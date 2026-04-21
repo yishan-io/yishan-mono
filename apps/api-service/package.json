@@ -1,0 +1,25 @@
+{
+  "name": "@yishan/api-service",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:bun": "bun --watch src/server.ts",
+    "dev:worker": "wrangler dev",
+    "start": "bun run src/server.ts",
+    "check": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "deploy:worker": "wrangler deploy"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.1",
+    "drizzle-orm": "^0.44.6",
+    "hono": "^4.10.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260417.0",
+    "drizzle-kit": "^0.31.7",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.12.0"
+  }
+}

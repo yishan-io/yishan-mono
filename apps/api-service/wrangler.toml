@@ -1,0 +1,6 @@
+name = "yishan-api-service"
+main = "src/worker.ts"
+compatibility_date = "2026-04-22"
+
+[observability]
+enabled = true
