@@ -2,6 +2,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 
 import type { AppDb } from "../db/client";
 import { refreshTokens } from "../db/schema";
+import { newId } from "../lib/id";
 import type { ServiceConfig } from "../types";
 import { randomToken, sha256Hex, signAccessToken } from "./security";
 
@@ -18,7 +19,7 @@ async function createRefreshTokenRecord(db: AppDb, userId: string, ttlDays: numb
   const tokenHash = await sha256Hex(token);
   const now = new Date();
   const expiresAt = new Date(now.getTime() + ttlDays * 24 * 60 * 60 * 1000);
-  const id = crypto.randomUUID();
+  const id = newId();
 
   await db.insert(refreshTokens).values({
     id,

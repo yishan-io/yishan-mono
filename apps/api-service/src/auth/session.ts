@@ -2,6 +2,7 @@ import { and, eq, gt } from "drizzle-orm";
 
 import type { AppDb } from "../db/client";
 import { sessions, users } from "../db/schema";
+import { newId } from "../lib/id";
 import { randomToken, sha256Hex } from "./security";
 
 export type SessionUser = Pick<typeof users.$inferSelect, "id" | "email" | "name" | "avatarUrl">;
@@ -17,7 +18,7 @@ export async function createSession(
   const expiresAt = new Date(now.getTime() + ttlDays * 24 * 60 * 60 * 1000);
 
   await db.insert(sessions).values({
-    id: crypto.randomUUID(),
+    id: newId(),
     userId,
     tokenHash,
     expiresAt

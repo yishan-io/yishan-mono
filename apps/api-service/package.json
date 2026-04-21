@@ -15,7 +15,8 @@
     "@neondatabase/serverless": "^1.0.1",
     "drizzle-orm": "^0.44.6",
     "hono": "^4.10.1",
-    "jose": "^6.1.0"
+    "jose": "^6.1.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260417.0",

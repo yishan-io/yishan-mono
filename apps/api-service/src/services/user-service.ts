@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 
 import type { AppDb } from "../db/client";
 import { oauthAccounts, users } from "../db/schema";
+import { newId } from "../lib/id";
 import type { OAuthProfile } from "../types";
 
 export class UserService {
@@ -45,7 +46,7 @@ export class UserService {
         const insertedUsers = await tx
           .insert(users)
           .values({
-            id: crypto.randomUUID(),
+            id: newId(),
             email: profile.email,
             name: profile.name,
             avatarUrl: profile.avatarUrl
@@ -73,7 +74,7 @@ export class UserService {
       await tx
         .insert(oauthAccounts)
         .values({
-          id: crypto.randomUUID(),
+          id: newId(),
           userId,
           provider: profile.provider,
           providerUserId: profile.providerUserId
