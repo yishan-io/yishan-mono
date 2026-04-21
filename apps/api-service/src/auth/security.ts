@@ -1,4 +1,4 @@
-import { SignJWT, jwtVerify } from "jose";
+import { sign, verify } from "hono/jwt";
 
 const textEncoder = new TextEncoder();
 
@@ -50,11 +50,7 @@ export async function signAccessToken(
     ...payload
   };
 
-  const secretKey = textEncoder.encode(secret);
-
-  return new SignJWT(claims)
-    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-    .sign(secretKey);
+  return sign(claims, secret, "HS256");
 }
 
 export async function verifyAccessToken(
@@ -66,11 +62,7 @@ export async function verifyAccessToken(
   let payload: Record<string, unknown>;
 
   try {
-    const secretKey = textEncoder.encode(secret);
-    const verification = await jwtVerify(token, secretKey, {
-      algorithms: ["HS256"]
-    });
-    payload = verification.payload as Record<string, unknown>;
+    payload = (await verify(token, secret, "HS256")) as Record<string, unknown>;
   } catch {
     return null;
   }
