@@ -1,8 +1,12 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import type { AppDb } from "../db/client";
 import { organizationMembers, organizations, users } from "../db/schema";
-import { InvalidOrganizationMembersError } from "../errors";
+import {
+  InvalidOrganizationMembersError,
+  OrganizationNotFoundError,
+  OrganizationOwnerRequiredError
+} from "../errors";
 import { newId } from "../lib/id";
 
 type CreateOrganizationInput = {
@@ -29,6 +33,38 @@ type OrganizationView = {
 
 export class OrganizationService {
   constructor(private readonly db: AppDb) {}
+
+  async deleteOrganization(input: { organizationId: string; actorUserId: string }): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const existingOrganizationRows = await tx
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.id, input.organizationId))
+        .limit(1);
+
+      if (existingOrganizationRows.length === 0) {
+        throw new OrganizationNotFoundError(input.organizationId);
+      }
+
+      const actorMembershipRows = await tx
+        .select({ role: organizationMembers.role })
+        .from(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.organizationId, input.organizationId),
+            eq(organizationMembers.userId, input.actorUserId)
+          )
+        )
+        .limit(1);
+
+      const actorRole = actorMembershipRows[0]?.role;
+      if (actorRole !== "owner") {
+        throw new OrganizationOwnerRequiredError();
+      }
+
+      await tx.delete(organizations).where(eq(organizations.id, input.organizationId));
+    });
+  }
 
   async createOrganization(input: CreateOrganizationInput): Promise<OrganizationView> {
     return this.db.transaction(async (tx) => {

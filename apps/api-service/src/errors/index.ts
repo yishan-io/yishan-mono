@@ -35,3 +35,23 @@ export class InvalidOrganizationMembersError extends AppError {
     this.name = "InvalidOrganizationMembersError";
   }
 }
+
+export class OrganizationNotFoundError extends AppError {
+  constructor(organizationId: string) {
+    super("Organization not found", StatusCodes.NOT_FOUND, "ORGANIZATION_NOT_FOUND", {
+      organizationId
+    });
+    this.name = "OrganizationNotFoundError";
+  }
+}
+
+export class OrganizationOwnerRequiredError extends AppError {
+  constructor() {
+    super(
+      "Only organization owners can delete this organization",
+      StatusCodes.FORBIDDEN,
+      "ORGANIZATION_OWNER_REQUIRED"
+    );
+    this.name = "OrganizationOwnerRequiredError";
+  }
+}

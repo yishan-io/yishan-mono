@@ -53,9 +53,11 @@ Copy `.env.example` to `.env` (Bun) and `.dev.vars` (Wrangler local dev):
 - `GET /me`
 - `GET /orgs`
 - `POST /orgs`
+- `DELETE /orgs/:orgId`
 
 Notes:
 
 - OAuth login only accepts provider accounts with verified email addresses.
 - Account resolution order is: provider account link first, then local user by email.
 - `POST /orgs` accepts `{ "name": string, "memberUserIds"?: string[] }` and always includes the authenticated user as an `owner` member.
+- `DELETE /orgs/:orgId` is owner-only and removes the org with cascading memberships.

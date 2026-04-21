@@ -72,3 +72,18 @@ export async function listOrganizationsHandler(c: AppContext) {
   const organizations = await c.get("services").organization.getOrganizationsForUser(user.id);
   return c.json({ organizations });
 }
+
+export async function deleteOrganizationHandler(c: AppContext) {
+  const organizationId = c.req.param("orgId")?.trim();
+  if (!organizationId) {
+    return c.json({ error: "orgId is required" }, StatusCodes.BAD_REQUEST);
+  }
+
+  const actorUser = c.get("sessionUser");
+  await c.get("services").organization.deleteOrganization({
+    organizationId,
+    actorUserId: actorUser.id
+  });
+
+  return c.json({ ok: true });
+}
