@@ -109,6 +109,7 @@ async function exchangeGoogleToken(
 type GoogleProfileResponse = {
   sub: string;
   email: string;
+  email_verified?: boolean;
   name?: string;
   picture?: string;
 };
@@ -130,10 +131,15 @@ async function getGoogleProfile(accessToken: string): Promise<OAuthProfile> {
     throw new Error("Google account does not provide an email address");
   }
 
+  if (!profile.email_verified) {
+    throw new Error("Google account email is not verified");
+  }
+
   return {
     provider: "google",
     providerUserId: profile.sub,
     email: profile.email.toLowerCase(),
+    emailVerified: true,
     name: profile.name ?? null,
     avatarUrl: profile.picture ?? null
   };
@@ -195,33 +201,30 @@ async function getGithubProfile(accessToken: string): Promise<OAuthProfile> {
   }
 
   const user = (await userResponse.json()) as GithubUserResponse;
-  let email = user.email;
+  const emailResponse = await fetch("https://api.github.com/user/emails", {
+    headers: baseHeaders
+  });
 
-  if (!email) {
-    const emailResponse = await fetch("https://api.github.com/user/emails", {
-      headers: baseHeaders
-    });
-
-    if (!emailResponse.ok) {
-      throw new Error("Failed to load GitHub email addresses");
-    }
-
-    const emails = (await emailResponse.json()) as GithubEmailResponse[];
-    const primaryVerified =
-      emails.find((entry) => entry.primary && entry.verified) ??
-      emails.find((entry) => entry.verified);
-
-    email = primaryVerified?.email ?? null;
+  if (!emailResponse.ok) {
+    throw new Error("Failed to load GitHub email addresses");
   }
 
+  const emails = (await emailResponse.json()) as GithubEmailResponse[];
+  const primaryVerified =
+    emails.find((entry) => entry.primary && entry.verified) ??
+    emails.find((entry) => entry.verified);
+
+  const email = primaryVerified?.email ?? null;
+
   if (!email) {
-    throw new Error("GitHub account does not provide an email address");
+    throw new Error("GitHub account does not provide a verified email address");
   }
 
   return {
     provider: "github",
     providerUserId: String(user.id),
     email: email.toLowerCase(),
+    emailVerified: true,
     name: user.name,
     avatarUrl: user.avatar_url
   };

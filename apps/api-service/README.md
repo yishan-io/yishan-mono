@@ -18,6 +18,11 @@ Copy `.env.example` to `.env` (Bun) and `.dev.vars` (Wrangler local dev):
 - `APP_BASE_URL`
 - `SESSION_SECRET`
 - `SESSION_TTL_DAYS` (default `30`)
+- `JWT_ACCESS_SECRET`
+- `JWT_ACCESS_TTL_SECONDS` (default `900`)
+- `REFRESH_TOKEN_TTL_DAYS` (default `30`)
+- `JWT_ISSUER` (optional, defaults to `APP_BASE_URL`)
+- `JWT_AUDIENCE` (optional, defaults to `api-service`)
 - `COOKIE_DOMAIN` (optional)
 - `CORS_ORIGINS` (optional, comma-separated origins)
 - `GOOGLE_CLIENT_ID`
@@ -41,5 +46,13 @@ Copy `.env.example` to `.env` (Bun) and `.dev.vars` (Wrangler local dev):
 - `GET /auth/google/callback`
 - `GET /auth/github`
 - `GET /auth/github/callback`
+- `POST /auth/token`
+- `POST /auth/refresh`
+- `POST /auth/revoke`
 - `POST /auth/logout`
 - `GET /me`
+
+Notes:
+
+- OAuth login only accepts provider accounts with verified email addresses.
+- Account resolution order is: provider account link first, then local user by email.

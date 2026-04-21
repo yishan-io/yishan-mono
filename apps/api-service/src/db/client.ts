@@ -20,3 +20,5 @@ export function getDb(databaseUrl: string) {
   dbCache.set(databaseUrl, db);
   return db;
 }
+
+export type AppDb = ReturnType<typeof getDb>;

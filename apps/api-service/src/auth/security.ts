@@ -1,3 +1,5 @@
+import { SignJWT, jwtVerify } from "jose";
+
 const textEncoder = new TextEncoder();
 
 function bytesToBase64Url(bytes: Uint8Array): string {
@@ -7,19 +9,6 @@ function bytesToBase64Url(bytes: Uint8Array): string {
   }
 
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
-function base64UrlToBytes(value: string): Uint8Array {
-  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
-  const binary = atob(padded);
-  const bytes = new Uint8Array(binary.length);
-
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-
-  return bytes;
 }
 
 export function randomToken(bytes = 32): string {
@@ -33,61 +22,82 @@ export async function sha256Base64Url(value: string): Promise<string> {
   return bytesToBase64Url(new Uint8Array(digest));
 }
 
-async function hmacSha256(input: string, secret: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    textEncoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
-  const digest = await crypto.subtle.sign("HMAC", key, textEncoder.encode(input));
-  return bytesToBase64Url(new Uint8Array(digest));
-}
-
-type SignedPayloadResult<T> = {
-  ok: true;
-  data: T;
-} | {
-  ok: false;
-};
-
-export async function signPayload<T>(payload: T, secret: string): Promise<string> {
-  const payloadString = JSON.stringify(payload);
-  const payloadBytes = textEncoder.encode(payloadString);
-  const encodedPayload = bytesToBase64Url(payloadBytes);
-  const signature = await hmacSha256(encodedPayload, secret);
-  return `${encodedPayload}.${signature}`;
-}
-
-export async function verifyPayload<T>(raw: string, secret: string): Promise<SignedPayloadResult<T>> {
-  const [encodedPayload, signature] = raw.split(".");
-  if (!encodedPayload || !signature) {
-    return { ok: false };
-  }
-
-  const expectedSignature = await hmacSha256(encodedPayload, secret);
-  if (expectedSignature !== signature) {
-    return { ok: false };
-  }
-
-  try {
-    const payloadBytes = base64UrlToBytes(encodedPayload);
-    const jsonString = new TextDecoder().decode(payloadBytes);
-    return {
-      ok: true,
-      data: JSON.parse(jsonString) as T
-    };
-  } catch {
-    return { ok: false };
-  }
-}
-
 export async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", textEncoder.encode(value));
   const bytes = new Uint8Array(digest);
   return Array.from(bytes)
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+}
+
+export type AccessTokenClaims = {
+  type: "access";
+  sub: string;
+  sid: string;
+  scope: string;
+  iss: string;
+  aud: string;
+  iat: number;
+  exp: number;
+};
+
+export async function signAccessToken(
+  payload: Omit<AccessTokenClaims, "type">,
+  secret: string
+): Promise<string> {
+  const claims: AccessTokenClaims = {
+    type: "access",
+    ...payload
+  };
+
+  const secretKey = textEncoder.encode(secret);
+
+  return new SignJWT(claims)
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .sign(secretKey);
+}
+
+export async function verifyAccessToken(
+  token: string,
+  secret: string,
+  expectedIssuer: string,
+  expectedAudience: string
+): Promise<AccessTokenClaims | null> {
+  let payload: Record<string, unknown>;
+
+  try {
+    const secretKey = textEncoder.encode(secret);
+    const verification = await jwtVerify(token, secretKey, {
+      algorithms: ["HS256"]
+    });
+    payload = verification.payload as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+
+  const claims = payload as Partial<AccessTokenClaims>;
+
+  if (claims.type !== "access") {
+    return null;
+  }
+
+  if (claims.iss !== expectedIssuer || claims.aud !== expectedAudience) {
+    return null;
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (typeof claims.exp !== "number" || claims.exp <= now) {
+    return null;
+  }
+
+  if (
+    typeof claims.sub !== "string" ||
+    typeof claims.sid !== "string" ||
+    typeof claims.scope !== "string" ||
+    typeof claims.iat !== "number"
+  ) {
+    return null;
+  }
+
+  return claims as AccessTokenClaims;
 }

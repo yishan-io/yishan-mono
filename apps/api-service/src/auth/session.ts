@@ -1,17 +1,13 @@
 import { and, eq, gt } from "drizzle-orm";
 
+import type { AppDb } from "../db/client";
 import { sessions, users } from "../db/schema";
 import { randomToken, sha256Hex } from "./security";
 
-export type SessionUser = {
-  id: string;
-  email: string;
-  name: string | null;
-  avatarUrl: string | null;
-};
+export type SessionUser = Pick<typeof users.$inferSelect, "id" | "email" | "name" | "avatarUrl">;
 
 export async function createSession(
-  db: any,
+  db: AppDb,
   userId: string,
   ttlDays: number
 ) {
@@ -33,7 +29,7 @@ export async function createSession(
   };
 }
 
-export async function getSessionUser(db: any, token: string): Promise<SessionUser | null> {
+export async function getSessionUser(db: AppDb, token: string): Promise<SessionUser | null> {
   const tokenHash = await sha256Hex(token);
   const now = new Date();
 
@@ -52,7 +48,7 @@ export async function getSessionUser(db: any, token: string): Promise<SessionUse
   return rows[0] ?? null;
 }
 
-export async function invalidateSession(db: any, token: string) {
+export async function invalidateSession(db: AppDb, token: string) {
   const tokenHash = await sha256Hex(token);
   await db.delete(sessions).where(eq(sessions.tokenHash, tokenHash));
 }

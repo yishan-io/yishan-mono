@@ -26,6 +26,10 @@ function requireEnv(c: Context, key: string): string {
 export function getServiceConfig(c: Context): ServiceConfig {
   const sessionTtlRaw = readEnv(c, "SESSION_TTL_DAYS") ?? "30";
   const sessionTtlDays = Number(sessionTtlRaw);
+  const jwtAccessTtlRaw = readEnv(c, "JWT_ACCESS_TTL_SECONDS") ?? "900";
+  const jwtAccessTtlSeconds = Number(jwtAccessTtlRaw);
+  const refreshTtlRaw = readEnv(c, "REFRESH_TOKEN_TTL_DAYS") ?? "30";
+  const refreshTokenTtlDays = Number(refreshTtlRaw);
 
   if (!Number.isFinite(sessionTtlDays) || sessionTtlDays <= 0) {
     throw new HTTPException(500, {
@@ -33,13 +37,33 @@ export function getServiceConfig(c: Context): ServiceConfig {
     });
   }
 
+  if (!Number.isFinite(jwtAccessTtlSeconds) || jwtAccessTtlSeconds <= 0) {
+    throw new HTTPException(500, {
+      message: "JWT_ACCESS_TTL_SECONDS must be a positive number"
+    });
+  }
+
+  if (!Number.isFinite(refreshTokenTtlDays) || refreshTokenTtlDays <= 0) {
+    throw new HTTPException(500, {
+      message: "REFRESH_TOKEN_TTL_DAYS must be a positive number"
+    });
+  }
+
   const cookieDomain = readEnv(c, "COOKIE_DOMAIN");
+  const appBaseUrl = requireEnv(c, "APP_BASE_URL");
+  const jwtIssuer = readEnv(c, "JWT_ISSUER") ?? appBaseUrl;
+  const jwtAudience = readEnv(c, "JWT_AUDIENCE") ?? "api-service";
 
   return {
     databaseUrl: requireEnv(c, "DATABASE_URL"),
-    appBaseUrl: requireEnv(c, "APP_BASE_URL"),
+    appBaseUrl,
     sessionSecret: requireEnv(c, "SESSION_SECRET"),
     sessionTtlDays,
+    jwtAccessSecret: requireEnv(c, "JWT_ACCESS_SECRET"),
+    jwtAccessTtlSeconds,
+    refreshTokenTtlDays,
+    jwtIssuer,
+    jwtAudience,
     cookieDomain,
     googleClientId: requireEnv(c, "GOOGLE_CLIENT_ID"),
     googleClientSecret: requireEnv(c, "GOOGLE_CLIENT_SECRET"),
