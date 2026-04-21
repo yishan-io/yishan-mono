@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+bun.lockb
+dist/
+build/
+coverage/
+.idea/
+.vscode/
+playwright-report/
+test-results/
+.env

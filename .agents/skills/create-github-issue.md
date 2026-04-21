@@ -1,0 +1,71 @@
+---
+name: create-github-issue
+description: Create a new GitHub issue that follows this repository's `.github/ISSUE_TEMPLATE/work-item.md` structure.
+---
+
+# Create GitHub Issue
+
+Use this skill to open a new GitHub issue in the current repository with the same structure as `.github/ISSUE_TEMPLATE/work-item.md`.
+The implementation is shared in `scripts/automation/create-work-item-issue.sh` so all agents reuse the same workflow.
+
+## Workflow
+
+1. Confirm target repository and requirement scope.
+- Default to the current repository.
+- If user specifies another repo, pass `--repo owner/name`.
+
+2. Collect or infer issue fields.
+- Required for high-quality issue: title, type, summary, acceptance criteria.
+- If some details are missing, keep placeholders like `TBD` rather than blocking creation.
+
+3. Generate and create the issue.
+- Use `scripts/automation/create-work-item-issue.sh` to generate the body and call `gh issue create`.
+
+4. Return result.
+- Report issue URL, title, type, and any placeholders left for follow-up editing.
+
+## Input Mapping
+
+Map user input to:
+- `title`
+- `type`: `bug` | `feature` | `refactor` | `documentation` | `other`
+- `summary`
+- `problem/context`
+- `scope`
+- `out of scope`
+- `acceptance criteria` (one or more)
+- `validation plan`
+- `risks/dependencies`
+- `additional context`
+- optional `labels`, `assignees`
+
+## Script
+
+Use:
+
+```bash
+scripts/automation/create-work-item-issue.sh \
+  --title "[Work] Add release checklist panel" \
+  --type feature \
+  --summary "Add a release checklist panel so maintainers can validate release readiness in one place." \
+  --context "Release readiness checks are currently scattered across docs and scripts." \
+  --scope "Desktop settings UI and release helper state only." \
+  --out-of-scope "CI workflow redesign." \
+  --acceptance "Panel displays checklist items from config." \
+  --acceptance "Users can mark items complete and persist locally." \
+  --validation "Unit tests for state logic + manual verification in desktop app." \
+  --risks "Potential confusion if checklist source is stale." \
+  --additional "Related: #123" \
+  --label "type:feature"
+```
+
+Dry-run preview (no issue creation):
+
+```bash
+scripts/automation/create-work-item-issue.sh \
+  --title "[Work] Example" \
+  --type other \
+  --summary "Example only." \
+  --acceptance "Example criterion." \
+  --dry-run
+```

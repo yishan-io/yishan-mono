@@ -1,0 +1,190 @@
+name: Release Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Optional release version (x.y.z). Leave empty to auto-bump from package.json."
+        required: false
+        default: ""
+        type: string
+      bump:
+        description: "Semver bump when version is not provided"
+        required: false
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      run_checks:
+        description: "Run typecheck, lint, test:unit, build before commit"
+        required: false
+        default: true
+        type: boolean
+      create_tag:
+        description: "Create and push git tag v<version>"
+        required: false
+        default: true
+        type: boolean
+      create_release:
+        description: "Create a GitHub release with auto-generated notes"
+        required: false
+        default: true
+        type: boolean
+      release_draft:
+        description: "Create the GitHub release as a draft"
+        required: false
+        default: true
+        type: boolean
+      dry_run:
+        description: "Preview release changes without writing commit/tag"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.repository.default_branch }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.3
+
+      - name: Install dependencies
+        run: SKIP_INSTALL_SIMPLE_GIT_HOOKS=1 bun install --frozen-lockfile --linker hoisted
+
+      - name: Prepare release files
+        id: prepare
+        run: |
+          set -euo pipefail
+
+          args=(
+            --bump "${{ inputs.bump }}"
+          )
+
+          if [[ -n "${{ inputs.version }}" ]]; then
+            args+=(--version "${{ inputs.version }}")
+          fi
+
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            args+=(--dry-run)
+          fi
+
+          output="$(bun run release:prepare -- "${args[@]}")"
+          printf '%s\n' "$output"
+
+          version="$(printf '%s\n' "$output" | awk -F= '/^RELEASE_VERSION=/{print $2}' | tail -n 1)"
+          if [[ -z "$version" ]]; then
+            echo "::error::Failed to resolve release version from release:prepare output."
+            exit 1
+          fi
+
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+
+      - name: Run quality checks
+        if: ${{ inputs.run_checks == true }}
+        run: |
+          set -euo pipefail
+          bun run typecheck
+          bun run lint
+          bun run test:unit
+          bun run build
+
+      - name: Commit and push release changes
+        id: commit
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          set -euo pipefail
+
+          changed_files="$(git diff --name-only)"
+          if [[ -z "$changed_files" ]]; then
+            echo "No release changes detected."
+            echo "committed=false" >>"$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          unexpected="$(
+            printf '%s\n' "$changed_files" | grep -Ev '^(package.json|apps/[^/]+/package.json|packages/[^/]+/package.json|services/[^/]+/package.json)$' || true
+          )"
+          if [[ -n "$unexpected" ]]; then
+            echo "::error::Release workflow produced unexpected file changes:"
+            printf '%s\n' "$unexpected"
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json apps/*/package.json packages/*/package.json services/*/package.json
+
+          if git diff --cached --quiet; then
+            echo "No staged release changes after filtering."
+            echo "committed=false" >>"$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git commit -m "chore(release): cut ${{ steps.prepare.outputs.version }}"
+          git push origin "${{ github.event.repository.default_branch }}"
+          echo "committed=true" >>"$GITHUB_OUTPUT"
+
+      - name: Create and push release tag
+        if: ${{ inputs.dry_run != true && inputs.create_tag == true && steps.commit.outputs.committed == 'true' }}
+        run: |
+          set -euo pipefail
+          tag="v${{ steps.prepare.outputs.version }}"
+
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "::error::Tag $tag already exists."
+            exit 1
+          fi
+
+          git tag "$tag"
+          git push origin "$tag"
+
+      - name: Create GitHub release with generated notes
+        if: ${{ inputs.dry_run != true && inputs.create_release == true && steps.commit.outputs.committed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="v${{ steps.prepare.outputs.version }}"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::error::Release $tag already exists."
+            exit 1
+          fi
+
+          # Prevent implicit tag creation when create_tag is disabled.
+          if [[ "${{ inputs.create_tag }}" != "true" ]]; then
+            if ! git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+              echo "::error::create_tag=false and tag $tag does not exist on origin. Enable create_tag or create the tag first."
+              exit 1
+            fi
+          fi
+
+          args=(
+            "$tag"
+            --title "$tag"
+            --generate-notes
+            --verify-tag
+          )
+
+          if [[ "${{ inputs.release_draft }}" == "true" ]]; then
+            args+=(--draft)
+          fi
+
+          gh release create "${args[@]}"

@@ -1,0 +1,53 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: claude-pr-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: >-
+      ${{
+        !github.event.pull_request.draft &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        secrets.ANTHROPIC_API_KEY != ''
+      }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Review this pull request as a strict production code reviewer.
+
+            Prioritize findings in this order:
+            1) Correctness and behavioral regressions
+            2) Security and data safety risks
+            3) Reliability and edge-case handling
+            4) Test gaps for changed behavior
+
+            Rules for feedback:
+            - Do not propose style-only comments.
+            - Only report actionable, high-confidence findings.
+            - Reference concrete files and lines when possible.
+            - Keep comments concise and practical.

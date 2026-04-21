@@ -1,0 +1,19 @@
+{
+  "name": "yishan",
+  "license": "Elastic-2.0",
+  "type": "module",
+  "packageManager": "bun@1.3.3",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*"
+  ],
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@biomejs/biome": "^1.9.4",
+    "vitest": "^4.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
