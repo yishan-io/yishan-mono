@@ -1,75 +1,207 @@
 package workspace
 
 import (
+	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-type FileReadRequest struct {
-	WorkspaceID string `json:"workspaceId"`
-	Path        string `json:"path"`
+type FileEntry struct {
+	Path  string `json:"path"`
+	Name  string `json:"name"`
+	IsDir bool   `json:"isDir"`
+	Size  int64  `json:"size"`
+	Mode  uint32 `json:"mode"`
 }
 
-type FileReadResponse struct {
-	Content string `json:"content"`
+type FileService struct{}
+
+func NewFileService() *FileService {
+	return &FileService{}
 }
 
-type FileWriteRequest struct {
-	WorkspaceID string `json:"workspaceId"`
-	Path        string `json:"path"`
-	Content     string `json:"content"`
-	Mode        uint32 `json:"mode,omitempty"`
+func (s *FileService) List(root string, path string) ([]FileEntry, error) {
+	dir, err := safeJoinOptional(root, path)
+	if err != nil {
+		return nil, err
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]FileEntry, 0, len(entries))
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil {
+			return nil, err
+		}
+		fullPath := filepath.Join(dir, entry.Name())
+		relPath, err := filepath.Rel(root, fullPath)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, FileEntry{
+			Path:  filepath.ToSlash(relPath),
+			Name:  entry.Name(),
+			IsDir: entry.IsDir(),
+			Size:  info.Size(),
+			Mode:  uint32(info.Mode()),
+		})
+	}
+
+	return out, nil
 }
 
-type FileWriteResponse struct {
-	Bytes int `json:"bytes"`
+func (s *FileService) Read(root string, path string) (string, error) {
+	fullPath, err := safeJoin(root, path)
+	if err != nil {
+		return "", err
+	}
+
+	b, err := os.ReadFile(fullPath)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }
 
-func (m *Manager) FileRead(req FileReadRequest) (FileReadResponse, error) {
-	ws, err := m.getWorkspace(req.WorkspaceID)
+func (s *FileService) Write(root string, path string, content string, mode uint32) (int, error) {
+	fullPath, err := safeJoin(root, path)
 	if err != nil {
-		return FileReadResponse{}, err
+		return 0, err
 	}
 
-	path, err := safeJoin(ws.Path, req.Path)
-	if err != nil {
-		return FileReadResponse{}, err
+	permission := os.FileMode(0o644)
+	if mode != 0 {
+		permission = os.FileMode(mode)
 	}
 
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return FileReadResponse{}, err
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+		return 0, err
 	}
 
-	return FileReadResponse{Content: string(b)}, nil
+	if err := os.WriteFile(fullPath, []byte(content), permission); err != nil {
+		return 0, err
+	}
+
+	return len(content), nil
 }
 
-func (m *Manager) FileWrite(req FileWriteRequest) (FileWriteResponse, error) {
-	ws, err := m.getWorkspace(req.WorkspaceID)
+func (s *FileService) Delete(root string, path string, recursive bool) error {
+	fullPath, err := safeJoin(root, path)
 	if err != nil {
-		return FileWriteResponse{}, err
+		return err
 	}
 
-	path, err := safeJoin(ws.Path, req.Path)
+	if recursive {
+		if err := os.RemoveAll(fullPath); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if err := os.Remove(fullPath); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *FileService) Move(root string, fromPath string, toPath string) error {
+	fromFullPath, err := safeJoin(root, fromPath)
 	if err != nil {
-		return FileWriteResponse{}, err
+		return err
+	}
+	toFullPath, err := safeJoin(root, toPath)
+	if err != nil {
+		return err
 	}
 
-	mode := os.FileMode(0o644)
-	if req.Mode != 0 {
-		mode = os.FileMode(req.Mode)
+	if err := os.MkdirAll(filepath.Dir(toFullPath), 0o755); err != nil {
+		return err
+	}
+	if err := os.Rename(fromFullPath, toFullPath); err != nil {
+		return err
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return FileWriteResponse{}, err
+	return nil
+}
+
+func (s *FileService) Mkdir(root string, path string, parents bool, mode uint32) error {
+	fullPath, err := safeJoin(root, path)
+	if err != nil {
+		return err
 	}
 
-	if err := os.WriteFile(path, []byte(req.Content), mode); err != nil {
-		return FileWriteResponse{}, err
+	permission := os.FileMode(0o755)
+	if mode != 0 {
+		permission = os.FileMode(mode)
 	}
 
-	return FileWriteResponse{Bytes: len(req.Content)}, nil
+	if parents {
+		if err := os.MkdirAll(fullPath, permission); err != nil {
+			return err
+		}
+	} else {
+		if err := os.Mkdir(fullPath, permission); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *FileService) Stat(root string, path string) (FileEntry, error) {
+	fullPath, err := safeJoin(root, path)
+	if err != nil {
+		return FileEntry{}, err
+	}
+
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		return FileEntry{}, err
+	}
+
+	relPath, err := filepath.Rel(root, fullPath)
+	if err != nil {
+		return FileEntry{}, err
+	}
+
+	return FileEntry{
+		Path:  filepath.ToSlash(relPath),
+		Name:  filepath.Base(fullPath),
+		IsDir: info.IsDir(),
+		Size:  info.Size(),
+		Mode:  uint32(info.Mode()),
+	}, nil
+}
+
+func (s *FileService) ReadDiff(ctx context.Context, root string, path string) (string, error) {
+	fullPath, err := safeJoin(root, path)
+	if err != nil {
+		return "", err
+	}
+
+	relPath, err := filepath.Rel(root, fullPath)
+	if err != nil {
+		return "", err
+	}
+
+	cmd := exec.CommandContext(ctx, "git", "-C", root, "diff", "--", relPath)
+	out, err := cmd.Output()
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			return string(out), nil
+		}
+		return "", err
+	}
+
+	return string(out), nil
 }
 
 func safeJoin(root string, p string) (string, error) {
@@ -94,4 +226,11 @@ func safeJoin(root string, p string) (string, error) {
 	}
 
 	return full, nil
+}
+
+func safeJoinOptional(root string, p string) (string, error) {
+	if strings.TrimSpace(p) == "" {
+		return filepath.Clean(root), nil
+	}
+	return safeJoin(root, p)
 }
