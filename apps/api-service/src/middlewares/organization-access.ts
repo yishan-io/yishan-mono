@@ -1,8 +1,8 @@
 import type { Next } from "hono";
 import { StatusCodes } from "http-status-codes";
 
-import { OrganizationMembershipRequiredError } from "../errors";
-import type { AppContext } from "../hono";
+import { OrganizationMembershipRequiredError } from "@/errors";
+import type { AppContext } from "@/hono";
 
 function readOrganizationIdFromParam(c: AppContext, paramName = "orgId"): string | null {
   const value = c.req.param(paramName);

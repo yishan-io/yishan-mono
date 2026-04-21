@@ -1,9 +1,9 @@
 import type { Next } from "hono";
 
-import { getDb } from "../db/client";
-import { getServiceConfig } from "../env";
-import type { AppContext } from "../hono";
-import { createServices } from "../services";
+import { getDb } from "@/db/client";
+import { getServiceConfig } from "@/env";
+import type { AppContext } from "@/hono";
+import { createServices } from "@/services";
 
 export async function injectRequestContext(c: AppContext, next: Next) {
   const config = getServiceConfig(c);

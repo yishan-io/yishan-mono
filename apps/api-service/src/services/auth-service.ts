@@ -1,9 +1,9 @@
-import { createSession, getSessionUser, invalidateSession } from "../auth/session";
-import { signAccessToken, verifyAccessToken } from "../auth/security";
-import { issueTokenPair, revokeRefreshToken, rotateRefreshToken } from "../auth/tokens";
-import type { AppDb } from "../db/client";
-import type { OAuthProfile, ServiceConfig } from "../types";
-import type { UserService } from "./user-service";
+import { createSession, getSessionUser, invalidateSession } from "@/auth/session";
+import { signAccessToken, verifyAccessToken } from "@/auth/security";
+import { issueTokenPair, revokeRefreshToken, rotateRefreshToken } from "@/auth/tokens";
+import type { AppDb } from "@/db/client";
+import type { OAuthProfile, ServiceConfig } from "@/types";
+import type { UserService } from "@/services/user-service";
 
 export class AuthService {
   constructor(

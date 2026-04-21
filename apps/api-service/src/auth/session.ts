@@ -1,9 +1,9 @@
 import { and, eq, gt } from "drizzle-orm";
 
-import type { AppDb } from "../db/client";
-import { sessions, users } from "../db/schema";
-import { newId } from "../lib/id";
-import { randomToken, sha256Hex } from "./security";
+import type { AppDb } from "@/db/client";
+import { sessions, users } from "@/db/schema";
+import { newId } from "@/lib/id";
+import { randomToken, sha256Hex } from "@/auth/security";
 
 export type SessionUser = Pick<typeof users.$inferSelect, "id" | "email" | "name" | "avatarUrl">;
 

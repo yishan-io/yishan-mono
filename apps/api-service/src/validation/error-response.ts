@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
-import { ValidationError, type ValidationIssue } from "../errors";
+import { ValidationError, type ValidationIssue } from "@/errors";
 
 function normalizeValidationIssues(error: unknown): ValidationIssue[] {
   if (

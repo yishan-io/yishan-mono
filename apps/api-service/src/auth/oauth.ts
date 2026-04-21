@@ -1,5 +1,5 @@
-import type { OAuthProfile, OAuthProvider, ServiceConfig } from "../types";
-import { randomToken, sha256Base64Url } from "./security";
+import type { OAuthProfile, OAuthProvider, ServiceConfig } from "@/types";
+import { randomToken, sha256Base64Url } from "@/auth/security";
 
 const GOOGLE_SCOPES = ["openid", "email", "profile"];
 const GITHUB_SCOPES = ["read:user", "user:email"];

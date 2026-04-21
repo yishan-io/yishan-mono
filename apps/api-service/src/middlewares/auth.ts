@@ -2,8 +2,8 @@ import { getCookie } from "hono/cookie";
 import type { Next } from "hono";
 import { StatusCodes } from "http-status-codes";
 
-import { SESSION_COOKIE_NAME } from "../auth/http";
-import type { AppContext } from "../hono";
+import { SESSION_COOKIE_NAME } from "@/auth/http";
+import type { AppContext } from "@/hono";
 
 function readBearerToken(c: AppContext): string | null {
   const authorization = c.req.header("Authorization");

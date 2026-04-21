@@ -1,7 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 
-import type { AppDb } from "../db/client";
-import { organizationMembers, organizations, users } from "../db/schema";
+import type { AppDb } from "@/db/client";
+import { organizationMembers, organizations, users } from "@/db/schema";
 import {
   InvalidOrganizationMemberRoleError,
   InvalidOrganizationMembersError,
@@ -11,8 +11,8 @@ import {
   OrganizationNotFoundError,
   OrganizationOwnerRemovalNotAllowedError,
   OrganizationOwnerRequiredError
-} from "../errors";
-import { newId } from "../lib/id";
+} from "@/errors";
+import { newId } from "@/lib/id";
 
 type CreateOrganizationInput = {
   name: string;

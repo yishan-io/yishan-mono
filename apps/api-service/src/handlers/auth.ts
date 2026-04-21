@@ -1,14 +1,14 @@
 import { deleteCookie, getCookie, getSignedCookie, setCookie, setSignedCookie } from "hono/cookie";
 import { StatusCodes } from "http-status-codes";
 
-import { buildAuthorizationUrl, exchangeCodeForProfile } from "../auth/oauth";
+import { buildAuthorizationUrl, exchangeCodeForProfile } from "@/auth/oauth";
 import {
   OAUTH_COOKIE_NAME,
   SESSION_COOKIE_NAME,
   cookieOptions,
   type OAuthCookiePayload
-} from "../auth/http";
-import type { AppContext } from "../hono";
+} from "@/auth/http";
+import type { AppContext } from "@/hono";
 
 export async function startOAuthHandler(c: AppContext) {
   const providerParam = c.get("oauthProvider");

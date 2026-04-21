@@ -1,16 +1,16 @@
 import { Hono } from "hono";
 import { StatusCodes } from "http-status-codes";
 
-import type { AppEnv } from "./hono";
-import { injectRequestContext } from "./middlewares/context";
-import { corsMiddleware } from "./middlewares/cors";
-import { handleAppError } from "./middlewares/error";
-import { requireAuthUser } from "./middlewares/auth";
-import { authRouter } from "./routes/auth";
-import { nodeRouter } from "./routes/node";
-import { organizationRouter } from "./routes/organization";
-import { systemRouter } from "./routes/system";
-import { userRouter } from "./routes/user";
+import type { AppEnv } from "@/hono";
+import { requireAuthUser } from "@/middlewares/auth";
+import { injectRequestContext } from "@/middlewares/context";
+import { corsMiddleware } from "@/middlewares/cors";
+import { handleAppError } from "@/middlewares/error";
+import { authRouter } from "@/routes/auth";
+import { nodeRouter } from "@/routes/node";
+import { organizationRouter } from "@/routes/organization";
+import { systemRouter } from "@/routes/system";
+import { userRouter } from "@/routes/user";
 
 export const app = new Hono<AppEnv>();
 const protectedRouter = new Hono<AppEnv>();

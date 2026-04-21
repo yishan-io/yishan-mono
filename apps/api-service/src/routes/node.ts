@@ -1,15 +1,15 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 
-import { createNodeHandler, deleteNodeHandler, listNodesHandler } from "../handlers/node";
-import type { AppEnv } from "../hono";
-import { requireOrganizationMemberFromParam } from "../middlewares/organization-access";
-import { validationErrorResponse } from "../validation/error-response";
+import { createNodeHandler, deleteNodeHandler, listNodesHandler } from "@/handlers/node";
+import type { AppEnv } from "@/hono";
+import { requireOrganizationMemberFromParam } from "@/middlewares/organization-access";
+import { validationErrorResponse } from "@/validation/error-response";
 import {
   createNodeBodySchema,
   organizationNodeDeleteParamsSchema,
   organizationNodeParamsSchema
-} from "../validation/node";
+} from "@/validation/node";
 
 export const nodeRouter = new Hono<AppEnv>();
 const orgNodesRouter = new Hono<AppEnv>();

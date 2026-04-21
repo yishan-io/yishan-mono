@@ -1,9 +1,8 @@
 import type { Context } from "hono";
 
-import type { SessionUser } from "./auth/session";
-import type { AppServices } from "./services";
-import type { ServiceConfig } from "./types";
-import type { OAuthProvider } from "./types";
+import type { SessionUser } from "@/auth/session";
+import type { AppServices } from "@/services";
+import type { OAuthProvider, ServiceConfig } from "@/types";
 
 export type AppEnv = {
   Variables: {

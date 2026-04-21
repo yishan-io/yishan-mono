@@ -7,16 +7,16 @@ import {
   deleteOrganizationHandler,
   listOrganizationsHandler,
   removeOrganizationMemberHandler
-} from "../handlers/organization";
-import type { AppEnv } from "../hono";
-import { requireOrganizationMemberFromParam } from "../middlewares/organization-access";
+} from "@/handlers/organization";
+import type { AppEnv } from "@/hono";
+import { requireOrganizationMemberFromParam } from "@/middlewares/organization-access";
 import {
   addOrganizationMemberBodySchema,
   createOrganizationBodySchema,
   organizationParamsSchema,
   removeOrganizationMemberParamsSchema
-} from "../validation/organization";
-import { validationErrorResponse } from "../validation/error-response";
+} from "@/validation/organization";
+import { validationErrorResponse } from "@/validation/error-response";
 
 export const organizationRouter = new Hono<AppEnv>();
 

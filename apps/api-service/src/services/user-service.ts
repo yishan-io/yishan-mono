@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
 
-import type { AppDb } from "../db/client";
-import { oauthAccounts, users } from "../db/schema";
-import { newId } from "../lib/id";
-import type { OAuthProfile } from "../types";
+import type { AppDb } from "@/db/client";
+import { oauthAccounts, users } from "@/db/schema";
+import { newId } from "@/lib/id";
+import type { OAuthProfile } from "@/types";
 
 export class UserService {
   constructor(private readonly db: AppDb) {}

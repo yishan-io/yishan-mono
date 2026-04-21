@@ -1,10 +1,10 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 
-import type { AppDb } from "../db/client";
-import { refreshTokens } from "../db/schema";
-import { newId } from "../lib/id";
-import type { ServiceConfig } from "../types";
-import { randomToken, sha256Hex, signAccessToken } from "./security";
+import type { AppDb } from "@/db/client";
+import { refreshTokens } from "@/db/schema";
+import { newId } from "@/lib/id";
+import type { ServiceConfig } from "@/types";
+import { randomToken, sha256Hex, signAccessToken } from "@/auth/security";
 
 export type TokenPair = {
   accessToken: string;

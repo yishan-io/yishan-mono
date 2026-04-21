@@ -7,10 +7,10 @@ import {
   refreshTokenHandler,
   revokeTokenHandler,
   startOAuthHandler
-} from "../handlers/auth";
-import type { AppEnv } from "../hono";
-import { requireOAuthProvider } from "../middlewares/oauth";
-import { requireSessionUser } from "../middlewares/session";
+} from "@/handlers/auth";
+import type { AppEnv } from "@/hono";
+import { requireOAuthProvider } from "@/middlewares/oauth";
+import { requireSessionUser } from "@/middlewares/session";
 
 export const authRouter = new Hono<AppEnv>();
 

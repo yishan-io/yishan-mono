@@ -2,8 +2,8 @@ import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { StatusCodes } from "http-status-codes";
 
-import { isBusinessError } from "../errors";
-import type { AppContext } from "../hono";
+import { isBusinessError } from "@/errors";
+import type { AppContext } from "@/hono";
 
 export function handleAppError(error: unknown, c: AppContext) {
   if (isBusinessError(error)) {

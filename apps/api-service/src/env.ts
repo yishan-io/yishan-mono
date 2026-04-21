@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { StatusCodes } from "http-status-codes";
 
-import type { ServiceConfig } from "./types";
+import type { ServiceConfig } from "@/types";
 
 const RUNTIME_ENV: Record<string, string | undefined> =
   typeof process !== "undefined" && process.env

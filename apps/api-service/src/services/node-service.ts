@@ -1,14 +1,14 @@
 import { and, eq, inArray, or } from "drizzle-orm";
 
-import type { AppDb } from "../db/client";
-import { nodes, organizationMembers } from "../db/schema";
+import type { AppDb } from "@/db/client";
+import { nodes, organizationMembers } from "@/db/schema";
 import {
   NodeDeletePermissionRequiredError,
   NodeNotFoundError,
   OrganizationNodePermissionRequiredError,
   OrganizationMembershipRequiredError
-} from "../errors";
-import { newId } from "../lib/id";
+} from "@/errors";
+import { newId } from "@/lib/id";
 
 type NodeScope = "local" | "remote";
 

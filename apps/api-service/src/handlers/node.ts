@@ -1,11 +1,11 @@
 import { StatusCodes } from "http-status-codes";
 
-import type { AppContext } from "../hono";
+import type { AppContext } from "@/hono";
 import type {
   CreateNodeBodyInput,
   OrganizationNodeDeleteParamsInput,
   OrganizationNodeParamsInput
-} from "../validation/node";
+} from "@/validation/node";
 
 export async function listNodesHandler(c: AppContext, params: OrganizationNodeParamsInput) {
   const actorUser = c.get("sessionUser");

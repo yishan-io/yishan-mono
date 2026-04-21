@@ -1,12 +1,12 @@
 import { StatusCodes } from "http-status-codes";
 
-import type { AppContext } from "../hono";
+import type { AppContext } from "@/hono";
 import type {
   AddOrganizationMemberBodyInput,
   CreateOrganizationBodyInput,
   OrganizationParamsInput,
   RemoveOrganizationMemberParamsInput
-} from "../validation/organization";
+} from "@/validation/organization";
 
 export async function createOrganizationHandler(c: AppContext, body: CreateOrganizationBodyInput) {
   const { name, memberUserIds } = body;
