@@ -130,6 +130,74 @@ export const nodes = pgTable(
   ]
 );
 
+export const projects = pgTable(
+  "projects",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    sourceType: text("source_type").notNull(),
+    repoProvider: text("repo_provider"),
+    repoUrl: text("repo_url"),
+    repoKey: text("repo_key"),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => [
+    index("projects_organization_id_idx").on(table.organizationId),
+    index("projects_source_type_idx").on(table.sourceType),
+    index("projects_created_by_user_id_idx").on(table.createdByUserId),
+    uniqueIndex("projects_org_repo_provider_key_uq").on(
+      table.organizationId,
+      table.repoProvider,
+      table.repoKey
+    )
+  ]
+);
+
+export const workspaces = pgTable(
+  "workspaces",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    nodeId: text("node_id")
+      .notNull()
+      .references(() => nodes.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull().default("primary"),
+    branch: text("branch"),
+    localPath: text("local_path").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => [
+    index("workspaces_organization_id_idx").on(table.organizationId),
+    index("workspaces_project_id_idx").on(table.projectId),
+    index("workspaces_user_id_idx").on(table.userId),
+    index("workspaces_node_id_idx").on(table.nodeId),
+    index("workspaces_kind_idx").on(table.kind),
+    uniqueIndex("workspaces_project_user_node_kind_branch_uq").on(
+      table.projectId,
+      table.userId,
+      table.nodeId,
+      table.kind,
+      table.branch
+    )
+  ]
+);
+
 export type User = InferSelectModel<typeof users>;
 export type NewUser = InferInsertModel<typeof users>;
 
@@ -150,3 +218,9 @@ export type NewOrganizationMember = InferInsertModel<typeof organizationMembers>
 
 export type Node = InferSelectModel<typeof nodes>;
 export type NewNode = InferInsertModel<typeof nodes>;
+
+export type Project = InferSelectModel<typeof projects>;
+export type NewProject = InferInsertModel<typeof projects>;
+
+export type Workspace = InferSelectModel<typeof workspaces>;
+export type NewWorkspace = InferInsertModel<typeof workspaces>;

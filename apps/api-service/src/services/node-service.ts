@@ -9,6 +9,7 @@ import {
   OrganizationMembershipRequiredError
 } from "@/errors";
 import { newId } from "@/lib/id";
+import type { OrganizationService } from "@/services/organization-service";
 
 type NodeScope = "local" | "remote";
 
@@ -36,7 +37,10 @@ type CreateNodeInput = {
 };
 
 export class NodeService {
-  constructor(private readonly db: AppDb) {}
+  constructor(
+    private readonly db: AppDb,
+    private readonly organizationService: OrganizationService
+  ) {}
 
   private normalizeMetadata(value: unknown): Record<string, unknown> | null {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -89,18 +93,7 @@ export class NodeService {
           organizationId,
           createdByUserId: input.actorUserId
         })
-        .returning({
-          id: nodes.id,
-          name: nodes.name,
-          scope: nodes.scope,
-          endpoint: nodes.endpoint,
-          metadata: nodes.metadata,
-          ownerUserId: nodes.ownerUserId,
-          organizationId: nodes.organizationId,
-          createdByUserId: nodes.createdByUserId,
-          createdAt: nodes.createdAt,
-          updatedAt: nodes.updatedAt
-        });
+        .returning();
 
       const node = insertedRows[0];
       if (!node) {
@@ -117,44 +110,24 @@ export class NodeService {
   }
 
   async listNodes(input: { actorUserId: string; organizationId: string }): Promise<NodeView[]> {
-    const actorMembershipRows = await this.db
-      .select({ role: organizationMembers.role })
-      .from(organizationMembers)
-      .where(
-        and(
-          eq(organizationMembers.organizationId, input.organizationId),
-          eq(organizationMembers.userId, input.actorUserId)
-        )
-      )
-      .limit(1);
+    const actorRole = await this.organizationService.getMembershipRole({
+      organizationId: input.organizationId,
+      userId: input.actorUserId
+    });
 
-    if (actorMembershipRows.length === 0) {
+    if (!actorRole) {
       throw new OrganizationMembershipRequiredError();
     }
 
-    const orgMemberRows = await this.db
-      .select({ userId: organizationMembers.userId })
-      .from(organizationMembers)
-      .where(eq(organizationMembers.organizationId, input.organizationId));
-
-    const orgMemberUserIds = Array.from(new Set(orgMemberRows.map((row) => row.userId)));
+    const orgMemberUserIds = await this.organizationService.getOrganizationMemberUserIds(
+      input.organizationId
+    );
     if (orgMemberUserIds.length === 0) {
       return [];
     }
 
     const rows = await this.db
-      .select({
-        id: nodes.id,
-        name: nodes.name,
-        scope: nodes.scope,
-        endpoint: nodes.endpoint,
-        metadata: nodes.metadata,
-        ownerUserId: nodes.ownerUserId,
-        organizationId: nodes.organizationId,
-        createdByUserId: nodes.createdByUserId,
-        createdAt: nodes.createdAt,
-        updatedAt: nodes.updatedAt
-      })
+      .select()
       .from(nodes)
       .where(
         or(

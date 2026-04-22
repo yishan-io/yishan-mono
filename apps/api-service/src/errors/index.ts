@@ -188,3 +188,69 @@ export class OrganizationMembershipRequiredError extends AppError {
     this.name = "OrganizationMembershipRequiredError";
   }
 }
+
+export class ProjectGitSourceFieldsRequiredError extends AppError {
+  constructor() {
+    super(
+      "Git projects require repoProvider, repoUrl, and repoKey",
+      StatusCodes.BAD_REQUEST,
+      "PROJECT_GIT_SOURCE_FIELDS_REQUIRED"
+    );
+    this.name = "ProjectGitSourceFieldsRequiredError";
+  }
+}
+
+export class ProjectInvalidGitUrlError extends AppError {
+  constructor(repoUrl: string) {
+    super("Invalid project repoUrl", StatusCodes.BAD_REQUEST, "PROJECT_INVALID_GIT_URL", { repoUrl });
+    this.name = "ProjectInvalidGitUrlError";
+  }
+}
+
+export class ProjectNotFoundError extends AppError {
+  constructor(projectId: string) {
+    super("Project not found", StatusCodes.NOT_FOUND, "PROJECT_NOT_FOUND", { projectId });
+    this.name = "ProjectNotFoundError";
+  }
+}
+
+export class WorkspaceNodeNotFoundError extends AppError {
+  constructor(nodeId: string) {
+    super("Node not found", StatusCodes.BAD_REQUEST, "WORKSPACE_NODE_NOT_FOUND", { nodeId });
+    this.name = "WorkspaceNodeNotFoundError";
+  }
+}
+
+export class WorkspaceLocalNodeScopeInvalidError extends AppError {
+  constructor(nodeId: string) {
+    super(
+      "Workspaces require a local scope node",
+      StatusCodes.BAD_REQUEST,
+      "WORKSPACE_LOCAL_NODE_SCOPE_INVALID",
+      { nodeId }
+    );
+    this.name = "WorkspaceLocalNodeScopeInvalidError";
+  }
+}
+
+export class WorkspaceLocalNodePermissionRequiredError extends AppError {
+  constructor() {
+    super(
+      "You do not have permission to use this local node",
+      StatusCodes.FORBIDDEN,
+      "WORKSPACE_LOCAL_NODE_PERMISSION_REQUIRED"
+    );
+    this.name = "WorkspaceLocalNodePermissionRequiredError";
+  }
+}
+
+export class WorkspaceBranchRequiredError extends AppError {
+  constructor() {
+    super(
+      "Worktree workspaces require branch",
+      StatusCodes.BAD_REQUEST,
+      "WORKSPACE_BRANCH_REQUIRED"
+    );
+    this.name = "WorkspaceBranchRequiredError";
+  }
+}

@@ -1,6 +1,5 @@
 import { z } from "zod";
-
-const nonEmptyStringSchema = z.string().trim().min(1);
+import { nonEmptyStringSchema } from "@/validation/common";
 const nodeMetadataSchema = z
   .object({
     os: nonEmptyStringSchema.optional(),

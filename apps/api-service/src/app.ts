@@ -9,6 +9,7 @@ import { handleAppError } from "@/middlewares/error";
 import { authRouter } from "@/routes/auth";
 import { nodeRouter } from "@/routes/node";
 import { organizationRouter } from "@/routes/organization";
+import { projectRouter } from "@/routes/project";
 import { systemRouter } from "@/routes/system";
 import { userRouter } from "@/routes/user";
 
@@ -27,5 +28,6 @@ protectedRouter.use("/*", requireAuthUser);
 protectedRouter.route("/", userRouter);
 protectedRouter.route("/", organizationRouter);
 protectedRouter.route("/", nodeRouter);
+protectedRouter.route("/", projectRouter);
 
 app.route("/", protectedRouter);

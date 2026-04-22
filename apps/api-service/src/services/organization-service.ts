@@ -64,6 +64,15 @@ export class OrganizationService {
     return null;
   }
 
+  async getOrganizationMemberUserIds(organizationId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ userId: organizationMembers.userId })
+      .from(organizationMembers)
+      .where(eq(organizationMembers.organizationId, organizationId));
+
+    return Array.from(new Set(rows.map((row) => row.userId)));
+  }
+
   async addOrganizationMember(input: {
     organizationId: string;
     actorUserId: string;
@@ -276,12 +285,7 @@ export class OrganizationService {
           id: newId(),
           name: input.name
         })
-        .returning({
-          id: organizations.id,
-          name: organizations.name,
-          createdAt: organizations.createdAt,
-          updatedAt: organizations.updatedAt
-        });
+        .returning();
 
       const organization = insertedOrganizations[0];
       if (!organization) {
