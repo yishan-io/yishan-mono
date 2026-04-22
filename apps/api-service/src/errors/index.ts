@@ -189,17 +189,6 @@ export class OrganizationMembershipRequiredError extends AppError {
   }
 }
 
-export class ProjectGitSourceFieldsRequiredError extends AppError {
-  constructor() {
-    super(
-      "Git projects require repoProvider, repoUrl, and repoKey",
-      StatusCodes.BAD_REQUEST,
-      "PROJECT_GIT_SOURCE_FIELDS_REQUIRED"
-    );
-    this.name = "ProjectGitSourceFieldsRequiredError";
-  }
-}
-
 export class ProjectInvalidGitUrlError extends AppError {
   constructor(repoUrl: string) {
     super("Invalid project repoUrl", StatusCodes.BAD_REQUEST, "PROJECT_INVALID_GIT_URL", { repoUrl });

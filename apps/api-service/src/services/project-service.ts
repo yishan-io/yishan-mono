@@ -4,8 +4,6 @@ import type { AppDb } from "@/db/client";
 import { nodes, organizationMembers, projects, workspaces } from "@/db/schema";
 import {
   OrganizationMembershipRequiredError,
-  ProjectGitSourceFieldsRequiredError,
-  ProjectInvalidGitUrlError,
   ProjectNotFoundError,
   WorkspaceBranchRequiredError,
   WorkspaceLocalNodePermissionRequiredError,
@@ -13,9 +11,10 @@ import {
   WorkspaceNodeNotFoundError
 } from "@/errors";
 import { newId } from "@/lib/id";
+import { inferRepoSource } from "@/lib/repo";
 import type { OrganizationService } from "@/services/organization-service";
 
-type ProjectSourceType = "git" | "none";
+type ProjectSourceType = "git" | "git-local" | "unknown";
 type WorkspaceKind = "primary" | "worktree";
 
 export type ProjectView = {
@@ -48,10 +47,10 @@ type CreateProjectInput = {
   organizationId: string;
   actorUserId: string;
   name: string;
-  sourceType: ProjectSourceType;
-  repoProvider?: string;
+  sourceTypeHint?: "unknown" | "git-local";
   repoUrl?: string;
-  repoKey?: string;
+  nodeId?: string;
+  localPath?: string;
 };
 
 type CreateWorkspaceInput = {
@@ -63,24 +62,6 @@ type CreateWorkspaceInput = {
   branch?: string;
   localPath: string;
 };
-
-function isValidGitUrl(value: string): boolean {
-  if (value.startsWith("git@") && value.includes(":")) {
-    return true;
-  }
-
-  try {
-    const parsed = new URL(value);
-    return (
-      parsed.protocol === "https:" ||
-      parsed.protocol === "http:" ||
-      parsed.protocol === "ssh:" ||
-      parsed.protocol === "git:"
-    );
-  } catch {
-    return false;
-  }
-}
 
 export class ProjectService {
   constructor(
@@ -99,49 +80,77 @@ export class ProjectService {
     }
 
     const name = input.name.trim();
-    const sourceType = input.sourceType;
+    const repoUrl = input.repoUrl?.trim() ?? null;
+    const sourceType: ProjectSourceType = repoUrl ? "git" : (input.sourceTypeHint ?? "unknown");
 
-    let repoProvider: string | null = input.repoProvider?.trim() ?? null;
-    let repoUrl: string | null = input.repoUrl?.trim() ?? null;
-    let repoKey: string | null = input.repoKey?.trim() ?? null;
+    let repoProvider: string | null = null;
+    let repoKey: string | null = null;
+    const nodeId = input.nodeId?.trim() ?? null;
+    const localPath = input.localPath?.trim() ?? null;
 
     if (sourceType === "git") {
-      if (!repoProvider || !repoUrl || !repoKey) {
-        throw new ProjectGitSourceFieldsRequiredError();
-      }
-
-      if (!isValidGitUrl(repoUrl)) {
-        throw new ProjectInvalidGitUrlError(repoUrl);
-      }
-    } else {
-      repoProvider = null;
-      repoUrl = null;
-      repoKey = null;
+      const inferred = inferRepoSource(repoUrl!);
+      repoProvider = inferred.repoProvider;
+      repoKey = inferred.repoKey;
     }
 
-    const insertedRows = await this.db
-      .insert(projects)
-      .values({
-        id: newId(),
-        name,
-        sourceType,
-        repoProvider,
-        repoUrl,
-        repoKey,
-        organizationId: input.organizationId,
-        createdByUserId: input.actorUserId
-      })
-      .returning();
+    return this.db.transaction(async (tx) => {
+      const insertedRows = await tx
+        .insert(projects)
+        .values({
+          id: newId(),
+          name,
+          sourceType,
+          repoProvider,
+          repoUrl,
+          repoKey,
+          organizationId: input.organizationId,
+          createdByUserId: input.actorUserId
+        })
+        .returning();
 
-    const project = insertedRows[0];
-    if (!project) {
-      throw new Error("Failed to create project");
-    }
+      const project = insertedRows[0];
+      if (!project) {
+        throw new Error("Failed to create project");
+      }
 
-    return {
-      ...project,
-      sourceType: project.sourceType as ProjectSourceType
-    };
+      if ((sourceType === "git" || sourceType === "git-local") && nodeId && localPath) {
+        const nodeRows = await tx
+          .select({ id: nodes.id, scope: nodes.scope, ownerUserId: nodes.ownerUserId })
+          .from(nodes)
+          .where(eq(nodes.id, nodeId!))
+          .limit(1);
+
+        const node = nodeRows[0];
+        if (!node) {
+          throw new WorkspaceNodeNotFoundError(nodeId!);
+        }
+
+        if (node.scope !== "local") {
+          throw new WorkspaceLocalNodeScopeInvalidError(nodeId!);
+        }
+
+        if (node.ownerUserId !== input.actorUserId) {
+          throw new WorkspaceLocalNodePermissionRequiredError();
+        }
+
+        await tx.insert(workspaces).values({
+          id: newId(),
+          organizationId: input.organizationId,
+          projectId: project.id,
+          userId: input.actorUserId,
+          nodeId: nodeId!,
+          kind: "primary",
+          branch: null,
+          localPath: localPath!
+        });
+      }
+
+      return {
+        ...project,
+        sourceType: project.sourceType as ProjectSourceType
+      };
+    });
   }
 
   async listProjects(input: { organizationId: string; actorUserId: string }): Promise<ProjectView[]> {

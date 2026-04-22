@@ -13,10 +13,10 @@ export const projectWorkspaceParamsSchema = z.object({
 
 export const createProjectBodySchema = z.object({
   name: nonEmptyStringSchema,
-  sourceType: z.enum(["git", "none"]),
-  repoProvider: nonEmptyStringSchema.optional(),
+  sourceTypeHint: z.enum(["unknown", "git-local"]).optional(),
   repoUrl: nonEmptyStringSchema.optional(),
-  repoKey: nonEmptyStringSchema.optional()
+  nodeId: nonEmptyStringSchema.optional(),
+  localPath: nonEmptyStringSchema.optional()
 });
 
 export const createWorkspaceBodySchema = z.object({

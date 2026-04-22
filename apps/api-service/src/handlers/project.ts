@@ -28,10 +28,10 @@ export async function createProjectHandler(
     actorUserId: actorUser.id,
     organizationId: params.orgId,
     name: body.name,
-    sourceType: body.sourceType,
-    repoProvider: body.repoProvider,
+    sourceTypeHint: body.sourceTypeHint,
     repoUrl: body.repoUrl,
-    repoKey: body.repoKey
+    nodeId: body.nodeId,
+    localPath: body.localPath
   });
 
   return c.json({ project }, StatusCodes.CREATED);
