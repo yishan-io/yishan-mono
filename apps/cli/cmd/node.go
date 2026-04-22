@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var apiNodeListCmd = &cobra.Command{
+var nodeListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List organization nodes",
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -15,11 +15,11 @@ var apiNodeListCmd = &cobra.Command{
 			return err
 		}
 
-		return newAPIClient().doJSON(http.MethodGet, "/orgs/"+orgID+"/nodes", nil)
+		return doAPIJSON(http.MethodGet, "/orgs/"+orgID+"/nodes", nil)
 	},
 }
 
-var apiNodeCreateCmd = &cobra.Command{
+var nodeCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create organization node",
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -66,11 +66,11 @@ var apiNodeCreateCmd = &cobra.Command{
 			payload["metadata"] = metadata
 		}
 
-		return newAPIClient().doJSON(http.MethodPost, "/orgs/"+orgID+"/nodes", payload)
+		return doAPIJSON(http.MethodPost, "/orgs/"+orgID+"/nodes", payload)
 	},
 }
 
-var apiNodeDeleteCmd = &cobra.Command{
+var nodeDeleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete organization node",
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -83,7 +83,7 @@ var apiNodeDeleteCmd = &cobra.Command{
 			return err
 		}
 
-		return newAPIClient().doJSON(http.MethodDelete, "/orgs/"+orgID+"/nodes/"+nodeID, nil)
+		return doAPIJSON(http.MethodDelete, "/orgs/"+orgID+"/nodes/"+nodeID, nil)
 	},
 }
 
@@ -91,24 +91,24 @@ var nodeCmd = &cobra.Command{Use: "node", Short: "Node operations"}
 
 func init() {
 	rootCmd.AddCommand(nodeCmd)
-	nodeCmd.AddCommand(apiNodeListCmd)
-	nodeCmd.AddCommand(apiNodeCreateCmd)
-	nodeCmd.AddCommand(apiNodeDeleteCmd)
+	nodeCmd.AddCommand(nodeListCmd)
+	nodeCmd.AddCommand(nodeCreateCmd)
+	nodeCmd.AddCommand(nodeDeleteCmd)
 
-	apiNodeListCmd.Flags().String("org-id", "", "organization ID")
-	cobra.CheckErr(apiNodeListCmd.MarkFlagRequired("org-id"))
+	nodeListCmd.Flags().String("org-id", "", "organization ID")
+	cobra.CheckErr(nodeListCmd.MarkFlagRequired("org-id"))
 
-	apiNodeCreateCmd.Flags().String("org-id", "", "organization ID")
-	apiNodeCreateCmd.Flags().String("name", "", "node name")
-	apiNodeCreateCmd.Flags().String("scope", "remote", "node scope (local|remote)")
-	apiNodeCreateCmd.Flags().String("endpoint", "", "node endpoint URL")
-	apiNodeCreateCmd.Flags().String("metadata-os", "", "node OS metadata")
-	apiNodeCreateCmd.Flags().String("metadata-version", "", "node version metadata")
-	cobra.CheckErr(apiNodeCreateCmd.MarkFlagRequired("org-id"))
-	cobra.CheckErr(apiNodeCreateCmd.MarkFlagRequired("name"))
+	nodeCreateCmd.Flags().String("org-id", "", "organization ID")
+	nodeCreateCmd.Flags().String("name", "", "node name")
+	nodeCreateCmd.Flags().String("scope", "remote", "node scope (local|remote)")
+	nodeCreateCmd.Flags().String("endpoint", "", "node endpoint URL")
+	nodeCreateCmd.Flags().String("metadata-os", "", "node OS metadata")
+	nodeCreateCmd.Flags().String("metadata-version", "", "node version metadata")
+	cobra.CheckErr(nodeCreateCmd.MarkFlagRequired("org-id"))
+	cobra.CheckErr(nodeCreateCmd.MarkFlagRequired("name"))
 
-	apiNodeDeleteCmd.Flags().String("org-id", "", "organization ID")
-	apiNodeDeleteCmd.Flags().String("node-id", "", "node ID")
-	cobra.CheckErr(apiNodeDeleteCmd.MarkFlagRequired("org-id"))
-	cobra.CheckErr(apiNodeDeleteCmd.MarkFlagRequired("node-id"))
+	nodeDeleteCmd.Flags().String("org-id", "", "organization ID")
+	nodeDeleteCmd.Flags().String("node-id", "", "node ID")
+	cobra.CheckErr(nodeDeleteCmd.MarkFlagRequired("org-id"))
+	cobra.CheckErr(nodeDeleteCmd.MarkFlagRequired("node-id"))
 }

@@ -10,7 +10,7 @@ var healthCmd = &cobra.Command{
 	Use:   "health",
 	Short: "Check API health",
 	RunE: func(_ *cobra.Command, _ []string) error {
-		return newAPIClient().doJSON(http.MethodGet, "/health", nil)
+		return doAPIJSON(http.MethodGet, "/health", nil)
 	},
 }
 
@@ -18,7 +18,7 @@ var meCmd = &cobra.Command{
 	Use:   "me",
 	Short: "Show current authenticated user",
 	RunE: func(_ *cobra.Command, _ []string) error {
-		return newAPIClient().doJSON(http.MethodGet, "/me", nil)
+		return doAPIJSON(http.MethodGet, "/me", nil)
 	},
 }
 

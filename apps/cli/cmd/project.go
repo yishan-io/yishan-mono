@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var apiProjectListCmd = &cobra.Command{
+var projectListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List organization projects",
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -15,11 +15,11 @@ var apiProjectListCmd = &cobra.Command{
 			return err
 		}
 
-		return newAPIClient().doJSON(http.MethodGet, "/orgs/"+orgID+"/projects", nil)
+		return doAPIJSON(http.MethodGet, "/orgs/"+orgID+"/projects", nil)
 	},
 }
 
-var apiProjectCreateCmd = &cobra.Command{
+var projectCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create organization project",
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -64,7 +64,7 @@ var apiProjectCreateCmd = &cobra.Command{
 			payload["localPath"] = localPath
 		}
 
-		return newAPIClient().doJSON(http.MethodPost, "/orgs/"+orgID+"/projects", payload)
+		return doAPIJSON(http.MethodPost, "/orgs/"+orgID+"/projects", payload)
 	},
 }
 
@@ -72,18 +72,18 @@ var projectCmd = &cobra.Command{Use: "project", Short: "Project operations"}
 
 func init() {
 	rootCmd.AddCommand(projectCmd)
-	projectCmd.AddCommand(apiProjectListCmd)
-	projectCmd.AddCommand(apiProjectCreateCmd)
+	projectCmd.AddCommand(projectListCmd)
+	projectCmd.AddCommand(projectCreateCmd)
 
-	apiProjectListCmd.Flags().String("org-id", "", "organization ID")
-	cobra.CheckErr(apiProjectListCmd.MarkFlagRequired("org-id"))
+	projectListCmd.Flags().String("org-id", "", "organization ID")
+	cobra.CheckErr(projectListCmd.MarkFlagRequired("org-id"))
 
-	apiProjectCreateCmd.Flags().String("org-id", "", "organization ID")
-	apiProjectCreateCmd.Flags().String("name", "", "project name")
-	apiProjectCreateCmd.Flags().String("source-type-hint", "", "source type hint (unknown|git-local)")
-	apiProjectCreateCmd.Flags().String("repo-url", "", "repository URL")
-	apiProjectCreateCmd.Flags().String("node-id", "", "node ID")
-	apiProjectCreateCmd.Flags().String("local-path", "", "local path")
-	cobra.CheckErr(apiProjectCreateCmd.MarkFlagRequired("org-id"))
-	cobra.CheckErr(apiProjectCreateCmd.MarkFlagRequired("name"))
+	projectCreateCmd.Flags().String("org-id", "", "organization ID")
+	projectCreateCmd.Flags().String("name", "", "project name")
+	projectCreateCmd.Flags().String("source-type-hint", "", "source type hint (unknown|git-local)")
+	projectCreateCmd.Flags().String("repo-url", "", "repository URL")
+	projectCreateCmd.Flags().String("node-id", "", "node ID")
+	projectCreateCmd.Flags().String("local-path", "", "local path")
+	cobra.CheckErr(projectCreateCmd.MarkFlagRequired("org-id"))
+	cobra.CheckErr(projectCreateCmd.MarkFlagRequired("name"))
 }

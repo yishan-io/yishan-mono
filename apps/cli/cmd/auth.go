@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var apiRefreshCmd = &cobra.Command{
+var refreshCmd = &cobra.Command{
 	Use:   "refresh",
 	Short: "Refresh access token",
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -15,13 +15,13 @@ var apiRefreshCmd = &cobra.Command{
 			return err
 		}
 
-		return newAPIClient().doJSON(http.MethodPost, "/auth/refresh", map[string]string{
+		return doAPIJSON(http.MethodPost, "/auth/refresh", map[string]string{
 			"refreshToken": refreshToken,
 		})
 	},
 }
 
-var apiRevokeCmd = &cobra.Command{
+var revokeCmd = &cobra.Command{
 	Use:   "revoke",
 	Short: "Revoke refresh token",
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -30,7 +30,7 @@ var apiRevokeCmd = &cobra.Command{
 			return err
 		}
 
-		return newAPIClient().doJSON(http.MethodPost, "/auth/revoke", map[string]string{
+		return doAPIJSON(http.MethodPost, "/auth/revoke", map[string]string{
 			"refreshToken": refreshToken,
 		})
 	},
@@ -43,11 +43,11 @@ var authCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(authCmd)
-	authCmd.AddCommand(apiRefreshCmd)
-	authCmd.AddCommand(apiRevokeCmd)
+	authCmd.AddCommand(refreshCmd)
+	authCmd.AddCommand(revokeCmd)
 
-	apiRefreshCmd.Flags().String("refresh-token", "", "refresh token")
-	apiRevokeCmd.Flags().String("refresh-token", "", "refresh token")
-	cobra.CheckErr(apiRefreshCmd.MarkFlagRequired("refresh-token"))
-	cobra.CheckErr(apiRevokeCmd.MarkFlagRequired("refresh-token"))
+	refreshCmd.Flags().String("refresh-token", "", "refresh token")
+	revokeCmd.Flags().String("refresh-token", "", "refresh token")
+	cobra.CheckErr(refreshCmd.MarkFlagRequired("refresh-token"))
+	cobra.CheckErr(revokeCmd.MarkFlagRequired("refresh-token"))
 }

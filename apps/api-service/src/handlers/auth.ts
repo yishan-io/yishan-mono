@@ -10,6 +10,37 @@ import {
 } from "@/auth/http";
 import type { AppContext } from "@/hono";
 
+function isLoopbackHost(hostname: string): boolean {
+  return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1";
+}
+
+function parseCliRedirectUri(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return null;
+  }
+
+  if (parsed.protocol !== "http:") {
+    return null;
+  }
+
+  if (!isLoopbackHost(parsed.hostname)) {
+    return null;
+  }
+
+  if (!parsed.port) {
+    return null;
+  }
+
+  return parsed.toString();
+}
+
 export async function startOAuthHandler(c: AppContext) {
   const providerParam = c.get("oauthProvider");
   const config = c.get("config");
@@ -18,11 +49,26 @@ export async function startOAuthHandler(c: AppContext) {
     config
   );
 
+  const responseModeParam = c.req.query("mode");
+  const responseMode = responseModeParam === "token" || responseModeParam === "cli" ? responseModeParam : undefined;
+  const cliRedirectUri = parseCliRedirectUri(c.req.query("redirect_uri"));
+  const cliState = c.req.query("state");
+
+  if (responseMode === "cli" && (!cliRedirectUri || !cliState)) {
+    return c.json(
+      { error: "mode=cli requires valid redirect_uri and state query parameters" },
+      StatusCodes.BAD_REQUEST
+    );
+  }
+
   const payload: OAuthCookiePayload = {
     provider: providerParam,
     state,
     codeVerifier,
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    responseMode,
+    cliRedirectUri: responseMode === "cli" ? cliRedirectUri ?? undefined : undefined,
+    cliState: responseMode === "cli" ? cliState ?? undefined : undefined
   };
 
   await setSignedCookie(c, OAUTH_COOKIE_NAME, JSON.stringify(payload), config.sessionSecret, {
@@ -78,7 +124,7 @@ export async function callbackOAuthHandler(c: AppContext) {
 
   const userId = await authService.resolveUserIdForOAuthProfile(profile);
 
-  const responseMode = c.req.query("mode");
+  const responseMode = oauthContext.responseMode ?? c.req.query("mode");
 
   const session = await authService.createWebSession(userId, config.sessionTtlDays);
   setCookie(c, SESSION_COOKIE_NAME, session.token, {
@@ -89,6 +135,24 @@ export async function callbackOAuthHandler(c: AppContext) {
   if (responseMode === "token") {
     const tokens = await authService.issueApiTokens(userId);
     return c.json({ userId, tokens });
+  }
+
+  if (responseMode === "cli") {
+    if (!oauthContext.cliRedirectUri || !oauthContext.cliState) {
+      return c.json({ error: "Invalid OAuth CLI context" }, StatusCodes.BAD_REQUEST);
+    }
+
+    const tokens = await authService.issueApiTokens(userId);
+    const redirectUrl = new URL(oauthContext.cliRedirectUri);
+    redirectUrl.searchParams.set("state", oauthContext.cliState);
+    redirectUrl.searchParams.set("tokenType", "Bearer");
+    redirectUrl.searchParams.set("accessToken", tokens.accessToken);
+    redirectUrl.searchParams.set("accessTokenExpiresIn", String(tokens.accessTokenExpiresIn));
+    redirectUrl.searchParams.set("accessTokenExpiresAt", tokens.accessTokenExpiresAt);
+    redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
+    redirectUrl.searchParams.set("refreshTokenExpiresAt", tokens.refreshTokenExpiresAt);
+
+    return c.redirect(redirectUrl.toString(), StatusCodes.MOVED_TEMPORARILY);
   }
 
   return c.redirect(new URL("/", config.appBaseUrl).toString(), StatusCodes.MOVED_TEMPORARILY);

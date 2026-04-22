@@ -64,6 +64,7 @@ Notes:
 
 - OAuth login only accepts provider accounts with verified email addresses.
 - Account resolution order is: provider account link first, then local user by email.
+- `GET /auth/:provider` supports `mode=cli&redirect_uri=http://127.0.0.1:<port>/callback&state=<random>` and redirects back with API tokens for CLI login flows.
 - `POST /orgs` accepts `{ "name": string, "memberUserIds"?: string[] }` and always includes the authenticated user as an `owner` member.
 - `DELETE /orgs/:orgId` is owner-only and removes the org with cascading memberships.
 - `POST /orgs/:orgId/members` accepts `{ "userId": string, "role"?: "member" | "admin" }` and is allowed for org owners/admins.

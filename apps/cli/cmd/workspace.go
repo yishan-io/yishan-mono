@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var apiWorkspaceListCmd = &cobra.Command{
+var workspaceListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List project workspaces",
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -20,11 +20,11 @@ var apiWorkspaceListCmd = &cobra.Command{
 		}
 
 		path := "/orgs/" + orgID + "/projects/" + projectID + "/workspaces"
-		return newAPIClient().doJSON(http.MethodGet, path, nil)
+		return doAPIJSON(http.MethodGet, path, nil)
 	},
 }
 
-var apiWorkspaceCreateCmd = &cobra.Command{
+var workspaceCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create project workspace",
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -63,7 +63,7 @@ var apiWorkspaceCreateCmd = &cobra.Command{
 		}
 
 		path := "/orgs/" + orgID + "/projects/" + projectID + "/workspaces"
-		return newAPIClient().doJSON(http.MethodPost, path, payload)
+		return doAPIJSON(http.MethodPost, path, payload)
 	},
 }
 
@@ -71,22 +71,22 @@ var workspaceCmd = &cobra.Command{Use: "workspace", Short: "Workspace operations
 
 func init() {
 	rootCmd.AddCommand(workspaceCmd)
-	workspaceCmd.AddCommand(apiWorkspaceListCmd)
-	workspaceCmd.AddCommand(apiWorkspaceCreateCmd)
+	workspaceCmd.AddCommand(workspaceListCmd)
+	workspaceCmd.AddCommand(workspaceCreateCmd)
 
-	apiWorkspaceListCmd.Flags().String("org-id", "", "organization ID")
-	apiWorkspaceListCmd.Flags().String("project-id", "", "project ID")
-	cobra.CheckErr(apiWorkspaceListCmd.MarkFlagRequired("org-id"))
-	cobra.CheckErr(apiWorkspaceListCmd.MarkFlagRequired("project-id"))
+	workspaceListCmd.Flags().String("org-id", "", "organization ID")
+	workspaceListCmd.Flags().String("project-id", "", "project ID")
+	cobra.CheckErr(workspaceListCmd.MarkFlagRequired("org-id"))
+	cobra.CheckErr(workspaceListCmd.MarkFlagRequired("project-id"))
 
-	apiWorkspaceCreateCmd.Flags().String("org-id", "", "organization ID")
-	apiWorkspaceCreateCmd.Flags().String("project-id", "", "project ID")
-	apiWorkspaceCreateCmd.Flags().String("node-id", "", "node ID")
-	apiWorkspaceCreateCmd.Flags().String("local-path", "", "local path")
-	apiWorkspaceCreateCmd.Flags().String("kind", "primary", "workspace kind (primary|worktree)")
-	apiWorkspaceCreateCmd.Flags().String("branch", "", "branch name for worktree")
-	cobra.CheckErr(apiWorkspaceCreateCmd.MarkFlagRequired("org-id"))
-	cobra.CheckErr(apiWorkspaceCreateCmd.MarkFlagRequired("project-id"))
-	cobra.CheckErr(apiWorkspaceCreateCmd.MarkFlagRequired("node-id"))
-	cobra.CheckErr(apiWorkspaceCreateCmd.MarkFlagRequired("local-path"))
+	workspaceCreateCmd.Flags().String("org-id", "", "organization ID")
+	workspaceCreateCmd.Flags().String("project-id", "", "project ID")
+	workspaceCreateCmd.Flags().String("node-id", "", "node ID")
+	workspaceCreateCmd.Flags().String("local-path", "", "local path")
+	workspaceCreateCmd.Flags().String("kind", "primary", "workspace kind (primary|worktree)")
+	workspaceCreateCmd.Flags().String("branch", "", "branch name for worktree")
+	cobra.CheckErr(workspaceCreateCmd.MarkFlagRequired("org-id"))
+	cobra.CheckErr(workspaceCreateCmd.MarkFlagRequired("project-id"))
+	cobra.CheckErr(workspaceCreateCmd.MarkFlagRequired("node-id"))
+	cobra.CheckErr(workspaceCreateCmd.MarkFlagRequired("local-path"))
 }

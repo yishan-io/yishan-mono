@@ -1,4 +1,4 @@
-package cmd
+package apiclient
 
 import (
 	"bytes"
@@ -8,27 +8,25 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/spf13/viper"
 )
 
-type apiClient struct {
+type Client struct {
 	baseURL string
 	token   string
 	client  *http.Client
 }
 
-func newAPIClient() *apiClient {
-	return &apiClient{
-		baseURL: strings.TrimRight(viper.GetString("api_base_url"), "/"),
-		token:   strings.TrimSpace(viper.GetString("api_token")),
+func New(baseURL string, token string) *Client {
+	return &Client{
+		baseURL: strings.TrimRight(baseURL, "/"),
+		token:   strings.TrimSpace(token),
 		client: &http.Client{
 			Timeout: 15 * time.Second,
 		},
 	}
 }
 
-func (c *apiClient) doJSON(method string, path string, body any) error {
+func (c *Client) DoJSON(method string, path string, body any) error {
 	var bodyReader io.Reader
 	if body != nil {
 		payload, err := json.Marshal(body)

@@ -73,6 +73,7 @@ Supported JSON-RPC methods:
 
 API-backed subcommands:
 
+- `login --provider google|github`
 - `health`
 - `me`
 - `auth refresh --refresh-token <token>`
