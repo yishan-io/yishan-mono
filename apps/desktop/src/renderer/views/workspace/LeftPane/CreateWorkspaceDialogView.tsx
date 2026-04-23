@@ -19,10 +19,10 @@ import {
   resolveTargetBranchForCreate,
   suggestTargetBranchName,
 } from "../../../helpers/workspaceBranchNaming";
+import { renderProjectIcon } from "../../../components/projectIcons";
 import { useCommands } from "../../../hooks/useCommands";
 import { gitBranchStore, resolveGitBranchPrefix } from "../../../store/gitBranchStore";
 import { workspaceStore } from "../../../store/workspaceStore";
-import { renderRepoIcon } from "./repoIcons";
 
 type CreateWorkspaceDialogViewProps = {
   open: boolean;
@@ -382,7 +382,7 @@ export function CreateWorkspaceDialogView({
                               ),
                             }}
                           >
-                            {renderRepoIcon(selectedValueRepo?.icon, 12)}
+                            {renderProjectIcon(selectedValueRepo?.icon, 12)}
                           </Avatar>
                           <Typography variant="body2" sx={{ fontWeight: 500 }}>
                             {repoName}
@@ -405,7 +405,7 @@ export function CreateWorkspaceDialogView({
                           color: theme.palette.getContrastText(repo.iconBgColor ?? theme.palette.primary.main),
                         }}
                       >
-                        {renderRepoIcon(repo.icon, 12)}
+                        {renderProjectIcon(repo.icon, 12)}
                       </Avatar>
                       <Typography variant="body2">{repo.name}</Typography>
                     </Stack>

@@ -12,7 +12,7 @@ import {
 } from "../../../../shared/contracts/externalApps";
 import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../commands/workspaceCommands";
 import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextMenu";
-import { RepoRow } from "../../../components/RepoRow";
+import { ProjectRow } from "../../../components/ProjectRow";
 import { WorkspaceRow, type WorkspaceRowIndicator } from "../../../components/WorkspaceRow";
 import { useCommands } from "../../../hooks/useCommands";
 import { useContextMenuState } from "../../../hooks/useContextMenuState";
@@ -22,8 +22,8 @@ import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay"
 import { type WorkspaceUnreadTone, chatStore } from "../../../store/chatStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
-import { RepoConfigDialogView } from "./RepoConfigDialogView";
-import { RepoDeleteDialogView } from "./RepoDeleteDialogView";
+import { ProjectConfigDialogView } from "./ProjectConfigDialogView";
+import { ProjectDeleteDialogView } from "./ProjectDeleteDialogView";
 import { WorkspaceDeleteDialogView } from "./WorkspaceDeleteDialogView";
 import { WorkspaceInfoPopperView } from "./WorkspaceInfoPopperView";
 
@@ -68,7 +68,7 @@ function resolveWorkspaceIndicator(input: {
 }
 
 /** Renders repository rows and nested workspace rows with per-repo fold controls. */
-export function RepoListView() {
+export function ProjectListView() {
   const workspaceInfoCloseDelayMs = 120;
   const { t } = useTranslation();
   const repos = workspaceStore((state) => state.repos);
@@ -598,7 +598,7 @@ export function RepoListView() {
 
           return (
             <Box key={repo.id} sx={{ mb: 0.5 }}>
-              <RepoRow
+              <ProjectRow
                 repo={repo}
                 isSelected={selectedRepoId === repo.id}
                 isFolded={isRepoFolded}
@@ -712,7 +712,7 @@ export function RepoListView() {
           setRenameWorkspaceContext(null);
         }}
       />
-      <RepoConfigDialogView
+      <ProjectConfigDialogView
         open={isRepoConfigOpen}
         repoId={repoConfigRepoId}
         onClose={() => {
@@ -738,7 +738,7 @@ export function RepoListView() {
           });
         }}
       />
-      <RepoDeleteDialogView
+      <ProjectDeleteDialogView
         open={Boolean(pendingRepoDeletion)}
         repoName={pendingRepoDeletion?.repoName ?? ""}
         isDeleting={isDeletingRepo}

@@ -63,7 +63,7 @@ vi.mock("../../hooks/useCommands", () => ({
   },
 }));
 
-vi.mock("../../mod/platform", () => ({
+vi.mock("../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
@@ -75,8 +75,8 @@ vi.mock("../../commands/fileCommands", () => ({
   writeFile: vi.fn(),
 }));
 
-vi.mock("../../components/RepoDiffViewer", () => ({
-  RepoDiffViewer: () => <div data-testid="repo-diff-viewer" />,
+vi.mock("../../components/ProjectDiffViewer", () => ({
+  ProjectDiffViewer: () => <div data-testid="repo-diff-viewer" />,
 }));
 
 vi.mock("../../components/fileTreeIcons", () => ({

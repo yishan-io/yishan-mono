@@ -2,9 +2,9 @@ import { Avatar, Box, IconButton, ListItem, ListItemButton, Tooltip, Typography,
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { LuChevronDown, LuChevronRight, LuPlus } from "react-icons/lu";
 import type { Repo } from "../store/types";
-import { renderRepoIcon } from "../views/workspace/LeftPane/repoIcons";
+import { renderProjectIcon } from "./projectIcons";
 
-type RepoRowProps = {
+type ProjectRowProps = {
   repo: Repo;
   isSelected: boolean;
   isFolded: boolean;
@@ -18,7 +18,7 @@ type RepoRowProps = {
 };
 
 /** Renders one repository row with quick actions and fold toggle. */
-export function RepoRow({
+export function ProjectRow({
   repo,
   isSelected,
   isFolded,
@@ -29,7 +29,7 @@ export function RepoRow({
   onContextMenu,
   onAddWorkspace,
   onToggleFold,
-}: RepoRowProps) {
+}: ProjectRowProps) {
   const theme = useTheme();
 
   return (
@@ -64,7 +64,7 @@ export function RepoRow({
               fontWeight: 700,
             }}
           >
-            {renderRepoIcon(repo.icon, 12)}
+            {renderProjectIcon(repo.icon, 12)}
           </Avatar>
           <Box sx={{ minWidth: 0, flexGrow: 1 }}>
             <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>

@@ -18,7 +18,7 @@ import { useTranslation } from "react-i18next";
 import { LuFolder, LuFolderOpen, LuGlobe } from "react-icons/lu";
 import { useCommands } from "../../../hooks/useCommands";
 
-type CreateRepoDialogViewProps = {
+type CreateProjectDialogViewProps = {
   open: boolean;
   onClose: () => void;
 };
@@ -49,7 +49,7 @@ function isValidRepoKey(value: string): boolean {
   return /^[a-z0-9-]+$/.test(value);
 }
 
-export function CreateRepoDialogView({ open, onClose }: CreateRepoDialogViewProps) {
+export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogViewProps) {
   const { t } = useTranslation();
   const { createRepo, openLocalFolderDialog } = useCommands();
   const [repoDraft, setRepoDraft] = useState({

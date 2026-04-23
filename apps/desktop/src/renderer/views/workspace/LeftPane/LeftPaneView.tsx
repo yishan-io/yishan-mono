@@ -6,8 +6,8 @@ import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay"
 import { workspaceStore } from "../../../store/workspaceStore";
 import { AppMenuView } from "../../layout/AppMenuView";
 import { LeftPaneResourceUsageControl } from "./LeftPaneResourceUsageControl";
-import { RepoFilterPopoverView } from "./RepoFilterPopoverView";
-import { RepoListView } from "./RepoListView";
+import { ProjectFilterPopoverView } from "./ProjectFilterPopoverView";
+import { ProjectListView } from "./ProjectListView";
 
 const paneHeaderSx = {
   minHeight: 42,
@@ -61,7 +61,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
         </Box>
         <Stack direction="row" alignItems="center" spacing={0.25}>
           <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center" }}>
-            <RepoFilterPopoverView />
+            <ProjectFilterPopoverView />
           </Box>
           <Tooltip title={toggleLeftTooltipLabel} arrow>
             <span>
@@ -78,7 +78,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
           </Tooltip>
         </Stack>
       </Box>
-      <RepoListView />
+      <ProjectListView />
       {filteredRepos.length === 0 ? (
         <Box sx={{ px: 2, pb: 1.5 }}>
           <Typography variant="caption" color="text.secondary">

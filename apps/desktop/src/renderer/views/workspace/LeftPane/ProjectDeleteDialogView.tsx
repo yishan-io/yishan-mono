@@ -1,7 +1,7 @@
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 
-type RepoDeleteDialogViewProps = {
+type ProjectDeleteDialogViewProps = {
   open: boolean;
   repoName: string;
   isDeleting: boolean;
@@ -10,7 +10,13 @@ type RepoDeleteDialogViewProps = {
 };
 
 /** Renders repository deletion confirmation dialog. */
-export function RepoDeleteDialogView({ open, repoName, isDeleting, onCancel, onConfirm }: RepoDeleteDialogViewProps) {
+export function ProjectDeleteDialogView({
+  open,
+  repoName,
+  isDeleting,
+  onCancel,
+  onConfirm,
+}: ProjectDeleteDialogViewProps) {
   const { t } = useTranslation();
 
   return (

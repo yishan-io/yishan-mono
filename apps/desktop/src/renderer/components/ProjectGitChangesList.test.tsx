@@ -2,16 +2,16 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RepoGitChangesList } from "./RepoGitChangesList";
+import { ProjectGitChangesList } from "./ProjectGitChangesList";
 
 afterEach(() => {
   cleanup();
 });
 
-describe("RepoGitChangesList", () => {
+describe("ProjectGitChangesList", () => {
   it("shows unstage actions for files in the staged section", () => {
     const view = render(
-      <RepoGitChangesList
+      <ProjectGitChangesList
         sections={[
           {
             id: "staged",
@@ -30,7 +30,7 @@ describe("RepoGitChangesList", () => {
 
   it("keeps stage actions for files in unstaged sections", () => {
     const view = render(
-      <RepoGitChangesList
+      <ProjectGitChangesList
         sections={[
           {
             id: "unstaged",
@@ -49,7 +49,7 @@ describe("RepoGitChangesList", () => {
 
   it("uses discard wording for untracked section restore actions", () => {
     render(
-      <RepoGitChangesList
+      <ProjectGitChangesList
         sections={[
           {
             id: "untracked",
@@ -67,7 +67,7 @@ describe("RepoGitChangesList", () => {
 
   it("shows question-mark badge for untracked files", () => {
     render(
-      <RepoGitChangesList
+      <ProjectGitChangesList
         sections={[
           {
             id: "untracked",
@@ -89,7 +89,7 @@ describe("RepoGitChangesList", () => {
 
   it("hides stage and revert actions in read-only mode", () => {
     render(
-      <RepoGitChangesList
+      <ProjectGitChangesList
         readOnly
         sections={[
           {
@@ -112,7 +112,7 @@ describe("RepoGitChangesList", () => {
       "docs/guides/really/deep/path/with/a-very-very-very-very-very-very-long-filename-for-overflow-check.ts";
 
     render(
-      <RepoGitChangesList
+      <ProjectGitChangesList
         sections={[
           {
             id: "unstaged",
@@ -139,7 +139,7 @@ describe("RepoGitChangesList", () => {
     const longFolder = "docs/guides/really/deep/path/that-should-not-push-the-panel-layout-horizontally";
 
     render(
-      <RepoGitChangesList
+      <ProjectGitChangesList
         sections={[
           {
             id: "unstaged",
@@ -167,7 +167,7 @@ describe("RepoGitChangesList", () => {
     const onCopyRelativeFilePath = vi.fn();
 
     const view = render(
-      <RepoGitChangesList
+      <ProjectGitChangesList
         sections={[
           {
             id: "staged",
@@ -209,7 +209,7 @@ describe("RepoGitChangesList", () => {
     const onTrackFile = vi.fn();
 
     const view = render(
-      <RepoGitChangesList
+      <ProjectGitChangesList
         sections={[
           {
             id: "unstaged",
@@ -233,7 +233,7 @@ describe("RepoGitChangesList", () => {
     const onMoveFile = vi.fn();
 
     render(
-      <RepoGitChangesList
+      <ProjectGitChangesList
         sections={[
           {
             id: "staged",
@@ -261,7 +261,7 @@ describe("RepoGitChangesList", () => {
     const onMoveFile = vi.fn();
 
     render(
-      <RepoGitChangesList
+      <ProjectGitChangesList
         sections={[
           {
             id: "unstaged",
@@ -289,7 +289,7 @@ describe("RepoGitChangesList", () => {
     const onMoveFiles = vi.fn();
 
     render(
-      <RepoGitChangesList
+      <ProjectGitChangesList
         sections={[
           {
             id: "staged",
@@ -329,7 +329,7 @@ describe("RepoGitChangesList", () => {
 
   it("allows folding and expanding folders in untracked section", () => {
     render(
-      <RepoGitChangesList
+      <ProjectGitChangesList
         sections={[
           {
             id: "untracked",

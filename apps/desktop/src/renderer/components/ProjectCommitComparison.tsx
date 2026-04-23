@@ -1,7 +1,7 @@
 import { Autocomplete, Box, LinearProgress, TextField, Typography } from "@mui/material";
 import { LuArrowRight } from "react-icons/lu";
 
-export type RepoCommitComparisonCommit = {
+export type ProjectCommitComparisonCommit = {
   hash: string;
   shortHash: string;
   authorName: string;
@@ -10,27 +10,27 @@ export type RepoCommitComparisonCommit = {
   changedFiles: string[];
 };
 
-export type RepoCommitComparisonData = {
+export type ProjectCommitComparisonData = {
   currentBranch: string;
   targetBranch: string;
   allChangedFiles: string[];
-  commits: RepoCommitComparisonCommit[];
+  commits: ProjectCommitComparisonCommit[];
 };
 
-export type RepoCommitComparisonSelection = "uncommitted" | "all" | string;
+export type ProjectCommitComparisonSelection = "uncommitted" | "all" | string;
 
-type RepoComparisonScopeOption = {
-  value: RepoCommitComparisonSelection;
+type ProjectComparisonScopeOption = {
+  value: ProjectCommitComparisonSelection;
   label: string;
 };
 
-type RepoCommitComparisonProps = {
-  comparison: RepoCommitComparisonData;
+type ProjectCommitComparisonProps = {
+  comparison: ProjectCommitComparisonData;
   targetBranch: string;
-  selectedComparison?: RepoCommitComparisonSelection;
+  selectedComparison?: ProjectCommitComparisonSelection;
   onSelectUncommitted?: () => void;
   onSelectAll?: () => void;
-  onSelectCommit?: (commit: RepoCommitComparisonCommit) => void;
+  onSelectCommit?: (commit: ProjectCommitComparisonCommit) => void;
   isTargetBranchLoading?: boolean;
   comparisonScopeAriaLabel?: string;
 };
@@ -74,12 +74,12 @@ export function formatRelativeCommitTime(committedAt: string, nowMs = Date.now()
 }
 
 /** Builds compact scope options with uncommitted, aggregate, and per-commit entries. */
-function buildComparisonScopeOptions(comparison: RepoCommitComparisonData): RepoComparisonScopeOption[] {
+function buildComparisonScopeOptions(comparison: ProjectCommitComparisonData): ProjectComparisonScopeOption[] {
   const dedupedAllChangedFileCount = new Set(
     comparison.allChangedFiles.map((path) => path.trim().replace(/\\/g, "/")).filter((path) => path.length > 0),
   ).size;
 
-  const scopeOptions: RepoComparisonScopeOption[] = [
+  const scopeOptions: ProjectComparisonScopeOption[] = [
     {
       value: "uncommitted",
       label: "Uncommitted",
@@ -101,7 +101,7 @@ function buildComparisonScopeOptions(comparison: RepoCommitComparisonData): Repo
 }
 
 /** Renders one compact current-to-target branch comparison control group in the Changes tab. */
-export function RepoCommitComparison({
+export function ProjectCommitComparison({
   comparison,
   targetBranch,
   selectedComparison,
@@ -110,14 +110,14 @@ export function RepoCommitComparison({
   onSelectCommit,
   isTargetBranchLoading = false,
   comparisonScopeAriaLabel = "Change scope",
-}: RepoCommitComparisonProps) {
+}: ProjectCommitComparisonProps) {
   const normalizedTargetBranch = targetBranch.trim();
   if (!normalizedTargetBranch) {
     return null;
   }
 
   /** Selects one commit row so the changes list can render files for that commit. */
-  const handleSelectCommit = (commit: RepoCommitComparisonCommit) => {
+  const handleSelectCommit = (commit: ProjectCommitComparisonCommit) => {
     onSelectCommit?.(commit);
   };
 
@@ -136,7 +136,7 @@ export function RepoCommitComparison({
     comparisonScopeOptions.find((option) => option.value === selectedComparison) ?? comparisonScopeOptions[0];
 
   /** Handles compact scope selection and forwards it to the appropriate callback. */
-  const handleSelectComparisonScope = (_event: unknown, option: RepoComparisonScopeOption | null) => {
+  const handleSelectComparisonScope = (_event: unknown, option: ProjectComparisonScopeOption | null) => {
     if (!option) {
       return;
     }

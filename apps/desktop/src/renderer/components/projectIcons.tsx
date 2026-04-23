@@ -40,12 +40,12 @@ import {
   LuWrench,
 } from "react-icons/lu";
 
-type RepoIconOption = {
+type ProjectIconOption = {
   id: string;
   Icon: IconType;
 };
 
-export const REPO_ICON_OPTIONS: RepoIconOption[] = [
+export const PROJECT_ICON_OPTIONS: ProjectIconOption[] = [
   { id: "folder", Icon: LuFolder },
   { id: "code", Icon: LuCode },
   { id: "terminal", Icon: LuSquareTerminal },
@@ -85,16 +85,16 @@ export const REPO_ICON_OPTIONS: RepoIconOption[] = [
   { id: "wrench", Icon: LuWrench },
 ];
 
-export const DEFAULT_REPO_ICON_ID = "folder";
+export const DEFAULT_PROJECT_ICON_ID = "folder";
 
 /** Finds a configured icon option by its persisted id. */
-export function findRepoIconOption(iconId?: string): RepoIconOption | undefined {
-  return REPO_ICON_OPTIONS.find((option) => option.id === iconId);
+export function findProjectIconOption(iconId?: string): ProjectIconOption | undefined {
+  return PROJECT_ICON_OPTIONS.find((option) => option.id === iconId);
 }
 
 /** Renders a repo icon, falling back to initial letter or default folder icon. */
-export function renderRepoIcon(iconId: string | undefined, size: number): ReactNode {
-  const option = findRepoIconOption(iconId);
+export function renderProjectIcon(iconId: string | undefined, size: number): ReactNode {
+  const option = findProjectIconOption(iconId);
   if (option) {
     return <option.Icon size={size} />;
   }
@@ -106,3 +106,8 @@ export function renderRepoIcon(iconId: string | undefined, size: number): ReactN
 
   return <LuFolder size={size} />;
 }
+
+export const REPO_ICON_OPTIONS = PROJECT_ICON_OPTIONS;
+export const DEFAULT_REPO_ICON_ID = DEFAULT_PROJECT_ICON_ID;
+export const findRepoIconOption = findProjectIconOption;
+export const renderRepoIcon = renderProjectIcon;

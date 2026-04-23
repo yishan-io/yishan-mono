@@ -3,7 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { workspaceStore } from "../../../store/workspaceStore";
-import { RepoConfigDialogView } from "./RepoConfigDialogView";
+import { ProjectConfigDialogView } from "./ProjectConfigDialogView";
 
 const mocked = vi.hoisted(() => ({
   updateRepoConfig: vi.fn(),
@@ -29,7 +29,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("RepoConfigDialogView", () => {
+describe("ProjectConfigDialogView", () => {
   it("renders git url and repo key as static text rows", () => {
     workspaceStore.setState({
       repos: [
@@ -47,7 +47,7 @@ describe("RepoConfigDialogView", () => {
       workspaces: [],
     });
 
-    render(<RepoConfigDialogView open repoId="repo-1" onClose={() => {}} />);
+    render(<ProjectConfigDialogView open repoId="repo-1" onClose={() => {}} />);
 
     expect(screen.getByText("git@github.com:acme/core-repo.git")).toBeTruthy();
     expect(screen.getByText("core-repo")).toBeTruthy();

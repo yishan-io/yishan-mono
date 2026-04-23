@@ -21,17 +21,17 @@ import {
 import { useEffect, useState } from "react";
 import { LuChevronDown, LuCircleHelp, LuExternalLink, LuFolderOpen } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../../../shared/contracts/externalApps";
+import { DEFAULT_PROJECT_ICON_ID, PROJECT_ICON_OPTIONS, findProjectIconOption, renderProjectIcon } from "../../../components/projectIcons";
 import { useCommands } from "../../../hooks/useCommands";
 import { workspaceStore } from "../../../store/workspaceStore";
-import { DEFAULT_REPO_ICON_ID, REPO_ICON_OPTIONS, findRepoIconOption, renderRepoIcon } from "./repoIcons";
 
-type RepoConfigDialogViewProps = {
+type ProjectConfigDialogViewProps = {
   open: boolean;
   repoId: string;
   onClose: () => void;
 };
 
-type RepoConfigDraft = {
+type ProjectConfigDraft = {
   name: string;
   worktreePath: string;
   privateContextEnabled: boolean;
@@ -44,23 +44,23 @@ type RepoConfigDraft = {
 const DEFAULT_ICON_BG_COLOR = "#1E66F5";
 const ICON_BG_COLOR_PRESETS = ["#1E66F5", "#0F766E", "#CA8A04", "#DC2626", "#7C3AED", "#DB2777", "#0891B2"];
 
-function getDefaultDraft(): RepoConfigDraft {
+function getDefaultDraft(): ProjectConfigDraft {
   return {
     name: "",
     worktreePath: "",
     privateContextEnabled: true,
-    icon: DEFAULT_REPO_ICON_ID,
+    icon: DEFAULT_PROJECT_ICON_ID,
     iconBgColor: DEFAULT_ICON_BG_COLOR,
     setupScript: "",
     postScript: "",
   };
 }
 
-export function RepoConfigDialogView({ open, repoId, onClose }: RepoConfigDialogViewProps) {
+export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfigDialogViewProps) {
   const repos = workspaceStore((state) => state.repos);
   const { updateRepoConfig, getDefaultWorktreeLocation, openEntryInExternalApp, openLocalFolderDialog } = useCommands();
   const repo = repos.find((item) => item.id === repoId);
-  const [draft, setDraft] = useState<RepoConfigDraft>(getDefaultDraft);
+  const [draft, setDraft] = useState<ProjectConfigDraft>(getDefaultDraft);
   const [iconAnchorEl, setIconAnchorEl] = useState<HTMLElement | null>(null);
   const repoLocalPath = repo?.localPath ?? repo?.path ?? "";
   const trimmedRepoLocalPath = repoLocalPath.trim();
@@ -90,7 +90,7 @@ export function RepoConfigDialogView({ open, repoId, onClose }: RepoConfigDialog
         name: repo.name,
         worktreePath,
         privateContextEnabled: repo.privateContextEnabled ?? true,
-        icon: findRepoIconOption(repo.icon)?.id ?? DEFAULT_REPO_ICON_ID,
+        icon: findProjectIconOption(repo.icon)?.id ?? DEFAULT_PROJECT_ICON_ID,
         iconBgColor: repo.iconBgColor ?? DEFAULT_ICON_BG_COLOR,
         setupScript: repo.setupScript ?? "",
         postScript: repo.postScript ?? "",
@@ -140,7 +140,7 @@ export function RepoConfigDialogView({ open, repoId, onClose }: RepoConfigDialog
       name: draft.name.trim() || repo.name,
       worktreePath: draft.worktreePath.trim(),
       privateContextEnabled: draft.privateContextEnabled,
-      icon: findRepoIconOption(draft.icon)?.id ?? DEFAULT_REPO_ICON_ID,
+      icon: findProjectIconOption(draft.icon)?.id ?? DEFAULT_PROJECT_ICON_ID,
       iconBgColor: normalizedIconBgColor,
       setupScript: draft.setupScript,
       postScript: draft.postScript,
@@ -303,7 +303,7 @@ export function RepoConfigDialogView({ open, repoId, onClose }: RepoConfigDialog
                   borderRadius: 1.5,
                 }}
               >
-                {renderRepoIcon(draft.icon, 18)}
+                {renderProjectIcon(draft.icon, 18)}
               </IconButton>
             </Box>
             <Box sx={{ width: 220 }}>
@@ -412,7 +412,7 @@ export function RepoConfigDialogView({ open, repoId, onClose }: RepoConfigDialog
               gap: 1,
             }}
           >
-            {REPO_ICON_OPTIONS.map((option) => {
+            {PROJECT_ICON_OPTIONS.map((option) => {
               const selected = option.id === draft.icon;
               return (
                 <IconButton

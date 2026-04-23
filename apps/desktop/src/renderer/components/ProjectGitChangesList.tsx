@@ -14,50 +14,50 @@ import { type DragEvent as ReactDragEvent, type MouseEvent as ReactMouseEvent, u
 import { LuChevronDown, LuChevronRight, LuCopy, LuCornerUpLeft, LuMinus, LuPlus } from "react-icons/lu";
 import { GitChangeTotals } from "./GitChangeTotals";
 
-export type RepoGitChangeKind = "added" | "modified" | "deleted";
+export type ProjectGitChangeKind = "added" | "modified" | "deleted";
 
-export type RepoGitChangeItem = {
+export type ProjectGitChangeItem = {
   path: string;
-  kind: RepoGitChangeKind;
+  kind: ProjectGitChangeKind;
   additions: number;
   deletions: number;
 };
 
-export type RepoGitChangesSection = {
+export type ProjectGitChangesSection = {
   id: string;
   label: string;
-  files: RepoGitChangeItem[];
+  files: ProjectGitChangeItem[];
 };
 
-type RepoGitChangesListProps = {
-  sections: RepoGitChangesSection[];
+type ProjectGitChangesListProps = {
+  sections: ProjectGitChangesSection[];
   readOnly?: boolean;
-  onSelectFile?: (file: RepoGitChangeItem) => void;
-  onTrackSection?: (section: RepoGitChangesSection) => void;
-  onRevertSection?: (section: RepoGitChangesSection) => void;
-  onTrackFile?: (file: RepoGitChangeItem, sectionId: RepoGitChangesSection["id"]) => void;
-  onRevertFile?: (file: RepoGitChangeItem) => void;
+  onSelectFile?: (file: ProjectGitChangeItem) => void;
+  onTrackSection?: (section: ProjectGitChangesSection) => void;
+  onRevertSection?: (section: ProjectGitChangesSection) => void;
+  onTrackFile?: (file: ProjectGitChangeItem, sectionId: ProjectGitChangesSection["id"]) => void;
+  onRevertFile?: (file: ProjectGitChangeItem) => void;
   onMoveFile?: (
-    file: RepoGitChangeItem,
-    sourceSectionId: RepoGitChangesSection["id"],
-    targetSectionId: RepoGitChangesSection["id"],
+    file: ProjectGitChangeItem,
+    sourceSectionId: ProjectGitChangesSection["id"],
+    targetSectionId: ProjectGitChangesSection["id"],
   ) => void;
   onMoveFiles?: (
-    files: RepoGitChangeItem[],
-    sourceSectionId: RepoGitChangesSection["id"],
-    targetSectionId: RepoGitChangesSection["id"],
+    files: ProjectGitChangeItem[],
+    sourceSectionId: ProjectGitChangesSection["id"],
+    targetSectionId: ProjectGitChangesSection["id"],
   ) => void;
-  onCopyFilePath?: (file: RepoGitChangeItem) => void;
-  onCopyRelativeFilePath?: (file: RepoGitChangeItem) => void;
+  onCopyFilePath?: (file: ProjectGitChangeItem) => void;
+  onCopyRelativeFilePath?: (file: ProjectGitChangeItem) => void;
 };
 
 type FolderGroup = {
   folder: string;
-  files: RepoGitChangeItem[];
+  files: ProjectGitChangeItem[];
 };
 
 /** Returns one icon/color pair for one git change kind badge. */
-function getChangeColors(kind: RepoGitChangeKind, sectionId: string) {
+function getChangeColors(kind: ProjectGitChangeKind, sectionId: string) {
   if (sectionId === "untracked") {
     return { icon: "?", color: "info.main" };
   }
@@ -74,7 +74,7 @@ function getChangeColors(kind: RepoGitChangeKind, sectionId: string) {
 }
 
 /** Groups changed files by parent folder so list rows stay compact. */
-function groupByFolder(files: RepoGitChangeItem[]): FolderGroup[] {
+function groupByFolder(files: ProjectGitChangeItem[]): FolderGroup[] {
   const groups = new Map<string, RepoGitChangeItem[]>();
 
   for (const file of files) {
@@ -142,7 +142,7 @@ function getFolderCollapseKey(sectionId: string, folder: string) {
 }
 
 /** Renders grouped git sections and supports selecting one diff row. */
-export function RepoGitChangesList({
+export function ProjectGitChangesList({
   sections,
   readOnly = false,
   onSelectFile,
@@ -154,22 +154,22 @@ export function RepoGitChangesList({
   onMoveFiles,
   onCopyFilePath,
   onCopyRelativeFilePath,
-}: RepoGitChangesListProps) {
+}: ProjectGitChangesListProps) {
   const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(new Set());
   const [contextMenuState, setContextMenuState] = useState<{
-    file: RepoGitChangeItem;
-    sectionId: RepoGitChangesSection["id"];
+    file: ProjectGitChangeItem;
+    sectionId: ProjectGitChangesSection["id"];
     top: number;
     left: number;
   } | null>(null);
   const [draggedFileState, setDraggedFileState] = useState<{
-    files: RepoGitChangeItem[];
-    sectionId: RepoGitChangesSection["id"];
+    files: ProjectGitChangeItem[];
+    sectionId: ProjectGitChangesSection["id"];
   } | null>(null);
   const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
   const [selectedFileKeys, setSelectedFileKeys] = useState<Set<string>>(new Set());
   const [selectionAnchor, setSelectionAnchor] = useState<{
-    sectionId: RepoGitChangesSection["id"];
+    sectionId: ProjectGitChangesSection["id"];
     path: string;
   } | null>(null);
   const visibleSections = sections.filter((section) => section.files.length > 0);
@@ -212,8 +212,8 @@ export function RepoGitChangesList({
   /** Opens one file-row context menu at the pointer position. */
   const handleFileContextMenu = (
     event: ReactMouseEvent,
-    file: RepoGitChangeItem,
-    sectionId: RepoGitChangesSection["id"],
+    file: ProjectGitChangeItem,
+    sectionId: ProjectGitChangesSection["id"],
   ) => {
     event.preventDefault();
     setContextMenuState({
@@ -232,8 +232,8 @@ export function RepoGitChangesList({
   /** Starts one file drag operation and records source metadata. */
   const handleFileDragStart = (
     event: ReactDragEvent,
-    file: RepoGitChangeItem,
-    sectionId: RepoGitChangesSection["id"],
+    file: ProjectGitChangeItem,
+    sectionId: ProjectGitChangesSection["id"],
   ) => {
     const clickedFileKey = getFileSelectionKey(sectionId, file.path);
     const selectedFilesInSection = selectedFileKeys.has(clickedFileKey)

@@ -2,19 +2,19 @@ import { Box, LinearProgress } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  RepoCommitComparison,
-  type RepoCommitComparisonCommit,
-  type RepoCommitComparisonData,
-  type RepoCommitComparisonSelection,
-} from "../../../components/RepoCommitComparison";
-import { RepoGitChangesList, type RepoGitChangesSection } from "../../../components/RepoGitChangesList";
+  ProjectCommitComparison,
+  type ProjectCommitComparisonCommit,
+  type ProjectCommitComparisonData,
+  type ProjectCommitComparisonSelection,
+} from "../../../components/ProjectCommitComparison";
+import { ProjectGitChangesList, type ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
 import { useCommands } from "../../../hooks/useCommands";
 import { workspaceStore } from "../../../store/workspaceStore";
 
 type RepoChangesBySection = {
-  unstaged: RepoGitChangesSection["files"];
-  staged: RepoGitChangesSection["files"];
-  untracked: RepoGitChangesSection["files"];
+  unstaged: ProjectGitChangesSection["files"];
+  staged: ProjectGitChangesSection["files"];
+  untracked: ProjectGitChangesSection["files"];
 };
 
 /** Normalizes one workspace-relative path for consistent rendering and diff lookups. */
@@ -44,8 +44,8 @@ function dedupeChangedPaths(paths: string[]): string[] {
 }
 
 /** Merges duplicate file entries so one rendered row always maps to one normalized path. */
-function dedupeRepoChangeFiles(files: RepoGitChangesSection["files"]): RepoGitChangesSection["files"] {
-  const dedupedFilesByPath = new Map<string, RepoGitChangesSection["files"][number]>();
+function dedupeRepoChangeFiles(files: ProjectGitChangesSection["files"]): ProjectGitChangesSection["files"] {
+  const dedupedFilesByPath = new Map<string, ProjectGitChangesSection["files"][number]>();
 
   for (const file of files) {
     const normalizedPath = normalizeWorkspaceRelativePath(file.path);
@@ -97,7 +97,7 @@ function createEmptyRepoChangesBySection(): RepoChangesBySection {
 }
 
 /** Creates one empty commit-comparison snapshot used for initialization and fallback. */
-function createEmptyRepoCommitComparison(): RepoCommitComparisonData {
+function createEmptyRepoCommitComparison(): ProjectCommitComparisonData {
   return {
     currentBranch: "",
     targetBranch: "",
@@ -107,7 +107,7 @@ function createEmptyRepoCommitComparison(): RepoCommitComparisonData {
 }
 
 /** Maps one commit changed-file list into one read-only git section for the lower pane. */
-function buildCommitChangesSection(commit: RepoCommitComparisonCommit): RepoGitChangesSection {
+function buildCommitChangesSection(commit: ProjectCommitComparisonCommit): ProjectGitChangesSection {
   return {
     id: "commit-files",
     label: `Changes in ${commit.shortHash}`,
@@ -121,7 +121,7 @@ function buildCommitChangesSection(commit: RepoCommitComparisonCommit): RepoGitC
 }
 
 /** Maps all branch-comparison changed files into one read-only section for aggregate browsing. */
-function buildAllCommitChangesSection(allChangedFiles: string[]): RepoGitChangesSection {
+function buildAllCommitChangesSection(allChangedFiles: string[]): ProjectGitChangesSection {
   return {
     id: "all-commit-files",
     label: "Changes in all",
@@ -140,12 +140,12 @@ export function ChangesTabView() {
   const [repoChangesBySection, setRepoChangesBySection] = useState<RepoChangesBySection>(
     createEmptyRepoChangesBySection,
   );
-  const [repoCommitComparison, setRepoCommitComparison] = useState<RepoCommitComparisonData>(
+  const [repoCommitComparison, setRepoCommitComparison] = useState<ProjectCommitComparisonData>(
     createEmptyRepoCommitComparison,
   );
   const [isRepoChangesLoading, setIsRepoChangesLoading] = useState(false);
   const [isCommitComparisonLoading, setIsCommitComparisonLoading] = useState(false);
-  const [selectedComparison, setSelectedComparison] = useState<RepoCommitComparisonSelection>("uncommitted");
+  const [selectedComparison, setSelectedComparison] = useState<ProjectCommitComparisonSelection>("uncommitted");
   const commitComparisonRequestIdRef = useRef(0);
   const repoChangesLoadRequestIdRef = useRef(0);
   const pendingWorkspaceSwitchLoadPathRef = useRef<string | null>(null);
@@ -496,7 +496,7 @@ export function ChangesTabView() {
               pb: 1,
             }}
           >
-            <RepoCommitComparison
+            <ProjectCommitComparison
               comparison={repoCommitComparison}
               targetBranch={selectedWorkspaceSourceBranch ?? ""}
               selectedComparison={selectedComparison}
@@ -513,7 +513,7 @@ export function ChangesTabView() {
               comparisonScopeAriaLabel={t("files.git.changeScope")}
             />
           </Box>
-          <RepoGitChangesList
+          <ProjectGitChangesList
             sections={visibleChanges}
             readOnly={isCommitChangesMode}
             onTrackSection={

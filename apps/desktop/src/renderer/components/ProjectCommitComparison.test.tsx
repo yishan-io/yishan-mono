@@ -2,13 +2,13 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RepoCommitComparison, formatRelativeCommitTime } from "./RepoCommitComparison";
+import { ProjectCommitComparison, formatRelativeCommitTime } from "./ProjectCommitComparison";
 
 afterEach(() => {
   cleanup();
 });
 
-describe("RepoCommitComparison", () => {
+describe("ProjectCommitComparison", () => {
   it("formats short relative commit times", () => {
     const now = Date.parse("2026-03-23T12:00:00.000Z");
 
@@ -25,7 +25,7 @@ describe("RepoCommitComparison", () => {
     const onSelectCommit = vi.fn();
 
     render(
-      <RepoCommitComparison
+      <ProjectCommitComparison
         comparison={{
           currentBranch: "feature/work",
           targetBranch: "main",
@@ -77,7 +77,7 @@ describe("RepoCommitComparison", () => {
 
   it("shows target-branch loading indicator when comparison is refreshing", () => {
     render(
-      <RepoCommitComparison
+      <ProjectCommitComparison
         comparison={{
           currentBranch: "feature/work",
           targetBranch: "main",
@@ -95,7 +95,7 @@ describe("RepoCommitComparison", () => {
 
   it("does not render an empty-state message when no commits are ahead", () => {
     render(
-      <RepoCommitComparison
+      <ProjectCommitComparison
         comparison={{
           currentBranch: "feature/work",
           targetBranch: "main",
@@ -116,7 +116,7 @@ describe("RepoCommitComparison", () => {
       "feature/super-long-branch-name-that-should-be-truncated-in-commit-comparison-header-to-keep-layout-stable";
 
     render(
-      <RepoCommitComparison
+      <ProjectCommitComparison
         comparison={{
           currentBranch: longBranch,
           targetBranch: "main",

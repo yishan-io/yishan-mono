@@ -65,6 +65,10 @@ vi.mock("../../../store/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
+vi.mock("../../../helpers/platform", () => ({
+  getRendererPlatform: () => "darwin",
+}));
+
 vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
 }));
@@ -73,20 +77,20 @@ vi.mock("../../layout/AppMenuView", () => ({
   AppMenuView: () => <div data-testid="app-menu-view" />,
 }));
 
-vi.mock("./CreateRepoDialogView", () => ({
-  CreateRepoDialogView: () => null,
+vi.mock("./CreateProjectDialogView", () => ({
+  CreateProjectDialogView: () => null,
 }));
 
 vi.mock("./CreateWorkspaceDialogView", () => ({
   CreateWorkspaceDialogView: () => null,
 }));
 
-vi.mock("./RepoConfigDialogView", () => ({
-  RepoConfigDialogView: () => null,
+vi.mock("./ProjectConfigDialogView", () => ({
+  ProjectConfigDialogView: () => null,
 }));
 
-vi.mock("./RepoListView", () => ({
-  RepoListView: () => (
+vi.mock("./ProjectListView", () => ({
+  ProjectListView: () => (
     <>
       {mocked.stateRef.current.repos
         .filter((repo) => mocked.stateRef.current.displayRepoIds.includes(repo.id))

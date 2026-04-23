@@ -5,7 +5,7 @@ import { useTheme } from "@mui/material/styles";
 import "@git-diff-view/react/styles/diff-view-pure.css";
 import { useMemo } from "react";
 
-type RepoDiffViewerProps = {
+type ProjectDiffViewerProps = {
   filePath: string;
   oldContent: string;
   newContent: string;
@@ -29,7 +29,7 @@ function getMockLanguage(filePath: string): string {
   return "plaintext";
 }
 
-export function RepoDiffViewer({ filePath, oldContent, newContent }: RepoDiffViewerProps) {
+export function ProjectDiffViewer({ filePath, oldContent, newContent }: ProjectDiffViewerProps) {
   const theme = useTheme();
   const diffFile = useMemo(() => {
     if (!oldContent.trim() && !newContent.trim()) {

@@ -3,7 +3,7 @@
 import { act, cleanup, createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../commands/workspaceCommands";
-import { RepoListView } from "./RepoListView";
+import { ProjectListView } from "./ProjectListView";
 
 const mocked = vi.hoisted(() => {
   const renameWorkspace = vi.fn();
@@ -131,7 +131,8 @@ vi.mock("../../../shortcuts/shortcutDisplay", () => ({
   },
 }));
 
-vi.mock("./repoIcons", () => ({
+vi.mock("../../../components/projectIcons", () => ({
+  renderProjectIcon: () => "R",
   renderRepoIcon: () => "R",
 }));
 
@@ -140,8 +141,8 @@ vi.mock("./CreateWorkspaceDialogView", () => ({
     open ? <div data-testid={mode === "rename" ? "rename-workspace-dialog" : "create-workspace-dialog"} /> : null,
 }));
 
-vi.mock("./RepoConfigDialogView", () => ({
-  RepoConfigDialogView: ({ open }: { open: boolean }) => (open ? <div data-testid="repo-config-dialog" /> : null),
+vi.mock("./ProjectConfigDialogView", () => ({
+  ProjectConfigDialogView: ({ open }: { open: boolean }) => (open ? <div data-testid="repo-config-dialog" /> : null),
 }));
 
 vi.mock("../../../store/workspaceStore", () => ({
@@ -169,7 +170,7 @@ vi.mock("../../../commands/fileCommands", () => ({
   openEntryInExternalApp: (...args: unknown[]) => mocked.openEntryInExternalApp(...args),
 }));
 
-vi.mock("../../../mod/platform", () => ({
+vi.mock("../../../helpers/platform", () => ({
   getRendererPlatform: () => mocked.rendererPlatform,
 }));
 
@@ -232,7 +233,7 @@ function renderRepoList(
     markWorkspaceNotificationsRead: mocked.markWorkspaceNotificationsRead,
   };
 
-  const rendered = render(<RepoListView />);
+  const rendered = render(<ProjectListView />);
 
   if (foldedRepoIds.includes("repo-1")) {
     fireEvent.click(screen.getByRole("button", { name: "repo.actions.collapse" }));
@@ -245,7 +246,7 @@ function renderRepoList(
   };
 }
 
-describe("RepoListView", () => {
+describe("ProjectListView", () => {
   it("shows workspace items when repository is expanded", () => {
     renderRepoList();
 
@@ -302,7 +303,7 @@ describe("RepoListView", () => {
       gitChangeTotalsByWorkspaceId: {},
     };
 
-    render(<RepoListView />);
+    render(<ProjectListView />);
 
     expect(screen.queryByTestId("workspace-change-totals-workspace-1")).toBeNull();
   });
@@ -373,7 +374,7 @@ describe("RepoListView", () => {
       workspaceUnreadToneByWorkspaceId: {},
       markWorkspaceNotificationsRead: mocked.markWorkspaceNotificationsRead,
     };
-    render(<RepoListView />);
+    render(<ProjectListView />);
 
     expect(screen.getByTestId("workspace-kind-local-workspace-local-1")).toBeTruthy();
     expect(screen.queryByTestId("workspace-actions-workspace-local-1")).toBeNull();
@@ -613,7 +614,7 @@ describe("RepoListView", () => {
     renderRepoList();
     mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "running" };
     cleanup();
-    render(<RepoListView />);
+    render(<ProjectListView />);
     expect(screen.getByTestId("workspace-status-running-spinner-workspace-1")).toBeTruthy();
   });
 
@@ -621,14 +622,14 @@ describe("RepoListView", () => {
     renderRepoList();
     mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "waiting_input" };
     cleanup();
-    render(<RepoListView />);
+    render(<ProjectListView />);
     expect(screen.getByTestId("workspace-status-waiting-input-badge-workspace-1")).toBeTruthy();
   });
 
   it("renders no indicator when workspace has no active runtime status and no unread notifications", () => {
     renderRepoList();
     cleanup();
-    render(<RepoListView />);
+    render(<ProjectListView />);
     expect(screen.queryByTestId("workspace-status-running-spinner-workspace-1")).toBeNull();
     expect(screen.queryByTestId("workspace-status-waiting-input-badge-workspace-1")).toBeNull();
     expect(screen.queryByTestId("workspace-status-done-badge-workspace-1")).toBeNull();
@@ -639,7 +640,7 @@ describe("RepoListView", () => {
     renderRepoList([], undefined, "workspace-2");
     mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "success" };
     cleanup();
-    render(<RepoListView />);
+    render(<ProjectListView />);
 
     const doneBadge = screen.getByTestId("workspace-status-done-badge-workspace-1");
     expect(doneBadge).toBeTruthy();
@@ -650,7 +651,7 @@ describe("RepoListView", () => {
     renderRepoList([], undefined, "workspace-2");
     mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "error" };
     cleanup();
-    render(<RepoListView />);
+    render(<ProjectListView />);
 
     const failedBadge = screen.getByTestId("workspace-status-failed-badge-workspace-1");
     expect(failedBadge).toBeTruthy();
@@ -660,14 +661,14 @@ describe("RepoListView", () => {
   it("clears unread indicator after opening that workspace while app is focused", () => {
     const rendered = renderRepoList([], undefined, "workspace-2");
     mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "success" };
-    rendered.rerender(<RepoListView />);
+    rendered.rerender(<ProjectListView />);
     expect(screen.getByTestId("workspace-status-done-badge-workspace-1")).toBeTruthy();
 
     mocked.stateRef.current.selectedWorkspaceId = "workspace-1";
     act(() => {
       window.dispatchEvent(new Event("focus"));
     });
-    rendered.rerender(<RepoListView />);
+    rendered.rerender(<ProjectListView />);
 
     expect(screen.queryByTestId("workspace-status-done-badge-workspace-1")).toBeNull();
   });

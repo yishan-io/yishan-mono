@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { LuSquareTerminal } from "react-icons/lu";
 import { FileEditor } from "../../components/FileEditor";
-import { RepoDiffViewer } from "../../components/RepoDiffViewer";
+import { ProjectDiffViewer } from "../../components/ProjectDiffViewer";
 import { TabBar, type TabBarCreateOption } from "../../components/TabBar";
 import { getFileTreeIcon } from "../../components/fileTreeIcons";
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
@@ -194,7 +194,7 @@ export function MainPaneView() {
                   flexDirection: "column",
                 }}
               >
-                <RepoDiffViewer
+                <ProjectDiffViewer
                   filePath={tab.data.path}
                   oldContent={tab.data.oldContent ?? ""}
                   newContent={tab.data.newContent ?? ""}

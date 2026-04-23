@@ -7,7 +7,7 @@ import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../
 import { layoutStore } from "../store/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
-import { CreateRepoDialogView } from "./workspace/LeftPane/CreateRepoDialogView";
+import { CreateProjectDialogView } from "./workspace/LeftPane/CreateProjectDialogView";
 import { LeftPaneView } from "./workspace/LeftPane/LeftPaneView";
 import { MainPaneView } from "./workspace/MainPaneView";
 import { RightPaneView } from "./workspace/RightPane/RightPaneView";
@@ -229,7 +229,7 @@ export function WorkspaceView() {
           </Box>
         }
       />
-      <CreateRepoDialogView open={isCreateRepoOpen} onClose={() => setIsCreateRepoOpen(false)} />
+      <CreateProjectDialogView open={isCreateRepoOpen} onClose={() => setIsCreateRepoOpen(false)} />
       <WorkspaceLifecycleNoticeView />
     </WorkspacePaneVisibilityProvider>
   );
