@@ -10,3 +10,4 @@ playwright-report/
 test-results/
 .env
 .wrangler
+apps/desktop/release/

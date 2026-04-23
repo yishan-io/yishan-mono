@@ -1,0 +1,68 @@
+{
+  "name": "@yishan/desktop",
+  "version": "0.1.0",
+  "description": "Yishan desktop application",
+  "type": "module",
+  "main": "dist/electron/main.cjs",
+  "scripts": {
+    "start": "vite build && bun run electron:build && electron dist/electron/main.cjs",
+    "dev": "bun run dev:hmr",
+    "dev:hmr": "concurrently \"bun run hmr\" \"bun run electron:watch:main\" \"bun run electron:watch:preload\" \"bun run electron:dev\"",
+    "hmr": "vite --host 127.0.0.1 --port 5173",
+    "build": "vite build && bun run electron:build",
+    "build:app": "bun run build && electron-builder --publish never",
+    "build:app:dir": "bun run build && electron-builder --dir --publish never",
+    "electron:build": "bun run electron:build:main && bun run electron:build:preload",
+    "electron:build:main": "esbuild src/main/main.ts --bundle --platform=node --format=cjs --outfile=dist/electron/main.cjs --external:electron",
+    "electron:build:preload": "esbuild src/main/preload.ts --bundle --platform=node --format=cjs --outfile=dist/electron/preload.js --external:electron",
+    "electron:watch:main": "esbuild src/main/main.ts --bundle --platform=node --format=cjs --outfile=dist/electron/main.cjs --external:electron --watch",
+    "electron:watch:preload": "esbuild src/main/preload.ts --bundle --platform=node --format=cjs --outfile=dist/electron/preload.js --external:electron --watch",
+    "electron:dev": "cross-env ELECTRON_CHANNEL=dev NODE_ENV=development ELECTRON_RENDERER_URL=http://127.0.0.1:5173 wait-on tcp:5173 file:dist/electron/main.cjs file:dist/electron/preload.js && cross-env ELECTRON_CHANNEL=dev NODE_ENV=development ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron dist/electron/main.cjs",
+    "check": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^41.3.0",
+    "electron-builder": "^26.8.1",
+    "esbuild": "^0.28.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10",
+    "wait-on": "^9.0.5"
+  },
+  "build": {
+    "appId": "dev.yishan.desktop",
+    "productName": "Yishan",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "identity": null
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    },
+    "extraMetadata": {
+      "main": "dist/electron/main.cjs"
+    }
+  },
+  "license": "Elastic-2.0"
+}
