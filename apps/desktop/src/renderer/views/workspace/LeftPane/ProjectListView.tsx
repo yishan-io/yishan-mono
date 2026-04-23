@@ -422,7 +422,7 @@ export function ProjectListView() {
   const repoContextMenuItems: ContextMenuEntry[] = [
     {
       id: "repo-config",
-      label: t("repo.actions.config"),
+      label: t("project.actions.config"),
       icon: <LuSettings size={14} />,
       onSelect: () => {
         if (!repoContextMenu) {
@@ -434,7 +434,7 @@ export function ProjectListView() {
     },
     {
       id: "repo-delete",
-      label: t("repo.actions.delete"),
+      label: t("project.actions.delete"),
       icon: <LuTrash2 size={14} />,
       onSelect: () => {
         if (!repoContextMenu) {

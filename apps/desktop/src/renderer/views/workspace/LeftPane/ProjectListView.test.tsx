@@ -406,8 +406,8 @@ describe("ProjectListView", () => {
     renderRepoList();
 
     fireEvent.contextMenu(screen.getByText("Repo 1"));
-    fireEvent.click(screen.getByRole("menuitem", { name: "repo.actions.delete" }));
-    fireEvent.click(screen.getByRole("button", { name: "repo.actions.delete" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "project.actions.delete" }));
+    fireEvent.click(screen.getByRole("button", { name: "project.actions.delete" }));
 
     expect(mocked.deleteRepo).toHaveBeenCalledWith("repo-1");
   });
@@ -416,7 +416,7 @@ describe("ProjectListView", () => {
     renderRepoList();
 
     fireEvent.contextMenu(screen.getByText("Repo 1"));
-    fireEvent.click(screen.getByRole("menuitem", { name: "repo.actions.config" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "project.actions.config" }));
 
     expect(screen.getByTestId("repo-config-dialog")).toBeTruthy();
   });
@@ -425,7 +425,7 @@ describe("ProjectListView", () => {
     renderRepoList();
 
     fireEvent.contextMenu(screen.getByText("Repo 1"));
-    expect(screen.getByRole("menuitem", { name: "repo.actions.config" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "project.actions.config" })).toBeTruthy();
 
     const whileMenuOpenContextMenuEvent = createEvent.contextMenu(document.body, { cancelable: true });
     document.body.dispatchEvent(whileMenuOpenContextMenuEvent);

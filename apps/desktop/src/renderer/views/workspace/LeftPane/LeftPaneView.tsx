@@ -82,7 +82,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
       {filteredRepos.length === 0 ? (
         <Box sx={{ px: 2, pb: 1.5 }}>
           <Typography variant="caption" color="text.secondary">
-            {t("repo.filter.empty")}
+            {t("project.filter.empty")}
           </Typography>
         </Box>
       ) : null}
@@ -99,7 +99,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
           variant="outlined"
           startIcon={<LuPlus size={14} />}
           onClick={onCreateRepository}
-          aria-label={t("repo.actions.addRepository")}
+          aria-label={t("project.actions.addRepository")}
           sx={{
             flex: 1,
             textTransform: "none",
@@ -114,7 +114,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
             },
           }}
         >
-          {t("repo.actions.addRepository")}
+          {t("project.actions.addRepository")}
         </Button>
         <AppMenuView iconOnly />
       </Box>

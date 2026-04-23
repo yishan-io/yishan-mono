@@ -367,7 +367,7 @@ export function CreateWorkspaceDialogView({
                     renderValue: (value) => {
                       const selectedValue = typeof value === "string" ? value : "";
                       const selectedValueRepo = repos.find((repo) => repo.id === selectedValue);
-                      const repoName = selectedValueRepo?.name ?? t("repo.unknown");
+                      const repoName = selectedValueRepo?.name ?? t("project.unknown");
 
                       return (
                         <Stack direction="row" alignItems="center" gap={1}>

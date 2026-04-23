@@ -282,6 +282,58 @@
     "missingHint": "仓库路径不可用，请重新关联后继续工作区操作。",
     "relink": "重新关联"
   },
+  "project": {
+    "list": {
+      "title": "项目",
+      "workspaces": "工作区",
+      "globalWorkspaces": "全局工作区"
+    },
+    "form": {
+      "name": "项目名称",
+      "key": "项目 Key",
+      "keyHelp": "用于工作区目录路径。允许：a-z、0-9、-",
+      "keyInvalid": "仅允许小写字母、数字和 '-'。",
+      "path": "项目路径",
+      "newPath": "新的项目路径",
+      "source": {
+        "label": "来源",
+        "local": "本地",
+        "remote": "远程"
+      },
+      "gitUrl": "Git 地址",
+      "chooseFolder": "选择文件夹",
+      "create": "创建"
+    },
+    "actions": {
+      "addRepository": "添加项目",
+      "filter": "筛选",
+      "config": "配置",
+      "collapse": "折叠项目",
+      "expand": "展开项目",
+      "delete": "删除项目",
+      "register": "注册项目"
+    },
+    "delete": {
+      "confirm": "确认删除项目 '{{name}}' 及其所有子工作区？"
+    },
+    "filter": {
+      "placeholder": "按项目、路径、工作区或分支筛选",
+      "clear": "清除项目筛选",
+      "empty": "当前筛选条件下没有匹配的项目。",
+      "searchPlaceholder": "快速搜索项目",
+      "searchAriaLabel": "快速搜索项目",
+      "actions": {
+        "all": "全部",
+        "clear": "清空"
+      }
+    },
+    "registered": "已注册项目",
+    "selected": "当前项目",
+    "unknown": "未知项目",
+    "missing": "路径不可用",
+    "missingHint": "项目路径不可用，请重新关联后继续工作区操作。",
+    "relink": "重新关联"
+  },
   "layout": {
     "sidebarTitle": "侧边栏",
     "fileExplorerTitle": "文件浏览器",

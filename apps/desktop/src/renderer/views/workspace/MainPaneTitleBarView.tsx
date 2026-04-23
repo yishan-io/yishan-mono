@@ -120,7 +120,7 @@ export function MainPaneTitleBarView() {
           <Button
             size="small"
             variant="outlined"
-            aria-label={t("repo.selected")}
+            aria-label={t("project.selected")}
             startIcon={<LuBookMarked size={14} />}
             onClick={(event) => {
               setRepoMenuAnchorEl(event.currentTarget);
@@ -139,7 +139,7 @@ export function MainPaneTitleBarView() {
             }}
           >
             <Typography variant="body2" noWrap>
-              {selectedRepo?.name ?? t("repo.unknown")}
+              {selectedRepo?.name ?? t("project.unknown")}
             </Typography>
           </Button>
           <LuChevronRight size={14} />

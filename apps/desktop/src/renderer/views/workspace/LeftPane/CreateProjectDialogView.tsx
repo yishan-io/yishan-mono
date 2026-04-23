@@ -105,12 +105,12 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
 
   return (
     <Dialog open={open} onClose={resetAndClose} fullWidth maxWidth="sm">
-      <DialogTitle>{t("repo.actions.addRepository")}</DialogTitle>
+      <DialogTitle>{t("project.actions.addRepository")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              {t("repo.form.name")}
+              {t("project.form.name")}
             </Typography>
             <TextField
               autoFocus
@@ -127,7 +127,7 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
           </Box>
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              {t("repo.form.key")}
+              {t("project.form.key")}
             </Typography>
             <TextField
               size="small"
@@ -140,13 +140,13 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
                 }))
               }
               error={isKeyInvalid}
-              helperText={isKeyInvalid ? t("repo.form.keyInvalid") : t("repo.form.keyHelp")}
+              helperText={isKeyInvalid ? t("project.form.keyInvalid") : t("project.form.keyHelp")}
               fullWidth
             />
           </Box>
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              {t("repo.form.source.label")}
+              {t("project.form.source.label")}
             </Typography>
             <ButtonGroup size="small" fullWidth>
               <Button
@@ -160,7 +160,7 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
                   }))
                 }
               >
-                {t("repo.form.source.local")}
+                {t("project.form.source.local")}
               </Button>
               <Button
                 startIcon={<LuGlobe size={14} />}
@@ -173,13 +173,13 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
                   }))
                 }
               >
-                {t("repo.form.source.remote")}
+                {t("project.form.source.remote")}
               </Button>
             </ButtonGroup>
           </Box>
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              {repoDraft.source === "local" ? t("repo.form.path") : t("repo.form.gitUrl")}
+              {repoDraft.source === "local" ? t("project.form.path") : t("project.form.gitUrl")}
             </Typography>
             <TextField
               size="small"
@@ -203,10 +203,10 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
                       input: {
                         endAdornment: (
                           <InputAdornment position="end">
-                            <Tooltip title={t("repo.form.chooseFolder")} arrow>
+                            <Tooltip title={t("project.form.chooseFolder")} arrow>
                               <IconButton
                                 edge="end"
-                                aria-label={t("repo.form.chooseFolder")}
+                                aria-label={t("project.form.chooseFolder")}
                                 onClick={handlePickRepoFolder}
                               >
                                 <LuFolderOpen size={18} />
@@ -225,7 +225,7 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
       <DialogActions>
         <Button onClick={resetAndClose}>{t("common.actions.cancel")}</Button>
         <Button variant="contained" onClick={handleCreateRepo} disabled={isCreateDisabled}>
-          {t("repo.form.create")}
+          {t("project.form.create")}
         </Button>
       </DialogActions>
     </Dialog>

@@ -21,10 +21,10 @@ export function ProjectDeleteDialogView({
 
   return (
     <Dialog open={open} onClose={onCancel} fullWidth maxWidth="xs">
-      <DialogTitle>{t("repo.actions.delete")}</DialogTitle>
+      <DialogTitle>{t("project.actions.delete")}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary">
-          {t("repo.delete.confirm", {
+          {t("project.delete.confirm", {
             name: repoName,
           })}
         </Typography>
@@ -34,7 +34,7 @@ export function ProjectDeleteDialogView({
           {t("common.actions.cancel")}
         </Button>
         <Button color="error" onClick={onConfirm} disabled={isDeleting}>
-          {t("repo.actions.delete")}
+          {t("project.actions.delete")}
         </Button>
       </DialogActions>
     </Dialog>

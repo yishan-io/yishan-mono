@@ -48,10 +48,10 @@ export function ProjectFilterPopoverView() {
 
   return (
     <>
-      <Tooltip title={t("repo.actions.filter")} arrow>
+      <Tooltip title={t("project.actions.filter")} arrow>
         <IconButton
           size="small"
-          aria-label={t("repo.actions.filter")}
+          aria-label={t("project.actions.filter")}
           onClick={(event) => setRepoFilterAnchor(event.currentTarget)}
         >
           <MdOutlineFilterList size={15} />
@@ -104,10 +104,10 @@ export function ProjectFilterPopoverView() {
         <Box sx={{ width: 240, p: 1 }}>
           <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
             <Button size="small" sx={{ minWidth: 0, px: 0.75, py: 0.25, fontSize: 11 }} onClick={handleSelectAll}>
-              {t("repo.filter.actions.all")}
+              {t("project.filter.actions.all")}
             </Button>
             <Button size="small" sx={{ minWidth: 0, px: 0.75, py: 0.25, fontSize: 11 }} onClick={handleClearSelection}>
-              {t("repo.filter.actions.clear")}
+              {t("project.filter.actions.clear")}
             </Button>
           </Stack>
           <TextField
@@ -115,7 +115,7 @@ export function ProjectFilterPopoverView() {
             size="small"
             fullWidth
             autoFocus
-            placeholder={t("repo.filter.searchPlaceholder")}
+            placeholder={t("project.filter.searchPlaceholder")}
             onChange={(event) => setRepoQuickSearch(event.target.value)}
             sx={{
               "& .MuiInputBase-root": {
@@ -128,7 +128,7 @@ export function ProjectFilterPopoverView() {
             }}
             slotProps={{
               htmlInput: {
-                "aria-label": t("repo.filter.searchAriaLabel"),
+                "aria-label": t("project.filter.searchAriaLabel"),
               },
             }}
           />

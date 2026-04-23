@@ -40,20 +40,20 @@ vi.mock("react-i18next", () => ({
       const translations: Record<string, string> = {
         "workspace.actions.delete": "Delete workspace",
         "workspace.delete.confirm": `Delete workspace '${params?.name ?? ""}'?`,
-        "repo.actions.delete": "Delete repository",
-        "repo.delete.confirm": `Delete repository '${params?.name ?? ""}' and all child workspaces?`,
-        "repo.filter.placeholder": "Filter by repository, path, workspace, or branch",
-        "repo.filter.clear": "Clear repository filter",
-        "repo.filter.empty": "No repositories match the current filter.",
-        "repo.filter.searchPlaceholder": "Quick search repositories",
-        "repo.filter.searchAriaLabel": "Quick search repositories",
-        "repo.filter.actions.all": "All",
-        "repo.filter.actions.clear": "Clear",
+        "project.actions.delete": "Delete project",
+        "project.delete.confirm": `Delete project '${params?.name ?? ""}' and all child workspaces?`,
+        "project.filter.placeholder": "Filter by project, path, workspace, or branch",
+        "project.filter.clear": "Clear project filter",
+        "project.filter.empty": "No projects match the current filter.",
+        "project.filter.searchPlaceholder": "Quick search projects",
+        "project.filter.searchAriaLabel": "Quick search projects",
+        "project.filter.actions.all": "All",
+        "project.filter.actions.clear": "Clear",
         "common.actions.cancel": "Cancel",
         "org.settings.title": "Organization settings",
-        "repo.list.title": "Repositories",
-        "repo.actions.filter": "Filter",
-        "repo.actions.addRepository": "Add repository",
+        "project.list.title": "Projects",
+        "project.actions.filter": "Filter",
+        "project.actions.addRepository": "Add project",
       };
 
       return translations[key] ?? key;
@@ -147,7 +147,7 @@ describe("LeftPaneView deletion", () => {
 
     expect(screen.queryByTestId("visible-repo-repo-1")).toBeNull();
     expect(screen.queryByTestId("visible-repo-repo-2")).toBeNull();
-    expect(screen.getByText("No repositories match the current filter.")).toBeTruthy();
+    expect(screen.getByText("No projects match the current filter.")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "All" }));
     rerender(<LeftPaneView />);
@@ -170,7 +170,7 @@ describe("LeftPaneView deletion", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Filter" }));
     fireEvent.click(screen.getByRole("button", { name: "Clear" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Quick search repositories" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Quick search projects" }), {
       target: { value: "client" },
     });
     const popoverRepoOption = screen.getAllByText("Client Portal").at(-1);
@@ -223,7 +223,7 @@ describe("LeftPaneView deletion", () => {
 
     render(<LeftPaneView onCreateRepository={onCreateRepository} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Add repository" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add project" }));
 
     expect(onCreateRepository).toHaveBeenCalledTimes(1);
   });
