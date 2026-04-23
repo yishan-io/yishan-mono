@@ -21,6 +21,8 @@ import (
 
 var ErrNotRunning = errors.New("daemon is not running")
 
+const detachedEnvKey = "YISHAN_DAEMON_DETACHED"
+
 type RunConfig struct {
 	Host        string
 	Port        int
@@ -121,13 +123,17 @@ func Run(cfg RunConfig, statePath string) error {
 		}
 	}()
 
-	log.Info().Str("address", actualAddr).Bool("jwt_required", cfg.JWTRequired).Msg("daemon server started")
+	startLog := log.Info()
+	if os.Getenv(detachedEnvKey) == "1" {
+		startLog = log.Debug()
+	}
+	startLog.Str("address", actualAddr).Bool("jwt_required", cfg.JWTRequired).Msg("daemon server started")
 	err = server.Serve(listener)
 	if err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("daemon server failed: %w", err)
 	}
 
-	log.Info().Msg("daemon server stopped")
+	log.Debug().Msg("daemon server stopped")
 	return nil
 }
 
@@ -196,6 +202,7 @@ func StartDetached(cfg StartConfig) (int, error) {
 	}
 
 	command := exec.Command(executable, args...)
+	command.Env = append(os.Environ(), detachedEnvKey+"=1")
 	if cfg.Stdout != nil {
 		command.Stdout = cfg.Stdout
 	} else {
