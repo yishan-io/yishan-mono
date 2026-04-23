@@ -148,8 +148,22 @@ var orgCurrentCmd = &cobra.Command{
 			return fmt.Errorf("no active org: run `yishan org use <org-id>`")
 		}
 
-		fmt.Println(appConfig.CurrentOrgID)
-		return nil
+		response, err := apiClient().ListOrganizations()
+		if err != nil {
+			return err
+		}
+
+		for _, organization := range response.Organizations {
+			if organization.ID == appConfig.CurrentOrgID {
+				if err := output.PrintRenderData(toOrgCurrentRenderData(organization)); err != nil {
+					return err
+				}
+
+				return output.PrintRenderData(toOrgMembersRenderData(organization))
+			}
+		}
+
+		return fmt.Errorf("current org %s not found in accessible organizations", appConfig.CurrentOrgID)
 	},
 }
 
