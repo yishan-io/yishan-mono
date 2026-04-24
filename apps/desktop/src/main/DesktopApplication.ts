@@ -2,16 +2,20 @@ import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { getAuthStatus, getAuthTokens, login } from "./auth/cliAuth";
+import { DaemonManager } from "./daemon/daemonManager";
 import { readExternalClipboardSourcePathsFromSystem } from "./integrations/externalClipboardPipeline";
 import { launchPath, openExternalUrl } from "./integrations/externalAppLauncher";
 import { HOST_IPC_CHANNELS } from "./ipc";
 import { createDesktopNotificationHostAdapter } from "./notifications/service";
+import { isDevMode } from "./runtime/environment";
 
 /**
  * Owns Electron desktop lifecycle and main window bootstrap.
  */
 export class DesktopApplication {
   private mainWindow: BrowserWindow | null = null;
+  private readonly daemonManager = new DaemonManager();
+  private hasProcessedBeforeQuit = false;
 
   /**
    * Starts the desktop app and exits on startup failure.
@@ -30,9 +34,29 @@ export class DesktopApplication {
    */
   private async start(): Promise<void> {
     await app.whenReady();
+    await this.daemonManager.ensureStarted();
     this.registerHostIpcHandlers();
     this.registerAuthIpcHandlers();
     this.createMainWindow();
+
+    if (isDevMode()) {
+      app.on("before-quit", (event) => {
+        if (this.hasProcessedBeforeQuit) {
+          return;
+        }
+
+        event.preventDefault();
+        this.hasProcessedBeforeQuit = true;
+        void this.daemonManager
+          .stop()
+          .catch((error: unknown) => {
+            console.warn("Failed to stop daemon service during desktop shutdown", error);
+          })
+          .finally(() => {
+            app.quit();
+          });
+      });
+    }
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {

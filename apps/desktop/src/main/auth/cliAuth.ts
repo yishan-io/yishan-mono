@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import type { AuthLoginResult, AuthStatusResult, AuthTokensResult } from "../ipc";
+import { isDevMode } from "../runtime/environment";
 
 const CLI_WHOAMI_ARGS = ["whoami"];
 const CLI_LOGIN_ARGS = ["login"];
@@ -40,8 +41,7 @@ function resolveCliInvocation(): CliInvocation {
     };
   }
 
-  const isDevMode = process.env.ELECTRON_CHANNEL === "dev" || process.env.NODE_ENV === "development";
-  if (isDevMode) {
+  if (isDevMode()) {
     const configuredDevCliDir = process.env.YISHAN_CLI_DEV_DIR?.trim();
     const candidateDir = configuredDevCliDir || resolve(process.cwd(), "..", "cli");
     const cliDir = existsSync(candidateDir) ? candidateDir : undefined;
@@ -63,8 +63,7 @@ function resolveCliInvocation(): CliInvocation {
 
 /** Resolves active CLI profile name used for auth credential storage. */
 function resolveCliProfileName(): string {
-  const isDevMode = process.env.ELECTRON_CHANNEL === "dev" || process.env.NODE_ENV === "development";
-  if (isDevMode) {
+  if (isDevMode()) {
     return "dev";
   }
 
