@@ -54,9 +54,20 @@ function resolveCliInvocation(): CliInvocation {
   }
 
   const bundledCliName = process.platform === "win32" ? "yishan.exe" : "yishan";
+  const bundledCliPath = resolve(process.resourcesPath, bundledCliName);
+  if (!existsSync(bundledCliPath)) {
+    const fallbackDevCliDir = process.env.YISHAN_CLI_DEV_DIR?.trim() || resolve(process.cwd(), "..", "cli");
+    const cliDir = existsSync(fallbackDevCliDir) ? fallbackDevCliDir : undefined;
+
+    return {
+      executablePath: "go",
+      prefixArgs: ["run", ".", "--profile", "dev"],
+      cwd: cliDir,
+    };
+  }
 
   return {
-    executablePath: resolve(process.resourcesPath, bundledCliName),
+    executablePath: bundledCliPath,
     prefixArgs: [],
   };
 }

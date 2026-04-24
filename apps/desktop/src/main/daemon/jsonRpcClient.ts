@@ -71,57 +71,49 @@ export class DaemonJsonRpcClient {
   private readonly terminalNextIndexBySessionId = new Map<string, number>();
 
   readonly workspace = {
-    list: async (): Promise<WorkspaceListResponse> => await this.listWorkspaces(),
-    create: async (input: WorkspaceCreateInput): Promise<WorkspaceCreateResponse> => await this.createWorkspace(input),
-    close: async (input: WorkspaceCloseExecutionInput): Promise<WorkspaceCloseExecutionResponse> =>
-      await this.closeWorkspace(input),
+    list: this.listWorkspaces.bind(this),
+    create: this.createWorkspace.bind(this),
+    close: this.closeWorkspace.bind(this),
   };
 
   readonly file = {
-    listFiles: async (input: FileListInput): Promise<FileListResponse> => await this.listFiles(input),
-    listFilesBatch: async (input: FileListBatchInput): Promise<FileListBatchResponse> => await this.listFilesBatch(input),
-    readFile: async (input: FileReadInput): Promise<FileReadResponse> => await this.readFile(input),
-    writeFile: async (input: FileWriteInput): Promise<FileWriteResponse> => await this.writeFile(input),
-    createFile: async (input: FileWriteInput): Promise<FileWriteResponse> => await this.createFile(input),
-    createFolder: async (input: FileCreateFolderInput): Promise<FileMutationOkResponse> => await this.createFolder(input),
-    renameEntry: async (input: FileRenameInput): Promise<FileMutationOkResponse> => await this.renameEntry(input),
-    deleteEntry: async (input: FileDeleteInput): Promise<FileMutationOkResponse> => await this.deleteEntry(input),
-    readDiff: async (input: FileReadInput): Promise<FileDiffResponse> => await this.readFileDiff(input),
+    listFiles: this.listFiles.bind(this),
+    listFilesBatch: this.listFilesBatch.bind(this),
+    readFile: this.readFile.bind(this),
+    writeFile: this.writeFile.bind(this),
+    createFile: this.writeFile.bind(this),
+    createFolder: this.createFolder.bind(this),
+    renameEntry: this.renameEntry.bind(this),
+    deleteEntry: this.deleteEntry.bind(this),
+    readDiff: this.readFileDiff.bind(this),
   };
 
   readonly git = {
-    listChanges: async (input: GitWorktreeInput): Promise<GitChangesBySection> => await this.listGitChanges(input),
-    trackChanges: async (input: GitPathsInput): Promise<GitStatusOperationResponse> => await this.trackGitChanges(input),
-    unstageChanges: async (input: GitPathsInput): Promise<GitStatusOperationResponse> => await this.unstageGitChanges(input),
-    revertChanges: async (input: GitPathsInput): Promise<GitStatusOperationResponse> => await this.revertGitChanges(input),
-    commitChanges: async (input: GitCommitInput): Promise<string> => await this.commitGitChanges(input),
-    getBranchStatus: async (input: GitWorktreeInput): Promise<GitBranchStatusResponse> =>
-      await this.getGitBranchStatus(input),
-    listCommitsToTarget: async (input: GitTargetBranchInput): Promise<GitCommitComparisonResponse> =>
-      await this.listGitCommitsToTarget(input),
-    readCommitDiff: async (input: GitCommitDiffInput): Promise<GitDiffContentResponse> => await this.readGitCommitDiff(input),
-    readBranchComparisonDiff: async (input: GitBranchDiffInput): Promise<GitDiffContentResponse> =>
-      await this.readGitBranchComparisonDiff(input),
-    listBranches: async (input: GitWorktreeInput): Promise<GitBranchListResponse> => await this.listGitBranches(input),
-    pushBranch: async (input: GitWorktreeInput): Promise<string> => await this.pushGitBranch(input),
-    publishBranch: async (input: GitWorktreeInput): Promise<string> => await this.publishGitBranch(input),
-    renameBranch: async (input: GitRenameBranchInput): Promise<GitStatusOperationResponse> =>
-      await this.renameGitBranch(input),
-    getAuthorName: async (input: GitWorktreeInput): Promise<string> => await this.getGitAuthorName(input),
+    listChanges: this.listGitChanges.bind(this),
+    trackChanges: this.trackGitChanges.bind(this),
+    unstageChanges: this.unstageGitChanges.bind(this),
+    revertChanges: this.revertGitChanges.bind(this),
+    commitChanges: this.commitGitChanges.bind(this),
+    getBranchStatus: this.getGitBranchStatus.bind(this),
+    listCommitsToTarget: this.listGitCommitsToTarget.bind(this),
+    readCommitDiff: this.readGitCommitDiff.bind(this),
+    readBranchComparisonDiff: this.readGitBranchComparisonDiff.bind(this),
+    listBranches: this.listGitBranches.bind(this),
+    pushBranch: this.pushGitBranch.bind(this),
+    publishBranch: this.publishGitBranch.bind(this),
+    renameBranch: this.renameGitBranch.bind(this),
+    getAuthorName: this.getGitAuthorName.bind(this),
   };
 
   readonly terminal = {
-    createSession: async (input: TerminalCreateSessionInput): Promise<TerminalCreateSessionResponse> =>
-      await this.createTerminalSession(input),
-    writeInput: async (input: TerminalWriteInput): Promise<TerminalMutationOkResponse> => await this.writeTerminalInput(input),
-    resize: async (input: TerminalResizeInput): Promise<TerminalMutationOkResponse> => await this.resizeTerminal(input),
-    closeSession: async (input: TerminalCloseInput): Promise<TerminalMutationOkResponse> => await this.closeTerminalSession(input),
-    readOutput: async (input: TerminalReadOutputInput): Promise<TerminalReadOutputResponse> =>
-      await this.readTerminalOutput(input),
-    listDetectedPorts: async (): Promise<TerminalDetectedPort[]> => await this.listDetectedTerminalPorts(),
-    getResourceUsage: async (): Promise<TerminalResourceUsageSnapshot> => await this.getTerminalResourceUsage(),
-    listSessions: async (input?: TerminalListSessionsInput): Promise<TerminalSessionSummary[]> =>
-      await this.listTerminalSessions(input),
+    createSession: this.createTerminalSession.bind(this),
+    writeInput: this.writeTerminalInput.bind(this),
+    resize: this.resizeTerminal.bind(this),
+    closeSession: this.closeTerminalSession.bind(this),
+    readOutput: this.readTerminalOutput.bind(this),
+    listDetectedPorts: this.listDetectedTerminalPorts.bind(this),
+    getResourceUsage: this.getTerminalResourceUsage.bind(this),
+    listSessions: this.listTerminalSessions.bind(this),
   };
 
   private resolveNamespaceHandler(
@@ -509,10 +501,6 @@ export class DaemonJsonRpcClient {
     const content = typeof record?.content === "string" ? record.content : "";
     const written = await this.invoke("file.write", { workspaceId, path: relativePath, content });
     return { ok: true, written: typeof written === "number" ? written : 0 };
-  }
-
-  private async createFile(input: FileWriteInput): Promise<FileWriteResponse> {
-    return await this.writeFile(input);
   }
 
   private async createFolder(input: FileCreateFolderInput): Promise<FileMutationOkResponse> {
