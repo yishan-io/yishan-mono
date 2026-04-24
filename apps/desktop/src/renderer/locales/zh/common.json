@@ -110,6 +110,8 @@
   "org": {
     "menu": {
       "trigger": "组织",
+      "organizations": "组织列表",
+      "noOrganizations": "暂无组织",
       "settings": "设置",
       "documentation": "文档",
       "shortcutMap": "快捷键映射",

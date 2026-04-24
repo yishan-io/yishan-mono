@@ -1,4 +1,5 @@
 import {
+  Avatar,
   Box,
   Button,
   ButtonGroup,
@@ -15,11 +16,26 @@ import type { SxProps, Theme } from "@mui/material/styles";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { IconType } from "react-icons";
-import { LuBookOpen, LuKeyboard, LuLaptop, LuMail, LuMenu, LuMoon, LuSettings, LuSun } from "react-icons/lu";
+import {
+  LuBookOpen,
+  LuBuilding2,
+  LuCheck,
+  LuChevronRight,
+  LuKeyboard,
+  LuLaptop,
+  LuMail,
+  LuMenu,
+  LuMoon,
+  LuSettings,
+  LuSun,
+} from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
+import { loadWorkspaceFromBackend } from "../../commands/projectCommands";
 import { useThemePreference } from "../../hooks/useThemePreference";
 import { getRendererPlatform } from "../../helpers/platform";
+import { rendererQueryClient } from "../../queryClient";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
+import { sessionStore } from "../../store/sessionStore";
 import type { AppThemePreference } from "../../theme";
 
 const themeButtonSx: SxProps<Theme> = {
@@ -80,11 +96,24 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
   const { themePreference, setThemePreference } = useThemePreference();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const currentUser = sessionStore((state) => state.currentUser);
+  const organizations = sessionStore((state) => state.organizations);
+  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
+  const setSelectedOrganizationId = sessionStore((state) => state.setSelectedOrganizationId);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [organizationMenuAnchor, setOrganizationMenuAnchor] = useState<HTMLElement | null>(null);
   const isMenuOpen = Boolean(menuAnchor);
+  const isOrganizationMenuOpen = Boolean(organizationMenuAnchor);
   const platform = getRendererPlatform();
   const settingsShortcutLabel = platform === "darwin" ? "⌘+," : "CTRL+,";
   const keybindingsShortcutLabel = getShortcutDisplayLabelById("open-keybindings", platform);
+  const initials =
+    currentUser?.name
+      ?.split(" ")
+      .map((segment) => segment[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "U";
 
   return (
     <>
@@ -109,7 +138,13 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
             },
           }}
         >
-          <LuMenu size={16} />
+          <Avatar
+            src={currentUser?.avatarUrl ?? undefined}
+            alt={currentUser?.name ?? currentUser?.email ?? t("org.menu.trigger")}
+            sx={{ width: 22, height: 22, fontSize: 11 }}
+          >
+            {initials}
+          </Avatar>
         </IconButton>
       ) : (
         <Button
@@ -145,6 +180,7 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
         <ClickAwayListener
           onClickAway={() => {
             setMenuAnchor(null);
+            setOrganizationMenuAnchor(null);
           }}
         >
           <Paper elevation={3} sx={{ p: 1, minWidth: 168, maxWidth: 220 }}>
@@ -185,6 +221,25 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
                 <Button
                   size="small"
                   fullWidth
+                  startIcon={<LuBuilding2 size={14} />}
+                  sx={menuItemButtonSx}
+                  onClick={(event) => {
+                    setOrganizationMenuAnchor((currentAnchor) =>
+                      currentAnchor && currentAnchor === event.currentTarget ? null : event.currentTarget,
+                    );
+                  }}
+                >
+                  <Box
+                    component="span"
+                    sx={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}
+                  >
+                    <span>{t("org.menu.organizations")}</span>
+                    <LuChevronRight size={14} aria-hidden="true" />
+                  </Box>
+                </Button>
+                <Button
+                  size="small"
+                  fullWidth
                   startIcon={<LuSettings size={14} />}
                   sx={menuItemButtonSx}
                   onClick={() => {
@@ -194,7 +249,7 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
                 >
                   <Box
                     component="span"
-                    sx={{ width: "100%", display: "flex", justifyContent: "space-between", gap: 1 }}
+                    sx={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}
                   >
                     <span>{t("org.menu.settings")}</span>
                     <Typography variant="caption" color="text.secondary" component="span" aria-hidden="true">
@@ -227,7 +282,7 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
                 >
                   <Box
                     component="span"
-                    sx={{ width: "100%", display: "flex", justifyContent: "space-between", gap: 1 }}
+                    sx={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}
                   >
                     <span>{t("org.menu.shortcutMap")}</span>
                     {keybindingsShortcutLabel ? (
@@ -253,6 +308,55 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
             </Stack>
           </Paper>
         </ClickAwayListener>
+      </Popper>
+      <Popper
+        open={isOrganizationMenuOpen}
+        anchorEl={organizationMenuAnchor}
+        placement="right-start"
+        disablePortal
+        sx={{ zIndex: 1301, ml: 0.5 }}
+      >
+        <Paper elevation={3} sx={{ p: 0.75, minWidth: 220 }}>
+          <Stack spacing={0.25}>
+            {organizations.length === 0 ? (
+              <Typography variant="caption" color="text.secondary" sx={{ px: 1, py: 0.75 }}>
+                {t("org.menu.noOrganizations")}
+              </Typography>
+            ) : (
+              organizations.map((organization) => {
+                const selected = organization.id === selectedOrganizationId;
+
+                return (
+                  <Button
+                    key={organization.id}
+                    size="small"
+                    fullWidth
+                    disabled={selected}
+                    sx={{
+                      justifyContent: "space-between",
+                      textTransform: "none",
+                      color: "text.secondary",
+                      bgcolor: selected ? "action.selected" : "transparent",
+                    }}
+                    onClick={() => {
+                      if (selected) {
+                        return;
+                      }
+                      setSelectedOrganizationId(organization.id);
+                      setOrganizationMenuAnchor(null);
+                      setMenuAnchor(null);
+                      void rendererQueryClient.invalidateQueries({ queryKey: ["org-project-snapshot"] });
+                      void loadWorkspaceFromBackend();
+                    }}
+                  >
+                    <span>{organization.name}</span>
+                    {selected ? <LuCheck size={14} /> : null}
+                  </Button>
+                );
+              })
+            )}
+          </Stack>
+        </Paper>
       </Popper>
     </>
   );

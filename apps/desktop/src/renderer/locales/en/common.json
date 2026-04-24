@@ -110,6 +110,8 @@
   "org": {
     "menu": {
       "trigger": "Org",
+      "organizations": "Organizations",
+      "noOrganizations": "No organizations",
       "settings": "Settings",
       "documentation": "Documentation",
       "shortcutMap": "Shortcut map",
