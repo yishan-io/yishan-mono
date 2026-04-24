@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"yishan/apps/cli/internal/buildinfo"
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
@@ -87,8 +89,12 @@ func Run(cfg RunConfig, statePath string) error {
 	mux := http.NewServeMux()
 	mux.Handle("/ws", auth.Middleware(handler))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"status":  "running",
+			"version": buildinfo.Version,
+		})
 	})
 
 	server := &http.Server{

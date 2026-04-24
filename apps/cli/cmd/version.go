@@ -4,15 +4,14 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"yishan/apps/cli/internal/buildinfo"
 )
-
-var version = "dev"
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print CLI version",
 	Run: func(_ *cobra.Command, _ []string) {
-		fmt.Println(version)
+		fmt.Println(buildinfo.Version)
 	},
 }
 

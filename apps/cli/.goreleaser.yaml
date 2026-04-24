@@ -21,7 +21,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X yishan/apps/cli/cmd.version={{.Version}}
+      - -s -w -X yishan/apps/cli/internal/buildinfo.Version={{.Version}}
 
 archives:
   - id: yishan-archive
