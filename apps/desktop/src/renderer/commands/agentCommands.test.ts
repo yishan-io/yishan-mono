@@ -10,9 +10,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../rpc/rpcTransport", () => ({
   getApiServiceClient: vi.fn(async () => ({
     agent: {
-      listDetectionStatuses: {
-        query: mocks.listDetectionStatuses,
-      },
+      listDetectionStatuses: mocks.listDetectionStatuses,
     },
   })),
 }));

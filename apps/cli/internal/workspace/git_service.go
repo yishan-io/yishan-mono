@@ -61,6 +61,12 @@ type GitBranchList struct {
 	Branches      []string `json:"branches"`
 }
 
+type GitInspectResult struct {
+	IsGitRepository bool   `json:"isGitRepository"`
+	RemoteURL       string `json:"remoteUrl,omitempty"`
+	CurrentBranch   string `json:"currentBranch,omitempty"`
+}
+
 type GitService struct{}
 
 func NewGitService() *GitService {
@@ -73,6 +79,38 @@ func (s *GitService) Status(ctx context.Context, root string) (GitStatusResponse
 		return GitStatusResponse{}, err
 	}
 	return parseStatusOutput(out), nil
+}
+
+func (s *GitService) Inspect(ctx context.Context, path string) (GitInspectResult, error) {
+	candidatePath := strings.TrimSpace(path)
+	if candidatePath == "" {
+		return GitInspectResult{}, NewRPCError(-32602, "path is required")
+	}
+
+	absPath, err := filepath.Abs(candidatePath)
+	if err != nil {
+		return GitInspectResult{}, err
+	}
+
+	statInfo, err := os.Stat(absPath)
+	if err == nil && !statInfo.IsDir() {
+		absPath = filepath.Dir(absPath)
+	}
+
+	topLevel, err := gitCommand(ctx, absPath, "rev-parse", "--show-toplevel")
+	if err != nil || strings.TrimSpace(topLevel) == "" {
+		return GitInspectResult{IsGitRepository: false}, nil
+	}
+
+	repoRoot := strings.TrimSpace(topLevel)
+	remoteURL, _ := gitCommand(ctx, repoRoot, "config", "--get", "remote.origin.url")
+	currentBranch, _ := gitCommand(ctx, repoRoot, "rev-parse", "--abbrev-ref", "HEAD")
+
+	return GitInspectResult{
+		IsGitRepository: true,
+		RemoteURL:       strings.TrimSpace(remoteURL),
+		CurrentBranch:   strings.TrimSpace(currentBranch),
+	}, nil
 }
 
 func (s *GitService) ListChanges(ctx context.Context, root string) (GitChangesBySection, error) {

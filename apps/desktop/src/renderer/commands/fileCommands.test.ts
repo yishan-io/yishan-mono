@@ -34,42 +34,18 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../rpc/rpcTransport", () => ({
   getApiServiceClient: vi.fn(async () => ({
     file: {
-      createFile: {
-        mutate: mocks.createFile,
-      },
-      createFolder: {
-        mutate: mocks.createFolder,
-      },
-      deleteEntry: {
-        mutate: mocks.deleteEntry,
-      },
-      importEntries: {
-        mutate: mocks.importEntries,
-      },
-      importFilePayloads: {
-        mutate: mocks.importFilePayloads,
-      },
-      listFiles: {
-        query: mocks.listFiles,
-      },
-      openEntryInExternalApp: {
-        mutate: mocks.openEntryInExternalApp,
-      },
-      pasteEntries: {
-        mutate: mocks.pasteEntries,
-      },
-      readExternalClipboardSourcePaths: {
-        query: mocks.readExternalClipboardSourcePaths,
-      },
-      readFile: {
-        query: mocks.readFile,
-      },
-      renameEntry: {
-        mutate: mocks.renameEntry,
-      },
-      writeFile: {
-        mutate: mocks.writeFile,
-      },
+      createFile: mocks.createFile,
+      createFolder: mocks.createFolder,
+      deleteEntry: mocks.deleteEntry,
+      importEntries: mocks.importEntries,
+      importFilePayloads: mocks.importFilePayloads,
+      listFiles: mocks.listFiles,
+      openEntryInExternalApp: mocks.openEntryInExternalApp,
+      pasteEntries: mocks.pasteEntries,
+      readExternalClipboardSourcePaths: mocks.readExternalClipboardSourcePaths,
+      readFile: mocks.readFile,
+      renameEntry: mocks.renameEntry,
+      writeFile: mocks.writeFile,
     },
   })),
   getDesktopHostBridge: vi.fn(() => ({

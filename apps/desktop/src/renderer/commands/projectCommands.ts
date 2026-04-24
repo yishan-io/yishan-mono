@@ -1,11 +1,31 @@
 import { readPersistedDisplayRepoIds } from "../helpers/projectHelpers";
-import { createProject as createRemoteProject, listOrganizations } from "../api/orgProjectApi";
+import { createProject as createRemoteProject } from "../api/orgProjectApi";
 import { getOrgProjectSnapshot } from "../api/orgProjectQueries";
 import { rendererQueryClient } from "../queryClient";
 import { getApiServiceClient } from "../rpc/rpcTransport";
+import { sessionStore } from "../store/sessionStore";
 import { workspaceStore } from "../store/workspaceStore";
 import type { RepoSnapshot } from "../types/projectTypes";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
+
+async function inspectLocalRepository(path: string): Promise<{
+  isGitRepository: boolean;
+  remoteUrl?: string;
+  currentBranch?: string;
+}> {
+  try {
+    const client = await getApiServiceClient();
+    return (await client.git.inspect({ path })) as {
+      isGitRepository: boolean;
+      remoteUrl?: string;
+      currentBranch?: string;
+    };
+  } catch {
+    return {
+      isGitRepository: false,
+    };
+  }
+}
 
 /**
  * Maps org/project REST rows into the legacy workspace-store snapshot shape.
@@ -130,7 +150,7 @@ export async function loadWorkspaceFromBackend(): Promise<void> {
 }
 
 /** Creates one project in backend, then applies it into the local legacy store shape. */
-export async function createRepo(input: {
+export async function createProject(input: {
   name: string;
   key?: string;
   source: "local" | "remote";
@@ -146,10 +166,21 @@ export async function createRepo(input: {
     return;
   }
 
-  const organizations = await listOrganizations();
-  const primaryOrganization = organizations[0];
-  if (!primaryOrganization) {
+  const sessionState = sessionStore.getState();
+  const selectedOrganizationId = sessionState.selectedOrganizationId?.trim();
+  if (!selectedOrganizationId) {
     return;
+  }
+
+  let inferredSourceTypeHint: "unknown" | "git-local" = input.source === "local" ? "git-local" : "unknown";
+  let inferredRemoteUrl = input.source === "remote" ? normalizedGitUrl || undefined : undefined;
+  let inferredDefaultBranch: string | undefined;
+
+  if (input.source === "local" && normalizedPath) {
+    const localRepositoryMetadata = await inspectLocalRepository(normalizedPath);
+    inferredSourceTypeHint = localRepositoryMetadata.isGitRepository ? "git-local" : "unknown";
+    inferredRemoteUrl = localRepositoryMetadata.remoteUrl || undefined;
+    inferredDefaultBranch = localRepositoryMetadata.currentBranch || undefined;
   }
 
   let backendProject:
@@ -161,10 +192,10 @@ export async function createRepo(input: {
     | undefined;
 
   try {
-    backendProject = await createRemoteProject(primaryOrganization.id, {
+    backendProject = await createRemoteProject(selectedOrganizationId, {
       name: normalizedName,
-      sourceTypeHint: input.source === "local" ? "git-local" : "unknown",
-      repoUrl: input.source === "remote" ? normalizedGitUrl || undefined : undefined,
+      sourceTypeHint: inferredSourceTypeHint,
+      repoUrl: inferredRemoteUrl,
       localPath: input.source === "local" ? normalizedPath || undefined : undefined,
     });
   } catch (error) {
@@ -182,19 +213,22 @@ export async function createRepo(input: {
       key: backendProject.repoKey ?? normalizedKey ?? undefined,
       localPath: input.source === "local" ? normalizedPath || undefined : undefined,
       worktreePath: input.source === "local" ? normalizedPath || undefined : undefined,
-      gitUrl: backendProject.repoUrl ?? (input.source === "remote" ? normalizedGitUrl || undefined : undefined),
+      gitUrl: backendProject.repoUrl ?? inferredRemoteUrl,
       contextEnabled: true,
       icon: "folder",
       color: "#1E66F5",
       setupScript: "",
       postScript: "",
-      defaultBranch: null,
+      defaultBranch: inferredDefaultBranch ?? null,
     },
   });
 }
 
+/** @deprecated use createProject; kept for legacy call sites during migration. */
+export const createRepo = createProject;
+
 /** Deletes one project in backend and then removes it from local store state. */
-export async function deleteRepo(projectId: string): Promise<void> {
+export async function deleteProject(projectId: string): Promise<void> {
   if (!projectId) {
     return;
   }
@@ -203,7 +237,7 @@ export async function deleteRepo(projectId: string): Promise<void> {
   const client = await getApiServiceClient();
 
   try {
-    await client.repo.deleteRepo.mutate({ repoId: projectId });
+    await client.repo.deleteRepo({ repoId: projectId });
   } catch (error) {
     console.error("Failed to delete backend project and workspaces", error);
     return;
@@ -213,8 +247,11 @@ export async function deleteRepo(projectId: string): Promise<void> {
   syncTabStoreWithWorkspace(previousWorkspaces);
 }
 
+/** @deprecated use deleteProject; kept for legacy call sites during migration. */
+export const deleteRepo = deleteProject;
+
 /** Persists project config to backend and updates local config state when successful. */
-export async function updateRepoConfig(
+export async function updateProjectConfig(
   projectId: string,
   config: {
     name: string;
@@ -235,7 +272,7 @@ export async function updateRepoConfig(
 
   const client = await getApiServiceClient();
   try {
-    await client.repo.createRepo.mutate({
+    await client.repo.createRepo({
       key: project.key,
       localPath: project.localPath || undefined,
       remoteUrl: project.gitUrl || undefined,
@@ -255,3 +292,6 @@ export async function updateRepoConfig(
   store.updateRepoConfig(projectId, config);
   store.incrementFileTreeRefreshVersion();
 }
+
+/** @deprecated use updateProjectConfig; kept for legacy call sites during migration. */
+export const updateRepoConfig = updateProjectConfig;

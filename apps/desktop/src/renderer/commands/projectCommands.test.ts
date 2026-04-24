@@ -2,19 +2,18 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../store/chatStore";
+import { sessionStore } from "../store/sessionStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
 import { createRepo, deleteRepo, loadWorkspaceFromBackend, updateRepoConfig } from "./projectCommands";
 
 const apiMocks = vi.hoisted(() => ({
-  listOrganizations: vi.fn(),
   createProject: vi.fn(),
   fetchOrgProjectSnapshot: vi.fn(),
   queryClientFetchQuery: vi.fn(),
 }));
 
 vi.mock("../api/orgProjectApi", () => ({
-  listOrganizations: apiMocks.listOrganizations,
   createProject: apiMocks.createProject,
 }));
 
@@ -31,17 +30,17 @@ vi.mock("../queryClient", () => ({
 const rpcMocks = vi.hoisted(() => ({
   createRepo: vi.fn(),
   deleteRepo: vi.fn(),
+  gitInspect: vi.fn(),
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
   getApiServiceClient: vi.fn(async () => ({
+    git: {
+      inspect: rpcMocks.gitInspect,
+    },
     repo: {
-      createRepo: {
-        mutate: rpcMocks.createRepo,
-      },
-      deleteRepo: {
-        mutate: rpcMocks.deleteRepo,
-      },
+      createRepo: rpcMocks.createRepo,
+      deleteRepo: rpcMocks.deleteRepo,
     },
   })),
 }));
@@ -49,12 +48,14 @@ vi.mock("../rpc/rpcTransport", () => ({
 const initialWorkspaceStoreState = workspaceStore.getState();
 const initialTabStoreState = tabStore.getState();
 const initialChatStoreState = chatStore.getState();
+const initialSessionStoreState = sessionStore.getState();
 
 afterEach(() => {
   localStorage.clear();
   workspaceStore.setState(initialWorkspaceStoreState, true);
   tabStore.setState(initialTabStoreState, true);
   chatStore.setState(initialChatStoreState, true);
+  sessionStore.setState(initialSessionStoreState, true);
   vi.clearAllMocks();
 });
 
@@ -110,7 +111,12 @@ describe("projectCommands", () => {
   it("creates backend repo and then appends store state", async () => {
     const appendRepo = vi.fn();
     workspaceStore.setState({ createRepo: appendRepo });
-    apiMocks.listOrganizations.mockResolvedValueOnce([{ id: "org-1", name: "Default org" }]);
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    rpcMocks.gitInspect.mockResolvedValueOnce({
+      isGitRepository: true,
+      remoteUrl: "https://github.com/test/repo-1.git",
+      currentBranch: "main",
+    });
     apiMocks.createProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Repo 1",
@@ -130,10 +136,17 @@ describe("projectCommands", () => {
     expect(apiMocks.createProject).toHaveBeenCalledWith("org-1", {
       name: "Repo 1",
       sourceTypeHint: "git-local",
-      repoUrl: undefined,
+      repoUrl: "https://github.com/test/repo-1.git",
       localPath: "/tmp/repo-1",
     });
     expect(appendRepo).toHaveBeenCalledTimes(1);
+    expect(appendRepo.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        backendRepo: expect.objectContaining({
+          defaultBranch: "main",
+        }),
+      }),
+    );
   });
 
   it("deletes backend repo and then removes repo from store", async () => {

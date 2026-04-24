@@ -40,6 +40,7 @@ export class DaemonJsonRpcClient {
   };
 
   readonly git = {
+    inspect: this.inspectGitRepository.bind(this),
     listChanges: this.listGitChanges.bind(this),
     trackChanges: this.trackGitChanges.bind(this),
     unstageChanges: this.unstageGitChanges.bind(this),
@@ -502,6 +503,16 @@ export class DaemonJsonRpcClient {
   private async listGitChanges(input: Rpc.GitWorktreeInput): Promise<Rpc.GitChangesBySection> {
     const workspaceId = await this.resolveWorkspaceId(input);
     return (await this.invoke("git.listChanges", { workspaceId })) as Rpc.GitChangesBySection;
+  }
+
+  private async inspectGitRepository(input: Rpc.GitInspectInput): Promise<Rpc.GitInspectResponse> {
+    const record = asRecord(input);
+    const path = readOptionalString(record?.path);
+    if (!path) {
+      throw new Error("path is required");
+    }
+
+    return (await this.invoke("git.inspect", { path })) as Rpc.GitInspectResponse;
   }
 
   private async trackGitChanges(input: Rpc.GitPathsInput): Promise<Rpc.GitStatusOperationResponse> {

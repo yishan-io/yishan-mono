@@ -7,7 +7,7 @@ const gitAuthorNameByWorktreePath = new Map<string, string | null>();
 /** Reads old/new file content for one workspace diff view. */
 export async function readDiff(params: { workspaceWorktreePath: string; relativePath: string }) {
   const client = await getApiServiceClient();
-  return client.file.readDiff.query({
+  return client.file.readDiff({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
   });
@@ -20,7 +20,7 @@ export async function readCommitDiff(params: {
   relativePath: string;
 }) {
   const client = await getApiServiceClient();
-  return client.git.readCommitDiff.query({
+  return client.git.readCommitDiff({
     workspaceWorktreePath: params.workspaceWorktreePath,
     commitHash: params.commitHash,
     relativePath: params.relativePath,
@@ -34,7 +34,7 @@ export async function readBranchComparisonDiff(params: {
   relativePath: string;
 }) {
   const client = await getApiServiceClient();
-  return client.git.readBranchComparisonDiff.query({
+  return client.git.readBranchComparisonDiff({
     workspaceWorktreePath: params.workspaceWorktreePath,
     targetBranch: params.targetBranch,
     relativePath: params.relativePath,
@@ -51,7 +51,7 @@ export async function listGitChanges(params: { workspaceWorktreePath: string }) 
 
   const request = (async () => {
     const client = await getApiServiceClient();
-    return await client.git.listChanges.query({ workspaceWorktreePath: normalizedWorkspaceWorktreePath });
+    return await client.git.listChanges({ workspaceWorktreePath: normalizedWorkspaceWorktreePath });
   })();
 
   inFlightListGitChangesByWorktreePath.set(normalizedWorkspaceWorktreePath, request);
@@ -65,7 +65,7 @@ export async function listGitChanges(params: { workspaceWorktreePath: string }) 
 /** Stages one or more changed paths for one workspace. */
 export async function trackGitChanges(params: { workspaceWorktreePath: string; relativePaths: string[] }) {
   const client = await getApiServiceClient();
-  return client.git.trackChanges.mutate({
+  return client.git.trackChanges({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePaths: params.relativePaths,
   });
@@ -74,7 +74,7 @@ export async function trackGitChanges(params: { workspaceWorktreePath: string; r
 /** Unstages one or more changed paths for one workspace. */
 export async function unstageGitChanges(params: { workspaceWorktreePath: string; relativePaths: string[] }) {
   const client = await getApiServiceClient();
-  return client.git.unstageChanges.mutate({
+  return client.git.unstageChanges({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePaths: params.relativePaths,
   });
@@ -83,7 +83,7 @@ export async function unstageGitChanges(params: { workspaceWorktreePath: string;
 /** Reverts one or more changed paths for one workspace. */
 export async function revertGitChanges(params: { workspaceWorktreePath: string; relativePaths: string[] }) {
   const client = await getApiServiceClient();
-  return client.git.revertChanges.mutate({
+  return client.git.revertChanges({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePaths: params.relativePaths,
   });
@@ -97,7 +97,7 @@ export async function commitGitChanges(params: {
   signoff?: boolean;
 }) {
   const client = await getApiServiceClient();
-  return client.git.commitChanges.mutate({
+  return client.git.commitChanges({
     workspaceWorktreePath: params.workspaceWorktreePath,
     message: params.message,
     amend: params.amend,
@@ -108,13 +108,13 @@ export async function commitGitChanges(params: {
 /** Reads upstream and ahead/behind status for one workspace branch. */
 export async function getGitBranchStatus(params: { workspaceWorktreePath: string }) {
   const client = await getApiServiceClient();
-  return client.git.getBranchStatus.query({ workspaceWorktreePath: params.workspaceWorktreePath });
+  return client.git.getBranchStatus({ workspaceWorktreePath: params.workspaceWorktreePath });
 }
 
 /** Lists commits from current branch to one target branch. */
 export async function listGitCommitsToTarget(params: { workspaceWorktreePath: string; targetBranch: string }) {
   const client = await getApiServiceClient();
-  return client.git.listCommitsToTarget.query({
+  return client.git.listCommitsToTarget({
     workspaceWorktreePath: params.workspaceWorktreePath,
     targetBranch: params.targetBranch,
   });
@@ -123,19 +123,19 @@ export async function listGitCommitsToTarget(params: { workspaceWorktreePath: st
 /** Lists available branch names for one workspace. */
 export async function listGitBranches(params: { workspaceWorktreePath: string }) {
   const client = await getApiServiceClient();
-  return client.git.listBranches.query({ workspaceWorktreePath: params.workspaceWorktreePath });
+  return client.git.listBranches({ workspaceWorktreePath: params.workspaceWorktreePath });
 }
 
 /** Pushes one workspace branch to its upstream. */
 export async function pushGitBranch(params: { workspaceWorktreePath: string }) {
   const client = await getApiServiceClient();
-  return client.git.pushBranch.mutate({ workspaceWorktreePath: params.workspaceWorktreePath });
+  return client.git.pushBranch({ workspaceWorktreePath: params.workspaceWorktreePath });
 }
 
 /** Publishes one workspace branch and configures upstream tracking. */
 export async function publishGitBranch(params: { workspaceWorktreePath: string }) {
   const client = await getApiServiceClient();
-  return client.git.publishBranch.mutate({ workspaceWorktreePath: params.workspaceWorktreePath });
+  return client.git.publishBranch({ workspaceWorktreePath: params.workspaceWorktreePath });
 }
 
 /** Reads one repository's resolved git `user.name` value for branch-prefix `Git author` usage. */
@@ -152,7 +152,7 @@ export async function getGitAuthorName(params: { workspaceWorktreePath: string }
 
   const request = (async () => {
     const client = await getApiServiceClient();
-    return await client.git.getAuthorName.query({ workspaceWorktreePath: normalizedWorkspaceWorktreePath });
+    return await client.git.getAuthorName({ workspaceWorktreePath: normalizedWorkspaceWorktreePath });
   })();
 
   inFlightGitAuthorNameByWorktreePath.set(normalizedWorkspaceWorktreePath, request);

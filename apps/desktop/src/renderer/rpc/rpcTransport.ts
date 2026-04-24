@@ -98,12 +98,8 @@ function ensureBridgeSubscription(): void {
   });
 }
 
-/** Invokes one api-service query/mutation procedure through preload bridge IPC. */
-async function invokeApiProcedure(
-  path: string,
-  procedureKind: "query" | "mutation",
-  input?: unknown,
-): Promise<unknown> {
+/** Invokes one api-service procedure through preload bridge IPC. */
+async function invokeApiProcedure(path: string, input?: unknown): Promise<unknown> {
   const apiBridge = getDesktopBridge()?.api;
   if (!apiBridge) {
     throw new Error("Desktop api-service bridge is unavailable");
@@ -117,7 +113,6 @@ async function invokeApiProcedure(
   return await apiBridge.invoke({
     namespace: parsed.namespace,
     method: parsed.method,
-    procedureKind,
     input,
   });
 }
@@ -180,47 +175,49 @@ function parseProcedurePath(path: string): { namespace: DesktopApiNamespace; met
 
 /** Builds one dynamic procedure proxy node for one dotted-path prefix. */
 function createProcedureProxy(pathSegments: string[]): unknown {
-  return new Proxy(
-    {},
-    {
-      get(_target, property) {
-        if (property === "then") {
-          return undefined;
-        }
+  const callable = async (input?: unknown) => {
+    const path = pathSegments.join(".");
+    if (!path) {
+      throw new Error("API procedure path is required");
+    }
 
-        if (property === "query") {
-          return async (input?: unknown) => {
-            return await invokeApiProcedure(pathSegments.join("."), "query", input);
+    return await invokeApiProcedure(path, input);
+  };
+
+  return new Proxy(callable, {
+    get(_target, property) {
+      if (property === "then") {
+        return undefined;
+      }
+
+      if (property === "subscribe") {
+        return (input: unknown, handlers: ApiSubscriptionHandlers) => {
+          const stopPromise = subscribeApiProcedure(pathSegments.join("."), input, handlers);
+          return {
+            unsubscribe: () => {
+              void stopPromise.then((stop) => {
+                stop();
+              });
+            },
           };
-        }
+        };
+      }
 
-        if (property === "mutate") {
-          return async (input?: unknown) => {
-            return await invokeApiProcedure(pathSegments.join("."), "mutation", input);
-          };
-        }
+      if (typeof property !== "string") {
+        return undefined;
+      }
 
-        if (property === "subscribe") {
-          return (input: unknown, handlers: ApiSubscriptionHandlers) => {
-            const stopPromise = subscribeApiProcedure(pathSegments.join("."), input, handlers);
-            return {
-              unsubscribe: () => {
-                void stopPromise.then((stop) => {
-                  stop();
-                });
-              },
-            };
-          };
-        }
-
-        if (typeof property !== "string") {
-          return undefined;
-        }
-
-        return createProcedureProxy([...pathSegments, property]);
-      },
+      return createProcedureProxy([...pathSegments, property]);
     },
-  );
+    apply(_target, _thisArg, argArray) {
+      const path = pathSegments.join(".");
+      if (!path) {
+        return Promise.reject(new Error("API procedure path is required"));
+      }
+
+      return invokeApiProcedure(path, argArray[0]);
+    },
+  });
 }
 
 /** Creates one dynamic API client that mirrors the expected tRPC query/mutation/subscription shape. */

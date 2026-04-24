@@ -28,21 +28,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../rpc/rpcTransport", () => ({
   getApiServiceClient: vi.fn(async () => ({
     app: {
-      checkAgentGlobalConfigExternalDirectoryPermission: {
-        query: mocks.checkAgentGlobalConfigExternalDirectoryPermission,
-      },
-      ensureAgentGlobalConfigExternalDirectoryPermission: {
-        mutate: mocks.ensureAgentGlobalConfigExternalDirectoryPermission,
-      },
-      getDefaultWorktreeLocation: {
-        query: mocks.getDefaultWorktreeLocation,
-      },
-      openLocalFolderDialog: {
-        mutate: mocks.openLocalFolderDialog,
-      },
-      toggleMainWindowMaximized: {
-        mutate: mocks.toggleMainWindowMaximized,
-      },
+      checkAgentGlobalConfigExternalDirectoryPermission: mocks.checkAgentGlobalConfigExternalDirectoryPermission,
+      ensureAgentGlobalConfigExternalDirectoryPermission: mocks.ensureAgentGlobalConfigExternalDirectoryPermission,
+      getDefaultWorktreeLocation: mocks.getDefaultWorktreeLocation,
+      openLocalFolderDialog: mocks.openLocalFolderDialog,
+      toggleMainWindowMaximized: mocks.toggleMainWindowMaximized,
     },
   })),
   getDesktopHostBridge: vi.fn(() => ({

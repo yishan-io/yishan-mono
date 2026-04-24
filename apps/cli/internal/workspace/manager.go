@@ -163,6 +163,10 @@ func (m *Manager) GitStatus(ctx context.Context, workspaceID string) (GitStatusR
 	return m.gits.Status(ctx, ws.Path)
 }
 
+func (m *Manager) GitInspect(ctx context.Context, path string) (GitInspectResult, error) {
+	return m.gits.Inspect(ctx, path)
+}
+
 func (m *Manager) GitListChanges(ctx context.Context, workspaceID string) (GitChangesBySection, error) {
 	ws, err := m.getWorkspace(workspaceID)
 	if err != nil {

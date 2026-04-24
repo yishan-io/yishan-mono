@@ -106,7 +106,7 @@ async function resolveBackendWorkspaceId(
   client: Awaited<ReturnType<typeof getApiServiceClient>>,
   workspaceId: string,
 ): Promise<string | undefined> {
-  const workspaces = (await client.workspace.list.query({
+  const workspaces = (await client.workspace.list({
     orgId: "default",
   })) as WorkspaceListResponse;
   return resolveWorkspaceIdByInstanceId(workspaces, workspaceId);
@@ -125,7 +125,7 @@ async function closeWorkspaceInBackground(input: {
     return;
   }
 
-  const closed = (await client.workspace.close.mutate({
+  const closed = (await client.workspace.close({
     workspaceId: backendWorkspaceId,
     removeBranch: input.removeBranch,
   })) as CloseWorkspaceResponse | undefined;
@@ -175,7 +175,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<void
   if (project?.localPath) {
     const client = await getApiServiceClient();
     try {
-      const created = (await client.workspace.create.mutate({
+      const created = (await client.workspace.create({
         orgId: "default",
         repositoryId: projectId,
         workspaceName: normalizedName,
@@ -249,7 +249,7 @@ export async function refreshWorkspaceGitChanges(workspaceId: string, workspaceW
 
   try {
     const client = await getApiServiceClient();
-    const sections = await client.git.listChanges.query({
+    const sections = await client.git.listChanges({
       workspaceWorktreePath,
     });
     const count = countWorkspaceGitChanges(sections);
@@ -435,7 +435,7 @@ export async function renameWorkspaceBranch(input: {
 
   try {
     const client = await getApiServiceClient();
-    await client.git.renameBranch.mutate({
+    await client.git.renameBranch({
       workspaceWorktreePath,
       nextBranch: normalizedBranch,
     });

@@ -8,13 +8,13 @@ import { getApiServiceClient, getDesktopHostBridge } from "../rpc/rpcTransport";
 /** Loads persisted notification preferences from desktop runtime storage. */
 export async function getNotificationPreferences() {
   const client = await getApiServiceClient();
-  return client.notification.getNotificationPreferences.query(undefined);
+  return client.notification.getNotificationPreferences(undefined);
 }
 
 /** Updates notification preferences and persists them through desktop runtime storage. */
 export async function updateNotificationPreferences(patch: Partial<NotificationPreferences>) {
   const client = await getApiServiceClient();
-  return client.notification.updateNotificationPreferences.mutate(patch);
+  return client.notification.updateNotificationPreferences(patch);
 }
 
 /** Triggers one OS notification preview with current or provided preferences. */

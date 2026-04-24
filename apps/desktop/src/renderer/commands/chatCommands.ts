@@ -97,7 +97,7 @@ export async function ensureChatSession(params: {
   agentKind?: WorkspaceAgentKind;
 }): Promise<EnsureWorkspaceChatSessionResponse> {
   const client = await getApiServiceClient();
-  return (await client.chat.ensureWorkspaceChatSession.mutate({
+  return (await client.chat.ensureWorkspaceChatSession({
     workspaceId: params.workspaceId,
     sessionId: params.sessionId,
     title: params.title,
@@ -114,7 +114,7 @@ export async function runChatPrompt(params: {
   suppressCompletionNotification?: boolean;
 }) {
   const client = await getApiServiceClient();
-  return client.chat.runWorkspaceChatPrompt.mutate({
+  return client.chat.runWorkspaceChatPrompt({
     workspaceId: params.workspaceId,
     sessionId: params.sessionId,
     prompt: params.prompt,
@@ -126,7 +126,7 @@ export async function runChatPrompt(params: {
 /** Closes one agent session and optionally deletes its persisted record. */
 export async function closeAgentSession(params: { sessionId: string; deleteRecord?: boolean }) {
   const client = await getApiServiceClient();
-  return client.chat.closeAgentSession.mutate({
+  return client.chat.closeAgentSession({
     sessionId: params.sessionId,
     deleteRecord: params.deleteRecord,
   });

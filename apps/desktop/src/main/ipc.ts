@@ -8,14 +8,11 @@ export type DesktopRpcEventEnvelope = {
   payload?: unknown;
 };
 
-export type ApiProcedureKind = "query" | "mutation";
-
 export type DesktopApiNamespace = "workspace" | "file" | "git" | "terminal";
 
 export type InvokeApiProcedureInput = {
   namespace: DesktopApiNamespace;
   method: string;
-  procedureKind: ApiProcedureKind;
   input?: unknown;
 };
 

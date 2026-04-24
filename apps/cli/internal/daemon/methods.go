@@ -16,6 +16,7 @@ const (
 	MethodFileDiff   = "file.diff"
 
 	MethodGitStatus          = "git.status"
+	MethodGitInspect         = "git.inspect"
 	MethodGitListChanges     = "git.listChanges"
 	MethodGitTrack           = "git.track"
 	MethodGitUnstage         = "git.unstage"

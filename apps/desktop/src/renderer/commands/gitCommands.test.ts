@@ -38,50 +38,22 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../rpc/rpcTransport", () => ({
   getApiServiceClient: vi.fn(async () => ({
     file: {
-      readDiff: {
-        query: mocks.readDiff,
-      },
+      readDiff: mocks.readDiff,
     },
     git: {
-      commitChanges: {
-        mutate: mocks.commitGitChanges,
-      },
-      getBranchStatus: {
-        query: mocks.getGitBranchStatus,
-      },
-      getAuthorName: {
-        query: mocks.getGitAuthorName,
-      },
-      listBranches: {
-        query: mocks.listGitBranches,
-      },
-      listChanges: {
-        query: mocks.listGitChanges,
-      },
-      listCommitsToTarget: {
-        query: mocks.listGitCommitsToTarget,
-      },
-      publishBranch: {
-        mutate: mocks.publishGitBranch,
-      },
-      pushBranch: {
-        mutate: mocks.pushGitBranch,
-      },
-      readBranchComparisonDiff: {
-        query: mocks.readBranchComparisonDiff,
-      },
-      readCommitDiff: {
-        query: mocks.readCommitDiff,
-      },
-      revertChanges: {
-        mutate: mocks.revertGitChanges,
-      },
-      trackChanges: {
-        mutate: mocks.trackGitChanges,
-      },
-      unstageChanges: {
-        mutate: mocks.unstageGitChanges,
-      },
+      commitChanges: mocks.commitGitChanges,
+      getBranchStatus: mocks.getGitBranchStatus,
+      getAuthorName: mocks.getGitAuthorName,
+      listBranches: mocks.listGitBranches,
+      listChanges: mocks.listGitChanges,
+      listCommitsToTarget: mocks.listGitCommitsToTarget,
+      publishBranch: mocks.publishGitBranch,
+      pushBranch: mocks.pushGitBranch,
+      readBranchComparisonDiff: mocks.readBranchComparisonDiff,
+      readCommitDiff: mocks.readCommitDiff,
+      revertChanges: mocks.revertGitChanges,
+      trackChanges: mocks.trackGitChanges,
+      unstageChanges: mocks.unstageGitChanges,
     },
   })),
 }));

@@ -5,7 +5,7 @@ import { getApiServiceClient, getDesktopHostBridge } from "../rpc/rpcTransport";
 /** Lists workspace files under one optional directory path, recursively by default. */
 export async function listFiles(params: { workspaceWorktreePath: string; relativePath?: string; recursive?: boolean }) {
   const client = await getApiServiceClient();
-  return client.file.listFiles.query({
+  return client.file.listFiles({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
     recursive: params.recursive,
@@ -21,7 +21,7 @@ export async function listFilesBatch(params: {
   }>;
 }) {
   const client = await getApiServiceClient();
-  return client.file.listFilesBatch.query({
+  return client.file.listFilesBatch({
     workspaceWorktreePath: params.workspaceWorktreePath,
     requests: params.requests,
   });
@@ -30,7 +30,7 @@ export async function listFilesBatch(params: {
 /** Reads one file from one workspace worktree path. */
 export async function readFile(params: { workspaceWorktreePath: string; relativePath: string }) {
   const client = await getApiServiceClient();
-  return client.file.readFile.query({
+  return client.file.readFile({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
   });
@@ -43,7 +43,7 @@ export async function writeFile(params: {
   content: string;
 }) {
   const client = await getApiServiceClient();
-  return client.file.writeFile.mutate({
+  return client.file.writeFile({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
     content: params.content,
@@ -57,7 +57,7 @@ export async function createFile(params: {
   content: string;
 }) {
   const client = await getApiServiceClient();
-  return client.file.createFile.mutate({
+  return client.file.createFile({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
     content: params.content,
@@ -67,7 +67,7 @@ export async function createFile(params: {
 /** Creates one folder inside one workspace worktree path. */
 export async function createFolder(params: { workspaceWorktreePath: string; relativePath: string }) {
   const client = await getApiServiceClient();
-  return client.file.createFolder.mutate({
+  return client.file.createFolder({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
   });
@@ -80,7 +80,7 @@ export async function renameEntry(params: {
   toRelativePath: string;
 }) {
   const client = await getApiServiceClient();
-  return client.file.renameEntry.mutate({
+  return client.file.renameEntry({
     workspaceWorktreePath: params.workspaceWorktreePath,
     fromRelativePath: params.fromRelativePath,
     toRelativePath: params.toRelativePath,
@@ -90,7 +90,7 @@ export async function renameEntry(params: {
 /** Deletes one file-system entry in one workspace worktree path. */
 export async function deleteEntry(params: { workspaceWorktreePath: string; relativePath: string }) {
   const client = await getApiServiceClient();
-  return client.file.deleteEntry.mutate({
+  return client.file.deleteEntry({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
   });
@@ -122,7 +122,7 @@ export async function pasteEntries(params: {
   mode: "copy" | "move";
 }) {
   const client = await getApiServiceClient();
-  return client.file.pasteEntries.mutate({
+  return client.file.pasteEntries({
     workspaceWorktreePath: params.workspaceWorktreePath,
     sourceRelativePaths: params.sourceRelativePaths,
     destinationRelativePath: params.destinationRelativePath,
@@ -137,7 +137,7 @@ export async function importEntries(params: {
   destinationRelativePath?: string;
 }) {
   const client = await getApiServiceClient();
-  return client.file.importEntries.mutate({
+  return client.file.importEntries({
     workspaceWorktreePath: params.workspaceWorktreePath,
     sourcePaths: params.sourcePaths,
     destinationRelativePath: params.destinationRelativePath,
@@ -154,7 +154,7 @@ export async function importFilePayloads(params: {
   destinationRelativePath?: string;
 }) {
   const client = await getApiServiceClient();
-  return client.file.importFilePayloads.mutate({
+  return client.file.importFilePayloads({
     workspaceWorktreePath: params.workspaceWorktreePath,
     filePayloads: params.filePayloads,
     destinationRelativePath: params.destinationRelativePath,

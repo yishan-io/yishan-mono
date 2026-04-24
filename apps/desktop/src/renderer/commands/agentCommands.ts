@@ -37,6 +37,6 @@ function normalizeAgentDetectionStatuses(payload: unknown): AgentDetectionStatus
 /** Lists supported desktop agents with current system detection state. */
 export async function listAgentDetectionStatuses(): Promise<AgentDetectionStatus[]> {
   const client = await getApiServiceClient();
-  const payload = await client.agent.listDetectionStatuses.query(undefined);
+  const payload = await client.agent.listDetectionStatuses(undefined);
   return normalizeAgentDetectionStatuses(payload);
 }

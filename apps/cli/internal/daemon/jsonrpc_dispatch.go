@@ -83,6 +83,12 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 			return nil, err
 		}
 		return h.manager.GitStatus(ctx, req.WorkspaceID)
+	case MethodGitInspect:
+		var req gitInspectParams
+		if err := decodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.manager.GitInspect(ctx, req.Path)
 	case MethodGitListChanges:
 		var req gitStatusParams
 		if err := decodeParams(params, &req); err != nil {

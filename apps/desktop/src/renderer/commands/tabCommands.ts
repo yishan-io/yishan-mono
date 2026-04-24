@@ -35,7 +35,7 @@ function closeTerminalSessionsForTabs(tabs: TerminalTab[]): void {
 
     void getApiServiceClient()
       .then((client) => {
-        return client.terminal.closeSession.mutate({ sessionId });
+        return client.terminal.closeSession({ sessionId });
       })
       .catch(() => {
         return;
@@ -52,7 +52,7 @@ export async function createTab(input?: { workspaceId?: string }): Promise<void>
 
   try {
     const client = await getApiServiceClient();
-    const ensured = await client.chat.ensureWorkspaceChatSession.mutate({
+    const ensured = await client.chat.ensureWorkspaceChatSession({
       workspaceId: created.workspaceId,
       sessionId: created.tabId,
       title: created.title,
@@ -76,7 +76,7 @@ export function closeTab(tabId: string): void {
     const sessionId = tab.data.sessionId;
     void getApiServiceClient()
       .then((client) => {
-        return client.chat.closeAgentSession.mutate({ sessionId });
+        return client.chat.closeAgentSession({ sessionId });
       })
       .catch(() => {
         return;
@@ -104,7 +104,7 @@ export function closeOtherTabs(tabId: string): void {
   for (const sessionId of collectSessionIdsToCloseOtherTabs(snapshot.tabs, tabId)) {
     void getApiServiceClient()
       .then((client) => {
-        return client.chat.closeAgentSession.mutate({ sessionId });
+        return client.chat.closeAgentSession({ sessionId });
       })
       .catch(() => {
         return;
@@ -132,7 +132,7 @@ export function closeAllTabs(tabId: string): void {
   for (const sessionId of collectSessionIdsToCloseAllTabs(snapshot.tabs, tabId)) {
     void getApiServiceClient()
       .then((client) => {
-        return client.chat.closeAgentSession.mutate({ sessionId });
+        return client.chat.closeAgentSession({ sessionId });
       })
       .catch(() => {
         return;

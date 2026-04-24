@@ -28,33 +28,19 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../rpc/rpcTransport", () => ({
   getApiServiceClient: vi.fn(async () => ({
     terminal: {
-      closeSession: {
-        mutate: mocks.closeSession,
-      },
-      createSession: {
-        mutate: mocks.createSession,
-      },
-      listDetectedPorts: {
-        query: mocks.listDetectedPorts,
-      },
-      listSessions: {
-        query: mocks.listSessions,
-      },
-      readOutput: {
-        query: mocks.readOutput,
-      },
+      closeSession: mocks.closeSession,
+      createSession: mocks.createSession,
+      listDetectedPorts: mocks.listDetectedPorts,
+      listSessions: mocks.listSessions,
+      readOutput: mocks.readOutput,
       subscribeSessions: {
         subscribe: mocks.subscribeSessions,
       },
       subscribeOutput: {
         subscribe: mocks.subscribeOutput,
       },
-      resize: {
-        mutate: mocks.resize,
-      },
-      writeInput: {
-        mutate: mocks.writeInput,
-      },
+      resize: mocks.resize,
+      writeInput: mocks.writeInput,
     },
   })),
 }));

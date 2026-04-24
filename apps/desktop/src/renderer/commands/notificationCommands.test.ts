@@ -20,12 +20,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../rpc/rpcTransport", () => ({
   getApiServiceClient: vi.fn(async () => ({
     notification: {
-      getNotificationPreferences: {
-        query: mocks.getNotificationPreferences,
-      },
-      updateNotificationPreferences: {
-        mutate: mocks.updateNotificationPreferences,
-      },
+      getNotificationPreferences: mocks.getNotificationPreferences,
+      updateNotificationPreferences: mocks.updateNotificationPreferences,
     },
   })),
   getDesktopHostBridge: vi.fn(() => ({

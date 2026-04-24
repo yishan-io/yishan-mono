@@ -9,20 +9,20 @@ export async function openLocalFolderDialog(startingFolder?: string) {
 /** Reads default workspace worktree location from backend app settings. */
 export async function getDefaultWorktreeLocation() {
   const client = await getApiServiceClient();
-  const response = await client.app.getDefaultWorktreeLocation.query(undefined);
+  const response = await client.app.getDefaultWorktreeLocation(undefined);
   return response.worktreePath;
 }
 
 /** Checks whether one agent global config grants external directory access. */
 export async function checkAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: AgentKind }) {
   const client = await getApiServiceClient();
-  return client.app.checkAgentGlobalConfigExternalDirectoryPermission.query(params ?? {});
+  return client.app.checkAgentGlobalConfigExternalDirectoryPermission(params ?? {});
 }
 
 /** Ensures one agent global config grants external directory access. */
 export async function ensureAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: AgentKind }) {
   const client = await getApiServiceClient();
-  return client.app.ensureAgentGlobalConfigExternalDirectoryPermission.mutate(params ?? {});
+  return client.app.ensureAgentGlobalConfigExternalDirectoryPermission(params ?? {});
 }
 
 /** Toggles the main desktop window maximized state. */

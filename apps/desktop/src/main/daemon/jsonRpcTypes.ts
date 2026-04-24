@@ -113,6 +113,10 @@ export type GitWorktreeInput = {
   workspaceWorktreePath: string;
 };
 
+export type GitInspectInput = {
+  path: string;
+};
+
 export type GitPathsInput = {
   workspaceWorktreePath: string;
   relativePaths: string[];
@@ -266,6 +270,12 @@ export type GitStatusOperationResponse = {
   unstaged?: boolean;
   reverted?: boolean;
   renamed?: boolean;
+};
+
+export type GitInspectResponse = {
+  isGitRepository: boolean;
+  remoteUrl?: string;
+  currentBranch?: string;
 };
 
 export type GitBranchStatusResponse = {
