@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   clipboardReadText: vi.fn(),
 }));
 
-vi.mock("@yishan/runtime", () => ({
+vi.mock("./process", () => ({
   runCommandForStdout: mocks.runCommandForStdout,
 }));
 

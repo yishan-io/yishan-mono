@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   shellOpenExternal: vi.fn(),
 }));
 
-vi.mock("@yishan/runtime", () => ({
+vi.mock("./process", () => ({
   runCommandForExitCode: mocks.runCommandForExitCode,
 }));
 

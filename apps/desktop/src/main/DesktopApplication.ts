@@ -1,7 +1,11 @@
-import { app, BrowserWindow, ipcMain } from "electron";
-import { join } from "node:path";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { statSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { getAuthStatus, login } from "./auth/cliAuth";
+import { readExternalClipboardSourcePathsFromSystem } from "./integrations/externalClipboardPipeline";
+import { launchPath, openExternalUrl } from "./integrations/externalAppLauncher";
 import { HOST_IPC_CHANNELS } from "./ipc";
+import { createDesktopNotificationHostAdapter } from "./notifications/service";
 
 /**
  * Owns Electron desktop lifecycle and main window bootstrap.
@@ -26,6 +30,7 @@ export class DesktopApplication {
    */
   private async start(): Promise<void> {
     await app.whenReady();
+    this.registerHostIpcHandlers();
     this.registerAuthIpcHandlers();
     this.createMainWindow();
 
@@ -50,6 +55,106 @@ export class DesktopApplication {
 
     ipcMain.handle(HOST_IPC_CHANNELS.login, async () => {
       return await login();
+    });
+  }
+
+  /** Registers desktop host IPC endpoints used by renderer shell/runtime commands. */
+  private registerHostIpcHandlers() {
+    const notificationAdapter = createDesktopNotificationHostAdapter();
+
+    ipcMain.handle(HOST_IPC_CHANNELS.openLocalFolderDialog, async (_event, input) => {
+      const options: Electron.OpenDialogOptions = {
+        properties: ["openDirectory", "createDirectory"],
+        defaultPath: input?.startingFolder?.trim() || undefined,
+      };
+      const result = this.mainWindow
+        ? await dialog.showOpenDialog(this.mainWindow, options)
+        : await dialog.showOpenDialog(options);
+
+      if (result.canceled) {
+        return null;
+      }
+
+      return result.filePaths[0] ?? null;
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.toggleMainWindowMaximized, async () => {
+      const window = this.mainWindow;
+      if (!window) {
+        return { ok: true };
+      }
+
+      if (window.isMaximized()) {
+        window.unmaximize();
+      } else {
+        window.maximize();
+      }
+
+      return { ok: true };
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.getMainWindowFullscreenState, async () => {
+      return {
+        isFullscreen: this.mainWindow?.isFullScreen() ?? false,
+      };
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.openEntryInExternalApp, async (_event, input) => {
+      const absolutePath = resolve(input.workspaceWorktreePath, input.relativePath ?? ".");
+      if (input.appId === "system-file-manager") {
+        let isDirectory = true;
+        try {
+          isDirectory = statSync(absolutePath).isDirectory();
+        } catch {
+          isDirectory = true;
+        }
+
+        await launchPath({
+          kind: "system-file-manager",
+          path: absolutePath,
+          isDirectory,
+        });
+      } else {
+        await launchPath({
+          kind: "external-app",
+          path: absolutePath,
+          appId: input.appId,
+        });
+      }
+
+      return { ok: true };
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.openExternalUrl, async (_event, input) => {
+      return await openExternalUrl(input.url);
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.readExternalClipboardSourcePaths, async () => {
+      return await readExternalClipboardSourcePathsFromSystem();
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.dispatchNotification, async (_event, input) => {
+      const notificationResult = await notificationAdapter.driver.show({
+        title: input.title,
+        body: input.body,
+      });
+
+      return {
+        sent: true,
+        notificationId: notificationResult?.notificationId,
+      };
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.playNotificationSound, async (_event, input) => {
+      await notificationAdapter.playSound({
+        eventType: "run-finished",
+        soundId: input.soundId,
+        volume: input.volume,
+      });
+
+      return {
+        played: true,
+      };
     });
   }
 

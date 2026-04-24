@@ -1,4 +1,4 @@
-import { runCommandForExitCode } from "@yishan/runtime";
+import { runCommandForExitCode } from "./process";
 import { shell } from "electron";
 import {
   type ExternalAppId,

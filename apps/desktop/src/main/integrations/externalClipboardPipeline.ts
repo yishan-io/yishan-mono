@@ -1,4 +1,4 @@
-import { runCommandForStdout } from "@yishan/runtime";
+import { runCommandForStdout } from "./process";
 import { clipboard } from "electron";
 import type { ExternalClipboardReadOutcome } from "../../shared/contracts/rpcRequestTypes";
 import { extractPathsFromClipboardText } from "../../shared/fileClipboardPaths";
