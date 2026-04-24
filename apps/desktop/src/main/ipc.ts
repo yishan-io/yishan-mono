@@ -8,6 +8,29 @@ export type DesktopRpcEventEnvelope = {
   payload?: unknown;
 };
 
+export type ApiProcedureKind = "query" | "mutation";
+
+export type InvokeApiProcedureInput = {
+  path: string;
+  procedureKind: ApiProcedureKind;
+  input?: unknown;
+};
+
+export type StartApiSubscriptionInput = {
+  path: string;
+  input?: unknown;
+};
+
+export type StopApiSubscriptionInput = {
+  subscriptionId: string;
+};
+
+export type DesktopApiBridge = {
+  invokeProcedure: (input: InvokeApiProcedureInput) => Promise<unknown>;
+  startSubscription: (input: StartApiSubscriptionInput) => Promise<{ subscriptionId: string }>;
+  stopSubscription: (input: StopApiSubscriptionInput) => Promise<{ stopped: true }>;
+};
+
 export type OpenLocalFolderDialogInput = {
   startingFolder?: string;
 };
@@ -80,6 +103,7 @@ export type DesktopHostBridge = {
 
 export type DesktopBridge = {
   host: DesktopHostBridge;
+  api: DesktopApiBridge;
   subscribeDesktopRpcEvent: (listener: (envelope: DesktopRpcEventEnvelope) => void) => () => void;
 };
 
@@ -100,4 +124,10 @@ export const HOST_IPC_CHANNELS = {
 /** IPC channels used to forward normalized desktop RPC envelopes from main process to renderer. */
 export const DESKTOP_RPC_IPC_CHANNELS = {
   event: "desktop:rpc/event",
+} as const;
+
+export const API_RPC_IPC_CHANNELS = {
+  invokeProcedure: "desktop:api/invoke-procedure",
+  startSubscription: "desktop:api/start-subscription",
+  stopSubscription: "desktop:api/stop-subscription",
 } as const;
