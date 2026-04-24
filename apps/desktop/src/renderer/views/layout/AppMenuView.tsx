@@ -31,7 +31,6 @@ import {
   LuSun,
 } from "react-icons/lu";
 import { useLocation, useNavigate } from "react-router-dom";
-import { createOrganization, listOrganizations } from "../../api/orgProjectApi";
 import { loadWorkspaceFromBackend } from "../../commands/projectCommands";
 import { useThemePreference } from "../../hooks/useThemePreference";
 import { getRendererPlatform } from "../../helpers/platform";
@@ -39,6 +38,7 @@ import { rendererQueryClient } from "../../queryClient";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { sessionStore } from "../../store/sessionStore";
 import type { AppThemePreference } from "../../theme";
+import { CreateOrganizationDialogView } from "./CreateOrganizationDialogView";
 
 const themeButtonSx: SxProps<Theme> = {
   boxShadow: "none",
@@ -105,6 +105,7 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
   const setSelectedOrganizationId = sessionStore((state) => state.setSelectedOrganizationId);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [organizationMenuAnchor, setOrganizationMenuAnchor] = useState<HTMLElement | null>(null);
+  const [isCreateOrganizationDialogOpen, setIsCreateOrganizationDialogOpen] = useState(false);
   const isMenuOpen = Boolean(menuAnchor);
   const isOrganizationMenuOpen = Boolean(organizationMenuAnchor);
   const platform = getRendererPlatform();
@@ -231,6 +232,9 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
                   fullWidth
                   startIcon={<LuBuilding2 size={14} />}
                   sx={menuItemButtonSx}
+                  onMouseEnter={(event) => {
+                    setOrganizationMenuAnchor(event.currentTarget);
+                  }}
                   onClick={(event) => {
                     setOrganizationMenuAnchor((currentAnchor) =>
                       currentAnchor && currentAnchor === event.currentTarget ? null : event.currentTarget,
@@ -380,30 +384,8 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
                 color: "text.secondary",
               }}
               onClick={() => {
-                const organizationName = window.prompt(t("org.menu.newOrganizationPrompt"), "");
-                const normalizedOrganizationName = organizationName?.trim() || "";
-                if (!normalizedOrganizationName) {
-                  return;
-                }
-
-                void (async () => {
-                  try {
-                    const createdOrganization = await createOrganization(normalizedOrganizationName);
-                    const nextOrganizations = await listOrganizations();
-                    const currentUser = sessionStore.getState().currentUser;
-                    sessionStore.getState().setSessionData({
-                      currentUser,
-                      organizations: nextOrganizations,
-                      selectedOrganizationId: createdOrganization.id,
-                    });
-                    setOrganizationMenuAnchor(null);
-                    setMenuAnchor(null);
-                    void rendererQueryClient.invalidateQueries({ queryKey: ["org-project-snapshot"] });
-                    void loadWorkspaceFromBackend();
-                  } catch {
-                    // keep menu open on error to allow retry
-                  }
-                })();
+                setOrganizationMenuAnchor(null);
+                setIsCreateOrganizationDialogOpen(true);
               }}
             >
               {t("org.menu.newOrganization")}
@@ -411,6 +393,12 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
           </Stack>
         </Paper>
       </Popper>
+      <CreateOrganizationDialogView
+        open={isCreateOrganizationDialogOpen}
+        onClose={() => {
+          setIsCreateOrganizationDialogOpen(false);
+        }}
+      />
     </>
   );
 }

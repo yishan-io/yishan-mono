@@ -114,6 +114,7 @@
       "noOrganizations": "暂无组织",
       "newOrganization": "新建组织",
       "newOrganizationPrompt": "组织名称",
+      "newOrganizationFailed": "创建组织失败。",
       "settings": "设置",
       "documentation": "文档",
       "shortcutMap": "快捷键映射",

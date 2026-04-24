@@ -114,6 +114,7 @@
       "noOrganizations": "No organizations",
       "newOrganization": "New organization",
       "newOrganizationPrompt": "Organization name",
+      "newOrganizationFailed": "Failed to create organization.",
       "settings": "Settings",
       "documentation": "Documentation",
       "shortcutMap": "Shortcut map",
