@@ -1,5 +1,7 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import { join } from "node:path";
+import { getAuthStatus, login } from "./auth/cliAuth";
+import { HOST_IPC_CHANNELS } from "./ipc";
 
 /**
  * Owns Electron desktop lifecycle and main window bootstrap.
@@ -24,6 +26,7 @@ export class DesktopApplication {
    */
   private async start(): Promise<void> {
     await app.whenReady();
+    this.registerAuthIpcHandlers();
     this.createMainWindow();
 
     app.on("activate", () => {
@@ -36,6 +39,17 @@ export class DesktopApplication {
       if (process.platform !== "darwin") {
         app.quit();
       }
+    });
+  }
+
+  /** Registers desktop auth IPC endpoints backed by the bundled CLI login/status commands. */
+  private registerAuthIpcHandlers() {
+    ipcMain.handle(HOST_IPC_CHANNELS.getAuthStatus, async () => {
+      return await getAuthStatus();
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.login, async () => {
+      return await login();
     });
   }
 

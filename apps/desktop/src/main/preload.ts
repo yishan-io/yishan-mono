@@ -12,6 +12,8 @@ const bridge: DesktopBridge = {
     readExternalClipboardSourcePaths: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.readExternalClipboardSourcePaths),
     dispatchNotification: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.dispatchNotification, input),
     playNotificationSound: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.playNotificationSound, input),
+    getAuthStatus: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getAuthStatus),
+    login: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.login),
   },
   subscribeDesktopRpcEvent: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, envelope: unknown) => {

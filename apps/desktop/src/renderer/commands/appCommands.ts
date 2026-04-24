@@ -39,3 +39,13 @@ export async function getMainWindowFullscreenState() {
 export async function openExternalUrl(url: string) {
   return await getDesktopHostBridge().openExternalUrl({ url });
 }
+
+/** Reads current desktop authentication status from main-process IPC. */
+export async function getAuthStatus() {
+  return await getDesktopHostBridge().getAuthStatus();
+}
+
+/** Runs one desktop login flow through main-process IPC. */
+export async function login() {
+  return await getDesktopHostBridge().login();
+}

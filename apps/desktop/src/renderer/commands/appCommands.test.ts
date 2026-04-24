@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   checkAgentGlobalConfigExternalDirectoryPermission,
   ensureAgentGlobalConfigExternalDirectoryPermission,
+  getAuthStatus,
   getDefaultWorktreeLocation,
+  login,
   getMainWindowFullscreenState,
   openExternalUrl,
   openLocalFolderDialog,
@@ -19,6 +21,8 @@ const mocks = vi.hoisted(() => ({
   openExternalUrl: vi.fn(),
   toggleMainWindowMaximized: vi.fn(),
   getMainWindowFullscreenState: vi.fn(),
+  getAuthStatus: vi.fn(),
+  login: vi.fn(),
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
@@ -46,6 +50,8 @@ vi.mock("../rpc/rpcTransport", () => ({
     openExternalUrl: mocks.openExternalUrl,
     toggleMainWindowMaximized: mocks.toggleMainWindowMaximized,
     getMainWindowFullscreenState: mocks.getMainWindowFullscreenState,
+    getAuthStatus: mocks.getAuthStatus,
+    login: mocks.login,
   })),
 }));
 
@@ -60,6 +66,8 @@ describe("appCommands", () => {
     await toggleMainWindowMaximized();
     await getMainWindowFullscreenState();
     await openExternalUrl("https://vestin.io/docs");
+    await getAuthStatus();
+    await login();
 
     expect(mocks.openLocalFolderDialog).toHaveBeenCalledWith({ startingFolder: "/tmp" });
     expect(mocks.getDefaultWorktreeLocation).toHaveBeenCalledWith(undefined);
@@ -68,5 +76,7 @@ describe("appCommands", () => {
     expect(mocks.toggleMainWindowMaximized).toHaveBeenCalledWith();
     expect(mocks.getMainWindowFullscreenState).toHaveBeenCalledWith();
     expect(mocks.openExternalUrl).toHaveBeenCalledWith({ url: "https://vestin.io/docs" });
+    expect(mocks.getAuthStatus).toHaveBeenCalledWith();
+    expect(mocks.login).toHaveBeenCalledWith();
   });
 });

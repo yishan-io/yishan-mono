@@ -9,7 +9,7 @@
       "googleCta": "Continue with Google",
       "signingIn": "Signing in...",
       "errors": {
-        "openGoogleFailed": "Unable to open Google sign-in in your browser.",
+        "commandFailed": "Unable to complete login with the local CLI.",
         "unexpected": "Something went wrong while signing in."
       }
     }

@@ -2,15 +2,13 @@ import { Alert, Box, Button, CircularProgress, Stack, Typography } from "@mui/ma
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FcGoogle } from "react-icons/fc";
-import { openExternalUrl } from "../commands/appCommands";
+import { login } from "../commands/appCommands";
 import { authStore } from "../store/authStore";
-
-const DEFAULT_GOOGLE_LOGIN_URL = "http://127.0.0.1:8787/auth/google";
 
 /** Renders one pre-authentication entry screen with Google sign-in action. */
 export function LoginView() {
   const { t } = useTranslation();
-  const setAuthenticated = authStore((state) => state.setAuthenticated);
+  const setAuthState = authStore((state) => state.setAuthState);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -19,15 +17,13 @@ export function LoginView() {
     setErrorMessage(null);
 
     try {
-      const googleLoginUrl = import.meta.env.VITE_AUTH_GOOGLE_START_URL || DEFAULT_GOOGLE_LOGIN_URL;
-      const openResult = await openExternalUrl(googleLoginUrl);
-
-      if (!openResult.opened) {
-        setErrorMessage(t("auth.login.errors.openGoogleFailed"));
+      const loginResult = await login();
+      if (!loginResult.authenticated) {
+        setErrorMessage(loginResult.error || t("auth.login.errors.commandFailed"));
         return;
       }
 
-      setAuthenticated(true);
+      setAuthState(true, true);
     } catch {
       setErrorMessage(t("auth.login.errors.unexpected"));
     } finally {

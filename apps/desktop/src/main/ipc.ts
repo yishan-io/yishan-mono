@@ -43,6 +43,18 @@ export type MainWindowFullscreenState = {
   isFullscreen: boolean;
 };
 
+export type AuthStatusResult = {
+  authenticated: boolean;
+  expiresAt?: string;
+  error?: string;
+};
+
+export type AuthLoginResult = {
+  authenticated: boolean;
+  skipped: boolean;
+  error?: string;
+};
+
 export type DesktopHostBridge = {
   openLocalFolderDialog: (input?: OpenLocalFolderDialogInput) => Promise<string | null>;
   toggleMainWindowMaximized: () => Promise<{ ok: true }>;
@@ -52,6 +64,8 @@ export type DesktopHostBridge = {
   readExternalClipboardSourcePaths: () => Promise<ExternalClipboardReadOutcome>;
   dispatchNotification: (input: DispatchNotificationInput) => Promise<NotificationDispatchResult>;
   playNotificationSound: (input: PlayNotificationSoundInput) => Promise<NotificationSoundPreviewResult>;
+  getAuthStatus: () => Promise<AuthStatusResult>;
+  login: () => Promise<AuthLoginResult>;
 };
 
 export type DesktopBridge = {
@@ -68,6 +82,8 @@ export const HOST_IPC_CHANNELS = {
   readExternalClipboardSourcePaths: "desktop:host/read-external-clipboard-source-paths",
   dispatchNotification: "desktop:host/dispatch-notification",
   playNotificationSound: "desktop:host/play-notification-sound",
+  getAuthStatus: "desktop:host/get-auth-status",
+  login: "desktop:host/login",
 } as const;
 
 /** IPC channels used to forward normalized desktop RPC envelopes from main process to renderer. */

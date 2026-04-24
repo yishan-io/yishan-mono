@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { cleanup } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getAuthStatus } from "../../commands/appCommands";
 import { authStore } from "../../store/authStore";
 import { ApplicationRouterView, NotFoundRouteView } from "./ApplicationRouterView";
 
@@ -11,6 +12,10 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
+}));
+
+vi.mock("../../commands/appCommands", () => ({
+  getAuthStatus: vi.fn(async () => ({ authenticated: false })),
 }));
 
 vi.mock("../WorkspaceView", async () => {
@@ -84,7 +89,8 @@ describe("ApplicationRouterView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    authStore.setState({ isAuthenticated: false });
+    authStore.setState({ isAuthenticated: false, authStatusResolved: true });
+    vi.mocked(getAuthStatus).mockResolvedValue({ authenticated: false });
   });
 
   afterEach(() => {
@@ -99,7 +105,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("renders workspace view on / route after user is authenticated", () => {
-    authStore.setState({ isAuthenticated: true });
+    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
     renderApplicationRouter("/");
 
     expect(screen.getByTestId("workspace-input")).toBeTruthy();
@@ -108,7 +114,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("keeps workspace mounted while showing settings overlay", () => {
-    authStore.setState({ isAuthenticated: true });
+    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
     renderApplicationRouter("/");
 
     const input = screen.getByTestId("workspace-input") as HTMLInputElement;
@@ -125,7 +131,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("shows keybindings as overlay while preserving workspace state", () => {
-    authStore.setState({ isAuthenticated: true });
+    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
     renderApplicationRouter("/");
 
     const input = screen.getByTestId("workspace-input") as HTMLInputElement;
@@ -137,7 +143,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("shows not-found state for unknown routes and allows returning", () => {
-    authStore.setState({ isAuthenticated: true });
+    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
     renderApplicationRouter("/unknown");
 
     expect(screen.getByText("routing.notFound.title")).toBeTruthy();
@@ -145,5 +151,14 @@ describe("ApplicationRouterView", () => {
 
     expect(screen.getByTestId("workspace-input")).toBeTruthy();
     expect(screen.queryByText("routing.notFound.title")).toBeNull();
+  });
+
+  it("resolves auth status through CLI command before showing authenticated app", async () => {
+    authStore.setState({ isAuthenticated: false, authStatusResolved: false });
+    vi.mocked(getAuthStatus).mockResolvedValueOnce({ authenticated: true });
+
+    renderApplicationRouter("/");
+
+    expect(await screen.findByTestId("workspace-input")).toBeTruthy();
   });
 });

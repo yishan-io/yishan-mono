@@ -1,6 +1,8 @@
-import { Box, Button, Stack, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate } from "react-router-dom";
+import { getAuthStatus } from "../../commands/appCommands";
 import { authStore } from "../../store/authStore";
 import { LoginView } from "../LoginView";
 import { WorkspaceView } from "../WorkspaceView";
@@ -45,6 +47,46 @@ export function NotFoundRouteView() {
  */
 export function ApplicationRouterView() {
   const isAuthenticated = authStore((state) => state.isAuthenticated);
+  const authStatusResolved = authStore((state) => state.authStatusResolved);
+  const setAuthState = authStore((state) => state.setAuthState);
+
+  useEffect(() => {
+    if (authStatusResolved) {
+      return;
+    }
+
+    let disposed = false;
+    const resolveAuthStatus = async () => {
+      try {
+        const status = await getAuthStatus();
+        if (disposed) {
+          return;
+        }
+
+        setAuthState(status.authenticated, true);
+      } catch {
+        if (disposed) {
+          return;
+        }
+
+        setAuthState(false, true);
+      }
+    };
+
+    void resolveAuthStatus();
+
+    return () => {
+      disposed = true;
+    };
+  }, [authStatusResolved, setAuthState]);
+
+  if (!authStatusResolved) {
+    return (
+      <Box sx={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <CircularProgress size={28} />
+      </Box>
+    );
+  }
 
   if (!isAuthenticated) {
     return <LoginView />;
