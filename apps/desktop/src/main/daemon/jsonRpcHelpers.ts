@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import type { DaemonState, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse } from "./jsonRpcTypes";
+import type * as Rpc from "./jsonRpcTypes";
 import { isDevMode } from "../runtime/environment";
 
 const DAEMON_STATE_FILE_NAME = "daemon.state.json";
@@ -64,7 +64,7 @@ function resolveDaemonStateFilePath(): string {
   return resolve(homedir(), ".yishan", "profiles", resolveCliProfileName(), DAEMON_STATE_FILE_NAME);
 }
 
-function ensureDaemonState(candidate: unknown): DaemonState {
+function ensureDaemonState(candidate: unknown): Rpc.DaemonState {
   const state = asRecord(candidate);
   if (!state) {
     throw new Error("daemon state is invalid");
@@ -98,9 +98,9 @@ function toWebSocketPayload(data: unknown): string {
   throw new Error("unsupported websocket payload");
 }
 
-export function parseJsonRpcMessage(data: unknown): JsonRpcResponse | JsonRpcNotification {
+export function parseJsonRpcMessage(data: unknown): Rpc.JsonRpcResponse | Rpc.JsonRpcNotification {
   const payload = toWebSocketPayload(data);
-  const parsed = JSON.parse(payload) as JsonRpcResponse | JsonRpcNotification;
+  const parsed = JSON.parse(payload) as Rpc.JsonRpcResponse | Rpc.JsonRpcNotification;
 
   if (!parsed || typeof parsed !== "object") {
     throw new Error("daemon websocket payload is invalid");
@@ -161,7 +161,7 @@ export async function openSocket(): Promise<WebSocket> {
   });
 }
 
-export function buildRequest(method: string, params?: unknown): JsonRpcRequest {
+export function buildRequest(method: string, params?: unknown): Rpc.JsonRpcRequest {
   return {
     jsonrpc: "2.0",
     id: randomUUID(),

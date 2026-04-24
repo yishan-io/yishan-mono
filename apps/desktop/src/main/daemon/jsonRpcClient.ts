@@ -1,55 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { basename } from "node:path";
-import type {
-  DaemonWorkspace,
-  FileDiffResponse,
-  FileCreateFolderInput,
-  FileDeleteInput,
-  FileListBatchInput,
-  FileListBatchResponse,
-  FileListInput,
-  FileListResponse,
-  FileReadInput,
-  FileReadResponse,
-  FileRenameInput,
-  FileMutationOkResponse,
-  FileWriteInput,
-  FileWriteResponse,
-  GitBranchListResponse,
-  GitBranchStatusResponse,
-  GitBranchDiffInput,
-  GitChangesBySection,
-  GitCommitComparisonResponse,
-  GitDiffContentResponse,
-  GitStatusOperationResponse,
-  GitCommitDiffInput,
-  GitCommitInput,
-  GitPathsInput,
-  GitRenameBranchInput,
-  GitTargetBranchInput,
-  GitWorktreeInput,
-  JsonRpcNotification,
-  JsonRpcResponse,
-  ProcedureSubscriptionOptions,
-  StartSubscriptionOptions,
-  TerminalCreateSessionResponse,
-  TerminalDetectedPort,
-  TerminalMutationOkResponse,
-  TerminalReadOutputResponse,
-  TerminalResourceUsageSnapshot,
-  TerminalSessionSummary,
-  TerminalCloseInput,
-  TerminalCreateSessionInput,
-  TerminalListSessionsInput,
-  TerminalReadOutputInput,
-  TerminalResizeInput,
-  TerminalWriteInput,
-  WorkspaceCloseExecutionResponse,
-  WorkspaceCloseExecutionInput,
-  WorkspaceCreateResponse,
-  WorkspaceCreateInput,
-  WorkspaceListResponse,
-} from "./jsonRpcTypes";
+import type * as Rpc from "./jsonRpcTypes";
 import {
   asRecord,
   buildRequest,
@@ -117,7 +68,7 @@ export class DaemonJsonRpcClient {
   };
 
   private resolveNamespaceHandler(
-    namespace: "workspace" | "file" | "git" | "terminal",
+    namespace: Rpc.ApiNamespace,
     method: string,
   ): ((input?: unknown) => Promise<unknown>) | null {
     const namespaceNode = (this as Record<string, unknown>)[namespace];
@@ -159,7 +110,7 @@ export class DaemonJsonRpcClient {
       };
 
       socket.addEventListener("message", (event) => {
-        let message: JsonRpcResponse | JsonRpcNotification;
+        let message: Rpc.JsonRpcResponse | Rpc.JsonRpcNotification;
         try {
           message = parseJsonRpcMessage(event.data);
         } catch (error) {
@@ -170,11 +121,11 @@ export class DaemonJsonRpcClient {
           return;
         }
 
-        if ((message as JsonRpcResponse).id !== request.id) {
+        if ((message as Rpc.JsonRpcResponse).id !== request.id) {
           return;
         }
 
-        const response = message as JsonRpcResponse;
+        const response = message as Rpc.JsonRpcResponse;
         if (response.error) {
           const rpcError = response.error;
           settle(() => {
@@ -206,7 +157,7 @@ export class DaemonJsonRpcClient {
     });
   }
 
-  private async startRawSubscription(options: StartSubscriptionOptions): Promise<string> {
+  private async startRawSubscription(options: Rpc.StartSubscriptionOptions): Promise<string> {
     const socket = await openSocket();
     const request = buildRequest(options.method, options.params);
     const subscriptionId = randomUUID();
@@ -242,7 +193,7 @@ export class DaemonJsonRpcClient {
       };
 
       socket.addEventListener("message", (event) => {
-        let message: JsonRpcResponse | JsonRpcNotification;
+        let message: Rpc.JsonRpcResponse | Rpc.JsonRpcNotification;
         try {
           message = parseJsonRpcMessage(event.data);
         } catch (error) {
@@ -251,8 +202,8 @@ export class DaemonJsonRpcClient {
           return;
         }
 
-        if ((message as JsonRpcNotification).method) {
-          const notification = message as JsonRpcNotification;
+        if ((message as Rpc.JsonRpcNotification).method) {
+          const notification = message as Rpc.JsonRpcNotification;
           options.onNotification({
             method: notification.method,
             payload: notification.params,
@@ -260,7 +211,7 @@ export class DaemonJsonRpcClient {
           return;
         }
 
-        const response = message as JsonRpcResponse;
+        const response = message as Rpc.JsonRpcResponse;
         if (response.id !== request.id) {
           return;
         }
@@ -297,13 +248,13 @@ export class DaemonJsonRpcClient {
     return subscriptionId;
   }
 
-  private async listWorkspaces(): Promise<DaemonWorkspace[]> {
+  private async listWorkspaces(): Promise<Rpc.DaemonWorkspace[]> {
     const result = await this.invoke("list");
     if (!Array.isArray(result)) {
       return [];
     }
 
-    const workspaces: DaemonWorkspace[] = [];
+    const workspaces: Rpc.DaemonWorkspace[] = [];
     for (const candidate of result) {
       const record = asRecord(candidate);
       if (!record) {
@@ -401,7 +352,7 @@ export class DaemonJsonRpcClient {
     };
   }
 
-  private async createWorkspace(input: WorkspaceCreateInput): Promise<WorkspaceCreateResponse> {
+  private async createWorkspace(input: Rpc.WorkspaceCreateInput): Promise<Rpc.WorkspaceCreateResponse> {
     const record = asRecord(input);
     const workspaceWorktreePath = readOptionalString(record?.workspaceWorktreePath);
     if (!workspaceWorktreePath) {
@@ -436,7 +387,7 @@ export class DaemonJsonRpcClient {
     };
   }
 
-  private async closeWorkspace(input: WorkspaceCloseExecutionInput): Promise<WorkspaceCloseExecutionResponse> {
+  private async closeWorkspace(input: Rpc.WorkspaceCloseExecutionInput): Promise<Rpc.WorkspaceCloseExecutionResponse> {
     const record = asRecord(input);
     const workspaceId = readOptionalString(record?.workspaceId) || "";
     return {
@@ -446,15 +397,15 @@ export class DaemonJsonRpcClient {
     };
   }
 
-  private async listFiles(input: FileListInput): Promise<FileListResponse> {
+  private async listFiles(input: Rpc.FileListInput): Promise<Rpc.FileListResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     const relativePath = readOptionalString(record?.relativePath) || "";
     const files = await this.invoke("file.list", { workspaceId, path: relativePath });
-    return { files: Array.isArray(files) ? (files as FileListResponse["files"]) : [] };
+    return { files: Array.isArray(files) ? (files as Rpc.FileListResponse["files"]) : [] };
   }
 
-  private async listFilesBatch(input: FileListBatchInput): Promise<FileListBatchResponse> {
+  private async listFilesBatch(input: Rpc.FileListBatchInput): Promise<Rpc.FileListBatchResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     const requests = Array.isArray(record?.requests) ? record.requests : [];
@@ -466,7 +417,7 @@ export class DaemonJsonRpcClient {
           const files = await this.invoke("file.list", { workspaceId, path: relativePath });
           return {
             request: { relativePath, recursive: readOptionalBoolean(requestRecord.recursive) ?? false },
-            files: Array.isArray(files) ? (files as FileListResponse["files"]) : [],
+            files: Array.isArray(files) ? (files as Rpc.FileListResponse["files"]) : [],
           };
         } catch (error) {
           return {
@@ -480,7 +431,7 @@ export class DaemonJsonRpcClient {
     return { results };
   }
 
-  private async readFile(input: FileReadInput): Promise<FileReadResponse> {
+  private async readFile(input: Rpc.FileReadInput): Promise<Rpc.FileReadResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     const relativePath = readOptionalString(record?.relativePath);
@@ -491,7 +442,7 @@ export class DaemonJsonRpcClient {
     return { content: typeof content === "string" ? content : "" };
   }
 
-  private async writeFile(input: FileWriteInput): Promise<FileWriteResponse> {
+  private async writeFile(input: Rpc.FileWriteInput): Promise<Rpc.FileWriteResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     const relativePath = readOptionalString(record?.relativePath);
@@ -503,7 +454,7 @@ export class DaemonJsonRpcClient {
     return { ok: true, written: typeof written === "number" ? written : 0 };
   }
 
-  private async createFolder(input: FileCreateFolderInput): Promise<FileMutationOkResponse> {
+  private async createFolder(input: Rpc.FileCreateFolderInput): Promise<Rpc.FileMutationOkResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     const relativePath = readOptionalString(record?.relativePath);
@@ -514,7 +465,7 @@ export class DaemonJsonRpcClient {
     return { ok: true };
   }
 
-  private async renameEntry(input: FileRenameInput): Promise<FileMutationOkResponse> {
+  private async renameEntry(input: Rpc.FileRenameInput): Promise<Rpc.FileMutationOkResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     const fromRelativePath = readOptionalString(record?.fromRelativePath);
@@ -526,7 +477,7 @@ export class DaemonJsonRpcClient {
     return { ok: true };
   }
 
-  private async deleteEntry(input: FileDeleteInput): Promise<FileMutationOkResponse> {
+  private async deleteEntry(input: Rpc.FileDeleteInput): Promise<Rpc.FileMutationOkResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     const relativePath = readOptionalString(record?.relativePath);
@@ -537,7 +488,7 @@ export class DaemonJsonRpcClient {
     return { ok: true };
   }
 
-  private async readFileDiff(input: FileReadInput): Promise<FileDiffResponse> {
+  private async readFileDiff(input: Rpc.FileReadInput): Promise<Rpc.FileDiffResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     const relativePath = readOptionalString(record?.relativePath);
@@ -548,39 +499,39 @@ export class DaemonJsonRpcClient {
     return { oldContent: "", newContent: typeof diffText === "string" ? diffText : "" };
   }
 
-  private async listGitChanges(input: GitWorktreeInput): Promise<GitChangesBySection> {
+  private async listGitChanges(input: Rpc.GitWorktreeInput): Promise<Rpc.GitChangesBySection> {
     const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("git.listChanges", { workspaceId })) as GitChangesBySection;
+    return (await this.invoke("git.listChanges", { workspaceId })) as Rpc.GitChangesBySection;
   }
 
-  private async trackGitChanges(input: GitPathsInput): Promise<GitStatusOperationResponse> {
+  private async trackGitChanges(input: Rpc.GitPathsInput): Promise<Rpc.GitStatusOperationResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     return (await this.invoke("git.track", {
       workspaceId,
       paths: readOptionalStringArray(record?.relativePaths) ?? [],
-    })) as GitStatusOperationResponse;
+    })) as Rpc.GitStatusOperationResponse;
   }
 
-  private async unstageGitChanges(input: GitPathsInput): Promise<GitStatusOperationResponse> {
+  private async unstageGitChanges(input: Rpc.GitPathsInput): Promise<Rpc.GitStatusOperationResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     return (await this.invoke("git.unstage", {
       workspaceId,
       paths: readOptionalStringArray(record?.relativePaths) ?? [],
-    })) as GitStatusOperationResponse;
+    })) as Rpc.GitStatusOperationResponse;
   }
 
-  private async revertGitChanges(input: GitPathsInput): Promise<GitStatusOperationResponse> {
+  private async revertGitChanges(input: Rpc.GitPathsInput): Promise<Rpc.GitStatusOperationResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     return (await this.invoke("git.revert", {
       workspaceId,
       paths: readOptionalStringArray(record?.relativePaths) ?? [],
-    })) as GitStatusOperationResponse;
+    })) as Rpc.GitStatusOperationResponse;
   }
 
-  private async commitGitChanges(input: GitCommitInput): Promise<string> {
+  private async commitGitChanges(input: Rpc.GitCommitInput): Promise<string> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     return (await this.invoke("git.commit", {
@@ -591,22 +542,22 @@ export class DaemonJsonRpcClient {
     })) as string;
   }
 
-  private async getGitBranchStatus(input: GitWorktreeInput): Promise<GitBranchStatusResponse> {
+  private async getGitBranchStatus(input: Rpc.GitWorktreeInput): Promise<Rpc.GitBranchStatusResponse> {
     const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("git.branchStatus", { workspaceId })) as GitBranchStatusResponse;
+    return (await this.invoke("git.branchStatus", { workspaceId })) as Rpc.GitBranchStatusResponse;
   }
 
-  private async listGitCommitsToTarget(input: GitTargetBranchInput): Promise<GitCommitComparisonResponse> {
+  private async listGitCommitsToTarget(input: Rpc.GitTargetBranchInput): Promise<Rpc.GitCommitComparisonResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     const targetBranch = readOptionalString(record?.targetBranch);
     if (!targetBranch) {
       throw new Error("targetBranch is required");
     }
-    return (await this.invoke("git.commitsToTarget", { workspaceId, targetBranch })) as GitCommitComparisonResponse;
+    return (await this.invoke("git.commitsToTarget", { workspaceId, targetBranch })) as Rpc.GitCommitComparisonResponse;
   }
 
-  private async readGitCommitDiff(input: GitCommitDiffInput): Promise<GitDiffContentResponse> {
+  private async readGitCommitDiff(input: Rpc.GitCommitDiffInput): Promise<Rpc.GitDiffContentResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     const commitHash = readOptionalString(record?.commitHash);
@@ -618,10 +569,10 @@ export class DaemonJsonRpcClient {
       workspaceId,
       commitHash,
       path: relativePath,
-    })) as GitDiffContentResponse;
+    })) as Rpc.GitDiffContentResponse;
   }
 
-  private async readGitBranchComparisonDiff(input: GitBranchDiffInput): Promise<GitDiffContentResponse> {
+  private async readGitBranchComparisonDiff(input: Rpc.GitBranchDiffInput): Promise<Rpc.GitDiffContentResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     const targetBranch = readOptionalString(record?.targetBranch);
@@ -633,46 +584,46 @@ export class DaemonJsonRpcClient {
       workspaceId,
       targetBranch,
       path: relativePath,
-    })) as GitDiffContentResponse;
+    })) as Rpc.GitDiffContentResponse;
   }
 
-  private async listGitBranches(input: GitWorktreeInput): Promise<GitBranchListResponse> {
+  private async listGitBranches(input: Rpc.GitWorktreeInput): Promise<Rpc.GitBranchListResponse> {
     const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("git.branches", { workspaceId })) as GitBranchListResponse;
+    return (await this.invoke("git.branches", { workspaceId })) as Rpc.GitBranchListResponse;
   }
 
-  private async pushGitBranch(input: GitWorktreeInput): Promise<string> {
+  private async pushGitBranch(input: Rpc.GitWorktreeInput): Promise<string> {
     const workspaceId = await this.resolveWorkspaceId(input);
     return (await this.invoke("git.push", { workspaceId })) as string;
   }
 
-  private async publishGitBranch(input: GitWorktreeInput): Promise<string> {
+  private async publishGitBranch(input: Rpc.GitWorktreeInput): Promise<string> {
     const workspaceId = await this.resolveWorkspaceId(input);
     return (await this.invoke("git.publish", { workspaceId })) as string;
   }
 
-  private async renameGitBranch(input: GitRenameBranchInput): Promise<GitStatusOperationResponse> {
+  private async renameGitBranch(input: Rpc.GitRenameBranchInput): Promise<Rpc.GitStatusOperationResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     const nextBranch = readOptionalString(record?.nextBranch);
     if (!nextBranch) {
       throw new Error("nextBranch is required");
     }
-    return (await this.invoke("git.renameBranch", { workspaceId, nextBranch })) as GitStatusOperationResponse;
+    return (await this.invoke("git.renameBranch", { workspaceId, nextBranch })) as Rpc.GitStatusOperationResponse;
   }
 
-  private async getGitAuthorName(input: GitWorktreeInput): Promise<string> {
+  private async getGitAuthorName(input: Rpc.GitWorktreeInput): Promise<string> {
     const workspaceId = await this.resolveWorkspaceId(input);
     return (await this.invoke("git.authorName", { workspaceId })) as string;
   }
 
-  private async createTerminalSession(input: TerminalCreateSessionInput): Promise<TerminalCreateSessionResponse> {
+  private async createTerminalSession(input: Rpc.TerminalCreateSessionInput): Promise<Rpc.TerminalCreateSessionResponse> {
     const workspaceId = await this.resolveWorkspaceId(input);
     const { command, args, env } = this.toTerminalCreateCommand(input);
-    return (await this.invoke("terminal.start", { workspaceId, command, args, env })) as TerminalCreateSessionResponse;
+    return (await this.invoke("terminal.start", { workspaceId, command, args, env })) as Rpc.TerminalCreateSessionResponse;
   }
 
-  private async writeTerminalInput(input: TerminalWriteInput): Promise<TerminalMutationOkResponse> {
+  private async writeTerminalInput(input: Rpc.TerminalWriteInput): Promise<Rpc.TerminalMutationOkResponse> {
     const record = asRecord(input);
     await this.invoke("terminal.send", {
       sessionId: readOptionalString(record?.sessionId) || "",
@@ -681,7 +632,7 @@ export class DaemonJsonRpcClient {
     return { ok: true };
   }
 
-  private async resizeTerminal(input: TerminalResizeInput): Promise<TerminalMutationOkResponse> {
+  private async resizeTerminal(input: Rpc.TerminalResizeInput): Promise<Rpc.TerminalMutationOkResponse> {
     const record = asRecord(input);
     await this.invoke("terminal.resize", {
       sessionId: readOptionalString(record?.sessionId) || "",
@@ -691,7 +642,7 @@ export class DaemonJsonRpcClient {
     return { ok: true };
   }
 
-  private async closeTerminalSession(input: TerminalCloseInput): Promise<TerminalMutationOkResponse> {
+  private async closeTerminalSession(input: Rpc.TerminalCloseInput): Promise<Rpc.TerminalMutationOkResponse> {
     const record = asRecord(input);
     const sessionId = readOptionalString(record?.sessionId) || "";
     await this.invoke("terminal.stop", { sessionId });
@@ -699,7 +650,7 @@ export class DaemonJsonRpcClient {
     return { ok: true };
   }
 
-  private async readTerminalOutput(input: TerminalReadOutputInput): Promise<TerminalReadOutputResponse> {
+  private async readTerminalOutput(input: Rpc.TerminalReadOutputInput): Promise<Rpc.TerminalReadOutputResponse> {
     const record = asRecord(input);
     const sessionId = readOptionalString(record?.sessionId) || "";
     const fromIndex = Math.max(0, Math.floor(readOptionalNumber(record?.fromIndex) ?? 0));
@@ -713,20 +664,20 @@ export class DaemonJsonRpcClient {
     return { nextIndex, chunks, exited: !running };
   }
 
-  private async listDetectedTerminalPorts(): Promise<TerminalDetectedPort[]> {
+  private async listDetectedTerminalPorts(): Promise<Rpc.TerminalDetectedPort[]> {
     return [];
   }
 
-  private async getTerminalResourceUsage(): Promise<TerminalResourceUsageSnapshot> {
+  private async getTerminalResourceUsage(): Promise<Rpc.TerminalResourceUsageSnapshot> {
     return { processes: [] };
   }
 
-  private async listTerminalSessions(_input?: TerminalListSessionsInput): Promise<TerminalSessionSummary[]> {
+  private async listTerminalSessions(_input?: Rpc.TerminalListSessionsInput): Promise<Rpc.TerminalSessionSummary[]> {
     return [];
   }
 
   async invokeApi(options: {
-    namespace: "workspace" | "file" | "git" | "terminal";
+    namespace: Rpc.ApiNamespace;
     method: string;
     input?: unknown;
   }): Promise<unknown> {
@@ -738,7 +689,7 @@ export class DaemonJsonRpcClient {
     return await handler(options.input);
   }
 
-  async startSubscription(options: ProcedureSubscriptionOptions): Promise<string> {
+  async startSubscription(options: Rpc.ProcedureSubscriptionOptions): Promise<string> {
     const path = `${options.namespace}.${options.method}`;
     const record = asRecord(options.input);
 

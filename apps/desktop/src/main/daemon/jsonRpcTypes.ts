@@ -42,8 +42,10 @@ export type ProcedureNotification = {
   payload: unknown;
 };
 
+export type ApiNamespace = "workspace" | "file" | "git" | "terminal";
+
 export type ProcedureSubscriptionOptions = {
-  namespace: "workspace" | "file" | "git" | "terminal";
+  namespace: ApiNamespace;
   method: string;
   input?: unknown;
   onNotification: (event: ProcedureNotification) => void;

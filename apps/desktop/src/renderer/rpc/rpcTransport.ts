@@ -1,7 +1,11 @@
-import type { DesktopBridge, DesktopHostBridge, DesktopRpcEventEnvelope } from "../../main/ipc";
+import type {
+  DesktopApiNamespace,
+  DesktopBridge,
+  DesktopHostBridge,
+  DesktopRpcEventEnvelope,
+} from "../../main/ipc";
 
 type DesktopRpcEventListener = (envelope: DesktopRpcEventEnvelope) => void;
-type ApiNamespace = "workspace" | "file" | "git" | "terminal";
 type ApiSubscriptionHandlers = {
   onData: (event: unknown) => void;
   onError?: (error: unknown) => void;
@@ -153,7 +157,7 @@ async function subscribeApiProcedure(
   };
 }
 
-function parseProcedurePath(path: string): { namespace: ApiNamespace; method: string } | null {
+function parseProcedurePath(path: string): { namespace: DesktopApiNamespace; method: string } | null {
   const segments = path
     .split(".")
     .map((segment) => segment.trim())
