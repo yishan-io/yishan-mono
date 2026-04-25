@@ -48,6 +48,22 @@ vi.mock("../rpc/rpcTransport", () => ({
       writeFile: mocks.writeFile,
     },
   })),
+  getDaemonRpcClient: vi.fn(async () => ({
+    file: {
+      createFile: mocks.createFile,
+      createFolder: mocks.createFolder,
+      deleteEntry: mocks.deleteEntry,
+      importEntries: mocks.importEntries,
+      importFilePayloads: mocks.importFilePayloads,
+      listFiles: mocks.listFiles,
+      openEntryInExternalApp: mocks.openEntryInExternalApp,
+      pasteEntries: mocks.pasteEntries,
+      readExternalClipboardSourcePaths: mocks.readExternalClipboardSourcePaths,
+      readFile: mocks.readFile,
+      renameEntry: mocks.renameEntry,
+      writeFile: mocks.writeFile,
+    },
+  })),
   getDesktopHostBridge: vi.fn(() => ({
     openEntryInExternalApp: mocks.openEntryInExternalApp,
     readExternalClipboardSourcePaths: mocks.readExternalClipboardSourcePaths,

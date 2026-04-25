@@ -37,6 +37,15 @@ vi.mock("../rpc/rpcTransport", () => ({
       toggleMainWindowMaximized: mocks.toggleMainWindowMaximized,
     },
   })),
+  getDaemonRpcClient: vi.fn(async () => ({
+    app: {
+      checkAgentGlobalConfigExternalDirectoryPermission: mocks.checkAgentGlobalConfigExternalDirectoryPermission,
+      ensureAgentGlobalConfigExternalDirectoryPermission: mocks.ensureAgentGlobalConfigExternalDirectoryPermission,
+      getDefaultWorktreeLocation: mocks.getDefaultWorktreeLocation,
+      openLocalFolderDialog: mocks.openLocalFolderDialog,
+      toggleMainWindowMaximized: mocks.toggleMainWindowMaximized,
+    },
+  })),
   getDesktopHostBridge: vi.fn(() => ({
     openLocalFolderDialog: mocks.openLocalFolderDialog,
     openExternalUrl: mocks.openExternalUrl,

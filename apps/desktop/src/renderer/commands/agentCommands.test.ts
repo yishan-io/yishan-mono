@@ -13,6 +13,11 @@ vi.mock("../rpc/rpcTransport", () => ({
       listDetectionStatuses: mocks.listDetectionStatuses,
     },
   })),
+  getDaemonRpcClient: vi.fn(async () => ({
+    agent: {
+      listDetectionStatuses: mocks.listDetectionStatuses,
+    },
+  })),
 }));
 
 describe("agentCommands", () => {

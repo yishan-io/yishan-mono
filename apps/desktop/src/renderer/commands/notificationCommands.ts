@@ -3,17 +3,17 @@ import type {
   NotificationPreferences,
   NotificationSoundId,
 } from "../../shared/notifications/notificationPreferences";
-import { getApiServiceClient, getDesktopHostBridge } from "../rpc/rpcTransport";
+import { getDaemonRpcClient, getDesktopHostBridge } from "../rpc/rpcTransport";
 
 /** Loads persisted notification preferences from desktop runtime storage. */
 export async function getNotificationPreferences() {
-  const client = await getApiServiceClient();
+  const client = await getDaemonRpcClient();
   return client.notification.getNotificationPreferences(undefined);
 }
 
 /** Updates notification preferences and persists them through desktop runtime storage. */
 export async function updateNotificationPreferences(patch: Partial<NotificationPreferences>) {
-  const client = await getApiServiceClient();
+  const client = await getDaemonRpcClient();
   return client.notification.updateNotificationPreferences(patch);
 }
 

@@ -41,6 +41,11 @@ vi.mock("../rpc/rpcTransport", () => ({
       inspect: rpcMocks.gitInspect,
     },
   })),
+  getDaemonRpcClient: vi.fn(async () => ({
+    git: {
+      inspect: rpcMocks.gitInspect,
+    },
+  })),
 }));
 
 const initialWorkspaceStoreState = workspaceStore.getState();

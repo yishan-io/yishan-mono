@@ -56,6 +56,26 @@ vi.mock("../rpc/rpcTransport", () => ({
       unstageChanges: mocks.unstageGitChanges,
     },
   })),
+  getDaemonRpcClient: vi.fn(async () => ({
+    file: {
+      readDiff: mocks.readDiff,
+    },
+    git: {
+      commitChanges: mocks.commitGitChanges,
+      getBranchStatus: mocks.getGitBranchStatus,
+      getAuthorName: mocks.getGitAuthorName,
+      listBranches: mocks.listGitBranches,
+      listChanges: mocks.listGitChanges,
+      listCommitsToTarget: mocks.listGitCommitsToTarget,
+      publishBranch: mocks.publishGitBranch,
+      pushBranch: mocks.pushGitBranch,
+      readBranchComparisonDiff: mocks.readBranchComparisonDiff,
+      readCommitDiff: mocks.readCommitDiff,
+      revertChanges: mocks.revertGitChanges,
+      trackChanges: mocks.trackGitChanges,
+      unstageChanges: mocks.unstageGitChanges,
+    },
+  })),
 }));
 
 describe("gitCommands", () => {

@@ -33,6 +33,15 @@ vi.mock("../rpc/rpcTransport", () => ({
       closeSession: rpcMocks.closeSession,
     },
   })),
+  getDaemonRpcClient: vi.fn(async () => ({
+    chat: {
+      ensureWorkspaceChatSession: rpcMocks.ensureWorkspaceChatSession,
+      closeAgentSession: rpcMocks.closeAgentSession,
+    },
+    terminal: {
+      closeSession: rpcMocks.closeSession,
+    },
+  })),
 }));
 
 const initialTabStoreState = tabStore.getState();

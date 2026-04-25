@@ -1,5 +1,5 @@
 import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../helpers/tabHelpers";
-import { getApiServiceClient } from "../rpc/rpcTransport";
+import { getDaemonRpcClient } from "../rpc/rpcTransport";
 import { chatStore } from "../store/chatStore";
 import type { TabStoreState } from "../store/tabStore";
 import { tabStore } from "../store/tabStore";
@@ -33,7 +33,7 @@ function closeTerminalSessionsForTabs(tabs: TerminalTab[]): void {
       continue;
     }
 
-    void getApiServiceClient()
+    void getDaemonRpcClient()
       .then((client) => {
         return client.terminal.closeSession({ sessionId });
       })
@@ -51,7 +51,7 @@ export async function createTab(input?: { workspaceId?: string }): Promise<void>
   }
 
   try {
-    const client = await getApiServiceClient();
+    const client = await getDaemonRpcClient();
     const ensured = await client.chat.ensureWorkspaceChatSession({
       workspaceId: created.workspaceId,
       sessionId: created.tabId,
@@ -74,7 +74,7 @@ export function closeTab(tabId: string): void {
 
   if (tab?.kind === "session" && tab.data.sessionId) {
     const sessionId = tab.data.sessionId;
-    void getApiServiceClient()
+    void getDaemonRpcClient()
       .then((client) => {
         return client.chat.closeAgentSession({ sessionId });
       })
@@ -102,7 +102,7 @@ export function closeOtherTabs(tabId: string): void {
   const removedTabIds = removedTabs.map((tab) => tab.id);
 
   for (const sessionId of collectSessionIdsToCloseOtherTabs(snapshot.tabs, tabId)) {
-    void getApiServiceClient()
+    void getDaemonRpcClient()
       .then((client) => {
         return client.chat.closeAgentSession({ sessionId });
       })
@@ -130,7 +130,7 @@ export function closeAllTabs(tabId: string): void {
   const removedTabIds = removedTabs.map((tab) => tab.id);
 
   for (const sessionId of collectSessionIdsToCloseAllTabs(snapshot.tabs, tabId)) {
-    void getApiServiceClient()
+    void getDaemonRpcClient()
       .then((client) => {
         return client.chat.closeAgentSession({ sessionId });
       })

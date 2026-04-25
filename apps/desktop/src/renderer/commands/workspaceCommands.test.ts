@@ -60,6 +60,17 @@ vi.mock("../rpc/rpcTransport", () => ({
       close: rpcMocks.closeWorkspace,
     },
   })),
+  getDaemonRpcClient: vi.fn(async () => ({
+    git: {
+      listChanges: rpcMocks.listGitChanges,
+      renameBranch: rpcMocks.renameGitBranch,
+    },
+    workspace: {
+      create: rpcMocks.createWorkspace,
+      list: rpcMocks.list,
+      close: rpcMocks.closeWorkspace,
+    },
+  })),
 }));
 
 const initialWorkspaceStoreState = workspaceStore.getState();

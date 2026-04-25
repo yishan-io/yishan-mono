@@ -24,6 +24,12 @@ vi.mock("../rpc/rpcTransport", () => ({
       updateNotificationPreferences: mocks.updateNotificationPreferences,
     },
   })),
+  getDaemonRpcClient: vi.fn(async () => ({
+    notification: {
+      getNotificationPreferences: mocks.getNotificationPreferences,
+      updateNotificationPreferences: mocks.updateNotificationPreferences,
+    },
+  })),
   getDesktopHostBridge: vi.fn(() => ({
     dispatchNotification: mocks.dispatchNotification,
     playNotificationSound: mocks.playNotificationSoundBridge,

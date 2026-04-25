@@ -4,21 +4,16 @@ import type {
   DesktopHostBridge,
   DesktopRpcEventEnvelope,
 } from "../../main/ipc";
+import type { ApiSubscriptionHandlers, DaemonRpcClient } from "./types";
 
 type DesktopRpcEventListener = (envelope: DesktopRpcEventEnvelope) => void;
-type ApiSubscriptionHandlers = {
-  onData: (event: unknown) => void;
-  onError?: (error: unknown) => void;
-};
-// biome-ignore lint/suspicious/noExplicitAny: transitional dynamic RPC shape during API migration.
-type ApiServiceClient = any;
 
 const API_RPC_SUBSCRIPTION_EVENT_METHOD = "apiRpc.subscription";
 const desktopRpcEventListeners = new Set<DesktopRpcEventListener>();
 const apiSubscriptionHandlersById = new Map<string, ApiSubscriptionHandlers>();
 let bridgeSubscription: (() => void) | null = null;
 let backendEventsSubscription: { unsubscribe: () => void } | null = null;
-let apiServiceClientPromise: Promise<ApiServiceClient> | null = null;
+let daemonRpcClientPromise: Promise<DaemonRpcClient> | null = null;
 
 /** Returns true when one unknown payload is one subscription envelope payload. */
 function isApiSubscriptionEnvelopePayload(payload: unknown): payload is {
@@ -221,18 +216,21 @@ function createProcedureProxy(pathSegments: string[]): unknown {
 }
 
 /** Creates one dynamic API client that mirrors the expected tRPC query/mutation/subscription shape. */
-async function createApiServiceClient(): Promise<ApiServiceClient> {
-  return createProcedureProxy([]);
+async function createApiServiceClient(): Promise<DaemonRpcClient> {
+  return createProcedureProxy([]) as DaemonRpcClient;
 }
 
 /** Returns one cached dynamic API client for renderer commands. */
-export async function getApiServiceClient(): Promise<ApiServiceClient> {
-  if (!apiServiceClientPromise) {
-    apiServiceClientPromise = createApiServiceClient();
+export async function getDaemonRpcClient(): Promise<DaemonRpcClient> {
+  if (!daemonRpcClientPromise) {
+    daemonRpcClientPromise = createApiServiceClient();
   }
 
-  return await apiServiceClientPromise;
+  return await daemonRpcClientPromise;
 }
+
+/** @deprecated use getDaemonRpcClient for clarity. */
+export const getApiServiceClient = getDaemonRpcClient;
 
 /** Ensures one backend event stream subscription while desktop RPC listeners are active. */
 async function ensureBackendEventsSubscription(): Promise<void> {
@@ -240,7 +238,7 @@ async function ensureBackendEventsSubscription(): Promise<void> {
     return;
   }
 
-  const client = await getApiServiceClient();
+  const client = await getDaemonRpcClient();
   backendEventsSubscription = client.events.stream.subscribe(undefined, {
     onData: (event: { topic: string; payload: unknown }) => {
       emitDesktopRpcEvent({

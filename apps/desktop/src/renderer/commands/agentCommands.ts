@@ -1,5 +1,5 @@
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS, isDesktopAgentKind } from "../helpers/agentSettings";
-import { getApiServiceClient } from "../rpc/rpcTransport";
+import { getDaemonRpcClient } from "../rpc/rpcTransport";
 
 export type AgentDetectionStatus = {
   agentKind: DesktopAgentKind;
@@ -36,7 +36,7 @@ function normalizeAgentDetectionStatuses(payload: unknown): AgentDetectionStatus
 
 /** Lists supported desktop agents with current system detection state. */
 export async function listAgentDetectionStatuses(): Promise<AgentDetectionStatus[]> {
-  const client = await getApiServiceClient();
+  const client = await getDaemonRpcClient();
   const payload = await client.agent.listDetectionStatuses(undefined);
   return normalizeAgentDetectionStatuses(payload);
 }

@@ -4,7 +4,7 @@ import {
   normalizeCreateWorkspaceInput,
   summarizeWorkspaceGitChangeTotals,
 } from "../helpers/workspaceHelpers";
-import { getApiServiceClient } from "../rpc/rpcTransport";
+import { getDaemonRpcClient } from "../rpc/rpcTransport";
 import { layoutStore } from "../store/layoutStore";
 import { tabStore } from "../store/tabStore";
 import type { WorkspaceStoreState } from "../store/types";
@@ -103,7 +103,7 @@ function resolveWorkspaceIdByInstanceId(workspaces: WorkspaceListResponse, works
 
 /** Resolves one backend workspace id from one workspace-instance id. */
 async function resolveBackendWorkspaceId(
-  client: Awaited<ReturnType<typeof getApiServiceClient>>,
+  client: Awaited<ReturnType<typeof getDaemonRpcClient>>,
   workspaceId: string,
 ): Promise<string | undefined> {
   const workspaces = (await client.workspace.list({
@@ -118,7 +118,7 @@ async function closeWorkspaceInBackground(input: {
   workspaceName: string;
   removeBranch?: boolean;
 }): Promise<void> {
-  const client = await getApiServiceClient();
+  const client = await getDaemonRpcClient();
 
   const backendWorkspaceId = await resolveBackendWorkspaceId(client, input.workspaceId);
   if (!backendWorkspaceId) {
@@ -173,7 +173,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<void
   let backendWorkspace: BackendWorkspace | undefined;
 
   if (project?.localPath) {
-    const client = await getApiServiceClient();
+    const client = await getDaemonRpcClient();
     try {
       const created = (await client.workspace.create({
         orgId: "default",
@@ -248,7 +248,7 @@ export async function refreshWorkspaceGitChanges(workspaceId: string, workspaceW
   }
 
   try {
-    const client = await getApiServiceClient();
+    const client = await getDaemonRpcClient();
     const sections = await client.git.listChanges({
       workspaceWorktreePath,
     });
@@ -432,7 +432,7 @@ export async function renameWorkspaceBranch(input: {
   }
 
   try {
-    const client = await getApiServiceClient();
+    const client = await getDaemonRpcClient();
     await client.git.renameBranch({
       workspaceWorktreePath,
       nextBranch: normalizedBranch,
