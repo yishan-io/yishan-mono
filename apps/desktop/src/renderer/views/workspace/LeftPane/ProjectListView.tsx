@@ -71,11 +71,11 @@ function resolveWorkspaceIndicator(input: {
 export function ProjectListView() {
   const workspaceInfoCloseDelayMs = 120;
   const { t } = useTranslation();
-  const projects = workspaceStore((state) => state.projects);
-  const workspaces = workspaceStore((state) => state.workspaces);
+  const projects = workspaceStore((state) => state.projects) ?? [];
+  const workspaces = workspaceStore((state) => state.workspaces) ?? [];
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const displayProjectIds = workspaceStore((state) => state.displayProjectIds);
+  const displayProjectIds = workspaceStore((state) => state.displayProjectIds) ?? [];
   const gitChangeTotalsByWorkspaceId = workspaceStore((state) => state.gitChangeTotalsByWorkspaceId);
   const lastUsedExternalAppId = workspaceStore((state) => state.lastUsedExternalAppId);
   const {
@@ -184,7 +184,7 @@ export function ProjectListView() {
     closeWorkspaceMenus();
   };
 
-  const workspacesByRepoId = workspaces.reduce<Record<string, (typeof workspaces)[number][]>>((acc, workspace) => {
+  const workspaceByProjectId = workspaces.reduce<Record<string, (typeof workspaces)[number][]>>((acc, workspace) => {
     const existing = acc[workspace.repoId];
     if (existing) {
       existing.push(workspace);
@@ -193,7 +193,37 @@ export function ProjectListView() {
     }
     return acc;
   }, {});
-  const filteredRepos = projects.filter((repo) => displayProjectIds.includes(repo.id));
+  const filteredProjects = projects.filter((p) => displayProjectIds.includes(p.id));
+  const displayWorkspaceIdByProjectId = useMemo(() => {
+    const displayWorkspaceIdByProjectIdMap: Record<string, string> = {};
+
+    for (const project of projects) {
+      const projectWorkspaces = workspaceByProjectId[project.id] ?? [];
+      const preferredProjectPath = project.localPath?.trim() || project.path?.trim() || project.worktreePath?.trim() || "";
+      if (!preferredProjectPath) {
+        continue;
+      }
+
+      const primaryWorkspace = projectWorkspaces.find(
+        (workspace) => workspace.kind !== "local" && workspace.worktreePath?.trim() === preferredProjectPath,
+      );
+      if (primaryWorkspace) {
+        displayWorkspaceIdByProjectIdMap[project.id] = primaryWorkspace.id;
+      }
+    }
+
+    return displayWorkspaceIdByProjectIdMap;
+  }, [projects, workspaceByProjectId]);
+  const workspaceContextTarget =
+    workspaceContextMenu &&
+    workspaces.find(
+      (workspace) => workspace.repoId === workspaceContextMenu.repoId && workspace.id === workspaceContextMenu.workspaceId,
+    );
+  const isWorkspaceContextTargetLocal = Boolean(
+    workspaceContextTarget &&
+      (workspaceContextTarget.kind === "local" ||
+        displayWorkspaceIdByProjectId[workspaceContextTarget.repoId] === workspaceContextTarget.id),
+  );
 
   /** Opens the create workspace dialog for one selected repository id. */
   const handleOpenCreateWorkspace = useCallback((repoId: string) => {
@@ -532,8 +562,7 @@ export function ProjectListView() {
           },
         ]
       : []),
-    ...(workspaceContextMenu &&
-    workspaces.find((workspace) => workspace.id === workspaceContextMenu.workspaceId)?.kind !== "local"
+    ...(workspaceContextMenu && !isWorkspaceContextTargetLocal
       ? [
           {
             id: "workspace-rename",
@@ -544,7 +573,10 @@ export function ProjectListView() {
               }
 
               const workspace = workspaces.find((item) => item.id === workspaceContextMenu.workspaceId);
-              if (!workspace || workspace.kind === "local") {
+              const isWorkspaceDisplayedAsLocal =
+                workspace?.kind === "local" ||
+                (workspace ? displayWorkspaceIdByProjectId[workspace.repoId] === workspace.id : false);
+              if (!workspace || isWorkspaceDisplayedAsLocal) {
                 return;
               }
 
@@ -593,8 +625,13 @@ export function ProjectListView() {
   return (
     <>
       <List data-testid="repo-workspace-list" disablePadding sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-        {filteredRepos.map((repo) => {
+        {filteredProjects.map((repo) => {
           const isRepoFolded = foldedRepoIds.includes(repo.id);
+          const localDisplayWorkspaceId = displayWorkspaceIdByProjectId[repo.id];
+          const repoWorkspaces = workspaceByProjectId[repo.id] ?? [];
+          const displayedWorkspaces = localDisplayWorkspaceId
+            ? repoWorkspaces.filter((workspace) => workspace.kind !== "local")
+            : repoWorkspaces;
 
           return (
             <Box key={repo.id} sx={{ mb: 0.5 }}>
@@ -631,7 +668,17 @@ export function ProjectListView() {
               />
               {!isRepoFolded ? (
                 <List disablePadding sx={{ mt: 0.25 }}>
-                  {(workspacesByRepoId[repo.id] ?? []).map((workspace) => {
+                  {displayedWorkspaces.map((workspace) => {
+                    const isWorkspaceDisplayedAsLocal =
+                      workspace.kind === "local" || localDisplayWorkspaceId === workspace.id;
+                    const workspaceForRow = isWorkspaceDisplayedAsLocal
+                      ? {
+                          ...workspace,
+                          kind: "local" as const,
+                          name: "local",
+                          title: "local",
+                        }
+                      : workspace;
                     const workspaceRuntimeStatus = workspaceAgentStatusByWorkspaceId[workspace.id] ?? "idle";
                     const workspaceIndicator = resolveWorkspaceIndicator({
                       runtimeStatus: workspaceRuntimeStatus,
@@ -641,7 +688,7 @@ export function ProjectListView() {
                       <WorkspaceRow
                         key={workspace.id}
                         repoId={repo.id}
-                        workspace={workspace}
+                        workspace={workspaceForRow}
                         isSelected={selectedWorkspaceId === workspace.id}
                         indicator={workspaceIndicator}
                         changeTotals={gitChangeTotalsByWorkspaceId[workspace.id]}

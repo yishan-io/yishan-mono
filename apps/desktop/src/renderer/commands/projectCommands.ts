@@ -103,12 +103,19 @@ export async function createProject(input: {
   let inferredNodeId: string | undefined;
 
   if (input.source === "local" && normalizedPath) {
+    const daemonId = sessionStore.getState().daemonId?.trim();
+
     try {
       const nodes = await api.node.listByOrg(selectedOrganizationId);
-      const preferredLocalNode = nodes.find(
-        (node) => (node.scope === "private" || node.scope === "local") && node.canUse,
-      );
-      inferredNodeId = preferredLocalNode?.id;
+      if (daemonId) {
+        const daemonNode = nodes.find((node) => node.id === daemonId && node.scope === "private" && node.canUse);
+        inferredNodeId = daemonNode?.id;
+      }
+
+      if (!inferredNodeId) {
+        const preferredPrivateNode = nodes.find((node) => node.scope === "private" && node.canUse);
+        inferredNodeId = preferredPrivateNode?.id;
+      }
     } catch (error) {
       if (import.meta.env.DEV) {
         console.debug("[projectCommands] listOrganizationNodes failed", { error });

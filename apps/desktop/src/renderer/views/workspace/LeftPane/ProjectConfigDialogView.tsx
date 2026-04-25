@@ -63,6 +63,8 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
   const [draft, setDraft] = useState<ProjectConfigDraft>(getDefaultDraft);
   const [iconAnchorEl, setIconAnchorEl] = useState<HTMLElement | null>(null);
   const repoLocalPath = repo?.localPath ?? repo?.path ?? "";
+  const repoGitUrl = repo?.gitUrl ?? repo?.repoUrl ?? "";
+  const repoKey = repo?.key ?? repo?.repoKey ?? "";
   const trimmedRepoLocalPath = repoLocalPath.trim();
 
   useEffect(() => {
@@ -181,8 +183,8 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
               justifyContent="space-between"
               sx={{ minHeight: 40, px: 1.5, border: 1, borderColor: "divider", borderRadius: 1 }}
             >
-              <Typography variant="body2" sx={{ color: repo?.gitUrl ? "text.primary" : "text.disabled" }}>
-                {repo?.gitUrl ?? "-"}
+              <Typography variant="body2" sx={{ color: repoGitUrl ? "text.primary" : "text.disabled" }}>
+                {repoGitUrl || "-"}
               </Typography>
             </Stack>
           </Box>
@@ -197,8 +199,8 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
               justifyContent="space-between"
               sx={{ minHeight: 40, px: 1.5, border: 1, borderColor: "divider", borderRadius: 1 }}
             >
-              <Typography variant="body2" sx={{ color: repo?.key ? "text.primary" : "text.disabled" }}>
-                {repo?.key ?? "-"}
+              <Typography variant="body2" sx={{ color: repoKey ? "text.primary" : "text.disabled" }}>
+                {repoKey || "-"}
               </Typography>
             </Stack>
           </Box>

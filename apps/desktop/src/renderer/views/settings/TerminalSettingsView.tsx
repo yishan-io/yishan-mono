@@ -72,7 +72,7 @@ function resolveSessionLocationLabel(input: {
 export function TerminalSettingsView() {
   const { t } = useTranslation();
   const { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions } = useCommands();
-  const repos = workspaceStore((state) => state.repos);
+  const projects = workspaceStore((state) => state.projects);
   const workspaces = workspaceStore((state) => state.workspaces);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadError, setHasLoadError] = useState(false);
@@ -131,8 +131,8 @@ export function TerminalSettingsView() {
   }, [listTerminalSessions, subscribeTerminalSessions]);
 
   const repoNameById = useMemo(() => {
-    return new Map(repos.map((repo) => [repo.id, repo.name]));
-  }, [repos]);
+    return new Map(projects.map((repo) => [repo.id, repo.name]));
+  }, [projects]);
   const workspaceNameById = useMemo(() => {
     return new Map(workspaces.map((workspace) => [workspace.id, workspace.title]));
   }, [workspaces]);

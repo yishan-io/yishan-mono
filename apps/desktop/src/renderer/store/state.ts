@@ -1,8 +1,9 @@
-import type { Repo, RepoWorkspaceItem, WorkspaceStorePersistedState, WorkspaceStoreState } from "./types";
+import type { ProjectRecord } from "../api/types";
+import type { RepoWorkspaceItem, WorkspaceStorePersistedState, WorkspaceStoreState } from "./types";
 
 /** Builds workspace store state from backend snapshot data without creating implicit tabs. */
 export function buildWorkspaceStateFromData(input: {
-  projects: Repo[];
+  projects: ProjectRecord[];
   workspaces: RepoWorkspaceItem[];
   preferredProjectId?: string;
   preferredWorkspaceId?: string;

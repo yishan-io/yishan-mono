@@ -105,7 +105,7 @@ import {
   toggleRightPaneVisibility as toggleRightPaneVisibilityCommand,
   undoFileTreeOperation as undoFileTreeOperationCommand,
 } from "../commands/workspaceCommands";
-import type { Repo } from "../store/types";
+import type { ProjectRecord } from "../api/types";
 
 export type Commands = {
   setSelectedRepoId: (repoId: string) => void;
@@ -191,7 +191,7 @@ export type Commands = {
   updateProjectConfig: (
     repoId: string,
     config: Pick<
-      Repo,
+      ProjectRecord,
       "name" | "worktreePath" | "privateContextEnabled" | "icon" | "iconBgColor" | "setupScript" | "postScript"
     >,
   ) => Promise<void>;

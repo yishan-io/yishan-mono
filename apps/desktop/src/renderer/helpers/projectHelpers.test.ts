@@ -30,7 +30,7 @@ describe("projectHelpers", () => {
 
   it("reads persisted display repo ids and ignores invalid payloads", () => {
     const storage = {
-      getItem: () => JSON.stringify({ state: { displayRepoIds: ["repo-1", "repo-2", 3] } }),
+      getItem: () => JSON.stringify({ state: { displayProjectIds: ["repo-1", "repo-2", 3] } }),
     } as unknown as Storage;
 
     expect(readPersistedDisplayRepoIds(storage)).toEqual(["repo-1", "repo-2"]);

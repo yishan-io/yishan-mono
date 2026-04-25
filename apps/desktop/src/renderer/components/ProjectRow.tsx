@@ -1,11 +1,11 @@
 import { Avatar, Box, IconButton, ListItem, ListItemButton, Tooltip, Typography, useTheme } from "@mui/material";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { LuChevronDown, LuChevronRight, LuPlus } from "react-icons/lu";
-import type { Repo } from "../store/types";
+import type { ProjectRecord } from "../api/types";
 import { renderProjectIcon } from "./projectIcons";
 
 type ProjectRowProps = {
-  repo: Repo;
+  repo: ProjectRecord;
   isSelected: boolean;
   isFolded: boolean;
   addWorkspaceAriaLabel: string;

@@ -17,8 +17,8 @@ const mocked = vi.hoisted(() => {
   let rendererPlatform = "darwin";
 
   const stateRef: {
-    current: {
-      repos: Array<{
+      current: {
+      projects: Array<{
         id: string;
         name: string;
         path: string;
@@ -38,9 +38,9 @@ const mocked = vi.hoisted(() => {
         worktreePath?: string;
         kind?: "managed" | "local";
       }>;
-      selectedRepoId: string;
+      selectedProjectId: string;
       selectedWorkspaceId: string;
-      displayRepoIds: string[];
+      displayProjectIds: string[];
       lastUsedExternalAppId?: string;
       gitChangeTotalsByWorkspaceId: Record<string, { additions: number; deletions: number }>;
       setSelectedRepoId: (repoId: string) => void;
@@ -56,11 +56,11 @@ const mocked = vi.hoisted(() => {
     };
   } = {
     current: {
-      repos: [],
+      projects: [],
       workspaces: [],
-      selectedRepoId: "",
+      selectedProjectId: "",
       selectedWorkspaceId: "",
-      displayRepoIds: [],
+      displayProjectIds: [],
       lastUsedExternalAppId: undefined,
       gitChangeTotalsByWorkspaceId: {},
       setSelectedRepoId,
@@ -191,7 +191,7 @@ function renderRepoList(
   mocked.deleteProject.mockResolvedValue(undefined);
   mocked.openEntryInExternalApp.mockResolvedValue({ ok: true });
   mocked.stateRef.current = {
-    repos: [
+    projects: [
       {
         id: "repo-1",
         name: "Repo 1",
@@ -214,9 +214,9 @@ function renderRepoList(
         worktreePath: "/tmp/worktrees/workspace-1",
       },
     ],
-    selectedRepoId: "repo-1",
+    selectedProjectId: "repo-1",
     selectedWorkspaceId,
-    displayRepoIds: ["repo-1"],
+    displayProjectIds: ["repo-1"],
     lastUsedExternalAppId,
     gitChangeTotalsByWorkspaceId: {
       "workspace-1": { additions: 12, deletions: 4 },
@@ -273,7 +273,7 @@ describe("ProjectListView", () => {
   it("does not render workspace git totals when no totals are cached", () => {
     mocked.stateRef.current = {
       ...mocked.stateRef.current,
-      repos: [
+      projects: [
         {
           id: "repo-1",
           name: "Repo 1",
@@ -296,9 +296,9 @@ describe("ProjectListView", () => {
           worktreePath: "/tmp/worktrees/workspace-1",
         },
       ],
-      selectedRepoId: "repo-1",
+      selectedProjectId: "repo-1",
       selectedWorkspaceId: "workspace-1",
-      displayRepoIds: ["repo-1"],
+      displayProjectIds: ["repo-1"],
       lastUsedExternalAppId: undefined,
       gitChangeTotalsByWorkspaceId: {},
     };
@@ -332,7 +332,7 @@ describe("ProjectListView", () => {
 
   it("renders local workspace rows with a computer icon and no delete action", () => {
     mocked.stateRef.current = {
-      repos: [
+      projects: [
         {
           id: "repo-1",
           name: "Repo 1",
@@ -356,9 +356,9 @@ describe("ProjectListView", () => {
           kind: "local",
         },
       ],
-      selectedRepoId: "repo-1",
+      selectedProjectId: "repo-1",
       selectedWorkspaceId: "workspace-local-1",
-      displayRepoIds: ["repo-1"],
+      displayProjectIds: ["repo-1"],
       lastUsedExternalAppId: undefined,
       gitChangeTotalsByWorkspaceId: {
         "workspace-local-1": { additions: 2, deletions: 1 },

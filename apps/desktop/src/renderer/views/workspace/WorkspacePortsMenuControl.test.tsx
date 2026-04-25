@@ -79,7 +79,7 @@ describe("WorkspacePortsMenuControl", () => {
     ]);
 
     workspaceStore.setState({
-      repos: [
+      projects: [
         {
           id: "repo-1",
           key: "repo-1",
@@ -101,7 +101,7 @@ describe("WorkspacePortsMenuControl", () => {
           worktreePath: "/tmp/repo-1/workspace-1",
         },
       ],
-      selectedRepoId: "repo-1",
+      selectedProjectId: "repo-1",
       selectedWorkspaceId: "workspace-1",
     });
 

@@ -19,23 +19,6 @@ export type AvailableModel = {
   name: string;
 };
 
-export type Repo = {
-  id: string;
-  key: string;
-  name: string;
-  path: string;
-  missing: boolean;
-  gitUrl?: string;
-  localPath?: string;
-  worktreePath: string;
-  privateContextEnabled?: boolean;
-  defaultBranch?: string;
-  icon?: string;
-  iconBgColor?: string;
-  setupScript?: string;
-  postScript?: string;
-};
-
 export type RepoWorkspaceItem = {
   id: string;
   projectId?: string;
@@ -128,7 +111,7 @@ export type OpenWorkspaceTabInput =
     };
 
 export type WorkspaceStoreState = {
-  projects: Repo[];
+  projects: ProjectRecord[];
   workspaces: RepoWorkspaceItem[];
   gitChangesCountByWorkspaceId: Record<string, number>;
   gitChangeTotalsByWorkspaceId: Record<string, WorkspaceGitChangeTotals>;
@@ -159,7 +142,7 @@ export type WorkspaceStoreState = {
   updateProjectConfig: (
     projectId: string,
     config: Pick<
-      Repo,
+      ProjectRecord,
       "name" | "worktreePath" | "privateContextEnabled" | "icon" | "iconBgColor" | "setupScript" | "postScript"
     >,
   ) => void;

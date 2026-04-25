@@ -22,16 +22,16 @@ const PREVIEW_BRANCH_SUFFIX = "dev-123-settings-polish";
 export function GitWorkspaceSettingsView() {
   const { t } = useTranslation();
   const { getGitAuthorName } = useCommands();
-  const repos = workspaceStore((state) => state.repos);
-  const selectedRepoId = workspaceStore((state) => state.selectedRepoId);
+  const projects = workspaceStore((state) => state.projects);
+  const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
   const prefixMode = gitBranchStore((state) => state.prefixMode);
   const customPrefix = gitBranchStore((state) => state.customPrefix);
   const setPrefixMode = gitBranchStore((state) => state.setPrefixMode);
   const setCustomPrefix = gitBranchStore((state) => state.setCustomPrefix);
   const [resolvedGitUserName, setResolvedGitUserName] = useState("");
-  const previewRepo = repos.find((repo) => repo.id === selectedRepoId) ?? repos[0];
+  const previewRepo = projects.find((repo) => repo.id === selectedProjectId) ?? projects[0];
   const previewRepoPath = previewRepo
-    ? previewRepo.localPath?.trim() || previewRepo.path.trim() || previewRepo.worktreePath.trim()
+    ? previewRepo.localPath?.trim() || previewRepo.path?.trim() || previewRepo.worktreePath?.trim() || ""
     : "";
   const previewValue = useMemo(() => {
     const prefix = resolveGitBranchPrefix({

@@ -1,7 +1,7 @@
 import { buildWorkspaceStateFromData } from "../store/state";
 import { getFileName } from "../store/tabs";
-import type { Repo, RepoWorkspaceItem, WorkspaceStoreState } from "../store/types";
 import type { CreateRepoResult, ProjectRecord, ProjectWorkspaceRecord } from "../api/types";
+import type { RepoWorkspaceItem, WorkspaceStoreState } from "../store/types";
 
 type ProjectStoreSlice = Pick<
   WorkspaceStoreState,
@@ -14,42 +14,8 @@ type ProjectStoreSlice = Pick<
   | "displayProjectIds"
 >;
 
-/** Builds one deterministic local-workspace id for a repository id. */
-function buildLocalWorkspaceId(repoId: string): string {
-  return `local-${repoId}`;
-}
-
-/** Returns the user-facing label for one default local workspace row. */
-function getDefaultLocalWorkspaceLabel(): string {
-  return "local";
-}
-
-/** Builds one local workspace row that points at the repository local path. */
-function buildLocalWorkspaceItem(repo: Repo): RepoWorkspaceItem | null {
-  const localPath = repo.localPath?.trim() ?? "";
-  if (!localPath) {
-    return null;
-  }
-
-  const defaultBranch = repo.defaultBranch?.trim() || "main";
-  const workspaceId = buildLocalWorkspaceId(repo.id);
-  const localWorkspaceLabel = getDefaultLocalWorkspaceLabel();
-  return {
-    id: workspaceId,
-    projectId: repo.id,
-    repoId: repo.id,
-    name: localWorkspaceLabel,
-    title: localWorkspaceLabel,
-    sourceBranch: defaultBranch,
-    branch: defaultBranch,
-    summaryId: workspaceId,
-    worktreePath: localPath,
-    kind: "local",
-  };
-}
-
 type RepoConfigUpdate = Pick<
-  Repo,
+  ProjectRecord,
   "name" | "worktreePath" | "privateContextEnabled" | "icon" | "iconBgColor" | "setupScript" | "postScript"
 >;
 
@@ -86,7 +52,7 @@ function filterWorkspaceScopedRecord<T>(record: Record<string, T>, workspaceIdSe
 
 /** Maps backend API data into workspace projects and open workspaces. */
 function mapApiData(projects: ProjectRecord[], workspacesFromApi: ProjectWorkspaceRecord[]): {
-  projects: Repo[];
+  projects: ProjectRecord[];
   workspaces: RepoWorkspaceItem[];
 } {
   const preferredWorkspaceByProjectId = new Map<string, ProjectWorkspaceRecord>();
@@ -107,7 +73,7 @@ function mapApiData(projects: ProjectRecord[], workspacesFromApi: ProjectWorkspa
     const path = preferredWorkspace?.localPath?.trim() ?? "";
     const displayName = repo.name?.trim() || (path ? getFileName(path) : repo.id);
     return {
-      id: repo.id,
+      ...repo,
       key: repo.repoKey ?? repo.id,
       name: displayName,
       path,
@@ -121,7 +87,7 @@ function mapApiData(projects: ProjectRecord[], workspacesFromApi: ProjectWorkspa
       iconBgColor: "#1E66F5",
       setupScript: "",
       postScript: "",
-    } satisfies Repo;
+    } satisfies ProjectRecord;
   });
 
   const projectIdSet = new Set(mappedProjects.map((project) => project.id));
@@ -146,15 +112,9 @@ function mapApiData(projects: ProjectRecord[], workspacesFromApi: ProjectWorkspa
         }) satisfies RepoWorkspaceItem,
     );
 
-  const localWorkspaces = mappedProjects
-    .map((project) => buildLocalWorkspaceItem(project))
-    .filter((workspace): workspace is RepoWorkspaceItem => workspace !== null);
-
-  const workspaces = [...localWorkspaces, ...managedWorkspaces];
-
   return {
     projects: mappedProjects,
-    workspaces,
+    workspaces: managedWorkspaces,
   };
 }
 
@@ -218,7 +178,7 @@ export function buildCreatedRepoState(
   const currentProjects = state.projects;
   const currentDisplayProjectIds = state.displayProjectIds;
   const nextRepoId = input.backendRepo.id;
-  const repoPath = input.backendRepo.localPath ?? input.resolvedPath;
+  const repoPath = (input.backendRepo.localPath ?? input.resolvedPath).trim();
   const nextProject = {
     id: nextRepoId,
     key: input.backendRepo.key ?? nextRepoId,
@@ -234,37 +194,23 @@ export function buildCreatedRepoState(
     iconBgColor: "#1E66F5",
     setupScript: input.backendRepo.setupScript ?? "",
     postScript: input.backendRepo.postScript ?? "",
-  } satisfies Repo;
-  const localWorkspaceId = buildLocalWorkspaceId(nextRepoId);
-  const hasLocalWorkspace = input.source === "local" && repoPath.trim().length > 0;
-  const defaultBranch = input.backendRepo.defaultBranch ?? "main";
-  const localWorkspaceLabel = getDefaultLocalWorkspaceLabel();
-
+    sourceType: input.source === "local" ? "git-local" : "git",
+    repoProvider: null,
+    repoUrl: input.backendRepo.gitUrl ?? (input.source === "remote" ? input.normalizedGitUrl : "") || null,
+    repoKey: input.backendRepo.key ?? nextRepoId,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    createdByUserId: "",
+  } satisfies ProjectRecord;
   return {
     projects: [...currentProjects, nextProject],
-    workspaces: hasLocalWorkspace
-      ? [
-          ...state.workspaces,
-          {
-            id: localWorkspaceId,
-            projectId: nextRepoId,
-            repoId: nextRepoId,
-            name: localWorkspaceLabel,
-            title: localWorkspaceLabel,
-            sourceBranch: defaultBranch,
-            branch: defaultBranch,
-            summaryId: localWorkspaceId,
-            worktreePath: repoPath,
-            kind: "local",
-          },
-        ]
-      : state.workspaces,
+    workspaces: state.workspaces,
     displayProjectIds:
       currentDisplayProjectIds.length === currentProjects.length
         ? [...currentDisplayProjectIds, nextRepoId]
         : currentDisplayProjectIds,
     selectedProjectId: nextRepoId,
-    selectedWorkspaceId: hasLocalWorkspace ? localWorkspaceId : "",
+    selectedWorkspaceId: "",
   };
 }
 

@@ -134,14 +134,14 @@ afterEach(() => {
 
 function buildStoreState(isInitializing: boolean) {
   return {
-    repos: [
+    projects: [
       {
         id: "repo-1",
         name: "Repo 1",
         path: "/tmp/repo-1",
       },
     ],
-    selectedRepoId: "repo-1",
+    selectedProjectId: "repo-1",
     workspaces: [
       {
         id: "workspace-1",
@@ -206,8 +206,8 @@ describe("MainPaneView", () => {
           worktreePath: "/tmp/workspace-1",
         },
       ],
-      repos: [{ id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" }],
-      selectedRepoId: "repo-1",
+      projects: [{ id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" }],
+      selectedProjectId: "repo-1",
       selectedWorkspaceId: "workspace-1",
       tabs: [
         {
@@ -264,8 +264,8 @@ describe("MainPaneView", () => {
           worktreePath: "/tmp/workspace-2",
         },
       ],
-      repos: [{ id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" }],
-      selectedRepoId: "repo-1",
+      projects: [{ id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" }],
+      selectedProjectId: "repo-1",
       selectedWorkspaceId: "workspace-1",
       tabs: [
         {
@@ -335,8 +335,8 @@ describe("MainPaneView", () => {
           worktreePath: "/tmp/workspace-empty",
         },
       ],
-      repos: [{ id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" }],
-      selectedRepoId: "repo-1",
+      projects: [{ id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" }],
+      selectedProjectId: "repo-1",
       selectedWorkspaceId: "workspace-empty",
       tabs: [
         {
@@ -489,7 +489,7 @@ describe("MainPaneView", () => {
 
     render(<MainPaneView />);
 
-    const repoSelectorButton = screen.getByRole("button", { name: "repo.selected" });
+    const repoSelectorButton = screen.getByRole("button", { name: "project.selected" });
     const header = repoSelectorButton.closest("header");
     expect(header?.classList.contains("electron-webkit-app-region-drag")).toBe(true);
   });
@@ -499,11 +499,11 @@ describe("MainPaneView", () => {
     const setSelectedWorkspaceId = vi.fn();
     mocked.stateRef.current = {
       ...buildStoreState(false),
-      repos: [
+      projects: [
         { id: "repo-1", name: "Repo One", path: "/tmp/repo-1" },
         { id: "repo-2", name: "Repo Two", path: "/tmp/repo-2" },
       ],
-      selectedRepoId: "repo-1",
+      selectedProjectId: "repo-1",
       workspaces: [
         { id: "workspace-1", repoId: "repo-1", name: "Workspace 1", branch: "origin/main", title: "Workspace 1" },
         { id: "workspace-2", repoId: "repo-1", name: "Workspace 2", branch: "feature/a", title: "Workspace 2" },
@@ -515,7 +515,7 @@ describe("MainPaneView", () => {
 
     render(<MainPaneView />);
 
-    fireEvent.click(screen.getByRole("button", { name: "repo.selected" }));
+    fireEvent.click(screen.getByRole("button", { name: "project.selected" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Repo Two" }));
 
     expect(setSelectedRepoId).toHaveBeenCalledWith("repo-2");
@@ -529,11 +529,11 @@ describe("MainPaneView", () => {
   it("filters repo and workspace dropdown items with search", () => {
     mocked.stateRef.current = {
       ...buildStoreState(false),
-      repos: [
+      projects: [
         { id: "repo-1", name: "Alpha Repo", path: "/tmp/repo-1" },
         { id: "repo-2", name: "Beta Repo", path: "/tmp/repo-2" },
       ],
-      selectedRepoId: "repo-1",
+      selectedProjectId: "repo-1",
       workspaces: [
         { id: "workspace-1", repoId: "repo-1", name: "Alpha Workspace", branch: "origin/main", title: "Alpha" },
         { id: "workspace-2", repoId: "repo-1", name: "Beta Workspace", branch: "feature/b", title: "Beta" },
@@ -542,7 +542,7 @@ describe("MainPaneView", () => {
 
     render(<MainPaneView />);
 
-    fireEvent.click(screen.getByRole("button", { name: "repo.selected" }));
+    fireEvent.click(screen.getByRole("button", { name: "project.selected" }));
     fireEvent.change(screen.getByRole("textbox", { name: "org.menu.search.repo" }), {
       target: { value: "beta" },
     });

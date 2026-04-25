@@ -8,16 +8,16 @@ import { ProjectFilterPopoverView } from "./ProjectFilterPopoverView";
 
 const mocked = vi.hoisted(() => {
   const stateRef: {
-    current: {
-      repos: Array<{ id: string; name: string; path: string }>;
-      displayRepoIds: string[];
-      setDisplayRepoIds: (repoIds: string[]) => void;
+      current: {
+      projects: Array<{ id: string; name: string; path: string }>;
+      displayProjectIds: string[];
+      setDisplayProjectIds: (repoIds: string[]) => void;
     };
   } = {
     current: {
-      repos: [{ id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" }],
-      displayRepoIds: ["repo-1"],
-      setDisplayRepoIds: () => undefined,
+      projects: [{ id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" }],
+      displayProjectIds: ["repo-1"],
+      setDisplayProjectIds: () => undefined,
     },
   };
 

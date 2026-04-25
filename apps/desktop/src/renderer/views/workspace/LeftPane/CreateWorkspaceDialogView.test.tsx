@@ -32,7 +32,7 @@ describe("CreateWorkspaceDialogView", () => {
     workspaceStore.setState(
       {
         ...initialWorkspaceStoreState,
-        repos: [
+        projects: [
           {
             id: "repo-1",
             key: "repo-1",
@@ -259,7 +259,7 @@ describe("CreateWorkspaceDialogView", () => {
     workspaceStore.setState(
       {
         ...nextWorkspaceStoreState,
-        repos: [...nextWorkspaceStoreState.repos],
+        projects: [...nextWorkspaceStoreState.projects],
       },
       true,
     );

@@ -5,30 +5,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LeftPaneView } from "./LeftPaneView";
 
 const mocked = vi.hoisted(() => {
-  const setDisplayRepoIds = vi.fn((repoIds: string[]) => {
-    stateRef.current.displayRepoIds = repoIds;
+  const setDisplayProjectIds = vi.fn((repoIds: string[]) => {
+    stateRef.current.displayProjectIds = repoIds;
   });
 
   const stateRef: {
-    current: {
-      repos: Array<{ id: string; name: string; path: string }>;
+      current: {
+      projects: Array<{ id: string; name: string; path: string }>;
       workspaces: Array<{ id: string; repoId: string; name: string; branch: string }>;
-      displayRepoIds: string[];
-      setDisplayRepoIds: (repoIds: string[]) => void;
+      displayProjectIds: string[];
+      setDisplayProjectIds: (repoIds: string[]) => void;
     };
   } = {
     current: {
-      repos: [],
+      projects: [],
       workspaces: [],
-      displayRepoIds: [],
-      setDisplayRepoIds,
+      displayProjectIds: [],
+      setDisplayProjectIds,
     },
   };
 
   const workspaceStore = vi.fn((selector: (state: typeof stateRef.current) => unknown) => selector(stateRef.current));
 
   return {
-    setDisplayRepoIds,
+    setDisplayProjectIds,
     stateRef,
     workspaceStore,
   };
@@ -92,8 +92,8 @@ vi.mock("./ProjectConfigDialogView", () => ({
 vi.mock("./ProjectListView", () => ({
   ProjectListView: () => (
     <>
-      {mocked.stateRef.current.repos
-        .filter((repo) => mocked.stateRef.current.displayRepoIds.includes(repo.id))
+      {mocked.stateRef.current.projects
+        .filter((repo) => mocked.stateRef.current.displayProjectIds.includes(repo.id))
         .map((repo) => (
           <div key={repo.id} data-testid={`visible-repo-${repo.id}`}>
             {repo.name}
@@ -110,10 +110,10 @@ vi.mock("./LeftPaneResourceUsageControl", () => ({
 describe("LeftPaneView deletion", () => {
   beforeEach(() => {
     mocked.stateRef.current = {
-      repos: [{ id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" }],
+      projects: [{ id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" }],
       workspaces: [{ id: "workspace-1", repoId: "repo-1", name: "Feature A", branch: "feature-a" }],
-      displayRepoIds: ["repo-1"],
-      setDisplayRepoIds: mocked.setDisplayRepoIds,
+      displayProjectIds: ["repo-1"],
+      setDisplayProjectIds: mocked.setDisplayProjectIds,
     };
   });
 
@@ -125,11 +125,11 @@ describe("LeftPaneView deletion", () => {
   it("supports clear and all actions in the repo filter popover", () => {
     mocked.stateRef.current = {
       ...mocked.stateRef.current,
-      repos: [
+      projects: [
         { id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" },
         { id: "repo-2", name: "Client Portal", path: "/tmp/client-portal" },
       ],
-      displayRepoIds: ["repo-1", "repo-2"],
+      displayProjectIds: ["repo-1", "repo-2"],
       workspaces: [
         { id: "workspace-1", repoId: "repo-1", name: "Feature A", branch: "feature-a" },
         { id: "workspace-2", repoId: "repo-2", name: "Billing Queue", branch: "feature-billing" },
@@ -159,11 +159,11 @@ describe("LeftPaneView deletion", () => {
   it("filters popover repository options with quick search and supports selection", () => {
     mocked.stateRef.current = {
       ...mocked.stateRef.current,
-      repos: [
+      projects: [
         { id: "repo-1", name: "Repo 1", path: "/tmp/repo-1" },
         { id: "repo-2", name: "Client Portal", path: "/tmp/client-portal" },
       ],
-      displayRepoIds: ["repo-1", "repo-2"],
+      displayProjectIds: ["repo-1", "repo-2"],
     };
 
     const { rerender } = render(<LeftPaneView />);

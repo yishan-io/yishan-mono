@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createWorkspaceActions } from "./actions.workspaces";
 
 type TestState = {
-  repos: Array<{ id: string; localPath?: string; worktreePath: string }>;
+  projects: Array<{ id: string; localPath?: string; worktreePath: string }>;
   workspaces: Array<{
     id: string;
     repoId: string;
@@ -15,7 +15,7 @@ type TestState = {
     summaryId: string;
     worktreePath?: string;
   }>;
-  selectedRepoId: string;
+  selectedProjectId: string;
   selectedWorkspaceId: string;
   gitChangesCountByWorkspaceId: Record<string, number>;
   gitChangeTotalsByWorkspaceId: Record<string, { additions: number; deletions: number }>;
@@ -25,7 +25,7 @@ type TestState = {
 /** Creates a minimal state harness for pure workspace store actions. */
 function createHarness() {
   let state: TestState = {
-    repos: [
+    projects: [
       {
         id: "repo-1",
         localPath: "/tmp/repo-1",
@@ -44,7 +44,7 @@ function createHarness() {
         worktreePath: "/tmp/repo-1/.worktrees/existing",
       },
     ],
-    selectedRepoId: "repo-1",
+    selectedProjectId: "repo-1",
     selectedWorkspaceId: "workspace-1",
     gitChangesCountByWorkspaceId: {},
     gitChangeTotalsByWorkspaceId: {},

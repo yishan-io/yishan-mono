@@ -114,12 +114,12 @@ describe("projectCommands", () => {
   it("creates backend project and then appends store state", async () => {
     const appendRepo = vi.fn();
     workspaceStore.setState({ createProject: appendRepo });
-    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    sessionStore.setState({ selectedOrganizationId: "org-1", daemonId: "daemon-1" });
     apiMocks.listOrganizationNodes.mockResolvedValueOnce([
       {
-        id: "node-local-1",
+        id: "daemon-1",
         name: "local",
-        scope: "local",
+        scope: "private",
         endpoint: null,
         metadata: null,
         ownerUserId: "user-1",
@@ -155,7 +155,7 @@ describe("projectCommands", () => {
       name: "Repo 1",
       sourceTypeHint: "git-local",
       repoUrl: "https://github.com/test/repo-1.git",
-      nodeId: "node-local-1",
+      nodeId: "daemon-1",
       localPath: "/tmp/repo-1",
     });
     expect(appendRepo).toHaveBeenCalledTimes(1);

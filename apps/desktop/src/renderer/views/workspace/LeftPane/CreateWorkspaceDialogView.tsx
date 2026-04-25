@@ -125,7 +125,7 @@ export function CreateWorkspaceDialogView({
     (workspace) => workspace.id === workspaceId && workspace.repoId === selectedRepoId && workspace.kind !== "local",
   );
   const selectedRepoBranchListPath =
-    selectedRepo?.localPath?.trim() || selectedRepo?.path.trim() || selectedRepo?.worktreePath.trim() || "";
+    selectedRepo?.localPath?.trim() || selectedRepo?.path?.trim() || selectedRepo?.worktreePath?.trim() || "";
   const resolvedPrefix = resolveGitBranchPrefix({
     prefixMode,
     customPrefix,

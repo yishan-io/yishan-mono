@@ -134,7 +134,7 @@ export function ProjectFilterPopoverView() {
           />
           <List dense disablePadding sx={{ mt: 1, maxHeight: 260, overflowY: "auto" }}>
             {repos
-              .filter((repo) => repoMatchesQuickSearch(repo.name, repo.path, repoQuickSearch))
+              .filter((repo) => repoMatchesQuickSearch(repo.name, repo.path ?? repo.localPath ?? repo.worktreePath ?? "", repoQuickSearch))
               .map((repo) => {
                 const checked = displayRepoIds.includes(repo.id);
 

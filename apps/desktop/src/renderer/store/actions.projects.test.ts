@@ -211,17 +211,9 @@ describe("createWorkspaceRepoActions", () => {
 
     const state = harness.getState();
     expect(state.projects.map((repo) => repo.id)).toEqual(["repo-1"]);
-    expect(state.workspaces).toEqual([
-      expect.objectContaining({
-        id: "local-repo-1",
-        repoId: "repo-1",
-        name: "local",
-        worktreePath: "/tmp/repo-1",
-        kind: "local",
-      }),
-    ]);
+    expect(state.workspaces).toEqual([]);
     expect(state.selectedProjectId).toBe("repo-1");
-    expect(state.selectedWorkspaceId).toBe("local-repo-1");
+    expect(state.selectedWorkspaceId).toBe("");
   });
 
   it("updates project config and refresh version as separate pure actions", () => {

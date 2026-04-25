@@ -172,7 +172,8 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<void
 
   let backendWorkspace: BackendWorkspace | undefined;
 
-  if (project?.localPath) {
+  const projectWorktreePath = project?.worktreePath?.trim() || project?.localPath?.trim() || "";
+  if (projectWorktreePath) {
     const client = await getDaemonRpcClient();
     try {
       const created = (await client.workspace.create({
@@ -181,7 +182,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<void
         workspaceName: normalizedName,
         sourceBranch: input.sourceBranch?.trim() || undefined,
         targetBranch: input.targetBranch?.trim() || undefined,
-        workspaceWorktreePath: project.worktreePath,
+        workspaceWorktreePath: projectWorktreePath,
       })) as CreateWorkspaceResponse;
       notifyLifecycleScriptWarnings(normalizedName, created.lifecycleScriptWarnings);
 

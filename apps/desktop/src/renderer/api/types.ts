@@ -6,13 +6,25 @@ export type OrganizationRecord = {
 export type ProjectRecord = {
   id: string;
   name: string;
-  sourceType: "git" | "git-local" | "unknown";
-  repoProvider: string | null;
-  repoUrl: string | null;
-  repoKey: string | null;
-  createdAt: string;
-  updatedAt: string;
-  createdByUserId: string;
+  key?: string;
+  path?: string;
+  missing?: boolean;
+  gitUrl?: string;
+  sourceType?: "git" | "git-local" | "unknown";
+  repoProvider?: string | null;
+  repoUrl?: string | null;
+  repoKey?: string | null;
+  localPath?: string | null;
+  worktreePath?: string | null;
+  privateContextEnabled?: boolean;
+  defaultBranch?: string | null;
+  icon?: string | null;
+  iconBgColor?: string | null;
+  setupScript?: string | null;
+  postScript?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  createdByUserId?: string;
 };
 
 export type ProjectWorkspaceRecord = {

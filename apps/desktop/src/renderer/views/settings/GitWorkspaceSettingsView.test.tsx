@@ -24,7 +24,7 @@ describe("GitWorkspaceSettingsView", () => {
     workspaceStore.setState(
       {
         ...initialWorkspaceState,
-        repos: [
+        projects: [
           {
             id: "repo-1",
             key: "repo-1",
@@ -35,7 +35,7 @@ describe("GitWorkspaceSettingsView", () => {
             missing: false,
           },
         ],
-        selectedRepoId: "repo-1",
+        selectedProjectId: "repo-1",
       },
       true,
     );

@@ -94,7 +94,7 @@ describe("workspaceCommands", () => {
     const setSelectedWorkspaceId = vi.fn();
     tabStore.setState({ setSelectedWorkspaceId });
     workspaceStore.setState({
-      repos: [
+      projects: [
         {
           id: "repo-1",
           key: "repo-1",
@@ -150,7 +150,7 @@ describe("workspaceCommands", () => {
 
   it("shows system notification when create returns lifecycle script warning", async () => {
     workspaceStore.setState({
-      repos: [
+      projects: [
         {
           id: "repo-1",
           key: "repo-1",
@@ -214,7 +214,7 @@ describe("workspaceCommands", () => {
   it("does not add workspace when backend create fails", async () => {
     const addWorkspace = vi.fn();
     workspaceStore.setState({
-      repos: [
+      projects: [
         {
           id: "repo-1",
           key: "repo-1",
@@ -492,13 +492,13 @@ describe("workspaceCommands", () => {
   });
 
   it("delegates workspace view-state updates to workspace and layout stores", () => {
-    const setDisplayRepoIdsState = vi.fn();
+    const setDisplayProjectIdsState = vi.fn();
     const setLastUsedExternalAppIdState = vi.fn();
     const setLeftWidth = vi.fn();
     const setRightWidth = vi.fn();
     const renameWorkspaceState = vi.fn();
     workspaceStore.setState({
-      setDisplayRepoIds: setDisplayRepoIdsState,
+      setDisplayProjectIds: setDisplayProjectIdsState,
       setLastUsedExternalAppId: setLastUsedExternalAppIdState,
       renameWorkspace: renameWorkspaceState,
     });
@@ -510,7 +510,7 @@ describe("workspaceCommands", () => {
     setRightPaneWidth(420);
     renameWorkspace({ repoId: "repo-1", workspaceId: "workspace-1", name: "next-name" });
 
-    expect(setDisplayRepoIdsState).toHaveBeenCalledWith(["repo-1"]);
+    expect(setDisplayProjectIdsState).toHaveBeenCalledWith(["repo-1"]);
     expect(setLastUsedExternalAppIdState).toHaveBeenCalledWith("vscode");
     expect(setLeftWidth).toHaveBeenCalledWith(320);
     expect(setRightWidth).toHaveBeenCalledWith(420);
@@ -652,7 +652,7 @@ describe("workspaceCommands", () => {
 
   it("dispatches open-create-workspace event using selected repo context", () => {
     workspaceStore.setState({
-      selectedRepoId: "repo-1",
+      selectedProjectId: "repo-1",
     });
 
     const eventListener = vi.fn();

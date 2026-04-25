@@ -32,7 +32,7 @@ afterEach(() => {
 describe("ProjectConfigDialogView", () => {
   it("renders git url and repo key as static text rows", () => {
     workspaceStore.setState({
-      repos: [
+      projects: [
         {
           id: "repo-1",
           key: "core-repo",
