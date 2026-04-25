@@ -45,6 +45,11 @@ export async function getAuthStatus() {
   return await getDesktopHostBridge().getAuthStatus();
 }
 
+/** Reads current daemon identity and version from desktop main-process IPC. */
+export async function getDaemonInfo() {
+  return await getDesktopHostBridge().getDaemonInfo();
+}
+
 /** Runs one desktop login flow through main-process IPC. */
 export async function login() {
   return await getDesktopHostBridge().login();

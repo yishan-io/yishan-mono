@@ -17,6 +17,8 @@ type SessionStoreState = {
   currentUser: SessionUser | null;
   organizations: SessionOrganization[];
   selectedOrganizationId?: string;
+  daemonId?: string;
+  daemonVersion?: string;
   loaded: boolean;
   setSessionData: (input: {
     currentUser: SessionUser | null;
@@ -24,6 +26,7 @@ type SessionStoreState = {
     selectedOrganizationId?: string;
   }) => void;
   setSelectedOrganizationId: (organizationId: string) => void;
+  setDaemonInfo: (input: { daemonId: string; daemonVersion: string }) => void;
   clearSessionData: () => void;
 };
 
@@ -34,6 +37,8 @@ export const sessionStore = create<SessionStoreState>()(
       currentUser: null,
       organizations: [],
       selectedOrganizationId: undefined,
+      daemonId: undefined,
+      daemonVersion: undefined,
       loaded: false,
       setSessionData: ({ currentUser, organizations, selectedOrganizationId }) => {
         const normalizedSelectedOrganizationId =
@@ -58,6 +63,12 @@ export const sessionStore = create<SessionStoreState>()(
             ...state,
             selectedOrganizationId: organizationId,
           };
+        });
+      },
+      setDaemonInfo: ({ daemonId, daemonVersion }) => {
+        set({
+          daemonId: daemonId.trim(),
+          daemonVersion: daemonVersion.trim(),
         });
       },
       clearSessionData: () => {

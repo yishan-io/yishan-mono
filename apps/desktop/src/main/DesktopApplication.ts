@@ -184,6 +184,10 @@ export class DesktopApplication {
     ipcMain.handle(HOST_IPC_CHANNELS.getAuthTokens, async () => {
       return await getAuthTokens();
     });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.getDaemonInfo, async () => {
+      return await this.daemonManager.getInfo();
+    });
   }
 
   /** Registers desktop host IPC endpoints used by renderer shell/runtime commands. */

@@ -15,6 +15,7 @@ const bridge: DesktopBridge = {
     getAuthStatus: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getAuthStatus),
     login: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.login),
     getAuthTokens: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getAuthTokens),
+    getDaemonInfo: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getDaemonInfo),
   },
   api: {
     invoke: (input) => ipcRenderer.invoke(API_RPC_IPC_CHANNELS.invoke, input),

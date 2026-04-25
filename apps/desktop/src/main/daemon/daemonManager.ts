@@ -8,6 +8,7 @@ import { isDevMode } from "../runtime/environment";
 const DAEMON_START_ARGS = ["daemon", "start", "--jwt-required=false"];
 const DAEMON_STOP_ARGS = ["daemon", "stop"];
 const DAEMON_STATE_FILE_NAME = "daemon.state.json";
+const DAEMON_ID_FILE_NAME = "daemon.id";
 
 type CliCommandResult = {
   exitCode: number | null;
@@ -47,6 +48,19 @@ function resolveCliProfileName(): string {
 
 function resolveDaemonStateFilePath(): string {
   return resolve(homedir(), ".yishan", "profiles", resolveCliProfileName(), DAEMON_STATE_FILE_NAME);
+}
+
+function resolveDaemonIdFilePath(): string {
+  return resolve(homedir(), ".yishan", "profiles", resolveCliProfileName(), DAEMON_ID_FILE_NAME);
+}
+
+async function readPersistedDaemonId(): Promise<string> {
+  try {
+    const raw = await readFile(resolveDaemonIdFilePath(), "utf8");
+    return raw.trim();
+  } catch {
+    return "";
+  }
 }
 
 async function resolveDaemonHealthUrl(): Promise<string> {
@@ -221,7 +235,8 @@ export class DaemonManager {
 
     const body = (await response.json()) as { version?: unknown; daemonId?: unknown };
     const version = typeof body.version === "string" ? body.version.trim() : "";
-    const daemonId = typeof body.daemonId === "string" ? body.daemonId.trim() : "";
+    const daemonIdFromHealth = typeof body.daemonId === "string" ? body.daemonId.trim() : "";
+    const daemonId = daemonIdFromHealth || (await readPersistedDaemonId());
     if (!version || !daemonId) {
       throw new Error("daemon health response is invalid");
     }

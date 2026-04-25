@@ -67,6 +67,11 @@ export type MainWindowFullscreenState = {
   isFullscreen: boolean;
 };
 
+export type DaemonInfoResult = {
+  version: string;
+  daemonId: string;
+};
+
 export type AuthStatusResult = {
   authenticated: boolean;
   expiresAt?: string;
@@ -100,6 +105,7 @@ export type DesktopHostBridge = {
   getAuthStatus: () => Promise<AuthStatusResult>;
   login: () => Promise<AuthLoginResult>;
   getAuthTokens: () => Promise<AuthTokensResult>;
+  getDaemonInfo: () => Promise<DaemonInfoResult>;
 };
 
 export type DesktopBridge = {
@@ -120,6 +126,7 @@ export const HOST_IPC_CHANNELS = {
   getAuthStatus: "desktop:host/get-auth-status",
   login: "desktop:host/login",
   getAuthTokens: "desktop:host/get-auth-tokens",
+  getDaemonInfo: "desktop:host/get-daemon-info",
 } as const;
 
 /** IPC channels used to forward normalized desktop RPC envelopes from main process to renderer. */

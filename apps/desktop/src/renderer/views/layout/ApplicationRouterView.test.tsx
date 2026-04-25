@@ -6,7 +6,7 @@ import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../api";
 import { getSessionBootstrapData } from "../../api/sessionApi";
-import { getAuthStatus } from "../../commands/appCommands";
+import { getAuthStatus, getDaemonInfo } from "../../commands/appCommands";
 import { loadWorkspaceFromBackend } from "../../commands/projectCommands";
 import { authStore } from "../../store/authStore";
 import { ApplicationRouterView, NotFoundRouteView } from "./ApplicationRouterView";
@@ -19,6 +19,7 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../commands/appCommands", () => ({
   getAuthStatus: vi.fn(async () => ({ authenticated: false })),
+  getDaemonInfo: vi.fn(async () => ({ daemonId: "daemon-1", version: "0.0.0" })),
 }));
 
 vi.mock("../../api/sessionApi", () => ({
@@ -123,6 +124,7 @@ describe("ApplicationRouterView", () => {
     localStorage.clear();
     authStore.setState({ isAuthenticated: false, authStatusResolved: true });
     vi.mocked(getAuthStatus).mockResolvedValue({ authenticated: false });
+    vi.mocked(getDaemonInfo).mockResolvedValue({ daemonId: "daemon-1", version: "0.0.0" });
     vi.mocked(getSessionBootstrapData).mockResolvedValue({
       currentUser: {
         id: "user-1",

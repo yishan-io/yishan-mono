@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate } from "react-router-dom";
 import { api } from "../../api";
 import { getSessionBootstrapData } from "../../api/sessionApi";
-import { getAuthStatus } from "../../commands/appCommands";
+import { getAuthStatus, getDaemonInfo } from "../../commands/appCommands";
 import { loadWorkspaceFromBackend } from "../../commands/projectCommands";
 import { rendererQueryClient } from "../../queryClient";
 import { authStore } from "../../store/authStore";
@@ -60,6 +60,33 @@ export function ApplicationRouterView() {
   const [appBootstrapReady, setAppBootstrapReady] = useState(false);
   const [appBootstrapError, setAppBootstrapError] = useState<string | null>(null);
   const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
+
+  useEffect(() => {
+    let disposed = false;
+    const loadDaemonIdentity = async () => {
+      try {
+        const daemonInfo = await getDaemonInfo();
+        if (disposed) {
+          return;
+        }
+
+        sessionStore.getState().setDaemonInfo({
+          daemonId: daemonInfo.daemonId,
+          daemonVersion: daemonInfo.version,
+        });
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.debug("[ApplicationRouterView] failed to load daemon info", error);
+        }
+      }
+    };
+
+    loadDaemonIdentity();
+
+    return () => {
+      disposed = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (authStatusResolved) {
