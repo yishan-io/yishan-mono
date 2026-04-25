@@ -50,7 +50,7 @@ export async function deleteProjectHandler(c: AppContext, params: ProjectWorkspa
 
 export async function listWorkspacesHandler(c: AppContext, params: ProjectWorkspaceParamsInput) {
   const actorUser = c.get("sessionUser");
-  const workspaces = await c.get("services").project.listWorkspaces({
+  const workspaces = await c.get("services").workspace.listWorkspaces({
     actorUserId: actorUser.id,
     organizationId: params.orgId,
     projectId: params.projectId
@@ -65,7 +65,7 @@ export async function createWorkspaceHandler(
   body: CreateWorkspaceBodyInput
 ) {
   const actorUser = c.get("sessionUser");
-  const workspace = await c.get("services").project.createWorkspace({
+  const workspace = await c.get("services").workspace.createWorkspace({
     actorUserId: actorUser.id,
     organizationId: params.orgId,
     projectId: params.projectId,

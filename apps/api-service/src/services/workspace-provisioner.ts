@@ -1,4 +1,4 @@
-import type { WorkspaceView } from "@/services/project-service";
+import type { WorkspaceView } from "@/services/workspace-service";
 
 export type WorkspaceProvisionRequest = {
   workspace: WorkspaceView;

@@ -12,6 +12,9 @@ export type ProjectRecord = {
   repoProvider: string | null;
   repoUrl: string | null;
   repoKey: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdByUserId: string;
 };
 
 export type ProjectWorkspaceRecord = {

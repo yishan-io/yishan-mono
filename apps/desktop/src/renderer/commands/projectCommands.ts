@@ -1,5 +1,6 @@
 import { readPersistedDisplayRepoIds } from "../helpers/projectHelpers";
 import { createProject as createRemoteProject, deleteProject as deleteRemoteProject } from "../api/orgProjectApi";
+import type { ProjectRecord } from "../api/orgProjectApi";
 import { getOrgProjectSnapshot } from "../api/orgProjectQueries";
 import { rendererQueryClient } from "../queryClient";
 import { RestApiError } from "../api/restClient";
@@ -16,12 +17,22 @@ async function inspectLocalRepository(path: string): Promise<{
 }> {
   try {
     const client = await getApiServiceClient();
-    return (await client.git.inspect({ path })) as {
+    const result = (await client.git.inspect({ path })) as {
       isGitRepository: boolean;
       remoteUrl?: string;
       currentBranch?: string;
     };
+
+    if (import.meta.env.DEV) {
+      console.debug("[projectCommands] git.inspect result", { path, result });
+    }
+
+    return result;
   } catch {
+    if (import.meta.env.DEV) {
+      console.debug("[projectCommands] git.inspect failed, falling back", { path });
+    }
+
     return {
       isGitRepository: false,
     };
@@ -182,15 +193,18 @@ export async function createProject(input: {
     inferredSourceTypeHint = localRepositoryMetadata.isGitRepository ? "git-local" : "unknown";
     inferredRemoteUrl = localRepositoryMetadata.remoteUrl || undefined;
     inferredDefaultBranch = localRepositoryMetadata.currentBranch || undefined;
+
+    if (import.meta.env.DEV) {
+      console.debug("[projectCommands] local project inference", {
+        path: normalizedPath,
+        inferredSourceTypeHint,
+        inferredRemoteUrl,
+        inferredDefaultBranch,
+      });
+    }
   }
 
-  let backendProject:
-    | {
-        id: string;
-        repoKey: string | null;
-        repoUrl: string | null;
-      }
-    | undefined;
+  let backendProject: ProjectRecord | undefined;
 
   try {
     backendProject = await createRemoteProject(selectedOrganizationId, {
@@ -203,12 +217,13 @@ export async function createProject(input: {
     console.error("Failed to create backend project", error);
   }
 
-  if (!backendProject?.id) {
+  if (!backendProject) {
     return;
   }
 
   workspaceStore.getState().createRepo({
     ...input,
+    name: backendProject.name || normalizedName,
     backendRepo: {
       id: backendProject.id,
       key: backendProject.repoKey ?? normalizedKey ?? undefined,
