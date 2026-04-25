@@ -1,12 +1,15 @@
-import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
-import { useEffect } from "react";
+import { Box, CircularProgress, Stack, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useNavigate } from "react-router-dom";
+import { api } from "../../api";
 import { getSessionBootstrapData } from "../../api/sessionApi";
 import { getAuthStatus } from "../../commands/appCommands";
+import { loadWorkspaceFromBackend } from "../../commands/projectCommands";
 import { rendererQueryClient } from "../../queryClient";
 import { authStore } from "../../store/authStore";
 import { sessionStore } from "../../store/sessionStore";
+import { AppBootstrapLoadingView } from "./AppBootstrapLoadingView";
 import { LoginView } from "../LoginView";
 import { WorkspaceView } from "../WorkspaceView";
 
@@ -49,9 +52,13 @@ export function NotFoundRouteView() {
  * Renders the workspace view with an outlet slot for route overlays.
  */
 export function ApplicationRouterView() {
+  const { t } = useTranslation();
   const isAuthenticated = authStore((state) => state.isAuthenticated);
   const authStatusResolved = authStore((state) => state.authStatusResolved);
   const setAuthState = authStore((state) => state.setAuthState);
+  const [appBootstrapReady, setAppBootstrapReady] = useState(false);
+  const [appBootstrapError, setAppBootstrapError] = useState<string | null>(null);
+  const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
 
   useEffect(() => {
     if (authStatusResolved) {
@@ -85,12 +92,17 @@ export function ApplicationRouterView() {
 
   useEffect(() => {
     if (!authStatusResolved || !isAuthenticated) {
+      setAppBootstrapReady(false);
+      setAppBootstrapError(null);
       return;
     }
 
     let disposed = false;
     const bootstrapSession = async () => {
       try {
+        setAppBootstrapReady(false);
+        setAppBootstrapError(null);
+
         const sessionData = await rendererQueryClient.fetchQuery({
           queryKey: ["session-bootstrap"],
           queryFn: getSessionBootstrapData,
@@ -106,9 +118,30 @@ export function ApplicationRouterView() {
           organizations: sessionData.organizations,
           selectedOrganizationId: previousSelectedOrganizationId,
         });
+
+        await loadWorkspaceFromBackend();
+        if (disposed) {
+          return;
+        }
+
+        const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
+        if (selectedOrganizationId) {
+          const nodes = await api.node.listByOrg(selectedOrganizationId);
+          if (disposed) {
+            return;
+          }
+
+          rendererQueryClient.setQueryData(["org-nodes", selectedOrganizationId], nodes);
+        }
+
+        if (!disposed) {
+          setAppBootstrapReady(true);
+        }
       } catch {
         if (!disposed) {
           sessionStore.getState().clearSessionData();
+          setAppBootstrapReady(false);
+          setAppBootstrapError("failed");
         }
       }
     };
@@ -118,7 +151,7 @@ export function ApplicationRouterView() {
     return () => {
       disposed = true;
     };
-  }, [authStatusResolved, isAuthenticated]);
+  }, [authStatusResolved, bootstrapAttempt, isAuthenticated]);
 
   if (!authStatusResolved) {
     return (
@@ -130,6 +163,17 @@ export function ApplicationRouterView() {
 
   if (!isAuthenticated) {
     return <LoginView />;
+  }
+
+  if (!appBootstrapReady) {
+    return (
+      <AppBootstrapLoadingView
+        hasError={Boolean(appBootstrapError)}
+        onRetry={() => {
+          setBootstrapAttempt((value) => value + 1);
+        }}
+      />
+    );
   }
 
   return (

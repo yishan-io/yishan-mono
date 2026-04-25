@@ -4,7 +4,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { cleanup } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { api } from "../../api";
+import { getSessionBootstrapData } from "../../api/sessionApi";
 import { getAuthStatus } from "../../commands/appCommands";
+import { loadWorkspaceFromBackend } from "../../commands/projectCommands";
 import { authStore } from "../../store/authStore";
 import { ApplicationRouterView, NotFoundRouteView } from "./ApplicationRouterView";
 
@@ -16,6 +19,35 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../commands/appCommands", () => ({
   getAuthStatus: vi.fn(async () => ({ authenticated: false })),
+}));
+
+vi.mock("../../api/sessionApi", () => ({
+  getSessionBootstrapData: vi.fn(async () => ({
+    currentUser: {
+      id: "user-1",
+      email: "user@example.com",
+      name: "User",
+      avatarUrl: null,
+    },
+    organizations: [
+      {
+        id: "org-1",
+        name: "Organization",
+      },
+    ],
+  })),
+}));
+
+vi.mock("../../commands/projectCommands", () => ({
+  loadWorkspaceFromBackend: vi.fn(async () => undefined),
+}));
+
+vi.mock("../../api", () => ({
+  api: {
+    node: {
+      listByOrg: vi.fn(async () => []),
+    },
+  },
 }));
 
 vi.mock("../WorkspaceView", async () => {
@@ -91,6 +123,22 @@ describe("ApplicationRouterView", () => {
     localStorage.clear();
     authStore.setState({ isAuthenticated: false, authStatusResolved: true });
     vi.mocked(getAuthStatus).mockResolvedValue({ authenticated: false });
+    vi.mocked(getSessionBootstrapData).mockResolvedValue({
+      currentUser: {
+        id: "user-1",
+        email: "user@example.com",
+        name: "User",
+        avatarUrl: null,
+      },
+      organizations: [
+        {
+          id: "org-1",
+          name: "Organization",
+        },
+      ],
+    });
+    vi.mocked(loadWorkspaceFromBackend).mockResolvedValue(undefined);
+    vi.mocked(api.node.listByOrg).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -104,20 +152,20 @@ describe("ApplicationRouterView", () => {
     expect(screen.queryByTestId("workspace-input")).toBeNull();
   });
 
-  it("renders workspace view on / route after user is authenticated", () => {
+  it("renders workspace view on / route after user is authenticated", async () => {
     authStore.setState({ isAuthenticated: true, authStatusResolved: true });
     renderApplicationRouter("/");
 
-    expect(screen.getByTestId("workspace-input")).toBeTruthy();
+    expect(await screen.findByTestId("workspace-input")).toBeTruthy();
     expect(screen.queryByTestId("settings-overlay")).toBeNull();
     expect(screen.queryByTestId("keybindings-overlay")).toBeNull();
   });
 
-  it("keeps workspace mounted while showing settings overlay", () => {
+  it("keeps workspace mounted while showing settings overlay", async () => {
     authStore.setState({ isAuthenticated: true, authStatusResolved: true });
     renderApplicationRouter("/");
 
-    const input = screen.getByTestId("workspace-input") as HTMLInputElement;
+    const input = (await screen.findByTestId("workspace-input")) as HTMLInputElement;
     fireEvent.change(input, { target: { value: "sticky-state" } });
     fireEvent.click(screen.getByText("to-settings"));
 
@@ -130,11 +178,11 @@ describe("ApplicationRouterView", () => {
     expect((screen.getByTestId("workspace-input") as HTMLInputElement).value).toBe("sticky-state");
   });
 
-  it("shows keybindings as overlay while preserving workspace state", () => {
+  it("shows keybindings as overlay while preserving workspace state", async () => {
     authStore.setState({ isAuthenticated: true, authStatusResolved: true });
     renderApplicationRouter("/");
 
-    const input = screen.getByTestId("workspace-input") as HTMLInputElement;
+    const input = (await screen.findByTestId("workspace-input")) as HTMLInputElement;
     fireEvent.change(input, { target: { value: "workspace-value" } });
     fireEvent.click(screen.getByText("to-keybindings"));
 
@@ -142,14 +190,14 @@ describe("ApplicationRouterView", () => {
     expect((screen.getByTestId("workspace-input") as HTMLInputElement).value).toBe("workspace-value");
   });
 
-  it("shows not-found state for unknown routes and allows returning", () => {
+  it("shows not-found state for unknown routes and allows returning", async () => {
     authStore.setState({ isAuthenticated: true, authStatusResolved: true });
     renderApplicationRouter("/unknown");
 
     expect(screen.getByText("routing.notFound.title")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "routing.notFound.backToWorkspace" }));
 
-    expect(screen.getByTestId("workspace-input")).toBeTruthy();
+    expect(await screen.findByTestId("workspace-input")).toBeTruthy();
     expect(screen.queryByText("routing.notFound.title")).toBeNull();
   });
 

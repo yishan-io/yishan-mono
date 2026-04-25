@@ -1,6 +1,11 @@
 {
   "app": {
-    "title": "Yishan"
+    "title": "Yishan",
+    "bootstrap": {
+      "title": "正在准备你的工作区",
+      "description": "正在加载用户信息、组织、项目、节点和工作区...",
+      "retry": "重试"
+    }
   },
   "auth": {
     "login": {

@@ -1,6 +1,11 @@
 {
   "app": {
-    "title": "Yishan"
+    "title": "Yishan",
+    "bootstrap": {
+      "title": "Preparing your workspace",
+      "description": "Loading user info, organizations, projects, nodes, and workspaces...",
+      "retry": "Retry"
+    }
   },
   "auth": {
     "login": {
