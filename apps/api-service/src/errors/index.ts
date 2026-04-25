@@ -213,7 +213,7 @@ export class WorkspaceNodeNotFoundError extends AppError {
 export class WorkspaceLocalNodeScopeInvalidError extends AppError {
   constructor(nodeId: string) {
     super(
-      "Workspaces require a local scope node",
+      "Workspaces require a private scope node",
       StatusCodes.BAD_REQUEST,
       "WORKSPACE_LOCAL_NODE_SCOPE_INVALID",
       { nodeId }

@@ -112,7 +112,7 @@ func init() {
 
 	nodeCreateCmd.Flags().String("org-id", "", "organization ID")
 	nodeCreateCmd.Flags().String("name", "", "node name")
-	nodeCreateCmd.Flags().String("scope", "remote", "node scope (local|remote)")
+	nodeCreateCmd.Flags().String("scope", "shared", "node scope (private|shared)")
 	nodeCreateCmd.Flags().String("endpoint", "", "node endpoint URL")
 	nodeCreateCmd.Flags().String("metadata-os", "", "node OS metadata")
 	nodeCreateCmd.Flags().String("metadata-version", "", "node version metadata")

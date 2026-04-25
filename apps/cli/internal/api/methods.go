@@ -20,6 +20,14 @@ type CreateProjectInput struct {
 	LocalPath      string
 }
 
+type RegisterNodeInput struct {
+	NodeID   string
+	Name     string
+	Endpoint string
+	Metadata map[string]string
+	Scope    string
+}
+
 func (c *Client) Health() (HealthResponse, error) {
 	var response HealthResponse
 	err := c.DoDecode("GET", "/health", nil, &response)
@@ -94,6 +102,24 @@ func (c *Client) CreateNode(orgID string, input CreateNodeInput) (CreateNodeResp
 func (c *Client) DeleteNode(orgID string, nodeID string) (OKResponse, error) {
 	var response OKResponse
 	err := c.DoDecode("DELETE", "/orgs/"+orgID+"/nodes/"+nodeID, nil, &response)
+	return response, err
+}
+
+func (c *Client) RegisterNode(input RegisterNodeInput) (RegisterNodeResponse, error) {
+	payload := map[string]any{
+		"nodeId": input.NodeID,
+		"name":   input.Name,
+		"scope":  input.Scope,
+	}
+	if input.Endpoint != "" {
+		payload["endpoint"] = input.Endpoint
+	}
+	if len(input.Metadata) > 0 {
+		payload["metadata"] = input.Metadata
+	}
+
+	var response RegisterNodeResponse
+	err := c.DoDecode("POST", "/nodes/register", payload, &response)
 	return response, err
 }
 

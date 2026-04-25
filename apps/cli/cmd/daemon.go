@@ -2,14 +2,19 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"os"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"yishan/apps/cli/internal/api"
+	"yishan/apps/cli/internal/buildinfo"
 	"yishan/apps/cli/internal/daemon"
 	"yishan/apps/cli/internal/output"
 )
@@ -64,12 +69,13 @@ func runDaemon(_ *cobra.Command, _ []string) error {
 	}
 
 	return daemon.Run(daemon.RunConfig{
-		Host:        appConfig.Daemon.Host,
-		Port:        appConfig.Daemon.Port,
-		JWTSecret:   appConfig.Daemon.JWTSecret,
-		JWTIssuer:   appConfig.Daemon.JWTIssuer,
-		JWTAudience: appConfig.Daemon.JWTAudience,
-		JWTRequired: appConfig.Daemon.JWTRequired,
+		Host:         appConfig.Daemon.Host,
+		Port:         appConfig.Daemon.Port,
+		JWTSecret:    appConfig.Daemon.JWTSecret,
+		JWTIssuer:    appConfig.Daemon.JWTIssuer,
+		JWTAudience:  appConfig.Daemon.JWTAudience,
+		JWTRequired:  appConfig.Daemon.JWTRequired,
+		RegisterNode: buildDaemonNodeRegistrar(),
 	}, statePath)
 }
 
@@ -115,6 +121,35 @@ func startDaemon(_ *cobra.Command, _ []string) error {
 
 	log.Info().Int("pid", state.PID).Str("address", net.JoinHostPort(state.Host, strconv.Itoa(state.Port))).Msg("daemon started")
 	return nil
+}
+
+func buildDaemonNodeRegistrar() func(daemon.NodeRegistration) error {
+	if strings.TrimSpace(appConfig.API.Token) == "" || strings.TrimSpace(appConfig.API.BaseURL) == "" {
+		return nil
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "local-daemon"
+	}
+
+	return func(registration daemon.NodeRegistration) error {
+		_, err := apiClient().RegisterNode(api.RegisterNodeInput{
+			NodeID:   registration.ID,
+			Name:     hostname,
+			Scope:    "private",
+			Endpoint: registration.Endpoint,
+			Metadata: map[string]string{
+				"os":      runtime.GOOS,
+				"version": buildinfo.Version,
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("register node %q: %w", registration.ID, err)
+		}
+
+		return nil
+	}
 }
 
 func stopDaemon(_ *cobra.Command, _ []string) error {

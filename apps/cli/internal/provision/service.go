@@ -65,7 +65,7 @@ func (s *Service) Create(ctx context.Context, req CreateRequest) ([]byte, error)
 		return nil, err
 	}
 
-	if node.Scope != "local" {
+	if node.Scope != "private" {
 		return body, nil
 	}
 

@@ -84,7 +84,7 @@ export class WorkspaceService {
         throw new WorkspaceNodeNotFoundError(input.nodeId);
       }
 
-      if (node.scope !== "local") {
+      if (node.scope !== "private" && node.scope !== "local") {
         throw new WorkspaceLocalNodeScopeInvalidError(input.nodeId);
       }
 

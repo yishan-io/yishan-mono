@@ -11,7 +11,7 @@ import {
 import { newId } from "@/lib/id";
 import type { OrganizationService } from "@/services/organization-service";
 
-type NodeScope = "local" | "remote";
+type NodeScope = "private" | "shared";
 
 export type NodeView = {
   id: string;
@@ -36,6 +36,15 @@ type CreateNodeInput = {
   metadata?: Record<string, unknown>;
 };
 
+type RegisterNodeInput = {
+  actorUserId: string;
+  nodeId: string;
+  name: string;
+  scope: NodeScope;
+  endpoint?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
 export class NodeService {
   constructor(
     private readonly db: AppDb,
@@ -49,6 +58,22 @@ export class NodeService {
     }
 
     return value as Record<string, unknown>;
+  }
+
+  private isPrivateScope(scope: string | null | undefined): boolean {
+    return scope === "private" || scope === "local";
+  }
+
+  private isSharedScope(scope: string | null | undefined): boolean {
+    return scope === "shared" || scope === "remote";
+  }
+
+  private normalizeScope(scope: string): NodeScope {
+    if (this.isSharedScope(scope)) {
+      return "shared";
+    }
+
+    return "private";
   }
 
   async createNode(input: CreateNodeInput): Promise<NodeView> {
@@ -72,7 +97,7 @@ export class NodeService {
       let organizationId: string | null = null;
       let ownerUserId: string | null = null;
 
-      if (input.scope === "remote") {
+      if (input.scope === "shared") {
         if (actorRole !== "owner" && actorRole !== "admin") {
           throw new OrganizationNodePermissionRequiredError();
         }
@@ -105,7 +130,7 @@ export class NodeService {
         ...node,
         canUse: true,
         metadata: this.normalizeMetadata(node.metadata),
-        scope: node.scope as NodeScope
+        scope: this.normalizeScope(node.scope)
       };
     });
   }
@@ -132,17 +157,60 @@ export class NodeService {
       .from(nodes)
       .where(
         or(
-          and(eq(nodes.scope, "remote"), eq(nodes.organizationId, input.organizationId)),
-          and(eq(nodes.scope, "local"), inArray(nodes.ownerUserId, orgMemberUserIds))
+          and(eq(nodes.scope, "shared"), eq(nodes.organizationId, input.organizationId)),
+          and(inArray(nodes.scope, ["private", "local"]), inArray(nodes.ownerUserId, orgMemberUserIds)),
+          and(eq(nodes.scope, "remote"), eq(nodes.organizationId, input.organizationId))
         )
       );
 
     return rows.map((row) => ({
       ...row,
-      canUse: row.scope === "remote" || row.ownerUserId === input.actorUserId,
+      canUse: this.isSharedScope(row.scope) || row.ownerUserId === input.actorUserId,
       metadata: this.normalizeMetadata(row.metadata),
-      scope: row.scope as NodeScope
+      scope: this.normalizeScope(row.scope)
     }));
+  }
+
+  async registerNode(input: RegisterNodeInput): Promise<NodeView> {
+    const now = new Date();
+    const upsertedRows = await this.dbWs
+      .insert(nodes)
+      .values({
+        id: input.nodeId,
+        name: input.name,
+        scope: input.scope,
+        endpoint: input.endpoint ?? null,
+        metadata: input.metadata ?? null,
+        ownerUserId: input.actorUserId,
+        organizationId: null,
+        createdByUserId: input.actorUserId,
+        updatedAt: now
+      })
+      .onConflictDoUpdate({
+        target: nodes.id,
+        set: {
+          name: input.name,
+          scope: input.scope,
+          endpoint: input.endpoint ?? null,
+          metadata: input.metadata ?? null,
+          ownerUserId: input.actorUserId,
+          organizationId: null,
+          updatedAt: now
+        }
+      })
+      .returning();
+
+    const node = upsertedRows[0];
+    if (!node) {
+      throw new Error("Failed to register node");
+    }
+
+    return {
+      ...node,
+      canUse: true,
+      metadata: this.normalizeMetadata(node.metadata),
+      scope: this.normalizeScope(node.scope)
+    };
   }
 
   async deleteNode(input: {
@@ -183,7 +251,7 @@ export class NodeService {
         throw new NodeNotFoundError(input.nodeId);
       }
 
-      if (node.scope === "local") {
+      if (this.isPrivateScope(node.scope)) {
         const ownerUserId = node.ownerUserId;
         if (!ownerUserId) {
           throw new NodeDeletePermissionRequiredError();

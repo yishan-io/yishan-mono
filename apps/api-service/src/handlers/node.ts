@@ -1,10 +1,8 @@
-import { StatusCodes } from "http-status-codes";
-
 import type { AppContext } from "@/hono";
 import type {
-  CreateNodeBodyInput,
   OrganizationNodeDeleteParamsInput,
-  OrganizationNodeParamsInput
+  OrganizationNodeParamsInput,
+  RegisterNodeBodyInput
 } from "@/validation/node";
 
 export async function listNodesHandler(c: AppContext, params: OrganizationNodeParamsInput) {
@@ -16,24 +14,6 @@ export async function listNodesHandler(c: AppContext, params: OrganizationNodePa
   return c.json({ nodes });
 }
 
-export async function createNodeHandler(
-  c: AppContext,
-  params: OrganizationNodeParamsInput,
-  body: CreateNodeBodyInput
-) {
-  const actorUser = c.get("sessionUser");
-  const node = await c.get("services").node.createNode({
-    actorUserId: actorUser.id,
-    organizationId: params.orgId,
-    name: body.name,
-    scope: body.scope,
-    endpoint: body.endpoint,
-    metadata: body.metadata
-  });
-
-  return c.json({ node }, StatusCodes.CREATED);
-}
-
 export async function deleteNodeHandler(c: AppContext, params: OrganizationNodeDeleteParamsInput) {
   const actorUser = c.get("sessionUser");
   await c.get("services").node.deleteNode({
@@ -43,4 +23,18 @@ export async function deleteNodeHandler(c: AppContext, params: OrganizationNodeD
   });
 
   return c.json({ ok: true });
+}
+
+export async function registerNodeHandler(c: AppContext, body: RegisterNodeBodyInput) {
+  const actorUser = c.get("sessionUser");
+  const node = await c.get("services").node.registerNode({
+    actorUserId: actorUser.id,
+    nodeId: body.nodeId,
+    name: body.name,
+    scope: body.scope,
+    endpoint: body.endpoint,
+    metadata: body.metadata
+  });
+
+  return c.json({ node });
 }

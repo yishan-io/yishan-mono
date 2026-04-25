@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -26,12 +27,13 @@ var ErrNotRunning = errors.New("daemon is not running")
 const detachedEnvKey = "YISHAN_DAEMON_DETACHED"
 
 type RunConfig struct {
-	Host        string
-	Port        int
-	JWTSecret   string
-	JWTIssuer   string
-	JWTAudience string
-	JWTRequired bool
+	Host         string
+	Port         int
+	JWTSecret    string
+	JWTIssuer    string
+	JWTAudience  string
+	JWTRequired  bool
+	RegisterNode func(NodeRegistration) error
 }
 
 type StartConfig struct {
@@ -73,6 +75,11 @@ func Run(cfg RunConfig, statePath string) error {
 		return fmt.Errorf("unexpected listener address type %T", listener.Addr())
 	}
 	actualAddr := net.JoinHostPort(cfg.Host, strconv.Itoa(tcpAddr.Port))
+	daemonIDPath := filepath.Join(filepath.Dir(statePath), IDFileName)
+	daemonID, err := EnsureDaemonID(daemonIDPath)
+	if err != nil {
+		return fmt.Errorf("ensure daemon id: %w", err)
+	}
 
 	workspaceManager := workspace.NewManager()
 	handler := NewJSONRPCHandler(workspaceManager)
@@ -115,6 +122,15 @@ func Run(cfg RunConfig, statePath string) error {
 			log.Warn().Err(err).Msg("failed to remove daemon state file")
 		}
 	}()
+
+	if cfg.RegisterNode != nil {
+		if err := cfg.RegisterNode(NodeRegistration{
+			ID:       daemonID,
+			Endpoint: "http://" + actualAddr,
+		}); err != nil {
+			return fmt.Errorf("register daemon node: %w", err)
+		}
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)

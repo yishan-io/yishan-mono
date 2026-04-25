@@ -66,6 +66,10 @@ type CreateNodeResponse struct {
 	Node Node `json:"node"`
 }
 
+type RegisterNodeResponse struct {
+	Node Node `json:"node"`
+}
+
 type Project struct {
 	ID             string `json:"id"`
 	OrganizationID string `json:"organizationId"`

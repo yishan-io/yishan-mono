@@ -102,7 +102,7 @@ export class ProjectService {
           throw new WorkspaceNodeNotFoundError(nodeId);
         }
 
-        if (node.scope !== "local") {
+        if (node.scope !== "private" && node.scope !== "local") {
           throw new WorkspaceLocalNodeScopeInvalidError(nodeId);
         }
 
