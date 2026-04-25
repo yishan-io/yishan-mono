@@ -1,7 +1,7 @@
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { createOrganization, listOrganizations } from "../../api/orgProjectApi";
+import { createOrganization, listOrganizations } from "../../api";
 import { loadWorkspaceFromBackend } from "../../commands/projectCommands";
 import { rendererQueryClient } from "../../queryClient";
 import { sessionStore } from "../../store/sessionStore";

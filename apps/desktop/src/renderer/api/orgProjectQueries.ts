@@ -1,4 +1,5 @@
-import { listOrganizations, listProjects, listProjectWorkspaces, type ProjectWorkspaceRecord } from "./orgProjectApi";
+import { api } from "./client";
+import type { ProjectWorkspaceRecord } from "./types";
 import { sessionStore } from "../store/sessionStore";
 
 export type OrgProjectSnapshot = {
@@ -11,7 +12,7 @@ export type OrgProjectSnapshot = {
 export async function getOrgProjectSnapshot(): Promise<OrgProjectSnapshot> {
   const sessionState = sessionStore.getState();
   const organizations =
-    sessionState.organizations.length > 0 ? sessionState.organizations : await listOrganizations();
+    sessionState.organizations.length > 0 ? sessionState.organizations : await api.org.list();
   const selectedOrganization =
     sessionState.selectedOrganizationId && organizations.some((organization) => organization.id === sessionState.selectedOrganizationId)
       ? organizations.find((organization) => organization.id === sessionState.selectedOrganizationId)
@@ -24,10 +25,10 @@ export async function getOrgProjectSnapshot(): Promise<OrgProjectSnapshot> {
     };
   }
 
-  const projects = await listProjects(selectedOrganization.id);
+  const projects = await api.project.listByOrg(selectedOrganization.id);
   const workspaceLists = await Promise.all(
     projects.map(async (project) => {
-      return await listProjectWorkspaces(selectedOrganization.id, project.id);
+      return await api.workspace.listByProject(selectedOrganization.id, project.id);
     }),
   );
 

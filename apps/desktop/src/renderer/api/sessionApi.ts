@@ -1,4 +1,5 @@
-import { listOrganizations, type OrganizationRecord } from "./orgProjectApi";
+import { api } from "./client";
+import type { OrganizationRecord } from "./types";
 import { requestJson } from "./restClient";
 
 export type CurrentUserRecord = {
@@ -19,6 +20,6 @@ export async function getSessionBootstrapData(): Promise<{
   currentUser: CurrentUserRecord;
   organizations: OrganizationRecord[];
 }> {
-  const [currentUser, organizations] = await Promise.all([getCurrentUser(), listOrganizations()]);
+  const [currentUser, organizations] = await Promise.all([getCurrentUser(), api.org.list()]);
   return { currentUser, organizations };
 }

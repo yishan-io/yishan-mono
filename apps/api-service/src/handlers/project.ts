@@ -1,12 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 
 import type { AppContext } from "@/hono";
-import type {
-  CreateProjectBodyInput,
-  CreateWorkspaceBodyInput,
-  OrganizationProjectParamsInput,
-  ProjectWorkspaceParamsInput
-} from "@/validation/project";
+import type { CreateProjectBodyInput, OrganizationProjectParamsInput, ProjectWorkspaceParamsInput } from "@/validation/project";
 
 export async function listProjectsHandler(c: AppContext, params: OrganizationProjectParamsInput) {
   const actorUser = c.get("sessionUser");
@@ -46,34 +41,4 @@ export async function deleteProjectHandler(c: AppContext, params: ProjectWorkspa
   });
 
   return c.json({ ok: true });
-}
-
-export async function listWorkspacesHandler(c: AppContext, params: ProjectWorkspaceParamsInput) {
-  const actorUser = c.get("sessionUser");
-  const workspaces = await c.get("services").workspace.listWorkspaces({
-    actorUserId: actorUser.id,
-    organizationId: params.orgId,
-    projectId: params.projectId
-  });
-
-  return c.json({ workspaces });
-}
-
-export async function createWorkspaceHandler(
-  c: AppContext,
-  params: ProjectWorkspaceParamsInput,
-  body: CreateWorkspaceBodyInput
-) {
-  const actorUser = c.get("sessionUser");
-  const workspace = await c.get("services").workspace.createWorkspace({
-    actorUserId: actorUser.id,
-    organizationId: params.orgId,
-    projectId: params.projectId,
-    nodeId: body.nodeId,
-    kind: body.kind,
-    branch: body.branch,
-    localPath: body.localPath
-  });
-
-  return c.json({ workspace }, StatusCodes.CREATED);
 }

@@ -15,10 +15,16 @@ const apiMocks = vi.hoisted(() => ({
   queryClientFetchQuery: vi.fn(),
 }));
 
-vi.mock("../api/orgProjectApi", () => ({
-  createProject: apiMocks.createProject,
-  deleteProject: apiMocks.deleteProject,
-  listOrganizationNodes: apiMocks.listOrganizationNodes,
+vi.mock("../api", () => ({
+  api: {
+    project: {
+      create: apiMocks.createProject,
+      delete: apiMocks.deleteProject,
+    },
+    node: {
+      listByOrg: apiMocks.listOrganizationNodes,
+    },
+  },
 }));
 
 vi.mock("../api/orgProjectQueries", () => ({

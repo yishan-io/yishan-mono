@@ -4,10 +4,9 @@ import { zValidator } from "@hono/zod-validator";
 import {
   createProjectHandler,
   deleteProjectHandler,
-  createWorkspaceHandler,
-  listProjectsHandler,
-  listWorkspacesHandler
+  listProjectsHandler
 } from "@/handlers/project";
+import { createWorkspaceHandler, listWorkspacesHandler } from "@/handlers/workspace";
 import type { AppEnv } from "@/hono";
 import { requireOrganizationMemberFromParam } from "@/middlewares/organization-access";
 import { validationErrorResponse } from "@/validation/error-response";

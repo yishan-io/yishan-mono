@@ -1,10 +1,8 @@
 import { readPersistedDisplayRepoIds } from "../helpers/projectHelpers";
 import {
-  createProject as createRemoteProject,
-  deleteProject as deleteRemoteProject,
-  listOrganizationNodes,
-} from "../api/orgProjectApi";
-import type { ProjectRecord } from "../api/orgProjectApi";
+  api,
+} from "../api";
+import type { ProjectRecord } from "../api";
 import { getOrgProjectSnapshot } from "../api/orgProjectQueries";
 import { rendererQueryClient } from "../queryClient";
 import { RestApiError } from "../api/restClient";
@@ -195,7 +193,7 @@ export async function createProject(input: {
 
   if (input.source === "local" && normalizedPath) {
     try {
-      const nodes = await listOrganizationNodes(selectedOrganizationId);
+      const nodes = await api.node.listByOrg(selectedOrganizationId);
       const preferredLocalNode = nodes.find((node) => node.scope === "local" && node.canUse);
       inferredNodeId = preferredLocalNode?.id;
     } catch (error) {
@@ -223,7 +221,7 @@ export async function createProject(input: {
   let backendProject: ProjectRecord | undefined;
 
   try {
-    backendProject = await createRemoteProject(selectedOrganizationId, {
+    backendProject = await api.project.create(selectedOrganizationId, {
       name: normalizedName,
       sourceTypeHint: inferredSourceTypeHint,
       repoUrl: inferredRemoteUrl,
@@ -267,7 +265,7 @@ export async function deleteProject(projectId: string): Promise<void> {
   const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
   if (selectedOrganizationId) {
     try {
-      await deleteRemoteProject(selectedOrganizationId, projectId);
+      await api.project.delete(selectedOrganizationId, projectId);
     } catch (error) {
       if (!(error instanceof RestApiError && error.status === 404)) {
         console.error("Failed to delete backend project and workspaces", error);
