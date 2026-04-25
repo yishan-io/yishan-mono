@@ -1,10 +1,13 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { isDevMode } from "../runtime/environment";
 
 const DAEMON_START_ARGS = ["daemon", "start", "--jwt-required=false"];
 const DAEMON_STOP_ARGS = ["daemon", "stop"];
+const DAEMON_STATE_FILE_NAME = "daemon.state.json";
 
 type CliCommandResult = {
   exitCode: number | null;
@@ -26,7 +29,37 @@ type DaemonLogger = Pick<Console, "warn">;
 type DaemonManagerOptions = {
   run?: CliCommandRunner;
   logger?: DaemonLogger;
+  fetch?: typeof fetch;
 };
+
+type DaemonInfo = {
+  version: string;
+  daemonId: string;
+};
+
+function resolveCliProfileName(): string {
+  if (isDevMode()) {
+    return "dev";
+  }
+
+  return process.env.YISHAN_PROFILE?.trim() || "default";
+}
+
+function resolveDaemonStateFilePath(): string {
+  return resolve(homedir(), ".yishan", "profiles", resolveCliProfileName(), DAEMON_STATE_FILE_NAME);
+}
+
+async function resolveDaemonHealthUrl(): Promise<string> {
+  const stateRaw = await readFile(resolveDaemonStateFilePath(), "utf8");
+  const parsed = JSON.parse(stateRaw) as { host?: unknown; port?: unknown };
+  const host = typeof parsed.host === "string" ? parsed.host.trim() : "";
+  const port = typeof parsed.port === "number" ? parsed.port : 0;
+  if (!host || port <= 0) {
+    throw new Error("daemon state is invalid");
+  }
+
+  return `http://${host}:${port}/healthz`;
+}
 
 function resolveCliInvocation(): CliInvocation {
   const explicitCliPath = process.env.YISHAN_CLI_PATH?.trim();
@@ -137,10 +170,12 @@ function isDaemonNotRunning(details: string): boolean {
 export class DaemonManager {
   private readonly run: CliCommandRunner;
   private readonly logger: DaemonLogger;
+  private readonly fetchFn: typeof fetch;
 
   constructor(options?: DaemonManagerOptions) {
     this.run = options?.run ?? runCliCommand;
     this.logger = options?.logger ?? console;
+    this.fetchFn = options?.fetch ?? fetch;
   }
 
   async ensureStarted(): Promise<void> {
@@ -171,5 +206,26 @@ export class DaemonManager {
     }
 
     this.logger.warn(formatCliFailure("stop", stopResult));
+  }
+
+  async getInfo(): Promise<DaemonInfo> {
+    const url = await resolveDaemonHealthUrl();
+    const response = await this.fetchFn(url, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to load daemon health: HTTP ${response.status}`);
+    }
+
+    const body = (await response.json()) as { version?: unknown; daemonId?: unknown };
+    const version = typeof body.version === "string" ? body.version.trim() : "";
+    const daemonId = typeof body.daemonId === "string" ? body.daemonId.trim() : "";
+    if (!version || !daemonId) {
+      throw new Error("daemon health response is invalid");
+    }
+
+    return { version, daemonId };
   }
 }

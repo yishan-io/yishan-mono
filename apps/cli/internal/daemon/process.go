@@ -80,6 +80,7 @@ func Run(cfg RunConfig, statePath string) error {
 	if err != nil {
 		return fmt.Errorf("ensure daemon id: %w", err)
 	}
+	currentPID := os.Getpid()
 
 	workspaceManager := workspace.NewManager()
 	handler := NewJSONRPCHandler(workspaceManager)
@@ -98,9 +99,10 @@ func Run(cfg RunConfig, statePath string) error {
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"status":  "running",
-			"version": buildinfo.Version,
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"status":   "running",
+			"version":  buildinfo.Version,
+			"daemonId": daemonID,
 		})
 	})
 
@@ -110,7 +112,7 @@ func Run(cfg RunConfig, statePath string) error {
 	}
 
 	if err := SaveState(statePath, RuntimeState{
-		PID:       os.Getpid(),
+		PID:       currentPID,
 		Host:      cfg.Host,
 		Port:      tcpAddr.Port,
 		StartedAt: time.Now().UTC(),
