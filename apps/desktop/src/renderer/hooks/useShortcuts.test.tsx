@@ -59,7 +59,7 @@ const mocks = vi.hoisted(() => ({
     setLastUsedExternalAppId: vi.fn(),
     setLeftWidth: vi.fn(),
     setRightWidth: vi.fn(),
-    loadWorkspaceFromBackend: vi.fn(),
+    load: vi.fn(),
     createProject: vi.fn(),
     deleteProject: vi.fn(),
     updateProjectConfig: vi.fn(),

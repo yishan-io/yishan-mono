@@ -144,7 +144,7 @@ describe("createWorkspaceRepoActions", () => {
   it("hydrates state from backend snapshot", () => {
     const harness = createHarness();
 
-    harness.actions.loadWorkspaceFromBackend(
+    harness.actions.load(
       [
         {
           id: "repo-1",

@@ -9,7 +9,7 @@ import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetSt
 
 type WorkspaceRepoActions = Pick<
   WorkspaceStoreActions,
-  | "loadWorkspaceFromBackend"
+  | "load"
   | "createProject"
   | "deleteProject"
   | "updateProjectConfig"
@@ -49,8 +49,8 @@ export function createWorkspaceRepoActions(
   };
 
   return {
-    loadWorkspaceFromBackend: (projects, workspaces, persistedDisplayProjectIds) => {
-      set((state) => buildHydratedStateFromApiData(state, projects, workspaces, persistedDisplayProjectIds));
+    load: (projects, workspaces, displayProjectIds) => {
+      set((state) => buildHydratedStateFromApiData(state, projects, workspaces, displayProjectIds));
     },
     createProject,
     deleteProject: (projectId) => {

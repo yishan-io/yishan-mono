@@ -55,7 +55,7 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       setLastUsedExternalAppId: vi.fn(),
       setLeftWidth: vi.fn(),
       setRightWidth: vi.fn(),
-      loadWorkspaceFromBackend: vi.fn(),
+      load: vi.fn(),
       createProject: vi.fn(),
       deleteProject: vi.fn(),
       updateProjectConfig: vi.fn(),
@@ -72,7 +72,7 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
     commands: {
       setSelectedRepoId: vi.fn(),
       setSelectedWorkspaceId: vi.fn(),
-      loadWorkspaceFromBackend: vi.fn(async () => {}),
+      load: vi.fn(async () => {}),
       createProject: vi.fn(async () => {}),
       deleteProject: vi.fn(async () => {}),
       updateProjectConfig: vi.fn(async () => {}),

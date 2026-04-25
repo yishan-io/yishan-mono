@@ -2,10 +2,9 @@ import type { WorkspaceStoreState } from "../store/types";
 
 type WorkspaceStoreSlice = Pick<
   WorkspaceStoreState,
-  | "repos"
+  | "projects"
   | "workspaces"
   | "selectedProjectId"
-  | "selectedRepoId"
   | "selectedWorkspaceId"
   | "gitChangesCountByWorkspaceId"
   | "gitChangeTotalsByWorkspaceId"
@@ -66,7 +65,6 @@ export function buildCreatedWorkspaceState(
       },
     ],
     selectedProjectId: input.projectId,
-    selectedRepoId: input.projectId,
     selectedWorkspaceId: nextWorkspaceId,
   };
 }
@@ -86,9 +84,9 @@ export function buildDeletedWorkspaceState(
   delete nextGitChangesCountByWorkspaceId[input.workspaceId];
   delete nextGitChangeTotalsByWorkspaceId[input.workspaceId];
 
-  const nextSelectedRepoId = state.repos.some((repo) => repo.id === state.selectedRepoId)
-    ? state.selectedRepoId
-    : (state.repos[0]?.id ?? "");
+  const nextSelectedProjectId = state.projects.some((project) => project.id === state.selectedProjectId)
+    ? state.selectedProjectId
+    : (state.projects[0]?.id ?? "");
 
   const nextSelectedWorkspaceId =
     state.selectedWorkspaceId === input.workspaceId
@@ -99,8 +97,7 @@ export function buildDeletedWorkspaceState(
 
   return {
     workspaces: nextWorkspaces,
-    selectedProjectId: nextSelectedRepoId,
-    selectedRepoId: nextSelectedRepoId,
+    selectedProjectId: nextSelectedProjectId,
     selectedWorkspaceId: nextSelectedWorkspaceId,
     gitChangesCountByWorkspaceId: nextGitChangesCountByWorkspaceId,
     gitChangeTotalsByWorkspaceId: nextGitChangeTotalsByWorkspaceId,

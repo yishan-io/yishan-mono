@@ -3,7 +3,7 @@ import { getFileName } from "../store/tabs";
 import type { Repo, RepoWorkspaceItem, WorkspaceStoreState } from "../store/types";
 import type { CreateRepoResult, ProjectRecord, ProjectWorkspaceRecord } from "../api/types";
 
-type RepoStoreSlice = Pick<
+type ProjectStoreSlice = Pick<
   WorkspaceStoreState,
   | "projects"
   | "workspaces"
@@ -160,11 +160,11 @@ function mapApiData(projects: ProjectRecord[], workspacesFromApi: ProjectWorkspa
 
 /** Reconciles current state with backend snapshot while preserving compatible UI-only state. */
 export function buildHydratedStateFromApiData(
-  state: RepoStoreSlice,
+  state: ProjectStoreSlice,
   projects: ProjectRecord[],
   workspacesFromApi: ProjectWorkspaceRecord[],
-  persistedDisplayRepoIds: string[] | undefined,
-): Partial<RepoStoreSlice> {
+  displayRepoIds: string[] | undefined,
+): Partial<ProjectStoreSlice> {
   const { projects: mappedProjects, workspaces } = mapApiData(projects, workspacesFromApi);
   const nextBaseState = buildWorkspaceStateFromData({
     projects: mappedProjects,
@@ -173,9 +173,9 @@ export function buildHydratedStateFromApiData(
     preferredWorkspaceId: state.selectedWorkspaceId,
   });
   const nextProjectIdSet = new Set(mappedProjects.map((project) => project.id));
-  const baseDisplayProjectIds = persistedDisplayRepoIds ?? state.displayProjectIds;
+  const baseDisplayProjectIds = displayRepoIds ?? state.displayProjectIds;
   const nextDisplayProjectIds =
-    persistedDisplayRepoIds === undefined && baseDisplayProjectIds.length === 0
+    displayRepoIds === undefined && baseDisplayProjectIds.length === 0
       ? mappedProjects.map((project) => project.id)
       : baseDisplayProjectIds.filter((projectId) => nextProjectIdSet.has(projectId));
   const nextWorkspaceIdSet = new Set(workspaces.map((workspace) => workspace.id));
@@ -205,7 +205,7 @@ export function normalizeCreateRepoInput(input: {
 
 /** Builds optimistic local state for a newly created repo. */
 export function buildCreatedRepoState(
-  state: RepoStoreSlice,
+  state: ProjectStoreSlice,
   input: {
     name: string;
     source: "local" | "remote";
@@ -214,7 +214,7 @@ export function buildCreatedRepoState(
     resolvedPath: string;
     backendRepo: CreateRepoResult;
   },
-): Partial<RepoStoreSlice> {
+): Partial<ProjectStoreSlice> {
   const currentProjects = state.projects;
   const currentDisplayProjectIds = state.displayProjectIds;
   const nextRepoId = input.backendRepo.id;
@@ -269,7 +269,7 @@ export function buildCreatedRepoState(
 }
 
 /** Removes a repo and all workspace-scoped UI state derived from that repo. */
-export function buildDeletedRepoState(state: RepoStoreSlice, repoId: string): Partial<RepoStoreSlice> {
+export function buildDeletedRepoState(state: ProjectStoreSlice, repoId: string): Partial<ProjectStoreSlice> {
   const currentDisplayProjectIds = state.displayProjectIds;
   const nextProjects = state.projects.filter((project) => project.id !== repoId);
   const deletedWorkspaceIdSet = new Set(

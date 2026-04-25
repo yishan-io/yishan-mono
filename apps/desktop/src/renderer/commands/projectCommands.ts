@@ -53,7 +53,7 @@ export async function loadWorkspaceFromBackend(): Promise<void> {
         : organizations[0];
 
     if (!selectedOrganization) {
-      workspaceStore.getState().loadWorkspaceFromBackend([], [], []);
+      workspaceStore.getState().load([], [], []);
       syncTabStoreWithWorkspace(previousWorkspaces);
       return;
     }
@@ -67,7 +67,7 @@ export async function loadWorkspaceFromBackend(): Promise<void> {
     const persistedDisplayProjectIds = readPersistedDisplayRepoIds(
       typeof localStorage === "undefined" ? undefined : localStorage,
     );
-    workspaceStore.getState().loadWorkspaceFromBackend(projects, workspaces, persistedDisplayProjectIds);
+    workspaceStore.getState().load(projects, workspaces, persistedDisplayProjectIds);
     syncTabStoreWithWorkspace(previousWorkspaces);
   } catch (error) {
     console.error("Failed to load workspace snapshot", error);

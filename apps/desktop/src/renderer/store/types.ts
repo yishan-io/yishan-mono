@@ -143,7 +143,7 @@ export type WorkspaceStoreState = {
   setSelectedWorkspaceId: (workspaceId: string) => void;
   setDisplayProjectIds: (projectIds: string[]) => void;
   setLastUsedExternalAppId: (appId: ExternalAppId) => void;
-  loadWorkspaceFromBackend: (
+  load: (
     projects: ProjectRecord[],
     workspaces: ProjectWorkspaceRecord[],
     persistedDisplayProjectIds?: string[],
@@ -206,7 +206,7 @@ export type WorkspaceStoreActions = Pick<
   | "setSelectedWorkspaceId"
   | "setDisplayProjectIds"
   | "setLastUsedExternalAppId"
-  | "loadWorkspaceFromBackend"
+  | "load"
   | "createProject"
   | "deleteProject"
   | "updateProjectConfig"

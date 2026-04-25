@@ -63,7 +63,7 @@ describe("projectCommands", () => {
     const retainWorkspaceTabs = vi.fn().mockReturnValue([]);
     const setSelectedWorkspaceId = vi.fn();
     tabStore.setState({ retainWorkspaceTabs, setSelectedWorkspaceId });
-    workspaceStore.setState({ loadWorkspaceFromBackend: hydrate });
+    workspaceStore.setState({ load: hydrate });
     sessionStore.setState({
       organizations: [{ id: "org-1", name: "Org 1" }],
       selectedOrganizationId: "org-1",
