@@ -21,7 +21,13 @@ export function createWorkspaceRepoActions(
   set: WorkspaceStoreSetState,
   _get: WorkspaceStoreGetState,
 ): WorkspaceRepoActions {
-  const createProject = ({ name, source, path, gitUrl, backendRepo }: Parameters<WorkspaceStoreActions["createProject"]>[0]) => {
+  const createProject = ({
+    name,
+    source,
+    path,
+    gitUrl,
+    backendProject,
+  }: Parameters<WorkspaceStoreActions["createProject"]>[0]) => {
     const { normalizedPath, normalizedGitUrl, resolvedPath } = normalizeCreateRepoInput({
       path,
       gitUrl,
@@ -32,7 +38,7 @@ export function createWorkspaceRepoActions(
       return;
     }
 
-    if (!backendRepo?.id) {
+    if (!backendProject?.id) {
       return;
     }
 
@@ -43,7 +49,7 @@ export function createWorkspaceRepoActions(
         normalizedPath,
         normalizedGitUrl,
         resolvedPath,
-        backendRepo,
+        backendProject,
       }),
     );
   };

@@ -1,7 +1,12 @@
 import { buildWorkspaceStateFromData } from "../store/state";
 import { getFileName } from "../store/tabs";
-import type { CreateRepoResult, ProjectRecord, ProjectWorkspaceRecord } from "../api/types";
-import type { RepoWorkspaceItem, WorkspaceStoreOrganizationPreference, WorkspaceStoreState } from "../store/types";
+import type { ProjectRecord, WorkspaceRecord } from "../api/types";
+import type {
+  RepoWorkspaceItem,
+  WorkspaceProjectRecord,
+  WorkspaceStoreOrganizationPreference,
+  WorkspaceStoreState,
+} from "../store/types";
 
 type ProjectStoreSlice = Pick<
   WorkspaceStoreState,
@@ -17,8 +22,8 @@ type ProjectStoreSlice = Pick<
 >;
 
 type RepoConfigUpdate = Pick<
-  ProjectRecord,
-  "name" | "worktreePath" | "privateContextEnabled" | "icon" | "iconBgColor" | "setupScript" | "postScript"
+  WorkspaceProjectRecord,
+  "name" | "worktreePath" | "contextEnabled" | "privateContextEnabled" | "icon" | "iconBgColor" | "setupScript" | "postScript"
 >;
 
 /** Returns persisted workspace preferences for one organization id when available. */
@@ -97,11 +102,11 @@ function filterWorkspaceScopedRecord<T>(record: Record<string, T>, workspaceIdSe
 }
 
 /** Maps backend API data into workspace projects and open workspaces. */
-function mapApiData(projects: ProjectRecord[], workspacesFromApi: ProjectWorkspaceRecord[]): {
-  projects: ProjectRecord[];
+function mapApiData(projects: ProjectRecord[], workspacesFromApi: WorkspaceRecord[]): {
+  projects: WorkspaceProjectRecord[];
   workspaces: RepoWorkspaceItem[];
 } {
-  const preferredWorkspaceByProjectId = new Map<string, ProjectWorkspaceRecord>();
+  const preferredWorkspaceByProjectId = new Map<string, WorkspaceRecord>();
   for (const workspace of workspacesFromApi) {
     const projectId = workspace.projectId?.trim();
     if (!projectId) {
@@ -127,13 +132,14 @@ function mapApiData(projects: ProjectRecord[], workspacesFromApi: ProjectWorkspa
       gitUrl: repo.repoUrl ?? "",
       localPath: path,
       worktreePath: path,
-      privateContextEnabled: true,
+      contextEnabled: repo.contextEnabled,
+      privateContextEnabled: repo.contextEnabled,
       defaultBranch: preferredWorkspace?.branch ?? "",
-      icon: "folder",
-      iconBgColor: "#1E66F5",
-      setupScript: "",
-      postScript: "",
-    } satisfies ProjectRecord;
+      icon: repo.icon,
+      iconBgColor: repo.color,
+      setupScript: repo.setupScript,
+      postScript: repo.postScript,
+    } satisfies WorkspaceProjectRecord;
   });
 
   const projectIdSet = new Set(mappedProjects.map((project) => project.id));
@@ -169,7 +175,7 @@ export function buildHydratedStateFromApiData(
   state: ProjectStoreSlice,
   organizationId: string,
   projects: ProjectRecord[],
-  workspacesFromApi: ProjectWorkspaceRecord[],
+  workspacesFromApi: WorkspaceRecord[],
 ): Partial<ProjectStoreSlice> {
   const normalizedOrganizationId = organizationId.trim();
   const orgPreferences =
@@ -244,36 +250,37 @@ export function buildCreatedRepoState(
     normalizedPath: string;
     normalizedGitUrl: string;
     resolvedPath: string;
-    backendRepo: CreateRepoResult;
+    backendProject: WorkspaceProjectRecord;
   },
 ): Partial<ProjectStoreSlice> {
   const currentProjects = state.projects;
   const currentDisplayProjectIds = state.displayProjectIds;
-  const nextRepoId = input.backendRepo.id;
-  const repoPath = (input.backendRepo.localPath ?? input.resolvedPath).trim();
+  const nextRepoId = input.backendProject.id;
+  const repoPath = (input.backendProject.localPath ?? input.resolvedPath).trim();
   const nextProject = {
     id: nextRepoId,
-    key: input.backendRepo.key ?? nextRepoId,
+    key: input.backendProject.key ?? input.backendProject.repoKey ?? nextRepoId,
     name: input.name.trim(),
     path: repoPath,
     missing: false,
-    gitUrl: input.backendRepo.gitUrl ?? (input.source === "remote" ? input.normalizedGitUrl : ""),
+    gitUrl: input.backendProject.gitUrl ?? (input.source === "remote" ? input.normalizedGitUrl : ""),
     localPath: input.source === "local" ? repoPath : "",
-    worktreePath: input.backendRepo.worktreePath ?? (input.source === "local" ? repoPath : ""),
-    privateContextEnabled: input.backendRepo.privateContextEnabled ?? true,
-    defaultBranch: input.backendRepo.defaultBranch ?? "",
-    icon: "folder",
-    iconBgColor: "#1E66F5",
-    setupScript: input.backendRepo.setupScript ?? "",
-    postScript: input.backendRepo.postScript ?? "",
+    worktreePath: input.backendProject.worktreePath ?? (input.source === "local" ? repoPath : ""),
+    contextEnabled: input.backendProject.contextEnabled ?? true,
+    privateContextEnabled: input.backendProject.contextEnabled ?? true,
+    defaultBranch: input.backendProject.defaultBranch ?? "",
+    icon: input.backendProject.icon ?? "folder",
+    iconBgColor: input.backendProject.iconBgColor ?? "#1E66F5",
+    setupScript: input.backendProject.setupScript ?? "",
+    postScript: input.backendProject.postScript ?? "",
     sourceType: input.source === "local" ? "git-local" : "git",
-    repoProvider: null,
-    repoUrl: (input.backendRepo.gitUrl ?? (input.source === "remote" ? input.normalizedGitUrl : "")) || null,
-    repoKey: input.backendRepo.key ?? nextRepoId,
+    repoProvider: input.backendProject.repoProvider ?? null,
+    repoUrl: (input.backendProject.repoUrl ?? (input.source === "remote" ? input.normalizedGitUrl : "")) || null,
+    repoKey: input.backendProject.repoKey ?? input.backendProject.key ?? nextRepoId,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     createdByUserId: "",
-  } satisfies ProjectRecord;
+  } satisfies WorkspaceProjectRecord;
   return {
     projects: [...currentProjects, nextProject],
     workspaces: state.workspaces,
@@ -335,6 +342,7 @@ export function buildUpdatedRepoConfigState(
             ...project,
             name: config.name,
             worktreePath: config.worktreePath,
+            contextEnabled: config.contextEnabled ?? config.privateContextEnabled ?? project.contextEnabled,
             privateContextEnabled: config.privateContextEnabled,
             icon: config.icon,
             iconBgColor: config.iconBgColor,

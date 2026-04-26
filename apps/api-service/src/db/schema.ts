@@ -1,5 +1,6 @@
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
+  boolean,
   jsonb,
   index,
   pgTable,
@@ -11,6 +12,7 @@ import {
 export type NodeScope = "private" | "shared";
 export type ProjectSourceType = "git" | "git-local" | "unknown";
 export type WorkspaceKind = "primary" | "worktree";
+export type WorkspaceStatus = "active" | "closed";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -143,6 +145,11 @@ export const projects = pgTable(
     repoProvider: text("repo_provider"),
     repoUrl: text("repo_url"),
     repoKey: text("repo_key"),
+    icon: text("icon").notNull().default("folder"),
+    color: text("color").notNull().default("#1E66F5"),
+    setupScript: text("setup_script").notNull().default(""),
+    postScript: text("post_script").notNull().default(""),
+    contextEnabled: boolean("context_enabled").notNull().default(true),
     organizationId: text("organization_id")
       .notNull()
       .references(() => organizations.id, { onDelete: "cascade" }),
@@ -181,6 +188,7 @@ export const workspaces = pgTable(
       .notNull()
       .references(() => nodes.id, { onDelete: "cascade" }),
     kind: text("kind").$type<WorkspaceKind>().notNull().default("primary"),
+    status: text("status").$type<WorkspaceStatus>().notNull().default("active"),
     branch: text("branch"),
     localPath: text("local_path").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -192,6 +200,7 @@ export const workspaces = pgTable(
     index("workspaces_user_id_idx").on(table.userId),
     index("workspaces_node_id_idx").on(table.nodeId),
     index("workspaces_kind_idx").on(table.kind),
+    index("workspaces_status_idx").on(table.status),
     uniqueIndex("workspaces_project_user_node_kind_branch_uq").on(
       table.projectId,
       table.userId,

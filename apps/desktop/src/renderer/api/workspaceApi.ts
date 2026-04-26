@@ -1,9 +1,9 @@
 import { requestJson } from "./restClient";
-import type { ProjectWorkspaceRecord } from "./types";
+import type { WorkspaceRecord } from "./types";
 
 /** Lists project workspaces for one organization project. */
-export async function listProjectWorkspaces(orgId: string, projectId: string): Promise<ProjectWorkspaceRecord[]> {
-  const response = await requestJson<{ workspaces: ProjectWorkspaceRecord[] }>(`/orgs/${orgId}/projects/${projectId}/workspaces`);
+export async function listProjectWorkspaces(orgId: string, projectId: string): Promise<WorkspaceRecord[]> {
+  const response = await requestJson<{ workspaces: WorkspaceRecord[] }>(`/orgs/${orgId}/projects/${projectId}/workspaces`);
   return response.workspaces;
 }
 
@@ -17,8 +17,8 @@ export async function createProjectWorkspace(
     branch?: string;
     localPath: string;
   },
-): Promise<ProjectWorkspaceRecord> {
-  const response = await requestJson<{ workspace: ProjectWorkspaceRecord }>(`/orgs/${orgId}/projects/${projectId}/workspaces`, {
+): Promise<WorkspaceRecord> {
+  const response = await requestJson<{ workspace: WorkspaceRecord }>(`/orgs/${orgId}/projects/${projectId}/workspaces`, {
     method: "POST",
     body: input,
   });

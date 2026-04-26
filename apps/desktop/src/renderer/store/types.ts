@@ -1,6 +1,31 @@
 import type { StateCreator } from "zustand";
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
-import type { CreateRepoResult, ProjectRecord, ProjectWorkspaceRecord } from "../api/types";
+import type { ProjectRecord, WorkspaceRecord } from "../api/types";
+
+export type WorkspaceProjectRecord = {
+  id: string;
+  name: string;
+  key?: string;
+  path?: string;
+  missing?: boolean;
+  gitUrl?: string;
+  sourceType?: "git" | "git-local" | "unknown";
+  repoProvider?: string | null;
+  repoUrl?: string | null;
+  repoKey?: string | null;
+  localPath?: string | null;
+  worktreePath?: string | null;
+  contextEnabled?: boolean;
+  privateContextEnabled?: boolean;
+  defaultBranch?: string | null;
+  icon?: string | null;
+  iconBgColor?: string | null;
+  setupScript?: string | null;
+  postScript?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  createdByUserId?: string;
+};
 
 export type ChatMessage = {
   id: string;
@@ -111,7 +136,7 @@ export type OpenWorkspaceTabInput =
     };
 
 export type WorkspaceStoreState = {
-  projects: ProjectRecord[];
+  projects: WorkspaceProjectRecord[];
   workspaces: RepoWorkspaceItem[];
   gitChangesCountByWorkspaceId: Record<string, number>;
   gitChangeTotalsByWorkspaceId: Record<string, WorkspaceGitChangeTotals>;
@@ -130,21 +155,28 @@ export type WorkspaceStoreState = {
   load: (
     organizationId: string,
     projects: ProjectRecord[],
-    workspaces: ProjectWorkspaceRecord[],
+    workspaces: WorkspaceRecord[],
   ) => void;
   createProject: (input: {
     name: string;
     source: "local" | "remote";
     path?: string;
     gitUrl?: string;
-    backendRepo: CreateRepoResult;
+    backendProject: WorkspaceProjectRecord;
   }) => void;
   deleteProject: (projectId: string) => void;
   updateProjectConfig: (
     projectId: string,
     config: Pick<
-      ProjectRecord,
-      "name" | "worktreePath" | "privateContextEnabled" | "icon" | "iconBgColor" | "setupScript" | "postScript"
+      WorkspaceProjectRecord,
+      | "name"
+      | "worktreePath"
+      | "contextEnabled"
+      | "privateContextEnabled"
+      | "icon"
+      | "iconBgColor"
+      | "setupScript"
+      | "postScript"
     >,
   ) => void;
   incrementFileTreeRefreshVersion: (workspaceWorktreePath?: string, changedRelativePaths?: string[]) => void;

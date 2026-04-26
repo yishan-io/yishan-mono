@@ -165,7 +165,7 @@ describe("projectCommands", () => {
     expect(addWorkspace).not.toHaveBeenCalled();
     expect(appendRepo.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
-        backendRepo: expect.objectContaining({
+        backendProject: expect.objectContaining({
           defaultBranch: "main",
         }),
       }),
@@ -192,6 +192,7 @@ describe("projectCommands", () => {
           userId: "user-1",
           nodeId: "node-1",
           kind: "primary",
+          status: "active",
           branch: "main",
           localPath: "/tmp/remote-repo",
           createdAt: "2026-01-01T00:00:00.000Z",
@@ -209,7 +210,7 @@ describe("projectCommands", () => {
     expect(appendRepo).toHaveBeenCalledTimes(1);
     expect(appendRepo.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
-        backendRepo: expect.objectContaining({
+        backendProject: expect.objectContaining({
           localPath: "/tmp/remote-repo",
           worktreePath: "/tmp/remote-repo",
           defaultBranch: "main",

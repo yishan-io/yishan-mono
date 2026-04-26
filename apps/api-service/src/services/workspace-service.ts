@@ -23,6 +23,7 @@ export type WorkspaceView = {
   userId: string;
   nodeId: string;
   kind: WorkspaceKind;
+  status: "active" | "closed";
   branch: string | null;
   localPath: string;
   createdAt: Date;

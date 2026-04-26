@@ -22,6 +22,11 @@ export type ProjectView = {
   repoProvider: string | null;
   repoUrl: string | null;
   repoKey: string | null;
+  icon: string;
+  color: string;
+  setupScript: string;
+  postScript: string;
+  contextEnabled: boolean;
   organizationId: string;
   createdByUserId: string;
   createdAt: Date;
@@ -36,6 +41,7 @@ export type ProjectWithWorkspacesView = ProjectView & {
     userId: string;
     nodeId: string;
     kind: "primary" | "worktree";
+    status: "active" | "closed";
     branch: string | null;
     localPath: string;
     createdAt: Date;

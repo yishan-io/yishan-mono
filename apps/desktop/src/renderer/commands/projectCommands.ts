@@ -182,18 +182,27 @@ export async function createProject(input: {
   workspaceStore.getState().createProject({
     ...input,
     name: project.name || normalizedName,
-    backendRepo: {
+    backendProject: {
       id: project.id,
+      name: project.name || normalizedName,
       key: project.repoKey ?? normalizedKey ?? undefined,
+      repoKey: project.repoKey ?? normalizedKey ?? null,
       localPath: resolvedProjectLocalPath,
       worktreePath: resolvedProjectLocalPath,
       gitUrl: project.repoUrl ?? inferredRemoteUrl,
-      contextEnabled: true,
-      icon: "folder",
-      color: "#1E66F5",
-      setupScript: "",
-      postScript: "",
+      repoUrl: project.repoUrl ?? inferredRemoteUrl,
+      contextEnabled: project.contextEnabled,
+      privateContextEnabled: project.contextEnabled,
+      icon: project.icon,
+      iconBgColor: project.color,
+      setupScript: project.setupScript,
+      postScript: project.postScript,
       defaultBranch: resolvedProjectDefaultBranch,
+      sourceType: project.sourceType,
+      repoProvider: project.repoProvider,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      createdByUserId: project.createdByUserId,
     },
   });
 
