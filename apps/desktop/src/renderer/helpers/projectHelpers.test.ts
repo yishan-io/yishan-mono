@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeCreateRepoInput, readPersistedDisplayRepoIds } from "./projectHelpers";
+import { buildHydratedStateFromApiData, normalizeCreateRepoInput, readPersistedDisplayRepoIds } from "./projectHelpers";
 
 describe("projectHelpers", () => {
   it("normalizes create-repo input based on source", () => {
@@ -40,5 +40,57 @@ describe("projectHelpers", () => {
     } as unknown as Storage;
 
     expect(readPersistedDisplayRepoIds(invalidStorage)).toBeUndefined();
+  });
+
+  it("falls back to showing all repos when persisted display ids are stale", () => {
+    const initialState = {
+      projects: [],
+      workspaces: [],
+      gitChangesCountByWorkspaceId: {},
+      gitChangeTotalsByWorkspaceId: {},
+      selectedProjectId: "",
+      selectedWorkspaceId: "",
+      displayProjectIds: [],
+    };
+
+    const hydrated = buildHydratedStateFromApiData(
+      initialState,
+      [
+        {
+          id: "repo-1",
+          name: "Repo 1",
+        },
+      ],
+      [],
+      ["missing-repo-id"],
+    );
+
+    expect(hydrated.displayProjectIds).toEqual(["repo-1"]);
+  });
+
+  it("keeps explicit empty persisted display ids", () => {
+    const initialState = {
+      projects: [],
+      workspaces: [],
+      gitChangesCountByWorkspaceId: {},
+      gitChangeTotalsByWorkspaceId: {},
+      selectedProjectId: "",
+      selectedWorkspaceId: "",
+      displayProjectIds: [],
+    };
+
+    const hydrated = buildHydratedStateFromApiData(
+      initialState,
+      [
+        {
+          id: "repo-1",
+          name: "Repo 1",
+        },
+      ],
+      [],
+      [],
+    );
+
+    expect(hydrated.displayProjectIds).toEqual([]);
   });
 });

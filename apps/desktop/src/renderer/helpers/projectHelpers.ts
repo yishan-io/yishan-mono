@@ -134,10 +134,18 @@ export function buildHydratedStateFromApiData(
   });
   const nextProjectIdSet = new Set(mappedProjects.map((project) => project.id));
   const baseDisplayProjectIds = displayRepoIds ?? state.displayProjectIds;
+  const filteredDisplayProjectIds = baseDisplayProjectIds.filter((projectId) => nextProjectIdSet.has(projectId));
+  const shouldResetPersistedDisplayProjectIds =
+    displayRepoIds !== undefined &&
+    displayRepoIds.length > 0 &&
+    filteredDisplayProjectIds.length === 0 &&
+    mappedProjects.length > 0;
   const nextDisplayProjectIds =
     displayRepoIds === undefined && baseDisplayProjectIds.length === 0
       ? mappedProjects.map((project) => project.id)
-      : baseDisplayProjectIds.filter((projectId) => nextProjectIdSet.has(projectId));
+      : shouldResetPersistedDisplayProjectIds
+        ? mappedProjects.map((project) => project.id)
+        : filteredDisplayProjectIds;
   const nextWorkspaceIdSet = new Set(workspaces.map((workspace) => workspace.id));
 
   return {
