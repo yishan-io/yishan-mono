@@ -60,7 +60,7 @@ export class ProjectService {
     private readonly organizationService: OrganizationService
   ) {}
 
-  async createProject(input: CreateProjectInput): Promise<ProjectView> {
+  async createProject(input: CreateProjectInput): Promise<ProjectWithWorkspacesView> {
     const role = await this.organizationService.getMembershipRole({
       organizationId: input.organizationId,
       userId: input.actorUserId
@@ -105,6 +105,8 @@ export class ProjectService {
         throw new Error("Failed to create project");
       }
 
+      const createdWorkspaces: ProjectWithWorkspacesView["workspaces"] = [];
+
       if ((sourceType === "git" || sourceType === "git-local") && nodeId && localPath) {
         const nodeRows = await tx
           .select({ id: nodes.id, scope: nodes.scope, ownerUserId: nodes.ownerUserId })
@@ -125,19 +127,27 @@ export class ProjectService {
           throw new WorkspaceLocalNodePermissionRequiredError();
         }
 
-        await tx.insert(workspaces).values({
-          id: newId(),
-          organizationId: input.organizationId,
-          projectId: project.id,
-          userId: input.actorUserId,
-          nodeId,
-          kind: "primary",
-          branch: null,
-          localPath
-        });
+        const insertedWorkspaces = await tx
+          .insert(workspaces)
+          .values({
+            id: newId(),
+            organizationId: input.organizationId,
+            projectId: project.id,
+            userId: input.actorUserId,
+            nodeId,
+            kind: "primary",
+            branch: null,
+            localPath
+          })
+          .returning();
+
+        createdWorkspaces.push(...insertedWorkspaces);
       }
 
-      return project;
+      return {
+        ...project,
+        workspaces: createdWorkspaces
+      };
     });
   }
 

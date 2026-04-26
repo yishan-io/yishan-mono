@@ -113,7 +113,8 @@ describe("projectCommands", () => {
 
   it("creates backend project and then appends store state", async () => {
     const appendRepo = vi.fn();
-    workspaceStore.setState({ createProject: appendRepo });
+    const addWorkspace = vi.fn();
+    workspaceStore.setState({ createProject: appendRepo, addWorkspace });
     sessionStore.setState({ selectedOrganizationId: "org-1", daemonId: "daemon-1" });
     apiMocks.listOrganizationNodes.mockResolvedValueOnce([
       {
@@ -142,6 +143,7 @@ describe("projectCommands", () => {
       repoProvider: null,
       repoUrl: null,
       repoKey: "repo-1",
+      workspaces: [],
     });
 
     await createProject({
@@ -159,6 +161,7 @@ describe("projectCommands", () => {
       localPath: "/tmp/repo-1",
     });
     expect(appendRepo).toHaveBeenCalledTimes(1);
+    expect(addWorkspace).not.toHaveBeenCalled();
     expect(appendRepo.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
         backendRepo: expect.objectContaining({
@@ -166,6 +169,60 @@ describe("projectCommands", () => {
         }),
       }),
     );
+  });
+
+  it("adds created backend workspace entries for remote projects", async () => {
+    const appendRepo = vi.fn();
+    const addWorkspace = vi.fn();
+    workspaceStore.setState({ createProject: appendRepo, addWorkspace });
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    apiMocks.createProject.mockResolvedValueOnce({
+      id: "project-remote-1",
+      name: "Remote Repo",
+      sourceType: "git",
+      repoProvider: "github",
+      repoUrl: "https://github.com/test/remote-repo.git",
+      repoKey: "remote-repo",
+      workspaces: [
+        {
+          id: "workspace-1",
+          organizationId: "org-1",
+          projectId: "project-remote-1",
+          userId: "user-1",
+          nodeId: "node-1",
+          kind: "primary",
+          branch: "main",
+          localPath: "/tmp/remote-repo",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+
+    await createProject({
+      name: "Remote Repo",
+      source: "remote",
+      gitUrl: "https://github.com/test/remote-repo.git",
+    });
+
+    expect(appendRepo).toHaveBeenCalledTimes(1);
+    expect(appendRepo.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        backendRepo: expect.objectContaining({
+          localPath: "/tmp/remote-repo",
+          worktreePath: "/tmp/remote-repo",
+          defaultBranch: "main",
+        }),
+      }),
+    );
+    expect(addWorkspace).toHaveBeenCalledWith({
+      projectId: "project-remote-1",
+      workspaceId: "workspace-1",
+      name: "main",
+      sourceBranch: "main",
+      branch: "main",
+      worktreePath: "/tmp/remote-repo",
+    });
   });
 
   it("deletes backend project and then removes project from store", async () => {

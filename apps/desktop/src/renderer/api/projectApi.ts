@@ -28,8 +28,8 @@ export async function createProject(
     nodeId?: string;
     localPath?: string;
   },
-): Promise<ProjectRecord> {
-  const response = await requestJson<{ project: ProjectRecord }>(`/orgs/${orgId}/projects`, {
+): Promise<ProjectWithWorkspacesRecord> {
+  const response = await requestJson<{ project: ProjectWithWorkspacesRecord }>(`/orgs/${orgId}/projects`, {
     method: "POST",
     body: input,
   });

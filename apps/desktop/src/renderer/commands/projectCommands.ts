@@ -138,10 +138,10 @@ export async function createProject(input: {
     }
   }
 
-  let backendProject: ProjectRecord | undefined;
+  let project: ProjectWithWorkspacesRecord | undefined;
 
   try {
-    backendProject = await api.project.create(selectedOrganizationId, {
+    project = await api.project.create(selectedOrganizationId, {
       name: normalizedName,
       sourceTypeHint: inferredSourceTypeHint,
       repoUrl: inferredRemoteUrl,
@@ -152,27 +152,49 @@ export async function createProject(input: {
     console.error("Failed to create backend project", error);
   }
 
-  if (!backendProject) {
+  if (!project) {
     return;
   }
 
+  const workspaces = project.workspaces ?? [];
+  const primaryWorkspace =
+    workspaces.find((workspace) => workspace.kind === "primary") ?? workspaces[0];
+  const resolvedProjectLocalPath =
+    input.source === "local"
+      ? normalizedPath || undefined
+      : (primaryWorkspace?.localPath?.trim() || undefined);
+  const resolvedProjectDefaultBranch = primaryWorkspace?.branch ?? inferredDefaultBranch ?? null;
+
   workspaceStore.getState().createProject({
     ...input,
-    name: backendProject.name || normalizedName,
+    name: project.name || normalizedName,
     backendRepo: {
-      id: backendProject.id,
-      key: backendProject.repoKey ?? normalizedKey ?? undefined,
-      localPath: input.source === "local" ? normalizedPath || undefined : undefined,
-      worktreePath: input.source === "local" ? normalizedPath || undefined : undefined,
-      gitUrl: backendProject.repoUrl ?? inferredRemoteUrl,
+      id: project.id,
+      key: project.repoKey ?? normalizedKey ?? undefined,
+      localPath: resolvedProjectLocalPath,
+      worktreePath: resolvedProjectLocalPath,
+      gitUrl: project.repoUrl ?? inferredRemoteUrl,
       contextEnabled: true,
       icon: "folder",
       color: "#1E66F5",
       setupScript: "",
       postScript: "",
-      defaultBranch: inferredDefaultBranch ?? null,
+      defaultBranch: resolvedProjectDefaultBranch,
     },
   });
+
+  for (const workspace of workspaces) {
+    workspaceStore.getState().addWorkspace({
+      projectId: workspace.projectId ?? project.id,
+      workspaceId: workspace.id,
+      name: workspace.branch?.trim() || "workspace",
+      sourceBranch: workspace.branch?.trim() || "main",
+      branch: workspace.branch?.trim() || "main",
+      worktreePath: workspace.localPath,
+    });
+  }
+
+  tabStore.getState().setSelectedWorkspaceId(workspaceStore.getState().selectedWorkspaceId);
 }
 
 /** Deletes one project in backend and then removes it from local store state. */
