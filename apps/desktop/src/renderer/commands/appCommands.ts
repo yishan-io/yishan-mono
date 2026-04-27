@@ -1,5 +1,5 @@
 import type { AgentKind } from "@yishan/agent-runtime";
-import { getDaemonRpcClient, getDesktopHostBridge } from "../rpc/rpcTransport";
+import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
 
 /** Opens one native folder picker and returns a selected directory path when available. */
 export async function openLocalFolderDialog(startingFolder?: string) {
@@ -8,20 +8,20 @@ export async function openLocalFolderDialog(startingFolder?: string) {
 
 /** Reads default workspace worktree location from backend app settings. */
 export async function getDefaultWorktreeLocation() {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   const response = await client.app.getDefaultWorktreeLocation(undefined);
   return response.worktreePath;
 }
 
 /** Checks whether one agent global config grants external directory access. */
 export async function checkAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: AgentKind }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.app.checkAgentGlobalConfigExternalDirectoryPermission(params ?? {});
 }
 
 /** Ensures one agent global config grants external directory access. */
 export async function ensureAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: AgentKind }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.app.ensureAgentGlobalConfigExternalDirectoryPermission(params ?? {});
 }
 

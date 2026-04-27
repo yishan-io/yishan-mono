@@ -1,20 +1,42 @@
-import { randomUUID } from "node:crypto";
-import { basename } from "node:path";
-import type * as Rpc from "./jsonRpcTypes";
+import type * as Rpc from "./daemonTypes";
 import {
   asRecord,
   buildRequest,
   buildUnsupportedMethodError,
   normalizeWorktreePath,
-  openSocket,
   parseJsonRpcMessage,
   readOptionalBoolean,
   readOptionalNumber,
   readOptionalString,
   readOptionalStringArray,
-} from "./jsonRpcHelpers";
+} from "./helpers";
 
 const RPC_REQUEST_TIMEOUT_MS = 30_000;
+
+function createRandomId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function createDesktopWorkspaceId(): string {
+  return `desktop-${createRandomId()}`;
+}
+
+type PendingRequest = {
+  method: string;
+  timeout: ReturnType<typeof setTimeout>;
+  resolve: (value: unknown) => void;
+  reject: (error: Error) => void;
+};
+
+type ActiveSubscription = {
+  method: string;
+  params?: unknown;
+  onNotification: (event: Rpc.DaemonNotification) => void;
+};
 
 /** Normalizes daemon file-entry paths so directories always keep a trailing slash. */
 function normalizeDaemonFileEntries(files: Rpc.DaemonFileEntry[]): Rpc.DaemonFileEntry[] {
@@ -27,10 +49,19 @@ function normalizeDaemonFileEntries(files: Rpc.DaemonFileEntry[]): Rpc.DaemonFil
   });
 }
 
-export class DaemonJsonRpcClient {
-  private readonly subscriptionSockets = new Map<string, WebSocket | null>();
+export class DaemonClient {
+  private readonly openSocket: () => Promise<WebSocket>;
+  private socket: WebSocket | null = null;
+  private socketOpenPromise: Promise<WebSocket> | null = null;
+  private readonly pendingRequestsById = new Map<string, PendingRequest>();
+  private readonly subscriptionsById = new Map<string, ActiveSubscription>();
   private readonly workspaceIdByWorktreePath = new Map<string, string>();
   private readonly terminalNextIndexBySessionId = new Map<string, number>();
+  private disposed = false;
+
+  constructor(options: { openSocket: () => Promise<WebSocket> }) {
+    this.openSocket = options.openSocket;
+  }
 
   readonly workspace = {
     list: this.listWorkspaces.bind(this),
@@ -79,6 +110,160 @@ export class DaemonJsonRpcClient {
     listSessions: this.listTerminalSessions.bind(this),
   };
 
+  private clearSocketReference(socket: WebSocket): void {
+    if (this.socket === socket) {
+      this.socket = null;
+    }
+  }
+
+  private rejectAllPendingRequests(reason: string): void {
+    for (const [requestId, pending] of this.pendingRequestsById.entries()) {
+      clearTimeout(pending.timeout);
+      pending.reject(new Error(`${reason} while calling method "${pending.method}"`));
+      this.pendingRequestsById.delete(requestId);
+    }
+  }
+
+  private handleSocketMessage(data: unknown): void {
+    let message: Rpc.JsonRpcResponse | Rpc.JsonRpcNotification;
+    try {
+      message = parseJsonRpcMessage(data);
+    } catch {
+      return;
+    }
+
+    if ((message as Rpc.JsonRpcNotification).method) {
+      const notification = message as Rpc.JsonRpcNotification;
+      this.dispatchNotification({
+        method: notification.method,
+        payload: notification.params,
+      });
+      return;
+    }
+
+    const response = message as Rpc.JsonRpcResponse;
+    const responseId = typeof response.id === "string" ? response.id : "";
+    if (!responseId) {
+      return;
+    }
+
+    const pending = this.pendingRequestsById.get(responseId);
+    if (!pending) {
+      return;
+    }
+
+    this.pendingRequestsById.delete(responseId);
+    clearTimeout(pending.timeout);
+
+    if (response.error) {
+      pending.reject(new Error(`daemon RPC error ${response.error.code}: ${response.error.message}`));
+      return;
+    }
+
+    pending.resolve(response.result);
+  }
+
+  private dispatchNotification(event: Rpc.DaemonNotification): void {
+    for (const subscription of this.subscriptionsById.values()) {
+      if (!this.matchesSubscription(subscription, event)) {
+        continue;
+      }
+
+      subscription.onNotification(event);
+    }
+  }
+
+  private matchesSubscription(subscription: ActiveSubscription, event: Rpc.DaemonNotification): boolean {
+    if (subscription.method === "terminal.subscribe") {
+      if (event.method !== "terminal.output" && event.method !== "terminal.exit") {
+        return false;
+      }
+
+      const expectedSessionId = readOptionalString(asRecord(subscription.params)?.sessionId);
+      if (!expectedSessionId) {
+        return true;
+      }
+
+      const payloadSessionId = readOptionalString(asRecord(event.payload)?.sessionId);
+      return payloadSessionId === expectedSessionId;
+    }
+
+    return event.method === subscription.method;
+  }
+
+  private async ensureSocket(): Promise<WebSocket> {
+    if (this.disposed) {
+      throw new Error("daemon websocket client is disposed");
+    }
+
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      return this.socket;
+    }
+
+    if (this.socketOpenPromise) {
+      return await this.socketOpenPromise;
+    }
+
+    this.socketOpenPromise = this.openSocket()
+      .then((socket) => {
+        this.socket = socket;
+
+        socket.addEventListener("message", (event) => {
+          this.handleSocketMessage(event.data);
+        });
+
+        socket.addEventListener("close", () => {
+          this.clearSocketReference(socket);
+          this.rejectAllPendingRequests("daemon websocket closed");
+        });
+
+        socket.addEventListener("error", () => {
+          this.rejectAllPendingRequests("daemon websocket failed");
+        });
+
+        return socket;
+      })
+      .finally(() => {
+        this.socketOpenPromise = null;
+      });
+
+    return await this.socketOpenPromise;
+  }
+
+  private async sendRequest(method: string, params?: unknown): Promise<unknown> {
+    const socket = await this.ensureSocket();
+    const request = buildRequest(method, params);
+
+    return await new Promise<unknown>((resolvePromise, rejectPromise) => {
+      const timeout = setTimeout(() => {
+        if (!this.pendingRequestsById.has(request.id)) {
+          return;
+        }
+
+        this.pendingRequestsById.delete(request.id);
+        rejectPromise(new Error(`daemon RPC request timed out for method "${method}"`));
+      }, RPC_REQUEST_TIMEOUT_MS);
+
+      this.pendingRequestsById.set(request.id, {
+        method,
+        timeout,
+        resolve: resolvePromise,
+        reject: rejectPromise,
+      });
+
+      try {
+        socket.send(JSON.stringify(request));
+      } catch (error) {
+        const pending = this.pendingRequestsById.get(request.id);
+        if (pending) {
+          clearTimeout(pending.timeout);
+          this.pendingRequestsById.delete(request.id);
+        }
+        rejectPromise(error instanceof Error ? error : new Error(`failed to send daemon RPC method "${method}"`));
+      }
+    });
+  }
+
   private resolveNamespaceHandler(
     namespace: Rpc.ApiNamespace,
     method: string,
@@ -97,166 +282,17 @@ export class DaemonJsonRpcClient {
   }
 
   private async invoke(method: string, params?: unknown): Promise<unknown> {
-    const socket = await openSocket();
-
-    return await new Promise<unknown>((resolvePromise, rejectPromise) => {
-      const request = buildRequest(method, params);
-      let settled = false;
-
-      const timeout = setTimeout(() => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        socket.close();
-        rejectPromise(new Error(`daemon RPC request timed out for method \"${method}\"`));
-      }, RPC_REQUEST_TIMEOUT_MS);
-
-      const settle = (callback: () => void) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        clearTimeout(timeout);
-        callback();
-      };
-
-      socket.addEventListener("message", (event) => {
-        let message: Rpc.JsonRpcResponse | Rpc.JsonRpcNotification;
-        try {
-          message = parseJsonRpcMessage(event.data);
-        } catch (error) {
-          settle(() => {
-            socket.close();
-            rejectPromise(error instanceof Error ? error : new Error("failed to parse daemon websocket payload"));
-          });
-          return;
-        }
-
-        if ((message as Rpc.JsonRpcResponse).id !== request.id) {
-          return;
-        }
-
-        const response = message as Rpc.JsonRpcResponse;
-        if (response.error) {
-          const rpcError = response.error;
-          settle(() => {
-            socket.close();
-            rejectPromise(new Error(`daemon RPC error ${rpcError.code}: ${rpcError.message}`));
-          });
-          return;
-        }
-
-        settle(() => {
-          socket.close();
-          resolvePromise(response.result);
-        });
-      });
-
-      socket.addEventListener("close", () => {
-        settle(() => {
-          rejectPromise(new Error(`daemon websocket closed while waiting for method \"${method}\"`));
-        });
-      });
-
-      socket.addEventListener("error", () => {
-        settle(() => {
-          rejectPromise(new Error(`daemon websocket failed while calling method \"${method}\"`));
-        });
-      });
-
-      socket.send(JSON.stringify(request));
-    });
+    return await this.sendRequest(method, params);
   }
 
   private async startRawSubscription(options: Rpc.StartSubscriptionOptions): Promise<string> {
-    const socket = await openSocket();
-    const request = buildRequest(options.method, options.params);
-    const subscriptionId = randomUUID();
-
-    await new Promise<void>((resolvePromise, rejectPromise) => {
-      let settled = false;
-
-      const timeout = setTimeout(() => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        socket.close();
-        rejectPromise(new Error(`daemon subscription timed out for method \"${options.method}\"`));
-      }, RPC_REQUEST_TIMEOUT_MS);
-
-      const resolveOnce = () => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        clearTimeout(timeout);
-        resolvePromise();
-      };
-
-      const rejectOnce = (error: Error) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        clearTimeout(timeout);
-        rejectPromise(error);
-      };
-
-      socket.addEventListener("message", (event) => {
-        let message: Rpc.JsonRpcResponse | Rpc.JsonRpcNotification;
-        try {
-          message = parseJsonRpcMessage(event.data);
-        } catch (error) {
-          socket.close();
-          rejectOnce(error instanceof Error ? error : new Error("failed to parse daemon websocket payload"));
-          return;
-        }
-
-        if ((message as Rpc.JsonRpcNotification).method) {
-          const notification = message as Rpc.JsonRpcNotification;
-          options.onNotification({
-            method: notification.method,
-            payload: notification.params,
-          });
-          return;
-        }
-
-        const response = message as Rpc.JsonRpcResponse;
-        if (response.id !== request.id) {
-          return;
-        }
-
-        if (response.error) {
-          const rpcError = response.error;
-          socket.close();
-          rejectOnce(new Error(`daemon RPC error ${rpcError.code}: ${rpcError.message}`));
-          return;
-        }
-
-        resolveOnce();
-      });
-
-      socket.addEventListener("close", () => {
-        if (!settled) {
-          rejectOnce(new Error(`daemon websocket closed while subscribing to method \"${options.method}\"`));
-          return;
-        }
-
-        this.subscriptionSockets.delete(subscriptionId);
-      });
-
-      socket.addEventListener("error", () => {
-        if (!this.subscriptionSockets.has(subscriptionId)) {
-          rejectOnce(new Error(`daemon websocket failed while subscribing to method \"${options.method}\"`));
-        }
-      });
-
-      socket.send(JSON.stringify(request));
+    await this.sendRequest(options.method, options.params);
+    const subscriptionId = createRandomId();
+    this.subscriptionsById.set(subscriptionId, {
+      method: options.method,
+      params: options.params,
+      onNotification: options.onNotification,
     });
-
-    this.subscriptionSockets.set(subscriptionId, socket);
     return subscriptionId;
   }
 
@@ -305,7 +341,7 @@ export class DaemonJsonRpcClient {
       return existingWorkspace.id;
     }
 
-    const workspaceId = `desktop-${randomUUID()}`;
+    const workspaceId = createDesktopWorkspaceId();
     await this.invoke("open", {
       id: workspaceId,
       path: normalizedWorktreePath,
@@ -371,7 +407,7 @@ export class DaemonJsonRpcClient {
       throw new Error("workspaceWorktreePath is required");
     }
 
-    const workspaceId = `desktop-${randomUUID()}`;
+    const workspaceId = createDesktopWorkspaceId();
     const normalizedWorktreePath = normalizeWorktreePath(workspaceWorktreePath);
     await this.invoke("open", {
       id: workspaceId,
@@ -381,7 +417,9 @@ export class DaemonJsonRpcClient {
 
     const sourceBranch = readOptionalString(record?.sourceBranch) || "";
     const targetBranch = readOptionalString(record?.targetBranch) || sourceBranch;
-    const workspaceName = readOptionalString(record?.workspaceName) || basename(normalizedWorktreePath) || workspaceId;
+    const worktreePathParts = normalizedWorktreePath.split(/[/\\]/).filter(Boolean);
+    const derivedWorkspaceName = worktreePathParts[worktreePathParts.length - 1];
+    const workspaceName = readOptionalString(record?.workspaceName) || derivedWorkspaceName || workspaceId;
 
     return {
       workspace: { id: workspaceId },
@@ -753,8 +791,11 @@ export class DaemonJsonRpcClient {
     }
 
     if (options.namespace === "terminal" && options.method === "subscribeSessions") {
-      const subscriptionId = randomUUID();
-      this.subscriptionSockets.set(subscriptionId, null);
+      const subscriptionId = createRandomId();
+      this.subscriptionsById.set(subscriptionId, {
+        method: "terminal.sessions",
+        onNotification: options.onNotification,
+      });
       return subscriptionId;
     }
 
@@ -770,18 +811,26 @@ export class DaemonJsonRpcClient {
   }
 
   stopSubscription(subscriptionId: string): void {
-    const socket = this.subscriptionSockets.get(subscriptionId);
-    if (socket === undefined) {
+    if (!this.subscriptionsById.has(subscriptionId)) {
       return;
     }
 
-    this.subscriptionSockets.delete(subscriptionId);
-    socket?.close();
+    this.subscriptionsById.delete(subscriptionId);
   }
 
   dispose(): void {
-    for (const subscriptionId of this.subscriptionSockets.keys()) {
-      this.stopSubscription(subscriptionId);
+    this.disposed = true;
+    for (const requestId of this.pendingRequestsById.keys()) {
+      const pending = this.pendingRequestsById.get(requestId);
+      if (!pending) {
+        continue;
+      }
+      clearTimeout(pending.timeout);
+      pending.reject(new Error(`daemon websocket client disposed while calling method "${pending.method}"`));
     }
+    this.pendingRequestsById.clear();
+    this.subscriptionsById.clear();
+    this.socket?.close();
+    this.socket = null;
   }
 }

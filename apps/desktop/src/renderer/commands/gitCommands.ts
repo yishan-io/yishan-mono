@@ -1,5 +1,5 @@
-import { getDaemonRpcClient } from "../rpc/rpcTransport";
-import type { GitChangesBySection } from "../../main/daemon/jsonRpcTypes";
+import { getDaemonClient } from "../rpc/rpcTransport";
+import type { GitChangesBySection } from "../rpc/daemonTypes";
 
 const inFlightListGitChangesByWorktreePath = new Map<string, Promise<GitChangesBySection>>();
 const inFlightGitAuthorNameByWorktreePath = new Map<string, Promise<string | null>>();
@@ -7,7 +7,7 @@ const gitAuthorNameByWorktreePath = new Map<string, string | null>();
 
 /** Reads old/new file content for one workspace diff view. */
 export async function readDiff(params: { workspaceWorktreePath: string; relativePath: string }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.file.readDiff({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
@@ -20,7 +20,7 @@ export async function readCommitDiff(params: {
   commitHash: string;
   relativePath: string;
 }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.git.readCommitDiff({
     workspaceWorktreePath: params.workspaceWorktreePath,
     commitHash: params.commitHash,
@@ -34,7 +34,7 @@ export async function readBranchComparisonDiff(params: {
   targetBranch: string;
   relativePath: string;
 }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.git.readBranchComparisonDiff({
     workspaceWorktreePath: params.workspaceWorktreePath,
     targetBranch: params.targetBranch,
@@ -51,7 +51,7 @@ export async function listGitChanges(params: { workspaceWorktreePath: string }) 
   }
 
   const request = (async () => {
-    const client = await getDaemonRpcClient();
+    const client = await getDaemonClient();
     return await client.git.listChanges({ workspaceWorktreePath: normalizedWorkspaceWorktreePath });
   })();
 
@@ -65,7 +65,7 @@ export async function listGitChanges(params: { workspaceWorktreePath: string }) 
 
 /** Stages one or more changed paths for one workspace. */
 export async function trackGitChanges(params: { workspaceWorktreePath: string; relativePaths: string[] }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.git.trackChanges({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePaths: params.relativePaths,
@@ -74,7 +74,7 @@ export async function trackGitChanges(params: { workspaceWorktreePath: string; r
 
 /** Unstages one or more changed paths for one workspace. */
 export async function unstageGitChanges(params: { workspaceWorktreePath: string; relativePaths: string[] }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.git.unstageChanges({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePaths: params.relativePaths,
@@ -83,7 +83,7 @@ export async function unstageGitChanges(params: { workspaceWorktreePath: string;
 
 /** Reverts one or more changed paths for one workspace. */
 export async function revertGitChanges(params: { workspaceWorktreePath: string; relativePaths: string[] }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.git.revertChanges({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePaths: params.relativePaths,
@@ -97,7 +97,7 @@ export async function commitGitChanges(params: {
   amend?: boolean;
   signoff?: boolean;
 }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.git.commitChanges({
     workspaceWorktreePath: params.workspaceWorktreePath,
     message: params.message,
@@ -108,13 +108,13 @@ export async function commitGitChanges(params: {
 
 /** Reads upstream and ahead/behind status for one workspace branch. */
 export async function getGitBranchStatus(params: { workspaceWorktreePath: string }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.git.getBranchStatus({ workspaceWorktreePath: params.workspaceWorktreePath });
 }
 
 /** Lists commits from current branch to one target branch. */
 export async function listGitCommitsToTarget(params: { workspaceWorktreePath: string; targetBranch: string }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.git.listCommitsToTarget({
     workspaceWorktreePath: params.workspaceWorktreePath,
     targetBranch: params.targetBranch,
@@ -123,19 +123,19 @@ export async function listGitCommitsToTarget(params: { workspaceWorktreePath: st
 
 /** Lists available branch names for one workspace. */
 export async function listGitBranches(params: { workspaceWorktreePath: string }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.git.listBranches({ workspaceWorktreePath: params.workspaceWorktreePath });
 }
 
 /** Pushes one workspace branch to its upstream. */
 export async function pushGitBranch(params: { workspaceWorktreePath: string }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.git.pushBranch({ workspaceWorktreePath: params.workspaceWorktreePath });
 }
 
 /** Publishes one workspace branch and configures upstream tracking. */
 export async function publishGitBranch(params: { workspaceWorktreePath: string }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.git.publishBranch({ workspaceWorktreePath: params.workspaceWorktreePath });
 }
 
@@ -152,7 +152,7 @@ export async function getGitAuthorName(params: { workspaceWorktreePath: string }
   }
 
   const request = (async () => {
-    const client = await getDaemonRpcClient();
+    const client = await getDaemonClient();
     return await client.git.getAuthorName({ workspaceWorktreePath: normalizedWorkspaceWorktreePath });
   })();
 

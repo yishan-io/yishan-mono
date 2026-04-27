@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { API_RPC_IPC_CHANNELS, DESKTOP_RPC_IPC_CHANNELS, type DesktopBridge, HOST_IPC_CHANNELS } from "./ipc";
+import { type DesktopBridge, HOST_IPC_CHANNELS } from "./ipc";
 
 /** Exposes immutable desktop bootstrap values for renderer transport initialization. */
 const bridge: DesktopBridge = {
@@ -16,21 +16,6 @@ const bridge: DesktopBridge = {
     login: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.login),
     getAuthTokens: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getAuthTokens),
     getDaemonInfo: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getDaemonInfo),
-  },
-  api: {
-    invoke: (input) => ipcRenderer.invoke(API_RPC_IPC_CHANNELS.invoke, input),
-    startSubscription: (input) => ipcRenderer.invoke(API_RPC_IPC_CHANNELS.startSubscription, input),
-    stopSubscription: (input) => ipcRenderer.invoke(API_RPC_IPC_CHANNELS.stopSubscription, input),
-  },
-  subscribeDesktopRpcEvent: (listener) => {
-    const handler = (_event: Electron.IpcRendererEvent, envelope: unknown) => {
-      listener(envelope as Parameters<typeof listener>[0]);
-    };
-    ipcRenderer.on(DESKTOP_RPC_IPC_CHANNELS.event, handler);
-
-    return () => {
-      ipcRenderer.removeListener(DESKTOP_RPC_IPC_CHANNELS.event, handler);
-    };
   },
 };
 

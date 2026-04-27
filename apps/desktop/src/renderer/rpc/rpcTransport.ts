@@ -1,31 +1,105 @@
 import type {
-  DesktopApiNamespace,
   DesktopBridge,
   DesktopHostBridge,
   DesktopRpcEventEnvelope,
 } from "../../main/ipc";
+import { DaemonClient } from "./daemonClient";
+import type { ApiNamespace } from "./daemonTypes";
+import { delay } from "./helpers";
 import type { ApiSubscriptionHandlers, DaemonRpcClient } from "./types";
 
 type DesktopRpcEventListener = (envelope: DesktopRpcEventEnvelope) => void;
 
-const API_RPC_SUBSCRIPTION_EVENT_METHOD = "apiRpc.subscription";
+const SOCKET_CONNECT_RETRY_COUNT = 6;
+const SOCKET_CONNECT_RETRY_DELAY_MS = 250;
+const API_NAMESPACES = new Set<ApiNamespace>(["workspace", "file", "git", "terminal"]);
 const desktopRpcEventListeners = new Set<DesktopRpcEventListener>();
-const apiSubscriptionHandlersById = new Map<string, ApiSubscriptionHandlers>();
-let bridgeSubscription: (() => void) | null = null;
 let backendEventsSubscription: { unsubscribe: () => void } | null = null;
 let daemonRpcClientPromise: Promise<DaemonRpcClient> | null = null;
+let daemonTransportClientPromise: Promise<DaemonClient> | null = null;
+let daemonWsUrlPromise: Promise<string> | null = null;
 
-/** Returns true when one unknown payload is one subscription envelope payload. */
-function isApiSubscriptionEnvelopePayload(payload: unknown): payload is {
-  subscriptionId: string;
-  data: unknown;
-} {
-  return Boolean(
-    payload &&
-      typeof payload === "object" &&
-      typeof (payload as { subscriptionId?: unknown }).subscriptionId === "string" &&
-      "data" in (payload as Record<string, unknown>),
-  );
+async function getDaemonWsUrl(): Promise<string> {
+  if (!daemonWsUrlPromise) {
+    daemonWsUrlPromise = getDesktopHostBridge()
+      .getDaemonInfo()
+      .then((info) => {
+        const wsUrl = info.wsUrl?.trim();
+        if (!wsUrl) {
+          throw new Error("Daemon websocket endpoint is unavailable.");
+        }
+        return wsUrl;
+      })
+      .catch((error) => {
+        daemonWsUrlPromise = null;
+        throw error;
+      });
+  }
+
+  return await daemonWsUrlPromise;
+}
+
+async function openSocketWithRetry(): Promise<WebSocket> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= SOCKET_CONNECT_RETRY_COUNT; attempt += 1) {
+    try {
+      const wsUrl = await getDaemonWsUrl();
+      return await new Promise<WebSocket>((resolvePromise, rejectPromise) => {
+        const socket = new WebSocket(wsUrl);
+        let settled = false;
+
+        const resolveOnce = (value: WebSocket) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          resolvePromise(value);
+        };
+
+        const rejectOnce = (error: Error) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          rejectPromise(error);
+        };
+
+        socket.addEventListener("open", () => {
+          resolveOnce(socket);
+        });
+
+        socket.addEventListener("error", () => {
+          rejectOnce(new Error("failed to connect to daemon websocket"));
+        });
+
+        socket.addEventListener("close", () => {
+          rejectOnce(new Error("daemon websocket closed before opening"));
+        });
+      });
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("failed to connect to daemon websocket");
+      if (attempt === SOCKET_CONNECT_RETRY_COUNT) {
+        break;
+      }
+
+      await delay(SOCKET_CONNECT_RETRY_DELAY_MS);
+    }
+  }
+
+  throw lastError ?? new Error("failed to connect to daemon websocket");
+}
+
+async function getDaemonTransportClient(): Promise<DaemonClient> {
+  if (!daemonTransportClientPromise) {
+    daemonTransportClientPromise = Promise.resolve(
+      new DaemonClient({
+        openSocket: openSocketWithRetry,
+      }),
+    );
+  }
+
+  return await daemonTransportClientPromise;
 }
 
 /** Emits one raw desktop RPC envelope to registered listeners. */
@@ -35,23 +109,22 @@ function emitDesktopRpcEvent(envelope: DesktopRpcEventEnvelope): void {
   }
 }
 
-/** Handles one internal API subscription bridge envelope and returns true when consumed. */
-function tryHandleApiSubscriptionEnvelope(envelope: DesktopRpcEventEnvelope): boolean {
-  if (envelope.method !== API_RPC_SUBSCRIPTION_EVENT_METHOD) {
-    return false;
+function formatSubscriptionEventData(method: string, payload: unknown): unknown {
+  if (method === "terminal.output" && payload && typeof payload === "object") {
+    return {
+      type: "output",
+      ...(payload as Record<string, unknown>),
+    };
   }
 
-  if (!isApiSubscriptionEnvelopePayload(envelope.payload)) {
-    return true;
+  if (method === "terminal.exit" && payload && typeof payload === "object") {
+    return {
+      type: "exit",
+      ...(payload as Record<string, unknown>),
+    };
   }
 
-  const handlers = apiSubscriptionHandlersById.get(envelope.payload.subscriptionId);
-  if (!handlers) {
-    return true;
-  }
-
-  handlers.onData(envelope.payload.data);
-  return true;
+  return payload;
 }
 
 /** Returns one preload-provided desktop bridge object when available. */
@@ -73,56 +146,27 @@ export function getDesktopHostBridge(): DesktopHostBridge {
   return host;
 }
 
-/** Ensures one active desktop-bridge IPC subscription while listeners are registered. */
-function ensureBridgeSubscription(): void {
-  if (bridgeSubscription || desktopRpcEventListeners.size === 0) {
-    return;
-  }
-
-  const bridge = getDesktopBridge();
-  if (!bridge?.subscribeDesktopRpcEvent) {
-    return;
-  }
-
-  bridgeSubscription = bridge.subscribeDesktopRpcEvent((envelope) => {
-    if (tryHandleApiSubscriptionEnvelope(envelope)) {
-      return;
-    }
-
-    emitDesktopRpcEvent(envelope);
-  });
-}
-
-/** Invokes one api-service procedure through preload bridge IPC. */
-async function invokeApiProcedure(path: string, input?: unknown): Promise<unknown> {
-  const apiBridge = getDesktopBridge()?.api;
-  if (!apiBridge) {
-    throw new Error("Desktop api-service bridge is unavailable");
-  }
-
+/** Invokes one daemon procedure directly over websocket. */
+async function invokeDaemonProcedure(path: string, input?: unknown): Promise<unknown> {
   const parsed = parseProcedurePath(path);
   if (!parsed) {
     throw new Error(`Unsupported API procedure path: ${path}`);
   }
 
-  return await apiBridge.invoke({
+  const daemonClient = await getDaemonTransportClient();
+  return await daemonClient.invokeApi({
     namespace: parsed.namespace,
     method: parsed.method,
     input,
   });
 }
 
-/** Starts one subscription bridge for one api-service path and returns one unsubscribe handle. */
-async function subscribeApiProcedure(
+/** Starts one daemon subscription and returns one unsubscribe handle. */
+async function subscribeDaemonProcedure(
   path: string,
   input: unknown,
   handlers: ApiSubscriptionHandlers,
 ): Promise<() => void> {
-  const apiBridge = getDesktopBridge()?.api;
-  if (!apiBridge) {
-    throw new Error("Desktop api-service bridge is unavailable");
-  }
-
   if (path === "events.stream") {
     return () => {};
   }
@@ -132,22 +176,26 @@ async function subscribeApiProcedure(
     throw new Error(`Unsupported API subscription path: ${path}`);
   }
 
-  const { subscriptionId } = await apiBridge.startSubscription({
+  const daemonClient = await getDaemonTransportClient();
+  const subscriptionId = await daemonClient.startSubscription({
     namespace: parsed.namespace,
     method: parsed.method,
     input,
+    onNotification: (notification) => {
+      handlers.onData(formatSubscriptionEventData(notification.method, notification.payload));
+      emitDesktopRpcEvent({
+        method: notification.method,
+        payload: notification.payload,
+      });
+    },
   });
-  apiSubscriptionHandlersById.set(subscriptionId, handlers);
 
   return () => {
-    apiSubscriptionHandlersById.delete(subscriptionId);
-    void apiBridge.stopSubscription({
-      subscriptionId,
-    });
+    daemonClient.stopSubscription(subscriptionId);
   };
 }
 
-function parseProcedurePath(path: string): { namespace: DesktopApiNamespace; method: string } | null {
+function parseProcedurePath(path: string): { namespace: ApiNamespace; method: string } | null {
   const segments = path
     .split(".")
     .map((segment) => segment.trim())
@@ -158,25 +206,25 @@ function parseProcedurePath(path: string): { namespace: DesktopApiNamespace; met
   }
 
   const namespace = segments[0];
-  if (namespace !== "workspace" && namespace !== "file" && namespace !== "git" && namespace !== "terminal") {
+  if (!API_NAMESPACES.has(namespace as ApiNamespace)) {
     return null;
   }
 
   return {
-    namespace,
+    namespace: namespace as ApiNamespace,
     method: segments.slice(1).join("."),
   };
 }
 
-/** Builds one dynamic procedure proxy node for one dotted-path prefix. */
-function createProcedureProxy(pathSegments: string[]): unknown {
+/** Builds one dynamic RPC path proxy for one dotted-path prefix. */
+function createRpcPathProxy(pathSegments: string[]): unknown {
   const callable = async (input?: unknown) => {
     const path = pathSegments.join(".");
     if (!path) {
       throw new Error("API procedure path is required");
     }
 
-    return await invokeApiProcedure(path, input);
+    return await invokeDaemonProcedure(path, input);
   };
 
   return new Proxy(callable, {
@@ -187,7 +235,7 @@ function createProcedureProxy(pathSegments: string[]): unknown {
 
       if (property === "subscribe") {
         return (input: unknown, handlers: ApiSubscriptionHandlers) => {
-          const stopPromise = subscribeApiProcedure(pathSegments.join("."), input, handlers);
+          const stopPromise = subscribeDaemonProcedure(pathSegments.join("."), input, handlers);
           return {
             unsubscribe: () => {
               void stopPromise.then((stop) => {
@@ -202,7 +250,7 @@ function createProcedureProxy(pathSegments: string[]): unknown {
         return undefined;
       }
 
-      return createProcedureProxy([...pathSegments, property]);
+      return createRpcPathProxy([...pathSegments, property]);
     },
     apply(_target, _thisArg, argArray) {
       const path = pathSegments.join(".");
@@ -210,27 +258,21 @@ function createProcedureProxy(pathSegments: string[]): unknown {
         return Promise.reject(new Error("API procedure path is required"));
       }
 
-      return invokeApiProcedure(path, argArray[0]);
+      return invokeDaemonProcedure(path, argArray[0]);
     },
   });
 }
 
-/** Creates one dynamic API client that mirrors the expected tRPC query/mutation/subscription shape. */
-async function createApiServiceClient(): Promise<DaemonRpcClient> {
-  return createProcedureProxy([]) as DaemonRpcClient;
-}
-
 /** Returns one cached dynamic API client for renderer commands. */
-export async function getDaemonRpcClient(): Promise<DaemonRpcClient> {
+export async function getDaemonClient(): Promise<DaemonRpcClient> {
   if (!daemonRpcClientPromise) {
-    daemonRpcClientPromise = createApiServiceClient();
+    // TODO: remove proxy indirection once DaemonClient exposes the full DaemonRpcClient surface
+    // (app/chat/agent/notification/events + subscribe shape) directly.
+    daemonRpcClientPromise = Promise.resolve(createRpcPathProxy([]) as DaemonRpcClient);
   }
 
   return await daemonRpcClientPromise;
 }
-
-/** @deprecated use getDaemonRpcClient for clarity. */
-export const getApiServiceClient = getDaemonRpcClient;
 
 /** Ensures one backend event stream subscription while desktop RPC listeners are active. */
 async function ensureBackendEventsSubscription(): Promise<void> {
@@ -238,7 +280,7 @@ async function ensureBackendEventsSubscription(): Promise<void> {
     return;
   }
 
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   backendEventsSubscription = client.events.stream.subscribe(undefined, {
     onData: (event: { topic: string; payload: unknown }) => {
       emitDesktopRpcEvent({
@@ -263,7 +305,6 @@ async function ensureBackendEventsSubscription(): Promise<void> {
 /** Registers one raw desktop RPC listener and returns one unsubscribe callback. */
 export function subscribeDesktopRpcEvent(listener: DesktopRpcEventListener): () => void {
   desktopRpcEventListeners.add(listener);
-  ensureBridgeSubscription();
   void ensureBackendEventsSubscription();
 
   return () => {
@@ -271,8 +312,6 @@ export function subscribeDesktopRpcEvent(listener: DesktopRpcEventListener): () 
     if (desktopRpcEventListeners.size === 0) {
       backendEventsSubscription?.unsubscribe();
       backendEventsSubscription = null;
-      bridgeSubscription?.();
-      bridgeSubscription = null;
     }
   };
 }

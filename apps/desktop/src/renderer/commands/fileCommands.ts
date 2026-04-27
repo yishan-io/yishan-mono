@@ -1,10 +1,10 @@
 import type { WorkspaceEntryAppId } from "../../shared/contracts/externalApps";
 import type { ExternalClipboardReadOutcome } from "../../shared/contracts/rpcRequestTypes";
-import { getDaemonRpcClient, getDesktopHostBridge } from "../rpc/rpcTransport";
+import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
 
 /** Lists workspace files under one optional directory path, recursively by default. */
 export async function listFiles(params: { workspaceWorktreePath: string; relativePath?: string; recursive?: boolean }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.file.listFiles({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
@@ -20,7 +20,7 @@ export async function listFilesBatch(params: {
     recursive?: boolean;
   }>;
 }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.file.listFilesBatch({
     workspaceWorktreePath: params.workspaceWorktreePath,
     requests: params.requests,
@@ -29,7 +29,7 @@ export async function listFilesBatch(params: {
 
 /** Reads one file from one workspace worktree path. */
 export async function readFile(params: { workspaceWorktreePath: string; relativePath: string }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.file.readFile({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
@@ -42,7 +42,7 @@ export async function writeFile(params: {
   relativePath: string;
   content: string;
 }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.file.writeFile({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
@@ -56,7 +56,7 @@ export async function createFile(params: {
   relativePath: string;
   content: string;
 }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.file.createFile({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
@@ -66,7 +66,7 @@ export async function createFile(params: {
 
 /** Creates one folder inside one workspace worktree path. */
 export async function createFolder(params: { workspaceWorktreePath: string; relativePath: string }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.file.createFolder({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
@@ -79,7 +79,7 @@ export async function renameEntry(params: {
   fromRelativePath: string;
   toRelativePath: string;
 }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.file.renameEntry({
     workspaceWorktreePath: params.workspaceWorktreePath,
     fromRelativePath: params.fromRelativePath,
@@ -89,7 +89,7 @@ export async function renameEntry(params: {
 
 /** Deletes one file-system entry in one workspace worktree path. */
 export async function deleteEntry(params: { workspaceWorktreePath: string; relativePath: string }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.file.deleteEntry({
     workspaceWorktreePath: params.workspaceWorktreePath,
     relativePath: params.relativePath,
@@ -121,7 +121,7 @@ export async function pasteEntries(params: {
   destinationRelativePath?: string;
   mode: "copy" | "move";
 }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.file.pasteEntries({
     workspaceWorktreePath: params.workspaceWorktreePath,
     sourceRelativePaths: params.sourceRelativePaths,
@@ -136,7 +136,7 @@ export async function importEntries(params: {
   sourcePaths: string[];
   destinationRelativePath?: string;
 }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.file.importEntries({
     workspaceWorktreePath: params.workspaceWorktreePath,
     sourcePaths: params.sourcePaths,
@@ -153,7 +153,7 @@ export async function importFilePayloads(params: {
   }>;
   destinationRelativePath?: string;
 }) {
-  const client = await getDaemonRpcClient();
+  const client = await getDaemonClient();
   return client.file.importFilePayloads({
     workspaceWorktreePath: params.workspaceWorktreePath,
     filePayloads: params.filePayloads,

@@ -36,12 +36,7 @@ const rpcMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
-  getApiServiceClient: vi.fn(async () => ({
-    git: {
-      inspect: rpcMocks.gitInspect,
-    },
-  })),
-  getDaemonRpcClient: vi.fn(async () => ({
+  getDaemonClient: vi.fn(async () => ({
     git: {
       inspect: rpcMocks.gitInspect,
     },

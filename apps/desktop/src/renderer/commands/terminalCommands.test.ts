@@ -26,24 +26,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
-  getApiServiceClient: vi.fn(async () => ({
-    terminal: {
-      closeSession: mocks.closeSession,
-      createSession: mocks.createSession,
-      listDetectedPorts: mocks.listDetectedPorts,
-      listSessions: mocks.listSessions,
-      readOutput: mocks.readOutput,
-      subscribeSessions: {
-        subscribe: mocks.subscribeSessions,
-      },
-      subscribeOutput: {
-        subscribe: mocks.subscribeOutput,
-      },
-      resize: mocks.resize,
-      writeInput: mocks.writeInput,
-    },
-  })),
-  getDaemonRpcClient: vi.fn(async () => ({
+  getDaemonClient: vi.fn(async () => ({
     terminal: {
       closeSession: mocks.closeSession,
       createSession: mocks.createSession,

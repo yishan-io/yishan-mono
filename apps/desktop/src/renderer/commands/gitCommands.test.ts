@@ -36,27 +36,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
-  getApiServiceClient: vi.fn(async () => ({
-    file: {
-      readDiff: mocks.readDiff,
-    },
-    git: {
-      commitChanges: mocks.commitGitChanges,
-      getBranchStatus: mocks.getGitBranchStatus,
-      getAuthorName: mocks.getGitAuthorName,
-      listBranches: mocks.listGitBranches,
-      listChanges: mocks.listGitChanges,
-      listCommitsToTarget: mocks.listGitCommitsToTarget,
-      publishBranch: mocks.publishGitBranch,
-      pushBranch: mocks.pushGitBranch,
-      readBranchComparisonDiff: mocks.readBranchComparisonDiff,
-      readCommitDiff: mocks.readCommitDiff,
-      revertChanges: mocks.revertGitChanges,
-      trackChanges: mocks.trackGitChanges,
-      unstageChanges: mocks.unstageGitChanges,
-    },
-  })),
-  getDaemonRpcClient: vi.fn(async () => ({
+  getDaemonClient: vi.fn(async () => ({
     file: {
       readDiff: mocks.readDiff,
     },

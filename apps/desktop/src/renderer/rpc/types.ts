@@ -1,4 +1,4 @@
-import type * as Rpc from "../../main/daemon/jsonRpcTypes";
+import type * as Rpc from "./daemonTypes";
 import type { WorkspaceFileEntry } from "../../shared/contracts/rpcRequestTypes";
 import type { NotificationPreferences } from "../../shared/notifications/notificationPreferences";
 

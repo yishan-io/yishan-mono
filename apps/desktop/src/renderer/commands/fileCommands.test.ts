@@ -32,23 +32,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
-  getApiServiceClient: vi.fn(async () => ({
-    file: {
-      createFile: mocks.createFile,
-      createFolder: mocks.createFolder,
-      deleteEntry: mocks.deleteEntry,
-      importEntries: mocks.importEntries,
-      importFilePayloads: mocks.importFilePayloads,
-      listFiles: mocks.listFiles,
-      openEntryInExternalApp: mocks.openEntryInExternalApp,
-      pasteEntries: mocks.pasteEntries,
-      readExternalClipboardSourcePaths: mocks.readExternalClipboardSourcePaths,
-      readFile: mocks.readFile,
-      renameEntry: mocks.renameEntry,
-      writeFile: mocks.writeFile,
-    },
-  })),
-  getDaemonRpcClient: vi.fn(async () => ({
+  getDaemonClient: vi.fn(async () => ({
     file: {
       createFile: mocks.createFile,
       createFolder: mocks.createFolder,

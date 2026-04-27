@@ -42,6 +42,12 @@ type DaemonManagerOptions = {
 type DaemonInfo = {
   version: string;
   daemonId: string;
+  wsUrl: string;
+};
+
+type DaemonState = {
+  host: string;
+  port: number;
 };
 
 function firstExistingPath(candidates: Array<string | undefined>): string | undefined {
@@ -97,7 +103,7 @@ async function readPersistedDaemonId(): Promise<string> {
   }
 }
 
-async function resolveDaemonHealthUrl(): Promise<string> {
+async function readDaemonState(): Promise<DaemonState> {
   const stateFilePath = resolveDaemonStateFilePath();
   let stateRaw: string;
   try {
@@ -116,7 +122,56 @@ async function resolveDaemonHealthUrl(): Promise<string> {
     throw new Error("daemon state is invalid");
   }
 
-  return `http://${host}:${port}/healthz`;
+  return { host, port };
+}
+
+function resolveDaemonWsUrlFromHealthUrl(healthUrl: string): string {
+  try {
+    const parsed = new URL(healthUrl);
+    const protocol = parsed.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${parsed.host}/ws`;
+  } catch {
+    return "";
+  }
+}
+
+async function resolveDaemonHealthUrl(): Promise<string> {
+  const explicitHealthUrl = process.env.YISHAN_DAEMON_HEALTH_URL?.trim();
+  if (explicitHealthUrl) {
+    return explicitHealthUrl;
+  }
+
+  const explicitWsUrl = process.env.YISHAN_DAEMON_WS_URL?.trim();
+  if (explicitWsUrl) {
+    try {
+      const parsed = new URL(explicitWsUrl);
+      const protocol = parsed.protocol === "wss:" ? "https:" : "http:";
+      return `${protocol}//${parsed.host}/healthz`;
+    } catch {
+      // fall through to daemon state file
+    }
+  }
+
+  const state = await readDaemonState();
+  return `http://${state.host}:${state.port}/healthz`;
+}
+
+async function resolveDaemonWebSocketUrl(): Promise<string> {
+  const explicitWsUrl = process.env.YISHAN_DAEMON_WS_URL?.trim();
+  if (explicitWsUrl) {
+    return explicitWsUrl;
+  }
+
+  const explicitHealthUrl = process.env.YISHAN_DAEMON_HEALTH_URL?.trim();
+  if (explicitHealthUrl) {
+    const inferredWsUrl = resolveDaemonWsUrlFromHealthUrl(explicitHealthUrl);
+    if (inferredWsUrl) {
+      return inferredWsUrl;
+    }
+  }
+
+  const state = await readDaemonState();
+  return `ws://${state.host}:${state.port}/ws`;
 }
 
 function resolveCliInvocation(): CliInvocation {
@@ -406,6 +461,7 @@ export class DaemonManager {
 
   async getInfo(): Promise<DaemonInfo> {
     const url = await resolveDaemonHealthUrl();
+    const wsUrl = await resolveDaemonWebSocketUrl();
     const response = await this.fetchFn(url, {
       method: "GET",
       headers: { Accept: "application/json" },
@@ -423,6 +479,6 @@ export class DaemonManager {
       throw new Error("daemon health response is invalid");
     }
 
-    return { version, daemonId };
+    return { version, daemonId, wsUrl };
   }
 }

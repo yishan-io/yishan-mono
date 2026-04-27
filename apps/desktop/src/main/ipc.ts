@@ -8,30 +8,6 @@ export type DesktopRpcEventEnvelope = {
   payload?: unknown;
 };
 
-export type DesktopApiNamespace = "workspace" | "file" | "git" | "terminal";
-
-export type InvokeApiProcedureInput = {
-  namespace: DesktopApiNamespace;
-  method: string;
-  input?: unknown;
-};
-
-export type StartApiSubscriptionInput = {
-  namespace: DesktopApiNamespace;
-  method: string;
-  input?: unknown;
-};
-
-export type StopApiSubscriptionInput = {
-  subscriptionId: string;
-};
-
-export type DesktopApiBridge = {
-  invoke: (input: InvokeApiProcedureInput) => Promise<unknown>;
-  startSubscription: (input: StartApiSubscriptionInput) => Promise<{ subscriptionId: string }>;
-  stopSubscription: (input: StopApiSubscriptionInput) => Promise<{ stopped: true }>;
-};
-
 export type OpenLocalFolderDialogInput = {
   startingFolder?: string;
 };
@@ -70,6 +46,7 @@ export type MainWindowFullscreenState = {
 export type DaemonInfoResult = {
   version: string;
   daemonId: string;
+  wsUrl: string;
 };
 
 export type AuthStatusResult = {
@@ -110,8 +87,6 @@ export type DesktopHostBridge = {
 
 export type DesktopBridge = {
   host: DesktopHostBridge;
-  api: DesktopApiBridge;
-  subscribeDesktopRpcEvent: (listener: (envelope: DesktopRpcEventEnvelope) => void) => () => void;
 };
 
 export const HOST_IPC_CHANNELS = {
@@ -127,15 +102,4 @@ export const HOST_IPC_CHANNELS = {
   login: "desktop:host/login",
   getAuthTokens: "desktop:host/get-auth-tokens",
   getDaemonInfo: "desktop:host/get-daemon-info",
-} as const;
-
-/** IPC channels used to forward normalized desktop RPC envelopes from main process to renderer. */
-export const DESKTOP_RPC_IPC_CHANNELS = {
-  event: "desktop:rpc/event",
-} as const;
-
-export const API_RPC_IPC_CHANNELS = {
-  invoke: "desktop:api/invoke",
-  startSubscription: "desktop:api/start-subscription",
-  stopSubscription: "desktop:api/stop-subscription",
 } as const;

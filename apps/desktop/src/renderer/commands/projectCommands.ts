@@ -4,7 +4,7 @@ import {
 } from "../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../api";
 import { RestApiError } from "../api/restClient";
-import { getDaemonRpcClient } from "../rpc/rpcTransport";
+import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
@@ -16,7 +16,7 @@ async function inspectLocalRepository(path: string): Promise<{
   currentBranch?: string;
 }> {
   try {
-    const client = await getDaemonRpcClient();
+    const client = await getDaemonClient();
     const result = (await client.git.inspect({ path })) as {
       isGitRepository: boolean;
       remoteUrl?: string;

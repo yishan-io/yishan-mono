@@ -49,18 +49,7 @@ vi.mock("../store/workspaceLifecycleNoticeStore", () => ({
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
-  getApiServiceClient: vi.fn(async () => ({
-    git: {
-      listChanges: rpcMocks.listGitChanges,
-      renameBranch: rpcMocks.renameGitBranch,
-    },
-    workspace: {
-      create: rpcMocks.createWorkspace,
-      list: rpcMocks.list,
-      close: rpcMocks.closeWorkspace,
-    },
-  })),
-  getDaemonRpcClient: vi.fn(async () => ({
+  getDaemonClient: vi.fn(async () => ({
     git: {
       listChanges: rpcMocks.listGitChanges,
       renameBranch: rpcMocks.renameGitBranch,

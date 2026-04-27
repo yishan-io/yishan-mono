@@ -24,16 +24,7 @@ const rpcMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
-  getApiServiceClient: vi.fn(async () => ({
-    chat: {
-      ensureWorkspaceChatSession: rpcMocks.ensureWorkspaceChatSession,
-      closeAgentSession: rpcMocks.closeAgentSession,
-    },
-    terminal: {
-      closeSession: rpcMocks.closeSession,
-    },
-  })),
-  getDaemonRpcClient: vi.fn(async () => ({
+  getDaemonClient: vi.fn(async () => ({
     chat: {
       ensureWorkspaceChatSession: rpcMocks.ensureWorkspaceChatSession,
       closeAgentSession: rpcMocks.closeAgentSession,
