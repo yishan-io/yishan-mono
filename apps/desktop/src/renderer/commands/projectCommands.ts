@@ -164,10 +164,11 @@ export async function createProject(input: {
     });
   } catch (error) {
     console.error("Failed to create backend project", error);
+    throw error instanceof Error ? error : new Error("Failed to create backend project");
   }
 
   if (!project) {
-    return;
+    throw new Error("Backend project response is empty");
   }
 
   const workspaces = project.workspaces ?? [];

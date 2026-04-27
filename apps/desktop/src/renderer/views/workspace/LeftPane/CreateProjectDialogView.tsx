@@ -2,6 +2,7 @@ import {
   Box,
   Button,
   ButtonGroup,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -13,6 +14,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolder, LuFolderOpen, LuGlobe } from "react-icons/lu";
@@ -21,6 +23,15 @@ import { useCommands } from "../../../hooks/useCommands";
 type CreateProjectDialogViewProps = {
   open: boolean;
   onClose: () => void;
+};
+
+type RepoDraft = {
+  name: string;
+  key?: string;
+  source: "local" | "remote";
+  path?: string;
+  gitUrl?: string;
+  keyEdited: boolean;
 };
 
 /** Converts one local path or URL into a default repository key candidate. */
@@ -49,20 +60,30 @@ function isValidRepoKey(value: string): boolean {
   return /^[a-z0-9-]+$/.test(value);
 }
 
+const defaultDraft: RepoDraft = { name: "", key: "", source: "local", path: "", gitUrl: "", keyEdited: false };
+
 export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogViewProps) {
   const { t } = useTranslation();
   const { createProject, openLocalFolderDialog } = useCommands();
-  const [repoDraft, setRepoDraft] = useState({
-    name: "",
-    key: "",
-    source: "local" as "local" | "remote",
-    path: "",
-    gitUrl: "",
-    keyEdited: false,
+  const [repoDraft, setRepoDraft] = useState<RepoDraft>(defaultDraft);
+
+  const createProjectMutation = useMutation({
+    mutationFn: async (input: Omit<RepoDraft, "keyEdited">) => {
+      await createProject(input);
+    },
+    onSuccess: () => {
+      setRepoDraft(defaultDraft);
+      onClose();
+    },
   });
 
+  const isCreating = createProjectMutation.isPending;
+
   const resetAndClose = () => {
-    setRepoDraft({ name: "", key: "", source: "local", path: "", gitUrl: "", keyEdited: false });
+    if (isCreating) {
+      return;
+    }
+    setRepoDraft(defaultDraft);
     onClose();
   };
 
@@ -86,6 +107,10 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
   };
 
   const handleCreateRepo = () => {
+    if (isCreating) {
+      return;
+    }
+
     const name = repoDraft.name.trim();
     const location = repoDraft.source === "local" ? repoDraft.path.trim() : repoDraft.gitUrl.trim();
 
@@ -93,18 +118,30 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
       return;
     }
 
-    createProject({
-      name,
-      key: normalizedKey,
-      source: repoDraft.source,
-      path: repoDraft.source === "local" ? location : "",
-      gitUrl: repoDraft.source === "remote" ? location : "",
-    });
-    resetAndClose();
+    createProjectMutation.mutate(
+      {
+        name,
+        key: normalizedKey,
+        source: repoDraft.source,
+        path: repoDraft.source === "local" ? location : "",
+        gitUrl: repoDraft.source === "remote" ? location : "",
+      },
+      {
+        onError: (error) => {
+          console.error("Failed to create project", error);
+        },
+      },
+    );
   };
 
   return (
-    <Dialog open={open} onClose={resetAndClose} fullWidth maxWidth="sm">
+    <Dialog
+      open={open}
+      onClose={resetAndClose}
+      fullWidth
+      maxWidth="sm"
+      disableEscapeKeyDown={isCreating}
+    >
       <DialogTitle>{t("project.actions.addRepository")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
@@ -115,6 +152,7 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
             <TextField
               autoFocus
               size="small"
+              disabled={isCreating}
               value={repoDraft.name}
               onChange={(event) =>
                 setRepoDraft((previous) => ({
@@ -131,6 +169,7 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
             </Typography>
             <TextField
               size="small"
+              disabled={isCreating}
               value={repoDraft.key}
               onChange={(event) =>
                 setRepoDraft((previous) => ({
@@ -152,6 +191,7 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
               <Button
                 startIcon={<LuFolder size={14} />}
                 variant={repoDraft.source === "local" ? "contained" : "outlined"}
+                disabled={isCreating}
                 onClick={() =>
                   setRepoDraft((previous) => ({
                     ...previous,
@@ -165,6 +205,7 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
               <Button
                 startIcon={<LuGlobe size={14} />}
                 variant={repoDraft.source === "remote" ? "contained" : "outlined"}
+                disabled={isCreating}
                 onClick={() =>
                   setRepoDraft((previous) => ({
                     ...previous,
@@ -184,6 +225,7 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
             <TextField
               size="small"
               value={repoDraft.source === "local" ? repoDraft.path : repoDraft.gitUrl}
+              disabled={isCreating}
               onChange={(event) =>
                 setRepoDraft((previous) => {
                   const nextLocation = event.target.value;
@@ -207,6 +249,7 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
                               <IconButton
                                 edge="end"
                                 aria-label={t("project.form.chooseFolder")}
+                                disabled={isCreating}
                                 onClick={handlePickRepoFolder}
                               >
                                 <LuFolderOpen size={18} />
@@ -223,9 +266,16 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={resetAndClose}>{t("common.actions.cancel")}</Button>
-        <Button variant="contained" onClick={handleCreateRepo} disabled={isCreateDisabled}>
-          {t("project.form.create")}
+        <Button onClick={resetAndClose} disabled={isCreating}>
+          {t("common.actions.cancel")}
+        </Button>
+        <Button
+          variant="contained"
+          onClick={() => void handleCreateRepo()}
+          disabled={isCreateDisabled || isCreating}
+          startIcon={isCreating ? <CircularProgress size={14} color="inherit" /> : undefined}
+        >
+          {isCreating ? t("common.actions.creating", { defaultValue: "Creating..." }) : t("project.form.create")}
         </Button>
       </DialogActions>
     </Dialog>
