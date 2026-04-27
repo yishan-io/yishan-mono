@@ -4,6 +4,7 @@ import {
   AccordionSummary,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -18,7 +19,9 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuCircleHelp, LuExternalLink, LuFolderOpen } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../../../shared/contracts/externalApps";
 import { DEFAULT_PROJECT_ICON_ID, PROJECT_ICON_OPTIONS, findProjectIconOption, renderProjectIcon } from "../../../components/projectIcons";
@@ -57,11 +60,35 @@ function getDefaultDraft(): ProjectConfigDraft {
 }
 
 export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfigDialogViewProps) {
+  const { t } = useTranslation();
   const projects = workspaceStore((state) => state.projects);
   const { updateProjectConfig, getDefaultWorktreeLocation, openEntryInExternalApp, openLocalFolderDialog } = useCommands();
   const repo = projects.find((item) => item.id === repoId);
   const [draft, setDraft] = useState<ProjectConfigDraft>(getDefaultDraft);
   const [iconAnchorEl, setIconAnchorEl] = useState<HTMLElement | null>(null);
+  const updateProjectConfigMutation = useMutation({
+    mutationFn: async (payload: {
+      projectId: string;
+      config: {
+        name: string;
+        worktreePath: string;
+        contextEnabled?: boolean;
+        icon?: string;
+        color?: string;
+        setupScript?: string;
+        postScript?: string;
+      };
+    }) => {
+      await updateProjectConfig(payload.projectId, payload.config);
+    },
+    onSuccess: () => {
+      onClose();
+    },
+    onError: (error) => {
+      console.error("Failed to update project config", error);
+    },
+  });
+  const isSaving = updateProjectConfigMutation.isPending;
   const repoLocalPath = repo?.localPath ?? repo?.path ?? "";
   const repoGitUrl = repo?.gitUrl ?? repo?.repoUrl ?? "";
   const repoKey = repo?.key ?? repo?.repoKey ?? "";
@@ -138,30 +165,33 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
       ? draft.color
       : DEFAULT_ICON_BG_COLOR;
 
-    updateProjectConfig(repo.id, {
-      name: draft.name.trim() || repo.name,
-      worktreePath: draft.worktreePath.trim(),
-      contextEnabled: draft.contextEnabled,
-      icon: findProjectIconOption(draft.icon)?.id ?? DEFAULT_PROJECT_ICON_ID,
-      color: normalizedIconBgColor,
-      setupScript: draft.setupScript,
-      postScript: draft.postScript,
+    updateProjectConfigMutation.mutate({
+      projectId: repo.id,
+      config: {
+        name: draft.name.trim() || repo.name,
+        worktreePath: draft.worktreePath.trim(),
+        contextEnabled: draft.contextEnabled,
+        icon: findProjectIconOption(draft.icon)?.id ?? DEFAULT_PROJECT_ICON_ID,
+        color: normalizedIconBgColor,
+        setupScript: draft.setupScript,
+        postScript: draft.postScript,
+      },
     });
-    onClose();
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Repository config</DialogTitle>
+    <Dialog open={open} onClose={isSaving ? undefined : onClose} fullWidth maxWidth="sm" disableEscapeKeyDown={isSaving}>
+      <DialogTitle>{t("project.actions.config")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               Repo name
             </Typography>
-            <TextField
-              size="small"
-              value={draft.name}
+              <TextField
+                size="small"
+                disabled={isSaving}
+                value={draft.name}
               onChange={(event) =>
                 setDraft((previous) => ({
                   ...previous,
@@ -251,6 +281,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
               control={
                 <Switch
                   checked={draft.contextEnabled}
+                  disabled={isSaving}
                   onChange={(_event, checked) =>
                     setDraft((previous) => ({
                       ...previous,
@@ -272,6 +303,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
             <TextField
               size="small"
               value={draft.worktreePath}
+              disabled={isSaving}
               fullWidth
               slotProps={{
                 input: {
@@ -279,7 +311,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                   endAdornment: (
                     <InputAdornment position="end">
                       <Tooltip title="Choose folder" arrow>
-                        <IconButton edge="end" aria-label="Choose worktree folder" onClick={handlePickWorktreeFolder}>
+                        <IconButton edge="end" aria-label="Choose worktree folder" disabled={isSaving} onClick={handlePickWorktreeFolder}>
                           <LuFolderOpen size={18} />
                         </IconButton>
                       </Tooltip>
@@ -297,6 +329,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
               <IconButton
                 aria-label="Choose project icon"
                 onClick={(event) => setIconAnchorEl(event.currentTarget)}
+                disabled={isSaving}
                 sx={{
                   width: 40,
                   height: 40,
@@ -320,6 +353,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                       <IconButton
                         size="small"
                         aria-label={`Select ${color}`}
+                        disabled={isSaving}
                         onClick={() =>
                           setDraft((previous) => ({
                             ...previous,
@@ -366,6 +400,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                     multiline
                     minRows={3}
                     value={draft.setupScript}
+                    disabled={isSaving}
                     onChange={(event) =>
                       setDraft((previous) => ({
                         ...previous,
@@ -385,6 +420,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                     multiline
                     minRows={3}
                     value={draft.postScript}
+                    disabled={isSaving}
                     onChange={(event) =>
                       setDraft((previous) => ({
                         ...previous,
@@ -444,9 +480,14 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
         </Popover>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={handleSave} disabled={!repo}>
-          Save
+        <Button onClick={onClose} disabled={isSaving}>{t("common.actions.cancel")}</Button>
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={!repo || isSaving}
+          startIcon={isSaving ? <CircularProgress size={14} color="inherit" /> : undefined}
+        >
+          {isSaving ? t("common.actions.saving", { defaultValue: "Saving..." }) : t("common.actions.save")}
         </Button>
       </DialogActions>
     </Dialog>

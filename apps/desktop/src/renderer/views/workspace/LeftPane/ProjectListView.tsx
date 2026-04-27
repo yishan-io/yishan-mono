@@ -1,4 +1,5 @@
 import { Box, List } from "@mui/material";
+import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuSettings, LuTrash2 } from "react-icons/lu";
@@ -121,7 +122,18 @@ export function ProjectListView() {
   const [pendingWorkspaceDeletion, setPendingWorkspaceDeletion] = useState<PendingWorkspaceDeletion | null>(null);
   const [isDeletingWorkspace, setIsDeletingWorkspace] = useState(false);
   const [pendingRepoDeletion, setPendingRepoDeletion] = useState<PendingRepoDeletion | null>(null);
-  const [isDeletingRepo, setIsDeletingRepo] = useState(false);
+  const deleteProjectMutation = useMutation({
+    mutationFn: async (repoId: string) => {
+      await deleteProject(repoId);
+    },
+    onSuccess: () => {
+      setPendingRepoDeletion(null);
+    },
+    onError: (error) => {
+      console.error("Failed to delete project", error);
+    },
+  });
+  const isDeletingRepo = deleteProjectMutation.isPending;
   const [foldedRepoIds, setFoldedRepoIds] = useState<string[]>([]);
   const [workspaceInfoAnchorEl, setWorkspaceInfoAnchorEl] = useState<HTMLElement | null>(null);
   const [hoveredWorkspaceId, setHoveredWorkspaceId] = useState("");
@@ -318,18 +330,12 @@ export function ProjectListView() {
   };
 
   /** Deletes the selected repository after the user confirms in the dialog. */
-  const handleConfirmRepoDeletion = async () => {
+  const handleConfirmRepoDeletion = () => {
     if (!pendingRepoDeletion) {
       return;
     }
 
-    setIsDeletingRepo(true);
-    try {
-      await deleteProject(pendingRepoDeletion.repoId);
-      setPendingRepoDeletion(null);
-    } finally {
-      setIsDeletingRepo(false);
-    }
+    deleteProjectMutation.mutate(pendingRepoDeletion.repoId);
   };
 
   useEffect(() => {

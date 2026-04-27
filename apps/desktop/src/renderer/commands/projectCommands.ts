@@ -234,7 +234,7 @@ export async function deleteProject(projectId: string): Promise<void> {
     } catch (error) {
       if (!(error instanceof RestApiError && error.status === 404)) {
         console.error("Failed to delete backend project and workspaces", error);
-        return;
+        throw error instanceof Error ? error : new Error("Failed to delete backend project and workspaces");
       }
     }
   }
@@ -290,7 +290,7 @@ export async function updateProjectConfig(
       return;
     } catch (error) {
       console.error("Failed to update backend project", error);
-      return;
+      throw error instanceof Error ? error : new Error("Failed to update backend project");
     }
   }
 
