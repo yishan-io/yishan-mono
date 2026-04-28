@@ -14,6 +14,8 @@ import (
 
 const managedBinDirEnvKey = "MANAGED_BIN_DIR"
 
+const loginShellPathTimeout = 1 * time.Second
+
 var versionPattern = regexp.MustCompile(`\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?`)
 
 // SupportedAgentCLIKinds contains all supported agent CLIs that can be detected on one node.
@@ -52,7 +54,7 @@ type agentDetectionOptions struct {
 // ListAgentCLIDetectionStatuses returns detection statuses for all supported desktop agent CLIs.
 func ListAgentCLIDetectionStatuses() []AgentCLIDetectionStatus {
 	options := agentDetectionOptions{
-		PathValue:      os.Getenv("PATH"),
+		PathValue:      resolveDetectionPathValue(),
 		PathExtValue:   os.Getenv("PATHEXT"),
 		IsWindows:      runtime.GOOS == "windows",
 		ExcludedDirs:   resolveExcludedDirectories(),
@@ -60,6 +62,51 @@ func ListAgentCLIDetectionStatuses() []AgentCLIDetectionStatus {
 	}
 
 	return listAgentCLIDetectionStatusesWithOptions(options)
+}
+
+func resolveDetectionPathValue() string {
+	pathValues := []string{os.Getenv("PATH")}
+
+	if runtime.GOOS != "windows" {
+		pathValues = append(pathValues, readLoginShellPath(loginShellPathTimeout))
+		pathValues = append(pathValues, commonUserBinDirectories()...)
+	}
+
+	return strings.Join(pathValues, string(os.PathListSeparator))
+}
+
+func readLoginShellPath(timeout time.Duration) string {
+	shellPath := strings.TrimSpace(os.Getenv("SHELL"))
+	if shellPath == "" {
+		return ""
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	command := exec.CommandContext(ctx, shellPath, "-l", "-c", `printf %s "$PATH"`)
+	output, err := command.Output()
+	if err != nil {
+		return ""
+	}
+
+	return strings.TrimSpace(string(output))
+}
+
+func commonUserBinDirectories() []string {
+	directories := []string{"/opt/homebrew/bin", "/usr/local/bin"}
+	homeDir, err := os.UserHomeDir()
+	if err != nil || strings.TrimSpace(homeDir) == "" {
+		return directories
+	}
+
+	return append(directories,
+		filepath.Join(homeDir, ".opencode", "bin"),
+		filepath.Join(homeDir, ".local", "bin"),
+		filepath.Join(homeDir, ".bun", "bin"),
+		filepath.Join(homeDir, ".npm-global", "bin"),
+		filepath.Join(homeDir, "go", "bin"),
+	)
 }
 
 func listAgentCLIDetectionStatusesWithOptions(options agentDetectionOptions) []AgentCLIDetectionStatus {
