@@ -13,6 +13,7 @@ import { useCommands } from "../../hooks/useCommands";
 import { agentSettingsStore } from "../../store/agentSettingsStore";
 
 type AgentDetectionByKind = Record<DesktopAgentKind, boolean | undefined>;
+type AgentVersionByKind = Record<DesktopAgentKind, string | undefined>;
 
 const AGENT_DETECTION_TIMEOUT_MS = 10_000;
 const AGENT_RECHECK_MIN_DURATION_MS = 500;
@@ -25,13 +26,32 @@ function createDefaultAgentDetectionByKind(): AgentDetectionByKind {
   }, {} as AgentDetectionByKind);
 }
 
+/** Creates one default agent-version map for each supported agent. */
+function createDefaultAgentVersionByKind(): AgentVersionByKind {
+  return SUPPORTED_DESKTOP_AGENT_KINDS.reduce<AgentVersionByKind>((nextMap, agentKind) => {
+    nextMap[agentKind] = undefined;
+    return nextMap;
+  }, {} as AgentVersionByKind);
+}
+
 /** Builds one detection lookup map from one API status list while preserving all supported agents. */
 function buildDetectionByKind(
-  statuses: Array<{ agentKind: DesktopAgentKind; detected: boolean }>,
+  statuses: Array<{ agentKind: DesktopAgentKind; detected: boolean; version?: string }>,
 ): AgentDetectionByKind {
   const nextMap = createDefaultAgentDetectionByKind();
   for (const status of statuses) {
     nextMap[status.agentKind] = status.detected;
+  }
+  return nextMap;
+}
+
+/** Builds one version lookup map from one API status list while preserving all supported agents. */
+function buildVersionByKind(
+  statuses: Array<{ agentKind: DesktopAgentKind; detected: boolean; version?: string }>,
+): AgentVersionByKind {
+  const nextMap = createDefaultAgentVersionByKind();
+  for (const status of statuses) {
+    nextMap[status.agentKind] = typeof status.version === "string" ? status.version.trim() || undefined : undefined;
   }
   return nextMap;
 }
@@ -45,6 +65,7 @@ export function AgentSettingsView() {
   const [detectedByAgentKind, setDetectedByAgentKind] = useState<AgentDetectionByKind>(
     createDefaultAgentDetectionByKind,
   );
+  const [versionByAgentKind, setVersionByAgentKind] = useState<AgentVersionByKind>(createDefaultAgentVersionByKind);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLoadError, setHasLoadError] = useState(false);
@@ -75,6 +96,7 @@ export function AgentSettingsView() {
           return;
         }
         setDetectedByAgentKind(buildDetectionByKind(statuses));
+        setVersionByAgentKind(buildVersionByKind(statuses));
       } catch (error) {
         console.error("[AgentSettingsView] Failed to load agent detection statuses", error);
         if (!isLatestMountedLoad()) {
@@ -140,12 +162,23 @@ export function AgentSettingsView() {
           {SUPPORTED_DESKTOP_AGENT_KINDS.map((agentKind) => {
             const rawDetected = detectedByAgentKind[agentKind];
             const isStatusPending = rawDetected === undefined && (isLoading || isRefreshing) && !hasLoadError;
+            const rawVersion = versionByAgentKind[agentKind];
             const statusLabel = isStatusPending
               ? t("settings.agents.status.checking")
               : rawDetected
-                ? t("settings.agents.status.detected")
+                ? rawVersion
+                  ? (
+                      <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+                        <Box component="span">{t("settings.agents.status.versionPrefix")}</Box>
+                        <Box component="span" sx={{ fontWeight: 700 }}>
+                          {rawVersion}
+                        </Box>
+                      </Box>
+                    )
+                  : t("settings.agents.status.versionUnknown")
                 : t("settings.agents.status.notDetected");
             const statusColor = isStatusPending ? "default" : rawDetected ? "success" : "default";
+            const statusVariant = isStatusPending ? "outlined" : rawDetected ? "filled" : "outlined";
 
             return (
               <SettingsControlRow
@@ -162,7 +195,7 @@ export function AgentSettingsView() {
                       size="small"
                       label={statusLabel}
                       color={statusColor}
-                      variant={rawDetected ? "filled" : "outlined"}
+                      variant={statusVariant}
                     />
                     <Switch
                       checked={inUseByAgentKind[agentKind]}

@@ -11,6 +11,10 @@ describe("agentSettingsStore", () => {
         opencode: true,
         codex: true,
         claude: true,
+        gemini: true,
+        pi: true,
+        copilot: true,
+        cursor: true,
       },
     });
   });
@@ -34,6 +38,10 @@ describe("agentSettingsStore", () => {
       opencode: true,
       codex: false,
       claude: true,
+      gemini: true,
+      pi: true,
+      copilot: true,
+      cursor: true,
     });
   });
 

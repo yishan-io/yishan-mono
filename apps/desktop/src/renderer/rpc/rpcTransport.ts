@@ -12,7 +12,17 @@ type DesktopRpcEventListener = (envelope: DesktopRpcEventEnvelope) => void;
 
 const SOCKET_CONNECT_RETRY_COUNT = 6;
 const SOCKET_CONNECT_RETRY_DELAY_MS = 250;
-const API_NAMESPACES = new Set<ApiNamespace>(["workspace", "file", "git", "terminal"]);
+const API_NAMESPACES = new Set<ApiNamespace>([
+  "app",
+  "workspace",
+  "file",
+  "git",
+  "terminal",
+  "chat",
+  "agent",
+  "notification",
+  "events",
+]);
 const desktopRpcEventListeners = new Set<DesktopRpcEventListener>();
 let backendEventsSubscription: { unsubscribe: () => void } | null = null;
 let daemonRpcClientPromise: Promise<DaemonRpcClient> | null = null;

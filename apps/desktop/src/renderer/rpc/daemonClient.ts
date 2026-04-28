@@ -728,11 +728,11 @@ export class DaemonClient {
     input?: unknown;
   }): Promise<unknown> {
     const handler = this.resolveNamespaceHandler(options.namespace, options.method);
-    if (!handler) {
-      throw buildUnsupportedMethodError(`${options.namespace}.${options.method}`);
+    if (handler) {
+      return await handler(options.input);
     }
 
-    return await handler(options.input);
+    return await this.invoke(`${options.namespace}.${options.method}`, options.input);
   }
 
   async startSubscription(options: Rpc.ProcedureSubscriptionOptions): Promise<string> {

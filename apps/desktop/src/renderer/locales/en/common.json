@@ -66,12 +66,20 @@
       "status": {
         "checking": "Checking...",
         "detected": "Detected",
+        "versionPrefix": "Version:",
+        "versionUnknown": "Version: unknown",
+        "detectedVersion": "Detected version: {{version}}",
+        "detectedVersionUnknown": "Detected version: unknown",
         "notDetected": "Not detected"
       },
       "items": {
         "opencode": "OpenCode",
         "codex": "Codex",
-        "claude": "Claude"
+        "claude": "Claude",
+        "gemini": "Gemini",
+        "pi": "Pi",
+        "copilot": "GitHub Copilot",
+        "cursor": "Cursor"
       }
     },
     "appearance": {
@@ -481,7 +489,11 @@
       "chat": "Chat",
       "opencode": "OpenCode",
       "codex": "Codex",
-      "claude": "Claude"
+      "claude": "Claude",
+      "gemini": "Gemini",
+      "pi": "Pi",
+      "copilot": "GitHub Copilot",
+      "cursor": "Cursor"
     },
     "renameA11y": "Rename tab",
     "actions": {

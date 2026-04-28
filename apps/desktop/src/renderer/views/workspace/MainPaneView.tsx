@@ -41,6 +41,22 @@ const agentTerminalConfigs: Record<
     title: "Claude",
     command: "claude",
   },
+  gemini: {
+    title: "Gemini",
+    command: "gemini",
+  },
+  pi: {
+    title: "Pi",
+    command: "pi",
+  },
+  copilot: {
+    title: "Copilot",
+    command: "copilot",
+  },
+  cursor: {
+    title: "Cursor",
+    command: "cursor",
+  },
 };
 
 /** Creates a terminal tab payload that launches one agent CLI command. */

@@ -3,7 +3,11 @@ import type { DragEvent, KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPin, LuPlus, LuSquareTerminal, LuX } from "react-icons/lu";
-import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../helpers/agentSettings";
+import {
+  AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
+  type DesktopAgentKind,
+  SUPPORTED_DESKTOP_AGENT_KINDS,
+} from "../helpers/agentSettings";
 import { getRendererPlatform } from "../helpers/platform";
 import { getShortcutDisplayLabelById } from "../shortcuts/shortcutDisplay";
 import { AgentIcon } from "./AgentIcon";
@@ -68,9 +72,13 @@ export function TabBar({
   const newTabLabel = t("tabs.new");
   const createMenuLabel = t("tabs.createMenu.label");
   const terminalTitle = t("terminal.title");
-  const createOpenCodeLabel = t("tabs.createMenu.opencode");
-  const createCodexLabel = t("tabs.createMenu.codex");
-  const createClaudeLabel = t("tabs.createMenu.claude");
+  const createLabelByAgentKind = SUPPORTED_DESKTOP_AGENT_KINDS.reduce<Record<DesktopAgentKind, string>>(
+    (next, agentKind) => {
+      next[agentKind] = t(AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND[agentKind]);
+      return next;
+    },
+    {} as Record<DesktopAgentKind, string>,
+  );
   const renameTabLabel = t("tabs.renameA11y");
   const renameActionLabel = t("tabs.actions.rename");
   const pinTabActionLabel = t("tabs.actions.pin");
@@ -200,24 +208,15 @@ export function TabBar({
       icon: <LuSquareTerminal size={14} />,
       shortcutLabel: getShortcutDisplayLabelById("open-terminal", platform),
     },
-    {
-      option: "opencode",
-      label: createOpenCodeLabel,
-      icon: <AgentIcon agentKind="opencode" context="tabMenu" label={createOpenCodeLabel} />,
-      shortcutLabel: null,
-    },
-    {
-      option: "codex",
-      label: createCodexLabel,
-      icon: <AgentIcon agentKind="codex" context="tabMenu" label={createCodexLabel} />,
-      shortcutLabel: null,
-    },
-    {
-      option: "claude",
-      label: createClaudeLabel,
-      icon: <AgentIcon agentKind="claude" context="tabMenu" label={createClaudeLabel} />,
-      shortcutLabel: null,
-    },
+    ...SUPPORTED_DESKTOP_AGENT_KINDS.map((agentKind) => {
+      const label = createLabelByAgentKind[agentKind];
+      return {
+        option: agentKind,
+        label,
+        icon: <AgentIcon agentKind={agentKind} context="tabMenu" label={label} />,
+        shortcutLabel: null,
+      };
+    }),
   ];
   const createOptions = allCreateOptions.filter(
     (item) => !isAgentCreateOption(item.option) || enabledAgentKindSet.has(item.option),

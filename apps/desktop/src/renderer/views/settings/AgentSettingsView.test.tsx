@@ -31,22 +31,32 @@ describe("AgentSettingsView", () => {
         opencode: true,
         codex: true,
         claude: true,
+        gemini: true,
+        pi: true,
+        copilot: true,
+        cursor: true,
       },
     });
   });
 
   it("renders detected statuses and updates in-use toggle state", async () => {
     mocked.listAgentDetectionStatuses.mockResolvedValueOnce([
-      { agentKind: "opencode", detected: true },
+      { agentKind: "opencode", detected: true, version: "0.11.3" },
       { agentKind: "codex", detected: false },
       { agentKind: "claude", detected: true },
+      { agentKind: "gemini", detected: false },
+      { agentKind: "pi", detected: false },
+      { agentKind: "copilot", detected: false },
+      { agentKind: "cursor", detected: false },
     ]);
 
     render(<AgentSettingsView />);
 
     expect(await screen.findByText("settings.agents.items.opencode")).toBeTruthy();
-    expect(screen.getAllByText("settings.agents.status.detected").length).toBe(2);
-    expect(screen.getByText("settings.agents.status.notDetected")).toBeTruthy();
+    expect(screen.getByText("settings.agents.status.versionPrefix")).toBeTruthy();
+    expect(screen.getByText("0.11.3")).toBeTruthy();
+    expect(screen.getByText("settings.agents.status.versionUnknown")).toBeTruthy();
+    expect(screen.getAllByText("settings.agents.status.notDetected").length).toBeGreaterThan(0);
 
     const codexSwitch = screen.getByRole("checkbox", {
       name: "settings.agents.items.codex settings.agents.inUse",
@@ -79,6 +89,10 @@ describe("AgentSettingsView", () => {
         { agentKind: "opencode", detected: true },
         { agentKind: "codex", detected: true },
         { agentKind: "claude", detected: true },
+        { agentKind: "gemini", detected: false },
+        { agentKind: "pi", detected: false },
+        { agentKind: "copilot", detected: false },
+        { agentKind: "cursor", detected: false },
       ]);
 
     render(<AgentSettingsView />);
@@ -97,6 +111,10 @@ describe("AgentSettingsView", () => {
       { agentKind: "opencode", detected: true },
       { agentKind: "codex", detected: false },
       { agentKind: "claude", detected: true },
+      { agentKind: "gemini", detected: false },
+      { agentKind: "pi", detected: false },
+      { agentKind: "copilot", detected: false },
+      { agentKind: "cursor", detected: false },
     ]);
   });
 });

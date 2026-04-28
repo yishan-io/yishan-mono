@@ -1,6 +1,7 @@
 import type { StateCreator } from "zustand";
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
 import type { ProjectRecord, WorkspaceRecord } from "../api/types";
+import type { DesktopAgentKind } from "../helpers/agentSettings";
 
 export type WorkspaceProjectRecord = {
   id: string;
@@ -66,7 +67,7 @@ export type WorkspaceGitChangeTotals = {
 export type WorkspaceTabDataByKind = {
   session: {
     sessionId?: string;
-    agentKind?: "opencode" | "codex" | "claude";
+    agentKind?: DesktopAgentKind;
     isInitializing?: boolean;
   };
   diff: { path: string; oldContent: string; newContent: string };
@@ -78,7 +79,7 @@ export type WorkspaceTabDataByKind = {
     /** Backend terminal runtime session id bound to this tab. */
     sessionId?: string;
     launchCommand?: string;
-    agentKind?: "opencode" | "codex" | "claude";
+    agentKind?: DesktopAgentKind;
   };
 };
 
@@ -130,7 +131,7 @@ export type OpenWorkspaceTabInput =
       kind: "terminal";
       title?: string;
       launchCommand?: string;
-      agentKind?: "opencode" | "codex" | "claude";
+      agentKind?: DesktopAgentKind;
       reuseExisting?: boolean;
     };
 

@@ -42,7 +42,7 @@ export type ProcedureNotification = {
   payload: unknown;
 };
 
-export type ApiNamespace = "workspace" | "file" | "git" | "terminal";
+export type ApiNamespace = "app" | "workspace" | "file" | "git" | "terminal" | "chat" | "agent" | "notification" | "events";
 
 export type ProcedureSubscriptionOptions = {
   namespace: ApiNamespace;

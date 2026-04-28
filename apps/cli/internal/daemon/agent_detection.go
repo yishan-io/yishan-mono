@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -63,21 +64,28 @@ func ListAgentCLIDetectionStatuses() []AgentCLIDetectionStatus {
 
 func listAgentCLIDetectionStatusesWithOptions(options agentDetectionOptions) []AgentCLIDetectionStatus {
 	pathSegments := splitPathSegments(options.PathValue)
-	statuses := make([]AgentCLIDetectionStatus, 0, len(SupportedAgentCLIKinds))
+	statuses := make([]AgentCLIDetectionStatus, len(supportedAgentCLIs))
 
-	for _, agentCLI := range supportedAgentCLIs {
-		binaryPath, ok := findExecutableInPath(agentCLI.Commands, pathSegments, options)
-		if !ok {
-			statuses = append(statuses, AgentCLIDetectionStatus{AgentKind: agentCLI.Kind, Detected: false})
-			continue
-		}
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(len(supportedAgentCLIs))
+	for index, agentCLI := range supportedAgentCLIs {
+		go func(index int, agentCLI supportedAgentCLI) {
+			defer waitGroup.Done()
 
-		statuses = append(statuses, AgentCLIDetectionStatus{
-			AgentKind: agentCLI.Kind,
-			Detected:  true,
-			Version:   detectAgentCLIVersion(binaryPath, options.VersionTimeout),
-		})
+			binaryPath, ok := findExecutableInPath(agentCLI.Commands, pathSegments, options)
+			if !ok {
+				statuses[index] = AgentCLIDetectionStatus{AgentKind: agentCLI.Kind, Detected: false}
+				return
+			}
+
+			statuses[index] = AgentCLIDetectionStatus{
+				AgentKind: agentCLI.Kind,
+				Detected:  true,
+				Version:   detectAgentCLIVersion(binaryPath, options.VersionTimeout),
+			}
+		}(index, agentCLI)
 	}
+	waitGroup.Wait()
 
 	return statuses
 }

@@ -29,6 +29,10 @@ describe("agentCommands", () => {
       { agentKind: "opencode", detected: false },
       { agentKind: "codex", detected: true },
       { agentKind: "claude", detected: true },
+      { agentKind: "gemini", detected: false },
+      { agentKind: "pi", detected: false },
+      { agentKind: "copilot", detected: false },
+      { agentKind: "cursor", detected: false },
     ]);
   });
 });

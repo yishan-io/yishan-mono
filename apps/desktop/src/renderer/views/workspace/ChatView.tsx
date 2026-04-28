@@ -5,6 +5,7 @@ import { MessageList } from "../../components/MessageList";
 import { RichComposer } from "../../components/RichComposer";
 import { subscribeWorkspaceChatEvent } from "../../events";
 import { useCommands } from "../../hooks/useCommands";
+import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { chatStore } from "../../store/chatStore";
 import type { AvailableModel, ChatMessage } from "../../store/workspaceStore";
 
@@ -46,7 +47,7 @@ type ChatViewProps = {
   workspaceId: string;
   summary: string;
   sessionId: string;
-  agentKind?: "opencode" | "codex" | "claude";
+  agentKind?: DesktopAgentKind;
 };
 
 /** Renders one workspace chat tab and streams runtime events into local UI state. */

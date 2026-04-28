@@ -18,6 +18,10 @@ vi.mock("react-i18next", () => ({
           "tabs.createMenu.opencode": "OpenCode",
           "tabs.createMenu.codex": "Codex",
           "tabs.createMenu.claude": "Claude",
+          "tabs.createMenu.gemini": "Gemini",
+          "tabs.createMenu.pi": "Pi",
+          "tabs.createMenu.copilot": "GitHub Copilot",
+          "tabs.createMenu.cursor": "Cursor",
           "tabs.renameA11y": "Rename tab",
           "tabs.actions.rename": "Rename",
           "tabs.actions.pin": "Pin Tab",
@@ -30,7 +34,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../mod/platform", () => ({
+vi.mock("../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 

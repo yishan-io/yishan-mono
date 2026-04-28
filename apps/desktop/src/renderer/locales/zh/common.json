@@ -66,12 +66,20 @@
       "status": {
         "checking": "检测中...",
         "detected": "已检测",
+        "versionPrefix": "版本：",
+        "versionUnknown": "版本：未知",
+        "detectedVersion": "检测到版本：{{version}}",
+        "detectedVersionUnknown": "检测到版本：未知",
         "notDetected": "未检测到"
       },
       "items": {
         "opencode": "OpenCode",
         "codex": "Codex",
-        "claude": "Claude"
+        "claude": "Claude",
+        "gemini": "Gemini",
+        "pi": "Pi",
+        "copilot": "GitHub Copilot",
+        "cursor": "Cursor"
       }
     },
     "appearance": {
@@ -481,7 +489,11 @@
       "chat": "聊天",
       "opencode": "OpenCode",
       "codex": "Codex",
-      "claude": "Claude"
+      "claude": "Claude",
+      "gemini": "Gemini",
+      "pi": "Pi",
+      "copilot": "GitHub Copilot",
+      "cursor": "Cursor"
     },
     "renameA11y": "重命名标签",
     "actions": {

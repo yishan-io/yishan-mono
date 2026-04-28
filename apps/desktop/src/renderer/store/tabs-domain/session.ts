@@ -1,4 +1,5 @@
 import type { WorkspaceTabStateSlice } from "./types";
+import type { DesktopAgentKind } from "../../helpers/agentSettings";
 
 /** Creates an optimistic session tab and marks it selected for its workspace. */
 export function createSessionTabOptimisticState(input: {
@@ -6,7 +7,7 @@ export function createSessionTabOptimisticState(input: {
   workspaceId: string;
   tabId: string;
   title: string;
-  agentKind: "opencode" | "codex" | "claude";
+  agentKind: DesktopAgentKind;
 }): Partial<WorkspaceTabStateSlice> {
   return {
     tabs: [
