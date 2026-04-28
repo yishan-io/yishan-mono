@@ -1,6 +1,7 @@
 package daemon
 
 type NodeRegistration struct {
-	ID       string
-	Endpoint string
+	ID                   string
+	Endpoint             string
+	AgentDetectionStatus []AgentCLIDetectionStatus
 }

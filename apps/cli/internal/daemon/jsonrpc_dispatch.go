@@ -20,6 +20,8 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 		return h.manager.Open(req)
 	case MethodList:
 		return h.manager.List(), nil
+	case MethodAgentListDetectionStatuses:
+		return ListAgentCLIDetectionStatuses(), nil
 	case MethodFileRead:
 		var req fileReadParams
 		if err := decodeParams(params, &req); err != nil {

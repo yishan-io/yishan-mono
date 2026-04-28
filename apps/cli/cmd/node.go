@@ -59,7 +59,7 @@ var nodeCreateCmd = &cobra.Command{
 			Endpoint: endpoint,
 		}
 		if metadataOS != "" || metadataVersion != "" {
-			metadata := map[string]string{}
+			metadata := map[string]any{}
 			if metadataOS != "" {
 				metadata["os"] = metadataOS
 			}

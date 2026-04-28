@@ -9,7 +9,7 @@ type CreateNodeInput struct {
 	Name     string
 	Scope    string
 	Endpoint string
-	Metadata map[string]string
+	Metadata map[string]any
 }
 
 type CreateProjectInput struct {
@@ -24,7 +24,7 @@ type RegisterNodeInput struct {
 	NodeID   string
 	Name     string
 	Endpoint string
-	Metadata map[string]string
+	Metadata map[string]any
 	Scope    string
 }
 

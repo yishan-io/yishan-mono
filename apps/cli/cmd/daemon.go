@@ -138,14 +138,27 @@ func buildDaemonNodeRegistrar() func(daemon.NodeRegistration) error {
 	}
 
 	return func(registration daemon.NodeRegistration) error {
+		agentDetection := make([]map[string]any, 0, len(registration.AgentDetectionStatus))
+		for _, status := range registration.AgentDetectionStatus {
+			entry := map[string]any{
+				"agentKind": status.AgentKind,
+				"detected":  status.Detected,
+			}
+			if strings.TrimSpace(status.Version) != "" {
+				entry["version"] = status.Version
+			}
+			agentDetection = append(agentDetection, entry)
+		}
+
 		_, err := apiClient().RegisterNode(api.RegisterNodeInput{
 			NodeID:   registration.ID,
 			Name:     hostname,
 			Scope:    "private",
 			Endpoint: registration.Endpoint,
-			Metadata: map[string]string{
+			Metadata: map[string]any{
 				"os":      runtime.GOOS,
 				"version": buildinfo.Version,
+				"agents":  agentDetection,
 			},
 		})
 		if err != nil {

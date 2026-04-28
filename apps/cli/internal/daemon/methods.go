@@ -6,6 +6,8 @@ const (
 	MethodOpen = "open"
 	MethodList = "list"
 
+	MethodAgentListDetectionStatuses = "agent.listDetectionStatuses"
+
 	MethodFileRead   = "file.read"
 	MethodFileList   = "file.list"
 	MethodFileStat   = "file.stat"

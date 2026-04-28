@@ -126,9 +126,11 @@ func Run(cfg RunConfig, statePath string) error {
 	}()
 
 	if cfg.RegisterNode != nil {
+		agentDetectionStatus := ListAgentCLIDetectionStatuses()
 		if err := cfg.RegisterNode(NodeRegistration{
-			ID:       daemonID,
-			Endpoint: "http://" + actualAddr,
+			ID:                   daemonID,
+			Endpoint:             "http://" + actualAddr,
+			AgentDetectionStatus: agentDetectionStatus,
 		}); err != nil {
 			return fmt.Errorf("register daemon node: %w", err)
 		}
