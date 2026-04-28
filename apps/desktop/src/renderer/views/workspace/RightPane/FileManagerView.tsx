@@ -1,5 +1,13 @@
 import { Alert, Box, LinearProgress, Typography } from "@mui/material";
-import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
   type ExternalAppId,
@@ -23,31 +31,6 @@ import { buildWorkspaceFileTreeContextMenuItems } from "./buildWorkspaceFileTree
 import { useFileTreeOperations } from "./useFileTreeOperations";
 
 const MAX_FILE_SEARCH_RESULTS = 100;
-const VISIBLE_IGNORED_DIRECTORY_NAMES = new Set([".my-context", ".private-context"]);
-
-/** Returns true when one repo-relative path points to a context directory that should remain fully visible. */
-function isVisibleIgnoredDirectoryPath(path: string): boolean {
-  const normalizedPath = path.replace(/\/+$/, "");
-  const lastSegment = normalizedPath.split("/").at(-1) ?? "";
-  return VISIBLE_IGNORED_DIRECTORY_NAMES.has(lastSegment);
-}
-
-/** Keeps ignored directory roots visible while pruning their descendants from the rendered file tree. */
-function filterTreeFiles(files: string[], ignoredPaths: string[]): string[] {
-  const ignoredDirectoryPaths = ignoredPaths
-    .filter((path) => path.endsWith("/"))
-    .filter((path) => !isVisibleIgnoredDirectoryPath(path))
-    .map((path) => path.replace(/\/+$/, ""));
-
-  return files.filter((path) => {
-    const normalizedPath = path.replace(/\/+$/, "");
-
-    return !ignoredDirectoryPaths.some(
-      (ignoredDirectoryPath) =>
-        normalizedPath !== ignoredDirectoryPath && normalizedPath.startsWith(`${ignoredDirectoryPath}/`),
-    );
-  });
-}
 
 type FileManagerViewProps = {
   openFileSearchRequestKey?: number;
@@ -164,22 +147,23 @@ export function FileManagerView({
 
   useSuppressNativeContextMenuWhileOpen(hasOpenContextMenu);
 
-  const visibleTreeFiles = useMemo(() => filterTreeFiles(repoFiles, ignoredRepoPaths), [ignoredRepoPaths, repoFiles]);
+  const visibleTreeFiles = repoFiles;
   const ignoredSearchRepoPathSet = useMemo(
     () => new Set(searchIgnoredRepoPaths.map((path) => path.replace(/\/+$/, ""))),
     [searchIgnoredRepoPaths],
   );
   const searchableFiles = useMemo(
-    () => searchRepoFiles.filter((path) => !path.endsWith("/") && !ignoredSearchRepoPathSet.has(path)),
+    () => searchRepoFiles.filter((path) => !ignoredSearchRepoPathSet.has(path.replace(/\/+$/, ""))),
     [ignoredSearchRepoPathSet, searchRepoFiles],
   );
   const trimmedFileSearchQuery = fileSearchQuery.trim();
+  const deferredFileSearchQuery = useDeferredValue(trimmedFileSearchQuery);
   const fileSearchResults = useMemo(
     () =>
-      trimmedFileSearchQuery
-        ? searchFiles(searchableFiles, trimmedFileSearchQuery).slice(0, MAX_FILE_SEARCH_RESULTS)
+      deferredFileSearchQuery
+        ? searchFiles(searchableFiles, deferredFileSearchQuery).slice(0, MAX_FILE_SEARCH_RESULTS)
         : [],
-    [searchableFiles, trimmedFileSearchQuery],
+    [deferredFileSearchQuery, searchableFiles],
   );
 
   useEffect(() => {
@@ -251,6 +235,25 @@ export function FileManagerView({
     void onUndoLastEntryOperation();
   }, [canUndoLastEntryOperation, lastHandledUndoRequestId, onUndoLastEntryOperation, undoRequestId]);
 
+  const openSearchResult = useCallback(
+    async (path: string) => {
+      if (path.endsWith("/")) {
+        const directoryPath = path.replace(/\/+$/, "");
+        await loadExpandedDirectory(directoryPath);
+        if (!expandedItems.includes(directoryPath)) {
+          handleExpandedItemsChange([...expandedItems, directoryPath]);
+        }
+        setSelectedEntryPath(directoryPath);
+        setIsFileSearchOpen(false);
+        return;
+      }
+
+      await openWorkspaceFile(path);
+      setIsFileSearchOpen(false);
+    },
+    [expandedItems, handleExpandedItemsChange, loadExpandedDirectory, openWorkspaceFile, setSelectedEntryPath],
+  );
+
   /** Opens the currently highlighted quick-search result if one exists. */
   const openSelectedSearchResult = useCallback(async () => {
     const selectedResult = fileSearchResults[selectedSearchResultIndex];
@@ -258,9 +261,8 @@ export function FileManagerView({
       return;
     }
 
-    await openWorkspaceFile(selectedResult.path);
-    setIsFileSearchOpen(false);
-  }, [fileSearchResults, openWorkspaceFile, selectedSearchResultIndex]);
+    await openSearchResult(selectedResult.path);
+  }, [fileSearchResults, openSearchResult, selectedSearchResultIndex]);
 
   /** Handles keyboard navigation and submit behavior in the quick-search input. */
   const handleFileSearchInputKeyDown = useCallback(
@@ -565,8 +567,7 @@ export function FileManagerView({
         onSelectResultIndex={setSelectedSearchResultIndex}
         onOpenResult={(path, index) => {
           setSelectedSearchResultIndex(index);
-          void openWorkspaceFile(path);
-          setIsFileSearchOpen(false);
+          void openSearchResult(path);
         }}
       />
     </Box>

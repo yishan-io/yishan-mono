@@ -152,7 +152,7 @@ vi.mock("../../../store/tabStore", () => ({
   tabStore: mocks.workspaceStore,
 }));
 
-vi.mock("../../../mod/platform", () => ({
+vi.mock("../../../helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
@@ -286,6 +286,25 @@ describe("FileManagerView file search", () => {
     expect(highlightedSegments.length).toBeGreaterThan(0);
   });
 
+  it("shows directory name matches in quick-open search", async () => {
+    mocks.listFiles.mockResolvedValue({
+      files: asEntries(["cmd/", "src/readme.md"]),
+    });
+
+    const { rerender } = render(<FileManagerView openFileSearchRequestKey={0} />);
+
+    await waitFor(() => {
+      expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo", recursive: false });
+    });
+
+    rerender(<FileManagerView openFileSearchRequestKey={1} />);
+
+    const searchInput = await screen.findByRole("textbox", { name: "Search files..." });
+    fireEvent.change(searchInput, { target: { value: "cmd" } });
+
+    expect(screen.getByRole("button", { name: "cmd/" })).toBeTruthy();
+  });
+
   it("does not render file result rows before a search query is typed", async () => {
     const { rerender } = render(<FileManagerView openFileSearchRequestKey={0} />);
 
@@ -319,7 +338,7 @@ describe("FileManagerView file search", () => {
     expect(screen.queryByRole("button", { name: "dist/debug.log" })).toBeNull();
   });
 
-  it("keeps ignored directory roots visible while pruning ignored descendants from the tree", async () => {
+  it("keeps ignored directories and loaded descendants visible in the tree", async () => {
     mocks.listFiles.mockResolvedValue({
       files: asEntries(
         ["node_modules/", "node_modules/pkg/index.js", "src/index.ts"],
@@ -330,7 +349,11 @@ describe("FileManagerView file search", () => {
     render(<FileManagerView />);
 
     await waitFor(() => {
-      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual(["node_modules/", "src/index.ts"]);
+      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
+        "node_modules/",
+        "node_modules/pkg/index.js",
+        "src/index.ts",
+      ]);
     });
   });
 
@@ -605,6 +628,27 @@ describe("FileManagerView lazy preload", () => {
         ]),
       );
     });
+  });
+
+  it("does not preload ignored directories automatically", async () => {
+    mocks.listFiles
+      .mockResolvedValueOnce({ files: asEntries(["node_modules/", "src/", "README.md"], ["node_modules/"]) })
+      .mockResolvedValueOnce({ files: asEntries(["src/index.ts"]) });
+
+    render(<FileManagerView />);
+
+    await waitFor(() => {
+      expect(mocks.listFiles.mock.calls).toEqual(
+        expect.arrayContaining([
+          [{ workspaceWorktreePath: "/tmp/repo", recursive: false }],
+          [{ workspaceWorktreePath: "/tmp/repo", relativePath: "src", recursive: false }],
+        ]),
+      );
+    });
+
+    expect(mocks.listFiles.mock.calls).not.toContainEqual([
+      { workspaceWorktreePath: "/tmp/repo", relativePath: "node_modules", recursive: false },
+    ]);
   });
 
   it("preloads one more level after expanding an already loaded branch", async () => {

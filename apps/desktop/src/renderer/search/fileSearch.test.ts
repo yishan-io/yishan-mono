@@ -27,12 +27,31 @@ describe("searchFiles", () => {
     expect(results[0]?.highlightedPathIndexes.length).toBe(3);
   });
 
+  it("matches directory names with trailing slashes", () => {
+    const results = searchFiles(["cmd/", "src/components/Button.tsx"], "cmd");
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.path).toBe("cmd/");
+    expect(results[0]?.highlightedPathIndexes).toEqual([0, 1, 2]);
+  });
+
   it("matches query against path segments when filename does not match", () => {
     const results = searchFiles(["apps/desktop/src/renderer/views/workspace/RightPane/RightPaneView.tsx"], "rendr");
 
     expect(results).toHaveLength(1);
     expect(results[0]?.path).toContain("renderer");
     expect(results[0]?.highlightedPathIndexes).toHaveLength(5);
+  });
+
+  it("matches space-separated query terms against the full file path", () => {
+    const results = searchFiles(
+      ["apps/desktop/src/renderer/views/workspace/RightPane/RightPaneView.tsx", "src/views/TerminalView.tsx"],
+      "renderer rightpane",
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0]?.path).toBe("apps/desktop/src/renderer/views/workspace/RightPane/RightPaneView.tsx");
+    expect(results[0]?.highlightedPathIndexes).toHaveLength("rendererrightpane".length);
   });
 
   it("returns all files for empty query ordered by path length then alphabetically", () => {

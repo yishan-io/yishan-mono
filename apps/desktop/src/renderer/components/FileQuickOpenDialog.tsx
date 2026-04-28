@@ -33,19 +33,20 @@ type FilePathDisplayParts = {
  * Splits one workspace path into filename and directory parts used in quick-open rows.
  */
 function splitFilePathForDisplay(path: string): FilePathDisplayParts {
-  const slashIndex = path.lastIndexOf("/");
+  const displayPath = path.replace(/\/+$/, "");
+  const slashIndex = displayPath.lastIndexOf("/");
 
   if (slashIndex < 0) {
     return {
-      filename: path,
+      filename: displayPath,
       directory: "",
       filenameStart: 0,
     };
   }
 
   return {
-    filename: path.slice(slashIndex + 1),
-    directory: path.slice(0, slashIndex + 1),
+    filename: displayPath.slice(slashIndex + 1),
+    directory: displayPath.slice(0, slashIndex + 1),
     filenameStart: slashIndex + 1,
   };
 }
@@ -229,7 +230,7 @@ export function FileQuickOpenDialog({
                 >
                   <Box
                     component="img"
-                    src={getFileTreeIcon(result.path, false)}
+                    src={getFileTreeIcon(result.path, result.path.endsWith("/"))}
                     alt=""
                     sx={{ width: 16, height: 16, flexShrink: 0 }}
                   />

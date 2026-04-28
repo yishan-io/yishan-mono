@@ -91,12 +91,12 @@ func (m *Manager) TerminalStart(ctx context.Context, req TerminalStartRequest) (
 	return m.terminals.Start(ctx, ws.Path, req)
 }
 
-func (m *Manager) FileList(workspaceID string, path string) ([]FileEntry, error) {
+func (m *Manager) FileList(workspaceID string, path string, recursive bool) ([]FileEntry, error) {
 	ws, err := m.getWorkspace(workspaceID)
 	if err != nil {
 		return nil, err
 	}
-	return m.files.List(ws.Path, path)
+	return m.files.List(ws.Path, path, recursive)
 }
 
 func (m *Manager) FileStat(workspaceID string, path string) (FileEntry, error) {

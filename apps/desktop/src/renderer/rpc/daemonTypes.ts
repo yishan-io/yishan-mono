@@ -215,6 +215,7 @@ export type DaemonFileEntry = {
   path: string;
   name: string;
   isDir: boolean;
+  isIgnored?: boolean;
   size: number;
   mode: number;
 };

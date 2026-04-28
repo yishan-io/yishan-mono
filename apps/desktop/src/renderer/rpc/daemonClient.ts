@@ -425,7 +425,8 @@ export class DaemonClient {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     const relativePath = readOptionalString(record?.relativePath) || "";
-    const files = await this.invoke("file.list", { workspaceId, path: relativePath });
+    const recursive = readOptionalBoolean(record?.recursive) ?? true;
+    const files = await this.invoke("file.list", { workspaceId, path: relativePath, recursive });
     return {
       files: Array.isArray(files)
         ? normalizeDaemonFileEntries(files as Rpc.FileListResponse["files"])
@@ -441,17 +442,18 @@ export class DaemonClient {
       requests.map(async (request) => {
         const requestRecord = asRecord(request) ?? {};
         const relativePath = readOptionalString(requestRecord.relativePath) || "";
+        const recursive = readOptionalBoolean(requestRecord.recursive) ?? false;
         try {
-          const files = await this.invoke("file.list", { workspaceId, path: relativePath });
+          const files = await this.invoke("file.list", { workspaceId, path: relativePath, recursive });
           return {
-            request: { relativePath, recursive: readOptionalBoolean(requestRecord.recursive) ?? false },
+            request: { relativePath, recursive },
             files: Array.isArray(files)
               ? normalizeDaemonFileEntries(files as Rpc.FileListResponse["files"])
               : [],
           };
         } catch (error) {
           return {
-            request: { relativePath, recursive: readOptionalBoolean(requestRecord.recursive) ?? false },
+            request: { relativePath, recursive },
             files: [],
             error: error instanceof Error ? error.message : String(error),
           };

@@ -235,7 +235,10 @@ function collectDirectChildEntries(entries: WorkspaceFileEntry[], directoryPath:
 /** Returns direct child directory paths under one directory path, capped for background preloading. */
 function collectDirectChildDirectoryPaths(entries: WorkspaceFileEntry[], directoryPath: string): string[] {
   return entries
-    .filter((entry) => entry.path.endsWith("/") && isDirectChildPath(directoryPath, entry.path.replace(/\/+$/, "")))
+    .filter(
+      (entry) =>
+        !entry.isIgnored && entry.path.endsWith("/") && isDirectChildPath(directoryPath, entry.path.replace(/\/+$/, "")),
+    )
     .map((entry) => entry.path.replace(/\/+$/, ""));
 }
 

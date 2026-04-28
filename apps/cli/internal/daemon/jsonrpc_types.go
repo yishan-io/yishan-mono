@@ -30,6 +30,7 @@ type rpcError struct {
 type fileListParams struct {
 	WorkspaceID string `json:"workspaceId"`
 	Path        string `json:"path,omitempty"`
+	Recursive   bool   `json:"recursive,omitempty"`
 }
 
 type fileReadParams struct {

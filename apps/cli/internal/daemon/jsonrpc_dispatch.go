@@ -33,7 +33,7 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.FileList(req.WorkspaceID, req.Path)
+		return h.manager.FileList(req.WorkspaceID, req.Path, req.Recursive)
 	case MethodFileStat:
 		var req fileReadParams
 		if err := decodeParams(params, &req); err != nil {

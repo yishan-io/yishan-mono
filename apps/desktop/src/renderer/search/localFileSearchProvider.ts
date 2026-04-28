@@ -5,6 +5,10 @@ type SubsequenceMatch = {
   score: number;
 };
 
+function compactPathQuery(query: string): string {
+  return query.replace(/[\\/\s]+/g, "");
+}
+
 /**
  * Resolves a fuzzy/substring subsequence match and returns highlight indexes in target text.
  */
@@ -61,8 +65,9 @@ function resolveFilePathMatch(path: string, query: string): FileSearchResult | n
     };
   }
 
-  const normalizedPath = path.toLowerCase();
-  const filenameStart = path.lastIndexOf("/") + 1;
+  const matchPath = path.replace(/\/+$/, "");
+  const normalizedPath = matchPath.toLowerCase();
+  const filenameStart = matchPath.lastIndexOf("/") + 1;
   const normalizedFilename = normalizedPath.slice(filenameStart);
 
   const filenameMatch = resolveSubsequenceMatch(normalizedFilename, query);
@@ -74,7 +79,8 @@ function resolveFilePathMatch(path: string, query: string): FileSearchResult | n
     };
   }
 
-  const pathMatch = resolveSubsequenceMatch(normalizedPath, query);
+  const pathQuery = compactPathQuery(query);
+  const pathMatch = resolveSubsequenceMatch(normalizedPath, pathQuery);
   if (!pathMatch) {
     return null;
   }
