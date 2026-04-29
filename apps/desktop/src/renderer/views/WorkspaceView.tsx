@@ -15,6 +15,7 @@ import { workspaceStore } from "../store/workspaceStore";
 import { CreateProjectDialogView } from "./workspace/LeftPane/CreateProjectDialogView";
 import { LeftPaneView } from "./workspace/LeftPane/LeftPaneView";
 import { MainPaneView } from "./workspace/MainPaneView";
+import { OnboardingView } from "./workspace/OnboardingView";
 import { RightPaneView } from "./workspace/RightPane/RightPaneView";
 import { WorkspaceLifecycleNoticeView } from "./workspace/WorkspaceLifecycleNoticeView";
 import { TerminalRecoveryCoordinator } from "./workspace/terminalRecovery";
@@ -50,6 +51,7 @@ export function WorkspaceView() {
   const paneVisibility = useWorkspacePaneVisibility();
   const leftWidth = layoutStore((state) => state.leftWidth);
   const rightWidth = layoutStore((state) => state.rightWidth);
+  const projects = workspaceStore((state) => state.projects);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const selectedWorkspaceWorktreePath = workspaceStore(
     (state) => state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath,
@@ -229,6 +231,7 @@ export function WorkspaceView() {
 
   const resolvedLeftWidth = clamp(leftWidth, LEFT_MIN_WIDTH, maxLeftWidth);
   const resolvedRightWidth = clamp(rightWidth, RIGHT_MIN_WIDTH, maxRightWidth);
+  const hasProjects = projects.length > 0;
 
   const resizeLeftStart = (clientXStart: number) => {
     if (leftCollapsed) {
@@ -271,6 +274,17 @@ export function WorkspaceView() {
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
   };
+
+  if (!hasProjects) {
+    return (
+      <WorkspacePaneVisibilityProvider value={paneVisibility}>
+        <Box sx={{ height: "100%" }}>
+          <OnboardingView />
+        </Box>
+        <WorkspaceLifecycleNoticeView />
+      </WorkspacePaneVisibilityProvider>
+    );
+  }
 
   return (
     <WorkspacePaneVisibilityProvider value={paneVisibility}>

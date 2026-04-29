@@ -217,6 +217,13 @@
     },
     "defaultWorkspaceName": "Default organization"
   },
+  "onboarding": {
+    "firstProject": {
+      "title": "Create your first project",
+      "description": "{{organizationName}} does not have any projects yet. Add a local folder or remote Git repository to start working.",
+      "submit": "Create first project"
+    }
+  },
   "workspace": {
     "panelTitle": "Organization",
     "dashboardTitle": "Workspace Dashboard",

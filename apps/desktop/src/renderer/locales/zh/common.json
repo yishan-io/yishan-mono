@@ -217,6 +217,13 @@
     },
     "defaultWorkspaceName": "默认组织"
   },
+  "onboarding": {
+    "firstProject": {
+      "title": "创建你的第一个项目",
+      "description": "{{organizationName}} 还没有项目。添加本地文件夹或远程 Git 仓库即可开始工作。",
+      "submit": "创建第一个项目"
+    }
+  },
   "workspace": {
     "panelTitle": "组织",
     "dashboardTitle": "工作区看板",
