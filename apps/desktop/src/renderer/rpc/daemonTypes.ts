@@ -322,13 +322,26 @@ export type TerminalReadOutputResponse = {
   exited: boolean;
 };
 
+export type TerminalStreamEvent =
+  | {
+      type: "output";
+      sessionId: string;
+      chunk: string;
+      nextIndex: number;
+    }
+  | {
+      type: "exit";
+      sessionId: string;
+      exitCode?: number;
+    };
+
 export type TerminalDetectedPort = {
   sessionId: string;
   workspaceId: string;
   pid: number;
   port: number;
-  host?: string;
-  processName?: string;
+  address: string;
+  processName: string;
 };
 
 export type TerminalResourceUsageSnapshot = {
@@ -349,4 +362,9 @@ export type TerminalSessionSummary = {
   status: "running" | "exited";
   startedAt?: string;
   exitedAt?: string;
+};
+
+export type TerminalSessionLifecycleEvent = {
+  type: "session.started" | "session.exited" | "session.updated";
+  session: TerminalSessionSummary;
 };

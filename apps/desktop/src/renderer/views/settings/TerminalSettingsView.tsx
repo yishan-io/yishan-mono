@@ -1,4 +1,4 @@
-import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "@api-service/domain/terminal/types";
+import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../rpc/daemonTypes";
 import {
   Alert,
   Box,

@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/websocket"
-	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/terminal"
 )
 
 type wsConnState struct {
@@ -52,7 +52,7 @@ func (c *wsConnState) Close() {
 	})
 }
 
-func (c *wsConnState) AttachSubscription(sessionID string, subscriptionID uint64, events <-chan workspace.TerminalEvent, cancel func(sessionID string, subscriptionID uint64)) {
+func (c *wsConnState) AttachSubscription(sessionID string, subscriptionID uint64, events <-chan terminal.Event, cancel func(sessionID string, subscriptionID uint64)) {
 	c.subsMu.Lock()
 	if current, ok := c.subscriptions[sessionID]; ok {
 		delete(c.subscriptions, sessionID)

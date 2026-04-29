@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"yishan/apps/cli/internal/workspace/terminal"
 )
 
 type Workspace struct {
@@ -17,7 +19,7 @@ type Manager struct {
 	workspaces map[string]Workspace
 	files      *FileService
 	gits       *GitService
-	terminals  *TerminalManager
+	terminals  *terminal.Manager
 }
 
 func NewManager() *Manager {
@@ -25,7 +27,7 @@ func NewManager() *Manager {
 		workspaces: make(map[string]Workspace),
 		files:      NewFileService(),
 		gits:       NewGitService(),
-		terminals:  NewTerminalManager(),
+		terminals:  terminal.NewManager(),
 	}
 }
 
@@ -309,6 +311,10 @@ func (m *Manager) TerminalSend(req TerminalSendRequest) (TerminalSendResponse, e
 
 func (m *Manager) TerminalListSessions(req TerminalListSessionsRequest) []TerminalSessionSummary {
 	return m.terminals.ListSessions(req)
+}
+
+func (m *Manager) TerminalListDetectedPorts() []TerminalDetectedPort {
+	return m.terminals.ListDetectedPorts()
 }
 
 func (m *Manager) TerminalRead(req TerminalReadRequest) (TerminalReadResponse, error) {

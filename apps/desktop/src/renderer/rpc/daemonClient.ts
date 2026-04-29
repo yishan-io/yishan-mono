@@ -754,7 +754,33 @@ export class DaemonClient {
   }
 
   private async listDetectedTerminalPorts(): Promise<Rpc.TerminalDetectedPort[]> {
-    return [];
+    const ports = await this.invoke("terminal.listDetectedPorts", {});
+    if (!Array.isArray(ports)) {
+      return [];
+    }
+    return ports.flatMap((entry) => {
+      const record = asRecord(entry);
+      if (!record) {
+        return [];
+      }
+      const sessionId = readOptionalString(record.sessionId);
+      const workspaceId = readOptionalString(record.workspaceId);
+      const pid = readOptionalNumber(record.pid);
+      const port = readOptionalNumber(record.port);
+      if (!sessionId || !workspaceId || pid === undefined || port === undefined) {
+        return [];
+      }
+      return [
+        {
+          sessionId,
+          workspaceId,
+          pid,
+          port,
+          address: readOptionalString(record.address) || readOptionalString(record.host) || "0.0.0.0",
+          processName: readOptionalString(record.processName) || "unknown",
+        },
+      ];
+    });
   }
 
   private async getTerminalResourceUsage(): Promise<Rpc.TerminalResourceUsageSnapshot> {

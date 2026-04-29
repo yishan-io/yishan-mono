@@ -1,13 +1,15 @@
 import type {
   TerminalCreateSessionInput,
-  TerminalDetectedPort,
   TerminalListSessionsInput,
   TerminalResourceUsageSnapshot,
   TerminalSessionLifecycleEvent,
   TerminalSessionSummary,
   TerminalStreamEvent,
-} from "@api-service/domain/terminal/types";
+} from "../rpc/daemonTypes";
+import type { TerminalDetectedPort } from "../rpc/daemonTypes";
 import { getDaemonClient } from "../rpc/rpcTransport";
+
+export type { TerminalDetectedPort } from "../rpc/daemonTypes";
 
 type TerminalCreateSessionParams = TerminalCreateSessionInput;
 
@@ -71,7 +73,7 @@ export async function subscribeTerminalOutput(params: {
   return client.terminal.subscribeOutput.subscribe(
     { sessionId: params.sessionId },
     {
-      onData: params.onData,
+      onData: (event) => params.onData(event as TerminalOutputEvent),
       onError: params.onError,
     },
   );
@@ -84,7 +86,7 @@ export async function subscribeTerminalSessions(params: {
 }) {
   const client = await getDaemonClient();
   return client.terminal.subscribeSessions.subscribe(undefined, {
-    onData: params.onData,
+    onData: (event) => params.onData(event as TerminalSessionLifecycleEvent),
     onError: params.onError,
   });
 }

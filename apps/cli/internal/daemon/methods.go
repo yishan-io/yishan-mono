@@ -44,6 +44,7 @@ const (
 	MethodTerminalRead         = "terminal.read"
 	MethodTerminalStop         = "terminal.stop"
 	MethodTerminalListSessions = "terminal.listSessions"
+	MethodTerminalListPorts    = "terminal.listDetectedPorts"
 	MethodTerminalResize       = "terminal.resize"
 	MethodTerminalSubscribe    = "terminal.subscribe"
 	MethodTerminalUnsubscribe  = "terminal.unsubscribe"

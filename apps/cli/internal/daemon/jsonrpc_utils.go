@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/terminal"
 )
 
 func decodeParams(raw json.RawMessage, out any) error {
@@ -32,6 +33,10 @@ func mapRPCError(err error) *rpcError {
 	var e *workspace.RPCError
 	if errors.As(err, &e) {
 		return &rpcError{Code: e.Code, Message: e.Message}
+	}
+	var terminalError *terminal.RPCError
+	if errors.As(err, &terminalError) {
+		return &rpcError{Code: terminalError.Code, Message: terminalError.Message}
 	}
 	return &rpcError{Code: -32000, Message: err.Error()}
 }

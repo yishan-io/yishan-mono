@@ -266,6 +266,8 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 			return nil, err
 		}
 		return h.manager.TerminalListSessions(req), nil
+	case MethodTerminalListPorts:
+		return h.manager.TerminalListDetectedPorts(), nil
 	case MethodTerminalResize:
 		var req workspace.TerminalResizeRequest
 		if err := decodeParams(params, &req); err != nil {

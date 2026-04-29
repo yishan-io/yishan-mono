@@ -1,4 +1,4 @@
-package workspace
+package terminal
 
 import (
 	"context"
@@ -7,10 +7,10 @@ import (
 	"time"
 )
 
-func TestResolveTerminalCommand(t *testing.T) {
+func TestResolveCommand(t *testing.T) {
 	tests := []struct {
 		name            string
-		request         TerminalStartRequest
+		request         StartRequest
 		goos            string
 		shellEnv        string
 		wantCommand     string
@@ -20,7 +20,7 @@ func TestResolveTerminalCommand(t *testing.T) {
 	}{
 		{
 			name: "uses explicit command when provided",
-			request: TerminalStartRequest{
+			request: StartRequest{
 				Command: "python",
 				Args:    []string{"-V"},
 			},
@@ -33,7 +33,7 @@ func TestResolveTerminalCommand(t *testing.T) {
 		},
 		{
 			name:            "uses shell env on unix when command missing",
-			request:         TerminalStartRequest{},
+			request:         StartRequest{},
 			goos:            "linux",
 			shellEnv:        "/bin/zsh",
 			wantCommand:     "/bin/zsh",
@@ -43,7 +43,7 @@ func TestResolveTerminalCommand(t *testing.T) {
 		},
 		{
 			name: "keeps explicit default shell args",
-			request: TerminalStartRequest{
+			request: StartRequest{
 				Args: []string{"-f"},
 			},
 			goos:            "linux",
@@ -55,7 +55,7 @@ func TestResolveTerminalCommand(t *testing.T) {
 		},
 		{
 			name:            "falls back to zsh on darwin when shell env missing",
-			request:         TerminalStartRequest{},
+			request:         StartRequest{},
 			goos:            "darwin",
 			shellEnv:        "",
 			wantCommand:     "/bin/zsh",
@@ -65,7 +65,7 @@ func TestResolveTerminalCommand(t *testing.T) {
 		},
 		{
 			name:            "falls back to bash on linux when shell env missing",
-			request:         TerminalStartRequest{},
+			request:         StartRequest{},
 			goos:            "linux",
 			shellEnv:        "",
 			wantCommand:     "/bin/bash",
@@ -75,7 +75,7 @@ func TestResolveTerminalCommand(t *testing.T) {
 		},
 		{
 			name:            "uses cmd on windows",
-			request:         TerminalStartRequest{},
+			request:         StartRequest{},
 			goos:            "windows",
 			shellEnv:        "C:/Program Files/Git/bin/bash.exe",
 			wantCommand:     "cmd.exe",
@@ -86,7 +86,7 @@ func TestResolveTerminalCommand(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotCommand, gotArgs := resolveTerminalCommand(test.request, test.goos, test.shellEnv)
+			gotCommand, gotArgs := resolveCommand(test.request, test.goos, test.shellEnv)
 			if gotCommand != test.wantCommand {
 				t.Fatalf("expected command %q, got %q", test.wantCommand, gotCommand)
 			}
@@ -100,8 +100,8 @@ func TestResolveTerminalCommand(t *testing.T) {
 	}
 }
 
-func TestResolveTerminalEnvDefaults(t *testing.T) {
-	got := resolveTerminalEnv([]string{"PATH=/usr/bin"}, []string{"TERM=screen-256color"})
+func TestResolveEnvDefaults(t *testing.T) {
+	got := resolveEnv([]string{"PATH=/usr/bin"}, []string{"TERM=screen-256color"})
 	joined := strings.Join(got, "\n")
 
 	if !strings.Contains(joined, "TERM=screen-256color") {
@@ -115,26 +115,26 @@ func TestResolveTerminalEnvDefaults(t *testing.T) {
 	}
 }
 
-func TestTerminalSessionSendReadStop(t *testing.T) {
-	m := NewTerminalManager()
+func TestSessionSendReadStop(t *testing.T) {
+	m := NewManager()
 
-	start, err := m.Start(context.Background(), t.TempDir(), TerminalStartRequest{Command: "cat"})
+	start, err := m.Start(context.Background(), t.TempDir(), StartRequest{Command: "cat"})
 	if err != nil {
 		t.Fatalf("start terminal: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = m.Stop(TerminalStopRequest{SessionID: start.SessionID})
+		_, _ = m.Stop(StopRequest{SessionID: start.SessionID})
 	})
 
 	input := "hello-from-test\n"
-	if _, err := m.Send(TerminalSendRequest{SessionID: start.SessionID, Input: input}); err != nil {
+	if _, err := m.Send(SendRequest{SessionID: start.SessionID, Input: input}); err != nil {
 		t.Fatalf("send input: %v", err)
 	}
 
 	deadline := time.Now().Add(2 * time.Second)
 	var output strings.Builder
 	for time.Now().Before(deadline) {
-		resp, err := m.Read(TerminalReadRequest{SessionID: start.SessionID})
+		resp, err := m.Read(ReadRequest{SessionID: start.SessionID})
 		if err != nil {
 			t.Fatalf("read output: %v", err)
 		}
@@ -149,7 +149,7 @@ func TestTerminalSessionSendReadStop(t *testing.T) {
 		t.Fatalf("expected output to contain sent input, got %q", output.String())
 	}
 
-	stopped, err := m.Stop(TerminalStopRequest{SessionID: start.SessionID})
+	stopped, err := m.Stop(StopRequest{SessionID: start.SessionID})
 	if err != nil {
 		t.Fatalf("stop terminal: %v", err)
 	}
@@ -158,18 +158,18 @@ func TestTerminalSessionSendReadStop(t *testing.T) {
 	}
 }
 
-func TestTerminalListSessions(t *testing.T) {
-	m := NewTerminalManager()
+func TestListSessions(t *testing.T) {
+	m := NewManager()
 
-	running, err := m.Start(context.Background(), t.TempDir(), TerminalStartRequest{WorkspaceID: "workspace-1", Command: "cat"})
+	running, err := m.Start(context.Background(), t.TempDir(), StartRequest{WorkspaceID: "workspace-1", Command: "cat"})
 	if err != nil {
 		t.Fatalf("start running terminal: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = m.Stop(TerminalStopRequest{SessionID: running.SessionID})
+		_, _ = m.Stop(StopRequest{SessionID: running.SessionID})
 	})
 
-	exited, err := m.Start(context.Background(), t.TempDir(), TerminalStartRequest{WorkspaceID: "workspace-2", Command: "sh", Args: []string{"-c", "exit 0"}})
+	exited, err := m.Start(context.Background(), t.TempDir(), StartRequest{WorkspaceID: "workspace-2", Command: "sh", Args: []string{"-c", "exit 0"}})
 	if err != nil {
 		t.Fatalf("start exiting terminal: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestTerminalListSessions(t *testing.T) {
 	deadline := time.Now().Add(2 * time.Second)
 	var sawExited bool
 	for time.Now().Before(deadline) {
-		sessions := m.ListSessions(TerminalListSessionsRequest{IncludeExited: true})
+		sessions := m.ListSessions(ListSessionsRequest{IncludeExited: true})
 		for _, session := range sessions {
 			if session.SessionID == exited.SessionID && session.Status == "exited" {
 				sawExited = true
@@ -193,7 +193,7 @@ func TestTerminalListSessions(t *testing.T) {
 		t.Fatal("timed out waiting for terminal session to exit")
 	}
 
-	runningOnly := m.ListSessions(TerminalListSessionsRequest{})
+	runningOnly := m.ListSessions(ListSessionsRequest{})
 	if len(runningOnly) != 1 {
 		t.Fatalf("expected one running session, got %d", len(runningOnly))
 	}
@@ -213,7 +213,7 @@ func TestTerminalListSessions(t *testing.T) {
 		t.Fatal("expected startedAt to be set")
 	}
 
-	all := m.ListSessions(TerminalListSessionsRequest{IncludeExited: true})
+	all := m.ListSessions(ListSessionsRequest{IncludeExited: true})
 	if len(all) != 2 {
 		t.Fatalf("expected running and exited sessions, got %d", len(all))
 	}
@@ -234,10 +234,10 @@ func TestTerminalListSessions(t *testing.T) {
 	}
 }
 
-func TestTerminalSubscriptionStreamsOutputAndExit(t *testing.T) {
-	m := NewTerminalManager()
+func TestSubscriptionStreamsOutputAndExit(t *testing.T) {
+	m := NewManager()
 
-	start, err := m.Start(context.Background(), t.TempDir(), TerminalStartRequest{
+	start, err := m.Start(context.Background(), t.TempDir(), StartRequest{
 		Command: "sh",
 		Args:    []string{"-c", `read line; printf "echo:%s\n" "$line"`},
 	})
@@ -245,15 +245,15 @@ func TestTerminalSubscriptionStreamsOutputAndExit(t *testing.T) {
 		t.Fatalf("start terminal: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = m.Stop(TerminalStopRequest{SessionID: start.SessionID})
+		_, _ = m.Stop(StopRequest{SessionID: start.SessionID})
 	})
 
-	sub, err := m.Subscribe(TerminalSubscribeRequest{SessionID: start.SessionID})
+	sub, err := m.Subscribe(SubscribeRequest{SessionID: start.SessionID})
 	if err != nil {
 		t.Fatalf("subscribe: %v", err)
 	}
 
-	if _, err := m.Send(TerminalSendRequest{SessionID: start.SessionID, Input: "ping\n"}); err != nil {
+	if _, err := m.Send(SendRequest{SessionID: start.SessionID, Input: "ping\n"}); err != nil {
 		t.Fatalf("send input: %v", err)
 	}
 
@@ -290,31 +290,31 @@ func TestTerminalSubscriptionStreamsOutputAndExit(t *testing.T) {
 	}
 }
 
-func TestTerminalResizeAndUnsubscribe(t *testing.T) {
-	m := NewTerminalManager()
+func TestResizeAndUnsubscribe(t *testing.T) {
+	m := NewManager()
 
-	start, err := m.Start(context.Background(), t.TempDir(), TerminalStartRequest{Command: "cat"})
+	start, err := m.Start(context.Background(), t.TempDir(), StartRequest{Command: "cat"})
 	if err != nil {
 		t.Fatalf("start terminal: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = m.Stop(TerminalStopRequest{SessionID: start.SessionID})
+		_, _ = m.Stop(StopRequest{SessionID: start.SessionID})
 	})
 
-	if _, err := m.Resize(TerminalResizeRequest{SessionID: start.SessionID, Cols: 120, Rows: 40}); err != nil {
+	if _, err := m.Resize(ResizeRequest{SessionID: start.SessionID, Cols: 120, Rows: 40}); err != nil {
 		t.Fatalf("resize terminal: %v", err)
 	}
 
-	if _, err := m.Resize(TerminalResizeRequest{SessionID: start.SessionID, Cols: 0, Rows: 40}); err == nil {
+	if _, err := m.Resize(ResizeRequest{SessionID: start.SessionID, Cols: 0, Rows: 40}); err == nil {
 		t.Fatal("expected resize error when cols is zero")
 	}
 
-	sub, err := m.Subscribe(TerminalSubscribeRequest{SessionID: start.SessionID})
+	sub, err := m.Subscribe(SubscribeRequest{SessionID: start.SessionID})
 	if err != nil {
 		t.Fatalf("subscribe: %v", err)
 	}
 
-	resp, err := m.Unsubscribe(TerminalUnsubscribeRequest{SessionID: start.SessionID, SubscriptionID: sub.ID})
+	resp, err := m.Unsubscribe(UnsubscribeRequest{SessionID: start.SessionID, SubscriptionID: sub.ID})
 	if err != nil {
 		t.Fatalf("unsubscribe: %v", err)
 	}

@@ -1,4 +1,4 @@
-import type { TerminalResourceUsageSnapshot } from "@api-service/domain/terminal/types";
+import type { TerminalResourceUsageSnapshot } from "../rpc/daemonTypes";
 import { useEffect, useRef, useState } from "react";
 import { withTimeout } from "../helpers/withTimeout";
 

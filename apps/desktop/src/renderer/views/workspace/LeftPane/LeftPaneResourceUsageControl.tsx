@@ -1,7 +1,7 @@
-import type { TerminalResourceUsageSnapshot } from "@api-service/domain/terminal/types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useInRouterContext, useLocation } from "react-router-dom";
+import type { TerminalResourceUsageSnapshot } from "../../../rpc/daemonTypes";
 import {
   WorkspaceResourceTableMenu,
   type WorkspaceResourceTableMenuRow,

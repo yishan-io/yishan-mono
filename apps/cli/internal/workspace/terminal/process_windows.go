@@ -1,10 +1,10 @@
 //go:build windows
 
-package workspace
+package terminal
 
 import "os/exec"
 
-func stopTerminalProcess(cmd *exec.Cmd) error {
+func stopProcess(cmd *exec.Cmd) error {
 	if cmd.Process == nil {
 		return nil
 	}
