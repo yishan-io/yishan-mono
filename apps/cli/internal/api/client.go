@@ -29,6 +29,19 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("request failed: %s %s -> %s\n%s", e.Method, e.Path, e.Status, string(e.Body))
 }
 
+type TokenRefreshError struct {
+	RequestError error
+	RefreshError error
+}
+
+func (e *TokenRefreshError) Error() string {
+	return fmt.Sprintf("request unauthorized and token refresh failed: %v", e.RefreshError)
+}
+
+func (e *TokenRefreshError) Unwrap() error {
+	return e.RefreshError
+}
+
 type Client struct {
 	http           *resty.Client
 	accessToken    string
@@ -50,9 +63,11 @@ func (c *Client) DoRaw(method string, path string, body any) ([]byte, error) {
 	responseBody, err := c.doRaw(method, path, body)
 	if apiErr, ok := err.(*APIError); ok && apiErr.StatusCode == http.StatusUnauthorized {
 		if c.refreshToken != "" && !isRefreshRequest(path) {
-			if refreshErr := c.refreshAccessToken(); refreshErr == nil {
+			refreshErr := c.refreshAccessToken()
+			if refreshErr == nil {
 				return c.doRaw(method, path, body)
 			}
+			return nil, &TokenRefreshError{RequestError: err, RefreshError: refreshErr}
 		}
 	}
 

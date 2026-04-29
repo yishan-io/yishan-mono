@@ -295,6 +295,16 @@ function delay(ms: number): Promise<void> {
   });
 }
 
+function formatDevDaemonExitFailure(exitCode: number | null, signal: NodeJS.Signals | null, output: string): string {
+  const status = typeof exitCode === "number" ? `code ${exitCode}` : `signal ${signal ?? "unknown"}`;
+  const details = output.trim();
+  if (!details) {
+    return `dev daemon exited before becoming healthy (${status})`;
+  }
+
+  return `dev daemon exited before becoming healthy (${status}): ${details}`;
+}
+
 export class DaemonManager {
   private readonly run: CliCommandRunner;
   private readonly logger: DaemonLogger;
@@ -343,20 +353,37 @@ export class DaemonManager {
     }
 
     const invocation = resolveCliInvocation();
+    let output = "";
     const child = spawn(invocation.executablePath, [...invocation.prefixArgs, "daemon", "run", "--jwt-required=false"], {
-      stdio: ["ignore", "ignore", "ignore"],
+      stdio: ["ignore", "pipe", "pipe"],
       env: process.env,
       cwd: invocation.cwd,
     });
 
     this.devDaemonChild = child;
+    child.stdout?.on("data", (chunk) => {
+      output += chunk.toString();
+    });
+    child.stderr?.on("data", (chunk) => {
+      output += chunk.toString();
+    });
+
+    const exitBeforeHealthy = new Promise<never>((_, reject) => {
+      child.once("error", (error) => {
+        reject(error);
+      });
+      child.once("exit", (exitCode, signal) => {
+        reject(new Error(formatDevDaemonExitFailure(exitCode, signal, output)));
+      });
+    });
+
     child.once("exit", () => {
       if (this.devDaemonChild === child) {
         this.devDaemonChild = null;
       }
     });
 
-    await this.waitForHealthy();
+    await Promise.race([this.waitForHealthy(), exitBeforeHealthy]);
   }
 
   private async stopDevForegroundDaemon(): Promise<boolean> {
