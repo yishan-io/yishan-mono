@@ -44,6 +44,12 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 		return created, nil
 	case MethodAgentListDetectionStatuses:
 		return ListAgentCLIDetectionStatuses(), nil
+	case MethodEventsStream:
+		subscriptionID, events := h.events.Subscribe()
+		connState.AttachEventStream(events, func() {
+			h.events.Unsubscribe(subscriptionID)
+		})
+		return map[string]bool{"subscribed": true}, nil
 	case MethodFileRead:
 		var req fileReadParams
 		if err := decodeParams(params, &req); err != nil {

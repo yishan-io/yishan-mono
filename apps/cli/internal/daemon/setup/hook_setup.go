@@ -62,6 +62,13 @@ func EnsureAgentHookSetup(cfg AgentHookSetupConfig) error {
 	if err := ensureClaudeHookSettings(notifyScriptPath, homeDir, goos); err != nil {
 		setupErr = err
 	}
+	if err := ensureManagedOpenCodeConfigOverlay(configHome); err != nil {
+		if setupErr != nil {
+			setupErr = fmt.Errorf("%v; %w", setupErr, err)
+		} else {
+			setupErr = err
+		}
+	}
 	if err := ensureOpenCodePlugin(notifyScriptPath, configHome, goos); err != nil {
 		if setupErr != nil {
 			setupErr = fmt.Errorf("%v; %w", setupErr, err)
@@ -88,6 +95,7 @@ func EnsureManagedAgentRuntime() {
 	if err := ensureManagedShellSetup(managedRootDir); err != nil {
 		log.Warn().Err(err).Msg("failed to install managed shell setup")
 	}
+	managedOpenCodeConfigHome := filepath.Join(managedRootDir, "opencode-config-home")
 
 	notifyScriptPath := assets.notifyScriptPath
 	if runtime.GOOS == "windows" {
@@ -96,7 +104,7 @@ func EnsureManagedAgentRuntime() {
 
 	if err := EnsureAgentHookSetup(AgentHookSetupConfig{
 		NotifyScriptPath: notifyScriptPath,
-		XDGConfigHome:    filepath.Join(managedRootDir, "opencode-config-home"),
+		XDGConfigHome:    managedOpenCodeConfigHome,
 	}); err != nil {
 		log.Warn().Err(err).Msg("failed to install agent hook setup")
 	}
@@ -140,9 +148,20 @@ func ensureClaudeHookSettings(notifyScriptPath string, homeDir string, goos stri
 }
 
 func ensureOpenCodePlugin(notifyScriptPath string, configHome string, goos string) error {
-	pluginPath := filepath.Join(configHome, "opencode", "plugin", openCodePluginFileName)
+	pluginPath := filepath.Join(configHome, "plugin", openCodePluginFileName)
 	content := buildOpenCodePluginContent(notifyScriptPath, "YISHAN_TAB_ID", openCodePluginMarker, goos)
 	return writeTextFileIfChanged(pluginPath, content, 0o644)
+}
+
+func ensureManagedOpenCodeConfigOverlay(configHome string) error {
+	configPath := filepath.Join(configHome, "opencode.json")
+	if _, err := os.Stat(configPath); err == nil {
+		return nil
+	} else if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	return writeTextFileIfChanged(configPath, "{}\n", 0o644)
 }
 
 func buildManagedClaudeEvents(notifyScriptPath string, goos string) []struct {

@@ -98,6 +98,7 @@ func Run(cfg RunConfig, statePath string) error {
 
 	mux := http.NewServeMux()
 	mux.Handle("/ws", auth.Middleware(handler))
+	mux.HandleFunc(agentHookIngestPath, handler.ServeAgentHook)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -121,6 +122,7 @@ func Run(cfg RunConfig, statePath string) error {
 	}); err != nil {
 		return fmt.Errorf("save daemon state: %w", err)
 	}
+	_ = os.Setenv("YISHAN_HOOK_INGRESS_URL", "http://"+actualAddr+agentHookIngestPath)
 	setup.EnsureManagedAgentRuntime()
 	defer func() {
 		if err := RemoveState(statePath); err != nil {

@@ -68,7 +68,7 @@ func TestEnsureAgentHookSetupMergesClaudeHooksAndOpenCodePlugin(t *testing.T) {
 		t.Fatalf("expected managed Claude hook to use quoted notify script path: %s", stopCommand)
 	}
 
-	pluginPath := filepath.Join(configHome, "opencode", "plugin", openCodePluginFileName)
+	pluginPath := filepath.Join(configHome, "plugin", openCodePluginFileName)
 	pluginRaw, err := os.ReadFile(pluginPath)
 	if err != nil {
 		t.Fatalf("read OpenCode plugin: %v", err)
@@ -82,6 +82,13 @@ func TestEnsureAgentHookSetupMergesClaudeHooksAndOpenCodePlugin(t *testing.T) {
 	}
 	if !strings.Contains(pluginText, "--agent opencode --event ${hookEventName}") {
 		t.Fatalf("expected OpenCode plugin notifier command")
+	}
+	configRaw, err := os.ReadFile(filepath.Join(configHome, "opencode.json"))
+	if err != nil {
+		t.Fatalf("read OpenCode config: %v", err)
+	}
+	if string(configRaw) != "{}\n" {
+		t.Fatalf("expected default OpenCode config overlay, got %q", string(configRaw))
 	}
 }
 
@@ -114,7 +121,7 @@ func TestEnsureAgentHookSetupUsesPowerShellCommandsOnWindows(t *testing.T) {
 		t.Fatalf("expected PowerShell Claude command, got %s", stopCommand)
 	}
 
-	pluginRaw, err := os.ReadFile(filepath.Join(configHome, "opencode", "plugin", openCodePluginFileName))
+	pluginRaw, err := os.ReadFile(filepath.Join(configHome, "plugin", openCodePluginFileName))
 	if err != nil {
 		t.Fatalf("read OpenCode plugin: %v", err)
 	}

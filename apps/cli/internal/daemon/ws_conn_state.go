@@ -13,6 +13,8 @@ type wsConnState struct {
 	closeOnce     sync.Once
 	subsMu        sync.Mutex
 	subscriptions map[string]subscriptionHandle
+	eventsMu      sync.Mutex
+	eventsCancel  func()
 }
 
 type subscriptionHandle struct {
@@ -48,6 +50,7 @@ func (c *wsConnState) Close() {
 		for _, handle := range handles {
 			handle.cancel(handle.sessionID, handle.subscriptionID)
 		}
+		c.DetachEventStream()
 		_ = c.conn.Close()
 	})
 }
@@ -95,5 +98,39 @@ func (c *wsConnState) DetachSubscription(sessionID string) {
 
 	if ok {
 		handle.cancel(handle.sessionID, handle.subscriptionID)
+	}
+}
+
+func (c *wsConnState) AttachEventStream(events <-chan frontendEvent, cancel func()) {
+	c.eventsMu.Lock()
+	previousCancel := c.eventsCancel
+	c.eventsCancel = cancel
+	c.eventsMu.Unlock()
+
+	if previousCancel != nil {
+		previousCancel()
+	}
+
+	go func() {
+		for event := range events {
+			if err := c.Notify(MethodEventsStream, map[string]any{
+				"topic":   event.Topic,
+				"payload": event.Payload,
+			}); err != nil {
+				c.DetachEventStream()
+				return
+			}
+		}
+	}()
+}
+
+func (c *wsConnState) DetachEventStream() {
+	c.eventsMu.Lock()
+	cancel := c.eventsCancel
+	c.eventsCancel = nil
+	c.eventsMu.Unlock()
+
+	if cancel != nil {
+		cancel()
 	}
 }

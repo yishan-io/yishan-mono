@@ -24,7 +24,7 @@ if [ -n "${MANAGED_BIN_DIR:-}" ]; then
   managed_bin_dir="${MANAGED_BIN_DIR%/}"
   if [[ "$managed_bin_dir" == */bin ]]; then
     managed_root_dir="${managed_bin_dir%/bin}"
-    export XDG_CONFIG_HOME="${managed_root_dir}/opencode-config-home"
+    export OPENCODE_CONFIG_DIR="${managed_root_dir}/opencode-config-home"
   fi
 fi
 

@@ -850,7 +850,12 @@ export class DaemonClient {
       return subscriptionId;
     }
 
-    if (options.namespace === "terminal" || options.namespace === "git" || options.namespace === "file") {
+    if (
+      options.namespace === "terminal" ||
+      options.namespace === "git" ||
+      options.namespace === "file" ||
+      options.namespace === "events"
+    ) {
       return await this.startRawSubscription({
         method: path,
         params: options.input,

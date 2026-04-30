@@ -15,6 +15,7 @@ type JSONRPCHandler struct {
 	manager         *workspace.Manager
 	nodeID          string
 	createWorkspace func(context.Context, WorkspaceCreation) error
+	events          *eventHub
 }
 
 func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, createWorkspace func(context.Context, WorkspaceCreation) error) *JSONRPCHandler {
@@ -25,6 +26,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, createWorkspac
 		manager:         manager,
 		nodeID:          nodeID,
 		createWorkspace: createWorkspace,
+		events:          newEventHub(),
 	}
 }
 

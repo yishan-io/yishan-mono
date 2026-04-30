@@ -177,10 +177,6 @@ async function subscribeDaemonProcedure(
   input: unknown,
   handlers: ApiSubscriptionHandlers,
 ): Promise<() => void> {
-  if (path === "events.stream") {
-    return () => {};
-  }
-
   const parsed = parseProcedurePath(path);
   if (!parsed) {
     throw new Error(`Unsupported API subscription path: ${path}`);
