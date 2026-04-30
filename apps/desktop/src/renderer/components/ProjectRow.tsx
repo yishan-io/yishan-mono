@@ -60,11 +60,12 @@ export function ProjectRow({
               width: 20,
               height: 20,
               bgcolor: repo.color ?? theme.palette.primary.main,
+              color: theme.palette.common.white,
               fontSize: 12,
               fontWeight: 700,
             }}
           >
-            {renderProjectIcon(repo.icon, 12)}
+            {renderProjectIcon(repo.icon ?? undefined, 12)}
           </Avatar>
           <Box sx={{ minWidth: 0, flexGrow: 1 }}>
             <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
