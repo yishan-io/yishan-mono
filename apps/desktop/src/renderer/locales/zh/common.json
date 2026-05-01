@@ -1,6 +1,13 @@
 {
   "app": {
     "title": "Yishan",
+    "update": {
+      "readyTitle": "有可用更新",
+      "readyTitleWithVersion": "发现新版本 {{version}}",
+      "readyDescription": "立即重启 Yishan 以安装最新版本。",
+      "restartAction": "重启并更新",
+      "closeAria": "关闭更新通知"
+    },
     "bootstrap": {
       "title": "正在准备你的工作区",
       "description": "正在加载用户信息、组织、项目、节点和工作区...",

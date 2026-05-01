@@ -39,6 +39,10 @@ export type PlayNotificationSoundInput = {
   volume: number;
 };
 
+export type DesktopUpdateEventPayload = {
+  version?: string;
+};
+
 export type MainWindowFullscreenState = {
   isFullscreen: boolean;
 };
@@ -79,6 +83,8 @@ export type DesktopHostBridge = {
   readExternalClipboardSourcePaths: () => Promise<ExternalClipboardReadOutcome>;
   dispatchNotification: (input: DispatchNotificationInput) => Promise<NotificationDispatchResult>;
   playNotificationSound: (input: PlayNotificationSoundInput) => Promise<NotificationSoundPreviewResult>;
+  getPendingUpdate: () => Promise<DesktopUpdateEventPayload | null>;
+  installUpdate: () => Promise<{ ok: true }>;
   getAuthStatus: () => Promise<AuthStatusResult>;
   login: () => Promise<AuthLoginResult>;
   getAuthTokens: () => Promise<AuthTokensResult>;
@@ -107,6 +113,8 @@ export const HOST_IPC_CHANNELS = {
   readExternalClipboardSourcePaths: "desktop:host/read-external-clipboard-source-paths",
   dispatchNotification: "desktop:host/dispatch-notification",
   playNotificationSound: "desktop:host/play-notification-sound",
+  getPendingUpdate: "desktop:host/get-pending-update",
+  installUpdate: "desktop:host/install-update",
   getAuthStatus: "desktop:host/get-auth-status",
   login: "desktop:host/login",
   getAuthTokens: "desktop:host/get-auth-tokens",

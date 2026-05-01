@@ -1,21 +1,22 @@
 import "./style.css";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { CssBaseline } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
+import { QueryClientProvider } from "@tanstack/react-query";
 import React, { useEffect, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import { HashRouter, Route, Routes } from "react-router-dom";
-import { i18n } from "./i18n";
+import { AppUpdateSnackbar } from "./components/AppUpdateSnackbar";
 import { WorkspaceOverlay } from "./components/WorkspaceOverlay";
 import { startBackendEventPipeline, startBackendEventStoreBindings } from "./events";
 import { AppThemePreferenceProvider, useThemePreference } from "./hooks/useThemePreference";
+import { i18n } from "./i18n";
+import { rendererQueryClient } from "./queryClient";
 import { createAppTheme } from "./theme";
 import { KeyBindingsView } from "./views/KeyBindingsView";
 import { SettingsView } from "./views/SettingsView";
 import { AppShell } from "./views/layout/AppShell";
 import { ApplicationRouterView, NotFoundRouteView } from "./views/layout/ApplicationRouterView";
-import { rendererQueryClient } from "./queryClient";
 
 /** Renders app routes with a shared theme-preference context. */
 function AppRoot() {
@@ -62,6 +63,7 @@ function AppRoot() {
             </Route>
           </Routes>
         </HashRouter>
+        <AppUpdateSnackbar />
       </ThemeProvider>
     </QueryClientProvider>
   );

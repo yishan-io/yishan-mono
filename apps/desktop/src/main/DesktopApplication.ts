@@ -1,13 +1,14 @@
 import { statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { BrowserWindow, app, dialog, ipcMain } from "electron";
+import { autoUpdater } from "electron-updater";
 import type { AppActionPayload } from "../shared/contracts/actions";
 import { configureApplicationMenu } from "./app/menu";
 import { getAuthStatus, getAuthTokens, login } from "./auth/cliAuth";
 import { DaemonManager } from "./daemon/daemonManager";
 import { launchPath, openExternalUrl } from "./integrations/externalAppLauncher";
 import { readExternalClipboardSourcePathsFromSystem } from "./integrations/externalClipboardPipeline";
-import { DESKTOP_RPC_IPC_CHANNELS, HOST_IPC_CHANNELS } from "./ipc";
+import { DESKTOP_RPC_IPC_CHANNELS, type DesktopUpdateEventPayload, HOST_IPC_CHANNELS } from "./ipc";
 import { createDesktopNotificationHostAdapter } from "./notifications/service";
 import { isDevMode } from "./runtime/environment";
 import { startAutoUpdates } from "./updates/autoUpdateService";
@@ -23,6 +24,7 @@ export class DesktopApplication {
   private mainWindow: BrowserWindow | null = null;
   private readonly daemonManager = new DaemonManager();
   private hasProcessedBeforeQuit = false;
+  private pendingUpdateReady: DesktopUpdateEventPayload | null = null;
 
   /**
    * Starts the desktop app and exits on startup failure.
@@ -57,7 +59,12 @@ export class DesktopApplication {
         this.dispatchAction(payload, options);
       },
     });
-    startAutoUpdates({ app });
+    startAutoUpdates({
+      app,
+      notifyUpdateReady: (payload) => {
+        this.dispatchUpdateReady(payload);
+      },
+    });
 
     if (isDevMode()) {
       app.on("before-quit", (event) => {
@@ -208,6 +215,15 @@ export class DesktopApplication {
         played: true,
       };
     });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.getPendingUpdate, async () => {
+      return this.pendingUpdateReady;
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.installUpdate, async () => {
+      autoUpdater.quitAndInstall();
+      return { ok: true };
+    });
   }
 
   /** Focuses the main window when menu actions should bring the app forward. */
@@ -226,6 +242,15 @@ export class DesktopApplication {
     if (options?.focusApp) {
       this.focusMainWindow();
     }
+  }
+
+  /** Forwards a downloaded app update event to renderer update prompts. */
+  private dispatchUpdateReady(payload: DesktopUpdateEventPayload): void {
+    this.pendingUpdateReady = payload;
+    this.mainWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
+      method: "desktopUpdateReady",
+      payload,
+    });
   }
 
   /**

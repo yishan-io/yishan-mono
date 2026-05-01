@@ -1,6 +1,13 @@
 {
   "app": {
     "title": "Yishan",
+    "update": {
+      "readyTitle": "An update is available",
+      "readyTitleWithVersion": "Update {{version}} is available",
+      "readyDescription": "Restart Yishan now to install the latest version.",
+      "restartAction": "Restart and update",
+      "closeAria": "Close update notification"
+    },
     "bootstrap": {
       "title": "Preparing your workspace",
       "description": "Loading user info, organizations, projects, nodes, and workspaces...",
