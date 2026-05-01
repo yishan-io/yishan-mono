@@ -24,7 +24,12 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuCircleHelp, LuExternalLink, LuFolderOpen } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../../../shared/contracts/externalApps";
-import { DEFAULT_PROJECT_ICON_ID, PROJECT_ICON_OPTIONS, findProjectIconOption, renderProjectIcon } from "../../../components/projectIcons";
+import {
+  DEFAULT_PROJECT_ICON_ID,
+  PROJECT_ICON_OPTIONS,
+  findProjectIconOption,
+  renderProjectIcon,
+} from "../../../components/projectIcons";
 import { useCommands } from "../../../hooks/useCommands";
 import { workspaceStore } from "../../../store/workspaceStore";
 
@@ -62,7 +67,8 @@ function getDefaultDraft(): ProjectConfigDraft {
 export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfigDialogViewProps) {
   const { t } = useTranslation();
   const projects = workspaceStore((state) => state.projects);
-  const { updateProjectConfig, getDefaultWorktreeLocation, openEntryInExternalApp, openLocalFolderDialog } = useCommands();
+  const { updateProjectConfig, getDefaultWorktreeLocation, openEntryInExternalApp, openLocalFolderDialog } =
+    useCommands();
   const repo = projects.find((item) => item.id === repoId);
   const [draft, setDraft] = useState<ProjectConfigDraft>(getDefaultDraft);
   const [iconAnchorEl, setIconAnchorEl] = useState<HTMLElement | null>(null);
@@ -119,7 +125,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
         name: repo.name,
         worktreePath,
         contextEnabled: repo.contextEnabled ?? true,
-        icon: findProjectIconOption(repo.icon)?.id ?? DEFAULT_PROJECT_ICON_ID,
+        icon: findProjectIconOption(repo.icon ?? undefined)?.id ?? DEFAULT_PROJECT_ICON_ID,
         color: repo.color ?? DEFAULT_ICON_BG_COLOR,
         setupScript: repo.setupScript ?? "",
         postScript: repo.postScript ?? "",
@@ -161,9 +167,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
       return;
     }
 
-    const normalizedIconBgColor = /^#[0-9a-fA-F]{6}$/.test(draft.color)
-      ? draft.color
-      : DEFAULT_ICON_BG_COLOR;
+    const normalizedIconBgColor = /^#[0-9a-fA-F]{6}$/.test(draft.color) ? draft.color : DEFAULT_ICON_BG_COLOR;
 
     updateProjectConfigMutation.mutate({
       projectId: repo.id,
@@ -180,7 +184,13 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
   };
 
   return (
-    <Dialog open={open} onClose={isSaving ? undefined : onClose} fullWidth maxWidth="sm" disableEscapeKeyDown={isSaving}>
+    <Dialog
+      open={open}
+      onClose={isSaving ? undefined : onClose}
+      fullWidth
+      maxWidth="sm"
+      disableEscapeKeyDown={isSaving}
+    >
       <DialogTitle>{t("project.actions.config")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
@@ -188,10 +198,10 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               Repo name
             </Typography>
-              <TextField
-                size="small"
-                disabled={isSaving}
-                value={draft.name}
+            <TextField
+              size="small"
+              disabled={isSaving}
+              value={draft.name}
               onChange={(event) =>
                 setDraft((previous) => ({
                   ...previous,
@@ -265,13 +275,13 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
           <Box>
             <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 1 }}>
               <Typography variant="body2" color="text.secondary">
-                Private context hook
+                Context
               </Typography>
               <Tooltip
-                title="Private context stores repo-specific notes and guidance (briefs, decisions, references) outside the git repo so agents can reuse it across workspaces. This switch controls whether Yishan auto-creates the `.private-context` link in new workspaces."
+                title="Context stores repo-specific notes and guidance (briefs, decisions, references) outside the git repo so agents can reuse it across workspaces. This switch controls whether Yishan auto-creates the context link in new workspaces."
                 arrow
               >
-                <IconButton size="small" aria-label="What is private context?" sx={{ p: 0.25 }}>
+                <IconButton size="small" aria-label="What is context?" sx={{ p: 0.25 }}>
                   <LuCircleHelp size={14} />
                 </IconButton>
               </Tooltip>
@@ -293,7 +303,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
               label={draft.contextEnabled ? "Enabled" : "Disabled"}
             />
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-              Creates `.private-context` symlink on new workspace creation.
+              Creates context symlink on new workspace creation.
             </Typography>
           </Box>
           <Box>
@@ -311,7 +321,12 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                   endAdornment: (
                     <InputAdornment position="end">
                       <Tooltip title="Choose folder" arrow>
-                        <IconButton edge="end" aria-label="Choose worktree folder" disabled={isSaving} onClick={handlePickWorktreeFolder}>
+                        <IconButton
+                          edge="end"
+                          aria-label="Choose worktree folder"
+                          disabled={isSaving}
+                          onClick={handlePickWorktreeFolder}
+                        >
                           <LuFolderOpen size={18} />
                         </IconButton>
                       </Tooltip>
@@ -480,7 +495,9 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
         </Popover>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={isSaving}>{t("common.actions.cancel")}</Button>
+        <Button onClick={onClose} disabled={isSaving}>
+          {t("common.actions.cancel")}
+        </Button>
         <Button
           variant="contained"
           onClick={handleSave}
