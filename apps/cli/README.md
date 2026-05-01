@@ -4,6 +4,15 @@ Go-based CLI built with Cobra, Viper, and Zerolog.
 
 ## Run
 
+Install the latest released CLI with Homebrew:
+
+```bash
+brew tap yishan-io/tap
+brew install yishan
+```
+
+Run from source during development:
+
 ```bash
 go run .
 ```
@@ -117,14 +126,15 @@ The CLI reads env vars with the `YISHAN_` prefix.
 - `YISHAN_DAEMON_JWT_ISSUER` (optional)
 - `YISHAN_DAEMON_JWT_AUDIENCE` (optional)
 - `YISHAN_DAEMON_JWT_REQUIRED` (default: `true`)
-- `YISHAN_API_BASE_URL` (default: `http://127.0.0.1:8787`)
+- `YISHAN_API_BASE_URL` (default: `https://api.yishan.io`)
 - `YISHAN_API_TOKEN` (optional Bearer token for protected API routes)
 
 You can also set `--log-level` on any command.
 
 ## Release
 
-The CLI is released with GoReleaser using tags like `v1.0.0`.
+The CLI is released with GoReleaser using component-specific tags like `cli-v1.0.0`.
 
 - Local dry run: `goreleaser release --snapshot --clean --config .goreleaser.yaml`
 - CI release workflow: `.github/workflows/cli-goreleaser.yml`
+- Homebrew formula publishing uses `yishan-io/homebrew-tap` and requires the `HOMEBREW_TAP_GITHUB_TOKEN` repository secret.

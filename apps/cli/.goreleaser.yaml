@@ -35,6 +35,19 @@ archives:
 checksum:
   name_template: checksums.txt
 
+brews:
+  - name: yishan
+    repository:
+      owner: yishan-io
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/yishan-io/yishan-mono"
+    description: "CLI and local daemon for Yishan"
+    license: "Elastic-2.0"
+    install: |
+      bin.install "yishan"
+
 changelog:
   use: git
 

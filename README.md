@@ -128,7 +128,7 @@ bun --cwd apps/api-service run check
 The CLI reads `YISHAN_`-prefixed environment variables. Common values:
 
 - `YISHAN_PROFILE`: profile name, default `default`.
-- `YISHAN_API_BASE_URL`: API service URL, default `http://127.0.0.1:8787`.
+- `YISHAN_API_BASE_URL`: API service URL, default `https://api.yishan.io`.
 - `YISHAN_API_TOKEN`: API bearer token.
 - `YISHAN_DAEMON_HOST`: daemon host, default `127.0.0.1`.
 - `YISHAN_DAEMON_PORT`: daemon port, default `0` for a random free port.
