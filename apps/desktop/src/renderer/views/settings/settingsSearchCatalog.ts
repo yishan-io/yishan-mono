@@ -91,6 +91,22 @@ const SETTINGS_TAB_SEARCH_ITEMS: SettingsSearchCatalogItem[] = SETTINGS_NAV_SECT
   })),
 );
 
+const ACCOUNT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
+  {
+    id: "account-profile",
+    tab: "account",
+    icon: BiUser,
+    labelKey: "settings.account.title",
+    sectionLabelKey: "settings.items.account",
+    keywordKeys: [
+      "settings.account.description",
+      "settings.account.fields.name",
+      "settings.account.fields.email",
+      "settings.account.fields.userId",
+    ],
+  },
+];
+
 const APPEARANCE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "appearance-theme",
@@ -165,6 +181,7 @@ const NOTIFICATION_SEARCH_ITEMS: SettingsSearchCatalogItem[] = NOTIFICATION_SETT
 
 export const SETTINGS_SEARCH_CATALOG: SettingsSearchCatalogItem[] = [
   ...SETTINGS_TAB_SEARCH_ITEMS,
+  ...ACCOUNT_SEARCH_ITEMS,
   ...AGENT_SEARCH_ITEMS,
   ...APPEARANCE_SEARCH_ITEMS,
   ...DAEMON_SEARCH_ITEMS,

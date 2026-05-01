@@ -49,6 +49,21 @@
       "terminal": "Terminal",
       "workspace": "Workspace"
     },
+    "account": {
+      "title": "Account profile",
+      "description": "Review the profile attached to your signed-in Yishan account.",
+      "loading": "Loading profile information...",
+      "empty": "No signed-in user profile is available.",
+      "avatarAlt": "User avatar",
+      "fields": {
+        "name": "Name",
+        "email": "Email",
+        "userId": "User ID"
+      },
+      "values": {
+        "notAvailable": "Not available"
+      }
+    },
     "git": {
       "workspace": {
         "title": "Workspace branch naming",

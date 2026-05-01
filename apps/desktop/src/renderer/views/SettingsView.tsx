@@ -20,6 +20,7 @@ import { SettingsSectionHeader } from "../components/settings";
 import { ThemePreferencePicker } from "../components/settings/ThemePreferencePicker";
 import { getRendererPlatform } from "../helpers/platform";
 import { useThemePreference } from "../hooks/useThemePreference";
+import { AccountSettingsView } from "./settings/AccountSettingsView";
 import { AgentSettingsView } from "./settings/AgentSettingsView";
 import { DaemonSettingsView } from "./settings/DaemonSettingsView";
 import { GitWorkspaceSettingsView } from "./settings/GitWorkspaceSettingsView";
@@ -100,7 +101,7 @@ export function SettingsView() {
     ) {
       return selectedTabParam;
     }
-    return "notifications";
+    return "account";
   }, [selectedTabParam]);
 
   const normalizedSearchQuery = useMemo(() => normalizeSettingsSearchQuery(searchQuery), [searchQuery]);
@@ -272,6 +273,8 @@ export function SettingsView() {
       >
         {selectedTab === "notifications" ? (
           <NotificationSettingsView focusItemId={focusedNotificationItemId} />
+        ) : selectedTab === "account" ? (
+          <AccountSettingsView />
         ) : selectedTab === "agents" ? (
           <AgentSettingsView />
         ) : selectedTab === "appearance" ? (
@@ -292,7 +295,7 @@ export function SettingsView() {
           <GitWorkspaceSettingsView />
         ) : (
           <Box>
-            <SettingsSectionHeader title={t(`settings.items.${selectedTab}`)} description={t("settings.comingSoon")} />
+            <SettingsSectionHeader title={t("settings.title")} description={t("settings.comingSoon")} />
           </Box>
         )}
       </Box>

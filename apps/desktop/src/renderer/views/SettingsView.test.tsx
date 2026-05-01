@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppThemePreferenceProvider } from "../hooks/useThemePreference";
 import { LAYOUT_STORE_STORAGE_KEY, layoutStore } from "../store/layoutStore";
+import { sessionStore } from "../store/sessionStore";
 import { SettingsView } from "./SettingsView";
 
 vi.mock("react-i18next", () => ({
@@ -43,6 +44,7 @@ describe("SettingsView", () => {
   afterEach(() => {
     window.localStorage.removeItem(LAYOUT_STORE_STORAGE_KEY);
     layoutStore.setState({ themePreference: "system" });
+    sessionStore.setState({ currentUser: null, organizations: [], selectedOrganizationId: undefined, loaded: false });
     cleanup();
     vi.clearAllMocks();
   });
@@ -230,6 +232,92 @@ describe("SettingsView", () => {
     );
 
     expect(screen.getByTestId("agent-settings-panel")).toBeTruthy();
+  });
+
+  it("renders current user profile details on account tab", () => {
+    sessionStore.setState({
+      currentUser: {
+        id: "user-1",
+        email: "user@example.com",
+        name: "Test User",
+        avatarUrl: "https://example.com/avatar.png",
+      },
+      organizations: [],
+      selectedOrganizationId: undefined,
+      loaded: true,
+    });
+
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=account"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    expect(screen.getByText("settings.account.title")).toBeTruthy();
+    expect(screen.getAllByText("Test User").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("user@example.com").length).toBeGreaterThan(0);
+    expect(screen.getByText("user-1")).toBeTruthy();
+  });
+
+  it("renders account profile view by default", () => {
+    sessionStore.setState({
+      currentUser: {
+        id: "user-1",
+        email: "user@example.com",
+        name: "Test User",
+        avatarUrl: null,
+      },
+      organizations: [],
+      selectedOrganizationId: undefined,
+      loaded: true,
+    });
+
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    expect(screen.getByText("settings.account.title")).toBeTruthy();
+    expect(screen.getAllByText("Test User").length).toBeGreaterThan(0);
+  });
+
+  it("renders account loading state safely", () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=account"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    expect(screen.getByText("settings.account.loading")).toBeTruthy();
+  });
+
+  it("renders missing account profile state safely", () => {
+    sessionStore.setState({ currentUser: null, organizations: [], selectedOrganizationId: undefined, loaded: true });
+
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=account"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    expect(screen.getByText("settings.account.empty")).toBeTruthy();
   });
 
   it("matches agent settings in search and opens agents tab", () => {
