@@ -1,4 +1,5 @@
-export const DEFAULT_REMOTE_API_BASE_URL = "http://localhost:8787";
+export const DEFAULT_REMOTE_API_BASE_URL = "https://api.yishan.io";
+export const DEFAULT_DEV_REMOTE_API_BASE_URL = "http://localhost:8787";
 
 type RendererHostBridge = {
   getAuthTokens?: () => Promise<{
@@ -31,7 +32,11 @@ async function resolveAuthHeader(): Promise<string | undefined> {
 
 function resolveApiBaseUrl(): string {
   const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
-  return configuredBaseUrl || DEFAULT_REMOTE_API_BASE_URL;
+  if (configuredBaseUrl) {
+    return configuredBaseUrl;
+  }
+
+  return import.meta.env.DEV ? DEFAULT_DEV_REMOTE_API_BASE_URL : DEFAULT_REMOTE_API_BASE_URL;
 }
 
 export class RestApiError extends Error {
