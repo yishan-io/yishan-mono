@@ -55,6 +55,10 @@ const mocked = vi.hoisted(() => {
     },
   );
   const writeTerminalInput = vi.fn().mockResolvedValue({ ok: true });
+  const renameTab = vi.fn((tabId: string, title: string) => {
+    const state = stateRef.current as { tabs?: Array<{ id: string; title: string }> };
+    state.tabs = state.tabs?.map((tab) => (tab.id === tabId ? { ...tab, title } : tab));
+  });
   const xtermFocus = vi.fn();
   const xtermClear = vi.fn();
   const closeTab = vi.fn((tabId: string) => {
@@ -68,6 +72,7 @@ const mocked = vi.hoisted(() => {
     clearActiveDecoration: vi.fn(),
   };
   let terminalCustomKeyEventHandler: ((event: KeyboardEvent) => boolean) | undefined;
+  const terminalDataHandlers: Array<((data: string) => void) | undefined> = [];
   const loadTerminalAddons = vi.fn(() => ({
     fitAddon: {
       fit() {},
@@ -88,6 +93,7 @@ const mocked = vi.hoisted(() => {
     xtermFocus,
     xtermClear,
     closeTab,
+    renameTab,
     searchAddon,
     loadTerminalAddons,
     setTerminalCustomKeyEventHandler: (handler: ((event: KeyboardEvent) => boolean) | undefined) => {
@@ -95,8 +101,21 @@ const mocked = vi.hoisted(() => {
     },
     dispatchTerminalKeyEvent: (type: "keydown" | "keypress" | "keyup", input: KeyboardEventInit) =>
       terminalCustomKeyEventHandler?.(new KeyboardEvent(type, input)),
+    emitTerminalInput: (data: string, terminalIndex = terminalDataHandlers.length - 1) => {
+      terminalDataHandlers[terminalIndex]?.(data);
+    },
     emitTerminalEvent: (sessionId: string, event: TerminalOutputEvent) => {
       subscriptions.get(sessionId)?.onData(event);
+    },
+    addTerminalDataHandler: (handler: (data: string) => void) => {
+      terminalDataHandlers.push(handler);
+      return terminalDataHandlers.length - 1;
+    },
+    removeTerminalDataHandler: (handlerIndex: number) => {
+      terminalDataHandlers[handlerIndex] = undefined;
+    },
+    clearTerminalDataHandlers: () => {
+      terminalDataHandlers.length = 0;
     },
   };
 });
@@ -118,6 +137,7 @@ vi.mock("../../hooks/useCommands", () => ({
     resizeTerminal: mocked.resizeTerminal,
     subscribeTerminalOutput: mocked.subscribeTerminalOutput,
     writeTerminalInput: mocked.writeTerminalInput,
+    renameTab: mocked.renameTab,
   }),
 }));
 
@@ -126,6 +146,7 @@ vi.mock("@xterm/xterm", () => {
     cols = 120;
     rows = 30;
     private onDataHandler: ((data: string) => void) | undefined;
+    private onDataHandlerIndex: number | undefined;
 
     open() {}
     reset() {}
@@ -146,9 +167,13 @@ vi.mock("@xterm/xterm", () => {
     }
     onData(handler: (data: string) => void) {
       this.onDataHandler = handler;
+      this.onDataHandlerIndex = mocked.addTerminalDataHandler(handler);
       return {
         dispose: () => {
           this.onDataHandler = undefined;
+          if (this.onDataHandlerIndex !== undefined) {
+            mocked.removeTerminalDataHandler(this.onDataHandlerIndex);
+          }
         },
       };
     }
@@ -167,6 +192,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   mocked.setTerminalCustomKeyEventHandler(undefined);
+  mocked.clearTerminalDataHandlers();
   vi.clearAllMocks();
 });
 
@@ -335,6 +361,205 @@ describe("TerminalView", () => {
         data: "exec codex\r",
       });
     });
+    expect(mocked.renameTab).toHaveBeenCalledWith("terminal-tab-2", "codex");
+  });
+
+  it("updates terminal tab title from submitted command input", async () => {
+    const state = buildStoreState();
+    mocked.stateRef.current = state;
+    mocked.createTerminalSession.mockResolvedValueOnce({
+      sessionId: "session-title",
+      cwd: "/tmp/workspace-1",
+      cols: 120,
+      rows: 30,
+    });
+    mocked.readTerminalOutput.mockResolvedValueOnce({
+      nextIndex: 0,
+      chunks: [],
+      exited: false,
+      exitCode: null,
+      signalCode: null,
+    });
+    mocked.resizeTerminal.mockResolvedValue({ ok: true });
+
+    class MockResizeObserver {
+      observe() {}
+      disconnect() {}
+    }
+
+    vi.stubGlobal("ResizeObserver", MockResizeObserver);
+
+    render(<TerminalView tabId="terminal-tab-1" />);
+    await waitFor(() => {
+      expect(mocked.createTerminalSession).toHaveBeenCalled();
+    });
+
+    mocked.emitTerminalInput("git status\r");
+
+    expect(mocked.renameTab).toHaveBeenCalledWith("terminal-tab-1", "git status");
+  });
+
+  it("strips terminal color and control sequences from submitted command titles", async () => {
+    const state = buildStoreState();
+    mocked.stateRef.current = state;
+    mocked.createTerminalSession.mockResolvedValueOnce({
+      sessionId: "session-escaped-title",
+      cwd: "/tmp/workspace-1",
+      cols: 120,
+      rows: 30,
+    });
+    mocked.readTerminalOutput.mockResolvedValueOnce({
+      nextIndex: 0,
+      chunks: [],
+      exited: false,
+      exitCode: null,
+      signalCode: null,
+    });
+    mocked.resizeTerminal.mockResolvedValue({ ok: true });
+
+    class MockResizeObserver {
+      observe() {}
+      disconnect() {}
+    }
+
+    vi.stubGlobal("ResizeObserver", MockResizeObserver);
+
+    render(<TerminalView tabId="terminal-tab-1" />);
+    await waitFor(() => {
+      expect(mocked.createTerminalSession).toHaveBeenCalled();
+    });
+
+    mocked.emitTerminalInput("\u001b[31mpnpm test\u001b[0m\u0007\r");
+
+    expect(mocked.renameTab).toHaveBeenCalledWith("terminal-tab-1", "pnpm test");
+  });
+
+  it("uses workspace directory title until a command is submitted", async () => {
+    const state = buildStoreState();
+    mocked.stateRef.current = state;
+    mocked.createTerminalSession.mockResolvedValueOnce({
+      sessionId: "session-default-title",
+      cwd: "/tmp/workspace-1",
+      cols: 120,
+      rows: 30,
+    });
+    mocked.readTerminalOutput.mockResolvedValueOnce({
+      nextIndex: 0,
+      chunks: [],
+      exited: false,
+      exitCode: null,
+      signalCode: null,
+    });
+    mocked.resizeTerminal.mockResolvedValue({ ok: true });
+
+    class MockResizeObserver {
+      observe() {}
+      disconnect() {}
+    }
+
+    vi.stubGlobal("ResizeObserver", MockResizeObserver);
+
+    render(<TerminalView tabId="terminal-tab-1" />);
+    await waitFor(() => {
+      expect(mocked.createTerminalSession).toHaveBeenCalled();
+    });
+
+    mocked.emitTerminalInput("\r");
+
+    expect(mocked.renameTab).toHaveBeenCalledWith("terminal-tab-1", "workspace-1");
+    expect(mocked.renameTab).not.toHaveBeenCalledWith("terminal-tab-1", "");
+  });
+
+  it("restores a current-directory title from terminal OSC output", async () => {
+    const state = buildStoreState();
+    mocked.stateRef.current = state;
+    mocked.createTerminalSession.mockResolvedValueOnce({
+      sessionId: "session-osc-title",
+      cwd: "/tmp/workspace-1",
+      cols: 120,
+      rows: 30,
+    });
+    mocked.readTerminalOutput.mockResolvedValueOnce({
+      nextIndex: 0,
+      chunks: [],
+      exited: false,
+      exitCode: null,
+      signalCode: null,
+    });
+    mocked.resizeTerminal.mockResolvedValue({ ok: true });
+
+    class MockResizeObserver {
+      observe() {}
+      disconnect() {}
+    }
+
+    vi.stubGlobal("ResizeObserver", MockResizeObserver);
+
+    render(<TerminalView tabId="terminal-tab-1" />);
+    await waitFor(() => {
+      expect(mocked.subscribeTerminalOutput).toHaveBeenCalled();
+    });
+
+    mocked.emitTerminalEvent("session-osc-title", {
+      type: "output",
+      sessionId: "session-osc-title",
+      chunk: "\u001b]0;zhex@mac:/Users/zhex/code/work/vestin/yishan\u0007",
+      nextIndex: 1,
+    });
+
+    expect(mocked.renameTab).toHaveBeenCalledWith("terminal-tab-1", "yishan");
+  });
+
+  it("truncates long command titles and keeps terminal tabs independent", async () => {
+    const state = buildStoreState();
+    const firstTerminalTab = state.tabs[0];
+    if (!firstTerminalTab) {
+      throw new Error("Expected default terminal tab");
+    }
+    state.tabs = [
+      firstTerminalTab,
+      {
+        id: "terminal-tab-2",
+        workspaceId: "workspace-1",
+        title: "Terminal",
+        pinned: false,
+        kind: "terminal",
+        data: {
+          title: "Terminal",
+        },
+      },
+    ];
+    mocked.stateRef.current = state;
+    mocked.createTerminalSession
+      .mockResolvedValueOnce({ sessionId: "session-title-1", cwd: "/tmp/workspace-1", cols: 120, rows: 30 })
+      .mockResolvedValueOnce({ sessionId: "session-title-2", cwd: "/tmp/workspace-1", cols: 120, rows: 30 });
+    mocked.readTerminalOutput
+      .mockResolvedValueOnce({ nextIndex: 0, chunks: [], exited: false, exitCode: null, signalCode: null })
+      .mockResolvedValueOnce({ nextIndex: 0, chunks: [], exited: false, exitCode: null, signalCode: null });
+    mocked.resizeTerminal.mockResolvedValue({ ok: true });
+
+    class MockResizeObserver {
+      observe() {}
+      disconnect() {}
+    }
+
+    vi.stubGlobal("ResizeObserver", MockResizeObserver);
+
+    render(
+      <>
+        <TerminalView tabId="terminal-tab-1" />
+        <TerminalView tabId="terminal-tab-2" />
+      </>,
+    );
+    await waitFor(() => {
+      expect(mocked.createTerminalSession).toHaveBeenCalledTimes(2);
+    });
+
+    mocked.emitTerminalInput("pnpm test --filter apps/desktop -- --runInBand\r", 0);
+    mocked.emitTerminalInput("bun lint\r", 1);
+
+    expect(mocked.renameTab).toHaveBeenCalledWith("terminal-tab-1", "pnpm test --filter apps/desktop…");
+    expect(mocked.renameTab).toHaveBeenCalledWith("terminal-tab-2", "bun lint");
   });
 
   it("does not close tab when attach resolves after unmount", async () => {
