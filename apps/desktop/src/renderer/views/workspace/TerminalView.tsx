@@ -116,6 +116,13 @@ export function TerminalView({ tabId, focusRequestKey = 0 }: TerminalViewProps) 
         return false;
       }
 
+      if (shouldClearTerminalOutputShortcut(event)) {
+        if (event.type === "keydown") {
+          terminal.clear();
+        }
+        return false;
+      }
+
       if (!isShiftEnterLineFeedChord(event)) {
         return true;
       }
@@ -467,6 +474,18 @@ function shouldReleaseCommandWForTabCloseShortcut(event: KeyboardEvent): boolean
     !event.altKey &&
     !event.shiftKey &&
     event.key.toLowerCase() === "w"
+  );
+}
+
+/** Returns true when macOS Cmd+K should clear local terminal output instead of reaching the shell. */
+function shouldClearTerminalOutputShortcut(event: KeyboardEvent): boolean {
+  return (
+    isMacPlatform() &&
+    event.metaKey &&
+    !event.ctrlKey &&
+    !event.altKey &&
+    !event.shiftKey &&
+    event.key.toLowerCase() === "k"
   );
 }
 

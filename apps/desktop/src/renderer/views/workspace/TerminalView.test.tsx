@@ -56,6 +56,7 @@ const mocked = vi.hoisted(() => {
   );
   const writeTerminalInput = vi.fn().mockResolvedValue({ ok: true });
   const xtermFocus = vi.fn();
+  const xtermClear = vi.fn();
   const closeTab = vi.fn((tabId: string) => {
     const state = stateRef.current as { closeTab?: (nextTabId: string) => void };
     state.closeTab?.(tabId);
@@ -85,6 +86,7 @@ const mocked = vi.hoisted(() => {
     subscribeTerminalOutput,
     writeTerminalInput,
     xtermFocus,
+    xtermClear,
     closeTab,
     searchAddon,
     loadTerminalAddons,
@@ -127,6 +129,9 @@ vi.mock("@xterm/xterm", () => {
 
     open() {}
     reset() {}
+    clear() {
+      mocked.xtermClear();
+    }
     writeln() {}
     write() {}
     paste(data: string) {
@@ -565,6 +570,45 @@ describe("TerminalView", () => {
 
     const handled = mocked.dispatchTerminalKeyEvent("keydown", { key: "w", ctrlKey: true });
     expect(handled).toBe(true);
+  });
+
+  it("clears terminal output for macOS Cmd+K without closing the session", async () => {
+    const state = buildStoreState();
+    mocked.stateRef.current = state;
+    mocked.createTerminalSession.mockResolvedValueOnce({
+      sessionId: "session-cmd-k",
+      cwd: "/tmp/workspace-1",
+      cols: 120,
+      rows: 30,
+    });
+    mocked.readTerminalOutput.mockResolvedValueOnce({
+      nextIndex: 0,
+      chunks: [],
+      exited: false,
+      exitCode: null,
+      signalCode: null,
+    });
+    mocked.resizeTerminal.mockResolvedValue({ ok: true });
+
+    class MockResizeObserver {
+      observe() {}
+      disconnect() {}
+    }
+
+    vi.stubGlobal("ResizeObserver", MockResizeObserver);
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)");
+
+    render(<TerminalView tabId="terminal-tab-1" />);
+    await waitFor(() => {
+      expect(mocked.createTerminalSession).toHaveBeenCalled();
+    });
+
+    const handled = mocked.dispatchTerminalKeyEvent("keydown", { key: "k", metaKey: true });
+
+    expect(handled).toBe(false);
+    expect(mocked.xtermClear).toHaveBeenCalledTimes(1);
+    expect(mocked.writeTerminalInput).not.toHaveBeenCalled();
+    expect(mocked.closeTab).not.toHaveBeenCalled();
   });
 
   it("forwards Shift+Enter as line feed input for multiline agent composition", async () => {
