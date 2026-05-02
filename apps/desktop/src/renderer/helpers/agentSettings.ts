@@ -5,7 +5,7 @@ export const SUPPORTED_DESKTOP_AGENT_KINDS = [
   "gemini",
   "pi",
   "copilot",
-  "cursor-agent",
+  "cursor",
 ] as const;
 
 export type DesktopAgentKind = (typeof SUPPORTED_DESKTOP_AGENT_KINDS)[number];
