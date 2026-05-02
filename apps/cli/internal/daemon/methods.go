@@ -3,10 +3,11 @@ package daemon
 const (
 	MethodDaemonPing = "daemon.ping"
 
-	MethodOpen            = "open"
-	MethodList            = "list"
-	MethodWorkspaceCreate = "workspace.create"
-	MethodWorkspaceClose  = "workspace.close"
+	MethodOpen                     = "open"
+	MethodList                     = "list"
+	MethodWorkspaceCreate          = "workspace.create"
+	MethodWorkspaceClose           = "workspace.close"
+	MethodWorkspaceSyncContextLink = "workspace.syncContextLink"
 
 	MethodAgentListDetectionStatuses = "agent.listDetectionStatuses"
 	MethodFrontendEventsStream       = "events.frontendStream"

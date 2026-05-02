@@ -277,6 +277,8 @@ export async function updateProjectConfig(
     return;
   }
 
+  const previousContextEnabled = project.contextEnabled ?? true;
+
   const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
   if (selectedOrganizationId) {
     try {
@@ -302,6 +304,14 @@ export async function updateProjectConfig(
       const store = workspaceStore.getState();
       store.updateProjectConfig(projectId, persistedConfig);
       store.incrementFileTreeRefreshVersion();
+
+      if (config.contextEnabled !== undefined && updatedProject.contextEnabled !== previousContextEnabled) {
+        await syncProjectContextLinks({
+          projectId,
+          repoKey: updatedProject.repoKey ?? project.repoKey ?? project.key ?? null,
+          enabled: updatedProject.contextEnabled,
+        });
+      }
       return;
     } catch (error) {
       console.error("Failed to update backend project", error);
@@ -312,4 +322,64 @@ export async function updateProjectConfig(
   const store = workspaceStore.getState();
   store.updateProjectConfig(projectId, config);
   store.incrementFileTreeRefreshVersion();
+}
+
+/**
+ * Asks the local daemon to add or remove the `.my-context` symlink in every
+ * known workspace worktree for the given project. Failures are logged but do
+ * not throw so the user-facing project update is still considered successful.
+ */
+async function syncProjectContextLinks(input: {
+  projectId: string;
+  repoKey: string | null;
+  enabled: boolean;
+}): Promise<void> {
+  const repoKey = input.repoKey?.trim();
+  if (!repoKey) {
+    if (import.meta.env.DEV) {
+      console.debug("[projectCommands] skip context sync: missing repoKey", input);
+    }
+    return;
+  }
+
+  const state = workspaceStore.getState();
+  const project = state.projects.find((item) => item.id === input.projectId);
+  const candidatePaths = new Set<string>();
+
+  for (const workspace of state.workspaces) {
+    const ownsProject = (workspace.projectId ?? workspace.repoId) === input.projectId;
+    if (!ownsProject) {
+      continue;
+    }
+    const path = workspace.worktreePath?.trim();
+    if (path) {
+      candidatePaths.add(path);
+    }
+  }
+
+  // Primary repos may surface only via the project record (no workspace entry yet).
+  for (const path of [project?.localPath, project?.path, project?.worktreePath]) {
+    const trimmed = path?.trim();
+    if (trimmed) {
+      candidatePaths.add(trimmed);
+    }
+  }
+
+  if (candidatePaths.size === 0) {
+    return;
+  }
+
+  try {
+    const client = await getDaemonClient();
+    const result = await client.workspace.syncContextLink({
+      repoKey,
+      enabled: input.enabled,
+      worktreePaths: Array.from(candidatePaths),
+    });
+    if (import.meta.env.DEV) {
+      console.debug("[projectCommands] context sync result", { input, result });
+    }
+  } catch (error) {
+    console.error("Failed to sync project context links across workspaces", error);
+  }
 }

@@ -11,8 +11,8 @@ import { tabStore } from "../store/tabStore";
 import type { WorkspaceStoreState } from "../store/types";
 import { workspaceFileTreeStore } from "../store/workspaceFileTreeStore";
 import {
-  enqueueWorkspaceErrorNotice,
   type WorkspaceLifecycleScriptWarning,
+  enqueueWorkspaceErrorNotice,
   enqueueWorkspaceLifecycleWarnings,
 } from "../store/workspaceLifecycleNoticeStore";
 import { type WorkspaceRightPaneTab, workspacePaneStore } from "../store/workspacePaneStore";
@@ -165,6 +165,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<void
       sourcePath,
       sourceBranch,
       targetBranch,
+      contextEnabled: project?.contextEnabled ?? true,
     })) as CreateWorkspaceResponse;
     notifyLifecycleScriptWarnings(normalizedName, created.lifecycleScriptWarnings);
 
@@ -219,7 +220,8 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
   void closeWorkspaceInBackground({
     workspaceId,
     workspaceName: workspace.name,
-    organizationId: workspace.organizationId?.trim() || sessionStore.getState().selectedOrganizationId?.trim() || undefined,
+    organizationId:
+      workspace.organizationId?.trim() || sessionStore.getState().selectedOrganizationId?.trim() || undefined,
     projectId: workspace.projectId ?? workspace.repoId,
     workspaceWorktreePath: workspace.worktreePath?.trim() || undefined,
     branch: workspace.branch,
@@ -303,7 +305,9 @@ export function openCreateWorkspaceDialog() {
   const selectedWorkspaceProjectId = state.workspaces.find(
     (workspace) => workspace.id === state.selectedWorkspaceId,
   )?.projectId;
-  const selectedWorkspaceRepoId = state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.repoId;
+  const selectedWorkspaceRepoId = state.workspaces.find(
+    (workspace) => workspace.id === state.selectedWorkspaceId,
+  )?.repoId;
   const fallbackProjectId = state.projects.find((project) => state.displayProjectIds.includes(project.id))?.id;
   const projectId = selectedProjectId || selectedWorkspaceProjectId || selectedWorkspaceRepoId || fallbackProjectId;
 

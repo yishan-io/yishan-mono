@@ -278,7 +278,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                 Context
               </Typography>
               <Tooltip
-                title="Context stores repo-specific notes and guidance (briefs, decisions, references) outside the git repo so agents can reuse it across workspaces. This switch controls whether Yishan auto-creates the context link in new workspaces."
+                title="Context stores repo-specific notes and guidance (briefs, decisions, references) outside the git repo so agents can reuse it across workspaces. This switch controls whether Yishan maintains the .my-context link in this project's workspaces."
                 arrow
               >
                 <IconButton size="small" aria-label="What is context?" sx={{ p: 0.25 }}>
@@ -303,7 +303,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
               label={draft.contextEnabled ? "Enabled" : "Disabled"}
             />
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-              Creates context symlink on new workspace creation.
+              Toggling applies to all current workspaces and future ones.
             </Typography>
           </Box>
           <Box>

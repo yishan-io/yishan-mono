@@ -42,7 +42,16 @@ export type ProcedureNotification = {
   payload: unknown;
 };
 
-export type ApiNamespace = "app" | "workspace" | "file" | "git" | "terminal" | "chat" | "agent" | "notification" | "events";
+export type ApiNamespace =
+  | "app"
+  | "workspace"
+  | "file"
+  | "git"
+  | "terminal"
+  | "chat"
+  | "agent"
+  | "notification"
+  | "events";
 
 export type ProcedureSubscriptionOptions = {
   namespace: ApiNamespace;
@@ -64,6 +73,19 @@ export type WorkspaceCreateInput = {
   projectId?: string;
   sourceBranch?: string;
   targetBranch?: string;
+  contextEnabled?: boolean;
+};
+
+export type WorkspaceSyncContextLinkInput = {
+  repoKey: string;
+  enabled: boolean;
+  worktreePaths: string[];
+};
+
+export type WorkspaceSyncContextLinkResponse = {
+  updated: string[];
+  skipped: string[];
+  errors: Record<string, string>;
 };
 
 export type WorkspaceCloseExecutionInput = {

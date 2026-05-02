@@ -75,6 +75,7 @@ export class DaemonClient {
     list: this.listWorkspaces.bind(this),
     createWorkspace: this.createWorkspace.bind(this),
     close: this.closeWorkspace.bind(this),
+    syncContextLink: this.syncContextLink.bind(this),
   };
 
   readonly file = {
@@ -341,7 +342,9 @@ export class DaemonClient {
         this.workspaceIdByWorktreePath.set(workspace.path, workspace.id);
       }
 
-      const existingPreferredWorkspace = workspaces.find((workspace) => workspace.id === normalizedPreferredWorkspaceId);
+      const existingPreferredWorkspace = workspaces.find(
+        (workspace) => workspace.id === normalizedPreferredWorkspaceId,
+      );
       if (existingPreferredWorkspace) {
         return existingPreferredWorkspace.id;
       }
@@ -423,6 +426,7 @@ export class DaemonClient {
     const targetBranch = readOptionalString(record?.targetBranch) || sourceBranch;
     const workspaceId = createDesktopWorkspaceId();
     const workspaceName = readOptionalString(record?.workspaceName) || workspaceId;
+    const contextEnabled = readOptionalBoolean(record?.contextEnabled) ?? false;
 
     const createdWorkspace = (await this.invoke("workspace.create", {
       id: workspaceId,
@@ -433,6 +437,7 @@ export class DaemonClient {
       sourcePath,
       targetBranch,
       sourceBranch,
+      contextEnabled,
     })) as Rpc.DaemonWorkspace;
 
     const createdWorktreePath = createdWorkspace.path || "";
@@ -449,6 +454,44 @@ export class DaemonClient {
       worktreePath: createdWorktreePath,
       status: "active",
       lifecycleScriptWarnings: [],
+    };
+  }
+
+  private async syncContextLink(
+    input: Rpc.WorkspaceSyncContextLinkInput,
+  ): Promise<Rpc.WorkspaceSyncContextLinkResponse> {
+    const record = asRecord(input);
+    const repoKey = readOptionalString(record?.repoKey);
+    if (!repoKey) {
+      throw new Error("repoKey is required");
+    }
+    const enabled = readOptionalBoolean(record?.enabled) ?? false;
+    const rawPaths = readOptionalStringArray(record?.worktreePaths) ?? [];
+    const normalizedPaths = Array.from(
+      new Set(
+        rawPaths
+          .map((path) => normalizeWorktreePath(path))
+          .filter((path): path is string => typeof path === "string" && path.length > 0),
+      ),
+    );
+
+    const result = (await this.invoke("workspace.syncContextLink", {
+      repoKey,
+      enabled,
+      worktreePaths: normalizedPaths,
+    })) as Partial<Rpc.WorkspaceSyncContextLinkResponse> | null | undefined;
+
+    return {
+      updated: Array.isArray(result?.updated)
+        ? result.updated.filter((item): item is string => typeof item === "string")
+        : [],
+      skipped: Array.isArray(result?.skipped)
+        ? result.skipped.filter((item): item is string => typeof item === "string")
+        : [],
+      errors:
+        result?.errors && typeof result.errors === "object"
+          ? Object.fromEntries(Object.entries(result.errors).filter(([, value]) => typeof value === "string"))
+          : {},
     };
   }
 
@@ -479,9 +522,7 @@ export class DaemonClient {
     const recursive = readOptionalBoolean(record?.recursive) ?? true;
     const files = await this.invoke("file.list", { workspaceId, path: relativePath, recursive });
     return {
-      files: Array.isArray(files)
-        ? normalizeDaemonFileEntries(files as Rpc.FileListResponse["files"])
-        : [],
+      files: Array.isArray(files) ? normalizeDaemonFileEntries(files as Rpc.FileListResponse["files"]) : [],
     };
   }
 
@@ -498,9 +539,7 @@ export class DaemonClient {
           const files = await this.invoke("file.list", { workspaceId, path: relativePath, recursive });
           return {
             request: { relativePath, recursive },
-            files: Array.isArray(files)
-              ? normalizeDaemonFileEntries(files as Rpc.FileListResponse["files"])
-              : [],
+            files: Array.isArray(files) ? normalizeDaemonFileEntries(files as Rpc.FileListResponse["files"]) : [],
           };
         } catch (error) {
           return {
@@ -710,7 +749,9 @@ export class DaemonClient {
     return (await this.invoke("git.authorName", { workspaceId })) as string;
   }
 
-  private async createTerminalSession(input: Rpc.TerminalCreateSessionInput): Promise<Rpc.TerminalCreateSessionResponse> {
+  private async createTerminalSession(
+    input: Rpc.TerminalCreateSessionInput,
+  ): Promise<Rpc.TerminalCreateSessionResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
     return (await this.invoke("terminal.start", {

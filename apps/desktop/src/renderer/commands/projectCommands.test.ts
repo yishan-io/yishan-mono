@@ -35,12 +35,16 @@ vi.mock("../api", () => ({
 
 const rpcMocks = vi.hoisted(() => ({
   gitInspect: vi.fn(),
+  workspaceSyncContextLink: vi.fn(async () => ({ updated: [], skipped: [], errors: {} })),
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     git: {
       inspect: rpcMocks.gitInspect,
+    },
+    workspace: {
+      syncContextLink: rpcMocks.workspaceSyncContextLink,
     },
   })),
 }));
@@ -302,5 +306,149 @@ describe("projectCommands", () => {
     });
     expect(applyRepoConfig).toHaveBeenCalledTimes(1);
     expect(bumpRefreshVersion).toHaveBeenCalledTimes(1);
+    expect(rpcMocks.workspaceSyncContextLink).not.toHaveBeenCalled();
+  });
+
+  it("syncs context links across all project workspaces when contextEnabled changes", async () => {
+    const applyRepoConfig = vi.fn();
+    const bumpRefreshVersion = vi.fn();
+    workspaceStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "repo-key",
+          repoKey: "repo-key",
+          name: "Repo 1",
+          path: "/tmp/repo-1",
+          missing: false,
+          localPath: "/tmp/repo-1",
+          gitUrl: "",
+          worktreePath: "/tmp/repo-1",
+          contextEnabled: false,
+        },
+      ],
+      workspaces: [
+        {
+          id: "ws-primary",
+          projectId: "repo-1",
+          repoId: "repo-1",
+          name: "local",
+          title: "local",
+          sourceBranch: "main",
+          branch: "main",
+          summaryId: "ws-primary",
+          worktreePath: "/tmp/repo-1",
+        },
+        {
+          id: "ws-feature",
+          projectId: "repo-1",
+          repoId: "repo-1",
+          name: "feature-x",
+          title: "feature-x",
+          sourceBranch: "main",
+          branch: "feature-x",
+          summaryId: "ws-feature",
+          worktreePath: "/tmp/repo-1-worktrees/feature-x",
+        },
+        {
+          id: "ws-other",
+          projectId: "repo-2",
+          repoId: "repo-2",
+          name: "main",
+          title: "main",
+          sourceBranch: "main",
+          branch: "main",
+          summaryId: "ws-other",
+          worktreePath: "/tmp/other-repo",
+        },
+      ],
+      updateProjectConfig: applyRepoConfig,
+      incrementFileTreeRefreshVersion: bumpRefreshVersion,
+    });
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    apiMocks.updateProject.mockResolvedValueOnce({
+      id: "repo-1",
+      name: "Repo 1",
+      sourceType: "git-local",
+      repoProvider: null,
+      repoUrl: null,
+      repoKey: "repo-key",
+      icon: "folder",
+      color: "#1E66F5",
+      setupScript: "",
+      postScript: "",
+      contextEnabled: true,
+      organizationId: "org-1",
+      createdByUserId: "user-1",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+
+    await updateProjectConfig("repo-1", {
+      name: "Repo 1",
+      worktreePath: "/tmp/repo-1",
+      contextEnabled: true,
+    });
+
+    expect(rpcMocks.workspaceSyncContextLink).toHaveBeenCalledTimes(1);
+    const call = (
+      rpcMocks.workspaceSyncContextLink.mock.calls[0] as unknown as [
+        { repoKey: string; enabled: boolean; worktreePaths: string[] },
+      ]
+    )[0];
+    expect(call.repoKey).toBe("repo-key");
+    expect(call.enabled).toBe(true);
+    // Both workspaces for this project plus the project's own localPath (deduped).
+    expect(new Set(call.worktreePaths)).toEqual(new Set(["/tmp/repo-1", "/tmp/repo-1-worktrees/feature-x"]));
+    expect(call.worktreePaths).not.toContain("/tmp/other-repo");
+  });
+
+  it("does not sync context links when contextEnabled value is unchanged", async () => {
+    const applyRepoConfig = vi.fn();
+    const bumpRefreshVersion = vi.fn();
+    workspaceStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "repo-key",
+          repoKey: "repo-key",
+          name: "Repo 1",
+          path: "/tmp/repo-1",
+          missing: false,
+          localPath: "/tmp/repo-1",
+          gitUrl: "",
+          worktreePath: "/tmp/repo-1",
+          contextEnabled: true,
+        },
+      ],
+      workspaces: [],
+      updateProjectConfig: applyRepoConfig,
+      incrementFileTreeRefreshVersion: bumpRefreshVersion,
+    });
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    apiMocks.updateProject.mockResolvedValueOnce({
+      id: "repo-1",
+      name: "Repo 1 Renamed",
+      sourceType: "git-local",
+      repoProvider: null,
+      repoUrl: null,
+      repoKey: "repo-key",
+      icon: "folder",
+      color: "#1E66F5",
+      setupScript: "",
+      postScript: "",
+      contextEnabled: true,
+      organizationId: "org-1",
+      createdByUserId: "user-1",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+
+    await updateProjectConfig("repo-1", {
+      name: "Repo 1 Renamed",
+      contextEnabled: true,
+    });
+
+    expect(rpcMocks.workspaceSyncContextLink).not.toHaveBeenCalled();
   });
 });

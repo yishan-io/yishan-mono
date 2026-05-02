@@ -114,6 +114,7 @@ describe("workspaceCommands", () => {
       sourcePath: "/tmp/repo-1",
       sourceBranch: "main",
       targetBranch: "feature-a",
+      contextEnabled: true,
     });
     expect(rpcMocks.list).not.toHaveBeenCalled();
     expect(addWorkspace).toHaveBeenCalledWith({

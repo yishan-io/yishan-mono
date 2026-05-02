@@ -42,6 +42,12 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 			}
 		}
 		return created, nil
+	case MethodWorkspaceSyncContextLink:
+		var req workspace.SyncContextLinkRequest
+		if err := decodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.manager.SyncContextLink(req)
 	case MethodWorkspaceClose:
 		var req workspaceCloseParams
 		if err := decodeParams(params, &req); err != nil {
