@@ -90,6 +90,7 @@ Supported JSON-RPC methods:
 API-backed subcommands:
 
 - `login --provider google|github`
+- `logout`
 - `health`
 - `whoami` (alias: `me`)
 - `auth refresh --refresh-token <token>`
