@@ -1,11 +1,12 @@
-import { javascript } from "@codemirror/lang-javascript";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import type { Extension } from "@codemirror/state";
 import { EditorState } from "@codemirror/state";
 import { keymap } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { Box, Typography, useTheme } from "@mui/material";
 import { EditorView, basicSetup } from "codemirror";
 import { useEffect, useMemo, useRef } from "react";
+import { getLanguageExtension } from "../helpers/editorLanguage";
 import { DARK_SURFACE_COLORS } from "../theme";
 
 type FileEditorProps = {
@@ -122,12 +123,15 @@ export function FileEditor({ path, content, focusRequestKey = 0, onContentChange
       return;
     }
 
+    const languageExtension = getLanguageExtension(path);
+    const languageExtensions: Extension[] = languageExtension ? [languageExtension] : [];
+
     const editorState = EditorState.create({
       doc: contentRef.current,
       extensions: [
         basicSetup,
         EditorView.lineWrapping,
-        javascript(),
+        ...languageExtensions,
         editorTheme,
         editorSyntaxTheme,
         EditorView.updateListener.of((update) => {
@@ -160,7 +164,7 @@ export function FileEditor({ path, content, focusRequestKey = 0, onContentChange
       editorView.destroy();
       editorViewRef.current = null;
     };
-  }, [editorSyntaxTheme, editorTheme]);
+  }, [editorSyntaxTheme, editorTheme, path]);
 
   useEffect(() => {
     const editorView = editorViewRef.current;

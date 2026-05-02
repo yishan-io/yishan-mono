@@ -22,6 +22,13 @@ const mockStateRef: {
   keymapRun: null,
 };
 
+vi.mock("../helpers/editorLanguage", () => ({
+  getLanguageExtension: (path: string) => {
+    if (path.endsWith(".unknown")) return null;
+    return { __kind: "languageExtension" };
+  },
+}));
+
 vi.mock("@codemirror/state", () => ({
   EditorState: {
     create: (input: { extensions?: unknown[] }) => {
@@ -51,10 +58,6 @@ vi.mock("@codemirror/state", () => ({
       };
     },
   },
-}));
-
-vi.mock("@codemirror/lang-javascript", () => ({
-  javascript: () => ({ __kind: "javascript" }),
 }));
 
 vi.mock("@codemirror/language", () => ({
@@ -203,6 +206,35 @@ describe("FileEditor", () => {
     expect(hasSyntaxHighlighting).toBe(true);
   });
 
+  it("includes the language extension for supported files", () => {
+    render(
+      <ThemeProvider theme={createAppTheme("dark")}>
+        <FileEditor path="src/a.ts" content="initial" />
+      </ThemeProvider>,
+    );
+
+    const hasLangExtension = mockStateRef.latestExtensions.some(
+      (extension) => (extension as { __kind?: string }).__kind === "languageExtension",
+    );
+
+    expect(hasLangExtension).toBe(true);
+  });
+
+  it("renders without language extension for unsupported files", () => {
+    render(
+      <ThemeProvider theme={createAppTheme("dark")}>
+        <FileEditor path="data/file.unknown" content="initial" />
+      </ThemeProvider>,
+    );
+
+    expect(mockStateRef.editorStateCreateCount).toBe(1);
+
+    const hasLangExtension = mockStateRef.latestExtensions.some(
+      (extension) => (extension as { __kind?: string }).__kind === "languageExtension",
+    );
+    expect(hasLangExtension).toBe(false);
+  });
+
   it("keeps one editor instance across rerenders in same theme", () => {
     const onContentChange = vi.fn();
     const { rerender } = render(
@@ -244,5 +276,23 @@ describe("FileEditor", () => {
     );
 
     expect(mockStateRef.editorFocus).toHaveBeenCalledTimes(1);
+  });
+
+  it("recreates editor when path changes", () => {
+    const { rerender } = render(
+      <ThemeProvider theme={createAppTheme("dark")}>
+        <FileEditor path="src/a.ts" content="initial" />
+      </ThemeProvider>,
+    );
+
+    expect(mockStateRef.editorStateCreateCount).toBe(1);
+
+    rerender(
+      <ThemeProvider theme={createAppTheme("dark")}>
+        <FileEditor path="src/b.py" content="print('hi')" />
+      </ThemeProvider>,
+    );
+
+    expect(mockStateRef.editorStateCreateCount).toBe(2);
   });
 });
