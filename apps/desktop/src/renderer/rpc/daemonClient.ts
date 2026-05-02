@@ -441,16 +441,11 @@ export class DaemonClient {
       sourceBranch,
       contextEnabled,
       setupHook,
-    })) as Rpc.DaemonWorkspace & { setupHookResult?: { error?: string } };
+    })) as Rpc.DaemonWorkspace & { lifecycleScriptWarnings?: unknown[] };
 
     const createdWorktreePath = createdWorkspace.path || "";
     if (createdWorktreePath) {
       this.workspaceIdByWorktreePath.set(createdWorktreePath, workspaceId);
-    }
-
-    const lifecycleScriptWarnings: unknown[] = [];
-    if (createdWorkspace.setupHookResult?.error) {
-      lifecycleScriptWarnings.push(createdWorkspace.setupHookResult.error);
     }
 
     return {
@@ -461,7 +456,9 @@ export class DaemonClient {
       branch: targetBranch,
       worktreePath: createdWorktreePath,
       status: "active",
-      lifecycleScriptWarnings,
+      lifecycleScriptWarnings: Array.isArray(createdWorkspace.lifecycleScriptWarnings)
+        ? createdWorkspace.lifecycleScriptWarnings
+        : [],
     };
   }
 

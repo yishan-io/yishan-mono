@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"yishan/apps/cli/internal/workspace"
 )
@@ -42,7 +43,16 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 				return nil, err
 			}
 		}
-		return created, nil
+		warnings := []any{}
+		if created.SetupHookResult != nil && created.SetupHookResult.Error != "" {
+			warnings = append(warnings, hookResultToWarning("setup", req.SetupHook, created.SetupHookResult))
+		}
+		return map[string]any{
+			"id":                      created.ID,
+			"path":                    created.Path,
+			"setupHookResult":         created.SetupHookResult,
+			"lifecycleScriptWarnings": warnings,
+		}, nil
 	case MethodWorkspaceSyncContextLink:
 		var req workspace.SyncContextLinkRequest
 		if err := decodeParams(params, &req); err != nil {
@@ -79,7 +89,7 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 		}
 		warnings := []any{}
 		if closeResult.PostHookResult != nil && closeResult.PostHookResult.Error != "" {
-			warnings = append(warnings, closeResult.PostHookResult.Error)
+			warnings = append(warnings, hookResultToWarning("post", req.PostHook, closeResult.PostHookResult))
 		}
 		result := map[string]any{
 			"workspace":               map[string]string{"id": req.WorkspaceID, "status": "closed"},
@@ -350,5 +360,31 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 		return workspace.TerminalUnsubscribeResponse{Unsubscribed: true}, nil
 	default:
 		return nil, workspace.NewRPCError(-32601, fmt.Sprintf("method not found: %s", method))
+	}
+}
+
+// hookResultToWarning converts a HookResult into the structured warning shape
+// that the desktop UI expects for lifecycle script warnings.
+func hookResultToWarning(scriptKind string, command string, hr *workspace.HookResult) map[string]any {
+	var exitCode any
+	if hr.ExitCode >= 0 {
+		exitCode = hr.ExitCode
+	}
+
+	timedOut := false
+	if hr.Error != "" {
+		timedOut = strings.Contains(hr.Error, "timed out")
+	}
+
+	return map[string]any{
+		"scriptKind":    scriptKind,
+		"timedOut":      timedOut,
+		"message":       hr.Error,
+		"command":       command,
+		"stdoutExcerpt": hr.Stdout,
+		"stderrExcerpt": hr.Stderr,
+		"exitCode":      exitCode,
+		"signal":        nil,
+		"logFilePath":   nil,
 	}
 }
