@@ -11,6 +11,18 @@ import {
 
 const MATERIAL_ICON_BASE_PATH = `${import.meta.env.BASE_URL}material-icons`;
 
+/**
+ * App-specific folder icon overrides for folder names not covered by the
+ * upstream Material icon theme. These take priority over the generated maps.
+ */
+const APP_FOLDER_OVERRIDES: Record<string, string> = {
+  ".my-context": "folder-context",
+};
+
+const APP_FOLDER_OVERRIDES_EXPANDED: Record<string, string> = {
+  ".my-context": "folder-context-open",
+};
+
 function resolveIconUrl(iconId: string): string | undefined {
   const iconFileName = MATERIAL_ICON_FILES[iconId];
   if (!iconFileName) {
@@ -47,6 +59,12 @@ function resolveFileIconId(fileName: string): string {
 
 function resolveFolderIconId(folderName: string, isExpanded: boolean): string {
   if (isExpanded) {
+    const appOverride =
+      lookupIconId(APP_FOLDER_OVERRIDES_EXPANDED, folderName) ?? lookupIconId(APP_FOLDER_OVERRIDES, folderName);
+    if (appOverride) {
+      return appOverride;
+    }
+
     const expanded =
       lookupIconId(MATERIAL_FOLDER_NAMES_EXPANDED, folderName) ?? lookupIconId(MATERIAL_FOLDER_NAMES, folderName);
 
@@ -55,6 +73,11 @@ function resolveFolderIconId(folderName: string, isExpanded: boolean): string {
     }
 
     return MATERIAL_DEFAULT_FOLDER_EXPANDED_ICON;
+  }
+
+  const appOverride = lookupIconId(APP_FOLDER_OVERRIDES, folderName);
+  if (appOverride) {
+    return appOverride;
   }
 
   return lookupIconId(MATERIAL_FOLDER_NAMES, folderName) ?? MATERIAL_DEFAULT_FOLDER_ICON;

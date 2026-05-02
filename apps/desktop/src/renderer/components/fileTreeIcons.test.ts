@@ -26,4 +26,29 @@ describe("getFileTreeIcon", () => {
   it("uses the typescript definition icon for d.ts files", () => {
     expect(getFileTreeIcon("src/index.d.ts", false)).toContain("/material-icons/typescript-def.svg");
   });
+
+  describe("app-specific folder overrides", () => {
+    it("uses folder-context icon for .my-context folder (collapsed)", () => {
+      expect(getFileTreeIcon(".my-context", true, false)).toContain("/material-icons/folder-context.svg");
+    });
+
+    it("uses folder-context-open icon for .my-context folder (expanded)", () => {
+      expect(getFileTreeIcon(".my-context", true, true)).toContain("/material-icons/folder-context-open.svg");
+    });
+
+    it("resolves .my-context from a nested path", () => {
+      expect(getFileTreeIcon("workspace/.my-context", true, false)).toContain("/material-icons/folder-context.svg");
+      expect(getFileTreeIcon("workspace/.my-context", true, true)).toContain("/material-icons/folder-context-open.svg");
+    });
+  });
+
+  describe("generated folder mappings still work", () => {
+    it("uses folder-context icon for .context folder (collapsed)", () => {
+      expect(getFileTreeIcon(".context", true, false)).toContain("/material-icons/folder-context.svg");
+    });
+
+    it("uses folder-context-open icon for .context folder (expanded)", () => {
+      expect(getFileTreeIcon(".context", true, true)).toContain("/material-icons/folder-context-open.svg");
+    });
+  });
 });

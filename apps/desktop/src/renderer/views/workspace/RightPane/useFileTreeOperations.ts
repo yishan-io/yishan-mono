@@ -96,7 +96,7 @@ type WorkspaceTreeCacheEntry = {
   allRepoEntries: WorkspaceFileEntry[] | null;
 };
 
-export const CONTEXT_DIRECTORY_PATHS = [".my-context", ".private-context"];
+export const CONTEXT_DIRECTORY_PATHS = [".my-context"];
 const EMPTY_CHANGED_RELATIVE_PATHS: string[] = [];
 const INVALID_DIRECTORY_LIST_PATH_ERROR_MESSAGE = "relativePath must point to a directory under rootPath";
 
