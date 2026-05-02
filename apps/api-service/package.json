@@ -8,6 +8,7 @@
     "db:local": "docker compose up -d postgres",
     "start": "bun run src/server.ts",
     "check": "tsc --noEmit",
+    "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "deploy:worker": "wrangler deploy"

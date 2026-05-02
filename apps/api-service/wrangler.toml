@@ -6,6 +6,9 @@ compatibility_flags = ["nodejs_compat"]
 [observability]
 enabled = true
 
+[triggers]
+crons = ["0 3 * * *"]
+
 [[hyperdrive]]
 binding = "HYPERDRIVE"
 id = "1ea658ace38348609cf27570666c4c78"
