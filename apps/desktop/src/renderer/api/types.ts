@@ -30,6 +30,7 @@ export type WorkspaceRecord = {
   kind: "primary" | "worktree";
   status: "active" | "closed";
   branch: string | null;
+  sourceBranch: string | null;
   localPath: string;
   createdAt: string;
   updatedAt: string;

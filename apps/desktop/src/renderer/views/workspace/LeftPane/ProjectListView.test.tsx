@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../commands/workspaceCommands";
@@ -170,6 +171,10 @@ vi.mock("../../../commands/fileCommands", () => ({
   openEntryInExternalApp: (...args: unknown[]) => mocked.openEntryInExternalApp(...args),
 }));
 
+vi.mock("../../../commands/gitCommands", () => ({
+  inspectGitRepository: vi.fn(() => Promise.resolve({ isGitRepository: true, currentBranch: "feature/live-branch" })),
+}));
+
 vi.mock("../../../helpers/platform", () => ({
   getRendererPlatform: () => mocked.rendererPlatform,
 }));
@@ -179,6 +184,15 @@ afterEach(() => {
   vi.clearAllMocks();
   mocked.rendererPlatform = "darwin";
 });
+
+function renderProjectListView() {
+  const queryClient = new QueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <ProjectListView />
+    </QueryClientProvider>,
+  );
+}
 
 function renderRepoList(
   foldedRepoIds: string[] = [],
@@ -233,7 +247,12 @@ function renderRepoList(
     markWorkspaceNotificationsRead: mocked.markWorkspaceNotificationsRead,
   };
 
-  const rendered = render(<ProjectListView />);
+  const queryClient = new QueryClient();
+  const rendered = render(
+    <QueryClientProvider client={queryClient}>
+      <ProjectListView />
+    </QueryClientProvider>,
+  );
 
   if (foldedRepoIds.includes("repo-1")) {
     fireEvent.click(screen.getByRole("button", { name: "repo.actions.collapse" }));
@@ -242,7 +261,8 @@ function renderRepoList(
   return {
     onRenameWorkspace: mocked.renameWorkspace,
     onRenameWorkspaceBranch: mocked.renameWorkspaceBranch,
-    rerender: rendered.rerender,
+    rerender: (ui: React.ReactElement) =>
+      rendered.rerender(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>),
   };
 }
 
@@ -303,7 +323,7 @@ describe("ProjectListView", () => {
       gitChangeTotalsByWorkspaceId: {},
     };
 
-    render(<ProjectListView />);
+    renderProjectListView();
 
     expect(screen.queryByTestId("workspace-change-totals-workspace-1")).toBeNull();
   });
@@ -374,7 +394,7 @@ describe("ProjectListView", () => {
       workspaceUnreadToneByWorkspaceId: {},
       markWorkspaceNotificationsRead: mocked.markWorkspaceNotificationsRead,
     };
-    render(<ProjectListView />);
+    renderProjectListView();
 
     expect(screen.getByTestId("workspace-kind-local-workspace-local-1")).toBeTruthy();
     expect(screen.queryByTestId("workspace-actions-workspace-local-1")).toBeNull();
@@ -402,14 +422,16 @@ describe("ProjectListView", () => {
     expect(onRenameWorkspace).not.toHaveBeenCalled();
   });
 
-  it("opens context menu on right click and deletes repository from menu action", () => {
+  it("opens context menu on right click and deletes repository from menu action", async () => {
     renderRepoList();
 
     fireEvent.contextMenu(screen.getByText("Repo 1"));
     fireEvent.click(screen.getByRole("menuitem", { name: "project.actions.delete" }));
     fireEvent.click(screen.getByRole("button", { name: "project.actions.delete" }));
 
-    expect(mocked.deleteProject).toHaveBeenCalledWith("repo-1");
+    await waitFor(() => {
+      expect(mocked.deleteProject).toHaveBeenCalledWith("repo-1");
+    });
   });
 
   it("opens context menu on right click and opens repo config from menu action", () => {
@@ -614,7 +636,7 @@ describe("ProjectListView", () => {
     renderRepoList();
     mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "running" };
     cleanup();
-    render(<ProjectListView />);
+    renderProjectListView();
     expect(screen.getByTestId("workspace-status-running-spinner-workspace-1")).toBeTruthy();
   });
 
@@ -622,14 +644,14 @@ describe("ProjectListView", () => {
     renderRepoList();
     mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "waiting_input" };
     cleanup();
-    render(<ProjectListView />);
+    renderProjectListView();
     expect(screen.getByTestId("workspace-status-waiting-input-badge-workspace-1")).toBeTruthy();
   });
 
   it("renders no indicator when workspace has no active runtime status and no unread notifications", () => {
     renderRepoList();
     cleanup();
-    render(<ProjectListView />);
+    renderProjectListView();
     expect(screen.queryByTestId("workspace-status-running-spinner-workspace-1")).toBeNull();
     expect(screen.queryByTestId("workspace-status-waiting-input-badge-workspace-1")).toBeNull();
     expect(screen.queryByTestId("workspace-status-done-badge-workspace-1")).toBeNull();
@@ -640,7 +662,7 @@ describe("ProjectListView", () => {
     renderRepoList([], undefined, "workspace-2");
     mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "success" };
     cleanup();
-    render(<ProjectListView />);
+    renderProjectListView();
 
     const doneBadge = screen.getByTestId("workspace-status-done-badge-workspace-1");
     expect(doneBadge).toBeTruthy();
@@ -651,7 +673,7 @@ describe("ProjectListView", () => {
     renderRepoList([], undefined, "workspace-2");
     mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "error" };
     cleanup();
-    render(<ProjectListView />);
+    renderProjectListView();
 
     const failedBadge = screen.getByTestId("workspace-status-failed-badge-workspace-1");
     expect(failedBadge).toBeTruthy();
@@ -659,28 +681,34 @@ describe("ProjectListView", () => {
   });
 
   it("clears unread indicator after opening that workspace while app is focused", () => {
-    const rendered = renderRepoList([], undefined, "workspace-2");
+    const { rerender } = renderRepoList([], undefined, "workspace-2");
     mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "success" };
-    rendered.rerender(<ProjectListView />);
+    rerender(<ProjectListView />);
     expect(screen.getByTestId("workspace-status-done-badge-workspace-1")).toBeTruthy();
 
     mocked.stateRef.current.selectedWorkspaceId = "workspace-1";
     act(() => {
       window.dispatchEvent(new Event("focus"));
     });
-    rendered.rerender(<ProjectListView />);
+    rerender(<ProjectListView />);
 
     expect(screen.queryByTestId("workspace-status-done-badge-workspace-1")).toBeNull();
   });
 
-  it("shows workspace info popover on hover and hides it on mouse leave", () => {
+  it("shows workspace info popover on hover and hides it on mouse leave", async () => {
     vi.useFakeTimers();
     renderRepoList();
 
     fireEvent.mouseEnter(screen.getByTestId("workspace-row-workspace-1"));
+
+    // Wait for the async daemon branch fetch to resolve.
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
     const infoPopper = screen.getByTestId("workspace-info-popper");
 
-    expect(infoPopper.textContent).toContain("workspace.info.branch: feature/repo-fold");
+    expect(infoPopper.textContent).toContain("workspace.info.branch: feature/live-branch");
     expect(infoPopper.textContent).toContain("workspace.info.sourceBranch: main");
 
     fireEvent.mouseLeave(screen.getByTestId("workspace-row-workspace-1"));
@@ -692,12 +720,18 @@ describe("ProjectListView", () => {
     vi.useRealTimers();
   });
 
-  it("keeps workspace info popover open when cursor moves into it", () => {
+  it("keeps workspace info popover open when cursor moves into it", async () => {
     vi.useFakeTimers();
     renderRepoList();
 
     const workspaceRow = screen.getByTestId("workspace-row-workspace-1");
     fireEvent.mouseEnter(workspaceRow);
+
+    // Wait for the async daemon branch fetch to resolve.
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
     fireEvent.mouseLeave(workspaceRow);
 
     const infoPopper = screen.getByTestId("workspace-info-popper");
@@ -709,6 +743,7 @@ describe("ProjectListView", () => {
     act(() => {
       vi.advanceTimersByTime(200);
     });
+    expect(infoPopper.textContent).toContain("workspace.info.branch: feature/live-branch");
     expect(infoPopper.textContent).toContain("workspace.info.sourceBranch: main");
 
     fireEvent.mouseLeave(infoPopper);

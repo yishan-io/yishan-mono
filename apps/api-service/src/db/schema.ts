@@ -191,6 +191,7 @@ export const workspaces = pgTable(
     kind: text("kind").$type<WorkspaceKind>().notNull().default("primary"),
     status: text("status").$type<WorkspaceStatus>().notNull().default("active"),
     branch: text("branch"),
+    sourceBranch: text("source_branch"),
     localPath: text("local_path").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()

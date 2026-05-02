@@ -18,6 +18,7 @@ type WorkspaceCreation struct {
 	ProjectID      string
 	Kind           string
 	Branch         string
+	SourceBranch   string
 	LocalPath      string
 }
 
@@ -40,10 +41,11 @@ func createRemoteWorkspace(_ context.Context, creation WorkspaceCreation) error 
 	}
 
 	_, err := cliruntime.APIClient().CreateWorkspace(orgID, creation.ProjectID, api.CreateWorkspaceInput{
-		NodeID:    creation.NodeID,
-		LocalPath: creation.LocalPath,
-		Kind:      creation.Kind,
-		Branch:    creation.Branch,
+		NodeID:       creation.NodeID,
+		LocalPath:    creation.LocalPath,
+		Kind:         creation.Kind,
+		Branch:       creation.Branch,
+		SourceBranch: creation.SourceBranch,
 	})
 	if err != nil {
 		return fmt.Errorf("create API workspace for project %q: %w", creation.ProjectID, err)

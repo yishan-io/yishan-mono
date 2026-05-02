@@ -11,14 +11,15 @@ import {
   findExternalAppPreset,
   isExternalAppPlatformSupported,
 } from "../../../../shared/contracts/externalApps";
+import { inspectGitRepository } from "../../../commands/gitCommands";
 import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../commands/workspaceCommands";
 import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextMenu";
 import { ProjectRow } from "../../../components/ProjectRow";
 import { WorkspaceRow, type WorkspaceRowIndicator } from "../../../components/WorkspaceRow";
+import { getRendererPlatform } from "../../../helpers/platform";
 import { useCommands } from "../../../hooks/useCommands";
 import { useContextMenuState } from "../../../hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "../../../hooks/useSuppressNativeContextMenuWhileOpen";
-import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { type WorkspaceUnreadTone, chatStore } from "../../../store/chatStore";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -137,6 +138,7 @@ export function ProjectListView() {
   const [foldedRepoIds, setFoldedRepoIds] = useState<string[]>([]);
   const [workspaceInfoAnchorEl, setWorkspaceInfoAnchorEl] = useState<HTMLElement | null>(null);
   const [hoveredWorkspaceId, setHoveredWorkspaceId] = useState("");
+  const [hoveredWorkspaceCurrentBranch, setHoveredWorkspaceCurrentBranch] = useState("");
   const [isAppFocused, setIsAppFocused] = useState(() => document.hasFocus());
   const workspaceInfoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rendererPlatform = getRendererPlatform();
@@ -371,6 +373,7 @@ export function ProjectListView() {
     clearWorkspaceInfoCloseTimer();
     workspaceInfoCloseTimerRef.current = setTimeout(() => {
       setHoveredWorkspaceId("");
+      setHoveredWorkspaceCurrentBranch("");
       setWorkspaceInfoAnchorEl(null);
       workspaceInfoCloseTimerRef.current = null;
     }, workspaceInfoCloseDelayMs);
@@ -379,6 +382,9 @@ export function ProjectListView() {
   /** Opens the workspace details popover while hovering one workspace row. */
   const handleWorkspaceInfoMouseEnter = (workspaceId: string, anchorEl: HTMLElement) => {
     clearWorkspaceInfoCloseTimer();
+    if (workspaceId !== hoveredWorkspaceId) {
+      setHoveredWorkspaceCurrentBranch("");
+    }
     setHoveredWorkspaceId(workspaceId);
     setWorkspaceInfoAnchorEl(anchorEl);
   };
@@ -400,6 +406,37 @@ export function ProjectListView() {
 
   const hoveredWorkspace = workspaces.find((workspace) => workspace.id === hoveredWorkspaceId);
   const isWorkspaceInfoOpen = Boolean(workspaceInfoAnchorEl) && Boolean(hoveredWorkspace);
+
+  useEffect(() => {
+    if (!hoveredWorkspaceId) {
+      setHoveredWorkspaceCurrentBranch("");
+      return;
+    }
+
+    const workspace = workspaces.find((ws) => ws.id === hoveredWorkspaceId);
+    const worktreePath = workspace?.worktreePath?.trim();
+    if (!worktreePath) {
+      setHoveredWorkspaceCurrentBranch("");
+      return;
+    }
+
+    let cancelled = false;
+    inspectGitRepository({ path: worktreePath })
+      .then((result) => {
+        if (!cancelled) {
+          setHoveredWorkspaceCurrentBranch(result.currentBranch || "");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHoveredWorkspaceCurrentBranch("");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hoveredWorkspaceId, workspaces]);
   useSuppressNativeContextMenuWhileOpen(isRepoContextMenuOpen || isWorkspaceContextMenuOpen);
 
   /** Opens one workspace root path in a selected external app preset. */
@@ -802,6 +839,7 @@ export function ProjectListView() {
         open={isWorkspaceInfoOpen}
         anchorEl={workspaceInfoAnchorEl}
         workspace={hoveredWorkspace}
+        currentBranch={hoveredWorkspaceCurrentBranch}
         onMouseEnter={handleWorkspaceInfoPopoverMouseEnter}
         onMouseLeave={handleWorkspaceInfoPopoverMouseLeave}
       />

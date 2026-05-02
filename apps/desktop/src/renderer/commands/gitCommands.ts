@@ -121,6 +121,16 @@ export async function listGitCommitsToTarget(params: { workspaceWorktreePath: st
   });
 }
 
+/** Inspects a local path for git repository metadata including the current branch. */
+export async function inspectGitRepository(params: { path: string }): Promise<{
+  isGitRepository: boolean;
+  remoteUrl?: string;
+  currentBranch?: string;
+}> {
+  const client = await getDaemonClient();
+  return client.git.inspect({ path: params.path });
+}
+
 /** Lists available branch names for one workspace. */
 export async function listGitBranches(params: { workspaceWorktreePath: string }) {
   const client = await getDaemonClient();

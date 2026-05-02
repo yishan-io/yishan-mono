@@ -29,10 +29,11 @@ type RegisterNodeInput struct {
 }
 
 type CreateWorkspaceInput struct {
-	NodeID    string
-	LocalPath string
-	Kind      string
-	Branch    string
+	NodeID       string
+	LocalPath    string
+	Kind         string
+	Branch       string
+	SourceBranch string
 }
 
 type CloseWorkspaceInput struct {
@@ -179,6 +180,9 @@ func (c *Client) CreateWorkspace(orgID string, projectID string, input CreateWor
 	}
 	if input.Branch != "" {
 		payload["branch"] = input.Branch
+	}
+	if input.SourceBranch != "" {
+		payload["sourceBranch"] = input.SourceBranch
 	}
 
 	var response CreateWorkspaceResponse

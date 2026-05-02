@@ -26,6 +26,7 @@ export type WorkspaceView = {
   kind: WorkspaceKind;
   status: "active" | "closed";
   branch: string | null;
+  sourceBranch: string | null;
   localPath: string;
   createdAt: Date;
   updatedAt: Date;
@@ -38,6 +39,7 @@ type CreateWorkspaceInput = {
   nodeId: string;
   kind: WorkspaceKind;
   branch?: string;
+  sourceBranch?: string;
   localPath: string;
 };
 
@@ -143,6 +145,8 @@ export class WorkspaceService {
         return reactivatedWorkspace;
       }
 
+      const sourceBranch = input.sourceBranch?.trim() ?? null;
+
       const insertedRows = await tx
         .insert(workspaces)
         .values({
@@ -153,6 +157,7 @@ export class WorkspaceService {
           nodeId: input.nodeId,
           kind: input.kind,
           branch,
+          sourceBranch,
           localPath: input.localPath.trim()
         })
         .returning();

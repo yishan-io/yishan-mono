@@ -36,6 +36,7 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 				ProjectID:      req.ProjectID,
 				Kind:           "worktree",
 				Branch:         req.TargetBranch,
+				SourceBranch:   req.SourceBranch,
 				LocalPath:      created.Path,
 			}); err != nil {
 				return nil, err

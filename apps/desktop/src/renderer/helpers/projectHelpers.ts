@@ -156,7 +156,7 @@ function mapApiData(projects: ProjectRecord[], workspacesFromApi: WorkspaceRecor
           repoId: workspace.projectId,
           name: workspace.kind === "primary" ? "local" : (workspace.branch ?? "workspace"),
           title: workspace.kind === "primary" ? "local" : getFileName(workspace.localPath ?? "") || workspace.branch || "workspace",
-          sourceBranch: workspace.branch ?? "main",
+          sourceBranch: workspace.sourceBranch ?? workspace.branch ?? "main",
           branch: workspace.branch ?? "main",
           summaryId: workspace.id,
           worktreePath: workspace.localPath,

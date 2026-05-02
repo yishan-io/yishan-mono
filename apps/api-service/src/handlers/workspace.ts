@@ -27,6 +27,7 @@ export async function createWorkspaceHandler(
     nodeId: body.nodeId,
     kind: body.kind,
     branch: body.branch,
+    sourceBranch: body.sourceBranch,
     localPath: body.localPath
   });
 
