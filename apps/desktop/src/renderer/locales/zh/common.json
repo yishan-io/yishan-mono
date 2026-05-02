@@ -120,6 +120,22 @@
       },
       "values": {
         "unknown": "未知"
+      },
+      "controls": {
+        "title": "守护进程控制",
+        "description": "管理守护进程的生命周期和关闭行为。"
+      },
+      "restart": {
+        "label": "重启守护进程",
+        "description": "停止并重新启动本地守护进程。",
+        "action": "重启",
+        "inProgress": "重启中…",
+        "success": "守护进程已成功重启。",
+        "failed": "重启守护进程失败。"
+      },
+      "quitOnExit": {
+        "label": "退出应用前关闭守护进程",
+        "description": "启用后，桌面应用退出前会停止守护进程。禁用后，守护进程将在后台继续运行。"
       }
     },
     "terminal": {

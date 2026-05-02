@@ -83,6 +83,21 @@ const DAEMON_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.daemon.actions.refresh",
     ],
   },
+  {
+    id: "daemon-controls",
+    tab: "daemon",
+    icon: BiChip,
+    labelKey: "settings.daemon.controls.title",
+    sectionLabelKey: "settings.items.daemon",
+    keywordKeys: [
+      "settings.daemon.controls.description",
+      "settings.daemon.restart.label",
+      "settings.daemon.restart.description",
+      "settings.daemon.restart.action",
+      "settings.daemon.quitOnExit.label",
+      "settings.daemon.quitOnExit.description",
+    ],
+  },
 ];
 
 const SETTINGS_TAB_SEARCH_ITEMS: SettingsSearchCatalogItem[] = SETTINGS_NAV_SECTIONS.flatMap((section) =>

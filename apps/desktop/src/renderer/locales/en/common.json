@@ -136,6 +136,22 @@
       },
       "values": {
         "unknown": "Unknown"
+      },
+      "controls": {
+        "title": "Daemon Controls",
+        "description": "Manage daemon lifecycle and shutdown behavior."
+      },
+      "restart": {
+        "label": "Restart Daemon",
+        "description": "Stop and start the local daemon process.",
+        "action": "Restart",
+        "inProgress": "Restarting…",
+        "success": "Daemon restarted successfully.",
+        "failed": "Failed to restart daemon."
+      },
+      "quitOnExit": {
+        "label": "Quit daemon before app exits",
+        "description": "When enabled, the daemon is stopped before the desktop app exits. When disabled, the daemon continues running in the background."
       }
     },
     "terminal": {

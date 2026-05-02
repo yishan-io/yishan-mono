@@ -6,6 +6,7 @@ import type { AppActionPayload } from "../shared/contracts/actions";
 import { configureApplicationMenu } from "./app/menu";
 import { getAuthStatus, getAuthTokens, login } from "./auth/cliAuth";
 import { DaemonManager } from "./daemon/daemonManager";
+import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "./daemon/daemonSettings";
 import { launchPath, openExternalUrl } from "./integrations/externalAppLauncher";
 import { readExternalClipboardSourcePathsFromSystem } from "./integrations/externalClipboardPipeline";
 import { DESKTOP_RPC_IPC_CHANNELS, type DesktopUpdateEventPayload, HOST_IPC_CHANNELS } from "./ipc";
@@ -25,6 +26,7 @@ export class DesktopApplication {
   private readonly daemonManager = new DaemonManager();
   private hasProcessedBeforeQuit = false;
   private pendingUpdateReady: DesktopUpdateEventPayload | null = null;
+  private cachedDaemonQuitOnExit: boolean | null = null;
 
   /**
    * Starts the desktop app and exits on startup failure.
@@ -49,6 +51,16 @@ export class DesktopApplication {
    */
   private async start(): Promise<void> {
     await app.whenReady();
+
+    // Pre-load daemon settings so before-quit has the correct value even
+    // when the user never opens the Settings view during this session.
+    try {
+      this.cachedDaemonQuitOnExit = await getDaemonQuitOnExit();
+    } catch (error: unknown) {
+      console.warn("Failed to load daemon quit-on-exit setting:", error);
+      this.cachedDaemonQuitOnExit = false;
+    }
+
     await this.daemonManager.ensureStarted();
     this.registerHostIpcHandlers();
     this.registerAuthIpcHandlers();
@@ -83,6 +95,26 @@ export class DesktopApplication {
             app.quit();
           });
       });
+    } else {
+      app.on("before-quit", async (event) => {
+        if (this.hasProcessedBeforeQuit) {
+          return;
+        }
+
+        event.preventDefault();
+        this.hasProcessedBeforeQuit = true;
+
+        const quitOnExit = this.cachedDaemonQuitOnExit ?? false;
+        if (quitOnExit) {
+          try {
+            await this.daemonManager.stop();
+          } catch (error: unknown) {
+            console.warn("Failed to stop daemon service during desktop shutdown", error);
+          }
+        }
+
+        app.quit();
+      });
     }
 
     app.on("activate", () => {
@@ -114,6 +146,42 @@ export class DesktopApplication {
 
     ipcMain.handle(HOST_IPC_CHANNELS.getDaemonInfo, async () => {
       return await this.daemonManager.getInfo();
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.restartDaemon, async () => {
+      try {
+        await this.daemonManager.stop();
+      } catch (error: unknown) {
+        const reason = error instanceof Error ? error.message : "Failed to stop daemon";
+        console.warn("Daemon stop during restart:", reason);
+      }
+
+      try {
+        await this.daemonManager.ensureStarted();
+        const info = await this.daemonManager.getInfo();
+        return { success: true as const, daemonInfo: info };
+      } catch (error: unknown) {
+        const reason = error instanceof Error ? error.message : "Failed to start daemon";
+        return { success: false as const, error: reason };
+      }
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.getDaemonQuitOnExit, async () => {
+      try {
+        if (this.cachedDaemonQuitOnExit === null) {
+          this.cachedDaemonQuitOnExit = await getDaemonQuitOnExit();
+        }
+        return this.cachedDaemonQuitOnExit;
+      } catch (error: unknown) {
+        console.warn("Failed to read daemon quit-on-exit setting:", error);
+        return false;
+      }
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.setDaemonQuitOnExit, async (_event, value: boolean) => {
+      await setDaemonQuitOnExit(value);
+      this.cachedDaemonQuitOnExit = value;
+      return { ok: true as const };
     });
   }
 

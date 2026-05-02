@@ -53,6 +53,10 @@ export type DaemonInfoResult = {
   wsUrl: string;
 };
 
+export type DaemonRestartResult =
+  | { success: true; daemonInfo: DaemonInfoResult }
+  | { success: false; error: string };
+
 export type AuthStatusResult = {
   authenticated: boolean;
   expiresAt?: string;
@@ -89,6 +93,9 @@ export type DesktopHostBridge = {
   login: () => Promise<AuthLoginResult>;
   getAuthTokens: () => Promise<AuthTokensResult>;
   getDaemonInfo: () => Promise<DaemonInfoResult>;
+  restartDaemon: () => Promise<DaemonRestartResult>;
+  getDaemonQuitOnExit: () => Promise<boolean>;
+  setDaemonQuitOnExit: (value: boolean) => Promise<{ ok: true }>;
 };
 
 export type DesktopRpcEventBridge = {
@@ -119,4 +126,7 @@ export const HOST_IPC_CHANNELS = {
   login: "desktop:host/login",
   getAuthTokens: "desktop:host/get-auth-tokens",
   getDaemonInfo: "desktop:host/get-daemon-info",
+  restartDaemon: "desktop:host/restart-daemon",
+  getDaemonQuitOnExit: "desktop:host/get-daemon-quit-on-exit",
+  setDaemonQuitOnExit: "desktop:host/set-daemon-quit-on-exit",
 } as const;

@@ -1,4 +1,5 @@
-import type { AgentKind } from "@yishan/agent-runtime";
+import type { DaemonInfoResult, DaemonRestartResult } from "../../main/ipc";
+import type { DesktopAgentKind } from "../helpers/agentSettings";
 import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
 
 /** Opens one native folder picker and returns a selected directory path when available. */
@@ -14,13 +15,13 @@ export async function getDefaultWorktreeLocation() {
 }
 
 /** Checks whether one agent global config grants external directory access. */
-export async function checkAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: AgentKind }) {
+export async function checkAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: DesktopAgentKind }) {
   const client = await getDaemonClient();
   return client.app.checkAgentGlobalConfigExternalDirectoryPermission(params ?? {});
 }
 
 /** Ensures one agent global config grants external directory access. */
-export async function ensureAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: AgentKind }) {
+export async function ensureAgentGlobalConfigExternalDirectoryPermission(params?: { agentKind?: DesktopAgentKind }) {
   const client = await getDaemonClient();
   return client.app.ensureAgentGlobalConfigExternalDirectoryPermission(params ?? {});
 }
@@ -46,8 +47,23 @@ export async function getAuthStatus() {
 }
 
 /** Reads current daemon identity and version from desktop main-process IPC. */
-export async function getDaemonInfo() {
+export async function getDaemonInfo(): Promise<DaemonInfoResult> {
   return await getDesktopHostBridge().getDaemonInfo();
+}
+
+/** Restarts the local daemon through the desktop main process. */
+export async function restartDaemon(): Promise<DaemonRestartResult> {
+  return await getDesktopHostBridge().restartDaemon();
+}
+
+/** Reads the persisted quit-daemon-before-app-exit setting. */
+export async function getDaemonQuitOnExit(): Promise<boolean> {
+  return await getDesktopHostBridge().getDaemonQuitOnExit();
+}
+
+/** Persists the quit-daemon-before-app-exit setting. */
+export async function setDaemonQuitOnExit(value: boolean): Promise<void> {
+  await getDesktopHostBridge().setDaemonQuitOnExit(value);
 }
 
 /** Runs one desktop login flow through main-process IPC. */
