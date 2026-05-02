@@ -80,6 +80,7 @@ type Project struct {
 	RepoURL        string `json:"repoUrl"`
 	RepoKey        string `json:"repoKey"`
 	LocalPath      string `json:"localPath"`
+	ContextEnabled bool   `json:"contextEnabled"`
 	CreatedAt      string `json:"createdAt"`
 	UpdatedAt      string `json:"updatedAt"`
 }

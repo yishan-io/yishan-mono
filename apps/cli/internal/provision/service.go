@@ -132,12 +132,13 @@ func (p *Provisioner) ensureWorkspaceProvisionedLocally(
 	}
 
 	if _, err := p.workspaceManager.CreateWorkspace(ctx, workspace.CreateRequest{
-		ID:            workspaceItem.ID,
-		RepoKey:       project.RepoKey,
-		WorkspaceName: workspaceItem.Branch,
-		SourcePath:    localSourcePath,
-		TargetBranch:  workspaceItem.Branch,
-		SourceBranch:  sourceBranch,
+		ID:             workspaceItem.ID,
+		RepoKey:        project.RepoKey,
+		WorkspaceName:  workspaceItem.Branch,
+		SourcePath:     localSourcePath,
+		TargetBranch:   workspaceItem.Branch,
+		SourceBranch:   sourceBranch,
+		ContextEnabled: project.ContextEnabled,
 	}); err != nil {
 		return fmt.Errorf("create workspace locally: %w", err)
 	}

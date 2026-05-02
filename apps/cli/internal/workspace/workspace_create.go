@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,7 +17,12 @@ type CreateRequest struct {
 	SourcePath     string `json:"sourcePath"`
 	TargetBranch   string `json:"targetBranch"`
 	SourceBranch   string `json:"sourceBranch"`
+	ContextEnabled bool   `json:"contextEnabled,omitempty"`
 }
+
+// contextLinkName is the directory name created inside each worktree
+// pointing at the shared per-repo context folder.
+const contextLinkName = ".my-context"
 
 func (m *Manager) CreateWorkspace(ctx context.Context, req CreateRequest) (Workspace, error) {
 	if strings.TrimSpace(req.ID) == "" {
@@ -59,6 +65,16 @@ func (m *Manager) CreateWorkspace(ctx context.Context, req CreateRequest) (Works
 		return Workspace{}, err
 	}
 
+	if req.ContextEnabled {
+		contextPath, err := defaultContextPath(repoKey)
+		if err != nil {
+			return Workspace{}, err
+		}
+		if err := ensureContextLink(contextPath, worktreePath); err != nil {
+			return Workspace{}, fmt.Errorf("create context link: %w", err)
+		}
+	}
+
 	ws := Workspace{ID: strings.TrimSpace(req.ID), Path: worktreePath}
 	m.mu.Lock()
 	m.workspaces[ws.ID] = ws
@@ -88,6 +104,51 @@ func defaultWorktreePath(repoKey string, workspaceName string) (string, error) {
 		return "", err
 	}
 	return filepath.Join(home, ".yishan", "worktrees", repoKey, workspaceName), nil
+}
+
+// defaultContextPath returns the per-repo shared context directory path.
+// All workspaces for the same repo share this folder via a `context` symlink
+// inside the worktree, so notes and references persist across worktrees.
+func defaultContextPath(repoKey string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".yishan", "contexts", repoKey), nil
+}
+
+// ensureContextLink creates the per-repo context directory (if missing) and
+// links it from `<worktreePath>/.my-context`. It is idempotent: if the link is
+// already correct, it is left in place; existing non-symlink entries at the
+// link path are left untouched to avoid clobbering user data.
+func ensureContextLink(contextPath string, worktreePath string) error {
+	if err := os.MkdirAll(contextPath, 0o755); err != nil {
+		return fmt.Errorf("ensure context dir: %w", err)
+	}
+
+	linkPath := filepath.Join(worktreePath, contextLinkName)
+	info, err := os.Lstat(linkPath)
+	if err == nil {
+		// Path exists. Only manage it if it is a symlink we own.
+		if info.Mode()&os.ModeSymlink == 0 {
+			// Non-symlink (likely a real folder/file the user created); leave alone.
+			return nil
+		}
+		existingTarget, readErr := os.Readlink(linkPath)
+		if readErr == nil && existingTarget == contextPath {
+			return nil
+		}
+		if removeErr := os.Remove(linkPath); removeErr != nil {
+			return fmt.Errorf("remove stale context link: %w", removeErr)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("inspect context link: %w", err)
+	}
+
+	if err := os.Symlink(contextPath, linkPath); err != nil {
+		return fmt.Errorf("create context symlink: %w", err)
+	}
+	return nil
 }
 
 func safeRelativePath(input string, field string) (string, error) {
