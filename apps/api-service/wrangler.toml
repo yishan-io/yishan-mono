@@ -9,7 +9,36 @@ enabled = true
 [triggers]
 crons = ["0 3 * * *"]
 
+# ── Hyperdrive ──────────────────────────────────────────────
+# The Hyperdrive binding connects the Worker to Neon Postgres.
+# The `id` below must match the Hyperdrive config created via:
+#   wrangler hyperdrive create yishan-db --connection-string="<NEON_CONNECTION_STRING>"
+# `localConnectionString` is used only during `wrangler dev`.
 [[hyperdrive]]
 binding = "HYPERDRIVE"
 id = "1ea658ace38348609cf27570666c4c78"
 localConnectionString = "postgres://postgres:postgres@localhost:5432/yishan"
+
+# ── Worker Secrets ──────────────────────────────────────────
+# The following secrets must be set via `wrangler secret put <NAME>`:
+#   SESSION_SECRET
+#   JWT_ACCESS_SECRET
+#   GOOGLE_CLIENT_ID
+#   GOOGLE_CLIENT_SECRET
+#   GITHUB_CLIENT_ID
+#   GITHUB_CLIENT_SECRET
+#
+# Non-secret environment variables are set in [vars] below.
+
+[vars]
+APP_BASE_URL         = "https://api.yishan.io"
+SESSION_TTL_DAYS     = "30"
+JWT_ACCESS_TTL_SECONDS = "900"
+REFRESH_TOKEN_TTL_DAYS = "30"
+JWT_ISSUER           = "https://api.yishan.io"
+JWT_AUDIENCE         = "api-service"
+COOKIE_DOMAIN        = "yishan.io"
+# Desktop dev (Electron renderer on Vite dev server) and production web origins.
+# Electron production builds load from file:// and bypass CORS enforcement,
+# so they do not need an explicit origin entry here.
+CORS_ORIGINS         = "https://yishan.io,https://app.yishan.io,http://localhost:5173,http://localhost:3000"
