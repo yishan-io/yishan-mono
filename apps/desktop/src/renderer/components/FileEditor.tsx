@@ -209,7 +209,7 @@ export function FileEditor({ path, content, focusRequestKey = 0, onContentChange
           display: "flex",
           alignItems: "center",
           bgcolor: (muiTheme) =>
-            muiTheme.palette.mode === "dark" ? DARK_SURFACE_COLORS.gutter : muiTheme.palette.background.paper,
+            muiTheme.palette.mode === "dark" ? "background.default" : muiTheme.palette.background.paper,
         }}
       >
         <Typography variant="caption" color="text.secondary" noWrap>

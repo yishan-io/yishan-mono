@@ -1,4 +1,5 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, darken } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuSquareTerminal } from "react-icons/lu";
@@ -17,13 +18,22 @@ import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
 import { TerminalView } from "./TerminalView";
 
 const paneHeaderSx = {
-  minHeight: 42,
+  minHeight: 38,
   px: 1.5,
-  borderBottom: 1,
-  borderColor: "divider",
-  bgcolor: "background.paper",
+  bgcolor: (theme: Theme) => darken(theme.palette.background.default, theme.palette.mode === "dark" ? 0.05 : 0.2),
+  position: "relative",
   display: "flex",
   alignItems: "center",
+  "&::after": {
+    content: '""',
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "1px",
+    bgcolor: "divider",
+    zIndex: 0,
+  },
 } as const;
 
 const agentTerminalConfigs: Record<
@@ -120,7 +130,6 @@ export function MainPaneView() {
     isDirty: tab.kind === "file" ? tab.data.isDirty : false,
     isTemporary: tab.kind === "file" ? tab.data.isTemporary : false,
   }));
-  const selectedTab = workspaceTabs.find((tab) => tab.id === selectedTabId);
   const hasWorkspaceTabs = workspaceTabs.length > 0;
   const enabledAgentKinds = useMemo(
     () => SUPPORTED_DESKTOP_AGENT_KINDS.filter((agentKind) => inUseByAgentKind[agentKind]),

@@ -248,6 +248,49 @@ export function TabBar({
   };
 
   const canDragTabs = Boolean(onReorderTab) && !disabled;
+  const buildTabContainerSx = (active: boolean, editing: boolean) => ({
+    display: "flex",
+    alignItems: "center",
+    bgcolor: active ? "background.default" : "transparent",
+    px: 2,
+    flexShrink: 0,
+    position: "relative",
+    zIndex: active ? 1 : 0,
+    mb: active ? "-1px" : 0,
+    transition: "background-color 120ms ease",
+    borderRight: "1px solid",
+    borderColor: "divider",
+    ...(active
+      ? {
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: -1,
+            height: 2,
+            bgcolor: "background.default",
+          },
+        }
+      : {}),
+    "& .tab-close": {
+      opacity: 0,
+      pointerEvents: "none",
+      transition: "opacity 0.15s ease",
+      mr: -2,
+    },
+    "&:hover": {
+      bgcolor: active ? "background.default" : "action.hover",
+    },
+    "&:hover .tab-close": {
+      opacity: 1,
+      pointerEvents: "auto",
+    },
+    "& .tab-pin": {
+      mr: -2,
+    },
+    cursor: canDragTabs && !editing ? "grab" : "default",
+  });
 
   /**
    * Resolves the target used when dropping near the right edge of the scroll area.
@@ -381,14 +424,14 @@ export function TabBar({
   const unpinnedTabs = tabs.filter((tab) => !tab.pinned);
 
   return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0, bgcolor: "background.paper" }}>
+    <Box sx={{ display: "flex", alignItems: "flex-end", minWidth: 0, height: "100%" }}>
       <Box
         sx={{
           flex: 1,
           minWidth: 0,
           display: "flex",
-          alignItems: "center",
-          gap: 0.5,
+          alignItems: "flex-end",
+          height: "100%",
         }}
       >
         {pinnedTabs.map((tab) => {
@@ -409,25 +452,7 @@ export function TabBar({
               onDrop={(event) => handleTabDrop(event, tab)}
               onDragEnd={resetDragState}
               sx={{
-                display: "flex",
-                alignItems: "center",
-                borderBottom: 2,
-                borderColor: active ? "primary.main" : "transparent",
-                px: 2,
-                flexShrink: 0,
-                "& .tab-close": {
-                  opacity: 0,
-                  pointerEvents: "none",
-                  transition: "opacity 0.15s ease",
-                  mr: -2,
-                },
-                "&:hover .tab-close": {
-                  opacity: 1,
-                  pointerEvents: "auto",
-                },
-                "& .tab-pin": {
-                  mr: -2,
-                },
+                ...buildTabContainerSx(active, editing),
                 ...(dropTarget?.tabId === tab.id && {
                   ...(dropTarget.position === "before"
                     ? {
@@ -438,7 +463,6 @@ export function TabBar({
                       }),
                 }),
                 opacity: draggedTabId === tab.id ? 0.9 : 1,
-                cursor: canDragTabs && !editing ? "grab" : "default",
               }}
             >
               {editing ? (
@@ -578,11 +602,11 @@ export function TabBar({
           sx={{
             display: "flex",
             alignItems: "center",
-            gap: 0.5,
             minWidth: 0,
             overflowX: "auto",
             overflowY: "hidden",
             pr: 0.5,
+            height: "100%",
             scrollbarWidth: "none",
             msOverflowStyle: "none",
             "&::-webkit-scrollbar": {
@@ -608,25 +632,7 @@ export function TabBar({
                 onDrop={(event) => handleTabDrop(event, tab)}
                 onDragEnd={resetDragState}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  borderBottom: 2,
-                  borderColor: active ? "primary.main" : "transparent",
-                  px: 2,
-                  flexShrink: 0,
-                  "& .tab-close": {
-                    opacity: 0,
-                    pointerEvents: "none",
-                    transition: "opacity 0.15s ease",
-                    mr: -2,
-                  },
-                  "&:hover .tab-close": {
-                    opacity: 1,
-                    pointerEvents: "auto",
-                  },
-                  "& .tab-pin": {
-                    mr: -2,
-                  },
+                  ...buildTabContainerSx(active, editing),
                   ...(dropTarget?.tabId === tab.id && {
                     ...(dropTarget.position === "before"
                       ? {
@@ -637,7 +643,6 @@ export function TabBar({
                         }),
                   }),
                   opacity: draggedTabId === tab.id ? 0.9 : 1,
-                  cursor: canDragTabs && !editing ? "grab" : "default",
                 }}
               >
                 {editing ? (
@@ -777,7 +782,7 @@ export function TabBar({
         aria-label={newTabLabel}
         onClick={(event) => setCreateMenuAnchor(event.currentTarget)}
         disabled={disabled}
-        sx={{ flexShrink: 0 }}
+        sx={{ flexShrink: 0, alignSelf: "center" }}
       >
         <LuPlus size={16} />
       </IconButton>

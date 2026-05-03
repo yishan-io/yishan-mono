@@ -73,7 +73,6 @@ export function ProjectFilterPopoverView() {
             sx: {
               mt: 1,
               overflow: "visible",
-              bgcolor: "background.default",
               border: (theme) => `1px solid ${theme.palette.divider}`,
               "&::before": {
                 content: '""',
