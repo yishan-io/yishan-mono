@@ -39,9 +39,19 @@ export function ProjectRow({
         onClick={onSelect}
         onContextMenu={onContextMenu}
         sx={{
+          bgcolor: "transparent",
           pl: 2,
           pr: 1.5,
           py: 0.5,
+          "&:hover, &:focus-visible": {
+            bgcolor: theme.palette.mode === "dark" ? theme.palette.action.hover : "rgba(47, 122, 100, 0.1)",
+          },
+          "&.Mui-selected": {
+            bgcolor: theme.palette.mode === "dark" ? theme.palette.action.selected : "rgba(211, 134, 17, 0.14)",
+          },
+          "&.Mui-selected:hover, &.Mui-selected:focus-visible": {
+            bgcolor: theme.palette.mode === "dark" ? theme.palette.action.hover : "rgba(211, 134, 17, 0.2)",
+          },
           "& .repo-actions": {
             opacity: 0,
             pointerEvents: "none",

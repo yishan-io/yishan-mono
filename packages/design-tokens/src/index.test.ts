@@ -19,8 +19,10 @@ describe("getDesignTokenPackageInfo", () => {
 describe("token version exports", () => {
   it("exposes a stable v1 token contract", () => {
     expect(DESIGN_TOKEN_VERSION).toBe("v1");
-    expect(SEMANTIC_COLOR_TOKENS.light.background.app).toBe("#f8f8f9");
-    expect(SEMANTIC_COLOR_TOKENS.dark.background.app).toBe("#23262e");
+    expect(SEMANTIC_COLOR_TOKENS.light.background.app).toBe("#f7f8fa");
+    expect(SEMANTIC_COLOR_TOKENS.dark.background.app).toBe("#212425");
+    expect(SEMANTIC_COLOR_TOKENS.light.primary).toBe("#9f5f06");
+    expect(SEMANTIC_COLOR_TOKENS.dark.primary).toBe("#f7bc59");
   });
 });
 
@@ -31,22 +33,27 @@ describe("platform adapters", () => {
     expect(muiOptions.palette).toMatchObject({
       mode: "dark",
       background: {
-        default: "#23262e",
-        paper: "#23262e",
+        default: "#212425",
+        paper: "#282c2d",
       },
       text: {
-        primary: "#d2d6de",
+        primary: "#e7eeea",
       },
       action: {
-        selected: "#363d4a",
+        selected: "rgba(127, 209, 168, 0.16)",
       },
     });
   });
 
-  it("keeps light-mode MUI action states on framework defaults", () => {
+  it("maps light-mode MUI action states to the shared palette", () => {
     const muiOptions = createMuiThemeOptions("light");
 
-    expect(muiOptions.palette).not.toHaveProperty("action");
+    expect(muiOptions.palette).toMatchObject({
+      action: {
+        hover: "#f3f4f6",
+        selected: "#eceff3",
+      },
+    });
   });
 
   it("builds a React Native token payload", () => {
@@ -55,8 +62,8 @@ describe("platform adapters", () => {
     expect(nativeTheme).toMatchObject({
       mode: "light",
       colors: {
-        backgroundApp: "#f8f8f9",
-        textPrimary: "#2a2a31",
+        backgroundApp: "#f7f8fa",
+        textPrimary: "#19211f",
       },
       typography: {
         bodyFontSize: 14,

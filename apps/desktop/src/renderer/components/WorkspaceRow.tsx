@@ -1,4 +1,4 @@
-import { Box, IconButton, ListItem, ListItemButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, IconButton, ListItem, ListItemButton, Stack, Tooltip, Typography, useTheme } from "@mui/material";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { LuArchive, LuFolderGit2, LuMonitor } from "react-icons/lu";
 import type { RepoWorkspaceItem, WorkspaceGitChangeTotals } from "../store/types";
@@ -79,6 +79,7 @@ export function WorkspaceRow({
   onContextMenu,
   onRequestDelete,
 }: WorkspaceRowProps) {
+  const theme = useTheme();
   const isLocalWorkspace = workspace.kind === "local";
   const badgeIndicator = isWorkspaceBadgeIndicator(indicator) ? indicator : null;
   const additions = changeTotals?.additions ?? 0;
@@ -147,10 +148,20 @@ export function WorkspaceRow({
         onMouseLeave={onMouseLeave}
         onContextMenu={onContextMenu}
         sx={{
+          bgcolor: "transparent",
           py: 0.5,
           pl: 3,
           pr: 2,
           minHeight: 24,
+          "&:hover, &:focus-visible": {
+            bgcolor: theme.palette.mode === "dark" ? theme.palette.action.hover : "rgba(47, 122, 100, 0.1)",
+          },
+          "&.Mui-selected": {
+            bgcolor: theme.palette.mode === "dark" ? theme.palette.action.selected : "rgba(211, 134, 17, 0.14)",
+          },
+          "&.Mui-selected:hover, &.Mui-selected:focus-visible": {
+            bgcolor: theme.palette.mode === "dark" ? theme.palette.action.hover : "rgba(211, 134, 17, 0.2)",
+          },
           "& .workspace-actions": {
             opacity: 0,
             pointerEvents: "none",

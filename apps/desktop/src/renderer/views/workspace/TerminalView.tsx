@@ -415,15 +415,11 @@ export function TerminalView({ tabId, focusRequestKey = 0 }: TerminalViewProps) 
     <Box
       ref={terminalHostRef}
       sx={{
-        position: "relative",
         flex: 1,
         minHeight: 0,
-        px: 1.5,
+        p: 1.5,
         bgcolor: "#1e1e1e",
-        "& .xterm": {
-          height: "100%",
-          pt: 1,
-        },
+        height: '100%',
         "& .xterm-viewport": {
           overflowY: "auto",
         },

@@ -14,14 +14,14 @@ body,
 
 html[data-app-theme-mode="dark"],
 html[data-app-theme-mode="dark"] body {
-  background-color: #23262e;
-  color: #d2d6de;
+  background-color: #212425;
+  color: #e7eeea;
 }
 
 html[data-app-theme-mode="dark"] .MuiTreeItem-content[data-selected],
 html[data-app-theme-mode="dark"] .MuiTreeItem-content[data-selected][data-focused],
 html[data-app-theme-mode="dark"] .MuiTreeItem-content[aria-selected="true"] {
-  background-color: #363d4a !important;
+  background-color: rgba(127, 209, 168, 0.16) !important;
   background-image: none !important;
 }
 
@@ -36,6 +36,6 @@ html[data-app-theme-mode="dark"] .MuiTreeItem-content[aria-selected="true"] {
 html[data-app-theme-mode="dark"] .MuiTreeItem-content[data-selected]:hover,
 html[data-app-theme-mode="dark"] .MuiTreeItem-content[data-focused]:hover,
 html[data-app-theme-mode="dark"] .MuiTreeItem-content[aria-selected="true"]:hover {
-  background-color: #313745 !important;
+  background-color: rgba(127, 209, 168, 0.2) !important;
   background-image: none !important;
 }

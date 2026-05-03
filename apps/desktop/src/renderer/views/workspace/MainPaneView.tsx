@@ -322,10 +322,9 @@ export function MainPaneView() {
             <Box
               key={tab.id}
               sx={{
-                position: "absolute",
-                inset: 0,
                 display: isSelected ? "flex" : "none",
                 flexDirection: "column",
+                height: '100%',
               }}
             >
               <TerminalView tabId={tab.id} focusRequestKey={isSelected ? focusContentRequestKey : 0} />

@@ -14,26 +14,24 @@ export function createMuiThemeOptions(mode: DesignTokenThemeMode) {
   const semantics = SEMANTIC_COLOR_TOKENS[mode];
   const isDark = mode === "dark";
   const elevation = isDark ? ELEVATION_TOKENS.dark : ELEVATION_TOKENS.light;
-  const listItemButtonSelectedOverrides = isDark
-    ? {
-        "&.Mui-selected": {
-          backgroundColor: semantics.action.selected,
-        },
-        "&.Mui-selected:hover": {
-          backgroundColor: semantics.action.hover,
-        },
-      }
-    : {};
+  const listItemButtonSelectedOverrides = {
+    "&.Mui-selected": {
+      backgroundColor: semantics.action.selected,
+    },
+    "&.Mui-selected:hover": {
+      backgroundColor: semantics.action.hover,
+    },
+  };
   const dialogPaperOverrides = isDark
     ? {
-        backgroundColor: semantics.background.app,
+        backgroundColor: semantics.background.surface,
         backgroundImage: "none",
         border: `1px solid ${semantics.border.default}`,
       }
     : {};
   const floatingSurfaceOverrides = isDark
     ? {
-        backgroundColor: semantics.background.app,
+        backgroundColor: semantics.background.surface,
         backgroundImage: "none",
         border: `1px solid ${semantics.border.default}`,
       }
@@ -58,15 +56,11 @@ export function createMuiThemeOptions(mode: DesignTokenThemeMode) {
       primary: semantics.text.primary,
       secondary: semantics.text.secondary,
     },
-    ...(isDark
-      ? {
-          action: {
-            active: semantics.action.active,
-            hover: semantics.action.hover,
-            selected: semantics.action.selected,
-          },
-        }
-      : {}),
+    action: {
+      active: semantics.action.active,
+      hover: semantics.action.hover,
+      selected: semantics.action.selected,
+    },
   };
 
   return {
