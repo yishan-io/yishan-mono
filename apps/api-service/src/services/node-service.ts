@@ -5,8 +5,8 @@ import { nodes, organizationMembers } from "@/db/schema";
 import {
   NodeDeletePermissionRequiredError,
   NodeNotFoundError,
+  OrganizationMembershipRequiredError,
   OrganizationNodePermissionRequiredError,
-  OrganizationMembershipRequiredError
 } from "@/errors";
 import { newId } from "@/lib/id";
 import type { OrganizationService } from "@/services/organization-service";
@@ -43,12 +43,13 @@ type RegisterNodeInput = {
   scope: NodeScope;
   endpoint?: string | null;
   metadata?: Record<string, unknown>;
+  updateIfExists?: boolean;
 };
 
 export class NodeService {
   constructor(
     private readonly db: AppDb,
-    private readonly organizationService: OrganizationService
+    private readonly organizationService: OrganizationService,
   ) {}
 
   private normalizeMetadata(value: unknown): Record<string, unknown> | null {
@@ -67,8 +68,8 @@ export class NodeService {
         .where(
           and(
             eq(organizationMembers.organizationId, input.organizationId),
-            eq(organizationMembers.userId, input.actorUserId)
-          )
+            eq(organizationMembers.userId, input.actorUserId),
+          ),
         )
         .limit(1);
 
@@ -100,7 +101,7 @@ export class NodeService {
           metadata: input.metadata ?? null,
           ownerUserId,
           organizationId,
-          createdByUserId: input.actorUserId
+          createdByUserId: input.actorUserId,
         })
         .returning();
 
@@ -113,7 +114,7 @@ export class NodeService {
         ...node,
         canUse: true,
         metadata: this.normalizeMetadata(node.metadata),
-        scope: node.scope
+        scope: node.scope,
       };
     });
   }
@@ -121,16 +122,14 @@ export class NodeService {
   async listNodes(input: { actorUserId: string; organizationId: string }): Promise<NodeView[]> {
     const actorRole = await this.organizationService.getMembershipRole({
       organizationId: input.organizationId,
-      userId: input.actorUserId
+      userId: input.actorUserId,
     });
 
     if (!actorRole) {
       throw new OrganizationMembershipRequiredError();
     }
 
-    const orgMemberUserIds = await this.organizationService.getOrganizationMemberUserIds(
-      input.organizationId
-    );
+    const orgMemberUserIds = await this.organizationService.getOrganizationMemberUserIds(input.organizationId);
     if (orgMemberUserIds.length === 0) {
       return [];
     }
@@ -141,48 +140,66 @@ export class NodeService {
       .where(
         or(
           and(eq(nodes.scope, "shared"), eq(nodes.organizationId, input.organizationId)),
-          and(eq(nodes.scope, "private"), inArray(nodes.ownerUserId, orgMemberUserIds))
-        )
+          and(eq(nodes.scope, "private"), inArray(nodes.ownerUserId, orgMemberUserIds)),
+        ),
       );
 
     return rows.map((row) => ({
       ...row,
       canUse: row.scope === "shared" || row.ownerUserId === input.actorUserId,
       metadata: this.normalizeMetadata(row.metadata),
-      scope: row.scope
+      scope: row.scope,
     }));
   }
 
   async registerNode(input: RegisterNodeInput): Promise<NodeView> {
+    const shouldUpdate = input.updateIfExists !== false;
     const now = new Date();
-    const upsertedRows = await this.db
-      .insert(nodes)
-      .values({
-        id: input.nodeId,
-        name: input.name,
-        scope: input.scope,
-        endpoint: input.endpoint ?? null,
-        metadata: input.metadata ?? null,
-        ownerUserId: input.actorUserId,
-        organizationId: null,
-        createdByUserId: input.actorUserId,
-        updatedAt: now
-      })
-      .onConflictDoUpdate({
-        target: nodes.id,
-        set: {
-          name: input.name,
-          scope: input.scope,
-          endpoint: input.endpoint ?? null,
-          metadata: input.metadata ?? null,
-          ownerUserId: input.actorUserId,
-          organizationId: null,
-          updatedAt: now
-        }
-      })
-      .returning();
+    const insertValues = {
+      id: input.nodeId,
+      name: input.name,
+      scope: input.scope,
+      endpoint: input.endpoint ?? null,
+      metadata: input.metadata ?? null,
+      ownerUserId: input.actorUserId,
+      organizationId: null,
+      createdByUserId: input.actorUserId,
+      updatedAt: now,
+    };
 
-    const node = upsertedRows[0];
+    let resultRows: (typeof nodes.$inferSelect)[];
+
+    if (shouldUpdate) {
+      resultRows = await this.db
+        .insert(nodes)
+        .values(insertValues)
+        .onConflictDoUpdate({
+          target: nodes.id,
+          set: {
+            name: input.name,
+            scope: input.scope,
+            endpoint: input.endpoint ?? null,
+            metadata: input.metadata ?? null,
+            ownerUserId: input.actorUserId,
+            organizationId: null,
+            updatedAt: now,
+          },
+        })
+        .returning();
+    } else {
+      resultRows = await this.db
+        .insert(nodes)
+        .values(insertValues)
+        .onConflictDoNothing({ target: nodes.id })
+        .returning();
+
+      // If conflict occurred, returning() is empty — fetch the existing row.
+      if (resultRows.length === 0) {
+        resultRows = await this.db.select().from(nodes).where(eq(nodes.id, input.nodeId)).limit(1);
+      }
+    }
+
+    const node = resultRows[0];
     if (!node) {
       throw new Error("Failed to register node");
     }
@@ -191,7 +208,7 @@ export class NodeService {
       ...node,
       canUse: true,
       metadata: this.normalizeMetadata(node.metadata),
-      scope: node.scope
+      scope: node.scope,
     };
   }
 
@@ -207,8 +224,8 @@ export class NodeService {
         .where(
           and(
             eq(organizationMembers.organizationId, input.organizationId),
-            eq(organizationMembers.userId, input.actorUserId)
-          )
+            eq(organizationMembers.userId, input.actorUserId),
+          ),
         )
         .limit(1);
 
@@ -222,7 +239,7 @@ export class NodeService {
           id: nodes.id,
           scope: nodes.scope,
           ownerUserId: nodes.ownerUserId,
-          organizationId: nodes.organizationId
+          organizationId: nodes.organizationId,
         })
         .from(nodes)
         .where(eq(nodes.id, input.nodeId))
@@ -245,8 +262,8 @@ export class NodeService {
           .where(
             and(
               eq(organizationMembers.organizationId, input.organizationId),
-              eq(organizationMembers.userId, ownerUserId)
-            )
+              eq(organizationMembers.userId, ownerUserId),
+            ),
           )
           .limit(1);
 

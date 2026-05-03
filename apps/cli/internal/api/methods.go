@@ -21,11 +21,12 @@ type CreateProjectInput struct {
 }
 
 type RegisterNodeInput struct {
-	NodeID   string
-	Name     string
-	Endpoint string
-	Metadata map[string]any
-	Scope    string
+	NodeID         string
+	Name           string
+	Endpoint       string
+	Metadata       map[string]any
+	Scope          string
+	UpdateIfExists *bool
 }
 
 type CreateWorkspaceInput struct {
@@ -131,6 +132,9 @@ func (c *Client) RegisterNode(input RegisterNodeInput) (RegisterNodeResponse, er
 	}
 	if len(input.Metadata) > 0 {
 		payload["metadata"] = input.Metadata
+	}
+	if input.UpdateIfExists != nil {
+		payload["updateIfExists"] = *input.UpdateIfExists
 	}
 
 	var response RegisterNodeResponse

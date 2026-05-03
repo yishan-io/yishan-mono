@@ -9,13 +9,19 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"yishan/apps/cli/internal/api"
+	"yishan/apps/cli/internal/buildinfo"
 	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/daemon"
 )
 
 type loginCallbackResult struct {
@@ -117,6 +123,14 @@ var loginCmd = &cobra.Command{
 			}
 
 			fmt.Println("Login successful. API token saved to local config.")
+
+			if err := registerLocalNodeAfterLogin(); err != nil {
+				log.Warn().Err(err).Msg("failed to register local node after login")
+				fmt.Printf("Warning: local node registration failed: %v\n", err)
+			} else {
+				log.Info().Msg("local node registered successfully after login")
+			}
+
 			return nil
 		case <-time.After(2 * time.Minute):
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -169,6 +183,9 @@ func persistAPITokens(result loginCallbackResult) error {
 	}
 
 	appConfig.API.Token = result.accessToken
+	appConfig.API.RefreshToken = result.refreshToken
+	appConfig.API.AccessTokenExpiresAt = result.accessTokenExpiresAt
+	appConfig.API.RefreshTokenExpiresAt = result.refreshTokenExpiresAt
 	return nil
 }
 
@@ -191,4 +208,49 @@ func openBrowser(targetURL string) error {
 	}
 
 	return exec.Command(command, args...).Start()
+}
+
+// registerLocalNodeAfterLogin registers the local daemon node with the API
+// immediately after login so that downstream workspace/project flows have
+// a node available without waiting for the daemon to start. The call is
+// idempotent — the API upserts on the daemon ID.
+func registerLocalNodeAfterLogin() error {
+	if appConfig.API.BaseURL == "" || appConfig.API.Token == "" {
+		return fmt.Errorf("API is not configured; skipping node registration")
+	}
+
+	statePath, err := daemon.ResolveStateFilePath(appConfig.ConfigPath)
+	if err != nil {
+		return fmt.Errorf("resolve daemon state path: %w", err)
+	}
+
+	daemonIDPath := filepath.Join(filepath.Dir(statePath), daemon.IDFileName)
+	daemonID, err := daemon.EnsureDaemonID(daemonIDPath)
+	if err != nil {
+		return fmt.Errorf("ensure daemon id: %w", err)
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "local-daemon"
+	}
+
+	updateIfExists := false
+	client := api.NewClient(appConfig.API.BaseURL, appConfig.API.Token, appConfig.API.RefreshToken, nil)
+	_, err = client.RegisterNode(api.RegisterNodeInput{
+		NodeID: daemonID,
+		Name:   hostname,
+		Scope:  "private",
+		Metadata: map[string]any{
+			"os":      runtime.GOOS,
+			"version": buildinfo.Version,
+		},
+		UpdateIfExists: &updateIfExists,
+	})
+	if err != nil {
+		return fmt.Errorf("register node %q: %w", daemonID, err)
+	}
+
+	log.Debug().Str("nodeId", daemonID).Str("hostname", hostname).Msg("registered local node after login")
+	return nil
 }

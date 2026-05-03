@@ -1,23 +1,23 @@
-import { z } from "zod";
 import { nonEmptyStringSchema } from "@/validation/common";
+import { z } from "zod";
 const nodeMetadataSchema = z
   .object({
     os: nonEmptyStringSchema.optional(),
-    version: nonEmptyStringSchema.optional()
+    version: nonEmptyStringSchema.optional(),
   })
   .catchall(z.unknown());
 
 export const nodeParamsSchema = z.object({
-  nodeId: nonEmptyStringSchema
+  nodeId: nonEmptyStringSchema,
 });
 
 export const organizationNodeParamsSchema = z.object({
-  orgId: nonEmptyStringSchema
+  orgId: nonEmptyStringSchema,
 });
 
 export const organizationNodeDeleteParamsSchema = z.object({
   orgId: nonEmptyStringSchema,
-  nodeId: nonEmptyStringSchema
+  nodeId: nonEmptyStringSchema,
 });
 
 export const registerNodeBodySchema = z.object({
@@ -25,7 +25,8 @@ export const registerNodeBodySchema = z.object({
   name: nonEmptyStringSchema,
   scope: z.enum(["private", "shared"]),
   endpoint: nonEmptyStringSchema.optional(),
-  metadata: nodeMetadataSchema.optional()
+  metadata: nodeMetadataSchema.optional(),
+  updateIfExists: z.boolean().optional(),
 });
 
 export type NodeParamsInput = z.infer<typeof nodeParamsSchema>;
