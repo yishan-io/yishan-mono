@@ -134,8 +134,8 @@ export function TerminalView({ tabId, focusRequestKey = 0 }: TerminalViewProps) 
       fontSize: 12,
       lineHeight: 1.4,
       theme: {
-        background: "#1e1e1e",
-        foreground: "#d4d4d4",
+        background: "#292e36",
+        foreground: "#e7ebf0",
       },
     });
     const { fitAddon, searchAddon } = loadTerminalAddons(terminal);
@@ -418,8 +418,8 @@ export function TerminalView({ tabId, focusRequestKey = 0 }: TerminalViewProps) 
         flex: 1,
         minHeight: 0,
         p: 1.5,
-        bgcolor: "#1e1e1e",
-        height: '100%',
+        bgcolor: "#2b3038",
+        height: "100%",
         "& .xterm-viewport": {
           overflowY: "auto",
         },
@@ -436,9 +436,9 @@ export function TerminalView({ tabId, focusRequestKey = 0 }: TerminalViewProps) 
             alignItems: "center",
             px: 1,
             py: 0.5,
-            border: "1px solid #3a3a3a",
+            border: "1px solid #414754",
             borderRadius: 1,
-            bgcolor: "#252526",
+            bgcolor: "#31363f",
             zIndex: 2,
           }}
         >
@@ -458,9 +458,9 @@ export function TerminalView({ tabId, focusRequestKey = 0 }: TerminalViewProps) 
               width: 220,
               px: 0.75,
               py: 0.25,
-              border: "1px solid #3a3a3a",
+              border: "1px solid #414754",
               borderRadius: 0.75,
-              color: "#d4d4d4",
+              color: "#e7ebf0",
               fontSize: 13,
             }}
           />
@@ -472,7 +472,7 @@ export function TerminalView({ tabId, focusRequestKey = 0 }: TerminalViewProps) 
               runTerminalSearch("previous");
             }}
             sx={{
-              color: "#d4d4d4",
+              color: "#e7ebf0",
               fontSize: 11,
               "&.Mui-disabled": {
                 color: "#8b8b8b",
@@ -489,7 +489,7 @@ export function TerminalView({ tabId, focusRequestKey = 0 }: TerminalViewProps) 
               runTerminalSearch("next");
             }}
             sx={{
-              color: "#d4d4d4",
+              color: "#e7ebf0",
               fontSize: 11,
               "&.Mui-disabled": {
                 color: "#8b8b8b",
@@ -502,7 +502,7 @@ export function TerminalView({ tabId, focusRequestKey = 0 }: TerminalViewProps) 
             aria-label="Close terminal search"
             size="small"
             onClick={closeSearchPanel}
-            sx={{ color: "#d4d4d4", fontSize: 11 }}
+            sx={{ color: "#e7ebf0", fontSize: 11 }}
           >
             Close
           </IconButton>

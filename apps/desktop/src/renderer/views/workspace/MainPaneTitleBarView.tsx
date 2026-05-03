@@ -4,12 +4,12 @@ import { useTranslation } from "react-i18next";
 import { LuChevronRight, LuFolderGit2, LuMonitor, LuPanelLeft, LuPanelRight } from "react-icons/lu";
 import { getMainWindowFullscreenState } from "../../commands/appCommands";
 import { renderProjectIcon } from "../../components/projectIcons";
+import { getRendererPlatform } from "../../helpers/platform";
 import { useCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
-import { getRendererPlatform } from "../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
-import { workspaceStore } from "../../store/workspaceStore";
 import type { RepoWorkspaceItem, WorkspaceProjectRecord } from "../../store/types";
+import { workspaceStore } from "../../store/workspaceStore";
 import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";
 
 const titleBarSx = {
@@ -17,6 +17,7 @@ const titleBarSx = {
   px: 1.5,
   borderBottom: 1,
   borderColor: "divider",
+  bgcolor: "background.paper",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -24,13 +25,17 @@ const titleBarSx = {
 
 /** Resolves the workspace displayed as local in the left pane for a project. */
 function resolvePrimaryWorkspaceId(project: WorkspaceProjectRecord | undefined, workspaces: RepoWorkspaceItem[]) {
-  const preferredProjectPath = project?.localPath?.trim() || project?.path?.trim() || project?.worktreePath?.trim() || "";
+  const preferredProjectPath =
+    project?.localPath?.trim() || project?.path?.trim() || project?.worktreePath?.trim() || "";
   if (!project || !preferredProjectPath) {
     return undefined;
   }
 
   return workspaces.find(
-    (workspace) => workspace.repoId === project.id && workspace.kind !== "local" && workspace.worktreePath?.trim() === preferredProjectPath,
+    (workspace) =>
+      workspace.repoId === project.id &&
+      workspace.kind !== "local" &&
+      workspace.worktreePath?.trim() === preferredProjectPath,
   )?.id;
 }
 

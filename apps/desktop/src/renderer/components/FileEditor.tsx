@@ -51,7 +51,7 @@ function createEditorTheme(mode: "light" | "dark") {
         backgroundColor: isDark ? DARK_SURFACE_COLORS.activeLine : "#f1f3f7",
       },
       ".cm-selectionBackground, .cm-content ::selection": {
-        backgroundColor: isDark ? "#3c4560" : "#ced7ec",
+        backgroundColor: isDark ? "rgba(221, 226, 233, 0.12)" : "#ced7ec",
       },
       ".cm-gutters": {
         backgroundColor: isDark ? DARK_SURFACE_COLORS.gutter : "#f5f6f8",

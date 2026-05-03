@@ -128,6 +128,9 @@ export function ApplicationRouterView() {
       return;
     }
 
+    void bootstrapAttempt;
+    void selectedOrganizationId;
+
     let disposed = false;
     const bootstrapSession = async () => {
       let bootstrappedSessionData = false;
@@ -220,6 +223,7 @@ export function ApplicationRouterView() {
             height: 42,
             minHeight: 42,
             px: 1,
+            bgcolor: "background.paper",
             display: "flex",
             alignItems: "center",
           }}

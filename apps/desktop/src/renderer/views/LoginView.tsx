@@ -2,7 +2,7 @@ import { Alert, Box, Button, CircularProgress, Stack, Typography } from "@mui/ma
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaGoogle } from "react-icons/fa";
-import yishaLogoSrc from "../../assets/images/yisha-transparent.png";
+import logo from "../../assets/images/yishan-transparent.png";
 import { login } from "../commands/appCommands";
 import { authStore } from "../store/authStore";
 
@@ -53,7 +53,7 @@ export function LoginView() {
           textAlign: "center",
         }}
       >
-        <Box component="img" src={yishaLogoSrc} alt="" sx={{ width: 256, height: 256, alignSelf: "center" }} />
+        <Box component="img" src={logo} alt="" sx={{ width: 256, height: 256, alignSelf: "center" }} />
         <Stack spacing={1}>
           <Typography variant="h4" fontWeight={700}>
             {t("auth.login.title")}

@@ -31,7 +31,7 @@ export function createMuiThemeOptions(mode: DesignTokenThemeMode) {
     : {};
   const floatingSurfaceOverrides = isDark
     ? {
-        backgroundColor: semantics.background.surface,
+        backgroundColor: semantics.background.app,
         backgroundImage: "none",
         border: `1px solid ${semantics.border.default}`,
       }

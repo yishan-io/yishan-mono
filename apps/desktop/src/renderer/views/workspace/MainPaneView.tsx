@@ -21,6 +21,7 @@ const paneHeaderSx = {
   px: 1.5,
   borderBottom: 1,
   borderColor: "divider",
+  bgcolor: "background.paper",
   display: "flex",
   alignItems: "center",
 } as const;
@@ -324,7 +325,7 @@ export function MainPaneView() {
               sx={{
                 display: isSelected ? "flex" : "none",
                 flexDirection: "column",
-                height: '100%',
+                height: "100%",
               }}
             >
               <TerminalView tabId={tab.id} focusRequestKey={isSelected ? focusContentRequestKey : 0} />

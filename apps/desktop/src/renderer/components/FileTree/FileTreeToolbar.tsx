@@ -33,16 +33,15 @@ export function FileTreeToolbar({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: 0.5,
+        gap: 2.5,
         px: 0.5,
-        pb: 0.5,
-        mb: 0.5,
+        my: 1.1,
       }}
     >
       <Tooltip title={createFileActionLabel}>
         <span>
           <IconButton size="small" aria-label={createFileActionLabel} onClick={onCreateFile} disabled={!canCreateFile}>
-            <LuFilePlus2 size={14} />
+            <LuFilePlus2 size={16} />
           </IconButton>
         </span>
       </Tooltip>
@@ -54,14 +53,14 @@ export function FileTreeToolbar({
             onClick={onCreateFolder}
             disabled={!canCreateFolder}
           >
-            <LuFolderPlus size={16} />
+            <LuFolderPlus size={18} />
           </IconButton>
         </span>
       </Tooltip>
       <Tooltip title={refreshActionLabel}>
         <span>
           <IconButton size="small" aria-label={refreshActionLabel} onClick={onRefresh} disabled={!canRefresh}>
-            <LuRefreshCw size={14} />
+            <LuRefreshCw size={16} />
           </IconButton>
         </span>
       </Tooltip>

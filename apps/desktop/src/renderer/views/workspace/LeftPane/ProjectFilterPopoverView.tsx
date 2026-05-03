@@ -17,7 +17,6 @@ import { useTranslation } from "react-i18next";
 import { MdOutlineFilterList } from "react-icons/md";
 import { useCommands } from "../../../hooks/useCommands";
 import { workspaceStore } from "../../../store/workspaceStore";
-import { DARK_SURFACE_COLORS } from "../../../theme";
 
 /** Returns true when a repository row matches the quick-search keyword. */
 function repoMatchesQuickSearch(repoName: string, repoPath: string, keyword: string): boolean {
@@ -74,12 +73,8 @@ export function ProjectFilterPopoverView() {
             sx: {
               mt: 1,
               overflow: "visible",
-              bgcolor: (theme) =>
-                theme.palette.mode === "dark" ? DARK_SURFACE_COLORS.mainPane : theme.palette.background.paper,
-              border: (theme) =>
-                theme.palette.mode === "dark"
-                  ? `1px solid ${DARK_SURFACE_COLORS.border}`
-                  : `1px solid ${theme.palette.divider}`,
+              bgcolor: "background.default",
+              border: (theme) => `1px solid ${theme.palette.divider}`,
               "&::before": {
                 content: '""',
                 position: "absolute",
@@ -87,15 +82,11 @@ export function ProjectFilterPopoverView() {
                 right: 16,
                 width: 10,
                 height: 10,
-                bgcolor: (theme) =>
-                  theme.palette.mode === "dark" ? DARK_SURFACE_COLORS.mainPane : theme.palette.background.paper,
+                bgcolor: "background.default",
                 backgroundImage: "none",
                 transform: "translateY(-50%) rotate(45deg)",
                 zIndex: 0,
-                boxShadow: (theme) =>
-                  theme.palette.mode === "dark"
-                    ? `-1px -1px 0 0 ${DARK_SURFACE_COLORS.border}`
-                    : `-1px -1px 0 0 ${theme.palette.divider}`,
+                boxShadow: (theme) => `-1px -1px 0 0 ${theme.palette.divider}`,
               },
             },
           },
@@ -134,7 +125,13 @@ export function ProjectFilterPopoverView() {
           />
           <List dense disablePadding sx={{ mt: 1, maxHeight: 260, overflowY: "auto" }}>
             {repos
-              .filter((repo) => repoMatchesQuickSearch(repo.name, repo.path ?? repo.localPath ?? repo.worktreePath ?? "", repoQuickSearch))
+              .filter((repo) =>
+                repoMatchesQuickSearch(
+                  repo.name,
+                  repo.path ?? repo.localPath ?? repo.worktreePath ?? "",
+                  repoQuickSearch,
+                ),
+              )
               .map((repo) => {
                 const checked = displayRepoIds.includes(repo.id);
 

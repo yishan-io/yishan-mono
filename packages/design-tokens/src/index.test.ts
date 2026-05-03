@@ -20,7 +20,7 @@ describe("token version exports", () => {
   it("exposes a stable v1 token contract", () => {
     expect(DESIGN_TOKEN_VERSION).toBe("v1");
     expect(SEMANTIC_COLOR_TOKENS.light.background.app).toBe("#f7f8fa");
-    expect(SEMANTIC_COLOR_TOKENS.dark.background.app).toBe("#212425");
+    expect(SEMANTIC_COLOR_TOKENS.dark.background.app).toBe("#2b3038");
     expect(SEMANTIC_COLOR_TOKENS.light.primary).toBe("#9f5f06");
     expect(SEMANTIC_COLOR_TOKENS.dark.primary).toBe("#f7bc59");
   });
@@ -33,14 +33,14 @@ describe("platform adapters", () => {
     expect(muiOptions.palette).toMatchObject({
       mode: "dark",
       background: {
-        default: "#212425",
-        paper: "#282c2d",
+        default: "#2b3038",
+        paper: "#31363f",
       },
       text: {
-        primary: "#e7eeea",
+        primary: "#e7ebf0",
       },
       action: {
-        selected: "rgba(127, 209, 168, 0.16)",
+        selected: "rgba(221, 226, 233, 0.08)",
       },
     });
   });

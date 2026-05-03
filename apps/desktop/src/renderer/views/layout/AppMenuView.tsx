@@ -34,8 +34,8 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { requestJson } from "../../api/restClient";
 import { openExternalUrl } from "../../commands/appCommands";
-import { useThemePreference } from "../../hooks/useThemePreference";
 import { getRendererPlatform } from "../../helpers/platform";
+import { useThemePreference } from "../../hooks/useThemePreference";
 import { rendererQueryClient } from "../../queryClient";
 import { getDesktopHostBridge } from "../../rpc/rpcTransport";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
@@ -95,6 +95,9 @@ const menuItemButtonSx: SxProps<Theme> = {
   justifyContent: "flex-start",
   textTransform: "none",
   color: "text.secondary",
+  "&:hover": {
+    bgcolor: "action.hover",
+  },
 };
 
 /** Renders a compact app menu with horizontal theme controls and route actions. */
@@ -126,6 +129,10 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
       .toUpperCase() || "U";
 
   useEffect(() => {
+    if (!location.pathname) {
+      return;
+    }
+
     setMenuAnchor(null);
     setOrganizationMenuAnchor(null);
   }, [location.pathname]);
@@ -229,7 +236,17 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
             setOrganizationMenuAnchor(null);
           }}
         >
-          <Paper elevation={3} sx={{ p: 1, minWidth: 168, maxWidth: 220 }}>
+          <Paper
+            elevation={3}
+            sx={{
+              p: 1,
+              minWidth: 168,
+              maxWidth: 220,
+              bgcolor: "background.default",
+              border: (theme) => `1px solid ${theme.palette.divider}`,
+              backgroundImage: "none",
+            }}
+          >
             <Stack spacing={1}>
               <ButtonGroup
                 size="small"
@@ -280,7 +297,13 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
                 >
                   <Box
                     component="span"
-                    sx={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}
+                    sx={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 1,
+                    }}
                   >
                     <span>{t("org.menu.organizations")}</span>
                     <LuChevronRight size={14} aria-hidden="true" />
@@ -298,7 +321,13 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
                 >
                   <Box
                     component="span"
-                    sx={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}
+                    sx={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 1,
+                    }}
                   >
                     <span>{t("org.menu.settings")}</span>
                     <Typography variant="caption" color="text.secondary" component="span" aria-hidden="true">
@@ -330,7 +359,13 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
                 >
                   <Box
                     component="span"
-                    sx={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}
+                    sx={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 1,
+                    }}
                   >
                     <span>{t("org.menu.shortcutMap")}</span>
                     {keybindingsShortcutLabel ? (
@@ -377,7 +412,13 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
       >
         <Paper
           elevation={3}
-          sx={{ p: 0.75, minWidth: 220 }}
+          sx={{
+            p: 0.75,
+            minWidth: 220,
+            bgcolor: "background.default",
+            border: (theme) => `1px solid ${theme.palette.divider}`,
+            backgroundImage: "none",
+          }}
           onMouseLeave={() => {
             setOrganizationMenuAnchor(null);
           }}
@@ -396,15 +437,24 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
                     key={organization.id}
                     size="small"
                     fullWidth
-                    disabled={selected}
                     sx={{
                       justifyContent: "space-between",
                       textTransform: "none",
-                      color: "text.secondary",
+                      color: selected ? "primary.main" : "text.secondary",
                       bgcolor: selected ? "action.selected" : "transparent",
+                      boxShadow: selected ? (theme) => `inset 0 0 0 1px ${theme.palette.action.active}` : undefined,
+                      "&:hover": {
+                        bgcolor: "action.hover",
+                      },
+                      "&:focus-visible": {
+                        bgcolor: "action.hover",
+                        boxShadow: (theme) => `inset 0 0 0 1px ${theme.palette.action.active}`,
+                      },
                     }}
                     onClick={() => {
                       if (selected) {
+                        setOrganizationMenuAnchor(null);
+                        setMenuAnchor(null);
                         return;
                       }
                       setSelectedOrganizationId(organization.id);
@@ -428,6 +478,9 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
                 justifyContent: "flex-start",
                 textTransform: "none",
                 color: "text.secondary",
+                "&:hover": {
+                  bgcolor: "action.hover",
+                },
               }}
               onClick={() => {
                 setOrganizationMenuAnchor(null);

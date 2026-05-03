@@ -14,6 +14,7 @@ const paneHeaderSx = {
   py: 0.75,
   borderBottom: 1,
   borderColor: "divider",
+  bgcolor: "background.paper",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
