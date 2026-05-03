@@ -277,7 +277,6 @@ export function TabBar({
       opacity: 0,
       pointerEvents: "none",
       transition: "opacity 0.15s ease",
-      mr: -2,
     },
     "&:hover": {
       bgcolor: active ? "background.default" : "action.hover",
@@ -286,8 +285,9 @@ export function TabBar({
       opacity: 1,
       pointerEvents: "auto",
     },
-    "& .tab-pin": {
-      mr: -2,
+    "& .tab-content": {
+      flexGrow: 1,
+      minWidth: 0,
     },
     cursor: canDragTabs && !editing ? "grab" : "default",
   });
@@ -424,13 +424,13 @@ export function TabBar({
   const unpinnedTabs = tabs.filter((tab) => !tab.pinned);
 
   return (
-    <Box sx={{ display: "flex", alignItems: "flex-end", minWidth: 0, height: "100%" }}>
+    <Box sx={{ display: "flex", alignItems: "center", minWidth: 0, height: "100%" }}>
       <Box
         sx={{
           flex: 1,
           minWidth: 0,
           display: "flex",
-          alignItems: "flex-end",
+          alignItems: "center",
           height: "100%",
         }}
       >
@@ -467,6 +467,7 @@ export function TabBar({
             >
               {editing ? (
                 <Box
+                  className="tab-content"
                   sx={{
                     py: 0.75,
                     pl: 0.5,
@@ -518,6 +519,7 @@ export function TabBar({
                 </Box>
               ) : (
                 <ButtonBase
+                  className="tab-content"
                   disableRipple
                   onClick={() => onSelectTab(tab.id)}
                   onDoubleClick={() => beginRename(tab)}
@@ -566,7 +568,7 @@ export function TabBar({
                   sx={{
                     color: active ? "text.primary" : "text.secondary",
                     p: 0.5,
-                    mr: 0.25,
+                    mr: -2,
                     display: editing ? "none" : "inline-flex",
                   }}
                 >
@@ -585,7 +587,7 @@ export function TabBar({
                   sx={{
                     color: active ? "text.primary" : "text.secondary",
                     p: 0.5,
-                    mr: 0.25,
+                    mr: -2,
                     display: editing ? "none" : "inline-flex",
                   }}
                 >
@@ -647,6 +649,7 @@ export function TabBar({
               >
                 {editing ? (
                   <Box
+                    className="tab-content"
                     sx={{
                       py: 0.75,
                       pl: 0.5,
@@ -698,6 +701,7 @@ export function TabBar({
                   </Box>
                 ) : (
                   <ButtonBase
+                    className="tab-content"
                     disableRipple
                     onClick={() => onSelectTab(tab.id)}
                     onDoubleClick={() => beginRename(tab)}
@@ -746,7 +750,7 @@ export function TabBar({
                     sx={{
                       color: active ? "text.primary" : "text.secondary",
                       p: 0.5,
-                      mr: 0.25,
+                      mr: -2,
                       display: editing ? "none" : "inline-flex",
                     }}
                   >
@@ -765,7 +769,7 @@ export function TabBar({
                     sx={{
                       color: active ? "text.primary" : "text.secondary",
                       p: 0.5,
-                      mr: 0.25,
+                      mr: -2,
                       display: editing ? "none" : "inline-flex",
                     }}
                   >

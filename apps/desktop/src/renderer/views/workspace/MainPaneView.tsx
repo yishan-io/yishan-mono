@@ -20,7 +20,7 @@ import { TerminalView } from "./TerminalView";
 const paneHeaderSx = {
   minHeight: 38,
   px: 1.5,
-  bgcolor: (theme: Theme) => darken(theme.palette.background.default, theme.palette.mode === "dark" ? 0.05 : 0.2),
+  bgcolor: (theme: Theme) => darken(theme.palette.background.default, theme.palette.mode === "dark" ? 0.1 : 0.2),
   position: "relative",
   display: "flex",
   alignItems: "center",
