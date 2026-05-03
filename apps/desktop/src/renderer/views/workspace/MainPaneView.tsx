@@ -20,7 +20,6 @@ import { TerminalView } from "./TerminalView";
 const paneHeaderSx = {
   minHeight: 38,
   px: 1.5,
-  bgcolor: (theme: Theme) => darken(theme.palette.background.default, theme.palette.mode === "dark" ? 0.1 : 0.2),
   position: "relative",
   display: "flex",
   alignItems: "center",
@@ -192,7 +191,18 @@ export function MainPaneView() {
       }}
     >
       <MainPaneTitleBarView />
-      <Box sx={{ ...paneHeaderSx, minWidth: 0 }}>
+      <Box
+        sx={{
+          ...paneHeaderSx,
+          minWidth: 0,
+          ...(hasWorkspaceTabs
+            ? {
+                bgcolor: (theme: Theme) =>
+                  darken(theme.palette.background.default, theme.palette.mode === "dark" ? 0.1 : 0.2),
+              }
+            : {}),
+        }}
+      >
         <TabBar
           tabs={tabBarTabs}
           selectedTabId={selectedTabId}
