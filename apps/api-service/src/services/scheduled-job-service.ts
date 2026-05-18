@@ -110,29 +110,7 @@ type ListRunsInput = JobIdentityInput & {
 };
 
 export function toScheduledJobView(row: ScheduledJobRecord): ScheduledJobView {
-  return {
-    id: row.id,
-    organizationId: row.organizationId,
-    projectId: row.projectId,
-    nodeId: row.nodeId,
-    name: row.name,
-    agentKind: row.agentKind,
-    prompt: row.prompt,
-    model: row.model,
-    command: row.command,
-    cronExpression: row.cronExpression,
-    timezone: row.timezone,
-    status: row.status,
-    nextRunAt: row.nextRunAt,
-    lastScheduledFor: row.lastScheduledFor,
-    lastRunAt: row.lastRunAt,
-    lastRunStatus: row.lastRunStatus,
-    lastErrorCode: row.lastErrorCode,
-    lastErrorMessage: row.lastErrorMessage,
-    createdByUserId: row.createdByUserId,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
+  return row as ScheduledJobView;
 }
 
 function toRunView(row: ScheduledJobRunRecord): ScheduledJobRunView {
