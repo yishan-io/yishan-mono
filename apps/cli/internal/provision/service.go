@@ -3,7 +3,11 @@ package provision
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+
+	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/api"
+	"yishan/apps/cli/internal/daemon"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -165,4 +169,30 @@ func (p *Provisioner) resolvePrimaryWorkspace(orgID string, projectID string, no
 	}
 
 	return api.Workspace{}, fmt.Errorf("no primary workspace found on node %s for project %s; create one first", nodeID, projectID)
+}
+
+// RuntimeConfig holds the configuration needed to create a runtime provisioner
+// from the running daemon's state.
+type RuntimeConfig struct {
+	ConfigPath string
+}
+
+// NewRuntimeProvisioner creates a Provisioner wired to the local daemon's node
+// ID, resolved from the daemon state file at runtime.
+func NewRuntimeProvisioner(apiClient *api.Client, cfg RuntimeConfig) *Provisioner {
+	localNodeID := ""
+
+	statePath, err := daemon.ResolveStateFilePath(cfg.ConfigPath)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to resolve daemon runtime state path")
+	} else {
+		daemonIDPath := filepath.Join(filepath.Dir(statePath), daemon.IDFileName)
+		if id, err := daemon.EnsureDaemonID(daemonIDPath); err == nil {
+			localNodeID = id
+		} else {
+			log.Warn().Err(err).Msg("failed to resolve local daemon id")
+		}
+	}
+
+	return NewLocalProvisioner(apiClient, workspace.NewManager(), localNodeID)
 }

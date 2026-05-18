@@ -51,6 +51,14 @@ type createProgressStep struct {
 	Run     func(ctx context.Context) (CreateProgressStatus, string, error)
 }
 
+// resolvedCreatePaths holds the validated and resolved filesystem paths for a
+// CreateWorkspace request.
+type resolvedCreatePaths struct {
+	sourcePath   string
+	worktreePath string
+	repoKey      string // validated relative path, used for context dir resolution
+}
+
 func (m *Manager) CreateWorkspace(ctx context.Context, req CreateRequest) (Workspace, error) {
 	return m.CreateWorkspaceWithProgress(ctx, req, nil)
 }
@@ -60,7 +68,6 @@ func (m *Manager) CreateWorkspaceWithProgress(ctx context.Context, req CreateReq
 		if report == nil {
 			return
 		}
-
 		report(CreateProgressEvent{
 			WorkspaceID: strings.TrimSpace(req.ID),
 			StepID:      stepID,
@@ -71,6 +78,41 @@ func (m *Manager) CreateWorkspaceWithProgress(ctx context.Context, req CreateReq
 		})
 	}
 
+	if err := validateCreateRequest(req); err != nil {
+		return Workspace{}, err
+	}
+
+	paths, err := resolveCreatePaths(req)
+	if err != nil {
+		return Workspace{}, err
+	}
+
+	ws := Workspace{
+		ID:        strings.TrimSpace(req.ID),
+		Path:      paths.worktreePath,
+		OrgID:     req.OrganizationID,
+		ProjectID: req.ProjectID,
+	}
+
+	steps := []createProgressStep{
+		makeWorktreeStep(m, req, paths),
+		makeContextStep(req, paths),
+		makeSetupHookStep(req, &ws),
+	}
+
+	if err := runCreateSteps(ctx, req.ID, steps, reportProgress); err != nil {
+		return Workspace{}, err
+	}
+
+	m.mu.Lock()
+	m.workspaces[ws.ID] = ws
+	m.mu.Unlock()
+
+	return ws, nil
+}
+
+// validateCreateRequest checks that all required fields are present.
+func validateCreateRequest(req CreateRequest) error {
 	for _, field := range []struct {
 		name  string
 		value string
@@ -83,102 +125,120 @@ func (m *Manager) CreateWorkspaceWithProgress(ctx context.Context, req CreateReq
 		{name: "sourceBranch", value: req.SourceBranch},
 	} {
 		if strings.TrimSpace(field.value) == "" {
-			return Workspace{}, NewRPCError(-32602, field.name+" is required")
+			return NewRPCError(-32602, field.name+" is required")
 		}
 	}
+	return nil
+}
 
+// resolveCreatePaths validates and resolves filesystem paths for a create request.
+func resolveCreatePaths(req CreateRequest) (resolvedCreatePaths, error) {
 	sourcePath, err := absUserPath(req.SourcePath)
 	if err != nil {
-		return Workspace{}, err
+		return resolvedCreatePaths{}, err
 	}
 	repoKey, err := safeRelativePath(req.RepoKey, "repoKey")
 	if err != nil {
-		return Workspace{}, err
+		return resolvedCreatePaths{}, err
 	}
 	workspaceName, err := safeRelativePath(req.WorkspaceName, "workspaceName")
 	if err != nil {
-		return Workspace{}, err
+		return resolvedCreatePaths{}, err
 	}
 	worktreePath, err := defaultWorktreePath(repoKey, workspaceName)
 	if err != nil {
-		return Workspace{}, err
+		return resolvedCreatePaths{}, err
 	}
+	return resolvedCreatePaths{sourcePath: sourcePath, worktreePath: worktreePath, repoKey: repoKey}, nil
+}
 
-	ws := Workspace{ID: strings.TrimSpace(req.ID), Path: worktreePath, OrgID: req.OrganizationID, ProjectID: req.ProjectID}
-	steps := []createProgressStep{
-		{
-			ID:      "worktree",
-			Label:   "Create local worktree",
-			Timeout: 10 * time.Minute,
-			Run: func(stepCtx context.Context) (CreateProgressStatus, string, error) {
-				err := m.gits.CreateWorktree(stepCtx, sourcePath, req.TargetBranch, worktreePath, true, strings.TrimSpace(req.SourceBranch))
-				if err == nil {
-					return CreateProgressCompleted, worktreePath, nil
-				}
+// makeWorktreeStep returns the step that creates the local git worktree.
+func makeWorktreeStep(m *Manager, req CreateRequest, paths resolvedCreatePaths) createProgressStep {
+	return createProgressStep{
+		ID:      "worktree",
+		Label:   "Create local worktree",
+		Timeout: 10 * time.Minute,
+		Run: func(stepCtx context.Context) (CreateProgressStatus, string, error) {
+			err := m.gits.CreateWorktree(stepCtx, paths.sourcePath, req.TargetBranch, paths.worktreePath, true, strings.TrimSpace(req.SourceBranch))
+			if err == nil {
+				return CreateProgressCompleted, paths.worktreePath, nil
+			}
 
-				if !isMissingRefError(err) {
-					return CreateProgressFailed, err.Error(), err
-				}
+			if !isMissingRefError(err) {
+				return CreateProgressFailed, err.Error(), err
+			}
 
-				reportProgress("worktree", "Create local worktree", CreateProgressRunning, "Fetching missing refs...")
-				if fetchErr := m.gits.FetchRef(stepCtx, sourcePath, strings.TrimSpace(req.SourceBranch)); fetchErr != nil {
-					return CreateProgressFailed, fetchErr.Error(), fetchErr
-				}
+			// Fetch missing ref and retry.
+			if fetchErr := m.gits.FetchRef(stepCtx, paths.sourcePath, strings.TrimSpace(req.SourceBranch)); fetchErr != nil {
+				return CreateProgressFailed, fetchErr.Error(), fetchErr
+			}
 
-				if err := m.gits.CreateWorktree(stepCtx, sourcePath, req.TargetBranch, worktreePath, true, strings.TrimSpace(req.SourceBranch)); err != nil {
-					return CreateProgressFailed, err.Error(), err
-				}
-				return CreateProgressCompleted, worktreePath, nil
-			},
+			if err := m.gits.CreateWorktree(stepCtx, paths.sourcePath, req.TargetBranch, paths.worktreePath, true, strings.TrimSpace(req.SourceBranch)); err != nil {
+				return CreateProgressFailed, err.Error(), err
+			}
+			return CreateProgressCompleted, paths.worktreePath, nil
 		},
-		{
-			ID:      "context",
-			Label:   "Link project context",
-			Timeout: 30 * time.Second,
-			Run: func(stepCtx context.Context) (CreateProgressStatus, string, error) {
-				if !req.ContextEnabled {
-					return CreateProgressSkipped, "Context link disabled", nil
-				}
+	}
+}
 
-				contextPath, err := defaultContextPath(repoKey)
-				if err != nil {
-					return CreateProgressFailed, err.Error(), err
-				}
-				if err := ensureContextLink(contextPath, worktreePath); err != nil {
-					wrappedErr := fmt.Errorf("create context link: %w", err)
-					return CreateProgressFailed, err.Error(), wrappedErr
-				}
-				return CreateProgressCompleted, "", nil
-			},
+// makeContextStep returns the step that links the project context directory.
+func makeContextStep(req CreateRequest, paths resolvedCreatePaths) createProgressStep {
+	return createProgressStep{
+		ID:      "context",
+		Label:   "Link project context",
+		Timeout: 30 * time.Second,
+		Run: func(stepCtx context.Context) (CreateProgressStatus, string, error) {
+			if !req.ContextEnabled {
+				return CreateProgressSkipped, "Context link disabled", nil
+			}
+
+			contextPath, err := defaultContextPath(paths.repoKey)
+			if err != nil {
+				return CreateProgressFailed, err.Error(), err
+			}
+			if err := ensureContextLink(contextPath, paths.worktreePath); err != nil {
+				wrappedErr := fmt.Errorf("create context link: %w", err)
+				return CreateProgressFailed, err.Error(), wrappedErr
+			}
+			return CreateProgressCompleted, "", nil
 		},
-		{
-			ID:      "setup",
-			Label:   "Run setup script",
-			Timeout: 5 * time.Minute,
-			Run: func(stepCtx context.Context) (CreateProgressStatus, string, error) {
-				hookResult, hookErr := RunHook(stepCtx, HookRequest{
-					Command:       req.SetupHook,
-					WorkspaceID:   ws.ID,
-					WorkspacePath: ws.Path,
-					HookName:      "setup",
-				})
-				if hookErr != nil {
-					hookResult.Error = fmt.Sprintf("setup hook: %v", hookErr)
-					ws.SetupHookResult = &hookResult
+	}
+}
+
+// makeSetupHookStep returns the step that runs the setup lifecycle hook.
+// ws is a pointer so the step can record the hook result onto the workspace.
+func makeSetupHookStep(req CreateRequest, ws *Workspace) createProgressStep {
+	return createProgressStep{
+		ID:      "setup",
+		Label:   "Run setup script",
+		Timeout: 5 * time.Minute,
+		Run: func(stepCtx context.Context) (CreateProgressStatus, string, error) {
+			hookResult, hookErr := RunHook(stepCtx, HookRequest{
+				Command:       req.SetupHook,
+				WorkspaceID:   ws.ID,
+				WorkspacePath: ws.Path,
+				HookName:      "setup",
+			})
+			if hookErr != nil {
+				hookResult.Error = fmt.Sprintf("setup hook: %v", hookErr)
+				ws.SetupHookResult = &hookResult
+				return CreateProgressWarning, hookResult.Error, nil
+			}
+			if !hookResult.Skipped {
+				ws.SetupHookResult = &hookResult
+				if hookResult.Error != "" {
 					return CreateProgressWarning, hookResult.Error, nil
 				}
-				if !hookResult.Skipped {
-					ws.SetupHookResult = &hookResult
-					if hookResult.Error != "" {
-						return CreateProgressWarning, hookResult.Error, nil
-					}
-					return CreateProgressCompleted, "", nil
-				}
-				return CreateProgressSkipped, "No setup script configured", nil
-			},
+				return CreateProgressCompleted, "", nil
+			}
+			return CreateProgressSkipped, "No setup script configured", nil
 		},
 	}
+}
 
+// runCreateSteps executes each step in sequence, emitting progress events.
+// On step failure it emits the failed event and returns the error.
+func runCreateSteps(ctx context.Context, workspaceID string, steps []createProgressStep, reportProgress func(string, string, CreateProgressStatus, string)) error {
 	for _, step := range steps {
 		reportProgress(step.ID, step.Label, CreateProgressRunning, "")
 
@@ -186,18 +246,12 @@ func (m *Manager) CreateWorkspaceWithProgress(ctx context.Context, req CreateReq
 		status, message, err := step.Run(stepCtx)
 		cancel()
 
-		if err != nil {
-			reportProgress(step.ID, step.Label, status, message)
-			return Workspace{}, err
-		}
 		reportProgress(step.ID, step.Label, status, message)
+		if err != nil {
+			return err
+		}
 	}
-
-	m.mu.Lock()
-	m.workspaces[ws.ID] = ws
-	m.mu.Unlock()
-
-	return ws, nil
+	return nil
 }
 
 func absUserPath(path string) (string, error) {

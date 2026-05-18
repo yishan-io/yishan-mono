@@ -2,19 +2,10 @@ package cmd
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
-	"errors"
 	"fmt"
-	"html"
-	"net"
-	"net/http"
-	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -23,16 +14,8 @@ import (
 	"yishan/apps/cli/internal/buildinfo"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/daemon"
+	"yishan/apps/cli/internal/login"
 )
-
-type loginCallbackResult struct {
-	state                 string
-	accessToken           string
-	accessTokenExpiresAt  string
-	refreshToken          string
-	refreshTokenExpiresAt string
-	err                   error
-}
 
 var loginCmd = &cobra.Command{
 	Use:   "login",
@@ -46,99 +29,28 @@ var loginCmd = &cobra.Command{
 			return fmt.Errorf("unsupported provider %q (allowed: google, github)", provider)
 		}
 
-		state, err := generateState(24)
-		if err != nil {
-			return err
-		}
-
-		listener, err := net.Listen("tcp", "127.0.0.1:0")
-		if err != nil {
-			return fmt.Errorf("start callback listener: %w", err)
-		}
-		defer listener.Close()
-
-		callbackURL := fmt.Sprintf("http://%s/callback", listener.Addr().String())
-		resultCh := make(chan loginCallbackResult, 1)
-
-		mux := http.NewServeMux()
-		mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
-			query := r.URL.Query()
-			if callbackErr := query.Get("error"); callbackErr != "" {
-				resultCh <- loginCallbackResult{err: fmt.Errorf("oauth callback error: %s", callbackErr)}
-				w.WriteHeader(http.StatusBadRequest)
-				_, _ = w.Write([]byte(buildDesktopRedirectHTML("error", callbackErr)))
-				return
-			}
-
-			result := loginCallbackResult{
-				state:                 query.Get("state"),
-				accessToken:           query.Get("accessToken"),
-				accessTokenExpiresAt:  query.Get("accessTokenExpiresAt"),
-				refreshToken:          query.Get("refreshToken"),
-				refreshTokenExpiresAt: query.Get("refreshTokenExpiresAt"),
-			}
-
-			if result.state == "" || result.accessToken == "" || result.refreshToken == "" {
-				result.err = errors.New("missing auth token fields in callback")
-			}
-
-			resultCh <- result
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(buildDesktopRedirectHTML("success", "")))
+		result, err := login.RunBrowserFlow(context.Background(), login.FlowConfig{
+			BaseURL:  appConfig.API.BaseURL,
+			Provider: provider,
 		})
-
-		server := &http.Server{
-			Handler:           mux,
-			ReadHeaderTimeout: 5 * time.Second,
-		}
-
-		go func() {
-			_ = server.Serve(listener)
-		}()
-
-		loginURL, err := buildLoginURL(appConfig.API.BaseURL, provider, callbackURL, state)
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("Opening browser for %s login...\n", provider)
-		if err := openBrowser(loginURL); err != nil {
-			fmt.Printf("Could not open browser automatically. Open this URL manually:\n%s\n", loginURL)
+		if err := persistAPITokens(result); err != nil {
+			return err
 		}
 
-		select {
-		case result := <-resultCh:
-			shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-			defer cancel()
-			_ = server.Shutdown(shutdownCtx)
+		fmt.Println("Login successful. API token saved to local config.")
 
-			if result.err != nil {
-				return result.err
-			}
-			if result.state != state {
-				return errors.New("oauth state mismatch")
-			}
-
-			if err := persistAPITokens(result); err != nil {
-				return err
-			}
-
-			fmt.Println("Login successful. API token saved to local config.")
-
-			if err := registerLocalNodeAfterLogin(); err != nil {
-				log.Warn().Err(err).Msg("failed to register local node after login")
-				fmt.Printf("Warning: local node registration failed: %v\n", err)
-			} else {
-				log.Info().Msg("local node registered successfully after login")
-			}
-
-			return nil
-		case <-time.After(2 * time.Minute):
-			shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-			defer cancel()
-			_ = server.Shutdown(shutdownCtx)
-			return errors.New("login timed out waiting for OAuth callback")
+		if err := registerLocalNodeAfterLogin(); err != nil {
+			log.Warn().Err(err).Msg("failed to register local node after login")
+			fmt.Printf("Warning: local node registration failed: %v\n", err)
+		} else {
+			log.Info().Msg("local node registered successfully after login")
 		}
+
+		return nil
 	},
 }
 
@@ -147,101 +59,22 @@ func init() {
 	loginCmd.Flags().String("provider", "google", "oauth provider (google|github)")
 }
 
-func buildLoginURL(baseURL string, provider string, redirectURI string, state string) (string, error) {
-	parsedBase, err := url.Parse(baseURL)
-	if err != nil {
-		return "", fmt.Errorf("invalid API base URL %q: %w", baseURL, err)
-	}
-
-	parsedBase.Path = fmt.Sprintf("/auth/%s", provider)
-	query := parsedBase.Query()
-	query.Set("mode", "cli")
-	query.Set("redirect_uri", redirectURI)
-	query.Set("state", state)
-	parsedBase.RawQuery = query.Encode()
-
-	return parsedBase.String(), nil
-}
-
-func generateState(bytesLen int) (string, error) {
-	raw := make([]byte, bytesLen)
-	if _, err := rand.Read(raw); err != nil {
-		return "", fmt.Errorf("generate state: %w", err)
-	}
-
-	return base64.RawURLEncoding.EncodeToString(raw), nil
-}
-
-func persistAPITokens(result loginCallbackResult) error {
+func persistAPITokens(result login.FlowResult) error {
 	if err := config.UpdateFile(appConfig.ConfigPath, func(cfg *viper.Viper) {
 		cfg.Set(config.KeyAPIBaseURL, appConfig.API.BaseURL)
-		cfg.Set(config.KeyAPIToken, result.accessToken)
-		cfg.Set(config.KeyAPIRefreshToken, result.refreshToken)
-		cfg.Set(config.KeyAPIAccessTokenExpiresAt, result.accessTokenExpiresAt)
-		cfg.Set(config.KeyAPIRefreshTokenExpiresAt, result.refreshTokenExpiresAt)
+		cfg.Set(config.KeyAPIToken, result.AccessToken)
+		cfg.Set(config.KeyAPIRefreshToken, result.RefreshToken)
+		cfg.Set(config.KeyAPIAccessTokenExpiresAt, result.AccessTokenExpiresAt)
+		cfg.Set(config.KeyAPIRefreshTokenExpiresAt, result.RefreshTokenExpiresAt)
 	}); err != nil {
 		return err
 	}
 
-	appConfig.API.Token = result.accessToken
-	appConfig.API.RefreshToken = result.refreshToken
-	appConfig.API.AccessTokenExpiresAt = result.accessTokenExpiresAt
-	appConfig.API.RefreshTokenExpiresAt = result.refreshTokenExpiresAt
+	appConfig.API.Token = result.AccessToken
+	appConfig.API.RefreshToken = result.RefreshToken
+	appConfig.API.AccessTokenExpiresAt = result.AccessTokenExpiresAt
+	appConfig.API.RefreshTokenExpiresAt = result.RefreshTokenExpiresAt
 	return nil
-}
-
-func openBrowser(targetURL string) error {
-	var command string
-	var args []string
-
-	switch runtime.GOOS {
-	case "darwin":
-		command = "open"
-		args = []string{targetURL}
-	case "linux":
-		command = "xdg-open"
-		args = []string{targetURL}
-	case "windows":
-		command = "rundll32"
-		args = []string{"url.dll,FileProtocolHandler", targetURL}
-	default:
-		return fmt.Errorf("unsupported OS for browser open: %s", runtime.GOOS)
-	}
-
-	return exec.Command(command, args...).Start()
-}
-
-func buildDesktopRedirectHTML(status string, reason string) string {
-	deepLink := "yishan://auth/callback?status=" + url.QueryEscape(status)
-	if reason != "" {
-		deepLink += "&reason=" + url.QueryEscape(reason)
-	}
-
-	escapedDeepLink := html.EscapeString(deepLink)
-	statusText := "Login successful"
-	if status != "success" {
-		statusText = "Login failed"
-	}
-
-	return fmt.Sprintf(`<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>%s</title>
-  </head>
-  <body>
-    <p>%s. Returning to Yishan…</p>
-    <p>If nothing happens, <a href="%s">open Yishan</a>.</p>
-    <script>
-      window.location.replace(%q);
-      setTimeout(function () {
-        window.close();
-      }, 300);
-    </script>
-  </body>
-</html>
-`, statusText, statusText, escapedDeepLink, deepLink)
 }
 
 // registerLocalNodeAfterLogin registers the local daemon node with the API
