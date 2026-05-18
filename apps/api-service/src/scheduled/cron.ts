@@ -194,7 +194,8 @@ function toTimezoneParts(date: Date, timezone: string) {
   const year = Number(parts.get("year"));
   const month = Number(parts.get("month"));
   const day = Number(parts.get("day"));
-  const hour = Number(parts.get("hour"));
+  // Some runtimes return "24" for midnight with hour12:false — normalise to 0.
+  const hour = Number(parts.get("hour")) % 24;
   const minute = Number(parts.get("minute"));
   const second = Number(parts.get("second"));
 
