@@ -2,20 +2,18 @@ import type { AgentKind } from "@yishan/core";
 import { and, desc, eq } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
-import { nodes, projects, scheduledJobRuns, scheduledJobs } from "@/db/schema";
+import { projects, scheduledJobRuns, scheduledJobs } from "@/db/schema";
 import {
-  NodeNotFoundError,
-  OrganizationMembershipRequiredError,
   ProjectNotFoundError,
   ScheduledJobInvalidCronError,
   ScheduledJobInvalidTimezoneError,
   ScheduledJobNotFoundError,
-  WorkspaceLocalNodePermissionRequiredError,
-  WorkspaceLocalNodeScopeInvalidError,
 } from "@/errors";
 import { newId } from "@/lib/id";
 import { computeNextRunAt, ensureTimezoneSupported, parseCronExpression } from "@/scheduled/cron";
 import type { OrganizationService } from "@/services/organization-service";
+import { assertNodeOwnedByActor } from "@/services/shared/assertNodeOwnedByActor";
+import { assertOrganizationMember } from "@/services/shared/assertOrganizationMember";
 
 const DEFAULT_RUN_LIMIT = 20;
 
@@ -165,10 +163,7 @@ export class ScheduledJobService {
   ) {}
 
   private async assertOrganizationMember(organizationId: string, userId: string): Promise<void> {
-    const role = await this.organizationService.getMembershipRole({ organizationId, userId });
-    if (!role) {
-      throw new OrganizationMembershipRequiredError();
-    }
+    await assertOrganizationMember(this.organizationService, organizationId, userId);
   }
 
   private async assertProjectBelongsToOrganization(projectId: string, organizationId: string): Promise<void> {
@@ -183,22 +178,7 @@ export class ScheduledJobService {
   }
 
   private async assertNodeOwnedByActor(nodeId: string, actorUserId: string): Promise<void> {
-    const rows = await this.db
-      .select({ id: nodes.id, ownerUserId: nodes.ownerUserId, scope: nodes.scope })
-      .from(nodes)
-      .where(eq(nodes.id, nodeId))
-      .limit(1);
-
-    const node = rows[0];
-    if (!node) {
-      throw new NodeNotFoundError(nodeId);
-    }
-    if (node.scope !== "private") {
-      throw new WorkspaceLocalNodeScopeInvalidError(nodeId);
-    }
-    if (node.ownerUserId !== actorUserId) {
-      throw new WorkspaceLocalNodePermissionRequiredError();
-    }
+    await assertNodeOwnedByActor(this.db, nodeId, actorUserId);
   }
 
   private async getJobOrThrow(jobId: string, organizationId: string): Promise<ScheduledJobRecord> {

@@ -1,14 +1,12 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
 import { workspacePullRequests, workspaces } from "@/db/schema";
 import type { WorkspacePullRequestState } from "@/db/schema";
-import {
-  OrganizationMembershipRequiredError,
-  WorkspaceNotFoundError
-} from "@/errors";
+import { WorkspaceNotFoundError } from "@/errors";
 import { newId } from "@/lib/id";
 import type { OrganizationService } from "@/services/organization-service";
+import { assertOrganizationMember } from "@/services/shared/assertOrganizationMember";
 
 export type WorkspacePullRequestView = {
   id: string;
@@ -48,34 +46,61 @@ type ListWorkspacePullRequestsInput = {
   workspaceId: string;
 };
 
+/**
+ * Returns the latest pull-request row for each workspace in `workspaceIds`,
+ * keyed by workspace ID. Used by workspace and project list queries.
+ */
+export async function fetchLatestPrByWorkspaceId(
+  db: AppDb,
+  organizationId: string,
+  workspaceIds: string[],
+): Promise<Map<string, WorkspacePullRequestView>> {
+  if (workspaceIds.length === 0) {
+    return new Map();
+  }
+
+  const rows = await db
+    .selectDistinctOn([workspacePullRequests.workspaceId], {
+      id: workspacePullRequests.id,
+      workspaceId: workspacePullRequests.workspaceId,
+      organizationId: workspacePullRequests.organizationId,
+      prId: workspacePullRequests.prId,
+      title: workspacePullRequests.title,
+      url: workspacePullRequests.url,
+      branch: workspacePullRequests.branch,
+      baseBranch: workspacePullRequests.baseBranch,
+      state: workspacePullRequests.state,
+      metadata: workspacePullRequests.metadata,
+      detectedAt: workspacePullRequests.detectedAt,
+      resolvedAt: workspacePullRequests.resolvedAt,
+      createdAt: workspacePullRequests.createdAt,
+      updatedAt: workspacePullRequests.updatedAt,
+    })
+    .from(workspacePullRequests)
+    .where(
+      and(
+        eq(workspacePullRequests.organizationId, organizationId),
+        inArray(workspacePullRequests.workspaceId, workspaceIds),
+      ),
+    )
+    .orderBy(workspacePullRequests.workspaceId, desc(workspacePullRequests.detectedAt));
+
+  return new Map(rows.map((row) => [row.workspaceId, row]));
+}
+
 export class WorkspacePullRequestService {
   constructor(
     private readonly db: AppDb,
-    private readonly organizationService: OrganizationService
+    private readonly organizationService: OrganizationService,
   ) {}
 
-  async upsertWorkspacePullRequest(
-    input: UpsertWorkspacePullRequestInput
-  ): Promise<WorkspacePullRequestView> {
-    const role = await this.organizationService.getMembershipRole({
-      organizationId: input.organizationId,
-      userId: input.actorUserId
-    });
+  async upsertWorkspacePullRequest(input: UpsertWorkspacePullRequestInput): Promise<WorkspacePullRequestView> {
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
 
-    if (!role) {
-      throw new OrganizationMembershipRequiredError();
-    }
-
-    // Verify the workspace belongs to this org
     const workspaceRows = await this.db
       .select({ id: workspaces.id })
       .from(workspaces)
-      .where(
-        and(
-          eq(workspaces.id, input.workspaceId),
-          eq(workspaces.organizationId, input.organizationId)
-        )
-      )
+      .where(and(eq(workspaces.id, input.workspaceId), eq(workspaces.organizationId, input.organizationId)))
       .limit(1);
 
     if (workspaceRows.length === 0) {
@@ -84,14 +109,12 @@ export class WorkspacePullRequestService {
         nodeId: "",
         kind: "primary",
         branch: null,
-        localPath: ""
+        localPath: "",
       });
     }
 
     const now = new Date();
-    const resolvedAt =
-      input.resolvedAt ??
-      (input.state === "closed" || input.state === "merged" ? now : null);
+    const resolvedAt = input.resolvedAt ?? (input.state === "closed" || input.state === "merged" ? now : null);
 
     const rows = await this.db
       .insert(workspacePullRequests)
@@ -108,7 +131,7 @@ export class WorkspacePullRequestService {
         metadata: input.metadata ?? null,
         detectedAt: input.detectedAt,
         resolvedAt,
-        updatedAt: now
+        updatedAt: now,
       })
       .onConflictDoUpdate({
         target: [workspacePullRequests.workspaceId, workspacePullRequests.prId],
@@ -120,8 +143,8 @@ export class WorkspacePullRequestService {
           state: input.state,
           metadata: input.metadata ?? null,
           resolvedAt,
-          updatedAt: now
-        }
+          updatedAt: now,
+        },
       })
       .returning();
 
@@ -133,29 +156,18 @@ export class WorkspacePullRequestService {
     return row;
   }
 
-  async listWorkspacePullRequests(
-    input: ListWorkspacePullRequestsInput
-  ): Promise<WorkspacePullRequestView[]> {
-    const role = await this.organizationService.getMembershipRole({
-      organizationId: input.organizationId,
-      userId: input.actorUserId
-    });
+  async listWorkspacePullRequests(input: ListWorkspacePullRequestsInput): Promise<WorkspacePullRequestView[]> {
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
 
-    if (!role) {
-      throw new OrganizationMembershipRequiredError();
-    }
-
-    const rows = await this.db
+    return this.db
       .select()
       .from(workspacePullRequests)
       .where(
         and(
           eq(workspacePullRequests.workspaceId, input.workspaceId),
-          eq(workspacePullRequests.organizationId, input.organizationId)
-        )
+          eq(workspacePullRequests.organizationId, input.organizationId),
+        ),
       )
       .orderBy(desc(workspacePullRequests.detectedAt));
-
-    return rows;
   }
 }

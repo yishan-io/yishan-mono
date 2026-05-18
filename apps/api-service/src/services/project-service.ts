@@ -1,18 +1,15 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
-import { nodes, projects, workspacePullRequests, workspaces } from "@/db/schema";
+import { projects, workspaces } from "@/db/schema";
 import type { WorkspacePullRequestState } from "@/db/schema";
-import {
-  OrganizationMembershipRequiredError,
-  ProjectNotFoundError,
-  WorkspaceLocalNodePermissionRequiredError,
-  WorkspaceLocalNodeScopeInvalidError,
-  WorkspaceNodeNotFoundError
-} from "@/errors";
+import { ProjectNotFoundError } from "@/errors";
 import { newId } from "@/lib/id";
 import { inferRepoSource } from "@/lib/repo";
 import type { OrganizationService } from "@/services/organization-service";
+import { assertNodeOwnedByActor } from "@/services/shared/assertNodeOwnedByActor";
+import { assertOrganizationMember } from "@/services/shared/assertOrganizationMember";
+import { fetchLatestPrByWorkspaceId } from "@/services/workspace-pull-request-service";
 
 type ProjectSourceType = "git" | "git-local" | "unknown";
 
@@ -87,18 +84,11 @@ type UpdateProjectInput = {
 export class ProjectService {
   constructor(
     private readonly db: AppDb,
-    private readonly organizationService: OrganizationService
+    private readonly organizationService: OrganizationService,
   ) {}
 
   async createProject(input: CreateProjectInput): Promise<ProjectWithWorkspacesView> {
-    const role = await this.organizationService.getMembershipRole({
-      organizationId: input.organizationId,
-      userId: input.actorUserId
-    });
-
-    if (!role) {
-      throw new OrganizationMembershipRequiredError();
-    }
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
 
     const name = input.name.trim();
     const repoUrl = input.repoUrl?.trim() ?? null;
@@ -115,6 +105,10 @@ export class ProjectService {
       repoKey = inferred.repoKey;
     }
 
+    if ((sourceType === "git" || sourceType === "git-local") && nodeId) {
+      await assertNodeOwnedByActor(this.db, nodeId, input.actorUserId);
+    }
+
     return this.db.transaction(async (tx) => {
       const insertedRows = await tx
         .insert(projects)
@@ -126,7 +120,7 @@ export class ProjectService {
           repoUrl,
           repoKey,
           organizationId: input.organizationId,
-          createdByUserId: input.actorUserId
+          createdByUserId: input.actorUserId,
         })
         .returning();
 
@@ -138,25 +132,6 @@ export class ProjectService {
       const createdWorkspaces: ProjectWithWorkspacesView["workspaces"] = [];
 
       if ((sourceType === "git" || sourceType === "git-local") && nodeId && localPath) {
-        const nodeRows = await tx
-          .select({ id: nodes.id, scope: nodes.scope, ownerUserId: nodes.ownerUserId })
-          .from(nodes)
-          .where(eq(nodes.id, nodeId))
-          .limit(1);
-
-        const node = nodeRows[0];
-        if (!node) {
-          throw new WorkspaceNodeNotFoundError(nodeId);
-        }
-
-        if (node.scope !== "private") {
-          throw new WorkspaceLocalNodeScopeInvalidError(nodeId);
-        }
-
-        if (node.ownerUserId !== input.actorUserId) {
-          throw new WorkspaceLocalNodePermissionRequiredError();
-        }
-
         const insertedWorkspaces = await tx
           .insert(workspaces)
           .values({
@@ -167,17 +142,14 @@ export class ProjectService {
             nodeId,
             kind: "primary",
             branch: null,
-            localPath
+            localPath,
           })
           .returning();
 
         createdWorkspaces.push({ ...insertedWorkspaces[0]!, latestPullRequest: null });
       }
 
-      return {
-        ...project,
-        workspaces: createdWorkspaces
-      };
+      return { ...project, workspaces: createdWorkspaces };
     });
   }
 
@@ -186,14 +158,7 @@ export class ProjectService {
     actorUserId: string;
     withWorkspaces?: boolean;
   }): Promise<ProjectView[] | ProjectWithWorkspacesView[]> {
-    const role = await this.organizationService.getMembershipRole({
-      organizationId: input.organizationId,
-      userId: input.actorUserId
-    });
-
-    if (!role) {
-      throw new OrganizationMembershipRequiredError();
-    }
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
 
     const rows = await this.db.select().from(projects).where(eq(projects.organizationId, input.organizationId));
 
@@ -214,8 +179,8 @@ export class ProjectService {
           eq(workspaces.organizationId, input.organizationId),
           eq(workspaces.userId, input.actorUserId),
           eq(workspaces.status, "active"),
-          inArray(workspaces.projectId, projectIds)
-        )
+          inArray(workspaces.projectId, projectIds),
+        ),
       );
 
     if (workspaceRows.length === 0) {
@@ -223,30 +188,7 @@ export class ProjectService {
     }
 
     const workspaceIds = workspaceRows.map((w) => w.id);
-    const prRows = await this.db
-      .selectDistinctOn([workspacePullRequests.workspaceId], {
-        id: workspacePullRequests.id,
-        workspaceId: workspacePullRequests.workspaceId,
-        prId: workspacePullRequests.prId,
-        title: workspacePullRequests.title,
-        url: workspacePullRequests.url,
-        branch: workspacePullRequests.branch,
-        baseBranch: workspacePullRequests.baseBranch,
-        state: workspacePullRequests.state,
-        metadata: workspacePullRequests.metadata,
-        detectedAt: workspacePullRequests.detectedAt,
-        resolvedAt: workspacePullRequests.resolvedAt
-      })
-      .from(workspacePullRequests)
-      .where(
-        and(
-          eq(workspacePullRequests.organizationId, input.organizationId),
-          inArray(workspacePullRequests.workspaceId, workspaceIds)
-        )
-      )
-      .orderBy(workspacePullRequests.workspaceId, desc(workspacePullRequests.detectedAt));
-
-    const latestPrByWorkspaceId = new Map(prRows.map((pr) => [pr.workspaceId, pr]));
+    const latestPrByWorkspaceId = await fetchLatestPrByWorkspaceId(this.db, input.organizationId, workspaceIds);
 
     const workspacesByProjectId = new Map<string, ProjectWithWorkspacesView["workspaces"]>();
     for (const workspace of workspaceRows) {
@@ -262,31 +204,28 @@ export class ProjectService {
               url: pr.url,
               branch: pr.branch,
               baseBranch: pr.baseBranch,
-              state: pr.state as WorkspacePullRequestState,
+              state: pr.state,
               metadata: pr.metadata,
               detectedAt: pr.detectedAt,
-              resolvedAt: pr.resolvedAt
+              resolvedAt: pr.resolvedAt,
             }
-          : null
+          : null,
       });
       workspacesByProjectId.set(workspace.projectId, existing);
     }
 
     return rows.map((row) => ({
       ...row,
-      workspaces: workspacesByProjectId.get(row.id) ?? []
+      workspaces: workspacesByProjectId.get(row.id) ?? [],
     }));
   }
 
-  async deleteProject(input: { organizationId: string; projectId: string; actorUserId: string }): Promise<void> {
-    const role = await this.organizationService.getMembershipRole({
-      organizationId: input.organizationId,
-      userId: input.actorUserId
-    });
-
-    if (!role) {
-      throw new OrganizationMembershipRequiredError();
-    }
+  async deleteProject(input: {
+    organizationId: string;
+    projectId: string;
+    actorUserId: string;
+  }): Promise<void> {
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
 
     const deletedRows = await this.db
       .delete(projects)
@@ -300,27 +239,15 @@ export class ProjectService {
 
   async updateProject(input: UpdateProjectInput): Promise<ProjectView> {
     const { organizationId, actorUserId, projectId, ...updates } = input;
-    const role = await this.organizationService.getMembershipRole({
-      organizationId: organizationId,
-      userId: actorUserId
-    });
-
-    if (!role) {
-      throw new OrganizationMembershipRequiredError();
-    }
+    await assertOrganizationMember(this.organizationService, organizationId, actorUserId);
 
     const filteredUpdates = Object.fromEntries(
-      Object.entries(updates).filter(([, value]) => value !== undefined)
-    ) as Partial<
-      Pick<ProjectView, "name" | "icon" | "color" | "setupScript" | "postScript" | "contextEnabled">
-    >;
+      Object.entries(updates).filter(([, value]) => value !== undefined),
+    ) as Partial<Pick<ProjectView, "name" | "icon" | "color" | "setupScript" | "postScript" | "contextEnabled">>;
 
     const updatedRows = await this.db
       .update(projects)
-      .set({
-        ...filteredUpdates,
-        updatedAt: new Date()
-      })
+      .set({ ...filteredUpdates, updatedAt: new Date() })
       .where(and(eq(projects.id, projectId), eq(projects.organizationId, organizationId)))
       .returning();
 

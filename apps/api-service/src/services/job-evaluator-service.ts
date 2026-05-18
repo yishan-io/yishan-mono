@@ -1,18 +1,13 @@
 import { and, eq, lte } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
-import { nodes, scheduledJobRuns, scheduledJobs } from "@/db/schema";
-import {
-  NodeNotFoundError,
-  ScheduledJobInvalidCronError,
-  ScheduledJobInvalidTimezoneError,
-  WorkspaceLocalNodePermissionRequiredError,
-  WorkspaceLocalNodeScopeInvalidError,
-} from "@/errors";
+import { scheduledJobRuns, scheduledJobs } from "@/db/schema";
+import { ScheduledJobInvalidCronError, ScheduledJobInvalidTimezoneError } from "@/errors";
 import { newId } from "@/lib/id";
 import { computeNextRunAt, ensureTimezoneSupported, parseCronExpression } from "@/scheduled/cron";
 import type { PendingRun, ScheduledJobView } from "@/services/scheduled-job-service";
 import { toScheduledJobView } from "@/services/scheduled-job-service";
+import { assertNodeOwnedByActor } from "@/services/shared/assertNodeOwnedByActor";
 
 const MAX_RESPONSE_BODY_SIZE = 4096;
 
@@ -62,22 +57,7 @@ export class JobEvaluatorService {
   constructor(private readonly db: AppDb) {}
 
   private async assertNodeOwnedByActor(nodeId: string, actorUserId: string): Promise<void> {
-    const rows = await this.db
-      .select({ id: nodes.id, ownerUserId: nodes.ownerUserId, scope: nodes.scope })
-      .from(nodes)
-      .where(eq(nodes.id, nodeId))
-      .limit(1);
-
-    const node = rows[0];
-    if (!node) {
-      throw new NodeNotFoundError(nodeId);
-    }
-    if (node.scope !== "private") {
-      throw new WorkspaceLocalNodeScopeInvalidError(nodeId);
-    }
-    if (node.ownerUserId !== actorUserId) {
-      throw new WorkspaceLocalNodePermissionRequiredError();
-    }
+    await assertNodeOwnedByActor(this.db, nodeId, actorUserId);
   }
 
   /** Claims all due scheduled jobs and creates pending run records for them. */

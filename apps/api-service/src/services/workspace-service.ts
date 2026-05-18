@@ -1,20 +1,20 @@
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
-import { nodes, organizationMembers, projects, workspacePullRequests, workspaces } from "@/db/schema";
+import { organizationMembers, projects, workspaces } from "@/db/schema";
 import type { WorkspacePullRequestState } from "@/db/schema";
 import {
-  OrganizationMembershipRequiredError,
   ProjectNotFoundError,
   WorkspaceBranchRequiredError,
-  WorkspaceLocalNodePermissionRequiredError,
-  WorkspaceLocalNodeScopeInvalidError,
+  WorkspaceNodeNotFoundError,
   WorkspaceNotFoundError,
-  WorkspaceNodeNotFoundError
 } from "@/errors";
 import { newId } from "@/lib/id";
 import type { OrganizationService } from "@/services/organization-service";
+import { assertNodeOwnedByActor } from "@/services/shared/assertNodeOwnedByActor";
+import { assertOrganizationMember } from "@/services/shared/assertOrganizationMember";
 import type { WorkspaceProvisioner } from "@/services/workspace-provisioner";
+import { fetchLatestPrByWorkspaceId } from "@/services/workspace-pull-request-service";
 
 type WorkspaceKind = "primary" | "worktree";
 
@@ -73,20 +73,14 @@ export class WorkspaceService {
   constructor(
     private readonly db: AppDb,
     private readonly organizationService: OrganizationService,
-    private readonly workspaceProvisioner: WorkspaceProvisioner
+    private readonly workspaceProvisioner: WorkspaceProvisioner,
   ) {}
 
   async createWorkspace(input: CreateWorkspaceInput): Promise<WorkspaceView> {
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
+    await assertNodeOwnedByActor(this.db, input.nodeId, input.actorUserId);
+
     const workspaceRow = await this.db.transaction(async (tx) => {
-      const role = await this.organizationService.getMembershipRole({
-        organizationId: input.organizationId,
-        userId: input.actorUserId
-      });
-
-      if (!role) {
-        throw new OrganizationMembershipRequiredError();
-      }
-
       const branch = input.branch?.trim() ?? null;
       if (input.kind === "worktree" && !branch) {
         throw new WorkspaceBranchRequiredError();
@@ -102,33 +96,14 @@ export class WorkspaceService {
         throw new ProjectNotFoundError(input.projectId);
       }
 
-      const nodeRows = await tx
-        .select({ id: nodes.id, scope: nodes.scope, ownerUserId: nodes.ownerUserId })
-        .from(nodes)
-        .where(eq(nodes.id, input.nodeId))
-        .limit(1);
-
-      const node = nodeRows[0];
-      if (!node) {
-        throw new WorkspaceNodeNotFoundError(input.nodeId);
-      }
-
-      if (node.scope !== "private") {
-        throw new WorkspaceLocalNodeScopeInvalidError(input.nodeId);
-      }
-
-      if (node.ownerUserId !== input.actorUserId) {
-        throw new WorkspaceLocalNodePermissionRequiredError();
-      }
-
       const ownerMembershipRows = await tx
         .select({ userId: organizationMembers.userId })
         .from(organizationMembers)
         .where(
           and(
             eq(organizationMembers.organizationId, input.organizationId),
-            eq(organizationMembers.userId, input.actorUserId)
-          )
+            eq(organizationMembers.userId, input.actorUserId),
+          ),
         )
         .limit(1);
 
@@ -138,11 +113,7 @@ export class WorkspaceService {
 
       const reactivatedRows = await tx
         .update(workspaces)
-        .set({
-          status: "active",
-          localPath: input.localPath.trim(),
-          updatedAt: new Date()
-        })
+        .set({ status: "active", localPath: input.localPath.trim(), updatedAt: new Date() })
         .where(
           and(
             eq(workspaces.organizationId, input.organizationId),
@@ -151,8 +122,8 @@ export class WorkspaceService {
             eq(workspaces.nodeId, input.nodeId),
             eq(workspaces.kind, input.kind),
             branch ? eq(workspaces.branch, branch) : isNull(workspaces.branch),
-            eq(workspaces.status, "closed")
-          )
+            eq(workspaces.status, "closed"),
+          ),
         )
         .returning();
 
@@ -174,7 +145,7 @@ export class WorkspaceService {
           kind: input.kind,
           branch,
           sourceBranch,
-          localPath: input.localPath.trim()
+          localPath: input.localPath.trim(),
         })
         .returning();
 
@@ -188,7 +159,7 @@ export class WorkspaceService {
 
     await this.workspaceProvisioner.enqueueWorkspaceProvision({
       workspace: workspaceRow,
-      actorUserId: input.actorUserId
+      actorUserId: input.actorUserId,
     });
 
     return { ...workspaceRow, latestPullRequest: null };
@@ -199,14 +170,7 @@ export class WorkspaceService {
     projectId: string;
     actorUserId: string;
   }): Promise<WorkspaceView[]> {
-    const role = await this.organizationService.getMembershipRole({
-      organizationId: input.organizationId,
-      userId: input.actorUserId
-    });
-
-    if (!role) {
-      throw new OrganizationMembershipRequiredError();
-    }
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
 
     const rows = await this.db
       .select()
@@ -216,40 +180,16 @@ export class WorkspaceService {
           eq(workspaces.organizationId, input.organizationId),
           eq(workspaces.projectId, input.projectId),
           eq(workspaces.userId, input.actorUserId),
-          eq(workspaces.status, "active")
-        )
+          eq(workspaces.status, "active"),
+        ),
       );
 
     if (rows.length === 0) {
       return [];
     }
 
-    // Fetch the latest PR for each workspace in one query, then group by workspaceId.
     const workspaceIds = rows.map((w) => w.id);
-    const prRows = await this.db
-      .selectDistinctOn([workspacePullRequests.workspaceId], {
-        id: workspacePullRequests.id,
-        workspaceId: workspacePullRequests.workspaceId,
-        prId: workspacePullRequests.prId,
-        title: workspacePullRequests.title,
-        url: workspacePullRequests.url,
-        branch: workspacePullRequests.branch,
-        baseBranch: workspacePullRequests.baseBranch,
-        state: workspacePullRequests.state,
-        metadata: workspacePullRequests.metadata,
-        detectedAt: workspacePullRequests.detectedAt,
-        resolvedAt: workspacePullRequests.resolvedAt
-      })
-      .from(workspacePullRequests)
-      .where(
-        and(
-          eq(workspacePullRequests.organizationId, input.organizationId),
-          inArray(workspacePullRequests.workspaceId, workspaceIds)
-        )
-      )
-      .orderBy(workspacePullRequests.workspaceId, desc(workspacePullRequests.detectedAt));
-
-    const latestPrByWorkspaceId = new Map(prRows.map((pr) => [pr.workspaceId, pr]));
+    const latestPrByWorkspaceId = await fetchLatestPrByWorkspaceId(this.db, input.organizationId, workspaceIds);
 
     return rows.map((workspace) => {
       const pr = latestPrByWorkspaceId.get(workspace.id) ?? null;
@@ -263,25 +203,18 @@ export class WorkspaceService {
               url: pr.url,
               branch: pr.branch,
               baseBranch: pr.baseBranch,
-              state: pr.state as WorkspacePullRequestState,
+              state: pr.state,
               metadata: pr.metadata,
               detectedAt: pr.detectedAt,
-              resolvedAt: pr.resolvedAt
+              resolvedAt: pr.resolvedAt,
             }
-          : null
+          : null,
       };
     });
   }
 
   async closeWorkspace(input: CloseWorkspaceInput): Promise<WorkspaceView> {
-    const role = await this.organizationService.getMembershipRole({
-      organizationId: input.organizationId,
-      userId: input.actorUserId
-    });
-
-    if (!role) {
-      throw new OrganizationMembershipRequiredError();
-    }
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
 
     const branch = input.branch?.trim() ?? null;
     if (input.kind === "worktree" && !branch) {
@@ -290,10 +223,7 @@ export class WorkspaceService {
 
     const rows = await this.db
       .update(workspaces)
-      .set({
-        status: "closed",
-        updatedAt: new Date()
-      })
+      .set({ status: "closed", updatedAt: new Date() })
       .where(
         and(
           eq(workspaces.organizationId, input.organizationId),
@@ -302,8 +232,8 @@ export class WorkspaceService {
           eq(workspaces.nodeId, input.nodeId),
           eq(workspaces.kind, input.kind),
           branch ? eq(workspaces.branch, branch) : isNull(workspaces.branch),
-          eq(workspaces.localPath, input.localPath.trim())
-        )
+          eq(workspaces.localPath, input.localPath.trim()),
+        ),
       )
       .returning();
 
@@ -314,7 +244,7 @@ export class WorkspaceService {
         nodeId: input.nodeId,
         kind: input.kind,
         branch,
-        localPath: input.localPath
+        localPath: input.localPath,
       });
     }
 
