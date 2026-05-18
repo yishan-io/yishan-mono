@@ -1,5 +1,5 @@
 import { Alert, Box, Button, Chip, CircularProgress, Stack, Switch } from "@mui/material";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentIcon } from "../../components/AgentIcon";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
@@ -8,9 +8,8 @@ import {
   type DesktopAgentKind,
   SUPPORTED_DESKTOP_AGENT_KINDS,
 } from "../../helpers/agentSettings";
-import { withTimeout } from "../../helpers/withTimeout";
-import { useLatestRequestGuard } from "../../hooks/useLatestRequestGuard";
 import { useCommands } from "../../hooks/useCommands";
+import { useRefreshableLoader } from "../../hooks/useRefreshableLoader";
 import { agentSettingsStore } from "../../store/agentSettingsStore";
 
 type AgentDetectionByKind = Record<DesktopAgentKind, boolean | undefined>;
@@ -63,71 +62,25 @@ export function AgentSettingsView() {
   const { listAgentDetectionStatuses } = useCommands();
   const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
   const setAgentInUse = agentSettingsStore((state) => state.setAgentInUse);
-  const [detectedByAgentKind, setDetectedByAgentKind] = useState<AgentDetectionByKind>(
-    createDefaultAgentDetectionByKind,
+
+  const fetchStatuses = useCallback(
+    (isManualRefresh: boolean) => listAgentDetectionStatuses(isManualRefresh),
+    [listAgentDetectionStatuses],
   );
-  const [versionByAgentKind, setVersionByAgentKind] = useState<AgentVersionByKind>(createDefaultAgentVersionByKind);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hasLoadError, setHasLoadError] = useState(false);
-  const requestGuard = useLatestRequestGuard();
+  const {
+    data: statuses,
+    isLoading,
+    isRefreshing,
+    hasLoadError,
+    refresh,
+  } = useRefreshableLoader({
+    fetch: fetchStatuses,
+    timeoutMs: AGENT_DETECTION_TIMEOUT_MS,
+    minRefreshMs: AGENT_RECHECK_MIN_DURATION_MS,
+  });
 
-  /** Loads current per-agent detection state and updates the view model. */
-  const loadDetectionStatuses = useCallback(
-    async (isManualRefresh: boolean) => {
-      const loadId = requestGuard.beginRequest();
-      const isLatestMountedLoad = () => requestGuard.isCurrentRequest(loadId);
-      const refreshStartedAt = isManualRefresh ? Date.now() : null;
-
-      if (isManualRefresh) {
-        setIsRefreshing(true);
-      }
-
-      setHasLoadError(false);
-
-      try {
-        const statuses = await withTimeout(
-          listAgentDetectionStatuses(isManualRefresh),
-          AGENT_DETECTION_TIMEOUT_MS,
-          `Agent detection timed out after ${AGENT_DETECTION_TIMEOUT_MS}ms`,
-        );
-        if (!isLatestMountedLoad()) {
-          return;
-        }
-        setDetectedByAgentKind(buildDetectionByKind(statuses));
-        setVersionByAgentKind(buildVersionByKind(statuses));
-      } catch (error) {
-        console.error("[AgentSettingsView] Failed to load agent detection statuses", error);
-        if (!isLatestMountedLoad()) {
-          return;
-        }
-        setHasLoadError(true);
-      } finally {
-        if (refreshStartedAt !== null) {
-          const elapsedMs = Date.now() - refreshStartedAt;
-          const remainingMs = AGENT_RECHECK_MIN_DURATION_MS - elapsedMs;
-          if (remainingMs > 0) {
-            await new Promise<void>((resolve) => {
-              window.setTimeout(resolve, remainingMs);
-            });
-          }
-        }
-
-        if (isLatestMountedLoad()) {
-          if (isManualRefresh) {
-            setIsRefreshing(false);
-          }
-          setIsLoading(false);
-        }
-      }
-    },
-    [listAgentDetectionStatuses, requestGuard],
-  );
-
-  useEffect(() => {
-    /** Performs initial agent detection load for the settings panel. */
-    void loadDetectionStatuses(false);
-  }, [loadDetectionStatuses]);
+  const detectedByAgentKind = statuses ? buildDetectionByKind(statuses) : createDefaultAgentDetectionByKind();
+  const versionByAgentKind = statuses ? buildVersionByKind(statuses) : createDefaultAgentVersionByKind();
 
   return (
     <Box>
@@ -139,7 +92,7 @@ export function AgentSettingsView() {
             size="small"
             variant="outlined"
             onClick={() => {
-              void loadDetectionStatuses(true);
+              refresh();
             }}
             disabled={isRefreshing}
             startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : null}
@@ -155,20 +108,22 @@ export function AgentSettingsView() {
             const rawDetected = detectedByAgentKind[agentKind];
             const isStatusPending = rawDetected === undefined && (isLoading || isRefreshing) && !hasLoadError;
             const rawVersion = versionByAgentKind[agentKind];
-            const statusLabel = isStatusPending
-              ? t("settings.agents.status.checking")
-              : rawDetected
-                ? rawVersion
-                  ? (
-                      <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
-                        <Box component="span">{t("settings.agents.status.versionPrefix")}</Box>
-                        <Box component="span" sx={{ fontWeight: 700 }}>
-                          {rawVersion}
-                        </Box>
-                      </Box>
-                    )
-                  : t("settings.agents.status.versionUnknown")
-                : t("settings.agents.status.notDetected");
+            const statusLabel = isStatusPending ? (
+              t("settings.agents.status.checking")
+            ) : rawDetected ? (
+              rawVersion ? (
+                <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+                  <Box component="span">{t("settings.agents.status.versionPrefix")}</Box>
+                  <Box component="span" sx={{ fontWeight: 700 }}>
+                    {rawVersion}
+                  </Box>
+                </Box>
+              ) : (
+                t("settings.agents.status.versionUnknown")
+              )
+            ) : (
+              t("settings.agents.status.notDetected")
+            );
             const statusColor = isStatusPending ? "default" : rawDetected ? "success" : "default";
             const statusVariant = isStatusPending ? "outlined" : rawDetected ? "filled" : "outlined";
 
@@ -183,12 +138,7 @@ export function AgentSettingsView() {
                 }
                 control={
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ pl: 1 }}>
-                    <Chip
-                      size="small"
-                      label={statusLabel}
-                      color={statusColor}
-                      variant={statusVariant}
-                    />
+                    <Chip size="small" label={statusLabel} color={statusColor} variant={statusVariant} />
                     <Switch
                       checked={inUseByAgentKind[agentKind]}
                       onChange={(event) => {

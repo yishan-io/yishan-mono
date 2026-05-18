@@ -1,6 +1,6 @@
 import { Avatar, Box, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { SettingsCard, SettingsRows, SettingsSectionHeader } from "../../components/settings";
+import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
 import { type SessionUser, sessionStore } from "../../store/sessionStore";
 
 /** Returns compact display initials for one user avatar fallback. */
@@ -17,25 +17,6 @@ function getUserInitials(user: SessionUser | null): string {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-}
-
-type ProfileDetailRowProps = {
-  label: string;
-  value: string;
-};
-
-/** Renders one read-only account profile detail row. */
-function ProfileDetailRow({ label, value }: ProfileDetailRowProps) {
-  return (
-    <Box sx={{ py: 1.5, display: "flex", gap: 2, alignItems: "center", justifyContent: "space-between" }}>
-      <Typography variant="body2" color="text.secondary">
-        {label}
-      </Typography>
-      <Typography variant="body2" sx={{ fontWeight: 500, textAlign: "right", wordBreak: "break-word" }}>
-        {value}
-      </Typography>
-    </Box>
-  );
 }
 
 /** Shows the current authenticated user's profile details in settings. */
@@ -98,12 +79,18 @@ export function AccountSettingsView() {
           </Box>
 
           <SettingsRows>
-            <ProfileDetailRow
-              label={t("settings.account.fields.name")}
-              value={currentUser.name?.trim() || missingValue}
+            <SettingsControlRow
+              title={t("settings.account.fields.name")}
+              control={<Typography variant="body2">{currentUser.name?.trim() || missingValue}</Typography>}
             />
-            <ProfileDetailRow label={t("settings.account.fields.email")} value={currentUser.email || missingValue} />
-            <ProfileDetailRow label={t("settings.account.fields.userId")} value={currentUser.id || missingValue} />
+            <SettingsControlRow
+              title={t("settings.account.fields.email")}
+              control={<Typography variant="body2">{currentUser.email || missingValue}</Typography>}
+            />
+            <SettingsControlRow
+              title={t("settings.account.fields.userId")}
+              control={<Typography variant="body2">{currentUser.id || missingValue}</Typography>}
+            />
           </SettingsRows>
         </Stack>
       </SettingsCard>

@@ -2,17 +2,10 @@ import { Box, Paper, Popper, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { LuGitBranch } from "react-icons/lu";
 import type { WorkspacePullRequestSummary } from "../../../api/types";
+import { PullRequestIcon } from "../../../components/PullRequestIcon";
+import { livePrStatus } from "../../../helpers/pullRequestUtils";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
 import type { RepoWorkspaceItem } from "../../../store/types";
-import { PullRequestIcon } from "../../../components/PullRequestIcon";
-
-function livePrStatus(pr: DaemonWorkspacePullRequest): string {
-  const s = (pr.status ?? "").toLowerCase();
-  if (pr.complete || s === "merged") return "merged";
-  if (pr.isDraft || s === "draft") return "draft";
-  if (s === "closed") return "closed";
-  return "open";
-}
 
 type WorkspaceInfoPopperViewProps = {
   open: boolean;
@@ -132,7 +125,10 @@ export function WorkspaceInfoPopperView({
           ) : null}
           {pullRequest || latestPullRequest ? (
             <Stack spacing={0.25} sx={{ mt: 1 }}>
-              <Typography variant="caption" sx={{ textTransform: "uppercase", letterSpacing: 0.4, color: "text.primary", lineHeight: 1.2 }}>
+              <Typography
+                variant="caption"
+                sx={{ textTransform: "uppercase", letterSpacing: 0.4, color: "text.primary", lineHeight: 1.2 }}
+              >
                 {t("workspace.pr.tab")}
               </Typography>
               {prSection}

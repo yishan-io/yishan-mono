@@ -1,8 +1,9 @@
-import { Badge, Box, IconButton, ToggleButton, ToggleButtonGroup, Tooltip } from "@mui/material";
+import { Badge, Box, ToggleButton, ToggleButtonGroup, Tooltip } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest, LuPanelRight } from "react-icons/lu";
 import { PaneHeader } from "../../../components/PaneHeader";
+import { PaneToggleButton } from "../../../components/PaneToggleButton";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { workspacePaneStore } from "../../../store/workspacePaneStore";
@@ -140,19 +141,12 @@ export function RightPaneView({ onToggleRightPane }: RightPaneViewProps = {}) {
           </ToggleButtonGroup>
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }} />
-        <Tooltip title={toggleRightTooltipLabel} arrow>
-          <span>
-            <IconButton
-              className="electron-webkit-app-region-no-drag"
-              size="small"
-              aria-label={t("layout.toggleRightSidebar")}
-              onClick={onToggleRightPane}
-              disabled={!onToggleRightPane}
-            >
-              <LuPanelRight size={16} />
-            </IconButton>
-          </span>
-        </Tooltip>
+        <PaneToggleButton
+          tooltipLabel={toggleRightTooltipLabel}
+          ariaLabel={t("layout.toggleRightSidebar")}
+          icon={<LuPanelRight size={16} />}
+          onClick={onToggleRightPane}
+        />
       </PaneHeader>
       <Box
         sx={{

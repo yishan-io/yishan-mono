@@ -9,6 +9,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { MONOSPACE_SX } from "../../helpers/styles";
 import { useDialogRegistration } from "../../hooks/useDialogRegistration";
 import { workspaceLifecycleNoticeStore } from "../../store/workspaceLifecycleNoticeStore";
 
@@ -21,8 +22,10 @@ export function WorkspaceLifecycleNoticeView() {
   const closeDetailNotice = workspaceLifecycleNoticeStore((state) => state.closeDetailNotice);
   useDialogRegistration(Boolean(detailNotice));
 
-  const activeScriptLabel = activeNotice?.kind === "lifecycle" && activeNotice.warning.scriptKind === "setup" ? "setup" : "post";
-  const activeTitle = activeNotice?.kind === "error" ? activeNotice.title : `Workspace ${activeScriptLabel} script failed`;
+  const activeScriptLabel =
+    activeNotice?.kind === "lifecycle" && activeNotice.warning.scriptKind === "setup" ? "setup" : "post";
+  const activeTitle =
+    activeNotice?.kind === "error" ? activeNotice.title : `Workspace ${activeScriptLabel} script failed`;
   const activeMessage =
     activeNotice?.kind === "error"
       ? activeNotice.message
@@ -107,7 +110,7 @@ export function WorkspaceLifecycleNoticeView() {
                 bgcolor: "action.hover",
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
-                fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                ...MONOSPACE_SX,
               }}
             >
               {detailNotice?.warning.stderrExcerpt || "(empty)"}
@@ -123,7 +126,7 @@ export function WorkspaceLifecycleNoticeView() {
                 bgcolor: "action.hover",
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
-                fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                ...MONOSPACE_SX,
               }}
             >
               {detailNotice?.warning.stdoutExcerpt || "(empty)"}

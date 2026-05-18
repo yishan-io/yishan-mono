@@ -1,10 +1,11 @@
-import { Box, Button, IconButton, Menu, MenuItem, TextField, Tooltip, Typography } from "@mui/material";
+import { Box, Button, Menu, MenuItem, TextField, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
 import { LuChevronRight, LuPanelLeft, LuPanelRight } from "react-icons/lu";
 import { getMainWindowFullscreenState } from "../../commands/appCommands";
 import { PaneHeader } from "../../components/PaneHeader";
+import { PaneToggleButton } from "../../components/PaneToggleButton";
 import { renderProjectIcon } from "../../components/projectIcons";
 import { getRendererPlatform } from "../../helpers/platform";
 import { useCommands } from "../../hooks/useCommands";
@@ -38,6 +39,33 @@ function renderWorkspaceKindIcon(workspace: RepoWorkspaceItem | undefined, isPri
   }
 
   return <HiCubeTransparent size={size} />;
+}
+
+type MenuSearchFieldProps = {
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+};
+
+/** Renders a compact search TextField used inside a Menu header row. */
+function MenuSearchField({ placeholder, value, onChange }: MenuSearchFieldProps) {
+  return (
+    <MenuItem disableRipple disableTouchRipple disableGutters sx={{ px: 1, py: 0.5, cursor: "default" }}>
+      <TextField
+        autoFocus
+        size="small"
+        fullWidth
+        placeholder={placeholder}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        slotProps={{ htmlInput: { "aria-label": placeholder } }}
+        sx={{
+          "& .MuiInputBase-root": { minHeight: 28 },
+          "& .MuiInputBase-input": { py: 0.5, fontSize: 13 },
+        }}
+      />
+    </MenuItem>
+  );
 }
 
 /** Renders the main pane title bar with repo/workspace selectors and pane toggle controls. */
@@ -85,7 +113,9 @@ export function MainPaneTitleBarView() {
   const filteredWorkspaceOptions = workspacesForSelectedRepo.filter((workspace) =>
     workspace.name.toLowerCase().includes(workspaceSearchValue.trim().toLowerCase()),
   );
-  const resolveWorkspaceIconColor = (workspaceId: string): "warning.main" | "error.main" | "success.main" | "text.secondary" => {
+  const resolveWorkspaceIconColor = (
+    workspaceId: string,
+  ): "warning.main" | "error.main" | "success.main" | "text.secondary" => {
     const runtimeStatus = workspaceAgentStatusByWorkspaceId[workspaceId] ?? "idle";
     const unreadTone = workspaceUnreadToneByWorkspaceId[workspaceId];
     if (runtimeStatus === "waiting_input") {
@@ -142,18 +172,12 @@ export function MainPaneTitleBarView() {
             <Box data-testid="main-pane-macos-controls-inset" sx={{ width: 72, flexShrink: 0 }} />
           ) : null}
           {leftCollapsed ? (
-            <Tooltip title={toggleLeftTooltipLabel} arrow>
-              <span>
-                <IconButton
-                  size="small"
-                  aria-label={t("layout.toggleLeftSidebar")}
-                  onClick={onToggleLeftPane}
-                  disabled={!onToggleLeftPane}
-                >
-                  <LuPanelLeft size={16} />
-                </IconButton>
-              </span>
-            </Tooltip>
+            <PaneToggleButton
+              tooltipLabel={toggleLeftTooltipLabel}
+              ariaLabel={t("layout.toggleLeftSidebar")}
+              icon={<LuPanelLeft size={16} />}
+              onClick={onToggleLeftPane}
+            />
           ) : null}
           <Button
             size="small"
@@ -215,18 +239,12 @@ export function MainPaneTitleBarView() {
         <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
           <WorkspacePortsMenuControl />
           {rightCollapsed ? (
-            <Tooltip title={toggleRightTooltipLabel} arrow>
-              <span>
-                <IconButton
-                  size="small"
-                  aria-label={t("layout.toggleRightSidebar")}
-                  onClick={onToggleRightPane}
-                  disabled={!onToggleRightPane}
-                >
-                  <LuPanelRight size={16} />
-                </IconButton>
-              </span>
-            </Tooltip>
+            <PaneToggleButton
+              tooltipLabel={toggleRightTooltipLabel}
+              ariaLabel={t("layout.toggleRightSidebar")}
+              icon={<LuPanelRight size={16} />}
+              onClick={onToggleRightPane}
+            />
           ) : null}
         </Box>
       </PaneHeader>
@@ -238,23 +256,11 @@ export function MainPaneTitleBarView() {
           setRepoSearchValue("");
         }}
       >
-        <MenuItem disableRipple disableTouchRipple disableGutters sx={{ px: 1, py: 0.5, cursor: "default" }}>
-          <TextField
-            autoFocus
-            size="small"
-            fullWidth
-            placeholder={t("org.menu.search.repo")}
-            value={repoSearchValue}
-            onChange={(event) => {
-              setRepoSearchValue(event.target.value);
-            }}
-            slotProps={{ htmlInput: { "aria-label": t("org.menu.search.repo") } }}
-            sx={{
-              "& .MuiInputBase-root": { minHeight: 28 },
-              "& .MuiInputBase-input": { py: 0.5, fontSize: 13 },
-            }}
-          />
-        </MenuItem>
+        <MenuSearchField
+          placeholder={t("org.menu.search.repo")}
+          value={repoSearchValue}
+          onChange={setRepoSearchValue}
+        />
         {filteredRepoOptions.map((repo) => (
           <MenuItem
             key={repo.id}
@@ -284,23 +290,11 @@ export function MainPaneTitleBarView() {
           setWorkspaceSearchValue("");
         }}
       >
-        <MenuItem disableRipple disableTouchRipple disableGutters sx={{ px: 1, py: 0.5, cursor: "default" }}>
-          <TextField
-            autoFocus
-            size="small"
-            fullWidth
-            placeholder={t("org.menu.search.workspace")}
-            value={workspaceSearchValue}
-            onChange={(event) => {
-              setWorkspaceSearchValue(event.target.value);
-            }}
-            slotProps={{ htmlInput: { "aria-label": t("org.menu.search.workspace") } }}
-            sx={{
-              "& .MuiInputBase-root": { minHeight: 28 },
-              "& .MuiInputBase-input": { py: 0.5, fontSize: 13 },
-            }}
-          />
-        </MenuItem>
+        <MenuSearchField
+          placeholder={t("org.menu.search.workspace")}
+          value={workspaceSearchValue}
+          onChange={setWorkspaceSearchValue}
+        />
         {filteredWorkspaceOptions.map((workspace) => (
           <MenuItem
             key={workspace.id}
@@ -313,7 +307,12 @@ export function MainPaneTitleBarView() {
           >
             <Box
               component="span"
-              sx={{ display: "inline-flex", alignItems: "center", mr: 1, color: resolveWorkspaceIconColor(workspace.id) }}
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                mr: 1,
+                color: resolveWorkspaceIconColor(workspace.id),
+              }}
             >
               {renderWorkspaceKindIcon(workspace, workspace.id === primaryWorkspaceId, 14)}
             </Box>

@@ -1,21 +1,10 @@
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Snackbar,
-  Typography,
-} from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Snackbar, Typography } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useDialogRegistration } from "../../hooks/useDialogRegistration";
 import type { DaemonInfoResult } from "../../../main/ipc";
 import { closeTerminalSession } from "../../commands/terminalCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
+import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 import { StatusIndicator } from "../../components/StatusIndicator";
 import {
   SettingsCard,
@@ -24,6 +13,8 @@ import {
   SettingsSectionHeader,
   SettingsToggleRow,
 } from "../../components/settings";
+import { MONOSPACE_SX } from "../../helpers/styles";
+import { useDialogRegistration } from "../../hooks/useDialogRegistration";
 import { getDesktopHostBridge, subscribeDesktopRpcEvent } from "../../rpc/rpcTransport";
 import { tabStore } from "../../store/tabStore";
 import { clearTerminalRecoveryStorage } from "../workspace/terminal/terminalRecovery";
@@ -248,7 +239,7 @@ export function DaemonSettingsView() {
               <SettingsControlRow
                 title={t("settings.daemon.rows.id")}
                 control={
-                  <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
+                  <Typography variant="body2" sx={MONOSPACE_SX}>
                     {daemonInfo?.daemonId || t("settings.daemon.values.unknown")}
                   </Typography>
                 }
@@ -256,7 +247,7 @@ export function DaemonSettingsView() {
               <SettingsControlRow
                 title={t("settings.daemon.rows.websocket")}
                 control={
-                  <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
+                  <Typography variant="body2" sx={MONOSPACE_SX}>
                     {daemonInfo?.wsUrl || t("settings.daemon.values.unknown")}
                   </Typography>
                 }
@@ -337,7 +328,7 @@ export function DaemonSettingsView() {
               <SettingsControlRow
                 title={t("settings.daemon.relay.rows.url")}
                 control={
-                  <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
+                  <Typography variant="body2" sx={MONOSPACE_SX}>
                     {daemonInfo?.relay?.url || t("settings.daemon.values.unknown")}
                   </Typography>
                 }
@@ -376,36 +367,20 @@ export function DaemonSettingsView() {
         </Alert>
       </Snackbar>
 
-      <Dialog
+      <ConfirmationDialog
         open={isConfirmOpen}
-        onClose={isRestarting ? undefined : () => setIsConfirmOpen(false)}
-        fullWidth
-        maxWidth="xs"
-        disableEscapeKeyDown={isRestarting}
-      >
-        <DialogTitle>{t("settings.daemon.restart.confirmTitle")}</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            {t("settings.daemon.restart.confirmMessage")}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsConfirmOpen(false)} disabled={isRestarting}>
-            {t("common.actions.cancel")}
-          </Button>
-          <Button
-            color="warning"
-            onClick={() => {
-              setIsConfirmOpen(false);
-              void handleRestart();
-            }}
-            disabled={isRestarting}
-            startIcon={isRestarting ? <CircularProgress size={14} color="inherit" /> : undefined}
-          >
-            {t("settings.daemon.restart.action")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        title={t("settings.daemon.restart.confirmTitle")}
+        description={t("settings.daemon.restart.confirmMessage")}
+        confirmLabel={t("settings.daemon.restart.action")}
+        cancelLabel={t("common.actions.cancel")}
+        confirmColor="warning"
+        isSubmitting={isRestarting}
+        onCancel={() => setIsConfirmOpen(false)}
+        onConfirm={() => {
+          setIsConfirmOpen(false);
+          void handleRestart();
+        }}
+      />
     </Box>
   );
 }

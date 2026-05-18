@@ -1,19 +1,14 @@
-import { Box, Chip, Divider, LinearProgress, Link, Stack, Typography } from "@mui/material";
+import { Box, Chip, Divider, Link, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { LuArrowRight, LuCheck, LuCircleDashed, LuGitBranch, LuX } from "react-icons/lu";
-import { openLink } from "../../../commands/appCommands";
+import { LuArrowRight, LuCheck, LuCircleDashed, LuX } from "react-icons/lu";
 import type { WorkspacePullRequestRecord } from "../../../api/types";
-import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
+import { openLink } from "../../../commands/appCommands";
+import { BranchBadge } from "../../../components/BranchBadge";
+import { PaneLoadingBar } from "../../../components/PaneLoadingBar";
 import { PullRequestIcon } from "../../../components/PullRequestIcon";
+import { livePrStatus } from "../../../helpers/pullRequestUtils";
+import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
 import { useWorkspacePullRequestState } from "./useWorkspacePullRequestState";
-
-function livePrStatus(pr: DaemonWorkspacePullRequest): string {
-  const s = (pr.status ?? "").toLowerCase();
-  if (pr.complete || s === "merged") return "merged";
-  if (pr.isDraft || s === "draft") return "draft";
-  if (s === "closed") return "closed";
-  return "open";
-}
 
 function CheckStateIcon({ state }: { state: string }) {
   const s = state.toUpperCase();
@@ -27,37 +22,6 @@ function CheckStateIcon({ state }: { state: string }) {
   return <LuCircleDashed size={14} color="#71717a" />;
 }
 
-function BranchBadge({ name }: { name: string }) {
-  return (
-    <Box
-      title={name}
-      sx={{
-        color: "text.secondary",
-        flex: "1 1 0",
-        minWidth: 0,
-        display: "flex",
-        alignItems: "center",
-        gap: 0.5,
-        px: 0.625,
-        py: 0.375,
-        border: 1,
-        borderColor: "divider",
-        borderRadius: 0.75,
-        boxSizing: "border-box",
-      }}
-    >
-      <LuGitBranch size={12} color="currentColor" />
-      <Typography
-        variant="caption"
-        component="span"
-        sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-      >
-        {name}
-      </Typography>
-    </Box>
-  );
-}
-
 function HistoricalPullRequestRow({ pr }: { pr: WorkspacePullRequestRecord }) {
   const { t } = useTranslation();
   const isDraft = (pr.metadata as Record<string, unknown> | null)?.isDraft as boolean | undefined;
@@ -67,16 +31,12 @@ function HistoricalPullRequestRow({ pr }: { pr: WorkspacePullRequestRecord }) {
       <Stack direction="row" spacing={1} alignItems="center">
         <PullRequestIcon state={pr.state} isDraft={isDraft} size={15} />
         <Typography variant="body2" noWrap sx={{ flex: 1, minWidth: 0 }}>
-          #{pr.prId}{pr.title ? ` ${pr.title}` : ""}
+          #{pr.prId}
+          {pr.title ? ` ${pr.title}` : ""}
         </Typography>
-        <Chip
-          size="small"
-          label={pr.state}
-          variant="outlined"
-          sx={{ flexShrink: 0, fontSize: 11, height: 20 }}
-        />
+        <Chip size="small" label={pr.state} variant="outlined" sx={{ flexShrink: 0, fontSize: 11, height: 20 }} />
       </Stack>
-      {(pr.branch || pr.baseBranch) ? (
+      {pr.branch || pr.baseBranch ? (
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0, overflow: "hidden" }}>
           <BranchBadge name={pr.branch || t("workspace.info.unavailable")} />
           <Box sx={{ flexShrink: 0, display: "inline-flex", alignItems: "center" }}>
@@ -115,11 +75,7 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
   const isEmpty = !hasLivePr && !hasHistory;
 
   if (isLoading && isEmpty) {
-    return (
-      <Box sx={{ flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", px: 2 }}>
-        <LinearProgress sx={{ width: 120, height: 3, borderRadius: 999, overflow: "hidden" }} />
-      </Box>
-    );
+    return <PaneLoadingBar />;
   }
 
   if (isEmpty) {
@@ -135,7 +91,6 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
   return (
     <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, overflow: "auto", px: 2, py: 1.5 }}>
       <Stack spacing={2}>
-
         {/* ── Live PR (from daemon) ── */}
         {pullRequest ? (
           <>
@@ -171,7 +126,7 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
             {checks.length > 0 ? (
               <Stack spacing={1}>
                 <Typography variant="subtitle2">{t("workspace.pr.checks")}</Typography>
-                {                checks.map((check) => (
+                {checks.map((check) => (
                   <Stack key={`${check.workflow ?? ""}:${check.name}`} direction="row" spacing={1} alignItems="center">
                     <Box sx={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
                       <CheckStateIcon state={check.state} />
@@ -219,7 +174,11 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
                   <Typography variant="subtitle2">{t("workspace.pr.deployments")}</Typography>
                   {deployments.map((deployment) => (
                     <Stack key={deployment.id} direction="row" spacing={1} alignItems="center">
-                      <Chip size="small" label={deployment.state || t("workspace.info.unavailable")} variant="outlined" />
+                      <Chip
+                        size="small"
+                        label={deployment.state || t("workspace.info.unavailable")}
+                        variant="outlined"
+                      />
                       <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography variant="body2" noWrap>
                           {deployment.environment || t("workspace.info.unavailable")}
@@ -266,7 +225,6 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
             </Stack>
           </>
         ) : null}
-
       </Stack>
     </Box>
   );

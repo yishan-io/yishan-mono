@@ -1,5 +1,5 @@
 import { Box, MenuItem, Stack, Typography } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   SettingsCard,
@@ -8,7 +8,7 @@ import {
   SettingsRows,
   SettingsSectionHeader,
 } from "../../components/settings";
-import { useCommands } from "../../hooks/useCommands";
+import { useGitAuthorName } from "../../hooks/useGitAuthorName";
 import { type GitBranchPrefixMode, gitBranchStore, resolveGitBranchPrefix } from "../../store/gitBranchStore";
 import { workspaceStore } from "../../store/workspaceStore";
 
@@ -21,18 +21,19 @@ const PREVIEW_BRANCH_SUFFIX = "dev-123-settings-polish";
  */
 export function GitWorkspaceSettingsView() {
   const { t } = useTranslation();
-  const { getGitAuthorName } = useCommands();
   const projects = workspaceStore((state) => state.projects);
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
   const prefixMode = gitBranchStore((state) => state.prefixMode);
   const customPrefix = gitBranchStore((state) => state.customPrefix);
   const setPrefixMode = gitBranchStore((state) => state.setPrefixMode);
   const setCustomPrefix = gitBranchStore((state) => state.setCustomPrefix);
-  const [resolvedGitUserName, setResolvedGitUserName] = useState("");
   const previewRepo = projects.find((repo) => repo.id === selectedProjectId) ?? projects[0];
   const previewRepoPath = previewRepo
     ? previewRepo.localPath?.trim() || previewRepo.path?.trim() || previewRepo.worktreePath?.trim() || ""
     : "";
+
+  const authorNamePath = prefixMode === "user" ? previewRepoPath : "";
+  const resolvedGitUserName = useGitAuthorName(authorNamePath);
   const previewValue = useMemo(() => {
     const prefix = resolveGitBranchPrefix({
       prefixMode,
@@ -41,34 +42,6 @@ export function GitWorkspaceSettingsView() {
     });
     return prefix ? `${prefix}/${PREVIEW_BRANCH_SUFFIX}` : PREVIEW_BRANCH_SUFFIX;
   }, [customPrefix, prefixMode, resolvedGitUserName]);
-
-  useEffect(() => {
-    if (!previewRepoPath || prefixMode !== "user") {
-      setResolvedGitUserName("");
-      return;
-    }
-
-    let isCancelled = false;
-    void (async () => {
-      try {
-        const authorName = await getGitAuthorName({
-          workspaceWorktreePath: previewRepoPath,
-        });
-        if (isCancelled) {
-          return;
-        }
-        setResolvedGitUserName(authorName?.trim() || "");
-      } catch {
-        if (!isCancelled) {
-          setResolvedGitUserName("");
-        }
-      }
-    })();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [getGitAuthorName, prefixMode, previewRepoPath]);
 
   return (
     <Stack spacing={2} data-testid="git-workspace-settings-panel">

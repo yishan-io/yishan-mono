@@ -19,15 +19,16 @@ import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuFolderGit2, LuGitBranch } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import { BranchDropdown, type BranchDropdownGroups } from "../../../components/BranchDropdown";
+import { renderProjectIcon } from "../../../components/projectIcons";
+import { getRendererPlatform } from "../../../helpers/platform";
 import {
   resolveSourceBranchState,
   resolveTargetBranchForCreate,
   suggestTargetBranchName,
 } from "../../../helpers/workspaceBranchNaming";
-import { renderProjectIcon } from "../../../components/projectIcons";
-import { getRendererPlatform } from "../../../helpers/platform";
 import { useCommands } from "../../../hooks/useCommands";
 import { useDialogRegistration } from "../../../hooks/useDialogRegistration";
+import { useGitAuthorName } from "../../../hooks/useGitAuthorName";
 import { buildWorkspaceNavigationPath } from "../../../navigation/workspaceNavigation";
 import { gitBranchStore, resolveGitBranchPrefix } from "../../../store/gitBranchStore";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -39,7 +40,6 @@ type CreateWorkspaceDialogViewProps = {
   workspaceId?: string;
   onClose: () => void;
 };
-
 
 function toUniqueSorted(values: string[]): string[] {
   const normalizedValues = Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
@@ -144,7 +144,7 @@ export function CreateWorkspaceDialogView({
   const navigate = useNavigate();
   const projects = workspaceStore((state) => state.projects);
   const workspaces = workspaceStore((state) => state.workspaces);
-  const { createWorkspace, renameWorkspace, renameWorkspaceBranch, getGitAuthorName, listGitBranches } = useCommands();
+  const { createWorkspace, renameWorkspace, renameWorkspaceBranch, listGitBranches } = useCommands();
   const prefixMode = gitBranchStore((state) => state.prefixMode);
   const customPrefix = gitBranchStore((state) => state.customPrefix);
   useDialogRegistration(open);
@@ -168,7 +168,6 @@ export function CreateWorkspaceDialogView({
   const [targetBranch, setTargetBranch] = useState("");
   const hasEditedTargetBranchRef = useRef(false);
   const hasSyncedRepoIdForOpenRef = useRef(false);
-  const [resolvedGitUserName, setResolvedGitUserName] = useState("");
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
 
   /** Clears dialog draft values so reopening starts from a clean form. */
@@ -205,43 +204,14 @@ export function CreateWorkspaceDialogView({
   );
   const selectedProjectBranchListPath =
     selectedProject?.localPath?.trim() || selectedProject?.path?.trim() || selectedProject?.worktreePath?.trim() || "";
+  const gitAuthorNamePath = open && !isRenameMode && prefixMode === "user" ? selectedProjectBranchListPath : "";
+  const resolvedGitUserName = useGitAuthorName(gitAuthorNamePath);
   const resolvedPrefix = resolveGitBranchPrefix({
     prefixMode,
     customPrefix,
     gitUserName: resolvedGitUserName,
   });
   const defaultBranchPrefix = resolvedPrefix ? `${resolvedPrefix}/` : "";
-
-  useEffect(() => {
-    if (!open || !selectedProjectBranchListPath || prefixMode !== "user") {
-      setResolvedGitUserName("");
-      return;
-    }
-    if (isRenameMode) {
-      return;
-    }
-
-    let isCancelled = false;
-    void (async () => {
-      try {
-        const authorName = await getGitAuthorName({
-          workspaceWorktreePath: selectedProjectBranchListPath,
-        });
-        if (isCancelled) {
-          return;
-        }
-        setResolvedGitUserName(authorName?.trim() || "");
-      } catch {
-        if (!isCancelled) {
-          setResolvedGitUserName("");
-        }
-      }
-    })();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [getGitAuthorName, isRenameMode, open, prefixMode, selectedProjectBranchListPath]);
 
   useEffect(() => {
     if (!open || hasEditedTargetBranchRef.current || isRenameMode) {
@@ -292,9 +262,7 @@ export function CreateWorkspaceDialogView({
       setSourceBranchOptions(nextSourceBranchState.options);
       setSourceBranchGroups(resolvedGroups);
       setSourceBranch((currentValue) =>
-        currentValue && nextSourceBranchState.options.includes(currentValue)
-          ? currentValue
-          : preferredBranch,
+        currentValue && nextSourceBranchState.options.includes(currentValue) ? currentValue : preferredBranch,
       );
     };
 
@@ -621,26 +589,28 @@ export function CreateWorkspaceDialogView({
                 {isLoadingSourceBranches ? (
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", py: 3, px: 2, gap: 1 }}>
                     <CircularProgress size={14} />
-                    <Typography variant="caption" color="text.secondary">Loading branches\u2026</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Loading branches\u2026
+                    </Typography>
                   </Box>
                 ) : (
-                <>
-                <BranchDropdown
-                  groups={sourceBranchGroups}
-                  selectedValue={sourceBranchSelectValue}
-                  onSelect={(value) => {
-                    setSourceBranch(value);
-                    setSourceBranchMenuAnchorEl(null);
-                  }}
-                  localLabel="Local"
-                  branchesLabel="Branches"
-                  worktreesLabel="Worktrees"
-                  remoteLabel="Remote"
-                  emptyLocalLabel="No local branches"
-                  emptyWorktreeLabel="No worktree branches"
-                  emptyRemoteLabel="No remote branches"
-                />
-                </>
+                  <>
+                    <BranchDropdown
+                      groups={sourceBranchGroups}
+                      selectedValue={sourceBranchSelectValue}
+                      onSelect={(value) => {
+                        setSourceBranch(value);
+                        setSourceBranchMenuAnchorEl(null);
+                      }}
+                      localLabel="Local"
+                      branchesLabel="Branches"
+                      worktreesLabel="Worktrees"
+                      remoteLabel="Remote"
+                      emptyLocalLabel="No local branches"
+                      emptyWorktreeLabel="No worktree branches"
+                      emptyRemoteLabel="No remote branches"
+                    />
+                  </>
                 )}
               </Popover>
             </Box>

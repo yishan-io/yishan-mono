@@ -1,7 +1,18 @@
-import { type Theme, Box, IconButton, ListItem, ListItemButton, Stack, Tooltip, Typography, useTheme } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  ListItem,
+  ListItemButton,
+  Stack,
+  type Theme,
+  Tooltip,
+  Typography,
+  useTheme,
+} from "@mui/material";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
 import { LuArchive, LuLoaderCircle } from "react-icons/lu";
+import { buildListItemButtonSx } from "../helpers/leftPaneStyles";
 import type { RepoWorkspaceItem, WorkspaceGitChangeTotals } from "../store/types";
 import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
 import { CliSpinner } from "./CliSpinner";
@@ -62,11 +73,8 @@ export function WorkspaceRow({
   const additions = changeTotals?.additions ?? 0;
   const deletions = changeTotals?.deletions ?? 0;
   const shouldShowChangeTotals = additions > 0 || deletions > 0;
-  const workspaceCreateProgress = workspaceCreateProgressStore(
-    (state) => state.progressByWorkspaceId[workspace.id],
-  );
-  const isSetupRunning =
-    Boolean(workspaceCreateProgress && !workspaceCreateProgress.isComplete);
+  const workspaceCreateProgress = workspaceCreateProgressStore((state) => state.progressByWorkspaceId[workspace.id]);
+  const isSetupRunning = Boolean(workspaceCreateProgress && !workspaceCreateProgress.isComplete);
 
   const renderWorkspaceIcon = () => {
     if (indicator === "running") {
@@ -114,20 +122,23 @@ export function WorkspaceRow({
       );
     }
 
-    const indicatorColor = indicator in INDICATOR_PALETTE_KEY
-      ? theme.palette[INDICATOR_PALETTE_KEY[indicator as WorkspaceBadgeIndicator]].main
-      : undefined;
+    const indicatorColor =
+      indicator in INDICATOR_PALETTE_KEY
+        ? theme.palette[INDICATOR_PALETTE_KEY[indicator as WorkspaceBadgeIndicator]].main
+        : undefined;
 
-    const badgeTestId = indicator in INDICATOR_TEST_ID_SLUG
-      ? `workspace-status-${INDICATOR_TEST_ID_SLUG[indicator as WorkspaceBadgeIndicator]}-badge-${workspace.id}`
-      : null;
+    const badgeTestId =
+      indicator in INDICATOR_TEST_ID_SLUG
+        ? `workspace-status-${INDICATOR_TEST_ID_SLUG[indicator as WorkspaceBadgeIndicator]}-badge-${workspace.id}`
+        : null;
 
     const indicatorLabelMap: Record<WorkspaceBadgeIndicator, string> = {
       waiting_input: waitingInputIndicatorLabel,
       done: doneIndicatorLabel,
       failed: failedIndicatorLabel,
     };
-    const indicatorLabel = indicator in indicatorLabelMap ? indicatorLabelMap[indicator as WorkspaceBadgeIndicator] : undefined;
+    const indicatorLabel =
+      indicator in indicatorLabelMap ? indicatorLabelMap[indicator as WorkspaceBadgeIndicator] : undefined;
 
     return (
       <Box
@@ -156,20 +167,11 @@ export function WorkspaceRow({
         onMouseLeave={onMouseLeave}
         onContextMenu={onContextMenu}
         sx={{
-          bgcolor: "transparent",
           py: 0.5,
           pl: 3,
           pr: 2,
           minHeight: 24,
-          "&:hover, &:focus-visible": {
-            bgcolor: theme.palette.mode === "dark" ? theme.palette.action.hover : "rgba(47, 122, 100, 0.1)",
-          },
-          "&.Mui-selected": {
-            bgcolor: theme.palette.mode === "dark" ? theme.palette.action.selected : "rgba(211, 134, 17, 0.14)",
-          },
-          "&.Mui-selected:hover, &.Mui-selected:focus-visible": {
-            bgcolor: theme.palette.mode === "dark" ? theme.palette.action.hover : "rgba(211, 134, 17, 0.2)",
-          },
+          ...buildListItemButtonSx(theme),
           "& .workspace-actions": {
             opacity: 0,
             pointerEvents: "none",

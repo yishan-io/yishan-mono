@@ -1,37 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useInRouterContext, useLocation } from "react-router-dom";
+import { useInRouterContext } from "react-router-dom";
 import type { TerminalDetectedPort } from "../../commands/terminalCommands";
 import { PortsTableMenu, type PortsTableMenuRow } from "../../components/PortsTableMenu";
+import { RouteCloseWatcher } from "../../components/RouteCloseWatcher";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import { isTerminalTabWithSessionId } from "../../helpers/terminalTabUtils";
 import { useCommands } from "../../hooks/useCommands";
+import { useTerminalTabLookups } from "../../hooks/useTerminalTabLookups";
 import { tabStore } from "../../store/tabStore";
-import { workspaceStore } from "../../store/workspaceStore";
 import { enqueueWorkspaceErrorNotice } from "../../store/workspaceLifecycleNoticeStore";
+import { workspaceStore } from "../../store/workspaceStore";
 
 const PORT_POLL_INTERVAL_MS = 3000;
 
 /** Builds one stable row id for port-menu rendering and selection mapping. */
 function buildPortRowId(entry: TerminalDetectedPort): string {
   return `${entry.sessionId}\u0000${entry.pid}\u0000${entry.port}\u0000${entry.address}`;
-}
-
-type PortsMenuRouteCloseWatcherProps = {
-  onClose: () => void;
-};
-
-/** Closes one open ports dropdown whenever route changes away from workspace root. */
-function PortsMenuRouteCloseWatcher({ onClose }: PortsMenuRouteCloseWatcherProps) {
-  const location = useLocation();
-
-  useEffect(() => {
-    if (location.pathname !== "/") {
-      onClose();
-    }
-  }, [location.pathname, onClose]);
-
-  return null;
 }
 
 /** Renders one workspace-scoped ports badge and dropdown with address, pid, and process columns. */
@@ -72,9 +56,7 @@ export function WorkspacePortsMenuControl() {
   const pidByPortRowId = useMemo(() => {
     return new Map(workspacePorts.map((entry) => [buildPortRowId(entry), entry.pid]));
   }, [workspacePorts]);
-  const terminalTabBySessionId = useMemo(() => {
-    return new Map(tabs.filter(isTerminalTabWithSessionId).map((tab) => [tab.data.sessionId.trim(), tab]));
-  }, [tabs]);
+  const terminalTabBySessionId = useTerminalTabLookups();
   const portsSummaryLabel = useMemo(() => {
     if (workspacePorts.length === 0) {
       return "";
@@ -135,7 +117,7 @@ export function WorkspacePortsMenuControl() {
 
   return (
     <>
-      {isInRouterContext ? <PortsMenuRouteCloseWatcher onClose={closePortsMenu} /> : null}
+      {isInRouterContext ? <RouteCloseWatcher onClose={closePortsMenu} /> : null}
       <PortsTableMenu
         anchorEl={portsMenuAnchorEl}
         rows={portRows}

@@ -1,7 +1,8 @@
-import { Box, Button, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Button, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { LuPanelLeft, LuPlus } from "react-icons/lu";
 import { PaneHeader } from "../../../components/PaneHeader";
+import { PaneToggleButton } from "../../../components/PaneToggleButton";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -50,19 +51,12 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
           <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center" }}>
             <ProjectFilterPopoverView />
           </Box>
-          <Tooltip title={toggleLeftTooltipLabel} arrow>
-            <span>
-              <IconButton
-                className="electron-webkit-app-region-no-drag"
-                size="small"
-                aria-label={t("layout.toggleLeftSidebar")}
-                onClick={onToggleLeftPane}
-                disabled={!onToggleLeftPane}
-              >
-                <LuPanelLeft size={16} />
-              </IconButton>
-            </span>
-          </Tooltip>
+          <PaneToggleButton
+            tooltipLabel={toggleLeftTooltipLabel}
+            ariaLabel={t("layout.toggleLeftSidebar")}
+            icon={<LuPanelLeft size={16} />}
+            onClick={onToggleLeftPane}
+          />
         </Stack>
       </PaneHeader>
       <ProjectListView />

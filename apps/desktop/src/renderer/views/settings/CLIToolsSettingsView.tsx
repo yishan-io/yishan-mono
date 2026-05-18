@@ -1,5 +1,5 @@
 import { Alert, Box, Button, Chip, CircularProgress, Stack, Switch } from "@mui/material";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { CLIToolStatus } from "../../commands/cliToolCommands";
 import { AgentIcon } from "../../components/AgentIcon";
@@ -10,9 +10,8 @@ import {
   SUPPORTED_DESKTOP_AGENT_KINDS,
   isDesktopAgentKind,
 } from "../../helpers/agentSettings";
-import { withTimeout } from "../../helpers/withTimeout";
 import { useCommands } from "../../hooks/useCommands";
-import { useLatestRequestGuard } from "../../hooks/useLatestRequestGuard";
+import { useRefreshableLoader } from "../../hooks/useRefreshableLoader";
 import { agentSettingsStore } from "../../store/agentSettingsStore";
 
 const CLI_TOOLS_STATUS_TIMEOUT_MS = 15_000;
@@ -23,65 +22,23 @@ export function CLIToolsSettingsView() {
   const { listCLIToolStatuses } = useCommands();
   const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
   const setAgentInUse = agentSettingsStore((state) => state.setAgentInUse);
-  const [statuses, setStatuses] = useState<CLIToolStatus[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hasLoadError, setHasLoadError] = useState(false);
-  const requestGuard = useLatestRequestGuard();
 
-  const loadStatuses = useCallback(
-    async (isManualRefresh: boolean) => {
-      const loadId = requestGuard.beginRequest();
-      const isLatestMountedLoad = () => requestGuard.isCurrentRequest(loadId);
-      const refreshStartedAt = isManualRefresh ? Date.now() : null;
-
-      if (isManualRefresh) {
-        setIsRefreshing(true);
-      }
-
-      setHasLoadError(false);
-
-      try {
-        const nextStatuses = await withTimeout(
-          listCLIToolStatuses(isManualRefresh),
-          CLI_TOOLS_STATUS_TIMEOUT_MS,
-          `CLI tools status check timed out after ${CLI_TOOLS_STATUS_TIMEOUT_MS}ms`,
-        );
-        if (!isLatestMountedLoad()) {
-          return;
-        }
-        setStatuses(nextStatuses);
-      } catch (error) {
-        console.error("[CLIToolsSettingsView] Failed to load CLI tool statuses", error);
-        if (!isLatestMountedLoad()) {
-          return;
-        }
-        setHasLoadError(true);
-      } finally {
-        if (refreshStartedAt !== null) {
-          const elapsedMs = Date.now() - refreshStartedAt;
-          const remainingMs = CLI_TOOLS_RECHECK_MIN_DURATION_MS - elapsedMs;
-          if (remainingMs > 0) {
-            await new Promise<void>((resolve) => {
-              window.setTimeout(resolve, remainingMs);
-            });
-          }
-        }
-
-        if (isLatestMountedLoad()) {
-          if (isManualRefresh) {
-            setIsRefreshing(false);
-          }
-          setIsLoading(false);
-        }
-      }
-    },
-    [listCLIToolStatuses, requestGuard],
+  const fetchStatuses = useCallback(
+    (isManualRefresh: boolean) => listCLIToolStatuses(isManualRefresh),
+    [listCLIToolStatuses],
   );
-
-  useEffect(() => {
-    void loadStatuses(false);
-  }, [loadStatuses]);
+  const {
+    data: statusesData,
+    isLoading,
+    isRefreshing,
+    hasLoadError,
+    refresh,
+  } = useRefreshableLoader({
+    fetch: fetchStatuses,
+    timeoutMs: CLI_TOOLS_STATUS_TIMEOUT_MS,
+    minRefreshMs: CLI_TOOLS_RECHECK_MIN_DURATION_MS,
+  });
+  const statuses: CLIToolStatus[] = statusesData ?? [];
 
   const statusByToolID = useMemo(() => {
     const nextMap = new Map<string, CLIToolStatus>();
@@ -103,7 +60,7 @@ export function CLIToolsSettingsView() {
             size="small"
             variant="outlined"
             onClick={() => {
-              void loadStatuses(true);
+              refresh();
             }}
             disabled={isRefreshing}
             startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : null}

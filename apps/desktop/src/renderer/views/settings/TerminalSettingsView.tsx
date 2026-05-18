@@ -1,21 +1,12 @@
-import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../rpc/daemonTypes";
-import {
-  Alert,
-  Box,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from "@mui/material";
-import { CenteredSpinner } from "../../components/CenteredSpinner";
-import { StatusIndicator } from "../../components/StatusIndicator";
+import { Alert, Box, Button, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { CenteredSpinner } from "../../components/CenteredSpinner";
+import { StatusIndicator } from "../../components/StatusIndicator";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
+import { MONOSPACE_SX } from "../../helpers/styles";
 import { useCommands } from "../../hooks/useCommands";
+import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../rpc/daemonTypes";
 import { tabStore } from "../../store/tabStore";
 import { workspaceStore } from "../../store/workspaceStore";
 
@@ -258,12 +249,14 @@ export function TerminalSettingsView() {
                     </TableRow>,
                     ...group.sessions.map(({ session, workspaceName, actionKey, isClosing, isRunning }) => (
                       <TableRow key={session.sessionId}>
-                        <TableCell sx={{ fontFamily: "monospace" }}>{session.sessionId}</TableCell>
+                        <TableCell sx={MONOSPACE_SX}>{session.sessionId}</TableCell>
                         <TableCell>{workspaceName}</TableCell>
-                        <TableCell sx={{ fontFamily: "monospace" }}>{session.pid}</TableCell>
+                        <TableCell sx={MONOSPACE_SX}>{session.pid}</TableCell>
                         <TableCell>
                           <StatusIndicator
-                            label={isRunning ? t("settings.terminal.status.running") : t("settings.terminal.status.exited")}
+                            label={
+                              isRunning ? t("settings.terminal.status.running") : t("settings.terminal.status.exited")
+                            }
                             color={isRunning ? "success" : "disabled"}
                           />
                         </TableCell>

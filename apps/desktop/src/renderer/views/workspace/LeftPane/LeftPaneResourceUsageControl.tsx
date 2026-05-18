@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useInRouterContext, useLocation } from "react-router-dom";
-import type { TerminalResourceUsageSnapshot } from "../../../rpc/daemonTypes";
+import { useInRouterContext } from "react-router-dom";
+import { RouteCloseWatcher } from "../../../components/RouteCloseWatcher";
 import {
   WorkspaceResourceTableMenu,
   type WorkspaceResourceTableMenuRow,
@@ -10,6 +10,7 @@ import { formatCpuPercent, formatMemoryBytes } from "../../../helpers/formatters
 import { isTerminalTabWithSessionId } from "../../../helpers/terminalTabUtils";
 import { useCommands } from "../../../hooks/useCommands";
 import { useSharedTerminalResourceUsageSnapshot } from "../../../hooks/useSharedTerminalResourceUsageSnapshot";
+import type { TerminalResourceUsageSnapshot } from "../../../rpc/daemonTypes";
 import { tabStore } from "../../../store/tabStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 
@@ -21,23 +22,6 @@ type WorkspaceResourceUsageRow = {
   cpuPercent: number;
   memoryBytes: number;
 };
-
-type LeftPaneResourceUsageRouteCloseWatcherProps = {
-  onClose: () => void;
-};
-
-/** Closes one open left-pane resource dropdown whenever route changes away from workspace root. */
-function LeftPaneResourceUsageRouteCloseWatcher({ onClose }: LeftPaneResourceUsageRouteCloseWatcherProps) {
-  const location = useLocation();
-
-  useEffect(() => {
-    if (location.pathname !== "/") {
-      onClose();
-    }
-  }, [location.pathname, onClose]);
-
-  return null;
-}
 
 /** Aggregates one per-process snapshot into per-workspace CPU/memory rows. */
 function buildWorkspaceRows(
@@ -156,7 +140,7 @@ export function LeftPaneResourceUsageControl() {
 
   return (
     <>
-      {isInRouterContext ? <LeftPaneResourceUsageRouteCloseWatcher onClose={closeMenu} /> : null}
+      {isInRouterContext ? <RouteCloseWatcher onClose={closeMenu} /> : null}
       <WorkspaceResourceTableMenu
         anchorEl={menuAnchorEl}
         rows={tableRows}

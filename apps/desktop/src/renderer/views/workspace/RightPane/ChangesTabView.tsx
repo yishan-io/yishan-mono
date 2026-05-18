@@ -1,5 +1,6 @@
-import { Box, LinearProgress } from "@mui/material";
+import { Box } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import { PaneLoadingBar } from "../../../components/PaneLoadingBar";
 import { ProjectCommitComparison } from "../../../components/ProjectCommitComparison";
 import { ProjectGitChangesList } from "../../../components/ProjectGitChangesList";
 import { useChangesTabActions } from "./useChangesTabActions";
@@ -40,12 +41,7 @@ export function ChangesTabView() {
   return (
     <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>
       {isRepoChangesLoading ? (
-        <Box sx={{ flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", px: 2 }}>
-          <LinearProgress
-            data-testid="changes-tab-loading-progress"
-            sx={{ width: 120, height: 3, borderRadius: 999, overflow: "hidden" }}
-          />
-        </Box>
+        <PaneLoadingBar testId="changes-tab-loading-progress" />
       ) : (
         <>
           <Box
@@ -84,7 +80,8 @@ export function ChangesTabView() {
             onTrackFile={
               isCommitChangesMode
                 ? undefined
-                : (file, sectionId) => void (sectionId === "staged" ? unstagePaths([file.path]) : trackPaths([file.path]))
+                : (file, sectionId) =>
+                    void (sectionId === "staged" ? unstagePaths([file.path]) : trackPaths([file.path]))
             }
             onMoveFile={(file, sourceSectionId, targetSectionId) => {
               if (isCommitChangesMode || sourceSectionId === targetSectionId) {
@@ -122,7 +119,8 @@ export function ChangesTabView() {
               if (isCommitChangesMode) {
                 const commitHashForSelection =
                   selectedComparison !== "uncommitted" && selectedComparison !== "all" ? selectedComparison : undefined;
-                const targetBranchForAllSelection = selectedComparison === "all" ? selectedWorkspaceSourceBranch : undefined;
+                const targetBranchForAllSelection =
+                  selectedComparison === "all" ? selectedWorkspaceSourceBranch : undefined;
                 await selectCommitChangedFile(file.path, commitHashForSelection, targetBranchForAllSelection);
                 return;
               }

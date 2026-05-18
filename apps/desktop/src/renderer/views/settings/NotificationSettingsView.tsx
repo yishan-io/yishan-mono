@@ -9,6 +9,7 @@ import {
   SUPPORTED_NOTIFICATION_CATEGORIES,
   SUPPORTED_NOTIFICATION_SOUND_IDS,
 } from "../../../shared/notifications/notificationPreferences";
+import { CenteredSpinner } from "../../components/CenteredSpinner";
 import {
   SettingsCard,
   SettingsCheckboxRow,
@@ -215,18 +216,7 @@ export function NotificationSettingsView({ focusItemId }: NotificationSettingsVi
         description={t("org.settings.notifications.subtitle")}
       />
 
-      {isLoading ? (
-        <Box
-          sx={{
-            py: 6,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <CircularProgress size={24} />
-        </Box>
-      ) : null}
+      {isLoading ? <CenteredSpinner /> : null}
 
       {!isLoading && draft ? (
         <SettingsCard>

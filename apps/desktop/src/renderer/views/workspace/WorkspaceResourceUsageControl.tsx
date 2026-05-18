@@ -1,32 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useInRouterContext, useLocation } from "react-router-dom";
+import { useInRouterContext } from "react-router-dom";
 import { ResourceUsageMenu, type ResourceUsageMenuRow } from "../../components/ResourceUsageMenu";
+import { RouteCloseWatcher } from "../../components/RouteCloseWatcher";
 import { formatCpuPercent, formatMemoryBytes } from "../../helpers/formatters";
 import { isTerminalTabWithSessionId } from "../../helpers/terminalTabUtils";
 import { useCommands } from "../../hooks/useCommands";
 import { useSharedTerminalResourceUsageSnapshot } from "../../hooks/useSharedTerminalResourceUsageSnapshot";
+import { useTerminalTabLookups } from "../../hooks/useTerminalTabLookups";
 import { tabStore } from "../../store/tabStore";
 import { workspaceStore } from "../../store/workspaceStore";
 
 const MAX_VISIBLE_PROCESSES = 20;
-
-type ResourceUsageRouteCloseWatcherProps = {
-  onClose: () => void;
-};
-
-/** Closes one open resource-usage dropdown whenever route changes away from workspace root. */
-function ResourceUsageRouteCloseWatcher({ onClose }: ResourceUsageRouteCloseWatcherProps) {
-  const location = useLocation();
-
-  useEffect(() => {
-    if (location.pathname !== "/") {
-      onClose();
-    }
-  }, [location.pathname, onClose]);
-
-  return null;
-}
 
 /** Builds one stable row id for resource menu rendering. */
 function buildResourceUsageRowId(sessionId: string, pid: number): string {
@@ -108,9 +93,7 @@ export function WorkspaceResourceUsageControl() {
     }
     return mapping;
   }, [workspaceProcesses]);
-  const terminalTabBySessionId = useMemo(() => {
-    return new Map(tabs.filter(isTerminalTabWithSessionId).map((tab) => [tab.data.sessionId.trim(), tab]));
-  }, [tabs]);
+  const terminalTabBySessionId = useTerminalTabLookups();
 
   const summaryLabel = useMemo(() => {
     return t("terminal.resourceUsage.summary", {
@@ -125,7 +108,7 @@ export function WorkspaceResourceUsageControl() {
 
   return (
     <>
-      {isInRouterContext ? <ResourceUsageRouteCloseWatcher onClose={closeResourceMenu} /> : null}
+      {isInRouterContext ? <RouteCloseWatcher onClose={closeResourceMenu} /> : null}
       <ResourceUsageMenu
         anchorEl={resourceMenuAnchorEl}
         rows={rows}
