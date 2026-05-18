@@ -109,7 +109,7 @@ type ListRunsInput = JobIdentityInput & {
   limit?: number;
 };
 
-function toScheduledJobView(row: ScheduledJobRecord): ScheduledJobView {
+export function toScheduledJobView(row: ScheduledJobRecord): ScheduledJobView {
   return {
     id: row.id,
     organizationId: row.organizationId,

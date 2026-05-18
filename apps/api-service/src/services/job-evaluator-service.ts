@@ -1,4 +1,3 @@
-import type { AgentKind } from "@yishan/core";
 import { and, eq, lte } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
@@ -13,6 +12,7 @@ import {
 import { newId } from "@/lib/id";
 import { computeNextRunAt, ensureTimezoneSupported, parseCronExpression } from "@/scheduled/cron";
 import type { PendingRun, ScheduledJobView } from "@/services/scheduled-job-service";
+import { toScheduledJobView } from "@/services/scheduled-job-service";
 
 const MAX_RESPONSE_BODY_SIZE = 4096;
 
@@ -49,32 +49,6 @@ function validateTimezoneOrThrow(timezone: string): string {
       error instanceof Error ? error.message : "Unknown timezone validation error",
     );
   }
-}
-
-function toScheduledJobViewLocal(row: typeof scheduledJobs.$inferSelect): ScheduledJobView {
-  return {
-    id: row.id,
-    organizationId: row.organizationId,
-    projectId: row.projectId,
-    nodeId: row.nodeId,
-    name: row.name,
-    agentKind: row.agentKind as AgentKind,
-    prompt: row.prompt,
-    model: row.model,
-    command: row.command,
-    cronExpression: row.cronExpression,
-    timezone: row.timezone,
-    status: row.status,
-    nextRunAt: row.nextRunAt,
-    lastScheduledFor: row.lastScheduledFor,
-    lastRunAt: row.lastRunAt,
-    lastRunStatus: row.lastRunStatus,
-    lastErrorCode: row.lastErrorCode,
-    lastErrorMessage: row.lastErrorMessage,
-    createdByUserId: row.createdByUserId,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
 }
 
 /**
@@ -166,7 +140,7 @@ export class JobEvaluatorService {
       pending.push({
         runId,
         scheduledFor,
-        job: toScheduledJobViewLocal(updated),
+        job: toScheduledJobView(updated),
       });
     }
 
