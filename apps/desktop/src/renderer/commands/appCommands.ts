@@ -1,8 +1,14 @@
-import type { AppendBrowserHistoryInput, AuthStatusResult, BrowserHistoryGroup, DaemonInfoResult, DaemonRestartResult } from "../../main/ipc";
+import type {
+  AppendBrowserHistoryInput,
+  AuthStatusResult,
+  BrowserHistoryGroup,
+  DaemonInfoResult,
+  DaemonRestartResult,
+} from "../../main/ipc";
 import type { DesktopAgentKind } from "../helpers/agentSettings";
-import { linkSettingsStore, type LinkTarget } from "../store/linkSettingsStore";
-import { tabStore } from "../store/tabStore";
 import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
+import { type LinkTarget, layoutStore } from "../store/layoutStore";
+import { tabStore } from "../store/tabStore";
 
 /** Opens one native folder picker and returns a selected directory path when available. */
 export async function openLocalFolderDialog(startingFolder?: string) {
@@ -52,12 +58,14 @@ function isHttpUrl(url: string): boolean {
   }
 }
 
-export type OpenLinkResult = {
-  opened: true;
-} | {
-  opened: false;
-  reason: string;
-};
+export type OpenLinkResult =
+  | {
+      opened: true;
+    }
+  | {
+      opened: false;
+      reason: string;
+    };
 
 export type OpenLinkOptions = {
   url: string;
@@ -66,7 +74,7 @@ export type OpenLinkOptions = {
 
 export async function openLink(options: OpenLinkOptions): Promise<OpenLinkResult> {
   const { url, workspaceId } = options;
-  const linkTarget: LinkTarget = linkSettingsStore.getState().linkTarget;
+  const linkTarget: LinkTarget = layoutStore.getState().linkTarget;
 
   if (linkTarget === "built-in" && isHttpUrl(url)) {
     const resolvedWorkspaceId = workspaceId ?? resolveActiveWorkspaceId();

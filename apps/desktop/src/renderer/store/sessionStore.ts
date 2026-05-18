@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { immer } from "zustand/middleware/immer";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { immer } from "zustand/middleware/immer";
 import type { NotificationPreferences } from "../../shared/notifications/notificationPreferences";
 import type { SupportedLanguageCode } from "../i18n";
 
@@ -25,6 +25,10 @@ type SessionStoreState = {
   daemonId?: string;
   daemonVersion?: string;
   loaded: boolean;
+  /** True after authentication status has been resolved (replaces authStore). */
+  isAuthenticated: boolean;
+  /** True once the auth check has completed, regardless of outcome. */
+  authStatusResolved: boolean;
   setSessionData: (input: {
     currentUser: SessionUser | null;
     organizations: SessionOrganization[];
@@ -33,9 +37,11 @@ type SessionStoreState = {
   setSelectedOrganizationId: (organizationId: string) => void;
   setDaemonInfo: (input: { daemonId: string; daemonVersion: string }) => void;
   clearSessionData: () => void;
+  /** Sets authentication flags (merged from former authStore). */
+  setAuthState: (isAuthenticated: boolean, authStatusResolved: boolean) => void;
 };
 
-/** Stores renderer session metadata (user + organizations) for remote REST flows. */
+/** Stores renderer session metadata (user + organizations + auth state) for remote REST flows. */
 export const sessionStore = create<SessionStoreState>()(
   persist(
     immer((set) => ({
@@ -45,6 +51,8 @@ export const sessionStore = create<SessionStoreState>()(
       daemonId: undefined,
       daemonVersion: undefined,
       loaded: false,
+      isAuthenticated: false,
+      authStatusResolved: false,
       setSessionData: ({ currentUser, organizations, selectedOrganizationId }) => {
         const normalizedSelectedOrganizationId =
           selectedOrganizationId && organizations.some((organization) => organization.id === selectedOrganizationId)
@@ -84,12 +92,16 @@ export const sessionStore = create<SessionStoreState>()(
           loaded: false,
         });
       },
+      setAuthState: (isAuthenticated, authStatusResolved) => {
+        set({ isAuthenticated, authStatusResolved });
+      },
     })),
     {
       name: "yishan-session-store",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         selectedOrganizationId: state.selectedOrganizationId,
+        isAuthenticated: state.isAuthenticated,
       }),
     },
   ),

@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ACTIONS } from "../../shared/contracts/actions";
@@ -12,7 +12,6 @@ import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../
 import { parseWorkspaceSessionNavigationPath } from "../navigation/workspaceNavigation";
 import { isEditableActiveElement } from "../shortcuts/editableTarget";
 import { layoutStore } from "../store/layoutStore";
-import { popupStore } from "../store/popupStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
 import { CreateProjectDialogView } from "./workspace/LeftPane/CreateProjectDialogView";
@@ -43,7 +42,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
 
   useEffect(() => {
     return subscribeAppActionEvent((payload) => {
-      if (payload.action !== ACTIONS.NAVIGATE && popupStore.getState().isPopupOpen) {
+      if (payload.action !== ACTIONS.NAVIGATE && layoutStore.getState().isPopupOpen) {
         return;
       }
 
@@ -161,7 +160,10 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
 }
 
 /** Loads workspace data and restores terminal tabs persisted from previous sessions. */
-function useWorkspaceBootstrap(input: { cmd: WorkspaceViewCommands; terminalRecoveryCoordinator: TerminalRecoveryCoordinator }) {
+function useWorkspaceBootstrap(input: {
+  cmd: WorkspaceViewCommands;
+  terminalRecoveryCoordinator: TerminalRecoveryCoordinator;
+}) {
   const { cmd, terminalRecoveryCoordinator } = input;
 
   useEffect(() => {

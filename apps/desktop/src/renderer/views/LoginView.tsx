@@ -7,12 +7,12 @@ import { resetAuthExpiredState } from "../api/restClient";
 import { login } from "../commands/appCommands";
 import { AppBackgroundContainer } from "../components/AppBackgroundContainer";
 import { CenteredContentLayout } from "../components/CenteredContentLayout";
-import { authStore } from "../store/authStore";
+import { sessionStore } from "../store/sessionStore";
 
 /** Renders one pre-authentication entry screen with Google sign-in action. */
 export function LoginView() {
   const { t } = useTranslation();
-  const setAuthState = authStore((state) => state.setAuthState);
+  const setAuthState = sessionStore((state) => state.setAuthState);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -39,10 +39,7 @@ export function LoginView() {
   return (
     <AppBackgroundContainer>
       <CenteredContentLayout className="electron-webkit-app-region-drag" maxWidth={460}>
-        <Stack
-          spacing={2.5}
-          sx={{ textAlign: "center" }}
-        >
+        <Stack spacing={2.5} sx={{ textAlign: "center" }}>
           <Box component="img" src={logo} alt="" sx={{ width: 256, height: 256, alignSelf: "center" }} />
           <Stack spacing={1}>
             <Typography variant="h4" fontWeight={700}>

@@ -1,4 +1,3 @@
-import { removeTabMetadataById } from "./shared";
 import type { WorkspaceTabStateSlice } from "./types";
 
 /** Closes one tab and updates selected-tab pointers and per-tab metadata maps. */
@@ -18,7 +17,6 @@ export function closeTabState(state: WorkspaceTabStateSlice, tabId: string): Par
 
   return {
     tabs: state.tabs.filter((tab) => tab.id !== tabId),
-    ...removeTabMetadataById(state, [tabId]),
     selectedTabId: nextSelectedTabId,
     selectedTabIdByWorkspaceId: {
       ...state.selectedTabIdByWorkspaceId,
@@ -37,16 +35,10 @@ export function closeOtherTabsState(
     return null;
   }
 
-  const tabs = state.tabs.filter(
-    (tab) => tab.workspaceId !== currentTab.workspaceId || tab.id === tabId || tab.pinned,
-  );
-  const removedTabIds = state.tabs
-    .filter((tab) => tab.workspaceId === currentTab.workspaceId && tab.id !== tabId && !tab.pinned)
-    .map((tab) => tab.id);
+  const tabs = state.tabs.filter((tab) => tab.workspaceId !== currentTab.workspaceId || tab.id === tabId || tab.pinned);
 
   return {
     tabs,
-    ...removeTabMetadataById(state, removedTabIds),
     selectedTabId: tabId,
     selectedTabIdByWorkspaceId: {
       ...state.selectedTabIdByWorkspaceId,
@@ -57,9 +49,7 @@ export function closeOtherTabsState(
 
 /** Closes every terminal tab across all workspaces and resets selection pointers. */
 export function closeAllTerminalTabsState(state: WorkspaceTabStateSlice): Partial<WorkspaceTabStateSlice> | null {
-  const terminalTabIds = new Set(
-    state.tabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id),
-  );
+  const terminalTabIds = new Set(state.tabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id));
   if (terminalTabIds.size === 0) {
     return null;
   }
@@ -78,7 +68,6 @@ export function closeAllTerminalTabsState(state: WorkspaceTabStateSlice): Partia
 
   return {
     tabs: nextTabs,
-    ...removeTabMetadataById(state, Array.from(terminalTabIds)),
     selectedTabId: nextSelectedTabId,
     selectedTabIdByWorkspaceId: nextSelectedByWorkspaceId,
   };
@@ -95,9 +84,6 @@ export function closeAllTabsState(
   }
 
   const tabs = state.tabs.filter((tab) => tab.workspaceId !== currentTab.workspaceId || tab.pinned);
-  const removedTabIds = state.tabs
-    .filter((tab) => tab.workspaceId === currentTab.workspaceId && !tab.pinned)
-    .map((tab) => tab.id);
   const selectedTabBelongsToWorkspace = state.tabs.some(
     (tab) => tab.id === state.selectedTabId && tab.workspaceId === currentTab.workspaceId,
   );
@@ -107,7 +93,6 @@ export function closeAllTabsState(
 
   return {
     tabs,
-    ...removeTabMetadataById(state, removedTabIds),
     selectedTabId: nextSelectedTabId,
     selectedTabIdByWorkspaceId: {
       ...state.selectedTabIdByWorkspaceId,

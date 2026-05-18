@@ -5,16 +5,11 @@ import {
   applyUpdatedRepoConfigState,
   normalizeCreateRepoInput,
 } from "../helpers/projectHelpers";
-import { sessionStore } from "./sessionStore";
 import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "./types";
 
 type WorkspaceRepoActions = Pick<
   WorkspaceStoreActions,
-  | "load"
-  | "createProject"
-  | "deleteProject"
-  | "updateProjectConfig"
-  | "incrementFileTreeRefreshVersion"
+  "load" | "createProject" | "deleteProject" | "updateProjectConfig" | "incrementFileTreeRefreshVersion"
 >;
 
 function isGitInternalPath(path: string): boolean {
@@ -32,6 +27,7 @@ export function createWorkspaceRepoActions(
     path,
     gitUrl,
     backendProject,
+    organizationId,
   }: Parameters<WorkspaceStoreActions["createProject"]>[0]) => {
     const { normalizedPath, normalizedGitUrl, resolvedPath } = normalizeCreateRepoInput({
       path,
@@ -47,7 +43,7 @@ export function createWorkspaceRepoActions(
       return;
     }
 
-    const organizationId = sessionStore.getState().selectedOrganizationId?.trim() ?? "";
+    const normalizedOrganizationId = organizationId.trim();
 
     set((state) => {
       applyCreatedRepoState(state, {
@@ -60,10 +56,10 @@ export function createWorkspaceRepoActions(
       });
 
       // Persist selection + display preferences into organization-scoped storage.
-      if (organizationId) {
+      if (normalizedOrganizationId) {
         state.organizationPreferencesById ??= {};
-        state.organizationPreferencesById[organizationId] ??= {};
-        const orgPrefs = state.organizationPreferencesById[organizationId];
+        state.organizationPreferencesById[normalizedOrganizationId] ??= {};
+        const orgPrefs = state.organizationPreferencesById[normalizedOrganizationId];
         orgPrefs.selectedProjectId = state.selectedProjectId;
         orgPrefs.selectedWorkspaceId = state.selectedWorkspaceId;
         orgPrefs.displayProjectIds = state.displayProjectIds;
@@ -104,7 +100,8 @@ export function createWorkspaceRepoActions(
           return;
         }
 
-        state.fileTreeChangedRelativePathsByWorktreePath[normalizedWorkspaceWorktreePath] = normalizedChangedRelativePaths;
+        state.fileTreeChangedRelativePathsByWorktreePath[normalizedWorkspaceWorktreePath] =
+          normalizedChangedRelativePaths;
       });
     },
   };

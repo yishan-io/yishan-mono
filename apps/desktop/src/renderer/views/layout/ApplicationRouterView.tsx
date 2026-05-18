@@ -9,7 +9,6 @@ import { getAuthStatus, getDaemonInfo } from "../../commands/appCommands";
 import { loadWorkspaceFromBackend } from "../../commands/projectCommands";
 import { setAppLanguage } from "../../i18n";
 import { rendererQueryClient } from "../../queryClient";
-import { authStore } from "../../store/authStore";
 import { sessionStore } from "../../store/sessionStore";
 import { LoginView } from "../LoginView";
 import { WorkspaceView } from "../WorkspaceView";
@@ -56,9 +55,9 @@ export function NotFoundRouteView() {
  */
 export function ApplicationRouterView() {
   const { t } = useTranslation();
-  const isAuthenticated = authStore((state) => state.isAuthenticated);
-  const authStatusResolved = authStore((state) => state.authStatusResolved);
-  const setAuthState = authStore((state) => state.setAuthState);
+  const isAuthenticated = sessionStore((state) => state.isAuthenticated);
+  const authStatusResolved = sessionStore((state) => state.authStatusResolved);
+  const setAuthState = sessionStore((state) => state.setAuthState);
   const organizations = sessionStore((state) => state.organizations);
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
   const [appBootstrapReady, setAppBootstrapReady] = useState(false);
@@ -198,7 +197,7 @@ export function ApplicationRouterView() {
           // A 401 from the API means the session token is invalid or expired.
           // Transition back to the login view instead of showing a retry screen.
           if (error instanceof RestApiError && error.status === 401) {
-            authStore.getState().setAuthState(false, true);
+            sessionStore.getState().setAuthState(false, true);
             sessionStore.getState().clearSessionData();
             rendererQueryClient.clear();
             return;
@@ -218,9 +217,7 @@ export function ApplicationRouterView() {
   }, [authStatusResolved, bootstrapAttempt, isAuthenticated, selectedOrganizationId]);
 
   if (!authStatusResolved) {
-    return (
-      <AppBootstrapLoadingView hasError={false} onRetry={() => {}} />
-    );
+    return <AppBootstrapLoadingView hasError={false} onRetry={() => {}} />;
   }
 
   if (!isAuthenticated) {

@@ -6,8 +6,8 @@ import { PaneHeader } from "../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../components/PaneToggleButton";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
-import { workspacePaneStore } from "../../../store/workspacePaneStore";
 import { workspaceStore } from "../../../store/workspaceStore";
+import { workspaceUiStore } from "../../../store/workspaceUiStore";
 import { ChangesTabView } from "./ChangesTabView";
 import { FileManagerView } from "./FileManagerView";
 import { PullRequestTabView } from "./PullRequestTabView";
@@ -21,9 +21,9 @@ export type RightPaneViewProps = {
  */
 export function RightPaneView({ onToggleRightPane }: RightPaneViewProps = {}) {
   const { t } = useTranslation();
-  const activeRightPaneTab = workspacePaneStore((state) => state.rightPaneTab);
-  const openFileSearchRequestKey = workspacePaneStore((state) => state.fileSearchRequestKey);
-  const setRightPaneTab = workspacePaneStore((state) => state.setRightPaneTab);
+  const activeRightPaneTab = workspaceUiStore((state) => state.rightPaneTab);
+  const openFileSearchRequestKey = workspaceUiStore((state) => state.fileSearchRequestKey);
+  const setRightPaneTab = workspaceUiStore((state) => state.setRightPaneTab);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const changesCount = workspaceStore((state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0);
   const [lastHandledFileSearchRequestKey, setLastHandledFileSearchRequestKey] = useState(0);

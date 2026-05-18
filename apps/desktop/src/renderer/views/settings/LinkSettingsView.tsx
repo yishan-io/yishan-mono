@@ -1,14 +1,19 @@
 import { MenuItem } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { SettingsCard, SettingsCompactSelect, SettingsControlRow, SettingsSectionHeader } from "../../components/settings";
-import { type LinkTarget, linkSettingsStore } from "../../store/linkSettingsStore";
+import {
+  SettingsCard,
+  SettingsCompactSelect,
+  SettingsControlRow,
+  SettingsSectionHeader,
+} from "../../components/settings";
+import { type LinkTarget, layoutStore } from "../../store/layoutStore";
 
 const LINK_TARGET_OPTIONS: LinkTarget[] = ["built-in", "external"];
 
 export function LinkSettingsView() {
   const { t } = useTranslation();
-  const linkTarget = linkSettingsStore((state) => state.linkTarget);
-  const setLinkTarget = linkSettingsStore((state) => state.setLinkTarget);
+  const linkTarget = layoutStore((state) => state.linkTarget);
+  const setLinkTarget = layoutStore((state) => state.setLinkTarget);
 
   return (
     <>

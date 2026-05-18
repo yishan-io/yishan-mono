@@ -46,7 +46,7 @@ type TestState = {
 
 /** Creates a minimal state harness for repo store actions with immer-style mutation. */
 function createHarness(overrides?: Partial<TestState>) {
-  let state: TestState = {
+  const state: TestState = {
     organizationPreferencesById: {
       "org-1": {
         selectedProjectId: "repo-1",
@@ -156,6 +156,7 @@ describe("createWorkspaceRepoActions", () => {
       name: "Repo 1",
       source: "local",
       path: "/tmp/repo-1",
+      organizationId: "org-1",
       backendProject: {
         id: "repo-1",
         name: "Repo 1",
@@ -266,6 +267,7 @@ describe("createWorkspaceRepoActions", () => {
       name: "Repo 1",
       source: "local",
       path: "/tmp/repo-1",
+      organizationId: "org-1",
       backendProject: {
         id: "repo-1",
         name: "Repo 1",
@@ -303,6 +305,7 @@ describe("createWorkspaceRepoActions", () => {
       name: "Repo 3",
       source: "local",
       path: "/tmp/repo-3",
+      organizationId: "org-1",
       backendProject: {
         id: "repo-3",
         name: "Repo 3",

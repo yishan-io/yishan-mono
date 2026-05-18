@@ -8,10 +8,7 @@ import type {
 
 type WorkspaceSelectionActions = Pick<
   WorkspaceStoreActions,
-  | "setSelectedProjectId"
-  | "setSelectedWorkspaceId"
-  | "setDisplayProjectIds"
-  | "setLastUsedExternalAppId"
+  "setSelectedProjectId" | "setSelectedWorkspaceId" | "setDisplayProjectIds" | "setLastUsedExternalAppId"
 >;
 
 export function createWorkspaceSelectionActions(
@@ -22,11 +19,16 @@ export function createWorkspaceSelectionActions(
     return workspace.projectId ?? workspace.repoId;
   };
 
-  const updateCurrentOrganizationPreferences = (
+  /**
+   * Persists selection preferences for the given organization.
+   * `organizationId` must be resolved _before_ calling `set()` to avoid
+   * reading a sibling store inside a mutation callback.
+   */
+  const applyOrganizationPreferences = (
     state: WorkspaceStoreState,
+    organizationId: string,
     updater: (organizationPreferences: NonNullable<WorkspaceStoreState["organizationPreferencesById"]>[string]) => void,
   ): void => {
-    const organizationId = sessionStore.getState().selectedOrganizationId?.trim();
     if (!organizationId) {
       return;
     }
@@ -45,36 +47,44 @@ export function createWorkspaceSelectionActions(
       const nextWorkspaceId = workspaceBelongsToProject
         ? selectedWorkspaceId
         : (workspaces.find((workspace) => resolveWorkspaceProjectId(workspace) === projectId)?.id ?? "");
+      // Read session state before entering the set() callback.
+      const organizationId = sessionStore.getState().selectedOrganizationId?.trim() ?? "";
 
       set((state) => {
         state.selectedProjectId = projectId;
         state.selectedWorkspaceId = nextWorkspaceId;
-        updateCurrentOrganizationPreferences(state, (organizationPreferences) => {
+        applyOrganizationPreferences(state, organizationId, (organizationPreferences) => {
           organizationPreferences.selectedProjectId = projectId;
           organizationPreferences.selectedWorkspaceId = nextWorkspaceId;
         });
       });
     },
     setSelectedWorkspaceId: (workspaceId) => {
+      const organizationId = sessionStore.getState().selectedOrganizationId?.trim() ?? "";
+
       set((state) => {
         state.selectedWorkspaceId = workspaceId;
-        updateCurrentOrganizationPreferences(state, (organizationPreferences) => {
+        applyOrganizationPreferences(state, organizationId, (organizationPreferences) => {
           organizationPreferences.selectedWorkspaceId = workspaceId;
         });
       });
     },
     setDisplayProjectIds: (projectIds) => {
+      const organizationId = sessionStore.getState().selectedOrganizationId?.trim() ?? "";
+
       set((state) => {
         state.displayProjectIds = projectIds;
-        updateCurrentOrganizationPreferences(state, (organizationPreferences) => {
+        applyOrganizationPreferences(state, organizationId, (organizationPreferences) => {
           organizationPreferences.displayProjectIds = projectIds;
         });
       });
     },
     setLastUsedExternalAppId: (appId) => {
+      const organizationId = sessionStore.getState().selectedOrganizationId?.trim() ?? "";
+
       set((state) => {
         state.lastUsedExternalAppId = appId;
-        updateCurrentOrganizationPreferences(state, (organizationPreferences) => {
+        applyOrganizationPreferences(state, organizationId, (organizationPreferences) => {
           organizationPreferences.lastUsedExternalAppId = appId;
         });
       });

@@ -1,8 +1,11 @@
 import type { StateCreator } from "zustand";
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
-import type { ProjectRecord, WorkspaceRecord, WorkspacePullRequestSummary } from "../api/types";
+import type { ProjectRecord, WorkspacePullRequestSummary, WorkspaceRecord } from "../api/types";
 import type { DesktopAgentKind } from "../helpers/agentSettings";
 import type { DaemonWorkspacePullRequest } from "../rpc/daemonTypes";
+
+// Re-export chat-domain types from their canonical location.
+export type { AvailableCommand, AvailableModel, ChatMessage } from "./chatTypes";
 
 export type WorkspaceProjectRecord = {
   id: string;
@@ -26,23 +29,6 @@ export type WorkspaceProjectRecord = {
   createdAt?: string;
   updatedAt?: string;
   createdByUserId?: string;
-};
-
-export type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  thinking?: string;
-};
-
-export type AvailableCommand = {
-  name: string;
-  description: string;
-};
-
-export type AvailableModel = {
-  id: string;
-  name: string;
 };
 
 export type RepoWorkspaceItem = {
@@ -201,30 +187,21 @@ export type WorkspaceStoreState = {
   setSelectedWorkspaceId: (workspaceId: string) => void;
   setDisplayProjectIds: (projectIds: string[]) => void;
   setLastUsedExternalAppId: (appId: ExternalAppId) => void;
-  load: (
-    organizationId: string,
-    projects: ProjectRecord[],
-    workspaces: WorkspaceRecord[],
-  ) => void;
+  load: (organizationId: string, projects: ProjectRecord[], workspaces: WorkspaceRecord[]) => void;
   createProject: (input: {
     name: string;
     source: "local" | "remote";
     path?: string;
     gitUrl?: string;
     backendProject: WorkspaceProjectRecord;
+    organizationId: string;
   }) => void;
   deleteProject: (projectId: string) => void;
   updateProjectConfig: (
     projectId: string,
     config: Pick<
       WorkspaceProjectRecord,
-      | "name"
-      | "worktreePath"
-      | "contextEnabled"
-      | "icon"
-      | "color"
-      | "setupScript"
-      | "postScript"
+      "name" | "worktreePath" | "contextEnabled" | "icon" | "color" | "setupScript" | "postScript"
     >,
   ) => void;
   incrementFileTreeRefreshVersion: (workspaceWorktreePath?: string, changedRelativePaths?: string[]) => void;

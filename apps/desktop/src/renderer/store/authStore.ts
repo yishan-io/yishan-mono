@@ -1,31 +1,11 @@
-import { create } from "zustand";
-import { immer } from "zustand/middleware/immer";
-import { createJSONStorage, persist } from "zustand/middleware";
+/**
+ * @deprecated Import from `sessionStore` instead.
+ * `authStore` is now a re-export of `sessionStore` — `isAuthenticated`,
+ * `authStatusResolved`, and `setAuthState` live there.
+ * This shim exists only to avoid breaking test files that call
+ * `authStore.setState(...)` directly.
+ */
+export { sessionStore as authStore } from "./sessionStore";
 
+/** @deprecated Key is no longer used — auth state is persisted inside sessionStore. */
 export const AUTH_STORE_STORAGE_KEY = "yishan-auth-store";
-
-type AuthStoreState = {
-  isAuthenticated: boolean;
-  authStatusResolved: boolean;
-  setAuthState: (isAuthenticated: boolean, authStatusResolved: boolean) => void;
-};
-
-/** Stores one persisted signed-in flag used to gate app shell routes. */
-export const authStore = create<AuthStoreState>()(
-  persist(
-    immer((set) => ({
-      isAuthenticated: false,
-      authStatusResolved: false,
-      setAuthState: (isAuthenticated, authStatusResolved) => {
-        set({ isAuthenticated, authStatusResolved });
-      },
-    })),
-    {
-      name: AUTH_STORE_STORAGE_KEY,
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        isAuthenticated: state.isAuthenticated,
-      }),
-    },
-  ),
-);

@@ -39,7 +39,6 @@ import { useThemePreference } from "../../hooks/useThemePreference";
 import { rendererQueryClient } from "../../queryClient";
 import { getDaemonClient } from "../../rpc/rpcTransport";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
-import { authStore } from "../../store/authStore";
 import { sessionStore } from "../../store/sessionStore";
 import type { AppThemePreference } from "../../theme";
 import { CreateOrganizationDialogView } from "./CreateOrganizationDialogView";
@@ -111,7 +110,7 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
   const setSelectedOrganizationId = sessionStore((state) => state.setSelectedOrganizationId);
   const clearSessionData = sessionStore((state) => state.clearSessionData);
-  const setAuthState = authStore((state) => state.setAuthState);
+  const setAuthState = sessionStore((state) => state.setAuthState);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [organizationMenuAnchor, setOrganizationMenuAnchor] = useState<HTMLElement | null>(null);
   const [isCreateOrganizationDialogOpen, setIsCreateOrganizationDialogOpen] = useState(false);

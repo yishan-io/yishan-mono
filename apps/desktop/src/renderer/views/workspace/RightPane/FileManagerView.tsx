@@ -1,16 +1,7 @@
 import { Alert, Box, LinearProgress, Typography } from "@mui/material";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  findExternalAppPreset,
-  isExternalAppPlatformSupported,
-} from "../../../../shared/contracts/externalApps";
+import { findExternalAppPreset, isExternalAppPlatformSupported } from "../../../../shared/contracts/externalApps";
 import { ContextMenu } from "../../../components/ContextMenu";
 import { FileQuickOpenDialog } from "../../../components/FileQuickOpenDialog";
 import { FileTree } from "../../../components/FileTree";
@@ -21,8 +12,8 @@ import { useCommands } from "../../../hooks/useCommands";
 import { useContextMenuState } from "../../../hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "../../../hooks/useSuppressNativeContextMenuWhileOpen";
 import { tabStore } from "../../../store/tabStore";
-import { workspaceFileTreeStore } from "../../../store/workspaceFileTreeStore";
 import { workspaceStore } from "../../../store/workspaceStore";
+import { workspaceUiStore } from "../../../store/workspaceUiStore";
 import { useFileSearchController } from "./useFileSearchController";
 import { useFileTreeContextMenuItems } from "./useFileTreeContextMenuItems";
 import { useFileTreeCreateEntryRequest } from "./useFileTreeCreateEntryRequest";
@@ -61,7 +52,8 @@ export function FileManagerView({
   const lastUsedExternalAppId = workspaceStore((state) => state.lastUsedExternalAppId);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const selectedWorkspaceWorktreePath = workspaceStore(
-    (state) => state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath?.trim() ?? "",
+    (state) =>
+      state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath?.trim() ?? "",
   );
   const workspaceGitRefreshVersion = workspaceStore((state) => {
     if (!selectedWorkspaceWorktreePath) {
@@ -81,18 +73,16 @@ export function FileManagerView({
     closeMenu: closeContextMenu,
     isOpen: hasOpenContextMenu,
   } = useContextMenuState<FileTreeContextMenuRequest>();
-  const selectedEntryPath = workspaceFileTreeStore((state) => state.selectedEntryPath);
-  const selectedEntryIsDirectory = selectedEntryPath
-    ? ops.repoFiles.some((p) => p === selectedEntryPath + "/")
-    : false;
+  const selectedEntryPath = workspaceUiStore((state) => state.selectedEntryPath);
+  const selectedEntryIsDirectory = selectedEntryPath ? ops.repoFiles.some((p) => p === selectedEntryPath + "/") : false;
   const createEntryBasePath = selectedEntryPath
     ? selectedEntryIsDirectory
       ? selectedEntryPath
       : selectedEntryPath.split("/").slice(0, -1).join("/")
     : "";
-  const deleteSelectionRequestId = workspaceFileTreeStore((state) => state.deleteSelectionRequestId);
-  const undoRequestId = workspaceFileTreeStore((state) => state.undoRequestId);
-  const setSelectedEntryPath = workspaceFileTreeStore((state) => state.setSelectedEntryPath);
+  const deleteSelectionRequestId = workspaceUiStore((state) => state.deleteSelectionRequestId);
+  const undoRequestId = workspaceUiStore((state) => state.undoRequestId);
+  const setSelectedEntryPath = workspaceUiStore((state) => state.setSelectedEntryPath);
   const [lastHandledDeleteSelectionRequestId, setLastHandledDeleteSelectionRequestId] = useState(0);
   const [lastHandledUndoRequestId, setLastHandledUndoRequestId] = useState(0);
   const [expandedItemsByWorkspaceId, setExpandedItemsByWorkspaceId] = useState<Record<string, string[]>>({});
@@ -224,7 +214,9 @@ export function FileManagerView({
     openSearchResult,
   });
 
-  const fileOperationModeLabel = ops.fileOperationState ? t(`files.operations.modes.${ops.fileOperationState.mode}`) : "";
+  const fileOperationModeLabel = ops.fileOperationState
+    ? t(`files.operations.modes.${ops.fileOperationState.mode}`)
+    : "";
 
   const { items: contextMenuItems, anchorPosition: contextMenuAnchorPosition } = useFileTreeContextMenuItems({
     t,
@@ -348,7 +340,7 @@ export function FileManagerView({
         onItemContextMenu={(request) => {
           openContextMenu(request);
         }}
-        />
+      />
       <ContextMenu
         open={Boolean(contextMenu)}
         onClose={closeContextMenu}

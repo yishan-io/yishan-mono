@@ -96,9 +96,7 @@ export async function loadWorkspaceFromBackend(): Promise<void> {
     workspaceStore.getState().load(selectedOrganization.id, projects, workspaces);
 
     const mergedWorkspaceIds = new Set(
-      workspaces
-        .filter((w) => w.latestPullRequest?.state === "merged")
-        .map((w) => w.id),
+      workspaces.filter((w) => w.latestPullRequest?.state === "merged").map((w) => w.id),
     );
     await ensureVisibleWorkspacesOpen(mergedWorkspaceIds);
     syncTabStoreWithWorkspace(previousWorkspaces);
@@ -156,11 +154,11 @@ export async function createProject(input: {
     }
 
     const localRepositoryMetadata = await inspectLocalRepository(normalizedPath);
-    
+
     if (!localRepositoryMetadata.isGitRepository) {
       throw new Error("The selected folder is not a git repository. Please choose a valid git repository folder.");
     }
-    
+
     inferredRemoteUrl = localRepositoryMetadata.remoteUrl || undefined;
     inferredSourceTypeHint = inferredRemoteUrl
       ? "git"
@@ -211,6 +209,7 @@ export async function createProject(input: {
     source: isLocalSource ? "local" : "remote",
     path: isLocalSource ? normalizedPath : undefined,
     gitUrl: isLocalSource ? undefined : normalizedGitUrl,
+    organizationId: selectedOrganizationId,
     backendProject: {
       id: project.id,
       name: project.name || normalizedName,

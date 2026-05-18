@@ -9,9 +9,8 @@ import { getDaemonClient } from "../rpc/rpcTransport";
 import { layoutStore } from "../store/layoutStore";
 import { sessionStore } from "../store/sessionStore";
 import type { WorkspaceStoreState } from "../store/types";
-import { workspaceFileTreeStore } from "../store/workspaceFileTreeStore";
-import { type WorkspaceRightPaneTab, workspacePaneStore } from "../store/workspacePaneStore";
 import { workspaceStore } from "../store/workspaceStore";
+import { type WorkspaceRightPaneTab, workspaceUiStore } from "../store/workspaceUiStore";
 import { ensureVisibleWorkspacesOpen } from "./daemonWorkspaceSync";
 
 export { createWorkspace } from "./workspaceCreateCommand";
@@ -149,7 +148,7 @@ export function activateWorkspacePane(pane: "repo" | WorkspaceRightPaneTab) {
   }
 
   layoutStore.getState().setIsRightPaneManuallyHidden(false);
-  workspacePaneStore.getState().setRightPaneTab(pane);
+  workspaceUiStore.getState().setRightPaneTab(pane);
 }
 
 /** Requests opening the create-workspace dialog for the currently selected project context. */
@@ -219,17 +218,17 @@ export function focusWorkspaceFileTree() {
 
 /** Opens workspace file search without changing file-tree pane visibility state. */
 export function openWorkspaceFileSearch() {
-  workspacePaneStore.getState().requestFileSearch();
+  workspaceUiStore.getState().requestFileSearch();
 }
 
 /** Requests deletion of the currently selected file-tree entry. */
 export function deleteSelectedFileTreeEntry() {
-  workspaceFileTreeStore.getState().requestDeleteSelection();
+  workspaceUiStore.getState().requestDeleteSelection();
 }
 
 /** Requests undo of the latest file-tree operation. */
 export function undoFileTreeOperation() {
-  workspaceFileTreeStore.getState().requestUndo();
+  workspaceUiStore.getState().requestUndo();
 }
 
 /** Renames one workspace in renderer store state. */

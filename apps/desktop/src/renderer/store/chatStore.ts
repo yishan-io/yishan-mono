@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { AvailableCommand, AvailableModel, ChatMessage } from "./types";
+import type { AvailableCommand, AvailableModel, ChatMessage } from "./chatTypes";
 
 export type WorkspaceAgentStatus = "running" | "waiting_input" | "idle";
 export type WorkspaceUnreadTone = "success" | "error";
@@ -67,166 +67,166 @@ function sanitizeAvailableModels(models: AvailableModel[]): AvailableModel[] {
 export const chatStore = create<ChatStoreState>()(
   immer((set, get) => {
     return {
-    messagesByTabId: {},
-    availableCommandsByTabId: {},
-    availableModelsByTabId: {},
-    currentModelByTabId: {},
-    workspaceAgentStatusByWorkspaceId: {},
-    workspaceUnreadToneByWorkspaceId: {},
-    getMessages: (tabId) => get().messagesByTabId[tabId] ?? [],
-    appendMessages: (tabId, messages) => {
-      set((state) => {
-        const current = state.messagesByTabId[tabId] ?? [];
-        const combined = [...current, ...messages];
-        const trimmed = combined.length > MAX_MESSAGES_PER_TAB ? combined.slice(-MAX_MESSAGES_PER_TAB) : combined;
-        return {
-          messagesByTabId: {
-            ...state.messagesByTabId,
-            [tabId]: trimmed,
+      messagesByTabId: {},
+      availableCommandsByTabId: {},
+      availableModelsByTabId: {},
+      currentModelByTabId: {},
+      workspaceAgentStatusByWorkspaceId: {},
+      workspaceUnreadToneByWorkspaceId: {},
+      getMessages: (tabId) => get().messagesByTabId[tabId] ?? [],
+      appendMessages: (tabId, messages) => {
+        set((state) => {
+          const current = state.messagesByTabId[tabId] ?? [];
+          const combined = [...current, ...messages];
+          const trimmed = combined.length > MAX_MESSAGES_PER_TAB ? combined.slice(-MAX_MESSAGES_PER_TAB) : combined;
+          return {
+            messagesByTabId: {
+              ...state.messagesByTabId,
+              [tabId]: trimmed,
+            },
+          };
+        });
+      },
+      updateMessage: (tabId, messageId, update) => {
+        set((state) => {
+          const current = state.messagesByTabId[tabId];
+          if (!current) {
+            return state;
+          }
+
+          return {
+            messagesByTabId: {
+              ...state.messagesByTabId,
+              [tabId]: current.map((msg) => (msg.id === messageId ? { ...msg, ...update } : msg)),
+            },
+          };
+        });
+      },
+      clearMessages: (tabId) => {
+        set((state) => ({
+          messagesByTabId: omitKeys(state.messagesByTabId, new Set([tabId])),
+        }));
+      },
+      getAvailableCommands: (tabId) => get().availableCommandsByTabId[tabId] ?? [],
+      setAvailableCommands: (tabId, commands) => {
+        const nextCommands = sanitizeAvailableCommands(commands);
+        set((state) => ({
+          availableCommandsByTabId: {
+            ...state.availableCommandsByTabId,
+            [tabId]: nextCommands,
           },
-        };
-      });
-    },
-    updateMessage: (tabId, messageId, update) => {
-      set((state) => {
-        const current = state.messagesByTabId[tabId];
-        if (!current) {
-          return state;
+        }));
+      },
+      clearAvailableCommands: (tabId) => {
+        set((state) => ({
+          availableCommandsByTabId: omitKeys(state.availableCommandsByTabId, new Set([tabId])),
+        }));
+      },
+      getAvailableModels: (tabId) => get().availableModelsByTabId[tabId] ?? [],
+      setAvailableModels: (tabId, models) => {
+        const nextModels = sanitizeAvailableModels(models);
+        set((state) => ({
+          availableModelsByTabId: {
+            ...state.availableModelsByTabId,
+            [tabId]: nextModels,
+          },
+          currentModelByTabId:
+            nextModels.length === 0 ? omitKeys(state.currentModelByTabId, new Set([tabId])) : state.currentModelByTabId,
+        }));
+      },
+      clearAvailableModels: (tabId) => {
+        set((state) => ({
+          availableModelsByTabId: omitKeys(state.availableModelsByTabId, new Set([tabId])),
+        }));
+      },
+      getCurrentModel: (tabId) => get().currentModelByTabId[tabId],
+      setCurrentModel: (tabId, modelId) => {
+        const nextModelId = modelId.trim();
+        if (nextModelId.length === 0) {
+          return;
         }
 
-        return {
-          messagesByTabId: {
-            ...state.messagesByTabId,
-            [tabId]: current.map((msg) => (msg.id === messageId ? { ...msg, ...update } : msg)),
+        set((state) => ({
+          currentModelByTabId: {
+            ...state.currentModelByTabId,
+            [tabId]: nextModelId,
           },
-        };
-      });
-    },
-    clearMessages: (tabId) => {
-      set((state) => ({
-        messagesByTabId: omitKeys(state.messagesByTabId, new Set([tabId])),
-      }));
-    },
-    getAvailableCommands: (tabId) => get().availableCommandsByTabId[tabId] ?? [],
-    setAvailableCommands: (tabId, commands) => {
-      const nextCommands = sanitizeAvailableCommands(commands);
-      set((state) => ({
-        availableCommandsByTabId: {
-          ...state.availableCommandsByTabId,
-          [tabId]: nextCommands,
-        },
-      }));
-    },
-    clearAvailableCommands: (tabId) => {
-      set((state) => ({
-        availableCommandsByTabId: omitKeys(state.availableCommandsByTabId, new Set([tabId])),
-      }));
-    },
-    getAvailableModels: (tabId) => get().availableModelsByTabId[tabId] ?? [],
-    setAvailableModels: (tabId, models) => {
-      const nextModels = sanitizeAvailableModels(models);
-      set((state) => ({
-        availableModelsByTabId: {
-          ...state.availableModelsByTabId,
-          [tabId]: nextModels,
-        },
-        currentModelByTabId:
-          nextModels.length === 0 ? omitKeys(state.currentModelByTabId, new Set([tabId])) : state.currentModelByTabId,
-      }));
-    },
-    clearAvailableModels: (tabId) => {
-      set((state) => ({
-        availableModelsByTabId: omitKeys(state.availableModelsByTabId, new Set([tabId])),
-      }));
-    },
-    getCurrentModel: (tabId) => get().currentModelByTabId[tabId],
-    setCurrentModel: (tabId, modelId) => {
-      const nextModelId = modelId.trim();
-      if (nextModelId.length === 0) {
-        return;
-      }
-
-      set((state) => ({
-        currentModelByTabId: {
-          ...state.currentModelByTabId,
-          [tabId]: nextModelId,
-        },
-      }));
-    },
-    clearCurrentModel: (tabId) => {
-      set((state) => ({
-        currentModelByTabId: omitKeys(state.currentModelByTabId, new Set([tabId])),
-      }));
-    },
-    setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId) => {
-      set(() => ({
-        workspaceAgentStatusByWorkspaceId: { ...statusByWorkspaceId },
-      }));
-    },
-    recordWorkspaceUnreadNotification: (workspaceId, tone) => {
-      const trimmedWorkspaceId = workspaceId.trim();
-      if (!trimmedWorkspaceId) {
-        return;
-      }
-
-      set((state) => {
-        const previousTone = state.workspaceUnreadToneByWorkspaceId[trimmedWorkspaceId];
-        const nextTone = previousTone === "error" ? "error" : tone;
-        if (previousTone === nextTone) {
-          return state;
+        }));
+      },
+      clearCurrentModel: (tabId) => {
+        set((state) => ({
+          currentModelByTabId: omitKeys(state.currentModelByTabId, new Set([tabId])),
+        }));
+      },
+      setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId) => {
+        set(() => ({
+          workspaceAgentStatusByWorkspaceId: { ...statusByWorkspaceId },
+        }));
+      },
+      recordWorkspaceUnreadNotification: (workspaceId, tone) => {
+        const trimmedWorkspaceId = workspaceId.trim();
+        if (!trimmedWorkspaceId) {
+          return;
         }
 
-        return {
-          workspaceUnreadToneByWorkspaceId: {
-            ...state.workspaceUnreadToneByWorkspaceId,
-            [trimmedWorkspaceId]: nextTone,
-          },
-        };
-      });
-    },
-    markWorkspaceNotificationsRead: (workspaceId) => {
-      const trimmedWorkspaceId = workspaceId.trim();
-      if (!trimmedWorkspaceId) {
-        return;
-      }
+        set((state) => {
+          const previousTone = state.workspaceUnreadToneByWorkspaceId[trimmedWorkspaceId];
+          const nextTone = previousTone === "error" ? "error" : tone;
+          if (previousTone === nextTone) {
+            return state;
+          }
 
-      set((state) => {
-        if (!(trimmedWorkspaceId in state.workspaceUnreadToneByWorkspaceId)) {
-          return state;
+          return {
+            workspaceUnreadToneByWorkspaceId: {
+              ...state.workspaceUnreadToneByWorkspaceId,
+              [trimmedWorkspaceId]: nextTone,
+            },
+          };
+        });
+      },
+      markWorkspaceNotificationsRead: (workspaceId) => {
+        const trimmedWorkspaceId = workspaceId.trim();
+        if (!trimmedWorkspaceId) {
+          return;
         }
 
-        return {
-          workspaceUnreadToneByWorkspaceId: omitKeys(
-            state.workspaceUnreadToneByWorkspaceId,
-            new Set([trimmedWorkspaceId]),
-          ),
-        };
-      });
-    },
-    removeTabData: (tabIds) => {
-      if (tabIds.length === 0) {
-        return;
-      }
+        set((state) => {
+          if (!(trimmedWorkspaceId in state.workspaceUnreadToneByWorkspaceId)) {
+            return state;
+          }
 
-      const removedTabIds = new Set(tabIds);
-      set((state) => ({
-        messagesByTabId: omitKeys(state.messagesByTabId, removedTabIds),
-        availableCommandsByTabId: omitKeys(state.availableCommandsByTabId, removedTabIds),
-        availableModelsByTabId: omitKeys(state.availableModelsByTabId, removedTabIds),
-        currentModelByTabId: omitKeys(state.currentModelByTabId, removedTabIds),
-      }));
-    },
-    removeWorkspaceTaskCounts: (workspaceIds) => {
-      if (workspaceIds.length === 0) {
-        return;
-      }
+          return {
+            workspaceUnreadToneByWorkspaceId: omitKeys(
+              state.workspaceUnreadToneByWorkspaceId,
+              new Set([trimmedWorkspaceId]),
+            ),
+          };
+        });
+      },
+      removeTabData: (tabIds) => {
+        if (tabIds.length === 0) {
+          return;
+        }
 
-      const removedWorkspaceIds = new Set(workspaceIds);
-      set((state) => ({
-        workspaceAgentStatusByWorkspaceId: omitKeys(state.workspaceAgentStatusByWorkspaceId, removedWorkspaceIds),
-        workspaceUnreadToneByWorkspaceId: omitKeys(state.workspaceUnreadToneByWorkspaceId, removedWorkspaceIds),
-      }));
-    },
+        const removedTabIds = new Set(tabIds);
+        set((state) => ({
+          messagesByTabId: omitKeys(state.messagesByTabId, removedTabIds),
+          availableCommandsByTabId: omitKeys(state.availableCommandsByTabId, removedTabIds),
+          availableModelsByTabId: omitKeys(state.availableModelsByTabId, removedTabIds),
+          currentModelByTabId: omitKeys(state.currentModelByTabId, removedTabIds),
+        }));
+      },
+      removeWorkspaceTaskCounts: (workspaceIds) => {
+        if (workspaceIds.length === 0) {
+          return;
+        }
+
+        const removedWorkspaceIds = new Set(workspaceIds);
+        set((state) => ({
+          workspaceAgentStatusByWorkspaceId: omitKeys(state.workspaceAgentStatusByWorkspaceId, removedWorkspaceIds),
+          workspaceUnreadToneByWorkspaceId: omitKeys(state.workspaceUnreadToneByWorkspaceId, removedWorkspaceIds),
+        }));
+      },
     };
   }),
 );

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { onAuthExpired } from "../api/restClient";
 import { rendererQueryClient } from "../queryClient";
-import { authStore } from "../store/authStore";
 import { sessionStore } from "../store/sessionStore";
 
 function SlideTransition(props: SlideProps) {
@@ -21,7 +20,7 @@ export function AuthSessionExpiredSnackbar() {
 
   useEffect(() => {
     const unsubscribe = onAuthExpired(() => {
-      if (authStore.getState().isAuthenticated) {
+      if (sessionStore.getState().isAuthenticated) {
         setVisible(true);
       }
     });
@@ -31,7 +30,7 @@ export function AuthSessionExpiredSnackbar() {
 
   const handleSignIn = () => {
     setVisible(false);
-    authStore.getState().setAuthState(false, true);
+    sessionStore.getState().setAuthState(false, true);
     sessionStore.getState().clearSessionData();
     rendererQueryClient.clear();
   };
