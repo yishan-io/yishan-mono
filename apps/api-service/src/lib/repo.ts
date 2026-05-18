@@ -6,7 +6,7 @@ export type InferredRepoSource = {
   repoKey: string;
 };
 
-export function isValidGitUrl(value: string): boolean {
+function isValidGitUrl(value: string): boolean {
   if (value.startsWith("git@") && value.includes(":")) {
     return true;
   }
@@ -61,7 +61,7 @@ export function inferRepoSource(repoUrl: string): InferredRepoSource {
     return {
       sourceType: "git",
       repoProvider: inferProviderFromHost(host),
-      repoKey: `${owner}/${repo}`
+      repoKey: `${owner}/${repo}`,
     };
   }
 
@@ -86,6 +86,6 @@ export function inferRepoSource(repoUrl: string): InferredRepoSource {
   return {
     sourceType: "git",
     repoProvider: inferProviderFromHost(parsed.host),
-    repoKey: `${owner}/${repo}`
+    repoKey: `${owner}/${repo}`,
   };
 }

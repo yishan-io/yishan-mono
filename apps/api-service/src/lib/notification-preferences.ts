@@ -1,3 +1,6 @@
+import type { notificationPreferencesSchema } from "@/validation/user";
+import type { z } from "zod";
+
 export const SUPPORTED_NOTIFICATION_EVENT_TYPES = ["run-finished", "run-failed", "pending-question"] as const;
 export type NotificationEventType = (typeof SUPPORTED_NOTIFICATION_EVENT_TYPES)[number];
 
@@ -8,17 +11,8 @@ export const SUPPORTED_NOTIFICATION_CATEGORIES = ["ai-task"] as const;
 export type NotificationCategory = (typeof SUPPORTED_NOTIFICATION_CATEGORIES)[number];
 export const CURRENT_NOTIFICATION_PREFERENCES_SCHEMA_VERSION = 2;
 
-export type NotificationPreferences = {
-  schemaVersion: number;
-  enabled: boolean;
-  osEnabled: boolean;
-  soundEnabled: boolean;
-  volume: number;
-  focusOnClick: boolean;
-  enabledEventTypes: NotificationEventType[];
-  eventSounds: Record<NotificationEventType, NotificationSoundId>;
-  enabledCategories: NotificationCategory[];
-};
+/** Canonical type derived from the validation schema — the two stay in sync automatically. */
+export type NotificationPreferences = z.infer<typeof notificationPreferencesSchema>;
 
 export type NotificationPreferencesPatch = Partial<
   Omit<NotificationPreferences, "eventSounds"> & {
@@ -50,9 +44,10 @@ export function normalizeNotificationPreferences(
   const candidate = stored && typeof stored === "object" ? (stored as Record<string, unknown>) : {};
 
   const enabledEventTypes = dedupe(
-    [...(Array.isArray(candidate.enabledEventTypes) ? candidate.enabledEventTypes : fallback.enabledEventTypes), ...fallback.enabledEventTypes].filter(
-      isNotificationEventType,
-    ),
+    [
+      ...(Array.isArray(candidate.enabledEventTypes) ? candidate.enabledEventTypes : fallback.enabledEventTypes),
+      ...fallback.enabledEventTypes,
+    ].filter(isNotificationEventType),
   );
   const enabledCategories = dedupe(
     (Array.isArray(candidate.enabledCategories) ? candidate.enabledCategories : fallback.enabledCategories).filter(

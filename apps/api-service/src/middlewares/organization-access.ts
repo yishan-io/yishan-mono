@@ -14,21 +14,9 @@ function readOrganizationIdFromParam(c: AppContext, paramName = "orgId"): string
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function readOrganizationIdFromQuery(c: AppContext, queryKey = "organizationId"): string | null {
-  const value = c.req.query(queryKey);
-  if (!value) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
 async function assertOrganizationMembership(c: AppContext, organizationId: string): Promise<void> {
   const actorUser = c.get("sessionUser");
-  const role = await c
-    .get("services")
-    .organization.getMembershipRole({ organizationId, userId: actorUser.id });
+  const role = await c.get("services").organization.getMembershipRole({ organizationId, userId: actorUser.id });
 
   if (!role) {
     throw new OrganizationMembershipRequiredError();
@@ -42,17 +30,6 @@ export async function requireOrganizationMemberFromParam(c: AppContext, next: Ne
   const organizationId = readOrganizationIdFromParam(c);
   if (!organizationId) {
     return c.json({ error: "orgId is required" }, StatusCodes.BAD_REQUEST);
-  }
-
-  await assertOrganizationMembership(c, organizationId);
-  await next();
-}
-
-export async function requireOrganizationMemberFromQuery(c: AppContext, next: Next) {
-  const organizationId = readOrganizationIdFromQuery(c);
-  if (!organizationId) {
-    await next();
-    return;
   }
 
   await assertOrganizationMembership(c, organizationId);

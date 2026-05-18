@@ -7,10 +7,6 @@ const nodeMetadataSchema = z
   })
   .catchall(z.unknown());
 
-export const nodeParamsSchema = z.object({
-  nodeId: nonEmptyStringSchema,
-});
-
 export const organizationNodeParamsSchema = z.object({
   orgId: nonEmptyStringSchema,
 });
@@ -33,7 +29,6 @@ export const nodeRelayTokenParamsSchema = z.object({
   nodeId: nonEmptyStringSchema,
 });
 
-export type NodeParamsInput = z.infer<typeof nodeParamsSchema>;
 export type RegisterNodeBodyInput = z.infer<typeof registerNodeBodySchema>;
 export type OrganizationNodeParamsInput = z.infer<typeof organizationNodeParamsSchema>;
 export type OrganizationNodeDeleteParamsInput = z.infer<typeof organizationNodeDeleteParamsSchema>;

@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { SUPPORTED_LANGUAGE_CODES } from "@/lib/user-preferences";
+import { z } from "zod";
 
 const notificationEventTypeSchema = z.enum(["run-finished", "run-failed", "pending-question"]);
 const notificationSoundIdSchema = z.enum(["chime", "ping", "pop", "zip", "alert"]);
@@ -12,7 +12,7 @@ const notificationEventSoundsSchema = z.object({
 });
 
 export const notificationPreferencesSchema = z.object({
-  schemaVersion: z.number().int().positive().optional(),
+  schemaVersion: z.number().int().positive(),
   enabled: z.boolean(),
   osEnabled: z.boolean(),
   soundEnabled: z.boolean(),
