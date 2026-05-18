@@ -10,10 +10,8 @@ import { FileDiffViewer } from "../../components/FileDiffViewer";
 import { ImagePreview } from "../../components/ImagePreview";
 import { TabPanel } from "../../components/TabPanel";
 import { UnsupportedFileView } from "../../components/UnsupportedFileView";
-import type { TabBarCreateOption } from "../../components/TabBar";
 import { SplitPaneGroup } from "../../components/SplitPaneGroup";
 import { SplitPaneContainer } from "../../components/SplitPaneContainer";
-import { resolveDropResult, type SplitDropRegion } from "../../components/SplitDropZone";
 import { getFileTreeIcon } from "../../components/fileTreeIcons";
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
 import { useCommands } from "../../hooks/useCommands";
@@ -32,6 +30,9 @@ import { removeWebviewsForClosedTabs } from "./browser/webviewRegistry";
 import { getOrCreateRuntimeRoot } from "./runtime/runtimeRoot";
 import { TerminalView } from "./terminal/TerminalView";
 import { disposeTerminalRuntimesForClosedTabs } from "./terminal/terminalRuntimeRegistry";
+import { usePaneTabHandlers } from "./usePaneTabHandlers";
+
+// ─── Small helpers ────────────────────────────────────────────────────────────
 
 function FaviconIcon({ url, size }: { url?: string; size: number }) {
   const [failed, setFailed] = useState(false);
@@ -47,32 +48,6 @@ function FaviconIcon({ url, size }: { url?: string; size: number }) {
       onError={() => setFailed(true)}
     />
   );
-}
-
-const agentTerminalConfigs: Record<
-  Extract<TabBarCreateOption, DesktopAgentKind>,
-  { title: string; command: string }
-> = {
-  opencode: { title: "OpenCode", command: "opencode" },
-  codex: { title: "Codex", command: "codex" },
-  claude: { title: "Claude", command: "claude" },
-  gemini: { title: "Gemini", command: "gemini" },
-  pi: { title: "Pi", command: "pi" },
-  copilot: { title: "Copilot", command: "copilot" },
-  cursor: { title: "Cursor", command: "cursor" },
-};
-
-function buildAgentTerminalInput(agentKind: DesktopAgentKind) {
-  const config = agentTerminalConfigs[agentKind];
-  return { kind: "terminal" as const, title: config.title, launchCommand: config.command, agentKind, reuseExisting: false };
-}
-
-function buildTerminalInput(title: string) {
-  return { kind: "terminal" as const, title, reuseExisting: false };
-}
-
-function buildBrowserInput() {
-  return { kind: "browser" as const, url: "" };
 }
 
 function collectPaneLeaves(node: SplitPaneNode | null | undefined): PaneLeaf[] {
@@ -99,7 +74,7 @@ function toTabBarDescriptor(tab: WorkspaceTab) {
   };
 }
 
-// ─── Per-workspace split pane ──────────────────────────────────────────────────
+// ─── Per-workspace split pane ─────────────────────────────────────────────────
 
 type WorkspaceSplitPaneProps = {
   workspaceId: string;
@@ -124,6 +99,7 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
   const externalAppLabel = lastUsedExternalAppPreset
     ? `Open in ${lastUsedExternalAppPreset.label}`
     : "Open in external app";
+
   const handleOpenExternalApp = async (filePath: string) => {
     const workspaceWorktreePath = workspace?.worktreePath;
     if (!workspaceWorktreePath) return;
@@ -153,12 +129,10 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
   const [layoutVersion, setLayoutVersion] = useState(0);
   const lastKnownRectByTabIdRef = useRef<Record<string, { left: number; top: number; width: number; height: number }>>({});
 
-  // Read this workspace's layout from the store
   const layout = splitPaneStore((state) => state.layoutByWorkspaceId[workspaceId]);
   const splitRoot = layout?.root;
   const activePaneId = layout?.activePaneId ?? "";
 
-  // Tab id → tab data map
   const tabById = useMemo(() => {
     const map = new Map<string, WorkspaceTab>();
     for (const tab of workspaceTabs) {
@@ -192,7 +166,6 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
   }, [workspaceId, workspaceTabs]);
 
   // Sync tabStore.selectedTabId to splitPaneStore when a tab is selected programmatically
-  // (e.g. openTab reusing an existing temporary tab, or selecting an already-open file)
   useEffect(() => {
     if (!didSyncPaneSelectionRef.current) {
       didSyncPaneSelectionRef.current = true;
@@ -247,138 +220,32 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
     setFocusContentRequestKey((k) => k + 1);
   }, [selectedTabId, isActive]);
 
-  const handleSelectTab = useCallback(
-    (paneId: string, tabId: string) => {
-      splitPaneStore.getState().selectTab(workspaceId, paneId, tabId);
-      cmd.setSelectedTabId(tabId);
-    },
-    [workspaceId, cmd],
-  );
+  // ─── Pane tab handlers ──────────────────────────────────────────────────────
 
-  const handleCloseTab = useCallback(
-    (tabId: string) => {
-      splitPaneStore.getState().removeTab(workspaceId, tabId);
-      cmd.closeTab(tabId);
-    },
-    [workspaceId, cmd],
-  );
+  const {
+    handleSelectTab,
+    handleCloseTab,
+    handleCreateTab,
+    handleRenameTab,
+    handleReorderTab,
+    handleSplitDrop,
+    handleFocusPane,
+    handleTabDragStart,
+    handleTabDragEnd,
+    handleSplitRight,
+    handleSplitDown,
+    handleSplitRatioChange,
+  } = usePaneTabHandlers({
+    workspaceId,
+    workspaceTabs,
+    workspace,
+    enabledAgentKindSet: enabledAgentKindSet as Set<DesktopAgentKind>,
+    cmd,
+    setFocusContentRequestKey,
+    setIsDraggingSplit,
+  });
 
-  const handleCreateTab = useCallback(
-    (option: TabBarCreateOption) => {
-      if (option === "terminal") {
-        cmd.openTab({ workspaceId, ...buildTerminalInput(t("terminal.title")) });
-        return;
-      }
-      if (option === "browser") {
-        cmd.openTab({ workspaceId, ...buildBrowserInput(), reuseExisting: false });
-        return;
-      }
-      if (!enabledAgentKindSet.has(option)) return;
-      cmd.openTab({ workspaceId, ...buildAgentTerminalInput(option) });
-    },
-    [cmd, workspaceId, enabledAgentKindSet, t],
-  );
-
-  const handleRenameTab = useCallback(
-    async (tabId: string, title: string) => {
-      const tab = workspaceTabs.find((item) => item.id === tabId);
-      if (!tab) return;
-
-      if (tab.kind !== "file") {
-        cmd.renameTab(tabId, title, { userRenamed: true });
-        return;
-      }
-
-      const workspaceWorktreePath = workspace?.worktreePath;
-      if (!workspaceWorktreePath) return;
-
-      const pathSegments = tab.data.path.split("/").filter(Boolean);
-      const parentPath = pathSegments.slice(0, -1).join("/");
-      const targetPath = parentPath ? `${parentPath}/${title}` : title;
-      if (targetPath === tab.data.path) return;
-
-      try {
-        await cmd.renameEntry({ workspaceWorktreePath, fromRelativePath: tab.data.path, toRelativePath: targetPath });
-        cmd.renameTabsForEntryRename(workspaceId, tab.data.path, targetPath);
-      } catch (error) {
-        console.error("Failed to rename workspace file from tab", error);
-      }
-    },
-    [cmd, workspaceTabs, workspace, workspaceId],
-  );
-
-  const handleReorderTab = useCallback(
-    (paneId: string, draggedTabId: string, targetTabId: string, position: "before" | "after") => {
-      splitPaneStore.getState().reorderTab(workspaceId, paneId, draggedTabId, targetTabId, position);
-    },
-    [workspaceId],
-  );
-
-  const handleSplitDrop = useCallback(
-    (tabId: string, targetPaneId: string, region: SplitDropRegion) => {
-      const result = resolveDropResult(region);
-      if (!result) return;
-
-      if ("center" in result) {
-        splitPaneStore.getState().moveTab(workspaceId, tabId, targetPaneId);
-      } else {
-        splitPaneStore.getState().splitPane(workspaceId, {
-          tabId,
-          targetPaneId,
-          direction: result.direction,
-          placement: result.placement,
-        });
-      }
-
-      cmd.setSelectedTabId(tabId);
-      setFocusContentRequestKey((key) => key + 1);
-
-      setIsDraggingSplit(false);
-    },
-    [workspaceId, cmd],
-  );
-
-  const handleFocusPane = useCallback(
-    (paneId: string) => {
-      splitPaneStore.getState().setActivePane(workspaceId, paneId);
-      const pane = splitPaneStore.getState().getPane(workspaceId, paneId);
-      if (pane?.selectedTabId) {
-        cmd.setSelectedTabId(pane.selectedTabId);
-      }
-    },
-    [workspaceId, cmd],
-  );
-
-  const handleTabDragStart = useCallback(() => setIsDraggingSplit(true), []);
-  const handleTabDragEnd = useCallback(() => setIsDraggingSplit(false), []);
-
-  /** Splits the selected tab out of a pane into a new sibling pane. */
-  const performSplit = useCallback(
-    (paneId: string, direction: "horizontal" | "vertical") => {
-      const pane = splitPaneStore.getState().getPane(workspaceId, paneId);
-      if (!pane?.selectedTabId || pane.tabIds.length <= 1) return;
-      const movedTabId = pane.selectedTabId;
-      splitPaneStore.getState().splitPane(workspaceId, {
-        tabId: movedTabId,
-        targetPaneId: paneId,
-        direction,
-        placement: "second",
-      });
-      cmd.setSelectedTabId(movedTabId);
-      setFocusContentRequestKey((key) => key + 1);
-    },
-    [workspaceId, cmd],
-  );
-
-  const handleSplitRight = useCallback(
-    (paneId: string) => performSplit(paneId, "horizontal"),
-    [performSplit],
-  );
-
-  const handleSplitDown = useCallback(
-    (paneId: string) => performSplit(paneId, "vertical"),
-    [performSplit],
-  );
+  // ─── Tab icon resolver ──────────────────────────────────────────────────────
 
   const getTabIcon = useCallback(
     (tab: { id: string; kind?: string }) => {
@@ -387,7 +254,12 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
       if (fullTab?.kind === "browser") return <FaviconIcon url={fullTab.data.faviconUrl} size={14} />;
       if (fullTab?.kind === "file" || fullTab?.kind === "diff" || fullTab?.kind === "image") {
         return (
-          <Box component="img" src={getFileTreeIcon(fullTab.data.path, false)} alt="" sx={{ width: 14, height: 14, flexShrink: 0 }} />
+          <Box
+            component="img"
+            src={getFileTreeIcon(fullTab.data.path, false)}
+            alt=""
+            sx={{ width: 14, height: 14, flexShrink: 0 }}
+          />
         );
       }
       return null;
@@ -395,9 +267,12 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
     [tabById],
   );
 
+  // ─── Tab content renderer ───────────────────────────────────────────────────
+
   const renderTabContent = useCallback(
     (tab: WorkspaceTab, isSelected: boolean, isInActivePane: boolean) => {
       const shouldFocusContent = isSelected && isInActivePane;
+
       if (tab.kind === "diff") {
         return (
           <TabPanel key={tab.id} active={isSelected}>
@@ -417,8 +292,16 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
               <UnsupportedFileView
                 path={tab.data.path}
                 title={t("files.unsupported.title")}
-                description={tab.data.unsupportedReason === "size" ? t("files.unsupported.descriptionLarge") : t("files.unsupported.description")}
-                hint={tab.data.unsupportedReason === "size" ? t("files.unsupported.hintLarge") : t("files.unsupported.hint")}
+                description={
+                  tab.data.unsupportedReason === "size"
+                    ? t("files.unsupported.descriptionLarge")
+                    : t("files.unsupported.description")
+                }
+                hint={
+                  tab.data.unsupportedReason === "size"
+                    ? t("files.unsupported.hintLarge")
+                    : t("files.unsupported.hint")
+                }
                 onCopyPath={copyToClipboard}
                 onOpenExternalApp={handleOpenExternalApp}
                 openExternalAppLabel={externalAppLabel}
@@ -472,7 +355,16 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
       if (tab.kind === "session") {
         return (
           <TabPanel key={tab.id} active={isSelected}>
-            <Box sx={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1.5 }}>
+            <Box
+              sx={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 1.5,
+              }}
+            >
               <Typography variant="body2" color="text.secondary">
                 Chat is currently disabled.
               </Typography>
@@ -483,15 +375,21 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
 
       if (tab.kind === "browser") {
         return (
-          <Box key={tab.id} sx={{ position: "absolute", inset: 0, display: isSelected ? "flex" : "none", flexDirection: "column" }}>
+          <Box
+            key={tab.id}
+            sx={{
+              position: "absolute",
+              inset: 0,
+              display: isSelected ? "flex" : "none",
+              flexDirection: "column",
+            }}
+          >
             <BrowserView tabId={tab.id} initialUrl={tab.data.url} />
           </Box>
         );
       }
 
       if (tab.kind === "terminal") {
-        // Only mount TerminalView for the selected tab. The registry preserves
-        // xterm state across unmount/remount — no data loss on tab switch.
         if (!isSelected) {
           return null;
         }
@@ -504,8 +402,10 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
 
       return null;
     },
-    [t, cmd, workspace, externalAppLabel, handleOpenExternalApp, focusContentRequestKey, copyToClipboard],
+    [t, cmd, workspace, externalAppLabel, handleOpenExternalApp, focusContentRequestKey],
   );
+
+  // ─── Tab surface renderer (fixed-position portal overlay) ─────────────────
 
   const renderTabSurface = useCallback(
     (
@@ -520,7 +420,8 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
         lastKnownRectByTabIdRef.current[tab.id] = rect;
       }
       const effectiveRect = rect ?? lastKnownRectByTabIdRef.current[tab.id] ?? null;
-      const shouldShow = isActive && isSelected && Boolean(effectiveRect && effectiveRect.width > 1 && effectiveRect.height > 1);
+      const shouldShow =
+        isActive && isSelected && Boolean(effectiveRect && effectiveRect.width > 1 && effectiveRect.height > 1);
       const style = effectiveRect
         ? {
             position: "fixed" as const,
@@ -559,17 +460,24 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
     [isActive, isDraggingSplit, handleFocusPane, renderTabContent],
   );
 
-  const renderPaneContent = useCallback(
-    (_pane: PaneLeaf, _placeholder: HTMLDivElement | null) => null,
-    [],
-  );
+  const renderPaneContent = useCallback((_pane: PaneLeaf, _placeholder: HTMLDivElement | null) => null, []);
 
   const handleContentPlaceholderChange = useCallback((paneId: string, placeholder: HTMLDivElement | null) => {
     setPanePlaceholders((prev) => (prev[paneId] === placeholder ? prev : { ...prev, [paneId]: placeholder }));
   }, []);
 
+  // ─── Layout / resize observer ─────────────────────────────────────────────
+
   const tabPlacements = useMemo(() => {
-    const placements = new Map<string, { paneId: string; selected: boolean; activePane: boolean; rect: { left: number; top: number; width: number; height: number } | null }>();
+    const placements = new Map<
+      string,
+      {
+        paneId: string;
+        selected: boolean;
+        activePane: boolean;
+        rect: { left: number; top: number; width: number; height: number } | null;
+      }
+    >();
     if (!splitRoot) {
       return placements;
     }
@@ -579,15 +487,15 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
       let rect: { left: number; top: number; width: number; height: number } | null = null;
       if (placeholder) {
         const bounds = placeholder.getBoundingClientRect();
-        rect = {
-          left: bounds.left,
-          top: bounds.top,
-          width: bounds.width,
-          height: bounds.height,
-        };
+        rect = { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height };
       }
       for (const tabId of pane.tabIds) {
-        placements.set(tabId, { paneId: pane.id, selected: tabId === pane.selectedTabId, activePane: pane.id === activePaneId, rect });
+        placements.set(tabId, {
+          paneId: pane.id,
+          selected: tabId === pane.selectedTabId,
+          activePane: pane.id === activePaneId,
+          rect,
+        });
       }
     }
     return placements;
@@ -613,6 +521,8 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
       resizeObserver.disconnect();
     };
   }, [panePlaceholders]);
+
+  // ─── Pane renderer ────────────────────────────────────────────────────────
 
   const renderPane = useCallback(
     (pane: PaneLeaf) => {
@@ -655,29 +565,34 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
       );
     },
     [
-      activePaneId, isDraggingSplit, tabById, handleSelectTab, handleCloseTab,
-      cmd, handleReorderTab, handleCreateTab, handleRenameTab, handleSplitDrop,
-      handleSplitRight, handleSplitDown, handleFocusPane, handleTabDragStart,
-      handleTabDragEnd, getTabIcon, enabledAgentKinds, workspaceId, handleContentPlaceholderChange, renderPaneContent,
+      activePaneId,
+      isDraggingSplit,
+      tabById,
+      handleSelectTab,
+      handleCloseTab,
+      cmd,
+      handleReorderTab,
+      handleCreateTab,
+      handleRenameTab,
+      handleSplitDrop,
+      handleSplitRight,
+      handleSplitDown,
+      handleFocusPane,
+      handleTabDragStart,
+      handleTabDragEnd,
+      getTabIcon,
+      enabledAgentKinds,
+      workspaceId,
+      handleContentPlaceholderChange,
+      renderPaneContent,
     ],
-  );
-
-  const handleSplitRatioChange = useCallback(
-    (branchId: string, ratio: number) => {
-      splitPaneStore.getState().updateSplitRatio(workspaceId, branchId, ratio);
-    },
-    [workspaceId],
   );
 
   if (!splitRoot) return null;
 
   return (
     <Box sx={{ position: "relative", height: "100%" }}>
-      <SplitPaneContainer
-        node={splitRoot}
-        renderPane={renderPane}
-        onSplitRatioChange={handleSplitRatioChange}
-      />
+      <SplitPaneContainer node={splitRoot} renderPane={renderPane} onSplitRatioChange={handleSplitRatioChange} />
       {createPortal(
         <Box
           sx={{
@@ -693,7 +608,13 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
         >
           {workspaceTabs.map((tab) => {
             const placement = tabPlacements.get(tab.id);
-            return renderTabSurface(tab, placement?.selected ?? false, placement?.activePane ?? false, placement?.rect ?? null, placement?.paneId ?? "");
+            return renderTabSurface(
+              tab,
+              placement?.selected ?? false,
+              placement?.activePane ?? false,
+              placement?.rect ?? null,
+              placement?.paneId ?? "",
+            );
           })}
         </Box>,
         getOrCreateRuntimeRoot(),
@@ -717,7 +638,6 @@ export function MainPaneView() {
     disposeTerminalRuntimesForClosedTabs(terminalTabIds);
   }, [tabs]);
 
-  // Group tabs by workspace to know which workspaces have content
   const workspaceIdsWithTabs = useMemo(() => {
     const ids = new Set<string>();
     for (const tab of tabs) {
@@ -755,8 +675,6 @@ export function MainPaneView() {
     >
       <MainPaneTitleBarView />
       <Box sx={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        {/* Render a split-pane layout for each workspace that has tabs.
-            Inactive workspaces are hidden via display:none but stay mounted. */}
         {Array.from(workspaceIdsWithTabs).map((wsId) => (
           <Box
             key={wsId}

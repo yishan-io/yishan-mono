@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useInRouterContext, useLocation } from "react-router-dom";
 import type { TerminalDetectedPort } from "../../commands/terminalCommands";
 import { PortsTableMenu, type PortsTableMenuRow } from "../../components/PortsTableMenu";
+import { getErrorMessage } from "../../helpers/errorHelpers";
 import { isTerminalTabWithSessionId } from "../../helpers/terminalTabUtils";
 import { useCommands } from "../../hooks/useCommands";
 import { tabStore } from "../../store/tabStore";
@@ -173,7 +174,7 @@ export function WorkspacePortsMenuControl() {
               setDetectedPorts(nextPorts);
             })
             .catch((error) => {
-              const message = error instanceof Error ? error.message : String(error);
+              const message = getErrorMessage(error);
               enqueueWorkspaceErrorNotice({
                 title: "Failed to close port",
                 message: `Could not terminate PID ${pid}: ${message}`,

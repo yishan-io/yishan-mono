@@ -1,4 +1,5 @@
 import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../helpers/tabHelpers";
+import { getErrorMessage } from "../helpers/errorHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { chatStore } from "../store/chatStore";
 import { splitPaneStore } from "../store/splitPaneStore";
@@ -40,7 +41,7 @@ function closeTerminalSessionsForTabs(tabs: TerminalTab[]): void {
         return client.terminal.closeSession({ sessionId });
       })
       .catch((error) => {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = getErrorMessage(error);
         enqueueWorkspaceErrorNotice({
           title: "Failed to close terminal session",
           message: `Could not clean up terminal session ${sessionId}: ${message}`,

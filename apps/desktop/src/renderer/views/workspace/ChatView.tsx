@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { MessageList } from "../../components/MessageList";
 import { RichComposer } from "../../components/RichComposer";
 import { subscribeWorkspaceChatEvent } from "../../events";
+import { getErrorMessage } from "../../helpers/errorHelpers";
 import { useCommands } from "../../hooks/useCommands";
 import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { chatStore } from "../../store/chatStore";
@@ -107,7 +108,7 @@ export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: 
         }
       })
       .catch((error) => {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = getErrorMessage(error);
         if (!cancelled) {
           appendChatMessages(tabId, [
             {
@@ -211,7 +212,7 @@ export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: 
         });
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = getErrorMessage(error);
       const currentMessages = getChatMessages(tabId);
       const existingMessage = currentMessages.find((msg) => msg.id === assistantMessageId);
       if (existingMessage) {
@@ -246,7 +247,7 @@ export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: 
         suppressCompletionNotification: true,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = getErrorMessage(error);
       appendChatMessages(tabId, [
         {
           id: crypto.randomUUID(),

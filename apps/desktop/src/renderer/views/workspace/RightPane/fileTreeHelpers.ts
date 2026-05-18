@@ -1,5 +1,6 @@
 import type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
 import type { ClipboardFilePayload } from "./clipboardSourceResolvers";
+import { generateId } from "../../../helpers/generateId";
 
 export const LARGE_FILE_OPEN_THRESHOLD_BYTES = 2 * 1024 * 1024;
 
@@ -18,11 +19,7 @@ export function getFileOperationErrorMessage(error: unknown): string {
 }
 
 export function createOperationId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-
-  return `operation-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return generateId();
 }
 
 export function mapWorkspaceEntryPaths(entries: WorkspaceFileEntry[]): string[] {

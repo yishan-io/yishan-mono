@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { generateId } from "../helpers/generateId";
 
 export type WorkspaceLifecycleScriptWarning = {
   scriptKind: "setup" | "post";
@@ -40,7 +41,7 @@ type WorkspaceLifecycleNoticeStoreState = {
 };
 
 function createNoticeId(scriptKind: "setup" | "post"): string {
-  return `${scriptKind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${scriptKind}-${generateId()}`;
 }
 
 /** Stores workspace lifecycle warning queue and selected detail modal payload. */
@@ -67,7 +68,7 @@ export const workspaceLifecycleNoticeStore = create<WorkspaceLifecycleNoticeStor
     enqueueError: (title, message) => {
       set((state) => {
         state.queue.push({
-          id: `error-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          id: `error-${generateId()}`,
           kind: "error",
           title,
           message,

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
 import { listFiles } from "../../../commands/fileCommands";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { useCommands } from "../../../hooks/useCommands";
 import { tabStore } from "../../../store/tabStore";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -249,7 +250,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
         setRepoEntries((currentEntries) => mergeWorkspaceEntries(currentEntries, response.files));
       } catch (error) {
         // Suppress benign filesystem errors (stale worktree, removed path, broken symlink)
-        const message = error instanceof Error ? error.message : String(error);
+        const message = getErrorMessage(error);
         const isBenignFsError =
           message.includes("not a directory") ||
           message.includes("no such file") ||

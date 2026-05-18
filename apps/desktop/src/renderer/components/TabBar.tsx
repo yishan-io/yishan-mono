@@ -1,5 +1,5 @@
 import { Box, ButtonBase, Divider, IconButton, Menu, MenuItem, Typography } from "@mui/material";
-import type { DragEvent, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuColumns2, LuGlobe, LuPin, LuPlus, LuRows2, LuSquareTerminal, LuX } from "react-icons/lu";
@@ -11,6 +11,8 @@ import {
 import { getRendererPlatform } from "../helpers/platform";
 import { getShortcutDisplayLabelById } from "../shortcuts/shortcutDisplay";
 import { AgentIcon } from "./AgentIcon";
+import { useTabDragDrop } from "./useTabDragDrop";
+import { useTabRename } from "./useTabRename";
 
 type WorkspaceTab = {
   id: string;
@@ -124,7 +126,7 @@ export function TabBar({
   const closeTabActionLabel = t("tabs.actions.close");
   const closeOthersActionLabel = t("tabs.actions.closeOthers");
   const closeAllActionLabel = t("tabs.actions.closeAll");
-  const [editingTabId, setEditingTabId] = useState("");
+
   const [contextMenu, setContextMenu] = useState<{
     mouseX: number;
     mouseY: number;
@@ -132,37 +134,40 @@ export function TabBar({
   } | null>(null);
   const [createMenuAnchor, setCreateMenuAnchor] = useState<HTMLElement | null>(null);
   const [splitMenuAnchor, setSplitMenuAnchor] = useState<HTMLElement | null>(null);
-  const [draggedTabId, setDraggedTabId] = useState("");
-  const [dropTarget, setDropTarget] = useState<{
-    tabId: string;
-    position: "before" | "after";
-  } | null>(null);
+
   const scrollableTabsContainerRef = useRef<HTMLDivElement | null>(null);
   const tabItemRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const editingRef = useRef<HTMLDivElement | null>(null);
-  const editingDraftRef = useRef("");
-  const renameCancelledRef = useRef(false);
+
+  // ─── Rename state ──────────────────────────────────────────────────────────
+
+  const {
+    editingTabId,
+    editingRef,
+    editingDraftRef,
+    beginRename,
+    cancelRename: _cancelRename,
+    handleRenameBlur,
+    handleRenameKeyDown,
+  } = useTabRename({ selectedTabId, untitledLabel, onSelectTab, onRenameTab });
+
+  // ─── Drag & drop state ─────────────────────────────────────────────────────
+
+  const canDragTabs = Boolean(onReorderTab) && !disabled;
+  const {
+    draggedTabId,
+    dropTarget,
+    resetDragState,
+    handleTabDragStart,
+    handleTabDragOver,
+    handleTabDrop,
+    handleTabsContainerDragOver,
+    handleTabsContainerDrop,
+  } = useTabDragDrop({ tabs, canDragTabs, onReorderTab, onTabDragStart, onTabDragEnd });
+
+  // ─── Auto-scroll newly created selected tab into view ─────────────────────
+
   const previousSelectedTabIdRef = useRef(selectedTabId);
   const previousTabIdsRef = useRef(new Set(tabs.map((tab) => tab.id)));
-
-  useEffect(() => {
-    if (!editingTabId || !editingRef.current) {
-      return;
-    }
-
-    const editable = editingRef.current;
-    editable.focus();
-    const selection = window.getSelection();
-    if (!selection) {
-      return;
-    }
-
-    editable.textContent = editingDraftRef.current;
-    const range = document.createRange();
-    range.selectNodeContents(editable);
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }, [editingTabId]);
 
   useEffect(() => {
     const previousSelectedTabId = previousSelectedTabIdRef.current;
@@ -174,11 +179,7 @@ export function TabBar({
     previousSelectedTabIdRef.current = selectedTabId;
     previousTabIdsRef.current = currentTabIds;
 
-    if (!selectedNewlyCreatedTab) {
-      return;
-    }
-
-    if (!selectedTabId) {
+    if (!selectedNewlyCreatedTab || !selectedTabId) {
       return;
     }
 
@@ -207,62 +208,7 @@ export function TabBar({
     }
   }, [selectedTabId, tabs]);
 
-  const beginRename = (tab: WorkspaceTab) => {
-    setEditingTabId(tab.id);
-    editingDraftRef.current = tab.title || untitledLabel;
-    if (tab.id !== selectedTabId) {
-      onSelectTab(tab.id);
-    }
-  };
-
-  const commitRename = (tab: WorkspaceTab) => {
-    const nextTitle = editingDraftRef.current.trim();
-    if (nextTitle && nextTitle !== tab.title) {
-      onRenameTab(tab.id, nextTitle);
-    }
-    renameCancelledRef.current = true;
-    setEditingTabId("");
-    editingDraftRef.current = "";
-  };
-
-  const cancelRename = () => {
-    renameCancelledRef.current = true;
-    setEditingTabId("");
-    editingDraftRef.current = "";
-  };
-
-  const handleRenameBlur = (tab: WorkspaceTab) => {
-    if (renameCancelledRef.current) {
-      renameCancelledRef.current = false;
-      return;
-    }
-    commitRename(tab);
-  };
-
-  const closeContextMenu = () => {
-    setContextMenu(null);
-  };
-
-  const resetDragState = () => {
-    setDraggedTabId("");
-    setDropTarget(null);
-    onTabDragEnd?.();
-  };
-
-  const handleContextMenu = (event: MouseEvent<HTMLDivElement>, tab: WorkspaceTab) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (tab.id !== selectedTabId) {
-      onSelectTab(tab.id);
-    }
-    setContextMenu({
-      mouseX: event.clientX,
-      mouseY: event.clientY,
-      tabId: tab.id,
-    });
-  };
-
-  const selectedContextTab = contextMenu ? tabs.find((tab) => tab.id === contextMenu.tabId) : null;
+  // ─── Create menu options ───────────────────────────────────────────────────
 
   const platform = getRendererPlatform();
   const enabledAgentKindSet = new Set(enabledAgentKinds ?? SUPPORTED_DESKTOP_AGENT_KINDS);
@@ -299,32 +245,8 @@ export function TabBar({
   );
   const hasAgentCreateOptions = createOptions.some((item) => isAgentCreateOption(item.option));
 
-  const handleRenameKeyDown = (event: KeyboardEvent<HTMLDivElement>, tab: WorkspaceTab) => {
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {
-      event.preventDefault();
-      const selection = window.getSelection();
-      if (!selection) {
-        return;
-      }
-      const range = document.createRange();
-      range.selectNodeContents(event.currentTarget);
-      selection.removeAllRanges();
-      selection.addRange(range);
-      return;
-    }
+  // ─── Tab item styles ──────────────────────────────────────────────────────
 
-    if (event.key === "Enter") {
-      event.preventDefault();
-      commitRename(tab);
-      return;
-    }
-    if (event.key === "Escape") {
-      event.preventDefault();
-      cancelRename();
-    }
-  };
-
-  const canDragTabs = Boolean(onReorderTab) && !disabled;
   const buildTabContainerSx = (active: boolean, editing: boolean) => ({
     display: "flex",
     alignItems: "center",
@@ -372,138 +294,28 @@ export function TabBar({
     cursor: canDragTabs && !editing ? "grab" : "default",
   });
 
-  /**
-   * Resolves the target used when dropping near the right edge of the scroll area.
-   *
-   * The target stays inside the dragged tab's pin-group so pinned and unpinned tabs
-   * preserve their group boundaries during drag reordering.
-   */
-  const resolveTrailingDropTarget = (draggedId: string) => {
-    const draggedTab = tabs.find((tab) => tab.id === draggedId);
-    if (!draggedTab) {
-      return null;
-    }
+  // ─── Context menu ─────────────────────────────────────────────────────────
 
-    const lastTabInGroup =
-      tabs.filter((tab) => tab.pinned === draggedTab.pinned && tab.id !== draggedId).at(-1) ?? null;
-
-    if (!lastTabInGroup) {
-      return null;
-    }
-
-    return {
-      tabId: lastTabInGroup.id,
-      position: "after" as const,
-    };
+  const closeContextMenu = () => {
+    setContextMenu(null);
   };
 
-  const handleTabDragStart = (event: DragEvent<HTMLDivElement>, tab: WorkspaceTab) => {
-    if (!canDragTabs || editingTabId) {
-      event.preventDefault();
-      return;
-    }
-
-    setDraggedTabId(tab.id);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", tab.id);
-    event.dataTransfer.setData("application/x-tab-id", tab.id);
-    onTabDragStart?.(tab.id);
-  };
-
-  const handleTabDragOver = (event: DragEvent<HTMLDivElement>, tab: WorkspaceTab) => {
-    if (!canDragTabs) {
-      return;
-    }
-
-    const draggedId = draggedTabId || event.dataTransfer.getData("text/plain");
-    if (!draggedId || draggedId === tab.id) {
-      return;
-    }
-
+  const handleContextMenu = (event: React.MouseEvent<HTMLDivElement>, tab: WorkspaceTab) => {
     event.preventDefault();
     event.stopPropagation();
-    const rect = event.currentTarget.getBoundingClientRect();
-    const midpoint = rect.left + rect.width / 2;
-    const position = event.clientX < midpoint ? "before" : "after";
-    setDropTarget({ tabId: tab.id, position });
-    event.dataTransfer.dropEffect = "move";
+    if (tab.id !== selectedTabId) {
+      onSelectTab(tab.id);
+    }
+    setContextMenu({
+      mouseX: event.clientX,
+      mouseY: event.clientY,
+      tabId: tab.id,
+    });
   };
 
-  const handleTabDrop = (event: DragEvent<HTMLDivElement>, tab: WorkspaceTab) => {
-    if (!canDragTabs) {
-      return;
-    }
+  const selectedContextTab = contextMenu ? tabs.find((tab) => tab.id === contextMenu.tabId) : null;
 
-    event.preventDefault();
-    event.stopPropagation();
-    const draggedId = draggedTabId || event.dataTransfer.getData("text/plain");
-    const position = dropTarget?.tabId === tab.id ? dropTarget.position : "before";
-
-    if (draggedId && draggedId !== tab.id) {
-      onReorderTab?.(draggedId, tab.id, position);
-    }
-
-    resetDragState();
-  };
-
-  const handleTabsContainerDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (!canDragTabs) {
-      return;
-    }
-
-    const draggedId = draggedTabId || event.dataTransfer.getData("text/plain");
-    if (!draggedId) {
-      return;
-    }
-
-    const draggedTab = tabs.find((tab) => tab.id === draggedId);
-    if (!draggedTab || draggedTab.pinned) {
-      return;
-    }
-
-    const rect = event.currentTarget.getBoundingClientRect();
-    const rightEdgeThreshold = 24;
-
-    if (event.clientX >= rect.right - rightEdgeThreshold) {
-      const trailingTarget = resolveTrailingDropTarget(draggedId);
-      if (trailingTarget) {
-        event.preventDefault();
-        setDropTarget(trailingTarget);
-        event.dataTransfer.dropEffect = "move";
-      }
-    }
-  };
-
-  const handleTabsContainerDrop = (event: DragEvent<HTMLDivElement>) => {
-    if (!canDragTabs) {
-      return;
-    }
-
-    const draggedId = draggedTabId || event.dataTransfer.getData("text/plain");
-    if (!draggedId) {
-      resetDragState();
-      return;
-    }
-
-    const draggedTab = tabs.find((tab) => tab.id === draggedId);
-    if (!draggedTab || draggedTab.pinned) {
-      resetDragState();
-      return;
-    }
-
-    const trailingTarget = resolveTrailingDropTarget(draggedId);
-    const target = dropTarget ?? trailingTarget;
-
-    if (target) {
-      event.preventDefault();
-      onReorderTab?.(draggedId, target.tabId, target.position);
-    }
-
-    resetDragState();
-  };
-
-  const pinnedTabs = tabs.filter((tab) => tab.pinned);
-  const unpinnedTabs = tabs.filter((tab) => !tab.pinned);
+  // ─── Tab item renderer ────────────────────────────────────────────────────
 
   const renderTabItem = (tab: WorkspaceTab) => {
     const active = tab.id === selectedTabId;
@@ -518,7 +330,7 @@ export function TabBar({
         }}
         draggable={canDragTabs && !editing}
         onContextMenu={(event) => handleContextMenu(event, tab)}
-        onDragStart={(event) => handleTabDragStart(event, tab)}
+        onDragStart={(event) => handleTabDragStart(event, tab, editingTabId)}
         onDragOver={(event) => handleTabDragOver(event, tab)}
         onDrop={(event) => handleTabDrop(event, tab)}
         onDragEnd={resetDragState}
@@ -647,6 +459,11 @@ export function TabBar({
     );
   };
 
+  // ─── Render ───────────────────────────────────────────────────────────────
+
+  const pinnedTabs = tabs.filter((tab) => tab.pinned);
+  const unpinnedTabs = tabs.filter((tab) => !tab.pinned);
+
   return (
     <Box sx={{ display: "flex", alignItems: "center", minWidth: 0, width: "100%", height: "100%" }}>
       <Box
@@ -701,6 +518,8 @@ export function TabBar({
           <LuColumns2 size={16} />
         </IconButton>
       )}
+
+      {/* Create tab menu */}
       <Menu
         anchorEl={createMenuAnchor}
         open={Boolean(createMenuAnchor)}
@@ -725,7 +544,15 @@ export function TabBar({
               aria-label={`${createMenuLabel}: ${item.label}`}
             >
               {item.icon}
-              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, width: "100%" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 1,
+                  width: "100%",
+                }}
+              >
                 <Box component="span">{item.label}</Box>
                 {item.shortcutLabel ? (
                   <Typography
@@ -744,6 +571,8 @@ export function TabBar({
           </Box>
         ))}
       </Menu>
+
+      {/* Split pane menu */}
       <Menu
         anchorEl={splitMenuAnchor}
         open={Boolean(splitMenuAnchor)}
@@ -777,6 +606,8 @@ export function TabBar({
           </MenuItem>
         )}
       </Menu>
+
+      {/* Tab context menu */}
       <Menu
         open={Boolean(contextMenu)}
         onClose={closeContextMenu}

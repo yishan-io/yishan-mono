@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { startBackendEventPipeline, subscribeBackendEvent } from "../events/backendEventPipeline";
+import { getErrorMessage } from "../helpers/errorHelpers";
 import type { Commands } from "./useCommands";
 import type { DiffTabSource } from "../store/types";
 
@@ -55,7 +56,7 @@ function didPathChange(tabPath: string, changedRelativePaths?: string[]): boolea
 }
 
 function isFileNotFoundError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = getErrorMessage(error);
   const normalized = message.toLowerCase();
   return (
     normalized.includes("no such file") ||

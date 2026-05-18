@@ -1,5 +1,6 @@
 import type { FitAddon } from "@xterm/addon-fit";
 import type { Terminal } from "@xterm/xterm";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { tabStore } from "../../../store/tabStore";
 import type { TabStoreState } from "../../../store/tabStore";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -153,7 +154,7 @@ export class TerminalSessionOrchestrator {
       try {
         snapshot = await this.commands.readTerminalOutput({ sessionId, fromIndex: 0 });
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = getErrorMessage(error);
         if (!message.includes(TERMINAL_SESSION_NOT_FOUND_MESSAGE)) {
           throw error;
         }

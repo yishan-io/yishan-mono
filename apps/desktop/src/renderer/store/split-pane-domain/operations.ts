@@ -1,13 +1,11 @@
 import type { PaneBranch, PaneLeaf, SplitDirection, SplitPaneNode, SplitPaneStateSlice } from "./types";
+import { generateId } from "../../helpers/generateId";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Creates a new unique pane id. */
 export function createPaneId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return `pane-${crypto.randomUUID()}`;
-  }
-  return `pane-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `pane-${generateId()}`;
 }
 
 /** Creates a leaf node with given tab ids. */

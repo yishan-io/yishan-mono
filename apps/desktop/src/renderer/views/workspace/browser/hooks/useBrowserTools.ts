@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { getErrorMessage } from "../../../../helpers/errorHelpers";
 
 export function useBrowserTools(webviewRef: React.RefObject<Electron.WebviewTag | null>) {
   const [toolsAnchor, setToolsAnchor] = useState<HTMLElement | null>(null);
@@ -42,8 +43,7 @@ export function useBrowserTools(webviewRef: React.RefObject<Electron.WebviewTag 
       link.click();
       notifySuccess("Snapshot saved.");
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setErrorMessage(`Failed to take snapshot: ${message}`);
+      setErrorMessage(`Failed to take snapshot: ${getErrorMessage(error)}`);
     }
   }, [webviewRef, closeToolsMenu, notifySuccess]);
 
@@ -62,8 +62,7 @@ export function useBrowserTools(webviewRef: React.RefObject<Electron.WebviewTag 
       setErrorMessage("");
       notifySuccess("Clear Cache succeeded.");
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setErrorMessage(`Failed to clear browser cache: ${message}`);
+      setErrorMessage(`Failed to clear browser cache: ${getErrorMessage(error)}`);
     }
   }, [webviewRef, closeToolsMenu, notifySuccess]);
 
@@ -81,8 +80,7 @@ export function useBrowserTools(webviewRef: React.RefObject<Electron.WebviewTag 
       setErrorMessage("");
       notifySuccess("Clear History succeeded.");
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setErrorMessage(`Failed to clear browser history: ${message}`);
+      setErrorMessage(`Failed to clear browser history: ${getErrorMessage(error)}`);
     }
   }, [webviewRef, closeToolsMenu, notifySuccess]);
 
@@ -104,8 +102,7 @@ export function useBrowserTools(webviewRef: React.RefObject<Electron.WebviewTag 
       setErrorMessage("");
       notifySuccess("Clear Cookies succeeded.");
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setErrorMessage(`Failed to clear browser cookies: ${message}`);
+      setErrorMessage(`Failed to clear browser cookies: ${getErrorMessage(error)}`);
     }
   }, [webviewRef, closeToolsMenu, notifySuccess]);
 
@@ -133,8 +130,7 @@ export function useBrowserTools(webviewRef: React.RefObject<Electron.WebviewTag 
       setErrorMessage("");
       notifySuccess("Clear All Data succeeded.");
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setErrorMessage(`Failed to clear browser data: ${message}`);
+      setErrorMessage(`Failed to clear browser data: ${getErrorMessage(error)}`);
     }
   }, [webviewRef, closeToolsMenu, notifySuccess]);
 

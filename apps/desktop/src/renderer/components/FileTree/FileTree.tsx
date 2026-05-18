@@ -1,13 +1,11 @@
-import { Box, TextField } from "@mui/material";
-import { MdOutlineKeyboardArrowRight } from "react-icons/md";
+import { Box } from "@mui/material";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { ClipboardEvent, DragEvent, KeyboardEvent, MouseEvent } from "react";
+import type { ClipboardEvent, DragEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isEditableTarget } from "../../shortcuts/editableTarget";
-import { handleFileTreeShortcutFromRegistry } from "../fileTreeActionRegistry";
-import { getFileTreeIcon } from "../fileTreeIcons";
+import { FlatTreeRow } from "./FlatTreeRow";
+import { ROW_HEIGHT } from "./FlatTreeRow";
 import {
-  FILETREE_DRAG_MIME,
   extractInternalDragRelativePaths,
   extractSourcePathsFromDataTransferAsync,
   hasExternalFileDragIntent,
@@ -22,233 +20,15 @@ import {
 } from "./treeUtils";
 import type {
   EditingEntry,
-  FileTreeContextMenuRequest,
   FileTreeGitChangeKind,
   FileTreeProps,
   VisibleRow,
 } from "./types";
+import { useFileTreeKeyboard } from "./useFileTreeKeyboard";
 import { useVisibleFileTree } from "./useVisibleFileTree";
-
-const ROW_HEIGHT = 28;
-const INDENT_SIZE = 2;
 
 const EMPTY_IGNORED_PATHS: string[] = [];
 const EMPTY_GIT_CHANGES_BY_PATH: Record<string, FileTreeGitChangeKind> = {};
-
-function getGitChangeIndicatorMeta(kind: FileTreeGitChangeKind): { textColor: string } {
-  if (kind === "added") {
-    return { textColor: "success.main" };
-  }
-
-  if (kind === "renamed") {
-    return { textColor: "info.main" };
-  }
-
-  return { textColor: "warning.main" };
-}
-
-function FlatTreeRow({
-  row,
-  isSelected,
-  isEditing,
-  editingName,
-  editingInputRef,
-  gitChangeKind,
-  isIgnored,
-  isExpanded,
-  isDraggable,
-  absolutePath,
-  isDropTarget,
-  onSelect,
-  onToggle,
-  onOpen,
-  onContextMenu,
-  onEditingNameChange,
-  onRenameKeyDown,
-  onRenameBlur,
-  onDragOver,
-  onDrop,
-  onDragEnter,
-  onDragLeave,
-  hasDescendantGitChange,
-}: {
-  row: VisibleRow;
-  isSelected: boolean;
-  isEditing: boolean;
-  editingName: string;
-  editingInputRef: React.RefObject<HTMLInputElement | null>;
-  gitChangeKind: FileTreeGitChangeKind | undefined;
-  hasDescendantGitChange: boolean;
-  isIgnored: boolean;
-  isExpanded: boolean;
-  /** When true, the row is draggable and will emit file path data on drag start. */
-  isDraggable: boolean;
-  /** Absolute file path used as the drag payload. */
-  absolutePath: string;
-  /** True when this row is the active drop target during a drag operation. */
-  isDropTarget: boolean;
-  onSelect: () => void;
-  onToggle: () => void;
-  onOpen: () => void;
-  onContextMenu: (event: MouseEvent<HTMLElement>) => void;
-  onEditingNameChange: (value: string) => void;
-  onRenameKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
-  onRenameBlur: () => void;
-  onDragOver: (event: DragEvent<HTMLElement>) => void;
-  onDrop: (event: DragEvent<HTMLElement>, targetPath: string, targetIsDirectory: boolean) => void;
-  onDragEnter: (event: DragEvent<HTMLElement>, targetPath: string, targetIsDirectory: boolean) => void;
-  onDragLeave: (event: DragEvent<HTMLElement>) => void;
-}) {
-  if (isEditing) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          height: ROW_HEIGHT,
-          pl: row.depth * INDENT_SIZE + 0.5,
-          pr: 1,
-          borderRadius: 1,
-          bgcolor: "action.hover",
-        }}
-      >
-        <Box sx={{ width: 16, flexShrink: 0 }} />
-        <Box
-          component="img"
-          src={getFileTreeIcon(editingName || row.path, row.isDirectory)}
-          alt=""
-          sx={{ width: 16, height: 16, flexShrink: 0, ml: 0.25 }}
-        />
-        <TextField
-          autoFocus
-          inputRef={editingInputRef}
-          value={editingName}
-          variant="standard"
-          size="small"
-          autoComplete="off"
-          spellCheck={false}
-          slotProps={{
-            htmlInput: {
-              autoCorrect: "off",
-              autoCapitalize: "none",
-              "data-gramm": "false",
-            },
-          }}
-          onChange={(event) => onEditingNameChange(event.target.value)}
-          onKeyDown={(event) => {
-            event.stopPropagation();
-            onRenameKeyDown(event);
-          }}
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={(event) => event.stopPropagation()}
-          onBlur={onRenameBlur}
-          sx={{
-            minWidth: 100,
-            ml: 0.75,
-            "& .MuiInputBase-input": {
-              py: 0,
-              typography: "body2",
-            },
-          }}
-        />
-      </Box>
-    );
-  }
-
-  const icon = getFileTreeIcon(row.path, row.isDirectory, isExpanded);
-  const indicatorMeta = gitChangeKind
-    ? getGitChangeIndicatorMeta(gitChangeKind)
-    : hasDescendantGitChange
-      ? { textColor: "warning.main" as const }
-      : null;
-
-  return (
-    <Box
-      data-path={row.path}
-      data-testid={`tree-row-${row.path}`}
-      draggable={isDraggable}
-      onDragStart={
-        isDraggable
-          ? (event: DragEvent<HTMLElement>) => {
-              event.dataTransfer.effectAllowed = "copyMove";
-              event.dataTransfer.setData(FILETREE_DRAG_MIME, JSON.stringify([absolutePath]));
-              event.dataTransfer.setData("text/plain", absolutePath);
-            }
-          : undefined
-      }
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelect();
-        if (row.isDirectory) {
-          onToggle();
-        }
-      }}
-      onDoubleClick={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        onOpen();
-      }}
-      onContextMenu={onContextMenu}
-      onDragOver={onDragOver}
-      onDragEnter={(event) => onDragEnter(event, row.path, row.isDirectory)}
-      onDragLeave={onDragLeave}
-      onDrop={(event) => onDrop(event, row.path, row.isDirectory)}
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        height: ROW_HEIGHT,
-        pl: row.depth * INDENT_SIZE + 0.5,
-        pr: 1,
-        borderRadius: 1,
-        cursor: "pointer",
-        userSelect: "none",
-        WebkitUserSelect: "none",
-        bgcolor: isDropTarget ? "action.focus" : isSelected ? "action.selected" : "transparent",
-        outline: isDropTarget ? "1.5px dashed" : "none",
-        outlineColor: isDropTarget ? "primary.main" : undefined,
-        outlineOffset: isDropTarget ? "-1.5px" : undefined,
-        "&:hover": {
-          bgcolor: isDropTarget ? "action.focus" : isSelected ? "action.selected" : "action.hover",
-        },
-      }}
-    >
-      {row.isDirectory ? (
-        <Box
-          sx={{
-            width: 16,
-            height: ROW_HEIGHT,
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-            color: "text.secondary",
-            "& svg": { display: "block" },
-          }}
-        >
-          <MdOutlineKeyboardArrowRight size={16} />
-        </Box>
-      ) : (
-        <Box sx={{ width: 16, flexShrink: 0 }} />
-      )}
-      <Box component="img" src={icon} alt="" sx={{ width: 16, height: 16, flexShrink: 0, ml: 0.25 }} />
-      <Box
-        component="span"
-        data-ignored={isIgnored ? "true" : "false"}
-        data-git-change-kind={gitChangeKind ?? "none"}
-        sx={{
-          ml: 0.75,
-          typography: "body2",
-          color: isIgnored ? "text.disabled" : indicatorMeta?.textColor ?? "text.primary",
-          fontWeight: indicatorMeta ? 500 : 400,
-          whiteSpace: "nowrap",
-        }}
-      >
-        {row.name}
-      </Box>
-    </Box>
-  );
-}
 
 export function FileTree({
   files,
@@ -274,7 +54,8 @@ export function FileTree({
   onDropExternalEntries,
   onMoveEntries,
   onItemContextMenu,
-}: FileTreeProps) {  const gitChangesByPathResolved = gitChangesByPath ?? EMPTY_GIT_CHANGES_BY_PATH;
+}: FileTreeProps) {
+  const gitChangesByPathResolved = gitChangesByPath ?? EMPTY_GIT_CHANGES_BY_PATH;
   const ancestorOfGitChangePaths = useMemo(() => {
     const set = new Set<string>();
     for (const path of Object.keys(gitChangesByPathResolved)) {
@@ -285,6 +66,7 @@ export function FileTree({
     }
     return set;
   }, [gitChangesByPathResolved]);
+
   const [editingEntry, setEditingEntry] = useState<EditingEntry | null>(null);
   const [editingName, setEditingName] = useState("");
   const [selectedEntryPath, setSelectedEntryPath] = useState("");
@@ -324,6 +106,8 @@ export function FileTree({
     overscan: 20,
   });
 
+  // ─── Selection request effect ──────────────────────────────────────────────
+
   useEffect(() => {
     if (!selectionRequest) {
       return;
@@ -356,6 +140,8 @@ export function FileTree({
     lastAppliedSelectionRequestIdRef.current = selectionRequest.requestId;
   }, [onEnsurePathLoaded, rowByPath, selectionRequest, setExpandedItems]);
 
+  // ─── Create entry request effect ──────────────────────────────────────────
+
   useEffect(() => {
     if (!createEntryRequest) {
       return;
@@ -368,6 +154,8 @@ export function FileTree({
     startCreate(createEntryRequest.basePath ?? "", createEntryRequest.kind === "folder");
     lastAppliedCreateRequestIdRef.current = createEntryRequest.requestId;
   }, [createEntryRequest]);
+
+  // ─── Editing input auto-selection effect ──────────────────────────────────
 
   useEffect(() => {
     if (!editingEntry?.path || !editingInputRef.current) {
@@ -387,13 +175,15 @@ export function FileTree({
     didApplyInitialSelectionRef.current = true;
   }, [editingEntry, editingName]);
 
-  const cancelRename = () => {
+  // ─── Rename handlers ──────────────────────────────────────────────────────
+
+  const cancelRename = useCallback(() => {
     setEditingEntry(null);
     setEditingName("");
     didApplyInitialSelectionRef.current = false;
-  };
+  }, []);
 
-  const commitRename = async () => {
+  const commitRename = useCallback(async () => {
     if (!editingEntry) {
       cancelRename();
       return;
@@ -435,282 +225,210 @@ export function FileTree({
     } finally {
       cancelRename();
     }
-  };
+  }, [cancelRename, editingEntry, editingName, onCreateEntry, onRenameEntry]);
 
-  const startCreate = (basePath: string, isDirectory: boolean) => {
-    if (!onCreateEntry) {
-      return;
-    }
-
-    const draftName = resolveUniqueChildName(files, basePath, isDirectory ? "new-folder" : "new-file");
-    if (basePath) {
-      setExpandedItems((currentItems) => [
-        ...new Set([...currentItems, ...collectAncestorDirectoryPaths(basePath), basePath]),
-      ]);
-    }
-    ignoreRenameBlurUntilRef.current = Date.now() + 150;
-    didApplyInitialSelectionRef.current = false;
-    setEditingEntry({
-      mode: "create",
-      path: joinChildPath(basePath, draftName),
-      basePath,
-      isDirectory,
-    });
-    setEditingName("");
-  };
-
-  const startRename = (targetPath: string, basePath: string) => {
-    if (!targetPath || !onRenameEntry) {
-      return;
-    }
-
-    ignoreRenameBlurUntilRef.current = Date.now() + 150;
-    didApplyInitialSelectionRef.current = false;
-    setEditingEntry({
-      mode: "rename",
-      path: targetPath,
-      basePath,
-      isDirectory: false,
-    });
-    setEditingName(getEntryName(targetPath));
-  };
-
-  const handleExternalDragOver = (event: DragEvent<HTMLElement>) => {
-    // Accept internal file-tree drags for move operations
-    if (onMoveEntries && hasInternalFileTreeDragIntent(event)) {
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "move";
-      return;
-    }
-
-    // Accept external file drops for import operations
-    if (!onDropExternalEntries || !hasExternalFileDragIntent(event)) {
-      return;
-    }
-
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
-  };
-
-  const handleRowDragEnter = (event: DragEvent<HTMLElement>, targetPath: string, targetIsDirectory: boolean) => {
-    const destinationPath = resolveDestinationDirectoryPath(targetPath, targetIsDirectory);
-
-    // For internal drags, highlight the target directory.
-    // Note: We cannot validate source paths here because getData() is restricted
-    // during dragenter; validation happens in the drop handler.
-    if (onMoveEntries && hasInternalFileTreeDragIntent(event)) {
-      setDropTargetPath(destinationPath);
-      return;
-    }
-
-    // For external drags, highlight the target
-    if (onDropExternalEntries && hasExternalFileDragIntent(event)) {
-      setDropTargetPath(destinationPath);
-    }
-  };
-
-  const handleRowDragLeave = (_event: DragEvent<HTMLElement>) => {
-    // The drop target will be updated by the next dragEnter, or cleared on drop/dragLeave of container
-  };
-
-  const handleExternalDrop = async (event: DragEvent<HTMLElement>, targetPath: string, targetIsDirectory: boolean) => {
-    setDropTargetPath(null);
-
-    const destinationPath = resolveDestinationDirectoryPath(targetPath, targetIsDirectory);
-
-    // Handle internal file-tree move
-    if (onMoveEntries && hasInternalFileTreeDragIntent(event) && worktreePath) {
-      event.preventDefault();
-      event.stopPropagation();
-
-      const sourcePaths = extractInternalDragRelativePaths(event.dataTransfer, worktreePath);
-      if (sourcePaths.length === 0) {
+  const startCreate = useCallback(
+    (basePath: string, isDirectory: boolean) => {
+      if (!onCreateEntry) {
         return;
       }
 
-      // Don't allow dropping onto itself or its own descendant
-      const isInvalidTarget = sourcePaths.some(
-        (srcPath) => srcPath === destinationPath || destinationPath.startsWith(`${srcPath}/`),
-      );
-      if (isInvalidTarget) {
+      const draftName = resolveUniqueChildName(files, basePath, isDirectory ? "new-folder" : "new-file");
+      if (basePath) {
+        setExpandedItems((currentItems) => [
+          ...new Set([...currentItems, ...collectAncestorDirectoryPaths(basePath), basePath]),
+        ]);
+      }
+      ignoreRenameBlurUntilRef.current = Date.now() + 150;
+      didApplyInitialSelectionRef.current = false;
+      setEditingEntry({
+        mode: "create",
+        path: joinChildPath(basePath, draftName),
+        basePath,
+        isDirectory,
+      });
+      setEditingName("");
+    },
+    [files, onCreateEntry, setExpandedItems],
+  );
+
+  const startRename = useCallback(
+    (targetPath: string, basePath: string) => {
+      if (!targetPath || !onRenameEntry) {
         return;
       }
 
-      await onMoveEntries(sourcePaths, destinationPath);
-      return;
-    }
+      ignoreRenameBlurUntilRef.current = Date.now() + 150;
+      didApplyInitialSelectionRef.current = false;
+      setEditingEntry({
+        mode: "rename",
+        path: targetPath,
+        basePath,
+        isDirectory: false,
+      });
+      setEditingName(getEntryName(targetPath));
+    },
+    [onRenameEntry],
+  );
 
-    // Handle external file import
-    if (!onDropExternalEntries) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const sourcePaths = await extractSourcePathsFromDataTransferAsync(event.dataTransfer);
-    if (sourcePaths.length === 0) {
-      return;
-    }
-
-    await onDropExternalEntries(sourcePaths, destinationPath);
-  };
-
-  const handleExternalPaste = async (event: ClipboardEvent<HTMLElement>) => {
-    if (!onDropExternalEntries || editingEntry || isEditableTarget(event.target)) {
-      return;
-    }
-
-    const clipboardData = event.clipboardData;
-    if (!clipboardData) {
-      return;
-    }
-
-    const sourcePaths = await extractSourcePathsFromDataTransferAsync(clipboardData);
-    if (sourcePaths.length === 0) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    await onDropExternalEntries(
-      sourcePaths,
-      resolveDestinationDirectoryPath(selectedEntryPath, directoryPaths.has(selectedEntryPath)),
-    );
-  };
-
-  const handleTreeKeyDown = async (event: KeyboardEvent<HTMLElement>) => {
-    if (editingEntry || isEditableTarget(event.target)) {
-      return;
-    }
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      const current = rowByPath.get(selectedEntryPath);
-      if (!current) {
-        const firstRow = visibleRows[0];
-        if (firstRow) {
-          setSelectedEntryPath(firstRow.path);
-          onSelectEntry?.({ path: firstRow.path, isDirectory: firstRow.isDirectory });
-          virtualizer.scrollToIndex(0, { align: "auto" });
-        }
+  const handleRenameInputKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLElement>) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        void commitRename();
         return;
       }
 
-      const nextRow = visibleRows[current.index + 1];
-      if (nextRow) {
-        setSelectedEntryPath(nextRow.path);
-        onSelectEntry?.({ path: nextRow.path, isDirectory: nextRow.isDirectory });
-        virtualizer.scrollToIndex(current.index + 1, { align: "auto" });
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelRename();
       }
-      return;
-    }
+    },
+    [cancelRename, commitRename],
+  );
 
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      const current = rowByPath.get(selectedEntryPath);
-      if (!current || current.index === 0) {
-        return;
-      }
-
-      const prevRow = visibleRows[current.index - 1];
-      if (prevRow) {
-        setSelectedEntryPath(prevRow.path);
-        onSelectEntry?.({ path: prevRow.path, isDirectory: prevRow.isDirectory });
-        virtualizer.scrollToIndex(current.index - 1, { align: "auto" });
-      }
-      return;
-    }
-
-    if (event.key === "ArrowRight") {
-      event.preventDefault();
-      const current = rowByPath.get(selectedEntryPath);
-      if (current?.row.isDirectory) {
-        if (!expandedPathSet.has(selectedEntryPath)) {
-          setExpandedItems((items) => [...new Set([...items, selectedEntryPath])]);
-        } else {
-          const firstChild = visibleRows[current.index + 1];
-          if (firstChild && firstChild.path.startsWith(selectedEntryPath + "/")) {
-            setSelectedEntryPath(firstChild.path);
-            onSelectEntry?.({ path: firstChild.path, isDirectory: firstChild.isDirectory });
-          }
-        }
-      }
-      return;
-    }
-
-    if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      const current = rowByPath.get(selectedEntryPath);
-      if (current?.row.isDirectory && expandedPathSet.has(selectedEntryPath)) {
-        setExpandedItems((items) => items.filter((item) => item !== selectedEntryPath));
-      } else {
-        const pathParts = selectedEntryPath.split("/").filter(Boolean);
-        if (pathParts.length > 1) {
-          const parentPath = pathParts.slice(0, -1).join("/");
-          setSelectedEntryPath(parentPath);
-          onSelectEntry?.({ path: parentPath, isDirectory: true });
-        }
-      }
-      return;
-    }
-
-    if (event.key === "Enter" && selectedEntryPath) {
-      event.preventDefault();
-      const current = rowByPath.get(selectedEntryPath);
-      if (current?.row.isDirectory) {
-        setExpandedItems((items) => {
-          const isCurrentlyExpanded = items.includes(selectedEntryPath);
-          return isCurrentlyExpanded
-            ? items.filter((item) => item !== selectedEntryPath)
-            : [...items, selectedEntryPath];
-        });
-      } else {
-        await onOpenEntry?.({ path: selectedEntryPath, isDirectory: false });
-      }
-      return;
-    }
-
-    await handleFileTreeShortcutFromRegistry(
-      {
-        event,
-        selectedEntryPath,
-        canPasteEntries: Boolean(canPasteEntries),
-        canUndoLastEntryOperation: Boolean(canUndoLastEntryOperation),
-        onCopyEntry,
-        onCutEntry,
-        onPasteEntries,
-        onDeleteEntry,
-        onUndoLastEntryOperation,
-        resolveSelectedPasteDestination: () =>
-          resolveDestinationDirectoryPath(selectedEntryPath, directoryPaths.has(selectedEntryPath)),
-      },
-      [],
-    );
-  };
-
-  const handleRenameInputKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      void commitRename();
-      return;
-    }
-
-    if (event.key === "Escape") {
-      event.preventDefault();
-      cancelRename();
-    }
-  };
-
-  const handleRenameInputBlur = () => {
+  const handleRenameInputBlur = useCallback(() => {
     if (Date.now() < ignoreRenameBlurUntilRef.current) {
       return;
     }
 
     cancelRename();
-  };
+  }, [cancelRename]);
 
-  const selectFirstTreeEntryOnFocus = () => {
+  // ─── Drag & drop handlers ─────────────────────────────────────────────────
+
+  const handleExternalDragOver = useCallback(
+    (event: DragEvent<HTMLElement>) => {
+      if (onMoveEntries && hasInternalFileTreeDragIntent(event)) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        return;
+      }
+
+      if (!onDropExternalEntries || !hasExternalFileDragIntent(event)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+    },
+    [onDropExternalEntries, onMoveEntries],
+  );
+
+  const handleRowDragEnter = useCallback(
+    (event: DragEvent<HTMLElement>, targetPath: string, targetIsDirectory: boolean) => {
+      const destinationPath = resolveDestinationDirectoryPath(targetPath, targetIsDirectory);
+
+      if (onMoveEntries && hasInternalFileTreeDragIntent(event)) {
+        setDropTargetPath(destinationPath);
+        return;
+      }
+
+      if (onDropExternalEntries && hasExternalFileDragIntent(event)) {
+        setDropTargetPath(destinationPath);
+      }
+    },
+    [onDropExternalEntries, onMoveEntries],
+  );
+
+  const handleRowDragLeave = useCallback((_event: DragEvent<HTMLElement>) => {
+    // Drop target is updated by next dragEnter or cleared on drop/container-dragLeave.
+  }, []);
+
+  const handleExternalDrop = useCallback(
+    async (event: DragEvent<HTMLElement>, targetPath: string, targetIsDirectory: boolean) => {
+      setDropTargetPath(null);
+
+      const destinationPath = resolveDestinationDirectoryPath(targetPath, targetIsDirectory);
+
+      if (onMoveEntries && hasInternalFileTreeDragIntent(event) && worktreePath) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const sourcePaths = extractInternalDragRelativePaths(event.dataTransfer, worktreePath);
+        if (sourcePaths.length === 0) {
+          return;
+        }
+
+        const isInvalidTarget = sourcePaths.some(
+          (srcPath) => srcPath === destinationPath || destinationPath.startsWith(`${srcPath}/`),
+        );
+        if (isInvalidTarget) {
+          return;
+        }
+
+        await onMoveEntries(sourcePaths, destinationPath);
+        return;
+      }
+
+      if (!onDropExternalEntries) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const sourcePaths = await extractSourcePathsFromDataTransferAsync(event.dataTransfer);
+      if (sourcePaths.length === 0) {
+        return;
+      }
+
+      await onDropExternalEntries(sourcePaths, destinationPath);
+    },
+    [onDropExternalEntries, onMoveEntries, worktreePath],
+  );
+
+  const handleExternalPaste = useCallback(
+    async (event: ClipboardEvent<HTMLElement>) => {
+      if (!onDropExternalEntries || editingEntry || isEditableTarget(event.target)) {
+        return;
+      }
+
+      const clipboardData = event.clipboardData;
+      if (!clipboardData) {
+        return;
+      }
+
+      const sourcePaths = await extractSourcePathsFromDataTransferAsync(clipboardData);
+      if (sourcePaths.length === 0) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      await onDropExternalEntries(
+        sourcePaths,
+        resolveDestinationDirectoryPath(selectedEntryPath, directoryPaths.has(selectedEntryPath)),
+      );
+    },
+    [directoryPaths, editingEntry, onDropExternalEntries, selectedEntryPath],
+  );
+
+  // ─── Keyboard navigation ─────────────────────────────────────────────────
+
+  const { handleTreeKeyDown } = useFileTreeKeyboard({
+    visibleRows,
+    rowByPath,
+    selectedEntryPath,
+    editingEntry,
+    expandedItems,
+    expandedPathSet,
+    directoryPaths,
+    canPasteEntries,
+    canUndoLastEntryOperation,
+    virtualizer,
+    setSelectedEntryPath,
+    setExpandedItems,
+    onSelectEntry,
+    onOpenEntry,
+    onCopyEntry,
+    onCutEntry,
+    onPasteEntries,
+    onDeleteEntry,
+    onUndoLastEntryOperation,
+  });
+
+  const selectFirstTreeEntryOnFocus = useCallback(() => {
     if (selectedEntryPath) {
       return;
     }
@@ -726,7 +444,9 @@ export function FileTree({
 
     setSelectedEntryPath(firstRow.path);
     onSelectEntry?.({ path: firstRow.path, isDirectory: firstRow.isDirectory });
-  };
+  }, [onSelectEntry, selectedEntryPath, selectionRequest?.path, visibleRows]);
+
+  // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
     <Box
@@ -767,7 +487,6 @@ export function FileTree({
       }}
       onDragOver={handleExternalDragOver}
       onDragLeave={(event) => {
-        // Clear drop target when the drag leaves the tree container entirely
         const relatedTarget = event.relatedTarget as Node | null;
         if (!scrollRef.current?.contains(relatedTarget)) {
           setDropTargetPath(null);

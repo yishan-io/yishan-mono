@@ -3,29 +3,18 @@ import {
   asRecord,
   buildRequest,
   buildUnsupportedMethodError,
-  normalizeWorktreePath,
   parseJsonRpcMessage,
-  readOptionalBoolean,
-  readOptionalNumber,
   readOptionalString,
-  readOptionalStringArray,
 } from "./helpers";
+import { generateId } from "../helpers/generateId";
+import { DaemonWorkspaceClient } from "./daemonWorkspaceClient";
+import { DaemonFileClient } from "./daemonFileClient";
+import { DaemonGitClient } from "./daemonGitClient";
+import { DaemonTerminalClient } from "./daemonTerminalClient";
 
 const RPC_REQUEST_TIMEOUT_MS = 30_000;
-const terminalFrameTextDecoder = new TextDecoder();
 const terminalFrameTextEncoder = new TextEncoder();
-
-function createRandomId(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function createDesktopWorkspaceId(): string {
-  return createRandomId();
-}
+const terminalFrameTextDecoder = new TextDecoder();
 
 type PendingRequest = {
   method: string;
@@ -45,17 +34,6 @@ type DaemonRpcError = Error & { code?: number };
 
 type DaemonClientConnectionEvent = "connecting" | "connected" | "disconnected";
 
-/** Normalizes daemon file-entry paths so directories always keep a trailing slash. */
-function normalizeDaemonFileEntries(files: Rpc.DaemonFileEntry[]): Rpc.DaemonFileEntry[] {
-  return files.map((entry) => {
-    const trimmedPath = entry.path.replace(/\\/g, "/").replace(/\/+$/, "");
-    return {
-      ...entry,
-      path: entry.isDir ? `${trimmedPath}/` : trimmedPath,
-    };
-  });
-}
-
 function createDaemonRpcError(code: number, message: string): DaemonRpcError {
   const error = new Error(message || `daemon RPC error ${code}`) as DaemonRpcError;
   error.code = code;
@@ -70,10 +48,14 @@ export class DaemonClient {
   private readonly pendingRequestsById = new Map<string, PendingRequest>();
   private readonly subscriptionsById = new Map<string, ActiveSubscription>();
   private readonly workspaceIdByWorktreePath = new Map<string, string>();
-  private readonly terminalNextIndexBySessionId = new Map<string, number>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectPromise: Promise<void> | null = null;
   private disposed = false;
+
+  private readonly _workspaceClient: DaemonWorkspaceClient;
+  private readonly _fileClient: DaemonFileClient;
+  private readonly _gitClient: DaemonGitClient;
+  private readonly _terminalClient: DaemonTerminalClient;
 
   constructor(options: {
     openSocket: () => Promise<WebSocket>;
@@ -81,58 +63,74 @@ export class DaemonClient {
   }) {
     this.openSocket = options.openSocket;
     this.onConnectionEvent = options.onConnectionEvent;
+
+    const invoke = this.invoke.bind(this);
+    const resolveWorkspaceId = this.resolveWorkspaceId.bind(this);
+
+    this._workspaceClient = new DaemonWorkspaceClient(invoke, this.workspaceIdByWorktreePath);
+    this._fileClient = new DaemonFileClient(invoke, resolveWorkspaceId);
+    this._gitClient = new DaemonGitClient(invoke, resolveWorkspaceId);
+    this._terminalClient = new DaemonTerminalClient({
+      invoke,
+      resolveWorkspaceId,
+      sendBinary: this.sendTerminalInputBinary.bind(this),
+      getSocketReadyState: () => this.socket?.readyState ?? null,
+      subscriptionsById: this.subscriptionsById as DaemonTerminalClient["subscriptionsById"],
+    });
   }
 
   readonly workspace = {
-    list: this.listWorkspaces.bind(this),
-    open: this.openWorkspace.bind(this),
-    createWorkspace: this.createWorkspace.bind(this),
-    close: this.closeWorkspace.bind(this),
-    syncContextLink: this.syncContextLink.bind(this),
+    list: () => this._workspaceClient.list(),
+    open: (input: Rpc.WorkspaceOpenInput) => this._workspaceClient.open(input),
+    createWorkspace: (input: Rpc.WorkspaceCreateInput) => this._workspaceClient.createWorkspace(input),
+    close: (input: Rpc.WorkspaceCloseExecutionInput) => this._workspaceClient.close(input),
+    syncContextLink: (input: Rpc.WorkspaceSyncContextLinkInput) => this._workspaceClient.syncContextLink(input),
   };
 
   readonly file = {
-    listFiles: this.listFiles.bind(this),
-    listFilesBatch: this.listFilesBatch.bind(this),
-    readFile: this.readFile.bind(this),
-    writeFile: this.writeFile.bind(this),
-    createFile: this.writeFile.bind(this),
-    createFolder: this.createFolder.bind(this),
-    renameEntry: this.renameEntry.bind(this),
-    deleteEntry: this.deleteEntry.bind(this),
-    readDiff: this.readFileDiff.bind(this),
+    listFiles: (input: Rpc.FileListInput) => this._fileClient.listFiles(input),
+    listFilesBatch: (input: Rpc.FileListBatchInput) => this._fileClient.listFilesBatch(input),
+    readFile: (input: Rpc.FileReadInput) => this._fileClient.readFile(input),
+    writeFile: (input: Rpc.FileWriteInput) => this._fileClient.writeFile(input),
+    createFile: (input: Rpc.FileWriteInput) => this._fileClient.writeFile(input),
+    createFolder: (input: Rpc.FileCreateFolderInput) => this._fileClient.createFolder(input),
+    renameEntry: (input: Rpc.FileRenameInput) => this._fileClient.renameEntry(input),
+    deleteEntry: (input: Rpc.FileDeleteInput) => this._fileClient.deleteEntry(input),
+    readDiff: (input: Rpc.FileReadInput) => this._fileClient.readDiff(input),
   };
 
   readonly git = {
-    inspect: this.inspectGitRepository.bind(this),
-    listChanges: this.listGitChanges.bind(this),
-    trackChanges: this.trackGitChanges.bind(this),
-    unstageChanges: this.unstageGitChanges.bind(this),
-    revertChanges: this.revertGitChanges.bind(this),
-    commitChanges: this.commitGitChanges.bind(this),
-    getBranchStatus: this.getGitBranchStatus.bind(this),
-    listCommitsToTarget: this.listGitCommitsToTarget.bind(this),
-    getBranchDiffSummary: this.getGitBranchDiffSummary.bind(this),
-    readCommitDiff: this.readGitCommitDiff.bind(this),
-    readBranchComparisonDiff: this.readGitBranchComparisonDiff.bind(this),
-    listBranches: this.listGitBranches.bind(this),
-    pushBranch: this.pushGitBranch.bind(this),
-    publishBranch: this.publishGitBranch.bind(this),
-    renameBranch: this.renameGitBranch.bind(this),
-    getAuthorName: this.getGitAuthorName.bind(this),
+    inspect: (input: Rpc.GitInspectInput) => this._gitClient.inspect(input),
+    listChanges: (input: Rpc.GitWorktreeInput) => this._gitClient.listChanges(input),
+    trackChanges: (input: Rpc.GitPathsInput) => this._gitClient.trackChanges(input),
+    unstageChanges: (input: Rpc.GitPathsInput) => this._gitClient.unstageChanges(input),
+    revertChanges: (input: Rpc.GitPathsInput) => this._gitClient.revertChanges(input),
+    commitChanges: (input: Rpc.GitCommitInput) => this._gitClient.commitChanges(input),
+    getBranchStatus: (input: Rpc.GitWorktreeInput) => this._gitClient.getBranchStatus(input),
+    listCommitsToTarget: (input: Rpc.GitTargetBranchInput) => this._gitClient.listCommitsToTarget(input),
+    getBranchDiffSummary: (input: Rpc.GitTargetBranchInput) => this._gitClient.getBranchDiffSummary(input),
+    readCommitDiff: (input: Rpc.GitCommitDiffInput) => this._gitClient.readCommitDiff(input),
+    readBranchComparisonDiff: (input: Rpc.GitBranchDiffInput) => this._gitClient.readBranchComparisonDiff(input),
+    listBranches: (input: Rpc.GitWorktreeInput) => this._gitClient.listBranches(input),
+    pushBranch: (input: Rpc.GitWorktreeInput) => this._gitClient.pushBranch(input),
+    publishBranch: (input: Rpc.GitWorktreeInput) => this._gitClient.publishBranch(input),
+    renameBranch: (input: Rpc.GitRenameBranchInput) => this._gitClient.renameBranch(input),
+    getAuthorName: (input: Rpc.GitWorktreeInput) => this._gitClient.getAuthorName(input),
   };
 
   readonly terminal = {
-    createSession: this.createTerminalSession.bind(this),
-    writeInput: this.writeTerminalInput.bind(this),
-    resize: this.resizeTerminal.bind(this),
-    closeSession: this.closeTerminalSession.bind(this),
-    killProcess: this.killTerminalProcess.bind(this),
-    readOutput: this.readTerminalOutput.bind(this),
-    listDetectedPorts: this.listDetectedTerminalPorts.bind(this),
-    getResourceUsage: this.getTerminalResourceUsage.bind(this),
-    listSessions: this.listTerminalSessions.bind(this),
+    createSession: (input: Rpc.TerminalCreateSessionInput) => this._terminalClient.createSession(input),
+    writeInput: (input: Rpc.TerminalWriteInput) => this._terminalClient.writeInput(input),
+    resize: (input: Rpc.TerminalResizeInput) => this._terminalClient.resize(input),
+    closeSession: (input: Rpc.TerminalCloseInput) => this._terminalClient.closeSession(input),
+    killProcess: (input: Rpc.TerminalKillProcessInput) => this._terminalClient.killProcess(input),
+    readOutput: (input: Rpc.TerminalReadOutputInput) => this._terminalClient.readOutput(input),
+    listDetectedPorts: () => this._terminalClient.listDetectedPorts(),
+    getResourceUsage: () => this._terminalClient.getResourceUsage(),
+    listSessions: (input?: Rpc.TerminalListSessionsInput) => this._terminalClient.listSessions(input),
   };
+
+  // ─── Connection Lifecycle ───────────────────────────────────────────────────
 
   private clearSocketReference(socket: WebSocket): void {
     if (this.socket === socket) {
@@ -407,7 +405,6 @@ export class DaemonClient {
     }
 
     // Dispatch as a terminal output event to matching subscribers.
-    // The subscription handler in startSubscription() manages nextIndex tracking.
     for (const subscription of this.subscriptionsById.values()) {
       if (subscription.method !== "terminal.subscribe") {
         continue;
@@ -444,9 +441,13 @@ export class DaemonClient {
     return await this.sendRequest(method, params);
   }
 
+  private resolveWorkspaceId(input: unknown): Promise<string> {
+    return this._workspaceClient.resolveId(input);
+  }
+
   private async startRawSubscription(options: Rpc.StartSubscriptionOptions): Promise<string> {
     await this.sendRequest(options.method, options.params);
-    const subscriptionId = createRandomId();
+    const subscriptionId = generateId();
     this.subscriptionsById.set(subscriptionId, {
       method: options.method,
       params: options.params,
@@ -456,613 +457,7 @@ export class DaemonClient {
     return subscriptionId;
   }
 
-  private async listWorkspaces(): Promise<Rpc.DaemonWorkspace[]> {
-    const result = await this.invoke("list");
-    if (!Array.isArray(result)) {
-      return [];
-    }
-
-    const workspaces: Rpc.DaemonWorkspace[] = [];
-    for (const candidate of result) {
-      const record = asRecord(candidate);
-      if (!record) {
-        continue;
-      }
-
-      const id = readOptionalString(record.id);
-      const path = readOptionalString(record.path);
-      if (!id || !path) {
-        continue;
-      }
-
-      workspaces.push({
-        id,
-        path: normalizeWorktreePath(path),
-        pullRequest: readDaemonWorkspacePullRequest(record.pullRequest),
-      });
-    }
-
-    return workspaces;
-  }
-
-  private async openWorkspace(input: Rpc.WorkspaceOpenInput): Promise<Rpc.DaemonWorkspace> {
-    const workspaceId = input.workspaceId.trim();
-    const workspaceWorktreePath = normalizeWorktreePath(input.workspaceWorktreePath);
-    if (!workspaceId || !workspaceWorktreePath) {
-      throw new Error("workspaceId and workspaceWorktreePath are required");
-    }
-
-    const record = asRecord(
-      await this.invoke("open", {
-        id: workspaceId,
-        path: workspaceWorktreePath,
-        ...(input.orgId ? { orgId: input.orgId } : {}),
-        ...(input.projectId ? { projectId: input.projectId } : {}),
-        ...(input.prAlreadyMerged ? { prAlreadyMerged: true } : {}),
-      }),
-    );
-    if (!record) {
-      throw new Error("daemon workspace open returned invalid response");
-    }
-
-    const id = readOptionalString(record.id) || workspaceId;
-    const path = normalizeWorktreePath(readOptionalString(record.path) || workspaceWorktreePath);
-    this.workspaceIdByWorktreePath.set(path, id);
-    return {
-      id,
-      path,
-      pullRequest: readDaemonWorkspacePullRequest(record.pullRequest),
-    };
-  }
-
-  private async ensureWorkspaceIdByWorktreePath(worktreePath: string, preferredWorkspaceId?: string): Promise<string> {
-    const normalizedWorktreePath = normalizeWorktreePath(worktreePath);
-    const normalizedPreferredWorkspaceId = preferredWorkspaceId?.trim();
-    if (normalizedPreferredWorkspaceId) {
-      const workspaces = await this.listWorkspaces();
-      for (const workspace of workspaces) {
-        this.workspaceIdByWorktreePath.set(workspace.path, workspace.id);
-      }
-
-      const existingPreferredWorkspace = workspaces.find(
-        (workspace) => workspace.id === normalizedPreferredWorkspaceId,
-      );
-      if (existingPreferredWorkspace) {
-        return existingPreferredWorkspace.id;
-      }
-
-      await this.invoke("open", {
-        id: normalizedPreferredWorkspaceId,
-        path: normalizedWorktreePath,
-      });
-      this.workspaceIdByWorktreePath.set(normalizedWorktreePath, normalizedPreferredWorkspaceId);
-      return normalizedPreferredWorkspaceId;
-    }
-
-    const cachedWorkspaceId = this.workspaceIdByWorktreePath.get(normalizedWorktreePath);
-    if (cachedWorkspaceId) {
-      return cachedWorkspaceId;
-    }
-
-    const workspaces = await this.listWorkspaces();
-    for (const workspace of workspaces) {
-      this.workspaceIdByWorktreePath.set(workspace.path, workspace.id);
-    }
-
-    const existingWorkspace = workspaces.find((workspace) => workspace.path === normalizedWorktreePath);
-    if (existingWorkspace) {
-      return existingWorkspace.id;
-    }
-
-    const workspaceId = createDesktopWorkspaceId();
-    await this.invoke("open", {
-      id: workspaceId,
-      path: normalizedWorktreePath,
-    });
-    this.workspaceIdByWorktreePath.set(normalizedWorktreePath, workspaceId);
-    return workspaceId;
-  }
-
-  private async resolveWorkspaceId(input: unknown): Promise<string> {
-    const record = asRecord(input);
-    if (!record) {
-      throw new Error("workspace input is required");
-    }
-
-    const workspaceId = readOptionalString(record.workspaceId);
-    const workspaceWorktreePath = readOptionalString(record.workspaceWorktreePath);
-    if (workspaceWorktreePath) {
-      return await this.ensureWorkspaceIdByWorktreePath(workspaceWorktreePath, workspaceId);
-    }
-
-    const cwd = readOptionalString(record.cwd);
-    if (cwd) {
-      return await this.ensureWorkspaceIdByWorktreePath(cwd, workspaceId);
-    }
-
-    if (workspaceId) {
-      return workspaceId;
-    }
-
-    throw new Error("workspaceId or workspaceWorktreePath is required");
-  }
-
-  private async createWorkspace(input: Rpc.WorkspaceCreateInput): Promise<Rpc.WorkspaceCreateResponse> {
-    const record = asRecord(input);
-    const organizationId = readOptionalString(record?.organizationId);
-    if (!organizationId) {
-      throw new Error("organizationId is required");
-    }
-    const sourcePath = readOptionalString(record?.sourcePath);
-    if (!sourcePath) {
-      throw new Error("sourcePath is required");
-    }
-    const repoKey = readOptionalString(record?.repoKey);
-    if (!repoKey) {
-      throw new Error("repoKey is required");
-    }
-    const sourceBranch = readOptionalString(record?.sourceBranch) || "";
-    if (!sourceBranch) {
-      throw new Error("sourceBranch is required");
-    }
-    const targetBranch = readOptionalString(record?.targetBranch) || sourceBranch;
-    const workspaceId = createDesktopWorkspaceId();
-    const workspaceName = readOptionalString(record?.workspaceName) || workspaceId;
-    const contextEnabled = readOptionalBoolean(record?.contextEnabled) ?? false;
-
-    const setupHook = readOptionalString(record?.setupHook) || "";
-
-    const createdWorkspace = (await this.invoke("workspace.create", {
-      id: workspaceId,
-      organizationId,
-      projectId: readOptionalString(record?.projectId) || "",
-      repoKey,
-      workspaceName,
-      sourcePath,
-      targetBranch,
-      sourceBranch,
-      contextEnabled,
-      setupHook,
-    })) as Rpc.DaemonWorkspace & { lifecycleScriptWarnings?: unknown[]; remoteSyncWarning?: unknown };
-
-    const createdWorktreePath = createdWorkspace.path || "";
-    if (createdWorktreePath) {
-      this.workspaceIdByWorktreePath.set(createdWorktreePath, workspaceId);
-    }
-
-    return {
-      workspaceId: createdWorkspace.id || workspaceId,
-      projectId: readOptionalString(record?.projectId) || workspaceId,
-      name: workspaceName,
-      sourceBranch,
-      branch: targetBranch,
-      worktreePath: createdWorktreePath,
-      status: "active",
-      lifecycleScriptWarnings: Array.isArray(createdWorkspace.lifecycleScriptWarnings)
-        ? createdWorkspace.lifecycleScriptWarnings
-        : [],
-      remoteSyncWarning: readOptionalString(createdWorkspace.remoteSyncWarning),
-    };
-  }
-
-  private async syncContextLink(
-    input: Rpc.WorkspaceSyncContextLinkInput,
-  ): Promise<Rpc.WorkspaceSyncContextLinkResponse> {
-    const record = asRecord(input);
-    const repoKey = readOptionalString(record?.repoKey);
-    if (!repoKey) {
-      throw new Error("repoKey is required");
-    }
-    const enabled = readOptionalBoolean(record?.enabled) ?? false;
-    const rawPaths = readOptionalStringArray(record?.worktreePaths) ?? [];
-    const normalizedPaths = Array.from(
-      new Set(
-        rawPaths
-          .map((path) => normalizeWorktreePath(path))
-          .filter((path): path is string => typeof path === "string" && path.length > 0),
-      ),
-    );
-
-    const result = (await this.invoke("workspace.syncContextLink", {
-      repoKey,
-      enabled,
-      worktreePaths: normalizedPaths,
-    })) as Partial<Rpc.WorkspaceSyncContextLinkResponse> | null | undefined;
-
-    return {
-      updated: Array.isArray(result?.updated)
-        ? result.updated.filter((item): item is string => typeof item === "string")
-        : [],
-      skipped: Array.isArray(result?.skipped)
-        ? result.skipped.filter((item): item is string => typeof item === "string")
-        : [],
-      errors:
-        result?.errors && typeof result.errors === "object"
-          ? Object.fromEntries(Object.entries(result.errors).filter(([, value]) => typeof value === "string"))
-          : {},
-    };
-  }
-
-  private async closeWorkspace(input: Rpc.WorkspaceCloseExecutionInput): Promise<Rpc.WorkspaceCloseExecutionResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const organizationId = readOptionalString(record?.organizationId);
-    const projectId = readOptionalString(record?.projectId);
-    const worktreePath = readOptionalString(record?.workspaceWorktreePath);
-    const branch = readOptionalString(record?.branch);
-    const removeBranch = readOptionalBoolean(record?.removeBranch) ?? false;
-    const postHook = readOptionalString(record?.postHook) || "";
-    return (await this.invoke("workspace.close", {
-      workspaceId,
-      organizationId,
-      projectId,
-      branch,
-      worktreePath,
-      removeBranch,
-      forceWorktree: true,
-      forceBranch: true,
-      postHook,
-    })) as Rpc.WorkspaceCloseExecutionResponse;
-  }
-
-  private async listFiles(input: Rpc.FileListInput): Promise<Rpc.FileListResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const relativePath = readOptionalString(record?.relativePath) || "";
-    const recursive = readOptionalBoolean(record?.recursive) ?? true;
-    const files = await this.invoke("file.list", { workspaceId, path: relativePath, recursive });
-    return {
-      files: Array.isArray(files) ? normalizeDaemonFileEntries(files as Rpc.FileListResponse["files"]) : [],
-    };
-  }
-
-  private async listFilesBatch(input: Rpc.FileListBatchInput): Promise<Rpc.FileListBatchResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const requests = Array.isArray(record?.requests) ? record.requests : [];
-    const results = await Promise.all(
-      requests.map(async (request) => {
-        const requestRecord = asRecord(request) ?? {};
-        const relativePath = readOptionalString(requestRecord.relativePath) || "";
-        const recursive = readOptionalBoolean(requestRecord.recursive) ?? false;
-        try {
-          const files = await this.invoke("file.list", { workspaceId, path: relativePath, recursive });
-          return {
-            request: { relativePath, recursive },
-            files: Array.isArray(files) ? normalizeDaemonFileEntries(files as Rpc.FileListResponse["files"]) : [],
-          };
-        } catch (error) {
-          return {
-            request: { relativePath, recursive },
-            files: [],
-            error: error instanceof Error ? error.message : String(error),
-          };
-        }
-      }),
-    );
-    return { results };
-  }
-
-  private async readFile(input: Rpc.FileReadInput): Promise<Rpc.FileReadResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const relativePath = readOptionalString(record?.relativePath);
-    if (!relativePath) {
-      throw new Error("relativePath is required");
-    }
-    const content = await this.invoke("file.read", { workspaceId, path: relativePath });
-    return { content: typeof content === "string" ? content : "" };
-  }
-
-  private async writeFile(input: Rpc.FileWriteInput): Promise<Rpc.FileWriteResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const relativePath = readOptionalString(record?.relativePath);
-    if (!relativePath) {
-      throw new Error("relativePath is required");
-    }
-    const content = typeof record?.content === "string" ? record.content : "";
-    const written = await this.invoke("file.write", { workspaceId, path: relativePath, content });
-    return { ok: true, written: typeof written === "number" ? written : 0 };
-  }
-
-  private async createFolder(input: Rpc.FileCreateFolderInput): Promise<Rpc.FileMutationOkResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const relativePath = readOptionalString(record?.relativePath);
-    if (!relativePath) {
-      throw new Error("relativePath is required");
-    }
-    await this.invoke("file.mkdir", { workspaceId, path: relativePath, parents: true });
-    return { ok: true };
-  }
-
-  private async renameEntry(input: Rpc.FileRenameInput): Promise<Rpc.FileMutationOkResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const fromRelativePath = readOptionalString(record?.fromRelativePath);
-    const toRelativePath = readOptionalString(record?.toRelativePath);
-    if (!fromRelativePath || !toRelativePath) {
-      throw new Error("fromRelativePath and toRelativePath are required");
-    }
-    await this.invoke("file.move", { workspaceId, fromPath: fromRelativePath, toPath: toRelativePath });
-    return { ok: true };
-  }
-
-  private async deleteEntry(input: Rpc.FileDeleteInput): Promise<Rpc.FileMutationOkResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const relativePath = readOptionalString(record?.relativePath);
-    if (!relativePath) {
-      throw new Error("relativePath is required");
-    }
-    await this.invoke("file.delete", { workspaceId, path: relativePath, recursive: true });
-    return { ok: true };
-  }
-
-  private async readFileDiff(input: Rpc.FileReadInput): Promise<Rpc.FileDiffResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const relativePath = readOptionalString(record?.relativePath);
-    if (!relativePath) {
-      throw new Error("relativePath is required");
-    }
-    const result = await this.invoke("file.diff", { workspaceId, path: relativePath });
-    const data = typeof result === "object" && result !== null ? (result as Record<string, unknown>) : {};
-    return {
-      oldContent: typeof data.oldContent === "string" ? data.oldContent : "",
-      newContent: typeof data.newContent === "string" ? data.newContent : "",
-    };
-  }
-
-  private async listGitChanges(input: Rpc.GitWorktreeInput): Promise<Rpc.GitChangesBySection> {
-    const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("git.listChanges", { workspaceId })) as Rpc.GitChangesBySection;
-  }
-
-  private async inspectGitRepository(input: Rpc.GitInspectInput): Promise<Rpc.GitInspectResponse> {
-    const record = asRecord(input);
-    const path = readOptionalString(record?.path);
-    if (!path) {
-      throw new Error("path is required");
-    }
-
-    return (await this.invoke("git.inspect", { path })) as Rpc.GitInspectResponse;
-  }
-
-  private async trackGitChanges(input: Rpc.GitPathsInput): Promise<Rpc.GitStatusOperationResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("git.track", {
-      workspaceId,
-      paths: readOptionalStringArray(record?.relativePaths) ?? [],
-    })) as Rpc.GitStatusOperationResponse;
-  }
-
-  private async unstageGitChanges(input: Rpc.GitPathsInput): Promise<Rpc.GitStatusOperationResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("git.unstage", {
-      workspaceId,
-      paths: readOptionalStringArray(record?.relativePaths) ?? [],
-    })) as Rpc.GitStatusOperationResponse;
-  }
-
-  private async revertGitChanges(input: Rpc.GitPathsInput): Promise<Rpc.GitStatusOperationResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("git.revert", {
-      workspaceId,
-      paths: readOptionalStringArray(record?.relativePaths) ?? [],
-    })) as Rpc.GitStatusOperationResponse;
-  }
-
-  private async commitGitChanges(input: Rpc.GitCommitInput): Promise<string> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("git.commit", {
-      workspaceId,
-      message: readOptionalString(record?.message) || "",
-      amend: readOptionalBoolean(record?.amend),
-      signoff: readOptionalBoolean(record?.signoff),
-    })) as string;
-  }
-
-  private async getGitBranchStatus(input: Rpc.GitWorktreeInput): Promise<Rpc.GitBranchStatusResponse> {
-    const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("git.branchStatus", { workspaceId })) as Rpc.GitBranchStatusResponse;
-  }
-
-  private async listGitCommitsToTarget(input: Rpc.GitTargetBranchInput): Promise<Rpc.GitCommitComparisonResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const targetBranch = readOptionalString(record?.targetBranch);
-    if (!targetBranch) {
-      throw new Error("targetBranch is required");
-    }
-    return (await this.invoke("git.commitsToTarget", { workspaceId, targetBranch })) as Rpc.GitCommitComparisonResponse;
-  }
-
-  private async getGitBranchDiffSummary(input: Rpc.GitTargetBranchInput): Promise<Rpc.GitBranchDiffSummaryResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const targetBranch = readOptionalString(record?.targetBranch);
-    if (!targetBranch) {
-      throw new Error("targetBranch is required");
-    }
-    return (await this.invoke("git.branchDiffSummary", { workspaceId, targetBranch })) as Rpc.GitBranchDiffSummaryResponse;
-  }
-
-  private async readGitCommitDiff(input: Rpc.GitCommitDiffInput): Promise<Rpc.GitDiffContentResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const commitHash = readOptionalString(record?.commitHash);
-    const relativePath = readOptionalString(record?.relativePath);
-    if (!commitHash || !relativePath) {
-      throw new Error("commitHash and relativePath are required");
-    }
-    return (await this.invoke("git.commitDiff", {
-      workspaceId,
-      commitHash,
-      path: relativePath,
-    })) as Rpc.GitDiffContentResponse;
-  }
-
-  private async readGitBranchComparisonDiff(input: Rpc.GitBranchDiffInput): Promise<Rpc.GitDiffContentResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const targetBranch = readOptionalString(record?.targetBranch);
-    const relativePath = readOptionalString(record?.relativePath);
-    if (!targetBranch || !relativePath) {
-      throw new Error("targetBranch and relativePath are required");
-    }
-    return (await this.invoke("git.branchDiff", {
-      workspaceId,
-      targetBranch,
-      path: relativePath,
-    })) as Rpc.GitDiffContentResponse;
-  }
-
-  private async listGitBranches(input: Rpc.GitWorktreeInput): Promise<Rpc.GitBranchListResponse> {
-    const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("git.branches", { workspaceId })) as Rpc.GitBranchListResponse;
-  }
-
-  private async pushGitBranch(input: Rpc.GitWorktreeInput): Promise<string> {
-    const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("git.push", { workspaceId })) as string;
-  }
-
-  private async publishGitBranch(input: Rpc.GitWorktreeInput): Promise<string> {
-    const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("git.publish", { workspaceId })) as string;
-  }
-
-  private async renameGitBranch(input: Rpc.GitRenameBranchInput): Promise<Rpc.GitStatusOperationResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    const nextBranch = readOptionalString(record?.nextBranch);
-    if (!nextBranch) {
-      throw new Error("nextBranch is required");
-    }
-    return (await this.invoke("git.renameBranch", { workspaceId, nextBranch })) as Rpc.GitStatusOperationResponse;
-  }
-
-  private async getGitAuthorName(input: Rpc.GitWorktreeInput): Promise<string> {
-    const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("git.authorName", { workspaceId })) as string;
-  }
-
-  private async createTerminalSession(
-    input: Rpc.TerminalCreateSessionInput,
-  ): Promise<Rpc.TerminalCreateSessionResponse> {
-    const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
-    return (await this.invoke("terminal.start", {
-      workspaceId,
-      command: readOptionalString(record?.command),
-      args: readOptionalStringArray(record?.args),
-      env: readOptionalStringArray(record?.env),
-      tabId: readOptionalString(record?.tabId),
-      paneId: readOptionalString(record?.paneId),
-    })) as Rpc.TerminalCreateSessionResponse;
-  }
-
-  private async writeTerminalInput(input: Rpc.TerminalWriteInput): Promise<Rpc.TerminalMutationOkResponse> {
-    const record = asRecord(input);
-    const rawData = record?.data;
-    const data = rawData instanceof Uint8Array ? rawData : typeof rawData === "string" ? rawData : "";
-    const sessionId = readOptionalString(record?.sessionId) || "";
-
-    // Fast path: send as binary WebSocket frame — zero JSON overhead.
-    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      this.sendTerminalInputBinary(sessionId, data);
-      return { ok: true };
-    }
-
-    // Fallback: socket is not open yet (rare — e.g. reconnection in progress).
-    // Use full request/response to ensure the connection is re-established.
-    await this.invoke("terminal.send", { sessionId, input: typeof data === "string" ? data : terminalFrameTextDecoder.decode(data) });
-    return { ok: true };
-  }
-
-  private async resizeTerminal(input: Rpc.TerminalResizeInput): Promise<Rpc.TerminalMutationOkResponse> {
-    const record = asRecord(input);
-    await this.invoke("terminal.resize", {
-      sessionId: readOptionalString(record?.sessionId) || "",
-      cols: Math.max(1, Math.floor(readOptionalNumber(record?.cols) ?? 80)),
-      rows: Math.max(1, Math.floor(readOptionalNumber(record?.rows) ?? 24)),
-    });
-    return { ok: true };
-  }
-
-  private async closeTerminalSession(input: Rpc.TerminalCloseInput): Promise<Rpc.TerminalMutationOkResponse> {
-    const record = asRecord(input);
-    const sessionId = readOptionalString(record?.sessionId) || "";
-    await this.invoke("terminal.stop", { sessionId });
-    this.dropTerminalSubscriptionsForSession(sessionId);
-    this.terminalNextIndexBySessionId.delete(sessionId);
-    return { ok: true };
-  }
-
-  private async killTerminalProcess(input: Rpc.TerminalKillProcessInput): Promise<Rpc.TerminalMutationOkResponse> {
-    const record = asRecord(input);
-    const pid = Math.floor(readOptionalNumber(record?.pid) ?? 0);
-    await this.invoke("terminal.killProcess", { pid });
-    return { ok: true };
-  }
-
-  private async readTerminalOutput(input: Rpc.TerminalReadOutputInput): Promise<Rpc.TerminalReadOutputResponse> {
-    const record = asRecord(input);
-    const sessionId = readOptionalString(record?.sessionId) || "";
-    const fromIndex = Math.max(0, Math.floor(readOptionalNumber(record?.fromIndex) ?? 0));
-    const daemonSnapshot = asRecord(await this.invoke("terminal.read", { sessionId })) ?? {};
-    const output = typeof daemonSnapshot.output === "string" ? daemonSnapshot.output : "";
-    const running = daemonSnapshot.running === true;
-    const chunks = output ? [output] : [];
-    const currentIndex = Math.max(this.terminalNextIndexBySessionId.get(sessionId) ?? 0, fromIndex);
-    const nextIndex = currentIndex + chunks.length;
-    this.terminalNextIndexBySessionId.set(sessionId, nextIndex);
-    return { nextIndex, chunks, exited: !running };
-  }
-
-  private async listDetectedTerminalPorts(): Promise<Rpc.TerminalDetectedPort[]> {
-    const ports = await this.invoke("terminal.listDetectedPorts", {});
-    if (!Array.isArray(ports)) {
-      return [];
-    }
-    return ports.flatMap((entry) => {
-      const record = asRecord(entry);
-      if (!record) {
-        return [];
-      }
-      const sessionId = readOptionalString(record.sessionId);
-      const workspaceId = readOptionalString(record.workspaceId);
-      const pid = readOptionalNumber(record.pid);
-      const port = readOptionalNumber(record.port);
-      if (!sessionId || !workspaceId || pid === undefined || port === undefined) {
-        return [];
-      }
-      return [
-        {
-          sessionId,
-          workspaceId,
-          pid,
-          port,
-          address: readOptionalString(record.address) || readOptionalString(record.host) || "0.0.0.0",
-          processName: readOptionalString(record.processName) || "unknown",
-        },
-      ];
-    });
-  }
-
-  private async getTerminalResourceUsage(): Promise<Rpc.TerminalResourceUsageSnapshot> {
-    return { processes: [] };
-  }
-
-  private async listTerminalSessions(input?: Rpc.TerminalListSessionsInput): Promise<Rpc.TerminalSessionSummary[]> {
-    return (await this.invoke("terminal.listSessions", input ?? {})) as Rpc.TerminalSessionSummary[];
-  }
+  // ─── Public API ─────────────────────────────────────────────────────────────
 
   async invokeApi(options: {
     namespace: Rpc.ApiNamespace;
@@ -1093,8 +488,9 @@ export class DaemonClient {
             // Accept both string (JSON-RPC) and Uint8Array (binary fast-path) chunks.
             const rawChunk = payload.chunk;
             const chunk = rawChunk instanceof Uint8Array ? rawChunk : typeof rawChunk === "string" ? rawChunk : "";
-            const nextIndex = (this.terminalNextIndexBySessionId.get(eventSessionId) ?? 0) + 1;
-            this.terminalNextIndexBySessionId.set(eventSessionId, nextIndex);
+            const terminalNextIndexBySessionId = this._terminalClient.terminalNextIndexBySessionId;
+            const nextIndex = (terminalNextIndexBySessionId.get(eventSessionId) ?? 0) + 1;
+            terminalNextIndexBySessionId.set(eventSessionId, nextIndex);
             options.onNotification({
               method: event.method,
               payload: {
@@ -1115,7 +511,7 @@ export class DaemonClient {
     }
 
     if (options.namespace === "terminal" && options.method === "subscribeSessions") {
-      const subscriptionId = createRandomId();
+      const subscriptionId = generateId();
       this.subscriptionsById.set(subscriptionId, {
         method: "terminal.sessions",
         onNotification: options.onNotification,
@@ -1166,34 +562,11 @@ export class DaemonClient {
       return;
     }
 
-    if (!this.hasTerminalSubscriptionForSession(sessionId)) {
-      this.terminalNextIndexBySessionId.delete(sessionId);
+    if (!this._terminalClient.hasSubscriptionForSession(sessionId)) {
+      this._terminalClient.terminalNextIndexBySessionId.delete(sessionId);
     }
     if (subscription.registeredWithDaemon) {
       void this.sendRequest("terminal.unsubscribe", { sessionId }).catch(() => undefined);
-    }
-  }
-
-  private hasTerminalSubscriptionForSession(sessionId: string): boolean {
-    for (const subscription of this.subscriptionsById.values()) {
-      if (subscription.method !== "terminal.subscribe") {
-        continue;
-      }
-      if (readOptionalString(asRecord(subscription.params)?.sessionId) === sessionId) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private dropTerminalSubscriptionsForSession(sessionId: string): void {
-    for (const [subscriptionId, subscription] of this.subscriptionsById.entries()) {
-      if (subscription.method !== "terminal.subscribe") {
-        continue;
-      }
-      if (readOptionalString(asRecord(subscription.params)?.sessionId) === sessionId) {
-        this.subscriptionsById.delete(subscriptionId);
-      }
     }
   }
 
@@ -1216,72 +589,4 @@ export class DaemonClient {
     this.socket?.close();
     this.socket = null;
   }
-}
-
-function readDaemonWorkspacePullRequest(value: unknown): Rpc.DaemonWorkspacePullRequest | undefined {
-  const record = asRecord(value);
-  if (!record) {
-    return undefined;
-  }
-
-  const numberValue = typeof record.number === "number" ? record.number : null;
-  if (!numberValue || !Number.isFinite(numberValue)) {
-    return undefined;
-  }
-
-  return {
-    number: numberValue,
-    title: readOptionalString(record.title),
-    url: readOptionalString(record.url),
-    branch: readOptionalString(record.branch),
-    baseBranch: readOptionalString(record.baseBranch),
-    githubState: readOptionalString(record.githubState),
-    status: readOptionalString(record.status),
-    reviewDecision: readOptionalString(record.reviewDecision),
-    isDraft: readOptionalBoolean(record.isDraft) ?? undefined,
-    complete: readOptionalBoolean(record.complete) ?? undefined,
-    updatedAt: readOptionalString(record.updatedAt),
-    checks: Array.isArray(record.checks)
-      ? record.checks.map((item) => readDaemonWorkspacePullRequestCheck(item)).filter((item) => item !== undefined)
-      : undefined,
-    deployments: Array.isArray(record.deployments)
-      ? record.deployments.map((item) => readDaemonWorkspacePullRequestDeployment(item)).filter((item) => item !== undefined)
-      : undefined,
-  };
-}
-
-function readDaemonWorkspacePullRequestCheck(value: unknown): Rpc.DaemonWorkspacePullRequestCheck | undefined {
-  const record = asRecord(value);
-  const name = readOptionalString(record?.name);
-  const state = readOptionalString(record?.state);
-  if (!record || !name || !state) {
-    return undefined;
-  }
-
-  return {
-    name,
-    workflow: readOptionalString(record.workflow),
-    state,
-    description: readOptionalString(record.description),
-    url: readOptionalString(record.url),
-  };
-}
-
-function readDaemonWorkspacePullRequestDeployment(value: unknown): Rpc.DaemonWorkspacePullRequestDeployment | undefined {
-  const record = asRecord(value);
-  const id = typeof record?.id === "number" ? record.id : null;
-  if (!record || !id || !Number.isFinite(id)) {
-    return undefined;
-  }
-
-  return {
-    id,
-    environment: readOptionalString(record.environment),
-    state: readOptionalString(record.state),
-    description: readOptionalString(record.description),
-    environmentUrl: readOptionalString(record.environmentUrl),
-    createdAt: readOptionalString(record.createdAt),
-    updatedAt: readOptionalString(record.updatedAt),
-    originalPayload: readOptionalString(record.originalPayload),
-  };
 }

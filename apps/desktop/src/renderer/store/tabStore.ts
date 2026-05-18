@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { generateId } from "../helpers/generateId";
 import { resolveSelectedTabIdForWorkspace } from "./tabs";
 import {
   closeAllTabsState,
@@ -64,11 +65,7 @@ export type TabStoreState = {
 
 /** Creates a client-only tab id for local UI tab lifecycle. */
 function createClientTabId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-
-  return `tab-${Date.now()}`;
+  return generateId();
 }
 
 /** Reads current workspace state for both real store and selector-mocked tests. */

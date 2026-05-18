@@ -160,8 +160,3 @@ export function createMuiThemeOptions(mode: DesignTokenThemeMode) {
     },
   };
 }
-
-/**
- * Exposes dark surface aliases for existing desktop consumers while migrating to semantic tokens.
- */
-export const MUI_DARK_SURFACE_COLORS = DARK_SURFACE_COLORS;

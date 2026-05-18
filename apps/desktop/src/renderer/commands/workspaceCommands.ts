@@ -5,6 +5,7 @@ import {
   normalizeCreateWorkspaceInput,
   summarizeReconciledWorkspaceGitChangeTotals,
 } from "../helpers/workspaceHelpers";
+import { generateId } from "../helpers/generateId";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { layoutStore } from "../store/layoutStore";
 import { sessionStore } from "../store/sessionStore";
@@ -140,11 +141,7 @@ function isReauthRequiredRemoteSyncWarning(message: string): boolean {
 }
 
 function createWorkspaceId(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return generateId();
 }
 
 const WORKSPACE_CREATE_STEP_DISPLAY_MS = 200;

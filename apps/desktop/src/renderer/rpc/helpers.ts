@@ -1,12 +1,5 @@
 import type * as Rpc from "./daemonTypes";
-
-function randomRequestId(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
+import { generateId } from "../helpers/generateId";
 
 function toWebSocketPayload(data: unknown): string {
   if (typeof data === "string") {
@@ -71,7 +64,7 @@ export function normalizeWorktreePath(worktreePath: string): string {
 export function buildRequest(method: string, params?: unknown): Rpc.JsonRpcRequest {
   return {
     jsonrpc: "2.0",
-    id: randomRequestId(),
+    id: generateId(),
     method,
     params,
   };
