@@ -122,7 +122,7 @@ export type WorkspaceOpenInput = {
   orgId?: string;
   projectId?: string;
   /** When true the daemon skips PR polling — the latest PR is already merged. */
-  prAlreadyMerged?: boolean;
+  pullRequestAlreadyMerged?: boolean;
 };
 
 export type PersistAuthTokensInput = {

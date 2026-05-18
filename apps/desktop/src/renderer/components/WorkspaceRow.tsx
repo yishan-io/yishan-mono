@@ -13,7 +13,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
 import { LuArchive, LuLoaderCircle } from "react-icons/lu";
 import { buildListItemButtonSx } from "../helpers/leftPaneStyles";
-import type { RepoWorkspaceItem, WorkspaceGitChangeTotals } from "../store/types";
+import type { WorkspaceItem, WorkspaceGitChangeTotals } from "../store/types";
 import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
 import { CliSpinner } from "./CliSpinner";
 import { GitChangeTotals } from "./GitChangeTotals";
@@ -35,7 +35,7 @@ const INDICATOR_TEST_ID_SLUG: Record<WorkspaceBadgeIndicator, string> = {
 
 type WorkspaceRowProps = {
   repoId: string;
-  workspace: RepoWorkspaceItem;
+  workspace: WorkspaceItem;
   isSelected: boolean;
   indicator: WorkspaceRowIndicator;
   changeTotals?: WorkspaceGitChangeTotals;

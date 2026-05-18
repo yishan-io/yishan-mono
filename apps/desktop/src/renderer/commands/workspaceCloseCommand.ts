@@ -45,7 +45,7 @@ function notifyWorkspaceCloseFailure(input: { workspaceName?: string; error: unk
 }
 
 /** Runs backend workspace-close cleanup without blocking UI state updates. */
-async function closeWorkspaceInBackground(input: {
+async function removeWorkspaceInBackground(input: {
   workspaceId: string;
   workspaceName: string;
   organizationId?: string;
@@ -92,13 +92,13 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
   const projectId = workspace.projectId ?? workspace.repoId;
   const project = store.projects.find((item) => item.id === projectId);
 
-  store.closeWorkspace({
+  store.removeWorkspace({
     repoId: projectId,
     workspaceId,
   });
   syncTabStoreWithWorkspace(previousWorkspaces);
 
-  void closeWorkspaceInBackground({
+  void removeWorkspaceInBackground({
     workspaceId,
     workspaceName: workspace.name,
     organizationId:

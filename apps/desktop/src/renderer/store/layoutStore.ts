@@ -22,8 +22,8 @@ type LayoutStoreState = {
   popupCount: number;
   isPopupOpen: boolean;
 
-  setLeftWidth: (width: number) => void;
-  setRightWidth: (width: number) => void;
+  setLeftPaneWidth: (width: number) => void;
+  setRightPaneWidth: (width: number) => void;
   setThemePreference: (preference: AppThemePreference) => void;
   setIsLeftPaneManuallyHidden: (hidden: boolean) => void;
   setIsRightPaneManuallyHidden: (hidden: boolean) => void;
@@ -45,10 +45,10 @@ export const layoutStore = create<LayoutStoreState>()(
       popupCount: 0,
       isPopupOpen: false,
 
-      setLeftWidth: (leftWidth) => {
+      setLeftPaneWidth: (leftWidth) => {
         set({ leftWidth });
       },
-      setRightWidth: (rightWidth) => {
+      setRightPaneWidth: (rightWidth) => {
         set({ rightWidth });
       },
       setThemePreference: (themePreference) => {

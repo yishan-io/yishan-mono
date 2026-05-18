@@ -12,7 +12,7 @@ const mocked = vi.hoisted(() => ({
   getTerminalResourceUsage: vi.fn(),
   setSelectedRepoId: vi.fn(),
   setSelectedWorkspaceId: vi.fn(),
-  setSelectedTabId: vi.fn(),
+  selectTab: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -34,7 +34,7 @@ vi.mock("../../hooks/useCommands", () => ({
     getTerminalResourceUsage: mocked.getTerminalResourceUsage,
     setSelectedRepoId: mocked.setSelectedRepoId,
     setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
-    setSelectedTabId: mocked.setSelectedTabId,
+    selectTab: mocked.selectTab,
   }),
 }));
 
@@ -48,7 +48,7 @@ describe("Resource usage shared polling", () => {
     mocked.getTerminalResourceUsage.mockReset();
     mocked.setSelectedRepoId.mockReset();
     mocked.setSelectedWorkspaceId.mockReset();
-    mocked.setSelectedTabId.mockReset();
+    mocked.selectTab.mockReset();
     mocked.getTerminalResourceUsage.mockResolvedValue({
       totalCpuPercent: 12,
       totalMemoryBytes: 96 * 1024 * 1024,

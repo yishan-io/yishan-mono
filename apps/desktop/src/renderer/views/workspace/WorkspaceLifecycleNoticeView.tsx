@@ -15,7 +15,7 @@ import { workspaceLifecycleNoticeStore } from "../../store/workspaceLifecycleNot
 
 /** Renders in-app snackbar and detail dialog for lifecycle script warnings. */
 export function WorkspaceLifecycleNoticeView() {
-  const activeNotice = workspaceLifecycleNoticeStore((state) => state.queue[0] ?? null);
+  const activeNotice = workspaceLifecycleNoticeStore((state) => state.noticeQueue[0] ?? null);
   const detailNotice = workspaceLifecycleNoticeStore((state) => state.detailNotice);
   const dismissActiveNotice = workspaceLifecycleNoticeStore((state) => state.dismissActiveNotice);
   const openActiveNoticeDetails = workspaceLifecycleNoticeStore((state) => state.openActiveNoticeDetails);

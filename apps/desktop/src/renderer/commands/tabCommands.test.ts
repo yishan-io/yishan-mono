@@ -344,7 +344,7 @@ describe("tabCommands", () => {
   });
 
   it("delegates tab state updates to tab store", () => {
-    const setSelectedTabId = vi.fn();
+    const selectTab = vi.fn();
     const openTabState = vi.fn();
     const toggleTabPinnedState = vi.fn();
     const reorderTabState = vi.fn();
@@ -353,7 +353,7 @@ describe("tabCommands", () => {
     const markFileTabSavedState = vi.fn();
 
     tabStore.setState({
-      setSelectedTabId,
+      selectTab,
       openTab: openTabState,
       toggleTabPinned: toggleTabPinnedState,
       reorderTab: reorderTabState,
@@ -370,7 +370,7 @@ describe("tabCommands", () => {
     updateFileTabContent("tab-1", "next");
     markFileTabSaved("tab-1");
 
-    expect(setSelectedTabId).toHaveBeenCalledWith("tab-1");
+    expect(selectTab).toHaveBeenCalledWith("tab-1");
     expect(openTabState).toHaveBeenCalledWith(
       { workspaceId: "workspace-1", kind: "file", path: "a.ts", content: "x" },
       { activePaneTabIds: undefined },

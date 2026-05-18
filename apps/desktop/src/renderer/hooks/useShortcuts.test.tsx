@@ -25,7 +25,7 @@ const mocks = vi.hoisted(() => ({
       { id: "tab-1", workspaceId: "workspace-1", title: "Tab 1", pinned: false, kind: "session", data: {} },
     ]),
     setSelectedWorkspaceId: vi.fn(),
-    setSelectedTabId: vi.fn(),
+    selectTab: vi.fn(),
     retainWorkspaceTabs: vi.fn(() => []),
     createTab: vi.fn(async () => undefined),
     resolveSessionTab: vi.fn(),
@@ -59,8 +59,8 @@ const mocks = vi.hoisted(() => ({
     setSelectedWorkspaceId: vi.fn(),
     setDisplayProjectIds: vi.fn(),
     setLastUsedExternalAppId: vi.fn(),
-    setLeftWidth: vi.fn(),
-    setRightWidth: vi.fn(),
+    setLeftPaneWidth: vi.fn(),
+    setRightPaneWidth: vi.fn(),
     load: vi.fn(),
     createProject: vi.fn(),
     deleteProject: vi.fn(),
@@ -78,7 +78,7 @@ const mocks = vi.hoisted(() => ({
     createTab: vi.fn(),
     closeTab: vi.fn(),
     openTab: vi.fn(),
-    setSelectedTabId: vi.fn(),
+    selectTab: vi.fn(),
   },
 }));
 

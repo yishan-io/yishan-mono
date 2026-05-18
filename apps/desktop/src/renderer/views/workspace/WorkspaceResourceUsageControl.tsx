@@ -24,7 +24,7 @@ export function WorkspaceResourceUsageControl() {
   const isInRouterContext = useInRouterContext();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const tabs = tabStore((state) => state.tabs);
-  const { getTerminalResourceUsage, setSelectedTabId, setSelectedWorkspaceId } = useCommands();
+  const { getTerminalResourceUsage, selectTab, setSelectedWorkspaceId } = useCommands();
   const [resourceMenuAnchorEl, setResourceMenuAnchorEl] = useState<null | HTMLElement>(null);
   const closeResourceMenu = useCallback(() => {
     setResourceMenuAnchorEl(null);
@@ -130,7 +130,7 @@ export function WorkspaceResourceUsageControl() {
           const targetTab = terminalTabBySessionId.get(sessionId);
           if (targetTab) {
             setSelectedWorkspaceId(targetTab.workspaceId);
-            setSelectedTabId(targetTab.id);
+            selectTab(targetTab.id);
           }
           closeResourceMenu();
         }}

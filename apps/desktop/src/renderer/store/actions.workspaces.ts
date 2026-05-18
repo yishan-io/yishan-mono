@@ -10,7 +10,7 @@ import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetSt
 type WorkspaceActions = Pick<
   WorkspaceStoreActions,
   | "addWorkspace"
-  | "closeWorkspace"
+  | "removeWorkspace"
   | "renameWorkspace"
   | "renameWorkspaceBranch"
   | "setWorkspaceGitChangesCount"
@@ -40,7 +40,6 @@ export function createWorkspaceActions(set: WorkspaceStoreSetState, _get: Worksp
         applyCreatedWorkspaceState(state, {
           projectId: resolvedProjectId,
           normalizedName: name,
-          normalizedTitle: name,
           normalizedBranch: branch,
           backendWorkspace: {
             workspaceId,
@@ -53,7 +52,7 @@ export function createWorkspaceActions(set: WorkspaceStoreSetState, _get: Worksp
         });
       });
     },
-    closeWorkspace: ({ projectId, repoId, workspaceId }) => {
+    removeWorkspace: ({ projectId, repoId, workspaceId }) => {
       const resolvedProjectId = resolveProjectId({ projectId, repoId });
       if (!resolvedProjectId || !workspaceId) {
         return;

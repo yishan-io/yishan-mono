@@ -1,8 +1,8 @@
+import type { ProjectRecord, WorkspaceRecord } from "../api/types";
 import { buildWorkspaceStateFromData } from "../store/state";
 import { getFileName } from "../store/tabs";
-import type { ProjectRecord, WorkspaceRecord } from "../api/types";
 import type {
-  RepoWorkspaceItem,
+  WorkspaceItem,
   WorkspaceProjectRecord,
   WorkspaceStoreOrganizationPreference,
   WorkspaceStoreState,
@@ -65,7 +65,8 @@ export function readPersistedWorkspacePreferencesByOrg(
       }
 
       return {
-        selectedProjectId: typeof scopedPreferences.selectedProjectId === "string" ? scopedPreferences.selectedProjectId : undefined,
+        selectedProjectId:
+          typeof scopedPreferences.selectedProjectId === "string" ? scopedPreferences.selectedProjectId : undefined,
         selectedWorkspaceId:
           typeof scopedPreferences.selectedWorkspaceId === "string" ? scopedPreferences.selectedWorkspaceId : undefined,
         displayProjectIds: Array.isArray(scopedPreferences.displayProjectIds)
@@ -79,7 +80,8 @@ export function readPersistedWorkspacePreferencesByOrg(
     }
 
     return {
-      selectedProjectId: typeof parsed.state?.selectedProjectId === "string" ? parsed.state.selectedProjectId : undefined,
+      selectedProjectId:
+        typeof parsed.state?.selectedProjectId === "string" ? parsed.state.selectedProjectId : undefined,
       selectedWorkspaceId:
         typeof parsed.state?.selectedWorkspaceId === "string" ? parsed.state.selectedWorkspaceId : undefined,
       displayProjectIds: Array.isArray(parsed.state?.displayProjectIds)
@@ -106,9 +108,12 @@ function filterWorkspaceScopedRecord<T>(record: Record<string, T>, workspaceIdSe
 }
 
 /** Maps backend API data into workspace projects and open workspaces. */
-function mapApiData(projects: ProjectRecord[], workspacesFromApi: WorkspaceRecord[]): {
+function mapApiData(
+  projects: ProjectRecord[],
+  workspacesFromApi: WorkspaceRecord[],
+): {
   projects: WorkspaceProjectRecord[];
-  workspaces: RepoWorkspaceItem[];
+  workspaces: WorkspaceItem[];
 } {
   const preferredWorkspaceByProjectId = new Map<string, WorkspaceRecord>();
   for (const workspace of workspacesFromApi) {
@@ -159,13 +164,16 @@ function mapApiData(projects: ProjectRecord[], workspacesFromApi: WorkspaceRecor
           projectId: workspace.projectId,
           repoId: workspace.projectId,
           name: workspace.kind === "primary" ? "local" : (workspace.branch ?? "workspace"),
-          title: workspace.kind === "primary" ? "local" : getFileName(workspace.localPath ?? "") || workspace.branch || "workspace",
+          title:
+            workspace.kind === "primary"
+              ? "local"
+              : getFileName(workspace.localPath ?? "") || workspace.branch || "workspace",
           sourceBranch: workspace.sourceBranch ?? "",
           branch: workspace.branch ?? "main",
           summaryId: workspace.id,
           worktreePath: workspace.localPath,
           kind: "managed",
-        }) satisfies RepoWorkspaceItem,
+        }) satisfies WorkspaceItem,
     );
 
   return {

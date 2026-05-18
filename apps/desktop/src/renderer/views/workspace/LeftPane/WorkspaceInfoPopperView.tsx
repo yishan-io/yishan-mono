@@ -5,12 +5,12 @@ import type { WorkspacePullRequestSummary } from "../../../api/types";
 import { PullRequestIcon } from "../../../components/PullRequestIcon";
 import { livePrStatus } from "../../../helpers/pullRequestUtils";
 import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
-import type { RepoWorkspaceItem } from "../../../store/types";
+import type { WorkspaceItem } from "../../../store/types";
 
 type WorkspaceInfoPopperViewProps = {
   open: boolean;
   anchorEl: HTMLElement | null;
-  workspace: RepoWorkspaceItem | undefined;
+  workspace: WorkspaceItem | undefined;
   isPrimaryWorkspace: boolean;
   /** Live current branch read from the workspace path via the daemon. */
   currentBranch?: string;

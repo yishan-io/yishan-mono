@@ -24,7 +24,7 @@ export function WorkspacePortsMenuControl() {
   const isInRouterContext = useInRouterContext();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const tabs = tabStore((state) => state.tabs);
-  const { killTerminalProcess, listDetectedPorts, setSelectedTabId, setSelectedWorkspaceId } = useCommands();
+  const { killTerminalProcess, listDetectedPorts, selectTab, setSelectedWorkspaceId } = useCommands();
   const [portsMenuAnchorEl, setPortsMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [detectedPorts, setDetectedPorts] = useState<TerminalDetectedPort[]>([]);
   const [isKillingByRowId, setIsKillingByRowId] = useState<Record<string, boolean>>({});
@@ -137,7 +137,7 @@ export function WorkspacePortsMenuControl() {
           const targetTab = terminalTabBySessionId.get(sessionId);
           if (targetTab) {
             setSelectedWorkspaceId(targetTab.workspaceId);
-            setSelectedTabId(targetTab.id);
+            selectTab(targetTab.id);
           }
           closePortsMenu();
         }}

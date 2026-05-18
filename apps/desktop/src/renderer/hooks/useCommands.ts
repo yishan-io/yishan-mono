@@ -126,8 +126,8 @@ export type Commands = {
   checkGitHubConnectionStatus: typeof checkGitHubConnectionStatusCommand;
   setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
   setLastUsedExternalAppId: typeof setLastUsedExternalAppIdCommand;
-  setLeftWidth: typeof setLeftPaneWidthCommand;
-  setRightWidth: typeof setRightPaneWidthCommand;
+  setLeftPaneWidth: typeof setLeftPaneWidthCommand;
+  setRightPaneWidth: typeof setRightPaneWidthCommand;
   toggleLeftPaneVisibility: typeof toggleLeftPaneVisibilityCommand;
   toggleRightPaneVisibility: typeof toggleRightPaneVisibilityCommand;
   activateWorkspacePane: typeof activateWorkspacePaneCommand;
@@ -213,7 +213,7 @@ export type Commands = {
   }) => Promise<string | undefined>;
   closeWorkspace: (workspaceId: string, options?: { removeBranch?: boolean }) => Promise<void>;
   refreshWorkspaceGitChanges: (workspaceId: string, workspaceWorktreePath: string) => Promise<void>;
-  setSelectedTabId: typeof setSelectedTabCommand;
+  selectTab: typeof setSelectedTabCommand;
   createTab: (input?: { workspaceId?: string }) => Promise<void>;
   openTab: typeof openTabCommand;
   closeTab: (tabId: string) => void;
@@ -242,8 +242,8 @@ export function useCommands(): Commands {
       checkGitHubConnectionStatus: checkGitHubConnectionStatusCommand,
       setDisplayRepoIds: setDisplayRepoIdsCommand,
       setLastUsedExternalAppId: setLastUsedExternalAppIdCommand,
-      setLeftWidth: setLeftPaneWidthCommand,
-      setRightWidth: setRightPaneWidthCommand,
+      setLeftPaneWidth: setLeftPaneWidthCommand,
+      setRightPaneWidth: setRightPaneWidthCommand,
       toggleLeftPaneVisibility: toggleLeftPaneVisibilityCommand,
       toggleRightPaneVisibility: toggleRightPaneVisibilityCommand,
       activateWorkspacePane: activateWorkspacePaneCommand,
@@ -311,7 +311,7 @@ export function useCommands(): Commands {
       updateNotificationPreferences: updateNotificationPreferencesCommand,
       previewNotification: previewNotificationCommand,
       playNotificationSound: playNotificationSoundCommand,
-      setSelectedTabId: setSelectedTabCommand,
+      selectTab: setSelectedTabCommand,
       loadWorkspaceFromBackend: loadWorkspaceFromBackendCommand,
       inspectLocalProjectSource: inspectLocalProjectSourceCommand,
       createProject: createProjectCommand,

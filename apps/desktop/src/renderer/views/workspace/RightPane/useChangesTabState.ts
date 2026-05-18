@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  type ProjectCommitComparisonCommit,
-  type ProjectCommitComparisonData,
-  type ProjectCommitComparisonSelection,
+import type {
+  ProjectCommitComparisonCommit,
+  ProjectCommitComparisonData,
+  ProjectCommitComparisonSelection,
 } from "../../../components/ProjectCommitComparison";
-import { type ProjectGitChangeKind, type ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
+import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
 import { useCommands } from "../../../hooks/useCommands";
 import { workspaceStore } from "../../../store/workspaceStore";
 
@@ -221,8 +221,12 @@ function buildAllCommitChangesSection(
 
 export function useChangesTabState() {
   const { t } = useTranslation();
-  const [repoChangesBySection, setRepoChangesBySection] = useState<RepoChangesBySection>(createEmptyRepoChangesBySection);
-  const [repoCommitComparison, setRepoCommitComparison] = useState<ProjectCommitComparisonData>(createEmptyRepoCommitComparison);
+  const [repoChangesBySection, setRepoChangesBySection] = useState<RepoChangesBySection>(
+    createEmptyRepoChangesBySection,
+  );
+  const [repoCommitComparison, setRepoCommitComparison] = useState<ProjectCommitComparisonData>(
+    createEmptyRepoCommitComparison,
+  );
   const [isRepoChangesLoading, setIsRepoChangesLoading] = useState(false);
   const [isCommitComparisonLoading, setIsCommitComparisonLoading] = useState(false);
   const [selectedComparison, setSelectedComparison] = useState<ProjectCommitComparisonSelection>("uncommitted");
@@ -235,8 +239,13 @@ export function useChangesTabState() {
   );
   const selectedWorkspaceWorktreePath = selectedWorkspace?.worktreePath;
   const selectedWorkspaceSourceBranch = workspaceStore((state) => {
-    const ws = state.workspaces.find((w) => w.id === state.selectedWorkspaceId);
-    const raw = ws?.sourceBranch?.trim() || (state.projects ?? []).find((p) => p.id === (ws?.projectId ?? ws?.repoId))?.defaultBranch?.trim() || "main";
+    const workspace = state.workspaces.find((w) => w.id === state.selectedWorkspaceId);
+    const raw =
+      workspace?.sourceBranch?.trim() ||
+      (state.projects ?? [])
+        .find((project) => project.id === (workspace?.projectId ?? workspace?.repoId))
+        ?.defaultBranch?.trim() ||
+      "main";
     return raw.includes("/") ? raw : `origin/${raw}`;
   });
   const workspaceGitRefreshVersion = workspaceStore((state) => {
@@ -287,7 +296,8 @@ export function useChangesTabState() {
     const requestId = repoChangesLoadRequestIdRef.current + 1;
     repoChangesLoadRequestIdRef.current = requestId;
     const shouldShowLoadingForRequest =
-      Boolean(selectedWorkspaceWorktreePath) && pendingWorkspaceSwitchLoadPathRef.current === selectedWorkspaceWorktreePath;
+      Boolean(selectedWorkspaceWorktreePath) &&
+      pendingWorkspaceSwitchLoadPathRef.current === selectedWorkspaceWorktreePath;
 
     if (!selectedWorkspaceWorktreePath) {
       setRepoChangesBySection(createEmptyRepoChangesBySection());
@@ -302,9 +312,15 @@ export function useChangesTabState() {
     try {
       const response = await listGitChanges({ workspaceWorktreePath: selectedWorkspaceWorktreePath });
       const dedupedResponse: RepoChangesBySection = {
-        unstaged: dedupeRepoChangeFiles(response.unstaged.map((file) => ({ ...file, kind: normalizeProjectGitChangeKind(file.kind) }))),
-        staged: dedupeRepoChangeFiles(response.staged.map((file) => ({ ...file, kind: normalizeProjectGitChangeKind(file.kind) }))),
-        untracked: dedupeRepoChangeFiles(response.untracked.map((file) => ({ ...file, kind: normalizeProjectGitChangeKind(file.kind) }))),
+        unstaged: dedupeRepoChangeFiles(
+          response.unstaged.map((file) => ({ ...file, kind: normalizeProjectGitChangeKind(file.kind) })),
+        ),
+        staged: dedupeRepoChangeFiles(
+          response.staged.map((file) => ({ ...file, kind: normalizeProjectGitChangeKind(file.kind) })),
+        ),
+        untracked: dedupeRepoChangeFiles(
+          response.untracked.map((file) => ({ ...file, kind: normalizeProjectGitChangeKind(file.kind) })),
+        ),
       };
       setRepoChangesBySection(reconcileRenameLikePairs(dedupedResponse));
       if (shouldShowLoadingForRequest && repoChangesLoadRequestIdRef.current === requestId) {
@@ -401,7 +417,11 @@ export function useChangesTabState() {
         allPaths.add(normalized);
       }
     }
-    for (const section of [repoChangesBySection.staged, repoChangesBySection.unstaged, repoChangesBySection.untracked]) {
+    for (const section of [
+      repoChangesBySection.staged,
+      repoChangesBySection.unstaged,
+      repoChangesBySection.untracked,
+    ]) {
       for (const file of section) {
         const normalized = normalizeWorkspaceRelativePath(file.path);
         if (normalized) {
@@ -410,7 +430,12 @@ export function useChangesTabState() {
       }
     }
     return [...allPaths];
-  }, [repoCommitComparison.allChangedFiles, repoChangesBySection.staged, repoChangesBySection.unstaged, repoChangesBySection.untracked]);
+  }, [
+    repoCommitComparison.allChangedFiles,
+    repoChangesBySection.staged,
+    repoChangesBySection.unstaged,
+    repoChangesBySection.untracked,
+  ]);
 
   const mergedComparison = useMemo<ProjectCommitComparisonData>(
     () => ({ ...repoCommitComparison, allChangedFiles: mergedAllChangedFiles }),

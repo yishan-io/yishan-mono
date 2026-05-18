@@ -11,7 +11,7 @@ import { WorkspaceLifecycleNoticeView } from "./WorkspaceLifecycleNoticeView";
 afterEach(() => {
   workspaceLifecycleNoticeStore.setState(
     {
-      queue: [],
+      noticeQueue: [],
       detailNotice: null,
     },
     false,

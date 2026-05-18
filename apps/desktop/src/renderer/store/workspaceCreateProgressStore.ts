@@ -10,7 +10,7 @@ export type WorkspaceCreateProgressStep = {
   message?: string;
 };
 
-export type WorkspaceCreateProgressRecord = {
+export type WorkspaceCreateProgressEntry = {
   workspaceId: string;
   steps: WorkspaceCreateProgressStep[];
   updatedAt: string;
@@ -18,7 +18,7 @@ export type WorkspaceCreateProgressRecord = {
 };
 
 type WorkspaceCreateProgressStoreState = {
-  progressByWorkspaceId: Record<string, WorkspaceCreateProgressRecord>;
+  progressByWorkspaceId: Record<string, WorkspaceCreateProgressEntry>;
   startWorkspaceCreateProgress: (workspaceId: string) => void;
   applyWorkspaceCreateProgressEvent: (event: RpcFrontendMessagePayload<"workspaceCreateProgress">) => void;
   finishWorkspaceCreateProgress: (workspaceId: string) => void;

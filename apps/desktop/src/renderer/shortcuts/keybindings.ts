@@ -248,7 +248,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
   }
 
   context.splitPaneStoreState.selectTab(workspaceId, activePane.id, nextTab.id);
-  context.commands.setSelectedTabId(nextTab.id);
+  context.commands.selectTab(nextTab.id);
   event.preventDefault();
   return true;
 }

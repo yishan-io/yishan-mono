@@ -13,7 +13,6 @@ describe("workspaceHelpers", () => {
       }),
     ).toEqual({
       normalizedName: "feature-a",
-      normalizedTitle: "feature-a",
       normalizedBranch: "main",
     });
   });
@@ -53,7 +52,6 @@ describe("workspaceHelpers", () => {
     applyCreatedWorkspaceState(state, {
       projectId: "repo-1",
       normalizedName: "feature-a",
-      normalizedTitle: "feature-a",
       normalizedBranch: "feature-a",
       backendWorkspace: {
         workspaceId: "workspace-1",

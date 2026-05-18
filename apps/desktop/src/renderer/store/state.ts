@@ -1,16 +1,16 @@
-import type { RepoWorkspaceItem, WorkspaceProjectRecord, WorkspaceStorePersistedState, WorkspaceStoreState } from "./types";
+import type { WorkspaceItem, WorkspaceProjectRecord, WorkspaceStorePersistedState, WorkspaceStoreState } from "./types";
 
 /** Builds workspace store state from backend snapshot data without creating implicit tabs. */
 export function buildWorkspaceStateFromData(input: {
   projects: WorkspaceProjectRecord[];
-  workspaces: RepoWorkspaceItem[];
+  workspaces: WorkspaceItem[];
   preferredProjectId?: string;
   preferredWorkspaceId?: string;
 }): Pick<
   WorkspaceStoreState,
   "projects" | "workspaces" | "selectedProjectId" | "selectedWorkspaceId"
 > {
-  const resolveWorkspaceProjectId = (workspace: RepoWorkspaceItem): string => {
+  const resolveWorkspaceProjectId = (workspace: WorkspaceItem): string => {
     return workspace.projectId ?? workspace.repoId;
   };
   const preferredProjectExists =

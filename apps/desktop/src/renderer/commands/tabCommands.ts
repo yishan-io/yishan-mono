@@ -154,7 +154,7 @@ export function closeAllTabs(tabId: string): void {
 
 /** Sets one selected tab id in tab store state. */
 export function setSelectedTab(tabId: string) {
-  readTabStoreState().setSelectedTabId(tabId);
+  readTabStoreState().selectTab(tabId);
 }
 
 /** Opens one tab from one normalized tab input payload. */

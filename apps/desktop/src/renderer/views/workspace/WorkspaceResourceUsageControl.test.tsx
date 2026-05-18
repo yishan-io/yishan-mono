@@ -9,7 +9,7 @@ import { WorkspaceResourceUsageControl } from "./WorkspaceResourceUsageControl";
 const mocked = vi.hoisted(() => ({
   getTerminalResourceUsage: vi.fn(),
   setSelectedWorkspaceId: vi.fn(),
-  setSelectedTabId: vi.fn(),
+  selectTab: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -27,7 +27,7 @@ vi.mock("../../hooks/useCommands", () => ({
   useCommands: () => ({
     getTerminalResourceUsage: mocked.getTerminalResourceUsage,
     setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
-    setSelectedTabId: mocked.setSelectedTabId,
+    selectTab: mocked.selectTab,
   }),
 }));
 
@@ -38,7 +38,7 @@ describe("WorkspaceResourceUsageControl", () => {
   beforeEach(() => {
     mocked.getTerminalResourceUsage.mockReset();
     mocked.setSelectedWorkspaceId.mockReset();
-    mocked.setSelectedTabId.mockReset();
+    mocked.selectTab.mockReset();
     mocked.getTerminalResourceUsage.mockResolvedValue({
       totalCpuPercent: 20,
       totalMemoryBytes: 200 * 1024 * 1024,
@@ -152,7 +152,7 @@ describe("WorkspaceResourceUsageControl", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: /node.*6510.*6.0%.*64 MB/ }));
 
     expect(mocked.setSelectedWorkspaceId).toHaveBeenCalledWith("workspace-1");
-    expect(mocked.setSelectedTabId).toHaveBeenCalledWith("terminal-tab-1");
+    expect(mocked.selectTab).toHaveBeenCalledWith("terminal-tab-1");
   });
 
   it("skips usage polling when selected workspace has no terminal tabs", async () => {

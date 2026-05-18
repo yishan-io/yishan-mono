@@ -47,14 +47,14 @@ export function usePaneTabHandlers({
   const handleSelectTab = useCallback(
     (paneId: string, tabId: string) => {
       splitPaneStore.getState().selectTab(workspaceId, paneId, tabId);
-      cmd.setSelectedTabId(tabId);
+      cmd.selectTab(tabId);
     },
     [workspaceId, cmd],
   );
 
   const handleCloseTab = useCallback(
     (tabId: string) => {
-      splitPaneStore.getState().removeTab(workspaceId, tabId);
+      splitPaneStore.getState().unregisterTabFromPane(workspaceId, tabId);
       cmd.closeTab(tabId);
     },
     [workspaceId, cmd],
@@ -135,7 +135,7 @@ export function usePaneTabHandlers({
         });
       }
 
-      cmd.setSelectedTabId(tabId);
+      cmd.selectTab(tabId);
       setFocusContentRequestKey((key) => key + 1);
       setIsDraggingSplit(false);
     },
@@ -147,7 +147,7 @@ export function usePaneTabHandlers({
       splitPaneStore.getState().setActivePane(workspaceId, paneId);
       const pane = splitPaneStore.getState().getPane(workspaceId, paneId);
       if (pane?.selectedTabId) {
-        cmd.setSelectedTabId(pane.selectedTabId);
+        cmd.selectTab(pane.selectedTabId);
       }
     },
     [workspaceId, cmd],
@@ -164,7 +164,7 @@ export function usePaneTabHandlers({
         direction,
         placement: "second",
       });
-      cmd.setSelectedTabId(movedTabId);
+      cmd.selectTab(movedTabId);
       setFocusContentRequestKey((key) => key + 1);
     },
     [workspaceId, cmd, setFocusContentRequestKey],

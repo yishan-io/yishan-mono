@@ -92,7 +92,7 @@ describe("useOpenTabAutoRefresh", () => {
       useOpenTabAutoRefresh({
         workspaceWorktreePath: "/repo",
         tabs,
-        cmd: commands,
+        commands: commands,
       }),
     );
 
@@ -119,7 +119,7 @@ describe("useOpenTabAutoRefresh", () => {
       useOpenTabAutoRefresh({
         workspaceWorktreePath: "/repo",
         tabs,
-        cmd: commands,
+        commands: commands,
       }),
     );
 
@@ -144,7 +144,7 @@ describe("useOpenTabAutoRefresh", () => {
       useOpenTabAutoRefresh({
         workspaceWorktreePath: "/repo",
         tabs,
-        cmd: commands,
+        commands: commands,
       }),
     );
 
@@ -172,7 +172,7 @@ describe("useOpenTabAutoRefresh", () => {
       useOpenTabAutoRefresh({
         workspaceWorktreePath: "/repo",
         tabs,
-        cmd: commands,
+        commands: commands,
       }),
     );
 

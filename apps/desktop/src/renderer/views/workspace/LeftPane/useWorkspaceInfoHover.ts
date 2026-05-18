@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { inspectGitRepository } from "../../../commands/gitCommands";
 import { workspaceStore } from "../../../store/workspaceStore";
-import type { RepoWorkspaceItem } from "../../../store/types";
+import type { WorkspaceItem } from "../../../store/types";
 
 type UseWorkspaceInfoHoverInput = {
-  workspaces: RepoWorkspaceItem[];
+  workspaces: WorkspaceItem[];
   displayWorkspaceIdByProjectId: Record<string, string>;
   closeDelayMs?: number;
 };

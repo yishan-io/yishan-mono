@@ -184,7 +184,7 @@ describe("workspaceCommands", () => {
         workspaceWorktreePath: "/tmp/workspaces/workspace-1",
         orgId: undefined,
         projectId: "repo-1",
-        prAlreadyMerged: false,
+        pullRequestAlreadyMerged: false,
       });
     });
   });
@@ -310,7 +310,7 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/worktrees/feature-a",
         },
       ],
-      closeWorkspace: closeWorkspaceAction,
+      removeWorkspace: closeWorkspaceAction,
     });
     await closeWorkspace("workspace-1");
 
@@ -349,7 +349,7 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/worktrees/feature-a",
         },
       ],
-      closeWorkspace: closeWorkspaceAction,
+      removeWorkspace: closeWorkspaceAction,
     });
     rpcMocks.closeWorkspace.mockResolvedValueOnce({
       workspace: { id: "workspace-1", status: "archived" },
@@ -407,7 +407,7 @@ describe("workspaceCommands", () => {
           worktreePath: "",
         },
       ],
-      closeWorkspace: closeWorkspaceAction,
+      removeWorkspace: closeWorkspaceAction,
     });
     await closeWorkspace("workspace-1", { removeBranch: true });
     await vi.waitFor(() => {
@@ -439,7 +439,7 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/worktrees/feature-a",
         },
       ],
-      closeWorkspace: closeWorkspaceAction,
+      removeWorkspace: closeWorkspaceAction,
     });
     rpcMocks.closeWorkspace.mockRejectedValueOnce(new Error("daemon RPC error -32000: server unavailable"));
 
@@ -469,7 +469,7 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/worktrees/feature-a",
         },
       ],
-      closeWorkspace: closeWorkspaceAction,
+      removeWorkspace: closeWorkspaceAction,
     });
     rpcMocks.closeWorkspace.mockResolvedValueOnce({
       workspace: { id: "workspace-1", status: "archived" },
@@ -489,7 +489,7 @@ describe("workspaceCommands", () => {
     const closeWorkspaceAction = vi.fn().mockResolvedValue(undefined);
     workspaceStore.setState({
       workspaces: [],
-      closeWorkspace: closeWorkspaceAction,
+      removeWorkspace: closeWorkspaceAction,
     });
 
     await closeWorkspace("workspace-404");
@@ -514,7 +514,7 @@ describe("workspaceCommands", () => {
           worktreePath: "",
         },
       ],
-      closeWorkspace: closeWorkspaceAction,
+      removeWorkspace: closeWorkspaceAction,
     });
 
     let resolveClose: (() => void) | undefined;
@@ -729,15 +729,15 @@ describe("workspaceCommands", () => {
   it("delegates workspace view-state updates to workspace and layout stores", () => {
     const setDisplayProjectIdsState = vi.fn();
     const setLastUsedExternalAppIdState = vi.fn();
-    const setLeftWidth = vi.fn();
-    const setRightWidth = vi.fn();
+    const setLeftPaneWidth = vi.fn();
+    const setRightPaneWidth = vi.fn();
     const renameWorkspaceState = vi.fn();
     workspaceStore.setState({
       setDisplayProjectIds: setDisplayProjectIdsState,
       setLastUsedExternalAppId: setLastUsedExternalAppIdState,
       renameWorkspace: renameWorkspaceState,
     });
-    layoutStore.setState({ setLeftWidth, setRightWidth });
+    layoutStore.setState({ setLeftPaneWidth, setRightPaneWidth });
 
     setDisplayRepoIds(["repo-1"]);
     setLastUsedExternalAppId("vscode");
@@ -747,8 +747,8 @@ describe("workspaceCommands", () => {
 
     expect(setDisplayProjectIdsState).toHaveBeenCalledWith(["repo-1"]);
     expect(setLastUsedExternalAppIdState).toHaveBeenCalledWith("vscode");
-    expect(setLeftWidth).toHaveBeenCalledWith(320);
-    expect(setRightWidth).toHaveBeenCalledWith(420);
+    expect(setLeftPaneWidth).toHaveBeenCalledWith(320);
+    expect(setRightPaneWidth).toHaveBeenCalledWith(420);
     expect(renameWorkspaceState).toHaveBeenCalledWith({
       repoId: "repo-1",
       workspaceId: "workspace-1",

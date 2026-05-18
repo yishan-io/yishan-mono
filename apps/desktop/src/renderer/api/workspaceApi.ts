@@ -3,7 +3,9 @@ import type { WorkspaceRecord } from "./types";
 
 /** Lists project workspaces for one organization project. */
 export async function listProjectWorkspaces(orgId: string, projectId: string): Promise<WorkspaceRecord[]> {
-  const response = await requestJson<{ workspaces: WorkspaceRecord[] }>(`/orgs/${orgId}/projects/${projectId}/workspaces`);
+  const response = await requestJson<{ workspaces: WorkspaceRecord[] }>(
+    `/orgs/${orgId}/projects/${projectId}/workspaces`,
+  );
   return response.workspaces;
 }
 
@@ -18,10 +20,13 @@ export async function createProjectWorkspace(
     localPath: string;
   },
 ): Promise<WorkspaceRecord> {
-  const response = await requestJson<{ workspace: WorkspaceRecord }>(`/orgs/${orgId}/projects/${projectId}/workspaces`, {
-    method: "POST",
-    body: input,
-  });
+  const response = await requestJson<{ workspace: WorkspaceRecord }>(
+    `/orgs/${orgId}/projects/${projectId}/workspaces`,
+    {
+      method: "POST",
+      body: input,
+    },
+  );
 
   return response.workspace;
 }

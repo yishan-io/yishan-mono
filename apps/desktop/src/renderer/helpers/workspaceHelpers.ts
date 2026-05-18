@@ -20,13 +20,11 @@ export function normalizeCreateWorkspaceInput(input: {
   name: string;
 }): {
   normalizedName: string;
-  normalizedTitle: string;
   normalizedBranch: string;
 } {
   const normalizedName = input.name.trim();
   return {
     normalizedName,
-    normalizedTitle: normalizedName,
     normalizedBranch: "main",
   };
 }
@@ -37,7 +35,6 @@ export function applyCreatedWorkspaceState(
   input: {
     projectId: string;
     normalizedName: string;
-    normalizedTitle: string;
     normalizedBranch: string;
     backendWorkspace: {
       workspaceId: string;
@@ -56,7 +53,7 @@ export function applyCreatedWorkspaceState(
     projectId: input.projectId,
     repoId: input.projectId,
     name: input.backendWorkspace.name || input.normalizedName,
-    title: input.normalizedTitle,
+    title: input.backendWorkspace.name || input.normalizedName,
     sourceBranch: input.backendWorkspace.sourceBranch || "",
     branch: input.backendWorkspace.branch || input.normalizedBranch,
     summaryId: nextWorkspaceId,
@@ -83,9 +80,9 @@ export function applyDeletedWorkspaceState(
     state.workspaces.splice(removedIndex, 1);
   }
 
-	delete state.gitChangesCountByWorkspaceId[input.workspaceId];
-	delete state.gitChangeTotalsByWorkspaceId[input.workspaceId];
-	delete state.pullRequestByWorkspaceId[input.workspaceId];
+  delete state.gitChangesCountByWorkspaceId[input.workspaceId];
+  delete state.gitChangeTotalsByWorkspaceId[input.workspaceId];
+  delete state.pullRequestByWorkspaceId[input.workspaceId];
 
   if (!state.projects.some((project) => project.id === state.selectedProjectId)) {
     state.selectedProjectId = state.projects[0]?.id ?? "";
@@ -211,13 +208,13 @@ function dedupeGitChangeFiles(files: GitChangeEntry[]): GitChangeEntry[] {
   return [...byPath.values()];
 }
 
-function gitChangeGetParentPath(path: string): string {
+function getGitChangeParentPath(path: string): string {
   const normalizedPath = path.replace(/\\/g, "/");
   const slashIndex = normalizedPath.lastIndexOf("/");
   return slashIndex <= 0 ? "" : normalizedPath.slice(0, slashIndex);
 }
 
-function gitChangeGetExtension(path: string): string {
+function getGitChangeFileExtension(path: string): string {
   const fileName = path.replace(/\\/g, "/").split("/").pop() ?? "";
   const dotIndex = fileName.lastIndexOf(".");
   if (dotIndex <= 0 || dotIndex === fileName.length - 1) {
@@ -239,19 +236,19 @@ function reconcileGitRenameLikePairs(input: GitChangeSections): GitChangeSection
   const addedCandidatesByPath = new Map(addedUntracked.map((file) => [file.path, file]));
 
   for (const deletedFile of deletedUnstaged) {
-    const deletedExtension = gitChangeGetExtension(deletedFile.path);
-    const deletedParentPath = gitChangeGetParentPath(deletedFile.path);
+    const deletedExtension = getGitChangeFileExtension(deletedFile.path);
+    const deletedParentPath = getGitChangeParentPath(deletedFile.path);
     const sameDirectoryCandidate = addedUntracked.find((candidate) => {
       if (consumedAddedPaths.has(candidate.path)) {
         return false;
       }
-      if (gitChangeGetParentPath(candidate.path) !== deletedParentPath) {
+      if (getGitChangeParentPath(candidate.path) !== deletedParentPath) {
         return false;
       }
       if (!deletedExtension) {
         return true;
       }
-      return gitChangeGetExtension(candidate.path) === deletedExtension;
+      return getGitChangeFileExtension(candidate.path) === deletedExtension;
     });
 
     const extensionCandidate =
@@ -260,7 +257,7 @@ function reconcileGitRenameLikePairs(input: GitChangeSections): GitChangeSection
         if (consumedAddedPaths.has(candidate.path)) {
           return false;
         }
-        return deletedExtension !== "" && gitChangeGetExtension(candidate.path) === deletedExtension;
+        return deletedExtension !== "" && getGitChangeFileExtension(candidate.path) === deletedExtension;
       });
 
     const fallbackCandidate = extensionCandidate;

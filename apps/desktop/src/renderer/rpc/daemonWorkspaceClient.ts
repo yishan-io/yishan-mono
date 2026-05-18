@@ -1,3 +1,4 @@
+import { generateId } from "../helpers/generateId";
 import type * as Rpc from "./daemonTypes";
 import {
   asRecord,
@@ -6,7 +7,6 @@ import {
   readOptionalString,
   readOptionalStringArray,
 } from "./helpers";
-import { generateId } from "../helpers/generateId";
 
 type InvokeFn = (method: string, params?: unknown) => Promise<unknown>;
 
@@ -139,7 +139,7 @@ export class DaemonWorkspaceClient {
         path: workspaceWorktreePath,
         ...(input.orgId ? { orgId: input.orgId } : {}),
         ...(input.projectId ? { projectId: input.projectId } : {}),
-        ...(input.prAlreadyMerged ? { prAlreadyMerged: true } : {}),
+        ...(input.pullRequestAlreadyMerged ? { pullRequestAlreadyMerged: true } : {}),
       }),
     );
     if (!record) {
@@ -285,9 +285,7 @@ export class DaemonWorkspaceClient {
     };
   }
 
-  async syncContextLink(
-    input: Rpc.WorkspaceSyncContextLinkInput,
-  ): Promise<Rpc.WorkspaceSyncContextLinkResponse> {
+  async syncContextLink(input: Rpc.WorkspaceSyncContextLinkInput): Promise<Rpc.WorkspaceSyncContextLinkResponse> {
     const record = asRecord(input);
     const repoKey = readOptionalString(record?.repoKey);
     if (!repoKey) {

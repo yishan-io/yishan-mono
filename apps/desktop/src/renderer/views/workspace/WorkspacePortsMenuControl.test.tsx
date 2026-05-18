@@ -11,7 +11,7 @@ const mocked = vi.hoisted(() => ({
   killTerminalProcess: vi.fn(),
   listDetectedPorts: vi.fn(),
   setSelectedWorkspaceId: vi.fn(),
-  setSelectedTabId: vi.fn(),
+  selectTab: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -25,7 +25,7 @@ vi.mock("../../hooks/useCommands", () => ({
     killTerminalProcess: mocked.killTerminalProcess,
     listDetectedPorts: mocked.listDetectedPorts,
     setSelectedWorkspaceId: mocked.setSelectedWorkspaceId,
-    setSelectedTabId: mocked.setSelectedTabId,
+    selectTab: mocked.selectTab,
   }),
 }));
 
@@ -68,7 +68,7 @@ describe("WorkspacePortsMenuControl", () => {
     mocked.listDetectedPorts.mockReset();
     mocked.killTerminalProcess.mockReset();
     mocked.setSelectedWorkspaceId.mockReset();
-    mocked.setSelectedTabId.mockReset();
+    mocked.selectTab.mockReset();
 
     mocked.listDetectedPorts.mockResolvedValue([
       {

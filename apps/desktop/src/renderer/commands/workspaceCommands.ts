@@ -120,12 +120,12 @@ export function setLastUsedExternalAppId(appId: ExternalAppId) {
 
 /** Sets left pane width in workspace layout state. */
 export function setLeftPaneWidth(width: number) {
-  layoutStore.getState().setLeftWidth(width);
+  layoutStore.getState().setLeftPaneWidth(width);
 }
 
 /** Sets right pane width in workspace layout state. */
 export function setRightPaneWidth(width: number) {
-  layoutStore.getState().setRightWidth(width);
+  layoutStore.getState().setRightPaneWidth(width);
 }
 
 /** Toggles left workspace pane manual visibility state. */

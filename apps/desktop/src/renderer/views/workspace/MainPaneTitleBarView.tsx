@@ -12,12 +12,12 @@ import { useCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { chatStore } from "../../store/chatStore";
-import type { RepoWorkspaceItem, WorkspaceProjectRecord } from "../../store/types";
+import type { WorkspaceItem, WorkspaceProjectRecord } from "../../store/types";
 import { workspaceStore } from "../../store/workspaceStore";
 import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";
 
 /** Resolves the workspace displayed as local in the left pane for a project. */
-function resolvePrimaryWorkspaceId(project: WorkspaceProjectRecord | undefined, workspaces: RepoWorkspaceItem[]) {
+function resolvePrimaryWorkspaceId(project: WorkspaceProjectRecord | undefined, workspaces: WorkspaceItem[]) {
   const preferredProjectPath =
     project?.localPath?.trim() || project?.path?.trim() || project?.worktreePath?.trim() || "";
   if (!project || !preferredProjectPath) {
@@ -33,7 +33,7 @@ function resolvePrimaryWorkspaceId(project: WorkspaceProjectRecord | undefined, 
 }
 
 /** Renders the same workspace kind icon used by left-pane workspace rows. */
-function renderWorkspaceKindIcon(workspace: RepoWorkspaceItem | undefined, isPrimaryWorkspace: boolean, size: number) {
+function renderWorkspaceKindIcon(workspace: WorkspaceItem | undefined, isPrimaryWorkspace: boolean, size: number) {
   if (workspace?.kind === "local" || isPrimaryWorkspace) {
     return <HiOutlineCube size={size} />;
   }

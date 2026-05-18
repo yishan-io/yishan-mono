@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import {
+  type PaneLeaf,
+  type SplitDirection,
+  type SplitPaneNode,
+  type SplitPaneStateSlice,
   addTabToPane,
   collectLeaves,
   createLeaf,
@@ -14,10 +18,6 @@ import {
   setActivePaneState,
   setSplitRatio,
   splitPaneWithTab,
-  type PaneLeaf,
-  type SplitDirection,
-  type SplitPaneNode,
-  type SplitPaneStateSlice,
 } from "./split-pane-domain";
 
 const ROOT_PANE_ID = "root-pane";
@@ -40,24 +40,30 @@ export type SplitPaneStoreState = {
   // Mutations (workspace-scoped)
   setActivePane: (workspaceId: string, paneId: string) => void;
   selectTab: (workspaceId: string, paneId: string, tabId: string) => void;
-  addTab: (workspaceId: string, tabId: string, paneId?: string) => void;
-  removeTab: (workspaceId: string, tabId: string) => void;
-  splitPane: (workspaceId: string, input: {
-    tabId: string;
-    targetPaneId: string;
-    direction: SplitDirection;
-    placement: "first" | "second";
-  }) => void;
+  registerTabInPane: (workspaceId: string, tabId: string, paneId?: string) => void;
+  unregisterTabFromPane: (workspaceId: string, tabId: string) => void;
+  splitPane: (
+    workspaceId: string,
+    input: {
+      tabId: string;
+      targetPaneId: string;
+      direction: SplitDirection;
+      placement: "first" | "second";
+    },
+  ) => void;
   moveTab: (workspaceId: string, tabId: string, targetPaneId: string) => void;
-  reorderTab: (workspaceId: string, paneId: string, draggedTabId: string, targetTabId: string, position: "before" | "after") => void;
+  reorderTab: (
+    workspaceId: string,
+    paneId: string,
+    draggedTabId: string,
+    targetTabId: string,
+    position: "before" | "after",
+  ) => void;
   updateSplitRatio: (workspaceId: string, branchId: string, ratio: number) => void;
 };
 
 /** Returns the layout for a workspace, creating one if it doesn't exist yet. */
-function ensureLayout(
-  layouts: Record<string, SplitPaneStateSlice>,
-  workspaceId: string,
-): SplitPaneStateSlice {
+function ensureLayout(layouts: Record<string, SplitPaneStateSlice>, workspaceId: string): SplitPaneStateSlice {
   if (!layouts[workspaceId]) {
     layouts[workspaceId] = createEmptyLayout();
   }
@@ -118,7 +124,7 @@ export const splitPaneStore = create<SplitPaneStoreState>()(
       });
     },
 
-    addTab: (workspaceId, tabId, paneId) => {
+    registerTabInPane: (workspaceId, tabId, paneId) => {
       set((state) => {
         const layout = ensureLayout(state.layoutByWorkspaceId, workspaceId);
         const next = addTabToPane(layout, tabId, paneId);
@@ -129,7 +135,7 @@ export const splitPaneStore = create<SplitPaneStoreState>()(
       });
     },
 
-    removeTab: (workspaceId, tabId) => {
+    unregisterTabFromPane: (workspaceId, tabId) => {
       set((state) => {
         const layout = ensureLayout(state.layoutByWorkspaceId, workspaceId);
         const next = removeTabFromPane(layout, tabId);

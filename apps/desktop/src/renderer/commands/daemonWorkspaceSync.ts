@@ -67,7 +67,7 @@ export async function ensureVisibleWorkspacesOpen(mergedWorkspaceIds?: ReadonlyS
         console.debug("[daemonWorkspaceSync] opening workspace in daemon", {
           workspaceId: workspace.id,
           worktreePath,
-          prAlreadyMerged: mergedWorkspaceIds?.has(workspace.id) ?? false,
+          pullRequestAlreadyMerged: mergedWorkspaceIds?.has(workspace.id) ?? false,
         });
       }
       await client.workspace.open({
@@ -75,7 +75,7 @@ export async function ensureVisibleWorkspacesOpen(mergedWorkspaceIds?: ReadonlyS
         workspaceWorktreePath: worktreePath,
         orgId: workspace.organizationId,
         projectId: workspace.projectId,
-        prAlreadyMerged: mergedWorkspaceIds?.has(workspace.id) ?? false,
+        pullRequestAlreadyMerged: mergedWorkspaceIds?.has(workspace.id) ?? false,
       });
       openPaths.add(worktreePath);
     }),

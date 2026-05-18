@@ -67,7 +67,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
           if (tabId) {
             const tab = tabStore.getState().tabs.find((item) => item.workspaceId === workspaceId && item.id === tabId);
             if (tab) {
-              cmd.setSelectedTabId(tab.id);
+              cmd.selectTab(tab.id);
             }
           } else if (sessionId) {
             const sessionTab = tabStore
@@ -76,7 +76,7 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
                 (tab) => tab.workspaceId === workspaceId && tab.kind === "session" && tab.data.sessionId === sessionId,
               );
             if (sessionTab) {
-              cmd.setSelectedTabId(sessionTab.id);
+              cmd.selectTab(sessionTab.id);
             }
           }
         }
@@ -344,7 +344,7 @@ export function WorkspaceView() {
       const { startX, startWidth } = leftDragRef.current;
       const delta = clientX - startX;
       const nextWidth = clamp(startWidth + delta, LEFT_MIN_WIDTH, maxLeftWidth);
-      cmd.setLeftWidth(nextWidth);
+      cmd.setLeftPaneWidth(nextWidth);
     },
     [cmd, maxLeftWidth],
   );
@@ -362,7 +362,7 @@ export function WorkspaceView() {
       const { startX, startWidth } = rightDragRef.current;
       const delta = startX - clientX;
       const nextWidth = clamp(startWidth + delta, RIGHT_MIN_WIDTH, maxRightWidth);
-      cmd.setRightWidth(nextWidth);
+      cmd.setRightPaneWidth(nextWidth);
     },
     [cmd, maxRightWidth],
   );

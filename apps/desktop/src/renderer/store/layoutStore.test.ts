@@ -50,8 +50,8 @@ describe("layoutStore", () => {
   });
 
   it("persists left and right pane widths", () => {
-    layoutStore.getState().setLeftWidth(360);
-    layoutStore.getState().setRightWidth(440);
+    layoutStore.getState().setLeftPaneWidth(360);
+    layoutStore.getState().setRightPaneWidth(440);
 
     void layoutStore.persist.rehydrate();
 

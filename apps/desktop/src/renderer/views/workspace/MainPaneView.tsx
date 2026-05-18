@@ -145,14 +145,14 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
       if (!previousTabIds.has(tabId)) {
         const existingPane = splitPaneStore.getState().getPaneForTab(workspaceId, tabId);
         if (!existingPane) {
-          splitPaneStore.getState().addTab(workspaceId, tabId);
+          splitPaneStore.getState().registerTabInPane(workspaceId, tabId);
         }
       }
     }
 
     for (const tabId of previousTabIds) {
       if (!currentTabIds.has(tabId)) {
-        splitPaneStore.getState().removeTab(workspaceId, tabId);
+        splitPaneStore.getState().unregisterTabFromPane(workspaceId, tabId);
       }
     }
 
@@ -201,7 +201,7 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
   useOpenTabAutoRefresh({
     workspaceWorktreePath: workspace?.worktreePath,
     tabs: refreshableTabs,
-    cmd,
+    commands: cmd,
   });
 
   // Focus content when the selected tab changes

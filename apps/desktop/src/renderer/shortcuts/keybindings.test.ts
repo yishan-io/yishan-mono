@@ -22,7 +22,7 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
         { id: "tab-1", workspaceId: "workspace-1", title: "Tab 1", pinned: false, kind: "session", data: {} },
       ]),
       setSelectedWorkspaceId: vi.fn(),
-      setSelectedTabId: vi.fn(),
+      selectTab: vi.fn(),
       retainWorkspaceTabs: vi.fn(() => []),
       createTab: vi.fn(async () => undefined),
       resolveSessionTab: vi.fn(),
@@ -58,8 +58,8 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       setSelectedWorkspaceId: vi.fn(),
       setDisplayProjectIds: vi.fn(),
       setLastUsedExternalAppId: vi.fn(),
-      setLeftWidth: vi.fn(),
-      setRightWidth: vi.fn(),
+      setLeftPaneWidth: vi.fn(),
+      setRightPaneWidth: vi.fn(),
       load: vi.fn(),
       createProject: vi.fn(),
       deleteProject: vi.fn(),
@@ -82,8 +82,8 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       getAllPanes: vi.fn(() => []),
       setActivePane: vi.fn(),
       selectTab: vi.fn(),
-      addTab: vi.fn(),
-      removeTab: vi.fn(),
+      registerTabInPane: vi.fn(),
+      unregisterTabFromPane: vi.fn(),
       splitPane: vi.fn(),
       moveTab: vi.fn(),
       reorderTab: vi.fn(),
@@ -100,7 +100,7 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       createWorkspace: vi.fn(async () => {}),
       closeWorkspace: vi.fn(async () => {}),
       refreshWorkspaceGitChanges: vi.fn(async () => {}),
-      setSelectedTabId: vi.fn(),
+      selectTab: vi.fn(),
       createTab: vi.fn(async () => {}),
       openTab: vi.fn(),
       closeTab: vi.fn(),
@@ -114,8 +114,8 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       refreshFileTabFromDisk: vi.fn(),
       refreshDiffTabContent: vi.fn(),
       setDisplayRepoIds: vi.fn(),
-      setLeftWidth: vi.fn(),
-      setRightWidth: vi.fn(),
+      setLeftPaneWidth: vi.fn(),
+      setRightPaneWidth: vi.fn(),
       toggleLeftPaneVisibility: vi.fn(),
       toggleRightPaneVisibility: vi.fn(),
       activateWorkspacePane: vi.fn(),
@@ -645,13 +645,13 @@ describe("getShortcutDefinitions", () => {
     const selectByIndexDefinition = runtimeDefinitions.find((definition) => definition.id === "select-tab-by-index");
     expect(selectByIndexDefinition).toBeTruthy();
 
-    const setSelectedTabId = vi.fn();
+    const selectTabCmd = vi.fn();
     const getActivePane = vi.fn(() => ({ kind: "leaf" as const, id: "active-pane-1", tabIds: ["tab-1", "tab-2"], selectedTabId: "tab-1" }));
     const selectTab = vi.fn();
     const context = createShortcutContext({
       commands: {
         ...createShortcutContext().commands,
-        setSelectedTabId,
+        selectTab: selectTabCmd,
       },
       tabStoreState: {
         ...createShortcutContext().tabStoreState,
@@ -676,7 +676,7 @@ describe("getShortcutDefinitions", () => {
 
     expect(getActivePane).toHaveBeenCalledWith("workspace-1");
     expect(selectTab).toHaveBeenCalledWith("workspace-1", "active-pane-1", "tab-2");
-    expect(setSelectedTabId).toHaveBeenCalledWith("tab-2");
+    expect(selectTabCmd).toHaveBeenCalledWith("tab-2");
   });
 
   it("selects tabs by the same pinned-first order shown in the active pane", () => {
@@ -684,7 +684,7 @@ describe("getShortcutDefinitions", () => {
     const selectByIndexDefinition = runtimeDefinitions.find((definition) => definition.id === "select-tab-by-index");
     expect(selectByIndexDefinition).toBeTruthy();
 
-    const setSelectedTabId = vi.fn();
+    const selectTabCmd = vi.fn();
     const getActivePane = vi.fn(() => ({
       kind: "leaf" as const,
       id: "active-pane-1",
@@ -695,7 +695,7 @@ describe("getShortcutDefinitions", () => {
     const context = createShortcutContext({
       commands: {
         ...createShortcutContext().commands,
-        setSelectedTabId,
+        selectTab: selectTabCmd,
       },
       tabStoreState: {
         ...createShortcutContext().tabStoreState,
@@ -718,7 +718,7 @@ describe("getShortcutDefinitions", () => {
     } as unknown as KeyboardEvent);
 
     expect(selectTab).toHaveBeenCalledWith("workspace-1", "active-pane-1", "tab-1");
-    expect(setSelectedTabId).toHaveBeenCalledWith("tab-1");
+    expect(selectTabCmd).toHaveBeenCalledWith("tab-1");
   });
   it("ignores file-tree delete shortcut when editable target is focused", () => {
     const runtimeDefinitions = getShortcutDefinitions();

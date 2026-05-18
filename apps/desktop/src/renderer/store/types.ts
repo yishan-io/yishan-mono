@@ -31,7 +31,7 @@ export type WorkspaceProjectRecord = {
   createdByUserId?: string;
 };
 
-export type RepoWorkspaceItem = {
+export type WorkspaceItem = {
   id: string;
   organizationId?: string;
   projectId?: string;
@@ -170,7 +170,7 @@ export type OpenWorkspaceTabInput =
 
 export type WorkspaceStoreState = {
   projects: WorkspaceProjectRecord[];
-  workspaces: RepoWorkspaceItem[];
+  workspaces: WorkspaceItem[];
   pullRequestByWorkspaceId: Record<string, DaemonWorkspacePullRequest | undefined>;
   latestPullRequestByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined>;
   gitChangesCountByWorkspaceId: Record<string, number>;
@@ -215,7 +215,7 @@ export type WorkspaceStoreState = {
     worktreePath?: string;
     workspaceId: string;
   }) => void;
-  closeWorkspace: (input: {
+  removeWorkspace: (input: {
     projectId?: string;
     repoId?: string;
     workspaceId: string;
@@ -262,7 +262,7 @@ export type WorkspaceStoreActions = Pick<
   | "updateProjectConfig"
   | "incrementFileTreeRefreshVersion"
   | "addWorkspace"
-  | "closeWorkspace"
+  | "removeWorkspace"
   | "renameWorkspace"
   | "renameWorkspaceBranch"
   | "setWorkspaceGitChangesCount"

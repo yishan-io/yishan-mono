@@ -165,7 +165,7 @@ describe("projectCommands", () => {
       workspaceWorktreePath: "/tmp/workspaces/project-1/feature-a",
       orgId: "org-1",
       projectId: "project-1",
-      prAlreadyMerged: false,
+      pullRequestAlreadyMerged: false,
     });
   });
 

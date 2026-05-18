@@ -30,7 +30,7 @@ export type TabStoreState = {
   /** Returns workspace tabs sorted with pinned entries first. */
   getWorkspaceTabs: (workspaceId: string) => WorkspaceTab[];
   setSelectedWorkspaceId: (workspaceId: string) => void;
-  setSelectedTabId: (tabId: string) => void;
+  selectTab: (tabId: string) => void;
   retainWorkspaceTabs: (workspaceIds: string[]) => string[];
   createTab: (input?: { workspaceId?: string }) => Promise<
     { tabId: string; workspaceId: string; title: string } | undefined
@@ -91,7 +91,7 @@ export const tabStore = create<TabStoreState>()(
           }),
         }));
       },
-      setSelectedTabId: (tabId) => {
+      selectTab: (tabId) => {
         set((state) => {
           const tabs = state.tabs ?? [];
           const selectedTabIdByWorkspaceId = state.selectedTabIdByWorkspaceId ?? {};
