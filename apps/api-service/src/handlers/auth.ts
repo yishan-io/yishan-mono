@@ -1,8 +1,15 @@
 import { deleteCookie, getCookie, getSignedCookie, setCookie, setSignedCookie } from "hono/cookie";
 import { StatusCodes } from "http-status-codes";
 
-import { OAUTH_COOKIE_NAME, type OAuthCookiePayload, SESSION_COOKIE_NAME, cookieOptions } from "@/auth/http";
+import {
+  OAUTH_COOKIE_NAME,
+  type OAuthCookiePayload,
+  SESSION_COOKIE_NAME,
+  cookieOptions,
+  oauthCookiePayloadSchema,
+} from "@/auth/http";
 import type { AppContext } from "@/hono";
+import type { RefreshTokenBodyInput, RevokeTokenBodyInput } from "@/validation/auth";
 
 function isLoopbackHost(hostname: string): boolean {
   return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1";
@@ -93,7 +100,7 @@ export async function callbackOAuthHandler(c: AppContext) {
   let oauthContext: OAuthCookiePayload;
 
   try {
-    oauthContext = JSON.parse(rawCookie) as OAuthCookiePayload;
+    oauthContext = oauthCookiePayloadSchema.parse(JSON.parse(rawCookie));
   } catch {
     return c.json({ error: "Invalid OAuth state" }, StatusCodes.BAD_REQUEST);
   }
@@ -175,19 +182,7 @@ export async function issueTokenHandler(c: AppContext) {
   });
 }
 
-export async function refreshTokenHandler(c: AppContext) {
-  let body: { refreshToken?: string };
-
-  try {
-    body = await c.req.json<{ refreshToken?: string }>();
-  } catch {
-    return c.json({ error: "Invalid JSON body" }, StatusCodes.BAD_REQUEST);
-  }
-
-  if (!body.refreshToken) {
-    return c.json({ error: "refreshToken is required" }, StatusCodes.BAD_REQUEST);
-  }
-
+export async function refreshTokenHandler(c: AppContext, body: RefreshTokenBodyInput) {
   const authService = c.get("services").auth;
   const refreshed = await authService.refreshApiTokens(body.refreshToken);
 
@@ -201,19 +196,7 @@ export async function refreshTokenHandler(c: AppContext) {
   });
 }
 
-export async function revokeTokenHandler(c: AppContext) {
-  let body: { refreshToken?: string };
-
-  try {
-    body = await c.req.json<{ refreshToken?: string }>();
-  } catch {
-    return c.json({ error: "Invalid JSON body" }, StatusCodes.BAD_REQUEST);
-  }
-
-  if (!body.refreshToken) {
-    return c.json({ error: "refreshToken is required" }, StatusCodes.BAD_REQUEST);
-  }
-
+export async function revokeTokenHandler(c: AppContext, body: RevokeTokenBodyInput) {
   const authService = c.get("services").auth;
   await authService.revokeApiRefreshToken(body.refreshToken);
 

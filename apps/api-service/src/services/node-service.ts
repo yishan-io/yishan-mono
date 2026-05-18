@@ -98,7 +98,8 @@ export class NodeService {
       }
 
       return result;
-    } catch {
+    } catch (error) {
+      console.warn("[NodeService] Failed to fetch relay metrics — treating all nodes as offline:", error);
       return result;
     }
   }
