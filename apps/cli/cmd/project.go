@@ -76,9 +76,9 @@ func init() {
 	projectCmd.AddCommand(projectListCmd)
 	projectCmd.AddCommand(projectCreateCmd)
 
-	projectListCmd.Flags().String("org-id", "", "organization ID")
+	addOrgIDFlag(projectListCmd)
 
-	projectCreateCmd.Flags().String("org-id", "", "organization ID")
+	addOrgIDFlag(projectCreateCmd)
 	projectCreateCmd.Flags().String("name", "", "project name")
 	projectCreateCmd.Flags().String("source-type-hint", "", "source type hint (unknown|git-local)")
 	projectCreateCmd.Flags().String("repo-url", "", "repository URL")

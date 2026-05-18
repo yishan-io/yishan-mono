@@ -43,6 +43,12 @@ func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath st
 	}
 }
 
+// Shutdown stops background goroutines owned by the handler (PR tracker poll loop).
+// It must be called when the daemon server shuts down.
+func (h *JSONRPCHandler) Shutdown() {
+	h.prTracker.Stop()
+}
+
 func (h *JSONRPCHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -117,11 +123,11 @@ func (h *JSONRPCHandler) handleBinaryFrame(connState *wsConnState, payload []byt
 func (h *JSONRPCHandler) handleRequest(ctx context.Context, connState *wsConnState, payload []byte) *response {
 	var req request
 	if err := json.Unmarshal(payload, &req); err != nil {
-		return &response{JSONRPC: "2.0", Error: &rpcError{Code: -32700, Message: "parse error"}}
+		return &response{JSONRPC: "2.0", Error: &rpcError{Code: rpcCodeParseError, Message: "parse error"}}
 	}
 
 	if req.JSONRPC != "2.0" {
-		return &response{JSONRPC: "2.0", ID: asJSONID(req.ID), Error: &rpcError{Code: -32600, Message: "invalid request"}}
+		return &response{JSONRPC: "2.0", ID: asJSONID(req.ID), Error: &rpcError{Code: rpcCodeInvalidRequest, Message: "invalid request"}}
 	}
 
 	result, err := h.dispatch(ctx, connState, req.Method, req.Params)

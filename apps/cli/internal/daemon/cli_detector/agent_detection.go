@@ -69,15 +69,14 @@ type agentDetectionOptions struct {
 }
 
 // ListAgentCLIDetectionStatuses returns detection statuses for all supported desktop agent CLIs.
+// It uses the cached result if available.
 func ListAgentCLIDetectionStatuses() []AgentCLIDetectionStatus {
 	return ListAgentCLIDetectionStatusesWithRefresh(false)
 }
 
+// ListAgentCLIDetectionStatusesWithRefresh returns detection statuses, optionally
+// bypassing the cache when forceRefresh is true.
 func ListAgentCLIDetectionStatusesWithRefresh(forceRefresh bool) []AgentCLIDetectionStatus {
-	return listRawAgentCLIDetectionStatuses(forceRefresh)
-}
-
-func ListRawAgentCLIDetectionStatuses(forceRefresh bool) []AgentCLIDetectionStatus {
 	ttl := resolveAgentDetectionCacheTTL()
 	if !forceRefresh {
 		if statuses, ok := loadAnyCachedAgentDetectionStatuses(ttl); ok {
@@ -93,10 +92,6 @@ func ListRawAgentCLIDetectionStatuses(forceRefresh bool) []AgentCLIDetectionStat
 		VersionTimeout: 2 * time.Second,
 	}
 	return ListAgentCLIDetectionStatusesWithRuntimeOptions(forceRefresh, options, ttl)
-}
-
-func listRawAgentCLIDetectionStatuses(forceRefresh bool) []AgentCLIDetectionStatus {
-	return ListRawAgentCLIDetectionStatuses(forceRefresh)
 }
 
 func ListAgentCLIDetectionStatusesWithRuntimeOptions(forceRefresh bool, options agentDetectionOptions, ttl time.Duration) []AgentCLIDetectionStatus {

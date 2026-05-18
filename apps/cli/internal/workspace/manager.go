@@ -89,7 +89,7 @@ func (m *Manager) Open(req OpenRequest) (Workspace, error) {
 
 	ws := Workspace{ID: req.ID, Path: absPath, OrgID: req.OrgID, ProjectID: req.ProjectID}
 
-	ensureGitExclude(absPath, contextLinkName)
+	ensureGitExclude(absPath, ContextLinkName)
 
 	m.mu.Lock()
 	m.workspaces[req.ID] = ws

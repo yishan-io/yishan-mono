@@ -8,12 +8,22 @@ import (
 	"yishan/apps/cli/internal/workspace/terminal"
 )
 
+// JSON-RPC 2.0 reserved error codes.
+const (
+	rpcCodeParseError     = -32700
+	rpcCodeInvalidRequest = -32600
+	rpcCodeMethodNotFound = -32601
+	rpcCodeInvalidParams  = -32602
+	rpcCodeServerError    = -32000
+	rpcCodeNotFound       = -32004
+)
+
 func decodeParams(raw json.RawMessage, out any) error {
 	if len(raw) == 0 {
-		return workspace.NewRPCError(-32602, "missing params")
+		return workspace.NewRPCError(rpcCodeInvalidParams, "missing params")
 	}
 	if err := json.Unmarshal(raw, out); err != nil {
-		return workspace.NewRPCError(-32602, "invalid params")
+		return workspace.NewRPCError(rpcCodeInvalidParams, "invalid params")
 	}
 	return nil
 }
@@ -38,5 +48,5 @@ func mapRPCError(err error) *rpcError {
 	if errors.As(err, &terminalError) {
 		return &rpcError{Code: terminalError.Code, Message: terminalError.Message}
 	}
-	return &rpcError{Code: -32000, Message: err.Error()}
+	return &rpcError{Code: rpcCodeServerError, Message: err.Error()}
 }

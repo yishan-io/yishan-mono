@@ -8,10 +8,6 @@ import (
 	"strings"
 )
 
-// contextLinkName is the directory name created inside each worktree pointing
-// at the shared per-repo context folder.
-const contextLinkName = ".my-context"
-
 // SyncContextLinkRequest applies the project-level `contextEnabled` flag to a
 // set of existing workspace worktree paths. When enabled, the per-repo context
 // folder is ensured and a `.my-context` symlink is created in each worktree.
@@ -112,9 +108,9 @@ func ensureContextLink(contextPath string, worktreePath string) error {
 		return fmt.Errorf("ensure context dir: %w", err)
 	}
 
-	ensureGitExclude(worktreePath, contextLinkName)
+	ensureGitExclude(worktreePath, ContextLinkName)
 
-	linkPath := filepath.Join(worktreePath, contextLinkName)
+	linkPath := filepath.Join(worktreePath, ContextLinkName)
 	info, err := os.Lstat(linkPath)
 	if err == nil {
 		if info.Mode()&os.ModeSymlink == 0 {
@@ -213,7 +209,7 @@ func appendExcludePattern(excludePath string, pattern string) {
 // other targets are left untouched to avoid clobbering user data. Returns nil
 // when there is nothing to remove.
 func removeContextLink(contextPath string, worktreePath string) error {
-	linkPath := filepath.Join(worktreePath, contextLinkName)
+	linkPath := filepath.Join(worktreePath, ContextLinkName)
 	info, err := os.Lstat(linkPath)
 	if err != nil {
 		if os.IsNotExist(err) {

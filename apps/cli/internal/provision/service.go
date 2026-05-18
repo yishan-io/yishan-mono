@@ -7,15 +7,6 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-type DaemonAuthConfig struct {
-	Host        string
-	Port        int
-	JWTSecret   string
-	JWTIssuer   string
-	JWTAudience string
-	JWTRequired bool
-}
-
 type CreateWorkspaceRequest struct {
 	OrganizationID string
 	ProjectID      string
@@ -32,7 +23,7 @@ type Provisioner struct {
 	localNodeID      string
 }
 
-func NewLocalProvisioner(apiClient *api.Client, daemonAuth DaemonAuthConfig, workspaceManager *workspace.Manager, localNodeID string) *Provisioner {
+func NewLocalProvisioner(apiClient *api.Client, workspaceManager *workspace.Manager, localNodeID string) *Provisioner {
 	return &Provisioner{apiClient: apiClient, workspaceManager: workspaceManager, localNodeID: localNodeID}
 }
 
@@ -51,7 +42,7 @@ func (p *Provisioner) CreateWorkspace(ctx context.Context, req CreateWorkspaceRe
 	if workspaceName == "" {
 		workspaceName = req.Branch
 	}
-	if req.Kind == "worktree" {
+	if req.Kind == workspace.KindWorktree {
 		if req.Branch == "" {
 			return api.CreateWorkspaceResponse{}, fmt.Errorf("branch is required for worktree workspace")
 		}
@@ -86,7 +77,7 @@ func (p *Provisioner) CreateWorkspace(ctx context.Context, req CreateWorkspaceRe
 		return api.CreateWorkspaceResponse{}, fmt.Errorf("created workspace response is missing workspace id")
 	}
 
-	if created.Workspace.Kind != "worktree" {
+	if created.Workspace.Kind != workspace.KindWorktree {
 		return created, nil
 	}
 
@@ -167,9 +158,9 @@ func (p *Provisioner) resolvePrimaryWorkspace(orgID string, projectID string, no
 		return api.Workspace{}, err
 	}
 
-	for _, workspace := range response.Workspaces {
-		if workspace.Kind == "primary" && workspace.NodeID == nodeID && workspace.LocalPath != "" {
-			return workspace, nil
+	for _, ws := range response.Workspaces {
+		if ws.Kind == workspace.KindPrimary && ws.NodeID == nodeID && ws.LocalPath != "" {
+			return ws, nil
 		}
 	}
 

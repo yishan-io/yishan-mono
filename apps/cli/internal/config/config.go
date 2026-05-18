@@ -10,6 +10,17 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config file keys for API credential storage.
+// All credential reads/writes use these constants to prevent key-string drift.
+const (
+	KeyAPIBaseURL               = "api_base_url"
+	KeyAPIToken                 = "api_token"
+	KeyAPIRefreshToken          = "api_refresh_token"
+	KeyAPIAccessTokenExpiresAt  = "api_access_token_expires_at"
+	KeyAPIRefreshTokenExpiresAt = "api_refresh_token_expires_at"
+	KeyCurrentOrgID             = "current_org_id"
+)
+
 type APIConfig struct {
 	BaseURL               string
 	Token                 string
@@ -52,13 +63,13 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 		LogLevel:     v.GetString("log_level"),
 		LogFormat:    v.GetString("log_format"),
 		ConfigPath:   configPath,
-		CurrentOrgID: v.GetString("current_org_id"),
+		CurrentOrgID: v.GetString(KeyCurrentOrgID),
 		API: APIConfig{
-			BaseURL:               v.GetString("api_base_url"),
-			Token:                 v.GetString("api_token"),
-			RefreshToken:          v.GetString("api_refresh_token"),
-			AccessTokenExpiresAt:  v.GetString("api_access_token_expires_at"),
-			RefreshTokenExpiresAt: v.GetString("api_refresh_token_expires_at"),
+			BaseURL:               v.GetString(KeyAPIBaseURL),
+			Token:                 v.GetString(KeyAPIToken),
+			RefreshToken:          v.GetString(KeyAPIRefreshToken),
+			AccessTokenExpiresAt:  v.GetString(KeyAPIAccessTokenExpiresAt),
+			RefreshTokenExpiresAt: v.GetString(KeyAPIRefreshTokenExpiresAt),
 		},
 		Daemon: DaemonConfig{
 			Host:         v.GetString("daemon_host"),

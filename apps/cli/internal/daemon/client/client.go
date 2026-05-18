@@ -33,6 +33,17 @@ type rpcError struct {
 	Message string `json:"message"`
 }
 
+// RPCError is returned by Call when the daemon responds with a JSON-RPC error.
+// Callers can inspect Code to distinguish error categories programmatically.
+type RPCError struct {
+	Code    int
+	Message string
+}
+
+func (e *RPCError) Error() string {
+	return fmt.Sprintf("daemon RPC error %d: %s", e.Code, e.Message)
+}
+
 func New(url string, token string) *Client {
 	return &Client{url: url, token: token}
 }
@@ -63,7 +74,7 @@ func (c *Client) Call(ctx context.Context, method string, params any, out any) e
 		return fmt.Errorf("parse daemon RPC response: %w", err)
 	}
 	if res.Error != nil {
-		return fmt.Errorf("daemon RPC error %d: %s", res.Error.Code, res.Error.Message)
+		return &RPCError{Code: res.Error.Code, Message: res.Error.Message}
 	}
 
 	if out == nil || len(res.Result) == 0 {

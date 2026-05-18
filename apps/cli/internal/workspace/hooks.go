@@ -3,6 +3,7 @@ package workspace
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -118,7 +119,7 @@ func RunHook(ctx context.Context, req HookRequest) (HookResult, error) {
 			result.Error = fmt.Sprintf("%s hook timed out after %s", req.HookName, timeout)
 		} else if ctx.Err() == context.Canceled {
 			result.Error = fmt.Sprintf("%s hook canceled", req.HookName)
-		} else if exitErr, ok := err.(*exec.ExitError); ok {
+		} else if exitErr := (*exec.ExitError)(nil); errors.As(err, &exitErr) {
 			result.Error = fmt.Sprintf("%s hook exited with code %d", req.HookName, exitErr.ExitCode())
 		} else {
 			// Unexpected system error (shell not found, permission denied, etc.)
@@ -170,15 +171,4 @@ func resolveHookEnv(baseEnv []string, workspaceID, workspacePath, hookName strin
 // shell profile doesn't fully initialize (e.g. non-interactive fallback).
 func ensureCommonPathDirectories(env []string) []string {
 	return shellenv.EnsurePathHasExistingDirectories(env, shellenv.CommonUserBinDirectories())
-}
-
-// hookEnvValue returns the value of an environment variable from the given
-// env slice, or empty string if not found.
-func hookEnvValue(env []string, key string) string {
-	return shellenv.EnvValueOrDefault(env, key, "")
-}
-
-// hookUpsertEnv sets or replaces an environment variable in the given slice.
-func hookUpsertEnv(env []string, key, value string) []string {
-	return shellenv.UpsertEnv(env, key, value)
 }

@@ -56,7 +56,7 @@ type WorkspaceClose struct {
 	LocalPath      string
 }
 
-func createRemoteWorkspace(_ context.Context, creation WorkspaceCreation) error {
+func createRemoteWorkspace(ctx context.Context, creation WorkspaceCreation) error {
 	if !cliruntime.APIConfigured() {
 		return nil
 	}
@@ -82,7 +82,7 @@ func createRemoteWorkspace(_ context.Context, creation WorkspaceCreation) error 
 	return nil
 }
 
-func closeRemoteWorkspace(_ context.Context, closing WorkspaceClose) error {
+func closeRemoteWorkspace(ctx context.Context, closing WorkspaceClose) error {
 	if !cliruntime.APIConfigured() {
 		return nil
 	}

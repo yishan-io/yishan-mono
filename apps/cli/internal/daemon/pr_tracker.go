@@ -22,6 +22,7 @@ type workspacePRTracker struct {
 	active         map[string]bool
 	inFlight       map[string]bool
 	started        bool
+	done           chan struct{}
 	publish        func(frontendEvent)
 	branchResolver func(context.Context, string) (string, error)
 	prResolver     func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error)
@@ -33,26 +34,27 @@ func newWorkspacePRTracker(manager *workspace.Manager, publish func(frontendEven
 		manager:  manager,
 		active:   make(map[string]bool),
 		inFlight: make(map[string]bool),
+		done:     make(chan struct{}),
 		publish:  publish,
 	}
 	tracker.branchResolver = func(ctx context.Context, root string) (string, error) {
 		ws, ok := manager.FindWorkspaceByPath(root)
 		if !ok {
-			return "", workspace.NewRPCError(-32004, "workspace not found")
+			return "", workspace.NewRPCError(rpcCodeNotFound, "workspace not found")
 		}
 		return manager.GitCurrentBranch(ctx, ws.ID)
 	}
 	tracker.prResolver = func(ctx context.Context, root string, branch string) (workspace.GitBranchPullRequestStatus, error) {
 		ws, ok := manager.FindWorkspaceByPath(root)
 		if !ok {
-			return workspace.GitBranchPullRequestStatus{}, workspace.NewRPCError(-32004, "workspace not found")
+			return workspace.GitBranchPullRequestStatus{}, workspace.NewRPCError(rpcCodeNotFound, "workspace not found")
 		}
 		return manager.GitBranchPullRequestLite(ctx, ws.ID, branch)
 	}
 	tracker.detailResolver = func(ctx context.Context, root string, branch string) (workspace.GitBranchPullRequestStatus, error) {
 		ws, ok := manager.FindWorkspaceByPath(root)
 		if !ok {
-			return workspace.GitBranchPullRequestStatus{}, workspace.NewRPCError(-32004, "workspace not found")
+			return workspace.GitBranchPullRequestStatus{}, workspace.NewRPCError(rpcCodeNotFound, "workspace not found")
 		}
 		return manager.GitBranchPullRequestWithDetails(ctx, ws.ID, branch)
 	}
@@ -108,6 +110,18 @@ func (t *workspacePRTracker) StopTracking(workspaceID string) {
 	delete(t.active, workspaceID)
 }
 
+// Stop shuts down the background poll loop. It is safe to call multiple times.
+func (t *workspacePRTracker) Stop() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	select {
+	case <-t.done:
+		// already closed
+	default:
+		close(t.done)
+	}
+}
+
 func (t *workspacePRTracker) RefreshWorkspaceByPath(worktreePath string) {
 	ws, ok := t.manager.FindWorkspaceByPath(worktreePath)
 	if !ok {
@@ -137,7 +151,14 @@ func (t *workspacePRTracker) pollLoop() {
 	ticker := time.NewTicker(workspacePullRequestPollInterval)
 	defer ticker.Stop()
 
-	for range ticker.C {
+	for {
+		select {
+		case <-t.done:
+			log.Debug().Msg("workspace PR tracker poll loop stopped")
+			return
+		case <-ticker.C:
+		}
+
 		for _, ws := range t.manager.List() {
 			t.mu.Lock()
 			tracked := t.active[ws.ID]
@@ -377,10 +398,6 @@ func (t *workspacePRTracker) persistPullRequest(workspaceID string, pr *workspac
 		DetectedAt: pr.UpdatedAt,
 		ResolvedAt: resolvedAt,
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	_ = ctx // resty client manages its own timeout
 
 	if _, err := cliruntime.APIClient().UpsertWorkspacePullRequest(ws.OrgID, ws.ProjectID, workspaceID, input); err != nil {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Str("prId", input.PrID).Str("state", state).Msg("pr persist: failed to upsert to api-service")

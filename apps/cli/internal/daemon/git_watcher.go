@@ -9,13 +9,10 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/workspace"
 )
 
 const watcherDebounce = 200 * time.Millisecond
-
-// contextLinkName is the symlink directory inside a worktree that points to the
-// shared per-repo context folder (e.g. ~/.yishan/contexts/<repoKey>).
-const contextLinkName = ".my-context"
 
 type worktreeWatcher struct {
 	mu             sync.Mutex
@@ -150,7 +147,7 @@ func (ws *workspaceWatchers) Watch(worktreePath string) {
 	// Watch the .my-context symlink target directory so that file changes inside
 	// the shared context folder (which lives outside the worktree) trigger file
 	// tree refresh events.
-	contextLinkPath := filepath.Join(worktreePath, contextLinkName)
+	contextLinkPath := filepath.Join(worktreePath, workspace.ContextLinkName)
 	if target, err := filepath.EvalSymlinks(contextLinkPath); err == nil {
 		if fi, err := os.Stat(target); err == nil && fi.IsDir() {
 			if err := fw.Add(target); err != nil {
@@ -229,7 +226,7 @@ func (w *worktreeWatcher) consume() {
 				if relPath == "." {
 					relPath = ""
 				}
-				w.scheduleFileEmit(filepath.ToSlash(filepath.Join(contextLinkName, relPath)))
+				w.scheduleFileEmit(filepath.ToSlash(filepath.Join(workspace.ContextLinkName, relPath)))
 			} else {
 				relPath, err := filepath.Rel(w.path, event.Name)
 				if err != nil {

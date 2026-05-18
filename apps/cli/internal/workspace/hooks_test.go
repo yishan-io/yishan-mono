@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"yishan/apps/cli/internal/workspace/shellenv"
 )
 
 func TestRunHook_SkipsEmptyCommand(t *testing.T) {
@@ -322,7 +324,7 @@ func TestEnsureCommonPathDirectories_AppendsExistingDirs(t *testing.T) {
 	env := []string{"PATH=/usr/bin"}
 	result := ensureCommonPathDirectories(env)
 
-	pathValue := hookEnvValue(result, "PATH")
+	pathValue := shellenv.EnvValueOrDefault(result, "PATH", "")
 	if !strings.Contains(pathValue, "/usr/bin") {
 		t.Fatalf("original PATH entry should be preserved")
 	}
@@ -338,7 +340,7 @@ func TestEnsureCommonPathDirectories_SkipsDuplicates(t *testing.T) {
 	env := []string{"PATH=/usr/local/bin:/usr/bin"}
 	result := ensureCommonPathDirectories(env)
 
-	pathValue := hookEnvValue(result, "PATH")
+	pathValue := shellenv.EnvValueOrDefault(result, "PATH", "")
 	count := strings.Count(pathValue, "/usr/local/bin")
 	if count > 1 {
 		t.Fatalf("expected /usr/local/bin to appear once, found %d times in %q", count, pathValue)

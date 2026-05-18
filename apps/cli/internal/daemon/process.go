@@ -154,16 +154,21 @@ func Run(cfg RunConfig, statePath string) error {
 		}
 	}
 
-	if cfg.RelayEnabled && cfg.RelayURL != "" {
-		go runRelayClientLoop(handler, daemonID, cfg.RelayURL, relayStatus)
-	}
-
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	defer signal.Stop(stop)
 
+	shutdownCtx, cancelShutdown := context.WithCancel(context.Background())
+	defer cancelShutdown()
+
+	if cfg.RelayEnabled && cfg.RelayURL != "" {
+		go runRelayClientLoop(shutdownCtx, handler, daemonID, cfg.RelayURL, relayStatus)
+	}
+
 	go func() {
 		<-stop
+		cancelShutdown()
+		handler.Shutdown()
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := server.Shutdown(ctx); err != nil {
@@ -291,7 +296,10 @@ func StartDetached(cfg StartConfig) (int, error) {
 	return pid, nil
 }
 
-func IsHealthy(state RuntimeState, timeout time.Duration) bool {
+// ProbeHealth performs a live HTTP GET to the daemon's /healthz endpoint.
+// It returns true only if the daemon responds with HTTP 200 within the given timeout.
+// Unlike a simple state predicate, this function performs network I/O.
+func ProbeHealth(state RuntimeState, timeout time.Duration) bool {
 	if state.Host == "" || state.Port <= 0 {
 		return false
 	}
@@ -310,7 +318,7 @@ func WaitForReady(statePath string, timeout time.Duration) (RuntimeState, error)
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		state, err := LoadState(statePath)
-		if err == nil && IsProcessRunning(state.PID) && IsHealthy(state, 250*time.Millisecond) {
+		if err == nil && IsProcessRunning(state.PID) && ProbeHealth(state, 250*time.Millisecond) {
 			return state, nil
 		}
 		time.Sleep(200 * time.Millisecond)

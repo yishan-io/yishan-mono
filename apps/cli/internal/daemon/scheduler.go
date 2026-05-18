@@ -15,6 +15,9 @@ import (
 
 const (
 	agentExecTimeout = 5 * time.Minute
+
+	// agentExecErrorCode is the error code reported when an agent process fails to run.
+	agentExecErrorCode = "AGENT_EXEC_ERROR"
 )
 
 // jobRunParams matches the relay protocol's job.run notification params.
@@ -93,7 +96,7 @@ func processRelayJob(connState *wsConnState, nodeID string, params jobRunParams)
 
 	if execErr != nil {
 		apiInput.Status = "failed"
-		apiInput.ErrorCode = "AGENT_EXEC_ERROR"
+		apiInput.ErrorCode = agentExecErrorCode
 		apiInput.ErrorMessage = execErr.Error()
 		if output != "" {
 			apiInput.ResponseBody = output
@@ -113,7 +116,7 @@ func processRelayJob(connState *wsConnState, nodeID string, params jobRunParams)
 	// Send job.result back to relay
 	if execErr != nil {
 		sendJobResult(connState, params.RunID, "failed", durationMs, nil, &jobResultError{
-			Code:    "AGENT_EXEC_ERROR",
+			Code:    agentExecErrorCode,
 			Message: execErr.Error(),
 		})
 	} else {

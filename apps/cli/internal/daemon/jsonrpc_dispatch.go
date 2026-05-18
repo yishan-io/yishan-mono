@@ -51,7 +51,7 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 				NodeID:         h.nodeID,
 				OrganizationID: req.OrganizationID,
 				ProjectID:      req.ProjectID,
-				Kind:           "worktree",
+				Kind:           workspace.KindWorktree,
 				Branch:         req.TargetBranch,
 				SourceBranch:   req.SourceBranch,
 				LocalPath:      created.Path,
@@ -139,7 +139,7 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 				NodeID:         h.nodeID,
 				OrganizationID: req.OrganizationID,
 				ProjectID:      req.ProjectID,
-				Kind:           "worktree",
+				Kind:           workspace.KindWorktree,
 				Branch:         req.Branch,
 				LocalPath:      req.WorktreePath,
 			}); err != nil {
@@ -212,7 +212,7 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 		req.AccessToken = strings.TrimSpace(req.AccessToken)
 		req.RefreshToken = strings.TrimSpace(req.RefreshToken)
 		if req.AccessToken == "" {
-			return nil, workspace.NewRPCError(-32602, "accessToken is required")
+			return nil, workspace.NewRPCError(rpcCodeInvalidParams, "accessToken is required")
 		}
 		if err := cliruntime.PersistAuthTokens(req); err != nil {
 			return nil, err
@@ -515,7 +515,7 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 		connState.DetachSubscription(req.SessionID)
 		return workspace.TerminalUnsubscribeResponse{Unsubscribed: true}, nil
 	default:
-		return nil, workspace.NewRPCError(-32601, fmt.Sprintf("method not found: %s", method))
+		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, fmt.Sprintf("method not found: %s", method))
 	}
 }
 

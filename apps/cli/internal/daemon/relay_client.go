@@ -95,7 +95,7 @@ func (s *RelayStatus) Snapshot() RelayStatusSnapshot {
 	return snap
 }
 
-func runRelayClientLoop(handler *JSONRPCHandler, nodeID string, relayURL string, status *RelayStatus) {
+func runRelayClientLoop(ctx context.Context, handler *JSONRPCHandler, nodeID string, relayURL string, status *RelayStatus) {
 	endpoint, err := normalizeRelayWSURL(relayURL)
 	if err != nil {
 		log.Warn().Err(err).Str("relay_url", relayURL).Msg("invalid relay url; relay client disabled")
@@ -108,10 +108,21 @@ func runRelayClientLoop(handler *JSONRPCHandler, nodeID string, relayURL string,
 
 	delay := relayReconnectInitialDelay
 	for {
+		select {
+		case <-ctx.Done():
+			log.Debug().Msg("relay client loop stopped")
+			return
+		default:
+		}
+
 		if !cliruntime.APIConfigured() {
 			log.Warn().Msg("relay client waiting for API credentials")
 			status.setDisconnected("waiting for API credentials")
-			time.Sleep(delay)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(delay):
+			}
 			delay = nextRelayDelay(delay)
 			continue
 		}
@@ -124,7 +135,11 @@ func runRelayClientLoop(handler *JSONRPCHandler, nodeID string, relayURL string,
 			if err != nil {
 				log.Warn().Err(err).Str("nodeId", nodeID).Msg("relay token mint failed")
 				status.setDisconnected("token mint failed: " + err.Error())
-				time.Sleep(delay)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(delay):
+				}
 				delay = nextRelayDelay(delay)
 				continue
 			}
@@ -135,11 +150,15 @@ func runRelayClientLoop(handler *JSONRPCHandler, nodeID string, relayURL string,
 		endpointWithMetadata := appendRelayClientMetadata(endpoint)
 		headers := http.Header{}
 		headers.Set("Authorization", "Bearer "+cachedToken)
-		conn, _, err := websocket.DefaultDialer.Dial(endpointWithMetadata, headers)
+		conn, _, err := websocket.DefaultDialer.DialContext(ctx, endpointWithMetadata, headers)
 		if err != nil {
 			log.Warn().Err(err).Str("relay_url", endpointWithMetadata).Msg("relay websocket dial failed")
 			status.setDisconnected("dial failed: " + err.Error())
-			time.Sleep(delay)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(delay):
+			}
 			delay = nextRelayDelay(delay)
 			continue
 		}

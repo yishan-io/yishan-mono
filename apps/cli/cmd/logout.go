@@ -67,18 +67,18 @@ func hasStoredLocalCredentials(configPath string) (bool, error) {
 		return false, err
 	}
 
-	return strings.TrimSpace(v.GetString("api_token")) != "" ||
-		strings.TrimSpace(v.GetString("api_refresh_token")) != "" ||
-		strings.TrimSpace(v.GetString("api_access_token_expires_at")) != "" ||
-		strings.TrimSpace(v.GetString("api_refresh_token_expires_at")) != "", nil
+	return strings.TrimSpace(v.GetString(config.KeyAPIToken)) != "" ||
+		strings.TrimSpace(v.GetString(config.KeyAPIRefreshToken)) != "" ||
+		strings.TrimSpace(v.GetString(config.KeyAPIAccessTokenExpiresAt)) != "" ||
+		strings.TrimSpace(v.GetString(config.KeyAPIRefreshTokenExpiresAt)) != "", nil
 }
 
 func clearLocalCredentials() error {
 	if err := config.UpdateFile(appConfig.ConfigPath, func(cfg *viper.Viper) {
-		cfg.Set("api_token", "")
-		cfg.Set("api_refresh_token", "")
-		cfg.Set("api_access_token_expires_at", "")
-		cfg.Set("api_refresh_token_expires_at", "")
+		cfg.Set(config.KeyAPIToken, "")
+		cfg.Set(config.KeyAPIRefreshToken, "")
+		cfg.Set(config.KeyAPIAccessTokenExpiresAt, "")
+		cfg.Set(config.KeyAPIRefreshTokenExpiresAt, "")
 	}); err != nil {
 		return err
 	}

@@ -130,7 +130,7 @@ var orgUseCmd = &cobra.Command{
 	RunE: func(_ *cobra.Command, args []string) error {
 		orgID := args[0]
 		if err := config.UpdateFile(appConfig.ConfigPath, func(cfg *viper.Viper) {
-			cfg.Set("current_org_id", orgID)
+			cfg.Set(config.KeyCurrentOrgID, orgID)
 		}); err != nil {
 			return err
 		}
@@ -173,7 +173,7 @@ var orgClearCmd = &cobra.Command{
 	Short: "Clear current organization",
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if err := config.UpdateFile(appConfig.ConfigPath, func(cfg *viper.Viper) {
-			cfg.Set("current_org_id", "")
+			cfg.Set(config.KeyCurrentOrgID, "")
 		}); err != nil {
 			return err
 		}
@@ -201,14 +201,14 @@ func init() {
 	orgCreateCmd.Flags().StringSlice("member-user-id", []string{}, "additional member user id")
 	cobra.CheckErr(orgCreateCmd.MarkFlagRequired("name"))
 
-	orgDeleteCmd.Flags().String("org-id", "", "organization ID")
+	addOrgIDFlag(orgDeleteCmd)
 
-	orgMemberAddCmd.Flags().String("org-id", "", "organization ID")
+	addOrgIDFlag(orgMemberAddCmd)
 	orgMemberAddCmd.Flags().String("user-id", "", "member user ID")
 	orgMemberAddCmd.Flags().String("role", "member", "member role (member|admin)")
 	cobra.CheckErr(orgMemberAddCmd.MarkFlagRequired("user-id"))
 
-	orgMemberRemoveCmd.Flags().String("org-id", "", "organization ID")
+	addOrgIDFlag(orgMemberRemoveCmd)
 	orgMemberRemoveCmd.Flags().String("user-id", "", "member user ID")
 	cobra.CheckErr(orgMemberRemoveCmd.MarkFlagRequired("user-id"))
 }

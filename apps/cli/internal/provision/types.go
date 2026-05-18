@@ -41,7 +41,7 @@ func ensureBareRepoClone(ctx context.Context, repoURL string, repoPath string) e
 
 	cmd := exec.CommandContext(ctx, "git", "clone", "--bare", repoURL, repoPath)
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("clone bare repo: %s", strings.TrimSpace(string(out)))
+		return fmt.Errorf("clone bare repo (%s): %w", strings.TrimSpace(string(out)), err)
 	}
 	return nil
 }
@@ -51,7 +51,7 @@ func updateGitRepo(ctx context.Context, repoPath string) error {
 	remoteOut, err := remoteCmd.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			return fmt.Errorf("list git remotes: %s", strings.TrimSpace(string(exitErr.Stderr)))
+			return fmt.Errorf("list git remotes (%s): %w", strings.TrimSpace(string(exitErr.Stderr)), err)
 		}
 		return err
 	}
@@ -61,7 +61,7 @@ func updateGitRepo(ctx context.Context, repoPath string) error {
 
 	cmd := exec.CommandContext(ctx, "git", "-C", repoPath, "fetch", "--all", "--prune")
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("fetch git repo: %s", strings.TrimSpace(string(out)))
+		return fmt.Errorf("fetch git repo (%s): %w", strings.TrimSpace(string(out)), err)
 	}
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"yishan/apps/cli/internal/output"
 	"yishan/apps/cli/internal/provision"
 	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/workspace"
 
 	"github.com/spf13/cobra"
 )
@@ -37,9 +38,9 @@ var workspaceListCmd = &cobra.Command{
 	},
 }
 
-var workspaceGetCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Get project workspace by id",
+var workspaceFindCmd = &cobra.Command{
+	Use:   "find",
+	Short: "Find workspace by project and workspace ID",
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		orgID, err := resolveOrgID(cmd)
 		if err != nil {
@@ -110,7 +111,7 @@ var workspaceCreateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if kind == "primary" && strings.TrimSpace(localPath) == "" {
+		if kind == workspace.KindPrimary && strings.TrimSpace(localPath) == "" {
 			return fmt.Errorf("local-path is required for primary workspaces")
 		}
 		if err := validateWorkspaceKind(kind); err != nil {
@@ -119,14 +120,6 @@ var workspaceCreateCmd = &cobra.Command{
 
 		provisioner := provision.NewRuntimeProvisioner(cliruntime.APIClient(), provision.RuntimeConfig{
 			ConfigPath: appConfig.ConfigPath,
-			Daemon: provision.DaemonAuthConfig{
-				Host:        appConfig.Daemon.Host,
-				Port:        appConfig.Daemon.Port,
-				JWTSecret:   appConfig.Daemon.JWTSecret,
-				JWTIssuer:   appConfig.Daemon.JWTIssuer,
-				JWTAudience: appConfig.Daemon.JWTAudience,
-				JWTRequired: appConfig.Daemon.JWTRequired,
-			},
 		})
 
 		response, err := provisioner.CreateWorkspace(cmd.Context(), provision.CreateWorkspaceRequest{
@@ -219,21 +212,21 @@ var workspaceCmd = &cobra.Command{Use: "workspace", Short: "Workspace operations
 func init() {
 	rootCmd.AddCommand(workspaceCmd)
 	workspaceCmd.AddCommand(workspaceListCmd)
-	workspaceCmd.AddCommand(workspaceGetCmd)
+	workspaceCmd.AddCommand(workspaceFindCmd)
 	workspaceCmd.AddCommand(workspaceCreateCmd)
 	workspaceCmd.AddCommand(workspaceCloseCmd)
 
-	workspaceListCmd.Flags().String("org-id", "", "organization ID")
+	addOrgIDFlag(workspaceListCmd)
 	workspaceListCmd.Flags().String("project-id", "", "project ID")
 	cobra.CheckErr(workspaceListCmd.MarkFlagRequired("project-id"))
 
-	workspaceGetCmd.Flags().String("org-id", "", "organization ID")
-	workspaceGetCmd.Flags().String("project-id", "", "project ID")
-	workspaceGetCmd.Flags().String("workspace-id", "", "workspace ID")
-	cobra.CheckErr(workspaceGetCmd.MarkFlagRequired("project-id"))
-	cobra.CheckErr(workspaceGetCmd.MarkFlagRequired("workspace-id"))
+	addOrgIDFlag(workspaceFindCmd)
+	workspaceFindCmd.Flags().String("project-id", "", "project ID")
+	workspaceFindCmd.Flags().String("workspace-id", "", "workspace ID")
+	cobra.CheckErr(workspaceFindCmd.MarkFlagRequired("project-id"))
+	cobra.CheckErr(workspaceFindCmd.MarkFlagRequired("workspace-id"))
 
-	workspaceCreateCmd.Flags().String("org-id", "", "organization ID")
+	addOrgIDFlag(workspaceCreateCmd)
 	workspaceCreateCmd.Flags().String("project-id", "", "project ID")
 	workspaceCreateCmd.Flags().String("local-path", "", "local path")
 	workspaceCreateCmd.Flags().String("kind", "primary", "workspace kind (primary|worktree)")
@@ -242,7 +235,7 @@ func init() {
 	workspaceCreateCmd.Flags().String("name", "", "workspace name for worktree path")
 	cobra.CheckErr(workspaceCreateCmd.MarkFlagRequired("project-id"))
 
-	workspaceCloseCmd.Flags().String("org-id", "", "organization ID")
+	addOrgIDFlag(workspaceCloseCmd)
 	workspaceCloseCmd.Flags().String("project-id", "", "project ID")
 	workspaceCloseCmd.Flags().String("workspace-id", "", "workspace ID")
 	cobra.CheckErr(workspaceCloseCmd.MarkFlagRequired("project-id"))
@@ -251,7 +244,7 @@ func init() {
 
 func validateWorkspaceKind(kind string) error {
 	switch strings.TrimSpace(kind) {
-	case "primary", "worktree":
+	case workspace.KindPrimary, workspace.KindWorktree:
 		return nil
 	default:
 		return fmt.Errorf("invalid kind %q: expected primary or worktree", kind)

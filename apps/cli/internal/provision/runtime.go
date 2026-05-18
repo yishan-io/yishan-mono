@@ -11,7 +11,6 @@ import (
 
 type RuntimeConfig struct {
 	ConfigPath string
-	Daemon     DaemonAuthConfig
 }
 
 func NewRuntimeProvisioner(apiClient *api.Client, cfg RuntimeConfig) *Provisioner {
@@ -29,5 +28,5 @@ func NewRuntimeProvisioner(apiClient *api.Client, cfg RuntimeConfig) *Provisione
 		}
 	}
 
-	return NewLocalProvisioner(apiClient, cfg.Daemon, workspace.NewManager(), localNodeID)
+	return NewLocalProvisioner(apiClient, workspace.NewManager(), localNodeID)
 }

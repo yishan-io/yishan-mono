@@ -16,11 +16,11 @@ func NewRuntimeClient(appCfg *config.Config) *Client {
 		appCfg.API.RefreshTokenExpiresAt,
 		func(update TokenUpdate) error {
 			if err := config.UpdateFile(appCfg.ConfigPath, func(cfg *viper.Viper) {
-				cfg.Set("api_base_url", appCfg.API.BaseURL)
-				cfg.Set("api_token", update.AccessToken)
-				cfg.Set("api_refresh_token", update.RefreshToken)
-				cfg.Set("api_access_token_expires_at", update.AccessTokenExpiresAt)
-				cfg.Set("api_refresh_token_expires_at", update.RefreshTokenExpiresAt)
+				cfg.Set(config.KeyAPIBaseURL, appCfg.API.BaseURL)
+				cfg.Set(config.KeyAPIToken, update.AccessToken)
+				cfg.Set(config.KeyAPIRefreshToken, update.RefreshToken)
+				cfg.Set(config.KeyAPIAccessTokenExpiresAt, update.AccessTokenExpiresAt)
+				cfg.Set(config.KeyAPIRefreshTokenExpiresAt, update.RefreshTokenExpiresAt)
 			}); err != nil {
 				return fmt.Errorf("persist refreshed API tokens: %w", err)
 			}

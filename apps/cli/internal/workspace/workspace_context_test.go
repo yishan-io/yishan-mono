@@ -27,7 +27,7 @@ func TestEnsureContextLink_CreatesSymlinkAndContextDir(t *testing.T) {
 		t.Fatalf("context path is not a directory")
 	}
 
-	linkPath := filepath.Join(worktreePath, contextLinkName)
+	linkPath := filepath.Join(worktreePath, ContextLinkName)
 	linkInfo, err := os.Lstat(linkPath)
 	if err != nil {
 		t.Fatalf("context link not created: %v", err)
@@ -61,7 +61,7 @@ func TestEnsureContextLink_IsIdempotent(t *testing.T) {
 		t.Fatalf("second call: %v", err)
 	}
 
-	target, err := os.Readlink(filepath.Join(worktreePath, contextLinkName))
+	target, err := os.Readlink(filepath.Join(worktreePath, ContextLinkName))
 	if err != nil {
 		t.Fatalf("readlink: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestEnsureContextLink_ReplacesStaleSymlink(t *testing.T) {
 	if err := os.MkdirAll(staleTarget, 0o755); err != nil {
 		t.Fatalf("setup stale target: %v", err)
 	}
-	linkPath := filepath.Join(worktreePath, contextLinkName)
+	linkPath := filepath.Join(worktreePath, ContextLinkName)
 	if err := os.Symlink(staleTarget, linkPath); err != nil {
 		t.Fatalf("setup stale symlink: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestEnsureContextLink_PreservesExistingDirectory(t *testing.T) {
 	root := t.TempDir()
 	contextPath := filepath.Join(root, "contexts", "repo_abc")
 	worktreePath := filepath.Join(root, "worktrees", "repo_abc", "feature-x")
-	existingContextDir := filepath.Join(worktreePath, contextLinkName)
+	existingContextDir := filepath.Join(worktreePath, ContextLinkName)
 
 	if err := os.MkdirAll(existingContextDir, 0o755); err != nil {
 		t.Fatalf("setup existing dir: %v", err)
@@ -146,7 +146,7 @@ func TestRemoveContextLink_RemovesOwnedSymlink(t *testing.T) {
 		t.Fatalf("removeContextLink: %v", err)
 	}
 
-	if _, err := os.Lstat(filepath.Join(worktreePath, contextLinkName)); !os.IsNotExist(err) {
+	if _, err := os.Lstat(filepath.Join(worktreePath, ContextLinkName)); !os.IsNotExist(err) {
 		t.Fatalf("expected link removed, got err=%v", err)
 	}
 }
@@ -155,7 +155,7 @@ func TestRemoveContextLink_LeavesNonSymlinkAlone(t *testing.T) {
 	root := t.TempDir()
 	contextPath := filepath.Join(root, "contexts", "repo_abc")
 	worktreePath := filepath.Join(root, "worktrees", "repo_abc", "feature-x")
-	userDir := filepath.Join(worktreePath, contextLinkName)
+	userDir := filepath.Join(worktreePath, ContextLinkName)
 
 	if err := os.MkdirAll(userDir, 0o755); err != nil {
 		t.Fatalf("setup user dir: %v", err)
@@ -186,7 +186,7 @@ func TestRemoveContextLink_LeavesUnrelatedSymlinkAlone(t *testing.T) {
 	if err := os.MkdirAll(otherTarget, 0o755); err != nil {
 		t.Fatalf("setup other target: %v", err)
 	}
-	linkPath := filepath.Join(worktreePath, contextLinkName)
+	linkPath := filepath.Join(worktreePath, ContextLinkName)
 	if err := os.Symlink(otherTarget, linkPath); err != nil {
 		t.Fatalf("setup unrelated symlink: %v", err)
 	}
@@ -300,7 +300,7 @@ func TestSyncContextLink_AcceptsTildePaths(t *testing.T) {
 	if len(res.Updated) != 1 {
 		t.Fatalf("expected 1 updated for ~ path, got %+v", res)
 	}
-	if _, err := os.Lstat(filepath.Join(worktreeDir, contextLinkName)); err != nil {
+	if _, err := os.Lstat(filepath.Join(worktreeDir, ContextLinkName)); err != nil {
 		t.Fatalf("expected symlink at %s, got %v", worktreeDir, err)
 	}
 }
@@ -332,7 +332,7 @@ func TestSyncContextLink_AppliesEnabledThenDisabledAcrossWorktrees(t *testing.T)
 	}
 
 	for _, p := range []string{worktreeA, worktreeB} {
-		linkPath := filepath.Join(p, contextLinkName)
+		linkPath := filepath.Join(p, ContextLinkName)
 		info, err := os.Lstat(linkPath)
 		if err != nil {
 			t.Fatalf("expected link at %s: %v", linkPath, err)
@@ -355,7 +355,7 @@ func TestSyncContextLink_AppliesEnabledThenDisabledAcrossWorktrees(t *testing.T)
 	}
 
 	for _, p := range []string{worktreeA, worktreeB} {
-		if _, err := os.Lstat(filepath.Join(p, contextLinkName)); !os.IsNotExist(err) {
+		if _, err := os.Lstat(filepath.Join(p, ContextLinkName)); !os.IsNotExist(err) {
 			t.Fatalf("expected link removed at %s, got err=%v", p, err)
 		}
 	}

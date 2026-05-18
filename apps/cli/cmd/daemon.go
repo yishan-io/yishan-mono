@@ -64,12 +64,9 @@ func runDaemon(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	logFile := viper.GetString("daemon_log_file")
-	if logFile == "" {
-		logFile, err = daemon.ResolveLogFilePath(appConfig.ConfigPath)
-		if err != nil {
-			return err
-		}
+	logFile, err := resolveLogFilePath()
+	if err != nil {
+		return err
 	}
 
 	if err := configureDaemonLogFile(logFile); err != nil {
@@ -79,17 +76,7 @@ func runDaemon(_ *cobra.Command, _ []string) error {
 
 	log.Info().Str("log_file", logFile).Msg("daemon log file configured")
 
-	return daemon.Run(daemon.RunConfig{
-		Host:         appConfig.Daemon.Host,
-		Port:         appConfig.Daemon.Port,
-		JWTSecret:    appConfig.Daemon.JWTSecret,
-		JWTIssuer:    appConfig.Daemon.JWTIssuer,
-		JWTAudience:  appConfig.Daemon.JWTAudience,
-		JWTRequired:  appConfig.Daemon.JWTRequired,
-		RelayEnabled: appConfig.Daemon.RelayEnabled,
-		RelayURL:     appConfig.Daemon.RelayURL,
-		LogFilePath:  logFile,
-	}, statePath)
+	return daemon.Run(buildRunConfig(logFile), statePath)
 }
 
 func startDaemon(_ *cobra.Command, _ []string) error {
@@ -101,7 +88,7 @@ func startDaemon(_ *cobra.Command, _ []string) error {
 	state, err := daemon.LoadState(statePath)
 	if err == nil {
 		if daemon.IsProcessRunning(state.PID) {
-			if daemon.IsHealthy(state, 250*time.Millisecond) {
+			if daemon.ProbeHealth(state, 250*time.Millisecond) {
 				log.Info().Int("pid", state.PID).Str("address", net.JoinHostPort(state.Host, strconv.Itoa(state.Port))).Msg("daemon already running")
 				return nil
 			}
@@ -116,25 +103,13 @@ func startDaemon(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	logFile := viper.GetString("daemon_log_file")
-	if logFile == "" {
-		logFile, err = daemon.ResolveLogFilePath(appConfig.ConfigPath)
-		if err != nil {
-			return err
-		}
+	logFile, err := resolveLogFilePath()
+	if err != nil {
+		return err
 	}
 
 	if _, err := daemon.StartDetached(daemon.StartConfig{
-		Run: daemon.RunConfig{
-			Host:         appConfig.Daemon.Host,
-			Port:         appConfig.Daemon.Port,
-			JWTSecret:    appConfig.Daemon.JWTSecret,
-			JWTIssuer:    appConfig.Daemon.JWTIssuer,
-			JWTAudience:  appConfig.Daemon.JWTAudience,
-			JWTRequired:  appConfig.Daemon.JWTRequired,
-			RelayEnabled: appConfig.Daemon.RelayEnabled,
-			RelayURL:     appConfig.Daemon.RelayURL,
-		},
+		Run:        buildRunConfig(""),
 		ConfigPath: appConfig.ConfigPath,
 		LogLevel:   appConfig.LogLevel,
 		LogFile:    logFile,
@@ -160,7 +135,7 @@ func stopDaemon(_ *cobra.Command, _ []string) error {
 	state, err := daemon.Stop(statePath, 10*time.Second)
 	if err != nil {
 		if errors.Is(err, daemon.ErrNotRunning) {
-			return errors.New("daemon is not running")
+			return daemon.ErrNotRunning
 		}
 		return err
 	}
@@ -176,26 +151,14 @@ func restartDaemon(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	logFile := viper.GetString("daemon_log_file")
-	if logFile == "" {
-		logFile, err = daemon.ResolveLogFilePath(appConfig.ConfigPath)
-		if err != nil {
-			return err
-		}
+	logFile, err := resolveLogFilePath()
+	if err != nil {
+		return err
 	}
 
 	state, err := daemon.Restart(
 		daemon.StartConfig{
-			Run: daemon.RunConfig{
-				Host:         appConfig.Daemon.Host,
-				Port:         appConfig.Daemon.Port,
-				JWTSecret:    appConfig.Daemon.JWTSecret,
-				JWTIssuer:    appConfig.Daemon.JWTIssuer,
-				JWTAudience:  appConfig.Daemon.JWTAudience,
-				JWTRequired:  appConfig.Daemon.JWTRequired,
-				RelayEnabled: appConfig.Daemon.RelayEnabled,
-				RelayURL:     appConfig.Daemon.RelayURL,
-			},
+			Run:        buildRunConfig(""),
 			ConfigPath: appConfig.ConfigPath,
 			LogLevel:   appConfig.LogLevel,
 			LogFile:    logFile,
@@ -211,6 +174,32 @@ func restartDaemon(_ *cobra.Command, _ []string) error {
 	log.Info().Int("pid", state.PID).Str("address", net.JoinHostPort(state.Host, strconv.Itoa(state.Port))).Msg("daemon restarted")
 	return nil
 
+}
+
+// buildRunConfig assembles a daemon.RunConfig from the current appConfig.
+// logFilePath is only meaningful when running in the foreground (daemon run);
+// pass an empty string when building a config for StartDetached.
+func buildRunConfig(logFilePath string) daemon.RunConfig {
+	return daemon.RunConfig{
+		Host:         appConfig.Daemon.Host,
+		Port:         appConfig.Daemon.Port,
+		JWTSecret:    appConfig.Daemon.JWTSecret,
+		JWTIssuer:    appConfig.Daemon.JWTIssuer,
+		JWTAudience:  appConfig.Daemon.JWTAudience,
+		JWTRequired:  appConfig.Daemon.JWTRequired,
+		RelayEnabled: appConfig.Daemon.RelayEnabled,
+		RelayURL:     appConfig.Daemon.RelayURL,
+		LogFilePath:  logFilePath,
+	}
+}
+
+// resolveLogFilePath returns the daemon log file path from the --log-file flag
+// or falls back to the profile-default path.
+func resolveLogFilePath() (string, error) {
+	if logFile := viper.GetString("daemon_log_file"); logFile != "" {
+		return logFile, nil
+	}
+	return daemon.ResolveLogFilePath(appConfig.ConfigPath)
 }
 
 func statusDaemon(_ *cobra.Command, _ []string) error {

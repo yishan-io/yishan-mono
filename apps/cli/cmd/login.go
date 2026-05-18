@@ -174,11 +174,11 @@ func generateState(bytesLen int) (string, error) {
 
 func persistAPITokens(result loginCallbackResult) error {
 	if err := config.UpdateFile(appConfig.ConfigPath, func(cfg *viper.Viper) {
-		cfg.Set("api_base_url", appConfig.API.BaseURL)
-		cfg.Set("api_token", result.accessToken)
-		cfg.Set("api_refresh_token", result.refreshToken)
-		cfg.Set("api_access_token_expires_at", result.accessTokenExpiresAt)
-		cfg.Set("api_refresh_token_expires_at", result.refreshTokenExpiresAt)
+		cfg.Set(config.KeyAPIBaseURL, appConfig.API.BaseURL)
+		cfg.Set(config.KeyAPIToken, result.accessToken)
+		cfg.Set(config.KeyAPIRefreshToken, result.refreshToken)
+		cfg.Set(config.KeyAPIAccessTokenExpiresAt, result.accessTokenExpiresAt)
+		cfg.Set(config.KeyAPIRefreshTokenExpiresAt, result.refreshTokenExpiresAt)
 	}); err != nil {
 		return err
 	}

@@ -109,9 +109,9 @@ func init() {
 	nodeCmd.AddCommand(nodeCreateCmd)
 	nodeCmd.AddCommand(nodeDeleteCmd)
 
-	nodeListCmd.Flags().String("org-id", "", "organization ID")
+	addOrgIDFlag(nodeListCmd)
 
-	nodeCreateCmd.Flags().String("org-id", "", "organization ID")
+	addOrgIDFlag(nodeCreateCmd)
 	nodeCreateCmd.Flags().String("name", "", "node name")
 	nodeCreateCmd.Flags().String("scope", "shared", "node scope (private|shared)")
 	nodeCreateCmd.Flags().String("endpoint", "", "node endpoint URL")
@@ -119,7 +119,7 @@ func init() {
 	nodeCreateCmd.Flags().String("metadata-version", "", "node version metadata")
 	cobra.CheckErr(nodeCreateCmd.MarkFlagRequired("name"))
 
-	nodeDeleteCmd.Flags().String("org-id", "", "organization ID")
+	addOrgIDFlag(nodeDeleteCmd)
 	nodeDeleteCmd.Flags().String("node-id", "", "node ID")
 	cobra.CheckErr(nodeDeleteCmd.MarkFlagRequired("node-id"))
 }

@@ -20,7 +20,7 @@ func ListCLIToolDetectionStatusesWithRefresh(forceRefresh bool) []CLIToolDetecti
 type agentCLIToolDetector struct{}
 
 func (agentCLIToolDetector) Detect(forceRefresh bool) []clidetector.Status {
-	statuses := clidetector.ListRawAgentCLIDetectionStatuses(forceRefresh)
+	statuses := clidetector.ListAgentCLIDetectionStatusesWithRefresh(forceRefresh)
 	results := make([]clidetector.Status, 0, len(statuses))
 	for _, status := range statuses {
 		detail := "Not detected"
