@@ -2,7 +2,6 @@ package relay
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -23,7 +22,6 @@ type Server struct {
 	apiToken      string
 	upgrader      websocket.Upgrader
 	startedAt     time.Time
-	metricsTTL    time.Duration
 	metricsMu     sync.RWMutex
 	metricsCache  *metricsSnapshot
 	clientMu      sync.RWMutex
@@ -41,7 +39,7 @@ type clientConn struct {
 	write  sync.Mutex
 }
 
-// NewServer creates a new relay server.
+// NewServer creates a new relay server and wires background housekeeping.
 func NewServer(sessions *SessionManager, authenticator *auth.Authenticator, queue *jobqueue.Manager, apiToken string) *Server {
 	s := &Server{
 		sessions:      sessions,
@@ -50,26 +48,46 @@ func NewServer(sessions *SessionManager, authenticator *auth.Authenticator, queu
 		apiToken:      apiToken,
 		upgrader: websocket.Upgrader{
 			CheckOrigin:     func(_ *http.Request) bool { return true },
-			ReadBufferSize:  4096,
-			WriteBufferSize: 4096,
+			ReadBufferSize:  wsReadBufferSize,
+			WriteBufferSize: wsWriteBufferSize,
 		},
 		startedAt:     time.Now(),
-		metricsTTL:    5 * time.Second,
 		clientsByNode: make(map[string]map[*clientConn]struct{}),
 	}
 
 	// Wire session events to the job queue for reconnect/disconnect handling.
+	// HandleNodeReconnect is dispatched asynchronously so it never blocks the
+	// session event handler (which may be called from inside a lock).
 	sessions.OnEvent(func(event SessionEvent) {
 		s.invalidateMetricsCache()
 		switch event.Type {
 		case "disconnected", "replaced":
 			queue.HandleNodeDisconnect(event.NodeID)
 		case "connected":
-			queue.HandleNodeReconnect(event.NodeID)
+			go queue.HandleNodeReconnect(event.NodeID)
 		}
 	})
 
+	// Background housekeeping: evict stale disconnected sessions.
+	go s.evictionLoop()
+
+	// Background housekeeping: prune completed/failed job runs.
+	go queue.PruneLoop(staleSessionMaxAge)
+
 	return s
+}
+
+// evictionLoop periodically removes sessions that have been disconnected for
+// longer than staleSessionMaxAge, preventing unbounded memory growth.
+func (s *Server) evictionLoop() {
+	ticker := time.NewTicker(staleSessionEvictInterval)
+	defer ticker.Stop()
+	for range ticker.C {
+		n := s.sessions.EvictStale(staleSessionMaxAge)
+		if n > 0 {
+			log.Debug().Int("evicted", n).Msg("evicted stale disconnected sessions")
+		}
+	}
 }
 
 // HandleWebSocket upgrades HTTP to WebSocket and runs the node session loop.
@@ -88,8 +106,10 @@ func (s *Server) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	session := s.sessions.Register(conn, *identity)
+	// Disconnect using the session pointer so the deferred call never
+	// accidentally marks a newer session as disconnected after a reconnect.
 	defer func() {
-		s.sessions.Disconnect(identity.NodeID, websocket.CloseNormalClosure, "connection closed")
+		s.sessions.DisconnectSession(session, websocket.CloseNormalClosure, "connection closed")
 	}()
 
 	log.Info().
@@ -138,7 +158,7 @@ func (s *Server) HandleClientWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		node := s.sessions.Get(nodeID)
-		if node == nil || node.State != StateConnected {
+		if node == nil || !node.isConnected() {
 			_ = client.writeJSON(response{
 				JSONRPC: "2.0",
 				ID:      nil,
@@ -239,7 +259,7 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 
 // heartbeatLoop sends periodic relay.ping to the node.
 func (s *Server) heartbeatLoop(session *NodeSession, done <-chan struct{}) {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(heartbeatInterval)
 	defer ticker.Stop()
 
 	for {
@@ -247,6 +267,11 @@ func (s *Server) heartbeatLoop(session *NodeSession, done <-chan struct{}) {
 		case <-done:
 			return
 		case <-ticker.C:
+			// Set a write deadline before each heartbeat write so a slow or
+			// unresponsive node cannot block this goroutine indefinitely.
+			if session.conn != nil {
+				_ = session.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
+			}
 			if err := session.SendNotification(MethodPing, nil); err != nil {
 				log.Debug().Err(err).Str("nodeId", session.Identity.NodeID).Msg("heartbeat ping failed")
 				return
@@ -356,7 +381,6 @@ func (s *Server) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	metrics := s.getMetricsSnapshot()
-
 	writeJSON(w, http.StatusOK, metrics)
 }
 
@@ -372,19 +396,21 @@ func (s *Server) getMetricsSnapshot() map[string]any {
 	}
 	s.metricsMu.RUnlock()
 
+	// Collect all session stats in one locked pass instead of four.
+	stats := s.sessions.GetStats()
 	queueMetrics := s.queue.GetMetrics()
 	payload := map[string]any{
 		"uptime":            time.Since(s.startedAt).String(),
-		"connectedNodes":    s.sessions.ConnectedNodeIDs(),
-		"connectedSessions": s.sessions.ConnectedSessions(),
-		"connectedCount":    s.sessions.ConnectedCount(),
-		"totalSessions":     s.sessions.TotalCount(),
+		"connectedNodes":    stats.ConnectedIDs,
+		"connectedSessions": stats.ConnectedSessions,
+		"connectedCount":    stats.ConnectedCount,
+		"totalSessions":     stats.TotalCount,
 		"queue":             queueMetrics,
 	}
 
 	s.metricsMu.Lock()
 	s.metricsCache = &metricsSnapshot{
-		expiresAt: now.Add(s.metricsTTL),
+		expiresAt: now.Add(metricsCacheTTL),
 		payload:   payload,
 	}
 	s.metricsMu.Unlock()
@@ -398,26 +424,14 @@ func (s *Server) invalidateMetricsCache() {
 	s.metricsMu.Unlock()
 }
 
+// authorizeAPIRequest extracts and validates the bearer token from the request.
+// It uses the shared extractBearerToken helper from internal/auth.
 func (s *Server) authorizeAPIRequest(w http.ResponseWriter, r *http.Request) bool {
-	token := ""
-
-	if authorization := r.Header.Get("Authorization"); authorization != "" {
-		token = strings.TrimSpace(strings.TrimPrefix(authorization, "Bearer "))
-		if token == authorization {
-			token = ""
-		}
-	}
-
-	// Fallback: query param (needed for browser WebSocket which cannot set headers).
-	if token == "" {
-		token = strings.TrimSpace(r.URL.Query().Get("token"))
-	}
-
+	token := auth.ExtractBearerToken(r)
 	if token == "" || token != s.apiToken {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return false
 	}
-
 	return true
 }
 
@@ -457,6 +471,10 @@ func (s *Server) removeClient(client *clientConn) {
 func (s *Server) broadcastToNodeClients(nodeID string, msgType int, payload []byte) {
 	s.clientMu.RLock()
 	set := s.clientsByNode[nodeID]
+	if len(set) == 0 {
+		s.clientMu.RUnlock()
+		return
+	}
 	clients := make([]*clientConn, 0, len(set))
 	for c := range set {
 		clients = append(clients, c)
@@ -464,6 +482,8 @@ func (s *Server) broadcastToNodeClients(nodeID string, msgType int, payload []by
 	s.clientMu.RUnlock()
 
 	for _, c := range clients {
+		// Set write deadline before each broadcast write.
+		_ = c.conn.SetWriteDeadline(time.Now().Add(writeDeadline))
 		if err := c.writeMessage(msgType, payload); err != nil {
 			log.Debug().Err(err).Str("nodeId", nodeID).Msg("dropping relay client on write failure")
 			s.removeClient(c)
@@ -481,15 +501,4 @@ func (c *clientConn) writeJSON(v any) error {
 	c.write.Lock()
 	defer c.write.Unlock()
 	return c.conn.WriteJSON(v)
-}
-
-// SendJobRun sends a job.run notification to a node via its relay session.
-// Used by the job queue manager.
-func (s *Server) SendJobRun(nodeID string, params jobRunParams) bool {
-	return s.sessions.SendNotification(nodeID, MethodJobRun, params)
-}
-
-// FormatDispatchErr returns an actionable error message.
-func FormatDispatchErr(nodeID string, err error) string {
-	return fmt.Sprintf("failed to dispatch to node %s: %v — verify node is connected to relay and check relay logs for details", nodeID, err)
 }

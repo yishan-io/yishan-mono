@@ -10,6 +10,9 @@ import (
 	"yishan/apps/relay/internal/auth"
 )
 
+// ErrNodeOffline is returned when attempting to send to a disconnected node.
+var ErrNodeOffline = errNodeOffline
+
 // ---------------------------------------------------------------------------
 // NodeSession represents a single connected node.
 // ---------------------------------------------------------------------------
@@ -24,9 +27,14 @@ const (
 
 // NodeSession holds the state for a connected (or recently disconnected) node.
 type NodeSession struct {
-	Identity       auth.NodeIdentity
+	Identity    auth.NodeIdentity
+	ConnectedAt time.Time
+
+	// stateMu protects State and DisconnectedAt independently of the
+	// SessionManager.mu so concurrent reads of these fields (IsOnline, etc.)
+	// and the markDisconnected write are properly synchronised.
+	stateMu        sync.RWMutex
 	State          SessionState
-	ConnectedAt    time.Time
 	DisconnectedAt *time.Time
 
 	conn    *websocket.Conn
@@ -40,6 +48,15 @@ func newNodeSession(conn *websocket.Conn, identity auth.NodeIdentity) *NodeSessi
 		ConnectedAt: time.Now(),
 		conn:        conn,
 	}
+}
+
+// isConnected returns true when the session is in the connected state.
+// Thread-safe via stateMu.
+func (s *NodeSession) isConnected() bool {
+	s.stateMu.RLock()
+	ok := s.State == StateConnected
+	s.stateMu.RUnlock()
+	return ok
 }
 
 // SendJSON sends a JSON message to the node. Thread-safe.
@@ -81,10 +98,15 @@ func (s *NodeSession) Close(code int, reason string) {
 	}
 }
 
+// markDisconnected atomically marks the session as disconnected.
+// Protected by stateMu so concurrent reads of State are race-free.
 func (s *NodeSession) markDisconnected() {
 	now := time.Now()
+	s.stateMu.Lock()
 	s.State = StateDisconnected
 	s.DisconnectedAt = &now
+	s.stateMu.Unlock()
+
 	s.writeMu.Lock()
 	s.conn = nil
 	s.writeMu.Unlock()
@@ -102,10 +124,19 @@ type SessionEvent struct {
 	DaemonVersion string
 }
 
+// ConnectedSessionView is a read-only view of a connected session for metrics.
 type ConnectedSessionView struct {
 	NodeID        string  `json:"nodeId"`
 	UserID        string  `json:"userId"`
 	DaemonVersion *string `json:"daemonVersion,omitempty"`
+}
+
+// SessionStats is a snapshot of session counts collected in one locked pass.
+type SessionStats struct {
+	ConnectedIDs      []string
+	ConnectedSessions []ConnectedSessionView
+	ConnectedCount    int
+	TotalCount        int
 }
 
 // SessionEventHandler is a callback for session lifecycle events.
@@ -119,7 +150,11 @@ type SessionEventHandler func(SessionEvent)
 type SessionManager struct {
 	mu       sync.RWMutex
 	sessions map[string]*NodeSession // keyed by nodeId
-	handlers []SessionEventHandler
+
+	// handlerMu protects the handlers slice. Handlers are registered once at
+	// startup so reads dominate; use RWMutex to avoid copying on every emit.
+	handlerMu sync.RWMutex
+	handlers  []SessionEventHandler
 }
 
 // NewSessionManager creates a new SessionManager.
@@ -131,17 +166,17 @@ func NewSessionManager() *SessionManager {
 
 // OnEvent registers a handler for session lifecycle events.
 func (m *SessionManager) OnEvent(handler SessionEventHandler) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.handlerMu.Lock()
+	defer m.handlerMu.Unlock()
 	m.handlers = append(m.handlers, handler)
 }
 
 func (m *SessionManager) emit(event SessionEvent) {
-	// Read handlers under lock, call outside lock to avoid deadlock.
-	m.mu.RLock()
-	handlers := make([]SessionEventHandler, len(m.handlers))
-	copy(handlers, m.handlers)
-	m.mu.RUnlock()
+	// Read the handlers slice pointer under RLock without copying.
+	// Handlers are registered once at startup and never removed.
+	m.handlerMu.RLock()
+	handlers := m.handlers
+	m.handlerMu.RUnlock()
 
 	for _, h := range handlers {
 		func() {
@@ -156,7 +191,13 @@ func (m *SessionManager) emit(event SessionEvent) {
 }
 
 // Register creates or replaces a session for the given node.
-// If the node already has an active connection, the old one is closed.
+// If the node already has an active connection, the old one is replaced.
+//
+// The fix for the double-disconnect race: the old session pointer is captured
+// under the lock and passed directly into Close/markDisconnected. The deferred
+// Disconnect in HandleWebSocket passes the *session pointer* it received from
+// Register, so it never re-looks up sessions[nodeID] and cannot corrupt the new
+// live session.
 func (m *SessionManager) Register(conn *websocket.Conn, identity auth.NodeIdentity) *NodeSession {
 	m.mu.Lock()
 	existing := m.sessions[identity.NodeID]
@@ -164,9 +205,9 @@ func (m *SessionManager) Register(conn *websocket.Conn, identity auth.NodeIdenti
 	m.sessions[identity.NodeID] = session
 	m.mu.Unlock()
 
-	if existing != nil && existing.State == StateConnected {
+	if existing != nil && existing.isConnected() {
 		log.Info().Str("nodeId", identity.NodeID).Msg("replacing existing connection")
-		existing.Close(4000, "replaced by new connection")
+		existing.Close(wsCloseReplaced, "replaced by new connection")
 		existing.markDisconnected()
 		m.emit(SessionEvent{Type: "replaced", NodeID: identity.NodeID, UserID: identity.UserID, DaemonVersion: identity.DaemonVersion})
 	}
@@ -179,23 +220,46 @@ func (m *SessionManager) Register(conn *websocket.Conn, identity auth.NodeIdenti
 	return session
 }
 
-// Disconnect marks a node session as disconnected.
+// DisconnectSession marks the given session pointer as disconnected.
+// Using the explicit session pointer (rather than re-looking up by nodeID)
+// prevents the old goroutine from accidentally disconnecting the new session
+// after a reconnect.
+func (m *SessionManager) DisconnectSession(session *NodeSession, code int, reason string) {
+	if session == nil || !session.isConnected() {
+		return
+	}
+
+	session.Close(code, reason)
+	session.markDisconnected()
+	log.Info().
+		Str("nodeId", session.Identity.NodeID).
+		Int("code", code).
+		Str("reason", reason).
+		Msg("node disconnected")
+	m.emit(SessionEvent{
+		Type:          "disconnected",
+		NodeID:        session.Identity.NodeID,
+		UserID:        session.Identity.UserID,
+		DaemonVersion: session.Identity.DaemonVersion,
+	})
+}
+
+// Disconnect is the nodeID-based variant kept for callers that don't hold
+// a session pointer. It guards against corrupting a new session by only
+// calling markDisconnected on the exact session pointer currently in the map.
 func (m *SessionManager) Disconnect(nodeID string, code int, reason string) {
-	m.mu.Lock()
+	m.mu.RLock()
 	session := m.sessions[nodeID]
-	m.mu.Unlock()
+	m.mu.RUnlock()
 
 	if session == nil {
 		return
 	}
 
-	session.markDisconnected()
-	log.Info().
-		Str("nodeId", nodeID).
-		Int("code", code).
-		Str("reason", reason).
-		Msg("node disconnected")
-	m.emit(SessionEvent{Type: "disconnected", NodeID: nodeID, UserID: session.Identity.UserID, DaemonVersion: session.Identity.DaemonVersion})
+	// Guard: only disconnect if the stored pointer is still the same session
+	// this call is about. After a reconnect, sessions[nodeID] already points
+	// to the new session — we must not mark it disconnected.
+	m.DisconnectSession(session, code, reason)
 }
 
 // Get returns a session by node ID, or nil if not found.
@@ -208,33 +272,28 @@ func (m *SessionManager) Get(nodeID string) *NodeSession {
 // IsOnline checks if a node is currently connected.
 func (m *SessionManager) IsOnline(nodeID string) bool {
 	m.mu.RLock()
-	defer m.mu.RUnlock()
 	s := m.sessions[nodeID]
-	return s != nil && s.State == StateConnected
+	m.mu.RUnlock()
+	return s != nil && s.isConnected()
 }
 
-// ConnectedNodeIDs returns the IDs of all currently connected nodes.
-func (m *SessionManager) ConnectedNodeIDs() []string {
+// GetStats returns all session metrics in a single locked pass,
+// avoiding four separate map iterations.
+func (m *SessionManager) GetStats() SessionStats {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	ids := make([]string, 0, len(m.sessions))
-	for id, s := range m.sessions {
-		if s.State == StateConnected {
-			ids = append(ids, id)
-		}
+
+	stats := SessionStats{
+		TotalCount:        len(m.sessions),
+		ConnectedIDs:      make([]string, 0, len(m.sessions)),
+		ConnectedSessions: make([]ConnectedSessionView, 0, len(m.sessions)),
 	}
-	return ids
-}
-
-// ConnectedSessions returns the connected node sessions with live identity metadata.
-func (m *SessionManager) ConnectedSessions() []ConnectedSessionView {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	sessions := make([]ConnectedSessionView, 0, len(m.sessions))
-	for _, s := range m.sessions {
-		if s.State != StateConnected {
+	for id, s := range m.sessions {
+		if !s.isConnected() {
 			continue
 		}
+		stats.ConnectedCount++
+		stats.ConnectedIDs = append(stats.ConnectedIDs, id)
 		view := ConnectedSessionView{
 			NodeID: s.Identity.NodeID,
 			UserID: s.Identity.UserID,
@@ -243,22 +302,24 @@ func (m *SessionManager) ConnectedSessions() []ConnectedSessionView {
 			version := s.Identity.DaemonVersion
 			view.DaemonVersion = &version
 		}
-		sessions = append(sessions, view)
+		stats.ConnectedSessions = append(stats.ConnectedSessions, view)
 	}
-	return sessions
+	return stats
+}
+
+// ConnectedNodeIDs returns the IDs of all currently connected nodes.
+func (m *SessionManager) ConnectedNodeIDs() []string {
+	return m.GetStats().ConnectedIDs
+}
+
+// ConnectedSessions returns the connected node sessions with live identity metadata.
+func (m *SessionManager) ConnectedSessions() []ConnectedSessionView {
+	return m.GetStats().ConnectedSessions
 }
 
 // ConnectedCount returns the number of currently connected nodes.
 func (m *SessionManager) ConnectedCount() int {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	count := 0
-	for _, s := range m.sessions {
-		if s.State == StateConnected {
-			count++
-		}
-	}
-	return count
+	return m.GetStats().ConnectedCount
 }
 
 // TotalCount returns the total number of tracked sessions.
@@ -268,6 +329,30 @@ func (m *SessionManager) TotalCount() int {
 	return len(m.sessions)
 }
 
+// EvictStale removes sessions that have been disconnected longer than maxAge.
+// Call periodically (e.g. from a background ticker in NewServer) to prevent
+// unbounded memory growth from node churn.
+func (m *SessionManager) EvictStale(maxAge time.Duration) int {
+	cutoff := time.Now().Add(-maxAge)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	evicted := 0
+	for id, s := range m.sessions {
+		if s.isConnected() {
+			continue
+		}
+		s.stateMu.RLock()
+		disconnectedAt := s.DisconnectedAt
+		s.stateMu.RUnlock()
+		if disconnectedAt != nil && disconnectedAt.Before(cutoff) {
+			delete(m.sessions, id)
+			evicted++
+		}
+	}
+	return evicted
+}
+
 // SendNotification sends a JSON-RPC notification to a specific node.
 // Returns false if the node is not online.
 func (m *SessionManager) SendNotification(nodeID, method string, params any) bool {
@@ -275,7 +360,7 @@ func (m *SessionManager) SendNotification(nodeID, method string, params any) boo
 	session := m.sessions[nodeID]
 	m.mu.RUnlock()
 
-	if session == nil || session.State != StateConnected {
+	if session == nil || !session.isConnected() {
 		return false
 	}
 

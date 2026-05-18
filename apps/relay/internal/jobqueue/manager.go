@@ -44,6 +44,9 @@ const (
 	StatusRetrying       RunStatus = "retrying"
 )
 
+// jobRunMethod is the JSON-RPC method name for job dispatch notifications.
+const jobRunMethod = "job.run"
+
 // PendingRun represents a single dispatched job run.
 type PendingRun struct {
 	RunID          string         `json:"runId"`
@@ -104,14 +107,24 @@ type ResultError struct {
 
 // Metrics exposes observable queue state.
 type Metrics struct {
-	PendingDepth      int `json:"pendingDepth"`
-	AwaitingAck       int `json:"awaitingAck"`
-	AwaitingResult    int `json:"awaitingResult"`
-	TotalDispatched   int `json:"totalDispatched"`
-	TotalCompleted    int `json:"totalCompleted"`
-	TotalFailed       int `json:"totalFailed"`
-	TotalRetries      int `json:"totalRetries"`
+	PendingDepth        int `json:"pendingDepth"`
+	AwaitingAck         int `json:"awaitingAck"`
+	AwaitingResult      int `json:"awaitingResult"`
+	TotalDispatched     int `json:"totalDispatched"`
+	TotalCompleted      int `json:"totalCompleted"`
+	TotalFailed         int `json:"totalFailed"`
+	TotalRetries        int `json:"totalRetries"`
 	TotalSkippedOffline int `json:"totalSkippedOffline"`
+}
+
+// jobRunParams is the structured params sent in job.run notifications.
+// Using a typed struct avoids a heap map[string]any allocation per dispatch.
+type jobRunParams struct {
+	RunID          string         `json:"runId"`
+	JobID          string         `json:"jobId"`
+	ScheduledFor   string         `json:"scheduledFor"`
+	IdempotencyKey string         `json:"idempotencyKey"`
+	Payload        map[string]any `json:"payload"`
 }
 
 // ---------------------------------------------------------------------------
@@ -123,12 +136,17 @@ type Manager struct {
 	transport NodeTransport
 	config    Config
 
-	mu               sync.Mutex
+	// mu protects all mutable fields. Read-only methods (GetRun, GetMetrics,
+	// GetRunsForNode, IsOnline) use RLock so concurrent reads don't serialise.
+	mu               sync.RWMutex
 	runs             map[string]*PendingRun // keyed by runId
 	idempotencyIndex map[string]string      // idempotencyKey -> runId
-	ackTimers        map[string]*time.Timer
-	resultTimers     map[string]*time.Timer
-	metrics          Metrics
+	// runsByNode is a secondary index for O(1) node → run lookups.
+	// Updated on dispatch and completion to avoid O(n) scans.
+	runsByNode   map[string]map[string]struct{} // nodeId -> set of runIds
+	ackTimers    map[string]*time.Timer
+	resultTimers map[string]*time.Timer
+	metrics      Metrics
 }
 
 // NewManager creates a new job queue manager.
@@ -138,8 +156,23 @@ func NewManager(transport NodeTransport, config Config) *Manager {
 		config:           config,
 		runs:             make(map[string]*PendingRun),
 		idempotencyIndex: make(map[string]string),
+		runsByNode:       make(map[string]map[string]struct{}),
 		ackTimers:        make(map[string]*time.Timer),
 		resultTimers:     make(map[string]*time.Timer),
+	}
+}
+
+// PruneLoop starts a background goroutine that periodically prunes completed and
+// failed runs older than maxAge. This prevents unbounded memory growth.
+func (m *Manager) PruneLoop(maxAge time.Duration) {
+	const pruneInterval = 10 * time.Minute
+	ticker := time.NewTicker(pruneInterval)
+	defer ticker.Stop()
+	for range ticker.C {
+		n := m.PruneCompleted(maxAge)
+		if n > 0 {
+			log.Debug().Int("pruned", n).Msg("pruned old job queue runs")
+		}
 	}
 }
 
@@ -172,6 +205,7 @@ func (m *Manager) Dispatch(params DispatchParams) DispatchResult {
 
 	m.runs[params.RunID] = run
 	m.idempotencyIndex[idempotencyKey] = params.RunID
+	m.addToNodeIndex(params.NodeID, params.RunID)
 	m.metrics.PendingDepth++
 
 	// Check node online before releasing lock.
@@ -208,6 +242,14 @@ func (m *Manager) HandleAck(nodeID string, ack AckParams) {
 	if run.NodeID != nodeID {
 		m.mu.Unlock()
 		log.Warn().Str("runId", ack.RunID).Str("expected", run.NodeID).Str("got", nodeID).Msg("ack from wrong node")
+		return
+	}
+
+	// Guard against double-decrement: the timer callback may have already
+	// fired if t.Stop() returned false. Only process ack if still awaiting.
+	if run.Status != StatusAwaitingAck {
+		m.mu.Unlock()
+		log.Debug().Str("runId", ack.RunID).Str("status", string(run.Status)).Msg("ack arrived after status already advanced; ignoring")
 		return
 	}
 
@@ -290,9 +332,12 @@ func (m *Manager) HandleResult(nodeID string, result ResultParams) {
 // HandleNodeDisconnect handles all in-flight runs for a disconnected node.
 func (m *Manager) HandleNodeDisconnect(nodeID string) {
 	m.mu.Lock()
+	// Use the secondary index for O(1) lookup instead of iterating all runs.
+	runIDs := m.nodeRunIDs(nodeID)
 	var retryRuns []*PendingRun
-	for _, run := range m.runs {
-		if run.NodeID != nodeID {
+	for runID := range runIDs {
+		run, ok := m.runs[runID]
+		if !ok {
 			continue
 		}
 		switch run.Status {
@@ -322,9 +367,11 @@ func (m *Manager) HandleNodeDisconnect(nodeID string) {
 // HandleNodeReconnect retries any runs queued for retry on the reconnected node.
 func (m *Manager) HandleNodeReconnect(nodeID string) {
 	m.mu.Lock()
+	runIDs := m.nodeRunIDs(nodeID)
 	var retryRuns []*PendingRun
-	for _, run := range m.runs {
-		if run.NodeID == nodeID && run.Status == StatusRetrying {
+	for runID := range runIDs {
+		run, ok := m.runs[runID]
+		if ok && run.Status == StatusRetrying {
 			retryRuns = append(retryRuns, run)
 		}
 	}
@@ -338,18 +385,19 @@ func (m *Manager) HandleNodeReconnect(nodeID string) {
 
 // GetRun returns the current state of a run, or nil if not found.
 func (m *Manager) GetRun(runID string) *PendingRun {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.runs[runID]
 }
 
 // GetRunsForNode returns all runs targeting a specific node.
 func (m *Manager) GetRunsForNode(nodeID string) []*PendingRun {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	var result []*PendingRun
-	for _, run := range m.runs {
-		if run.NodeID == nodeID {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	runIDs := m.nodeRunIDs(nodeID)
+	result := make([]*PendingRun, 0, len(runIDs))
+	for runID := range runIDs {
+		if run, ok := m.runs[runID]; ok {
 			result = append(result, run)
 		}
 	}
@@ -358,8 +406,8 @@ func (m *Manager) GetRunsForNode(nodeID string) []*PendingRun {
 
 // GetMetrics returns a snapshot of queue metrics.
 func (m *Manager) GetMetrics() Metrics {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return m.metrics
 }
 
@@ -374,6 +422,7 @@ func (m *Manager) PruneCompleted(maxAge time.Duration) int {
 		if run.CompletedAt != nil && run.CompletedAt.Before(cutoff) {
 			delete(m.runs, runID)
 			delete(m.idempotencyIndex, run.IdempotencyKey)
+			m.removeFromNodeIndex(run.NodeID, runID)
 			pruned++
 		}
 	}
@@ -383,6 +432,35 @@ func (m *Manager) PruneCompleted(maxAge time.Duration) int {
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+// addToNodeIndex adds a runID to the secondary index for the given node.
+// Must be called with m.mu held (write).
+func (m *Manager) addToNodeIndex(nodeID, runID string) {
+	if m.runsByNode[nodeID] == nil {
+		m.runsByNode[nodeID] = make(map[string]struct{})
+	}
+	m.runsByNode[nodeID][runID] = struct{}{}
+}
+
+// removeFromNodeIndex removes a runID from the secondary index.
+// Must be called with m.mu held (write).
+func (m *Manager) removeFromNodeIndex(nodeID, runID string) {
+	if set := m.runsByNode[nodeID]; set != nil {
+		delete(set, runID)
+		if len(set) == 0 {
+			delete(m.runsByNode, nodeID)
+		}
+	}
+}
+
+// nodeRunIDs returns the set of runIDs for a node from the secondary index.
+// Must be called with m.mu held (any lock level).
+func (m *Manager) nodeRunIDs(nodeID string) map[string]struct{} {
+	if set := m.runsByNode[nodeID]; set != nil {
+		return set
+	}
+	return map[string]struct{}{}
+}
 
 func (m *Manager) attemptDispatch(run *PendingRun) DispatchResult {
 	m.mu.Lock()
@@ -394,12 +472,13 @@ func (m *Manager) attemptDispatch(run *PendingRun) DispatchResult {
 	m.metrics.AwaitingAck++
 	m.mu.Unlock()
 
-	sent := m.transport.SendNotification(run.NodeID, "job.run", map[string]any{
-		"runId":          run.RunID,
-		"jobId":          run.JobID,
-		"scheduledFor":   run.ScheduledFor,
-		"idempotencyKey": run.IdempotencyKey,
-		"payload":        run.Payload,
+	// Use a typed struct to avoid a heap map[string]any allocation per dispatch.
+	sent := m.transport.SendNotification(run.NodeID, jobRunMethod, jobRunParams{
+		RunID:          run.RunID,
+		JobID:          run.JobID,
+		ScheduledFor:   run.ScheduledFor,
+		IdempotencyKey: run.IdempotencyKey,
+		Payload:        run.Payload,
 	})
 
 	if !sent {
@@ -461,11 +540,23 @@ func (m *Manager) clearResultTimer(runID string) {
 
 func (m *Manager) handleAckTimeout(run *PendingRun) {
 	m.mu.Lock()
+	// Guard against double-decrement: check that the run is still in the
+	// awaiting-ack state. If HandleAck already ran concurrently (e.g. t.Stop()
+	// returned false but the callback was already dispatched), the status will
+	// have advanced and we must not decrement AwaitingAck again.
+	if run.Status != StatusAwaitingAck {
+		m.mu.Unlock()
+		return
+	}
 	delete(m.ackTimers, run.RunID)
 	m.metrics.AwaitingAck--
+	// Capture the values needed for logging before releasing the lock.
+	runID := run.RunID
+	nodeID := run.NodeID
+	attempts := run.Attempts
 	m.mu.Unlock()
 
-	log.Warn().Str("runId", run.RunID).Str("nodeId", run.NodeID).Int("attempts", run.Attempts).Msg("ack timeout")
+	log.Warn().Str("runId", runID).Str("nodeId", nodeID).Int("attempts", attempts).Msg("ack timeout")
 	m.scheduleRetry(run, "ack timeout")
 }
 
@@ -493,6 +584,8 @@ func (m *Manager) scheduleRetry(run *PendingRun, reason string) {
 		run.LastError = reason + " (max retries exceeded)"
 		m.metrics.PendingDepth--
 		m.metrics.TotalFailed++
+		// AwaitingAck was already decremented by handleAckTimeout before
+		// scheduleRetry is called, so do not decrement it here.
 		m.mu.Unlock()
 		log.Error().Str("runId", run.RunID).Str("nodeId", run.NodeID).Int("attempts", run.Attempts).Msg("run failed: max retries exceeded")
 		return
@@ -513,12 +606,14 @@ func (m *Manager) scheduleRetry(run *PendingRun, reason string) {
 }
 
 // buildIdempotencyKey creates a minute-bucketed key from jobId and scheduledFor.
-// Format: {jobId}:{YYYY-MM-DDTHH:MM}
 func buildIdempotencyKey(jobID, scheduledFor string) string {
 	t, err := time.Parse(time.RFC3339, scheduledFor)
 	if err != nil {
 		// Fall back to raw string if not parseable.
 		return jobID + ":" + scheduledFor
 	}
-	return jobID + ":" + t.UTC().Format("2006-01-02T15:04")
+	return jobID + ":" + t.UTC().Format(minuteBucketFormat)
 }
+
+// minuteBucketFormat is the time format used in idempotency keys.
+const minuteBucketFormat = "2006-01-02T15:04"

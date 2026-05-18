@@ -46,7 +46,7 @@ func NewAuthenticator(config Config) *Authenticator {
 // Authenticate validates a Bearer token from the request and returns the node identity.
 // Returns nil and an error if authentication fails.
 func (a *Authenticator) Authenticate(r *http.Request) (*NodeIdentity, error) {
-	tokenString := extractBearerToken(r)
+	tokenString := ExtractBearerToken(r)
 	if tokenString == "" {
 		return nil, fmt.Errorf("missing bearer token")
 	}
@@ -99,7 +99,10 @@ func (a *Authenticator) validateToken(tokenString string) (*NodeIdentity, error)
 	}, nil
 }
 
-func extractBearerToken(r *http.Request) string {
+// ExtractBearerToken extracts a bearer token from the Authorization header or
+// query parameters. Exported so the relay server can reuse it for API auth
+// without duplicating the extraction logic.
+func ExtractBearerToken(r *http.Request) string {
 	authHeader := r.Header.Get("Authorization")
 	if token, ok := strings.CutPrefix(authHeader, "Bearer "); ok {
 		return strings.TrimSpace(token)

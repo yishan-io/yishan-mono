@@ -106,15 +106,3 @@ type jobError struct {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-func asJSONID(raw json.RawMessage) any {
-	if len(raw) == 0 {
-		return nil
-	}
-
-	var id any
-	if err := json.Unmarshal(raw, &id); err != nil {
-		return nil
-	}
-	return id
-}
