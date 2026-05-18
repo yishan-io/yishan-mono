@@ -11,7 +11,7 @@ import { useCommands } from "../hooks/useCommands";
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../hooks/useWorkspacePaneVisibility";
 import { parseWorkspaceSessionNavigationPath } from "../navigation/workspaceNavigation";
 import { isEditableActiveElement } from "../shortcuts/editableTarget";
-import { layoutStore } from "../store/layoutStore";
+import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
 import { CreateProjectDialogView } from "./workspace/LeftPane/CreateProjectDialogView";

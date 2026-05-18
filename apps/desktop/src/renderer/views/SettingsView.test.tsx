@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppThemePreferenceProvider } from "../hooks/useThemePreference";
-import { LAYOUT_STORE_STORAGE_KEY, layoutStore } from "../store/layoutStore";
+import { LAYOUT_STORE_STORAGE_KEY, layoutStore } from "../store/settings/layoutStore";
 import { sessionStore } from "../store/sessionStore";
 import { SettingsView } from "./SettingsView";
 

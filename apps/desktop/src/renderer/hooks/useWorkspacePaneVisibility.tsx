@@ -1,6 +1,6 @@
 import { useMediaQuery, useTheme } from "@mui/material";
 import { type ReactNode, createContext, useContext, useMemo } from "react";
-import { layoutStore } from "../store/layoutStore";
+import { layoutStore } from "../store/settings/layoutStore";
 
 export type WorkspacePaneVisibilityValue = {
   leftCollapsed: boolean;

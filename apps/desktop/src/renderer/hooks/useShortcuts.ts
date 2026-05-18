@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getShortcutDefinitions } from "../shortcuts/keybindings";
 import { compileShortcutDefinitions, processShortcuts } from "../shortcuts/shortcutRunner";
-import { layoutStore } from "../store/layoutStore";
+import { layoutStore } from "../store/settings/layoutStore";
 import { splitPaneStore } from "../store/splitPaneStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";

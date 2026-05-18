@@ -1,4 +1,4 @@
-import type { WorkspaceItem, WorkspaceProjectRecord, WorkspaceStorePersistedState, WorkspaceStoreState } from "./types";
+import type { WorkspaceItem, WorkspaceProjectRecord, WorkspaceStorePersistedState, WorkspaceStoreState } from "../types";
 
 /** Builds workspace store state from backend snapshot data without creating implicit tabs. */
 export function buildWorkspaceStateFromData(input: {

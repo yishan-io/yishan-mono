@@ -3,7 +3,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LAYOUT_STORE_STORAGE_KEY, layoutStore } from "../store/layoutStore";
+import { LAYOUT_STORE_STORAGE_KEY, layoutStore } from "../store/settings/layoutStore";
 import { AppThemePreferenceProvider, useThemePreference } from "./useThemePreference";
 
 vi.mock("@mui/material", async () => {

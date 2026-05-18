@@ -1,10 +1,10 @@
-import { sessionStore } from "./sessionStore";
+import { sessionStore } from "../sessionStore";
 import type {
   WorkspaceStoreActions,
   WorkspaceStoreGetState,
   WorkspaceStoreSetState,
   WorkspaceStoreState,
-} from "./types";
+} from "../types";
 
 type WorkspaceSelectionActions = Pick<
   WorkspaceStoreActions,

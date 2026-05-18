@@ -1,6 +1,6 @@
 import { useMediaQuery } from "@mui/material";
 import { type ReactNode, createContext, useContext, useEffect, useMemo } from "react";
-import { layoutStore } from "../store/layoutStore";
+import { layoutStore } from "../store/settings/layoutStore";
 import type { AppThemeMode, AppThemePreference } from "../theme";
 import { resolveAppThemeMode } from "../theme";
 

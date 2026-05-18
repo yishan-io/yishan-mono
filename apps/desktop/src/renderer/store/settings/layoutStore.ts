@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import type { AppThemePreference } from "../theme";
+import type { AppThemePreference } from "../../theme";
 
 export const LAYOUT_STORE_STORAGE_KEY = "yishan-layout-store";
 export const DEFAULT_LEFT_WIDTH = 320;

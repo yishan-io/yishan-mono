@@ -4,8 +4,8 @@ import {
   applyHydratedStateFromApiData,
   applyUpdatedRepoConfigState,
   normalizeCreateRepoInput,
-} from "../helpers/projectHelpers";
-import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "./types";
+} from "../../helpers/projectHelpers";
+import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "../types";
 
 type WorkspaceRepoActions = Pick<
   WorkspaceStoreActions,

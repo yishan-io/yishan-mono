@@ -6,7 +6,7 @@ import {
   SettingsControlRow,
   SettingsSectionHeader,
 } from "../../components/settings";
-import { type LinkTarget, layoutStore } from "../../store/layoutStore";
+import { type LinkTarget, layoutStore } from "../../store/settings/layoutStore";
 
 const LINK_TARGET_OPTIONS: LinkTarget[] = ["built-in", "external"];
 

@@ -10,7 +10,7 @@ import {
 } from "../../helpers/agentSettings";
 import { useCommands } from "../../hooks/useCommands";
 import { useRefreshableLoader } from "../../hooks/useRefreshableLoader";
-import { agentSettingsStore } from "../../store/agentSettingsStore";
+import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
 
 type AgentDetectionByKind = Record<DesktopAgentKind, boolean | undefined>;
 type AgentVersionByKind = Record<DesktopAgentKind, string | undefined>;

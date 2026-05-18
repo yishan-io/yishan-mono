@@ -7,7 +7,7 @@ import type {
 } from "../../main/ipc";
 import type { DesktopAgentKind } from "../helpers/agentSettings";
 import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
-import { type LinkTarget, layoutStore } from "../store/layoutStore";
+import { type LinkTarget, layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 
 /** Opens one native folder picker and returns a selected directory path when available. */

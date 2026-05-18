@@ -1,5 +1,5 @@
 import type { ProjectRecord, WorkspaceRecord } from "../api/types";
-import { buildWorkspaceStateFromData } from "../store/state";
+import { buildWorkspaceStateFromData } from "../store/workspace/state";
 import { getFileName } from "../store/tabs";
 import type {
   WorkspaceItem,

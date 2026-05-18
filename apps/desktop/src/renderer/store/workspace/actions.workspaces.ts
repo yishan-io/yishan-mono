@@ -3,9 +3,9 @@ import {
   applyDeletedWorkspaceState,
   applyRenamedWorkspaceBranchState,
   applyRenamedWorkspaceState,
-} from "../helpers/workspaceHelpers";
-import type { DaemonWorkspacePullRequest } from "../rpc/daemonTypes";
-import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "./types";
+} from "../../helpers/workspaceHelpers";
+import type { DaemonWorkspacePullRequest } from "../../rpc/daemonTypes";
+import type { WorkspaceStoreActions, WorkspaceStoreGetState, WorkspaceStoreSetState } from "../types";
 
 type WorkspaceActions = Pick<
   WorkspaceStoreActions,

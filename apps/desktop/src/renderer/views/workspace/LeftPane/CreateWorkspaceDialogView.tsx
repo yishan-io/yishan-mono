@@ -30,7 +30,7 @@ import { useCommands } from "../../../hooks/useCommands";
 import { useDialogRegistration } from "../../../hooks/useDialogRegistration";
 import { useGitAuthorName } from "../../../hooks/useGitAuthorName";
 import { buildWorkspaceNavigationPath } from "../../../navigation/workspaceNavigation";
-import { gitBranchStore, resolveGitBranchPrefix } from "../../../store/gitBranchStore";
+import { gitBranchStore, resolveGitBranchPrefix } from "../../../store/settings/gitBranchStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 
 type CreateWorkspaceDialogViewProps = {

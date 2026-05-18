@@ -6,7 +6,7 @@ import {
   summarizeReconciledWorkspaceGitChangeTotals,
 } from "../helpers/workspaceHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
-import { layoutStore } from "../store/layoutStore";
+import { layoutStore } from "../store/settings/layoutStore";
 import { sessionStore } from "../store/sessionStore";
 import type { WorkspaceStoreState } from "../store/types";
 import { workspaceStore } from "../store/workspaceStore";

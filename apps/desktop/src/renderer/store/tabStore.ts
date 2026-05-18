@@ -19,7 +19,7 @@ import {
   resolveSessionTabState,
   toggleTabPinnedState,
   updateFileTabContentState,
-} from "./tabs-domain";
+} from "./tabs/index";
 import type { OpenWorkspaceTabInput, WorkspaceTab } from "./types";
 
 export type TabStoreState = {

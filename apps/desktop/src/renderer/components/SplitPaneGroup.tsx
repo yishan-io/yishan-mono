@@ -2,7 +2,7 @@ import { Box, darken } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
-import type { PaneLeaf } from "../store/split-pane-domain";
+import type { PaneLeaf } from "../store/split-pane";
 import { type SplitDropRegion, SplitDropZone } from "./SplitDropZone";
 import { TabBar, type TabBarCreateOption } from "./TabBar";
 

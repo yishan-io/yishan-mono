@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { gitBranchStore } from "../../store/gitBranchStore";
+import { gitBranchStore } from "../../store/settings/gitBranchStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { GitWorkspaceSettingsView } from "./GitWorkspaceSettingsView";
 

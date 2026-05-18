@@ -9,7 +9,7 @@ import {
   SettingsSectionHeader,
 } from "../../components/settings";
 import { useGitAuthorName } from "../../hooks/useGitAuthorName";
-import { type GitBranchPrefixMode, gitBranchStore, resolveGitBranchPrefix } from "../../store/gitBranchStore";
+import { type GitBranchPrefixMode, gitBranchStore, resolveGitBranchPrefix } from "../../store/settings/gitBranchStore";
 import { workspaceStore } from "../../store/workspaceStore";
 
 const GIT_WORKSPACE_PREFIX_SELECT_WIDTH = 200;

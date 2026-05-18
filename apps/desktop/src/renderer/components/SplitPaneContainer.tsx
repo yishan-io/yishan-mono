@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
 import { useCallback, useRef } from "react";
-import type { PaneBranch, PaneLeaf, SplitPaneNode } from "../store/split-pane-domain";
+import type { PaneBranch, PaneLeaf, SplitPaneNode } from "../store/split-pane";
 import { ColumnSeparator } from "./ColumnSeparator";
 
 type SplitPaneContainerProps = {

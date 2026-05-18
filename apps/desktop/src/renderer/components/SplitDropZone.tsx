@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
 import { type DragEvent, useCallback, useState } from "react";
-import type { SplitDirection } from "../store/split-pane-domain";
+import type { SplitDirection } from "../store/split-pane";
 
 export type SplitDropRegion = "left" | "right" | "top" | "bottom" | "center" | null;
 

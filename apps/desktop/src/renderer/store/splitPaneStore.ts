@@ -18,7 +18,7 @@ import {
   setActivePaneState,
   setSplitRatio,
   splitPaneWithTab,
-} from "./split-pane-domain";
+} from "./split-pane";
 
 const ROOT_PANE_ID = "root-pane";
 

@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WorkspacePaneVisibilityProvider } from "../../hooks/useWorkspacePaneVisibility";
-import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "../../store/agentSettingsStore";
+import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import { MainPaneView } from "./MainPaneView";
 
 const mocked = vi.hoisted(() => {

@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "../../store/agentSettingsStore";
+import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import { AgentSettingsView } from "./AgentSettingsView";
 
 const mocked = vi.hoisted(() => ({
