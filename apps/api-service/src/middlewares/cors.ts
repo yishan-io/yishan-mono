@@ -4,6 +4,13 @@ import { cors } from "hono/cors";
 /** Origins allowed in development when no CORS_ORIGINS env var is set. */
 const DEFAULT_DEV_ORIGINS = ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173"] as const;
 
+/**
+ * Cache of already-computed allowed-origins sets, keyed by the raw CORS_ORIGINS
+ * string (or "" for the dev default). This avoids re-parsing on every request
+ * when the env var does not change between requests.
+ */
+const allowedOriginsCache = new Map<string, Set<string>>();
+
 function readEnv(c: Context, key: string): string | undefined {
   const bindings = c.env as Record<string, string | undefined> | undefined;
   const runtimeEnv =
@@ -19,42 +26,42 @@ function normalizeOrigin(value: string): string | null {
   }
 }
 
-function getAllowedOrigins(c: Context): Set<string> {
+function buildAllowedOriginsFromRaw(corsOriginsRaw: string): Set<string> {
   const allowedOrigins = new Set<string>();
+  for (const entry of corsOriginsRaw.split(",")) {
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+    if (trimmed === "*") {
+      allowedOrigins.add("*");
+      continue;
+    }
+    const normalized = normalizeOrigin(trimmed);
+    if (normalized) allowedOrigins.add(normalized);
+  }
+  return allowedOrigins;
+}
 
+function getAllowedOrigins(c: Context): Set<string> {
   const corsOriginsRaw = readEnv(c, "CORS_ORIGINS");
+
   if (corsOriginsRaw) {
-    for (const entry of corsOriginsRaw.split(",")) {
-      const trimmed = entry.trim();
-      if (!trimmed) {
-        continue;
-      }
-      if (trimmed === "*") {
-        allowedOrigins.add("*");
-        continue;
-      }
+    const cached = allowedOriginsCache.get(corsOriginsRaw);
+    if (cached) return cached;
 
-      const normalized = normalizeOrigin(trimmed);
-      if (normalized) {
-        allowedOrigins.add(normalized);
-      }
-    }
-
-    return allowedOrigins;
+    const set = buildAllowedOriginsFromRaw(corsOriginsRaw);
+    allowedOriginsCache.set(corsOriginsRaw, set);
+    return set;
   }
 
-  for (const origin of DEFAULT_DEV_ORIGINS) {
-    allowedOrigins.add(origin);
-  }
+  const appBaseUrl = readEnv(c, "APP_BASE_URL") ?? "";
+  const cacheKey = `__dev__:${appBaseUrl}`;
+  const cached = allowedOriginsCache.get(cacheKey);
+  if (cached) return cached;
 
-  const appBaseUrl = readEnv(c, "APP_BASE_URL");
-  if (appBaseUrl) {
-    const normalized = normalizeOrigin(appBaseUrl);
-    if (normalized) {
-      allowedOrigins.add(normalized);
-    }
-  }
-
+  const allowedOrigins = new Set<string>(DEFAULT_DEV_ORIGINS);
+  const normalized = normalizeOrigin(appBaseUrl);
+  if (normalized) allowedOrigins.add(normalized);
+  allowedOriginsCache.set(cacheKey, allowedOrigins);
   return allowedOrigins;
 }
 

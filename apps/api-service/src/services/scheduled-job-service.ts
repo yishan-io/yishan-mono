@@ -236,6 +236,7 @@ export class ScheduledJobService {
     organizationId: string;
     projectId?: string;
     actorUserId: string;
+    limit?: number;
   }): Promise<ScheduledJobView[]> {
     await this.assertOrganizationMember(input.organizationId, input.actorUserId);
     if (input.projectId) {
@@ -247,11 +248,13 @@ export class ScheduledJobService {
       conditions.push(eq(scheduledJobs.projectId, input.projectId));
     }
 
-    const rows = await this.db
+    const query = this.db
       .select()
       .from(scheduledJobs)
       .where(and(...conditions))
       .orderBy(desc(scheduledJobs.createdAt));
+
+    const rows = input.limit != null ? await query.limit(input.limit) : await query;
 
     return rows.map(toScheduledJobView);
   }

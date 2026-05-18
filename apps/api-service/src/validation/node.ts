@@ -1,4 +1,4 @@
-import { nonEmptyStringSchema } from "@/validation/common";
+import { nonEmptyStringSchema, orgIdParamSchema } from "@/validation/common";
 import { z } from "zod";
 
 const nodeMetadataSchema = z
@@ -8,14 +8,12 @@ const nodeMetadataSchema = z
   })
   .catchall(z.unknown());
 
-/** Params schema for any route that identifies a single node by ID. */
+/** Shared node params schema for any route that identifies a single node by ID. */
 export const nodeParamsSchema = z.object({
   nodeId: nonEmptyStringSchema,
 });
 
-export const organizationNodeParamsSchema = z.object({
-  orgId: nonEmptyStringSchema,
-});
+export { orgIdParamSchema as organizationNodeParamsSchema };
 
 export const organizationNodeDeleteParamsSchema = z.object({
   orgId: nonEmptyStringSchema,
@@ -33,5 +31,5 @@ export const registerNodeBodySchema = z.object({
 
 export type NodeParamsInput = z.infer<typeof nodeParamsSchema>;
 export type RegisterNodeBodyInput = z.infer<typeof registerNodeBodySchema>;
-export type OrganizationNodeParamsInput = z.infer<typeof organizationNodeParamsSchema>;
+export type OrganizationNodeParamsInput = z.infer<typeof orgIdParamSchema>;
 export type OrganizationNodeDeleteParamsInput = z.infer<typeof organizationNodeDeleteParamsSchema>;

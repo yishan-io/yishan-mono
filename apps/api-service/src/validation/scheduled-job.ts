@@ -1,14 +1,12 @@
 import { AGENT_KINDS } from "@yishan/core";
 import { z } from "zod";
 
-import { nonEmptyStringSchema } from "@/validation/common";
+import { nonEmptyStringSchema, orgIdParamSchema } from "@/validation/common";
 import { nodeParamsSchema } from "@/validation/node";
 
 const scheduledAgentKindSchema = z.enum(AGENT_KINDS);
 
-export const scheduledJobOrgParamsSchema = z.object({
-  orgId: nonEmptyStringSchema,
-});
+export { orgIdParamSchema as scheduledJobOrgParamsSchema };
 
 export const scheduledJobParamsSchema = z.object({
   orgId: nonEmptyStringSchema,
@@ -51,7 +49,7 @@ export const updateScheduledJobBodySchema = z
     message: "At least one field must be provided",
   });
 
-export type ScheduledJobOrgParamsInput = z.infer<typeof scheduledJobOrgParamsSchema>;
+export type ScheduledJobOrgParamsInput = z.infer<typeof orgIdParamSchema>;
 export type ScheduledJobParamsInput = z.infer<typeof scheduledJobParamsSchema>;
 export type ScheduledJobListQueryInput = z.infer<typeof scheduledJobListQuerySchema>;
 export type ScheduledJobRunsQueryInput = z.infer<typeof scheduledJobRunsQuerySchema>;

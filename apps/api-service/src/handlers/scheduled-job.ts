@@ -23,6 +23,7 @@ export async function listScheduledJobsHandler(
     actorUserId: actorUser.id,
     organizationId: params.orgId,
     projectId: query.projectId,
+    limit: query.limit,
   });
 
   return c.json({ jobs });

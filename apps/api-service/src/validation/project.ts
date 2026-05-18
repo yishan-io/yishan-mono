@@ -1,11 +1,8 @@
+import { nonEmptyStringSchema, orgIdParamSchema } from "@/validation/common";
 import { z } from "zod";
 
-import { nonEmptyStringSchema } from "@/validation/common";
-
-export const organizationProjectParamsSchema = z.object({
-  orgId: nonEmptyStringSchema,
-});
-
+export { orgIdParamSchema as organizationProjectParamsSchema };
+export type OrganizationProjectParamsInput = z.infer<typeof orgIdParamSchema>;
 export const projectWorkspaceParamsSchema = z.object({
   orgId: nonEmptyStringSchema,
   projectId: nonEmptyStringSchema,
@@ -78,7 +75,6 @@ export const upsertWorkspacePullRequestBodySchema = z.object({
   resolvedAt: z.string().datetime().optional(),
 });
 
-export type OrganizationProjectParamsInput = z.infer<typeof organizationProjectParamsSchema>;
 export type OrganizationProjectListQueryInput = z.infer<typeof organizationProjectListQuerySchema>;
 export type ProjectWorkspaceParamsInput = z.infer<typeof projectWorkspaceParamsSchema>;
 export type CreateProjectBodyInput = z.infer<typeof createProjectBodySchema>;

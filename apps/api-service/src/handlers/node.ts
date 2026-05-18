@@ -43,13 +43,9 @@ export async function registerNodeHandler(c: AppContext, body: RegisterNodeBodyI
 
 export async function relayTokenHandler(c: AppContext, params: NodeParamsInput) {
   const actorUser = c.get("sessionUser");
-  const config = c.get("config");
   const result = await c.get("services").node.issueRelayToken({
     actorUserId: actorUser.id,
     nodeId: params.nodeId,
-    jwtSecret: config.jwtAccessSecret,
-    jwtIssuer: config.jwtIssuer,
-    jwtAudience: config.jwtAudience,
   });
 
   return c.json(result);

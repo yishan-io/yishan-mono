@@ -8,8 +8,9 @@ import {
   cookieOptions,
   oauthCookiePayloadSchema,
 } from "@/auth/http";
+import { InvalidOAuthCallbackError, OAuthStateMismatchError, ProviderEmailNotVerifiedError } from "@/errors";
 import type { AppContext } from "@/hono";
-import type { RefreshTokenBodyInput, RevokeTokenBodyInput } from "@/validation/auth";
+import type { OAuthStartQueryInput, RefreshTokenBodyInput, RevokeTokenBodyInput } from "@/validation/auth";
 
 /** Cookie max-age for the OAuth state cookie, in seconds (10 minutes). */
 const OAUTH_STATE_COOKIE_MAX_AGE_SECONDS = 10 * 60;
@@ -48,7 +49,7 @@ function parseCliRedirectUri(value: string | undefined): string | null {
   return parsed.toString();
 }
 
-export async function startOAuthHandler(c: AppContext) {
+export async function startOAuthHandler(c: AppContext, query: OAuthStartQueryInput) {
   const providerParam = c.get("oauthProvider");
   const config = c.get("config");
   const authService = c.get("services").auth;
@@ -58,10 +59,9 @@ export async function startOAuthHandler(c: AppContext) {
     oauthBaseUrl,
   );
 
-  const responseModeParam = c.req.query("mode");
-  const responseMode = responseModeParam === "token" || responseModeParam === "cli" ? responseModeParam : undefined;
-  const cliRedirectUri = parseCliRedirectUri(c.req.query("redirect_uri"));
-  const cliState = c.req.query("state");
+  const responseMode = query.mode;
+  const cliRedirectUri = parseCliRedirectUri(query.redirect_uri);
+  const cliState = query.state;
 
   if (responseMode === "cli" && (!cliRedirectUri || !cliState)) {
     return c.json(
@@ -100,7 +100,7 @@ export async function callbackOAuthHandler(c: AppContext) {
   deleteCookie(c, OAUTH_COOKIE_NAME, cookieOptions(c.req.url, config.cookieDomain));
 
   if (!state || !code || !rawCookie) {
-    return c.json({ error: "Invalid OAuth callback payload" }, StatusCodes.BAD_REQUEST);
+    throw new InvalidOAuthCallbackError("missing state, code or OAuth cookie");
   }
 
   let oauthContext: OAuthCookiePayload;
@@ -108,13 +108,13 @@ export async function callbackOAuthHandler(c: AppContext) {
   try {
     oauthContext = oauthCookiePayloadSchema.parse(JSON.parse(rawCookie));
   } catch {
-    return c.json({ error: "Invalid OAuth state" }, StatusCodes.BAD_REQUEST);
+    throw new InvalidOAuthCallbackError("malformed OAuth cookie payload");
   }
 
   const isFresh = Date.now() - oauthContext.createdAt <= OAUTH_STATE_TTL_MS;
 
   if (!isFresh || oauthContext.state !== state || oauthContext.provider !== providerParam) {
-    return c.json({ error: "OAuth state mismatch" }, StatusCodes.BAD_REQUEST);
+    throw new OAuthStateMismatchError();
   }
 
   const profile = await authService.exchangeOAuthCodeForProfile(
@@ -125,7 +125,7 @@ export async function callbackOAuthHandler(c: AppContext) {
   );
 
   if (!profile.emailVerified) {
-    return c.json({ error: "Provider email must be verified" }, StatusCodes.BAD_REQUEST);
+    throw new ProviderEmailNotVerifiedError();
   }
 
   const userId = await authService.resolveUserIdForOAuthProfile(profile);
@@ -145,7 +145,7 @@ export async function callbackOAuthHandler(c: AppContext) {
 
   if (responseMode === "cli") {
     if (!oauthContext.cliRedirectUri || !oauthContext.cliState) {
-      return c.json({ error: "Invalid OAuth CLI context" }, StatusCodes.BAD_REQUEST);
+      throw new InvalidOAuthCallbackError("missing CLI redirect_uri or state");
     }
 
     const tokens = await authService.issueApiTokens(userId);

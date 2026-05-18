@@ -304,9 +304,6 @@ export class NodeService {
   async issueRelayToken(input: {
     actorUserId: string;
     nodeId: string;
-    jwtSecret: string;
-    jwtIssuer: string;
-    jwtAudience: string;
   }): Promise<{ token: string; expiresAt: string }> {
     const rows = await this.db
       .select({ id: nodes.id, ownerUserId: nodes.ownerUserId })
@@ -327,10 +324,10 @@ export class NodeService {
       {
         sub: input.actorUserId,
         nodeId: input.nodeId,
-        iss: input.jwtIssuer,
-        aud: input.jwtAudience,
+        iss: this.config.jwtIssuer,
+        aud: this.config.jwtAudience,
       },
-      input.jwtSecret,
+      this.config.jwtAccessSecret,
     );
   }
 }

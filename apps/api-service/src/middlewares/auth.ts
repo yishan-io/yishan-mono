@@ -1,8 +1,8 @@
-import { getCookie } from "hono/cookie";
 import type { Next } from "hono";
-import { StatusCodes } from "http-status-codes";
+import { getCookie } from "hono/cookie";
 
 import { SESSION_COOKIE_NAME } from "@/auth/http";
+import { UnauthorizedError } from "@/errors";
 import type { AppContext } from "@/hono";
 
 function readBearerToken(c: AppContext): string | null {
@@ -42,5 +42,5 @@ export async function requireAuthUser(c: AppContext, next: Next) {
     }
   }
 
-  return c.json({ error: "Unauthorized" }, StatusCodes.UNAUTHORIZED);
+  throw new UnauthorizedError();
 }

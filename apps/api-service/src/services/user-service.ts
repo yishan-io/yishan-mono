@@ -2,9 +2,9 @@ import { and, eq } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
 import { oauthAccounts, users } from "@/db/schema";
-import type { NotificationPreferencesPatch } from "@/lib/notification-preferences";
-import { mergeUserPreferences, type UserPreferences, type UserPreferencesPatch } from "@/lib/user-preferences";
 import { newId } from "@/lib/id";
+import type { NotificationPreferencesPatch } from "@/lib/notification-preferences";
+import { type UserPreferences, type UserPreferencesPatch, mergeUserPreferences } from "@/lib/user-preferences";
 import type { OAuthProfile } from "@/types";
 
 export class UserService {
@@ -34,10 +34,7 @@ export class UserService {
         .select({ userId: oauthAccounts.userId })
         .from(oauthAccounts)
         .where(
-          and(
-            eq(oauthAccounts.provider, profile.provider),
-            eq(oauthAccounts.providerUserId, profile.providerUserId)
-          )
+          and(eq(oauthAccounts.provider, profile.provider), eq(oauthAccounts.providerUserId, profile.providerUserId)),
         )
         .limit(1);
 
@@ -52,7 +49,7 @@ export class UserService {
             id: newId(),
             email: profile.email,
             name: profile.name,
-            avatarUrl: profile.avatarUrl
+            avatarUrl: profile.avatarUrl,
           })
           .onConflictDoNothing()
           .returning({ id: users.id });
@@ -80,7 +77,7 @@ export class UserService {
           id: newId(),
           userId,
           provider: profile.provider,
-          providerUserId: profile.providerUserId
+          providerUserId: profile.providerUserId,
         })
         .onConflictDoNothing();
 
@@ -88,10 +85,7 @@ export class UserService {
         .select({ userId: oauthAccounts.userId })
         .from(oauthAccounts)
         .where(
-          and(
-            eq(oauthAccounts.provider, profile.provider),
-            eq(oauthAccounts.providerUserId, profile.providerUserId)
-          )
+          and(eq(oauthAccounts.provider, profile.provider), eq(oauthAccounts.providerUserId, profile.providerUserId)),
         )
         .limit(1);
 
@@ -105,7 +99,7 @@ export class UserService {
         .set({
           name: profile.name,
           avatarUrl: profile.avatarUrl,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(users.id, linkedUserId));
 
@@ -114,21 +108,13 @@ export class UserService {
   }
 
   async getUserPreferences(userId: string): Promise<UserPreferences> {
-    const rows = await this.db.select({ userPreferences: users.userPreferences }).from(users).where(eq(users.id, userId)).limit(1);
+    const rows = await this.db
+      .select({ userPreferences: users.userPreferences })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
 
-    const originalPreferences = rows[0]?.userPreferences;
-    const normalizedPreferences = mergeUserPreferences(originalPreferences, {});
-    if (JSON.stringify(originalPreferences ?? null) !== JSON.stringify(normalizedPreferences)) {
-      await this.db
-        .update(users)
-        .set({
-          userPreferences: normalizedPreferences,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, userId));
-    }
-
-    return normalizedPreferences;
+    return mergeUserPreferences(rows[0]?.userPreferences, {});
   }
 
   async updateUserPreferences(userId: string, patch: UserPreferencesPatch): Promise<UserPreferences> {
