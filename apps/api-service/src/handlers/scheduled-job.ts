@@ -21,6 +21,7 @@ export async function listScheduledJobsHandler(
   const actorUser = c.get("sessionUser");
   const jobs = await c.get("services").scheduledJob.listScheduledJobs({
     actorUserId: actorUser.id,
+    actorRole: c.get("organizationRole"),
     organizationId: params.orgId,
     projectId: query.projectId,
     limit: query.limit,
@@ -37,6 +38,7 @@ export async function createScheduledJobHandler(
   const actorUser = c.get("sessionUser");
   const job = await c.get("services").scheduledJob.createScheduledJob({
     actorUserId: actorUser.id,
+    actorRole: c.get("organizationRole"),
     organizationId: params.orgId,
     projectId: body.projectId,
     name: body.name,
@@ -60,6 +62,7 @@ export async function updateScheduledJobHandler(
   const actorUser = c.get("sessionUser");
   const job = await c.get("services").scheduledJob.updateScheduledJob({
     actorUserId: actorUser.id,
+    actorRole: c.get("organizationRole"),
     organizationId: params.orgId,
     jobId: params.jobId,
     name: body.name,
@@ -79,6 +82,7 @@ export async function pauseScheduledJobHandler(c: AppContext, params: ScheduledJ
   const actorUser = c.get("sessionUser");
   const job = await c.get("services").scheduledJob.pauseScheduledJob({
     actorUserId: actorUser.id,
+    actorRole: c.get("organizationRole"),
     organizationId: params.orgId,
     jobId: params.jobId,
   });
@@ -90,6 +94,7 @@ export async function resumeScheduledJobHandler(c: AppContext, params: Scheduled
   const actorUser = c.get("sessionUser");
   const job = await c.get("services").scheduledJob.resumeScheduledJob({
     actorUserId: actorUser.id,
+    actorRole: c.get("organizationRole"),
     organizationId: params.orgId,
     jobId: params.jobId,
   });
@@ -101,6 +106,7 @@ export async function disableScheduledJobHandler(c: AppContext, params: Schedule
   const actorUser = c.get("sessionUser");
   const job = await c.get("services").scheduledJob.disableScheduledJob({
     actorUserId: actorUser.id,
+    actorRole: c.get("organizationRole"),
     organizationId: params.orgId,
     jobId: params.jobId,
   });
@@ -116,6 +122,7 @@ export async function listScheduledJobRunsHandler(
   const actorUser = c.get("sessionUser");
   const runs = await c.get("services").scheduledJob.listJobRuns({
     actorUserId: actorUser.id,
+    actorRole: c.get("organizationRole"),
     organizationId: params.orgId,
     jobId: params.jobId,
     limit: query.limit,

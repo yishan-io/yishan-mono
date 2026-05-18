@@ -1,6 +1,8 @@
 import type { AgentKind } from "@yishan/core";
 import { and, desc, eq } from "drizzle-orm";
 
+import type { OrganizationMemberRole } from "@/db/schema";
+
 import type { AppDb } from "@/db/client";
 import { projects, scheduledJobRuns, scheduledJobs } from "@/db/schema";
 import {
@@ -73,6 +75,7 @@ type CreateScheduledJobInput = {
   organizationId: string;
   projectId: string;
   actorUserId: string;
+  actorRole?: OrganizationMemberRole;
   name: string;
   nodeId: string;
   agentKind?: AgentKind;
@@ -87,6 +90,7 @@ type UpdateScheduledJobInput = {
   organizationId: string;
   jobId: string;
   actorUserId: string;
+  actorRole?: OrganizationMemberRole;
   name?: string;
   nodeId?: string;
   agentKind?: AgentKind;
@@ -101,6 +105,7 @@ type JobIdentityInput = {
   organizationId: string;
   jobId: string;
   actorUserId: string;
+  actorRole?: OrganizationMemberRole;
 };
 
 type ListRunsInput = JobIdentityInput & {
@@ -162,8 +167,12 @@ export class ScheduledJobService {
     private readonly organizationService: OrganizationService,
   ) {}
 
-  private async assertOrganizationMember(organizationId: string, userId: string): Promise<void> {
-    await assertOrganizationMember(this.organizationService, organizationId, userId);
+  private async assertOrganizationMember(
+    organizationId: string,
+    userId: string,
+    preResolvedRole?: OrganizationMemberRole,
+  ): Promise<void> {
+    await assertOrganizationMember(this.organizationService, organizationId, userId, preResolvedRole);
   }
 
   private async assertProjectBelongsToOrganization(projectId: string, organizationId: string): Promise<void> {
@@ -195,10 +204,29 @@ export class ScheduledJobService {
     return job;
   }
 
+  /**
+   * Lightweight existence-and-ownership check — fetches only `id` and `status`.
+   * Use when the full job record is not needed (e.g. pause / disable / list runs).
+   */
+  private async assertJobExistsInOrg(jobId: string, organizationId: string): Promise<void> {
+    const rows = await this.db
+      .select({ id: scheduledJobs.id })
+      .from(scheduledJobs)
+      .where(and(eq(scheduledJobs.id, jobId), eq(scheduledJobs.organizationId, organizationId)))
+      .limit(1);
+
+    if (rows.length === 0) {
+      throw new ScheduledJobNotFoundError(jobId);
+    }
+  }
+
   async createScheduledJob(input: CreateScheduledJobInput): Promise<ScheduledJobView> {
-    await this.assertOrganizationMember(input.organizationId, input.actorUserId);
-    await this.assertProjectBelongsToOrganization(input.projectId, input.organizationId);
-    await this.assertNodeOwnedByActor(input.nodeId, input.actorUserId);
+    await this.assertOrganizationMember(input.organizationId, input.actorUserId, input.actorRole);
+    // Project-ownership check and node-ownership check are independent — run concurrently.
+    await Promise.all([
+      this.assertProjectBelongsToOrganization(input.projectId, input.organizationId),
+      this.assertNodeOwnedByActor(input.nodeId, input.actorUserId),
+    ]);
 
     const cronExpression = input.cronExpression.trim();
     const timezone = validateTimezoneOrThrow(input.timezone?.trim() || "UTC");
@@ -236,9 +264,10 @@ export class ScheduledJobService {
     organizationId: string;
     projectId?: string;
     actorUserId: string;
+    actorRole?: OrganizationMemberRole;
     limit?: number;
   }): Promise<ScheduledJobView[]> {
-    await this.assertOrganizationMember(input.organizationId, input.actorUserId);
+    await this.assertOrganizationMember(input.organizationId, input.actorUserId, input.actorRole);
     if (input.projectId) {
       await this.assertProjectBelongsToOrganization(input.projectId, input.organizationId);
     }
@@ -260,7 +289,7 @@ export class ScheduledJobService {
   }
 
   async updateScheduledJob(input: UpdateScheduledJobInput): Promise<ScheduledJobView> {
-    await this.assertOrganizationMember(input.organizationId, input.actorUserId);
+    await this.assertOrganizationMember(input.organizationId, input.actorUserId, input.actorRole);
     const existing = await this.getJobOrThrow(input.jobId, input.organizationId);
     const nodeId = input.nodeId?.trim() ?? existing.nodeId;
     if (input.nodeId !== undefined) {
@@ -299,8 +328,8 @@ export class ScheduledJobService {
   }
 
   async pauseScheduledJob(input: JobIdentityInput): Promise<ScheduledJobView> {
-    await this.assertOrganizationMember(input.organizationId, input.actorUserId);
-    await this.getJobOrThrow(input.jobId, input.organizationId);
+    await this.assertOrganizationMember(input.organizationId, input.actorUserId, input.actorRole);
+    await this.assertJobExistsInOrg(input.jobId, input.organizationId);
 
     const rows = await this.db
       .update(scheduledJobs)
@@ -316,7 +345,7 @@ export class ScheduledJobService {
   }
 
   async resumeScheduledJob(input: JobIdentityInput): Promise<ScheduledJobView> {
-    await this.assertOrganizationMember(input.organizationId, input.actorUserId);
+    await this.assertOrganizationMember(input.organizationId, input.actorUserId, input.actorRole);
     const existing = await this.getJobOrThrow(input.jobId, input.organizationId);
 
     const parsed = validateCronOrThrow(existing.cronExpression);
@@ -337,8 +366,8 @@ export class ScheduledJobService {
   }
 
   async disableScheduledJob(input: JobIdentityInput): Promise<ScheduledJobView> {
-    await this.assertOrganizationMember(input.organizationId, input.actorUserId);
-    await this.getJobOrThrow(input.jobId, input.organizationId);
+    await this.assertOrganizationMember(input.organizationId, input.actorUserId, input.actorRole);
+    await this.assertJobExistsInOrg(input.jobId, input.organizationId);
 
     const rows = await this.db
       .update(scheduledJobs)
@@ -354,8 +383,8 @@ export class ScheduledJobService {
   }
 
   async listJobRuns(input: ListRunsInput): Promise<ScheduledJobRunView[]> {
-    await this.assertOrganizationMember(input.organizationId, input.actorUserId);
-    await this.getJobOrThrow(input.jobId, input.organizationId);
+    await this.assertOrganizationMember(input.organizationId, input.actorUserId, input.actorRole);
+    await this.assertJobExistsInOrg(input.jobId, input.organizationId);
 
     const limit = input.limit ?? DEFAULT_RUN_LIMIT;
     const rows = await this.db

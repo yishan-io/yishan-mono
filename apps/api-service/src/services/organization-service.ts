@@ -139,8 +139,9 @@ export class OrganizationService {
         throw new InvalidOrganizationMemberRoleError(input.role);
       }
 
+      // Fetch user details needed for the return value — also validates the user exists.
       const targetUserRows = await tx
-        .select({ id: users.id })
+        .select({ id: users.id, email: users.email, name: users.name, avatarUrl: users.avatarUrl })
         .from(users)
         .where(eq(users.id, input.memberUserId))
         .limit(1);
@@ -148,6 +149,8 @@ export class OrganizationService {
       if (targetUserRows.length === 0) {
         throw new InvalidOrganizationMembersError([input.memberUserId]);
       }
+
+      const targetUser = targetUserRows[0]!;
 
       const existingMembershipRows = await tx
         .select({ userId: organizationMembers.userId })
@@ -171,30 +174,14 @@ export class OrganizationService {
         role: input.role,
       });
 
-      const insertedMemberRows = await tx
-        .select({
-          userId: organizationMembers.userId,
-          role: organizationMembers.role,
-          email: users.email,
-          name: users.name,
-          avatarUrl: users.avatarUrl,
-        })
-        .from(organizationMembers)
-        .innerJoin(users, eq(users.id, organizationMembers.userId))
-        .where(
-          and(
-            eq(organizationMembers.organizationId, input.organizationId),
-            eq(organizationMembers.userId, input.memberUserId),
-          ),
-        )
-        .limit(1);
-
-      const insertedMember = insertedMemberRows[0];
-      if (!insertedMember) {
-        throw new Error("Failed to add organization member");
-      }
-
-      return insertedMember;
+      // Build return value from already-fetched user data — no second SELECT needed.
+      return {
+        userId: targetUser.id,
+        role: input.role,
+        email: targetUser.email,
+        name: targetUser.name,
+        avatarUrl: targetUser.avatarUrl,
+      };
     });
   }
 
@@ -323,16 +310,8 @@ export class OrganizationService {
   }
 
   async getOrganizationsForUser(userId: string): Promise<OrganizationView[]> {
-    const organizationRows = await this.db
-      .select({ organizationId: organizationMembers.organizationId })
-      .from(organizationMembers)
-      .where(eq(organizationMembers.userId, userId));
-
-    const organizationIds = Array.from(new Set(organizationRows.map((row) => row.organizationId)));
-    if (organizationIds.length === 0) {
-      return [];
-    }
-
+    // Single JOIN from organization_members → organizations → users.
+    // No need for a preliminary "which orgs does this user belong to" query.
     const memberships = await this.db
       .select({
         organizationId: organizations.id,
@@ -348,7 +327,20 @@ export class OrganizationService {
       .from(organizationMembers)
       .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationMembers.userId))
-      .where(inArray(organizationMembers.organizationId, organizationIds));
+      .where(
+        // Limit to orgs the requesting user belongs to.
+        inArray(
+          organizationMembers.organizationId,
+          this.db
+            .select({ organizationId: organizationMembers.organizationId })
+            .from(organizationMembers)
+            .where(eq(organizationMembers.userId, userId)),
+        ),
+      );
+
+    if (memberships.length === 0) {
+      return [];
+    }
 
     const byOrg = new Map<string, OrganizationView>();
 

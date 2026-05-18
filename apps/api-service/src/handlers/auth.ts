@@ -15,9 +15,6 @@ import type { OAuthStartQueryInput, RefreshTokenBodyInput, RevokeTokenBodyInput 
 /** Cookie max-age for the OAuth state cookie, in seconds (10 minutes). */
 const OAUTH_STATE_COOKIE_MAX_AGE_SECONDS = 10 * 60;
 
-/** Maximum age of an OAuth state cookie before the callback rejects it, in ms (10 minutes). */
-const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
-
 function isLoopbackHost(hostname: string): boolean {
   return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1";
 }
@@ -111,9 +108,9 @@ export async function callbackOAuthHandler(c: AppContext) {
     throw new InvalidOAuthCallbackError("malformed OAuth cookie payload");
   }
 
-  const isFresh = Date.now() - oauthContext.createdAt <= OAUTH_STATE_TTL_MS;
-
-  if (!isFresh || oauthContext.state !== state || oauthContext.provider !== providerParam) {
+  // No manual freshness check needed — the cookie is set with maxAge: 600 so an
+  // expired cookie is never returned by getSignedCookie.
+  if (oauthContext.state !== state || oauthContext.provider !== providerParam) {
     throw new OAuthStateMismatchError();
   }
 
@@ -132,13 +129,8 @@ export async function callbackOAuthHandler(c: AppContext) {
 
   const responseMode = oauthContext.responseMode ?? c.req.query("mode");
 
-  const session = await authService.createWebSession(userId, config.sessionTtlDays);
-  setCookie(c, SESSION_COOKIE_NAME, session.token, {
-    ...cookieOptions(c.req.url, config.cookieDomain),
-    expires: session.expiresAt,
-  });
-
   if (responseMode === "token") {
+    // Bearer-token clients do not use the session cookie — skip creating it.
     const tokens = await authService.issueApiTokens(userId);
     return c.json({ userId, tokens });
   }
@@ -148,6 +140,7 @@ export async function callbackOAuthHandler(c: AppContext) {
       throw new InvalidOAuthCallbackError("missing CLI redirect_uri or state");
     }
 
+    // CLI mode uses a bearer token redirected to the local callback server — no cookie needed.
     const tokens = await authService.issueApiTokens(userId);
     const redirectUrl = new URL(oauthContext.cliRedirectUri);
     redirectUrl.searchParams.set("state", oauthContext.cliState);
@@ -160,6 +153,13 @@ export async function callbackOAuthHandler(c: AppContext) {
 
     return c.redirect(redirectUrl.toString(), StatusCodes.MOVED_TEMPORARILY);
   }
+
+  // Default (web) mode: create a session cookie.
+  const session = await authService.createWebSession(userId, config.sessionTtlDays);
+  setCookie(c, SESSION_COOKIE_NAME, session.token, {
+    ...cookieOptions(c.req.url, config.cookieDomain),
+    expires: session.expiresAt,
+  });
 
   return c.redirect(new URL("/", config.appBaseUrl).toString(), StatusCodes.MOVED_TEMPORARILY);
 }

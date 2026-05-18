@@ -56,11 +56,14 @@ export class CleanupService {
 
   /**
    * Run all cleanup operations and return aggregate results.
+   * All three DELETEs target independent tables and are issued concurrently.
    */
   async runAll(): Promise<CleanupResult> {
-    const deletedSessions = await this.deleteExpiredSessions();
-    const deletedExpiredRefreshTokens = await this.deleteExpiredRefreshTokens();
-    const deletedRevokedRefreshTokens = await this.deleteOldRevokedRefreshTokens();
+    const [deletedSessions, deletedExpiredRefreshTokens, deletedRevokedRefreshTokens] = await Promise.all([
+      this.deleteExpiredSessions(),
+      this.deleteExpiredRefreshTokens(),
+      this.deleteOldRevokedRefreshTokens(),
+    ]);
 
     return {
       deletedSessions,

@@ -10,6 +10,19 @@ const DEFAULT_JWT_AUDIENCE = "api-service";
 const RUNTIME_ENV: Record<string, string | undefined> =
   typeof process !== "undefined" && process.env ? (process.env as Record<string, string | undefined>) : {};
 
+/**
+ * Module-scope cache for parsed service configs.
+ *
+ * Keyed by the raw bindings object (`c.env`).  On Cloudflare Workers the same
+ * bindings object is reused for every request in a given Worker isolation, so
+ * the cache avoids re-parsing and re-validating up to 14 env vars per request.
+ * On Node.js each request still uses `process.env`, which is also a single
+ * stable reference, so caching works there too.
+ *
+ * WeakMap ensures the entry is GC'd if the env object is ever dropped.
+ */
+const serviceConfigCache = new WeakMap<object, ServiceConfig>();
+
 function readEnv(c: Context, key: string): string | undefined {
   const bindings = c.env as Record<string, string | undefined> | undefined;
   return bindings?.[key] ?? RUNTIME_ENV[key];
@@ -35,7 +48,7 @@ function requireEnv(c: Context, key: string): string {
   return value;
 }
 
-export function getServiceConfig(c: Context): ServiceConfig {
+function buildServiceConfig(c: Context): ServiceConfig {
   const sessionTtlRaw = readEnv(c, "SESSION_TTL_DAYS") ?? "30";
   const sessionTtlDays = Number(sessionTtlRaw);
   const jwtAccessTtlRaw = readEnv(c, "JWT_ACCESS_TTL_SECONDS") ?? "900";
@@ -84,4 +97,18 @@ export function getServiceConfig(c: Context): ServiceConfig {
     githubClientId: requireEnv(c, "GITHUB_CLIENT_ID"),
     githubClientSecret: requireEnv(c, "GITHUB_CLIENT_SECRET"),
   };
+}
+
+export function getServiceConfig(c: Context): ServiceConfig {
+  // Use the env bindings object (or process.env as fallback) as the cache key.
+  // Both are stable references within a Worker isolation / Node.js process.
+  const envKey = (c.env as object | undefined) ?? RUNTIME_ENV;
+  const cached = serviceConfigCache.get(envKey);
+  if (cached) {
+    return cached;
+  }
+
+  const config = buildServiceConfig(c);
+  serviceConfigCache.set(envKey, config);
+  return config;
 }

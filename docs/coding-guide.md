@@ -483,11 +483,93 @@ check a concrete output value or a specific side effect.
 - Batch database or API operations when processing a list. Never issue one query per item
   in a loop.
 
-### api-service
-- Independent database queries must run with `Promise.all`, not `await` in sequence.
-- Service methods that are called on every request (e.g., `assertOrganizationMember`)
-  must be as lean as possible — single query, no extra fetches.
-- `SELECT *` is banned. Always specify the columns your view type needs.
+### api-service (Cloudflare Workers + Neon — both serverless)
+
+`api-service` runs on **Cloudflare Workers** and talks to **Neon** (serverless Postgres).
+Both are serverless: a Worker isolate is created per request (or per concurrent burst) and
+torn down after the response; Neon compute starts cold when the first connection arrives.
+Every design decision must account for this.
+
+#### No persistent in-process state
+
+Module-scope variables (`let`, `const`, class instances at module level) **do not survive
+between requests**. A new isolate starts with a fresh module graph on every request (or
+after a period of inactivity). This means:
+
+- **In-memory caches with a TTL do not work.** A cache populated in request N is not
+  visible to request N+1 if it runs in a different isolate. Do not add module-scope cache
+  variables expecting them to persist across requests.
+- **The one safe use of module-scope state** is for values that are purely derived from
+  the Worker's `env` bindings object, which is the same reference for the entire lifetime
+  of a single isolate. `getServiceConfig` caches its result in a `WeakMap<object, ServiceConfig>`
+  keyed on `c.env` — this works because `c.env` is stable within an isolate, and the
+  `WeakMap` is GC-safe if the isolate is ever torn down.
+- **Do not port Go/Node.js caching patterns to `api-service`.** Patterns like "module-scope
+  `let cache = null`" or "module-scope `Map` with TTL" are standard in long-lived servers
+  but broken in Workers. If cross-request caching is needed, use Cloudflare KV or Cache API.
+
+#### Database connections — always via Hyperdrive in production
+
+In production, Neon is reached through **Cloudflare Hyperdrive**, which terminates
+the TCP connection inside Cloudflare's network and maintains a persistent pool on behalf
+of the Worker. This is how the two serverless constraints are reconciled: Neon's compute
+can stay warm because Hyperdrive holds the actual connections; Workers never hold a raw
+connection themselves.
+
+The connection path in `injectRequestContext` (`middlewares/context.ts`):
+
+```
+CF Worker request
+  → hasHyperdriveBinding? yes (production)
+      → createRequestDb(hyperdrive.connectionString)
+        opens one pg.Client for this request, routed through Hyperdrive
+        closed in the finally block after the response
+  → hasHyperdriveBinding? no (local Bun dev)
+      → getDb(DATABASE_URL)
+        returns a pooled pg.Pool instance cached in module scope
+```
+
+Rules that follow from this:
+
+- **`createRequestDb` is the production code path, not the exception.** The `getDb` pool
+  path exists only for local development (no Hyperdrive binding). Do not treat it as the
+  default.
+- **Always close the request-scoped client in a `finally` block.** `injectRequestContext`
+  already does this. If you introduce a new request-scoped client anywhere, the same
+  pattern is mandatory — a leaked client holds a Hyperdrive slot and will eventually
+  exhaust the pool.
+- **Do not open additional connections inside a service method.** All DB access goes
+  through the `db` instance injected at construction time. A service must never call
+  `createRequestDb` or `getDb` directly.
+- **Prefer `db.transaction(async (tx) => ...)` over multiple sequential writes.**
+  A crash between two sequential `await db.update()` calls leaves the DB in a partial
+  state. Wrap multi-step atomic writes in a transaction.
+- **Neon auto-pauses idle compute.** The first query after a cold period has a connection
+  latency spike (~100–500 ms). Design accordingly: do not assume sub-millisecond DB
+  response times on the first query of a cold request.
+
+#### Query discipline
+
+- **`SELECT *` is banned.** Enumerate only the columns needed. Large text columns such as
+  `prompt` (up to 4 096 chars) and `lastErrorMessage` cost real bandwidth to Neon and back.
+  Fetching them just to perform an existence check is wasteful.
+- **Never issue one query per item in a loop.** Use `Promise.all` to fan out independent
+  queries, or restructure into a single query with `IN (...)` / `JOIN`.
+- Independent queries within a single request must run concurrently with `Promise.all`,
+  not `await`-ed in sequence.
+- Service methods called on every protected endpoint (e.g., membership checks) must be
+  as lean as possible — one query, no extra fetches.
+
+#### External HTTP calls (QStash, relay metrics, OAuth providers)
+
+- **Never loop over a list with sequential `await fetch(...)`** inside the loop.
+  Use `Promise.all` with a concurrency limiter (semaphore) to bound simultaneous open
+  connections.
+- Workers have a per-request wall-clock limit. Long-running evaluators must use
+  `Promise.race([work(), timeoutAfter(N)])` so a slow external service cannot cause the
+  Worker to hit its CPU/wall-clock limit silently.
+- Add a `console.warn` / `console.error` on any failed external HTTP call. An empty
+  `catch {}` that silently swallows a failure makes relay downtime invisible.
 
 ---
 
@@ -526,6 +608,18 @@ These rules exist to prevent common AI-assisted mistakes.
 
 10. **Do not leave TODO comments without a linked issue or a concrete plan.** A TODO
     that describes a known deficiency without an action plan is noise.
+
+11. **Do not port long-lived-server caching patterns to `api-service`.** Module-scope
+    `let cache = null` or a `Map` with a TTL are correct patterns in Node.js or Go servers
+    but **do not work** in Cloudflare Workers — each isolate starts fresh. If you find
+    yourself adding a module-scope mutable variable to `api-service` to cache data across
+    requests, stop and reconsider. Use Cloudflare KV, the Cache API, or restructure the
+    query instead. The only safe module-scope cache is one keyed on `c.env` (a stable
+    reference within a single isolate) via a `WeakMap`.
+
+12. **Do not issue sequential `await` DB or HTTP calls in `api-service` when they are
+    independent.** Sequential awaits in a serverless context consume wall-clock time that
+    counts against the Worker's CPU budget. Use `Promise.all`.
 
 ---
 

@@ -118,18 +118,26 @@ export class UserService {
   }
 
   async updateUserPreferences(userId: string, patch: UserPreferencesPatch): Promise<UserPreferences> {
-    const currentPreferences = await this.getUserPreferences(userId);
-    const mergedPreferences = mergeUserPreferences(currentPreferences, patch);
+    return this.db.transaction(async (tx) => {
+      const rows = await tx
+        .select({ userPreferences: users.userPreferences })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
 
-    await this.db
-      .update(users)
-      .set({
-        userPreferences: mergedPreferences,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
+      const currentPreferences = mergeUserPreferences(rows[0]?.userPreferences, {});
+      const mergedPreferences = mergeUserPreferences(currentPreferences, patch);
 
-    return mergedPreferences;
+      await tx
+        .update(users)
+        .set({
+          userPreferences: mergedPreferences,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
+
+      return mergedPreferences;
+    });
   }
 
   async updateLanguagePreference(userId: string, languagePreference: string): Promise<string> {

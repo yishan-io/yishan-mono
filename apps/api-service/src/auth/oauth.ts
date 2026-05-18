@@ -207,23 +207,21 @@ async function getGithubProfile(accessToken: string): Promise<OAuthProfile> {
     "User-Agent": "yishan-api-service"
   };
 
-  const userResponse = await fetch("https://api.github.com/user", {
-    headers: baseHeaders
-  });
+  // Both GitHub API calls are independent — fetch them concurrently.
+  const [userResponse, emailResponse] = await Promise.all([
+    fetch("https://api.github.com/user", { headers: baseHeaders }),
+    fetch("https://api.github.com/user/emails", { headers: baseHeaders }),
+  ]);
 
   if (!userResponse.ok) {
     throw new Error("Failed to load GitHub profile");
   }
 
-  const user = (await userResponse.json()) as GithubUserResponse;
-  const emailResponse = await fetch("https://api.github.com/user/emails", {
-    headers: baseHeaders
-  });
-
   if (!emailResponse.ok) {
     throw new Error("Failed to load GitHub email addresses");
   }
 
+  const user = (await userResponse.json()) as GithubUserResponse;
   const emails = (await emailResponse.json()) as GithubEmailResponse[];
   const primaryVerified =
     emails.find((entry) => entry.primary && entry.verified) ??

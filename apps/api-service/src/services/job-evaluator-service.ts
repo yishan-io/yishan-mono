@@ -70,57 +70,87 @@ export class JobEvaluatorService {
       .where(and(eq(scheduledJobs.status, "active"), lte(scheduledJobs.nextRunAt, now)))
       .limit(input.limit);
 
-    const pending: PendingRun[] = [];
+    if (dueJobs.length === 0) {
+      return [];
+    }
 
-    for (const dueJob of dueJobs) {
+    // Pre-compute per-job values before hitting the DB.
+    const jobWork = dueJobs.map((dueJob) => {
       const parsed = validateCronOrThrow(dueJob.cronExpression);
       const timezone = validateTimezoneOrThrow(dueJob.timezone);
       const rawScheduledFor = dueJob.nextRunAt;
       const scheduledFor = bucketToMinute(rawScheduledFor);
       const nextRunAt = computeNextRunAt(parsed, timezone, rawScheduledFor);
       const runId = newId();
+      return { dueJob, parsed, timezone, rawScheduledFor, scheduledFor, nextRunAt, runId };
+    });
 
-      // Optimistic lock: only advance if nextRunAt hasn't changed
-      const updatedRows = await this.db
-        .update(scheduledJobs)
-        .set({ nextRunAt, lastScheduledFor: scheduledFor, updatedAt: now })
-        .where(
-          and(
-            eq(scheduledJobs.id, dueJob.id),
-            eq(scheduledJobs.status, "active"),
-            eq(scheduledJobs.nextRunAt, rawScheduledFor),
-          ),
-        )
-        .returning();
+    // Optimistic-lock UPDATEs fired concurrently — one round-trip instead of N.
+    const updateResults = await Promise.all(
+      jobWork.map(({ dueJob, scheduledFor, nextRunAt }) =>
+        this.db
+          .update(scheduledJobs)
+          .set({ nextRunAt, lastScheduledFor: scheduledFor, updatedAt: now })
+          .where(
+            and(
+              eq(scheduledJobs.id, dueJob.id),
+              eq(scheduledJobs.status, "active"),
+              eq(scheduledJobs.nextRunAt, dueJob.nextRunAt),
+            ),
+          )
+          .returning(),
+      ),
+    );
 
-      const updated = updatedRows[0];
+    // Collect claimed jobs; log optimistic-lock misses for diagnosability.
+    const claimedWork = jobWork.filter(({ dueJob }, i) => {
+      const updated = updateResults[i]?.[0];
       if (!updated) {
+        console.debug(
+          `[JobEvaluatorService.evaluateDueJobs] Optimistic lock miss — job already claimed or paused: jobId=${dueJob.id}`,
+        );
+        return false;
+      }
+      return true;
+    });
+
+    if (claimedWork.length === 0) {
+      return [];
+    }
+
+    // Conflict guard: unique index on (job_id, scheduled_for) prevents duplicate runs.
+    // Run INSERT concurrently for all claimed jobs — one round-trip instead of N.
+    const insertResults = await Promise.all(
+      claimedWork.map(({ dueJob, runId, scheduledFor }, i) => {
+        const updated = updateResults[jobWork.indexOf(claimedWork[i]!)]![0]!;
+        return this.db
+          .insert(scheduledJobRuns)
+          .values({
+            id: runId,
+            jobId: updated.id,
+            organizationId: updated.organizationId,
+            projectId: updated.projectId,
+            nodeId: updated.nodeId,
+            scheduledFor,
+            status: "pending",
+          })
+          .onConflictDoNothing()
+          .returning({ id: scheduledJobRuns.id });
+      }),
+    );
+
+    const pending: PendingRun[] = [];
+
+    for (let i = 0; i < claimedWork.length; i++) {
+      const work = claimedWork[i]!;
+      if (insertResults[i]!.length === 0) {
         continue;
       }
-
-      // Conflict guard: unique index on (job_id, scheduled_for) prevents duplicate runs
-      const insertedRows = await this.db
-        .insert(scheduledJobRuns)
-        .values({
-          id: runId,
-          jobId: updated.id,
-          organizationId: updated.organizationId,
-          projectId: updated.projectId,
-          nodeId: updated.nodeId,
-          scheduledFor,
-          status: "pending",
-        })
-        .onConflictDoNothing()
-        .returning({ id: scheduledJobRuns.id });
-
-      if (insertedRows.length === 0) {
-        continue;
-      }
-
+      const updatedJob = updateResults[jobWork.indexOf(work)]![0]!;
       pending.push({
-        runId,
-        scheduledFor,
-        job: toScheduledJobView(updated),
+        runId: work.runId,
+        scheduledFor: work.scheduledFor,
+        job: toScheduledJobView(updatedJob),
       });
     }
 
@@ -170,7 +200,7 @@ export class JobEvaluatorService {
     await this.assertNodeOwnedByActor(input.nodeId, input.actorUserId);
 
     const runRows = await this.db
-      .select()
+      .select({ id: scheduledJobRuns.id, jobId: scheduledJobRuns.jobId })
       .from(scheduledJobRuns)
       .where(and(eq(scheduledJobRuns.id, input.runId), eq(scheduledJobRuns.nodeId, input.nodeId)))
       .limit(1);
@@ -182,27 +212,32 @@ export class JobEvaluatorService {
     }
 
     const finishedAt = input.finishedAt ?? new Date();
-    await this.db
-      .update(scheduledJobRuns)
-      .set({
-        status: input.status,
-        finishedAt,
-        responseBody: input.responseBody ? limitResponseBody(input.responseBody) : null,
-        errorCode: input.errorCode ?? null,
-        errorMessage: input.errorMessage ?? null,
-        errorDetails: input.errorDetails ?? null,
-      })
-      .where(eq(scheduledJobRuns.id, run.id));
 
-    await this.db
-      .update(scheduledJobs)
-      .set({
-        lastRunAt: finishedAt,
-        lastRunStatus: input.status,
-        lastErrorCode: input.status === "failed" ? (input.errorCode ?? null) : null,
-        lastErrorMessage: input.status === "failed" ? (input.errorMessage ?? null) : null,
-        updatedAt: finishedAt,
-      })
-      .where(eq(scheduledJobs.id, run.jobId));
+    // Both UPDATEs must succeed together — wrap in a transaction so a mid-flight
+    // crash cannot leave the run status and job last-run summary out of sync.
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(scheduledJobRuns)
+        .set({
+          status: input.status,
+          finishedAt,
+          responseBody: input.responseBody ? limitResponseBody(input.responseBody) : null,
+          errorCode: input.errorCode ?? null,
+          errorMessage: input.errorMessage ?? null,
+          errorDetails: input.errorDetails ?? null,
+        })
+        .where(eq(scheduledJobRuns.id, run.id));
+
+      await tx
+        .update(scheduledJobs)
+        .set({
+          lastRunAt: finishedAt,
+          lastRunStatus: input.status,
+          lastErrorCode: input.status === "failed" ? (input.errorCode ?? null) : null,
+          lastErrorMessage: input.status === "failed" ? (input.errorMessage ?? null) : null,
+          updatedAt: finishedAt,
+        })
+        .where(eq(scheduledJobs.id, run.jobId));
+    });
   }
 }

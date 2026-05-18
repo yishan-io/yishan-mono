@@ -116,16 +116,18 @@ export class NodeService {
   }
 
   async listNodes(input: { actorUserId: string; organizationId: string }): Promise<NodeView[]> {
-    const actorRole = await this.organizationService.getMembershipRole({
-      organizationId: input.organizationId,
-      userId: input.actorUserId,
-    });
+    const [actorRole, orgMemberUserIds] = await Promise.all([
+      this.organizationService.getMembershipRole({
+        organizationId: input.organizationId,
+        userId: input.actorUserId,
+      }),
+      this.organizationService.getOrganizationMemberUserIds(input.organizationId),
+    ]);
 
     if (!actorRole) {
       throw new OrganizationMembershipRequiredError();
     }
 
-    const orgMemberUserIds = await this.organizationService.getOrganizationMemberUserIds(input.organizationId);
     if (orgMemberUserIds.length === 0) {
       return [];
     }

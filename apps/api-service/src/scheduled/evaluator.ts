@@ -5,9 +5,28 @@ import type { JobEvaluatorService } from "@/services/job-evaluator-service";
 const EVALUATE_LIMIT = 500;
 const STALE_THRESHOLD_MINUTES = 5;
 
+/**
+ * Hard deadline for a single evaluator run, in milliseconds (50 seconds).
+ *
+ * The cron fires every 60 s. Setting the deadline to 50 s ensures the evaluator
+ * finishes before the next tick, preventing overlapping evaluations when the DB
+ * or QStash is temporarily slow.
+ */
+const EVALUATOR_TIMEOUT_MS = 50_000;
+
 export type EvaluatorEnv = ScheduledDbEnv & QStashEnv;
 
+function timeoutAfter(ms: number): Promise<never> {
+  return new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`[evaluator] Timed out after ${ms}ms`)), ms),
+  );
+}
+
 export async function handleEvaluateJobs(jobEvaluatorService: JobEvaluatorService, env: EvaluatorEnv): Promise<void> {
+  await Promise.race([runEvaluator(jobEvaluatorService, env), timeoutAfter(EVALUATOR_TIMEOUT_MS)]);
+}
+
+async function runEvaluator(jobEvaluatorService: JobEvaluatorService, env: EvaluatorEnv): Promise<void> {
   try {
     const pendingRuns = await jobEvaluatorService.evaluateDueJobs({ limit: EVALUATE_LIMIT });
 
