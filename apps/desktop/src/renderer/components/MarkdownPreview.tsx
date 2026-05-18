@@ -1,6 +1,6 @@
 import { Box, Typography, useTheme } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeMermaidLite from "rehype-mermaid-lite";
@@ -12,6 +12,8 @@ import { buildWorkspaceFileUrl } from "../commands/fileCommands";
 import { tabStore } from "../store/tabStore";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
 import { MermaidBlock } from "./MermaidBlock";
+
+const MARKDOWN_RENDER_DEBOUNCE_MS = 400;
 
 type MarkdownPreviewProps = {
   content: string;
@@ -463,8 +465,15 @@ function MarkdownImage({
   return <img src={resolvedSrc} alt={alt ?? ""} style={{ maxWidth: "100%", height: "auto", borderRadius: 4 }} />;
 }
 
-/** Renders a Markdown string as styled HTML using react-markdown with GFM and syntax highlighting support. */
-export function MarkdownPreview({ content, filePath, worktreePath }: MarkdownPreviewProps) {
+/**
+ * Memoized inner renderer that only re-renders when `debouncedContent` actually changes.
+ * This prevents the expensive rehype pipeline from running on every parent re-render.
+ */
+const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
+  content,
+  filePath,
+  worktreePath,
+}: MarkdownPreviewProps) {
   const theme = useTheme();
   const styles = useMarkdownStyles(theme);
 
@@ -573,5 +582,44 @@ export function MarkdownPreview({ content, filePath, worktreePath }: MarkdownPre
         {content}
       </Markdown>
     </Box>
+  );
+});
+
+/** Renders a Markdown string as styled HTML using react-markdown with GFM and syntax highlighting support.
+ *  Debounces content updates to avoid re-running the expensive rehype pipeline on every keystroke or file-change event. */
+export function MarkdownPreview({ content, filePath, worktreePath }: MarkdownPreviewProps) {
+  const [debouncedContent, setDebouncedContent] = useState(content);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // If content is cleared or this is the first render, update immediately.
+    if (!debouncedContent && content) {
+      setDebouncedContent(content);
+      return;
+    }
+
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+    }
+
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      setDebouncedContent(content);
+    }, MARKDOWN_RENDER_DEBOUNCE_MS);
+
+    return () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [content]);
+
+  return (
+    <MemoizedMarkdownRenderer
+      content={debouncedContent}
+      filePath={filePath}
+      worktreePath={worktreePath}
+    />
   );
 }
