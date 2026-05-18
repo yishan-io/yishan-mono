@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import type { DiffFileChangeKind } from "../../../store/types";
 import { useCommands } from "../../../hooks/useCommands";
 import { normalizeWorkspaceRelativePath } from "./useChangesTabState";
 
@@ -105,7 +106,7 @@ export function useChangesTabActions({
   );
 
   const selectWorkspaceFile = useCallback(
-    async (file: { path: string; kind: "added" | "deleted" | "modified" | "renamed"; additions: number; deletions: number }) => {
+    async (file: { path: string; kind: "added" | "deleted" | "modified" | "renamed" | "untracked"; additions: number; deletions: number }) => {
       if (!selectedWorkspaceWorktreePath) {
         return;
       }
@@ -113,13 +114,14 @@ export function useChangesTabActions({
       if (!normalizedPath) {
         return;
       }
+      const changeKind: DiffFileChangeKind = file.kind === "untracked" ? "added" : file.kind;
       try {
         const response = await readDiff({ workspaceWorktreePath: selectedWorkspaceWorktreePath, relativePath: normalizedPath });
         openTab({
           workspaceId: selectedWorkspaceId,
           kind: "diff",
           path: normalizedPath,
-          changeKind: file.kind,
+          changeKind,
           additions: file.additions,
           deletions: file.deletions,
           oldContent: response.oldContent,
@@ -133,7 +135,7 @@ export function useChangesTabActions({
           workspaceId: selectedWorkspaceId,
           kind: "diff",
           path: normalizedPath,
-          changeKind: file.kind,
+          changeKind,
           additions: file.additions,
           deletions: file.deletions,
           temporary: true,

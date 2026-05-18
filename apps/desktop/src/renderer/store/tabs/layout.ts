@@ -12,16 +12,14 @@ function remapPathByRename(path: string, fromPath: string, toPath: string): stri
   return `${toPath}/${path.slice(prefix.length)}`;
 }
 
-function isTemporaryTab(tab: WorkspaceTab): boolean {
-  return (
-    (tab.kind === "file" && tab.data.isTemporary) ||
-    (tab.kind === "image" && tab.data.isTemporary) ||
-    (tab.kind === "diff" && tab.data.isTemporary)
-  );
-}
-
 function clearTemporaryOnPin(tab: WorkspaceTab): WorkspaceTab {
-  if (isTemporaryTab(tab)) {
+  if (tab.kind === "file" && tab.data.isTemporary) {
+    return { ...tab, pinned: true, data: { ...tab.data, isTemporary: false } };
+  }
+  if (tab.kind === "image" && tab.data.isTemporary) {
+    return { ...tab, pinned: true, data: { ...tab.data, isTemporary: false } };
+  }
+  if (tab.kind === "diff" && tab.data.isTemporary) {
     return { ...tab, pinned: true, data: { ...tab.data, isTemporary: false } };
   }
   return { ...tab, pinned: !tab.pinned };

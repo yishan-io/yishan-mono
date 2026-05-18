@@ -506,6 +506,7 @@ describe("createBackendEventStoreBindings", () => {
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
     const getNotificationPreferences = vi.fn(async () => ({
+      schemaVersion: 1,
       enabled: true,
       osEnabled: true,
       soundEnabled: true,
@@ -578,6 +579,7 @@ describe("createBackendEventStoreBindings", () => {
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
     const getNotificationPreferences = vi.fn(async () => ({
+      schemaVersion: 1,
       enabled: true,
       osEnabled: true,
       soundEnabled: true,
@@ -640,6 +642,7 @@ describe("createBackendEventStoreBindings", () => {
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
     const getNotificationPreferences = vi.fn(async () => ({
+      schemaVersion: 1,
       enabled: true,
       osEnabled: true,
       soundEnabled: true,
@@ -703,6 +706,7 @@ describe("createBackendEventStoreBindings", () => {
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
     const getNotificationPreferences = vi.fn(async () => ({
+      schemaVersion: 1,
       enabled: true,
       osEnabled: true,
       soundEnabled: true,
@@ -769,6 +773,7 @@ describe("createBackendEventStoreBindings", () => {
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
     const getNotificationPreferences = vi.fn(async () => ({
+      schemaVersion: 1,
       enabled: true,
       osEnabled: true,
       soundEnabled: false,

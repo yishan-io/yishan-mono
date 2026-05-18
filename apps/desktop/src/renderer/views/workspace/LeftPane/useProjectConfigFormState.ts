@@ -17,18 +17,18 @@ export type ProjectConfigDraft = {
 type ProjectLike = {
   id: string;
   name: string;
-  localPath?: string;
+  localPath?: string | null;
   path?: string;
   gitUrl?: string;
-  repoUrl?: string;
+  repoUrl?: string | null;
   key?: string;
-  repoKey?: string;
-  worktreePath?: string;
+  repoKey?: string | null;
+  worktreePath?: string | null;
   contextEnabled?: boolean;
-  icon?: string;
-  color?: string;
-  setupScript?: string;
-  postScript?: string;
+  icon?: string | null;
+  color?: string | null;
+  setupScript?: string | null;
+  postScript?: string | null;
 };
 
 export const DEFAULT_ICON_BG_COLOR = "#1E66F5";

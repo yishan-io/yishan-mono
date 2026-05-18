@@ -114,7 +114,7 @@ describe("workspaceCommands", () => {
     });
 
     expect(createdWorkspaceId).toMatch(/^[0-9a-f-]{36}$/i);
-    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId[createdWorkspaceId]?.steps[0]).toMatchObject({
+    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId[createdWorkspaceId!]?.steps[0]).toMatchObject({
       id: "update",
       label: "Fetch repository",
       status: "running",

@@ -641,7 +641,7 @@ describe("CreateWorkspaceDialogView", () => {
     it("submits create form when Cmd+Enter is pressed and form is valid", async () => {
       const onClose = vi.fn();
       mocked.createWorkspace.mockResolvedValueOnce("workspace-new");
-      renderDialogWithLocation(<CreateWorkspaceDialogView open repoId="repo-1" onClose={onClose} />);
+      renderDialogWithLocation(<CreateWorkspaceDialogView open projectId="repo-1" onClose={onClose} />);
 
       await waitFor(() => {
         expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
@@ -669,7 +669,7 @@ describe("CreateWorkspaceDialogView", () => {
     it("submits create form when Ctrl+Enter is pressed and form is valid", async () => {
       const onClose = vi.fn();
       mocked.createWorkspace.mockResolvedValueOnce("workspace-ctrl");
-      renderDialogWithLocation(<CreateWorkspaceDialogView open repoId="repo-1" onClose={onClose} />);
+      renderDialogWithLocation(<CreateWorkspaceDialogView open projectId="repo-1" onClose={onClose} />);
 
       await waitFor(() => {
         expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
@@ -695,7 +695,7 @@ describe("CreateWorkspaceDialogView", () => {
     });
 
     it("does not submit when Cmd+Enter is pressed with empty name", async () => {
-      renderDialog(<CreateWorkspaceDialogView open repoId="repo-1" onClose={() => {}} />);
+      renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
       await waitFor(() => {
         expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
@@ -707,7 +707,7 @@ describe("CreateWorkspaceDialogView", () => {
     });
 
     it("does not submit when Enter is pressed without modifier key", async () => {
-      renderDialog(<CreateWorkspaceDialogView open repoId="repo-1" onClose={() => {}} />);
+      renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
       await waitFor(() => {
         expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
@@ -725,7 +725,7 @@ describe("CreateWorkspaceDialogView", () => {
     it("submits the full name after incremental input changes via Cmd+Enter", async () => {
       const onClose = vi.fn();
       mocked.createWorkspace.mockResolvedValueOnce("workspace-incremental");
-      renderDialogWithLocation(<CreateWorkspaceDialogView open repoId="repo-1" onClose={onClose} />);
+      renderDialogWithLocation(<CreateWorkspaceDialogView open projectId="repo-1" onClose={onClose} />);
 
       await waitFor(() => {
         expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
@@ -774,7 +774,7 @@ describe("CreateWorkspaceDialogView", () => {
       );
 
       renderDialog(
-        <CreateWorkspaceDialogView open repoId="repo-1" mode="rename" workspaceId="workspace-1" onClose={onClose} />,
+        <CreateWorkspaceDialogView open projectId="repo-1" mode="rename" workspaceId="workspace-1" onClose={onClose} />,
       );
 
       fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {

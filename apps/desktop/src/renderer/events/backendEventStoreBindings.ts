@@ -99,7 +99,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   listWorkspaceWorktreePaths: () =>
     workspaceStore
       .getState()
-      .workspaces.map((workspace) => workspace.worktreePath.trim())
+      .workspaces.map((workspace) => workspace.worktreePath?.trim() ?? "")
       .filter((workspaceWorktreePath) => workspaceWorktreePath.length > 0),
   incrementFileTreeRefreshVersion: (workspaceWorktreePath, changedRelativePaths) => {
     workspaceStore.getState().incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
@@ -138,7 +138,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
       return undefined;
     }
 
-    const projectName = state.projects.find((project) => project.id === workspace.projectId)?.name?.trim();
+    const projectName = state.projects.find((project) => project.id === workspace?.projectId)?.name?.trim();
     return projectName ? `${projectName} / ${workspaceName}` : workspaceName;
   },
 };

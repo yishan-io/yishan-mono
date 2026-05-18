@@ -57,7 +57,7 @@ export function WorkspaceDeleteDialogView({
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onCancel} disabled={isDeleting} variant="secondary">
+        <Button onClick={onCancel} disabled={isDeleting}>
           {t("common.actions.cancel")}
         </Button>
         <Button color="error" onClick={onConfirm} disabled={isDeleting}>

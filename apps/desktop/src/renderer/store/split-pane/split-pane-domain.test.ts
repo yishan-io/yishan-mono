@@ -86,7 +86,7 @@ describe("collectLeaves", () => {
     const state = createSinglePaneState();
     const leaves = collectLeaves(state.root);
     expect(leaves).toHaveLength(1);
-    expect(leaves[0].id).toBe("pane-root");
+    expect(leaves[0]?.id).toBe("pane-root");
   });
 
   it("returns both leaves for a two-pane layout", () => {

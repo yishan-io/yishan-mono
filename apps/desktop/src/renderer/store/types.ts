@@ -166,6 +166,7 @@ export type OpenWorkspaceTabInput =
       workspaceId?: string;
       kind: "browser";
       url?: string;
+      reuseExisting?: boolean;
     };
 
 export type WorkspaceStoreState = {

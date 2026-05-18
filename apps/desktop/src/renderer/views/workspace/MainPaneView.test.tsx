@@ -142,7 +142,7 @@ vi.mock("../../components/SplitPaneGroup", () => ({
   }: {
     pane: { id: string; tabIds: string[]; selectedTabId: string };
     tabs: Array<{ id: string; title: string }>;
-    renderContent: (pane: { id: string; tabIds: string[]; selectedTabId: string }) => React.ReactNode;
+    renderContent: (pane: { id: string; tabIds: string[]; selectedTabId: string }, _extra: unknown) => React.ReactNode;
     onCreateTab: (option: string) => void;
     enabledAgentKinds?: string[];
   }) => (

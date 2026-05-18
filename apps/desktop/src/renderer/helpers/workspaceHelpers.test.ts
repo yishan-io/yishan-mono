@@ -29,7 +29,7 @@ describe("workspaceHelpers", () => {
 
   it("updates existing optimistic workspace when backend details arrive", () => {
     const state = {
-      projects: [{ id: "repo-1", worktreePath: "/tmp/repo-1" }],
+      projects: [{ id: "repo-1", name: "repo-1", worktreePath: "/tmp/repo-1" }],
       workspaces: [
         {
           id: "workspace-1",

@@ -242,6 +242,7 @@ describe("createWorkspaceRepoActions", () => {
           branch: "feature-a",
           sourceBranch: "main",
           localPath: "/tmp/repo-1/.worktrees/feature-a",
+          latestPullRequest: null,
           createdAt: "2026-01-01T00:00:00Z",
           updatedAt: "2026-01-01T00:00:00Z",
         },

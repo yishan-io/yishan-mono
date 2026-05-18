@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
       name: "User",
       avatarUrl: null,
       notificationPreferences: {
+        schemaVersion: 1,
         enabled: true,
         osEnabled: true,
         soundEnabled: false,
@@ -115,6 +116,7 @@ describe("notificationCommands", () => {
     mocks.sessionState.currentUser = {
       ...mocks.sessionState.currentUser,
       notificationPreferences: {
+        schemaVersion: 1,
         enabled: true,
         osEnabled: true,
         soundEnabled: false,

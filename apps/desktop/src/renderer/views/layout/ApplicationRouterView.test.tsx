@@ -38,6 +38,7 @@ vi.mock("../../api/sessionApi", () => ({
       name: "User",
       avatarUrl: null,
       notificationPreferences: {
+        schemaVersion: 1,
         enabled: true,
         osEnabled: true,
         soundEnabled: true,
@@ -47,6 +48,7 @@ vi.mock("../../api/sessionApi", () => ({
         eventSounds: {
           "run-finished": "chime",
           "run-failed": "alert",
+          "pending-question": "ping",
         },
         enabledCategories: ["ai-task"],
       },
@@ -160,6 +162,7 @@ describe("ApplicationRouterView", () => {
         name: "User",
         avatarUrl: null,
         notificationPreferences: {
+          schemaVersion: 1,
           enabled: true,
           osEnabled: true,
           soundEnabled: true,
@@ -214,6 +217,7 @@ describe("ApplicationRouterView", () => {
         name: "User",
         avatarUrl: null,
         notificationPreferences: {
+          schemaVersion: 1,
           enabled: true,
           osEnabled: true,
           soundEnabled: true,
@@ -247,6 +251,7 @@ describe("ApplicationRouterView", () => {
         name: "User",
         avatarUrl: null,
         notificationPreferences: {
+          schemaVersion: 1,
           enabled: true,
           osEnabled: true,
           soundEnabled: true,
@@ -283,6 +288,7 @@ describe("ApplicationRouterView", () => {
         name: "User",
         avatarUrl: null,
         notificationPreferences: {
+          schemaVersion: 1,
           enabled: true,
           osEnabled: true,
           soundEnabled: true,
@@ -325,6 +331,7 @@ describe("ApplicationRouterView", () => {
         name: "User",
         avatarUrl: null,
         notificationPreferences: {
+          schemaVersion: 1,
           enabled: true,
           osEnabled: true,
           soundEnabled: true,
@@ -365,6 +372,7 @@ describe("ApplicationRouterView", () => {
         name: "User",
         avatarUrl: null,
         notificationPreferences: {
+          schemaVersion: 1,
           enabled: true,
           osEnabled: true,
           soundEnabled: true,

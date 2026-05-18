@@ -306,6 +306,7 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
             width: 0,
             height: 0,
             display: "none",
+            flexDirection: "column" as const,
             pointerEvents: "none",
           };
 

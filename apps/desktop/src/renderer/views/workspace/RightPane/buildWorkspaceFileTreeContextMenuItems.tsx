@@ -40,7 +40,7 @@ type BuildWorkspaceFileTreeContextMenuItemsInput = {
   contextBasePath: string;
   contextTargetPath: string;
   contextPasteDestination: string;
-  lastUsedWorkspaceExternalAppPreset: ExternalAppPreset | null;
+  lastUsedWorkspaceExternalAppPreset: Pick<ExternalAppPreset, "id" | "iconSrc"> | null;
   handlers: {
     startCreate: (basePath: string, isDirectory: boolean) => void;
     rename: () => void;

@@ -61,7 +61,10 @@ export function applyCreatedWorkspaceState(
   };
   const existingWorkspaceIndex = state.workspaces.findIndex((workspace) => workspace.id === nextWorkspaceId);
   if (existingWorkspaceIndex >= 0) {
-    Object.assign(state.workspaces[existingWorkspaceIndex], nextWorkspace);
+    const existing = state.workspaces[existingWorkspaceIndex];
+    if (existing) {
+      Object.assign(existing, nextWorkspace);
+    }
   } else {
     state.workspaces.push(nextWorkspace);
   }
