@@ -8,6 +8,9 @@ import { newId } from "@/lib/id";
 import type { UserService } from "@/services/user-service";
 import type { OAuthProfile, OAuthProvider, ServiceConfig } from "@/types";
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const DEFAULT_TOKEN_SCOPE = "api:read api:write";
+
 export type SessionUser = Pick<typeof users.$inferSelect, "id" | "email" | "name" | "avatarUrl" | "userPreferences">;
 
 export class AuthService {
@@ -44,7 +47,7 @@ export class AuthService {
     const token = randomToken(48);
     const tokenHash = await sha256Hex(token);
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + ttlDays * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(now.getTime() + ttlDays * MS_PER_DAY);
 
     await this.db.insert(sessions).values({
       id: newId(),
@@ -98,7 +101,7 @@ export class AuthService {
       {
         sub: userId,
         sid: refresh.id,
-        scope: "api:read api:write",
+        scope: DEFAULT_TOKEN_SCOPE,
         iss: this.config.jwtIssuer,
         aud: this.config.jwtAudience,
         iat: nowSeconds,
@@ -156,7 +159,7 @@ export class AuthService {
       {
         sub: row.userId,
         sid: replacement.id,
-        scope: "api:read api:write",
+        scope: DEFAULT_TOKEN_SCOPE,
         iss: this.config.jwtIssuer,
         aud: this.config.jwtAudience,
         iat: nowSeconds,
@@ -208,7 +211,7 @@ export class AuthService {
     const token = randomToken(48);
     const tokenHash = await sha256Hex(token);
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + ttlDays * 24 * 60 * 60 * 1000);
+    const expiresAt = new Date(now.getTime() + ttlDays * MS_PER_DAY);
     const id = newId();
 
     await this.db.insert(refreshTokens).values({ id, userId, tokenHash, expiresAt });

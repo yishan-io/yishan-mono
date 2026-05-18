@@ -11,6 +11,12 @@ import {
 import type { AppContext } from "@/hono";
 import type { RefreshTokenBodyInput, RevokeTokenBodyInput } from "@/validation/auth";
 
+/** Cookie max-age for the OAuth state cookie, in seconds (10 minutes). */
+const OAUTH_STATE_COOKIE_MAX_AGE_SECONDS = 10 * 60;
+
+/** Maximum age of an OAuth state cookie before the callback rejects it, in ms (10 minutes). */
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+
 function isLoopbackHost(hostname: string): boolean {
   return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "::1";
 }
@@ -77,7 +83,7 @@ export async function startOAuthHandler(c: AppContext) {
 
   await setSignedCookie(c, OAUTH_COOKIE_NAME, JSON.stringify(payload), config.sessionSecret, {
     ...cookieOptions(c.req.url, config.cookieDomain),
-    maxAge: 10 * 60,
+    maxAge: OAUTH_STATE_COOKIE_MAX_AGE_SECONDS,
   });
 
   return c.redirect(authorizationUrl, StatusCodes.MOVED_TEMPORARILY);
@@ -105,7 +111,7 @@ export async function callbackOAuthHandler(c: AppContext) {
     return c.json({ error: "Invalid OAuth state" }, StatusCodes.BAD_REQUEST);
   }
 
-  const isFresh = Date.now() - oauthContext.createdAt <= 10 * 60 * 1000;
+  const isFresh = Date.now() - oauthContext.createdAt <= OAUTH_STATE_TTL_MS;
 
   if (!isFresh || oauthContext.state !== state || oauthContext.provider !== providerParam) {
     return c.json({ error: "OAuth state mismatch" }, StatusCodes.BAD_REQUEST);

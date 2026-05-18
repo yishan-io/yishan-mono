@@ -4,10 +4,11 @@ import { StatusCodes } from "http-status-codes";
 
 import type { ServiceConfig } from "@/types";
 
+/** Default JWT audience when JWT_AUDIENCE env var is not set. */
+const DEFAULT_JWT_AUDIENCE = "api-service";
+
 const RUNTIME_ENV: Record<string, string | undefined> =
-  typeof process !== "undefined" && process.env
-    ? (process.env as Record<string, string | undefined>)
-    : {};
+  typeof process !== "undefined" && process.env ? (process.env as Record<string, string | undefined>) : {};
 
 function readEnv(c: Context, key: string): string | undefined {
   const bindings = c.env as Record<string, string | undefined> | undefined;
@@ -28,7 +29,7 @@ function requireEnv(c: Context, key: string): string {
   const value = readEnv(c, key);
   if (!value) {
     throw new HTTPException(StatusCodes.INTERNAL_SERVER_ERROR, {
-      message: `Missing required environment variable: ${key}`
+      message: `Missing required environment variable: ${key}`,
     });
   }
   return value;
@@ -44,26 +45,26 @@ export function getServiceConfig(c: Context): ServiceConfig {
 
   if (!Number.isFinite(sessionTtlDays) || sessionTtlDays <= 0) {
     throw new HTTPException(StatusCodes.INTERNAL_SERVER_ERROR, {
-      message: "SESSION_TTL_DAYS must be a positive number"
+      message: "SESSION_TTL_DAYS must be a positive number",
     });
   }
 
   if (!Number.isFinite(jwtAccessTtlSeconds) || jwtAccessTtlSeconds <= 0) {
     throw new HTTPException(StatusCodes.INTERNAL_SERVER_ERROR, {
-      message: "JWT_ACCESS_TTL_SECONDS must be a positive number"
+      message: "JWT_ACCESS_TTL_SECONDS must be a positive number",
     });
   }
 
   if (!Number.isFinite(refreshTokenTtlDays) || refreshTokenTtlDays <= 0) {
     throw new HTTPException(StatusCodes.INTERNAL_SERVER_ERROR, {
-      message: "REFRESH_TOKEN_TTL_DAYS must be a positive number"
+      message: "REFRESH_TOKEN_TTL_DAYS must be a positive number",
     });
   }
 
   const cookieDomain = readEnv(c, "COOKIE_DOMAIN");
   const appBaseUrl = requireEnv(c, "APP_BASE_URL");
   const jwtIssuer = readEnv(c, "JWT_ISSUER") ?? appBaseUrl;
-  const jwtAudience = readEnv(c, "JWT_AUDIENCE") ?? "api-service";
+  const jwtAudience = readEnv(c, "JWT_AUDIENCE") ?? DEFAULT_JWT_AUDIENCE;
 
   return {
     databaseUrl: readHyperdriveConnectionString(c) ?? requireEnv(c, "DATABASE_URL"),
@@ -81,6 +82,6 @@ export function getServiceConfig(c: Context): ServiceConfig {
     googleClientId: requireEnv(c, "GOOGLE_CLIENT_ID"),
     googleClientSecret: requireEnv(c, "GOOGLE_CLIENT_SECRET"),
     githubClientId: requireEnv(c, "GITHUB_CLIENT_ID"),
-    githubClientSecret: requireEnv(c, "GITHUB_CLIENT_SECRET")
+    githubClientSecret: requireEnv(c, "GITHUB_CLIENT_SECRET"),
   };
 }

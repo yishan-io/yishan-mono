@@ -1,13 +1,22 @@
 const WEEKDAY_NAMES: Record<string, number> = {
-  SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6
+  SUN: 0,
+  MON: 1,
+  TUE: 2,
+  WED: 3,
+  THU: 4,
+  FRI: 5,
+  SAT: 6,
 };
 
+/** Maximum cron scan window: ~400 days of per-minute steps. */
+const MAX_CRON_SCAN_MINUTES = 60 * 24 * 400;
+
 const FIELD_BOUNDS = {
-  minute:     { min: 0,  max: 59 },
-  hour:       { min: 0,  max: 23 },
-  dayOfMonth: { min: 1,  max: 31 },
-  month:      { min: 1,  max: 12 },
-  dayOfWeek:  { min: 0,  max: 6  }
+  minute: { min: 0, max: 59 },
+  hour: { min: 0, max: 23 },
+  dayOfMonth: { min: 1, max: 31 },
+  month: { min: 1, max: 12 },
+  dayOfWeek: { min: 0, max: 6 },
 } as const;
 
 type FieldName = keyof typeof FIELD_BOUNDS;
@@ -111,11 +120,11 @@ export function parseCronExpression(expression: string): ParsedCron {
   const [minute, hour, dayOfMonth, month, dayOfWeek] = parts as [string, string, string, string, string];
   return {
     source: normalized,
-    minute:     parseField(minute, "minute"),
-    hour:       parseField(hour, "hour"),
+    minute: parseField(minute, "minute"),
+    hour: parseField(hour, "hour"),
     dayOfMonth: parseField(dayOfMonth, "dayOfMonth"),
-    month:      parseField(month, "month"),
-    dayOfWeek:  parseField(dayOfWeek, "dayOfWeek")
+    month: parseField(month, "month"),
+    dayOfWeek: parseField(dayOfWeek, "dayOfWeek"),
   };
 }
 
@@ -137,7 +146,7 @@ export function computeNextRunAt(parsed: ParsedCron, timezone: string, fromDate:
   cursor.setUTCMinutes(cursor.getUTCMinutes() + 1);
 
   // Scan up to ~400 days of minutes
-  const maxMinutes = 60 * 24 * 400;
+  const maxMinutes = MAX_CRON_SCAN_MINUTES;
   for (let i = 0; i < maxMinutes; i++) {
     if (matchesCron(parsed, cursor, timezone)) {
       return new Date(cursor.getTime());
@@ -177,7 +186,7 @@ function toTimezoneParts(date: Date, timezone: string) {
     minute: "2-digit",
     second: "2-digit",
     hour12: false,
-    weekday: "short"
+    weekday: "short",
   });
 
   const parts = new Map(fmt.formatToParts(date).map((p) => [p.type, p.value]));
