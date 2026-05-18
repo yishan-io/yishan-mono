@@ -1,4 +1,9 @@
 import { nodes } from "@/db/schema";
+import {
+  NodeDeletePermissionRequiredError,
+  OrganizationMembershipRequiredError,
+  OrganizationNodePermissionRequiredError,
+} from "@/errors";
 import { NodeService } from "@/services/node-service";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -280,3 +285,134 @@ describe("NodeService", () => {
     });
   });
 });
+
+// ── deleteNode ─────────────────────────────────────────────────────────────────
+
+describe("NodeService.deleteNode", () => {
+  /** Build a mock transaction that supports the full deleteNode query chain. */
+  function createDeleteMock(options: {
+    actorRole?: string | null;
+    nodeScope?: "private" | "shared";
+    nodeOwner?: string | null;
+    nodeOrgId?: string | null;
+    ownerIsMember?: boolean;
+  }) {
+    const {
+      actorRole = "member",
+      nodeScope = "private",
+      nodeOwner = "user-1",
+      nodeOrgId = null,
+      ownerIsMember = true,
+    } = options;
+
+    const mockDeleteWhere = vi.fn().mockResolvedValue({ rowCount: 1 });
+    const mockDeleteFrom = vi.fn().mockReturnValue({ where: mockDeleteWhere });
+
+    let selectCallCount = 0;
+    const mockLimit = vi.fn().mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) {
+        // First select: actor membership
+        return Promise.resolve(actorRole ? [{ role: actorRole }] : []);
+      }
+      if (selectCallCount === 2) {
+        // Second select: node lookup
+        return Promise.resolve([
+          {
+            id: "node-1",
+            scope: nodeScope,
+            ownerUserId: nodeOwner,
+            organizationId: nodeOrgId,
+          },
+        ]);
+      }
+      if (selectCallCount === 3) {
+        // Third select: owner membership check (only for private nodes)
+        return Promise.resolve(ownerIsMember ? [{ userId: nodeOwner }] : []);
+      }
+      return Promise.resolve([]);
+    });
+    const mockWhere = vi.fn().mockReturnValue({ limit: mockLimit });
+    const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
+    const mockSelect = vi.fn().mockReturnValue({ from: mockFrom });
+
+    const mockTx = {
+      select: mockSelect,
+      delete: vi.fn().mockReturnValue({ where: mockDeleteWhere }),
+    };
+
+    // biome-ignore lint/suspicious/noExplicitAny: mock DB for unit testing
+    const mockDb = { transaction: vi.fn().mockImplementation((fn: any) => fn(mockTx)) } as any;
+    return { mockDb, mockTx, mockDeleteWhere };
+  }
+
+  it("deletes a private node owned by the actor", async () => {
+    const { mockDb, mockTx, mockDeleteWhere } = createDeleteMock({
+      actorRole: "member",
+      nodeScope: "private",
+      nodeOwner: "user-1",
+    });
+
+    // biome-ignore lint/suspicious/noExplicitAny: stub
+    const service = new NodeService(mockDb, {} as any, {} as any);
+    await service.deleteNode({ organizationId: "org-1", nodeId: "node-1", actorUserId: "user-1" });
+
+    expect(mockTx.delete).toHaveBeenCalled();
+    expect(mockDeleteWhere).toHaveBeenCalled();
+  });
+
+  it("throws OrganizationMembershipRequiredError when actor is not a member", async () => {
+    const { mockDb } = createDeleteMock({ actorRole: null });
+    // biome-ignore lint/suspicious/noExplicitAny: stub
+    const service = new NodeService(mockDb, {} as any, {} as any);
+
+    await expect(
+      service.deleteNode({ organizationId: "org-1", nodeId: "node-1", actorUserId: "user-2" }),
+    ).rejects.toBeInstanceOf(OrganizationMembershipRequiredError);
+  });
+
+  it("throws NodeDeletePermissionRequiredError when actor does not own the private node", async () => {
+    const { mockDb } = createDeleteMock({
+      actorRole: "member",
+      nodeScope: "private",
+      nodeOwner: "user-99",  // different owner
+    });
+    // biome-ignore lint/suspicious/noExplicitAny: stub
+    const service = new NodeService(mockDb, {} as any, {} as any);
+
+    await expect(
+      service.deleteNode({ organizationId: "org-1", nodeId: "node-1", actorUserId: "user-1" }),
+    ).rejects.toBeInstanceOf(NodeDeletePermissionRequiredError);
+  });
+
+  it("throws OrganizationNodePermissionRequiredError when actor is a plain member trying to delete a shared node", async () => {
+    const { mockDb } = createDeleteMock({
+      actorRole: "member",
+      nodeScope: "shared",
+      nodeOwner: null,
+      nodeOrgId: "org-1",
+    });
+    // biome-ignore lint/suspicious/noExplicitAny: stub
+    const service = new NodeService(mockDb, {} as any, {} as any);
+
+    await expect(
+      service.deleteNode({ organizationId: "org-1", nodeId: "node-1", actorUserId: "user-1" }),
+    ).rejects.toBeInstanceOf(OrganizationNodePermissionRequiredError);
+  });
+
+  it("allows an admin to delete a shared node", async () => {
+    const { mockDb, mockTx } = createDeleteMock({
+      actorRole: "admin",
+      nodeScope: "shared",
+      nodeOwner: null,
+      nodeOrgId: "org-1",
+    });
+    // biome-ignore lint/suspicious/noExplicitAny: stub
+    const service = new NodeService(mockDb, {} as any, {} as any);
+
+    await service.deleteNode({ organizationId: "org-1", nodeId: "node-1", actorUserId: "user-1" });
+
+    expect(mockTx.delete).toHaveBeenCalled();
+  });
+});
+
