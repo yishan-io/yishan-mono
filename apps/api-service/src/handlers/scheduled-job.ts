@@ -1,10 +1,10 @@
 import { StatusCodes } from "http-status-codes";
 
 import type { AppContext } from "@/hono";
+import type { NodeParamsInput } from "@/validation/node";
 import type {
   CompleteScheduledJobRunBodyInput,
   CreateScheduledJobBodyInput,
-  NodeScheduledJobParamsInput,
   ScheduledJobListQueryInput,
   ScheduledJobOrgParamsInput,
   ScheduledJobParamsInput,
@@ -125,7 +125,7 @@ export async function listScheduledJobRunsHandler(
 
 export async function startScheduledJobRunHandler(
   c: AppContext,
-  params: NodeScheduledJobParamsInput,
+  params: NodeParamsInput,
   body: StartScheduledJobRunBodyInput,
 ) {
   const actorUser = c.get("sessionUser");
@@ -141,7 +141,7 @@ export async function startScheduledJobRunHandler(
 
 export async function completeScheduledJobRunHandler(
   c: AppContext,
-  params: NodeScheduledJobParamsInput,
+  params: NodeParamsInput,
   body: CompleteScheduledJobRunBodyInput,
 ) {
   const actorUser = c.get("sessionUser");

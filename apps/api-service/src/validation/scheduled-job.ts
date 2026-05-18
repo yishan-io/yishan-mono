@@ -2,6 +2,7 @@ import { AGENT_KINDS } from "@yishan/core";
 import { z } from "zod";
 
 import { nonEmptyStringSchema } from "@/validation/common";
+import { nodeParamsSchema } from "@/validation/node";
 
 const scheduledAgentKindSchema = z.enum(AGENT_KINDS);
 
@@ -57,9 +58,9 @@ export type ScheduledJobRunsQueryInput = z.infer<typeof scheduledJobRunsQuerySch
 export type CreateScheduledJobBodyInput = z.infer<typeof createScheduledJobBodySchema>;
 export type UpdateScheduledJobBodyInput = z.infer<typeof updateScheduledJobBodySchema>;
 
-export const nodeScheduledJobParamsSchema = z.object({
-  nodeId: nonEmptyStringSchema,
-});
+/** Re-export from validation/node for routes that validate a node-scoped run endpoint. */
+export { nodeParamsSchema as nodeScheduledJobParamsSchema };
+export type NodeScheduledJobParamsInput = z.infer<typeof nodeParamsSchema>;
 
 export const startScheduledJobRunBodySchema = z.object({
   runId: nonEmptyStringSchema,
@@ -76,6 +77,5 @@ export const completeScheduledJobRunBodySchema = z.object({
   errorDetails: z.record(z.string(), z.unknown()).optional(),
 });
 
-export type NodeScheduledJobParamsInput = z.infer<typeof nodeScheduledJobParamsSchema>;
 export type StartScheduledJobRunBodyInput = z.infer<typeof startScheduledJobRunBodySchema>;
 export type CompleteScheduledJobRunBodyInput = z.infer<typeof completeScheduledJobRunBodySchema>;

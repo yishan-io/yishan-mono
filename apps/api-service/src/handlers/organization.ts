@@ -5,7 +5,7 @@ import type {
   AddOrganizationMemberBodyInput,
   CreateOrganizationBodyInput,
   OrganizationParamsInput,
-  RemoveOrganizationMemberParamsInput
+  RemoveOrganizationMemberParamsInput,
 } from "@/validation/organization";
 
 export async function createOrganizationHandler(c: AppContext, body: CreateOrganizationBodyInput) {
@@ -17,15 +17,15 @@ export async function createOrganizationHandler(c: AppContext, body: CreateOrgan
   const organization = await organizationService.createOrganization({
     name,
     actorUserId: actorUser.id,
-    memberUserIds
+    memberUserIds,
   });
 
   return c.json({ organization }, StatusCodes.CREATED);
 }
 
 export async function listOrganizationsHandler(c: AppContext) {
-  const user = c.get("sessionUser");
-  const organizations = await c.get("services").organization.getOrganizationsForUser(user.id);
+  const actorUser = c.get("sessionUser");
+  const organizations = await c.get("services").organization.getOrganizationsForUser(actorUser.id);
   return c.json({ organizations });
 }
 
@@ -33,7 +33,7 @@ export async function listOrganizationMembersHandler(c: AppContext, params: Orga
   const actorUser = c.get("sessionUser");
   const members = await c.get("services").organization.listOrganizationMembers({
     organizationId: params.orgId,
-    actorUserId: actorUser.id
+    actorUserId: actorUser.id,
   });
   return c.json({ members });
 }
@@ -44,7 +44,7 @@ export async function deleteOrganizationHandler(c: AppContext, params: Organizat
   const actorUser = c.get("sessionUser");
   await c.get("services").organization.deleteOrganization({
     organizationId,
-    actorUserId: actorUser.id
+    actorUserId: actorUser.id,
   });
 
   return c.json({ ok: true });
@@ -53,7 +53,7 @@ export async function deleteOrganizationHandler(c: AppContext, params: Organizat
 export async function addOrganizationMemberHandler(
   c: AppContext,
   params: OrganizationParamsInput,
-  body: AddOrganizationMemberBodyInput
+  body: AddOrganizationMemberBodyInput,
 ) {
   const { orgId: organizationId } = params;
   const { userId, role } = body;
@@ -63,23 +63,20 @@ export async function addOrganizationMemberHandler(
     organizationId,
     actorUserId: actorUser.id,
     memberUserId: userId,
-    role
+    role,
   });
 
   return c.json({ member }, StatusCodes.CREATED);
 }
 
-export async function removeOrganizationMemberHandler(
-  c: AppContext,
-  params: RemoveOrganizationMemberParamsInput
-) {
+export async function removeOrganizationMemberHandler(c: AppContext, params: RemoveOrganizationMemberParamsInput) {
   const { orgId: organizationId, userId: memberUserId } = params;
 
   const actorUser = c.get("sessionUser");
   await c.get("services").organization.removeOrganizationMember({
     organizationId,
     actorUserId: actorUser.id,
-    memberUserId
+    memberUserId,
   });
 
   return c.json({ ok: true });
