@@ -1,17 +1,15 @@
 import { Box, Typography, useTheme } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import Markdown from "react-markdown";
-import rehypeHighlight from "rehype-highlight";
-import rehypeMermaidLite from "rehype-mermaid-lite";
-import rehypeRaw from "rehype-raw";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
-import remarkGfm from "remark-gfm";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import { openLink } from "../commands/appCommands";
 import { buildWorkspaceFileUrl } from "../commands/fileCommands";
 import { tabStore } from "../store/tabStore";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
+import { markdownWorkerService } from "./markdownWorkerService";
 import { MermaidBlock } from "./MermaidBlock";
+
+const MARKDOWN_RENDER_DEBOUNCE_MS = 400;
 
 type MarkdownPreviewProps = {
   content: string;
@@ -38,72 +36,6 @@ function resolveRelativePath(baseDir: string, relativePath: string): string {
   return parts.join("/");
 }
 
-const sanitizeSchema = {
-  ...defaultSchema,
-  tagNames: [
-    ...(defaultSchema.tagNames ?? []),
-    "div",
-    "span",
-    "details",
-    "summary",
-    "abbr",
-    "kbd",
-    "mark",
-    "sub",
-    "sup",
-    "br",
-    "wbr",
-    "figure",
-    "figcaption",
-    "picture",
-    "source",
-    "dl",
-    "dt",
-    "dd",
-    "cite",
-    "dfn",
-    "var",
-    "samp",
-    "ruby",
-    "rt",
-    "rp",
-    "bdi",
-    "bdo",
-  ],
-  attributes: {
-    ...defaultSchema.attributes,
-    "*": [
-      ...(defaultSchema.attributes?.["*"] ?? []),
-      "className",
-      "style",
-      "title",
-      "role",
-      "aria-*",
-      "data-*",
-    ],
-    img: [
-      ...(defaultSchema.attributes?.img ?? []),
-      "width",
-      "height",
-    ],
-    td: [
-      ...(defaultSchema.attributes?.td ?? []),
-      "colspan",
-      "rowspan",
-    ],
-    th: [
-      ...(defaultSchema.attributes?.th ?? []),
-      "colspan",
-      "rowspan",
-    ],
-    input: [
-      ...(defaultSchema.attributes?.input ?? []),
-      "checked",
-      "disabled",
-    ],
-  },
-};
-
 async function openMarkdownLink(url: string): Promise<void> {
   const result = await openLink({ url });
 
@@ -115,18 +47,6 @@ async function openMarkdownLink(url: string): Promise<void> {
     title: "Failed to open link",
     message: "Could not open link in external app (" + result.reason + ").",
   });
-}
-
-/** Recursively extracts plain text from React node trees (strings, elements with children, arrays). */
-function extractTextContent(node: React.ReactNode): string {
-  if (node == null || typeof node === "boolean") return "";
-  if (typeof node === "string") return node;
-  if (typeof node === "number") return String(node);
-  if (Array.isArray(node)) return node.map(extractTextContent).join("");
-  if (React.isValidElement<{ children?: React.ReactNode }>(node)) {
-    return extractTextContent(node.props.children);
-  }
-  return "";
 }
 
 /** highlight.js token colors inspired by GitHub's light/dark themes, applied via sx. */
@@ -372,101 +292,20 @@ function useMarkdownStyles(theme: Theme) {
   );
 }
 
-function MarkdownImage({
-  src,
-  alt,
+/**
+ * Memoized inner renderer that parses markdown in a Web Worker (off main thread)
+ * and renders the resulting HTML with post-processing for mermaid, images, and links.
+ */
+const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
+  content,
+  filePath,
   worktreePath,
-  fileDir,
-}: {
-  src?: string;
-  alt?: string;
-  worktreePath: string;
-  fileDir: string;
-}) {
-  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
-  const [error, setError] = useState(false);
-
-  const resolveImage = useCallback(async () => {
-    if (!src) return;
-
-    if (isAbsoluteUrl(src)) {
-      setResolvedSrc(src);
-      return;
-    }
-
-    if (!worktreePath) {
-      setResolvedSrc(src);
-      return;
-    }
-
-    const cleanSrc = src.replace(/[?#].*$/, "");
-    const relativePath = resolveRelativePath(fileDir, cleanSrc);
-    const cacheKey = `${worktreePath}:${relativePath}`;
-
-    const cached = workspaceImageUrlCache.get(cacheKey);
-    if (cached) {
-      setResolvedSrc(cached);
-      return;
-    }
-
-    try {
-      const protocolUrl = buildWorkspaceFileUrl({ workspaceWorktreePath: worktreePath, relativePath });
-      workspaceImageUrlCache.set(cacheKey, protocolUrl);
-      setResolvedSrc(protocolUrl);
-    } catch {
-      setError(true);
-    }
-  }, [src, worktreePath, fileDir]);
-
-  useEffect(() => {
-    setError(false);
-    setResolvedSrc(null);
-    void resolveImage();
-  }, [resolveImage]);
-
-  if (error) {
-    return (
-      <Box
-        component="span"
-        sx={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 0.5,
-          px: 1,
-          py: 0.25,
-          borderRadius: 1,
-          bgcolor: "action.hover",
-          color: "text.secondary",
-          fontSize: "0.85em",
-        }}
-      >
-        {alt || "image"}
-      </Box>
-    );
-  }
-
-  if (!resolvedSrc) {
-    return (
-      <Box
-        component="span"
-        sx={{
-          display: "inline-block",
-          width: 48,
-          height: 48,
-          borderRadius: 1,
-          bgcolor: "action.hover",
-        }}
-      />
-    );
-  }
-
-  return <img src={resolvedSrc} alt={alt ?? ""} style={{ maxWidth: "100%", height: "auto", borderRadius: 4 }} />;
-}
-
-/** Renders a Markdown string as styled HTML using react-markdown with GFM and syntax highlighting support. */
-export function MarkdownPreview({ content, filePath, worktreePath }: MarkdownPreviewProps) {
+}: MarkdownPreviewProps) {
   const theme = useTheme();
   const styles = useMarkdownStyles(theme);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [html, setHtml] = useState<string | null>(null);
+  const [mermaidBlocks, setMermaidBlocks] = useState<Array<{ id: string; code: string }>>([]);
 
   const fileDir = useMemo(() => {
     if (!filePath) return "";
@@ -474,68 +313,106 @@ export function MarkdownPreview({ content, filePath, worktreePath }: MarkdownPre
     return parts.length > 1 ? parts.slice(0, -1).join("/") : "";
   }, [filePath]);
 
-  const remarkPlugins = useMemo(() => [remarkGfm], []);
-  const rehypePlugins = useMemo(
-    () => [
-      rehypeRaw,
-      [rehypeSanitize, sanitizeSchema],
-      rehypeMermaidLite,
-      rehypeHighlight,
-    ],
-    [],
-  );
+  // Parse markdown in worker
+  useEffect(() => {
+    if (!content.trim()) {
+      setHtml(null);
+      setMermaidBlocks([]);
+      return;
+    }
 
-  const components = useMemo(
-    () => ({
-      pre: ({ className, children, ...props }: React.ComponentProps<"pre">) => {
-        if (typeof className === "string" && className.split(/\s+/).includes("mermaid")) {
-          const code = extractTextContent(children).replace(/\n$/, "");
-          return <MermaidBlock code={code} />;
+    let cancelled = false;
+
+    markdownWorkerService.parse(content).then((result) => {
+      if (!cancelled) {
+        setHtml(result);
+      }
+    }).catch((err) => {
+      if (!cancelled) {
+        console.error("[MarkdownPreview] Worker parse error", err);
+        setHtml(`<p style="color: red;">Failed to render markdown</p>`);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [content]);
+
+  // Post-process rendered HTML: extract mermaid blocks, fix images, attach link handlers
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || html === null) return;
+
+    // Set HTML content
+    container.innerHTML = html;
+
+    // Extract mermaid code blocks and replace with placeholder divs
+    const mermaidPres = container.querySelectorAll("pre.mermaid");
+    const blocks: Array<{ id: string; code: string }> = [];
+    mermaidPres.forEach((pre, index) => {
+      const code = pre.textContent?.replace(/\n$/, "") ?? "";
+      const id = `mermaid-placeholder-${index}`;
+      const placeholder = document.createElement("div");
+      placeholder.setAttribute("data-mermaid-id", id);
+      pre.replaceWith(placeholder);
+      blocks.push({ id, code });
+    });
+    setMermaidBlocks(blocks);
+
+    // Fix images: resolve relative paths to workspace file URLs
+    if (worktreePath) {
+      const images = container.querySelectorAll("img");
+      images.forEach((img) => {
+        const src = img.getAttribute("src");
+        if (!src || isAbsoluteUrl(src)) return;
+
+        const cleanSrc = src.replace(/[?#].*$/, "");
+        const relativePath = resolveRelativePath(fileDir, cleanSrc);
+        const cacheKey = `${worktreePath}:${relativePath}`;
+
+        const cached = workspaceImageUrlCache.get(cacheKey);
+        if (cached) {
+          img.src = cached;
+          return;
         }
 
-        return <pre className={className} {...props}>{children}</pre>;
-      },
-      img: ({ src, alt, ...props }: React.ComponentProps<"img">) => (
-        <MarkdownImage
-          src={src}
-          alt={alt}
-          worktreePath={worktreePath ?? ""}
-          fileDir={fileDir}
-        />
-      ),
-      a: ({ href, children, ...props }: React.ComponentProps<"a">) => {
-        const handleClick = (e: React.MouseEvent) => {
-          if (!href) return;
-          e.preventDefault();
+        try {
+          const protocolUrl = buildWorkspaceFileUrl({ workspaceWorktreePath: worktreePath, relativePath });
+          workspaceImageUrlCache.set(cacheKey, protocolUrl);
+          img.src = protocolUrl;
+        } catch {
+          // Leave original src on failure
+        }
+      });
+    }
 
-          if (href.startsWith("#")) return;
+    // Attach link click handlers
+    const links = container.querySelectorAll("a[href]");
+    links.forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        const href = link.getAttribute("href");
+        if (!href || href.startsWith("#")) return;
 
-          if (isAbsoluteUrl(href)) {
-            void openMarkdownLink(href);
-            return;
+        if (isAbsoluteUrl(href)) {
+          void openMarkdownLink(href);
+          return;
+        }
+
+        if (worktreePath) {
+          const cleanPath = href.replace(/[?#].*$/, "");
+          const resolvedPath = resolveRelativePath(fileDir, cleanPath);
+          if (resolvedPath) {
+            tabStore.getState().openTab({
+              kind: "file",
+              path: resolvedPath,
+            });
           }
-
-          if (worktreePath) {
-            const cleanPath = href.replace(/[?#].*$/, "");
-            const resolvedPath = resolveRelativePath(fileDir, cleanPath);
-            if (resolvedPath) {
-              tabStore.getState().openTab({
-                kind: "file",
-                path: resolvedPath,
-              });
-            }
-          }
-        };
-
-        return (
-          <a href={href} onClick={handleClick} {...props}>
-            {children}
-          </a>
-        );
-      },
-    }),
-    [worktreePath, fileDir],
-  );
+        }
+      });
+    });
+  }, [html, worktreePath, fileDir]);
 
   if (!content.trim()) {
     return (
@@ -565,13 +442,87 @@ export function MarkdownPreview({ content, filePath, worktreePath }: MarkdownPre
         ...styles.container,
       }}
     >
-      <Markdown
-        remarkPlugins={remarkPlugins}
-        rehypePlugins={rehypePlugins as never}
-        components={components}
-      >
-        {content}
-      </Markdown>
+      <Box ref={containerRef} />
+      {/* Render mermaid blocks as React portals into their placeholder divs */}
+      {mermaidBlocks.map((block) => (
+        <MermaidPortal key={block.id} targetId={block.id} code={block.code} containerRef={containerRef} />
+      ))}
     </Box>
+  );
+});
+
+/** Renders a MermaidBlock into a placeholder div found within the container. */
+function MermaidPortal({
+  targetId,
+  code,
+  containerRef,
+}: {
+  targetId: string;
+  code: string;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const portalRef = useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const target = container.querySelector(`[data-mermaid-id="${targetId}"]`);
+    if (!target) return;
+
+    // Create a div for React to render into
+    const renderTarget = document.createElement("div");
+    target.replaceWith(renderTarget);
+    portalRef.current = renderTarget;
+    setMounted(true);
+
+    return () => {
+      portalRef.current = null;
+      setMounted(false);
+    };
+  }, [targetId, containerRef]);
+
+  if (!mounted || !portalRef.current) return null;
+
+  return ReactDOM.createPortal(<MermaidBlock code={code} />, portalRef.current);
+}
+
+/** Renders a Markdown string as styled HTML using react-markdown with GFM and syntax highlighting support.
+ *  Debounces content updates to avoid re-running the expensive rehype pipeline on every keystroke or file-change event. */
+export function MarkdownPreview({ content, filePath, worktreePath }: MarkdownPreviewProps) {
+  const [debouncedContent, setDebouncedContent] = useState(content);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // If content is cleared or this is the first render, update immediately.
+    if (!debouncedContent && content) {
+      setDebouncedContent(content);
+      return;
+    }
+
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+    }
+
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      setDebouncedContent(content);
+    }, MARKDOWN_RENDER_DEBOUNCE_MS);
+
+    return () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [content]);
+
+  return (
+    <MemoizedMarkdownRenderer
+      content={debouncedContent}
+      filePath={filePath}
+      worktreePath={worktreePath}
+    />
   );
 }

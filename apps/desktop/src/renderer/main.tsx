@@ -20,6 +20,17 @@ import { AppShell } from "./views/layout/AppShell";
 import { SettingsView } from "./views/SettingsView";
 import { ApplicationRouterView, NotFoundRouteView } from "./views/layout/ApplicationRouterView";
 
+// React 19 dev mode emits performance.measure() entries for every component render/update.
+// These accumulate indefinitely in the Performance API buffer and cause unbounded memory growth.
+// Periodically clear the buffer to prevent multi-GB leaks during long dev sessions.
+if (import.meta.env.DEV) {
+  const PERFORMANCE_BUFFER_FLUSH_INTERVAL_MS = 10_000;
+  setInterval(() => {
+    performance.clearMeasures();
+    performance.clearMarks();
+  }, PERFORMANCE_BUFFER_FLUSH_INTERVAL_MS);
+}
+
 /** Renders app routes with a shared theme-preference context. */
 function AppRoot() {
   const { themeMode } = useThemePreference();
