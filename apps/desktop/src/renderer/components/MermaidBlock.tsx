@@ -1,6 +1,6 @@
 import { Box, Typography, useTheme } from "@mui/material";
 import { memo, useEffect, useId, useRef, useState } from "react";
-import mermaid from "mermaid";
+import { mermaidIframeRenderer } from "./mermaidIframeRenderer";
 
 type MermaidBlockProps = {
   code: string;
@@ -18,58 +18,21 @@ function buildMermaidCacheKey(code: string, isDark: boolean): string {
   return `${code.trim()}\0${isDark ? "dark" : "light"}`;
 }
 
-/** Tracks whether mermaid has been initialized for the current theme mode. */
-let lastInitializedTheme: "dark" | "light" | null = null;
-
-/** Initializes mermaid only when the theme mode actually changes. */
-function ensureMermaidInitialized(isDark: boolean, fontFamily: string): void {
-  const targetTheme = isDark ? "dark" : "light";
-  if (lastInitializedTheme === targetTheme) {
-    return;
-  }
-
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: isDark ? "dark" : "default",
-    themeVariables: isDark
-      ? {
-          primaryColor: "#3f51b5",
-          primaryTextColor: "#e0e0e0",
-          primaryBorderColor: "#5c6bc0",
-          lineColor: "#7986cb",
-          secondaryColor: "#1a237e",
-          tertiaryColor: "#283593",
-          background: "#121212",
-          mainBkg: "#1e1e1e",
-          nodeBorder: "#5c6bc0",
-          clusterBkg: "#1a1a2e",
-          titleColor: "#e0e0e0",
-          edgeLabelBackground: "#2d2d2d",
-        }
-      : undefined,
-    fontFamily,
-    fontSize: 14,
-  });
-
-  lastInitializedTheme = targetTheme;
-}
-
 /**
  * Renders a Mermaid diagram from a code string, with theme-aware styling and error handling.
  *
  * Performance optimizations:
- * - Per-component SVG cache: skips mermaid.render() when code+theme haven't changed.
+ * - Renders in a hidden iframe so mermaid's layout engine does not block the main thread.
+ * - Per-component SVG cache: skips render when code+theme haven't changed.
  * - Memoized with React.memo: skips re-render when parent updates but props are identical.
- * - Mermaid.initialize() called only on theme change, not every render.
  */
 const MermaidBlock = memo(function MermaidBlock({ code }: MermaidBlockProps) {
   const theme = useTheme();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const uniqueId = useId().replace(/:/g, "-");
   const isDark = theme.palette.mode === "dark";
 
-  // Per-component cache: stores last successful render to avoid redundant mermaid.render() calls.
+  // Per-component cache: stores last successful render to avoid redundant render calls.
   const cachedRenderRef = useRef<CachedMermaidRender | null>(null);
 
   useEffect(() => {
@@ -88,12 +51,12 @@ const MermaidBlock = memo(function MermaidBlock({ code }: MermaidBlockProps) {
     let cancelled = false;
 
     const renderDiagram = async () => {
-      ensureMermaidInitialized(isDark, theme.typography.fontFamily as string);
-
-      const diagramId = `mermaid-${uniqueId}-${Date.now()}`;
-
       try {
-        const { svg } = await mermaid.render(diagramId, trimmedCode);
+        const svg = await mermaidIframeRenderer.render(trimmedCode, {
+          isDark,
+          fontFamily: theme.typography.fontFamily as string,
+        });
+
         if (!cancelled && containerRef.current) {
           containerRef.current.innerHTML = svg;
           cachedRenderRef.current = { key: cacheKey, svg };
@@ -101,10 +64,6 @@ const MermaidBlock = memo(function MermaidBlock({ code }: MermaidBlockProps) {
         }
       } catch (err) {
         if (!cancelled) {
-          // Clean up any leftover error element mermaid may have inserted
-          const errorElement = document.getElementById(`d${diagramId}`);
-          errorElement?.remove();
-
           setError(err instanceof Error ? err.message : "Failed to render diagram");
           // Clear cache on error so next attempt with same code retries rendering.
           cachedRenderRef.current = null;
@@ -117,7 +76,7 @@ const MermaidBlock = memo(function MermaidBlock({ code }: MermaidBlockProps) {
     return () => {
       cancelled = true;
     };
-  }, [code, isDark, uniqueId, theme.typography.fontFamily]);
+  }, [code, isDark, theme.typography.fontFamily]);
 
   if (!code.trim()) {
     return null;
