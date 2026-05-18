@@ -1,78 +1,195 @@
-import { createSession, getSessionUser, invalidateSession } from "@/auth/session";
-import { signAccessToken, verifyAccessToken } from "@/auth/security";
-import { issueTokenPair, revokeRefreshToken, rotateRefreshToken } from "@/auth/tokens";
+import { and, eq, gt, isNull } from "drizzle-orm";
+
+import { type OAuthStart, buildAuthorizationUrl, exchangeCodeForProfile } from "@/auth/oauth";
+import { randomToken, sha256Hex, signAccessToken, verifyAccessToken } from "@/auth/security";
 import type { AppDb } from "@/db/client";
-import type { OAuthProfile, ServiceConfig } from "@/types";
+import { refreshTokens, sessions, users } from "@/db/schema";
+import { newId } from "@/lib/id";
 import type { UserService } from "@/services/user-service";
+import type { OAuthProfile, OAuthProvider, ServiceConfig } from "@/types";
+
+export type SessionUser = Pick<typeof users.$inferSelect, "id" | "email" | "name" | "avatarUrl" | "userPreferences">;
 
 export class AuthService {
   constructor(
     private readonly db: AppDb,
     private readonly config: ServiceConfig,
-    private readonly userService: UserService
+    private readonly userService: UserService,
   ) {}
+
+  // ── OAuth ─────────────────────────────────────────────────────────────────
+
+  /** Builds the authorization URL and PKCE state for an OAuth provider redirect. */
+  async buildOAuthAuthorizationUrl(provider: OAuthProvider, callbackBaseUrl: string): Promise<OAuthStart> {
+    return buildAuthorizationUrl(provider, this.config, callbackBaseUrl);
+  }
+
+  /** Exchanges an OAuth authorization code for a user profile. */
+  async exchangeOAuthCodeForProfile(
+    provider: OAuthProvider,
+    code: string,
+    codeVerifier: string,
+    callbackBaseUrl: string,
+  ): Promise<OAuthProfile> {
+    return exchangeCodeForProfile(provider, code, codeVerifier, this.config, callbackBaseUrl);
+  }
 
   async resolveUserIdForOAuthProfile(profile: OAuthProfile): Promise<string> {
     return this.userService.resolveUserIdForOAuthProfile(profile);
   }
 
-  async createWebSession(userId: string, sessionTtlDays: number) {
-    return createSession(this.db, userId, sessionTtlDays);
+  // ── Web session ───────────────────────────────────────────────────────────
+
+  async createWebSession(userId: string, ttlDays: number): Promise<{ token: string; expiresAt: Date }> {
+    const token = randomToken(48);
+    const tokenHash = await sha256Hex(token);
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + ttlDays * 24 * 60 * 60 * 1000);
+
+    await this.db.insert(sessions).values({
+      id: newId(),
+      userId,
+      tokenHash,
+      expiresAt,
+    });
+
+    return { token, expiresAt };
   }
 
-  async invalidateWebSession(sessionToken: string) {
-    await invalidateSession(this.db, sessionToken);
+  async invalidateWebSession(sessionToken: string): Promise<void> {
+    const tokenHash = await sha256Hex(sessionToken);
+    await this.db.delete(sessions).where(eq(sessions.tokenHash, tokenHash));
   }
 
-  async issueApiTokens(userId: string) {
-    return issueTokenPair(this.db, userId, this.config);
+  async getSessionUserByToken(sessionToken: string): Promise<SessionUser | null> {
+    const tokenHash = await sha256Hex(sessionToken);
+    const now = new Date();
+
+    const rows = await this.db
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        avatarUrl: users.avatarUrl,
+        userPreferences: users.userPreferences,
+      })
+      .from(sessions)
+      .innerJoin(users, eq(users.id, sessions.userId))
+      .where(and(eq(sessions.tokenHash, tokenHash), gt(sessions.expiresAt, now)))
+      .limit(1);
+
+    return rows[0] ?? null;
   }
 
-  async refreshApiTokens(refreshToken: string) {
-    const rotated = await rotateRefreshToken(this.db, refreshToken, this.config);
+  // ── API tokens ────────────────────────────────────────────────────────────
 
-    if (!rotated) {
-      return null;
-    }
-
+  async issueApiTokens(userId: string): Promise<{
+    accessToken: string;
+    accessTokenExpiresIn: number;
+    accessTokenExpiresAt: string;
+    refreshToken: string;
+    refreshTokenExpiresAt: string;
+  }> {
     const nowSeconds = Math.floor(Date.now() / 1000);
     const accessExp = nowSeconds + this.config.jwtAccessTtlSeconds;
+    const refresh = await this._createRefreshTokenRecord(userId, this.config.refreshTokenTtlDays);
+
     const accessToken = await signAccessToken(
       {
-        sub: rotated.userId,
-        sid: rotated.refreshTokenId,
+        sub: userId,
+        sid: refresh.id,
         scope: "api:read api:write",
         iss: this.config.jwtIssuer,
         aud: this.config.jwtAudience,
         iat: nowSeconds,
-        exp: accessExp
+        exp: accessExp,
       },
-      this.config.jwtAccessSecret
+      this.config.jwtAccessSecret,
     );
 
     return {
       accessToken,
       accessTokenExpiresIn: this.config.jwtAccessTtlSeconds,
       accessTokenExpiresAt: new Date(accessExp * 1000).toISOString(),
-      refreshToken: rotated.refreshToken,
-      refreshTokenExpiresAt: rotated.refreshTokenExpiresAt
+      refreshToken: refresh.token,
+      refreshTokenExpiresAt: refresh.expiresAt.toISOString(),
     };
   }
 
-  async revokeApiRefreshToken(refreshToken: string) {
-    await revokeRefreshToken(this.db, refreshToken);
+  async refreshApiTokens(refreshToken: string): Promise<{
+    accessToken: string;
+    accessTokenExpiresIn: number;
+    accessTokenExpiresAt: string;
+    refreshToken: string;
+    refreshTokenExpiresAt: string;
+  } | null> {
+    const refreshTokenHash = await sha256Hex(refreshToken);
+    const now = new Date();
+
+    const rows = await this.db
+      .select({ id: refreshTokens.id, userId: refreshTokens.userId })
+      .from(refreshTokens)
+      .where(
+        and(
+          eq(refreshTokens.tokenHash, refreshTokenHash),
+          isNull(refreshTokens.revokedAt),
+          gt(refreshTokens.expiresAt, now),
+        ),
+      )
+      .limit(1);
+
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+
+    const replacement = await this._createRefreshTokenRecord(row.userId, this.config.refreshTokenTtlDays);
+
+    await this.db
+      .update(refreshTokens)
+      .set({ revokedAt: now, replacedByTokenId: replacement.id })
+      .where(eq(refreshTokens.id, row.id));
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const accessExp = nowSeconds + this.config.jwtAccessTtlSeconds;
+    const accessToken = await signAccessToken(
+      {
+        sub: row.userId,
+        sid: replacement.id,
+        scope: "api:read api:write",
+        iss: this.config.jwtIssuer,
+        aud: this.config.jwtAudience,
+        iat: nowSeconds,
+        exp: accessExp,
+      },
+      this.config.jwtAccessSecret,
+    );
+
+    return {
+      accessToken,
+      accessTokenExpiresIn: this.config.jwtAccessTtlSeconds,
+      accessTokenExpiresAt: new Date(accessExp * 1000).toISOString(),
+      refreshToken: replacement.token,
+      refreshTokenExpiresAt: replacement.expiresAt.toISOString(),
+    };
   }
 
-  async getSessionUserByToken(sessionToken: string) {
-    return getSessionUser(this.db, sessionToken);
+  async revokeApiRefreshToken(refreshToken: string): Promise<void> {
+    const refreshTokenHash = await sha256Hex(refreshToken);
+    await this.db
+      .update(refreshTokens)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(refreshTokens.tokenHash, refreshTokenHash), isNull(refreshTokens.revokedAt)));
   }
 
-  async getUserFromAccessToken(accessToken: string) {
+  // ── Access token verification ─────────────────────────────────────────────
+
+  async getUserFromAccessToken(accessToken: string): Promise<SessionUser | null> {
     const claims = await verifyAccessToken(
       accessToken,
       this.config.jwtAccessSecret,
       this.config.jwtIssuer,
-      this.config.jwtAudience
+      this.config.jwtAudience,
     );
 
     if (!claims) {
@@ -80,5 +197,22 @@ export class AuthService {
     }
 
     return this.userService.getById(claims.sub);
+  }
+
+  // ── Private helpers ────────────────────────────────────────────────────────
+
+  private async _createRefreshTokenRecord(
+    userId: string,
+    ttlDays: number,
+  ): Promise<{ id: string; token: string; expiresAt: Date }> {
+    const token = randomToken(48);
+    const tokenHash = await sha256Hex(token);
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + ttlDays * 24 * 60 * 60 * 1000);
+    const id = newId();
+
+    await this.db.insert(refreshTokens).values({ id, userId, tokenHash, expiresAt });
+
+    return { id, token, expiresAt };
   }
 }

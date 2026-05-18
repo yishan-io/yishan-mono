@@ -1,13 +1,7 @@
 import { deleteCookie, getCookie, getSignedCookie, setCookie, setSignedCookie } from "hono/cookie";
 import { StatusCodes } from "http-status-codes";
 
-import { buildAuthorizationUrl, exchangeCodeForProfile } from "@/auth/oauth";
-import {
-  OAUTH_COOKIE_NAME,
-  SESSION_COOKIE_NAME,
-  cookieOptions,
-  type OAuthCookiePayload
-} from "@/auth/http";
+import { OAUTH_COOKIE_NAME, type OAuthCookiePayload, SESSION_COOKIE_NAME, cookieOptions } from "@/auth/http";
 import type { AppContext } from "@/hono";
 
 function isLoopbackHost(hostname: string): boolean {
@@ -44,11 +38,11 @@ function parseCliRedirectUri(value: string | undefined): string | null {
 export async function startOAuthHandler(c: AppContext) {
   const providerParam = c.get("oauthProvider");
   const config = c.get("config");
+  const authService = c.get("services").auth;
   const oauthBaseUrl = config.appBaseUrl;
-  const { authorizationUrl, state, codeVerifier } = await buildAuthorizationUrl(
+  const { authorizationUrl, state, codeVerifier } = await authService.buildOAuthAuthorizationUrl(
     providerParam,
-    config,
-    oauthBaseUrl
+    oauthBaseUrl,
   );
 
   const responseModeParam = c.req.query("mode");
@@ -59,7 +53,7 @@ export async function startOAuthHandler(c: AppContext) {
   if (responseMode === "cli" && (!cliRedirectUri || !cliState)) {
     return c.json(
       { error: "mode=cli requires valid redirect_uri and state query parameters" },
-      StatusCodes.BAD_REQUEST
+      StatusCodes.BAD_REQUEST,
     );
   }
 
@@ -70,13 +64,13 @@ export async function startOAuthHandler(c: AppContext) {
     createdAt: Date.now(),
     callbackBaseUrl: oauthBaseUrl,
     responseMode,
-    cliRedirectUri: responseMode === "cli" ? cliRedirectUri ?? undefined : undefined,
-    cliState: responseMode === "cli" ? cliState ?? undefined : undefined
+    cliRedirectUri: responseMode === "cli" ? (cliRedirectUri ?? undefined) : undefined,
+    cliState: responseMode === "cli" ? (cliState ?? undefined) : undefined,
   };
 
   await setSignedCookie(c, OAUTH_COOKIE_NAME, JSON.stringify(payload), config.sessionSecret, {
     ...cookieOptions(c.req.url, config.cookieDomain),
-    maxAge: 10 * 60
+    maxAge: 10 * 60,
   });
 
   return c.redirect(authorizationUrl, StatusCodes.MOVED_TEMPORARILY);
@@ -106,20 +100,15 @@ export async function callbackOAuthHandler(c: AppContext) {
 
   const isFresh = Date.now() - oauthContext.createdAt <= 10 * 60 * 1000;
 
-  if (
-    !isFresh ||
-    oauthContext.state !== state ||
-    oauthContext.provider !== providerParam
-  ) {
+  if (!isFresh || oauthContext.state !== state || oauthContext.provider !== providerParam) {
     return c.json({ error: "OAuth state mismatch" }, StatusCodes.BAD_REQUEST);
   }
 
-  const profile = await exchangeCodeForProfile(
+  const profile = await authService.exchangeOAuthCodeForProfile(
     providerParam,
     code,
     oauthContext.codeVerifier,
-    config,
-    oauthContext.callbackBaseUrl
+    oauthContext.callbackBaseUrl ?? config.appBaseUrl,
   );
 
   if (!profile.emailVerified) {
@@ -133,7 +122,7 @@ export async function callbackOAuthHandler(c: AppContext) {
   const session = await authService.createWebSession(userId, config.sessionTtlDays);
   setCookie(c, SESSION_COOKIE_NAME, session.token, {
     ...cookieOptions(c.req.url, config.cookieDomain),
-    expires: session.expiresAt
+    expires: session.expiresAt,
   });
 
   if (responseMode === "token") {
@@ -182,7 +171,7 @@ export async function issueTokenHandler(c: AppContext) {
   const tokens = await authService.issueApiTokens(sessionUser.id);
   return c.json({
     tokenType: "Bearer",
-    ...tokens
+    ...tokens,
   });
 }
 
@@ -208,7 +197,7 @@ export async function refreshTokenHandler(c: AppContext) {
 
   return c.json({
     tokenType: "Bearer",
-    ...refreshed
+    ...refreshed,
   });
 }
 

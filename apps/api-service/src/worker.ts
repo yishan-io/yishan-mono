@@ -1,9 +1,10 @@
 import { app } from "@/app";
 import type { CleanupEnv } from "@/scheduled/cleanup";
 import { handleCleanup } from "@/scheduled/cleanup";
+import { type ScheduledDbEnv, runWithScheduledDb } from "@/scheduled/db";
 import type { EvaluatorEnv } from "@/scheduled/evaluator";
 import { handleEvaluateJobs } from "@/scheduled/evaluator";
-import { runWithScheduledDb, type ScheduledDbEnv } from "@/scheduled/db";
+import { JobEvaluatorService } from "@/services/job-evaluator-service";
 
 type WorkerEnv = ScheduledDbEnv & CleanupEnv & EvaluatorEnv;
 
@@ -13,14 +14,15 @@ export default {
     if (event.cron === "* * * * *") {
       ctx.waitUntil(
         runWithScheduledDb(env, "evaluator", async (db) => {
-          await handleEvaluateJobs(db, env);
-        })
+          const jobEvaluatorService = new JobEvaluatorService(db);
+          await handleEvaluateJobs(jobEvaluatorService, env);
+        }),
       );
     } else {
       ctx.waitUntil(
         runWithScheduledDb(env, "cleanup", async (db) => {
           await handleCleanup(db, env);
-        })
+        }),
       );
     }
   },

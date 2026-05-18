@@ -1,5 +1,5 @@
 import type { AgentKind } from "@yishan/core";
-import { and, asc, desc, eq, lte } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
 import { nodes, projects, scheduledJobRuns, scheduledJobs } from "@/db/schema";
@@ -18,7 +18,6 @@ import { computeNextRunAt, ensureTimezoneSupported, parseCronExpression } from "
 import type { OrganizationService } from "@/services/organization-service";
 
 const DEFAULT_RUN_LIMIT = 20;
-const MAX_RESPONSE_BODY_SIZE = 4096;
 
 type ScheduledJobRecord = typeof scheduledJobs.$inferSelect;
 type ScheduledJobRunRecord = typeof scheduledJobRuns.$inferSelect;
@@ -158,19 +157,6 @@ function toRunView(row: ScheduledJobRunRecord): ScheduledJobRunView {
   };
 }
 
-function limitResponseBody(raw: string): string {
-  if (raw.length <= MAX_RESPONSE_BODY_SIZE) {
-    return raw;
-  }
-  return `${raw.slice(0, MAX_RESPONSE_BODY_SIZE)}...`;
-}
-
-function bucketToMinute(date: Date): Date {
-  const rounded = new Date(date.getTime());
-  rounded.setUTCSeconds(0, 0);
-  return rounded;
-}
-
 function validateCronOrThrow(expression: string) {
   try {
     return parseCronExpression(expression);
@@ -193,6 +179,7 @@ function validateTimezoneOrThrow(timezone: string): string {
   }
 }
 
+/** Handles HTTP CRUD operations for scheduled jobs. Background evaluation lives in JobEvaluatorService. */
 export class ScheduledJobService {
   constructor(
     private readonly db: AppDb,
@@ -418,153 +405,5 @@ export class ScheduledJobService {
       .limit(limit);
 
     return rows.map(toRunView);
-  }
-
-  async evaluateDueJobs(input: {
-    limit: number;
-    now?: Date;
-  }): Promise<PendingRun[]> {
-    const now = input.now ?? new Date();
-
-    const dueJobs = await this.db
-      .select()
-      .from(scheduledJobs)
-      .where(and(eq(scheduledJobs.status, "active"), lte(scheduledJobs.nextRunAt, now)))
-      .orderBy(asc(scheduledJobs.nextRunAt))
-      .limit(input.limit);
-
-    const pending: PendingRun[] = [];
-
-    for (const dueJob of dueJobs) {
-      const parsed = validateCronOrThrow(dueJob.cronExpression);
-      const timezone = validateTimezoneOrThrow(dueJob.timezone);
-      const rawScheduledFor = dueJob.nextRunAt;
-      const scheduledFor = bucketToMinute(rawScheduledFor);
-      const nextRunAt = computeNextRunAt(parsed, timezone, rawScheduledFor);
-      const runId = newId();
-
-      // Optimistic lock: only advance if nextRunAt hasn't changed (another evaluator didn't claim it)
-      const updatedRows = await this.db
-        .update(scheduledJobs)
-        .set({ nextRunAt, lastScheduledFor: scheduledFor, updatedAt: now })
-        .where(
-          and(
-            eq(scheduledJobs.id, dueJob.id),
-            eq(scheduledJobs.status, "active"),
-            eq(scheduledJobs.nextRunAt, rawScheduledFor),
-          ),
-        )
-        .returning();
-
-      const updated = updatedRows[0];
-      if (!updated) {
-        continue;
-      }
-
-      // Conflict guard: unique index on (job_id, scheduled_for) prevents duplicate runs
-      // If this insert conflicts, another evaluator tick already created the run — skip publishing
-      const insertedRows = await this.db
-        .insert(scheduledJobRuns)
-        .values({
-          id: runId,
-          jobId: updated.id,
-          organizationId: updated.organizationId,
-          projectId: updated.projectId,
-          nodeId: updated.nodeId,
-          scheduledFor,
-          status: "pending",
-        })
-        .onConflictDoNothing()
-        .returning({ id: scheduledJobRuns.id });
-
-      if (insertedRows.length === 0) {
-        continue;
-      }
-
-      pending.push({
-        runId,
-        scheduledFor,
-        job: toScheduledJobView(updated),
-      });
-    }
-
-    return pending;
-  }
-
-  async markStaleRunsOffline(input: {
-    staleThresholdMinutes: number;
-    now?: Date;
-  }): Promise<number> {
-    const now = input.now ?? new Date();
-    const threshold = new Date(now.getTime() - input.staleThresholdMinutes * 60_000);
-
-    const rows = await this.db
-      .update(scheduledJobRuns)
-      .set({ status: "skipped_offline", finishedAt: now })
-      .where(and(eq(scheduledJobRuns.status, "pending"), lte(scheduledJobRuns.createdAt, threshold)))
-      .returning({ id: scheduledJobRuns.id });
-
-    return rows.length;
-  }
-
-  async markRunStarted(input: {
-    runId: string;
-    nodeId: string;
-    actorUserId: string;
-    startedAt?: Date;
-  }): Promise<void> {
-    await this.assertNodeOwnedByActor(input.nodeId, input.actorUserId);
-    await this.db
-      .update(scheduledJobRuns)
-      .set({ status: "running", startedAt: input.startedAt ?? new Date() })
-      .where(and(eq(scheduledJobRuns.id, input.runId), eq(scheduledJobRuns.nodeId, input.nodeId)));
-  }
-
-  async completeRun(input: {
-    runId: string;
-    nodeId: string;
-    actorUserId: string;
-    status: "succeeded" | "failed";
-    finishedAt?: Date;
-    responseBody?: string;
-    errorCode?: string;
-    errorMessage?: string;
-    errorDetails?: Record<string, unknown>;
-  }): Promise<void> {
-    await this.assertNodeOwnedByActor(input.nodeId, input.actorUserId);
-    const runRows = await this.db
-      .select()
-      .from(scheduledJobRuns)
-      .where(and(eq(scheduledJobRuns.id, input.runId), eq(scheduledJobRuns.nodeId, input.nodeId)))
-      .limit(1);
-
-    const run = runRows[0];
-    if (!run) {
-      return;
-    }
-
-    const finishedAt = input.finishedAt ?? new Date();
-    await this.db
-      .update(scheduledJobRuns)
-      .set({
-        status: input.status,
-        finishedAt,
-        responseBody: input.responseBody ? limitResponseBody(input.responseBody) : null,
-        errorCode: input.errorCode ?? null,
-        errorMessage: input.errorMessage ?? null,
-        errorDetails: input.errorDetails ?? null,
-      })
-      .where(eq(scheduledJobRuns.id, run.id));
-
-    await this.db
-      .update(scheduledJobs)
-      .set({
-        lastRunAt: finishedAt,
-        lastRunStatus: input.status,
-        lastErrorCode: input.status === "failed" ? (input.errorCode ?? null) : null,
-        lastErrorMessage: input.status === "failed" ? (input.errorMessage ?? null) : null,
-        updatedAt: finishedAt,
-      })
-      .where(eq(scheduledJobs.id, run.jobId));
   }
 }
