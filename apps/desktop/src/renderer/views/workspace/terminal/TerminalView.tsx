@@ -74,7 +74,6 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
   // ─── Search ─────────────────────────────────────────────────────────────────
 
   const searchState = useTerminalSearchState({
-    terminalHostRef: containerRef,
     searchInputRef,
     xtermRef,
     searchAddonRef,
@@ -146,6 +145,7 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
       ) : null}
       {isSearchPanelOpen ? (
         <TerminalSearchPanel
+          anchorRef={containerRef}
           searchInputRef={searchInputRef}
           searchQuery={terminalSearchQuery}
           onSearchQueryChange={setTerminalSearchQuery}

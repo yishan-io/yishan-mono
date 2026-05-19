@@ -4,7 +4,6 @@ import type { RefObject } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 type UseTerminalSearchStateInput = {
-  terminalHostRef: RefObject<HTMLDivElement | null>;
   searchInputRef: RefObject<HTMLInputElement | null>;
   xtermRef: RefObject<Terminal | null>;
   searchAddonRef: RefObject<SearchAddon | null>;
@@ -19,7 +18,6 @@ const TERMINAL_SEARCH_OPTIONS = {
 };
 
 export function useTerminalSearchState({
-  terminalHostRef,
   searchInputRef,
   xtermRef,
   searchAddonRef,
@@ -65,13 +63,16 @@ export function useTerminalSearchState({
   }, [clearTerminalSearchHighlights, xtermRef]);
 
   useEffect(() => {
-    const host = terminalHostRef.current;
-    if (!host) {
-      return;
-    }
-
     const onKeyDown = (event: KeyboardEvent): void => {
+      const activeElement = document.activeElement;
+      const terminalInput = xtermRef.current?.textarea ?? null;
+      const isSearchInputFocused = activeElement === searchInputRef.current;
+      const isTerminalFocused = activeElement === terminalInput;
+
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
+        if (!isTerminalFocused && !isSearchInputFocused) {
+          return;
+        }
         event.preventDefault();
         setIsSearchOpen(true);
         return;
@@ -93,11 +94,11 @@ export function useTerminalSearchState({
       }
     };
 
-    host.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown);
     return () => {
-      host.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onKeyDown);
     };
-  }, [closeSearchPanel, isSearchOpen, runTerminalSearch, terminalHostRef]);
+  }, [closeSearchPanel, isSearchOpen, runTerminalSearch, searchInputRef, xtermRef]);
 
   useEffect(() => {
     if (!isSearchOpen) {
