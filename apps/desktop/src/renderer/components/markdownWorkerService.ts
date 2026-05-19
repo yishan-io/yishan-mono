@@ -15,28 +15,8 @@ type PendingParse = {
 
 const PARSE_TIMEOUT_MS = 30_000;
 
-/**
- * Inline worker source that shims `document` before importing the actual worker module.
- * This is necessary because Vite's pre-bundled dependencies (remark-parse, etc.)
- * reference `document` at the top level for browser detection, which fails in Workers.
- *
- * The shim must execute before any ES module imports, so we use a blob wrapper
- * that sets the global first, then dynamically imports the real worker.
- */
-function createWorkerBlobUrl(): string {
-  const workerUrl = new URL("./markdownWorker.ts", import.meta.url).href;
-  const source = `
-    // Shim document for Vite pre-bundled deps that reference it at module load
-    self.document = self.document || { createElementNS: () => ({}), createElement: () => ({ setAttribute: () => {} }), querySelectorAll: () => [] };
-    import("${workerUrl}");
-  `;
-  const blob = new Blob([source], { type: "application/javascript" });
-  return URL.createObjectURL(blob);
-}
-
 class MarkdownWorkerService {
   private worker: Worker | null = null;
-  private workerBlobUrl: string | null = null;
   private pendingParses = new Map<string, PendingParse>();
   private nextId = 0;
 
@@ -45,8 +25,17 @@ class MarkdownWorkerService {
       return this.worker;
     }
 
-    this.workerBlobUrl = createWorkerBlobUrl();
-    this.worker = new Worker(this.workerBlobUrl, { type: "module" });
+    /**
+     * Use Vite's native worker bundling pattern. Vite detects
+     * `new Worker(new URL(..., import.meta.url))` at build time and emits
+     * markdownWorker.ts as a separate bundled chunk, so the worker URL
+     * resolves correctly in both dev and production (file://) contexts.
+     *
+     * The blob-URL wrapper approach used previously only worked in dev
+     * because Vite's dev server could resolve and transpile the raw .ts URL
+     * on the fly; in production the .ts file does not exist in the output.
+     */
+    this.worker = new Worker(new URL("./markdownWorker.ts", import.meta.url), { type: "module" });
 
     this.worker.addEventListener("message", (event: MessageEvent<MarkdownWorkerResponse>) => {
       const { id, html, error } = event.data;
@@ -105,11 +94,6 @@ class MarkdownWorkerService {
 
     this.worker?.terminate();
     this.worker = null;
-
-    if (this.workerBlobUrl) {
-      URL.revokeObjectURL(this.workerBlobUrl);
-      this.workerBlobUrl = null;
-    }
   }
 }
 

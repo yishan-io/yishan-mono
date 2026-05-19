@@ -7,10 +7,19 @@
  *
  * This keeps the main thread free during expensive parsing and syntax highlighting.
  *
- * NOTE: The `document` global must be shimmed before this module loads.
- * See markdownWorkerService.ts which creates the worker via a blob wrapper
- * that sets the shim before importing this module.
+ * NOTE: Some Vite pre-bundled dependencies (e.g. remark-parse) reference
+ * `document` at the top level for browser detection. Workers don't have
+ * `document`, so we shim it here at the very top of the worker entry. Vite
+ * bundles this file as the worker entry and this shim runs before any
+ * module-level side-effects from the imported packages.
  */
+
+// biome-ignore lint/suspicious/noExplicitAny: worker document shim required before remark/rehype imports
+(globalThis as any).document ??= {
+  createElementNS: () => ({}),
+  createElement: () => ({ setAttribute: () => {} }),
+  querySelectorAll: () => [],
+};
 
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
