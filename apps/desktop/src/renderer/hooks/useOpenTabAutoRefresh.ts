@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { startBackendEventPipeline, subscribeBackendEvent } from "../events/backendEventPipeline";
 import { getErrorMessage } from "../helpers/errorHelpers";
+import { subscribeDaemonConnectionStatus as defaultSubscribeDaemonConnectionStatus } from "../rpc/rpcTransport";
 import type { DiffTabSource } from "../store/types";
 import type { Commands } from "./useCommands";
 
@@ -33,6 +34,8 @@ type UseOpenTabAutoRefreshInput = {
   workspaceWorktreePath?: string;
   tabs: RefreshableOpenTab[];
   commands: OpenTabAutoRefreshCommands;
+  /** Injectable for testing. Defaults to the shared transport implementation. */
+  subscribeDaemonConnectionStatus?: typeof defaultSubscribeDaemonConnectionStatus;
 };
 
 function normalizeRelativePath(path: string): string {
@@ -82,6 +85,8 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
     if (!workspaceWorktreePath) {
       return;
     }
+
+    const subscribeDaemonStatus = input.subscribeDaemonConnectionStatus ?? defaultSubscribeDaemonConnectionStatus;
 
     let disposed = false;
     let inFlight = false;
@@ -224,11 +229,30 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
       scheduleRefresh(undefined, true);
     });
 
+    let daemonReconnectSeen = false;
+    const unsubscribeDaemonConnectionStatus = subscribeDaemonStatus((status) => {
+      if (status === "disconnected") {
+        daemonReconnectSeen = true;
+        return;
+      }
+
+      if (status !== "connected" || !daemonReconnectSeen) {
+        return;
+      }
+
+      daemonReconnectSeen = false;
+      // Re-read all open file and diff tabs after daemon restart — their content
+      // may be stale since the file-watcher events that normally trigger refreshes
+      // were missed while the daemon was offline.
+      scheduleRefresh(undefined, true);
+    });
+
     return () => {
       disposed = true;
       stopBackendEventPipeline();
       unsubscribeWorkspaceFilesChanged();
       unsubscribeGitChanged();
+      unsubscribeDaemonConnectionStatus();
     };
   }, [workspaceWorktreePath]);
 }

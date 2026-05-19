@@ -21,13 +21,7 @@ import type { TerminalWriteQueue } from "./terminalWriteQueue";
  *
  * All other transitions are no-ops.
  */
-export type TerminalRuntimeState =
-  | "idle"
-  | "attaching"
-  | "attached"
-  | "detached"
-  | "disposing"
-  | "disposed";
+export type TerminalRuntimeState = "idle" | "attaching" | "attached" | "detached" | "disposing" | "disposed";
 
 export type TerminalRuntimeEntry = {
   tabId: string;
@@ -353,6 +347,14 @@ export function disposeTerminalRuntimesForClosedTabs(openTabIds: ReadonlySet<str
  */
 export function getTerminalRuntime(tabId: string): TerminalRuntimeEntry | null {
   return runtimesByTabId.get(tabId) ?? null;
+}
+
+/**
+ * Returns all active (non-disposed) terminal runtime entries.
+ * Used by the reconnect flow to re-establish sessions after daemon restart.
+ */
+export function getActiveTerminalRuntimes(): TerminalRuntimeEntry[] {
+  return Array.from(runtimesByTabId.values()).filter((entry) => entry.state !== "disposed");
 }
 
 /**

@@ -4,6 +4,8 @@ import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useOpenTabAutoRefresh, type RefreshableOpenTab } from "./useOpenTabAutoRefresh";
 
+type DaemonConnectionStatus = "connected" | "connecting" | "disconnected";
+
 type BackendEvent =
   | {
       source: "workspaceFilesChanged";
@@ -67,6 +69,23 @@ function createCommands() {
 
 async function flushRefreshWork() {
   await vi.runAllTimersAsync();
+}
+
+function createDaemonStatusHarness() {
+  const state: { listener: ((status: DaemonConnectionStatus) => void) | null } = { listener: null };
+  const unsubscribe = vi.fn();
+  const subscribe = vi.fn((listener: (status: DaemonConnectionStatus) => void) => {
+    state.listener = listener;
+    return unsubscribe;
+  });
+
+  return {
+    subscribe,
+    unsubscribe,
+    emit(status: DaemonConnectionStatus) {
+      state.listener?.(status);
+    },
+  };
 }
 
 describe("useOpenTabAutoRefresh", () => {
@@ -184,5 +203,112 @@ describe("useOpenTabAutoRefresh", () => {
 
     expect(mocked.listenersByName.size).toBe(0);
     expect(mocked.stopBackendEventPipeline).toHaveBeenCalledTimes(1);
+  });
+
+  describe("daemon reconnect refresh", () => {
+    it("re-reads all clean file tabs when daemon reconnects after disconnect", async () => {
+      const commands = createCommands();
+      const tabs: RefreshableOpenTab[] = [
+        { id: "file-1", kind: "file", path: "src/a.ts", isDirty: false },
+        { id: "file-2", kind: "file", path: "src/b.ts", isDirty: true },
+        { id: "diff-1", kind: "diff", path: "src/c.ts" },
+      ];
+
+      const daemonHarness = createDaemonStatusHarness();
+
+      renderHook(() =>
+        useOpenTabAutoRefresh({
+          workspaceWorktreePath: "/repo",
+          tabs,
+          commands,
+          subscribeDaemonConnectionStatus: daemonHarness.subscribe,
+        }),
+      );
+
+      expect(daemonHarness.subscribe).toHaveBeenCalledOnce();
+
+      // Simulate daemon disconnect then reconnect.
+      daemonHarness.emit("disconnected");
+      daemonHarness.emit("connected");
+      await flushRefreshWork();
+
+      // Clean file tab should be re-read.
+      expect(commands.readFile).toHaveBeenCalledWith({ workspaceWorktreePath: "/repo", relativePath: "src/a.ts" });
+      // Dirty file tab should not be re-read.
+      expect(commands.readFile).not.toHaveBeenCalledWith({ workspaceWorktreePath: "/repo", relativePath: "src/b.ts" });
+      // Diff tab should also be refreshed.
+      expect(commands.readDiff).toHaveBeenCalledWith({ workspaceWorktreePath: "/repo", relativePath: "src/c.ts" });
+    });
+
+    it("does not refresh when connected fires without prior disconnect", async () => {
+      const commands = createCommands();
+      const tabs: RefreshableOpenTab[] = [{ id: "file-1", kind: "file", path: "src/a.ts", isDirty: false }];
+
+      const daemonHarness = createDaemonStatusHarness();
+
+      renderHook(() =>
+        useOpenTabAutoRefresh({
+          workspaceWorktreePath: "/repo",
+          tabs,
+          commands,
+          subscribeDaemonConnectionStatus: daemonHarness.subscribe,
+        }),
+      );
+
+      // Fire "connected" without any prior "disconnected".
+      daemonHarness.emit("connected");
+      await flushRefreshWork();
+
+      expect(commands.readFile).not.toHaveBeenCalled();
+    });
+
+    it("does not refresh on second connected if no new disconnect occurred", async () => {
+      const commands = createCommands();
+      const tabs: RefreshableOpenTab[] = [{ id: "file-1", kind: "file", path: "src/a.ts", isDirty: false }];
+
+      const daemonHarness = createDaemonStatusHarness();
+
+      renderHook(() =>
+        useOpenTabAutoRefresh({
+          workspaceWorktreePath: "/repo",
+          tabs,
+          commands,
+          subscribeDaemonConnectionStatus: daemonHarness.subscribe,
+        }),
+      );
+
+      // First reconnect.
+      daemonHarness.emit("disconnected");
+      daemonHarness.emit("connected");
+      await flushRefreshWork();
+
+      expect(commands.readFile).toHaveBeenCalledTimes(1);
+
+      // Second "connected" without a new "disconnected" in between.
+      daemonHarness.emit("connected");
+      await flushRefreshWork();
+
+      // Should NOT trigger a second refresh.
+      expect(commands.readFile).toHaveBeenCalledTimes(1);
+    });
+
+    it("unsubscribes daemon connection status listener on unmount", () => {
+      const commands = createCommands();
+      const tabs: RefreshableOpenTab[] = [{ id: "file-1", kind: "file", path: "src/a.ts", isDirty: false }];
+      const daemonHarness = createDaemonStatusHarness();
+
+      const { unmount } = renderHook(() =>
+        useOpenTabAutoRefresh({
+          workspaceWorktreePath: "/repo",
+          tabs,
+          commands,
+          subscribeDaemonConnectionStatus: daemonHarness.subscribe,
+        }),
+      );
+
+      unmount();
+
+      expect(daemonHarness.unsubscribe).toHaveBeenCalledOnce();
+    });
   });
 });

@@ -1,7 +1,4 @@
-import {
-  closeTab,
-  renameTab,
-} from "../../../commands/tabCommands";
+import { closeTab, renameTab } from "../../../commands/tabCommands";
 import {
   createTerminalSession,
   listTerminalSessions,
@@ -10,14 +7,13 @@ import {
   subscribeTerminalOutput,
   writeTerminalInput,
 } from "../../../commands/terminalCommands";
+import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import { tabStore } from "../../../store/tabStore";
 import type { WorkspaceTab } from "../../../store/types";
-import {
-  shouldClearTerminalOutputShortcut,
-  shouldReleaseCommandWForTabCloseShortcut,
-} from "./terminalKeyboardUtils";
+import { shouldClearTerminalOutputShortcut, shouldReleaseCommandWForTabCloseShortcut } from "./terminalKeyboardUtils";
 import {
   ensureTerminalRuntime,
+  getActiveTerminalRuntimes,
   getTerminalRuntime,
   reportTerminalAsyncError,
   setTerminalDisposeHandler,
@@ -60,6 +56,24 @@ const TERMINAL_PERF_LOG_INTERVAL_MS = 2_000;
 setTerminalResizeHandler(sendTerminalResize);
 setTerminalDisposeHandler(cleanupTerminalSessionLifecycle);
 setTerminalReattachHandler(handleReattach);
+
+// ─── Daemon Reconnect Handling ─────────────────────────────────────────────────
+
+let daemonReconnectSeen = false;
+
+subscribeDaemonConnectionStatus((status) => {
+  if (status === "disconnected") {
+    daemonReconnectSeen = true;
+    return;
+  }
+
+  if (status !== "connected" || !daemonReconnectSeen) {
+    return;
+  }
+
+  daemonReconnectSeen = false;
+  reconnectAllTerminalSessions();
+});
 
 // ─── Public API ────────────────────────────────────────────────────────────────
 
@@ -141,9 +155,48 @@ export function handleReattach(tabId: string): void {
 export function __resetTerminalSessionServiceForTests(): void {
   initializedTabs.clear();
   lastAppliedTitleByTabId.clear();
+  daemonReconnectSeen = false;
 }
 
 // ─── Internal Helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Re-establishes all active terminal sessions after a daemon reconnect.
+ *
+ * When the daemon restarts, all prior PTY sessions are gone. For each
+ * active (non-exited) terminal runtime this function:
+ *   1. Drops the old output subscription (which targets the now-gone session).
+ *   2. Resets the xterm buffer so old output is not shown alongside new session output.
+ *   3. Re-runs resolveAndSubscribeSession to create a fresh PTY session.
+ */
+function reconnectAllTerminalSessions(): void {
+  const activeRuntimes = getActiveTerminalRuntimes();
+  for (const entry of activeRuntimes) {
+    if (entry.exited || entry.didRequestClose) {
+      continue;
+    }
+
+    // Tear down the subscription referencing the old session.
+    entry.outputSubscription?.unsubscribe();
+    entry.outputSubscription = null;
+
+    // Reset the xterm buffer so old output is not shown alongside new session output.
+    // reset() clears the full display and scrollback; clear() only clears scrollback.
+    try {
+      entry.terminal.reset();
+    } catch {
+      // Ignore errors during reset — the session will still be re-established.
+    }
+
+    // Clear any cached title for this tab so the new session can set it.
+    lastAppliedTitleByTabId.delete(entry.tabId);
+
+    // Kick off session resolution for this entry.
+    void resolveAndSubscribeSession(entry, entry.tabId).catch((error) => {
+      reportTerminalAsyncError("reconnect terminal session after daemon restart", error);
+    });
+  }
+}
 
 function setupKeyboardShortcuts(entry: TerminalRuntimeEntry): void {
   entry.terminal.attachCustomKeyEventHandler((event) => {
@@ -194,10 +247,7 @@ function setupTitleTracking(entry: TerminalRuntimeEntry, tabId: string): void {
   });
 }
 
-async function resolveAndSubscribeSession(
-  entry: TerminalRuntimeEntry,
-  tabId: string,
-): Promise<void> {
+async function resolveAndSubscribeSession(entry: TerminalRuntimeEntry, tabId: string): Promise<void> {
   const orchestrator = new TerminalSessionOrchestrator({
     createTerminalSession,
     listTerminalSessions,
@@ -337,10 +387,7 @@ function isUserRenamed(tabId: string): boolean {
 function findTerminalTab(tabId: string): TerminalTab | undefined {
   return tabStore
     .getState()
-    .tabs.find(
-      (candidate): candidate is TerminalTab =>
-        candidate.id === tabId && candidate.kind === "terminal",
-    );
+    .tabs.find((candidate): candidate is TerminalTab => candidate.id === tabId && candidate.kind === "terminal");
 }
 
 function reportTerminalOutputPerf(tabId: string, chunkBytes: number): void {
