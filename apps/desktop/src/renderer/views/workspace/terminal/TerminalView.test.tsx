@@ -597,6 +597,10 @@ describe("TerminalView", () => {
       nextIndex: 2,
     });
 
+    while (animationFrames.length > 0) {
+      animationFrames.shift()?.(0);
+    }
+
     expect(mocked.xtermWrite).toHaveBeenCalledTimes(2);
     expect(mocked.xtermWrite).toHaveBeenNthCalledWith(1, "hel", expect.any(Function));
     expect(mocked.xtermWrite).toHaveBeenNthCalledWith(2, "lo", expect.any(Function));

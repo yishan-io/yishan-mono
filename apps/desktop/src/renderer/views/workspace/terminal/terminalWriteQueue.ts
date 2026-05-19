@@ -2,7 +2,9 @@ import type { Terminal } from "@xterm/xterm";
 
 const MAX_TERMINAL_LIVE_WRITE_QUEUE_BYTES = 1024 * 1024;
 const MAX_IMMEDIATE_TERMINAL_CHUNK_BYTES = 256;
+const MAX_ATTACHED_BATCH_BYTES = 32 * 1024;
 const DETACHED_WRITE_INTERVAL_MS = 500;
+const INTERACTIVE_BURST_WINDOW_MS = 24;
 
 export type TerminalWriteChunk = string | Uint8Array;
 
@@ -17,16 +19,17 @@ export type TerminalWriteQueue = {
 export function createTerminalWriteQueue(terminal: Terminal): TerminalWriteQueue {
   let pendingBytes = 0;
   let disposed = false;
-  let scheduledFlushTimerId: ReturnType<typeof setTimeout> | null = null;
+  let attachedFlushAnimationFrameId: number | null = null;
   let detachedFlushTimerId: ReturnType<typeof setTimeout> | null = null;
   let writeInFlight = false;
   let detached = false;
+  let lastWriteCompletedAt = 0;
   const chunks: TerminalWriteChunk[] = [];
 
   const cancelScheduledFlush = (): void => {
-    if (scheduledFlushTimerId !== null) {
-      clearTimeout(scheduledFlushTimerId);
-      scheduledFlushTimerId = null;
+    if (attachedFlushAnimationFrameId !== null) {
+      cancelAnimationFrame(attachedFlushAnimationFrameId);
+      attachedFlushAnimationFrameId = null;
     }
     if (detachedFlushTimerId !== null) {
       clearTimeout(detachedFlushTimerId);
@@ -51,14 +54,15 @@ export function createTerminalWriteQueue(terminal: Terminal): TerminalWriteQueue
       }, DETACHED_WRITE_INTERVAL_MS);
       return;
     } else {
-      if (scheduledFlushTimerId !== null) {
+      if (attachedFlushAnimationFrameId !== null) {
         return; // already scheduled
       }
-      // Lower-latency attached flush: do not wait for next animation frame.
-      scheduledFlushTimerId = setTimeout(() => {
-        scheduledFlushTimerId = null;
+      // Attached mode: align writes to a frame budget to batch bursty output
+      // and reduce renderer churn under high-throughput streams.
+      attachedFlushAnimationFrameId = requestAnimationFrame(() => {
+        attachedFlushAnimationFrameId = null;
         flushNextBatch();
-      }, 0);
+      });
     }
   };
 
@@ -66,6 +70,7 @@ export function createTerminalWriteQueue(terminal: Terminal): TerminalWriteQueue
     writeInFlight = true;
     terminal.write(chunk, () => {
       writeInFlight = false;
+      lastWriteCompletedAt = Date.now();
       flushNextBatch();
     });
   };
@@ -75,7 +80,7 @@ export function createTerminalWriteQueue(terminal: Terminal): TerminalWriteQueue
       return;
     }
 
-    const batch = takeTerminalWriteBatch(chunks);
+    const batch = takeTerminalWriteBatch(chunks, detached ? Number.POSITIVE_INFINITY : MAX_ATTACHED_BATCH_BYTES);
     pendingBytes = Math.max(0, pendingBytes - getTerminalWriteChunkLength(batch));
     writeChunk(batch);
   };
@@ -96,7 +101,7 @@ export function createTerminalWriteQueue(terminal: Terminal): TerminalWriteQueue
       return;
     }
 
-    if (!detached && !writeInFlight && chunks.length === 0 && isInteractiveTerminalChunk(chunk)) {
+    if (!detached && !writeInFlight && chunks.length === 0 && isInteractiveTerminalChunk(chunk) && !isBurstingOutput(lastWriteCompletedAt)) {
       writeChunk(chunk);
       return;
     }
@@ -146,8 +151,15 @@ function isInteractiveTerminalChunk(chunk: TerminalWriteChunk): boolean {
   return getTerminalWriteChunkLength(chunk) <= MAX_IMMEDIATE_TERMINAL_CHUNK_BYTES;
 }
 
+function isBurstingOutput(lastWriteCompletedAt: number): boolean {
+  if (lastWriteCompletedAt <= 0) {
+    return false;
+  }
+  return Date.now() - lastWriteCompletedAt <= INTERACTIVE_BURST_WINDOW_MS;
+}
+
 /** Takes and combines one run of same-type chunks into a single xterm.write payload. */
-function takeTerminalWriteBatch(chunks: TerminalWriteChunk[]): TerminalWriteChunk {
+function takeTerminalWriteBatch(chunks: TerminalWriteChunk[], maxBatchBytes: number): TerminalWriteChunk {
   const first = chunks.shift();
   if (!first) {
     return "";
@@ -155,8 +167,14 @@ function takeTerminalWriteBatch(chunks: TerminalWriteChunk[]): TerminalWriteChun
 
   if (typeof first === "string") {
     let output = first;
+    let byteLength = first.length;
     while (typeof chunks[0] === "string") {
+      const next = chunks[0] as string;
+      if (byteLength + next.length > maxBatchBytes) {
+        break;
+      }
       output += chunks.shift() as string;
+      byteLength += next.length;
     }
     return output;
   }
@@ -164,7 +182,11 @@ function takeTerminalWriteBatch(chunks: TerminalWriteChunk[]): TerminalWriteChun
   const byteChunks = [first];
   let byteLength = first.byteLength;
   while (chunks[0] instanceof Uint8Array) {
-    const next = chunks.shift() as Uint8Array;
+    const next = chunks[0] as Uint8Array;
+    if (byteLength + next.byteLength > maxBatchBytes) {
+      break;
+    }
+    chunks.shift();
     byteChunks.push(next);
     byteLength += next.byteLength;
   }

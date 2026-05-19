@@ -2,10 +2,14 @@ package daemon
 
 import (
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"yishan/apps/cli/internal/workspace/terminal"
 )
+
+const terminalOutputFlushInterval = 16 * time.Millisecond
+const terminalOutputMaxBatchBytes = 32 * 1024
 
 type wsConnState struct {
 	conn                            *websocket.Conn
@@ -85,38 +89,95 @@ func (c *wsConnState) AttachSubscription(sessionID string, subscriptionID uint64
 	c.subsMu.Unlock()
 
 	go func() {
-		sid := []byte(sessionID)
-		outputFramePrefix := make([]byte, 1+len(sid)+1)
-		outputFramePrefix[0] = 0x02 // opcode: terminal output
-		copy(outputFramePrefix[1:], sid)
-		outputFramePrefix[1+len(sid)] = 0 // null terminator
-
-		for event := range events {
-			switch event.Type {
-			case "output":
-				// Fast path: send PTY output as binary WebSocket frame.
-				// Frame format: [0x02] [sessionID + '\0'] [raw PTY bytes]
-				if len(event.RawChunk) > 0 {
-					frame := make([]byte, len(outputFramePrefix)+len(event.RawChunk))
-					copy(frame, outputFramePrefix)
-					copy(frame[len(outputFramePrefix):], event.RawChunk)
-					if err := c.WriteBinary(frame); err != nil {
-						c.DetachSubscription(sessionID)
-						return
-					}
-				}
-			case "exit":
-				// Exit events remain as JSON-RPC — they are infrequent control messages.
-				if err := c.Notify("terminal.exit", map[string]any{
-					"sessionId": event.SessionID,
-					"exitCode":  event.ExitCode,
-				}); err != nil {
-					c.DetachSubscription(sessionID)
-					return
-				}
-			}
+		if err := c.streamTerminalEvents(sessionID, events); err != nil {
+			c.DetachSubscription(sessionID)
 		}
 	}()
+}
+
+func (c *wsConnState) streamTerminalEvents(sessionID string, events <-chan terminal.Event) error {
+	batcher := newTerminalOutputBatcher(sessionID)
+	// TODO(low-priority): Replace the always-on ticker with an armed timer that
+	// starts only when pending payload exists, to reduce idle wakeups.
+	ticker := time.NewTicker(terminalOutputFlushInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := batcher.flush(c); err != nil {
+				return err
+			}
+		case event, ok := <-events:
+			if !ok {
+				return batcher.flush(c)
+			}
+			if err := c.handleTerminalEvent(event, batcher); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (c *wsConnState) handleTerminalEvent(event terminal.Event, batcher *terminalOutputBatcher) error {
+	switch event.Type {
+	case "output":
+		if len(event.RawChunk) == 0 {
+			return nil
+		}
+		if err := batcher.append(c, event.RawChunk); err != nil {
+			return err
+		}
+		return nil
+	case "exit":
+		if err := batcher.flush(c); err != nil {
+			return err
+		}
+		return c.Notify("terminal.exit", map[string]any{
+			"sessionId": event.SessionID,
+			"exitCode":  event.ExitCode,
+		})
+	default:
+		return nil
+	}
+}
+
+type terminalOutputBatcher struct {
+	outputFramePrefix []byte
+	pendingPayload    []byte
+}
+
+func newTerminalOutputBatcher(sessionID string) *terminalOutputBatcher {
+	sid := []byte(sessionID)
+	prefix := make([]byte, 1+len(sid)+1)
+	prefix[0] = 0x02
+	copy(prefix[1:], sid)
+	prefix[1+len(sid)] = 0
+
+	return &terminalOutputBatcher{
+		outputFramePrefix: prefix,
+		pendingPayload:    make([]byte, 0, terminalOutputMaxBatchBytes),
+	}
+}
+
+func (b *terminalOutputBatcher) append(conn *wsConnState, chunk []byte) error {
+	b.pendingPayload = append(b.pendingPayload, chunk...)
+	if len(b.pendingPayload) < terminalOutputMaxBatchBytes {
+		return nil
+	}
+	return b.flush(conn)
+}
+
+func (b *terminalOutputBatcher) flush(conn *wsConnState) error {
+	if len(b.pendingPayload) == 0 {
+		return nil
+	}
+
+	frame := make([]byte, len(b.outputFramePrefix)+len(b.pendingPayload))
+	copy(frame, b.outputFramePrefix)
+	copy(frame[len(b.outputFramePrefix):], b.pendingPayload)
+	b.pendingPayload = b.pendingPayload[:0]
+	return conn.WriteBinary(frame)
 }
 
 func (c *wsConnState) DetachSubscription(sessionID string) {

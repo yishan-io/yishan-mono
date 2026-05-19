@@ -51,6 +51,10 @@ const initializedTabs = new Set<string>();
  * Tracks the last applied title per tab to avoid redundant rename calls.
  */
 const lastAppliedTitleByTabId = new Map<string, string>();
+const terminalPerfByTabId = new Map<string, { intervalStartAt: number; messageCount: number; byteCount: number }>();
+
+const TERMINAL_PERF_LOGGING_STORAGE_KEY = "yishan.terminal.perfLogging";
+const TERMINAL_PERF_LOG_INTERVAL_MS = 2_000;
 
 // Register handlers with the registry (avoiding circular imports).
 setTerminalResizeHandler(sendTerminalResize);
@@ -88,6 +92,7 @@ export function initTerminalSessionLifecycle(tabId: string): void {
 export function cleanupTerminalSessionLifecycle(tabId: string): void {
   initializedTabs.delete(tabId);
   lastAppliedTitleByTabId.delete(tabId);
+  terminalPerfByTabId.delete(tabId);
 }
 
 /**
@@ -254,6 +259,7 @@ async function resolveAndSubscribeSession(
         updateTerminalReadIndex(tabId, payload.nextIndex);
 
         const { chunk } = payload;
+        reportTerminalOutputPerf(tabId, chunk instanceof Uint8Array ? chunk.byteLength : chunk.length);
         if (chunk instanceof Uint8Array) {
           if (chunk.byteLength > 0) {
             entry.writeQueue.enqueue(chunk);
@@ -335,4 +341,37 @@ function findTerminalTab(tabId: string): TerminalTab | undefined {
       (candidate): candidate is TerminalTab =>
         candidate.id === tabId && candidate.kind === "terminal",
     );
+}
+
+function reportTerminalOutputPerf(tabId: string, chunkBytes: number): void {
+  if (!isTerminalPerfLoggingEnabled()) {
+    return;
+  }
+
+  const now = Date.now();
+  const current = terminalPerfByTabId.get(tabId) ?? { intervalStartAt: now, messageCount: 0, byteCount: 0 };
+  current.messageCount += 1;
+  current.byteCount += chunkBytes;
+
+  const elapsedMs = Math.max(1, now - current.intervalStartAt);
+  if (elapsedMs < TERMINAL_PERF_LOG_INTERVAL_MS) {
+    terminalPerfByTabId.set(tabId, current);
+    return;
+  }
+
+  const messagesPerSec = (current.messageCount * 1_000) / elapsedMs;
+  const bytesPerSec = (current.byteCount * 1_000) / elapsedMs;
+  console.info(`[TerminalPerf][${tabId}] msg/s=${messagesPerSec.toFixed(1)} bytes/s=${Math.round(bytesPerSec)}`);
+  terminalPerfByTabId.set(tabId, { intervalStartAt: now, messageCount: 0, byteCount: 0 });
+}
+
+function isTerminalPerfLoggingEnabled(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  try {
+    return window.localStorage.getItem(TERMINAL_PERF_LOGGING_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
 }

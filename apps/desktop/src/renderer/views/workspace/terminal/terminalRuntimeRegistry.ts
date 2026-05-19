@@ -59,6 +59,8 @@ export type TerminalRuntimeEntry = {
   /** Last terminal dimensions sent to PTY resize handler. */
   lastReportedCols: number;
   lastReportedRows: number;
+  /** Timestamp of last successful fit call for throttling. */
+  lastFitAt: number;
 };
 
 // ─── Resize Callback ───────────────────────────────────────────────────────────
@@ -101,7 +103,7 @@ const TERMINAL_OPTIONS = {
   fontFamily: '"MesloLGS NF", "JetBrains Mono", "SF Mono", Menlo, monospace',
   fontSize: 13,
   lineHeight: 1.4,
-  scrollback: 5_000,
+  scrollback: 2_000,
   smoothScrollDuration: 0,
   scrollSensitivity: 1,
   fastScrollSensitivity: 5,
@@ -115,6 +117,7 @@ const TERMINAL_OPTIONS = {
 /** Resize debounce interval in milliseconds. */
 const RESIZE_DEBOUNCE_MS = 50;
 const MIN_HOST_SIZE_DELTA_PX = 1;
+const MIN_FIT_INTERVAL_MS = 80;
 
 // ─── Module State ──────────────────────────────────────────────────────────────
 
@@ -203,6 +206,7 @@ export function ensureTerminalRuntime(tabId: string): TerminalRuntimeEntry {
     exited: false,
     lastReportedCols: -1,
     lastReportedRows: -1,
+    lastFitAt: 0,
   };
 
   runtimesByTabId.set(tabId, entry);
@@ -230,7 +234,7 @@ export function attachTerminalRuntime(tabId: string, placeholder: HTMLElement): 
   } else if (entry.state === "attaching" || entry.state === "attached") {
     // Already attaching/attached — just re-sync the placeholder positioning.
     runtimeLayer.attach(tabId, placeholder);
-    safeFitTerminal(entry);
+    safeFitTerminal(entry, true);
     return entry.version;
   } else {
     return -1;
@@ -254,7 +258,7 @@ export function attachTerminalRuntime(tabId: string, placeholder: HTMLElement): 
   setupResizeObserver(entry);
 
   // Perform one definitive fit on attach when host has non-zero area.
-  const didFitOnAttach = safeFitTerminal(entry);
+  const didFitOnAttach = safeFitTerminal(entry, true);
 
   // Notify resize handler so PTY gets the new dimensions after fit.
   notifyTerminalResizeIfNeeded(entry, didFitOnAttach);
@@ -466,8 +470,12 @@ function disconnectResizeObserver(entry: TerminalRuntimeEntry): void {
   entry.resizeObserver = null;
 }
 
-function safeFitTerminal(entry: TerminalRuntimeEntry): boolean {
+function safeFitTerminal(entry: TerminalRuntimeEntry, force = false): boolean {
   if (entry.state !== "attached" && entry.state !== "attaching") {
+    return false;
+  }
+
+  if (!force && Date.now() - entry.lastFitAt < MIN_FIT_INTERVAL_MS) {
     return false;
   }
 
@@ -478,6 +486,7 @@ function safeFitTerminal(entry: TerminalRuntimeEntry): boolean {
 
   try {
     entry.fitAddon.fit();
+    entry.lastFitAt = Date.now();
     return true;
   } catch (error) {
     console.error("[TerminalRegistry] Failed to fit terminal", error);

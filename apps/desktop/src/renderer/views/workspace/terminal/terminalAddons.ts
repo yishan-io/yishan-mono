@@ -9,6 +9,7 @@ import type { ITerminalAddon, Terminal } from "@xterm/xterm";
 import { openLink } from "../../../commands/appCommands";
 
 type Logger = Pick<Console, "warn">;
+const TERMINAL_DISABLED_ADDONS_STORAGE_KEY = "yishan.terminal.disabledAddons";
 
 export type TerminalAddons = {
   fitAddon: FitAddon;
@@ -29,23 +30,27 @@ let suggestedRendererType: "webgl" | "dom" = "webgl";
  * viewport and link layer are fully initialized before addons access them.
  */
 export function loadTerminalAddons(terminal: Pick<Terminal, "loadAddon">, logger: Logger = console): TerminalAddons {
+  const disabledAddons = getDisabledAddonNames();
   const fitAddon = new FitAddon();
   const searchAddon = new SearchAddon({
     highlightLimit: 1_000,
   });
 
   loadAddonSafely(terminal, fitAddon, logger, "fit");
-  loadAddonSafely(terminal, searchAddon, logger, "search");
-  loadAddonSafely(terminal, new ClipboardAddon(), logger, "clipboard");
-  loadAddonSafely(terminal, new ImageAddon(), logger, "image");
-  loadAddonSafely(terminal, new WebFontsAddon(), logger, "web-fonts");
-  loadAddonSafely(
+  loadAddonWhenEnabled(terminal, searchAddon, logger, "search", disabledAddons);
+  loadAddonWhenEnabled(terminal, new ClipboardAddon(), logger, "clipboard", disabledAddons);
+  loadAddonWhenEnabled(terminal, new ImageAddon(), logger, "image", disabledAddons);
+  loadAddonWhenEnabled(terminal, new WebFontsAddon(), logger, "web-fonts", disabledAddons);
+  loadAddonWhenEnabled(
     terminal,
     new WebLinksAddon((event, uri) => void openExternalLink(event, uri, logger)),
     logger,
     "web-links",
+    disabledAddons,
   );
-  loadWebglAddonWithFallback(terminal, logger);
+  if (!disabledAddons.has("webgl")) {
+    loadWebglAddonWithFallback(terminal, logger);
+  }
 
   return {
     fitAddon,
@@ -97,6 +102,42 @@ function loadAddonSafely(
   } catch (error) {
     logger.warn(`Failed to load xterm ${addonName} addon`, error);
     return false;
+  }
+}
+
+function loadAddonWhenEnabled(
+  terminal: Pick<Terminal, "loadAddon">,
+  addon: ITerminalAddon,
+  logger: Logger,
+  addonName: string,
+  disabledAddons: ReadonlySet<string>,
+): boolean {
+  if (disabledAddons.has(addonName)) {
+    return false;
+  }
+
+  return loadAddonSafely(terminal, addon, logger, addonName);
+}
+
+function getDisabledAddonNames(): ReadonlySet<string> {
+  if (typeof window === "undefined") {
+    return new Set();
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(TERMINAL_DISABLED_ADDONS_STORAGE_KEY);
+    if (!rawValue) {
+      return new Set();
+    }
+
+    return new Set(
+      rawValue
+        .split(",")
+        .map((value) => value.trim().toLowerCase())
+        .filter((value) => value.length > 0),
+    );
+  } catch {
+    return new Set();
   }
 }
 
