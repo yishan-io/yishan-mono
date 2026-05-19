@@ -121,6 +121,8 @@ function createWorkspacePullRequestUpdatedHarness() {
 
 describe("createBackendEventStoreBindings", () => {
   it("subscribes once and forwards git changed events to store action", () => {
+    vi.useFakeTimers();
+    try {
     const harness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
@@ -148,6 +150,7 @@ describe("createBackendEventStoreBindings", () => {
 
     const stopBindings = startBindings();
     harness.emit("/tmp/repo/.worktrees/task-1");
+    vi.advanceTimersByTime(2_000);
 
     expect(harness.subscribeGitChanged).toHaveBeenCalledTimes(1);
     expect(incrementGitRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1");
@@ -157,9 +160,14 @@ describe("createBackendEventStoreBindings", () => {
     expect(workspaceFilesHarness.unsubscribe).toHaveBeenCalledTimes(1);
     expect(inAppNotificationHarness.unsubscribe).toHaveBeenCalledTimes(1);
     expect(daemonConnectionHarness.unsubscribe).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("forces file tree and git refresh after daemon reconnect", () => {
+    vi.useFakeTimers();
+    try {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
@@ -190,11 +198,15 @@ describe("createBackendEventStoreBindings", () => {
     daemonConnectionHarness.emit("disconnected");
     daemonConnectionHarness.emit("connecting");
     daemonConnectionHarness.emit("connected");
+    vi.advanceTimersByTime(2_000);
 
     expect(incrementFileTreeRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1", []);
     expect(incrementGitRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1");
 
     stopBindings();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("logs clear diagnostics when reconnect recovery fails", () => {
@@ -241,6 +253,8 @@ describe("createBackendEventStoreBindings", () => {
   });
 
   it("forwards workspace file updates to file tree and git refresh actions", () => {
+    vi.useFakeTimers();
+    try {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
@@ -265,6 +279,7 @@ describe("createBackendEventStoreBindings", () => {
 
     const stopBindings = startBindings();
     workspaceFilesHarness.emit("/tmp/repo/.worktrees/task-1", ["src/test.md"]);
+    vi.advanceTimersByTime(2_000);
 
     expect(incrementFileTreeRefreshVersion).toHaveBeenCalledTimes(1);
     expect(incrementFileTreeRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1", ["src/test.md"]);
@@ -272,6 +287,9 @@ describe("createBackendEventStoreBindings", () => {
     expect(incrementGitRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1");
 
     stopBindings();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("stores workspace pull request updates", () => {

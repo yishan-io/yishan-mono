@@ -954,7 +954,7 @@ describe("MainPaneView", () => {
     });
   });
 
-  it("prevents overlapping port polling while one request is in flight", async () => {
+  it("loads detected ports once and does not auto-poll", async () => {
     vi.useFakeTimers();
     try {
       const pendingResolves: Array<(value: Array<unknown>) => void> = [];
@@ -993,13 +993,6 @@ describe("MainPaneView", () => {
 
       const resolveFirst = pendingResolves.shift();
       resolveFirst?.([]);
-      await Promise.resolve();
-
-      await vi.advanceTimersByTimeAsync(3000);
-      expect(listDetectedPorts).toHaveBeenCalledTimes(2);
-
-      const resolveSecond = pendingResolves.shift();
-      resolveSecond?.([]);
       await Promise.resolve();
     } finally {
       vi.useRealTimers();

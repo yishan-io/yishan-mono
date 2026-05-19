@@ -14,9 +14,9 @@ import (
 
 const (
 	// Binary frame opcodes for terminal I/O fast-path.
-	binOpcodeTerminalInput  byte = 0x01
-	binOpcodeTerminalOutput byte = 0x02
-	maxInFlightJSONRPCPerConn    = 16
+	binOpcodeTerminalInput    byte = 0x01
+	binOpcodeTerminalOutput   byte = 0x02
+	maxInFlightJSONRPCPerConn      = 16
 )
 
 type JSONRPCHandler struct {
@@ -32,6 +32,14 @@ type JSONRPCHandler struct {
 func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath string) *JSONRPCHandler {
 	events := newEventHub()
 	prTracker := newWorkspacePRTracker(manager, events.Publish)
+	manager.SetTerminalDetectedPortsListener(func(ports []workspace.TerminalDetectedPort) {
+		events.Publish(frontendEvent{
+			Topic: "terminalDetectedPortsChanged",
+			Payload: map[string]any{
+				"ports": ports,
+			},
+		})
+	})
 	return &JSONRPCHandler{
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(_ *http.Request) bool { return true },

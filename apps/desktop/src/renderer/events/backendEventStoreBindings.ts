@@ -48,6 +48,8 @@ type BackendEventStoreBindingsDependencies = {
   resolveWorkspaceLabel?: (workspaceId: string) => string | undefined;
 };
 
+const GIT_REFRESH_COALESCE_MS = 2_000;
+
 const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindingsDependencies = {
   subscribeDaemonConnectionStatus,
   subscribeGitChanged: (listener) =>
@@ -339,6 +341,24 @@ export function createBackendEventStoreBindings(
    * Starts backend event listeners that mutate renderer store state and returns one teardown function.
    */
   return function startBackendEventStoreBindings() {
+    const gitRefreshTimersByWorktreePath = new Map<string, ReturnType<typeof setTimeout>>();
+
+    const scheduleGitRefresh = (workspaceWorktreePath: string) => {
+      const normalizedPath = workspaceWorktreePath.trim();
+      if (!normalizedPath) {
+        return;
+      }
+      if (gitRefreshTimersByWorktreePath.has(normalizedPath)) {
+        return;
+      }
+
+      const timeoutId = setTimeout(() => {
+        gitRefreshTimersByWorktreePath.delete(normalizedPath);
+        dependencies.incrementGitRefreshVersion(normalizedPath);
+      }, GIT_REFRESH_COALESCE_MS);
+      gitRefreshTimersByWorktreePath.set(normalizedPath, timeoutId);
+    };
+
     const lifecycleBySessionKey = new Map<
       string,
       {
@@ -348,7 +368,7 @@ export function createBackendEventStoreBindings(
     >();
 
     const unsubscribeGitChanged = dependencies.subscribeGitChanged((workspaceWorktreePath) => {
-      dependencies.incrementGitRefreshVersion(workspaceWorktreePath);
+      scheduleGitRefresh(workspaceWorktreePath);
     });
     let hasObservedConnectedState = false;
     let shouldRecoverWorkspaceViewsOnReconnect = false;
@@ -378,7 +398,7 @@ export function createBackendEventStoreBindings(
         const workspaceWorktreePaths = dependencies.listWorkspaceWorktreePaths?.() ?? [];
         for (const workspaceWorktreePath of workspaceWorktreePaths) {
           dependencies.incrementFileTreeRefreshVersion(workspaceWorktreePath, []);
-          dependencies.incrementGitRefreshVersion(workspaceWorktreePath);
+          scheduleGitRefresh(workspaceWorktreePath);
         }
       } catch (error) {
         console.error("[backendEventStoreBindings] Failed to recover workspace views after daemon reconnect", error);
@@ -388,7 +408,7 @@ export function createBackendEventStoreBindings(
     const unsubscribeWorkspaceFilesChanged = dependencies.subscribeWorkspaceFilesChanged(
       (workspaceWorktreePath, changedRelativePaths) => {
         dependencies.incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
-        dependencies.incrementGitRefreshVersion(workspaceWorktreePath);
+        scheduleGitRefresh(workspaceWorktreePath);
       },
     );
     const unsubscribeInAppNotification = dependencies.subscribeInAppNotification((payload) => {
@@ -461,6 +481,10 @@ export function createBackendEventStoreBindings(
       unsubscribeWorkspaceCreateProgress();
       unsubscribeWorkspacePullRequestUpdated();
       unsubscribeOpenBrowserUrl();
+      for (const timeoutId of gitRefreshTimersByWorktreePath.values()) {
+        clearTimeout(timeoutId);
+      }
+      gitRefreshTimersByWorktreePath.clear();
       lifecycleBySessionKey.clear();
     };
   };

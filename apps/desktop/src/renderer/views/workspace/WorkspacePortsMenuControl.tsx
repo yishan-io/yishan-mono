@@ -7,11 +7,10 @@ import { RouteCloseWatcher } from "../../components/RouteCloseWatcher";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { useCommands } from "../../hooks/useCommands";
 import { useTerminalTabLookups } from "../../hooks/useTerminalTabLookups";
+import { subscribeDesktopRpcEvent } from "../../rpc/rpcTransport";
 import { tabStore } from "../../store/tabStore";
 import { enqueueWorkspaceErrorNotice } from "../../store/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../../store/workspaceStore";
-
-const PORT_POLL_INTERVAL_MS = 3000;
 
 /** Builds one stable row id for port-menu rendering and selection mapping. */
 function buildPortRowId(entry: TerminalDetectedPort): string {
@@ -77,14 +76,9 @@ export function WorkspacePortsMenuControl() {
     }
 
     let cancelled = false;
-    let inFlight = false;
 
     /** Refreshes one latest terminal port snapshot for workspace badge rendering. */
     const refreshDetectedPorts = async () => {
-      if (inFlight) {
-        return;
-      }
-      inFlight = true;
       try {
         const nextPorts = await listDetectedPorts();
         if (!cancelled) {
@@ -95,19 +89,27 @@ export function WorkspacePortsMenuControl() {
           setDetectedPorts([]);
         }
         console.error("[WorkspacePortsMenuControl] Failed to load detected ports", error);
-      } finally {
-        inFlight = false;
       }
     };
 
+    const unsubscribePortsChanged = subscribeDesktopRpcEvent((event) => {
+      if (event.method !== "terminalDetectedPortsChanged") {
+        return;
+      }
+
+      const payload = event.payload as { ports?: TerminalDetectedPort[] } | undefined;
+      if (!Array.isArray(payload?.ports) || cancelled) {
+        return;
+      }
+
+      setDetectedPorts(payload.ports);
+    });
+
     void refreshDetectedPorts();
-    const intervalId = window.setInterval(() => {
-      void refreshDetectedPorts();
-    }, PORT_POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      unsubscribePortsChanged();
     };
   }, [closePortsMenu, hasTerminalTabInSelectedWorkspace, listDetectedPorts, selectedWorkspaceId]);
 

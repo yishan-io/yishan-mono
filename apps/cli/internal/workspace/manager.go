@@ -534,3 +534,14 @@ func (m *Manager) TerminalSubscribe(req TerminalSubscribeRequest) (TerminalSubsc
 func (m *Manager) TerminalUnsubscribe(req TerminalUnsubscribeRequest) (TerminalUnsubscribeResponse, error) {
 	return m.terminals.Unsubscribe(req)
 }
+
+func (m *Manager) SetTerminalDetectedPortsListener(listener func([]TerminalDetectedPort)) {
+	if listener == nil {
+		m.terminals.SetPortsChangedListener(nil)
+		return
+	}
+
+	m.terminals.SetPortsChangedListener(func(ports []terminal.DetectedPort) {
+		listener(ports)
+	})
+}

@@ -6,9 +6,12 @@ import (
 	"bytes"
 	"errors"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 )
+
+const maxLsofPIDsPerInvocation = 256
 
 func listProcesses() ([]processInfo, error) {
 	out, err := exec.Command("ps", "-axo", "pid=,ppid=").Output()
@@ -18,8 +21,43 @@ func listProcesses() ([]processInfo, error) {
 	return parseProcesses(out), nil
 }
 
-func listListeningTCPPorts() ([]listeningPort, error) {
-	out, err := exec.Command("lsof", "-nP", "-iTCP", "-sTCP:LISTEN", "-F", "pcn").Output()
+func listListeningTCPPorts(pids []int) ([]listeningPort, error) {
+	normalized := normalizePositivePIDs(pids)
+	if len(normalized) == 0 {
+		return nil, nil
+	}
+
+	ports := make([]listeningPort, 0)
+	for start := 0; start < len(normalized); start += maxLsofPIDsPerInvocation {
+		end := min(start+maxLsofPIDsPerInvocation, len(normalized))
+		chunk := normalized[start:end]
+		chunkPorts, err := listListeningTCPPortsForPIDChunk(chunk)
+		if err != nil {
+			return nil, err
+		}
+		ports = append(ports, chunkPorts...)
+	}
+
+	return ports, nil
+}
+
+func listListeningTCPPortsForPIDChunk(pids []int) ([]listeningPort, error) {
+	pidValues := make([]string, 0, len(pids))
+	for _, pid := range pids {
+		pidValues = append(pidValues, strconv.Itoa(pid))
+	}
+
+	args := []string{
+		"-nP",
+		"-a",
+		"-p",
+		strings.Join(pidValues, ","),
+		"-iTCP",
+		"-sTCP:LISTEN",
+		"-F",
+		"pcn",
+	}
+	out, err := exec.Command("lsof", args...).Output()
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
@@ -29,6 +67,27 @@ func listListeningTCPPorts() ([]listeningPort, error) {
 		return nil, err
 	}
 	return parseLsofListeningTCPPorts(out), nil
+}
+
+func normalizePositivePIDs(pids []int) []int {
+	if len(pids) == 0 {
+		return nil
+	}
+
+	seen := make(map[int]struct{}, len(pids))
+	unique := make([]int, 0, len(pids))
+	for _, pid := range pids {
+		if pid <= 0 {
+			continue
+		}
+		if _, ok := seen[pid]; ok {
+			continue
+		}
+		seen[pid] = struct{}{}
+		unique = append(unique, pid)
+	}
+	slices.Sort(unique)
+	return unique
 }
 
 func parseProcesses(out []byte) []processInfo {
