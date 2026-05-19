@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"strings"
 
-	"yishan/apps/cli/internal/workspace/shellenv"
+	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
 func resolveCommand(req StartRequest, goos string, shellEnv string) (string, []string) {

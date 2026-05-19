@@ -2,10 +2,19 @@ package daemon
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
 )
+
+func initGitRepo(t *testing.T, root string) {
+	t.Helper()
+	cmd := exec.Command("git", "init", root)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init failed: %v (%s)", err, string(output))
+	}
+}
 
 func TestResolveGitDir_StandardRepo(t *testing.T) {
 	root := t.TempDir()
@@ -428,5 +437,65 @@ func TestWorktreeWatcher_ExcludesCommonLargeDirectories(t *testing.T) {
 
 	if nodeModulesWatched || distWatched || buildWatched {
 		t.Fatalf("expected excluded directories to be unwatched, got node_modules=%t dist=%t build=%t", nodeModulesWatched, distWatched, buildWatched)
+	}
+}
+
+func TestWorktreeWatcher_ExcludesGitIgnoredDirectories(t *testing.T) {
+	root := evalSymlinks(t, t.TempDir())
+	initGitRepo(t, root)
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".cache/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, ".cache"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	hub := newEventHub()
+	watchers := newWorkspaceWatchers(hub, nil)
+	defer watchers.Close()
+
+	watchers.Watch(root)
+
+	entry := watchers.entries[root]
+	if entry == nil {
+		t.Fatal("expected watcher entry for root")
+	}
+
+	entry.mu.Lock()
+	_, cacheWatched := entry.watchedDirs[filepath.Join(root, ".cache")]
+	entry.mu.Unlock()
+
+	if cacheWatched {
+		t.Fatalf("expected gitignored directory %q to be unwatched", filepath.Join(root, ".cache"))
+	}
+}
+
+func TestWorktreeWatcher_AlwaysWatchesMyContextEvenIfIgnored(t *testing.T) {
+	root := evalSymlinks(t, t.TempDir())
+	initGitRepo(t, root)
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".my-context/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, ".my-context"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	hub := newEventHub()
+	watchers := newWorkspaceWatchers(hub, nil)
+	defer watchers.Close()
+
+	watchers.Watch(root)
+
+	entry := watchers.entries[root]
+	if entry == nil {
+		t.Fatal("expected watcher entry for root")
+	}
+
+	entry.mu.Lock()
+	_, contextWatched := entry.watchedDirs[filepath.Join(root, ".my-context")]
+	entry.mu.Unlock()
+
+	if !contextWatched {
+		t.Fatalf("expected %q to always be watched", filepath.Join(root, ".my-context"))
 	}
 }

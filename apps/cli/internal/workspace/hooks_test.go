@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"yishan/apps/cli/internal/workspace/shellenv"
+	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
 func TestRunHook_SkipsEmptyCommand(t *testing.T) {

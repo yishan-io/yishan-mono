@@ -97,14 +97,21 @@ func (c *wsConnState) AttachSubscription(sessionID string, subscriptionID uint64
 
 func (c *wsConnState) streamTerminalEvents(sessionID string, events <-chan terminal.Event) error {
 	batcher := newTerminalOutputBatcher(sessionID)
-	// TODO(low-priority): Replace the always-on ticker with an armed timer that
-	// starts only when pending payload exists, to reduce idle wakeups.
-	ticker := time.NewTicker(terminalOutputFlushInterval)
-	defer ticker.Stop()
+	flushTimer := time.NewTimer(terminalOutputFlushInterval)
+	if !flushTimer.Stop() {
+		select {
+		case <-flushTimer.C:
+		default:
+		}
+	}
+	defer flushTimer.Stop()
+
+	var flushTimerC <-chan time.Time
 
 	for {
 		select {
-		case <-ticker.C:
+		case <-flushTimerC:
+			flushTimerC = nil
 			if err := batcher.flush(c); err != nil {
 				return err
 			}
@@ -112,33 +119,42 @@ func (c *wsConnState) streamTerminalEvents(sessionID string, events <-chan termi
 			if !ok {
 				return batcher.flush(c)
 			}
-			if err := c.handleTerminalEvent(event, batcher); err != nil {
+			shouldArmFlush, err := c.handleTerminalEvent(event, batcher)
+			if err != nil {
 				return err
 			}
+			if !shouldArmFlush {
+				continue
+			}
+			if flushTimerC != nil {
+				continue
+			}
+			flushTimer.Reset(terminalOutputFlushInterval)
+			flushTimerC = flushTimer.C
 		}
 	}
 }
 
-func (c *wsConnState) handleTerminalEvent(event terminal.Event, batcher *terminalOutputBatcher) error {
+func (c *wsConnState) handleTerminalEvent(event terminal.Event, batcher *terminalOutputBatcher) (bool, error) {
 	switch event.Type {
 	case "output":
 		if len(event.RawChunk) == 0 {
-			return nil
+			return false, nil
 		}
 		if err := batcher.append(c, event.RawChunk); err != nil {
-			return err
+			return false, err
 		}
-		return nil
+		return batcher.hasPendingPayload(), nil
 	case "exit":
 		if err := batcher.flush(c); err != nil {
-			return err
+			return false, err
 		}
-		return c.Notify("terminal.exit", map[string]any{
+		return false, c.Notify("terminal.exit", map[string]any{
 			"sessionId": event.SessionID,
 			"exitCode":  event.ExitCode,
 		})
 	default:
-		return nil
+		return false, nil
 	}
 }
 
@@ -178,6 +194,10 @@ func (b *terminalOutputBatcher) flush(conn *wsConnState) error {
 	copy(frame[len(b.outputFramePrefix):], b.pendingPayload)
 	b.pendingPayload = b.pendingPayload[:0]
 	return conn.WriteBinary(frame)
+}
+
+func (b *terminalOutputBatcher) hasPendingPayload() bool {
+	return len(b.pendingPayload) > 0
 }
 
 func (c *wsConnState) DetachSubscription(sessionID string) {

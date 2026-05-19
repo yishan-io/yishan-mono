@@ -1,7 +1,9 @@
 package daemon
 
 import (
+	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -9,6 +11,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/gitexec"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -27,6 +30,9 @@ type worktreeWatcher struct {
 	changedPaths   []string
 	done           chan struct{}
 	onGitChanged   func(worktreePath string)
+	ignoredDirs    map[string]bool
+	gitIgnoreUsable *bool
+	gitRunner      gitexec.Runner
 }
 
 type workspaceWatchers struct {
@@ -110,9 +116,11 @@ func (ws *workspaceWatchers) Watch(worktreePath string) {
 		resolvedGitDir: resolvedGitDir,
 		fw:             fw,
 		watchedDirs:    make(map[string]bool),
+		ignoredDirs:    make(map[string]bool),
 		events:         ws.events,
 		done:           make(chan struct{}),
 		onGitChanged:   ws.onGitChanged,
+		gitRunner:      gitexec.DefaultRunner(),
 	}
 
 	if err := entry.addWorkspaceRecursive(worktreePath); err != nil {
@@ -195,6 +203,8 @@ func (w *worktreeWatcher) consume() {
 			if !ok {
 				return
 			}
+
+			w.clearIgnoreCacheIfNeeded(event.Name)
 
 			if event.Has(fsnotify.Create) {
 				if fi, err := os.Stat(event.Name); err == nil && fi.IsDir() && w.shouldWatchWorkspaceDir(event.Name) {
@@ -336,6 +346,9 @@ func (w *worktreeWatcher) shouldWatchWorkspaceDir(path string) bool {
 	rel = filepath.Clean(rel)
 	parts := strings.Split(rel, string(filepath.Separator))
 	for i, part := range parts {
+		if part == workspace.ContextLinkName {
+			return true
+		}
 		switch part {
 		case ".git":
 			if i == 0 {
@@ -350,7 +363,101 @@ func (w *worktreeWatcher) shouldWatchWorkspaceDir(path string) bool {
 		}
 	}
 
+	if w.isGitIgnoredDir(path) {
+		return false
+	}
+
 	return true
+}
+
+func (w *worktreeWatcher) isGitIgnoredDir(path string) bool {
+	if !w.isGitIgnoreUsable() {
+		return false
+	}
+
+	rel, err := filepath.Rel(w.path, path)
+	if err != nil || rel == "." {
+		return false
+	}
+	rel = filepath.ToSlash(filepath.Clean(rel))
+
+	w.mu.Lock()
+	if ignored, ok := w.ignoredDirs[rel]; ok {
+		w.mu.Unlock()
+		return ignored
+	}
+	w.mu.Unlock()
+
+	ignored := w.gitCheckIgnore(rel)
+
+	w.mu.Lock()
+	w.ignoredDirs[rel] = ignored
+	w.mu.Unlock()
+	return ignored
+}
+
+func (w *worktreeWatcher) isGitIgnoreUsable() bool {
+	w.mu.Lock()
+	if w.gitIgnoreUsable != nil {
+		usable := *w.gitIgnoreUsable
+		w.mu.Unlock()
+		return usable
+	}
+	w.mu.Unlock()
+
+	usable := w.gitWorktreeReady()
+
+	w.mu.Lock()
+	w.gitIgnoreUsable = &usable
+	w.mu.Unlock()
+	return usable
+}
+
+func (w *worktreeWatcher) clearIgnoreCacheIfNeeded(changedPath string) {
+	base := filepath.Base(changedPath)
+	if base != ".gitignore" && base != ".git" {
+		return
+	}
+
+	w.mu.Lock()
+	w.ignoredDirs = make(map[string]bool)
+	w.mu.Unlock()
+}
+
+func (w *worktreeWatcher) gitCheckIgnore(relativePath string) bool {
+	if strings.TrimSpace(relativePath) == "" {
+		return false
+	}
+
+	command, ok := w.gitCommand("-C", w.path, "check-ignore", "-q", relativePath)
+	if !ok {
+		return false
+	}
+	err := command.Run()
+	if err == nil {
+		return true
+	}
+
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+		return false
+	}
+
+	log.Debug().Err(err).Str("path", relativePath).Msg("git check-ignore failed")
+	return false
+}
+
+func (w *worktreeWatcher) gitWorktreeReady() bool {
+	command, ok := w.gitCommand("-C", w.path, "rev-parse", "--is-inside-work-tree")
+	if !ok {
+		return false
+	}
+	err := command.Run()
+	return err == nil
+}
+
+func (w *worktreeWatcher) gitCommand(args ...string) (*exec.Cmd, bool) {
+	return w.gitRunner.Command(args...)
 }
 
 func (w *worktreeWatcher) scheduleFileEmit(relPath string) {

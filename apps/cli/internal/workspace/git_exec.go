@@ -9,12 +9,16 @@ import (
 	"os/exec"
 	"strings"
 
-	"yishan/apps/cli/internal/workspace/shellenv"
+	"yishan/apps/cli/internal/gitexec"
+	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
 func gitCommand(ctx context.Context, cwd string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", cwd}, args...)...)
-	out, err := cmd.Output()
+	runner := gitexec.DefaultRunner()
+	out, err, ok := runner.Run(ctx, cwd, args...)
+	if !ok {
+		return "", NewRPCError(-32010, "git is not installed")
+	}
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			return "", NewRPCError(-32010, strings.TrimSpace(string(exitErr.Stderr)))
@@ -25,8 +29,11 @@ func gitCommand(ctx context.Context, cwd string, args ...string) (string, error)
 }
 
 func gitCommandCombined(ctx context.Context, cwd string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", cwd}, args...)...)
-	out, err := cmd.CombinedOutput()
+	runner := gitexec.DefaultRunner()
+	out, err, ok := runner.RunCombined(ctx, cwd, args...)
+	if !ok {
+		return "", NewRPCError(-32010, "git is not installed")
+	}
 	if err != nil {
 		return "", NewRPCError(-32010, strings.TrimSpace(string(out)))
 	}
@@ -164,22 +171,9 @@ func mapStatusToKind(status byte) string {
 }
 
 func coalesceNonEmpty(values ...string) string {
-	for _, value := range values {
-		trimmed := strings.TrimSpace(value)
-		if trimmed != "" {
-			return trimmed
-		}
-	}
-	return ""
+	return gitexec.CoalesceNonEmpty(values...)
 }
 
 func splitNonEmptyLines(input string) []string {
-	out := make([]string, 0)
-	for line := range strings.SplitSeq(input, "\n") {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			out = append(out, line)
-		}
-	}
-	return out
+	return gitexec.SplitNonEmptyLines(input)
 }

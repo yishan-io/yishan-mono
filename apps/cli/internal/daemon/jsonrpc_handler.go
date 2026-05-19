@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
@@ -15,6 +16,7 @@ const (
 	// Binary frame opcodes for terminal I/O fast-path.
 	binOpcodeTerminalInput  byte = 0x01
 	binOpcodeTerminalOutput byte = 0x02
+	maxInFlightJSONRPCPerConn    = 16
 )
 
 type JSONRPCHandler struct {
@@ -57,6 +59,12 @@ func (h *JSONRPCHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	connState := newWSConnState(conn)
 	defer connState.Close()
+	connCtx, cancelConn := context.WithCancel(context.Background())
+	defer cancelConn()
+
+	jsonRPCSem := make(chan struct{}, maxInFlightJSONRPCPerConn)
+	var inFlight sync.WaitGroup
+	defer inFlight.Wait()
 
 	for {
 		msgType, payload, err := conn.ReadMessage()
@@ -76,12 +84,19 @@ func (h *JSONRPCHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Dispatch JSON-RPC requests asynchronously so that slow handlers
 		// never block the read loop (and therefore never starve terminal input).
 		//
-		// Use context.Background() rather than r.Context(). After the WebSocket
-		// upgrade the HTTP request context is no longer meaningful — it's tied to
-		// the upgrade request, not the WS lifetime. Each handler method manages
-		// its own timeout budget internally.
+		// Use a connection-lifetime context rather than r.Context(). After the
+		// WebSocket upgrade the HTTP request context is no longer meaningful —
+		// it's tied to the upgrade request, not the WS lifetime. Each handler
+		// method still manages its own timeout budget internally.
+		jsonRPCSem <- struct{}{}
+		inFlight.Add(1)
 		go func(data []byte) {
-			resp := h.handleRequest(context.Background(), connState, data)
+			defer func() {
+				<-jsonRPCSem
+				inFlight.Done()
+			}()
+
+			resp := h.handleRequest(connCtx, connState, data)
 			if resp == nil {
 				return
 			}

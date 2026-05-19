@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"yishan/apps/cli/internal/workspace/shellenv"
+	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
 const managedRuntimeRootDirName = shellenv.ManagedRuntimeRootDirName
