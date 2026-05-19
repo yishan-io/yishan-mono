@@ -45,21 +45,6 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
 
   const filteredHistory = useMemo(() => filterHistory(urlInput, urlFocused), [filterHistory, urlInput, urlFocused]);
 
-  const navigateTo = useCallback(
-    (rawUrl: string) => {
-      const normalized = normalizeUrl(rawUrl);
-      if (!normalized) {
-        return;
-      }
-      setUrlInput(normalized);
-      cmd.setBrowserTabFaviconUrl(tabId, undefined);
-      resetForNavigation();
-      setActiveUrl(normalized);
-      (document.activeElement as HTMLElement)?.blur();
-    },
-    [cmd, tabId, setUrlInput, setActiveUrl, resetForNavigation],
-  );
-
   const handleNavigated = useCallback(
     (url: string) => {
       setUrlInput(url);
@@ -79,6 +64,25 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
 
   const tools = useBrowserTools(webviewRef);
 
+  const navigateTo = useCallback(
+    (rawUrl: string) => {
+      const normalized = normalizeUrl(rawUrl);
+      if (!normalized) {
+        return;
+      }
+      setUrlInput(normalized);
+      cmd.setBrowserTabFaviconUrl(tabId, undefined);
+      resetForNavigation();
+      if (normalized === resolvedUrl) {
+        webviewRef.current?.reload();
+      } else {
+        setActiveUrl(normalized);
+      }
+      (document.activeElement as HTMLElement)?.blur();
+    },
+    [cmd, tabId, setUrlInput, setActiveUrl, resetForNavigation, resolvedUrl, webviewRef],
+  );
+
   const handleSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -94,11 +98,15 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
       const nextUrl = normalizeUrl(trimmed);
       cmd.setBrowserTabFaviconUrl(tabId, undefined);
       resetForNavigation();
-      setActiveUrl(nextUrl);
+      if (nextUrl === resolvedUrl) {
+        webviewRef.current?.reload();
+      } else {
+        setActiveUrl(nextUrl);
+      }
       addHistoryEntry(nextUrl, "");
       (document.activeElement as HTMLElement)?.blur();
     },
-    [urlInput, cmd, tabId, setActiveUrl, resetForNavigation, addHistoryEntry],
+    [urlInput, cmd, tabId, setActiveUrl, resetForNavigation, addHistoryEntry, resolvedUrl, webviewRef],
   );
 
   const handleUrlKeyDown = useCallback(

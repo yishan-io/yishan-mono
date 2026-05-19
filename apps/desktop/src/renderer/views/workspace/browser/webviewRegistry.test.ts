@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
-import { getOrCreateWebview, removeWebviewsForClosedTabs } from "./webviewRegistry";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { getOrCreateWebview, removeWebviewsForClosedTabs, syncWebviewUrl } from "./webviewRegistry";
 
 describe("webviewRegistry", () => {
   afterEach(() => {
@@ -25,5 +25,30 @@ describe("webviewRegistry", () => {
 
     expect(document.body.contains(open)).toBe(true);
     expect(document.body.contains(closed)).toBe(false);
+  });
+
+  it("forces a navigation when requested URL matches stale pending request", () => {
+    const webview = getOrCreateWebview("tab-1", "https://example.com");
+    const setAttributeSpy = vi.spyOn(webview, "setAttribute");
+    Object.defineProperty(webview, "getURL", {
+      configurable: true,
+      value: vi.fn(() => "about:blank"),
+    });
+
+    syncWebviewUrl("tab-1", "https://example.com");
+
+    expect(setAttributeSpy).toHaveBeenCalledWith("src", "https://example.com");
+  });
+
+  it("does not throw when getURL is unavailable before dom-ready", () => {
+    const webview = getOrCreateWebview("tab-2", "https://example.com");
+    Object.defineProperty(webview, "getURL", {
+      configurable: true,
+      value: vi.fn(() => {
+        throw new Error("not ready");
+      }),
+    });
+
+    expect(() => syncWebviewUrl("tab-2", "https://example.com")).not.toThrow();
   });
 });

@@ -100,7 +100,15 @@ export function UrlBar({
         }}
       />
       <Popper open={urlFocused && historyGroups.length > 0} anchorEl={textFieldRef.current} placement="bottom-start" style={{ zIndex: 1300 }}>
-        <Paper sx={{ mt: 0.5, maxHeight: 320, overflowY: "auto", minWidth: textFieldRef.current?.offsetWidth ?? 300 }}>
+        <Paper
+          sx={{
+            mt: 0.5,
+            maxHeight: 320,
+            overflowY: "auto",
+            width: textFieldRef.current?.offsetWidth ?? 300,
+            maxWidth: "calc(100vw - 24px)",
+          }}
+        >
           <MenuList dense>
             {historyGroups.map((group) => {
               const entries = filteredHistory.filter((e) => {
@@ -122,7 +130,7 @@ export function UrlBar({
                       <LuGlobe size={13} />
                     )}
                   </ListItemIcon>
-                  {group.host}
+                  <Box sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{group.host}</Box>
                 </MenuItem>,
                 ...entries.map((entry) => {
                   const flatIdx = filteredHistory.indexOf(entry);
@@ -140,6 +148,7 @@ export function UrlBar({
                       <ListItemText
                         primary={entry.title}
                         secondary={entry.url}
+                        sx={{ minWidth: 0 }}
                         primaryTypographyProps={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                         secondaryTypographyProps={{ fontSize: 11, color: "text.disabled", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                       />

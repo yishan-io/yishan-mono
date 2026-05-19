@@ -41,7 +41,15 @@ export function syncWebviewUrl(tabId: string, resolvedUrl: string): void {
 
   const normalizedUrl = resolvedUrl.trim();
   const requestedUrl = requestedUrlByTabId.get(tabId) ?? "";
-  if (requestedUrl === normalizedUrl) {
+  const srcUrl = (webview.getAttribute("src") ?? "").trim();
+  const currentUrl = (() => {
+    try {
+      return (webview.getURL?.() ?? "").trim() || srcUrl;
+    } catch {
+      return srcUrl;
+    }
+  })();
+  if (requestedUrl === normalizedUrl && currentUrl === normalizedUrl) {
     return;
   }
 
