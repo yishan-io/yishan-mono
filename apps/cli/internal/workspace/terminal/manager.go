@@ -31,7 +31,8 @@ type Manager struct {
 	sessions            map[string]*session
 	portsListenerMu     sync.RWMutex
 	onPortsChanged      portsChangedListener
-	portLoopStartOnce   sync.Once
+	portLoopMu          sync.Mutex
+	portLoopRunning     bool
 	portSnapshotMu      sync.Mutex
 	lastPortSnapshotKey string
 }
@@ -218,22 +219,52 @@ func (m *Manager) collectDetectedPorts() []DetectedPort {
 }
 
 func (m *Manager) ensurePortScanLoop() {
-	m.portLoopStartOnce.Do(func() {
-		go m.runPortScanLoop()
-	})
+	m.portLoopMu.Lock()
+	if m.portLoopRunning {
+		m.portLoopMu.Unlock()
+		return
+	}
+	m.portLoopRunning = true
+	m.portLoopMu.Unlock()
+
+	go m.runPortScanLoop()
 }
 
 func (m *Manager) runPortScanLoop() {
+	defer func() {
+		m.portLoopMu.Lock()
+		m.portLoopRunning = false
+		m.portLoopMu.Unlock()
+	}()
+
 	ticker := time.NewTicker(portScanInterval)
 	defer ticker.Stop()
 
 	for range ticker.C {
+		if !m.hasActiveSessions() {
+			if m.shouldPublishPortsUpdate(nil) {
+				m.publishPortsChanged(nil)
+			}
+			return
+		}
+
 		ports := m.collectDetectedPorts()
 		if !m.shouldPublishPortsUpdate(ports) {
 			continue
 		}
 		m.publishPortsChanged(ports)
 	}
+}
+
+func (m *Manager) hasActiveSessions() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, session := range m.sessions {
+		if session.running.Load() && session.cmd.Process != nil {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *Manager) shouldPublishPortsUpdate(ports []DetectedPort) bool {
