@@ -23,9 +23,9 @@ export function CreateScheduledJobDialogView({ open, onClose }: CreateScheduledJ
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm" disableEscapeKeyDown={isCreating}>
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="lg" disableEscapeKeyDown={isCreating}>
       <DialogTitle>{t("scheduledJob.form.title")}</DialogTitle>
-      <DialogContent sx={{ pb: 2.5 }}>
+      <DialogContent sx={{ pb: 2.5, pt: 1.5 }}>
         <CreateScheduledJobFormView onCreated={onClose} onCancel={handleClose} onBusyChange={setIsCreating} />
       </DialogContent>
     </Dialog>

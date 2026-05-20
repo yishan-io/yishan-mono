@@ -258,3 +258,28 @@ describe("ScheduledJobService.listJobRuns", () => {
     ).rejects.toBeInstanceOf(OrganizationMembershipRequiredError);
   });
 });
+
+describe("ScheduledJobService.triggerRunNow", () => {
+  it("throws ScheduledJobNotFoundError when job does not exist", async () => {
+    const { db, mockLimit } = createMockDb();
+    mockLimit.mockResolvedValueOnce([]);
+    const service = new ScheduledJobService(db, makeOrgService("member"));
+
+    await expect(
+      service.triggerRunNow({ organizationId: "org-1", jobId: "missing", actorUserId: "u1" }),
+    ).rejects.toBeInstanceOf(ScheduledJobNotFoundError);
+  });
+
+  it("creates a pending run and returns run info", async () => {
+    const { db, mockLimit, mockInsert, mockInsertValues } = createMockDb();
+    mockLimit.mockResolvedValueOnce([{ ...JOB_ROW, status: "active" }]);
+    mockInsertValues.mockResolvedValueOnce(undefined);
+    const service = new ScheduledJobService(db, makeOrgService("member"));
+
+    const run = await service.triggerRunNow({ organizationId: "org-1", jobId: "job-1", actorUserId: "user-1" });
+
+    expect(mockInsert).toHaveBeenCalled();
+    expect(run.job.id).toBe("job-1");
+    expect(run.runId).toBeTruthy();
+  });
+});

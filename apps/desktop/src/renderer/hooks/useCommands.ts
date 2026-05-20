@@ -71,6 +71,7 @@ import {
   loadScheduledJobs as loadScheduledJobsCommand,
   pauseScheduledJob as pauseScheduledJobCommand,
   resumeScheduledJob as resumeScheduledJobCommand,
+  runScheduledJobNow as runScheduledJobNowCommand,
   updateScheduledJob as updateScheduledJobCommand,
 } from "../commands/scheduledJobCommands";
 import { setSelectedRepo, setSelectedWorkspace } from "../commands/selectionCommands";
@@ -136,6 +137,7 @@ export type Commands = {
   deleteScheduledJob: typeof deleteScheduledJobCommand;
   pauseScheduledJob: typeof pauseScheduledJobCommand;
   resumeScheduledJob: typeof resumeScheduledJobCommand;
+  runScheduledJobNow: typeof runScheduledJobNowCommand;
   listCLIToolStatuses: typeof listCLIToolStatusesCommand;
   checkGitHubConnectionStatus: typeof checkGitHubConnectionStatusCommand;
   setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
@@ -258,6 +260,7 @@ export function useCommands(): Commands {
       deleteScheduledJob: deleteScheduledJobCommand,
       pauseScheduledJob: pauseScheduledJobCommand,
       resumeScheduledJob: resumeScheduledJobCommand,
+      runScheduledJobNow: runScheduledJobNowCommand,
       listCLIToolStatuses: listCLIToolStatusesCommand,
       checkGitHubConnectionStatus: checkGitHubConnectionStatusCommand,
       setDisplayRepoIds: setDisplayRepoIdsCommand,

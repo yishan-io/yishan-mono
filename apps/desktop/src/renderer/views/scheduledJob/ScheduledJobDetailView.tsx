@@ -12,6 +12,7 @@ import {
   LuPlay,
   LuRefreshCw,
   LuTrash2,
+  LuZap,
 } from "react-icons/lu";
 import { api } from "../../api";
 import type { ScheduledJobRecord, ScheduledJobRunRecord } from "../../api/scheduledJobApi";
@@ -56,6 +57,38 @@ function formatOptionalDate(isoDate: string | null): string {
 function formatShortTime(isoDate: string | null): string {
   if (!isoDate) return "—";
   return new Date(isoDate).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
+function describeCronExpression(cronExpression: string): string {
+  const parts = cronExpression.trim().split(/\s+/);
+  if (parts.length !== 5) {
+    return "Custom schedule";
+  }
+
+  const minute = parts[0] ?? "*";
+  const hour = parts[1] ?? "*";
+  const dayOfMonth = parts[2] ?? "*";
+  const month = parts[3] ?? "*";
+  const dayOfWeek = parts[4] ?? "*";
+  const minuteText = String(minute).padStart(2, "0");
+  const hourText = String(hour).padStart(2, "0");
+
+  if (minute === "0" && hour === "*" && dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
+    return "Every hour";
+  }
+  if (dayOfMonth === "*" && month === "*" && dayOfWeek === "1-5") {
+    return `Weekdays at ${hourText}:${minuteText}`;
+  }
+  if (dayOfMonth === "*" && month === "*" && /^\d$/.test(dayOfWeek)) {
+    const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const weekdayName = weekdayNames[Number.parseInt(dayOfWeek, 10)] ?? `day ${dayOfWeek}`;
+    return `Weekly on ${weekdayName} at ${hourText}:${minuteText}`;
+  }
+  if (dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
+    return `Daily at ${hourText}:${minuteText}`;
+  }
+
+  return "Custom schedule";
 }
 
 /** Returns a short date (Mon DD) or empty string. */
@@ -237,7 +270,7 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
   const isPending = scheduledJobStore((state) => state.pendingActionIds.includes(job.id));
   const orgId = sessionStore((state) => state.selectedOrganizationId ?? "");
   const project = workspaceStore((state) => state.projects.find((p) => p.id === job.projectId));
-  const { pauseScheduledJob, resumeScheduledJob, deleteScheduledJob } = useCommands();
+  const { pauseScheduledJob, resumeScheduledJob, runScheduledJobNow, deleteScheduledJob } = useCommands();
   const [runsPaneWidth, setRunsPaneWidth] = useState(RUNS_PANE_DEFAULT_WIDTH);
   const dragRef = useRef({ startX: 0, startWidth: 0 });
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -275,8 +308,8 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
     }
   }, [deleteScheduledJob, job.id, onBack]);
 
-  const canPause = job.status === "active" && !isPending;
-  const canResume = job.status === "paused" && !isPending;
+  const primaryAction = job.status === "active" ? "pause" : job.status === "paused" ? "resume" : null;
+  const canRunNow = !isPending;
 
   const statusDotColor = job.status === "active" ? "success.main" : "text.disabled";
 
@@ -284,44 +317,47 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* Header */}
       <PaneHeader justifyContent="space-between" showMacInset={shouldReserveMacInset}>
-        <Box
-          className="electron-webkit-app-region-no-drag"
-          sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0, flex: 1 }}
-        >
-          <IconButton size="small" onClick={onBack} aria-label={t("scheduledJob.detail.back")}>
-            <LuArrowLeft size={16} />
-          </IconButton>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0, flex: 1 }}>
+          <Box className="electron-webkit-app-region-no-drag" sx={{ display: "inline-flex" }}>
+            <IconButton size="small" onClick={onBack} aria-label={t("scheduledJob.detail.back")}>
+              <LuArrowLeft size={16} />
+            </IconButton>
+          </Box>
           <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
             {job.name}
           </Typography>
         </Box>
-        <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          {canPause ? (
-            <Tooltip title={t("scheduledJob.actions.pause")} arrow>
+        <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+          {primaryAction ? (
+            <Tooltip title={t(`scheduledJob.actions.${primaryAction}`)} arrow>
+              <Box className="electron-webkit-app-region-no-drag" sx={{ display: "inline-flex" }}>
+                <Button
+                  size="small"
+                  variant="text"
+                  startIcon={primaryAction === "pause" ? <LuPause size={13} /> : <LuPlay size={13} />}
+                  onClick={primaryAction === "pause" ? handlePause : handleResume}
+                  disabled={isPending}
+                  sx={{ textTransform: "none", color: "text.secondary", minWidth: 92 }}
+                >
+                  {t(`scheduledJob.actions.${primaryAction}`)}
+                </Button>
+              </Box>
+            </Tooltip>
+          ) : null}
+          {
+            <Tooltip title={t("scheduledJob.actions.runNow")} arrow>
               <Button
                 size="small"
                 variant="text"
-                startIcon={<LuPause size={13} />}
-                onClick={handlePause}
-                sx={{ textTransform: "none", color: "text.secondary" }}
+                startIcon={<LuZap size={13} />}
+                onClick={() => void runScheduledJobNow(job.id)}
+                disabled={!canRunNow}
+                sx={{ textTransform: "none", color: "text.secondary", px: 1.5 }}
               >
-                {t("scheduledJob.actions.pause")}
+                {t("scheduledJob.actions.runNow")}
               </Button>
             </Tooltip>
-          ) : null}
-          {canResume ? (
-            <Tooltip title={t("scheduledJob.actions.resume")} arrow>
-              <Button
-                size="small"
-                variant="text"
-                startIcon={<LuPlay size={13} />}
-                onClick={handleResume}
-                sx={{ textTransform: "none", color: "text.secondary" }}
-              >
-                {t("scheduledJob.actions.resume")}
-              </Button>
-            </Tooltip>
-          ) : null}
+          }
           <Tooltip title={t("scheduledJob.actions.edit")} arrow>
             <Button
               size="small"
@@ -362,7 +398,7 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
         >
           {/* Left: fields */}
           <Box sx={{ height: "100%", overflow: "auto", px: 2.5, py: 1.5 }}>
-            <Stack divider={<Divider />}>
+            <Stack divider={<Divider sx={{ borderStyle: "dashed" }} />}>
               <FieldRow label={t("scheduledJob.detail.fields.name")}>
                 <Typography variant="body2">{job.name}</Typography>
               </FieldRow>
@@ -404,9 +440,14 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
               </FieldRow>
 
               <FieldRow label={t("scheduledJob.detail.fields.cronExpression")}>
-                <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
-                  {job.cronExpression}
-                </Typography>
+                <Box>
+                  <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
+                    {job.cronExpression}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {describeCronExpression(job.cronExpression)}
+                  </Typography>
+                </Box>
               </FieldRow>
 
               <FieldRow label={t("scheduledJob.detail.fields.timezone")}>

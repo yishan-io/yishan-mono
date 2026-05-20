@@ -73,6 +73,8 @@ export type PendingRun = {
   job: ScheduledJobView;
 };
 
+export type TriggerNowRun = PendingRun;
+
 type CreateScheduledJobInput = {
   organizationId: string;
   projectId: string;
@@ -422,5 +424,29 @@ export class ScheduledJobService {
       .limit(limit);
 
     return rows.map(toRunView);
+  }
+
+  async triggerRunNow(input: JobIdentityInput): Promise<TriggerNowRun> {
+    await this.assertOrganizationMember(input.organizationId, input.actorUserId, input.actorRole);
+    const job = await this.getJobOrThrow(input.jobId, input.organizationId);
+
+    const scheduledFor = new Date();
+    const runId = newId();
+
+    await this.db.insert(scheduledJobRuns).values({
+      id: runId,
+      jobId: job.id,
+      organizationId: job.organizationId,
+      projectId: job.projectId,
+      nodeId: job.nodeId,
+      scheduledFor,
+      status: "pending",
+    });
+
+    return {
+      runId,
+      scheduledFor,
+      job: toScheduledJobView(job),
+    };
   }
 }

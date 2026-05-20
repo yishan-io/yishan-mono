@@ -109,3 +109,19 @@ export async function resumeScheduledJob(jobId: string): Promise<void> {
     scheduledJobStore.getState().removePendingActionId(jobId);
   }
 }
+
+/** Triggers one scheduled job immediately. */
+export async function runScheduledJobNow(jobId: string): Promise<void> {
+  const orgId = sessionStore.getState().selectedOrganizationId;
+  if (!orgId) {
+    return;
+  }
+
+  scheduledJobStore.getState().addPendingActionId(jobId);
+
+  try {
+    await api.scheduledJob.runNow(orgId, jobId);
+  } finally {
+    scheduledJobStore.getState().removePendingActionId(jobId);
+  }
+}

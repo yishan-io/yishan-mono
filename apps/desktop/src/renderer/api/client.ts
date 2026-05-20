@@ -8,6 +8,7 @@ import {
   listScheduledJobs,
   pauseScheduledJob,
   resumeScheduledJob,
+  runScheduledJobNow,
   updateScheduledJob,
 } from "./scheduledJobApi";
 import { createProjectWorkspace, listProjectWorkspaces } from "./workspaceApi";
@@ -42,6 +43,7 @@ export const api = {
     update: updateScheduledJob,
     pause: pauseScheduledJob,
     resume: resumeScheduledJob,
+    runNow: runScheduledJobNow,
     delete: deleteScheduledJob,
     listRuns: listScheduledJobRuns,
   },
