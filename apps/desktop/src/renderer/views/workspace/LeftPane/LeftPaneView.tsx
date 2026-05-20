@@ -5,6 +5,7 @@ import { LuPanelLeft, LuPlus, LuZap } from "react-icons/lu";
 import { PaneHeader } from "../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../components/PaneToggleButton";
 import { getRendererPlatform } from "../../../helpers/platform";
+import { useCommands } from "../../../hooks/useCommands";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
@@ -33,10 +34,16 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
 
   const isScheduledJobPanelOpen = workspaceUiStore((state) => state.isScheduledJobPanelOpen);
   const setScheduledJobPanelOpen = workspaceUiStore((state) => state.setScheduledJobPanelOpen);
+  const { setSelectedRepoId, setSelectedWorkspaceId } = useCommands();
 
   const handleToggleScheduledJobs = useCallback(() => {
-    setScheduledJobPanelOpen(!isScheduledJobPanelOpen);
-  }, [isScheduledJobPanelOpen, setScheduledJobPanelOpen]);
+    const willOpen = !isScheduledJobPanelOpen;
+    setScheduledJobPanelOpen(willOpen);
+    if (willOpen) {
+      setSelectedRepoId("");
+      setSelectedWorkspaceId("");
+    }
+  }, [isScheduledJobPanelOpen, setScheduledJobPanelOpen, setSelectedRepoId, setSelectedWorkspaceId]);
 
   return (
     <Box
@@ -57,9 +64,6 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
           sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", minWidth: 0, pr: 0.5 }}
         />
         <Stack direction="row" alignItems="center" spacing={0.25}>
-          <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center" }}>
-            <ProjectFilterPopoverView />
-          </Box>
           <PaneToggleButton
             tooltipLabel={toggleLeftTooltipLabel}
             ariaLabel={t("layout.toggleLeftSidebar")}
@@ -92,6 +96,18 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
       >
         {t("scheduledJob.title")}
       </Button>
+
+      <Box sx={{ px: 2, pt: 1.5, pb: 0.75, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+        <Typography
+          variant="caption"
+          sx={{ color: "text.disabled", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}
+        >
+          Workspaces
+        </Typography>
+        <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center" }}>
+          <ProjectFilterPopoverView />
+        </Box>
+      </Box>
       <ProjectListView />
       {filteredRepos.length === 0 ? (
         <Box sx={{ px: 2, pb: 1.5 }}>

@@ -88,10 +88,7 @@ export function ScheduledJobView({ onClose: _onClose }: ScheduledJobViewProps = 
       >
         {/* Header */}
         <PaneHeader justifyContent="space-between" showMacInset={shouldReserveMacInset}>
-          <Box
-            className="electron-webkit-app-region-no-drag"
-            sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0, flex: 1 }}
-          >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0, flex: 1 }}>
             <LuZap size={16} />
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {t("scheduledJob.title")}
