@@ -136,6 +136,23 @@ export function getAgentIconPresentation(
   };
 }
 
+/**
+ * The system-default CLI command name for each agent kind.
+ * These are the fallback values used when no user-defined custom command is set.
+ */
+export const DEFAULT_AGENT_COMMANDS: Record<DesktopAgentKind, string> = {
+  opencode: "opencode",
+  codex: "codex",
+  claude: "claude",
+  gemini: "gemini",
+  pi: "pi",
+  copilot: "copilot",
+  cursor: "cursor",
+};
+
+/** Maximum character length enforced on a user-supplied agent command string. */
+export const AGENT_COMMAND_MAX_LENGTH = 2048;
+
 /** Returns true when one string is a supported desktop-agent kind. */
 export function isDesktopAgentKind(value: string): value is DesktopAgentKind {
   return SUPPORTED_DESKTOP_AGENT_KINDS.some((agentKind) => agentKind === value);
@@ -150,4 +167,38 @@ export function createDefaultAgentInUseByKind(defaultValue: boolean): Record<Des
     },
     {} as Record<DesktopAgentKind, boolean>,
   );
+}
+
+/**
+ * Builds a partial map initialised with no custom commands (all `undefined`).
+ * Persisted as a `Partial` record — absent keys mean "use the system default".
+ */
+export function createDefaultCustomCommandByKind(): Partial<Record<DesktopAgentKind, string>> {
+  return {};
+}
+
+/**
+ * Resolves the effective launch command for one agent kind.
+ * Returns the user-supplied override when present, otherwise falls back to the system default.
+ */
+export function resolveAgentLaunchCommand(
+  agentKind: DesktopAgentKind,
+  customCommands: Partial<Record<DesktopAgentKind, string>>,
+): string {
+  return customCommands[agentKind] ?? DEFAULT_AGENT_COMMANDS[agentKind];
+}
+
+/**
+ * Validates a user-supplied custom command string.
+ * Returns an i18n error key when invalid, or `null` when the value is acceptable.
+ */
+export function validateAgentCommand(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return "settings.agents.command.errorEmpty";
+  }
+  if (trimmed.length > AGENT_COMMAND_MAX_LENGTH) {
+    return "settings.agents.command.errorTooLong";
+  }
+  return null;
 }

@@ -141,6 +141,13 @@
         "detectedVersionUnknown": "检测到版本：未知",
         "notDetected": "未检测到"
       },
+      "command": {
+        "label": "命令",
+        "placeholder": "{{defaultCommand}}",
+        "resetAriaLabel": "重置为默认命令",
+        "errorEmpty": "命令不能为空。",
+        "errorTooLong": "命令过长（最多 2048 个字符）。"
+      },
       "items": {
         "opencode": "OpenCode",
         "codex": "Codex",

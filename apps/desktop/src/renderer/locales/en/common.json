@@ -156,6 +156,13 @@
         "detectedVersionUnknown": "Detected version: unknown",
         "notDetected": "Not detected"
       },
+      "command": {
+        "label": "Command",
+        "placeholder": "{{defaultCommand}}",
+        "resetAriaLabel": "Reset to default command",
+        "errorEmpty": "Command cannot be empty.",
+        "errorTooLong": "Command is too long (max 2048 characters)."
+      },
       "items": {
         "opencode": "OpenCode",
         "codex": "Codex",
