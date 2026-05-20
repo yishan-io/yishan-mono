@@ -347,10 +347,22 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
     // Set HTML content
     container.innerHTML = html;
 
-    // Extract mermaid code blocks and replace with placeholder divs
-    const mermaidPres = container.querySelectorAll("pre.mermaid");
+    // Extract mermaid code blocks and replace with placeholder divs.
+    // Support both shapes:
+    // 1) <pre class="mermaid">...</pre>
+    // 2) <pre><code class="language-mermaid">...</code></pre>
+    const mermaidPres = new Set<HTMLElement>();
+    container.querySelectorAll("pre.mermaid").forEach((pre) => {
+      mermaidPres.add(pre as HTMLElement);
+    });
+    container.querySelectorAll("pre code.language-mermaid").forEach((codeEl) => {
+      const pre = codeEl.closest("pre");
+      if (pre) {
+        mermaidPres.add(pre as HTMLElement);
+      }
+    });
     const blocks: Array<{ id: string; code: string }> = [];
-    mermaidPres.forEach((pre, index) => {
+    Array.from(mermaidPres).forEach((pre, index) => {
       const code = pre.textContent?.replace(/\n$/, "") ?? "";
       const id = `mermaid-placeholder-${index}`;
       const placeholder = document.createElement("div");
@@ -471,13 +483,14 @@ function MermaidPortal({
     const target = container.querySelector(`[data-mermaid-id="${targetId}"]`);
     if (!target) return;
 
-    // Create a div for React to render into
-    const renderTarget = document.createElement("div");
-    target.replaceWith(renderTarget);
-    portalRef.current = renderTarget;
+    // Render directly into the existing placeholder node.
+    portalRef.current = target as HTMLDivElement;
     setMounted(true);
 
     return () => {
+      if (portalRef.current) {
+        portalRef.current.innerHTML = "";
+      }
       portalRef.current = null;
       setMounted(false);
     };
