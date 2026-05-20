@@ -8,5 +8,18 @@ export function normalizeUrl(rawValue: string): string {
     return trimmed;
   }
 
-  return `https://${trimmed}`;
+  // If input has no spaces and looks like a domain/hostname, treat as URL
+  if (!/\s/.test(trimmed)) {
+    if (
+      trimmed.includes(".") ||
+      trimmed === "localhost" ||
+      trimmed.startsWith("localhost:") ||
+      trimmed.startsWith("[")
+    ) {
+      return `https://${trimmed}`;
+    }
+  }
+
+  // Not a recognizable URL — search Google
+  return `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`;
 }
