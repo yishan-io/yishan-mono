@@ -1,5 +1,5 @@
 import type { AgentKind } from "@yishan/core";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
 import type { OrganizationMemberRole } from "@/db/schema";
 
@@ -23,6 +23,8 @@ type ScheduledJobRecord = typeof scheduledJobs.$inferSelect;
 type ScheduledJobRunRecord = typeof scheduledJobRuns.$inferSelect;
 
 type JobRunStatus = "pending" | "running" | "succeeded" | "failed" | "skipped_offline";
+
+const SCHEDULED_JOB_VISIBLE_STATUSES = ["active", "paused", "disabled"] as const;
 
 export type ScheduledJobView = {
   id: string;
@@ -70,6 +72,8 @@ export type PendingRun = {
   scheduledFor: Date;
   job: ScheduledJobView;
 };
+
+export type TriggerNowRun = PendingRun;
 
 type CreateScheduledJobInput = {
   organizationId: string;
@@ -194,7 +198,13 @@ export class ScheduledJobService {
     const rows = await this.db
       .select()
       .from(scheduledJobs)
-      .where(and(eq(scheduledJobs.id, jobId), eq(scheduledJobs.organizationId, organizationId)))
+      .where(
+        and(
+          eq(scheduledJobs.id, jobId),
+          eq(scheduledJobs.organizationId, organizationId),
+          inArray(scheduledJobs.status, SCHEDULED_JOB_VISIBLE_STATUSES),
+        ),
+      )
       .limit(1);
 
     const job = rows[0];
@@ -212,7 +222,13 @@ export class ScheduledJobService {
     const rows = await this.db
       .select({ id: scheduledJobs.id })
       .from(scheduledJobs)
-      .where(and(eq(scheduledJobs.id, jobId), eq(scheduledJobs.organizationId, organizationId)))
+      .where(
+        and(
+          eq(scheduledJobs.id, jobId),
+          eq(scheduledJobs.organizationId, organizationId),
+          inArray(scheduledJobs.status, SCHEDULED_JOB_VISIBLE_STATUSES),
+        ),
+      )
       .limit(1);
 
     if (rows.length === 0) {
@@ -272,7 +288,10 @@ export class ScheduledJobService {
       await this.assertProjectBelongsToOrganization(input.projectId, input.organizationId);
     }
 
-    const conditions = [eq(scheduledJobs.organizationId, input.organizationId)];
+    const conditions = [
+      eq(scheduledJobs.organizationId, input.organizationId),
+      inArray(scheduledJobs.status, SCHEDULED_JOB_VISIBLE_STATUSES),
+    ];
     if (input.projectId) {
       conditions.push(eq(scheduledJobs.projectId, input.projectId));
     }
@@ -382,6 +401,16 @@ export class ScheduledJobService {
     return toScheduledJobView(updated);
   }
 
+  async deleteScheduledJob(input: JobIdentityInput): Promise<void> {
+    await this.assertOrganizationMember(input.organizationId, input.actorUserId, input.actorRole);
+    await this.assertJobExistsInOrg(input.jobId, input.organizationId);
+
+    await this.db
+      .update(scheduledJobs)
+      .set({ status: "deleted", updatedAt: new Date() })
+      .where(and(eq(scheduledJobs.id, input.jobId), eq(scheduledJobs.organizationId, input.organizationId)));
+  }
+
   async listJobRuns(input: ListRunsInput): Promise<ScheduledJobRunView[]> {
     await this.assertOrganizationMember(input.organizationId, input.actorUserId, input.actorRole);
     await this.assertJobExistsInOrg(input.jobId, input.organizationId);
@@ -395,5 +424,29 @@ export class ScheduledJobService {
       .limit(limit);
 
     return rows.map(toRunView);
+  }
+
+  async triggerRunNow(input: JobIdentityInput): Promise<TriggerNowRun> {
+    await this.assertOrganizationMember(input.organizationId, input.actorUserId, input.actorRole);
+    const job = await this.getJobOrThrow(input.jobId, input.organizationId);
+
+    const scheduledFor = new Date();
+    const runId = newId();
+
+    await this.db.insert(scheduledJobRuns).values({
+      id: runId,
+      jobId: job.id,
+      organizationId: job.organizationId,
+      projectId: job.projectId,
+      nodeId: job.nodeId,
+      scheduledFor,
+      status: "pending",
+    });
+
+    return {
+      runId,
+      scheduledFor,
+      job: toScheduledJobView(job),
+    };
   }
 }

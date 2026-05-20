@@ -176,7 +176,7 @@ describe("ScheduledJobService.listScheduledJobs", () => {
   });
 });
 
-// ── pauseScheduledJob / resumeScheduledJob / disableScheduledJob ───────────────
+// ── pauseScheduledJob / resumeScheduledJob / disableScheduledJob / deleteScheduledJob ──
 
 describe("ScheduledJobService status mutations", () => {
   function makeServiceWithJob(status = "active") {
@@ -220,6 +220,30 @@ describe("ScheduledJobService status mutations", () => {
       service.disableScheduledJob({ organizationId: "org-1", jobId: "missing", actorUserId: "u1" }),
     ).rejects.toBeInstanceOf(ScheduledJobNotFoundError);
   });
+
+  it("deleteScheduledJob throws ScheduledJobNotFoundError when job does not exist", async () => {
+    const { db, mockLimit } = createMockDb();
+    mockLimit.mockResolvedValueOnce([]);
+    const service = new ScheduledJobService(db, makeOrgService("member"));
+
+    await expect(
+      service.deleteScheduledJob({ organizationId: "org-1", jobId: "missing", actorUserId: "u1" }),
+    ).rejects.toBeInstanceOf(ScheduledJobNotFoundError);
+  });
+
+  it("deleteScheduledJob marks the job as deleted", async () => {
+    const { db, mockLimit, mockUpdateSet } = createMockDb();
+    mockLimit.mockResolvedValueOnce([{ ...JOB_ROW, status: "active" }]);
+    const service = new ScheduledJobService(db, makeOrgService("member"));
+
+    await service.deleteScheduledJob({ organizationId: "org-1", jobId: "job-1", actorUserId: "user-1" });
+
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "deleted",
+      }),
+    );
+  });
 });
 
 // ── listJobRuns ────────────────────────────────────────────────────────────────
@@ -232,5 +256,30 @@ describe("ScheduledJobService.listJobRuns", () => {
     await expect(
       service.listJobRuns({ organizationId: "org-1", jobId: "job-1", actorUserId: "x" }),
     ).rejects.toBeInstanceOf(OrganizationMembershipRequiredError);
+  });
+});
+
+describe("ScheduledJobService.triggerRunNow", () => {
+  it("throws ScheduledJobNotFoundError when job does not exist", async () => {
+    const { db, mockLimit } = createMockDb();
+    mockLimit.mockResolvedValueOnce([]);
+    const service = new ScheduledJobService(db, makeOrgService("member"));
+
+    await expect(
+      service.triggerRunNow({ organizationId: "org-1", jobId: "missing", actorUserId: "u1" }),
+    ).rejects.toBeInstanceOf(ScheduledJobNotFoundError);
+  });
+
+  it("creates a pending run and returns run info", async () => {
+    const { db, mockLimit, mockInsert, mockInsertValues } = createMockDb();
+    mockLimit.mockResolvedValueOnce([{ ...JOB_ROW, status: "active" }]);
+    mockInsertValues.mockResolvedValueOnce(undefined);
+    const service = new ScheduledJobService(db, makeOrgService("member"));
+
+    const run = await service.triggerRunNow({ organizationId: "org-1", jobId: "job-1", actorUserId: "user-1" });
+
+    expect(mockInsert).toHaveBeenCalled();
+    expect(run.job.id).toBe("job-1");
+    expect(run.runId).toBeTruthy();
   });
 });

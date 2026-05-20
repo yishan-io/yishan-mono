@@ -50,7 +50,7 @@ export function RightPaneView({ onToggleRightPane }: RightPaneViewProps = {}) {
         overflow: "hidden",
       }}
     >
-      <PaneHeader className="electron-webkit-app-region-drag" justifyContent="flex-start">
+      <PaneHeader justifyContent="flex-start">
         <Box className="electron-webkit-app-region-no-drag" sx={{ minWidth: 0 }}>
           <ToggleButtonGroup
             value={activeTab}

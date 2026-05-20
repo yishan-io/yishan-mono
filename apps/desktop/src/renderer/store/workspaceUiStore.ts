@@ -11,12 +11,15 @@ type WorkspaceUiStoreState = {
   // ── pane state ─────────────────────────────────────────────────────────────
   rightPaneTab: WorkspaceRightPaneTab;
   fileSearchRequestKey: number;
+  /** Whether the scheduled job panel is visible in the main pane. */
+  isScheduledJobPanelOpen: boolean;
 
   setSelectedEntryPath: (path: string) => void;
   requestDeleteSelection: () => void;
   requestUndo: () => void;
   setRightPaneTab: (tab: WorkspaceRightPaneTab) => void;
   requestFileSearch: () => void;
+  setScheduledJobPanelOpen: (isOpen: boolean) => void;
 };
 
 /** Stores workspace-scoped UI signals: file-tree selection/commands and right-pane tab state. */
@@ -27,6 +30,7 @@ export const workspaceUiStore = create<WorkspaceUiStoreState>()(
     undoRequestId: 0,
     rightPaneTab: "files",
     fileSearchRequestKey: 0,
+    isScheduledJobPanelOpen: false,
 
     setSelectedEntryPath: (selectedEntryPath) => {
       set({ selectedEntryPath });
@@ -48,6 +52,9 @@ export const workspaceUiStore = create<WorkspaceUiStoreState>()(
       set((state) => {
         state.fileSearchRequestKey += 1;
       });
+    },
+    setScheduledJobPanelOpen: (isOpen) => {
+      set({ isScheduledJobPanelOpen: isOpen });
     },
   })),
 );

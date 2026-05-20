@@ -14,6 +14,8 @@ import { isEditableActiveElement } from "../shortcuts/editableTarget";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
+import { workspaceUiStore } from "../store/workspaceUiStore";
+import { ScheduledJobView } from "./scheduledJob/ScheduledJobView";
 import { CreateProjectDialogView } from "./workspace/LeftPane/CreateProjectDialogView";
 import { LeftPaneView } from "./workspace/LeftPane/LeftPaneView";
 import { MainPaneView } from "./workspace/MainPaneView";
@@ -295,10 +297,17 @@ export function WorkspaceView() {
 
     return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
   });
+  const isScheduledJobPanelOpen = workspaceUiStore((state) => state.isScheduledJobPanelOpen);
+  const setScheduledJobPanelOpen = workspaceUiStore((state) => state.setScheduledJobPanelOpen);
   const cmd = useCommands();
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator());
   const { leftCollapsed, rightCollapsed, onToggleLeftPane, onToggleRightPane } = paneVisibility;
+
+  const handleCloseScheduledJobPanel = useCallback(() => {
+    setScheduledJobPanelOpen(false);
+  }, [setScheduledJobPanelOpen]);
+
   useWorkspaceAppActions({ cmd, navigate });
   useWorkspaceBootstrap({ cmd, terminalRecoveryCoordinator });
   useElementWidthObserver({
@@ -401,20 +410,24 @@ export function WorkspaceView() {
           </Box>
         }
       >
-        <SplitPaneLayout
-          position="right"
-          collapsed={rightCollapsed}
-          resizeLabel={t("layout.resize.right")}
-          onResizeStart={resizeRightStart}
-          onResizeMove={resizeRightMove}
-          sideContent={
-            <Box sx={{ width: resolvedRightWidth, minWidth: resolvedRightWidth, height: "100%" }}>
-              <RightPaneView onToggleRightPane={onToggleRightPane} />
-            </Box>
-          }
-        >
-          <MainPaneView />
-        </SplitPaneLayout>
+        {isScheduledJobPanelOpen ? (
+          <ScheduledJobView onClose={handleCloseScheduledJobPanel} />
+        ) : (
+          <SplitPaneLayout
+            position="right"
+            collapsed={rightCollapsed}
+            resizeLabel={t("layout.resize.right")}
+            onResizeStart={resizeRightStart}
+            onResizeMove={resizeRightMove}
+            sideContent={
+              <Box sx={{ width: resolvedRightWidth, minWidth: resolvedRightWidth, height: "100%" }}>
+                <RightPaneView onToggleRightPane={onToggleRightPane} />
+              </Box>
+            }
+          >
+            <MainPaneView />
+          </SplitPaneLayout>
+        )}
       </SplitPaneLayout>
       <CreateProjectDialogView open={isCreateRepoOpen} onClose={() => setIsCreateRepoOpen(false)} />
       <WorkspaceLifecycleNoticeView />

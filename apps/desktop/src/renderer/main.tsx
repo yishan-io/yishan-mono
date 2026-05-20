@@ -6,18 +6,18 @@ import React, { useEffect, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import { HashRouter, Route, Routes } from "react-router-dom";
+import { openLink } from "./commands/appCommands";
 import { AppUpdateSnackbar } from "./components/AppUpdateSnackbar";
 import { AuthSessionExpiredSnackbar } from "./components/AuthSessionExpiredSnackbar";
 import { WorkspaceOverlay } from "./components/WorkspaceOverlay";
 import { startBackendEventPipeline, startBackendEventStoreBindings } from "./events";
 import { AppThemePreferenceProvider, useThemePreference } from "./hooks/useThemePreference";
-import { subscribeDesktopRpcEvent } from "./rpc/rpcTransport";
-import { openLink } from "./commands/appCommands";
 import { i18n } from "./i18n";
 import { rendererQueryClient } from "./queryClient";
+import { subscribeDesktopRpcEvent } from "./rpc/rpcTransport";
 import { createAppTheme } from "./theme";
-import { AppShell } from "./views/layout/AppShell";
 import { SettingsView } from "./views/SettingsView";
+import { AppShell } from "./views/layout/AppShell";
 import { ApplicationRouterView, NotFoundRouteView } from "./views/layout/ApplicationRouterView";
 
 // React 19 dev mode emits performance.measure() entries for every component render/update.

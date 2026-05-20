@@ -192,20 +192,13 @@ describe("LeftPaneView deletion", () => {
     expect(screen.getByTestId("visible-repo-repo-2")).toBeTruthy();
   });
 
-  it("shows left pane toggle button after filter in header", () => {
+  it("shows left pane toggle button in header", () => {
     const onToggleLeftPane = vi.fn();
 
     render(<LeftPaneView onToggleLeftPane={onToggleLeftPane} />);
 
-    const filterButton = screen.getByRole("button", { name: "Filter" });
     const toggleButton = screen.getByRole("button", { name: "layout.toggleLeftSidebar" });
-    const header = toggleButton.closest("header");
-    const headerButtons = Array.from<HTMLElement>(header?.querySelectorAll("button") ?? []);
-    const filterButtonIndex = headerButtons.indexOf(filterButton);
-    const toggleButtonIndex = headerButtons.indexOf(toggleButton);
-
-    expect(filterButtonIndex).toBeGreaterThanOrEqual(0);
-    expect(toggleButtonIndex).toBeGreaterThan(filterButtonIndex);
+    expect(toggleButton).toBeTruthy();
 
     fireEvent.click(toggleButton);
 

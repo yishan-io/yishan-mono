@@ -1,6 +1,8 @@
 import { StatusCodes } from "http-status-codes";
+import { HTTPException } from "hono/http-exception";
 
 import type { AppContext } from "@/hono";
+import { publishViaQStash } from "@/scheduled/qstash";
 import type { NodeParamsInput } from "@/validation/node";
 import type {
   CompleteScheduledJobRunBodyInput,
@@ -114,6 +116,18 @@ export async function disableScheduledJobHandler(c: AppContext, params: Schedule
   return c.json({ job });
 }
 
+export async function deleteScheduledJobHandler(c: AppContext, params: ScheduledJobParamsInput) {
+  const actorUser = c.get("sessionUser");
+  await c.get("services").scheduledJob.deleteScheduledJob({
+    actorUserId: actorUser.id,
+    actorRole: c.get("organizationRole"),
+    organizationId: params.orgId,
+    jobId: params.jobId,
+  });
+
+  return c.json({ ok: true }, StatusCodes.OK);
+}
+
 export async function listScheduledJobRunsHandler(
   c: AppContext,
   params: ScheduledJobParamsInput,
@@ -129,6 +143,47 @@ export async function listScheduledJobRunsHandler(
   });
 
   return c.json({ runs });
+}
+
+export async function runScheduledJobNowHandler(c: AppContext, params: ScheduledJobParamsInput) {
+  const actorUser = c.get("sessionUser");
+  const pendingRun = await c.get("services").scheduledJob.triggerRunNow({
+    actorUserId: actorUser.id,
+    actorRole: c.get("organizationRole"),
+    organizationId: params.orgId,
+    jobId: params.jobId,
+  });
+
+  const config = c.get("config");
+  const bindings = c.env as Record<string, string | undefined>;
+  const published = await publishViaQStash(
+    {
+      QSTASH_TOKEN: bindings.QSTASH_TOKEN,
+      QSTASH_URL: bindings.QSTASH_URL,
+      RELAY_URL: config.relayUrl,
+      RELAY_API_TOKEN: config.relayApiToken,
+    },
+    [
+      {
+        runId: pendingRun.runId,
+        nodeId: pendingRun.job.nodeId,
+        jobId: pendingRun.job.id,
+        agentKind: pendingRun.job.agentKind,
+        prompt: pendingRun.job.prompt,
+        model: pendingRun.job.model ?? "",
+        command: pendingRun.job.command ?? "",
+        scheduledFor: pendingRun.scheduledFor.toISOString(),
+      },
+    ],
+  );
+
+  if (published === 0) {
+    throw new HTTPException(StatusCodes.SERVICE_UNAVAILABLE, {
+      message: "Failed to dispatch scheduled job run",
+    });
+  }
+
+  return c.json({ ok: true, runId: pendingRun.runId }, StatusCodes.ACCEPTED);
 }
 
 export async function startScheduledJobRunHandler(

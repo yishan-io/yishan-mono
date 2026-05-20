@@ -805,5 +805,122 @@
       "save": "Save",
       "saving": "Saving..."
     }
+  },
+  "scheduledJob": {
+    "title": "Autopilot",
+    "loadError": "Failed to load scheduled jobs.",
+    "empty": "No scheduled jobs are configured for this organization.",
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "disabled": "Disabled"
+    },
+    "lastRun": {
+      "succeeded": "Last run succeeded",
+      "failed": "Last run failed"
+    },
+    "columns": {
+      "name": "Name",
+      "project": "Project",
+      "schedule": "Schedule",
+      "agent": "Agent",
+      "status": "Status",
+      "lastRun": "Last run",
+      "nextRun": "Next run"
+    },
+    "runs": {
+      "title": "Run History",
+      "refresh": "Refresh",
+      "empty": "No runs yet.",
+      "resizeLabel": "Resize run history panel",
+      "nextRun": "Next run",
+      "status": {
+        "pending": "Pending",
+        "running": "Running",
+        "succeeded": "Succeeded",
+        "failed": "Failed",
+        "skipped_offline": "Skipped"
+      }
+    },
+    "detail": {
+      "back": "Back to scheduled jobs",
+      "fields": {
+        "name": "Name",
+        "status": "Status",
+        "project": "Project",
+        "node": "Node",
+        "cronExpression": "Schedule",
+        "timezone": "Timezone",
+        "nextRunAt": "Next run",
+        "agentKind": "Agent",
+        "prompt": "Prompt",
+        "model": "Model",
+        "command": "Command",
+        "lastRunAt": "Last run",
+        "lastError": "Last error",
+        "createdAt": "Created",
+        "updatedAt": "Updated"
+      }
+    },
+    "delete": {
+      "title": "Delete scheduled job?",
+      "description": "\"{{name}}\" will be disabled and will no longer run. This cannot be undone.",
+      "confirm": "Delete"
+    },
+    "edit": {
+      "title": "Edit scheduled job",
+      "save": "Save"
+    },
+    "actions": {
+      "pause": "Pause",
+      "resume": "Resume",
+      "retry": "Retry",
+      "new": "New",
+      "edit": "Edit",
+      "runNow": "Run now",
+      "delete": "Delete",
+      "close": "Close",
+      "openDetails": "Open details for {{name}}"
+    },
+    "form": {
+      "title": "New scheduled job",
+      "name": "Name",
+      "namePlaceholder": "My daily task",
+      "runbook": "RUNBOOK",
+      "runbookHint": "Read by the agent on every run",
+      "configuration": "CONFIGURATION",
+      "scheduleSection": "SCHEDULE",
+      "quickSchedule": "Quick schedule",
+      "time": "Time",
+      "weekday": "Weekday",
+      "scheduleTypes": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "weekday": "Weekday",
+        "hourly": "Hourly",
+        "custom": "Custom"
+      },
+      "weekdays": {
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
+      },
+      "project": "Project",
+      "node": "Node",
+      "agentKind": "Agent",
+      "cronExpression": "Schedule (cron)",
+      "cronExpressionPlaceholder": "0 9 * * 1-5",
+      "timezone": "Timezone",
+      "nextRunEstimate": "Next run: {{value}}",
+      "nextRunEstimateUnavailable": "Next run: unavailable",
+      "prompt": "Prompt",
+      "promptPlaceholder": "Describe what the agent should do...",
+      "submit": "Create",
+      "creating": "Creating..."
+    }
   }
 }

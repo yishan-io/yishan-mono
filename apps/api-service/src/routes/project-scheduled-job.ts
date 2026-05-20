@@ -3,11 +3,13 @@ import { zValidator } from "@hono/zod-validator";
 
 import {
   createScheduledJobHandler,
+  deleteScheduledJobHandler,
   disableScheduledJobHandler,
   listScheduledJobRunsHandler,
   listScheduledJobsHandler,
   pauseScheduledJobHandler,
   resumeScheduledJobHandler,
+  runScheduledJobNowHandler,
   updateScheduledJobHandler
 } from "@/handlers/scheduled-job";
 import type { AppEnv } from "@/hono";
@@ -65,9 +67,21 @@ scheduledJobRouter.put(
   (c) => disableScheduledJobHandler(c, c.req.valid("param"))
 );
 
+scheduledJobRouter.delete(
+  "/:jobId",
+  zValidator("param", scheduledJobParamsSchema, validationErrorResponse),
+  (c) => deleteScheduledJobHandler(c, c.req.valid("param"))
+);
+
 scheduledJobRouter.get(
   "/:jobId/runs",
   zValidator("param", scheduledJobParamsSchema, validationErrorResponse),
   zValidator("query", scheduledJobRunsQuerySchema, validationErrorResponse),
   (c) => listScheduledJobRunsHandler(c, c.req.valid("param"), c.req.valid("query"))
+);
+
+scheduledJobRouter.post(
+  "/:jobId/run-now",
+  zValidator("param", scheduledJobParamsSchema, validationErrorResponse),
+  (c) => runScheduledJobNowHandler(c, c.req.valid("param"))
 );

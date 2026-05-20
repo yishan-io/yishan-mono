@@ -163,14 +163,11 @@ export function MainPaneTitleBarView() {
 
   return (
     <>
-      <PaneHeader className="electron-webkit-app-region-drag">
+      <PaneHeader showMacInset={shouldReserveMacWindowControlsInset} macInsetTestId="main-pane-macos-controls-inset">
         <Box
           className="electron-webkit-app-region-no-drag"
           sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0 }}
         >
-          {shouldReserveMacWindowControlsInset ? (
-            <Box data-testid="main-pane-macos-controls-inset" sx={{ width: 72, flexShrink: 0 }} />
-          ) : null}
           {leftCollapsed ? (
             <PaneToggleButton
               tooltipLabel={toggleLeftTooltipLabel}

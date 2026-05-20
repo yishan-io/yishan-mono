@@ -8,7 +8,7 @@ export type ProjectSourceType = "git" | "git-local" | "unknown";
 export type WorkspaceKind = "primary" | "worktree";
 export type WorkspaceStatus = "active" | "closed";
 export type WorkspacePullRequestState = "open" | "closed" | "merged";
-export type ScheduledJobStatus = "active" | "paused" | "disabled";
+export type ScheduledJobStatus = "active" | "paused" | "disabled" | "deleted";
 export type ScheduledAgentKind = AgentKind;
 export type ScheduledJobRunStatus = "pending" | "running" | "succeeded" | "failed" | "skipped_offline";
 

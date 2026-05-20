@@ -14,10 +14,20 @@ import type { ReactNode } from "react";
  */
 export const PANE_HEADER_MIN_HEIGHT = 42;
 
+/** Width reserved for macOS traffic-light window controls when the left sidebar is hidden. */
+export const MAC_WINDOW_CONTROLS_INSET_WIDTH = 72;
+
 export type PaneHeaderProps = {
   children: ReactNode;
-  /** Additional CSS class names applied to the root element. */
-  className?: string;
+  /** When true (default), applies `electron-webkit-app-region-drag` so the header is a window drag handle. */
+  windowDraggable?: boolean;
+  /**
+   * When true, inserts a spacer at the far left to clear the macOS traffic-light window controls.
+   * Typically set to `getRendererPlatform() === "darwin" && leftCollapsed`.
+   */
+  showMacInset?: boolean;
+  /** Optional data-testid forwarded to the mac inset spacer element. */
+  macInsetTestId?: string;
   /** Override the default `justifyContent` value ("space-between"). */
   justifyContent?: "space-between" | "flex-start" | "flex-end" | "center";
   /** Extra padding-y override. Defaults to 0. */
@@ -32,10 +42,15 @@ export type PaneHeaderProps = {
  * Provides the consistent 42px minimum height, horizontal padding, bottom border,
  * `background.paper` fill, and flex alignment that was previously duplicated in
  * `LeftPaneView`, `RightPaneView`, and `MainPaneTitleBarView` as `paneHeaderSx`.
+ *
+ * Set `windowDraggable={false}` on the rare header that should not be a drag region.
+ * Set `showMacInset` when the left sidebar may be hidden on macOS.
  */
 export function PaneHeader({
   children,
-  className,
+  windowDraggable = true,
+  showMacInset = false,
+  macInsetTestId,
   justifyContent = "space-between",
   py = 0,
   "data-testid": dataTestId,
@@ -43,7 +58,7 @@ export function PaneHeader({
   return (
     <Box
       component="header"
-      className={className}
+      className={windowDraggable ? "electron-webkit-app-region-drag" : undefined}
       data-testid={dataTestId}
       sx={{
         minHeight: PANE_HEADER_MIN_HEIGHT,
@@ -57,6 +72,9 @@ export function PaneHeader({
         justifyContent,
       }}
     >
+      {showMacInset ? (
+        <Box data-testid={macInsetTestId} sx={{ width: MAC_WINDOW_CONTROLS_INSET_WIDTH, flexShrink: 0 }} />
+      ) : null}
       {children}
     </Box>
   );

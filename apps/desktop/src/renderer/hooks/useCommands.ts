@@ -65,6 +65,15 @@ import {
   loadWorkspaceFromBackend as loadWorkspaceFromBackendCommand,
   updateProjectConfig as updateProjectConfigCommand,
 } from "../commands/projectCommands";
+import {
+  createScheduledJob as createScheduledJobCommand,
+  deleteScheduledJob as deleteScheduledJobCommand,
+  loadScheduledJobs as loadScheduledJobsCommand,
+  pauseScheduledJob as pauseScheduledJobCommand,
+  resumeScheduledJob as resumeScheduledJobCommand,
+  runScheduledJobNow as runScheduledJobNowCommand,
+  updateScheduledJob as updateScheduledJobCommand,
+} from "../commands/scheduledJobCommands";
 import { setSelectedRepo, setSelectedWorkspace } from "../commands/selectionCommands";
 import {
   closeAllTabs as closeAllTabsCommand,
@@ -123,6 +132,13 @@ export type Commands = {
   setSelectedRepoId: (repoId: string) => void;
   setSelectedWorkspaceId: (workspaceId: string) => void;
   listAgentDetectionStatuses: typeof listAgentDetectionStatusesCommand;
+  loadScheduledJobs: typeof loadScheduledJobsCommand;
+  createScheduledJob: typeof createScheduledJobCommand;
+  updateScheduledJob: typeof updateScheduledJobCommand;
+  deleteScheduledJob: typeof deleteScheduledJobCommand;
+  pauseScheduledJob: typeof pauseScheduledJobCommand;
+  resumeScheduledJob: typeof resumeScheduledJobCommand;
+  runScheduledJobNow: typeof runScheduledJobNowCommand;
   listCLIToolStatuses: typeof listCLIToolStatusesCommand;
   checkGitHubConnectionStatus: typeof checkGitHubConnectionStatusCommand;
   setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
@@ -240,6 +256,13 @@ export function useCommands(): Commands {
       setSelectedRepoId: setSelectedRepo,
       setSelectedWorkspaceId: setSelectedWorkspace,
       listAgentDetectionStatuses: listAgentDetectionStatusesCommand,
+      loadScheduledJobs: loadScheduledJobsCommand,
+      createScheduledJob: createScheduledJobCommand,
+      updateScheduledJob: updateScheduledJobCommand,
+      deleteScheduledJob: deleteScheduledJobCommand,
+      pauseScheduledJob: pauseScheduledJobCommand,
+      resumeScheduledJob: resumeScheduledJobCommand,
+      runScheduledJobNow: runScheduledJobNowCommand,
       listCLIToolStatuses: listCLIToolStatusesCommand,
       checkGitHubConnectionStatus: checkGitHubConnectionStatusCommand,
       setDisplayRepoIds: setDisplayRepoIdsCommand,
