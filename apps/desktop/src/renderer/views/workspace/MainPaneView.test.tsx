@@ -699,7 +699,7 @@ describe("MainPaneView", () => {
     expect(openTab).toHaveBeenCalledWith({
       workspaceId: "workspace-1",
       kind: "terminal",
-      title: "Codex",
+      title: "settings.agents.items.codex",
       launchCommand: "codex",
       agentKind: "codex",
       reuseExisting: false,
