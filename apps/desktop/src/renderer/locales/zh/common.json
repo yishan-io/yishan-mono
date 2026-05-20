@@ -721,8 +721,9 @@
     }
   },
   "launch": {
-    "title": "当前没有打开标签",
+    "title": "接下来做什么？",
     "hint": "选择一个操作以开始。",
+    "agents": "使用智能体启动",
     "actions": {
       "openTerminal": "打开终端",
       "openBrowser": "打开浏览器标签",

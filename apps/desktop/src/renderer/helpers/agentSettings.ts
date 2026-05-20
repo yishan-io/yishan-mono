@@ -8,7 +8,7 @@ export const SUPPORTED_DESKTOP_AGENT_KINDS = AGENT_KINDS;
 
 export type DesktopAgentKind = (typeof SUPPORTED_DESKTOP_AGENT_KINDS)[number];
 
-export type AgentIconContext = "tabMenu" | "settingsRow";
+export type AgentIconContext = "tabMenu" | "settingsRow" | "launchGrid";
 export type AgentIconThemeMode = "light" | "dark";
 
 type AgentIconSizeRatio = {
@@ -61,6 +61,7 @@ const AGENT_ICON_SRC_BY_KIND: Record<DesktopAgentKind, string> = {
 const AGENT_ICON_SLOT_SIZE_BY_CONTEXT: Record<AgentIconContext, number> = {
   tabMenu: 16,
   settingsRow: 16,
+  launchGrid: 28,
 };
 
 const AGENT_ICON_SIZE_RATIO_BY_KIND: Record<DesktopAgentKind, AgentIconSizeRatio> = {
