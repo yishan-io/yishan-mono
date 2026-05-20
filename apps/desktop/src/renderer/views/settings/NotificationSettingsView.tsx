@@ -1,4 +1,4 @@
-import { Alert, Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, MenuItem, Stack, Typography } from "@mui/material";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiCheckCircle, BiLoaderAlt, BiXCircle } from "react-icons/bi";
@@ -13,6 +13,7 @@ import { CenteredSpinner } from "../../components/CenteredSpinner";
 import {
   SettingsCard,
   SettingsCheckboxRow,
+  SettingsCompactSelect,
   SettingsRows,
   SettingsSectionHeader,
   SettingsSoundSelectRow,
@@ -238,20 +239,19 @@ export function NotificationSettingsView({ focusItemId }: NotificationSettingsVi
             description={t("org.settings.notifications.general.hint")}
             action={
               <Stack direction="row" alignItems="center" spacing={0.75}>
-                <Box>
-                  <select
-                    aria-label={t("org.settings.notifications.preview.eventTypeLabel")}
-                    value={previewEventType}
-                    disabled={isSaving || isPreviewing || isSoundPreviewing}
-                    onChange={(event) => setPreviewEventType(event.target.value as NotificationEventType)}
-                  >
-                    {NOTIFICATION_EVENT_OPTIONS.map((option) => (
-                      <option key={option.type} value={option.type}>
-                        {t(option.labelKey)}
-                      </option>
-                    ))}
-                  </select>
-                </Box>
+                <SettingsCompactSelect
+                  width={180}
+                  value={previewEventType}
+                  disabled={isSaving || isPreviewing || isSoundPreviewing}
+                  slotProps={{ input: { "aria-label": t("org.settings.notifications.preview.eventTypeLabel") } }}
+                  onChange={(event) => setPreviewEventType(event.target.value as NotificationEventType)}
+                >
+                  {NOTIFICATION_EVENT_OPTIONS.map((option) => (
+                    <MenuItem key={option.type} value={option.type}>
+                      {t(option.labelKey)}
+                    </MenuItem>
+                  ))}
+                </SettingsCompactSelect>
                 {previewIndicatorState ? (
                   <Box
                     role="img"

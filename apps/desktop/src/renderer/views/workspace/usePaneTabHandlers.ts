@@ -1,24 +1,14 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import type { TabBarCreateOption } from "../../components/TabBar";
-import type { DesktopAgentKind } from "../../helpers/agentSettings";
-import type { Commands } from "../../hooks/useCommands";
-import { splitPaneStore } from "../../store/splitPaneStore";
-import type { WorkspaceTab } from "../../store/types";
 import type { SplitDropRegion } from "../../components/SplitDropZone";
 import { resolveDropResult } from "../../components/SplitDropZone";
-
-type AgentTerminalConfig = { title: string; command: string };
-
-const agentTerminalConfigs: Record<Extract<TabBarCreateOption, DesktopAgentKind>, AgentTerminalConfig> = {
-  opencode: { title: "OpenCode", command: "opencode" },
-  codex: { title: "Codex", command: "codex" },
-  claude: { title: "Claude", command: "claude" },
-  gemini: { title: "Gemini", command: "gemini" },
-  pi: { title: "Pi", command: "pi" },
-  copilot: { title: "Copilot", command: "copilot" },
-  cursor: { title: "Cursor", command: "cursor" },
-};
+import type { TabBarCreateOption } from "../../components/TabBar";
+import type { DesktopAgentKind } from "../../helpers/agentSettings";
+import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, resolveAgentLaunchCommand } from "../../helpers/agentSettings";
+import type { Commands } from "../../hooks/useCommands";
+import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
+import { splitPaneStore } from "../../store/splitPaneStore";
+import type { WorkspaceTab } from "../../store/types";
 
 export type UsePaneTabHandlersOptions = {
   workspaceId: string;
@@ -43,6 +33,7 @@ export function usePaneTabHandlers({
   setIsDraggingSplit,
 }: UsePaneTabHandlersOptions) {
   const { t } = useTranslation();
+  const customCommandByAgentKind = agentSettingsStore((state) => state.customCommandByAgentKind);
 
   const handleSelectTab = useCallback(
     (paneId: string, tabId: string) => {
@@ -71,17 +62,18 @@ export function usePaneTabHandlers({
         return;
       }
       if (!enabledAgentKindSet.has(option)) return;
-      const config = agentTerminalConfigs[option];
+      const title = t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[option]);
+      const launchCommand = resolveAgentLaunchCommand(option, customCommandByAgentKind);
       cmd.openTab({
         workspaceId,
         kind: "terminal",
-        title: config.title,
-        launchCommand: config.command,
+        title,
+        launchCommand,
         agentKind: option,
         reuseExisting: false,
       });
     },
-    [cmd, workspaceId, enabledAgentKindSet, t],
+    [cmd, workspaceId, enabledAgentKindSet, customCommandByAgentKind, t],
   );
 
   const handleRenameTab = useCallback(
@@ -170,15 +162,9 @@ export function usePaneTabHandlers({
     [workspaceId, cmd, setFocusContentRequestKey],
   );
 
-  const handleSplitRight = useCallback(
-    (paneId: string) => performSplit(paneId, "horizontal"),
-    [performSplit],
-  );
+  const handleSplitRight = useCallback((paneId: string) => performSplit(paneId, "horizontal"), [performSplit]);
 
-  const handleSplitDown = useCallback(
-    (paneId: string) => performSplit(paneId, "vertical"),
-    [performSplit],
-  );
+  const handleSplitDown = useCallback((paneId: string) => performSplit(paneId, "vertical"), [performSplit]);
 
   const handleTabDragStart = useCallback(() => setIsDraggingSplit(true), [setIsDraggingSplit]);
   const handleTabDragEnd = useCallback(() => setIsDraggingSplit(false), [setIsDraggingSplit]);

@@ -156,6 +156,13 @@
         "detectedVersionUnknown": "Detected version: unknown",
         "notDetected": "Not detected"
       },
+      "command": {
+        "label": "Command",
+        "placeholder": "{{defaultCommand}}",
+        "resetAriaLabel": "Reset to default command",
+        "errorEmpty": "Command cannot be empty.",
+        "errorTooLong": "Command is too long (max 2048 characters)."
+      },
       "items": {
         "opencode": "OpenCode",
         "codex": "Codex",
@@ -380,7 +387,7 @@
           "previewSoundFailed": "Failed to preview notification sound."
         },
         "preview": {
-          "button": "Show Notification Example",
+          "button": "Play",
           "soundButton": "Preview Sound",
           "status": {
             "inProgress": "Sending notification preview",
@@ -744,8 +751,9 @@
     }
   },
   "launch": {
-    "title": "No tabs open",
+    "title": "What's next?",
     "hint": "Choose an action to get started.",
+    "agents": "Start with Agent",
     "actions": {
       "openTerminal": "Open terminal",
       "openBrowser": "Open browser tab",

@@ -496,6 +496,11 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
 export function MainPaneView() {
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const tabs = tabStore((state) => state.tabs);
+  const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
+  const enabledAgentKinds = useMemo(
+    () => SUPPORTED_DESKTOP_AGENT_KINDS.filter((agentKind) => inUseByAgentKind[agentKind]),
+    [inUseByAgentKind],
+  );
 
   useEffect(() => {
     const browserTabIds = new Set(tabs.filter((tab) => tab.kind === "browser").map((tab) => tab.id));
@@ -561,7 +566,7 @@ export function MainPaneView() {
         ))}
         {!hasSelectedWorkspaceTabs && (
           <TabPanel active>
-            <LaunchView />
+            <LaunchView workspaceId={selectedWorkspaceId} enabledAgentKinds={enabledAgentKinds} />
           </TabPanel>
         )}
       </Box>

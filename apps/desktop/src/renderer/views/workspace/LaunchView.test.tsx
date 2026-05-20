@@ -53,9 +53,14 @@ vi.mock("../../shortcuts/shortcutDisplay", () => ({
   },
 }));
 
-vi.mock("../../store/workspaceStore", () => ({
-  workspaceStore: (selector: (state: { selectedWorkspaceId: string }) => unknown) =>
-    selector({ selectedWorkspaceId: "workspace-1", workspaces: [] } as never),
+vi.mock("../../store/workspaceCreateProgressStore", () => ({
+  workspaceCreateProgressStore: (selector: (state: { progressByWorkspaceId: Record<string, unknown> }) => unknown) =>
+    selector({ progressByWorkspaceId: {} }),
+}));
+
+vi.mock("../../store/settings/agentSettingsStore", () => ({
+  agentSettingsStore: (selector: (state: { customCommandByAgentKind: Record<string, unknown> }) => unknown) =>
+    selector({ customCommandByAgentKind: {} }),
 }));
 
 describe("LaunchView", () => {
@@ -65,7 +70,7 @@ describe("LaunchView", () => {
   });
 
   it("shows shortcut labels for launch actions", () => {
-    render(<LaunchView />);
+    render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={[]} />);
 
     expect(screen.getByText("⌘+T")).toBeTruthy();
     expect(screen.getByText("⌘+P")).toBeTruthy();
@@ -73,7 +78,7 @@ describe("LaunchView", () => {
   });
 
   it("runs launch actions when clicked", () => {
-    render(<LaunchView />);
+    render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={[]} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open terminal" }));
     fireEvent.click(screen.getByRole("button", { name: "Open browser tab" }));

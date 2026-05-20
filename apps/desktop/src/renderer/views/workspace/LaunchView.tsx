@@ -10,11 +10,21 @@ import {
   LuSquareTerminal,
   LuTriangleAlert,
 } from "react-icons/lu";
-import { useCommands } from "../../hooks/useCommands";
+import { AgentIcon } from "../../components/AgentIcon";
+import {
+  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
+  AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
+  type DesktopAgentKind,
+  resolveAgentLaunchCommand,
+} from "../../helpers/agentSettings";
 import { getRendererPlatform } from "../../helpers/platform";
+import { useCommands } from "../../hooks/useCommands";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
-import { workspaceCreateProgressStore, type WorkspaceCreateProgressStep } from "../../store/workspaceCreateProgressStore";
-import { workspaceStore } from "../../store/workspaceStore";
+import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
+import {
+  type WorkspaceCreateProgressStep,
+  workspaceCreateProgressStore,
+} from "../../store/workspaceCreateProgressStore";
 
 function CreateProgressStepIcon({ step }: { step: WorkspaceCreateProgressStep }) {
   if (step.status === "completed") {
@@ -44,16 +54,16 @@ function CreateProgressStepIcon({ step }: { step: WorkspaceCreateProgressStep })
   return <LuCircle size={16} />;
 }
 
+export type LaunchViewProps = {
+  workspaceId: string;
+  enabledAgentKinds: DesktopAgentKind[];
+};
+
 /** Renders quick actions when no tab is open in the selected workspace. */
-export function LaunchView() {
+export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) {
   const { t } = useTranslation();
-  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
-  const selectedWorkspace = workspaceStore((state) =>
-    (state.workspaces ?? []).find((workspace) => workspace.id === state.selectedWorkspaceId),
-  );
-  const workspaceCreateProgress = workspaceCreateProgressStore(
-    (state) => state.progressByWorkspaceId[selectedWorkspaceId],
-  );
+  const customCommandByAgentKind = agentSettingsStore((state) => state.customCommandByAgentKind);
+  const workspaceCreateProgress = workspaceCreateProgressStore((state) => state.progressByWorkspaceId[workspaceId]);
   const { openTab, openWorkspaceFileSearch } = useCommands();
   const platform = getRendererPlatform();
   const isPreparingWorkspace = Boolean(workspaceCreateProgress && !workspaceCreateProgress.isComplete);
@@ -66,7 +76,7 @@ export function LaunchView() {
       icon: <LuSquareTerminal size={16} />,
       onClick: () =>
         openTab({
-          workspaceId: selectedWorkspaceId,
+          workspaceId,
           kind: "terminal",
           title: t("terminal.title"),
           reuseExisting: false,
@@ -79,7 +89,7 @@ export function LaunchView() {
       icon: <LuGlobe size={16} />,
       onClick: () =>
         openTab({
-          workspaceId: selectedWorkspaceId,
+          workspaceId,
           kind: "browser",
           url: "",
         }),
@@ -133,7 +143,7 @@ export function LaunchView() {
               sx={{
                 display: "flex",
                 alignItems: "flex-start",
-                gap: 1,
+              gap: 1.5,
                 border: 1,
                 borderColor: "divider",
                 borderRadius: 1,
@@ -177,21 +187,16 @@ export function LaunchView() {
       <Typography variant="body2" color="text.secondary">
         {t("launch.hint")}
       </Typography>
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 1.25,
-          width: 260,
-        }}
-      >
+
+      {/* Quick-action list */}
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2, width: 260 }}>
         {launchActions.map((action) => (
           <Box
             key={action.id}
             component="button"
             type="button"
             onClick={action.onClick}
-            disabled={!selectedWorkspaceId}
+            disabled={!workspaceId}
             sx={{
               minHeight: 40,
               border: 1,
@@ -204,9 +209,14 @@ export function LaunchView() {
               alignItems: "center",
               justifyContent: "space-between",
               gap: 1,
-              cursor: selectedWorkspaceId ? "pointer" : "not-allowed",
+              cursor: workspaceId ? "pointer" : "not-allowed",
               textAlign: "left",
               typography: "body2",
+              transition: "background-color 0.15s, border-color 0.15s",
+              "&:hover:not(:disabled)": {
+                bgcolor: "action.hover",
+                borderColor: "action.selected",
+              },
             }}
           >
             <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
@@ -227,6 +237,78 @@ export function LaunchView() {
           </Box>
         ))}
       </Box>
+
+      {/* Agent grid */}
+      {enabledAgentKinds.length > 0 && (
+        <Box sx={{ width: "min(360px, 100%)", mt: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ display: "block", mb: 2, textAlign: "center" }}>
+            {t("launch.agents")}
+          </Typography>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${Math.min(enabledAgentKinds.length, 4)}, 80px)`,
+              justifyContent: "center",
+              gap: 2,
+            }}
+          >
+            {enabledAgentKinds.map((agentKind) => {
+              const label = t(AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND[agentKind]);
+              const launchCommand = resolveAgentLaunchCommand(agentKind, customCommandByAgentKind);
+              return (
+                <Box
+                  key={agentKind}
+                  component="button"
+                  type="button"
+                  disabled={!workspaceId}
+                  onClick={() =>
+                    openTab({
+                      workspaceId,
+                      kind: "terminal",
+                      title: t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind]),
+                      launchCommand,
+                      agentKind,
+                      reuseExisting: false,
+                    })
+                  }
+                  sx={{
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    bgcolor: "background.paper",
+                    color: "text.secondary",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 1.5,
+                    py: 1.25,
+                    px: 0.5,
+                    cursor: workspaceId ? "pointer" : "not-allowed",
+                    minWidth: 0,
+                    transition: "background-color 0.15s, border-color 0.15s",
+                    "&:hover:not(:disabled)": {
+                      bgcolor: "action.hover",
+                      borderColor: "action.selected",
+                    },
+                  }}
+                  aria-label={label}
+                >
+                  <AgentIcon agentKind={agentKind} context="launchGrid" decorative />
+                  <Typography
+                    variant="caption"
+                    component="span"
+                    noWrap
+                    sx={{ fontSize: "0.7rem", lineHeight: 1, maxWidth: "100%" }}
+                  >
+                    {label}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }
