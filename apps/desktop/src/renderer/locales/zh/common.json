@@ -793,6 +793,7 @@
         "name": "名称",
         "status": "状态",
         "project": "项目",
+        "node": "节点",
         "cronExpression": "计划",
         "timezone": "时区",
         "nextRunAt": "下次运行",

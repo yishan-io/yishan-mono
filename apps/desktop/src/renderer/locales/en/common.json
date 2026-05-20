@@ -837,6 +837,7 @@
         "name": "Name",
         "status": "Status",
         "project": "Project",
+        "node": "Node",
         "cronExpression": "Schedule",
         "timezone": "Timezone",
         "nextRunAt": "Next run",

@@ -270,6 +270,11 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
   const isPending = scheduledJobStore((state) => state.pendingActionIds.includes(job.id));
   const orgId = sessionStore((state) => state.selectedOrganizationId ?? "");
   const project = workspaceStore((state) => state.projects.find((p) => p.id === job.projectId));
+  const nodeQuery = useQuery({
+    queryKey: ["org-nodes", orgId],
+    queryFn: () => api.node.listByOrg(orgId),
+    enabled: Boolean(orgId),
+  });
   const { pauseScheduledJob, resumeScheduledJob, runScheduledJobNow, deleteScheduledJob } = useCommands();
   const [runsPaneWidth, setRunsPaneWidth] = useState(RUNS_PANE_DEFAULT_WIDTH);
   const dragRef = useRef({ startX: 0, startWidth: 0 });
@@ -312,6 +317,7 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
   const canRunNow = !isPending;
 
   const statusDotColor = job.status === "active" ? "success.main" : "text.disabled";
+  const nodeName = nodeQuery.data?.find((node) => node.id === job.nodeId)?.name ?? job.nodeId;
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -442,6 +448,10 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
                     —
                   </Typography>
                 )}
+              </FieldRow>
+
+              <FieldRow label={t("scheduledJob.detail.fields.node")}>
+                <Typography variant="body2">{nodeName}</Typography>
               </FieldRow>
 
               <FieldRow label={t("scheduledJob.detail.fields.cronExpression")}>
