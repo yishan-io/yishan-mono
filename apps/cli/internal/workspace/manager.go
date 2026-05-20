@@ -469,6 +469,22 @@ func (m *Manager) GitRemoveBranch(ctx context.Context, workspaceID string, branc
 	return m.gits.RemoveBranch(ctx, ws.Path, branch, force)
 }
 
+func (m *Manager) GitPrMerge(ctx context.Context, workspaceID string, prNumber int, method string, deleteBranch bool) (string, error) {
+	ws, err := m.getWorkspace(workspaceID)
+	if err != nil {
+		return "", err
+	}
+	return m.gits.MergePullRequest(ctx, ws.Path, prNumber, method, deleteBranch)
+}
+
+func (m *Manager) GitPrClose(ctx context.Context, workspaceID string, prNumber int) (string, error) {
+	ws, err := m.getWorkspace(workspaceID)
+	if err != nil {
+		return "", err
+	}
+	return m.gits.ClosePullRequest(ctx, ws.Path, prNumber)
+}
+
 func (m *Manager) GitCreateWorktree(ctx context.Context, workspaceID string, branch string, worktreePath string, createBranch bool, fromRef string) error {
 	ws, err := m.getWorkspace(workspaceID)
 	if err != nil {

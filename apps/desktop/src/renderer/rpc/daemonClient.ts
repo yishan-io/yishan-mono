@@ -116,6 +116,8 @@ export class DaemonClient {
     publishBranch: (input: Rpc.GitWorktreeInput) => this._gitClient.publishBranch(input),
     renameBranch: (input: Rpc.GitRenameBranchInput) => this._gitClient.renameBranch(input),
     getAuthorName: (input: Rpc.GitWorktreeInput) => this._gitClient.getAuthorName(input),
+    mergePullRequest: (input: Rpc.GitPrMergeInput) => this._gitClient.mergePullRequest(input),
+    closePullRequest: (input: Rpc.GitPrCloseInput) => this._gitClient.closePullRequest(input),
   };
 
   readonly terminal = {

@@ -66,6 +66,8 @@ export type DaemonRpcClient = {
     readCommitDiff: (input: Rpc.GitCommitDiffInput) => Promise<Rpc.GitDiffContentResponse>;
     readBranchComparisonDiff: (input: Rpc.GitBranchDiffInput) => Promise<Rpc.GitDiffContentResponse>;
     renameBranch: (input: Rpc.GitRenameBranchInput) => Promise<Rpc.GitStatusOperationResponse>;
+    mergePullRequest: (input: Rpc.GitPrMergeInput) => Promise<{ output: string }>;
+    closePullRequest: (input: Rpc.GitPrCloseInput) => Promise<{ output: string }>;
   };
   terminal: {
     createSession: (input?: Rpc.TerminalCreateSessionInput) => Promise<Rpc.TerminalCreateSessionResponse>;

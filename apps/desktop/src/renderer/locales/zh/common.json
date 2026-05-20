@@ -446,7 +446,18 @@
       "noChecks": "暂无检查信息。",
       "deployments": "部署",
       "noDeployments": "暂无部署信息。",
-      "history": "历史记录"
+      "history": "历史记录",
+      "merge": "合并",
+      "squash": "压缩合并",
+      "rebase": "变基合并",
+      "mergeCommit": "创建合并提交",
+      "squashMerge": "压缩并合并",
+      "rebaseMerge": "变基并合并",
+      "deleteBranch": "合并后删除远程分支",
+      "close": "关闭",
+      "closeConfirm": "关闭而不合并将丢弃此 PR 中的更改。",
+      "merging": "正在合并…",
+      "closing": "正在关闭…"
     }
   },
   "repo": {

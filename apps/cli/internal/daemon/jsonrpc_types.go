@@ -129,6 +129,18 @@ type gitRemoveBranchParams struct {
 	Force       bool   `json:"force,omitempty"`
 }
 
+type gitPrMergeParams struct {
+	WorkspaceID  string `json:"workspaceId"`
+	PrNumber     int    `json:"prNumber"`
+	Method       string `json:"method,omitempty"`
+	DeleteBranch bool   `json:"deleteBranch,omitempty"`
+}
+
+type gitPrCloseParams struct {
+	WorkspaceID string `json:"workspaceId"`
+	PrNumber    int    `json:"prNumber"`
+}
+
 type gitCreateWorktreeParams struct {
 	WorkspaceID  string `json:"workspaceId"`
 	Branch       string `json:"branch"`

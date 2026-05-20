@@ -47,6 +47,8 @@ const (
 	MethodGitPublish           = "git.publish"
 	MethodGitRenameBranch      = "git.renameBranch"
 	MethodGitRemoveBranch      = "git.removeBranch"
+	MethodGitPrMerge           = "git.prMerge"
+	MethodGitPrClose           = "git.prClose"
 
 	MethodGitWorktreeCreate = "git.worktree.create"
 	MethodGitWorktreeRemove = "git.worktree.remove"

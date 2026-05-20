@@ -160,4 +160,32 @@ export class DaemonGitClient {
     const workspaceId = await this.resolveWorkspaceId(input);
     return (await this.invoke("git.authorName", { workspaceId })) as string;
   }
+
+  async mergePullRequest(input: Rpc.GitPrMergeInput): Promise<{ output: string }> {
+    const record = asRecord(input);
+    const workspaceId = await this.resolveWorkspaceId(input);
+    const prNumber = record?.prNumber;
+    if (typeof prNumber !== "number" || prNumber <= 0) {
+      throw new Error("prNumber is required");
+    }
+    return (await this.invoke("git.prMerge", {
+      workspaceId,
+      prNumber,
+      method: readOptionalString(record?.method),
+      deleteBranch: readOptionalBoolean(record?.deleteBranch),
+    })) as { output: string };
+  }
+
+  async closePullRequest(input: Rpc.GitPrCloseInput): Promise<{ output: string }> {
+    const record = asRecord(input);
+    const workspaceId = await this.resolveWorkspaceId(input);
+    const prNumber = record?.prNumber;
+    if (typeof prNumber !== "number" || prNumber <= 0) {
+      throw new Error("prNumber is required");
+    }
+    return (await this.invoke("git.prClose", {
+      workspaceId,
+      prNumber,
+    })) as { output: string };
+  }
 }

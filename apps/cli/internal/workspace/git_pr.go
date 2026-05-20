@@ -264,6 +264,29 @@ func (s *GitService) getPullRequestDeployments(ctx context.Context, root string,
 	return result, nil
 }
 
+func (s *GitService) MergePullRequest(ctx context.Context, root string, prNumber int, method string, deleteBranch bool) (string, error) {
+	args := []string{"pr", "merge", fmt.Sprintf("%d", prNumber)}
+
+	switch method {
+	case "squash":
+		args = append(args, "--squash")
+	case "rebase":
+		args = append(args, "--rebase")
+	default:
+		args = append(args, "--merge")
+	}
+
+	if deleteBranch {
+		args = append(args, "--delete-branch")
+	}
+
+	return s.ghCommand(ctx, root, args...)
+}
+
+func (s *GitService) ClosePullRequest(ctx context.Context, root string, prNumber int) (string, error) {
+	return s.ghCommand(ctx, root, "pr", "close", fmt.Sprintf("%d", prNumber))
+}
+
 func (s *GitService) getDeploymentStatus(ctx context.Context, root string, repo string, deploymentID int64) (state string, environmentURL string, description string, err error) {
 	type ghDeploymentStatus struct {
 		State          string `json:"state"`

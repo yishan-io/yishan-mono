@@ -132,6 +132,26 @@ func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params 
 			return nil, err
 		}
 		return map[string]bool{"removed": true}, nil
+	case MethodGitPrMerge:
+		var req gitPrMergeParams
+		if err := decodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		out, err := h.manager.GitPrMerge(ctx, req.WorkspaceID, req.PrNumber, req.Method, req.DeleteBranch)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]string{"output": out}, nil
+	case MethodGitPrClose:
+		var req gitPrCloseParams
+		if err := decodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		out, err := h.manager.GitPrClose(ctx, req.WorkspaceID, req.PrNumber)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]string{"output": out}, nil
 	case MethodGitWorktreeCreate:
 		var req gitCreateWorktreeParams
 		if err := decodeParams(params, &req); err != nil {

@@ -177,3 +177,31 @@ export async function getGitAuthorName(params: { workspaceWorktreePath: string }
     inFlightGitAuthorNameByWorktreePath.delete(normalizedWorkspaceWorktreePath);
   }
 }
+
+/** Merges one pull request for one workspace through the daemon gh CLI. */
+export async function mergePullRequest(params: {
+  workspaceWorktreePath: string;
+  prNumber: number;
+  method?: "merge" | "squash" | "rebase";
+  deleteBranch?: boolean;
+}): Promise<{ output: string }> {
+  const client = await getDaemonClient();
+  return client.git.mergePullRequest({
+    workspaceWorktreePath: params.workspaceWorktreePath,
+    prNumber: params.prNumber,
+    method: params.method,
+    deleteBranch: params.deleteBranch,
+  });
+}
+
+/** Closes one pull request for one workspace through the daemon gh CLI. */
+export async function closePullRequest(params: {
+  workspaceWorktreePath: string;
+  prNumber: number;
+}): Promise<{ output: string }> {
+  const client = await getDaemonClient();
+  return client.git.closePullRequest({
+    workspaceWorktreePath: params.workspaceWorktreePath,
+    prNumber: params.prNumber,
+  });
+}

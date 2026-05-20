@@ -476,7 +476,18 @@
       "noChecks": "No checks available.",
       "deployments": "Deployments",
       "noDeployments": "No deployments available.",
-      "history": "History"
+      "history": "History",
+      "merge": "Merge",
+      "squash": "Squash merge",
+      "rebase": "Rebase merge",
+      "mergeCommit": "Create a merge commit",
+      "squashMerge": "Squash and merge",
+      "rebaseMerge": "Rebase and merge",
+      "deleteBranch": "Delete remote branch after merge",
+      "close": "Close",
+      "closeConfirm": "Closing without merging will discard changes in this PR.",
+      "merging": "Merging…",
+      "closing": "Closing…"
     }
   },
   "repo": {

@@ -255,6 +255,18 @@ export type GitRenameBranchInput = {
   nextBranch: string;
 };
 
+export type GitPrMergeInput = {
+  workspaceWorktreePath: string;
+  prNumber: number;
+  method?: "merge" | "squash" | "rebase";
+  deleteBranch?: boolean;
+};
+
+export type GitPrCloseInput = {
+  workspaceWorktreePath: string;
+  prNumber: number;
+};
+
 export type TerminalCreateSessionInput = {
   workspaceId?: string;
   workspaceWorktreePath?: string;
