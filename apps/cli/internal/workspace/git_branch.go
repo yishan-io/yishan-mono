@@ -83,10 +83,6 @@ func (s *GitService) ListBranches(ctx context.Context, root string) (GitBranchLi
 		return entry.data, nil
 	}
 
-	fetchCtx, cancel := context.WithTimeout(ctx, fetchTimeout)
-	s.FetchRef(fetchCtx, root, "")
-	cancel()
-
 	list, err := s.listBranchesFromGit(ctx, root)
 	if err != nil {
 		return GitBranchList{}, err
@@ -95,7 +91,16 @@ func (s *GitService) ListBranches(ctx context.Context, root string) (GitBranchLi
 	s.mu.Lock()
 	s.branchCache[root] = branchCacheEntry{data: list, at: time.Now()}
 	s.mu.Unlock()
+
+	go s.backgroundFetchBranches(root)
+
 	return list, nil
+}
+
+func (s *GitService) backgroundFetchBranches(root string) {
+	ctx, cancel := context.WithTimeout(context.Background(), fetchTimeout)
+	defer cancel()
+	_ = s.FetchRef(ctx, root, "")
 }
 
 func (s *GitService) listBranchesFromGit(ctx context.Context, root string) (GitBranchList, error) {
@@ -214,6 +219,38 @@ func (s *GitService) RemoveBranch(ctx context.Context, root string, branch strin
 		flag = "-D"
 	}
 	_, err := gitCommandCombined(ctx, root, "branch", flag, branch)
+	return err
+}
+
+func (s *GitService) RefExists(ctx context.Context, root string, ref string) bool {
+	if strings.TrimSpace(ref) == "" || ref == "HEAD" {
+		return false
+	}
+	_, err := gitCommand(ctx, root, "rev-parse", "--verify", ref)
+	return err == nil
+}
+
+func (s *GitService) FetchRefShallow(ctx context.Context, root string, ref string) error {
+	remotesOut, err := gitCommand(ctx, root, "remote")
+	if err != nil {
+		return err
+	}
+	remotes := splitNonEmptyLines(remotesOut)
+	if len(remotes) == 0 {
+		return nil
+	}
+
+	remote := "origin"
+	if !slices.Contains(remotes, "origin") {
+		remote = remotes[0]
+	}
+
+	args := []string{"fetch", remote, "--quiet", "--no-tags", "--depth=1"}
+	if strings.TrimSpace(ref) != "" && ref != "HEAD" {
+		args = append(args, ref)
+	}
+
+	_, err = gitCommandCombined(ctx, root, args...)
 	return err
 }
 

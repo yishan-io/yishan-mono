@@ -59,6 +59,16 @@ type resolvedCreatePaths struct {
 	repoKey      string // validated relative path, used for context dir resolution
 }
 
+// CreateStepTimeouts maps step IDs to their timeout durations.
+type CreateStepTimeouts map[string]time.Duration
+
+// defaultCreateStepTimeouts provides the fallback timeout for each creation step.
+var defaultCreateStepTimeouts = CreateStepTimeouts{
+	"worktree": 30 * time.Minute,
+	"context":  30 * time.Second,
+	"setup":    5 * time.Minute,
+}
+
 func (m *Manager) CreateWorkspace(ctx context.Context, req CreateRequest) (Workspace, error) {
 	return m.CreateWorkspaceWithProgress(ctx, req, nil)
 }
@@ -153,11 +163,13 @@ func resolveCreatePaths(req CreateRequest) (resolvedCreatePaths, error) {
 }
 
 // makeWorktreeStep returns the step that creates the local git worktree.
+// It tries worktree add first (cheap, uses existing local objects). Only when
+// the ref is missing does it do a narrow shallow fetch of just that branch.
 func makeWorktreeStep(m *Manager, req CreateRequest, paths resolvedCreatePaths) createProgressStep {
 	return createProgressStep{
 		ID:      "worktree",
 		Label:   "Create local worktree",
-		Timeout: 10 * time.Minute,
+		Timeout: defaultCreateStepTimeouts["worktree"],
 		Run: func(stepCtx context.Context) (CreateProgressStatus, string, error) {
 			err := m.gits.CreateWorktree(stepCtx, paths.sourcePath, req.TargetBranch, paths.worktreePath, true, strings.TrimSpace(req.SourceBranch))
 			if err == nil {
@@ -168,8 +180,7 @@ func makeWorktreeStep(m *Manager, req CreateRequest, paths resolvedCreatePaths) 
 				return CreateProgressFailed, err.Error(), err
 			}
 
-			// Fetch missing ref and retry.
-			if fetchErr := m.gits.FetchRef(stepCtx, paths.sourcePath, strings.TrimSpace(req.SourceBranch)); fetchErr != nil {
+			if fetchErr := m.gits.FetchRefShallow(stepCtx, paths.sourcePath, strings.TrimSpace(req.SourceBranch)); fetchErr != nil {
 				return CreateProgressFailed, fetchErr.Error(), fetchErr
 			}
 
@@ -186,7 +197,7 @@ func makeContextStep(req CreateRequest, paths resolvedCreatePaths) createProgres
 	return createProgressStep{
 		ID:      "context",
 		Label:   "Link project context",
-		Timeout: 30 * time.Second,
+		Timeout: defaultCreateStepTimeouts["context"],
 		Run: func(stepCtx context.Context) (CreateProgressStatus, string, error) {
 			if !req.ContextEnabled {
 				return CreateProgressSkipped, "Context link disabled", nil
@@ -211,7 +222,7 @@ func makeSetupHookStep(req CreateRequest, ws *Workspace) createProgressStep {
 	return createProgressStep{
 		ID:      "setup",
 		Label:   "Run setup script",
-		Timeout: 5 * time.Minute,
+		Timeout: defaultCreateStepTimeouts["setup"],
 		Run: func(stepCtx context.Context) (CreateProgressStatus, string, error) {
 			hookResult, hookErr := RunHook(stepCtx, HookRequest{
 				Command:       req.SetupHook,

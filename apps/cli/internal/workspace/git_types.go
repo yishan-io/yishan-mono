@@ -2,7 +2,7 @@ package workspace
 
 import "time"
 
-const fetchTimeout = 15 * time.Second
+const fetchTimeout = 30 * time.Second
 const branchCacheTTL = 30 * time.Second
 const branchPullRequestCacheTTL = 30 * time.Second
 
