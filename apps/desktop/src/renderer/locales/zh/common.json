@@ -110,6 +110,21 @@
         "unknownVersion": "未知"
       }
     },
+    "account": {
+      "title": "账号资料",
+      "description": "查看与已登录的 Yishan 账号关联的个人资料。",
+      "loading": "正在加载个人资料信息...",
+      "empty": "暂无已登录的用户资料。",
+      "avatarAlt": "用户头像",
+      "fields": {
+        "name": "姓名",
+        "email": "邮箱",
+        "userId": "用户 ID"
+      },
+      "values": {
+        "notAvailable": "不可用"
+      }
+    },
     "git": {
       "workspace": {
         "title": "工作区分支命名",
