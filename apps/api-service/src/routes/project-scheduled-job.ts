@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 
 import {
   createScheduledJobHandler,
+  deleteScheduledJobHandler,
   disableScheduledJobHandler,
   listScheduledJobRunsHandler,
   listScheduledJobsHandler,
@@ -63,6 +64,12 @@ scheduledJobRouter.put(
   "/:jobId/disable",
   zValidator("param", scheduledJobParamsSchema, validationErrorResponse),
   (c) => disableScheduledJobHandler(c, c.req.valid("param"))
+);
+
+scheduledJobRouter.delete(
+  "/:jobId",
+  zValidator("param", scheduledJobParamsSchema, validationErrorResponse),
+  (c) => deleteScheduledJobHandler(c, c.req.valid("param"))
 );
 
 scheduledJobRouter.get(

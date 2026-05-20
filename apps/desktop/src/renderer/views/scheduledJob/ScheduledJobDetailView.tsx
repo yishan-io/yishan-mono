@@ -237,7 +237,7 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
   const isPending = scheduledJobStore((state) => state.pendingActionIds.includes(job.id));
   const orgId = sessionStore((state) => state.selectedOrganizationId ?? "");
   const project = workspaceStore((state) => state.projects.find((p) => p.id === job.projectId));
-  const { pauseScheduledJob, resumeScheduledJob, disableScheduledJob } = useCommands();
+  const { pauseScheduledJob, resumeScheduledJob, deleteScheduledJob } = useCommands();
   const [runsPaneWidth, setRunsPaneWidth] = useState(RUNS_PANE_DEFAULT_WIDTH);
   const dragRef = useRef({ startX: 0, startWidth: 0 });
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -267,13 +267,13 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
   const handleConfirmDelete = useCallback(async () => {
     setIsDeleting(true);
     try {
-      await disableScheduledJob(job.id);
+      await deleteScheduledJob(job.id);
       onBack();
     } finally {
       setIsDeleting(false);
       setIsDeleteOpen(false);
     }
-  }, [disableScheduledJob, job.id, onBack]);
+  }, [deleteScheduledJob, job.id, onBack]);
 
   const canPause = job.status === "active" && !isPending;
   const canResume = job.status === "paused" && !isPending;

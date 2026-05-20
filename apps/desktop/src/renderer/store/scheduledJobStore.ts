@@ -13,6 +13,7 @@ type ScheduledJobStoreState = {
   setScheduledJobs: (jobs: ScheduledJobRecord[]) => void;
   setLoadState: (loadState: ScheduledJobLoadState, loadError?: string | null) => void;
   upsertScheduledJob: (job: ScheduledJobRecord) => void;
+  removeScheduledJob: (jobId: string) => void;
   addPendingActionId: (jobId: string) => void;
   removePendingActionId: (jobId: string) => void;
 };
@@ -38,6 +39,11 @@ export const scheduledJobStore = create<ScheduledJobStoreState>()(
         } else {
           state.scheduledJobs.push(job);
         }
+      });
+    },
+    removeScheduledJob: (jobId) => {
+      set((state) => {
+        state.scheduledJobs = state.scheduledJobs.filter((job) => job.id !== jobId);
       });
     },
     addPendingActionId: (jobId) => {

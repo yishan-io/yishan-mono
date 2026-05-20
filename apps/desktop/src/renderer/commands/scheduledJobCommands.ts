@@ -18,9 +18,9 @@ export async function updateScheduledJob(jobId: string, input: UpdateScheduledJo
 }
 
 /**
- * Disables one scheduled job by ID and updates the store entry on success.
+ * Soft-deletes one scheduled job by ID and removes it from the store on success.
  */
-export async function disableScheduledJob(jobId: string): Promise<void> {
+export async function deleteScheduledJob(jobId: string): Promise<void> {
   const orgId = sessionStore.getState().selectedOrganizationId;
   if (!orgId) {
     return;
@@ -29,8 +29,8 @@ export async function disableScheduledJob(jobId: string): Promise<void> {
   scheduledJobStore.getState().addPendingActionId(jobId);
 
   try {
-    const updated = await api.scheduledJob.disable(orgId, jobId);
-    scheduledJobStore.getState().upsertScheduledJob(updated);
+    await api.scheduledJob.delete(orgId, jobId);
+    scheduledJobStore.getState().removeScheduledJob(jobId);
   } finally {
     scheduledJobStore.getState().removePendingActionId(jobId);
   }

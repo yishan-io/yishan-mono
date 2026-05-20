@@ -176,7 +176,7 @@ describe("ScheduledJobService.listScheduledJobs", () => {
   });
 });
 
-// ── pauseScheduledJob / resumeScheduledJob / disableScheduledJob ───────────────
+// ── pauseScheduledJob / resumeScheduledJob / disableScheduledJob / deleteScheduledJob ──
 
 describe("ScheduledJobService status mutations", () => {
   function makeServiceWithJob(status = "active") {
@@ -219,6 +219,30 @@ describe("ScheduledJobService status mutations", () => {
     await expect(
       service.disableScheduledJob({ organizationId: "org-1", jobId: "missing", actorUserId: "u1" }),
     ).rejects.toBeInstanceOf(ScheduledJobNotFoundError);
+  });
+
+  it("deleteScheduledJob throws ScheduledJobNotFoundError when job does not exist", async () => {
+    const { db, mockLimit } = createMockDb();
+    mockLimit.mockResolvedValueOnce([]);
+    const service = new ScheduledJobService(db, makeOrgService("member"));
+
+    await expect(
+      service.deleteScheduledJob({ organizationId: "org-1", jobId: "missing", actorUserId: "u1" }),
+    ).rejects.toBeInstanceOf(ScheduledJobNotFoundError);
+  });
+
+  it("deleteScheduledJob marks the job as deleted", async () => {
+    const { db, mockLimit, mockUpdateSet } = createMockDb();
+    mockLimit.mockResolvedValueOnce([{ ...JOB_ROW, status: "active" }]);
+    const service = new ScheduledJobService(db, makeOrgService("member"));
+
+    await service.deleteScheduledJob({ organizationId: "org-1", jobId: "job-1", actorUserId: "user-1" });
+
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "deleted",
+      }),
+    );
   });
 });
 

@@ -134,10 +134,9 @@ export async function updateScheduledJob(
   return response.job;
 }
 
-/** Disables one scheduled job so it no longer runs or appears active. */
-export async function disableScheduledJob(orgId: string, jobId: string): Promise<ScheduledJobRecord> {
-  const response = await requestJson<{ job: ScheduledJobRecord }>(`/orgs/${orgId}/scheduled-jobs/${jobId}/disable`, {
-    method: "PUT",
+/** Soft-deletes one scheduled job so it no longer appears in job lists. */
+export async function deleteScheduledJob(orgId: string, jobId: string): Promise<void> {
+  await requestJson<{ ok: boolean }>(`/orgs/${orgId}/scheduled-jobs/${jobId}`, {
+    method: "DELETE",
   });
-  return response.job;
 }

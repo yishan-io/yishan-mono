@@ -3,7 +3,7 @@ import { createOrganization, listOrganizationMembers, listOrganizations } from "
 import { createProject, deleteProject, listProjects, updateProject } from "./projectApi";
 import {
   createScheduledJob,
-  disableScheduledJob,
+  deleteScheduledJob,
   listScheduledJobRuns,
   listScheduledJobs,
   pauseScheduledJob,
@@ -42,7 +42,7 @@ export const api = {
     update: updateScheduledJob,
     pause: pauseScheduledJob,
     resume: resumeScheduledJob,
-    disable: disableScheduledJob,
+    delete: deleteScheduledJob,
     listRuns: listScheduledJobRuns,
   },
 };

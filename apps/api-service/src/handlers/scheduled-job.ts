@@ -114,6 +114,18 @@ export async function disableScheduledJobHandler(c: AppContext, params: Schedule
   return c.json({ job });
 }
 
+export async function deleteScheduledJobHandler(c: AppContext, params: ScheduledJobParamsInput) {
+  const actorUser = c.get("sessionUser");
+  await c.get("services").scheduledJob.deleteScheduledJob({
+    actorUserId: actorUser.id,
+    actorRole: c.get("organizationRole"),
+    organizationId: params.orgId,
+    jobId: params.jobId,
+  });
+
+  return c.json({ ok: true }, StatusCodes.OK);
+}
+
 export async function listScheduledJobRunsHandler(
   c: AppContext,
   params: ScheduledJobParamsInput,

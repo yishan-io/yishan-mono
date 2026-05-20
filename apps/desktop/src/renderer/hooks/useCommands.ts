@@ -67,7 +67,7 @@ import {
 } from "../commands/projectCommands";
 import {
   createScheduledJob as createScheduledJobCommand,
-  disableScheduledJob as disableScheduledJobCommand,
+  deleteScheduledJob as deleteScheduledJobCommand,
   loadScheduledJobs as loadScheduledJobsCommand,
   pauseScheduledJob as pauseScheduledJobCommand,
   resumeScheduledJob as resumeScheduledJobCommand,
@@ -133,7 +133,7 @@ export type Commands = {
   loadScheduledJobs: typeof loadScheduledJobsCommand;
   createScheduledJob: typeof createScheduledJobCommand;
   updateScheduledJob: typeof updateScheduledJobCommand;
-  disableScheduledJob: typeof disableScheduledJobCommand;
+  deleteScheduledJob: typeof deleteScheduledJobCommand;
   pauseScheduledJob: typeof pauseScheduledJobCommand;
   resumeScheduledJob: typeof resumeScheduledJobCommand;
   listCLIToolStatuses: typeof listCLIToolStatusesCommand;
@@ -255,7 +255,7 @@ export function useCommands(): Commands {
       loadScheduledJobs: loadScheduledJobsCommand,
       createScheduledJob: createScheduledJobCommand,
       updateScheduledJob: updateScheduledJobCommand,
-      disableScheduledJob: disableScheduledJobCommand,
+      deleteScheduledJob: deleteScheduledJobCommand,
       pauseScheduledJob: pauseScheduledJobCommand,
       resumeScheduledJob: resumeScheduledJobCommand,
       listCLIToolStatuses: listCLIToolStatusesCommand,
