@@ -751,6 +751,96 @@
       "selectTabByIndex": "按序号切换标签"
     }
   },
+  "scheduledJob": {
+    "title": "自动驾驶",
+    "loadError": "加载自动任务失败。",
+    "empty": "当前组织尚未配置自动任务。",
+    "status": {
+      "active": "运行中",
+      "paused": "已暂停",
+      "disabled": "已禁用"
+    },
+    "lastRun": {
+      "succeeded": "最近一次运行成功",
+      "failed": "最近一次运行失败"
+    },
+    "columns": {
+      "name": "名称",
+      "project": "项目",
+      "schedule": "计划",
+      "agent": "代理",
+      "status": "状态",
+      "lastRun": "最近运行",
+      "nextRun": "下次运行"
+    },
+    "runs": {
+      "title": "运行历史",
+      "refresh": "刷新",
+      "empty": "暂无运行记录。",
+      "resizeLabel": "调整运行历史面板大小",
+      "nextRun": "下次运行",
+      "status": {
+        "pending": "等待中",
+        "running": "运行中",
+        "succeeded": "成功",
+        "failed": "失败",
+        "skipped_offline": "已跳过"
+      }
+    },
+    "detail": {
+      "back": "返回自动任务",
+      "fields": {
+        "name": "名称",
+        "status": "状态",
+        "project": "项目",
+        "cronExpression": "计划",
+        "timezone": "时区",
+        "nextRunAt": "下次运行",
+        "agentKind": "代理",
+        "prompt": "提示词",
+        "model": "模型",
+        "command": "命令",
+        "lastRunAt": "最近运行",
+        "lastError": "最近错误",
+        "createdAt": "创建时间",
+        "updatedAt": "更新时间"
+      }
+    },
+    "delete": {
+      "title": "删除自动任务？",
+      "description": "\"{{name}}\" 将被禁用并停止运行。此操作不可撤销。",
+      "confirm": "删除"
+    },
+    "edit": {
+      "title": "编辑自动任务",
+      "save": "保存"
+    },
+    "actions": {
+      "pause": "暂停",
+      "resume": "恢复",
+      "retry": "重试",
+      "new": "新建",
+      "edit": "编辑",
+      "delete": "删除",
+      "close": "关闭",
+      "openDetails": "查看 {{name}} 详情"
+    },
+    "form": {
+      "title": "新建自动任务",
+      "name": "名称",
+      "namePlaceholder": "我的每日任务",
+      "project": "项目",
+      "node": "节点",
+      "agentKind": "代理",
+      "cronExpression": "计划（Cron）",
+      "cronExpressionPlaceholder": "0 9 * * 1-5",
+      "timezone": "时区",
+      "prompt": "提示词",
+      "promptPlaceholder": "描述代理需要执行的任务...",
+      "submit": "创建",
+      "creating": "创建中..."
+    }
+  },
   "routing": {
     "notFound": {
       "title": "路由不存在",

@@ -102,7 +102,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
           variant="caption"
           sx={{ color: "text.disabled", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}
         >
-          Workspaces
+          {t("project.list.workspaces")}
         </Typography>
         <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center" }}>
           <ProjectFilterPopoverView />
