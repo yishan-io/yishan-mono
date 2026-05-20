@@ -143,7 +143,7 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
               sx={{
                 display: "flex",
                 alignItems: "flex-start",
-                gap: 1,
+              gap: 1.5,
                 border: 1,
                 borderColor: "divider",
                 borderRadius: 1,
@@ -247,8 +247,9 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(80px, 1fr))",
-              gap: 1,
+              gridTemplateColumns: `repeat(${Math.min(enabledAgentKinds.length, 4)}, 80px)`,
+              justifyContent: "center",
+              gap: 2,
             }}
           >
             {enabledAgentKinds.map((agentKind) => {

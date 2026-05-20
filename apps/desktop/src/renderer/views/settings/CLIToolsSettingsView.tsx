@@ -2,7 +2,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   IconButton,
   InputAdornment,
@@ -218,7 +217,7 @@ export function CLIToolsSettingsView() {
                 ? t("settings.agents.status.checking")
                 : detected
                   ? version
-                    ? `${t("settings.agents.status.versionPrefix")} ${version}`
+                    ? `v${version}`
                     : t("settings.agents.status.versionUnknown")
                   : t("settings.agents.status.notDetected");
 
@@ -232,12 +231,23 @@ export function CLIToolsSettingsView() {
                       </Box>
                     </Box>
                     <Stack direction="row" spacing={1} alignItems="center">
-                      <Chip
-                        size="small"
-                        label={label}
-                        color={detected ? "success" : "default"}
-                        variant={detected ? "filled" : "outlined"}
-                      />
+                      <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>
+                        <Box
+                          sx={{
+                            width: 7,
+                            height: 7,
+                            borderRadius: "50%",
+                            flexShrink: 0,
+                            bgcolor: detected ? "success.main" : "text.disabled",
+                          }}
+                        />
+                        <Box
+                          component="span"
+                          sx={{ typography: "body2", color: "text.secondary", whiteSpace: "nowrap" }}
+                        >
+                          {label}
+                        </Box>
+                      </Box>
                       <Switch
                         checked={inUseByAgentKind[agentKind as DesktopAgentKind]}
                         onChange={(event) => {
@@ -254,7 +264,7 @@ export function CLIToolsSettingsView() {
                       />
                     </Stack>
                   </Box>
-                  <Box sx={{ mt: 0.75 }}>
+                  <Box sx={{ mt: 0.75, ml: 3 }}>
                     <AgentCommandInput
                       agentKind={agentKind as DesktopAgentKind}
                       currentCommand={customCommandByAgentKind[agentKind as DesktopAgentKind]}

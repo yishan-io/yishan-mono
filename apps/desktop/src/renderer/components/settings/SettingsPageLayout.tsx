@@ -72,7 +72,7 @@ export function SettingsPageLayout({
           overflowY: "auto",
         }}
       >
-        {children}
+        <Box sx={{ maxWidth: 900, mx: "auto" }}>{children}</Box>
       </Box>
     </Box>
   );
