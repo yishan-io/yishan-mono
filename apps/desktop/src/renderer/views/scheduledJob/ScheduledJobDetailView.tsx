@@ -374,7 +374,12 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
               size="small"
               onClick={() => setIsDeleteOpen(true)}
               aria-label={t("scheduledJob.actions.delete")}
-              sx={{ color: "error.main" }}
+              sx={{
+                color: "text.secondary",
+                ":hover": {
+                  color: "error.main",
+                },
+              }}
             >
               <LuTrash2 size={15} />
             </IconButton>
