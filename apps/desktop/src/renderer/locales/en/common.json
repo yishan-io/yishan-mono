@@ -387,7 +387,7 @@
           "previewSoundFailed": "Failed to preview notification sound."
         },
         "preview": {
-          "button": "Show Notification Example",
+          "button": "Play",
           "soundButton": "Preview Sound",
           "status": {
             "inProgress": "Sending notification preview",

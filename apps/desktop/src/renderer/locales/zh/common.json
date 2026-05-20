@@ -357,7 +357,7 @@
           "previewSoundFailed": "声音预览失败。"
         },
         "preview": {
-          "button": "显示通知示例",
+          "button": "播放",
           "soundButton": "预览声音",
           "status": {
             "inProgress": "正在发送通知示例",
