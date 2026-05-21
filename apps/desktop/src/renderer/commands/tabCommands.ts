@@ -169,6 +169,11 @@ export function toggleTabPinned(tabId: string) {
   readTabStoreState().toggleTabPinned(tabId);
 }
 
+/** Promotes a temporary tab to permanent (non-temporary) state. */
+export function promoteTemporaryTab(tabId: string) {
+  readTabStoreState().promoteTemporaryTab(tabId);
+}
+
 /** Reorders one tab relative to one target tab position. */
 export function reorderTab(draggedTabId: string, targetTabId: string, position: "before" | "after") {
   readTabStoreState().reorderTab(draggedTabId, targetTabId, position);

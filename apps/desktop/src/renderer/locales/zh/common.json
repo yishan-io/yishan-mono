@@ -719,6 +719,7 @@
     },
     "renameA11y": "重命名标签",
     "actions": {
+      "keepOpen": "保持打开",
       "rename": "重命名",
       "pin": "固定标签",
       "unpin": "取消固定标签",

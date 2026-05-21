@@ -134,7 +134,7 @@ function renderTabBar(overrides: Partial<ComponentProps<typeof TabBar>> = {}) {
     onSelectTab: vi.fn(),
     onCloseTab: vi.fn(),
     onCreateTab: vi.fn(),
-    onRenameTab: vi.fn(),
+    onPromoteTemporaryTab: vi.fn(),
   };
 
   const props = { ...baseProps, ...overrides };
@@ -319,18 +319,32 @@ describe("TabBar interactions", () => {
     expect(onCloseTab).toHaveBeenCalledWith("b");
   });
 
-  it("renames tab on double click and Enter", async () => {
-    const onRenameTab = vi.fn();
-    renderTabBar({ onRenameTab });
+  it("promotes temporary tab on double click", async () => {
+    const onPromoteTemporaryTab = vi.fn();
+    renderTabBar({
+      onPromoteTemporaryTab,
+      tabs: [
+        { id: "a", title: "Tab A", pinned: false },
+        { id: "b", title: "Tab B", pinned: false, isTemporary: true },
+        { id: "c", title: "Tab C", pinned: false },
+      ],
+    });
 
     fireEvent.doubleClick(getTabButtonByTitle("Tab B"));
-    const editable = await screen.findByLabelText("Rename tab");
-    editable.textContent = "  New Name  ";
-    fireEvent.input(editable);
-    fireEvent.keyDown(editable, { key: "Enter" });
 
     await waitFor(() => {
-      expect(onRenameTab).toHaveBeenCalledWith("b", "New Name");
+      expect(onPromoteTemporaryTab).toHaveBeenCalledWith("b");
+    });
+  });
+
+  it("does not promote non-temporary tab on double click", async () => {
+    const onPromoteTemporaryTab = vi.fn();
+    renderTabBar({ onPromoteTemporaryTab });
+
+    fireEvent.doubleClick(getTabButtonByTitle("Tab A"));
+
+    await waitFor(() => {
+      expect(onPromoteTemporaryTab).not.toHaveBeenCalled();
     });
   });
 

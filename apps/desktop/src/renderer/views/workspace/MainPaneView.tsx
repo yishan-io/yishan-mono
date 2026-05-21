@@ -220,7 +220,6 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
     handleSelectTab,
     handleCloseTab,
     handleCreateTab,
-    handleRenameTab,
     handleReorderTab,
     handleSplitDrop,
     handleFocusPane,
@@ -416,7 +415,7 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
           onTogglePinTab={cmd.toggleTabPinned}
           onReorderTab={handleReorderTab}
           onCreateTab={handleCreateTab}
-          onRenameTab={handleRenameTab}
+          onPromoteTemporaryTab={cmd.promoteTemporaryTab}
           onSplitDrop={handleSplitDrop}
           onSplitRight={handleSplitRight}
           onSplitDown={handleSplitDown}
@@ -440,7 +439,6 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
       cmd,
       handleReorderTab,
       handleCreateTab,
-      handleRenameTab,
       handleSplitDrop,
       handleSplitRight,
       handleSplitDown,

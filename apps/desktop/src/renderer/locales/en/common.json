@@ -734,6 +734,7 @@
     },
     "renameA11y": "Rename tab",
     "actions": {
+      "keepOpen": "Keep Open",
       "rename": "Rename",
       "pin": "Pin Tab",
       "unpin": "Unpin Tab",

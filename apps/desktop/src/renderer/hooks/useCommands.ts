@@ -91,6 +91,7 @@ import {
   setBrowserTabUrl as setBrowserTabUrlCommand,
   setSelectedTab as setSelectedTabCommand,
   toggleTabPinned as toggleTabPinnedCommand,
+  promoteTemporaryTab as promoteTemporaryTabCommand,
   updateFileTabContent as updateFileTabContentCommand,
 } from "../commands/tabCommands";
 import {
@@ -238,6 +239,7 @@ export type Commands = {
   closeOtherTabs: (tabId: string) => void;
   closeAllTabs: (tabId: string) => void;
   toggleTabPinned: typeof toggleTabPinnedCommand;
+  promoteTemporaryTab: typeof promoteTemporaryTabCommand;
   reorderTab: typeof reorderTabCommand;
   renameTab: typeof renameTabCommand;
   setBrowserTabFaviconUrl: typeof setBrowserTabFaviconUrlCommand;
@@ -351,6 +353,7 @@ export function useCommands(): Commands {
       closeOtherTabs: closeOtherTabsCommand,
       closeAllTabs: closeAllTabsCommand,
       toggleTabPinned: toggleTabPinnedCommand,
+      promoteTemporaryTab: promoteTemporaryTabCommand,
       reorderTab: reorderTabCommand,
       renameTab: renameTabCommand,
       setBrowserTabFaviconUrl: setBrowserTabFaviconUrlCommand,

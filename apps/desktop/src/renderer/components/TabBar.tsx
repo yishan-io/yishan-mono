@@ -12,7 +12,6 @@ import { getRendererPlatform } from "../helpers/platform";
 import { getShortcutDisplayLabelById } from "../shortcuts/shortcutDisplay";
 import { AgentIcon } from "./AgentIcon";
 import { useTabDragDrop } from "./useTabDragDrop";
-import { useTabRename } from "./useTabRename";
 
 type WorkspaceTab = {
   id: string;
@@ -58,7 +57,7 @@ type TabBarProps = {
   onTogglePinTab?: (tabId: string) => void;
   onReorderTab?: (draggedTabId: string, targetTabId: string, position: "before" | "after") => void;
   onCreateTab: (option: TabBarCreateOption) => void;
-  onRenameTab: (tabId: string, title: string) => void;
+  onPromoteTemporaryTab?: (tabId: string) => void;
   getTabIcon?: (tab: WorkspaceTab) => ReactNode;
   enabledAgentKinds?: AgentCreateOption[];
   disabled?: boolean;
@@ -90,7 +89,7 @@ export function TabBar({
   onTogglePinTab,
   onReorderTab,
   onCreateTab,
-  onRenameTab,
+  onPromoteTemporaryTab,
   getTabIcon,
   enabledAgentKinds,
   disabled,
@@ -119,8 +118,7 @@ export function TabBar({
     },
     {} as Record<DesktopAgentKind, string>,
   );
-  const renameTabLabel = t("tabs.renameA11y");
-  const renameActionLabel = t("tabs.actions.rename");
+  const keepOpenActionLabel = t("tabs.actions.keepOpen");
   const pinTabActionLabel = t("tabs.actions.pin");
   const unpinTabActionLabel = t("tabs.actions.unpin");
   const closeTabActionLabel = t("tabs.actions.close");
@@ -137,18 +135,6 @@ export function TabBar({
 
   const scrollableTabsContainerRef = useRef<HTMLDivElement | null>(null);
   const tabItemRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  // ─── Rename state ──────────────────────────────────────────────────────────
-
-  const {
-    editingTabId,
-    editingRef,
-    editingDraftRef,
-    beginRename,
-    cancelRename: _cancelRename,
-    handleRenameBlur,
-    handleRenameKeyDown,
-  } = useTabRename({ selectedTabId, untitledLabel, onSelectTab, onRenameTab });
 
   // ─── Drag & drop state ─────────────────────────────────────────────────────
 
@@ -247,7 +233,7 @@ export function TabBar({
 
   // ─── Tab item styles ──────────────────────────────────────────────────────
 
-  const buildTabContainerSx = (active: boolean, editing: boolean) => ({
+  const buildTabContainerSx = (active: boolean) => ({
     display: "flex",
     alignItems: "center",
     bgcolor: active ? "background.default" : "transparent",
@@ -291,7 +277,7 @@ export function TabBar({
       flexGrow: 1,
       minWidth: 0,
     },
-    cursor: canDragTabs && !editing ? "grab" : "default",
+    cursor: canDragTabs ? "grab" : "default",
   });
 
   // ─── Context menu ─────────────────────────────────────────────────────────
@@ -319,7 +305,6 @@ export function TabBar({
 
   const renderTabItem = (tab: WorkspaceTab) => {
     const active = tab.id === selectedTabId;
-    const editing = tab.id === editingTabId;
     const pinned = tab.pinned;
 
     return (
@@ -328,14 +313,14 @@ export function TabBar({
         ref={(element: HTMLDivElement | null) => {
           tabItemRefs.current[tab.id] = element;
         }}
-        draggable={canDragTabs && !editing}
+        draggable={canDragTabs}
         onContextMenu={(event) => handleContextMenu(event, tab)}
-        onDragStart={(event) => handleTabDragStart(event, tab, editingTabId)}
+        onDragStart={(event) => handleTabDragStart(event, tab, "")}
         onDragOver={(event) => handleTabDragOver(event, tab)}
         onDrop={(event) => handleTabDrop(event, tab)}
         onDragEnd={resetDragState}
         sx={{
-          ...buildTabContainerSx(active, editing),
+          ...buildTabContainerSx(active),
           ...(dropTarget?.tabId === tab.id && {
             ...(dropTarget.position === "before"
               ? {
@@ -348,51 +333,15 @@ export function TabBar({
           opacity: draggedTabId === tab.id ? 0.9 : 1,
         }}
       >
-        {editing ? (
-          <Box
-            className="tab-content"
-            sx={{
-              py: 0.75,
-              pl: 0.5,
-              pr: 0.25,
-              display: "flex",
-              alignItems: "center",
-              gap: 0.5,
-            }}
-          >
-            {getTabIcon?.(tab)}
-            <TabDirtyDot tabId={tab.id} isDirty={tab.isDirty} />
-            <Box
-              ref={editingRef}
-              component="div"
-              contentEditable
-              suppressContentEditableWarning
-              aria-label={renameTabLabel}
-              onKeyDown={(event) => handleRenameKeyDown(event, tab)}
-              onInput={(event) => {
-                editingDraftRef.current = event.currentTarget.textContent ?? "";
-              }}
-              onBlur={() => handleRenameBlur(tab)}
-              sx={{
-                typography: "body2",
-                color: active ? "text.primary" : "text.secondary",
-                minWidth: 24,
-                maxWidth: 220,
-                outline: "none",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {tab.title || untitledLabel}
-            </Box>
-          </Box>
-        ) : (
-          <ButtonBase
+        <ButtonBase
             className="tab-content"
             disableRipple
             onClick={() => onSelectTab(tab.id)}
-            onDoubleClick={() => beginRename(tab)}
+            onDoubleClick={() => {
+              if (tab.isTemporary) {
+                onPromoteTemporaryTab?.(tab.id);
+              }
+            }}
             sx={{
               typography: "body2",
               color: active ? "text.primary" : "text.secondary",
@@ -415,7 +364,6 @@ export function TabBar({
               {tab.title || untitledLabel}
             </Box>
           </ButtonBase>
-        )}
         {pinned ? (
           <IconButton
             className="tab-pin"
@@ -425,12 +373,12 @@ export function TabBar({
               event.stopPropagation();
               onTogglePinTab?.(tab.id);
             }}
-            disabled={editing || !onTogglePinTab}
+            disabled={!onTogglePinTab}
             sx={{
               color: active ? "text.primary" : "text.secondary",
               p: 0.5,
               mr: -2,
-              display: editing ? "none" : "inline-flex",
+              display: "inline-flex",
             }}
           >
             <LuPin size={14} />
@@ -444,12 +392,12 @@ export function TabBar({
               event.stopPropagation();
               onCloseTab(tab.id);
             }}
-            disabled={editing}
+            disabled={false}
             sx={{
               color: active ? "text.primary" : "text.secondary",
               p: 0.5,
               mr: -2,
-              display: editing ? "none" : "inline-flex",
+              display: "inline-flex",
             }}
           >
             <LuX size={14} />
@@ -615,18 +563,18 @@ export function TabBar({
         anchorReference="anchorPosition"
         anchorPosition={contextMenu ? { top: contextMenu.mouseY, left: contextMenu.mouseX } : undefined}
       >
-        <MenuItem
-          onClick={() => {
-            const tab = tabs.find((item) => item.id === contextMenu?.tabId);
-            if (tab) {
-              beginRename(tab);
-            }
-            closeContextMenu();
-          }}
-          disabled={!contextMenu}
-        >
-          {renameActionLabel}
-        </MenuItem>
+        {selectedContextTab?.isTemporary && (
+          <MenuItem
+            onClick={() => {
+              if (contextMenu?.tabId) {
+                onPromoteTemporaryTab?.(contextMenu.tabId);
+              }
+              closeContextMenu();
+            }}
+          >
+            {keepOpenActionLabel}
+          </MenuItem>
+        )}
         <MenuItem
           onClick={() => {
             if (contextMenu?.tabId) {

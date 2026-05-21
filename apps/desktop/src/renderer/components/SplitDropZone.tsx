@@ -114,7 +114,7 @@ export function SplitDropZone({ paneId, active, onDrop, children }: SplitDropZon
             bgcolor: "primary.main",
             opacity: 0.12,
             transition: "all 120ms ease",
-            borderRadius: 1,
+            borderRadius: 0,
             ...regionHighlightSx[activeRegion],
           }}
         />

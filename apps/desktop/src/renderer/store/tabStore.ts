@@ -11,6 +11,7 @@ import {
   failSessionTabInitState,
   markFileTabSavedState,
   openTabState,
+  promoteTemporaryTabState,
   refreshDiffTabContentState,
   refreshFileTabFromDiskState,
   renameTabState,
@@ -49,6 +50,7 @@ export type TabStoreState = {
   /** Persists the current navigated URL on a browser tab so it survives unmount/remount cycles. */
   setBrowserTabUrl: (tabId: string, url: string) => void;
   toggleTabPinned: (tabId: string) => void;
+  promoteTemporaryTab: (tabId: string) => void;
   reorderTab: (draggedTabId: string, targetTabId: string, position: "before" | "after") => void;
   renameTab: (tabId: string, title: string, options?: { userRenamed?: boolean }) => void;
   renameTabsForEntryRename: (workspaceId: string, fromPath: string, toPath: string) => void;
@@ -259,6 +261,9 @@ export const tabStore = create<TabStoreState>()(
       },
       toggleTabPinned: (tabId) => {
         set((state) => toggleTabPinnedState(state, tabId));
+      },
+      promoteTemporaryTab: (tabId) => {
+        set((state) => promoteTemporaryTabState(state, tabId) ?? state);
       },
       reorderTab: (draggedTabId, targetTabId, position) => {
         set((state) => reorderTabState(state, draggedTabId, targetTabId, position) ?? state);

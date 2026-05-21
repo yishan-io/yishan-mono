@@ -28,7 +28,7 @@ export type SplitPaneGroupProps = {
   onTogglePinTab?: (tabId: string) => void;
   onReorderTab?: (paneId: string, draggedTabId: string, targetTabId: string, position: "before" | "after") => void;
   onCreateTab: (option: TabBarCreateOption) => void;
-  onRenameTab: (tabId: string, title: string) => void;
+  onPromoteTemporaryTab?: (tabId: string) => void;
   onSplitDrop: (tabId: string, targetPaneId: string, region: SplitDropRegion) => void;
   onSplitRight?: (paneId: string) => void;
   onSplitDown?: (paneId: string) => void;
@@ -83,7 +83,7 @@ export function SplitPaneGroup({
   onTogglePinTab,
   onReorderTab,
   onCreateTab,
-  onRenameTab,
+  onPromoteTemporaryTab,
   onSplitDrop,
   onSplitRight,
   onSplitDown,
@@ -169,7 +169,7 @@ export function SplitPaneGroup({
           onTogglePinTab={onTogglePinTab}
           onReorderTab={handleReorderTab}
           onCreateTab={onCreateTab}
-          onRenameTab={onRenameTab}
+          onPromoteTemporaryTab={onPromoteTemporaryTab}
           getTabIcon={getTabIcon}
           enabledAgentKinds={enabledAgentKinds}
           disabled={disabled}

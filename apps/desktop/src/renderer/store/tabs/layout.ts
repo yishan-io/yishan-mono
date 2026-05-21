@@ -25,6 +25,30 @@ function clearTemporaryOnPin(tab: WorkspaceTab): WorkspaceTab {
   return { ...tab, pinned: !tab.pinned };
 }
 
+/** Promotes one temporary tab to permanent (non-temporary) state. No-op if not temporary. */
+export function promoteTemporaryTabState(
+  state: WorkspaceTabStateSlice,
+  tabId: string,
+): Partial<WorkspaceTabStateSlice> | null {
+  const tab = state.tabs.find((t) => t.id === tabId);
+  if (!tab) return null;
+  if (
+    (tab.kind === "file" || tab.kind === "image" || tab.kind === "diff") &&
+    tab.data.isTemporary
+  ) {
+    return {
+      tabs: state.tabs.map((t): WorkspaceTab => {
+        if (t.id !== tabId) return t;
+        if (t.kind === "file") return { ...t, data: { ...t.data, isTemporary: false } };
+        if (t.kind === "image") return { ...t, data: { ...t.data, isTemporary: false } };
+        if (t.kind === "diff") return { ...t, data: { ...t.data, isTemporary: false } };
+        return t;
+      }),
+    };
+  }
+  return null;
+}
+
 /** Toggles pinned state for one tab id. */
 export function toggleTabPinnedState(state: WorkspaceTabStateSlice, tabId: string): Partial<WorkspaceTabStateSlice> {
   return {
