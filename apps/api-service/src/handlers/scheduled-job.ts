@@ -181,7 +181,28 @@ export async function runScheduledJobNowHandler(c: AppContext, params: Scheduled
     });
   }
 
-  return c.json({ ok: true, runId: pendingRun.runId }, StatusCodes.ACCEPTED);
+  return c.json(
+    {
+      ok: true,
+      run: {
+        id: pendingRun.runId,
+        jobId: pendingRun.job.id,
+        organizationId: pendingRun.job.organizationId,
+        projectId: pendingRun.job.projectId,
+        nodeId: pendingRun.job.nodeId,
+        scheduledFor: pendingRun.scheduledFor,
+        startedAt: null,
+        finishedAt: null,
+        status: "pending",
+        responseBody: null,
+        errorCode: null,
+        errorMessage: null,
+        errorDetails: null,
+        createdAt: new Date(),
+      },
+    },
+    StatusCodes.ACCEPTED,
+  );
 }
 
 export async function startScheduledJobRunHandler(

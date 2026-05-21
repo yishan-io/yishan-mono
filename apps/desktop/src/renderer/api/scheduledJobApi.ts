@@ -142,8 +142,12 @@ export async function deleteScheduledJob(orgId: string, jobId: string): Promise<
 }
 
 /** Triggers one scheduled job immediately. */
-export async function runScheduledJobNow(orgId: string, jobId: string): Promise<void> {
-  await requestJson<{ ok: boolean; runId: string }>(`/orgs/${orgId}/scheduled-jobs/${jobId}/run-now`, {
-    method: "POST",
-  });
+export async function runScheduledJobNow(orgId: string, jobId: string): Promise<ScheduledJobRunRecord> {
+  const response = await requestJson<{ ok: boolean; run: ScheduledJobRunRecord }>(
+    `/orgs/${orgId}/scheduled-jobs/${jobId}/run-now`,
+    {
+      method: "POST",
+    },
+  );
+  return response.run;
 }

@@ -1,5 +1,5 @@
 import { Box, Button, CircularProgress, Divider, IconButton, Stack, Tooltip, Typography } from "@mui/material";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -183,6 +183,13 @@ function RunsSidebar({ orgId, jobId, job }: { orgId: string; jobId: string; job:
     queryKey: ["scheduled-job-runs", orgId, jobId],
     queryFn: () => api.scheduledJob.listRuns(orgId, jobId, 20),
     enabled: Boolean(orgId && jobId),
+    refetchInterval: (query) => {
+      const runs = query.state.data;
+      if (!runs || runs.length === 0) {
+        return false;
+      }
+      return runs.some((run) => run.status === "pending" || run.status === "running") ? 10_000 : false;
+    },
   });
 
   return (
@@ -276,6 +283,7 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
     enabled: Boolean(orgId),
   });
   const { pauseScheduledJob, resumeScheduledJob, runScheduledJobNow, deleteScheduledJob } = useCommands();
+  const queryClient = useQueryClient();
   const [runsPaneWidth, setRunsPaneWidth] = useState(RUNS_PANE_DEFAULT_WIDTH);
   const dragRef = useRef({ startX: 0, startWidth: 0 });
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -312,6 +320,19 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
       setIsDeleteOpen(false);
     }
   }, [deleteScheduledJob, job.id, onBack]);
+
+  const handleRunNow = useCallback(async () => {
+    const run = await runScheduledJobNow(job.id);
+    if (!run) {
+      return;
+    }
+    queryClient.setQueryData<ScheduledJobRunRecord[]>(["scheduled-job-runs", orgId, job.id], (previous = []) => {
+      if (previous.some((item) => item.id === run.id)) {
+        return previous;
+      }
+      return [run, ...previous].slice(0, 20);
+    });
+  }, [job.id, orgId, queryClient, runScheduledJobNow]);
 
   const primaryAction = job.status === "active" ? "pause" : job.status === "paused" ? "resume" : null;
   const canRunNow = !isPending;
@@ -356,7 +377,7 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
                 size="small"
                 variant="text"
                 startIcon={<LuZap size={13} />}
-                onClick={() => void runScheduledJobNow(job.id)}
+                onClick={() => void handleRunNow()}
                 disabled={!canRunNow}
                 sx={{ textTransform: "none", color: "text.secondary", px: 1.5 }}
               >
