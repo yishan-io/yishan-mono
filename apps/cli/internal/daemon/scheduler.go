@@ -76,6 +76,7 @@ func processRelayJob(connState *wsConnState, nodeID string, params jobRunParams)
 	prompt, _ := params.Payload["prompt"].(string)
 	model, _ := params.Payload["model"].(string)
 	command, _ := params.Payload["command"].(string)
+	projectPath, _ := params.Payload["projectPath"].(string)
 
 	log.Info().
 		Str("runId", params.RunID).
@@ -83,9 +84,10 @@ func processRelayJob(connState *wsConnState, nodeID string, params jobRunParams)
 		Str("prompt", prompt).
 		Str("model", model).
 		Str("command", command).
+		Str("projectPath", projectPath).
 		Msg("scheduler: executing agent")
 
-	output, execErr := runAgent(agentKind, prompt, model, command)
+	_, execErr := runAgent(agentKind, prompt, model, command, projectPath)
 	finishedAt := time.Now()
 	durationMs := finishedAt.Sub(startTime).Milliseconds()
 
@@ -99,14 +101,8 @@ func processRelayJob(connState *wsConnState, nodeID string, params jobRunParams)
 		apiInput.Status = "failed"
 		apiInput.ErrorCode = agentExecErrorCode
 		apiInput.ErrorMessage = execErr.Error()
-		if output != "" {
-			apiInput.ResponseBody = output
-		}
 	} else {
 		apiInput.Status = "succeeded"
-		if output != "" {
-			apiInput.ResponseBody = output
-		}
 	}
 
 	_, reportErr := client.CompleteScheduledJobRun(nodeID, apiInput)
@@ -217,19 +213,13 @@ func resolveAgentCommand(agentKind string) string {
 	}
 }
 
-func runAgent(agentKind, prompt, model, command string) (output string, err error) {
+func runAgent(agentKind, prompt, model, command, projectPath string) (output string, err error) {
 	binary := resolveAgentCommand(agentKind)
 	if binary == "" {
 		return "", fmt.Errorf("unsupported agent kind: %s", agentKind)
 	}
 
-	args := []string{"run", "--prompt", prompt}
-	if model != "" {
-		args = append(args, "--model", model)
-	}
-	if command != "" {
-		args = append(args, "--command", command)
-	}
+	args := buildAgentArgs(agentKind, prompt, model, command)
 
 	// exec.CommandContext kills the process when the context deadline fires,
 	// eliminating the time.After goroutine leak that occurred on every job
@@ -238,6 +228,9 @@ func runAgent(agentKind, prompt, model, command string) (output string, err erro
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, binary, args...)
+	if projectPath != "" {
+		cmd.Dir = projectPath
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -258,4 +251,37 @@ func runAgent(agentKind, prompt, model, command string) (output string, err erro
 		combined += "\n" + stderr.String()
 	}
 	return combined, nil
+}
+
+func buildAgentArgs(agentKind, prompt, model, command string) []string {
+	if agentKind == "" || agentKind == "opencode" {
+		args := []string{"run", prompt}
+		if model != "" {
+			args = append(args, "--model", model)
+		}
+		if command != "" {
+			args = append(args, "--command", command)
+		}
+		return args
+	}
+
+	if agentKind == "claude" {
+		args := []string{"-p", prompt}
+		if model != "" {
+			args = append(args, "--model", model)
+		}
+		if command != "" {
+			args = append(args, "--command", command)
+		}
+		return args
+	}
+
+	args := []string{"run", "--prompt", prompt}
+	if model != "" {
+		args = append(args, "--model", model)
+	}
+	if command != "" {
+		args = append(args, "--command", command)
+	}
+	return args
 }

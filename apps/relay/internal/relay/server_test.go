@@ -22,7 +22,7 @@ type testTransport struct {
 }
 
 func (t *testTransport) IsOnline(nodeID string) bool      { return t.online[nodeID] }
-func (t *testTransport) SendNotification(string, string, any) bool { return true }
+func (t *testTransport) SendNotificationWithError(string, string, any) error { return nil }
 
 // ---------------------------------------------------------------------------
 // Server test helpers

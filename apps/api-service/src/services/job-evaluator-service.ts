@@ -1,7 +1,7 @@
-import { and, eq, lte } from "drizzle-orm";
+import { and, desc, eq, lte } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
-import { scheduledJobRuns, scheduledJobs } from "@/db/schema";
+import { scheduledJobRuns, scheduledJobs, workspaces } from "@/db/schema";
 import { ScheduledJobInvalidCronError, ScheduledJobInvalidTimezoneError } from "@/errors";
 import { newId } from "@/lib/id";
 import { computeNextRunAt, ensureTimezoneSupported, parseCronExpression } from "@/scheduled/cron";
@@ -210,6 +210,24 @@ export class JobEvaluatorService {
           eq(scheduledJobRuns.status, "pending"),
         ),
       );
+  }
+
+  async findProjectPathForNode(input: { projectId: string; nodeId: string }): Promise<string | null> {
+    const rows = await this.db
+      .select({ localPath: workspaces.localPath })
+      .from(workspaces)
+      .where(
+        and(
+          eq(workspaces.projectId, input.projectId),
+          eq(workspaces.nodeId, input.nodeId),
+          eq(workspaces.kind, "primary"),
+          eq(workspaces.status, "active"),
+        ),
+      )
+      .orderBy(desc(workspaces.updatedAt))
+      .limit(1);
+
+    return rows[0]?.localPath ?? null;
   }
 
   /** Records that a node has started executing a scheduled run. */

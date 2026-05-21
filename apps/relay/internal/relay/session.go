@@ -1,6 +1,7 @@
 package relay
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -39,6 +40,24 @@ type NodeSession struct {
 
 	conn    *websocket.Conn
 	writeMu sync.Mutex
+}
+
+func (s *NodeSession) remoteAddr() string {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+	if s.conn == nil || s.conn.UnderlyingConn() == nil {
+		return ""
+	}
+	return s.conn.UnderlyingConn().RemoteAddr().String()
+}
+
+func (s *NodeSession) localAddr() string {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
+	if s.conn == nil || s.conn.UnderlyingConn() == nil {
+		return ""
+	}
+	return s.conn.UnderlyingConn().LocalAddr().String()
 }
 
 func newNodeSession(conn *websocket.Conn, identity auth.NodeIdentity) *NodeSession {
@@ -215,6 +234,8 @@ func (m *SessionManager) Register(conn *websocket.Conn, identity auth.NodeIdenti
 	log.Info().
 		Str("nodeId", identity.NodeID).
 		Str("userId", identity.UserID).
+		Str("remoteAddr", session.remoteAddr()).
+		Str("localAddr", session.localAddr()).
 		Msg("node connected")
 	m.emit(SessionEvent{Type: "connected", NodeID: identity.NodeID, UserID: identity.UserID, DaemonVersion: identity.DaemonVersion})
 	return session
@@ -233,6 +254,8 @@ func (m *SessionManager) DisconnectSession(session *NodeSession, code int, reaso
 	session.markDisconnected()
 	log.Info().
 		Str("nodeId", session.Identity.NodeID).
+		Str("remoteAddr", session.remoteAddr()).
+		Str("localAddr", session.localAddr()).
 		Int("code", code).
 		Str("reason", reason).
 		Msg("node disconnected")
@@ -356,17 +379,29 @@ func (m *SessionManager) EvictStale(maxAge time.Duration) int {
 // SendNotification sends a JSON-RPC notification to a specific node.
 // Returns false if the node is not online.
 func (m *SessionManager) SendNotification(nodeID, method string, params any) bool {
+	return m.SendNotificationWithError(nodeID, method, params) == nil
+}
+
+// SendNotificationWithError sends a JSON-RPC notification to a specific node.
+// Returns an error when the node is offline or the write fails.
+func (m *SessionManager) SendNotificationWithError(nodeID, method string, params any) error {
 	m.mu.RLock()
 	session := m.sessions[nodeID]
 	m.mu.RUnlock()
 
 	if session == nil || !session.isConnected() {
-		return false
+		log.Debug().Str("nodeId", nodeID).Str("method", method).Msg("send notification skipped: session offline")
+		return ErrNodeOffline
 	}
 
 	if err := session.SendNotification(method, params); err != nil {
-		log.Error().Err(err).Str("nodeId", nodeID).Str("method", method).Msg("send notification failed")
-		return false
+		log.Error().Err(err).
+			Str("nodeId", nodeID).
+			Str("method", method).
+			Str("remoteAddr", session.remoteAddr()).
+			Str("localAddr", session.localAddr()).
+			Msg("send notification failed")
+		return fmt.Errorf("send notification failed: %w", err)
 	}
-	return true
+	return nil
 }

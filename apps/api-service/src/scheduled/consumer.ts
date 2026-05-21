@@ -60,6 +60,10 @@ export async function handleDispatchMessage(
         prompt: msg.prompt,
         model: msg.model,
         command: msg.command,
+        projectPath: await jobEvaluatorService.findProjectPathForNode({
+          projectId: msg.projectId,
+          nodeId: msg.nodeId,
+        }),
       },
     }),
   });

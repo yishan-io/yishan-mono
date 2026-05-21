@@ -38,6 +38,7 @@ async function runEvaluator(jobEvaluatorService: JobEvaluatorService, env: Evalu
       runId: run.runId,
       nodeId: run.job.nodeId,
       jobId: run.job.id,
+      projectId: run.job.projectId,
       agentKind: run.job.agentKind,
       prompt: run.job.prompt,
       model: run.job.model ?? "",

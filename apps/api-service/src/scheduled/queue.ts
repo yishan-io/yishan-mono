@@ -2,6 +2,7 @@ export type DispatchMessage = {
   runId: string;
   nodeId: string;
   jobId: string;
+  projectId: string;
   agentKind: string;
   prompt: string;
   model: string;

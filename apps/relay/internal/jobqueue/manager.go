@@ -16,7 +16,7 @@ import (
 // This decouples the jobqueue package from the relay session implementation.
 type NodeTransport interface {
 	IsOnline(nodeID string) bool
-	SendNotification(nodeID, method string, params any) bool
+	SendNotificationWithError(nodeID, method string, params any) error
 }
 
 // ---------------------------------------------------------------------------
@@ -478,7 +478,7 @@ func (m *Manager) attemptDispatch(run *PendingRun) DispatchResult {
 	m.mu.Unlock()
 
 	// Use a typed struct to avoid a heap map[string]any allocation per dispatch.
-	sent := m.transport.SendNotification(run.NodeID, jobRunMethod, jobRunParams{
+	err := m.transport.SendNotificationWithError(run.NodeID, jobRunMethod, jobRunParams{
 		RunID:          run.RunID,
 		JobID:          run.JobID,
 		ScheduledFor:   run.ScheduledFor,
@@ -486,7 +486,7 @@ func (m *Manager) attemptDispatch(run *PendingRun) DispatchResult {
 		Payload:        run.Payload,
 	})
 
-	if !sent {
+	if err != nil {
 		m.mu.Lock()
 		now := time.Now()
 		run.Status = StatusSkippedOffline
@@ -495,8 +495,8 @@ func (m *Manager) attemptDispatch(run *PendingRun) DispatchResult {
 		m.metrics.AwaitingAck--
 		m.metrics.TotalSkippedOffline++
 		m.mu.Unlock()
-		log.Warn().Str("runId", run.RunID).Str("nodeId", run.NodeID).Msg("dispatch failed: node unreachable")
-		return DispatchResult{Reason: "node_offline", RunID: run.RunID, ErrorDetail: "node unreachable"}
+		log.Warn().Err(err).Str("runId", run.RunID).Str("nodeId", run.NodeID).Msg("dispatch failed: node unreachable")
+		return DispatchResult{Reason: "node_offline", RunID: run.RunID, ErrorDetail: err.Error()}
 	}
 
 	m.startAckTimer(run)

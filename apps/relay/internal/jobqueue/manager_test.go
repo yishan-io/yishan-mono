@@ -1,6 +1,7 @@
 package jobqueue
 
 import (
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -14,7 +15,7 @@ type stubTransport struct {
 	mu       sync.Mutex
 	online   map[string]bool
 	sent     []sentNotification
-	sendFail bool // force SendNotification to return false
+	sendFail bool // force SendNotificationWithError to fail
 }
 
 type sentNotification struct {
@@ -37,14 +38,14 @@ func (s *stubTransport) IsOnline(nodeID string) bool {
 	return s.online[nodeID]
 }
 
-func (s *stubTransport) SendNotification(nodeID, method string, params any) bool {
+func (s *stubTransport) SendNotificationWithError(nodeID, method string, params any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.sendFail {
-		return false
+		return errors.New("write tcp 127.0.0.1:8788->127.0.0.1:57575: i/o timeout")
 	}
 	s.sent = append(s.sent, sentNotification{nodeID: nodeID, method: method, params: params})
-	return true
+	return nil
 }
 
 func (s *stubTransport) setOnline(nodeID string, v bool) {

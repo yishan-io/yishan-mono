@@ -165,6 +165,7 @@ export async function runScheduledJobNowHandler(c: AppContext, params: Scheduled
         runId: pendingRun.runId,
         nodeId: pendingRun.job.nodeId,
         jobId: pendingRun.job.id,
+        projectId: pendingRun.job.projectId,
         agentKind: pendingRun.job.agentKind,
         prompt: pendingRun.job.prompt,
         model: pendingRun.job.model ?? "",
