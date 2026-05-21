@@ -1,11 +1,13 @@
 import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuPlus, LuZap } from "react-icons/lu";
+import { LuPanelLeft, LuPlus, LuZap } from "react-icons/lu";
 import { PaneHeader } from "../../components/PaneHeader";
+import { PaneToggleButton } from "../../components/PaneToggleButton";
 import { getRendererPlatform } from "../../helpers/platform";
 import { useCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
+import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { scheduledJobStore } from "../../store/scheduledJobStore";
 import { CreateScheduledJobDialogView } from "./CreateScheduledJobDialogView";
 import { ScheduledJobDetailView } from "./ScheduledJobDetailView";
@@ -34,7 +36,9 @@ type ScheduledJobViewProps = {
 /** Renders the scheduled job management panel with list and detail views. */
 export function ScheduledJobView({ onClose: _onClose }: ScheduledJobViewProps = {}) {
   const { t } = useTranslation();
-  const { leftCollapsed } = useWorkspacePaneVisibilityContext();
+  const { leftCollapsed, onToggleLeftPane } = useWorkspacePaneVisibilityContext();
+  const toggleLeftShortcutLabel = getShortcutDisplayLabelById("toggle-left-pane", getRendererPlatform());
+  const toggleLeftTooltipLabel = `${t("layout.toggleLeftSidebar")} (${toggleLeftShortcutLabel})`;
   const shouldReserveMacInset = getRendererPlatform() === "darwin" && leftCollapsed;
   const jobs = scheduledJobStore((state) => state.scheduledJobs);
   const loadState = scheduledJobStore((state) => state.loadState);
@@ -89,6 +93,14 @@ export function ScheduledJobView({ onClose: _onClose }: ScheduledJobViewProps = 
         {/* Header */}
         <PaneHeader justifyContent="space-between" showMacInset={shouldReserveMacInset}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0, flex: 1 }}>
+            {leftCollapsed ? (
+              <PaneToggleButton
+                tooltipLabel={toggleLeftTooltipLabel}
+                ariaLabel={t("layout.toggleLeftSidebar")}
+                icon={<LuPanelLeft size={16} />}
+                onClick={onToggleLeftPane}
+              />
+            ) : null}
             <LuZap size={16} />
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {t("scheduledJob.title")}

@@ -10,6 +10,7 @@ import {
   LuPause,
   LuPencil,
   LuPlay,
+  LuPanelLeft,
   LuRefreshCw,
   LuTrash2,
   LuZap,
@@ -19,6 +20,7 @@ import type { ScheduledJobRecord, ScheduledJobRunRecord } from "../../api/schedu
 import { AgentIcon } from "../../components/AgentIcon";
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 import { PaneHeader } from "../../components/PaneHeader";
+import { PaneToggleButton } from "../../components/PaneToggleButton";
 import { SplitPaneLayout } from "../../components/SplitPaneLayout";
 import { renderProjectIcon } from "../../components/projectIcons";
 import { isDesktopAgentKind } from "../../helpers/agentSettings";
@@ -26,6 +28,7 @@ import { getErrorMessage } from "../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../helpers/platform";
 import { useCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
+import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { scheduledJobStore } from "../../store/scheduledJobStore";
 import { sessionStore } from "../../store/sessionStore";
 import { workspaceStore } from "../../store/workspaceStore";
@@ -272,7 +275,9 @@ function RunsSidebar({ orgId, jobId, job }: { orgId: string; jobId: string; job:
 /** Renders the detail view for one scheduled job with a runs history sidebar. */
 export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewProps) {
   const { t } = useTranslation();
-  const { leftCollapsed } = useWorkspacePaneVisibilityContext();
+  const { leftCollapsed, onToggleLeftPane } = useWorkspacePaneVisibilityContext();
+  const toggleLeftShortcutLabel = getShortcutDisplayLabelById("toggle-left-pane", getRendererPlatform());
+  const toggleLeftTooltipLabel = `${t("layout.toggleLeftSidebar")} (${toggleLeftShortcutLabel})`;
   const shouldReserveMacInset = getRendererPlatform() === "darwin" && leftCollapsed;
   const isPending = scheduledJobStore((state) => state.pendingActionIds.includes(job.id));
   const orgId = sessionStore((state) => state.selectedOrganizationId ?? "");
@@ -345,6 +350,14 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
       {/* Header */}
       <PaneHeader justifyContent="space-between" showMacInset={shouldReserveMacInset}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0, flex: 1 }}>
+          {leftCollapsed ? (
+            <PaneToggleButton
+              tooltipLabel={toggleLeftTooltipLabel}
+              ariaLabel={t("layout.toggleLeftSidebar")}
+              icon={<LuPanelLeft size={16} />}
+              onClick={onToggleLeftPane}
+            />
+          ) : null}
           <Box className="electron-webkit-app-region-no-drag" sx={{ display: "inline-flex" }}>
             <IconButton size="small" onClick={onBack} aria-label={t("scheduledJob.detail.back")}>
               <LuArrowLeft size={16} />

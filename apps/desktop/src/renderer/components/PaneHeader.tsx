@@ -60,9 +60,14 @@ export function PaneHeader({
       component="header"
       className={windowDraggable ? "electron-webkit-app-region-drag" : undefined}
       data-testid={dataTestId}
-      sx={{
+      sx={(theme) => ({
         minHeight: PANE_HEADER_MIN_HEIGHT,
         px: 1.5,
+        ...(showMacInset
+          ? {
+              pl: `calc(${theme.spacing(1.5)} + ${MAC_WINDOW_CONTROLS_INSET_WIDTH}px)`,
+            }
+          : {}),
         py,
         borderBottom: 1,
         borderColor: "divider",
@@ -70,10 +75,21 @@ export function PaneHeader({
         display: "flex",
         alignItems: "center",
         justifyContent,
-      }}
+        position: "relative",
+      })}
     >
       {showMacInset ? (
-        <Box data-testid={macInsetTestId} sx={{ width: MAC_WINDOW_CONTROLS_INSET_WIDTH, flexShrink: 0 }} />
+        <Box
+          data-testid={macInsetTestId}
+          sx={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: MAC_WINDOW_CONTROLS_INSET_WIDTH,
+            pointerEvents: "none",
+          }}
+        />
       ) : null}
       {children}
     </Box>
