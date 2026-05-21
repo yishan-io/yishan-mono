@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"time"
 
@@ -207,6 +208,17 @@ func runAgent(agentKind, prompt, model, projectPath string) (output string, err 
 	if projectPath != "" {
 		cmd.Dir = projectPath
 	}
+	// Scheduled jobs should not emit desktop hook notifications. The managed
+	// notify bridge only forwards events when these YISHAN_* hook context vars
+	// are present, so we explicitly clear them for scheduler-spawned agent runs.
+	cmd.Env = append(
+		os.Environ(),
+		"YISHAN_WORKSPACE_ID=",
+		"YISHAN_TAB_ID=",
+		"YISHAN_PANE_ID=",
+		"YISHAN_HOOK_INGRESS_URL=",
+		"YISHAN_OBSERVER_TOKEN=",
+	)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
