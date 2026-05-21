@@ -91,7 +91,7 @@ export function setTerminalReattachHandler(handler: (tabId: string) => void): vo
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const TERMINAL_OPTIONS = {
-  cursorBlink: false,
+  cursorBlink: true,
   convertEol: true,
   allowProposedApi: true,
   fontFamily: '"MesloLGS NF", "JetBrains Mono", "SF Mono", Menlo, monospace',
@@ -103,7 +103,7 @@ const TERMINAL_OPTIONS = {
   fastScrollSensitivity: 5,
   rescaleOverlappingGlyphs: true,
   theme: {
-    background: "#292e36",
+    background: "#2b3038",
     foreground: "#e7ebf0",
   },
 } as const;
@@ -525,6 +525,8 @@ export function __resetTerminalRuntimeRegistryForTests(): void {
 }
 
 const XTERM_VIEWPORT_STYLE_ID = "yishan-xterm-viewport-style";
+const XTERM_RIGHT_OVERSCAN_PX = 16;
+const XTERM_BOTTOM_OVERSCAN_PX = 16;
 
 function ensureXtermViewportStyle(): void {
   if (document.getElementById(XTERM_VIEWPORT_STYLE_ID)) {
@@ -534,6 +536,13 @@ function ensureXtermViewportStyle(): void {
   const style = document.createElement("style");
   style.id = XTERM_VIEWPORT_STYLE_ID;
   style.textContent = [
+    `[data-terminal-tab-id] {`,
+    `  overflow: hidden !important;`,
+    `}`,
+    `[data-terminal-tab-id] .xterm-screen {`,
+    `  width: calc(100% + ${XTERM_RIGHT_OVERSCAN_PX}px) !important;`,
+    `  height: calc(100% + ${XTERM_BOTTOM_OVERSCAN_PX}px) !important;`,
+    `}`,
     `[data-terminal-tab-id] .xterm-viewport {`,
     `  overflow-y: scroll !important;`,
     `  scrollbar-width: none !important;`,

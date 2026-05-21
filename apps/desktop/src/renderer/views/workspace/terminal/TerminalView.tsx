@@ -103,7 +103,8 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
       sx={{
         flex: 1,
         minHeight: 0,
-        p: 1.5,
+        pt: 1.5,
+        pl: 2,
         bgcolor: "#2b3038",
         height: "100%",
         display: "flex",
