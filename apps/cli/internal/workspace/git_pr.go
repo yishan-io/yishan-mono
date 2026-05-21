@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 func (s *GitService) BranchPullRequest(ctx context.Context, root string, branch string) (GitBranchPullRequestStatus, error) {
@@ -93,11 +95,13 @@ func (s *GitService) branchPullRequest(ctx context.Context, root string, branch 
 	if includeDetails {
 		checks, err = s.getPullRequestChecks(ctx, root, pr.Number, pr.HeadRefOID)
 		if err != nil {
-			return GitBranchPullRequestStatus{}, err
+			log.Warn().Err(err).Str("root", root).Str("branch", branchName).Int("pr", pr.Number).Msg("pr detail: failed to fetch checks, continuing without")
+			checks = []GitPullRequestCheck{}
 		}
 		deployments, err = s.getPullRequestDeployments(ctx, root, pr.HeadRefOID)
 		if err != nil {
-			return GitBranchPullRequestStatus{}, err
+			log.Warn().Err(err).Str("root", root).Str("branch", branchName).Int("pr", pr.Number).Msg("pr detail: failed to fetch deployments, continuing without")
+			deployments = []GitPullRequestDeployment{}
 		}
 	}
 	status := GitBranchPullRequestStatus{
