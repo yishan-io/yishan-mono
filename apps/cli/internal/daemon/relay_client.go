@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -151,9 +152,29 @@ func runRelayClientLoop(ctx context.Context, handler *JSONRPCHandler, nodeID str
 		endpointWithMetadata := appendRelayClientMetadata(endpoint)
 		headers := http.Header{}
 		headers.Set("Authorization", "Bearer "+cachedToken)
-		conn, _, err := websocket.DefaultDialer.DialContext(ctx, endpointWithMetadata, headers)
+		conn, resp, err := websocket.DefaultDialer.DialContext(ctx, endpointWithMetadata, headers)
 		if err != nil {
-			log.Warn().Err(err).Str("relay_url", endpointWithMetadata).Msg("relay websocket dial failed")
+			statusCode := 0
+			responseBody := ""
+			if resp != nil {
+				statusCode = resp.StatusCode
+				if resp.Body != nil {
+					body, readErr := io.ReadAll(io.LimitReader(resp.Body, 2048))
+					_ = resp.Body.Close()
+					if readErr == nil {
+						responseBody = strings.TrimSpace(string(body))
+					}
+				}
+			}
+
+			logWarn := log.Warn().Err(err).Str("relay_url", endpointWithMetadata)
+			if statusCode > 0 {
+				logWarn = logWarn.Int("status", statusCode)
+			}
+			if responseBody != "" {
+				logWarn = logWarn.Str("response_body", responseBody)
+			}
+			logWarn.Msg("relay websocket dial failed")
 			status.setDisconnected("dial failed: " + err.Error())
 			select {
 			case <-ctx.Done():
