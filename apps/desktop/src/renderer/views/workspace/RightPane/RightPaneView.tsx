@@ -26,7 +26,9 @@ export function RightPaneView({ onToggleRightPane }: RightPaneViewProps = {}) {
   const setRightPaneTab = workspaceUiStore((state) => state.setRightPaneTab);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const changesCount = workspaceStore((state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0);
-  const [lastHandledFileSearchRequestKey, setLastHandledFileSearchRequestKey] = useState(0);
+  const [lastHandledFileSearchRequestKey, setLastHandledFileSearchRequestKey] = useState(
+    () => workspaceUiStore.getState().fileSearchRequestKey,
+  );
   const toggleRightShortcutLabel = getShortcutDisplayLabelById("toggle-right-pane", getRendererPlatform());
   const toggleRightTooltipLabel = toggleRightShortcutLabel
     ? t("layout.toggleWithShortcut", {
