@@ -17,13 +17,17 @@ import (
 	"time"
 
 	"github.com/creack/pty"
+	"github.com/rs/zerolog/log"
 )
 
 const maxSessionOutputBytes = 2 * 1024 * 1024
-const portScanActiveInterval = 3 * time.Second
-const portScanIdleInterval = 60 * time.Second
+const portScanFallbackInterval = 30 * time.Second
 const portScanActivityWindow = 15 * time.Second
 const portScanHintDebounce = 500 * time.Millisecond
+// portScanTailSize is the number of bytes kept from the end of recent PTY
+// output so that port announcements split across multiple small read chunks
+// are still detected reliably.
+const portScanTailSize = 256
 
 type portsChangedListener func([]DetectedPort)
 
@@ -56,6 +60,12 @@ type session struct {
 	lastActivityUnixNano atomic.Int64
 	subsMu               sync.Mutex
 	subs                 map[uint64]chan Event
+	// portHintFn is called when the session output looks like it contains a
+	// port-start announcement. Set once at session creation; never nil.
+	portHintFn func()
+	// portScanTail holds the tail of recent PTY output used to detect port
+	// announcements that span multiple small read chunks.
+	portScanTail []byte
 }
 
 func NewManager() *Manager {
@@ -82,6 +92,7 @@ func (m *Manager) Start(_ context.Context, cwd string, req StartRequest) (StartR
 
 	id := fmt.Sprintf("term-%d", m.nextID.Add(1))
 	s := &session{id: id, workspaceID: req.WorkspaceID, cmd: cmd, pty: ptyFile, startedAt: time.Now().UTC(), subs: make(map[uint64]chan Event)}
+	s.portHintFn = m.requestPortScanHint
 	s.running.Store(true)
 	s.exitCode.Store(-1)
 	s.lastActivityUnixNano.Store(time.Now().UTC().UnixNano())
@@ -106,6 +117,9 @@ func (m *Manager) Start(_ context.Context, cwd string, req StartRequest) (StartR
 		s.running.Store(false)
 		s.exitedAtUnixNano.Store(time.Now().UTC().UnixNano())
 		_ = s.pty.Close()
+		// Immediately scan so ports owned by this session are cleared
+		// without waiting for the fallback ticker.
+		m.requestPortScanHint()
 
 		exit := int(code)
 		s.broadcast(Event{SessionID: s.id, Type: "exit", ExitCode: &exit})
@@ -193,8 +207,10 @@ func (m *Manager) collectDetectedPortsForWindow(recentWindow time.Duration, work
 
 	listeningPorts, err := listListeningTCPPorts(trackedPIDs)
 	if err != nil {
+		log.Debug().Err(err).Msg("[ports] listListeningTCPPorts error")
 		return nil
 	}
+	log.Debug().Int("trackedPIDs", len(trackedPIDs)).Int("listeningPorts", len(listeningPorts)).Msg("[ports] lsof result")
 
 	out := make([]DetectedPort, 0, len(listeningPorts))
 	for _, port := range listeningPorts {
@@ -203,6 +219,7 @@ func (m *Manager) collectDetectedPortsForWindow(recentWindow time.Duration, work
 			continue
 		}
 		session := sessionByPID[rootPID]
+		log.Debug().Str("sessionId", session.id).Str("workspaceId", session.workspaceID).Int("port", port.Port).Msg("[ports] detected port")
 		out = append(out, DetectedPort{
 			SessionID:   session.id,
 			WorkspaceID: session.workspaceID,
@@ -271,41 +288,69 @@ func (m *Manager) runPortScanLoop() {
 		m.portLoopMu.Unlock()
 	}()
 
-	ticker := time.NewTicker(portScanActiveInterval)
-	defer ticker.Stop()
+	// fallbackTicker fires periodically as a safety net for servers that bind
+	// a port without printing anything recognisable (e.g. silent daemons).
+	fallback := time.NewTicker(portScanFallbackInterval)
+	defer fallback.Stop()
 
-	var lastHintScanAt time.Time
+	// debounce timer: started when a hint arrives, fires after portScanHintDebounce
+	// to coalesce rapid bursts (e.g. multi-line startup log).
+	debounce := time.NewTimer(0)
+	if !debounce.Stop() {
+		<-debounce.C
+	}
+	debouncing := false
 
-	for {
-		select {
-		case <-ticker.C:
-		case <-m.portScanHintCh:
-			if !lastHintScanAt.IsZero() && time.Since(lastHintScanAt) < portScanHintDebounce {
-				continue
-			}
-			lastHintScanAt = time.Now().UTC()
-		}
-
+	scan := func() bool {
+		debouncing = false
 		if !m.hasActiveSessions() {
 			if m.shouldPublishPortsUpdate(nil) {
 				m.publishPortsChanged(nil)
 			}
-			return
+			return false
 		}
-
 		recentWindow := time.Duration(0)
 		workspaceScopeID := m.currentPortScopeWorkspaceID()
 		if m.hasRecentlyActiveSessions(portScanActivityWindow) {
 			recentWindow = portScanActivityWindow
 		}
-
 		ports := m.collectDetectedPortsForWindow(recentWindow, workspaceScopeID)
-		if !m.shouldPublishPortsUpdate(ports) {
-			ticker.Reset(m.nextPortScanInterval())
-			continue
+		log.Debug().Int("count", len(ports)).Str("workspaceScopeID", workspaceScopeID).Msg("[ports] scan complete")
+		if m.shouldPublishPortsUpdate(ports) {
+			log.Debug().Int("count", len(ports)).Msg("[ports] publishing ports changed")
+			m.publishPortsChanged(ports)
 		}
-		m.publishPortsChanged(ports)
-		ticker.Reset(m.nextPortScanInterval())
+		return true
+	}
+
+	for {
+		select {
+		case <-fallback.C:
+			if !scan() {
+				return
+			}
+
+		case <-m.portScanHintCh:
+			// Coalesce: reset the debounce window on every incoming hint so
+			// that a burst of matching lines (e.g. http-server printing several
+			// "Available on: http://…:port" lines) results in a single scan
+			// fired portScanHintDebounce after the last hint.
+			if debouncing {
+				if !debounce.Stop() {
+					select {
+					case <-debounce.C:
+					default:
+					}
+				}
+			}
+			debounce.Reset(portScanHintDebounce)
+			debouncing = true
+
+		case <-debounce.C:
+			if !scan() {
+				return
+			}
+		}
 	}
 }
 
@@ -330,12 +375,6 @@ func (m *Manager) currentPortScopeWorkspaceID() string {
 	return m.portScopeWorkspaceID
 }
 
-func (m *Manager) nextPortScanInterval() time.Duration {
-	if m.hasRecentlyActiveSessions(portScanActivityWindow) {
-		return portScanActiveInterval
-	}
-	return portScanIdleInterval
-}
 
 func (m *Manager) hasRecentlyActiveSessions(window time.Duration) bool {
 	threshold := time.Now().UTC().Add(-window).UnixNano()
@@ -693,6 +732,20 @@ func (s *session) capture() {
 			s.appendOutput(chunk)
 			s.outputMu.Unlock()
 			s.broadcast(Event{SessionID: s.id, Type: "output", Chunk: chunk, RawChunk: raw})
+			// Scan tail+chunk so that port announcements split across read
+			// boundaries are still detected (e.g. "Listening\n" in one chunk,
+			// "on :3000" in the next).
+			window := string(s.portScanTail) + chunk
+			if outputMentionsPorts(window) {
+				log.Debug().Str("sessionId", s.id).Str("chunk", chunk).Msg("[ports] output matches port pattern, requesting scan hint")
+				s.portHintFn()
+			}
+			// Advance the tail: keep the last portScanTailSize bytes.
+			combined := append(s.portScanTail, raw...)
+			if len(combined) > portScanTailSize {
+				combined = combined[len(combined)-portScanTailSize:]
+			}
+			s.portScanTail = combined
 		}
 		if err != nil {
 			if errors.Is(err, io.EOF) {
