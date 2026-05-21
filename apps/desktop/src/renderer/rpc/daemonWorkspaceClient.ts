@@ -8,7 +8,11 @@ import {
   readOptionalStringArray,
 } from "./helpers";
 
-type InvokeFn = (method: string, params?: unknown) => Promise<unknown>;
+type InvokeFn = (method: string, params?: unknown, timeoutMs?: number) => Promise<unknown>;
+
+// workspace.create can take a very long time for large repos (shallow fetch +
+// worktree checkout + setup script). Use a dedicated long timeout.
+const WORKSPACE_CREATE_TIMEOUT_MS = 40 * 60 * 1_000;
 
 /** Parses a pull-request check entry from a raw daemon payload. */
 function readDaemonWorkspacePullRequestCheck(value: unknown): Rpc.DaemonWorkspacePullRequestCheck | undefined {
@@ -247,7 +251,9 @@ export class DaemonWorkspaceClient {
       throw new Error("sourceBranch is required");
     }
     const targetBranch = readOptionalString(record?.targetBranch) || sourceBranch;
-    const workspaceId = generateId();
+    // Use the workspaceId supplied by the caller so that progress events emitted
+    // by the daemon (keyed by this same ID) match what the frontend store tracks.
+    const workspaceId = readOptionalString(record?.workspaceId) || generateId();
     const workspaceName = readOptionalString(record?.workspaceName) || workspaceId;
     const contextEnabled = readOptionalBoolean(record?.contextEnabled) ?? false;
     const setupHook = readOptionalString(record?.setupHook) || "";
@@ -263,7 +269,7 @@ export class DaemonWorkspaceClient {
       sourceBranch,
       contextEnabled,
       setupHook,
-    })) as Rpc.DaemonWorkspace & { lifecycleScriptWarnings?: unknown[]; remoteSyncWarning?: unknown };
+    }, WORKSPACE_CREATE_TIMEOUT_MS)) as Rpc.DaemonWorkspace & { lifecycleScriptWarnings?: unknown[]; remoteSyncWarning?: unknown };
 
     const createdWorktreePath = createdWorkspace.path || "";
     if (createdWorktreePath) {

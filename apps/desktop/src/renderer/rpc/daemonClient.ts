@@ -13,6 +13,9 @@ import { DaemonGitClient } from "./daemonGitClient";
 import { DaemonTerminalClient } from "./daemonTerminalClient";
 
 const RPC_REQUEST_TIMEOUT_MS = 30_000;
+// workspace.create can take a very long time for large repos (shallow fetch +
+// worktree checkout + setup script). Allow up to 40 minutes before giving up.
+const WORKSPACE_CREATE_TIMEOUT_MS = 40 * 60 * 1_000;
 const terminalFrameTextEncoder = new TextEncoder();
 const terminalFrameTextDecoder = new TextDecoder();
 
@@ -316,9 +319,10 @@ export class DaemonClient {
     return await this.socketOpenPromise;
   }
 
-  private async sendRequest(method: string, params?: unknown): Promise<unknown> {
+  private async sendRequest(method: string, params?: unknown, timeoutMs?: number): Promise<unknown> {
     const socket = await this.ensureSocket();
     const request = buildRequest(method, params);
+    const requestTimeoutMs = timeoutMs ?? RPC_REQUEST_TIMEOUT_MS;
 
     return await new Promise<unknown>((resolvePromise, rejectPromise) => {
       const timeout = setTimeout(() => {
@@ -328,7 +332,7 @@ export class DaemonClient {
 
         this.pendingRequestsById.delete(request.id);
         rejectPromise(new Error(`daemon RPC request timed out for method "${method}"`));
-      }, RPC_REQUEST_TIMEOUT_MS);
+      }, requestTimeoutMs);
 
       this.pendingRequestsById.set(request.id, {
         method,
@@ -440,8 +444,8 @@ export class DaemonClient {
     return handler as (input?: unknown) => Promise<unknown>;
   }
 
-  private async invoke(method: string, params?: unknown): Promise<unknown> {
-    return await this.sendRequest(method, params);
+  private async invoke(method: string, params?: unknown, timeoutMs?: number): Promise<unknown> {
+    return await this.sendRequest(method, params, timeoutMs);
   }
 
   private resolveWorkspaceId(input: unknown): Promise<string> {

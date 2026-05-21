@@ -258,6 +258,22 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
         worktreePath: created.worktreePath,
       };
     } catch (error) {
+      // Mark any step still showing as "running" as failed so the UI doesn't
+      // stay stuck with a spinning indicator forever.
+      const progressState = workspaceCreateProgressStore.getState().progressByWorkspaceId[workspaceId];
+      if (progressState) {
+        for (const step of progressState.steps) {
+          if (step.status === "running") {
+            workspaceCreateProgressStore.getState().applyWorkspaceCreateProgressEvent({
+              workspaceId,
+              stepId: step.id,
+              label: step.label,
+              status: "failed",
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
       workspaceCreateProgressStore.getState().applyWorkspaceCreateProgressEvent({
         workspaceId,
         stepId: "complete",
