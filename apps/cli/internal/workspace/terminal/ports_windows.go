@@ -14,7 +14,7 @@ func listProcesses() ([]processInfo, error) {
 		"powershell",
 		"-NoProfile",
 		"-Command",
-		"Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId | ConvertTo-Csv -NoTypeInformation",
+		"Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name | ConvertTo-Csv -NoTypeInformation",
 	).Output()
 	if err != nil {
 		return nil, err
@@ -34,12 +34,23 @@ func listListeningTCPPorts(pids []int) ([]listeningPort, error) {
 		return nil, nil
 	}
 
+	processes, err := listProcesses()
+	if err != nil {
+		return nil, err
+	}
+	pidToName := make(map[int]string, len(processes))
+	for _, p := range processes {
+		if p.Name != "" {
+			pidToName[p.PID] = p.Name
+		}
+	}
+
 	out, err := exec.Command("netstat", "-ano", "-p", "tcp").Output()
 	if err != nil {
 		return nil, err
 	}
 
-	return parseWindowsNetstatTCP(out, tracked), nil
+	return parseWindowsNetstatTCP(out, tracked, pidToName), nil
 }
 
 func parseWindowsProcessCSV(out []byte) []processInfo {
@@ -55,12 +66,16 @@ func parseWindowsProcessCSV(out []byte) []processInfo {
 		if pidErr != nil || ppidErr != nil {
 			continue
 		}
-		processes = append(processes, processInfo{PID: pid, PPID: ppid})
+		name := ""
+		if len(fields) >= 3 {
+			name = strings.TrimSpace(fields[2])
+		}
+		processes = append(processes, processInfo{PID: pid, PPID: ppid, Name: name})
 	}
 	return processes
 }
 
-func parseWindowsNetstatTCP(out []byte, tracked map[int]struct{}) []listeningPort {
+func parseWindowsNetstatTCP(out []byte, tracked map[int]struct{}, pidToName map[int]string) []listeningPort {
 	lines := strings.Split(string(out), "\n")
 	ports := make([]listeningPort, 0, len(lines))
 	for _, rawLine := range lines {
@@ -81,7 +96,11 @@ func parseWindowsNetstatTCP(out []byte, tracked map[int]struct{}) []listeningPor
 			continue
 		}
 
-		ports = append(ports, listeningPort{PID: pid, Address: address, Port: port, ProcessName: "unknown"})
+		name := pidToName[pid]
+		if name == "" {
+			name = "unknown"
+		}
+		ports = append(ports, listeningPort{PID: pid, Address: address, Port: port, ProcessName: name})
 	}
 	return ports
 }
