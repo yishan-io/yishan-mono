@@ -152,18 +152,29 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
         method: mergeMethod,
         deleteBranch,
       });
+      const state = workspaceStore.getState();
       if (hasLivePr && pullRequest) {
-        const state = workspaceStore.getState();
         state.setWorkspacePullRequest(state.selectedWorkspaceId, {
           ...pullRequest,
           complete: true,
           status: "merged",
         });
+      } else {
+        // No live daemon PR — synthesize a merged PR entry so the UI reflects the merge.
+        state.setWorkspacePullRequest(state.selectedWorkspaceId, {
+          number: prNumber,
+          title: prTitle ?? "",
+          url: prUrl ?? "",
+          branch: prBranch ?? "",
+          baseBranch: prBaseBranch ?? "",
+          complete: true,
+          status: "merged",
+        } as DaemonWorkspacePullRequest);
       }
     } finally {
       setIsMerging(false);
     }
-  }, [prNumber, worktreePath, mergeMethod, deleteBranch, isMerging, hasLivePr, pullRequest]);
+  }, [prNumber, worktreePath, mergeMethod, deleteBranch, isMerging, hasLivePr, pullRequest, prTitle, prUrl, prBranch, prBaseBranch]);
 
   const handleClose = useCallback(async () => {
     if (!prNumber || !worktreePath || isClosing) return;
@@ -173,18 +184,29 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
         workspaceWorktreePath: worktreePath,
         prNumber,
       });
+      const state = workspaceStore.getState();
       if (hasLivePr && pullRequest) {
-        const state = workspaceStore.getState();
         state.setWorkspacePullRequest(state.selectedWorkspaceId, {
           ...pullRequest,
           status: "closed",
           githubState: "CLOSED",
         });
+      } else {
+        state.setWorkspacePullRequest(state.selectedWorkspaceId, {
+          number: prNumber,
+          title: prTitle ?? "",
+          url: prUrl ?? "",
+          branch: prBranch ?? "",
+          baseBranch: prBaseBranch ?? "",
+          complete: true,
+          status: "closed",
+          githubState: "CLOSED",
+        } as DaemonWorkspacePullRequest);
       }
     } finally {
       setIsClosing(false);
     }
-  }, [prNumber, worktreePath, isClosing, hasLivePr, pullRequest]);
+  }, [prNumber, worktreePath, isClosing, hasLivePr, pullRequest, prTitle, prUrl, prBranch, prBaseBranch]);
 
   if (isLoading && isEmpty) {
     return <PaneLoadingBar />;
