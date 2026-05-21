@@ -35,6 +35,14 @@ function CreateProgressStepIcon({ step }: { step: WorkspaceCreateProgressStep })
     );
   }
 
+  if (step.status === "skipped") {
+    return (
+      <Box component="span" sx={{ display: "inline-flex", color: "text.disabled" }}>
+        <LuCircleCheck size={16} />
+      </Box>
+    );
+  }
+
   if (step.status === "failed") {
     return <LuCircleX size={16} color="var(--mui-palette-error-main)" />;
   }
