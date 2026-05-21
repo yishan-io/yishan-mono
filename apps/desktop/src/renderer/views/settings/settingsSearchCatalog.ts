@@ -1,5 +1,6 @@
 import {
   BiBell,
+  BiBot,
   BiChip,
   type BiCog,
   BiDesktop,
@@ -77,7 +78,7 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
       { tab: "workspace", labelKey: "settings.items.workspace", icon: BiGitBranch },
       { tab: "terminal", labelKey: "settings.items.terminal", icon: BiTerminal },
       { tab: "daemon", labelKey: "settings.items.daemon", icon: BiChip },
-      { tab: "agents", labelKey: "settings.items.agents", icon: BiChip },
+      { tab: "agents", labelKey: "settings.items.agents", icon: BiBot },
     ],
   },
 ];
@@ -283,7 +284,7 @@ const AGENT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "agent-settings",
     tab: "agents",
-    icon: BiChip,
+    icon: BiBot,
     labelKey: "settings.agents.title",
     sectionLabelKey: "settings.items.agents",
     keywordKeys: [
@@ -298,7 +299,7 @@ const AGENT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   ...SUPPORTED_DESKTOP_AGENT_KINDS.map((agentKind) => ({
     id: `agent-item-${agentKind}`,
     tab: "agents" as const,
-    icon: BiChip,
+    icon: BiBot,
     labelKey: AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind],
     sectionLabelKey: "settings.items.agents",
     keywordKeys: ["settings.agents.inUse", "settings.agents.status.detected", "settings.agents.status.notDetected"],
