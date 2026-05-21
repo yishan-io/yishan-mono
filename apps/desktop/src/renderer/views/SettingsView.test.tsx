@@ -48,6 +48,10 @@ vi.mock("./settings/KeybindingsSettingsView", () => ({
   KeybindingsSettingsView: () => <div data-testid="keybindings-settings-panel" />,
 }));
 
+vi.mock("./settings/MemberSettingsView", () => ({
+  MemberSettingsView: () => <div data-testid="member-settings-panel" />,
+}));
+
 describe("SettingsView", () => {
   afterEach(() => {
     window.localStorage.removeItem(LAYOUT_STORE_STORAGE_KEY);
@@ -192,6 +196,40 @@ describe("SettingsView", () => {
     );
 
     expect(screen.getByTestId("daemon-settings-panel")).toBeTruthy();
+  });
+
+  it("renders members panel when members tab is selected", () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=members"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    expect(screen.getByTestId("member-settings-panel")).toBeTruthy();
+  });
+
+  it("matches member settings in search and opens members tab", () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("settings.searchPlaceholder"), {
+      target: { value: "role" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /settings\.members\.title/ }));
+
+    expect(screen.getByTestId("member-settings-panel")).toBeTruthy();
   });
 
   it("matches daemon settings in search and opens daemon tab", () => {

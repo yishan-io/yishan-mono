@@ -68,9 +68,9 @@
     "searchPlaceholder": "搜索设置...",
     "searchNoResults": "没有匹配的设置项。",
     "sections": {
-      "account": "账号",
-      "app": "应用",
-      "advanced": "高级"
+      "personal": "个人",
+      "organization": "组织",
+      "workspaceSystem": "工作区与系统"
     },
     "items": {
       "account": "账号",
@@ -80,6 +80,7 @@
       "integrations": "集成",
       "keybindings": "键盘快捷键",
       "links": "链接",
+      "members": "成员",
       "nodes": "节点",
       "notifications": "通知",
       "terminal": "终端",
@@ -108,6 +109,18 @@
       "values": {
         "unknownOwner": "未知",
         "unknownVersion": "未知"
+      }
+    },
+    "members": {
+      "title": "组织成员",
+      "description": "查看当前组织的成员列表以及每个人的权限角色。",
+      "loadError": "加载组织成员失败。",
+      "empty": "当前组织没有成员。",
+      "columns": {
+        "member": "成员",
+        "email": "邮箱",
+        "role": "角色",
+        "userId": "用户 ID"
       }
     },
     "account": {

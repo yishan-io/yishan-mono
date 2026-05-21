@@ -68,9 +68,9 @@
     "searchPlaceholder": "Search settings...",
     "searchNoResults": "No matching settings.",
     "sections": {
-      "account": "Account",
-      "app": "App",
-      "advanced": "Advanced"
+      "personal": "Personal",
+      "organization": "Organization",
+      "workspaceSystem": "Workspace & System"
     },
     "items": {
       "account": "Account",
@@ -80,6 +80,7 @@
       "integrations": "Integrations",
       "keybindings": "Keyboard Shortcuts",
       "links": "Links",
+      "members": "Members",
       "nodes": "Nodes",
       "notifications": "Notifications",
       "terminal": "Terminal",
@@ -108,6 +109,18 @@
       "values": {
         "unknownOwner": "Unknown",
         "unknownVersion": "Unknown"
+      }
+    },
+    "members": {
+      "title": "Organization members",
+      "description": "Review who belongs to the current organization and what access role each person has.",
+      "loadError": "Failed to load organization members.",
+      "empty": "No members are available for this organization.",
+      "columns": {
+        "member": "Member",
+        "email": "Email",
+        "role": "Role",
+        "userId": "User ID"
       }
     },
     "account": {
