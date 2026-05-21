@@ -317,7 +317,8 @@ export function openTabState(
 
     if (input.kind === "file" && existingTab.kind === "file") {
       const nextContent = input.content;
-      const isOpeningTemporary = Boolean(input.temporary);
+      // Never demote a permanent tab back to temporary on re-open.
+      const isOpeningTemporary = Boolean(input.temporary) && existingTab.data.isTemporary;
       const isUnsupported = Boolean(input.isUnsupported);
       const unsupportedReason = input.unsupportedReason;
       if (typeof nextContent !== "string") {
@@ -368,7 +369,8 @@ export function openTabState(
     }
 
     if (input.kind === "image" && existingTab.kind === "image") {
-      const isOpeningTemporary = Boolean(input.temporary);
+      // Never demote a permanent tab back to temporary on re-open.
+      const isOpeningTemporary = Boolean(input.temporary) && existingTab.data.isTemporary;
       return {
         tabs: state.tabs.map((tab) =>
           tab.id === existingTab.id && tab.kind === "image"
