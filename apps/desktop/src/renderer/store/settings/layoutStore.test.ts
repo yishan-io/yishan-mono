@@ -9,6 +9,9 @@ describe("layoutStore", () => {
       leftWidth: DEFAULT_LEFT_WIDTH,
       rightWidth: DEFAULT_RIGHT_WIDTH,
       themePreference: "system",
+      markdownDefaultViewMode: "split",
+      markdownPreviewFontSize: "medium",
+      markdownPreviewWidth: "readable",
     });
     window.localStorage.clear();
   });
@@ -67,5 +70,38 @@ describe("layoutStore", () => {
     layoutStore.getState().setThemePreference("light");
 
     expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"themePreference":"light"');
+  });
+
+  it("hydrates persisted markdown default view mode", () => {
+    window.localStorage.setItem(
+      LAYOUT_STORE_STORAGE_KEY,
+      JSON.stringify({
+        state: {
+          leftWidth: DEFAULT_LEFT_WIDTH,
+          rightWidth: DEFAULT_RIGHT_WIDTH,
+          themePreference: "system",
+          markdownDefaultViewMode: "preview",
+        },
+        version: 0,
+      }),
+    );
+
+    void layoutStore.persist.rehydrate();
+
+    expect(layoutStore.getState().markdownDefaultViewMode).toBe("preview");
+  });
+
+  it("persists markdown default view mode", () => {
+    layoutStore.getState().setMarkdownDefaultViewMode("edit");
+
+    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownDefaultViewMode":"edit"');
+  });
+
+  it("persists markdown preview font size and preview width", () => {
+    layoutStore.getState().setMarkdownPreviewFontSize("large");
+    layoutStore.getState().setMarkdownPreviewWidth("full");
+
+    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownPreviewFontSize":"large"');
+    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownPreviewWidth":"full"');
   });
 });

@@ -55,7 +55,12 @@ vi.mock("./settings/MemberSettingsView", () => ({
 describe("SettingsView", () => {
   afterEach(() => {
     window.localStorage.removeItem(LAYOUT_STORE_STORAGE_KEY);
-    layoutStore.setState({ themePreference: "system" });
+    layoutStore.setState({
+      themePreference: "system",
+      markdownDefaultViewMode: "split",
+      markdownPreviewFontSize: "medium",
+      markdownPreviewWidth: "readable",
+    });
     sessionStore.setState({ currentUser: null, organizations: [], selectedOrganizationId: undefined, loaded: false });
     cleanup();
     vi.clearAllMocks();
@@ -148,6 +153,44 @@ describe("SettingsView", () => {
     fireEvent.click(screen.getByTestId("settings-theme-option-dark"));
 
     expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"themePreference":"dark"');
+  });
+
+  it("renders markdown default view mode setting and persists changes", () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=appearance"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    fireEvent.mouseDown(screen.getByLabelText("settings.appearance.markdown.defaultViewMode.label"));
+    fireEvent.click(screen.getByRole("option", { name: "settings.appearance.markdown.defaultViewMode.options.preview" }));
+
+    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownDefaultViewMode":"preview"');
+  });
+
+  it("persists markdown preview font size and preview width", () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=appearance"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    fireEvent.mouseDown(screen.getByLabelText("settings.appearance.markdown.previewFontSize.label"));
+    fireEvent.click(screen.getByRole("option", { name: "settings.appearance.markdown.previewFontSize.options.large" }));
+
+    fireEvent.mouseDown(screen.getByLabelText("settings.appearance.markdown.previewWidth.label"));
+    fireEvent.click(screen.getByRole("option", { name: "settings.appearance.markdown.previewWidth.options.full" }));
+
+    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownPreviewFontSize":"large"');
+    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownPreviewWidth":"full"');
   });
 
   it("matches appearance theme settings in search and opens appearance tab", () => {

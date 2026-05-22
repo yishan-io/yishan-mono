@@ -4,12 +4,18 @@ import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { openLink } from "../commands/appCommands";
 import { buildWorkspaceFileUrl } from "../commands/fileCommands";
+import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
 import { markdownService } from "./markdownService";
 import { MermaidBlock } from "./MermaidBlock";
 
 const MARKDOWN_RENDER_DEBOUNCE_MS = 400;
+const MARKDOWN_PREVIEW_BASE_FONT_SIZE_BY_MODE = {
+  small: 14,
+  medium: 16,
+  large: 18,
+} as const;
 
 type MarkdownPreviewProps = {
   content: string;
@@ -87,12 +93,12 @@ function getCodeHighlightStyles(mode: "light" | "dark") {
 }
 
 /** Returns MUI-aware styles for the Markdown preview container. */
-function useMarkdownStyles(theme: Theme) {
+function useMarkdownStyles(theme: Theme, baseFontSize: number) {
   return useMemo(
     () => ({
       container: {
         fontFamily: theme.typography.fontFamily,
-        fontSize: 15,
+        fontSize: baseFontSize,
         lineHeight: 1.7,
         color: theme.palette.text.primary,
         "& > *:first-of-type": { mt: 0 },
@@ -288,7 +294,7 @@ function useMarkdownStyles(theme: Theme) {
         },
       },
     }),
-    [theme],
+    [baseFontSize, theme],
   );
 }
 
@@ -302,7 +308,10 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
   worktreePath,
 }: MarkdownPreviewProps) {
   const theme = useTheme();
-  const styles = useMarkdownStyles(theme);
+  const markdownPreviewFontSize = layoutStore((state) => state.markdownPreviewFontSize);
+  const markdownPreviewWidth = layoutStore((state) => state.markdownPreviewWidth);
+  const baseFontSize = MARKDOWN_PREVIEW_BASE_FONT_SIZE_BY_MODE[markdownPreviewFontSize];
+  const styles = useMarkdownStyles(theme, baseFontSize);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [html, setHtml] = useState<string | null>(null);
   const [mermaidBlocks, setMermaidBlocks] = useState<Array<{ id: string; code: string }>>([]);
@@ -449,12 +458,19 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
       sx={{
         flex: 1,
         overflow: "auto",
-        px: 4,
+        px: markdownPreviewWidth === "full" ? 3 : 4,
         py: 3,
-        ...styles.container,
       }}
     >
-      <Box ref={containerRef} />
+      <Box
+        ref={containerRef}
+        sx={{
+          width: "100%",
+          maxWidth: markdownPreviewWidth === "full" ? "none" : 860,
+          mx: markdownPreviewWidth === "full" ? 0 : "auto",
+          ...styles.container,
+        }}
+      />
       {/* Render mermaid blocks as React portals into their placeholder divs */}
       {mermaidBlocks.map((block) => (
         <MermaidPortal key={block.id} targetId={block.id} code={block.code} containerRef={containerRef} />

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { ThemeProvider } from "@mui/material/styles";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAppTheme } from "../theme";
 import { FileEditor } from "./FileEditor";
@@ -305,5 +305,25 @@ describe("FileEditor", () => {
 
     expect(onCopyPath).toHaveBeenCalledWith("src/components/App.tsx");
     expect(onOpenExternalApp).toHaveBeenCalledWith("src/components/App.tsx");
+  });
+
+  it("defaults markdown files to split mode", () => {
+    render(
+      <ThemeProvider theme={createAppTheme("dark")}>
+        <FileEditor path="README.md" content="# Hello" />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: "Split view" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("respects configured markdown default mode", () => {
+    render(
+      <ThemeProvider theme={createAppTheme("dark")}>
+        <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: "Preview" }).getAttribute("aria-pressed")).toBe("true");
   });
 });

@@ -8,6 +8,7 @@ import { TabPanel } from "../../components/TabPanel";
 import { UnsupportedFileView } from "../../components/UnsupportedFileView";
 import { copyToClipboard } from "../../helpers/clipboard";
 import type { Commands } from "../../hooks/useCommands";
+import { layoutStore } from "../../store/settings/layoutStore";
 import type { WorkspaceTab } from "../../store/types";
 import { BrowserView } from "./browser/BrowserView";
 import { TerminalView } from "./terminal/TerminalView";
@@ -31,6 +32,7 @@ export function useTabContentRenderer({
   onOpenExternalApp,
 }: TabContentRendererProps): RenderTabContent {
   const { t } = useTranslation();
+  const markdownDefaultViewMode = layoutStore((state) => state.markdownDefaultViewMode);
 
   return useCallback(
     (tab: WorkspaceTab, isSelected: boolean, isInActivePane: boolean) => {
@@ -78,6 +80,7 @@ export function useTabContentRenderer({
               content={tab.data.content ?? ""}
               worktreePath={workspace?.worktreePath}
               isDeleted={Boolean(tab.data.isDeleted)}
+              defaultMarkdownViewMode={markdownDefaultViewMode}
               focusRequestKey={shouldFocusContent ? focusContentRequestKey : 0}
               onContentChange={(nextContent) => cmd.updateFileTabContent(tab.id, nextContent)}
               onSave={async (nextContent) => {
@@ -163,6 +166,6 @@ export function useTabContentRenderer({
 
       return null;
     },
-    [t, cmd, workspace, externalAppLabel, onOpenExternalApp, focusContentRequestKey],
+    [t, cmd, workspace, externalAppLabel, onOpenExternalApp, focusContentRequestKey, markdownDefaultViewMode],
   );
 }

@@ -257,6 +257,36 @@
           "dark": "深色",
           "system": "系统主题"
         }
+      },
+      "markdown": {
+        "title": "Markdown",
+        "description": "配置 Markdown 文件在编辑器中的默认打开方式。",
+        "defaultViewMode": {
+          "label": "默认 Markdown 视图模式",
+          "description": "选择 Markdown 文件默认打开方式。",
+          "options": {
+            "edit": "编辑",
+            "preview": "预览",
+            "split": "分栏"
+          }
+        },
+        "previewFontSize": {
+          "label": "预览字体大小",
+          "description": "控制 Markdown 预览中的文本大小。",
+          "options": {
+            "small": "小",
+            "medium": "中",
+            "large": "大"
+          }
+        },
+        "previewWidth": {
+          "label": "预览宽度",
+          "description": "选择预览使用全宽，或更易读的列宽。",
+          "options": {
+            "readable": "易读列宽",
+            "full": "全宽"
+          }
+        }
       }
     },
     "language": {
