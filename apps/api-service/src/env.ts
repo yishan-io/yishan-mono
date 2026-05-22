@@ -76,12 +76,14 @@ function buildServiceConfig(c: Context): ServiceConfig {
 
   const cookieDomain = readEnv(c, "COOKIE_DOMAIN");
   const appBaseUrl = requireEnv(c, "APP_BASE_URL");
+  const landingBaseUrl = readEnv(c, "LANDING_BASE_URL") ?? "https://yishan.io";
   const jwtIssuer = readEnv(c, "JWT_ISSUER") ?? appBaseUrl;
   const jwtAudience = readEnv(c, "JWT_AUDIENCE") ?? DEFAULT_JWT_AUDIENCE;
 
   return {
     databaseUrl: readHyperdriveConnectionString(c) ?? requireEnv(c, "DATABASE_URL"),
     appBaseUrl,
+    landingBaseUrl,
     relayUrl: readEnv(c, "RELAY_URL"),
     relayApiToken: readEnv(c, "RELAY_API_TOKEN"),
     sessionSecret: requireEnv(c, "SESSION_SECRET"),
@@ -96,6 +98,8 @@ function buildServiceConfig(c: Context): ServiceConfig {
     googleClientSecret: requireEnv(c, "GOOGLE_CLIENT_SECRET"),
     githubClientId: requireEnv(c, "GITHUB_CLIENT_ID"),
     githubClientSecret: requireEnv(c, "GITHUB_CLIENT_SECRET"),
+    resendApiKey: requireEnv(c, "RESEND_API_KEY"),
+    resendFromEmail: requireEnv(c, "RESEND_FROM_EMAIL"),
   };
 }
 

@@ -21,14 +21,15 @@ type AddMemberRole = "member" | "admin";
 interface AddOrgMemberDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (invited: boolean) => void;
 }
 
 const FIELD_LABEL_SX = { display: "block", mb: 0.5, fontWeight: 600 } as const;
 
 /**
  * Dialog for adding a new member to the currently selected organization.
- * The caller is responsible for refreshing the member list on success via `onSuccess`.
+ * When the email address has no account yet, an invitation is sent and
+ * `onSuccess` is called with `invited: true`.
  */
 export function AddOrgMemberDialog({ isOpen, onClose, onSuccess }: AddOrgMemberDialogProps) {
   const { t } = useTranslation();
@@ -58,10 +59,10 @@ export function AddOrgMemberDialog({ isOpen, onClose, onSuccess }: AddOrgMemberD
     setSubmitError(null);
 
     try {
-      await addOrgMember(trimmedEmail, role);
+      const { invited } = await addOrgMember(trimmedEmail, role);
       setEmail("");
       setRole("member");
-      onSuccess();
+      onSuccess(invited);
       onClose();
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : String(error));

@@ -32,6 +32,7 @@ localConnectionString = "postgres://postgres:postgres@localhost:5432/yishan"
 #   GITHUB_CLIENT_ID
 #   GITHUB_CLIENT_SECRET
 #   RELAY_API_TOKEN
+#   RESEND_API_KEY
 #
 # Non-secret environment variables are set in [vars] below.
 
@@ -45,6 +46,7 @@ max_batch_size = 20
 
 [vars]
 APP_BASE_URL         = "https://api.yishan.io"
+LANDING_BASE_URL     = "https://yishan.io"
 SESSION_TTL_DAYS     = "30"
 JWT_ACCESS_TTL_SECONDS = "900"
 REFRESH_TOKEN_TTL_DAYS = "30"
@@ -56,3 +58,4 @@ RELAY_URL            = "https://relay.yishan.io"
 # Electron production builds load from file:// and bypass CORS enforcement,
 # so they do not need an explicit origin entry here.
 CORS_ORIGINS         = "https://yishan.io,https://app.yishan.io,http://localhost:5173,http://localhost:3000"
+RESEND_FROM_EMAIL    = "Yishan <noreply@yishan.io>"

@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import type { AppContext } from "@/hono";
 import type {
   AddOrganizationMemberBodyInput,
+  CancelOrganizationInviteParamsInput,
   CreateOrganizationBodyInput,
   OrganizationParamsInput,
   RemoveOrganizationMemberParamsInput,
@@ -59,14 +60,18 @@ export async function addOrganizationMemberHandler(
   const { email, role } = body;
 
   const actorUser = c.get("sessionUser");
-  const member = await c.get("services").organization.addOrganizationMember({
+  const result = await c.get("services").organization.addOrganizationMember({
     organizationId,
     actorUserId: actorUser.id,
     memberEmail: email,
     role,
   });
 
-  return c.json({ member }, StatusCodes.CREATED);
+  if (result.kind === "invited") {
+    return c.json({ invited: true, invite: result.invite }, StatusCodes.CREATED);
+  }
+
+  return c.json({ invited: false, member: result.member }, StatusCodes.CREATED);
 }
 
 export async function removeOrganizationMemberHandler(c: AppContext, params: RemoveOrganizationMemberParamsInput) {
@@ -79,5 +84,20 @@ export async function removeOrganizationMemberHandler(c: AppContext, params: Rem
     memberUserId,
   });
 
+  return c.json({ ok: true });
+}
+
+export async function listOrganizationInvitesHandler(c: AppContext, params: OrganizationParamsInput) {
+  const invites = await c.get("services").organizationInvite.listPendingInvites(params.orgId);
+  return c.json({ invites });
+}
+
+export async function cancelOrganizationInviteHandler(c: AppContext, params: CancelOrganizationInviteParamsInput) {
+  const actorUser = c.get("sessionUser");
+  await c.get("services").organizationInvite.cancelInvite({
+    organizationId: params.orgId,
+    inviteId: params.inviteId,
+    actorUserId: actorUser.id,
+  });
   return c.json({ ok: true });
 }

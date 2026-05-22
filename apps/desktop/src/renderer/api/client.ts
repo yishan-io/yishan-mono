@@ -1,5 +1,12 @@
 import { listOrganizationNodes } from "./nodeApi";
-import { addOrganizationMember, createOrganization, listOrganizationMembers, listOrganizations } from "./orgApi";
+import {
+  addOrganizationMember,
+  cancelOrganizationInvite,
+  createOrganization,
+  listOrganizationInvites,
+  listOrganizationMembers,
+  listOrganizations,
+} from "./orgApi";
 import { createProject, deleteProject, listProjects, updateProject } from "./projectApi";
 import {
   createScheduledJob,
@@ -20,6 +27,8 @@ export const api = {
     create: createOrganization,
     listMembers: listOrganizationMembers,
     addMember: addOrganizationMember,
+    listInvites: listOrganizationInvites,
+    cancelInvite: cancelOrganizationInvite,
   },
   node: {
     listByOrg: listOrganizationNodes,

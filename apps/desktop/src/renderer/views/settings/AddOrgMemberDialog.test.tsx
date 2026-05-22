@@ -13,7 +13,6 @@ vi.mock("react-i18next", () => ({
 vi.mock("../../commands/orgCommands", () => ({
   addOrgMember: vi.fn(),
 }));
-
 describe("AddOrgMemberDialog", () => {
   const onClose = vi.fn();
   const onSuccess = vi.fn();
@@ -49,7 +48,7 @@ describe("AddOrgMemberDialog", () => {
   });
 
   it("calls addOrgMember with trimmed email and role on submit", async () => {
-    vi.mocked(addOrgMember).mockResolvedValue(undefined);
+    vi.mocked(addOrgMember).mockResolvedValue({ invited: false });
     render(<AddOrgMemberDialog isOpen onClose={onClose} onSuccess={onSuccess} />);
 
     fireEvent.change(screen.getByLabelText("settings.members.addDialog.emailLabel"), {
@@ -60,8 +59,22 @@ describe("AddOrgMemberDialog", () => {
     await waitFor(() => {
       expect(addOrgMember).toHaveBeenCalledWith("alice@example.com", "member");
     });
-    expect(onSuccess).toHaveBeenCalledOnce();
+    expect(onSuccess).toHaveBeenCalledWith(false);
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("calls onSuccess with invited=true when an invite was sent", async () => {
+    vi.mocked(addOrgMember).mockResolvedValue({ invited: true });
+    render(<AddOrgMemberDialog isOpen onClose={onClose} onSuccess={onSuccess} />);
+
+    fireEvent.change(screen.getByLabelText("settings.members.addDialog.emailLabel"), {
+      target: { value: "new@example.com" },
+    });
+    fireEvent.click(screen.getByText("settings.members.addDialog.submit"));
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledWith(true);
+    });
   });
 
   it("shows error alert when addOrgMember rejects", async () => {

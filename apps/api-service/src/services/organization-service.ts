@@ -13,9 +13,9 @@ import {
   OrganizationNotFoundError,
   OrganizationOwnerRemovalNotAllowedError,
   OrganizationOwnerRequiredError,
-  UserNotFoundByEmailError,
 } from "@/errors";
 import { newId } from "@/lib/id";
+import type { OrganizationInviteService, OrganizationInviteView } from "@/services/organization-invite-service";
 import type { UserService } from "@/services/user-service";
 
 type CreateOrganizationInput = {
@@ -32,6 +32,15 @@ export type OrganizationMemberView = {
   avatarUrl: string | null;
 };
 
+/**
+ * Discriminated result from `addOrganizationMember`.
+ * When the target email is not yet registered, an invite is sent instead and
+ * `kind` is `"invited"`.
+ */
+export type AddOrganizationMemberResult =
+  | { kind: "added"; member: OrganizationMemberView }
+  | { kind: "invited"; invite: OrganizationInviteView };
+
 type OrganizationView = {
   id: string;
   name: string;
@@ -44,6 +53,7 @@ export class OrganizationService {
   constructor(
     private readonly db: AppDb,
     private readonly userService: UserService,
+    private readonly inviteService: OrganizationInviteService,
   ) {}
 
   // ── Private helpers ────────────────────────────────────────────────────────
@@ -121,16 +131,23 @@ export class OrganizationService {
     actorUserId: string;
     memberEmail: string;
     role: "member" | "admin";
-  }): Promise<OrganizationMemberView> {
+  }): Promise<AddOrganizationMemberResult> {
     await this.assertOrganizationExists(input.organizationId);
 
-    // Resolve email → user outside the transaction: a simple read with no locking needed.
+    // Resolve email → user. If the user does not yet have an account, send an
+    // invite email so they can register and be auto-joined on signup.
     const targetUser = await this.userService.getByEmail(input.memberEmail);
     if (!targetUser) {
-      throw new UserNotFoundByEmailError(input.memberEmail);
+      const invite = await this.inviteService.createInvite({
+        organizationId: input.organizationId,
+        actorUserId: input.actorUserId,
+        email: input.memberEmail,
+        role: input.role,
+      });
+      return { kind: "invited", invite };
     }
 
-    return this.db.transaction(async (tx) => {
+    const member = await this.db.transaction(async (tx) => {
       const actorMembershipRows = await tx
         .select({ role: organizationMembers.role })
         .from(organizationMembers)
@@ -182,6 +199,8 @@ export class OrganizationService {
         avatarUrl: targetUser.avatarUrl,
       };
     });
+
+    return { kind: "added", member };
   }
 
   async removeOrganizationMember(input: {

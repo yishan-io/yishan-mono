@@ -12,6 +12,7 @@ export type OAuthProfile = {
 export type ServiceConfig = {
   databaseUrl: string;
   appBaseUrl: string;
+  landingBaseUrl: string;
   relayUrl?: string;
   relayApiToken?: string;
   sessionSecret: string;
@@ -26,4 +27,6 @@ export type ServiceConfig = {
   googleClientSecret: string;
   githubClientId: string;
   githubClientSecret: string;
+  resendApiKey: string;
+  resendFromEmail: string;
 };

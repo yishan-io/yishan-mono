@@ -3,6 +3,7 @@ import {
   Avatar,
   Box,
   Button,
+  Snackbar,
   Stack,
   Table,
   TableBody,
@@ -19,6 +20,7 @@ import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
 import { sessionStore } from "../../store/sessionStore";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
+import { PendingInvitesSection } from "./PendingInvitesSection";
 
 function getMemberInitials(member: OrganizationMemberRecord): string {
   const displayName = member.name?.trim() || member.email?.trim() || member.userId.trim();
@@ -54,6 +56,8 @@ export function MemberSettingsView() {
   const [hasLoadError, setHasLoadError] = useState(false);
   const [members, setMembers] = useState<OrganizationMemberRecord[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [inviteReloadKey, setInviteReloadKey] = useState(0);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const organizationId = resolveOrganizationId(
     selectedOrganizationId,
     organizations.map((organization) => organization.id),
@@ -98,11 +102,18 @@ export function MemberSettingsView() {
     };
   }, [organizationId, loadMembers]);
 
-  const handleAddDialogSuccess = useCallback(() => {
-    if (organizationId) {
-      void loadMembers(organizationId, { cancelled: false });
-    }
-  }, [organizationId, loadMembers]);
+  const handleAddDialogSuccess = useCallback(
+    (invited: boolean) => {
+      if (invited) {
+        setInviteReloadKey((k) => k + 1);
+        setSuccessMessage(t("settings.members.inviteSent"));
+      } else if (organizationId) {
+        void loadMembers(organizationId, { cancelled: false });
+        setSuccessMessage(t("settings.members.memberAdded"));
+      }
+    },
+    [organizationId, loadMembers, t],
+  );
 
   return (
     <Box>
@@ -197,10 +208,17 @@ export function MemberSettingsView() {
           </>
         )}
       </SettingsCard>
+      {organizationId ? <PendingInvitesSection organizationId={organizationId} reloadKey={inviteReloadKey} /> : null}
       <AddOrgMemberDialog
         isOpen={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
         onSuccess={handleAddDialogSuccess}
+      />
+      <Snackbar
+        open={successMessage !== null}
+        autoHideDuration={4000}
+        onClose={() => setSuccessMessage(null)}
+        message={successMessage}
       />
     </Box>
   );

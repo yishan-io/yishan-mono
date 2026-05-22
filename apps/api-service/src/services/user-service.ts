@@ -5,10 +5,21 @@ import { oauthAccounts, users } from "@/db/schema";
 import { newId } from "@/lib/id";
 import type { NotificationPreferencesPatch } from "@/lib/notification-preferences";
 import { type UserPreferences, type UserPreferencesPatch, mergeUserPreferences } from "@/lib/user-preferences";
+import type { OrganizationInviteService } from "@/services/organization-invite-service";
 import type { OAuthProfile } from "@/types";
 
 export class UserService {
+  private inviteService: OrganizationInviteService | null = null;
+
   constructor(private readonly db: AppDb) {}
+
+  /**
+   * Sets the invite service after construction to avoid a circular dependency.
+   * Called by `createServices` immediately after both services are instantiated.
+   */
+  setInviteService(inviteService: OrganizationInviteService): void {
+    this.inviteService = inviteService;
+  }
 
   async getById(userId: string) {
     const rows = await this.db
@@ -116,6 +127,12 @@ export class UserService {
           updatedAt: new Date(),
         })
         .where(eq(users.id, linkedUserId));
+
+      // Accept any pending invitations for this email — runs for both new and
+      // returning users so an invite issued after first login is never missed.
+      if (this.inviteService) {
+        await this.inviteService.acceptPendingInvitesForEmail(tx, linkedUserId, profile.email);
+      }
 
       return linkedUserId;
     });

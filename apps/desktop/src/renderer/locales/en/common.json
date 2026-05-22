@@ -117,6 +117,8 @@
       "loadError": "Failed to load organization members.",
       "empty": "No members are available for this organization.",
       "addMember": "Add member",
+      "memberAdded": "Member added successfully.",
+      "inviteSent": "Invitation sent. They will be added when they register.",
       "addDialog": {
         "title": "Add organization member",
         "emailLabel": "Email address",
@@ -129,6 +131,22 @@
         "submit": "Add member",
         "adding": "Adding...",
         "errorEmailEmpty": "Email address cannot be empty."
+      },
+      "pendingInvites": {
+        "title": "Pending invitations",
+        "description": "These email addresses have been invited but have not yet registered.",
+        "loadError": "Failed to load pending invitations.",
+        "cancelAriaLabel": "Cancel invitation",
+        "cancelDialog": {
+          "title": "Cancel invitation?",
+          "description": "The invitation to {{email}} will be revoked. They will no longer be able to join this organization using it.",
+          "confirm": "Cancel invitation"
+        },
+        "columns": {
+          "email": "Email",
+          "role": "Role",
+          "expires": "Expires"
+        }
       },
       "columns": {
         "member": "Member",

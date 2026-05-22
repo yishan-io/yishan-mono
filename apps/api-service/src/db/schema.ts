@@ -348,3 +348,31 @@ export type NewScheduledJob = InferInsertModel<typeof scheduledJobs>;
 
 export type ScheduledJobRun = InferSelectModel<typeof scheduledJobRuns>;
 export type NewScheduledJobRun = InferInsertModel<typeof scheduledJobRuns>;
+
+export const organizationInvitations = pgTable(
+  "organization_invitations",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: text("role").notNull().default("member"),
+    invitedByUserId: text("invited_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("organization_invitations_org_id_email_uq").on(table.organizationId, table.email),
+    index("organization_invitations_org_id_idx").on(table.organizationId),
+    index("organization_invitations_email_idx").on(table.email),
+    uniqueIndex("organization_invitations_token_uq").on(table.token),
+  ],
+);
+
+export type OrganizationInvitation = InferSelectModel<typeof organizationInvitations>;
+export type NewOrganizationInvitation = InferInsertModel<typeof organizationInvitations>;

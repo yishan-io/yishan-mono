@@ -17,7 +17,12 @@ export const removeOrganizationMemberParamsSchema = orgIdParamSchema.extend({
   userId: nonEmptyStringSchema,
 });
 
+export const cancelOrganizationInviteParamsSchema = orgIdParamSchema.extend({
+  inviteId: nonEmptyStringSchema,
+});
+
 export type CreateOrganizationBodyInput = z.infer<typeof createOrganizationBodySchema>;
 export type OrganizationParamsInput = z.infer<typeof orgIdParamSchema>;
 export type AddOrganizationMemberBodyInput = z.infer<typeof addOrganizationMemberBodySchema>;
 export type RemoveOrganizationMemberParamsInput = z.infer<typeof removeOrganizationMemberParamsSchema>;
+export type CancelOrganizationInviteParamsInput = z.infer<typeof cancelOrganizationInviteParamsSchema>;

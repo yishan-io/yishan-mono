@@ -7,7 +7,6 @@ import {
   OrganizationNotFoundError,
   OrganizationOwnerRemovalNotAllowedError,
   OrganizationOwnerRequiredError,
-  UserNotFoundByEmailError,
 } from "@/errors";
 import { OrganizationService } from "@/services/organization-service";
 import { describe, expect, it, vi } from "vitest";
@@ -88,13 +87,19 @@ function makeUserService(
   return { getByEmail: vi.fn().mockResolvedValue(resolvedUser) } as any;
 }
 
+/** Stub invite service used in tests that don't exercise the invite path. */
+function makeInviteService() {
+  // biome-ignore lint/suspicious/noExplicitAny: stub for unit testing
+  return { createInvite: vi.fn() } as any;
+}
+
 // ── getMembershipRole ──────────────────────────────────────────────────────────
 
 describe("OrganizationService.getMembershipRole", () => {
   it("returns the role when membership exists", async () => {
     const { db, limit } = makeSelectDb([[{ role: "admin" }]]);
     limit.mockResolvedValueOnce([{ role: "admin" }]);
-    const service = new OrganizationService(db, makeUserService(null));
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     expect(await service.getMembershipRole({ organizationId: "org-1", userId: "u1" })).toBe("admin");
   });
@@ -102,7 +107,7 @@ describe("OrganizationService.getMembershipRole", () => {
   it("returns null when membership does not exist", async () => {
     const { db, limit } = makeSelectDb([[]]);
     limit.mockResolvedValueOnce([]);
-    const service = new OrganizationService(db, makeUserService(null));
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     expect(await service.getMembershipRole({ organizationId: "org-1", userId: "u1" })).toBeNull();
   });
@@ -110,7 +115,7 @@ describe("OrganizationService.getMembershipRole", () => {
   it("returns null for unknown role values", async () => {
     const { db, limit } = makeSelectDb([[]]);
     limit.mockResolvedValueOnce([{ role: "superuser" }]);
-    const service = new OrganizationService(db, makeUserService(null));
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     expect(await service.getMembershipRole({ organizationId: "org-1", userId: "u1" })).toBeNull();
   });
@@ -119,7 +124,7 @@ describe("OrganizationService.getMembershipRole", () => {
     for (const r of ["owner", "admin", "member"] as const) {
       const { db, limit } = makeSelectDb([[]]);
       limit.mockResolvedValueOnce([{ role: r }]);
-      const service = new OrganizationService(db, makeUserService(null));
+      const service = new OrganizationService(db, makeUserService(null), makeInviteService());
       expect(await service.getMembershipRole({ organizationId: "o", userId: "u" })).toBe(r);
     }
   });
@@ -132,7 +137,7 @@ describe("OrganizationService.listOrganizationMembers", () => {
     // getMembershipRole returns nothing
     const { db, limit } = makeSelectDb([[]]);
     limit.mockResolvedValue([]);
-    const service = new OrganizationService(db, makeUserService(null));
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     await expect(service.listOrganizationMembers({ organizationId: "org-1", actorUserId: "x" })).rejects.toBeInstanceOf(
       OrganizationMembershipRequiredError,
@@ -146,7 +151,7 @@ describe("OrganizationService.addOrganizationMember", () => {
   it("throws OrganizationNotFoundError when org does not exist", async () => {
     const { db } = makeTxDb([[]], []);
     const userService = makeUserService({ id: "u2", email: "u2@example.com", name: null, avatarUrl: null });
-    const service = new OrganizationService(db, userService);
+    const service = new OrganizationService(db, userService, makeInviteService());
 
     await expect(
       service.addOrganizationMember({
@@ -158,18 +163,27 @@ describe("OrganizationService.addOrganizationMember", () => {
     ).rejects.toBeInstanceOf(OrganizationNotFoundError);
   });
 
-  it("throws UserNotFoundByEmailError when no user exists with that email", async () => {
+  it("delegates to inviteService when no user exists with that email", async () => {
     const { db } = makeTxDb([[{ id: "org-1" }]], []);
-    const service = new OrganizationService(db, makeUserService(null));
+    const inviteService = makeInviteService();
+    const fakeInvite = { id: "inv-1", email: "ghost@example.com", role: "member" };
+    inviteService.createInvite.mockResolvedValue(fakeInvite);
+    const service = new OrganizationService(db, makeUserService(null), inviteService);
 
-    await expect(
-      service.addOrganizationMember({
-        organizationId: "org-1",
-        actorUserId: "u1",
-        memberEmail: "ghost@example.com",
-        role: "member",
-      }),
-    ).rejects.toBeInstanceOf(UserNotFoundByEmailError);
+    const result = await service.addOrganizationMember({
+      organizationId: "org-1",
+      actorUserId: "u1",
+      memberEmail: "ghost@example.com",
+      role: "member",
+    });
+
+    expect(result).toEqual({ kind: "invited", invite: fakeInvite });
+    expect(inviteService.createInvite).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      actorUserId: "u1",
+      email: "ghost@example.com",
+      role: "member",
+    });
   });
 
   it("throws OrganizationManageMembersPermissionRequiredError when actor is a plain member", async () => {
@@ -178,7 +192,7 @@ describe("OrganizationService.addOrganizationMember", () => {
       [[{ role: "member" }]], // actor membership in tx
     );
     const userService = makeUserService({ id: "u2", email: "u2@example.com", name: null, avatarUrl: null });
-    const service = new OrganizationService(db, userService);
+    const service = new OrganizationService(db, userService, makeInviteService());
 
     await expect(
       service.addOrganizationMember({
@@ -190,7 +204,7 @@ describe("OrganizationService.addOrganizationMember", () => {
     ).rejects.toBeInstanceOf(OrganizationManageMembersPermissionRequiredError);
   });
 
-  it("adds the member and returns a view when actor is an admin", async () => {
+  it("returns kind=added with member view when actor is an admin and user exists", async () => {
     const { db, txInsert } = makeTxDb(
       [[{ id: "org-1" }]], // assertOrganizationExists
       [
@@ -199,7 +213,7 @@ describe("OrganizationService.addOrganizationMember", () => {
       ],
     );
     const userService = makeUserService({ id: "u2", email: "u2@example.com", name: "User Two", avatarUrl: null });
-    const service = new OrganizationService(db, userService);
+    const service = new OrganizationService(db, userService, makeInviteService());
 
     const result = await service.addOrganizationMember({
       organizationId: "org-1",
@@ -209,16 +223,13 @@ describe("OrganizationService.addOrganizationMember", () => {
     });
 
     expect(result).toMatchObject({
-      userId: "u2",
-      role: "member",
-      email: "u2@example.com",
-      name: "User Two",
-      avatarUrl: null,
+      kind: "added",
+      member: { userId: "u2", role: "member", email: "u2@example.com", name: "User Two", avatarUrl: null },
     });
     expect(txInsert).toHaveBeenCalledWith(organizationMembers);
   });
 
-  it("adds the member and returns a view when actor is the owner", async () => {
+  it("returns kind=added with member view when actor is the owner", async () => {
     const { db, txInsert } = makeTxDb(
       [[{ id: "org-1" }]], // assertOrganizationExists
       [
@@ -232,7 +243,7 @@ describe("OrganizationService.addOrganizationMember", () => {
       name: "User Three",
       avatarUrl: "https://example.com/avatar.png",
     });
-    const service = new OrganizationService(db, userService);
+    const service = new OrganizationService(db, userService, makeInviteService());
 
     const result = await service.addOrganizationMember({
       organizationId: "org-1",
@@ -241,7 +252,7 @@ describe("OrganizationService.addOrganizationMember", () => {
       role: "admin",
     });
 
-    expect(result).toMatchObject({ userId: "u3", role: "admin", email: "u3@example.com" });
+    expect(result).toMatchObject({ kind: "added", member: { userId: "u3", role: "admin" } });
     expect(txInsert).toHaveBeenCalledWith(organizationMembers);
   });
 
@@ -254,7 +265,7 @@ describe("OrganizationService.addOrganizationMember", () => {
       ],
     );
     const userService = makeUserService({ id: "u2", email: "u2@example.com", name: null, avatarUrl: null });
-    const service = new OrganizationService(db, userService);
+    const service = new OrganizationService(db, userService, makeInviteService());
 
     await expect(
       service.addOrganizationMember({
@@ -272,7 +283,7 @@ describe("OrganizationService.addOrganizationMember", () => {
 describe("OrganizationService.removeOrganizationMember", () => {
   it("throws OrganizationNotFoundError when org does not exist", async () => {
     const { db } = makeTxDb([[]], []);
-    const service = new OrganizationService(db, makeUserService(null));
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     await expect(
       service.removeOrganizationMember({ organizationId: "x", actorUserId: "u1", memberUserId: "u2" }),
@@ -287,7 +298,7 @@ describe("OrganizationService.removeOrganizationMember", () => {
         [{ role: "owner" }], // target role in tx
       ],
     );
-    const service = new OrganizationService(db, makeUserService(null));
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     await expect(
       service.removeOrganizationMember({ organizationId: "org-1", actorUserId: "admin-1", memberUserId: "owner-1" }),
@@ -300,7 +311,7 @@ describe("OrganizationService.removeOrganizationMember", () => {
 describe("OrganizationService.deleteOrganization", () => {
   it("throws OrganizationNotFoundError when org does not exist", async () => {
     const { db } = makeTxDb([[]], []);
-    const service = new OrganizationService(db, makeUserService(null));
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     await expect(service.deleteOrganization({ organizationId: "x", actorUserId: "u1" })).rejects.toBeInstanceOf(
       OrganizationNotFoundError,
@@ -312,7 +323,7 @@ describe("OrganizationService.deleteOrganization", () => {
       [[{ id: "org-1" }]], // assertOrganizationExists
       [[{ role: "admin" }]], // actor is admin, not owner
     );
-    const service = new OrganizationService(db, makeUserService(null));
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     await expect(
       service.deleteOrganization({ organizationId: "org-1", actorUserId: "admin-1" }),
@@ -324,7 +335,7 @@ describe("OrganizationService.deleteOrganization", () => {
       [[{ id: "org-1" }]], // assertOrganizationExists
       [[{ role: "owner" }]], // actor is owner
     );
-    const service = new OrganizationService(db, makeUserService(null));
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     await service.deleteOrganization({ organizationId: "org-1", actorUserId: "owner-1" });
 
@@ -353,7 +364,7 @@ describe("OrganizationService.createOrganization", () => {
       }),
       // biome-ignore lint/suspicious/noExplicitAny: mock DB for unit testing
     } as any;
-    const service = new OrganizationService(db, makeUserService(null));
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     await expect(
       service.createOrganization({ name: "Acme", actorUserId: "actor-1", memberUserIds: ["missing-user"] }),

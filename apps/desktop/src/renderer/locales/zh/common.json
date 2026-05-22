@@ -117,6 +117,8 @@
       "loadError": "加载组织成员失败。",
       "empty": "当前组织没有成员。",
       "addMember": "添加成员",
+      "memberAdded": "成员添加成功。",
+      "inviteSent": "邀请已发送，对方注册后将自动加入。",
       "addDialog": {
         "title": "添加组织成员",
         "emailLabel": "邮箱地址",
@@ -129,6 +131,22 @@
         "submit": "添加成员",
         "adding": "添加中...",
         "errorEmailEmpty": "邮箱地址不能为空。"
+      },
+      "pendingInvites": {
+        "title": "待处理邀请",
+        "description": "以下邮箱已被邀请，但尚未注册。",
+        "loadError": "加载待处理邀请失败。",
+        "cancelAriaLabel": "取消邀请",
+        "cancelDialog": {
+          "title": "取消邀请？",
+          "description": "发给 {{email}} 的邀请将被撤销，对方将无法再通过该邀请加入组织。",
+          "confirm": "取消邀请"
+        },
+        "columns": {
+          "email": "邮箱",
+          "role": "角色",
+          "expires": "过期时间"
+        }
       },
       "columns": {
         "member": "成员",
