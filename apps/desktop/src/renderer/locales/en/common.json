@@ -60,6 +60,9 @@
   "daemon": {
     "connection": {
       "reconnecting": "Reconnecting to daemon..."
+    },
+    "version": {
+      "outdatedMessage": "Your app was upgraded to {{appVersion}}, but the daemon is still running {{daemonVersion}}. App upgrades do not auto-restart the daemon. Restart the daemon from Settings to apply the matching version."
     }
   },
   "settings": {

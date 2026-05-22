@@ -4,6 +4,7 @@ import { DESKTOP_RPC_IPC_CHANNELS, type DesktopBridge, type DesktopRpcEventEnvel
 /** Exposes immutable desktop bootstrap values for renderer transport initialization. */
 const bridge: DesktopBridge = {
   host: {
+    getDesktopAppVersion: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getDesktopAppVersion),
     openLocalFolderDialog: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.openLocalFolderDialog, input),
     toggleMainWindowMaximized: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.toggleMainWindowMaximized),
     getMainWindowFullscreenState: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getMainWindowFullscreenState),

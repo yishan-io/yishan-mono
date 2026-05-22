@@ -234,6 +234,10 @@ export class DesktopApplication {
 
   /** Registers desktop auth IPC endpoints backed by the bundled CLI login/status commands. */
   private registerAuthIpcHandlers() {
+    ipcMain.handle(HOST_IPC_CHANNELS.getDesktopAppVersion, async () => {
+      return app.getVersion();
+    });
+
     ipcMain.handle(HOST_IPC_CHANNELS.getAuthStatus, async () => {
       return await getAuthStatus();
     });

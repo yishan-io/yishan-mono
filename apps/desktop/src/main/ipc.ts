@@ -132,6 +132,7 @@ export type AppendBrowserHistoryInput = {
 };
 
 export type DesktopHostBridge = {
+  getDesktopAppVersion: () => Promise<string>;
   openLocalFolderDialog: (input?: OpenLocalFolderDialogInput) => Promise<string | null>;
   toggleMainWindowMaximized: () => Promise<{ ok: true }>;
   getMainWindowFullscreenState: () => Promise<MainWindowFullscreenState>;
@@ -171,6 +172,7 @@ export const DESKTOP_RPC_IPC_CHANNELS = {
 } as const;
 
 export const HOST_IPC_CHANNELS = {
+  getDesktopAppVersion: "desktop:host/get-desktop-app-version",
   openLocalFolderDialog: "desktop:host/open-local-folder-dialog",
   toggleMainWindowMaximized: "desktop:host/toggle-main-window-maximized",
   getMainWindowFullscreenState: "desktop:host/get-main-window-fullscreen-state",
