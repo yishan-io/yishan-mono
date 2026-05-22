@@ -15,6 +15,8 @@ import (
 
 const workspacePullRequestPollInterval = 5 * time.Minute
 
+const ghUnknownGitHubHostErrorFragment = "none of the git remotes configured for this repository point to a known github host"
+
 type workspacePRTracker struct {
 	mu             sync.Mutex
 	manager        *workspace.Manager
@@ -218,6 +220,11 @@ func (t *workspacePRTracker) refreshWorkspace(ws workspace.Workspace) error {
 
 	pr, err := t.detailResolver(ctx, ws.Path, branch)
 	if err != nil {
+		if shouldSkipPullRequestRefresh(err) {
+			t.setWorkspacePullRequest(ws.ID, nil, true)
+			log.Debug().Err(err).Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh skipped for non-GitHub repository")
+			return nil
+		}
 		log.Warn().Err(err).Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh failed to resolve pull request")
 		return err
 	}
@@ -254,6 +261,13 @@ func (t *workspacePRTracker) refreshWorkspace(ws workspace.Workspace) error {
 		Bool("complete", complete).
 		Msg("workspace PR refresh synced pull request")
 	return nil
+}
+
+func shouldSkipPullRequestRefresh(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(strings.ToLower(err.Error()), ghUnknownGitHubHostErrorFragment)
 }
 
 func (t *workspacePRTracker) setWorkspacePullRequest(workspaceID string, pr *workspace.WorkspacePullRequest, keepActive bool) {
