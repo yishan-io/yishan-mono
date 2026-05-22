@@ -7,9 +7,18 @@ import (
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
+var projectCmd = &cobra.Command{
+	Use:   "project",
+	Short: "Project operations",
+	Long:  `Create, list, and delete projects within a Yishan organization.`,
+}
+
 var projectListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List organization projects",
+	Long:  `List all projects in the current organization.`,
+	Example: `  yishan project list
+  yishan project list --output json`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		orgID, err := resolveOrgID(cmd)
 		if err != nil {
@@ -28,6 +37,9 @@ var projectListCmd = &cobra.Command{
 var projectCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create organization project",
+	Long:  `Create a new project in the current organization. Optionally link it to a git repository and a compute node.`,
+	Example: `  yishan project create --name "my-project"
+  yishan project create --name "my-project" --local-path /path/to/repo --node-id <node-id>`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		orgID, err := resolveOrgID(cmd)
 		if err != nil {
@@ -69,12 +81,35 @@ var projectCreateCmd = &cobra.Command{
 	},
 }
 
-var projectCmd = &cobra.Command{Use: "project", Short: "Project operations"}
+var projectDeleteCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "Delete organization project",
+	Long:  `Permanently delete a project and all its workspaces. This action cannot be undone.`,
+	Example: `  yishan project delete --project-id <project-id>`,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		orgID, err := resolveOrgID(cmd)
+		if err != nil {
+			return err
+		}
+		projectID, err := cmd.Flags().GetString("project-id")
+		if err != nil {
+			return err
+		}
+
+		response, err := cliruntime.APIClient().DeleteProject(orgID, projectID)
+		if err != nil {
+			return err
+		}
+
+		return output.PrintAny(response)
+	},
+}
 
 func init() {
 	rootCmd.AddCommand(projectCmd)
 	projectCmd.AddCommand(projectListCmd)
 	projectCmd.AddCommand(projectCreateCmd)
+	projectCmd.AddCommand(projectDeleteCmd)
 
 	addOrgIDFlag(projectListCmd)
 
@@ -85,4 +120,8 @@ func init() {
 	projectCreateCmd.Flags().String("node-id", "", "node ID")
 	projectCreateCmd.Flags().String("local-path", "", "local path")
 	cobra.CheckErr(projectCreateCmd.MarkFlagRequired("name"))
+
+	addOrgIDFlag(projectDeleteCmd)
+	projectDeleteCmd.Flags().String("project-id", "", "project ID")
+	cobra.CheckErr(projectDeleteCmd.MarkFlagRequired("project-id"))
 }

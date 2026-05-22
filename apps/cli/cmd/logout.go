@@ -8,12 +8,20 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/output"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
 var logoutCmd = &cobra.Command{
 	Use:   "logout",
 	Short: "Logout and clear local auth credentials",
+	Long: `Revoke the active refresh token on the server and remove local credentials.
+
+If token revocation fails (e.g. due to a network error) local credentials are
+cleared anyway. Environment-variable credentials (YISHAN_API_TOKEN,
+YISHAN_API_REFRESH_TOKEN) are not affected — unset them manually to fully
+sign out of the current shell.`,
+	Example: `  yishan logout`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		return executeLogout(func(refreshToken string) error {
 			_, err := cliruntime.APIClient().RevokeToken(refreshToken)
@@ -39,19 +47,17 @@ func executeLogout(revokeToken func(refreshToken string) error, stderrWriter int
 		return err
 	}
 
+	printEnvCredentialNotice(stderrWriter)
+
 	if !storedCredentials {
-		fmt.Println("Already logged out. No local credentials found.")
-		printEnvCredentialNotice()
-		return nil
+		return output.PrintAny(map[string]string{"status": "ok", "message": "already logged out"})
 	}
 
 	if err := clearLocalCredentials(); err != nil {
 		return err
 	}
 
-	fmt.Println("Logout successful. Local credentials cleared.")
-	printEnvCredentialNotice()
-	return nil
+	return output.PrintAny(map[string]string{"status": "ok", "message": "logout successful"})
 }
 
 func hasStoredLocalCredentials(configPath string) (bool, error) {
@@ -91,9 +97,9 @@ func clearLocalCredentials() error {
 	return nil
 }
 
-func printEnvCredentialNotice() {
+func printEnvCredentialNotice(stderrWriter interface{ Write([]byte) (int, error) }) {
 	if strings.TrimSpace(os.Getenv("YISHAN_API_TOKEN")) == "" && strings.TrimSpace(os.Getenv("YISHAN_API_REFRESH_TOKEN")) == "" {
 		return
 	}
-	fmt.Println("Note: environment-based API credentials are still set. Unset YISHAN_API_TOKEN/YISHAN_API_REFRESH_TOKEN to fully sign out this shell.")
+	_, _ = fmt.Fprintf(stderrWriter, "Note: environment-based API credentials are still set. Unset YISHAN_API_TOKEN/YISHAN_API_REFRESH_TOKEN to fully sign out this shell.\n")
 }

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -14,6 +15,9 @@ import (
 var orgListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List organizations",
+	Long:  `List all organizations the authenticated user is a member of.`,
+	Example: `  yishan org list
+  yishan org list --output json`,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		response, err := cliruntime.APIClient().ListOrganizations()
 		if err != nil {
@@ -32,6 +36,9 @@ var orgListCmd = &cobra.Command{
 var orgCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create organization",
+	Long:  `Create a new Yishan organization. The authenticated user becomes the first admin member.`,
+	Example: `  yishan org create --name "My Org"
+  yishan org create --name "My Org" --member-user-id uid1 --member-user-id uid2`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
@@ -57,6 +64,8 @@ var orgCreateCmd = &cobra.Command{
 var orgDeleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete organization",
+	Long:  `Permanently delete an organization and all its projects and workspaces. This action cannot be undone.`,
+	Example: `  yishan org delete --org-id <org-id>`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		orgID, err := resolveOrgID(cmd)
 		if err != nil {
@@ -75,6 +84,9 @@ var orgDeleteCmd = &cobra.Command{
 var orgMemberAddCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add organization member",
+	Long:  `Add a user to the current organization. Role defaults to "member".`,
+	Example: `  yishan org member add --user-id <uid>
+  yishan org member add --user-id <uid> --role admin`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		orgID, err := resolveOrgID(cmd)
 		if err != nil {
@@ -101,6 +113,8 @@ var orgMemberAddCmd = &cobra.Command{
 var orgMemberRemoveCmd = &cobra.Command{
 	Use:   "remove",
 	Short: "Remove organization member",
+	Long:  `Remove a user from the current organization.`,
+	Example: `  yishan org member remove --user-id <uid>`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		orgID, err := resolveOrgID(cmd)
 		if err != nil {
@@ -120,15 +134,47 @@ var orgMemberRemoveCmd = &cobra.Command{
 	},
 }
 
-var orgCmd = &cobra.Command{Use: "org", Short: "Organization operations"}
-var orgMemberCmd = &cobra.Command{Use: "member", Short: "Organization member operations"}
+var orgCmd = &cobra.Command{
+	Use:   "org",
+	Short: "Organization operations",
+	Long:  `Create, list, delete, and manage membership for Yishan organizations.`,
+}
+
+var orgMemberCmd = &cobra.Command{
+	Use:   "member",
+	Short: "Organization member operations",
+	Long:  `Add and remove members from a Yishan organization.`,
+}
 
 var orgUseCmd = &cobra.Command{
-	Use:   "use <org-id>",
+	Use:   "use",
 	Short: "Set current organization",
-	Args:  cobra.ExactArgs(1),
-	RunE: func(_ *cobra.Command, args []string) error {
-		orgID := args[0]
+	Long: `Set the current organization used by all commands that accept --org-id.
+
+Preferred usage:
+  yishan org use --org-id <org-id>
+
+Passing the org ID as a positional argument is deprecated and will be removed
+in a future release:
+  yishan org use <org-id>   # deprecated`,
+	Args: cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		flagOrgID, err := cmd.Flags().GetString("org-id")
+		if err != nil {
+			return err
+		}
+
+		var orgID string
+		switch {
+		case strings.TrimSpace(flagOrgID) != "":
+			orgID = strings.TrimSpace(flagOrgID)
+		case len(args) == 1:
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: passing org-id as a positional argument is deprecated. Use --org-id instead.\n")
+			orgID = args[0]
+		default:
+			return fmt.Errorf("org-id is required: use --org-id <org-id>")
+		}
+
 		if err := config.UpdateFile(appConfig.ConfigPath, func(cfg *viper.Viper) {
 			cfg.Set(config.KeyCurrentOrgID, orgID)
 		}); err != nil {
@@ -136,8 +182,7 @@ var orgUseCmd = &cobra.Command{
 		}
 
 		appConfig.CurrentOrgID = orgID
-		fmt.Printf("Current org set to %s\n", orgID)
-		return nil
+		return output.PrintAny(map[string]string{"orgId": orgID, "status": "active"})
 	},
 }
 
@@ -156,6 +201,13 @@ var orgCurrentCmd = &cobra.Command{
 
 		for _, organization := range response.Organizations {
 			if organization.ID == appConfig.CurrentOrgID {
+				// In JSON mode emit a single combined object so consumers get
+				// one parseable document. In default mode keep the two-table
+				// human-readable layout.
+				if output.IsJSONOutput() {
+					return output.PrintAny(toOrgCurrentCombinedObject(organization))
+				}
+
 				if err := output.PrintRenderData(toOrgCurrentRenderData(organization)); err != nil {
 					return err
 				}
@@ -179,8 +231,7 @@ var orgClearCmd = &cobra.Command{
 		}
 
 		appConfig.CurrentOrgID = ""
-		fmt.Println("Current org cleared")
-		return nil
+		return output.PrintAny(map[string]string{"status": "cleared"})
 	},
 }
 
@@ -202,6 +253,8 @@ func init() {
 	cobra.CheckErr(orgCreateCmd.MarkFlagRequired("name"))
 
 	addOrgIDFlag(orgDeleteCmd)
+
+	orgUseCmd.Flags().String("org-id", "", "organization ID to activate")
 
 	addOrgIDFlag(orgMemberAddCmd)
 	orgMemberAddCmd.Flags().String("user-id", "", "member user ID")

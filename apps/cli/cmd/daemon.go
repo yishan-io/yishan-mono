@@ -12,50 +12,66 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"yishan/apps/cli/internal/daemon"
+	daemonclient "yishan/apps/cli/internal/daemon/client"
 	"yishan/apps/cli/internal/output"
 )
 
 var daemonCmd = &cobra.Command{
 	Use:   "daemon",
 	Short: "Manage workspace daemon service",
-	Long:  "Manage the workspace daemon service that serves operations over WebSocket JSON-RPC.",
-	Args:  cobra.NoArgs,
-	RunE:  startDaemon,
+	Long:  `Manage the workspace daemon service that serves operations over WebSocket JSON-RPC.`,
 }
 
 var daemonStartCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start daemon in background",
-	Args:  cobra.NoArgs,
-	RunE:  startDaemon,
+	Long: `Start the daemon process in the background.
+
+Idempotent — if a healthy daemon is already running this command exits
+successfully without starting a second instance. If a stale state file is
+found (process no longer alive) it is removed and a fresh daemon is started.`,
+	Example: `  yishan daemon start`,
+	Args:    cobra.NoArgs,
+	RunE:    startDaemon,
 }
 
 var daemonRunCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run daemon in foreground",
-	Args:  cobra.NoArgs,
-	RunE:  runDaemon,
+	Long: `Run the daemon in the foreground. Useful for debugging — logs go directly
+to the terminal and the process exits when you press Ctrl-C.`,
+	Example: `  yishan daemon run
+  yishan daemon run --log-level debug`,
+	Args: cobra.NoArgs,
+	RunE: runDaemon,
 }
 
 var daemonStopCmd = &cobra.Command{
-	Use:   "stop",
-	Short: "Stop running daemon",
-	Args:  cobra.NoArgs,
-	RunE:  stopDaemon,
+	Use:     "stop",
+	Short:   "Stop running daemon",
+	Long:    `Send a shutdown signal to the running daemon and wait for it to exit.`,
+	Example: `  yishan daemon stop`,
+	Args:    cobra.NoArgs,
+	RunE:    stopDaemon,
 }
 
 var daemonRestartCmd = &cobra.Command{
-	Use:   "restart",
-	Short: "Restart daemon in background",
-	Args:  cobra.NoArgs,
-	RunE:  restartDaemon,
+	Use:     "restart",
+	Short:   "Restart daemon in background",
+	Long:    `Stop the running daemon (if any) and start a fresh one in the background.`,
+	Example: `  yishan daemon restart`,
+	Args:    cobra.NoArgs,
+	RunE:    restartDaemon,
 }
 
 var daemonStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show daemon status",
-	Args:  cobra.NoArgs,
-	RunE:  statusDaemon,
+	Long:  `Show whether the daemon is running and, if so, its PID, listen address, start time, and uptime.`,
+	Example: `  yishan daemon status
+  yishan daemon status --output json`,
+	Args: cobra.NoArgs,
+	RunE: statusDaemon,
 }
 
 func runDaemon(_ *cobra.Command, _ []string) error {
@@ -285,4 +301,26 @@ func init() {
 	cobra.CheckErr(viper.BindPFlag("daemon_relay_enabled", daemonCmd.PersistentFlags().Lookup("relay-enabled")))
 	cobra.CheckErr(viper.BindPFlag("daemon_relay_url", daemonCmd.PersistentFlags().Lookup("relay-url")))
 	cobra.CheckErr(viper.BindPFlag("daemon_log_file", daemonCmd.PersistentFlags().Lookup("log-file")))
+}
+
+// resolveDaemonClient loads the daemon state file and returns a JSON-RPC
+// client pointed at the running daemon. Returns daemon.ErrNotRunning if no
+// healthy daemon process is found, which maps to exit code 6.
+func resolveDaemonClient() (*daemonclient.Client, error) {
+	statePath, err := daemon.ResolveStateFilePath(appConfig.ConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	state, err := daemon.LoadState(statePath)
+	if err != nil {
+		return nil, daemon.ErrNotRunning
+	}
+
+	if !daemon.IsProcessRunning(state.PID) {
+		return nil, daemon.ErrNotRunning
+	}
+
+	wsURL := "ws://" + net.JoinHostPort(state.Host, strconv.Itoa(state.Port)) + "/ws"
+	return daemonclient.New(wsURL, ""), nil
 }

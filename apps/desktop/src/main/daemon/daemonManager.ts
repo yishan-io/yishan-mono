@@ -195,8 +195,8 @@ function formatCliFailure(action: "start" | "stop", result: CliCommandResult): s
   return `Failed to ${action} daemon: CLI command exited unexpectedly`;
 }
 
-function isDaemonNotRunning(details: string): boolean {
-  return details.toLowerCase().includes("daemon is not running");
+function isDaemonNotRunning(result: CliCommandResult): boolean {
+  return result.exitCode === 6;
 }
 
 function formatDevDaemonExitFailure(exitCode: number | null, signal: NodeJS.Signals | null, output: string): string {
@@ -371,8 +371,7 @@ export class DaemonManager {
       return;
     }
 
-    const details = [stopResult.stderr, stopResult.stdout].join("\n").trim();
-    if (isDaemonNotRunning(details)) {
+    if (isDaemonNotRunning(stopResult)) {
       return;
     }
 

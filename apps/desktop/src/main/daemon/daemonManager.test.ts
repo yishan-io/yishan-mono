@@ -9,7 +9,7 @@ describe("DaemonManager", () => {
 
     await expect(manager.ensureStarted()).rejects.toThrow("Daemon did not become healthy after start");
 
-    expect(run).toHaveBeenCalledWith(["daemon", "start", "--jwt-required=false"]);
+    expect(run).toHaveBeenCalledWith(["daemon", "start", "--jwt-required=true"]);
   });
 
   it("throws when daemon start exits non-zero", async () => {
@@ -26,9 +26,9 @@ describe("DaemonManager", () => {
 
   it("treats daemon-not-running stop failures as no-op", async () => {
     const run = vi.fn().mockResolvedValue({
-      exitCode: 1,
+      exitCode: 6,
       stdout: "",
-      stderr: "Error: daemon is not running",
+      stderr: "",
     });
     const logger = { warn: vi.fn() };
     const manager = new DaemonManager({ run, logger });

@@ -5,11 +5,14 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/cmd"
+	"yishan/apps/cli/internal/output"
 )
 
 func main() {
 	if err := cmd.Execute(); err != nil {
 		log.Error().Err(err).Msg("command failed")
-		os.Exit(1)
+		code := cmd.ClassifyError(err)
+		output.PrintError(err, code)
+		os.Exit(output.CodeToExitCode(code))
 	}
 }
