@@ -64,7 +64,7 @@ func renderNodesList(response api.ListNodesResponse, includeAll bool) output.Ren
 	return output.RenderData{Title: "nodes", Columns: columns, Rows: rows}
 }
 
-func renderWorkspacesList(response api.ListWorkspacesResponse, includeAll bool) output.RenderData {
+func renderWorkspacesList(response api.ListWorkspacesResponse, includeAll bool, includeProjectColumn bool, projectNames map[string]string) output.RenderData {
 	rows := make([]map[string]any, 0, len(response.Workspaces))
 	for _, workspace := range response.Workspaces {
 		row := map[string]any{
@@ -72,6 +72,13 @@ func renderWorkspacesList(response api.ListWorkspacesResponse, includeAll bool) 
 			"kind":      workspace.Kind,
 			"branch":    workspace.Branch,
 			"localPath": workspace.LocalPath,
+		}
+		if includeProjectColumn {
+			if projectName, ok := projectNames[workspace.ProjectID]; ok && projectName != "" {
+				row["project"] = projectName
+			} else {
+				row["project"] = workspace.ProjectID
+			}
 		}
 		if includeAll {
 			row["organizationId"] = workspace.OrganizationID
@@ -84,6 +91,9 @@ func renderWorkspacesList(response api.ListWorkspacesResponse, includeAll bool) 
 	}
 
 	columns := []string{"id", "kind", "branch", "localPath"}
+	if includeProjectColumn {
+		columns = []string{"id", "project", "kind", "branch", "localPath"}
+	}
 	if includeAll {
 		columns = []string{"id", "kind", "branch", "localPath", "organizationId", "projectId", "nodeId", "createdAt", "updatedAt"}
 	}

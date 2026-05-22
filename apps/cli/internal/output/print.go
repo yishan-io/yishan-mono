@@ -38,10 +38,6 @@ func PrintRenderData(data RenderData) error {
 		return printAsJSON(renderDataToJSON(data))
 	}
 
-	if data.Title != "" {
-		fmt.Printf("%s:\n", data.Title)
-	}
-
 	if data.Rows != nil {
 		return printTableRows(data.Rows, data.Columns)
 	}

@@ -41,12 +41,31 @@ var workspaceListCmd = &cobra.Command{
 			return err
 		}
 
-		response, err := cliruntime.APIClient().ListWorkspaces(orgID, projectID)
+		response := api.ListWorkspacesResponse{Workspaces: []api.Workspace{}}
+		projectNames := map[string]string{}
+		if strings.TrimSpace(projectID) != "" {
+			response, err = cliruntime.APIClient().ListWorkspaces(orgID, projectID)
+			if err != nil {
+				return err
+			}
+			return output.PrintRenderData(renderWorkspacesList(response, showAll || verbose, false, projectNames))
+		}
+
+		projectsResponse, err := cliruntime.APIClient().ListProjects(orgID)
 		if err != nil {
 			return err
 		}
 
-		return output.PrintRenderData(renderWorkspacesList(response, showAll || verbose))
+		for _, project := range projectsResponse.Projects {
+			projectNames[project.ID] = project.Name
+			projectWorkspaces, projectErr := cliruntime.APIClient().ListWorkspaces(orgID, project.ID)
+			if projectErr != nil {
+				return projectErr
+			}
+			response.Workspaces = append(response.Workspaces, projectWorkspaces.Workspaces...)
+		}
+
+		return output.PrintRenderData(renderWorkspacesList(response, showAll || verbose, true, projectNames))
 	},
 }
 
@@ -229,8 +248,7 @@ func init() {
 	addOrgIDFlag(workspaceListCmd)
 	workspaceListCmd.Flags().Bool("all", false, "show full response fields")
 	workspaceListCmd.Flags().BoolP("verbose", "v", false, "show full response fields")
-	workspaceListCmd.Flags().String("project-id", "", "project ID")
-	cobra.CheckErr(workspaceListCmd.MarkFlagRequired("project-id"))
+	workspaceListCmd.Flags().String("project-id", "", "project ID (optional; if omitted, lists workspaces across all projects)")
 
 	addOrgIDFlag(workspaceFindCmd)
 	workspaceFindCmd.Flags().String("project-id", "", "project ID")
