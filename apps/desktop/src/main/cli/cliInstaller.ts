@@ -67,10 +67,21 @@ export async function getDesktopCliInstallStatus(): Promise<DesktopCliInstallSta
     isManagedInstall = existsSync(installPath);
   }
 
-  const isAvailableInPath = resolvedPath ? await isExecutable(resolvedPath) : false;
+  // On macOS/Linux, GUI apps launched outside a shell don't inherit the user's
+  // full PATH, so ~/.local/bin is often missing from process.env.PATH even after
+  // a successful install. We therefore also check the known install path directly
+  // so that the status correctly reflects an installed binary regardless of the
+  // Electron process's restricted PATH.
+  const installPathExecutable = await isExecutable(installPath);
+  const isAvailableInPath = (resolvedPath ? await isExecutable(resolvedPath) : false) || installPathExecutable;
+
+  // Prefer the PATH-resolved path for display; fall back to the known install
+  // path if the binary is present there but not visible via PATH.
+  const effectiveResolvedPath = resolvedPath ?? (installPathExecutable ? installPath : undefined);
+
   return {
     isAvailableInPath,
-    resolvedPath,
+    resolvedPath: effectiveResolvedPath,
     isManagedInstall,
     installPath,
     bundledCliPath,
@@ -106,7 +117,13 @@ export async function uninstallDesktopCli(): Promise<DesktopCliInstallStatus> {
 
   try {
     await unlink(installPath);
-  } catch {}
+  } catch (error) {
+    // Ignore ENOENT — the file was already gone, which is the desired state.
+    // Re-throw all other errors (e.g. permission denied) so the UI can surface them.
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+  }
 
   return await getDesktopCliInstallStatus();
 }

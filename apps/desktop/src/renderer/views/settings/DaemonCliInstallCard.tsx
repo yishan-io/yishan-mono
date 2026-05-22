@@ -31,6 +31,9 @@ export function DaemonCliInstallCard(props: DaemonCliInstallCardProps) {
   const { t } = useTranslation();
   const { status, isLoading, isInstalling, isUninstalling, error, onInstall, onUninstall } = props;
   const isInstalled = Boolean(status?.isAvailableInPath);
+  // Only allow uninstalling if we created the managed symlink. If the binary
+  // was installed independently (isManagedInstall === false), we must not delete it.
+  const canUninstall = isInstalled && Boolean(status?.isManagedInstall);
   const statusLabel = isInstalled
     ? status?.resolvedPath || t("settings.daemon.values.unknown")
     : t("settings.daemon.cli.status.notInstalled");
@@ -70,7 +73,7 @@ export function DaemonCliInstallCard(props: DaemonCliInstallCardProps) {
                       size="small"
                       variant="text"
                       color="error"
-                      disabled={isUninstalling}
+                      disabled={isUninstalling || !canUninstall}
                       onClick={onUninstall}
                       startIcon={isUninstalling ? <CircularProgress size={14} color="inherit" /> : undefined}
                     >
