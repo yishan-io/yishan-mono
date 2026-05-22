@@ -489,7 +489,18 @@ export function createBackendEventStoreBindings(
     }) ?? (() => {});
     const unsubscribeWorkspaceSnapshotChanged = dependencies.subscribeWorkspaceSnapshotChanged?.((payload) => {
       const selectedOrganizationId = dependencies.getSelectedOrganizationId?.()?.trim();
-      if (!selectedOrganizationId || selectedOrganizationId !== payload.organizationId.trim()) {
+      const payloadOrganizationId = payload.organizationId.trim();
+      if (selectedOrganizationId && selectedOrganizationId !== payloadOrganizationId) {
+        if (import.meta.env.DEV) {
+          console.debug("[backendEventStoreBindings] workspace snapshot invalidation ignored due to org mismatch", {
+            selectedOrganizationId,
+            payloadOrganizationId,
+            resource: payload.resource,
+            change: payload.change,
+            projectId: payload.projectId,
+            workspaceId: payload.workspaceId,
+          });
+        }
         return;
       }
 
@@ -509,7 +520,11 @@ export function createBackendEventStoreBindings(
 
       workspaceSnapshotRefreshTimer = setTimeout(() => {
         workspaceSnapshotRefreshTimer = undefined;
-        void dependencies.loadWorkspaceSnapshot?.();
+        void dependencies
+          .loadWorkspaceSnapshot?.()
+          .catch((error) => {
+            console.error("[backendEventStoreBindings] Failed to refresh workspace snapshot after invalidation", error);
+          });
       }, 300);
     }) ?? (() => {});
     const unsubscribeOpenBrowserUrl = dependencies.subscribeOpenBrowserUrl?.((payload) => {

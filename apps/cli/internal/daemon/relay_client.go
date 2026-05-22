@@ -232,7 +232,7 @@ func runRelaySession(handler *JSONRPCHandler, nodeID string, conn *websocket.Con
 		}
 
 		// Handle relay-level messages before dispatching to the daemon handler.
-		if handleRelayMessage(connState, nodeID, payload) {
+		if handleRelayMessage(handler, connState, nodeID, payload) {
 			continue
 		}
 
@@ -277,7 +277,7 @@ func normalizeRelayWSURL(raw string) (string, error) {
 
 // handleRelayMessage handles relay-protocol messages (heartbeat, job dispatch).
 // Returns true if the message was consumed and should not be passed to the daemon handler.
-func handleRelayMessage(connState *wsConnState, nodeID string, payload []byte) bool {
+func handleRelayMessage(handler *JSONRPCHandler, connState *wsConnState, nodeID string, payload []byte) bool {
 	var msg struct {
 		Method string          `json:"method"`
 		Params json.RawMessage `json:"params,omitempty"`
@@ -294,14 +294,14 @@ func handleRelayMessage(connState *wsConnState, nodeID string, payload []byte) b
 		handleJobRun(connState, nodeID, msg.Params)
 		return true
 	case relayMethodWorkspaceSnapshotChanged:
-		publishWorkspaceSnapshotChanged(connState, msg.Params)
+		publishWorkspaceSnapshotChanged(handler, msg.Params)
 		return true
 	default:
 		return false
 	}
 }
 
-func publishWorkspaceSnapshotChanged(connState *wsConnState, params json.RawMessage) {
+func publishWorkspaceSnapshotChanged(handler *JSONRPCHandler, params json.RawMessage) {
 	var payload map[string]any
 	if len(params) > 0 {
 		if err := json.Unmarshal(params, &payload); err != nil {
@@ -326,10 +326,7 @@ func publishWorkspaceSnapshotChanged(connState *wsConnState, params json.RawMess
 		Str("workspaceId", strings.TrimSpace(workspaceID)).
 		Msg("relay: workspace snapshot change received")
 
-	_ = connState.Notify(MethodFrontendEventsStream, map[string]any{
-		"topic":   "workspaceSnapshotChanged",
-		"payload": payload,
-	})
+	handler.events.Publish(frontendEvent{Topic: "workspaceSnapshotChanged", Payload: payload})
 }
 
 func mintRelayToken(nodeID string) (string, time.Time, error) {
