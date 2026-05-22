@@ -42,6 +42,26 @@ func toOrgMembersRenderData(organization api.Organization) output.RenderData {
 	}
 }
 
+// toOrgCurrentCombinedObject returns a single JSON-safe object combining the
+// organization record and its member list. Used by orgCurrentCmd in JSON mode
+// to avoid emitting two separate JSON documents to stdout.
+func toOrgCurrentCombinedObject(organization api.Organization) map[string]any {
+	members := make([]map[string]any, 0, len(organization.Members))
+	for _, member := range organization.Members {
+		members = append(members, map[string]any{
+			"userId": member.UserID,
+			"name":   member.Name,
+			"email":  member.Email,
+			"role":   member.Role,
+		})
+	}
+
+	return map[string]any{
+		"organization": organizationSummaryRow(organization),
+		"members":      members,
+	}
+}
+
 func organizationSummaryRow(organization api.Organization) map[string]any {
 	return map[string]any{
 		"id":          organization.ID,

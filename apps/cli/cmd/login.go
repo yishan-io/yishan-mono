@@ -15,6 +15,7 @@ import (
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/daemon"
 	"yishan/apps/cli/internal/login"
+	"yishan/apps/cli/internal/output"
 )
 
 var loginCmd = &cobra.Command{
@@ -41,16 +42,14 @@ var loginCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Println("Login successful. API token saved to local config.")
-
 		if err := registerLocalNodeAfterLogin(); err != nil {
 			log.Warn().Err(err).Msg("failed to register local node after login")
-			fmt.Printf("Warning: local node registration failed: %v\n", err)
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: local node registration failed: %v\n", err)
 		} else {
 			log.Info().Msg("local node registered successfully after login")
 		}
 
-		return nil
+		return output.PrintAny(map[string]string{"status": "ok", "message": "login successful"})
 	},
 }
 

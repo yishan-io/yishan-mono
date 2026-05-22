@@ -135,15 +135,7 @@ var workspaceCreateCmd = &cobra.Command{
 			return formatWorkspaceLifecycleError("create", err)
 		}
 
-		return output.PrintAny(map[string]string{
-			"message":        "workspace created",
-			"workspaceId":    response.Workspace.ID,
-			"organizationId": orgID,
-			"projectId":      projectID,
-			"kind":           response.Workspace.Kind,
-			"localPath":      response.Workspace.LocalPath,
-			"branch":         response.Workspace.Branch,
-		})
+		return output.PrintAny(response)
 	},
 }
 
@@ -195,15 +187,7 @@ var workspaceCloseCmd = &cobra.Command{
 			return formatWorkspaceLifecycleError("close", err)
 		}
 
-		return output.PrintAny(map[string]string{
-			"message":        "workspace closed",
-			"workspaceId":    response.Workspace.ID,
-			"organizationId": orgID,
-			"projectId":      projectID,
-			"kind":           response.Workspace.Kind,
-			"localPath":      response.Workspace.LocalPath,
-			"branch":         response.Workspace.Branch,
-		})
+		return output.PrintAny(response)
 	},
 }
 

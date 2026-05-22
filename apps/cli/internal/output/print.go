@@ -3,6 +3,7 @@ package output
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 )
 
 func PrintResponse(body []byte) error {
@@ -12,7 +13,7 @@ func PrintResponse(body []byte) error {
 		return nil
 	}
 
-	if isJSONOutputEnabled() {
+	if IsJSONOutput() {
 		return printAsJSON(decoded)
 	}
 
@@ -20,7 +21,7 @@ func PrintResponse(body []byte) error {
 }
 
 func PrintAny(decoded any) error {
-	if isJSONOutputEnabled() {
+	if IsJSONOutput() {
 		return printAsJSON(decoded)
 	}
 
@@ -33,7 +34,7 @@ func PrintAny(decoded any) error {
 }
 
 func PrintRenderData(data RenderData) error {
-	if isJSONOutputEnabled() {
+	if IsJSONOutput() {
 		return printAsJSON(renderDataToJSON(data))
 	}
 
@@ -86,4 +87,33 @@ func renderDataToJSON(data RenderData) any {
 	}
 
 	return map[string]any{}
+}
+
+// PrintError writes a structured error to stderr. When JSON output is active
+// the envelope is:
+//
+//	{"error": {"code": "<code>", "message": "<message>"}}
+//
+// In default mode it writes nothing — Cobra already prints "Error: <msg>" to
+// stderr itself, so we only need to act in JSON mode.
+func PrintError(err error, code string) {
+	if !IsJSONOutput() {
+		return
+	}
+
+	envelope := map[string]any{
+		"error": map[string]string{
+			"code":    code,
+			"message": err.Error(),
+		},
+	}
+
+	b, encErr := json.MarshalIndent(envelope, "", "  ")
+	if encErr != nil {
+		// Last-resort: write plain text so the caller is never left with silence.
+		_, _ = fmt.Fprintf(os.Stderr, `{"error":{"code":"internal","message":%q}}`+"\n", err.Error())
+		return
+	}
+
+	_, _ = fmt.Fprintln(os.Stderr, string(b))
 }

@@ -136,8 +136,7 @@ var orgUseCmd = &cobra.Command{
 		}
 
 		appConfig.CurrentOrgID = orgID
-		fmt.Printf("Current org set to %s\n", orgID)
-		return nil
+		return output.PrintAny(map[string]string{"orgId": orgID, "status": "active"})
 	},
 }
 
@@ -156,6 +155,13 @@ var orgCurrentCmd = &cobra.Command{
 
 		for _, organization := range response.Organizations {
 			if organization.ID == appConfig.CurrentOrgID {
+				// In JSON mode emit a single combined object so consumers get
+				// one parseable document. In default mode keep the two-table
+				// human-readable layout.
+				if output.IsJSONOutput() {
+					return output.PrintAny(toOrgCurrentCombinedObject(organization))
+				}
+
 				if err := output.PrintRenderData(toOrgCurrentRenderData(organization)); err != nil {
 					return err
 				}
@@ -179,8 +185,7 @@ var orgClearCmd = &cobra.Command{
 		}
 
 		appConfig.CurrentOrgID = ""
-		fmt.Println("Current org cleared")
-		return nil
+		return output.PrintAny(map[string]string{"status": "cleared"})
 	},
 }
 

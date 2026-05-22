@@ -27,6 +27,7 @@ func SetFormat(raw string) error {
 	}
 }
 
-func isJSONOutputEnabled() bool {
+// IsJSONOutput reports whether the current output format is JSON.
+func IsJSONOutput() bool {
 	return currentFormat == FormatJSON
 }
