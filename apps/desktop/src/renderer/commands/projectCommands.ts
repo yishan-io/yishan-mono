@@ -6,7 +6,7 @@ import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
-import { ensureVisibleWorkspacesOpen } from "./daemonWorkspaceSync";
+import { ensureVisibleWorkspacesOpen, reconcileDaemonWorkspaces } from "./daemonWorkspaceSync";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
 
 async function inspectLocalRepository(path: string): Promise<{
@@ -94,6 +94,15 @@ export async function loadWorkspaceFromBackend(): Promise<void> {
     }
 
     workspaceStore.getState().load(selectedOrganization.id, projects, workspaces);
+
+    await reconcileDaemonWorkspaces(
+      workspaces.map((workspace) => ({
+        id: workspace.id,
+        organizationId: workspace.organizationId,
+        projectId: workspace.projectId,
+        worktreePath: workspace.worktreePath,
+      })),
+    );
 
     const mergedWorkspaceIds = new Set(
       workspaces.filter((w) => w.latestPullRequest?.state === "merged").map((w) => w.id),
