@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../api/client";
+import { removeOrgMember } from "../../commands/orgCommands";
 import { sessionStore } from "../../store/sessionStore";
 import { MemberSettingsView } from "./MemberSettingsView";
 
@@ -23,12 +24,18 @@ vi.mock("../../api/client", () => ({
 
 vi.mock("../../commands/orgCommands", () => ({
   addOrgMember: vi.fn(),
+  removeOrgMember: vi.fn(),
 }));
 
 describe("MemberSettingsView", () => {
   beforeEach(() => {
     sessionStore.setState({
-      currentUser: null,
+      currentUser: {
+        id: "user-1",
+        email: "admin@example.com",
+        name: "Admin User",
+        avatarUrl: null,
+      },
       organizations: [{ id: "org-1", name: "Org 1" }],
       selectedOrganizationId: "org-1",
       loaded: true,
@@ -131,5 +138,67 @@ describe("MemberSettingsView", () => {
     fireEvent.click(screen.getByText("settings.members.addMember"));
 
     expect(screen.getByText("settings.members.addDialog.title")).toBeTruthy();
+  });
+
+  it("removes a member after confirm", async () => {
+    vi.mocked(api.org.listMembers).mockResolvedValue([
+      {
+        userId: "user-1",
+        role: "admin",
+        email: "admin@example.com",
+        name: "Admin User",
+        avatarUrl: null,
+      },
+      {
+        userId: "user-2",
+        role: "member",
+        email: "member@example.com",
+        name: "Member User",
+        avatarUrl: null,
+      },
+    ]);
+    vi.mocked(removeOrgMember).mockResolvedValue();
+
+    render(<MemberSettingsView />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Member User")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getAllByLabelText("settings.members.removeAriaLabel")[1]);
+    fireEvent.click(screen.getByText("settings.members.removeDialog.confirm"));
+
+    await waitFor(() => {
+      expect(removeOrgMember).toHaveBeenCalledWith("user-2");
+    });
+    expect(screen.queryByText("Member User")).toBeNull();
+  });
+
+  it("disables remove button for owner member", async () => {
+    vi.mocked(api.org.listMembers).mockResolvedValue([
+      {
+        userId: "user-1",
+        role: "admin",
+        email: "admin@example.com",
+        name: "Admin User",
+        avatarUrl: null,
+      },
+      {
+        userId: "owner-1",
+        role: "owner",
+        email: "owner@example.com",
+        name: "Owner User",
+        avatarUrl: null,
+      },
+    ]);
+
+    render(<MemberSettingsView />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Owner User")).toBeTruthy();
+    });
+
+    const removeButtons = screen.getAllByLabelText("settings.members.removeAriaLabel");
+    expect(removeButtons[1]).toHaveProperty("disabled", true);
   });
 });

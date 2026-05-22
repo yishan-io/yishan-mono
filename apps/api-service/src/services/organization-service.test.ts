@@ -3,6 +3,7 @@ import {
   InvalidOrganizationMembersError,
   OrganizationManageMembersPermissionRequiredError,
   OrganizationMemberAlreadyExistsError,
+  OrganizationMemberNotFoundError,
   OrganizationMembershipRequiredError,
   OrganizationNotFoundError,
   OrganizationOwnerRemovalNotAllowedError,
@@ -281,6 +282,46 @@ describe("OrganizationService.addOrganizationMember", () => {
 // ── removeOrganizationMember ───────────────────────────────────────────────────
 
 describe("OrganizationService.removeOrganizationMember", () => {
+  it("removes a member when actor is an owner", async () => {
+    const { db, txDelete, txDeleteWhere } = makeTxDb(
+      [[{ id: "org-1" }]],
+      [
+        [{ role: "owner" }],
+        [{ role: "member" }],
+      ],
+    );
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
+
+    await service.removeOrganizationMember({
+      organizationId: "org-1",
+      actorUserId: "owner-1",
+      memberUserId: "member-1",
+    });
+
+    expect(txDelete).toHaveBeenCalledWith(organizationMembers);
+    expect(txDeleteWhere).toHaveBeenCalledTimes(1);
+  });
+
+  it("removes a member when actor is an admin", async () => {
+    const { db, txDelete, txDeleteWhere } = makeTxDb(
+      [[{ id: "org-1" }]],
+      [
+        [{ role: "admin" }],
+        [{ role: "member" }],
+      ],
+    );
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
+
+    await service.removeOrganizationMember({
+      organizationId: "org-1",
+      actorUserId: "admin-1",
+      memberUserId: "member-1",
+    });
+
+    expect(txDelete).toHaveBeenCalledWith(organizationMembers);
+    expect(txDeleteWhere).toHaveBeenCalledTimes(1);
+  });
+
   it("throws OrganizationNotFoundError when org does not exist", async () => {
     const { db } = makeTxDb([[]], []);
     const service = new OrganizationService(db, makeUserService(null), makeInviteService());
@@ -288,6 +329,41 @@ describe("OrganizationService.removeOrganizationMember", () => {
     await expect(
       service.removeOrganizationMember({ organizationId: "x", actorUserId: "u1", memberUserId: "u2" }),
     ).rejects.toBeInstanceOf(OrganizationNotFoundError);
+  });
+
+  it("throws OrganizationManageMembersPermissionRequiredError when actor is a plain member", async () => {
+    const { db } = makeTxDb(
+      [[{ id: "org-1" }]],
+      [[{ role: "member" }]],
+    );
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
+
+    await expect(
+      service.removeOrganizationMember({
+        organizationId: "org-1",
+        actorUserId: "member-1",
+        memberUserId: "member-2",
+      }),
+    ).rejects.toBeInstanceOf(OrganizationManageMembersPermissionRequiredError);
+  });
+
+  it("throws OrganizationMemberNotFoundError when target is not part of the org", async () => {
+    const { db } = makeTxDb(
+      [[{ id: "org-1" }]],
+      [
+        [{ role: "admin" }],
+        [],
+      ],
+    );
+    const service = new OrganizationService(db, makeUserService(null), makeInviteService());
+
+    await expect(
+      service.removeOrganizationMember({
+        organizationId: "org-1",
+        actorUserId: "admin-1",
+        memberUserId: "missing-member",
+      }),
+    ).rejects.toBeInstanceOf(OrganizationMemberNotFoundError);
   });
 
   it("throws OrganizationOwnerRemovalNotAllowedError when removing an owner", async () => {

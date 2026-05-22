@@ -43,6 +43,11 @@ export async function addOrganizationMember(
   });
 }
 
+/** Removes a member from one organization. */
+export async function removeOrganizationMember(orgId: string, userId: string): Promise<void> {
+  await requestJson<{ ok: boolean }>(`/orgs/${orgId}/members/${userId}`, { method: "DELETE" });
+}
+
 /** Lists pending (un-accepted) invitations for one organization. */
 export async function listOrganizationInvites(orgId: string): Promise<OrganizationInviteRecord[]> {
   const response = await requestJson<{ invites: OrganizationInviteRecord[] }>(`/orgs/${orgId}/invites`);

@@ -42,3 +42,21 @@ export async function cancelOrgInvite(inviteId: string): Promise<void> {
     throw new Error(getErrorMessage(error));
   }
 }
+
+/**
+ * Removes a member from the currently selected organization.
+ * Throws with a human-readable message on failure.
+ */
+export async function removeOrgMember(memberUserId: string): Promise<void> {
+  const orgId = sessionStore.getState().selectedOrganizationId;
+
+  if (!orgId) {
+    throw new Error("No organization selected.");
+  }
+
+  try {
+    await api.org.removeMember(orgId, memberUserId);
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
+}

@@ -6,6 +6,7 @@ import {
   listOrganizationInvites,
   listOrganizationMembers,
   listOrganizations,
+  removeOrganizationMember,
 } from "./orgApi";
 import { createProject, deleteProject, listProjects, updateProject } from "./projectApi";
 import {
@@ -27,6 +28,7 @@ export const api = {
     create: createOrganization,
     listMembers: listOrganizationMembers,
     addMember: addOrganizationMember,
+    removeMember: removeOrganizationMember,
     listInvites: listOrganizationInvites,
     cancelInvite: cancelOrganizationInvite,
   },
