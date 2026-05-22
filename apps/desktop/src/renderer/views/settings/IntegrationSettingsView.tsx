@@ -2,6 +2,7 @@ import { Alert, Box, Button, Chip, CircularProgress } from "@mui/material";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { BiLogoGithub } from "react-icons/bi";
+import { LuRefreshCw } from "react-icons/lu";
 import type { GitHubConnectionStatus } from "../../commands/integrationCommands";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
 import { useCommands } from "../../hooks/useCommands";
@@ -55,12 +56,12 @@ export function IntegrationSettingsView() {
         action={
           <Button
             size="small"
-            variant="outlined"
+            variant="text"
             onClick={() => {
               refresh();
             }}
             disabled={isRefreshing}
-            startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : null}
+            startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : <LuRefreshCw />}
           >
             {t("settings.integrations.actions.recheckAll")}
           </Button>

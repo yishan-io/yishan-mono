@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LuRefreshCw } from "react-icons/lu";
 import type { CLIToolStatus } from "../../commands/cliToolCommands";
 import { AgentIcon } from "../../components/AgentIcon";
 import { SettingsCard, SettingsRows, SettingsSectionHeader } from "../../components/settings";
@@ -192,12 +193,12 @@ export function CLIToolsSettingsView() {
         action={
           <Button
             size="small"
-            variant="outlined"
+            variant="text"
             onClick={() => {
               refresh();
             }}
             disabled={isRefreshing}
-            startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : null}
+            startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : <LuRefreshCw />}
           >
             {t("settings.agents.actions.rescanAll")}
           </Button>

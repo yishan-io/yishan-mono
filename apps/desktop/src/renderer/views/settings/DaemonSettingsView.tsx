@@ -1,6 +1,7 @@
 import { Alert, Box, Button, CircularProgress, Snackbar, Typography } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LuPower, LuRefreshCw } from "react-icons/lu";
 import type { DaemonInfoResult } from "../../../main/ipc";
 import { closeTerminalSession } from "../../commands/terminalCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
@@ -208,12 +209,12 @@ export function DaemonSettingsView() {
         action={
           <Button
             size="small"
-            variant="outlined"
+            variant="text"
             onClick={() => {
               void loadDaemonInfo(true);
             }}
             disabled={isRefreshing || isLoading || isRestarting}
-            startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : null}
+            startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : <LuRefreshCw />}
           >
             {t("settings.daemon.actions.refresh")}
           </Button>
@@ -275,13 +276,13 @@ export function DaemonSettingsView() {
               control={
                 <Button
                   size="small"
-                  variant="contained"
+                  variant="text"
                   color="primary"
                   onClick={() => {
                     setIsConfirmOpen(true);
                   }}
                   disabled={isRestarting || isLoading}
-                  startIcon={isRestarting ? <CircularProgress size={14} color="inherit" /> : null}
+                  startIcon={isRestarting ? <CircularProgress size={14} color="inherit" /> : <LuPower />}
                 >
                   {isRestarting ? t("settings.daemon.restart.inProgress") : t("settings.daemon.restart.action")}
                 </Button>

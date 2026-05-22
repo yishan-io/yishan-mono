@@ -58,3 +58,8 @@ export async function listOrganizationInvites(orgId: string): Promise<Organizati
 export async function cancelOrganizationInvite(orgId: string, inviteId: string): Promise<void> {
   await requestJson<{ ok: boolean }>(`/orgs/${orgId}/invites/${inviteId}`, { method: "DELETE" });
 }
+
+/** Leaves an organization as the current user. */
+export async function leaveOrganization(orgId: string): Promise<void> {
+  await requestJson<{ ok: boolean }>(`/orgs/${orgId}/leave`, { method: "POST" });
+}

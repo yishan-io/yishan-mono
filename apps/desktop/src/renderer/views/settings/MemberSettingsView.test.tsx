@@ -18,6 +18,7 @@ vi.mock("../../api/client", () => ({
     org: {
       listMembers: vi.fn(),
       addMember: vi.fn(),
+      leave: vi.fn(),
     },
   },
 }));
@@ -25,6 +26,7 @@ vi.mock("../../api/client", () => ({
 vi.mock("../../commands/orgCommands", () => ({
   addOrgMember: vi.fn(),
   removeOrgMember: vi.fn(),
+  leaveOrg: vi.fn(),
 }));
 
 describe("MemberSettingsView", () => {
@@ -174,7 +176,7 @@ describe("MemberSettingsView", () => {
     expect(screen.queryByText("Member User")).toBeNull();
   });
 
-  it("disables remove button for owner member", async () => {
+  it("hides remove button for owner member", async () => {
     vi.mocked(api.org.listMembers).mockResolvedValue([
       {
         userId: "user-1",
@@ -198,7 +200,8 @@ describe("MemberSettingsView", () => {
       expect(screen.getByText("Owner User")).toBeTruthy();
     });
 
+    // Only one remove button should be present (for the admin row, not the owner row).
     const removeButtons = screen.getAllByLabelText("settings.members.removeAriaLabel");
-    expect(removeButtons[1]).toHaveProperty("disabled", true);
+    expect(removeButtons).toHaveLength(1);
   });
 });

@@ -60,3 +60,22 @@ export async function removeOrgMember(memberUserId: string): Promise<void> {
     throw new Error(getErrorMessage(error));
   }
 }
+
+/**
+ * Leaves the currently selected organization as the signed-in user.
+ * Throws with a human-readable message when the user is the last owner and
+ * other members still exist.
+ */
+export async function leaveOrg(): Promise<void> {
+  const orgId = sessionStore.getState().selectedOrganizationId;
+
+  if (!orgId) {
+    throw new Error("No organization selected.");
+  }
+
+  try {
+    await api.org.leave(orgId);
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  }
+}

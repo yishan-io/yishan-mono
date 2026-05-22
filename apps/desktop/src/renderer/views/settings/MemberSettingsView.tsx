@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   IconButton,
+  Paper,
   Snackbar,
   Stack,
   Table,
@@ -15,14 +16,15 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BiTrash } from "react-icons/bi";
+import { BiTrash, BiUserPlus } from "react-icons/bi";
+import { LuLogOut } from "react-icons/lu";
 import { api } from "../../api/client";
 import type { OrganizationMemberRecord } from "../../api/types";
-import { removeOrgMember } from "../../commands/orgCommands";
+import { leaveOrg, removeOrgMember } from "../../commands/orgCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
-import { getErrorMessage } from "../../helpers/errorHelpers";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
+import { getErrorMessage } from "../../helpers/errorHelpers";
 import { sessionStore } from "../../store/sessionStore";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
 import { PendingInvitesSection } from "./PendingInvitesSection";
@@ -58,6 +60,7 @@ export function MemberSettingsView() {
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
   const organizations = sessionStore((state) => state.organizations);
   const currentUser = sessionStore((state) => state.currentUser);
+  const setSessionData = sessionStore((state) => state.setSessionData);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadError, setHasLoadError] = useState(false);
   const [members, setMembers] = useState<OrganizationMemberRecord[]>([]);
@@ -67,6 +70,9 @@ export function MemberSettingsView() {
   const [removeErrorMessage, setRemoveErrorMessage] = useState<string | null>(null);
   const [pendingRemoveMember, setPendingRemoveMember] = useState<OrganizationMemberRecord | null>(null);
   const [isRemovingMember, setIsRemovingMember] = useState(false);
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+  const [isLeavingOrg, setIsLeavingOrg] = useState(false);
+  const [leaveErrorMessage, setLeaveErrorMessage] = useState<string | null>(null);
   const organizationId = resolveOrganizationId(
     selectedOrganizationId,
     organizations.map((organization) => organization.id),
@@ -157,13 +163,45 @@ export function MemberSettingsView() {
     }
   }, [organizationId, pendingRemoveMember, t]);
 
+  const handleLeaveDialogOpen = useCallback(() => {
+    setLeaveErrorMessage(null);
+    setIsLeaveDialogOpen(true);
+  }, []);
+
+  const handleLeaveDialogClose = useCallback(() => {
+    if (!isLeavingOrg) {
+      setIsLeaveDialogOpen(false);
+    }
+  }, [isLeavingOrg]);
+
+  const handleLeaveConfirm = useCallback(async () => {
+    if (!organizationId || !currentUser) {
+      return;
+    }
+
+    setIsLeavingOrg(true);
+    setLeaveErrorMessage(null);
+    try {
+      await leaveOrg();
+      const nextOrganizations = organizations.filter((org) => org.id !== organizationId);
+      setSessionData({
+        currentUser,
+        organizations: nextOrganizations,
+        selectedOrganizationId: nextOrganizations[0]?.id,
+      });
+    } catch (error) {
+      setLeaveErrorMessage(getErrorMessage(error));
+      setIsLeavingOrg(false);
+    }
+  }, [organizationId, currentUser, organizations, setSessionData]);
+
   return (
     <Box>
       <SettingsSectionHeader
         title={t("settings.members.title")}
         description={t("settings.members.description")}
         action={
-          <Button size="small" variant="outlined" onClick={() => setIsAddDialogOpen(true)}>
+          <Button size="small" variant="text" onClick={() => setIsAddDialogOpen(true)} startIcon={<BiUserPlus />}>
             {t("settings.members.addMember")}
           </Button>
         }
@@ -245,14 +283,15 @@ export function MemberSettingsView() {
                           </Typography>
                         </TableCell>
                         <TableCell align="right" sx={{ pr: 0.5 }}>
-                          <IconButton
-                            size="small"
-                            disabled={!canRemoveMember}
-                            onClick={() => handleRemoveRequest(member)}
-                            aria-label={t("settings.members.removeAriaLabel")}
-                          >
-                            <BiTrash />
-                          </IconButton>
+                          {canRemoveMember ? (
+                            <IconButton
+                              size="small"
+                              onClick={() => handleRemoveRequest(member)}
+                              aria-label={t("settings.members.removeAriaLabel")}
+                            >
+                              <BiTrash />
+                            </IconButton>
+                          ) : null}
                         </TableCell>
                       </TableRow>
                     );
@@ -264,6 +303,33 @@ export function MemberSettingsView() {
         )}
       </SettingsCard>
       {organizationId ? <PendingInvitesSection organizationId={organizationId} reloadKey={inviteReloadKey} /> : null}
+      <Box sx={{ mt: 3 }}>
+        <Typography variant="subtitle2" color="error" sx={{ fontWeight: 700, mb: 1, px: 0.5 }}>
+          {t("settings.members.dangerZone.title")}
+        </Typography>
+        <Paper variant="outlined" sx={{ borderColor: "error.main", borderRadius: 2, px: 2.5, py: 1.5 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {t("settings.members.dangerZone.leaveTitle")}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {t("settings.members.dangerZone.leaveDescription")}
+              </Typography>
+            </Box>
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              onClick={handleLeaveDialogOpen}
+              startIcon={<LuLogOut />}
+              sx={{ flexShrink: 0, ml: 2 }}
+            >
+              {t("settings.members.leaveOrganization")}
+            </Button>
+          </Stack>
+        </Paper>
+      </Box>
       <AddOrgMemberDialog
         isOpen={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
@@ -293,6 +359,23 @@ export function MemberSettingsView() {
         autoHideDuration={5000}
         onClose={() => setRemoveErrorMessage(null)}
         message={removeErrorMessage}
+      />
+      <ConfirmationDialog
+        open={isLeaveDialogOpen}
+        title={t("settings.members.leaveDialog.title")}
+        description={t("settings.members.leaveDialog.description")}
+        confirmLabel={t("settings.members.leaveDialog.confirm")}
+        cancelLabel={t("common.actions.cancel")}
+        confirmColor="error"
+        isSubmitting={isLeavingOrg}
+        onCancel={handleLeaveDialogClose}
+        onConfirm={() => void handleLeaveConfirm()}
+      />
+      <Snackbar
+        open={leaveErrorMessage !== null}
+        autoHideDuration={6000}
+        onClose={() => setLeaveErrorMessage(null)}
+        message={leaveErrorMessage}
       />
     </Box>
   );

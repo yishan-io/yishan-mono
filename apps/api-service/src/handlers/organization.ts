@@ -101,3 +101,15 @@ export async function cancelOrganizationInviteHandler(c: AppContext, params: Can
   });
   return c.json({ ok: true });
 }
+
+export async function leaveOrganizationHandler(c: AppContext, params: OrganizationParamsInput) {
+  const { orgId: organizationId } = params;
+
+  const actorUser = c.get("sessionUser");
+  await c.get("services").organization.leaveOrganization({
+    organizationId,
+    actorUserId: actorUser.id,
+  });
+
+  return c.json({ ok: true });
+}

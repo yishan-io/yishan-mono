@@ -133,6 +133,17 @@ export class OrganizationOwnerRemovalNotAllowedError extends AppError {
   }
 }
 
+export class OrganizationLastOwnerLeaveError extends AppError {
+  constructor() {
+    super(
+      "You are the last owner of this organization. Transfer ownership to another member before leaving.",
+      StatusCodes.CONFLICT,
+      "ORGANIZATION_LAST_OWNER_LEAVE",
+    );
+    this.name = "OrganizationLastOwnerLeaveError";
+  }
+}
+
 export class ValidationError extends AppError {
   constructor(issues: ValidationIssue[]) {
     super("Invalid request payload", StatusCodes.BAD_REQUEST, "VALIDATION_ERROR", { issues });

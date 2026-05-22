@@ -6,6 +6,7 @@ import {
   cancelOrganizationInviteHandler,
   createOrganizationHandler,
   deleteOrganizationHandler,
+  leaveOrganizationHandler,
   listOrganizationInvitesHandler,
   listOrganizationMembersHandler,
   listOrganizationsHandler,
@@ -39,6 +40,12 @@ organizationRouter.get(
   requireOrganizationMemberFromParam,
   zValidator("param", organizationParamsSchema, validationErrorResponse),
   (c) => listOrganizationMembersHandler(c, c.req.valid("param")),
+);
+organizationRouter.post(
+  "/orgs/:orgId/leave",
+  requireOrganizationMemberFromParam,
+  zValidator("param", organizationParamsSchema, validationErrorResponse),
+  (c) => leaveOrganizationHandler(c, c.req.valid("param")),
 );
 organizationRouter.post(
   "/orgs/:orgId/members",

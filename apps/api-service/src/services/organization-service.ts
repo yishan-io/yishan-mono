@@ -6,6 +6,7 @@ import type { OrganizationMemberRole } from "@/db/schema";
 import {
   InvalidOrganizationMemberRoleError,
   InvalidOrganizationMembersError,
+  OrganizationLastOwnerLeaveError,
   OrganizationManageMembersPermissionRequiredError,
   OrganizationMemberAlreadyExistsError,
   OrganizationMemberNotFoundError,
@@ -252,6 +253,52 @@ export class OrganizationService {
           and(
             eq(organizationMembers.organizationId, input.organizationId),
             eq(organizationMembers.userId, input.memberUserId),
+          ),
+        );
+    });
+  }
+
+  async leaveOrganization(input: { organizationId: string; actorUserId: string }): Promise<void> {
+    await this.assertOrganizationExists(input.organizationId);
+    await this.db.transaction(async (tx) => {
+      const actorMembershipRows = await tx
+        .select({ role: organizationMembers.role })
+        .from(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.organizationId, input.organizationId),
+            eq(organizationMembers.userId, input.actorUserId),
+          ),
+        )
+        .limit(1);
+
+      const actorRole = actorMembershipRows[0]?.role;
+      if (!actorRole) {
+        throw new OrganizationMemberNotFoundError(input.actorUserId);
+      }
+
+      if (actorRole === "owner") {
+        // The owner role is only ever assigned at org creation; there is no API
+        // path to promote another member to owner. So if the actor is the owner
+        // and any other member exists, they are the sole owner and cannot leave.
+        const allMemberRows = await tx
+          .select({ userId: organizationMembers.userId })
+          .from(organizationMembers)
+          .where(eq(organizationMembers.organizationId, input.organizationId));
+
+        const hasMembersOtherThanActor = allMemberRows.some((row) => row.userId !== input.actorUserId);
+
+        if (hasMembersOtherThanActor) {
+          throw new OrganizationLastOwnerLeaveError();
+        }
+      }
+
+      await tx
+        .delete(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.organizationId, input.organizationId),
+            eq(organizationMembers.userId, input.actorUserId),
           ),
         );
     });

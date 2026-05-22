@@ -1,6 +1,7 @@
 import { Alert, Box, Button, Chip, CircularProgress, Stack, Switch } from "@mui/material";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { LuRefreshCw } from "react-icons/lu";
 import { AgentIcon } from "../../components/AgentIcon";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
 import {
@@ -90,12 +91,12 @@ export function AgentSettingsView() {
         action={
           <Button
             size="small"
-            variant="outlined"
+            variant="text"
             onClick={() => {
               refresh();
             }}
             disabled={isRefreshing}
-            startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : null}
+            startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : <LuRefreshCw />}
           >
             {t("settings.agents.actions.rescanAll")}
           </Button>

@@ -118,7 +118,25 @@
       "empty": "No members are available for this organization.",
       "addMember": "Add member",
       "memberAdded": "Member added successfully.",
+      "memberRemoved": "Member removed successfully.",
       "inviteSent": "Invitation sent. They will be added when they register.",
+      "leaveOrganization": "Leave organization",
+      "removeAriaLabel": "Remove member",
+      "dangerZone": {
+        "title": "Danger zone",
+        "leaveTitle": "Leave this organization",
+        "leaveDescription": "You will lose access to all projects, workspaces, and resources in this organization."
+      },
+      "removeDialog": {
+        "title": "Remove member?",
+        "description": "{{email}} will be removed from the organization and will lose access immediately.",
+        "confirm": "Remove member"
+      },
+      "leaveDialog": {
+        "title": "Leave organization?",
+        "description": "You will lose access to this organization and all its resources. This cannot be undone.",
+        "confirm": "Leave organization"
+      },
       "addDialog": {
         "title": "Add organization member",
         "emailLabel": "Email address",
