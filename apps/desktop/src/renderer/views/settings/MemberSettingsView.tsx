@@ -3,6 +3,7 @@ import {
   Avatar,
   Box,
   Button,
+  IconButton,
   Snackbar,
   Stack,
   Table,
@@ -14,9 +15,13 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { BiTrash } from "react-icons/bi";
 import { api } from "../../api/client";
 import type { OrganizationMemberRecord } from "../../api/types";
+import { removeOrgMember } from "../../commands/orgCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
+import { ConfirmationDialog } from "../../components/ConfirmationDialog";
+import { getErrorMessage } from "../../helpers/errorHelpers";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
 import { sessionStore } from "../../store/sessionStore";
 import { AddOrgMemberDialog } from "./AddOrgMemberDialog";
@@ -52,16 +57,23 @@ export function MemberSettingsView() {
   const { t } = useTranslation();
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
   const organizations = sessionStore((state) => state.organizations);
+  const currentUser = sessionStore((state) => state.currentUser);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadError, setHasLoadError] = useState(false);
   const [members, setMembers] = useState<OrganizationMemberRecord[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [inviteReloadKey, setInviteReloadKey] = useState(0);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [removeErrorMessage, setRemoveErrorMessage] = useState<string | null>(null);
+  const [pendingRemoveMember, setPendingRemoveMember] = useState<OrganizationMemberRecord | null>(null);
+  const [isRemovingMember, setIsRemovingMember] = useState(false);
   const organizationId = resolveOrganizationId(
     selectedOrganizationId,
     organizations.map((organization) => organization.id),
   );
+
+  const actorRole = members.find((member) => member.userId === currentUser?.id)?.role;
+  const canManageMembers = actorRole === "owner" || actorRole === "admin";
 
   const loadMembers = useCallback(async (orgId: string, signal: { cancelled: boolean }) => {
     setIsLoading(true);
@@ -115,6 +127,36 @@ export function MemberSettingsView() {
     [organizationId, loadMembers, t],
   );
 
+  const handleRemoveRequest = useCallback((member: OrganizationMemberRecord) => {
+    setRemoveErrorMessage(null);
+    setPendingRemoveMember(member);
+  }, []);
+
+  const handleRemoveDialogClose = useCallback(() => {
+    if (!isRemovingMember) {
+      setPendingRemoveMember(null);
+    }
+  }, [isRemovingMember]);
+
+  const handleRemoveConfirm = useCallback(async () => {
+    if (!pendingRemoveMember || !organizationId) {
+      return;
+    }
+
+    setIsRemovingMember(true);
+    setRemoveErrorMessage(null);
+    try {
+      await removeOrgMember(pendingRemoveMember.userId);
+      setMembers((prev) => prev.filter((member) => member.userId !== pendingRemoveMember.userId));
+      setPendingRemoveMember(null);
+      setSuccessMessage(t("settings.members.memberRemoved"));
+    } catch (error) {
+      setRemoveErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsRemovingMember(false);
+    }
+  }, [organizationId, pendingRemoveMember, t]);
+
   return (
     <Box>
       <SettingsSectionHeader
@@ -154,12 +196,13 @@ export function MemberSettingsView() {
                   <TableCell>{t("settings.members.columns.email")}</TableCell>
                   <TableCell>{t("settings.members.columns.role")}</TableCell>
                   <TableCell>{t("settings.members.columns.userId")}</TableCell>
+                  <TableCell />
                 </TableRow>
               </TableHead>
               <TableBody>
                 {members.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4}>
+                    <TableCell colSpan={5}>
                       <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
                         {t("settings.members.empty")}
                       </Typography>
@@ -169,6 +212,8 @@ export function MemberSettingsView() {
                   members.map((member) => {
                     const displayName = member.name?.trim() || member.email;
                     const avatarAlt = displayName || member.userId;
+                    const isOwnerMember = member.role === "owner";
+                    const canRemoveMember = canManageMembers && !isOwnerMember;
 
                     return (
                       <TableRow key={member.userId}>
@@ -199,6 +244,16 @@ export function MemberSettingsView() {
                             {member.userId}
                           </Typography>
                         </TableCell>
+                        <TableCell align="right" sx={{ pr: 0.5 }}>
+                          <IconButton
+                            size="small"
+                            disabled={!canRemoveMember}
+                            onClick={() => handleRemoveRequest(member)}
+                            aria-label={t("settings.members.removeAriaLabel")}
+                          >
+                            <BiTrash />
+                          </IconButton>
+                        </TableCell>
                       </TableRow>
                     );
                   })
@@ -219,6 +274,25 @@ export function MemberSettingsView() {
         autoHideDuration={4000}
         onClose={() => setSuccessMessage(null)}
         message={successMessage}
+      />
+      <ConfirmationDialog
+        open={pendingRemoveMember !== null}
+        title={t("settings.members.removeDialog.title")}
+        description={t("settings.members.removeDialog.description", {
+          email: pendingRemoveMember?.email ?? "",
+        })}
+        confirmLabel={t("settings.members.removeDialog.confirm")}
+        cancelLabel={t("common.actions.cancel")}
+        confirmColor="error"
+        isSubmitting={isRemovingMember}
+        onCancel={handleRemoveDialogClose}
+        onConfirm={() => void handleRemoveConfirm()}
+      />
+      <Snackbar
+        open={removeErrorMessage !== null}
+        autoHideDuration={5000}
+        onClose={() => setRemoveErrorMessage(null)}
+        message={removeErrorMessage}
       />
     </Box>
   );
