@@ -3,10 +3,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPower, LuRefreshCw } from "react-icons/lu";
 import type { DaemonInfoResult } from "../../../main/ipc";
+import { getDesktopCliInstallStatus, installDesktopCli } from "../../commands/appCommands";
 import { closeTerminalSession } from "../../commands/terminalCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 import { StatusIndicator } from "../../components/StatusIndicator";
+import { getErrorMessage } from "../../helpers/errorHelpers";
 import {
   SettingsCard,
   SettingsControlRow,
@@ -18,6 +20,7 @@ import { MONOSPACE_SX } from "../../helpers/styles";
 import { useDialogRegistration } from "../../hooks/useDialogRegistration";
 import { getDesktopHostBridge, subscribeDesktopRpcEvent } from "../../rpc/rpcTransport";
 import { tabStore } from "../../store/tabStore";
+import { DaemonCliInstallCard } from "./DaemonCliInstallCard";
 import { clearTerminalRecoveryStorage } from "../workspace/terminal/terminalRecovery";
 
 /** Renders one settings panel for inspecting the local daemon connection. */
@@ -35,6 +38,16 @@ export function DaemonSettingsView() {
   useDialogRegistration(isConfirmOpen);
   const [isLoadingQuitOnExit, setIsLoadingQuitOnExit] = useState(true);
   const [isSavingQuitOnExit, setIsSavingQuitOnExit] = useState(false);
+  const [isLoadingCliStatus, setIsLoadingCliStatus] = useState(true);
+  const [isInstallingCli, setIsInstallingCli] = useState(false);
+  const [cliInstallError, setCliInstallError] = useState<string | null>(null);
+  const [cliStatus, setCliStatus] = useState<{
+    isAvailableInPath: boolean;
+    resolvedPath?: string;
+    isManagedInstall: boolean;
+    installPath: string;
+    bundledCliPath: string;
+  } | null>(null);
   const latestLoadIdRef = useRef(0);
   const isMountedRef = useRef(true);
 
@@ -85,15 +98,37 @@ export function DaemonSettingsView() {
     }
   }, []);
 
+  const loadCliInstallStatus = useCallback(async () => {
+    setIsLoadingCliStatus(true);
+    try {
+      const status = await getDesktopCliInstallStatus();
+      if (!isMountedRef.current) {
+        return;
+      }
+      setCliStatus(status);
+    } catch (error) {
+      console.error("[DaemonSettingsView] Failed to load CLI install status", error);
+      if (!isMountedRef.current) {
+        return;
+      }
+      setCliStatus(null);
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoadingCliStatus(false);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     isMountedRef.current = true;
     void loadDaemonInfo(false);
     void loadQuitOnExit();
+    void loadCliInstallStatus();
 
     return () => {
       isMountedRef.current = false;
     };
-  }, [loadDaemonInfo, loadQuitOnExit]);
+  }, [loadDaemonInfo, loadQuitOnExit, loadCliInstallStatus]);
 
   useEffect(() => {
     const unsubscribe = subscribeDesktopRpcEvent((event) => {
@@ -199,6 +234,34 @@ export function DaemonSettingsView() {
     }
   }, []);
 
+  const handleInstallCli = useCallback(async () => {
+    setIsInstallingCli(true);
+    setCliInstallError(null);
+    try {
+      const result = await installDesktopCli();
+      if (!isMountedRef.current) {
+        return;
+      }
+      if (result.success) {
+        setCliStatus(result.status);
+      } else {
+        setCliInstallError(result.error);
+        if (result.status) {
+          setCliStatus(result.status);
+        }
+      }
+    } catch (error) {
+      if (!isMountedRef.current) {
+        return;
+      }
+      setCliInstallError(getErrorMessage(error));
+    } finally {
+      if (isMountedRef.current) {
+        setIsInstallingCli(false);
+      }
+    }
+  }, []);
+
   const statusLabel = daemonInfo ? t("settings.daemon.status.running") : t("settings.daemon.status.unavailable");
 
   return (
@@ -299,6 +362,21 @@ export function DaemonSettingsView() {
             />
           </SettingsRows>
         </SettingsCard>
+      </Box>
+
+      <Box sx={{ mt: 3 }}>
+        <DaemonCliInstallCard
+          status={cliStatus}
+          isLoading={isLoadingCliStatus}
+          isInstalling={isInstallingCli}
+          error={cliInstallError}
+          onRefresh={() => {
+            void loadCliInstallStatus();
+          }}
+          onInstall={() => {
+            void handleInstallCli();
+          }}
+        />
       </Box>
 
       <Box sx={{ mt: 3 }}>

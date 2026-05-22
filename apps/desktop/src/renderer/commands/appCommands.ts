@@ -2,6 +2,8 @@ import type {
   AppendBrowserHistoryInput,
   AuthStatusResult,
   BrowserHistoryGroup,
+  DesktopCliInstallResult,
+  DesktopCliInstallStatusResult,
   DaemonInfoResult,
   DaemonRestartResult,
 } from "../../main/ipc";
@@ -138,6 +140,16 @@ export async function getDaemonQuitOnExit(): Promise<boolean> {
 /** Persists the quit-daemon-before-app-exit setting. */
 export async function setDaemonQuitOnExit(value: boolean): Promise<void> {
   await getDesktopHostBridge().setDaemonQuitOnExit(value);
+}
+
+/** Reads desktop-managed CLI install status from main-process IPC. */
+export async function getDesktopCliInstallStatus(): Promise<DesktopCliInstallStatusResult> {
+  return await getDesktopHostBridge().getDesktopCliInstallStatus();
+}
+
+/** Installs desktop-managed CLI symlink for terminal usage. */
+export async function installDesktopCli(): Promise<DesktopCliInstallResult> {
+  return await getDesktopHostBridge().installDesktopCli();
 }
 
 /** Runs one desktop login flow through main-process IPC. */

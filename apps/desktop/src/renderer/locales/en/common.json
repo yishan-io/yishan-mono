@@ -351,6 +351,28 @@
           "disconnected": "Disconnected",
           "disabled": "Disabled"
         }
+      },
+      "cli": {
+        "title": "Yishan CLI",
+        "description": "Install yishan in your terminal to use AI agent workflows directly from your shell, scripts, and remote SSH sessions.",
+        "rows": {
+          "status": "Status",
+          "detectedPath": "Detected command path",
+          "installPath": "Managed install path",
+          "mode": "Install mode"
+        },
+        "status": {
+          "installed": "Installed",
+          "notInstalled": "Not installed"
+        },
+        "mode": {
+          "managed": "Managed by desktop app",
+          "external": "External install"
+        },
+        "install": {
+          "action": "Install",
+          "inProgress": "Installing..."
+        }
       }
     },
     "terminal": {

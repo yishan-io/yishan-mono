@@ -7,6 +7,7 @@ import { DaemonSettingsView } from "./DaemonSettingsView";
 const mocked = vi.hoisted(() => ({
   getDaemonInfo: vi.fn(),
   getDaemonQuitOnExit: vi.fn(),
+  getDesktopCliInstallStatus: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -19,6 +20,8 @@ vi.mock("../../rpc/rpcTransport", () => ({
   getDesktopHostBridge: () => ({
     getDaemonInfo: mocked.getDaemonInfo,
     getDaemonQuitOnExit: mocked.getDaemonQuitOnExit,
+    getDesktopCliInstallStatus: mocked.getDesktopCliInstallStatus,
+    installDesktopCli: vi.fn(),
     setDaemonQuitOnExit: vi.fn(async () => ({ ok: true })),
     restartDaemon: vi.fn(),
   }),
@@ -29,7 +32,14 @@ describe("DaemonSettingsView", () => {
   beforeEach(() => {
     mocked.getDaemonInfo.mockReset();
     mocked.getDaemonQuitOnExit.mockReset();
+    mocked.getDesktopCliInstallStatus.mockReset();
     mocked.getDaemonQuitOnExit.mockResolvedValue(false);
+    mocked.getDesktopCliInstallStatus.mockResolvedValue({
+      isAvailableInPath: false,
+      isManagedInstall: false,
+      installPath: "/Users/test/.local/bin/yishan",
+      bundledCliPath: "/Applications/Yishan.app/Contents/Resources/yishan",
+    });
   });
 
   afterEach(() => {

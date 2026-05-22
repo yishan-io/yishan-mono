@@ -318,6 +318,28 @@
       "quitOnExit": {
         "label": "退出应用前关闭守护进程",
         "description": "启用后，桌面应用退出前会停止守护进程。禁用后，守护进程将在后台继续运行。"
+      },
+      "cli": {
+        "title": "Yishan CLI",
+        "description": "在终端安装 yishan 后，你可以在本地 shell、脚本和远程 SSH 会话中直接使用 AI agent 工作流。",
+        "rows": {
+          "status": "状态",
+          "detectedPath": "检测到的命令路径",
+          "installPath": "托管安装路径",
+          "mode": "安装模式"
+        },
+        "status": {
+          "installed": "已安装",
+          "notInstalled": "未安装"
+        },
+        "mode": {
+          "managed": "由桌面应用托管",
+          "external": "外部安装"
+        },
+        "install": {
+          "action": "安装",
+          "inProgress": "安装中..."
+        }
       }
     },
     "terminal": {

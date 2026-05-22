@@ -90,6 +90,25 @@ export type AuthLoginResult = {
   error?: string;
 };
 
+export type DesktopCliInstallStatusResult = {
+  isAvailableInPath: boolean;
+  resolvedPath?: string;
+  isManagedInstall: boolean;
+  installPath: string;
+  bundledCliPath: string;
+};
+
+export type DesktopCliInstallResult =
+  | {
+      success: true;
+      status: DesktopCliInstallStatusResult;
+    }
+  | {
+      success: false;
+      error: string;
+      status?: DesktopCliInstallStatusResult;
+    };
+
 export type CopyFilesInput = {
   /** Absolute source paths to copy from (external OS paths). */
   sourcePaths: string[];
@@ -156,6 +175,8 @@ export type DesktopHostBridge = {
   getDaemonQuitOnExit: () => Promise<boolean>;
   setDaemonQuitOnExit: (value: boolean) => Promise<{ ok: true }>;
   getDaemonJwt: () => Promise<string>;
+  getDesktopCliInstallStatus: () => Promise<DesktopCliInstallStatusResult>;
+  installDesktopCli: () => Promise<DesktopCliInstallResult>;
 };
 
 export type DesktopRpcEventBridge = {
@@ -196,4 +217,6 @@ export const HOST_IPC_CHANNELS = {
   getDaemonQuitOnExit: "desktop:host/get-daemon-quit-on-exit",
   setDaemonQuitOnExit: "desktop:host/set-daemon-quit-on-exit",
   getDaemonJwt: "desktop:host/get-daemon-jwt",
+  getDesktopCliInstallStatus: "desktop:host/get-desktop-cli-install-status",
+  installDesktopCli: "desktop:host/install-desktop-cli",
 } as const;

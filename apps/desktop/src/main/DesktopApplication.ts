@@ -18,6 +18,7 @@ import {
 } from "./browser/browserHistory";
 import { configureApplicationMenu } from "./app/menu";
 import { getAuthStatus, login } from "./auth/cliAuth";
+import { getDesktopCliInstallStatus, installDesktopCli } from "./cli/cliInstaller";
 import { DaemonManager } from "./daemon/daemonManager";
 import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "./daemon/daemonSettings";
 import { createDaemonJwt, ensureDaemonJwtSecret } from "./daemon/daemonSecret";
@@ -291,6 +292,24 @@ export class DesktopApplication {
         this.daemonJwtSecret = await ensureDaemonJwtSecret();
       }
       return createDaemonJwt(this.daemonJwtSecret);
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.getDesktopCliInstallStatus, async () => {
+      return await getDesktopCliInstallStatus();
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.installDesktopCli, async () => {
+      try {
+        const status = await installDesktopCli();
+        return { success: true as const, status };
+      } catch (error) {
+        const status = await getDesktopCliInstallStatus().catch(() => undefined);
+        return {
+          success: false as const,
+          error: error instanceof Error ? error.message : "Failed to install desktop CLI.",
+          status,
+        };
+      }
     });
   }
 
