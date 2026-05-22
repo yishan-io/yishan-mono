@@ -60,6 +60,9 @@
   "daemon": {
     "connection": {
       "reconnecting": "正在重新连接守护进程..."
+    },
+    "version": {
+      "outdatedMessage": "应用已升级到 {{appVersion}}，但守护进程仍在运行 {{daemonVersion}}。应用升级不会自动重启守护进程。请在设置中重启守护进程以应用匹配版本。"
     }
   },
   "settings": {

@@ -5,7 +5,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { api } from "../../api";
 import { RestApiError } from "../../api/restClient";
 import { getSessionBootstrapData } from "../../api/sessionApi";
-import { getAuthStatus, getDaemonInfo } from "../../commands/appCommands";
+import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../commands/appCommands";
 import { loadWorkspaceFromBackend } from "../../commands/projectCommands";
 import { setAppLanguage } from "../../i18n";
 import { rendererQueryClient } from "../../queryClient";
@@ -68,6 +68,13 @@ export function ApplicationRouterView() {
     let disposed = false;
     const loadDaemonIdentity = async () => {
       try {
+        const appVersion = await getDesktopAppVersion();
+        if (disposed) {
+          return;
+        }
+
+        sessionStore.getState().setAppVersion(appVersion);
+
         const daemonInfo = await getDaemonInfo();
         if (disposed) {
           return;

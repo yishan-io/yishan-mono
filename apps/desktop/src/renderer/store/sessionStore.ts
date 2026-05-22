@@ -24,6 +24,7 @@ type SessionStoreState = {
   selectedOrganizationId?: string;
   daemonId?: string;
   daemonVersion?: string;
+  appVersion?: string;
   loaded: boolean;
   /** True after authentication status has been resolved (replaces authStore). */
   isAuthenticated: boolean;
@@ -36,6 +37,7 @@ type SessionStoreState = {
   }) => void;
   setSelectedOrganizationId: (organizationId: string) => void;
   setDaemonInfo: (input: { daemonId: string; daemonVersion: string }) => void;
+  setAppVersion: (appVersion: string) => void;
   clearSessionData: () => void;
   /** Sets authentication flags (merged from former authStore). */
   setAuthState: (isAuthenticated: boolean, authStatusResolved: boolean) => void;
@@ -50,6 +52,7 @@ export const sessionStore = create<SessionStoreState>()(
       selectedOrganizationId: undefined,
       daemonId: undefined,
       daemonVersion: undefined,
+      appVersion: undefined,
       loaded: false,
       isAuthenticated: false,
       authStatusResolved: false,
@@ -83,6 +86,9 @@ export const sessionStore = create<SessionStoreState>()(
           daemonId: daemonId.trim(),
           daemonVersion: daemonVersion.trim(),
         });
+      },
+      setAppVersion: (appVersion) => {
+        set({ appVersion: appVersion.trim() });
       },
       clearSessionData: () => {
         set({

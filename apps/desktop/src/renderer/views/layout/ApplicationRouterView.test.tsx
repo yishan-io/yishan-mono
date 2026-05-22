@@ -8,7 +8,7 @@ import { api } from "../../api";
 import { createOrganization } from "../../api";
 import { RestApiError } from "../../api/restClient";
 import { getSessionBootstrapData } from "../../api/sessionApi";
-import { getAuthStatus, getDaemonInfo } from "../../commands/appCommands";
+import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../commands/appCommands";
 import { loadWorkspaceFromBackend } from "../../commands/projectCommands";
 import { rendererQueryClient } from "../../queryClient";
 import { authStore } from "../../store/authStore";
@@ -28,6 +28,7 @@ vi.mock("react-i18next", () => ({
 vi.mock("../../commands/appCommands", () => ({
   getAuthStatus: vi.fn(async () => ({ authenticated: false })),
   getDaemonInfo: vi.fn(async () => ({ daemonId: "daemon-1", version: "0.0.0", wsUrl: "ws://127.0.0.1:0" })),
+  getDesktopAppVersion: vi.fn(async () => "0.0.0"),
 }));
 
 vi.mock("../../api/sessionApi", () => ({
@@ -155,6 +156,7 @@ describe("ApplicationRouterView", () => {
     sessionStore.getState().clearSessionData();
     vi.mocked(getAuthStatus).mockResolvedValue({ authenticated: false });
     vi.mocked(getDaemonInfo).mockResolvedValue({ daemonId: "daemon-1", version: "0.0.0", wsUrl: "ws://127.0.0.1:0" });
+    vi.mocked(getDesktopAppVersion).mockResolvedValue("0.0.0");
     vi.mocked(getSessionBootstrapData).mockResolvedValue({
       currentUser: {
         id: "user-1",

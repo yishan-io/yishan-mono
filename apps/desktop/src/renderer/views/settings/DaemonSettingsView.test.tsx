@@ -6,6 +6,7 @@ import { DaemonSettingsView } from "./DaemonSettingsView";
 
 const mocked = vi.hoisted(() => ({
   getDaemonInfo: vi.fn(),
+  getDaemonQuitOnExit: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -17,6 +18,9 @@ vi.mock("react-i18next", () => ({
 vi.mock("../../rpc/rpcTransport", () => ({
   getDesktopHostBridge: () => ({
     getDaemonInfo: mocked.getDaemonInfo,
+    getDaemonQuitOnExit: mocked.getDaemonQuitOnExit,
+    setDaemonQuitOnExit: vi.fn(async () => ({ ok: true })),
+    restartDaemon: vi.fn(),
   }),
   subscribeDesktopRpcEvent: vi.fn(() => vi.fn()),
 }));
@@ -24,6 +28,8 @@ vi.mock("../../rpc/rpcTransport", () => ({
 describe("DaemonSettingsView", () => {
   beforeEach(() => {
     mocked.getDaemonInfo.mockReset();
+    mocked.getDaemonQuitOnExit.mockReset();
+    mocked.getDaemonQuitOnExit.mockResolvedValue(false);
   });
 
   afterEach(() => {

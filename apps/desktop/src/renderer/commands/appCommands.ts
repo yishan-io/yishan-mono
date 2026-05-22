@@ -115,6 +115,11 @@ export async function getAuthStatus(): Promise<AuthStatusResult> {
   }
 }
 
+/** Reads the currently running desktop app version from main-process IPC. */
+export async function getDesktopAppVersion(): Promise<string> {
+  return await getDesktopHostBridge().getDesktopAppVersion();
+}
+
 /** Reads current daemon identity and version from desktop main-process IPC. */
 export async function getDaemonInfo(): Promise<DaemonInfoResult> {
   return await getDesktopHostBridge().getDaemonInfo();
