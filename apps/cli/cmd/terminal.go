@@ -106,35 +106,6 @@ var terminalStopCmd = &cobra.Command{
 	},
 }
 
-var terminalReadCmd = &cobra.Command{
-	Use:   "read",
-	Short: "Read buffered output from a terminal session",
-	Long:  `Read any buffered stdout/stderr output from a terminal session. Also reports whether the session is still running and, if exited, the exit code.`,
-	Example: `  yishan terminal read --session-id <id>
-  yishan terminal read --session-id <id> --output json`,
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		sessionID, err := cmd.Flags().GetString("session-id")
-		if err != nil {
-			return err
-		}
-
-		client, err := resolveDaemonClient()
-		if err != nil {
-			return err
-		}
-
-		var result terminal.ReadResponse
-		if err := client.Call(cmd.Context(), daemon.MethodTerminalRead,
-			terminal.ReadRequest{SessionID: sessionID},
-			&result,
-		); err != nil {
-			return err
-		}
-
-		return output.PrintAny(result)
-	},
-}
-
 var terminalPortsCmd = &cobra.Command{
 	Use:   "ports",
 	Short: "List ports detected in terminal sessions",
@@ -161,7 +132,6 @@ func init() {
 	terminalCmd.AddCommand(terminalListCmd)
 	terminalCmd.AddCommand(terminalStartCmd)
 	terminalCmd.AddCommand(terminalStopCmd)
-	terminalCmd.AddCommand(terminalReadCmd)
 	terminalCmd.AddCommand(terminalPortsCmd)
 
 	terminalListCmd.Flags().Bool("include-exited", false, "include already-exited sessions")
@@ -172,7 +142,4 @@ func init() {
 
 	terminalStopCmd.Flags().String("session-id", "", "terminal session ID")
 	cobra.CheckErr(terminalStopCmd.MarkFlagRequired("session-id"))
-
-	terminalReadCmd.Flags().String("session-id", "", "terminal session ID")
-	cobra.CheckErr(terminalReadCmd.MarkFlagRequired("session-id"))
 }
