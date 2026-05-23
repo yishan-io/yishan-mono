@@ -5,6 +5,7 @@ import "@xterm/xterm/css/xterm.css";
 import { memo, useCallback, useEffect, useRef } from "react";
 import { FloatingVoiceButton } from "../../../components/FloatingVoiceButton";
 import { writeTerminalInput } from "../../../commands/terminalCommands";
+import { layoutStore } from "../../../store/settings/layoutStore";
 import { useTerminalSearchState } from "./useTerminalSearchState";
 import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import { useTerminalFileDrop } from "./useTerminalFileDrop";
@@ -19,6 +20,7 @@ import { initTerminalSessionLifecycle } from "./terminalSessionService";
 type TerminalViewProps = {
   tabId: string;
   focusRequestKey?: number;
+  showVoiceButton?: boolean;
 };
 
 /**
@@ -30,7 +32,8 @@ type TerminalViewProps = {
  * 3. Detaches on unmount (terminal stays alive in offscreen parking area).
  * 4. Manages UI-only concerns: search panel, drag/drop overlay, focus, keyboard shortcuts.
  */
-export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey = 0 }: TerminalViewProps) {
+export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey = 0, showVoiceButton = false }: TerminalViewProps) {
+  const isVoiceInputEnabled = layoutStore((state) => state.isVoiceInputEnabled);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -179,7 +182,7 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
           pointerEvents: "none",
         }}
       />
-      <FloatingVoiceButton onText={handleVoiceText} />
+      {isVoiceInputEnabled && showVoiceButton ? <FloatingVoiceButton onText={handleVoiceText} /> : null}
     </Box>
   );
 });

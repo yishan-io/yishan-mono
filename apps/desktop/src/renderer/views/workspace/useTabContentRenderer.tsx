@@ -156,7 +156,11 @@ export function useTabContentRenderer({
         }
         return (
           <Box key={tab.id} sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-            <TerminalView tabId={tab.id} focusRequestKey={shouldFocusContent ? focusContentRequestKey : 0} />
+            <TerminalView
+              tabId={tab.id}
+              focusRequestKey={shouldFocusContent ? focusContentRequestKey : 0}
+              showVoiceButton={shouldFocusContent}
+            />
           </Box>
         );
       }

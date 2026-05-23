@@ -3,9 +3,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { StatusIndicator } from "../../components/StatusIndicator";
-import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
+import { SettingsCard, SettingsRows, SettingsSectionHeader, SettingsToggleRow } from "../../components/settings";
 import { MONOSPACE_SX } from "../../helpers/styles";
 import { useCommands } from "../../hooks/useCommands";
+import { layoutStore } from "../../store/settings/layoutStore";
 import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../rpc/daemonTypes";
 import { tabStore } from "../../store/tabStore";
 import { workspaceStore } from "../../store/workspaceStore";
@@ -81,6 +82,8 @@ function resolveSessionLocationLabel(input: {
 export function TerminalSettingsView() {
   const { t } = useTranslation();
   const { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions } = useCommands();
+  const isVoiceInputEnabled = layoutStore((state) => state.isVoiceInputEnabled);
+  const setIsVoiceInputEnabled = layoutStore((state) => state.setIsVoiceInputEnabled);
   const projects = workspaceStore((state) => state.projects);
   const workspaces = workspaceStore((state) => state.workspaces);
   const [isLoading, setIsLoading] = useState(true);
@@ -198,7 +201,23 @@ export function TerminalSettingsView() {
   }, [closingSessionIds, repoNameById, sessions, t, workspaceNameById, workspaceRepoIdByWorkspaceId]);
 
   return (
-    <Box>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Box>
+        <SettingsSectionHeader
+          title={t("settings.terminal.voice.title")}
+          description={t("settings.terminal.voice.description")}
+        />
+        <SettingsCard>
+          <SettingsRows>
+            <SettingsToggleRow
+              title={t("settings.terminal.voice.enable.label")}
+              description={t("settings.terminal.voice.enable.description")}
+              checked={isVoiceInputEnabled}
+              onChange={setIsVoiceInputEnabled}
+            />
+          </SettingsRows>
+        </SettingsCard>
+      </Box>
       <SettingsSectionHeader title={t("settings.terminal.title")} description={t("settings.terminal.description")} />
       <SettingsCard>
         {isLoading ? (

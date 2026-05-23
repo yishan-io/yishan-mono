@@ -18,6 +18,7 @@ type LayoutStoreState = {
   isRightPaneManuallyHidden: boolean;
   // ── persisted link setting (from former linkSettingsStore) ─────────────────
   linkTarget: LinkTarget;
+  isVoiceInputEnabled: boolean;
   // ── transient popup tracking (from former popupStore) ─────────────────────
   popupCount: number;
   isPopupOpen: boolean;
@@ -28,6 +29,7 @@ type LayoutStoreState = {
   setIsLeftPaneManuallyHidden: (hidden: boolean) => void;
   setIsRightPaneManuallyHidden: (hidden: boolean) => void;
   setLinkTarget: (target: LinkTarget) => void;
+  setIsVoiceInputEnabled: (enabled: boolean) => void;
   registerPopup: () => void;
   unregisterPopup: () => void;
 };
@@ -42,6 +44,7 @@ export const layoutStore = create<LayoutStoreState>()(
       isLeftPaneManuallyHidden: false,
       isRightPaneManuallyHidden: true,
       linkTarget: "built-in" as LinkTarget,
+      isVoiceInputEnabled: false,
       popupCount: 0,
       isPopupOpen: false,
 
@@ -62,6 +65,9 @@ export const layoutStore = create<LayoutStoreState>()(
       },
       setLinkTarget: (linkTarget) => {
         set({ linkTarget });
+      },
+      setIsVoiceInputEnabled: (isVoiceInputEnabled) => {
+        set({ isVoiceInputEnabled });
       },
       registerPopup: () => {
         set((state) => {
@@ -86,6 +92,7 @@ export const layoutStore = create<LayoutStoreState>()(
         rightWidth: state.rightWidth,
         themePreference: state.themePreference,
         linkTarget: state.linkTarget,
+        isVoiceInputEnabled: state.isVoiceInputEnabled,
       }),
     },
   ),
