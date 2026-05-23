@@ -7,10 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog/log"
-	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/api"
+	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
+
+	"github.com/rs/zerolog/log"
 )
 
 const workspacePullRequestPollInterval = 5 * time.Minute
@@ -18,19 +19,20 @@ const workspacePullRequestPollInterval = 5 * time.Minute
 const ghUnknownGitHubHostErrorFragment = "none of the git remotes configured for this repository point to a known github host"
 
 type workspacePRTracker struct {
-	mu             sync.Mutex
-	manager        *workspace.Manager
+	mu      sync.Mutex
+	manager *workspace.Manager
 	// active maps workspaceID → Workspace for all workspaces currently being
 	// tracked. Storing the full Workspace avoids calling manager.List() on
 	// every poll tick and filtering by active map membership.
-	active         map[string]workspace.Workspace
-	inFlight       map[string]bool
-	started        bool
-	done           chan struct{}
-	publish        func(frontendEvent)
-	branchResolver func(context.Context, string) (string, error)
-	prResolver     func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error)
-	detailResolver func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error)
+	active          map[string]workspace.Workspace
+	inFlight        map[string]bool
+	started         bool
+	done            chan struct{}
+	publish         func(frontendEvent)
+	inspectResolver func(context.Context, string) (workspace.GitInspectResult, error)
+	branchResolver  func(context.Context, string) (string, error)
+	prResolver      func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error)
+	detailResolver  func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error)
 }
 
 func newWorkspacePRTracker(manager *workspace.Manager, publish func(frontendEvent)) *workspacePRTracker {
@@ -47,6 +49,9 @@ func newWorkspacePRTracker(manager *workspace.Manager, publish func(frontendEven
 			return "", workspace.NewRPCError(rpcCodeNotFound, "workspace not found")
 		}
 		return manager.GitCurrentBranch(ctx, ws.ID)
+	}
+	tracker.inspectResolver = func(ctx context.Context, root string) (workspace.GitInspectResult, error) {
+		return manager.GitInspect(ctx, root)
 	}
 	tracker.prResolver = func(ctx context.Context, root string, branch string) (workspace.GitBranchPullRequestStatus, error) {
 		ws, ok := manager.FindWorkspaceByPath(root)
@@ -65,13 +70,18 @@ func newWorkspacePRTracker(manager *workspace.Manager, publish func(frontendEven
 	return tracker
 }
 
-func (t *workspacePRTracker) EnsureTracked(worktreePath string) {
+func (t *workspacePRTracker) EnsureTracked(worktreePath string, refreshImmediately bool) {
 	if strings.TrimSpace(worktreePath) == "" {
 		return
 	}
 
 	ws, ok := t.manager.FindWorkspaceByPath(worktreePath)
 	if !ok {
+		return
+	}
+
+	if !t.shouldTrackWorkspacePullRequest(ws) {
+		t.setWorkspacePullRequest(ws, nil, false)
 		return
 	}
 
@@ -83,29 +93,9 @@ func (t *workspacePRTracker) EnsureTracked(worktreePath string) {
 	t.active[ws.ID] = ws
 	t.mu.Unlock()
 
-	go t.RefreshWorkspaceByPath(worktreePath)
-}
-
-// EnsureTrackedSkipInitialRefresh registers the workspace for future PR polling
-// without firing an immediate GitHub API call. Use this when the latest PR state
-// is already known (e.g. already merged) but polling should resume for new PRs.
-func (t *workspacePRTracker) EnsureTrackedSkipInitialRefresh(worktreePath string) {
-	if strings.TrimSpace(worktreePath) == "" {
-		return
+	if refreshImmediately {
+		go t.RefreshWorkspaceByPath(worktreePath)
 	}
-
-	ws, ok := t.manager.FindWorkspaceByPath(worktreePath)
-	if !ok {
-		return
-	}
-
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	if !t.started {
-		t.started = true
-		go t.pollLoop()
-	}
-	t.active[ws.ID] = ws
 }
 
 func (t *workspacePRTracker) StopTracking(workspaceID string) {
@@ -207,29 +197,34 @@ func (t *workspacePRTracker) refreshWorkspace(ws workspace.Workspace) error {
 
 	branch, err := t.branchResolver(ctx, ws.Path)
 	if err != nil {
+		if shouldDisableTrackingForBranchError(err) {
+			t.setWorkspacePullRequest(ws, nil, false)
+			log.Debug().Err(err).Str("workspaceId", ws.ID).Str("path", ws.Path).Msg("workspace PR refresh disabled tracking because branch could not be resolved")
+			return nil
+		}
 		log.Warn().Err(err).Str("workspaceId", ws.ID).Str("path", ws.Path).Msg("workspace PR refresh failed to resolve branch")
 		return err
 	}
 	branch = strings.TrimSpace(branch)
 	log.Debug().Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh resolved branch")
 	if branch == "" || branch == "HEAD" {
-		t.setWorkspacePullRequest(ws.ID, nil, true)
+		t.setWorkspacePullRequest(ws, nil, true)
 		log.Debug().Str("workspaceId", ws.ID).Str("path", ws.Path).Msg("workspace PR refresh cleared PR because branch is empty or detached")
 		return nil
 	}
 
 	pr, err := t.detailResolver(ctx, ws.Path, branch)
 	if err != nil {
-		if shouldSkipPullRequestRefresh(err) {
-			t.setWorkspacePullRequest(ws.ID, nil, true)
-			log.Debug().Err(err).Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh skipped for non-GitHub repository")
+		if shouldErrDisableTracking(err) {
+			t.setWorkspacePullRequest(ws, nil, false)
+			log.Debug().Err(err).Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh disabled tracking for repository without PR support")
 			return nil
 		}
 		log.Warn().Err(err).Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh failed to resolve pull request")
 		return err
 	}
 	if !pr.Found {
-		t.setWorkspacePullRequest(ws.ID, nil, true)
+		t.setWorkspacePullRequest(ws, nil, true)
 		log.Debug().Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh found no pull request")
 		return nil
 	}
@@ -251,7 +246,7 @@ func (t *workspacePRTracker) refreshWorkspace(ws workspace.Workspace) error {
 		Deployments:    pr.Deployments,
 	}
 	complete := status == "merged"
-	t.setWorkspacePullRequest(ws.ID, bound, !complete)
+	t.setWorkspacePullRequest(ws, bound, !complete)
 	log.Debug().
 		Str("workspaceId", ws.ID).
 		Str("path", ws.Path).
@@ -263,26 +258,38 @@ func (t *workspacePRTracker) refreshWorkspace(ws workspace.Workspace) error {
 	return nil
 }
 
-func shouldSkipPullRequestRefresh(err error) bool {
+func shouldErrDisableTracking(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.Contains(strings.ToLower(err.Error()), ghUnknownGitHubHostErrorFragment)
+	message := strings.ToLower(strings.TrimSpace(err.Error()))
+	return strings.Contains(message, ghUnknownGitHubHostErrorFragment) ||
+		strings.Contains(message, "no git remote") ||
+		strings.Contains(message, "no remotes")
 }
 
-func (t *workspacePRTracker) setWorkspacePullRequest(workspaceID string, pr *workspace.WorkspacePullRequest, keepActive bool) {
-	previousWorkspace, previousErr := t.manager.GetWorkspace(workspaceID)
-	previousPullRequest := previousWorkspace.PullRequest
-	if err := t.manager.SetWorkspacePullRequest(workspaceID, pr); err != nil {
+func shouldDisableTrackingForBranchError(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(strings.TrimSpace(err.Error()))
+	return strings.Contains(message, "workspace is not on a branch") ||
+		strings.Contains(message, "ambiguous argument 'head'") ||
+		strings.Contains(message, "unknown revision or path not in the working tree")
+}
+
+func (t *workspacePRTracker) setWorkspacePullRequest(ws workspace.Workspace, pr *workspace.WorkspacePullRequest, keepActive bool) {
+	previousPullRequest := ws.PullRequest
+	if err := t.manager.SetWorkspacePullRequest(ws.ID, pr); err != nil {
 		return
 	}
-	if previousErr == nil && prMeaningfullyChanged(previousPullRequest, pr) {
-		if currentWorkspace, err := t.manager.GetWorkspace(workspaceID); err == nil && t.publish != nil {
+	if prMeaningfullyChanged(previousPullRequest, pr) {
+		if t.publish != nil {
 			t.publish(frontendEvent{
 				Topic: "workspacePullRequestUpdated",
 				Payload: map[string]any{
-					"workspaceId":           currentWorkspace.ID,
-					"workspaceWorktreePath": currentWorkspace.Path,
+					"workspaceId":           ws.ID,
+					"workspaceWorktreePath": ws.Path,
 					"pullRequest":           pr,
 				},
 			})
@@ -292,23 +299,18 @@ func (t *workspacePRTracker) setWorkspacePullRequest(workspaceID string, pr *wor
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if keepActive {
-		// Re-read from active to preserve the Workspace value; the map entry
-		// already exists since setWorkspacePullRequest is only called for tracked
-		// workspaces (via refreshWorkspace or EnsureTracked).
-		if _, ok := t.active[workspaceID]; !ok {
-			// Workspace was untracked while refresh was running; re-resolve.
-			if ws, err := t.manager.GetWorkspace(workspaceID); err == nil {
-				t.active[workspaceID] = ws
-			}
+		if _, ok := t.active[ws.ID]; ok {
+			ws.PullRequest = pr
+			t.active[ws.ID] = ws
 		}
 	} else {
-		delete(t.active, workspaceID)
+		delete(t.active, ws.ID)
 	}
 
 	// Persist to api-service only when meaningful PR fields changed (excluding
 	// UpdatedAt which is set on every refresh and would always differ).
-	if pr != nil && previousErr == nil && prMeaningfullyChanged(previousPullRequest, pr) {
-		go t.persistPullRequest(workspaceID, pr)
+	if pr != nil && prMeaningfullyChanged(previousPullRequest, pr) {
+		go t.persistPullRequest(ws.ID, pr)
 	}
 }
 
