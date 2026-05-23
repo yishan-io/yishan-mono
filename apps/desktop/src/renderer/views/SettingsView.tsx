@@ -29,6 +29,7 @@ import { KeybindingsSettingsView } from "./settings/KeybindingsSettingsView";
 import { LanguageSettingsView } from "./settings/LanguageSettingsView";
 import { LinkSettingsView } from "./settings/LinkSettingsView";
 import { MemberSettingsView } from "./settings/MemberSettingsView";
+import { MarkdownSettingsView } from "./settings/MarkdownSettingsView";
 import { NodesSettingsView } from "./settings/NodesSettingsView";
 import { NotificationSettingsView } from "./settings/NotificationSettingsView";
 import { TerminalSettingsView } from "./settings/TerminalSettingsView";
@@ -168,6 +169,7 @@ export function SettingsView() {
             systemLabel={t("settings.appearance.theme.options.system")}
           />
           <LanguageSettingsView />
+          <MarkdownSettingsView />
         </Stack>
       ),
       daemon: <DaemonSettingsView />,

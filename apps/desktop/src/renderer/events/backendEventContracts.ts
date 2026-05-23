@@ -10,6 +10,7 @@ const FRONTEND_MESSAGE_KEYS = [
   "workspaceFilesChanged",
   "workspaceCreateProgress",
   "workspacePullRequestUpdated",
+  "workspaceSnapshotChanged",
   "openBrowserUrl",
 ] as const satisfies readonly RpcFrontendMessageKey[];
 
@@ -23,6 +24,7 @@ export type BackendEventName =
   | "workspace.files.changed"
   | "workspace.create.progress"
   | "workspace.pull_request.updated"
+  | "workspace.snapshot.changed"
   | "open.browser.url";
 
 export type NormalizedBackendEvent =
@@ -62,6 +64,11 @@ export type NormalizedBackendEvent =
       payload: RpcFrontendMessagePayload<"workspacePullRequestUpdated">;
     }
   | {
+      source: "workspaceSnapshotChanged";
+      name: "workspace.snapshot.changed";
+      payload: RpcFrontendMessagePayload<"workspaceSnapshotChanged">;
+    }
+  | {
       source: "openBrowserUrl";
       name: "open.browser.url";
       payload: RpcFrontendMessagePayload<"openBrowserUrl">;
@@ -78,6 +85,7 @@ export const BACKEND_EVENT_NAME_BY_SOURCE = {
   workspaceFilesChanged: "workspace.files.changed",
   workspaceCreateProgress: "workspace.create.progress",
   workspacePullRequestUpdated: "workspace.pull_request.updated",
+  workspaceSnapshotChanged: "workspace.snapshot.changed",
   openBrowserUrl: "open.browser.url",
 } as const satisfies Record<RpcFrontendMessageKey, BackendEventName>;
 
@@ -303,6 +311,27 @@ export function normalizeBackendEvent(envelope: DesktopRpcEventEnvelope): Normal
       source: "workspacePullRequestUpdated",
       name: BACKEND_EVENT_NAME_BY_SOURCE.workspacePullRequestUpdated,
       payload: payload as RpcFrontendMessagePayload<"workspacePullRequestUpdated">,
+    };
+  }
+
+  if (envelope.method === "workspaceSnapshotChanged") {
+    if (
+      typeof payload.organizationId !== "string" ||
+      (payload.resource !== "project" && payload.resource !== "workspace") ||
+      (payload.change !== "created" &&
+        payload.change !== "updated" &&
+        payload.change !== "deleted" &&
+        payload.change !== "closed") ||
+      !isOptionalString(payload.projectId) ||
+      !isOptionalString(payload.workspaceId)
+    ) {
+      return null;
+    }
+
+    return {
+      source: "workspaceSnapshotChanged",
+      name: BACKEND_EVENT_NAME_BY_SOURCE.workspaceSnapshotChanged,
+      payload: payload as RpcFrontendMessagePayload<"workspaceSnapshotChanged">,
     };
   }
 

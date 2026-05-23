@@ -346,6 +346,7 @@ export async function getDaemonClient(): Promise<DaemonRpcClient> {
           closeSession: transportClient.terminal.closeSession,
           killProcess: transportClient.terminal.killProcess,
           listDetectedPorts: transportClient.terminal.listDetectedPorts,
+          setActiveWorkspace: transportClient.terminal.setActiveWorkspace,
           getResourceUsage: transportClient.terminal.getResourceUsage,
           listSessions: transportClient.terminal.listSessions,
           subscribeOutput: proxyClient.terminal.subscribeOutput,

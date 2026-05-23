@@ -90,7 +90,11 @@ func Run(cfg RunConfig, statePath string) error {
 
 	// ── Phase 3: handler + auth + relay status ─────────────────────────────
 	workspaceManager := workspace.NewManager()
-	handler := NewJSONRPCHandler(workspaceManager, daemonID, cfg.LogFilePath)
+	cleanupStore, err := newWorkspaceCleanupStore(statePath)
+	if err != nil {
+		return fmt.Errorf("create workspace cleanup store: %w", err)
+	}
+	handler := NewJSONRPCHandler(workspaceManager, daemonID, cfg.LogFilePath, cleanupStore)
 	relayStatus := NewRelayStatus(cfg.RelayEnabled, cfg.RelayURL)
 
 	// ── Phase 4: HTTP server ───────────────────────────────────────────────
@@ -111,6 +115,10 @@ func Run(cfg RunConfig, statePath string) error {
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
+
+	cleanupCtx, cancelCleanup := context.WithCancel(context.Background())
+	defer cancelCleanup()
+	handler.startWorkspaceCleanupRetry(cleanupCtx)
 
 	// ── Phase 5: persist state + env setup + node registration + relay ─────
 	if err := startDaemonServices(cfg, statePath, actualAddr, daemonID, currentPID, tcpAddr.Port, handler, relayStatus); err != nil {

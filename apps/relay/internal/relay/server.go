@@ -77,6 +77,65 @@ func NewServer(sessions *SessionManager, authenticator *auth.Authenticator, queu
 	return s
 }
 
+// HandlePublishOrgEvent handles POST /api/v1/org-events — broadcasts one org-scoped invalidation to subscribed nodes.
+func (s *Server) HandlePublishOrgEvent(w http.ResponseWriter, r *http.Request) {
+	if !s.authorizeAPIRequest(w, r) {
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var body struct {
+		OrganizationID string         `json:"organizationId"`
+		Resource       string         `json:"resource"`
+		Change         string         `json:"change"`
+		ProjectID      string         `json:"projectId,omitempty"`
+		WorkspaceID    string         `json:"workspaceId,omitempty"`
+		Metadata       map[string]any `json:"metadata,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	organizationID := strings.TrimSpace(body.OrganizationID)
+	resource := strings.TrimSpace(body.Resource)
+	change := strings.TrimSpace(body.Change)
+	if organizationID == "" || resource == "" || change == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "organizationId, resource, and change are required"})
+		return
+	}
+
+	params := map[string]any{
+		"organizationId": organizationID,
+		"resource":       resource,
+		"change":         change,
+	}
+	if projectID := strings.TrimSpace(body.ProjectID); projectID != "" {
+		params["projectId"] = projectID
+	}
+	if workspaceID := strings.TrimSpace(body.WorkspaceID); workspaceID != "" {
+		params["workspaceId"] = workspaceID
+	}
+	if len(body.Metadata) > 0 {
+		params["metadata"] = body.Metadata
+	}
+
+	notified := s.broadcastOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, params)
+	log.Info().
+		Str("organizationId", organizationID).
+		Str("resource", resource).
+		Str("change", change).
+		Str("projectId", strings.TrimSpace(body.ProjectID)).
+		Str("workspaceId", strings.TrimSpace(body.WorkspaceID)).
+		Int("notified", notified).
+		Msg("org event broadcast")
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "notified": notified})
+}
+
 // evictionLoop periodically removes sessions that have been disconnected for
 // longer than staleSessionMaxAge, preventing unbounded memory growth.
 func (s *Server) evictionLoop() {
@@ -450,6 +509,10 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		log.Error().Err(err).Msg("failed to write json response")
 	}
+}
+
+func (s *Server) broadcastOrgNotification(organizationID string, method string, params any) int {
+	return s.sessions.SendOrgNotification(organizationID, method, params)
 }
 
 func (s *Server) addClient(client *clientConn) {

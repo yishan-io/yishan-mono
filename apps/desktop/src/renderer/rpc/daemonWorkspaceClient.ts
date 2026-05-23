@@ -123,6 +123,8 @@ export class DaemonWorkspaceClient {
       workspaces.push({
         id,
         path: normalizeWorktreePath(path),
+        orgId: readOptionalString(record.orgId),
+        projectId: readOptionalString(record.projectId),
         pullRequest: readDaemonWorkspacePullRequest(record.pullRequest),
       });
     }
@@ -332,7 +334,6 @@ export class DaemonWorkspaceClient {
     const workspaceId = await this.resolveId(input);
     const organizationId = readOptionalString(record?.organizationId);
     const projectId = readOptionalString(record?.projectId);
-    const worktreePath = readOptionalString(record?.workspaceWorktreePath);
     const branch = readOptionalString(record?.branch);
     const removeBranch = readOptionalBoolean(record?.removeBranch) ?? false;
     const postHook = readOptionalString(record?.postHook) || "";
@@ -341,7 +342,6 @@ export class DaemonWorkspaceClient {
       organizationId,
       projectId,
       branch,
-      worktreePath,
       removeBranch,
       forceWorktree: true,
       forceBranch: true,

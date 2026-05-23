@@ -61,6 +61,7 @@ export type RelayTokenClaims = {
   type: "relay";
   sub: string;
   nodeId: string;
+  organizationIds: string[];
   iss: string;
   aud: string;
   iat: number;
@@ -70,7 +71,7 @@ export type RelayTokenClaims = {
 const RELAY_TOKEN_TTL_SECONDS = 300; // 5 minutes
 
 export async function signRelayToken(
-  payload: { sub: string; nodeId: string; iss: string; aud: string },
+  payload: { sub: string; nodeId: string; organizationIds: string[]; iss: string; aud: string },
   secret: string
 ): Promise<{ token: string; expiresAt: string }> {
   const nowSeconds = Math.floor(Date.now() / 1000);
@@ -80,6 +81,7 @@ export async function signRelayToken(
     type: "relay",
     sub: payload.sub,
     nodeId: payload.nodeId,
+    organizationIds: payload.organizationIds,
     iss: payload.iss,
     aud: payload.aud,
     iat: nowSeconds,

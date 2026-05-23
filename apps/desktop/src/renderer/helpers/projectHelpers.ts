@@ -201,8 +201,15 @@ export function applyHydratedStateFromApiData(
   });
 
   const nextProjectIdSet = new Set(mappedProjects.map((project) => project.id));
+  const previousProjectIdSet = new Set(state.projects.map((project) => project.id));
   const baseDisplayProjectIds = orgPreferences?.displayProjectIds ?? [];
   const filteredDisplayProjectIds = baseDisplayProjectIds.filter((projectId) => nextProjectIdSet.has(projectId));
+  const discoveredProjectIds =
+    state.projects.length > 0
+      ? mappedProjects
+          .map((project) => project.id)
+          .filter((projectId) => !baseDisplayProjectIds.includes(projectId) && !previousProjectIdSet.has(projectId))
+      : [];
   const hasNoPersistedPreference =
     orgPreferences?.displayProjectIds === undefined || orgPreferences.displayProjectIds.length === 0;
   const shouldResetPersistedDisplayProjectIds =
@@ -215,7 +222,7 @@ export function applyHydratedStateFromApiData(
       ? mappedProjects.map((project) => project.id)
       : shouldResetPersistedDisplayProjectIds
         ? mappedProjects.map((project) => project.id)
-        : filteredDisplayProjectIds;
+        : [...filteredDisplayProjectIds, ...discoveredProjectIds];
 
   state.projects = nextBaseState.projects;
   state.workspaces = nextBaseState.workspaces;

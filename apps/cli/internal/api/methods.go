@@ -32,10 +32,7 @@ type CreateWorkspaceInput struct {
 }
 
 type CloseWorkspaceInput struct {
-	NodeID    string
-	LocalPath string
-	Kind      string
-	Branch    string
+	WorkspaceID string
 }
 
 func (c *Client) Health() (HealthResponse, error) {
@@ -200,12 +197,7 @@ func (c *Client) UpsertWorkspacePullRequest(orgID string, projectID string, work
 
 func (c *Client) CloseWorkspace(orgID string, projectID string, input CloseWorkspaceInput) (CreateWorkspaceResponse, error) {
 	payload := map[string]string{
-		"nodeId":    input.NodeID,
-		"localPath": input.LocalPath,
-		"kind":      input.Kind,
-	}
-	if input.Branch != "" {
-		payload["branch"] = input.Branch
+		"workspaceId": input.WorkspaceID,
 	}
 
 	var response CreateWorkspaceResponse

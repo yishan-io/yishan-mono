@@ -39,6 +39,7 @@ describe("BACKEND_EVENT_NAME_BY_SOURCE", () => {
       workspaceFilesChanged: "workspace.files.changed",
       workspaceCreateProgress: "workspace.create.progress",
       workspacePullRequestUpdated: "workspace.pull_request.updated",
+      workspaceSnapshotChanged: "workspace.snapshot.changed",
       openBrowserUrl: "open.browser.url",
     });
   });
@@ -222,6 +223,26 @@ describe("normalizeBackendEvent", () => {
 
     expect(normalized.name).toBe("workspace.pull_request.updated");
     expect(normalized.source).toBe("workspacePullRequestUpdated");
+  });
+
+  it("normalizes workspace snapshot changed events", () => {
+    const normalized = assertNormalized(
+      normalizeBackendEvent(
+        createEnvelope({
+          method: "workspaceSnapshotChanged",
+          payload: {
+            organizationId: "org-1",
+            resource: "workspace",
+            change: "created",
+            projectId: "project-1",
+            workspaceId: "workspace-1",
+          },
+        }),
+      ),
+    );
+
+    expect(normalized.name).toBe("workspace.snapshot.changed");
+    expect(normalized.source).toBe("workspaceSnapshotChanged");
   });
 
   it("normalizes app actions", () => {

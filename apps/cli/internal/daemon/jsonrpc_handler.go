@@ -20,16 +20,17 @@ const (
 )
 
 type JSONRPCHandler struct {
-	upgrader    websocket.Upgrader
-	manager     *workspace.Manager
-	nodeID      string
-	logFilePath string
-	events      *eventHub
-	watchers    *workspaceWatchers
-	prTracker   *workspacePRTracker
+	upgrader     websocket.Upgrader
+	manager      *workspace.Manager
+	nodeID       string
+	logFilePath  string
+	cleanupStore *workspaceCleanupStore
+	events       *eventHub
+	watchers     *workspaceWatchers
+	prTracker    *workspacePRTracker
 }
 
-func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath string) *JSONRPCHandler {
+func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore) *JSONRPCHandler {
 	events := newEventHub()
 	prTracker := newWorkspacePRTracker(manager, events.Publish)
 	manager.SetTerminalDetectedPortsListener(func(ports []workspace.TerminalDetectedPort) {
@@ -44,12 +45,13 @@ func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath st
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(_ *http.Request) bool { return true },
 		},
-		manager:     manager,
-		nodeID:      nodeID,
-		logFilePath: logFilePath,
-		events:      events,
-		watchers:    newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
-		prTracker:   prTracker,
+		manager:      manager,
+		nodeID:       nodeID,
+		logFilePath:  logFilePath,
+		cleanupStore: cleanupStore,
+		events:       events,
+		watchers:     newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
+		prTracker:    prTracker,
 	}
 }
 

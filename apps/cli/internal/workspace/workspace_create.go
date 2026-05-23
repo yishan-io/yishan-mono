@@ -135,7 +135,7 @@ func validateCreateRequest(req CreateRequest) error {
 		{name: "sourceBranch", value: req.SourceBranch},
 	} {
 		if strings.TrimSpace(field.value) == "" {
-			return NewRPCError(-32602, field.name+" is required")
+			return NewRPCError(rpcCodeInvalidParams, field.name+" is required")
 		}
 	}
 	return nil
@@ -295,11 +295,11 @@ func defaultWorktreePath(repoKey string, workspaceName string) (string, error) {
 func safeRelativePath(input string, field string) (string, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" || filepath.IsAbs(trimmed) {
-		return "", NewRPCError(-32602, field+" must be relative")
+		return "", NewRPCError(rpcCodeInvalidParams, field+" must be relative")
 	}
 	cleaned := filepath.Clean(trimmed)
 	if cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, ".."+string(filepath.Separator)) {
-		return "", NewRPCError(-32602, field+" must not escape .yishan")
+		return "", NewRPCError(rpcCodeInvalidParams, field+" must not escape .yishan")
 	}
 	return cleaned, nil
 }

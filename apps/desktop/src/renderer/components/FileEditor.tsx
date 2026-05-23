@@ -4,16 +4,18 @@ import { LuCode, LuColumns2, LuEye } from "react-icons/lu";
 import { getLanguageId, isMarkdownFile } from "../helpers/editorLanguage";
 import { ensureEditorThemes, monaco, YISHAN_THEME_DARK, YISHAN_THEME_LIGHT } from "../helpers/monacoSetup";
 import { useGitGutterDecorations } from "../hooks/useGitGutterDecorations";
+import type { MarkdownDefaultViewMode } from "../store/settings/layoutStore";
 import { FileViewerToolbar } from "./FileViewerToolbar";
 import { MarkdownPreview } from "./MarkdownPreview";
 
-type MarkdownViewMode = "editor" | "split" | "preview";
+type MarkdownViewMode = "edit" | "split" | "preview";
 
 type FileEditorProps = {
   path: string;
   content: string;
   worktreePath?: string;
   isDeleted?: boolean;
+  defaultMarkdownViewMode?: MarkdownDefaultViewMode;
   focusRequestKey?: number;
   onContentChange?: (content: string) => void;
   onSave?: (content: string) => void | Promise<void>;
@@ -29,6 +31,7 @@ export function FileEditor({
   content,
   worktreePath,
   isDeleted = false,
+  defaultMarkdownViewMode = "split",
   focusRequestKey = 0,
   onContentChange,
   onSave,
@@ -47,20 +50,32 @@ export function FileEditor({
 
   const isMarkdown = useMemo(() => isMarkdownFile(path), [path]);
   const [viewMode, setViewMode] = useState<MarkdownViewMode>(() =>
-    isMarkdownFile(path) ? "split" : "editor",
+    isMarkdownFile(path) ? defaultMarkdownViewMode : "edit",
   );
+  const previousMarkdownDefaultModeRef = useRef(defaultMarkdownViewMode);
   const [editorPaneRatio, setEditorPaneRatio] = useState(0.5);
 
   // Reset view mode when switching between markdown and non-markdown files.
-  // When entering a markdown file from a non-markdown file (viewMode is "editor"),
-  // default to "split". When leaving markdown, always reset to "editor".
+  // When entering a markdown file from a non-markdown file (viewMode is "edit"),
+  // use user-configured markdown default. When leaving markdown, always reset to "edit".
   useEffect(() => {
     if (isMarkdown) {
-      setViewMode((prev) => (prev === "editor" ? "split" : prev));
+      setViewMode((prev) => (prev === "edit" ? defaultMarkdownViewMode : prev));
     } else {
-      setViewMode("editor");
+      setViewMode("edit");
     }
-  }, [isMarkdown]);
+  }, [defaultMarkdownViewMode, isMarkdown]);
+
+  useEffect(() => {
+    if (!isMarkdown) {
+      previousMarkdownDefaultModeRef.current = defaultMarkdownViewMode;
+      return;
+    }
+
+    const previousMode = previousMarkdownDefaultModeRef.current;
+    previousMarkdownDefaultModeRef.current = defaultMarkdownViewMode;
+    setViewMode((currentMode) => (currentMode === previousMode ? defaultMarkdownViewMode : currentMode));
+  }, [defaultMarkdownViewMode, isMarkdown]);
 
   const monacoTheme = useMemo(
     () => (theme.palette.mode === "dark" ? YISHAN_THEME_DARK : YISHAN_THEME_LIGHT),
@@ -70,7 +85,7 @@ export function FileEditor({
   // Track the current editor content for git gutter decorations.
   const [currentContent, setCurrentContent] = useState(content);
 
-  const showEditor = viewMode === "editor" || viewMode === "split";
+  const showEditor = viewMode === "edit" || viewMode === "split";
   const showPreview = viewMode === "preview" || viewMode === "split";
 
   useEffect(() => {
@@ -249,7 +264,7 @@ export function FileEditor({
           isMarkdown ? (
             <>
               <MarkdownViewModeToggle
-                mode="editor"
+                mode="edit"
                 currentMode={viewMode}
                 icon={<LuCode size={14} />}
                 tooltip="Source editor"

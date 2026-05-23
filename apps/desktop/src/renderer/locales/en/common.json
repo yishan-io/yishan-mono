@@ -275,6 +275,36 @@
           "dark": "Dark",
           "system": "System theme"
         }
+      },
+      "markdown": {
+        "title": "Markdown",
+        "description": "Configure how markdown files open in the editor.",
+        "defaultViewMode": {
+          "label": "Default markdown view mode",
+          "description": "Choose how markdown files open by default.",
+          "options": {
+            "edit": "Edit",
+            "preview": "Preview",
+            "split": "Split"
+          }
+        },
+        "previewFontSize": {
+          "label": "Preview font size",
+          "description": "Control text size in markdown preview.",
+          "options": {
+            "small": "Small",
+            "medium": "Medium",
+            "large": "Large"
+          }
+        },
+        "previewWidth": {
+          "label": "Preview width",
+          "description": "Choose whether preview spans full width or uses a readable column.",
+          "options": {
+            "readable": "Readable column",
+            "full": "Full width"
+          }
+        }
       }
     },
     "language": {

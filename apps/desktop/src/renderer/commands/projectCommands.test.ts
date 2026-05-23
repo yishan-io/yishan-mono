@@ -34,7 +34,7 @@ vi.mock("../api", () => ({
 }));
 
 const rpcMocks = vi.hoisted(() => ({
-  gitInspect: vi.fn(),
+  gitInspect: vi.fn(async () => ({ isGitRepository: true })),
   workspaceList: vi.fn(async () => []),
   workspaceOpen: vi.fn(),
   workspaceSyncContextLink: vi.fn(async () => ({ updated: [], skipped: [], errors: {} })),
@@ -159,7 +159,7 @@ describe("projectCommands", () => {
 
     await loadWorkspaceFromBackend();
 
-    expect(rpcMocks.workspaceList).toHaveBeenCalledTimes(1);
+    expect(rpcMocks.workspaceList).toHaveBeenCalledTimes(2);
     expect(rpcMocks.workspaceOpen).toHaveBeenCalledWith({
       workspaceId: "workspace-1",
       workspaceWorktreePath: "/tmp/workspaces/project-1/feature-a",

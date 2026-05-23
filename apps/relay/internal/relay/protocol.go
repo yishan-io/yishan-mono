@@ -38,8 +38,9 @@ type rpcError struct {
 
 const (
 	// Server -> Node
-	MethodPing   = "relay.ping"
-	MethodJobRun = "job.run"
+	MethodPing                     = "relay.ping"
+	MethodJobRun                   = "job.run"
+	MethodWorkspaceSnapshotChanged = "workspace.snapshot.changed"
 
 	// Node -> Server
 	MethodPong      = "relay.pong"

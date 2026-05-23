@@ -1,10 +1,10 @@
 package daemon
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
+
+	"yishan/apps/cli/internal/config"
 )
 
 const (
@@ -22,10 +22,10 @@ func ResolveLogFilePath(configPath string) (string, error) {
 		return filepath.Join(filepath.Dir(configPath), LogDirName, LogFileName), nil
 	}
 
-	home, err := os.UserHomeDir()
+	yishanHome, err := config.HomeDir()
 	if err != nil {
-		return "", fmt.Errorf("resolve user home dir: %w", err)
+		return "", err
 	}
 
-	return filepath.Join(home, ".yishan", LogDirName, LogFileName), nil
+	return filepath.Join(yishanHome, LogDirName, LogFileName), nil
 }

@@ -46,7 +46,7 @@ func (s *GitService) CurrentBranch(ctx context.Context, root string) (string, er
 	}
 	branch := strings.TrimSpace(out)
 	if branch == "" || branch == "HEAD" {
-		return "", NewRPCError(-32010, "workspace is not on a branch")
+		return "", NewRPCError(rpcCodeToolUnavailable, "workspace is not on a branch")
 	}
 	return branch, nil
 }
@@ -64,7 +64,7 @@ func (s *GitService) MainWorktreePath(ctx context.Context, root string) (string,
 			}
 		}
 	}
-	return "", NewRPCError(-32010, "main worktree not found")
+	return "", NewRPCError(rpcCodeToolUnavailable, "main worktree not found")
 }
 
 func (s *GitService) AuthorName(ctx context.Context, root string) (string, error) {
@@ -189,7 +189,7 @@ func (s *GitService) PublishBranch(ctx context.Context, root string) (string, er
 		remotes := splitNonEmptyLines(remotesOut)
 		if !slices.Contains(remotes, "origin") {
 			if len(remotes) == 0 {
-				return "", NewRPCError(-32010, "no git remote configured")
+				return "", NewRPCError(rpcCodeToolUnavailable, "no git remote configured")
 			}
 			remote = remotes[0]
 		}
@@ -204,7 +204,7 @@ func (s *GitService) PublishBranch(ctx context.Context, root string) (string, er
 
 func (s *GitService) RenameBranch(ctx context.Context, root string, nextBranch string) error {
 	if strings.TrimSpace(nextBranch) == "" {
-		return NewRPCError(-32602, "nextBranch is required")
+		return NewRPCError(rpcCodeInvalidParams, "nextBranch is required")
 	}
 	_, err := gitCommandCombined(ctx, root, "branch", "-m", nextBranch)
 	return err
@@ -212,7 +212,7 @@ func (s *GitService) RenameBranch(ctx context.Context, root string, nextBranch s
 
 func (s *GitService) RemoveBranch(ctx context.Context, root string, branch string, force bool) error {
 	if strings.TrimSpace(branch) == "" {
-		return NewRPCError(-32602, "branch is required")
+		return NewRPCError(rpcCodeInvalidParams, "branch is required")
 	}
 	flag := "-d"
 	if force {
@@ -290,15 +290,27 @@ func (s *GitService) FetchRef(ctx context.Context, root string, ref string) erro
 
 func (s *GitService) ListCommitsToTarget(ctx context.Context, root string, targetBranch string) (GitCommitComparison, error) {
 	if strings.TrimSpace(targetBranch) == "" {
-		return GitCommitComparison{}, NewRPCError(-32602, "targetBranch is required")
+		return GitCommitComparison{}, NewRPCError(rpcCodeInvalidParams, "targetBranch is required")
 	}
-
-	currentBranch, _ := gitCommand(ctx, root, "rev-parse", "--abbrev-ref", "HEAD")
-	logOut, err := gitCommand(ctx, root, "log", "--no-decorate", "--date=iso-strict", "--name-only", "--pretty=format:%x1e%H%x1f%h%x1f%an%x1f%aI%x1f%s", fmt.Sprintf("%s..HEAD", targetBranch))
+	resolvedTargetBranch, err := resolveCommitComparisonTarget(ctx, root, strings.TrimSpace(targetBranch))
 	if err != nil {
 		return GitCommitComparison{}, err
 	}
-	allChanged, err := gitCommand(ctx, root, "diff", "--name-only", fmt.Sprintf("%s...HEAD", targetBranch))
+
+	currentBranch, _ := gitCommand(ctx, root, "rev-parse", "--abbrev-ref", "HEAD")
+	if !refExists(ctx, root, resolvedTargetBranch) {
+		return GitCommitComparison{
+			CurrentBranch:   strings.TrimSpace(currentBranch),
+			TargetBranch:    resolvedTargetBranch,
+			AllChangedFiles: []string{},
+			Commits:         []GitCommit{},
+		}, nil
+	}
+	logOut, err := gitCommand(ctx, root, "log", "--no-decorate", "--date=iso-strict", "--name-only", "--pretty=format:%x1e%H%x1f%h%x1f%an%x1f%aI%x1f%s", fmt.Sprintf("%s..HEAD", resolvedTargetBranch))
+	if err != nil {
+		return GitCommitComparison{}, err
+	}
+	allChanged, err := gitCommand(ctx, root, "diff", "--name-only", fmt.Sprintf("%s...HEAD", resolvedTargetBranch))
 	if err != nil {
 		return GitCommitComparison{}, err
 	}
@@ -344,15 +356,54 @@ func (s *GitService) ListCommitsToTarget(ctx context.Context, root string, targe
 
 	return GitCommitComparison{
 		CurrentBranch:   strings.TrimSpace(currentBranch),
-		TargetBranch:    strings.TrimSpace(targetBranch),
+		TargetBranch:    resolvedTargetBranch,
 		AllChangedFiles: allChangedFiles,
 		Commits:         commits,
 	}, nil
 }
 
+func resolveCommitComparisonTarget(ctx context.Context, root string, targetBranch string) (string, error) {
+	if targetBranch == "" {
+		return "", NewRPCError(rpcCodeInvalidParams, "targetBranch is required")
+	}
+
+	if refExists(ctx, root, targetBranch) {
+		return targetBranch, nil
+	}
+
+	branchName := targetBranch
+	if strings.Contains(targetBranch, "/") {
+		if _, suffix, ok := strings.Cut(targetBranch, "/"); ok {
+			branchName = suffix
+		}
+	}
+
+	if refExists(ctx, root, branchName) {
+		return branchName, nil
+	}
+
+	remote, err := resolveRemote(ctx, root)
+	if err == nil && remote != "" {
+		candidate := fmt.Sprintf("%s/%s", remote, branchName)
+		if refExists(ctx, root, candidate) {
+			return candidate, nil
+		}
+	}
+
+	return targetBranch, nil
+}
+
+func refExists(ctx context.Context, root string, ref string) bool {
+	if strings.TrimSpace(ref) == "" || ref == "HEAD" {
+		return false
+	}
+	_, err := gitCommand(ctx, root, "rev-parse", "--verify", ref)
+	return err == nil
+}
+
 func (s *GitService) BranchDiffSummary(ctx context.Context, root string, targetBranch string) (GitBranchDiffSummary, error) {
 	if strings.TrimSpace(targetBranch) == "" {
-		return GitBranchDiffSummary{}, NewRPCError(-32602, "targetBranch is required")
+		return GitBranchDiffSummary{}, NewRPCError(rpcCodeInvalidParams, "targetBranch is required")
 	}
 
 	numstat, err := gitCommand(ctx, root, "diff", "--numstat", fmt.Sprintf("%s...HEAD", targetBranch))
@@ -376,7 +427,7 @@ func (s *GitService) BranchDiffSummary(ctx context.Context, root string, targetB
 
 func (s *GitService) ReadCommitDiff(ctx context.Context, root string, commitHash string, path string) (GitDiffContent, error) {
 	if strings.TrimSpace(commitHash) == "" || strings.TrimSpace(path) == "" {
-		return GitDiffContent{}, NewRPCError(-32602, "commitHash and path are required")
+		return GitDiffContent{}, NewRPCError(rpcCodeInvalidParams, "commitHash and path are required")
 	}
 	oldContent, _ := gitCommand(ctx, root, "show", fmt.Sprintf("%s^:%s", commitHash, path))
 	newContent, _ := gitCommand(ctx, root, "show", fmt.Sprintf("%s:%s", commitHash, path))
@@ -385,7 +436,7 @@ func (s *GitService) ReadCommitDiff(ctx context.Context, root string, commitHash
 
 func (s *GitService) ReadBranchComparisonDiff(ctx context.Context, root string, targetBranch string, path string) (GitDiffContent, error) {
 	if strings.TrimSpace(targetBranch) == "" || strings.TrimSpace(path) == "" {
-		return GitDiffContent{}, NewRPCError(-32602, "targetBranch and path are required")
+		return GitDiffContent{}, NewRPCError(rpcCodeInvalidParams, "targetBranch and path are required")
 	}
 	oldContent, _ := gitCommand(ctx, root, "show", fmt.Sprintf("%s:%s", targetBranch, path))
 	newContent, _ := gitCommand(ctx, root, "show", fmt.Sprintf("HEAD:%s", path))

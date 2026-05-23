@@ -33,7 +33,7 @@ func (s *GitService) RefreshBranchPullRequest(ctx context.Context, root string, 
 func (s *GitService) branchPullRequest(ctx context.Context, root string, branch string, refresh bool, includeDetails bool) (GitBranchPullRequestStatus, error) {
 	branchName := strings.TrimSpace(branch)
 	if branchName == "" {
-		return GitBranchPullRequestStatus{}, NewRPCError(-32602, "branch is required")
+		return GitBranchPullRequestStatus{}, NewRPCError(rpcCodeInvalidParams, "branch is required")
 	}
 
 	cacheKey := root + "\n" + branchName
@@ -78,7 +78,7 @@ func (s *GitService) branchPullRequest(ctx context.Context, root string, branch 
 
 	prs := make([]ghPullRequest, 0)
 	if err := json.Unmarshal([]byte(out), &prs); err != nil {
-		return GitBranchPullRequestStatus{}, NewRPCError(-32010, "failed to parse gh pr list output")
+		return GitBranchPullRequestStatus{}, NewRPCError(rpcCodeToolUnavailable, "failed to parse gh pr list output")
 	}
 
 	if len(prs) == 0 {

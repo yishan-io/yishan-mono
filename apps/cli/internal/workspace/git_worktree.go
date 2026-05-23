@@ -9,10 +9,10 @@ import (
 
 func (s *GitService) CreateWorktree(ctx context.Context, root string, branch string, worktreePath string, createBranch bool, fromRef string) error {
 	if strings.TrimSpace(branch) == "" {
-		return NewRPCError(-32602, "branch is required")
+		return NewRPCError(rpcCodeInvalidParams, "branch is required")
 	}
 	if strings.TrimSpace(worktreePath) == "" {
-		return NewRPCError(-32602, "worktreePath is required")
+		return NewRPCError(rpcCodeInvalidParams, "worktreePath is required")
 	}
 
 	absWorktreePath, err := filepath.Abs(worktreePath)
@@ -38,7 +38,7 @@ func (s *GitService) CreateWorktree(ctx context.Context, root string, branch str
 
 func (s *GitService) RemoveWorktree(ctx context.Context, root string, worktreePath string, force bool) error {
 	if strings.TrimSpace(worktreePath) == "" {
-		return NewRPCError(-32602, "worktreePath is required")
+		return NewRPCError(rpcCodeInvalidParams, "worktreePath is required")
 	}
 
 	absWorktreePath, err := filepath.Abs(worktreePath)

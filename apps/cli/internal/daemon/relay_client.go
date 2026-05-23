@@ -21,6 +21,7 @@ import (
 const relayMethodPing = "relay.ping"
 const relayMethodPong = "relay.pong"
 const relayMethodJobRun = "job.run"
+const relayMethodWorkspaceSnapshotChanged = "workspace.snapshot.changed"
 
 const relayReconnectInitialDelay = 2 * time.Second
 const relayReconnectMaxDelay = 30 * time.Second
@@ -231,7 +232,7 @@ func runRelaySession(handler *JSONRPCHandler, nodeID string, conn *websocket.Con
 		}
 
 		// Handle relay-level messages before dispatching to the daemon handler.
-		if handleRelayMessage(connState, nodeID, payload) {
+		if handleRelayMessage(handler, connState, nodeID, payload) {
 			continue
 		}
 
@@ -276,7 +277,7 @@ func normalizeRelayWSURL(raw string) (string, error) {
 
 // handleRelayMessage handles relay-protocol messages (heartbeat, job dispatch).
 // Returns true if the message was consumed and should not be passed to the daemon handler.
-func handleRelayMessage(connState *wsConnState, nodeID string, payload []byte) bool {
+func handleRelayMessage(handler *JSONRPCHandler, connState *wsConnState, nodeID string, payload []byte) bool {
 	var msg struct {
 		Method string          `json:"method"`
 		Params json.RawMessage `json:"params,omitempty"`
@@ -292,9 +293,40 @@ func handleRelayMessage(connState *wsConnState, nodeID string, payload []byte) b
 	case relayMethodJobRun:
 		handleJobRun(connState, nodeID, msg.Params)
 		return true
+	case relayMethodWorkspaceSnapshotChanged:
+		publishWorkspaceSnapshotChanged(handler, msg.Params)
+		return true
 	default:
 		return false
 	}
+}
+
+func publishWorkspaceSnapshotChanged(handler *JSONRPCHandler, params json.RawMessage) {
+	var payload map[string]any
+	if len(params) > 0 {
+		if err := json.Unmarshal(params, &payload); err != nil {
+			log.Warn().Err(err).Msg("relay: invalid workspace snapshot change params")
+			return
+		}
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+
+	organizationID, _ := payload["organizationId"].(string)
+	resource, _ := payload["resource"].(string)
+	change, _ := payload["change"].(string)
+	projectID, _ := payload["projectId"].(string)
+	workspaceID, _ := payload["workspaceId"].(string)
+	log.Info().
+		Str("organizationId", strings.TrimSpace(organizationID)).
+		Str("resource", strings.TrimSpace(resource)).
+		Str("change", strings.TrimSpace(change)).
+		Str("projectId", strings.TrimSpace(projectID)).
+		Str("workspaceId", strings.TrimSpace(workspaceID)).
+		Msg("relay: workspace snapshot change received")
+
+	handler.events.Publish(frontendEvent{Topic: "workspaceSnapshotChanged", Payload: payload})
 }
 
 func mintRelayToken(nodeID string) (string, time.Time, error) {

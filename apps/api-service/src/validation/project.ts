@@ -51,10 +51,7 @@ export const createWorkspaceBodySchema = z.object({
 });
 
 export const closeWorkspaceBodySchema = z.object({
-  kind: z.enum(["primary", "worktree"]).optional().default("worktree"),
-  branch: nonEmptyStringSchema.optional(),
-  nodeId: nonEmptyStringSchema,
-  localPath: nonEmptyStringSchema,
+  workspaceId: nonEmptyStringSchema,
 });
 
 export const workspacePullRequestParamsSchema = z.object({
@@ -71,8 +68,8 @@ export const upsertWorkspacePullRequestBodySchema = z.object({
   baseBranch: z.string().optional(),
   state: z.enum(["open", "closed", "merged"]),
   metadata: z.record(z.string(), z.unknown()).optional(),
-  detectedAt: z.string().datetime(),
-  resolvedAt: z.string().datetime().optional(),
+  detectedAt: z.iso.datetime(),
+  resolvedAt: z.iso.datetime().optional(),
 });
 
 export type OrganizationProjectListQueryInput = z.infer<typeof organizationProjectListQuerySchema>;

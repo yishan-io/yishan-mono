@@ -6,6 +6,7 @@ import type {
   ProjectCommitComparisonSelection,
 } from "../../../components/ProjectCommitComparison";
 import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
+import { loadWorkspaceFromBackend } from "../../../commands/projectCommands";
 import { useCommands } from "../../../hooks/useCommands";
 import { workspaceStore } from "../../../store/workspaceStore";
 
@@ -182,6 +183,12 @@ function normalizeProjectGitChangeKind(kind: string): ProjectGitChangeKind {
   return "modified";
 }
 
+function isMissingWorkspacePathError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const normalizedMessage = message.toLowerCase();
+  return normalizedMessage.includes("no such file or directory") && normalizedMessage.includes("stat ");
+}
+
 function createEmptyRepoChangesBySection(): RepoChangesBySection {
   return { unstaged: [], staged: [], untracked: [] };
 }
@@ -335,6 +342,10 @@ export function useChangesTabState() {
     } catch (error) {
       setRepoChangesBySection(createEmptyRepoChangesBySection());
       setRepoCommitComparison(createEmptyRepoCommitComparison());
+      if (isMissingWorkspacePathError(error)) {
+        void loadWorkspaceFromBackend();
+        return;
+      }
       console.error("Failed to load workspace git changes", error);
     }
   }, [listGitChanges, loadCommitComparison, selectedWorkspaceSourceBranch, selectedWorkspaceWorktreePath]);

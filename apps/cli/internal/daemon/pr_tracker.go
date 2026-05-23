@@ -15,6 +15,8 @@ import (
 
 const workspacePullRequestPollInterval = 5 * time.Minute
 
+const ghUnknownGitHubHostErrorFragment = "none of the git remotes configured for this repository point to a known github host"
+
 type workspacePRTracker struct {
 	mu             sync.Mutex
 	manager        *workspace.Manager
@@ -209,21 +211,26 @@ func (t *workspacePRTracker) refreshWorkspace(ws workspace.Workspace) error {
 		return err
 	}
 	branch = strings.TrimSpace(branch)
-	log.Info().Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh resolved branch")
+	log.Debug().Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh resolved branch")
 	if branch == "" || branch == "HEAD" {
 		t.setWorkspacePullRequest(ws.ID, nil, true)
-		log.Info().Str("workspaceId", ws.ID).Str("path", ws.Path).Msg("workspace PR refresh cleared PR because branch is empty or detached")
+		log.Debug().Str("workspaceId", ws.ID).Str("path", ws.Path).Msg("workspace PR refresh cleared PR because branch is empty or detached")
 		return nil
 	}
 
 	pr, err := t.detailResolver(ctx, ws.Path, branch)
 	if err != nil {
+		if shouldSkipPullRequestRefresh(err) {
+			t.setWorkspacePullRequest(ws.ID, nil, true)
+			log.Debug().Err(err).Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh skipped for non-GitHub repository")
+			return nil
+		}
 		log.Warn().Err(err).Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh failed to resolve pull request")
 		return err
 	}
 	if !pr.Found {
 		t.setWorkspacePullRequest(ws.ID, nil, true)
-		log.Info().Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh found no pull request")
+		log.Debug().Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh found no pull request")
 		return nil
 	}
 
@@ -245,7 +252,7 @@ func (t *workspacePRTracker) refreshWorkspace(ws workspace.Workspace) error {
 	}
 	complete := status == "merged"
 	t.setWorkspacePullRequest(ws.ID, bound, !complete)
-	log.Info().
+	log.Debug().
 		Str("workspaceId", ws.ID).
 		Str("path", ws.Path).
 		Str("branch", branch).
@@ -254,6 +261,13 @@ func (t *workspacePRTracker) refreshWorkspace(ws workspace.Workspace) error {
 		Bool("complete", complete).
 		Msg("workspace PR refresh synced pull request")
 	return nil
+}
+
+func shouldSkipPullRequestRefresh(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(strings.ToLower(err.Error()), ghUnknownGitHubHostErrorFragment)
 }
 
 func (t *workspacePRTracker) setWorkspacePullRequest(workspaceID string, pr *workspace.WorkspacePullRequest, keepActive bool) {
@@ -455,5 +469,5 @@ func (t *workspacePRTracker) persistPullRequest(workspaceID string, pr *workspac
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Str("prId", input.PrID).Str("state", state).Msg("pr persist: failed to upsert to api-service")
 		return
 	}
-	log.Info().Str("workspaceId", workspaceID).Str("prId", input.PrID).Str("state", state).Msg("pr persist: upserted to api-service")
+	log.Debug().Str("workspaceId", workspaceID).Str("prId", input.PrID).Str("state", state).Msg("pr persist: upserted to api-service")
 }

@@ -119,6 +119,28 @@ function createWorkspacePullRequestUpdatedHarness() {
   };
 }
 
+function createWorkspaceSnapshotChangedHarness() {
+  let listener: ((payload: RpcFrontendMessagePayload<"workspaceSnapshotChanged">) => void) | null = null;
+  const unsubscribe = vi.fn();
+  const subscribeWorkspaceSnapshotChanged = vi.fn(
+    (nextListener: (payload: RpcFrontendMessagePayload<"workspaceSnapshotChanged">) => void) => {
+      listener = nextListener;
+      return () => {
+        unsubscribe();
+        listener = null;
+      };
+    },
+  );
+
+  return {
+    subscribeWorkspaceSnapshotChanged,
+    unsubscribe,
+    emit(payload: RpcFrontendMessagePayload<"workspaceSnapshotChanged">) {
+      listener?.(payload);
+    },
+  };
+}
+
 describe("createBackendEventStoreBindings", () => {
   it("subscribes once and forwards git changed events to store action", () => {
     vi.useFakeTimers();
@@ -329,6 +351,102 @@ describe("createBackendEventStoreBindings", () => {
     expect(setWorkspacePullRequest).toHaveBeenCalledWith("workspace-1", { number: 42, title: "PR" });
 
     stopBindings();
+  });
+
+  it("refreshes workspace snapshot on matching organization invalidation", async () => {
+    vi.useFakeTimers();
+    try {
+      const gitHarness = createGitChangedHarness();
+      const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+      const inAppNotificationHarness = createInAppNotificationHarness();
+      const snapshotHarness = createWorkspaceSnapshotChangedHarness();
+      const incrementFileTreeRefreshVersion = vi.fn();
+      const incrementGitRefreshVersion = vi.fn();
+      const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+      const recordWorkspaceUnreadNotification = vi.fn();
+      const dispatchSystemNotification = vi.fn(async () => undefined);
+      const playNotificationSound = vi.fn(async () => undefined);
+      const loadWorkspaceSnapshot = vi.fn(async () => undefined);
+
+      const startBindings = createBackendEventStoreBindings({
+        subscribeGitChanged: gitHarness.subscribeGitChanged,
+        subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+        subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+        subscribeWorkspaceSnapshotChanged: snapshotHarness.subscribeWorkspaceSnapshotChanged,
+        incrementFileTreeRefreshVersion,
+        incrementGitRefreshVersion,
+        setWorkspaceAgentStatusByWorkspaceId,
+        recordWorkspaceUnreadNotification,
+        dispatchSystemNotification,
+        playNotificationSound,
+        loadWorkspaceSnapshot,
+        getSelectedOrganizationId: () => "org-1",
+      });
+
+      const stopBindings = startBindings();
+      snapshotHarness.emit({
+        organizationId: "org-1",
+        resource: "workspace",
+        change: "created",
+        projectId: "project-1",
+        workspaceId: "workspace-1",
+      });
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+
+      expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+      stopBindings();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("still refreshes workspace snapshot when selected organization is unavailable", async () => {
+    vi.useFakeTimers();
+    try {
+      const gitHarness = createGitChangedHarness();
+      const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+      const inAppNotificationHarness = createInAppNotificationHarness();
+      const snapshotHarness = createWorkspaceSnapshotChangedHarness();
+      const incrementFileTreeRefreshVersion = vi.fn();
+      const incrementGitRefreshVersion = vi.fn();
+      const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+      const recordWorkspaceUnreadNotification = vi.fn();
+      const dispatchSystemNotification = vi.fn(async () => undefined);
+      const playNotificationSound = vi.fn(async () => undefined);
+      const loadWorkspaceSnapshot = vi.fn(async () => undefined);
+
+      const startBindings = createBackendEventStoreBindings({
+        subscribeGitChanged: gitHarness.subscribeGitChanged,
+        subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+        subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+        subscribeWorkspaceSnapshotChanged: snapshotHarness.subscribeWorkspaceSnapshotChanged,
+        incrementFileTreeRefreshVersion,
+        incrementGitRefreshVersion,
+        setWorkspaceAgentStatusByWorkspaceId,
+        recordWorkspaceUnreadNotification,
+        dispatchSystemNotification,
+        playNotificationSound,
+        loadWorkspaceSnapshot,
+        getSelectedOrganizationId: () => undefined,
+      });
+
+      const stopBindings = startBindings();
+      snapshotHarness.emit({
+        organizationId: "org-1",
+        resource: "workspace",
+        change: "created",
+        projectId: "project-1",
+        workspaceId: "workspace-1",
+      });
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+
+      expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+      stopBindings();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("tracks running counts from observer lifecycle notification payloads without double-counting duplicates", () => {
