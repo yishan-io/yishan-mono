@@ -74,6 +74,36 @@ describe("VoiceTranscriptionService", () => {
     ).rejects.toBeInstanceOf(VoiceTranscriptionPlanRequiredError);
   });
 
+  it("returns monthly usage for paid organizations", async () => {
+    const service = new VoiceTranscriptionService(makeDb("pro", 90) as never, config, organizationService);
+
+    await expect(
+      service.getUsage({
+        actorUserId: "user-1",
+        organizationId: "org-1",
+      }),
+    ).resolves.toEqual({
+      quotaMinutes: 300,
+      usedSeconds: 90,
+      remainingSeconds: 17_910,
+    });
+  });
+
+  it("returns zero usage for free organizations", async () => {
+    const service = new VoiceTranscriptionService(makeDb("free") as never, config, organizationService);
+
+    await expect(
+      service.getUsage({
+        actorUserId: "user-1",
+        organizationId: "org-1",
+      }),
+    ).resolves.toEqual({
+      quotaMinutes: 0,
+      usedSeconds: 0,
+      remainingSeconds: 0,
+    });
+  });
+
   it("transcribes audio, optimizes it, and records usage", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({

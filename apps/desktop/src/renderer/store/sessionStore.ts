@@ -17,6 +17,12 @@ export type SessionOrganization = {
   id: string;
   name: string;
   plan?: "free" | "pro" | "premium";
+  members?: Array<{ userId: string; role: string }>;
+  voiceUsage?: {
+    quotaMinutes: number;
+    usedSeconds: number;
+    remainingSeconds: number;
+  };
 };
 
 type SessionStoreState = {
@@ -37,6 +43,7 @@ type SessionStoreState = {
     selectedOrganizationId?: string;
   }) => void;
   setSelectedOrganizationId: (organizationId: string) => void;
+  setOrganizationVoiceUsage: (organizationId: string, voiceUsage: NonNullable<SessionOrganization["voiceUsage"]>) => void;
   setDaemonInfo: (input: { daemonId: string; daemonVersion: string }) => void;
   setAppVersion: (appVersion: string) => void;
   clearSessionData: () => void;
@@ -81,6 +88,13 @@ export const sessionStore = create<SessionStoreState>()(
             selectedOrganizationId: organizationId,
           };
         });
+      },
+      setOrganizationVoiceUsage: (organizationId, voiceUsage) => {
+        set((state) => ({
+          organizations: state.organizations.map((organization) =>
+            organization.id === organizationId ? { ...organization, voiceUsage } : organization,
+          ),
+        }));
       },
       setDaemonInfo: ({ daemonId, daemonVersion }) => {
         set({

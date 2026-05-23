@@ -2,16 +2,21 @@ export type OrganizationRecord = {
   id: string;
   name: string;
   plan?: "free" | "pro" | "premium";
+  members?: OrganizationMemberRecord[];
+  voiceUsage?: VoiceTranscriptionUsageRecord;
+};
+
+export type VoiceTranscriptionUsageRecord = {
+  quotaMinutes: number;
+  usedSeconds: number;
+  remainingSeconds: number;
 };
 
 export type VoiceTranscriptionResponse = {
   transcript: string;
   optimizedText: string;
-  usage: {
+  usage: VoiceTranscriptionUsageRecord & {
     durationSeconds: number;
-    quotaMinutes: number;
-    usedSeconds: number;
-    remainingSeconds: number;
   };
 };
 

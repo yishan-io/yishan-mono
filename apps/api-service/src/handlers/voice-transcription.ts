@@ -19,3 +19,14 @@ export async function voiceTranscribeHandler(
 
   return c.json(result);
 }
+
+export async function getVoiceTranscriptionUsageHandler(c: AppContext, params: VoiceTranscriptionParamsInput) {
+  const actorUser = c.get("sessionUser");
+  const usage = await c.get("services").voiceTranscription.getUsage({
+    actorUserId: actorUser.id,
+    organizationId: params.orgId,
+    organizationRole: c.get("organizationRole"),
+  });
+
+  return c.json({ usage });
+}

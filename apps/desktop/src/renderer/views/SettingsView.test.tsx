@@ -331,8 +331,16 @@ describe("SettingsView", () => {
         name: "Test User",
         avatarUrl: "https://example.com/avatar.png",
       },
-      organizations: [],
-      selectedOrganizationId: undefined,
+      organizations: [
+        {
+          id: "org-1",
+          name: "Acme Org",
+          plan: "pro",
+          members: [{ userId: "user-1", role: "admin" }],
+          voiceUsage: { quotaMinutes: 300, usedSeconds: 120, remainingSeconds: 17_880 },
+        },
+      ],
+      selectedOrganizationId: "org-1",
       loaded: true,
     });
 
@@ -350,6 +358,14 @@ describe("SettingsView", () => {
     expect(screen.getAllByText("Test User").length).toBeGreaterThan(0);
     expect(screen.getAllByText("user@example.com").length).toBeGreaterThan(0);
     expect(screen.getByText("user-1")).toBeTruthy();
+    expect(screen.getByText("Acme Org")).toBeTruthy();
+    expect(screen.getByText("Pro")).toBeTruthy();
+    expect(screen.getByText("admin")).toBeTruthy();
+    expect(screen.getByText("settings.account.profile.title")).toBeTruthy();
+    expect(screen.getByText("settings.account.organization.title")).toBeTruthy();
+    expect(screen.getByText("settings.account.usage.title")).toBeTruthy();
+    expect(screen.getByText("settings.account.usage.voiceInput")).toBeTruthy();
+    expect(screen.getByText("settings.account.usage.summary")).toBeTruthy();
   });
 
   it("renders account profile view by default", () => {
