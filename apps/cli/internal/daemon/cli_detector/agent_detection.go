@@ -63,6 +63,7 @@ type AgentCLIDetectionStatus struct {
 type agentDetectionOptions struct {
 	PathValue      string
 	PathExtValue   string
+	CommandEnv     []string
 	IsWindows      bool
 	ExcludedDirs   map[string]struct{}
 	VersionTimeout time.Duration
@@ -87,6 +88,7 @@ func ListAgentCLIDetectionStatusesWithRefresh(forceRefresh bool) []AgentCLIDetec
 	options := agentDetectionOptions{
 		PathValue:      resolveDetectionPathValue(),
 		PathExtValue:   os.Getenv("PATHEXT"),
+		CommandEnv:     resolveDetectionCommandEnv(),
 		IsWindows:      runtime.GOOS == "windows",
 		ExcludedDirs:   resolveExcludedDirectories(),
 		VersionTimeout: 2 * time.Second,
@@ -235,7 +237,7 @@ func listAgentCLIDetectionStatusesWithOptions(options agentDetectionOptions) []A
 				return
 			}
 
-			version, unusableWrapper := detectAgentCLIVersion(binaryPath, options.VersionTimeout)
+			version, unusableWrapper := detectAgentCLIVersion(agentCLI.Kind, binaryPath, options.CommandEnv, options.VersionTimeout)
 			if unusableWrapper {
 				statuses[index] = AgentCLIDetectionStatus{AgentKind: agentCLI.Kind, Detected: false}
 				return
@@ -361,9 +363,9 @@ func isExecutableCandidate(candidatePath string, isWindows bool) bool {
 	return fileInfo.Mode().Perm()&0o111 != 0
 }
 
-func detectAgentCLIVersion(binaryPath string, timeout time.Duration) (string, bool) {
-	for _, args := range [][]string{{"--version"}, {"version"}, {"-v"}} {
-		output := readVersionCommandOutput(binaryPath, args, timeout)
+func detectAgentCLIVersion(agentKind string, binaryPath string, commandEnv []string, timeout time.Duration) (string, bool) {
+	for _, args := range versionCommandArgsForAgent(agentKind) {
+		output := readVersionCommandOutput(binaryPath, args, commandEnv, timeout)
 		if output == "" {
 			continue
 		}
@@ -385,16 +387,31 @@ func detectAgentCLIVersion(binaryPath string, timeout time.Duration) (string, bo
 	return "", false
 }
 
+func versionCommandArgsForAgent(agentKind string) [][]string {
+	if agentKind == "pi" {
+		return [][]string{{"--version"}}
+	}
+
+	return [][]string{{"--version"}, {"version"}, {"-v"}}
+}
+
 func isManagedWrapperMissingRealOutput(output string) bool {
 	normalized := strings.ToLower(output)
 	return strings.Contains(normalized, "wrapper: real") && strings.Contains(normalized, "not found in path")
 }
 
-func readVersionCommandOutput(binaryPath string, args []string, timeout time.Duration) string {
+func resolveDetectionCommandEnv() []string {
+	return shellenv.ResolveEnvWithUserPath(os.Environ(), os.Getenv("SHELL"))
+}
+
+func readVersionCommandOutput(binaryPath string, args []string, commandEnv []string, timeout time.Duration) string {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	command := exec.CommandContext(ctx, binaryPath, args...)
+	if len(commandEnv) > 0 {
+		command.Env = commandEnv
+	}
 	output, err := command.CombinedOutput()
 	if err != nil && len(output) == 0 {
 		return ""

@@ -136,6 +136,92 @@ func TestListAgentCLIDetectionStatusesWithOptionsDetectsAgentBinaryNames(t *test
 	}
 }
 
+func TestListAgentCLIDetectionStatusesWithOptionsUsesPiDashDashVersionOnly(t *testing.T) {
+	t.Setenv("PATH", "")
+
+	if runtime.GOOS == "windows" {
+		t.Skip("test currently targets unix-style executable permissions")
+	}
+
+	binDir := t.TempDir()
+	piPath := filepath.Join(binDir, "pi")
+	piScript := "#!/bin/sh\n" +
+		"if [ \"$1\" = \"--version\" ]; then\n" +
+		"  echo 'pi 1.2.3'\n" +
+		"  exit 0\n" +
+		"fi\n" +
+		"echo 'wrong invocation' 1>&2\n" +
+		"exit 1\n"
+	if err := os.WriteFile(piPath, []byte(piScript), 0o755); err != nil {
+		t.Fatalf("write pi script %q: %v", piPath, err)
+	}
+
+	statuses := listAgentCLIDetectionStatusesWithOptions(agentDetectionOptions{
+		PathValue:      binDir,
+		PathExtValue:   ".COM;.EXE;.BAT;.CMD",
+		IsWindows:      false,
+		ExcludedDirs:   map[string]struct{}{},
+		VersionTimeout: 500 * time.Millisecond,
+	})
+
+	statusByAgent := map[string]AgentCLIDetectionStatus{}
+	for _, status := range statuses {
+		statusByAgent[status.AgentKind] = status
+	}
+
+	piStatus := statusByAgent["pi"]
+	if !piStatus.Detected {
+		t.Fatalf("expected pi to be detected")
+	}
+	if piStatus.Version != "1.2.3" {
+		t.Fatalf("expected pi version 1.2.3, got %q", piStatus.Version)
+	}
+}
+
+func TestListAgentCLIDetectionStatusesWithOptionsUsesCommandEnvForVersionCheck(t *testing.T) {
+	t.Setenv("PATH", "")
+
+	if runtime.GOOS == "windows" {
+		t.Skip("test currently targets unix-style executable permissions")
+	}
+
+	binDir := t.TempDir()
+	nodePath := filepath.Join(binDir, "node")
+	nodeScript := "#!/bin/sh\necho 'node 20.1.0'\n"
+	if err := os.WriteFile(nodePath, []byte(nodeScript), 0o755); err != nil {
+		t.Fatalf("write node script %q: %v", nodePath, err)
+	}
+
+	piPath := filepath.Join(binDir, "pi")
+	piScript := "#!/bin/sh\n" +
+		"node --version\n"
+	if err := os.WriteFile(piPath, []byte(piScript), 0o755); err != nil {
+		t.Fatalf("write pi script %q: %v", piPath, err)
+	}
+
+	statuses := listAgentCLIDetectionStatusesWithOptions(agentDetectionOptions{
+		PathValue:      binDir,
+		PathExtValue:   ".COM;.EXE;.BAT;.CMD",
+		CommandEnv:     []string{"PATH=" + binDir},
+		IsWindows:      false,
+		ExcludedDirs:   map[string]struct{}{},
+		VersionTimeout: 500 * time.Millisecond,
+	})
+
+	statusByAgent := map[string]AgentCLIDetectionStatus{}
+	for _, status := range statuses {
+		statusByAgent[status.AgentKind] = status
+	}
+
+	piStatus := statusByAgent["pi"]
+	if !piStatus.Detected {
+		t.Fatalf("expected pi to be detected when command env PATH includes node")
+	}
+	if piStatus.Version != "20.1.0" {
+		t.Fatalf("expected pi version 20.1.0 from nested node command, got %q", piStatus.Version)
+	}
+}
+
 func TestListAgentCLIDetectionStatusesWithOptionsSkipsExcludedDirectories(t *testing.T) {
 	t.Setenv("PATH", "")
 
