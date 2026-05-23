@@ -1,0 +1,62 @@
+// @vitest-environment jsdom
+
+import { beforeEach, describe, expect, it } from "vitest";
+import { sessionStore } from "../sessionStore";
+import { createWorkspaceSelectionActions } from "./actions.selection";
+
+type TestState = {
+  workspaces: Array<{ id: string; repoId: string; projectId?: string }>;
+  selectedProjectId: string;
+  selectedWorkspaceId: string;
+  displayProjectIds: string[];
+  organizationPreferencesById?: Record<string, { selectedProjectId?: string; selectedWorkspaceId?: string }>;
+  lastUsedExternalAppId?: string;
+};
+
+function createHarness() {
+  let state: TestState = {
+    workspaces: [
+      { id: "workspace-1", repoId: "repo-1", projectId: "repo-1" },
+      { id: "workspace-2", repoId: "repo-2", projectId: "repo-2" },
+    ],
+    selectedProjectId: "repo-1",
+    selectedWorkspaceId: "workspace-1",
+    displayProjectIds: ["repo-1", "repo-2"],
+    organizationPreferencesById: {},
+  };
+
+  const set = ((updater: ((current: TestState) => void) | Partial<TestState>) => {
+    if (typeof updater === "function") {
+      updater(state);
+      return;
+    }
+    Object.assign(state, updater);
+  }) as Parameters<typeof createWorkspaceSelectionActions>[0];
+
+  const get = (() => state) as Parameters<typeof createWorkspaceSelectionActions>[1];
+
+  return {
+    actions: createWorkspaceSelectionActions(set, get),
+    getState: () => state,
+  };
+}
+
+describe("createWorkspaceSelectionActions", () => {
+  beforeEach(() => {
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+  });
+
+  it("selects workspace and aligns selected project with workspace project", () => {
+    const harness = createHarness();
+
+    harness.actions.setSelectedWorkspaceId("workspace-2");
+
+    const state = harness.getState();
+    expect(state.selectedWorkspaceId).toBe("workspace-2");
+    expect(state.selectedProjectId).toBe("repo-2");
+    expect(state.organizationPreferencesById?.["org-1"]).toEqual({
+      selectedProjectId: "repo-2",
+      selectedWorkspaceId: "workspace-2",
+    });
+  });
+});
