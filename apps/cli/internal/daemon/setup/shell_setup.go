@@ -197,8 +197,8 @@ func prependPathValue(pathValue string, directory string) string {
 func envValueOrDefault(env []string, key string, fallback string) string {
 	prefix := key + "="
 	for _, entry := range env {
-		if strings.HasPrefix(entry, prefix) && strings.TrimSpace(strings.TrimPrefix(entry, prefix)) != "" {
-			return strings.TrimPrefix(entry, prefix)
+		if value, ok := strings.CutPrefix(entry, prefix); ok && strings.TrimSpace(value) != "" {
+			return value
 		}
 	}
 	return fallback

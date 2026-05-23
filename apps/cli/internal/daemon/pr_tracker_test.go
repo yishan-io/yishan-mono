@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"yishan/apps/cli/internal/workspace"
 )
@@ -111,7 +112,7 @@ func TestWorkspacePRTracker_ClearsMissingPullRequest(t *testing.T) {
 	}
 }
 
-func TestWorkspacePRTracker_SkipsNonGitHubRepositoryPullRequestLookup(t *testing.T) {
+func TestWorkspacePRTracker_DisablesTrackingForNonGitHubRepository(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
 	if err := manager.SetWorkspacePullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
 		t.Fatalf("SetWorkspacePullRequest: %v", err)
@@ -134,8 +135,8 @@ func TestWorkspacePRTracker_SkipsNonGitHubRepositoryPullRequestLookup(t *testing
 	if updated.PullRequest != nil {
 		t.Fatalf("expected pull request to be cleared for non-GitHub repo, got %+v", updated.PullRequest)
 	}
-	if _, ok := tracker.active[ws.ID]; !ok {
-		t.Fatalf("expected workspace %q to remain active for future checks", ws.ID)
+	if _, ok := tracker.active[ws.ID]; ok {
+		t.Fatalf("expected workspace %q to be removed from active set", ws.ID)
 	}
 }
 
@@ -168,6 +169,76 @@ func TestWorkspacePRTracker_SkipsOverlappingRefreshes(t *testing.T) {
 
 	if got := resolverCalls.Load(); got != 1 {
 		t.Fatalf("expected one resolver call, got %d", got)
+	}
+}
+
+func TestWorkspacePRTracker_ClearsPullRequestWhenHeadCannotBeResolved(t *testing.T) {
+	manager, ws := openTrackedWorkspace(t)
+	if err := manager.SetWorkspacePullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
+		t.Fatalf("SetWorkspacePullRequest: %v", err)
+	}
+
+	tracker := newWorkspacePRTracker(manager, nil)
+	tracker.active[ws.ID] = ws
+	tracker.branchResolver = func(context.Context, string) (string, error) {
+		return "", errors.New("fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree")
+	}
+
+	tracker.RefreshWorkspaceByPath(ws.Path)
+
+	updated, err := manager.GetWorkspace(ws.ID)
+	if err != nil {
+		t.Fatalf("GetWorkspace: %v", err)
+	}
+	if updated.PullRequest != nil {
+		t.Fatalf("expected pull request to be cleared when HEAD is unresolved, got %+v", updated.PullRequest)
+	}
+	if _, ok := tracker.active[ws.ID]; ok {
+		t.Fatalf("expected workspace %q to be removed from active set", ws.ID)
+	}
+}
+
+func TestWorkspacePRTracker_EnsureTrackedSkipsUnsupportedProvider(t *testing.T) {
+	manager, ws := openTrackedWorkspace(t)
+	tracker := newWorkspacePRTracker(manager, nil)
+	tracker.inspectResolver = func(context.Context, string) (workspace.GitInspectResult, error) {
+		return workspace.GitInspectResult{
+			IsGitRepository: true,
+			RemoteURL:       "git@bitbucket.org:acme/repo.git",
+			CurrentBranch:   "feature/test",
+		}, nil
+	}
+
+	tracker.EnsureTracked(ws.Path, true)
+	time.Sleep(30 * time.Millisecond)
+
+	trackerHasWorkspace := false
+	tracker.mu.Lock()
+	_, trackerHasWorkspace = tracker.active[ws.ID]
+	tracker.mu.Unlock()
+	if trackerHasWorkspace {
+		t.Fatalf("expected workspace %q to remain untracked for unsupported provider", ws.ID)
+	}
+}
+
+func TestWorkspacePRTracker_EnsureTrackedSkipsWorkspaceWithoutRemote(t *testing.T) {
+	manager, ws := openTrackedWorkspace(t)
+	tracker := newWorkspacePRTracker(manager, nil)
+	tracker.inspectResolver = func(context.Context, string) (workspace.GitInspectResult, error) {
+		return workspace.GitInspectResult{
+			IsGitRepository: true,
+			CurrentBranch:   "feature/test",
+		}, nil
+	}
+
+	tracker.EnsureTracked(ws.Path, true)
+	time.Sleep(30 * time.Millisecond)
+
+	tracker.mu.Lock()
+	_, tracked := tracker.active[ws.ID]
+	tracker.mu.Unlock()
+	if tracked {
+		t.Fatalf("expected workspace %q to remain untracked without remote", ws.ID)
 	}
 }
 

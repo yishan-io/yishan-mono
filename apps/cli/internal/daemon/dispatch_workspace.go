@@ -178,7 +178,7 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 // watchAndTrack starts filesystem watching and PR tracking for a workspace path.
 func (h *JSONRPCHandler) watchAndTrack(path string) {
 	h.watchers.Watch(path)
-	h.prTracker.EnsureTracked(path)
+	h.prTracker.EnsureTracked(path, true)
 }
 
 // buildWorkspaceHookWarnings builds the lifecycle script warning list from a HookResult.
