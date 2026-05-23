@@ -32,6 +32,7 @@ const rpcMocks = vi.hoisted(() => ({
   listGitChanges: vi.fn(),
   getBranchDiffSummary: vi.fn(),
   renameGitBranch: vi.fn(),
+  gitInspect: vi.fn(async () => ({ isGitRepository: true })),
   enqueueWorkspaceErrorNotice: vi.fn(),
   enqueueWorkspaceLifecycleWarnings: vi.fn(),
 }));
@@ -44,6 +45,7 @@ vi.mock("../store/workspaceLifecycleNoticeStore", () => ({
 vi.mock("../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     git: {
+      inspect: rpcMocks.gitInspect,
       listChanges: rpcMocks.listGitChanges,
       getBranchDiffSummary: rpcMocks.getBranchDiffSummary,
       renameBranch: rpcMocks.renameGitBranch,
@@ -154,7 +156,7 @@ describe("workspaceCommands", () => {
       });
     });
     await vi.waitFor(() => {
-      expect(setSelectedWorkspaceId).toHaveBeenCalledTimes(2);
+      expect(setSelectedWorkspaceId).toHaveBeenCalledTimes(1);
     }, { timeout: 3_500 });
     expect(rpcMocks.enqueueWorkspaceLifecycleWarnings).not.toHaveBeenCalled();
   });
@@ -176,6 +178,7 @@ describe("workspaceCommands", () => {
       ],
     });
     rpcMocks.list.mockResolvedValueOnce([]);
+    rpcMocks.gitInspect.mockResolvedValueOnce({ isGitRepository: true });
 
     setDisplayRepoIds(["repo-1"]);
     await vi.waitFor(() => {
