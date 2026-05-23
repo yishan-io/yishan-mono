@@ -29,5 +29,5 @@ export type ServiceConfig = {
   githubClientSecret: string;
   resendApiKey: string;
   resendFromEmail: string;
-  openaiApiKey: string;
+  openrouterApiKey: string;
 };

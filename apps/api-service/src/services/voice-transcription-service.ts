@@ -7,6 +7,7 @@ import {
   AppError,
   OrganizationNotFoundError,
   SpeechToTextInvalidAudioError,
+  SpeechToTextNoSpeechDetectedError,
   SpeechToTextOptimizationFailedError,
   SpeechToTextTranscriptionFailedError,
   VoiceTranscriptionPlanRequiredError,
@@ -17,9 +18,9 @@ import type { OrganizationService } from "@/services/organization-service";
 import { assertOrganizationMember } from "@/services/shared/assertOrganizationMember";
 import type { ServiceConfig } from "@/types";
 
-const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
-const TRANSCRIPTION_MODEL = "gpt-4o-mini-transcribe";
-const OPTIMIZATION_MODEL = "gpt-4o-mini";
+const OPENROUTER_API_BASE_URL = "https://openrouter.ai/api/v1";
+const TRANSCRIPTION_MODEL = "openai/gpt-4o-mini-transcribe";
+const OPTIMIZATION_MODEL = "openai/gpt-4o-mini";
 const TRANSCRIPTION_PROMPT =
   "The speaker is likely a software engineer or developer dictating instructions for an agent CLI. Prefer common software terms, command names, flags, package names, file paths, APIs, frameworks, programming languages, git terminology, and code-related words when audio is ambiguous.";
 
@@ -29,19 +30,48 @@ const PLAN_QUOTA_MINUTES: Record<Exclude<OrganizationPlan, "free">, number> = {
 };
 
 type OpenAITextResponse = {
-  output_text?: unknown;
-  output?: unknown;
+  choices?: Array<{
+    message?: {
+      content?: unknown;
+    };
+  }>;
 };
 
 type OpenAITranscriptionResponse = {
   text?: unknown;
+  transcription?: unknown;
+  output_text?: unknown;
+  error?: unknown;
 };
+
+type OpenAIErrorResponse = {
+  error?: {
+    message?: unknown;
+    type?: unknown;
+    code?: unknown;
+  };
+};
+
+async function readOpenAIError(response: Response): Promise<Record<string, unknown>> {
+  try {
+    const body = (await response.json()) as OpenAIErrorResponse;
+    return {
+      providerStatus: response.status,
+      providerError: typeof body.error?.message === "string" ? body.error.message : response.statusText,
+      providerErrorType: typeof body.error?.type === "string" ? body.error.type : undefined,
+      providerErrorCode: typeof body.error?.code === "string" ? body.error.code : undefined,
+    };
+  } catch {
+    return { providerStatus: response.status, providerError: response.statusText };
+  }
+}
 
 type TranscribeInput = {
   actorUserId: string;
   organizationId: string;
   organizationRole?: OrganizationMemberRole;
-  audioFile: File;
+  audioData: string;
+  audioFormat: "webm" | "wav" | "mp4" | "ogg" | "m4a";
   durationSeconds: number;
   prompt?: string;
 };
@@ -58,7 +88,7 @@ export class VoiceTranscriptionService {
     optimizedText: string;
     usage: { durationSeconds: number; quotaMinutes: number; usedSeconds: number; remainingSeconds: number };
   }> {
-    if (!input.audioFile || input.audioFile.size === 0) {
+    if (input.audioData.trim().length === 0) {
       throw new SpeechToTextInvalidAudioError();
     }
 
@@ -72,7 +102,7 @@ export class VoiceTranscriptionService {
     const quota = await this.assertQuotaAvailable(input);
 
     try {
-      const transcript = await this.transcribeAudio(input.audioFile, input.prompt);
+      const transcript = await this.transcribeAudio(input.audioData, input.audioFormat, input.prompt);
       const optimizedText = await this.optimizeTranscript(transcript, input.prompt);
       await this.recordUsage(input, "succeeded");
 
@@ -161,43 +191,69 @@ export class VoiceTranscriptionService {
     });
   }
 
-  private async transcribeAudio(audioFile: File, prompt?: string): Promise<string> {
-    const formData = new FormData();
-    formData.append("model", TRANSCRIPTION_MODEL);
-    formData.append("file", audioFile);
-    formData.append("prompt", [TRANSCRIPTION_PROMPT, prompt?.trim()].filter(Boolean).join("\n\n"));
-
-    const response = await fetch(`${OPENAI_API_BASE_URL}/audio/transcriptions`, {
+  private async transcribeAudio(audioData: string, audioFormat: string, prompt?: string): Promise<string> {
+    const response = await fetch(`${OPENROUTER_API_BASE_URL}/audio/transcriptions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.config.openaiApiKey}`,
+        Authorization: `Bearer ${this.config.openrouterApiKey}`,
+        "Content-Type": "application/json",
       },
-      body: formData,
+      body: JSON.stringify({
+        model: TRANSCRIPTION_MODEL,
+        input_audio: {
+          data: audioData,
+          format: audioFormat,
+        },
+        prompt: [TRANSCRIPTION_PROMPT, prompt?.trim()].filter(Boolean).join("\n\n"),
+      }),
     });
 
     if (!response.ok) {
-      throw new SpeechToTextTranscriptionFailedError();
+      throw new SpeechToTextTranscriptionFailedError(await readOpenAIError(response));
     }
 
     const body = (await response.json()) as OpenAITranscriptionResponse;
-    if (typeof body.text !== "string" || body.text.trim().length === 0) {
-      throw new SpeechToTextTranscriptionFailedError();
+    const transcript = this.getTranscriptionText(body);
+    if (!transcript) {
+      if (typeof body.text === "string" && body.text.trim().length === 0) {
+        throw new SpeechToTextNoSpeechDetectedError({
+          providerStatus: response.status,
+          providerResponse: body,
+        });
+      }
+
+      throw new SpeechToTextTranscriptionFailedError({
+        providerStatus: response.status,
+        providerError: "OpenRouter transcription response did not include text",
+        providerResponseKeys: Object.keys(body),
+        providerResponse: body,
+      });
     }
 
-    return body.text.trim();
+    return transcript;
+  }
+
+  private getTranscriptionText(body: OpenAITranscriptionResponse): string | null {
+    for (const value of [body.text, body.transcription, body.output_text]) {
+      if (typeof value === "string" && value.trim().length > 0) {
+        return value.trim();
+      }
+    }
+
+    return null;
   }
 
   private async optimizeTranscript(transcript: string, prompt?: string): Promise<string> {
     const promptPrefix = prompt ? `${prompt.trim()}\n\nTranscript:\n` : "Transcript:\n";
-    const response = await fetch(`${OPENAI_API_BASE_URL}/responses`, {
+    const response = await fetch(`${OPENROUTER_API_BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.config.openaiApiKey}`,
+        Authorization: `Bearer ${this.config.openrouterApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: OPTIMIZATION_MODEL,
-        input: [
+        messages: [
           {
             role: "system",
             content:
@@ -212,7 +268,7 @@ export class VoiceTranscriptionService {
     });
 
     if (!response.ok) {
-      throw new SpeechToTextOptimizationFailedError();
+      throw new SpeechToTextOptimizationFailedError(await readOpenAIError(response));
     }
 
     const body = (await response.json()) as OpenAITextResponse;
@@ -225,34 +281,9 @@ export class VoiceTranscriptionService {
   }
 
   private getResponseText(body: OpenAITextResponse): string | null {
-    if (typeof body.output_text === "string" && body.output_text.trim().length > 0) {
-      return body.output_text.trim();
-    }
-
-    if (!Array.isArray(body.output)) {
-      return null;
-    }
-
-    for (const outputItem of body.output) {
-      if (!outputItem || typeof outputItem !== "object" || !("content" in outputItem)) {
-        continue;
-      }
-
-      const content = (outputItem as { content?: unknown }).content;
-      if (!Array.isArray(content)) {
-        continue;
-      }
-
-      for (const contentItem of content) {
-        if (!contentItem || typeof contentItem !== "object" || !("text" in contentItem)) {
-          continue;
-        }
-
-        const text = (contentItem as { text?: unknown }).text;
-        if (typeof text === "string" && text.trim().length > 0) {
-          return text.trim();
-        }
-      }
+    const content = body.choices?.[0]?.message?.content;
+    if (typeof content === "string" && content.trim().length > 0) {
+      return content.trim();
     }
 
     return null;

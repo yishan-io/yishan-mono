@@ -164,6 +164,7 @@ export type DesktopHostBridge = {
   appendBrowserHistory: (input: AppendBrowserHistoryInput) => Promise<{ ok: true }>;
   dispatchNotification: (input: DispatchNotificationInput) => Promise<NotificationDispatchResult>;
   playNotificationSound: (input: PlayNotificationSoundInput) => Promise<NotificationSoundPreviewResult>;
+  requestMicrophoneAccess: () => Promise<{ granted: boolean }>;
   getPendingUpdate: () => Promise<DesktopUpdateEventPayload | null>;
   checkForUpdates: () => Promise<{ ok: true }>;
   downloadUpdate: () => Promise<{ ok: true } | { ok: false; error: string }>;
@@ -206,6 +207,7 @@ export const HOST_IPC_CHANNELS = {
   appendBrowserHistory: "desktop:host/append-browser-history",
   dispatchNotification: "desktop:host/dispatch-notification",
   playNotificationSound: "desktop:host/play-notification-sound",
+  requestMicrophoneAccess: "desktop:host/request-microphone-access",
   getPendingUpdate: "desktop:host/get-pending-update",
   checkForUpdates: "desktop:host/check-for-updates",
   downloadUpdate: "desktop:host/download-update",

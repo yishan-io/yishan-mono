@@ -116,6 +116,9 @@
       "gatekeeperAssess": false,
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Yishan uses the microphone to transcribe voice input into agent prompts."
+      },
       "notarize": true
     },
     "win": {

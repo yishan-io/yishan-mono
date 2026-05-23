@@ -2,7 +2,9 @@ import { Box } from "@mui/material";
 import type { SearchAddon } from "@xterm/addon-search";
 import type { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
-import { memo, useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
+import { FloatingVoiceButton } from "../../../components/FloatingVoiceButton";
+import { writeTerminalInput } from "../../../commands/terminalCommands";
 import { useTerminalSearchState } from "./useTerminalSearchState";
 import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import { useTerminalFileDrop } from "./useTerminalFileDrop";
@@ -45,6 +47,15 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
     searchAddonRef.current = entry.searchAddon;
     sessionIdRef.current = entry.sessionId;
   }
+
+  const handleVoiceText = useCallback(async (text: string) => {
+    const sessionId = getTerminalRuntime(tabId)?.sessionId ?? sessionIdRef.current;
+    if (!sessionId) {
+      throw new Error("Terminal session is not ready yet.");
+    }
+
+    await writeTerminalInput({ sessionId, data: text });
+  }, [tabId]);
 
   // ─── Attach/Detach Lifecycle ────────────────────────────────────────────────
 
@@ -168,6 +179,7 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
           pointerEvents: "none",
         }}
       />
+      <FloatingVoiceButton onText={handleVoiceText} />
     </Box>
   );
 });

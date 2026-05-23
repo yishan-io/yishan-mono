@@ -17,6 +17,7 @@ const bridge: DesktopBridge = {
     appendBrowserHistory: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.appendBrowserHistory, input),
     dispatchNotification: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.dispatchNotification, input),
     playNotificationSound: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.playNotificationSound, input),
+    requestMicrophoneAccess: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.requestMicrophoneAccess),
     getPendingUpdate: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getPendingUpdate),
     checkForUpdates: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.checkForUpdates),
     downloadUpdate: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.downloadUpdate),

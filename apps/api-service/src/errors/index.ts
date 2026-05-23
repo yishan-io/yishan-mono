@@ -333,15 +333,22 @@ export class SpeechToTextInvalidAudioError extends AppError {
 }
 
 export class SpeechToTextTranscriptionFailedError extends AppError {
-  constructor() {
-    super("Failed to transcribe audio", StatusCodes.BAD_GATEWAY, "SPEECH_TO_TEXT_TRANSCRIPTION_FAILED");
+  constructor(details?: Record<string, unknown>) {
+    super("Failed to transcribe audio", StatusCodes.BAD_GATEWAY, "SPEECH_TO_TEXT_TRANSCRIPTION_FAILED", details);
     this.name = "SpeechToTextTranscriptionFailedError";
   }
 }
 
+export class SpeechToTextNoSpeechDetectedError extends AppError {
+  constructor(details?: Record<string, unknown>) {
+    super("No speech detected in audio", StatusCodes.UNPROCESSABLE_ENTITY, "SPEECH_TO_TEXT_NO_SPEECH_DETECTED", details);
+    this.name = "SpeechToTextNoSpeechDetectedError";
+  }
+}
+
 export class SpeechToTextOptimizationFailedError extends AppError {
-  constructor() {
-    super("Failed to optimize transcript", StatusCodes.BAD_GATEWAY, "SPEECH_TO_TEXT_OPTIMIZATION_FAILED");
+  constructor(details?: Record<string, unknown>) {
+    super("Failed to optimize transcript", StatusCodes.BAD_GATEWAY, "SPEECH_TO_TEXT_OPTIMIZATION_FAILED", details);
     this.name = "SpeechToTextOptimizationFailedError";
   }
 }

@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { SpeechToTextInvalidAudioError, VoiceTranscriptionPlanRequiredError } from "@/errors";
+import { SpeechToTextInvalidAudioError, SpeechToTextNoSpeechDetectedError, VoiceTranscriptionPlanRequiredError } from "@/errors";
 import { VoiceTranscriptionService } from "@/services/voice-transcription-service";
 import type { ServiceConfig } from "@/types";
 
 const config = {
-  openaiApiKey: "test-openai-key",
+  openrouterApiKey: "test-openrouter-key",
 } as ServiceConfig;
 
 function makeDb(plan: "free" | "pro" | "premium", usedSeconds = 0) {
@@ -48,13 +48,13 @@ const organizationService = {
 describe("VoiceTranscriptionService", () => {
   it("rejects empty audio files", async () => {
     const service = new VoiceTranscriptionService(makeDb("pro") as never, config, organizationService);
-    const audioFile = new File([], "empty.webm", { type: "audio/webm" });
 
     await expect(
       service.transcribe({
         actorUserId: "user-1",
         organizationId: "org-1",
-        audioFile,
+        audioData: "",
+        audioFormat: "webm",
         durationSeconds: 1,
       }),
     ).rejects.toBeInstanceOf(SpeechToTextInvalidAudioError);
@@ -62,13 +62,13 @@ describe("VoiceTranscriptionService", () => {
 
   it("blocks free organizations", async () => {
     const service = new VoiceTranscriptionService(makeDb("free") as never, config, organizationService);
-    const audioFile = new File(["audio"], "input.webm", { type: "audio/webm" });
 
     await expect(
       service.transcribe({
         actorUserId: "user-1",
         organizationId: "org-1",
-        audioFile,
+        audioData: "YXVkaW8=",
+        audioFormat: "webm",
         durationSeconds: 60,
       }),
     ).rejects.toBeInstanceOf(VoiceTranscriptionPlanRequiredError);
@@ -82,18 +82,20 @@ describe("VoiceTranscriptionService", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ output_text: "Fix the failing tests, then create a commit with the changes." }),
+        json: async () => ({
+          choices: [{ message: { content: "Fix the failing tests, then create a commit with the changes." } }],
+        }),
       });
     vi.stubGlobal("fetch", fetchMock);
 
     const db = makeDb("pro");
     const service = new VoiceTranscriptionService(db as never, config, organizationService);
-    const audioFile = new File(["audio"], "input.webm", { type: "audio/webm" });
 
     const result = await service.transcribe({
       actorUserId: "user-1",
       organizationId: "org-1",
-      audioFile,
+      audioData: "YXVkaW8=",
+      audioFormat: "webm",
       durationSeconds: 120,
     });
 
@@ -108,12 +110,46 @@ describe("VoiceTranscriptionService", () => {
       },
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://openrouter.ai/api/v1/audio/transcriptions");
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("https://openrouter.ai/api/v1/chat/completions");
     expect(db.insertedValues).toMatchObject([
       {
         organizationId: "org-1",
         userId: "user-1",
         durationSeconds: 120,
         status: "succeeded",
+      },
+    ]);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("reports no speech when provider returns an empty transcript", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ text: "", usage: { total_tokens: 21 } }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const db = makeDb("pro");
+    const service = new VoiceTranscriptionService(db as never, config, organizationService);
+
+    await expect(
+      service.transcribe({
+        actorUserId: "user-1",
+        organizationId: "org-1",
+        audioData: "YXVkaW8=",
+        audioFormat: "webm",
+        durationSeconds: 3,
+      }),
+    ).rejects.toBeInstanceOf(SpeechToTextNoSpeechDetectedError);
+    expect(db.insertedValues).toMatchObject([
+      {
+        organizationId: "org-1",
+        userId: "user-1",
+        durationSeconds: 3,
+        status: "failed",
+        errorCode: "SPEECH_TO_TEXT_NO_SPEECH_DETECTED",
       },
     ]);
 

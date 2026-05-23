@@ -100,7 +100,7 @@ function buildServiceConfig(c: Context): ServiceConfig {
     githubClientSecret: requireEnv(c, "GITHUB_CLIENT_SECRET"),
     resendApiKey: requireEnv(c, "RESEND_API_KEY"),
     resendFromEmail: requireEnv(c, "RESEND_FROM_EMAIL"),
-    openaiApiKey: requireEnv(c, "OPENAI_API_KEY"),
+    openrouterApiKey: requireEnv(c, "OPENROUTER_API_KEY"),
   };
 }
 

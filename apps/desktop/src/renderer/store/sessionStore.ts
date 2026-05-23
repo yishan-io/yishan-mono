@@ -16,6 +16,7 @@ export type SessionUser = {
 export type SessionOrganization = {
   id: string;
   name: string;
+  plan?: "free" | "pro" | "premium";
 };
 
 type SessionStoreState = {

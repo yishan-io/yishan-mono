@@ -1,6 +1,18 @@
 export type OrganizationRecord = {
   id: string;
   name: string;
+  plan?: "free" | "pro" | "premium";
+};
+
+export type VoiceTranscriptionResponse = {
+  transcript: string;
+  optimizedText: string;
+  usage: {
+    durationSeconds: number;
+    quotaMinutes: number;
+    usedSeconds: number;
+    remainingSeconds: number;
+  };
 };
 
 export type OrganizationMemberRecord = {

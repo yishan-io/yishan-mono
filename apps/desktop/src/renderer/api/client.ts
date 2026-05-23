@@ -22,6 +22,7 @@ import {
 } from "./scheduledJobApi";
 import { createProjectWorkspace, listProjectWorkspaces } from "./workspaceApi";
 import { listWorkspacePullRequests, upsertWorkspacePullRequest } from "./workspacePullRequestApi";
+import { transcribeVoice } from "./voiceTranscriptionApi";
 
 export const api = {
   org: {
@@ -60,6 +61,9 @@ export const api = {
     runNow: runScheduledJobNow,
     delete: deleteScheduledJob,
     listRuns: listScheduledJobRuns,
+  },
+  voiceTranscription: {
+    transcribe: transcribeVoice,
   },
 };
 
