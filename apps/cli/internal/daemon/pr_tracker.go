@@ -211,10 +211,10 @@ func (t *workspacePRTracker) refreshWorkspace(ws workspace.Workspace) error {
 		return err
 	}
 	branch = strings.TrimSpace(branch)
-	log.Info().Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh resolved branch")
+	log.Debug().Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh resolved branch")
 	if branch == "" || branch == "HEAD" {
 		t.setWorkspacePullRequest(ws.ID, nil, true)
-		log.Info().Str("workspaceId", ws.ID).Str("path", ws.Path).Msg("workspace PR refresh cleared PR because branch is empty or detached")
+		log.Debug().Str("workspaceId", ws.ID).Str("path", ws.Path).Msg("workspace PR refresh cleared PR because branch is empty or detached")
 		return nil
 	}
 
@@ -230,7 +230,7 @@ func (t *workspacePRTracker) refreshWorkspace(ws workspace.Workspace) error {
 	}
 	if !pr.Found {
 		t.setWorkspacePullRequest(ws.ID, nil, true)
-		log.Info().Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh found no pull request")
+		log.Debug().Str("workspaceId", ws.ID).Str("path", ws.Path).Str("branch", branch).Msg("workspace PR refresh found no pull request")
 		return nil
 	}
 
@@ -252,7 +252,7 @@ func (t *workspacePRTracker) refreshWorkspace(ws workspace.Workspace) error {
 	}
 	complete := status == "merged"
 	t.setWorkspacePullRequest(ws.ID, bound, !complete)
-	log.Info().
+	log.Debug().
 		Str("workspaceId", ws.ID).
 		Str("path", ws.Path).
 		Str("branch", branch).
@@ -469,5 +469,5 @@ func (t *workspacePRTracker) persistPullRequest(workspaceID string, pr *workspac
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Str("prId", input.PrID).Str("state", state).Msg("pr persist: failed to upsert to api-service")
 		return
 	}
-	log.Info().Str("workspaceId", workspaceID).Str("prId", input.PrID).Str("state", state).Msg("pr persist: upserted to api-service")
+	log.Debug().Str("workspaceId", workspaceID).Str("prId", input.PrID).Str("state", state).Msg("pr persist: upserted to api-service")
 }
