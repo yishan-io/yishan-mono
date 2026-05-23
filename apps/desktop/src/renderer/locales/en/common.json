@@ -182,10 +182,29 @@
       "loading": "Loading profile information...",
       "empty": "No signed-in user profile is available.",
       "avatarAlt": "User avatar",
+      "profile": {
+        "title": "User profile"
+      },
+      "organization": {
+        "title": "Current Organization",
+        "description": "Review your active organization, plan, and membership role."
+      },
       "fields": {
         "name": "Name",
         "email": "Email",
-        "userId": "User ID"
+        "userId": "User ID",
+        "organization": "Name",
+        "plan": "Plan",
+        "role": "Role"
+      },
+      "usage": {
+        "title": "Usage",
+        "description": "Track monthly quotas and current consumption for account features.",
+        "voiceInput": "Voice input",
+        "minutes": "{{count}} min",
+        "summary": "{{used}} of {{total}} used ({{percent}}%)",
+        "unavailable": "Usage data is not available.",
+        "loadError": "Could not load usage data."
       },
       "values": {
         "notAvailable": "Not available"

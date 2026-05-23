@@ -1,5 +1,5 @@
 import { requestJson } from "./restClient";
-import type { VoiceTranscriptionResponse } from "./types";
+import type { VoiceTranscriptionResponse, VoiceTranscriptionUsageRecord } from "./types";
 
 function getAudioFormat(audio: Blob): "webm" | "wav" | "mp4" | "ogg" | "m4a" {
   if (audio.type.includes("wav")) {
@@ -47,4 +47,10 @@ export async function transcribeVoice(input: {
       ...(input.prompt?.trim() ? { prompt: input.prompt.trim() } : {}),
     },
   });
+}
+
+/** Loads current monthly voice input usage for one organization. */
+export async function getVoiceTranscriptionUsage(orgId: string): Promise<VoiceTranscriptionUsageRecord> {
+  const response = await requestJson<{ usage: VoiceTranscriptionUsageRecord }>(`/orgs/${orgId}/voice-transcribe/usage`);
+  return response.usage;
 }

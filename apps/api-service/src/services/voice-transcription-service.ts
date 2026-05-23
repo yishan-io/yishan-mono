@@ -29,6 +29,12 @@ const PLAN_QUOTA_MINUTES: Record<Exclude<OrganizationPlan, "free">, number> = {
   premium: 1_000,
 };
 
+export type VoiceTranscriptionUsageView = {
+  quotaMinutes: number;
+  usedSeconds: number;
+  remainingSeconds: number;
+};
+
 type OpenAITextResponse = {
   choices?: Array<{
     message?: {
@@ -86,7 +92,6 @@ export class VoiceTranscriptionService {
   async transcribe(input: TranscribeInput): Promise<{
     transcript: string;
     optimizedText: string;
-    usage: { durationSeconds: number; quotaMinutes: number; usedSeconds: number; remainingSeconds: number };
   }> {
     if (input.audioData.trim().length === 0) {
       throw new SpeechToTextInvalidAudioError();
@@ -99,7 +104,7 @@ export class VoiceTranscriptionService {
       input.organizationRole,
     );
 
-    const quota = await this.assertQuotaAvailable(input);
+    await this.assertQuotaAvailable(input);
 
     try {
       const transcript = await this.transcribeAudio(input.audioData, input.audioFormat, input.prompt);
@@ -109,12 +114,6 @@ export class VoiceTranscriptionService {
       return {
         transcript,
         optimizedText,
-        usage: {
-          durationSeconds: input.durationSeconds,
-          quotaMinutes: quota.quotaMinutes,
-          usedSeconds: quota.usedSeconds + input.durationSeconds,
-          remainingSeconds: quota.remainingSeconds - input.durationSeconds,
-        },
       };
     } catch (error) {
       await this.recordUsage(input, "failed", error instanceof AppError ? error.code : "VOICE_TRANSCRIPTION_FAILED");
@@ -122,7 +121,41 @@ export class VoiceTranscriptionService {
     }
   }
 
+  async getUsage(input: {
+    actorUserId: string;
+    organizationId: string;
+    organizationRole?: OrganizationMemberRole;
+  }): Promise<VoiceTranscriptionUsageView> {
+    await assertOrganizationMember(
+      this.organizationService,
+      input.organizationId,
+      input.actorUserId,
+      input.organizationRole,
+    );
+
+    return this.getUsageForOrganization(input);
+  }
+
   private async assertQuotaAvailable(input: TranscribeInput) {
+    const quota = await this.getQuota(input);
+
+    if (input.durationSeconds > quota.remainingSeconds) {
+      throw new VoiceTranscriptionQuotaExceededError({
+        plan: quota.plan,
+        quotaMinutes: quota.quotaMinutes,
+        usedSeconds: quota.usedSeconds,
+        requestedSeconds: input.durationSeconds,
+        remainingSeconds: Math.max(quota.remainingSeconds, 0),
+      });
+    }
+
+    return quota;
+  }
+
+  private async getQuota(input: {
+    actorUserId: string;
+    organizationId: string;
+  }): Promise<VoiceTranscriptionUsageView & { plan: Exclude<OrganizationPlan, "free"> }> {
     const organizationRows = await this.db
       .select({ plan: organizations.plan })
       .from(organizations)
@@ -138,25 +171,47 @@ export class VoiceTranscriptionService {
       throw new VoiceTranscriptionPlanRequiredError();
     }
 
+    return { plan, ...(await this.buildUsage(input, plan)) };
+  }
+
+  private async getUsageForOrganization(input: {
+    actorUserId: string;
+    organizationId: string;
+  }): Promise<VoiceTranscriptionUsageView> {
+    const organizationRows = await this.db
+      .select({ plan: organizations.plan })
+      .from(organizations)
+      .where(eq(organizations.id, input.organizationId))
+      .limit(1);
+    const plan = organizationRows[0]?.plan;
+
+    if (!plan) {
+      throw new OrganizationNotFoundError(input.organizationId);
+    }
+
+    return this.buildUsage(input, plan);
+  }
+
+  private async buildUsage(
+    input: { actorUserId: string; organizationId: string },
+    plan: OrganizationPlan,
+  ): Promise<VoiceTranscriptionUsageView> {
+    if (plan === "free") {
+      return { quotaMinutes: 0, usedSeconds: 0, remainingSeconds: 0 };
+    }
+
     const quotaMinutes = PLAN_QUOTA_MINUTES[plan];
     const quotaSeconds = quotaMinutes * 60;
     const usedSeconds = await this.getUsedSeconds(input, plan);
     const remainingSeconds = quotaSeconds - usedSeconds;
 
-    if (input.durationSeconds > remainingSeconds) {
-      throw new VoiceTranscriptionQuotaExceededError({
-        plan,
-        quotaMinutes,
-        usedSeconds,
-        requestedSeconds: input.durationSeconds,
-        remainingSeconds: Math.max(remainingSeconds, 0),
-      });
-    }
-
-    return { quotaMinutes, usedSeconds, remainingSeconds };
+    return { quotaMinutes, usedSeconds, remainingSeconds: Math.max(remainingSeconds, 0) };
   }
 
-  private async getUsedSeconds(input: TranscribeInput, plan: Exclude<OrganizationPlan, "free">): Promise<number> {
+  private async getUsedSeconds(
+    input: { actorUserId: string; organizationId: string },
+    plan: Exclude<OrganizationPlan, "free">,
+  ): Promise<number> {
     const monthStart = this.getMonthStart(new Date());
     const filters = [
       eq(voiceUsageActivities.organizationId, input.organizationId),

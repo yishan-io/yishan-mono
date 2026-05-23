@@ -164,10 +164,29 @@
       "loading": "正在加载个人资料信息...",
       "empty": "暂无已登录的用户资料。",
       "avatarAlt": "用户头像",
+      "profile": {
+        "title": "用户资料"
+      },
+      "organization": {
+        "title": "当前组织",
+        "description": "查看当前组织、套餐和成员角色。"
+      },
       "fields": {
         "name": "姓名",
         "email": "邮箱",
-        "userId": "用户 ID"
+        "userId": "用户 ID",
+        "organization": "名称",
+        "plan": "套餐",
+        "role": "角色"
+      },
+      "usage": {
+        "title": "用量",
+        "description": "跟踪账号功能的每月额度和当前用量。",
+        "voiceInput": "语音输入",
+        "minutes": "{{count}} 分钟",
+        "summary": "已使用 {{used}} / {{total}}（{{percent}}%）",
+        "unavailable": "用量数据不可用。",
+        "loadError": "无法加载用量数据。"
       },
       "values": {
         "notAvailable": "不可用"

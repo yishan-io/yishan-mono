@@ -74,6 +74,36 @@ describe("VoiceTranscriptionService", () => {
     ).rejects.toBeInstanceOf(VoiceTranscriptionPlanRequiredError);
   });
 
+  it("returns monthly usage for paid organizations", async () => {
+    const service = new VoiceTranscriptionService(makeDb("pro", 90) as never, config, organizationService);
+
+    await expect(
+      service.getUsage({
+        actorUserId: "user-1",
+        organizationId: "org-1",
+      }),
+    ).resolves.toEqual({
+      quotaMinutes: 300,
+      usedSeconds: 90,
+      remainingSeconds: 17_910,
+    });
+  });
+
+  it("returns zero usage for free organizations", async () => {
+    const service = new VoiceTranscriptionService(makeDb("free") as never, config, organizationService);
+
+    await expect(
+      service.getUsage({
+        actorUserId: "user-1",
+        organizationId: "org-1",
+      }),
+    ).resolves.toEqual({
+      quotaMinutes: 0,
+      usedSeconds: 0,
+      remainingSeconds: 0,
+    });
+  });
+
   it("transcribes audio, optimizes it, and records usage", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
@@ -102,12 +132,6 @@ describe("VoiceTranscriptionService", () => {
     expect(result).toEqual({
       transcript: "fix the broken tests and commit it",
       optimizedText: "Fix the failing tests, then create a commit with the changes.",
-      usage: {
-        durationSeconds: 120,
-        quotaMinutes: 300,
-        usedSeconds: 120,
-        remainingSeconds: 17_880,
-      },
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0]?.[0]).toBe("https://openrouter.ai/api/v1/audio/transcriptions");
