@@ -64,7 +64,14 @@ export function createWorkspaceSelectionActions(
 
       set((state) => {
         state.selectedWorkspaceId = workspaceId;
+        const selectedWorkspace = state.workspaces.find((workspace) => workspace.id === workspaceId);
+        if (selectedWorkspace) {
+          state.selectedProjectId = resolveWorkspaceProjectId(selectedWorkspace);
+        }
         applyOrganizationPreferences(state, organizationId, (organizationPreferences) => {
+          if (selectedWorkspace) {
+            organizationPreferences.selectedProjectId = resolveWorkspaceProjectId(selectedWorkspace);
+          }
           organizationPreferences.selectedWorkspaceId = workspaceId;
         });
       });
