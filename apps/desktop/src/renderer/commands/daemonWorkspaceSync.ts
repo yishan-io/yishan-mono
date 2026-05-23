@@ -91,7 +91,6 @@ export async function ensureVisibleWorkspacesOpen(mergedWorkspaceIds?: ReadonlyS
         try {
           await client.workspace.close({
             workspaceId: workspace.id,
-            workspaceWorktreePath: worktreePath,
             organizationId: workspace.organizationId,
             projectId: workspace.projectId,
             branch: workspace.branch,
@@ -146,9 +145,8 @@ export async function reconcileDaemonWorkspaces(snapshotWorkspaces: WorkspaceSna
       try {
         await client.workspace.close({
           workspaceId: daemonWorkspace.id,
-          workspaceWorktreePath: daemonPath,
-          organizationId: snapshotMatch?.organizationId,
-          projectId: snapshotMatch?.projectId,
+          organizationId: snapshotMatch?.organizationId ?? daemonWorkspace.orgId,
+          projectId: snapshotMatch?.projectId ?? daemonWorkspace.projectId,
         });
       } catch (error) {
         console.warn("[daemonWorkspaceSync] failed to close stale daemon workspace", {

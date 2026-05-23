@@ -100,7 +100,7 @@ export async function loadWorkspaceFromBackend(): Promise<void> {
         id: workspace.id,
         organizationId: workspace.organizationId,
         projectId: workspace.projectId,
-        worktreePath: workspace.worktreePath,
+        worktreePath: workspace.localPath,
       })),
     );
 

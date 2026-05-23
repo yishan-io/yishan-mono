@@ -13,8 +13,8 @@ import (
 type Workspace struct {
 	ID              string                `json:"id"`
 	Path            string                `json:"path"`
-	OrgID           string                `json:"-"`
-	ProjectID       string                `json:"-"`
+	OrgID           string                `json:"orgId,omitempty"`
+	ProjectID       string                `json:"projectId,omitempty"`
 	SetupHookResult *HookResult           `json:"setupHookResult,omitempty"`
 	PullRequest     *WorkspacePullRequest `json:"pullRequest,omitempty"`
 }
@@ -131,6 +131,16 @@ func (m *Manager) CloseWorkspace(ctx context.Context, req CloseRequest) (CloseRe
 			messages[i] = e.Error()
 		}
 		result.TerminalCleanupErrors = messages
+	}
+
+	if _, statErr := os.Stat(ws.Path); statErr != nil {
+		if os.IsNotExist(statErr) {
+			m.mu.Lock()
+			delete(m.workspaces, req.WorkspaceID)
+			m.mu.Unlock()
+			return result, nil
+		}
+		return result, statErr
 	}
 
 	// Run the post hook before tearing down the workspace so the hook can

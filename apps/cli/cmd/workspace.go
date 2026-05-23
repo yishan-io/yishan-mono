@@ -219,10 +219,7 @@ var workspaceCloseCmd = &cobra.Command{
 		}
 
 		response, err := cliruntime.APIClient().CloseWorkspace(orgID, projectID, api.CloseWorkspaceInput{
-			NodeID:    selected.NodeID,
-			LocalPath: selected.LocalPath,
-			Kind:      selected.Kind,
-			Branch:    selected.Branch,
+			WorkspaceID: selected.ID,
 		})
 		if err != nil {
 			return formatWorkspaceLifecycleError("close", err)

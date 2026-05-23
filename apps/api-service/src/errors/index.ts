@@ -249,6 +249,15 @@ export class WorkspaceBranchRequiredError extends AppError {
   }
 }
 
+export class PrimaryWorkspaceCloseNotAllowedError extends AppError {
+  constructor(workspaceId: string) {
+    super("Primary workspace cannot be closed", StatusCodes.BAD_REQUEST, "PRIMARY_WORKSPACE_CLOSE_NOT_ALLOWED", {
+      workspaceId,
+    });
+    this.name = "PrimaryWorkspaceCloseNotAllowedError";
+  }
+}
+
 export class WorkspaceNotFoundError extends AppError {
   constructor(details: Record<string, unknown>) {
     super("Workspace not found", StatusCodes.NOT_FOUND, "WORKSPACE_NOT_FOUND", details);

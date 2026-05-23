@@ -4,6 +4,7 @@ import type { AppDb } from "@/db/client";
 import { organizationMembers, projects, workspaces } from "@/db/schema";
 import type { WorkspaceKind, WorkspacePullRequestState } from "@/db/schema";
 import {
+  PrimaryWorkspaceCloseNotAllowedError,
   ProjectNotFoundError,
   WorkspaceBranchRequiredError,
   WorkspaceNodeNotFoundError,
@@ -58,13 +59,10 @@ type CreateWorkspaceInput = {
 };
 
 type CloseWorkspaceInput = {
+  workspaceId: string;
   organizationId: string;
   actorUserId: string;
   projectId: string;
-  nodeId: string;
-  kind: WorkspaceKind;
-  branch?: string;
-  localPath: string;
 };
 
 export class WorkspaceService {
@@ -214,9 +212,28 @@ export class WorkspaceService {
   async closeWorkspace(input: CloseWorkspaceInput): Promise<WorkspaceView> {
     await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
 
-    const branch = input.branch?.trim() ?? null;
-    if (input.kind === "worktree" && !branch) {
-      throw new WorkspaceBranchRequiredError();
+    const existingRows = await this.db
+      .select()
+      .from(workspaces)
+      .where(
+        and(
+          eq(workspaces.organizationId, input.organizationId),
+          eq(workspaces.projectId, input.projectId),
+          eq(workspaces.userId, input.actorUserId),
+          eq(workspaces.id, input.workspaceId),
+        ),
+      )
+      .limit(1);
+
+    const existing = existingRows[0];
+    if (!existing) {
+      throw new WorkspaceNotFoundError({
+        workspaceId: input.workspaceId,
+        projectId: input.projectId,
+      });
+    }
+    if (existing.kind === "primary") {
+      throw new PrimaryWorkspaceCloseNotAllowedError(input.workspaceId);
     }
 
     const rows = await this.db
@@ -227,10 +244,7 @@ export class WorkspaceService {
           eq(workspaces.organizationId, input.organizationId),
           eq(workspaces.projectId, input.projectId),
           eq(workspaces.userId, input.actorUserId),
-          eq(workspaces.nodeId, input.nodeId),
-          eq(workspaces.kind, input.kind),
-          branch ? eq(workspaces.branch, branch) : isNull(workspaces.branch),
-          eq(workspaces.localPath, input.localPath.trim()),
+          eq(workspaces.id, input.workspaceId),
         ),
       )
       .returning();
@@ -238,11 +252,8 @@ export class WorkspaceService {
     const workspace = rows[0];
     if (!workspace) {
       throw new WorkspaceNotFoundError({
+        workspaceId: input.workspaceId,
         projectId: input.projectId,
-        nodeId: input.nodeId,
-        kind: input.kind,
-        branch,
-        localPath: input.localPath,
       });
     }
 

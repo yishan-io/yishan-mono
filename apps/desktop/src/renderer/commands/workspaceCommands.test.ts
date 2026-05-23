@@ -325,7 +325,6 @@ describe("workspaceCommands", () => {
         workspaceId: "workspace-1",
         organizationId: "org-1",
         projectId: "repo-1",
-        workspaceWorktreePath: "/tmp/worktrees/feature-a",
         branch: "feature-a",
         removeBranch: undefined,
       });
@@ -415,7 +414,6 @@ describe("workspaceCommands", () => {
         workspaceId: "workspace-1",
         organizationId: "org-1",
         projectId: "repo-1",
-        workspaceWorktreePath: undefined,
         branch: "feature-a",
         removeBranch: true,
       });

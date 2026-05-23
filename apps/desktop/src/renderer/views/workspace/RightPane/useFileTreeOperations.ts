@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
 import { listFiles } from "../../../commands/fileCommands";
+import { loadWorkspaceFromBackend } from "../../../commands/projectCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { useCommands } from "../../../hooks/useCommands";
 import { tabStore } from "../../../store/tabStore";
@@ -48,6 +49,11 @@ function buildNormalizedPathSet(entries: WorkspaceFileEntry[]): Set<string> {
   }
 
   return normalizedPaths;
+}
+
+function isMissingWorkspacePathError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return message.includes("no such file or directory") && message.includes("stat ");
 }
 
 type FileOperationState = {
@@ -222,8 +228,12 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
       });
       return mapWorkspaceEntryPaths(response.files);
     } catch (error) {
-      console.error("Failed to load workspace files", error);
       setRepoEntries([]);
+      if (isMissingWorkspacePathError(error)) {
+        void loadWorkspaceFromBackend();
+        return [];
+      }
+      console.error("Failed to load workspace files", error);
       return [];
     }
   }, [selectedWorkspaceWorktreePath]);

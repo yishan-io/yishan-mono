@@ -3,11 +3,11 @@ package daemon
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/workspace"
+
+	"github.com/rs/zerolog/log"
 )
 
 func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, method string, params json.RawMessage) (any, error) {
@@ -37,7 +37,7 @@ func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, 
 	}
 }
 
-func (h *JSONRPCHandler) handleOpen(ctx context.Context, params json.RawMessage) (any, error) {
+func (h *JSONRPCHandler) handleOpen(_ context.Context, params json.RawMessage) (any, error) {
 	var req workspace.OpenRequest
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
@@ -121,83 +121,35 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
 	}
-	ws, wsErr := h.manager.GetWorkspace(req.WorkspaceID)
-	closeResult, err := h.manager.CloseWorkspace(ctx, workspace.CloseRequest{
+	if err := closeRemoteWorkspace(ctx, WorkspaceClose{
+		WorkspaceID:    req.WorkspaceID,
+		OrganizationID: req.OrganizationID,
+		ProjectID:      req.ProjectID,
+	}); err != nil {
+		return nil, err
+	}
+
+	closeReq := workspace.CloseRequest{
 		WorkspaceID:   req.WorkspaceID,
 		Branch:        req.Branch,
 		RemoveBranch:  req.RemoveBranch,
 		ForceWorktree: req.ForceWorktree,
 		ForceBranch:   req.ForceBranch,
 		PostHook:      req.PostHook,
-	})
-	if err != nil {
-		if req.ProjectID != "" && shouldFallbackToRemoteWorkspaceClose(err) {
-			if remoteErr := closeRemoteWorkspace(ctx, WorkspaceClose{
-				NodeID:         h.nodeID,
-				OrganizationID: req.OrganizationID,
-				ProjectID:      req.ProjectID,
-				Kind:           workspace.KindWorktree,
-				Branch:         req.Branch,
-				LocalPath:      req.WorktreePath,
-			}); remoteErr != nil {
-				return nil, remoteErr
-			}
-			return map[string]any{
-				"workspace":   map[string]string{"id": req.WorkspaceID, "status": "closed"},
-				"workspaceId": req.WorkspaceID,
-				"warnings": []any{map[string]any{
-					"code":    "workspace_missing_locally",
-					"message": err.Error(),
-				}},
-			}, nil
-		}
-		return nil, err
 	}
+	ws, wsErr := h.manager.GetWorkspace(closeReq.WorkspaceID)
 	if wsErr == nil {
 		h.watchers.Unwatch(ws.Path)
 		h.prTracker.StopTracking(ws.ID)
 	}
-	if req.ProjectID != "" {
-		if err := closeRemoteWorkspace(ctx, WorkspaceClose{
-			NodeID:         h.nodeID,
-			OrganizationID: req.OrganizationID,
-			ProjectID:      req.ProjectID,
-			Kind:           workspace.KindWorktree,
-			Branch:         req.Branch,
-			LocalPath:      req.WorktreePath,
-		}); err != nil {
-			return nil, err
-		}
-	}
-	warnings := buildWorkspaceHookWarnings(req.PostHook, closeResult.PostHookResult, h.logFilePath)
-	result := map[string]any{
-		"workspace":               map[string]string{"id": req.WorkspaceID, "status": "closed"},
-		"workspaceId":             req.WorkspaceID,
-		"lifecycleScriptWarnings": warnings,
-	}
-	if closeResult.PostHookResult != nil {
-		result["postHookResult"] = closeResult.PostHookResult
-	}
-	if len(closeResult.TerminalCleanupErrors) > 0 {
-		result["terminalCleanupErrors"] = closeResult.TerminalCleanupErrors
-	}
-	return result, nil
-}
-
-func shouldFallbackToRemoteWorkspaceClose(err error) bool {
-	if err == nil {
-		return false
+	if _, err := h.manager.CloseWorkspace(ctx, closeReq); err != nil {
+		return nil, err
 	}
 
-	var rpcErr *workspace.RPCError
-	if errors.As(err, &rpcErr) {
-		if rpcErr.Code == rpcCodeNotFound {
-			return true
-		}
-	}
-
-	message := strings.ToLower(strings.TrimSpace(err.Error()))
-	return strings.Contains(message, "workspace not found") || strings.Contains(message, "no such file or directory")
+	return map[string]any{
+		"workspace":   map[string]string{"id": req.WorkspaceID, "status": "closed"},
+		"workspaceId": req.WorkspaceID,
+	}, nil
 }
 
 // watchAndTrack starts filesystem watching and PR tracking for a workspace path.
