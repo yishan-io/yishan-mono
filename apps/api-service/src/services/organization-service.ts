@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
 import { organizationMembers, organizations, users } from "@/db/schema";
-import type { OrganizationMemberRole } from "@/db/schema";
+import type { OrganizationMemberRole, OrganizationPlan } from "@/db/schema";
 import {
   InvalidOrganizationMemberRoleError,
   InvalidOrganizationMembersError,
@@ -45,6 +45,7 @@ export type AddOrganizationMemberResult =
 type OrganizationView = {
   id: string;
   name: string;
+  plan: OrganizationPlan;
   createdAt: Date;
   updatedAt: Date;
   members: OrganizationMemberView[];
@@ -381,6 +382,7 @@ export class OrganizationService {
       .select({
         organizationId: organizations.id,
         organizationName: organizations.name,
+        organizationPlan: organizations.plan,
         organizationCreatedAt: organizations.createdAt,
         organizationUpdatedAt: organizations.updatedAt,
         userId: organizationMembers.userId,
@@ -427,6 +429,7 @@ export class OrganizationService {
       byOrg.set(row.organizationId, {
         id: row.organizationId,
         name: row.organizationName,
+        plan: row.organizationPlan,
         createdAt: row.organizationCreatedAt,
         updatedAt: row.organizationUpdatedAt,
         members: [member],

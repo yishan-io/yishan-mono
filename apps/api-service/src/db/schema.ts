@@ -4,6 +4,7 @@ import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex }
 
 export type NodeScope = "private" | "shared";
 export type OrganizationMemberRole = "owner" | "admin" | "member";
+export type OrganizationPlan = "free" | "pro" | "premium";
 export type ProjectSourceType = "git" | "git-local" | "unknown";
 export type WorkspaceKind = "primary" | "worktree";
 export type WorkspaceStatus = "active" | "closed";
@@ -82,10 +83,36 @@ export const organizations = pgTable(
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
+    plan: text("plan").$type<OrganizationPlan>().notNull().default("free"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index("organizations_created_at_idx").on(table.createdAt)],
+);
+
+export const voiceUsageActivities = pgTable(
+  "voice_usage_activities",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    durationSeconds: integer("duration_seconds").notNull(),
+    status: text("status").$type<"succeeded" | "failed">().notNull(),
+    errorCode: text("error_code"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("voice_usage_activities_org_id_created_at_idx").on(table.organizationId, table.createdAt),
+    index("voice_usage_activities_org_id_user_id_created_at_idx").on(
+      table.organizationId,
+      table.userId,
+      table.createdAt,
+    ),
+  ],
 );
 
 export const organizationMembers = pgTable(
@@ -327,6 +354,9 @@ export type NewRefreshToken = InferInsertModel<typeof refreshTokens>;
 
 export type Organization = InferSelectModel<typeof organizations>;
 export type NewOrganization = InferInsertModel<typeof organizations>;
+
+export type VoiceUsageActivity = InferSelectModel<typeof voiceUsageActivities>;
+export type NewVoiceUsageActivity = InferInsertModel<typeof voiceUsageActivities>;
 
 export type OrganizationMember = InferSelectModel<typeof organizationMembers>;
 export type NewOrganizationMember = InferInsertModel<typeof organizationMembers>;

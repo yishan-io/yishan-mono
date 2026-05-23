@@ -65,6 +65,18 @@ function resolveApiBaseUrl(): string {
   return import.meta.env.DEV ? DEFAULT_DEV_REMOTE_API_BASE_URL : DEFAULT_REMOTE_API_BASE_URL;
 }
 
+export function getApiBaseUrl(): string {
+  return resolveApiBaseUrl();
+}
+
+export async function getApiAccessToken(): Promise<string | undefined> {
+  return resolveAccessToken();
+}
+
+export async function readRestErrorMessage(response: Response): Promise<string> {
+  return readErrorMessage(response);
+}
+
 export class RestApiError extends Error {
   readonly status: number;
 
@@ -75,9 +87,13 @@ export class RestApiError extends Error {
   }
 }
 
-function buildHeaders(accessToken: string | undefined, hasBody: boolean): Record<string, string> {
+function buildHeaders(
+  accessToken: string | undefined,
+  hasBody: boolean,
+  contentType: "json" | "form" = "json",
+): Record<string, string> {
   const headers: Record<string, string> = {};
-  if (hasBody) {
+  if (hasBody && contentType === "json") {
     headers["Content-Type"] = "application/json";
   }
   if (accessToken) {
@@ -91,12 +107,13 @@ async function executeFetch(
   method: string,
   headers: Record<string, string>,
   body: unknown | undefined,
+  contentType: "json" | "form" = "json",
 ): Promise<Response> {
   return fetch(url, {
     method,
     headers: Object.keys(headers).length > 0 ? headers : undefined,
     credentials: "include",
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined || contentType === "form" ? (body as BodyInit | undefined) : JSON.stringify(body),
   });
 }
 
@@ -138,6 +155,51 @@ export async function requestJson<T>(
         if (retryToken?.accessToken) {
           const retryHeaders = buildHeaders(retryToken.accessToken, hasBody);
           const retryResponse = await executeFetch(url, method, retryHeaders, input?.body);
+
+          if (!retryResponse.ok) {
+            const message = await readErrorMessage(retryResponse);
+            throw new RestApiError(message, retryResponse.status);
+          }
+
+          return (await retryResponse.json()) as T;
+        }
+      }
+    } catch (retryErr) {
+      if (retryErr instanceof RestApiError) {
+        throw retryErr;
+      }
+    }
+
+    emitAuthExpired();
+    const message = await readErrorMessage(response);
+    throw new RestApiError(message, 401);
+  }
+
+  if (!response.ok) {
+    const message = await readErrorMessage(response);
+    throw new RestApiError(message, response.status);
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function requestFormJson<T>(path: string, formData: FormData): Promise<T> {
+  const accessToken = await resolveAccessToken();
+  const baseUrl = resolveApiBaseUrl();
+  const url = new URL(path, baseUrl).toString();
+  const headers = buildHeaders(accessToken, true, "form");
+
+  const response = await executeFetch(url, "POST", headers, formData, "form");
+
+  if (response.status === 401) {
+    try {
+      const daemonClient = await getDaemonClient();
+      const status = await daemonClient.app.checkAuthStatus();
+      if (status.authenticated) {
+        const retryToken = await daemonClient.app.getAccessToken();
+        if (retryToken?.accessToken) {
+          const retryHeaders = buildHeaders(retryToken.accessToken, true, "form");
+          const retryResponse = await executeFetch(url, "POST", retryHeaders, formData, "form");
 
           if (!retryResponse.ok) {
             const message = await readErrorMessage(retryResponse);

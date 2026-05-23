@@ -8,7 +8,7 @@ import {
 } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { BrowserWindow, Menu, app, dialog, ipcMain, net, protocol } from "electron";
+import { BrowserWindow, Menu, app, dialog, ipcMain, net, protocol, session, systemPreferences } from "electron";
 import { autoUpdater } from "electron-updater";
 import { ACTIONS, type AppActionPayload } from "../shared/contracts/actions";
 import {
@@ -94,6 +94,7 @@ export class DesktopApplication {
   private async start(): Promise<void> {
     await app.whenReady();
     this.registerWorkspaceFileProtocol();
+    this.registerMediaPermissionHandlers();
 
     const defaultAppEntry = process.argv[1];
     if (process.defaultApp && defaultAppEntry) {
@@ -489,6 +490,19 @@ export class DesktopApplication {
       }
     });
 
+    ipcMain.handle(HOST_IPC_CHANNELS.requestMicrophoneAccess, async () => {
+      if (process.platform !== "darwin") {
+        return { granted: true };
+      }
+
+      const status = systemPreferences.getMediaAccessStatus("microphone");
+      if (status === "granted") {
+        return { granted: true };
+      }
+
+      return { granted: await systemPreferences.askForMediaAccess("microphone") };
+    });
+
     ipcMain.handle(HOST_IPC_CHANNELS.getPendingUpdate, async () => {
       return this.pendingUpdateReady;
     });
@@ -742,5 +756,15 @@ export class DesktopApplication {
     }
 
     this.mainWindow = mainWindow;
+  }
+
+  private registerMediaPermissionHandlers(): void {
+    session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+      callback(permission === "media");
+    });
+
+    session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
+      return permission === "media";
+    });
   }
 }

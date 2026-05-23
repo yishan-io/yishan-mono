@@ -266,6 +266,7 @@ function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: WorkspaceS
     workspace,
     externalAppLabel,
     focusContentRequestKey,
+    isWorkspaceActive: isActive,
     cmd,
     onOpenExternalApp: handleOpenExternalApp,
   });

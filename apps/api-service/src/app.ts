@@ -12,6 +12,7 @@ import { organizationRouter } from "@/routes/organization";
 import { projectRouter } from "@/routes/project";
 import { systemRouter } from "@/routes/system";
 import { userRouter } from "@/routes/user";
+import { voiceTranscriptionRouter } from "@/routes/voice-transcription";
 
 export const app = new Hono<AppEnv>();
 const protectedRouter = new Hono<AppEnv>();
@@ -29,5 +30,6 @@ protectedRouter.route("/", userRouter);
 protectedRouter.route("/", organizationRouter);
 protectedRouter.route("/", nodeRouter);
 protectedRouter.route("/", projectRouter);
+protectedRouter.route("/", voiceTranscriptionRouter);
 
 app.route("/", protectedRouter);
