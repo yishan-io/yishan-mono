@@ -50,7 +50,6 @@ async function removeWorkspaceInBackground(input: {
   workspaceName: string;
   organizationId?: string;
   projectId?: string;
-  workspaceWorktreePath?: string;
   branch?: string;
   removeBranch?: boolean;
   postHook?: string;
@@ -61,7 +60,6 @@ async function removeWorkspaceInBackground(input: {
     workspaceId: input.workspaceId,
     organizationId: input.organizationId,
     projectId: input.projectId,
-    workspaceWorktreePath: input.workspaceWorktreePath,
     branch: input.branch,
     removeBranch: input.removeBranch,
     postHook: input.postHook,
@@ -104,7 +102,6 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
     organizationId:
       workspace.organizationId?.trim() || sessionStore.getState().selectedOrganizationId?.trim() || undefined,
     projectId,
-    workspaceWorktreePath: workspace.worktreePath?.trim() || undefined,
     branch: workspace.branch,
     removeBranch: options?.removeBranch,
     postHook: project?.postScript?.trim() || undefined,

@@ -304,7 +304,6 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     });
     await delay(WORKSPACE_CREATE_STEP_DISPLAY_MS);
     workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(workspaceId);
-    tabStore.getState().setSelectedWorkspaceId(readWorkspaceStoreState().selectedWorkspaceId);
   })().catch((error) => {
     console.error("Failed to create workspace in background", error);
   });

@@ -13,6 +13,7 @@ import (
 // Config file keys for API credential storage.
 // All credential reads/writes use these constants to prevent key-string drift.
 const (
+	DirName                     = ".yishan"
 	KeyAPIBaseURL               = "api_base_url"
 	KeyAPIToken                 = "api_token"
 	KeyAPIRefreshToken          = "api_refresh_token"
@@ -20,6 +21,14 @@ const (
 	KeyAPIRefreshTokenExpiresAt = "api_refresh_token_expires_at"
 	KeyCurrentOrgID             = "current_org_id"
 )
+
+func HomeDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve user home dir: %w", err)
+	}
+	return filepath.Join(home, DirName), nil
+}
 
 type APIConfig struct {
 	BaseURL               string
@@ -112,12 +121,12 @@ func resolveProfile(v *viper.Viper) (string, error) {
 }
 
 func defaultConfigPath(profile string) (string, error) {
-	home, err := os.UserHomeDir()
+	yishanHome, err := HomeDir()
 	if err != nil {
-		return "", fmt.Errorf("resolve user home dir: %w", err)
+		return "", err
 	}
 
-	return filepath.Join(home, ".yishan", "profiles", profile, "credential.yaml"), nil
+	return filepath.Join(yishanHome, "profiles", profile, "credential.yaml"), nil
 }
 
 func DefaultConfigPathForProfile(profile string) (string, error) {

@@ -624,11 +624,11 @@ func (s *FileService) ReadDiff(ctx context.Context, root string, path string) (G
 
 func safeJoin(root string, p string) (string, error) {
 	if p == "" {
-		return "", NewRPCError(-32602, "path is required")
+		return "", NewRPCError(rpcCodeInvalidParams, "path is required")
 	}
 
 	if containsGitMetadataPath(p) {
-		return "", NewRPCError(-32003, "path points to ignored git metadata")
+		return "", NewRPCError(rpcCodePathRestricted, "path points to ignored git metadata")
 	}
 
 	candidate := filepath.Join(root, p)
@@ -644,7 +644,7 @@ func safeJoin(root string, p string) (string, error) {
 	}
 
 	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return "", NewRPCError(-32003, "path escapes workspace root")
+		return "", NewRPCError(rpcCodePathRestricted, "path escapes workspace root")
 	}
 
 	return full, nil

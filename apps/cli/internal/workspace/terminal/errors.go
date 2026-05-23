@@ -1,5 +1,11 @@
 package terminal
 
+const (
+	rpcCodeInvalidParams   = -32602
+	rpcCodeNotFound        = -32004
+	rpcCodeSessionInactive = -32005
+)
+
 type RPCError struct {
 	Code    int
 	Message string

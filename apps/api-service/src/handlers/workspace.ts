@@ -31,6 +31,13 @@ export async function createWorkspaceHandler(
     sourceBranch: body.sourceBranch,
     localPath: body.localPath
   });
+  await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
+    organizationId: params.orgId,
+    resource: "workspace",
+    change: "created",
+    projectId: params.projectId,
+    workspaceId: workspace.id,
+  });
 
   return c.json({ workspace }, StatusCodes.CREATED);
 }
@@ -42,13 +49,17 @@ export async function closeWorkspaceHandler(
 ) {
   const actorUser = c.get("sessionUser");
   const workspace = await c.get("services").workspace.closeWorkspace({
+    workspaceId: body.workspaceId,
     actorUserId: actorUser.id,
     organizationId: params.orgId,
     projectId: params.projectId,
-    nodeId: body.nodeId,
-    kind: body.kind,
-    branch: body.branch,
-    localPath: body.localPath
+  });
+  await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
+    organizationId: params.orgId,
+    resource: "workspace",
+    change: "closed",
+    projectId: params.projectId,
+    workspaceId: workspace.id,
   });
 
   return c.json({ workspace });

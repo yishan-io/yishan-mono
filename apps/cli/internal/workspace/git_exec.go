@@ -17,11 +17,11 @@ func gitCommand(ctx context.Context, cwd string, args ...string) (string, error)
 	runner := gitexec.DefaultRunner()
 	out, err, ok := runner.Run(ctx, cwd, args...)
 	if !ok {
-		return "", NewRPCError(-32010, "git is not installed")
+		return "", NewRPCError(rpcCodeToolUnavailable, "git is not installed")
 	}
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			return "", NewRPCError(-32010, strings.TrimSpace(string(exitErr.Stderr)))
+			return "", NewRPCError(rpcCodeToolUnavailable, strings.TrimSpace(string(exitErr.Stderr)))
 		}
 		return "", err
 	}
@@ -32,10 +32,10 @@ func gitCommandCombined(ctx context.Context, cwd string, args ...string) (string
 	runner := gitexec.DefaultRunner()
 	out, err, ok := runner.RunCombined(ctx, cwd, args...)
 	if !ok {
-		return "", NewRPCError(-32010, "git is not installed")
+		return "", NewRPCError(rpcCodeToolUnavailable, "git is not installed")
 	}
 	if err != nil {
-		return "", NewRPCError(-32010, strings.TrimSpace(string(out)))
+		return "", NewRPCError(rpcCodeToolUnavailable, strings.TrimSpace(string(out)))
 	}
 	return string(out), nil
 }
@@ -55,7 +55,7 @@ func (s *GitService) resolveGH() (path string, env []string) {
 func (s *GitService) ghCommand(ctx context.Context, cwd string, args ...string) (string, error) {
 	ghPath, env := s.resolveGH()
 	if ghPath == "" {
-		return "", NewRPCError(-32010, "GitHub CLI (gh) is not installed")
+		return "", NewRPCError(rpcCodeToolUnavailable, "GitHub CLI (gh) is not installed")
 	}
 
 	cmd := exec.CommandContext(ctx, ghPath, args...)
@@ -64,9 +64,9 @@ func (s *GitService) ghCommand(ctx context.Context, cwd string, args ...string) 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		if errors.Is(err, exec.ErrNotFound) {
-			return "", NewRPCError(-32010, "GitHub CLI (gh) is not installed")
+			return "", NewRPCError(rpcCodeToolUnavailable, "GitHub CLI (gh) is not installed")
 		}
-		return "", NewRPCError(-32010, strings.TrimSpace(string(out)))
+		return "", NewRPCError(rpcCodeToolUnavailable, strings.TrimSpace(string(out)))
 	}
 	return string(out), nil
 }
@@ -78,7 +78,7 @@ func (s *GitService) ghJSON(ctx context.Context, cwd string, target any, args ..
 		return err
 	}
 	if err := json.Unmarshal([]byte(out), target); err != nil {
-		return NewRPCError(-32010, "failed to parse gh output")
+		return NewRPCError(rpcCodeToolUnavailable, "failed to parse gh output")
 	}
 	return nil
 }

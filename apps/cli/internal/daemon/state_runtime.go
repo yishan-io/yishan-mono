@@ -8,6 +8,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"yishan/apps/cli/internal/config"
 )
 
 const StateFileName = "daemon.state.json"
@@ -24,12 +26,12 @@ func ResolveStateFilePath(configPath string) (string, error) {
 		return filepath.Join(filepath.Dir(configPath), StateFileName), nil
 	}
 
-	home, err := os.UserHomeDir()
+	yishanHome, err := config.HomeDir()
 	if err != nil {
-		return "", fmt.Errorf("resolve user home dir: %w", err)
+		return "", err
 	}
 
-	return filepath.Join(home, StateFileName), nil
+	return filepath.Join(yishanHome, StateFileName), nil
 }
 
 func LoadState(path string) (RuntimeState, error) {

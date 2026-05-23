@@ -65,6 +65,8 @@ export type ProcedureSubscriptionOptions = {
 export type DaemonWorkspace = {
   id: string;
   path: string;
+  orgId?: string;
+  projectId?: string;
   pullRequest?: DaemonWorkspacePullRequest;
 };
 
@@ -166,7 +168,6 @@ export type WorkspaceCloseExecutionInput = {
   workspaceId: string;
   organizationId?: string;
   projectId?: string;
-  workspaceWorktreePath?: string;
   branch?: string;
   removeBranch?: boolean;
   postHook?: string;

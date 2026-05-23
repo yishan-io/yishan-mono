@@ -13,8 +13,8 @@ import (
 type Workspace struct {
 	ID              string                `json:"id"`
 	Path            string                `json:"path"`
-	OrgID           string                `json:"-"`
-	ProjectID       string                `json:"-"`
+	OrgID           string                `json:"orgId,omitempty"`
+	ProjectID       string                `json:"projectId,omitempty"`
 	SetupHookResult *HookResult           `json:"setupHookResult,omitempty"`
 	PullRequest     *WorkspacePullRequest `json:"pullRequest,omitempty"`
 }
@@ -69,9 +69,19 @@ type CloseRequest struct {
 	PostHook      string
 }
 
+type ClosePathRequest struct {
+	WorkspaceID   string
+	Path          string
+	Branch        string
+	RemoveBranch  bool
+	ForceWorktree bool
+	ForceBranch   bool
+	PostHook      string
+}
+
 func (m *Manager) Open(req OpenRequest) (Workspace, error) {
 	if req.ID == "" || req.Path == "" {
-		return Workspace{}, NewRPCError(-32602, "id and path are required")
+		return Workspace{}, NewRPCError(rpcCodeInvalidParams, "id and path are required")
 	}
 
 	absPath, err := filepath.Abs(req.Path)
@@ -84,7 +94,7 @@ func (m *Manager) Open(req OpenRequest) (Workspace, error) {
 		return Workspace{}, err
 	}
 	if !info.IsDir() {
-		return Workspace{}, NewRPCError(-32602, "workspace path must be a directory")
+		return Workspace{}, NewRPCError(rpcCodeInvalidParams, "workspace path must be a directory")
 	}
 
 	ws := Workspace{ID: req.ID, Path: absPath, OrgID: req.OrgID, ProjectID: req.ProjectID}
@@ -133,13 +143,43 @@ func (m *Manager) CloseWorkspace(ctx context.Context, req CloseRequest) (CloseRe
 		result.TerminalCleanupErrors = messages
 	}
 
+	result, err = m.CloseWorkspacePath(ctx, ClosePathRequest{
+		WorkspaceID:   req.WorkspaceID,
+		Path:          ws.Path,
+		Branch:        req.Branch,
+		RemoveBranch:  req.RemoveBranch,
+		ForceWorktree: req.ForceWorktree,
+		ForceBranch:   req.ForceBranch,
+		PostHook:      req.PostHook,
+	})
+	if err != nil {
+		return result, err
+	}
+
+	m.mu.Lock()
+	delete(m.workspaces, req.WorkspaceID)
+	m.mu.Unlock()
+
+	return result, nil
+}
+
+func (m *Manager) CloseWorkspacePath(ctx context.Context, req ClosePathRequest) (CloseResult, error) {
+	var result CloseResult
+
+	if _, statErr := os.Stat(req.Path); statErr != nil {
+		if os.IsNotExist(statErr) {
+			return result, nil
+		}
+		return result, statErr
+	}
+
 	// Run the post hook before tearing down the workspace so the hook can
 	// still access workspace files and git state. Hook failures are
 	// non-fatal: the close operation always proceeds.
 	hookResult, hookErr := RunHook(ctx, HookRequest{
 		Command:       req.PostHook,
-		WorkspaceID:   ws.ID,
-		WorkspacePath: ws.Path,
+		WorkspaceID:   req.WorkspaceID,
+		WorkspacePath: req.Path,
 		HookName:      "post",
 	})
 	if hookErr != nil {
@@ -149,20 +189,20 @@ func (m *Manager) CloseWorkspace(ctx context.Context, req CloseRequest) (CloseRe
 		result.PostHookResult = &hookResult
 	}
 
-	mainWorktreePath, err := m.gits.MainWorktreePath(ctx, ws.Path)
+	mainWorktreePath, err := m.gits.MainWorktreePath(ctx, req.Path)
 	if err != nil {
 		return result, err
 	}
 
 	branch := req.Branch
 	if req.RemoveBranch && branch == "" {
-		branch, err = m.gits.CurrentBranch(ctx, ws.Path)
+		branch, err = m.gits.CurrentBranch(ctx, req.Path)
 		if err != nil {
 			return result, err
 		}
 	}
 
-	if err := m.gits.RemoveWorktree(ctx, mainWorktreePath, ws.Path, req.ForceWorktree); err != nil {
+	if err := m.gits.RemoveWorktree(ctx, mainWorktreePath, req.Path, req.ForceWorktree); err != nil {
 		return result, err
 	}
 	if req.RemoveBranch {
@@ -170,10 +210,6 @@ func (m *Manager) CloseWorkspace(ctx context.Context, req CloseRequest) (CloseRe
 			return result, err
 		}
 	}
-
-	m.mu.Lock()
-	delete(m.workspaces, req.WorkspaceID)
-	m.mu.Unlock()
 
 	return result, nil
 }
@@ -184,7 +220,7 @@ func (m *Manager) getWorkspace(id string) (Workspace, error) {
 
 	ws, ok := m.workspaces[id]
 	if !ok {
-		return Workspace{}, NewRPCError(-32004, "workspace not found")
+		return Workspace{}, NewRPCError(rpcCodeNotFound, "workspace not found")
 	}
 	return ws, nil
 }
@@ -217,7 +253,7 @@ func (m *Manager) SetWorkspacePullRequest(workspaceID string, pr *WorkspacePullR
 
 	ws, ok := m.workspaces[workspaceID]
 	if !ok {
-		return NewRPCError(-32004, "workspace not found")
+		return NewRPCError(rpcCodeNotFound, "workspace not found")
 	}
 
 	ws.PullRequest = pr

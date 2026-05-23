@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -107,6 +108,34 @@ func TestWorkspacePRTracker_ClearsMissingPullRequest(t *testing.T) {
 	// When no PR is found the workspace stays active so future PRs can be detected.
 	if _, ok := tracker.active[ws.ID]; !ok {
 		t.Fatalf("expected workspace %q to remain active when no PR found", ws.ID)
+	}
+}
+
+func TestWorkspacePRTracker_SkipsNonGitHubRepositoryPullRequestLookup(t *testing.T) {
+	manager, ws := openTrackedWorkspace(t)
+	if err := manager.SetWorkspacePullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
+		t.Fatalf("SetWorkspacePullRequest: %v", err)
+	}
+	tracker := newWorkspacePRTracker(manager, nil)
+	tracker.active[ws.ID] = ws
+	tracker.branchResolver = func(context.Context, string) (string, error) {
+		return "feature/test", nil
+	}
+	tracker.detailResolver = func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error) {
+		return workspace.GitBranchPullRequestStatus{}, errors.New("none of the git remotes configured for this repository point to a known GitHub host. To tell gh about a new GitHub host, please use `gh auth login`")
+	}
+
+	tracker.RefreshWorkspaceByPath(ws.Path)
+
+	updated, err := manager.GetWorkspace(ws.ID)
+	if err != nil {
+		t.Fatalf("GetWorkspace: %v", err)
+	}
+	if updated.PullRequest != nil {
+		t.Fatalf("expected pull request to be cleared for non-GitHub repo, got %+v", updated.PullRequest)
+	}
+	if _, ok := tracker.active[ws.ID]; !ok {
+		t.Fatalf("expected workspace %q to remain active for future checks", ws.ID)
 	}
 }
 

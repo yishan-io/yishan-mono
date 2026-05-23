@@ -322,10 +322,13 @@ export class NodeService {
       throw new NodeDeletePermissionRequiredError();
     }
 
+    const organizations = await this.organizationService.getOrganizationsForUser(input.actorUserId);
+
     return signRelayToken(
       {
         sub: input.actorUserId,
         nodeId: input.nodeId,
+        organizationIds: organizations.map((organization) => organization.id),
         iss: this.config.jwtIssuer,
         aud: this.config.jwtAudience,
       },

@@ -408,3 +408,35 @@ func (m *SessionManager) SendNotificationWithError(nodeID, method string, params
 	}
 	return nil
 }
+
+// SendOrgNotification sends a JSON-RPC notification to every connected node in one organization.
+func (m *SessionManager) SendOrgNotification(organizationID string, method string, params any) int {
+	m.mu.RLock()
+	sessions := make([]*NodeSession, 0, len(m.sessions))
+	for _, session := range m.sessions {
+		if !session.isConnected() {
+			continue
+		}
+		for _, sessionOrganizationID := range session.Identity.OrganizationIDs {
+			if sessionOrganizationID == organizationID {
+				sessions = append(sessions, session)
+				break
+			}
+		}
+	}
+	m.mu.RUnlock()
+
+	notified := 0
+	for _, session := range sessions {
+		if err := session.SendNotification(method, params); err == nil {
+			notified++
+		} else {
+			log.Error().Err(err).
+				Str("nodeId", session.Identity.NodeID).
+				Str("organizationId", organizationID).
+				Str("method", method).
+				Msg("send org notification failed")
+		}
+	}
+	return notified
+}

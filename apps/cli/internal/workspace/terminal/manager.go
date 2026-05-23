@@ -24,6 +24,7 @@ const maxSessionOutputBytes = 2 * 1024 * 1024
 const portScanFallbackInterval = 30 * time.Second
 const portScanActivityWindow = 15 * time.Second
 const portScanHintDebounce = 500 * time.Millisecond
+
 // portScanTailSize is the number of bytes kept from the end of recent PTY
 // output so that port announcements split across multiple small read chunks
 // are still detected reliably.
@@ -375,7 +376,6 @@ func (m *Manager) currentPortScopeWorkspaceID() string {
 	return m.portScopeWorkspaceID
 }
 
-
 func (m *Manager) hasRecentlyActiveSessions(window time.Duration) bool {
 	threshold := time.Now().UTC().Add(-window).UnixNano()
 	m.mu.RLock()
@@ -455,7 +455,7 @@ func (m *Manager) Send(req SendRequest) (SendResponse, error) {
 	}
 
 	if !s.running.Load() {
-		return SendResponse{}, NewRPCError(-32005, "terminal session not running")
+		return SendResponse{}, NewRPCError(rpcCodeSessionInactive, "terminal session not running")
 	}
 
 	n, err := io.WriteString(s.pty, req.Input)
@@ -569,7 +569,7 @@ func (m *Manager) StopAllForWorkspace(workspaceID string) []error {
 
 func (m *Manager) KillProcess(req KillProcessRequest) (KillProcessResponse, error) {
 	if req.PID <= 0 {
-		return KillProcessResponse{}, NewRPCError(-32602, "pid is required")
+		return KillProcessResponse{}, NewRPCError(rpcCodeInvalidParams, "pid is required")
 	}
 
 	if err := stopProcessByPID(req.PID); err != nil {
@@ -657,7 +657,7 @@ func (m *Manager) Resize(req ResizeRequest) (ResizeResponse, error) {
 	}
 
 	if req.Cols == 0 || req.Rows == 0 {
-		return ResizeResponse{}, NewRPCError(-32602, "cols and rows are required")
+		return ResizeResponse{}, NewRPCError(rpcCodeInvalidParams, "cols and rows are required")
 	}
 
 	if err := pty.Setsize(s.pty, &pty.Winsize{Cols: req.Cols, Rows: req.Rows}); err != nil {
@@ -698,7 +698,7 @@ func (m *Manager) Unsubscribe(req UnsubscribeRequest) (UnsubscribeResponse, erro
 	s.subsMu.Unlock()
 
 	if !ok {
-		return UnsubscribeResponse{}, NewRPCError(-32004, "terminal subscription not found")
+		return UnsubscribeResponse{}, NewRPCError(rpcCodeNotFound, "terminal subscription not found")
 	}
 
 	return UnsubscribeResponse{Unsubscribed: true}, nil
@@ -706,14 +706,14 @@ func (m *Manager) Unsubscribe(req UnsubscribeRequest) (UnsubscribeResponse, erro
 
 func (m *Manager) session(id string) (*session, error) {
 	if id == "" {
-		return nil, NewRPCError(-32602, "sessionId is required")
+		return nil, NewRPCError(rpcCodeInvalidParams, "sessionId is required")
 	}
 
 	m.mu.RLock()
 	s, ok := m.sessions[id]
 	m.mu.RUnlock()
 	if !ok {
-		return nil, NewRPCError(-32004, "terminal session not found")
+		return nil, NewRPCError(rpcCodeNotFound, "terminal session not found")
 	}
 	return s, nil
 }

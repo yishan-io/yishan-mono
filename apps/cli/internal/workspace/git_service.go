@@ -50,7 +50,7 @@ func (s *GitService) Status(ctx context.Context, root string) (GitStatusResponse
 func (s *GitService) Inspect(ctx context.Context, path string) (GitInspectResult, error) {
 	candidatePath := strings.TrimSpace(path)
 	if candidatePath == "" {
-		return GitInspectResult{}, NewRPCError(-32602, "path is required")
+		return GitInspectResult{}, NewRPCError(rpcCodeInvalidParams, "path is required")
 	}
 
 	absPath, err := filepath.Abs(candidatePath)

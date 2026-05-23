@@ -491,3 +491,64 @@ func TestGitServiceFetchRefNoRemote(t *testing.T) {
 		t.Fatalf("expected no error for repo without remotes, got: %v", err)
 	}
 }
+
+func TestGitServiceListCommitsToTargetFallsBackWhenOriginRefMissing(t *testing.T) {
+	remote := filepath.Join(t.TempDir(), "remote.git")
+	runGit(t, t.TempDir(), "init", "--bare", remote)
+
+	repo := filepath.Join(t.TempDir(), "repo")
+	runGit(t, t.TempDir(), "clone", remote, repo)
+	runGit(t, repo, "config", "user.name", "Test User")
+	runGit(t, repo, "config", "user.email", "test@example.com")
+
+	os.WriteFile(filepath.Join(repo, "base.txt"), []byte("base\n"), 0o644)
+	runGit(t, repo, "add", "base.txt")
+	runGit(t, repo, "commit", "-m", "base commit")
+	runGit(t, repo, "push", "origin", "HEAD:main")
+
+	runGit(t, repo, "remote", "rename", "origin", "upstream")
+
+	worktree := filepath.Join(t.TempDir(), "wt-feature")
+	svc := NewGitService()
+	if err := svc.CreateWorktree(context.Background(), repo, "feature", worktree, true, "HEAD"); err != nil {
+		t.Fatalf("create worktree: %v", err)
+	}
+
+	os.WriteFile(filepath.Join(worktree, "feature.txt"), []byte("feature\n"), 0o644)
+	runGit(t, worktree, "add", "feature.txt")
+	runGit(t, worktree, "commit", "-m", "feature commit")
+
+	comparison, err := svc.ListCommitsToTarget(context.Background(), worktree, "origin/main")
+	if err != nil {
+		t.Fatalf("ListCommitsToTarget: %v", err)
+	}
+	if len(comparison.Commits) != 1 {
+		t.Fatalf("expected 1 commit after fallback target resolution, got %d", len(comparison.Commits))
+	}
+	if comparison.TargetBranch != "main" && comparison.TargetBranch != "upstream/main" {
+		t.Fatalf("expected fallback target branch, got %q", comparison.TargetBranch)
+	}
+}
+
+func TestGitServiceListCommitsToTargetReturnsEmptyWhenTargetMissing(t *testing.T) {
+	root := t.TempDir()
+	initGitRepo(t, root)
+	runGit(t, root, "config", "user.name", "Test User")
+	runGit(t, root, "config", "user.email", "test@example.com")
+
+	os.WriteFile(filepath.Join(root, "file.txt"), []byte("content\n"), 0o644)
+	runGit(t, root, "add", "file.txt")
+	runGit(t, root, "commit", "-m", "initial")
+
+	svc := NewGitService()
+	comparison, err := svc.ListCommitsToTarget(context.Background(), root, "origin/main")
+	if err != nil {
+		t.Fatalf("expected no error when target branch is missing, got: %v", err)
+	}
+	if len(comparison.Commits) != 0 {
+		t.Fatalf("expected no commits when target branch is missing, got %d", len(comparison.Commits))
+	}
+	if len(comparison.AllChangedFiles) != 0 {
+		t.Fatalf("expected no changed files when target branch is missing, got %d", len(comparison.AllChangedFiles))
+	}
+}

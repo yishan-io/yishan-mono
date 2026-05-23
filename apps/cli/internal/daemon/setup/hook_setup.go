@@ -1,12 +1,12 @@
 package setup
 
 import (
-	"os"
 	"path/filepath"
 	"runtime"
 
 	"github.com/rs/zerolog/log"
 
+	"yishan/apps/cli/internal/config"
 	hooksetup "yishan/apps/cli/internal/daemon/setup/hooks"
 )
 
@@ -48,9 +48,5 @@ func EnsureManagedAgentRuntime() {
 }
 
 func resolveManagedHookRootDir() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(homeDir, ".yishan"), nil
+	return config.HomeDir()
 }

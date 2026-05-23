@@ -5,6 +5,7 @@ import { NodeService } from "@/services/node-service";
 import { OrganizationInviteService } from "@/services/organization-invite-service";
 import { OrganizationService } from "@/services/organization-service";
 import { ProjectService } from "@/services/project-service";
+import { RelayEventService } from "@/services/relay-event-service";
 import { ResendEmailService } from "@/services/resend-email-service";
 import { ScheduledJobService } from "@/services/scheduled-job-service";
 import { UserService } from "@/services/user-service";
@@ -20,6 +21,7 @@ export type AppServices = {
   organizationInvite: OrganizationInviteService;
   node: NodeService;
   project: ProjectService;
+  relayEvent: RelayEventService;
   scheduledJob: ScheduledJobService;
   jobEvaluator: JobEvaluatorService;
   workspace: WorkspaceService;
@@ -32,6 +34,7 @@ export function createServices(deps: { db: AppDb; config: ServiceConfig }): AppS
   const organizationInvite = new OrganizationInviteService(deps.db, emailService, deps.config.landingBaseUrl);
   const organization = new OrganizationService(deps.db, user, organizationInvite);
   const workspaceProvisioner = new NoopWorkspaceProvisioner();
+  const relayEvent = new RelayEventService(deps.config);
 
   // Wire invite acceptance into user creation so that when a user registers,
   // their pending invitations are automatically accepted.
@@ -44,6 +47,7 @@ export function createServices(deps: { db: AppDb; config: ServiceConfig }): AppS
     organizationInvite,
     node: new NodeService(deps.db, organization, deps.config),
     project: new ProjectService(deps.db, organization),
+    relayEvent,
     scheduledJob: new ScheduledJobService(deps.db, organization),
     jobEvaluator: new JobEvaluatorService(deps.db),
     workspace: new WorkspaceService(deps.db, organization, workspaceProvisioner),

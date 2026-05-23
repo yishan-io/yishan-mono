@@ -48,12 +48,9 @@ type WorkspaceCreation struct {
 }
 
 type WorkspaceClose struct {
-	NodeID         string
+	WorkspaceID    string
 	OrganizationID string
 	ProjectID      string
-	Kind           string
-	Branch         string
-	LocalPath      string
 }
 
 func createRemoteWorkspace(ctx context.Context, creation WorkspaceCreation) error {
@@ -82,7 +79,7 @@ func createRemoteWorkspace(ctx context.Context, creation WorkspaceCreation) erro
 	return nil
 }
 
-func closeRemoteWorkspace(ctx context.Context, closing WorkspaceClose) error {
+func closeRemoteWorkspace(_ context.Context, closing WorkspaceClose) error {
 	if !cliruntime.APIConfigured() {
 		return nil
 	}
@@ -92,10 +89,7 @@ func closeRemoteWorkspace(ctx context.Context, closing WorkspaceClose) error {
 	}
 
 	_, err := cliruntime.APIClient().CloseWorkspace(orgID, closing.ProjectID, api.CloseWorkspaceInput{
-		NodeID:    closing.NodeID,
-		LocalPath: closing.LocalPath,
-		Kind:      closing.Kind,
-		Branch:    closing.Branch,
+		WorkspaceID: closing.WorkspaceID,
 	})
 	if err != nil {
 		if isReauthRequiredError(err) {

@@ -15,9 +15,10 @@ import (
 
 // NodeIdentity represents the authenticated identity of a relay connection.
 type NodeIdentity struct {
-	UserID        string
-	NodeID        string
-	DaemonVersion string
+	UserID          string
+	NodeID          string
+	OrganizationIDs []string
+	DaemonVersion   string
 }
 
 // Config holds JWT validation parameters.
@@ -30,7 +31,8 @@ type Config struct {
 // nodeClaims extends RegisteredClaims with the custom nodeId claim.
 type nodeClaims struct {
 	jwt.RegisteredClaims
-	NodeID string `json:"nodeId"`
+	NodeID          string   `json:"nodeId"`
+	OrganizationIDs []string `json:"organizationIds"`
 }
 
 // Authenticator validates JWT tokens and extracts node identity.
@@ -94,8 +96,9 @@ func (a *Authenticator) validateToken(tokenString string) (*NodeIdentity, error)
 	}
 
 	return &NodeIdentity{
-		UserID: claims.Subject,
-		NodeID: claims.NodeID,
+		UserID:          claims.Subject,
+		NodeID:          claims.NodeID,
+		OrganizationIDs: claims.OrganizationIDs,
 	}, nil
 }
 

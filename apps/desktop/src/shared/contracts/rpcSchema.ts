@@ -89,6 +89,13 @@ export type RpcSchema = {
           }>;
         };
       };
+      workspaceSnapshotChanged: {
+        organizationId: string;
+        resource: "project" | "workspace";
+        change: "created" | "updated" | "deleted" | "closed";
+        projectId?: string;
+        workspaceId?: string;
+      };
       openBrowserUrl: {
         url: string;
         workspaceId: string;

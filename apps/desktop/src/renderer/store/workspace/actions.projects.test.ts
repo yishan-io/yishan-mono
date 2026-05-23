@@ -261,6 +261,115 @@ describe("createWorkspaceRepoActions", () => {
     });
   });
 
+  it("makes newly discovered backend projects visible after refresh", () => {
+    const harness = createHarness();
+
+    harness.actions.load(
+      "org-1",
+      [
+        {
+          id: "repo-1",
+          name: "Repo 1",
+          sourceType: "git-local",
+          repoProvider: null,
+          repoUrl: null,
+          repoKey: "repo-1",
+          icon: "folder",
+          color: "#1E66F5",
+          setupScript: "",
+          postScript: "",
+          contextEnabled: true,
+          organizationId: "org-1",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          createdByUserId: "user-1",
+        },
+        {
+          id: "repo-3",
+          name: "Repo 3",
+          sourceType: "git-local",
+          repoProvider: null,
+          repoUrl: null,
+          repoKey: "repo-3",
+          icon: "folder",
+          color: "#1E66F5",
+          setupScript: "",
+          postScript: "",
+          contextEnabled: true,
+          organizationId: "org-1",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          createdByUserId: "user-1",
+        },
+      ],
+      [],
+    );
+
+    expect(harness.getState().displayProjectIds).toEqual(["repo-1", "repo-3"]);
+    expect(harness.getState().organizationPreferencesById?.["org-1"]?.displayProjectIds).toEqual([
+      "repo-1",
+      "repo-3",
+    ]);
+  });
+
+  it("does not re-show projects the user hid on initial hydration", () => {
+    const harness = createHarness({
+      projects: [],
+      workspaces: [],
+      displayProjectIds: [],
+      organizationPreferencesById: {
+        "org-1": {
+          selectedProjectId: "repo-1",
+          selectedWorkspaceId: "",
+          displayProjectIds: ["repo-1"],
+        },
+      },
+    });
+
+    harness.actions.load(
+      "org-1",
+      [
+        {
+          id: "repo-1",
+          name: "Repo 1",
+          sourceType: "git-local",
+          repoProvider: null,
+          repoUrl: null,
+          repoKey: "repo-1",
+          icon: "folder",
+          color: "#1E66F5",
+          setupScript: "",
+          postScript: "",
+          contextEnabled: true,
+          organizationId: "org-1",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          createdByUserId: "user-1",
+        },
+        {
+          id: "repo-2",
+          name: "Repo 2",
+          sourceType: "git-local",
+          repoProvider: null,
+          repoUrl: null,
+          repoKey: "repo-2",
+          icon: "folder",
+          color: "#1E66F5",
+          setupScript: "",
+          postScript: "",
+          contextEnabled: true,
+          organizationId: "org-1",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          createdByUserId: "user-1",
+        },
+      ],
+      [],
+    );
+
+    expect(harness.getState().displayProjectIds).toEqual(["repo-1"]);
+  });
+
   it("adds project state from backend create result", () => {
     const harness = createHarness({ projects: [], workspaces: [], displayProjectIds: [] });
 

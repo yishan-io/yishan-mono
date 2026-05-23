@@ -8,8 +8,10 @@ import {
   getNotificationPreferences,
   playNotificationSound,
 } from "../commands/notificationCommands";
+import { loadWorkspaceFromBackend } from "../commands/projectCommands";
 import { subscribeDaemonConnectionStatus } from "../rpc/rpcTransport";
 import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../store/chatStore";
+import { sessionStore } from "../store/sessionStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../store/workspaceStore";
@@ -21,6 +23,7 @@ type ObserverStatusPayload = NonNullable<NotificationEventPayload["observerStatu
 type NotificationSoundPayload = NonNullable<NotificationEventPayload["soundToPlay"]>;
 type WorkspaceCreateProgressPayload = RpcFrontendMessagePayload<"workspaceCreateProgress">;
 type WorkspacePullRequestUpdatedPayload = RpcFrontendMessagePayload<"workspacePullRequestUpdated">;
+type WorkspaceSnapshotChangedPayload = RpcFrontendMessagePayload<"workspaceSnapshotChanged">;
 type AgentSessionLifecycleStatus = "running" | "waiting_input";
 
 type BackendEventStoreBindingsDependencies = {
@@ -32,6 +35,7 @@ type BackendEventStoreBindingsDependencies = {
   subscribeInAppNotification: (listener: (payload: NotificationEventPayload) => void) => () => void;
   subscribeWorkspaceCreateProgress?: (listener: (payload: WorkspaceCreateProgressPayload) => void) => () => void;
   subscribeWorkspacePullRequestUpdated?: (listener: (payload: WorkspacePullRequestUpdatedPayload) => void) => () => void;
+  subscribeWorkspaceSnapshotChanged?: (listener: (payload: WorkspaceSnapshotChangedPayload) => void) => () => void;
   subscribeOpenBrowserUrl?: (listener: (payload: { url: string; workspaceId: string }) => void) => () => void;
   listWorkspaceWorktreePaths?: () => string[];
   incrementFileTreeRefreshVersion: (workspaceWorktreePath?: string, changedRelativePaths?: string[]) => void;
@@ -40,6 +44,8 @@ type BackendEventStoreBindingsDependencies = {
   recordWorkspaceUnreadNotification: (workspaceId: string, tone: WorkspaceUnreadTone) => void;
   applyWorkspaceCreateProgressEvent?: (payload: WorkspaceCreateProgressPayload) => void;
   setWorkspacePullRequest?: (workspaceId: string, pullRequest: WorkspacePullRequestUpdatedPayload["pullRequest"]) => void;
+  loadWorkspaceSnapshot?: () => Promise<void>;
+  getSelectedOrganizationId?: () => string | undefined;
   openBrowserTab?: (payload: { url: string; workspaceId: string }) => void;
   dispatchSystemNotification: (input: { title: string; body?: string }) => Promise<void>;
   playNotificationSound: (input: NotificationSoundPayload) => Promise<void>;
@@ -89,6 +95,15 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
       listener(event.payload);
     });
   },
+  subscribeWorkspaceSnapshotChanged: (listener) => {
+    return subscribeBackendEvent("workspace.snapshot.changed", (event) => {
+      if (event.source !== "workspaceSnapshotChanged") {
+        return;
+      }
+
+      listener(event.payload);
+    });
+  },
   subscribeOpenBrowserUrl: (listener) => {
     return subscribeBackendEvent("open.browser.url", (event) => {
       if (event.source !== "openBrowserUrl") {
@@ -121,6 +136,8 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   setWorkspacePullRequest: (workspaceId, pullRequest) => {
     workspaceStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);
   },
+  loadWorkspaceSnapshot: loadWorkspaceFromBackend,
+  getSelectedOrganizationId: () => sessionStore.getState().selectedOrganizationId,
   openBrowserTab: (payload) => {
     tabStore.getState().openTab({ kind: "browser", workspaceId: payload.workspaceId, url: payload.url });
   },
@@ -342,6 +359,7 @@ export function createBackendEventStoreBindings(
    */
   return function startBackendEventStoreBindings() {
     const gitRefreshTimersByWorktreePath = new Map<string, ReturnType<typeof setTimeout>>();
+    let workspaceSnapshotRefreshTimer: ReturnType<typeof setTimeout> | undefined;
 
     const scheduleGitRefresh = (workspaceWorktreePath: string) => {
       const normalizedPath = workspaceWorktreePath.trim();
@@ -469,6 +487,46 @@ export function createBackendEventStoreBindings(
     const unsubscribeWorkspacePullRequestUpdated = dependencies.subscribeWorkspacePullRequestUpdated?.((payload) => {
       dependencies.setWorkspacePullRequest?.(payload.workspaceId, payload.pullRequest);
     }) ?? (() => {});
+    const unsubscribeWorkspaceSnapshotChanged = dependencies.subscribeWorkspaceSnapshotChanged?.((payload) => {
+      const selectedOrganizationId = dependencies.getSelectedOrganizationId?.()?.trim();
+      const payloadOrganizationId = payload.organizationId.trim();
+      if (selectedOrganizationId && selectedOrganizationId !== payloadOrganizationId) {
+        if (import.meta.env.DEV) {
+          console.debug("[backendEventStoreBindings] workspace snapshot invalidation ignored due to org mismatch", {
+            selectedOrganizationId,
+            payloadOrganizationId,
+            resource: payload.resource,
+            change: payload.change,
+            projectId: payload.projectId,
+            workspaceId: payload.workspaceId,
+          });
+        }
+        return;
+      }
+
+      if (import.meta.env.DEV) {
+        console.debug("[backendEventStoreBindings] workspace snapshot invalidated", {
+          organizationId: payload.organizationId,
+          resource: payload.resource,
+          change: payload.change,
+          projectId: payload.projectId,
+          workspaceId: payload.workspaceId,
+        });
+      }
+
+      if (workspaceSnapshotRefreshTimer) {
+        return;
+      }
+
+      workspaceSnapshotRefreshTimer = setTimeout(() => {
+        workspaceSnapshotRefreshTimer = undefined;
+        void dependencies
+          .loadWorkspaceSnapshot?.()
+          .catch((error) => {
+            console.error("[backendEventStoreBindings] Failed to refresh workspace snapshot after invalidation", error);
+          });
+      }, 300);
+    }) ?? (() => {});
     const unsubscribeOpenBrowserUrl = dependencies.subscribeOpenBrowserUrl?.((payload) => {
       dependencies.openBrowserTab?.(payload);
     }) ?? (() => {});
@@ -480,7 +538,11 @@ export function createBackendEventStoreBindings(
       unsubscribeInAppNotification();
       unsubscribeWorkspaceCreateProgress();
       unsubscribeWorkspacePullRequestUpdated();
+      unsubscribeWorkspaceSnapshotChanged();
       unsubscribeOpenBrowserUrl();
+      if (workspaceSnapshotRefreshTimer) {
+        clearTimeout(workspaceSnapshotRefreshTimer);
+      }
       for (const timeoutId of gitRefreshTimersByWorktreePath.values()) {
         clearTimeout(timeoutId);
       }
