@@ -136,6 +136,7 @@ vi.mock("../../../commands/fileCommands", () => ({
   importFilePayloads: (...args: unknown[]) => mocks.importFilePayloads(...args),
   copyFiles: (...args: unknown[]) => mocks.copyFiles(...args),
   writeFileBase64: (...args: unknown[]) => mocks.writeFileBase64(...args),
+  writeClipboardText: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../../commands/gitCommands", () => ({

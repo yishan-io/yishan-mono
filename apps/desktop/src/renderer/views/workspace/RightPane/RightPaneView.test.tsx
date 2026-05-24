@@ -20,6 +20,7 @@ const importEntries = vi.fn();
 const importFilePayloads = vi.fn();
 const copyFiles = vi.fn();
 const writeFileBase64 = vi.fn();
+const writeClipboardText = vi.fn();
 const readWorkspaceDiff = vi.fn();
 
 const openTab = vi.fn();
@@ -68,6 +69,7 @@ vi.mock("../../../commands/fileCommands", () => ({
   importFilePayloads: (...args: unknown[]) => importFilePayloads(...args),
   copyFiles: (...args: unknown[]) => copyFiles(...args),
   writeFileBase64: (...args: unknown[]) => writeFileBase64(...args),
+  writeClipboardText: (...args: unknown[]) => writeClipboardText(...args),
 }));
 
 vi.mock("../../../commands/gitCommands", () => ({
@@ -264,38 +266,24 @@ describe("RightPaneView delete flow", () => {
   });
 
   it("copies absolute file path from context menu", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, {
-      clipboard: {
-        writeText,
-      },
-    });
-
     render(<RightPaneView />);
 
     fireEvent.contextMenu(await screen.findByText("a.ts"), { clientX: 20, clientY: 20 });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Copy Path" }));
 
     await waitFor(() => {
-      expect(writeText).toHaveBeenCalledWith("/tmp/repo/a.ts");
+      expect(writeClipboardText).toHaveBeenCalledWith("/tmp/repo/a.ts");
     });
   });
 
   it("copies relative file path from context menu", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, {
-      clipboard: {
-        writeText,
-      },
-    });
-
     render(<RightPaneView />);
 
     fireEvent.contextMenu(await screen.findByText("a.ts"), { clientX: 20, clientY: 20 });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Copy Relative Path" }));
 
     await waitFor(() => {
-      expect(writeText).toHaveBeenCalledWith("a.ts");
+      expect(writeClipboardText).toHaveBeenCalledWith("a.ts");
     });
   });
 
