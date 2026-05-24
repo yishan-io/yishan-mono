@@ -11,11 +11,9 @@
 [![Desktop Release](https://github.com/yishan-io/yishan-mono/actions/workflows/desktop-release.yml/badge.svg)](https://github.com/yishan-io/yishan-mono/actions/workflows/desktop-release.yml)
 [![GitHub stars](https://img.shields.io/github/stars/yishan-io/yishan-mono?style=social)](https://github.com/yishan-io/yishan-mono/stargazers)
 
-**A worktree-first workspace for the agentic era.**
+**The workspace built for parallel minds.**
 
-Agents let you run multiple tasks in parallel — one fixing a bug, one refactoring a module, one reviewing code. But each workstream lives in its own terminal or repo, and the burden of monitoring, switching, and resuming still falls on you. Tools were built for serial work; the work has become parallel.
-
-Yishan makes parallel development work feel manageable.
+Agents made parallel work easy. Managing it is still on you. Yishan fixes that.
 
 - **Every workstream gets a living workspace** — terminals, agent sessions, file state, and git context stay hot. Switch between them without reloading everything into your head.
 - **One place to monitor all active work** — see what changed, what is running, and what needs attention across all workstreams at a glance.

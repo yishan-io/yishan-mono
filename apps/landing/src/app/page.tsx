@@ -44,7 +44,7 @@ export default function LandingPage() {
       </div>
 
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-[#2A342F] bg-[#0D1110]/82 backdrop-blur-xl">
+      <header className="sticky top-0 z-40">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-8">
           <div className="flex items-center gap-1">
             <div className="flex h-20 w-20 items-center justify-center">
@@ -54,30 +54,8 @@ export default function LandingPage() {
             <div className="text-lg font-semibold tracking-wide text-[#E8ECE8]">{t("brand")}</div>
           </div>
 
-          <nav className="hidden items-center gap-8 text-sm text-[#A5B0A8] md:flex">
-            <a href="#features" className="transition hover:text-[#E8ECE8]">
-              {t("nav.product")}
-            </a>
-            <a href="#workflow" className="transition hover:text-[#E8ECE8]">
-              {t("nav.workflow")}
-            </a>
-            <a href="#roadmap" className="transition hover:text-[#E8ECE8]">
-              {t("nav.roadmap")}
-            </a>
-            <a href="https://github.com/yishan-io/yishan-mono/releases" className="transition hover:text-[#E8ECE8]">
-              {t("nav.changelog")}
-            </a>
-          </nav>
-
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
-            <a
-              href="https://github.com/yishan-io/yishan-mono"
-              className="inline-flex items-center gap-2 rounded-2xl border border-[#2A342F] bg-[#151B18] px-4 py-2 text-sm text-[#E8ECE8] transition hover:bg-[#1B2420]"
-            >
-              <GitHubIcon />
-              {t("nav.github")}
-            </a>
           </div>
         </div>
       </header>

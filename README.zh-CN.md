@@ -11,11 +11,9 @@
 [![Desktop Release](https://github.com/yishan-io/yishan-mono/actions/workflows/desktop-release.yml/badge.svg)](https://github.com/yishan-io/yishan-mono/actions/workflows/desktop-release.yml)
 [![GitHub stars](https://img.shields.io/github/stars/yishan-io/yishan-mono?style=social)](https://github.com/yishan-io/yishan-mono/stargazers)
 
-**面向 Agentic 时代、以 worktree 为核心的开发工作区。**
+**为并行思维者而生的工作区。**
 
-Agent 让你可以同时跑多个任务——一个在修 bug，一个在重构模块，一个在做代码审查。但每个工作流散落在各自的终端或仓库里，监控、切换、恢复的负担全压在你身上。工具还是为串行工作设计的，而工作已经变成并行的了。
-
-Yishan 让并行开发变得轻松可控。
+Agent 让并行工作变得容易。管理它，还是靠你。Yishan 解决这个问题。
 
 - **每个工作流都有独立的热活工作区** — 终端、Agent 会话、文件状态、git 上下文全部保持活跃。在它们之间切换，无需重新加载任何东西。
 - **一个页面监控所有活跃工作** — 一眼看清所有工作流中什么变了、什么在跑、什么需要关注。
