@@ -20,7 +20,7 @@ import type { ServiceConfig } from "@/types";
 
 const OPENROUTER_API_BASE_URL = "https://openrouter.ai/api/v1";
 const TRANSCRIPTION_MODEL = "openai/gpt-4o-mini-transcribe";
-const OPTIMIZATION_MODEL = "deepseek/deepseek-v4-flash";
+const OPTIMIZATION_MODEL = "openai/gpt-4o-mini";
 const TRANSCRIPTION_PROMPT =
   "The speaker is likely a software engineer or developer dictating instructions for an agent CLI. Prefer common software terms, command names, flags, package names, file paths, APIs, frameworks, programming languages, git terminology, and code-related words when audio is ambiguous.";
 
