@@ -8,6 +8,7 @@ import {
   readFile,
   buildWorkspaceFileUrl,
   renameEntry,
+  writeClipboardText,
 } from "../../../commands/fileCommands";
 import { isImageFile, isUnsupportedFileTab } from "../../../helpers/editorLanguage";
 import { SYSTEM_FILE_MANAGER_APP_ID, type ExternalAppId } from "../../../../shared/contracts/externalApps";
@@ -257,13 +258,13 @@ export function useFileTreeCrud({
 
   const onCopyPath = useCallback(
     async (path: string) => {
-      if (!selectedWorkspaceWorktreePath || !navigator.clipboard) {
+      if (!selectedWorkspaceWorktreePath) {
         return;
       }
 
       try {
         const absolutePath = resolveWorkspaceAbsolutePath(selectedWorkspaceWorktreePath, path);
-        await navigator.clipboard.writeText(absolutePath);
+        await writeClipboardText(absolutePath);
       } catch (error) {
         console.error("Failed to copy workspace entry path", error);
       }
@@ -272,12 +273,8 @@ export function useFileTreeCrud({
   );
 
   const onCopyRelativePath = useCallback(async (path: string) => {
-    if (!navigator.clipboard) {
-      return;
-    }
-
     try {
-      await navigator.clipboard.writeText(path);
+      await writeClipboardText(path);
     } catch (error) {
       console.error("Failed to copy workspace entry relative path", error);
     }

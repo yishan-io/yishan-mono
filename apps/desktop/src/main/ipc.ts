@@ -178,6 +178,7 @@ export type DesktopHostBridge = {
   getDesktopCliInstallStatus: () => Promise<DesktopCliInstallStatusResult>;
   installDesktopCli: () => Promise<DesktopCliInstallResult>;
   uninstallDesktopCli: () => Promise<DesktopCliInstallResult>;
+  writeClipboardText: (text: string) => Promise<{ ok: true }>;
 };
 
 export type DesktopRpcEventBridge = {
@@ -221,4 +222,5 @@ export const HOST_IPC_CHANNELS = {
   getDesktopCliInstallStatus: "desktop:host/get-desktop-cli-install-status",
   installDesktopCli: "desktop:host/install-desktop-cli",
   uninstallDesktopCli: "desktop:host/uninstall-desktop-cli",
+  writeClipboardText: "desktop:host/write-clipboard-text",
 } as const;

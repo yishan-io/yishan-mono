@@ -1,13 +1,9 @@
 import { useCallback } from "react";
 import type { DiffFileChangeKind } from "../../../store/types";
 import { useCommands } from "../../../hooks/useCommands";
+import { writeClipboardText } from "../../../commands/fileCommands";
 import { normalizeWorkspaceRelativePath } from "./useChangesTabState";
-
-function resolveWorkspaceAbsolutePath(worktreePath: string, relativePath: string): string {
-  const trimmedRoot = worktreePath.replace(/\/+$/, "");
-  const trimmedRelative = relativePath.replace(/^\/+/, "");
-  return `${trimmedRoot}/${trimmedRelative}`;
-}
+import { resolveWorkspaceAbsolutePath } from "./fileTreeHelpers";
 
 type UseChangesTabActionsInput = {
   selectedWorkspaceId: string;
@@ -147,11 +143,11 @@ export function useChangesTabActions({
 
   const copyFilePath = useCallback(
     async (relativePath: string) => {
-      if (!selectedWorkspaceWorktreePath || !navigator.clipboard) {
+      if (!selectedWorkspaceWorktreePath) {
         return;
       }
       try {
-        await navigator.clipboard.writeText(resolveWorkspaceAbsolutePath(selectedWorkspaceWorktreePath, relativePath));
+        await writeClipboardText(resolveWorkspaceAbsolutePath(selectedWorkspaceWorktreePath, relativePath));
       } catch (error) {
         console.error("Failed to copy workspace file path", error);
       }
@@ -160,11 +156,8 @@ export function useChangesTabActions({
   );
 
   const copyRelativeFilePath = useCallback(async (relativePath: string) => {
-    if (!navigator.clipboard) {
-      return;
-    }
     try {
-      await navigator.clipboard.writeText(relativePath);
+      await writeClipboardText(relativePath);
     } catch (error) {
       console.error("Failed to copy workspace relative file path", error);
     }

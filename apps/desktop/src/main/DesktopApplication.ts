@@ -8,7 +8,7 @@ import {
 } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { BrowserWindow, Menu, app, dialog, ipcMain, net, protocol, session, systemPreferences } from "electron";
+import { BrowserWindow, Menu, app, clipboard, dialog, ipcMain, net, protocol, session, systemPreferences } from "electron";
 import { autoUpdater } from "electron-updater";
 import { ACTIONS, type AppActionPayload } from "../shared/contracts/actions";
 import {
@@ -391,6 +391,11 @@ export class DesktopApplication {
 
     ipcMain.handle(HOST_IPC_CHANNELS.readExternalClipboardSourcePaths, async () => {
       return await readExternalClipboardSourcePathsFromSystem();
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.writeClipboardText, (_event, text: string) => {
+      clipboard.writeText(String(text ?? ""));
+      return { ok: true as const };
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.copyFiles, async (_event, input) => {

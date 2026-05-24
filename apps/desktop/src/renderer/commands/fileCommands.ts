@@ -116,6 +116,11 @@ export async function readExternalClipboardSourcePaths() {
   return (await getDesktopHostBridge().readExternalClipboardSourcePaths()) as ExternalClipboardReadOutcome;
 }
 
+/** Writes text to the system clipboard via the main process (works in file:// contexts). */
+export async function writeClipboardText(text: string): Promise<void> {
+  await getDesktopHostBridge().writeClipboardText(text);
+}
+
 /** Builds one workspace-scoped custom protocol URL for image/file previews. */
 export function buildWorkspaceFileUrl(params: { workspaceWorktreePath: string; relativePath: string }) {
   const search = new URLSearchParams({
