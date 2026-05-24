@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { LuArrowUp, LuLoaderCircle, LuMic, LuX } from "react-icons/lu";
+import recordStartSound from "../../assets/record-start.mp3";
 import { transcribeVoiceForOrganization } from "../commands/voiceTranscriptionCommands";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { sessionStore } from "../store/sessionStore";
@@ -30,10 +31,12 @@ export function FloatingVoiceButton({ onText, disabled = false, disabledMessage,
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [recordedAudio, setRecordedAudio] = useState<{ audio: Blob; durationSeconds: number } | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const startedAtRef = useRef(0);
   const stopTimerRef = useRef<number | null>(null);
+  const countTimerRef = useRef<number | null>(null);
   const didCancelRecordingRef = useRef(false);
   const didSubmitRecordingRef = useRef(false);
 
@@ -41,6 +44,11 @@ export function FloatingVoiceButton({ onText, disabled = false, disabledMessage,
     if (stopTimerRef.current !== null) {
       window.clearTimeout(stopTimerRef.current);
       stopTimerRef.current = null;
+    }
+
+    if (countTimerRef.current !== null) {
+      window.clearInterval(countTimerRef.current);
+      countTimerRef.current = null;
     }
 
     for (const track of streamRef.current?.getTracks() ?? []) {
@@ -191,7 +199,18 @@ export function FloatingVoiceButton({ onText, disabled = false, disabledMessage,
 
       recorder.start(1_000);
       setRecordingState("recording");
-      stopTimerRef.current = window.setTimeout(stopRecording, MAX_RECORDING_MS);
+      setElapsedSeconds(0);
+      const audio = new Audio(recordStartSound);
+      audio.currentTime = 0.4;
+      audio.play().catch(() => {});
+      stopTimerRef.current = window.setTimeout(() => {
+        didSubmitRecordingRef.current = true;
+        setRecordingState("transcribing");
+        stopRecording();
+      }, MAX_RECORDING_MS);
+      countTimerRef.current = window.setInterval(() => {
+        setElapsedSeconds((s) => s + 1);
+      }, 1_000);
     } catch (error) {
       cleanupRecording();
       setRecordingState("idle");
@@ -241,7 +260,7 @@ export function FloatingVoiceButton({ onText, disabled = false, disabledMessage,
             onClick={handleClick}
             disabled={isBusy}
             sx={{
-              width: isBusy ? 220 : 34,
+              width: isBusy ? 240 : 34,
               height: 34,
               justifyContent: isBusy ? "flex-start" : "center",
               gap: 1,
@@ -275,7 +294,7 @@ export function FloatingVoiceButton({ onText, disabled = false, disabledMessage,
                 Transcribing...
               </Box>
             ) : isBusy ? (
-              <Waveform isActive={recordingState === "recording"} />
+              <Waveform isActive={recordingState === "recording"} elapsedSeconds={elapsedSeconds} stream={streamRef.current} />
             ) : null}
           </IconButton>
         </span>
@@ -336,29 +355,129 @@ export function FloatingVoiceButton({ onText, disabled = false, disabledMessage,
   return portalHost ? createPortal(button, portalHost) : null;
 }
 
-function Waveform({ isActive }: { isActive: boolean }) {
-  const bars = [12, 18, 9, 22, 14, 19, 10, 16, 21, 11, 17, 13];
+const BAR_COUNT = 12;
+const IDLE_HEIGHTS = [12, 18, 9, 22, 14, 19, 10, 16, 21, 11, 17, 13];
+// How many rAF frames between each scroll step (lower = faster scroll)
+const SCROLL_INTERVAL_FRAMES = 5;
+
+function Waveform({ isActive, elapsedSeconds, stream }: { isActive: boolean; elapsedSeconds: number; stream: MediaStream | null }) {
+  const capped = Math.min(60, elapsedSeconds);
+  const timeLabel = `0:${String(capped).padStart(2, "0")}`;
+  const barEls = useRef<(HTMLDivElement | null)[]>([]);
+  const rafRef = useRef<number | null>(null);
+  // Ring buffer holding the last BAR_COUNT amplitude samples
+  const historyRef = useRef<number[]>(Array(BAR_COUNT).fill(5));
+  const frameCountRef = useRef(0);
+
+  useEffect(() => {
+    if (!isActive || !stream) {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      return;
+    }
+
+    const audioCtx = new AudioContext();
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = 0.5;
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+
+    const timeData = new Uint8Array(analyser.fftSize);
+    const history = historyRef.current;
+
+    const tick = () => {
+      frameCountRef.current += 1;
+
+      // Sample overall RMS amplitude from the time-domain waveform
+      analyser.getByteTimeDomainData(timeData);
+      let sumSq = 0;
+      for (let i = 0; i < timeData.length; i++) {
+        const v = ((timeData[i] ?? 128) - 128) / 128;
+        sumSq += v * v;
+      }
+      const rms = Math.sqrt(sumSq / timeData.length);
+      // Map rms (0–1, but typically 0–0.5 for speech) → bar height 5–27px
+      const sample = 3 + Math.min(rms * 8, 1) * 24;
+
+      // Push new sample into ring buffer every N frames (controls scroll speed)
+      if (frameCountRef.current % SCROLL_INTERVAL_FRAMES === 0) {
+        history.pop();
+        history.unshift(sample);
+      }
+
+      // Write bar heights directly to DOM
+      for (let i = 0; i < BAR_COUNT; i++) {
+        const el = barEls.current[i];
+        if (el) el.style.height = `${(history[i] ?? 5).toFixed(1)}px`;
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      analyser.disconnect();
+      audioCtx.close().catch(() => {});
+    };
+  }, [isActive, stream]);
 
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 0.45, flex: 1, pr: 3.5, pl: 3.5 }}>
-      {bars.map((height, index) => (
-        <Box
-          key={`${height}-${index}`}
-          sx={{
-            width: 3,
-            height,
-            borderRadius: 99,
-            bgcolor: isActive ? "success.main" : "grey.300",
-            opacity: isActive ? 0.95 : 0.6,
-            animation: isActive ? "voice-wave 850ms ease-in-out infinite" : "none",
-            animationDelay: `${index * 62}ms`,
-            "@keyframes voice-wave": {
-              "0%, 100%": { transform: "scaleY(0.45)" },
-              "50%": { transform: "scaleY(1.15)" },
-            },
-          }}
-        />
-      ))}
+      {isActive ? (
+        <>
+          {IDLE_HEIGHTS.map((idleHeight, index) => (
+            <Box
+              key={index}
+              ref={(el) => { barEls.current[index] = el as HTMLDivElement | null; }}
+              sx={{
+                width: 3,
+                height: idleHeight,
+                borderRadius: 99,
+                bgcolor: "success.main",
+                opacity: 0.95 - (index / BAR_COUNT) * 0.35,
+                transition: "height 80ms ease-out",
+              }}
+            />
+          ))}
+          <Box
+            sx={{
+              ml: 0.5,
+              fontSize: 11,
+              fontVariantNumeric: "tabular-nums",
+              color: capped >= 50 ? "error.main" : "success.main",
+              flexShrink: 0,
+            }}
+          >
+            {timeLabel}
+          </Box>
+        </>
+      ) : (
+        IDLE_HEIGHTS.map((height, index) => (
+          <Box
+            key={index}
+            sx={{
+              width: 3,
+              height,
+              borderRadius: 99,
+              bgcolor: "grey.300",
+              opacity: 0.6,
+              animation: "voice-wave 850ms ease-in-out infinite",
+              animationDelay: `${index * 62}ms`,
+              "@keyframes voice-wave": {
+                "0%, 100%": { transform: "scaleY(0.45)" },
+                "50%": { transform: "scaleY(1.15)" },
+              },
+            }}
+          />
+        ))
+      )}
     </Box>
   );
 }
