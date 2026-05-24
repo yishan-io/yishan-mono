@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   ButtonGroup,
@@ -18,6 +19,7 @@ import { LuArrowRight, LuCheck, LuChevronDown, LuCircleDashed, LuX } from "react
 import type { WorkspacePullRequestRecord } from "../../../api/types";
 import { openLink } from "../../../commands/appCommands";
 import { closePullRequest, mergePullRequest } from "../../../commands/gitCommands";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { BranchBadge } from "../../../components/BranchBadge";
 import { PaneLoadingBar } from "../../../components/PaneLoadingBar";
 import { PullRequestIcon } from "../../../components/PullRequestIcon";
@@ -127,6 +129,7 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
   const [deleteBranch, setDeleteBranch] = useState(true);
   const [isMerging, setIsMerging] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const mergeMenuOpen = Boolean(mergeAnchorEl);
 
   const handleOpenMergeMenu = useCallback((event: React.MouseEvent<HTMLElement>) => {
@@ -145,6 +148,7 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
   const handleMerge = useCallback(async () => {
     if (!prNumber || !worktreePath || isMerging) return;
     setIsMerging(true);
+    setActionError(null);
     try {
       await mergePullRequest({
         workspaceWorktreePath: worktreePath,
@@ -171,6 +175,9 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
           status: "merged",
         } as DaemonWorkspacePullRequest);
       }
+    } catch (error: unknown) {
+      console.error("[PullRequestTabView] merge failed", error);
+      setActionError(getErrorMessage(error));
     } finally {
       setIsMerging(false);
     }
@@ -179,6 +186,7 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
   const handleClose = useCallback(async () => {
     if (!prNumber || !worktreePath || isClosing) return;
     setIsClosing(true);
+    setActionError(null);
     try {
       await closePullRequest({
         workspaceWorktreePath: worktreePath,
@@ -203,6 +211,9 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
           githubState: "CLOSED",
         } as DaemonWorkspacePullRequest);
       }
+    } catch (error: unknown) {
+      console.error("[PullRequestTabView] close failed", error);
+      setActionError(getErrorMessage(error));
     } finally {
       setIsClosing(false);
     }
@@ -407,12 +418,18 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
                       onChange={(_, checked) => setDeleteBranch(checked)}
                       disabled={!mergeEnabled || isMerging}
                       sx={{ py: 0 }}
-                    />
-                  }
+                />
+                }
                   label={t("workspace.pr.deleteBranch")}
                   sx={{ mx: 0, "& .MuiFormControlLabel-label": { fontSize: 12 } }}
                 />
               </Stack>
+            ) : null}
+
+            {actionError ? (
+              <Alert severity="error" variant="outlined" onClose={() => setActionError(null)} sx={{ fontSize: 12 }}>
+                {actionError}
+              </Alert>
             ) : null}
           </>
         ) : null}
