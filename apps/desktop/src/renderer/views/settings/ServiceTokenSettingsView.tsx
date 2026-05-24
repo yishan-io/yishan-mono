@@ -97,7 +97,6 @@ export function ServiceTokenSettingsView() {
   };
 
   const activeTokens = tokens.filter((token) => !token.revokedAt);
-  const revokedTokens = tokens.filter((token) => token.revokedAt);
 
   return (
     <Box>
@@ -137,7 +136,7 @@ export function ServiceTokenSettingsView() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {activeTokens.length === 0 && revokedTokens.length === 0 ? (
+                {activeTokens.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6}>
                       <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
@@ -146,14 +145,14 @@ export function ServiceTokenSettingsView() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  [...activeTokens, ...revokedTokens].map((token) => {
+                  activeTokens.map((token) => {
                     const status = resolveTokenStatus(token, {
                       active: t("settings.serviceTokens.status.active"),
                       revoked: t("settings.serviceTokens.status.revoked"),
                       expired: t("settings.serviceTokens.status.expired"),
                     });
                     return (
-                      <TableRow key={token.id} sx={{ opacity: token.revokedAt ? 0.5 : 1 }}>
+                      <TableRow key={token.id}>
                         <TableCell>{token.name}</TableCell>
                         <TableCell>
                           <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: "0.8rem" }}>
@@ -166,13 +165,11 @@ export function ServiceTokenSettingsView() {
                           <StatusIndicator label={status.label} color={status.color} />
                         </TableCell>
                         <TableCell>
-                          {!token.revokedAt ? (
-                            <Tooltip title={t("settings.serviceTokens.actions.revoke")}>
-                              <IconButton size="small" onClick={() => setRevokeTarget(token)}>
-                                <BiTrash size={16} />
-                              </IconButton>
-                            </Tooltip>
-                          ) : null}
+                          <Tooltip title={t("settings.serviceTokens.actions.revoke")}>
+                            <IconButton size="small" onClick={() => setRevokeTarget(token)}>
+                              <BiTrash size={16} />
+                            </IconButton>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     );
