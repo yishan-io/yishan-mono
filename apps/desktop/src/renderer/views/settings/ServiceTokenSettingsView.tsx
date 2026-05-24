@@ -56,6 +56,7 @@ export function ServiceTokenSettingsView() {
   const [hasLoadError, setHasLoadError] = useState(false);
   const [tokens, setTokens] = useState<ServiceTokenRecord[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [revokeTarget, setRevokeTarget] = useState<ServiceTokenRecord | null>(null);
   const [createdToken, setCreatedToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -81,6 +82,7 @@ export function ServiceTokenSettingsView() {
   const handleRevoke = async (tokenId: string) => {
     try {
       await api.serviceToken.revoke(tokenId);
+      setRevokeTarget(null);
       await loadTokens();
     } catch (error) {
       console.error("[ServiceTokenSettingsView] Failed to revoke service token", error);
@@ -165,7 +167,7 @@ export function ServiceTokenSettingsView() {
                         <TableCell>
                           {!token.revokedAt ? (
                             <Tooltip title={t("settings.serviceTokens.actions.revoke")}>
-                              <IconButton size="small" onClick={() => handleRevoke(token.id)}>
+                              <IconButton size="small" onClick={() => setRevokeTarget(token)}>
                                 <BiTrash size={16} />
                               </IconButton>
                             </Tooltip>
@@ -216,6 +218,23 @@ export function ServiceTokenSettingsView() {
           void loadTokens();
         }}
       />
+
+      <Dialog open={revokeTarget !== null} onClose={() => setRevokeTarget(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>{t("settings.serviceTokens.revokeDialog.title")}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            {t("settings.serviceTokens.revokeDialog.description", { name: revokeTarget?.name ?? "" })}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRevokeTarget(null)}>
+            {t("settings.serviceTokens.revokeDialog.cancel")}
+          </Button>
+          <Button color="error" variant="contained" onClick={() => revokeTarget && handleRevoke(revokeTarget.id)}>
+            {t("settings.serviceTokens.revokeDialog.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

@@ -150,6 +150,12 @@
         "cancel": "Cancel",
         "create": "Create",
         "creating": "Creating…"
+      },
+      "revokeDialog": {
+        "title": "Revoke service token",
+        "description": "Are you sure you want to revoke \"{{name}}\"? Any CLI or service using this token will immediately lose access.",
+        "cancel": "Cancel",
+        "confirm": "Revoke"
       }
     },
     "members": {

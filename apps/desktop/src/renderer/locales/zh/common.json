@@ -150,6 +150,12 @@
         "cancel": "取消",
         "create": "创建",
         "creating": "创建中…"
+      },
+      "revokeDialog": {
+        "title": "撤销服务令牌",
+        "description": "确定要撤销「{{name}}」吗？使用此令牌的 CLI 或服务将立即失去访问权限。",
+        "cancel": "取消",
+        "confirm": "撤销"
       }
     },
     "members": {
