@@ -86,6 +86,7 @@
       "members": "Members",
       "nodes": "Nodes",
       "notifications": "Notifications",
+      "serviceTokens": "Service Tokens",
       "terminal": "Terminal",
       "workspace": "Workspace"
     },
@@ -112,6 +113,43 @@
       "values": {
         "unknownOwner": "Unknown",
         "unknownVersion": "Unknown"
+      }
+    },
+    "serviceTokens": {
+      "title": "Service Tokens",
+      "description": "Create and manage service tokens for authenticating the CLI on remote hosts without a browser login.",
+      "create": "Create token",
+      "loadError": "Failed to load service tokens.",
+      "empty": "No service tokens have been created yet.",
+      "copied": "Copied!",
+      "createdWarning": "Store this token securely — it will not be shown again.",
+      "columns": {
+        "name": "Name",
+        "token": "Token",
+        "lastUsed": "Last Used",
+        "expires": "Expires",
+        "status": "Status"
+      },
+      "status": {
+        "active": "Active",
+        "revoked": "Revoked",
+        "expired": "Expired"
+      },
+      "actions": {
+        "revoke": "Revoke token",
+        "copy": "Copy token"
+      },
+      "createDialog": {
+        "title": "Create service token",
+        "description": "Service tokens allow the CLI to authenticate on remote hosts without an interactive browser login. Use them for headless servers, CI pipelines, or any non-interactive environment.",
+        "nameLabel": "Token name",
+        "namePlaceholder": "e.g. prod-server, ci-runner",
+        "expiresLabel": "Expires in (days)",
+        "expiresPlaceholder": "e.g. 90",
+        "expiresHelp": "Leave empty for a token that never expires.",
+        "cancel": "Cancel",
+        "create": "Create",
+        "creating": "Creating…"
       }
     },
     "members": {

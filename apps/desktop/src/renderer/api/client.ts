@@ -20,6 +20,7 @@ import {
   runScheduledJobNow,
   updateScheduledJob,
 } from "./scheduledJobApi";
+import { createServiceToken, listServiceTokens, revokeServiceToken } from "./serviceTokenApi";
 import { createProjectWorkspace, listProjectWorkspaces } from "./workspaceApi";
 import { listWorkspacePullRequests, upsertWorkspacePullRequest } from "./workspacePullRequestApi";
 import { getVoiceTranscriptionUsage, transcribeVoice } from "./voiceTranscriptionApi";
@@ -65,6 +66,11 @@ export const api = {
   voiceTranscription: {
     transcribe: transcribeVoice,
     getUsage: getVoiceTranscriptionUsage,
+  },
+  serviceToken: {
+    list: listServiceTokens,
+    create: createServiceToken,
+    revoke: revokeServiceToken,
   },
 };
 

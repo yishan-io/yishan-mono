@@ -86,6 +86,7 @@
       "members": "成员",
       "nodes": "节点",
       "notifications": "通知",
+      "serviceTokens": "服务令牌",
       "terminal": "终端",
       "workspace": "工作区"
     },
@@ -112,6 +113,43 @@
       "values": {
         "unknownOwner": "未知",
         "unknownVersion": "未知"
+      }
+    },
+    "serviceTokens": {
+      "title": "服务令牌",
+      "description": "创建和管理服务令牌，用于在远程主机上无需浏览器登录即可认证 CLI。",
+      "create": "创建令牌",
+      "loadError": "加载服务令牌失败。",
+      "empty": "尚未创建任何服务令牌。",
+      "copied": "已复制！",
+      "createdWarning": "请安全保存此令牌——它将不会再次显示。",
+      "columns": {
+        "name": "名称",
+        "token": "令牌",
+        "lastUsed": "最后使用",
+        "expires": "过期时间",
+        "status": "状态"
+      },
+      "status": {
+        "active": "有效",
+        "revoked": "已撤销",
+        "expired": "已过期"
+      },
+      "actions": {
+        "revoke": "撤销令牌",
+        "copy": "复制令牌"
+      },
+      "createDialog": {
+        "title": "创建服务令牌",
+        "description": "服务令牌允许 CLI 在远程主机上无需交互式浏览器登录即可认证。适用于无界面服务器、CI 流水线或任何非交互式环境。",
+        "nameLabel": "令牌名称",
+        "namePlaceholder": "例如 prod-server、ci-runner",
+        "expiresLabel": "过期天数",
+        "expiresPlaceholder": "例如 90",
+        "expiresHelp": "留空表示令牌永不过期。",
+        "cancel": "取消",
+        "create": "创建",
+        "creating": "创建中…"
       }
     },
     "members": {

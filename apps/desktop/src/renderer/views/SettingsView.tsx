@@ -31,6 +31,7 @@ import { MemberSettingsView } from "./settings/MemberSettingsView";
 import { MarkdownSettingsView } from "./settings/MarkdownSettingsView";
 import { NodesSettingsView } from "./settings/NodesSettingsView";
 import { NotificationSettingsView } from "./settings/NotificationSettingsView";
+import { ServiceTokenSettingsView } from "./settings/ServiceTokenSettingsView";
 import { TerminalSettingsView } from "./settings/TerminalSettingsView";
 import { WorkspaceSettingsView } from "./settings/WorkspaceSettingsView";
 import {
@@ -109,6 +110,7 @@ export function SettingsView() {
       selectedTabParam === "members" ||
       selectedTabParam === "nodes" ||
       selectedTabParam === "notifications" ||
+      selectedTabParam === "serviceTokens" ||
       selectedTabParam === "terminal" ||
       selectedTabParam === "workspace"
     ) {
@@ -181,6 +183,7 @@ export function SettingsView() {
       links: <LinkSettingsView />,
       members: <MemberSettingsView />,
       nodes: <NodesSettingsView />,
+      serviceTokens: <ServiceTokenSettingsView />,
       terminal: <TerminalSettingsView />,
       keybindings: <KeybindingsSettingsView />,
       workspace: <WorkspaceSettingsView />,
