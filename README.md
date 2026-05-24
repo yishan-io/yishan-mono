@@ -15,6 +15,10 @@
 
 Agents made parallel work easy. Managing it is still on you. Yishan fixes that.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/yishan-io/yishan-mono/main/apps/landing/public/app.png" alt="Yishan — from zero to multiple parallel workstreams" width="100%" />
+</p>
+
 ## Why Yishan?
 
 Tools were built for serial work. The work is now parallel.

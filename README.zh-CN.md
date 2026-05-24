@@ -15,6 +15,10 @@
 
 Agent 让并行工作变得容易。管理它，还是靠你。Yishan 解决这个问题。
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/yishan-io/yishan-mono/main/apps/landing/public/app.png" alt="Yishan — 从零到多个并行工作流" width="100%" />
+</p>
+
 ## 为什么需要 Yishan？
 
 工具为串行工作而设计。工作已经是并行的了。
