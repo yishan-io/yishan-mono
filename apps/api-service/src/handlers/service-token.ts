@@ -39,7 +39,6 @@ export async function listServiceTokensHandler(c: AppContext) {
       scopes: t.scopes,
       lastUsedAt: t.lastUsedAt?.toISOString() ?? null,
       expiresAt: t.expiresAt?.toISOString() ?? null,
-      revokedAt: t.revokedAt?.toISOString() ?? null,
       createdAt: t.createdAt.toISOString(),
     })),
   });

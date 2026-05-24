@@ -52,7 +52,6 @@ export class ServiceTokenService {
       scopes: string;
       lastUsedAt: Date | null;
       expiresAt: Date | null;
-      revokedAt: Date | null;
       createdAt: Date;
     }>
   > {
@@ -64,11 +63,10 @@ export class ServiceTokenService {
         scopes: serviceTokens.scopes,
         lastUsedAt: serviceTokens.lastUsedAt,
         expiresAt: serviceTokens.expiresAt,
-        revokedAt: serviceTokens.revokedAt,
         createdAt: serviceTokens.createdAt,
       })
       .from(serviceTokens)
-      .where(eq(serviceTokens.userId, actorUserId))
+      .where(and(eq(serviceTokens.userId, actorUserId), isNull(serviceTokens.revokedAt)))
       .orderBy(desc(serviceTokens.createdAt));
   }
 
