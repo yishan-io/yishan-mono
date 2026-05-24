@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 function VoiceVisual() {
   const bars = [3, 6, 9, 14, 20, 26, 20, 14, 9, 6, 3];
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-8 p-10">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-4 p-5">
       <div className="relative flex items-center justify-center">
         <div className="absolute h-32 w-32 animate-ping rounded-full bg-[#8FCB99]/5" />
         <div className="absolute h-24 w-24 rounded-full border border-[#8FCB99]/20 bg-[#8FCB99]/5" />
@@ -54,8 +54,8 @@ function VoiceVisual() {
 
 function PRVisual() {
   return (
-    <div className="flex h-full w-full flex-col justify-center gap-3 p-8">
-      <div className="rounded-2xl border border-[#2A342F] bg-[#0F1412] p-5">
+    <div className="flex h-full w-full flex-col justify-center gap-2 p-4">
+      <div className="rounded-2xl border border-[#2A342F] bg-[#0F1412] p-3">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -173,8 +173,8 @@ function TeamVisual() {
   const activeCount = statuses.filter((s) => s === "running" || s === "waiting").length;
 
   return (
-    <div className="flex h-full w-full flex-col justify-center gap-3 p-8">
-      <div className="rounded-2xl border border-[#2A342F] bg-[#0F1412] p-4">
+    <div className="flex h-full w-full flex-col justify-center gap-2 p-4">
+      <div className="rounded-2xl border border-[#2A342F] bg-[#0F1412] p-3">
         <div className="flex items-center justify-between">
           <div className="text-[11px] font-medium text-[#E8ECE8]">my-project</div>
           <div className="flex items-center gap-1.5">
@@ -322,10 +322,10 @@ function AutopilotVisual() {
   }, []);
 
   return (
-    <div className="flex h-full w-full flex-col justify-center gap-3 p-8">
+    <div className="flex h-full w-full flex-col justify-center gap-2 p-4">
       {/* Scheduled jobs */}
-      <div className="rounded-2xl border border-[#2A342F] bg-[#0F1412] p-4">
-        <div className="mb-3 text-[10px] uppercase tracking-[0.18em] text-[#4A5A4E]">Scheduled jobs</div>
+      <div className="rounded-2xl border border-[#2A342F] bg-[#0F1412] p-3">
+        <div className="mb-2 text-[10px] uppercase tracking-[0.18em] text-[#4A5A4E]">Scheduled jobs</div>
         <div className="space-y-2">
           {JOBS.map((job, i) => (
             <div key={job.name} className="flex items-center justify-between rounded-xl bg-[#0A0E0C] px-3 py-2.5">
@@ -347,8 +347,8 @@ function AutopilotVisual() {
       </div>
 
       {/* Run history */}
-      <div className="rounded-2xl border border-[#2A342F] bg-[#0F1412] p-4">
-        <div className="mb-3 text-[10px] uppercase tracking-[0.18em] text-[#4A5A4E]">Run history</div>
+      <div className="rounded-2xl border border-[#2A342F] bg-[#0F1412] p-3">
+        <div className="mb-2 text-[10px] uppercase tracking-[0.18em] text-[#4A5A4E]">Run history</div>
         <div className="space-y-1.5 overflow-hidden">
           {runs.map((r, i) => (
             <div
@@ -405,41 +405,24 @@ export function MoreFeatures({ t }: Props) {
           </p>
         </div>
 
-        <div className="mt-12 space-y-6">
-          {features.map((f, i) => {
-            const isEven = i % 2 === 0;
-            const content = (
-              <div className="flex flex-col justify-center px-2 py-6 lg:px-8">
-                <h3 className="text-2xl font-semibold leading-8 text-[#E8ECE8]">
+        <div className="mt-10 grid gap-5 md:grid-cols-2">
+          {features.map((f, i) => (
+            <div key={i} className="overflow-hidden rounded-[28px]">
+              {/* Visual */}
+              <div className="h-[320px] overflow-hidden rounded-[28px] bg-[#0D1110]">
+                {f.visual}
+              </div>
+              {/* Text */}
+              <div className="p-5">
+                <h3 className="text-base font-semibold text-[#E8ECE8]">
                   {t(f.titleKey)}
                 </h3>
-                <p className="mt-4 text-base leading-8 text-[#A5B0A8]">
+                <p className="mt-2 text-sm leading-6 text-[#A5B0A8]">
                   {t(f.descKey)}
                 </p>
               </div>
-            );
-            const visual = (
-              <div className="min-h-[320px] overflow-hidden rounded-[28px] border border-[#2A342F] bg-[#0D1110]">
-                {f.visual}
-              </div>
-            );
-
-            return (
-              <div key={i} className="grid gap-4 overflow-hidden rounded-[28px] lg:grid-cols-2">
-                {isEven ? (
-                  <>
-                    <div className="lg:order-1">{visual}</div>
-                    <div className="lg:order-2">{content}</div>
-                  </>
-                ) : (
-                  <>
-                    <div className="lg:order-2">{visual}</div>
-                    <div className="lg:order-1">{content}</div>
-                  </>
-                )}
-              </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
 
       </div>

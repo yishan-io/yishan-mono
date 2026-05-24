@@ -33,14 +33,14 @@
   "features.1.title": "Live status across all workstreams",
   "features.1.desc": "See every task's state — running, waiting for input, done — in one view. No more opening each terminal to check what's happening.",
 
-  "features.2.title": "Resume in seconds",
-  "features.2.desc": "Come back to any workstream and everything is exactly where you left it. Terminal history, open files, git state — all still live.",
+  "features.2.title": "Leave it running, come back when ready",
+  "features.2.desc": "Start a task, switch to something more urgent, and return later without paying any setup cost. Every workstream stays exactly as you left it — terminals, agent sessions, files, context — until the work is actually done.",
 
   "features.3.title": "Agent sessions tied to the workspace",
   "features.3.desc": "Agent work runs inside the workspace alongside the repo and terminal — not in a detached chat tab that loses context the moment you close it.",
 
-  "features.4.title": "Context stays with the work",
-  "features.4.desc": "Notes, plans, and next steps live in .my-context, attached to each workspace. Pick up a task you haven't touched in a week without rebuilding everything from scratch.",
+  "features.4.title": "Built-in context shared across every workspace",
+  "features.4.desc": "Each project has a .my-context folder — notes, plans, and handoff details written in one workspace are immediately visible in all others. Switch workstreams and the context comes with you, without dragging it into normal commit flow.",
 
   "more.label": "More ways to work",
   "more.title": "Built for how developers actually live",

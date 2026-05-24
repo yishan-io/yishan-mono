@@ -1,8 +1,8 @@
 "use client";
 
 import { useI18n } from "@/i18n";
+import { CoreFeatureRows } from "./core-feature-rows";
 import { DownloadButton } from "./download-button";
-import { FeatureCards } from "./feature-cards";
 import { HeroImage } from "./hero-image";
 import { LanguageSwitcher } from "./language-switcher";
 import { MoreFeatures } from "./more-features";
@@ -137,7 +137,7 @@ export default function LandingPage() {
             </h2>
           </div>
 
-          <FeatureCards t={t} />
+          <CoreFeatureRows t={t} />
         </section>
 
         <MoreFeatures t={t} />
