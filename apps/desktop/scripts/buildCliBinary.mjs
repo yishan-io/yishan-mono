@@ -7,15 +7,14 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const desktopDir = resolve(scriptDir, "..");
 const cliDir = resolve(desktopDir, "..", "cli");
 const cliBinDir = resolve(cliDir, "bin");
-const desktopPackageJsonPath = resolve(desktopDir, "package.json");
 const resourcesDir = resolve(desktopDir, "dist", "resources");
 const binaryName = process.platform === "win32" ? "yishan.exe" : "yishan";
 const cliBinaryCandidates = [resolve(cliBinDir, binaryName), resolve(cliBinDir, "yishan"), resolve(cliBinDir, "yishan.exe")];
 const outputPath = resolve(resourcesDir, binaryName);
-const desktopPackageJson = JSON.parse(readFileSync(desktopPackageJsonPath, "utf8"));
+const cliVersionFilePath = resolve(cliDir, "VERSION");
 const cliVersion =
   process.env.YISHAN_CLI_VERSION?.trim() ||
-  (typeof desktopPackageJson.version === "string" ? desktopPackageJson.version.trim() : "") ||
+  (existsSync(cliVersionFilePath) ? readFileSync(cliVersionFilePath, "utf8").trim() : "") ||
   "dev";
 
 mkdirSync(resourcesDir, { recursive: true });

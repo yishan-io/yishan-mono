@@ -1,6 +1,6 @@
 APP_NAME := yishan
 BUILD_DIR := bin
-VERSION ?= dev
+VERSION ?= $(shell cat VERSION 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X yishan/apps/cli/internal/buildinfo.Version=$(VERSION)
 
 .PHONY: help fmt test build run daemon clean release-snapshot
