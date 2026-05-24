@@ -4,12 +4,16 @@
 
 <h1 align="center">Yishan</h1>
 
-[English](README.md)
+<p align="center">
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a>
+</p>
 
-[![License](https://img.shields.io/badge/license-Elastic--2.0-blue.svg)](LICENSE)
-[![PR Unit Tests](https://github.com/yishan-io/yishan-mono/actions/workflows/pr-unit-tests.yml/badge.svg)](https://github.com/yishan-io/yishan-mono/actions/workflows/pr-unit-tests.yml)
-[![Desktop Release](https://github.com/yishan-io/yishan-mono/actions/workflows/desktop-release.yml/badge.svg)](https://github.com/yishan-io/yishan-mono/actions/workflows/desktop-release.yml)
-[![GitHub stars](https://img.shields.io/github/stars/yishan-io/yishan-mono?style=social)](https://github.com/yishan-io/yishan-mono/stargazers)
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Elastic--2.0-blue.svg" alt="License" /></a>
+  <a href="https://github.com/yishan-io/yishan-mono/actions/workflows/pr-unit-tests.yml"><img src="https://github.com/yishan-io/yishan-mono/actions/workflows/pr-unit-tests.yml/badge.svg" alt="PR Unit Tests" /></a>
+  <a href="https://github.com/yishan-io/yishan-mono/actions/workflows/desktop-release.yml"><img src="https://github.com/yishan-io/yishan-mono/actions/workflows/desktop-release.yml/badge.svg" alt="Desktop Release" /></a>
+  <a href="https://github.com/yishan-io/yishan-mono/stargazers"><img src="https://img.shields.io/github/stars/yishan-io/yishan-mono?style=social" alt="GitHub stars" /></a>
+</p>
 
 **为并行思维者而生的工作区。**
 
