@@ -152,3 +152,23 @@ type ScheduledJob struct {
 	UpdatedAt        string `json:"updatedAt"`
 }
 
+type ServiceToken struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	TokenPrefix string  `json:"tokenPrefix"`
+	Scopes      string  `json:"scopes,omitempty"`
+	Token       string  `json:"token,omitempty"`
+	LastUsedAt  *string `json:"lastUsedAt"`
+	ExpiresAt   *string `json:"expiresAt"`
+	RevokedAt   *string `json:"revokedAt"`
+	CreatedAt   string  `json:"createdAt"`
+}
+
+type CreateServiceTokenResponse struct {
+	ServiceToken ServiceToken `json:"serviceToken"`
+}
+
+type ListServiceTokensResponse struct {
+	ServiceTokens []ServiceToken `json:"serviceTokens"`
+}
+

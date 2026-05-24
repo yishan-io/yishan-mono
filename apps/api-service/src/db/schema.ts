@@ -406,3 +406,30 @@ export const organizationInvitations = pgTable(
 
 export type OrganizationInvitation = InferSelectModel<typeof organizationInvitations>;
 export type NewOrganizationInvitation = InferInsertModel<typeof organizationInvitations>;
+
+export const serviceTokens = pgTable(
+  "service_tokens",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenPrefix: text("token_prefix").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    scopes: text("scopes").notNull().default("api:read api:write"),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("service_tokens_token_hash_uq").on(table.tokenHash),
+    index("service_tokens_user_id_idx").on(table.userId),
+    index("service_tokens_token_prefix_idx").on(table.tokenPrefix),
+  ],
+);
+
+export type ServiceToken = InferSelectModel<typeof serviceTokens>;
+export type NewServiceToken = InferInsertModel<typeof serviceTokens>;

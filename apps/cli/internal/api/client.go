@@ -73,8 +73,18 @@ func NewClient(
 
 const accessTokenEarlyRefreshWindow = 30 * time.Second
 const refreshTokenExpiryGuardWindow = 30 * time.Second
+const serviceTokenPrefix = "yst_"
+
+func isServiceToken(token string) bool {
+	return strings.HasPrefix(token, serviceTokenPrefix)
+}
 
 func (c *Client) DoRaw(method string, path string, body any) ([]byte, error) {
+	// Service tokens are long-lived and never need refresh
+	if isServiceToken(c.accessToken) {
+		return c.doRaw(method, path, body)
+	}
+
 	if c.shouldProactivelyRefresh(path) {
 		log.Debug().Str("path", path).Dur("window", accessTokenEarlyRefreshWindow).Msg("proactively refreshing API access token")
 		if err := c.refreshAccessToken(); err != nil {
