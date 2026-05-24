@@ -4,6 +4,7 @@ import { RestApiError } from "../api/restClient";
 import { readPersistedWorkspacePreferencesByOrg } from "../helpers/projectHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
+import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
 import { ensureVisibleWorkspacesOpen, reconcileDaemonWorkspaces } from "./daemonWorkspaceSync";
@@ -196,6 +197,7 @@ export async function createProject(input: {
       repoUrl: inferredRemoteUrl,
       nodeId: inferredNodeId,
       localPath: isLocalSource ? normalizedPath || undefined : undefined,
+      contextEnabled: workspaceSettingsStore.getState().isDefaultContextEnabled,
     });
   } catch (error) {
     console.error("Failed to create backend project", error);

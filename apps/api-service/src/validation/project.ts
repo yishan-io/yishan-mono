@@ -22,6 +22,7 @@ export const createProjectBodySchema = z
     repoUrl: nonEmptyStringSchema.optional(),
     nodeId: nonEmptyStringSchema.optional(),
     localPath: nonEmptyStringSchema.optional(),
+    contextEnabled: z.boolean().optional(),
   })
   .refine((input) => !(input.localPath && input.sourceTypeHint === "unknown"), {
     message:

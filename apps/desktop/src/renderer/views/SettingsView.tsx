@@ -23,7 +23,6 @@ import { useThemePreference } from "../hooks/useThemePreference";
 import { AccountSettingsView } from "./settings/AccountSettingsView";
 import { CLIToolsSettingsView } from "./settings/CLIToolsSettingsView";
 import { DaemonSettingsView } from "./settings/DaemonSettingsView";
-import { GitWorkspaceSettingsView } from "./settings/GitWorkspaceSettingsView";
 import { IntegrationSettingsView } from "./settings/IntegrationSettingsView";
 import { KeybindingsSettingsView } from "./settings/KeybindingsSettingsView";
 import { LanguageSettingsView } from "./settings/LanguageSettingsView";
@@ -33,6 +32,7 @@ import { MarkdownSettingsView } from "./settings/MarkdownSettingsView";
 import { NodesSettingsView } from "./settings/NodesSettingsView";
 import { NotificationSettingsView } from "./settings/NotificationSettingsView";
 import { TerminalSettingsView } from "./settings/TerminalSettingsView";
+import { WorkspaceSettingsView } from "./settings/WorkspaceSettingsView";
 import {
   type NotificationSettingsFocusItemId,
   isNotificationSettingsFocusItemId,
@@ -183,7 +183,7 @@ export function SettingsView() {
       nodes: <NodesSettingsView />,
       terminal: <TerminalSettingsView />,
       keybindings: <KeybindingsSettingsView />,
-      workspace: <GitWorkspaceSettingsView />,
+      workspace: <WorkspaceSettingsView />,
     }),
     [focusedNotificationItemId, setThemePreference, t, themePreference],
   );

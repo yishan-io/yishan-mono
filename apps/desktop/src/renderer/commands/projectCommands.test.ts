@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../store/chatStore";
 import { sessionStore } from "../store/sessionStore";
+import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
 import { createProject, deleteProject, loadWorkspaceFromBackend, updateProjectConfig } from "./projectCommands";
@@ -34,7 +35,9 @@ vi.mock("../api", () => ({
 }));
 
 const rpcMocks = vi.hoisted(() => ({
-  gitInspect: vi.fn(async () => ({ isGitRepository: true })),
+  gitInspect: vi.fn(async () =>
+    ({ isGitRepository: true } as { isGitRepository: boolean; remoteUrl?: string; currentBranch?: string }),
+  ),
   workspaceList: vi.fn(async () => []),
   workspaceOpen: vi.fn(),
   workspaceSyncContextLink: vi.fn(async () => ({ updated: [], skipped: [], errors: {} })),
@@ -57,6 +60,7 @@ const initialWorkspaceStoreState = workspaceStore.getState();
 const initialTabStoreState = tabStore.getState();
 const initialChatStoreState = chatStore.getState();
 const initialSessionStoreState = sessionStore.getState();
+const initialWorkspaceSettingsStoreState = workspaceSettingsStore.getState();
 
 afterEach(() => {
   localStorage.clear();
@@ -64,6 +68,7 @@ afterEach(() => {
   tabStore.setState(initialTabStoreState, true);
   chatStore.setState(initialChatStoreState, true);
   sessionStore.setState(initialSessionStoreState, true);
+  workspaceSettingsStore.setState(initialWorkspaceSettingsStoreState, true);
   vi.clearAllMocks();
 });
 
@@ -215,6 +220,7 @@ describe("projectCommands", () => {
       repoUrl: "https://github.com/test/repo-1.git",
       nodeId: "daemon-1",
       localPath: "/tmp/repo-1",
+      contextEnabled: true,
     });
     expect(appendRepo).toHaveBeenCalledTimes(1);
     expect(addWorkspace).not.toHaveBeenCalled();
@@ -224,6 +230,32 @@ describe("projectCommands", () => {
           defaultBranch: "main",
         }),
       }),
+    );
+  });
+
+  it("uses workspace default context setting during project creation", async () => {
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
+    workspaceSettingsStore.setState({ isDefaultContextEnabled: false });
+    apiMocks.createProject.mockResolvedValueOnce({
+      id: "project-1",
+      name: "Remote Repo",
+      sourceType: "git",
+      repoProvider: "github",
+      repoUrl: "https://github.com/test/remote-repo.git",
+      repoKey: "remote-repo",
+      contextEnabled: false,
+      workspaces: [],
+    });
+
+    await createProject({
+      name: "Remote Repo",
+      sourceTypeHint: "git",
+      gitUrl: "https://github.com/test/remote-repo.git",
+    });
+
+    expect(apiMocks.createProject).toHaveBeenCalledWith(
+      "org-1",
+      expect.objectContaining({ contextEnabled: false }),
     );
   });
 

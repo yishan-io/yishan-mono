@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { gitBranchStore } from "../../store/settings/gitBranchStore";
+import { workspaceSettingsStore } from "../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { GitWorkspaceSettingsView } from "./GitWorkspaceSettingsView";
 
@@ -16,7 +16,7 @@ vi.mock("../../hooks/useCommands", () => ({
   }),
 }));
 
-const initialGitBranchState = gitBranchStore.getState();
+const initialWorkspaceSettingsState = workspaceSettingsStore.getState();
 const initialWorkspaceState = workspaceStore.getState();
 
 describe("GitWorkspaceSettingsView", () => {
@@ -43,7 +43,7 @@ describe("GitWorkspaceSettingsView", () => {
   });
 
   afterEach(() => {
-    gitBranchStore.setState(initialGitBranchState, true);
+    workspaceSettingsStore.setState(initialWorkspaceSettingsState, true);
     workspaceStore.setState(initialWorkspaceState, true);
     cleanup();
     vi.clearAllMocks();
@@ -51,8 +51,8 @@ describe("GitWorkspaceSettingsView", () => {
 
   it("keeps default prefix settings when no edits are made", () => {
     render(<GitWorkspaceSettingsView />);
-    expect(gitBranchStore.getState().prefixMode).toBe("none");
-    expect(gitBranchStore.getState().customPrefix).toBe("");
+    expect(workspaceSettingsStore.getState().prefixMode).toBe("none");
+    expect(workspaceSettingsStore.getState().customPrefix).toBe("");
   });
 
   it("updates prefix mode when selection changes", async () => {
@@ -61,7 +61,7 @@ describe("GitWorkspaceSettingsView", () => {
     fireEvent.mouseDown(screen.getByLabelText("settings.git.workspace.prefixModeLabel"));
     fireEvent.click(await screen.findByRole("option", { name: "settings.git.workspace.prefix.user" }));
 
-    expect(gitBranchStore.getState().prefixMode).toBe("user");
+    expect(workspaceSettingsStore.getState().prefixMode).toBe("user");
   });
 
   it("updates custom prefix when input changes", async () => {
@@ -73,7 +73,7 @@ describe("GitWorkspaceSettingsView", () => {
       target: { value: "Team Core" },
     });
 
-    expect(gitBranchStore.getState().customPrefix).toBe("Team Core");
+    expect(workspaceSettingsStore.getState().customPrefix).toBe("Team Core");
   });
 
   it("shows custom prefix input only when prefix mode is custom", async () => {

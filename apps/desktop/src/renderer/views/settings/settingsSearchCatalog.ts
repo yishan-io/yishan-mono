@@ -331,6 +331,18 @@ const AGENT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
 
 const GIT_WORKSPACE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
+    id: "workspace-default-context",
+    tab: "workspace",
+    icon: BiGitBranch,
+    labelKey: "settings.workspace.defaultContext.label",
+    sectionLabelKey: "settings.items.workspace",
+    keywordKeys: [
+      "settings.workspace.defaultContext.description",
+      "settings.workspace.defaultContext.status.enabled",
+      "settings.workspace.defaultContext.status.disabled",
+    ],
+  },
+  {
     id: "git-workspace-branch-prefix",
     tab: "workspace",
     icon: BiGitBranch,

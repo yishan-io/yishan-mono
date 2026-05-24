@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import type { ReactElement } from "react";
-import { gitBranchStore } from "../../../store/settings/gitBranchStore";
+import { workspaceSettingsStore as gitBranchStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
 

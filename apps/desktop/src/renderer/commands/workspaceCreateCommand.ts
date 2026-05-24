@@ -3,6 +3,7 @@ import { generateId } from "../helpers/generateId";
 import { normalizeCreateWorkspaceInput } from "../helpers/workspaceHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
+import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore";
 import { tabStore } from "../store/tabStore";
 import type { WorkspaceStoreState } from "../store/types";
 import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
@@ -221,7 +222,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
         sourcePath,
         sourceBranch,
         targetBranch,
-        contextEnabled: project?.contextEnabled ?? true,
+        contextEnabled: project?.contextEnabled ?? workspaceSettingsStore.getState().isDefaultContextEnabled,
         setupHook: project?.setupScript?.trim() || undefined,
       })) as CreateWorkspaceResponse;
       notifyLifecycleScriptWarnings(

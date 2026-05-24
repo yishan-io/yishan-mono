@@ -224,6 +224,22 @@
         "previewLabel": "Preview"
       }
     },
+    "workspace": {
+      "title": "Workspace",
+      "description": "Manage default preferences used for workspace and project setup.",
+      "loading": "Loading workspace settings...",
+      "defaultContext": {
+        "label": "Enable default context",
+        "description": "When enabled, new projects and workspaces create and link the .my-context folder by default.",
+        "status": {
+          "enabled": "Enabled",
+          "disabled": "Disabled"
+        }
+      },
+      "errors": {
+        "saveFailed": "Failed to save workspace setting: {{message}}"
+      }
+    },
     "agents": {
       "title": "Agents",
       "description": "Manage which agents are available in tab creation and verify local CLI detection.",

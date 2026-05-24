@@ -37,7 +37,8 @@ export async function createProjectHandler(
     sourceTypeHint: body.sourceTypeHint,
     repoUrl: body.repoUrl,
     nodeId: body.nodeId,
-    localPath: body.localPath
+    localPath: body.localPath,
+    contextEnabled: body.contextEnabled,
   });
   await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
     organizationId: params.orgId,

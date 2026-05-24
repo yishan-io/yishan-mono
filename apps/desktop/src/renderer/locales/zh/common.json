@@ -206,6 +206,22 @@
         "previewLabel": "预览"
       }
     },
+    "workspace": {
+      "title": "工作区",
+      "description": "管理工作区和项目创建时使用的默认偏好设置。",
+      "loading": "正在加载工作区设置...",
+      "defaultContext": {
+        "label": "启用默认上下文",
+        "description": "启用后，新建项目和工作区会默认创建并链接 .my-context 文件夹。",
+        "status": {
+          "enabled": "已启用",
+          "disabled": "已禁用"
+        }
+      },
+      "errors": {
+        "saveFailed": "保存工作区设置失败：{{message}}"
+      }
+    },
     "agents": {
       "title": "智能体",
       "description": "管理哪些智能体显示在新建标签菜单，并检查本地 CLI 检测状态。",

@@ -55,6 +55,7 @@ type CreateProjectInput = {
   repoUrl?: string;
   nodeId?: string;
   localPath?: string;
+  contextEnabled?: boolean;
 };
 
 type UpdateProjectInput = {
@@ -107,6 +108,7 @@ export class ProjectService {
           repoProvider,
           repoUrl,
           repoKey,
+          contextEnabled: input.contextEnabled ?? true,
           organizationId: input.organizationId,
           createdByUserId: input.actorUserId,
         })

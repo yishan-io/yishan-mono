@@ -27,6 +27,7 @@ export async function createProject(
     repoUrl?: string;
     nodeId?: string;
     localPath?: string;
+    contextEnabled?: boolean;
   },
 ): Promise<ProjectWithWorkspacesRecord> {
   const response = await requestJson<{ project: ProjectWithWorkspacesRecord }>(`/orgs/${orgId}/projects`, {
