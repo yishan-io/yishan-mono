@@ -1,5 +1,8 @@
 version: 2
 
+monorepo:
+  tag_prefix: cli-
+
 project_name: yishan-cli
 
 before:
