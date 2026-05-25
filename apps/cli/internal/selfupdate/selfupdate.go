@@ -60,8 +60,8 @@ func LatestRelease(ctx context.Context) (*Release, error) {
 		return nil, fmt.Errorf("no redirect from GitHub releases/latest (status %d)", resp.StatusCode)
 	}
 
-	// Location: https://github.com/yishan-io/yishan-mono/releases/tag/cli-v0.12.0
-	parts := strings.Split(location, "/tag/cli-v")
+	// Location: https://github.com/yishan-io/yishan-mono/releases/tag/v0.12.0
+	parts := strings.Split(location, "/tag/v")
 	if len(parts) != 2 || parts[1] == "" {
 		return nil, fmt.Errorf("unexpected release tag format in redirect: %s", location)
 	}
@@ -78,7 +78,7 @@ func releaseForVersion(version string) *Release {
 	os := normalizeOS(runtime.GOOS)
 	arch := normalizeArch(runtime.GOARCH)
 	archive := fmt.Sprintf("%s_%s_%s_%s.tar.gz", project, version, os, arch)
-	base := fmt.Sprintf("https://github.com/%s/releases/download/cli-v%s", repo, version)
+	base := fmt.Sprintf("https://github.com/%s/releases/download/v%s", repo, version)
 
 	return &Release{
 		Version:     version,

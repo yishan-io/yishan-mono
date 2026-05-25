@@ -145,7 +145,7 @@
         "owner": "yishan-io",
         "repo": "yishan-mono",
         "releaseType": "draft",
-        "tagNamePrefix": "desktop-v"
+        "tagNamePrefix": "v"
       }
     ],
     "protocols": [

@@ -55,5 +55,5 @@ changelog:
     - "install.sh"
 
 release:
-  name_template: "Yishan CLI {{.Tag}}"
+  name_template: "Yishan v{{.Version}}"
   prerelease: true
