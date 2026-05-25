@@ -664,6 +664,36 @@ export class DesktopApplication {
    * Creates and initializes the main BrowserWindow instance.
    */
   private createMainWindow() {
+    const isPrimaryShortcutModifierPressed = (input: Electron.Input): boolean => {
+      return process.platform === "darwin" ? input.meta && !input.control : input.control && !input.meta;
+    };
+
+    const isWebviewReservedShortcut = (input: Electron.Input): boolean => {
+      const normalizedKey = input.key.trim().toLowerCase();
+      const isPrimaryModifier = isPrimaryShortcutModifierPressed(input);
+      if (!isPrimaryModifier || input.alt) {
+        return false;
+      }
+
+      if (input.shift) {
+        return normalizedKey === "b" || normalizedKey === "r" || normalizedKey === "f" || normalizedKey === "g" || normalizedKey === "w";
+      }
+
+      if (normalizedKey === "/" || normalizedKey === "w" || normalizedKey === "y" || normalizedKey === "n" || normalizedKey === "t") {
+        return true;
+      }
+
+      if (normalizedKey === "b" || normalizedKey === "l" || normalizedKey === "p" || normalizedKey === "o" || normalizedKey === "z") {
+        return true;
+      }
+
+      if (normalizedKey === "backspace" || normalizedKey === "delete") {
+        return true;
+      }
+
+      return /^[1-9]$/.test(normalizedKey);
+    };
+
     const mainWindow = new BrowserWindow({
       width: 1200,
       height: 800,
@@ -694,7 +724,7 @@ export class DesktopApplication {
     // target="_blank", window.open) and forward the URL to the renderer so it can
     // open the destination in a new in-app browser tab instead of a popup window.
     mainWindow.webContents.on("did-attach-webview", (_event, webviewContents) => {
-      webviewContents.on("before-input-event", (inputEvent, input) => {
+      webviewContents.on("before-input-event", (_inputEvent, input) => {
         if (input.type !== "keyDown" && input.type !== "rawKeyDown") {
           return;
         }
@@ -711,8 +741,10 @@ export class DesktopApplication {
           },
         });
 
-        if (input.meta || input.control || input.alt) {
-          inputEvent.preventDefault();
+        // Let native edit shortcuts reach Chromium, but suppress known app-level
+        // bindings so they don't trigger both page/menu behavior and app actions.
+        if (isWebviewReservedShortcut(input)) {
+          _inputEvent.preventDefault();
         }
       });
 
