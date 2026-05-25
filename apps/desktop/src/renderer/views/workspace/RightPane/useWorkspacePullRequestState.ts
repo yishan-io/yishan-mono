@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../../../api/client";
 import type { WorkspacePullRequestRecord } from "../../../api/types";
+import { getDaemonClient } from "../../../rpc/rpcTransport";
 import { workspaceStore } from "../../../store/workspaceStore";
 
 export type WorkspacePullRequestState = {
@@ -25,6 +26,11 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
 
   const orgId = workspace?.organizationId;
   const projectId = workspace?.projectId;
+  const worktreePath = workspace?.worktreePath;
+
+  // Track whether we've already attempted an on-demand daemon refresh for this workspace
+  // to avoid repeated calls while the tab stays open.
+  const daemonRefreshAttemptedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!enabled || !selectedWorkspaceId || !orgId || !projectId) {
@@ -58,6 +64,55 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
       cancelled = true;
     };
   }, [enabled, selectedWorkspaceId, orgId, projectId]);
+
+  // When the tab is active and there is no live daemon PR yet, trigger an immediate
+  // daemon workspace.open() call. The daemon will check the current branch for an
+  // associated PR and return it inline. If found, we feed the result directly into
+  // the store so it appears without waiting for the next polling interval.
+  useEffect(() => {
+    if (
+      !enabled ||
+      !selectedWorkspaceId ||
+      !worktreePath ||
+      pullRequest || // Already have a live PR — skip
+      daemonRefreshAttemptedRef.current === selectedWorkspaceId // Already tried for this workspace
+    ) {
+      return;
+    }
+
+    // Mark as attempted immediately so concurrent renders don't fire duplicates.
+    daemonRefreshAttemptedRef.current = selectedWorkspaceId;
+
+    let cancelled = false;
+
+    getDaemonClient()
+      .then((client) =>
+        client.workspace.open({
+          workspaceId: selectedWorkspaceId,
+          workspaceWorktreePath: worktreePath,
+          orgId,
+          projectId,
+        }),
+      )
+      .then((daemonWorkspace) => {
+        if (!cancelled && daemonWorkspace.pullRequest) {
+          workspaceStore.getState().setWorkspacePullRequest(selectedWorkspaceId, daemonWorkspace.pullRequest);
+        }
+      })
+      .catch(() => {
+        // Best-effort — daemon refresh failures are non-fatal.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, selectedWorkspaceId, worktreePath, orgId, projectId, pullRequest]);
+
+  // Reset the daemon refresh tracker when the workspace changes so a new workspace
+  // gets its own on-demand check.
+  useEffect(() => {
+    daemonRefreshAttemptedRef.current = null;
+  }, [selectedWorkspaceId]);
 
   return {
     selectedWorkspaceId,
