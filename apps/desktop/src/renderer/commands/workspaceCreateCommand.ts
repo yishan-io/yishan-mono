@@ -19,6 +19,7 @@ type CreateWorkspaceInput = {
   name: string;
   sourceBranch?: string;
   targetBranch?: string;
+  nodeId?: string;
 };
 
 type BackendWorkspace = {
@@ -216,6 +217,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
       const created = (await client.workspace.createWorkspace({
         workspaceId,
         organizationId,
+        nodeId: input.nodeId?.trim() || undefined,
         projectId,
         repoKey,
         workspaceName: normalizedName,

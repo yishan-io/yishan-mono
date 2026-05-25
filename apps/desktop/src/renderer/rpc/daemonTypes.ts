@@ -108,6 +108,7 @@ export type DaemonWorkspacePullRequestDeployment = {
 export type WorkspaceCreateInput = {
   workspaceId?: string;
   organizationId?: string;
+  nodeId?: string;
   repoKey?: string;
   sourcePath?: string;
   workspaceName?: string;

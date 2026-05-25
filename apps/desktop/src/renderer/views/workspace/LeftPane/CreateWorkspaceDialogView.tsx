@@ -16,10 +16,12 @@ import {
 } from "@mui/material";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuChevronDown, LuFolderGit2, LuGitBranch } from "react-icons/lu";
+import { LuChevronDown, LuCloud, LuFolderGit2, LuGitBranch, LuServer } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import { BranchDropdown, type BranchDropdownGroups } from "../../../components/BranchDropdown";
 import { renderProjectIcon } from "../../../components/projectIcons";
+import { api } from "../../../api";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../helpers/platform";
 import {
   resolveSourceBranchState,
@@ -30,6 +32,7 @@ import { useCommands } from "../../../hooks/useCommands";
 import { useDialogRegistration } from "../../../hooks/useDialogRegistration";
 import { useGitAuthorName } from "../../../hooks/useGitAuthorName";
 import { buildWorkspaceNavigationPath } from "../../../navigation/workspaceNavigation";
+import { sessionStore } from "../../../store/sessionStore";
 import { resolveGitBranchPrefix, workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 
@@ -142,6 +145,8 @@ export function CreateWorkspaceDialogView({
   const theme = useTheme();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const organizationId = sessionStore((state) => state.selectedOrganizationId);
+  const daemonId = sessionStore((state) => state.daemonId);
   const projects = workspaceStore((state) => state.projects);
   const workspaces = workspaceStore((state) => state.workspaces);
   const { createWorkspace, renameWorkspace, renameWorkspaceBranch, listGitBranches } = useCommands();
@@ -169,6 +174,11 @@ export function CreateWorkspaceDialogView({
   const hasEditedTargetBranchRef = useRef(false);
   const hasSyncedRepoIdForOpenRef = useRef(false);
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState("");
+  const [nodes, setNodes] = useState<
+    Array<{ id: string; name: string; scope: "private" | "shared"; canUse: boolean; isOnline?: boolean }>
+  >([]);
+  const [nodesError, setNodesError] = useState("");
 
   /** Clears dialog draft values so reopening starts from a clean form. */
   const resetDraftInputs = () => {
@@ -197,6 +207,55 @@ export function CreateWorkspaceDialogView({
       return projects[0]?.id ?? "";
     });
   }, [open, projectId, projects]);
+
+  useEffect(() => {
+    if (!open || isRenameMode || !organizationId) {
+      setNodes([]);
+      setNodesError("");
+      setSelectedNodeId("");
+      return;
+    }
+
+    let isCancelled = false;
+    const loadNodes = async () => {
+      try {
+        const listedNodes = await api.node.listByOrg(organizationId);
+        if (isCancelled) {
+          return;
+        }
+        setNodes(listedNodes);
+        setNodesError("");
+      } catch (error) {
+        if (isCancelled) {
+          return;
+        }
+        setNodes([]);
+        setNodesError(getErrorMessage(error));
+      }
+    };
+
+    void loadNodes();
+    return () => {
+      isCancelled = true;
+    };
+  }, [isRenameMode, open, organizationId]);
+
+  useEffect(() => {
+    if (!open || isRenameMode || !nodes || nodes.length === 0) {
+      return;
+    }
+    setSelectedNodeId((currentNodeId) => {
+      if (currentNodeId && nodes.some((node) => node.id === currentNodeId && node.canUse)) {
+        return currentNodeId;
+      }
+      const daemonNode = daemonId ? nodes.find((node) => node.id === daemonId && node.canUse) : undefined;
+      if (daemonNode) {
+        return daemonNode.id;
+      }
+      const fallbackNode = nodes.find((node) => node.canUse);
+      return fallbackNode?.id ?? "";
+    });
+  }, [daemonId, isRenameMode, nodes, open]);
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId);
   const selectedWorkspace = workspaces.find(
@@ -340,6 +399,7 @@ export function CreateWorkspaceDialogView({
         name: normalizedName,
         sourceBranch: sourceBranch.trim() || undefined,
         targetBranch: normalizedTargetBranch,
+        nodeId: selectedNodeId || undefined,
       });
       resetDraftInputs();
       onClose();
@@ -398,6 +458,7 @@ export function CreateWorkspaceDialogView({
     !isLoadingSourceBranches &&
     !isCreatingWorkspace &&
     Boolean(name.trim()) &&
+    (!organizationId || Boolean(selectedNodeId)) &&
     Boolean(sourceBranch.trim()) &&
     Boolean(targetBranch.trim());
   const hasRenameChanges =
@@ -533,7 +594,6 @@ export function CreateWorkspaceDialogView({
                 ))}
               </TextField>
             </Box>
-
             <Box sx={{ flex: 1 }}>
               <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
                 Source branch
@@ -652,6 +712,75 @@ export function CreateWorkspaceDialogView({
               />
             </Box>
           </Stack>
+
+          {!isRenameMode ? (
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+                Run on node
+              </Typography>
+              <TextField
+                select
+                size="small"
+                fullWidth
+                value={selectedNodeId}
+                onChange={(event) => setSelectedNodeId(event.target.value)}
+                sx={compactSelectSx}
+                disabled={isCreatingWorkspace || nodes.length === 0}
+                slotProps={{
+                  select: {
+                    renderValue: (value) => {
+                      const selectedValue = typeof value === "string" ? value : "";
+                      const selectedNode = nodes.find((node) => node.id === selectedValue);
+                      return (
+                        <Stack direction="row" alignItems="center" gap={1}>
+                          <Box component="span" sx={{ display: "inline-flex", color: "text.secondary" }}>
+                            {selectedNode?.scope === "shared" ? <LuCloud size={14} /> : <LuServer size={14} />}
+                          </Box>
+                          <Box
+                            component="span"
+                            sx={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: "50%",
+                              bgcolor: selectedNode?.isOnline ? "success.main" : "text.disabled",
+                            }}
+                          />
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {selectedNode?.name ?? "Select node"}
+                          </Typography>
+                        </Stack>
+                      );
+                    },
+                  },
+                }}
+              >
+                {nodes.map((node) => (
+                    <MenuItem key={node.id} value={node.id} disabled={!node.canUse}>
+                      <Stack direction="row" alignItems="center" gap={1}>
+                        <Box component="span" sx={{ display: "inline-flex", color: "text.secondary" }}>
+                          {node.scope === "shared" ? <LuCloud size={14} /> : <LuServer size={14} />}
+                        </Box>
+                        <Box
+                          component="span"
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            bgcolor: node.isOnline ? "success.main" : "text.disabled",
+                          }}
+                        />
+                        <Typography variant="body2">{node.name}</Typography>
+                      </Stack>
+                    </MenuItem>
+                  ))}
+              </TextField>
+              {nodesError ? (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5, display: "block" }}>
+                  {nodesError}
+                </Typography>
+              ) : null}
+            </Box>
+          ) : null}
 
           <Button
             size="medium"

@@ -134,6 +134,7 @@ describe("workspaceCommands", () => {
       expect(rpcMocks.createWorkspace).toHaveBeenCalledWith({
         workspaceId: createdWorkspaceId,
         organizationId: "org-1",
+        nodeId: undefined,
         projectId: "repo-1",
         repoKey: "repo-1",
         workspaceName: "feature-a",
