@@ -12,6 +12,7 @@ import (
 type CreateRequest struct {
 	ID             string `json:"id"`
 	OrganizationID string `json:"organizationId,omitempty"`
+	NodeID         string `json:"nodeId,omitempty"`
 	ProjectID      string `json:"projectId,omitempty"`
 	RepoKey        string `json:"repoKey"`
 	WorkspaceName  string `json:"workspaceName"`

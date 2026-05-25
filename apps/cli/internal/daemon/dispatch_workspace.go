@@ -56,6 +56,20 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
 	}
+	resolvedCreateRequest, err := resolveCreateRequestForNode(ctx, workspaceCreateRequestInput{
+		organizationID: req.OrganizationID,
+		projectID:      req.ProjectID,
+		localNodeID:    h.nodeID,
+		nodeID:         req.NodeID,
+		repoKey:        req.RepoKey,
+		sourcePath:     req.SourcePath,
+	})
+	if err != nil {
+		return nil, err
+	}
+	req.NodeID = resolvedCreateRequest.nodeID
+	req.SourcePath = resolvedCreateRequest.sourcePath
+
 	reportProgress := func(event workspace.CreateProgressEvent) {
 		h.events.Publish(frontendEvent{Topic: "workspaceCreateProgress", Payload: event})
 	}
@@ -86,7 +100,7 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 	remoteSyncWarning := ""
 	if err := createRemoteWorkspace(ctx, WorkspaceCreation{
 		ID:             created.ID,
-		NodeID:         h.nodeID,
+		NodeID:         req.NodeID,
 		OrganizationID: req.OrganizationID,
 		ProjectID:      req.ProjectID,
 		Kind:           workspace.KindWorktree,

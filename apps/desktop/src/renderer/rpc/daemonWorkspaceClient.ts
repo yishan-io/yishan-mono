@@ -263,6 +263,7 @@ export class DaemonWorkspaceClient {
     const createdWorkspace = (await this.invoke("workspace.create", {
       id: workspaceId,
       organizationId,
+      nodeId: readOptionalString(record?.nodeId) || undefined,
       projectId: readOptionalString(record?.projectId) || "",
       repoKey,
       workspaceName,
