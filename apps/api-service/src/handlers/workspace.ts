@@ -48,19 +48,21 @@ export async function closeWorkspaceHandler(
   body: CloseWorkspaceBodyInput
 ) {
   const actorUser = c.get("sessionUser");
-  const workspace = await c.get("services").workspace.closeWorkspace({
+  const closeResult = await c.get("services").workspace.closeWorkspace({
     workspaceId: body.workspaceId,
     actorUserId: actorUser.id,
     organizationId: params.orgId,
     projectId: params.projectId,
   });
-  await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
-    organizationId: params.orgId,
-    resource: "workspace",
-    change: "closed",
-    projectId: params.projectId,
-    workspaceId: workspace.id,
-  });
+  if (closeResult.changed) {
+    await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
+      organizationId: params.orgId,
+      resource: "workspace",
+      change: "closed",
+      projectId: params.projectId,
+      workspaceId: closeResult.workspace.id,
+    });
+  }
 
-  return c.json({ workspace });
+  return c.json({ workspace: closeResult.workspace });
 }

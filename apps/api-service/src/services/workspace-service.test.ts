@@ -1,8 +1,10 @@
 import { workspaces } from "@/db/schema";
 import {
   OrganizationMembershipRequiredError,
+  PrimaryWorkspaceCloseNotAllowedError,
   ProjectNotFoundError,
   WorkspaceBranchRequiredError,
+  WorkspaceNotFoundError,
 } from "@/errors";
 import { WorkspaceService } from "@/services/workspace-service";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -234,5 +236,135 @@ describe("WorkspaceService.listWorkspaces", () => {
     });
 
     expect(result).toEqual([]);
+  });
+});
+
+describe("WorkspaceService.closeWorkspace", () => {
+  const WORKTREE_ACTIVE_ROW = {
+    ...WORKSPACE_ROW,
+    kind: "worktree" as const,
+    status: "active" as const,
+  };
+  const WORKTREE_CLOSED_ROW = {
+    ...WORKSPACE_ROW,
+    kind: "worktree" as const,
+    status: "closed" as const,
+  };
+
+  function makeCloseDb(options: {
+    existingRows?: unknown[];
+    updatedRows?: unknown[];
+    fallbackRows?: unknown[];
+  } = {}) {
+    const { existingRows = [WORKTREE_ACTIVE_ROW], updatedRows = [WORKTREE_CLOSED_ROW], fallbackRows = [] } = options;
+
+    const limit = vi
+      .fn()
+      .mockResolvedValueOnce(existingRows)
+      .mockResolvedValueOnce(fallbackRows);
+    const whereSelect = vi.fn().mockReturnValue({ limit });
+    const from = vi.fn().mockReturnValue({ where: whereSelect });
+    const select = vi.fn().mockReturnValue({ from });
+
+    const updateReturning = vi.fn().mockResolvedValue(updatedRows);
+    const updateWhere = vi.fn().mockReturnValue({ returning: updateReturning });
+    const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
+    const update = vi.fn().mockReturnValue({ set: updateSet });
+
+    // biome-ignore lint/suspicious/noExplicitAny: mock DB for unit testing
+    const db = { select, update } as any;
+    return { db, updateWhere };
+  }
+
+  it("throws OrganizationMembershipRequiredError when actor is not a member", async () => {
+    const { db } = makeCloseDb();
+    const service = new WorkspaceService(db, makeOrgService(null), stubProvisioner);
+
+    await expect(
+      service.closeWorkspace({
+        organizationId: "org-1",
+        actorUserId: "user-1",
+        projectId: "proj-1",
+        workspaceId: "ws-1",
+      }),
+    ).rejects.toBeInstanceOf(OrganizationMembershipRequiredError);
+  });
+
+  it("throws PrimaryWorkspaceCloseNotAllowedError for primary workspace", async () => {
+    const { db } = makeCloseDb({ existingRows: [WORKSPACE_ROW] });
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    await expect(
+      service.closeWorkspace({
+        organizationId: "org-1",
+        actorUserId: "user-1",
+        projectId: "proj-1",
+        workspaceId: "ws-1",
+      }),
+    ).rejects.toBeInstanceOf(PrimaryWorkspaceCloseNotAllowedError);
+  });
+
+  it("returns changed false when workspace is already closed", async () => {
+    const { db } = makeCloseDb({ existingRows: [WORKTREE_CLOSED_ROW] });
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.closeWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+    });
+
+    expect(result.changed).toBe(false);
+    expect(result.workspace.status).toBe("closed");
+  });
+
+  it("returns changed true when active workspace is newly closed", async () => {
+    const { db, updateWhere } = makeCloseDb({ existingRows: [WORKTREE_ACTIVE_ROW], updatedRows: [WORKTREE_CLOSED_ROW] });
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.closeWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+    });
+
+    expect(result.changed).toBe(true);
+    expect(result.workspace.status).toBe("closed");
+    expect(updateWhere).toHaveBeenCalledOnce();
+  });
+
+  it("returns changed false when concurrent close already updated status", async () => {
+    const { db } = makeCloseDb({
+      existingRows: [WORKTREE_ACTIVE_ROW],
+      updatedRows: [],
+      fallbackRows: [WORKTREE_CLOSED_ROW],
+    });
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.closeWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+    });
+
+    expect(result.changed).toBe(false);
+    expect(result.workspace.status).toBe("closed");
+  });
+
+  it("throws WorkspaceNotFoundError when workspace does not exist", async () => {
+    const { db } = makeCloseDb({ existingRows: [] });
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    await expect(
+      service.closeWorkspace({
+        organizationId: "org-1",
+        actorUserId: "user-1",
+        projectId: "proj-1",
+        workspaceId: "missing",
+      }),
+    ).rejects.toBeInstanceOf(WorkspaceNotFoundError);
   });
 });

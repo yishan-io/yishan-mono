@@ -65,6 +65,11 @@ type CloseWorkspaceInput = {
   projectId: string;
 };
 
+export type CloseWorkspaceResult = {
+  workspace: WorkspaceView;
+  changed: boolean;
+};
+
 export class WorkspaceService {
   constructor(
     private readonly db: AppDb,
@@ -209,7 +214,7 @@ export class WorkspaceService {
     });
   }
 
-  async closeWorkspace(input: CloseWorkspaceInput): Promise<WorkspaceView> {
+  async closeWorkspace(input: CloseWorkspaceInput): Promise<CloseWorkspaceResult> {
     await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
 
     const existingRows = await this.db
@@ -236,6 +241,13 @@ export class WorkspaceService {
       throw new PrimaryWorkspaceCloseNotAllowedError(input.workspaceId);
     }
 
+    if (existing.status === "closed") {
+      return {
+        workspace: { ...existing, latestPullRequest: null },
+        changed: false,
+      };
+    }
+
     const rows = await this.db
       .update(workspaces)
       .set({ status: "closed", updatedAt: new Date() })
@@ -245,18 +257,43 @@ export class WorkspaceService {
           eq(workspaces.projectId, input.projectId),
           eq(workspaces.userId, input.actorUserId),
           eq(workspaces.id, input.workspaceId),
+          eq(workspaces.status, "active"),
         ),
       )
       .returning();
 
     const workspace = rows[0];
     if (!workspace) {
-      throw new WorkspaceNotFoundError({
-        workspaceId: input.workspaceId,
-        projectId: input.projectId,
-      });
+      const currentRows = await this.db
+        .select()
+        .from(workspaces)
+        .where(
+          and(
+            eq(workspaces.organizationId, input.organizationId),
+            eq(workspaces.projectId, input.projectId),
+            eq(workspaces.userId, input.actorUserId),
+            eq(workspaces.id, input.workspaceId),
+          ),
+        )
+        .limit(1);
+
+      const current = currentRows[0];
+      if (!current) {
+        throw new WorkspaceNotFoundError({
+          workspaceId: input.workspaceId,
+          projectId: input.projectId,
+        });
+      }
+
+      return {
+        workspace: { ...current, latestPullRequest: null },
+        changed: false,
+      };
     }
 
-    return { ...workspace, latestPullRequest: null };
+    return {
+      workspace: { ...workspace, latestPullRequest: null },
+      changed: true,
+    };
   }
 }
