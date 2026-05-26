@@ -1,6 +1,6 @@
 import { Box, IconButton, Tooltip } from "@mui/material";
 import { createPortal } from "react-dom";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { LuArrowUp, LuLoaderCircle, LuMic, LuX } from "react-icons/lu";
 import recordStartSound from "../../assets/record-start.mp3";
@@ -25,7 +25,12 @@ type FloatingVoiceButtonProps = {
   rightOffset?: number;
 };
 
-export function FloatingVoiceButton({ onText, disabled = false, disabledMessage, rightOffset = 0 }: FloatingVoiceButtonProps) {
+export type FloatingVoiceButtonHandle = {
+  startRecording: () => void;
+};
+
+export const FloatingVoiceButton = forwardRef<FloatingVoiceButtonHandle, FloatingVoiceButtonProps>(
+  function FloatingVoiceButton({ onText, disabled = false, disabledMessage, rightOffset = 0 }, ref) {
   const location = useLocation();
   const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
@@ -218,6 +223,8 @@ export function FloatingVoiceButton({ onText, disabled = false, disabledMessage,
     }
   }, [cleanupRecording, clearRecordedAudio, disabled, disabledMessage, stopRecording]);
 
+  useImperativeHandle(ref, () => ({ startRecording: () => { void startRecording(); } }), [startRecording]);
+
   const handleClick = () => {
     setErrorMessage(null);
     void startRecording();
@@ -353,7 +360,7 @@ export function FloatingVoiceButton({ onText, disabled = false, disabledMessage,
   }
 
   return portalHost ? createPortal(button, portalHost) : null;
-}
+});
 
 const BAR_COUNT = 12;
 const IDLE_HEIGHTS = [12, 18, 9, 22, 14, 19, 10, 16, 21, 11, 17, 13];
