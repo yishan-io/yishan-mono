@@ -85,6 +85,12 @@ export function detachWebviewPlaceholder(tabId: string, placeholder: HTMLElement
   parkWebview(tabId);
 }
 
+/** Reloads the webview for one browser tab when it is registered. */
+export function reloadWebview(tabId: string): void {
+  const webview = webviewsByTabId.get(tabId);
+  webview?.reload();
+}
+
 export function removeWebviewsForClosedTabs(openTabIds: ReadonlySet<string>): void {
   for (const tabId of webviewsByTabId.keys()) {
     if (openTabIds.has(tabId)) {

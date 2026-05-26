@@ -112,6 +112,11 @@ function HookHarness() {
 
 describe("useShortcuts", () => {
   beforeEach(() => {
+    Object.defineProperty(window, "desktop", {
+      value: { platform: "darwin", getPathForFile: vi.fn() },
+      writable: true,
+      configurable: true,
+    });
     mocks.getShortcutDefinitions.mockReset();
     mocks.getShortcutDefinitions.mockReturnValue([
       {

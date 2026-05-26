@@ -7,6 +7,10 @@ import type { TabStoreState } from "../store/tabStore";
 import type { WorkspaceStoreState } from "../store/workspaceStore";
 import { SUPPORTED_KEY_BINDINGS, type ShortContext, getShortcutDefinitions } from "./keybindings";
 
+vi.mock("../views/workspace/browser/webviewRegistry", () => ({
+  reloadWebview: vi.fn(),
+}));
+
 /** Creates a complete shortcut context with overridable test doubles. */
 function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext {
   return {
@@ -204,6 +208,13 @@ describe("SUPPORTED_KEY_BINDINGS", () => {
     expect(openFileBinding?.macKeys).toEqual(["⌘", "O"]);
     expect(openFileBinding?.windowsKeys).toEqual(["CTRL", "O"]);
   });
+
+  it("documents reload-browser-tab as mod+r", () => {
+    const reloadBinding = SUPPORTED_KEY_BINDINGS.find((binding) => binding.id === "reload-browser-tab");
+
+    expect(reloadBinding?.macKeys).toEqual(["⌘", "R"]);
+    expect(reloadBinding?.windowsKeys).toEqual(["CTRL", "R"]);
+  });
 });
 
 describe("getShortcutDefinitions", () => {
@@ -265,6 +276,46 @@ describe("getShortcutDefinitions", () => {
       url: "",
       reuseExisting: false,
     });
+  });
+
+  it("reloads the active browser tab from Cmd+R shortcut", async () => {
+    const { reloadWebview } = await import("../views/workspace/browser/webviewRegistry");
+    const reloadWebviewMock = vi.mocked(reloadWebview);
+    reloadWebviewMock.mockClear();
+
+    const runtimeDefinitions = getShortcutDefinitions();
+    const reloadBrowser = runtimeDefinitions.find((definition) => definition.id === "reload-browser-tab");
+    expect(reloadBrowser).toBeTruthy();
+
+    const context = createShortcutContext({
+      tabStoreState: {
+        ...createShortcutContext().tabStoreState,
+        selectedTabId: "tab-browser",
+        tabs: [
+          { id: "tab-browser", workspaceId: "workspace-1", title: "Browser", pinned: false, kind: "browser", data: { url: "https://example.com" } },
+        ],
+      } as TabStoreState,
+    });
+
+    reloadBrowser?.run(context, new KeyboardEvent("keydown", { key: "r", metaKey: true }));
+
+    expect(reloadWebviewMock).toHaveBeenCalledWith("tab-browser");
+  });
+
+  it("does not reload browser tab when selected tab is not a browser tab", async () => {
+    const { reloadWebview } = await import("../views/workspace/browser/webviewRegistry");
+    const reloadWebviewMock = vi.mocked(reloadWebview);
+    reloadWebviewMock.mockClear();
+
+    const runtimeDefinitions = getShortcutDefinitions();
+    const reloadBrowser = runtimeDefinitions.find((definition) => definition.id === "reload-browser-tab");
+    expect(reloadBrowser).toBeTruthy();
+
+    const context = createShortcutContext();
+
+    reloadBrowser?.run(context, new KeyboardEvent("keydown", { key: "r", metaKey: true }));
+
+    expect(reloadWebviewMock).not.toHaveBeenCalled();
   });
 
   it("opens selected file tab in latest external app from shortcut", () => {
@@ -521,7 +572,7 @@ describe("getShortcutDefinitions", () => {
     });
   });
 
-  it("does not open terminal on Cmd+T when target is regular editable textarea", () => {
+  it("opens a new terminal tab from shortcut even when focus is inside a regular editable", () => {
     const runtimeDefinitions = getShortcutDefinitions();
     const openTerminal = runtimeDefinitions.find((definition) => definition.id === "open-terminal");
     expect(openTerminal).toBeTruthy();
@@ -543,7 +594,12 @@ describe("getShortcutDefinitions", () => {
       preventDefault: vi.fn(),
     } as unknown as KeyboardEvent);
 
-    expect(openTab).not.toHaveBeenCalled();
+    expect(openTab).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      kind: "terminal",
+      title: "terminal.title",
+      reuseExisting: false,
+    });
   });
 
   it("closes selected workspace from shortcut when focus is in repo/workspace list", () => {

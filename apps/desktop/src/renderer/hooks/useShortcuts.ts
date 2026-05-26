@@ -54,8 +54,9 @@ export function useShortcuts(): void {
   );
 
   const contextRef = useRef(context);
+  const isMac = window.desktop?.platform === "darwin";
   const definitions = useMemo(() => getShortcutDefinitions(overridesById), [overridesById]);
-  const compiledDefinitions = useMemo(() => compileShortcutDefinitions(definitions), [definitions]);
+  const compiledDefinitions = useMemo(() => compileShortcutDefinitions(definitions, isMac), [definitions, isMac]);
 
   useEffect(() => {
     contextRef.current = context;

@@ -49,8 +49,24 @@ function parseKeyCombo(combo: string): ParsedShortcutCombo | null {
   };
 }
 
+/**
+ * Returns true when one parsed combo is valid for the given platform.
+ * On macOS, ctrl-only combos are excluded (they are Windows/Linux bindings).
+ * On Windows/Linux, command combos are excluded (they are macOS bindings).
+ */
+function isPlatformCombo(combo: ParsedShortcutCombo, isMac: boolean): boolean {
+  if (isMac) {
+    return !combo.ctrl || combo.command;
+  }
+
+  return !combo.command;
+}
+
 /** Compiles shortcut definitions into parsed combos for low-cost keydown matching. */
-export function compileShortcutDefinitions(definitions: readonly ShortcutDefinition[]): CompiledShortcutDefinition[] {
+export function compileShortcutDefinitions(
+  definitions: readonly ShortcutDefinition[],
+  isMac = false,
+): CompiledShortcutDefinition[] {
   return definitions.map((definition) => ({
     definition,
     combos: definition.keys
@@ -58,8 +74,25 @@ export function compileShortcutDefinitions(definitions: readonly ShortcutDefinit
       .map((combo) => combo.trim())
       .filter((combo) => combo.length > 0)
       .map(parseKeyCombo)
-      .filter((combo): combo is ParsedShortcutCombo => Boolean(combo)),
+      .filter((combo): combo is ParsedShortcutCombo => Boolean(combo))
+      .filter((combo) => isPlatformCombo(combo, isMac)),
   }));
+}
+
+/**
+ * Returns true when the current context satisfies the scope precondition for one shortcut.
+ * Scope preconditions are checked before shouldRun so individual shortcuts don't
+ * need to repeat the same baseline route/popup guards.
+ *
+ * - "global"    — no precondition; fires on any route
+ * - "workspace" — requires isWorkspaceRoute and no popup open
+ */
+function matchesScope(definition: ShortcutDefinition, context: ShortContext): boolean {
+  if (definition.scope === "workspace") {
+    return context.isWorkspaceRoute && !context.isPopupOpen;
+  }
+
+  return true;
 }
 
 /** Returns true when one keyboard event matches one parsed key binding combo. */
@@ -92,7 +125,7 @@ export function processShortcuts(
       continue;
     }
 
-    if (compiledDefinition.definition.scope === "workspace" && context.isPopupOpen) {
+    if (!matchesScope(compiledDefinition.definition, context)) {
       event.preventDefault();
       return;
     }
