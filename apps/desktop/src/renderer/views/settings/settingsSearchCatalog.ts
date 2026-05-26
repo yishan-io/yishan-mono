@@ -111,6 +111,16 @@ const TERMINAL_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   },
   {
+    id: "terminal-voice-shortcut",
+    tab: "keybindings",
+    icon: BiSolidKeyboard,
+    labelKey: "keybindings.actions.toggleVoiceInput",
+    sectionLabelKey: "settings.items.keybindings",
+    keywordKeys: [
+      "settings.terminal.voice.title",
+    ],
+  },
+  {
     id: "terminal-sessions",
     tab: "terminal",
     icon: BiTerminal,

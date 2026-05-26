@@ -1009,7 +1009,8 @@
       "openSelectedFileInExternalApp": "用最近的外部应用打开当前工作区",
       "deleteSelectedFileTreeEntry": "删除当前选中文件树条目",
       "undoFileTreeOperation": "撤销最近一次文件树操作",
-      "selectTabByIndex": "按序号切换标签"
+      "selectTabByIndex": "按序号切换标签",
+      "toggleVoiceInput": "切换语音输入"
     }
   },
   "scheduledJob": {

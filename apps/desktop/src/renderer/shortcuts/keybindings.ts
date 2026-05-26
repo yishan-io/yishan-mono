@@ -1,5 +1,6 @@
 import { ACTIONS } from "../../shared/contracts/actions";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps";
+import { layoutStore } from "../store/settings/layoutStore";
 import { normalizeKeysString } from "./customKeybindings";
 import { isEditableTarget, isWithinRepoFileTree, isWithinRepoWorkspaceList } from "./editableTarget";
 import { toSupportedKeyBinding } from "./shortcutMetadata";
@@ -444,6 +445,17 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     keys: TAB_INDEX_HOTKEYS,
     target: { command: "tabs.selectByIndex" },
     shouldRun: (context, event) => context.isWorkspaceRoute && isTabIndexKey(event.key),
+  },
+  {
+    id: "toggle-voice-input",
+    descriptionKey: "keybindings.actions.toggleVoiceInput",
+    scope: "global",
+    keys: "alt+ctrl+v,alt+command+v",
+    run: (_context, event) => {
+      event.preventDefault();
+      const current = layoutStore.getState().isVoiceInputEnabled;
+      layoutStore.getState().setIsVoiceInputEnabled(!current);
+    },
   },
 ] as const;
 

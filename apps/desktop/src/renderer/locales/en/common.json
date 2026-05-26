@@ -1042,7 +1042,8 @@
       "openSelectedFileInExternalApp": "Open selected workspace in latest external app",
       "deleteSelectedFileTreeEntry": "Delete selected file tree entry",
       "undoFileTreeOperation": "Undo last file tree operation",
-      "selectTabByIndex": "Switch to tab by index"
+      "selectTabByIndex": "Switch to tab by index",
+      "toggleVoiceInput": "Toggle voice input"
     }
   },
   "routing": {
