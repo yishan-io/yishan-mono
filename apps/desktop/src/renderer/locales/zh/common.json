@@ -98,9 +98,14 @@
       "columns": {
         "name": "节点名称",
         "type": "节点类型",
+        "kind": "来源",
         "version": "版本",
         "owner": "所有者",
         "status": "状态"
+      },
+      "kinds": {
+        "managed": "托管",
+        "external": "外部"
       },
       "types": {
         "private": "私有",
@@ -116,13 +121,19 @@
       },
       "actions": {
         "makeShared": "设为共享",
-        "makePrivate": "设为私有"
+        "makePrivate": "设为私有",
+        "unregister": "注销节点"
       },
       "scopeChangeDialog": {
         "title": "更改节点范围",
-        "toSharedDescription": "将「{{name}}」设为共享后，所有组织成员均可使用该节点。确认更改吗？",
-        "toPrivateDescription": "将「{{name}}」设为私有后，仅节点所有者可使用。当前使用该节点的工作区可能会失去访问权限。确认更改吗？",
+        "toSharedDescription": "将“{{name}}”设为共享后，组织内所有成员都可以使用该节点。确定吗？",
+        "toPrivateDescription": "将“{{name}}”设为私有后，只有节点所有者可以使用。当前使用该节点的工作区可能会失去访问权限。确定吗？",
         "confirm": "更改范围"
+      },
+      "unregisterDialog": {
+        "title": "注销节点",
+        "description": "注销“{{name}}”后，它将从当前组织移除。正在使用该节点的工作区可能会失去访问权限。确定吗？",
+        "confirm": "注销"
       }
     },
     "serviceTokens": {

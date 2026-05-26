@@ -3,6 +3,7 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export type NodeScope = "private" | "shared";
+export type NodeKind = "managed" | "external";
 export type OrganizationMemberRole = "owner" | "admin" | "member";
 export type OrganizationPlan = "free" | "pro" | "premium";
 export type ProjectSourceType = "git" | "git-local" | "unknown";
@@ -140,6 +141,7 @@ export const nodes = pgTable(
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
+    kind: text("kind").$type<NodeKind>().notNull().default("managed"),
     scope: text("scope").$type<NodeScope>().notNull(),
     endpoint: text("endpoint"),
     metadata: jsonb("metadata"),
@@ -153,6 +155,7 @@ export const nodes = pgTable(
   },
   (table) => [
     index("nodes_scope_idx").on(table.scope),
+    index("nodes_kind_idx").on(table.kind),
     index("nodes_owner_user_id_idx").on(table.ownerUserId),
     index("nodes_organization_id_idx").on(table.organizationId),
     index("nodes_created_by_user_id_idx").on(table.createdByUserId),

@@ -83,9 +83,9 @@ Notes:
 - `DELETE /orgs/:orgId` is owner-only and removes the org with cascading memberships.
 - `POST /orgs/:orgId/members` accepts `{ "userId": string, "role"?: "member" | "admin" }` and is allowed for org owners/admins.
 - `DELETE /orgs/:orgId/members/:userId` is allowed for org owners/admins, but owner members cannot be removed.
-- `POST /orgs/:orgId/nodes` accepts `{ "name": string, "scope": "local" | "remote", "endpoint"?: string, "metadata"?: { "os"?: string, "version"?: string, ... } }`.
-- Local nodes are user-owned (`organizationId = null`) even when created in org context; remote nodes are org-shared by default.
-- `GET /orgs/:orgId/nodes` returns both org remote nodes and local nodes owned by org members; listing visibility does not imply usage permission (`canUse` indicates direct usability).
+- `POST /nodes/register` accepts `{ "nodeId": string, "name": string, "kind"?: "managed" | "external", "scope": "private" | "shared", "endpoint"?: string, "metadata"?: { "os"?: string, "version"?: string, ... } }`.
+- Managed nodes are desktop-managed (`kind = "managed"`) and cannot be unregistered; external nodes (`kind = "external"`) are service-token managed and can be unregistered by permitted users.
+- `GET /orgs/:orgId/nodes` returns both shared org nodes and private nodes owned by org members; listing visibility does not imply usage permission (`canUse` indicates direct usability).
 - `POST /orgs/:orgId/projects/:projectId/workspaces` creates workspace records via API first; node provisioning is handled as a backend orchestration concern.
 - Org-scoped resources reject access when the authenticated user is not a member of that org.
 

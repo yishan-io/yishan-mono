@@ -4,6 +4,7 @@ import { signRelayToken } from "@/auth/security";
 import type { AppDb } from "@/db/client";
 import { nodes, organizationMembers } from "@/db/schema";
 import {
+  ManagedNodeUnregisterNotAllowedError,
   NodeDeletePermissionRequiredError,
   NodeNotFoundError,
   NodeScopeUpdatePermissionRequiredError,
@@ -15,10 +16,12 @@ import type { OrganizationService } from "@/services/organization-service";
 import type { ServiceConfig } from "@/types";
 
 type NodeScope = "private" | "shared";
+type NodeKind = "managed" | "external";
 
 export type NodeView = {
   id: string;
   name: string;
+  kind: NodeKind;
   scope: NodeScope;
   endpoint: string | null;
   metadata: Record<string, unknown> | null;
@@ -35,6 +38,7 @@ type RegisterNodeInput = {
   actorUserId: string;
   nodeId: string;
   name: string;
+  kind?: NodeKind;
   scope: NodeScope;
   endpoint?: string | null;
   metadata?: Record<string, unknown>;
@@ -146,7 +150,8 @@ export class NodeService {
     const connectedNodeDaemonVersions = await this.getConnectedNodeSessions();
 
     return rows.map((row) => {
-      const isOnline = connectedNodeDaemonVersions.has(row.id);
+      const isActorOwnedManagedNode = row.kind === "managed" && row.ownerUserId === input.actorUserId;
+      const isOnline = isActorOwnedManagedNode || connectedNodeDaemonVersions.has(row.id);
       const liveDaemonVersion = isOnline ? (connectedNodeDaemonVersions.get(row.id) ?? "") : "";
       const baseMetadata = this.normalizeMetadata(row.metadata) ?? {};
 
@@ -168,10 +173,12 @@ export class NodeService {
 
   async registerNode(input: RegisterNodeInput): Promise<NodeView> {
     const shouldUpdate = input.updateIfExists !== false;
+    const nodeKind: NodeKind = input.kind ?? "managed";
     const now = new Date();
     const insertValues = {
       id: input.nodeId,
       name: input.name,
+      kind: nodeKind,
       scope: input.scope,
       endpoint: input.endpoint ?? null,
       metadata: input.metadata ?? null,
@@ -191,6 +198,7 @@ export class NodeService {
           target: nodes.id,
           set: {
             name: input.name,
+            kind: nodeKind,
             scope: input.scope,
             endpoint: input.endpoint ?? null,
             metadata: input.metadata ?? null,
@@ -252,6 +260,7 @@ export class NodeService {
       const existingRows = await tx
         .select({
           id: nodes.id,
+          kind: nodes.kind,
           scope: nodes.scope,
           ownerUserId: nodes.ownerUserId,
           organizationId: nodes.organizationId,
@@ -263,6 +272,9 @@ export class NodeService {
       const node = existingRows[0];
       if (!node) {
         throw new NodeNotFoundError(input.nodeId);
+      }
+      if (node.kind === "managed") {
+        throw new ManagedNodeUnregisterNotAllowedError();
       }
 
       if (node.scope === "private") {

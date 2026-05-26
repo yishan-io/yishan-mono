@@ -194,6 +194,13 @@ export class NodeDeletePermissionRequiredError extends AppError {
   }
 }
 
+export class ManagedNodeUnregisterNotAllowedError extends AppError {
+  constructor() {
+    super("Managed nodes cannot be unregistered", StatusCodes.FORBIDDEN, "MANAGED_NODE_UNREGISTER_NOT_ALLOWED");
+    this.name = "ManagedNodeUnregisterNotAllowedError";
+  }
+}
+
 export class NodeScopeUpdatePermissionRequiredError extends AppError {
   constructor() {
     super(

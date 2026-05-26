@@ -98,9 +98,14 @@
       "columns": {
         "name": "Node Name",
         "type": "Node Type",
+        "kind": "Kind",
         "version": "Version",
         "owner": "Owner",
         "status": "Status"
+      },
+      "kinds": {
+        "managed": "Managed",
+        "external": "External"
       },
       "types": {
         "private": "Private",
@@ -116,13 +121,19 @@
       },
       "actions": {
         "makeShared": "Make shared",
-        "makePrivate": "Make private"
+        "makePrivate": "Make private",
+        "unregister": "Unregister node"
       },
       "scopeChangeDialog": {
         "title": "Change node scope",
         "toSharedDescription": "Making \"{{name}}\" shared will allow all organization members to use this node. Are you sure?",
         "toPrivateDescription": "Making \"{{name}}\" private will restrict access to the node owner only. Any workspaces currently using this node may lose access. Are you sure?",
         "confirm": "Change scope"
+      },
+      "unregisterDialog": {
+        "title": "Unregister node",
+        "description": "Unregistering \"{{name}}\" will remove it from this organization. Any workspaces using this node may lose access. Are you sure?",
+        "confirm": "Unregister"
       }
     },
     "serviceTokens": {

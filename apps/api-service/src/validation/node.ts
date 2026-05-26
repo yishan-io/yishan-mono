@@ -32,6 +32,7 @@ export const updateNodeScopeBodySchema = z.object({
 export const registerNodeBodySchema = z.object({
   nodeId: nonEmptyStringSchema,
   name: nonEmptyStringSchema,
+  kind: z.enum(["managed", "external"]).optional().default("managed"),
   scope: z.enum(["private", "shared"]),
   endpoint: nonEmptyStringSchema.optional(),
   metadata: nodeMetadataSchema.optional(),

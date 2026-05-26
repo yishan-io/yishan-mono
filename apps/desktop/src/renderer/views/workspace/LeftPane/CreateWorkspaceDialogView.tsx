@@ -245,14 +245,14 @@ export function CreateWorkspaceDialogView({
       return;
     }
     setSelectedNodeId((currentNodeId) => {
-      if (currentNodeId && nodes.some((node) => node.id === currentNodeId && node.canUse)) {
+      if (currentNodeId && nodes.some((node) => node.id === currentNodeId && node.canUse && node.isOnline)) {
         return currentNodeId;
       }
-      const daemonNode = daemonId ? nodes.find((node) => node.id === daemonId && node.canUse) : undefined;
+      const daemonNode = daemonId ? nodes.find((node) => node.id === daemonId && node.canUse && node.isOnline) : undefined;
       if (daemonNode) {
         return daemonNode.id;
       }
-      const fallbackNode = nodes.find((node) => node.canUse);
+      const fallbackNode = nodes.find((node) => node.canUse && node.isOnline);
       return fallbackNode?.id ?? "";
     });
   }, [daemonId, isRenameMode, nodes, open]);
@@ -755,7 +755,7 @@ export function CreateWorkspaceDialogView({
                 }}
               >
                 {nodes.map((node) => (
-                    <MenuItem key={node.id} value={node.id} disabled={!node.canUse}>
+                    <MenuItem key={node.id} value={node.id} disabled={!node.canUse || !node.isOnline}>
                       <Stack direction="row" alignItems="center" gap={1}>
                         <Box component="span" sx={{ display: "inline-flex", color: "text.secondary" }}>
                           {node.scope === "shared" ? <LuCloud size={14} /> : <LuServer size={14} />}

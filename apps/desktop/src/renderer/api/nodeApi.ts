@@ -19,3 +19,10 @@ export async function updateOrganizationNodeScope(
   });
   return response.node;
 }
+
+/** Unregisters one node from one organization. */
+export async function unregisterOrganizationNode(orgId: string, nodeId: string): Promise<void> {
+  await requestJson(`/orgs/${orgId}/nodes/${nodeId}`, {
+    method: "DELETE",
+  });
+}
