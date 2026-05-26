@@ -483,6 +483,10 @@
         "enable": {
           "label": "启用语音输入",
           "description": "启用后，终端标签页会显示麦克风按钮，可录制最多 60 秒语音。"
+        },
+        "autoEnter": {
+          "label": "转写后自动提交",
+          "description": "转写文本插入终端后自动按下回车键。"
         }
       },
       "title": "终端会话",
@@ -1005,7 +1009,8 @@
       "openSelectedFileInExternalApp": "用最近的外部应用打开当前工作区",
       "deleteSelectedFileTreeEntry": "删除当前选中文件树条目",
       "undoFileTreeOperation": "撤销最近一次文件树操作",
-      "selectTabByIndex": "按序号切换标签"
+      "selectTabByIndex": "按序号切换标签",
+      "toggleVoiceInput": "开始语音录制"
     }
   },
   "scheduledJob": {

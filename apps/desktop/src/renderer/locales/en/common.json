@@ -516,6 +516,10 @@
         "enable": {
           "label": "Enable voice input",
           "description": "When enabled, terminal tabs show a microphone button for recording up to 60 seconds of speech."
+        },
+        "autoEnter": {
+          "label": "Auto-submit after transcription",
+          "description": "Automatically press Enter after transcribed text is inserted into the terminal."
         }
       },
       "title": "Terminal sessions",
@@ -1038,7 +1042,8 @@
       "openSelectedFileInExternalApp": "Open selected workspace in latest external app",
       "deleteSelectedFileTreeEntry": "Delete selected file tree entry",
       "undoFileTreeOperation": "Undo last file tree operation",
-      "selectTabByIndex": "Switch to tab by index"
+      "selectTabByIndex": "Switch to tab by index",
+      "toggleVoiceInput": "Start voice recording"
     }
   },
   "routing": {

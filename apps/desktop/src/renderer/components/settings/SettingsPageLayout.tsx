@@ -55,9 +55,9 @@ export function SettingsPageLayout({
           borderRight: 1,
           borderColor: "divider",
           bgcolor: "background.paper",
-          px: 1.25,
-          py: 1.5,
-          overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
         }}
       >
         {sidebar}

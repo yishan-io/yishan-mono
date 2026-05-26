@@ -195,37 +195,42 @@ export function SettingsView() {
     <SettingsPageLayout
       sidebar={
         <>
-          <Box
-            className="electron-webkit-app-region-drag"
-            sx={{ px: 1, mb: 0.5, display: "flex", alignItems: "center" }}
-          >
-            {shouldReserveMacWindowControlsInset ? <Box sx={{ width: 72, flexShrink: 0 }} /> : null}
-            <Box sx={{ flex: 1 }} />
-            <Tooltip title={t("settings.back")} arrow>
-              <IconButton
-                className="electron-webkit-app-region-no-drag"
-                size="small"
-                onClick={() => navigate("/")}
-                data-testid="settings-back-button"
-                aria-label={t("settings.back")}
-                sx={{ transform: "rotate(180deg)" }}
-              >
-                <RxExit size={16} />
-              </IconButton>
-            </Tooltip>
+          {/* ── Fixed header: window controls + title + search ── */}
+          <Box sx={{ px: 1.25, pt: 1.5, pb: 0, flexShrink: 0 }}>
+            <Box
+              className="electron-webkit-app-region-drag"
+              sx={{ px: 0, mb: 0.5, display: "flex", alignItems: "center" }}
+            >
+              {shouldReserveMacWindowControlsInset ? <Box sx={{ width: 72, flexShrink: 0 }} /> : null}
+              <Box sx={{ flex: 1 }} />
+              <Tooltip title={t("settings.back")} arrow>
+                <IconButton
+                  className="electron-webkit-app-region-no-drag"
+                  size="small"
+                  onClick={() => navigate("/")}
+                  data-testid="settings-back-button"
+                  aria-label={t("settings.back")}
+                  sx={{ transform: "rotate(180deg)" }}
+                >
+                  <RxExit size={16} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            <Typography variant="body2" sx={{ px: 1, mb: 1.25, fontWeight: 700 }}>
+              {t("settings.title")}
+            </Typography>
+
+            <SearchInput
+              placeholder={t("settings.searchPlaceholder")}
+              value={searchQuery}
+              onChange={(value) => {
+                setSearchQuery(value);
+              }}
+            />
           </Box>
-          <Typography variant="body2" sx={{ px: 1, mb: 1.25, fontWeight: 700 }}>
-            {t("settings.title")}
-          </Typography>
 
-          <SearchInput
-            placeholder={t("settings.searchPlaceholder")}
-            value={searchQuery}
-            onChange={(value) => {
-              setSearchQuery(value);
-            }}
-          />
-
+          {/* ── Scrollable nav list below search ── */}
+          <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 1.25, pb: 1.5 }}>
           {normalizedSearchQuery ? (
             <Box sx={{ mt: 1.5 }}>
               <List disablePadding>
@@ -304,6 +309,7 @@ export function SettingsView() {
               ))}
             </Stack>
           )}
+          </Box>
         </>
       }
     >

@@ -445,6 +445,16 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     target: { command: "tabs.selectByIndex" },
     shouldRun: (context, event) => context.isWorkspaceRoute && isTabIndexKey(event.key),
   },
+  {
+    id: "toggle-voice-input",
+    descriptionKey: "keybindings.actions.toggleVoiceInput",
+    scope: "workspace",
+    keys: "ctrl+shift+v,command+shift+v",
+    run: (_context, event) => {
+      event.preventDefault();
+    },
+    shouldRun: (context) => context.isWorkspaceRoute,
+  },
 ] as const;
 
 function resolveShortcutKeys(shortcutId: string, defaultKeys: string, overrides: ShortcutOverrideMap = {}): string {

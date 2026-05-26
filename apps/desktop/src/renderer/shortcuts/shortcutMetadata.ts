@@ -1,7 +1,7 @@
 import type { ShortcutCatalogItem, SupportedKeyBinding } from "./types";
 
 /** Converts one hotkeys-js token to a UI-facing key label. */
-function toDisplayKeyToken(token: string): string {
+function toDisplayKeyToken(token: string, platform: "mac" | "windows"): string {
   if (token === "command") {
     return "⌘";
   }
@@ -12,7 +12,7 @@ function toDisplayKeyToken(token: string): string {
     return "⇧";
   }
   if (token === "alt") {
-    return "ALT";
+    return platform === "mac" ? "⌥" : "ALT";
   }
   if (token === "delete" || token === "backspace") {
     return "DELETE/BACKSPACE";
@@ -47,7 +47,7 @@ function parseHotkeyCombo(combo: string): { modifiers: readonly string[]; key: s
  * Builds one display key sequence from platform-specific combo list.
  * Supports compact ranges for 1-9 and Delete/Backspace variants.
  */
-function buildDisplayKeysForPlatformCombos(combos: readonly string[]): readonly string[] {
+function buildDisplayKeysForPlatformCombos(combos: readonly string[], platform: "mac" | "windows"): readonly string[] {
   const parsedCombos = combos.map(parseHotkeyCombo).filter((combo) => combo.key.length > 0);
   if (parsedCombos.length === 0) {
     return [];
@@ -62,7 +62,7 @@ function buildDisplayKeysForPlatformCombos(combos: readonly string[]): readonly 
   const keySet = new Set(parsedCombos.map((combo) => combo.key));
 
   if (hasSameModifiers && keySet.has("delete") && keySet.has("backspace") && keySet.size === 2) {
-    return [...firstCombo.modifiers.map(toDisplayKeyToken), "DELETE/BACKSPACE"];
+    return [...firstCombo.modifiers.map((t) => toDisplayKeyToken(t, platform)), "DELETE/BACKSPACE"];
   }
 
   const numericKeys = parsedCombos.map((combo) => Number.parseInt(combo.key, 10));
@@ -72,10 +72,10 @@ function buildDisplayKeysForPlatformCombos(combos: readonly string[]): readonly 
     numericKeys.every((value, index) => value === index + 1) &&
     keySet.size === 9;
   if (hasNumericRange) {
-    return [...firstCombo.modifiers.map(toDisplayKeyToken), "1-9"];
+    return [...firstCombo.modifiers.map((t) => toDisplayKeyToken(t, platform)), "1-9"];
   }
 
-  return [...firstCombo.modifiers.map(toDisplayKeyToken), toDisplayKeyToken(firstCombo.key)];
+  return [...firstCombo.modifiers.map((t) => toDisplayKeyToken(t, platform)), toDisplayKeyToken(firstCombo.key, platform)];
 }
 
 /** Derives per-platform display keys from one hotkeys-js key string. */
@@ -96,8 +96,8 @@ function derivePlatformDisplayKeys(keys: string): {
   const resolvedWindowsCombos = windowsCombos.length > 0 ? windowsCombos : sharedCombos;
 
   return {
-    macKeys: buildDisplayKeysForPlatformCombos(resolvedMacCombos),
-    windowsKeys: buildDisplayKeysForPlatformCombos(resolvedWindowsCombos),
+    macKeys: buildDisplayKeysForPlatformCombos(resolvedMacCombos, "mac"),
+    windowsKeys: buildDisplayKeysForPlatformCombos(resolvedWindowsCombos, "windows"),
   };
 }
 

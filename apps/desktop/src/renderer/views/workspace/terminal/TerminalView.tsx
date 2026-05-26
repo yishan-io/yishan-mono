@@ -3,9 +3,11 @@ import type { SearchAddon } from "@xterm/addon-search";
 import type { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { memo, useCallback, useEffect, useRef } from "react";
-import { FloatingVoiceButton } from "../../../components/FloatingVoiceButton";
+import { FloatingVoiceButton, type FloatingVoiceButtonHandle } from "../../../components/FloatingVoiceButton";
 import { writeTerminalInput } from "../../../commands/terminalCommands";
 import { layoutStore } from "../../../store/settings/layoutStore";
+import { keybindingSettingsStore } from "../../../store/settings/keybindingSettingsStore";
+import { getShortcutKeysById } from "../../../shortcuts/keybindings";
 import { useWorkspacePaneVisibilityContext } from "../../../hooks/useWorkspacePaneVisibility";
 import { useTerminalSearchState } from "./useTerminalSearchState";
 import { TerminalSearchPanel } from "./TerminalSearchPanel";
@@ -35,11 +37,13 @@ type TerminalViewProps = {
  */
 export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey = 0, showVoiceButton = false }: TerminalViewProps) {
   const isVoiceInputEnabled = layoutStore((state) => state.isVoiceInputEnabled);
+  const voiceAutoEnter = layoutStore((state) => state.voiceAutoEnter);
   const rightWidth = layoutStore((state) => state.rightWidth);
   const { rightCollapsed } = useWorkspacePaneVisibilityContext();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const voiceButtonRef = useRef<FloatingVoiceButtonHandle | null>(null);
 
   // Stable refs that point into the registry entry — these survive remount.
   const xtermRef = useRef<Terminal | null>(null);
@@ -60,8 +64,45 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
       throw new Error("Terminal session is not ready yet.");
     }
 
-    await writeTerminalInput({ sessionId, data: text });
-  }, [tabId]);
+    const dataToWrite = voiceAutoEnter ? `${text}\r` : text;
+    await writeTerminalInput({ sessionId, data: dataToWrite });
+  }, [tabId, voiceAutoEnter]);
+
+  // ─── Voice shortcut ──────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!isVoiceInputEnabled || !showVoiceButton) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const overrides = keybindingSettingsStore.getState().overridesById;
+      const keys = getShortcutKeysById("toggle-voice-input", overrides) ?? "ctrl+shift+v,command+shift+v";
+      const combos = keys.split(",").map((c) => c.trim().toLowerCase());
+      const eventCombo = [
+        event.altKey && "alt",
+        event.ctrlKey && "ctrl",
+        event.metaKey && "command",
+        event.shiftKey && "shift",
+        event.key.toLowerCase(),
+      ]
+        .filter(Boolean)
+        .join("+");
+
+      if (!combos.includes(eventCombo)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      voiceButtonRef.current?.startRecording();
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [isVoiceInputEnabled, showVoiceButton]);
 
   // ─── Attach/Detach Lifecycle ────────────────────────────────────────────────
 
@@ -186,7 +227,7 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
         }}
       />
       {isVoiceInputEnabled && showVoiceButton ? (
-        <FloatingVoiceButton onText={handleVoiceText} rightOffset={rightCollapsed ? 0 : rightWidth} />
+        <FloatingVoiceButton ref={voiceButtonRef} onText={handleVoiceText} rightOffset={rightCollapsed ? 0 : rightWidth} />
       ) : null}
     </Box>
   );

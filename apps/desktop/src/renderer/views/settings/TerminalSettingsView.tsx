@@ -84,6 +84,8 @@ export function TerminalSettingsView() {
   const { closeTerminalSession, listTerminalSessions, subscribeTerminalSessions } = useCommands();
   const isVoiceInputEnabled = layoutStore((state) => state.isVoiceInputEnabled);
   const setIsVoiceInputEnabled = layoutStore((state) => state.setIsVoiceInputEnabled);
+  const voiceAutoEnter = layoutStore((state) => state.voiceAutoEnter);
+  const setVoiceAutoEnter = layoutStore((state) => state.setVoiceAutoEnter);
   const projects = workspaceStore((state) => state.projects);
   const workspaces = workspaceStore((state) => state.workspaces);
   const [isLoading, setIsLoading] = useState(true);
@@ -214,6 +216,12 @@ export function TerminalSettingsView() {
               description={t("settings.terminal.voice.enable.description")}
               checked={isVoiceInputEnabled}
               onChange={setIsVoiceInputEnabled}
+            />
+            <SettingsToggleRow
+              title={t("settings.terminal.voice.autoEnter.label")}
+              description={t("settings.terminal.voice.autoEnter.description")}
+              checked={voiceAutoEnter}
+              onChange={setVoiceAutoEnter}
             />
           </SettingsRows>
         </SettingsCard>
