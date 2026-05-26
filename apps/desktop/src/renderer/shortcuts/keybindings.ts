@@ -291,9 +291,7 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+y,command+y",
     target: { command: "tabs.create" },
-    shouldRun: (context) =>
-      context.isWorkspaceRoute &&
-      Boolean(context.workspaceStoreState.selectedWorkspaceId),
+    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
   },
   {
     id: "close-tab",
@@ -302,7 +300,7 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     keys: "ctrl+w,command+w",
     target: { command: "tabs.closeSelected" },
     shouldRun: (context, event) => {
-      if (!context.isWorkspaceRoute || !context.tabStoreState.selectedTabId) {
+      if (!context.tabStoreState.selectedTabId) {
         return false;
       }
 
@@ -320,7 +318,6 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     keys: "ctrl+shift+w,command+shift+w",
     target: { command: "workspace.closeSelected" },
     shouldRun: (context, event) =>
-      context.isWorkspaceRoute &&
       Boolean(context.workspaceStoreState.selectedWorkspaceId) &&
       !isEditableTarget(event.target) &&
       isWithinRepoWorkspaceList(event.target),
@@ -331,7 +328,6 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+n,command+n",
     target: { command: "workspace.openCreateWorkspaceDialog" },
-    shouldRun: (context) => context.isWorkspaceRoute,
   },
   {
     id: "open-terminal",
@@ -339,8 +335,7 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+t,command+t",
     target: { command: "tabs.openTerminal" },
-    shouldRun: (context) =>
-      context.isWorkspaceRoute && Boolean(context.workspaceStoreState.selectedWorkspaceId),
+    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
   },
   {
     id: "open-browser",
@@ -348,8 +343,7 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+shift+b,command+shift+b",
     target: { command: "tabs.openBrowser" },
-    shouldRun: (context) =>
-      context.isWorkspaceRoute && Boolean(context.workspaceStoreState.selectedWorkspaceId),
+    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
   },
   {
     id: "reload-browser-tab",
@@ -358,9 +352,6 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     keys: "ctrl+r,command+r",
     target: { command: "browser.reload" },
     shouldRun: (context) => {
-      if (!context.isWorkspaceRoute) {
-        return false;
-      }
       const selectedTabId = context.tabStoreState.selectedTabId;
       return context.tabStoreState.tabs.some((tab) => tab.id === selectedTabId && tab.kind === "browser");
     },
@@ -371,7 +362,6 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+shift+r,command+shift+r",
     target: { command: "workspace.activatePane", payload: { pane: "repo" } },
-    shouldRun: (context) => context.isWorkspaceRoute,
   },
   {
     id: "activate-files-pane",
@@ -379,7 +369,6 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+shift+f,command+shift+f",
     target: { command: "workspace.focusFileTree" },
-    shouldRun: (context) => context.isWorkspaceRoute,
   },
   {
     id: "activate-changes-pane",
@@ -387,7 +376,6 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+shift+g,command+shift+g",
     target: { command: "workspace.activatePane", payload: { pane: "changes" } },
-    shouldRun: (context) => context.isWorkspaceRoute,
   },
   {
     id: "toggle-left-pane",
@@ -395,7 +383,6 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+b,command+b",
     target: { command: "workspace.toggleLeftPane" },
-    shouldRun: (context) => context.isWorkspaceRoute,
   },
   {
     id: "toggle-right-pane",
@@ -403,7 +390,6 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+l,command+l",
     target: { command: "workspace.toggleRightPane" },
-    shouldRun: (context) => context.isWorkspaceRoute,
   },
   {
     id: "open-file-search",
@@ -411,7 +397,7 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+p,command+p",
     target: { command: "workspace.openFileSearch" },
-    shouldRun: (context) => context.isWorkspaceRoute && Boolean(context.workspaceStoreState.selectedWorkspaceId),
+    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
   },
   {
     id: ACTIONS.WORKSPACE_OPEN_SELECTED_IN_EXTERNAL_APP,
@@ -419,7 +405,7 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+o,command+o",
     target: { command: "workspace.openSelectedWorkspaceInExternalApp" },
-    shouldRun: (context) => context.isWorkspaceRoute && Boolean(context.workspaceStoreState.selectedWorkspaceId),
+    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
   },
   {
     id: ACTIONS.FILE_DELETE,
@@ -428,7 +414,6 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     keys: "ctrl+backspace,ctrl+delete,command+backspace,command+delete",
     target: { command: ACTIONS.FILE_DELETE },
     shouldRun: (context, event) =>
-      context.isWorkspaceRoute &&
       Boolean(context.workspaceStoreState.selectedWorkspaceId) &&
       shouldRunFileTreeShortcut(event),
   },
@@ -439,7 +424,6 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     keys: "ctrl+z,command+z",
     target: { command: ACTIONS.FILE_UNDO },
     shouldRun: (context, event) =>
-      context.isWorkspaceRoute &&
       Boolean(context.workspaceStoreState.selectedWorkspaceId) &&
       !event.shiftKey &&
       shouldRunFileTreeShortcut(event),
@@ -450,7 +434,7 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: TAB_INDEX_HOTKEYS,
     target: { command: "tabs.selectByIndex" },
-    shouldRun: (context, event) => context.isWorkspaceRoute && isTabIndexKey(event.key),
+    shouldRun: (_context, event) => isTabIndexKey(event.key),
   },
   {
     id: "toggle-voice-input",
@@ -460,7 +444,6 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     run: (_context, event) => {
       event.preventDefault();
     },
-    shouldRun: (context) => context.isWorkspaceRoute,
   },
 ] as const;
 

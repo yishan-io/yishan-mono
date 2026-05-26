@@ -79,6 +79,22 @@ export function compileShortcutDefinitions(
   }));
 }
 
+/**
+ * Returns true when the current context satisfies the scope precondition for one shortcut.
+ * Scope preconditions are checked before shouldRun so individual shortcuts don't
+ * need to repeat the same baseline route/popup guards.
+ *
+ * - "global"    — no precondition; fires on any route
+ * - "workspace" — requires isWorkspaceRoute and no popup open
+ */
+function matchesScope(definition: ShortcutDefinition, context: ShortContext): boolean {
+  if (definition.scope === "workspace") {
+    return context.isWorkspaceRoute && !context.isPopupOpen;
+  }
+
+  return true;
+}
+
 /** Returns true when one keyboard event matches one parsed key binding combo. */
 function matchKeyBinding(event: KeyboardEvent, combo: ParsedShortcutCombo): boolean {
   const normalizedEventKey = normalizeShortcutKeyToken(event.key);
@@ -109,7 +125,7 @@ export function processShortcuts(
       continue;
     }
 
-    if (compiledDefinition.definition.scope === "workspace" && context.isPopupOpen) {
+    if (!matchesScope(compiledDefinition.definition, context)) {
       event.preventDefault();
       return;
     }
