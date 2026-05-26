@@ -450,7 +450,7 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     id: "toggle-voice-input",
     descriptionKey: "keybindings.actions.toggleVoiceInput",
     scope: "global",
-    keys: "alt+ctrl+v,alt+command+v",
+    keys: "ctrl+shift+v,command+shift+v",
     run: (_context, event) => {
       event.preventDefault();
       const current = layoutStore.getState().isVoiceInputEnabled;

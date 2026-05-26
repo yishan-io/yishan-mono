@@ -77,7 +77,7 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const overrides = keybindingSettingsStore.getState().overridesById;
-      const keys = getShortcutKeysById("toggle-voice-input", overrides) ?? "alt+ctrl+v,alt+command+v";
+      const keys = getShortcutKeysById("toggle-voice-input", overrides) ?? "ctrl+shift+v,command+shift+v";
       const combos = keys.split(",").map((c) => c.trim().toLowerCase());
       const eventCombo = [
         event.altKey && "alt",
