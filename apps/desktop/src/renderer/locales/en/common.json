@@ -1043,7 +1043,7 @@
       "deleteSelectedFileTreeEntry": "Delete selected file tree entry",
       "undoFileTreeOperation": "Undo last file tree operation",
       "selectTabByIndex": "Switch to tab by index",
-      "toggleVoiceInput": "Start voice input (or toggle when outside terminal)"
+      "toggleVoiceInput": "Start voice recording"
     }
   },
   "routing": {

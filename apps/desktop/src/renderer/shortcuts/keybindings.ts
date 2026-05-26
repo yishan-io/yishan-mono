@@ -1,6 +1,5 @@
 import { ACTIONS } from "../../shared/contracts/actions";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps";
-import { layoutStore } from "../store/settings/layoutStore";
 import { normalizeKeysString } from "./customKeybindings";
 import { isEditableTarget, isWithinRepoFileTree, isWithinRepoWorkspaceList } from "./editableTarget";
 import { toSupportedKeyBinding } from "./shortcutMetadata";
@@ -449,13 +448,12 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
   {
     id: "toggle-voice-input",
     descriptionKey: "keybindings.actions.toggleVoiceInput",
-    scope: "global",
+    scope: "workspace",
     keys: "ctrl+shift+v,command+shift+v",
     run: (_context, event) => {
       event.preventDefault();
-      const current = layoutStore.getState().isVoiceInputEnabled;
-      layoutStore.getState().setIsVoiceInputEnabled(!current);
     },
+    shouldRun: (context) => context.isWorkspaceRoute,
   },
 ] as const;
 

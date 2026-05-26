@@ -1010,7 +1010,7 @@
       "deleteSelectedFileTreeEntry": "删除当前选中文件树条目",
       "undoFileTreeOperation": "撤销最近一次文件树操作",
       "selectTabByIndex": "按序号切换标签",
-      "toggleVoiceInput": "启动语音输入（在终端外则切换开关）"
+      "toggleVoiceInput": "开始语音录制"
     }
   },
   "scheduledJob": {
