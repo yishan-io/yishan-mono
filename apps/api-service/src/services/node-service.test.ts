@@ -1,5 +1,6 @@
 import { nodes } from "@/db/schema";
 import {
+  ManagedNodeUnregisterNotAllowedError,
   NodeDeletePermissionRequiredError,
   NodeScopeUpdatePermissionRequiredError,
   OrganizationMembershipRequiredError,
@@ -11,6 +12,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const defaultRow = {
   id: "node-1",
   name: "my-host",
+  kind: "managed" as const,
   scope: "private" as const,
   endpoint: null,
   metadata: null,
@@ -86,6 +88,7 @@ describe("NodeService", () => {
         expect.objectContaining({
           id: "node-1",
           name: "my-host",
+          kind: "managed",
           scope: "private",
           ownerUserId: "user-1",
           organizationId: null,
@@ -97,6 +100,7 @@ describe("NodeService", () => {
           target: nodes.id,
           set: expect.objectContaining({
             name: "my-host",
+            kind: "managed",
             scope: "private",
             ownerUserId: "user-1",
             organizationId: null,
@@ -293,6 +297,7 @@ describe("NodeService.deleteNode", () => {
   /** Build a mock transaction that supports the full deleteNode query chain. */
   function createDeleteMock(options: {
     actorRole?: string | null;
+    nodeKind?: "managed" | "external";
     nodeScope?: "private" | "shared";
     nodeOwner?: string | null;
     nodeOrgId?: string | null;
@@ -300,6 +305,7 @@ describe("NodeService.deleteNode", () => {
   }) {
     const {
       actorRole = "member",
+      nodeKind = "external",
       nodeScope = "private",
       nodeOwner = "user-1",
       nodeOrgId = null,
@@ -321,6 +327,7 @@ describe("NodeService.deleteNode", () => {
         return Promise.resolve([
           {
             id: "node-1",
+            kind: nodeKind,
             scope: nodeScope,
             ownerUserId: nodeOwner,
             organizationId: nodeOrgId,
@@ -350,6 +357,7 @@ describe("NodeService.deleteNode", () => {
   it("deletes a private node owned by the actor", async () => {
     const { mockDb, mockTx, mockDeleteWhere } = createDeleteMock({
       actorRole: "member",
+      nodeKind: "external",
       nodeScope: "private",
       nodeOwner: "user-1",
     });
@@ -375,6 +383,7 @@ describe("NodeService.deleteNode", () => {
   it("throws NodeDeletePermissionRequiredError when actor does not own the private node", async () => {
     const { mockDb } = createDeleteMock({
       actorRole: "member",
+      nodeKind: "external",
       nodeScope: "private",
       nodeOwner: "user-99",  // different owner
     });
@@ -389,6 +398,7 @@ describe("NodeService.deleteNode", () => {
   it("throws OrganizationNodePermissionRequiredError when actor is a plain member trying to delete a shared node", async () => {
     const { mockDb } = createDeleteMock({
       actorRole: "member",
+      nodeKind: "external",
       nodeScope: "shared",
       nodeOwner: null,
       nodeOrgId: "org-1",
@@ -404,6 +414,7 @@ describe("NodeService.deleteNode", () => {
   it("allows an admin to delete a shared node", async () => {
     const { mockDb, mockTx } = createDeleteMock({
       actorRole: "admin",
+      nodeKind: "external",
       nodeScope: "shared",
       nodeOwner: null,
       nodeOrgId: "org-1",
@@ -414,6 +425,22 @@ describe("NodeService.deleteNode", () => {
     await service.deleteNode({ organizationId: "org-1", nodeId: "node-1", actorUserId: "user-1" });
 
     expect(mockTx.delete).toHaveBeenCalled();
+  });
+
+  it("throws ManagedNodeUnregisterNotAllowedError when trying to delete a managed node", async () => {
+    const { mockDb } = createDeleteMock({
+      actorRole: "admin",
+      nodeKind: "managed",
+      nodeScope: "shared",
+      nodeOwner: null,
+      nodeOrgId: "org-1",
+    });
+    // biome-ignore lint/suspicious/noExplicitAny: stub
+    const service = new NodeService(mockDb, {} as any, {} as any);
+
+    await expect(
+      service.deleteNode({ organizationId: "org-1", nodeId: "node-1", actorUserId: "user-1" }),
+    ).rejects.toBeInstanceOf(ManagedNodeUnregisterNotAllowedError);
   });
 });
 
@@ -535,4 +562,3 @@ describe("NodeService.updateNodeScope", () => {
     ).rejects.toBeInstanceOf(OrganizationMembershipRequiredError);
   });
 });
-

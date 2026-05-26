@@ -170,6 +170,7 @@ func registerLocalNodeAfterLogin() error {
 	_, err = client.RegisterNode(api.RegisterNodeInput{
 		NodeID: daemonID,
 		Name:   hostname,
+		Kind:   "managed",
 		Scope:  "private",
 		Metadata: map[string]any{
 			"os":      runtime.GOOS,

@@ -124,6 +124,7 @@ func registerRemoteNode(registration NodeRegistration) error {
 	_, err = cliruntime.APIClient().RegisterNode(api.RegisterNodeInput{
 		NodeID:   registration.ID,
 		Name:     hostname,
+		Kind:     "managed",
 		Scope:    "private",
 		Endpoint: registration.Endpoint,
 		Metadata: map[string]any{

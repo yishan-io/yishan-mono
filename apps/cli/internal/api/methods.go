@@ -16,6 +16,7 @@ type CreateProjectInput struct {
 type RegisterNodeInput struct {
 	NodeID         string
 	Name           string
+	Kind           string
 	Endpoint       string
 	Metadata       map[string]any
 	Scope          string
@@ -108,6 +109,9 @@ func (c *Client) RegisterNode(input RegisterNodeInput) (RegisterNodeResponse, er
 		"nodeId": input.NodeID,
 		"name":   input.Name,
 		"scope":  input.Scope,
+	}
+	if input.Kind != "" {
+		payload["kind"] = input.Kind
 	}
 	if input.Endpoint != "" {
 		payload["endpoint"] = input.Endpoint

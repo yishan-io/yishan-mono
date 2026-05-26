@@ -110,6 +110,7 @@ export type ProjectWithWorkspacesRecord = ProjectRecord & {
 export type NodeRecord = {
   id: string;
   name: string;
+  kind: "managed" | "external";
   scope: "private" | "shared";
   endpoint: string | null;
   metadata: Record<string, unknown> | null;

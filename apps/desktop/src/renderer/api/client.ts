@@ -1,4 +1,4 @@
-import { listOrganizationNodes, updateOrganizationNodeScope } from "./nodeApi";
+import { listOrganizationNodes, unregisterOrganizationNode, updateOrganizationNodeScope } from "./nodeApi";
 import {
   addOrganizationMember,
   cancelOrganizationInvite,
@@ -39,6 +39,7 @@ export const api = {
   node: {
     listByOrg: listOrganizationNodes,
     updateScope: updateOrganizationNodeScope,
+    unregister: unregisterOrganizationNode,
   },
   project: {
     listByOrg: listProjects,

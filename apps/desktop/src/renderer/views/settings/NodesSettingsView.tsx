@@ -12,13 +12,14 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuArrowLeftRight } from "react-icons/lu";
+import { LuArrowLeftRight, LuTrash2 } from "react-icons/lu";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 import { StatusIndicator } from "../../components/StatusIndicator";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
 import { api } from "../../api/client";
 import type { NodeRecord, OrganizationMemberRecord } from "../../api/types";
+import { unregisterNode, updateNodeScope } from "../../commands/nodeCommands";
 import { sessionStore } from "../../store/sessionStore";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 
@@ -44,6 +45,10 @@ function resolveNodeTypeLabel(node: NodeRecord, privateLabel: string, sharedLabe
   return node.scope === "shared" ? sharedLabel : privateLabel;
 }
 
+function resolveNodeKindLabel(node: NodeRecord, managedLabel: string, externalLabel: string): string {
+  return node.kind === "external" ? externalLabel : managedLabel;
+}
+
 type ScopeChangeTarget = {
   node: NodeRecord;
   newScope: "private" | "shared";
@@ -61,6 +66,9 @@ export function NodesSettingsView() {
   const [scopeChangeTarget, setScopeChangeTarget] = useState<ScopeChangeTarget | null>(null);
   const [isScopeChanging, setIsScopeChanging] = useState(false);
   const [scopeChangeError, setScopeChangeError] = useState<string | null>(null);
+  const [unregisterTarget, setUnregisterTarget] = useState<NodeRecord | null>(null);
+  const [isUnregistering, setIsUnregistering] = useState(false);
+  const [unregisterError, setUnregisterError] = useState<string | null>(null);
 
   const organizationId = selectedOrganizationId ?? organizations[0]?.id;
 
@@ -140,7 +148,7 @@ export function NodesSettingsView() {
     setScopeChangeError(null);
 
     try {
-      const updated = await api.node.updateScope(organizationId, scopeChangeTarget.node.id, scopeChangeTarget.newScope);
+      const updated = await updateNodeScope(scopeChangeTarget.node.id, scopeChangeTarget.newScope);
       setNodes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
       setScopeChangeTarget(null);
     } catch (error) {
@@ -156,6 +164,45 @@ export function NodesSettingsView() {
     }
     setScopeChangeTarget(null);
     setScopeChangeError(null);
+  }
+
+  function canUnregister(node: NodeRecord): boolean {
+    if (node.kind !== "external") {
+      return false;
+    }
+    return node.ownerUserId === currentUserId || currentUserRole === "owner" || currentUserRole === "admin";
+  }
+
+  function handleUnregisterRequest(node: NodeRecord) {
+    setUnregisterError(null);
+    setUnregisterTarget(node);
+  }
+
+  function handleUnregisterCancel() {
+    if (isUnregistering) {
+      return;
+    }
+    setUnregisterTarget(null);
+    setUnregisterError(null);
+  }
+
+  async function handleUnregisterConfirm() {
+    if (!unregisterTarget) {
+      return;
+    }
+
+    setIsUnregistering(true);
+    setUnregisterError(null);
+
+    try {
+      await unregisterNode(unregisterTarget.id);
+      setNodes((prev) => prev.filter((node) => node.id !== unregisterTarget.id));
+      setUnregisterTarget(null);
+    } catch (error) {
+      setUnregisterError(getErrorMessage(error));
+    } finally {
+      setIsUnregistering(false);
+    }
   }
 
   const confirmDialogDescription = scopeChangeTarget
@@ -178,10 +225,15 @@ export function NodesSettingsView() {
                 {scopeChangeError}
               </Alert>
             ) : null}
+            {unregisterError ? (
+              <Alert severity="error" sx={{ mt: hasLoadError || scopeChangeError ? 1 : 0, mb: 1.5 }}>
+                {unregisterError}
+              </Alert>
+            ) : null}
             <Table
               size="small"
               sx={{
-                mt: hasLoadError || scopeChangeError ? 1.5 : 0,
+                mt: hasLoadError || scopeChangeError || unregisterError ? 1.5 : 0,
                 "& th": {
                   fontWeight: 600,
                   borderBottomColor: "divider",
@@ -198,6 +250,7 @@ export function NodesSettingsView() {
                 <TableRow>
                   <TableCell>{t("settings.nodes.columns.name")}</TableCell>
                   <TableCell>{t("settings.nodes.columns.type")}</TableCell>
+                  <TableCell>{t("settings.nodes.columns.kind")}</TableCell>
                   <TableCell>{t("settings.nodes.columns.version")}</TableCell>
                   <TableCell>{t("settings.nodes.columns.owner")}</TableCell>
                   <TableCell>{t("settings.nodes.columns.status")}</TableCell>
@@ -206,11 +259,11 @@ export function NodesSettingsView() {
               </TableHead>
               <TableBody>
                 {nodes.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6}>
-                      <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
-                        {t("settings.nodes.empty")}
-                      </Typography>
+                    <TableRow>
+                      <TableCell colSpan={7}>
+                        <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                          {t("settings.nodes.empty")}
+                        </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -222,6 +275,13 @@ export function NodesSettingsView() {
                           node,
                           t("settings.nodes.types.private"),
                           t("settings.nodes.types.shared"),
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {resolveNodeKindLabel(
+                          node,
+                          t("settings.nodes.kinds.managed"),
+                          t("settings.nodes.kinds.external"),
                         )}
                       </TableCell>
                       <TableCell>{resolveNodeVersion(node, t("settings.nodes.values.unknownVersion"))}</TableCell>
@@ -254,6 +314,18 @@ export function NodesSettingsView() {
                             </IconButton>
                           </Tooltip>
                         ) : null}
+                        {canUnregister(node) ? (
+                          <Tooltip title={t("settings.nodes.actions.unregister")}>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleUnregisterRequest(node)}
+                              aria-label={t("settings.nodes.actions.unregister")}
+                            >
+                              <LuTrash2 size={14} />
+                            </IconButton>
+                          </Tooltip>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))
@@ -273,6 +345,16 @@ export function NodesSettingsView() {
         isSubmitting={isScopeChanging}
         onCancel={handleScopeChangeCancel}
         onConfirm={() => void handleScopeChangeConfirm()}
+      />
+      <ConfirmationDialog
+        open={unregisterTarget !== null}
+        title={t("settings.nodes.unregisterDialog.title")}
+        description={t("settings.nodes.unregisterDialog.description", { name: unregisterTarget?.name ?? "" })}
+        confirmLabel={t("settings.nodes.unregisterDialog.confirm")}
+        confirmColor="error"
+        isSubmitting={isUnregistering}
+        onCancel={handleUnregisterCancel}
+        onConfirm={() => void handleUnregisterConfirm()}
       />
     </Box>
   );

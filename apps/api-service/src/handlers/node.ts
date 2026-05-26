@@ -49,6 +49,7 @@ export async function registerNodeHandler(c: AppContext, body: RegisterNodeBodyI
     actorUserId: actorUser.id,
     nodeId: body.nodeId,
     name: body.name,
+    kind: body.kind,
     scope: body.scope,
     endpoint: body.endpoint,
     metadata: body.metadata,

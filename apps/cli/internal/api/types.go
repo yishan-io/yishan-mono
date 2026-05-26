@@ -51,6 +51,7 @@ type Node struct {
 	ID             string         `json:"id"`
 	OrganizationID string         `json:"organizationId"`
 	Name           string         `json:"name"`
+	Kind           string         `json:"kind"`
 	Scope          string         `json:"scope"`
 	Endpoint       string         `json:"endpoint"`
 	Metadata       map[string]any `json:"metadata"`
@@ -175,4 +176,3 @@ type CreateServiceTokenResponse struct {
 type ListServiceTokensResponse struct {
 	ServiceTokens []ServiceToken `json:"serviceTokens"`
 }
-
