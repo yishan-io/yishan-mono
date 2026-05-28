@@ -434,7 +434,7 @@ describe("TerminalView", () => {
     expect(state.closeTab).toHaveBeenCalledWith("terminal-tab-1");
   });
 
-  it("prefixes launch command with exec for new sessions", async () => {
+  it("runs launch command without exec for regular terminal tabs", async () => {
     const state = buildStoreState();
     state.tabs = [
       {
@@ -471,7 +471,7 @@ describe("TerminalView", () => {
     await waitFor(() => {
       expect(mocked.writeTerminalInput).toHaveBeenCalledWith({
         sessionId: "session-2",
-        data: "exec codex\r",
+        data: "codex\r",
       });
     });
     expect(mocked.renameTab).toHaveBeenCalledWith("terminal-tab-2", "codex");

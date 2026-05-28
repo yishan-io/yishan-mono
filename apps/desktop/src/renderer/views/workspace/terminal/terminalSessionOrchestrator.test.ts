@@ -170,7 +170,7 @@ describe("TerminalSessionOrchestrator", () => {
     });
     expect(commands.writeTerminalInput).toHaveBeenCalledWith({
       sessionId: "new-session",
-      data: "exec codex\r",
+      data: "codex\r",
     });
     expect(tabStoreAccess.setTerminalTabSessionId).toHaveBeenCalledWith("tab-2", "new-session");
   });
@@ -339,7 +339,7 @@ describe("TerminalSessionOrchestrator", () => {
     expect(commands.writeTerminalInput).toHaveBeenCalledTimes(1);
     expect(commands.writeTerminalInput).toHaveBeenCalledWith({
       sessionId: "shared-session",
-      data: "exec codex\r",
+      data: "codex\r",
     });
   });
 });
