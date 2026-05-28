@@ -12,6 +12,7 @@ export type ProjectConfigDraft = {
   color: string;
   setupScript: string;
   postScript: string;
+  commands: Array<{ name: string; command: string }>;
 };
 
 type ProjectLike = {
@@ -29,6 +30,7 @@ type ProjectLike = {
   color?: string | null;
   setupScript?: string | null;
   postScript?: string | null;
+  commands?: Array<{ name?: string | null; command?: string | null } | string> | null;
 };
 
 export const DEFAULT_ICON_BG_COLOR = "#1E66F5";
@@ -42,6 +44,7 @@ function getDefaultDraft(): ProjectConfigDraft {
     color: DEFAULT_ICON_BG_COLOR,
     setupScript: "",
     postScript: "",
+    commands: [],
   };
 }
 
@@ -96,6 +99,25 @@ export function useProjectConfigFormState({
         color: repo.color ?? DEFAULT_ICON_BG_COLOR,
         setupScript: repo.setupScript ?? "",
         postScript: repo.postScript ?? "",
+        commands: Array.isArray(repo.commands)
+          ? repo.commands
+              .map((item) => {
+                if (typeof item === "string") {
+                  const command = item.trim();
+                  if (!command) {
+                    return null;
+                  }
+                  return { name: command, command };
+                }
+                const command = item.command?.trim() || "";
+                const name = item.name?.trim() || command;
+                if (!command || !name) {
+                  return null;
+                }
+                return { name, command };
+              })
+              .filter((item): item is { name: string; command: string } => item !== null)
+          : [],
       });
     };
 

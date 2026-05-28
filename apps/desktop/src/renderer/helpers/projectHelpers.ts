@@ -25,7 +25,7 @@ type ProjectStoreSlice = Pick<
 
 type RepoConfigUpdate = Pick<
   WorkspaceProjectRecord,
-  "name" | "worktreePath" | "contextEnabled" | "icon" | "color" | "setupScript" | "postScript"
+  "name" | "worktreePath" | "contextEnabled" | "icon" | "color" | "setupScript" | "postScript" | "commands"
 >;
 
 /** Returns persisted workspace preferences for one organization id when available. */
@@ -147,6 +147,7 @@ function mapApiData(
       color: repo.color,
       setupScript: repo.setupScript,
       postScript: repo.postScript,
+      commands: repo.commands,
     } satisfies WorkspaceProjectRecord;
   });
 
@@ -310,6 +311,7 @@ export function applyCreatedRepoState(
     color: input.backendProject.color ?? "#1E66F5",
     setupScript: input.backendProject.setupScript ?? "",
     postScript: input.backendProject.postScript ?? "",
+    commands: input.backendProject.commands ?? [],
     sourceType: input.source === "local" ? "git-local" : "git",
     repoProvider: input.backendProject.repoProvider ?? null,
     repoUrl: (input.backendProject.repoUrl ?? (input.source === "remote" ? input.normalizedGitUrl : "")) || null,
@@ -372,4 +374,5 @@ export function applyUpdatedRepoConfigState(
   project.color = config.color ?? project.color;
   project.setupScript = config.setupScript ?? project.setupScript;
   project.postScript = config.postScript ?? project.postScript;
+  project.commands = config.commands ?? project.commands;
 }

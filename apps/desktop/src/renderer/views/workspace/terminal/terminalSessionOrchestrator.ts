@@ -183,7 +183,7 @@ export class TerminalSessionOrchestrator {
       if (launchCommand) {
         await this.commands.writeTerminalInput({
           sessionId,
-          data: `${buildTerminalLaunchCommand(launchCommand)}\r`,
+          data: `${buildTerminalLaunchCommand(launchCommand, Boolean(tab.data.agentKind))}\r`,
         });
       }
     }
@@ -224,10 +224,10 @@ function resolveTerminalPaneId(tabId: string, paneId: string | undefined): strin
   return `pane-${tabId}`;
 }
 
-/** Prefixes one launch command with exec so shell lifecycle follows the command lifecycle. */
-function buildTerminalLaunchCommand(launchCommand: string): string {
+/** Builds one launch command; agent tabs exec, regular commands keep shell alive. */
+function buildTerminalLaunchCommand(launchCommand: string, shouldExec: boolean): string {
   const trimmedCommand = launchCommand.trim();
-  if (trimmedCommand.startsWith("exec ")) {
+  if (!shouldExec || trimmedCommand.startsWith("exec ")) {
     return trimmedCommand;
   }
 

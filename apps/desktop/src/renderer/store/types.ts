@@ -7,6 +7,11 @@ import type { DaemonWorkspacePullRequest } from "../rpc/daemonTypes";
 // Re-export chat-domain types from their canonical location.
 export type { AvailableCommand, AvailableModel, ChatMessage } from "./chatTypes";
 
+export type WorkspaceProjectCommand = {
+  name: string;
+  command: string;
+};
+
 export type WorkspaceProjectRecord = {
   id: string;
   name: string;
@@ -26,6 +31,7 @@ export type WorkspaceProjectRecord = {
   color?: string | null;
   setupScript?: string | null;
   postScript?: string | null;
+  commands?: WorkspaceProjectCommand[];
   createdAt?: string;
   updatedAt?: string;
   createdByUserId?: string;
@@ -203,6 +209,7 @@ export type WorkspaceStoreState = {
     config: Pick<
       WorkspaceProjectRecord,
       "name" | "worktreePath" | "contextEnabled" | "icon" | "color" | "setupScript" | "postScript"
+      | "commands"
     >,
   ) => void;
   incrementFileTreeRefreshVersion: (workspaceWorktreePath?: string, changedRelativePaths?: string[]) => void;

@@ -82,6 +82,7 @@ export async function updateProjectHandler(
     color: body.color,
     setupScript: body.setupScript,
     postScript: body.postScript,
+    commands: body.commands,
     contextEnabled: body.contextEnabled
   });
   await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({

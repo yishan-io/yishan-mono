@@ -54,6 +54,7 @@ export async function updateProject(
     color?: string;
     setupScript?: string;
     postScript?: string;
+    commands?: Array<{ name: string; command: string }>;
     contextEnabled?: boolean;
   },
 ): Promise<ProjectRecord> {

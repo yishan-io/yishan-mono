@@ -39,6 +39,11 @@ export type AddOrganizationMemberResponse =
   | { invited: false; member: OrganizationMemberRecord }
   | { invited: true; invite: OrganizationInviteRecord };
 
+export type ProjectCommandRecord = {
+  name: string;
+  command: string;
+};
+
 export type ProjectRecord = {
   id: string;
   name: string;
@@ -50,6 +55,7 @@ export type ProjectRecord = {
   color: string;
   setupScript: string;
   postScript: string;
+  commands?: ProjectCommandRecord[];
   contextEnabled: boolean;
   organizationId: string;
   createdByUserId: string;

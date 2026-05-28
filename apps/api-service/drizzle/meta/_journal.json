@@ -57,6 +57,13 @@
       "when": 1780000000000,
       "tag": "0007_node_kind_managed_external",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782000000000,
+      "tag": "0008_project_commands",
+      "breakpoints": true
     }
   ]
 }

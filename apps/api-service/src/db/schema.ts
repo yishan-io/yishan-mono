@@ -175,6 +175,7 @@ export const projects = pgTable(
     color: text("color").notNull().default("#1E66F5"),
     setupScript: text("setup_script").notNull().default(""),
     postScript: text("post_script").notNull().default(""),
+    commands: jsonb("commands").$type<Array<{ name: string; command: string }>>().notNull().default([]),
     contextEnabled: boolean("context_enabled").notNull().default(true),
     organizationId: text("organization_id")
       .notNull()

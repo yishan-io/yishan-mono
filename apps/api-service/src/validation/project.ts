@@ -36,6 +36,14 @@ export const updateProjectBodySchema = z
     color: nonEmptyStringSchema.optional(),
     setupScript: z.string().optional(),
     postScript: z.string().optional(),
+    commands: z
+      .array(
+        z.object({
+          name: nonEmptyStringSchema,
+          command: nonEmptyStringSchema,
+        }),
+      )
+      .optional(),
     contextEnabled: z.boolean().optional(),
   })
   .refine((value) => Object.values(value).some((item) => item !== undefined), {

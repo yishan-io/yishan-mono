@@ -20,7 +20,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { LuChevronDown, LuCircleHelp, LuExternalLink, LuFolderOpen } from "react-icons/lu";
+import { LuChevronDown, LuCircleHelp, LuExternalLink, LuFolderOpen, LuPlus, LuTrash2 } from "react-icons/lu";
 import {
   PROJECT_ICON_OPTIONS,
   renderProjectIcon,
@@ -316,6 +316,75 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                     fullWidth
                     placeholder="Runs in workspace worktree before deletion"
                   />
+                </Box>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Project commands
+                  </Typography>
+                  <Stack spacing={1}>
+                    {draft.commands.map((item, index) => (
+                      <Stack key={`${item.name}-${item.command}-${index}`} direction="row" spacing={1} alignItems="center">
+                        <TextField
+                          size="small"
+                          value={item.name}
+                          disabled={isSaving}
+                          onChange={(event) =>
+                            setDraft((previous) => ({
+                              ...previous,
+                              commands: previous.commands.map((entry, entryIndex) =>
+                                entryIndex === index ? { ...entry, name: event.target.value } : entry,
+                              ),
+                            }))
+                          }
+                          placeholder="Name"
+                          sx={{ width: 180 }}
+                        />
+                        <TextField
+                          size="small"
+                          value={item.command}
+                          disabled={isSaving}
+                          onChange={(event) =>
+                            setDraft((previous) => ({
+                              ...previous,
+                              commands: previous.commands.map((entry, entryIndex) =>
+                                entryIndex === index ? { ...entry, command: event.target.value } : entry,
+                              ),
+                            }))
+                          }
+                          placeholder="Command line"
+                          fullWidth
+                        />
+                        <IconButton
+                          size="small"
+                          aria-label="Remove command"
+                          disabled={isSaving}
+                          onClick={() =>
+                            setDraft((previous) => ({
+                              ...previous,
+                              commands: previous.commands.filter((_, entryIndex) => entryIndex !== index),
+                            }))
+                          }
+                        >
+                          <LuTrash2 size={14} />
+                        </IconButton>
+                      </Stack>
+                    ))}
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      disabled={isSaving}
+                      startIcon={<LuPlus size={14} />}
+                      onClick={() =>
+                        setDraft((previous) => ({
+                          ...previous,
+                          commands: [...previous.commands, { name: "", command: "" }],
+                        }))
+                      }
+                      sx={{ alignSelf: "flex-start", textTransform: "none" }}
+                    >
+                      Add command
+                    </Button>
+                  </Stack>
                 </Box>
               </Stack>
             </AccordionDetails>

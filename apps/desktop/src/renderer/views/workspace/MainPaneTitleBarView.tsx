@@ -1,8 +1,21 @@
-import { Box, Button, Menu, MenuItem, TextField, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Menu,
+  MenuItem,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
-import { LuChevronRight, LuPanelLeft, LuPanelRight } from "react-icons/lu";
+import { LuChevronRight, LuPanelLeft, LuPanelRight, LuPlay } from "react-icons/lu";
 import { getMainWindowFullscreenState } from "../../commands/appCommands";
 import { PaneHeader } from "../../components/PaneHeader";
 import { PaneToggleButton } from "../../components/PaneToggleButton";
@@ -78,7 +91,7 @@ export function MainPaneTitleBarView() {
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
   const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
-  const { setSelectedRepoId, setSelectedWorkspaceId } = useCommands();
+  const { setSelectedRepoId, setSelectedWorkspaceId, openTab, updateProjectConfig } = useCommands();
   const selectedRepo = projects.find((project) => project.id === selectedProjectId);
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === selectedWorkspaceId);
   const workspacesForSelectedRepo = workspaces.filter((workspace) => workspace.repoId === selectedRepo?.id);
@@ -103,16 +116,30 @@ export function MainPaneTitleBarView() {
     rendererPlatform === "darwin" && leftCollapsed && !isFullscreenDisplayMode;
   const [repoMenuAnchorEl, setRepoMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [workspaceMenuAnchorEl, setWorkspaceMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [commandMenuAnchorEl, setCommandMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [isAddCommandDialogOpen, setIsAddCommandDialogOpen] = useState(false);
+  const [newCommandNameValue, setNewCommandNameValue] = useState("");
+  const [newCommandLineValue, setNewCommandLineValue] = useState("");
+  const [isSavingCommand, setIsSavingCommand] = useState(false);
+  const [addCommandError, setAddCommandError] = useState("");
   const [repoSearchValue, setRepoSearchValue] = useState("");
   const [workspaceSearchValue, setWorkspaceSearchValue] = useState("");
   const isRepoMenuOpen = Boolean(repoMenuAnchorEl);
   const isWorkspaceMenuOpen = Boolean(workspaceMenuAnchorEl);
+  const isCommandMenuOpen = Boolean(commandMenuAnchorEl);
+  const projectCommands = (selectedRepo?.commands ?? []).filter(
+    (item) => item.name.trim().length > 0 && item.command.trim().length > 0,
+  );
   const filteredRepoOptions = projects.filter((project) =>
     project.name.toLowerCase().includes(repoSearchValue.trim().toLowerCase()),
   );
   const filteredWorkspaceOptions = workspacesForSelectedRepo.filter((workspace) =>
     workspace.name.toLowerCase().includes(workspaceSearchValue.trim().toLowerCase()),
   );
+  const trimmedNewCommandNameValue = newCommandNameValue.trim();
+  const trimmedNewCommandLineValue = newCommandLineValue.trim();
+  const isAddCommandDisabled =
+    !selectedRepo || trimmedNewCommandNameValue.length === 0 || trimmedNewCommandLineValue.length === 0 || isSavingCommand;
   const resolveWorkspaceIconColor = (
     workspaceId: string,
   ): "warning.main" | "error.main" | "success.main" | "text.secondary" => {
@@ -160,6 +187,56 @@ export function MainPaneTitleBarView() {
       window.removeEventListener("resize", handleWindowResize);
     };
   }, []);
+
+  const handleSaveNewCommand = async () => {
+    if (!selectedRepo || trimmedNewCommandNameValue.length === 0 || trimmedNewCommandLineValue.length === 0) {
+      return;
+    }
+
+    const existingCommands = (selectedRepo.commands ?? []).filter(
+      (item) => item.name.trim().length > 0 && item.command.trim().length > 0,
+    );
+    const duplicate = existingCommands.some(
+      (item) => item.name.trim() === trimmedNewCommandNameValue || item.command.trim() === trimmedNewCommandLineValue,
+    );
+    if (duplicate) {
+      setIsAddCommandDialogOpen(false);
+      setNewCommandNameValue("");
+      setNewCommandLineValue("");
+      setAddCommandError("");
+      return;
+    }
+
+    setIsSavingCommand(true);
+    setAddCommandError("");
+    try {
+      await updateProjectConfig(selectedRepo.id, {
+        name: selectedRepo.name,
+        worktreePath: selectedRepo.worktreePath ?? "",
+        contextEnabled: selectedRepo.contextEnabled,
+        icon: selectedRepo.icon ?? undefined,
+        color: selectedRepo.color ?? undefined,
+        setupScript: selectedRepo.setupScript ?? "",
+        postScript: selectedRepo.postScript ?? "",
+        commands: [
+          ...existingCommands,
+          {
+            name: trimmedNewCommandNameValue,
+            command: trimmedNewCommandLineValue,
+          },
+        ],
+      });
+      setIsAddCommandDialogOpen(false);
+      setNewCommandNameValue("");
+      setNewCommandLineValue("");
+      setAddCommandError("");
+    } catch (error) {
+      console.error("Failed to add project command", error);
+      setAddCommandError("Failed to save command. Please try again.");
+    } finally {
+      setIsSavingCommand(false);
+    }
+  };
 
   return (
     <>
@@ -234,6 +311,30 @@ export function MainPaneTitleBarView() {
           </Button>
         </Box>
         <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+          <Tooltip title="Project commands" arrow>
+            <span>
+              <Button
+                size="small"
+                variant="outlined"
+                aria-label="Run project command"
+                disabled={!selectedRepo}
+                onClick={(event) => setCommandMenuAnchorEl(event.currentTarget)}
+                sx={{
+                  minWidth: 32,
+                  px: 0.75,
+                  color: "text.secondary",
+                  borderColor: "transparent",
+                  bgcolor: "transparent",
+                  "&:hover": {
+                    borderColor: "divider",
+                    bgcolor: "action.hover",
+                  },
+                }}
+              >
+                <LuPlay size={14} />
+              </Button>
+            </span>
+          </Tooltip>
           <WorkspacePortsMenuControl />
           {rightCollapsed ? (
             <PaneToggleButton
@@ -280,6 +381,77 @@ export function MainPaneTitleBarView() {
         ))}
       </Menu>
       <Menu
+        open={isCommandMenuOpen}
+        anchorEl={commandMenuAnchorEl}
+        onClose={() => {
+          setCommandMenuAnchorEl(null);
+        }}
+        slotProps={{
+          paper: {
+            sx: {
+              border: 1,
+              borderColor: "divider",
+            },
+          },
+        }}
+      >
+        {projectCommands.length === 0 ? (
+          <MenuItem disabled>
+            <Typography variant="body2" color="text.secondary">
+              No commands yet
+            </Typography>
+          </MenuItem>
+        ) : null}
+        {projectCommands.map((projectCommand) => (
+          <MenuItem
+            key={`${projectCommand.name}:${projectCommand.command}`}
+            sx={{
+              color: "text.primary",
+              "&:hover": {
+                bgcolor: "action.hover",
+              },
+            }}
+            onClick={() => {
+              if (selectedWorkspaceId) {
+                openTab({
+                  workspaceId: selectedWorkspaceId,
+                  kind: "terminal",
+                  title: t("terminal.title"),
+                  launchCommand: projectCommand.command,
+                  reuseExisting: false,
+                });
+              }
+              setCommandMenuAnchorEl(null);
+            }}
+          >
+            <Box component="span" sx={{ display: "inline-flex", alignItems: "center", mr: 1, color: "text.secondary" }}>
+              <LuPlay size={13} />
+            </Box>
+            <Typography variant="body2" noWrap sx={{ maxWidth: 280 }}>
+              {projectCommand.name}
+            </Typography>
+          </MenuItem>
+        ))}
+        <Divider />
+        <MenuItem
+          sx={{
+            color: "text.secondary",
+            "&:hover": {
+              bgcolor: "action.hover",
+            },
+          }}
+          onClick={() => {
+            setCommandMenuAnchorEl(null);
+            setNewCommandNameValue("");
+            setNewCommandLineValue("");
+            setAddCommandError("");
+            setIsAddCommandDialogOpen(true);
+          }}
+        >
+          <Typography variant="body2">+ Add command</Typography>
+        </MenuItem>
+      </Menu>
+      <Menu
         open={isWorkspaceMenuOpen}
         anchorEl={workspaceMenuAnchorEl}
         onClose={() => {
@@ -319,6 +491,56 @@ export function MainPaneTitleBarView() {
           </MenuItem>
         ))}
       </Menu>
+      <Dialog
+        open={isAddCommandDialogOpen}
+        onClose={isSavingCommand ? undefined : () => setIsAddCommandDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Add project command</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            size="small"
+            fullWidth
+            label="Name"
+            value={newCommandNameValue}
+            disabled={isSavingCommand}
+            onChange={(event) => setNewCommandNameValue(event.target.value)}
+            placeholder="Start Dev Server"
+            sx={{ mt: 0.5 }}
+          />
+          <TextField
+            size="small"
+            fullWidth
+            label="Command line"
+            value={newCommandLineValue}
+            disabled={isSavingCommand}
+            onChange={(event) => setNewCommandLineValue(event.target.value)}
+            placeholder="bun run dev"
+            sx={{ mt: 1.5 }}
+          />
+          {addCommandError ? (
+            <Typography variant="caption" color="error" sx={{ display: "block", mt: 1 }}>
+              {addCommandError}
+            </Typography>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setIsAddCommandDialogOpen(false);
+              setAddCommandError("");
+            }}
+            disabled={isSavingCommand}
+          >
+            {t("common.actions.cancel")}
+          </Button>
+          <Button variant="contained" onClick={() => void handleSaveNewCommand()} disabled={isAddCommandDisabled}>
+            Add
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }

@@ -44,6 +44,7 @@ export function useProjectConfigActions({
         color?: string;
         setupScript?: string;
         postScript?: string;
+        commands?: Array<{ name: string; command: string }>;
       };
     }) => {
       await updateProjectConfig(payload.projectId, payload.config);
@@ -94,6 +95,12 @@ export function useProjectConfigActions({
         color: normalizedIconBgColor,
         setupScript: draft.setupScript,
         postScript: draft.postScript,
+        commands: draft.commands
+          .map((item) => ({
+            name: item.name.trim(),
+            command: item.command.trim(),
+          }))
+          .filter((item) => item.name.length > 0 && item.command.length > 0),
       },
     });
   };

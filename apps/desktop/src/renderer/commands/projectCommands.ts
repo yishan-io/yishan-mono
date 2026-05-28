@@ -304,6 +304,7 @@ export async function updateProjectConfig(
     color?: string;
     setupScript?: string;
     postScript?: string;
+    commands?: Array<{ name: string; command: string }>;
   },
 ): Promise<void> {
   const project = workspaceStore.getState().projects.find((item) => item.id === projectId);
@@ -322,6 +323,7 @@ export async function updateProjectConfig(
         color: config.color,
         setupScript: config.setupScript,
         postScript: config.postScript,
+        commands: config.commands,
         contextEnabled: config.contextEnabled,
       });
 
@@ -333,6 +335,7 @@ export async function updateProjectConfig(
         color: updatedProject.color,
         setupScript: updatedProject.setupScript,
         postScript: updatedProject.postScript,
+        commands: updatedProject.commands ?? config.commands,
       };
 
       const store = workspaceStore.getState();

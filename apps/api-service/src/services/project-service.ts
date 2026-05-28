@@ -23,6 +23,7 @@ export type ProjectView = {
   color: string;
   setupScript: string;
   postScript: string;
+  commands: Array<{ name: string; command: string }>;
   contextEnabled: boolean;
   organizationId: string;
   createdByUserId: string;
@@ -67,6 +68,7 @@ type UpdateProjectInput = {
   color?: string;
   setupScript?: string;
   postScript?: string;
+  commands?: Array<{ name: string; command: string }>;
   contextEnabled?: boolean;
 };
 
@@ -233,7 +235,9 @@ export class ProjectService {
 
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([, value]) => value !== undefined),
-    ) as Partial<Pick<ProjectView, "name" | "icon" | "color" | "setupScript" | "postScript" | "contextEnabled">>;
+    ) as Partial<
+      Pick<ProjectView, "name" | "icon" | "color" | "setupScript" | "postScript" | "commands" | "contextEnabled">
+    >;
 
     const updatedRows = await this.db
       .update(projects)
