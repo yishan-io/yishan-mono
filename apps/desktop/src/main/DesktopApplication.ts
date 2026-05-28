@@ -664,6 +664,27 @@ export class DesktopApplication {
    * Creates and initializes the main BrowserWindow instance.
    */
   private createMainWindow() {
+    const isToggleDevToolsShortcut = (input: Electron.Input): boolean => {
+      if (input.type !== "keyDown" && input.type !== "rawKeyDown") {
+        return false;
+      }
+
+      const normalizedKey = input.key.trim().toLowerCase();
+      if (normalizedKey === "f12") {
+        return true;
+      }
+
+      if (normalizedKey !== "i") {
+        return false;
+      }
+
+      if (process.platform === "darwin") {
+        return input.meta && input.alt;
+      }
+
+      return input.control && input.shift;
+    };
+
     const isPrimaryShortcutModifierPressed = (input: Electron.Input): boolean => {
       return process.platform === "darwin" ? input.meta && !input.control : input.control && !input.meta;
     };
@@ -723,8 +744,23 @@ export class DesktopApplication {
     // Intercept popup/new-window requests from <webview> guests (e.g. Cmd+Click,
     // target="_blank", window.open) and forward the URL to the renderer so it can
     // open the destination in a new in-app browser tab instead of a popup window.
+    mainWindow.webContents.on("before-input-event", (inputEvent, input) => {
+      if (!isToggleDevToolsShortcut(input)) {
+        return;
+      }
+
+      mainWindow.webContents.toggleDevTools();
+      inputEvent.preventDefault();
+    });
+
     mainWindow.webContents.on("did-attach-webview", (_event, webviewContents) => {
       webviewContents.on("before-input-event", (_inputEvent, input) => {
+        if (isToggleDevToolsShortcut(input)) {
+          mainWindow.webContents.toggleDevTools();
+          _inputEvent.preventDefault();
+          return;
+        }
+
         if (input.type !== "keyDown" && input.type !== "rawKeyDown") {
           return;
         }
