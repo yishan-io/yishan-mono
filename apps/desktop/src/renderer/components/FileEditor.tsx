@@ -54,6 +54,7 @@ export function FileEditor({
   );
   const previousMarkdownDefaultModeRef = useRef(defaultMarkdownViewMode);
   const [editorPaneRatio, setEditorPaneRatio] = useState(0.5);
+  const [markdownPreviewImmediateUpdateToken, setMarkdownPreviewImmediateUpdateToken] = useState(0);
 
   // Reset view mode when switching between markdown and non-markdown files.
   // When entering a markdown file from a non-markdown file (viewMode is "edit"),
@@ -211,6 +212,19 @@ export function FileEditor({
     setViewMode(mode);
   }, []);
 
+  const handleMarkdownPreviewContentChange = useCallback((nextContent: string) => {
+    const editor = editorRef.current;
+    if (editor && editor.getValue() !== nextContent) {
+      setMarkdownPreviewImmediateUpdateToken((token) => token + 1);
+      editor.setValue(nextContent);
+      return;
+    }
+
+    setMarkdownPreviewImmediateUpdateToken((token) => token + 1);
+    setCurrentContent(nextContent);
+    onContentChangeRef.current?.(nextContent);
+  }, []);
+
   // Apply git gutter decorations showing added/modified/deleted lines.
   useGitGutterDecorations({
     editor: editorInstance,
@@ -343,7 +357,14 @@ export function FileEditor({
               overflow: "hidden",
             }}
           >
-            <MarkdownPreview content={content} filePath={path} worktreePath={worktreePath} />
+            <MarkdownPreview
+              content={content}
+              filePath={path}
+              worktreePath={worktreePath}
+              canEdit={!isDeleted}
+              onContentChange={handleMarkdownPreviewContentChange}
+              immediateUpdateToken={markdownPreviewImmediateUpdateToken}
+            />
           </Box>
         ) : null}
       </Box>

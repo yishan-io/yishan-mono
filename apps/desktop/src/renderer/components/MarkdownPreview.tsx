@@ -21,9 +21,65 @@ type MarkdownPreviewProps = {
   content: string;
   filePath?: string;
   worktreePath?: string;
+  canEdit?: boolean;
+  onContentChange?: (content: string) => void;
+  immediateUpdateToken?: number;
 };
 
 const workspaceImageUrlCache = new Map<string, string>();
+
+function toggleTaskListItem(content: string, taskItemIndex: number, checked: boolean): string {
+  const lines = content.split("\n");
+  let currentTaskItemIndex = 0;
+  const taskPattern = /^(\s*(?:[-*+]|\d+\.)\s+\[)( |x|X)(\].*)$/;
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex];
+    if (line === undefined) {
+      continue;
+    }
+    const match = taskPattern.exec(line);
+    if (!match) {
+      continue;
+    }
+
+    if (currentTaskItemIndex === taskItemIndex) {
+      const prefix = match[1];
+      const suffix = match[3];
+      lines[lineIndex] = `${prefix}${checked ? "x" : " "}${suffix}`;
+      return lines.join("\n");
+    }
+
+    currentTaskItemIndex += 1;
+  }
+
+  return content;
+}
+
+function getTaskListItemChecked(content: string, taskItemIndex: number): boolean | null {
+  const lines = content.split("\n");
+  let currentTaskItemIndex = 0;
+  const taskPattern = /^(\s*(?:[-*+]|\d+\.)\s+\[)( |x|X)(\].*)$/;
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex];
+    if (line === undefined) {
+      continue;
+    }
+    const match = taskPattern.exec(line);
+    if (!match) {
+      continue;
+    }
+
+    if (currentTaskItemIndex === taskItemIndex) {
+      return match[2].toLowerCase() === "x";
+    }
+
+    currentTaskItemIndex += 1;
+  }
+
+  return null;
+}
 
 function isAbsoluteUrl(src: string): boolean {
   return /^data:/i.test(src) || /^[a-z][a-z0-9+.-]*:/i.test(src);
@@ -306,6 +362,8 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
   content,
   filePath,
   worktreePath,
+  canEdit = false,
+  onContentChange,
 }: MarkdownPreviewProps) {
   const theme = useTheme();
   const markdownPreviewFontSize = layoutStore((state) => state.markdownPreviewFontSize);
@@ -433,7 +491,30 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
         }
       });
     });
-  }, [html, worktreePath, fileDir]);
+
+    // Attach task-list checkbox handlers
+    const checkboxes = container.querySelectorAll<HTMLInputElement>("input[type='checkbox']");
+    checkboxes.forEach((checkbox, index) => {
+      checkbox.disabled = !canEdit;
+      if (!canEdit) {
+        return;
+      }
+
+      checkbox.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const currentChecked = getTaskListItemChecked(content, index);
+        if (currentChecked === null) {
+          return;
+        }
+        const nextChecked = !currentChecked;
+        const nextContent = toggleTaskListItem(content, index, nextChecked);
+        if (nextContent !== content) {
+          onContentChange?.(nextContent);
+        }
+      });
+    });
+  }, [html, worktreePath, fileDir, canEdit, content, onContentChange]);
 
   if (!content.trim()) {
     return (
@@ -519,11 +600,29 @@ function MermaidPortal({
 
 /** Renders a Markdown string as styled HTML using react-markdown with GFM and syntax highlighting support.
  *  Debounces content updates to avoid re-running the expensive rehype pipeline on every keystroke or file-change event. */
-export function MarkdownPreview({ content, filePath, worktreePath }: MarkdownPreviewProps) {
+export function MarkdownPreview({
+  content,
+  filePath,
+  worktreePath,
+  canEdit = false,
+  onContentChange,
+  immediateUpdateToken = 0,
+}: MarkdownPreviewProps) {
   const [debouncedContent, setDebouncedContent] = useState(content);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previousImmediateUpdateTokenRef = useRef(immediateUpdateToken);
 
   useEffect(() => {
+    if (immediateUpdateToken !== previousImmediateUpdateTokenRef.current) {
+      previousImmediateUpdateTokenRef.current = immediateUpdateToken;
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      setDebouncedContent(content);
+      return;
+    }
+
     // If content is cleared or this is the first render, update immediately.
     if (!debouncedContent && content) {
       setDebouncedContent(content);
@@ -545,13 +644,15 @@ export function MarkdownPreview({ content, filePath, worktreePath }: MarkdownPre
         timerRef.current = null;
       }
     };
-  }, [content]);
+  }, [content, debouncedContent, immediateUpdateToken]);
 
   return (
     <MemoizedMarkdownRenderer
       content={debouncedContent}
       filePath={filePath}
       worktreePath={worktreePath}
+      canEdit={canEdit}
+      onContentChange={onContentChange}
     />
   );
 }
