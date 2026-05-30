@@ -50,6 +50,7 @@ export function WorkspaceTree({
   onWorkspaceMouseEnter,
   onWorkspaceMouseLeave,
   onWorkspaceRequestDelete,
+  createWorkspaceTooltipLabel,
   onProjectCreateWorkspaceClick,
   onProjectActionsClick,
 }: WorkspaceTreeProps) {
@@ -75,7 +76,10 @@ export function WorkspaceTree({
   return (
     <Box ref={scrollRef} role="tree" sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 1 }}>
       <Box sx={{ height: virtualizer.getTotalSize(), width: "100%", position: "relative" }}>
-        {virtualizer.getVirtualItems().map((item) => {
+        {(virtualizer.getVirtualItems().length > 0
+          ? virtualizer.getVirtualItems()
+          : visibleRows.map((_, index) => ({ index, key: index, start: index * WORKSPACE_TREE_ROW_HEIGHT }))
+        ).map((item) => {
           const row = visibleRows[item.index];
           if (!row) {
             return null;
@@ -106,7 +110,15 @@ export function WorkspaceTree({
                 row={row}
                 isExpanded={expanded}
                 isSelected={isSelected}
+                onToggle={() => {
+                  if (!row.hasChildren) {
+                    return;
+                  }
+
+                  toggleExpanded(row.id);
+                }}
                 deleteWorkspaceLabel={deleteWorkspaceLabel}
+                createWorkspaceTooltipLabel={createWorkspaceTooltipLabel}
                 onWorkspaceRequestDelete={() => {
                   if (row.kind !== "workspace") {
                     return;

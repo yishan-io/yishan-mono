@@ -17,6 +17,7 @@ type WorkspaceTreeRowViewProps = {
   isExpanded: boolean;
   isSelected: boolean;
   onClick: () => void;
+  onToggle?: () => void;
   onMouseEnter?: (event: MouseEvent<HTMLElement>) => void;
   onMouseLeave?: () => void;
   onContextMenu?: (event: MouseEvent<HTMLElement>) => void;
@@ -24,6 +25,7 @@ type WorkspaceTreeRowViewProps = {
   onProjectActionsClick?: (event: MouseEvent<HTMLElement>) => void;
   deleteWorkspaceLabel?: string;
   onWorkspaceRequestDelete?: () => void;
+  createWorkspaceTooltipLabel?: string;
 };
 
 export function WorkspaceTreeRowView({
@@ -31,6 +33,7 @@ export function WorkspaceTreeRowView({
   isExpanded,
   isSelected,
   onClick,
+  onToggle,
   onMouseEnter,
   onMouseLeave,
   onContextMenu,
@@ -38,9 +41,11 @@ export function WorkspaceTreeRowView({
   onProjectActionsClick,
   deleteWorkspaceLabel,
   onWorkspaceRequestDelete,
+  createWorkspaceTooltipLabel,
 }: WorkspaceTreeRowViewProps) {
   const theme = useTheme();
   const isFolderLike = row.kind !== "workspace";
+  const workspaceId = row.kind === "workspace" ? row.id.replace(/^workspace:/, "") : "";
   const workspaceIconColor =
     row.notificationTone === "waiting_input"
       ? "warning.main"
@@ -52,6 +57,7 @@ export function WorkspaceTreeRowView({
 
   return (
     <Box
+      data-testid={row.kind === "workspace" ? `workspace-row-${workspaceId}` : undefined}
       role="treeitem"
       aria-expanded={isFolderLike ? isExpanded : undefined}
       onClick={onClick}
@@ -99,21 +105,35 @@ export function WorkspaceTreeRowView({
         },
       }}
     >
-      <Box
-        sx={{
-          width: 16,
-          height: 16,
-          mr: 0.5,
-          color: "text.secondary",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          visibility: row.hasChildren ? "visible" : "hidden",
-          transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-        }}
-      >
-        <LuChevronRight size={14} />
-      </Box>
+      {row.hasChildren ? (
+        <IconButton
+          size="small"
+          aria-label={
+            row.kind === "project"
+              ? isExpanded
+                ? "repo.actions.collapse"
+                : "repo.actions.expand"
+              : isExpanded
+                ? "node.actions.collapse"
+                : "node.actions.expand"
+          }
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggle?.();
+          }}
+          sx={{
+            width: 16,
+            height: 16,
+            mr: 0.5,
+            color: "text.secondary",
+            transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+          }}
+        >
+          <LuChevronRight size={14} />
+        </IconButton>
+      ) : (
+        <Box sx={{ width: 16, height: 16, mr: 0.5 }} />
+      )}
       {row.kind === "project" ? (
         <Box
           component="span"
@@ -145,11 +165,35 @@ export function WorkspaceTreeRowView({
       ) : row.kind === "workspace" ? (
         <Box component="span" sx={{ width: 16, height: 16, display: "inline-flex", color: workspaceIconColor }}>
           {row.runtimeStatus === "running" ? (
-            <CliSpinner fontSize={20} />
+            <Box component="span" data-testid={`workspace-status-running-spinner-${workspaceId}`}>
+              <CliSpinner fontSize={20} />
+            </Box>
           ) : row.workspaceKind === "local" ? (
-            <HiOutlineCube size={16} />
+            <HiOutlineCube
+              size={16}
+              data-testid={
+                row.notificationTone === "waiting_input"
+                  ? `workspace-status-waiting-input-badge-${workspaceId}`
+                  : row.notificationTone === "done"
+                    ? `workspace-status-done-badge-${workspaceId}`
+                    : row.notificationTone === "failed"
+                      ? `workspace-status-failed-badge-${workspaceId}`
+                      : `workspace-kind-local-${workspaceId}`
+              }
+            />
           ) : (
-            <HiCubeTransparent size={16} />
+            <HiCubeTransparent
+              size={16}
+              data-testid={
+                row.notificationTone === "waiting_input"
+                  ? `workspace-status-waiting-input-badge-${workspaceId}`
+                  : row.notificationTone === "done"
+                    ? `workspace-status-done-badge-${workspaceId}`
+                    : row.notificationTone === "failed"
+                      ? `workspace-status-failed-badge-${workspaceId}`
+                      : `workspace-icon-${workspaceId}`
+              }
+            />
           )}
         </Box>
       ) : (
@@ -159,6 +203,8 @@ export function WorkspaceTreeRowView({
       )}
       <Box
         component="span"
+        data-testid={row.kind === "workspace" ? `workspace-name-${workspaceId}` : undefined}
+        className={row.kind === "workspace" ? "MuiTypography-noWrap" : undefined}
         sx={{
           ml: 0.75,
           typography: "body2",
@@ -176,54 +222,60 @@ export function WorkspaceTreeRowView({
           {(row.additions ?? 0) > 0 || (row.deletions ?? 0) > 0 ? (
             <GitChangeTotals
               className="workspace-change-totals"
+              testId={`workspace-change-totals-${workspaceId}`}
               additions={row.additions ?? 0}
               deletions={row.deletions ?? 0}
               sx={{ justifyContent: "flex-end", width: "100%", flexShrink: 0 }}
             />
           ) : null}
-          <Box
-            className="workspace-actions"
-            sx={{
-              position: "absolute",
-              right: 0,
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: 24,
-              height: 24,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Tooltip title={deleteWorkspaceLabel ?? "Close workspace"} arrow>
-              <IconButton
-                size="small"
-                aria-label={deleteWorkspaceLabel ?? "Close workspace"}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onWorkspaceRequestDelete?.();
-                }}
-              >
-                <LuArchive size={13} />
-              </IconButton>
-            </Tooltip>
-          </Box>
+          {row.workspaceKind === "local" ? null : (
+            <Box
+              className="workspace-actions"
+              data-testid={`workspace-actions-${workspaceId}`}
+              sx={{
+                position: "absolute",
+                right: 0,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 24,
+                height: 24,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Tooltip title={deleteWorkspaceLabel ?? "Close workspace"} arrow>
+                <IconButton
+                  size="small"
+                  aria-label={deleteWorkspaceLabel ?? "Close workspace"}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onWorkspaceRequestDelete?.();
+                  }}
+                >
+                  <LuArchive size={13} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )}
         </Box>
       ) : null}
       {row.kind === "project" ? (
         <>
-          <IconButton
-            className="project-actions"
-            size="small"
-            aria-label="Create workspace"
-            onClick={(event) => {
-              event.stopPropagation();
-              onProjectCreateWorkspaceClick?.(event);
-            }}
-            sx={{ ml: "auto" }}
-          >
-            <LuPlus size={14} />
-          </IconButton>
+          <Tooltip title={createWorkspaceTooltipLabel ?? "workspace.actions.add"} arrow>
+            <IconButton
+              className="project-actions"
+              size="small"
+              aria-label="workspace.actions.add"
+              onClick={(event) => {
+                event.stopPropagation();
+                onProjectCreateWorkspaceClick?.(event);
+              }}
+              sx={{ ml: "auto" }}
+            >
+              <LuPlus size={14} />
+            </IconButton>
+          </Tooltip>
           <IconButton
             className="project-actions"
             size="small"

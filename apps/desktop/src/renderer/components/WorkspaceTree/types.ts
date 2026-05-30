@@ -65,6 +65,7 @@ export type WorkspaceTreeProps = {
   onWorkspaceMouseEnter?: (event: React.MouseEvent<HTMLElement>, workspaceId: string) => void;
   onWorkspaceMouseLeave?: () => void;
   onWorkspaceRequestDelete?: (workspaceId: string, projectId: string) => void;
+  createWorkspaceTooltipLabel?: string;
   onProjectCreateWorkspaceClick?: (event: React.MouseEvent<HTMLElement>, projectId: string) => void;
   onProjectActionsClick?: (event: React.MouseEvent<HTMLElement>, projectId: string) => void;
 };

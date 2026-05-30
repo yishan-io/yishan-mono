@@ -662,6 +662,7 @@ export function ProjectListView() {
             setFoldedNodeKeys(nextFoldedNodeKeys);
           }}
           deleteWorkspaceLabel={t("workspace.actions.delete")}
+          createWorkspaceTooltipLabel={createWorkspaceTooltipLabel}
           onSelectProject={(projectId) => {
             setSelectedRepoId(projectId);
             if (workspaceListHierarchyMode === "by_project") {
