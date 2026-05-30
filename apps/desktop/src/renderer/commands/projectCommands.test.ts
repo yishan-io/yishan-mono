@@ -311,6 +311,7 @@ describe("projectCommands", () => {
       sourceBranch: "main",
       branch: "main",
       worktreePath: "/tmp/remote-repo",
+      nodeId: "node-1",
     });
   });
 
