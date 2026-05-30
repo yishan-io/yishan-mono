@@ -42,6 +42,7 @@ export type WorkspaceItem = {
   branch: string;
   summaryId: string;
   worktreePath?: string;
+  nodeId?: string;
   kind?: "managed" | "local";
 };
 

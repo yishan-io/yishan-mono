@@ -1,4 +1,5 @@
-import { Box, List } from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
+import { Box, ListItemIcon, Menu, MenuItem } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuSettings, LuTrash2 } from "react-icons/lu";
@@ -12,15 +13,17 @@ import {
 } from "../../../../shared/contracts/externalApps";
 import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../commands/workspaceCommands";
 import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextMenu";
-import { ProjectRow } from "../../../components/ProjectRow";
-import { WorkspaceRow, type WorkspaceRowIndicator } from "../../../components/WorkspaceRow";
+import { WorkspaceTree } from "../../../components/WorkspaceTree";
+import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { useCommands } from "../../../hooks/useCommands";
 import { useContextMenuState } from "../../../hooks/useContextMenuState";
 import { useSuppressNativeContextMenuWhileOpen } from "../../../hooks/useSuppressNativeContextMenuWhileOpen";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
-import { type WorkspaceUnreadTone, chatStore } from "../../../store/chatStore";
+import { chatStore } from "../../../store/chatStore";
+import { sessionStore } from "../../../store/sessionStore";
 import { workspaceStore } from "../../../store/workspaceStore";
+import { api } from "../../../api/client";
 import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
 import { ProjectConfigDialogView } from "./ProjectConfigDialogView";
 import { ProjectDeleteDialogView } from "./ProjectDeleteDialogView";
@@ -31,19 +34,10 @@ import { useProjectListDialogState } from "./useProjectListDialogState";
 import { useWorkspaceDeletionFlow } from "./useWorkspaceDeletionFlow";
 import { useWorkspaceInfoHover } from "./useWorkspaceInfoHover";
 
-/**
- * Resolves the final workspace indicator from runtime status and unread notification tone.
- *
- * Priority is: running > waiting_input > failed > done > none.
- */
-function resolveWorkspaceIndicator(input: {
+function resolveWorkspaceNotificationTone(input: {
   runtimeStatus: "running" | "waiting_input" | "idle";
-  unreadTone?: WorkspaceUnreadTone;
-}): WorkspaceRowIndicator {
-  if (input.runtimeStatus === "running") {
-    return "running";
-  }
-
+  unreadTone?: "success" | "error";
+}): "none" | "waiting_input" | "done" | "failed" {
   if (input.runtimeStatus === "waiting_input") {
     return "waiting_input";
   }
@@ -137,7 +131,16 @@ export function ProjectListView() {
     deleteProject,
   });
   const [foldedProjectIds, setFoldedProjectIds] = useState<string[]>([]);
+  const [foldedNodeKeys, setFoldedNodeKeys] = useState<string[]>([]);
+  const [projectActionsAnchorEl, setProjectActionsAnchorEl] = useState<HTMLElement | null>(null);
+  const [projectActionsProjectId, setProjectActionsProjectId] = useState("");
   const [isAppFocused, setIsAppFocused] = useState(() => document.hasFocus());
+  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
+  const nodesQuery = useQuery({
+    queryKey: ["org-nodes", selectedOrganizationId],
+    queryFn: () => api.node.listByOrg(selectedOrganizationId as string),
+    enabled: Boolean(selectedOrganizationId),
+  });
   const rendererPlatform = getRendererPlatform();
   const canOpenWorkspaceInExternalApp = isExternalAppPlatformSupported(rendererPlatform);
   const openWorkspaceInFileManagerActionLabel =
@@ -193,6 +196,8 @@ export function ProjectListView() {
   const closeAllContextMenus = () => {
     closeProjectContextMenu();
     closeWorkspaceMenus();
+    setProjectActionsAnchorEl(null);
+    setProjectActionsProjectId("");
   };
 
   const workspaceByProjectId = workspaces.reduce<Record<string, (typeof workspaces)[number][]>>((acc, workspace) => {
@@ -205,6 +210,78 @@ export function ProjectListView() {
     return acc;
   }, {});
   const filteredProjects = projects.filter((p) => displayProjectIds.includes(p.id));
+  const treeProjects = filteredProjects.map((project) => ({
+    id: project.id,
+    name: project.name,
+    icon: project.icon,
+    color: project.color,
+  }));
+  const treeNodes = (nodesQuery.data ?? []).map((node) => ({
+    id: node.id,
+    name: node.name,
+    kind: node.kind,
+    scope: node.scope,
+    isOnline: node.isOnline,
+  }));
+  const treeWorkspaces: WorkspaceTreeWorkspace[] = useMemo(() => {
+    const rows: WorkspaceTreeWorkspace[] = [];
+    for (const project of filteredProjects) {
+      const projectWorkspaces = workspaceByProjectId[project.id] ?? [];
+      const preferredProjectPath = project.localPath?.trim() || project.path?.trim() || project.worktreePath?.trim() || "";
+      const localDisplayWorkspaceId = preferredProjectPath
+        ? (projectWorkspaces.find(
+            (workspace) => workspace.kind !== "local" && workspace.worktreePath?.trim() === preferredProjectPath,
+          )?.id ?? "")
+        : "";
+      const displayedWorkspaces = localDisplayWorkspaceId
+        ? projectWorkspaces.filter((workspace) => workspace.kind !== "local")
+        : projectWorkspaces;
+
+      for (const workspace of displayedWorkspaces) {
+        rows.push({
+          id: workspace.id,
+          name: workspace.kind === "local" || localDisplayWorkspaceId === workspace.id ? "local" : workspace.title,
+          projectId: project.id,
+          nodeId: workspace.nodeId?.trim() || "unknown",
+          kind: workspace.kind === "local" || localDisplayWorkspaceId === workspace.id ? "local" : "managed",
+          additions: gitChangeTotalsByWorkspaceId[workspace.id]?.additions ?? 0,
+          deletions: gitChangeTotalsByWorkspaceId[workspace.id]?.deletions ?? 0,
+          runtimeStatus: workspaceAgentStatusByWorkspaceId[workspace.id] ?? "idle",
+          notificationTone: resolveWorkspaceNotificationTone({
+            runtimeStatus: workspaceAgentStatusByWorkspaceId[workspace.id] ?? "idle",
+            unreadTone: workspaceUnreadToneByWorkspaceId[workspace.id],
+          }),
+        });
+      }
+    }
+    return rows;
+  }, [
+    filteredProjects,
+    gitChangeTotalsByWorkspaceId,
+    workspaceAgentStatusByWorkspaceId,
+    workspaceByProjectId,
+    workspaceUnreadToneByWorkspaceId,
+  ]);
+  const expandedTreeItems = useMemo(() => {
+    const items: string[] = [];
+    const foldedSet = new Set(foldedProjectIds);
+    const foldedNodeSet = new Set(foldedNodeKeys);
+    for (const project of filteredProjects) {
+      if (foldedSet.has(project.id)) {
+        continue;
+      }
+
+      items.push(`project:${project.id}`);
+      const projectNodeIds = new Set(treeWorkspaces.filter((workspace) => workspace.projectId === project.id).map((w) => w.nodeId));
+      for (const nodeId of projectNodeIds) {
+        const nodeKey = `${project.id}:${nodeId}`;
+        if (!foldedNodeSet.has(nodeKey)) {
+          items.push(`node:${nodeKey}`);
+        }
+      }
+    }
+    return items;
+  }, [filteredProjects, foldedNodeKeys, foldedProjectIds, treeWorkspaces]);
   const displayWorkspaceIdByProjectId = useMemo(() => {
     const displayWorkspaceIdByProjectIdMap: Record<string, string> = {};
 
@@ -508,112 +585,131 @@ export function ProjectListView() {
 
   return (
     <>
-      <List data-testid="repo-workspace-list" disablePadding sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-        {filteredProjects.map((project) => {
-          const isProjectFolded = foldedProjectIds.includes(project.id);
-          const localDisplayWorkspaceId = displayWorkspaceIdByProjectId[project.id];
-          const projectWorkspaces = workspaceByProjectId[project.id] ?? [];
-          const displayedWorkspaces = localDisplayWorkspaceId
-            ? projectWorkspaces.filter((workspace) => workspace.kind !== "local")
-            : projectWorkspaces;
+      <Box data-testid="repo-workspace-list" sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+        <WorkspaceTree
+          projects={treeProjects}
+          nodes={treeNodes}
+          workspaces={treeWorkspaces}
+          selectedProjectId={selectedProjectId}
+          selectedWorkspaceId={selectedWorkspaceId}
+          expandedItems={expandedTreeItems}
+          onExpandedItemsChange={(items) => {
+            const expandedProjectIds = new Set(
+              items
+                .filter((item) => item.startsWith("project:"))
+                .map((item) => item.replace(/^project:/, "")),
+            );
+            const expandedNodeKeys = new Set(
+              items
+                .filter((item) => item.startsWith("node:"))
+                .map((item) => item.replace(/^node:/, "")),
+            );
+            const nextFoldedProjectIds = filteredProjects
+              .map((project) => project.id)
+              .filter((projectId) => !expandedProjectIds.has(projectId));
+            const visibleNodeKeys = Array.from(new Set(treeWorkspaces.map((workspace) => `${workspace.projectId}:${workspace.nodeId}`)));
+            const nextFoldedNodeKeys = visibleNodeKeys.filter((nodeKey) => !expandedNodeKeys.has(nodeKey));
+            setFoldedProjectIds(nextFoldedProjectIds);
+            setFoldedNodeKeys(nextFoldedNodeKeys);
+          }}
+          deleteWorkspaceLabel={t("workspace.actions.delete")}
+          onSelectProject={(projectId) => {
+            setSelectedRepoId(projectId);
+            setFoldedProjectIds((current) => current.filter((item) => item !== projectId));
+          }}
+          onSelectWorkspace={(workspaceId, projectId) => {
+            setSelectedRepoId(projectId);
+            setSelectedWorkspaceId(workspaceId);
+            setFoldedProjectIds((current) => current.filter((item) => item !== projectId));
+          }}
+          onProjectContextMenu={(event, projectId) => {
+            event.preventDefault();
+            event.stopPropagation();
+            closeWorkspaceMenus();
+            setSelectedRepoId(projectId);
+            openProjectContextMenu({
+              repoId: projectId,
+              mouseX: event.clientX,
+              mouseY: event.clientY,
+            });
+          }}
+          onProjectActionsClick={(event, projectId) => {
+            closeAllContextMenus();
+            setSelectedRepoId(projectId);
+            setProjectActionsAnchorEl(event.currentTarget);
+            setProjectActionsProjectId(projectId);
+          }}
+          onProjectCreateWorkspaceClick={(event, projectId) => {
+            event.preventDefault();
+            event.stopPropagation();
+            closeAllContextMenus();
+            setSelectedRepoId(projectId);
+            handleOpenCreateWorkspace(projectId);
+          }}
+          onWorkspaceContextMenu={(event, workspaceId, projectId) => {
+            event.preventDefault();
+            event.stopPropagation();
+            closeProjectContextMenu();
+            closeWorkspaceMenus();
+            setSelectedRepoId(projectId);
+            setSelectedWorkspaceId(workspaceId);
+            openWorkspaceContextMenu({
+              repoId: projectId,
+              workspaceId,
+              mouseX: event.clientX,
+              mouseY: event.clientY,
+            });
+          }}
+          onWorkspaceMouseEnter={(event, workspaceId) => {
+            handleWorkspaceInfoMouseEnter(workspaceId, event.currentTarget);
+          }}
+          onWorkspaceMouseLeave={handleWorkspaceInfoMouseLeave}
+          onWorkspaceRequestDelete={(workspaceId, projectId) => {
+            handleRequestWorkspaceDeletion(projectId, workspaceId);
+          }}
+        />
+      </Box>
+      <Menu
+        open={Boolean(projectActionsAnchorEl && projectActionsProjectId)}
+        anchorEl={projectActionsAnchorEl}
+        onClose={() => {
+          setProjectActionsAnchorEl(null);
+          setProjectActionsProjectId("");
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            if (!projectActionsProjectId) {
+              return;
+            }
 
-          return (
-            <Box key={project.id} sx={{ mb: 0.5 }}>
-              <ProjectRow
-                repo={project}
-                isSelected={selectedProjectId === project.id}
-                isFolded={isProjectFolded}
-                addWorkspaceAriaLabel={t("workspace.actions.add")}
-                addWorkspaceTooltipLabel={createWorkspaceTooltipLabel}
-                foldToggleAriaLabel={t(isProjectFolded ? "repo.actions.expand" : "repo.actions.collapse")}
-                onSelect={() => {
-                  setSelectedRepoId(project.id);
-                  setFoldedProjectIds((current) => current.filter((item) => item !== project.id));
-                }}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  closeWorkspaceMenus();
-                  setSelectedRepoId(project.id);
-                  openProjectContextMenu({
-                    repoId: project.id,
-                    mouseX: event.clientX,
-                    mouseY: event.clientY,
-                  });
-                }}
-                onAddWorkspace={(event) => {
-                  event.stopPropagation();
-                  handleOpenCreateWorkspace(project.id);
-                }}
-                onToggleFold={(event) => {
-                  event.stopPropagation();
-                  toggleProjectFold(project.id);
-                }}
-              />
-              {!isProjectFolded ? (
-                <List disablePadding sx={{ mt: 0.25 }}>
-                  {displayedWorkspaces.map((workspace) => {
-                    const isWorkspaceDisplayedAsLocal =
-                      workspace.kind === "local" || localDisplayWorkspaceId === workspace.id;
-                    const workspaceForRow = isWorkspaceDisplayedAsLocal
-                      ? {
-                          ...workspace,
-                          kind: "local" as const,
-                          name: "local",
-                          title: "local",
-                        }
-                      : workspace;
-                    const workspaceRuntimeStatus = workspaceAgentStatusByWorkspaceId[workspace.id] ?? "idle";
-                    const workspaceIndicator = resolveWorkspaceIndicator({
-                      runtimeStatus: workspaceRuntimeStatus,
-                      unreadTone: workspaceUnreadToneByWorkspaceId[workspace.id],
-                    });
-                    return (
-                      <WorkspaceRow
-                        key={workspace.id}
-                        repoId={project.id}
-                        workspace={workspaceForRow}
-                        isSelected={selectedWorkspaceId === workspace.id}
-                        indicator={workspaceIndicator}
-                        changeTotals={gitChangeTotalsByWorkspaceId[workspace.id]}
-                        deleteWorkspaceLabel={t("workspace.actions.delete")}
-                        runningIndicatorLabel={t("workspace.notifications.runningIndicator")}
-                        waitingInputIndicatorLabel={t("workspace.notifications.waitingInputIndicator")}
-                        doneIndicatorLabel={t("workspace.notifications.doneIndicator")}
-                        failedIndicatorLabel={t("workspace.notifications.failedIndicator")}
-                        onSelect={() => {
-                          setSelectedRepoId(project.id);
-                          setSelectedWorkspaceId(workspace.id);
-                          setFoldedProjectIds((current) => current.filter((item) => item !== project.id));
-                        }}
-                        onMouseEnter={(event) => {
-                          handleWorkspaceInfoMouseEnter(workspace.id, event.currentTarget);
-                        }}
-                        onMouseLeave={handleWorkspaceInfoMouseLeave}
-                        onContextMenu={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          closeProjectContextMenu();
-                          closeWorkspaceMenus();
-                          setSelectedRepoId(project.id);
-                          setSelectedWorkspaceId(workspace.id);
-                          openWorkspaceContextMenu({
-                            repoId: project.id,
-                            workspaceId: workspace.id,
-                            mouseX: event.clientX,
-                            mouseY: event.clientY,
-                          });
-                        }}
-                        onRequestDelete={handleRequestWorkspaceDeletion}
-                      />
-                    );
-                  })}
-                </List>
-              ) : null}
-            </Box>
-          );
-        })}
-      </List>
+            handleOpenProjectConfig(projectActionsProjectId);
+            setProjectActionsAnchorEl(null);
+            setProjectActionsProjectId("");
+          }}
+        >
+          <ListItemIcon>
+            <LuSettings size={14} />
+          </ListItemIcon>
+          {t("project.actions.config")}
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (!projectActionsProjectId) {
+              return;
+            }
+
+            handleRequestProjectDeletion(projectActionsProjectId);
+            setProjectActionsAnchorEl(null);
+            setProjectActionsProjectId("");
+          }}
+        >
+          <ListItemIcon>
+            <LuTrash2 size={14} />
+          </ListItemIcon>
+          {t("project.actions.delete")}
+        </MenuItem>
+      </Menu>
       <ContextMenu
         open={Boolean(projectContextMenu)}
         onClose={closeAllContextMenus}
