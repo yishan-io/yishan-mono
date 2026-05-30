@@ -118,19 +118,19 @@ export function WorkspaceTreeRowView({
         <Box
           component="span"
           sx={{
-            width: 16,
-            height: 16,
+            width: 20,
+            height: 20,
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
             bgcolor: row.color ?? theme.palette.primary.main,
             color: theme.palette.common.white,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             borderRadius: 0.5,
           }}
         >
-          {renderProjectIcon(row.icon ?? undefined, 10)}
+          {renderProjectIcon(row.icon ?? undefined, 12)}
         </Box>
       ) : row.kind === "node" ? (
         <Box component="span" sx={{ width: 16, height: 16, display: "inline-flex", color: "text.secondary" }}>
@@ -162,6 +162,7 @@ export function WorkspaceTreeRowView({
         sx={{
           ml: 0.75,
           typography: "body2",
+          fontSize: row.kind === "project" ? 14 : undefined,
           color: "text.primary",
           whiteSpace: "nowrap",
           overflow: "hidden",
