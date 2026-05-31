@@ -1,8 +1,8 @@
-import { Box, ButtonBase, Divider, IconButton, Menu, MenuItem, Typography } from "@mui/material";
+import { Box, Divider, IconButton, Menu, MenuItem, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuColumns2, LuGlobe, LuPin, LuPlus, LuRows2, LuSquareTerminal, LuX } from "react-icons/lu";
+import { LuColumns2, LuGlobe, LuPlus, LuRows2, LuSquareTerminal } from "react-icons/lu";
 import {
   AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
   type DesktopAgentKind,
@@ -11,6 +11,7 @@ import {
 import { getRendererPlatform } from "../helpers/platform";
 import { getShortcutDisplayLabelById } from "../shortcuts/shortcutDisplay";
 import { AgentIcon } from "./AgentIcon";
+import { TabBarItem } from "./TabBarItem";
 import { useTabDragDrop } from "./useTabDragDrop";
 
 type WorkspaceTab = {
@@ -29,22 +30,6 @@ type AgentCreateOption = DesktopAgentKind;
 /** Returns true when one create-menu option targets an agent terminal preset. */
 function isAgentCreateOption(option: TabBarCreateOption): option is AgentCreateOption {
   return option !== "terminal" && option !== "browser";
-}
-
-const dirtyDotSx = {
-  width: 6,
-  height: 6,
-  borderRadius: "50%",
-  bgcolor: "primary.main",
-  flexShrink: 0,
-} as const;
-
-/** Renders one small colored dot indicating unsaved changes on a tab. */
-function TabDirtyDot({ tabId, isDirty }: { tabId: string; isDirty?: boolean }) {
-  if (!isDirty) {
-    return null;
-  }
-  return <Box component="span" data-testid={`tab-dirty-dot-${tabId}`} aria-hidden sx={dirtyDotSx} />;
 }
 
 type TabBarProps = {
@@ -231,55 +216,6 @@ export function TabBar({
   );
   const hasAgentCreateOptions = createOptions.some((item) => isAgentCreateOption(item.option));
 
-  // ─── Tab item styles ──────────────────────────────────────────────────────
-
-  const buildTabContainerSx = (active: boolean) => ({
-    display: "flex",
-    alignItems: "center",
-    bgcolor: active ? "background.default" : "transparent",
-    px: 2,
-    width: 180,
-    flexShrink: 0,
-    position: "relative",
-    zIndex: active ? 1 : 0,
-    mb: active ? "-1px" : 0,
-    transition: "background-color 120ms ease",
-    borderRight: "1px solid",
-    borderRightColor: "divider",
-    ...(active
-      ? {
-          borderLeft: "1px solid",
-          borderLeftColor: focused ? "primary.main" : "divider",
-          "&::after": {
-            content: '""',
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: -1,
-            height: 2,
-            bgcolor: "background.default",
-          },
-        }
-      : {}),
-    "& .tab-close": {
-      opacity: 0,
-      pointerEvents: "none",
-      transition: "opacity 0.15s ease",
-    },
-    "&:hover": {
-      bgcolor: active ? "background.default" : "action.hover",
-    },
-    "&:hover .tab-close": {
-      opacity: 1,
-      pointerEvents: "auto",
-    },
-    "& .tab-content": {
-      flexGrow: 1,
-      minWidth: 0,
-    },
-    cursor: canDragTabs ? "grab" : "default",
-  });
-
   // ─── Context menu ─────────────────────────────────────────────────────────
 
   const closeContextMenu = () => {
@@ -303,109 +239,31 @@ export function TabBar({
 
   // ─── Tab item renderer ────────────────────────────────────────────────────
 
-  const renderTabItem = (tab: WorkspaceTab) => {
-    const active = tab.id === selectedTabId;
-    const pinned = tab.pinned;
-
-    return (
-      <Box
-        key={tab.id}
-        ref={(element: HTMLDivElement | null) => {
-          tabItemRefs.current[tab.id] = element;
-        }}
-        draggable={canDragTabs}
-        onContextMenu={(event) => handleContextMenu(event, tab)}
-        onDragStart={(event) => handleTabDragStart(event, tab, "")}
-        onDragOver={(event) => handleTabDragOver(event, tab)}
-        onDrop={(event) => handleTabDrop(event, tab)}
-        onDragEnd={resetDragState}
-        sx={{
-          ...buildTabContainerSx(active),
-          ...(dropTarget?.tabId === tab.id && {
-            ...(dropTarget.position === "before"
-              ? {
-                  boxShadow: (theme) => `inset 2px 0 0 ${theme.palette.primary.main}`,
-                }
-              : {
-                  boxShadow: (theme) => `inset -2px 0 0 ${theme.palette.primary.main}`,
-                }),
-          }),
-          opacity: draggedTabId === tab.id ? 0.9 : 1,
-        }}
-      >
-        <ButtonBase
-            className="tab-content"
-            disableRipple
-            onClick={() => onSelectTab(tab.id)}
-            onDoubleClick={() => {
-              if (tab.isTemporary) {
-                onPromoteTemporaryTab?.(tab.id);
-              }
-            }}
-            sx={{
-              typography: "body2",
-              color: active ? "text.primary" : "text.secondary",
-              py: 1,
-              pl: 0.5,
-              pr: 0.25,
-              whiteSpace: "nowrap",
-              display: "flex",
-              alignItems: "center",
-              gap: 0.5,
-            }}
-          >
-            {getTabIcon?.(tab)}
-            <TabDirtyDot tabId={tab.id} isDirty={tab.isDirty} />
-            <Box
-              component="span"
-              style={{ fontStyle: tab.isTemporary ? "italic" : "normal" }}
-              sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
-            >
-              {tab.title || untitledLabel}
-            </Box>
-          </ButtonBase>
-        {pinned ? (
-          <IconButton
-            className="tab-pin"
-            size="small"
-            aria-label={unpinTabActionLabel}
-            onClick={(event) => {
-              event.stopPropagation();
-              onTogglePinTab?.(tab.id);
-            }}
-            disabled={!onTogglePinTab}
-            sx={{
-              color: active ? "text.primary" : "text.secondary",
-              p: 0.5,
-              mr: -2,
-              display: "inline-flex",
-            }}
-          >
-            <LuPin size={14} />
-          </IconButton>
-        ) : (
-          <IconButton
-            className="tab-close"
-            size="small"
-            aria-label={closeTabActionLabel}
-            onClick={(event) => {
-              event.stopPropagation();
-              onCloseTab(tab.id);
-            }}
-            disabled={false}
-            sx={{
-              color: active ? "text.primary" : "text.secondary",
-              p: 0.5,
-              mr: -2,
-              display: "inline-flex",
-            }}
-          >
-            <LuX size={14} />
-          </IconButton>
-        )}
-      </Box>
-    );
-  };
+  const renderTabItem = (tab: WorkspaceTab) => (
+    <TabBarItem
+      key={tab.id}
+      tab={tab}
+      active={tab.id === selectedTabId}
+      canDrag={canDragTabs}
+      draggedTabId={draggedTabId}
+      dropTarget={dropTarget}
+      focused={focused}
+      untitledLabel={untitledLabel}
+      unpinTabActionLabel={unpinTabActionLabel}
+      closeTabActionLabel={closeTabActionLabel}
+      getTabIcon={getTabIcon}
+      onSelectTab={onSelectTab}
+      onCloseTab={onCloseTab}
+      onTogglePinTab={onTogglePinTab}
+      onPromoteTemporaryTab={onPromoteTemporaryTab}
+      onContextMenu={handleContextMenu}
+      onDragStart={handleTabDragStart}
+      onDragOver={handleTabDragOver}
+      onDrop={handleTabDrop}
+      onDragEnd={resetDragState}
+      itemRef={(element) => { tabItemRefs.current[tab.id] = element; }}
+    />
+  );
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
