@@ -1,15 +1,12 @@
 import { Box } from "@mui/material";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { ClipboardEvent, DragEvent } from "react";
+import type { ClipboardEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isEditableTarget } from "../../shortcuts/editableTarget";
 import { FlatTreeRow } from "./FlatTreeRow";
 import { ROW_HEIGHT } from "./FlatTreeRow";
 import {
-  extractInternalDragRelativePaths,
   extractSourcePathsFromDataTransferAsync,
-  hasExternalFileDragIntent,
-  hasInternalFileTreeDragIntent,
 } from "./dataTransfer";
 import {
   collectAncestorDirectoryPaths,
@@ -24,6 +21,7 @@ import type {
   FileTreeProps,
   VisibleRow,
 } from "./types";
+import { useFileTreeDragDrop } from "./useFileTreeDragDrop";
 import { useFileTreeKeyboard } from "./useFileTreeKeyboard";
 import { useVisibleFileTree } from "./useVisibleFileTree";
 
@@ -91,7 +89,14 @@ export function FileTree({
   const lastAppliedSelectionRequestIdRef = useRef<number | null>(null);
   const lastAppliedCreateRequestIdRef = useRef<number | null>(null);
   const expandedPathSet = useMemo(() => new Set(expandedItems), [expandedItems]);
-  const [dropTargetPath, setDropTargetPath] = useState<string | null>(null);
+  const {
+    dropTargetPath,
+    handleExternalDragOver,
+    handleRowDragEnter,
+    handleRowDragLeave,
+    handleExternalDrop,
+    clearDropTarget,
+  } = useFileTreeDragDrop({ worktreePath, onDropExternalEntries, onMoveEntries });
   const rowByPath = useMemo(() => {
     const map = new Map<string, { row: VisibleRow; index: number }>();
     for (let i = 0; i < visibleRows.length; i++) {
@@ -296,88 +301,7 @@ export function FileTree({
     cancelRename();
   }, [cancelRename]);
 
-  // ─── Drag & drop handlers ─────────────────────────────────────────────────
-
-  const handleExternalDragOver = useCallback(
-    (event: DragEvent<HTMLElement>) => {
-      if (onMoveEntries && hasInternalFileTreeDragIntent(event)) {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "move";
-        return;
-      }
-
-      if (!onDropExternalEntries || !hasExternalFileDragIntent(event)) {
-        return;
-      }
-
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "copy";
-    },
-    [onDropExternalEntries, onMoveEntries],
-  );
-
-  const handleRowDragEnter = useCallback(
-    (event: DragEvent<HTMLElement>, targetPath: string, targetIsDirectory: boolean) => {
-      const destinationPath = resolveDestinationDirectoryPath(targetPath, targetIsDirectory);
-
-      if (onMoveEntries && hasInternalFileTreeDragIntent(event)) {
-        setDropTargetPath(destinationPath);
-        return;
-      }
-
-      if (onDropExternalEntries && hasExternalFileDragIntent(event)) {
-        setDropTargetPath(destinationPath);
-      }
-    },
-    [onDropExternalEntries, onMoveEntries],
-  );
-
-  const handleRowDragLeave = useCallback((_event: DragEvent<HTMLElement>) => {
-    // Drop target is updated by next dragEnter or cleared on drop/container-dragLeave.
-  }, []);
-
-  const handleExternalDrop = useCallback(
-    async (event: DragEvent<HTMLElement>, targetPath: string, targetIsDirectory: boolean) => {
-      setDropTargetPath(null);
-
-      const destinationPath = resolveDestinationDirectoryPath(targetPath, targetIsDirectory);
-
-      if (onMoveEntries && hasInternalFileTreeDragIntent(event) && worktreePath) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        const sourcePaths = extractInternalDragRelativePaths(event.dataTransfer, worktreePath);
-        if (sourcePaths.length === 0) {
-          return;
-        }
-
-        const isInvalidTarget = sourcePaths.some(
-          (srcPath) => srcPath === destinationPath || destinationPath.startsWith(`${srcPath}/`),
-        );
-        if (isInvalidTarget) {
-          return;
-        }
-
-        await onMoveEntries(sourcePaths, destinationPath);
-        return;
-      }
-
-      if (!onDropExternalEntries) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      const sourcePaths = await extractSourcePathsFromDataTransferAsync(event.dataTransfer);
-      if (sourcePaths.length === 0) {
-        return;
-      }
-
-      await onDropExternalEntries(sourcePaths, destinationPath);
-    },
-    [onDropExternalEntries, onMoveEntries, worktreePath],
-  );
+  // ─── External paste handler ────────────────────────────────────────────────
 
   const handleExternalPaste = useCallback(
     async (event: ClipboardEvent<HTMLElement>) => {
