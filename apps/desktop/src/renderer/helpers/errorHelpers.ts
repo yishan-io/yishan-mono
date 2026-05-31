@@ -1,24 +1,8 @@
 /**
- * Extracts a human-readable message from an unknown thrown value.
+ * Re-exports `getErrorMessage` from the shared module.
  *
- * When the value is an `Error` instance its `.message` property is returned.
- * For all other values `String(value)` is used as the fallback so the caller
- * always receives a plain string regardless of what was thrown.
- *
- * @example
- * ```ts
- * try {
- *   await riskyOperation();
- * } catch (error) {
- *   const message = getErrorMessage(error);
- *   showToast(message);
- * }
- * ```
+ * All renderer code can continue importing from this path. The canonical
+ * implementation now lives in `shared/helpers/errorHelpers.ts` so the main
+ * process can share it without duplication.
  */
-export function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return String(error);
-}
+export { getErrorMessage } from "../../shared/helpers/errorHelpers";

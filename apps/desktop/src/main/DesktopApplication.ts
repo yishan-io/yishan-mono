@@ -1,30 +1,19 @@
-import { statSync } from "node:fs";
-import {
-  copyFile as copyFileAsync,
-  cp as cpAsync,
-  mkdir as mkdirAsync,
-  stat as statAsync,
-  writeFile as writeFileAsync,
-} from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { BrowserWindow, Menu, app, clipboard, dialog, ipcMain, net, protocol, session, systemPreferences } from "electron";
+import { BrowserWindow, Menu, app, dialog, ipcMain, net, protocol, session } from "electron";
 import { autoUpdater } from "electron-updater";
 import { ACTIONS, type AppActionPayload } from "../shared/contracts/actions";
 import {
-  appendBrowserHistoryEntry,
   flushBrowserHistoryPruneCheck,
-  loadBrowserHistoryGroups,
 } from "./browser/browserHistory";
 import { configureApplicationMenu } from "./app/menu";
 import { getAuthStatus, login } from "./auth/cliAuth";
 import { getDesktopCliInstallStatus, installDesktopCli, uninstallDesktopCli } from "./cli/cliInstaller";
 import { DaemonManager } from "./daemon/daemonManager";
 import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "./daemon/daemonSettings";
-import { launchPath, openExternalUrl } from "./integrations/externalAppLauncher";
-import { readExternalClipboardSourcePathsFromSystem } from "./integrations/externalClipboardPipeline";
 import { DESKTOP_RPC_IPC_CHANNELS, type DesktopUpdateEventPayload, HOST_IPC_CHANNELS } from "./ipc";
-import { createDesktopNotificationHostAdapter } from "./notifications/service";
+import { registerFileIpcHandlers } from "./ipc/fileHandlers";
+import { registerNotificationAndBrowserIpcHandlers } from "./ipc/notificationAndBrowserHandlers";
 import { isDevMode } from "./runtime/environment";
 import { checkForUpdatesManually, downloadUpdate, startAutoUpdates } from "./updates/autoUpdateService";
 
@@ -320,7 +309,8 @@ export class DesktopApplication {
 
   /** Registers desktop host IPC endpoints used by renderer shell/runtime commands. */
   private registerHostIpcHandlers() {
-    const notificationAdapter = createDesktopNotificationHostAdapter();
+    registerFileIpcHandlers();
+    registerNotificationAndBrowserIpcHandlers();
 
     ipcMain.handle(HOST_IPC_CHANNELS.openLocalFolderDialog, async (_event, input) => {
       const options: Electron.OpenDialogOptions = {
@@ -357,155 +347,6 @@ export class DesktopApplication {
       return {
         isFullscreen: this.mainWindow?.isFullScreen() ?? false,
       };
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.openEntryInExternalApp, async (_event, input) => {
-      const absolutePath = resolve(input.workspaceWorktreePath, input.relativePath ?? ".");
-      if (input.appId === "system-file-manager") {
-        let isDirectory = true;
-        try {
-          isDirectory = statSync(absolutePath).isDirectory();
-        } catch {
-          isDirectory = true;
-        }
-
-        await launchPath({
-          kind: "system-file-manager",
-          path: absolutePath,
-          isDirectory,
-        });
-      } else {
-        await launchPath({
-          kind: "external-app",
-          path: absolutePath,
-          appId: input.appId,
-        });
-      }
-
-      return { ok: true };
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.openExternalUrl, async (_event, input) => {
-      return await openExternalUrl(input.url);
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.readExternalClipboardSourcePaths, async () => {
-      return await readExternalClipboardSourcePathsFromSystem();
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.writeClipboardText, (_event, text: string) => {
-      clipboard.writeText(String(text ?? ""));
-      return { ok: true as const };
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.copyFiles, async (_event, input) => {
-      try {
-        const sourcePaths: string[] = Array.isArray(input?.sourcePaths) ? input.sourcePaths : [];
-        const destinationDirectory = String(input?.destinationDirectory ?? "");
-        if (sourcePaths.length === 0) {
-          return { ok: false, error: "sourcePaths is required" };
-        }
-        if (!destinationDirectory) {
-          return { ok: false, error: "destinationDirectory is required" };
-        }
-
-        // Ensure destination directory exists
-        await mkdirAsync(destinationDirectory, { recursive: true });
-
-        const copiedPaths: string[] = [];
-        for (const sourcePath of sourcePaths) {
-          const name = basename(sourcePath);
-          const destPath = join(destinationDirectory, name);
-          const stat = await statAsync(sourcePath);
-          if (stat.isDirectory()) {
-            await cpAsync(sourcePath, destPath, { recursive: true });
-          } else {
-            await copyFileAsync(sourcePath, destPath);
-          }
-          copiedPaths.push(destPath);
-        }
-
-        return { ok: true, copiedPaths };
-      } catch (error) {
-        return { ok: false, error: error instanceof Error ? error.message : String(error) };
-      }
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.writeFileBase64, async (_event, input) => {
-      try {
-        const absolutePath = String(input?.absolutePath ?? "");
-        const contentBase64 = String(input?.contentBase64 ?? "");
-        if (!absolutePath) {
-          return { ok: false, error: "absolutePath is required" };
-        }
-        if (!contentBase64) {
-          return { ok: false, error: "contentBase64 is required" };
-        }
-
-        // Ensure parent directory exists
-        const parentDir = join(absolutePath, "..");
-        await mkdirAsync(parentDir, { recursive: true });
-
-        const buffer = Buffer.from(contentBase64, "base64");
-        await writeFileAsync(absolutePath, buffer);
-        return { ok: true };
-      } catch (error) {
-        return { ok: false, error: error instanceof Error ? error.message : String(error) };
-      }
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.loadBrowserHistory, async () => {
-      return await loadBrowserHistoryGroups();
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.appendBrowserHistory, async (_event, input) => {
-      await appendBrowserHistoryEntry(input?.entry);
-      return { ok: true };
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.dispatchNotification, async (_event, input) => {
-      const notificationResult = await notificationAdapter.driver.show({
-        title: input.title,
-        body: input.body,
-      });
-
-      return {
-        sent: true,
-        notificationId: notificationResult?.notificationId,
-      };
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.playNotificationSound, async (_event, input) => {
-      try {
-        await notificationAdapter.playSound({
-          eventType: "run-finished",
-          soundId: input.soundId,
-          volume: input.volume,
-        });
-
-        return {
-          played: true,
-        };
-      } catch (error) {
-        console.error("Notification sound playback failed:", error);
-        return {
-          played: false,
-          reason: "sound-player-unavailable" as const,
-        };
-      }
-    });
-
-    ipcMain.handle(HOST_IPC_CHANNELS.requestMicrophoneAccess, async () => {
-      if (process.platform !== "darwin") {
-        return { granted: true };
-      }
-
-      const status = systemPreferences.getMediaAccessStatus("microphone");
-      if (status === "granted") {
-        return { granted: true };
-      }
-
-      return { granted: await systemPreferences.askForMediaAccess("microphone") };
     });
 
     ipcMain.handle(HOST_IPC_CHANNELS.getPendingUpdate, async () => {

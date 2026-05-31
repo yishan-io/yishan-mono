@@ -2,6 +2,7 @@ import { runCommandForStdout } from "./process";
 import { clipboard } from "electron";
 import type { ExternalClipboardReadOutcome } from "../../shared/contracts/rpcRequestTypes";
 import { extractPathsFromClipboardText } from "../../shared/fileClipboardPaths";
+import { getErrorMessage } from "../../shared/helpers/errorHelpers";
 
 type ClipboardReadAttemptKind = "success" | "supported" | "empty" | "permission-denied" | "parse-failed";
 
@@ -29,7 +30,7 @@ function isPermissionDeniedError(error: unknown): boolean {
 
 /** Converts one thrown read error into a typed clipboard-read attempt. */
 function toClipboardErrorAttempt(strategy: string, error: unknown): ClipboardReadAttempt {
-  const fallbackMessage = error instanceof Error ? error.message : String(error);
+  const fallbackMessage = getErrorMessage(error);
   if (isPermissionDeniedError(error)) {
     return {
       kind: "permission-denied",

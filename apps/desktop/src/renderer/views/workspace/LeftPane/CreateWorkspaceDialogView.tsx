@@ -14,27 +14,22 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuCloud, LuFolderGit2, LuGitBranch, LuServer } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import { BranchDropdown, type BranchDropdownGroups } from "../../../components/BranchDropdown";
 import { renderProjectIcon } from "../../../components/projectIcons";
-import { api } from "../../../api";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../../helpers/platform";
-import {
-  resolveSourceBranchState,
-  resolveTargetBranchForCreate,
-  suggestTargetBranchName,
-} from "../../../helpers/workspaceBranchNaming";
+import { resolveTargetBranchForCreate } from "../../../helpers/workspaceBranchNaming";
 import { useCommands } from "../../../hooks/useCommands";
 import { useDialogRegistration } from "../../../hooks/useDialogRegistration";
-import { useGitAuthorName } from "../../../hooks/useGitAuthorName";
 import { buildWorkspaceNavigationPath } from "../../../navigation/workspaceNavigation";
 import { sessionStore } from "../../../store/sessionStore";
-import { resolveGitBranchPrefix, workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
+import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
+import { compactSelectSx, resolveSourceBranchGroups } from "./createWorkspaceHelpers";
+import { useCreateWorkspaceDialogState } from "./useCreateWorkspaceDialogState";
 
 type CreateWorkspaceDialogViewProps = {
   open: boolean;
@@ -42,96 +37,6 @@ type CreateWorkspaceDialogViewProps = {
   mode?: "create" | "rename";
   workspaceId?: string;
   onClose: () => void;
-};
-
-function toUniqueSorted(values: string[]): string[] {
-  const normalizedValues = Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
-  const preferredBranchOrder = new Map<string, number>([
-    ["main", 0],
-    ["master", 1],
-    ["origin/main", 0],
-    ["origin/master", 1],
-  ]);
-
-  return normalizedValues.sort((left, right) => {
-    const leftRank = preferredBranchOrder.get(left);
-    const rightRank = preferredBranchOrder.get(right);
-    if (leftRank !== undefined || rightRank !== undefined) {
-      return (leftRank ?? Number.MAX_SAFE_INTEGER) - (rightRank ?? Number.MAX_SAFE_INTEGER);
-    }
-
-    return left.localeCompare(right);
-  });
-}
-
-function resolveSourceBranchGroups(input: {
-  branches: string[];
-  localBranches?: string[];
-  remoteBranches?: string[];
-  worktreeBranches?: string[];
-}): BranchDropdownGroups {
-  const hasExplicitGroups = Boolean(input.localBranches || input.remoteBranches || input.worktreeBranches);
-  if (hasExplicitGroups) {
-    return {
-      localBranches: toUniqueSorted(input.localBranches ?? []),
-      worktreeBranches: toUniqueSorted(input.worktreeBranches ?? []),
-      remoteBranches: toUniqueSorted(input.remoteBranches ?? []),
-    };
-  }
-
-  const localBranches: string[] = [];
-  const worktreeBranches: string[] = [];
-  const remoteBranches: string[] = [];
-
-  for (const branch of input.branches) {
-    const normalizedBranch = branch.trim();
-    if (!normalizedBranch) {
-      continue;
-    }
-    if (normalizedBranch.includes("/") && !normalizedBranch.startsWith("origin/")) {
-      worktreeBranches.push(normalizedBranch);
-      continue;
-    }
-    if (normalizedBranch.startsWith("origin/")) {
-      remoteBranches.push(normalizedBranch);
-      continue;
-    }
-    localBranches.push(normalizedBranch);
-  }
-
-  return {
-    localBranches: toUniqueSorted(localBranches),
-    worktreeBranches: toUniqueSorted(worktreeBranches),
-    remoteBranches: toUniqueSorted(remoteBranches),
-  };
-}
-
-const compactSelectSx = {
-  "& .MuiOutlinedInput-root": {
-    borderRadius: 2.5,
-    backgroundColor: "action.hover",
-    minHeight: 36,
-    "& fieldset": {
-      borderColor: "transparent",
-    },
-    "&:hover fieldset": {
-      borderColor: "transparent",
-    },
-    "&.Mui-focused fieldset": {
-      borderColor: "divider",
-    },
-  },
-  "& .MuiSelect-select": {
-    display: "flex",
-    alignItems: "center",
-    py: 0.5,
-    pr: 4,
-  },
-  "& .MuiSelect-icon": {
-    right: 10,
-    color: "text.secondary",
-    fontSize: 18,
-  },
 };
 
 /** Renders one create/rename workspace dialog that reuses shared name/branch form controls. */
@@ -157,223 +62,44 @@ export function CreateWorkspaceDialogView({
   const branchInputPlaceholder = isRenameMode
     ? t("workspace.rename.branchNameLabel")
     : t("workspace.create.branchNameLabel");
-  const [selectedProjectId, setSelectedProjectId] = useState(() =>
-    projects.some((project) => project.id === projectId) ? projectId : (projects[0]?.id ?? ""),
-  );
-  const [sourceBranchOptions, setSourceBranchOptions] = useState<string[]>([]);
-  const [sourceBranchGroups, setSourceBranchGroups] = useState<BranchDropdownGroups>({
-    localBranches: [],
-    worktreeBranches: [],
-    remoteBranches: [],
-  });
-  const [sourceBranch, setSourceBranch] = useState("");
-  const [sourceBranchMenuAnchorEl, setSourceBranchMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [isLoadingSourceBranches, setIsLoadingSourceBranches] = useState(false);
-  const [name, setName] = useState("");
-  const [targetBranch, setTargetBranch] = useState("");
-  const hasEditedTargetBranchRef = useRef(false);
-  const hasSyncedRepoIdForOpenRef = useRef(false);
-  const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
-  const [selectedNodeId, setSelectedNodeId] = useState("");
-  const [nodes, setNodes] = useState<
-    Array<{ id: string; name: string; scope: "private" | "shared"; canUse: boolean; isOnline?: boolean }>
-  >([]);
-  const [nodesError, setNodesError] = useState("");
-
-  /** Clears dialog draft values so reopening starts from a clean form. */
-  const resetDraftInputs = () => {
-    setName("");
-    setTargetBranch("");
-    hasEditedTargetBranchRef.current = false;
-  };
-
-  useEffect(() => {
-    if (!open) {
-      hasSyncedRepoIdForOpenRef.current = false;
-      return;
-    }
-    if (hasSyncedRepoIdForOpenRef.current) {
-      return;
-    }
-    hasSyncedRepoIdForOpenRef.current = true;
-    hasEditedTargetBranchRef.current = false;
-    setSelectedProjectId((currentProjectId) => {
-      if (projects.some((project) => project.id === projectId)) {
-        return projectId;
-      }
-      if (projects.some((project) => project.id === currentProjectId)) {
-        return currentProjectId;
-      }
-      return projects[0]?.id ?? "";
-    });
-  }, [open, projectId, projects]);
-
-  useEffect(() => {
-    if (!open || isRenameMode || !organizationId) {
-      setNodes([]);
-      setNodesError("");
-      setSelectedNodeId("");
-      return;
-    }
-
-    let isCancelled = false;
-    const loadNodes = async () => {
-      try {
-        const listedNodes = await api.node.listByOrg(organizationId);
-        if (isCancelled) {
-          return;
-        }
-        setNodes(listedNodes);
-        setNodesError("");
-      } catch (error) {
-        if (isCancelled) {
-          return;
-        }
-        setNodes([]);
-        setNodesError(getErrorMessage(error));
-      }
-    };
-
-    void loadNodes();
-    return () => {
-      isCancelled = true;
-    };
-  }, [isRenameMode, open, organizationId]);
-
-  useEffect(() => {
-    if (!open || isRenameMode || !nodes || nodes.length === 0) {
-      return;
-    }
-    setSelectedNodeId((currentNodeId) => {
-      if (currentNodeId && nodes.some((node) => node.id === currentNodeId && node.canUse && node.isOnline)) {
-        return currentNodeId;
-      }
-      const daemonNode = daemonId ? nodes.find((node) => node.id === daemonId && node.canUse && node.isOnline) : undefined;
-      if (daemonNode) {
-        return daemonNode.id;
-      }
-      const fallbackNode = nodes.find((node) => node.canUse && node.isOnline);
-      return fallbackNode?.id ?? "";
-    });
-  }, [daemonId, isRenameMode, nodes, open]);
-
-  const selectedProject = projects.find((project) => project.id === selectedProjectId);
-  const selectedWorkspace = workspaces.find(
-    (workspace) => workspace.id === workspaceId && workspace.repoId === selectedProjectId && workspace.kind !== "local",
-  );
-  const selectedProjectBranchListPath =
-    selectedProject?.localPath?.trim() || selectedProject?.path?.trim() || selectedProject?.worktreePath?.trim() || "";
-  const gitAuthorNamePath = open && !isRenameMode && prefixMode === "user" ? selectedProjectBranchListPath : "";
-  const resolvedGitUserName = useGitAuthorName(gitAuthorNamePath);
-  const resolvedPrefix = resolveGitBranchPrefix({
+  const {
+    selectedProjectId,
+    setSelectedProjectId,
+    sourceBranchOptions,
+    sourceBranchGroups,
+    sourceBranch,
+    setSourceBranch,
+    sourceBranchMenuAnchorEl,
+    setSourceBranchMenuAnchorEl,
+    isLoadingSourceBranches,
+    name,
+    setName,
+    targetBranch,
+    setTargetBranch,
+    hasEditedTargetBranchRef,
+    isCreatingWorkspace,
+    setIsCreatingWorkspace,
+    selectedNodeId,
+    setSelectedNodeId,
+    nodes,
+    nodesError,
+    resetDraftInputs,
+    selectedProject,
+    selectedWorkspace,
+    defaultBranchPrefix,
+  } = useCreateWorkspaceDialogState({
+    open,
+    projectId,
+    workspaceId,
+    isRenameMode,
+    organizationId,
+    daemonId,
+    projects,
+    workspaces,
     prefixMode,
     customPrefix,
-    gitUserName: resolvedGitUserName,
-  });
-  const defaultBranchPrefix = resolvedPrefix ? `${resolvedPrefix}/` : "";
-
-  useEffect(() => {
-    if (!open || hasEditedTargetBranchRef.current || isRenameMode) {
-      return;
-    }
-    const nextTargetBranch = suggestTargetBranchName(name, defaultBranchPrefix);
-    setTargetBranch((currentValue) => (currentValue === nextTargetBranch ? currentValue : nextTargetBranch));
-  }, [defaultBranchPrefix, isRenameMode, name, open]);
-
-  useEffect(() => {
-    if (!open || !selectedProjectBranchListPath || isRenameMode) {
-      const renameSourceBranch = selectedWorkspace?.sourceBranch?.trim() ?? "";
-      if (isRenameMode && open) {
-        setSourceBranchOptions(renameSourceBranch ? [renameSourceBranch] : []);
-        setSourceBranchGroups({
-          localBranches: renameSourceBranch ? [renameSourceBranch] : [],
-          worktreeBranches: [],
-          remoteBranches: [],
-        });
-        setSourceBranch(renameSourceBranch);
-        setIsLoadingSourceBranches(false);
-        return;
-      }
-      setSourceBranchOptions([]);
-      setSourceBranchGroups({
-        localBranches: [],
-        worktreeBranches: [],
-        remoteBranches: [],
-      });
-      setSourceBranch("");
-      setIsLoadingSourceBranches(false);
-      return;
-    }
-
-    let isCancelled = false;
-
-    /** Applies one branch list into selector options while preserving manual current selection. */
-    const applySourceBranchState = (branches: string[], nextGroups?: BranchDropdownGroups) => {
-      const nextSourceBranchState = resolveSourceBranchState(branches, selectedProject?.defaultBranch ?? "");
-      const resolvedGroups =
-        nextGroups ??
-        resolveSourceBranchGroups({
-          branches: nextSourceBranchState.options,
-        });
-      const remotePreferredBranch =
-        resolvedGroups.remoteBranches.find((branch) => branch === "origin/main" || branch === "origin/master") ?? "";
-      const preferredBranch = remotePreferredBranch || nextSourceBranchState.preferred;
-      setSourceBranchOptions(nextSourceBranchState.options);
-      setSourceBranchGroups(resolvedGroups);
-      setSourceBranch((currentValue) =>
-        currentValue && nextSourceBranchState.options.includes(currentValue) ? currentValue : preferredBranch,
-      );
-    };
-
-    const loadSourceBranches = async () => {
-      setIsLoadingSourceBranches(true);
-      try {
-        const result = await listGitBranches({ workspaceWorktreePath: selectedProjectBranchListPath });
-        if (isCancelled) {
-          return;
-        }
-
-        const nextGroups = resolveSourceBranchGroups({
-          branches: result.branches ?? [],
-          localBranches: result.localBranches,
-          remoteBranches: result.remoteBranches,
-          worktreeBranches: result.worktreeBranches,
-        });
-        applySourceBranchState(result.branches ?? [], nextGroups);
-      } catch {
-        if (isCancelled) {
-          return;
-        }
-        applySourceBranchState([]);
-      } finally {
-        if (!isCancelled) {
-          setIsLoadingSourceBranches(false);
-        }
-      }
-    };
-
-    void loadSourceBranches();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [
-    isRenameMode,
     listGitBranches,
-    open,
-    selectedProject?.defaultBranch,
-    selectedProjectBranchListPath,
-    selectedWorkspace?.sourceBranch,
-  ]);
-
-  useEffect(() => {
-    if (!open || !isRenameMode) {
-      return;
-    }
-
-    setName(selectedWorkspace?.name ?? "");
-    setTargetBranch(selectedWorkspace?.branch ?? "");
-  }, [isRenameMode, open, selectedWorkspace?.branch, selectedWorkspace?.name]);
+  });
 
   /** Creates one workspace from manual inputs with prefix-aware branch fallback behavior. */
   const handleCreateWorkspace = async () => {

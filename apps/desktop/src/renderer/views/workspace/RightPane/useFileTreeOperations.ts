@@ -9,91 +9,22 @@ import { tabStore } from "../../../store/tabStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import type { FileTreeClipboardState } from "./clipboardSourceResolvers";
 import {
-  createOperationId,
   getFileOperationErrorMessage,
   mapIgnoredWorkspaceEntryPaths,
   mapWorkspaceEntryPaths,
 } from "./fileTreeHelpers";
+import {
+  buildNormalizedPathSet,
+  hasVisibleImmediateChildren,
+  isMissingWorkspacePathError,
+  isPathWithinOrEqual,
+  mergeWorkspaceEntries,
+} from "./fileTreeOperationHelpers";
 import { normalizeRelativePath } from "./fileTreePathHelpers";
+import { useFileOperationState, type FileOperationState } from "./useFileOperationState";
 import { useFileTreeClipboard } from "./useFileTreeClipboard";
 import { useFileTreeCrud } from "./useFileTreeCrud";
 import { useFileTreeUndo, type FileTreeUndoAction } from "./useFileTreeUndo";
-
-function mergeWorkspaceEntries(current: WorkspaceFileEntry[], incoming: WorkspaceFileEntry[]): WorkspaceFileEntry[] {
-  const mergedByPath = new Map<string, WorkspaceFileEntry>();
-
-  for (const entry of current) {
-    mergedByPath.set(entry.path, entry);
-  }
-
-  for (const entry of incoming) {
-    const existingEntry = mergedByPath.get(entry.path);
-    if (!existingEntry) {
-      mergedByPath.set(entry.path, entry);
-      continue;
-    }
-
-    mergedByPath.set(entry.path, {
-      ...entry,
-      isIgnored: existingEntry.isIgnored || entry.isIgnored,
-    });
-  }
-
-  return [...mergedByPath.values()].sort((left, right) => left.path.localeCompare(right.path));
-}
-
-function isPathWithinOrEqual(path: string, candidateParentPath: string): boolean {
-  return path === candidateParentPath || path.startsWith(`${candidateParentPath}/`);
-}
-
-function buildNormalizedPathSet(entries: WorkspaceFileEntry[]): Set<string> {
-  const normalizedPaths = new Set<string>();
-  for (const entry of entries) {
-    const normalizedEntryPath = normalizeRelativePath(entry.path);
-    if (!normalizedEntryPath) {
-      continue;
-    }
-
-    normalizedPaths.add(normalizedEntryPath);
-  }
-
-  return normalizedPaths;
-}
-
-function hasVisibleImmediateChildren(directoryPath: string, entries: WorkspaceFileEntry[]): boolean {
-  const normalizedDirectoryPath = normalizeRelativePath(directoryPath);
-  if (!normalizedDirectoryPath) {
-    return false;
-  }
-
-  return entries.some((entry) => {
-    if (entry.isIgnored) {
-      return false;
-    }
-
-    const normalizedEntryPath = normalizeRelativePath(entry.path);
-    if (!normalizedEntryPath || normalizedEntryPath === normalizedDirectoryPath) {
-      return false;
-    }
-
-    return normalizedEntryPath.startsWith(`${normalizedDirectoryPath}/`);
-  });
-}
-
-function isMissingWorkspacePathError(error: unknown): boolean {
-  const message = getErrorMessage(error).toLowerCase();
-  return message.includes("no such file or directory") && message.includes("stat ");
-}
-
-type FileOperationState = {
-  operationId: string;
-  workspaceWorktreePath: string;
-  mode: "copy" | "move" | "import";
-  status: "running" | "completed" | "failed";
-  processed: number;
-  total: number;
-  currentPath?: string;
-};
 
 export type FileTreeSelectionRequest = {
   path: string;
@@ -138,8 +69,6 @@ const EMPTY_CHANGED_RELATIVE_PATHS: string[] = [];
 export function useFileTreeOperations(): UseFileTreeOperationsResult {
   const [repoEntries, setRepoEntries] = useState<WorkspaceFileEntry[]>([]);
   const [clipboardState, setClipboardState] = useState<FileTreeClipboardState | null>(null);
-  const [fileOperationState, setFileOperationState] = useState<FileOperationState | null>(null);
-  const [fileOperationError, setFileOperationError] = useState<string | null>(null);
   const [undoStack, setUndoStack] = useState<FileTreeUndoAction[]>([]);
   const [fileTreeSelectionRequest, setFileTreeSelectionRequest] = useState<FileTreeSelectionRequest | null>(null);
   const repoEntriesRef = useRef<WorkspaceFileEntry[]>([]);
@@ -166,6 +95,15 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
   });
   const { openTab, closeTab, renameTabsForEntryRename, setLastUsedExternalAppId } = useCommands();
   const tabs = tabStore((state) => state.tabs);
+  const {
+    fileOperationState,
+    fileOperationError,
+    setFileOperationError,
+    resetFileOperationState,
+    beginFileOperation,
+    completeFileOperation,
+    failFileOperation,
+  } = useFileOperationState(selectedWorkspaceWorktreePath);
   const repoFiles = useMemo(() => mapWorkspaceEntryPaths(repoEntries), [repoEntries]);
   const ignoredRepoPaths = useMemo(() => mapIgnoredWorkspaceEntryPaths(repoEntries), [repoEntries]);
   const searchRepoFiles = repoFiles;
@@ -316,63 +254,13 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     void selectedWorkspaceWorktreePath;
     const cachedEntries = selectedWorkspaceId ? treeCacheByWorkspaceIdRef.current.get(selectedWorkspaceId) : null;
     setRepoEntries(cachedEntries ?? []);
-    setFileOperationState(null);
+    resetFileOperationState();
     setFileOperationError(null);
     setClipboardState(null);
     setUndoStack([]);
     setFileTreeSelectionRequest(null);
     loadedDirectoryPathsRef.current = new Set<string>();
   }, [selectedWorkspaceId, selectedWorkspaceWorktreePath]);
-
-  const beginFileOperation = useCallback(
-    (mode: FileOperationState["mode"]) => {
-      const operationId = createOperationId();
-      setFileOperationError(null);
-      setFileOperationState({
-        operationId,
-        workspaceWorktreePath: selectedWorkspaceWorktreePath ?? "",
-        mode,
-        status: "running",
-        processed: 0,
-        total: 1,
-      });
-
-      return operationId;
-    },
-    [selectedWorkspaceWorktreePath],
-  );
-
-  const completeFileOperation = useCallback((operationId: string): void => {
-    setFileOperationState((currentState) => {
-      if (!currentState || currentState.operationId !== operationId) {
-        return currentState;
-      }
-
-      return {
-        ...currentState,
-        status: "completed",
-        processed: 1,
-        total: 1,
-      };
-    });
-  }, []);
-
-  const failFileOperation = useCallback(
-    (operationId: string, error: unknown): void => {
-      setFileOperationState((currentState) => {
-        if (!currentState || currentState.operationId !== operationId) {
-          return currentState;
-        }
-
-        return {
-          ...currentState,
-          status: "failed",
-        };
-      });
-      setFileOperationError(getFileOperationErrorMessage(error));
-    },
-    [],
-  );
 
   const requestFileTreeSelection = useCallback((path: string | null, focus = true) => {
     const normalizedPath = normalizeRelativePath(path ?? "");

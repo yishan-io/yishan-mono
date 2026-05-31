@@ -1,4 +1,5 @@
 import { Notification } from "electron";
+import { generateId } from "../../shared/helpers/generateId";
 import type { NativeNotificationRequest, NotificationClickEvent, NotificationDriver } from "./types";
 
 /**
@@ -16,7 +17,7 @@ function createNativeNotificationDriver(
 
   return {
     show: async (notification) => {
-      const notificationId = crypto.randomUUID();
+      const notificationId = generateId();
       showNotification({
         request: notification,
         notificationId,

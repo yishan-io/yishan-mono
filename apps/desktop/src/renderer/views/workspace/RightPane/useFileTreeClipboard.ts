@@ -1,7 +1,6 @@
 import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
-import { extractPathsFromClipboardText } from "../../../../shared/fileClipboardPaths";
+import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
 import {
   copyFiles,
   importEntries,
@@ -9,7 +8,6 @@ import {
   pasteEntries,
   renameEntry,
   writeFileBase64,
-  readExternalClipboardSourcePaths as readExternalClipboardSourcePathsFromRpc,
 } from "../../../commands/fileCommands";
 import {
   DEFAULT_CLIPBOARD_SOURCE_RESOLVERS,
@@ -17,13 +15,16 @@ import {
   resolveClipboardSource,
 } from "./clipboardSourceResolvers";
 import {
+  captureNativeExternalClipboardSourcePathsSnapshot,
+  resolveExternalClipboardSourcePaths,
+} from "./fileTreeClipboardResolvers";
+import {
   type FileTreeMoveUndoEntry,
   buildMoveUndoEntries,
   resolvePreferredImportedPath,
 } from "./fileTreePathHelpers";
 import {
   mapWorkspaceEntryPaths,
-  reportNativeExternalClipboardOutcome,
   resolveExternalClipboardFilePayloads,
 } from "./fileTreeHelpers";
 import type { FileTreeUndoAction } from "./useFileTreeUndo";
@@ -72,25 +73,6 @@ export function useFileTreeClipboard({
     isExternalImportInFlightRef.current = false;
   }, []);
 
-  const captureNativeExternalClipboardSourcePathsSnapshot = useCallback(async (): Promise<string[] | null> => {
-    try {
-      const nativeClipboardResult = await readExternalClipboardSourcePathsFromRpc();
-      reportNativeExternalClipboardOutcome(nativeClipboardResult);
-      if (nativeClipboardResult.kind === "success") {
-        return nativeClipboardResult.sourcePaths;
-      }
-
-      if (nativeClipboardResult.kind === "supported" || nativeClipboardResult.kind === "empty") {
-        return [];
-      }
-
-      return null;
-    } catch (error) {
-      console.warn("Failed to capture native clipboard snapshot for internal file-tree clipboard", error);
-      return null;
-    }
-  }, []);
-
   const setInternalClipboardState = useCallback(
     (mode: "copy" | "move", path: string): void => {
       clipboardStateRequestIdRef.current += 1;
@@ -116,87 +98,8 @@ export function useFileTreeClipboard({
         });
       })();
     },
-    [captureNativeExternalClipboardSourcePathsSnapshot, setClipboardState],
+    [setClipboardState],
   );
-
-  const resolveExternalClipboardSourcePaths = useCallback(async (): Promise<{
-    sourcePaths: string[];
-    nativeOutcome: ExternalClipboardReadOutcome | null;
-  }> => {
-    const sourcePathSet = new Set<string>();
-    let nativeOutcome: ExternalClipboardReadOutcome | null = null;
-
-    try {
-      nativeOutcome = await readExternalClipboardSourcePathsFromRpc();
-      reportNativeExternalClipboardOutcome(nativeOutcome);
-      if (nativeOutcome.kind === "success") {
-        for (const sourcePath of nativeOutcome.sourcePaths) {
-          sourcePathSet.add(sourcePath);
-        }
-      }
-    } catch (error) {
-      console.warn("Failed to read native clipboard paths for external file paste", error);
-    }
-
-    if (sourcePathSet.size > 0) {
-      return {
-        sourcePaths: [...sourcePathSet],
-        nativeOutcome,
-      };
-    }
-
-    if (typeof navigator === "undefined" || !navigator.clipboard) {
-      return {
-        sourcePaths: [],
-        nativeOutcome,
-      };
-    }
-
-    if (typeof navigator.clipboard.read === "function") {
-      try {
-        const clipboardItems = await navigator.clipboard.read();
-        for (const clipboardItem of clipboardItems) {
-          for (const type of clipboardItem.types) {
-            const normalizedType = type.toLowerCase();
-            const shouldAttemptTextExtraction =
-              normalizedType.startsWith("text/") ||
-              normalizedType.includes("uri") ||
-              normalizedType.includes("file-url") ||
-              normalizedType.includes("utf8-plain-text");
-            if (!shouldAttemptTextExtraction) {
-              continue;
-            }
-
-            const blob = await clipboardItem.getType(type);
-            const text = await blob.text();
-            const paths = extractPathsFromClipboardText(text);
-            for (const path of paths) {
-              sourcePathSet.add(path);
-            }
-          }
-        }
-      } catch (error) {
-        console.warn("Failed to read clipboard items for external file paste", error);
-      }
-    }
-
-    if (sourcePathSet.size === 0 && typeof navigator.clipboard.readText === "function") {
-      try {
-        const text = await navigator.clipboard.readText();
-        const paths = extractPathsFromClipboardText(text);
-        for (const path of paths) {
-          sourcePathSet.add(path);
-        }
-      } catch (error) {
-        console.warn("Failed to read clipboard text for external file paste", error);
-      }
-    }
-
-    return {
-      sourcePaths: [...sourcePathSet],
-      nativeOutcome,
-    };
-  }, []);
 
   const onPasteEntries = useCallback(
     async (destinationPath: string) => {
@@ -401,7 +304,6 @@ export function useFileTreeClipboard({
       pushUndoAction,
       repoEntries,
       requestFileTreeSelection,
-      resolveExternalClipboardSourcePaths,
       selectedWorkspaceWorktreePath,
       setClipboardState,
       setFileOperationError,

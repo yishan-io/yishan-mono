@@ -5,6 +5,7 @@ import { MessageList } from "../../components/MessageList";
 import { RichComposer } from "../../components/RichComposer";
 import { subscribeWorkspaceChatEvent } from "../../events";
 import { getErrorMessage } from "../../helpers/errorHelpers";
+import { generateId } from "../../helpers/generateId";
 import { useCommands } from "../../hooks/useCommands";
 import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { chatStore } from "../../store/chatStore";
@@ -112,7 +113,7 @@ export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: 
         if (!cancelled) {
           appendChatMessages(tabId, [
             {
-              id: crypto.randomUUID(),
+              id: generateId(),
               role: "assistant",
               content: `Error: ${message}`,
             },
@@ -179,12 +180,12 @@ export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: 
     }
 
     setIsSending(true);
-    const assistantMessageId = crypto.randomUUID();
+    const assistantMessageId = generateId();
     activeAssistantMessageIdRef.current = assistantMessageId;
 
     appendChatMessages(tabId, [
       {
-        id: crypto.randomUUID(),
+        id: generateId(),
         role: "user",
         content: prompt,
       },
@@ -250,7 +251,7 @@ export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: 
       const message = getErrorMessage(error);
       appendChatMessages(tabId, [
         {
-          id: crypto.randomUUID(),
+          id: generateId(),
           role: "assistant",
           content: `Error: ${message}`,
         },
