@@ -150,14 +150,13 @@ export function WorkspaceTreeRowView({
             onToggle?.();
           }}
           sx={{
-            width: 20,
-            height: 20,
-            mr: 0.5,
+            width: 24,
+            height: 24,
             color: "text.secondary",
             transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
           }}
         >
-          <LuChevronRight size={18} />
+          <LuChevronRight />
         </IconButton>
       ) : (
         <Box sx={{ width: 20, height: 20, mr: 0.5 }} />

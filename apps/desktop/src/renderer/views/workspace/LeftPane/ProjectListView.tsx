@@ -185,6 +185,17 @@ export function ProjectListView() {
   const [projectActionsProjectId, setProjectActionsProjectId] = useState("");
   const [projectOrderIds, setProjectOrderIds] = useState<string[]>([]);
   const [nodeOrderByParentId, setNodeOrderByParentId] = useState<Record<string, string[]>>({});
+
+  // Keep projectOrderIds in sync with the filter: remove any ID that is no
+  // longer in displayProjectIds so that re-checked projects are appended to
+  // the end of the list (treated as new) rather than snapping back to their
+  // old position.
+  useEffect(() => {
+    setProjectOrderIds((current) => {
+      const next = current.filter((id) => displayProjectIds.includes(id));
+      return next.length === current.length ? current : next;
+    });
+  }, [displayProjectIds]);
   const [isAppFocused, setIsAppFocused] = useState(() => document.hasFocus());
   const workspaceListHierarchyMode = workspaceUiStore((state) => state.workspaceListHierarchyMode);
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
