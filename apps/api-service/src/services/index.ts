@@ -14,6 +14,7 @@ import { NoopWorkspaceProvisioner } from "@/services/workspace-provisioner";
 import { WorkspacePullRequestService } from "@/services/workspace-pull-request-service";
 import { WorkspaceService } from "@/services/workspace-service";
 import { ServiceTokenService } from "@/services/service-token-service";
+import { TokenUsageService } from "@/services/token-usage-service";
 import type { ServiceConfig } from "@/types";
 
 export type AppServices = {
@@ -30,6 +31,7 @@ export type AppServices = {
   workspacePullRequest: WorkspacePullRequestService;
   voiceTranscription: VoiceTranscriptionService;
   serviceToken: ServiceTokenService;
+  tokenUsage: TokenUsageService;
 };
 
 export function createServices(deps: { db: AppDb; config: ServiceConfig }): AppServices {
@@ -58,5 +60,6 @@ export function createServices(deps: { db: AppDb; config: ServiceConfig }): AppS
     workspacePullRequest: new WorkspacePullRequestService(deps.db, organization),
     voiceTranscription: new VoiceTranscriptionService(deps.db, deps.config, organization),
     serviceToken: new ServiceTokenService(deps.db),
+    tokenUsage: new TokenUsageService(deps.db, organization),
   };
 }
