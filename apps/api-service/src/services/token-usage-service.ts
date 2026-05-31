@@ -45,6 +45,40 @@ type ListTokenUsageHourlyInput = {
   limit: number;
 };
 
+const CONFLICT_KEY_FIELDS = ["projectId", "workspaceId", "agentKind", "modelNormalized", "bucketStartHourUtc"] as const;
+
+function dedupeRows(
+  rows: UpsertTokenUsageHourlyInput["rows"],
+): UpsertTokenUsageHourlyInput["rows"] {
+  const byKey = new Map<string, UpsertTokenUsageHourlyInput["rows"][number]>();
+
+  for (const row of rows) {
+    const key = CONFLICT_KEY_FIELDS.map((f) => row[f]).join("|");
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, { ...row });
+      continue;
+    }
+    existing.inputTokens += row.inputTokens;
+    existing.outputTokens += row.outputTokens;
+    existing.cachedInputTokens += row.cachedInputTokens;
+    existing.cachedOutputTokens += row.cachedOutputTokens;
+    existing.reasoningTokens += row.reasoningTokens;
+    existing.totalTokens += row.totalTokens;
+    existing.eventCount += row.eventCount;
+    existing.sessionCount += row.sessionCount;
+    if (new Date(row.ingestedAt) > new Date(existing.ingestedAt)) {
+      existing.workspacePath = row.workspacePath;
+      existing.model = row.model;
+      existing.attributionConfidence = row.attributionConfidence;
+      existing.ingestedAt = row.ingestedAt;
+      existing.runId = row.runId;
+    }
+  }
+
+  return Array.from(byKey.values());
+}
+
 export class TokenUsageService {
   constructor(
     private readonly db: AppDb,
@@ -59,7 +93,8 @@ export class TokenUsageService {
     }
 
     const now = new Date();
-    const rowsToInsert = input.rows.map((row) => ({
+    const deduped = dedupeRows(input.rows);
+    const rowsToInsert = deduped.map((row) => ({
       id: newId(),
       organizationId: input.organizationId,
       projectId: row.projectId,

@@ -1,6 +1,10 @@
+import { type Dispatch, type SetStateAction } from "react";
 import { Box, ListItemIcon, Menu, MenuItem } from "@mui/material";
 import { LuSettings, LuTrash2 } from "react-icons/lu";
 import type { TFunction } from "i18next";
+import type { WorkspacePullRequestSummary } from "../../../api/types";
+import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
+import type { WorkspaceItem } from "../../../store/types";
 import {
   EXTERNAL_APP_MENU_ENTRIES,
   type ExternalAppId,
@@ -13,17 +17,7 @@ import { ProjectConfigDialogView } from "./ProjectConfigDialogView";
 import { ProjectDeleteDialogView } from "./ProjectDeleteDialogView";
 import { WorkspaceDeleteDialogView } from "./WorkspaceDeleteDialogView";
 import { WorkspaceInfoPopperView } from "./WorkspaceInfoPopperView";
-
-type WorkspaceItem = {
-  id: string;
-  repoId: string;
-  kind?: string;
-};
-
-type PendingWorkspaceDeletion = {
-  workspaceName: string;
-  allowRemoveBranch: boolean;
-} | null;
+import type { PendingWorkspaceDeletion } from "./useWorkspaceDeletionFlow";
 
 type PendingProjectDeletion = {
   projectName: string;
@@ -81,22 +75,22 @@ type ProjectListMenusProps = {
   projectConfigProjectId: string;
   setIsProjectConfigOpen: (value: boolean) => void;
   setProjectConfigProjectId: (value: string) => void;
-  pendingWorkspaceDeletion: PendingWorkspaceDeletion;
+  pendingWorkspaceDeletion: PendingWorkspaceDeletion | null;
   isDeletingWorkspace: boolean;
   handleCancelWorkspaceDeletion: () => void;
   handleConfirmWorkspaceDeletion: () => Promise<void>;
-  setPendingWorkspaceDeletion: (value: PendingWorkspaceDeletion) => void;
+  setPendingWorkspaceDeletion: Dispatch<SetStateAction<PendingWorkspaceDeletion | null>>;
   pendingProjectDeletion: PendingProjectDeletion;
   isDeletingProject: boolean;
   handleCancelProjectDeletion: () => void;
-  handleConfirmProjectDeletion: () => Promise<void>;
+  handleConfirmProjectDeletion: () => void;
   isWorkspaceInfoOpen: boolean;
   workspaceInfoAnchorEl: HTMLElement | null;
-  hoveredWorkspace: unknown;
+  hoveredWorkspace: WorkspaceItem | undefined;
   isHoveredWorkspacePrimary: boolean;
   hoveredWorkspaceCurrentBranch: string | undefined;
-  hoveredWorkspacePullRequest: unknown;
-  hoveredWorkspaceLatestPullRequest: unknown;
+  hoveredWorkspacePullRequest: DaemonWorkspacePullRequest | undefined;
+  hoveredWorkspaceLatestPullRequest: WorkspacePullRequestSummary | undefined;
   handleWorkspaceInfoPopoverMouseEnter: () => void;
   handleWorkspaceInfoPopoverMouseLeave: () => void;
 };

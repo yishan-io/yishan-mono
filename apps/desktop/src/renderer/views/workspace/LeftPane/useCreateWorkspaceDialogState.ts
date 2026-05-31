@@ -8,7 +8,7 @@ import {
   suggestTargetBranchName,
 } from "../../../helpers/workspaceBranchNaming";
 import { useGitAuthorName } from "../../../hooks/useGitAuthorName";
-import { resolveGitBranchPrefix } from "../../../store/settings/workspaceSettingsStore";
+import { resolveGitBranchPrefix, type GitBranchPrefixMode } from "../../../store/settings/workspaceSettingsStore";
 import type { WorkspaceItem, WorkspaceProjectRecord } from "../../../store/types";
 import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
 
@@ -23,7 +23,7 @@ type UseCreateWorkspaceDialogStateInput = {
   daemonId: string | undefined;
   projects: WorkspaceProjectRecord[];
   workspaces: WorkspaceItem[];
-  prefixMode: string;
+  prefixMode: GitBranchPrefixMode;
   customPrefix: string;
   listGitBranches: (input: { workspaceWorktreePath: string }) => Promise<{
     branches?: string[];

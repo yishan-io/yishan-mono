@@ -3,11 +3,13 @@ import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
 import { listFiles } from "../../../commands/fileCommands";
 import { loadWorkspaceFromBackend } from "../../../commands/projectCommands";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { useCommands } from "../../../hooks/useCommands";
 import { tabStore } from "../../../store/tabStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import type { FileTreeClipboardState } from "./clipboardSourceResolvers";
 import {
+  getFileOperationErrorMessage,
   mapIgnoredWorkspaceEntryPaths,
   mapWorkspaceEntryPaths,
 } from "./fileTreeHelpers";
@@ -97,6 +99,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     fileOperationState,
     fileOperationError,
     setFileOperationError,
+    resetFileOperationState,
     beginFileOperation,
     completeFileOperation,
     failFileOperation,
@@ -251,7 +254,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     void selectedWorkspaceWorktreePath;
     const cachedEntries = selectedWorkspaceId ? treeCacheByWorkspaceIdRef.current.get(selectedWorkspaceId) : null;
     setRepoEntries(cachedEntries ?? []);
-    setFileOperationState(null);
+    resetFileOperationState();
     setFileOperationError(null);
     setClipboardState(null);
     setUndoStack([]);

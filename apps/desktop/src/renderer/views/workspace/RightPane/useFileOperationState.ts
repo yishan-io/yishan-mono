@@ -15,6 +15,7 @@ export type UseFileOperationStateResult = {
   fileOperationState: FileOperationState | null;
   fileOperationError: string | null;
   setFileOperationError: (value: string | null) => void;
+  resetFileOperationState: () => void;
   beginFileOperation: (mode: FileOperationState["mode"]) => string;
   completeFileOperation: (operationId: string) => void;
   failFileOperation: (operationId: string, error: unknown) => void;
@@ -72,10 +73,15 @@ export function useFileOperationState(selectedWorkspaceWorktreePath: string | un
     setFileOperationError(getFileOperationErrorMessage(error));
   }, []);
 
+  const resetFileOperationState = useCallback((): void => {
+    setFileOperationState(null);
+  }, []);
+
   return {
     fileOperationState,
     fileOperationError,
     setFileOperationError,
+    resetFileOperationState,
     beginFileOperation,
     completeFileOperation,
     failFileOperation,

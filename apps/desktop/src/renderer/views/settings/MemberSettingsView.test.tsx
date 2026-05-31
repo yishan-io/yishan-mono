@@ -167,7 +167,7 @@ describe("MemberSettingsView", () => {
       expect(screen.getByText("Member User")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getAllByLabelText("settings.members.removeAriaLabel")[1]);
+    fireEvent.click(screen.getAllByLabelText("settings.members.removeAriaLabel")[1]!);
     fireEvent.click(screen.getByText("settings.members.removeDialog.confirm"));
 
     await waitFor(() => {

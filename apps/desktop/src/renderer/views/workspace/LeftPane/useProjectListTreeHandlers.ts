@@ -209,7 +209,7 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
       draggedRowId: string;
       targetRowId: string;
       rowKind: "workspace" | "project" | "node";
-      parentId?: string;
+      parentId: string | null;
       position: "before" | "after";
     }) => {
       if (rowKind === "workspace") {

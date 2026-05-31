@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
 import { api } from "../../../api/client";
 import { chatStore } from "../../../store/chatStore";
@@ -7,23 +8,11 @@ import { sessionStore } from "../../../store/sessionStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { reconcileOrder, resolveWorkspaceNotificationTone } from "./projectListHelpers";
 
-type TreeProject = {
-  id: string;
-  name: string;
-  icon?: string;
-  color?: string;
-};
-
-type TreeNode = {
-  id: string;
-  name: string;
-  kind: string;
-  scope: string;
-  isOnline: boolean;
-};
+type TreeProject = WorkspaceTreeProject;
+type TreeNode = WorkspaceTreeNode;
 
 export type ProjectListTreeDataResult = {
-  filteredProjects: Array<{ id: string; name: string; icon?: string; color?: string; localPath?: string; path?: string; worktreePath?: string }>;
+  filteredProjects: Array<{ id: string; name: string; icon?: string | null; color?: string | null; localPath?: string | null; path?: string | null; worktreePath?: string | null }>;
   treeProjects: TreeProject[];
   treeNodes: TreeNode[];
   treeWorkspaces: WorkspaceTreeWorkspace[];

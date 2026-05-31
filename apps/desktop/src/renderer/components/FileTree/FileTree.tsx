@@ -414,7 +414,7 @@ export function FileTree({
       onDragLeave={(event) => {
         const relatedTarget = event.relatedTarget as Node | null;
         if (!scrollRef.current?.contains(relatedTarget)) {
-          setDropTargetPath(null);
+          clearDropTarget();
         }
       }}
       onDrop={(event) => {

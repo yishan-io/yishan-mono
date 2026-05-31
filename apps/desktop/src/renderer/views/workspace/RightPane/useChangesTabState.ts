@@ -16,6 +16,7 @@ import {
   createEmptyRepoChangesBySection,
   createEmptyRepoCommitComparison,
   dedupeChangedPaths,
+  dedupeRepoChangeFiles,
   isMissingWorkspacePathError,
   normalizeProjectGitChangeKind,
   normalizeWorkspaceRelativePath,

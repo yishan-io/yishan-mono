@@ -1,3 +1,4 @@
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { BrowserWindow, Menu, app, dialog, ipcMain, net, protocol, session } from "electron";
 import { autoUpdater } from "electron-updater";

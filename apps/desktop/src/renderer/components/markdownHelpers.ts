@@ -49,7 +49,8 @@ export function getTaskListItemChecked(content: string, taskItemIndex: number): 
     }
 
     if (currentTaskItemIndex === taskItemIndex) {
-      return match[2].toLowerCase() === "x";
+      const checked = match[2];
+      return checked !== undefined && checked.toLowerCase() === "x";
     }
 
     currentTaskItemIndex += 1;

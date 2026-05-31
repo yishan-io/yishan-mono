@@ -236,7 +236,7 @@ export function TabBar({
     });
   };
 
-  const selectedContextTab = contextMenu ? tabs.find((tab) => tab.id === contextMenu.tabId) : null;
+  const selectedContextTab = contextMenu ? (tabs.find((tab) => tab.id === contextMenu.tabId) ?? null) : null;
 
   // ─── Tab item renderer ────────────────────────────────────────────────────
 
