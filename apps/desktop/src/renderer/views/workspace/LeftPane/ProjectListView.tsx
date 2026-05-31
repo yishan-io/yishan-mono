@@ -83,6 +83,21 @@ function reorderIds(input: {
   return nextIds;
 }
 
+/**
+ * Merge a stored order list with the current live set of IDs.
+ * - IDs no longer in liveIds are stripped (unchecked / removed items).
+ * - IDs in liveIds but absent from storedOrder are appended at the end
+ *   (newly added / re-checked items).
+ * The relative order of retained IDs is preserved from storedOrder.
+ */
+function reconcileOrder(storedOrder: string[], liveIds: string[]): string[] {
+  const liveSet = new Set(liveIds);
+  const retained = storedOrder.filter((id) => liveSet.has(id));
+  const retainedSet = new Set(retained);
+  const appended = liveIds.filter((id) => !retainedSet.has(id));
+  return [...retained, ...appended];
+}
+
 function parseProjectRowProjectId(rowId: string): string {
   const value = rowId.replace(/^project:/, "");
   const splitIndex = value.indexOf(":");
@@ -969,7 +984,10 @@ export function ProjectListView() {
                       .map((workspace) => workspace.projectId),
                   ),
                 );
-                const currentOrder = nodeOrderByParentId[parentId] ?? projectIdsUnderNode;
+                const currentOrder = reconcileOrder(
+                  nodeOrderByParentId[parentId] ?? [],
+                  projectIdsUnderNode,
+                );
                 const nextOrder = reorderIds({
                   ids: currentOrder,
                   draggedId: draggedProjectId,
@@ -983,8 +1001,9 @@ export function ProjectListView() {
                 return;
               }
 
+              const liveProjectIds = filteredProjects.map((project) => project.id);
               const nextProjectIds = reorderIds({
-                ids: filteredProjects.map((project) => project.id),
+                ids: reconcileOrder(projectOrderIds, liveProjectIds),
                 draggedId: draggedProjectId,
                 targetId: targetProjectId,
                 position,
@@ -1016,7 +1035,10 @@ export function ProjectListView() {
                     .map((workspace) => workspace.nodeId),
                 ),
               );
-              const currentOrder = nodeOrderByParentId[reorderParentId] ?? nodeIdsUnderParent;
+              const currentOrder = reconcileOrder(
+                nodeOrderByParentId[reorderParentId] ?? [],
+                nodeIdsUnderParent,
+              );
               const nextOrder = reorderIds({
                 ids: currentOrder,
                 draggedId: draggedNodeId,
