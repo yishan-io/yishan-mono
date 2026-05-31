@@ -83,6 +83,14 @@ export function WorkspaceTree({
   });
 
   const rowById = useMemo(() => new Map(visibleRows.map((row) => [row.id, row])), [visibleRows]);
+  const workspaceRows = useMemo(() => visibleRows.filter((row) => row.kind === "workspace"), [visibleRows]);
+  const selectedWorkspaceRowIndex = useMemo(() => {
+    if (!selectedWorkspaceId) {
+      return -1;
+    }
+
+    return workspaceRows.findIndex((row) => row.id === `workspace:${selectedWorkspaceId}`);
+  }, [selectedWorkspaceId, workspaceRows]);
 
   /**
    * Given a row the cursor is over, find the nearest valid drop target for
@@ -181,7 +189,49 @@ export function WorkspaceTree({
   }, [draggedRowId, dropTargetPosition, dropTargetRowId, visibleRows]);
 
   return (
-    <Box ref={scrollRef} role="tree" sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 1 }}>
+    <Box
+      ref={scrollRef}
+      role="tree"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+          return;
+        }
+
+        if (workspaceRows.length === 0) {
+          return;
+        }
+
+        event.preventDefault();
+        const currentIndex = selectedWorkspaceRowIndex;
+        const nextIndex =
+          event.key === "ArrowUp"
+            ? currentIndex <= 0
+              ? workspaceRows.length - 1
+              : currentIndex - 1
+            : currentIndex < 0 || currentIndex >= workspaceRows.length - 1
+              ? 0
+              : currentIndex + 1;
+        const nextWorkspaceRow = workspaceRows[nextIndex];
+        if (!nextWorkspaceRow) {
+          return;
+        }
+
+        const nextWorkspaceId = nextWorkspaceRow.id.replace(/^workspace:/, "");
+        const nextWorkspace = workspaceById.get(nextWorkspaceId);
+        if (!nextWorkspace) {
+          return;
+        }
+
+        const nextVisibleRowIndex = visibleRows.findIndex((row) => row.id === nextWorkspaceRow.id);
+        if (nextVisibleRowIndex >= 0) {
+          virtualizer.scrollToIndex(nextVisibleRowIndex, { align: "auto" });
+        }
+
+        onSelectWorkspace?.(nextWorkspaceId, nextWorkspace.projectId, nextWorkspace.nodeId);
+      }}
+      sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 1 }}
+    >
       <Box sx={{ height: virtualizer.getTotalSize(), width: "100%", position: "relative" }}>
         {(virtualizer.getVirtualItems().length > 0
           ? virtualizer.getVirtualItems()
@@ -366,6 +416,7 @@ export function WorkspaceTree({
                   onProjectCreateWorkspaceClick?.(event, projectId);
                 }}
                 onClick={() => {
+                  scrollRef.current?.focus();
                   if (row.kind === "project") {
                     const projectId = parseProjectRowId(row.id)?.projectId ?? "";
                     onSelectProject?.(projectId);
