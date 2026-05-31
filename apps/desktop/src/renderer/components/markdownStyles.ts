@@ -37,12 +37,12 @@ export function getCodeHighlightStyles(mode: "light" | "dark") {
 }
 
 /** Returns MUI-aware styles for the Markdown preview container. */
-export function useMarkdownStyles(theme: Theme) {
+export function useMarkdownStyles(theme: Theme, baseFontSize = 15) {
   return useMemo(
     () => ({
       container: {
         fontFamily: theme.typography.fontFamily,
-        fontSize: 15,
+        fontSize: baseFontSize,
         lineHeight: 1.7,
         color: theme.palette.text.primary,
         "& > *:first-of-type": { mt: 0 },
@@ -232,6 +232,6 @@ export function useMarkdownStyles(theme: Theme) {
         },
       },
     }),
-    [theme],
+    [baseFontSize, theme],
   );
 }
