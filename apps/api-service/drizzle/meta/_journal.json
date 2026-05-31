@@ -64,6 +64,13 @@
       "when": 1782000000000,
       "tag": "0008_project_commands",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1783000000000,
+      "tag": "0009_token_usage_hourly",
+      "breakpoints": true
     }
   ]
 }

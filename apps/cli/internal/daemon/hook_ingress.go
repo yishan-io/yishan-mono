@@ -64,6 +64,9 @@ func (h *JSONRPCHandler) ServeAgentHook(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if h.tokenUsage != nil {
+		h.tokenUsage.Trigger(event.agent, "hook")
+	}
 
 	if notification := buildHookNotificationPayload(event); notification != nil {
 		h.events.Publish(frontendEvent{Topic: "notificationEvent", Payload: notification})

@@ -28,11 +28,16 @@ type JSONRPCHandler struct {
 	events       *eventHub
 	watchers     *workspaceWatchers
 	prTracker    *workspacePRTracker
+	tokenUsage   *tokenUsageCollector
 }
 
-func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore) *JSONRPCHandler {
+func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, configPath string) *JSONRPCHandler {
 	events := newEventHub()
 	prTracker := newWorkspacePRTracker(manager, events.Publish)
+	collector, err := newTokenUsageCollector(manager, configPath)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to initialize token usage collector")
+	}
 	manager.SetTerminalDetectedPortsListener(func(ports []workspace.TerminalDetectedPort) {
 		events.Publish(frontendEvent{
 			Topic: "terminalDetectedPortsChanged",
@@ -52,6 +57,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath st
 		events:       events,
 		watchers:     newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
 		prTracker:    prTracker,
+		tokenUsage:   collector,
 	}
 }
 
@@ -59,6 +65,9 @@ func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath st
 // It must be called when the daemon server shuts down.
 func (h *JSONRPCHandler) Shutdown() {
 	h.prTracker.Stop()
+	if h.tokenUsage != nil {
+		h.tokenUsage.Close()
+	}
 }
 
 func (h *JSONRPCHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

@@ -82,6 +82,14 @@ func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnSt
 			return nil, err
 		}
 		return map[string]bool{"ok": true}, nil
+	case MethodTokenUsageDebugState:
+		if h.tokenUsage == nil {
+			return map[string]any{"enabled": false}, nil
+		}
+		return map[string]any{
+			"enabled": true,
+			"state":   h.tokenUsage.DebugState(),
+		}, nil
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, fmt.Sprintf("method not found: %s", method))
 	}

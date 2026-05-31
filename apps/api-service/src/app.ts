@@ -12,6 +12,7 @@ import { organizationRouter } from "@/routes/organization";
 import { projectRouter } from "@/routes/project";
 import { serviceTokenRouter } from "@/routes/service-token";
 import { systemRouter } from "@/routes/system";
+import { tokenUsageRouter } from "@/routes/token-usage";
 import { userRouter } from "@/routes/user";
 import { voiceTranscriptionRouter } from "@/routes/voice-transcription";
 
@@ -32,6 +33,7 @@ protectedRouter.route("/", organizationRouter);
 protectedRouter.route("/", nodeRouter);
 protectedRouter.route("/", projectRouter);
 protectedRouter.route("/", serviceTokenRouter);
+protectedRouter.route("/", tokenUsageRouter);
 protectedRouter.route("/", voiceTranscriptionRouter);
 
 app.route("/", protectedRouter);

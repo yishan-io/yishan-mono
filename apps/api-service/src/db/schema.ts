@@ -1,6 +1,6 @@
 import type { AgentKind } from "@yishan/core";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
-import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export type NodeScope = "private" | "shared";
 export type NodeKind = "managed" | "external";
@@ -13,6 +13,7 @@ export type WorkspacePullRequestState = "open" | "closed" | "merged";
 export type ScheduledJobStatus = "active" | "paused" | "disabled" | "deleted";
 export type ScheduledAgentKind = AgentKind;
 export type ScheduledJobRunStatus = "pending" | "running" | "succeeded" | "failed" | "skipped_offline";
+export type TokenUsageAttributionConfidence = "exact" | "prefix_match" | "fallback_unknown";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -344,6 +345,54 @@ export const scheduledJobRuns = pgTable(
   ],
 );
 
+export const tokenUsageHourly = pgTable(
+  "token_usage_hourly",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    workspacePath: text("workspace_path").notNull(),
+    agentKind: text("agent_kind").$type<AgentKind>().notNull(),
+    model: text("model").notNull(),
+    modelNormalized: text("model_normalized").notNull(),
+    bucketStartHourUtc: timestamp("bucket_start_hour_utc", { withTimezone: true }).notNull(),
+    inputTokens: bigint("input_tokens", { mode: "number" }).notNull().default(0),
+    outputTokens: bigint("output_tokens", { mode: "number" }).notNull().default(0),
+    cachedInputTokens: bigint("cached_input_tokens", { mode: "number" }).notNull().default(0),
+    cachedOutputTokens: bigint("cached_output_tokens", { mode: "number" }).notNull().default(0),
+    reasoningTokens: bigint("reasoning_tokens", { mode: "number" }).notNull().default(0),
+    totalTokens: bigint("total_tokens", { mode: "number" }).notNull().default(0),
+    eventCount: bigint("event_count", { mode: "number" }).notNull().default(0),
+    sessionCount: bigint("session_count", { mode: "number" }).notNull().default(0),
+    attributionConfidence: text("attribution_confidence").$type<TokenUsageAttributionConfidence>().notNull(),
+    ingestedAt: timestamp("ingested_at", { withTimezone: true }).notNull(),
+    runId: text("run_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("token_usage_hourly_org_project_workspace_agent_model_bucket_uq").on(
+      table.organizationId,
+      table.projectId,
+      table.workspaceId,
+      table.agentKind,
+      table.modelNormalized,
+      table.bucketStartHourUtc,
+    ),
+    index("token_usage_hourly_org_id_bucket_idx").on(table.organizationId, table.bucketStartHourUtc),
+    index("token_usage_hourly_project_id_bucket_idx").on(table.projectId, table.bucketStartHourUtc),
+    index("token_usage_hourly_workspace_id_bucket_idx").on(table.workspaceId, table.bucketStartHourUtc),
+    index("token_usage_hourly_agent_bucket_idx").on(table.agentKind, table.bucketStartHourUtc),
+  ],
+);
+
 export type User = InferSelectModel<typeof users>;
 export type NewUser = InferInsertModel<typeof users>;
 
@@ -382,6 +431,9 @@ export type NewScheduledJob = InferInsertModel<typeof scheduledJobs>;
 
 export type ScheduledJobRun = InferSelectModel<typeof scheduledJobRuns>;
 export type NewScheduledJobRun = InferInsertModel<typeof scheduledJobRuns>;
+
+export type TokenUsageHourly = InferSelectModel<typeof tokenUsageHourly>;
+export type NewTokenUsageHourly = InferInsertModel<typeof tokenUsageHourly>;
 
 export const organizationInvitations = pgTable(
   "organization_invitations",

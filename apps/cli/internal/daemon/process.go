@@ -94,7 +94,10 @@ func Run(cfg RunConfig, statePath string) error {
 	if err != nil {
 		return fmt.Errorf("create workspace cleanup store: %w", err)
 	}
-	handler := NewJSONRPCHandler(workspaceManager, daemonID, cfg.LogFilePath, cleanupStore)
+	handler := NewJSONRPCHandler(workspaceManager, daemonID, cfg.LogFilePath, cleanupStore, statePath)
+	if handler.tokenUsage != nil {
+		handler.tokenUsage.StartStartupScan()
+	}
 	relayStatus := NewRelayStatus(cfg.RelayEnabled, cfg.RelayURL)
 
 	// ── Phase 4: HTTP server ───────────────────────────────────────────────

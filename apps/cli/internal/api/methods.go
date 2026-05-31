@@ -190,15 +190,43 @@ func (c *Client) CreateWorkspace(orgID string, projectID string, input CreateWor
 }
 
 type UpsertWorkspacePullRequestInput struct {
-	PrID        string         `json:"prId"`
-	Title       string         `json:"title,omitempty"`
-	URL         string         `json:"url,omitempty"`
-	Branch      string         `json:"branch,omitempty"`
-	BaseBranch  string         `json:"baseBranch,omitempty"`
-	State       string         `json:"state"`
-	Metadata    map[string]any `json:"metadata,omitempty"`
-	DetectedAt  string         `json:"detectedAt"`
-	ResolvedAt  string         `json:"resolvedAt,omitempty"`
+	PrID       string         `json:"prId"`
+	Title      string         `json:"title,omitempty"`
+	URL        string         `json:"url,omitempty"`
+	Branch     string         `json:"branch,omitempty"`
+	BaseBranch string         `json:"baseBranch,omitempty"`
+	State      string         `json:"state"`
+	Metadata   map[string]any `json:"metadata,omitempty"`
+	DetectedAt string         `json:"detectedAt"`
+	ResolvedAt string         `json:"resolvedAt,omitempty"`
+}
+
+type TokenUsageHourlyRowInput struct {
+	ProjectID             string `json:"projectId"`
+	WorkspaceID           string `json:"workspaceId"`
+	WorkspacePath         string `json:"workspacePath"`
+	AgentKind             string `json:"agentKind"`
+	Model                 string `json:"model"`
+	ModelNormalized       string `json:"modelNormalized"`
+	BucketStartHourUTC    string `json:"bucketStartHourUtc"`
+	InputTokens           int64  `json:"inputTokens"`
+	OutputTokens          int64  `json:"outputTokens"`
+	CachedInputTokens     int64  `json:"cachedInputTokens"`
+	CachedOutputTokens    int64  `json:"cachedOutputTokens"`
+	ReasoningTokens       int64  `json:"reasoningTokens"`
+	TotalTokens           int64  `json:"totalTokens"`
+	EventCount            int64  `json:"eventCount"`
+	SessionCount          int64  `json:"sessionCount"`
+	AttributionConfidence string `json:"attributionConfidence"`
+	IngestedAt            string `json:"ingestedAt"`
+	RunID                 string `json:"runId"`
+}
+
+func (c *Client) UpsertTokenUsageHourly(orgID string, rows []TokenUsageHourlyRowInput) (OKResponse, error) {
+	var response OKResponse
+	payload := map[string]any{"rows": rows}
+	err := c.DoDecode("POST", "/orgs/"+orgID+"/token-usage/hourly", payload, &response)
+	return response, err
 }
 
 func (c *Client) UpsertWorkspacePullRequest(orgID string, projectID string, workspaceID string, input UpsertWorkspacePullRequestInput) (OKResponse, error) {

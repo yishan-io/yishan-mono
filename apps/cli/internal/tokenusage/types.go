@@ -1,0 +1,54 @@
+package tokenusage
+
+type AttributionConfidence string
+
+const (
+	AttributionExact           AttributionConfidence = "exact"
+	AttributionPrefixMatch     AttributionConfidence = "prefix_match"
+	AttributionFallbackUnknown AttributionConfidence = "fallback_unknown"
+)
+
+type ScannerSourceKind string
+
+const (
+	SourceKindJSONL  ScannerSourceKind = "jsonl"
+	SourceKindSQLite ScannerSourceKind = "sqlite"
+	SourceKindAPI    ScannerSourceKind = "api"
+)
+
+type HourlyUsageRow struct {
+	ProjectID             string
+	WorkspaceID           string
+	WorkspacePath         string
+	AgentKind             string
+	Model                 string
+	ModelNormalized       string
+	BucketStartHourUTC    int64
+	InputTokens           int64
+	OutputTokens          int64
+	CachedInputTokens     int64
+	CachedOutputTokens    int64
+	ReasoningTokens       int64
+	TotalTokens           int64
+	EventCount            int64
+	SessionCount          int64
+	AttributionConfidence AttributionConfidence
+	ScannerSourceKind     ScannerSourceKind
+	ScannerSourceID       string
+	IngestedAt            int64
+	RunID                 string
+	UpdatedAt             int64
+}
+
+type WorktreeRef struct {
+	ProjectID     string
+	WorkspaceID   string
+	WorkspacePath string
+}
+
+type ScanInput struct {
+	RunID       string
+	IngestedAt  int64
+	Worktrees   []WorktreeRef
+	SessionRoot string
+}
