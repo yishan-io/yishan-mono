@@ -1,8 +1,8 @@
-import { Box, Divider, IconButton, Menu, MenuItem, Typography } from "@mui/material";
+import { Box, IconButton } from "@mui/material";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuColumns2, LuGlobe, LuPlus, LuRows2, LuSquareTerminal } from "react-icons/lu";
+import { LuColumns2, LuGlobe, LuPlus, LuSquareTerminal } from "react-icons/lu";
 import {
   AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
   type DesktopAgentKind,
@@ -12,6 +12,7 @@ import { getRendererPlatform } from "../helpers/platform";
 import { getShortcutDisplayLabelById } from "../shortcuts/shortcutDisplay";
 import { AgentIcon } from "./AgentIcon";
 import { TabBarItem } from "./TabBarItem";
+import { CreateTabMenu, SplitPaneMenu, TabContextMenu } from "./TabBarMenus";
 import { useTabDragDrop } from "./useTabDragDrop";
 
 type WorkspaceTab = {
@@ -325,159 +326,42 @@ export function TabBar({
         </IconButton>
       )}
 
-      {/* Create tab menu */}
-      <Menu
+      <CreateTabMenu
         anchorEl={createMenuAnchor}
-        open={Boolean(createMenuAnchor)}
         onClose={() => setCreateMenuAnchor(null)}
-        slotProps={{
-          paper: {
-            sx: {
-              minWidth: 220,
-            },
-          },
-        }}
-      >
-        {createOptions.map((item) => (
-          <Box key={item.option}>
-            <MenuItem
-              onClick={() => {
-                onCreateTab(item.option);
-                setCreateMenuAnchor(null);
-              }}
-              disabled={disabled}
-              sx={{ gap: 1 }}
-              aria-label={`${createMenuLabel}: ${item.label}`}
-            >
-              {item.icon}
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 1,
-                  width: "100%",
-                }}
-              >
-                <Box component="span">{item.label}</Box>
-                {item.shortcutLabel ? (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    component="span"
-                    aria-hidden="true"
-                    sx={{ fontSize: 13, lineHeight: 1 }}
-                  >
-                    {item.shortcutLabel}
-                  </Typography>
-                ) : null}
-              </Box>
-            </MenuItem>
-            {item.option === "browser" && hasAgentCreateOptions ? <Divider sx={{ my: 0.5 }} /> : null}
-          </Box>
-        ))}
-      </Menu>
+        options={createOptions}
+        disabled={disabled}
+        createMenuLabel={createMenuLabel}
+        hasAgentCreateOptions={hasAgentCreateOptions}
+        onCreateTab={onCreateTab}
+      />
 
-      {/* Split pane menu */}
-      <Menu
+      <SplitPaneMenu
         anchorEl={splitMenuAnchor}
-        open={Boolean(splitMenuAnchor)}
         onClose={() => setSplitMenuAnchor(null)}
-        slotProps={{ paper: { sx: { minWidth: 160 } } }}
-      >
-        {onSplitRight && (
-          <MenuItem
-            onClick={() => {
-              onSplitRight();
-              setSplitMenuAnchor(null);
-            }}
-            disabled={disabled || !selectedTabId}
-            sx={{ gap: 1 }}
-          >
-            <LuColumns2 size={14} />
-            <Box component="span">Split Right</Box>
-          </MenuItem>
-        )}
-        {onSplitDown && (
-          <MenuItem
-            onClick={() => {
-              onSplitDown();
-              setSplitMenuAnchor(null);
-            }}
-            disabled={disabled || !selectedTabId}
-            sx={{ gap: 1 }}
-          >
-            <LuRows2 size={14} />
-            <Box component="span">Split Down</Box>
-          </MenuItem>
-        )}
-      </Menu>
+        disabled={disabled}
+        selectedTabId={selectedTabId}
+        onSplitRight={onSplitRight}
+        onSplitDown={onSplitDown}
+      />
 
-      {/* Tab context menu */}
-      <Menu
-        open={Boolean(contextMenu)}
+      <TabContextMenu
+        contextMenu={contextMenu}
+        selectedContextTab={selectedContextTab}
+        keepOpenActionLabel={keepOpenActionLabel}
+        pinTabActionLabel={pinTabActionLabel}
+        unpinTabActionLabel={unpinTabActionLabel}
+        closeTabActionLabel={closeTabActionLabel}
+        closeOthersActionLabel={closeOthersActionLabel}
+        closeAllActionLabel={closeAllActionLabel}
+        tabsLength={tabs.length}
         onClose={closeContextMenu}
-        disableRestoreFocus
-        anchorReference="anchorPosition"
-        anchorPosition={contextMenu ? { top: contextMenu.mouseY, left: contextMenu.mouseX } : undefined}
-      >
-        {selectedContextTab?.isTemporary && (
-          <MenuItem
-            onClick={() => {
-              if (contextMenu?.tabId) {
-                onPromoteTemporaryTab?.(contextMenu.tabId);
-              }
-              closeContextMenu();
-            }}
-          >
-            {keepOpenActionLabel}
-          </MenuItem>
-        )}
-        <MenuItem
-          onClick={() => {
-            if (contextMenu?.tabId) {
-              onTogglePinTab?.(contextMenu.tabId);
-            }
-            closeContextMenu();
-          }}
-          disabled={!contextMenu || !onTogglePinTab}
-        >
-          {selectedContextTab?.pinned ? unpinTabActionLabel : pinTabActionLabel}
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (contextMenu?.tabId) {
-              onCloseTab(contextMenu.tabId);
-            }
-            closeContextMenu();
-          }}
-          disabled={!contextMenu || Boolean(selectedContextTab?.pinned)}
-        >
-          {closeTabActionLabel}
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (contextMenu?.tabId) {
-              onCloseOtherTabs?.(contextMenu.tabId);
-            }
-            closeContextMenu();
-          }}
-          disabled={!contextMenu || !onCloseOtherTabs || tabs.length <= 1}
-        >
-          {closeOthersActionLabel}
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (contextMenu?.tabId) {
-              onCloseAllTabs?.(contextMenu.tabId);
-            }
-            closeContextMenu();
-          }}
-          disabled={!contextMenu || !onCloseAllTabs || tabs.length === 0}
-        >
-          {closeAllActionLabel}
-        </MenuItem>
-      </Menu>
+        onPromoteTemporaryTab={onPromoteTemporaryTab}
+        onTogglePinTab={onTogglePinTab}
+        onCloseTab={onCloseTab}
+        onCloseOtherTabs={onCloseOtherTabs}
+        onCloseAllTabs={onCloseAllTabs}
+      />
     </Box>
   );
 }
