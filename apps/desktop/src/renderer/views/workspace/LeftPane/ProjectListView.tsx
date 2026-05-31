@@ -916,9 +916,16 @@ export function ProjectListView() {
                 new Set(
                   treeWorkspaces
                     .filter((workspace) => {
+                      // "root:node" is the synthetic parent for top-level nodes in by_node mode;
+                      // every workspace belongs to a node, so include all.
+                      if (reorderParentId === "root:node") {
+                        return true;
+                      }
+
                       if (workspaceListHierarchyMode === "by_project") {
                         return `project:${workspace.projectId}` === reorderParentId;
                       }
+
                       return `node:${workspace.nodeId}` === reorderParentId;
                     })
                     .map((workspace) => workspace.nodeId),

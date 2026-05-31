@@ -2,7 +2,7 @@ import { Box } from "@mui/material";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useMemo, useRef, useState } from "react";
 import { WORKSPACE_TREE_ROW_HEIGHT, WorkspaceTreeRowView } from "./WorkspaceTreeRow";
-import type { WorkspaceTreeProps } from "./types";
+import type { WorkspaceTreeProps, WorkspaceTreeRow } from "./types";
 import { useVisibleWorkspaceTree } from "./useVisibleWorkspaceTree";
 
 function parseCompositeNodeRowId(id: string): { projectId: string; nodeId: string } | null {
@@ -59,6 +59,8 @@ export function WorkspaceTree({
   const draggedRowIdRef = useRef("");
   const draggedRowKindRef = useRef<"project" | "node" | "workspace" | null>(null);
   const draggedParentIdRef = useRef<string | null>(null);
+  const dropTargetRowIdRef = useRef("");
+  const dropTargetPositionRef = useRef<"before" | "after">("before");
   const [draggedRowId, setDraggedRowId] = useState("");
   const [dropTargetRowId, setDropTargetRowId] = useState("");
   const [dropTargetPosition, setDropTargetPosition] = useState<"before" | "after">("before");
@@ -79,6 +81,58 @@ export function WorkspaceTree({
     estimateSize: () => WORKSPACE_TREE_ROW_HEIGHT,
     overscan: 16,
   });
+
+  const rowById = useMemo(() => new Map(visibleRows.map((row) => [row.id, row])), [visibleRows]);
+
+  /**
+   * Given a row the cursor is over, find the nearest valid drop target for
+   * the current drag. Returns the resolved row and whether it was found by
+   * walking up the parentId chain (i.e. the cursor is over a descendant, which
+   * always means "after" position relative to the target).
+   */
+  const findValidDropTarget = (hoveredRow: WorkspaceTreeRow): { targetRow: WorkspaceTreeRow; isDescendant: boolean } | null => {
+    const activeDraggedRowId = draggedRowIdRef.current;
+    const activeDraggedRowKind = draggedRowKindRef.current;
+    const activeDraggedParentId = draggedParentIdRef.current;
+    if (!activeDraggedRowId || !activeDraggedRowKind) {
+      return null;
+    }
+
+    if (hoveredRow.id === activeDraggedRowId) {
+      return null;
+    }
+
+    // Direct same-kind same-parent match
+    if (hoveredRow.kind === activeDraggedRowKind && hoveredRow.parentId === activeDraggedParentId) {
+      return { targetRow: hoveredRow, isDescendant: false };
+    }
+
+    // Walk up parentId chain to find an ancestor that matches
+    let current: WorkspaceTreeRow = hoveredRow;
+    for (let depth = 0; depth < 8; depth += 1) {
+      const parentId = current.parentId;
+      if (!parentId) {
+        break;
+      }
+
+      const parent = rowById.get(parentId);
+      if (!parent) {
+        break;
+      }
+
+      if (parent.id === activeDraggedRowId) {
+        break; // can't drop on itself
+      }
+
+      if (parent.kind === activeDraggedRowKind && parent.parentId === activeDraggedParentId) {
+        return { targetRow: parent, isDescendant: true };
+      }
+
+      current = parent;
+    }
+
+    return null;
+  };
 
   const dropIndicatorTop = useMemo(() => {
     if (!draggedRowId || !dropTargetRowId) {
@@ -174,70 +228,73 @@ export function WorkspaceTree({
                   setDropTargetRowId("");
                   setDropTargetPosition("before");
                 }}
-                onDragOver={(event) => {
-                  const activeDraggedRowId = draggedRowIdRef.current;
-                  const activeDraggedRowKind = draggedRowKindRef.current;
-                  const activeDraggedParentId = draggedParentIdRef.current;
-                  if (!activeDraggedRowId || activeDraggedRowId === row.id) {
-                    return;
-                  }
+                 onDragOver={(event) => {
+                    const found = findValidDropTarget(row);
+                    if (!found) {
+                      return;
+                    }
 
-                  if (
-                    !activeDraggedRowKind ||
-                    activeDraggedRowKind !== row.kind ||
-                    activeDraggedParentId !== row.parentId
-                  ) {
-                    return;
-                  }
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
 
-                  event.preventDefault();
-                  event.dataTransfer.dropEffect = "move";
-                  const { top, height } = event.currentTarget.getBoundingClientRect();
-                  const nextDropTargetPosition = event.clientY >= top + height / 2 ? "after" : "before";
-                  setDropTargetRowId(row.id);
-                  setDropTargetPosition(nextDropTargetPosition);
+                    let nextPosition: "before" | "after";
+                    if (found.isDescendant) {
+                      // Cursor is inside the target's subtree → always "after"
+                      nextPosition = "after";
+                    } else {
+                      const { top, height } = event.currentTarget.getBoundingClientRect();
+                      nextPosition = event.clientY >= top + height / 2 ? "after" : "before";
+                    }
 
-                }}
-                onDrop={(event) => {
-                  const activeDraggedRowId = draggedRowIdRef.current;
-                  const activeDraggedRowKind = draggedRowKindRef.current;
-                  const activeDraggedParentId = draggedParentIdRef.current;
-                  if (!activeDraggedRowId || !activeDraggedRowKind) {
-                    return;
-                  }
+                    dropTargetRowIdRef.current = found.targetRow.id;
+                    dropTargetPositionRef.current = nextPosition;
+                    setDropTargetRowId(found.targetRow.id);
+                    setDropTargetPosition(nextPosition);
+                  }}
+                 onDrop={(event) => {
+                    const activeDraggedRowId = draggedRowIdRef.current;
+                    const activeDraggedRowKind = draggedRowKindRef.current;
+                    const resolvedTargetRowId = dropTargetRowIdRef.current;
+                    const resolvedPosition = dropTargetPositionRef.current;
+                    if (!activeDraggedRowId || !activeDraggedRowKind || !resolvedTargetRowId) {
+                      return;
+                    }
 
-                  event.preventDefault();
-                  event.stopPropagation();
-                  if (
-                    activeDraggedRowId === row.id ||
-                    activeDraggedRowKind !== row.kind ||
-                    activeDraggedParentId !== row.parentId
-                  ) {
-                    return;
-                  }
+                    if (activeDraggedRowId === resolvedTargetRowId) {
+                      return;
+                    }
 
-                  const { top, height } = event.currentTarget.getBoundingClientRect();
-                  const dropPosition = event.clientY >= top + height / 2 ? "after" : "before";
+                    event.preventDefault();
+                    event.stopPropagation();
 
-                  onRowReorder?.({
-                    draggedRowId: activeDraggedRowId,
-                    targetRowId: row.id,
-                    rowKind: row.kind,
-                    parentId: row.parentId,
-                    position: dropPosition,
-                  });
+                    const targetRow = rowById.get(resolvedTargetRowId);
+                    if (!targetRow) {
+                      return;
+                    }
 
-                  setDropTargetRowId("");
-                  setDropTargetPosition("before");
-                }}
-                onDragEnd={() => {
-                  draggedRowIdRef.current = "";
-                  draggedRowKindRef.current = null;
-                  draggedParentIdRef.current = null;
-                  setDraggedRowId("");
-                  setDropTargetRowId("");
-                  setDropTargetPosition("before");
-                }}
+                    onRowReorder?.({
+                      draggedRowId: activeDraggedRowId,
+                      targetRowId: resolvedTargetRowId,
+                      rowKind: activeDraggedRowKind,
+                      parentId: targetRow.parentId,
+                      position: resolvedPosition,
+                    });
+
+                    dropTargetRowIdRef.current = "";
+                    dropTargetPositionRef.current = "before";
+                    setDropTargetRowId("");
+                    setDropTargetPosition("before");
+                  }}
+                 onDragEnd={() => {
+                    draggedRowIdRef.current = "";
+                    draggedRowKindRef.current = null;
+                    draggedParentIdRef.current = null;
+                    dropTargetRowIdRef.current = "";
+                    dropTargetPositionRef.current = "before";
+                    setDraggedRowId("");
+                    setDropTargetRowId("");
+                    setDropTargetPosition("before");
+                  }}
                 onToggle={() => {
                   if (!row.hasChildren) {
                     return;
