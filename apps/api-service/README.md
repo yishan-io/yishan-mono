@@ -321,5 +321,5 @@ The Worker runs two cron triggers configured in `wrangler.toml`:
 
 | Cron | Description |
 |---|---|
-| `* * * * *` | Evaluates due scheduled jobs every minute, creates pending runs, dispatches via QStash to relay |
+| `*/5 * * * *` | Evaluates due scheduled jobs every 5 minutes, creates pending runs, dispatches via QStash to relay |
 | `0 3 * * *` | Daily cleanup at 03:00 UTC -- removes expired sessions, revoked refresh tokens, and marks stale pending runs as `skipped_offline` |

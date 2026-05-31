@@ -13,7 +13,7 @@ type WorkerEnv = ScheduledDbEnv & CleanupEnv & EvaluatorEnv & RelayDispatchEnv &
 export default {
   fetch: app.fetch,
   async scheduled(event: ScheduledEvent, env: WorkerEnv, ctx: ExecutionContext) {
-    if (event.cron === "* * * * *") {
+    if (event.cron === "*/5 * * * *") {
       ctx.waitUntil(
         runWithScheduledDb(env, "evaluator", async (db) => {
           const jobEvaluatorService = new JobEvaluatorService(db);
