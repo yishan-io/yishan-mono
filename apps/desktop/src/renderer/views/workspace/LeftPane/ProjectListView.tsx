@@ -179,25 +179,99 @@ export function ProjectListView() {
     projects,
     deleteProject,
   });
-  const [foldedProjectIds, setFoldedProjectIds] = useState<string[]>([]);
-  const [foldedNodeKeys, setFoldedNodeKeys] = useState<string[]>([]);
+  const [foldStateByMode, setFoldStateByMode] = useState<
+    Record<"by_project" | "by_node", { foldedProjectIds: string[]; foldedNodeKeys: string[] }>
+  >({
+    by_project: { foldedProjectIds: [], foldedNodeKeys: [] },
+    by_node: { foldedProjectIds: [], foldedNodeKeys: [] },
+  });
   const [projectActionsAnchorEl, setProjectActionsAnchorEl] = useState<HTMLElement | null>(null);
   const [projectActionsProjectId, setProjectActionsProjectId] = useState("");
-  const [projectOrderIds, setProjectOrderIds] = useState<string[]>([]);
-  const [nodeOrderByParentId, setNodeOrderByParentId] = useState<Record<string, string[]>>({});
+
+  // Order and fold state is stored per hierarchy mode so that switching
+  // between by_project and by_node gives a fully isolated, clean state for
+  // each mode without any cross-mode bleed.
+  const [orderStateByMode, setOrderStateByMode] = useState<
+    Record<"by_project" | "by_node", { projectOrderIds: string[]; nodeOrderByParentId: Record<string, string[]> }>
+  >({
+    by_project: { projectOrderIds: [], nodeOrderByParentId: {} },
+    by_node: { projectOrderIds: [], nodeOrderByParentId: {} },
+  });
 
   // Keep projectOrderIds in sync with the filter: remove any ID that is no
   // longer in displayProjectIds so that re-checked projects are appended to
   // the end of the list (treated as new) rather than snapping back to their
-  // old position.
+  // old position. Applied only to the by_project mode bucket since
+  // displayProjectIds does not affect by_node project order (controlled by
+  // per-node drag order instead).
   useEffect(() => {
-    setProjectOrderIds((current) => {
-      const next = current.filter((id) => displayProjectIds.includes(id));
-      return next.length === current.length ? current : next;
+    setOrderStateByMode((current) => {
+      const prev = current.by_project.projectOrderIds;
+      const next = prev.filter((id) => displayProjectIds.includes(id));
+      if (next.length === prev.length) {
+        return current;
+      }
+
+      return {
+        ...current,
+        by_project: { ...current.by_project, projectOrderIds: next },
+      };
     });
   }, [displayProjectIds]);
+
   const [isAppFocused, setIsAppFocused] = useState(() => document.hasFocus());
   const workspaceListHierarchyMode = workspaceUiStore((state) => state.workspaceListHierarchyMode);
+
+  // Derive mode-specific order helpers with stable setter signatures so the
+  // rest of the component does not need to know about the per-mode nesting.
+  const projectOrderIds = orderStateByMode[workspaceListHierarchyMode].projectOrderIds;
+  const nodeOrderByParentId = orderStateByMode[workspaceListHierarchyMode].nodeOrderByParentId;
+
+  const setProjectOrderIds = (next: string[]) => {
+    setOrderStateByMode((current) => ({
+      ...current,
+      [workspaceListHierarchyMode]: { ...current[workspaceListHierarchyMode], projectOrderIds: next },
+    }));
+  };
+
+  const setNodeOrderByParentId = (updater: (prev: Record<string, string[]>) => Record<string, string[]>) => {
+    setOrderStateByMode((current) => ({
+      ...current,
+      [workspaceListHierarchyMode]: {
+        ...current[workspaceListHierarchyMode],
+        nodeOrderByParentId: updater(current[workspaceListHierarchyMode].nodeOrderByParentId),
+      },
+    }));
+  };
+
+  const foldedProjectIds = foldStateByMode[workspaceListHierarchyMode].foldedProjectIds;
+  const foldedNodeKeys = foldStateByMode[workspaceListHierarchyMode].foldedNodeKeys;
+
+  const setFoldedProjectIds = (updater: string[] | ((prev: string[]) => string[])) => {
+    setFoldStateByMode((current) => ({
+      ...current,
+      [workspaceListHierarchyMode]: {
+        ...current[workspaceListHierarchyMode],
+        foldedProjectIds:
+          typeof updater === "function"
+            ? updater(current[workspaceListHierarchyMode].foldedProjectIds)
+            : updater,
+      },
+    }));
+  };
+
+  const setFoldedNodeKeys = (updater: string[] | ((prev: string[]) => string[])) => {
+    setFoldStateByMode((current) => ({
+      ...current,
+      [workspaceListHierarchyMode]: {
+        ...current[workspaceListHierarchyMode],
+        foldedNodeKeys:
+          typeof updater === "function"
+            ? updater(current[workspaceListHierarchyMode].foldedNodeKeys)
+            : updater,
+      },
+    }));
+  };
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
   const nodesQuery = useQuery({
     queryKey: ["org-nodes", selectedOrganizationId],
