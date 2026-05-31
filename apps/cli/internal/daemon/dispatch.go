@@ -37,6 +37,7 @@ func isGitMethod(method string) bool {
 		MethodGitBranchPullRequest, MethodGitCommitsToTarget, MethodGitBranchDiffSummary,
 		MethodGitCommitDiff, MethodGitBranchDiff, MethodGitBranches, MethodGitPush,
 		MethodGitPublish, MethodGitRenameBranch, MethodGitRemoveBranch,
+		MethodGitPrMerge, MethodGitPrClose,
 		MethodGitWorktreeCreate, MethodGitWorktreeRemove, MethodGitAuthorName:
 		return true
 	}
