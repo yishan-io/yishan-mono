@@ -284,8 +284,6 @@ func (s *GitService) MergePullRequest(ctx context.Context, root string, prNumber
 		args = append(args, "--delete-branch")
 	}
 
-	args = append(args, "--yes")
-
 	return s.ghCommand(ctx, root, args...)
 }
 
