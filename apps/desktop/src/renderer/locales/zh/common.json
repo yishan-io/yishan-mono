@@ -1011,6 +1011,7 @@
       "activateRepoPane": "激活仓库面板",
       "activateFilesPane": "激活文件面板",
       "activateChangesPane": "激活变更面板",
+      "activatePrPane": "激活拉取请求面板",
       "toggleLeftPane": "切换左侧边栏",
       "toggleRightPane": "切换右侧边栏",
       "openFileSearch": "打开文件搜索",

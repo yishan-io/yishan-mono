@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { LuArrowUp, LuLoaderCircle, LuMic, LuX } from "react-icons/lu";
+import { VOICE_RECORDING_VISIBILITY_EVENT } from "../views/workspace/RightPane/RightPaneTabBar";
 import { useVoiceRecording } from "./useVoiceRecording";
 
 type FloatingVoiceButtonProps = {
@@ -10,6 +11,8 @@ type FloatingVoiceButtonProps = {
   disabled?: boolean;
   disabledMessage?: string;
   rightOffset?: number;
+  /** When true, hides the idle mic button — only shows the expanded recording UI when active. */
+  hideIdleButton?: boolean;
 };
 
 export type FloatingVoiceButtonHandle = {
@@ -17,7 +20,7 @@ export type FloatingVoiceButtonHandle = {
 };
 
 export const FloatingVoiceButton = forwardRef<FloatingVoiceButtonHandle, FloatingVoiceButtonProps>(
-  function FloatingVoiceButton({ onText, disabled = false, disabledMessage, rightOffset = 0 }, ref) {
+  function FloatingVoiceButton({ onText, disabled = false, disabledMessage, rightOffset = 0, hideIdleButton = false }, ref) {
   const location = useLocation();
   const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
 
@@ -44,6 +47,22 @@ export const FloatingVoiceButton = forwardRef<FloatingVoiceButtonHandle, Floatin
   };
 
   const isBusy = recordingState !== "idle";
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent(VOICE_RECORDING_VISIBILITY_EVENT, {
+        detail: { visible: isBusy },
+      }),
+    );
+
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent(VOICE_RECORDING_VISIBILITY_EVENT, {
+          detail: { visible: false },
+        }),
+      );
+    };
+  }, [isBusy]);
+
   const label =
     recordingState === "recording"
       ? "Recording voice input"
@@ -54,7 +73,7 @@ export const FloatingVoiceButton = forwardRef<FloatingVoiceButtonHandle, Floatin
         : "Click to record voice input";
 
   const button = (
-    <Box sx={{ position: "fixed", right: 18 + rightOffset, bottom: 18, zIndex: 9 }}>
+    <Box sx={{ position: "fixed", right: 58 + rightOffset, bottom: 18, zIndex: 9 }}>
       <Tooltip title={recordingState === "idle" ? (disabled ? (disabledMessage ?? label) : label) : (errorMessage ?? label)} placement="left">
         <span>
           <IconButton
@@ -89,9 +108,9 @@ export const FloatingVoiceButton = forwardRef<FloatingVoiceButtonHandle, Floatin
           >
             {recordingState === "transcribing" ? (
               <LuLoaderCircle className="voice-spin-icon" color="white" size={16} />
-            ) : (
+            ) : !isBusy ? (
               <LuMic size={16} />
-            )}
+            ) : null}
             {recordingState === "transcribing" ? (
               <Box sx={{ flex: 1, pr: 3.5, pl: 1, fontSize: 12, color: "grey.100", textAlign: "left" }}>
                 Transcribing...
@@ -152,6 +171,10 @@ export const FloatingVoiceButton = forwardRef<FloatingVoiceButtonHandle, Floatin
   );
 
   if (location.pathname !== "/") {
+    return null;
+  }
+
+  if (hideIdleButton && !isBusy) {
     return null;
   }
 

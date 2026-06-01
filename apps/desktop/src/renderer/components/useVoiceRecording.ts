@@ -184,6 +184,7 @@ export function useVoiceRecording({ onText, disabled = false, disabledMessage }:
       recorder.onstop = async () => {
         if (didCancelRecordingRef.current) {
           cleanupRecording();
+          clearRecordedAudio();
           return;
         }
 

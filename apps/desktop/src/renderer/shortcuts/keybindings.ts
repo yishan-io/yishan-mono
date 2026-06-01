@@ -25,7 +25,7 @@ type ShortcutTarget =
   | { command: "tabs.openTerminal" }
   | { command: "tabs.openBrowser" }
   | { command: "tabs.selectByIndex" }
-  | { command: "workspace.activatePane"; payload: { pane: "repo" | "files" | "changes" } }
+  | { command: "workspace.activatePane"; payload: { pane: "repo" | "files" | "changes" | "pr" } }
   | { command: "workspace.openCreateWorkspaceDialog" }
   | { command: "workspace.focusFileTree" }
   | { command: "workspace.closeSelected" }
@@ -403,6 +403,13 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+shift+g,command+shift+g",
     target: { command: "workspace.activatePane", payload: { pane: "changes" } },
+  },
+  {
+    id: "activate-pr-pane",
+    descriptionKey: "keybindings.actions.activatePrPane",
+    scope: "workspace",
+    keys: "ctrl+shift+p,command+shift+p",
+    target: { command: "workspace.activatePane", payload: { pane: "pr" } },
   },
   {
     id: "toggle-left-pane",

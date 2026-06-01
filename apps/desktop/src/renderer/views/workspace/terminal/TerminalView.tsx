@@ -10,6 +10,7 @@ import { layoutStore } from "../../../store/settings/layoutStore";
 import { keybindingSettingsStore } from "../../../store/settings/keybindingSettingsStore";
 import { getShortcutKeysById } from "../../../shortcuts/keybindings";
 import { useWorkspacePaneVisibilityContext } from "../../../hooks/useWorkspacePaneVisibility";
+import { VOICE_RECORD_REQUEST_EVENT } from "../RightPane/RightPaneTabBar";
 import { useTerminalSearchState } from "./useTerminalSearchState";
 import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import { useTerminalFileDrop } from "./useTerminalFileDrop";
@@ -106,6 +107,24 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
       window.removeEventListener("keydown", handleKeyDown, true);
     };
   }, [isVoiceInputEnabled, showVoiceButton]);
+
+  // ─── Voice tab-bar mic button listener ──────────────────────────────────────
+  // Listens regardless of showVoiceButton so the tab-bar mic icon always works
+  // as long as this terminal is mounted and voice input is enabled.
+  useEffect(() => {
+    if (!isVoiceInputEnabled) {
+      return;
+    }
+
+    const handleVoiceRecordRequest = () => {
+      voiceButtonRef.current?.startRecording();
+    };
+
+    window.addEventListener(VOICE_RECORD_REQUEST_EVENT, handleVoiceRecordRequest);
+    return () => {
+      window.removeEventListener(VOICE_RECORD_REQUEST_EVENT, handleVoiceRecordRequest);
+    };
+  }, [isVoiceInputEnabled]);
 
   // ─── Attach/Detach Lifecycle ────────────────────────────────────────────────
 
@@ -266,8 +285,8 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
           pointerEvents: "none",
         }}
       />
-      {isVoiceInputEnabled && showVoiceButton ? (
-        <FloatingVoiceButton ref={voiceButtonRef} onText={handleVoiceText} rightOffset={rightCollapsed ? 0 : rightWidth} />
+      {isVoiceInputEnabled ? (
+        <FloatingVoiceButton ref={voiceButtonRef} onText={handleVoiceText} rightOffset={rightCollapsed ? 0 : rightWidth} hideIdleButton />
       ) : null}
     </Box>
   );
