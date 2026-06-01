@@ -7,7 +7,6 @@ type UseTerminalSearchStateInput = {
   searchInputRef: RefObject<HTMLInputElement | null>;
   xtermRef: RefObject<Terminal | null>;
   searchAddonRef: RefObject<SearchAddon | null>;
-  focusRequestKey: number;
 };
 
 const TERMINAL_SEARCH_OPTIONS = {
@@ -21,7 +20,6 @@ export function useTerminalSearchState({
   searchInputRef,
   xtermRef,
   searchAddonRef,
-  focusRequestKey,
 }: UseTerminalSearchStateInput) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -112,18 +110,6 @@ export function useTerminalSearchState({
       window.cancelAnimationFrame(frame);
     };
   }, [isSearchOpen, searchInputRef]);
-
-  useEffect(() => {
-    if (focusRequestKey <= 0 || isSearchOpen) {
-      return;
-    }
-    const frame = window.requestAnimationFrame(() => {
-      xtermRef.current?.focus();
-    });
-    return () => {
-      window.cancelAnimationFrame(frame);
-    };
-  }, [focusRequestKey, isSearchOpen, xtermRef]);
 
   useEffect(() => {
     if (!isSearchOpen) {

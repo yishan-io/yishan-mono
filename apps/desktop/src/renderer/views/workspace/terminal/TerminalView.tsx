@@ -20,6 +20,7 @@ import {
   ensureTerminalRuntime,
   getTerminalRuntime,
   recoverAttachedTerminalRuntime,
+  requestTerminalRuntimeFocus,
 } from "./terminalRuntimeRegistry";
 import { initTerminalSessionLifecycle } from "./terminalSessionService";
 
@@ -152,6 +153,13 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
   }, [tabId]);
 
   useEffect(() => {
+    if (focusRequestKey <= 0) {
+      return;
+    }
+    requestTerminalRuntimeFocus(tabId);
+  }, [focusRequestKey, tabId]);
+
+  useEffect(() => {
     const hostElement = getTerminalRuntime(tabId)?.hostElement;
     if (!hostElement) {
       return;
@@ -194,7 +202,6 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
     searchInputRef,
     xtermRef,
     searchAddonRef,
-    focusRequestKey,
   });
   const {
     isSearchOpen: isSearchPanelOpen,
