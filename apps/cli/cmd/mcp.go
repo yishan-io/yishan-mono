@@ -97,6 +97,33 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 
 	orgID := appConfig.CurrentOrgID
 
+	// Prefer daemon context (desktop-pushed) over CLI config.
+	if contextState := readDaemonContext(daemonClient); contextState != nil {
+		if daemonOrgID, ok := contextState["activeOrgId"].(string); ok && daemonOrgID != "" {
+			orgID = daemonOrgID
+		}
+	}
+
+	server.AddResource(
+		&mcp.Resource{
+			URI:         "yishan://context",
+			Name:        "Current yishan context",
+			Description: "Current organization, project, workspace, and file context from the yishan desktop app. Includes activeOrgId, activeProjectId, activeWorkspaceId, and activeFilePath.",
+			MIMEType:    "application/json",
+		},
+		func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+			state := readDaemonContext(daemonClient)
+			encoded, _ := json.MarshalIndent(state, "", "  ")
+			return &mcp.ReadResourceResult{
+				Contents: []*mcp.ResourceContents{{
+					URI:      req.Params.URI,
+					MIMEType: "application/json",
+					Text:     string(encoded),
+				}},
+			}, nil
+		},
+	)
+
 	mcp.AddTool(server,
 		&mcp.Tool{Name: "workspace_list", Description: "List all workspaces currently open in yishan. Returns workspace id, path, org, project, and pull request info for each workspace."},
 		func(_ context.Context, _ *mcp.CallToolRequest, _ any) (*mcp.CallToolResult, any, error) {
@@ -248,4 +275,12 @@ func textErrorResult(text string) *mcp.CallToolResult {
 
 func init() {
 	rootCmd.AddCommand(mcpCmd)
+}
+
+func readDaemonContext(client *daemonclient.PersistentClient) map[string]any {
+	var state map[string]any
+	if err := client.Call("context.getState", nil, &state); err != nil {
+		return nil
+	}
+	return state
 }

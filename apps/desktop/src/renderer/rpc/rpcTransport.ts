@@ -11,6 +11,7 @@ const SOCKET_CONNECT_RETRY_COUNT = 30;
 const SOCKET_CONNECT_RETRY_DELAY_MS = 500;
 const API_NAMESPACES = new Set<ApiNamespace>([
   "app",
+  "context",
   "workspace",
   "file",
   "git",
@@ -358,6 +359,12 @@ export async function getDaemonClient(): Promise<DaemonRpcClient> {
         integration: proxyClient.integration,
         notification: proxyClient.notification,
         events: proxyClient.events,
+        context: {
+          getState: () => transportClient.context.getState(),
+          setCurrentOrg: (orgId: string) => transportClient.context.setCurrentOrg(orgId),
+          setActiveProject: (projectId: string) => transportClient.context.setActiveProject(projectId),
+          setActiveFile: (filePath: string) => transportClient.context.setActiveFile(filePath),
+        },
       };
     });
     void daemonRpcClientPromise.then(() => {

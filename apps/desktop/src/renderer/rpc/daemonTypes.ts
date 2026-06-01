@@ -44,6 +44,7 @@ export type ProcedureNotification = {
 
 export type ApiNamespace =
   | "app"
+  | "context"
   | "workspace"
   | "file"
   | "git"

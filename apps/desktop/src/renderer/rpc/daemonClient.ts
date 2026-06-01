@@ -141,6 +141,13 @@ export class DaemonClient {
     listSessions: (input?: Rpc.TerminalListSessionsInput) => this._terminalClient.listSessions(input),
   };
 
+  readonly context = {
+    getState: () => this.sendRequest("context.getState"),
+    setCurrentOrg: (orgId: string) => this.sendRequest("context.setCurrentOrg", { orgId }),
+    setActiveProject: (projectId: string) => this.sendRequest("context.setActiveProject", { projectId }),
+    setActiveFile: (filePath: string) => this.sendRequest("context.setActiveFile", { filePath }),
+  };
+
   // ─── Connection Lifecycle ───────────────────────────────────────────────────
 
   private clearSocketReference(socket: WebSocket): void {

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createOrganization, listOrganizations } from "../../api";
 import { loadWorkspaceFromBackend } from "../../commands/projectCommands";
+import { switchOrganization } from "../../commands/orgCommands";
 import { useDialogRegistration } from "../../hooks/useDialogRegistration";
 import { sessionStore } from "../../store/sessionStore";
 
@@ -51,6 +52,7 @@ export function CreateOrganizationDialogView({ open, onClose }: CreateOrganizati
         setErrorMessage(null);
         setIsCreating(false);
         onClose();
+        void switchOrganization(createdOrganization.id);
         void loadWorkspaceFromBackend();
       } catch {
         setErrorMessage(t("org.menu.newOrganizationFailed"));

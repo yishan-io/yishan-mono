@@ -34,6 +34,7 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { resetAuthExpiredState } from "../../api/restClient";
 import { openExternalUrl } from "../../commands/appCommands";
+import { switchOrganization } from "../../commands/orgCommands";
 import { getRendererPlatform } from "../../helpers/platform";
 import { useThemePreference } from "../../hooks/useThemePreference";
 import { rendererQueryClient } from "../../queryClient";
@@ -108,7 +109,6 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
   const currentUser = sessionStore((state) => state.currentUser);
   const organizations = sessionStore((state) => state.organizations);
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
-  const setSelectedOrganizationId = sessionStore((state) => state.setSelectedOrganizationId);
   const clearSessionData = sessionStore((state) => state.clearSessionData);
   const setAuthState = sessionStore((state) => state.setAuthState);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -450,7 +450,7 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: { fullWidth
                         setMenuAnchor(null);
                         return;
                       }
-                      setSelectedOrganizationId(organization.id);
+                      void switchOrganization(organization.id);
                       setOrganizationMenuAnchor(null);
                       setMenuAnchor(null);
                       void rendererQueryClient.invalidateQueries({ queryKey: ["org-nodes", organization.id] });

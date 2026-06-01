@@ -27,6 +27,7 @@ type JSONRPCHandler struct {
 	nodeID         string
 	logFilePath    string
 	cleanupStore   *workspaceCleanupStore
+	context        *AppContextStore
 	events         *eventHub
 	watchers       *workspaceWatchers
 	prTracker      *workspacePRTracker
@@ -34,7 +35,7 @@ type JSONRPCHandler struct {
 	fileCacheSubID uint64
 }
 
-func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, configPath string) *JSONRPCHandler {
+func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, configPath string, context *AppContextStore) *JSONRPCHandler {
 	events := newEventHub()
 	prTracker := newWorkspacePRTracker(manager, runtime, events.Publish)
 	fileCacheSubID, fileCacheEvents := events.Subscribe()
@@ -57,9 +58,9 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		manager:        manager,
 		runtime:        runtime,
 		nodeID:         nodeID,
-
 		logFilePath:    logFilePath,
 		cleanupStore:   cleanupStore,
+		context:        context,
 		events:         events,
 		watchers:       newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
 		prTracker:      prTracker,

@@ -21,6 +21,12 @@ export type DaemonRpcClient = {
     logout: (input?: unknown) => Promise<Rpc.LogoutOutput>;
     reloadAuthConfig: (input?: unknown) => Promise<Rpc.ReloadAuthConfigOutput>;
   };
+  context: {
+    getState: () => Promise<unknown>;
+    setCurrentOrg: (orgId: string) => Promise<unknown>;
+    setActiveProject: (projectId: string) => Promise<unknown>;
+    setActiveFile: (filePath: string) => Promise<unknown>;
+  };
   workspace: {
     list: (input?: unknown) => Promise<Rpc.DaemonWorkspace[]>;
     open: (input: Rpc.WorkspaceOpenInput) => Promise<Rpc.DaemonWorkspace>;

@@ -1,6 +1,22 @@
 import { api } from "../api";
 import { getErrorMessage } from "../helpers/errorHelpers";
+import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
+
+/**
+ * Switches the current organization in both the session store and the daemon
+ * context, so the CLI and MCP server know which org is active.
+ */
+export async function switchOrganization(orgId: string): Promise<void> {
+  sessionStore.getState().setSelectedOrganizationId(orgId);
+
+  try {
+    const client = await getDaemonClient();
+    await client.context.setCurrentOrg(orgId);
+  } catch {
+    // Best-effort: daemon may not be available.
+  }
+}
 
 /**
  * Adds a member to the currently selected organization by their email address.

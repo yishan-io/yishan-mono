@@ -11,6 +11,8 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 	switch {
 	case isWorkspaceMethod(method):
 		return h.dispatchWorkspace(ctx, connState, method, params)
+	case isContextMethod(method):
+		return h.dispatchContext(ctx, method, params)
 	case isGitMethod(method):
 		return h.dispatchGit(ctx, method, params)
 	case isFileMethod(method):
@@ -25,6 +27,14 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 func isWorkspaceMethod(method string) bool {
 	switch method {
 	case MethodOpen, MethodList, MethodWorkspaceCreate, MethodWorkspaceSyncContextLink, MethodWorkspaceClose, MethodWorkspaceSetActive:
+		return true
+	}
+	return false
+}
+
+func isContextMethod(method string) bool {
+	switch method {
+	case MethodContextGetState, MethodContextSetCurrentOrg, MethodContextSetActiveProject, MethodContextSetActiveFile:
 		return true
 	}
 	return false
