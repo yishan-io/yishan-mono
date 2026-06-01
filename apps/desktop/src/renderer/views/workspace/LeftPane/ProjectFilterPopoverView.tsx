@@ -18,7 +18,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MdOutlineFilterList } from "react-icons/md";
 import { useCommands } from "../../../hooks/useCommands";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 
 /** Returns true when a repository row matches the quick-search keyword. */
@@ -39,8 +38,8 @@ export function ProjectFilterPopoverView() {
   const { setDisplayRepoIds } = useCommands();
   const [repoFilterAnchor, setRepoFilterAnchor] = useState<HTMLElement | null>(null);
   const [repoQuickSearch, setRepoQuickSearch] = useState("");
-  const workspaceListHierarchyMode = workspaceUiStore((state) => state.workspaceListHierarchyMode);
-  const setWorkspaceListHierarchyMode = workspaceUiStore((state) => state.setWorkspaceListHierarchyMode);
+  const workspaceListHierarchyMode = workspaceStore((state) => state.workspaceListHierarchyMode);
+  const setWorkspaceListHierarchyMode = workspaceStore((state) => state.setWorkspaceListHierarchyMode);
 
   const handleSelectAll = () => {
     setDisplayRepoIds(repos.map((repo) => repo.id));

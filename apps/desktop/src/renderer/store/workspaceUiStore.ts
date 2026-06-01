@@ -14,7 +14,6 @@ type WorkspaceUiStoreState = {
   fileSearchRequestKey: number;
   /** Whether the scheduled job panel is visible in the main pane. */
   isScheduledJobPanelOpen: boolean;
-  workspaceListHierarchyMode: WorkspaceListHierarchyMode;
 
   setSelectedEntryPath: (path: string) => void;
   requestDeleteSelection: () => void;
@@ -22,7 +21,6 @@ type WorkspaceUiStoreState = {
   setRightPaneTab: (tab: WorkspaceRightPaneTab) => void;
   requestFileSearch: () => void;
   setScheduledJobPanelOpen: (isOpen: boolean) => void;
-  setWorkspaceListHierarchyMode: (mode: WorkspaceListHierarchyMode) => void;
 };
 
 /** Stores workspace-scoped UI signals: file-tree selection/commands and right-pane tab state. */
@@ -34,34 +32,30 @@ export const workspaceUiStore = create<WorkspaceUiStoreState>()(
     rightPaneTab: "files",
     fileSearchRequestKey: 0,
     isScheduledJobPanelOpen: false,
-    workspaceListHierarchyMode: "by_project",
 
-    setSelectedEntryPath: (selectedEntryPath) => {
-      set({ selectedEntryPath });
-    },
-    requestDeleteSelection: () => {
-      set((state) => {
-        state.deleteSelectionRequestId += 1;
-      });
-    },
-    requestUndo: () => {
-      set((state) => {
-        state.undoRequestId += 1;
-      });
-    },
-    setRightPaneTab: (rightPaneTab) => {
-      set({ rightPaneTab });
-    },
-    requestFileSearch: () => {
-      set((state) => {
-        state.fileSearchRequestKey += 1;
-      });
-    },
+      setSelectedEntryPath: (selectedEntryPath) => {
+        set({ selectedEntryPath });
+      },
+      requestDeleteSelection: () => {
+        set((state) => {
+          state.deleteSelectionRequestId += 1;
+        });
+      },
+      requestUndo: () => {
+        set((state) => {
+          state.undoRequestId += 1;
+        });
+      },
+      setRightPaneTab: (rightPaneTab) => {
+        set({ rightPaneTab });
+      },
+      requestFileSearch: () => {
+        set((state) => {
+          state.fileSearchRequestKey += 1;
+        });
+      },
     setScheduledJobPanelOpen: (isOpen) => {
       set({ isScheduledJobPanelOpen: isOpen });
-    },
-    setWorkspaceListHierarchyMode: (workspaceListHierarchyMode) => {
-      set({ workspaceListHierarchyMode });
     },
   })),
 );

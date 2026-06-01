@@ -56,10 +56,6 @@ vi.mock("../../../store/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));
 
-vi.mock("../../../store/workspaceUiStore", () => ({
-  workspaceUiStore: mocked.workspaceStore,
-}));
-
 afterEach(() => {
   vi.clearAllMocks();
 });

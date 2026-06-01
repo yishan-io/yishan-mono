@@ -191,10 +191,12 @@ export type WorkspaceStoreState = {
   lastUsedExternalAppId?: ExternalAppId;
   organizationPreferencesById?: Record<string, WorkspaceStoreOrganizationPreference>;
   fileTreeRefreshVersion: number;
+  workspaceListHierarchyMode: "by_project" | "by_node";
   setSelectedProjectId: (projectId: string) => void;
   setSelectedWorkspaceId: (workspaceId: string) => void;
   setDisplayProjectIds: (projectIds: string[]) => void;
   setLastUsedExternalAppId: (appId: ExternalAppId) => void;
+  setWorkspaceListHierarchyMode: (mode: "by_project" | "by_node") => void;
   load: (organizationId: string, projects: ProjectRecord[], workspaces: WorkspaceRecord[]) => void;
   createProject: (input: {
     name: string;
@@ -262,7 +264,7 @@ export type WorkspaceStoreOrganizationPreference = {
 
 export type WorkspaceStorePersistedState = Pick<
   WorkspaceStoreState,
-  "displayProjectIds" | "lastUsedExternalAppId" | "organizationPreferencesById"
+  "displayProjectIds" | "lastUsedExternalAppId" | "organizationPreferencesById" | "workspaceListHierarchyMode"
 >;
 
 export type WorkspaceStoreActions = Pick<
@@ -271,6 +273,7 @@ export type WorkspaceStoreActions = Pick<
   | "setSelectedWorkspaceId"
   | "setDisplayProjectIds"
   | "setLastUsedExternalAppId"
+  | "setWorkspaceListHierarchyMode"
   | "load"
   | "createProject"
   | "deleteProject"

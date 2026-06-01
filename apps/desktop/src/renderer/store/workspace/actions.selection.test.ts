@@ -11,6 +11,7 @@ type TestState = {
   displayProjectIds: string[];
   organizationPreferencesById?: Record<string, { selectedProjectId?: string; selectedWorkspaceId?: string }>;
   lastUsedExternalAppId?: string;
+  workspaceListHierarchyMode: "by_project" | "by_node";
 };
 
 function createHarness() {
@@ -23,6 +24,7 @@ function createHarness() {
     selectedWorkspaceId: "workspace-1",
     displayProjectIds: ["repo-1", "repo-2"],
     organizationPreferencesById: {},
+    workspaceListHierarchyMode: "by_project",
   };
 
   const set = ((updater: ((current: TestState) => void) | Partial<TestState>) => {
@@ -58,5 +60,13 @@ describe("createWorkspaceSelectionActions", () => {
       selectedProjectId: "repo-2",
       selectedWorkspaceId: "workspace-2",
     });
+  });
+
+  it("updates workspace list hierarchy mode", () => {
+    const harness = createHarness();
+
+    harness.actions.setWorkspaceListHierarchyMode("by_node");
+
+    expect(harness.getState().workspaceListHierarchyMode).toBe("by_node");
   });
 });

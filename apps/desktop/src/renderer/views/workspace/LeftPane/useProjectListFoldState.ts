@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { workspaceStore } from "../../../store/workspaceStore";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
 
 type HierarchyMode = "by_project" | "by_node";
 
@@ -35,7 +34,8 @@ export type ProjectListFoldStateResult = {
  */
 export function useProjectListFoldState(): ProjectListFoldStateResult {
   const displayProjectIds = workspaceStore((state) => state.displayProjectIds) ?? [];
-  const workspaceListHierarchyMode = workspaceUiStore((state) => state.workspaceListHierarchyMode);
+  const workspaceListHierarchyMode = workspaceStore((state) => state.workspaceListHierarchyMode);
+  const activeHierarchyMode: HierarchyMode = workspaceListHierarchyMode === "by_node" ? "by_node" : "by_project";
 
   const [foldStateByMode, setFoldStateByMode] = useState<Record<HierarchyMode, FoldState>>({
     by_project: { foldedProjectIds: [], foldedNodeKeys: [] },
@@ -68,38 +68,36 @@ export function useProjectListFoldState(): ProjectListFoldStateResult {
     });
   }, [displayProjectIds]);
 
-  const projectOrderIds = orderStateByMode[workspaceListHierarchyMode].projectOrderIds;
-  const nodeOrderByParentId = orderStateByMode[workspaceListHierarchyMode].nodeOrderByParentId;
+  const projectOrderIds = orderStateByMode[activeHierarchyMode].projectOrderIds;
+  const nodeOrderByParentId = orderStateByMode[activeHierarchyMode].nodeOrderByParentId;
 
   const setProjectOrderIds = (next: string[]) => {
     setOrderStateByMode((current) => ({
       ...current,
-      [workspaceListHierarchyMode]: { ...current[workspaceListHierarchyMode], projectOrderIds: next },
+      [activeHierarchyMode]: { ...current[activeHierarchyMode], projectOrderIds: next },
     }));
   };
 
   const setNodeOrderByParentId = (updater: (prev: Record<string, string[]>) => Record<string, string[]>) => {
     setOrderStateByMode((current) => ({
       ...current,
-      [workspaceListHierarchyMode]: {
-        ...current[workspaceListHierarchyMode],
-        nodeOrderByParentId: updater(current[workspaceListHierarchyMode].nodeOrderByParentId),
+      [activeHierarchyMode]: {
+        ...current[activeHierarchyMode],
+        nodeOrderByParentId: updater(current[activeHierarchyMode].nodeOrderByParentId),
       },
     }));
   };
 
-  const foldedProjectIds = foldStateByMode[workspaceListHierarchyMode].foldedProjectIds;
-  const foldedNodeKeys = foldStateByMode[workspaceListHierarchyMode].foldedNodeKeys;
+  const foldedProjectIds = foldStateByMode[activeHierarchyMode].foldedProjectIds;
+  const foldedNodeKeys = foldStateByMode[activeHierarchyMode].foldedNodeKeys;
 
   const setFoldedProjectIds = (updater: string[] | ((prev: string[]) => string[])) => {
     setFoldStateByMode((current) => ({
       ...current,
-      [workspaceListHierarchyMode]: {
-        ...current[workspaceListHierarchyMode],
+      [activeHierarchyMode]: {
+        ...current[activeHierarchyMode],
         foldedProjectIds:
-          typeof updater === "function"
-            ? updater(current[workspaceListHierarchyMode].foldedProjectIds)
-            : updater,
+          typeof updater === "function" ? updater(current[activeHierarchyMode].foldedProjectIds) : updater,
       },
     }));
   };
@@ -107,12 +105,10 @@ export function useProjectListFoldState(): ProjectListFoldStateResult {
   const setFoldedNodeKeys = (updater: string[] | ((prev: string[]) => string[])) => {
     setFoldStateByMode((current) => ({
       ...current,
-      [workspaceListHierarchyMode]: {
-        ...current[workspaceListHierarchyMode],
+      [activeHierarchyMode]: {
+        ...current[activeHierarchyMode],
         foldedNodeKeys:
-          typeof updater === "function"
-            ? updater(current[workspaceListHierarchyMode].foldedNodeKeys)
-            : updater,
+          typeof updater === "function" ? updater(current[activeHierarchyMode].foldedNodeKeys) : updater,
       },
     }));
   };
@@ -133,6 +129,6 @@ export function useProjectListFoldState(): ProjectListFoldStateResult {
     setFoldedProjectIds,
     setFoldedNodeKeys,
     toggleProjectFold,
-    workspaceListHierarchyMode,
+    workspaceListHierarchyMode: activeHierarchyMode,
   };
 }

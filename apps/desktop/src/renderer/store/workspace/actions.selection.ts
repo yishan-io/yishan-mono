@@ -8,7 +8,11 @@ import type {
 
 type WorkspaceSelectionActions = Pick<
   WorkspaceStoreActions,
-  "setSelectedProjectId" | "setSelectedWorkspaceId" | "setDisplayProjectIds" | "setLastUsedExternalAppId"
+  | "setSelectedProjectId"
+  | "setSelectedWorkspaceId"
+  | "setDisplayProjectIds"
+  | "setLastUsedExternalAppId"
+  | "setWorkspaceListHierarchyMode"
 >;
 
 export function createWorkspaceSelectionActions(
@@ -95,6 +99,9 @@ export function createWorkspaceSelectionActions(
           organizationPreferences.lastUsedExternalAppId = appId;
         });
       });
+    },
+    setWorkspaceListHierarchyMode: (mode) => {
+      set({ workspaceListHierarchyMode: mode });
     },
   };
 }
