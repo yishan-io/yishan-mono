@@ -140,15 +140,24 @@ export function toggleRightPaneVisibility() {
   state.setIsRightPaneManuallyHidden(!state.isRightPaneManuallyHidden);
 }
 
-/** Activates one workspace pane and makes sure the owning sidebar is visible. */
+/** Toggles a workspace pane: opens and switches to it, or collapses if already active. */
 export function activateWorkspacePane(pane: "repo" | WorkspaceRightPaneTab) {
   if (pane === "repo") {
-    layoutStore.getState().setIsLeftPaneManuallyHidden(false);
+    const state = layoutStore.getState();
+    state.setIsLeftPaneManuallyHidden(!state.isLeftPaneManuallyHidden);
     return;
   }
 
-  layoutStore.getState().setIsRightPaneManuallyHidden(false);
-  workspaceUiStore.getState().setRightPaneTab(pane);
+  const layout = layoutStore.getState();
+  const currentTab = workspaceUiStore.getState().rightPaneTab;
+  const isHidden = layout.isRightPaneManuallyHidden;
+
+  if (!isHidden && currentTab === pane) {
+    layout.setIsRightPaneManuallyHidden(true);
+  } else {
+    layout.setIsRightPaneManuallyHidden(false);
+    workspaceUiStore.getState().setRightPaneTab(pane);
+  }
 }
 
 /** Requests opening the create-workspace dialog for the currently selected project context. */

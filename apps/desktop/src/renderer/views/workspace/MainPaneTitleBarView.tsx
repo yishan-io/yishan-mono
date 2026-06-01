@@ -1,7 +1,7 @@
 import { Box, Button, Tooltip, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuChevronRight, LuPanelLeft, LuPanelRight, LuPlay } from "react-icons/lu";
+import { LuChevronRight, LuPanelLeft, LuPlay } from "react-icons/lu";
 import { getMainWindowFullscreenState } from "../../commands/appCommands";
 import { PaneHeader } from "../../components/PaneHeader";
 import { PaneToggleButton } from "../../components/PaneToggleButton";
@@ -24,7 +24,7 @@ import { renderWorkspaceKindIcon, resolvePrimaryWorkspaceId } from "./mainPaneTi
 /** Renders the main pane title bar with repo/workspace selectors and pane toggle controls. */
 export function MainPaneTitleBarView() {
   const { t } = useTranslation();
-  const { leftCollapsed, rightCollapsed, onToggleLeftPane, onToggleRightPane } = useWorkspacePaneVisibilityContext();
+  const { leftCollapsed, onToggleLeftPane } = useWorkspacePaneVisibilityContext();
   const projects = workspaceStore((state) => state.projects);
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
@@ -38,19 +38,12 @@ export function MainPaneTitleBarView() {
   const primaryWorkspaceId = resolvePrimaryWorkspaceId(selectedRepo, workspacesForSelectedRepo);
   const rendererPlatform = getRendererPlatform();
   const toggleLeftShortcutLabel = getShortcutDisplayLabelById("toggle-left-pane", rendererPlatform);
-  const toggleRightShortcutLabel = getShortcutDisplayLabelById("toggle-right-pane", rendererPlatform);
   const toggleLeftTooltipLabel = toggleLeftShortcutLabel
     ? t("layout.toggleWithShortcut", {
         label: t("layout.toggleLeftSidebar"),
         shortcut: toggleLeftShortcutLabel,
       })
     : t("layout.toggleLeftSidebar");
-  const toggleRightTooltipLabel = toggleRightShortcutLabel
-    ? t("layout.toggleWithShortcut", {
-        label: t("layout.toggleRightSidebar"),
-        shortcut: toggleRightShortcutLabel,
-      })
-    : t("layout.toggleRightSidebar");
   const [isFullscreenDisplayMode, setIsFullscreenDisplayMode] = useState(false);
   const shouldReserveMacWindowControlsInset =
     rendererPlatform === "darwin" && leftCollapsed && !isFullscreenDisplayMode;
@@ -276,14 +269,6 @@ export function MainPaneTitleBarView() {
             </span>
           </Tooltip>
           <WorkspacePortsMenuControl />
-          {rightCollapsed ? (
-            <PaneToggleButton
-              tooltipLabel={toggleRightTooltipLabel}
-              ariaLabel={t("layout.toggleRightSidebar")}
-              icon={<LuPanelRight size={16} />}
-              onClick={onToggleRightPane}
-            />
-          ) : null}
         </Box>
       </PaneHeader>
       <RepoSelectorMenu

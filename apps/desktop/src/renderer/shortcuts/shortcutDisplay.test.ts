@@ -10,7 +10,6 @@ describe("formatShortcutDisplay", () => {
 describe("getShortcutDisplayLabelById", () => {
   it("returns platform-specific labels for pane toggle shortcuts", () => {
     expect(getShortcutDisplayLabelById("toggle-left-pane", "darwin")).toBe("⌘+B");
-    expect(getShortcutDisplayLabelById("toggle-right-pane", "win32")).toBe("CTRL+L");
   });
 
   it("returns null when shortcut id is unknown", () => {

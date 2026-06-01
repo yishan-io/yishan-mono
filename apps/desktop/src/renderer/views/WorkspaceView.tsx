@@ -20,12 +20,10 @@ import { CreateProjectDialogView } from "./workspace/LeftPane/CreateProjectDialo
 import { LeftPaneView } from "./workspace/LeftPane/LeftPaneView";
 import { MainPaneView } from "./workspace/MainPaneView";
 import { OnboardingView } from "./workspace/OnboardingView";
-import { RightPaneView } from "./workspace/RightPane/RightPaneView";
 import { WorkspaceLifecycleNoticeView } from "./workspace/WorkspaceLifecycleNoticeView";
 import { TerminalRecoveryCoordinator } from "./workspace/terminal/terminalRecovery";
 
 const LEFT_MIN_WIDTH = 240;
-const RIGHT_MIN_WIDTH = 280;
 const MAIN_MIN_WIDTH = 520;
 const SEPARATOR_PX = 16;
 
@@ -284,7 +282,6 @@ export function WorkspaceView() {
   const [isCreateRepoOpen, setIsCreateRepoOpen] = useState(false);
   const paneVisibility = useWorkspacePaneVisibility();
   const leftWidth = layoutStore((state) => state.leftWidth);
-  const rightWidth = layoutStore((state) => state.rightWidth);
   const projects = workspaceStore((state) => state.projects);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const selectedWorkspaceWorktreePath = workspaceStore(
@@ -302,7 +299,7 @@ export function WorkspaceView() {
   const cmd = useCommands();
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator());
-  const { leftCollapsed, rightCollapsed, onToggleLeftPane, onToggleRightPane } = paneVisibility;
+  const { leftCollapsed, onToggleLeftPane } = paneVisibility;
 
   const handleCloseScheduledJobPanel = useCallback(() => {
     setScheduledJobPanelOpen(false);
@@ -325,23 +322,16 @@ export function WorkspaceView() {
   }, [cmd, selectedWorkspaceId]);
 
   const leftSep = leftCollapsed ? 0 : SEPARATOR_PX;
-  const rightSep = rightCollapsed ? 0 : SEPARATOR_PX;
   const maxLeftWidth = Math.max(
     LEFT_MIN_WIDTH,
-    containerWidth - leftSep - rightSep - MAIN_MIN_WIDTH - (rightCollapsed ? 0 : rightWidth),
-  );
-  const maxRightWidth = Math.max(
-    RIGHT_MIN_WIDTH,
-    containerWidth - leftSep - rightSep - MAIN_MIN_WIDTH - (leftCollapsed ? 0 : leftWidth),
+    containerWidth - leftSep - MAIN_MIN_WIDTH,
   );
 
   const resolvedLeftWidth = clamp(leftWidth, LEFT_MIN_WIDTH, maxLeftWidth);
-  const resolvedRightWidth = clamp(rightWidth, RIGHT_MIN_WIDTH, maxRightWidth);
   const hasProjects = projects.length > 0;
 
-  // Refs to hold the drag origin so pointer-capture callbacks can compute deltas.
+  // Ref to hold the drag origin so pointer-capture callbacks can compute deltas.
   const leftDragRef = useRef({ startX: 0, startWidth: 0 });
-  const rightDragRef = useRef({ startX: 0, startWidth: 0 });
 
   const resizeLeftStart = useCallback(
     (clientXStart: number) => {
@@ -359,24 +349,6 @@ export function WorkspaceView() {
       cmd.setLeftPaneWidth(nextWidth);
     },
     [cmd, maxLeftWidth],
-  );
-
-  const resizeRightStart = useCallback(
-    (clientXStart: number) => {
-      if (rightCollapsed) return;
-      rightDragRef.current = { startX: clientXStart, startWidth: resolvedRightWidth };
-    },
-    [rightCollapsed, resolvedRightWidth],
-  );
-
-  const resizeRightMove = useCallback(
-    (clientX: number) => {
-      const { startX, startWidth } = rightDragRef.current;
-      const delta = startX - clientX;
-      const nextWidth = clamp(startWidth + delta, RIGHT_MIN_WIDTH, maxRightWidth);
-      cmd.setRightPaneWidth(nextWidth);
-    },
-    [cmd, maxRightWidth],
   );
 
   if (!hasProjects) {
@@ -413,20 +385,7 @@ export function WorkspaceView() {
         {isScheduledJobPanelOpen ? (
           <ScheduledJobView onClose={handleCloseScheduledJobPanel} />
         ) : (
-          <SplitPaneLayout
-            position="right"
-            collapsed={rightCollapsed}
-            resizeLabel={t("layout.resize.right")}
-            onResizeStart={resizeRightStart}
-            onResizeMove={resizeRightMove}
-            sideContent={
-              <Box sx={{ width: resolvedRightWidth, minWidth: resolvedRightWidth, height: "100%" }}>
-                <RightPaneView onToggleRightPane={onToggleRightPane} />
-              </Box>
-            }
-          >
-            <MainPaneView />
-          </SplitPaneLayout>
+          <MainPaneView />
         )}
       </SplitPaneLayout>
       <CreateProjectDialogView open={isCreateRepoOpen} onClose={() => setIsCreateRepoOpen(false)} />

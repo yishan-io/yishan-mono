@@ -1044,6 +1044,7 @@
       "activateRepoPane": "Activate repository pane",
       "activateFilesPane": "Activate files pane",
       "activateChangesPane": "Activate changes pane",
+      "activatePrPane": "Activate pull request pane",
       "toggleLeftPane": "Toggle left sidebar",
       "toggleRightPane": "Toggle right sidebar",
       "openFileSearch": "Open file search",

@@ -165,14 +165,11 @@ describe("SUPPORTED_KEY_BINDINGS", () => {
     expect(selectByIndexBinding?.windowsKeys).toEqual(["CTRL", "1-9"]);
   });
 
-  it("documents pane toggles as mod+b and mod+l", () => {
+  it("documents left pane toggle as mod+b", () => {
     const leftPaneBinding = SUPPORTED_KEY_BINDINGS.find((binding) => binding.id === "toggle-left-pane");
-    const rightPaneBinding = SUPPORTED_KEY_BINDINGS.find((binding) => binding.id === "toggle-right-pane");
 
     expect(leftPaneBinding?.macKeys).toEqual(["⌘", "B"]);
     expect(leftPaneBinding?.windowsKeys).toEqual(["CTRL", "B"]);
-    expect(rightPaneBinding?.macKeys).toEqual(["⌘", "L"]);
-    expect(rightPaneBinding?.windowsKeys).toEqual(["CTRL", "L"]);
   });
 
   it("documents chat and terminal tabs as mod+y and mod+t", () => {
@@ -435,24 +432,18 @@ describe("getShortcutDefinitions", () => {
     });
   });
 
-  it("dispatches pane visibility toggles from central definitions", () => {
+  it("dispatches left pane visibility toggle from central definitions", () => {
     const runtimeDefinitions = getShortcutDefinitions();
     const leftPaneToggle = runtimeDefinitions.find((definition) => definition.id === "toggle-left-pane");
-    const rightPaneToggle = runtimeDefinitions.find((definition) => definition.id === "toggle-right-pane");
     expect(leftPaneToggle).toBeTruthy();
-    expect(rightPaneToggle).toBeTruthy();
 
     const toggleLeftPaneVisibility = vi.fn();
-    const toggleRightPaneVisibility = vi.fn();
     const context = createShortcutContext();
     context.commands.toggleLeftPaneVisibility = toggleLeftPaneVisibility;
-    context.commands.toggleRightPaneVisibility = toggleRightPaneVisibility;
 
     leftPaneToggle?.run(context, new KeyboardEvent("keydown", { key: "b", metaKey: true }));
-    rightPaneToggle?.run(context, new KeyboardEvent("keydown", { key: "l", metaKey: true }));
 
     expect(toggleLeftPaneVisibility).toHaveBeenCalledTimes(1);
-    expect(toggleRightPaneVisibility).toHaveBeenCalledTimes(1);
   });
 
   it("focuses file tree from the activate-files-pane shortcut", () => {
