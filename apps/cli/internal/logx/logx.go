@@ -24,6 +24,9 @@ type Config struct {
 	// When set, logs are written to both Out (with format) and FileOut (always JSON).
 	// Typically this is a *FileWriter with rotation.
 	FileOut io.Writer
+	// Version is the CLI build version. When non-empty it is attached to every
+	// log entry as the "version" field.
+	Version string
 }
 
 func Configure(cfg Config) error {
@@ -74,6 +77,10 @@ func Configure(cfg Config) error {
 		}
 	}
 
-	log.Logger = zerolog.New(writer).With().Timestamp().Logger()
+	ctx := zerolog.New(writer).With().Timestamp()
+	if cfg.Version != "" {
+		ctx = ctx.Str("version", cfg.Version)
+	}
+	log.Logger = ctx.Logger()
 	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"yishan/apps/cli/internal/api"
+	"yishan/apps/cli/internal/buildinfo"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/daemon"
 	"yishan/apps/cli/internal/logx"
@@ -106,9 +107,10 @@ var activeLogFileWriter *logx.FileWriter
 
 func configureLogger(level string, format string) error {
 	cfg := logx.Config{
-		Level:  level,
-		Format: format,
-		Out:    os.Stderr,
+		Level:   level,
+		Format:  format,
+		Out:     os.Stderr,
+		Version: buildinfo.Version,
 	}
 	if activeLogFileWriter != nil {
 		cfg.FileOut = activeLogFileWriter
