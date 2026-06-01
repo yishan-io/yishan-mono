@@ -11,7 +11,14 @@ const mocked = vi.hoisted(() => {
     current: {},
   };
 
-  const workspaceStore = vi.fn((selector: (state: Record<string, unknown>) => unknown) => selector(stateRef.current));
+  const workspaceStore = vi.fn((selector: (state: Record<string, unknown>) => unknown) =>
+    selector({
+      pullRequestByWorkspaceId: {},
+      latestPullRequestByWorkspaceId: {},
+      gitChangesCountByWorkspaceId: {},
+      ...stateRef.current,
+    }),
+  );
 
   return {
     stateRef,
@@ -750,9 +757,8 @@ describe("MainPaneView", () => {
     });
   });
 
-  it("shows pane toggle buttons and triggers callbacks", () => {
+  it("shows the left pane toggle and right tab bar controls", () => {
     const onToggleLeftPane = vi.fn();
-    const onToggleRightPane = vi.fn();
     mocked.stateRef.current = buildStoreState(false);
     mocked.getMainWindowFullscreenState.mockResolvedValue({ isFullscreen: false });
 
@@ -762,7 +768,7 @@ describe("MainPaneView", () => {
           leftCollapsed: true,
           rightCollapsed: true,
           onToggleLeftPane,
-          onToggleRightPane,
+          onToggleRightPane: vi.fn(),
         }}
       >
         <MainPaneView />
@@ -770,11 +776,12 @@ describe("MainPaneView", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "layout.toggleLeftSidebar" }));
-    fireEvent.click(screen.getByRole("button", { name: "layout.toggleRightSidebar" }));
 
     expect(screen.getByTestId("main-pane-macos-controls-inset")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "files.files" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "files.changes" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "workspace.pr.tab" })).toBeTruthy();
     expect(onToggleLeftPane).toHaveBeenCalledTimes(1);
-    expect(onToggleRightPane).toHaveBeenCalledTimes(1);
   });
 
   it("does not reserve mac controls inset in fullscreen display mode", async () => {
