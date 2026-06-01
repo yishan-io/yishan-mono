@@ -585,13 +585,36 @@ export class DesktopApplication {
     // Intercept popup/new-window requests from <webview> guests (e.g. Cmd+Click,
     // target="_blank", window.open) and forward the URL to the renderer so it can
     // open the destination in a new in-app browser tab instead of a popup window.
+    const isWorkspaceNavigationShortcut = (input: Electron.Input): boolean => {
+      if (input.type !== "keyDown" && input.type !== "rawKeyDown") {
+        return false;
+      }
+
+      const normalizedKey = input.key.trim().toLowerCase();
+      return input.control && input.meta && !input.alt && !input.shift && (normalizedKey === "j" || normalizedKey === "k");
+    };
+
     mainWindow.webContents.on("before-input-event", (inputEvent, input) => {
-      if (!isToggleDevToolsShortcut(input)) {
+      if (isToggleDevToolsShortcut(input)) {
+        mainWindow.webContents.toggleDevTools();
+        inputEvent.preventDefault();
         return;
       }
 
-      mainWindow.webContents.toggleDevTools();
-      inputEvent.preventDefault();
+      if (isWorkspaceNavigationShortcut(input)) {
+        inputEvent.preventDefault();
+        mainWindow.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
+          method: "webviewKeydown",
+          payload: {
+            key: input.key,
+            code: input.code,
+            ctrlKey: input.control,
+            metaKey: input.meta,
+            shiftKey: input.shift,
+            altKey: input.alt,
+          },
+        });
+      }
     });
 
     mainWindow.webContents.on("did-attach-webview", (_event, webviewContents) => {

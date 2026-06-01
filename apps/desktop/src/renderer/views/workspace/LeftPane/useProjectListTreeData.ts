@@ -5,6 +5,7 @@ import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
 import { api } from "../../../api/client";
 import { chatStore } from "../../../store/chatStore";
 import { sessionStore } from "../../../store/sessionStore";
+import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { reconcileOrder, resolveWorkspaceNotificationTone } from "./projectListHelpers";
 
@@ -40,6 +41,7 @@ export function useProjectListTreeData(input: {
   const gitChangeTotalsByWorkspaceId = workspaceStore((state) => state.gitChangeTotalsByWorkspaceId);
   const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
   const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
+  const progressByWorkspaceId = workspaceCreateProgressStore((state) => state.progressByWorkspaceId) ?? {};
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
 
   const nodesQuery = useQuery({
@@ -109,6 +111,8 @@ export function useProjectListTreeData(input: {
       });
 
       for (const workspace of sortedWorkspaces) {
+        const createProgress = progressByWorkspaceId[workspace.id];
+        const isCreating = Boolean(createProgress && !createProgress.isComplete);
         rows.push({
           id: workspace.id,
           name: workspace.kind === "local" || localDisplayWorkspaceId === workspace.id ? "local" : workspace.title,
@@ -122,6 +126,7 @@ export function useProjectListTreeData(input: {
             runtimeStatus: workspaceAgentStatusByWorkspaceId[workspace.id] ?? "idle",
             unreadTone: workspaceUnreadToneByWorkspaceId[workspace.id],
           }),
+          isCreating,
         });
       }
     }
@@ -152,6 +157,7 @@ export function useProjectListTreeData(input: {
     filteredProjects,
     gitChangeTotalsByWorkspaceId,
     nodeOrderByParentId,
+    progressByWorkspaceId,
     workspaceListHierarchyMode,
     workspaceAgentStatusByWorkspaceId,
     workspaceByProjectId,

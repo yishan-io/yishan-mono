@@ -25,6 +25,7 @@ export type WorkspaceTreeWorkspace = {
   deletions?: number;
   runtimeStatus?: "running" | "waiting_input" | "idle";
   notificationTone?: "none" | "waiting_input" | "done" | "failed";
+  isCreating?: boolean;
 };
 
 export type WorkspaceTreeRow = {
@@ -44,6 +45,7 @@ export type WorkspaceTreeRow = {
   deletions?: number;
   runtimeStatus?: "running" | "waiting_input" | "idle";
   notificationTone?: "none" | "waiting_input" | "done" | "failed";
+  isCreating?: boolean;
 };
 
 export type WorkspaceTreeProps = {

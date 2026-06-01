@@ -1,4 +1,5 @@
 import { Box, IconButton, Tooltip, useTheme } from "@mui/material";
+import { CgSpinner } from "react-icons/cg";
 import { LuChevronRight, LuCloud, LuFolder, LuFolderOpen, LuLaptop, LuServer } from "react-icons/lu";
 import { LuEllipsis } from "react-icons/lu";
 import { LuPlus } from "react-icons/lu";
@@ -191,7 +192,22 @@ export function WorkspaceTreeRowView({
         </Box>
       ) : row.kind === "workspace" ? (
         <Box component="span" sx={{ width: 16, height: 16, display: "inline-flex", color: workspaceIconColor }}>
-          {row.runtimeStatus === "running" ? (
+          {row.isCreating ? (
+            <Box
+              component="span"
+              data-testid={`workspace-creating-spinner-${workspaceId}`}
+              sx={{
+                display: "inline-flex",
+                "@keyframes workspace-creating-spin": {
+                  from: { transform: "rotate(0deg)" },
+                  to: { transform: "rotate(360deg)" },
+                },
+                animation: "workspace-creating-spin 1s linear infinite",
+              }}
+            >
+              <CgSpinner size={16} />
+            </Box>
+          ) : row.runtimeStatus === "running" ? (
             <Box component="span" data-testid={`workspace-status-running-spinner-${workspaceId}`}>
               <CliSpinner fontSize={20} />
             </Box>

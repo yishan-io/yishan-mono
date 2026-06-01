@@ -10,7 +10,7 @@ import {
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import { tabStore } from "../../../store/tabStore";
 import type { WorkspaceTab } from "../../../store/types";
-import { shouldClearTerminalOutputShortcut, shouldReleaseCommandWForTabCloseShortcut } from "./terminalKeyboardUtils";
+import { shouldClearTerminalOutputShortcut, shouldReleaseCommandWForTabCloseShortcut, shouldReleaseWorkspaceNavigationShortcut } from "./terminalKeyboardUtils";
 import {
   ensureTerminalRuntime,
   getActiveTerminalRuntimes,
@@ -201,6 +201,10 @@ function reconnectAllTerminalSessions(): void {
 function setupKeyboardShortcuts(entry: TerminalRuntimeEntry): void {
   entry.terminal.attachCustomKeyEventHandler((event) => {
     if (shouldReleaseCommandWForTabCloseShortcut(event)) {
+      return false;
+    }
+
+    if (shouldReleaseWorkspaceNavigationShortcut(event)) {
       return false;
     }
 

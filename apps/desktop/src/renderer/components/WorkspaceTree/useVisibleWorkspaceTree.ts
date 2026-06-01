@@ -143,6 +143,7 @@ export function useVisibleWorkspaceTree({
               deletions: workspace.deletions,
               runtimeStatus: workspace.runtimeStatus,
               notificationTone: workspace.notificationTone,
+              isCreating: workspace.isCreating,
             });
           }
         }
@@ -216,6 +217,7 @@ export function useVisibleWorkspaceTree({
             deletions: workspace.deletions,
             runtimeStatus: workspace.runtimeStatus,
             notificationTone: workspace.notificationTone,
+            isCreating: workspace.isCreating,
           });
         }
       }

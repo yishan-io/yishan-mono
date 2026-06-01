@@ -20,6 +20,22 @@ function normalizeShortcutKeyToken(key: string): string {
     return "esc";
   }
 
+  if (normalized === "arrowup") {
+    return "up";
+  }
+
+  if (normalized === "arrowdown") {
+    return "down";
+  }
+
+  if (normalized === "arrowleft") {
+    return "left";
+  }
+
+  if (normalized === "arrowright") {
+    return "right";
+  }
+
   return normalized;
 }
 
@@ -127,9 +143,12 @@ export function processShortcuts(
 
     if (!matchesScope(compiledDefinition.definition, context)) {
       event.preventDefault();
+      event.stopPropagation();
       return;
     }
 
+    event.preventDefault();
+    event.stopPropagation();
     compiledDefinition.definition.run(context, event);
     return;
   }

@@ -1051,7 +1051,9 @@
       "deleteSelectedFileTreeEntry": "Delete selected file tree entry",
       "undoFileTreeOperation": "Undo last file tree operation",
       "selectTabByIndex": "Switch to tab by index",
-      "toggleVoiceInput": "Start voice recording"
+      "toggleVoiceInput": "Start voice recording",
+      "selectPreviousWorkspace": "Select previous workspace",
+      "selectNextWorkspace": "Select next workspace"
     }
   },
   "routing": {

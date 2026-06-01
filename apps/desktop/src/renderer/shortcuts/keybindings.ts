@@ -1,5 +1,6 @@
 import { ACTIONS } from "../../shared/contracts/actions";
 import { SYSTEM_FILE_MANAGER_APP_ID } from "../../shared/contracts/externalApps";
+import { setSelectedWorkspace } from "../commands/selectionCommands";
 import { reloadWebview } from "../views/workspace/browser/webviewRegistry";
 import { normalizeKeysString } from "./customKeybindings";
 import { isEditableTarget, isWithinRepoFileTree, isWithinRepoWorkspaceList } from "./editableTarget";
@@ -32,6 +33,8 @@ type ShortcutTarget =
   | { command: "workspace.toggleRightPane" }
   | { command: "workspace.openSelectedWorkspaceInExternalApp" }
   | { command: "workspace.openFileSearch" }
+  | { command: "workspace.selectPreviousWorkspace" }
+  | { command: "workspace.selectNextWorkspace" }
   | { command: "browser.reload" };
 
 type ShortcutRegistryItem = {
@@ -196,6 +199,30 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
 
   if (target.command === "workspace.openFileSearch") {
     context.commands.openWorkspaceFileSearch();
+    event.preventDefault();
+    return true;
+  }
+
+  if (target.command === "workspace.selectPreviousWorkspace" || target.command === "workspace.selectNextWorkspace") {
+    const direction = target.command === "workspace.selectNextWorkspace" ? 1 : -1;
+    const displayProjectIds = new Set(context.workspaceStoreState.displayProjectIds ?? []);
+    const visibleWorkspaces = context.workspaceStoreState.workspaces.filter((workspace) => {
+      const projectId = workspace.projectId ?? workspace.repoId;
+      return displayProjectIds.has(projectId);
+    });
+    if (visibleWorkspaces.length === 0) {
+      return false;
+    }
+
+    const currentId = context.tabStoreState.selectedWorkspaceId;
+    const currentIndex = visibleWorkspaces.findIndex((workspace) => workspace.id === currentId);
+    const nextIndex = (currentIndex + direction + visibleWorkspaces.length) % visibleWorkspaces.length;
+    const nextWorkspace = visibleWorkspaces[nextIndex];
+    if (!nextWorkspace || nextWorkspace.id === currentId) {
+      return false;
+    }
+
+    setSelectedWorkspace(nextWorkspace.id);
     event.preventDefault();
     return true;
   }
@@ -390,6 +417,20 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+l,command+l",
     target: { command: "workspace.toggleRightPane" },
+  },
+  {
+    id: "select-previous-workspace",
+    descriptionKey: "keybindings.actions.selectPreviousWorkspace",
+    scope: "workspace",
+    keys: "ctrl+command+k",
+    target: { command: "workspace.selectPreviousWorkspace" },
+  },
+  {
+    id: "select-next-workspace",
+    descriptionKey: "keybindings.actions.selectNextWorkspace",
+    scope: "workspace",
+    keys: "ctrl+command+j",
+    target: { command: "workspace.selectNextWorkspace" },
   },
   {
     id: "open-file-search",

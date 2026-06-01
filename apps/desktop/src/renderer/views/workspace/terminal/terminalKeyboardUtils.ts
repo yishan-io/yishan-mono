@@ -11,6 +11,18 @@ export function shouldReleaseCommandWForTabCloseShortcut(event: KeyboardEvent): 
   );
 }
 
+/** Returns true when xterm should skip handling so the renderer workspace navigation shortcut runs. */
+export function shouldReleaseWorkspaceNavigationShortcut(event: KeyboardEvent): boolean {
+  return (
+    event.type === "keydown" &&
+    event.ctrlKey &&
+    event.metaKey &&
+    !event.altKey &&
+    !event.shiftKey &&
+    (event.key === "j" || event.key === "k")
+  );
+}
+
 /** Returns true when macOS Cmd+K should clear local terminal output instead of reaching the shell. */
 export function shouldClearTerminalOutputShortcut(event: KeyboardEvent): boolean {
   return (

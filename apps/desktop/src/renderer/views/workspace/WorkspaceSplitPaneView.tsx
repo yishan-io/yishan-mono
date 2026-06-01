@@ -166,6 +166,16 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
     setFocusContentRequestKey((k) => k + 1);
   }, [selectedTabId, isActive]);
 
+  // Focus the active tab content when this workspace becomes active (e.g. workspace switch)
+  const wasActiveRef = useRef(isActive);
+  useEffect(() => {
+    const wasActive = wasActiveRef.current;
+    wasActiveRef.current = isActive;
+    if (isActive && !wasActive && selectedTabId) {
+      setFocusContentRequestKey((k) => k + 1);
+    }
+  }, [isActive, selectedTabId]);
+
   // ─── Pane tab handlers ──────────────────────────────────────────────────────
 
   const {
