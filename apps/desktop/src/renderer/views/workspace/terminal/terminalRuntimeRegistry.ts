@@ -51,6 +51,7 @@ export function setTerminalReattachHandler(handler: (tabId: string) => void): vo
 
 const runtimesByTabId = new Map<string, TerminalRuntimeEntry>();
 const runtimeLayer = createFixedRuntimeLayer("terminal-root-host");
+const pendingFocusTabIds = new Set<string>();
 
 // ─── Core Registry APIs ────────────────────────────────────────────────────────
 
@@ -107,13 +108,21 @@ export function ensureTerminalRuntime(tabId: string): TerminalRuntimeEntry {
     readIndex: 0,
     didRequestClose: false,
     resizeObserver: null,
+    focusObserver: null,
     exited: false,
     lastReportedCols: -1,
     lastReportedRows: -1,
     lastFitAt: 0,
+    pendingFocus: false,
   };
 
+  if (pendingFocusTabIds.has(tabId)) {
+    entry.pendingFocus = true;
+    pendingFocusTabIds.delete(tabId);
+  }
+
   runtimesByTabId.set(tabId, entry);
+  armPendingTerminalFocus(entry);
   return entry;
 }
 
@@ -139,6 +148,7 @@ export function attachTerminalRuntime(tabId: string, placeholder: HTMLElement): 
     // Already attaching/attached — just re-sync the placeholder positioning.
     runtimeLayer.attach(tabId, placeholder);
     safeFitTerminal(entry, true);
+    armPendingTerminalFocus(entry);
     return entry.version;
   } else {
     return -1;
@@ -172,7 +182,34 @@ export function attachTerminalRuntime(tabId: string, placeholder: HTMLElement): 
     onTerminalReattached?.(tabId);
   }
 
+  armPendingTerminalFocus(entry, version);
+
   return version;
+}
+
+/**
+ * Requests focus for one terminal runtime. If the runtime is not interactive yet,
+ * focus is deferred until the xterm textarea is mounted into the host DOM.
+ */
+export function requestTerminalRuntimeFocus(tabId: string): void {
+  const entry = runtimesByTabId.get(tabId);
+  if (!entry) {
+    pendingFocusTabIds.add(tabId);
+    return;
+  }
+
+  if (entry.state === "disposed") {
+    return;
+  }
+
+  if (tryFocusTerminal(entry)) {
+    entry.pendingFocus = false;
+    disconnectFocusObserver(entry);
+    return;
+  }
+
+  entry.pendingFocus = true;
+  armPendingTerminalFocus(entry);
 }
 
 /**
@@ -192,6 +229,7 @@ export function detachTerminalRuntime(tabId: string, placeholder: HTMLElement): 
 
   // Disconnect resize observer.
   disconnectResizeObserver(entry);
+  disconnectFocusObserver(entry);
 
   // Detach from runtime layer (hides the host).
   runtimeLayer.detach(tabId, placeholder);
@@ -225,6 +263,7 @@ export function disposeTerminalRuntime(tabId: string): void {
 
   // Cleanup in order.
   disconnectResizeObserver(entry);
+  disconnectFocusObserver(entry);
   entry.outputSubscription?.unsubscribe();
   entry.outputSubscription = null;
   entry.writeQueue.dispose();
@@ -405,6 +444,11 @@ function disconnectResizeObserver(entry: TerminalRuntimeEntry): void {
   entry.resizeObserver = null;
 }
 
+function disconnectFocusObserver(entry: TerminalRuntimeEntry): void {
+  entry.focusObserver?.disconnect();
+  entry.focusObserver = null;
+}
+
 function safeFitTerminal(entry: TerminalRuntimeEntry, force = false): boolean {
   if (entry.state !== "attached" && entry.state !== "attaching") {
     return false;
@@ -445,6 +489,67 @@ function notifyTerminalResizeIfNeeded(entry: TerminalRuntimeEntry, didFit: boole
   onTerminalResized?.(entry.tabId);
 }
 
+function armPendingTerminalFocus(entry: TerminalRuntimeEntry, version?: number): void {
+  if (!entry.pendingFocus) {
+    disconnectFocusObserver(entry);
+    return;
+  }
+
+  if (tryFocusTerminal(entry)) {
+    entry.pendingFocus = false;
+    disconnectFocusObserver(entry);
+    return;
+  }
+
+  if (entry.state !== "attached" && entry.state !== "attaching") {
+    return;
+  }
+
+  const expectedVersion = version ?? entry.version;
+  disconnectFocusObserver(entry);
+  const observer = new MutationObserver(() => {
+    const latestEntry = runtimesByTabId.get(entry.tabId);
+    if (!latestEntry || latestEntry.version !== expectedVersion) {
+      disconnectFocusObserver(entry);
+      return;
+    }
+
+    if (!latestEntry.pendingFocus) {
+      disconnectFocusObserver(latestEntry);
+      return;
+    }
+
+    if (!tryFocusTerminal(latestEntry)) {
+      return;
+    }
+
+    latestEntry.pendingFocus = false;
+    disconnectFocusObserver(latestEntry);
+  });
+
+  observer.observe(entry.hostElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+  });
+  entry.focusObserver = observer;
+}
+
+function tryFocusTerminal(entry: TerminalRuntimeEntry): boolean {
+  if (entry.state !== "attached") {
+    return false;
+  }
+
+  const terminalInput = entry.terminal.textarea ?? entry.hostElement.querySelector("textarea");
+  if (!(terminalInput instanceof HTMLTextAreaElement) || !terminalInput.isConnected) {
+    return false;
+  }
+
+  terminalInput.focus();
+  entry.terminal.focus();
+  return document.activeElement === terminalInput;
+}
+
 /** Reports one terminal async error without breaking render lifecycle. */
 export function reportTerminalAsyncError(action: string, error: unknown): void {
   console.error(`[TerminalRegistry] Failed to ${action}`, error);
@@ -455,6 +560,7 @@ export function __resetTerminalRuntimeRegistryForTests(): void {
   for (const tabId of Array.from(runtimesByTabId.keys())) {
     disposeTerminalRuntime(tabId);
   }
+  pendingFocusTabIds.clear();
 }
 
 const XTERM_VIEWPORT_STYLE_ID = "yishan-xterm-viewport-style";

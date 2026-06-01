@@ -45,6 +45,8 @@ export type TerminalRuntimeEntry = {
   didRequestClose: boolean;
   /** ResizeObserver for the host element (disconnected on detach). */
   resizeObserver: ResizeObserver | null;
+  /** One-shot MutationObserver waiting for xterm textarea mount. */
+  focusObserver: MutationObserver | null;
   /** Whether the terminal session has exited (for close-on-reattach logic). */
   exited: boolean;
   /** Last terminal dimensions sent to PTY resize handler. */
@@ -52,6 +54,8 @@ export type TerminalRuntimeEntry = {
   lastReportedRows: number;
   /** Timestamp of last successful fit call for throttling. */
   lastFitAt: number;
+  /** Whether focus should be applied once runtime is attached and interactive. */
+  pendingFocus: boolean;
 };
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
