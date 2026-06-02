@@ -142,14 +142,15 @@ export function processShortcuts(
     }
 
     if (!matchesScope(compiledDefinition.definition, context)) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
+      continue;
     }
 
-    event.preventDefault();
+    const handled = compiledDefinition.definition.run(context, event);
+    if (!handled) {
+      continue;
+    }
+
     event.stopPropagation();
-    compiledDefinition.definition.run(context, event);
     return;
   }
 }
