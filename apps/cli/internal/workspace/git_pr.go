@@ -4,12 +4,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
 )
+
+type ghRepo struct {
+	NameWithOwner string `json:"nameWithOwner"`
+}
+
+func (s *GitService) getRepoNameWithOwner(ctx context.Context, root string) (string, error) {
+	repo := ghRepo{}
+	if err := s.ghJSON(ctx, root, &repo, "api", "repos/{owner}/{repo}"); err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(repo.NameWithOwner), nil
+}
 
 func (s *GitService) BranchPullRequest(ctx context.Context, root string, branch string) (GitBranchPullRequestStatus, error) {
 	return s.branchPullRequest(ctx, root, branch, false, true)
@@ -196,14 +209,11 @@ func (s *GitService) getPullRequestDeployments(ctx context.Context, root string,
 		return []GitPullRequestDeployment{}, nil
 	}
 
-	type ghRepo struct {
-		NameWithOwner string `json:"nameWithOwner"`
-	}
-	repo := ghRepo{}
-	if err := s.ghJSON(ctx, root, &repo, "api", "repos/{owner}/{repo}"); err != nil {
+	repoNameWithOwner, err := s.getRepoNameWithOwner(ctx, root)
+	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(repo.NameWithOwner) == "" {
+	if repoNameWithOwner == "" {
 		return []GitPullRequestDeployment{}, nil
 	}
 
@@ -219,7 +229,7 @@ func (s *GitService) getPullRequestDeployments(ctx context.Context, root string,
 	deployments := make([]ghDeployment, 0)
 	if err := s.ghJSON(ctx, root, &deployments,
 		"api",
-		fmt.Sprintf("repos/%s/deployments", repo.NameWithOwner),
+		fmt.Sprintf("repos/%s/deployments", repoNameWithOwner),
 		"-f", "sha="+headRefOID,
 		"-f", "per_page=20",
 	); err != nil {
@@ -240,7 +250,7 @@ func (s *GitService) getPullRequestDeployments(ctx context.Context, root string,
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			status, envURL, statusDescription, err := s.getDeploymentStatus(ctx, root, repo.NameWithOwner, d.ID)
+			status, envURL, statusDescription, err := s.getDeploymentStatus(ctx, root, repoNameWithOwner, d.ID)
 			if err != nil {
 				errs[i] = err
 				return
@@ -284,7 +294,18 @@ func (s *GitService) MergePullRequest(ctx context.Context, root string, prNumber
 		args = append(args, "--delete-branch")
 	}
 
-	return s.ghCommand(ctx, root, args...)
+	repoNameWithOwner, err := s.getRepoNameWithOwner(ctx, root)
+	if err != nil {
+		return "", err
+	}
+	if repoNameWithOwner == "" {
+		return s.ghCommand(ctx, root, args...)
+	}
+
+	// Run merge as a repo-targeted gh command outside the current worktree so
+	// gh does not try local branch/worktree cleanup after a successful merge.
+	args = append(args, "--repo", repoNameWithOwner)
+	return s.ghCommand(ctx, os.TempDir(), args...)
 }
 
 func (s *GitService) ClosePullRequest(ctx context.Context, root string, prNumber int) (string, error) {

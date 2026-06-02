@@ -249,6 +249,64 @@ func TestGitServiceBranchPullRequest(t *testing.T) {
 	}
 }
 
+func TestGitServiceMergePullRequestRunsOutsideWorktreeWhenDeletingBranch(t *testing.T) {
+	root := t.TempDir()
+	initGitRepo(t, root)
+	svc := NewGitService()
+
+	ghBinDir := t.TempDir()
+	ghBinPath := filepath.Join(ghBinDir, "gh")
+	argsLogPath := filepath.Join(ghBinDir, "args.log")
+	pwdLogPath := filepath.Join(ghBinDir, "pwd.log")
+	ghScript := "#!/bin/sh\n" +
+		"if [ \"$1\" = \"api\" ] && [ \"$2\" = \"repos/{owner}/{repo}\" ]; then\n" +
+		"  printf '{\"nameWithOwner\":\"acme/repo\"}'\n" +
+		"  exit 0\n" +
+		"fi\n" +
+		"if [ \"$1\" = \"pr\" ] && [ \"$2\" = \"merge\" ]; then\n" +
+		"  pwd > '" + pwdLogPath + "'\n" +
+		"  printf '%s\n' \"$@\" > '" + argsLogPath + "'\n" +
+		"  printf 'merged'\n" +
+		"  exit 0\n" +
+		"fi\n" +
+		"printf 'unexpected gh invocation' >&2\n" +
+		"exit 1\n"
+	if err := os.WriteFile(ghBinPath, []byte(ghScript), 0o755); err != nil {
+		t.Fatalf("write fake gh: %v", err)
+	}
+
+	oldPath := os.Getenv("PATH")
+	t.Setenv("PATH", ghBinDir+string(os.PathListSeparator)+oldPath)
+
+	out, err := svc.MergePullRequest(context.Background(), root, 123, "merge", true)
+	if err != nil {
+		t.Fatalf("MergePullRequest: %v", err)
+	}
+	if strings.TrimSpace(out) != "merged" {
+		t.Fatalf("unexpected merge output: %q", out)
+	}
+
+	argsLog, err := os.ReadFile(argsLogPath)
+	if err != nil {
+		t.Fatalf("read args log: %v", err)
+	}
+	argsText := string(argsLog)
+	if !strings.Contains(argsText, "--delete-branch") {
+		t.Fatalf("expected --delete-branch in args, got %q", argsText)
+	}
+	if !strings.Contains(argsText, "--repo\nacme/repo\n") {
+		t.Fatalf("expected --repo acme/repo in args, got %q", argsText)
+	}
+
+	pwdLog, err := os.ReadFile(pwdLogPath)
+	if err != nil {
+		t.Fatalf("read pwd log: %v", err)
+	}
+	if strings.TrimSpace(string(pwdLog)) == root {
+		t.Fatalf("expected merge to run outside repo worktree, cwd=%q", strings.TrimSpace(string(pwdLog)))
+	}
+}
+
 func TestGitServiceListChangesRenameScenarios(t *testing.T) {
 	root := t.TempDir()
 	initGitRepo(t, root)
