@@ -30,7 +30,7 @@ export type ShortcutDefinition = {
   descriptionKey: string;
   scope: KeyBindingScope;
   keys: string;
-  run: (context: ShortContext, event: KeyboardEvent) => void;
+  run: (context: ShortContext, event: KeyboardEvent) => boolean;
 };
 
 export type ShortcutCatalogItem = {

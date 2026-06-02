@@ -513,19 +513,19 @@ export function getShortcutDefinitions(overrides: ShortcutOverrideMap = {}): rea
       keys: resolveShortcutKeys(shortcutItem.id, shortcutItem.keys, overrides),
       run: (context: ShortContext, event: KeyboardEvent) => {
         if (shortcutItem.shouldRun && !shortcutItem.shouldRun(context, event)) {
-          return;
+          return false;
         }
 
         if (shortcutItem.run) {
           shortcutItem.run(context, event);
-          return;
+          return true;
         }
 
         if (!shortcutItem.target) {
-          return;
+          return false;
         }
 
-        executeShortcutTarget(context, event, shortcutItem.target);
+        return executeShortcutTarget(context, event, shortcutItem.target);
       },
     };
   });

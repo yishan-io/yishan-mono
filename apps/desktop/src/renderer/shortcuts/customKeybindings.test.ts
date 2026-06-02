@@ -19,14 +19,14 @@ describe("detectShortcutConflicts", () => {
         descriptionKey: "k1",
         scope: "workspace",
         keys: "command+p",
-        run: () => undefined,
+        run: () => true,
       },
       {
         id: "open-palette",
         descriptionKey: "k2",
         scope: "global",
         keys: "command+p",
-        run: () => undefined,
+        run: () => true,
       },
     ]);
 
