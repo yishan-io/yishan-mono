@@ -443,10 +443,13 @@ func TestWorktreeWatcher_ExcludesCommonLargeDirectories(t *testing.T) {
 func TestWorktreeWatcher_ExcludesGitIgnoredDirectories(t *testing.T) {
 	root := evalSymlinks(t, t.TempDir())
 	initGitRepo(t, root)
-	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".cache/\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".cache/\nignored/\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(filepath.Join(root, ".cache"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "ignored", "nested"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -463,10 +466,17 @@ func TestWorktreeWatcher_ExcludesGitIgnoredDirectories(t *testing.T) {
 
 	entry.mu.Lock()
 	_, cacheWatched := entry.watchedDirs[filepath.Join(root, ".cache")]
+	_, ignoredWatched := entry.watchedDirs[filepath.Join(root, "ignored")]
+	_, nestedIgnoredWatched := entry.watchedDirs[filepath.Join(root, "ignored", "nested")]
 	entry.mu.Unlock()
 
-	if cacheWatched {
-		t.Fatalf("expected gitignored directory %q to be unwatched", filepath.Join(root, ".cache"))
+	if cacheWatched || ignoredWatched || nestedIgnoredWatched {
+		t.Fatalf(
+			"expected gitignored directories to be unwatched, got .cache=%t ignored=%t ignored/nested=%t",
+			cacheWatched,
+			ignoredWatched,
+			nestedIgnoredWatched,
+		)
 	}
 }
 
