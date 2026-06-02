@@ -61,6 +61,20 @@ describe("buildApplicationMenuTemplate", () => {
     expect(dispatchAction).toHaveBeenCalledWith({ action: ACTIONS.TOGGLE_RIGHT_PANE });
   });
 
+  it("does not assign a default accelerator to the right sidebar toggle", () => {
+    const template = buildApplicationMenuTemplate({ appName: "Yishan", locale: "en" });
+    const viewMenu = template[3]?.submenu;
+
+    if (!Array.isArray(viewMenu)) {
+      throw new Error("expected view submenu to be an array");
+    }
+
+    const toggleRightPaneItem = viewMenu.find((item) => "label" in item && item.label === "Toggle right sidebar");
+
+    expect(toggleRightPaneItem).toBeTruthy();
+    expect(toggleRightPaneItem && "accelerator" in toggleRightPaneItem ? toggleRightPaneItem.accelerator : undefined).toBeUndefined();
+  });
+
   it("uses Chinese labels for Chinese locales", () => {
     const template = buildApplicationMenuTemplate({ appName: "Yishan", locale: "zh-CN" });
     const editMenu = template[2]?.submenu;

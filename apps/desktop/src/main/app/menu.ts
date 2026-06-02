@@ -86,7 +86,6 @@ export function buildApplicationMenuTemplate(input: ConfigureApplicationMenuInpu
   const deleteAccelerator = resolveShortcutAccelerator(ACTIONS.FILE_DELETE, "CmdOrCtrl+Backspace");
   const undoAccelerator = resolveShortcutAccelerator(ACTIONS.FILE_UNDO, "CmdOrCtrl+Z");
   const toggleLeftAccelerator = resolveShortcutAccelerator("toggle-left-pane", "CmdOrCtrl+B");
-  const toggleRightAccelerator = resolveShortcutAccelerator("toggle-right-pane", "CmdOrCtrl+L");
   const helpMenuItems: MenuItemConstructorOptions[] = [
     { label: "Document" },
     { label: "Key shortcut" },
@@ -168,7 +167,6 @@ export function buildApplicationMenuTemplate(input: ConfigureApplicationMenuInpu
         },
         {
           label: toggleRightPaneLabel,
-          accelerator: toggleRightAccelerator,
           click: () => {
             input.dispatchAction?.({ action: ACTIONS.TOGGLE_RIGHT_PANE });
           },
