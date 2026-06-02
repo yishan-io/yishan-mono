@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"os/exec"
@@ -261,24 +262,38 @@ func (w *worktreeWatcher) addWorkspaceRecursive(root string) error {
 		return err
 	}
 
-	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	candidateDirs := make([]string, 0)
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
 		if !d.IsDir() {
 			return nil
 		}
-		if path != root && !w.shouldWatchWorkspaceDir(path) {
+		if path != root && !w.shouldWatchWorkspaceDirWithoutGitIgnore(path) {
 			return filepath.SkipDir
 		}
 		if path == root {
 			return nil
 		}
+		candidateDirs = append(candidateDirs, path)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	ignoredDirs := w.gitCheckIgnoredDirs(candidateDirs)
+	for _, path := range candidateDirs {
+		if ignoredDirs[path] {
+			continue
+		}
 		if err := w.addSingleWorkspaceWatch(path); err != nil {
 			log.Debug().Err(err).Str("target", path).Msg("failed to add workspace directory watch")
 		}
-		return nil
-	})
+	}
+
+	return nil
 }
 
 func (w *worktreeWatcher) addSingleWorkspaceWatch(path string) error {
@@ -335,6 +350,18 @@ func (w *worktreeWatcher) removeWorkspaceWatchesForPath(path string) {
 }
 
 func (w *worktreeWatcher) shouldWatchWorkspaceDir(path string) bool {
+	if !w.shouldWatchWorkspaceDirWithoutGitIgnore(path) {
+		return false
+	}
+
+	if w.isGitIgnoredDir(path) {
+		return false
+	}
+
+	return true
+}
+
+func (w *worktreeWatcher) shouldWatchWorkspaceDirWithoutGitIgnore(path string) bool {
 	rel, err := filepath.Rel(w.path, path)
 	if err != nil {
 		return false
@@ -363,11 +390,43 @@ func (w *worktreeWatcher) shouldWatchWorkspaceDir(path string) bool {
 		}
 	}
 
-	if w.isGitIgnoredDir(path) {
-		return false
+	return true
+}
+
+func (w *worktreeWatcher) gitCheckIgnoredDirs(paths []string) map[string]bool {
+	ignoredDirs := make(map[string]bool)
+	if len(paths) == 0 || !w.isGitIgnoreUsable() {
+		return ignoredDirs
 	}
 
-	return true
+	relativePaths := make([]string, 0, len(paths))
+	pathByRelativePath := make(map[string]string, len(paths))
+	for _, path := range paths {
+		rel, err := filepath.Rel(w.path, path)
+		if err != nil || rel == "." {
+			continue
+		}
+		rel = filepath.ToSlash(filepath.Clean(rel))
+		if w.shouldAlwaysWatchRelativePath(rel) {
+			continue
+		}
+		relativePaths = append(relativePaths, rel)
+		pathByRelativePath[rel] = path
+	}
+
+	for rel := range w.gitCheckIgnoreMany(relativePaths) {
+		path := pathByRelativePath[rel]
+		if path == "" {
+			continue
+		}
+		ignoredDirs[path] = true
+
+		w.mu.Lock()
+		w.ignoredDirs[rel] = true
+		w.mu.Unlock()
+	}
+
+	return ignoredDirs
 }
 
 func (w *worktreeWatcher) isGitIgnoredDir(path string) bool {
@@ -445,6 +504,47 @@ func (w *worktreeWatcher) gitCheckIgnore(relativePath string) bool {
 
 	log.Debug().Err(err).Str("path", relativePath).Msg("git check-ignore failed")
 	return false
+}
+
+func (w *worktreeWatcher) shouldAlwaysWatchRelativePath(relativePath string) bool {
+	for part := range strings.SplitSeq(relativePath, "/") {
+		if part == workspace.ContextLinkName {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (w *worktreeWatcher) gitCheckIgnoreMany(relativePaths []string) map[string]bool {
+	ignored := make(map[string]bool)
+	if len(relativePaths) == 0 {
+		return ignored
+	}
+
+	command, ok := w.gitCommand("-C", w.path, "check-ignore", "-z", "--stdin")
+	if !ok {
+		return ignored
+	}
+
+	command.Stdin = strings.NewReader(strings.Join(relativePaths, "\x00") + "\x00")
+	output, err := command.Output()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
+			log.Debug().Err(err).Int("pathCount", len(relativePaths)).Msg("git check-ignore batch failed")
+		}
+		output = append([]byte(nil), output...)
+	}
+
+	for _, part := range bytes.Split(output, []byte{0}) {
+		if len(part) == 0 {
+			continue
+		}
+		ignored[string(part)] = true
+	}
+
+	return ignored
 }
 
 func (w *worktreeWatcher) gitWorktreeReady() bool {
