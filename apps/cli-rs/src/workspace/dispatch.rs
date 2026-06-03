@@ -44,7 +44,11 @@ pub async fn workspace(
             mgr.close(&req.workspace_id)?;
             Ok(json!({ "ok": true }))
         }
-        METHOD_WORKSPACE_SYNC_CONTEXT_LINK => Ok(json!({ "ok": true })),
+        METHOD_WORKSPACE_SYNC_CONTEXT_LINK => {
+            let req: crate::workspace::context::SyncContextLinkRequest = decode_params(params)?;
+            let result = crate::workspace::context::sync_context_links(&req);
+            Ok(json!(result))
+        }
         METHOD_WORKSPACE_SET_ACTIVE => {
             let req: SetActiveWorkspaceRequest = decode_params(params)?;
             let resp = mgr.set_active_workspace(&req)?;
