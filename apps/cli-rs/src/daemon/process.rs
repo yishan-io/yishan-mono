@@ -1,13 +1,18 @@
+use crate::daemon::server::{handle_ws, DaemonApp};
 use crate::daemon::state::{is_process_running, load_state, remove_state, save_state, DaemonState};
-use crate::daemon::server::{DaemonApp, handle_ws};
 use crate::runtime::AppRuntime;
 use anyhow::{bail, Context};
-use axum::{extract::{State, WebSocketUpgrade}, response::IntoResponse, routing::{get, post}, Router};
+use axum::{
+    extract::{State, WebSocketUpgrade},
+    response::IntoResponse,
+    routing::{get, post},
+    Router,
+};
 use std::env;
 use std::net::{SocketAddr, TcpListener};
-use std::path::PathBuf;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
+use std::path::PathBuf;
 use std::process;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -59,7 +64,9 @@ pub async fn run(cfg: RunConfig, runtime: AppRuntime) -> anyhow::Result<()> {
         if is_process_running(existing.pid) {
             bail!(
                 "daemon already running at {}:{} (pid {})",
-                existing.host, existing.port, existing.pid
+                existing.host,
+                existing.port,
+                existing.pid
             );
         }
         if let Err(e) = remove_state(&app_cfg.config_path) {
@@ -74,8 +81,8 @@ pub async fn run(cfg: RunConfig, runtime: AppRuntime) -> anyhow::Result<()> {
     let actual_addr: SocketAddr = listener.local_addr()?;
 
     // ── Phase 3: daemon ID + app ─────────────────────────────────────────────
-    let daemon_id = crate::daemon::id::ensure_daemon_id(&app_cfg.config_path)
-        .context("ensure daemon id")?;
+    let daemon_id =
+        crate::daemon::id::ensure_daemon_id(&app_cfg.config_path).context("ensure daemon id")?;
 
     let app = Arc::new(DaemonApp::new(runtime.clone(), daemon_id.clone()));
 
@@ -128,19 +135,14 @@ pub async fn run(cfg: RunConfig, runtime: AppRuntime) -> anyhow::Result<()> {
     let tokio_listener = tokio::net::TcpListener::from_std(std_listener)?;
 
     let serve = axum::serve(tokio_listener, router);
-    let result = serve
-        .with_graceful_shutdown(shutdown_signal())
-        .await;
+    let result = serve.with_graceful_shutdown(shutdown_signal()).await;
 
     cleanup();
     result.map_err(Into::into)
 }
 
 /// axum WS upgrade handler.
-async fn ws_handler(
-    ws: WebSocketUpgrade,
-    State(app): State<Arc<DaemonApp>>,
-) -> impl IntoResponse {
+async fn ws_handler(ws: WebSocketUpgrade, State(app): State<Arc<DaemonApp>>) -> impl IntoResponse {
     ws.on_upgrade(move |socket| handle_ws(socket, app))
 }
 
@@ -239,8 +241,10 @@ pub fn start_detached(cfg: &StartConfig) -> anyhow::Result<u32> {
     let mut args: Vec<String> = vec![
         "daemon".into(),
         "run".into(),
-        "--host".into(), cfg.run.host.clone(),
-        "--port".into(), cfg.run.port.to_string(),
+        "--host".into(),
+        cfg.run.host.clone(),
+        "--port".into(),
+        cfg.run.port.to_string(),
         format!("--relay-enabled={}", cfg.run.relay_enabled),
     ];
     if !cfg.run.relay_url.is_empty() {
@@ -298,7 +302,11 @@ pub fn probe_health(state: &DaemonState, timeout: Duration) -> bool {
         .timeout(timeout)
         .build()
         .unwrap_or_default();
-    client.get(&url).send().map(|r| r.status().is_success()).unwrap_or(false)
+    client
+        .get(&url)
+        .send()
+        .map(|r| r.status().is_success())
+        .unwrap_or(false)
 }
 
 /// Block until the daemon is ready or the timeout elapses.

@@ -44,10 +44,7 @@ pub fn validate_profile(raw: &str) -> Result<String> {
 }
 
 /// Resolves the config file path from CLI flags / env / profile name.
-pub fn resolve_config_path(
-    explicit_path: Option<&Path>,
-    profile: &str,
-) -> Result<PathBuf> {
+pub fn resolve_config_path(explicit_path: Option<&Path>, profile: &str) -> Result<PathBuf> {
     if let Some(p) = explicit_path {
         return Ok(p.to_path_buf());
     }

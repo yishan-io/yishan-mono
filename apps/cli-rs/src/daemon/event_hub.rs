@@ -11,7 +11,10 @@ pub struct FrontendEvent {
 
 impl FrontendEvent {
     pub fn new(topic: impl Into<String>, payload: Value) -> Self {
-        Self { topic: topic.into(), payload }
+        Self {
+            topic: topic.into(),
+            payload,
+        }
     }
 }
 

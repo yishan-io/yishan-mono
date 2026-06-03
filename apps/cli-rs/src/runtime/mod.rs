@@ -156,16 +156,18 @@ fn should_reject_stale_token(
     current_refresh_exp: &str,
     incoming_refresh_exp: &str,
 ) -> bool {
-    if let (Some(curr), Some(inc)) =
-        (parse_expiry(current_refresh_exp), parse_expiry(incoming_refresh_exp))
-    {
+    if let (Some(curr), Some(inc)) = (
+        parse_expiry(current_refresh_exp),
+        parse_expiry(incoming_refresh_exp),
+    ) {
         if inc < curr {
             return true;
         }
     }
-    if let (Some(curr), Some(inc)) =
-        (parse_expiry(current_access_exp), parse_expiry(incoming_access_exp))
-    {
+    if let (Some(curr), Some(inc)) = (
+        parse_expiry(current_access_exp),
+        parse_expiry(incoming_access_exp),
+    ) {
         if inc < curr {
             return true;
         }

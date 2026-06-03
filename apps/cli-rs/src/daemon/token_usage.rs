@@ -50,7 +50,9 @@ impl TokenUsageCollector {
     pub fn start_startup_scan(self: &Arc<Self>) {
         {
             let guard = self.inner.lock().unwrap();
-            if guard.closed { return; }
+            if guard.closed {
+                return;
+            }
         }
         self.start_sync_loop();
         self.start_hour_rollover_loop();
@@ -67,10 +69,14 @@ impl TokenUsageCollector {
     /// If a scan is already in-flight, mark needs_rerun instead.
     pub fn trigger(self: &Arc<Self>, agent_kind: &str, source: &str) {
         let kind = normalize_agent_kind(agent_kind);
-        if kind.is_empty() { return; }
+        if kind.is_empty() {
+            return;
+        }
 
         let mut guard = self.inner.lock().unwrap();
-        if guard.closed { return; }
+        if guard.closed {
+            return;
+        }
         if guard.in_flight.contains(&kind) {
             guard.needs_rerun.insert(kind);
             return;
@@ -95,7 +101,9 @@ impl TokenUsageCollector {
     #[allow(dead_code)]
     pub fn close(&self) {
         let mut guard = self.inner.lock().unwrap();
-        if guard.closed { return; }
+        if guard.closed {
+            return;
+        }
         guard.closed = true;
         for (_, h) in guard.debounce_handles.drain() {
             h.abort();
@@ -108,14 +116,19 @@ impl TokenUsageCollector {
     async fn run_scan(self: &Arc<Self>, agent_kind: &str, source: &str) {
         {
             let mut guard = self.inner.lock().unwrap();
-            if guard.closed { return; }
+            if guard.closed {
+                return;
+            }
             guard.in_flight.insert(agent_kind.to_string());
             guard.debounce_handles.remove(agent_kind);
         }
 
         debug!(agent = agent_kind, source, "token usage scan starting");
         // TODO: plug in per-agent log scanner when ported from Go.
-        debug!(agent = agent_kind, source, "token usage scan completed (stub)");
+        debug!(
+            agent = agent_kind,
+            source, "token usage scan completed (stub)"
+        );
 
         let (should_rerun, closed) = {
             let mut guard = self.inner.lock().unwrap();

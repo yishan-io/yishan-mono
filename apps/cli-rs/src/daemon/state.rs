@@ -1,8 +1,8 @@
 use anyhow::Context;
-use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 #[cfg(unix)]
 use libc;
+use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
 const STATE_FILE_NAME: &str = "daemon.state.json";
 const LOG_FILE_NAME: &str = "daemon.log";

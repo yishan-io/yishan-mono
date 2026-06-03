@@ -30,7 +30,11 @@ pub fn set_format(raw: &str) -> Result<(), String> {
     let fmt = match raw.trim().to_lowercase().as_str() {
         "" | "default" => OutputFormat::Default,
         "json" => OutputFormat::Json,
-        other => return Err(format!("invalid output format {other:?}: use default or json")),
+        other => {
+            return Err(format!(
+                "invalid output format {other:?}: use default or json"
+            ))
+        }
     };
     let _ = FORMAT.set(fmt); // Ok to fail if already set.
     Ok(())

@@ -62,8 +62,12 @@ pub fn print_error(err: &CliError, code: ExitCode) {
             "message": err.to_string(),
         }
     });
-    let text = serde_json::to_string_pretty(&envelope)
-        .unwrap_or_else(|_| format!(r#"{{"error":{{"code":"internal","message":{:?}}}}}"#, err.to_string()));
+    let text = serde_json::to_string_pretty(&envelope).unwrap_or_else(|_| {
+        format!(
+            r#"{{"error":{{"code":"internal","message":{:?}}}}}"#,
+            err.to_string()
+        )
+    });
     eprintln!("{text}");
 }
 

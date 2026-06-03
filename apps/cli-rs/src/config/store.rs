@@ -49,9 +49,7 @@ pub fn load(
     };
 
     let get_bool = |key: &str, default: bool| -> bool {
-        map.get(key)
-            .and_then(|v| v.as_bool())
-            .unwrap_or(default)
+        map.get(key).and_then(|v| v.as_bool()).unwrap_or(default)
     };
 
     let get_u16 = |key: &str, default: u16| -> u16 {

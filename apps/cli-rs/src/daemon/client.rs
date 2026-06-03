@@ -83,12 +83,13 @@ impl RpcClient {
 
         let text = match msg {
             Message::Text(t) => t.to_string(),
-            Message::Binary(b) => String::from_utf8(b.to_vec()).context("decode binary response")?,
+            Message::Binary(b) => {
+                String::from_utf8(b.to_vec()).context("decode binary response")?
+            }
             other => anyhow::bail!("unexpected WebSocket message type: {other:?}"),
         };
 
-        let resp: RpcResponse =
-            serde_json::from_str(&text).context("parse RPC response")?;
+        let resp: RpcResponse = serde_json::from_str(&text).context("parse RPC response")?;
 
         if let Some(err) = resp.error {
             anyhow::bail!("daemon RPC error {}: {}", err.code, err.message);

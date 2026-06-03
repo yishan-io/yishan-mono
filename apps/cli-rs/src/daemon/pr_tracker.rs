@@ -159,7 +159,10 @@ impl PrTracker {
 
     fn find_by_path(&self, path: &str) -> Option<Workspace> {
         let path = path.trim();
-        self.manager.list().into_iter().find(|w| w.path.trim() == path)
+        self.manager
+            .list()
+            .into_iter()
+            .find(|w| w.path.trim() == path)
     }
 }
 
@@ -272,7 +275,11 @@ fn normalize_pr_status(pr: &crate::workspace::types::GitBranchPullRequestStatus)
     if pr.is_draft {
         return "draft".into();
     }
-    if pr.review_decision.trim().eq_ignore_ascii_case("REVIEW_REQUIRED") {
+    if pr
+        .review_decision
+        .trim()
+        .eq_ignore_ascii_case("REVIEW_REQUIRED")
+    {
         return "review".into();
     }
     match state.as_str() {

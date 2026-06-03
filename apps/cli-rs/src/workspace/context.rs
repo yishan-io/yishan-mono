@@ -29,7 +29,9 @@ pub fn default_context_path(repo_key: &str) -> Result<PathBuf, DomainRpcError> {
     // Validate repo_key is a safe relative path (no `..`, no leading `/`).
     let key = repo_key.trim();
     if key.is_empty() || key.contains("..") || key.starts_with('/') {
-        return Err(DomainRpcError::invalid_params(format!("invalid repoKey: {key}")));
+        return Err(DomainRpcError::invalid_params(format!(
+            "invalid repoKey: {key}"
+        )));
     }
     Ok(home.join(".yishan").join("contexts").join(key))
 }
@@ -63,7 +65,9 @@ pub fn sync_context_links(req: &SyncContextLinkRequest) -> SyncContextLinkResult
             continue;
         }
         if !Path::new(&trimmed).is_absolute() {
-            result.errors.insert(raw.clone(), "worktree path must be absolute".into());
+            result
+                .errors
+                .insert(raw.clone(), "worktree path must be absolute".into());
             continue;
         }
         if seen.insert(trimmed.clone()) {
@@ -75,12 +79,17 @@ pub fn sync_context_links(req: &SyncContextLinkRequest) -> SyncContextLinkResult
         // Disable path: derive context path from repoKey and remove links.
         let context_path = match default_context_path(&req.repo_key) {
             Ok(p) => p,
-            Err(e) => { result.errors.insert("*".into(), e.to_string()); return result; }
+            Err(e) => {
+                result.errors.insert("*".into(), e.to_string());
+                return result;
+            }
         };
         for path in &paths {
             match remove_context_link(&context_path, path) {
                 Ok(()) => result.updated.push(path.clone()),
-                Err(e) => { result.errors.insert(path.clone(), e); }
+                Err(e) => {
+                    result.errors.insert(path.clone(), e);
+                }
             }
         }
         return result;
@@ -91,7 +100,10 @@ pub fn sync_context_links(req: &SyncContextLinkRequest) -> SyncContextLinkResult
     // content merged in, then all symlinks are updated to point at the canonical path.
     let context_path = match default_context_path(&req.repo_key) {
         Ok(p) => p,
-        Err(e) => { result.errors.insert("*".into(), e.to_string()); return result; }
+        Err(e) => {
+            result.errors.insert("*".into(), e.to_string());
+            return result;
+        }
     };
 
     // Collect any legacy symlink targets that differ from canonical and have content.
@@ -106,7 +118,9 @@ pub fn sync_context_links(req: &SyncContextLinkRequest) -> SyncContextLinkResult
         if target == context_path || !target.is_dir() || !seen.insert(target.clone()) {
             continue;
         }
-        let has_content = fs::read_dir(&target).map(|rd| rd.flatten().count() > 0).unwrap_or(false);
+        let has_content = fs::read_dir(&target)
+            .map(|rd| rd.flatten().count() > 0)
+            .unwrap_or(false);
         if has_content {
             legacy_targets.push(target);
         }
@@ -120,7 +134,9 @@ pub fn sync_context_links(req: &SyncContextLinkRequest) -> SyncContextLinkResult
     for path in &paths {
         match ensure_context_link(&context_path, path) {
             Ok(()) => result.updated.push(path.clone()),
-            Err(e) => { result.errors.insert(path.clone(), e); }
+            Err(e) => {
+                result.errors.insert(path.clone(), e);
+            }
         }
     }
 
@@ -131,8 +147,7 @@ pub fn sync_context_links(req: &SyncContextLinkRequest) -> SyncContextLinkResult
 /// the worktree. Idempotent — skips if the symlink is already correct.
 /// Matches the Go daemon's ensureContextLink behaviour exactly.
 fn ensure_context_link(context_path: &Path, worktree_path: &str) -> Result<(), String> {
-    fs::create_dir_all(context_path)
-        .map_err(|e| format!("ensure context dir: {e}"))?;
+    fs::create_dir_all(context_path).map_err(|e| format!("ensure context dir: {e}"))?;
 
     ensure_git_exclude(worktree_path, CONTEXT_LINK_NAME);
 
@@ -144,15 +159,14 @@ fn ensure_context_link(context_path: &Path, worktree_path: &str) -> Result<(), S
                 // User-created folder/file — leave alone.
                 return Ok(());
             }
-            let existing = std::fs::read_link(&link_path)
-                .map_err(|e| format!("read context link: {e}"))?;
+            let existing =
+                std::fs::read_link(&link_path).map_err(|e| format!("read context link: {e}"))?;
             if existing == context_path {
                 // Already correct.
                 return Ok(());
             }
             // Stale symlink — remove and recreate.
-            fs::remove_file(&link_path)
-                .map_err(|e| format!("remove stale context link: {e}"))?;
+            fs::remove_file(&link_path).map_err(|e| format!("remove stale context link: {e}"))?;
         }
         Err(e) if e.kind() == io::ErrorKind::NotFound => {}
         Err(e) => return Err(format!("inspect context link: {e}")),
@@ -208,15 +222,13 @@ fn remove_context_link(context_path: &Path, worktree_path: &str) -> Result<(), S
         }
     }
 
-    let existing = std::fs::read_link(&link_path)
-        .map_err(|e| format!("read context link: {e}"))?;
+    let existing = std::fs::read_link(&link_path).map_err(|e| format!("read context link: {e}"))?;
     if existing != context_path {
         // Points elsewhere — leave alone.
         return Ok(());
     }
 
-    fs::remove_file(&link_path)
-        .map_err(|e| format!("remove context link: {e}"))?;
+    fs::remove_file(&link_path).map_err(|e| format!("remove context link: {e}"))?;
     Ok(())
 }
 
@@ -236,7 +248,9 @@ fn ensure_git_exclude(worktree_path: &str, pattern: &str) {
                     Err(_) => return,
                 };
                 let line = content.trim();
-                let Some(git_dir_str) = line.strip_prefix("gitdir: ") else { return; };
+                let Some(git_dir_str) = line.strip_prefix("gitdir: ") else {
+                    return;
+                };
                 let git_dir = if Path::new(git_dir_str.trim()).is_absolute() {
                     PathBuf::from(git_dir_str.trim())
                 } else {
@@ -275,7 +289,9 @@ fn append_exclude_pattern(exclude_path: &Path, pattern: &str) {
     }
 
     let mut f = match fs::OpenOptions::new()
-        .write(true).create(true).append(true)
+        .write(true)
+        .create(true)
+        .append(true)
         .open(exclude_path)
     {
         Ok(f) => f,

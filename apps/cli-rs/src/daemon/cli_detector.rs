@@ -90,7 +90,11 @@ pub fn detect_agent_clis(force_refresh: bool) -> Vec<CliStatus> {
 
     let ttl = cache_ttl();
     let mut guard = AGENT_CACHE.lock().unwrap();
-    *guard = Some(CachedResult { value: statuses.clone(), cached_at: Instant::now(), ttl });
+    *guard = Some(CachedResult {
+        value: statuses.clone(),
+        cached_at: Instant::now(),
+        ttl,
+    });
     statuses
 }
 
@@ -129,7 +133,11 @@ pub fn detect_gh(force_refresh: bool) -> GhStatus {
     let status = detect_gh_inner();
     let ttl = cache_ttl();
     let mut guard = GH_CACHE.lock().unwrap();
-    *guard = Some(CachedResult { value: status.clone(), cached_at: Instant::now(), ttl });
+    *guard = Some(CachedResult {
+        value: status.clone(),
+        cached_at: Instant::now(),
+        ttl,
+    });
     status
 }
 
@@ -167,7 +175,10 @@ fn detect_gh_inner() -> GhStatus {
     };
 
     let detail = match authenticated {
-        Some(true) => account.as_deref().map(|a| format!("authenticated as {a}")).unwrap_or_else(|| "authenticated".into()),
+        Some(true) => account
+            .as_deref()
+            .map(|a| format!("authenticated as {a}"))
+            .unwrap_or_else(|| "authenticated".into()),
         Some(false) => "not authenticated".into(),
         None => "installed".into(),
     };
@@ -231,7 +242,12 @@ fn extract_gh_account(text: &str) -> Option<String> {
             for (i, p) in parts.iter().enumerate() {
                 if p.to_lowercase() == "account" {
                     if let Some(acct) = parts.get(i + 1) {
-                        return Some(acct.trim_matches(|c: char| !c.is_alphanumeric() && c != '-' && c != '_').to_string());
+                        return Some(
+                            acct.trim_matches(|c: char| {
+                                !c.is_alphanumeric() && c != '-' && c != '_'
+                            })
+                            .to_string(),
+                        );
                     }
                 }
             }

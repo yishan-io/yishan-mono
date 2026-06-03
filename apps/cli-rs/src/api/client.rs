@@ -76,10 +76,7 @@ impl ApiClient {
         refresh_token_expires_at: impl Into<String>,
         on_token_refresh: Option<OnTokenRefresh>,
     ) -> Self {
-        let base_url = base_url
-            .into()
-            .trim_end_matches('/')
-            .to_string();
+        let base_url = base_url.into().trim_end_matches('/').to_string();
 
         Self {
             http,
@@ -148,15 +145,23 @@ impl ApiClient {
     }
 
     /// Send a request and decode the JSON response into `T`.
-    pub async fn do_decode<B, T>(&self, method: Method, path: &str, body: Option<&B>) -> anyhow::Result<T>
+    pub async fn do_decode<B, T>(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&B>,
+    ) -> anyhow::Result<T>
     where
         B: Serialize + Send,
         T: DeserializeOwned,
     {
         let bytes = self.do_raw(method, path, body).await?;
-        let bytes = if bytes.is_empty() { b"{}".as_ref().into() } else { bytes };
-        serde_json::from_slice(&bytes)
-            .with_context(|| format!("parse JSON response for {path}"))
+        let bytes = if bytes.is_empty() {
+            b"{}".as_ref().into()
+        } else {
+            bytes
+        };
+        serde_json::from_slice(&bytes).with_context(|| format!("parse JSON response for {path}"))
     }
 
     async fn send_raw<B: Serialize + Send>(
@@ -178,9 +183,15 @@ impl ApiClient {
             req = req.json(b);
         }
 
-        let resp = req.send().await.with_context(|| format!("send request {method} {path}"))?;
+        let resp = req
+            .send()
+            .await
+            .with_context(|| format!("send request {method} {path}"))?;
         let status = resp.status();
-        let bytes = resp.bytes().await.with_context(|| format!("read response body {path}"))?;
+        let bytes = resp
+            .bytes()
+            .await
+            .with_context(|| format!("read response body {path}"))?;
 
         if !status.is_success() {
             let body_str = String::from_utf8_lossy(&bytes).to_string();

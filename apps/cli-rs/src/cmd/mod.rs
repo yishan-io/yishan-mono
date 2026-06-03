@@ -45,11 +45,22 @@ pub struct Cli {
     pub log_format: Option<String>,
 
     /// Output format (default, json)
-    #[arg(long = "output", short = 'o', global = true, default_value = "default", env = "YISHAN_OUTPUT")]
+    #[arg(
+        long = "output",
+        short = 'o',
+        global = true,
+        default_value = "default",
+        env = "YISHAN_OUTPUT"
+    )]
     pub output: String,
 
     /// API service base URL
-    #[arg(long, global = true, default_value = "https://api.yishan.io", env = "YISHAN_API_BASE_URL")]
+    #[arg(
+        long,
+        global = true,
+        default_value = "https://api.yishan.io",
+        env = "YISHAN_API_BASE_URL"
+    )]
     pub api_base_url: String,
 
     /// API access token (Bearer)
@@ -123,11 +134,8 @@ pub fn run() -> Result<(), CliError> {
 
 async fn dispatch(cli: Cli) -> Result<(), CliError> {
     // Resolve config path.
-    let config_path = config::resolve_config_path(
-        cli.config.as_deref(),
-        &cli.profile,
-    )
-    .map_err(|e| CliError::Other(e))?;
+    let config_path = config::resolve_config_path(cli.config.as_deref(), &cli.profile)
+        .map_err(|e| CliError::Other(e))?;
 
     // Load config (missing file = fresh install, not an error).
     let app_config = config::load(
@@ -173,8 +181,7 @@ async fn dispatch(cli: Cli) -> Result<(), CliError> {
 
 fn init_tracing(level: &str, format: &str) {
     use tracing_subscriber::{fmt, EnvFilter};
-    let filter = EnvFilter::try_new(level)
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let filter = EnvFilter::try_new(level).unwrap_or_else(|_| EnvFilter::new("info"));
 
     if format == "json" {
         fmt()

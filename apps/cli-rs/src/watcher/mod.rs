@@ -191,7 +191,9 @@ impl WorkspaceWatchers {
         let (notify_tx, notify_rx) = mpsc::channel::<notify::Result<Event>>(256);
 
         let mut fw = match RecommendedWatcher::new(
-            move |res| { let _ = notify_tx.blocking_send(res); },
+            move |res| {
+                let _ = notify_tx.blocking_send(res);
+            },
             notify::Config::default(),
         ) {
             Ok(w) => w,
@@ -223,11 +225,14 @@ impl WorkspaceWatchers {
             drop(fw);
         });
 
-        ctx_map.insert(ctx_target.clone(), ContextWatcher {
-            target: ctx_target.clone(),
-            workspace_paths: workspace_paths_shared,
-            cancel_tx,
-        });
+        ctx_map.insert(
+            ctx_target.clone(),
+            ContextWatcher {
+                target: ctx_target.clone(),
+                workspace_paths: workspace_paths_shared,
+                cancel_tx,
+            },
+        );
     }
 
     /// Stop watching a workspace directory.
@@ -503,7 +508,11 @@ fn resolve_git_dir(worktree: &Path) -> PathBuf {
 fn resolve_context_dir(worktree: &Path) -> Option<PathBuf> {
     let link = worktree.join(CONTEXT_LINK_NAME);
     let target = std::fs::canonicalize(&link).ok()?;
-    if target.is_dir() { Some(target) } else { None }
+    if target.is_dir() {
+        Some(target)
+    } else {
+        None
+    }
 }
 
 /// Returns the set of paths inside the git dir to watch.

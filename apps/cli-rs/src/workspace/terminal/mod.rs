@@ -14,7 +14,8 @@ use uuid::Uuid;
 /// Slow subscribers drop frames rather than blocking the PTY reader.
 const OUTPUT_CHANNEL_CAP: usize = 256;
 
-type WsSink = Arc<tokio::sync::Mutex<futures_util::stream::SplitSink<axum::extract::ws::WebSocket, Message>>>;
+type WsSink =
+    Arc<tokio::sync::Mutex<futures_util::stream::SplitSink<axum::extract::ws::WebSocket, Message>>>;
 
 /// A single PTY session.
 struct PtySession {
@@ -56,11 +57,21 @@ impl TerminalManager {
 
         let pty_system = native_pty_system();
         let pair = pty_system
-            .openpty(PtySize { rows, cols, pixel_width: 0, pixel_height: 0 })
+            .openpty(PtySize {
+                rows,
+                cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            })
             .map_err(|e| DomainRpcError::server_error(format!("open pty: {e}")))?;
 
         let shell = req.command.as_deref().unwrap_or_else(|| {
-            std::env::var("SHELL").ok().as_deref().unwrap_or("/bin/sh").to_owned().leak()
+            std::env::var("SHELL")
+                .ok()
+                .as_deref()
+                .unwrap_or("/bin/sh")
+                .to_owned()
+                .leak()
         });
         let mut cmd = CommandBuilder::new(shell);
         cmd.cwd(workspace_path);
@@ -71,7 +82,10 @@ impl TerminalManager {
         }
         // Ensure the shell knows its terminal type and initial dimensions.
         // Without these, zsh/bash fall back to guessing (often wrong values).
-        cmd.env("TERM", std::env::var("TERM").unwrap_or_else(|_| "xterm-256color".into()));
+        cmd.env(
+            "TERM",
+            std::env::var("TERM").unwrap_or_else(|_| "xterm-256color".into()),
+        );
         cmd.env("COLUMNS", cols.to_string());
         cmd.env("LINES", rows.to_string());
 
@@ -83,12 +97,18 @@ impl TerminalManager {
             }
         }
 
-        let _child = pair.slave.spawn_command(cmd)
+        let _child = pair
+            .slave
+            .spawn_command(cmd)
             .map_err(|e| DomainRpcError::server_error(format!("spawn pty command: {e}")))?;
 
-        let writer = pair.master.take_writer()
+        let writer = pair
+            .master
+            .take_writer()
             .map_err(|e| DomainRpcError::server_error(format!("pty writer: {e}")))?;
-        let reader = pair.master.try_clone_reader()
+        let reader = pair
+            .master
+            .try_clone_reader()
             .map_err(|e| DomainRpcError::server_error(format!("pty reader: {e}")))?;
         let master = pair.master;
 
@@ -131,7 +151,9 @@ impl TerminalManager {
             rows,
         };
 
-        self.sessions.write().unwrap()
+        self.sessions
+            .write()
+            .unwrap()
             .insert(session_id.clone(), Arc::new(Mutex::new(session)));
 
         Ok(TerminalStartResponse { session_id })
@@ -143,9 +165,15 @@ impl TerminalManager {
         // Clone the Arc so we can drop the read guard before locking the session.
         let session_arc = {
             let sessions = self.sessions.read().unwrap();
-            sessions.get(session_id).ok_or_else(|| {
-                DomainRpcError::new(RPC_SESSION_INACTIVE, format!("terminal session not found: {session_id}"))
-            })?.clone()
+            sessions
+                .get(session_id)
+                .ok_or_else(|| {
+                    DomainRpcError::new(
+                        RPC_SESSION_INACTIVE,
+                        format!("terminal session not found: {session_id}"),
+                    )
+                })?
+                .clone()
         };
         let rx = session_arc.lock().unwrap().output_tx.subscribe();
 
@@ -184,9 +212,9 @@ impl TerminalManager {
 
     pub fn send(&self, req: &TerminalSendRequest) -> Result<TerminalSendResponse, DomainRpcError> {
         self.with_session(&req.session_id, |s| {
-            s.writer.write_all(req.data.as_bytes()).map_err(|e| {
-                DomainRpcError::server_error(format!("write to pty: {e}"))
-            })?;
+            s.writer
+                .write_all(req.data.as_bytes())
+                .map_err(|e| DomainRpcError::server_error(format!("write to pty: {e}")))?;
             Ok(TerminalSendResponse { ok: true })
         })
     }
@@ -217,17 +245,14 @@ impl TerminalManager {
         req: &TerminalKillProcessRequest,
     ) -> Result<TerminalKillProcessResponse, DomainRpcError> {
         self.with_session(&req.session_id, |s| {
-            s.writer.write_all(b"\x03").map_err(|e| {
-                DomainRpcError::server_error(format!("kill process: {e}"))
-            })?;
+            s.writer
+                .write_all(b"\x03")
+                .map_err(|e| DomainRpcError::server_error(format!("kill process: {e}")))?;
             Ok(TerminalKillProcessResponse { ok: true })
         })
     }
 
-    pub fn list_sessions(
-        &self,
-        req: &TerminalListSessionsRequest,
-    ) -> Vec<TerminalSessionSummary> {
+    pub fn list_sessions(&self, req: &TerminalListSessionsRequest) -> Vec<TerminalSessionSummary> {
         let sessions = self.sessions.read().unwrap();
         sessions
             .iter()
@@ -255,7 +280,10 @@ impl TerminalManager {
         Vec::new()
     }
 
-    pub fn resize(&self, req: &TerminalResizeRequest) -> Result<TerminalResizeResponse, DomainRpcError> {
+    pub fn resize(
+        &self,
+        req: &TerminalResizeRequest,
+    ) -> Result<TerminalResizeResponse, DomainRpcError> {
         self.with_session(&req.session_id, |s| {
             s.cols = req.cols;
             s.rows = req.rows;
@@ -311,5 +339,7 @@ impl TerminalManager {
 }
 
 impl Default for TerminalManager {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }

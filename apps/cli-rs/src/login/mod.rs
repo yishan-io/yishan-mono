@@ -65,7 +65,9 @@ pub async fn run_browser_flow(base_url: &str, provider: &str) -> anyhow::Result<
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     tokio::spawn(async move {
         axum::serve(listener, app)
-            .with_graceful_shutdown(async { let _ = shutdown_rx.await; })
+            .with_graceful_shutdown(async {
+                let _ = shutdown_rx.await;
+            })
             .await
             .ok();
     });
@@ -92,14 +94,8 @@ fn handle_callback(
         anyhow::bail!("OAuth state mismatch");
     }
 
-    let access_token = params
-        .get("accessToken")
-        .cloned()
-        .unwrap_or_default();
-    let refresh_token = params
-        .get("refreshToken")
-        .cloned()
-        .unwrap_or_default();
+    let access_token = params.get("accessToken").cloned().unwrap_or_default();
+    let refresh_token = params.get("refreshToken").cloned().unwrap_or_default();
 
     if access_token.is_empty() || refresh_token.is_empty() {
         anyhow::bail!("missing auth token fields in OAuth callback");

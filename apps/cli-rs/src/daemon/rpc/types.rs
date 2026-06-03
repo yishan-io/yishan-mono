@@ -26,11 +26,21 @@ pub struct RpcResponse {
 
 impl RpcResponse {
     pub fn success(id: Option<Value>, result: Value) -> Self {
-        Self { jsonrpc: "2.0", id, result: Some(result), error: None }
+        Self {
+            jsonrpc: "2.0",
+            id,
+            result: Some(result),
+            error: None,
+        }
     }
 
     pub fn error(id: Option<Value>, err: RpcError) -> Self {
-        Self { jsonrpc: "2.0", id, result: None, error: Some(err) }
+        Self {
+            jsonrpc: "2.0",
+            id,
+            result: None,
+            error: Some(err),
+        }
     }
 }
 
@@ -51,7 +61,11 @@ pub struct RpcNotification {
 
 impl RpcNotification {
     pub fn new(method: impl Into<String>, params: Value) -> Self {
-        Self { jsonrpc: "2.0", method: method.into(), params }
+        Self {
+            jsonrpc: "2.0",
+            method: method.into(),
+            params,
+        }
     }
 }
 
@@ -65,7 +79,10 @@ pub struct DomainRpcError {
 
 impl DomainRpcError {
     pub fn new(code: i64, message: impl Into<String>) -> Self {
-        Self { code, message: message.into() }
+        Self {
+            code,
+            message: message.into(),
+        }
     }
 
     pub fn invalid_params(msg: impl Into<String>) -> Self {
@@ -90,7 +107,10 @@ impl DomainRpcError {
 
 impl From<DomainRpcError> for RpcError {
     fn from(e: DomainRpcError) -> Self {
-        Self { code: e.code, message: e.message }
+        Self {
+            code: e.code,
+            message: e.message,
+        }
     }
 }
 
@@ -98,7 +118,10 @@ impl From<anyhow::Error> for RpcError {
     fn from(e: anyhow::Error) -> Self {
         // Try to downcast to DomainRpcError first.
         if let Some(domain) = e.downcast_ref::<DomainRpcError>() {
-            return Self { code: domain.code, message: domain.message.clone() };
+            return Self {
+                code: domain.code,
+                message: domain.message.clone(),
+            };
         }
         Self {
             code: crate::daemon::constants::RPC_SERVER_ERROR,
@@ -112,6 +135,5 @@ pub fn decode_params<T: serde::de::DeserializeOwned>(
     raw: Option<&RawValue>,
 ) -> Result<T, DomainRpcError> {
     let raw = raw.ok_or_else(|| DomainRpcError::invalid_params("missing params"))?;
-    serde_json::from_str(raw.get())
-        .map_err(|_| DomainRpcError::invalid_params("invalid params"))
+    serde_json::from_str(raw.get()).map_err(|_| DomainRpcError::invalid_params("invalid params"))
 }

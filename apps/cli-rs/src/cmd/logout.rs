@@ -25,8 +25,7 @@ pub async fn run(args: LogoutArgs, runtime: &AppRuntime) -> anyhow::Result<()> {
 
     // Wipe credentials from disk.
     let path = Path::new(&cfg.config_path).to_path_buf();
-    persist_auth_tokens(&path, "", "", "", "", "")
-        .context("clear credentials from config file")?;
+    persist_auth_tokens(&path, "", "", "", "", "").context("clear credentials from config file")?;
 
     runtime.clear_auth();
 

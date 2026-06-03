@@ -61,17 +61,21 @@ impl GitService {
 
     fn gh_path(&self) -> Option<&str> {
         self.gh_path
-            .get_or_init(|| which::which("gh").ok().map(|p| p.to_string_lossy().into_owned()))
+            .get_or_init(|| {
+                which::which("gh")
+                    .ok()
+                    .map(|p| p.to_string_lossy().into_owned())
+            })
             .as_deref()
     }
 
     fn run_gh(&self, args: &[&str], cwd: &str) -> Result<String, DomainRpcError> {
-        let gh = self
-            .gh_path()
-            .ok_or_else(|| DomainRpcError::new(
+        let gh = self.gh_path().ok_or_else(|| {
+            DomainRpcError::new(
                 crate::daemon::constants::RPC_TOOL_UNAVAILABLE,
                 "gh CLI is not installed or not in PATH",
-            ))?;
+            )
+        })?;
         let out = Command::new(gh)
             .args(args)
             .current_dir(cwd)
@@ -89,7 +93,9 @@ impl GitService {
         let branch = self
             .run_git(&["rev-parse", "--abbrev-ref", "HEAD"], path)
             .unwrap_or_else(|_| "HEAD".into());
-        let raw = self.run_git(&["status", "--short"], path).unwrap_or_default();
+        let raw = self
+            .run_git(&["status", "--short"], path)
+            .unwrap_or_default();
         let files: Vec<String> = raw.lines().map(|l| l.to_string()).collect();
         Ok(GitStatusResponse { branch, files, raw })
     }
@@ -102,7 +108,10 @@ impl GitService {
             .map(|o| o.status.success())
             .unwrap_or(false);
         if !is_repo {
-            return Ok(GitInspectResult { is_git_repository: false, ..Default::default() });
+            return Ok(GitInspectResult {
+                is_git_repository: false,
+                ..Default::default()
+            });
         }
         let remote_url = self
             .run_git(&["remote", "get-url", "origin"], path)
@@ -124,7 +133,9 @@ impl GitService {
         let mut staged = Vec::new();
         let mut untracked = Vec::new();
         for line in out.lines() {
-            if line.len() < 3 { continue; }
+            if line.len() < 3 {
+                continue;
+            }
             let x = line.chars().next().unwrap_or(' ');
             let y = line.chars().nth(1).unwrap_or(' ');
             // Porcelain v1: "XY path" or "XY old -> new" for renames.
@@ -136,17 +147,36 @@ impl GitService {
                 raw.to_string()
             };
             if x == '?' && y == '?' {
-                untracked.push(GitChange { path: file, kind: "untracked".into(), additions: 0, deletions: 0 });
+                untracked.push(GitChange {
+                    path: file,
+                    kind: "untracked".into(),
+                    additions: 0,
+                    deletions: 0,
+                });
             } else {
                 if x != ' ' {
-                    staged.push(GitChange { path: file.clone(), kind: status_kind(x), additions: 0, deletions: 0 });
+                    staged.push(GitChange {
+                        path: file.clone(),
+                        kind: status_kind(x),
+                        additions: 0,
+                        deletions: 0,
+                    });
                 }
                 if y != ' ' {
-                    unstaged.push(GitChange { path: file, kind: status_kind(y), additions: 0, deletions: 0 });
+                    unstaged.push(GitChange {
+                        path: file,
+                        kind: status_kind(y),
+                        additions: 0,
+                        deletions: 0,
+                    });
                 }
             }
         }
-        Ok(GitChangesBySection { unstaged, staged, untracked })
+        Ok(GitChangesBySection {
+            unstaged,
+            staged,
+            untracked,
+        })
     }
 
     pub fn track_changes(&self, path: &str, paths: &[String]) -> Result<(), DomainRpcError> {
@@ -178,14 +208,21 @@ impl GitService {
         signoff: bool,
     ) -> Result<String, DomainRpcError> {
         let mut args = vec!["commit", "-m", message];
-        if amend { args.push("--amend"); }
-        if signoff { args.push("--signoff"); }
+        if amend {
+            args.push("--amend");
+        }
+        if signoff {
+            args.push("--signoff");
+        }
         self.run_git(&args, path)
     }
 
     pub fn branch_status(&self, path: &str) -> Result<GitBranchStatus, DomainRpcError> {
         let out = self
-            .run_git(&["rev-list", "--left-right", "--count", "@{upstream}...HEAD"], path)
+            .run_git(
+                &["rev-list", "--left-right", "--count", "@{upstream}...HEAD"],
+                path,
+            )
             .unwrap_or_default();
         let parts: Vec<&str> = out.split_whitespace().collect();
         let has_upstream = !out.is_empty();
@@ -194,7 +231,10 @@ impl GitService {
         } else {
             0
         };
-        Ok(GitBranchStatus { has_upstream, ahead_count })
+        Ok(GitBranchStatus {
+            has_upstream,
+            ahead_count,
+        })
     }
 
     pub fn branch_pull_request(
@@ -214,7 +254,10 @@ impl GitService {
         let result = self.fetch_branch_pr(path, branch)?;
         self.branch_pr_cache.lock().unwrap().insert(
             cache_key,
-            BranchPrCacheEntry { data: result.clone(), at: Instant::now() },
+            BranchPrCacheEntry {
+                data: result.clone(),
+                at: Instant::now(),
+            },
         );
         Ok(result)
     }
@@ -281,7 +324,12 @@ impl GitService {
         }
         let range = format!("{target}..HEAD");
         let out = self.run_git(
-            &["log", &range, "--pretty=format:%H %h %an %aI %s", "--name-only"],
+            &[
+                "log",
+                &range,
+                "--pretty=format:%H %h %an %aI %s",
+                "--name-only",
+            ],
             path,
         )?;
         let mut commits: Vec<GitCommit> = Vec::new();
@@ -305,7 +353,11 @@ impl GitService {
                 let committed_at = parts.next().unwrap_or("").to_string();
                 let subject = parts.next().unwrap_or("").to_string();
                 current_commit = Some(GitCommit {
-                    hash, short_hash, author_name, committed_at, subject,
+                    hash,
+                    short_hash,
+                    author_name,
+                    committed_at,
+                    subject,
                     changed_files: Vec::new(),
                 });
             } else if let Some(ref mut c) = current_commit {
@@ -332,7 +384,12 @@ impl GitService {
         target: &str,
     ) -> Result<GitBranchDiffSummary, DomainRpcError> {
         if !self.ref_exists(path, target) {
-            return Ok(GitBranchDiffSummary { file_count: 0, additions: 0, deletions: 0, files: vec![] });
+            return Ok(GitBranchDiffSummary {
+                file_count: 0,
+                additions: 0,
+                deletions: 0,
+                files: vec![],
+            });
         }
         let range = format!("{target}...HEAD");
         let out = self.run_git(&["diff", "--stat", &range], path)?;
@@ -378,7 +435,10 @@ impl GitService {
         let new_content = self
             .run_git(&["show", &format!("{commit_hash}:{file_path}")], path)
             .unwrap_or_default();
-        Ok(GitDiffContent { old_content, new_content })
+        Ok(GitDiffContent {
+            old_content,
+            new_content,
+        })
     }
 
     pub fn read_branch_comparison_diff(
@@ -390,9 +450,12 @@ impl GitService {
         let old_content = self
             .run_git(&["show", &format!("{target}:{file_path}")], path)
             .unwrap_or_default();
-        let new_content = std::fs::read_to_string(std::path::Path::new(path).join(file_path))
-            .unwrap_or_default();
-        Ok(GitDiffContent { old_content, new_content })
+        let new_content =
+            std::fs::read_to_string(std::path::Path::new(path).join(file_path)).unwrap_or_default();
+        Ok(GitDiffContent {
+            old_content,
+            new_content,
+        })
     }
 
     pub fn list_branches(&self, path: &str) -> Result<GitBranchList, DomainRpcError> {
@@ -427,7 +490,10 @@ impl GitService {
         };
         self.branch_cache.lock().unwrap().insert(
             cache_key,
-            BranchCacheEntry { data: result.clone(), at: Instant::now() },
+            BranchCacheEntry {
+                data: result.clone(),
+                at: Instant::now(),
+            },
         );
         Ok(result)
     }
@@ -442,10 +508,16 @@ impl GitService {
     }
 
     pub fn rename_branch(&self, path: &str, next_branch: &str) -> Result<(), DomainRpcError> {
-        self.run_git(&["branch", "-m", next_branch], path).map(|_| ())
+        self.run_git(&["branch", "-m", next_branch], path)
+            .map(|_| ())
     }
 
-    pub fn remove_branch(&self, path: &str, branch: &str, force: bool) -> Result<(), DomainRpcError> {
+    pub fn remove_branch(
+        &self,
+        path: &str,
+        branch: &str,
+        force: bool,
+    ) -> Result<(), DomainRpcError> {
         let flag = if force { "-D" } else { "-d" };
         self.run_git(&["branch", flag, branch], path).map(|_| ())
     }
@@ -464,7 +536,9 @@ impl GitService {
             "rebase" => args.push("--rebase"),
             _ => args.push("--merge"),
         }
-        if delete_branch { args.push("--delete-branch"); }
+        if delete_branch {
+            args.push("--delete-branch");
+        }
         self.run_gh(&args, path)
     }
 
@@ -482,9 +556,16 @@ impl GitService {
         from_ref: &str,
     ) -> Result<(), DomainRpcError> {
         let mut args = vec!["worktree", "add"];
-        if create_branch { args.push("-b"); args.push(branch); }
+        if create_branch {
+            args.push("-b");
+            args.push(branch);
+        }
         args.push(worktree_path);
-        if !from_ref.is_empty() { args.push(from_ref); } else if !create_branch { args.push(branch); }
+        if !from_ref.is_empty() {
+            args.push(from_ref);
+        } else if !create_branch {
+            args.push(branch);
+        }
         self.run_git(&args, path).map(|_| ())
     }
 
@@ -499,10 +580,17 @@ impl GitService {
         Ok(path.to_string())
     }
 
-    pub fn remove_worktree(&self, main_path: &str, worktree_path: &str, force: bool) -> Result<(), DomainRpcError> {
+    pub fn remove_worktree(
+        &self,
+        main_path: &str,
+        worktree_path: &str,
+        force: bool,
+    ) -> Result<(), DomainRpcError> {
         let flag = if force { "--force" } else { "" };
         let mut args = vec!["worktree", "remove"];
-        if force { args.push(flag); }
+        if force {
+            args.push(flag);
+        }
         args.push(worktree_path);
         self.run_git(&args, main_path).map(|_| ())
     }
@@ -513,7 +601,9 @@ impl GitService {
 }
 
 impl Default for GitService {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 fn status_kind(c: char) -> String {

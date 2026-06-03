@@ -10,29 +10,34 @@ impl ApiClient {
     // ── System ────────────────────────────────────────────────────────────────
 
     pub async fn health(&self) -> anyhow::Result<HealthResponse> {
-        self.do_decode::<_, HealthResponse>(Method::GET, "/health", None::<&()>).await
+        self.do_decode::<_, HealthResponse>(Method::GET, "/health", None::<&()>)
+            .await
     }
 
     pub async fn whoami(&self) -> anyhow::Result<MeResponse> {
-        self.do_decode::<_, MeResponse>(Method::GET, "/me", None::<&()>).await
+        self.do_decode::<_, MeResponse>(Method::GET, "/me", None::<&()>)
+            .await
     }
 
     // ── Auth ──────────────────────────────────────────────────────────────────
 
     pub async fn refresh_token(&self, refresh_token: &str) -> anyhow::Result<RefreshTokenResponse> {
         let body = json!({ "refreshToken": refresh_token });
-        self.do_decode(Method::POST, "/auth/refresh", Some(&body)).await
+        self.do_decode(Method::POST, "/auth/refresh", Some(&body))
+            .await
     }
 
     pub async fn revoke_token(&self, refresh_token: &str) -> anyhow::Result<OkResponse> {
         let body = json!({ "refreshToken": refresh_token });
-        self.do_decode(Method::POST, "/auth/revoke", Some(&body)).await
+        self.do_decode(Method::POST, "/auth/revoke", Some(&body))
+            .await
     }
 
     // ── Service Tokens ────────────────────────────────────────────────────────
 
     pub async fn list_service_tokens(&self) -> anyhow::Result<ListServiceTokensResponse> {
-        self.do_decode::<_, _>(Method::GET, "/service-tokens", None::<&()>).await
+        self.do_decode::<_, _>(Method::GET, "/service-tokens", None::<&()>)
+            .await
     }
 
     pub async fn create_service_token(
@@ -44,18 +49,21 @@ impl ApiClient {
         if let Some(days) = expires_in_days {
             body["expiresInDays"] = json!(days);
         }
-        self.do_decode(Method::POST, "/service-tokens", Some(&body)).await
+        self.do_decode(Method::POST, "/service-tokens", Some(&body))
+            .await
     }
 
     pub async fn revoke_service_token(&self, token_id: &str) -> anyhow::Result<OkResponse> {
         let path = format!("/service-tokens/{token_id}");
-        self.do_decode::<_, OkResponse>(Method::DELETE, &path, None::<&()>).await
+        self.do_decode::<_, OkResponse>(Method::DELETE, &path, None::<&()>)
+            .await
     }
 
     // ── Organizations ─────────────────────────────────────────────────────────
 
     pub async fn list_organizations(&self) -> anyhow::Result<ListOrganizationsResponse> {
-        self.do_decode::<_, _>(Method::GET, "/orgs", None::<&()>).await
+        self.do_decode::<_, _>(Method::GET, "/orgs", None::<&()>)
+            .await
     }
 
     pub async fn create_organization(
@@ -69,7 +77,8 @@ impl ApiClient {
 
     pub async fn delete_organization(&self, org_id: &str) -> anyhow::Result<OkResponse> {
         let path = format!("/orgs/{org_id}");
-        self.do_decode::<_, OkResponse>(Method::DELETE, &path, None::<&()>).await
+        self.do_decode::<_, OkResponse>(Method::DELETE, &path, None::<&()>)
+            .await
     }
 
     pub async fn add_organization_member(
@@ -89,19 +98,22 @@ impl ApiClient {
         user_id: &str,
     ) -> anyhow::Result<OkResponse> {
         let path = format!("/orgs/{org_id}/members/{user_id}");
-        self.do_decode::<_, OkResponse>(Method::DELETE, &path, None::<&()>).await
+        self.do_decode::<_, OkResponse>(Method::DELETE, &path, None::<&()>)
+            .await
     }
 
     // ── Nodes ─────────────────────────────────────────────────────────────────
 
     pub async fn list_nodes(&self, org_id: &str) -> anyhow::Result<ListNodesResponse> {
         let path = format!("/orgs/{org_id}/nodes");
-        self.do_decode::<_, _>(Method::GET, &path, None::<&()>).await
+        self.do_decode::<_, _>(Method::GET, &path, None::<&()>)
+            .await
     }
 
     pub async fn delete_node(&self, org_id: &str, node_id: &str) -> anyhow::Result<OkResponse> {
         let path = format!("/orgs/{org_id}/nodes/{node_id}");
-        self.do_decode::<_, OkResponse>(Method::DELETE, &path, None::<&()>).await
+        self.do_decode::<_, OkResponse>(Method::DELETE, &path, None::<&()>)
+            .await
     }
 
     pub async fn update_node_scope(
@@ -142,14 +154,16 @@ impl ApiClient {
         if let Some(u) = update_if_exists {
             body["updateIfExists"] = json!(u);
         }
-        self.do_decode(Method::POST, "/nodes/register", Some(&body)).await
+        self.do_decode(Method::POST, "/nodes/register", Some(&body))
+            .await
     }
 
     // ── Projects ──────────────────────────────────────────────────────────────
 
     pub async fn list_projects(&self, org_id: &str) -> anyhow::Result<ListProjectsResponse> {
         let path = format!("/orgs/{org_id}/projects");
-        self.do_decode::<_, _>(Method::GET, &path, None::<&()>).await
+        self.do_decode::<_, _>(Method::GET, &path, None::<&()>)
+            .await
     }
 
     pub async fn create_project(
@@ -184,7 +198,8 @@ impl ApiClient {
         project_id: &str,
     ) -> anyhow::Result<OkResponse> {
         let path = format!("/orgs/{org_id}/projects/{project_id}");
-        self.do_decode::<_, OkResponse>(Method::DELETE, &path, None::<&()>).await
+        self.do_decode::<_, OkResponse>(Method::DELETE, &path, None::<&()>)
+            .await
     }
 
     // ── Workspaces ────────────────────────────────────────────────────────────
@@ -195,7 +210,8 @@ impl ApiClient {
         project_id: &str,
     ) -> anyhow::Result<ListWorkspacesResponse> {
         let path = format!("/orgs/{org_id}/projects/{project_id}/workspaces");
-        self.do_decode::<_, _>(Method::GET, &path, None::<&()>).await
+        self.do_decode::<_, _>(Method::GET, &path, None::<&()>)
+            .await
     }
 
     pub async fn create_workspace(
@@ -254,7 +270,8 @@ impl ApiClient {
 
     pub async fn relay_token(&self, node_id: &str) -> anyhow::Result<RelayTokenResponse> {
         let path = format!("/nodes/{node_id}/relay-token");
-        self.do_decode::<_, _>(Method::POST, &path, None::<&()>).await
+        self.do_decode::<_, _>(Method::POST, &path, None::<&()>)
+            .await
     }
 
     // ── Scheduled Jobs ────────────────────────────────────────────────────────

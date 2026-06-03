@@ -1,4 +1,6 @@
-use crate::daemon::process::{restart, start_detached, stop, wait_for_ready, RunConfig, StartConfig};
+use crate::daemon::process::{
+    restart, start_detached, stop, wait_for_ready, RunConfig, StartConfig,
+};
 use crate::output::print_any;
 use crate::runtime::AppRuntime;
 use anyhow::Context;
@@ -110,8 +112,7 @@ pub async fn run(cmd: DaemonCommands, runtime: &AppRuntime) -> anyhow::Result<()
 
         DaemonCommands::Stop => {
             let cfg = runtime.config();
-            let state = stop(&cfg.config_path, Duration::from_secs(10))
-                .context("stop daemon")?;
+            let state = stop(&cfg.config_path, Duration::from_secs(10)).context("stop daemon")?;
             print_any(json!({ "status": "stopped", "pid": state.pid }))?;
             Ok(())
         }

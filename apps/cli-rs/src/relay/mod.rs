@@ -9,8 +9,8 @@ use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
-use tokio_tungstenite::{connect_async_with_config, tungstenite::client::IntoClientRequest};
 use tokio_tungstenite::tungstenite::{http::HeaderValue, Message};
+use tokio_tungstenite::{connect_async_with_config, tungstenite::client::IntoClientRequest};
 use tracing::{debug, info, warn};
 
 const RELAY_METHOD_PING: &str = "relay.ping";
@@ -87,7 +87,9 @@ pub async fn run_relay_client_loop(
         Ok(e) => e,
         Err(e) => {
             warn!(err = %e, url = relay_url, "invalid relay url; relay client disabled");
-            status.set_disconnected(&format!("invalid relay url: {e}")).await;
+            status
+                .set_disconnected(&format!("invalid relay url: {e}"))
+                .await;
             return;
         }
     };
@@ -118,18 +120,21 @@ pub async fn run_relay_client_loop(
                 let _cfg = app.runtime.config();
                 let api = app.runtime.api_client();
                 match api.relay_token(&node_id).await {
-                        Ok(resp) => {
-                            let expiry = resp.expires_at
-                                .trim()
-                                .parse::<chrono::DateTime<chrono::Utc>>()
-                                .ok()
-                                .unwrap_or_else(|| chrono::Utc::now() + chrono::Duration::minutes(5));
-                            cached_token = Some((resp.token.clone(), expiry));
-                            resp.token
-                        }
+                    Ok(resp) => {
+                        let expiry = resp
+                            .expires_at
+                            .trim()
+                            .parse::<chrono::DateTime<chrono::Utc>>()
+                            .ok()
+                            .unwrap_or_else(|| chrono::Utc::now() + chrono::Duration::minutes(5));
+                        cached_token = Some((resp.token.clone(), expiry));
+                        resp.token
+                    }
                     Err(e) => {
                         warn!(err = %e, "relay token mint failed");
-                        status.set_disconnected(&format!("token mint failed: {e}")).await;
+                        status
+                            .set_disconnected(&format!("token mint failed: {e}"))
+                            .await;
                         sleep(delay).await;
                         delay = next_relay_delay(delay);
                         continue;
@@ -169,7 +174,11 @@ pub async fn run_relay_client_loop(
             }
         };
 
-        info!(url = versioned_endpoint, node_id = node_id, "relay websocket connected");
+        info!(
+            url = versioned_endpoint,
+            node_id = node_id,
+            "relay websocket connected"
+        );
         delay = RELAY_RECONNECT_INITIAL_DELAY;
         cached_token = None; // always get fresh token on next connect
         status.set_connected().await;
@@ -179,9 +188,8 @@ pub async fn run_relay_client_loop(
     }
 }
 
-type WsStream = tokio_tungstenite::WebSocketStream<
-    tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
->;
+type WsStream =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
 
 /// Handle a single relay WebSocket session until it disconnects.
 async fn run_relay_session(ws: WsStream, app: &Arc<DaemonApp>, _node_id: &str) {
@@ -199,11 +207,14 @@ async fn run_relay_session(ws: WsStream, app: &Arc<DaemonApp>, _node_id: &str) {
         match msg {
             Message::Binary(data) => {
                 // Binary terminal fast-path — send input to the right PTY session.
-                if data.len() >= 2 && data[0] == crate::daemon::constants::BIN_OPCODE_TERMINAL_INPUT {
+                if data.len() >= 2 && data[0] == crate::daemon::constants::BIN_OPCODE_TERMINAL_INPUT
+                {
                     let rest = &data[1..];
                     if let Some(null_pos) = rest.iter().position(|&b| b == 0) {
                         if let Ok(session_id) = std::str::from_utf8(&rest[..null_pos]) {
-                            app.manager.terminal_send_raw(session_id, &rest[null_pos + 1..]).await;
+                            app.manager
+                                .terminal_send_raw(session_id, &rest[null_pos + 1..])
+                                .await;
                         }
                     }
                 }

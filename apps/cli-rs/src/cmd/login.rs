@@ -23,7 +23,10 @@ pub async fn run(args: LoginArgs, runtime: &AppRuntime) -> anyhow::Result<()> {
     }
 
     if args.provider != "google" && args.provider != "github" {
-        anyhow::bail!("unsupported provider {:?} (allowed: google, github)", args.provider);
+        anyhow::bail!(
+            "unsupported provider {:?} (allowed: google, github)",
+            args.provider
+        );
     }
 
     let cfg = runtime.config();
@@ -59,7 +62,10 @@ async fn login_with_service_token(token: &str, runtime: &AppRuntime) -> anyhow::
 
     // Verify the token works.
     let client = runtime.api_client();
-    let me = client.whoami().await.context("service token verification failed")?;
+    let me = client
+        .whoami()
+        .await
+        .context("service token verification failed")?;
     eprintln!("Authenticated as {} ({})", me.user.email, me.user.name);
 
     if let Err(e) = register_local_node(runtime).await {
@@ -92,7 +98,10 @@ async fn register_local_node(runtime: &AppRuntime) -> anyhow::Result<()> {
             None,
             Some(std::collections::HashMap::from([
                 ("os".to_string(), serde_json::json!(std::env::consts::OS)),
-                ("version".to_string(), serde_json::json!(crate::buildinfo::VERSION)),
+                (
+                    "version".to_string(),
+                    serde_json::json!(crate::buildinfo::VERSION),
+                ),
             ])),
             "private",
             Some(false),

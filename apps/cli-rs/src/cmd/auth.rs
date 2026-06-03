@@ -61,7 +61,9 @@ pub async fn run(args: AuthArgs, runtime: &AppRuntime) -> anyhow::Result<()> {
             print_any(resp)
         }
         AuthCommands::CreateServiceToken(a) => {
-            let resp = client.create_service_token(&a.name, a.expires_in_days).await?;
+            let resp = client
+                .create_service_token(&a.name, a.expires_in_days)
+                .await?;
             print_any(resp)
         }
         AuthCommands::RevokeServiceToken(a) => {

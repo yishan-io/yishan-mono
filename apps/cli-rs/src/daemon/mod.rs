@@ -19,8 +19,9 @@ use crate::runtime::AppRuntime;
 /// Build an RPC client connected to the running daemon.
 pub fn rpc_client(runtime: &AppRuntime) -> anyhow::Result<RpcClient> {
     let cfg = runtime.config();
-    let state = load_state(&cfg.config_path)
-        .ok_or_else(|| anyhow::anyhow!("daemon is not running; start it with `yishan daemon start`"))?;
+    let state = load_state(&cfg.config_path).ok_or_else(|| {
+        anyhow::anyhow!("daemon is not running; start it with `yishan daemon start`")
+    })?;
     if !state.running {
         anyhow::bail!("daemon is not running; start it with `yishan daemon start`");
     }

@@ -187,7 +187,10 @@ async fn handle_rpc_frame(
         Err(_) => {
             return Some(RpcResponse::error(
                 None,
-                RpcError { code: RPC_PARSE_ERROR, message: "parse error".into() },
+                RpcError {
+                    code: RPC_PARSE_ERROR,
+                    message: "parse error".into(),
+                },
             ));
         }
     };
@@ -195,7 +198,10 @@ async fn handle_rpc_frame(
     if req.jsonrpc != "2.0" {
         return Some(RpcResponse::error(
             req.id,
-            RpcError { code: RPC_INVALID_REQUEST, message: "invalid request".into() },
+            RpcError {
+                code: RPC_INVALID_REQUEST,
+                message: "invalid request".into(),
+            },
         ));
     }
 
@@ -245,7 +251,10 @@ async fn dispatch_rpc(
                             }
                         }
                         Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                            warn!(dropped = n, "event hub: subscriber lagged, some events dropped");
+                            warn!(
+                                dropped = n,
+                                "event hub: subscriber lagged, some events dropped"
+                            );
                             // Notify frontend to resync state.
                             let notif = RpcNotification::new(
                                 "frontend.eventsDropped",
@@ -336,42 +345,32 @@ async fn dispatch_rpc(
         }
 
         METHOD_CLI_TOOL_LIST_STATUSES => {
-            let all = tokio::task::spawn_blocking(|| {
-                crate::daemon::cli_detector::detect_all(false)
-            })
-            .await
-            .map_err(|_| DomainRpcError::server_error("cli detection task failed"))?;
+            let all =
+                tokio::task::spawn_blocking(|| crate::daemon::cli_detector::detect_all(false))
+                    .await
+                    .map_err(|_| DomainRpcError::server_error("cli detection task failed"))?;
             Ok(serde_json::to_value(all).unwrap_or(json!([])))
         }
 
         METHOD_INTEGRATION_GITHUB_STATUS => {
-            let status = tokio::task::spawn_blocking(|| {
-                crate::daemon::cli_detector::detect_gh(false)
-            })
-            .await
-            .map_err(|_| DomainRpcError::server_error("gh detection task failed"))?;
+            let status =
+                tokio::task::spawn_blocking(|| crate::daemon::cli_detector::detect_gh(false))
+                    .await
+                    .map_err(|_| DomainRpcError::server_error("gh detection task failed"))?;
             Ok(serde_json::to_value(status).unwrap_or(json!({ "connected": false })))
         }
 
         // ── Workspace ────────────────────────────────────────────────────────
-        m if is_workspace_method(m) => {
-            dispatch_workspace(m, params, app).await
-        }
+        m if is_workspace_method(m) => dispatch_workspace(m, params, app).await,
 
         // ── Git ──────────────────────────────────────────────────────────────
-        m if is_git_method(m) => {
-            dispatch_git(m, params, app).await
-        }
+        m if is_git_method(m) => dispatch_git(m, params, app).await,
 
         // ── File ─────────────────────────────────────────────────────────────
-        m if is_file_method(m) => {
-            dispatch_file(m, params, app).await
-        }
+        m if is_file_method(m) => dispatch_file(m, params, app).await,
 
         // ── Terminal ─────────────────────────────────────────────────────────
-        m if is_terminal_method(m) => {
-            dispatch_terminal(m, params, app, sink).await
-        }
+        m if is_terminal_method(m) => dispatch_terminal(m, params, app, sink).await,
 
         _ => Err(DomainRpcError::method_not_found(method)),
     };
@@ -465,15 +464,19 @@ async fn create_workspace(
     #[serde(rename_all = "camelCase")]
     struct Req {
         id: String,
-        #[serde(default)] organization_id: String,
-        #[serde(default)] project_id: String,
+        #[serde(default)]
+        organization_id: String,
+        #[serde(default)]
+        project_id: String,
         repo_key: String,
         workspace_name: String,
         source_path: String,
         target_branch: String,
         source_branch: String,
-        #[serde(default)] context_enabled: bool,
-        #[serde(default)] setup_hook: String,
+        #[serde(default)]
+        context_enabled: bool,
+        #[serde(default)]
+        setup_hook: String,
     }
 
     let req: Req = crate::daemon::rpc::decode_params(params)?;
@@ -488,7 +491,9 @@ async fn create_workspace(
         ("sourceBranch", &req.source_branch),
     ] {
         if val.trim().is_empty() {
-            return Err(DomainRpcError::invalid_params(format!("{name} is required")));
+            return Err(DomainRpcError::invalid_params(format!(
+                "{name} is required"
+            )));
         }
     }
 
@@ -503,9 +508,12 @@ async fn create_workspace(
     let home = dirs::home_dir()
         .ok_or_else(|| DomainRpcError::server_error("cannot determine home directory"))?;
     let worktree_path = home
-        .join(".yishan").join("worktrees")
-        .join(&repo_key).join(&workspace_name)
-        .to_string_lossy().into_owned();
+        .join(".yishan")
+        .join("worktrees")
+        .join(&repo_key)
+        .join(&workspace_name)
+        .to_string_lossy()
+        .into_owned();
 
     let events = app.events.clone();
 
@@ -528,8 +536,9 @@ async fn create_workspace(
 
     // Ensure the parent directory of the worktree path exists.
     if let Some(parent) = std::path::Path::new(&worktree_path).parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| DomainRpcError::server_error(format!("create worktree parent dir: {e}")))?;
+        std::fs::create_dir_all(parent).map_err(|e| {
+            DomainRpcError::server_error(format!("create worktree parent dir: {e}"))
+        })?;
     }
 
     // Check if source branch ref exists locally.
@@ -545,12 +554,16 @@ async fn create_workspace(
         let fetch = tokio::task::spawn_blocking({
             let sp = source_path.clone();
             let sb = source_branch.clone();
-            move || Command::new("git")
-                .args(["fetch", "--depth=1", "--filter=blob:none", "origin", &sb])
-                .current_dir(&sp)
-                .output()
-        }).await.map_err(|e| DomainRpcError::server_error(format!("fetch task: {e}")))?
-          .map_err(|e| DomainRpcError::server_error(format!("fetch: {e}")))?;
+            move || {
+                Command::new("git")
+                    .args(["fetch", "--depth=1", "--filter=blob:none", "origin", &sb])
+                    .current_dir(&sp)
+                    .output()
+            }
+        })
+        .await
+        .map_err(|e| DomainRpcError::server_error(format!("fetch task: {e}")))?
+        .map_err(|e| DomainRpcError::server_error(format!("fetch: {e}")))?;
 
         if !fetch.status.success() {
             let msg = String::from_utf8_lossy(&fetch.stderr).trim().to_string();
@@ -565,38 +578,59 @@ async fn create_workspace(
         let wp = worktree_path.clone();
         let tb = target_branch.clone();
         let sb = source_branch.clone();
-        move || Command::new("git")
-            .args(["worktree", "add", "-b", &tb, &wp, &sb])
-            .current_dir(&sp)
-            .output()
-    }).await.map_err(|e| DomainRpcError::server_error(format!("worktree task: {e}")))?
-      .map_err(|e| DomainRpcError::server_error(format!("git worktree add: {e}")))?;
+        move || {
+            Command::new("git")
+                .args(["worktree", "add", "-b", &tb, &wp, &sb])
+                .current_dir(&sp)
+                .output()
+        }
+    })
+    .await
+    .map_err(|e| DomainRpcError::server_error(format!("worktree task: {e}")))?
+    .map_err(|e| DomainRpcError::server_error(format!("git worktree add: {e}")))?;
 
     if !wt_result.status.success() {
-        let msg = String::from_utf8_lossy(&wt_result.stderr).trim().to_string();
+        let msg = String::from_utf8_lossy(&wt_result.stderr)
+            .trim()
+            .to_string();
         emit("worktree", "Fetch & create worktree", "failed", &msg);
-        return Err(DomainRpcError::server_error(format!("git worktree add: {msg}")));
+        return Err(DomainRpcError::server_error(format!(
+            "git worktree add: {msg}"
+        )));
     }
-    emit("worktree", "Fetch & create worktree", "completed", &worktree_path);
+    emit(
+        "worktree",
+        "Fetch & create worktree",
+        "completed",
+        &worktree_path,
+    );
 
     // ── Step 2: context link ──────────────────────────────────────────────────
     emit("context", "Link project context", "running", "");
     if req.context_enabled {
-        let ctx_result = sync_context_links(
-            &SyncContextLinkRequest {
-                repo_key: repo_key.clone(),
-                enabled: true,
-                worktree_paths: vec![worktree_path.clone()],
-            }
-        );
+        let ctx_result = sync_context_links(&SyncContextLinkRequest {
+            repo_key: repo_key.clone(),
+            enabled: true,
+            worktree_paths: vec![worktree_path.clone()],
+        });
         if !ctx_result.errors.is_empty() {
-            let msg = ctx_result.errors.values().next().cloned().unwrap_or_default();
+            let msg = ctx_result
+                .errors
+                .values()
+                .next()
+                .cloned()
+                .unwrap_or_default();
             emit("context", "Link project context", "warning", &msg);
         } else {
             emit("context", "Link project context", "completed", "");
         }
     } else {
-        emit("context", "Link project context", "skipped", "Context link disabled");
+        emit(
+            "context",
+            "Link project context",
+            "skipped",
+            "Context link disabled",
+        );
     }
 
     // ── Step 3: setup hook ────────────────────────────────────────────────────
@@ -604,14 +638,26 @@ async fn create_workspace(
     let setup_hook = req.setup_hook.trim().to_string();
     let lifecycle_warnings: Vec<String>;
     if setup_hook.is_empty() {
-        emit("setup", "Run setup script", "skipped", "No setup script configured");
+        emit(
+            "setup",
+            "Run setup script",
+            "skipped",
+            "No setup script configured",
+        );
         lifecycle_warnings = vec![];
     } else {
         let hook_out = tokio::task::spawn_blocking({
             let wp = worktree_path.clone();
             let cmd = setup_hook.clone();
-            move || Command::new("sh").args(["-c", &cmd]).current_dir(&wp).output()
-        }).await.map_err(|e| DomainRpcError::server_error(format!("setup task: {e}")))?;
+            move || {
+                Command::new("sh")
+                    .args(["-c", &cmd])
+                    .current_dir(&wp)
+                    .output()
+            }
+        })
+        .await
+        .map_err(|e| DomainRpcError::server_error(format!("setup task: {e}")))?;
 
         match hook_out {
             Ok(out) if out.status.success() => {
@@ -656,7 +702,9 @@ async fn dispatch_workspace(
     params: Option<&serde_json::value::RawValue>,
     app: &DaemonApp,
 ) -> Result<Value, DomainRpcError> {
-    use crate::daemon::constants::{METHOD_WORKSPACE_CLOSE, METHOD_WORKSPACE_CREATE, METHOD_WORKSPACE_OPEN};
+    use crate::daemon::constants::{
+        METHOD_WORKSPACE_CLOSE, METHOD_WORKSPACE_CREATE, METHOD_WORKSPACE_OPEN,
+    };
     use std::path::Path;
 
     match method {
@@ -671,7 +719,8 @@ async fn dispatch_workspace(
 
         // On open: register with watchers/pr_tracker.
         METHOD_WORKSPACE_OPEN => {
-            let result = crate::workspace::dispatch::workspace(method, params, &app.manager).await?;
+            let result =
+                crate::workspace::dispatch::workspace(method, params, &app.manager).await?;
             if let (Some(path), Some(_id)) = (result["path"].as_str(), result["id"].as_str()) {
                 app.watchers.watch(Path::new(path));
                 app.pr_tracker.ensure_tracked(path, true);
@@ -684,14 +733,21 @@ async fn dispatch_workspace(
             // Deserialize workspace_id from params to look up path before removal.
             #[derive(serde::Deserialize)]
             #[serde(rename_all = "camelCase")]
-            struct CloseReq { workspace_id: String }
-            let close_req: Option<(String, String)> = crate::daemon::rpc::decode_params::<CloseReq>(params)
-                .ok()
-                .and_then(|r| {
-                    app.manager.get(&r.workspace_id).ok().map(|ws| (r.workspace_id, ws.path))
-                });
+            struct CloseReq {
+                workspace_id: String,
+            }
+            let close_req: Option<(String, String)> =
+                crate::daemon::rpc::decode_params::<CloseReq>(params)
+                    .ok()
+                    .and_then(|r| {
+                        app.manager
+                            .get(&r.workspace_id)
+                            .ok()
+                            .map(|ws| (r.workspace_id, ws.path))
+                    });
 
-            let result = crate::workspace::dispatch::workspace(method, params, &app.manager).await?;
+            let result =
+                crate::workspace::dispatch::workspace(method, params, &app.manager).await?;
 
             if let Some((ws_id, ws_path)) = close_req {
                 app.watchers.unwatch(Path::new(&ws_path));

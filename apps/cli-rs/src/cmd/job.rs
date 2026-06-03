@@ -41,11 +41,7 @@ pub async fn run(cmd: JobCommands, runtime: &AppRuntime) -> anyhow::Result<()> {
     match cmd {
         JobCommands::StartRun(args) => {
             let resp = client
-                .start_scheduled_job_run(
-                    &args.node_id,
-                    &args.run_id,
-                    args.started_at.as_deref(),
-                )
+                .start_scheduled_job_run(&args.node_id, &args.run_id, args.started_at.as_deref())
                 .await?;
             print_any(resp)
         }
