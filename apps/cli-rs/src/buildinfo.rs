@@ -1,5 +1,9 @@
-/// Build-time version injected by build.rs or Cargo.
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+/// Build-time version injected from apps/cli/VERSION via build.rs.
+/// Falls back to the Cargo package version for environments that skip build.rs.
+pub const VERSION: &str = match option_env!("YISHAN_VERSION") {
+    Some(version) => version,
+    None => env!("CARGO_PKG_VERSION"),
+};
 
 /// Short commit SHA, populated by build.rs via the `GIT_COMMIT` env var.
 /// Falls back to "unknown" when not set (e.g. local dev builds).

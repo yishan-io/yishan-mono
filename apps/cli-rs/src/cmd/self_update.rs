@@ -13,6 +13,7 @@ use std::path::{Path, PathBuf};
 const REPO: &str = "yishan-io/yishan-mono";
 const PROJECT: &str = "yishan-cli";
 const BINARY_NAME: &str = "yishan";
+const RELEASE_TAG_PREFIX: &str = "cli-v";
 
 #[derive(Args)]
 pub struct SelfUpdateArgs {
@@ -57,7 +58,10 @@ fn release_for_version(version: &str) -> Release {
     let os_name = normalize_os(std::env::consts::OS);
     let arch = normalize_arch(std::env::consts::ARCH);
     let archive = format!("{PROJECT}_{version}_{os_name}_{arch}.tar.gz");
-    let base = format!("https://github.com/{REPO}/releases/download/v{version}");
+    let base = format!(
+        "https://github.com/{REPO}/releases/download/{}",
+        release_tag(version)
+    );
     Release {
         version: version.to_string(),
         archive_url: format!("{base}/{archive}"),
@@ -84,14 +88,25 @@ async fn latest_release() -> anyhow::Result<Release> {
             )
         })?;
 
-    // Location: https://github.com/yishan-io/yishan-mono/releases/tag/v0.12.0
-    let version = location
-        .split("/tag/v")
+    // Location: https://github.com/yishan-io/yishan-mono/releases/tag/cli-v0.12.0
+    let tag = location
+        .split("/tag/")
         .nth(1)
         .filter(|s| !s.is_empty())
         .ok_or_else(|| anyhow::anyhow!("unexpected release tag format: {location}"))?;
+    let version = parse_release_version(tag)
+        .ok_or_else(|| anyhow::anyhow!("unsupported release tag format: {tag}"))?;
 
     Ok(release_for_version(version))
+}
+
+fn release_tag(version: &str) -> String {
+    format!("{RELEASE_TAG_PREFIX}{version}")
+}
+
+fn parse_release_version(tag: &str) -> Option<&str> {
+    tag.strip_prefix(RELEASE_TAG_PREFIX)
+        .or_else(|| tag.strip_prefix('v'))
 }
 
 fn is_newer(release_version: &str) -> bool {
