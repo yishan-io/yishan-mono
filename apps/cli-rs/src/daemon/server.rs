@@ -36,6 +36,15 @@ impl DaemonApp {
     pub fn new(runtime: AppRuntime, node_id: String) -> Self {
         let events = Arc::new(EventHub::new());
         let manager = Arc::new(WorkspaceManager::new());
+        manager.set_terminal_detected_ports_listener(Arc::new({
+            let events = events.clone();
+            move |ports| {
+                events.publish(crate::daemon::event_hub::FrontendEvent::new(
+                    "terminalDetectedPortsChanged",
+                    serde_json::json!({ "ports": ports }),
+                ));
+            }
+        }));
         let pr_tracker = PrTracker::new(manager.clone(), events.clone());
         let token_usage = TokenUsageCollector::new();
         let watchers = Arc::new(WorkspaceWatchers::new(events.clone()));

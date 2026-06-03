@@ -3,7 +3,7 @@ use crate::workspace::{
     file_service::FileService, git_service::GitService, terminal::TerminalManager, types::*,
 };
 use std::collections::HashMap;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 /// Composition root for all workspace-scoped services.
 /// Fixes A1 by splitting FileService, GitService, TerminalManager into owned structs.
@@ -86,6 +86,13 @@ impl WorkspaceManager {
             .ok_or_else(|| DomainRpcError::not_found(format!("workspace not found: {id}")))?;
         ws.pull_request = pr;
         Ok(())
+    }
+
+    pub fn set_terminal_detected_ports_listener(
+        &self,
+        listener: Arc<dyn Fn(Vec<TerminalDetectedPort>) + Send + Sync>,
+    ) {
+        self.terminals.set_ports_changed_listener(listener);
     }
 
     // ── File ops (delegate to FileService) ───────────────────────────────────

@@ -284,7 +284,7 @@ pub struct TerminalStopResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TerminalKillProcessRequest {
-    pub session_id: String,
+    pub pid: i32,
     pub signal: Option<String>,
 }
 
@@ -305,6 +305,7 @@ pub struct TerminalListSessionsRequest {
 pub struct TerminalSessionSummary {
     pub session_id: String,
     pub workspace_id: String,
+    pub pid: i32,
     pub running: bool,
     pub cols: u16,
     pub rows: u16,
@@ -315,8 +316,10 @@ pub struct TerminalSessionSummary {
 pub struct TerminalDetectedPort {
     pub session_id: String,
     pub workspace_id: String,
+    pub pid: i32,
     pub port: u16,
-    pub protocol: String,
+    pub address: String,
+    pub process_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

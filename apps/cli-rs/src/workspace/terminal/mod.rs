@@ -10,6 +10,14 @@ use std::sync::{Arc, Mutex, RwLock};
 use tokio::sync::broadcast;
 use uuid::Uuid;
 
+#[cfg(unix)]
+mod ports_unix;
+
+#[cfg(unix)]
+use ports_unix::{append_port_scan_tail, collect_detected_ports_for_sessions, SessionPortRef};
+
+type PortsChangedListener = Arc<dyn Fn(Vec<TerminalDetectedPort>) + Send + Sync>;
+
 /// Capacity for per-session output broadcast channel.
 /// Slow subscribers drop frames rather than blocking the PTY reader.
 const OUTPUT_CHANNEL_CAP: usize = 256;
@@ -20,6 +28,7 @@ type WsSink =
 /// A single PTY session.
 struct PtySession {
     workspace_id: String,
+    root_pid: i32,
     /// Writer end — send input to the PTY.
     writer: Box<dyn Write + Send>,
     /// PTY master — kept alive and used for resize.
@@ -29,22 +38,31 @@ struct PtySession {
     /// Broadcast channel for live output push to subscribed WebSocket clients.
     output_tx: broadcast::Sender<Vec<u8>>,
     closed: Arc<std::sync::atomic::AtomicBool>,
+    port_scan_tail: String,
     cols: u16,
     rows: u16,
 }
 
 /// PTY session manager.
 pub struct TerminalManager {
-    sessions: RwLock<HashMap<String, Arc<Mutex<PtySession>>>>,
-    active_workspace: Mutex<Option<String>>,
+    sessions: Arc<RwLock<HashMap<String, Arc<Mutex<PtySession>>>>>,
+    active_workspace: Arc<Mutex<Option<String>>>,
+    ports_changed_listener: Arc<Mutex<Option<PortsChangedListener>>>,
+    last_ports_snapshot_key: Arc<Mutex<String>>,
 }
 
 impl TerminalManager {
     pub fn new() -> Self {
         Self {
-            sessions: RwLock::new(HashMap::new()),
-            active_workspace: Mutex::new(None),
+            sessions: Arc::new(RwLock::new(HashMap::new())),
+            active_workspace: Arc::new(Mutex::new(None)),
+            ports_changed_listener: Arc::new(Mutex::new(None)),
+            last_ports_snapshot_key: Arc::new(Mutex::new(String::new())),
         }
+    }
+
+    pub fn set_ports_changed_listener(&self, listener: PortsChangedListener) {
+        *self.ports_changed_listener.lock().unwrap() = Some(listener);
     }
 
     pub fn start(
@@ -97,10 +115,11 @@ impl TerminalManager {
             }
         }
 
-        let _child = pair
+        let mut child = pair
             .slave
             .spawn_command(cmd)
             .map_err(|e| DomainRpcError::server_error(format!("spawn pty command: {e}")))?;
+        let root_pid = child.process_id().unwrap_or_default() as i32;
 
         let writer = pair
             .master
@@ -116,10 +135,34 @@ impl TerminalManager {
         let closed = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let (output_tx, _) = broadcast::channel::<Vec<u8>>(OUTPUT_CHANNEL_CAP);
 
+        let session_id = Uuid::new_v4().to_string();
+        let session = Arc::new(Mutex::new(PtySession {
+            workspace_id: req.workspace_id.clone(),
+            root_pid,
+            writer,
+            master,
+            output_buf: output_buf.clone(),
+            output_tx: output_tx.clone(),
+            closed: closed.clone(),
+            port_scan_tail: String::new(),
+            cols,
+            rows,
+        }));
+
+        self.sessions
+            .write()
+            .unwrap()
+            .insert(session_id.clone(), Arc::clone(&session));
+
         // Spawn background reader — accumulates to buf AND broadcasts raw bytes.
         let buf_clone = output_buf.clone();
         let closed_clone = closed.clone();
         let tx_clone = output_tx.clone();
+        let session_for_reader = Arc::clone(&session);
+        let sessions_for_reader = Arc::clone(&self.sessions);
+        let active_workspace_for_reader = Arc::clone(&self.active_workspace);
+        let ports_listener_for_reader = Arc::clone(&self.ports_changed_listener);
+        let snapshot_key_for_reader = Arc::clone(&self.last_ports_snapshot_key);
         std::thread::spawn(move || {
             let mut reader = BufReader::new(reader);
             let mut chunk = [0u8; 4096];
@@ -130,31 +173,51 @@ impl TerminalManager {
                         let bytes = chunk[..n].to_vec();
                         let s = String::from_utf8_lossy(&bytes).into_owned();
                         buf_clone.lock().unwrap().push_str(&s);
+                        let should_refresh_ports = {
+                            let mut session = session_for_reader.lock().unwrap();
+                            let (next_tail, mentioned_ports) =
+                                update_port_scan_tail(&session.port_scan_tail, &s);
+                            session.port_scan_tail = next_tail;
+                            mentioned_ports
+                        };
                         // Broadcast to any subscribed WebSocket sinks.
                         // Ignore send errors — no active subscribers is fine.
                         let _ = tx_clone.send(bytes);
+                        if should_refresh_ports {
+                            publish_ports_changed_if_needed(
+                                &sessions_for_reader,
+                                &active_workspace_for_reader,
+                                &ports_listener_for_reader,
+                                &snapshot_key_for_reader,
+                            );
+                        }
                     }
                 }
             }
             closed_clone.store(true, std::sync::atomic::Ordering::Relaxed);
+            publish_ports_changed_if_needed(
+                &sessions_for_reader,
+                &active_workspace_for_reader,
+                &ports_listener_for_reader,
+                &snapshot_key_for_reader,
+            );
         });
 
-        let session_id = Uuid::new_v4().to_string();
-        let session = PtySession {
-            workspace_id: req.workspace_id.clone(),
-            writer,
-            master,
-            output_buf,
-            output_tx,
-            closed,
-            cols,
-            rows,
-        };
-
-        self.sessions
-            .write()
-            .unwrap()
-            .insert(session_id.clone(), Arc::new(Mutex::new(session)));
+        let closed_for_wait = closed;
+        let sessions_for_wait = Arc::clone(&self.sessions);
+        let active_workspace_for_wait = Arc::clone(&self.active_workspace);
+        let ports_listener_for_wait = Arc::clone(&self.ports_changed_listener);
+        let snapshot_key_for_wait = Arc::clone(&self.last_ports_snapshot_key);
+        std::thread::spawn(move || {
+            let _ = child.wait();
+            closed_for_wait.store(true, std::sync::atomic::Ordering::Relaxed);
+            publish_ports_changed_if_needed(
+                &sessions_for_wait,
+                &active_workspace_for_wait,
+                &ports_listener_for_wait,
+                &snapshot_key_for_wait,
+            );
+        });
 
         Ok(TerminalStartResponse { session_id })
     }
@@ -237,6 +300,7 @@ impl TerminalManager {
 
     pub fn stop(&self, req: &TerminalStopRequest) -> Result<TerminalStopResponse, DomainRpcError> {
         self.sessions.write().unwrap().remove(&req.session_id);
+        self.publish_ports_changed_if_needed();
         Ok(TerminalStopResponse { ok: true })
     }
 
@@ -244,12 +308,9 @@ impl TerminalManager {
         &self,
         req: &TerminalKillProcessRequest,
     ) -> Result<TerminalKillProcessResponse, DomainRpcError> {
-        self.with_session(&req.session_id, |s| {
-            s.writer
-                .write_all(b"\x03")
-                .map_err(|e| DomainRpcError::server_error(format!("kill process: {e}")))?;
-            Ok(TerminalKillProcessResponse { ok: true })
-        })
+        stop_process_by_pid(req.pid)?;
+        self.publish_ports_changed_if_needed();
+        Ok(TerminalKillProcessResponse { ok: true })
     }
 
     pub fn list_sessions(&self, req: &TerminalListSessionsRequest) -> Vec<TerminalSessionSummary> {
@@ -268,6 +329,7 @@ impl TerminalManager {
                 TerminalSessionSummary {
                     session_id: id.clone(),
                     workspace_id: sess.workspace_id.clone(),
+                    pid: sess.root_pid,
                     running: !sess.closed.load(std::sync::atomic::Ordering::Relaxed),
                     cols: sess.cols,
                     rows: sess.rows,
@@ -277,7 +339,7 @@ impl TerminalManager {
     }
 
     pub fn list_detected_ports(&self) -> Vec<TerminalDetectedPort> {
-        Vec::new()
+        self.collect_detected_ports()
     }
 
     pub fn resize(
@@ -305,6 +367,7 @@ impl TerminalManager {
         req: &SetActiveWorkspaceRequest,
     ) -> Result<SetActiveWorkspaceResponse, DomainRpcError> {
         *self.active_workspace.lock().unwrap() = Some(req.workspace_id.clone());
+        self.publish_ports_changed_if_needed();
         Ok(SetActiveWorkspaceResponse { ok: true })
     }
 
@@ -319,7 +382,22 @@ impl TerminalManager {
         for id in &ids {
             sessions.remove(id);
         }
+        drop(sessions);
+        self.publish_ports_changed_if_needed();
         Vec::new()
+    }
+
+    fn collect_detected_ports(&self) -> Vec<TerminalDetectedPort> {
+        collect_detected_ports_for_manager(&self.sessions, &self.active_workspace)
+    }
+
+    fn publish_ports_changed_if_needed(&self) {
+        publish_ports_changed_if_needed(
+            &self.sessions,
+            &self.active_workspace,
+            &self.ports_changed_listener,
+            &self.last_ports_snapshot_key,
+        );
     }
 
     fn with_session<F, T>(&self, session_id: &str, f: F) -> Result<T, DomainRpcError>
@@ -342,4 +420,109 @@ impl Default for TerminalManager {
     fn default() -> Self {
         Self::new()
     }
+}
+
+fn collect_detected_ports_for_manager(
+    sessions: &Arc<RwLock<HashMap<String, Arc<Mutex<PtySession>>>>>,
+    active_workspace: &Arc<Mutex<Option<String>>>,
+) -> Vec<TerminalDetectedPort> {
+    #[cfg(unix)]
+    {
+        let workspace_scope = active_workspace.lock().unwrap().clone();
+        let session_refs = sessions
+            .read()
+            .unwrap()
+            .iter()
+            .filter_map(|(session_id, session)| {
+                let session = session.lock().unwrap();
+                if session.closed.load(std::sync::atomic::Ordering::Relaxed) || session.root_pid <= 0 {
+                    return None;
+                }
+                if workspace_scope.as_deref().is_some_and(|workspace_id| workspace_id != session.workspace_id) {
+                    return None;
+                }
+                Some(SessionPortRef {
+                    session_id: session_id.clone(),
+                    workspace_id: session.workspace_id.clone(),
+                    pid: session.root_pid,
+                })
+            })
+            .collect::<Vec<_>>();
+        return collect_detected_ports_for_sessions(&session_refs);
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = (sessions, active_workspace);
+        Vec::new()
+    }
+}
+
+fn publish_ports_changed_if_needed(
+    sessions: &Arc<RwLock<HashMap<String, Arc<Mutex<PtySession>>>>>,
+    active_workspace: &Arc<Mutex<Option<String>>>,
+    ports_changed_listener: &Arc<Mutex<Option<PortsChangedListener>>>,
+    last_ports_snapshot_key: &Arc<Mutex<String>>,
+) {
+    let ports = collect_detected_ports_for_manager(sessions, active_workspace);
+    let key = build_port_snapshot_key(&ports);
+
+    {
+        let mut last_key = last_ports_snapshot_key.lock().unwrap();
+        if *last_key == key {
+            return;
+        }
+        *last_key = key;
+    }
+
+    if let Some(listener) = ports_changed_listener.lock().unwrap().clone() {
+        listener(ports);
+    }
+}
+
+fn build_port_snapshot_key(ports: &[TerminalDetectedPort]) -> String {
+    ports
+        .iter()
+        .map(|port| {
+            format!(
+                "{}|{}|{}|{}|{}|{}\n",
+                port.session_id, port.workspace_id, port.pid, port.port, port.address, port.process_name
+            )
+        })
+        .collect()
+}
+
+#[cfg(unix)]
+fn update_port_scan_tail(previous_tail: &str, chunk: &str) -> (String, bool) {
+    append_port_scan_tail(previous_tail, chunk)
+}
+
+#[cfg(not(unix))]
+fn update_port_scan_tail(previous_tail: &str, chunk: &str) -> (String, bool) {
+    let _ = (previous_tail, chunk);
+    (String::new(), false)
+}
+
+#[cfg(unix)]
+fn stop_process_by_pid(pid: i32) -> Result<(), DomainRpcError> {
+    if pid <= 0 {
+        return Ok(());
+    }
+    let result = unsafe { libc::kill(pid, libc::SIGKILL) };
+    if result == 0 {
+        return Ok(());
+    }
+    let err = std::io::Error::last_os_error();
+    if err.raw_os_error() == Some(libc::ESRCH) {
+        return Ok(());
+    }
+    Err(DomainRpcError::server_error(format!("kill process {pid}: {err}")))
+}
+
+#[cfg(not(unix))]
+fn stop_process_by_pid(pid: i32) -> Result<(), DomainRpcError> {
+    let _ = pid;
+    Err(DomainRpcError::server_error(
+        "terminal.killProcess is not implemented on this platform",
+    ))
 }
