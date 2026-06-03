@@ -3,30 +3,40 @@ use crate::workspace::types::FileEntry;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Directories that are never shown in the file tree or watched for changes.
-/// These are high-churn or very large directories that have no value to the user
-/// as navigable source trees.
+/// Directories that stay collapsed by default in the file tree and are not watched
+/// for deep changes unless the user explicitly drills into them.
 pub const IGNORED_DIRS: &[&str] = &[
     ".git",
-    "target",         // Rust build output
-    "node_modules",   // JS/TS dependencies
-    ".next",          // Next.js build cache
-    "dist",           // Generic build output
-    "build",          // Generic build output
-    ".turbo",         // Turborepo cache
-    ".cache",         // Generic tool caches
+    "target",       // Rust build output
+    "node_modules", // JS/TS dependencies
+    ".next",        // Next.js build cache
+    "dist",         // Generic build output
+    "build",        // Generic build output
+    ".turbo",       // Turborepo cache
+    ".cache",       // Generic tool caches
 ];
 
 /// Maximum file size the daemon will read into memory and transmit.
 /// Matches the desktop's LARGE_FILE_OPEN_THRESHOLD_BYTES (2 MiB).
 const MAX_READ_BYTES: u64 = 2 * 1024 * 1024;
+const HIDDEN_DIRS: &[&str] = &[".git"];
 
 /// Provides sandboxed file operations within a workspace root.
 /// Fixes A1: extracted from the Go god-handler into its own focused service.
 pub struct FileService;
 
 impl FileService {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
+
+    fn is_ignored_dir_name(name: &str) -> bool {
+        IGNORED_DIRS.contains(&name)
+    }
+
+    fn is_hidden_dir_name(name: &str) -> bool {
+        HIDDEN_DIRS.contains(&name)
+    }
 
     /// Resolve `rel_path` relative to `root` and verify it stays within `root`.
     /// The root is assumed to be already canonicalized (as stored by WorkspaceManager).
@@ -46,9 +56,9 @@ impl FileService {
         // Canonicalize the parent so we can check containment even for paths
         // that don't yet exist (or were just deleted).
         let parent = joined.parent().unwrap_or(base);
-        let canon_parent = parent.canonicalize().map_err(|_| {
-            DomainRpcError::not_found(format!("path not found: {rel_path}"))
-        })?;
+        let canon_parent = parent
+            .canonicalize()
+            .map_err(|_| DomainRpcError::not_found(format!("path not found: {rel_path}")))?;
 
         if canon_parent.starts_with(base) {
             // Fast path: inside the workspace root.
@@ -122,15 +132,12 @@ impl FileService {
         recursive: bool,
         out: &mut Vec<FileEntry>,
     ) -> Result<(), DomainRpcError> {
-        let read_dir = fs::read_dir(dir).map_err(|e| {
-            DomainRpcError::server_error(format!("read dir: {e}"))
-        })?;
+        let read_dir = fs::read_dir(dir)
+            .map_err(|e| DomainRpcError::server_error(format!("read dir: {e}")))?;
         for entry in read_dir.flatten() {
             let name = entry.file_name();
             let name_str = name.to_string_lossy();
-            // Skip git internals and other high-churn / large directories that
-            // have no value as navigable source trees.
-            if IGNORED_DIRS.contains(&name_str.as_ref()) {
+            if Self::is_hidden_dir_name(&name_str) {
                 continue;
             }
             let full_path = entry.path();
@@ -143,9 +150,12 @@ impl FileService {
                 Err(_) => continue,
             };
             let rel = full_path.strip_prefix(root).unwrap_or(&full_path);
-            let modified_at = meta.modified()
+            let is_ignored = meta.is_dir() && Self::is_ignored_dir_name(&name_str);
+            let modified_at = meta
+                .modified()
                 .map(|t| {
-                    let secs = t.duration_since(std::time::UNIX_EPOCH)
+                    let secs = t
+                        .duration_since(std::time::UNIX_EPOCH)
                         .map(|d| d.as_secs())
                         .unwrap_or(0);
                     chrono::DateTime::from_timestamp(secs as i64, 0)
@@ -157,10 +167,11 @@ impl FileService {
                 name: name_str.into_owned(),
                 path: rel.to_string_lossy().into_owned(),
                 is_dir: meta.is_dir(),
+                is_ignored,
                 size: if meta.is_file() { meta.len() } else { 0 },
                 modified_at,
             });
-            if recursive && meta.is_dir() {
+            if recursive && meta.is_dir() && !is_ignored {
                 self.list_dir(&full_path, root, recursive, out)?;
             }
         }
@@ -169,13 +180,14 @@ impl FileService {
 
     pub fn stat(&self, root: &str, rel_path: &str) -> Result<FileEntry, DomainRpcError> {
         let path = self.resolve_safe(root, rel_path)?;
-        let meta = fs::metadata(&path).map_err(|e| {
-            DomainRpcError::not_found(format!("stat {rel_path}: {e}"))
-        })?;
+        let meta = fs::metadata(&path)
+            .map_err(|e| DomainRpcError::not_found(format!("stat {rel_path}: {e}")))?;
         let rel = path.strip_prefix(root).unwrap_or(&path);
-        let modified_at = meta.modified()
+        let modified_at = meta
+            .modified()
             .map(|t| {
-                let secs = t.duration_since(std::time::UNIX_EPOCH)
+                let secs = t
+                    .duration_since(std::time::UNIX_EPOCH)
                     .map(|d| d.as_secs())
                     .unwrap_or(0);
                 chrono::DateTime::from_timestamp(secs as i64, 0)
@@ -184,9 +196,18 @@ impl FileService {
             })
             .unwrap_or_default();
         Ok(FileEntry {
-            name: path.file_name().unwrap_or_default().to_string_lossy().into_owned(),
+            name: path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned(),
             path: rel.to_string_lossy().into_owned(),
             is_dir: meta.is_dir(),
+            is_ignored: meta.is_dir()
+                && path
+                    .file_name()
+                    .map(|name| Self::is_ignored_dir_name(&name.to_string_lossy()))
+                    .unwrap_or(false),
             size: if meta.is_file() { meta.len() } else { 0 },
             modified_at,
         })
@@ -195,18 +216,15 @@ impl FileService {
     pub fn read(&self, root: &str, rel_path: &str) -> Result<String, DomainRpcError> {
         let path = self.resolve_safe(root, rel_path)?;
         // Guard against transmitting huge files over the WebSocket.
-        let size = fs::metadata(&path)
-            .map(|m| m.len())
-            .unwrap_or(0);
+        let size = fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
         if size > MAX_READ_BYTES {
             return Err(DomainRpcError::new(
                 crate::daemon::constants::RPC_INVALID_PARAMS,
                 format!("file too large to open ({size} bytes): {rel_path}"),
             ));
         }
-        fs::read_to_string(&path).map_err(|e| {
-            DomainRpcError::server_error(format!("read {rel_path}: {e}"))
-        })
+        fs::read_to_string(&path)
+            .map_err(|e| DomainRpcError::server_error(format!("read {rel_path}: {e}")))
     }
 
     pub fn write(
@@ -226,23 +244,26 @@ impl FileService {
                 opts.mode(mode);
             }
             use std::io::Write;
-            let mut f = opts.open(&path).map_err(|e| {
-                DomainRpcError::server_error(format!("write {rel_path}: {e}"))
-            })?;
-            f.write_all(content.as_bytes()).map_err(|e| {
-                DomainRpcError::server_error(format!("write {rel_path}: {e}"))
-            })?;
+            let mut f = opts
+                .open(&path)
+                .map_err(|e| DomainRpcError::server_error(format!("write {rel_path}: {e}")))?;
+            f.write_all(content.as_bytes())
+                .map_err(|e| DomainRpcError::server_error(format!("write {rel_path}: {e}")))?;
         }
         #[cfg(not(unix))]
         {
-            fs::write(&path, content.as_bytes()).map_err(|e| {
-                DomainRpcError::server_error(format!("write {rel_path}: {e}"))
-            })?;
+            fs::write(&path, content.as_bytes())
+                .map_err(|e| DomainRpcError::server_error(format!("write {rel_path}: {e}")))?;
         }
         Ok(content.len())
     }
 
-    pub fn delete(&self, root: &str, rel_path: &str, recursive: bool) -> Result<(), DomainRpcError> {
+    pub fn delete(
+        &self,
+        root: &str,
+        rel_path: &str,
+        recursive: bool,
+    ) -> Result<(), DomainRpcError> {
         let path = self.resolve_safe(root, rel_path)?;
         if path.is_dir() {
             if recursive {
@@ -259,12 +280,17 @@ impl FileService {
     pub fn move_path(&self, root: &str, from: &str, to: &str) -> Result<(), DomainRpcError> {
         let from_path = self.resolve_safe(root, from)?;
         let to_path = self.resolve_safe_write(root, to)?;
-        fs::rename(&from_path, &to_path).map_err(|e| {
-            DomainRpcError::server_error(format!("move {from} -> {to}: {e}"))
-        })
+        fs::rename(&from_path, &to_path)
+            .map_err(|e| DomainRpcError::server_error(format!("move {from} -> {to}: {e}")))
     }
 
-    pub fn mkdir(&self, root: &str, rel_path: &str, parents: bool, _mode: u32) -> Result<(), DomainRpcError> {
+    pub fn mkdir(
+        &self,
+        root: &str,
+        rel_path: &str,
+        parents: bool,
+        _mode: u32,
+    ) -> Result<(), DomainRpcError> {
         let base = Path::new(root);
         let joined = base.join(rel_path);
         let result = if parents {
@@ -292,10 +318,83 @@ impl FileService {
             .filter(|o| o.status.success())
             .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
             .unwrap_or_default();
-        Ok(crate::workspace::types::GitDiffContent { old_content, new_content })
+        Ok(crate::workspace::types::GitDiffContent {
+            old_content,
+            new_content,
+        })
     }
 }
 
 impl Default for FileService {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::FileService;
+    use std::fs;
+
+    #[test]
+    fn recursive_root_list_keeps_ignored_dirs_collapsed() {
+        let temp_dir = tempfile::tempdir().expect("create temp dir");
+        let root = temp_dir.path();
+        let canonical_root = root.canonicalize().expect("canonicalize root");
+        fs::create_dir_all(root.join(".git/objects")).expect("create hidden dir");
+        fs::create_dir_all(root.join("target/debug")).expect("create ignored dir");
+        fs::create_dir_all(root.join("src")).expect("create src dir");
+        fs::write(root.join(".git/HEAD"), "ref: refs/heads/main\n").expect("write hidden child");
+        fs::write(root.join("target/debug/app"), "bin").expect("write ignored child");
+        fs::write(root.join("src/main.rs"), "fn main() {}\n").expect("write visible child");
+
+        let service = FileService::new();
+        let entries = service
+            .list(canonical_root.to_str().expect("root path"), "", true)
+            .expect("list files");
+
+        let paths = entries
+            .iter()
+            .map(|entry| entry.path.as_str())
+            .collect::<Vec<_>>();
+        assert!(!paths.contains(&".git"));
+        assert!(paths.contains(&"target"));
+        assert!(paths.contains(&"src"));
+        assert!(paths.contains(&"src/main.rs"));
+        assert!(!paths.contains(&"target/debug"));
+
+        let target_entry = entries
+            .iter()
+            .find(|entry| entry.path == "target")
+            .expect("target entry");
+        assert!(target_entry.is_dir);
+        assert!(target_entry.is_ignored);
+    }
+
+    #[test]
+    fn recursive_list_of_ignored_dir_loads_its_children() {
+        let temp_dir = tempfile::tempdir().expect("create temp dir");
+        let root = temp_dir.path();
+        let canonical_root = root.canonicalize().expect("canonicalize root");
+        fs::create_dir_all(root.join("target/debug")).expect("create ignored dir");
+        fs::write(root.join("target/debug/app"), "bin").expect("write ignored child");
+
+        let service = FileService::new();
+        let entries = service
+            .list(canonical_root.to_str().expect("root path"), "target", true)
+            .expect("list ignored dir");
+
+        let paths = entries
+            .iter()
+            .map(|entry| entry.path.as_str())
+            .collect::<Vec<_>>();
+        assert!(paths.contains(&"target/debug"));
+        assert!(paths.contains(&"target/debug/app"));
+
+        let debug_entry = entries
+            .iter()
+            .find(|entry| entry.path == "target/debug")
+            .expect("debug entry");
+        assert!(!debug_entry.is_ignored);
+    }
 }
