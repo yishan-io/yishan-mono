@@ -137,9 +137,11 @@ impl FileService {
             // Use fs::metadata (follows symlinks) rather than entry.metadata()
             // (which on macOS returns the symlink's own metadata, not the target's).
             // This ensures symlinked directories like .my-context appear as is_dir=true.
-            let meta = fs::metadata(&full_path).map_err(|e| {
-                DomainRpcError::server_error(format!("stat: {e}"))
-            })?;
+            // Skip entries where metadata fails (broken symlink, permission error, race).
+            let meta = match fs::metadata(&full_path) {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
             let rel = full_path.strip_prefix(root).unwrap_or(&full_path);
             let modified_at = meta.modified()
                 .map(|t| {

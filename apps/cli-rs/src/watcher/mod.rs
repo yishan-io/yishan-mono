@@ -34,9 +34,24 @@ struct WorktreeWatcher {
     cancel_tx: mpsc::Sender<()>,
 }
 
+/// Shared watcher for one `.my-context` real target directory.
+/// All workspaces whose `.my-context` symlink resolves to the same real path
+/// share a single OS-level watcher. When a file changes in the context dir,
+/// `workspaceFilesChanged` is emitted for every registered workspace path.
+struct ContextWatcher {
+    /// Real path being watched.
+    target: PathBuf,
+    /// Workspace worktree paths that share this context dir (shared with the task).
+    workspace_paths: Arc<Mutex<Vec<PathBuf>>>,
+    /// Cancel channel for the background task.
+    cancel_tx: mpsc::Sender<()>,
+}
+
 /// Manages watchers for all open workspaces.
 pub struct WorkspaceWatchers {
     inner: Mutex<HashMap<PathBuf, Arc<WorktreeWatcher>>>,
+    /// Shared context watchers, keyed by real context target path.
+    context_watchers: Mutex<HashMap<PathBuf, ContextWatcher>>,
     events: Arc<EventHub>,
     on_git_changed: Option<Arc<dyn Fn(PathBuf) + Send + Sync>>,
 }
@@ -45,6 +60,7 @@ impl WorkspaceWatchers {
     pub fn new(events: Arc<EventHub>) -> Self {
         Self {
             inner: Mutex::new(HashMap::new()),
+            context_watchers: Mutex::new(HashMap::new()),
             events,
             on_git_changed: None,
         }
@@ -77,7 +93,9 @@ impl WorkspaceWatchers {
         let events = self.events.clone();
         let ws_path = workspace_path.to_path_buf();
         let git_dir_clone = git_dir.clone();
-        let ctx_dir = context_dir.clone();
+        // Pass None for ctx_dir here — context events are now handled by the
+        // shared ContextWatcher, not the per-workspace watcher.
+        let ctx_dir: Option<PathBuf> = None;
 
         // Set up notify watcher on a background thread.
         let (notify_tx, notify_rx) = mpsc::channel::<notify::Result<Event>>(256);
@@ -107,18 +125,12 @@ impl WorkspaceWatchers {
             }
         }
 
-        // Watch context symlink target.
-        if let Some(ref ctx) = context_dir {
-            if let Err(e) = fw.watch(ctx, RecursiveMode::Recursive) {
-                debug!(err = %e, "failed to watch context dir");
-            }
-        }
+        // Note: context dir is NOT watched here — handled by the shared ContextWatcher below.
 
         let ws_path_task = ws_path.clone();
         let events_task = events.clone();
         let on_git = self.on_git_changed.clone();
         let git_dir_task = git_dir_clone.clone();
-        let ctx_dir_task = ctx_dir.clone();
 
         // Spawn the event consumer task.
         tokio::spawn(async move {
@@ -127,7 +139,7 @@ impl WorkspaceWatchers {
                 cancel_rx,
                 ws_path_task,
                 git_dir_task,
-                ctx_dir_task,
+                ctx_dir,
                 pending_clone,
                 events_task,
                 on_git,
@@ -138,9 +150,9 @@ impl WorkspaceWatchers {
         });
 
         let watcher = Arc::new(WorktreeWatcher {
-            path: ws_path,
+            path: ws_path.clone(),
             git_dir,
-            context_dir,
+            context_dir: context_dir.clone(),
             events,
             on_git_changed: self.on_git_changed.clone(),
             ignored_dirs: Mutex::new(HashMap::new()),
@@ -150,6 +162,71 @@ impl WorkspaceWatchers {
         });
 
         map.insert(workspace_path.to_path_buf(), watcher);
+        drop(map);
+
+        // Register this workspace with the shared context watcher (if it has one).
+        if let Some(ctx_target) = context_dir {
+            self.register_context_workspace(&ctx_target, ws_path);
+        }
+    }
+
+    /// Ensure there is exactly one OS-level watcher for `ctx_target`, and that
+    /// `workspace_path` is in the subscriber list.  If the ContextWatcher
+    /// already exists we just add the subscriber; otherwise we create a new one.
+    fn register_context_workspace(&self, ctx_target: &PathBuf, workspace_path: PathBuf) {
+        let mut ctx_map = self.context_watchers.lock().unwrap();
+
+        if let Some(cw) = ctx_map.get_mut(ctx_target) {
+            // Already watching this context dir — just add the subscriber.
+            let mut paths = cw.workspace_paths.lock().unwrap();
+            if !paths.contains(&workspace_path) {
+                paths.push(workspace_path);
+            }
+            return;
+        }
+
+        // First workspace to use this context dir — start a new OS watcher.
+        let (cancel_tx, cancel_rx) = mpsc::channel(1);
+        let (notify_tx, notify_rx) = mpsc::channel::<notify::Result<Event>>(256);
+
+        let mut fw = match RecommendedWatcher::new(
+            move |res| { let _ = notify_tx.blocking_send(res); },
+            notify::Config::default(),
+        ) {
+            Ok(w) => w,
+            Err(e) => {
+                warn!(err = %e, target = %ctx_target.display(), "failed to create context watcher");
+                return;
+            }
+        };
+
+        if let Err(e) = fw.watch(ctx_target, RecursiveMode::Recursive) {
+            debug!(err = %e, target = %ctx_target.display(), "failed to watch context dir");
+        }
+
+        let workspace_paths_shared: Arc<Mutex<Vec<PathBuf>>> =
+            Arc::new(Mutex::new(vec![workspace_path.clone()]));
+        let workspace_paths_task = workspace_paths_shared.clone();
+        let ctx_target_clone = ctx_target.clone();
+        let events_task = self.events.clone();
+
+        tokio::spawn(async move {
+            consume_context_events(
+                notify_rx,
+                cancel_rx,
+                ctx_target_clone,
+                workspace_paths_task,
+                events_task,
+            )
+            .await;
+            drop(fw);
+        });
+
+        ctx_map.insert(ctx_target.clone(), ContextWatcher {
+            target: ctx_target.clone(),
+            workspace_paths: workspace_paths_shared,
+            cancel_tx,
+        });
     }
 
     /// Stop watching a workspace directory.
@@ -157,6 +234,22 @@ impl WorkspaceWatchers {
         let mut map = self.inner.lock().unwrap();
         if let Some(w) = map.remove(workspace_path) {
             let _ = w.cancel_tx.try_send(());
+
+            // Remove this workspace from any shared context watcher subscriber list.
+            if let Some(ref ctx_target) = w.context_dir {
+                let mut ctx_map = self.context_watchers.lock().unwrap();
+                if let Some(cw) = ctx_map.get(ctx_target) {
+                    let mut paths = cw.workspace_paths.lock().unwrap();
+                    paths.retain(|p| p != workspace_path);
+                    let is_empty = paths.is_empty();
+                    drop(paths);
+                    if is_empty {
+                        if let Some(removed) = ctx_map.remove(ctx_target) {
+                            let _ = removed.cancel_tx.try_send(());
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -166,6 +259,10 @@ impl WorkspaceWatchers {
         let mut map = self.inner.lock().unwrap();
         for (_, w) in map.drain() {
             let _ = w.cancel_tx.try_send(());
+        }
+        let mut ctx_map = self.context_watchers.lock().unwrap();
+        for (_, cw) in ctx_map.drain() {
+            let _ = cw.cancel_tx.try_send(());
         }
     }
 }
@@ -298,6 +395,76 @@ async fn consume_events(
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/// Shared context event consumer.
+/// Receives events from the real `.my-context` target directory and emits
+/// `workspaceFilesChanged` for every workspace that shares this context dir.
+async fn consume_context_events(
+    mut notify_rx: mpsc::Receiver<notify::Result<Event>>,
+    mut cancel_rx: mpsc::Receiver<()>,
+    ctx_target: PathBuf,
+    workspace_paths: Arc<Mutex<Vec<PathBuf>>>,
+    events: Arc<EventHub>,
+) {
+    let pending: Arc<Mutex<Vec<(PathBuf, String)>>> = Arc::new(Mutex::new(Vec::new()));
+    let mut debounce: Option<tokio::task::JoinHandle<()>> = None;
+
+    loop {
+        tokio::select! {
+            _ = cancel_rx.recv() => break,
+            maybe_event = notify_rx.recv() => {
+                let ev = match maybe_event {
+                    None => break,
+                    Some(Err(e)) => { warn!(err = %e, "context watcher error"); continue; }
+                    Some(Ok(ev)) => ev,
+                };
+
+                for path in &ev.paths {
+                    if path.extension().map_or(false, |e| e == "lock") { continue; }
+
+                    // Relative path inside the context dir → ".my-context/..."
+                    let suffix = path.strip_prefix(&ctx_target).unwrap_or(path);
+                    let rel = Path::new(CONTEXT_LINK_NAME).join(suffix)
+                        .to_string_lossy().replace('\\', "/");
+
+                    // Snapshot workspace list and queue one pending entry per workspace.
+                    let ws_paths: Vec<PathBuf> = workspace_paths.lock().unwrap().clone();
+                    let mut p = pending.lock().unwrap();
+                    for ws in ws_paths {
+                        p.push((ws, rel.clone()));
+                    }
+                }
+
+                // Debounce — fire after DEBOUNCE_MS of quiet.
+                if let Some(h) = debounce.take() { h.abort(); }
+                let pending2 = pending.clone();
+                let events2 = events.clone();
+                debounce = Some(tokio::spawn(async move {
+                    sleep(Duration::from_millis(DEBOUNCE_MS)).await;
+                    // Group by workspace path.
+                    let entries: Vec<(PathBuf, String)> = {
+                        let mut p = pending2.lock().unwrap();
+                        std::mem::take(&mut *p)
+                    };
+                    let mut by_ws: HashMap<PathBuf, HashSet<String>> = HashMap::new();
+                    for (ws, rel) in entries {
+                        by_ws.entry(ws).or_default().insert(rel);
+                    }
+                    for (ws_path, paths_set) in by_ws {
+                        let paths_vec: Vec<String> = paths_set.into_iter().collect();
+                        events2.publish(FrontendEvent::new(
+                            "workspaceFilesChanged",
+                            json!({
+                                "workspaceWorktreePath": ws_path.to_string_lossy(),
+                                "changedRelativePaths": paths_vec,
+                            }),
+                        ));
+                    }
+                }));
+            }
+        }
+    }
+}
 
 /// Resolve the actual git directory (handles worktree `.git` file pointers).
 fn resolve_git_dir(worktree: &Path) -> PathBuf {
