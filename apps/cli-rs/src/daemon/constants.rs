@@ -77,7 +77,7 @@ pub const METHOD_TERMINAL_UNSUBSCRIBE: &str = "terminal.unsubscribe";
 
 // System methods
 pub const METHOD_DAEMON_PING: &str = "daemon.ping";
-pub const METHOD_FRONTEND_EVENTS_STREAM: &str = "frontend.eventsStream";
+pub const METHOD_FRONTEND_EVENTS_STREAM: &str = "events.frontendStream";
 pub const METHOD_AGENT_LIST_DETECTION_STATUSES: &str = "agent.listDetectionStatuses";
 pub const METHOD_CLI_TOOL_LIST_STATUSES: &str = "cliTool.listStatuses";
 pub const METHOD_INTEGRATION_GITHUB_STATUS: &str = "integration.githubStatus";
