@@ -39,7 +39,8 @@ struct WorktreeWatcher {
 /// share a single OS-level watcher. When a file changes in the context dir,
 /// `workspaceFilesChanged` is emitted for every registered workspace path.
 struct ContextWatcher {
-    /// Real path being watched.
+    /// Real path being watched (kept for diagnostics / future use).
+    #[allow(dead_code)]
     target: PathBuf,
     /// Workspace worktree paths that share this context dir (shared with the task).
     workspace_paths: Arc<Mutex<Vec<PathBuf>>>,

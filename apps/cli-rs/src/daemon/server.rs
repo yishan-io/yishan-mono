@@ -461,7 +461,6 @@ async fn create_workspace(
 ) -> Result<Value, DomainRpcError> {
     use crate::workspace::context::{sync_context_links, SyncContextLinkRequest};
     use std::process::Command;
-
     #[derive(serde::Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct Req {
@@ -527,6 +526,12 @@ async fn create_workspace(
     // ── Step 1: worktree ──────────────────────────────────────────────────────
     emit("worktree", "Fetch & create worktree", "running", "");
 
+    // Ensure the parent directory of the worktree path exists.
+    if let Some(parent) = std::path::Path::new(&worktree_path).parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| DomainRpcError::server_error(format!("create worktree parent dir: {e}")))?;
+    }
+
     // Check if source branch ref exists locally.
     let ref_exists = Command::new("git")
         .args(["rev-parse", "--verify", &source_branch])
@@ -577,8 +582,8 @@ async fn create_workspace(
     // ── Step 2: context link ──────────────────────────────────────────────────
     emit("context", "Link project context", "running", "");
     if req.context_enabled {
-        let ctx_result = crate::workspace::context::sync_context_links(
-            &crate::workspace::context::SyncContextLinkRequest {
+        let ctx_result = sync_context_links(
+            &SyncContextLinkRequest {
                 repo_key: repo_key.clone(),
                 enabled: true,
                 worktree_paths: vec![worktree_path.clone()],
