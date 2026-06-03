@@ -380,6 +380,8 @@ pub async fn terminal(
             #[serde(rename_all = "camelCase")]
             struct Req { session_id: String }
             let req: Req = decode_params(params)?;
+            mgr.terminals.subscribe_output(&req.session_id, _sink)
+                .map_err(|e| e)?;
             Ok(json!({ "subscribed": true, "sessionId": req.session_id }))
         }
         METHOD_TERMINAL_UNSUBSCRIBE => {

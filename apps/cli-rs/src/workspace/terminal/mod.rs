@@ -1,18 +1,30 @@
+use crate::daemon::constants::{BIN_OPCODE_TERMINAL_OUTPUT, RPC_SESSION_INACTIVE};
 use crate::daemon::rpc::DomainRpcError;
 use crate::workspace::types::*;
+use axum::extract::ws::Message;
+use futures_util::SinkExt;
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Write};
 use std::sync::{Arc, Mutex, RwLock};
+use tokio::sync::broadcast;
 use uuid::Uuid;
+
+/// Capacity for per-session output broadcast channel.
+/// Slow subscribers drop frames rather than blocking the PTY reader.
+const OUTPUT_CHANNEL_CAP: usize = 256;
+
+type WsSink = Arc<tokio::sync::Mutex<futures_util::stream::SplitSink<axum::extract::ws::WebSocket, Message>>>;
 
 /// A single PTY session.
 struct PtySession {
     workspace_id: String,
     /// Writer end — send input to the PTY.
     writer: Box<dyn Write + Send>,
-    /// Buffered output accumulated from the PTY reader task.
+    /// Buffered output accumulated from the PTY reader task (for terminal.read pull).
     output_buf: Arc<Mutex<String>>,
+    /// Broadcast channel for live output push to subscribed WebSocket clients.
+    output_tx: broadcast::Sender<Vec<u8>>,
     closed: Arc<std::sync::atomic::AtomicBool>,
     cols: u16,
     rows: u16,
@@ -57,7 +69,6 @@ impl TerminalManager {
         }
         if let Some(env) = &req.env {
             for entry in env {
-                // Each entry is "KEY=value"; split on the first '=' only.
                 if let Some((k, v)) = entry.split_once('=') {
                     cmd.env(k, v);
                 }
@@ -74,10 +85,12 @@ impl TerminalManager {
 
         let output_buf: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
         let closed = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let (output_tx, _) = broadcast::channel::<Vec<u8>>(OUTPUT_CHANNEL_CAP);
 
-        // Spawn background reader task.
+        // Spawn background reader — accumulates to buf AND broadcasts raw bytes.
         let buf_clone = output_buf.clone();
         let closed_clone = closed.clone();
+        let tx_clone = output_tx.clone();
         std::thread::spawn(move || {
             let mut reader = BufReader::new(reader);
             let mut chunk = [0u8; 4096];
@@ -85,8 +98,12 @@ impl TerminalManager {
                 match reader.read(&mut chunk) {
                     Ok(0) | Err(_) => break,
                     Ok(n) => {
-                        let s = String::from_utf8_lossy(&chunk[..n]).into_owned();
+                        let bytes = chunk[..n].to_vec();
+                        let s = String::from_utf8_lossy(&bytes).into_owned();
                         buf_clone.lock().unwrap().push_str(&s);
+                        // Broadcast to any subscribed WebSocket sinks.
+                        // Ignore send errors — no active subscribers is fine.
+                        let _ = tx_clone.send(bytes);
                     }
                 }
             }
@@ -98,6 +115,7 @@ impl TerminalManager {
             workspace_id: req.workspace_id.clone(),
             writer,
             output_buf,
+            output_tx,
             closed,
             cols,
             rows,
@@ -107,6 +125,51 @@ impl TerminalManager {
             .insert(session_id.clone(), Arc::new(Mutex::new(session)));
 
         Ok(TerminalStartResponse { session_id })
+    }
+
+    /// Attach a WebSocket sink to receive live PTY output as binary frames.
+    /// Spawns a task that relays broadcast chunks to the sink until the session closes.
+    pub fn subscribe_output(&self, session_id: &str, sink: WsSink) -> Result<(), DomainRpcError> {
+        // Clone the Arc so we can drop the read guard before locking the session.
+        let session_arc = {
+            let sessions = self.sessions.read().unwrap();
+            sessions.get(session_id).ok_or_else(|| {
+                DomainRpcError::new(RPC_SESSION_INACTIVE, format!("terminal session not found: {session_id}"))
+            })?.clone()
+        };
+        let rx = session_arc.lock().unwrap().output_tx.subscribe();
+
+        let sid = session_id.to_string();
+        // Build the session-id prefix for binary frames: [0x02][session_id\0]
+        let prefix = {
+            let mut p = vec![BIN_OPCODE_TERMINAL_OUTPUT];
+            p.extend_from_slice(sid.as_bytes());
+            p.push(0u8); // null terminator
+            p
+        };
+
+        tokio::spawn(async move {
+            let mut rx = rx;
+            loop {
+                match rx.recv().await {
+                    Ok(bytes) => {
+                        let mut frame = prefix.clone();
+                        frame.extend_from_slice(&bytes);
+                        let mut s = sink.lock().await;
+                        if s.send(Message::Binary(frame.into())).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Lagged(_)) => {
+                        // Slow subscriber — skip dropped frames, continue.
+                        continue;
+                    }
+                    Err(broadcast::error::RecvError::Closed) => break,
+                }
+            }
+        });
+
+        Ok(())
     }
 
     pub fn send(&self, req: &TerminalSendRequest) -> Result<TerminalSendResponse, DomainRpcError> {
@@ -128,9 +191,9 @@ impl TerminalManager {
 
     pub fn read(&self, req: &TerminalReadRequest) -> Result<TerminalReadResponse, DomainRpcError> {
         self.with_session(&req.session_id, |s| {
-            let data = std::mem::take(&mut *s.output_buf.lock().unwrap());
-            let closed = s.closed.load(std::sync::atomic::Ordering::Relaxed);
-            Ok(TerminalReadResponse { data, closed })
+            let output = std::mem::take(&mut *s.output_buf.lock().unwrap());
+            let running = !s.closed.load(std::sync::atomic::Ordering::Relaxed);
+            Ok(TerminalReadResponse { output, running })
         })
     }
 
@@ -143,7 +206,6 @@ impl TerminalManager {
         &self,
         req: &TerminalKillProcessRequest,
     ) -> Result<TerminalKillProcessResponse, DomainRpcError> {
-        // Sending a NUL byte (Ctrl-C signal via PTY) is the portable approach.
         self.with_session(&req.session_id, |s| {
             s.writer.write_all(b"\x03").map_err(|e| {
                 DomainRpcError::server_error(format!("kill process: {e}"))
@@ -180,12 +242,10 @@ impl TerminalManager {
     }
 
     pub fn list_detected_ports(&self) -> Vec<TerminalDetectedPort> {
-        // Port detection is async/best-effort; return empty for now.
         Vec::new()
     }
 
     pub fn resize(&self, req: &TerminalResizeRequest) -> Result<TerminalResizeResponse, DomainRpcError> {
-        // portable-pty does not expose resize through the master easily; record sizes only.
         self.with_session(&req.session_id, |s| {
             s.cols = req.cols;
             s.rows = req.rows;
@@ -222,7 +282,7 @@ impl TerminalManager {
         let sessions = self.sessions.read().unwrap();
         let session = sessions.get(session_id).ok_or_else(|| {
             DomainRpcError::new(
-                crate::daemon::constants::RPC_SESSION_INACTIVE,
+                RPC_SESSION_INACTIVE,
                 format!("terminal session not found: {session_id}"),
             )
         })?;

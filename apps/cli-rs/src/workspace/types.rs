@@ -263,8 +263,8 @@ pub struct TerminalReadRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TerminalReadResponse {
-    pub data: String,
-    pub closed: bool,
+    pub output: String,
+    pub running: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
