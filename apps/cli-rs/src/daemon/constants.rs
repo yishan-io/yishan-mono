@@ -21,8 +21,8 @@ pub const MAX_IN_FLIGHT_RPC: usize = 16;
 // ── JSON-RPC method names ─────────────────────────────────────────────────────
 
 // Workspace methods
-pub const METHOD_WORKSPACE_OPEN: &str = "workspace.open";
-pub const METHOD_WORKSPACE_LIST: &str = "workspace.list";
+pub const METHOD_WORKSPACE_OPEN: &str = "open";
+pub const METHOD_WORKSPACE_LIST: &str = "list";
 pub const METHOD_WORKSPACE_CREATE: &str = "workspace.create";
 pub const METHOD_WORKSPACE_CLOSE: &str = "workspace.close";
 pub const METHOD_WORKSPACE_SYNC_CONTEXT_LINK: &str = "workspace.syncContextLink";
@@ -49,8 +49,8 @@ pub const METHOD_GIT_RENAME_BRANCH: &str = "git.renameBranch";
 pub const METHOD_GIT_REMOVE_BRANCH: &str = "git.removeBranch";
 pub const METHOD_GIT_PR_MERGE: &str = "git.prMerge";
 pub const METHOD_GIT_PR_CLOSE: &str = "git.prClose";
-pub const METHOD_GIT_WORKTREE_CREATE: &str = "git.worktreeCreate";
-pub const METHOD_GIT_WORKTREE_REMOVE: &str = "git.worktreeRemove";
+pub const METHOD_GIT_WORKTREE_CREATE: &str = "git.worktree.create";
+pub const METHOD_GIT_WORKTREE_REMOVE: &str = "git.worktree.remove";
 pub const METHOD_GIT_AUTHOR_NAME: &str = "git.authorName";
 
 // File methods
@@ -70,7 +70,7 @@ pub const METHOD_TERMINAL_READ: &str = "terminal.read";
 pub const METHOD_TERMINAL_STOP: &str = "terminal.stop";
 pub const METHOD_TERMINAL_KILL_PROCESS: &str = "terminal.killProcess";
 pub const METHOD_TERMINAL_LIST_SESSIONS: &str = "terminal.listSessions";
-pub const METHOD_TERMINAL_LIST_PORTS: &str = "terminal.listPorts";
+pub const METHOD_TERMINAL_LIST_PORTS: &str = "terminal.listDetectedPorts";
 pub const METHOD_TERMINAL_RESIZE: &str = "terminal.resize";
 pub const METHOD_TERMINAL_SUBSCRIBE: &str = "terminal.subscribe";
 pub const METHOD_TERMINAL_UNSUBSCRIBE: &str = "terminal.unsubscribe";
@@ -79,7 +79,7 @@ pub const METHOD_TERMINAL_UNSUBSCRIBE: &str = "terminal.unsubscribe";
 pub const METHOD_DAEMON_PING: &str = "daemon.ping";
 pub const METHOD_FRONTEND_EVENTS_STREAM: &str = "events.frontendStream";
 pub const METHOD_AGENT_LIST_DETECTION_STATUSES: &str = "agent.listDetectionStatuses";
-pub const METHOD_CLI_TOOL_LIST_STATUSES: &str = "cliTool.listStatuses";
+pub const METHOD_CLI_TOOL_LIST_STATUSES: &str = "cliTools.listStatuses";
 pub const METHOD_INTEGRATION_GITHUB_STATUS: &str = "integration.githubStatus";
 pub const METHOD_APP_PERSIST_AUTH_TOKENS: &str = "app.persistAuthTokens";
 pub const METHOD_APP_GET_ACCESS_TOKEN: &str = "app.getAccessToken";
