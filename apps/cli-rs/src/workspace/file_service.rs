@@ -87,6 +87,12 @@ impl FileService {
             DomainRpcError::server_error(format!("read dir: {e}"))
         })?;
         for entry in read_dir.flatten() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            // Never expose the git internals directory.
+            if name_str == ".git" {
+                continue;
+            }
             let meta = entry.metadata().map_err(|e| {
                 DomainRpcError::server_error(format!("stat: {e}"))
             })?;
@@ -103,7 +109,7 @@ impl FileService {
                 })
                 .unwrap_or_default();
             out.push(FileEntry {
-                name: entry.file_name().to_string_lossy().into_owned(),
+                name: name_str.into_owned(),
                 path: rel.to_string_lossy().into_owned(),
                 is_dir: meta.is_dir(),
                 size: if meta.is_file() { meta.len() } else { 0 },
