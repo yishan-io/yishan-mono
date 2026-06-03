@@ -3,7 +3,7 @@ use crate::daemon::rpc::DomainRpcError;
 use crate::workspace::types::*;
 use axum::extract::ws::Message;
 use futures_util::SinkExt;
-use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Write};
 use std::sync::{Arc, Mutex, RwLock};
@@ -21,6 +21,8 @@ struct PtySession {
     workspace_id: String,
     /// Writer end — send input to the PTY.
     writer: Box<dyn Write + Send>,
+    /// PTY master — kept alive and used for resize.
+    master: Box<dyn MasterPty + Send>,
     /// Buffered output accumulated from the PTY reader task (for terminal.read pull).
     output_buf: Arc<Mutex<String>>,
     /// Broadcast channel for live output push to subscribed WebSocket clients.
@@ -82,6 +84,7 @@ impl TerminalManager {
             .map_err(|e| DomainRpcError::server_error(format!("pty writer: {e}")))?;
         let reader = pair.master.try_clone_reader()
             .map_err(|e| DomainRpcError::server_error(format!("pty reader: {e}")))?;
+        let master = pair.master;
 
         let output_buf: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
         let closed = Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -114,6 +117,7 @@ impl TerminalManager {
         let session = PtySession {
             workspace_id: req.workspace_id.clone(),
             writer,
+            master,
             output_buf,
             output_tx,
             closed,
@@ -249,6 +253,15 @@ impl TerminalManager {
         self.with_session(&req.session_id, |s| {
             s.cols = req.cols;
             s.rows = req.rows;
+            // Apply the new dimensions to the PTY so the shell sees the correct
+            // TIOCGWINSZ values — without this, PROMPT_SP fires on every command
+            // because the shell thinks cols=220 while xterm shows fewer.
+            let _ = s.master.resize(PtySize {
+                rows: req.rows,
+                cols: req.cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            });
             Ok(TerminalResizeResponse { ok: true })
         })
     }
