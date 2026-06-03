@@ -286,3 +286,47 @@ fn last_n_chars(value: &str, max_chars: usize) -> String {
     }
     chars[chars.len() - max_chars..].iter().collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn append_port_scan_tail_detects_port_announcement() {
+        let (tail, mentioned_ports) = append_port_scan_tail("", "Available at http://127.0.0.1:1234\n");
+        assert!(mentioned_ports);
+        assert!(tail.contains("1234"));
+    }
+
+    #[test]
+    fn append_port_scan_tail_handles_split_output_chunks() {
+        let (tail, mentioned_ports) = append_port_scan_tail("listening on http://127.0.0.1", ":4321\n");
+        assert!(mentioned_ports);
+        assert!(tail.contains("4321"));
+    }
+
+    #[test]
+    fn parse_lsof_listening_tcp_ports_returns_pid_address_and_process_name() {
+        let output = b"p6510\nchttp-server\nnTCP 127.0.0.1:1234 (LISTEN)\n";
+        let ports = parse_lsof_listening_tcp_ports(output);
+        assert_eq!(ports.len(), 1);
+        assert_eq!(ports[0].pid, 6510);
+        assert_eq!(ports[0].process_name, "http-server");
+        assert_eq!(ports[0].address, "127.0.0.1");
+        assert_eq!(ports[0].port, 1234);
+    }
+
+    #[test]
+    fn build_pid_to_root_map_tracks_descendants_to_root_session() {
+        let processes = vec![
+            ProcessInfo { pid: 100, ppid: 1 },
+            ProcessInfo { pid: 200, ppid: 100 },
+            ProcessInfo { pid: 300, ppid: 200 },
+        ];
+
+        let mapping = build_pid_to_root_map(&[100], &processes);
+        assert_eq!(mapping.get(&100), Some(&100));
+        assert_eq!(mapping.get(&200), Some(&100));
+        assert_eq!(mapping.get(&300), Some(&100));
+    }
+}

@@ -4,6 +4,7 @@ use crate::runtime::AppRuntime;
 use clap::builder::PossibleValuesParser;
 use clap::{Args, Subcommand};
 use serde_json::json;
+use std::path::Path;
 
 #[derive(Subcommand)]
 pub enum WorkspaceCommands {
@@ -13,8 +14,11 @@ pub enum WorkspaceCommands {
     Create(WorkspaceCreateArgs),
     /// Close workspace
     Close(WorkspaceCloseArgs),
-    /// Find workspace by local path
+    /// Find workspace by project and workspace ID
     Find(WorkspaceFindArgs),
+    /// Find workspace by local path
+    #[command(name = "find-path", hide = true)]
+    FindPath(WorkspaceFindPathArgs),
 }
 
 #[derive(Args)]
@@ -22,7 +26,7 @@ pub struct WorkspaceListArgs {
     #[arg(long)]
     pub org_id: Option<String>,
     #[arg(long)]
-    pub project_id: String,
+    pub project_id: Option<String>,
 }
 
 #[derive(Args)]
@@ -61,6 +65,16 @@ pub struct WorkspaceCloseArgs {
 pub struct WorkspaceFindArgs {
     #[arg(long)]
     pub org_id: Option<String>,
+    #[arg(long)]
+    pub project_id: String,
+    #[arg(long)]
+    pub workspace_id: String,
+}
+
+#[derive(Args)]
+pub struct WorkspaceFindPathArgs {
+    #[arg(long)]
+    pub org_id: Option<String>,
     /// Local filesystem path to search by
     pub path: String,
 }
@@ -70,7 +84,7 @@ pub async fn run(cmd: WorkspaceCommands, runtime: &AppRuntime) -> anyhow::Result
     match cmd {
         WorkspaceCommands::List(args) => {
             let org_id = resolve_org_id(args.org_id.as_deref(), runtime)?;
-            let resp = client.list_workspaces(&org_id, &args.project_id).await?;
+            let resp = list_workspaces(&client, &org_id, args.project_id.as_deref()).await?;
             print_any(resp)
         }
         WorkspaceCommands::Create(args) => {
@@ -87,10 +101,61 @@ pub async fn run(cmd: WorkspaceCommands, runtime: &AppRuntime) -> anyhow::Result
         }
         WorkspaceCommands::Find(args) => {
             let org_id = resolve_org_id(args.org_id.as_deref(), runtime)?;
+            let resp = find_workspace(&client, &org_id, &args.project_id, &args.workspace_id).await?;
+            print_any(resp)
+        }
+        WorkspaceCommands::FindPath(args) => {
+            let org_id = resolve_org_id(args.org_id.as_deref(), runtime)?;
             let resp = client.find_workspace_by_path(&org_id, &args.path).await?;
             print_any(resp)
         }
     }
+}
+
+async fn list_workspaces(
+    client: &crate::api::ApiClient,
+    org_id: &str,
+    project_id: Option<&str>,
+) -> anyhow::Result<crate::api::ListWorkspacesResponse> {
+    if let Some(project_id) = project_id.map(str::trim).filter(|s| !s.is_empty()) {
+        return client.list_workspaces(org_id, project_id).await;
+    }
+
+    let projects = client.list_projects(org_id).await?;
+    let mut workspaces = Vec::new();
+    for project in projects.projects {
+        let response = client.list_workspaces(org_id, &project.id).await?;
+        workspaces.extend(response.workspaces);
+    }
+
+    Ok(crate::api::ListWorkspacesResponse { workspaces })
+}
+
+async fn find_workspace(
+    client: &crate::api::ApiClient,
+    org_id: &str,
+    project_id: &str,
+    workspace_id: &str,
+) -> anyhow::Result<serde_json::Value> {
+    let response = client.list_workspaces(org_id, project_id).await?;
+    let workspace = response
+        .workspaces
+        .into_iter()
+        .find(|workspace| workspace.id == workspace_id)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "workspace {} was not found in project {}; run `yishan workspace list --project-id {}` to find a valid id",
+                workspace_id,
+                project_id,
+                project_id
+            )
+        })?;
+
+    Ok(json!({
+        "workspace": workspace,
+        "organizationId": org_id,
+        "projectId": project_id,
+    }))
 }
 
 async fn create_workspace(
@@ -279,6 +344,15 @@ async fn resolve_worktree_source_path(
         return Ok(project.local_path.trim().to_string());
     }
 
+    if !project.repo_url.trim().is_empty() {
+        if project.repo_key.trim().is_empty() {
+            anyhow::bail!("project {} is missing repo key", project_id);
+        }
+        let repo_path = default_repo_path(&project.repo_key)?;
+        ensure_bare_repo_clone(&project.repo_url, &repo_path).await?;
+        return Ok(repo_path);
+    }
+
     let client = runtime.api_client();
     let response = client.list_workspaces(org_id, project_id).await?;
     response
@@ -297,4 +371,95 @@ async fn resolve_worktree_source_path(
                 project_id
             )
         })
+}
+
+fn default_repo_path(repo_key: &str) -> anyhow::Result<String> {
+    let home = crate::config::home_dir()?;
+    Ok(home
+        .join("repos")
+        .join(repo_key.trim())
+        .to_string_lossy()
+        .into_owned())
+}
+
+async fn ensure_bare_repo_clone(repo_url: &str, repo_path: &str) -> anyhow::Result<()> {
+    let repo_url = repo_url.trim().to_string();
+    let repo_path = repo_path.trim().to_string();
+    let parent_dir = Path::new(&repo_path)
+        .parent()
+        .map(|path| path.to_path_buf())
+        .ok_or_else(|| anyhow::anyhow!("repo path is missing a parent directory: {}", repo_path))?;
+
+    if let Ok(metadata) = std::fs::metadata(&repo_path) {
+        if !metadata.is_dir() {
+            anyhow::bail!("repo path exists and is not a directory: {}", repo_path);
+        }
+        return update_git_repo(&repo_path).await;
+    }
+
+    tokio::task::spawn_blocking(move || -> anyhow::Result<()> {
+        std::fs::create_dir_all(&parent_dir)?;
+        let output = std::process::Command::new("git")
+            .args(["clone", "--bare", &repo_url, &repo_path])
+            .output()?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            let message = if !stderr.is_empty() { stderr } else { stdout };
+            anyhow::bail!("clone bare repo ({}): git clone failed", message);
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|error| anyhow::anyhow!("clone bare repo task failed: {error}"))??;
+
+    Ok(())
+}
+
+async fn update_git_repo(repo_path: &str) -> anyhow::Result<()> {
+    let repo_path = repo_path.trim().to_string();
+    tokio::task::spawn_blocking(move || -> anyhow::Result<()> {
+        let remote_output = std::process::Command::new("git")
+            .args(["-C", &repo_path, "remote"])
+            .output()?;
+        if !remote_output.status.success() {
+            let stderr = String::from_utf8_lossy(&remote_output.stderr).trim().to_string();
+            anyhow::bail!("list git remotes ({}): git remote failed", stderr);
+        }
+        if String::from_utf8_lossy(&remote_output.stdout).trim().is_empty() {
+            return Ok(());
+        }
+
+        let fetch_output = std::process::Command::new("git")
+            .args(["-C", &repo_path, "fetch", "--all", "--prune"])
+            .output()?;
+        if !fetch_output.status.success() {
+            let stderr = String::from_utf8_lossy(&fetch_output.stderr).trim().to_string();
+            let stdout = String::from_utf8_lossy(&fetch_output.stdout).trim().to_string();
+            let message = if !stderr.is_empty() { stderr } else { stdout };
+            anyhow::bail!("fetch git repo ({}): git fetch failed", message);
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|error| anyhow::anyhow!("update git repo task failed: {error}"))??;
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_worktree_path_uses_yishan_worktrees_root() {
+        let path = default_worktree_path("owner/repo", "feature-branch").unwrap();
+        assert!(path.ends_with("/.yishan/worktrees/owner/repo/feature-branch") || path.ends_with("\\.yishan\\worktrees\\owner/repo\\feature-branch") || path.ends_with("\\.yishan\\worktrees\\owner\\repo\\feature-branch"));
+    }
+
+    #[test]
+    fn default_repo_path_uses_yishan_repos_root() {
+        let path = default_repo_path("owner/repo").unwrap();
+        assert!(path.ends_with("/.yishan/repos/owner/repo") || path.ends_with("\\.yishan\\repos\\owner/repo") || path.ends_with("\\.yishan\\repos\\owner\\repo"));
+    }
 }

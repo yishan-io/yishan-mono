@@ -12,13 +12,29 @@ pub struct AuthArgs {
 #[derive(Subcommand)]
 pub enum AuthCommands {
     /// Refresh the current access token
-    Refresh,
+    Refresh(RefreshArgs),
+    /// Revoke a refresh token
+    Revoke(RevokeArgs),
     /// List service tokens
     ListServiceTokens,
     /// Create a service token
     CreateServiceToken(CreateServiceTokenArgs),
     /// Revoke a service token
     RevokeServiceToken(RevokeServiceTokenArgs),
+}
+
+#[derive(Args)]
+pub struct RefreshArgs {
+    /// Refresh token (defaults to stored token)
+    #[arg(long)]
+    pub refresh_token: Option<String>,
+}
+
+#[derive(Args)]
+pub struct RevokeArgs {
+    /// Refresh token
+    #[arg(long)]
+    pub refresh_token: String,
 }
 
 #[derive(Args)]
@@ -42,12 +58,18 @@ pub struct RevokeServiceTokenArgs {
 pub async fn run(args: AuthArgs, runtime: &AppRuntime) -> anyhow::Result<()> {
     let client = runtime.api_client();
     match args.command {
-        AuthCommands::Refresh => {
+        AuthCommands::Refresh(args) => {
             let cfg = runtime.config();
-            if cfg.api.refresh_token.is_empty() {
+            let refresh_token = args
+                .refresh_token
+                .as_deref()
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .unwrap_or(cfg.api.refresh_token.as_str());
+            if refresh_token.is_empty() {
                 anyhow::bail!("no refresh token available; please log in again");
             }
-            let resp = client.refresh_token(&cfg.api.refresh_token).await?;
+            let resp = client.refresh_token(refresh_token).await?;
             runtime.persist_tokens(
                 &resp.access_token,
                 &resp.refresh_token,
@@ -55,6 +77,10 @@ pub async fn run(args: AuthArgs, runtime: &AppRuntime) -> anyhow::Result<()> {
                 &resp.refresh_token_expires_at,
             )?;
             print_any(json!({ "status": "ok", "expiresAt": resp.access_token_expires_at }))
+        }
+        AuthCommands::Revoke(args) => {
+            let resp = client.revoke_token(&args.refresh_token).await?;
+            print_any(resp)
         }
         AuthCommands::ListServiceTokens => {
             let resp = client.list_service_tokens().await?;

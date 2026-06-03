@@ -26,6 +26,8 @@ pub struct ProjectCreateArgs {
     #[arg(long)]
     pub name: String,
     #[arg(long)]
+    pub source_type_hint: Option<String>,
+    #[arg(long)]
     pub repo_url: Option<String>,
     #[arg(long)]
     pub node_id: Option<String>,
@@ -55,7 +57,7 @@ pub async fn run(cmd: ProjectCommands, runtime: &AppRuntime) -> anyhow::Result<(
                 .create_project(
                     &org_id,
                     &args.name,
-                    None,
+                    args.source_type_hint.as_deref(),
                     args.repo_url.as_deref(),
                     args.node_id.as_deref(),
                     args.local_path.as_deref(),

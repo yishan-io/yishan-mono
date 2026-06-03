@@ -31,6 +31,8 @@ pub struct JobCompleteRunArgs {
     #[arg(long)]
     pub finished_at: Option<String>,
     #[arg(long)]
+    pub response_body: Option<String>,
+    #[arg(long)]
     pub error_code: Option<String>,
     #[arg(long)]
     pub error_message: Option<String>,
@@ -52,7 +54,7 @@ pub async fn run(cmd: JobCommands, runtime: &AppRuntime) -> anyhow::Result<()> {
                     &args.run_id,
                     &args.status,
                     args.finished_at.as_deref(),
-                    None,
+                    args.response_body.as_deref(),
                     args.error_code.as_deref(),
                     args.error_message.as_deref(),
                     None,
