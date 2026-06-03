@@ -224,8 +224,9 @@ pub struct TerminalStartRequest {
     pub command: Option<String>,
     #[serde(default)]
     pub args: Option<Vec<String>>,
+    /// Environment variables as "KEY=value" strings, matching the desktop wire format.
     #[serde(default)]
-    pub env: Option<std::collections::HashMap<String, String>>,
+    pub env: Option<Vec<String>>,
     #[serde(default)]
     pub cols: Option<u16>,
     #[serde(default)]

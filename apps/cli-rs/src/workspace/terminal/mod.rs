@@ -56,8 +56,11 @@ impl TerminalManager {
             }
         }
         if let Some(env) = &req.env {
-            for (k, v) in env {
-                cmd.env(k, v);
+            for entry in env {
+                // Each entry is "KEY=value"; split on the first '=' only.
+                if let Some((k, v)) = entry.split_once('=') {
+                    cmd.env(k, v);
+                }
             }
         }
 
