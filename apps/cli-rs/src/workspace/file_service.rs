@@ -11,23 +11,33 @@ impl FileService {
     pub fn new() -> Self { Self }
 
     /// Resolve `rel_path` relative to `root` and verify it stays within `root`.
+    /// The root is assumed to be already canonicalized (as stored by WorkspaceManager).
+    /// We canonicalize the *parent* to handle symlinks without requiring the final
+    /// component (the file itself) to already exist — matching resolve_safe_write.
     fn resolve_safe(&self, root: &str, rel_path: &str) -> Result<PathBuf, DomainRpcError> {
         let base = Path::new(root);
         let joined = if rel_path.is_empty() || rel_path == "." {
-            base.to_path_buf()
+            return Ok(base.to_path_buf());
         } else {
             base.join(rel_path)
         };
-        let canonical = joined.canonicalize().map_err(|_| {
+
+        // Canonicalize the parent so we can check containment even for paths
+        // that don't yet exist (or were just deleted).
+        let parent = joined.parent().unwrap_or(base);
+        let canon_parent = parent.canonicalize().map_err(|_| {
             DomainRpcError::not_found(format!("path not found: {rel_path}"))
         })?;
-        if !canonical.starts_with(base) {
+
+        if !canon_parent.starts_with(base) {
             return Err(DomainRpcError::new(
                 crate::daemon::constants::RPC_PATH_RESTRICTED,
                 format!("path escapes workspace root: {rel_path}"),
             ));
         }
-        Ok(canonical)
+
+        // Reconstruct the full path from the canonical parent + the final component.
+        Ok(canon_parent.join(joined.file_name().unwrap_or_default()))
     }
 
     /// Resolve `rel_path` for write operations (parent must exist and be inside root).

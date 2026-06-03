@@ -49,6 +49,16 @@ impl GitService {
         Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
     }
 
+    /// Returns true when `git rev-parse --verify <refspec>` exits 0.
+    fn ref_exists(&self, cwd: &str, refspec: &str) -> bool {
+        Command::new("git")
+            .args(["rev-parse", "--verify", refspec])
+            .current_dir(cwd)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
+
     fn gh_path(&self) -> Option<&str> {
         self.gh_path
             .get_or_init(|| which::which("gh").ok().map(|p| p.to_string_lossy().into_owned()))
@@ -117,7 +127,14 @@ impl GitService {
             if line.len() < 3 { continue; }
             let x = line.chars().next().unwrap_or(' ');
             let y = line.chars().nth(1).unwrap_or(' ');
-            let file = line[3..].to_string();
+            // Porcelain v1: "XY path" or "XY old -> new" for renames.
+            // Always use the destination path (after " -> " if present).
+            let raw = &line[3..];
+            let file = if let Some(arrow) = raw.rfind(" -> ") {
+                raw[arrow + 4..].to_string()
+            } else {
+                raw.to_string()
+            };
             if x == '?' && y == '?' {
                 untracked.push(GitChange { path: file, kind: "untracked".into(), additions: 0, deletions: 0 });
             } else {
@@ -254,6 +271,14 @@ impl GitService {
         target: &str,
     ) -> Result<GitCommitComparison, DomainRpcError> {
         let current = self.current_branch(path)?;
+        if !self.ref_exists(path, target) {
+            return Ok(GitCommitComparison {
+                current_branch: current,
+                target_branch: target.to_string(),
+                all_changed_files: vec![],
+                commits: vec![],
+            });
+        }
         let range = format!("{target}..HEAD");
         let out = self.run_git(
             &["log", &range, "--pretty=format:%H %h %an %aI %s", "--name-only"],
@@ -306,6 +331,9 @@ impl GitService {
         path: &str,
         target: &str,
     ) -> Result<GitBranchDiffSummary, DomainRpcError> {
+        if !self.ref_exists(path, target) {
+            return Ok(GitBranchDiffSummary { file_count: 0, additions: 0, deletions: 0, files: vec![] });
+        }
         let range = format!("{target}...HEAD");
         let out = self.run_git(&["diff", "--stat", &range], path)?;
         let mut additions = 0i64;
