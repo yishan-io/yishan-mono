@@ -133,10 +133,13 @@ impl FileService {
             if IGNORED_DIRS.contains(&name_str.as_ref()) {
                 continue;
             }
-            let meta = entry.metadata().map_err(|e| {
+            let full_path = entry.path();
+            // Use fs::metadata (follows symlinks) rather than entry.metadata()
+            // (which on macOS returns the symlink's own metadata, not the target's).
+            // This ensures symlinked directories like .my-context appear as is_dir=true.
+            let meta = fs::metadata(&full_path).map_err(|e| {
                 DomainRpcError::server_error(format!("stat: {e}"))
             })?;
-            let full_path = entry.path();
             let rel = full_path.strip_prefix(root).unwrap_or(&full_path);
             let modified_at = meta.modified()
                 .map(|t| {
