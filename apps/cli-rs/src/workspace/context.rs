@@ -82,6 +82,11 @@ pub fn sync_context_links(req: &SyncContextLinkRequest) -> SyncContextLinkResult
 
 /// Create the shared context directory and place a `.my-context` symlink inside
 /// the worktree. Idempotent — skips if the symlink is already correct.
+///
+/// Migration: if an existing symlink points at a *different* directory (e.g.
+/// the old hash-based path used by the Go daemon), its contents are merged into
+/// the new `context_path` before the symlink is updated. This ensures no notes
+/// are lost when the project's repoKey format changes.
 fn ensure_context_link(context_path: &Path, worktree_path: &str) -> Result<(), String> {
     fs::create_dir_all(context_path)
         .map_err(|e| format!("ensure context dir: {e}"))?;
@@ -102,7 +107,12 @@ fn ensure_context_link(context_path: &Path, worktree_path: &str) -> Result<(), S
                 // Already correct.
                 return Ok(());
             }
-            // Stale symlink — remove and recreate.
+            // Stale symlink pointing at a different path (e.g. old hash-based
+            // context dir). Merge its contents into context_path first so no
+            // notes are lost, then replace the symlink.
+            if existing.is_dir() {
+                merge_dirs(&existing, context_path);
+            }
             fs::remove_file(&link_path)
                 .map_err(|e| format!("remove stale context link: {e}"))?;
         }
@@ -118,6 +128,32 @@ fn ensure_context_link(context_path: &Path, worktree_path: &str) -> Result<(), S
         .map_err(|e| format!("create context symlink (enable Developer Mode): {e}"))?;
 
     Ok(())
+}
+
+/// Recursively copy files from `src` into `dst`, skipping files that already
+/// exist in `dst`. Directories are created on demand. Non-fatal — errors are
+/// silently ignored so a migration failure never blocks the symlink update.
+fn merge_dirs(src: &Path, dst: &Path) {
+    let entries = match fs::read_dir(src) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        let src_path = entry.path();
+        let name = entry.file_name();
+        let dst_path = dst.join(&name);
+        let meta = match fs::metadata(&src_path) {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+        if meta.is_dir() {
+            let _ = fs::create_dir_all(&dst_path);
+            merge_dirs(&src_path, &dst_path);
+        } else if meta.is_file() && !dst_path.exists() {
+            // Only copy if not already present in destination.
+            let _ = fs::copy(&src_path, &dst_path);
+        }
+    }
 }
 
 /// Remove `.my-context` only if it's a symlink pointing at `context_path`.
