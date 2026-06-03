@@ -69,6 +69,12 @@ impl TerminalManager {
                 cmd.arg(arg);
             }
         }
+        // Ensure the shell knows its terminal type and initial dimensions.
+        // Without these, zsh/bash fall back to guessing (often wrong values).
+        cmd.env("TERM", std::env::var("TERM").unwrap_or_else(|_| "xterm-256color".into()));
+        cmd.env("COLUMNS", cols.to_string());
+        cmd.env("LINES", rows.to_string());
+
         if let Some(env) = &req.env {
             for entry in env {
                 if let Some((k, v)) = entry.split_once('=') {
