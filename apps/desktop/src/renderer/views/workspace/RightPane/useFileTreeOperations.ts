@@ -74,6 +74,10 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
   const repoEntriesRef = useRef<WorkspaceFileEntry[]>([]);
   const selectedWorkspaceWorktreePathRef = useRef<string | undefined>(undefined);
   const treeCacheByWorkspaceIdRef = useRef(new Map<string, WorkspaceFileEntry[]>());
+  // Tracks which workspace the current repoEntries belong to.
+  // Used to prevent the cache-save effect from writing stale entries from the
+  // previous workspace under the new workspace's key on the transition render.
+  const repoEntriesWorkspaceIdRef = useRef<string | undefined>(undefined);
   const fileTreeSelectionRequestIdRef = useRef(0);
   const loadedDirectoryPathsRef = useRef(new Set<string>());
   const changedRelativePathsForSelectedWorkspaceRef = useRef<string[]>([]);
@@ -123,7 +127,13 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     if (!selectedWorkspaceId) {
       return;
     }
-
+    // Only write the cache when repoEntries actually belong to this workspace.
+    // On the transition render (workspace just changed) selectedWorkspaceId is
+    // already the new id but repoEntries still holds the previous workspace's
+    // files. Writing here would corrupt the new workspace's cache slot.
+    if (repoEntriesWorkspaceIdRef.current !== selectedWorkspaceId) {
+      return;
+    }
     treeCacheByWorkspaceIdRef.current.set(selectedWorkspaceId, repoEntries);
   }, [repoEntries, selectedWorkspaceId]);
 
@@ -254,6 +264,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
   useEffect(() => {
     void selectedWorkspaceWorktreePath;
     const cachedEntries = selectedWorkspaceId ? treeCacheByWorkspaceIdRef.current.get(selectedWorkspaceId) : null;
+    repoEntriesWorkspaceIdRef.current = selectedWorkspaceId ?? undefined;
     setRepoEntries(cachedEntries ?? []);
     resetFileOperationState();
     setFileOperationError(null);
