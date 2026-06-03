@@ -25,8 +25,8 @@ const OUTPUT_CHANNEL_CAP: usize = 256;
 type WsSink =
     Arc<tokio::sync::Mutex<futures_util::stream::SplitSink<axum::extract::ws::WebSocket, Message>>>;
 
-/// A single PTY session.
-struct PtySession {
+/// One daemon-managed terminal session backed by a PTY.
+struct ManagedSession {
     workspace_id: String,
     root_pid: i32,
     /// Writer end — send input to the PTY.
@@ -43,9 +43,9 @@ struct PtySession {
     rows: u16,
 }
 
-/// PTY session manager.
+/// Terminal session manager.
 pub struct TerminalManager {
-    sessions: Arc<RwLock<HashMap<String, Arc<Mutex<PtySession>>>>>,
+    sessions: Arc<RwLock<HashMap<String, Arc<Mutex<ManagedSession>>>>>,
     active_workspace: Arc<Mutex<Option<String>>>,
     ports_changed_listener: Arc<Mutex<Option<PortsChangedListener>>>,
     last_ports_snapshot_key: Arc<Mutex<String>>,
@@ -136,7 +136,7 @@ impl TerminalManager {
         let (output_tx, _) = broadcast::channel::<Vec<u8>>(OUTPUT_CHANNEL_CAP);
 
         let session_id = Uuid::new_v4().to_string();
-        let session = Arc::new(Mutex::new(PtySession {
+        let session = Arc::new(Mutex::new(ManagedSession {
             workspace_id: req.workspace_id.clone(),
             root_pid,
             writer,
@@ -402,7 +402,7 @@ impl TerminalManager {
 
     fn with_session<F, T>(&self, session_id: &str, f: F) -> Result<T, DomainRpcError>
     where
-        F: FnOnce(&mut PtySession) -> Result<T, DomainRpcError>,
+        F: FnOnce(&mut ManagedSession) -> Result<T, DomainRpcError>,
     {
         let sessions = self.sessions.read().unwrap();
         let session = sessions.get(session_id).ok_or_else(|| {
@@ -423,7 +423,7 @@ impl Default for TerminalManager {
 }
 
 fn collect_detected_ports_for_manager(
-    sessions: &Arc<RwLock<HashMap<String, Arc<Mutex<PtySession>>>>>,
+    sessions: &Arc<RwLock<HashMap<String, Arc<Mutex<ManagedSession>>>>>,
     active_workspace: &Arc<Mutex<Option<String>>>,
 ) -> Vec<TerminalDetectedPort> {
     #[cfg(unix)]
@@ -459,7 +459,7 @@ fn collect_detected_ports_for_manager(
 }
 
 fn publish_ports_changed_if_needed(
-    sessions: &Arc<RwLock<HashMap<String, Arc<Mutex<PtySession>>>>>,
+    sessions: &Arc<RwLock<HashMap<String, Arc<Mutex<ManagedSession>>>>>,
     active_workspace: &Arc<Mutex<Option<String>>>,
     ports_changed_listener: &Arc<Mutex<Option<PortsChangedListener>>>,
     last_ports_snapshot_key: &Arc<Mutex<String>>,

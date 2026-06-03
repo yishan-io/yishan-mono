@@ -11,7 +11,7 @@ pub enum TerminalCommands {
     Start(TerminalStartArgs),
     /// Stop a terminal session
     Stop(TerminalStopArgs),
-    /// List detected ports for a terminal session
+    /// List detected ports across active terminal sessions
     Ports(TerminalPortsArgs),
 }
 
