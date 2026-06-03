@@ -35,6 +35,17 @@ pub fn default_context_path(repo_key: &str) -> Result<PathBuf, DomainRpcError> {
 }
 
 /// Sync context links for a batch of worktree paths.
+///
+/// Compatibility strategy: the old Go daemon used whatever `repoKey` string the
+/// backend sent (e.g. `repo_64bc557badfa`). The new backend sends `owner/repo`.
+/// Both are just passed through as path segments under `~/.yishan/contexts/`.
+///
+/// To keep all worktrees pointing at the same directory regardless of which
+/// backend version created them, we first scan all supplied worktree paths to
+/// find any existing `.my-context` symlink that already has content. If found,
+/// that directory becomes the canonical context path for this sync (all other
+/// worktrees are updated to point at it). Only if no worktree has any existing
+/// content do we fall back to creating a new directory at the repoKey path.
 pub fn sync_context_links(req: &SyncContextLinkRequest) -> SyncContextLinkResult {
     let mut result = SyncContextLinkResult {
         updated: Vec::new(),
@@ -42,14 +53,8 @@ pub fn sync_context_links(req: &SyncContextLinkRequest) -> SyncContextLinkResult
         errors: std::collections::HashMap::new(),
     };
 
-    let context_path = match default_context_path(&req.repo_key) {
-        Ok(p) => p,
-        Err(e) => {
-            result.errors.insert("*".into(), e.to_string());
-            return result;
-        }
-    };
-
+    // Collect valid absolute worktree paths first.
+    let mut paths: Vec<String> = Vec::new();
     let mut seen = std::collections::HashSet::new();
     for raw in &req.worktree_paths {
         let trimmed = raw.trim().to_string();
@@ -61,23 +66,96 @@ pub fn sync_context_links(req: &SyncContextLinkRequest) -> SyncContextLinkResult
             result.errors.insert(raw.clone(), "worktree path must be absolute".into());
             continue;
         }
-        if !seen.insert(trimmed.clone()) {
-            continue;
+        if seen.insert(trimmed.clone()) {
+            paths.push(trimmed);
         }
+    }
 
-        let op_result = if req.enabled {
-            ensure_context_link(&context_path, &trimmed)
-        } else {
-            remove_context_link(&context_path, &trimmed)
+    if !req.enabled {
+        // Disable path: derive context path from repoKey and remove links.
+        let context_path = match default_context_path(&req.repo_key) {
+            Ok(p) => p,
+            Err(e) => { result.errors.insert("*".into(), e.to_string()); return result; }
         };
+        for path in &paths {
+            match remove_context_link(&context_path, path) {
+                Ok(()) => result.updated.push(path.clone()),
+                Err(e) => { result.errors.insert(path.clone(), e); }
+            }
+        }
+        return result;
+    }
 
-        match op_result {
-            Ok(()) => result.updated.push(trimmed),
-            Err(e) => { result.errors.insert(raw.clone(), e); }
+    // Enable path: find the best canonical context directory.
+    // Priority: any existing symlink target that has content > repoKey-derived path.
+    let canonical = resolve_canonical_context_path(&paths, &req.repo_key);
+    let context_path = match canonical {
+        Ok(p) => p,
+        Err(e) => { result.errors.insert("*".into(), e.to_string()); return result; }
+    };
+
+    for path in &paths {
+        match ensure_context_link(&context_path, path) {
+            Ok(()) => result.updated.push(path.clone()),
+            Err(e) => { result.errors.insert(path.clone(), e); }
         }
     }
 
     result
+}
+
+/// Find the canonical context directory for this set of worktrees.
+///
+/// Scans each worktree's existing `.my-context` symlink. If any one already
+/// points at a non-empty directory, that is the canonical path — all symlinks
+/// should converge there. If multiple point at different non-empty directories,
+/// we pick the one with the most content and merge the others into it.
+/// If none have content, fall back to the repoKey-derived path.
+fn resolve_canonical_context_path(
+    worktree_paths: &[String],
+    repo_key: &str,
+) -> Result<PathBuf, DomainRpcError> {
+    // Collect (target_path, entry_count) for every existing valid symlink.
+    let mut candidates: Vec<(PathBuf, usize)> = Vec::new();
+    let mut seen_targets = std::collections::HashSet::new();
+
+    for wt in worktree_paths {
+        let link = Path::new(wt).join(CONTEXT_LINK_NAME);
+        let meta = match std::fs::symlink_metadata(&link) {
+            Ok(m) if m.file_type().is_symlink() => m,
+            _ => continue,
+        };
+        let _ = meta; // just confirming it's a symlink
+        let target = match std::fs::read_link(&link) {
+            Ok(t) => t,
+            Err(_) => continue,
+        };
+        if !target.is_dir() || !seen_targets.insert(target.clone()) {
+            continue;
+        }
+        let count = fs::read_dir(&target)
+            .map(|rd| rd.flatten().count())
+            .unwrap_or(0);
+        candidates.push((target, count));
+    }
+
+    if candidates.is_empty() {
+        // No existing symlinks — use the repoKey-derived path.
+        return default_context_path(repo_key);
+    }
+
+    // Pick the candidate with the most entries.
+    candidates.sort_by(|a, b| b.1.cmp(&a.1));
+    let (canonical, _) = candidates.remove(0);
+
+    // Merge any other non-empty candidates into the canonical one.
+    for (other, count) in candidates {
+        if count > 0 {
+            merge_dirs(&other, &canonical);
+        }
+    }
+
+    Ok(canonical)
 }
 
 /// Create the shared context directory and place a `.my-context` symlink inside
