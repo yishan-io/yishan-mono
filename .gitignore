@@ -13,3 +13,4 @@ test-results/
 .wrangler
 apps/desktop/release/
 apps/cli/bin/
+target/

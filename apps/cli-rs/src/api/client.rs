@@ -64,7 +64,11 @@ pub struct ApiClient {
 }
 
 impl ApiClient {
+    /// Create an `ApiClient` using the provided shared HTTP client.
+    /// The caller is responsible for building the client once and cloning
+    /// the cheap `Arc`-backed handle here (fixes P3 / A5).
     pub fn new(
+        http: HttpClient,
         base_url: impl Into<String>,
         access_token: impl Into<String>,
         refresh_token: impl Into<String>,
@@ -72,12 +76,6 @@ impl ApiClient {
         refresh_token_expires_at: impl Into<String>,
         on_token_refresh: Option<OnTokenRefresh>,
     ) -> Self {
-        let http = HttpClient::builder()
-            .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS))
-            .use_rustls_tls()
-            .build()
-            .expect("build reqwest client");
-
         let base_url = base_url
             .into()
             .trim_end_matches('/')
@@ -94,6 +92,16 @@ impl ApiClient {
             })),
             on_token_refresh,
         }
+    }
+
+    /// Build a standalone `reqwest::Client` with the standard daemon/CLI settings.
+    /// Use this only when no shared client is available (e.g. `self-update`).
+    pub fn build_http_client() -> HttpClient {
+        HttpClient::builder()
+            .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS))
+            .use_rustls_tls()
+            .build()
+            .expect("build reqwest client")
     }
 
     /// Raw request → bytes, with proactive + reactive token refresh.

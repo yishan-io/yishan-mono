@@ -1,20 +1,28 @@
 use crate::api::{ApiClient, TokenUpdate};
 use crate::config::{self, persist_auth_tokens, AppConfig};
 use anyhow::{Context, Result};
+use reqwest::Client as HttpClient;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 /// Process-wide application state, held in an Arc for cheap cloning into async tasks.
 /// Replaces the Go global `runtime.appCfg` singleton with an explicit, testable struct.
+///
+/// `http` is a single `reqwest::Client` whose connection pool is shared across every
+/// `ApiClient` produced by `api_client()`.  `reqwest::Client` is already `Arc`-backed
+/// internally, so `.clone()` is a cheap ref-count bump — no TLS setup per call (P3 fix).
 #[derive(Clone)]
 pub struct AppRuntime {
     inner: Arc<RwLock<AppConfig>>,
+    /// Shared HTTP client — built once, cloned cheaply into each `ApiClient`.
+    http: HttpClient,
 }
 
 impl AppRuntime {
     pub fn new(cfg: AppConfig) -> Self {
         Self {
             inner: Arc::new(RwLock::new(cfg)),
+            http: ApiClient::build_http_client(),
         }
     }
 
@@ -44,6 +52,7 @@ impl AppRuntime {
             )
         });
         ApiClient::new(
+            self.http.clone(),
             &cfg.api.base_url,
             &cfg.api.token,
             &cfg.api.refresh_token,
