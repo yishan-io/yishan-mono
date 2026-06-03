@@ -74,8 +74,10 @@ export class DaemonFileClient {
     if (!relativePath) {
       throw new Error("relativePath is required");
     }
-    const content = await this.invoke("file.read", { workspaceId, path: relativePath });
-    return { content: typeof content === "string" ? content : "" };
+    const result = await this.invoke("file.read", { workspaceId, path: relativePath });
+    // Daemon returns { content: string }
+    const content = readOptionalString(asRecord(result)?.content) ?? "";
+    return { content };
   }
 
   async writeFile(input: Rpc.FileWriteInput): Promise<Rpc.FileWriteResponse> {
