@@ -320,16 +320,25 @@ pub async fn file(
 
 // ── Terminal dispatcher ───────────────────────────────────────────────────────
 
+/// Terminal dispatch receives an `Arc<WorkspaceManager>` (not a borrow) so that
+/// blocking PTY operations can be offloaded to `spawn_blocking`, which requires
+/// `'static` ownership.
 pub async fn terminal(
     method: &str,
     params: Option<&serde_json::value::RawValue>,
-    mgr: &WorkspaceManager,
+    mgr: Arc<WorkspaceManager>,
     _sink: Sink,
 ) -> Result<Value, DomainRpcError> {
     match method {
         METHOD_TERMINAL_START => {
             let req: TerminalStartRequest = decode_params(params)?;
-            Ok(json!(mgr.terminal_start(&req)?))
+            // `openpty` + `spawn_command` are blocking syscalls — must not run on
+            // the tokio async thread or the executor stalls (manifests as "task
+            // queue exceeded allotted deadline").
+            tokio::task::spawn_blocking(move || mgr.terminal_start(&req))
+                .await
+                .map_err(|e| DomainRpcError::server_error(format!("spawn_blocking: {e}")))?
+                .map(|r| json!(r))
         }
         METHOD_TERMINAL_SEND => {
             let req: TerminalSendRequest = decode_params(params)?;
@@ -341,11 +350,19 @@ pub async fn terminal(
         }
         METHOD_TERMINAL_STOP => {
             let req: TerminalStopRequest = decode_params(params)?;
-            Ok(json!(mgr.terminal_stop(&req)?))
+            let m = Arc::clone(&mgr);
+            tokio::task::spawn_blocking(move || m.terminal_stop(&req))
+                .await
+                .map_err(|e| DomainRpcError::server_error(format!("spawn_blocking: {e}")))?
+                .map(|r| json!(r))
         }
         METHOD_TERMINAL_KILL_PROCESS => {
             let req: TerminalKillProcessRequest = decode_params(params)?;
-            Ok(json!(mgr.terminal_kill_process(&req)?))
+            let m = Arc::clone(&mgr);
+            tokio::task::spawn_blocking(move || m.terminal_kill_process(&req))
+                .await
+                .map_err(|e| DomainRpcError::server_error(format!("spawn_blocking: {e}")))?
+                .map(|r| json!(r))
         }
         METHOD_TERMINAL_LIST_SESSIONS => {
             let req: TerminalListSessionsRequest = decode_params(params)?;
@@ -359,7 +376,6 @@ pub async fn terminal(
             Ok(json!(mgr.terminal_resize(&req)?))
         }
         METHOD_TERMINAL_SUBSCRIBE => {
-            // Subscription via binary fast-path; return session confirmation.
             #[derive(serde::Deserialize)]
             #[serde(rename_all = "camelCase")]
             struct Req { session_id: String }

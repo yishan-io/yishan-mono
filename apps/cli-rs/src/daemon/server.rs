@@ -518,5 +518,5 @@ async fn dispatch_terminal(
     app: &DaemonApp,
     sink: Arc<tokio::sync::Mutex<futures_util::stream::SplitSink<WebSocket, Message>>>,
 ) -> Result<Value, DomainRpcError> {
-    crate::workspace::dispatch::terminal(method, params, &app.manager, sink).await
+    crate::workspace::dispatch::terminal(method, params, Arc::clone(&app.manager), sink).await
 }
