@@ -133,7 +133,19 @@ export function FileTree({
       setExpandedItems((currentItems) => [...new Set([...currentItems, ...ancestorDirectoryPaths])]);
     }
 
-    void onEnsurePathLoaded?.(requestedPath);
+    // Only ask the daemon to load a directory. If the requested path is a
+    // known file row, load its parent directory instead. If the row is not
+    // yet visible (tree not fully loaded), use the parent so we never call
+    // file.list on a plain file path.
+    const requestedRow = rowByPath.get(requestedPath);
+    const pathToLoad = requestedRow
+      ? requestedRow.row.isDirectory
+        ? requestedPath
+        : requestedPath.split("/").slice(0, -1).join("/")
+      : requestedPath.split("/").slice(0, -1).join("/") || requestedPath;
+    if (pathToLoad) {
+      void onEnsurePathLoaded?.(pathToLoad);
+    }
 
     if (!rowByPath.has(requestedPath)) {
       return;
