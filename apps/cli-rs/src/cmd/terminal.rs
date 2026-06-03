@@ -18,7 +18,7 @@ pub enum TerminalCommands {
 #[derive(Args)]
 pub struct TerminalListArgs {
     #[arg(long)]
-    pub workspace_id: String,
+    pub workspace_id: Option<String>,
 }
 
 #[derive(Args)]
@@ -32,25 +32,21 @@ pub struct TerminalStartArgs {
 #[derive(Args)]
 pub struct TerminalStopArgs {
     #[arg(long)]
-    pub workspace_id: String,
-    #[arg(long)]
-    pub terminal_id: String,
+    pub session_id: String,
 }
 
-#[derive(Args)]
-pub struct TerminalPortsArgs {
-    #[arg(long)]
-    pub workspace_id: String,
-    #[arg(long)]
-    pub terminal_id: String,
-}
+#[derive(Args, Default)]
+pub struct TerminalPortsArgs {}
 
 pub async fn run(cmd: TerminalCommands, runtime: &AppRuntime) -> anyhow::Result<()> {
     let client = crate::daemon::rpc_client(runtime)?;
     match cmd {
         TerminalCommands::List(args) => {
             let resp = client
-                .call("terminal.list", serde_json::json!({ "workspaceId": args.workspace_id }))
+                .call(
+                    "terminal.listSessions",
+                    serde_json::json!({ "workspaceId": args.workspace_id }),
+                )
                 .await?;
             print_any(resp)
         }
@@ -67,22 +63,15 @@ pub async fn run(cmd: TerminalCommands, runtime: &AppRuntime) -> anyhow::Result<
                 .call(
                     "terminal.stop",
                     serde_json::json!({
-                        "workspaceId": args.workspace_id,
-                        "terminalId": args.terminal_id,
+                        "sessionId": args.session_id,
                     }),
                 )
                 .await?;
             print_any(resp)
         }
-        TerminalCommands::Ports(args) => {
+        TerminalCommands::Ports(_args) => {
             let resp = client
-                .call(
-                    "terminal.ports",
-                    serde_json::json!({
-                        "workspaceId": args.workspace_id,
-                        "terminalId": args.terminal_id,
-                    }),
-                )
+                .call("terminal.listDetectedPorts", serde_json::json!({}))
                 .await?;
             print_any(resp)
         }
