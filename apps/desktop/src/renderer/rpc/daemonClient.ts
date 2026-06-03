@@ -100,6 +100,9 @@ export class DaemonClient {
     renameEntry: (input: Rpc.FileRenameInput) => this._fileClient.renameEntry(input),
     deleteEntry: (input: Rpc.FileDeleteInput) => this._fileClient.deleteEntry(input),
     readDiff: (input: Rpc.FileReadInput) => this._fileClient.readDiff(input),
+    pasteEntries: (input: unknown) => this._fileClient.pasteEntries(input),
+    importEntries: (input: unknown) => this._fileClient.importEntries(input),
+    importFilePayloads: (input: unknown) => this._fileClient.importFilePayloads(input),
   };
 
   readonly git = {

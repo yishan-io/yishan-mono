@@ -335,9 +335,9 @@ export async function getDaemonClient(): Promise<DaemonRpcClient> {
       const proxyClient = createRpcPathProxy([]) as DaemonRpcClient;
       return {
         app: proxyClient.app,
-        workspace: proxyClient.workspace,
-        file: proxyClient.file,
-        git: proxyClient.git,
+        workspace: transportClient.workspace,
+        file: transportClient.file,
+        git: transportClient.git,
         terminal: {
           createSession: (input) => transportClient.terminal.createSession(input ?? {}),
           writeInput: transportClient.terminal.writeInput,

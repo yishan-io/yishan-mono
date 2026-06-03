@@ -124,6 +124,20 @@ export class DaemonFileClient {
     return { ok: true };
   }
 
+  // These operations are not yet implemented in the daemon; stubs keep the
+  // DaemonRpcClient contract satisfied so callers get a clear error at runtime.
+  async pasteEntries(_input: unknown): Promise<Rpc.FileMutationOkResponse> {
+    throw new Error("file.pasteEntries is not yet implemented");
+  }
+
+  async importEntries(_input: unknown): Promise<Rpc.FileMutationOkResponse> {
+    throw new Error("file.importEntries is not yet implemented");
+  }
+
+  async importFilePayloads(_input: unknown): Promise<Rpc.FileMutationOkResponse> {
+    throw new Error("file.importFilePayloads is not yet implemented");
+  }
+
   async readDiff(input: Rpc.FileReadInput): Promise<Rpc.FileDiffResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
