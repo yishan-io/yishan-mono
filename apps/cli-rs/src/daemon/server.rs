@@ -452,6 +452,200 @@ fn is_terminal_method(m: &str) -> bool {
 
 // ── Sub-dispatchers ───────────────────────────────────────────────────────────
 
+/// Full workspace creation: git worktree + context link + setup hook.
+/// Progress events are published to the EventHub so the desktop can show
+/// step-by-step progress in the create workspace dialog.
+async fn create_workspace(
+    params: Option<&serde_json::value::RawValue>,
+    app: &DaemonApp,
+) -> Result<Value, DomainRpcError> {
+    use crate::workspace::context::{sync_context_links, SyncContextLinkRequest};
+    use std::process::Command;
+
+    #[derive(serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Req {
+        id: String,
+        #[serde(default)] organization_id: String,
+        #[serde(default)] project_id: String,
+        repo_key: String,
+        workspace_name: String,
+        source_path: String,
+        target_branch: String,
+        source_branch: String,
+        #[serde(default)] context_enabled: bool,
+        #[serde(default)] setup_hook: String,
+    }
+
+    let req: Req = crate::daemon::rpc::decode_params(params)?;
+
+    // Validate required fields.
+    for (name, val) in [
+        ("id", &req.id),
+        ("repoKey", &req.repo_key),
+        ("workspaceName", &req.workspace_name),
+        ("sourcePath", &req.source_path),
+        ("targetBranch", &req.target_branch),
+        ("sourceBranch", &req.source_branch),
+    ] {
+        if val.trim().is_empty() {
+            return Err(DomainRpcError::invalid_params(format!("{name} is required")));
+        }
+    }
+
+    let workspace_id = req.id.trim().to_string();
+    let repo_key = req.repo_key.trim().to_string();
+    let workspace_name = req.workspace_name.trim().to_string();
+    let source_path = req.source_path.trim().to_string();
+    let target_branch = req.target_branch.trim().to_string();
+    let source_branch = req.source_branch.trim().to_string();
+
+    // Derive worktree path: ~/.yishan/worktrees/<repoKey>/<workspaceName>
+    let home = dirs::home_dir()
+        .ok_or_else(|| DomainRpcError::server_error("cannot determine home directory"))?;
+    let worktree_path = home
+        .join(".yishan").join("worktrees")
+        .join(&repo_key).join(&workspace_name)
+        .to_string_lossy().into_owned();
+
+    let events = app.events.clone();
+
+    let emit = |step_id: &str, label: &str, status: &str, message: &str| {
+        events.publish(crate::daemon::event_hub::FrontendEvent::new(
+            "workspaceCreateProgress",
+            serde_json::json!({
+                "workspaceId": workspace_id,
+                "stepId": step_id,
+                "label": label,
+                "status": status,
+                "message": message,
+                "createdAt": chrono::Utc::now().to_rfc3339(),
+            }),
+        ));
+    };
+
+    // ── Step 1: worktree ──────────────────────────────────────────────────────
+    emit("worktree", "Fetch & create worktree", "running", "");
+
+    // Check if source branch ref exists locally.
+    let ref_exists = Command::new("git")
+        .args(["rev-parse", "--verify", &source_branch])
+        .current_dir(&source_path)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+
+    if !ref_exists {
+        // Shallow blobless fetch.
+        let fetch = tokio::task::spawn_blocking({
+            let sp = source_path.clone();
+            let sb = source_branch.clone();
+            move || Command::new("git")
+                .args(["fetch", "--depth=1", "--filter=blob:none", "origin", &sb])
+                .current_dir(&sp)
+                .output()
+        }).await.map_err(|e| DomainRpcError::server_error(format!("fetch task: {e}")))?
+          .map_err(|e| DomainRpcError::server_error(format!("fetch: {e}")))?;
+
+        if !fetch.status.success() {
+            let msg = String::from_utf8_lossy(&fetch.stderr).trim().to_string();
+            emit("worktree", "Fetch & create worktree", "failed", &msg);
+            return Err(DomainRpcError::server_error(format!("git fetch: {msg}")));
+        }
+    }
+
+    // git worktree add -b <target> <path> <source>
+    let wt_result = tokio::task::spawn_blocking({
+        let sp = source_path.clone();
+        let wp = worktree_path.clone();
+        let tb = target_branch.clone();
+        let sb = source_branch.clone();
+        move || Command::new("git")
+            .args(["worktree", "add", "-b", &tb, &wp, &sb])
+            .current_dir(&sp)
+            .output()
+    }).await.map_err(|e| DomainRpcError::server_error(format!("worktree task: {e}")))?
+      .map_err(|e| DomainRpcError::server_error(format!("git worktree add: {e}")))?;
+
+    if !wt_result.status.success() {
+        let msg = String::from_utf8_lossy(&wt_result.stderr).trim().to_string();
+        emit("worktree", "Fetch & create worktree", "failed", &msg);
+        return Err(DomainRpcError::server_error(format!("git worktree add: {msg}")));
+    }
+    emit("worktree", "Fetch & create worktree", "completed", &worktree_path);
+
+    // ── Step 2: context link ──────────────────────────────────────────────────
+    emit("context", "Link project context", "running", "");
+    if req.context_enabled {
+        let ctx_result = crate::workspace::context::sync_context_links(
+            &crate::workspace::context::SyncContextLinkRequest {
+                repo_key: repo_key.clone(),
+                enabled: true,
+                worktree_paths: vec![worktree_path.clone()],
+            }
+        );
+        if !ctx_result.errors.is_empty() {
+            let msg = ctx_result.errors.values().next().cloned().unwrap_or_default();
+            emit("context", "Link project context", "warning", &msg);
+        } else {
+            emit("context", "Link project context", "completed", "");
+        }
+    } else {
+        emit("context", "Link project context", "skipped", "Context link disabled");
+    }
+
+    // ── Step 3: setup hook ────────────────────────────────────────────────────
+    emit("setup", "Run setup script", "running", "");
+    let setup_hook = req.setup_hook.trim().to_string();
+    let lifecycle_warnings: Vec<String>;
+    if setup_hook.is_empty() {
+        emit("setup", "Run setup script", "skipped", "No setup script configured");
+        lifecycle_warnings = vec![];
+    } else {
+        let hook_out = tokio::task::spawn_blocking({
+            let wp = worktree_path.clone();
+            let cmd = setup_hook.clone();
+            move || Command::new("sh").args(["-c", &cmd]).current_dir(&wp).output()
+        }).await.map_err(|e| DomainRpcError::server_error(format!("setup task: {e}")))?;
+
+        match hook_out {
+            Ok(out) if out.status.success() => {
+                emit("setup", "Run setup script", "completed", "");
+                lifecycle_warnings = vec![];
+            }
+            Ok(out) => {
+                let msg = String::from_utf8_lossy(&out.stderr).trim().to_string();
+                emit("setup", "Run setup script", "warning", &msg);
+                lifecycle_warnings = vec![msg];
+            }
+            Err(e) => {
+                emit("setup", "Run setup script", "warning", &e.to_string());
+                lifecycle_warnings = vec![e.to_string()];
+            }
+        }
+    }
+
+    // Register workspace with manager.
+    let ws = app.manager.open(
+        workspace_id.clone(),
+        worktree_path.clone(),
+        req.organization_id.trim().to_string(),
+        req.project_id.trim().to_string(),
+    )?;
+
+    Ok(serde_json::json!({
+        "id": ws.id,
+        "path": ws.path,
+        "orgId": ws.org_id,
+        "projectId": ws.project_id,
+        "name": workspace_name,
+        "sourceBranch": source_branch,
+        "branch": target_branch,
+        "worktreePath": ws.path,
+        "lifecycleScriptWarnings": lifecycle_warnings,
+    }))
+}
+
 async fn dispatch_workspace(
     method: &str,
     params: Option<&serde_json::value::RawValue>,
@@ -461,8 +655,17 @@ async fn dispatch_workspace(
     use std::path::Path;
 
     match method {
-        // On open/create: call the sub-dispatcher first, then register with watchers/pr_tracker.
-        METHOD_WORKSPACE_OPEN | METHOD_WORKSPACE_CREATE => {
+        METHOD_WORKSPACE_CREATE => {
+            let result = create_workspace(params, app).await?;
+            if let (Some(path), Some(_id)) = (result["path"].as_str(), result["id"].as_str()) {
+                app.watchers.watch(Path::new(path));
+                app.pr_tracker.ensure_tracked(path, true);
+            }
+            Ok(result)
+        }
+
+        // On open: register with watchers/pr_tracker.
+        METHOD_WORKSPACE_OPEN => {
             let result = crate::workspace::dispatch::workspace(method, params, &app.manager).await?;
             if let (Some(path), Some(_id)) = (result["path"].as_str(), result["id"].as_str()) {
                 app.watchers.watch(Path::new(path));
