@@ -1,0 +1,128 @@
+[package]
+name = "yishan"
+version = "0.1.0"
+edition = "2021"
+description = "Yishan CLI — local developer workflow tool"
+license = "MIT"
+
+[[bin]]
+name = "yishan"
+path = "src/main.rs"
+
+[dependencies]
+# CLI framework
+clap = { version = "4", features = ["derive", "env", "wrap_help"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "blocking"], default-features = false }
+
+# WebSocket
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+
+# Logging / tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Config layering
+figment = { version = "0.10", features = ["yaml", "env"] }
+
+# Table output
+comfy-table = "7"
+
+# Interactive prompts
+dialoguer = "0.11"
+
+# Progress indicators
+indicatif = "0.17"
+
+# PTY (cross-platform)
+portable-pty = "0.8"
+
+# File watching
+notify = { version = "7", features = ["macos_fsevent"] }
+notify-debouncer-mini = "0.4"
+
+# UUID v7
+uuid = { version = "1", features = ["v4", "v7"] }
+
+# Embedded assets
+rust-embed = "8"
+
+# Cancellation
+tokio-util = { version = "0.7", features = ["rt"] }
+
+# axum (HTTP/WS server for daemon)
+axum = { version = "0.8", features = ["ws", "macros"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Directory helpers
+dirs = "5"
+
+# Open browser cross-platform
+open = "5"
+
+# Regex
+regex = "1"
+
+# Base64
+base64 = "0.22"
+
+# SHA-256 (self-update)
+sha2 = "0.10"
+hex = "0.4"
+
+# Atomically write files
+tempfile = "3"
+
+# Dashboard map
+dashmap = "6"
+
+# Random number generation
+rand = "0.8"
+
+# TTY detection
+atty = "0.2"
+
+# URL encoding
+urlencoding = "2"
+
+# Hostname
+hostname = "0.3"
+
+# Byte buffers
+bytes = "1"
+
+# futures utilities (for WebSocket stream)
+futures-util = "0.3"
+
+# System calls (Unix process management)
+libc = "0.2"
+
+# Find binary in PATH
+which = "6"
+
+[dev-dependencies]
+mockall = "0.13"
+tokio-test = "0.4"
+assert_cmd = "2"
+predicates = "3"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
