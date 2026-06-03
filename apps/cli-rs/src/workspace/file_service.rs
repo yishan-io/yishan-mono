@@ -55,6 +55,12 @@ impl FileService {
         recursive: bool,
     ) -> Result<Vec<FileEntry>, DomainRpcError> {
         let dir = self.resolve_safe(root, rel_path)?;
+        if !dir.is_dir() {
+            return Err(DomainRpcError::new(
+                crate::daemon::constants::RPC_INVALID_PARAMS,
+                format!("not a directory: {rel_path}"),
+            ));
+        }
         let mut entries = Vec::new();
         self.list_dir(&dir, root, recursive, &mut entries)?;
         Ok(entries)

@@ -237,11 +237,12 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
       } catch (error) {
         // Suppress benign filesystem errors (stale worktree, removed path, broken symlink)
         const message = getErrorMessage(error);
+        const msgLower = message.toLowerCase();
         const isBenignFsError =
-          message.includes("not a directory") ||
-          message.includes("no such file") ||
-          message.includes("ENOENT") ||
-          message.includes("ENOTDIR");
+          msgLower.includes("not a directory") ||
+          msgLower.includes("no such file") ||
+          msgLower.includes("enoent") ||
+          msgLower.includes("enotdir");
         if (!isBenignFsError) {
           console.error("Failed to load workspace directory", { path: normalizedPath, error });
         }
