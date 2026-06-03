@@ -3,6 +3,24 @@ use crate::workspace::types::FileEntry;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// Directories that are never shown in the file tree or watched for changes.
+/// These are high-churn or very large directories that have no value to the user
+/// as navigable source trees.
+pub const IGNORED_DIRS: &[&str] = &[
+    ".git",
+    "target",         // Rust build output
+    "node_modules",   // JS/TS dependencies
+    ".next",          // Next.js build cache
+    "dist",           // Generic build output
+    "build",          // Generic build output
+    ".turbo",         // Turborepo cache
+    ".cache",         // Generic tool caches
+];
+
+/// Maximum file size the daemon will read into memory and transmit.
+/// Matches the desktop's LARGE_FILE_OPEN_THRESHOLD_BYTES (2 MiB).
+const MAX_READ_BYTES: u64 = 2 * 1024 * 1024;
+
 /// Provides sandboxed file operations within a workspace root.
 /// Fixes A1: extracted from the Go god-handler into its own focused service.
 pub struct FileService;
@@ -89,8 +107,9 @@ impl FileService {
         for entry in read_dir.flatten() {
             let name = entry.file_name();
             let name_str = name.to_string_lossy();
-            // Never expose the git internals directory.
-            if name_str == ".git" {
+            // Skip git internals and other high-churn / large directories that
+            // have no value as navigable source trees.
+            if IGNORED_DIRS.contains(&name_str.as_ref()) {
                 continue;
             }
             let meta = entry.metadata().map_err(|e| {
@@ -149,6 +168,16 @@ impl FileService {
 
     pub fn read(&self, root: &str, rel_path: &str) -> Result<String, DomainRpcError> {
         let path = self.resolve_safe(root, rel_path)?;
+        // Guard against transmitting huge files over the WebSocket.
+        let size = fs::metadata(&path)
+            .map(|m| m.len())
+            .unwrap_or(0);
+        if size > MAX_READ_BYTES {
+            return Err(DomainRpcError::new(
+                crate::daemon::constants::RPC_INVALID_PARAMS,
+                format!("file too large to open ({size} bytes): {rel_path}"),
+            ));
+        }
         fs::read_to_string(&path).map_err(|e| {
             DomainRpcError::server_error(format!("read {rel_path}: {e}"))
         })

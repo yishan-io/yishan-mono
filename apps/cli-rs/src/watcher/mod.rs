@@ -1,4 +1,5 @@
 use crate::daemon::event_hub::{EventHub, FrontendEvent};
+use crate::workspace::file_service::IGNORED_DIRS;
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
@@ -204,6 +205,16 @@ async fn consume_events(
                     // every git operation (index.lock, HEAD.lock, etc.) and are
                     // the primary driver of the gitChanged feedback loop.
                     if path.extension().map_or(false, |e| e == "lock") {
+                        continue;
+                    }
+
+                    // Skip events from ignored high-churn directories (target,
+                    // node_modules, .next, …). These can produce thousands of
+                    // events per second during builds and have no value to the UI.
+                    let in_ignored = path.components().any(|c| {
+                        IGNORED_DIRS.contains(&c.as_os_str().to_string_lossy().as_ref())
+                    });
+                    if in_ignored {
                         continue;
                     }
 
