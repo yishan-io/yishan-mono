@@ -4,12 +4,16 @@ use serde_json::json;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::time::sleep;
 use tracing::{debug, warn};
 
 const DEBOUNCE_MS: u64 = 200;
+/// After emitting a `gitChanged` event, suppress further git events for this
+/// long.  Breaks the feedback loop where `git.status` refreshes the index
+/// mtime → watcher fires again → loop.
+const GIT_COOLDOWN_MS: u64 = 1500;
 const CONTEXT_LINK_NAME: &str = ".my-context";
 
 /// Per-workspace fsnotify watcher with debounce + gitignore filtering.
@@ -179,6 +183,8 @@ async fn consume_events(
     let git_entry = ws_path.join(".git");
     let mut file_debounce: Option<tokio::task::JoinHandle<()>> = None;
     let mut git_debounce: Option<tokio::task::JoinHandle<()>> = None;
+    // Cooldown: timestamp of the last emitted gitChanged event.
+    let mut git_last_emitted: Option<Instant> = None;
 
     loop {
         tokio::select! {
@@ -194,11 +200,25 @@ async fn consume_events(
                 };
 
                 for path in &ev.paths {
+                    // Skip git lock files — they are created and deleted during
+                    // every git operation (index.lock, HEAD.lock, etc.) and are
+                    // the primary driver of the gitChanged feedback loop.
+                    if path.extension().map_or(false, |e| e == "lock") {
+                        continue;
+                    }
+
                     // Classify: git event vs file event vs context event.
                     let is_git = path.starts_with(&git_entry)
                         || (git_dir != git_entry && path.starts_with(&git_dir));
 
                     if is_git {
+                        // Apply cooldown: if we just emitted gitChanged, ignore
+                        // further git events until the cooldown expires.
+                        if let Some(last) = git_last_emitted {
+                            if last.elapsed() < Duration::from_millis(GIT_COOLDOWN_MS) {
+                                continue;
+                            }
+                        }
                         // Debounce git event.
                         if let Some(h) = git_debounce.take() { h.abort(); }
                         let events2 = events.clone();
@@ -214,6 +234,9 @@ async fn consume_events(
                                 cb(ws2);
                             }
                         }));
+                        // Record emission time now (before the debounce fires) so
+                        // that rapid follow-on events are suppressed immediately.
+                        git_last_emitted = Some(Instant::now());
                     } else {
                         // Compute relative path.
                         let rel = if let Some(ref ctx) = ctx_dir {
