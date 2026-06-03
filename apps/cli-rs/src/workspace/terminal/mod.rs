@@ -2,9 +2,8 @@ use crate::daemon::rpc::DomainRpcError;
 use crate::workspace::types::*;
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufReader, Read, Write};
 use std::sync::{Arc, Mutex, RwLock};
-use tracing::{debug, warn};
 use uuid::Uuid;
 
 /// A single PTY session.
@@ -199,6 +198,7 @@ impl TerminalManager {
         Ok(SetActiveWorkspaceResponse { ok: true })
     }
 
+    #[allow(dead_code)]
     pub fn stop_all_for_workspace(&self, workspace_id: &str) -> Vec<anyhow::Error> {
         let mut sessions = self.sessions.write().unwrap();
         let ids: Vec<String> = sessions

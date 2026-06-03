@@ -44,6 +44,7 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
+    #[allow(dead_code)]
     pub fn is_service_token(&self) -> bool {
         self.api.token.starts_with("yst_")
     }

@@ -1,8 +1,8 @@
 mod store;
 mod types;
 
-pub use store::{load, persist_auth_tokens, update_current_org, ConfigStore};
-pub use types::{ApiConfig, AppConfig, DaemonConfig};
+pub use store::{load, persist_auth_tokens, update_current_org};
+pub use types::AppConfig;
 
 use anyhow::{Context, Result};
 use regex::Regex;

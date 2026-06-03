@@ -6,7 +6,9 @@ mod daemon;
 mod error;
 mod login;
 mod output;
+mod relay;
 mod runtime;
+mod watcher;
 mod workspace;
 
 use std::process;

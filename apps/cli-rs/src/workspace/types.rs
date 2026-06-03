@@ -330,6 +330,7 @@ pub struct TerminalResizeResponse {
     pub ok: bool,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TerminalSubscribeRequest {

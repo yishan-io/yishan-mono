@@ -1,4 +1,3 @@
-use crate::cmd::resolve_org_id;
 use crate::output::print_any;
 use crate::runtime::AppRuntime;
 use clap::{Args, Subcommand};

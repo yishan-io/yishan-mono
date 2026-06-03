@@ -15,7 +15,6 @@ use crate::config;
 use crate::error::CliError;
 use crate::output::set_format;
 use crate::runtime::AppRuntime;
-use anyhow::Context;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use super::types::{ApiConfig, AppConfig, DaemonConfig};
 use super::{
     KEY_API_ACCESS_TOKEN_EXPIRES_AT, KEY_API_BASE_URL, KEY_API_REFRESH_TOKEN,

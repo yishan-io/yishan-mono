@@ -100,6 +100,9 @@ atty = "0.2"
 # URL encoding
 urlencoding = "2"
 
+# URL parsing
+url = "2"
+
 # Hostname
 hostname = "0.3"
 

@@ -10,6 +10,7 @@ use thiserror::Error;
 /// 5  Permission denied
 /// 6  Daemon not running
 /// 7  Network or server error
+#[allow(dead_code)]
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExitCode {
@@ -39,6 +40,7 @@ impl ExitCode {
 }
 
 /// Top-level CLI error — wraps domain errors and carries an exit code.
+#[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum CliError {
     #[error("API error {status}: {body}")]

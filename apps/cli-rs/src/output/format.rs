@@ -11,6 +11,7 @@ pub enum OutputFormat {
 static FORMAT: OnceLock<OutputFormat> = OnceLock::new();
 
 /// Global accessor used throughout the output module and commands.
+#[allow(non_snake_case)]
 pub mod FORMAT {
     use super::{OutputFormat, FORMAT as INNER};
 

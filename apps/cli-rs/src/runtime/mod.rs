@@ -24,6 +24,7 @@ impl AppRuntime {
     }
 
     /// Returns true when API credentials are configured.
+    #[allow(dead_code)]
     pub fn is_authenticated(&self) -> bool {
         let cfg = self.inner.read().unwrap();
         !cfg.api.base_url.is_empty() && !cfg.api.token.is_empty()

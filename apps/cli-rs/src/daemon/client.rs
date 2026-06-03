@@ -42,6 +42,7 @@ impl RpcClient {
         }
     }
 
+    #[allow(dead_code)]
     pub fn with_token(mut self, token: impl Into<String>) -> Self {
         self.token = Some(token.into());
         self

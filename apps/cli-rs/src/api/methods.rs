@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use super::client::ApiClient;
 use super::types::*;
 use reqwest::Method;

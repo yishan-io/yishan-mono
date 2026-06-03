@@ -3,7 +3,6 @@ use crate::daemon::rpc::{decode_params, DomainRpcError};
 use crate::workspace::manager::WorkspaceManager;
 use crate::workspace::types::*;
 use axum::extract::ws::Message;
-use futures_util::SinkExt;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -368,7 +367,7 @@ pub async fn terminal(
             Ok(json!({ "subscribed": true, "sessionId": req.session_id }))
         }
         METHOD_TERMINAL_UNSUBSCRIBE => {
-            let req: TerminalUnsubscribeRequest = decode_params(params)?;
+            let _req: TerminalUnsubscribeRequest = decode_params(params)?;
             Ok(json!(TerminalUnsubscribeResponse { ok: true }))
         }
         _ => Err(DomainRpcError::method_not_found(method)),

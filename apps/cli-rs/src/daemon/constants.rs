@@ -1,4 +1,6 @@
-/// JSON-RPC 2.0 error codes (standard + custom)
+// JSON-RPC 2.0 error codes (standard + custom)
+#![allow(dead_code)]
+
 pub const RPC_PARSE_ERROR: i64 = -32700;
 pub const RPC_INVALID_REQUEST: i64 = -32600;
 pub const RPC_METHOD_NOT_FOUND: i64 = -32601;

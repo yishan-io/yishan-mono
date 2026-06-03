@@ -1,5 +1,5 @@
 use anyhow::Context;
-use reqwest::{Client as HttpClient, Method, StatusCode};
+use reqwest::{Client as HttpClient, Method};
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
@@ -24,6 +24,7 @@ pub struct ApiError {
 
 /// Wraps a failed request error + the underlying refresh failure.
 #[derive(Debug, Error)]
+#[allow(dead_code)]
 #[error("request unauthorized and token refresh failed: {refresh_error}")]
 pub struct TokenRefreshError {
     pub request_error: Box<dyn std::error::Error + Send + Sync>,
@@ -221,6 +222,7 @@ impl ApiClient {
     }
 
     /// Returns a snapshot of the current token state (for daemon relay etc.)
+    #[allow(dead_code)]
     pub async fn token_state(&self) -> TokenState {
         self.token_state.lock().await.clone()
     }

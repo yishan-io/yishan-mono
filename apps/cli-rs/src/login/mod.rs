@@ -2,7 +2,6 @@ use anyhow::Context;
 use axum::{extract::Query, response::Html, routing::get, Router};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use rand::RngCore;
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::net::TcpListener;

@@ -1,5 +1,4 @@
 use crate::daemon::process::{restart, start_detached, stop, wait_for_ready, RunConfig, StartConfig};
-use crate::daemon::state::is_process_running;
 use crate::output::print_any;
 use crate::runtime::AppRuntime;
 use anyhow::Context;
@@ -96,7 +95,7 @@ pub async fn run(cmd: DaemonCommands, runtime: &AppRuntime) -> anyhow::Result<()
                 ..Default::default()
             };
 
-            let pid = start_detached(&start_cfg).context("start daemon")?;
+            let _pid = start_detached(&start_cfg).context("start daemon")?;
             let state = wait_for_ready(&cfg.config_path, Duration::from_secs(10))
                 .context("wait for daemon ready")?;
 

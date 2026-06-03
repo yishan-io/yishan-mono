@@ -23,6 +23,7 @@ pub struct RunConfig {
     pub port: u16,
     pub relay_enabled: bool,
     pub relay_url: String,
+    #[allow(dead_code)]
     pub log_file_path: String,
 }
 
@@ -51,7 +52,7 @@ pub struct StartConfig {
 /// Mirrors Go `daemon.Run()`.
 pub async fn run(cfg: RunConfig, runtime: AppRuntime) -> anyhow::Result<()> {
     let app_cfg = runtime.config();
-    let state_path = PathBuf::from(&app_cfg.config_path).join("daemon.state.json");
+    let _state_path = PathBuf::from(&app_cfg.config_path).join("daemon.state.json");
 
     // ── Phase 1: stale state guard ───────────────────────────────────────────
     if let Some(existing) = load_state(&app_cfg.config_path) {

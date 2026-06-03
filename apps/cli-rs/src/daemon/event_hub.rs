@@ -1,8 +1,5 @@
 use serde::Serialize;
 use serde_json::Value;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
 use tokio::sync::broadcast;
 
 /// An event pushed to frontend subscribers.
@@ -19,6 +16,7 @@ impl FrontendEvent {
 }
 
 /// Subscriber handle — dropped when the subscriber disconnects.
+#[allow(dead_code)]
 pub struct Subscription {
     pub id: u64,
     pub receiver: broadcast::Receiver<FrontendEvent>,
@@ -50,6 +48,7 @@ impl EventHub {
     }
 
     /// Number of active subscribers.
+    #[allow(dead_code)]
     pub fn subscriber_count(&self) -> usize {
         self.sender.receiver_count()
     }

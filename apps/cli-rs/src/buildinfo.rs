@@ -6,6 +6,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const GIT_COMMIT: &str = env!("YISHAN_GIT_COMMIT", "unknown");
 
 /// Returns the full version string including optional git SHA.
+#[allow(dead_code)]
 pub fn version_string() -> String {
     if GIT_COMMIT == "unknown" {
         VERSION.to_string()

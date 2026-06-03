@@ -1,10 +1,11 @@
+#![allow(dead_code)]
+
 mod format;
 mod print;
 mod table;
 
-pub use format::{set_format, OutputFormat, FORMAT};
-pub use print::{print_any, print_error, print_json, print_render_data};
-pub use table::render_table;
+pub use format::set_format;
+pub use print::{print_any, print_error};
 
 use serde::Serialize;
 

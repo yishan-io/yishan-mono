@@ -1,9 +1,13 @@
 use crate::daemon::constants::*;
-use crate::daemon::event_hub::{EventHub, FrontendEvent};
+use crate::daemon::event_hub::EventHub;
+use crate::daemon::pr_tracker::PrTracker;
 use crate::daemon::rpc::{
     decode_params, DomainRpcError, RpcError, RpcNotification, RpcRequest, RpcResponse,
 };
+use crate::daemon::token_usage::TokenUsageCollector;
+use crate::relay::{run_relay_client_loop, RelayStatus};
 use crate::runtime::AppRuntime;
+use crate::watcher::WorkspaceWatchers;
 use crate::workspace::manager::WorkspaceManager;
 use axum::extract::ws::{Message, WebSocket};
 use bytes::Bytes;
@@ -11,7 +15,7 @@ use futures_util::{SinkExt, StreamExt};
 use serde_json::{json, Value};
 use std::sync::Arc;
 use tokio::sync::Semaphore;
-use tracing::{debug, error, warn};
+use tracing::{debug, info, warn};
 
 /// Central daemon application — composition root (fixes A2).
 /// Holds all subsystem references as `Arc<T>` so they can be injected individually.
@@ -22,16 +26,54 @@ pub struct DaemonApp {
     pub events: Arc<EventHub>,
     pub node_id: Arc<String>,
     pub version: &'static str,
+    #[allow(dead_code)]
+    pub pr_tracker: Arc<PrTracker>,
+    #[allow(dead_code)]
+    pub token_usage: Arc<TokenUsageCollector>,
+    #[allow(dead_code)]
+    pub watchers: Arc<WorkspaceWatchers>,
+    #[allow(dead_code)]
+    pub relay_status: RelayStatus,
 }
 
 impl DaemonApp {
     pub fn new(runtime: AppRuntime, node_id: String) -> Self {
+        let events = Arc::new(EventHub::new());
+        let manager = Arc::new(WorkspaceManager::new());
+        let pr_tracker = PrTracker::new(manager.clone(), events.clone());
+        let token_usage = TokenUsageCollector::new();
+        let watchers = Arc::new(WorkspaceWatchers::new(events.clone()));
+        let relay_url = runtime.config().daemon.relay_url.clone();
+        let relay_status = RelayStatus::new(!relay_url.is_empty(), relay_url);
         Self {
             runtime,
-            manager: Arc::new(WorkspaceManager::new()),
-            events: Arc::new(EventHub::new()),
+            manager,
+            events,
             node_id: Arc::new(node_id),
             version: crate::buildinfo::VERSION,
+            pr_tracker,
+            token_usage,
+            watchers,
+            relay_status,
+        }
+    }
+
+    /// Start all background services.  Called once after the axum server is bound.
+    #[allow(dead_code)]
+    pub fn start_background_services(self: &Arc<Self>) {
+        self.pr_tracker.start();
+        self.token_usage.start_startup_scan();
+
+        // Start relay client if URL is configured.
+        let relay_url = self.runtime.config().daemon.relay_url.clone();
+        if !relay_url.is_empty() {
+            info!(url = relay_url, "starting relay client");
+            let app = self.clone();
+            let node_id = (*self.node_id).clone();
+            let status = self.relay_status.clone();
+            tokio::spawn(async move {
+                run_relay_client_loop(app, node_id, relay_url, status).await;
+            });
         }
     }
 }
