@@ -160,11 +160,7 @@ fn resolve_canonical_context_path(
 
 /// Create the shared context directory and place a `.my-context` symlink inside
 /// the worktree. Idempotent — skips if the symlink is already correct.
-///
-/// Migration: if an existing symlink points at a *different* directory (e.g.
-/// the old hash-based path used by the Go daemon), its contents are merged into
-/// the new `context_path` before the symlink is updated. This ensures no notes
-/// are lost when the project's repoKey format changes.
+/// Matches the Go daemon's ensureContextLink behaviour exactly.
 fn ensure_context_link(context_path: &Path, worktree_path: &str) -> Result<(), String> {
     fs::create_dir_all(context_path)
         .map_err(|e| format!("ensure context dir: {e}"))?;
@@ -185,12 +181,7 @@ fn ensure_context_link(context_path: &Path, worktree_path: &str) -> Result<(), S
                 // Already correct.
                 return Ok(());
             }
-            // Stale symlink pointing at a different path (e.g. old hash-based
-            // context dir). Merge its contents into context_path first so no
-            // notes are lost, then replace the symlink.
-            if existing.is_dir() {
-                merge_dirs(&existing, context_path);
-            }
+            // Stale symlink — remove and recreate.
             fs::remove_file(&link_path)
                 .map_err(|e| format!("remove stale context link: {e}"))?;
         }
