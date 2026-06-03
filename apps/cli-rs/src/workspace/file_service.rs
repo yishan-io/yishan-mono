@@ -32,6 +32,9 @@ impl FileService {
     /// The root is assumed to be already canonicalized (as stored by WorkspaceManager).
     /// We canonicalize the *parent* to handle symlinks without requiring the final
     /// component (the file itself) to already exist — matching resolve_safe_write.
+    ///
+    /// `.my-context` is a blessed symlink that may point outside the workspace.
+    /// Paths under it are allowed even when canonicalization escapes `root`.
     fn resolve_safe(&self, root: &str, rel_path: &str) -> Result<PathBuf, DomainRpcError> {
         let base = Path::new(root);
         let joined = if rel_path.is_empty() || rel_path == "." {
@@ -47,15 +50,23 @@ impl FileService {
             DomainRpcError::not_found(format!("path not found: {rel_path}"))
         })?;
 
-        if !canon_parent.starts_with(base) {
-            return Err(DomainRpcError::new(
-                crate::daemon::constants::RPC_PATH_RESTRICTED,
-                format!("path escapes workspace root: {rel_path}"),
-            ));
+        if canon_parent.starts_with(base) {
+            // Fast path: inside the workspace root.
+            return Ok(canon_parent.join(joined.file_name().unwrap_or_default()));
         }
 
-        // Reconstruct the full path from the canonical parent + the final component.
-        Ok(canon_parent.join(joined.file_name().unwrap_or_default()))
+        // Allow paths that live under the .my-context symlink target.
+        let ctx_link = base.join(".my-context");
+        if let Ok(ctx_target) = ctx_link.canonicalize() {
+            if canon_parent.starts_with(&ctx_target) {
+                return Ok(canon_parent.join(joined.file_name().unwrap_or_default()));
+            }
+        }
+
+        Err(DomainRpcError::new(
+            crate::daemon::constants::RPC_PATH_RESTRICTED,
+            format!("path escapes workspace root: {rel_path}"),
+        ))
     }
 
     /// Resolve `rel_path` for write operations (parent must exist and be inside root).
@@ -67,13 +78,23 @@ impl FileService {
         let canon_parent = parent.canonicalize().map_err(|_| {
             DomainRpcError::not_found(format!("parent directory not found for: {rel_path}"))
         })?;
-        if !canon_parent.starts_with(base) {
-            return Err(DomainRpcError::new(
-                crate::daemon::constants::RPC_PATH_RESTRICTED,
-                format!("path escapes workspace root: {rel_path}"),
-            ));
+
+        if canon_parent.starts_with(base) {
+            return Ok(canon_parent.join(joined.file_name().unwrap_or_default()));
         }
-        Ok(canon_parent.join(joined.file_name().unwrap_or_default()))
+
+        // Allow writes under the .my-context symlink target.
+        let ctx_link = base.join(".my-context");
+        if let Ok(ctx_target) = ctx_link.canonicalize() {
+            if canon_parent.starts_with(&ctx_target) {
+                return Ok(canon_parent.join(joined.file_name().unwrap_or_default()));
+            }
+        }
+
+        Err(DomainRpcError::new(
+            crate::daemon::constants::RPC_PATH_RESTRICTED,
+            format!("path escapes workspace root: {rel_path}"),
+        ))
     }
 
     pub fn list(
