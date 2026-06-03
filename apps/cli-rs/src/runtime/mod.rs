@@ -106,6 +106,23 @@ impl AppRuntime {
         Ok(())
     }
 
+    /// Re-read auth tokens from the credential file on disk and update in-memory state.
+    /// Called by the `app.reloadAuthConfig` RPC after `yishan login` writes new tokens.
+    pub fn reload_auth_from_disk(&self) -> Result<()> {
+        let config_path = {
+            let cfg = self.inner.read().unwrap();
+            cfg.config_path.clone()
+        };
+        let fresh = config::load(Path::new(&config_path), "", "", "", "")
+            .context("reload auth config from disk")?;
+        let mut cfg = self.inner.write().unwrap();
+        cfg.api.token = fresh.api.token;
+        cfg.api.refresh_token = fresh.api.refresh_token;
+        cfg.api.access_token_expires_at = fresh.api.access_token_expires_at;
+        cfg.api.refresh_token_expires_at = fresh.api.refresh_token_expires_at;
+        Ok(())
+    }
+
     /// Clear auth state in memory (used after logout).
     pub fn clear_auth(&self) {
         let mut cfg = self.inner.write().unwrap();

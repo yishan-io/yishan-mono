@@ -315,9 +315,9 @@ async fn dispatch_rpc(
         }
 
         METHOD_APP_RELOAD_AUTH_CONFIG => {
-            // Re-load from disk — config is the source of truth.
-            // In Rust we don't have a global, so we need a fresh load.
-            // For now: no-op (AppRuntime already holds current state).
+            app.runtime
+                .reload_auth_from_disk()
+                .map_err(|e| DomainRpcError::server_error(e.to_string()))?;
             Ok(json!({ "ok": true }))
         }
 
