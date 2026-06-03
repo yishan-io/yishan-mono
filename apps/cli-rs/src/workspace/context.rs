@@ -86,13 +86,36 @@ pub fn sync_context_links(req: &SyncContextLinkRequest) -> SyncContextLinkResult
         return result;
     }
 
-    // Enable path: find the best canonical context directory.
-    // Priority: any existing symlink target that has content > repoKey-derived path.
-    let canonical = resolve_canonical_context_path(&paths, &req.repo_key);
-    let context_path = match canonical {
+    // Enable path: canonical dir is always the repoKey-derived path (owner/repo format).
+    // Any existing symlinks pointing elsewhere (e.g. old hash-based dirs) have their
+    // content merged in, then all symlinks are updated to point at the canonical path.
+    let context_path = match default_context_path(&req.repo_key) {
         Ok(p) => p,
         Err(e) => { result.errors.insert("*".into(), e.to_string()); return result; }
     };
+
+    // Collect any legacy symlink targets that differ from canonical and have content.
+    let mut legacy_targets: Vec<PathBuf> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for wt_path in &paths {
+        let link = Path::new(wt_path).join(CONTEXT_LINK_NAME);
+        let target = match (std::fs::symlink_metadata(&link), std::fs::read_link(&link)) {
+            (Ok(m), Ok(t)) if m.file_type().is_symlink() => t,
+            _ => continue,
+        };
+        if target == context_path || !target.is_dir() || !seen.insert(target.clone()) {
+            continue;
+        }
+        let has_content = fs::read_dir(&target).map(|rd| rd.flatten().count() > 0).unwrap_or(false);
+        if has_content {
+            legacy_targets.push(target);
+        }
+    }
+
+    // Merge legacy content into the canonical dir before updating symlinks.
+    for legacy in &legacy_targets {
+        merge_dirs(legacy, &context_path);
+    }
 
     for path in &paths {
         match ensure_context_link(&context_path, path) {
@@ -102,60 +125,6 @@ pub fn sync_context_links(req: &SyncContextLinkRequest) -> SyncContextLinkResult
     }
 
     result
-}
-
-/// Find the canonical context directory for this set of worktrees.
-///
-/// Scans each worktree's existing `.my-context` symlink. If any one already
-/// points at a non-empty directory, that is the canonical path — all symlinks
-/// should converge there. If multiple point at different non-empty directories,
-/// we pick the one with the most content and merge the others into it.
-/// If none have content, fall back to the repoKey-derived path.
-fn resolve_canonical_context_path(
-    worktree_paths: &[String],
-    repo_key: &str,
-) -> Result<PathBuf, DomainRpcError> {
-    // Collect (target_path, entry_count) for every existing valid symlink.
-    let mut candidates: Vec<(PathBuf, usize)> = Vec::new();
-    let mut seen_targets = std::collections::HashSet::new();
-
-    for wt in worktree_paths {
-        let link = Path::new(wt).join(CONTEXT_LINK_NAME);
-        let meta = match std::fs::symlink_metadata(&link) {
-            Ok(m) if m.file_type().is_symlink() => m,
-            _ => continue,
-        };
-        let _ = meta; // just confirming it's a symlink
-        let target = match std::fs::read_link(&link) {
-            Ok(t) => t,
-            Err(_) => continue,
-        };
-        if !target.is_dir() || !seen_targets.insert(target.clone()) {
-            continue;
-        }
-        let count = fs::read_dir(&target)
-            .map(|rd| rd.flatten().count())
-            .unwrap_or(0);
-        candidates.push((target, count));
-    }
-
-    if candidates.is_empty() {
-        // No existing symlinks — use the repoKey-derived path.
-        return default_context_path(repo_key);
-    }
-
-    // Pick the candidate with the most entries.
-    candidates.sort_by(|a, b| b.1.cmp(&a.1));
-    let (canonical, _) = candidates.remove(0);
-
-    // Merge any other non-empty candidates into the canonical one.
-    for (other, count) in candidates {
-        if count > 0 {
-            merge_dirs(&other, &canonical);
-        }
-    }
-
-    Ok(canonical)
 }
 
 /// Create the shared context directory and place a `.my-context` symlink inside
