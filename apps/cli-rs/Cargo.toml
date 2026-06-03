@@ -85,6 +85,10 @@ base64 = "0.22"
 sha2 = "0.10"
 hex = "0.4"
 
+# Tar + gzip extraction (self-update)
+flate2 = "1"
+tar = "0.4"
+
 # Atomically write files
 tempfile = "3"
 

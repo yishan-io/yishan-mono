@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::daemon::event_hub::{EventHub, FrontendEvent};
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use serde_json::json;
@@ -16,6 +14,7 @@ const CONTEXT_LINK_NAME: &str = ".my-context";
 
 /// Per-workspace fsnotify watcher with debounce + gitignore filtering.
 /// Publishes `workspaceFilesChanged` and `gitChanged` events to the EventHub.
+#[allow(dead_code)]
 struct WorktreeWatcher {
     path: PathBuf,
     git_dir: PathBuf,
@@ -46,6 +45,7 @@ impl WorkspaceWatchers {
         }
     }
 
+    #[allow(dead_code)]
     pub fn with_git_callback(mut self, cb: impl Fn(PathBuf) + Send + Sync + 'static) -> Self {
         self.on_git_changed = Some(Arc::new(cb));
         self
@@ -156,6 +156,7 @@ impl WorkspaceWatchers {
     }
 
     /// Stop all watchers.
+    #[allow(dead_code)]
     pub fn close(&self) {
         let mut map = self.inner.lock().unwrap();
         for (_, w) in map.drain() {

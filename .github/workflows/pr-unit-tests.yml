@@ -45,19 +45,21 @@ jobs:
         working-directory: ${{ matrix.working-directory }}
         run: ${{ matrix.command }}
 
-  go-unit-tests:
-    name: Go unit tests
+  rust-unit-tests:
+    name: Rust unit tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Setup Go
-        uses: actions/setup-go@v6
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
         with:
-          go-version-file: apps/cli/go.mod
-          cache-dependency-path: apps/cli/go.sum
+          workspaces: apps/cli-rs
 
       - name: Run CLI unit tests
-        working-directory: apps/cli
-        run: go test ./...
+        working-directory: apps/cli-rs
+        run: cargo test

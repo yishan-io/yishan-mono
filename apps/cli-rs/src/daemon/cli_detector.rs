@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 /// CLI detector — detects installed agent CLIs and GitHub CLI.
 /// Results are cached for 1 hour (configurable via env AGENT_CLI_DETECTION_CACHE_TTL_SECS).
 use serde::{Deserialize, Serialize};
@@ -9,6 +7,7 @@ use std::time::{Duration, Instant};
 use tracing::debug;
 
 const DEFAULT_CACHE_TTL_SECS: u64 = 3600; // 1 hour
+#[allow(dead_code)]
 const VERSION_TIMEOUT_SECS: u64 = 5;
 
 /// Supported agent CLI definitions.

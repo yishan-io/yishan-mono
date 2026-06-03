@@ -6,6 +6,7 @@ mod logout;
 mod node;
 mod org;
 mod project;
+mod self_update;
 mod system;
 mod terminal;
 mod version;
@@ -93,6 +94,15 @@ pub enum Commands {
     /// Daemon management
     #[command(subcommand)]
     Daemon(daemon::DaemonCommands),
+    /// Update the CLI to the latest (or specified) version
+    #[command(name = "self-update")]
+    SelfUpdate(self_update::SelfUpdateArgs),
+    /// Show authenticated user information (alias for `system whoami`)
+    #[command(hide = true)]
+    Whoami,
+    /// Check API health (alias for `system health`)
+    #[command(hide = true)]
+    Health,
 }
 
 /// Entry point: parse CLI args, initialise config/runtime, dispatch.
@@ -154,6 +164,9 @@ async fn dispatch(cli: Cli) -> Result<(), CliError> {
         Commands::Terminal(sub) => terminal::run(sub, &runtime).await,
         Commands::Job(sub) => job::run(sub, &runtime).await,
         Commands::Daemon(sub) => daemon::run(sub, &runtime).await,
+        Commands::SelfUpdate(args) => self_update::run(args, &runtime).await,
+        Commands::Whoami => system::run(system::SystemCommands::Whoami, &runtime).await,
+        Commands::Health => system::run(system::SystemCommands::Health, &runtime).await,
     }
     .map_err(|e| CliError::Other(e))
 }

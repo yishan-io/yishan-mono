@@ -26,13 +26,9 @@ pub struct DaemonApp {
     pub events: Arc<EventHub>,
     pub node_id: Arc<String>,
     pub version: &'static str,
-    #[allow(dead_code)]
     pub pr_tracker: Arc<PrTracker>,
-    #[allow(dead_code)]
     pub token_usage: Arc<TokenUsageCollector>,
-    #[allow(dead_code)]
     pub watchers: Arc<WorkspaceWatchers>,
-    #[allow(dead_code)]
     pub relay_status: RelayStatus,
 }
 
@@ -59,7 +55,6 @@ impl DaemonApp {
     }
 
     /// Start all background services.  Called once after the axum server is bound.
-    #[allow(dead_code)]
     pub fn start_background_services(self: &Arc<Self>) {
         self.pr_tracker.start();
         self.token_usage.start_startup_scan();
@@ -326,11 +321,37 @@ async fn dispatch_rpc(
             Ok(json!({ "ok": true }))
         }
 
-        METHOD_TOKEN_USAGE_DEBUG_STATE => Ok(json!({ "enabled": false })),
+        METHOD_TOKEN_USAGE_DEBUG_STATE => Ok(json!({
+            "enabled": true,
+            "supportedAgents": crate::daemon::token_usage::SUPPORTED_AGENT_KINDS,
+        })),
 
-        METHOD_AGENT_LIST_DETECTION_STATUSES => Ok(json!([])),
-        METHOD_CLI_TOOL_LIST_STATUSES => Ok(json!([])),
-        METHOD_INTEGRATION_GITHUB_STATUS => Ok(json!({ "connected": false })),
+        METHOD_AGENT_LIST_DETECTION_STATUSES => {
+            let statuses = tokio::task::spawn_blocking(|| {
+                crate::daemon::cli_detector::detect_agent_clis(false)
+            })
+            .await
+            .map_err(|_| DomainRpcError::server_error("cli detection task failed"))?;
+            Ok(serde_json::to_value(statuses).unwrap_or(json!([])))
+        }
+
+        METHOD_CLI_TOOL_LIST_STATUSES => {
+            let all = tokio::task::spawn_blocking(|| {
+                crate::daemon::cli_detector::detect_all(false)
+            })
+            .await
+            .map_err(|_| DomainRpcError::server_error("cli detection task failed"))?;
+            Ok(serde_json::to_value(all).unwrap_or(json!([])))
+        }
+
+        METHOD_INTEGRATION_GITHUB_STATUS => {
+            let status = tokio::task::spawn_blocking(|| {
+                crate::daemon::cli_detector::detect_gh(false)
+            })
+            .await
+            .map_err(|_| DomainRpcError::server_error("gh detection task failed"))?;
+            Ok(serde_json::to_value(status).unwrap_or(json!({ "connected": false })))
+        }
 
         // ── Workspace ────────────────────────────────────────────────────────
         m if is_workspace_method(m) => {
@@ -436,7 +457,43 @@ async fn dispatch_workspace(
     params: Option<&serde_json::value::RawValue>,
     app: &DaemonApp,
 ) -> Result<Value, DomainRpcError> {
-    crate::workspace::dispatch::workspace(method, params, &app.manager).await
+    use crate::daemon::constants::{METHOD_WORKSPACE_CLOSE, METHOD_WORKSPACE_CREATE, METHOD_WORKSPACE_OPEN};
+    use std::path::Path;
+
+    match method {
+        // On open/create: call the sub-dispatcher first, then register with watchers/pr_tracker.
+        METHOD_WORKSPACE_OPEN | METHOD_WORKSPACE_CREATE => {
+            let result = crate::workspace::dispatch::workspace(method, params, &app.manager).await?;
+            if let (Some(path), Some(_id)) = (result["path"].as_str(), result["id"].as_str()) {
+                app.watchers.watch(Path::new(path));
+                app.pr_tracker.ensure_tracked(path, true);
+            }
+            Ok(result)
+        }
+
+        // On close: look up path before removing, then unregister after.
+        METHOD_WORKSPACE_CLOSE => {
+            // Deserialize workspace_id from params to look up path before removal.
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct CloseReq { workspace_id: String }
+            let close_req: Option<(String, String)> = crate::daemon::rpc::decode_params::<CloseReq>(params)
+                .ok()
+                .and_then(|r| {
+                    app.manager.get(&r.workspace_id).ok().map(|ws| (r.workspace_id, ws.path))
+                });
+
+            let result = crate::workspace::dispatch::workspace(method, params, &app.manager).await?;
+
+            if let Some((ws_id, ws_path)) = close_req {
+                app.watchers.unwatch(Path::new(&ws_path));
+                app.pr_tracker.stop_tracking(&ws_id);
+            }
+            Ok(result)
+        }
+
+        _ => crate::workspace::dispatch::workspace(method, params, &app.manager).await,
+    }
 }
 
 async fn dispatch_git(

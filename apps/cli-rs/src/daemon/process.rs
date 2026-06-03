@@ -2,7 +2,7 @@ use crate::daemon::state::{is_process_running, load_state, remove_state, save_st
 use crate::daemon::server::{DaemonApp, handle_ws};
 use crate::runtime::AppRuntime;
 use anyhow::{bail, Context};
-use axum::{extract::{State, WebSocketUpgrade}, response::IntoResponse, routing::get, Router};
+use axum::{extract::{State, WebSocketUpgrade}, response::IntoResponse, routing::{get, post}, Router};
 use std::env;
 use std::net::{SocketAddr, TcpListener};
 use std::path::PathBuf;
@@ -83,6 +83,7 @@ pub async fn run(cfg: RunConfig, runtime: AppRuntime) -> anyhow::Result<()> {
     let router = Router::new()
         .route("/ws", get(ws_handler))
         .route("/healthz", get(healthz_handler))
+        .route("/agent-hook/ingest", post(agent_hook_handler))
         .with_state(app.clone());
 
     // ── Phase 5: persist state ───────────────────────────────────────────────
@@ -119,6 +120,9 @@ pub async fn run(cfg: RunConfig, runtime: AppRuntime) -> anyhow::Result<()> {
         info!(address = %actual_addr, "daemon server started");
     }
 
+    // Start background services now that the server address is known.
+    app.start_background_services();
+
     let std_listener = listener;
     std_listener.set_nonblocking(true)?;
     let tokio_listener = tokio::net::TcpListener::from_std(std_listener)?;
@@ -149,6 +153,19 @@ async fn healthz_handler(State(app): State<Arc<DaemonApp>>) -> impl IntoResponse
         "version": app.version,
         "daemonId": *app.node_id,
     }))
+}
+
+/// Agent hook ingest endpoint — receives token-usage trigger events from agent CLIs.
+async fn agent_hook_handler(
+    State(app): State<Arc<DaemonApp>>,
+    axum::Json(body): axum::Json<serde_json::Value>,
+) -> impl IntoResponse {
+    use axum::Json;
+    use serde_json::json;
+    let agent_kind = body["agentKind"].as_str().unwrap_or("");
+    let source = body["source"].as_str().unwrap_or("hook");
+    app.token_usage.trigger(agent_kind, source);
+    Json(json!({ "ok": true }))
 }
 
 async fn shutdown_signal() {

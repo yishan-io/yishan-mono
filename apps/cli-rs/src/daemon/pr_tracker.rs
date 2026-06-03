@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::daemon::event_hub::{EventHub, FrontendEvent};
 use crate::workspace::manager::WorkspaceManager;
 use crate::workspace::types::{Workspace, WorkspacePullRequest};
@@ -74,11 +72,13 @@ impl PrTracker {
     }
 
     /// Signal the poll loop to stop.
+    #[allow(dead_code)]
     pub fn stop(&self) {
         self.cancel.notify_waiters();
     }
 
-    /// Immediately refresh PR state for the workspace at the given path.
+    /// Trigger an immediate PR refresh for a workspace path (used by watcher on gitChanged).
+    #[allow(dead_code)]
     pub async fn refresh_by_path(self: &Arc<Self>, worktree_path: &str) {
         let ws = match self.find_by_path(worktree_path) {
             Some(w) => w,

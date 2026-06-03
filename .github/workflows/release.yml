@@ -49,32 +49,67 @@ jobs:
 
   cli:
     needs: resolve-version
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            goos: darwin
+            goarch: arm64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            goos: linux
+            goarch: amd64
+    runs-on: ${{ matrix.os }}
+    env:
+      YISHAN_VERSION: ${{ needs.resolve-version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
 
-      - name: Setup Go
-        uses: actions/setup-go@v6
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          go-version-file: apps/cli/go.mod
-          cache-dependency-path: apps/cli/go.sum
+          targets: ${{ matrix.target }}
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
         with:
-          distribution: goreleaser
-          version: "~> v2"
-          workdir: apps/cli
-          args: >-
-            release --clean --config .goreleaser.yaml
-            ${{ !startsWith(github.ref, 'refs/tags/') && '--snapshot' || '' }}
+          workspaces: apps/cli-rs
+
+      - name: Build release binary
+        working-directory: apps/cli-rs
+        run: |
+          cargo build --release --target ${{ matrix.target }} \
+            --config "env.YISHAN_VERSION=\"$YISHAN_VERSION\""
+
+      - name: Package archive
+        working-directory: apps/cli-rs
+        run: |
+          version="${{ needs.resolve-version.outputs.version }}"
+          archive="yishan-cli_${version}_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz"
+          binary="target/${{ matrix.target }}/release/yishan"
+          tar -czf "/tmp/$archive" -C "$(dirname "$binary")" "$(basename "$binary")"
+          echo "ARCHIVE_PATH=/tmp/$archive" >> "$GITHUB_ENV"
+          echo "ARCHIVE_NAME=$archive" >> "$GITHUB_ENV"
+
+          # Generate checksums
+          sha256sum "/tmp/$archive" | awk '{print $1, "'"$archive"'"}' >> /tmp/checksums.txt
+
+      - name: Upload CLI archive to release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-          GORELEASER_CURRENT_TAG: v${{ needs.resolve-version.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${{ needs.resolve-version.outputs.version }}"
+          tag="v${version}"
+          gh release upload "$tag" "$ARCHIVE_PATH" --clobber || \
+            gh release create "$tag" "$ARCHIVE_PATH" \
+              --title "Yishan v${version}" \
+              --draft=${{ inputs.draft || 'true' }} \
+              --notes "Release v${version}"
+          # Upload per-platform checksums fragment
+          gh release upload "$tag" /tmp/checksums.txt --clobber || true
 
   desktop:
     needs: [resolve-version, cli]
@@ -215,11 +250,11 @@ jobs:
             if [[ -n "$previous_tag" ]]; then
               echo "Changes since \`$previous_tag\`."
               echo
-              log_output="$(git log --no-merges --pretty=format:'- %s (%h)' "$previous_tag..HEAD" -- apps/cli || true)"
+              log_output="$(git log --no-merges --pretty=format:'- %s (%h)' "$previous_tag..HEAD" -- apps/cli-rs || true)"
             else
               echo "Changes in this release."
               echo
-              log_output="$(git log --no-merges --pretty=format:'- %s (%h)' HEAD -- apps/cli || true)"
+              log_output="$(git log --no-merges --pretty=format:'- %s (%h)' HEAD -- apps/cli-rs || true)"
             fi
 
             if [[ -n "${log_output:-}" ]]; then

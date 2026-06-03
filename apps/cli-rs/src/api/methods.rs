@@ -238,6 +238,18 @@ impl ApiClient {
         self.do_decode(Method::PATCH, &path, Some(&body)).await
     }
 
+    pub async fn find_workspace_by_path(
+        &self,
+        org_id: &str,
+        local_path: &str,
+    ) -> anyhow::Result<serde_json::Value> {
+        let path = format!(
+            "/orgs/{org_id}/workspaces/find?localPath={}",
+            urlencoding::encode(local_path)
+        );
+        self.do_decode(Method::GET, &path, None::<&()>).await
+    }
+
     // ── Relay / Node tokens ───────────────────────────────────────────────────
 
     pub async fn relay_token(&self, node_id: &str) -> anyhow::Result<RelayTokenResponse> {

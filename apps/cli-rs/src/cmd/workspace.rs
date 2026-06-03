@@ -2,7 +2,6 @@ use crate::cmd::resolve_org_id;
 use crate::output::print_any;
 use crate::runtime::AppRuntime;
 use clap::{Args, Subcommand};
-
 #[derive(Subcommand)]
 pub enum WorkspaceCommands {
     /// List workspaces
@@ -11,6 +10,8 @@ pub enum WorkspaceCommands {
     Create(WorkspaceCreateArgs),
     /// Close workspace
     Close(WorkspaceCloseArgs),
+    /// Find workspace by local path
+    Find(WorkspaceFindArgs),
 }
 
 #[derive(Args)]
@@ -51,6 +52,14 @@ pub struct WorkspaceCloseArgs {
     pub workspace_id: String,
 }
 
+#[derive(Args)]
+pub struct WorkspaceFindArgs {
+    #[arg(long)]
+    pub org_id: Option<String>,
+    /// Local filesystem path to search by
+    pub path: String,
+}
+
 pub async fn run(cmd: WorkspaceCommands, runtime: &AppRuntime) -> anyhow::Result<()> {
     let client = runtime.api_client();
     match cmd {
@@ -80,6 +89,11 @@ pub async fn run(cmd: WorkspaceCommands, runtime: &AppRuntime) -> anyhow::Result
             let resp = client
                 .close_workspace(&org_id, &args.project_id, &args.workspace_id)
                 .await?;
+            print_any(resp)
+        }
+        WorkspaceCommands::Find(args) => {
+            let org_id = resolve_org_id(args.org_id.as_deref(), runtime)?;
+            let resp = client.find_workspace_by_path(&org_id, &args.path).await?;
             print_any(resp)
         }
     }

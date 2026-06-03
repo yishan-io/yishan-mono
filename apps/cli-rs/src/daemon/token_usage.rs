@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 /// Token usage collector — debounces agent hook events and triggers periodic
 /// syncs to the API-service.
 ///
@@ -94,6 +92,7 @@ impl TokenUsageCollector {
     }
 
     /// Shut down: cancel all pending timers and flush pending data.
+    #[allow(dead_code)]
     pub fn close(&self) {
         let mut guard = self.inner.lock().unwrap();
         if guard.closed { return; }
