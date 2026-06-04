@@ -10,7 +10,11 @@ struct SubsequenceMatch {
     score: i64,
 }
 
-pub fn search_workspace_entries(entries: &[FileEntry], raw_query: &str, limit: usize) -> Vec<FileSearchResult> {
+pub fn search_workspace_entries(
+    entries: &[FileEntry],
+    raw_query: &str,
+    limit: usize,
+) -> Vec<FileSearchResult> {
     let query = raw_query.trim().to_lowercase();
     let mut results: Vec<FileSearchResult> = entries
         .iter()
@@ -70,7 +74,9 @@ fn resolve_subsequence_match(target: &str, query: &str) -> Option<SubsequenceMat
     };
 
     match contiguous {
-        Some(contiguous_match) if contiguous_match.score >= subsequence.score => Some(contiguous_match),
+        Some(contiguous_match) if contiguous_match.score >= subsequence.score => {
+            Some(contiguous_match)
+        }
         _ => Some(subsequence),
     }
 }

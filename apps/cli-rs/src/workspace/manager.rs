@@ -94,7 +94,10 @@ impl WorkspaceManager {
         self.workspace(&workspace_id)
     }
 
-    pub(crate) fn workspace_for_path(&self, workspace_path: &str) -> Result<WorkspaceHandle<'_>, DomainRpcError> {
+    pub(crate) fn workspace_for_path(
+        &self,
+        workspace_path: &str,
+    ) -> Result<WorkspaceHandle<'_>, DomainRpcError> {
         let workspace = self
             .workspaces
             .read()
@@ -102,7 +105,9 @@ impl WorkspaceManager {
             .values()
             .find(|workspace| workspace.path == workspace_path)
             .cloned()
-            .ok_or_else(|| DomainRpcError::not_found(format!("workspace not found for path: {workspace_path}")))?;
+            .ok_or_else(|| {
+                DomainRpcError::not_found(format!("workspace not found for path: {workspace_path}"))
+            })?;
         Ok(WorkspaceHandle {
             workspace,
             workspaces: &self.workspaces,

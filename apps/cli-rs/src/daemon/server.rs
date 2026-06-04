@@ -102,7 +102,9 @@ impl DaemonApp {
                         else {
                             continue;
                         };
-                        if let Ok(workspace) = manager.workspace_for_path(&payload.workspace_worktree_path) {
+                        if let Ok(workspace) =
+                            manager.workspace_for_path(&payload.workspace_worktree_path)
+                        {
                             workspace.invalidate_file_cache(&payload.changed_relative_paths);
                         }
                     }

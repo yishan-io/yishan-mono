@@ -71,7 +71,8 @@ impl WorkspaceHandle<'_> {
     }
 
     pub fn invalidate_file_cache(&self, changed_paths: &[String]) {
-        self.files.invalidate_paths(&self.workspace.path, changed_paths);
+        self.files
+            .invalidate_paths(&self.workspace.path, changed_paths);
     }
 
     pub fn clear_file_cache(&self) {
