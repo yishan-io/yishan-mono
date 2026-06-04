@@ -267,9 +267,11 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
         workspaceWorktreePath: selectedWorkspaceWorktreePath,
         requests: refreshDirectoryPaths.map((directoryPath) => ({
           relativePath: directoryPath || undefined,
-          // Always use recursive so we get the full current state of each
-          // directory; this is needed to discover renames and deletions.
-          recursive: true,
+          // Root fetch is recursive (full tree); loaded-subdirectory refreshes
+          // are shallow — the applyDirectoryRefreshes + changedRelativePaths
+          // filter handles evicting renamed/deleted entries without re-reading
+          // entire subtrees on every file-change event.
+          recursive: !directoryPath,
         })),
       });
       const refreshResults = response.results

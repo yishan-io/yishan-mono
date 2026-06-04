@@ -763,7 +763,8 @@ describe("FileManagerView file loading", () => {
       recursive?: boolean;
     }) => {
       if (input.recursive === false && input.relativePath === "src") {
-        return { files: asEntries(["src/old-name.ts"]) };
+        // After the rename, the shallow read returns only the new name.
+        return { files: asEntries(["src/new-name.ts"]) };
       }
 
       if (input.recursive) {
@@ -781,11 +782,12 @@ describe("FileManagerView file loading", () => {
 
     await getFileTreeProps().onEnsurePathLoaded?.("src");
 
+    // After ensurePathLoaded the shallow response returns new-name.ts, merged
+    // into the tree (which already had it from the initial recursive load).
     await waitFor(() => {
       expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
         "src/",
         "src/new-name.ts",
-        "src/old-name.ts",
       ]);
     });
 
@@ -796,6 +798,8 @@ describe("FileManagerView file loading", () => {
 
     rerender(<FileManagerView />);
 
+    // Shallow refresh returns new-name.ts; old-name.ts is in changedPaths
+    // but absent from the response so it's evicted. new-name.ts survives.
     await waitFor(() => {
       expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual(["src/", "src/new-name.ts"]);
     });
@@ -912,8 +916,9 @@ describe("FileManagerView file loading", () => {
       expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual(["src/", "src/a.txt"]);
     });
 
+    // After mv a.txt -> b.txt: daemon now returns b.txt on shallow read.
     recursiveLeafName = "b.txt";
-    loadedLeafName = "a.txt";
+    loadedLeafName = "b.txt";
     mocks.stateRef.current.fileTreeChangedRelativePathsByWorktreePath = {
       "/tmp/repo": ["src/a.txt", "src/b.txt"],
     };
