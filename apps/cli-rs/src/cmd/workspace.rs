@@ -101,7 +101,8 @@ pub async fn run(cmd: WorkspaceCommands, runtime: &AppRuntime) -> anyhow::Result
         }
         WorkspaceCommands::Find(args) => {
             let org_id = resolve_org_id(args.org_id.as_deref(), runtime)?;
-            let resp = find_workspace(&client, &org_id, &args.project_id, &args.workspace_id).await?;
+            let resp =
+                find_workspace(&client, &org_id, &args.project_id, &args.workspace_id).await?;
             print_any(resp)
         }
         WorkspaceCommands::FindPath(args) => {
@@ -168,7 +169,11 @@ async fn create_workspace(
     let project = resolve_project(client, org_id, &args.project_id).await?;
 
     let kind = args.kind.trim();
-    let branch = args.branch.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let branch = args
+        .branch
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
     let workspace_name = args
         .name
         .as_deref()
@@ -196,9 +201,11 @@ async fn create_workspace(
             }
         }
         "worktree" => {
-            let branch = branch.ok_or_else(|| anyhow::anyhow!("branch is required for worktree workspaces"))?;
-            let workspace_name = workspace_name
-                .ok_or_else(|| anyhow::anyhow!("workspace name is required for worktree workspaces"))?;
+            let branch = branch
+                .ok_or_else(|| anyhow::anyhow!("branch is required for worktree workspaces"))?;
+            let workspace_name = workspace_name.ok_or_else(|| {
+                anyhow::anyhow!("workspace name is required for worktree workspaces")
+            })?;
             if project.repo_key.trim().is_empty() {
                 anyhow::bail!("project {} is missing repo key", args.project_id);
             }
@@ -206,7 +213,9 @@ async fn create_workspace(
                 local_path = Some(default_worktree_path(&project.repo_key, workspace_name)?);
             }
             if source_branch.is_none() {
-                source_branch = resolve_default_source_branch(client, org_id, &args.project_id, &node_id).await?;
+                source_branch =
+                    resolve_default_source_branch(client, org_id, &args.project_id, &node_id)
+                        .await?;
             }
             if source_branch.is_none() {
                 anyhow::bail!("source-branch is required for worktree workspaces");
@@ -245,14 +254,27 @@ async fn create_workspace(
             workspace_name.unwrap_or(resp.workspace.branch.as_str()),
         )
         .await
-        .map_err(|error| anyhow::anyhow!("workspace {} created in api but local provisioning failed: {error}", resp.workspace.id))?;
+        .map_err(|error| {
+            anyhow::anyhow!(
+                "workspace {} created in api but local provisioning failed: {error}",
+                resp.workspace.id
+            )
+        })?;
     }
 
     Ok(resp)
 }
 
-fn resolve_workspace_node_id(args: &WorkspaceCreateArgs, runtime: &AppRuntime) -> anyhow::Result<String> {
-    if let Some(node_id) = args.node_id.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+fn resolve_workspace_node_id(
+    args: &WorkspaceCreateArgs,
+    runtime: &AppRuntime,
+) -> anyhow::Result<String> {
+    if let Some(node_id) = args
+        .node_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
         return Ok(node_id.to_string());
     }
     crate::daemon::ensure_daemon_id(&runtime.config().config_path)
@@ -268,7 +290,13 @@ async fn resolve_project(
         .projects
         .into_iter()
         .find(|project| project.id == project_id)
-        .ok_or_else(|| anyhow::anyhow!("project {} not found in organization {}", project_id, org_id))
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "project {} not found in organization {}",
+                project_id,
+                org_id
+            )
+        })
 }
 
 async fn resolve_default_source_branch(
@@ -281,7 +309,11 @@ async fn resolve_default_source_branch(
     Ok(response
         .workspaces
         .into_iter()
-        .find(|workspace| workspace.kind == "primary" && workspace.node_id == node_id && !workspace.local_path.trim().is_empty())
+        .find(|workspace| {
+            workspace.kind == "primary"
+                && workspace.node_id == node_id
+                && !workspace.local_path.trim().is_empty()
+        })
         .and_then(|workspace| {
             let branch = workspace.branch.trim();
             if branch.is_empty() {
@@ -312,7 +344,8 @@ async fn provision_worktree_locally(
     source_branch: &str,
     workspace_name: &str,
 ) -> anyhow::Result<()> {
-    let source_path = resolve_worktree_source_path(runtime, org_id, project_id, node_id, project).await?;
+    let source_path =
+        resolve_worktree_source_path(runtime, org_id, project_id, node_id, project).await?;
     let rpc = crate::daemon::rpc_client(runtime)?;
     rpc.call(
         "workspace.create",
@@ -423,10 +456,15 @@ async fn update_git_repo(repo_path: &str) -> anyhow::Result<()> {
             .args(["-C", &repo_path, "remote"])
             .output()?;
         if !remote_output.status.success() {
-            let stderr = String::from_utf8_lossy(&remote_output.stderr).trim().to_string();
+            let stderr = String::from_utf8_lossy(&remote_output.stderr)
+                .trim()
+                .to_string();
             anyhow::bail!("list git remotes ({}): git remote failed", stderr);
         }
-        if String::from_utf8_lossy(&remote_output.stdout).trim().is_empty() {
+        if String::from_utf8_lossy(&remote_output.stdout)
+            .trim()
+            .is_empty()
+        {
             return Ok(());
         }
 
@@ -434,8 +472,12 @@ async fn update_git_repo(repo_path: &str) -> anyhow::Result<()> {
             .args(["-C", &repo_path, "fetch", "--all", "--prune"])
             .output()?;
         if !fetch_output.status.success() {
-            let stderr = String::from_utf8_lossy(&fetch_output.stderr).trim().to_string();
-            let stdout = String::from_utf8_lossy(&fetch_output.stdout).trim().to_string();
+            let stderr = String::from_utf8_lossy(&fetch_output.stderr)
+                .trim()
+                .to_string();
+            let stdout = String::from_utf8_lossy(&fetch_output.stdout)
+                .trim()
+                .to_string();
             let message = if !stderr.is_empty() { stderr } else { stdout };
             anyhow::bail!("fetch git repo ({}): git fetch failed", message);
         }
@@ -454,12 +496,20 @@ mod tests {
     #[test]
     fn default_worktree_path_uses_yishan_worktrees_root() {
         let path = default_worktree_path("owner/repo", "feature-branch").unwrap();
-        assert!(path.ends_with("/.yishan/worktrees/owner/repo/feature-branch") || path.ends_with("\\.yishan\\worktrees\\owner/repo\\feature-branch") || path.ends_with("\\.yishan\\worktrees\\owner\\repo\\feature-branch"));
+        assert!(
+            path.ends_with("/.yishan/worktrees/owner/repo/feature-branch")
+                || path.ends_with("\\.yishan\\worktrees\\owner/repo\\feature-branch")
+                || path.ends_with("\\.yishan\\worktrees\\owner\\repo\\feature-branch")
+        );
     }
 
     #[test]
     fn default_repo_path_uses_yishan_repos_root() {
         let path = default_repo_path("owner/repo").unwrap();
-        assert!(path.ends_with("/.yishan/repos/owner/repo") || path.ends_with("\\.yishan\\repos\\owner/repo") || path.ends_with("\\.yishan\\repos\\owner\\repo"));
+        assert!(
+            path.ends_with("/.yishan/repos/owner/repo")
+                || path.ends_with("\\.yishan\\repos\\owner/repo")
+                || path.ends_with("\\.yishan\\repos\\owner\\repo")
+        );
     }
 }

@@ -140,7 +140,9 @@ pub struct GitBranchPullRequestStatus {
     pub deployments: Vec<GitPullRequestDeployment>,
 }
 
-fn is_zero(v: &i64) -> bool { *v == 0 }
+fn is_zero(v: &i64) -> bool {
+    *v == 0
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

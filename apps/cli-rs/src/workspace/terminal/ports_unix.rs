@@ -33,7 +33,9 @@ pub(super) fn append_port_scan_tail(previous_tail: &str, chunk: &str) -> (String
     (next_tail, output_mentions_ports(&combined))
 }
 
-pub(super) fn collect_detected_ports_for_sessions(sessions: &[SessionPortRef]) -> Vec<TerminalDetectedPort> {
+pub(super) fn collect_detected_ports_for_sessions(
+    sessions: &[SessionPortRef],
+) -> Vec<TerminalDetectedPort> {
     if sessions.is_empty() {
         return Vec::new();
     }
@@ -127,7 +129,9 @@ fn list_listening_tcp_ports_for_chunk(pids: &[i32]) -> std::io::Result<Vec<Liste
         .output()?;
 
     if !output.status.success() && output.status.code() != Some(1) {
-        return Err(std::io::Error::other(String::from_utf8_lossy(&output.stderr).into_owned()));
+        return Err(std::io::Error::other(
+            String::from_utf8_lossy(&output.stderr).into_owned(),
+        ));
     }
 
     Ok(parse_lsof_listening_tcp_ports(&output.stdout))
@@ -186,10 +190,15 @@ fn parse_lsof_listening_tcp_ports(output: &[u8]) -> Vec<ListeningPort> {
 }
 
 fn parse_lsof_network_address(value: &str) -> Option<(String, u16)> {
-    let value = value.trim().trim_start_matches("TCP ").trim_end_matches(" (LISTEN)");
+    let value = value
+        .trim()
+        .trim_start_matches("TCP ")
+        .trim_end_matches(" (LISTEN)");
     let colon_index = value.rfind(':')?;
     let port = value[colon_index + 1..].parse::<u16>().ok()?;
-    let mut address = value[..colon_index].trim_matches(&['[', ']'][..]).to_string();
+    let mut address = value[..colon_index]
+        .trim_matches(&['[', ']'][..])
+        .to_string();
     if address.is_empty() || address == "*" {
         address = "0.0.0.0".to_string();
     }
@@ -218,7 +227,11 @@ fn build_pid_to_root_map(root_pids: &[i32], processes: &[ProcessInfo]) -> HashMa
 
     let mut cache = HashMap::<i32, Option<i32>>::new();
     let mut pid_to_root = HashMap::new();
-    for pid in parent_by_pid.keys().copied().chain(root_pids.iter().copied()) {
+    for pid in parent_by_pid
+        .keys()
+        .copied()
+        .chain(root_pids.iter().copied())
+    {
         if let Some(root_pid) = resolve_root_pid(pid, &root_set, &parent_by_pid, &mut cache) {
             pid_to_root.insert(pid, root_pid);
         }
@@ -262,10 +275,8 @@ fn strip_ansi(value: &str) -> String {
 fn ansi_escape_re() -> &'static Regex {
     static ANSI_ESCAPE_RE: OnceLock<Regex> = OnceLock::new();
     ANSI_ESCAPE_RE.get_or_init(|| {
-        Regex::new(
-            r#"\x1b(?:\[[0-9;]*[A-Za-z]|\][^\x07]*\x07|\][^\x1b]*\x1b\\|[A-Z\\@^_])"#,
-        )
-        .expect("compile ansi escape regex")
+        Regex::new(r#"\x1b(?:\[[0-9;]*[A-Za-z]|\][^\x07]*\x07|\][^\x1b]*\x1b\\|[A-Z\\@^_])"#)
+            .expect("compile ansi escape regex")
     })
 }
 
@@ -293,14 +304,16 @@ mod tests {
 
     #[test]
     fn append_port_scan_tail_detects_port_announcement() {
-        let (tail, mentioned_ports) = append_port_scan_tail("", "Available at http://127.0.0.1:1234\n");
+        let (tail, mentioned_ports) =
+            append_port_scan_tail("", "Available at http://127.0.0.1:1234\n");
         assert!(mentioned_ports);
         assert!(tail.contains("1234"));
     }
 
     #[test]
     fn append_port_scan_tail_handles_split_output_chunks() {
-        let (tail, mentioned_ports) = append_port_scan_tail("listening on http://127.0.0.1", ":4321\n");
+        let (tail, mentioned_ports) =
+            append_port_scan_tail("listening on http://127.0.0.1", ":4321\n");
         assert!(mentioned_ports);
         assert!(tail.contains("4321"));
     }
@@ -320,8 +333,14 @@ mod tests {
     fn build_pid_to_root_map_tracks_descendants_to_root_session() {
         let processes = vec![
             ProcessInfo { pid: 100, ppid: 1 },
-            ProcessInfo { pid: 200, ppid: 100 },
-            ProcessInfo { pid: 300, ppid: 200 },
+            ProcessInfo {
+                pid: 200,
+                ppid: 100,
+            },
+            ProcessInfo {
+                pid: 300,
+                ppid: 200,
+            },
         ];
 
         let mapping = build_pid_to_root_map(&[100], &processes);

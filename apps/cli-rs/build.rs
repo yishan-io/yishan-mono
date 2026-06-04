@@ -17,7 +17,9 @@ fn main() {
         .ok()
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| std::env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "0.0.0".to_string()));
+        .unwrap_or_else(|| {
+            std::env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "0.0.0".to_string())
+        });
 
     println!("cargo:rustc-env=YISHAN_GIT_COMMIT={commit}");
     println!("cargo:rustc-env=YISHAN_VERSION={version}");
