@@ -56,6 +56,8 @@ vi.mock("@tanstack/react-virtual", () => ({
 
 vi.mock("../../../commands/fileCommands", () => ({
   listFiles: (...args: unknown[]) => listFiles(...args),
+  listFilesBatch: vi.fn(async () => ({ results: [] })),
+  searchFiles: vi.fn(async () => ({ files: [] })),
   readFile: (...args: unknown[]) => readFile(...args),
   writeFile: vi.fn(),
   createFile: (...args: unknown[]) => createFile(...args),

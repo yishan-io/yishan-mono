@@ -125,7 +125,7 @@ export async function ensureVisibleWorkspacesOpen(mergedWorkspaceIds?: ReadonlyS
           pullRequestAlreadyMerged: mergedWorkspaceIds?.has(workspace.id) ?? false,
         });
         openPaths.add(worktreePath);
-        if (openedWorkspace.pullRequest) {
+        if (openedWorkspace?.pullRequest) {
           workspaceStore.getState().setWorkspacePullRequest(openedWorkspace.id, openedWorkspace.pullRequest);
         }
       } catch (error) {
