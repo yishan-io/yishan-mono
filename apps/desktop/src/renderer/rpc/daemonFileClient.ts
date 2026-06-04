@@ -67,6 +67,19 @@ export class DaemonFileClient {
     return { results };
   }
 
+  async searchFiles(input: Rpc.FileSearchInput): Promise<Rpc.FileSearchResult[]> {
+    const record = asRecord(input);
+    const workspaceId = await this.resolveWorkspaceId(input);
+    const query = readOptionalString(record?.query)?.trim() ?? "";
+    if (!query) {
+      return [];
+    }
+
+    const limit = typeof record?.limit === "number" && Number.isFinite(record.limit) ? record.limit : 100;
+    const results = await this.invoke("file.search", { workspaceId, query, limit });
+    return Array.isArray(results) ? (results as Rpc.FileSearchResult[]) : [];
+  }
+
   async readFile(input: Rpc.FileReadInput): Promise<Rpc.FileReadResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);

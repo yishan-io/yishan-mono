@@ -114,14 +114,6 @@ export function FileManagerView({
   useSuppressNativeContextMenuWhileOpen(hasOpenContextMenu);
 
   const visibleTreeFiles = ops.repoFiles;
-  const ignoredSearchRepoPathSet = useMemo(
-    () => new Set(ops.searchIgnoredRepoPaths.map((path) => path.replace(/\/+$/, ""))),
-    [ops.searchIgnoredRepoPaths],
-  );
-  const searchableFiles = useMemo(
-    () => ops.searchRepoFiles.filter((path) => !ignoredSearchRepoPathSet.has(path.replace(/\/+$/, ""))),
-    [ignoredSearchRepoPathSet, ops.searchRepoFiles],
-  );
   const gitChangesByPath = useFileTreeGitChanges({
     listGitChanges: cmd.listGitChanges,
     selectedWorkspaceWorktreePath,
@@ -204,8 +196,7 @@ export function FileManagerView({
     fileSearchResults,
     handleFileSearchInputKeyDown,
   } = useFileSearchController({
-    searchableFiles,
-    loadAllRepoFiles: ops.loadAllRepoFiles,
+    workspaceWorktreePath: selectedWorkspaceWorktreePath || undefined,
     openFileSearchRequestKey,
     lastHandledFileSearchRequestKey,
     onFileSearchRequestHandled,

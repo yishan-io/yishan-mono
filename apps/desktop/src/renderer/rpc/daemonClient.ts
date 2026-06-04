@@ -93,6 +93,7 @@ export class DaemonClient {
   readonly file = {
     listFiles: (input: Rpc.FileListInput) => this._fileClient.listFiles(input),
     listFilesBatch: (input: Rpc.FileListBatchInput) => this._fileClient.listFilesBatch(input),
+    searchFiles: (input: Rpc.FileSearchInput) => this._fileClient.searchFiles(input),
     readFile: (input: Rpc.FileReadInput) => this._fileClient.readFile(input),
     writeFile: (input: Rpc.FileWriteInput) => this._fileClient.writeFile(input),
     createFile: (input: Rpc.FileWriteInput) => this._fileClient.writeFile(input),

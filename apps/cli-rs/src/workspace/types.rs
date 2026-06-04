@@ -218,6 +218,15 @@ pub struct FileEntry {
     pub modified_at: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileSearchResult {
+    pub path: String,
+    pub score: i64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub highlighted_path_indexes: Vec<usize>,
+}
+
 // ── Terminal request/response types ───────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

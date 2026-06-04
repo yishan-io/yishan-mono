@@ -1,6 +1,7 @@
 pub mod context;
 pub mod dispatch;
 pub mod file_cache;
+pub mod file_search;
 pub mod file_service;
 pub mod git_service;
 pub mod manager;

@@ -467,6 +467,7 @@ fn is_file_method(m: &str) -> bool {
         m,
         METHOD_FILE_READ
             | METHOD_FILE_LIST
+            | METHOD_FILE_SEARCH
             | METHOD_FILE_STAT
             | METHOD_FILE_WRITE
             | METHOD_FILE_DELETE

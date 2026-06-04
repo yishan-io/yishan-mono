@@ -1,5 +1,6 @@
 use crate::daemon::rpc::DomainRpcError;
 use crate::workspace::file_cache::{normalize_cache_path, WorkspaceFileCacheStore};
+use crate::workspace::file_search::search_workspace_entries;
 use crate::workspace::types::FileEntry;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -275,6 +276,16 @@ impl FileService {
         }
         fs::read_to_string(&path)
             .map_err(|e| DomainRpcError::server_error(format!("read {rel_path}: {e}")))
+    }
+
+    pub fn search(
+        &self,
+        root: &str,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<crate::workspace::types::FileSearchResult>, DomainRpcError> {
+        let entries = self.list(root, "", true)?;
+        Ok(search_workspace_entries(&entries, query, limit))
     }
 
     pub fn write(

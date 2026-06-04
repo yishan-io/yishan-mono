@@ -57,6 +57,7 @@ pub const METHOD_GIT_AUTHOR_NAME: &str = "git.authorName";
 // File methods
 pub const METHOD_FILE_READ: &str = "file.read";
 pub const METHOD_FILE_LIST: &str = "file.list";
+pub const METHOD_FILE_SEARCH: &str = "file.search";
 pub const METHOD_FILE_STAT: &str = "file.stat";
 pub const METHOD_FILE_WRITE: &str = "file.write";
 pub const METHOD_FILE_DELETE: &str = "file.delete";

@@ -188,6 +188,12 @@ export type FileListBatchInput = {
   }>;
 };
 
+export type FileSearchInput = {
+  workspaceWorktreePath: string;
+  query: string;
+  limit?: number;
+};
+
 export type FileReadInput = {
   workspaceWorktreePath: string;
   relativePath: string;
@@ -350,6 +356,12 @@ export type DaemonFileEntry = {
 
 export type FileListResponse = {
   files: DaemonFileEntry[];
+};
+
+export type FileSearchResult = {
+  path: string;
+  score: number;
+  highlightedPathIndexes: number[];
 };
 
 export type FileListBatchResponse = {

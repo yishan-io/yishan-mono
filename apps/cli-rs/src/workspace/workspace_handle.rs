@@ -29,6 +29,14 @@ impl WorkspaceHandle<'_> {
         self.files.list(&self.workspace.path, path, recursive)
     }
 
+    pub fn file_search(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<FileSearchResult>, DomainRpcError> {
+        self.files.search(&self.workspace.path, query, limit)
+    }
+
     pub fn file_stat(&self, path: &str) -> Result<FileEntry, DomainRpcError> {
         self.files.stat(&self.workspace.path, path)
     }

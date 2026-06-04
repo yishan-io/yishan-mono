@@ -1,11 +1,11 @@
-import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
-import { searchFiles } from "../../../search/fileSearch";
+import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
+import { searchFiles } from "../../../commands/fileCommands";
+import type { FileSearchResult } from "../../../rpc/daemonTypes";
 
 const MAX_FILE_SEARCH_RESULTS = 100;
 
 type UseFileSearchControllerInput = {
-  searchableFiles: string[];
-  loadAllRepoFiles: () => Promise<unknown>;
+  workspaceWorktreePath?: string;
   openFileSearchRequestKey: number;
   lastHandledFileSearchRequestKey: number;
   onFileSearchRequestHandled?: (requestKey: number) => void;
@@ -14,8 +14,7 @@ type UseFileSearchControllerInput = {
 
 /** Manages quick-open file search state, filtering, keyboard navigation, and open actions. */
 export function useFileSearchController({
-  searchableFiles,
-  loadAllRepoFiles,
+  workspaceWorktreePath,
   openFileSearchRequestKey,
   lastHandledFileSearchRequestKey,
   onFileSearchRequestHandled,
@@ -24,16 +23,11 @@ export function useFileSearchController({
   const [isFileSearchOpen, setIsFileSearchOpen] = useState(false);
   const [fileSearchQuery, setFileSearchQuery] = useState("");
   const [selectedSearchResultIndex, setSelectedSearchResultIndex] = useState(0);
+  const [fileSearchResults, setFileSearchResults] = useState<FileSearchResult[]>([]);
+  const searchRequestIdRef = useRef(0);
 
   const trimmedFileSearchQuery = fileSearchQuery.trim();
   const deferredFileSearchQuery = useDeferredValue(trimmedFileSearchQuery);
-  const fileSearchResults = useMemo(
-    () =>
-      deferredFileSearchQuery
-        ? searchFiles(searchableFiles, deferredFileSearchQuery).slice(0, MAX_FILE_SEARCH_RESULTS)
-        : [],
-    [deferredFileSearchQuery, searchableFiles],
-  );
 
   useEffect(() => {
     if (openFileSearchRequestKey <= lastHandledFileSearchRequestKey) {
@@ -42,10 +36,41 @@ export function useFileSearchController({
 
     setFileSearchQuery("");
     setSelectedSearchResultIndex(0);
+    setFileSearchResults([]);
     setIsFileSearchOpen(true);
-    void loadAllRepoFiles();
     onFileSearchRequestHandled?.(openFileSearchRequestKey);
-  }, [lastHandledFileSearchRequestKey, loadAllRepoFiles, onFileSearchRequestHandled, openFileSearchRequestKey]);
+  }, [lastHandledFileSearchRequestKey, onFileSearchRequestHandled, openFileSearchRequestKey]);
+
+  useEffect(() => {
+    if (!isFileSearchOpen) {
+      return;
+    }
+
+    if (!deferredFileSearchQuery || !workspaceWorktreePath) {
+      setFileSearchResults([]);
+      return;
+    }
+
+    searchRequestIdRef.current += 1;
+    const requestId = searchRequestIdRef.current;
+    void searchFiles({
+      workspaceWorktreePath,
+      query: deferredFileSearchQuery,
+      limit: MAX_FILE_SEARCH_RESULTS,
+    })
+      .then((results) => {
+        if (requestId !== searchRequestIdRef.current) {
+          return;
+        }
+        setFileSearchResults(results);
+      })
+      .catch(() => {
+        if (requestId !== searchRequestIdRef.current) {
+          return;
+        }
+        setFileSearchResults([]);
+      });
+  }, [deferredFileSearchQuery, isFileSearchOpen, workspaceWorktreePath]);
 
   useEffect(() => {
     if (selectedSearchResultIndex < fileSearchResults.length) {

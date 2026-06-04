@@ -33,8 +33,6 @@ export type FileTreeSelectionRequest = {
 export type UseFileTreeOperationsResult = {
   repoFiles: string[];
   ignoredRepoPaths: string[];
-  searchRepoFiles: string[];
-  searchIgnoredRepoPaths: string[];
   fileOperationState: FileOperationState | null;
   fileOperationError: string | null;
   fileTreeSelectionRequest: FileTreeSelectionRequest | null;
@@ -206,8 +204,6 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
   } = useFileOperationState(selectedWorkspaceWorktreePath);
   const repoFiles = useMemo(() => mapWorkspaceEntryPaths(repoEntries), [repoEntries]);
   const ignoredRepoPaths = useMemo(() => mapIgnoredWorkspaceEntryPaths(repoEntries), [repoEntries]);
-  const searchRepoFiles = repoFiles;
-  const searchIgnoredRepoPaths = ignoredRepoPaths;
 
   useEffect(() => {
     repoEntriesRef.current = repoEntries;
@@ -427,8 +423,6 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
   return {
     repoFiles,
     ignoredRepoPaths,
-    searchRepoFiles,
-    searchIgnoredRepoPaths,
     fileOperationState,
     fileOperationError,
     fileTreeSelectionRequest,

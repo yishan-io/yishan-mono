@@ -411,6 +411,25 @@ pub async fn file(
                 .workspace(&req.workspace_id)?
                 .file_list(&req.path, req.recursive)?))
         }
+        METHOD_FILE_SEARCH => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                query: String,
+                #[serde(default = "default_file_search_limit")]
+                limit: usize,
+            }
+
+            fn default_file_search_limit() -> usize {
+                100
+            }
+
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .file_search(&req.query, req.limit)?))
+        }
         METHOD_FILE_STAT => {
             #[derive(serde::Deserialize)]
             #[serde(rename_all = "camelCase")]
