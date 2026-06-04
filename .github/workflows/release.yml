@@ -57,10 +57,32 @@ jobs:
             target: aarch64-apple-darwin
             goos: darwin
             goarch: arm64
+            binary: yishan
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            goos: darwin
+            goarch: amd64
+            binary: yishan
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             goos: linux
             goarch: amd64
+            binary: yishan
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            goos: linux
+            goarch: arm64
+            binary: yishan
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            goos: windows
+            goarch: amd64
+            binary: yishan.exe
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            goos: windows
+            goarch: arm64
+            binary: yishan.exe
     runs-on: ${{ matrix.os }}
     env:
       YISHAN_VERSION: ${{ needs.resolve-version.outputs.version }}
@@ -79,25 +101,28 @@ jobs:
           workspaces: apps/cli-rs
 
       - name: Build release binary
+        shell: bash
         working-directory: apps/cli-rs
         run: |
           cargo build --release --target ${{ matrix.target }} \
             --config "env.YISHAN_VERSION=\"$YISHAN_VERSION\""
 
       - name: Package archive
+        shell: bash
         working-directory: apps/cli-rs
         run: |
           version="${{ needs.resolve-version.outputs.version }}"
           archive="yishan-cli_${version}_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz"
-          binary="target/${{ matrix.target }}/release/yishan"
-          tar -czf "/tmp/$archive" -C "$(dirname "$binary")" "$(basename "$binary")"
-          echo "ARCHIVE_PATH=/tmp/$archive" >> "$GITHUB_ENV"
+          binary="target/${{ matrix.target }}/release/${{ matrix.binary }}"
+          tar -czf "$RUNNER_TEMP/$archive" -C "$(dirname "$binary")" "$(basename "$binary")"
+          echo "ARCHIVE_PATH=$RUNNER_TEMP/$archive" >> "$GITHUB_ENV"
           echo "ARCHIVE_NAME=$archive" >> "$GITHUB_ENV"
 
           # Generate checksums
-          sha256sum "/tmp/$archive" | awk '{print $1, "'"$archive"'"}' >> /tmp/checksums.txt
+          sha256sum "$RUNNER_TEMP/$archive" | awk '{print $1, "'"$archive"'"}' >> "$RUNNER_TEMP/checksums.txt"
 
       - name: Upload CLI archive to release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -109,7 +134,7 @@ jobs:
               --draft=${{ inputs.draft || 'true' }} \
               --notes "Release v${version}"
           # Upload per-platform checksums fragment
-          gh release upload "$tag" /tmp/checksums.txt --clobber || true
+          gh release upload "$tag" "$RUNNER_TEMP/checksums.txt" --clobber || true
 
   desktop:
     needs: [resolve-version, cli]
