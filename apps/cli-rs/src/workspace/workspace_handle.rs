@@ -62,6 +62,14 @@ impl WorkspaceHandle<'_> {
         self.files.read_diff(&self.workspace.path, path)
     }
 
+    pub fn invalidate_file_cache(&self, changed_paths: &[String]) {
+        self.files.invalidate_paths(&self.workspace.path, changed_paths);
+    }
+
+    pub fn clear_file_cache(&self) {
+        self.files.clear_workspace_cache(&self.workspace.path);
+    }
+
     pub fn git_status(&self) -> Result<GitStatusResponse, DomainRpcError> {
         self.gits.status(&self.workspace.path)
     }

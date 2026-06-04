@@ -67,6 +67,7 @@ impl DaemonApp {
     pub fn start_background_services(self: &Arc<Self>) {
         self.pr_tracker.start();
         self.token_usage.start_startup_scan();
+        self.start_file_cache_invalidation_listener();
 
         // Start relay client if URL is configured.
         let relay_url = self.runtime.config().daemon.relay_url.clone();
@@ -79,6 +80,38 @@ impl DaemonApp {
                 run_relay_client_loop(app, node_id, relay_url, status).await;
             });
         }
+    }
+
+    fn start_file_cache_invalidation_listener(self: &Arc<Self>) {
+        let mut events = self.events.subscribe();
+        let manager = self.manager.clone();
+        tokio::spawn(async move {
+            loop {
+                match events.recv().await {
+                    Ok(event) if event.topic == "workspaceFilesChanged" => {
+                        #[derive(serde::Deserialize)]
+                        #[serde(rename_all = "camelCase")]
+                        struct FileChangePayload {
+                            workspace_worktree_path: String,
+                            #[serde(default)]
+                            changed_relative_paths: Vec<String>,
+                        }
+
+                        let Ok(payload) =
+                            serde_json::from_value::<FileChangePayload>(event.payload)
+                        else {
+                            continue;
+                        };
+                        if let Ok(workspace) = manager.workspace_for_path(&payload.workspace_worktree_path) {
+                            workspace.invalidate_file_cache(&payload.changed_relative_paths);
+                        }
+                    }
+                    Ok(_) => {}
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                }
+            }
+        });
     }
 }
 
@@ -762,6 +795,9 @@ async fn dispatch_workspace(
             if let Some((ws_id, ws_path)) = close_req {
                 app.watchers.unwatch(Path::new(&ws_path));
                 app.pr_tracker.stop_tracking(&ws_id);
+                if let Ok(workspace) = app.manager.workspace(&ws_id) {
+                    workspace.clear_file_cache();
+                }
             }
             Ok(result)
         }

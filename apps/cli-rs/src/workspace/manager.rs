@@ -94,6 +94,24 @@ impl WorkspaceManager {
         self.workspace(&workspace_id)
     }
 
+    pub(crate) fn workspace_for_path(&self, workspace_path: &str) -> Result<WorkspaceHandle<'_>, DomainRpcError> {
+        let workspace = self
+            .workspaces
+            .read()
+            .unwrap()
+            .values()
+            .find(|workspace| workspace.path == workspace_path)
+            .cloned()
+            .ok_or_else(|| DomainRpcError::not_found(format!("workspace not found for path: {workspace_path}")))?;
+        Ok(WorkspaceHandle {
+            workspace,
+            workspaces: &self.workspaces,
+            files: &self.files,
+            gits: &self.gits,
+            terminals: &self.terminals,
+        })
+    }
+
     pub fn git_inspect_path(&self, path: &str) -> Result<GitInspectResult, DomainRpcError> {
         self.gits.inspect(path)
     }

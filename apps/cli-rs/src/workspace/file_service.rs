@@ -1,7 +1,9 @@
 use crate::daemon::rpc::DomainRpcError;
+use crate::workspace::file_cache::{normalize_cache_path, WorkspaceFileCacheStore};
 use crate::workspace::types::FileEntry;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 /// Directories that stay collapsed by default in the file tree and are not watched
 /// for deep changes unless the user explicitly drills into them.
@@ -23,11 +25,15 @@ const HIDDEN_DIRS: &[&str] = &[".git"];
 
 /// Provides sandboxed file operations within a workspace root.
 /// Fixes A1: extracted from the Go god-handler into its own focused service.
-pub struct FileService;
+pub struct FileService {
+    cache: Mutex<WorkspaceFileCacheStore>,
+}
 
 impl FileService {
     pub fn new() -> Self {
-        Self
+        Self {
+            cache: Mutex::new(WorkspaceFileCacheStore::default()),
+        }
     }
 
     fn is_ignored_dir_name(name: &str) -> bool {
@@ -120,20 +126,67 @@ impl FileService {
                 format!("not a directory: {rel_path}"),
             ));
         }
-        let mut entries = Vec::new();
-        self.list_dir(&dir, root, recursive, &mut entries)?;
-        Ok(entries)
+
+        let cache_key = normalize_cache_path(rel_path);
+        if recursive {
+            let mut entries = Vec::new();
+            self.collect_dir_recursive(root, &dir, &cache_key, &mut entries)?;
+            return Ok(entries);
+        }
+
+        self.cached_directory_entries(&dir, root, &cache_key)
     }
 
-    fn list_dir(
+    fn cached_directory_entries(
         &self,
         dir: &Path,
         root: &str,
-        recursive: bool,
+        rel_path: &str,
+    ) -> Result<Vec<FileEntry>, DomainRpcError> {
+        if let Some(entries) = self.cache.lock().unwrap().get_directory(root, rel_path) {
+            return Ok(entries);
+        }
+
+        let entries = self.read_directory_entries(dir, root)?;
+        self.cache
+            .lock()
+            .unwrap()
+            .store_directory(root, rel_path.to_string(), entries.clone());
+        Ok(entries)
+    }
+
+    fn collect_dir_recursive(
+        &self,
+        root: &str,
+        dir: &Path,
+        rel_path: &str,
         out: &mut Vec<FileEntry>,
     ) -> Result<(), DomainRpcError> {
+        let entries = self.cached_directory_entries(dir, root, rel_path)?;
+        for entry in entries {
+            let child_path = entry.path.clone();
+            let should_recurse = entry.is_dir && !entry.is_ignored;
+            out.push(entry);
+            if should_recurse {
+                self.collect_dir_recursive(
+                    root,
+                    &Path::new(root).join(&child_path),
+                    &child_path,
+                    out,
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+    fn read_directory_entries(
+        &self,
+        dir: &Path,
+        root: &str,
+    ) -> Result<Vec<FileEntry>, DomainRpcError> {
         let read_dir = fs::read_dir(dir)
             .map_err(|e| DomainRpcError::server_error(format!("read dir: {e}")))?;
+        let mut entries = Vec::new();
         for entry in read_dir.flatten() {
             let name = entry.file_name();
             let name_str = name.to_string_lossy();
@@ -163,7 +216,7 @@ impl FileService {
                         .to_rfc3339()
                 })
                 .unwrap_or_default();
-            out.push(FileEntry {
+            entries.push(FileEntry {
                 name: name_str.into_owned(),
                 path: rel.to_string_lossy().into_owned(),
                 is_dir: meta.is_dir(),
@@ -171,11 +224,8 @@ impl FileService {
                 size: if meta.is_file() { meta.len() } else { 0 },
                 modified_at,
             });
-            if recursive && meta.is_dir() && !is_ignored {
-                self.list_dir(&full_path, root, recursive, out)?;
-            }
         }
-        Ok(())
+        Ok(entries)
     }
 
     pub fn stat(&self, root: &str, rel_path: &str) -> Result<FileEntry, DomainRpcError> {
@@ -255,6 +305,7 @@ impl FileService {
             fs::write(&path, content.as_bytes())
                 .map_err(|e| DomainRpcError::server_error(format!("write {rel_path}: {e}")))?;
         }
+        self.invalidate_paths(root, &[rel_path.to_string()]);
         Ok(content.len())
     }
 
@@ -274,14 +325,18 @@ impl FileService {
         } else {
             fs::remove_file(&path)
         }
-        .map_err(|e| DomainRpcError::server_error(format!("delete {rel_path}: {e}")))
+        .map_err(|e| DomainRpcError::server_error(format!("delete {rel_path}: {e}")))?;
+        self.invalidate_paths(root, &[rel_path.to_string()]);
+        Ok(())
     }
 
     pub fn move_path(&self, root: &str, from: &str, to: &str) -> Result<(), DomainRpcError> {
         let from_path = self.resolve_safe(root, from)?;
         let to_path = self.resolve_safe_write(root, to)?;
         fs::rename(&from_path, &to_path)
-            .map_err(|e| DomainRpcError::server_error(format!("move {from} -> {to}: {e}")))
+            .map_err(|e| DomainRpcError::server_error(format!("move {from} -> {to}: {e}")))?;
+        self.invalidate_paths(root, &[from.to_string(), to.to_string()]);
+        Ok(())
     }
 
     pub fn mkdir(
@@ -291,14 +346,15 @@ impl FileService {
         parents: bool,
         _mode: u32,
     ) -> Result<(), DomainRpcError> {
-        let base = Path::new(root);
-        let joined = base.join(rel_path);
+        let path = self.resolve_safe_write(root, rel_path)?;
         let result = if parents {
-            fs::create_dir_all(&joined)
+            fs::create_dir_all(&path)
         } else {
-            fs::create_dir(&joined)
+            fs::create_dir(&path)
         };
-        result.map_err(|e| DomainRpcError::server_error(format!("mkdir {rel_path}: {e}")))
+        result.map_err(|e| DomainRpcError::server_error(format!("mkdir {rel_path}: {e}")))?;
+        self.invalidate_paths(root, &[rel_path.to_string()]);
+        Ok(())
     }
 
     /// Return old + new content of a file relative to its last git-tracked state.
@@ -322,6 +378,14 @@ impl FileService {
             old_content,
             new_content,
         })
+    }
+
+    pub fn invalidate_paths(&self, root: &str, paths: &[String]) {
+        self.cache.lock().unwrap().invalidate_paths(root, paths);
+    }
+
+    pub fn clear_workspace_cache(&self, root: &str) {
+        self.cache.lock().unwrap().clear_workspace(root);
     }
 }
 
@@ -396,5 +460,42 @@ mod tests {
             .find(|entry| entry.path == "target/debug")
             .expect("debug entry");
         assert!(!debug_entry.is_ignored);
+    }
+
+    #[test]
+    fn cached_directory_listing_refreshes_after_write() {
+        let temp_dir = tempfile::tempdir().expect("create temp dir");
+        let root = temp_dir.path();
+        let canonical_root = root.canonicalize().expect("canonicalize root");
+        fs::create_dir_all(root.join("src")).expect("create src dir");
+        fs::write(root.join("src/main.rs"), "fn main() {}\n").expect("write file");
+
+        let service = FileService::new();
+        let initial = service
+            .list(canonical_root.to_str().expect("root path"), "src", false)
+            .expect("list src");
+        let initial_entry = initial
+            .iter()
+            .find(|entry| entry.path == "src/main.rs")
+            .expect("initial entry");
+        assert_eq!(initial_entry.size, 13);
+
+        service
+            .write(
+                canonical_root.to_str().expect("root path"),
+                "src/main.rs",
+                "fn main() { println!(\"hi\"); }\n",
+                0,
+            )
+            .expect("write file");
+
+        let refreshed = service
+            .list(canonical_root.to_str().expect("root path"), "src", false)
+            .expect("list src after write");
+        let refreshed_entry = refreshed
+            .iter()
+            .find(|entry| entry.path == "src/main.rs")
+            .expect("refreshed entry");
+        assert!(refreshed_entry.size > initial_entry.size);
     }
 }
