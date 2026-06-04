@@ -24,12 +24,17 @@ export class DaemonGitClient {
   }
 
   async inspect(input: Rpc.GitInspectInput): Promise<Rpc.GitInspectResponse> {
+    const workspaceId = await this.resolveWorkspaceId(input);
+    return (await this.invoke("git.inspect", { workspaceId })) as Rpc.GitInspectResponse;
+  }
+
+  async inspectPath(input: Rpc.GitInspectPathInput): Promise<Rpc.GitInspectResponse> {
     const record = asRecord(input);
     const path = readOptionalString(record?.path);
     if (!path) {
       throw new Error("path is required");
     }
-    return (await this.invoke("git.inspect", { path })) as Rpc.GitInspectResponse;
+    return (await this.invoke("git.inspectPath", { path })) as Rpc.GitInspectResponse;
   }
 
   async trackChanges(input: Rpc.GitPathsInput): Promise<Rpc.GitStatusOperationResponse> {

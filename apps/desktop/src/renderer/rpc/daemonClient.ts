@@ -107,6 +107,7 @@ export class DaemonClient {
 
   readonly git = {
     inspect: (input: Rpc.GitInspectInput) => this._gitClient.inspect(input),
+    inspectPath: (input: Rpc.GitInspectPathInput) => this._gitClient.inspectPath(input),
     listChanges: (input: Rpc.GitWorktreeInput) => this._gitClient.listChanges(input),
     trackChanges: (input: Rpc.GitPathsInput) => this._gitClient.trackChanges(input),
     unstageChanges: (input: Rpc.GitPathsInput) => this._gitClient.unstageChanges(input),

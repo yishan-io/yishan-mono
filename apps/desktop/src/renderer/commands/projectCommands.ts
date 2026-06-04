@@ -17,7 +17,7 @@ async function inspectLocalRepository(path: string): Promise<{
 }> {
   try {
     const client = await getDaemonClient();
-    const result = (await client.git.inspect({ path })) as {
+    const result = (await client.git.inspectPath({ path })) as {
       isGitRepository: boolean;
       remoteUrl?: string;
       currentBranch?: string;

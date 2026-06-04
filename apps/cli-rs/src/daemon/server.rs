@@ -404,6 +404,7 @@ fn is_git_method(m: &str) -> bool {
         m,
         METHOD_GIT_STATUS
             | METHOD_GIT_INSPECT
+            | METHOD_GIT_INSPECT_PATH
             | METHOD_GIT_LIST_CHANGES
             | METHOD_GIT_TRACK
             | METHOD_GIT_UNSTAGE

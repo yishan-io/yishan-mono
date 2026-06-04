@@ -172,8 +172,16 @@ fn refresh_workspace_sync(
     inner: &Mutex<Inner>,
     ws: Workspace,
 ) {
+    let workspace = match manager.workspace(&ws.id) {
+        Ok(workspace) => workspace,
+        Err(e) => {
+            debug!(err = %e, id = ws.id, "PR refresh: workspace lookup failed");
+            return;
+        }
+    };
+
     // Resolve current branch (sync subprocess).
-    let branch = match manager.gits.current_branch(&ws.path) {
+    let branch = match workspace.current_branch() {
         Ok(b) => b.trim().to_string(),
         Err(e) => {
             let msg = e.to_string().to_lowercase();
@@ -192,7 +200,7 @@ fn refresh_workspace_sync(
     }
 
     // Fetch PR details.
-    let pr_result = manager.gits.branch_pull_request(&ws.path, &branch);
+    let pr_result = workspace.git_branch_pr(&branch);
     let pr_status = match pr_result {
         Ok(s) => s,
         Err(e) => {
@@ -242,7 +250,9 @@ fn set_pull_request(
 ) {
     // Get previous value.
     let prev = manager.get(&ws.id).ok().and_then(|w| w.pull_request);
-    let _ = manager.set_pull_request(&ws.id, pr.clone());
+    if let Ok(workspace) = manager.workspace(&ws.id) {
+        let _ = workspace.set_pull_request(pr.clone());
+    }
 
     if pr_meaningfully_changed(prev.as_ref(), pr.as_ref()) {
         events.publish(FrontendEvent::new(

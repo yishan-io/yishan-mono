@@ -51,6 +51,7 @@ export type DaemonRpcClient = {
   };
   git: {
     inspect: (input: Rpc.GitInspectInput) => Promise<Rpc.GitInspectResponse>;
+    inspectPath: (input: Rpc.GitInspectPathInput) => Promise<Rpc.GitInspectResponse>;
     listChanges: (input: Rpc.GitWorktreeInput) => Promise<Rpc.GitChangesBySection>;
     trackChanges: (input: Rpc.GitPathsInput) => Promise<Rpc.GitStatusOperationResponse>;
     unstageChanges: (input: Rpc.GitPathsInput) => Promise<Rpc.GitStatusOperationResponse>;

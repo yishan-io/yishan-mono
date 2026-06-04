@@ -90,15 +90,24 @@ pub async fn git(
                 workspace_id: String,
             }
             let req: Req = decode_params(params)?;
-            Ok(json!(mgr.git_status(&req.workspace_id)?))
+            Ok(json!(mgr.workspace(&req.workspace_id)?.git_status()?))
         }
         METHOD_GIT_INSPECT => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr.workspace(&req.workspace_id)?.git_inspect()?))
+        }
+        METHOD_GIT_INSPECT_PATH => {
             #[derive(serde::Deserialize)]
             struct Req {
                 path: String,
             }
             let req: Req = decode_params(params)?;
-            Ok(json!(mgr.git_inspect(&req.path)?))
+            Ok(json!(mgr.git_inspect_path(&req.path)?))
         }
         METHOD_GIT_LIST_CHANGES => {
             #[derive(serde::Deserialize)]
@@ -107,7 +116,9 @@ pub async fn git(
                 workspace_id: String,
             }
             let req: Req = decode_params(params)?;
-            Ok(json!(mgr.git_list_changes(&req.workspace_id)?))
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .git_list_changes()?))
         }
         METHOD_GIT_TRACK => {
             #[derive(serde::Deserialize)]
@@ -117,7 +128,7 @@ pub async fn git(
                 paths: Vec<String>,
             }
             let req: Req = decode_params(params)?;
-            mgr.git_track(&req.workspace_id, &req.paths)?;
+            mgr.workspace(&req.workspace_id)?.git_track(&req.paths)?;
             Ok(json!({ "ok": true }))
         }
         METHOD_GIT_UNSTAGE => {
@@ -128,7 +139,7 @@ pub async fn git(
                 paths: Vec<String>,
             }
             let req: Req = decode_params(params)?;
-            mgr.git_unstage(&req.workspace_id, &req.paths)?;
+            mgr.workspace(&req.workspace_id)?.git_unstage(&req.paths)?;
             Ok(json!({ "ok": true }))
         }
         METHOD_GIT_REVERT => {
@@ -139,7 +150,7 @@ pub async fn git(
                 paths: Vec<String>,
             }
             let req: Req = decode_params(params)?;
-            mgr.git_revert(&req.workspace_id, &req.paths)?;
+            mgr.workspace(&req.workspace_id)?.git_revert(&req.paths)?;
             Ok(json!({ "ok": true }))
         }
         METHOD_GIT_COMMIT => {
@@ -154,7 +165,11 @@ pub async fn git(
                 signoff: bool,
             }
             let req: Req = decode_params(params)?;
-            let out = mgr.git_commit(&req.workspace_id, &req.message, req.amend, req.signoff)?;
+            let out = mgr.workspace(&req.workspace_id)?.git_commit(
+                &req.message,
+                req.amend,
+                req.signoff,
+            )?;
             Ok(json!({ "output": out }))
         }
         METHOD_GIT_BRANCH_STATUS => {
@@ -164,7 +179,9 @@ pub async fn git(
                 workspace_id: String,
             }
             let req: Req = decode_params(params)?;
-            Ok(json!(mgr.git_branch_status(&req.workspace_id)?))
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .git_branch_status()?))
         }
         METHOD_GIT_BRANCH_PR => {
             #[derive(serde::Deserialize)]
@@ -175,13 +192,13 @@ pub async fn git(
                 branch: String,
             }
             let req: Req = decode_params(params)?;
+            let ws = mgr.workspace(&req.workspace_id)?;
             let branch = if req.branch.is_empty() {
-                let root = mgr.get(&req.workspace_id)?.path;
-                mgr.gits.current_branch(&root)?
+                ws.current_branch()?
             } else {
                 req.branch.clone()
             };
-            Ok(json!(mgr.git_branch_pr(&req.workspace_id, &branch)?))
+            Ok(json!(ws.git_branch_pr(&branch)?))
         }
         METHOD_GIT_COMMITS_TO_TARGET => {
             #[derive(serde::Deserialize)]
@@ -191,10 +208,9 @@ pub async fn git(
                 target_branch: String,
             }
             let req: Req = decode_params(params)?;
-            Ok(json!(mgr.git_commits_to_target(
-                &req.workspace_id,
-                &req.target_branch
-            )?))
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .git_commits_to_target(&req.target_branch)?))
         }
         METHOD_GIT_BRANCH_DIFF_SUMMARY => {
             #[derive(serde::Deserialize)]
@@ -204,10 +220,9 @@ pub async fn git(
                 target_branch: String,
             }
             let req: Req = decode_params(params)?;
-            Ok(json!(mgr.git_branch_diff_summary(
-                &req.workspace_id,
-                &req.target_branch
-            )?))
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .git_branch_diff_summary(&req.target_branch)?))
         }
         METHOD_GIT_COMMIT_DIFF => {
             #[derive(serde::Deserialize)]
@@ -219,11 +234,9 @@ pub async fn git(
                 path: String,
             }
             let req: Req = decode_params(params)?;
-            Ok(json!(mgr.git_commit_diff(
-                &req.workspace_id,
-                &req.commit_hash,
-                &req.path
-            )?))
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .git_commit_diff(&req.commit_hash, &req.path)?))
         }
         METHOD_GIT_BRANCH_DIFF => {
             #[derive(serde::Deserialize)]
@@ -235,11 +248,9 @@ pub async fn git(
                 path: String,
             }
             let req: Req = decode_params(params)?;
-            Ok(json!(mgr.git_branch_diff(
-                &req.workspace_id,
-                &req.target_branch,
-                &req.path
-            )?))
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .git_branch_diff(&req.target_branch, &req.path)?))
         }
         METHOD_GIT_BRANCHES => {
             #[derive(serde::Deserialize)]
@@ -248,7 +259,7 @@ pub async fn git(
                 workspace_id: String,
             }
             let req: Req = decode_params(params)?;
-            Ok(json!(mgr.git_branches(&req.workspace_id)?))
+            Ok(json!(mgr.workspace(&req.workspace_id)?.git_branches()?))
         }
         METHOD_GIT_PUSH => {
             #[derive(serde::Deserialize)]
@@ -257,7 +268,7 @@ pub async fn git(
                 workspace_id: String,
             }
             let req: Req = decode_params(params)?;
-            let out = mgr.git_push(&req.workspace_id)?;
+            let out = mgr.workspace(&req.workspace_id)?.git_push()?;
             Ok(json!({ "output": out }))
         }
         METHOD_GIT_PUBLISH => {
@@ -267,7 +278,7 @@ pub async fn git(
                 workspace_id: String,
             }
             let req: Req = decode_params(params)?;
-            let out = mgr.git_publish(&req.workspace_id)?;
+            let out = mgr.workspace(&req.workspace_id)?.git_publish()?;
             Ok(json!({ "output": out }))
         }
         METHOD_GIT_RENAME_BRANCH => {
@@ -278,7 +289,8 @@ pub async fn git(
                 next_branch: String,
             }
             let req: Req = decode_params(params)?;
-            mgr.git_rename_branch(&req.workspace_id, &req.next_branch)?;
+            mgr.workspace(&req.workspace_id)?
+                .git_rename_branch(&req.next_branch)?;
             Ok(json!({ "ok": true }))
         }
         METHOD_GIT_REMOVE_BRANCH => {
@@ -291,7 +303,8 @@ pub async fn git(
                 force: bool,
             }
             let req: Req = decode_params(params)?;
-            mgr.git_remove_branch(&req.workspace_id, &req.branch, req.force)?;
+            mgr.workspace(&req.workspace_id)?
+                .git_remove_branch(&req.branch, req.force)?;
             Ok(json!({ "ok": true }))
         }
         METHOD_GIT_PR_MERGE => {
@@ -306,8 +319,7 @@ pub async fn git(
                 delete_branch: bool,
             }
             let req: Req = decode_params(params)?;
-            let out = mgr.git_pr_merge(
-                &req.workspace_id,
+            let out = mgr.workspace(&req.workspace_id)?.git_pr_merge(
                 req.pr_number,
                 &req.method,
                 req.delete_branch,
@@ -322,7 +334,9 @@ pub async fn git(
                 pr_number: i64,
             }
             let req: Req = decode_params(params)?;
-            let out = mgr.git_pr_close(&req.workspace_id, req.pr_number)?;
+            let out = mgr
+                .workspace(&req.workspace_id)?
+                .git_pr_close(req.pr_number)?;
             Ok(json!({ "output": out }))
         }
         METHOD_GIT_WORKTREE_CREATE => {
@@ -338,8 +352,7 @@ pub async fn git(
                 from_ref: String,
             }
             let req: Req = decode_params(params)?;
-            mgr.git_worktree_create(
-                &req.workspace_id,
+            mgr.workspace(&req.workspace_id)?.git_worktree_create(
                 &req.branch,
                 &req.worktree_path,
                 req.create_branch,
@@ -357,7 +370,8 @@ pub async fn git(
                 force: bool,
             }
             let req: Req = decode_params(params)?;
-            mgr.git_worktree_remove(&req.workspace_id, &req.worktree_path, req.force)?;
+            mgr.workspace(&req.workspace_id)?
+                .git_worktree_remove(&req.worktree_path, req.force)?;
             Ok(json!({ "ok": true }))
         }
         METHOD_GIT_AUTHOR_NAME => {
@@ -367,7 +381,7 @@ pub async fn git(
                 workspace_id: String,
             }
             let req: Req = decode_params(params)?;
-            let name = mgr.git_author_name(&req.workspace_id)?;
+            let name = mgr.workspace(&req.workspace_id)?.git_author_name()?;
             Ok(json!({ "name": name }))
         }
         _ => Err(DomainRpcError::method_not_found(method)),
@@ -393,11 +407,9 @@ pub async fn file(
                 recursive: bool,
             }
             let req: Req = decode_params(params)?;
-            Ok(json!(mgr.file_list(
-                &req.workspace_id,
-                &req.path,
-                req.recursive
-            )?))
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .file_list(&req.path, req.recursive)?))
         }
         METHOD_FILE_STAT => {
             #[derive(serde::Deserialize)]
@@ -407,7 +419,9 @@ pub async fn file(
                 path: String,
             }
             let req: Req = decode_params(params)?;
-            Ok(json!(mgr.file_stat(&req.workspace_id, &req.path)?))
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .file_stat(&req.path)?))
         }
         METHOD_FILE_READ => {
             #[derive(serde::Deserialize)]
@@ -417,7 +431,7 @@ pub async fn file(
                 path: String,
             }
             let req: Req = decode_params(params)?;
-            let content = mgr.file_read(&req.workspace_id, &req.path)?;
+            let content = mgr.workspace(&req.workspace_id)?.file_read(&req.path)?;
             Ok(json!({ "content": content }))
         }
         METHOD_FILE_WRITE => {
@@ -431,7 +445,9 @@ pub async fn file(
                 mode: u32,
             }
             let req: Req = decode_params(params)?;
-            let bytes = mgr.file_write(&req.workspace_id, &req.path, &req.content, req.mode)?;
+            let bytes =
+                mgr.workspace(&req.workspace_id)?
+                    .file_write(&req.path, &req.content, req.mode)?;
             Ok(json!({ "bytesWritten": bytes }))
         }
         METHOD_FILE_DELETE => {
@@ -444,7 +460,8 @@ pub async fn file(
                 recursive: bool,
             }
             let req: Req = decode_params(params)?;
-            mgr.file_delete(&req.workspace_id, &req.path, req.recursive)?;
+            mgr.workspace(&req.workspace_id)?
+                .file_delete(&req.path, req.recursive)?;
             Ok(json!({ "ok": true }))
         }
         METHOD_FILE_MOVE => {
@@ -456,7 +473,8 @@ pub async fn file(
                 to_path: String,
             }
             let req: Req = decode_params(params)?;
-            mgr.file_move(&req.workspace_id, &req.from_path, &req.to_path)?;
+            mgr.workspace(&req.workspace_id)?
+                .file_move(&req.from_path, &req.to_path)?;
             Ok(json!({ "ok": true }))
         }
         METHOD_FILE_MKDIR => {
@@ -471,7 +489,8 @@ pub async fn file(
                 mode: u32,
             }
             let req: Req = decode_params(params)?;
-            mgr.file_mkdir(&req.workspace_id, &req.path, req.parents, req.mode)?;
+            mgr.workspace(&req.workspace_id)?
+                .file_mkdir(&req.path, req.parents, req.mode)?;
             Ok(json!({ "ok": true }))
         }
         METHOD_FILE_DIFF => {
@@ -482,7 +501,9 @@ pub async fn file(
                 path: String,
             }
             let req: Req = decode_params(params)?;
-            Ok(json!(mgr.file_read_diff(&req.workspace_id, &req.path)?))
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .file_read_diff(&req.path)?))
         }
         _ => Err(DomainRpcError::method_not_found(method)),
     }
@@ -505,26 +526,35 @@ pub async fn terminal(
             // `openpty` + `spawn_command` are blocking syscalls — must not run on
             // the tokio async thread or the executor stalls (manifests as "task
             // queue exceeded allotted deadline").
-            tokio::task::spawn_blocking(move || mgr.terminal_start(&req))
-                .await
-                .map_err(|e| DomainRpcError::server_error(format!("spawn_blocking: {e}")))?
-                .map(|r| json!(r))
+            tokio::task::spawn_blocking(move || {
+                mgr.workspace(&req.workspace_id)?.terminal_start(&req)
+            })
+            .await
+            .map_err(|e| DomainRpcError::server_error(format!("spawn_blocking: {e}")))?
+            .map(|r| json!(r))
         }
         METHOD_TERMINAL_SEND => {
             let req: TerminalSendRequest = decode_params(params)?;
-            Ok(json!(mgr.terminal_send(&req)?))
+            Ok(json!(mgr
+                .workspace_for_terminal_session(&req.session_id)?
+                .terminal_send(&req)?))
         }
         METHOD_TERMINAL_READ => {
             let req: TerminalReadRequest = decode_params(params)?;
-            Ok(json!(mgr.terminal_read(&req)?))
+            Ok(json!(mgr
+                .workspace_for_terminal_session(&req.session_id)?
+                .terminal_read(&req)?))
         }
         METHOD_TERMINAL_STOP => {
             let req: TerminalStopRequest = decode_params(params)?;
             let m = Arc::clone(&mgr);
-            tokio::task::spawn_blocking(move || m.terminal_stop(&req))
-                .await
-                .map_err(|e| DomainRpcError::server_error(format!("spawn_blocking: {e}")))?
-                .map(|r| json!(r))
+            tokio::task::spawn_blocking(move || {
+                m.workspace_for_terminal_session(&req.session_id)?
+                    .terminal_stop(&req)
+            })
+            .await
+            .map_err(|e| DomainRpcError::server_error(format!("spawn_blocking: {e}")))?
+            .map(|r| json!(r))
         }
         METHOD_TERMINAL_KILL_PROCESS => {
             let req: TerminalKillProcessRequest = decode_params(params)?;
@@ -536,12 +566,20 @@ pub async fn terminal(
         }
         METHOD_TERMINAL_LIST_SESSIONS => {
             let req: TerminalListSessionsRequest = decode_params(params)?;
-            Ok(json!(mgr.terminal_list_sessions(&req)))
+            if let Some(workspace_id) = req.workspace_id {
+                Ok(json!(mgr
+                    .workspace(&workspace_id)?
+                    .terminal_list_sessions()))
+            } else {
+                Ok(json!(mgr.terminal_list_sessions()))
+            }
         }
         METHOD_TERMINAL_LIST_PORTS => Ok(json!(mgr.terminal_list_ports())),
         METHOD_TERMINAL_RESIZE => {
             let req: TerminalResizeRequest = decode_params(params)?;
-            Ok(json!(mgr.terminal_resize(&req)?))
+            Ok(json!(mgr
+                .workspace_for_terminal_session(&req.session_id)?
+                .terminal_resize(&req)?))
         }
         METHOD_TERMINAL_SUBSCRIBE => {
             #[derive(serde::Deserialize)]
@@ -550,9 +588,8 @@ pub async fn terminal(
                 session_id: String,
             }
             let req: Req = decode_params(params)?;
-            mgr.terminals
-                .subscribe_output(&req.session_id, _sink)
-                .map_err(|e| e)?;
+            mgr.workspace_for_terminal_session(&req.session_id)?
+                .terminal_subscribe_output(&req.session_id, _sink)?;
             Ok(json!({ "subscribed": true, "sessionId": req.session_id }))
         }
         METHOD_TERMINAL_UNSUBSCRIBE => {

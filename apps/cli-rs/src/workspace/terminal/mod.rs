@@ -371,6 +371,10 @@ impl TerminalManager {
         Ok(SetActiveWorkspaceResponse { ok: true })
     }
 
+    pub fn workspace_id_for_session(&self, session_id: &str) -> Result<String, DomainRpcError> {
+        self.with_session(session_id, |session| Ok(session.workspace_id.clone()))
+    }
+
     #[allow(dead_code)]
     pub fn stop_all_for_workspace(&self, workspace_id: &str) -> Vec<anyhow::Error> {
         let mut sessions = self.sessions.write().unwrap();
@@ -435,10 +439,15 @@ fn collect_detected_ports_for_manager(
             .iter()
             .filter_map(|(session_id, session)| {
                 let session = session.lock().unwrap();
-                if session.closed.load(std::sync::atomic::Ordering::Relaxed) || session.root_pid <= 0 {
+                if session.closed.load(std::sync::atomic::Ordering::Relaxed)
+                    || session.root_pid <= 0
+                {
                     return None;
                 }
-                if workspace_scope.as_deref().is_some_and(|workspace_id| workspace_id != session.workspace_id) {
+                if workspace_scope
+                    .as_deref()
+                    .is_some_and(|workspace_id| workspace_id != session.workspace_id)
+                {
                     return None;
                 }
                 Some(SessionPortRef {
@@ -486,7 +495,12 @@ fn build_port_snapshot_key(ports: &[TerminalDetectedPort]) -> String {
         .map(|port| {
             format!(
                 "{}|{}|{}|{}|{}|{}\n",
-                port.session_id, port.workspace_id, port.pid, port.port, port.address, port.process_name
+                port.session_id,
+                port.workspace_id,
+                port.pid,
+                port.port,
+                port.address,
+                port.process_name
             )
         })
         .collect()
@@ -516,7 +530,9 @@ fn stop_process_by_pid(pid: i32) -> Result<(), DomainRpcError> {
     if err.raw_os_error() == Some(libc::ESRCH) {
         return Ok(());
     }
-    Err(DomainRpcError::server_error(format!("kill process {pid}: {err}")))
+    Err(DomainRpcError::server_error(format!(
+        "kill process {pid}: {err}"
+    )))
 }
 
 #[cfg(not(unix))]

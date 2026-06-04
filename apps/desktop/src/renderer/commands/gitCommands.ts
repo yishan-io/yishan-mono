@@ -128,7 +128,7 @@ export async function inspectGitRepository(params: { path: string }): Promise<{
   currentBranch?: string;
 }> {
   const client = await getDaemonClient();
-  return client.git.inspect({ path: params.path });
+  return client.git.inspectPath({ path: params.path });
 }
 
 /** Lists available branch names for one workspace. */

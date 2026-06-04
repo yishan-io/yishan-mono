@@ -31,6 +31,7 @@ pub const METHOD_WORKSPACE_SET_ACTIVE: &str = "workspace.setActive";
 // Git methods
 pub const METHOD_GIT_STATUS: &str = "git.status";
 pub const METHOD_GIT_INSPECT: &str = "git.inspect";
+pub const METHOD_GIT_INSPECT_PATH: &str = "git.inspectPath";
 pub const METHOD_GIT_LIST_CHANGES: &str = "git.listChanges";
 pub const METHOD_GIT_TRACK: &str = "git.track";
 pub const METHOD_GIT_UNSTAGE: &str = "git.unstage";

@@ -92,7 +92,7 @@ export async function ensureVisibleWorkspacesOpen(mergedWorkspaceIds?: ReadonlyS
         });
       }
 
-      const inspect = await client.git.inspect({ path: worktreePath });
+      const inspect = await client.git.inspectPath({ path: worktreePath });
       if (!inspect.isGitRepository) {
         console.warn("[daemonWorkspaceSync] skipping workspace open because path is unavailable", {
           workspaceId: workspace.id,

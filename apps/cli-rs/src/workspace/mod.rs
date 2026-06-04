@@ -5,3 +5,4 @@ pub mod git_service;
 pub mod manager;
 pub mod terminal;
 pub mod types;
+pub mod workspace_handle;
