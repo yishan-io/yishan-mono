@@ -15,6 +15,7 @@ import {
   mapWorkspaceEntryPaths,
 } from "./fileTreeHelpers";
 import {
+  hasVisibleImmediateChildren,
   isMissingWorkspacePathError,
   mergeWorkspaceEntries,
 } from "./fileTreeOperationHelpers";
@@ -120,6 +121,7 @@ function applyDirectoryRefreshes(
   currentEntries: WorkspaceFileEntry[],
   refreshResults: Array<{ directoryPath: string; files: WorkspaceFileEntry[] }>,
   loadedDirectoryPaths: Set<string>,
+  changedRelativePaths?: string[],
 ): WorkspaceFileEntry[] {
   let nextEntries = currentEntries;
 
@@ -139,16 +141,31 @@ function applyDirectoryRefreshes(
       removedLoadedDirectories.push(loadedDirectoryPath);
     }
 
+    // When specific changed paths are known, only remove direct children of
+    // this directory that (a) are in the changed-path set AND (b) are not
+    // present in the incoming refresh result. Entries that were not changed
+    // are left untouched — they will be merged by mergeWorkspaceEntries below.
+    const normalizedChangedPaths = changedRelativePaths
+      ? new Set(changedRelativePaths.map((p) => normalizeRelativePath(p)).filter(Boolean))
+      : null;
+
     nextEntries = nextEntries.filter((entry) => {
       const normalizedEntryPath = normalizeRelativePath(entry.path);
       if (!normalizedEntryPath) {
         return false;
       }
 
-      if (getParentRelativePath(normalizedEntryPath) === directoryPath) {
+      const isDirectChild = getParentRelativePath(normalizedEntryPath) === directoryPath;
+      if (isDirectChild) {
+        if (normalizedChangedPaths) {
+          // Only evict if it was explicitly changed and is absent from the fresh result.
+          return !(normalizedChangedPaths.has(normalizedEntryPath) && !incomingImmediateChildPaths.has(normalizedEntryPath));
+        }
+        // Full refresh (no specific changed paths) — replace the directory entirely.
         return false;
       }
 
+      // Also evict descendants whose parent directory was removed from loadedPaths.
       return !removedLoadedDirectories.some(
         (removedPath) =>
           normalizedEntryPath === removedPath || normalizedEntryPath.startsWith(`${removedPath}/`),
@@ -250,9 +267,9 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
         workspaceWorktreePath: selectedWorkspaceWorktreePath,
         requests: refreshDirectoryPaths.map((directoryPath) => ({
           relativePath: directoryPath || undefined,
-          // Root-level load must be recursive to populate the full tree;
-          // subdirectory refreshes are shallow (they only re-read that directory).
-          recursive: !directoryPath,
+          // Always use recursive so we get the full current state of each
+          // directory; this is needed to discover renames and deletions.
+          recursive: true,
         })),
       });
       const refreshResults = response.results
@@ -266,6 +283,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
         repoEntriesRef.current,
         refreshResults,
         loadedDirectoryPathsRef.current,
+        changedRelativePaths,
       );
       repoEntriesWorkspaceIdRef.current = selectedWorkspaceId ?? undefined;
       repoEntriesRef.current = nextEntries;
@@ -307,11 +325,21 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
           relativePath: normalizedPath,
           recursive: false,
         });
-        const nextEntries = applyDirectoryRefreshes(
-          repoEntriesRef.current,
-          [{ directoryPath: normalizedPath, files: response.files }],
-          loadedDirectoryPathsRef.current,
-        );
+
+        if (hasVisibleImmediateChildren(normalizedPath, response.files)) {
+          const nextEntries = mergeWorkspaceEntries(repoEntriesRef.current, response.files);
+          repoEntriesRef.current = nextEntries;
+          setRepoEntries(nextEntries);
+          return;
+        }
+
+        // Shallow response had no visible children — fall back to recursive load.
+        const recursiveResponse = await listFiles({
+          workspaceWorktreePath: selectedWorkspaceWorktreePath,
+          relativePath: normalizedPath,
+          recursive: true,
+        });
+        const nextEntries = mergeWorkspaceEntries(repoEntriesRef.current, recursiveResponse.files);
         repoEntriesRef.current = nextEntries;
         setRepoEntries(nextEntries);
       } catch (error) {

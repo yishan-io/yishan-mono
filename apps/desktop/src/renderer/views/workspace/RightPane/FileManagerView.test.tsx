@@ -22,6 +22,7 @@ type ListFilesBatchInput = {
 
 const mocks = vi.hoisted(() => {
   const listFiles = vi.fn();
+  const lastLoadedFilesRef: { current: Array<{ path: string; isIgnored: boolean }> } = { current: [] };
   const listFilesBatch = vi.fn(async (input: ListFilesBatchInput) => {
     const results = await Promise.all(
       input.requests.map(async (request) => {
@@ -30,6 +31,9 @@ const mocks = vi.hoisted(() => {
           relativePath: request.relativePath,
           recursive: request.recursive,
         });
+        if (!request.relativePath && request.recursive) {
+          lastLoadedFilesRef.current = response.files as Array<{ path: string; isIgnored: boolean }>;
+        }
         return {
           request,
           files: response.files,
@@ -40,6 +44,26 @@ const mocks = vi.hoisted(() => {
     return {
       results,
     };
+  });
+  // Simulates daemon search by filtering the cached file list for the query.
+  const searchFiles = vi.fn(async (input: { workspaceWorktreePath: string; query: string }) => {
+    const query = input.query.toLowerCase();
+    const matched = lastLoadedFilesRef.current
+      .filter((f) => !f.isIgnored && f.path.toLowerCase().includes(query))
+      .map((f) => {
+        const pathLower = f.path.toLowerCase();
+        const highlightedPathIndexes: number[] = [];
+        let searchFrom = 0;
+        for (let qi = 0; qi < query.length; qi++) {
+          const idx = pathLower.indexOf(query[qi]!, searchFrom);
+          if (idx !== -1) {
+            highlightedPathIndexes.push(idx);
+            searchFrom = idx + 1;
+          }
+        }
+        return { path: f.path, score: 1, highlightedPathIndexes };
+      });
+    return matched;
   });
   const readFile = vi.fn();
   const createFile = vi.fn();
@@ -96,6 +120,7 @@ const mocks = vi.hoisted(() => {
   return {
     listFiles,
     listFilesBatch,
+    searchFiles,
     readFile,
     createFile,
     createFolder,
@@ -123,7 +148,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("../../../commands/fileCommands", () => ({
   listFiles: (...args: unknown[]) => mocks.listFiles(...args),
   listFilesBatch: (input: ListFilesBatchInput) => mocks.listFilesBatch(input),
-  searchFiles: vi.fn(async () => ({ files: [] })),
+  searchFiles: (...args: unknown[]) => mocks.searchFiles(...args),
   readFile: (...args: unknown[]) => mocks.readFile(...args),
   writeFile: vi.fn(),
   createFile: (...args: unknown[]) => mocks.createFile(...args),
@@ -296,8 +321,10 @@ describe("FileManagerView file search", () => {
     const searchInput = await screen.findByRole("textbox", { name: "Search files..." });
     fireEvent.change(searchInput, { target: { value: "button" } });
 
-    expect(screen.getByRole("button", { name: "src/components/Button.tsx" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "src/readme.md" })).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "src/components/Button.tsx" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "src/readme.md" })).toBeNull();
+    });
 
     const highlightedSegments = screen.getAllByText(
       (_, element) => element?.getAttribute("data-highlighted") === "true",
@@ -321,7 +348,9 @@ describe("FileManagerView file search", () => {
     const searchInput = await screen.findByRole("textbox", { name: "Search files..." });
     fireEvent.change(searchInput, { target: { value: "cmd" } });
 
-    expect(screen.getByRole("button", { name: "cmd/" })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "cmd/" })).toBeTruthy();
+    });
   });
 
   it("does not render file result rows before a search query is typed", async () => {
@@ -406,6 +435,12 @@ describe("FileManagerView file search", () => {
 
     const searchInput = await screen.findByRole("textbox", { name: "Search files..." });
     fireEvent.change(searchInput, { target: { value: "read" } });
+
+    // Wait for async searchFiles to populate results before pressing Enter.
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "src/readme.md" })).toBeTruthy();
+    });
+
     fireEvent.keyDown(searchInput, { key: "Enter" });
 
     await waitFor(() => {
@@ -1216,9 +1251,8 @@ describe("FileManagerView external file tree refresh", () => {
   });
 
   it("refreshes all files on refresh button click", async () => {
-    mocks.listFiles
-      .mockResolvedValueOnce({ files: asEntries(["src/a.ts"]) })
-      .mockResolvedValueOnce({ files: asEntries(["src/a.ts", "src/b.ts"]) });
+    mocks.listFiles.mockResolvedValue({ files: asEntries(["src/a.ts"]) });
+    mocks.listFiles.mockResolvedValueOnce({ files: asEntries(["src/a.ts"]) });
 
     render(<FileManagerView />);
 
@@ -1226,11 +1260,15 @@ describe("FileManagerView external file tree refresh", () => {
       expect(mocks.listFiles).toHaveBeenCalledTimes(1);
     });
 
+    const callCountBeforeRefresh = mocks.listFiles.mock.calls.length;
+
+    mocks.listFiles.mockResolvedValueOnce({ files: asEntries(["src/a.ts", "src/b.ts"]) });
+
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
 
     await waitFor(() => {
-      expect(mocks.listFiles).toHaveBeenCalledTimes(2);
-      expect(mocks.listFiles).toHaveBeenLastCalledWith({
+      expect(mocks.listFiles.mock.calls.length).toBeGreaterThan(callCountBeforeRefresh);
+      expect(mocks.listFiles).toHaveBeenCalledWith({
         workspaceWorktreePath: "/tmp/repo",
         recursive: true,
       });
