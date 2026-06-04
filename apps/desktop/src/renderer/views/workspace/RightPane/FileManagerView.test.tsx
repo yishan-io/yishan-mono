@@ -123,6 +123,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("../../../commands/fileCommands", () => ({
   listFiles: (...args: unknown[]) => mocks.listFiles(...args),
   listFilesBatch: (input: ListFilesBatchInput) => mocks.listFilesBatch(input),
+  searchFiles: vi.fn(async () => ({ files: [] })),
   readFile: (...args: unknown[]) => mocks.readFile(...args),
   writeFile: vi.fn(),
   createFile: (...args: unknown[]) => mocks.createFile(...args),

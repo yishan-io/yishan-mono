@@ -250,7 +250,9 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
         workspaceWorktreePath: selectedWorkspaceWorktreePath,
         requests: refreshDirectoryPaths.map((directoryPath) => ({
           relativePath: directoryPath || undefined,
-          recursive: false,
+          // Root-level load must be recursive to populate the full tree;
+          // subdirectory refreshes are shallow (they only re-read that directory).
+          recursive: !directoryPath,
         })),
       });
       const refreshResults = response.results
