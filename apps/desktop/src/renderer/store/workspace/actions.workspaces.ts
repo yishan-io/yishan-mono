@@ -17,6 +17,7 @@ type WorkspaceActions = Pick<
   | "setWorkspaceGitChangesCount"
   | "setWorkspaceGitChangeTotals"
   | "setWorkspacePullRequest"
+  | "setWorkspaceCurrentBranch"
   | "incrementGitRefreshVersion"
 >;
 
@@ -177,6 +178,15 @@ export function createWorkspaceActions(set: WorkspaceStoreSetState, _get: Worksp
 
       set((state) => {
         state.pullRequestByWorkspaceId[workspaceId] = pullRequest;
+      });
+    },
+    setWorkspaceCurrentBranch: (workspaceId, branch) => {
+      if (!workspaceId) {
+        return;
+      }
+
+      set((state) => {
+        state.currentBranchByWorkspaceId[workspaceId] = branch;
       });
     },
     incrementGitRefreshVersion: (workspaceWorktreePath) => {

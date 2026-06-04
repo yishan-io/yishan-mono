@@ -9,6 +9,7 @@ import {
   playNotificationSound,
 } from "../commands/notificationCommands";
 import { loadWorkspaceFromBackend } from "../commands/projectCommands";
+import { getDaemonClient } from "../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../rpc/rpcTransport";
 import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../store/chatStore";
 import { sessionStore } from "../store/sessionStore";
@@ -38,6 +39,8 @@ type BackendEventStoreBindingsDependencies = {
   subscribeWorkspaceSnapshotChanged?: (listener: (payload: WorkspaceSnapshotChangedPayload) => void) => () => void;
   subscribeOpenBrowserUrl?: (listener: (payload: { url: string; workspaceId: string }) => void) => () => void;
   listWorkspaceWorktreePaths?: () => string[];
+  resolveWorkspaceIdByWorktreePath?: (worktreePath: string) => string | undefined;
+  refreshWorkspaceCurrentBranch?: (workspaceId: string) => Promise<void>;
   incrementFileTreeRefreshVersion: (workspaceWorktreePath?: string, changedRelativePaths?: string[]) => void;
   incrementGitRefreshVersion: (workspaceWorktreePath: string) => void;
   setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId: Record<string, WorkspaceAgentStatus>) => void;
@@ -118,6 +121,21 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
       .getState()
       .workspaces.map((workspace) => workspace.worktreePath?.trim() ?? "")
       .filter((workspaceWorktreePath) => workspaceWorktreePath.length > 0),
+  resolveWorkspaceIdByWorktreePath: (worktreePath) => {
+    const normalized = worktreePath.trim();
+    return workspaceStore
+      .getState()
+      .workspaces.find((ws) => ws.worktreePath?.trim() === normalized)?.id;
+  },
+  refreshWorkspaceCurrentBranch: async (workspaceId) => {
+    try {
+      const client = await getDaemonClient();
+      const result = await client.git.inspect({ workspaceId });
+      workspaceStore.getState().setWorkspaceCurrentBranch(workspaceId, result.currentBranch ?? "");
+    } catch {
+      // Non-fatal: cache stays stale until the next gitChanged event.
+    }
+  },
   incrementFileTreeRefreshVersion: (workspaceWorktreePath, changedRelativePaths) => {
     workspaceStore.getState().incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
   },
@@ -387,6 +405,11 @@ export function createBackendEventStoreBindings(
 
     const unsubscribeGitChanged = dependencies.subscribeGitChanged((workspaceWorktreePath) => {
       scheduleGitRefresh(workspaceWorktreePath);
+
+      const workspaceId = dependencies.resolveWorkspaceIdByWorktreePath?.(workspaceWorktreePath);
+      if (workspaceId) {
+        void dependencies.refreshWorkspaceCurrentBranch?.(workspaceId);
+      }
     });
     let hasObservedConnectedState = false;
     let shouldRecoverWorkspaceViewsOnReconnect = false;

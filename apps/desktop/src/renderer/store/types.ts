@@ -181,6 +181,7 @@ export type WorkspaceStoreState = {
   workspaces: WorkspaceItem[];
   pullRequestByWorkspaceId: Record<string, DaemonWorkspacePullRequest | undefined>;
   latestPullRequestByWorkspaceId: Record<string, WorkspacePullRequestSummary | undefined>;
+  currentBranchByWorkspaceId: Record<string, string>;
   gitChangesCountByWorkspaceId: Record<string, number>;
   gitChangeTotalsByWorkspaceId: Record<string, WorkspaceGitChangeTotals>;
   gitRefreshVersionByWorktreePath: Record<string, number>;
@@ -252,6 +253,7 @@ export type WorkspaceStoreState = {
   setWorkspaceGitChangesCount: (workspaceId: string, count: number) => void;
   setWorkspaceGitChangeTotals: (workspaceId: string, totals: WorkspaceGitChangeTotals) => void;
   setWorkspacePullRequest: (workspaceId: string, pullRequest?: DaemonWorkspacePullRequest) => void;
+  setWorkspaceCurrentBranch: (workspaceId: string, branch: string) => void;
   incrementGitRefreshVersion: (workspaceWorktreePath: string) => void;
 };
 
@@ -287,6 +289,7 @@ export type WorkspaceStoreActions = Pick<
   | "setWorkspaceGitChangesCount"
   | "setWorkspaceGitChangeTotals"
   | "setWorkspacePullRequest"
+  | "setWorkspaceCurrentBranch"
   | "incrementGitRefreshVersion"
 >;
 

@@ -54,6 +54,7 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       workspaces: [],
       pullRequestByWorkspaceId: {},
       latestPullRequestByWorkspaceId: {},
+      currentBranchByWorkspaceId: {},
       gitChangesCountByWorkspaceId: {},
       gitChangeTotalsByWorkspaceId: {},
       gitRefreshVersionByWorktreePath: {},
@@ -79,6 +80,7 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       setWorkspaceGitChangesCount: vi.fn(),
       setWorkspaceGitChangeTotals: vi.fn(),
       setWorkspacePullRequest: vi.fn(),
+      setWorkspaceCurrentBranch: vi.fn(),
       incrementGitRefreshVersion: vi.fn(),
     } as WorkspaceStoreState,
     splitPaneStoreState: {

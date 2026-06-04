@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../helpers/errorHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { workspaceStore } from "../store/workspaceStore";
 
@@ -92,30 +93,6 @@ export async function ensureVisibleWorkspacesOpen(mergedWorkspaceIds?: ReadonlyS
         });
       }
 
-      const inspect = await client.git.inspectPath({ path: worktreePath });
-      if (!inspect.isGitRepository) {
-        console.warn("[daemonWorkspaceSync] skipping workspace open because path is unavailable", {
-          workspaceId: workspace.id,
-          worktreePath,
-        });
-        try {
-          await client.workspace.close({
-            workspaceId: workspace.id,
-            organizationId: workspace.organizationId,
-            projectId: workspace.projectId,
-            branch: workspace.branch,
-            removeBranch: true,
-          });
-        } catch (error) {
-          console.warn("[daemonWorkspaceSync] failed to close missing workspace", {
-            workspaceId: workspace.id,
-            worktreePath,
-            error,
-          });
-        }
-        return;
-      }
-
       try {
         const openedWorkspace = await client.workspace.open({
           workspaceId: workspace.id,
@@ -129,11 +106,26 @@ export async function ensureVisibleWorkspacesOpen(mergedWorkspaceIds?: ReadonlyS
           workspaceStore.getState().setWorkspacePullRequest(openedWorkspace.id, openedWorkspace.pullRequest);
         }
       } catch (error) {
-        console.warn("[daemonWorkspaceSync] failed to open workspace in daemon", {
+        console.warn("[daemonWorkspaceSync] failed to open workspace in daemon; closing stale entry", {
           workspaceId: workspace.id,
           worktreePath,
-          error,
+          error: getErrorMessage(error),
         });
+        try {
+          await client.workspace.close({
+            workspaceId: workspace.id,
+            organizationId: workspace.organizationId,
+            projectId: workspace.projectId,
+            branch: workspace.branch,
+            removeBranch: true,
+          });
+        } catch (closeError) {
+          console.warn("[daemonWorkspaceSync] failed to close stale workspace after open failure", {
+            workspaceId: workspace.id,
+            worktreePath,
+            error: getErrorMessage(closeError),
+          });
+        }
       }
     }),
   );

@@ -21,6 +21,7 @@ export const workspaceStore = create<WorkspaceStoreState>()(
       workspaces: initialWorkspaceState.workspaces,
       pullRequestByWorkspaceId: {},
       latestPullRequestByWorkspaceId: {},
+      currentBranchByWorkspaceId: {},
       gitChangesCountByWorkspaceId: {},
       gitChangeTotalsByWorkspaceId: {},
       gitRefreshVersionByWorktreePath: {},

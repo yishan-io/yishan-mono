@@ -17,7 +17,6 @@ export function useWorkspaceInfoHover({
 }: UseWorkspaceInfoHoverInput) {
   const [workspaceInfoAnchorEl, setWorkspaceInfoAnchorEl] = useState<HTMLElement | null>(null);
   const [hoveredWorkspaceId, setHoveredWorkspaceId] = useState("");
-  const [hoveredWorkspaceCurrentBranch, setHoveredWorkspaceCurrentBranch] = useState("");
   const workspaceInfoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearWorkspaceInfoCloseTimer = useCallback(() => {
@@ -33,7 +32,6 @@ export function useWorkspaceInfoHover({
     clearWorkspaceInfoCloseTimer();
     workspaceInfoCloseTimerRef.current = setTimeout(() => {
       setHoveredWorkspaceId("");
-      setHoveredWorkspaceCurrentBranch("");
       setWorkspaceInfoAnchorEl(null);
       workspaceInfoCloseTimerRef.current = null;
     }, closeDelayMs);
@@ -42,16 +40,10 @@ export function useWorkspaceInfoHover({
   const handleWorkspaceInfoMouseEnter = useCallback(
     (workspaceId: string, anchorEl: HTMLElement) => {
       clearWorkspaceInfoCloseTimer();
-      setHoveredWorkspaceCurrentBranch((currentBranch) => {
-        if (workspaceId !== hoveredWorkspaceId) {
-          return "";
-        }
-        return currentBranch;
-      });
       setHoveredWorkspaceId(workspaceId);
       setWorkspaceInfoAnchorEl(anchorEl);
     },
-    [clearWorkspaceInfoCloseTimer, hoveredWorkspaceId],
+    [clearWorkspaceInfoCloseTimer],
   );
 
   const handleWorkspaceInfoMouseLeave = useCallback(() => {
@@ -72,28 +64,32 @@ export function useWorkspaceInfoHover({
     };
   }, [clearWorkspaceInfoCloseTimer]);
 
+  // Fetch current branch on cache miss; subsequent hovers use the cached value
+  // updated by the gitChanged → git.inspect pipeline.
   useEffect(() => {
     if (!hoveredWorkspaceId) {
-      setHoveredWorkspaceCurrentBranch("");
       return;
     }
 
     const workspace = workspaces.find((ws) => ws.id === hoveredWorkspaceId);
-    const worktreePath = workspace?.worktreePath?.trim();
-    if (!worktreePath) {
-      setHoveredWorkspaceCurrentBranch("");
+    if (!workspace?.worktreePath?.trim()) {
+      return;
+    }
+
+    // Already cached — nothing to do.
+    if (workspaceStore.getState().currentBranchByWorkspaceId[hoveredWorkspaceId]) {
       return;
     }
 
     let cancelled = false;
-    inspectGitRepository({ path: worktreePath }).then((result) => {
-        if (!cancelled) {
-          setHoveredWorkspaceCurrentBranch(result.currentBranch || "");
+    inspectGitRepository({ workspaceId: hoveredWorkspaceId })
+      .then((result) => {
+        if (!cancelled && result.currentBranch) {
+          workspaceStore.getState().setWorkspaceCurrentBranch(hoveredWorkspaceId, result.currentBranch);
         }
-      }).catch(() => {
-        if (!cancelled) {
-          setHoveredWorkspaceCurrentBranch("");
-        }
+      })
+      .catch(() => {
+        // Cache miss stays empty; branch column shows nothing.
       });
 
     return () => {
@@ -102,6 +98,7 @@ export function useWorkspaceInfoHover({
   }, [hoveredWorkspaceId, workspaces]);
 
   const hoveredWorkspace = workspaces.find((workspace) => workspace.id === hoveredWorkspaceId);
+  const hoveredWorkspaceCurrentBranch = workspaceStore((state) => state.currentBranchByWorkspaceId[hoveredWorkspaceId] ?? "");
   const hoveredWorkspacePullRequest = workspaceStore((state) => state.pullRequestByWorkspaceId?.[hoveredWorkspaceId]);
   const hoveredWorkspaceLatestPullRequest = workspaceStore((state) => state.latestPullRequestByWorkspaceId?.[hoveredWorkspaceId]);
   const isHoveredWorkspacePrimary = Boolean(
