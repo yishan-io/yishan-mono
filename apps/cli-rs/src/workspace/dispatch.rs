@@ -1,0 +1,620 @@
+use crate::daemon::constants::*;
+use crate::daemon::rpc::{decode_params, DomainRpcError};
+use crate::workspace::manager::WorkspaceManager;
+use crate::workspace::types::*;
+use axum::extract::ws::Message;
+use serde_json::{json, Value};
+use std::sync::Arc;
+
+type Sink =
+    Arc<tokio::sync::Mutex<futures_util::stream::SplitSink<axum::extract::ws::WebSocket, Message>>>;
+
+// ── Workspace dispatcher ──────────────────────────────────────────────────────
+
+pub async fn workspace(
+    method: &str,
+    params: Option<&serde_json::value::RawValue>,
+    mgr: &WorkspaceManager,
+) -> Result<Value, DomainRpcError> {
+    match method {
+        METHOD_WORKSPACE_LIST => {
+            let workspaces = mgr.list();
+            Ok(json!(workspaces))
+        }
+        METHOD_WORKSPACE_OPEN => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                id: String,
+                path: String,
+                #[serde(default)]
+                org_id: String,
+                #[serde(default)]
+                project_id: String,
+            }
+            let req: Req = decode_params(params)?;
+            let ws = mgr.open(req.id, req.path, req.org_id, req.project_id)?;
+            Ok(json!(ws))
+        }
+        METHOD_WORKSPACE_CREATE => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                id: String,
+                path: String,
+                #[serde(default)]
+                org_id: String,
+                #[serde(default)]
+                project_id: String,
+            }
+            let req: Req = decode_params(params)?;
+            let ws = mgr.open(req.id, req.path, req.org_id, req.project_id)?;
+            Ok(json!(ws))
+        }
+        METHOD_WORKSPACE_CLOSE => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+            }
+            let req: Req = decode_params(params)?;
+            mgr.close(&req.workspace_id)?;
+            Ok(json!({ "ok": true }))
+        }
+        METHOD_WORKSPACE_SYNC_CONTEXT_LINK => {
+            let req: crate::workspace::context::SyncContextLinkRequest = decode_params(params)?;
+            let result = crate::workspace::context::sync_context_links(&req);
+            Ok(json!(result))
+        }
+        METHOD_WORKSPACE_SET_ACTIVE => {
+            let req: SetActiveWorkspaceRequest = decode_params(params)?;
+            let resp = mgr.set_active_workspace(&req)?;
+            Ok(json!(resp))
+        }
+        _ => Err(DomainRpcError::method_not_found(method)),
+    }
+}
+
+// ── Git dispatcher ────────────────────────────────────────────────────────────
+
+pub async fn git(
+    method: &str,
+    params: Option<&serde_json::value::RawValue>,
+    mgr: &WorkspaceManager,
+) -> Result<Value, DomainRpcError> {
+    match method {
+        METHOD_GIT_STATUS => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr.workspace(&req.workspace_id)?.git_status()?))
+        }
+        METHOD_GIT_INSPECT => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr.workspace(&req.workspace_id)?.git_inspect()?))
+        }
+        METHOD_GIT_INSPECT_PATH => {
+            #[derive(serde::Deserialize)]
+            struct Req {
+                path: String,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr.git_inspect_path(&req.path)?))
+        }
+        METHOD_GIT_LIST_CHANGES => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .git_list_changes()?))
+        }
+        METHOD_GIT_TRACK => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                paths: Vec<String>,
+            }
+            let req: Req = decode_params(params)?;
+            mgr.workspace(&req.workspace_id)?.git_track(&req.paths)?;
+            Ok(json!({ "ok": true }))
+        }
+        METHOD_GIT_UNSTAGE => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                paths: Vec<String>,
+            }
+            let req: Req = decode_params(params)?;
+            mgr.workspace(&req.workspace_id)?.git_unstage(&req.paths)?;
+            Ok(json!({ "ok": true }))
+        }
+        METHOD_GIT_REVERT => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                paths: Vec<String>,
+            }
+            let req: Req = decode_params(params)?;
+            mgr.workspace(&req.workspace_id)?.git_revert(&req.paths)?;
+            Ok(json!({ "ok": true }))
+        }
+        METHOD_GIT_COMMIT => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                message: String,
+                #[serde(default)]
+                amend: bool,
+                #[serde(default)]
+                signoff: bool,
+            }
+            let req: Req = decode_params(params)?;
+            let out = mgr.workspace(&req.workspace_id)?.git_commit(
+                &req.message,
+                req.amend,
+                req.signoff,
+            )?;
+            Ok(json!({ "output": out }))
+        }
+        METHOD_GIT_BRANCH_STATUS => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .git_branch_status()?))
+        }
+        METHOD_GIT_BRANCH_PR => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                #[serde(default)]
+                branch: String,
+            }
+            let req: Req = decode_params(params)?;
+            let ws = mgr.workspace(&req.workspace_id)?;
+            let branch = if req.branch.is_empty() {
+                ws.current_branch()?
+            } else {
+                req.branch.clone()
+            };
+            Ok(json!(ws.git_branch_pr(&branch)?))
+        }
+        METHOD_GIT_COMMITS_TO_TARGET => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                target_branch: String,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .git_commits_to_target(&req.target_branch)?))
+        }
+        METHOD_GIT_BRANCH_DIFF_SUMMARY => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                target_branch: String,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .git_branch_diff_summary(&req.target_branch)?))
+        }
+        METHOD_GIT_COMMIT_DIFF => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                commit_hash: String,
+                #[serde(default)]
+                path: String,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .git_commit_diff(&req.commit_hash, &req.path)?))
+        }
+        METHOD_GIT_BRANCH_DIFF => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                target_branch: String,
+                #[serde(default)]
+                path: String,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .git_branch_diff(&req.target_branch, &req.path)?))
+        }
+        METHOD_GIT_BRANCHES => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr.workspace(&req.workspace_id)?.git_branches()?))
+        }
+        METHOD_GIT_PUSH => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+            }
+            let req: Req = decode_params(params)?;
+            let out = mgr.workspace(&req.workspace_id)?.git_push()?;
+            Ok(json!({ "output": out }))
+        }
+        METHOD_GIT_PUBLISH => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+            }
+            let req: Req = decode_params(params)?;
+            let out = mgr.workspace(&req.workspace_id)?.git_publish()?;
+            Ok(json!({ "output": out }))
+        }
+        METHOD_GIT_RENAME_BRANCH => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                next_branch: String,
+            }
+            let req: Req = decode_params(params)?;
+            mgr.workspace(&req.workspace_id)?
+                .git_rename_branch(&req.next_branch)?;
+            Ok(json!({ "ok": true }))
+        }
+        METHOD_GIT_REMOVE_BRANCH => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                branch: String,
+                #[serde(default)]
+                force: bool,
+            }
+            let req: Req = decode_params(params)?;
+            mgr.workspace(&req.workspace_id)?
+                .git_remove_branch(&req.branch, req.force)?;
+            Ok(json!({ "ok": true }))
+        }
+        METHOD_GIT_PR_MERGE => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                pr_number: i64,
+                #[serde(default)]
+                method: String,
+                #[serde(default)]
+                delete_branch: bool,
+            }
+            let req: Req = decode_params(params)?;
+            let out = mgr.workspace(&req.workspace_id)?.git_pr_merge(
+                req.pr_number,
+                &req.method,
+                req.delete_branch,
+            )?;
+            Ok(json!({ "output": out }))
+        }
+        METHOD_GIT_PR_CLOSE => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                pr_number: i64,
+            }
+            let req: Req = decode_params(params)?;
+            let out = mgr
+                .workspace(&req.workspace_id)?
+                .git_pr_close(req.pr_number)?;
+            Ok(json!({ "output": out }))
+        }
+        METHOD_GIT_WORKTREE_CREATE => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                branch: String,
+                worktree_path: String,
+                #[serde(default)]
+                create_branch: bool,
+                #[serde(default)]
+                from_ref: String,
+            }
+            let req: Req = decode_params(params)?;
+            mgr.workspace(&req.workspace_id)?.git_worktree_create(
+                &req.branch,
+                &req.worktree_path,
+                req.create_branch,
+                &req.from_ref,
+            )?;
+            Ok(json!({ "ok": true }))
+        }
+        METHOD_GIT_WORKTREE_REMOVE => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                worktree_path: String,
+                #[serde(default)]
+                force: bool,
+            }
+            let req: Req = decode_params(params)?;
+            mgr.workspace(&req.workspace_id)?
+                .git_worktree_remove(&req.worktree_path, req.force)?;
+            Ok(json!({ "ok": true }))
+        }
+        METHOD_GIT_AUTHOR_NAME => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+            }
+            let req: Req = decode_params(params)?;
+            let name = mgr.workspace(&req.workspace_id)?.git_author_name()?;
+            Ok(json!({ "name": name }))
+        }
+        _ => Err(DomainRpcError::method_not_found(method)),
+    }
+}
+
+// ── File dispatcher ───────────────────────────────────────────────────────────
+
+pub async fn file(
+    method: &str,
+    params: Option<&serde_json::value::RawValue>,
+    mgr: &WorkspaceManager,
+) -> Result<Value, DomainRpcError> {
+    match method {
+        METHOD_FILE_LIST => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                #[serde(default)]
+                path: String,
+                #[serde(default)]
+                recursive: bool,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .file_list(&req.path, req.recursive)?))
+        }
+        METHOD_FILE_SEARCH => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                query: String,
+                #[serde(default = "default_file_search_limit")]
+                limit: usize,
+            }
+
+            fn default_file_search_limit() -> usize {
+                100
+            }
+
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .file_search(&req.query, req.limit)?))
+        }
+        METHOD_FILE_STAT => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                path: String,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .file_stat(&req.path)?))
+        }
+        METHOD_FILE_READ => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                path: String,
+            }
+            let req: Req = decode_params(params)?;
+            let content = mgr.workspace(&req.workspace_id)?.file_read(&req.path)?;
+            Ok(json!({ "content": content }))
+        }
+        METHOD_FILE_WRITE => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                path: String,
+                content: String,
+                #[serde(default)]
+                mode: u32,
+            }
+            let req: Req = decode_params(params)?;
+            let bytes =
+                mgr.workspace(&req.workspace_id)?
+                    .file_write(&req.path, &req.content, req.mode)?;
+            Ok(json!({ "bytesWritten": bytes }))
+        }
+        METHOD_FILE_DELETE => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                path: String,
+                #[serde(default)]
+                recursive: bool,
+            }
+            let req: Req = decode_params(params)?;
+            mgr.workspace(&req.workspace_id)?
+                .file_delete(&req.path, req.recursive)?;
+            Ok(json!({ "ok": true }))
+        }
+        METHOD_FILE_MOVE => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                from_path: String,
+                to_path: String,
+            }
+            let req: Req = decode_params(params)?;
+            mgr.workspace(&req.workspace_id)?
+                .file_move(&req.from_path, &req.to_path)?;
+            Ok(json!({ "ok": true }))
+        }
+        METHOD_FILE_MKDIR => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                path: String,
+                #[serde(default)]
+                parents: bool,
+                #[serde(default)]
+                mode: u32,
+            }
+            let req: Req = decode_params(params)?;
+            mgr.workspace(&req.workspace_id)?
+                .file_mkdir(&req.path, req.parents, req.mode)?;
+            Ok(json!({ "ok": true }))
+        }
+        METHOD_FILE_DIFF => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                workspace_id: String,
+                path: String,
+            }
+            let req: Req = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace(&req.workspace_id)?
+                .file_read_diff(&req.path)?))
+        }
+        _ => Err(DomainRpcError::method_not_found(method)),
+    }
+}
+
+// ── Terminal dispatcher ───────────────────────────────────────────────────────
+
+/// Terminal dispatch receives an `Arc<WorkspaceManager>` (not a borrow) so that
+/// blocking PTY operations can be offloaded to `spawn_blocking`, which requires
+/// `'static` ownership.
+pub async fn terminal(
+    method: &str,
+    params: Option<&serde_json::value::RawValue>,
+    mgr: Arc<WorkspaceManager>,
+    _sink: Sink,
+) -> Result<Value, DomainRpcError> {
+    match method {
+        METHOD_TERMINAL_START => {
+            let req: TerminalStartRequest = decode_params(params)?;
+            // `openpty` + `spawn_command` are blocking syscalls — must not run on
+            // the tokio async thread or the executor stalls (manifests as "task
+            // queue exceeded allotted deadline").
+            tokio::task::spawn_blocking(move || {
+                mgr.workspace(&req.workspace_id)?.terminal_start(&req)
+            })
+            .await
+            .map_err(|e| DomainRpcError::server_error(format!("spawn_blocking: {e}")))?
+            .map(|r| json!(r))
+        }
+        METHOD_TERMINAL_SEND => {
+            let req: TerminalSendRequest = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace_for_terminal_session(&req.session_id)?
+                .terminal_send(&req)?))
+        }
+        METHOD_TERMINAL_READ => {
+            let req: TerminalReadRequest = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace_for_terminal_session(&req.session_id)?
+                .terminal_read(&req)?))
+        }
+        METHOD_TERMINAL_STOP => {
+            let req: TerminalStopRequest = decode_params(params)?;
+            let m = Arc::clone(&mgr);
+            tokio::task::spawn_blocking(move || {
+                m.workspace_for_terminal_session(&req.session_id)?
+                    .terminal_stop(&req)
+            })
+            .await
+            .map_err(|e| DomainRpcError::server_error(format!("spawn_blocking: {e}")))?
+            .map(|r| json!(r))
+        }
+        METHOD_TERMINAL_KILL_PROCESS => {
+            let req: TerminalKillProcessRequest = decode_params(params)?;
+            let m = Arc::clone(&mgr);
+            tokio::task::spawn_blocking(move || m.terminal_kill_process(&req))
+                .await
+                .map_err(|e| DomainRpcError::server_error(format!("spawn_blocking: {e}")))?
+                .map(|r| json!(r))
+        }
+        METHOD_TERMINAL_LIST_SESSIONS => {
+            let req: TerminalListSessionsRequest = decode_params(params)?;
+            if let Some(workspace_id) = req.workspace_id {
+                Ok(json!(mgr
+                    .workspace(&workspace_id)?
+                    .terminal_list_sessions()))
+            } else {
+                Ok(json!(mgr.terminal_list_sessions()))
+            }
+        }
+        METHOD_TERMINAL_LIST_PORTS => Ok(json!(mgr.terminal_list_ports())),
+        METHOD_TERMINAL_RESIZE => {
+            let req: TerminalResizeRequest = decode_params(params)?;
+            Ok(json!(mgr
+                .workspace_for_terminal_session(&req.session_id)?
+                .terminal_resize(&req)?))
+        }
+        METHOD_TERMINAL_SUBSCRIBE => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Req {
+                session_id: String,
+            }
+            let req: Req = decode_params(params)?;
+            mgr.workspace_for_terminal_session(&req.session_id)?
+                .terminal_subscribe_output(&req.session_id, _sink)?;
+            Ok(json!({ "subscribed": true, "sessionId": req.session_id }))
+        }
+        METHOD_TERMINAL_UNSUBSCRIBE => {
+            let _req: TerminalUnsubscribeRequest = decode_params(params)?;
+            Ok(json!(TerminalUnsubscribeResponse { ok: true }))
+        }
+        _ => Err(DomainRpcError::method_not_found(method)),
+    }
+}

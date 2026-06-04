@@ -29,6 +29,16 @@ export async function listFilesBatch(params: {
   });
 }
 
+/** Searches workspace files through the daemon quick-open backend. */
+export async function searchFiles(params: { workspaceWorktreePath: string; query: string; limit?: number }) {
+  const client = await getDaemonClient();
+  return client.file.searchFiles({
+    workspaceWorktreePath: params.workspaceWorktreePath,
+    query: params.query,
+    limit: params.limit,
+  });
+}
+
 /** Reads one file from one workspace worktree path. */
 export async function readFile(params: { workspaceWorktreePath: string; relativePath: string }) {
   const client = await getDaemonClient();

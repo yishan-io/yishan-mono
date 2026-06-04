@@ -92,7 +92,7 @@ export async function ensureVisibleWorkspacesOpen(mergedWorkspaceIds?: ReadonlyS
         });
       }
 
-      const inspect = await client.git.inspect({ path: worktreePath });
+      const inspect = await client.git.inspectPath({ path: worktreePath });
       if (!inspect.isGitRepository) {
         console.warn("[daemonWorkspaceSync] skipping workspace open because path is unavailable", {
           workspaceId: workspace.id,
@@ -125,7 +125,7 @@ export async function ensureVisibleWorkspacesOpen(mergedWorkspaceIds?: ReadonlyS
           pullRequestAlreadyMerged: mergedWorkspaceIds?.has(workspace.id) ?? false,
         });
         openPaths.add(worktreePath);
-        if (openedWorkspace.pullRequest) {
+        if (openedWorkspace?.pullRequest) {
           workspaceStore.getState().setWorkspacePullRequest(openedWorkspace.id, openedWorkspace.pullRequest);
         }
       } catch (error) {

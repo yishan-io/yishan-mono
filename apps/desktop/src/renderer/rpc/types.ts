@@ -30,7 +30,7 @@ export type DaemonRpcClient = {
     syncContextLink: (input: Rpc.WorkspaceSyncContextLinkInput) => Promise<Rpc.WorkspaceSyncContextLinkResponse>;
   };
   file: {
-    listFiles: (input: Rpc.FileListInput) => Promise<{ files: WorkspaceFileEntry[] }>;
+    listFiles: (input: Rpc.FileListInput) => Promise<{ files: WorkspaceFileEntry[] }>; 
     listFilesBatch: (input: Rpc.FileListBatchInput) => Promise<{
       results: Array<{
         request: { relativePath: string; recursive: boolean };
@@ -38,6 +38,7 @@ export type DaemonRpcClient = {
         error: string | null;
       }>;
     }>;
+    searchFiles: (input: Rpc.FileSearchInput) => Promise<Rpc.FileSearchResult[]>;
     readFile: (input: Rpc.FileReadInput) => Promise<Rpc.FileReadResponse>;
     writeFile: (input: Rpc.FileWriteInput) => Promise<Rpc.FileWriteResponse>;
     createFile: (input: Rpc.FileWriteInput) => Promise<Rpc.FileMutationOkResponse>;
@@ -51,6 +52,7 @@ export type DaemonRpcClient = {
   };
   git: {
     inspect: (input: Rpc.GitInspectInput) => Promise<Rpc.GitInspectResponse>;
+    inspectPath: (input: Rpc.GitInspectPathInput) => Promise<Rpc.GitInspectResponse>;
     listChanges: (input: Rpc.GitWorktreeInput) => Promise<Rpc.GitChangesBySection>;
     trackChanges: (input: Rpc.GitPathsInput) => Promise<Rpc.GitStatusOperationResponse>;
     unstageChanges: (input: Rpc.GitPathsInput) => Promise<Rpc.GitStatusOperationResponse>;

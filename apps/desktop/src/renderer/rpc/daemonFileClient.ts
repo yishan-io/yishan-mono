@@ -67,6 +67,19 @@ export class DaemonFileClient {
     return { results };
   }
 
+  async searchFiles(input: Rpc.FileSearchInput): Promise<Rpc.FileSearchResult[]> {
+    const record = asRecord(input);
+    const workspaceId = await this.resolveWorkspaceId(input);
+    const query = readOptionalString(record?.query)?.trim() ?? "";
+    if (!query) {
+      return [];
+    }
+
+    const limit = typeof record?.limit === "number" && Number.isFinite(record.limit) ? record.limit : 100;
+    const results = await this.invoke("file.search", { workspaceId, query, limit });
+    return Array.isArray(results) ? (results as Rpc.FileSearchResult[]) : [];
+  }
+
   async readFile(input: Rpc.FileReadInput): Promise<Rpc.FileReadResponse> {
     const record = asRecord(input);
     const workspaceId = await this.resolveWorkspaceId(input);
@@ -74,8 +87,10 @@ export class DaemonFileClient {
     if (!relativePath) {
       throw new Error("relativePath is required");
     }
-    const content = await this.invoke("file.read", { workspaceId, path: relativePath });
-    return { content: typeof content === "string" ? content : "" };
+    const result = await this.invoke("file.read", { workspaceId, path: relativePath });
+    // Daemon returns { content: string }
+    const content = readOptionalString(asRecord(result)?.content) ?? "";
+    return { content };
   }
 
   async writeFile(input: Rpc.FileWriteInput): Promise<Rpc.FileWriteResponse> {
@@ -122,6 +137,20 @@ export class DaemonFileClient {
     }
     await this.invoke("file.delete", { workspaceId, path: relativePath, recursive: true });
     return { ok: true };
+  }
+
+  // These operations are not yet implemented in the daemon; stubs keep the
+  // DaemonRpcClient contract satisfied so callers get a clear error at runtime.
+  async pasteEntries(_input: unknown): Promise<Rpc.FileMutationOkResponse> {
+    throw new Error("file.pasteEntries is not yet implemented");
+  }
+
+  async importEntries(_input: unknown): Promise<Rpc.FileMutationOkResponse> {
+    throw new Error("file.importEntries is not yet implemented");
+  }
+
+  async importFilePayloads(_input: unknown): Promise<Rpc.FileMutationOkResponse> {
+    throw new Error("file.importFilePayloads is not yet implemented");
   }
 
   async readDiff(input: Rpc.FileReadInput): Promise<Rpc.FileDiffResponse> {

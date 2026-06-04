@@ -93,6 +93,7 @@ export class DaemonClient {
   readonly file = {
     listFiles: (input: Rpc.FileListInput) => this._fileClient.listFiles(input),
     listFilesBatch: (input: Rpc.FileListBatchInput) => this._fileClient.listFilesBatch(input),
+    searchFiles: (input: Rpc.FileSearchInput) => this._fileClient.searchFiles(input),
     readFile: (input: Rpc.FileReadInput) => this._fileClient.readFile(input),
     writeFile: (input: Rpc.FileWriteInput) => this._fileClient.writeFile(input),
     createFile: (input: Rpc.FileWriteInput) => this._fileClient.writeFile(input),
@@ -100,10 +101,14 @@ export class DaemonClient {
     renameEntry: (input: Rpc.FileRenameInput) => this._fileClient.renameEntry(input),
     deleteEntry: (input: Rpc.FileDeleteInput) => this._fileClient.deleteEntry(input),
     readDiff: (input: Rpc.FileReadInput) => this._fileClient.readDiff(input),
+    pasteEntries: (input: unknown) => this._fileClient.pasteEntries(input),
+    importEntries: (input: unknown) => this._fileClient.importEntries(input),
+    importFilePayloads: (input: unknown) => this._fileClient.importFilePayloads(input),
   };
 
   readonly git = {
     inspect: (input: Rpc.GitInspectInput) => this._gitClient.inspect(input),
+    inspectPath: (input: Rpc.GitInspectPathInput) => this._gitClient.inspectPath(input),
     listChanges: (input: Rpc.GitWorktreeInput) => this._gitClient.listChanges(input),
     trackChanges: (input: Rpc.GitPathsInput) => this._gitClient.trackChanges(input),
     unstageChanges: (input: Rpc.GitPathsInput) => this._gitClient.unstageChanges(input),

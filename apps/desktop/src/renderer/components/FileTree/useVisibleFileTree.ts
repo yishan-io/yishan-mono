@@ -24,6 +24,7 @@ export function useVisibleFileTree({
   expandedItemsOverride,
   onExpandedItemsChange,
 }: UseVisibleFileTreeInput): UseVisibleFileTreeResult {
+  const isControlled = expandedItemsOverride !== undefined;
   const createDraftPath = useMemo(() => {
     if (!editingEntry || editingEntry.mode !== "create") {
       return null;
@@ -55,28 +56,35 @@ export function useVisibleFileTree({
   }, [editableFiles, explicitDirectoryPathSet, ignoredPathSet]);
 
   const [uncontrolledExpandedItems, setUncontrolledExpandedItems] = useState<string[]>(defaultExpandedItems);
-  const expandedItems = expandedItemsOverride ?? uncontrolledExpandedItems;
+  const expandedItems = isControlled ? expandedItemsOverride : uncontrolledExpandedItems;
 
   const setExpandedItems = useCallback<Dispatch<SetStateAction<string[]>>>(
     (input) => {
       const nextExpandedItems = typeof input === "function" ? input(expandedItems) : input;
 
-      if (expandedItemsOverride) {
+      if (isControlled) {
         onExpandedItemsChange?.(nextExpandedItems);
         return;
       }
 
       setUncontrolledExpandedItems(nextExpandedItems);
     },
-    [expandedItems, expandedItemsOverride, onExpandedItemsChange],
+    [expandedItems, isControlled, onExpandedItemsChange],
   );
 
   useEffect(() => {
-    const nextExpandedItems = expandedItems.filter((item) => directoryPaths.has(item));
+    // In controlled mode the parent owns expansion state entirely. The tree
+    // must render from the provided expansion list without pruning it based on
+    // temporarily incomplete directory data.
+    if (isControlled) {
+      return;
+    }
+
+    const nextExpandedItems = uncontrolledExpandedItems.filter((item) => directoryPaths.has(item));
 
     if (
-      nextExpandedItems.length === expandedItems.length &&
-      nextExpandedItems.every((item, index) => item === expandedItems[index])
+      nextExpandedItems.length === uncontrolledExpandedItems.length &&
+      nextExpandedItems.every((item, index) => item === uncontrolledExpandedItems[index])
     ) {
       return;
     }
@@ -84,13 +92,8 @@ export function useVisibleFileTree({
     const finalExpandedItems =
       nextExpandedItems.length > 0 || defaultExpandedItems.length === 0 ? nextExpandedItems : defaultExpandedItems;
 
-    if (expandedItemsOverride) {
-      onExpandedItemsChange?.(finalExpandedItems);
-      return;
-    }
-
     setUncontrolledExpandedItems(finalExpandedItems);
-  }, [defaultExpandedItems, directoryPaths, expandedItems, expandedItemsOverride, onExpandedItemsChange]);
+  }, [defaultExpandedItems, directoryPaths, isControlled, uncontrolledExpandedItems]);
 
   const expandedPathSet = useMemo(() => new Set(expandedItems), [expandedItems]);
 

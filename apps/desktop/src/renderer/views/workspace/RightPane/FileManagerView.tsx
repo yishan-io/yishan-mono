@@ -83,9 +83,10 @@ export function FileManagerView({
   const deleteSelectionRequestId = workspaceUiStore((state) => state.deleteSelectionRequestId);
   const undoRequestId = workspaceUiStore((state) => state.undoRequestId);
   const setSelectedEntryPath = workspaceUiStore((state) => state.setSelectedEntryPath);
+  const expandedItemsByWorkspaceId = workspaceUiStore((state) => state.expandedFileTreeItemsByWorkspaceId);
+  const setExpandedFileTreeItems = workspaceUiStore((state) => state.setExpandedFileTreeItems);
   const [lastHandledDeleteSelectionRequestId, setLastHandledDeleteSelectionRequestId] = useState(0);
   const [lastHandledUndoRequestId, setLastHandledUndoRequestId] = useState(0);
-  const [expandedItemsByWorkspaceId, setExpandedItemsByWorkspaceId] = useState<Record<string, string[]>>({});
   const selectedTabId = tabStore((state) => state.selectedTabId);
   const tabs = tabStore((state) => state.tabs);
   const lastRevealedTabIdRef = useRef("");
@@ -99,12 +100,9 @@ export function FileManagerView({
         return;
       }
 
-      setExpandedItemsByWorkspaceId((currentState) => ({
-        ...currentState,
-        [selectedWorkspaceId]: items,
-      }));
+      setExpandedFileTreeItems(selectedWorkspaceId, items);
     },
-    [selectedWorkspaceId],
+    [selectedWorkspaceId, setExpandedFileTreeItems],
   );
 
   useEffect(() => {
@@ -116,14 +114,6 @@ export function FileManagerView({
   useSuppressNativeContextMenuWhileOpen(hasOpenContextMenu);
 
   const visibleTreeFiles = ops.repoFiles;
-  const ignoredSearchRepoPathSet = useMemo(
-    () => new Set(ops.searchIgnoredRepoPaths.map((path) => path.replace(/\/+$/, ""))),
-    [ops.searchIgnoredRepoPaths],
-  );
-  const searchableFiles = useMemo(
-    () => ops.searchRepoFiles.filter((path) => !ignoredSearchRepoPathSet.has(path.replace(/\/+$/, ""))),
-    [ignoredSearchRepoPathSet, ops.searchRepoFiles],
-  );
   const gitChangesByPath = useFileTreeGitChanges({
     listGitChanges: cmd.listGitChanges,
     selectedWorkspaceWorktreePath,
@@ -206,8 +196,7 @@ export function FileManagerView({
     fileSearchResults,
     handleFileSearchInputKeyDown,
   } = useFileSearchController({
-    searchableFiles,
-    loadAllRepoFiles: ops.loadAllRepoFiles,
+    workspaceWorktreePath: selectedWorkspaceWorktreePath || undefined,
     openFileSearchRequestKey,
     lastHandledFileSearchRequestKey,
     onFileSearchRequestHandled,

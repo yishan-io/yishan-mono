@@ -7,6 +7,7 @@ export type WorkspaceListHierarchyMode = "by_project" | "by_node";
 type WorkspaceUiStoreState = {
   // ── file tree signals ──────────────────────────────────────────────────────
   selectedEntryPath: string;
+  expandedFileTreeItemsByWorkspaceId: Record<string, string[]>;
   deleteSelectionRequestId: number;
   undoRequestId: number;
   // ── pane state ─────────────────────────────────────────────────────────────
@@ -16,6 +17,7 @@ type WorkspaceUiStoreState = {
   isScheduledJobPanelOpen: boolean;
 
   setSelectedEntryPath: (path: string) => void;
+  setExpandedFileTreeItems: (workspaceId: string, paths: string[]) => void;
   requestDeleteSelection: () => void;
   requestUndo: () => void;
   setRightPaneTab: (tab: WorkspaceRightPaneTab) => void;
@@ -27,6 +29,7 @@ type WorkspaceUiStoreState = {
 export const workspaceUiStore = create<WorkspaceUiStoreState>()(
   immer((set) => ({
     selectedEntryPath: "",
+    expandedFileTreeItemsByWorkspaceId: {},
     deleteSelectionRequestId: 0,
     undoRequestId: 0,
     rightPaneTab: "files",
@@ -35,6 +38,11 @@ export const workspaceUiStore = create<WorkspaceUiStoreState>()(
 
       setSelectedEntryPath: (selectedEntryPath) => {
         set({ selectedEntryPath });
+      },
+      setExpandedFileTreeItems: (workspaceId, paths) => {
+        set((state) => {
+          state.expandedFileTreeItemsByWorkspaceId[workspaceId] = paths;
+        });
       },
       requestDeleteSelection: () => {
         set((state) => {
