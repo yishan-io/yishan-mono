@@ -121,7 +121,7 @@ pub fn run() -> Result<(), CliError> {
     let cli = Cli::parse();
 
     // Configure output format first so error printing works correctly.
-    set_format(&cli.output).map_err(|e| CliError::Other(anyhow::anyhow!(e)))?;
+    set_format(&cli.output).map_err(|e| CliError::from_anyhow(anyhow::anyhow!(e)))?;
 
     // Initialise async runtime for all async work.
     let rt = tokio::runtime::Builder::new_current_thread()
@@ -135,7 +135,7 @@ pub fn run() -> Result<(), CliError> {
 async fn dispatch(cli: Cli) -> Result<(), CliError> {
     // Resolve config path.
     let config_path = config::resolve_config_path(cli.config.as_deref(), &cli.profile)
-        .map_err(|e| CliError::Other(e))?;
+        .map_err(CliError::from_anyhow)?;
 
     // Load config (missing file = fresh install, not an error).
     let app_config = config::load(
@@ -145,7 +145,7 @@ async fn dispatch(cli: Cli) -> Result<(), CliError> {
         &cli.api_base_url,
         cli.api_token.as_deref().unwrap_or(""),
     )
-    .map_err(|e| CliError::Other(e))?;
+    .map_err(CliError::from_anyhow)?;
 
     // Initialise tracing subscriber.
     init_tracing(&app_config.log_level, &app_config.log_format);
@@ -176,7 +176,7 @@ async fn dispatch(cli: Cli) -> Result<(), CliError> {
         Commands::Whoami => system::run(system::SystemCommands::Whoami, &runtime).await,
         Commands::Health => system::run(system::SystemCommands::Health, &runtime).await,
     }
-    .map_err(|e| CliError::Other(e))
+    .map_err(CliError::from_anyhow)
 }
 
 fn init_tracing(level: &str, format: &str) {

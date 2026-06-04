@@ -13,7 +13,7 @@ const SERVICE_TOKEN_PREFIX: &str = "yst_";
 const REQUEST_TIMEOUT_SECS: u64 = 15;
 
 /// HTTP-level API error.
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Error)]
 #[error("API {method} {path} → {status}: {body}")]
 pub struct ApiError {
     pub method: String,
@@ -27,8 +27,8 @@ pub struct ApiError {
 #[allow(dead_code)]
 #[error("request unauthorized and token refresh failed: {refresh_error}")]
 pub struct TokenRefreshError {
-    pub request_error: Box<dyn std::error::Error + Send + Sync>,
-    pub refresh_error: Box<dyn std::error::Error + Send + Sync>,
+    pub request_error: anyhow::Error,
+    pub refresh_error: anyhow::Error,
 }
 
 /// Mutable token state, guarded by a Mutex to prevent data races (fixes C1).
@@ -131,11 +131,13 @@ impl ApiClient {
                     let state = self.token_state.lock().await;
                     if !state.refresh_token.is_empty() && !is_refresh_token_near_expiry(&state) {
                         drop(state);
-                        self.do_refresh().await.map_err(|refresh_err| {
-                            anyhow::anyhow!(
-                                "request unauthorized and token refresh failed: {refresh_err}"
-                            )
-                        })?;
+                        let request_error = api_err.clone();
+                        self.do_refresh()
+                            .await
+                            .map_err(|refresh_err| TokenRefreshError {
+                                request_error: request_error.into(),
+                                refresh_error: refresh_err,
+                            })?;
                         return self.send_raw(&method, path, body).await;
                     }
                 }

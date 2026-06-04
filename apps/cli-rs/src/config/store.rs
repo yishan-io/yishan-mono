@@ -157,30 +157,29 @@ pub fn persist_auth_tokens(
             Value::String(base_url.to_string()),
         );
     }
-    map.insert(
-        Value::String(KEY_API_TOKEN.to_string()),
-        Value::String(access_token.to_string()),
+    upsert_string_field(&mut map, KEY_API_TOKEN, access_token);
+    upsert_string_field(&mut map, KEY_API_REFRESH_TOKEN, refresh_token);
+    upsert_string_field(
+        &mut map,
+        KEY_API_ACCESS_TOKEN_EXPIRES_AT,
+        access_token_expires_at,
     );
-    if !refresh_token.is_empty() {
-        map.insert(
-            Value::String(KEY_API_REFRESH_TOKEN.to_string()),
-            Value::String(refresh_token.to_string()),
-        );
-    }
-    if !access_token_expires_at.is_empty() {
-        map.insert(
-            Value::String(KEY_API_ACCESS_TOKEN_EXPIRES_AT.to_string()),
-            Value::String(access_token_expires_at.to_string()),
-        );
-    }
-    if !refresh_token_expires_at.is_empty() {
-        map.insert(
-            Value::String(KEY_API_REFRESH_TOKEN_EXPIRES_AT.to_string()),
-            Value::String(refresh_token_expires_at.to_string()),
-        );
-    }
+    upsert_string_field(
+        &mut map,
+        KEY_API_REFRESH_TOKEN_EXPIRES_AT,
+        refresh_token_expires_at,
+    );
 
     write_yaml_atomic(config_path, &map)
+}
+
+fn upsert_string_field(map: &mut serde_yaml::Mapping, key: &str, value: &str) {
+    let key = Value::String(key.to_string());
+    if value.is_empty() {
+        map.remove(&key);
+        return;
+    }
+    map.insert(key, Value::String(value.to_string()));
 }
 
 /// Atomically persist the current org ID to the YAML credential file.
@@ -230,4 +229,41 @@ fn write_yaml_atomic(path: &Path, map: &serde_yaml::Mapping) -> Result<()> {
         .with_context(|| format!("atomic rename config to {}", path.display()))?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{load, persist_auth_tokens};
+
+    #[test]
+    fn persist_auth_tokens_clears_stale_refresh_fields() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let config_path = dir.path().join("credential.yaml");
+
+        persist_auth_tokens(
+            &config_path,
+            "access-token",
+            "refresh-token",
+            "2026-06-04T10:00:00Z",
+            "2026-06-05T10:00:00Z",
+            "https://api.yishan.io",
+        )
+        .expect("seed auth tokens");
+
+        persist_auth_tokens(
+            &config_path,
+            "service-token",
+            "",
+            "",
+            "",
+            "https://api.yishan.io",
+        )
+        .expect("clear refresh fields");
+
+        let cfg = load(&config_path, "", "", "", "").expect("load config");
+        assert_eq!(cfg.api.token, "service-token");
+        assert!(cfg.api.refresh_token.is_empty());
+        assert!(cfg.api.access_token_expires_at.is_empty());
+        assert!(cfg.api.refresh_token_expires_at.is_empty());
+    }
 }

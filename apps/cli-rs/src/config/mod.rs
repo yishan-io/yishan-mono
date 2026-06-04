@@ -3,6 +3,8 @@ mod types;
 
 pub use store::{load, persist_auth_tokens, update_current_org};
 pub use types::AppConfig;
+#[cfg(test)]
+pub use types::{ApiConfig, DaemonConfig};
 
 use anyhow::{Context, Result};
 use regex::Regex;

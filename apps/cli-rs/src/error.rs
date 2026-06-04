@@ -1,3 +1,4 @@
+use crate::api::{ApiError, TokenRefreshError};
 use thiserror::Error;
 
 /// Exit codes for the Yishan CLI. POSIX-safe (0–125), stable across versions.
@@ -39,6 +40,8 @@ impl ExitCode {
     }
 }
 
+const RELOGIN_MESSAGE: &str = "session expired; run `yishan login` and retry";
+
 /// Top-level CLI error — wraps domain errors and carries an exit code.
 #[allow(dead_code)]
 #[derive(Debug, Error)]
@@ -64,6 +67,31 @@ pub enum CliError {
     Other(#[from] anyhow::Error),
 }
 
+impl CliError {
+    pub fn from_anyhow(err: anyhow::Error) -> Self {
+        if let Some(refresh_err) = err.downcast_ref::<TokenRefreshError>() {
+            if is_invalid_refresh_token_error(refresh_err) {
+                return CliError::Unauthenticated(RELOGIN_MESSAGE.to_string());
+            }
+        }
+
+        if let Some(api_err) = err.downcast_ref::<ApiError>() {
+            return match api_err.status {
+                401 => CliError::Unauthenticated(api_err.body.clone()),
+                403 => CliError::Forbidden(api_err.body.clone()),
+                404 => CliError::NotFound(api_err.body.clone()),
+                status => CliError::Api {
+                    status,
+                    body: api_err.body.clone(),
+                    source: err,
+                },
+            };
+        }
+
+        CliError::Other(err)
+    }
+}
+
 /// Classify any error into the numeric exit code.
 pub fn classify_exit_code(err: &CliError) -> ExitCode {
     match err {
@@ -82,5 +110,46 @@ pub fn classify_exit_code(err: &CliError) -> ExitCode {
         CliError::DaemonNotRunning => ExitCode::DaemonNotRunning,
         CliError::Network(_) => ExitCode::ServerError,
         CliError::Other(_) => ExitCode::Error,
+    }
+}
+
+fn is_invalid_refresh_token_error(err: &TokenRefreshError) -> bool {
+    let Some(api_err) = err.refresh_error.downcast_ref::<ApiError>() else {
+        return false;
+    };
+
+    api_err.status == 401
+        && api_err.path == "/auth/refresh"
+        && api_err.body.contains("Invalid refresh token")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CliError, RELOGIN_MESSAGE};
+    use crate::api::{ApiError, TokenRefreshError};
+
+    #[test]
+    fn from_anyhow_maps_invalid_refresh_token_to_relogin_error() {
+        let err = anyhow::Error::new(TokenRefreshError {
+            request_error: ApiError {
+                method: "GET".to_string(),
+                path: "/projects".to_string(),
+                status: 401,
+                body: r#"{"error":"Unauthorized"}"#.to_string(),
+            }
+            .into(),
+            refresh_error: ApiError {
+                method: "POST".to_string(),
+                path: "/auth/refresh".to_string(),
+                status: 401,
+                body: r#"{"error":"Invalid refresh token"}"#.to_string(),
+            }
+            .into(),
+        });
+
+        match CliError::from_anyhow(err) {
+            CliError::Unauthenticated(message) => assert_eq!(message, RELOGIN_MESSAGE),
+            other => panic!("expected unauthenticated error, got {other:?}"),
+        }
     }
 }

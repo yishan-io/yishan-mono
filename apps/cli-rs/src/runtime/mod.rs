@@ -94,15 +94,9 @@ impl AppRuntime {
         .context("persist auth tokens to config file")?;
 
         cfg.api.token = access_token.to_string();
-        if !refresh_token.is_empty() {
-            cfg.api.refresh_token = refresh_token.to_string();
-        }
-        if !access_token_expires_at.is_empty() {
-            cfg.api.access_token_expires_at = access_token_expires_at.to_string();
-        }
-        if !refresh_token_expires_at.is_empty() {
-            cfg.api.refresh_token_expires_at = refresh_token_expires_at.to_string();
-        }
+        cfg.api.refresh_token = refresh_token.to_string();
+        cfg.api.access_token_expires_at = access_token_expires_at.to_string();
+        cfg.api.refresh_token_expires_at = refresh_token_expires_at.to_string();
         Ok(())
     }
 
@@ -173,4 +167,48 @@ fn should_reject_stale_token(
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AppRuntime;
+    use crate::config::{ApiConfig, AppConfig, DaemonConfig};
+
+    #[test]
+    fn persist_tokens_clears_in_memory_refresh_fields() {
+        let runtime = AppRuntime::new(AppConfig {
+            log_level: "info".to_string(),
+            log_format: "pretty".to_string(),
+            config_path: tempfile::tempdir()
+                .expect("tempdir")
+                .path()
+                .join("credential.yaml")
+                .to_string_lossy()
+                .to_string(),
+            current_org_id: String::new(),
+            api: ApiConfig {
+                base_url: "https://api.yishan.io".to_string(),
+                token: "old-access".to_string(),
+                refresh_token: "old-refresh".to_string(),
+                access_token_expires_at: "2026-06-04T10:00:00Z".to_string(),
+                refresh_token_expires_at: "2026-06-05T10:00:00Z".to_string(),
+            },
+            daemon: DaemonConfig {
+                host: String::new(),
+                port: 0,
+                relay_enabled: true,
+                relay_url: String::new(),
+            },
+        });
+
+        runtime
+            .persist_tokens("service-token", "", "", "")
+            .expect("persist service token");
+
+        let cfg = runtime.config();
+        assert_eq!(cfg.api.token, "service-token");
+        assert!(cfg.api.refresh_token.is_empty());
+        assert!(cfg.api.access_token_expires_at.is_empty());
+        assert!(cfg.api.refresh_token_expires_at.is_empty());
+    }
 }

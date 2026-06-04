@@ -3,6 +3,13 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+fn deserialize_nullable_string<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(Option::<String>::deserialize(deserializer)?.unwrap_or_default())
+}
+
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -166,18 +173,37 @@ pub struct UpdateNodeScopeResponse {
 pub struct Project {
     pub id: String,
     pub organization_id: String,
-    pub node_id: String,
     pub name: String,
     pub source_type: String,
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
     pub repo_provider: String,
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
     pub repo_url: String,
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
     pub repo_key: String,
-    pub local_path: String,
+    pub icon: String,
+    pub color: String,
     pub context_enabled: bool,
+    #[serde(default)]
     pub setup_script: String,
+    #[serde(default)]
     pub post_script: String,
+    #[serde(default)]
+    pub commands: Vec<ProjectCommand>,
+    pub created_by_user_id: String,
+    #[serde(default)]
+    pub node_id: String,
+    #[serde(default, deserialize_with = "deserialize_nullable_string")]
+    pub local_path: String,
     pub created_at: String,
     pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectCommand {
+    pub name: String,
+    pub command: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
