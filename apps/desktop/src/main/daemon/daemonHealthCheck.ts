@@ -34,7 +34,7 @@ export type DaemonInfo = {
   relay?: DaemonRelayInfo;
 };
 
-function resolveCliProfileName(): string {
+export function resolveCliProfileName(): string {
   if (isDevMode()) {
     return "dev";
   }
@@ -45,6 +45,7 @@ function resolveCliProfileName(): string {
 function resolveDaemonStateFilePath(): string {
   return resolve(homedir(), ".yishan", "profiles", resolveCliProfileName(), DAEMON_STATE_FILE_NAME);
 }
+
 
 function resolveDaemonIdFilePath(): string {
   return resolve(homedir(), ".yishan", "profiles", resolveCliProfileName(), DAEMON_ID_FILE_NAME);

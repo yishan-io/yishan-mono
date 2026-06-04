@@ -11,12 +11,18 @@ import {
   type DaemonInfo,
   fetchDaemonInfo,
   firstExistingPath,
+  resolveCliProfileName,
   waitForDaemonHealthy,
 } from "./daemonHealthCheck";
 
-const DAEMON_START_ARGS = ["daemon", "start"];
+function buildDaemonStartArgs(): string[] {
+  return ["daemon", "start", "--profile", resolveCliProfileName()];
+}
+
+function buildDaemonStopArgs(): string[] {
+  return ["daemon", "stop", "--profile", resolveCliProfileName()];
+}
 const DAEMON_DEV_RELAY_URL = "http://127.0.0.1:8788";
-const DAEMON_STOP_ARGS = ["daemon", "stop"];
 const CLI_COMMAND_TIMEOUT_MS = 30_000;
 const DEV_DAEMON_STOP_TIMEOUT_MS = 5_000;
 const CLI_COMMAND_TERM_GRACE_MS = 1_000;
@@ -290,7 +296,7 @@ export class DaemonManager {
 
     const invocation = resolveCliInvocation();
     let output = "";
-    const daemonRunArgs = ["daemon", "run", "--relay-url", DAEMON_DEV_RELAY_URL];
+    const daemonRunArgs = ["daemon", "run", "--relay-url", DAEMON_DEV_RELAY_URL, "--profile", resolveCliProfileName()];
     const child = spawn(invocation.executablePath, [...invocation.prefixArgs, ...daemonRunArgs], {
       stdio: ["ignore", "pipe", "pipe"],
       env: process.env,
@@ -391,7 +397,7 @@ export class DaemonManager {
         throw new Error(`Daemon did not become healthy after start: ${reason}`);
       }
     } else {
-      const startResult = await this.run(DAEMON_START_ARGS);
+      const startResult = await this.run(buildDaemonStartArgs());
       if (startResult.error) {
         throw new Error(`Failed to start daemon: ${startResult.error}`);
       }
@@ -416,7 +422,7 @@ export class DaemonManager {
       }
     }
 
-    const stopResult = await this.run(DAEMON_STOP_ARGS);
+    const stopResult = await this.run(buildDaemonStopArgs());
     if (stopResult.error) {
       this.logger.warn(`Failed to stop daemon: ${stopResult.error}`);
       return;
