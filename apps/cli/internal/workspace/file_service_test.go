@@ -41,6 +41,9 @@ func TestFileServiceCRUD(t *testing.T) {
 	if entry.Name != "a.txt" || entry.IsDir {
 		t.Fatalf("unexpected stat entry: %+v", entry)
 	}
+	if entry.ModifiedAt == "" {
+		t.Fatalf("expected modifiedAt to be populated: %+v", entry)
+	}
 
 	entries, err := svc.List(root, "dir/sub", false)
 	if err != nil {
@@ -48,6 +51,9 @@ func TestFileServiceCRUD(t *testing.T) {
 	}
 	if len(entries) != 1 || entries[0].Name != "a.txt" {
 		t.Fatalf("unexpected list result: %+v", entries)
+	}
+	if entries[0].ModifiedAt == "" {
+		t.Fatalf("expected modifiedAt on list entry: %+v", entries[0])
 	}
 
 	recursiveEntries, err := svc.List(root, "", true)

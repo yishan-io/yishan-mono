@@ -17,12 +17,13 @@ import (
 const maxReadBytes = 2 * 1024 * 1024
 
 type FileEntry struct {
-	Path      string `json:"path"`
-	Name      string `json:"name"`
-	IsDir     bool   `json:"isDir"`
-	IsIgnored bool   `json:"isIgnored"`
-	Size      int64  `json:"size"`
-	Mode      uint32 `json:"mode"`
+	Path       string `json:"path"`
+	Name       string `json:"name"`
+	IsDir      bool   `json:"isDir"`
+	IsIgnored  bool   `json:"isIgnored"`
+	Size       int64  `json:"size"`
+	Mode       uint32 `json:"mode"`
+	ModifiedAt string `json:"modifiedAt"`
 }
 
 type FileService struct {
@@ -79,11 +80,12 @@ func (s *FileService) List(root string, path string, recursive bool) ([]FileEntr
 			return nil, err
 		}
 		out = append(out, FileEntry{
-			Path:  filepath.ToSlash(relPath),
-			Name:  entry.Name(),
-			IsDir: isDir,
-			Size:  info.Size(),
-			Mode:  uint32(info.Mode()),
+			Path:       filepath.ToSlash(relPath),
+			Name:       entry.Name(),
+			IsDir:      isDir,
+			Size:       info.Size(),
+			Mode:       uint32(info.Mode()),
+			ModifiedAt: formatModifiedAt(info),
 		})
 	}
 
@@ -141,11 +143,12 @@ func (s *FileService) walkFiles(root string, dir string) ([]FileEntry, error) {
 			return err
 		}
 		out = append(out, FileEntry{
-			Path:  filepath.ToSlash(relPath),
-			Name:  entry.Name(),
-			IsDir: isDir,
-			Size:  info.Size(),
-			Mode:  uint32(info.Mode()),
+			Path:       filepath.ToSlash(relPath),
+			Name:       entry.Name(),
+			IsDir:      isDir,
+			Size:       info.Size(),
+			Mode:       uint32(info.Mode()),
+			ModifiedAt: formatModifiedAt(info),
 		})
 
 		return nil
@@ -235,11 +238,12 @@ func listContextLinkEntries(root string, path string) ([]FileEntry, error) {
 	entries := []FileEntry{}
 	if cleanPath == "" || cleanPath == ContextLinkName {
 		entries = append(entries, FileEntry{
-			Path:  ContextLinkName,
-			Name:  ContextLinkName,
-			IsDir: true,
-			Size:  contextInfo.Size(),
-			Mode:  uint32(contextInfo.Mode()),
+			Path:       ContextLinkName,
+			Name:       ContextLinkName,
+			IsDir:      true,
+			Size:       contextInfo.Size(),
+			Mode:       uint32(contextInfo.Mode()),
+			ModifiedAt: formatModifiedAt(contextInfo),
 		})
 	}
 
@@ -274,11 +278,12 @@ func listContextLinkEntries(root string, path string) ([]FileEntry, error) {
 			return err
 		}
 		entries = append(entries, FileEntry{
-			Path:  contextRelPath,
-			Name:  entry.Name(),
-			IsDir: entry.IsDir(),
-			Size:  info.Size(),
-			Mode:  uint32(info.Mode()),
+			Path:       contextRelPath,
+			Name:       entry.Name(),
+			IsDir:      entry.IsDir(),
+			Size:       info.Size(),
+			Mode:       uint32(info.Mode()),
+			ModifiedAt: formatModifiedAt(info),
 		})
 		return nil
 	}); err != nil {
@@ -297,11 +302,12 @@ func contextLinkFallbackEntry(linkPath string, cleanPath string) []FileEntry {
 		return nil
 	}
 	return []FileEntry{{
-		Path:  ContextLinkName,
-		Name:  ContextLinkName,
-		IsDir: false,
-		Size:  info.Size(),
-		Mode:  uint32(info.Mode()),
+		Path:       ContextLinkName,
+		Name:       ContextLinkName,
+		IsDir:      false,
+		Size:       info.Size(),
+		Mode:       uint32(info.Mode()),
+		ModifiedAt: formatModifiedAt(info),
 	}}
 }
 
@@ -494,11 +500,12 @@ func fileEntryForRelativePath(root string, relPath string) (FileEntry, error) {
 	}
 
 	return FileEntry{
-		Path:  filepath.ToSlash(relPath),
-		Name:  filepath.Base(relPath),
-		IsDir: isDir,
-		Size:  info.Size(),
-		Mode:  uint32(info.Mode()),
+		Path:       filepath.ToSlash(relPath),
+		Name:       filepath.Base(relPath),
+		IsDir:      isDir,
+		Size:       info.Size(),
+		Mode:       uint32(info.Mode()),
+		ModifiedAt: formatModifiedAt(info),
 	}, nil
 }
 
@@ -632,12 +639,17 @@ func (s *FileService) Stat(root string, path string) (FileEntry, error) {
 	}
 
 	return FileEntry{
-		Path:  filepath.ToSlash(relPath),
-		Name:  filepath.Base(fullPath),
-		IsDir: info.IsDir(),
-		Size:  info.Size(),
-		Mode:  uint32(info.Mode()),
+		Path:       filepath.ToSlash(relPath),
+		Name:       filepath.Base(fullPath),
+		IsDir:      info.IsDir(),
+		Size:       info.Size(),
+		Mode:       uint32(info.Mode()),
+		ModifiedAt: formatModifiedAt(info),
 	}, nil
+}
+
+func formatModifiedAt(info os.FileInfo) string {
+	return info.ModTime().UTC().Format(time.RFC3339)
 }
 
 func (s *FileService) ReadDiff(ctx context.Context, root string, path string) (GitDiffContent, error) {
