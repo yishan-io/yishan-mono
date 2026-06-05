@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/creack/pty v1.1.24
+	github.com/fsnotify/fsevents v0.2.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/jedib0t/go-pretty/v6 v6.7.10

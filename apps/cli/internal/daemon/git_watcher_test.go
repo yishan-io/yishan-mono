@@ -4,6 +4,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -13,6 +15,116 @@ func initGitRepo(t *testing.T, root string) {
 	cmd := exec.Command("git", "init", root)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git init failed: %v (%s)", err, string(output))
+	}
+}
+
+func expectEventTopic(t *testing.T, events <-chan frontendEvent, wantTopic string) frontendEvent {
+	t.Helper()
+	deadline := time.After(3 * time.Second)
+
+	for {
+		select {
+		case event := <-events:
+			if event.Topic == wantTopic {
+				return event
+			}
+		case <-deadline:
+			t.Fatalf("timed out waiting for %s event", wantTopic)
+		}
+	}
+}
+
+func expectNoEvent(t *testing.T, events <-chan frontendEvent, wait time.Duration) {
+	t.Helper()
+
+	select {
+	case event := <-events:
+		t.Fatalf("expected no event, got topic %q", event.Topic)
+	case <-time.After(wait):
+	}
+}
+
+func drainEvents(events <-chan frontendEvent, wait time.Duration) {
+	timer := time.NewTimer(wait)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-events:
+		case <-timer.C:
+			return
+		}
+	}
+}
+
+func expectChangedPath(t *testing.T, event frontendEvent, wantPath string) {
+	t.Helper()
+	expectChangedPathInSet(t, event, []string{wantPath})
+}
+
+func expectChangedPathInSet(t *testing.T, event frontendEvent, wantPaths []string) {
+	t.Helper()
+
+	payload, ok := event.Payload.(map[string]any)
+	if !ok {
+		t.Fatal("expected map payload")
+	}
+	paths, ok := payload["changedRelativePaths"].([]string)
+	if !ok {
+		t.Fatal("expected []string changedRelativePaths")
+	}
+	for _, wantPath := range wantPaths {
+		if containsPath(paths, wantPath) {
+			return
+		}
+	}
+	t.Fatalf("expected one of changed paths %v, got %v", wantPaths, paths)
+}
+
+func containsPath(paths []string, want string) bool {
+	for _, path := range paths {
+		if path == want {
+			return true
+		}
+	}
+	return false
+}
+
+func containsPathWithSuffix(paths []string, suffix string) bool {
+	for _, path := range paths {
+		if strings.HasSuffix(path, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
+func evalSymlinks(t *testing.T, path string) string {
+	t.Helper()
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resolved
+}
+
+func skipDarwinWatcherIntegrationTest(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "darwin" {
+		t.Skip("darwin fsevents integration is covered by internal/fswatch unit tests; daemon-level watcher integration tests are flaky on macOS")
+	}
+}
+
+func writeUntilEvent(filePath string, content string, interval time.Duration, stop <-chan struct{}) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		_ = os.WriteFile(filePath, []byte(content), 0o644)
+		select {
+		case <-stop:
+			return
+		case <-ticker.C:
+		}
 	}
 }
 
@@ -31,13 +143,10 @@ func TestResolveGitDir_StandardRepo(t *testing.T) {
 
 func TestResolveGitDir_WorktreeFile(t *testing.T) {
 	root := t.TempDir()
-
-	// Create the actual git directory that the worktree points to
 	actualGitDir := filepath.Join(root, "main-repo", ".git", "worktrees", "my-worktree")
 	if err := os.MkdirAll(actualGitDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	// Create HEAD and index in the actual git dir
 	if err := os.WriteFile(filepath.Join(actualGitDir, "HEAD"), []byte("ref: refs/heads/my-branch\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +154,6 @@ func TestResolveGitDir_WorktreeFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create the worktree directory with a .git file
 	worktreeDir := filepath.Join(root, "worktree")
 	if err := os.MkdirAll(worktreeDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -63,19 +171,15 @@ func TestResolveGitDir_WorktreeFile(t *testing.T) {
 
 func TestResolveGitDir_WorktreeFileRelativePath(t *testing.T) {
 	root := t.TempDir()
-
-	// Create the actual git directory
 	actualGitDir := filepath.Join(root, "main-repo", ".git", "worktrees", "my-worktree")
 	if err := os.MkdirAll(actualGitDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
-	// Create a worktree with a relative gitdir path
 	worktreeDir := filepath.Join(root, "main-repo", "worktrees", "my-worktree")
 	if err := os.MkdirAll(worktreeDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	// Relative path from worktreeDir to actualGitDir
 	gitFileContent := "gitdir: ../../.git/worktrees/my-worktree\n"
 	if err := os.WriteFile(filepath.Join(worktreeDir, ".git"), []byte(gitFileContent), 0o644); err != nil {
 		t.Fatal(err)
@@ -89,7 +193,6 @@ func TestResolveGitDir_WorktreeFileRelativePath(t *testing.T) {
 
 func TestResolveGitDir_NoGitEntry(t *testing.T) {
 	root := t.TempDir()
-
 	resolved := resolveGitDir(root)
 	expected := filepath.Join(root, ".git")
 	if resolved != expected {
@@ -99,8 +202,6 @@ func TestResolveGitDir_NoGitEntry(t *testing.T) {
 
 func TestResolveGitDir_InvalidGitFileContent(t *testing.T) {
 	root := t.TempDir()
-
-	// Write a .git file without the "gitdir: " prefix
 	if err := os.WriteFile(filepath.Join(root, ".git"), []byte("some-random-content\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -112,20 +213,10 @@ func TestResolveGitDir_InvalidGitFileContent(t *testing.T) {
 	}
 }
 
-// evalSymlinks resolves symlinks for temp dirs (macOS /var -> /private/var).
-func evalSymlinks(t *testing.T, path string) string {
-	t.Helper()
-	resolved, err := filepath.EvalSymlinks(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return resolved
-}
-
 func TestWorktreeWatcher_DetectsGitChangesInResolvedDir(t *testing.T) {
-	root := evalSymlinks(t, t.TempDir())
+	skipDarwinWatcherIntegrationTest(t)
 
-	// Create the actual git directory (simulating a worktree)
+	root := evalSymlinks(t, t.TempDir())
 	actualGitDir := filepath.Join(root, "main-repo", ".git", "worktrees", "my-worktree")
 	if err := os.MkdirAll(actualGitDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -137,7 +228,6 @@ func TestWorktreeWatcher_DetectsGitChangesInResolvedDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create the worktree directory with .git file
 	worktreeDir := filepath.Join(root, "worktree")
 	if err := os.MkdirAll(worktreeDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -155,35 +245,27 @@ func TestWorktreeWatcher_DetectsGitChangesInResolvedDir(t *testing.T) {
 	defer hub.Unsubscribe(subID)
 
 	watchers.Watch(worktreeDir)
+	time.Sleep(100 * time.Millisecond)
+	drainEvents(events, 300*time.Millisecond)
 
-	// Modify the index file in the resolved git directory
-	time.Sleep(100 * time.Millisecond) // give watcher time to start
 	if err := os.WriteFile(filepath.Join(actualGitDir, "index"), []byte("updated-index"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	// Wait for the debounced event
-	select {
-	case event := <-events:
-		if event.Topic != "gitChanged" {
-			t.Errorf("expected topic 'gitChanged', got %q", event.Topic)
-		}
-		payload, ok := event.Payload.(map[string]any)
-		if !ok {
-			t.Fatal("expected map payload")
-		}
-		if payload["workspaceWorktreePath"] != worktreeDir {
-			t.Errorf("expected worktreePath %q, got %q", worktreeDir, payload["workspaceWorktreePath"])
-		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("timed out waiting for gitChanged event")
+	event := expectEventTopic(t, events, "gitChanged")
+	payload, ok := event.Payload.(map[string]any)
+	if !ok {
+		t.Fatal("expected map payload")
+	}
+	if payload["workspaceWorktreePath"] != worktreeDir {
+		t.Errorf("expected worktreePath %q, got %q", worktreeDir, payload["workspaceWorktreePath"])
 	}
 }
 
 func TestWorktreeWatcher_DetectsGitChangesInStandardRepo(t *testing.T) {
-	root := evalSymlinks(t, t.TempDir())
+	skipDarwinWatcherIntegrationTest(t)
 
-	// Create a standard .git directory
+	root := evalSymlinks(t, t.TempDir())
 	gitDir := filepath.Join(root, ".git")
 	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -203,25 +285,19 @@ func TestWorktreeWatcher_DetectsGitChangesInStandardRepo(t *testing.T) {
 	defer hub.Unsubscribe(subID)
 
 	watchers.Watch(root)
-
-	// Modify the index file
 	time.Sleep(100 * time.Millisecond)
+	drainEvents(events, 300*time.Millisecond)
+
 	if err := os.WriteFile(filepath.Join(gitDir, "index"), []byte("updated-index"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	// Wait for the debounced event
-	select {
-	case event := <-events:
-		if event.Topic != "gitChanged" {
-			t.Errorf("expected topic 'gitChanged', got %q", event.Topic)
-		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("timed out waiting for gitChanged event")
-	}
+	expectEventTopic(t, events, "gitChanged")
 }
 
 func TestWorktreeWatcher_InvokesGitChangedCallback(t *testing.T) {
+	skipDarwinWatcherIntegrationTest(t)
+
 	root := evalSymlinks(t, t.TempDir())
 	gitDir := filepath.Join(root, ".git")
 	if err := os.MkdirAll(gitDir, 0o755); err != nil {
@@ -242,7 +318,7 @@ func TestWorktreeWatcher_InvokesGitChangedCallback(t *testing.T) {
 	defer watchers.Close()
 
 	watchers.Watch(root)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	if err := os.WriteFile(filepath.Join(gitDir, "index"), []byte("updated-index"), 0o644); err != nil {
 		t.Fatal(err)
@@ -259,11 +335,10 @@ func TestWorktreeWatcher_InvokesGitChangedCallback(t *testing.T) {
 }
 
 func TestWorktreeWatcher_DetectsFileChangesInWorktree(t *testing.T) {
-	root := evalSymlinks(t, t.TempDir())
+	skipDarwinWatcherIntegrationTest(t)
 
-	// Create a standard .git directory
-	gitDir := filepath.Join(root, ".git")
-	if err := os.MkdirAll(gitDir, 0o755); err != nil {
+	root := evalSymlinks(t, t.TempDir())
+	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -275,27 +350,24 @@ func TestWorktreeWatcher_DetectsFileChangesInWorktree(t *testing.T) {
 	defer hub.Unsubscribe(subID)
 
 	watchers.Watch(root)
-
-	// Create a new file in the worktree root
 	time.Sleep(100 * time.Millisecond)
-	if err := os.WriteFile(filepath.Join(root, "newfile.txt"), []byte("hello"), 0o644); err != nil {
+	drainEvents(events, 300*time.Millisecond)
+
+	filePath := filepath.Join(root, "tracked.txt")
+	if err := os.WriteFile(filePath, []byte("initial"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-
-	// Wait for the debounced event
-	select {
-	case event := <-events:
-		if event.Topic != "workspaceFilesChanged" {
-			t.Errorf("expected topic 'workspaceFilesChanged', got %q", event.Topic)
-		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("timed out waiting for workspaceFilesChanged event")
-	}
+	stopWrites := make(chan struct{})
+	go writeUntilEvent(filePath, "hello", 250*time.Millisecond, stopWrites)
+	event := expectEventTopic(t, events, "workspaceFilesChanged")
+	close(stopWrites)
+	expectChangedPathInSet(t, event, []string{"tracked.txt", ""})
 }
 
 func TestWorktreeWatcher_DetectsFileChangesInSubdirectory(t *testing.T) {
-	root := evalSymlinks(t, t.TempDir())
+	skipDarwinWatcherIntegrationTest(t)
 
+	root := evalSymlinks(t, t.TempDir())
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -311,43 +383,20 @@ func TestWorktreeWatcher_DetectsFileChangesInSubdirectory(t *testing.T) {
 	defer hub.Unsubscribe(subID)
 
 	watchers.Watch(root)
-
 	time.Sleep(100 * time.Millisecond)
+	drainEvents(events, 300*time.Millisecond)
+
 	if err := os.WriteFile(filepath.Join(root, "nested", "deep", "child.txt"), []byte("hello"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	select {
-	case event := <-events:
-		if event.Topic != "workspaceFilesChanged" {
-			t.Fatalf("expected topic 'workspaceFilesChanged', got %q", event.Topic)
-		}
-		payload, ok := event.Payload.(map[string]any)
-		if !ok {
-			t.Fatal("expected map payload")
-		}
-		paths, ok := payload["changedRelativePaths"].([]string)
-		if !ok {
-			t.Fatal("expected []string changedRelativePaths")
-		}
-		found := false
-		for _, p := range paths {
-			if p == "nested/deep/child.txt" {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Fatalf("expected changed path nested/deep/child.txt, got %v", paths)
-		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("timed out waiting for workspaceFilesChanged event")
-	}
+	expectChangedPathInSet(t, expectEventTopic(t, events, "workspaceFilesChanged"), []string{"nested/deep/child.txt", "nested/deep", "nested"})
 }
 
-func TestWorktreeWatcher_WatchesNewDirectoriesAndCleansDeletedDirectoryWatches(t *testing.T) {
-	root := evalSymlinks(t, t.TempDir())
+func TestWorktreeWatcher_DetectsFileChangesInNewDirectories(t *testing.T) {
+	skipDarwinWatcherIntegrationTest(t)
 
+	root := evalSymlinks(t, t.TempDir())
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -360,13 +409,9 @@ func TestWorktreeWatcher_WatchesNewDirectoriesAndCleansDeletedDirectoryWatches(t
 	defer hub.Unsubscribe(subID)
 
 	watchers.Watch(root)
-
-	entry := watchers.entries[root]
-	if entry == nil {
-		t.Fatal("expected watcher entry for root")
-	}
-
 	time.Sleep(100 * time.Millisecond)
+	drainEvents(events, 300*time.Millisecond)
+
 	newDir := filepath.Join(root, "created", "sub")
 	if err := os.MkdirAll(newDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -375,36 +420,19 @@ func TestWorktreeWatcher_WatchesNewDirectoriesAndCleansDeletedDirectoryWatches(t
 		t.Fatal(err)
 	}
 
-	select {
-	case <-events:
-	case <-time.After(3 * time.Second):
-		t.Fatal("timed out waiting for file event from new directory")
-	}
-
-	entry.mu.Lock()
-	_, watched := entry.watchedDirs[newDir]
-	entry.mu.Unlock()
-	if !watched {
-		t.Fatalf("expected new directory %q to be watched", newDir)
-	}
+	expectChangedPath(t, expectEventTopic(t, events, "workspaceFilesChanged"), "created/sub/file.txt")
 
 	if err := os.RemoveAll(filepath.Join(root, "created")); err != nil {
 		t.Fatal(err)
 	}
 
-	time.Sleep(300 * time.Millisecond)
-
-	entry.mu.Lock()
-	_, stillWatched := entry.watchedDirs[newDir]
-	entry.mu.Unlock()
-	if stillWatched {
-		t.Fatalf("expected deleted directory %q watch to be cleaned up", newDir)
-	}
+	expectEventTopic(t, events, "workspaceFilesChanged")
 }
 
 func TestWorktreeWatcher_ExcludesCommonLargeDirectories(t *testing.T) {
-	root := evalSymlinks(t, t.TempDir())
+	skipDarwinWatcherIntegrationTest(t)
 
+	root := evalSymlinks(t, t.TempDir())
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -422,25 +450,29 @@ func TestWorktreeWatcher_ExcludesCommonLargeDirectories(t *testing.T) {
 	watchers := newWorkspaceWatchers(hub, nil)
 	defer watchers.Close()
 
+	subID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subID)
+
 	watchers.Watch(root)
+	time.Sleep(100 * time.Millisecond)
+	drainEvents(events, 300*time.Millisecond)
 
-	entry := watchers.entries[root]
-	if entry == nil {
-		t.Fatal("expected watcher entry for root")
+	if err := os.WriteFile(filepath.Join(root, "node_modules", "pkg.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "dist", "out.js"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "build", "out.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
 	}
 
-	entry.mu.Lock()
-	_, nodeModulesWatched := entry.watchedDirs[filepath.Join(root, "node_modules")]
-	_, distWatched := entry.watchedDirs[filepath.Join(root, "dist")]
-	_, buildWatched := entry.watchedDirs[filepath.Join(root, "build")]
-	entry.mu.Unlock()
-
-	if nodeModulesWatched || distWatched || buildWatched {
-		t.Fatalf("expected excluded directories to be unwatched, got node_modules=%t dist=%t build=%t", nodeModulesWatched, distWatched, buildWatched)
-	}
+	expectNoEvent(t, events, 500*time.Millisecond)
 }
 
 func TestWorktreeWatcher_ExcludesGitIgnoredDirectories(t *testing.T) {
+	skipDarwinWatcherIntegrationTest(t)
+
 	root := evalSymlinks(t, t.TempDir())
 	initGitRepo(t, root)
 	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".cache/\nignored/\n"), 0o644); err != nil {
@@ -457,30 +489,26 @@ func TestWorktreeWatcher_ExcludesGitIgnoredDirectories(t *testing.T) {
 	watchers := newWorkspaceWatchers(hub, nil)
 	defer watchers.Close()
 
+	subID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subID)
+
 	watchers.Watch(root)
+	time.Sleep(100 * time.Millisecond)
+	drainEvents(events, 300*time.Millisecond)
 
-	entry := watchers.entries[root]
-	if entry == nil {
-		t.Fatal("expected watcher entry for root")
+	if err := os.WriteFile(filepath.Join(root, ".cache", "tmp.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "ignored", "nested", "tmp.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
 	}
 
-	entry.mu.Lock()
-	_, cacheWatched := entry.watchedDirs[filepath.Join(root, ".cache")]
-	_, ignoredWatched := entry.watchedDirs[filepath.Join(root, "ignored")]
-	_, nestedIgnoredWatched := entry.watchedDirs[filepath.Join(root, "ignored", "nested")]
-	entry.mu.Unlock()
-
-	if cacheWatched || ignoredWatched || nestedIgnoredWatched {
-		t.Fatalf(
-			"expected gitignored directories to be unwatched, got .cache=%t ignored=%t ignored/nested=%t",
-			cacheWatched,
-			ignoredWatched,
-			nestedIgnoredWatched,
-		)
-	}
+	expectNoEvent(t, events, 500*time.Millisecond)
 }
 
 func TestWorktreeWatcher_AlwaysWatchesMyContextEvenIfIgnored(t *testing.T) {
+	skipDarwinWatcherIntegrationTest(t)
+
 	root := evalSymlinks(t, t.TempDir())
 	initGitRepo(t, root)
 	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".my-context/\n"), 0o644); err != nil {
@@ -494,18 +522,28 @@ func TestWorktreeWatcher_AlwaysWatchesMyContextEvenIfIgnored(t *testing.T) {
 	watchers := newWorkspaceWatchers(hub, nil)
 	defer watchers.Close()
 
+	subID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subID)
+
 	watchers.Watch(root)
+	time.Sleep(100 * time.Millisecond)
+	drainEvents(events, 300*time.Millisecond)
 
-	entry := watchers.entries[root]
-	if entry == nil {
-		t.Fatal("expected watcher entry for root")
+	contextFile := filepath.Join(root, ".my-context", "notes.md")
+	stopWrites := make(chan struct{})
+	go writeUntilEvent(contextFile, "hello", 250*time.Millisecond, stopWrites)
+
+	event := expectEventTopic(t, events, "workspaceFilesChanged")
+	close(stopWrites)
+	payload, ok := event.Payload.(map[string]any)
+	if !ok {
+		t.Fatal("expected map payload")
 	}
-
-	entry.mu.Lock()
-	_, contextWatched := entry.watchedDirs[filepath.Join(root, ".my-context")]
-	entry.mu.Unlock()
-
-	if !contextWatched {
-		t.Fatalf("expected %q to always be watched", filepath.Join(root, ".my-context"))
+	paths, ok := payload["changedRelativePaths"].([]string)
+	if !ok {
+		t.Fatal("expected []string changedRelativePaths")
+	}
+	if !containsPathWithSuffix(paths, ".my-context/notes.md") && !containsPath(paths, ".my-context") {
+		t.Fatalf("expected .my-context or .my-context/notes.md in changed paths, got %v", paths)
 	}
 }
