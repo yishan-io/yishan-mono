@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const desktopDir = resolve(scriptDir, "..");
-const cliDir = resolve(desktopDir, "..", "cli-rs");
+const cliDir = resolve(desktopDir, "..", "cli");
 const cliBinDir = resolve(cliDir, "bin");
 const resourcesDir = resolve(desktopDir, "dist", "resources");
 const binaryName = process.platform === "win32" ? "yishan.exe" : "yishan";
@@ -31,7 +31,7 @@ if (buildResult.status !== 0) {
 
 const sourcePath = cliBinaryCandidates.find((candidatePath) => existsSync(candidatePath));
 if (!sourcePath) {
-  console.error("Failed to locate CLI binary in apps/cli-rs/bin after make build-release");
+  console.error("Failed to locate CLI binary in apps/cli/bin after make build-release");
   process.exit(1);
 }
 
