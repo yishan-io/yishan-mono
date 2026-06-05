@@ -229,22 +229,40 @@ func (m *Manager) GetWorkspace(id string) (Workspace, error) {
 	return m.getWorkspace(id)
 }
 
-func (m *Manager) FindWorkspaceByPath(path string) (Workspace, bool) {
+func (m *Manager) WorkspaceHandle(id string) (WorkspaceHandle, error) {
+	ws, err := m.getWorkspace(id)
+	if err != nil {
+		return WorkspaceHandle{}, err
+	}
+	return m.handleForWorkspace(ws), nil
+}
+
+func (m *Manager) WorkspaceHandleByPath(path string) (WorkspaceHandle, error) {
 	resolvedPath, err := filepath.Abs(path)
 	if err != nil {
-		return Workspace{}, false
+		return WorkspaceHandle{}, err
 	}
 
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-
 	for _, ws := range m.workspaces {
 		if ws.Path == resolvedPath {
-			return ws, true
+			return m.handleForWorkspace(ws), nil
 		}
 	}
+	return WorkspaceHandle{}, NewRPCError(rpcCodeNotFound, "workspace not found")
+}
 
-	return Workspace{}, false
+func (m *Manager) handleForWorkspace(ws Workspace) WorkspaceHandle {
+	return WorkspaceHandle{workspace: ws, files: m.files, gits: m.gits, terminals: m.terminals}
+}
+
+func (m *Manager) FindWorkspaceByPath(path string) (Workspace, bool) {
+	handle, err := m.WorkspaceHandleByPath(path)
+	if err != nil {
+		return Workspace{}, false
+	}
+	return handle.Workspace(), true
 }
 
 func (m *Manager) SetWorkspacePullRequest(workspaceID string, pr *WorkspacePullRequest) error {
@@ -262,83 +280,83 @@ func (m *Manager) SetWorkspacePullRequest(workspaceID string, pr *WorkspacePullR
 }
 
 func (m *Manager) TerminalStart(ctx context.Context, req TerminalStartRequest) (TerminalStartResponse, error) {
-	ws, err := m.getWorkspace(req.WorkspaceID)
+	handle, err := m.WorkspaceHandle(req.WorkspaceID)
 	if err != nil {
 		return TerminalStartResponse{}, err
 	}
-	return m.terminals.Start(ctx, ws.Path, req)
+	return handle.TerminalStart(ctx, req)
 }
 
 func (m *Manager) FileList(workspaceID string, path string, recursive bool) ([]FileEntry, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return nil, err
 	}
-	return m.files.List(ws.Path, path, recursive)
+	return handle.FileList(path, recursive)
 }
 
 func (m *Manager) FileSearch(workspaceID string, query string, limit int) ([]FileSearchResult, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return nil, err
 	}
-	return m.files.Search(ws.Path, query, limit)
+	return handle.FileSearch(query, limit)
 }
 
 func (m *Manager) FileStat(workspaceID string, path string) (FileEntry, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return FileEntry{}, err
 	}
-	return m.files.Stat(ws.Path, path)
+	return handle.FileStat(path)
 }
 
 func (m *Manager) FileRead(workspaceID string, path string) (string, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return "", err
 	}
-	return m.files.Read(ws.Path, path)
+	return handle.FileRead(path)
 }
 
 func (m *Manager) FileWrite(workspaceID string, path string, content string, mode uint32) (int, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return 0, err
 	}
-	return m.files.Write(ws.Path, path, content, mode)
+	return handle.FileWrite(path, content, mode)
 }
 
 func (m *Manager) FileDelete(workspaceID string, path string, recursive bool) error {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return err
 	}
-	return m.files.Delete(ws.Path, path, recursive)
+	return handle.FileDelete(path, recursive)
 }
 
 func (m *Manager) FileMove(workspaceID string, fromPath string, toPath string) error {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return err
 	}
-	return m.files.Move(ws.Path, fromPath, toPath)
+	return handle.FileMove(fromPath, toPath)
 }
 
 func (m *Manager) FileMkdir(workspaceID string, path string, parents bool, mode uint32) error {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return err
 	}
-	return m.files.Mkdir(ws.Path, path, parents, mode)
+	return handle.FileMkdir(path, parents, mode)
 }
 
 func (m *Manager) FileReadDiff(ctx context.Context, workspaceID string, path string) (GitDiffContent, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return GitDiffContent{}, err
 	}
-	return m.files.ReadDiff(ctx, ws.Path, path)
+	return handle.FileReadDiff(ctx, path)
 }
 
 func (m *Manager) InvalidateWorkspaceFileCacheByPath(worktreePath string, changedPaths []string) {
@@ -346,11 +364,11 @@ func (m *Manager) InvalidateWorkspaceFileCacheByPath(worktreePath string, change
 }
 
 func (m *Manager) GitStatus(ctx context.Context, workspaceID string) (GitStatusResponse, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return GitStatusResponse{}, err
 	}
-	return m.gits.Status(ctx, ws.Path)
+	return handle.GitStatus(ctx)
 }
 
 func (m *Manager) GitInspect(ctx context.Context, path string) (GitInspectResult, error) {
@@ -358,203 +376,203 @@ func (m *Manager) GitInspect(ctx context.Context, path string) (GitInspectResult
 }
 
 func (m *Manager) GitListChanges(ctx context.Context, workspaceID string) (GitChangesBySection, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return GitChangesBySection{}, err
 	}
-	return m.gits.ListChanges(ctx, ws.Path)
+	return handle.GitListChanges(ctx)
 }
 
 func (m *Manager) GitTrackChanges(ctx context.Context, workspaceID string, paths []string) error {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return err
 	}
-	return m.gits.TrackChanges(ctx, ws.Path, paths)
+	return handle.GitTrackChanges(ctx, paths)
 }
 
 func (m *Manager) GitUnstageChanges(ctx context.Context, workspaceID string, paths []string) error {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return err
 	}
-	return m.gits.UnstageChanges(ctx, ws.Path, paths)
+	return handle.GitUnstageChanges(ctx, paths)
 }
 
 func (m *Manager) GitRevertChanges(ctx context.Context, workspaceID string, paths []string) error {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return err
 	}
-	return m.gits.RevertChanges(ctx, ws.Path, paths)
+	return handle.GitRevertChanges(ctx, paths)
 }
 
 func (m *Manager) GitCommitChanges(ctx context.Context, workspaceID string, message string, amend bool, signoff bool) (string, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return "", err
 	}
-	return m.gits.CommitChanges(ctx, ws.Path, message, amend, signoff)
+	return handle.GitCommitChanges(ctx, message, amend, signoff)
 }
 
 func (m *Manager) GitBranchStatus(ctx context.Context, workspaceID string) (GitBranchStatus, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return GitBranchStatus{}, err
 	}
-	return m.gits.BranchStatus(ctx, ws.Path)
+	return handle.GitBranchStatus(ctx)
 }
 
 func (m *Manager) GitBranchPullRequest(ctx context.Context, workspaceID string, branch string) (GitBranchPullRequestStatus, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return GitBranchPullRequestStatus{}, err
 	}
-	return m.gits.BranchPullRequest(ctx, ws.Path, branch)
+	return handle.GitBranchPullRequest(ctx, branch)
 }
 
 func (m *Manager) RefreshGitBranchPullRequest(ctx context.Context, workspaceID string, branch string) (GitBranchPullRequestStatus, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return GitBranchPullRequestStatus{}, err
 	}
-	return m.gits.RefreshBranchPullRequest(ctx, ws.Path, branch)
+	return handle.RefreshGitBranchPullRequest(ctx, branch)
 }
 
 func (m *Manager) GitBranchPullRequestLite(ctx context.Context, workspaceID string, branch string) (GitBranchPullRequestStatus, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return GitBranchPullRequestStatus{}, err
 	}
-	return m.gits.BranchPullRequestLite(ctx, ws.Path, branch)
+	return handle.GitBranchPullRequestLite(ctx, branch)
 }
 
 func (m *Manager) GitBranchPullRequestWithDetails(ctx context.Context, workspaceID string, branch string) (GitBranchPullRequestStatus, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return GitBranchPullRequestStatus{}, err
 	}
-	return m.gits.BranchPullRequestWithDetails(ctx, ws.Path, branch)
+	return handle.GitBranchPullRequestWithDetails(ctx, branch)
 }
 
 func (m *Manager) GitCurrentBranch(ctx context.Context, workspaceID string) (string, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return "", err
 	}
-	return m.gits.CurrentBranch(ctx, ws.Path)
+	return handle.GitCurrentBranch(ctx)
 }
 
 func (m *Manager) GitListCommitsToTarget(ctx context.Context, workspaceID string, targetBranch string) (GitCommitComparison, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return GitCommitComparison{}, err
 	}
-	return m.gits.ListCommitsToTarget(ctx, ws.Path, targetBranch)
+	return handle.GitListCommitsToTarget(ctx, targetBranch)
 }
 
 func (m *Manager) GitBranchDiffSummary(ctx context.Context, workspaceID string, targetBranch string) (GitBranchDiffSummary, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return GitBranchDiffSummary{}, err
 	}
-	return m.gits.BranchDiffSummary(ctx, ws.Path, targetBranch)
+	return handle.GitBranchDiffSummary(ctx, targetBranch)
 }
 
 func (m *Manager) GitReadCommitDiff(ctx context.Context, workspaceID string, commitHash string, path string) (GitDiffContent, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return GitDiffContent{}, err
 	}
-	return m.gits.ReadCommitDiff(ctx, ws.Path, commitHash, path)
+	return handle.GitReadCommitDiff(ctx, commitHash, path)
 }
 
 func (m *Manager) GitReadBranchComparisonDiff(ctx context.Context, workspaceID string, targetBranch string, path string) (GitDiffContent, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return GitDiffContent{}, err
 	}
-	return m.gits.ReadBranchComparisonDiff(ctx, ws.Path, targetBranch, path)
+	return handle.GitReadBranchComparisonDiff(ctx, targetBranch, path)
 }
 
 func (m *Manager) GitListBranches(ctx context.Context, workspaceID string) (GitBranchList, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return GitBranchList{}, err
 	}
-	return m.gits.ListBranches(ctx, ws.Path)
+	return handle.GitListBranches(ctx)
 }
 
 func (m *Manager) GitPushBranch(ctx context.Context, workspaceID string) (string, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return "", err
 	}
-	return m.gits.PushBranch(ctx, ws.Path)
+	return handle.GitPushBranch(ctx)
 }
 
 func (m *Manager) GitPublishBranch(ctx context.Context, workspaceID string) (string, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return "", err
 	}
-	return m.gits.PublishBranch(ctx, ws.Path)
+	return handle.GitPublishBranch(ctx)
 }
 
 func (m *Manager) GitRenameBranch(ctx context.Context, workspaceID string, nextBranch string) error {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return err
 	}
-	return m.gits.RenameBranch(ctx, ws.Path, nextBranch)
+	return handle.GitRenameBranch(ctx, nextBranch)
 }
 
 func (m *Manager) GitRemoveBranch(ctx context.Context, workspaceID string, branch string, force bool) error {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return err
 	}
-	return m.gits.RemoveBranch(ctx, ws.Path, branch, force)
+	return handle.GitRemoveBranch(ctx, branch, force)
 }
 
 func (m *Manager) GitPrMerge(ctx context.Context, workspaceID string, prNumber int, method string, deleteBranch bool) (string, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return "", err
 	}
-	return m.gits.MergePullRequest(ctx, ws.Path, prNumber, method, deleteBranch)
+	return handle.GitPrMerge(ctx, prNumber, method, deleteBranch)
 }
 
 func (m *Manager) GitPrClose(ctx context.Context, workspaceID string, prNumber int) (string, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return "", err
 	}
-	return m.gits.ClosePullRequest(ctx, ws.Path, prNumber)
+	return handle.GitPrClose(ctx, prNumber)
 }
 
 func (m *Manager) GitCreateWorktree(ctx context.Context, workspaceID string, branch string, worktreePath string, createBranch bool, fromRef string) error {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return err
 	}
-	return m.gits.CreateWorktree(ctx, ws.Path, branch, worktreePath, createBranch, fromRef)
+	return handle.GitCreateWorktree(ctx, branch, worktreePath, createBranch, fromRef)
 }
 
 func (m *Manager) GitRemoveWorktree(ctx context.Context, workspaceID string, worktreePath string, force bool) error {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return err
 	}
-	return m.gits.RemoveWorktree(ctx, ws.Path, worktreePath, force)
+	return handle.GitRemoveWorktree(ctx, worktreePath, force)
 }
 
 func (m *Manager) GitAuthorName(ctx context.Context, workspaceID string) (string, error) {
-	ws, err := m.getWorkspace(workspaceID)
+	handle, err := m.WorkspaceHandle(workspaceID)
 	if err != nil {
 		return "", err
 	}
-	return m.gits.AuthorName(ctx, ws.Path)
+	return handle.GitAuthorName(ctx)
 }
 
 func (m *Manager) TerminalSend(req TerminalSendRequest) (TerminalSendResponse, error) {
