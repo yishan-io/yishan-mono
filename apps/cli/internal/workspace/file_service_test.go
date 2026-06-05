@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -92,6 +93,112 @@ func TestFileServicePathEscapeRejected(t *testing.T) {
 	}
 	if rpcErr.Code != -32003 {
 		t.Fatalf("expected code -32003, got %d", rpcErr.Code)
+	}
+}
+
+func TestFileServiceReadRejectsLargeFiles(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+	largeContent := bytes.Repeat([]byte{'a'}, maxReadBytes+1)
+	if err := os.WriteFile(filepath.Join(root, "large.txt"), largeContent, 0o644); err != nil {
+		t.Fatalf("write large file: %v", err)
+	}
+
+	_, err := svc.Read(root, "large.txt")
+	if err == nil {
+		t.Fatal("expected large file read to be rejected")
+	}
+	rpcErr, ok := err.(*RPCError)
+	if !ok {
+		t.Fatalf("expected RPCError, got %T", err)
+	}
+	if rpcErr.Code != rpcCodeInvalidParams {
+		t.Fatalf("expected invalid params code %d, got %d", rpcCodeInvalidParams, rpcErr.Code)
+	}
+}
+
+func TestFileServiceReadAllowsContextSymlinkTargetsOutsideWorkspace(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+	contextDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(contextDir, "notes.md"), []byte("notes"), 0o644); err != nil {
+		t.Fatalf("write context file: %v", err)
+	}
+	if err := os.Symlink(contextDir, filepath.Join(root, ContextLinkName)); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	content, err := svc.Read(root, ".my-context/notes.md")
+	if err != nil {
+		t.Fatalf("read context file: %v", err)
+	}
+	if content != "notes" {
+		t.Fatalf("unexpected context file content: %q", content)
+	}
+}
+
+func TestFileServiceWriteAllowsContextSymlinkTargetsOutsideWorkspace(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+	contextDir := t.TempDir()
+	if err := os.Symlink(contextDir, filepath.Join(root, ContextLinkName)); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	if _, err := svc.Write(root, ".my-context/new.md", "hello", 0); err != nil {
+		t.Fatalf("write context file: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(contextDir, "new.md"))
+	if err != nil {
+		t.Fatalf("read target file: %v", err)
+	}
+	if string(content) != "hello" {
+		t.Fatalf("unexpected target content: %q", string(content))
+	}
+}
+
+func TestFileServiceReadRejectsUnrelatedSymlinkEscape(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+	externalDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(externalDir, "secret.txt"), []byte("secret"), 0o644); err != nil {
+		t.Fatalf("write external file: %v", err)
+	}
+	if err := os.Symlink(externalDir, filepath.Join(root, "linked")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	_, err := svc.Read(root, "linked/secret.txt")
+	if err == nil {
+		t.Fatal("expected unrelated symlink read to be rejected")
+	}
+	rpcErr, ok := err.(*RPCError)
+	if !ok {
+		t.Fatalf("expected RPCError, got %T", err)
+	}
+	if rpcErr.Code != rpcCodePathRestricted {
+		t.Fatalf("expected path restricted code %d, got %d", rpcCodePathRestricted, rpcErr.Code)
+	}
+}
+
+func TestFileServiceWriteRejectsUnrelatedSymlinkEscape(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+	externalDir := t.TempDir()
+	if err := os.Symlink(externalDir, filepath.Join(root, "linked")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	_, err := svc.Write(root, "linked/secret.txt", "secret", 0)
+	if err == nil {
+		t.Fatal("expected unrelated symlink write to be rejected")
+	}
+	rpcErr, ok := err.(*RPCError)
+	if !ok {
+		t.Fatalf("expected RPCError, got %T", err)
+	}
+	if rpcErr.Code != rpcCodePathRestricted {
+		t.Fatalf("expected path restricted code %d, got %d", rpcCodePathRestricted, rpcErr.Code)
 	}
 }
 
