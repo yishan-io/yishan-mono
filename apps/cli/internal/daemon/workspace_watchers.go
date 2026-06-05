@@ -1,7 +1,6 @@
 package daemon
 
 import (
-	"bytes"
 	"errors"
 	"os"
 	"os/exec"
@@ -42,9 +41,15 @@ type worktreeWatcher struct {
 	backend         *fswatch.Watcher
 }
 
+type contextWatchRegistration struct {
+	watcher        *fswatch.Watcher
+	workspacePaths map[string]bool
+}
+
 type workspaceWatchers struct {
 	mu           sync.Mutex
 	entries      map[string]*worktreeWatcher
+	contexts     map[string]*contextWatchRegistration
 	events       *eventHub
 	onGitChanged func(worktreePath string)
 }
@@ -52,6 +57,7 @@ type workspaceWatchers struct {
 func newWorkspaceWatchers(events *eventHub, onGitChanged func(worktreePath string)) *workspaceWatchers {
 	return &workspaceWatchers{
 		entries:      make(map[string]*worktreeWatcher),
+		contexts:     make(map[string]*contextWatchRegistration),
 		events:       events,
 		onGitChanged: onGitChanged,
 	}
@@ -142,6 +148,7 @@ func (ws *workspaceWatchers) Watch(worktreePath string) {
 	}
 	entry.backend = backend
 	ws.entries[worktreePath] = entry
+	ws.registerContextWatcher(entry)
 }
 
 func nonRecursiveWatchPaths(entry *worktreeWatcher) []string {
@@ -150,10 +157,79 @@ func nonRecursiveWatchPaths(entry *worktreeWatcher) []string {
 	if info, err := os.Stat(gitRefsDir); err == nil && info.IsDir() {
 		paths = append(paths, gitRefsDir)
 	}
-	if entry.contextDir != "" {
-		paths = append(paths, entry.contextDir)
-	}
 	return paths
+}
+
+func (ws *workspaceWatchers) registerContextWatcher(entry *worktreeWatcher) {
+	if entry.contextDir == "" {
+		return
+	}
+
+	registration, ok := ws.contexts[entry.contextDir]
+	if ok {
+		registration.workspacePaths[entry.path] = true
+		return
+	}
+
+	contextDir := entry.contextDir
+	watcher, err := fswatch.New(fswatch.Config{
+		RecursivePaths: []string{contextDir},
+		OnPathChanged: func(changedPath string) {
+			ws.handleSharedContextPathChanged(contextDir, changedPath)
+		},
+		OnError: func(err error) {
+			log.Warn().Err(err).Str("path", contextDir).Msg("shared context watcher error")
+		},
+	})
+	if err != nil {
+		log.Warn().Err(err).Str("path", contextDir).Msg("failed to create shared context watcher")
+		return
+	}
+
+	ws.contexts[contextDir] = &contextWatchRegistration{
+		watcher:        watcher,
+		workspacePaths: map[string]bool{entry.path: true},
+	}
+}
+
+func (ws *workspaceWatchers) handleSharedContextPathChanged(contextDir string, changedPath string) {
+	ws.mu.Lock()
+	registration, ok := ws.contexts[contextDir]
+	if !ok {
+		ws.mu.Unlock()
+		return
+	}
+
+	watchers := make([]*worktreeWatcher, 0, len(registration.workspacePaths))
+	for workspacePath := range registration.workspacePaths {
+		if entry, ok := ws.entries[workspacePath]; ok {
+			watchers = append(watchers, entry)
+		}
+	}
+	ws.mu.Unlock()
+
+	for _, watcher := range watchers {
+		watcher.handleChangedPath(changedPath)
+	}
+}
+
+func (ws *workspaceWatchers) unregisterContextWatcher(entry *worktreeWatcher) {
+	if entry.contextDir == "" {
+		return
+	}
+
+	registration, ok := ws.contexts[entry.contextDir]
+	if !ok {
+		return
+	}
+
+	delete(registration.workspacePaths, entry.path)
+	if len(registration.workspacePaths) > 0 {
+		return
+	}
+
+	registration.watcher.Close()
+	delete(ws.contexts, entry.contextDir)
 }
 
 func (ws *workspaceWatchers) Unwatch(worktreePath string) {
@@ -165,6 +241,7 @@ func (ws *workspaceWatchers) Unwatch(worktreePath string) {
 		return
 	}
 
+	ws.unregisterContextWatcher(entry)
 	entry.close()
 	delete(ws.entries, worktreePath)
 }
@@ -172,6 +249,11 @@ func (ws *workspaceWatchers) Unwatch(worktreePath string) {
 func (ws *workspaceWatchers) Close() {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
+
+	for contextDir, registration := range ws.contexts {
+		registration.watcher.Close()
+		delete(ws.contexts, contextDir)
+	}
 
 	for path, entry := range ws.entries {
 		entry.close()
@@ -301,38 +383,6 @@ func (w *worktreeWatcher) shouldWatchWorkspaceDirWithoutGitIgnore(path string) b
 	return true
 }
 
-func (w *worktreeWatcher) gitCheckIgnoredPaths(paths []string) map[string]bool {
-	ignoredPaths := make(map[string]bool)
-	if len(paths) == 0 || !w.isGitIgnoreUsable() {
-		return ignoredPaths
-	}
-
-	relativePaths := make([]string, 0, len(paths))
-	pathByRelativePath := make(map[string]string, len(paths))
-	for _, path := range paths {
-		relPath := w.relativeWorkspacePath(path)
-		if relPath == "" || w.shouldAlwaysWatchRelativePath(relPath) {
-			continue
-		}
-		relativePaths = append(relativePaths, relPath)
-		pathByRelativePath[relPath] = path
-	}
-
-	for relPath := range w.gitCheckIgnoreMany(relativePaths) {
-		absPath := pathByRelativePath[relPath]
-		if absPath == "" {
-			continue
-		}
-		ignoredPaths[absPath] = true
-
-		w.mu.Lock()
-		w.ignoredPaths[relPath] = true
-		w.mu.Unlock()
-	}
-
-	return ignoredPaths
-}
-
 func (w *worktreeWatcher) isGitIgnoredPath(path string) bool {
 	if !w.isGitIgnoreUsable() {
 		return false
@@ -431,37 +481,6 @@ func (w *worktreeWatcher) shouldAlwaysWatchRelativePath(relativePath string) boo
 	}
 
 	return false
-}
-
-func (w *worktreeWatcher) gitCheckIgnoreMany(relativePaths []string) map[string]bool {
-	ignored := make(map[string]bool)
-	if len(relativePaths) == 0 {
-		return ignored
-	}
-
-	command, ok := w.gitCommand("-C", w.path, "check-ignore", "-z", "--stdin")
-	if !ok {
-		return ignored
-	}
-
-	command.Stdin = strings.NewReader(strings.Join(relativePaths, "\x00") + "\x00")
-	output, err := command.Output()
-	if err != nil {
-		var exitErr *exec.ExitError
-		if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
-			log.Debug().Err(err).Int("pathCount", len(relativePaths)).Msg("git check-ignore batch failed")
-		}
-		output = append([]byte(nil), output...)
-	}
-
-	for _, part := range bytes.Split(output, []byte{0}) {
-		if len(part) == 0 {
-			continue
-		}
-		ignored[string(part)] = true
-	}
-
-	return ignored
 }
 
 func (w *worktreeWatcher) gitWorktreeReady() bool {

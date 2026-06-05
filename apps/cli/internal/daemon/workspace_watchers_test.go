@@ -547,3 +547,54 @@ func TestWorktreeWatcher_AlwaysWatchesMyContextEvenIfIgnored(t *testing.T) {
 		t.Fatalf("expected .my-context or .my-context/notes.md in changed paths, got %v", paths)
 	}
 }
+
+func TestWorkspaceWatchers_ReusesSharedContextWatchers(t *testing.T) {
+	root := evalSymlinks(t, t.TempDir())
+	contextDir := filepath.Join(root, "shared-context")
+	if err := os.MkdirAll(contextDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	workspaceOne := filepath.Join(root, "workspace-one")
+	workspaceTwo := filepath.Join(root, "workspace-two")
+	for _, workspacePath := range []string{workspaceOne, workspaceTwo} {
+		if err := os.MkdirAll(filepath.Join(workspacePath, ".git"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(contextDir, filepath.Join(workspacePath, ".my-context")); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	hub := newEventHub()
+	watchers := newWorkspaceWatchers(hub, nil)
+	defer watchers.Close()
+
+	watchers.Watch(workspaceOne)
+	watchers.Watch(workspaceTwo)
+
+	registration, ok := watchers.contexts[contextDir]
+	if !ok {
+		t.Fatal("expected shared context watcher registration")
+	}
+	if len(watchers.contexts) != 1 {
+		t.Fatalf("expected 1 shared context watcher, got %d", len(watchers.contexts))
+	}
+	if len(registration.workspacePaths) != 2 {
+		t.Fatalf("expected 2 workspace subscribers, got %d", len(registration.workspacePaths))
+	}
+
+	watchers.Unwatch(workspaceOne)
+	registration, ok = watchers.contexts[contextDir]
+	if !ok {
+		t.Fatal("expected shared context watcher to remain after removing one workspace")
+	}
+	if len(registration.workspacePaths) != 1 {
+		t.Fatalf("expected 1 remaining workspace subscriber, got %d", len(registration.workspacePaths))
+	}
+
+	watchers.Unwatch(workspaceTwo)
+	if len(watchers.contexts) != 0 {
+		t.Fatalf("expected shared context watchers to be cleaned up, got %d", len(watchers.contexts))
+	}
+}
