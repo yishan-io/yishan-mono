@@ -54,10 +54,10 @@ type DaemonManagerOptions = {
 function resolveDevCliDir(): string | undefined {
   return firstExistingPath([
     process.env.YISHAN_CLI_DEV_DIR,
-    resolve(process.cwd(), "..", "cli-rs"),
-    resolve(process.cwd(), "apps", "cli-rs"),
-    resolve(process.cwd(), "..", "apps", "cli-rs"),
-    resolve(process.cwd(), "..", "..", "apps", "cli-rs"),
+    resolve(process.cwd(), "..", "cli"),
+    resolve(process.cwd(), "apps", "cli"),
+    resolve(process.cwd(), "..", "apps", "cli"),
+    resolve(process.cwd(), "..", "..", "apps", "cli"),
   ]);
 }
 
@@ -118,8 +118,8 @@ function resolveCliInvocation(): CliInvocation {
     const cliDir = resolveDevCliDir();
 
     return {
-      executablePath: "cargo",
-      prefixArgs: ["run", "--"],
+      executablePath: "go",
+      prefixArgs: ["run", "."],
       cwd: cliDir,
     };
   }
@@ -141,8 +141,8 @@ function resolveCliInvocation(): CliInvocation {
     const cliDir = resolveDevCliDir();
 
     return {
-      executablePath: "cargo",
-      prefixArgs: ["run", "--"],
+      executablePath: "go",
+      prefixArgs: ["run", "."],
       cwd: cliDir,
     };
   }

@@ -57,6 +57,10 @@ func (h WorkspaceHandle) TerminalStart(ctx context.Context, req TerminalStartReq
 	return h.terminals.Start(ctx, h.workspace.Path, req)
 }
 
+func (h WorkspaceHandle) GitInspect(ctx context.Context) (GitInspectResult, error) {
+	return h.gits.Inspect(ctx, h.workspace.Path)
+}
+
 func (h WorkspaceHandle) GitStatus(ctx context.Context) (GitStatusResponse, error) {
 	return h.gits.Status(ctx, h.workspace.Path)
 }

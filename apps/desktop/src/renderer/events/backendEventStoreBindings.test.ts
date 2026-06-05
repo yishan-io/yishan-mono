@@ -6,21 +6,23 @@ import { createBackendEventStoreBindings } from "./backendEventStoreBindings";
  * Creates one in-memory git.changed subscription harness.
  */
 function createGitChangedHarness() {
-  let listener: ((workspaceWorktreePath: string) => void) | null = null;
+  let listener: ((workspaceWorktreePath: string, affectsBranch: boolean, currentBranch?: string) => void) | null = null;
   const unsubscribe = vi.fn();
-  const subscribeGitChanged = vi.fn((nextListener: (workspaceWorktreePath: string) => void) => {
-    listener = nextListener;
-    return () => {
-      unsubscribe();
-      listener = null;
-    };
-  });
+  const subscribeGitChanged = vi.fn(
+    (nextListener: (workspaceWorktreePath: string, affectsBranch: boolean, currentBranch?: string) => void) => {
+      listener = nextListener;
+      return () => {
+        unsubscribe();
+        listener = null;
+      };
+    },
+  );
 
   return {
     subscribeGitChanged,
     unsubscribe,
-    emit(workspaceWorktreePath: string) {
-      listener?.(workspaceWorktreePath);
+    emit(workspaceWorktreePath: string, affectsBranch = true, currentBranch?: string) {
+      listener?.(workspaceWorktreePath, affectsBranch, currentBranch);
     },
   };
 }

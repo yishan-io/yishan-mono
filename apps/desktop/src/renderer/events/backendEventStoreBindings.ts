@@ -29,7 +29,7 @@ type AgentSessionLifecycleStatus = "running" | "waiting_input";
 
 type BackendEventStoreBindingsDependencies = {
   subscribeDaemonConnectionStatus?: (listener: (status: "connected" | "connecting" | "disconnected") => void) => () => void;
-  subscribeGitChanged: (listener: (workspaceWorktreePath: string) => void) => () => void;
+  subscribeGitChanged: (listener: (workspaceWorktreePath: string, affectsBranch: boolean, currentBranch?: string) => void) => () => void;
   subscribeWorkspaceFilesChanged: (
     listener: (workspaceWorktreePath: string, changedRelativePaths?: string[]) => void,
   ) => () => void;
@@ -40,7 +40,7 @@ type BackendEventStoreBindingsDependencies = {
   subscribeOpenBrowserUrl?: (listener: (payload: { url: string; workspaceId: string }) => void) => () => void;
   listWorkspaceWorktreePaths?: () => string[];
   resolveWorkspaceIdByWorktreePath?: (worktreePath: string) => string | undefined;
-  refreshWorkspaceCurrentBranch?: (workspaceId: string) => Promise<void>;
+  refreshWorkspaceCurrentBranch?: (workspaceId: string, currentBranch?: string) => Promise<void>;
   incrementFileTreeRefreshVersion: (workspaceWorktreePath?: string, changedRelativePaths?: string[]) => void;
   incrementGitRefreshVersion: (workspaceWorktreePath: string) => void;
   setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId: Record<string, WorkspaceAgentStatus>) => void;
@@ -67,7 +67,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
         return;
       }
 
-      listener(event.payload.workspaceWorktreePath);
+      listener(event.payload.workspaceWorktreePath, event.payload.affectsBranch ?? true, event.payload.currentBranch);
     }),
   subscribeWorkspaceFilesChanged: (listener) =>
     subscribeBackendEvent("workspace.files.changed", (event) => {
@@ -127,7 +127,11 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
       .getState()
       .workspaces.find((ws) => ws.worktreePath?.trim() === normalized)?.id;
   },
-  refreshWorkspaceCurrentBranch: async (workspaceId) => {
+  refreshWorkspaceCurrentBranch: async (workspaceId, currentBranch) => {
+    if (currentBranch !== undefined) {
+      workspaceStore.getState().setWorkspaceCurrentBranch(workspaceId, currentBranch);
+      return;
+    }
     try {
       const client = await getDaemonClient();
       const result = await client.git.inspect({ workspaceId });
@@ -403,12 +407,14 @@ export function createBackendEventStoreBindings(
       }
     >();
 
-    const unsubscribeGitChanged = dependencies.subscribeGitChanged((workspaceWorktreePath) => {
+    const unsubscribeGitChanged = dependencies.subscribeGitChanged((workspaceWorktreePath, affectsBranch, currentBranch) => {
       scheduleGitRefresh(workspaceWorktreePath);
 
-      const workspaceId = dependencies.resolveWorkspaceIdByWorktreePath?.(workspaceWorktreePath);
-      if (workspaceId) {
-        void dependencies.refreshWorkspaceCurrentBranch?.(workspaceId);
+      if (affectsBranch) {
+        const workspaceId = dependencies.resolveWorkspaceIdByWorktreePath?.(workspaceWorktreePath);
+        if (workspaceId) {
+          void dependencies.refreshWorkspaceCurrentBranch?.(workspaceId, currentBranch);
+        }
       }
     });
     let hasObservedConnectedState = false;

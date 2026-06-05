@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -23,22 +24,23 @@ const (
 )
 
 type worktreeWatcher struct {
-	mu              sync.Mutex
-	path            string
-	contextDir      string
-	resolvedGitDir  string
-	events          *eventHub
-	fileTimer       *time.Timer
-	gitTimer        *time.Timer
-	gitCooldownTill time.Time
-	readyAt         time.Time
-	changedPaths    []string
-	done            chan struct{}
-	onGitChanged    func(worktreePath string)
-	ignoredPaths    map[string]bool
-	gitIgnoreUsable *bool
-	gitRunner       gitexec.Runner
-	backend         *fswatch.Watcher
+	mu                   sync.Mutex
+	path                 string
+	contextDir           string
+	resolvedGitDir       string
+	events               *eventHub
+	fileTimer            *time.Timer
+	gitTimer             *time.Timer
+	gitCooldownTill      time.Time
+	pendingAffectsBranch bool
+	readyAt              time.Time
+	changedPaths         []string
+	done                 chan struct{}
+	onGitChanged         func(worktreePath string)
+	ignoredPaths         map[string]bool
+	gitIgnoreUsable      *bool
+	gitRunner            gitexec.Runner
+	backend              *fswatch.Watcher
 }
 
 type contextWatchRegistration struct {
@@ -269,7 +271,10 @@ func (w *worktreeWatcher) handleChangedPath(changedPath string) {
 	w.clearIgnoreCacheIfNeeded(changedPath)
 
 	if w.isGitPath(changedPath) {
-		w.scheduleGitEmit()
+		if strings.HasSuffix(changedPath, ".lock") {
+			return
+		}
+		w.scheduleGitEmit(w.isBranchRelevantGitPath(changedPath))
 		return
 	}
 
@@ -559,12 +564,38 @@ func dedupePaths(paths []string) map[string]bool {
 	return seen
 }
 
-func (w *worktreeWatcher) scheduleGitEmit() {
+func (w *worktreeWatcher) readCurrentBranch() string {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err, ok := w.gitRunner.Run(ctx, w.path, "rev-parse", "--abbrev-ref", "HEAD")
+	if !ok || err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+func (w *worktreeWatcher) isBranchRelevantGitPath(changedPath string) bool {
+	gitDir := w.resolvedGitDir
+	if changedPath == filepath.Join(gitDir, "HEAD") {
+		return true
+	}
+	if changedPath == filepath.Join(gitDir, "packed-refs") {
+		return true
+	}
+	refsHeads := filepath.Join(gitDir, "refs", "heads")
+	return changedPath == refsHeads ||
+		strings.HasPrefix(changedPath, refsHeads+string(filepath.Separator))
+}
+
+func (w *worktreeWatcher) scheduleGitEmit(affectsBranch bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	if time.Now().Before(w.gitCooldownTill) {
 		return
+	}
+	if affectsBranch {
+		w.pendingAffectsBranch = true
 	}
 	if w.gitTimer != nil {
 		w.gitTimer.Stop()
@@ -574,13 +605,23 @@ func (w *worktreeWatcher) scheduleGitEmit() {
 		w.mu.Lock()
 		w.gitTimer = nil
 		w.gitCooldownTill = time.Now().Add(gitEventCooldown)
+		affects := w.pendingAffectsBranch
+		w.pendingAffectsBranch = false
 		w.mu.Unlock()
 
+		payload := map[string]any{
+			"workspaceWorktreePath": w.path,
+			"affectsBranch":         affects,
+		}
+		if affects {
+			if branch := w.readCurrentBranch(); branch != "" {
+				payload["currentBranch"] = branch
+			}
+		}
+
 		w.events.Publish(frontendEvent{
-			Topic: "gitChanged",
-			Payload: map[string]any{
-				"workspaceWorktreePath": w.path,
-			},
+			Topic:   "gitChanged",
+			Payload: payload,
 		})
 		if w.onGitChanged != nil {
 			go w.onGitChanged(w.path)

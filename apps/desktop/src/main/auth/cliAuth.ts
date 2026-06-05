@@ -33,13 +33,13 @@ function resolveCliInvocation(): CliInvocation {
 
   if (isDevMode()) {
     const configuredDevCliDir = process.env.YISHAN_CLI_DEV_DIR?.trim();
-    const candidateDir = configuredDevCliDir || resolve(process.cwd(), "..", "cli-rs");
+    const candidateDir = configuredDevCliDir || resolve(process.cwd(), "..", "cli");
     const cliDir = existsSync(candidateDir) ? candidateDir : undefined;
     const devApiBaseUrl = process.env.VITE_API_BASE_URL?.trim() || "http://localhost:8787";
 
     return {
-      executablePath: "cargo",
-      prefixArgs: ["run", "--", "--profile", "dev", "--api-base-url", devApiBaseUrl],
+      executablePath: "go",
+      prefixArgs: ["run", ".", "--profile", "dev", "--api-base-url", devApiBaseUrl],
       cwd: cliDir,
     };
   }
@@ -47,12 +47,12 @@ function resolveCliInvocation(): CliInvocation {
   const bundledCliName = process.platform === "win32" ? "yishan.exe" : "yishan";
   const bundledCliPath = resolve(process.resourcesPath, bundledCliName);
   if (!existsSync(bundledCliPath)) {
-    const fallbackDevCliDir = process.env.YISHAN_CLI_DEV_DIR?.trim() || resolve(process.cwd(), "..", "cli-rs");
+    const fallbackDevCliDir = process.env.YISHAN_CLI_DEV_DIR?.trim() || resolve(process.cwd(), "..", "cli");
     const cliDir = existsSync(fallbackDevCliDir) ? fallbackDevCliDir : undefined;
 
     return {
-      executablePath: "cargo",
-      prefixArgs: ["run", "--", "--profile", "dev"],
+      executablePath: "go",
+      prefixArgs: ["run", ".", "--profile", "dev"],
       cwd: cliDir,
     };
   }

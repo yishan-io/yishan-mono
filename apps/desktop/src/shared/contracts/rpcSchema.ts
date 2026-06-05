@@ -42,6 +42,10 @@ export type RpcSchema = {
       };
       gitChanged: {
         workspaceWorktreePath: string;
+        /** True when the change is branch-relevant (HEAD or refs/heads). False for index/FETCH_HEAD/etc. */
+        affectsBranch?: boolean;
+        /** Current branch name, pushed by the daemon when affectsBranch is true. */
+        currentBranch?: string;
       };
       workspaceFilesChanged: {
         workspaceWorktreePath: string;

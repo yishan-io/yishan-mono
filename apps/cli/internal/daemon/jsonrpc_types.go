@@ -87,7 +87,7 @@ type workspaceCloseParams struct {
 }
 
 type gitInspectParams struct {
-	Path string `json:"path"`
+	WorkspaceID string `json:"workspaceId"`
 }
 
 type gitPathsParams struct {
