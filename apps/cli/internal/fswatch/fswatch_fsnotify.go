@@ -87,6 +87,21 @@ func (b *fsnotifyBackend) handleCreate(path string) {
 	if err := b.addRecursivePath(path); err != nil {
 		emitError(b.config, fmt.Errorf("watch new directory %q: %w", path, err))
 	}
+	// Emit synthetic change events for any files/dirs that already exist
+	// inside the new directory. Without this, contents created between the
+	// MkdirAll call and the watch registration are silently missed — a race
+	// that is especially common when a directory and its children are created
+	// in rapid succession (e.g. os.MkdirAll followed by os.WriteFile).
+	_ = filepath.WalkDir(path, func(child string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil || child == path {
+			return nil
+		}
+		if d.IsDir() && !shouldDescendDir(b.config, child) {
+			return filepath.SkipDir
+		}
+		emitPathChanged(b.config, child)
+		return nil
+	})
 }
 
 func (b *fsnotifyBackend) addRecursivePath(root string) error {
