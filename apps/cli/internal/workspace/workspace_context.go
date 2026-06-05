@@ -48,6 +48,7 @@ func (m *Manager) SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkRe
 		Errors:  make(map[string]string),
 	}
 
+	paths := make([]string, 0, len(req.WorktreePaths))
 	seen := make(map[string]struct{}, len(req.WorktreePaths))
 	for _, raw := range req.WorktreePaths {
 		trimmed := strings.TrimSpace(raw)
@@ -70,13 +71,25 @@ func (m *Manager) SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkRe
 			continue
 		}
 		seen[path] = struct{}{}
+		paths = append(paths, path)
 
 		var opErr error
-		if req.Enabled {
-			opErr = ensureContextLink(contextPath, path)
-		} else {
+		if !req.Enabled {
 			opErr = removeContextLink(contextPath, path)
+			if opErr != nil {
+				result.Errors[path] = opErr.Error()
+				continue
+			}
+			result.Updated = append(result.Updated, path)
 		}
+	}
+
+	if !req.Enabled {
+		return result, nil
+	}
+
+	for _, path := range paths {
+		opErr := ensureContextLink(contextPath, path)
 		if opErr != nil {
 			result.Errors[path] = opErr.Error()
 			continue

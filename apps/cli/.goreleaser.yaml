@@ -8,13 +8,31 @@ before:
     - go test ./...
 
 builds:
-  - id: yishan
+  # macOS: CGO required for the FSEvents-backed recursive watcher.
+  # Cross-compiling darwin/amd64 from an arm64 host requires pointing the
+  # C compiler at the x86_64 slice of the universal Apple clang toolchain:
+  #   CC="clang -arch x86_64 -mmacosx-version-min=10.15"
+  - id: yishan-darwin
+    main: .
+    binary: yishan
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X yishan/apps/cli/internal/buildinfo.Version={{.Version}}
+
+  # Linux and Windows: no CGO needed — the pure-Go fsnotify watcher is used
+  # on non-Darwin platforms (//go:build !darwin).
+  - id: yishan-other
     main: .
     binary: yishan
     env:
       - CGO_ENABLED=0
     goos:
-      - darwin
       - linux
       - windows
     goarch:

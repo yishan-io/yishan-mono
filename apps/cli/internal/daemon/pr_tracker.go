@@ -44,28 +44,28 @@ func newWorkspacePRTracker(manager *workspace.Manager, publish func(frontendEven
 		publish:  publish,
 	}
 	tracker.branchResolver = func(ctx context.Context, root string) (string, error) {
-		ws, ok := manager.FindWorkspaceByPath(root)
-		if !ok {
+		handle, err := manager.WorkspaceHandleByPath(root)
+		if err != nil {
 			return "", workspace.NewRPCError(rpcCodeNotFound, "workspace not found")
 		}
-		return manager.GitCurrentBranch(ctx, ws.ID)
+		return handle.GitCurrentBranch(ctx)
 	}
 	tracker.inspectResolver = func(ctx context.Context, root string) (workspace.GitInspectResult, error) {
 		return manager.GitInspect(ctx, root)
 	}
 	tracker.prResolver = func(ctx context.Context, root string, branch string) (workspace.GitBranchPullRequestStatus, error) {
-		ws, ok := manager.FindWorkspaceByPath(root)
-		if !ok {
+		handle, err := manager.WorkspaceHandleByPath(root)
+		if err != nil {
 			return workspace.GitBranchPullRequestStatus{}, workspace.NewRPCError(rpcCodeNotFound, "workspace not found")
 		}
-		return manager.GitBranchPullRequestLite(ctx, ws.ID, branch)
+		return handle.GitBranchPullRequestLite(ctx, branch)
 	}
 	tracker.detailResolver = func(ctx context.Context, root string, branch string) (workspace.GitBranchPullRequestStatus, error) {
-		ws, ok := manager.FindWorkspaceByPath(root)
-		if !ok {
+		handle, err := manager.WorkspaceHandleByPath(root)
+		if err != nil {
 			return workspace.GitBranchPullRequestStatus{}, workspace.NewRPCError(rpcCodeNotFound, "workspace not found")
 		}
-		return manager.GitBranchPullRequestWithDetails(ctx, ws.ID, branch)
+		return handle.GitBranchPullRequestWithDetails(ctx, branch)
 	}
 	return tracker
 }

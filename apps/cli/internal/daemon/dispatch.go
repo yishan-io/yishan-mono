@@ -47,7 +47,7 @@ func isGitMethod(method string) bool {
 func isFileMethod(method string) bool {
 	switch method {
 	case MethodFileRead, MethodFileList, MethodFileStat, MethodFileWrite,
-		MethodFileDelete, MethodFileMove, MethodFileMkdir, MethodFileDiff:
+		MethodFileSearch, MethodFileDelete, MethodFileMove, MethodFileMkdir, MethodFileDiff:
 		return true
 	}
 	return false

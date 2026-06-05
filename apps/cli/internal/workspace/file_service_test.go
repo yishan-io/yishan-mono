@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -40,6 +41,9 @@ func TestFileServiceCRUD(t *testing.T) {
 	if entry.Name != "a.txt" || entry.IsDir {
 		t.Fatalf("unexpected stat entry: %+v", entry)
 	}
+	if entry.ModifiedAt == "" {
+		t.Fatalf("expected modifiedAt to be populated: %+v", entry)
+	}
 
 	entries, err := svc.List(root, "dir/sub", false)
 	if err != nil {
@@ -47,6 +51,9 @@ func TestFileServiceCRUD(t *testing.T) {
 	}
 	if len(entries) != 1 || entries[0].Name != "a.txt" {
 		t.Fatalf("unexpected list result: %+v", entries)
+	}
+	if entries[0].ModifiedAt == "" {
+		t.Fatalf("expected modifiedAt on list entry: %+v", entries[0])
 	}
 
 	recursiveEntries, err := svc.List(root, "", true)
@@ -92,6 +99,112 @@ func TestFileServicePathEscapeRejected(t *testing.T) {
 	}
 	if rpcErr.Code != -32003 {
 		t.Fatalf("expected code -32003, got %d", rpcErr.Code)
+	}
+}
+
+func TestFileServiceReadRejectsLargeFiles(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+	largeContent := bytes.Repeat([]byte{'a'}, maxReadBytes+1)
+	if err := os.WriteFile(filepath.Join(root, "large.txt"), largeContent, 0o644); err != nil {
+		t.Fatalf("write large file: %v", err)
+	}
+
+	_, err := svc.Read(root, "large.txt")
+	if err == nil {
+		t.Fatal("expected large file read to be rejected")
+	}
+	rpcErr, ok := err.(*RPCError)
+	if !ok {
+		t.Fatalf("expected RPCError, got %T", err)
+	}
+	if rpcErr.Code != rpcCodeInvalidParams {
+		t.Fatalf("expected invalid params code %d, got %d", rpcCodeInvalidParams, rpcErr.Code)
+	}
+}
+
+func TestFileServiceReadAllowsContextSymlinkTargetsOutsideWorkspace(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+	contextDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(contextDir, "notes.md"), []byte("notes"), 0o644); err != nil {
+		t.Fatalf("write context file: %v", err)
+	}
+	if err := os.Symlink(contextDir, filepath.Join(root, ContextLinkName)); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	content, err := svc.Read(root, ".my-context/notes.md")
+	if err != nil {
+		t.Fatalf("read context file: %v", err)
+	}
+	if content != "notes" {
+		t.Fatalf("unexpected context file content: %q", content)
+	}
+}
+
+func TestFileServiceWriteAllowsContextSymlinkTargetsOutsideWorkspace(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+	contextDir := t.TempDir()
+	if err := os.Symlink(contextDir, filepath.Join(root, ContextLinkName)); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	if _, err := svc.Write(root, ".my-context/new.md", "hello", 0); err != nil {
+		t.Fatalf("write context file: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(contextDir, "new.md"))
+	if err != nil {
+		t.Fatalf("read target file: %v", err)
+	}
+	if string(content) != "hello" {
+		t.Fatalf("unexpected target content: %q", string(content))
+	}
+}
+
+func TestFileServiceReadRejectsUnrelatedSymlinkEscape(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+	externalDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(externalDir, "secret.txt"), []byte("secret"), 0o644); err != nil {
+		t.Fatalf("write external file: %v", err)
+	}
+	if err := os.Symlink(externalDir, filepath.Join(root, "linked")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	_, err := svc.Read(root, "linked/secret.txt")
+	if err == nil {
+		t.Fatal("expected unrelated symlink read to be rejected")
+	}
+	rpcErr, ok := err.(*RPCError)
+	if !ok {
+		t.Fatalf("expected RPCError, got %T", err)
+	}
+	if rpcErr.Code != rpcCodePathRestricted {
+		t.Fatalf("expected path restricted code %d, got %d", rpcCodePathRestricted, rpcErr.Code)
+	}
+}
+
+func TestFileServiceWriteRejectsUnrelatedSymlinkEscape(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+	externalDir := t.TempDir()
+	if err := os.Symlink(externalDir, filepath.Join(root, "linked")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	_, err := svc.Write(root, "linked/secret.txt", "secret", 0)
+	if err == nil {
+		t.Fatal("expected unrelated symlink write to be rejected")
+	}
+	rpcErr, ok := err.(*RPCError)
+	if !ok {
+		t.Fatalf("expected RPCError, got %T", err)
+	}
+	if rpcErr.Code != rpcCodePathRestricted {
+		t.Fatalf("expected path restricted code %d, got %d", rpcCodePathRestricted, rpcErr.Code)
 	}
 }
 
@@ -536,6 +649,109 @@ func TestFileServiceReadDiffDeletedFile(t *testing.T) {
 	}
 	if diff.NewContent != "" {
 		t.Fatalf("expected empty newContent for deleted file, got %q", diff.NewContent)
+	}
+}
+
+func TestFileServiceListUsesCachedDirectoryEntriesUntilInvalidated(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+
+	if err := os.WriteFile(filepath.Join(root, "a.txt"), []byte("a"), 0o644); err != nil {
+		t.Fatalf("seed file: %v", err)
+	}
+
+	entries, err := svc.List(root, "", false)
+	if err != nil {
+		t.Fatalf("initial list: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Path != "a.txt" {
+		t.Fatalf("unexpected initial entries: %+v", entries)
+	}
+
+	if err := os.WriteFile(filepath.Join(root, "b.txt"), []byte("b"), 0o644); err != nil {
+		t.Fatalf("write uncached file: %v", err)
+	}
+
+	entries, err = svc.List(root, "", false)
+	if err != nil {
+		t.Fatalf("cached list: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Path != "a.txt" {
+		t.Fatalf("expected cached entries before invalidation, got %+v", entries)
+	}
+
+	svc.InvalidateWorkspacePaths(root, []string{"b.txt"})
+	entries, err = svc.List(root, "", false)
+	if err != nil {
+		t.Fatalf("list after invalidation: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("expected refreshed entries after invalidation, got %+v", entries)
+	}
+}
+
+func TestFileServiceWriteInvalidatesParentDirectoryCache(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+
+	if err := svc.Mkdir(root, "dir", true, 0); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if _, err := svc.List(root, "dir", false); err != nil {
+		t.Fatalf("prime cache: %v", err)
+	}
+
+	if _, err := svc.Write(root, "dir/new.txt", "hello", 0); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	entries, err := svc.List(root, "dir", false)
+	if err != nil {
+		t.Fatalf("list after write: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Path != "dir/new.txt" {
+		t.Fatalf("expected refreshed directory entries after write, got %+v", entries)
+	}
+}
+
+func TestFileServiceMoveInvalidatesSourceAndDestinationCaches(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+
+	if err := svc.Mkdir(root, "from", true, 0); err != nil {
+		t.Fatalf("mkdir from: %v", err)
+	}
+	if err := svc.Mkdir(root, "to", true, 0); err != nil {
+		t.Fatalf("mkdir to: %v", err)
+	}
+	if _, err := svc.Write(root, "from/item.txt", "hello", 0); err != nil {
+		t.Fatalf("write seed: %v", err)
+	}
+	if _, err := svc.List(root, "from", false); err != nil {
+		t.Fatalf("prime from cache: %v", err)
+	}
+	if _, err := svc.List(root, "to", false); err != nil {
+		t.Fatalf("prime to cache: %v", err)
+	}
+
+	if err := svc.Move(root, "from/item.txt", "to/item.txt"); err != nil {
+		t.Fatalf("move: %v", err)
+	}
+
+	fromEntries, err := svc.List(root, "from", false)
+	if err != nil {
+		t.Fatalf("list from after move: %v", err)
+	}
+	if len(fromEntries) != 0 {
+		t.Fatalf("expected empty source dir after move, got %+v", fromEntries)
+	}
+
+	toEntries, err := svc.List(root, "to", false)
+	if err != nil {
+		t.Fatalf("list to after move: %v", err)
+	}
+	if len(toEntries) != 1 || toEntries[0].Path != "to/item.txt" {
+		t.Fatalf("expected destination file after move, got %+v", toEntries)
 	}
 }
 

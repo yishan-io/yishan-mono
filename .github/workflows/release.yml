@@ -55,17 +55,14 @@ jobs:
         include:
           - os: macos-latest
             goos: darwin
-            targets: aarch64-apple-darwin,x86_64-apple-darwin
             goarches: arm64,amd64
             binary: yishan
           - os: ubuntu-latest
             goos: linux
-            targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu
             goarches: amd64,arm64
             binary: yishan
           - os: windows-latest
             goos: windows
-            targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
             goarches: amd64,arm64
             binary: yishan.exe
     runs-on: ${{ matrix.os }}
@@ -75,64 +72,80 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          targets: ${{ matrix.targets }}
+          go-version-file: apps/cli/go.mod
+          cache-dependency-path: apps/cli/go.sum
 
-      - name: Cache Rust build
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: apps/cli-rs
-
-      - name: Install Linux ARM64 cross-linker
+      - name: Install Linux ARM64 cross-compiler
         if: matrix.goos == 'linux'
         run: sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Build release binaries
         shell: bash
-        working-directory: apps/cli-rs
+        working-directory: apps/cli
         run: |
-          IFS=',' read -ra targets <<< "${{ matrix.targets }}"
-          for target in "${targets[@]}"; do
-            echo "::group::Building $target"
-            if [[ "$target" == "aarch64-unknown-linux-gnu" ]]; then
-              CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
-                cargo build --release --target "$target" \
-                  --config "env.YISHAN_VERSION=\"$YISHAN_VERSION\""
+          set -euo pipefail
+          version="${YISHAN_VERSION}"
+          ldflags="-s -w -X 'yishan/apps/cli/internal/buildinfo.Version=${version}'"
+          goos="${{ matrix.goos }}"
+          mkdir -p bin
+          IFS=',' read -ra goarches <<< "${{ matrix.goarches }}"
+          for goarch in "${goarches[@]}"; do
+            echo "::group::Building ${goos}/${goarch}"
+            if [[ "${goos}" == "windows" ]]; then
+              outfile="bin/yishan_${goarch}.exe"
             else
-              cargo build --release --target "$target" \
-                --config "env.YISHAN_VERSION=\"$YISHAN_VERSION\""
+              outfile="bin/yishan_${goarch}"
+            fi
+            if [[ "${goos}" == "darwin" && "${goarch}" == "amd64" ]]; then
+              # Cross-compile darwin/amd64 from the arm64 macOS runner using
+              # Apple's universal clang targeting the x86_64 slice.
+              CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 \
+                CC="clang -arch x86_64 -mmacosx-version-min=10.15" \
+                go build -ldflags "${ldflags}" -o "${outfile}" .
+            elif [[ "${goos}" == "darwin" ]]; then
+              CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 \
+                go build -ldflags "${ldflags}" -o "${outfile}" .
+            else
+              # Linux and Windows: pure-Go fsnotify watcher, no CGO needed.
+              CGO_ENABLED=0 GOOS="${goos}" GOARCH="${goarch}" \
+                go build -ldflags "${ldflags}" -o "${outfile}" .
             fi
             echo "::endgroup::"
           done
 
       - name: Package archives
         shell: bash
-        working-directory: apps/cli-rs
+        working-directory: apps/cli
         run: |
-          version="${{ needs.resolve-version.outputs.version }}"
-          IFS=',' read -ra targets  <<< "${{ matrix.targets }}"
-          IFS=',' read -ra goarches <<< "${{ matrix.goarches }}"
-          # Convert RUNNER_TEMP to a Unix path (required on Windows where it is a Windows-style path)
+          set -euo pipefail
+          version="${YISHAN_VERSION}"
+          goos="${{ matrix.goos }}"
+          binary="${{ matrix.binary }}"
           tmp_dir="$(cygpath -u "$RUNNER_TEMP" 2>/dev/null || echo "$RUNNER_TEMP")"
           archives=""
-          for i in "${!targets[@]}"; do
-            target="${targets[$i]}"
-            goarch="${goarches[$i]}"
-            archive="yishan-cli_${version}_${{ matrix.goos }}_${goarch}.tar.gz"
-            binary="target/${target}/release/${{ matrix.binary }}"
-            tar -czf "$tmp_dir/$archive" -C "$(dirname "$binary")" "$(basename "$binary")"
-            if command -v sha256sum &>/dev/null; then
-              checksum=$(sha256sum "$tmp_dir/$archive" | awk '{print $1}')
+          IFS=',' read -ra goarches <<< "${{ matrix.goarches }}"
+          for goarch in "${goarches[@]}"; do
+            staging="$(mktemp -d)"
+            if [[ "${goos}" == "windows" ]]; then
+              cp "bin/yishan_${goarch}.exe" "${staging}/${binary}"
             else
-              checksum=$(certutil -hashfile "$(cygpath -w "$tmp_dir/$archive")" SHA256 | sed -n '2p' | tr -d ' \r')
+              cp "bin/yishan_${goarch}" "${staging}/${binary}"
             fi
-            echo "$checksum  $archive" >> "$tmp_dir/checksums.txt"
-            archives="$archives $tmp_dir/$archive"
+            archive="yishan-cli_${version}_${goos}_${goarch}.tar.gz"
+            tar -czf "${tmp_dir}/${archive}" -C "${staging}" "${binary}"
+            if command -v sha256sum &>/dev/null; then
+              checksum=$(sha256sum "${tmp_dir}/${archive}" | awk '{print $1}')
+            else
+              checksum=$(certutil -hashfile "$(cygpath -w "${tmp_dir}/${archive}")" SHA256 | sed -n '2p' | tr -d ' \r')
+            fi
+            echo "${checksum}  ${archive}" >> "${tmp_dir}/checksums.txt"
+            archives="${archives} ${tmp_dir}/${archive}"
           done
-          echo "ARCHIVES=$archives" >> "$GITHUB_ENV"
-          echo "TMP_DIR=$tmp_dir" >> "$GITHUB_ENV"
+          echo "ARCHIVES=${archives}" >> "$GITHUB_ENV"
+          echo "TMP_DIR=${tmp_dir}" >> "$GITHUB_ENV"
 
       - name: Upload CLI archives to release
         shell: bash
@@ -289,11 +302,11 @@ jobs:
             if [[ -n "$previous_tag" ]]; then
               echo "Changes since \`$previous_tag\`."
               echo
-              log_output="$(git log --no-merges --pretty=format:'- %s (%h)' "$previous_tag..HEAD" -- apps/cli-rs || true)"
+              log_output="$(git log --no-merges --pretty=format:'- %s (%h)' "$previous_tag..HEAD" -- apps/cli || true)"
             else
               echo "Changes in this release."
               echo
-              log_output="$(git log --no-merges --pretty=format:'- %s (%h)' HEAD -- apps/cli-rs || true)"
+              log_output="$(git log --no-merges --pretty=format:'- %s (%h)' HEAD -- apps/cli || true)"
             fi
 
             if [[ -n "${log_output:-}" ]]; then

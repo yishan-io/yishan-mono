@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -157,15 +158,27 @@ func TestWorkspacePRTracker_SkipsOverlappingRefreshes(t *testing.T) {
 		return workspace.GitBranchPullRequestStatus{Found: false}, nil
 	}
 
+	// Start goroutine 1 and wait until it is inside detailResolver so that
+	// the in-flight guard is definitely set before goroutine 2 starts.
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		tracker.RefreshWorkspaceByPath(ws.Path)
+	}()
+	<-started // goroutine 1 holds the in-flight lock
+
+	// Goroutine 2 must see the in-flight guard and skip without calling detailResolver.
 	done := make(chan struct{})
-	go tracker.RefreshWorkspaceByPath(ws.Path)
 	go func() {
 		tracker.RefreshWorkspaceByPath(ws.Path)
 		close(done)
 	}()
-	<-started
+	<-done // goroutine 2 returns immediately (skipped)
+
+	// Let goroutine 1 finish.
 	close(release)
-	<-done
+	wg.Wait()
 
 	if got := resolverCalls.Load(); got != 1 {
 		t.Fatalf("expected one resolver call, got %d", got)

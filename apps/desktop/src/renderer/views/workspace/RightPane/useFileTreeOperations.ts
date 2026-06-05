@@ -207,6 +207,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
 
     return state.fileTreeChangedRelativePathsByWorktreePath?.[workspaceWorktreePath] ?? EMPTY_CHANGED_RELATIVE_PATHS;
   });
+  const fileTreeRefreshVersion = workspaceStore((state) => state.fileTreeRefreshVersion);
   const { openTab, closeTab, renameTabsForEntryRename, setLastUsedExternalAppId } = useCommands();
   const tabs = tabStore((state) => state.tabs);
   const {
@@ -318,6 +319,9 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
         return;
       }
 
+      if (loadedDirectoryPathsRef.current.has(normalizedPath)) {
+        return;
+      }
       loadedDirectoryPathsRef.current.add(normalizedPath);
 
       try {
@@ -449,7 +453,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
 
   useEffect(() => {
     void refreshLoadedRepoFiles(changedRelativePathsForSelectedWorkspace);
-  }, [changedRelativePathsForSelectedWorkspace, refreshLoadedRepoFiles]);
+  }, [changedRelativePathsForSelectedWorkspace, fileTreeRefreshVersion, refreshLoadedRepoFiles]);
 
   return {
     repoFiles,

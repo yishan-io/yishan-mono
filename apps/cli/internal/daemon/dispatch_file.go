@@ -14,13 +14,23 @@ func (h *JSONRPCHandler) dispatchFile(ctx context.Context, method string, params
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.FileRead(req.WorkspaceID, req.Path)
+		content, err := h.manager.FileRead(req.WorkspaceID, req.Path)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]string{"content": content}, nil
 	case MethodFileList:
 		var req fileListParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
 		return h.manager.FileList(req.WorkspaceID, req.Path, req.Recursive)
+	case MethodFileSearch:
+		var req fileSearchParams
+		if err := decodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.manager.FileSearch(req.WorkspaceID, req.Query, req.Limit)
 	case MethodFileStat:
 		var req fileReadParams
 		if err := decodeParams(params, &req); err != nil {

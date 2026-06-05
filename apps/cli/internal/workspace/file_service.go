@@ -14,23 +14,29 @@ import (
 	"time"
 )
 
+const maxReadBytes = 2 * 1024 * 1024
+
 type FileEntry struct {
-	Path      string `json:"path"`
-	Name      string `json:"name"`
-	IsDir     bool   `json:"isDir"`
-	IsIgnored bool   `json:"isIgnored"`
-	Size      int64  `json:"size"`
-	Mode      uint32 `json:"mode"`
+	Path       string `json:"path"`
+	Name       string `json:"name"`
+	IsDir      bool   `json:"isDir"`
+	IsIgnored  bool   `json:"isIgnored"`
+	Size       int64  `json:"size"`
+	Mode       uint32 `json:"mode"`
+	ModifiedAt string `json:"modifiedAt"`
 }
 
-type FileService struct{}
+type FileService struct {
+	mu    sync.Mutex
+	cache fileCacheStore
+}
 
 func NewFileService() *FileService {
-	return &FileService{}
+	return &FileService{cache: newFileCacheStore()}
 }
 
 func (s *FileService) List(root string, path string, recursive bool) ([]FileEntry, error) {
-	dir, err := safeJoinOptional(root, path)
+	dir, err := safeJoinOptional(root, path, false)
 	if err != nil {
 		return nil, err
 	}
@@ -48,6 +54,10 @@ func (s *FileService) List(root string, path string, recursive bool) ([]FileEntr
 			return nil, err
 		}
 		return withContextLinkEntries(root, path, entries)
+	}
+
+	if entries, ok := s.cachedDirectoryEntries(root, path); ok {
+		return entries, nil
 	}
 
 	entries, err := os.ReadDir(dir)
@@ -70,15 +80,36 @@ func (s *FileService) List(root string, path string, recursive bool) ([]FileEntr
 			return nil, err
 		}
 		out = append(out, FileEntry{
-			Path:  filepath.ToSlash(relPath),
-			Name:  entry.Name(),
-			IsDir: isDir,
-			Size:  info.Size(),
-			Mode:  uint32(info.Mode()),
+			Path:       filepath.ToSlash(relPath),
+			Name:       entry.Name(),
+			IsDir:      isDir,
+			Size:       info.Size(),
+			Mode:       uint32(info.Mode()),
+			ModifiedAt: formatModifiedAt(info),
 		})
 	}
 
-	return markIgnoredEntries(root, out), nil
+	out = markIgnoredEntries(root, out)
+	s.storeCachedDirectoryEntries(root, path, out)
+	return out, nil
+}
+
+func (s *FileService) cachedDirectoryEntries(root string, path string) ([]FileEntry, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cache.getDirectory(root, path)
+}
+
+func (s *FileService) storeCachedDirectoryEntries(root string, path string, entries []FileEntry) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.cache.storeDirectory(root, path, entries)
+}
+
+func (s *FileService) InvalidateWorkspacePaths(root string, paths []string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.cache.invalidatePaths(root, paths)
 }
 
 func (s *FileService) walkFiles(root string, dir string) ([]FileEntry, error) {
@@ -112,11 +143,12 @@ func (s *FileService) walkFiles(root string, dir string) ([]FileEntry, error) {
 			return err
 		}
 		out = append(out, FileEntry{
-			Path:  filepath.ToSlash(relPath),
-			Name:  entry.Name(),
-			IsDir: isDir,
-			Size:  info.Size(),
-			Mode:  uint32(info.Mode()),
+			Path:       filepath.ToSlash(relPath),
+			Name:       entry.Name(),
+			IsDir:      isDir,
+			Size:       info.Size(),
+			Mode:       uint32(info.Mode()),
+			ModifiedAt: formatModifiedAt(info),
 		})
 
 		return nil
@@ -206,11 +238,12 @@ func listContextLinkEntries(root string, path string) ([]FileEntry, error) {
 	entries := []FileEntry{}
 	if cleanPath == "" || cleanPath == ContextLinkName {
 		entries = append(entries, FileEntry{
-			Path:  ContextLinkName,
-			Name:  ContextLinkName,
-			IsDir: true,
-			Size:  contextInfo.Size(),
-			Mode:  uint32(contextInfo.Mode()),
+			Path:       ContextLinkName,
+			Name:       ContextLinkName,
+			IsDir:      true,
+			Size:       contextInfo.Size(),
+			Mode:       uint32(contextInfo.Mode()),
+			ModifiedAt: formatModifiedAt(contextInfo),
 		})
 	}
 
@@ -245,11 +278,12 @@ func listContextLinkEntries(root string, path string) ([]FileEntry, error) {
 			return err
 		}
 		entries = append(entries, FileEntry{
-			Path:  contextRelPath,
-			Name:  entry.Name(),
-			IsDir: entry.IsDir(),
-			Size:  info.Size(),
-			Mode:  uint32(info.Mode()),
+			Path:       contextRelPath,
+			Name:       entry.Name(),
+			IsDir:      entry.IsDir(),
+			Size:       info.Size(),
+			Mode:       uint32(info.Mode()),
+			ModifiedAt: formatModifiedAt(info),
 		})
 		return nil
 	}); err != nil {
@@ -268,11 +302,12 @@ func contextLinkFallbackEntry(linkPath string, cleanPath string) []FileEntry {
 		return nil
 	}
 	return []FileEntry{{
-		Path:  ContextLinkName,
-		Name:  ContextLinkName,
-		IsDir: false,
-		Size:  info.Size(),
-		Mode:  uint32(info.Mode()),
+		Path:       ContextLinkName,
+		Name:       ContextLinkName,
+		IsDir:      false,
+		Size:       info.Size(),
+		Mode:       uint32(info.Mode()),
+		ModifiedAt: formatModifiedAt(info),
 	}}
 }
 
@@ -465,18 +500,27 @@ func fileEntryForRelativePath(root string, relPath string) (FileEntry, error) {
 	}
 
 	return FileEntry{
-		Path:  filepath.ToSlash(relPath),
-		Name:  filepath.Base(relPath),
-		IsDir: isDir,
-		Size:  info.Size(),
-		Mode:  uint32(info.Mode()),
+		Path:       filepath.ToSlash(relPath),
+		Name:       filepath.Base(relPath),
+		IsDir:      isDir,
+		Size:       info.Size(),
+		Mode:       uint32(info.Mode()),
+		ModifiedAt: formatModifiedAt(info),
 	}, nil
 }
 
 func (s *FileService) Read(root string, path string) (string, error) {
-	fullPath, err := safeJoin(root, path)
+	fullPath, err := safeJoin(root, path, false)
 	if err != nil {
 		return "", err
+	}
+
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		return "", err
+	}
+	if info.Size() > maxReadBytes {
+		return "", NewRPCError(rpcCodeInvalidParams, fmt.Sprintf("file exceeds %d byte read limit", maxReadBytes))
 	}
 
 	b, err := os.ReadFile(fullPath)
@@ -488,7 +532,7 @@ func (s *FileService) Read(root string, path string) (string, error) {
 }
 
 func (s *FileService) Write(root string, path string, content string, mode uint32) (int, error) {
-	fullPath, err := safeJoin(root, path)
+	fullPath, err := safeJoin(root, path, true)
 	if err != nil {
 		return 0, err
 	}
@@ -505,12 +549,13 @@ func (s *FileService) Write(root string, path string, content string, mode uint3
 	if err := os.WriteFile(fullPath, []byte(content), permission); err != nil {
 		return 0, err
 	}
+	s.InvalidateWorkspacePaths(root, []string{path})
 
 	return len(content), nil
 }
 
 func (s *FileService) Delete(root string, path string, recursive bool) error {
-	fullPath, err := safeJoin(root, path)
+	fullPath, err := safeJoin(root, path, true)
 	if err != nil {
 		return err
 	}
@@ -519,22 +564,24 @@ func (s *FileService) Delete(root string, path string, recursive bool) error {
 		if err := os.RemoveAll(fullPath); err != nil {
 			return err
 		}
+		s.InvalidateWorkspacePaths(root, []string{path})
 		return nil
 	}
 
 	if err := os.Remove(fullPath); err != nil {
 		return err
 	}
+	s.InvalidateWorkspacePaths(root, []string{path})
 
 	return nil
 }
 
 func (s *FileService) Move(root string, fromPath string, toPath string) error {
-	fromFullPath, err := safeJoin(root, fromPath)
+	fromFullPath, err := safeJoin(root, fromPath, false)
 	if err != nil {
 		return err
 	}
-	toFullPath, err := safeJoin(root, toPath)
+	toFullPath, err := safeJoin(root, toPath, true)
 	if err != nil {
 		return err
 	}
@@ -545,12 +592,13 @@ func (s *FileService) Move(root string, fromPath string, toPath string) error {
 	if err := os.Rename(fromFullPath, toFullPath); err != nil {
 		return err
 	}
+	s.InvalidateWorkspacePaths(root, []string{fromPath, toPath})
 
 	return nil
 }
 
 func (s *FileService) Mkdir(root string, path string, parents bool, mode uint32) error {
-	fullPath, err := safeJoin(root, path)
+	fullPath, err := safeJoin(root, path, true)
 	if err != nil {
 		return err
 	}
@@ -569,12 +617,13 @@ func (s *FileService) Mkdir(root string, path string, parents bool, mode uint32)
 			return err
 		}
 	}
+	s.InvalidateWorkspacePaths(root, []string{path})
 
 	return nil
 }
 
 func (s *FileService) Stat(root string, path string) (FileEntry, error) {
-	fullPath, err := safeJoin(root, path)
+	fullPath, err := safeJoin(root, path, false)
 	if err != nil {
 		return FileEntry{}, err
 	}
@@ -590,16 +639,21 @@ func (s *FileService) Stat(root string, path string) (FileEntry, error) {
 	}
 
 	return FileEntry{
-		Path:  filepath.ToSlash(relPath),
-		Name:  filepath.Base(fullPath),
-		IsDir: info.IsDir(),
-		Size:  info.Size(),
-		Mode:  uint32(info.Mode()),
+		Path:       filepath.ToSlash(relPath),
+		Name:       filepath.Base(fullPath),
+		IsDir:      info.IsDir(),
+		Size:       info.Size(),
+		Mode:       uint32(info.Mode()),
+		ModifiedAt: formatModifiedAt(info),
 	}, nil
 }
 
+func formatModifiedAt(info os.FileInfo) string {
+	return info.ModTime().UTC().Format(time.RFC3339)
+}
+
 func (s *FileService) ReadDiff(ctx context.Context, root string, path string) (GitDiffContent, error) {
-	fullPath, err := safeJoin(root, path)
+	fullPath, err := safeJoin(root, path, false)
 	if err != nil {
 		return GitDiffContent{}, err
 	}
@@ -622,7 +676,7 @@ func (s *FileService) ReadDiff(ctx context.Context, root string, path string) (G
 	return GitDiffContent{OldContent: oldContent, NewContent: string(newBytes)}, nil
 }
 
-func safeJoin(root string, p string) (string, error) {
+func safeJoin(root string, p string, allowMissingLeaf bool) (string, error) {
 	if p == "" {
 		return "", NewRPCError(rpcCodeInvalidParams, "path is required")
 	}
@@ -638,23 +692,78 @@ func safeJoin(root string, p string) (string, error) {
 	}
 
 	cleanRoot := filepath.Clean(root)
+	resolvedRoot, resolveRootErr := filepath.EvalSymlinks(cleanRoot)
+	if resolveRootErr != nil {
+		resolvedRoot = cleanRoot
+	}
 	rel, err := filepath.Rel(cleanRoot, full)
 	if err != nil {
 		return "", err
 	}
-
 	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return "", NewRPCError(rpcCodePathRestricted, "path escapes workspace root")
 	}
 
-	return full, nil
+	resolvedAncestor, err := resolveExistingAncestor(full, allowMissingLeaf)
+	if err != nil {
+		return "", err
+	}
+	if isWithinResolvedRoot(resolvedAncestor, resolvedRoot) {
+		return full, nil
+	}
+	if usesContextLinkPath(p) {
+		contextTarget, contextErr := resolveContextTarget(cleanRoot)
+		if contextErr == nil && isWithinResolvedRoot(resolvedAncestor, contextTarget) {
+			return full, nil
+		}
+	}
+	return "", NewRPCError(rpcCodePathRestricted, "path escapes workspace root")
 }
 
-func safeJoinOptional(root string, p string) (string, error) {
+func resolveExistingAncestor(fullPath string, allowMissingLeaf bool) (string, error) {
+	currentPath := fullPath
+	if allowMissingLeaf {
+		currentPath = filepath.Dir(fullPath)
+	}
+	for {
+		resolvedPath, err := filepath.EvalSymlinks(currentPath)
+		if err == nil {
+			return filepath.Clean(resolvedPath), nil
+		}
+		if !os.IsNotExist(err) {
+			return "", err
+		}
+		parentPath := filepath.Dir(currentPath)
+		if parentPath == currentPath {
+			return "", err
+		}
+		currentPath = parentPath
+	}
+}
+
+func resolveContextTarget(root string) (string, error) {
+	return filepath.EvalSymlinks(filepath.Join(root, ContextLinkName))
+}
+
+func isWithinResolvedRoot(path string, root string) bool {
+	cleanPath := filepath.Clean(path)
+	cleanRoot := filepath.Clean(root)
+	if cleanPath == cleanRoot {
+		return true
+	}
+	return strings.HasPrefix(cleanPath, cleanRoot+string(filepath.Separator))
+}
+
+func usesContextLinkPath(path string) bool {
+	parts := strings.Split(filepath.ToSlash(filepath.Clean(path)), "/")
+	return len(parts) > 0 && parts[0] == ContextLinkName
+}
+
+func safeJoinOptional(root string, p string, allowMissingLeaf bool) (string, error) {
 	if strings.TrimSpace(p) == "" {
 		return filepath.Clean(root), nil
 	}
-	return safeJoin(root, p)
+	return safeJoin(root, p, allowMissingLeaf)
 }
 
 func containsGitMetadataPath(path string) bool {

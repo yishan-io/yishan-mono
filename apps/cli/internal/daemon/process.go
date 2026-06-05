@@ -52,12 +52,7 @@ func Run(cfg RunConfig, statePath string) error {
 	// ── Phase 1: stale state guard ─────────────────────────────────────────
 	state, err := LoadState(statePath)
 	if err == nil {
-		if IsProcessRunning(state.PID) {
-			return fmt.Errorf("daemon already running at %s (pid %d)", net.JoinHostPort(state.Host, strconv.Itoa(state.Port)), state.PID)
-		}
-		if err := RemoveState(statePath); err != nil {
-			log.Warn().Err(err).Msg("failed to remove stale daemon state file")
-		}
+		return fmt.Errorf("daemon already running at %s (pid %d)", net.JoinHostPort(state.Host, strconv.Itoa(state.Port)), state.PID)
 	} else if !os.IsNotExist(err) {
 		return fmt.Errorf("load daemon state: %w", err)
 	}
@@ -210,13 +205,6 @@ func Stop(statePath string, timeout time.Duration) (RuntimeState, error) {
 			return RuntimeState{}, ErrNotRunning
 		}
 		return RuntimeState{}, fmt.Errorf("load daemon state: %w", err)
-	}
-
-	if !IsProcessRunning(state.PID) {
-		if err := RemoveState(statePath); err != nil {
-			log.Warn().Err(err).Msg("failed to remove stale daemon state file")
-		}
-		return RuntimeState{}, ErrNotRunning
 	}
 
 	process, err := os.FindProcess(state.PID)

@@ -352,6 +352,7 @@ export type DaemonFileEntry = {
   isIgnored?: boolean;
   size: number;
   mode: number;
+  modifiedAt: string;
 };
 
 export type FileListResponse = {
