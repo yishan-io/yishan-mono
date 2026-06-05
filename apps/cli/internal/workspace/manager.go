@@ -277,6 +277,14 @@ func (m *Manager) FileList(workspaceID string, path string, recursive bool) ([]F
 	return m.files.List(ws.Path, path, recursive)
 }
 
+func (m *Manager) FileSearch(workspaceID string, query string, limit int) ([]FileSearchResult, error) {
+	ws, err := m.getWorkspace(workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	return m.files.Search(ws.Path, query, limit)
+}
+
 func (m *Manager) FileStat(workspaceID string, path string) (FileEntry, error) {
 	ws, err := m.getWorkspace(workspaceID)
 	if err != nil {
@@ -331,6 +339,10 @@ func (m *Manager) FileReadDiff(ctx context.Context, workspaceID string, path str
 		return GitDiffContent{}, err
 	}
 	return m.files.ReadDiff(ctx, ws.Path, path)
+}
+
+func (m *Manager) InvalidateWorkspaceFileCacheByPath(worktreePath string, changedPaths []string) {
+	m.files.InvalidateWorkspacePaths(worktreePath, changedPaths)
 }
 
 func (m *Manager) GitStatus(ctx context.Context, workspaceID string) (GitStatusResponse, error) {

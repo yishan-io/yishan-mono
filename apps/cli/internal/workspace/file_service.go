@@ -23,10 +23,13 @@ type FileEntry struct {
 	Mode      uint32 `json:"mode"`
 }
 
-type FileService struct{}
+type FileService struct {
+	mu    sync.Mutex
+	cache fileCacheStore
+}
 
 func NewFileService() *FileService {
-	return &FileService{}
+	return &FileService{cache: newFileCacheStore()}
 }
 
 func (s *FileService) List(root string, path string, recursive bool) ([]FileEntry, error) {
@@ -48,6 +51,10 @@ func (s *FileService) List(root string, path string, recursive bool) ([]FileEntr
 			return nil, err
 		}
 		return withContextLinkEntries(root, path, entries)
+	}
+
+	if entries, ok := s.cachedDirectoryEntries(root, path); ok {
+		return entries, nil
 	}
 
 	entries, err := os.ReadDir(dir)
@@ -78,7 +85,27 @@ func (s *FileService) List(root string, path string, recursive bool) ([]FileEntr
 		})
 	}
 
-	return markIgnoredEntries(root, out), nil
+	out = markIgnoredEntries(root, out)
+	s.storeCachedDirectoryEntries(root, path, out)
+	return out, nil
+}
+
+func (s *FileService) cachedDirectoryEntries(root string, path string) ([]FileEntry, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cache.getDirectory(root, path)
+}
+
+func (s *FileService) storeCachedDirectoryEntries(root string, path string, entries []FileEntry) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.cache.storeDirectory(root, path, entries)
+}
+
+func (s *FileService) InvalidateWorkspacePaths(root string, paths []string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.cache.invalidatePaths(root, paths)
 }
 
 func (s *FileService) walkFiles(root string, dir string) ([]FileEntry, error) {
@@ -505,6 +532,7 @@ func (s *FileService) Write(root string, path string, content string, mode uint3
 	if err := os.WriteFile(fullPath, []byte(content), permission); err != nil {
 		return 0, err
 	}
+	s.InvalidateWorkspacePaths(root, []string{path})
 
 	return len(content), nil
 }
@@ -519,12 +547,14 @@ func (s *FileService) Delete(root string, path string, recursive bool) error {
 		if err := os.RemoveAll(fullPath); err != nil {
 			return err
 		}
+		s.InvalidateWorkspacePaths(root, []string{path})
 		return nil
 	}
 
 	if err := os.Remove(fullPath); err != nil {
 		return err
 	}
+	s.InvalidateWorkspacePaths(root, []string{path})
 
 	return nil
 }
@@ -545,6 +575,7 @@ func (s *FileService) Move(root string, fromPath string, toPath string) error {
 	if err := os.Rename(fromFullPath, toFullPath); err != nil {
 		return err
 	}
+	s.InvalidateWorkspacePaths(root, []string{fromPath, toPath})
 
 	return nil
 }
@@ -569,6 +600,7 @@ func (s *FileService) Mkdir(root string, path string, parents bool, mode uint32)
 			return err
 		}
 	}
+	s.InvalidateWorkspacePaths(root, []string{path})
 
 	return nil
 }

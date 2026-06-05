@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"yishan/apps/cli/internal/workspace"
 )
 
 func initGitRepo(t *testing.T, root string) {
@@ -596,5 +598,70 @@ func TestWorkspaceWatchers_ReusesSharedContextWatchers(t *testing.T) {
 	watchers.Unwatch(workspaceTwo)
 	if len(watchers.contexts) != 0 {
 		t.Fatalf("expected shared context watchers to be cleaned up, got %d", len(watchers.contexts))
+	}
+}
+
+func TestJSONRPCHandler_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T) {
+	root := evalSymlinks(t, t.TempDir())
+	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "a.txt"), []byte("a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	manager := workspace.NewManager()
+	openedWorkspace, err := manager.Open(workspace.OpenRequest{ID: "ws-1", Path: root})
+	if err != nil {
+		t.Fatalf("open workspace: %v", err)
+	}
+	handler := NewJSONRPCHandler(manager, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"))
+	defer handler.Shutdown()
+
+	entries, err := manager.FileList(openedWorkspace.ID, "", false)
+	if err != nil {
+		t.Fatalf("prime cache: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Path != "a.txt" {
+		t.Fatalf("unexpected initial entries: %+v", entries)
+	}
+
+	if err := os.WriteFile(filepath.Join(root, "b.txt"), []byte("b"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	handler.events.Publish(frontendEvent{
+		Topic: "workspaceFilesChanged",
+		Payload: map[string]any{
+			"workspaceWorktreePath": root,
+			"changedRelativePaths":  []string{"b.txt"},
+		},
+	})
+	time.Sleep(100 * time.Millisecond)
+
+	entries, err = manager.FileList(openedWorkspace.ID, "", false)
+	if err != nil {
+		t.Fatalf("list after invalidation event: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("expected refreshed entries after invalidation event, got %+v", entries)
+	}
+}
+
+func TestWorktreeWatcher_HasCachedIgnoredAncestor(t *testing.T) {
+	watcher := &worktreeWatcher{
+		ignoredPaths: map[string]bool{
+			"ignored":             true,
+			"ignored/known-false": false,
+		},
+	}
+
+	if !watcher.hasCachedIgnoredAncestor("ignored/nested/file.txt") {
+		t.Fatal("expected ignored ancestor to be detected")
+	}
+	if watcher.hasCachedIgnoredAncestor("tracked/nested/file.txt") {
+		t.Fatal("did not expect unrelated path to have ignored ancestor")
+	}
+	if watcher.hasCachedIgnoredAncestor("ignored") {
+		t.Fatal("did not expect exact path lookup to count as ancestor")
 	}
 }

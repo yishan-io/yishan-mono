@@ -33,6 +33,12 @@ type fileListParams struct {
 	Recursive   bool   `json:"recursive,omitempty"`
 }
 
+type fileSearchParams struct {
+	WorkspaceID string `json:"workspaceId"`
+	Query       string `json:"query"`
+	Limit       int    `json:"limit,omitempty"`
+}
+
 type fileReadParams struct {
 	WorkspaceID string `json:"workspaceId"`
 	Path        string `json:"path"`

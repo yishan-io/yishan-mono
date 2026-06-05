@@ -23,6 +23,7 @@ const (
 
 	MethodFileRead   = "file.read"
 	MethodFileList   = "file.list"
+	MethodFileSearch = "file.search"
 	MethodFileStat   = "file.stat"
 	MethodFileWrite  = "file.write"
 	MethodFileDelete = "file.delete"

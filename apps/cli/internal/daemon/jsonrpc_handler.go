@@ -20,20 +20,22 @@ const (
 )
 
 type JSONRPCHandler struct {
-	upgrader     websocket.Upgrader
-	manager      *workspace.Manager
-	nodeID       string
-	logFilePath  string
-	cleanupStore *workspaceCleanupStore
-	events       *eventHub
-	watchers     *workspaceWatchers
-	prTracker    *workspacePRTracker
-	tokenUsage   *tokenUsageCollector
+	upgrader       websocket.Upgrader
+	manager        *workspace.Manager
+	nodeID         string
+	logFilePath    string
+	cleanupStore   *workspaceCleanupStore
+	events         *eventHub
+	watchers       *workspaceWatchers
+	prTracker      *workspacePRTracker
+	tokenUsage     *tokenUsageCollector
+	fileCacheSubID uint64
 }
 
 func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, configPath string) *JSONRPCHandler {
 	events := newEventHub()
 	prTracker := newWorkspacePRTracker(manager, events.Publish)
+	fileCacheSubID, fileCacheEvents := events.Subscribe()
 	collector, err := newTokenUsageCollector(manager, configPath)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to initialize token usage collector")
@@ -46,27 +48,49 @@ func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath st
 			},
 		})
 	})
-	return &JSONRPCHandler{
+	handler := &JSONRPCHandler{
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(_ *http.Request) bool { return true },
 		},
-		manager:      manager,
-		nodeID:       nodeID,
-		logFilePath:  logFilePath,
-		cleanupStore: cleanupStore,
-		events:       events,
-		watchers:     newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
-		prTracker:    prTracker,
-		tokenUsage:   collector,
+		manager:        manager,
+		nodeID:         nodeID,
+		logFilePath:    logFilePath,
+		cleanupStore:   cleanupStore,
+		events:         events,
+		watchers:       newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
+		prTracker:      prTracker,
+		tokenUsage:     collector,
+		fileCacheSubID: fileCacheSubID,
 	}
+	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)
+	return handler
 }
 
 // Shutdown stops background goroutines owned by the handler (PR tracker poll loop).
 // It must be called when the daemon server shuts down.
 func (h *JSONRPCHandler) Shutdown() {
+	h.events.Unsubscribe(h.fileCacheSubID)
 	h.prTracker.Stop()
 	if h.tokenUsage != nil {
 		h.tokenUsage.Close()
+	}
+}
+
+func (h *JSONRPCHandler) consumeFileCacheInvalidationEvents(events <-chan frontendEvent) {
+	for event := range events {
+		if event.Topic != "workspaceFilesChanged" {
+			continue
+		}
+		payload, ok := event.Payload.(map[string]any)
+		if !ok {
+			continue
+		}
+		worktreePath, _ := payload["workspaceWorktreePath"].(string)
+		changedPaths, _ := payload["changedRelativePaths"].([]string)
+		if worktreePath == "" || len(changedPaths) == 0 {
+			continue
+		}
+		h.manager.InvalidateWorkspaceFileCacheByPath(worktreePath, changedPaths)
 	}
 }
 

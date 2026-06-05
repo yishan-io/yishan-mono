@@ -21,6 +21,12 @@ func (h *JSONRPCHandler) dispatchFile(ctx context.Context, method string, params
 			return nil, err
 		}
 		return h.manager.FileList(req.WorkspaceID, req.Path, req.Recursive)
+	case MethodFileSearch:
+		var req fileSearchParams
+		if err := decodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.manager.FileSearch(req.WorkspaceID, req.Query, req.Limit)
 	case MethodFileStat:
 		var req fileReadParams
 		if err := decodeParams(params, &req); err != nil {

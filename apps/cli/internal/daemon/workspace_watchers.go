@@ -401,6 +401,11 @@ func (w *worktreeWatcher) isGitIgnoredPath(path string) bool {
 		w.mu.Unlock()
 		return ignored
 	}
+	if w.hasCachedIgnoredAncestor(relPath) {
+		w.ignoredPaths[relPath] = true
+		w.mu.Unlock()
+		return true
+	}
 	w.mu.Unlock()
 
 	ignored := w.gitCheckIgnore(relPath)
@@ -409,6 +414,20 @@ func (w *worktreeWatcher) isGitIgnoredPath(path string) bool {
 	w.ignoredPaths[relPath] = ignored
 	w.mu.Unlock()
 	return ignored
+}
+
+func (w *worktreeWatcher) hasCachedIgnoredAncestor(relativePath string) bool {
+	parentPath := relativePath
+	for {
+		separatorIndex := strings.LastIndex(parentPath, "/")
+		if separatorIndex <= 0 {
+			return false
+		}
+		parentPath = parentPath[:separatorIndex]
+		if w.ignoredPaths[parentPath] {
+			return true
+		}
+	}
 }
 
 func (w *worktreeWatcher) isGitIgnoreUsable() bool {
