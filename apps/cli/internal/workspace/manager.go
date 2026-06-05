@@ -88,6 +88,10 @@ func (m *Manager) Open(req OpenRequest) (Workspace, error) {
 	if err != nil {
 		return Workspace{}, err
 	}
+	resolvedPath, err := filepath.EvalSymlinks(absPath)
+	if err == nil {
+		absPath = resolvedPath
+	}
 
 	info, err := os.Stat(absPath)
 	if err != nil {
@@ -241,6 +245,10 @@ func (m *Manager) WorkspaceHandleByPath(path string) (WorkspaceHandle, error) {
 	resolvedPath, err := filepath.Abs(path)
 	if err != nil {
 		return WorkspaceHandle{}, err
+	}
+	canonicalPath, err := filepath.EvalSymlinks(resolvedPath)
+	if err == nil {
+		resolvedPath = canonicalPath
 	}
 
 	m.mu.RLock()

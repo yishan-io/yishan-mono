@@ -6,7 +6,10 @@ import (
 )
 
 func TestManagerWorkspaceHandleByPath_ReturnsWorkspaceHandle(t *testing.T) {
-	root := t.TempDir()
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatalf("eval symlinks: %v", err)
+	}
 	manager := NewManager()
 	openedWorkspace, err := manager.Open(OpenRequest{ID: "ws-1", Path: root})
 	if err != nil {
