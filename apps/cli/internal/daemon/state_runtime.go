@@ -47,6 +47,12 @@ func LoadState(path string) (RuntimeState, error) {
 	if state.PID <= 0 || strings.TrimSpace(state.Host) == "" || state.Port <= 0 {
 		return RuntimeState{}, fmt.Errorf("invalid daemon state file %q", path)
 	}
+	if !IsProcessRunning(state.PID) {
+		if err := RemoveState(path); err != nil {
+			return RuntimeState{}, fmt.Errorf("remove stale daemon state file %q: %w", path, err)
+		}
+		return RuntimeState{}, &os.PathError{Op: "open", Path: path, Err: os.ErrNotExist}
+	}
 
 	return state, nil
 }
