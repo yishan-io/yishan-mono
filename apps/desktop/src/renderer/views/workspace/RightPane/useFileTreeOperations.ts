@@ -15,7 +15,6 @@ import {
   mapWorkspaceEntryPaths,
 } from "./fileTreeHelpers";
 import {
-  hasVisibleImmediateChildren,
   isMissingWorkspacePathError,
   mergeWorkspaceEntries,
 } from "./fileTreeOperationHelpers";
@@ -331,20 +330,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
           recursive: false,
         });
 
-        if (hasVisibleImmediateChildren(normalizedPath, response.files)) {
-          const nextEntries = mergeWorkspaceEntries(repoEntriesRef.current, response.files);
-          repoEntriesRef.current = nextEntries;
-          setRepoEntries(nextEntries);
-          return;
-        }
-
-        // Shallow response had no visible children — fall back to recursive load.
-        const recursiveResponse = await listFiles({
-          workspaceWorktreePath: selectedWorkspaceWorktreePath,
-          relativePath: normalizedPath,
-          recursive: true,
-        });
-        const nextEntries = mergeWorkspaceEntries(repoEntriesRef.current, recursiveResponse.files);
+        const nextEntries = mergeWorkspaceEntries(repoEntriesRef.current, response.files);
         repoEntriesRef.current = nextEntries;
         setRepoEntries(nextEntries);
       } catch (error) {
