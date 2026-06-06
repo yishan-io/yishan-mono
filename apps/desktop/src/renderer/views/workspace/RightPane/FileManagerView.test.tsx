@@ -1061,7 +1061,7 @@ describe("FileManagerView file loading", () => {
     );
   });
 
-  it("falls back to recursive load when directory immediate children are ignored", async () => {
+  it("loads shallow directory contents when directory immediate children are ignored", async () => {
     mocks.listFiles.mockImplementation(async (input: {
       workspaceWorktreePath: string;
       relativePath?: string;
@@ -1105,22 +1105,11 @@ describe("FileManagerView file loading", () => {
         relativePath: "src",
         recursive: false,
       });
-      expect(mocks.listFiles).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
-        relativePath: "src",
-        recursive: true,
-      });
-      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
-        "src/",
-        "src/.cache/",
-        "src/.cache/nested/",
-        "src/.cache/nested/ignore.log",
-        "src/.cache/nested/keep.ts",
-      ]);
+      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual(["src/"]);
     });
   });
 
-  it("falls back to recursive load when shallow response only echoes the directory", async () => {
+  it("keeps collapsed directory when shallow response only echoes the directory", async () => {
     mocks.listFiles.mockImplementation(async (input: {
       workspaceWorktreePath: string;
       relativePath?: string;
@@ -1159,16 +1148,7 @@ describe("FileManagerView file loading", () => {
         relativePath: ".opencode",
         recursive: false,
       });
-      expect(mocks.listFiles).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
-        relativePath: ".opencode",
-        recursive: true,
-      });
-      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
-        ".opencode/",
-        ".opencode/agents/",
-        ".opencode/agents/main.md",
-      ]);
+      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([".opencode/"]);
     });
   });
 });
