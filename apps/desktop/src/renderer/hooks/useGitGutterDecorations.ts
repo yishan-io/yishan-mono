@@ -8,6 +8,8 @@ import { readDiff } from "../commands/gitCommands";
 const GUTTER_ADDED_CLASS = "git-gutter-added";
 const GUTTER_MODIFIED_CLASS = "git-gutter-modified";
 const GUTTER_DELETED_CLASS = "git-gutter-deleted";
+const GIT_GUTTER_DIFF_DEBOUNCE_MS = 150;
+const MAX_LIVE_GUTTER_DIFF_LINES = 5000;
 
 export type UseGitGutterDecorationsInput = {
   /** Monaco editor instance to decorate. */
@@ -34,6 +36,7 @@ export function useGitGutterDecorations({
 }: UseGitGutterDecorationsInput): void {
   const decorationsRef = useRef<monaco.editor.IEditorDecorationsCollection | null>(null);
   const [headContent, setHeadContent] = useState<string | null>(null);
+  const [shouldSkipDecorations, setShouldSkipDecorations] = useState(false);
   const pendingRequestRef = useRef(0);
   const changesRef = useRef<GitLineChange[]>([]);
   const viewZoneRef = useRef<{ zoneId: string; afterLineNumber: number } | null>(null);
@@ -43,6 +46,7 @@ export function useGitGutterDecorations({
   useEffect(() => {
     if (!worktreePath || !path) {
       setHeadContent(null);
+      setShouldSkipDecorations(false);
       return;
     }
 
@@ -51,10 +55,12 @@ export function useGitGutterDecorations({
     readDiff({ workspaceWorktreePath: worktreePath, relativePath: path })
       .then((result) => {
         if (pendingRequestRef.current !== requestId) return;
-        setHeadContent(result.oldContent);
+        setShouldSkipDecorations(Boolean(result.shouldSkipDecorations));
+        setHeadContent(result.shouldSkipDecorations ? null : result.oldContent);
       })
       .catch(() => {
         if (pendingRequestRef.current !== requestId) return;
+        setShouldSkipDecorations(false);
         setHeadContent(null);
       });
 
@@ -63,11 +69,13 @@ export function useGitGutterDecorations({
     };
   }, [path, worktreePath]);
 
+  const shouldThrottleLiveDiff = currentContent.split("\n").length > MAX_LIVE_GUTTER_DIFF_LINES;
+
   // Compute and apply decorations whenever content or HEAD changes.
   useEffect(() => {
     if (!editor) return;
 
-    if (headContent === null) {
+    if (headContent === null || shouldSkipDecorations) {
       changesRef.current = [];
       if (decorationsRef.current) {
         decorationsRef.current.clear();
@@ -75,16 +83,27 @@ export function useGitGutterDecorations({
       return;
     }
 
-    const changes = computeGitLineChanges(headContent, currentContent);
-    changesRef.current = changes;
-    const decorations = changesToDecorations(changes);
+    const applyChanges = () => {
+      const changes = computeGitLineChanges(headContent, currentContent);
+      changesRef.current = changes;
+      const decorations = changesToDecorations(changes);
 
-    if (decorationsRef.current) {
-      decorationsRef.current.set(decorations);
-    } else {
-      decorationsRef.current = editor.createDecorationsCollection(decorations);
+      if (decorationsRef.current) {
+        decorationsRef.current.set(decorations);
+      } else {
+        decorationsRef.current = editor.createDecorationsCollection(decorations);
+      }
+    };
+
+    if (shouldThrottleLiveDiff) {
+      const timeout = window.setTimeout(applyChanges, GIT_GUTTER_DIFF_DEBOUNCE_MS);
+      return () => {
+        window.clearTimeout(timeout);
+      };
     }
-  }, [editor, currentContent, headContent]);
+
+    applyChanges();
+  }, [editor, currentContent, headContent, shouldSkipDecorations, shouldThrottleLiveDiff]);
 
   // Register gutter click handler for showing inline diff.
   useEffect(() => {

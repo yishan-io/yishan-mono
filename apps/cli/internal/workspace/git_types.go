@@ -89,8 +89,9 @@ type GitBranchDiffSummary struct {
 }
 
 type GitDiffContent struct {
-	OldContent string `json:"oldContent"`
-	NewContent string `json:"newContent"`
+	OldContent            string `json:"oldContent"`
+	NewContent            string `json:"newContent"`
+	ShouldSkipDecorations bool   `json:"shouldSkipDecorations,omitempty"`
 }
 
 type GitBranchList struct {

@@ -392,6 +392,7 @@ export type FileMutationOkResponse = {
 export type FileDiffResponse = {
   oldContent: string;
   newContent: string;
+  shouldSkipDecorations?: boolean;
 };
 
 export type GitChange = {
