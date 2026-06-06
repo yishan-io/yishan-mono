@@ -59,7 +59,17 @@ export function readOptionalStringArray(input: unknown): string[] | undefined {
 }
 
 export function normalizeWorktreePath(worktreePath: string): string {
-  return worktreePath.trim();
+  const trimmedPath = worktreePath.trim();
+  if (!trimmedPath) {
+    return "";
+  }
+
+  const slashNormalizedPath = trimmedPath.replace(/\\/g, "/");
+  if (slashNormalizedPath === "/") {
+    return "/";
+  }
+
+  return slashNormalizedPath.replace(/\/+$/, "");
 }
 
 export function buildRequest(method: string, params?: unknown): Rpc.JsonRpcRequest {

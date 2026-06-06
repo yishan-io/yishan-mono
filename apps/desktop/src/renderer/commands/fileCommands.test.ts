@@ -8,6 +8,7 @@ import {
   importEntries,
   importFilePayloads,
   listFiles,
+  listFilesBatch,
   openEntryInExternalApp,
   pasteEntries,
   readExternalClipboardSourcePaths,
@@ -23,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   importEntries: vi.fn(),
   importFilePayloads: vi.fn(),
   listFiles: vi.fn(),
+  listFilesBatch: vi.fn(),
   openEntryInExternalApp: vi.fn(),
   pasteEntries: vi.fn(),
   readExternalClipboardSourcePaths: vi.fn(),
@@ -40,6 +42,7 @@ vi.mock("../rpc/rpcTransport", () => ({
       importEntries: mocks.importEntries,
       importFilePayloads: mocks.importFilePayloads,
       listFiles: mocks.listFiles,
+      listFilesBatch: mocks.listFilesBatch,
       openEntryInExternalApp: mocks.openEntryInExternalApp,
       pasteEntries: mocks.pasteEntries,
       readExternalClipboardSourcePaths: mocks.readExternalClipboardSourcePaths,
@@ -57,6 +60,10 @@ vi.mock("../rpc/rpcTransport", () => ({
 describe("fileCommands", () => {
   it("forwards file command requests to file service", async () => {
     await listFiles({ workspaceWorktreePath: "/tmp/repo", relativePath: "src", recursive: false });
+    await listFilesBatch({
+      workspaceWorktreePath: "/tmp/repo/",
+      requests: [{ relativePath: "src", recursive: false }],
+    });
     await readFile({ workspaceWorktreePath: "/tmp/repo", relativePath: "a.ts" });
     await writeFile({ workspaceWorktreePath: "/tmp/repo", relativePath: "a.ts", content: "x" });
     await createFile({ workspaceWorktreePath: "/tmp/repo", relativePath: "b.ts", content: "y" });
@@ -91,6 +98,10 @@ describe("fileCommands", () => {
       workspaceWorktreePath: "/tmp/repo",
       relativePath: "src",
       recursive: false,
+    });
+    expect(mocks.listFilesBatch).toHaveBeenCalledWith({
+      workspaceWorktreePath: "/tmp/repo/",
+      requests: [{ relativePath: "src", recursive: false }],
     });
     expect(mocks.readFile).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo", relativePath: "a.ts" });
     expect(mocks.writeFile).toHaveBeenCalledWith({
