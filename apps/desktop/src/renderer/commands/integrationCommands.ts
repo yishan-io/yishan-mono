@@ -13,8 +13,8 @@ export async function checkGitHubConnectionStatus(forceRefresh = false): Promise
   const payload = await client.integration.githubStatus(forceRefresh ? { refresh: true } : undefined);
   return {
     installed: Boolean(payload.installed),
-    loggedIn: Boolean(payload.authenticated),
-    username: typeof payload.account === "string" ? payload.account.trim() || undefined : undefined,
+    loggedIn: Boolean(payload.loggedIn),
+    username: typeof payload.username === "string" ? payload.username.trim() || undefined : undefined,
     statusDetail: typeof payload.statusDetail === "string" ? payload.statusDetail : "Unknown status",
   };
 }
