@@ -47,6 +47,19 @@ jobs:
           echo "version=$version" >>"$GITHUB_OUTPUT"
           echo "Resolved version: $version"
 
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          tag="v${version}"
+          # Create the release up-front so matrix jobs can upload to it.
+          gh release create "$tag" \
+            --title "Yishan v${version}" \
+            --draft=${{ inputs.draft || 'true' }} \
+            --notes "Release v${version}" || \
+            echo "Release $tag already exists — skipping creation."
+
   cli:
     needs: resolve-version
     strategy:
@@ -155,11 +168,7 @@ jobs:
           version="${{ needs.resolve-version.outputs.version }}"
           tag="v${version}"
           # shellcheck disable=SC2086
-          gh release upload "$tag" $ARCHIVES --clobber || \
-            gh release create "$tag" $ARCHIVES \
-              --title "Yishan v${version}" \
-              --draft=${{ inputs.draft || 'true' }} \
-              --notes "Release v${version}"
+          gh release upload "$tag" $ARCHIVES --clobber
           # Upload combined checksums fragment
           gh release upload "$tag" "$TMP_DIR/checksums.txt" --clobber || true
 
@@ -172,7 +181,6 @@ jobs:
           - os: macos-latest
             platform: mac
             goos: darwin
-            goarch: arm64
           - os: ubuntu-latest
             platform: linux
             goos: linux
@@ -203,16 +211,31 @@ jobs:
         run: |
           set -euo pipefail
           version="${{ needs.resolve-version.outputs.version }}"
-          archive="yishan-cli_${version}_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz"
           tag="v${version}"
+          goos="${{ matrix.goos }}"
 
           mkdir -p apps/desktop/dist/resources
 
-          # Download the CLI archive from the GitHub release created by GoReleaser
-          gh release download "$tag" --pattern "$archive" --dir /tmp
-          tar -xzf "/tmp/$archive" -C /tmp
-          cp /tmp/yishan apps/desktop/dist/resources/yishan
-          chmod +x apps/desktop/dist/resources/yishan
+          if [[ "$goos" == "darwin" ]]; then
+            # macOS: download both arm64 and amd64 CLI binaries so the
+            # beforePack hook can place the correct one per arch build.
+            for arch in arm64 amd64; do
+              archive="yishan-cli_${version}_darwin_${arch}.tar.gz"
+              gh release download "$tag" --pattern "$archive" --dir /tmp
+              tar -xzf "/tmp/$archive" -C /tmp
+              cp /tmp/yishan "apps/desktop/dist/resources/yishan-${arch}"
+              chmod +x "apps/desktop/dist/resources/yishan-${arch}"
+              rm /tmp/yishan
+            done
+            # Default to arm64 for initial resource copy (beforePack overrides)
+            cp apps/desktop/dist/resources/yishan-arm64 apps/desktop/dist/resources/yishan
+          else
+            archive="yishan-cli_${version}_${goos}_${{ matrix.goarch }}.tar.gz"
+            gh release download "$tag" --pattern "$archive" --dir /tmp
+            tar -xzf "/tmp/$archive" -C /tmp
+            cp /tmp/yishan apps/desktop/dist/resources/yishan
+            chmod +x apps/desktop/dist/resources/yishan
+          fi
 
       - name: Build renderer and electron
         working-directory: apps/desktop
