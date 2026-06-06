@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	"yishan/apps/cli/internal/output"
-	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
 var healthCmd = &cobra.Command{
@@ -13,7 +12,7 @@ var healthCmd = &cobra.Command{
 	Example: `  yishan health
   yishan health --output json`,
 	RunE: func(_ *cobra.Command, _ []string) error {
-		response, err := cliruntime.APIClient().Health()
+		response, err := apiClient.Health()
 		if err != nil {
 			return err
 		}
@@ -30,7 +29,7 @@ var whoamiCmd = &cobra.Command{
 	Example: `  yishan whoami
   yishan whoami --output json`,
 	RunE: func(_ *cobra.Command, _ []string) error {
-		response, err := cliruntime.APIClient().WhoAmI()
+		response, err := apiClient.WhoAmI()
 		if err != nil {
 			return err
 		}

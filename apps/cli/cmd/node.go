@@ -6,7 +6,6 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"yishan/apps/cli/internal/output"
-	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
 var nodeCmd = &cobra.Command{
@@ -36,7 +35,7 @@ var nodeListCmd = &cobra.Command{
 			return err
 		}
 
-		response, err := cliruntime.APIClient().ListNodes(orgID)
+		response, err := apiClient.ListNodes(orgID)
 		if err != nil {
 			return err
 		}
@@ -60,7 +59,7 @@ var nodeDeleteCmd = &cobra.Command{
 			return err
 		}
 
-		response, err := cliruntime.APIClient().DeleteNode(orgID, nodeID)
+		response, err := apiClient.DeleteNode(orgID, nodeID)
 		if err != nil {
 			return err
 		}
@@ -125,7 +124,7 @@ Permission rules:
 			}
 		}
 
-		response, err := cliruntime.APIClient().UpdateNodeScope(orgID, nodeID, scope)
+		response, err := apiClient.UpdateNodeScope(orgID, nodeID, scope)
 		if err != nil {
 			return err
 		}

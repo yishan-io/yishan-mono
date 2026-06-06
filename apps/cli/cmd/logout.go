@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/viper"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/output"
-	cliruntime "yishan/apps/cli/internal/runtime"
 )
+
 
 var logoutCmd = &cobra.Command{
 	Use:   "logout",
@@ -24,7 +24,7 @@ sign out of the current shell.`,
 	Example: `  yishan logout`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		return executeLogout(func(refreshToken string) error {
-			_, err := cliruntime.APIClient().RevokeToken(refreshToken)
+			_, err := apiClient.RevokeToken(refreshToken)
 			return err
 		}, cmd.ErrOrStderr())
 	},

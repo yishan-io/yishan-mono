@@ -10,7 +10,6 @@ import (
 	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/output"
 	"yishan/apps/cli/internal/provision"
-	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/spf13/cobra"
@@ -44,21 +43,21 @@ var workspaceListCmd = &cobra.Command{
 		response := api.ListWorkspacesResponse{Workspaces: []api.Workspace{}}
 		projectNames := map[string]string{}
 		if strings.TrimSpace(projectID) != "" {
-			response, err = cliruntime.APIClient().ListWorkspaces(orgID, projectID)
+			response, err = apiClient.ListWorkspaces(orgID, projectID)
 			if err != nil {
 				return err
 			}
 			return output.PrintRenderData(renderWorkspacesList(response, showAll || verbose, false, projectNames))
 		}
 
-		projectsResponse, err := cliruntime.APIClient().ListProjects(orgID)
+		projectsResponse, err := apiClient.ListProjects(orgID)
 		if err != nil {
 			return err
 		}
 
 		for _, project := range projectsResponse.Projects {
 			projectNames[project.ID] = project.Name
-			projectWorkspaces, projectErr := cliruntime.APIClient().ListWorkspaces(orgID, project.ID)
+			projectWorkspaces, projectErr := apiClient.ListWorkspaces(orgID, project.ID)
 			if projectErr != nil {
 				return projectErr
 			}
@@ -89,7 +88,7 @@ var workspaceFindCmd = &cobra.Command{
 			return err
 		}
 
-		response, err := cliruntime.APIClient().ListWorkspaces(orgID, projectID)
+		response, err := apiClient.ListWorkspaces(orgID, projectID)
 		if err != nil {
 			return formatWorkspaceLifecycleError("get", err)
 		}
@@ -161,7 +160,7 @@ Examples:
 			return err
 		}
 
-		provisioner := provision.NewRuntimeProvisioner(cliruntime.APIClient(), provision.RuntimeConfig{
+		provisioner := provision.NewRuntimeProvisioner(apiClient, provision.RuntimeConfig{
 			ConfigPath: appConfig.ConfigPath,
 		})
 
@@ -201,7 +200,7 @@ var workspaceCloseCmd = &cobra.Command{
 			return err
 		}
 
-		workspaces, err := cliruntime.APIClient().ListWorkspaces(orgID, projectID)
+		workspaces, err := apiClient.ListWorkspaces(orgID, projectID)
 		if err != nil {
 			return formatWorkspaceLifecycleError("close", err)
 		}
@@ -218,7 +217,7 @@ var workspaceCloseCmd = &cobra.Command{
 			return fmt.Errorf("workspace %s was not found in project %s; run `yishan workspace list --project-id %s` to find a valid id", workspaceID, projectID, projectID)
 		}
 
-		response, err := cliruntime.APIClient().CloseWorkspace(orgID, projectID, api.CloseWorkspaceInput{
+		response, err := apiClient.CloseWorkspace(orgID, projectID, api.CloseWorkspaceInput{
 			WorkspaceID: selected.ID,
 		})
 		if err != nil {

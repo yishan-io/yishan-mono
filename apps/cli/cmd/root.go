@@ -11,7 +11,7 @@ import (
 	"yishan/apps/cli/internal/daemon"
 	"yishan/apps/cli/internal/logx"
 	"yishan/apps/cli/internal/output"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	runtime "yishan/apps/cli/internal/runtime"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -20,6 +20,7 @@ import (
 
 var cfgFile string
 var appConfig config.Config
+var apiClient *api.Client
 
 var rootCmd = &cobra.Command{
 	Use:   "yishan",
@@ -86,7 +87,7 @@ func initConfig() {
 		cobra.CheckErr(err)
 	}
 	appConfig = loaded
-	cliruntime.Configure(&appConfig)
+	apiClient = api.NewRuntimeClient(&appConfig)
 
 	if err := configureLogger(appConfig.LogLevel, appConfig.LogFormat); err != nil {
 		cobra.CheckErr(err)
@@ -99,6 +100,10 @@ func initConfig() {
 	if used := viper.ConfigFileUsed(); used != "" {
 		log.Debug().Str("file", used).Msg("using config file")
 	}
+}
+
+func apiClientRuntime() *runtime.Runtime {
+	return runtime.New(&appConfig)
 }
 
 // activeLogFileWriter holds the current daemon log file writer so it can be

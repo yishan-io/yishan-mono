@@ -40,7 +40,7 @@ type RunConfig struct {
 
 func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
 	if runtime == nil {
-		runtime = cliruntime.Default()
+		return fmt.Errorf("runtime is required")
 	}
 
 	// ── Phase 1: stale state guard ─────────────────────────────────────────
