@@ -70,14 +70,17 @@ export function useWorkspaceInfoHover({
       return;
     }
 
+    const cachedBranch = workspaceStore.getState().currentBranchByWorkspaceId[hoveredWorkspaceId] ?? "";
+    if (cachedBranch) {
+      return;
+    }
+
     const workspace = workspaces.find((ws) => ws.id === hoveredWorkspaceId);
     if (!workspace?.worktreePath?.trim()) {
       return;
     }
 
-    if (workspaceStore.getState().currentBranchByWorkspaceId[hoveredWorkspaceId]) {
-      return;
-    }
+    workspaceStore.getState().setWorkspaceCurrentBranch(hoveredWorkspaceId, "");
 
     let cancelled = false;
     inspectGitRepository({ workspaceId: hoveredWorkspaceId })
