@@ -290,3 +290,15 @@ func (m *Manager) SetWorkspacePullRequest(workspaceID string, pr *WorkspacePullR
 func (m *Manager) InvalidateWorkspaceFileCacheByPath(worktreePath string, changedPaths []string) {
 	m.files.InvalidateWorkspacePaths(worktreePath, changedPaths)
 }
+
+func (m *Manager) GitInspect(ctx context.Context, path string) (GitInspectResult, error) {
+	return m.gits.Inspect(ctx, path)
+}
+
+func (m *Manager) SyncRepoSource(ctx context.Context, repoPath string) error {
+	return updateGitRepo(ctx, repoPath)
+}
+
+func (m *Manager) Terminals() *terminal.Manager {
+	return m.terminals
+}

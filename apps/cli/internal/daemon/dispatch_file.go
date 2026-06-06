@@ -14,7 +14,11 @@ func (h *JSONRPCHandler) dispatchFile(ctx context.Context, method string, params
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		content, err := h.manager.FileRead(req.WorkspaceID, req.Path)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		content, err := handle.FileRead(req.Path)
 		if err != nil {
 			return nil, err
 		}
@@ -24,31 +28,51 @@ func (h *JSONRPCHandler) dispatchFile(ctx context.Context, method string, params
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.FileList(req.WorkspaceID, req.Path, req.Recursive)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.FileList(req.Path, req.Recursive)
 	case MethodFileSearch:
 		var req fileSearchParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.FileSearch(req.WorkspaceID, req.Query, req.Limit)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.FileSearch(req.Query, req.Limit)
 	case MethodFileStat:
 		var req fileReadParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.FileStat(req.WorkspaceID, req.Path)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.FileStat(req.Path)
 	case MethodFileWrite:
 		var req fileWriteParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.FileWrite(req.WorkspaceID, req.Path, req.Content, req.Mode)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.FileWrite(req.Path, req.Content, req.Mode)
 	case MethodFileDelete:
 		var req fileDeleteParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		if err := h.manager.FileDelete(req.WorkspaceID, req.Path, req.Recursive); err != nil {
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		if err := handle.FileDelete(req.Path, req.Recursive); err != nil {
 			return nil, err
 		}
 		return map[string]bool{"deleted": true}, nil
@@ -57,7 +81,11 @@ func (h *JSONRPCHandler) dispatchFile(ctx context.Context, method string, params
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		if err := h.manager.FileMove(req.WorkspaceID, req.FromPath, req.ToPath); err != nil {
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		if err := handle.FileMove(req.FromPath, req.ToPath); err != nil {
 			return nil, err
 		}
 		return map[string]bool{"moved": true}, nil
@@ -66,7 +94,11 @@ func (h *JSONRPCHandler) dispatchFile(ctx context.Context, method string, params
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		if err := h.manager.FileMkdir(req.WorkspaceID, req.Path, req.Parents, req.Mode); err != nil {
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		if err := handle.FileMkdir(req.Path, req.Parents, req.Mode); err != nil {
 			return nil, err
 		}
 		return map[string]bool{"created": true}, nil
@@ -75,7 +107,11 @@ func (h *JSONRPCHandler) dispatchFile(ctx context.Context, method string, params
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.FileReadDiff(ctx, req.WorkspaceID, req.Path)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.FileReadDiff(ctx, req.Path)
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown file method: "+method)
 	}

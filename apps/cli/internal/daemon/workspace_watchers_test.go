@@ -618,7 +618,12 @@ func TestJSONRPCHandler_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T
 	handler := NewJSONRPCHandler(manager, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"))
 	defer handler.Shutdown()
 
-	entries, err := manager.FileList(openedWorkspace.ID, "", false)
+	handle, err := manager.WorkspaceHandle(openedWorkspace.ID)
+	if err != nil {
+		t.Fatalf("workspace handle: %v", err)
+	}
+
+	entries, err := handle.FileList("", false)
 	if err != nil {
 		t.Fatalf("prime cache: %v", err)
 	}
@@ -638,7 +643,7 @@ func TestJSONRPCHandler_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T
 	})
 	time.Sleep(100 * time.Millisecond)
 
-	entries, err = manager.FileList(openedWorkspace.ID, "", false)
+	entries, err = handle.FileList("", false)
 	if err != nil {
 		t.Fatalf("list after invalidation event: %v", err)
 	}

@@ -40,7 +40,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath st
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to initialize token usage collector")
 	}
-	manager.SetTerminalDetectedPortsListener(func(ports []workspace.TerminalDetectedPort) {
+	manager.Terminals().SetPortsChangedListener(func(ports []workspace.TerminalDetectedPort) {
 		events.Publish(frontendEvent{
 			Topic: "terminalDetectedPortsChanged",
 			Payload: map[string]any{
@@ -174,7 +174,7 @@ func (h *JSONRPCHandler) handleBinaryFrame(connState *wsConnState, payload []byt
 			return
 		}
 		// Write raw bytes directly to PTY — avoids JSON unmarshal + string conversion.
-		h.manager.TerminalSendRaw(sessionID, inputData)
+		h.manager.Terminals().SendRaw(sessionID, inputData)
 	}
 }
 

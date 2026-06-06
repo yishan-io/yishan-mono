@@ -29,7 +29,7 @@ func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, 
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.SetActiveWorkspace(req)
+		return h.manager.Terminals().SetActiveWorkspace(req)
 	case MethodWorkspaceClose:
 		return h.handleWorkspaceClose(ctx, params)
 	default:
