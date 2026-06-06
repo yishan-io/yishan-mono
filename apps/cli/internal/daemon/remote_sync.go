@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"runtime"
+	goruntime "runtime"
 	"strings"
 
 	"yishan/apps/cli/internal/api"
@@ -53,8 +53,8 @@ type WorkspaceClose struct {
 	ProjectID      string
 }
 
-func createRemoteWorkspace(ctx context.Context, creation WorkspaceCreation) error {
-	if !cliruntime.APIConfigured() {
+func createRemoteWorkspace(ctx context.Context, runtime *cliruntime.Runtime, creation WorkspaceCreation) error {
+	if runtime == nil || !runtime.APIConfigured() {
 		return nil
 	}
 	orgID := strings.TrimSpace(creation.OrganizationID)
@@ -62,7 +62,7 @@ func createRemoteWorkspace(ctx context.Context, creation WorkspaceCreation) erro
 		return fmt.Errorf("organizationId is required")
 	}
 
-	_, err := cliruntime.APIClient().CreateWorkspace(orgID, creation.ProjectID, api.CreateWorkspaceInput{
+	_, err := runtime.APIClient().CreateWorkspace(orgID, creation.ProjectID, api.CreateWorkspaceInput{
 		ID:           creation.ID,
 		NodeID:       creation.NodeID,
 		LocalPath:    creation.LocalPath,
@@ -79,8 +79,8 @@ func createRemoteWorkspace(ctx context.Context, creation WorkspaceCreation) erro
 	return nil
 }
 
-func closeRemoteWorkspace(_ context.Context, closing WorkspaceClose) error {
-	if !cliruntime.APIConfigured() {
+func closeRemoteWorkspace(_ context.Context, runtime *cliruntime.Runtime, closing WorkspaceClose) error {
+	if runtime == nil || !runtime.APIConfigured() {
 		return nil
 	}
 	orgID := strings.TrimSpace(closing.OrganizationID)
@@ -88,7 +88,7 @@ func closeRemoteWorkspace(_ context.Context, closing WorkspaceClose) error {
 		return fmt.Errorf("organizationId is required")
 	}
 
-	_, err := cliruntime.APIClient().CloseWorkspace(orgID, closing.ProjectID, api.CloseWorkspaceInput{
+	_, err := runtime.APIClient().CloseWorkspace(orgID, closing.ProjectID, api.CloseWorkspaceInput{
 		WorkspaceID: closing.WorkspaceID,
 	})
 	if err != nil {
@@ -100,8 +100,8 @@ func closeRemoteWorkspace(_ context.Context, closing WorkspaceClose) error {
 	return nil
 }
 
-func registerRemoteNode(registration NodeRegistration) error {
-	if !cliruntime.APIConfigured() {
+func registerRemoteNode(runtime *cliruntime.Runtime, registration NodeRegistration) error {
+	if runtime == nil || !runtime.APIConfigured() {
 		return nil
 	}
 	hostname, err := os.Hostname()
@@ -121,14 +121,14 @@ func registerRemoteNode(registration NodeRegistration) error {
 		agentDetection = append(agentDetection, entry)
 	}
 
-	_, err = cliruntime.APIClient().RegisterNode(api.RegisterNodeInput{
+	_, err = runtime.APIClient().RegisterNode(api.RegisterNodeInput{
 		NodeID:   registration.ID,
 		Name:     hostname,
 		Kind:     "managed",
 		Scope:    "private",
 		Endpoint: registration.Endpoint,
 		Metadata: map[string]any{
-			"os":      runtime.GOOS,
+			"os":      goruntime.GOOS,
 			"version": buildinfo.Version,
 			"agents":  agentDetection,
 		},

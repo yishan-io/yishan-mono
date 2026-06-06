@@ -21,6 +21,7 @@ const ghUnknownGitHubHostErrorFragment = "none of the git remotes configured for
 type workspacePRTracker struct {
 	mu      sync.Mutex
 	manager *workspace.Manager
+	runtime *cliruntime.Runtime
 	// active maps workspaceID → Workspace for all workspaces currently being
 	// tracked. Storing the full Workspace avoids calling manager.List() on
 	// every poll tick and filtering by active map membership.
@@ -35,9 +36,10 @@ type workspacePRTracker struct {
 	detailResolver  func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error)
 }
 
-func newWorkspacePRTracker(manager *workspace.Manager, publish func(frontendEvent)) *workspacePRTracker {
+func newWorkspacePRTracker(manager *workspace.Manager, runtime *cliruntime.Runtime, publish func(frontendEvent)) *workspacePRTracker {
 	tracker := &workspacePRTracker{
 		manager:  manager,
+		runtime:  runtime,
 		active:   make(map[string]workspace.Workspace),
 		inFlight: make(map[string]bool),
 		done:     make(chan struct{}),
@@ -396,7 +398,7 @@ func normalizeWorkspacePullRequestStatus(pr workspace.GitBranchPullRequestStatus
 // persistPullRequest writes a PR snapshot to the api-service.
 // Called in a goroutine; failures are logged and do not affect local state.
 func (t *workspacePRTracker) persistPullRequest(workspaceID string, pr *workspace.WorkspacePullRequest) {
-	if !cliruntime.APIConfigured() {
+	if t.runtime == nil || !t.runtime.APIConfigured() {
 		return
 	}
 
@@ -467,7 +469,7 @@ func (t *workspacePRTracker) persistPullRequest(workspaceID string, pr *workspac
 		ResolvedAt: resolvedAt,
 	}
 
-	if _, err := cliruntime.APIClient().UpsertWorkspacePullRequest(ws.OrgID, ws.ProjectID, workspaceID, input); err != nil {
+	if _, err := t.runtime.APIClient().UpsertWorkspacePullRequest(ws.OrgID, ws.ProjectID, workspaceID, input); err != nil {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Str("prId", input.PrID).Str("state", state).Msg("pr persist: failed to upsert to api-service")
 		return
 	}

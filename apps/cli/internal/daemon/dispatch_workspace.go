@@ -56,7 +56,7 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
 	}
-	resolvedCreateRequest, err := resolveCreateRequestForNode(ctx, workspaceCreateRequestInput{
+	resolvedCreateRequest, err := resolveCreateRequestForNode(ctx, h.runtime, workspaceCreateRequestInput{
 		organizationID: req.OrganizationID,
 		projectID:      req.ProjectID,
 		localNodeID:    h.nodeID,
@@ -98,7 +98,7 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 	}
 
 	remoteSyncWarning := ""
-	if err := createRemoteWorkspace(ctx, WorkspaceCreation{
+	if err := createRemoteWorkspace(ctx, h.runtime, WorkspaceCreation{
 		ID:             created.ID,
 		NodeID:         req.NodeID,
 		OrganizationID: req.OrganizationID,
@@ -135,7 +135,7 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
 	}
-	if err := closeRemoteWorkspace(ctx, WorkspaceClose{
+	if err := closeRemoteWorkspace(ctx, h.runtime, WorkspaceClose{
 		WorkspaceID:    req.WorkspaceID,
 		OrganizationID: req.OrganizationID,
 		ProjectID:      req.ProjectID,

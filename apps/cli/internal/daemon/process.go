@@ -38,7 +38,11 @@ type RunConfig struct {
 	LogFilePath string
 }
 
-func Run(cfg RunConfig, statePath string) error {
+func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
+	if runtime == nil {
+		runtime = cliruntime.Default()
+	}
+
 	// ── Phase 1: stale state guard ─────────────────────────────────────────
 	state, err := LoadState(statePath)
 	if err == nil {
@@ -79,7 +83,7 @@ func Run(cfg RunConfig, statePath string) error {
 	if err != nil {
 		return fmt.Errorf("create workspace cleanup store: %w", err)
 	}
-	handler := NewJSONRPCHandler(workspaceManager, daemonID, cfg.LogFilePath, cleanupStore, statePath)
+	handler := NewJSONRPCHandler(workspaceManager, runtime, daemonID, cfg.LogFilePath, cleanupStore, statePath)
 	if handler.tokenUsage != nil {
 		handler.tokenUsage.StartStartupScan()
 	}
@@ -109,7 +113,7 @@ func Run(cfg RunConfig, statePath string) error {
 	handler.startWorkspaceCleanupRetry(cleanupCtx)
 
 	// ── Phase 5: persist state + env setup + node registration + relay ─────
-	if err := startDaemonServices(cfg, statePath, actualAddr, daemonID, currentPID, tcpAddr.Port, handler, relayStatus); err != nil {
+	if err := startDaemonServices(cfg, statePath, actualAddr, daemonID, currentPID, tcpAddr.Port, handler, relayStatus, runtime); err != nil {
 		return err
 	}
 	defer func() {
@@ -127,7 +131,7 @@ func Run(cfg RunConfig, statePath string) error {
 	defer cancelShutdown()
 
 	if cfg.RelayEnabled && cfg.RelayURL != "" {
-		go runRelayClientLoop(shutdownCtx, handler, daemonID, cfg.RelayURL, relayStatus)
+		go runRelayClientLoop(shutdownCtx, handler.runtime, handler, daemonID, cfg.RelayURL, relayStatus)
 	}
 
 	go func() {
@@ -159,7 +163,7 @@ func Run(cfg RunConfig, statePath string) error {
 // state, setting up the hook ingress env var, running managed agent runtime
 // setup, registering the daemon as a remote node if API credentials are
 // configured, and initialising the relay client goroutine.
-func startDaemonServices(cfg RunConfig, statePath string, actualAddr string, daemonID string, currentPID int, actualPort int, handler *JSONRPCHandler, relayStatus *RelayStatus) error {
+func startDaemonServices(cfg RunConfig, statePath string, actualAddr string, daemonID string, currentPID int, actualPort int, handler *JSONRPCHandler, relayStatus *RelayStatus, runtime *cliruntime.Runtime) error {
 	if err := SaveState(statePath, RuntimeState{
 		PID:       currentPID,
 		Host:      cfg.Host,
@@ -171,9 +175,9 @@ func startDaemonServices(cfg RunConfig, statePath string, actualAddr string, dae
 	_ = os.Setenv("YISHAN_HOOK_INGRESS_URL", "http://"+actualAddr+agentHookIngestPath)
 	agentsetup.EnsureManagedAgentRuntime()
 
-	if cliruntime.APIConfigured() {
+	if runtime != nil && runtime.APIConfigured() {
 		agentDetectionStatus := clidetector.ListAgentCLIDetectionStatuses()
-		if err := registerRemoteNode(NodeRegistration{
+		if err := registerRemoteNode(runtime, NodeRegistration{
 			ID:                   daemonID,
 			Endpoint:             "http://" + actualAddr,
 			AgentDetectionStatus: agentDetectionStatus,

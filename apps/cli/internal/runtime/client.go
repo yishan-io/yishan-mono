@@ -23,6 +23,10 @@ func New(cfg *config.Config) *Runtime {
 
 var defaultRuntime = New(nil)
 
+func Default() *Runtime {
+	return defaultRuntime
+}
+
 func Configure(cfg *config.Config) {
 	defaultRuntime = New(cfg)
 }

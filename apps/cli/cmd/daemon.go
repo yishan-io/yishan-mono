@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"yishan/apps/cli/internal/daemon"
+	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/output"
 )
 
@@ -91,7 +92,7 @@ func runDaemon(_ *cobra.Command, _ []string) error {
 
 	log.Info().Str("log_file", logFile).Msg("daemon log file configured")
 
-	return daemon.Run(buildRunConfig(logFile), statePath)
+	return daemon.Run(buildRunConfig(logFile), statePath, cliruntime.Default())
 }
 
 func startDaemon(_ *cobra.Command, _ []string) error {

@@ -615,7 +615,7 @@ func TestJSONRPCHandler_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T
 	if err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
-	handler := NewJSONRPCHandler(manager, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"))
+	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"))
 	defer handler.Shutdown()
 
 	handle, err := manager.WorkspaceHandle(openedWorkspace.ID)

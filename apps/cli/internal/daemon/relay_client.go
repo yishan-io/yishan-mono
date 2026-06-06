@@ -98,7 +98,7 @@ func (s *RelayStatus) Snapshot() RelayStatusSnapshot {
 	return snap
 }
 
-func runRelayClientLoop(ctx context.Context, handler *JSONRPCHandler, nodeID string, relayURL string, status *RelayStatus) {
+func runRelayClientLoop(ctx context.Context, runtime *cliruntime.Runtime, handler *JSONRPCHandler, nodeID string, relayURL string, status *RelayStatus) {
 	endpoint, err := normalizeRelayWSURL(relayURL)
 	if err != nil {
 		log.Warn().Err(err).Str("relay_url", relayURL).Msg("invalid relay url; relay client disabled")
@@ -118,7 +118,7 @@ func runRelayClientLoop(ctx context.Context, handler *JSONRPCHandler, nodeID str
 		default:
 		}
 
-		if !cliruntime.APIConfigured() {
+		if runtime == nil || !runtime.APIConfigured() {
 			log.Warn().Msg("relay client waiting for API credentials")
 			status.setDisconnected("waiting for API credentials")
 			select {
@@ -134,7 +134,7 @@ func runRelayClientLoop(ctx context.Context, handler *JSONRPCHandler, nodeID str
 		// when the token is missing or about to expire.
 		now := time.Now()
 		if cachedToken == "" || now.After(cachedTokenExpiry.Add(-relayTokenEarlyRefreshWindow)) {
-			token, expiry, err := mintRelayToken(nodeID)
+			token, expiry, err := mintRelayToken(runtime, nodeID)
 			if err != nil {
 				log.Warn().Err(err).Str("nodeId", nodeID).Msg("relay token mint failed")
 				status.setDisconnected("token mint failed: " + err.Error())
@@ -193,7 +193,7 @@ func runRelayClientLoop(ctx context.Context, handler *JSONRPCHandler, nodeID str
 		cachedToken = ""
 		status.setConnected(time.Now().UTC())
 
-		runRelaySession(handler, nodeID, conn)
+		runRelaySession(handler, runtime, nodeID, conn)
 		status.setDisconnected("session ended")
 	}
 }
@@ -211,7 +211,7 @@ func appendRelayClientMetadata(endpoint string) string {
 	return parsed.String()
 }
 
-func runRelaySession(handler *JSONRPCHandler, nodeID string, conn *websocket.Conn) {
+func runRelaySession(handler *JSONRPCHandler, runtime *cliruntime.Runtime, nodeID string, conn *websocket.Conn) {
 	connState := newWSConnState(conn)
 	defer connState.Close()
 
@@ -232,7 +232,7 @@ func runRelaySession(handler *JSONRPCHandler, nodeID string, conn *websocket.Con
 		}
 
 		// Handle relay-level messages before dispatching to the daemon handler.
-		if handleRelayMessage(handler, connState, nodeID, payload) {
+		if handleRelayMessage(handler, runtime, connState, nodeID, payload) {
 			continue
 		}
 
@@ -277,7 +277,7 @@ func normalizeRelayWSURL(raw string) (string, error) {
 
 // handleRelayMessage handles relay-protocol messages (heartbeat, job dispatch).
 // Returns true if the message was consumed and should not be passed to the daemon handler.
-func handleRelayMessage(handler *JSONRPCHandler, connState *wsConnState, nodeID string, payload []byte) bool {
+func handleRelayMessage(handler *JSONRPCHandler, runtime *cliruntime.Runtime, connState *wsConnState, nodeID string, payload []byte) bool {
 	var msg struct {
 		Method string          `json:"method"`
 		Params json.RawMessage `json:"params,omitempty"`
@@ -291,7 +291,7 @@ func handleRelayMessage(handler *JSONRPCHandler, connState *wsConnState, nodeID 
 		_ = connState.WriteJSON(notification{JSONRPC: "2.0", Method: relayMethodPong})
 		return true
 	case relayMethodJobRun:
-		handleJobRun(connState, nodeID, msg.Params)
+		handleJobRun(runtime, connState, nodeID, msg.Params)
 		return true
 	case relayMethodWorkspaceSnapshotChanged:
 		publishWorkspaceSnapshotChanged(handler, msg.Params)
@@ -329,8 +329,8 @@ func publishWorkspaceSnapshotChanged(handler *JSONRPCHandler, params json.RawMes
 	handler.events.Publish(frontendEvent{Topic: "workspaceSnapshotChanged", Payload: payload})
 }
 
-func mintRelayToken(nodeID string) (string, time.Time, error) {
-	client := cliruntime.APIClient()
+func mintRelayToken(runtime *cliruntime.Runtime, nodeID string) (string, time.Time, error) {
+	client := runtime.APIClient()
 	resp, err := client.RelayToken(nodeID)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("request relay token: %w", err)

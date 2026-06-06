@@ -11,7 +11,7 @@ import (
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
-func resolveCreateRequestForNode(ctx context.Context, req workspaceCreateRequestInput) (workspaceCreateRequestInput, error) {
+func resolveCreateRequestForNode(ctx context.Context, runtime *cliruntime.Runtime, req workspaceCreateRequestInput) (workspaceCreateRequestInput, error) {
 	resolvedNodeID := strings.TrimSpace(req.nodeID)
 	if resolvedNodeID == "" {
 		resolvedNodeID = strings.TrimSpace(req.localNodeID)
@@ -19,22 +19,22 @@ func resolveCreateRequestForNode(ctx context.Context, req workspaceCreateRequest
 	if resolvedNodeID == "" {
 		return req, fmt.Errorf("workspace node id is required")
 	}
-	req.nodeID = resolvedNodeID
+		req.nodeID = resolvedNodeID
 	if resolvedNodeID == strings.TrimSpace(req.localNodeID) {
 		return req, nil
 	}
 
-	if !cliruntime.APIConfigured() {
+	if runtime == nil || !runtime.APIConfigured() {
 		return req, fmt.Errorf("creating a workspace on node %s requires an authenticated API session", resolvedNodeID)
 	}
 	if strings.TrimSpace(req.organizationID) == "" || strings.TrimSpace(req.projectID) == "" {
 		return req, fmt.Errorf("organizationId and projectId are required for cross-node workspace creation")
 	}
-	if err := ensureNodeUsableForWorkspace(req.organizationID, resolvedNodeID); err != nil {
+	if err := ensureNodeUsableForWorkspace(runtime, req.organizationID, resolvedNodeID); err != nil {
 		return req, err
 	}
 
-	repoURL, err := resolveProjectRepoURL(req.organizationID, req.projectID)
+	repoURL, err := resolveProjectRepoURL(runtime, req.organizationID, req.projectID)
 	if err != nil {
 		return req, err
 	}
@@ -55,8 +55,8 @@ type workspaceCreateRequestInput struct {
 	sourcePath     string
 }
 
-func ensureNodeUsableForWorkspace(organizationID string, nodeID string) error {
-	nodesResponse, err := cliruntime.APIClient().ListNodes(organizationID)
+func ensureNodeUsableForWorkspace(runtime *cliruntime.Runtime, organizationID string, nodeID string) error {
+	nodesResponse, err := runtime.APIClient().ListNodes(organizationID)
 	if err != nil {
 		return fmt.Errorf("load organization nodes: %w", err)
 	}
@@ -68,8 +68,8 @@ func ensureNodeUsableForWorkspace(organizationID string, nodeID string) error {
 	return fmt.Errorf("node %s was not found in this organization", nodeID)
 }
 
-func resolveProjectRepoURL(organizationID string, projectID string) (string, error) {
-	projectsResponse, err := cliruntime.APIClient().ListProjects(organizationID)
+func resolveProjectRepoURL(runtime *cliruntime.Runtime, organizationID string, projectID string) (string, error) {
+	projectsResponse, err := runtime.APIClient().ListProjects(organizationID)
 	if err != nil {
 		return "", fmt.Errorf("load project metadata: %w", err)
 	}

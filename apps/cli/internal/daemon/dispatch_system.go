@@ -8,7 +8,6 @@ import (
 
 	"yishan/apps/cli/internal/api"
 	clidetector "yishan/apps/cli/internal/daemon/cli_detector"
-	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -50,12 +49,12 @@ func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnSt
 		if req.AccessToken == "" {
 			return nil, workspace.NewRPCError(rpcCodeInvalidParams, "accessToken is required")
 		}
-		if err := cliruntime.PersistAuthTokens(req); err != nil {
+		if err := h.runtime.PersistAuthTokens(req); err != nil {
 			return nil, err
 		}
 		return map[string]bool{"ok": true}, nil
 	case MethodAppGetAccessToken:
-		accessToken, expiresAt, err := cliruntime.EnsureFreshAccessToken()
+		accessToken, expiresAt, err := h.runtime.EnsureFreshAccessToken()
 		if err != nil {
 			return nil, err
 		}
@@ -65,7 +64,7 @@ func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnSt
 		}
 		return result, nil
 	case MethodAppCheckAuthStatus:
-		authenticated, expiresAt, err := cliruntime.CheckAuthStatus()
+		authenticated, expiresAt, err := h.runtime.CheckAuthStatus()
 		if err != nil {
 			return map[string]any{"authenticated": false}, nil
 		}
@@ -75,10 +74,10 @@ func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnSt
 		}
 		return result, nil
 	case MethodAppLogout:
-		cliruntime.ClearAuthState()
+		h.runtime.ClearAuthState()
 		return map[string]bool{"ok": true}, nil
 	case MethodAppReloadAuthConfig:
-		if err := cliruntime.ReloadAuthConfig(); err != nil {
+		if err := h.runtime.ReloadAuthConfig(); err != nil {
 			return nil, err
 		}
 		return map[string]bool{"ok": true}, nil
