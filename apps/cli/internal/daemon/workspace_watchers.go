@@ -18,7 +18,6 @@ import (
 
 const (
 	watcherDebounce   = 200 * time.Millisecond
-	gitEventCooldown  = 1500 * time.Millisecond
 	watcherStartupLag = 300 * time.Millisecond
 	gitInfoExcludeRel = ".git/info/exclude"
 )
@@ -31,7 +30,6 @@ type worktreeWatcher struct {
 	events               *eventHub
 	fileTimer            *time.Timer
 	gitTimer             *time.Timer
-	gitCooldownTill      time.Time
 	pendingAffectsBranch bool
 	readyAt              time.Time
 	changedPaths         []string
@@ -591,9 +589,6 @@ func (w *worktreeWatcher) scheduleGitEmit(affectsBranch bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if time.Now().Before(w.gitCooldownTill) {
-		return
-	}
 	if affectsBranch {
 		w.pendingAffectsBranch = true
 	}
@@ -604,7 +599,6 @@ func (w *worktreeWatcher) scheduleGitEmit(affectsBranch bool) {
 	w.gitTimer = time.AfterFunc(watcherDebounce, func() {
 		w.mu.Lock()
 		w.gitTimer = nil
-		w.gitCooldownTill = time.Now().Add(gitEventCooldown)
 		affects := w.pendingAffectsBranch
 		w.pendingAffectsBranch = false
 		w.mu.Unlock()
