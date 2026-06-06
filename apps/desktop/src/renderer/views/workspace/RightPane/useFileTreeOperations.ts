@@ -116,6 +116,26 @@ function resolveRefreshDirectoryPaths(changedRelativePaths: string[], loadedDire
   return [...refreshPaths].sort((left, right) => left.localeCompare(right));
 }
 
+function shouldEvictChangedEntry(
+  directoryPath: string,
+  normalizedEntryPath: string,
+  normalizedChangedPaths: Set<string> | null,
+  incomingImmediateChildPaths: Set<string>,
+): boolean {
+  if (!normalizedChangedPaths) {
+    return true;
+  }
+
+  const isChangedPath = [...normalizedChangedPaths].some(
+    (changedPath) =>
+      changedPath === directoryPath ||
+      normalizedEntryPath === changedPath ||
+      normalizedEntryPath.startsWith(`${changedPath}/`),
+  );
+
+  return isChangedPath && !incomingImmediateChildPaths.has(normalizedEntryPath);
+}
+
 function applyDirectoryRefreshes(
   currentEntries: WorkspaceFileEntry[],
   refreshResults: Array<{ directoryPath: string; files: WorkspaceFileEntry[] }>,
@@ -144,9 +164,15 @@ function applyDirectoryRefreshes(
     // this directory that (a) are in the changed-path set AND (b) are not
     // present in the incoming refresh result. Entries that were not changed
     // are left untouched — they will be merged by mergeWorkspaceEntries below.
-    const normalizedChangedPaths = changedRelativePaths
+    const normalizedChangedPaths = changedRelativePaths && changedRelativePaths.length > 0
       ? new Set(changedRelativePaths.map((p) => normalizeRelativePath(p)).filter(Boolean))
       : null;
+
+    if (directoryPath === "" && !normalizedChangedPaths) {
+      nextEntries = [];
+      nextEntries = mergeWorkspaceEntries(nextEntries, files);
+      continue;
+    }
 
     nextEntries = nextEntries.filter((entry) => {
       const normalizedEntryPath = normalizeRelativePath(entry.path);
@@ -157,8 +183,12 @@ function applyDirectoryRefreshes(
       const isDirectChild = getParentRelativePath(normalizedEntryPath) === directoryPath;
       if (isDirectChild) {
         if (normalizedChangedPaths) {
-          // Only evict if it was explicitly changed and is absent from the fresh result.
-          return !(normalizedChangedPaths.has(normalizedEntryPath) && !incomingImmediateChildPaths.has(normalizedEntryPath));
+          return !shouldEvictChangedEntry(
+            directoryPath,
+            normalizedEntryPath,
+            normalizedChangedPaths,
+            incomingImmediateChildPaths,
+          );
         }
         // Full refresh (no specific changed paths) — replace the directory entirely.
         return false;
