@@ -279,6 +279,19 @@ func (s *GitService) getPullRequestDeployments(ctx context.Context, root string,
 }
 
 func (s *GitService) MergePullRequest(ctx context.Context, root string, prNumber int, method string, deleteBranch bool) (string, error) {
+	repoNameWithOwner, err := s.getRepoNameWithOwner(ctx, root)
+	if err != nil {
+		return "", err
+	}
+
+	// When deleteBranch is requested we need the head branch name so we can
+	// delete the remote ref via the API after the merge succeeds. Fetch it
+	// before merging because the PR data may become unavailable afterwards.
+	var headBranch string
+	if deleteBranch && repoNameWithOwner != "" {
+		headBranch, _ = s.getPullRequestHeadBranch(ctx, root, prNumber)
+	}
+
 	args := []string{"pr", "merge", fmt.Sprintf("%d", prNumber)}
 
 	switch method {
@@ -290,22 +303,53 @@ func (s *GitService) MergePullRequest(ctx context.Context, root string, prNumber
 		args = append(args, "--merge")
 	}
 
-	if deleteBranch {
-		args = append(args, "--delete-branch")
-	}
+	// Never pass --delete-branch to gh pr merge. In worktree setups gh tries
+	// to checkout the base branch locally before deleting the feature branch,
+	// which fails with "fatal: '<base>' is already used by worktree at ...".
+	// Instead we delete the remote branch via the API after the merge succeeds.
 
-	repoNameWithOwner, err := s.getRepoNameWithOwner(ctx, root)
+	var out string
+	if repoNameWithOwner == "" {
+		out, err = s.ghCommand(ctx, root, args...)
+	} else {
+		args = append(args, "--repo", repoNameWithOwner)
+		out, err = s.ghCommand(ctx, os.TempDir(), args...)
+	}
 	if err != nil {
 		return "", err
 	}
-	if repoNameWithOwner == "" {
-		return s.ghCommand(ctx, root, args...)
+
+	if deleteBranch && repoNameWithOwner != "" && headBranch != "" {
+		if delErr := s.deleteRemoteBranch(ctx, root, repoNameWithOwner, headBranch); delErr != nil {
+			log.Warn().Err(delErr).Str("repo", repoNameWithOwner).Str("branch", headBranch).Msg("pr merge: failed to delete remote branch")
+		}
 	}
 
-	// Run merge as a repo-targeted gh command outside the current worktree so
-	// gh does not try local branch/worktree cleanup after a successful merge.
-	args = append(args, "--repo", repoNameWithOwner)
-	return s.ghCommand(ctx, os.TempDir(), args...)
+	return out, nil
+}
+
+// getPullRequestHeadBranch returns the head branch name for the given PR number.
+func (s *GitService) getPullRequestHeadBranch(ctx context.Context, root string, prNumber int) (string, error) {
+	type prView struct {
+		HeadRefName string `json:"headRefName"`
+	}
+	var pr prView
+	if err := s.ghJSON(ctx, root, &pr,
+		"pr", "view", fmt.Sprintf("%d", prNumber),
+		"--json", "headRefName",
+	); err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(pr.HeadRefName), nil
+}
+
+// deleteRemoteBranch deletes a branch on the remote repository via the GitHub API.
+func (s *GitService) deleteRemoteBranch(ctx context.Context, root string, repoNameWithOwner string, branch string) error {
+	_, err := s.ghCommand(ctx, root,
+		"api", "--method", "DELETE", "--silent",
+		fmt.Sprintf("repos/%s/git/refs/heads/%s", repoNameWithOwner, branch),
+	)
+	return err
 }
 
 func (s *GitService) ClosePullRequest(ctx context.Context, root string, prNumber int) (string, error) {

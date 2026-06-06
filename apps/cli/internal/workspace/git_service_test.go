@@ -258,9 +258,19 @@ func TestGitServiceMergePullRequestRunsOutsideWorktreeWhenDeletingBranch(t *test
 	ghBinPath := filepath.Join(ghBinDir, "gh")
 	argsLogPath := filepath.Join(ghBinDir, "args.log")
 	pwdLogPath := filepath.Join(ghBinDir, "pwd.log")
+	deleteLogPath := filepath.Join(ghBinDir, "delete.log")
+	// The fake gh handles four call types:
+	// 1. api repos/{owner}/{repo}         → returns repo metadata
+	// 2. pr view <number> --json ...      → returns head branch name
+	// 3. pr merge ...                     → logs args/pwd, prints "merged"
+	// 4. api --method DELETE ...          → logs the delete ref call
 	ghScript := "#!/bin/sh\n" +
 		"if [ \"$1\" = \"api\" ] && [ \"$2\" = \"repos/{owner}/{repo}\" ]; then\n" +
 		"  printf '{\"nameWithOwner\":\"acme/repo\"}'\n" +
+		"  exit 0\n" +
+		"fi\n" +
+		"if [ \"$1\" = \"pr\" ] && [ \"$2\" = \"view\" ]; then\n" +
+		"  printf '{\"headRefName\":\"feature-x\"}'\n" +
 		"  exit 0\n" +
 		"fi\n" +
 		"if [ \"$1\" = \"pr\" ] && [ \"$2\" = \"merge\" ]; then\n" +
@@ -269,7 +279,11 @@ func TestGitServiceMergePullRequestRunsOutsideWorktreeWhenDeletingBranch(t *test
 		"  printf 'merged'\n" +
 		"  exit 0\n" +
 		"fi\n" +
-		"printf 'unexpected gh invocation' >&2\n" +
+		"if [ \"$1\" = \"api\" ] && [ \"$2\" = \"--method\" ] && [ \"$3\" = \"DELETE\" ]; then\n" +
+		"  printf '%s\n' \"$@\" > '" + deleteLogPath + "'\n" +
+		"  exit 0\n" +
+		"fi\n" +
+		"printf 'unexpected gh invocation: %s' \"$*\" >&2\n" +
 		"exit 1\n"
 	if err := os.WriteFile(ghBinPath, []byte(ghScript), 0o755); err != nil {
 		t.Fatalf("write fake gh: %v", err)
@@ -286,24 +300,36 @@ func TestGitServiceMergePullRequestRunsOutsideWorktreeWhenDeletingBranch(t *test
 		t.Fatalf("unexpected merge output: %q", out)
 	}
 
+	// --delete-branch must NOT be passed to gh pr merge (worktree-safe).
 	argsLog, err := os.ReadFile(argsLogPath)
 	if err != nil {
 		t.Fatalf("read args log: %v", err)
 	}
 	argsText := string(argsLog)
-	if !strings.Contains(argsText, "--delete-branch") {
-		t.Fatalf("expected --delete-branch in args, got %q", argsText)
+	if strings.Contains(argsText, "--delete-branch") {
+		t.Fatalf("--delete-branch must not be passed to gh pr merge, got %q", argsText)
 	}
 	if !strings.Contains(argsText, "--repo\nacme/repo\n") {
 		t.Fatalf("expected --repo acme/repo in args, got %q", argsText)
 	}
 
+	// Merge must run outside the repo worktree.
 	pwdLog, err := os.ReadFile(pwdLogPath)
 	if err != nil {
 		t.Fatalf("read pwd log: %v", err)
 	}
 	if strings.TrimSpace(string(pwdLog)) == root {
 		t.Fatalf("expected merge to run outside repo worktree, cwd=%q", strings.TrimSpace(string(pwdLog)))
+	}
+
+	// Remote branch must be deleted via the API.
+	deleteLog, err := os.ReadFile(deleteLogPath)
+	if err != nil {
+		t.Fatalf("read delete log: %v", err)
+	}
+	deleteText := string(deleteLog)
+	if !strings.Contains(deleteText, "repos/acme/repo/git/refs/heads/feature-x") {
+		t.Fatalf("expected remote branch deletion API call, got %q", deleteText)
 	}
 }
 
