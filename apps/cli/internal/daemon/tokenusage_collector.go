@@ -26,6 +26,7 @@ const (
 type tokenUsageCollector struct {
 	mu         sync.Mutex
 	manager    *workspace.Manager
+	runtime    *cliruntime.Runtime
 	repo       tokenusage.HourlyUsageRepository
 	timers     map[string]*time.Timer
 	inFlight   map[string]bool
@@ -45,13 +46,14 @@ type tokenUsageCollectorDebugState struct {
 	PendingAgents    []string          `json:"pendingAgents"`
 }
 
-func newTokenUsageCollector(manager *workspace.Manager, configPath string) (*tokenUsageCollector, error) {
+func newTokenUsageCollector(manager *workspace.Manager, runtime *cliruntime.Runtime, configPath string) (*tokenUsageCollector, error) {
 	repo, err := tokenusage.NewFileHourlyUsageRepository(configPath)
 	if err != nil {
 		return nil, err
 	}
 	return &tokenUsageCollector{
 		manager:    manager,
+		runtime:    runtime,
 		repo:       repo,
 		timers:     make(map[string]*time.Timer),
 		inFlight:   make(map[string]bool),
@@ -353,7 +355,7 @@ func durationUntilNextHourPlusLag() time.Duration {
 }
 
 func (c *tokenUsageCollector) syncPending(source string) {
-	if !cliruntime.APIConfigured() {
+	if c.runtime == nil || !c.runtime.APIConfigured() {
 		return
 	}
 	syncState, err := c.repo.GetHourlyUsageSyncState(context.Background())
@@ -473,7 +475,10 @@ func (c *tokenUsageCollector) syncRowsForOrg(orgID string, rows []tokenusage.Hou
 		if end > len(rowInputs) {
 			end = len(rowInputs)
 		}
-		if _, err := cliruntime.APIClient().UpsertTokenUsageHourly(orgID, rowInputs[start:end]); err != nil {
+		if c.runtime == nil {
+			return nil
+		}
+		if _, err := c.runtime.APIClient().UpsertTokenUsageHourly(orgID, rowInputs[start:end]); err != nil {
 			return err
 		}
 	}

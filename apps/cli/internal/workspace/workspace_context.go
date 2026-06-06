@@ -37,7 +37,7 @@ func (m *Manager) SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkRe
 		return SyncContextLinkResult{}, err
 	}
 
-	contextPath, err := defaultContextPath(repoKey)
+	contextPath, err := DefaultContextPath(repoKey)
 	if err != nil {
 		return SyncContextLinkResult{}, err
 	}
@@ -98,18 +98,6 @@ func (m *Manager) SyncContextLink(req SyncContextLinkRequest) (SyncContextLinkRe
 	}
 
 	return result, nil
-}
-
-// defaultContextPath returns the per-repo shared context directory path.
-// All workspaces for the same repo share this folder via a `.my-context`
-// symlink inside the worktree, so notes and references persist across
-// worktrees.
-func defaultContextPath(repoKey string) (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".yishan", "contexts", repoKey), nil
 }
 
 // ensureContextLink creates the per-repo context directory (if missing) and

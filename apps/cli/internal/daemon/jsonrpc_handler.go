@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
+	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -22,6 +23,7 @@ const (
 type JSONRPCHandler struct {
 	upgrader       websocket.Upgrader
 	manager        *workspace.Manager
+	runtime        *cliruntime.Runtime
 	nodeID         string
 	logFilePath    string
 	cleanupStore   *workspaceCleanupStore
@@ -32,15 +34,15 @@ type JSONRPCHandler struct {
 	fileCacheSubID uint64
 }
 
-func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, configPath string) *JSONRPCHandler {
+func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, configPath string) *JSONRPCHandler {
 	events := newEventHub()
-	prTracker := newWorkspacePRTracker(manager, events.Publish)
+	prTracker := newWorkspacePRTracker(manager, runtime, events.Publish)
 	fileCacheSubID, fileCacheEvents := events.Subscribe()
-	collector, err := newTokenUsageCollector(manager, configPath)
+	collector, err := newTokenUsageCollector(manager, runtime, configPath)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to initialize token usage collector")
 	}
-	manager.SetTerminalDetectedPortsListener(func(ports []workspace.TerminalDetectedPort) {
+	manager.Terminals().SetPortsChangedListener(func(ports []workspace.TerminalDetectedPort) {
 		events.Publish(frontendEvent{
 			Topic: "terminalDetectedPortsChanged",
 			Payload: map[string]any{
@@ -48,12 +50,14 @@ func NewJSONRPCHandler(manager *workspace.Manager, nodeID string, logFilePath st
 			},
 		})
 	})
-	handler := &JSONRPCHandler{
+		handler := &JSONRPCHandler{
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(_ *http.Request) bool { return true },
 		},
 		manager:        manager,
+		runtime:        runtime,
 		nodeID:         nodeID,
+
 		logFilePath:    logFilePath,
 		cleanupStore:   cleanupStore,
 		events:         events,
@@ -174,7 +178,7 @@ func (h *JSONRPCHandler) handleBinaryFrame(connState *wsConnState, payload []byt
 			return
 		}
 		// Write raw bytes directly to PTY — avoids JSON unmarshal + string conversion.
-		h.manager.TerminalSendRaw(sessionID, inputData)
+		h.manager.Terminals().SendRaw(sessionID, inputData)
 	}
 }
 

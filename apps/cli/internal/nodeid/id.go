@@ -1,4 +1,4 @@
-package daemon
+package nodeid
 
 import (
 	"crypto/rand"
@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const IDFileName = "daemon.id"
+const FileName = "daemon.id"
 
 func EnsureDaemonID(path string) (string, error) {
 	raw, err := os.ReadFile(path)
@@ -23,7 +23,7 @@ func EnsureDaemonID(path string) (string, error) {
 		return "", fmt.Errorf("read daemon id file %q: %w", path, err)
 	}
 
-	value, err := newDaemonID()
+	value, err := generateID()
 	if err != nil {
 		return "", err
 	}
@@ -45,7 +45,7 @@ func EnsureDaemonID(path string) (string, error) {
 	return value, nil
 }
 
-func newDaemonID() (string, error) {
+func generateID() (string, error) {
 	raw := make([]byte, 16)
 	if _, err := rand.Read(raw); err != nil {
 		return "", fmt.Errorf("generate daemon id: %w", err)

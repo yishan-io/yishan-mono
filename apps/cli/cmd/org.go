@@ -11,7 +11,6 @@ import (
 	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/output"
-	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
 var orgListCmd = &cobra.Command{
@@ -30,7 +29,7 @@ var orgListCmd = &cobra.Command{
 			return err
 		}
 
-		response, err := cliruntime.APIClient().ListOrganizations()
+		response, err := apiClient.ListOrganizations()
 		if err != nil {
 			return err
 		}
@@ -60,7 +59,7 @@ var orgCreateCmd = &cobra.Command{
 			return err
 		}
 
-		response, err := cliruntime.APIClient().CreateOrganization(api.CreateOrganizationInput{
+		response, err := apiClient.CreateOrganization(api.CreateOrganizationInput{
 			Name:          name,
 			MemberUserIDs: memberUserIDs,
 		})
@@ -83,7 +82,7 @@ var orgDeleteCmd = &cobra.Command{
 			return err
 		}
 
-		response, err := cliruntime.APIClient().DeleteOrganization(orgID)
+		response, err := apiClient.DeleteOrganization(orgID)
 		if err != nil {
 			return err
 		}
@@ -112,7 +111,7 @@ var orgMemberAddCmd = &cobra.Command{
 			return err
 		}
 
-		response, err := cliruntime.APIClient().AddOrganizationMember(orgID, userID, role)
+		response, err := apiClient.AddOrganizationMember(orgID, userID, role)
 		if err != nil {
 			return err
 		}
@@ -136,7 +135,7 @@ var orgMemberRemoveCmd = &cobra.Command{
 			return err
 		}
 
-		response, err := cliruntime.APIClient().RemoveOrganizationMember(orgID, userID)
+		response, err := apiClient.RemoveOrganizationMember(orgID, userID)
 		if err != nil {
 			return err
 		}
@@ -211,7 +210,7 @@ func selectOrganizationInteractive(cmd *cobra.Command) (string, error) {
 		return "", fmt.Errorf("org-id is required: use --org-id <org-id>")
 	}
 
-	response, err := cliruntime.APIClient().ListOrganizations()
+	response, err := apiClient.ListOrganizations()
 	if err != nil {
 		return "", err
 	}
@@ -246,7 +245,7 @@ var orgCurrentCmd = &cobra.Command{
 			return fmt.Errorf("no active org: run `yishan org use <org-id>`")
 		}
 
-		response, err := cliruntime.APIClient().ListOrganizations()
+		response, err := apiClient.ListOrganizations()
 		if err != nil {
 			return err
 		}

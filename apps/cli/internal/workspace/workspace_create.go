@@ -156,7 +156,7 @@ func resolveCreatePaths(req CreateRequest) (resolvedCreatePaths, error) {
 	if err != nil {
 		return resolvedCreatePaths{}, err
 	}
-	worktreePath, err := defaultWorktreePath(repoKey, workspaceName)
+	worktreePath, err := DefaultWorktreePath(repoKey, workspaceName)
 	if err != nil {
 		return resolvedCreatePaths{}, err
 	}
@@ -208,7 +208,7 @@ func makeContextStep(req CreateRequest, paths resolvedCreatePaths) createProgres
 				return CreateProgressSkipped, "Context link disabled", nil
 			}
 
-			contextPath, err := defaultContextPath(paths.repoKey)
+			contextPath, err := DefaultContextPath(paths.repoKey)
 			if err != nil {
 				return CreateProgressFailed, err.Error(), err
 			}
@@ -283,14 +283,6 @@ func absUserPath(path string) (string, error) {
 		}
 	}
 	return filepath.Abs(path)
-}
-
-func defaultWorktreePath(repoKey string, workspaceName string) (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".yishan", "worktrees", repoKey, workspaceName), nil
 }
 
 func safeRelativePath(input string, field string) (string, error) {

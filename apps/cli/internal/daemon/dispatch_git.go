@@ -14,7 +14,11 @@ func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params 
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.GitStatus(ctx, req.WorkspaceID)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.GitStatus(ctx)
 	case MethodGitInspect:
 		var req gitInspectParams
 		if err := decodeParams(params, &req); err != nil {
@@ -30,13 +34,21 @@ func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params 
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.GitListChanges(ctx, req.WorkspaceID)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.GitListChanges(ctx)
 	case MethodGitTrack:
 		var req gitPathsParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		if err := h.manager.GitTrackChanges(ctx, req.WorkspaceID, req.Paths); err != nil {
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		if err := handle.GitTrackChanges(ctx, req.Paths); err != nil {
 			return nil, err
 		}
 		return map[string]bool{"tracked": true}, nil
@@ -45,7 +57,11 @@ func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params 
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		if err := h.manager.GitUnstageChanges(ctx, req.WorkspaceID, req.Paths); err != nil {
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		if err := handle.GitUnstageChanges(ctx, req.Paths); err != nil {
 			return nil, err
 		}
 		return map[string]bool{"unstaged": true}, nil
@@ -54,7 +70,11 @@ func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params 
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		if err := h.manager.GitRevertChanges(ctx, req.WorkspaceID, req.Paths); err != nil {
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		if err := handle.GitRevertChanges(ctx, req.Paths); err != nil {
 			return nil, err
 		}
 		return map[string]bool{"reverted": true}, nil
@@ -63,67 +83,111 @@ func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params 
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.GitCommitChanges(ctx, req.WorkspaceID, req.Message, req.Amend, req.Signoff)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.GitCommitChanges(ctx, req.Message, req.Amend, req.Signoff)
 	case MethodGitBranchStatus:
 		var req gitStatusParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.GitBranchStatus(ctx, req.WorkspaceID)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.GitBranchStatus(ctx)
 	case MethodGitBranchPullRequest:
 		var req gitBranchPullRequestParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.GitBranchPullRequest(ctx, req.WorkspaceID, req.Branch)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.GitBranchPullRequest(ctx, req.Branch)
 	case MethodGitCommitsToTarget:
 		var req gitTargetBranchParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.GitListCommitsToTarget(ctx, req.WorkspaceID, req.TargetBranch)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.GitListCommitsToTarget(ctx, req.TargetBranch)
 	case MethodGitBranchDiffSummary:
 		var req gitTargetBranchParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.GitBranchDiffSummary(ctx, req.WorkspaceID, req.TargetBranch)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.GitBranchDiffSummary(ctx, req.TargetBranch)
 	case MethodGitCommitDiff:
 		var req gitCommitDiffParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.GitReadCommitDiff(ctx, req.WorkspaceID, req.CommitHash, req.Path)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.GitReadCommitDiff(ctx, req.CommitHash, req.Path)
 	case MethodGitBranchDiff:
 		var req gitBranchDiffParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.GitReadBranchComparisonDiff(ctx, req.WorkspaceID, req.TargetBranch, req.Path)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.GitReadBranchComparisonDiff(ctx, req.TargetBranch, req.Path)
 	case MethodGitBranches:
 		var req gitStatusParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.GitListBranches(ctx, req.WorkspaceID)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.GitListBranches(ctx)
 	case MethodGitPush:
 		var req gitStatusParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.GitPushBranch(ctx, req.WorkspaceID)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.GitPushBranch(ctx)
 	case MethodGitPublish:
 		var req gitStatusParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.GitPublishBranch(ctx, req.WorkspaceID)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.GitPublishBranch(ctx)
 	case MethodGitRenameBranch:
 		var req gitRenameBranchParams
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		if err := h.manager.GitRenameBranch(ctx, req.WorkspaceID, req.NextBranch); err != nil {
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		if err := handle.GitRenameBranch(ctx, req.NextBranch); err != nil {
 			return nil, err
 		}
 		return map[string]bool{"renamed": true}, nil
@@ -132,7 +196,11 @@ func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params 
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		if err := h.manager.GitRemoveBranch(ctx, req.WorkspaceID, req.Branch, req.Force); err != nil {
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		if err := handle.GitRemoveBranch(ctx, req.Branch, req.Force); err != nil {
 			return nil, err
 		}
 		return map[string]bool{"removed": true}, nil
@@ -141,7 +209,11 @@ func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params 
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		out, err := h.manager.GitPrMerge(ctx, req.WorkspaceID, req.PrNumber, req.Method, req.DeleteBranch)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		out, err := handle.GitPrMerge(ctx, req.PrNumber, req.Method, req.DeleteBranch)
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +223,11 @@ func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params 
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		out, err := h.manager.GitPrClose(ctx, req.WorkspaceID, req.PrNumber)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		out, err := handle.GitPrClose(ctx, req.PrNumber)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +237,11 @@ func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params 
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		if err := h.manager.GitCreateWorktree(ctx, req.WorkspaceID, req.Branch, req.WorktreePath, req.CreateBranch, req.FromRef); err != nil {
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		if err := handle.GitCreateWorktree(ctx, req.Branch, req.WorktreePath, req.CreateBranch, req.FromRef); err != nil {
 			return nil, err
 		}
 		return map[string]bool{"created": true}, nil
@@ -170,7 +250,11 @@ func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params 
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		if err := h.manager.GitRemoveWorktree(ctx, req.WorkspaceID, req.WorktreePath, req.Force); err != nil {
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		if err := handle.GitRemoveWorktree(ctx, req.WorktreePath, req.Force); err != nil {
 			return nil, err
 		}
 		return map[string]bool{"removed": true}, nil
@@ -179,7 +263,11 @@ func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params 
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.GitAuthorName(ctx, req.WorkspaceID)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.GitAuthorName(ctx)
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown git method: "+method)
 	}

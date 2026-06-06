@@ -48,10 +48,75 @@ type cachedAgentDetectionResult struct {
 	Statuses  []AgentCLIDetectionStatus
 }
 
-var (
-	agentDetectionCacheMu sync.RWMutex
-	agentDetectionCache   cachedAgentDetectionResult
-)
+type agentDetectionCache struct {
+	mu    sync.RWMutex
+	value cachedAgentDetectionResult
+}
+
+func newAgentDetectionCache() *agentDetectionCache {
+	return &agentDetectionCache{}
+}
+
+func (c *agentDetectionCache) load(cacheKey string, ttl time.Duration) ([]AgentCLIDetectionStatus, bool) {
+	if ttl <= 0 {
+		return nil, false
+	}
+
+	now := time.Now()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.value.CacheKey != cacheKey {
+		return nil, false
+	}
+	if now.After(c.value.ExpiresAt) {
+		return nil, false
+	}
+
+	return cloneAgentDetectionStatuses(c.value.Statuses), true
+}
+
+func (c *agentDetectionCache) loadAny(ttl time.Duration) ([]AgentCLIDetectionStatus, bool) {
+	if ttl <= 0 {
+		return nil, false
+	}
+
+	now := time.Now()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if now.After(c.value.ExpiresAt) {
+		return nil, false
+	}
+	if len(c.value.Statuses) == 0 {
+		return nil, false
+	}
+
+	return cloneAgentDetectionStatuses(c.value.Statuses), true
+}
+
+func (c *agentDetectionCache) store(cacheKey string, ttl time.Duration, statuses []AgentCLIDetectionStatus) {
+	if ttl <= 0 {
+		return
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.value = cachedAgentDetectionResult{
+		CacheKey:  cacheKey,
+		ExpiresAt: time.Now().Add(ttl),
+		Statuses:  cloneAgentDetectionStatuses(statuses),
+	}
+}
+
+func (c *agentDetectionCache) reset() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.value = cachedAgentDetectionResult{}
+}
+
+var defaultAgentDetectionCache = newAgentDetectionCache()
 
 // AgentCLIDetectionStatus captures one supported agent CLI detection result.
 type AgentCLIDetectionStatus struct {
@@ -80,7 +145,7 @@ func ListAgentCLIDetectionStatuses() []AgentCLIDetectionStatus {
 func ListAgentCLIDetectionStatusesWithRefresh(forceRefresh bool) []AgentCLIDetectionStatus {
 	ttl := resolveAgentDetectionCacheTTL()
 	if !forceRefresh {
-		if statuses, ok := loadAnyCachedAgentDetectionStatuses(ttl); ok {
+		if statuses, ok := defaultAgentDetectionCache.loadAny(ttl); ok {
 			return statuses
 		}
 	}
@@ -100,13 +165,13 @@ func ListAgentCLIDetectionStatusesWithRuntimeOptions(forceRefresh bool, options 
 	cacheKey := buildAgentDetectionCacheKey(options)
 
 	if !forceRefresh {
-		if statuses, ok := loadCachedAgentDetectionStatuses(cacheKey, ttl); ok {
+		if statuses, ok := defaultAgentDetectionCache.load(cacheKey, ttl); ok {
 			return statuses
 		}
 	}
 
 	statuses := listAgentCLIDetectionStatusesWithOptions(options)
-	storeCachedAgentDetectionStatuses(cacheKey, ttl, statuses)
+	defaultAgentDetectionCache.store(cacheKey, ttl, statuses)
 
 	return statuses
 }
@@ -140,59 +205,6 @@ func buildAgentDetectionCacheKey(options agentDetectionOptions) string {
 	}, "|")
 }
 
-func loadCachedAgentDetectionStatuses(cacheKey string, ttl time.Duration) ([]AgentCLIDetectionStatus, bool) {
-	if ttl <= 0 {
-		return nil, false
-	}
-
-	now := time.Now()
-	agentDetectionCacheMu.RLock()
-	defer agentDetectionCacheMu.RUnlock()
-
-	if agentDetectionCache.CacheKey != cacheKey {
-		return nil, false
-	}
-	if now.After(agentDetectionCache.ExpiresAt) {
-		return nil, false
-	}
-
-	return cloneAgentDetectionStatuses(agentDetectionCache.Statuses), true
-}
-
-func loadAnyCachedAgentDetectionStatuses(ttl time.Duration) ([]AgentCLIDetectionStatus, bool) {
-	if ttl <= 0 {
-		return nil, false
-	}
-
-	now := time.Now()
-	agentDetectionCacheMu.RLock()
-	defer agentDetectionCacheMu.RUnlock()
-
-	if now.After(agentDetectionCache.ExpiresAt) {
-		return nil, false
-	}
-	if len(agentDetectionCache.Statuses) == 0 {
-		return nil, false
-	}
-
-	return cloneAgentDetectionStatuses(agentDetectionCache.Statuses), true
-}
-
-func storeCachedAgentDetectionStatuses(cacheKey string, ttl time.Duration, statuses []AgentCLIDetectionStatus) {
-	if ttl <= 0 {
-		return
-	}
-
-	agentDetectionCacheMu.Lock()
-	defer agentDetectionCacheMu.Unlock()
-
-	agentDetectionCache = cachedAgentDetectionResult{
-		CacheKey:  cacheKey,
-		ExpiresAt: time.Now().Add(ttl),
-		Statuses:  cloneAgentDetectionStatuses(statuses),
-	}
-}
-
 func cloneAgentDetectionStatuses(statuses []AgentCLIDetectionStatus) []AgentCLIDetectionStatus {
 	cloned := make([]AgentCLIDetectionStatus, len(statuses))
 	copy(cloned, statuses)
@@ -200,9 +212,7 @@ func cloneAgentDetectionStatuses(statuses []AgentCLIDetectionStatus) []AgentCLID
 }
 
 func resetAgentDetectionCacheForTest() {
-	agentDetectionCacheMu.Lock()
-	defer agentDetectionCacheMu.Unlock()
-	agentDetectionCache = cachedAgentDetectionResult{}
+	defaultAgentDetectionCache.reset()
 }
 
 func resolveDetectionPathValue() string {
@@ -374,11 +384,14 @@ func detectAgentCLIVersion(agentKind string, binaryPath string, commandEnv []str
 			return "", true
 		}
 
+		firstLine := strings.TrimSpace(strings.Split(output, "\n")[0])
+		if matched := versionPattern.FindString(firstLine); matched != "" {
+			return matched, false
+		}
 		if matched := versionPattern.FindString(output); matched != "" {
 			return matched, false
 		}
 
-		firstLine := strings.TrimSpace(strings.Split(output, "\n")[0])
 		if firstLine != "" {
 			return firstLine, false
 		}
@@ -389,7 +402,7 @@ func detectAgentCLIVersion(agentKind string, binaryPath string, commandEnv []str
 
 func versionCommandArgsForAgent(agentKind string) [][]string {
 	if agentKind == "pi" {
-		return [][]string{{"--version"}}
+		return [][]string{{"--version"}, {}}
 	}
 
 	return [][]string{{"--version"}, {"version"}, {"-v"}}

@@ -37,7 +37,7 @@ type jobRunParams struct {
 
 // handleJobRun processes a job.run notification received from the relay.
 // It sends job.ack / job.result back over the relay WS connection.
-func handleJobRun(connState *wsConnState, nodeID string, raw json.RawMessage) {
+func handleJobRun(runtime *cliruntime.Runtime, connState *wsConnState, nodeID string, raw json.RawMessage) {
 	var params jobRunParams
 	if err := json.Unmarshal(raw, &params); err != nil {
 		log.Warn().Err(err).Msg("scheduler: invalid job.run params")
@@ -51,7 +51,7 @@ func handleJobRun(connState *wsConnState, nodeID string, raw json.RawMessage) {
 		return
 	}
 
-	if !cliruntime.APIConfigured() {
+	if runtime == nil || !runtime.APIConfigured() {
 		log.Warn().Msg("scheduler: API not configured, rejecting job.run")
 		sendJobAck(connState, params.RunID, "rejected", "API not configured")
 		return
@@ -61,12 +61,12 @@ func handleJobRun(connState *wsConnState, nodeID string, raw json.RawMessage) {
 	sendJobAck(connState, params.RunID, "accepted", "")
 
 	// Process asynchronously so the relay read loop is not blocked
-	go processRelayJob(connState, nodeID, params)
+	go processRelayJob(runtime, connState, nodeID, params)
 }
 
-func processRelayJob(connState *wsConnState, nodeID string, params jobRunParams) {
+func processRelayJob(runtime *cliruntime.Runtime, connState *wsConnState, nodeID string, params jobRunParams) {
 	startTime := time.Now()
-	client := cliruntime.APIClient()
+	client := runtime.APIClient()
 
 	_, err := client.StartScheduledJobRun(nodeID, api.StartScheduledJobRunInput{
 		RunID:     params.RunID,

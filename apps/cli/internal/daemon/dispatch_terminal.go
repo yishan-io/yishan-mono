@@ -14,56 +14,60 @@ func (h *JSONRPCHandler) dispatchTerminal(ctx context.Context, connState *wsConn
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.TerminalStart(ctx, req)
+		handle, err := h.manager.WorkspaceHandle(req.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+		return handle.TerminalStart(ctx, req)
 	case MethodTerminalSend:
 		var req workspace.TerminalSendRequest
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.TerminalSend(req)
+		return h.manager.Terminals().Send(req)
 	case MethodTerminalRead:
 		var req workspace.TerminalReadRequest
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.TerminalRead(req)
+		return h.manager.Terminals().Read(req)
 	case MethodTerminalStop:
 		var req workspace.TerminalStopRequest
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.TerminalStop(req)
+		return h.manager.Terminals().Stop(req)
 	case MethodTerminalKillProcess:
 		var req workspace.TerminalKillProcessRequest
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.TerminalKillProcess(req)
+		return h.manager.Terminals().KillProcess(req)
 	case MethodTerminalListSessions:
 		var req workspace.TerminalListSessionsRequest
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.TerminalListSessions(req), nil
+		return h.manager.Terminals().ListSessions(req), nil
 	case MethodTerminalListPorts:
-		return h.manager.TerminalListDetectedPorts(), nil
+		return h.manager.Terminals().ListDetectedPorts(), nil
 	case MethodTerminalResize:
 		var req workspace.TerminalResizeRequest
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		return h.manager.TerminalResize(req)
+		return h.manager.Terminals().Resize(req)
 	case MethodTerminalSubscribe:
 		var req workspace.TerminalSubscribeRequest
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		subscription, err := h.manager.TerminalSubscribe(req)
+		subscription, err := h.manager.Terminals().Subscribe(req)
 		if err != nil {
 			return nil, err
 		}
 		connState.AttachSubscription(req.SessionID, subscription.ID, subscription.Events, func(sessionID string, subscriptionID uint64) {
-			_, _ = h.manager.TerminalUnsubscribe(workspace.TerminalUnsubscribeRequest{SessionID: sessionID, SubscriptionID: subscriptionID})
+			_, _ = h.manager.Terminals().Unsubscribe(workspace.TerminalUnsubscribeRequest{SessionID: sessionID, SubscriptionID: subscriptionID})
 		})
 		return workspace.TerminalSubscribeResponse{Subscribed: true}, nil
 	case MethodTerminalUnsubscribe:

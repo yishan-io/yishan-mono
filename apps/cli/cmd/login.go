@@ -15,6 +15,7 @@ import (
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/daemon"
 	"yishan/apps/cli/internal/login"
+	"yishan/apps/cli/internal/nodeid"
 	"yishan/apps/cli/internal/output"
 )
 
@@ -147,8 +148,8 @@ func registerLocalNodeAfterLogin() error {
 		return fmt.Errorf("resolve daemon state path: %w", err)
 	}
 
-	daemonIDPath := filepath.Join(filepath.Dir(statePath), daemon.IDFileName)
-	daemonID, err := daemon.EnsureDaemonID(daemonIDPath)
+	daemonIDPath := filepath.Join(filepath.Dir(statePath), nodeid.FileName)
+	daemonID, err := nodeid.EnsureDaemonID(daemonIDPath)
 	if err != nil {
 		return fmt.Errorf("ensure daemon id: %w", err)
 	}

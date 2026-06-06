@@ -31,35 +31,73 @@ type cachedGitHubDetectionResult struct {
 	Status    GitHubConnectionStatus
 }
 
-var (
-	ghDetectionCacheMu sync.Mutex
-	ghDetectionCache   cachedGitHubDetectionResult
-)
+type gitHubDetectionCache struct {
+	mu    sync.Mutex
+	value cachedGitHubDetectionResult
+}
+
+func newGitHubDetectionCache() *gitHubDetectionCache {
+	return &gitHubDetectionCache{}
+}
+
+func (c *gitHubDetectionCache) load(ttl time.Duration) (GitHubConnectionStatus, bool) {
+	if ttl <= 0 {
+		return GitHubConnectionStatus{}, false
+	}
+
+	now := time.Now()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if now.After(c.value.ExpiresAt) {
+		return GitHubConnectionStatus{}, false
+	}
+
+	return c.value.Status, true
+}
+
+func (c *gitHubDetectionCache) store(ttl time.Duration, status GitHubConnectionStatus) {
+	if ttl <= 0 {
+		return
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.value = cachedGitHubDetectionResult{
+		ExpiresAt: time.Now().Add(ttl),
+		Status:    status,
+	}
+}
+
+func (c *gitHubDetectionCache) reset() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.value = cachedGitHubDetectionResult{}
+}
+
+var defaultGitHubDetectionCache = newGitHubDetectionCache()
 
 // CheckGitHubConnectionStatus detects whether the GitHub CLI is installed and
 // the user is authenticated. Results are cached to avoid repeated subprocess
 // invocations.
 func CheckGitHubConnectionStatus(forceRefresh bool) GitHubConnectionStatus {
-	return checkGitHubConnectionStatusRaw(forceRefresh)
+	return CheckGitHubConnectionStatusRaw(forceRefresh)
 }
 
 func CheckGitHubConnectionStatusRaw(forceRefresh bool) GitHubConnectionStatus {
 	ttl := resolveGhDetectionCacheTTL()
 
 	if !forceRefresh {
-		if status, ok := loadCachedGhDetectionStatus(ttl); ok {
+		if status, ok := defaultGitHubDetectionCache.load(ttl); ok {
 			return status
 		}
 	}
 
 	status := detectGitHubConnectionStatus()
-	storeCachedGhDetectionStatus(ttl, status)
+	defaultGitHubDetectionCache.store(ttl, status)
 
 	return status
-}
-
-func checkGitHubConnectionStatusRaw(forceRefresh bool) GitHubConnectionStatus {
-	return CheckGitHubConnectionStatusRaw(forceRefresh)
 }
 
 func resolveGhDetectionCacheTTL() time.Duration {
@@ -76,40 +114,8 @@ func resolveGhDetectionCacheTTL() time.Duration {
 	return ttl
 }
 
-func loadCachedGhDetectionStatus(ttl time.Duration) (GitHubConnectionStatus, bool) {
-	if ttl <= 0 {
-		return GitHubConnectionStatus{}, false
-	}
-
-	now := time.Now()
-	ghDetectionCacheMu.Lock()
-	defer ghDetectionCacheMu.Unlock()
-
-	if now.After(ghDetectionCache.ExpiresAt) {
-		return GitHubConnectionStatus{}, false
-	}
-
-	return ghDetectionCache.Status, true
-}
-
-func storeCachedGhDetectionStatus(ttl time.Duration, status GitHubConnectionStatus) {
-	if ttl <= 0 {
-		return
-	}
-
-	ghDetectionCacheMu.Lock()
-	defer ghDetectionCacheMu.Unlock()
-
-	ghDetectionCache = cachedGitHubDetectionResult{
-		ExpiresAt: time.Now().Add(ttl),
-		Status:    status,
-	}
-}
-
 func resetGhDetectionCacheForTest() {
-	ghDetectionCacheMu.Lock()
-	defer ghDetectionCacheMu.Unlock()
-	ghDetectionCache = cachedGitHubDetectionResult{}
+	defaultGitHubDetectionCache.reset()
 }
 
 func detectGitHubConnectionStatus() GitHubConnectionStatus {

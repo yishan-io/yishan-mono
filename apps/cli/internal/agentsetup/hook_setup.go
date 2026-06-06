@@ -7,7 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"yishan/apps/cli/internal/config"
-	hooksetup "yishan/apps/cli/internal/daemon/setup/hooks"
+	hooksetup "yishan/apps/cli/internal/agentsetup/hooks"
 )
 
 type AgentHookSetupConfig = hooksetup.AgentHookSetupConfig

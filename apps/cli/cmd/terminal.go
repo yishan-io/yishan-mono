@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 	"yishan/apps/cli/internal/daemon"
 	"yishan/apps/cli/internal/output"
-	"yishan/apps/cli/internal/workspace/terminal"
+	"yishan/apps/cli/internal/workspace"
 )
 
 var terminalCmd = &cobra.Command{
@@ -40,9 +40,9 @@ var terminalListCmd = &cobra.Command{
 			return err
 		}
 
-		var result []terminal.SessionSummary
+		var result []workspace.TerminalSessionSummary
 		if err := client.Call(cmd.Context(), daemon.MethodTerminalListSessions,
-			terminal.ListSessionsRequest{IncludeExited: includeExited},
+			workspace.TerminalListSessionsRequest{IncludeExited: includeExited},
 			&result,
 		); err != nil {
 			return err
@@ -74,9 +74,9 @@ var terminalStartCmd = &cobra.Command{
 			return err
 		}
 
-		var result terminal.StartResponse
+		var result workspace.TerminalStartResponse
 		if err := client.Call(cmd.Context(), daemon.MethodTerminalStart,
-			terminal.StartRequest{WorkspaceID: workspaceID, Command: command},
+			workspace.TerminalStartRequest{WorkspaceID: workspaceID, Command: command},
 			&result,
 		); err != nil {
 			return err
@@ -103,9 +103,9 @@ var terminalStopCmd = &cobra.Command{
 			return err
 		}
 
-		var result terminal.StopResponse
+		var result workspace.TerminalStopResponse
 		if err := client.Call(cmd.Context(), daemon.MethodTerminalStop,
-			terminal.StopRequest{SessionID: sessionID},
+			workspace.TerminalStopRequest{SessionID: sessionID},
 			&result,
 		); err != nil {
 			return err
@@ -136,7 +136,7 @@ var terminalPortsCmd = &cobra.Command{
 			return err
 		}
 
-		var result []terminal.DetectedPort
+		var result []workspace.TerminalDetectedPort
 		if err := client.Call(cmd.Context(), daemon.MethodTerminalListPorts, nil, &result); err != nil {
 			return err
 		}
@@ -165,4 +165,52 @@ func init() {
 
 	terminalPortsCmd.Flags().Bool("all", false, "show full response fields")
 	terminalPortsCmd.Flags().BoolP("verbose", "v", false, "show full response fields")
+}
+
+func renderTerminalSessionsList(sessions []workspace.TerminalSessionSummary, includeAll bool) output.RenderData {
+	rows := make([]map[string]any, 0, len(sessions))
+	for _, session := range sessions {
+		row := map[string]any{
+			"sessionId":   session.SessionID,
+			"workspaceId": session.WorkspaceID,
+			"status":      session.Status,
+		}
+		if includeAll {
+			row["pid"] = session.PID
+			row["startedAt"] = session.StartedAt
+			row["exitedAt"] = session.ExitedAt
+		}
+		rows = append(rows, row)
+	}
+
+	columns := []string{"sessionId", "workspaceId", "status"}
+	if includeAll {
+		columns = []string{"sessionId", "workspaceId", "status", "pid", "startedAt", "exitedAt"}
+	}
+
+	return output.RenderData{Title: "sessions", Columns: columns, Rows: rows}
+}
+
+func renderTerminalPortsList(ports []workspace.TerminalDetectedPort, includeAll bool) output.RenderData {
+	rows := make([]map[string]any, 0, len(ports))
+	for _, port := range ports {
+		row := map[string]any{
+			"port":        port.Port,
+			"address":     port.Address,
+			"processName": port.ProcessName,
+		}
+		if includeAll {
+			row["sessionId"] = port.SessionID
+			row["workspaceId"] = port.WorkspaceID
+			row["pid"] = port.PID
+		}
+		rows = append(rows, row)
+	}
+
+	columns := []string{"port", "address", "processName"}
+	if includeAll {
+		columns = []string{"port", "address", "processName", "sessionId", "workspaceId", "pid"}
+	}
+
+	return output.RenderData{Title: "ports", Columns: columns, Rows: rows}
 }

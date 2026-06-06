@@ -6,7 +6,6 @@ import (
 	"github.com/spf13/cobra"
 	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/output"
-	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
 var refreshCmd = &cobra.Command{
@@ -18,7 +17,7 @@ var refreshCmd = &cobra.Command{
 			return err
 		}
 
-		response, err := cliruntime.APIClient().RefreshToken(refreshToken)
+		response, err := apiClient.RefreshToken(refreshToken)
 		if err != nil {
 			return err
 		}
@@ -36,7 +35,7 @@ var revokeCmd = &cobra.Command{
 			return err
 		}
 
-		response, err := cliruntime.APIClient().RevokeToken(refreshToken)
+		response, err := apiClient.RevokeToken(refreshToken)
 		if err != nil {
 			return err
 		}
@@ -72,7 +71,7 @@ To use on a remote host:
 			input.ExpiresInDays = &expiresInDays
 		}
 
-		response, err := cliruntime.APIClient().CreateServiceToken(input)
+		response, err := apiClient.CreateServiceToken(input)
 		if err != nil {
 			return err
 		}
@@ -87,7 +86,7 @@ var listServiceTokensCmd = &cobra.Command{
 	Use:   "list-service-tokens",
 	Short: "List service tokens",
 	RunE: func(_ *cobra.Command, _ []string) error {
-		response, err := cliruntime.APIClient().ListServiceTokens()
+		response, err := apiClient.ListServiceTokens()
 		if err != nil {
 			return err
 		}
@@ -105,7 +104,7 @@ var revokeServiceTokenCmd = &cobra.Command{
 			return err
 		}
 
-		response, err := cliruntime.APIClient().RevokeServiceToken(tokenID)
+		response, err := apiClient.RevokeServiceToken(tokenID)
 		if err != nil {
 			return err
 		}
