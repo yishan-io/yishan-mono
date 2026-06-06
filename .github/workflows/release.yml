@@ -53,12 +53,15 @@ jobs:
         run: |
           version="${{ steps.version.outputs.version }}"
           tag="v${version}"
-          # Create the release up-front so matrix jobs can upload to it.
-          gh release create "$tag" \
-            --title "Yishan v${version}" \
-            --draft=${{ inputs.draft || 'true' }} \
-            --notes "Release v${version}" || \
+          # Check for any existing release (draft or published) for this tag.
+          if gh release view "$tag" &>/dev/null; then
             echo "Release $tag already exists — skipping creation."
+          else
+            gh release create "$tag" \
+              --title "Yishan v${version}" \
+              --draft=${{ inputs.draft || 'true' }} \
+              --notes "Release v${version}"
+          fi
 
   cli:
     needs: resolve-version
