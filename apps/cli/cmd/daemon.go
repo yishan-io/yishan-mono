@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"yishan/apps/cli/internal/daemon"
-	daemonclient "yishan/apps/cli/internal/daemon/client"
 	"yishan/apps/cli/internal/output"
 )
 
@@ -294,7 +293,7 @@ func init() {
 // resolveDaemonClient loads the daemon state file and returns a JSON-RPC
 // client pointed at the running daemon. Returns daemon.ErrNotRunning if no
 // healthy daemon process is found, which maps to exit code 6.
-func resolveDaemonClient() (*daemonclient.Client, error) {
+func resolveDaemonClient() (*daemon.Client, error) {
 	statePath, err := daemon.ResolveStateFilePath(appConfig.ConfigPath)
 	if err != nil {
 		return nil, err
@@ -310,5 +309,5 @@ func resolveDaemonClient() (*daemonclient.Client, error) {
 	}
 
 	wsURL := "ws://" + net.JoinHostPort(state.Host, strconv.Itoa(state.Port)) + "/ws"
-	return daemonclient.New(wsURL, ""), nil
+	return daemon.NewDaemonClient(wsURL, ""), nil
 }

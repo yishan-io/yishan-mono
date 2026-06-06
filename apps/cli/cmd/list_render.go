@@ -3,7 +3,7 @@ package cmd
 import (
 	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/output"
-	"yishan/apps/cli/internal/workspace/terminal"
+	"yishan/apps/cli/internal/workspace"
 )
 
 func renderProjectsList(response api.ListProjectsResponse, includeAll bool) output.RenderData {
@@ -101,7 +101,7 @@ func renderWorkspacesList(response api.ListWorkspacesResponse, includeAll bool, 
 	return output.RenderData{Title: "workspaces", Columns: columns, Rows: rows}
 }
 
-func renderTerminalSessionsList(sessions []terminal.SessionSummary, includeAll bool) output.RenderData {
+func renderTerminalSessionsList(sessions []workspace.TerminalSessionSummary, includeAll bool) output.RenderData {
 	rows := make([]map[string]any, 0, len(sessions))
 	for _, session := range sessions {
 		row := map[string]any{
@@ -125,7 +125,7 @@ func renderTerminalSessionsList(sessions []terminal.SessionSummary, includeAll b
 	return output.RenderData{Title: "sessions", Columns: columns, Rows: rows}
 }
 
-func renderTerminalPortsList(ports []terminal.DetectedPort, includeAll bool) output.RenderData {
+func renderTerminalPortsList(ports []workspace.TerminalDetectedPort, includeAll bool) output.RenderData {
 	rows := make([]map[string]any, 0, len(ports))
 	for _, port := range ports {
 		row := map[string]any{

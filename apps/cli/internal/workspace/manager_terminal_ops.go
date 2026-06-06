@@ -1,7 +1,18 @@
 package workspace
 
-import "yishan/apps/cli/internal/workspace/terminal"
+import (
+	"context"
 
+	"yishan/apps/cli/internal/workspace/terminal"
+)
+
+func (m *Manager) TerminalStart(ctx context.Context, req TerminalStartRequest) (TerminalStartResponse, error) {
+	handle, err := m.WorkspaceHandle(req.WorkspaceID)
+	if err != nil {
+		return TerminalStartResponse{}, err
+	}
+	return handle.TerminalStart(ctx, req)
+}
 func (m *Manager) TerminalSend(req TerminalSendRequest) (TerminalSendResponse, error) {
 	return m.terminals.Send(req)
 }

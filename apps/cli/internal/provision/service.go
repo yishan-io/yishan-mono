@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/daemon"
+	"yishan/apps/cli/internal/nodeid"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -60,7 +61,7 @@ func (p *Provisioner) CreateWorkspace(ctx context.Context, req CreateWorkspaceRe
 			return api.CreateWorkspaceResponse{}, fmt.Errorf("project %s is missing repo key", req.ProjectID)
 		}
 		if localPath == "" {
-			localPath, err = defaultWorktreePath(project.RepoKey, workspaceName)
+			localPath, err = workspace.DefaultWorktreePath(project.RepoKey, workspaceName)
 			if err != nil {
 				return api.CreateWorkspaceResponse{}, err
 			}
@@ -106,11 +107,11 @@ func (p *Provisioner) ensureWorkspaceProvisionedLocally(
 ) error {
 	localSourcePath := project.LocalPath
 	if project.RepoURL != "" && localSourcePath == "" {
-		repoPath, err := defaultRepoPath(project.RepoKey)
+		repoPath, err := workspace.DefaultRepoPath(project.RepoKey)
 		if err != nil {
 			return err
 		}
-		if err := ensureBareRepoClone(ctx, project.RepoURL, repoPath); err != nil {
+		if err := workspace.EnsureBareRepoClone(ctx, project.RepoURL, repoPath); err != nil {
 			return err
 		}
 		localSourcePath = repoPath
@@ -122,7 +123,7 @@ func (p *Provisioner) ensureWorkspaceProvisionedLocally(
 		}
 		localSourcePath = baseWorkspace.LocalPath
 	}
-	if err := updateGitRepo(ctx, localSourcePath); err != nil {
+	if err := p.workspaceManager.SyncRepoSource(ctx, localSourcePath); err != nil {
 		return err
 	}
 
@@ -186,8 +187,8 @@ func NewRuntimeProvisioner(apiClient *api.Client, cfg RuntimeConfig) *Provisione
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to resolve daemon runtime state path")
 	} else {
-		daemonIDPath := filepath.Join(filepath.Dir(statePath), daemon.IDFileName)
-		if id, err := daemon.EnsureDaemonID(daemonIDPath); err == nil {
+		daemonIDPath := filepath.Join(filepath.Dir(statePath), nodeid.FileName)
+		if id, err := nodeid.EnsureDaemonID(daemonIDPath); err == nil {
 			localNodeID = id
 		} else {
 			log.Warn().Err(err).Msg("failed to resolve local daemon id")
