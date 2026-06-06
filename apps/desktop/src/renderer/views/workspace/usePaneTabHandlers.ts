@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { SplitDropRegion } from "../../components/SplitDropZone";
 import { resolveDropResult } from "../../components/SplitDropZone";
@@ -9,6 +9,7 @@ import type { Commands } from "../../hooks/useCommands";
 import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import { splitPaneStore } from "../../store/splitPaneStore";
 import type { WorkspaceTab } from "../../store/types";
+import { forceFitTerminalRuntimes } from "./terminal/terminalRuntimeRegistry";
 
 export type UsePaneTabHandlersOptions = {
   workspaceId: string;
@@ -34,6 +35,24 @@ export function usePaneTabHandlers({
 }: UsePaneTabHandlersOptions) {
   const { t } = useTranslation();
   const customCommandByAgentKind = agentSettingsStore((state) => state.customCommandByAgentKind);
+  const terminalTabIds = useMemo(
+    () => workspaceTabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id),
+    [workspaceTabs],
+  );
+
+  useEffect(() => {
+    if (terminalTabIds.length === 0) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      forceFitTerminalRuntimes(terminalTabIds);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [terminalTabIds]);
 
   const handleSelectTab = useCallback(
     (paneId: string, tabId: string) => {

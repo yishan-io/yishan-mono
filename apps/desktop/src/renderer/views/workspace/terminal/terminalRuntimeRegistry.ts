@@ -292,6 +292,22 @@ export function disposeTerminalRuntimesForClosedTabs(openTabIds: ReadonlySet<str
 }
 
 /**
+ * Forces a definitive fit for the provided attached terminal runtimes.
+ * Used after layout changes that can move terminals between pane placeholders.
+ */
+export function forceFitTerminalRuntimes(tabIds: readonly string[]): void {
+  for (const tabId of tabIds) {
+    const entry = runtimesByTabId.get(tabId);
+    if (!entry || entry.state !== "attached") {
+      continue;
+    }
+
+    const didFit = safeFitTerminal(entry, true);
+    notifyTerminalResizeIfNeeded(entry, didFit);
+  }
+}
+
+/**
  * Gets an existing runtime entry (or null if not yet created/already disposed).
  */
 export function getTerminalRuntime(tabId: string): TerminalRuntimeEntry | null {
