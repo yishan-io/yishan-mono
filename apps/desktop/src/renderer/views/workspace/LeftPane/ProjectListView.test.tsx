@@ -261,7 +261,7 @@ function renderRepoList(
       lastUsedExternalAppId,
       pullRequestByWorkspaceId: {},
       latestPullRequestByWorkspaceId: {},
-      currentBranchByWorkspaceId: {},
+      currentBranchByWorkspaceId: { "workspace-1": "feature/live-branch" },
       setWorkspaceCurrentBranch: mocked.setWorkspaceCurrentBranch,
       gitChangeTotalsByWorkspaceId: {
       "workspace-1": { additions: 12, deletions: 4 },
@@ -350,9 +350,12 @@ describe("ProjectListView", () => {
       selectedProjectId: "repo-1",
       selectedWorkspaceId: "workspace-1",
       displayProjectIds: ["repo-1"],
-      lastUsedExternalAppId: undefined,
+      pullRequestByWorkspaceId: {},
+      currentBranchByWorkspaceId: {},
       gitChangeTotalsByWorkspaceId: {},
+      setWorkspaceCurrentBranch: mocked.setWorkspaceCurrentBranch,
     };
+
 
     renderProjectListView();
 
@@ -842,8 +845,11 @@ describe("ProjectListView", () => {
       selectedWorkspaceId: "workspace-1",
       displayProjectIds: ["repo-1"],
       pullRequestByWorkspaceId: {},
-      currentBranchByWorkspaceId: {},
+      currentBranchByWorkspaceId: { "workspace-1": "feature/live-branch" },
+      gitChangeTotalsByWorkspaceId: {},
+      setWorkspaceCurrentBranch: mocked.setWorkspaceCurrentBranch,
     };
+
     renderProjectListView();
 
     fireEvent.mouseEnter(screen.getByTestId("workspace-row-workspace-1"));

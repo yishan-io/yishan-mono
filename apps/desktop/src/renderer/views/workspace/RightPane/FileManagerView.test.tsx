@@ -805,6 +805,59 @@ describe("FileManagerView file loading", () => {
     });
   });
 
+  it("evicts stale .my-context direct children when refresh reports parent directory changes", async () => {
+    mocks.listFiles.mockImplementation(async (input: {
+      workspaceWorktreePath: string;
+      relativePath?: string;
+      recursive?: boolean;
+    }) => {
+      if (input.recursive === false && input.relativePath === ".my-context") {
+        return { files: asEntries([".my-context/sub/", ".my-context/sub/moved.md"]) };
+      }
+
+      if (input.recursive) {
+        return { files: asEntries([".my-context/", ".my-context/old.md"]) };
+      }
+
+      return { files: asEntries([]) };
+    });
+
+    const { rerender } = render(<FileManagerView />);
+
+    await waitFor(() => {
+      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
+        ".my-context/",
+        ".my-context/old.md",
+      ]);
+    });
+
+    await getFileTreeProps().onEnsurePathLoaded?.(".my-context");
+
+    await waitFor(() => {
+      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
+        ".my-context/",
+        ".my-context/old.md",
+        ".my-context/sub/",
+        ".my-context/sub/moved.md",
+      ]);
+    });
+
+    mocks.stateRef.current.fileTreeChangedRelativePathsByWorktreePath = {
+      "/tmp/repo": [".my-context", ".my-context/sub"],
+    };
+    mocks.stateRef.current.fileTreeRefreshVersion += 1;
+
+    rerender(<FileManagerView />);
+
+    await waitFor(() => {
+      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
+        ".my-context/",
+        ".my-context/sub/",
+        ".my-context/sub/moved.md",
+      ]);
+    });
+  });
+
   it("keeps loaded descendants after refresh when recursive root list only includes parent directory", async () => {
     mocks.listFiles.mockImplementation(async (input: {
       workspaceWorktreePath: string;
@@ -846,6 +899,45 @@ describe("FileManagerView file loading", () => {
         ".opencode/",
         ".opencode/agents/",
         ".opencode/agents/main.md",
+      ]);
+    });
+  });
+
+  it("fully replaces deep .my-context entries on file tree refresh", async () => {
+    let recursiveCallCount = 0;
+    mocks.listFiles.mockImplementation(async (input: {
+      workspaceWorktreePath: string;
+      relativePath?: string;
+      recursive?: boolean;
+    }) => {
+      if (input.recursive) {
+        recursiveCallCount += 1;
+        if (recursiveCallCount === 1) {
+          return { files: asEntries([".my-context/", ".my-context/sub/", ".my-context/sub/old.md"]) };
+        }
+
+        return { files: asEntries([".my-context/", ".my-context/new.md"]) };
+      }
+
+      return { files: asEntries([]) };
+    });
+
+    render(<FileManagerView />);
+
+    await waitFor(() => {
+      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
+        ".my-context/",
+        ".my-context/sub/",
+        ".my-context/sub/old.md",
+      ]);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+
+    await waitFor(() => {
+      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
+        ".my-context/",
+        ".my-context/new.md",
       ]);
     });
   });
@@ -969,7 +1061,7 @@ describe("FileManagerView file loading", () => {
     );
   });
 
-  it("falls back to recursive load when directory immediate children are ignored", async () => {
+  it("loads shallow directory contents when directory immediate children are ignored", async () => {
     mocks.listFiles.mockImplementation(async (input: {
       workspaceWorktreePath: string;
       relativePath?: string;
@@ -1013,22 +1105,11 @@ describe("FileManagerView file loading", () => {
         relativePath: "src",
         recursive: false,
       });
-      expect(mocks.listFiles).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
-        relativePath: "src",
-        recursive: true,
-      });
-      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
-        "src/",
-        "src/.cache/",
-        "src/.cache/nested/",
-        "src/.cache/nested/ignore.log",
-        "src/.cache/nested/keep.ts",
-      ]);
+      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual(["src/"]);
     });
   });
 
-  it("falls back to recursive load when shallow response only echoes the directory", async () => {
+  it("keeps collapsed directory when shallow response only echoes the directory", async () => {
     mocks.listFiles.mockImplementation(async (input: {
       workspaceWorktreePath: string;
       relativePath?: string;
@@ -1067,16 +1148,7 @@ describe("FileManagerView file loading", () => {
         relativePath: ".opencode",
         recursive: false,
       });
-      expect(mocks.listFiles).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
-        relativePath: ".opencode",
-        recursive: true,
-      });
-      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
-        ".opencode/",
-        ".opencode/agents/",
-        ".opencode/agents/main.md",
-      ]);
+      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([".opencode/"]);
     });
   });
 });

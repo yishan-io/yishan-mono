@@ -455,7 +455,7 @@ describe("createWorkspaceRepoActions", () => {
       setupScript: "npm ci",
       postScript: "rm -rf node_modules",
     });
-    harness.actions.incrementFileTreeRefreshVersion();
+    harness.actions.incrementFileTreeRefreshVersion("/tmp/repo-1");
 
     const state = harness.getState();
     expect(state.projects[0]?.name).toBe("Repo Updated");

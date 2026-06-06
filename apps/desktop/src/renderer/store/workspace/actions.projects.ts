@@ -90,16 +90,16 @@ export function createWorkspaceRepoActions(
     },
     incrementFileTreeRefreshVersion: (workspaceWorktreePath, changedRelativePaths) => {
       const normalizedWorkspaceWorktreePath = workspaceWorktreePath?.trim() ?? "";
+      if (normalizedWorkspaceWorktreePath.length === 0) {
+        return;
+      }
+
       const normalizedChangedRelativePaths = (changedRelativePaths ?? [])
         .map((path) => path.trim())
         .filter((path) => path.length > 0 && !isGitInternalPath(path));
 
       set((state) => {
         state.fileTreeRefreshVersion += 1;
-        if (normalizedWorkspaceWorktreePath.length === 0) {
-          return;
-        }
-
         state.fileTreeChangedRelativePathsByWorktreePath[normalizedWorkspaceWorktreePath] =
           normalizedChangedRelativePaths;
       });
