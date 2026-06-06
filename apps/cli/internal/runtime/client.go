@@ -12,57 +12,99 @@ import (
 	"github.com/spf13/viper"
 )
 
-var (
+type Runtime struct {
 	mu     sync.RWMutex
 	appCfg *config.Config
-)
+}
+
+func New(cfg *config.Config) *Runtime {
+	return &Runtime{appCfg: cfg}
+}
+
+var defaultRuntime = New(nil)
 
 func Configure(cfg *config.Config) {
-	mu.Lock()
-	defer mu.Unlock()
-	appCfg = cfg
+	defaultRuntime = New(cfg)
 }
 
 func APIClient() *api.Client {
-	mu.RLock()
-	cfg := appCfg
-	mu.RUnlock()
+	return defaultRuntime.APIClient()
+}
+
+func APIConfigured() bool {
+	return defaultRuntime.APIConfigured()
+}
+
+func APIToken() string {
+	return defaultRuntime.APIToken()
+}
+
+func PersistAuthTokens(update api.TokenUpdate) error {
+	return defaultRuntime.PersistAuthTokens(update)
+}
+
+func GetAccessToken() (accessToken string, accessTokenExpiresAt string, err error) {
+	return defaultRuntime.GetAccessToken()
+}
+
+const accessTokenEarlyRefreshWindow = 30 * time.Second
+
+func EnsureFreshAccessToken() (accessToken string, accessTokenExpiresAt string, err error) {
+	return defaultRuntime.EnsureFreshAccessToken()
+}
+
+func CheckAuthStatus() (authenticated bool, expiresAt string, err error) {
+	return defaultRuntime.CheckAuthStatus()
+}
+
+func ClearAuthState() {
+	defaultRuntime.ClearAuthState()
+}
+
+func ReloadAuthConfig() error {
+	return defaultRuntime.ReloadAuthConfig()
+}
+
+func (r *Runtime) APIClient() *api.Client {
+	r.mu.RLock()
+	cfg := r.appCfg
+	r.mu.RUnlock()
 	if cfg == nil {
 		return api.NewRuntimeClient(&config.Config{})
 	}
 	return api.NewRuntimeClient(cfg)
 }
 
-func APIConfigured() bool {
-	mu.RLock()
-	cfg := appCfg
-	mu.RUnlock()
+func (r *Runtime) APIConfigured() bool {
+	r.mu.RLock()
+	cfg := r.appCfg
+	r.mu.RUnlock()
 	return cfg != nil && cfg.API.BaseURL != "" && cfg.API.Token != ""
 }
 
-func APIToken() string {
-	mu.RLock()
-	defer mu.RUnlock()
-	if appCfg == nil {
+func (r *Runtime) APIToken() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.appCfg == nil {
 		return ""
 	}
-	return appCfg.API.Token
+	return r.appCfg.API.Token
 }
 
-func PersistAuthTokens(update api.TokenUpdate) error {
-	mu.Lock()
-	defer mu.Unlock()
+func (r *Runtime) PersistAuthTokens(update api.TokenUpdate) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
-	if appCfg == nil || appCfg.ConfigPath == "" {
+	if r.appCfg == nil || r.appCfg.ConfigPath == "" {
 		return fmt.Errorf("runtime config is not initialized")
 	}
 
-	if shouldRejectStaleTokenUpdate(appCfg, update) {
+	if shouldRejectStaleTokenUpdate(r.appCfg, update) {
 		return nil
 	}
 
-	if err := config.UpdateFile(appCfg.ConfigPath, func(cfg *viper.Viper) {
-		cfg.Set(config.KeyAPIBaseURL, appCfg.API.BaseURL)
+	if err := config.UpdateFile(r.appCfg.ConfigPath, func(cfg *viper.Viper) {
+		cfg.Set(config.KeyAPIBaseURL, r.appCfg.API.BaseURL)
 		cfg.Set(config.KeyAPIToken, update.AccessToken)
 		if update.RefreshToken != "" {
 			cfg.Set(config.KeyAPIRefreshToken, update.RefreshToken)
@@ -77,15 +119,15 @@ func PersistAuthTokens(update api.TokenUpdate) error {
 		return fmt.Errorf("persist auth tokens: %w", err)
 	}
 
-	appCfg.API.Token = update.AccessToken
+	r.appCfg.API.Token = update.AccessToken
 	if update.RefreshToken != "" {
-		appCfg.API.RefreshToken = update.RefreshToken
+		r.appCfg.API.RefreshToken = update.RefreshToken
 	}
 	if update.AccessTokenExpiresAt != "" {
-		appCfg.API.AccessTokenExpiresAt = update.AccessTokenExpiresAt
+		r.appCfg.API.AccessTokenExpiresAt = update.AccessTokenExpiresAt
 	}
 	if update.RefreshTokenExpiresAt != "" {
-		appCfg.API.RefreshTokenExpiresAt = update.RefreshTokenExpiresAt
+		r.appCfg.API.RefreshTokenExpiresAt = update.RefreshTokenExpiresAt
 	}
 
 	return nil
@@ -107,22 +149,20 @@ func shouldRejectStaleTokenUpdate(cfg *config.Config, incoming api.TokenUpdate) 
 	return false
 }
 
-func GetAccessToken() (accessToken string, accessTokenExpiresAt string, err error) {
-	mu.RLock()
-	cfg := appCfg
-	mu.RUnlock()
+func (r *Runtime) GetAccessToken() (accessToken string, accessTokenExpiresAt string, err error) {
+	r.mu.RLock()
+	cfg := r.appCfg
+	r.mu.RUnlock()
 	if cfg == nil || cfg.API.Token == "" {
 		return "", "", fmt.Errorf("not authenticated")
 	}
 	return cfg.API.Token, cfg.API.AccessTokenExpiresAt, nil
 }
 
-const accessTokenEarlyRefreshWindow = 30 * time.Second
-
-func EnsureFreshAccessToken() (accessToken string, accessTokenExpiresAt string, err error) {
-	mu.RLock()
-	cfg := appCfg
-	mu.RUnlock()
+func (r *Runtime) EnsureFreshAccessToken() (accessToken string, accessTokenExpiresAt string, err error) {
+	r.mu.RLock()
+	cfg := r.appCfg
+	r.mu.RUnlock()
 	if cfg == nil || cfg.API.Token == "" {
 		return "", "", fmt.Errorf("not authenticated")
 	}
@@ -132,83 +172,78 @@ func EnsureFreshAccessToken() (accessToken string, accessTokenExpiresAt string, 
 		return cfg.API.Token, cfg.API.AccessTokenExpiresAt, nil
 	}
 
-	client := APIClient()
+	client := r.APIClient()
 	if _, whoAmIErr := client.WhoAmI(); whoAmIErr != nil {
-		mu.RLock()
-		cfgNow := appCfg
-		mu.RUnlock()
+		r.mu.RLock()
+		cfgNow := r.appCfg
+		r.mu.RUnlock()
 		if cfgNow != nil && cfgNow.API.Token != "" {
 			return cfgNow.API.Token, cfgNow.API.AccessTokenExpiresAt, nil
 		}
 		return "", "", fmt.Errorf("token refresh failed: %w", whoAmIErr)
 	}
 
-	mu.RLock()
-	cfgNow := appCfg
-	mu.RUnlock()
+	r.mu.RLock()
+	cfgNow := r.appCfg
+	r.mu.RUnlock()
 	if cfgNow == nil || cfgNow.API.Token == "" {
 		return "", "", fmt.Errorf("not authenticated after refresh")
 	}
 	return cfgNow.API.Token, cfgNow.API.AccessTokenExpiresAt, nil
 }
 
-func CheckAuthStatus() (authenticated bool, expiresAt string, err error) {
-	if !APIConfigured() {
+func (r *Runtime) CheckAuthStatus() (authenticated bool, expiresAt string, err error) {
+	if !r.APIConfigured() {
 		return false, "", nil
 	}
-	client := APIClient()
+	client := r.APIClient()
 	if _, whoAmIErr := client.WhoAmI(); whoAmIErr != nil {
-		// A TokenRefreshError means the server explicitly rejected the credentials
-		// (e.g. expired/revoked refresh token). Any other error (network down, server
-		// unavailable) should not be treated as "logged out" — the user's stored
-		// credentials are still valid as far as we know.
 		var tokenErr *api.TokenRefreshError
 		if errors.As(whoAmIErr, &tokenErr) {
 			return false, "", nil
 		}
-		// Network / transient error: report authenticated based on stored token.
-		token, exp, tokenReadErr := GetAccessToken()
+		token, exp, tokenReadErr := r.GetAccessToken()
 		_ = token
 		if tokenReadErr != nil {
 			return false, "", nil
 		}
 		return true, exp, nil
 	}
-	token, exp, _ := GetAccessToken()
+	token, exp, _ := r.GetAccessToken()
 	_ = token
 	return true, exp, nil
 }
 
-func ClearAuthState() {
-	mu.Lock()
-	defer mu.Unlock()
-	if appCfg != nil {
-		appCfg.API.Token = ""
-		appCfg.API.RefreshToken = ""
-		appCfg.API.AccessTokenExpiresAt = ""
-		appCfg.API.RefreshTokenExpiresAt = ""
+func (r *Runtime) ClearAuthState() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.appCfg != nil {
+		r.appCfg.API.Token = ""
+		r.appCfg.API.RefreshToken = ""
+		r.appCfg.API.AccessTokenExpiresAt = ""
+		r.appCfg.API.RefreshTokenExpiresAt = ""
 	}
 }
 
-func ReloadAuthConfig() error {
-	mu.Lock()
-	defer mu.Unlock()
-	if appCfg == nil || appCfg.ConfigPath == "" {
+func (r *Runtime) ReloadAuthConfig() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.appCfg == nil || r.appCfg.ConfigPath == "" {
 		return fmt.Errorf("runtime config is not initialized")
 	}
 
 	v := viper.New()
-	v.SetConfigFile(appCfg.ConfigPath)
+	v.SetConfigFile(r.appCfg.ConfigPath)
 	v.SetConfigType("yaml")
 	if err := v.ReadInConfig(); err != nil {
 		return fmt.Errorf("read config: %w", err)
 	}
 
-	appCfg.API.Token = v.GetString(config.KeyAPIToken)
-	appCfg.API.RefreshToken = v.GetString(config.KeyAPIRefreshToken)
-	appCfg.API.AccessTokenExpiresAt = v.GetString(config.KeyAPIAccessTokenExpiresAt)
-	appCfg.API.RefreshTokenExpiresAt = v.GetString(config.KeyAPIRefreshTokenExpiresAt)
-	appCfg.API.BaseURL = v.GetString(config.KeyAPIBaseURL)
+	r.appCfg.API.Token = v.GetString(config.KeyAPIToken)
+	r.appCfg.API.RefreshToken = v.GetString(config.KeyAPIRefreshToken)
+	r.appCfg.API.AccessTokenExpiresAt = v.GetString(config.KeyAPIAccessTokenExpiresAt)
+	r.appCfg.API.RefreshTokenExpiresAt = v.GetString(config.KeyAPIRefreshTokenExpiresAt)
+	r.appCfg.API.BaseURL = v.GetString(config.KeyAPIBaseURL)
 
 	return nil
 }
