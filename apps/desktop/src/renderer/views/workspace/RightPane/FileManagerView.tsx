@@ -182,6 +182,17 @@ export function FileManagerView({
     void ops.onUndoLastEntryOperation();
   }, [lastHandledUndoRequestId, ops, undoRequestId]);
 
+  const requestFileDeletion = useCallback(
+    async (path: string) => {
+      handleRequestFileDeletion(path);
+    },
+    [handleRequestFileDeletion],
+  );
+
+  const confirmFileDeletion = useCallback(async () => {
+    await handleConfirmFileDeletion();
+  }, [handleConfirmFileDeletion]);
+
   const openSearchResult = useCallback(
     async (path: string) => {
       if (path.endsWith("/")) {
@@ -232,9 +243,7 @@ export function FileManagerView({
       onCreateFile: ops.onCreateFile,
       onCreateFolder: ops.onCreateFolder,
       onRenameEntry: ops.onRenameEntry,
-      onDeleteEntry: async (path: string) => {
-        handleRequestFileDeletion(path);
-      },
+      onDeleteEntry: requestFileDeletion,
       onCopyPath: ops.onCopyPath,
       onCopyRelativePath: ops.onCopyRelativePath,
       onOpenInFileManager: ops.onOpenInFileManager,
@@ -332,9 +341,7 @@ export function FileManagerView({
           await ops.onCreateFile(path);
         }}
         onRenameEntry={ops.onRenameEntry}
-        onDeleteEntry={async (path) => {
-          handleRequestFileDeletion(path);
-        }}
+        onDeleteEntry={requestFileDeletion}
         onCopyEntry={ops.onCopyEntry}
         onCutEntry={ops.onCutEntry}
         canPasteEntries={ops.canPasteEntries}
@@ -366,7 +373,7 @@ export function FileManagerView({
         confirmColor="error"
         isSubmitting={isDeletingEntry}
         onCancel={handleCancelFileDeletion}
-        onConfirm={handleConfirmFileDeletion}
+        onConfirm={confirmFileDeletion}
       />
       <FileQuickOpenDialog
         open={isFileSearchOpen}

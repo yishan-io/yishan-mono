@@ -1,5 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 type PendingFileDeletion = {
   path: string;
@@ -13,20 +12,10 @@ type UseFileDeletionConfirmationInput = {
 
 export function useFileDeletionConfirmation({ repoFiles, deleteEntry }: UseFileDeletionConfirmationInput) {
   const [pendingFileDeletion, setPendingFileDeletion] = useState<PendingFileDeletion | null>(null);
+  const [isDeletingEntry, setIsDeletingEntry] = useState(false);
+  const deleteEntryRef = useRef(deleteEntry);
 
-  const deleteEntryMutation = useMutation({
-    mutationFn: async (path: string) => {
-      await deleteEntry(path);
-    },
-    onSuccess: () => {
-      setPendingFileDeletion(null);
-    },
-    onError: (error) => {
-      console.error("Failed to delete file tree entry", error);
-    },
-  });
-
-  const isDeletingEntry = deleteEntryMutation.isPending;
+  deleteEntryRef.current = deleteEntry;
 
   const handleRequestFileDeletion = useCallback(
     (path: string) => {
@@ -50,13 +39,21 @@ export function useFileDeletionConfirmation({ repoFiles, deleteEntry }: UseFileD
     setPendingFileDeletion(null);
   }, [isDeletingEntry]);
 
-  const handleConfirmFileDeletion = useCallback(() => {
-    if (!pendingFileDeletion) {
+  const handleConfirmFileDeletion = useCallback(async () => {
+    if (!pendingFileDeletion || isDeletingEntry) {
       return;
     }
 
-    deleteEntryMutation.mutate(pendingFileDeletion.path);
-  }, [deleteEntryMutation, pendingFileDeletion]);
+    setIsDeletingEntry(true);
+    try {
+      await deleteEntryRef.current(pendingFileDeletion.path);
+      setPendingFileDeletion(null);
+    } catch (error) {
+      console.error("Failed to delete file tree entry", error);
+    } finally {
+      setIsDeletingEntry(false);
+    }
+  }, [isDeletingEntry, pendingFileDeletion]);
 
   const pendingFileDeletionDescriptionKey = useMemo(() => {
     if (!pendingFileDeletion) {

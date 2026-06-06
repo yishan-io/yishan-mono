@@ -202,6 +202,38 @@ vi.mock("../../../components/FileTree", () => ({
   },
 }));
 
+vi.mock("../../../components/ConfirmationDialog", () => ({
+  ConfirmationDialog: ({
+    open,
+    title,
+    description,
+    confirmLabel,
+    cancelLabel,
+    onCancel,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    description: string;
+    confirmLabel: string;
+    cancelLabel?: string;
+    onCancel: () => void;
+    onConfirm: () => void;
+  }) =>
+    open ? (
+      <div data-testid="confirmation-dialog">
+        <div>{title}</div>
+        <div>{description}</div>
+        <button type="button" onClick={onCancel}>
+          {cancelLabel ?? "Cancel"}
+        </button>
+        <button type="button" onClick={onConfirm}>
+          {confirmLabel}
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, params?: { path?: string }) => {
@@ -227,7 +259,7 @@ vi.mock("react-i18next", () => ({
         "files.unsupported.description": "This file type is not supported for editor tabs yet.",
         "files.delete.confirmFile": `Delete file '${params?.path ?? ""}'?`,
         "files.delete.confirmDirectory": `Delete folder '${params?.path ?? ""}' and all contents?`,
-        "common.actions.cancel": "Cancel",
+        "common.actions.deleting": "Deleting...",
       };
 
       return translations[key] ?? key;
@@ -1433,6 +1465,16 @@ describe("FileManagerView undo operations", () => {
 
     await getFileTreeProps().onDeleteEntry?.("src/a.ts");
     await waitFor(() => {
+      expect(screen.getByTestId("confirmation-dialog")).toBeTruthy();
+    });
+    fireEvent.click(screen.getAllByText("Delete")[1]!);
+    await waitFor(() => {
+      expect(mocks.deleteEntry).toHaveBeenCalledWith({
+        workspaceWorktreePath: "/tmp/repo",
+        relativePath: "src/a.ts",
+      });
+    });
+    await waitFor(() => {
       expect(getFileTreeProps()).toMatchObject({
         canUndoLastEntryOperation: true,
       });
@@ -1501,8 +1543,15 @@ describe("FileManagerView undo operations", () => {
     const secondDelete = getFileTreeProps().onDeleteEntry?.("src/a.ts");
 
     await waitFor(() => {
+      expect(screen.getByTestId("confirmation-dialog")).toBeTruthy();
+    });
+    fireEvent.click(screen.getAllByText("Delete")[1]!);
+
+    await waitFor(() => {
       expect(mocks.deleteEntry).toHaveBeenCalledTimes(1);
     });
+
+    expect(screen.getByTestId("confirmation-dialog")).toBeTruthy();
 
     resolveDelete?.();
     await Promise.all([firstDelete, secondDelete]);
