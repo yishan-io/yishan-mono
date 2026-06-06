@@ -1,6 +1,5 @@
-import type { WorkspaceFileEntry } from "../../shared/contracts/rpcRequestTypes";
-import type { NotificationPreferences } from "../../shared/notifications/notificationPreferences";
 import type * as Rpc from "./daemonTypes";
+import type { NotificationPreferences } from "../../shared/notifications/notificationPreferences";
 
 export type ApiSubscriptionHandlers = {
   onData: (event: unknown) => void;
@@ -30,14 +29,8 @@ export type DaemonRpcClient = {
     syncContextLink: (input: Rpc.WorkspaceSyncContextLinkInput) => Promise<Rpc.WorkspaceSyncContextLinkResponse>;
   };
   file: {
-    listFiles: (input: Rpc.FileListInput) => Promise<{ files: WorkspaceFileEntry[] }>; 
-    listFilesBatch: (input: Rpc.FileListBatchInput) => Promise<{
-      results: Array<{
-        request: { relativePath: string; recursive: boolean };
-        files: WorkspaceFileEntry[];
-        error: string | null;
-      }>;
-    }>;
+    listFiles: (input: Rpc.FileListInput) => Promise<Rpc.FileListResponse>;
+    listFilesBatch: (input: Rpc.FileListBatchInput) => Promise<Rpc.FileListBatchResponse>;
     searchFiles: (input: Rpc.FileSearchInput) => Promise<Rpc.FileSearchResult[]>;
     readFile: (input: Rpc.FileReadInput) => Promise<Rpc.FileReadResponse>;
     writeFile: (input: Rpc.FileWriteInput) => Promise<Rpc.FileWriteResponse>;

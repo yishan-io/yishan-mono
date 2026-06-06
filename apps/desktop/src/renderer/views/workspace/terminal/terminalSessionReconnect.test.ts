@@ -159,10 +159,12 @@ function buildStubRuntime(tabId: string, overrides?: Partial<TerminalRuntimeEntr
     readIndex: 0,
     didRequestClose: false,
     resizeObserver: null,
+    focusObserver: null,
     exited: false,
     lastReportedCols: -1,
     lastReportedRows: -1,
     lastFitAt: 0,
+    pendingFocus: false,
     ...overrides,
   };
 }

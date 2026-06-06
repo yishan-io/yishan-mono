@@ -14,6 +14,7 @@ function normalizeDaemonFileEntries(files: Rpc.DaemonFileEntry[]): Rpc.DaemonFil
     const trimmedPath = entry.path.replace(/\\/g, "/").replace(/\/+$/, "");
     return {
       ...entry,
+      isIgnored: entry.isIgnored ?? false,
       path: entry.isDir ? `${trimmedPath}/` : trimmedPath,
     };
   });

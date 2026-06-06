@@ -225,7 +225,8 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
   const workspaces = workspaceStore((state) => state.workspaces);
   const expandedFileTreeItemsByWorkspaceId = workspaceUiStore((state) => state.expandedFileTreeItemsByWorkspaceId);
   const selectedWorkspaceWorktreePath = workspaceStore(
-    (state) => state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath,
+    (state) =>
+      state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath?.trim() ?? "",
   );
   const changedRelativePathsForSelectedWorkspace = workspaceStore((state) => {
     const workspaceWorktreePath =
