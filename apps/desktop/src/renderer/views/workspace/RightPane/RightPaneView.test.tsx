@@ -263,6 +263,10 @@ describe("RightPaneView delete flow", () => {
     fireEvent.contextMenu(await screen.findByText("a.ts"), { clientX: 20, clientY: 20 });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
 
+    // Confirmation dialog should appear; confirm the deletion.
+    const confirmButton = await screen.findByRole("button", { name: "Delete" });
+    fireEvent.click(confirmButton);
+
     await waitFor(() => {
       expect(deleteEntry).toHaveBeenCalledWith({
         workspaceWorktreePath: "/tmp/repo",
