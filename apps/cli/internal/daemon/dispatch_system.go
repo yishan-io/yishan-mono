@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"yishan/apps/cli/internal/api"
-	clidetector "yishan/apps/cli/internal/daemon/cli_detector"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -26,7 +25,7 @@ func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnSt
 		if err != nil {
 			return nil, err
 		}
-		return clidetector.ListAgentCLIDetectionStatusesWithRefresh(refresh), nil
+		return listAgentDetectionStatuses(refresh), nil
 	case MethodCLIToolListStatuses:
 		refresh, err := parseBoolRefreshParam(params)
 		if err != nil {
@@ -38,7 +37,7 @@ func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnSt
 		if err != nil {
 			return nil, err
 		}
-		return clidetector.CheckGitHubConnectionStatus(refresh), nil
+		return getGitHubDetectionStatus(refresh), nil
 	case MethodAppPersistAuthTokens:
 		var req api.TokenUpdate
 		if err := decodeParams(params, &req); err != nil {

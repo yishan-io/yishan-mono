@@ -17,6 +17,40 @@ func ListCLIToolDetectionStatusesWithRefresh(forceRefresh bool) []CLIToolDetecti
 	return cliToolRegistry.List(forceRefresh)
 }
 
+func listAgentDetectionStatuses(forceRefresh bool) []clidetector.Status {
+	all := cliToolRegistry.List(forceRefresh)
+	agents := make([]clidetector.Status, 0, len(all))
+	for _, s := range all {
+		if s.Category == CLIToolCategoryAgent {
+			agents = append(agents, s)
+		}
+	}
+	return agents
+}
+
+func getGitHubDetectionStatus(forceRefresh bool) clidetector.GitHubConnectionStatus {
+	all := cliToolRegistry.List(forceRefresh)
+	for _, s := range all {
+		if s.ToolID == "github" {
+			authenticated := false
+			if s.Authenticated != nil {
+				authenticated = *s.Authenticated
+			}
+			return clidetector.GitHubConnectionStatus{
+				Installed:    s.Installed,
+				LoggedIn:     authenticated,
+				Username:     s.Account,
+				StatusDetail: s.StatusDetail,
+			}
+		}
+	}
+	return clidetector.GitHubConnectionStatus{
+		Installed:    false,
+		LoggedIn:     false,
+		StatusDetail: "GitHub CLI (gh) is not installed",
+	}
+}
+
 type agentCLIToolDetector struct{}
 
 func (agentCLIToolDetector) Detect(forceRefresh bool) []clidetector.Status {

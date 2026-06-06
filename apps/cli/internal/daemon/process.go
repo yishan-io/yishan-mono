@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/buildinfo"
-	clidetector "yishan/apps/cli/internal/daemon/cli_detector"
 	agentsetup "yishan/apps/cli/internal/agentsetup"
 	"yishan/apps/cli/internal/nodeid"
 	cliruntime "yishan/apps/cli/internal/runtime"
@@ -176,7 +175,7 @@ func startDaemonServices(cfg RunConfig, statePath string, actualAddr string, dae
 	agentsetup.EnsureManagedAgentRuntime()
 
 	if runtime != nil && runtime.APIConfigured() {
-		agentDetectionStatus := clidetector.ListAgentCLIDetectionStatuses()
+		agentDetectionStatus := listAgentDetectionStatuses(false)
 		if err := registerRemoteNode(runtime, NodeRegistration{
 			ID:                   daemonID,
 			Endpoint:             "http://" + actualAddr,

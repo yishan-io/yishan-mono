@@ -112,8 +112,8 @@ func registerRemoteNode(runtime *cliruntime.Runtime, registration NodeRegistrati
 	agentDetection := make([]map[string]any, 0, len(registration.AgentDetectionStatus))
 	for _, status := range registration.AgentDetectionStatus {
 		entry := map[string]any{
-			"agentKind": status.AgentKind,
-			"detected":  status.Detected,
+			"agentKind": status.ToolID,
+			"detected":  status.Installed,
 		}
 		if strings.TrimSpace(status.Version) != "" {
 			entry["version"] = status.Version
