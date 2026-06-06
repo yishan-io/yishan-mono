@@ -2,6 +2,7 @@ import { Alert, Box, LinearProgress, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { findExternalAppPreset, isExternalAppPlatformSupported } from "../../../../shared/contracts/externalApps";
+import { ConfirmationDialog } from "../../../components/ConfirmationDialog";
 import { ContextMenu } from "../../../components/ContextMenu";
 import { FileQuickOpenDialog } from "../../../components/FileQuickOpenDialog";
 import { FileTree } from "../../../components/FileTree";
@@ -14,6 +15,7 @@ import { useSuppressNativeContextMenuWhileOpen } from "../../../hooks/useSuppres
 import { tabStore } from "../../../store/tabStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { useFileDeletionConfirmation } from "./useFileDeletionConfirmation";
 import { useFileSearchController } from "./useFileSearchController";
 import { useFileTreeContextMenuItems } from "./useFileTreeContextMenuItems";
 import { useFileTreeCreateEntryRequest } from "./useFileTreeCreateEntryRequest";
@@ -74,7 +76,18 @@ export function FileManagerView({
     isOpen: hasOpenContextMenu,
   } = useContextMenuState<FileTreeContextMenuRequest>();
   const selectedEntryPath = workspaceUiStore((state) => state.selectedEntryPath);
-  const selectedEntryIsDirectory = selectedEntryPath ? ops.repoFiles.some((p) => p === selectedEntryPath + "/") : false;
+  const selectedEntryIsDirectory = selectedEntryPath ? ops.repoFiles.some((p) => p === `${selectedEntryPath}/`) : false;
+  const {
+    pendingFileDeletion,
+    pendingFileDeletionDescriptionKey,
+    isDeletingEntry,
+    handleRequestFileDeletion,
+    handleCancelFileDeletion,
+    handleConfirmFileDeletion,
+  } = useFileDeletionConfirmation({
+    repoFiles: ops.repoFiles,
+    deleteEntry: ops.onDeleteEntry,
+  });
   const createEntryBasePath = selectedEntryPath
     ? selectedEntryIsDirectory
       ? selectedEntryPath
@@ -153,8 +166,8 @@ export function FileManagerView({
       return;
     }
 
-    void ops.onDeleteEntry(selectedEntryPath);
-  }, [deleteSelectionRequestId, lastHandledDeleteSelectionRequestId, ops, selectedEntryPath]);
+    handleRequestFileDeletion(selectedEntryPath);
+  }, [deleteSelectionRequestId, handleRequestFileDeletion, lastHandledDeleteSelectionRequestId, selectedEntryPath]);
 
   useEffect(() => {
     if (undoRequestId <= lastHandledUndoRequestId) {
@@ -219,7 +232,9 @@ export function FileManagerView({
       onCreateFile: ops.onCreateFile,
       onCreateFolder: ops.onCreateFolder,
       onRenameEntry: ops.onRenameEntry,
-      onDeleteEntry: ops.onDeleteEntry,
+      onDeleteEntry: async (path: string) => {
+        handleRequestFileDeletion(path);
+      },
       onCopyPath: ops.onCopyPath,
       onCopyRelativePath: ops.onCopyRelativePath,
       onOpenInFileManager: ops.onOpenInFileManager,
@@ -317,7 +332,9 @@ export function FileManagerView({
           await ops.onCreateFile(path);
         }}
         onRenameEntry={ops.onRenameEntry}
-        onDeleteEntry={ops.onDeleteEntry}
+        onDeleteEntry={async (path) => {
+          handleRequestFileDeletion(path);
+        }}
         onCopyEntry={ops.onCopyEntry}
         onCutEntry={ops.onCutEntry}
         canPasteEntries={ops.canPasteEntries}
@@ -337,6 +354,19 @@ export function FileManagerView({
         marginThreshold={0}
         submenuDirection="left"
         items={contextMenuItems}
+      />
+      <ConfirmationDialog
+        open={Boolean(pendingFileDeletion)}
+        title={t("files.actions.delete")}
+        description={t(pendingFileDeletionDescriptionKey, { path: pendingFileDeletion?.path ?? "" })}
+        confirmLabel={
+          isDeletingEntry ? t("common.actions.deleting", { defaultValue: "Deleting..." }) : t("files.actions.delete")
+        }
+        cancelLabel={t("common.actions.cancel")}
+        confirmColor="error"
+        isSubmitting={isDeletingEntry}
+        onCancel={handleCancelFileDeletion}
+        onConfirm={handleConfirmFileDeletion}
       />
       <FileQuickOpenDialog
         open={isFileSearchOpen}
