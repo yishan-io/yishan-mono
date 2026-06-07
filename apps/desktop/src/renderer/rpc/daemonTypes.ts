@@ -118,6 +118,11 @@ export type WorkspaceCreateInput = {
   targetBranch?: string;
   contextEnabled?: boolean;
   setupHook?: string;
+  taskRun?: {
+    agentKind?: string;
+    prompt?: string;
+    model?: string;
+  };
 };
 
 export type WorkspaceOpenInput = {

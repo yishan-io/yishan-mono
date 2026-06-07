@@ -64,6 +64,9 @@ export type RpcSchema = {
         worktreePath: string;
         lifecycleScriptWarnings?: unknown[];
         remoteSyncWarning?: string;
+        taskRunSessionId?: string;
+        taskRunAgentKind?: string;
+        taskRunPrompt?: string;
       };
       workspacePullRequestUpdated: {
         workspaceId: string;
