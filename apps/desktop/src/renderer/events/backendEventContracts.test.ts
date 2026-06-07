@@ -38,6 +38,7 @@ describe("BACKEND_EVENT_NAME_BY_SOURCE", () => {
       gitChanged: "git.changed",
       workspaceFilesChanged: "workspace.files.changed",
       workspaceCreateProgress: "workspace.create.progress",
+      workspaceCreateCompleted: "workspace.create.completed",
       workspacePullRequestUpdated: "workspace.pull_request.updated",
       workspaceSnapshotChanged: "workspace.snapshot.changed",
       openBrowserUrl: "open.browser.url",

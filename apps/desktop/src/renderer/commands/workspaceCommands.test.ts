@@ -177,7 +177,7 @@ describe("workspaceCommands", () => {
     });
   });
 
-  it("shows system notification when create returns lifecycle script warning", async () => {
+  it("does not call lifecycle warnings from direct create response (warnings come via workspaceCreateCompleted event)", async () => {
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     workspaceStore.setState({
       projects: [
@@ -222,25 +222,11 @@ describe("workspaceCommands", () => {
       targetBranch: "feature-a",
     });
 
+    // In the two-phase flow, createWorkspace returns immediately after reserving
+    // the workspace ID. Lifecycle warnings are delivered later via the
+    // workspaceCreateCompleted backend event — not from the direct RPC response.
     expect(createdWorkspaceId).toBe("workspace-2");
-    await vi.waitFor(() => {
-      expect(rpcMocks.enqueueWorkspaceLifecycleWarnings).toHaveBeenCalledWith({
-        workspaceName: "feature-a",
-        warnings: [
-          {
-            scriptKind: "setup",
-            timedOut: false,
-            message: "Workspace setup script failed.",
-            command: "pnpm install",
-            stdoutExcerpt: "",
-            stderrExcerpt: "error",
-            exitCode: 1,
-            signal: null,
-            logFilePath: "/tmp/.yishan-dev/logs/workspace-lifecycle/setup.log",
-          },
-        ],
-      });
-    });
+    expect(rpcMocks.enqueueWorkspaceLifecycleWarnings).not.toHaveBeenCalled();
   });
 
   it("does not add workspace to store when backend create fails", async () => {
@@ -262,20 +248,27 @@ describe("workspaceCommands", () => {
     });
     rpcMocks.createWorkspace.mockRejectedValueOnce(new Error("boom"));
 
-    await expect(
-      createWorkspace({
-        projectId: "repo-1",
-        name: "feature-b",
-        sourceBranch: "main",
-        targetBranch: "feature-b",
-      }),
-    ).rejects.toThrow("boom");
+    // In the two-phase flow, createWorkspace catches errors and resolves
+    // undefined rather than propagating the rejection. An in-app error notice
+    // is shown instead.
+    const result = await createWorkspace({
+      projectId: "repo-1",
+      name: "feature-b",
+      sourceBranch: "main",
+      targetBranch: "feature-b",
+    });
+
+    expect(result).toBeUndefined();
 
     await vi.waitFor(() => {
       expect(rpcMocks.createWorkspace).toHaveBeenCalledTimes(1);
     });
     expect(rpcMocks.list).not.toHaveBeenCalled();
     expect(addWorkspace).not.toHaveBeenCalled();
+    expect(rpcMocks.enqueueWorkspaceErrorNotice).toHaveBeenCalledWith({
+      title: "Failed to create workspace",
+      message: "boom",
+    });
   });
 
   it("deletes local workspace immediately and closes backend workspace in background", async () => {
