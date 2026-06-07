@@ -9,18 +9,25 @@ import (
 	"time"
 )
 
+type TaskRunConfig struct {
+	AgentKind string `json:"agentKind"`
+	Prompt    string `json:"prompt"`
+	Model     string `json:"model,omitempty"`
+}
+
 type CreateRequest struct {
-	ID             string `json:"id"`
-	OrganizationID string `json:"organizationId,omitempty"`
-	NodeID         string `json:"nodeId,omitempty"`
-	ProjectID      string `json:"projectId,omitempty"`
-	RepoKey        string `json:"repoKey"`
-	WorkspaceName  string `json:"workspaceName"`
-	SourcePath     string `json:"sourcePath"`
-	TargetBranch   string `json:"targetBranch"`
-	SourceBranch   string `json:"sourceBranch"`
-	ContextEnabled bool   `json:"contextEnabled,omitempty"`
-	SetupHook      string `json:"setupHook,omitempty"`
+	ID             string         `json:"id"`
+	OrganizationID string         `json:"organizationId,omitempty"`
+	NodeID         string         `json:"nodeId,omitempty"`
+	ProjectID      string         `json:"projectId,omitempty"`
+	RepoKey        string         `json:"repoKey"`
+	WorkspaceName  string         `json:"workspaceName"`
+	SourcePath     string         `json:"sourcePath"`
+	TargetBranch   string         `json:"targetBranch"`
+	SourceBranch   string         `json:"sourceBranch"`
+	ContextEnabled bool           `json:"contextEnabled,omitempty"`
+	SetupHook      string         `json:"setupHook,omitempty"`
+	TaskRun        *TaskRunConfig `json:"taskRun,omitempty"`
 }
 
 type CreateProgressStatus string

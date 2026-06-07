@@ -165,6 +165,7 @@ export type OpenWorkspaceTabInput =
       workspaceId?: string;
       kind: "terminal";
       title?: string;
+      sessionId?: string;
       launchCommand?: string;
       agentKind?: DesktopAgentKind;
       reuseExisting?: boolean;

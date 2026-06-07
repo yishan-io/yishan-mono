@@ -20,6 +20,7 @@ type CreateWorkspaceRequest struct {
 	Branch         string
 	SourceBranch   string
 	WorkspaceName  string
+	TaskRun        *workspace.TaskRunConfig
 }
 
 type Provisioner struct {
@@ -89,7 +90,7 @@ func (p *Provisioner) CreateWorkspace(ctx context.Context, req CreateWorkspaceRe
 	if p.workspaceManager == nil {
 		return api.CreateWorkspaceResponse{}, fmt.Errorf("local workspace manager is not configured")
 	}
-	if err := p.ensureWorkspaceProvisionedLocally(ctx, req.OrganizationID, req.ProjectID, p.localNodeID, project, created.Workspace, req.SourceBranch); err != nil {
+	if err := p.ensureWorkspaceProvisionedLocally(ctx, req.OrganizationID, req.ProjectID, p.localNodeID, project, created.Workspace, req.SourceBranch, req.TaskRun); err != nil {
 		return api.CreateWorkspaceResponse{}, fmt.Errorf("workspace %s created in api but local provisioning failed: %w", created.Workspace.ID, err)
 	}
 
@@ -104,6 +105,7 @@ func (p *Provisioner) ensureWorkspaceProvisionedLocally(
 	project api.Project,
 	workspaceItem api.Workspace,
 	sourceBranch string,
+	taskRun *workspace.TaskRunConfig,
 ) error {
 	localSourcePath := project.LocalPath
 	if project.RepoURL != "" && localSourcePath == "" {
@@ -136,6 +138,7 @@ func (p *Provisioner) ensureWorkspaceProvisionedLocally(
 		SourceBranch:   sourceBranch,
 		ContextEnabled: project.ContextEnabled,
 		SetupHook:      project.SetupScript,
+		TaskRun:        taskRun,
 	}); err != nil {
 		return fmt.Errorf("create workspace locally: %w", err)
 	}

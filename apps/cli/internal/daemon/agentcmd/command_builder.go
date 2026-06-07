@@ -11,7 +11,7 @@ type Command struct {
 
 type runCommandBuilder interface {
 	Binary() string
-	Args(prompt, model string) []string
+	Args(prompt, model string, interactive bool) []string
 }
 
 var commandBuilders = map[string]runCommandBuilder{
@@ -26,7 +26,7 @@ var commandBuilders = map[string]runCommandBuilder{
 	"cursor-agent": cursorBuilder{},
 }
 
-func BuildRunCommand(agentKind, prompt, model string) (Command, error) {
+func BuildRunCommand(agentKind, prompt, model string, interactive bool) (Command, error) {
 	builder, ok := commandBuilders[agentKind]
 	if !ok {
 		return Command{}, fmt.Errorf("unsupported agent kind: %s", agentKind)
@@ -37,5 +37,5 @@ func BuildRunCommand(agentKind, prompt, model string) (Command, error) {
 		return Command{}, fmt.Errorf("unsupported agent kind: %s", agentKind)
 	}
 
-	return Command{Binary: binary, Args: builder.Args(prompt, model)}, nil
+	return Command{Binary: binary, Args: builder.Args(prompt, model, interactive)}, nil
 }

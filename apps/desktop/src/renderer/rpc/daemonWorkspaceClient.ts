@@ -268,6 +268,7 @@ export class DaemonWorkspaceClient {
       sourceBranch,
       contextEnabled,
       setupHook,
+      taskRun: record?.taskRun,
     }, WORKSPACE_CREATE_TIMEOUT_MS)) as Rpc.DaemonWorkspace & { lifecycleScriptWarnings?: unknown[]; remoteSyncWarning?: unknown };
 
     const createdWorktreePath = createdWorkspace.path || "";

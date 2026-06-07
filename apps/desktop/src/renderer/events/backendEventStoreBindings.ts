@@ -9,6 +9,7 @@ import {
   playNotificationSound,
 } from "../commands/notificationCommands";
 import { loadWorkspaceFromBackend } from "../commands/projectCommands";
+import type { DesktopAgentKind } from "../helpers/agentSettings";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../rpc/rpcTransport";
 import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../store/chatStore";
@@ -184,6 +185,19 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
       });
     }
     workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(payload.workspaceId);
+
+    if (payload.taskRunSessionId && payload.taskRunAgentKind) {
+      const title = payload.taskRunPrompt
+        ? `Task: ${payload.taskRunPrompt.slice(0, 40)}`
+        : `Task Run - ${payload.taskRunAgentKind}`;
+      tabStore.getState().openTab({
+        workspaceId: payload.workspaceId,
+        kind: "terminal",
+        title,
+        sessionId: payload.taskRunSessionId,
+        agentKind: payload.taskRunAgentKind as DesktopAgentKind,
+      });
+    }
   },
   setWorkspacePullRequest: (workspaceId, pullRequest) => {
     workspaceStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);

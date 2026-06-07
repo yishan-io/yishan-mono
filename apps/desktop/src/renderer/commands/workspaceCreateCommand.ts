@@ -18,6 +18,11 @@ type CreateWorkspaceInput = {
   sourceBranch?: string;
   targetBranch?: string;
   nodeId?: string;
+  taskRun?: {
+    agentKind: string;
+    prompt: string;
+    model?: string;
+  };
 };
 
 type CreateWorkspaceResponse = {
@@ -154,6 +159,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
       targetBranch,
       contextEnabled: project?.contextEnabled ?? workspaceSettingsStore.getState().isDefaultContextEnabled,
       setupHook: project?.setupScript?.trim() || undefined,
+      taskRun: input.taskRun,
     })) as Record<string, unknown>;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Workspace creation failed.";

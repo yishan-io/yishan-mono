@@ -153,6 +153,18 @@ Examples:
 		if err != nil {
 			return err
 		}
+		taskRunAgentKind, err := cmd.Flags().GetString("task-run-agent-kind")
+		if err != nil {
+			return err
+		}
+		taskRunPrompt, err := cmd.Flags().GetString("task-run-prompt")
+		if err != nil {
+			return err
+		}
+		taskRunModel, err := cmd.Flags().GetString("task-run-model")
+		if err != nil {
+			return err
+		}
 		if kind == workspace.KindPrimary && strings.TrimSpace(localPath) == "" {
 			return fmt.Errorf("local-path is required for primary workspaces")
 		}
@@ -172,6 +184,7 @@ Examples:
 			Branch:         branch,
 			SourceBranch:   sourceBranch,
 			WorkspaceName:  name,
+			TaskRun:        buildTaskRunConfig(taskRunAgentKind, taskRunPrompt, taskRunModel),
 		})
 		if err != nil {
 			return formatWorkspaceLifecycleError("create", err)
@@ -259,6 +272,9 @@ func init() {
 	workspaceCreateCmd.Flags().String("branch", "", "branch name for worktree")
 	workspaceCreateCmd.Flags().String("source-branch", "", "source branch for worktree")
 	workspaceCreateCmd.Flags().String("name", "", "workspace name for worktree path")
+	workspaceCreateCmd.Flags().String("task-run-agent-kind", "", "agent kind for init task run (e.g. opencode)")
+	workspaceCreateCmd.Flags().String("task-run-prompt", "", "initial prompt for task run agent")
+	workspaceCreateCmd.Flags().String("task-run-model", "", "model override for task run agent")
 	cobra.CheckErr(workspaceCreateCmd.MarkFlagRequired("project-id"))
 
 	addOrgIDFlag(workspaceCloseCmd)
@@ -322,4 +338,17 @@ func extractAPIErrorMessage(body []byte) string {
 	}
 
 	return ""
+}
+
+func buildTaskRunConfig(agentKind, prompt, model string) *workspace.TaskRunConfig {
+	agentKind = strings.TrimSpace(agentKind)
+	prompt = strings.TrimSpace(prompt)
+	if agentKind == "" || prompt == "" {
+		return nil
+	}
+	return &workspace.TaskRunConfig{
+		AgentKind: agentKind,
+		Prompt:    prompt,
+		Model:     strings.TrimSpace(model),
+	}
 }

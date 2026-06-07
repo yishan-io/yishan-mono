@@ -8,7 +8,9 @@ import (
 	"strings"
 	"time"
 
+	agentcmd "yishan/apps/cli/internal/daemon/agentcmd"
 	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/workspace/terminal"
 
 	"github.com/rs/zerolog/log"
 )
@@ -149,14 +151,39 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, req workspa
 		CreatedAt:   nowRFC3339Nano(),
 	})
 
+	completionPayload := map[string]any{
+		"workspaceId":             created.ID,
+		"worktreePath":            created.Path,
+		"lifecycleScriptWarnings": warnings,
+		"remoteSyncWarning":       remoteSyncWarning,
+	}
+
+	if req.TaskRun != nil {
+		cmd, buildErr := agentcmd.BuildRunCommand(req.TaskRun.AgentKind, req.TaskRun.Prompt, req.TaskRun.Model, true)
+		if buildErr != nil {
+			log.Warn().Err(buildErr).Str("workspaceId", created.ID).Str("agentKind", req.TaskRun.AgentKind).Msg("task run: failed to build agent command")
+		} else {
+			resp, startErr := h.manager.Terminals().Start(ctx, created.Path, terminal.StartRequest{
+				WorkspaceID: created.ID,
+			})
+			if startErr != nil {
+				log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("agentKind", req.TaskRun.AgentKind).Msg("task run: failed to start terminal session")
+			} else {
+				h.manager.Terminals().Send(terminal.SendRequest{
+					SessionID: resp.SessionID,
+					Input:     shellCommandLine(cmd.Binary, cmd.Args) + "\r",
+				})
+				completionPayload["taskRunSessionId"] = resp.SessionID
+				completionPayload["taskRunAgentKind"] = req.TaskRun.AgentKind
+				completionPayload["taskRunPrompt"] = req.TaskRun.Prompt
+				log.Info().Str("workspaceId", created.ID).Str("sessionId", resp.SessionID).Str("agentKind", req.TaskRun.AgentKind).Str("prompt", req.TaskRun.Prompt).Msg("task run: terminal session started")
+			}
+		}
+	}
+
 	h.events.Publish(frontendEvent{
-		Topic: "workspaceCreateCompleted",
-		Payload: map[string]any{
-			"workspaceId":             created.ID,
-			"worktreePath":            created.Path,
-			"lifecycleScriptWarnings": warnings,
-			"remoteSyncWarning":       remoteSyncWarning,
-		},
+		Topic:   "workspaceCreateCompleted",
+		Payload: completionPayload,
 	})
 }
 
@@ -283,4 +310,20 @@ func generateWorkspaceID() string {
 	id[8] = (id[8] & 0x3f) | 0x80
 	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
 		id[0:4], id[4:6], id[6:8], id[8:10], id[10:16])
+}
+
+func shellCommandLine(binary string, args []string) string {
+	var b strings.Builder
+	b.WriteString(binary)
+	for _, arg := range args {
+		b.WriteByte(' ')
+		if strings.ContainsAny(arg, " \t\n\r'\"") {
+			b.WriteByte('\'')
+			b.WriteString(strings.ReplaceAll(arg, "'", "'\\''"))
+			b.WriteByte('\'')
+		} else {
+			b.WriteString(arg)
+		}
+	}
+	return b.String()
 }

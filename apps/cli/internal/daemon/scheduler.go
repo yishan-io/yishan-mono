@@ -196,7 +196,7 @@ func sendJobResult(connState *wsConnState, runID, status string, durationMs int6
 // ---------------------------------------------------------------------------
 
 func runAgent(agentKind, prompt, model, projectPath string) (output string, err error) {
-	runCommand, err := agentcmd.BuildRunCommand(agentKind, prompt, model)
+	runCommand, err := agentcmd.BuildRunCommand(agentKind, prompt, model, false)
 	if err != nil {
 		return "", err
 	}

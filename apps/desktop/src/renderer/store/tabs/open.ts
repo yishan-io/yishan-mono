@@ -158,6 +158,7 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
 
   return {
     title: input.title?.trim() || "Terminal",
+    sessionId: input.sessionId?.trim() || undefined,
     launchCommand: input.launchCommand?.trim() || undefined,
     agentKind: input.agentKind,
   } as WorkspaceTabDataByKind[T["kind"]];

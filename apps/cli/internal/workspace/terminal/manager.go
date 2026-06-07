@@ -172,10 +172,6 @@ func (m *Manager) ListDetectedPorts() []DetectedPort {
 	return m.collectDetectedPortsForWindow(0, m.currentPortScopeWorkspaceID())
 }
 
-func (m *Manager) collectDetectedPorts() []DetectedPort {
-	return m.collectDetectedPortsForWindow(0, m.currentPortScopeWorkspaceID())
-}
-
 func (m *Manager) collectDetectedPortsForWindow(recentWindow time.Duration, workspaceScopeID string) []DetectedPort {
 	sessions := m.listRunningSessions(recentWindow, workspaceScopeID)
 	if len(sessions) == 0 && recentWindow > 0 {
