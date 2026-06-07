@@ -62,10 +62,6 @@ describe("layoutStore", () => {
     expect(layoutStore.getState().rightWidth).toBe(440);
   });
 
-  it("starts with right pane hidden by default", () => {
-    expect(layoutStore.getState().isRightPaneManuallyHidden).toBe(true);
-  });
-
   it("persists theme preference", () => {
     layoutStore.getState().setThemePreference("light");
 

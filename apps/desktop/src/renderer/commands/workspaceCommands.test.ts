@@ -855,8 +855,11 @@ describe("workspaceCommands", () => {
   });
 
   it("shows files pane and focuses file tree when requested", () => {
-    layoutStore.setState({ isRightPaneManuallyHidden: true });
-    workspacePaneStore.setState({ rightPaneTab: "changes" });
+    workspaceStore.setState({ selectedWorkspaceId: "ws-test" });
+    workspacePaneStore.setState({
+      isRightPaneHiddenByWorkspaceId: { "ws-test": true },
+      rightPaneTabByWorkspaceId: { "ws-test": "changes" },
+    });
 
     const treeArea = document.createElement("div");
     treeArea.setAttribute("data-testid", "repo-file-tree-area");
@@ -869,21 +872,25 @@ describe("workspaceCommands", () => {
 
     focusWorkspaceFileTree();
 
-    expect(layoutStore.getState().isRightPaneManuallyHidden).toBe(false);
-    expect(workspacePaneStore.getState().rightPaneTab).toBe("files");
+    expect(workspacePaneStore.getState().isRightPaneHiddenByWorkspaceId["ws-test"]).toBe(false);
+    expect(workspacePaneStore.getState().rightPaneTabByWorkspaceId["ws-test"]).toBe("files");
     expect(document.activeElement).toBe(treeItem);
 
     treeArea.remove();
   });
 
   it("opens file search without forcing the file tree pane open", () => {
-    layoutStore.setState({ isRightPaneManuallyHidden: true });
-    workspacePaneStore.setState({ rightPaneTab: "changes", fileSearchRequestKey: 4 });
+    workspaceStore.setState({ selectedWorkspaceId: "ws-test" });
+    workspacePaneStore.setState({
+      isRightPaneHiddenByWorkspaceId: { "ws-test": true },
+      rightPaneTabByWorkspaceId: { "ws-test": "changes" },
+      fileSearchRequestKey: 4,
+    });
 
     openWorkspaceFileSearch();
 
-    expect(layoutStore.getState().isRightPaneManuallyHidden).toBe(true);
-    expect(workspacePaneStore.getState().rightPaneTab).toBe("changes");
+    expect(workspacePaneStore.getState().isRightPaneHiddenByWorkspaceId["ws-test"]).toBe(true);
+    expect(workspacePaneStore.getState().rightPaneTabByWorkspaceId["ws-test"]).toBe("changes");
     expect(workspacePaneStore.getState().fileSearchRequestKey).toBe(5);
   });
 

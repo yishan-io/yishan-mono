@@ -1,6 +1,7 @@
 import { Box } from "@mui/material";
 import { useState } from "react";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { workspaceStore } from "../../../store/workspaceStore";
+import { DEFAULT_RIGHT_PANE_TAB, workspaceUiStore } from "../../../store/workspaceUiStore";
 import { ChangesTabView } from "./ChangesTabView";
 import { FileManagerView } from "./FileManagerView";
 import { PullRequestTabView } from "./PullRequestTabView";
@@ -14,7 +15,10 @@ export type RightPaneViewProps = {
  * The tab bar and pane header are managed externally by MainPaneView.
  */
 export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPaneViewProps = {}) {
-  const activeRightPaneTab = workspaceUiStore((state) => state.rightPaneTab);
+  const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
+  const activeRightPaneTab = workspaceUiStore(
+    (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
+  );
   const openFileSearchRequestKey = workspaceUiStore((state) => state.fileSearchRequestKey);
   const [lastHandledFileSearchRequestKey, setLastHandledFileSearchRequestKey] = useState(
     () => workspaceUiStore.getState().fileSearchRequestKey,
