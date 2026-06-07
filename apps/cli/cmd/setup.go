@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -126,12 +128,14 @@ var setupStateCmd = &cobra.Command{
 	Use:   "state",
 	Short: "Show installed yishan integrations",
 	Long:  `List all installed yishan integrations: skills, MCP configs, hooks, assets, and shell wrappers.`,
+	Example: `  yishan setup state
+  yishan setup state --output json`,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		state, err := setup.GetInstalledState()
 		if err != nil {
 			return err
 		}
-		return output.PrintAny(state)
+		return output.PrintRenderData(renderSetupState(state))
 	},
 }
 
@@ -162,6 +166,77 @@ func runSetupAll(_ *cobra.Command, _ []string) error {
 		"action":  "installed",
 		"message": "all setup tasks completed (hooks, mcp, skill)",
 	})
+}
+
+func renderSetupState(state *setup.InstalledState) output.RenderData {
+	rows := []map[string]any{
+		{
+			"resource":   "skill",
+			"installed":  state.Skill.Installed,
+			"details":    formatSkillDetails(state.Skill),
+		},
+		{
+			"resource":   "mcp",
+			"installed":  state.MCP.Configured,
+			"details":    formatMCPDetails(state.MCP),
+		},
+		{
+			"resource":   "hooks",
+			"installed":  state.Hooks.Configured,
+			"details":    formatHookDetails(state.Hooks),
+		},
+		{
+			"resource":   "assets",
+			"installed":  state.Assets.Installed,
+			"details":    formatAssetDetails(state.Assets),
+		},
+		{
+			"resource":   "shell",
+			"installed":  state.Shell.Configured,
+			"details":    formatShellDetails(state.Shell),
+		},
+	}
+
+	return output.RenderData{
+		Title:   "setup state",
+		Columns: []string{"resource", "installed", "details"},
+		Rows:    rows,
+	}
+}
+
+func formatSkillDetails(s setup.SkillState) string {
+	if !s.Installed {
+		return ""
+	}
+	return s.SkillPath
+}
+
+func formatMCPDetails(m setup.MCPState) string {
+	if !m.Configured {
+		return ""
+	}
+	return strings.Join(m.Configs, ", ")
+}
+
+func formatHookDetails(h setup.HookState) string {
+	if !h.Configured {
+		return ""
+	}
+	return strings.Join(h.Agents, ", ")
+}
+
+func formatAssetDetails(a setup.AssetState) string {
+	if !a.Installed {
+		return ""
+	}
+	return strings.Join(a.Binaries, ", ")
+}
+
+func formatShellDetails(s setup.ShellState) string {
+	if !s.Configured {
+		return ""
+	}
+	return s.ShellDir
 }
 
 func init() {
