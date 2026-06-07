@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { listAgentDetectionStatuses as listAgentDetectionStatusesCommand } from "../commands/agentCommands";
+import {
+  listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
+  listAgentModels as listAgentModelsCommand,
+} from "../commands/agentCommands";
 import {
   appendBrowserHistory as appendBrowserHistoryCommand,
   checkAgentGlobalConfigExternalDirectoryPermission as checkAgentGlobalConfigExternalDirectoryPermissionCommand,
@@ -134,6 +137,7 @@ export type Commands = {
   setSelectedRepoId: (repoId: string) => void;
   setSelectedWorkspaceId: (workspaceId: string) => void;
   listAgentDetectionStatuses: typeof listAgentDetectionStatusesCommand;
+  listAgentModels: typeof listAgentModelsCommand;
   loadScheduledJobs: typeof loadScheduledJobsCommand;
   createScheduledJob: typeof createScheduledJobCommand;
   updateScheduledJob: typeof updateScheduledJobCommand;
@@ -266,6 +270,7 @@ export function useCommands(): Commands {
       setSelectedRepoId: setSelectedRepo,
       setSelectedWorkspaceId: setSelectedWorkspace,
       listAgentDetectionStatuses: listAgentDetectionStatusesCommand,
+      listAgentModels: listAgentModelsCommand,
       loadScheduledJobs: loadScheduledJobsCommand,
       createScheduledJob: createScheduledJobCommand,
       updateScheduledJob: updateScheduledJobCommand,

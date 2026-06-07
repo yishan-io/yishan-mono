@@ -1,4 +1,5 @@
 import {
+  Autocomplete,
   Avatar,
   Box,
   Button,
@@ -14,18 +15,20 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import { type KeyboardEvent } from "react";
+import { type KeyboardEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuCloud, LuFolderGit2, LuGitBranch, LuServer, LuSparkles } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import { AgentIcon } from "../../../components/AgentIcon";
 import { BranchDropdown, type BranchDropdownGroups } from "../../../components/BranchDropdown";
+import { VirtualizedListbox } from "../../../components/VirtualizedListbox";
 import { renderProjectIcon } from "../../../components/projectIcons";
 import {
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
   type DesktopAgentKind,
   SUPPORTED_DESKTOP_AGENT_KINDS,
 } from "../../../helpers/agentSettings";
+import type { AgentModelInfo } from "../../../commands/agentCommands";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { resolveTargetBranchForCreate } from "../../../helpers/workspaceBranchNaming";
 import { useCommands } from "../../../hooks/useCommands";
@@ -61,7 +64,7 @@ export function CreateWorkspaceDialogView({
   const daemonId = sessionStore((state) => state.daemonId);
   const projects = workspaceStore((state) => state.projects);
   const workspaces = workspaceStore((state) => state.workspaces);
-  const { createWorkspace, renameWorkspace, renameWorkspaceBranch, listGitBranches } = useCommands();
+  const { createWorkspace, renameWorkspace, renameWorkspaceBranch, listGitBranches, listAgentModels } = useCommands();
   const prefixMode = workspaceSettingsStore((state) => state.prefixMode);
   const customPrefix = workspaceSettingsStore((state) => state.customPrefix);
   const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
@@ -114,6 +117,37 @@ export function CreateWorkspaceDialogView({
     customPrefix,
     listGitBranches,
   });
+
+  const [agentModels, setAgentModels] = useState<AgentModelInfo[]>([]);
+  const [loadingAgentModels, setLoadingAgentModels] = useState(false);
+
+  useEffect(() => {
+    if (!taskAgentKind) {
+      setAgentModels([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingAgentModels(true);
+    listAgentModels(taskAgentKind)
+      .then((result) => {
+        if (!cancelled) {
+          setAgentModels(result.models ?? []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAgentModels([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingAgentModels(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [taskAgentKind, listAgentModels]);
 
   /** Creates one workspace from manual inputs with prefix-aware branch fallback behavior. */
   const handleCreateWorkspace = async () => {
@@ -596,13 +630,32 @@ export function CreateWorkspaceDialogView({
                   maxRows={4}
                 />
                 {taskAgentKind ? (
-                  <TextField
+                  <Autocomplete
                     size="small"
                     fullWidth
-                    value={taskModel}
-                    onChange={(event) => setTaskModel(event.target.value)}
-                    placeholder="Model (optional)"
+                    freeSolo
+                    ListboxComponent={VirtualizedListbox}
+                    options={agentModels}
+                    getOptionLabel={(option) => (typeof option === "string" ? option : option.name)}
+                    value={taskModel || null}
+                    onChange={(_event, value) =>
+                      setTaskModel(typeof value === "string" ? value : (value?.id ?? ""))
+                    }
+                    onInputChange={(_event, value) => setTaskModel(value)}
+                    loading={loadingAgentModels}
                     disabled={isCreatingWorkspace}
+                    isOptionEqualToValue={(option, value) => option.id === (typeof value === "string" ? value : value.id)}
+                    renderInput={(params) => (
+                      <TextField {...params} placeholder="Model (optional)" />
+                    )}
+                    renderOption={(props, option) => {
+                      const { key, ...rest } = props;
+                      return (
+                        <li key={key} {...rest}>
+                          <Typography variant="body2">{option.name}</Typography>
+                        </li>
+                      );
+                    }}
                   />
                 ) : null}
               </Stack>
