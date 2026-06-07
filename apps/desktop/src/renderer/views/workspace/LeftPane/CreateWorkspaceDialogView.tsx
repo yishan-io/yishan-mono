@@ -16,15 +16,22 @@ import {
 } from "@mui/material";
 import { type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { LuChevronDown, LuCloud, LuFolderGit2, LuGitBranch, LuServer } from "react-icons/lu";
+import { LuChevronDown, LuCloud, LuFolderGit2, LuGitBranch, LuServer, LuSparkles } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
+import { AgentIcon } from "../../../components/AgentIcon";
 import { BranchDropdown, type BranchDropdownGroups } from "../../../components/BranchDropdown";
 import { renderProjectIcon } from "../../../components/projectIcons";
+import {
+  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
+  type DesktopAgentKind,
+  SUPPORTED_DESKTOP_AGENT_KINDS,
+} from "../../../helpers/agentSettings";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { resolveTargetBranchForCreate } from "../../../helpers/workspaceBranchNaming";
 import { useCommands } from "../../../hooks/useCommands";
 import { useDialogRegistration } from "../../../hooks/useDialogRegistration";
 import { buildWorkspaceNavigationPath } from "../../../navigation/workspaceNavigation";
+import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
 import { sessionStore } from "../../../store/sessionStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -57,6 +64,7 @@ export function CreateWorkspaceDialogView({
   const { createWorkspace, renameWorkspace, renameWorkspaceBranch, listGitBranches } = useCommands();
   const prefixMode = workspaceSettingsStore((state) => state.prefixMode);
   const customPrefix = workspaceSettingsStore((state) => state.customPrefix);
+  const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
   useDialogRegistration(open);
   const isRenameMode = mode === "rename";
   const branchInputPlaceholder = isRenameMode
@@ -87,6 +95,12 @@ export function CreateWorkspaceDialogView({
     selectedProject,
     selectedWorkspace,
     defaultBranchPrefix,
+    taskAgentKind,
+    setTaskAgentKind,
+    taskPrompt,
+    setTaskPrompt,
+    taskModel,
+    setTaskModel,
   } = useCreateWorkspaceDialogState({
     open,
     projectId,
@@ -126,6 +140,14 @@ export function CreateWorkspaceDialogView({
         sourceBranch: sourceBranch.trim() || undefined,
         targetBranch: normalizedTargetBranch,
         nodeId: selectedNodeId || undefined,
+        taskRun:
+          taskAgentKind && taskPrompt.trim()
+            ? {
+                agentKind: taskAgentKind,
+                prompt: taskPrompt.trim(),
+                model: taskModel.trim() || undefined,
+              }
+            : undefined,
       });
       resetDraftInputs();
       onClose();
@@ -505,6 +527,85 @@ export function CreateWorkspaceDialogView({
                   {nodesError}
                 </Typography>
               ) : null}
+            </Box>
+          ) : null}
+
+          {!isRenameMode ? (
+            <Box>
+              <Stack direction="row" alignItems="center" gap={0.75} sx={{ mb: 0.5 }}>
+                <LuSparkles size={14} />
+                <Typography variant="caption" color="text.secondary">
+                  Task run (optional)
+                </Typography>
+              </Stack>
+              <Stack spacing={1.5}>
+                <TextField
+                  select
+                  size="small"
+                  fullWidth
+                  value={taskAgentKind}
+                  onChange={(event) =>
+                    setTaskAgentKind(event.target.value as DesktopAgentKind | "")
+                  }
+                  sx={compactSelectSx}
+                  disabled={isCreatingWorkspace}
+                  slotProps={{
+                    select: {
+                      displayEmpty: true,
+                      renderValue: (value) => {
+                        const selectedKind = value as DesktopAgentKind | "";
+                        if (!selectedKind) {
+                          return (
+                            <Typography variant="body2" color="text.secondary">
+                              Agent
+                            </Typography>
+                          );
+                        }
+                        return (
+                          <Stack direction="row" alignItems="center" gap={1}>
+                            <AgentIcon agentKind={selectedKind} context="settingsRow" decorative />
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {selectedKind}
+                            </Typography>
+                          </Stack>
+                        );
+                      },
+                    },
+                  }}
+                >
+                  {SUPPORTED_DESKTOP_AGENT_KINDS.filter((kind) => inUseByAgentKind[kind]).map((kind) => (
+                    <MenuItem key={kind} value={kind}>
+                      <Stack direction="row" alignItems="center" gap={1}>
+                        <AgentIcon agentKind={kind} context="settingsRow" decorative />
+                        <Typography variant="body2">
+                          {t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[kind])}
+                        </Typography>
+                      </Stack>
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  size="small"
+                  fullWidth
+                  value={taskPrompt}
+                  onChange={(event) => setTaskPrompt(event.target.value)}
+                  placeholder="Task description / prompt"
+                  disabled={isCreatingWorkspace}
+                  multiline
+                  minRows={2}
+                  maxRows={4}
+                />
+                {taskAgentKind ? (
+                  <TextField
+                    size="small"
+                    fullWidth
+                    value={taskModel}
+                    onChange={(event) => setTaskModel(event.target.value)}
+                    placeholder="Model (optional)"
+                    disabled={isCreatingWorkspace}
+                  />
+                ) : null}
+              </Stack>
             </Box>
           ) : null}
 

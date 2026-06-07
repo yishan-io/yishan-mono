@@ -232,6 +232,11 @@ export type Commands = {
     sourceBranch?: string;
     targetBranch?: string;
     nodeId?: string;
+    taskRun?: {
+      agentKind: string;
+      prompt: string;
+      model?: string;
+    };
   }) => Promise<string | undefined>;
   closeWorkspace: (workspaceId: string, options?: { removeBranch?: boolean }) => Promise<void>;
   refreshWorkspaceGitChanges: (workspaceId: string, workspaceWorktreePath: string) => Promise<void>;

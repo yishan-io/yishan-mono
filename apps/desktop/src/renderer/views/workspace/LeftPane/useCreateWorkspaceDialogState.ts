@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../../../api";
 import type { BranchDropdownGroups } from "../../../components/BranchDropdown";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
+import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import {
   resolveSourceBranchState,
   resolveTargetBranchForCreate,
@@ -59,6 +60,12 @@ export type UseCreateWorkspaceDialogStateResult = {
   selectedWorkspace: WorkspaceItem | undefined;
   selectedProjectBranchListPath: string;
   defaultBranchPrefix: string;
+  taskAgentKind: DesktopAgentKind | "";
+  setTaskAgentKind: React.Dispatch<React.SetStateAction<DesktopAgentKind | "">>;
+  taskPrompt: string;
+  setTaskPrompt: React.Dispatch<React.SetStateAction<string>>;
+  taskModel: string;
+  setTaskModel: React.Dispatch<React.SetStateAction<string>>;
 };
 
 /** Manages draft state, branch loading, node loading, and prefix-derived defaults for the workspace dialog. */
@@ -95,6 +102,9 @@ export function useCreateWorkspaceDialogState({
   const [selectedNodeId, setSelectedNodeId] = useState("");
   const [nodes, setNodes] = useState<NodeOption[]>([]);
   const [nodesError, setNodesError] = useState("");
+  const [taskAgentKind, setTaskAgentKind] = useState<DesktopAgentKind | "">("");
+  const [taskPrompt, setTaskPrompt] = useState("");
+  const [taskModel, setTaskModel] = useState("");
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId);
   const selectedWorkspace = workspaces.find(
@@ -115,6 +125,9 @@ export function useCreateWorkspaceDialogState({
     setName("");
     setTargetBranch("");
     hasEditedTargetBranchRef.current = false;
+    setTaskAgentKind("");
+    setTaskPrompt("");
+    setTaskModel("");
   };
 
   useEffect(() => {
@@ -311,5 +324,11 @@ export function useCreateWorkspaceDialogState({
     selectedWorkspace,
     selectedProjectBranchListPath,
     defaultBranchPrefix,
+    taskAgentKind,
+    setTaskAgentKind,
+    taskPrompt,
+    setTaskPrompt,
+    taskModel,
+    setTaskModel,
   };
 }
