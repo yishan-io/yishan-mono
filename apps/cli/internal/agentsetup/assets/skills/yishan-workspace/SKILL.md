@@ -134,6 +134,27 @@ yishan workspace create \
   --name feature-my-branch
 ```
 
+### Create a workspace with a task run
+
+Start an agent in the workspace immediately after creation. The agent runs
+in a terminal session with the given prompt as the initial task.
+
+```bash
+yishan workspace create \
+  --project-id <project-id> \
+  --kind worktree \
+  --branch feature/my-branch \
+  --source-branch main \
+  --task-run-agent-kind opencode \
+  --task-run-prompt "Implement the login page" \
+  --task-run-model sonnet
+```
+
+Flags:
+- `--task-run-agent-kind` — Agent binary to launch (opencode, claude, codex, pi, gemini, copilot, cursor)
+- `--task-run-prompt` — Initial task prompt for the agent
+- `--task-run-model` — Optional model override for the agent
+
 ### Close a workspace
 
 ```bash
@@ -160,6 +181,10 @@ yishan workspace close \
 4. **Create a worktree**: Determine a branch name from the task (agree with user).
    Then run the worktree create command. The output includes a `localPath` —
    navigate the agent to that directory.
+
+   To also start an agent in the workspace immediately, add `--task-run-agent-kind`
+   and `--task-run-prompt` to the create command. The workspace will open with
+   the agent running the given prompt as its initial task.
 
 ### Finishing a task
 
