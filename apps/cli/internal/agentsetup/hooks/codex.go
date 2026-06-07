@@ -81,3 +81,11 @@ func buildCodexManagedCommand(notifyScriptPath string, goos string, eventName st
 	}
 	return codexManagedCommandMarker + " bash " + quoteShellPath(notifyScriptPath) + " --agent codex --event " + eventName
 }
+
+func (codexHookInstaller) Remove(ctx hookSetupContext) error {
+	return removeManagedCommandsFromConfig(
+		filepath.Join(ctx.homeDir, ".codex", "hooks.json"),
+		[]string{"SessionStart", "UserPromptSubmit", "Stop", "Notification"},
+		codexLegacyManagedCommandMarker, codexManagedCommandMarker,
+	)
+}

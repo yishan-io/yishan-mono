@@ -1,6 +1,8 @@
 package setup
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 
@@ -45,6 +47,17 @@ func EnsureManagedAgentRuntime() {
 	}); err != nil {
 		log.Warn().Err(err).Msg("failed to install agent hook setup")
 	}
+}
+
+// RemoveManagedAgentRuntime removes managed hook entries from all agent configs.
+func RemoveManagedAgentRuntime() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("resolve home dir: %w", err)
+	}
+	return hooksetup.RemoveAgentHookSetup(hooksetup.AgentHookSetupConfig{
+		HomeDir: homeDir,
+	})
 }
 
 func resolveManagedHookRootDir() (string, error) {

@@ -62,3 +62,11 @@ func buildOpenCodePluginContent(notifyScriptPath string, tabIDEnvKey string, plu
 	}
 	return rendered.String()
 }
+
+func (openCodeHookInstaller) Remove(ctx hookSetupContext) error {
+	pluginPath := filepath.Join(ctx.configHome, "plugin", openCodePluginFileName)
+	if err := os.Remove(pluginPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
