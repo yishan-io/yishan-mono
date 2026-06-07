@@ -77,7 +77,7 @@ func TestServeAgentHookPublishesFailedNotificationEvent(t *testing.T) {
 }
 
 func TestServeAgentHookSilencesPerToolFailureEvents(t *testing.T) {
-	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "")
+	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
 
@@ -158,7 +158,7 @@ func TestServeAgentHookNormalizesSupportedAgentNames(t *testing.T) {
 }
 
 func TestServeAgentHookNormalizesCursorAgentAlias(t *testing.T) {
-	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "")
+	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
 
