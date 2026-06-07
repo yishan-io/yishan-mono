@@ -23,6 +23,7 @@ type NotificationEventPayload = RpcFrontendMessagePayload<"notificationEvent">;
 type ObserverStatusPayload = NonNullable<NotificationEventPayload["observerStatus"]>;
 type NotificationSoundPayload = NonNullable<NotificationEventPayload["soundToPlay"]>;
 type WorkspaceCreateProgressPayload = RpcFrontendMessagePayload<"workspaceCreateProgress">;
+type WorkspaceCreateCompletedPayload = RpcFrontendMessagePayload<"workspaceCreateCompleted">;
 type WorkspacePullRequestUpdatedPayload = RpcFrontendMessagePayload<"workspacePullRequestUpdated">;
 type WorkspaceSnapshotChangedPayload = RpcFrontendMessagePayload<"workspaceSnapshotChanged">;
 type AgentSessionLifecycleStatus = "running" | "waiting_input";
@@ -35,6 +36,7 @@ type BackendEventStoreBindingsDependencies = {
   ) => () => void;
   subscribeInAppNotification: (listener: (payload: NotificationEventPayload) => void) => () => void;
   subscribeWorkspaceCreateProgress?: (listener: (payload: WorkspaceCreateProgressPayload) => void) => () => void;
+  subscribeWorkspaceCreateCompleted?: (listener: (payload: WorkspaceCreateCompletedPayload) => void) => () => void;
   subscribeWorkspacePullRequestUpdated?: (listener: (payload: WorkspacePullRequestUpdatedPayload) => void) => () => void;
   subscribeWorkspaceSnapshotChanged?: (listener: (payload: WorkspaceSnapshotChangedPayload) => void) => () => void;
   subscribeOpenBrowserUrl?: (listener: (payload: { url: string; workspaceId: string }) => void) => () => void;
@@ -46,6 +48,7 @@ type BackendEventStoreBindingsDependencies = {
   setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId: Record<string, WorkspaceAgentStatus>) => void;
   recordWorkspaceUnreadNotification: (workspaceId: string, tone: WorkspaceUnreadTone) => void;
   applyWorkspaceCreateProgressEvent?: (payload: WorkspaceCreateProgressPayload) => void;
+  applyWorkspaceCreateCompletedEvent?: (payload: WorkspaceCreateCompletedPayload) => void;
   setWorkspacePullRequest?: (workspaceId: string, pullRequest: WorkspacePullRequestUpdatedPayload["pullRequest"]) => void;
   loadWorkspaceSnapshot?: () => Promise<void>;
   getSelectedOrganizationId?: () => string | undefined;
@@ -83,6 +86,15 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   subscribeWorkspaceCreateProgress: (listener) => {
     return subscribeBackendEvent("workspace.create.progress", (event) => {
       if (event.source !== "workspaceCreateProgress") {
+        return;
+      }
+
+      listener(event.payload);
+    });
+  },
+  subscribeWorkspaceCreateCompleted: (listener) => {
+    return subscribeBackendEvent("workspace.create.completed", (event) => {
+      if (event.source !== "workspaceCreateCompleted") {
         return;
       }
 
@@ -154,6 +166,24 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   },
   applyWorkspaceCreateProgressEvent: (payload) => {
     workspaceCreateProgressStore.getState().applyWorkspaceCreateProgressEvent(payload);
+  },
+  applyWorkspaceCreateCompletedEvent: (payload) => {
+    const store = workspaceStore.getState();
+    const existing = store.workspaces.find((ws) => ws.id === payload.workspaceId);
+    if (existing) {
+      store.addWorkspace({
+        workspaceId: payload.workspaceId,
+        projectId: existing.projectId,
+        repoId: existing.repoId,
+        organizationId: existing.organizationId,
+        name: existing.name,
+        sourceBranch: existing.sourceBranch,
+        branch: existing.branch,
+        worktreePath: payload.worktreePath,
+        nodeId: existing.nodeId,
+      });
+    }
+    workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(payload.workspaceId);
   },
   setWorkspacePullRequest: (workspaceId, pullRequest) => {
     workspaceStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);
@@ -513,6 +543,9 @@ export function createBackendEventStoreBindings(
     const unsubscribeWorkspaceCreateProgress = dependencies.subscribeWorkspaceCreateProgress?.((payload) => {
       dependencies.applyWorkspaceCreateProgressEvent?.(payload);
     }) ?? (() => {});
+    const unsubscribeWorkspaceCreateCompleted = dependencies.subscribeWorkspaceCreateCompleted?.((payload) => {
+      dependencies.applyWorkspaceCreateCompletedEvent?.(payload);
+    }) ?? (() => {});
     const unsubscribeWorkspacePullRequestUpdated = dependencies.subscribeWorkspacePullRequestUpdated?.((payload) => {
       dependencies.setWorkspacePullRequest?.(payload.workspaceId, payload.pullRequest);
     }) ?? (() => {});
@@ -566,6 +599,7 @@ export function createBackendEventStoreBindings(
       unsubscribeWorkspaceFilesChanged();
       unsubscribeInAppNotification();
       unsubscribeWorkspaceCreateProgress();
+      unsubscribeWorkspaceCreateCompleted();
       unsubscribeWorkspacePullRequestUpdated();
       unsubscribeWorkspaceSnapshotChanged();
       unsubscribeOpenBrowserUrl();

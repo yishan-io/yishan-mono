@@ -2,8 +2,11 @@ package daemon
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"strings"
+	"time"
 
 	"yishan/apps/cli/internal/workspace"
 
@@ -56,6 +59,34 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
 	}
+	req.ID = generateWorkspaceID()
+	if strings.TrimSpace(req.WorkspaceName) == "" {
+		req.WorkspaceName = req.ID
+	}
+
+	if req.ProjectID != "" {
+		_ = createRemoteWorkspace(ctx, h.runtime, WorkspaceCreation{
+			ID:             req.ID,
+			NodeID:         req.NodeID,
+			OrganizationID: req.OrganizationID,
+			ProjectID:      req.ProjectID,
+			Kind:           workspace.KindWorktree,
+			Branch:         req.TargetBranch,
+			SourceBranch:   req.SourceBranch,
+			LocalPath:      "",
+		})
+	}
+
+	go h.executeWorkspaceCreate(context.Background(), req)
+
+	return map[string]any{"id": req.ID, "status": "pending"}, nil
+}
+
+func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, req workspace.CreateRequest) {
+	reportProgress := func(event workspace.CreateProgressEvent) {
+		h.events.Publish(frontendEvent{Topic: "workspaceCreateProgress", Payload: event})
+	}
+
 	resolvedCreateRequest, err := resolveCreateRequestForNode(ctx, h.runtime, workspaceCreateRequestInput{
 		organizationID: req.OrganizationID,
 		projectID:      req.ProjectID,
@@ -65,20 +96,51 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 		sourcePath:     req.SourcePath,
 	})
 	if err != nil {
-		return nil, err
+		reportProgress(workspace.CreateProgressEvent{
+			WorkspaceID: req.ID,
+			StepID:      "complete",
+			Label:       "Prepare workspace",
+			Status:      workspace.CreateProgressFailed,
+			Message:     err.Error(),
+			CreatedAt:   nowRFC3339Nano(),
+		})
+		return
 	}
 	req.NodeID = resolvedCreateRequest.nodeID
 	req.SourcePath = resolvedCreateRequest.sourcePath
 
-	reportProgress := func(event workspace.CreateProgressEvent) {
-		h.events.Publish(frontendEvent{Topic: "workspaceCreateProgress", Payload: event})
-	}
 	created, err := h.manager.CreateWorkspaceWithProgress(ctx, req, reportProgress)
 	if err != nil {
-		return nil, err
+		reportProgress(workspace.CreateProgressEvent{
+			WorkspaceID: req.ID,
+			StepID:      "complete",
+			Label:       "Prepare workspace",
+			Status:      workspace.CreateProgressFailed,
+			Message:     err.Error(),
+			CreatedAt:   nowRFC3339Nano(),
+		})
+		return
 	}
 
 	h.watchAndTrack(created.Path)
+	warnings := buildWorkspaceHookWarnings(req.SetupHook, created.SetupHookResult, h.logFilePath)
+
+	remoteSyncWarning := ""
+	if req.ProjectID != "" {
+		if err := createRemoteWorkspace(ctx, h.runtime, WorkspaceCreation{
+			ID:             created.ID,
+			NodeID:         req.NodeID,
+			OrganizationID: req.OrganizationID,
+			ProjectID:      req.ProjectID,
+			Kind:           workspace.KindWorktree,
+			Branch:         req.TargetBranch,
+			SourceBranch:   req.SourceBranch,
+			LocalPath:      created.Path,
+		}); err != nil {
+			remoteSyncWarning = err.Error()
+		}
+	}
+
 	reportProgress(workspace.CreateProgressEvent{
 		WorkspaceID: created.ID,
 		StepID:      "complete",
@@ -86,54 +148,25 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 		Status:      workspace.CreateProgressCompleted,
 		CreatedAt:   nowRFC3339Nano(),
 	})
-	warnings := buildWorkspaceHookWarnings(req.SetupHook, created.SetupHookResult, h.logFilePath)
 
-	if req.ProjectID == "" {
-		return map[string]any{
-			"id":                      created.ID,
-			"path":                    created.Path,
-			"setupHookResult":         created.SetupHookResult,
+	h.events.Publish(frontendEvent{
+		Topic: "workspaceCreateCompleted",
+		Payload: map[string]any{
+			"workspaceId":             created.ID,
+			"worktreePath":            created.Path,
 			"lifecycleScriptWarnings": warnings,
-		}, nil
-	}
-
-	remoteSyncWarning := ""
-	if err := createRemoteWorkspace(ctx, h.runtime, WorkspaceCreation{
-		ID:             created.ID,
-		NodeID:         req.NodeID,
-		OrganizationID: req.OrganizationID,
-		ProjectID:      req.ProjectID,
-		Kind:           workspace.KindWorktree,
-		Branch:         req.TargetBranch,
-		SourceBranch:   req.SourceBranch,
-		LocalPath:      created.Path,
-	}); err != nil {
-		remoteSyncWarning = err.Error()
-		log.Warn().
-			Err(err).
-			Str("workspaceId", created.ID).
-			Str("projectId", req.ProjectID).
-			Str("organizationId", req.OrganizationID).
-			Str("branch", req.TargetBranch).
-			Msg("failed to create remote workspace; local workspace remains available")
-	}
-
-	result := map[string]any{
-		"id":                      created.ID,
-		"path":                    created.Path,
-		"setupHookResult":         created.SetupHookResult,
-		"lifecycleScriptWarnings": warnings,
-	}
-	if remoteSyncWarning != "" {
-		result["remoteSyncWarning"] = remoteSyncWarning
-	}
-	return result, nil
+			"remoteSyncWarning":       remoteSyncWarning,
+		},
+	})
 }
 
 func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.RawMessage) (any, error) {
 	var req workspaceCloseParams
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
+	}
+	if strings.TrimSpace(req.ProjectID) == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "projectId is required")
 	}
 	if err := closeRemoteWorkspace(ctx, h.runtime, WorkspaceClose{
 		WorkspaceID:    req.WorkspaceID,
@@ -234,4 +267,20 @@ func hookResultToWarning(scriptKind string, command string, hr *workspace.HookRe
 		"signal":        nil,
 		"logFilePath":   logFileValue,
 	}
+}
+
+func generateWorkspaceID() string {
+	id := make([]byte, 16)
+	if _, err := rand.Read(id); err != nil {
+		return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+			uint32(time.Now().UnixNano()),
+			uint16(time.Now().UnixNano()>>16),
+			0x4000,
+			0x8000,
+			uint64(time.Now().UnixNano()))
+	}
+	id[6] = (id[6] & 0x0f) | 0x40
+	id[8] = (id[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+		id[0:4], id[4:6], id[6:8], id[8:10], id[10:16])
 }

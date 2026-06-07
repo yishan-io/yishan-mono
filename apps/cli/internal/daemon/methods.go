@@ -15,6 +15,9 @@ const (
 	MethodContextSetActiveProject  = "context.setActiveProject"
 	MethodContextSetActiveFile     = "context.setActiveFile"
 
+	MethodProjectList = "project.list"
+	MethodNodeList    = "node.list"
+
 	MethodAgentListDetectionStatuses = "agent.listDetectionStatuses"
 	MethodIntegrationGitHubStatus    = "integration.githubStatus"
 	MethodCLIToolListStatuses        = "cliTools.listStatuses"

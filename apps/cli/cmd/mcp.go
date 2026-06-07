@@ -57,10 +57,19 @@ type workspaceCreateArgs struct {
 
 type workspaceCloseArgs struct {
 	WorkspaceID  string `json:"workspaceId" jsonschema:"The workspace ID to close"`
-	ProjectID    string `json:"projectId,omitempty" jsonschema:"Project ID (optional)"`
+	ProjectID    string `json:"projectId" jsonschema:"Project ID for the workspace (required)"`
 	Branch       string `json:"branch,omitempty" jsonschema:"Branch name (optional, auto-detected if not provided)"`
 	RemoveBranch bool   `json:"removeBranch,omitempty" jsonschema:"Delete the git branch after closing"`
 	PostHook     string `json:"postHook,omitempty" jsonschema:"Shell command to run before closing (e.g. cleanup script)"`
+}
+
+type daemonProgressEvent struct {
+	WorkspaceID string `json:"workspaceId"`
+	StepID      string `json:"stepId"`
+	Label       string `json:"label"`
+	Status      string `json:"status"`
+	Message     string `json:"message,omitempty"`
+	CreatedAt   string `json:"createdAt"`
 }
 
 func runMCPServer(_ *cobra.Command, _ []string) error {
@@ -121,6 +130,54 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 					Text:     string(encoded),
 				}},
 			}, nil
+		},
+	)
+
+	mcp.AddTool(server,
+		&mcp.Tool{Name: "project_list", Description: "List all projects in the current organization. Returns project id, name, repo URL, repo key, and related metadata for each project."},
+		func(_ context.Context, _ *mcp.CallToolRequest, _ any) (*mcp.CallToolResult, any, error) {
+			if orgID == "" {
+				return textErrorResult("no current organization: set one with \"yishan org use <org-id>\""), nil, nil
+			}
+
+			var projects []map[string]any
+			if err := daemonClient.Call("project.list", map[string]any{"orgId": orgID}, &projects); err != nil {
+				return textErrorResult(fmt.Sprintf("failed to list projects: %v", err)), nil, nil
+			}
+
+			if len(projects) == 0 {
+				return textResult("No projects found."), nil, nil
+			}
+
+			encoded, err := json.MarshalIndent(projects, "", "  ")
+			if err != nil {
+				return textErrorResult(fmt.Sprintf("failed to encode projects: %v", err)), nil, nil
+			}
+			return textResult(string(encoded)), nil, nil
+		},
+	)
+
+	mcp.AddTool(server,
+		&mcp.Tool{Name: "node_list", Description: "List all nodes in the current organization. Returns node id, name, kind, scope, endpoint, and metadata for each node."},
+		func(_ context.Context, _ *mcp.CallToolRequest, _ any) (*mcp.CallToolResult, any, error) {
+			if orgID == "" {
+				return textErrorResult("no current organization: set one with \"yishan org use <org-id>\""), nil, nil
+			}
+
+			var nodes []map[string]any
+			if err := daemonClient.Call("node.list", map[string]any{"orgId": orgID}, &nodes); err != nil {
+				return textErrorResult(fmt.Sprintf("failed to list nodes: %v", err)), nil, nil
+			}
+
+			if len(nodes) == 0 {
+				return textResult("No nodes found."), nil, nil
+			}
+
+			encoded, err := json.MarshalIndent(nodes, "", "  ")
+			if err != nil {
+				return textErrorResult(fmt.Sprintf("failed to encode nodes: %v", err)), nil, nil
+			}
+			return textResult(string(encoded)), nil, nil
 		},
 	)
 
@@ -193,13 +250,46 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 	)
 
 	mcp.AddTool(server,
-		&mcp.Tool{Name: "workspace_create", Description: "Create a new yishan workspace (git worktree) on a branch. Use this when an agent needs to start work on a feature or fix. Requires repoKey, sourcePath, targetBranch, and sourceBranch."},
-		func(_ context.Context, _ *mcp.CallToolRequest, args workspaceCreateArgs) (*mcp.CallToolResult, any, error) {
+		&mcp.Tool{Name: "workspace_create", Description: "Create a new yishan workspace (git worktree) on a branch. Use this when an agent needs to start work on a feature or fix. Requires repoKey, sourcePath, targetBranch, and sourceBranch. Supports progress notifications during creation."},
+		func(_ context.Context, req *mcp.CallToolRequest, args workspaceCreateArgs) (*mcp.CallToolResult, any, error) {
 			if orgID == "" {
 				return textErrorResult("no current organization: set one with \"yishan org use <org-id>\""), nil, nil
 			}
 			if args.RepoKey == "" || args.SourcePath == "" || args.TargetBranch == "" || args.SourceBranch == "" {
 				return textErrorResult("repoKey, sourcePath, targetBranch, and sourceBranch are required"), nil, nil
+			}
+
+			progressToken := req.Params.GetProgressToken()
+			if progressToken != nil {
+				_ = daemonClient.Call("events.frontendStream", nil, nil)
+				session := req.Session
+				stepIndex := 0
+				daemonClient.SetNotificationHandler(func(method string, params json.RawMessage) {
+					if method != "events.frontendStream" {
+						return
+					}
+					var event struct {
+						Topic   string          `json:"topic"`
+						Payload json.RawMessage `json:"payload"`
+					}
+					if err := json.Unmarshal(params, &event); err != nil {
+						return
+					}
+					if event.Topic != "workspaceCreateProgress" {
+						return
+					}
+					var progress daemonProgressEvent
+					if err := json.Unmarshal(event.Payload, &progress); err != nil {
+						return
+					}
+					stepIndex++
+					_ = session.NotifyProgress(context.Background(), &mcp.ProgressNotificationParams{
+						ProgressToken: progressToken,
+						Progress:      float64(stepIndex),
+						Message:       progress.StepID + ": " + progress.Status,
+					})
+				})
+				defer daemonClient.SetNotificationHandler(nil)
 			}
 
 			var result map[string]any
@@ -233,6 +323,9 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 			}
 			if args.WorkspaceID == "" {
 				return textErrorResult("workspaceId is required"), nil, nil
+			}
+			if args.ProjectID == "" {
+				return textErrorResult("projectId is required"), nil, nil
 			}
 
 			var result map[string]any

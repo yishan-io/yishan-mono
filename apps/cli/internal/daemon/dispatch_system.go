@@ -88,6 +88,40 @@ func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnSt
 			"enabled": true,
 			"state":   h.tokenUsage.DebugState(),
 		}, nil
+	case MethodProjectList:
+		var req struct {
+			OrgID string `json:"orgId"`
+		}
+		if err := decodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		orgID := strings.TrimSpace(req.OrgID)
+		if orgID == "" {
+			return nil, workspace.NewRPCError(rpcCodeInvalidParams, "orgId is required")
+		}
+		client := h.runtime.APIClient()
+		resp, err := client.ListProjects(orgID)
+		if err != nil {
+			return nil, fmt.Errorf("list projects: %w", err)
+		}
+		return resp.Projects, nil
+	case MethodNodeList:
+		var req struct {
+			OrgID string `json:"orgId"`
+		}
+		if err := decodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		orgID := strings.TrimSpace(req.OrgID)
+		if orgID == "" {
+			return nil, workspace.NewRPCError(rpcCodeInvalidParams, "orgId is required")
+		}
+		client := h.runtime.APIClient()
+		resp, err := client.ListNodes(orgID)
+		if err != nil {
+			return nil, fmt.Errorf("list nodes: %w", err)
+		}
+		return resp.Nodes, nil
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, fmt.Sprintf("method not found: %s", method))
 	}

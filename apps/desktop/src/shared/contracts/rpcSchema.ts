@@ -59,6 +59,12 @@ export type RpcSchema = {
         message?: string;
         createdAt: string;
       };
+      workspaceCreateCompleted: {
+        workspaceId: string;
+        worktreePath: string;
+        lifecycleScriptWarnings?: unknown[];
+        remoteSyncWarning?: string;
+      };
       workspacePullRequestUpdated: {
         workspaceId: string;
         workspaceWorktreePath: string;

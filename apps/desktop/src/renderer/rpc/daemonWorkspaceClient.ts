@@ -253,15 +253,11 @@ export class DaemonWorkspaceClient {
       throw new Error("sourceBranch is required");
     }
     const targetBranch = readOptionalString(record?.targetBranch) || sourceBranch;
-    // Use the workspaceId supplied by the caller so that progress events emitted
-    // by the daemon (keyed by this same ID) match what the frontend store tracks.
-    const workspaceId = readOptionalString(record?.workspaceId) || generateId();
-    const workspaceName = readOptionalString(record?.workspaceName) || workspaceId;
+    const workspaceName = readOptionalString(record?.workspaceName) || targetBranch;
     const contextEnabled = readOptionalBoolean(record?.contextEnabled) ?? false;
     const setupHook = readOptionalString(record?.setupHook) || "";
 
     const createdWorkspace = (await this.invoke("workspace.create", {
-      id: workspaceId,
       organizationId,
       nodeId: readOptionalString(record?.nodeId) || undefined,
       projectId: readOptionalString(record?.projectId) || "",
@@ -275,13 +271,14 @@ export class DaemonWorkspaceClient {
     }, WORKSPACE_CREATE_TIMEOUT_MS)) as Rpc.DaemonWorkspace & { lifecycleScriptWarnings?: unknown[]; remoteSyncWarning?: unknown };
 
     const createdWorktreePath = createdWorkspace.path || "";
-    if (createdWorktreePath) {
-      this.workspaceIdByWorktreePath.set(createdWorktreePath, workspaceId);
+    const resolvedId = createdWorkspace.id || "";
+    if (createdWorktreePath && resolvedId) {
+      this.workspaceIdByWorktreePath.set(createdWorktreePath, resolvedId);
     }
 
     return {
-      workspaceId: createdWorkspace.id || workspaceId,
-      projectId: readOptionalString(record?.projectId) || workspaceId,
+      workspaceId: resolvedId,
+      projectId: readOptionalString(record?.projectId) || resolvedId,
       name: workspaceName,
       sourceBranch,
       branch: targetBranch,

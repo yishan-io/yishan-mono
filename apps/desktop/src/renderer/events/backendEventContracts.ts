@@ -9,6 +9,7 @@ const FRONTEND_MESSAGE_KEYS = [
   "gitChanged",
   "workspaceFilesChanged",
   "workspaceCreateProgress",
+  "workspaceCreateCompleted",
   "workspacePullRequestUpdated",
   "workspaceSnapshotChanged",
   "openBrowserUrl",
@@ -23,6 +24,7 @@ export type BackendEventName =
   | "git.changed"
   | "workspace.files.changed"
   | "workspace.create.progress"
+  | "workspace.create.completed"
   | "workspace.pull_request.updated"
   | "workspace.snapshot.changed"
   | "open.browser.url";
@@ -59,6 +61,11 @@ export type NormalizedBackendEvent =
       payload: RpcFrontendMessagePayload<"workspaceCreateProgress">;
     }
   | {
+      source: "workspaceCreateCompleted";
+      name: "workspace.create.completed";
+      payload: RpcFrontendMessagePayload<"workspaceCreateCompleted">;
+    }
+  | {
       source: "workspacePullRequestUpdated";
       name: "workspace.pull_request.updated";
       payload: RpcFrontendMessagePayload<"workspacePullRequestUpdated">;
@@ -84,6 +91,7 @@ export const BACKEND_EVENT_NAME_BY_SOURCE = {
   gitChanged: "git.changed",
   workspaceFilesChanged: "workspace.files.changed",
   workspaceCreateProgress: "workspace.create.progress",
+  workspaceCreateCompleted: "workspace.create.completed",
   workspacePullRequestUpdated: "workspace.pull_request.updated",
   workspaceSnapshotChanged: "workspace.snapshot.changed",
   openBrowserUrl: "open.browser.url",
@@ -299,6 +307,18 @@ export function normalizeBackendEvent(envelope: DesktopRpcEventEnvelope): Normal
       source: "workspaceCreateProgress",
       name: BACKEND_EVENT_NAME_BY_SOURCE.workspaceCreateProgress,
       payload: payload as RpcFrontendMessagePayload<"workspaceCreateProgress">,
+    };
+  }
+
+  if (envelope.method === "workspaceCreateCompleted") {
+    if (typeof payload.workspaceId !== "string" || typeof payload.worktreePath !== "string") {
+      return null;
+    }
+
+    return {
+      source: "workspaceCreateCompleted",
+      name: BACKEND_EVENT_NAME_BY_SOURCE.workspaceCreateCompleted,
+      payload: payload as RpcFrontendMessagePayload<"workspaceCreateCompleted">,
     };
   }
 

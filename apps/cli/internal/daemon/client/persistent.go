@@ -31,6 +31,9 @@ type PersistentClient struct {
 	closed   chan struct{}
 	closeErr error
 	closeMu  sync.RWMutex
+
+	onNotify   func(method string, params json.RawMessage)
+	onNotifyMu sync.RWMutex
 }
 
 type daemonRequest struct {
@@ -119,6 +122,15 @@ func (c *PersistentClient) Call(method string, params any, out any) error {
 	return nil
 }
 
+// SetNotificationHandler registers a callback for JSON-RPC notifications (push
+// messages without an id) received from the daemon. The callback is invoked from
+// the read loop goroutine and must be non-blocking or quick to return.
+func (c *PersistentClient) SetNotificationHandler(handler func(method string, params json.RawMessage)) {
+	c.onNotifyMu.Lock()
+	c.onNotify = handler
+	c.onNotifyMu.Unlock()
+}
+
 // Close terminates the WebSocket connection and cancels all pending calls.
 // It is safe to call multiple times.
 func (c *PersistentClient) Close() error {
@@ -174,6 +186,25 @@ func (c *PersistentClient) readLoop() {
 }
 
 func (c *PersistentClient) dispatchResponse(payload []byte) {
+	var raw struct {
+		ID     json.RawMessage `json:"id"`
+		Method string          `json:"method"`
+		Params json.RawMessage `json:"params"`
+	}
+	if err := json.Unmarshal(payload, &raw); err != nil {
+		return
+	}
+
+	if len(raw.ID) == 0 || string(raw.ID) == "null" {
+		c.onNotifyMu.RLock()
+		handler := c.onNotify
+		c.onNotifyMu.RUnlock()
+		if handler != nil {
+			handler(raw.Method, raw.Params)
+		}
+		return
+	}
+
 	var resp daemonResponse
 	if err := json.Unmarshal(payload, &resp); err != nil {
 		return

@@ -1,5 +1,3 @@
-import { delay } from "../helpers/delay";
-import { generateId } from "../helpers/generateId";
 import { normalizeCreateWorkspaceInput } from "../helpers/workspaceHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
@@ -22,15 +20,6 @@ type CreateWorkspaceInput = {
   nodeId?: string;
 };
 
-type BackendWorkspace = {
-  id: string;
-  projectId: string;
-  name: string;
-  sourceBranch: string;
-  branch: string;
-  worktreePath: string;
-};
-
 type CreateWorkspaceResponse = {
   workspaceId: string;
   projectId?: string;
@@ -46,12 +35,6 @@ type CreateWorkspaceResponse = {
 type WorkspaceStoreFacade = typeof workspaceStore & {
   getState?: () => WorkspaceStoreState;
 };
-
-const WORKSPACE_CREATE_STEP_DISPLAY_MS = 200;
-
-function createWorkspaceId(): string {
-  return generateId();
-}
 
 /**
  * Normalizes a raw lifecycle script warning from the daemon into the expected
@@ -110,12 +93,6 @@ export function notifyLifecycleScriptWarnings(
   });
 }
 
-function formatWorkspaceCreateError(error: unknown): string {
-  const message = error instanceof Error ? error.message : "Workspace creation failed.";
-  const daemonPrefixMatch = message.match(/^daemon RPC error -?\d+:\s*(.*)$/s);
-  return daemonPrefixMatch?.[1]?.trim() || message;
-}
-
 function isReauthRequiredRemoteSyncWarning(message: string): boolean {
   return /authenticated api session|refresh token|unauthorized|yishan login/i.test(message);
 }
@@ -130,42 +107,6 @@ function readWorkspaceStoreState(): WorkspaceStoreState {
   return (
     workspaceStore as unknown as (selector: (state: WorkspaceStoreState) => WorkspaceStoreState) => WorkspaceStoreState
   )((state) => state);
-}
-
-async function completeVisibleCreateProgressSteps(workspaceId: string): Promise<void> {
-  for (const step of ["worktree", "context", "setup"] as const) {
-    const currentStep = workspaceCreateProgressStore
-      .getState()
-      .progressByWorkspaceId[workspaceId]?.steps.find((item) => item.id === step);
-    if (
-      !currentStep ||
-      currentStep.status === "completed" ||
-      currentStep.status === "skipped" ||
-      currentStep.status === "warning"
-    ) {
-      continue;
-    }
-
-    if (currentStep.status === "pending") {
-      workspaceCreateProgressStore.getState().applyWorkspaceCreateProgressEvent({
-        workspaceId,
-        stepId: step,
-        label: currentStep.label,
-        status: "running",
-        createdAt: new Date().toISOString(),
-      });
-      await delay(WORKSPACE_CREATE_STEP_DISPLAY_MS);
-    }
-
-    workspaceCreateProgressStore.getState().applyWorkspaceCreateProgressEvent({
-      workspaceId,
-      stepId: step,
-      label: currentStep.label,
-      status: "completed",
-      createdAt: new Date().toISOString(),
-    });
-    await delay(WORKSPACE_CREATE_STEP_DISPLAY_MS);
-  }
 }
 
 /** Creates one workspace by calling backend service when available, then appending it in store state. */
@@ -197,9 +138,43 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     return;
   }
 
-  const workspaceId = createWorkspaceId();
   const normalizedNodeId = input.nodeId?.trim() || "";
-  workspaceCreateProgressStore.getState().startWorkspaceCreateProgress(workspaceId);
+
+  const client = await getDaemonClient();
+  let created: Record<string, unknown>;
+  try {
+    created = (await client.workspace.createWorkspace({
+      organizationId,
+      nodeId: normalizedNodeId || undefined,
+      projectId,
+      repoKey,
+      workspaceName: normalizedName,
+      sourcePath,
+      sourceBranch,
+      targetBranch,
+      contextEnabled: project?.contextEnabled ?? workspaceSettingsStore.getState().isDefaultContextEnabled,
+      setupHook: project?.setupScript?.trim() || undefined,
+    })) as Record<string, unknown>;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Workspace creation failed.";
+    const daemonPrefixMatch = message.match(/^daemon RPC error -?\d+:\s*(.*)$/s);
+    enqueueWorkspaceErrorNotice({
+      title: "Failed to create workspace",
+      message: daemonPrefixMatch?.[1]?.trim() || message,
+    });
+    return;
+  }
+
+  const workspaceId = (typeof created.id === "string" ? created.id : "") ||
+    (typeof created.workspaceId === "string" ? created.workspaceId : "");
+  if (!workspaceId) {
+    enqueueWorkspaceErrorNotice({
+      title: "Failed to create workspace",
+      message: "Daemon did not return a workspace ID",
+    });
+    return;
+  }
+
   store.addWorkspace({
     repoId: projectId,
     name: normalizedName,
@@ -211,108 +186,6 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     organizationId,
   });
   tabStore.getState().setSelectedWorkspaceId(workspaceId);
-
-  void (async () => {
-    let backendWorkspace: BackendWorkspace | undefined;
-    const client = await getDaemonClient();
-    try {
-      const created = (await client.workspace.createWorkspace({
-        workspaceId,
-        organizationId,
-        nodeId: normalizedNodeId || undefined,
-        projectId,
-        repoKey,
-        workspaceName: normalizedName,
-        sourcePath,
-        sourceBranch,
-        targetBranch,
-        contextEnabled: project?.contextEnabled ?? workspaceSettingsStore.getState().isDefaultContextEnabled,
-        setupHook: project?.setupScript?.trim() || undefined,
-      })) as CreateWorkspaceResponse;
-      notifyLifecycleScriptWarnings(
-        normalizedName,
-        created.lifecycleScriptWarnings,
-        "setup",
-        project?.setupScript?.trim() || "",
-      );
-      if (created.remoteSyncWarning?.trim()) {
-        const remoteSyncWarning = created.remoteSyncWarning.trim();
-        const remoteSyncMessage = isReauthRequiredRemoteSyncWarning(remoteSyncWarning)
-          ? `Remote sync needs re-authentication. Sign in again and retry sync from workspace actions. ${remoteSyncWarning}`
-          : `Remote sync failed. Sign in again to sync this workspace. ${remoteSyncWarning}`;
-        enqueueWorkspaceErrorNotice({
-          title: "Workspace created locally",
-          message: remoteSyncMessage,
-        });
-      }
-
-      backendWorkspace = {
-        id: workspaceId,
-        projectId: created.projectId ?? projectId,
-        name: created.name,
-        sourceBranch: created.sourceBranch,
-        branch: created.branch,
-        worktreePath: created.worktreePath,
-      };
-    } catch (error) {
-      // Mark any step still showing as "running" as failed so the UI doesn't
-      // stay stuck with a spinning indicator forever.
-      const progressState = workspaceCreateProgressStore.getState().progressByWorkspaceId[workspaceId];
-      if (progressState) {
-        for (const step of progressState.steps) {
-          if (step.status === "running") {
-            workspaceCreateProgressStore.getState().applyWorkspaceCreateProgressEvent({
-              workspaceId,
-              stepId: step.id,
-              label: step.label,
-              status: "failed",
-              createdAt: new Date().toISOString(),
-            });
-          }
-        }
-      }
-      workspaceCreateProgressStore.getState().applyWorkspaceCreateProgressEvent({
-        workspaceId,
-        stepId: "complete",
-        label: "Prepare workspace",
-        status: "failed",
-        message: formatWorkspaceCreateError(error),
-        createdAt: new Date().toISOString(),
-      });
-      console.error("Failed to create backend workspace worktree", error);
-      enqueueWorkspaceErrorNotice({
-        title: "Failed to create workspace",
-        message: formatWorkspaceCreateError(error),
-      });
-    }
-
-    if (!backendWorkspace?.id) {
-      return;
-    }
-
-    readWorkspaceStoreState().addWorkspace({
-      repoId: backendWorkspace.projectId,
-      organizationId,
-      workspaceId,
-      name: backendWorkspace.name,
-      sourceBranch: backendWorkspace.sourceBranch,
-      branch: backendWorkspace.branch,
-      worktreePath: backendWorkspace.worktreePath,
-      nodeId: normalizedNodeId || undefined,
-    });
-    await completeVisibleCreateProgressSteps(workspaceId);
-    workspaceCreateProgressStore.getState().applyWorkspaceCreateProgressEvent({
-      workspaceId,
-      stepId: "complete",
-      label: "Prepare workspace",
-      status: "completed",
-      createdAt: new Date().toISOString(),
-    });
-    await delay(WORKSPACE_CREATE_STEP_DISPLAY_MS);
-    workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(workspaceId);
-  })().catch((error) => {
-    console.error("Failed to create workspace in background", error);
-  });
 
   return workspaceId;
 }
