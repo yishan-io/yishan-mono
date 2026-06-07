@@ -19,6 +19,7 @@ const (
 	MethodNodeList    = "node.list"
 
 	MethodAgentListDetectionStatuses = "agent.listDetectionStatuses"
+	MethodAgentListModels           = "agent.listModels"
 	MethodIntegrationGitHubStatus    = "integration.githubStatus"
 	MethodCLIToolListStatuses        = "cliTools.listStatuses"
 	MethodFrontendEventsStream       = "events.frontendStream"
