@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"text/template"
 )
@@ -49,4 +50,12 @@ func buildPiExtensionContent(notifyScriptPath string, marker string, goos string
 		panic(err)
 	}
 	return rendered.String()
+}
+
+func (piHookInstaller) Remove(ctx hookSetupContext) error {
+	extensionPath := filepath.Join(ctx.homeDir, ".pi", "agent", "extensions", piExtensionFileName)
+	if err := os.Remove(extensionPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }

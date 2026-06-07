@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -108,4 +109,48 @@ func buildCursorManagedCommand(cursorHookScriptPath string, goos string, eventNa
 		return cursorManagedCommandMarker + " powershell.exe -NoProfile -ExecutionPolicy Bypass -File " + quotePowerShellPath(cursorHookScriptPath) + " " + eventName
 	}
 	return cursorManagedCommandMarker + " bash " + quoteShellPath(cursorHookScriptPath) + " " + eventName
+}
+
+func (cursorHookInstaller) Remove(ctx hookSetupContext) error {
+	settingsPath := filepath.Join(ctx.homeDir, ".cursor", "hooks.json")
+	settings, err := readJSONObject(settingsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	hooksValue, ok := settings["hooks"].(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	for _, eventName := range []string{"beforeSubmitPrompt", "stop", "beforeShellExecution", "beforeMCPExecution"} {
+		entries, _ := hooksValue[eventName].([]any)
+		filtered := make([]any, 0, len(entries))
+		for _, entry := range entries {
+			entryMap, ok := entry.(map[string]any)
+			if !ok {
+				filtered = append(filtered, entry)
+				continue
+			}
+			command, _ := entryMap["command"].(string)
+			if strings.Contains(command, cursorManagedCommandMarker) || strings.Contains(command, cursorLegacyManagedCommandMarker) {
+				continue
+			}
+			filtered = append(filtered, entry)
+		}
+		if len(filtered) == 0 {
+			delete(hooksValue, eventName)
+		} else {
+			hooksValue[eventName] = filtered
+		}
+	}
+
+	if len(hooksValue) == 0 {
+		delete(settings, "hooks")
+	}
+
+	return writeJSONObject(settingsPath, settings)
 }

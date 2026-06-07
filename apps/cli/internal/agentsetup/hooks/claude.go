@@ -82,3 +82,11 @@ func buildClaudeManagedCommand(notifyScriptPath string, goos string, eventName s
 	}
 	return claudeManagedCommandMarker + " bash " + quoteShellPath(notifyScriptPath) + " --agent claude --event " + eventName
 }
+
+func (claudeHookInstaller) Remove(ctx hookSetupContext) error {
+	return removeManagedCommandsFromConfig(
+		filepath.Join(ctx.homeDir, ".claude", "settings.json"),
+		[]string{"UserPromptSubmit", "Stop", "PostToolUse", "PostToolUseFailure", "PermissionRequest"},
+		claudeLegacyManagedCommandMarker, claudeManagedCommandMarker,
+	)
+}

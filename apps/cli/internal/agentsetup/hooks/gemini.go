@@ -79,3 +79,11 @@ func buildGeminiManagedCommand(notifyScriptPath string, goos string, eventName s
 	}
 	return geminiManagedCommandMarker + " bash " + quoteShellPath(notifyScriptPath) + " --agent gemini --event " + eventName
 }
+
+func (geminiHookInstaller) Remove(ctx hookSetupContext) error {
+	return removeManagedCommandsFromConfig(
+		filepath.Join(ctx.homeDir, ".gemini", "settings.json"),
+		[]string{"BeforeAgent", "AfterAgent", "Notification"},
+		geminiLegacyManagedCommandMarker, geminiManagedCommandMarker,
+	)
+}
