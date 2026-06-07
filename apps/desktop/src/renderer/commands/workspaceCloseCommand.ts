@@ -3,6 +3,7 @@ import { sessionStore } from "../store/sessionStore";
 import type { WorkspaceStoreState } from "../store/types";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../store/workspaceStore";
+import { workspaceUiStore } from "../store/workspaceUiStore";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
 
@@ -94,6 +95,13 @@ export async function closeWorkspace(workspaceId: string, options?: { removeBran
     repoId: projectId,
     workspaceId,
   });
+
+  // Cleanup per-workspace UI signals to avoid accumulating stale entries.
+  workspaceUiStore.setState((state) => {
+    delete state.rightPaneTabByWorkspaceId[workspaceId];
+    delete state.isRightPaneHiddenByWorkspaceId[workspaceId];
+  });
+
   syncTabStoreWithWorkspace(previousWorkspaces);
 
   void removeWorkspaceInBackground({

@@ -21,7 +21,6 @@ type LayoutStoreState = {
   markdownPreviewFontSize: MarkdownPreviewFontSize;
   markdownPreviewWidth: MarkdownPreviewWidth;
   isLeftPaneManuallyHidden: boolean;
-  isRightPaneManuallyHidden: boolean;
   // ── persisted link setting (from former linkSettingsStore) ─────────────────
   linkTarget: LinkTarget;
   isVoiceInputEnabled: boolean;
@@ -37,7 +36,6 @@ type LayoutStoreState = {
   setMarkdownPreviewFontSize: (size: MarkdownPreviewFontSize) => void;
   setMarkdownPreviewWidth: (width: MarkdownPreviewWidth) => void;
   setIsLeftPaneManuallyHidden: (hidden: boolean) => void;
-  setIsRightPaneManuallyHidden: (hidden: boolean) => void;
   setLinkTarget: (target: LinkTarget) => void;
   setIsVoiceInputEnabled: (enabled: boolean) => void;
   setVoiceAutoEnter: (enabled: boolean) => void;
@@ -56,7 +54,6 @@ export const layoutStore = create<LayoutStoreState>()(
       markdownPreviewFontSize: "medium" as MarkdownPreviewFontSize,
       markdownPreviewWidth: "readable" as MarkdownPreviewWidth,
       isLeftPaneManuallyHidden: false,
-      isRightPaneManuallyHidden: true,
       linkTarget: "built-in" as LinkTarget,
       isVoiceInputEnabled: false,
       voiceAutoEnter: true,
@@ -83,9 +80,6 @@ export const layoutStore = create<LayoutStoreState>()(
       },
       setIsLeftPaneManuallyHidden: (isLeftPaneManuallyHidden) => {
         set({ isLeftPaneManuallyHidden });
-      },
-      setIsRightPaneManuallyHidden: (isRightPaneManuallyHidden) => {
-        set({ isRightPaneManuallyHidden });
       },
       setLinkTarget: (linkTarget) => {
         set({ linkTarget });

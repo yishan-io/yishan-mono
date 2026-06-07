@@ -10,7 +10,7 @@ import { layoutStore } from "../store/settings/layoutStore";
 import { sessionStore } from "../store/sessionStore";
 import type { WorkspaceStoreState } from "../store/types";
 import { workspaceStore } from "../store/workspaceStore";
-import { type WorkspaceRightPaneTab, workspaceUiStore } from "../store/workspaceUiStore";
+import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, workspaceUiStore } from "../store/workspaceUiStore";
 import { ensureVisibleWorkspacesOpen } from "./daemonWorkspaceSync";
 
 export { createWorkspace } from "./workspaceCreateCommand";
@@ -134,10 +134,12 @@ export function toggleLeftPaneVisibility() {
   state.setIsLeftPaneManuallyHidden(!state.isLeftPaneManuallyHidden);
 }
 
-/** Toggles right workspace pane manual visibility state. */
+/** Toggles right workspace pane manual visibility state for the selected workspace. */
 export function toggleRightPaneVisibility() {
-  const state = layoutStore.getState();
-  state.setIsRightPaneManuallyHidden(!state.isRightPaneManuallyHidden);
+  const workspaceId = readWorkspaceStoreState().selectedWorkspaceId;
+  const uiState = workspaceUiStore.getState();
+  const isHidden = uiState.isRightPaneHiddenByWorkspaceId[workspaceId] ?? true;
+  uiState.setIsRightPaneHidden(workspaceId, !isHidden);
 }
 
 /** Toggles a workspace pane: opens and switches to it, or collapses if already active. */
@@ -148,15 +150,16 @@ export function activateWorkspacePane(pane: "repo" | WorkspaceRightPaneTab) {
     return;
   }
 
-  const layout = layoutStore.getState();
-  const currentTab = workspaceUiStore.getState().rightPaneTab;
-  const isHidden = layout.isRightPaneManuallyHidden;
+  const workspaceId = readWorkspaceStoreState().selectedWorkspaceId;
+  const uiState = workspaceUiStore.getState();
+  const currentTab = uiState.rightPaneTabByWorkspaceId[workspaceId] ?? DEFAULT_RIGHT_PANE_TAB;
+  const isHidden = uiState.isRightPaneHiddenByWorkspaceId[workspaceId] ?? true;
 
   if (!isHidden && currentTab === pane) {
-    layout.setIsRightPaneManuallyHidden(true);
+    uiState.setIsRightPaneHidden(workspaceId, true);
   } else {
-    layout.setIsRightPaneManuallyHidden(false);
-    workspaceUiStore.getState().setRightPaneTab(pane);
+    uiState.setIsRightPaneHidden(workspaceId, false);
+    uiState.setRightPaneTab(workspaceId, pane);
   }
 }
 

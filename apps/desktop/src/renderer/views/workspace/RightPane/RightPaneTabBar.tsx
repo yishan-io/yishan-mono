@@ -2,7 +2,7 @@ import { Badge, Box, IconButton, Tooltip } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest, LuMic } from "react-icons/lu";
-import type { WorkspaceRightPaneTab } from "../../../store/workspaceUiStore";
+import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab } from "../../../store/workspaceUiStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
 import { layoutStore } from "../../../store/settings/layoutStore";
@@ -29,21 +29,23 @@ export type RightPaneTabBarProps = {
  */
 export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPane }: RightPaneTabBarProps) {
   const { t } = useTranslation();
-  const activeRightPaneTab = workspaceUiStore((state) => state.rightPaneTab);
-  const setRightPaneTab = workspaceUiStore((state) => state.setRightPaneTab);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
+  const activeRightPaneTab = workspaceUiStore(
+    (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
+  );
+  const setRightPaneTab = workspaceUiStore((state) => state.setRightPaneTab);
   const changesCount = workspaceStore((state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0);
   const isVoiceInputEnabled = layoutStore((state) => state.isVoiceInputEnabled);
   const [isVoiceRecordingVisible, setIsVoiceRecordingVisible] = useState(false);
 
   const handleTabClick = (tab: WorkspaceRightPaneTab) => {
     if (rightCollapsed) {
-      setRightPaneTab(tab);
+      setRightPaneTab(selectedWorkspaceId, tab);
       showRightPane?.();
     } else if (activeRightPaneTab === tab) {
       onToggleRightPane?.();
     } else {
-      setRightPaneTab(tab);
+      setRightPaneTab(selectedWorkspaceId, tab);
     }
   };
 

@@ -4,14 +4,20 @@ import { immer } from "zustand/middleware/immer";
 export type WorkspaceRightPaneTab = "files" | "changes" | "pr";
 export type WorkspaceListHierarchyMode = "by_project" | "by_node";
 
+/** Default right-pane tab when no per-workspace preference has been set. */
+export const DEFAULT_RIGHT_PANE_TAB: WorkspaceRightPaneTab = "files";
+
 type WorkspaceUiStoreState = {
   // ── file tree signals ──────────────────────────────────────────────────────
   selectedEntryPath: string;
   expandedFileTreeItemsByWorkspaceId: Record<string, string[]>;
   deleteSelectionRequestId: number;
   undoRequestId: number;
-  // ── pane state ─────────────────────────────────────────────────────────────
-  rightPaneTab: WorkspaceRightPaneTab;
+  // ── pane state (per-workspace) ─────────────────────────────────────────────
+  /** Selected right-pane tab per workspace. Falls back to `DEFAULT_RIGHT_PANE_TAB`. */
+  rightPaneTabByWorkspaceId: Record<string, WorkspaceRightPaneTab>;
+  /** Whether the right pane is manually hidden per workspace. Falls back to `true` (hidden). */
+  isRightPaneHiddenByWorkspaceId: Record<string, boolean>;
   fileSearchRequestKey: number;
   /** Whether the scheduled job panel is visible in the main pane. */
   isScheduledJobPanelOpen: boolean;
@@ -20,7 +26,8 @@ type WorkspaceUiStoreState = {
   setExpandedFileTreeItems: (workspaceId: string, paths: string[]) => void;
   requestDeleteSelection: () => void;
   requestUndo: () => void;
-  setRightPaneTab: (tab: WorkspaceRightPaneTab) => void;
+  setRightPaneTab: (workspaceId: string, tab: WorkspaceRightPaneTab) => void;
+  setIsRightPaneHidden: (workspaceId: string, hidden: boolean) => void;
   requestFileSearch: () => void;
   setScheduledJobPanelOpen: (isOpen: boolean) => void;
 };
@@ -32,36 +39,44 @@ export const workspaceUiStore = create<WorkspaceUiStoreState>()(
     expandedFileTreeItemsByWorkspaceId: {},
     deleteSelectionRequestId: 0,
     undoRequestId: 0,
-    rightPaneTab: "files",
+    rightPaneTabByWorkspaceId: {},
+    isRightPaneHiddenByWorkspaceId: {},
     fileSearchRequestKey: 0,
     isScheduledJobPanelOpen: false,
 
-      setSelectedEntryPath: (selectedEntryPath) => {
-        set({ selectedEntryPath });
-      },
-      setExpandedFileTreeItems: (workspaceId, paths) => {
-        set((state) => {
-          state.expandedFileTreeItemsByWorkspaceId[workspaceId] = paths;
-        });
-      },
-      requestDeleteSelection: () => {
-        set((state) => {
-          state.deleteSelectionRequestId += 1;
-        });
-      },
-      requestUndo: () => {
-        set((state) => {
-          state.undoRequestId += 1;
-        });
-      },
-      setRightPaneTab: (rightPaneTab) => {
-        set({ rightPaneTab });
-      },
-      requestFileSearch: () => {
-        set((state) => {
-          state.fileSearchRequestKey += 1;
-        });
-      },
+    setSelectedEntryPath: (selectedEntryPath) => {
+      set({ selectedEntryPath });
+    },
+    setExpandedFileTreeItems: (workspaceId, paths) => {
+      set((state) => {
+        state.expandedFileTreeItemsByWorkspaceId[workspaceId] = paths;
+      });
+    },
+    requestDeleteSelection: () => {
+      set((state) => {
+        state.deleteSelectionRequestId += 1;
+      });
+    },
+    requestUndo: () => {
+      set((state) => {
+        state.undoRequestId += 1;
+      });
+    },
+    setRightPaneTab: (workspaceId, tab) => {
+      set((state) => {
+        state.rightPaneTabByWorkspaceId[workspaceId] = tab;
+      });
+    },
+    setIsRightPaneHidden: (workspaceId, hidden) => {
+      set((state) => {
+        state.isRightPaneHiddenByWorkspaceId[workspaceId] = hidden;
+      });
+    },
+    requestFileSearch: () => {
+      set((state) => {
+        state.fileSearchRequestKey += 1;
+      });
+    },
     setScheduledJobPanelOpen: (isOpen) => {
       set({ isScheduledJobPanelOpen: isOpen });
     },
