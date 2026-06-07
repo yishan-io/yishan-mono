@@ -171,29 +171,19 @@ func runSetupAll(_ *cobra.Command, _ []string) error {
 func renderSetupState(state *setup.InstalledState) output.RenderData {
 	rows := []map[string]any{
 		{
-			"resource":   "skill",
-			"installed":  state.Skill.Installed,
-			"details":    formatSkillDetails(state.Skill),
+			"resource":  "hooks",
+			"installed": state.Hooks.Configured,
+			"details":   formatHookDetails(state.Hooks),
 		},
 		{
-			"resource":   "mcp",
-			"installed":  state.MCP.Configured,
-			"details":    formatMCPDetails(state.MCP),
+			"resource":  "mcp",
+			"installed": state.MCP.Configured,
+			"details":   formatMCPDetails(state.MCP),
 		},
 		{
-			"resource":   "hooks",
-			"installed":  state.Hooks.Configured,
-			"details":    formatHookDetails(state.Hooks),
-		},
-		{
-			"resource":   "assets",
-			"installed":  state.Assets.Installed,
-			"details":    formatAssetDetails(state.Assets),
-		},
-		{
-			"resource":   "shell",
-			"installed":  state.Shell.Configured,
-			"details":    formatShellDetails(state.Shell),
+			"resource":  "skill",
+			"installed": state.Skill.Installed,
+			"details":   formatSkillDetails(state.Skill),
 		},
 	}
 
@@ -223,20 +213,6 @@ func formatHookDetails(h setup.HookState) string {
 		return ""
 	}
 	return strings.Join(h.Agents, ", ")
-}
-
-func formatAssetDetails(a setup.AssetState) string {
-	if !a.Installed {
-		return ""
-	}
-	return strings.Join(a.Binaries, ", ")
-}
-
-func formatShellDetails(s setup.ShellState) string {
-	if !s.Configured {
-		return ""
-	}
-	return s.ShellDir
 }
 
 func init() {
