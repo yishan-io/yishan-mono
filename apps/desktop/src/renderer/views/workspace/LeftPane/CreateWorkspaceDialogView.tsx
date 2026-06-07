@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import { type KeyboardEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuChevronDown, LuCloud, LuFolderGit2, LuGitBranch, LuServer, LuSparkles } from "react-icons/lu";
+import { LuChevronDown, LuCloud, LuCpu, LuFolderGit2, LuGitBranch, LuServer, LuSparkles } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import { AgentIcon } from "../../../components/AgentIcon";
 import { BranchDropdown, type BranchDropdownGroups } from "../../../components/BranchDropdown";
@@ -634,6 +634,7 @@ export function CreateWorkspaceDialogView({
                     size="small"
                     fullWidth
                     freeSolo
+                    forcePopupIcon
                     ListboxComponent={VirtualizedListbox}
                     options={agentModels}
                     getOptionLabel={(option) => (typeof option === "string" ? option : option.name)}
@@ -645,8 +646,41 @@ export function CreateWorkspaceDialogView({
                     loading={loadingAgentModels}
                     disabled={isCreatingWorkspace}
                     isOptionEqualToValue={(option, value) => option.id === (typeof value === "string" ? value : value.id)}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 2.5,
+                        backgroundColor: "action.hover",
+                        minHeight: 36,
+                      },
+                      "& .MuiOutlinedInput-root fieldset": {
+                        borderColor: "transparent",
+                      },
+                      "& .MuiOutlinedInput-root:hover fieldset": {
+                        borderColor: "transparent",
+                      },
+                      "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                        borderColor: "divider",
+                      },
+                      "& .MuiOutlinedInput-input": {
+                        py: 0.5,
+                      },
+                      "& .MuiAutocomplete-popupIndicator": {
+                        color: "text.secondary",
+                      },
+                    }}
                     renderInput={(params) => (
-                      <TextField {...params} placeholder="Model (optional)" />
+                      <TextField
+                        {...params}
+                        placeholder="Model (optional)"
+                        InputProps={{
+                          ...params.InputProps,
+                          startAdornment: (
+                            <InputAdornment position="start" sx={{ ml: 1 }}>
+                              <LuCpu size={14} />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
                     )}
                     renderOption={(props, option) => {
                       const { key, ...rest } = props;
