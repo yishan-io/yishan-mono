@@ -95,6 +95,13 @@ export type DaemonRpcClient = {
   };
   agent: {
     listDetectionStatuses: (input?: unknown) => Promise<unknown>;
+    listModels: (input?: { agentKind?: string; forceRefresh?: boolean }) => Promise<{
+      agentKind: string;
+      models: Array<{ id: string; name: string }>;
+      source: string;
+      fetchedAt: number;
+      cacheExpiry: number;
+    }>;
   };
   cliTools: {
     listStatuses: (input?: { refresh?: boolean }) => Promise<

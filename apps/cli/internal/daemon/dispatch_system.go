@@ -80,6 +80,24 @@ func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnSt
 			return nil, err
 		}
 		return map[string]bool{"ok": true}, nil
+	case MethodAgentListModels:
+		type listModelsParams struct {
+			AgentKind    string `json:"agentKind"`
+			ForceRefresh bool   `json:"forceRefresh"`
+		}
+		var req listModelsParams
+		if err := decodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		agentKind := strings.TrimSpace(req.AgentKind)
+		if agentKind == "" {
+			return h.modelList.ListAllModels(req.ForceRefresh), nil
+		}
+		result, err := h.modelList.ListModels(agentKind, req.ForceRefresh)
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
 	case MethodTokenUsageDebugState:
 		if h.tokenUsage == nil {
 			return map[string]any{"enabled": false}, nil

@@ -7,6 +7,19 @@ export type AgentDetectionStatus = {
   version?: string;
 };
 
+export type AgentModelInfo = {
+  id: string;
+  name: string;
+};
+
+export type AgentModelsResult = {
+  agentKind: string;
+  models: AgentModelInfo[];
+  source: string;
+  fetchedAt: number;
+  cacheExpiry: number;
+};
+
 /**
  * Normalizes one unknown API payload into ordered desktop agent detection statuses.
  */
@@ -55,4 +68,13 @@ export async function listAgentDetectionStatuses(forceRefresh = false): Promise<
   const client = await getDaemonClient();
   const payload = await client.agent.listDetectionStatuses(forceRefresh ? { refresh: true } : undefined);
   return normalizeAgentDetectionStatuses(payload);
+}
+
+/** Fetches available models for one agent kind from the daemon cache. */
+export async function listAgentModels(
+  agentKind: string,
+  forceRefresh = false,
+): Promise<AgentModelsResult> {
+  const client = await getDaemonClient();
+  return (await client.agent.listModels({ agentKind, forceRefresh })) as AgentModelsResult;
 }
