@@ -96,6 +96,19 @@ func StartDetached(cfg StartConfig) (int, error) {
 	}
 	if cfg.Stderr != nil {
 		command.Stderr = cfg.Stderr
+	} else if cfg.LogFile != "" {
+		// Redirect stderr to the log file so that Go runtime panics and other
+		// unrecoverable crashes are captured rather than silently dropped into
+		// /dev/null. The daemon writes structured JSON to the log file via
+		// zerolog, but the Go runtime writes plain text panic stacks directly
+		// to os.Stderr — without this redirect those are invisible.
+		stderrFile, openErr := os.OpenFile(cfg.LogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
+		if openErr == nil {
+			command.Stderr = stderrFile
+			defer stderrFile.Close()
+		} else {
+			command.Stderr = devNull
+		}
 	} else {
 		command.Stderr = devNull
 	}

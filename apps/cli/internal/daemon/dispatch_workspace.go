@@ -85,6 +85,12 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 }
 
 func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, req workspace.CreateRequest) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error().Interface("panic", r).Str("workspaceId", req.ID).Msg("panic in executeWorkspaceCreate")
+		}
+	}()
+
 	reportProgress := func(event workspace.CreateProgressEvent) {
 		h.events.Publish(frontendEvent{Topic: "workspaceCreateProgress", Payload: event})
 	}
