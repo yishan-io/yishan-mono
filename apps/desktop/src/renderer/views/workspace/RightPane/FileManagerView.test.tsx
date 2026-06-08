@@ -341,83 +341,6 @@ describe("FileManagerView file search", () => {
     vi.clearAllMocks();
   });
 
-  it("filters files in real time and highlights matched path text", async () => {
-    const { rerender } = render(<FileManagerView openFileSearchRequestKey={0} />);
-
-    await waitFor(() => {
-      expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo", recursive: true });
-    });
-
-    rerender(<FileManagerView openFileSearchRequestKey={1} />);
-
-    const searchInput = await screen.findByRole("textbox", { name: "Search files..." });
-    fireEvent.change(searchInput, { target: { value: "button" } });
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "src/components/Button.tsx" })).toBeTruthy();
-      expect(screen.queryByRole("button", { name: "src/readme.md" })).toBeNull();
-    });
-
-    const highlightedSegments = screen.getAllByText(
-      (_, element) => element?.getAttribute("data-highlighted") === "true",
-    );
-    expect(highlightedSegments.length).toBeGreaterThan(0);
-  });
-
-  it("shows directory name matches in quick-open search", async () => {
-    mocks.listFiles.mockResolvedValue({
-      files: asEntries(["cmd/", "src/readme.md"]),
-    });
-
-    const { rerender } = render(<FileManagerView openFileSearchRequestKey={0} />);
-
-    await waitFor(() => {
-      expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo", recursive: true });
-    });
-
-    rerender(<FileManagerView openFileSearchRequestKey={1} />);
-
-    const searchInput = await screen.findByRole("textbox", { name: "Search files..." });
-    fireEvent.change(searchInput, { target: { value: "cmd" } });
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "cmd/" })).toBeTruthy();
-    });
-  });
-
-  it("does not render file result rows before a search query is typed", async () => {
-    const { rerender } = render(<FileManagerView openFileSearchRequestKey={0} />);
-
-    await waitFor(() => {
-      expect(mocks.listFiles).toHaveBeenCalled();
-    });
-
-    rerender(<FileManagerView openFileSearchRequestKey={4} />);
-
-    await screen.findByRole("textbox", { name: "Search files..." });
-    expect(screen.queryByRole("button", { name: "src/readme.md" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "src/components/Button.tsx" })).toBeNull();
-  });
-
-  it("excludes ignored files from quick-open search results", async () => {
-    mocks.listFiles.mockResolvedValue({
-      files: asEntries(["src/readme.md", "dist/debug.log", "src/components/Button.tsx"], ["dist/debug.log"]),
-    });
-
-    const { rerender } = render(<FileManagerView openFileSearchRequestKey={0} />);
-
-    await waitFor(() => {
-      expect(mocks.listFiles).toHaveBeenCalled();
-    });
-
-    rerender(<FileManagerView openFileSearchRequestKey={7} />);
-
-    const searchInput = await screen.findByRole("textbox", { name: "Search files..." });
-    fireEvent.change(searchInput, { target: { value: "log" } });
-
-    expect(screen.queryByRole("button", { name: "dist/debug.log" })).toBeNull();
-  });
-
   it("keeps ignored directories and loaded descendants visible in the tree", async () => {
     mocks.listFiles.mockResolvedValue({
       files: asEntries(
@@ -453,48 +376,6 @@ describe("FileManagerView file search", () => {
         ".my-context/notes.md",
         "src/index.ts",
       ]);
-    });
-  });
-
-  it("opens highlighted file result when Enter is pressed", async () => {
-    const { rerender } = render(<FileManagerView openFileSearchRequestKey={0} />);
-
-    await waitFor(() => {
-      expect(mocks.listFiles).toHaveBeenCalled();
-    });
-
-    rerender(<FileManagerView openFileSearchRequestKey={2} />);
-
-    const searchInput = await screen.findByRole("textbox", { name: "Search files..." });
-    fireEvent.change(searchInput, { target: { value: "read" } });
-
-    // Wait for async searchFiles to populate results before pressing Enter.
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "src/readme.md" })).toBeTruthy();
-    });
-
-    fireEvent.keyDown(searchInput, { key: "Enter" });
-
-    await waitFor(() => {
-      expect(mocks.readFile).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
-        relativePath: "src/readme.md",
-      });
-      expect(mocks.openTab).toHaveBeenCalledWith(
-        {
-          workspaceId: "workspace-1",
-          kind: "file",
-          path: "src/readme.md",
-          content: "test-file-content",
-          temporary: false,
-        },
-        { activePaneTabIds: undefined },
-      );
-      expect(getFileTreeProps().selectionRequest).toMatchObject({
-        path: "src/readme.md",
-        requestId: expect.any(Number),
-        focus: false,
-      });
     });
   });
 
@@ -647,50 +528,6 @@ describe("FileManagerView file search", () => {
       mocks.stateRef.current.selectedTabId = originalSelectedTabId;
       mocks.stateRef.current.tabs = originalTabs;
     }
-  });
-
-  it("opens pending search requests on mount and marks them as handled", async () => {
-    const onFileSearchRequestHandled = vi.fn();
-
-    render(
-      <FileManagerView
-        openFileSearchRequestKey={3}
-        lastHandledFileSearchRequestKey={2}
-        onFileSearchRequestHandled={onFileSearchRequestHandled}
-      />,
-    );
-
-    expect(await screen.findByRole("textbox", { name: "Search files..." })).toBeTruthy();
-    expect(onFileSearchRequestHandled).toHaveBeenCalledWith(3);
-  });
-
-  it("focuses the search input automatically when quick-open opens", async () => {
-    const { rerender } = render(<FileManagerView openFileSearchRequestKey={0} />);
-
-    await waitFor(() => {
-      expect(mocks.listFiles).toHaveBeenCalled();
-    });
-
-    rerender(<FileManagerView openFileSearchRequestKey={5} />);
-
-    const searchInput = await screen.findByRole("textbox", { name: "Search files..." });
-    await waitFor(() => {
-      expect(document.activeElement).toBe(searchInput);
-    });
-  });
-
-  it("uses fixed width and capped height for the quick-open modal", async () => {
-    const { rerender } = render(<FileManagerView openFileSearchRequestKey={0} />);
-
-    await waitFor(() => {
-      expect(mocks.listFiles).toHaveBeenCalled();
-    });
-
-    rerender(<FileManagerView openFileSearchRequestKey={6} />);
-
-    const dialogPaper = await screen.findByTestId("file-quick-open-dialog-paper");
-    expect(dialogPaper.getAttribute("style")).toContain("width: 500px");
-    expect(dialogPaper.getAttribute("style")).toContain("max-height: calc(100% - 96px)");
   });
 
   it("keeps changed-path selector fallback stable when workspace path is unavailable", async () => {

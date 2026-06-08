@@ -2,22 +2,23 @@ import { Box } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ColumnSeparator } from "../../components/ColumnSeparator";
+import { TabPanel } from "../../components/TabPanel";
 import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
-import { layoutStore, DEFAULT_RIGHT_WIDTH } from "../../store/settings/layoutStore";
+import { DEFAULT_RIGHT_WIDTH, layoutStore } from "../../store/settings/layoutStore";
 import { tabStore } from "../../store/tabStore";
 import type { WorkspaceTab } from "../../store/types";
 import { workspaceStore } from "../../store/workspaceStore";
 import { DARK_SURFACE_COLORS } from "../../theme";
+import { FileSearchOverlay } from "./FileSearchOverlay";
 import { LaunchView } from "./LaunchView";
 import { MainPaneTitleBarView } from "./MainPaneTitleBarView";
-import { TabPanel } from "../../components/TabPanel";
 import { RightPaneTabBar } from "./RightPane/RightPaneTabBar";
 import { RightPaneView } from "./RightPane/RightPaneView";
+import { WorkspaceSplitPane } from "./WorkspaceSplitPaneView";
 import { removeWebviewsForClosedTabs } from "./browser/webviewRegistry";
 import { disposeTerminalRuntimesForClosedTabs } from "./terminal/terminalRuntimeRegistry";
-import { WorkspaceSplitPane } from "./WorkspaceSplitPaneView";
 
 const RIGHT_MIN_WIDTH = 280;
 
@@ -154,6 +155,7 @@ export function MainPaneView() {
           showRightPane={showRightPane}
         />
       </Box>
+      <FileSearchOverlay />
     </Box>
   );
 }

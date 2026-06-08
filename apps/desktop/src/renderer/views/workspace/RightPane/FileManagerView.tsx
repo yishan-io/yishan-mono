@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { findExternalAppPreset, isExternalAppPlatformSupported } from "../../../../shared/contracts/externalApps";
 import { ConfirmationDialog } from "../../../components/ConfirmationDialog";
 import { ContextMenu } from "../../../components/ContextMenu";
-import { FileQuickOpenDialog } from "../../../components/FileQuickOpenDialog";
 import { FileTree } from "../../../components/FileTree";
 import { FileTreeToolbar } from "../../../components/FileTree/FileTreeToolbar";
 import type { FileTreeContextMenuRequest } from "../../../components/FileTree/types";
@@ -16,17 +15,12 @@ import { tabStore } from "../../../store/tabStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
 import { useFileDeletionConfirmation } from "./useFileDeletionConfirmation";
-import { useFileSearchController } from "./useFileSearchController";
 import { useFileTreeContextMenuItems } from "./useFileTreeContextMenuItems";
 import { useFileTreeCreateEntryRequest } from "./useFileTreeCreateEntryRequest";
 import { useFileTreeGitChanges } from "./useFileTreeGitChanges";
 import { useFileTreeOperations } from "./useFileTreeOperations";
 
-type FileManagerViewProps = {
-  openFileSearchRequestKey?: number;
-  lastHandledFileSearchRequestKey?: number;
-  onFileSearchRequestHandled?: (requestKey: number) => void;
-};
+type FileManagerViewProps = Record<string, never>;
 
 /** Computes one bounded progress percentage value for file operations. */
 function getFileOperationProgressValue(operation: {
@@ -41,11 +35,7 @@ function getFileOperationProgressValue(operation: {
 }
 
 /** Renders file tree + quick-open and delegates file operations to useFileTreeOperations. */
-export function FileManagerView({
-  openFileSearchRequestKey = 0,
-  lastHandledFileSearchRequestKey = 0,
-  onFileSearchRequestHandled,
-}: FileManagerViewProps) {
+export function FileManagerView(_props: FileManagerViewProps) {
   const { t } = useTranslation();
   const ops = useFileTreeOperations();
   const rendererPlatform = getRendererPlatform();
@@ -192,40 +182,6 @@ export function FileManagerView({
   const confirmFileDeletion = useCallback(async () => {
     await handleConfirmFileDeletion();
   }, [handleConfirmFileDeletion]);
-
-  const openSearchResult = useCallback(
-    async (path: string) => {
-      if (path.endsWith("/")) {
-        const directoryPath = path.replace(/\/+$/, "");
-        if (!expandedItems.includes(directoryPath)) {
-          handleExpandedItemsChange([...expandedItems, directoryPath]);
-        }
-        setSelectedEntryPath(directoryPath);
-        setIsFileSearchOpen(false);
-        return;
-      }
-
-      await ops.openWorkspaceFile(path);
-      setIsFileSearchOpen(false);
-    },
-    [expandedItems, handleExpandedItemsChange, ops, setSelectedEntryPath],
-  );
-  const {
-    isFileSearchOpen,
-    setIsFileSearchOpen,
-    fileSearchQuery,
-    setFileSearchQuery,
-    selectedSearchResultIndex,
-    setSelectedSearchResultIndex,
-    fileSearchResults,
-    handleFileSearchInputKeyDown,
-  } = useFileSearchController({
-    workspaceWorktreePath: selectedWorkspaceWorktreePath || undefined,
-    openFileSearchRequestKey,
-    lastHandledFileSearchRequestKey,
-    onFileSearchRequestHandled,
-    openSearchResult,
-  });
 
   const fileOperationModeLabel = ops.fileOperationState
     ? t(`files.operations.modes.${ops.fileOperationState.mode}`)
@@ -374,27 +330,6 @@ export function FileManagerView({
         isSubmitting={isDeletingEntry}
         onCancel={handleCancelFileDeletion}
         onConfirm={confirmFileDeletion}
-      />
-      <FileQuickOpenDialog
-        open={isFileSearchOpen}
-        query={fileSearchQuery}
-        selectedResultIndex={selectedSearchResultIndex}
-        results={fileSearchResults}
-        placeholder={t("files.search.placeholder")}
-        emptyText={t("files.search.empty")}
-        onClose={() => {
-          setIsFileSearchOpen(false);
-        }}
-        onQueryChange={(nextQuery) => {
-          setFileSearchQuery(nextQuery);
-          setSelectedSearchResultIndex(0);
-        }}
-        onInputKeyDown={handleFileSearchInputKeyDown}
-        onSelectResultIndex={setSelectedSearchResultIndex}
-        onOpenResult={(path, index) => {
-          setSelectedSearchResultIndex(index);
-          void openSearchResult(path);
-        }}
       />
     </Box>
   );

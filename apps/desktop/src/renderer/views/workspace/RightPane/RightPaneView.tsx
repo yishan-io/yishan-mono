@@ -1,5 +1,4 @@
 import { Box } from "@mui/material";
-import { useState } from "react";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { DEFAULT_RIGHT_PANE_TAB, workspaceUiStore } from "../../../store/workspaceUiStore";
 import { ChangesTabView } from "./ChangesTabView";
@@ -18,10 +17,6 @@ export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPa
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const activeRightPaneTab = workspaceUiStore(
     (state) => state.rightPaneTabByWorkspaceId[selectedWorkspaceId] ?? DEFAULT_RIGHT_PANE_TAB,
-  );
-  const openFileSearchRequestKey = workspaceUiStore((state) => state.fileSearchRequestKey);
-  const [lastHandledFileSearchRequestKey, setLastHandledFileSearchRequestKey] = useState(
-    () => workspaceUiStore.getState().fileSearchRequestKey,
   );
 
   const activeTab = activeRightPaneTab === "changes" ? "changes" : activeRightPaneTab === "pr" ? "pr" : "files";
@@ -47,13 +42,7 @@ export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPa
           overflow: "hidden",
         }}
       >
-        <FileManagerView
-          openFileSearchRequestKey={openFileSearchRequestKey}
-          lastHandledFileSearchRequestKey={lastHandledFileSearchRequestKey}
-          onFileSearchRequestHandled={(requestKey) => {
-            setLastHandledFileSearchRequestKey((currentValue) => Math.max(currentValue, requestKey));
-          }}
-        />
+        <FileManagerView />
       </Box>
       <Box
         sx={{
