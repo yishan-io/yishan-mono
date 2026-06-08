@@ -580,6 +580,24 @@ export function createBackendEventStoreBindings(
         return;
       }
 
+      // When the backend confirms a workspace was closed, skip the full reload
+      // if that workspace is already absent from the local store. This avoids a
+      // race where the snapshot refresh re-adds a workspace that was just
+      // optimistically removed by the local close action.
+      if (
+        payload.change === "closed" &&
+        payload.workspaceId &&
+        !workspaceStore.getState().workspaces.some((w) => w.id === payload.workspaceId)
+      ) {
+        if (import.meta.env.DEV) {
+          console.debug(
+            "[backendEventStoreBindings] workspace snapshot reload skipped: workspace already closed locally",
+            { workspaceId: payload.workspaceId },
+          );
+        }
+        return;
+      }
+
       if (import.meta.env.DEV) {
         console.debug("[backendEventStoreBindings] workspace snapshot invalidated", {
           organizationId: payload.organizationId,
