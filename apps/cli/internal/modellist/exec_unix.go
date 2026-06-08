@@ -41,3 +41,7 @@ func isolateCmd(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	cmd.Env = getEnrichedEnv()
 }
+
+func ShutdownShell() {
+	shellenv.ShutdownLoginShell()
+}

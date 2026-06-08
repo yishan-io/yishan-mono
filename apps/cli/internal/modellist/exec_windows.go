@@ -25,3 +25,7 @@ func getEnrichedEnv() []string {
 func isolateCmd(cmd *exec.Cmd) {
 	cmd.Env = getEnrichedEnv()
 }
+
+func ShutdownShell() {
+	shellenv.ShutdownLoginShell()
+}
