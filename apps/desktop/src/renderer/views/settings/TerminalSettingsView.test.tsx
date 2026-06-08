@@ -4,6 +4,7 @@ import type { TerminalSessionLifecycleEvent } from "../../rpc/daemonTypes";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { tabStore } from "../../store/tabStore";
+import { workspaceStore } from "../../store/workspaceStore";
 import { TerminalSettingsView } from "./TerminalSettingsView";
 
 const mocked = vi.hoisted(() => {
@@ -44,7 +45,6 @@ describe("TerminalSettingsView", () => {
     mocked.subscribeTerminalSessions.mockClear();
     tabStore.setState({
       tabs: [],
-      selectedWorkspaceId: "",
       selectedTabId: "",
       selectedTabIdByWorkspaceId: {},
     });
@@ -67,10 +67,10 @@ describe("TerminalSettingsView", () => {
           data: { title: "Terminal", sessionId: "term_1" },
         },
       ],
-      selectedWorkspaceId: "workspace-1",
       selectedTabId: "terminal-tab-1",
       selectedTabIdByWorkspaceId: { "workspace-1": "terminal-tab-1" },
     });
+    workspaceStore.setState({ selectedWorkspaceId: "workspace-1" });
     mocked.listTerminalSessions.mockResolvedValue([
       {
         sessionId: "term_1",

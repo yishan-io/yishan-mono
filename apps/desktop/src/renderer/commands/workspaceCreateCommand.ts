@@ -191,7 +191,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     workspaceId,
     organizationId,
   });
-  tabStore.getState().setSelectedWorkspaceId(workspaceId);
+  tabStore.getState().resolveTabForWorkspace(workspaceId);
 
   return workspaceId;
 }

@@ -113,7 +113,6 @@ describe("WorkspaceResourceUsageControl", () => {
           },
         },
       ],
-      selectedWorkspaceId: "workspace-1",
       selectedTabId: "terminal-tab-1",
       selectedTabIdByWorkspaceId: {
         "workspace-1": "terminal-tab-1",
@@ -171,7 +170,6 @@ describe("WorkspaceResourceUsageControl", () => {
           },
         },
       ],
-      selectedWorkspaceId: "workspace-1",
       selectedTabId: "session-tab-1",
       selectedTabIdByWorkspaceId: {
         "workspace-1": "session-tab-1",
@@ -201,7 +199,6 @@ describe("WorkspaceResourceUsageControl", () => {
           },
         },
       ],
-      selectedWorkspaceId: "workspace-1",
       selectedTabId: "terminal-tab-1",
       selectedTabIdByWorkspaceId: {
         "workspace-1": "terminal-tab-1",

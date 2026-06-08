@@ -214,7 +214,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
       return false;
     }
 
-    const currentId = context.tabStoreState.selectedWorkspaceId;
+    const currentId = context.workspaceStoreState.selectedWorkspaceId;
     const currentIndex = visibleWorkspaces.findIndex((workspace) => workspace.id === currentId);
     const nextIndex = (currentIndex + direction + visibleWorkspaces.length) % visibleWorkspaces.length;
     const nextWorkspace = visibleWorkspaces[nextIndex];
@@ -238,7 +238,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
   }
 
   if (target.command === "workspace.openSelectedWorkspaceInExternalApp") {
-    const workspaceId = context.workspaceStoreState.selectedWorkspaceId || context.tabStoreState.selectedWorkspaceId;
+    const workspaceId = context.workspaceStoreState.selectedWorkspaceId;
     if (!workspaceId) {
       return false;
     }
@@ -262,7 +262,7 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
     return false;
   }
 
-  const workspaceId = context.workspaceStoreState.selectedWorkspaceId || context.tabStoreState.selectedWorkspaceId;
+  const workspaceId = context.workspaceStoreState.selectedWorkspaceId;
   if (!workspaceId) {
     return false;
   }

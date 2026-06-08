@@ -36,8 +36,8 @@ describe("workspaceTabSync", () => {
     });
 
     const retainWorkspaceTabs = vi.fn().mockReturnValue(["tab-removed"]);
-    const setSelectedWorkspaceId = vi.fn();
-    tabStore.setState({ retainWorkspaceTabs, setSelectedWorkspaceId });
+    const resolveTabForWorkspace = vi.fn();
+    tabStore.setState({ retainWorkspaceTabs, resolveTabForWorkspace });
 
     const removeTabData = vi.fn();
     const removeWorkspaceTaskCounts = vi.fn();
@@ -67,7 +67,7 @@ describe("workspaceTabSync", () => {
     ]);
 
     expect(retainWorkspaceTabs).toHaveBeenCalledWith(["workspace-2"]);
-    expect(setSelectedWorkspaceId).toHaveBeenCalledWith("workspace-2");
+    expect(resolveTabForWorkspace).toHaveBeenCalledWith("workspace-2");
     expect(removeTabData).toHaveBeenCalledWith(["tab-removed"]);
     expect(removeWorkspaceTaskCounts).toHaveBeenCalledWith(["workspace-1"]);
   });

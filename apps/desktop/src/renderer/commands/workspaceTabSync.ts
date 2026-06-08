@@ -10,18 +10,12 @@ export function syncTabStoreWithWorkspace(previousWorkspaces: WorkspaceItem[]): 
     .filter((workspace) => !nextWorkspaceIds.includes(workspace.id))
     .map((workspace) => workspace.id);
 
-  const tabState = tabStore.getState();
-  const removedTabIds = tabState.retainWorkspaceTabs(nextWorkspaceIds);
+  const removedTabIds = tabStore.getState().retainWorkspaceTabs(nextWorkspaceIds);
 
-  // Only update the tab store selection when the currently selected workspace
-  // was removed. The tab store owns the selection — overwriting it
-  // unconditionally causes the UI to jump back to a stale preference after
-  // background snapshot refreshes (e.g. during workspace creation).
-  const currentTabSelectedId = tabStore.getState().selectedWorkspaceId;
-  const currentSelectionStillExists = nextWorkspaceIds.includes(currentTabSelectedId);
-  if (!currentSelectionStillExists) {
-    tabState.setSelectedWorkspaceId(workspaceStore.getState().selectedWorkspaceId);
-  }
+  // Re-resolve the tab for the current workspace after the list changes.
+  // workspaceStore is the single source of truth for which workspace is selected;
+  // tabStore only needs to know which tab to show for it.
+  tabStore.getState().resolveTabForWorkspace(workspaceStore.getState().selectedWorkspaceId);
 
   if (removedTabIds.length > 0) {
     chatStore.getState().removeTabData(removedTabIds);

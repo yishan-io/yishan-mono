@@ -82,8 +82,8 @@ describe("workspaceCommands", () => {
   it("calls backend service then adds workspace to store", async () => {
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     const addWorkspace = vi.fn();
-    const setSelectedWorkspaceId = vi.fn();
-    tabStore.setState({ setSelectedWorkspaceId });
+    const resolveTabForWorkspace = vi.fn();
+    tabStore.setState({ resolveTabForWorkspace });
     workspaceStore.setState({
       projects: [
         {
@@ -141,7 +141,7 @@ describe("workspaceCommands", () => {
     });
     expect(rpcMocks.list).not.toHaveBeenCalled();
     await vi.waitFor(() => {
-      expect(setSelectedWorkspaceId).toHaveBeenCalledTimes(1);
+      expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
     }, { timeout: 3_500 });
     expect(rpcMocks.enqueueWorkspaceLifecycleWarnings).not.toHaveBeenCalled();
   });
@@ -274,10 +274,10 @@ describe("workspaceCommands", () => {
   it("deletes local workspace immediately and closes backend workspace in background", async () => {
     const closeWorkspaceAction = vi.fn().mockResolvedValue(undefined);
     const retainWorkspaceTabs = vi.fn().mockReturnValue(["tab-1"]);
-    const setSelectedWorkspaceId = vi.fn();
+    const resolveTabForWorkspace = vi.fn();
     const removeTabData = vi.fn();
     const removeWorkspaceTaskCounts = vi.fn();
-    tabStore.setState({ retainWorkspaceTabs, setSelectedWorkspaceId });
+    tabStore.setState({ retainWorkspaceTabs, resolveTabForWorkspace });
     chatStore.setState({ removeTabData, removeWorkspaceTaskCounts });
     workspaceStore.setState({
       workspaces: [
@@ -299,7 +299,7 @@ describe("workspaceCommands", () => {
 
     expect(closeWorkspaceAction).toHaveBeenCalledWith({ repoId: "repo-1", workspaceId: "workspace-1" });
     expect(retainWorkspaceTabs).toHaveBeenCalledTimes(1);
-    expect(setSelectedWorkspaceId).toHaveBeenCalledTimes(1);
+    expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
     expect(removeTabData).toHaveBeenCalledWith(["tab-1"]);
     expect(removeWorkspaceTaskCounts).not.toHaveBeenCalled();
 

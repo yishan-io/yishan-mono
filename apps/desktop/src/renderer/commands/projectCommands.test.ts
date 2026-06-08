@@ -76,8 +76,8 @@ describe("projectCommands", () => {
   it("loads backend snapshot and hydrates store", async () => {
     const hydrate = vi.fn();
     const retainWorkspaceTabs = vi.fn().mockReturnValue([]);
-    const setSelectedWorkspaceId = vi.fn();
-    tabStore.setState({ retainWorkspaceTabs, setSelectedWorkspaceId });
+    const resolveTabForWorkspace = vi.fn();
+    tabStore.setState({ retainWorkspaceTabs, resolveTabForWorkspace });
     workspaceStore.setState({ load: hydrate });
     sessionStore.setState({
       organizations: [{ id: "org-1", name: "Org 1" }],
@@ -119,7 +119,7 @@ describe("projectCommands", () => {
     ]);
     expect(hydrate.mock.calls[0]?.[2]).toEqual([]);
     expect(retainWorkspaceTabs).toHaveBeenCalledTimes(1);
-    expect(setSelectedWorkspaceId).toHaveBeenCalledTimes(1);
+    expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
   });
 
   it("opens visible hydrated workspaces in daemon", async () => {
@@ -318,11 +318,11 @@ describe("projectCommands", () => {
   it("deletes backend project and then removes project from store", async () => {
     const removeRepo = vi.fn();
     const retainWorkspaceTabs = vi.fn().mockReturnValue(["tab-1"]);
-    const setSelectedWorkspaceId = vi.fn();
+    const resolveTabForWorkspace = vi.fn();
     const removeTabData = vi.fn();
     const removeWorkspaceTaskCounts = vi.fn();
 
-    tabStore.setState({ retainWorkspaceTabs, setSelectedWorkspaceId });
+    tabStore.setState({ retainWorkspaceTabs, resolveTabForWorkspace });
     chatStore.setState({ removeTabData, removeWorkspaceTaskCounts });
     workspaceStore.setState({ deleteProject: removeRepo });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
@@ -333,7 +333,7 @@ describe("projectCommands", () => {
     expect(apiMocks.deleteProject).toHaveBeenCalledWith("org-1", "repo-1");
     expect(removeRepo).toHaveBeenCalledWith("repo-1");
     expect(retainWorkspaceTabs).toHaveBeenCalledTimes(1);
-    expect(setSelectedWorkspaceId).toHaveBeenCalledTimes(1);
+    expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
     expect(removeTabData).toHaveBeenCalledWith(["tab-1"]);
     expect(removeWorkspaceTaskCounts).not.toHaveBeenCalled();
   });

@@ -257,7 +257,7 @@ export async function createProject(input: {
     });
   }
 
-  tabStore.getState().setSelectedWorkspaceId(workspaceStore.getState().selectedWorkspaceId);
+  tabStore.getState().resolveTabForWorkspace(workspaceStore.getState().selectedWorkspaceId);
 
   // Ensure the context folder and symlinks are created for the new project's
   // known worktree paths. Without this, the `.my-context` directory is never

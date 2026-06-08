@@ -271,9 +271,9 @@ export function openTabState(
   state: WorkspaceTabStateSlice,
   input: OpenWorkspaceTabInput,
   nextTabId: string,
-  options?: { activePaneTabIds?: string[] },
+  options?: { activePaneTabIds?: string[]; selectedWorkspaceId?: string },
 ): Partial<WorkspaceTabStateSlice> | null {
-  const targetWorkspaceId = input.workspaceId ?? state.selectedWorkspaceId;
+  const targetWorkspaceId = input.workspaceId ?? options?.selectedWorkspaceId ?? "";
   if (!targetWorkspaceId) {
     return null;
   }

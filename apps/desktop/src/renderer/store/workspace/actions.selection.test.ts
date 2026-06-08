@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it } from "vitest";
-import { sessionStore } from "../sessionStore";
+import { describe, expect, it } from "vitest";
 import { createWorkspaceSelectionActions } from "./actions.selection";
 
 type TestState = {
@@ -9,7 +8,6 @@ type TestState = {
   selectedProjectId: string;
   selectedWorkspaceId: string;
   displayProjectIds: string[];
-  organizationPreferencesById?: Record<string, { selectedProjectId?: string; selectedWorkspaceId?: string }>;
   lastUsedExternalAppId?: string;
   workspaceListHierarchyMode: "by_project" | "by_node";
 };
@@ -23,7 +21,6 @@ function createHarness() {
     selectedProjectId: "repo-1",
     selectedWorkspaceId: "workspace-1",
     displayProjectIds: ["repo-1", "repo-2"],
-    organizationPreferencesById: {},
     workspaceListHierarchyMode: "by_project",
   };
 
@@ -44,9 +41,6 @@ function createHarness() {
 }
 
 describe("createWorkspaceSelectionActions", () => {
-  beforeEach(() => {
-    sessionStore.setState({ selectedOrganizationId: "org-1" });
-  });
 
   it("selects workspace and aligns selected project with workspace project", () => {
     const harness = createHarness();
@@ -56,10 +50,6 @@ describe("createWorkspaceSelectionActions", () => {
     const state = harness.getState();
     expect(state.selectedWorkspaceId).toBe("workspace-2");
     expect(state.selectedProjectId).toBe("repo-2");
-    expect(state.organizationPreferencesById?.["org-1"]).toEqual({
-      selectedProjectId: "repo-2",
-      selectedWorkspaceId: "workspace-2",
-    });
   });
 
   it("updates workspace list hierarchy mode", () => {

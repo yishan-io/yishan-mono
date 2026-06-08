@@ -48,7 +48,10 @@ export function closeOtherTabsState(
 }
 
 /** Closes every terminal tab across all workspaces and resets selection pointers. */
-export function closeAllTerminalTabsState(state: WorkspaceTabStateSlice): Partial<WorkspaceTabStateSlice> | null {
+export function closeAllTerminalTabsState(
+  state: WorkspaceTabStateSlice,
+  selectedWorkspaceId?: string,
+): Partial<WorkspaceTabStateSlice> | null {
   const terminalTabIds = new Set(state.tabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id));
   if (terminalTabIds.size === 0) {
     return null;
@@ -63,7 +66,7 @@ export function closeAllTerminalTabsState(state: WorkspaceTabStateSlice): Partia
     }
   }
   const nextSelectedTabId = terminalTabIds.has(state.selectedTabId)
-    ? (nextTabs.find((tab) => tab.workspaceId === state.selectedWorkspaceId)?.id ?? "")
+    ? (nextTabs.find((tab) => tab.workspaceId === (selectedWorkspaceId ?? ""))?.id ?? "")
     : state.selectedTabId;
 
   return {

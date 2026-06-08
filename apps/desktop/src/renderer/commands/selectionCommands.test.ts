@@ -15,34 +15,32 @@ afterEach(() => {
 });
 
 describe("selectionCommands", () => {
-  it("selects repo and syncs selected workspace into tab store", () => {
+  it("selects repo and resolves tab for the newly selected workspace", () => {
     const setSelectedProjectId = vi.fn();
-    const setSelectedWorkspaceId = vi.fn();
+    const resolveTabForWorkspace = vi.fn();
     workspaceStore.setState({
       setSelectedProjectId,
       selectedWorkspaceId: "workspace-2",
     });
-    tabStore.setState({ setSelectedWorkspaceId });
+    tabStore.setState({ resolveTabForWorkspace });
 
     setSelectedRepo("repo-2");
 
     expect(setSelectedProjectId).toHaveBeenCalledWith("repo-2");
-    expect(setSelectedWorkspaceId).toHaveBeenCalledWith("workspace-2");
+    expect(resolveTabForWorkspace).toHaveBeenCalledWith("workspace-2");
   });
 
-  it("selects workspace in both workspace and tab stores", () => {
+  it("selects workspace in workspace store and resolves tab", () => {
     const setSelectedWorkspaceIdInWorkspaceStore = vi.fn();
-    const setSelectedWorkspaceIdInTabStore = vi.fn();
+    const resolveTabForWorkspace = vi.fn();
     workspaceStore.setState({
       setSelectedWorkspaceId: setSelectedWorkspaceIdInWorkspaceStore,
     });
-    tabStore.setState({
-      setSelectedWorkspaceId: setSelectedWorkspaceIdInTabStore,
-    });
+    tabStore.setState({ resolveTabForWorkspace });
 
     setSelectedWorkspace("workspace-3");
 
     expect(setSelectedWorkspaceIdInWorkspaceStore).toHaveBeenCalledWith("workspace-3");
-    expect(setSelectedWorkspaceIdInTabStore).toHaveBeenCalledWith("workspace-3");
+    expect(resolveTabForWorkspace).toHaveBeenCalledWith("workspace-3");
   });
 });

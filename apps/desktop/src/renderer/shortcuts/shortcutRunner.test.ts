@@ -12,11 +12,10 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
     isPopupOpen: false,
     tabStoreState: {
       tabs: [],
-      selectedWorkspaceId: "workspace-1",
       selectedTabId: "tab-1",
       selectedTabIdByWorkspaceId: {},
       getWorkspaceTabs: vi.fn(() => []),
-      setSelectedWorkspaceId: vi.fn(),
+      resolveTabForWorkspace: vi.fn(),
       selectTab: vi.fn(),
       retainWorkspaceTabs: vi.fn(() => []),
       createTab: vi.fn(async () => undefined),

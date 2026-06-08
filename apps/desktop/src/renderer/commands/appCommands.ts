@@ -2,15 +2,16 @@ import type {
   AppendBrowserHistoryInput,
   AuthStatusResult,
   BrowserHistoryGroup,
-  DesktopCliInstallResult,
-  DesktopCliInstallStatusResult,
   DaemonInfoResult,
   DaemonRestartResult,
+  DesktopCliInstallResult,
+  DesktopCliInstallStatusResult,
 } from "../../main/ipc";
 import type { DesktopAgentKind } from "../helpers/agentSettings";
 import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
 import { type LinkTarget, layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
+import { workspaceStore } from "../store/workspaceStore";
 
 /** Opens one native folder picker and returns a selected directory path when available. */
 export async function openLocalFolderDialog(startingFolder?: string) {
@@ -100,7 +101,7 @@ export async function openLink(options: OpenLinkOptions): Promise<OpenLinkResult
 function resolveActiveWorkspaceId(): string | undefined {
   const state = tabStore.getState();
   const selectedTab = state.tabs.find((tab) => tab.id === state.selectedTabId);
-  return selectedTab?.workspaceId || state.selectedWorkspaceId || undefined;
+  return selectedTab?.workspaceId || workspaceStore.getState().selectedWorkspaceId || undefined;
 }
 
 /** Reads current desktop authentication status from main-process IPC. */

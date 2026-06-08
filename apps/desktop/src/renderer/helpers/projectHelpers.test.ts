@@ -39,8 +39,6 @@ describe("projectHelpers", () => {
           state: {
             organizationPreferencesById: {
               "org-1": {
-                selectedProjectId: "repo-1",
-                selectedWorkspaceId: "workspace-1",
                 displayProjectIds: ["repo-1", "repo-2", 3],
               },
             },
@@ -49,8 +47,6 @@ describe("projectHelpers", () => {
     } as unknown as Storage;
 
     expect(readPersistedWorkspacePreferencesByOrg(storage, "org-1")).toEqual({
-      selectedProjectId: "repo-1",
-      selectedWorkspaceId: "workspace-1",
       displayProjectIds: ["repo-1", "repo-2"],
       lastUsedExternalAppId: undefined,
     });

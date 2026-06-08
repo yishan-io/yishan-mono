@@ -213,8 +213,7 @@ export type WorkspaceStoreState = {
     projectId: string,
     config: Pick<
       WorkspaceProjectRecord,
-      "name" | "worktreePath" | "contextEnabled" | "icon" | "color" | "setupScript" | "postScript"
-      | "commands"
+      "name" | "worktreePath" | "contextEnabled" | "icon" | "color" | "setupScript" | "postScript" | "commands"
     >,
   ) => void;
   incrementFileTreeRefreshVersion: (workspaceWorktreePath?: string, changedRelativePaths?: string[]) => void;
@@ -259,8 +258,6 @@ export type WorkspaceStoreState = {
 };
 
 export type WorkspaceStoreOrganizationPreference = {
-  selectedProjectId?: string;
-  selectedWorkspaceId?: string;
   displayProjectIds?: string[];
   lastUsedExternalAppId?: ExternalAppId;
 };

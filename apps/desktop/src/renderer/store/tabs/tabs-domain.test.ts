@@ -55,7 +55,6 @@ function createBaseState(): WorkspaceTabStateSlice {
         },
       },
     ],
-    selectedWorkspaceId: "workspace-1",
     selectedTabId: "file-1",
     selectedTabIdByWorkspaceId: {
       "workspace-1": "file-1",
@@ -75,6 +74,7 @@ describe("tabs-domain open", () => {
         content: "next-content",
       },
       "unused",
+      { selectedWorkspaceId: "workspace-1" },
     );
 
     expect(patch).toBeTruthy();
@@ -92,6 +92,7 @@ describe("tabs-domain open", () => {
         title: "Logs",
       },
       "new-terminal",
+      { selectedWorkspaceId: "workspace-1" },
     );
 
     expect(patch).toBeTruthy();
@@ -110,6 +111,7 @@ describe("tabs-domain open", () => {
         url: "https://example.com",
       },
       "new-browser",
+      { selectedWorkspaceId: "workspace-1" },
     );
 
     expect(patch).toBeTruthy();
@@ -128,6 +130,7 @@ describe("tabs-domain open", () => {
         reuseExisting: false,
       },
       "new-terminal-2",
+      { selectedWorkspaceId: "workspace-1" },
     );
 
     expect(patch).toBeTruthy();
@@ -161,6 +164,7 @@ describe("tabs-domain open", () => {
         temporary: true,
       },
       "new-file",
+      { selectedWorkspaceId: "workspace-1" },
     );
 
     expect(patch?.selectedTabId).toBe("file-1");
@@ -197,6 +201,7 @@ describe("tabs-domain open", () => {
         content: "b2",
       },
       "new-file",
+      { selectedWorkspaceId: "workspace-1" },
     );
 
     expect(patch?.selectedTabId).toBe("new-file");
@@ -228,6 +233,7 @@ describe("tabs-domain open", () => {
         path: "src/a.ts",
       },
       "unused",
+      { selectedWorkspaceId: "workspace-1" },
     );
 
     expect(patch?.selectedTabId).toBe("file-1");
@@ -267,7 +273,7 @@ describe("tabs-domain open", () => {
       multiPaneState,
       { kind: "file", path: "src/c.ts", content: "c", temporary: true },
       "new-id",
-      { activePaneTabIds: ["session-1", "file-1"] },
+      { activePaneTabIds: ["session-1", "file-1"], selectedWorkspaceId: "workspace-1" },
     );
     expect(reusePatch?.selectedTabId).toBe("file-1");
     expect(reusePatch?.tabs?.some((tab) => tab.id === "new-id")).toBe(false);
@@ -279,7 +285,7 @@ describe("tabs-domain open", () => {
       multiPaneState,
       { kind: "file", path: "src/d.ts", content: "d", temporary: true },
       "new-id-2",
-      { activePaneTabIds: ["session-1", "file-2"] },
+      { activePaneTabIds: ["session-1", "file-2"], selectedWorkspaceId: "workspace-1" },
     );
     expect(reuseOtherPanePatch?.selectedTabId).toBe("file-2");
     const reusedOtherTab = reuseOtherPanePatch?.tabs?.find((tab) => tab.id === "file-2");
@@ -290,7 +296,7 @@ describe("tabs-domain open", () => {
       multiPaneState,
       { kind: "file", path: "src/e.ts", content: "e", temporary: true },
       "new-id-3",
-      { activePaneTabIds: ["session-1"] },
+      { activePaneTabIds: ["session-1"], selectedWorkspaceId: "workspace-1" },
     );
     expect(createPatch?.selectedTabId).toBe("new-id-3");
     expect(createPatch?.tabs?.some((tab) => tab.id === "new-id-3")).toBe(true);
@@ -312,6 +318,7 @@ describe("tabs-domain open", () => {
       previewState,
       { kind: "file", path: "src/c.ts", content: "c", temporary: true },
       "new-id",
+      { selectedWorkspaceId: "workspace-1" },
     );
     expect(patch?.selectedTabId).toBe("file-1");
   });

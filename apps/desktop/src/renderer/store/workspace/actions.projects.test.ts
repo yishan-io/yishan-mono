@@ -19,8 +19,6 @@ type TestState = {
   organizationPreferencesById?: Record<
     string,
     {
-      selectedProjectId?: string;
-      selectedWorkspaceId?: string;
       displayProjectIds?: string[];
     }
   >;
@@ -49,8 +47,6 @@ function createHarness(overrides?: Partial<TestState>) {
   const state: TestState = {
     organizationPreferencesById: {
       "org-1": {
-        selectedProjectId: "repo-1",
-        selectedWorkspaceId: "workspace-1",
         displayProjectIds: ["repo-1", "repo-2"],
       },
     },
@@ -182,8 +178,6 @@ describe("createWorkspaceRepoActions", () => {
 
     const state = getState();
     expect(state.organizationPreferencesById?.["org-1"]).toEqual({
-      selectedProjectId: "repo-1",
-      selectedWorkspaceId: "",
       displayProjectIds: ["repo-1"],
     });
   });
@@ -319,8 +313,6 @@ describe("createWorkspaceRepoActions", () => {
       displayProjectIds: [],
       organizationPreferencesById: {
         "org-1": {
-          selectedProjectId: "repo-1",
-          selectedWorkspaceId: "",
           displayProjectIds: ["repo-1"],
         },
       },

@@ -359,7 +359,7 @@ function isRelevantTerminalFocusedForNotification(payload: NotificationEventPayl
   }
 
   const state = tabStore.getState();
-  if (state.selectedWorkspaceId !== sessionParts.workspaceId || state.selectedTabId !== sessionParts.tabId) {
+  if (workspaceStore.getState().selectedWorkspaceId !== sessionParts.workspaceId || state.selectedTabId !== sessionParts.tabId) {
     return false;
   }
 

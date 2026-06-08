@@ -1,5 +1,4 @@
 import type { ProjectRecord, WorkspaceRecord } from "../api/types";
-import { buildWorkspaceStateFromData } from "../store/workspace/state";
 import { getFileName } from "../store/tabs";
 import type {
   WorkspaceItem,
@@ -7,6 +6,7 @@ import type {
   WorkspaceStoreOrganizationPreference,
   WorkspaceStoreState,
 } from "../store/types";
+import { buildWorkspaceStateFromData } from "../store/workspace/state";
 
 type ProjectStoreSlice = Pick<
   WorkspaceStoreState,
@@ -50,8 +50,6 @@ export function readPersistedWorkspacePreferencesByOrg(
 
     const parsed = JSON.parse(raw) as {
       state?: {
-        selectedProjectId?: unknown;
-        selectedWorkspaceId?: unknown;
         displayProjectIds?: unknown;
         lastUsedExternalAppId?: unknown;
         organizationPreferencesById?: Record<string, WorkspaceStoreOrganizationPreference>;
@@ -65,10 +63,6 @@ export function readPersistedWorkspacePreferencesByOrg(
       }
 
       return {
-        selectedProjectId:
-          typeof scopedPreferences.selectedProjectId === "string" ? scopedPreferences.selectedProjectId : undefined,
-        selectedWorkspaceId:
-          typeof scopedPreferences.selectedWorkspaceId === "string" ? scopedPreferences.selectedWorkspaceId : undefined,
         displayProjectIds: Array.isArray(scopedPreferences.displayProjectIds)
           ? scopedPreferences.displayProjectIds.filter((item): item is string => typeof item === "string")
           : undefined,
@@ -80,10 +74,6 @@ export function readPersistedWorkspacePreferencesByOrg(
     }
 
     return {
-      selectedProjectId:
-        typeof parsed.state?.selectedProjectId === "string" ? parsed.state.selectedProjectId : undefined,
-      selectedWorkspaceId:
-        typeof parsed.state?.selectedWorkspaceId === "string" ? parsed.state.selectedWorkspaceId : undefined,
       displayProjectIds: Array.isArray(parsed.state?.displayProjectIds)
         ? parsed.state.displayProjectIds.filter((item): item is string => typeof item === "string")
         : undefined,
@@ -198,8 +188,6 @@ export function applyHydratedStateFromApiData(
   const nextBaseState = buildWorkspaceStateFromData({
     projects: mappedProjects,
     workspaces,
-    preferredProjectId: orgPreferences?.selectedProjectId,
-    preferredWorkspaceId: orgPreferences?.selectedWorkspaceId,
   });
 
   const nextProjectIdSet = new Set(mappedProjects.map((project) => project.id));
@@ -236,8 +224,6 @@ export function applyHydratedStateFromApiData(
   if (normalizedOrganizationId.length > 0) {
     state.organizationPreferencesById ??= {};
     state.organizationPreferencesById[normalizedOrganizationId] = {
-      selectedProjectId: nextBaseState.selectedProjectId,
-      selectedWorkspaceId: nextBaseState.selectedWorkspaceId,
       displayProjectIds: nextDisplayProjectIds,
       lastUsedExternalAppId: orgPreferences?.lastUsedExternalAppId,
     };

@@ -123,7 +123,6 @@ describe("WorkspacePortsMenuControl", () => {
           },
         },
       ],
-      selectedWorkspaceId: "workspace-1",
       selectedTabId: "terminal-tab-1",
       selectedTabIdByWorkspaceId: {
         "workspace-1": "terminal-tab-1",

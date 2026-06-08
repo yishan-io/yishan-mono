@@ -51,33 +51,19 @@ export function createWorkspaceSelectionActions(
       const nextWorkspaceId = workspaceBelongsToProject
         ? selectedWorkspaceId
         : (workspaces.find((workspace) => resolveWorkspaceProjectId(workspace) === projectId)?.id ?? "");
-      // Read session state before entering the set() callback.
-      const organizationId = sessionStore.getState().selectedOrganizationId?.trim() ?? "";
 
       set((state) => {
         state.selectedProjectId = projectId;
         state.selectedWorkspaceId = nextWorkspaceId;
-        applyOrganizationPreferences(state, organizationId, (organizationPreferences) => {
-          organizationPreferences.selectedProjectId = projectId;
-          organizationPreferences.selectedWorkspaceId = nextWorkspaceId;
-        });
       });
     },
     setSelectedWorkspaceId: (workspaceId) => {
-      const organizationId = sessionStore.getState().selectedOrganizationId?.trim() ?? "";
-
       set((state) => {
         state.selectedWorkspaceId = workspaceId;
         const selectedWorkspace = state.workspaces.find((workspace) => workspace.id === workspaceId);
         if (selectedWorkspace) {
           state.selectedProjectId = resolveWorkspaceProjectId(selectedWorkspace);
         }
-        applyOrganizationPreferences(state, organizationId, (organizationPreferences) => {
-          if (selectedWorkspace) {
-            organizationPreferences.selectedProjectId = resolveWorkspaceProjectId(selectedWorkspace);
-          }
-          organizationPreferences.selectedWorkspaceId = workspaceId;
-        });
       });
     },
     setDisplayProjectIds: (projectIds) => {

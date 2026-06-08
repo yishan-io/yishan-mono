@@ -1,5 +1,5 @@
-import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../helpers/tabHelpers";
 import { getErrorMessage } from "../helpers/errorHelpers";
+import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../helpers/tabHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { chatStore } from "../store/chatStore";
 import { splitPaneStore } from "../store/splitPaneStore";
@@ -7,6 +7,7 @@ import type { TabStoreState } from "../store/tabStore";
 import { tabStore } from "../store/tabStore";
 import type { OpenWorkspaceTabInput } from "../store/types";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
+import { workspaceStore } from "../store/workspaceStore";
 
 type TabStoreFacade = typeof tabStore & {
   getState?: () => TabStoreState;
@@ -104,7 +105,9 @@ export function closeOtherTabs(tabId: string): void {
     return;
   }
 
-  const removedTabs = snapshot.tabs.filter((tab) => tab.workspaceId === target.workspaceId && tab.id !== tabId && !tab.pinned);
+  const removedTabs = snapshot.tabs.filter(
+    (tab) => tab.workspaceId === target.workspaceId && tab.id !== tabId && !tab.pinned,
+  );
   const removedTerminalTabs = removedTabs.filter((tab): tab is TerminalTab => tab.kind === "terminal");
   const removedTabIds = removedTabs.map((tab) => tab.id);
 
@@ -159,7 +162,7 @@ export function setSelectedTab(tabId: string) {
 
 /** Opens one tab from one normalized tab input payload. */
 export function openTab(input: OpenWorkspaceTabInput) {
-  const workspaceId = input.workspaceId ?? readTabStoreState().selectedWorkspaceId;
+  const workspaceId = input.workspaceId ?? workspaceStore.getState().selectedWorkspaceId;
   const activePane = splitPaneStore.getState().getActivePane(workspaceId);
   readTabStoreState().openTab(input, { activePaneTabIds: activePane?.tabIds });
 }
