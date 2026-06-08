@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Service struct {
@@ -91,12 +93,20 @@ func (s *Service) fetchWithFallback(af *agentFetcher) ([]ModelInfo, FetchSource,
 		if err == nil && len(models) > 0 {
 			return models, SourceCLI, nil
 		}
+		if err != nil {
+			log.Warn().Err(err).Str("agentKind", af.cli.AgentKind()).Msg("CLI model fetch failed, trying static fallback")
+		} else {
+			log.Warn().Str("agentKind", af.cli.AgentKind()).Msg("CLI model fetch returned empty list, trying static fallback")
+		}
 	}
 
 	if af.static != nil {
 		models, err := af.static.Fetch()
 		if err == nil && len(models) > 0 {
 			return models, SourceStatic, nil
+		}
+		if err != nil {
+			log.Warn().Err(err).Str("agentKind", af.static.AgentKind()).Msg("static model fetch failed")
 		}
 	}
 
