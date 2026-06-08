@@ -1,6 +1,7 @@
 import { type ChildProcess, spawn, execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
+import { app } from "electron";
 import { isDevMode } from "../runtime/environment";
 import {
   DAEMON_HEALTH_RETRY_COUNT,
@@ -43,7 +44,7 @@ type CliInvocation = {
   cwd?: string;
 };
 
-type DaemonLogger = Pick<Console, "warn">;
+type DaemonLogger = Pick<Console, "warn" | "log">;
 
 type DaemonManagerOptions = {
   run?: CliCommandRunner;
@@ -384,9 +385,32 @@ export class DaemonManager {
         retryCount: DAEMON_PRECHECK_HEALTH_RETRY_COUNT,
         retryDelayMs: DAEMON_PRECHECK_HEALTH_RETRY_DELAY_MS,
       });
-      return;
+
+      // In release mode, check whether the running daemon is from an older app
+      // version (e.g. after an auto-update that did not stop the daemon).
+      // If the versions differ, stop the old daemon and fall through to restart.
+      // In dev mode the daemon always reports "dev" so we skip this check.
+      if (!isDevMode()) {
+        try {
+          const info = await this.getInfo();
+          if (info.version !== app.getVersion()) {
+            this.logger.log(
+              `Restarting daemon: running version ${info.version} does not match app version ${app.getVersion()}`,
+            );
+            await this.stop();
+            // Fall through to start path below.
+          } else {
+            return;
+          }
+        } catch {
+          // Could not read version — daemon healthy enough, leave it.
+          return;
+        }
+      } else {
+        return;
+      }
     } catch {
-      // Continue to active recovery path.
+      // Daemon not healthy — continue to active recovery path.
     }
 
     if (isDevMode() && !this.preferCliStartPath) {

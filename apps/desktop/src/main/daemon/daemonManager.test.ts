@@ -30,7 +30,7 @@ describe("DaemonManager", () => {
       stdout: "",
       stderr: "",
     });
-    const logger = { warn: vi.fn() };
+    const logger = { warn: vi.fn(), log: vi.fn() };
     const manager = new DaemonManager({ run, logger });
 
     await manager.stop();
@@ -45,7 +45,7 @@ describe("DaemonManager", () => {
       stdout: "",
       stderr: "permission denied",
     });
-    const logger = { warn: vi.fn() };
+    const logger = { warn: vi.fn(), log: vi.fn() };
     const manager = new DaemonManager({ run, logger });
 
     await manager.stop();
