@@ -82,6 +82,7 @@ func (h *JSONRPCHandler) Shutdown() {
 	if h.tokenUsage != nil {
 		h.tokenUsage.Close()
 	}
+	modellist.ShutdownShell()
 }
 
 func (h *JSONRPCHandler) consumeFileCacheInvalidationEvents(events <-chan frontendEvent) {

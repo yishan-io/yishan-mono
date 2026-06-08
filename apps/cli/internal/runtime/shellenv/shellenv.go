@@ -12,7 +12,7 @@ import (
 
 const ManagedRuntimeRootDirName = ".yishan"
 const ManagedRuntimeOrigZdotdirEnvKey = "YISHAN_ORIG_ZDOTDIR"
-const loginShellPathTimeout = 1500 * time.Millisecond
+const loginShellPathTimeout = 10 * time.Second
 
 func ResolveUserShell(shellEnv string) string {
 	if resolved := strings.TrimSpace(shellEnv); resolved != "" {
@@ -115,11 +115,20 @@ func EnsurePathHasExistingDirectories(env []string, directories []string) []stri
 	return UpsertEnv(env, "PATH", newPath)
 }
 
+func resolveLoginShellPath(shellCommand string) string {
+	if sh, err := GetLoginShell(); err == nil {
+		if loginPath := sh.Path(); strings.TrimSpace(loginPath) != "" {
+			return loginPath
+		}
+	}
+	return readLoginShellPath(shellCommand, loginShellPathTimeout)
+}
+
 func ResolveEnvWithUserPath(env []string, shellCommand string) []string {
 	pathValues := []string{EnvValueOrDefault(env, "PATH", os.Getenv("PATH"))}
 
 	if runtime.GOOS != "windows" {
-		if loginPath := readLoginShellPath(shellCommand, loginShellPathTimeout); strings.TrimSpace(loginPath) != "" {
+		if loginPath := resolveLoginShellPath(shellCommand); strings.TrimSpace(loginPath) != "" {
 			pathValues = append(pathValues, loginPath)
 		}
 	}
@@ -166,6 +175,7 @@ func CommonUserBinDirectories() []string {
 
 	return append(directories,
 		filepath.Join(homeDir, ManagedRuntimeRootDirName, "bin"),
+		filepath.Join(homeDir, ".opencode", "bin"),
 		filepath.Join(homeDir, ".local", "bin"),
 		filepath.Join(homeDir, ".bun", "bin"),
 		filepath.Join(homeDir, ".npm-global", "bin"),
