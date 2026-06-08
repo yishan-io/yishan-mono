@@ -100,7 +100,14 @@ func (s *Service) fetchWithFallback(af *agentFetcher) ([]ModelInfo, FetchSource,
 		}
 	}
 
-	return nil, SourceError, fmt.Errorf("no models available for %q", af.static.AgentKind())
+	agentKind := "unknown"
+	switch {
+	case af.static != nil:
+		agentKind = af.static.AgentKind()
+	case af.cli != nil:
+		agentKind = af.cli.AgentKind()
+	}
+	return nil, SourceError, fmt.Errorf("no models available for %q", agentKind)
 }
 
 func (s *Service) ListAllModels(forceRefresh bool) []AgentModelList {
