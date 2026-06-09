@@ -83,8 +83,8 @@ export function ChangesTabView() {
                 size="small"
                 startIcon={<LuEye size={14} />}
                 onClick={handleViewAllDiffs}
-                variant="outlined"
-                sx={{ fontSize: 12, textTransform: "none" }}
+                variant="text"
+                sx={{ fontSize: 12, textTransform: "none", minWidth: 0, px: 1 }}
               >
                 View all diffs
               </Button>
