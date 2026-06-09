@@ -23,19 +23,40 @@ type MultiFileDiffViewerProps = {
 
 export type { FileDiffEntry };
 
-function CollapseToggle({
+type CustomHeaderItem = {
+  id: string;
+  fileDiff?: { name: string; type: string };
+  file?: { name: string };
+};
+
+function getChangeKindLabel(changeType: string): string {
+  if (changeType === "new") return "Added";
+  if (changeType === "deleted") return "Deleted";
+  if (changeType === "rename-pure" || changeType === "rename-changed") return "Renamed";
+  return "";
+}
+
+function DiffFileHeader({
   filePath,
+  fileName,
+  changeType,
+  additions,
+  deletions,
   isCollapsed,
   onToggle,
 }: {
   filePath: string;
+  fileName: string;
+  changeType: string;
+  additions: number;
+  deletions: number;
   isCollapsed: boolean;
   onToggle: (path: string) => void;
 }) {
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const elRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = buttonRef.current;
+    const el = elRef.current;
     if (!el) return;
 
     const handler = (e: Event) => {
@@ -48,26 +69,48 @@ function CollapseToggle({
     return () => el.removeEventListener("click", handler);
   }, [filePath, onToggle]);
 
+  const changeKindLabel = getChangeKindLabel(changeType);
+
   return (
-    <button
-      ref={buttonRef}
-      type="button"
+    <div
+      ref={elRef}
       style={{
-        display: "inline-flex",
+        display: "flex",
         alignItems: "center",
+        gap: 6,
+        padding: "4px 8px",
         cursor: "pointer",
-        flexShrink: 0,
-        margin: 0,
-        marginRight: 4,
-        padding: 0,
-        border: "none",
-        background: "none",
-        color: "inherit",
-        lineHeight: 1,
+        userSelect: "none",
+        minHeight: 28,
       }}
     >
-      {isCollapsed ? <LuChevronRight size={14} /> : <LuChevronDown size={14} />}
-    </button>
+      <span style={{ display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
+        {isCollapsed ? <LuChevronRight size={14} /> : <LuChevronDown size={14} />}
+      </span>
+
+      <span
+        style={{
+          flex: 1,
+          minWidth: 0,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          fontSize: 13,
+          fontWeight: 500,
+        }}
+      >
+        {fileName}
+      </span>
+
+      {changeKindLabel && <span style={{ fontSize: 11, opacity: 0.6, flexShrink: 0 }}>{changeKindLabel}</span>}
+
+      {additions > 0 && (
+        <span style={{ fontSize: 11, color: "var(--diffs-addition-base, #0dbe4e)", flexShrink: 0 }}>+{additions}</span>
+      )}
+      {deletions > 0 && (
+        <span style={{ fontSize: 11, color: "var(--diffs-deletion-base, #ff2e3f)", flexShrink: 0 }}>-{deletions}</span>
+      )}
+    </div>
   );
 }
 
@@ -157,13 +200,34 @@ export function MultiFileDiffViewer({ files }: MultiFileDiffViewerProps) {
     setChangesOnly((prev) => !prev);
   }, []);
 
-  const renderHeaderPrefix = useCallback(
-    (item: { id: string }) => {
+  const fileStatsByPath = useMemo(() => {
+    const map = new Map<string, { additions: number; deletions: number }>();
+    for (const f of files) {
+      map.set(f.path, { additions: f.additions, deletions: f.deletions });
+    }
+    return map;
+  }, [files]);
+
+  const renderCustomHeader = useCallback(
+    (item: CustomHeaderItem) => {
       const filePath = item.id;
       const isCollapsed = collapsedKeysRef.current.has(filePath);
-      return <CollapseToggle filePath={filePath} isCollapsed={isCollapsed} onToggle={handleToggleFile} />;
+      const stats = fileStatsByPath.get(filePath);
+      const name = item.fileDiff?.name ?? item.file?.name ?? filePath;
+      const changeType = item.fileDiff?.type ?? "change";
+      return (
+        <DiffFileHeader
+          filePath={filePath}
+          fileName={name}
+          changeType={changeType}
+          additions={stats?.additions ?? 0}
+          deletions={stats?.deletions ?? 0}
+          isCollapsed={isCollapsed}
+          onToggle={handleToggleFile}
+        />
+      );
     },
-    [handleToggleFile],
+    [handleToggleFile, fileStatsByPath],
   );
 
   return (
@@ -241,7 +305,7 @@ export function MultiFileDiffViewer({ files }: MultiFileDiffViewerProps) {
             initialItems={initialItems}
             style={{ position: "absolute", inset: 0, overflow: "auto" }}
             options={options}
-            renderHeaderPrefix={renderHeaderPrefix}
+            renderCustomHeader={renderCustomHeader}
           />
         )}
       </Box>
