@@ -9,6 +9,7 @@ import { handleAppError } from "@/middlewares/error";
 import { authRouter } from "@/routes/auth";
 import { nodeRouter } from "@/routes/node";
 import { organizationRouter } from "@/routes/organization";
+import { overviewRouter } from "@/routes/overview";
 import { projectRouter } from "@/routes/project";
 import { serviceTokenRouter } from "@/routes/service-token";
 import { systemRouter } from "@/routes/system";
@@ -34,6 +35,7 @@ protectedRouter.route("/", nodeRouter);
 protectedRouter.route("/", projectRouter);
 protectedRouter.route("/", serviceTokenRouter);
 protectedRouter.route("/", tokenUsageRouter);
+protectedRouter.route("/", overviewRouter);
 protectedRouter.route("/", voiceTranscriptionRouter);
 
 app.route("/", protectedRouter);

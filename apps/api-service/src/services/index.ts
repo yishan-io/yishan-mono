@@ -4,17 +4,18 @@ import { JobEvaluatorService } from "@/services/job-evaluator-service";
 import { NodeService } from "@/services/node-service";
 import { OrganizationInviteService } from "@/services/organization-invite-service";
 import { OrganizationService } from "@/services/organization-service";
+import { OverviewService } from "@/services/overview-service";
 import { ProjectService } from "@/services/project-service";
 import { RelayEventService } from "@/services/relay-event-service";
 import { ResendEmailService } from "@/services/resend-email-service";
 import { ScheduledJobService } from "@/services/scheduled-job-service";
+import { ServiceTokenService } from "@/services/service-token-service";
+import { TokenUsageService } from "@/services/token-usage-service";
 import { UserService } from "@/services/user-service";
 import { VoiceTranscriptionService } from "@/services/voice-transcription-service";
 import { NoopWorkspaceProvisioner } from "@/services/workspace-provisioner";
 import { WorkspacePullRequestService } from "@/services/workspace-pull-request-service";
 import { WorkspaceService } from "@/services/workspace-service";
-import { ServiceTokenService } from "@/services/service-token-service";
-import { TokenUsageService } from "@/services/token-usage-service";
 import type { ServiceConfig } from "@/types";
 
 export type AppServices = {
@@ -32,6 +33,7 @@ export type AppServices = {
   voiceTranscription: VoiceTranscriptionService;
   serviceToken: ServiceTokenService;
   tokenUsage: TokenUsageService;
+  overview: OverviewService;
 };
 
 export function createServices(deps: { db: AppDb; config: ServiceConfig }): AppServices {
@@ -61,5 +63,6 @@ export function createServices(deps: { db: AppDb; config: ServiceConfig }): AppS
     voiceTranscription: new VoiceTranscriptionService(deps.db, deps.config, organization),
     serviceToken: new ServiceTokenService(deps.db),
     tokenUsage: new TokenUsageService(deps.db, organization),
+    overview: new OverviewService(deps.db, organization),
   };
 }

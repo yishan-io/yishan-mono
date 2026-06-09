@@ -1,7 +1,7 @@
 import { Box, Button, Stack, Typography } from "@mui/material";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { LuPanelLeft, LuPlus, LuZap } from "react-icons/lu";
+import { LuChartBar, LuPanelLeft, LuPlus, LuZap } from "react-icons/lu";
 import { PaneHeader } from "../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../components/PaneToggleButton";
 import { getRendererPlatform } from "../../../helpers/platform";
@@ -34,16 +34,35 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
 
   const isScheduledJobPanelOpen = workspaceUiStore((state) => state.isScheduledJobPanelOpen);
   const setScheduledJobPanelOpen = workspaceUiStore((state) => state.setScheduledJobPanelOpen);
+  const isOverviewPanelOpen = workspaceUiStore((state) => state.isOverviewPanelOpen);
+  const setOverviewPanelOpen = workspaceUiStore((state) => state.setOverviewPanelOpen);
   const { setSelectedRepoId, setSelectedWorkspaceId } = useCommands();
 
   const handleToggleScheduledJobs = useCallback(() => {
     const willOpen = !isScheduledJobPanelOpen;
     setScheduledJobPanelOpen(willOpen);
+    setOverviewPanelOpen(false);
     if (willOpen) {
       setSelectedRepoId("");
       setSelectedWorkspaceId("");
     }
-  }, [isScheduledJobPanelOpen, setScheduledJobPanelOpen, setSelectedRepoId, setSelectedWorkspaceId]);
+  }, [
+    isScheduledJobPanelOpen,
+    setScheduledJobPanelOpen,
+    setOverviewPanelOpen,
+    setSelectedRepoId,
+    setSelectedWorkspaceId,
+  ]);
+
+  const handleToggleOverview = useCallback(() => {
+    const willOpen = !isOverviewPanelOpen;
+    setOverviewPanelOpen(willOpen);
+    setScheduledJobPanelOpen(false);
+    if (willOpen) {
+      setSelectedRepoId("");
+      setSelectedWorkspaceId("");
+    }
+  }, [isOverviewPanelOpen, setOverviewPanelOpen, setScheduledJobPanelOpen, setSelectedRepoId, setSelectedWorkspaceId]);
 
   return (
     <Box
@@ -96,11 +115,51 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
       >
         {t("scheduledJob.title")}
       </Button>
+      <Button
+        variant="text"
+        startIcon={<LuChartBar size={14} />}
+        onClick={handleToggleOverview}
+        aria-label="Overview"
+        aria-pressed={isOverviewPanelOpen}
+        sx={{
+          justifyContent: "flex-start",
+          textTransform: "none",
+          color: isOverviewPanelOpen ? "primary.main" : "text.secondary",
+          bgcolor: isOverviewPanelOpen ? "action.selected" : "transparent",
+          borderRadius: 0,
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          px: 2,
+          py: 0.875,
+          flexShrink: 0,
+          ":hover": {
+            bgcolor: isOverviewPanelOpen ? "action.selected" : "action.hover",
+          },
+        }}
+      >
+        Overview
+      </Button>
 
-      <Box sx={{ px: 2, pt: 1.5, pb: 0.75, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+      <Box
+        sx={{
+          px: 2,
+          pt: 1.5,
+          pb: 0.75,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 1,
+        }}
+      >
         <Typography
           variant="caption"
-          sx={{ color: "text.disabled", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}
+          sx={{
+            color: "text.disabled",
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+          }}
         >
           {t("project.list.workspaces")}
         </Typography>

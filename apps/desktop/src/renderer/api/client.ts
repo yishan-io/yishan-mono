@@ -9,6 +9,7 @@ import {
   listOrganizations,
   removeOrganizationMember,
 } from "./orgApi";
+import { loadOverviewModelBreakdown, loadOverviewTokenUsage, loadOverviewWorkspaceInsights } from "./overviewApi";
 import { createProject, deleteProject, listProjects, updateProject } from "./projectApi";
 import {
   createScheduledJob,
@@ -21,9 +22,9 @@ import {
   updateScheduledJob,
 } from "./scheduledJobApi";
 import { createServiceToken, listServiceTokens, revokeServiceToken } from "./serviceTokenApi";
+import { getVoiceTranscriptionUsage, transcribeVoice } from "./voiceTranscriptionApi";
 import { createProjectWorkspace, listProjectWorkspaces } from "./workspaceApi";
 import { listWorkspacePullRequests, upsertWorkspacePullRequest } from "./workspacePullRequestApi";
-import { getVoiceTranscriptionUsage, transcribeVoice } from "./voiceTranscriptionApi";
 
 export const api = {
   org: {
@@ -73,6 +74,11 @@ export const api = {
     list: listServiceTokens,
     create: createServiceToken,
     revoke: revokeServiceToken,
+  },
+  overview: {
+    loadTokenUsage: loadOverviewTokenUsage,
+    loadModelBreakdown: loadOverviewModelBreakdown,
+    loadWorkspaceInsights: loadOverviewWorkspaceInsights,
   },
 };
 

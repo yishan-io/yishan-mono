@@ -62,6 +62,11 @@ import {
   updateNotificationPreferences as updateNotificationPreferencesCommand,
 } from "../commands/notificationCommands";
 import {
+  loadAllOverviewData as loadAllOverviewDataCommand,
+  setOverviewProjectId as setOverviewProjectIdCommand,
+  setOverviewTimeRange as setOverviewTimeRangeCommand,
+} from "../commands/overviewCommands";
+import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
   inspectLocalProjectSource as inspectLocalProjectSourceCommand,
@@ -85,6 +90,7 @@ import {
   createTab as createTabCommand,
   markFileTabSaved as markFileTabSavedCommand,
   openTab as openTabCommand,
+  promoteTemporaryTab as promoteTemporaryTabCommand,
   refreshDiffTabContent as refreshDiffTabContentCommand,
   refreshFileTabFromDisk as refreshFileTabFromDiskCommand,
   renameTab as renameTabCommand,
@@ -94,7 +100,6 @@ import {
   setBrowserTabUrl as setBrowserTabUrlCommand,
   setSelectedTab as setSelectedTabCommand,
   toggleTabPinned as toggleTabPinnedCommand,
-  promoteTemporaryTab as promoteTemporaryTabCommand,
   updateFileTabContent as updateFileTabContentCommand,
 } from "../commands/tabCommands";
 import {
@@ -103,10 +108,10 @@ import {
   getTerminalResourceUsage as getTerminalResourceUsageCommand,
   killTerminalProcess as killTerminalProcessCommand,
   listDetectedPorts as listDetectedPortsCommand,
-  setActiveWorkspace as setActiveWorkspaceCommand,
   listTerminalSessions as listTerminalSessionsCommand,
   readTerminalOutput as readTerminalOutputCommand,
   resizeTerminal as resizeTerminalCommand,
+  setActiveWorkspace as setActiveWorkspaceCommand,
   subscribeTerminalOutput as subscribeTerminalOutputCommand,
   subscribeTerminalSessions as subscribeTerminalSessionsCommand,
   writeTerminalInput as writeTerminalInputCommand,
@@ -119,10 +124,10 @@ import {
   focusWorkspaceFileTree as focusWorkspaceFileTreeCommand,
   openCreateWorkspaceDialog as openCreateWorkspaceDialogCommand,
   openWorkspaceFileSearch as openWorkspaceFileSearchCommand,
-  reorderWorkspace as reorderWorkspaceCommand,
   refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
   renameWorkspaceBranch as renameWorkspaceBranchCommand,
   renameWorkspace as renameWorkspaceCommand,
+  reorderWorkspace as reorderWorkspaceCommand,
   setDisplayRepoIds as setDisplayRepoIdsCommand,
   setLastUsedExternalAppId as setLastUsedExternalAppIdCommand,
   setLeftPaneWidth as setLeftPaneWidthCommand,
@@ -145,6 +150,9 @@ export type Commands = {
   pauseScheduledJob: typeof pauseScheduledJobCommand;
   resumeScheduledJob: typeof resumeScheduledJobCommand;
   runScheduledJobNow: typeof runScheduledJobNowCommand;
+  loadAllOverviewData: typeof loadAllOverviewDataCommand;
+  setOverviewTimeRange: typeof setOverviewTimeRangeCommand;
+  setOverviewProjectId: typeof setOverviewProjectIdCommand;
   listCLIToolStatuses: typeof listCLIToolStatusesCommand;
   checkGitHubConnectionStatus: typeof checkGitHubConnectionStatusCommand;
   setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
@@ -278,6 +286,9 @@ export function useCommands(): Commands {
       pauseScheduledJob: pauseScheduledJobCommand,
       resumeScheduledJob: resumeScheduledJobCommand,
       runScheduledJobNow: runScheduledJobNowCommand,
+      loadAllOverviewData: loadAllOverviewDataCommand,
+      setOverviewTimeRange: setOverviewTimeRangeCommand,
+      setOverviewProjectId: setOverviewProjectIdCommand,
       listCLIToolStatuses: listCLIToolStatusesCommand,
       checkGitHubConnectionStatus: checkGitHubConnectionStatusCommand,
       setDisplayRepoIds: setDisplayRepoIdsCommand,

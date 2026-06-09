@@ -21,6 +21,8 @@ type WorkspaceUiStoreState = {
   fileSearchRequestKey: number;
   /** Whether the scheduled job panel is visible in the main pane. */
   isScheduledJobPanelOpen: boolean;
+  /** Whether the overview dashboard panel is visible in the main pane. */
+  isOverviewPanelOpen: boolean;
 
   setSelectedEntryPath: (path: string) => void;
   setExpandedFileTreeItems: (workspaceId: string, paths: string[]) => void;
@@ -30,6 +32,7 @@ type WorkspaceUiStoreState = {
   setIsRightPaneHidden: (workspaceId: string, hidden: boolean) => void;
   requestFileSearch: () => void;
   setScheduledJobPanelOpen: (isOpen: boolean) => void;
+  setOverviewPanelOpen: (isOpen: boolean) => void;
 };
 
 /** Stores workspace-scoped UI signals: file-tree selection/commands and right-pane tab state. */
@@ -43,6 +46,7 @@ export const workspaceUiStore = create<WorkspaceUiStoreState>()(
     isRightPaneHiddenByWorkspaceId: {},
     fileSearchRequestKey: 0,
     isScheduledJobPanelOpen: false,
+    isOverviewPanelOpen: false,
 
     setSelectedEntryPath: (selectedEntryPath) => {
       set({ selectedEntryPath });
@@ -79,6 +83,9 @@ export const workspaceUiStore = create<WorkspaceUiStoreState>()(
     },
     setScheduledJobPanelOpen: (isOpen) => {
       set({ isScheduledJobPanelOpen: isOpen });
+    },
+    setOverviewPanelOpen: (isOpen) => {
+      set({ isOverviewPanelOpen: isOpen });
     },
   })),
 );

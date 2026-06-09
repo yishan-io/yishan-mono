@@ -15,6 +15,7 @@ import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
 import { workspaceUiStore } from "../store/workspaceUiStore";
+import { OverviewView } from "./overview/OverviewView";
 import { ScheduledJobView } from "./scheduledJob/ScheduledJobView";
 import { CreateProjectDialogView } from "./workspace/LeftPane/CreateProjectDialogView";
 import { LeftPaneView } from "./workspace/LeftPane/LeftPaneView";
@@ -296,6 +297,8 @@ export function WorkspaceView() {
   });
   const isScheduledJobPanelOpen = workspaceUiStore((state) => state.isScheduledJobPanelOpen);
   const setScheduledJobPanelOpen = workspaceUiStore((state) => state.setScheduledJobPanelOpen);
+  const isOverviewPanelOpen = workspaceUiStore((state) => state.isOverviewPanelOpen);
+  const setOverviewPanelOpen = workspaceUiStore((state) => state.setOverviewPanelOpen);
   const cmd = useCommands();
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator());
@@ -304,6 +307,10 @@ export function WorkspaceView() {
   const handleCloseScheduledJobPanel = useCallback(() => {
     setScheduledJobPanelOpen(false);
   }, [setScheduledJobPanelOpen]);
+
+  const handleCloseOverviewPanel = useCallback(() => {
+    setOverviewPanelOpen(false);
+  }, [setOverviewPanelOpen]);
 
   useWorkspaceAppActions({ cmd, navigate });
   useWorkspaceBootstrap({ cmd, terminalRecoveryCoordinator });
@@ -322,10 +329,7 @@ export function WorkspaceView() {
   }, [cmd, selectedWorkspaceId]);
 
   const leftSep = leftCollapsed ? 0 : SEPARATOR_PX;
-  const maxLeftWidth = Math.max(
-    LEFT_MIN_WIDTH,
-    containerWidth - leftSep - MAIN_MIN_WIDTH,
-  );
+  const maxLeftWidth = Math.max(LEFT_MIN_WIDTH, containerWidth - leftSep - MAIN_MIN_WIDTH);
 
   const resolvedLeftWidth = clamp(leftWidth, LEFT_MIN_WIDTH, maxLeftWidth);
   const hasProjects = projects.length > 0;
@@ -384,6 +388,8 @@ export function WorkspaceView() {
       >
         {isScheduledJobPanelOpen ? (
           <ScheduledJobView onClose={handleCloseScheduledJobPanel} />
+        ) : isOverviewPanelOpen ? (
+          <OverviewView onClose={handleCloseOverviewPanel} />
         ) : (
           <MainPaneView />
         )}
