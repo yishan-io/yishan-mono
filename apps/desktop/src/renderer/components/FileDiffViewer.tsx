@@ -3,7 +3,7 @@ import { useTheme } from "@mui/material/styles";
 import { parseDiffFromFile } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import { useCallback, useMemo, useState } from "react";
-import { LuDiff, LuExternalLink, LuFileText, LuStretchHorizontal, LuStretchVertical } from "react-icons/lu";
+import { LuDiff, LuExternalLink, LuFileText, LuStretchHorizontal, LuStretchVertical, LuWrapText } from "react-icons/lu";
 import { isBinaryPath } from "../helpers/binaryExtensions";
 
 type FileDiffViewerProps = {
@@ -17,6 +17,7 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
   const theme = useTheme();
   const [sideBySide, setSideBySide] = useState(false);
   const [changesOnly, setChangesOnly] = useState(true);
+  const [wrapLines, setWrapLines] = useState(false);
 
   const handleToggleChangesOnly = useCallback(() => {
     setChangesOnly((prev) => !prev);
@@ -71,6 +72,11 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
             {sideBySide ? <LuStretchVertical size={14} /> : <LuStretchHorizontal size={14} />}
           </IconButton>
         </Tooltip>
+        <Tooltip title={wrapLines ? "Disable line wrapping" : "Enable line wrapping"}>
+          <IconButton size="small" onClick={() => setWrapLines((prev) => !prev)} sx={{ ml: 0.5 }}>
+            <LuWrapText size={14} />
+          </IconButton>
+        </Tooltip>
         {onOpenFile && (
           <Tooltip title="Open file">
             <IconButton size="small" onClick={() => onOpenFile(filePath)} sx={{ ml: 0.5 }}>
@@ -95,6 +101,7 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
             theme: diffTheme,
             diffStyle: sideBySide ? "split" : "unified",
             expandUnchanged: !changesOnly,
+            overflow: wrapLines ? "wrap" : "scroll",
             disableFileHeader: false,
           }}
         />

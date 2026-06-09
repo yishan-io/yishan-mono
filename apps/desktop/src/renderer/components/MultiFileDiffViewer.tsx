@@ -15,6 +15,7 @@ import {
   LuFileText,
   LuStretchHorizontal,
   LuStretchVertical,
+  LuWrapText,
 } from "react-icons/lu";
 import type { FileDiffEntry } from "../store/types";
 import { getFileTreeIcon } from "./fileTreeIcons";
@@ -183,6 +184,7 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
   });
   const [sideBySide, setSideBySide] = useState(false);
   const [changesOnly, setChangesOnly] = useState(true);
+  const [wrapLines, setWrapLines] = useState(false);
 
   const collapsedKeysRef = useRef(collapsedKeys);
   collapsedKeysRef.current = collapsedKeys;
@@ -203,8 +205,9 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
       theme: diffTheme,
       diffStyle: (sideBySide ? "split" : "unified") as "split" | "unified",
       expandUnchanged: !changesOnly,
+      overflow: (wrapLines ? "wrap" : "scroll") as "wrap" | "scroll",
     }),
-    [diffTheme, sideBySide, changesOnly],
+    [diffTheme, sideBySide, changesOnly, wrapLines],
   );
 
   const initialItems: CodeViewDiffItem[] = useMemo(
@@ -356,6 +359,12 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
         <Tooltip title={sideBySide ? "Switch to inline view" : "Switch to side-by-side view"}>
           <IconButton size="small" onClick={() => setSideBySide((prev) => !prev)} sx={{ ml: 0.25 }}>
             {sideBySide ? <LuStretchVertical size={14} /> : <LuStretchHorizontal size={14} />}
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title={wrapLines ? "Disable line wrapping" : "Enable line wrapping"}>
+          <IconButton size="small" onClick={() => setWrapLines((prev) => !prev)} sx={{ ml: 0.25 }}>
+            <LuWrapText size={14} />
           </IconButton>
         </Tooltip>
       </Box>
