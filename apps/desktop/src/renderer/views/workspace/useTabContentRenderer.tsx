@@ -66,6 +66,14 @@ export function useTabContentRenderer({
               filePath={tab.data.path}
               oldContent={tab.data.oldContent ?? ""}
               newContent={tab.data.newContent ?? ""}
+              onOpenFile={(filePath) => {
+                cmd.openTab({
+                  workspaceId: tab.workspaceId,
+                  kind: "file",
+                  path: filePath,
+                  temporary: true,
+                });
+              }}
             />
           </TabPanel>
         );

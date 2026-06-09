@@ -3,16 +3,17 @@ import { useTheme } from "@mui/material/styles";
 import { parseDiffFromFile } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import { useCallback, useMemo, useState } from "react";
-import { LuDiff, LuFileText, LuStretchHorizontal, LuStretchVertical } from "react-icons/lu";
+import { LuDiff, LuExternalLink, LuFileText, LuStretchHorizontal, LuStretchVertical } from "react-icons/lu";
 import { isBinaryPath } from "../helpers/binaryExtensions";
 
 type FileDiffViewerProps = {
   filePath: string;
   oldContent: string;
   newContent: string;
+  onOpenFile?: (filePath: string) => void;
 };
 
-export function FileDiffViewer({ filePath, oldContent, newContent }: FileDiffViewerProps) {
+export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }: FileDiffViewerProps) {
   const theme = useTheme();
   const [sideBySide, setSideBySide] = useState(false);
   const [changesOnly, setChangesOnly] = useState(true);
@@ -70,6 +71,13 @@ export function FileDiffViewer({ filePath, oldContent, newContent }: FileDiffVie
             {sideBySide ? <LuStretchVertical size={14} /> : <LuStretchHorizontal size={14} />}
           </IconButton>
         </Tooltip>
+        {onOpenFile && (
+          <Tooltip title="Open file">
+            <IconButton size="small" onClick={() => onOpenFile(filePath)} sx={{ ml: 0.5 }}>
+              <LuExternalLink size={14} />
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
       <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
         <FileDiff
