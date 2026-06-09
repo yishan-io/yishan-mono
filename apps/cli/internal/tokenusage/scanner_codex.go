@@ -132,6 +132,7 @@ func scanCodexSessionFile(
 
 	var currentSessionID string
 	var currentCWD string
+	var currentModel string
 
 	scanner := bufio.NewScanner(fileHandle)
 	scanner.Buffer(make([]byte, 0, 64*1024), maxTokenUsageScanLineBytes)
@@ -152,10 +153,17 @@ func scanCodexSessionFile(
 			if line.cwd != "" {
 				currentCWD = line.cwd
 			}
+			if line.model != "" {
+				currentModel = line.model
+			}
 		case codexLineTokenCount:
+			model := currentModel
+			if model == "" {
+				model = "unknown"
+			}
 			event := codexEvent{
 				SessionID: currentSessionID,
-				Model:     "unknown",
+				Model:     model,
 				CWD:       currentCWD,
 				Timestamp: line.timestamp,
 				Usage:     line.usage,
@@ -190,6 +198,7 @@ type codexParsedLine struct {
 	kind      codexLineKind
 	sessionID string
 	cwd       string
+	model     string
 	timestamp time.Time
 	usage     codexUsage
 }
@@ -214,8 +223,9 @@ func parseCodexLine(rawLine []byte) codexParsedLine {
 		}
 	case "turn_context":
 		return codexParsedLine{
-			kind: codexLineTurnContext,
-			cwd:  cleanCWDPath(getString(nested, "cwd")),
+			kind:  codexLineTurnContext,
+			cwd:   cleanCWDPath(getString(nested, "cwd")),
+			model: getString(nested, "model"),
 		}
 	case "event_msg":
 		if getString(nested, "type") != "token_count" {

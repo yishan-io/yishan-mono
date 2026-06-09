@@ -10,8 +10,9 @@ import (
 )
 
 const codexSessionFixture = `{"timestamp":"2026-06-08T05:08:10.774Z","type":"session_meta","payload":{"id":"019ea5a1-94ae-7013-a40d-636ab48c8618","cwd":"/Users/zhex/.yishan/worktrees/yishan-io/yishan-mono/test-codex","model_provider":"openai"}}
-{"timestamp":"2026-06-08T05:08:15.338Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1000,"cached_input_tokens":200,"output_tokens":50,"reasoning_output_tokens":10,"total_tokens":1050},"last_token_usage":{"input_tokens":1000,"cached_input_tokens":200,"output_tokens":50,"reasoning_output_tokens":10,"total_tokens":1050}}}}
-{"timestamp":"2026-06-08T05:08:15.338Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":2000,"cached_input_tokens":400,"output_tokens":100,"reasoning_output_tokens":20,"total_tokens":2100},"last_token_usage":{"input_tokens":2000,"cached_input_tokens":400,"output_tokens":100,"reasoning_output_tokens":20,"total_tokens":2100}}}}
+{"timestamp":"2026-06-08T05:08:12.147Z","type":"turn_context","payload":{"turn_id":"turn-1","cwd":"/Users/zhex/.yishan/worktrees/yishan-io/yishan-mono/test-codex","model":"gpt-5.4-mini"}}
+{"timestamp":"2026-06-08T05:08:15.338Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1000,"cached_input_tokens":200,"output_tokens":50,"reasoning_output_tokens":10,"total_tokens":1050},"last_token_usage":{"input_tokens":1000,"cached_input_tokens":200,"output_tokens":50,"reasoning_output_tokens":10,"total_tokens":1050},"model_context_window":258400}}}
+{"timestamp":"2026-06-08T05:08:15.338Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":2000,"cached_input_tokens":400,"output_tokens":100,"reasoning_output_tokens":20,"total_tokens":2100},"last_token_usage":{"input_tokens":2000,"cached_input_tokens":400,"output_tokens":100,"reasoning_output_tokens":20,"total_tokens":2100},"model_context_window":258400}}}
 `
 
 func TestParseCodexLineSessionMeta(t *testing.T) {
@@ -74,7 +75,7 @@ func TestParseCodexLineTokenCountOnlyTotalUsage(t *testing.T) {
 func TestParseCodexLineTurnContext(t *testing.T) {
 	t.Parallel()
 
-	line := `{"timestamp":"2026-06-08T05:08:33.544Z","type":"turn_context","payload":{"turn_id":"turn-1","cwd":"/home/user/other-project"}}`
+	line := `{"timestamp":"2026-06-08T05:08:33.544Z","type":"turn_context","payload":{"turn_id":"turn-1","cwd":"/home/user/other-project","model":"gpt-5.4-mini"}}`
 	parsed := parseCodexLine([]byte(line))
 
 	if parsed.kind != codexLineTurnContext {
@@ -82,6 +83,9 @@ func TestParseCodexLineTurnContext(t *testing.T) {
 	}
 	if parsed.cwd != "/home/user/other-project" {
 		t.Fatalf("expected cwd /home/user/other-project, got %q", parsed.cwd)
+	}
+	if parsed.model != "gpt-5.4-mini" {
+		t.Fatalf("expected model gpt-5.4-mini, got %q", parsed.model)
 	}
 }
 
@@ -175,6 +179,40 @@ func TestScanCodexHourlyUsageIntegration(t *testing.T) {
 		}
 		if !strings.Contains(row.ScannerSourceID, "session.jsonl") {
 			t.Fatalf("expected source ID to contain session.jsonl, got %q", row.ScannerSourceID)
+		}
+		if row.Model != "gpt-5.4-mini" {
+			t.Fatalf("expected model gpt-5.4-mini, got %q", row.Model)
+		}
+	}
+}
+
+func TestScanCodexSessionFileModelFallback(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	fixture := `{"timestamp":"2026-06-08T05:08:10.774Z","type":"session_meta","payload":{"id":"session-1","cwd":"/tmp"}}
+{"timestamp":"2026-06-08T05:08:15.338Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":100,"output_tokens":50,"total_tokens":150}}}}}
+`
+	sessionFilePath := filepath.Join(tmpDir, "session.jsonl")
+	if err := os.WriteFile(sessionFilePath, []byte(fixture), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	input := ScanInput{
+		RunID:      "test-run",
+		IngestedAt: time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
+		Worktrees:  nil,
+	}
+
+	buckets := make(map[hourlyKey]*hourlyAccumulator)
+	err := scanCodexSessionFile(context.Background(), sessionFilePath, input, nil, make(map[string]*codexSessionState), buckets)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+
+	for key := range buckets {
+		if key.model != "unknown" {
+			t.Fatalf("expected model unknown (no turn_context), got %q", key.model)
 		}
 	}
 }
