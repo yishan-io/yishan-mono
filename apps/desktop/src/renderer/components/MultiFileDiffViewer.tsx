@@ -6,12 +6,15 @@ import { CodeView } from "@pierre/diffs/react";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  LuArrowRightLeft,
   LuChevronDown,
   LuChevronRight,
   LuChevronsDownUp,
   LuChevronsUpDown,
   LuColumns2,
   LuDiff,
+  LuFileMinus,
+  LuFilePlus,
   LuFileText,
   LuRows2,
 } from "react-icons/lu";
@@ -34,6 +37,18 @@ function getChangeKindLabel(changeType: string): string {
   if (changeType === "deleted") return "Deleted";
   if (changeType === "rename-pure" || changeType === "rename-changed") return "Renamed";
   return "";
+}
+
+function getChangeKindIcon(changeType: string): React.ReactNode {
+  const size = 14;
+  const style = { flexShrink: 0 as const };
+  if (changeType === "new")
+    return <LuFilePlus size={size} style={{ ...style, color: "var(--diffs-addition-base, #0dbe4e)" }} />;
+  if (changeType === "deleted")
+    return <LuFileMinus size={size} style={{ ...style, color: "var(--diffs-deletion-base, #ff2e3f)" }} />;
+  if (changeType === "rename-pure" || changeType === "rename-changed")
+    return <LuArrowRightLeft size={size} style={{ ...style, color: "var(--diffs-modified-base, #009fff)" }} />;
+  return <LuFileText size={size} style={{ ...style, color: "var(--diffs-modified-base, #009fff)" }} />;
 }
 
 function DiffFileHeader({
@@ -87,6 +102,8 @@ function DiffFileHeader({
       <span style={{ display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
         {isCollapsed ? <LuChevronRight size={14} /> : <LuChevronDown size={14} />}
       </span>
+
+      {getChangeKindIcon(changeType)}
 
       <span
         style={{
