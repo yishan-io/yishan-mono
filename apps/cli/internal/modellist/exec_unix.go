@@ -5,11 +5,9 @@ package modellist
 import (
 	"os"
 	"os/exec"
-	"strings"
 	"sync"
 	"syscall"
 
-	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
@@ -26,20 +24,6 @@ var (
 func getEnrichedEnv() []string {
 	enrichedEnvOnce.Do(func() {
 		enrichedEnv = shellenv.ResolveEnvWithUserPath(os.Environ(), os.Getenv("SHELL"))
-		pathVal := ""
-		for _, e := range enrichedEnv {
-			if strings.HasPrefix(e, "PATH=") {
-				pathVal = e[5:]
-				break
-			}
-		}
-		hasOpenCodeBin := strings.Contains(pathVal, ".opencode/bin")
-		hasYishanBin := strings.Contains(pathVal, ".yishan/bin")
-		log.Info().
-			Bool("hasOpenCodeBin", hasOpenCodeBin).
-			Bool("hasYishanBin", hasYishanBin).
-			Int("pathLen", len(pathVal)).
-			Msg("enriched PATH computed")
 	})
 	return enrichedEnv
 }

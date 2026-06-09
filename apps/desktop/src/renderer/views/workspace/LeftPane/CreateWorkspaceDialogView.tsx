@@ -131,17 +131,10 @@ export function CreateWorkspaceDialogView({
     listAgentModels(taskAgentKind)
       .then((result) => {
         if (!cancelled) {
-          console.info("[CreateWorkspaceDialog] listAgentModels result", {
-            agentKind: taskAgentKind,
-            modelCount: result.models?.length ?? 0,
-            source: result.source,
-            firstModel: result.models?.[0]?.id,
-          });
           setAgentModels(result.models ?? []);
         }
       })
-      .catch((err) => {
-        console.warn("[CreateWorkspaceDialog] listAgentModels failed", { agentKind: taskAgentKind, error: err });
+      .catch(() => {
         if (!cancelled) {
           setAgentModels([]);
         }
