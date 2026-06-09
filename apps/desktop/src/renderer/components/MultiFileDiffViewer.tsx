@@ -17,6 +17,7 @@ import {
   LuStretchVertical,
   LuWrapText,
 } from "react-icons/lu";
+import { YISHAN_DIFF_THEME_DARK, YISHAN_DIFF_THEME_LIGHT, getDiffCssVariables } from "../helpers/diffTheme";
 import type { FileDiffEntry } from "../store/types";
 import { getFileTreeIcon } from "./fileTreeIcons";
 
@@ -198,7 +199,8 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
   const totalAdditions = useMemo(() => files.reduce((sum, f) => sum + f.additions, 0), [files]);
   const totalDeletions = useMemo(() => files.reduce((sum, f) => sum + f.deletions, 0), [files]);
 
-  const diffTheme = theme.palette.mode === "dark" ? "pierre-dark" : "pierre-light";
+  const diffTheme = theme.palette.mode === "dark" ? YISHAN_DIFF_THEME_DARK : YISHAN_DIFF_THEME_LIGHT;
+  const diffCssVars = useMemo(() => getDiffCssVariables(theme.palette.mode), [theme.palette.mode]);
 
   const options = useMemo(
     () => ({
@@ -382,6 +384,7 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
                 "--diffs-font-family": '"JetBrains Mono", "SF Mono", Menlo, monospace',
                 "--diffs-font-size": "13px",
                 "--diffs-line-height": "20px",
+                ...diffCssVars,
               } as React.CSSProperties
             }
             options={options}
