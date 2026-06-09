@@ -11,6 +11,7 @@ import {
   LuChevronsDownUp,
   LuChevronsUpDown,
   LuDiff,
+  LuExternalLink,
   LuFileText,
   LuStretchHorizontal,
   LuStretchVertical,
@@ -20,6 +21,7 @@ import { getFileTreeIcon } from "./fileTreeIcons";
 
 type MultiFileDiffViewerProps = {
   files: FileDiffEntry[];
+  onOpenFile?: (filePath: string) => void;
 };
 
 export type { FileDiffEntry };
@@ -37,6 +39,54 @@ function getChangeKindLabel(changeKind: string | undefined): string {
   return "";
 }
 
+function OpenFileButton({
+  filePath,
+  onOpenFile,
+}: {
+  filePath: string;
+  onOpenFile: (path: string) => void;
+}) {
+  const elRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const el = elRef.current;
+    if (!el) return;
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onOpenFile(filePath);
+    };
+
+    el.addEventListener("click", handler);
+    return () => el.removeEventListener("click", handler);
+  }, [filePath, onOpenFile]);
+
+  return (
+    <button
+      ref={elRef}
+      type="button"
+      title="Open file"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        cursor: "pointer",
+        flexShrink: 0,
+        margin: 0,
+        marginLeft: 4,
+        padding: 2,
+        border: "none",
+        background: "none",
+        color: "inherit",
+        opacity: 0.5,
+        lineHeight: 1,
+      }}
+    >
+      <LuExternalLink size={12} />
+    </button>
+  );
+}
+
 function DiffFileHeader({
   filePath,
   fileName,
@@ -45,6 +95,7 @@ function DiffFileHeader({
   deletions,
   isCollapsed,
   onToggle,
+  onOpenFile,
 }: {
   filePath: string;
   fileName: string;
@@ -53,6 +104,7 @@ function DiffFileHeader({
   deletions: number;
   isCollapsed: boolean;
   onToggle: (path: string) => void;
+  onOpenFile?: (path: string) => void;
 }) {
   const elRef = useRef<HTMLDivElement>(null);
 
@@ -113,11 +165,13 @@ function DiffFileHeader({
       {deletions > 0 && (
         <span style={{ fontSize: 11, color: "var(--diffs-deletion-base, #ff2e3f)", flexShrink: 0 }}>-{deletions}</span>
       )}
+
+      {onOpenFile && <OpenFileButton filePath={filePath} onOpenFile={onOpenFile} />}
     </div>
   );
 }
 
-export function MultiFileDiffViewer({ files }: MultiFileDiffViewerProps) {
+export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerProps) {
   const theme = useTheme();
   const codeViewRef = useRef<CodeViewHandle<undefined>>(null);
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(() => {
@@ -132,6 +186,9 @@ export function MultiFileDiffViewer({ files }: MultiFileDiffViewerProps) {
 
   const collapsedKeysRef = useRef(collapsedKeys);
   collapsedKeysRef.current = collapsedKeys;
+
+  const onOpenFileRef = useRef(onOpenFile);
+  onOpenFileRef.current = onOpenFile;
 
   const allExpanded = collapsedKeys.size === 0;
   const allCollapsed = collapsedKeys.size === files.length;
@@ -228,6 +285,7 @@ export function MultiFileDiffViewer({ files }: MultiFileDiffViewerProps) {
           deletions={meta?.deletions ?? 0}
           isCollapsed={isCollapsed}
           onToggle={handleToggleFile}
+          onOpenFile={onOpenFileRef.current}
         />
       );
     },

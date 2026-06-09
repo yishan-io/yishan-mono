@@ -45,7 +45,17 @@ export function useTabContentRenderer({
         if (tab.data.files && tab.data.files.length > 0) {
           return (
             <TabPanel key={tab.id} active={isSelected}>
-              <MultiFileDiffViewer files={tab.data.files} />
+              <MultiFileDiffViewer
+                files={tab.data.files}
+                onOpenFile={(filePath) => {
+                  cmd.openTab({
+                    workspaceId: tab.workspaceId,
+                    kind: "file",
+                    path: filePath,
+                    temporary: true,
+                  });
+                }}
+              />
             </TabPanel>
           );
         }
