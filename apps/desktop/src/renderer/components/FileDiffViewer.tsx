@@ -54,6 +54,8 @@ export function FileDiffViewer({ filePath, oldContent, newContent }: FileDiffVie
           borderColor: "divider",
           display: "flex",
           alignItems: "center",
+          justifyContent: "flex-end",
+          gap: 0.25,
           bgcolor: (muiTheme) =>
             muiTheme.palette.mode === "dark" ? "background.default" : muiTheme.palette.background.paper,
         }}
