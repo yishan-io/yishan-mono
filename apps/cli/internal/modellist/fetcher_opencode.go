@@ -1,9 +1,13 @@
 package modellist
 
 import (
+	"fmt"
+	"os"
 	"os/exec"
 	"sort"
 	"strings"
+
+	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
 const opencodeAgentKind = "opencode"
@@ -13,7 +17,13 @@ type opencodeFetcher struct{}
 func (f opencodeFetcher) AgentKind() string { return opencodeAgentKind }
 
 func (f opencodeFetcher) Fetch() ([]ModelInfo, error) {
-	cmd := exec.Command("opencode", "models")
+	env := shellenv.ResolveEnvWithUserPath(os.Environ(), os.Getenv("SHELL"))
+	opencodePath := shellenv.ResolveExecutablePathFromEnv("opencode", env)
+	if opencodePath == "" {
+		return nil, fmt.Errorf("opencode not found in resolved PATH")
+	}
+
+	cmd := exec.Command(opencodePath, "models")
 	isolateCmd(cmd)
 	output, err := cmd.Output()
 	if err != nil {
