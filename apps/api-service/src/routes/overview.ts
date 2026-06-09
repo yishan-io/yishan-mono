@@ -2,6 +2,7 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 
 import {
+  getOverviewAgentKindBreakdownHandler,
   getOverviewModelBreakdownHandler,
   getOverviewTokenUsageHandler,
   getOverviewWorkspaceInsightsHandler,
@@ -10,6 +11,7 @@ import type { AppEnv } from "@/hono";
 import { requireOrganizationMemberFromParam } from "@/middlewares/organization-access";
 import { validationErrorResponse } from "@/validation/error-response";
 import {
+  overviewAgentKindBreakdownQuerySchema,
   overviewModelBreakdownQuerySchema,
   overviewOrgParamsSchema,
   overviewTokenUsageQuerySchema,
@@ -33,6 +35,13 @@ router.get(
   zValidator("param", overviewOrgParamsSchema, validationErrorResponse),
   zValidator("query", overviewModelBreakdownQuerySchema, validationErrorResponse),
   (c) => getOverviewModelBreakdownHandler(c, c.req.valid("param"), c.req.valid("query")),
+);
+
+router.get(
+  "/overview/agent-kind-breakdown",
+  zValidator("param", overviewOrgParamsSchema, validationErrorResponse),
+  zValidator("query", overviewAgentKindBreakdownQuerySchema, validationErrorResponse),
+  (c) => getOverviewAgentKindBreakdownHandler(c, c.req.valid("param"), c.req.valid("query")),
 );
 
 router.get(

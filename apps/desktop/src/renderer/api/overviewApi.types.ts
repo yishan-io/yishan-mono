@@ -15,6 +15,15 @@ export type OverviewTokenUsageResponse = {
 
 export type ModelBreakdownItem = {
   modelNormalized: string;
+  agentKind: string;
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  percentage: number;
+};
+
+export type AgentKindBreakdownItem = {
+  agentKind: string;
   totalTokens: number;
   inputTokens: number;
   outputTokens: number;

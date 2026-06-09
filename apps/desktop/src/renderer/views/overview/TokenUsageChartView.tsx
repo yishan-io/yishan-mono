@@ -77,7 +77,9 @@ export function TokenUsageChartView() {
   if (loadState === "loading" || loadState === "idle") {
     return (
       <Box sx={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Typography variant="body2" color="text.secondary">Loading chart...</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Loading chart...
+        </Typography>
       </Box>
     );
   }
@@ -91,7 +93,9 @@ export function TokenUsageChartView() {
       <Box sx={{ height: 240, width: "100%" }}>
         {chartData.length === 0 ? (
           <Box sx={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Typography variant="body2" color="text.secondary">No token usage data available</Typography>
+            <Typography variant="body2" color="text.secondary">
+              No token usage data available
+            </Typography>
           </Box>
         ) : (
           <BarChart
@@ -145,19 +149,25 @@ export function TokenUsageChartView() {
 
       <Box sx={{ display: "flex", gap: 3, mt: 1.5, flexWrap: "wrap" }}>
         <Box>
-          <Typography variant="caption" color="text.secondary">Total</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Total
+          </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
             {formatTokens(totalTokens)}
           </Typography>
         </Box>
         <Box>
-          <Typography variant="caption" color="text.secondary">Cached</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Cached
+          </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace", color: "#4CAF50" }}>
             {formatTokens(cachedTotal)} ({cachedPercentage}%)
           </Typography>
         </Box>
         <Box>
-          <Typography variant="caption" color="text.secondary">Uncached</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Uncached
+          </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace", color: "#FF9800" }}>
             {formatTokens(uncachedTotal)}
           </Typography>

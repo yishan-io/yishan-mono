@@ -1,4 +1,4 @@
-import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Paper, Typography } from "@mui/material";
 import { useCallback, useEffect } from "react";
 import { LuChartBar } from "react-icons/lu";
 import { PaneHeader } from "../../components/PaneHeader";
@@ -9,6 +9,7 @@ import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneV
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { overviewStore } from "../../store/overviewStore";
 import { workspaceStore } from "../../store/workspaceStore";
+import { AgentKindChartView } from "./AgentKindChartView";
 import { ModelBreakdownView } from "./ModelBreakdownView";
 import { OverviewFiltersView } from "./OverviewFiltersView";
 import { TokenUsageChartView } from "./TokenUsageChartView";
@@ -17,6 +18,14 @@ import { WorkspaceInsightsView } from "./WorkspaceInsightsView";
 type OverviewViewProps = {
   onClose?: () => void;
 };
+
+const panelSx = {
+  border: 1,
+  borderColor: "divider",
+  borderRadius: 2,
+  bgcolor: "background.paper",
+  p: 2,
+} as const;
 
 export function OverviewView({ onClose }: OverviewViewProps = {}) {
   const { leftCollapsed, onToggleLeftPane } = useWorkspacePaneVisibilityContext();
@@ -28,6 +37,8 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
   const tokenUsageLoadError = overviewStore((state) => state.tokenUsageLoadError);
   const modelBreakdownLoadState = overviewStore((state) => state.modelBreakdownLoadState);
   const modelBreakdownLoadError = overviewStore((state) => state.modelBreakdownLoadError);
+  const agentKindBreakdownLoadState = overviewStore((state) => state.agentKindBreakdownLoadState);
+  const agentKindBreakdownLoadError = overviewStore((state) => state.agentKindBreakdownLoadError);
   const workspaceInsightsLoadState = overviewStore((state) => state.workspaceInsightsLoadState);
   const workspaceInsightsLoadError = overviewStore((state) => state.workspaceInsightsLoadError);
   const projects = workspaceStore((state) => state.projects);
@@ -39,11 +50,15 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
   }, [loadAllOverviewData]);
 
   const hasAnyError =
-    tokenUsageLoadState === "error" || modelBreakdownLoadState === "error" || workspaceInsightsLoadState === "error";
+    tokenUsageLoadState === "error" ||
+    modelBreakdownLoadState === "error" ||
+    agentKindBreakdownLoadState === "error" ||
+    workspaceInsightsLoadState === "error";
 
   const isLoading =
     (tokenUsageLoadState === "loading" || tokenUsageLoadState === "idle") &&
     (modelBreakdownLoadState === "loading" || modelBreakdownLoadState === "idle") &&
+    (agentKindBreakdownLoadState === "loading" || agentKindBreakdownLoadState === "idle") &&
     (workspaceInsightsLoadState === "loading" || workspaceInsightsLoadState === "idle");
 
   const handleRetry = useCallback(() => {
@@ -99,6 +114,7 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
             >
               {tokenUsageLoadError ??
                 modelBreakdownLoadError ??
+                agentKindBreakdownLoadError ??
                 workspaceInsightsLoadError ??
                 "Failed to load overview data"}
             </Alert>
@@ -107,7 +123,6 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
 
         {!isLoading && !hasAnyError ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <TokenUsageChartView />
             <Box
               sx={{
                 display: "grid",
@@ -115,8 +130,26 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
                 gap: 3,
               }}
             >
-              <ModelBreakdownView />
-              <WorkspaceInsightsView />
+              <Paper sx={panelSx}>
+                <TokenUsageChartView />
+              </Paper>
+              <Paper sx={panelSx}>
+                <AgentKindChartView />
+              </Paper>
+            </Box>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
+                gap: 3,
+              }}
+            >
+              <Paper sx={panelSx}>
+                <ModelBreakdownView />
+              </Paper>
+              <Paper sx={panelSx}>
+                <WorkspaceInsightsView />
+              </Paper>
             </Box>
           </Box>
         ) : null}

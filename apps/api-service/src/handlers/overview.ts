@@ -2,6 +2,7 @@ import { StatusCodes } from "http-status-codes";
 
 import type { AppContext } from "@/hono";
 import type {
+  OverviewAgentKindBreakdownQueryInput,
   OverviewModelBreakdownQueryInput,
   OverviewOrgParamsInput,
   OverviewTokenUsageQueryInput,
@@ -35,6 +36,24 @@ export async function getOverviewModelBreakdownHandler(
   const actorUser = c.get("sessionUser");
   const actorRole = c.get("organizationRole");
   const result = await c.get("services").overview.getModelBreakdown({
+    organizationId: params.orgId,
+    actorUserId: actorUser.id,
+    actorRole,
+    range: query.range,
+    projectId: query.projectId,
+  });
+
+  return c.json(result, StatusCodes.OK);
+}
+
+export async function getOverviewAgentKindBreakdownHandler(
+  c: AppContext,
+  params: OverviewOrgParamsInput,
+  query: OverviewAgentKindBreakdownQueryInput,
+) {
+  const actorUser = c.get("sessionUser");
+  const actorRole = c.get("organizationRole");
+  const result = await c.get("services").overview.getAgentKindBreakdown({
     organizationId: params.orgId,
     actorUserId: actorUser.id,
     actorRole,

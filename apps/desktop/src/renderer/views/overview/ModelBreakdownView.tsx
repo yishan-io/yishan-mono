@@ -84,6 +84,9 @@ export function ModelBreakdownView() {
               <Box component="th" sx={thSx}>
                 Model
               </Box>
+              <Box component="th" sx={thSx}>
+                Agent
+              </Box>
               <Box component="th" sx={thNumericSx}>
                 Total Tokens
               </Box>
@@ -104,6 +107,11 @@ export function ModelBreakdownView() {
                 <Box component="td" sx={tdSx}>
                   <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: 12 }}>
                     {model.modelNormalized}
+                  </Typography>
+                </Box>
+                <Box component="td" sx={tdSx}>
+                  <Typography variant="body2" sx={{ fontSize: 12, textTransform: "capitalize" }}>
+                    {model.agentKind}
                   </Typography>
                 </Box>
                 <Box component="td" sx={tdNumericSx}>
