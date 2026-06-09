@@ -30,17 +30,17 @@ type CustomHeaderItem = {
   file?: { name: string };
 };
 
-function getChangeKindLabel(changeType: string): string {
-  if (changeType === "new") return "Added";
-  if (changeType === "deleted") return "Deleted";
-  if (changeType === "rename-pure" || changeType === "rename-changed") return "Renamed";
+function getChangeKindLabel(changeKind: string | undefined): string {
+  if (changeKind === "added") return "Added";
+  if (changeKind === "deleted") return "Deleted";
+  if (changeKind === "renamed") return "Renamed";
   return "";
 }
 
 function DiffFileHeader({
   filePath,
   fileName,
-  changeType,
+  changeKind,
   additions,
   deletions,
   isCollapsed,
@@ -48,7 +48,7 @@ function DiffFileHeader({
 }: {
   filePath: string;
   fileName: string;
-  changeType: string;
+  changeKind?: string;
   additions: number;
   deletions: number;
   isCollapsed: boolean;
@@ -70,7 +70,7 @@ function DiffFileHeader({
     return () => el.removeEventListener("click", handler);
   }, [filePath, onToggle]);
 
-  const changeKindLabel = getChangeKindLabel(changeType);
+  const changeKindLabel = getChangeKindLabel(changeKind);
 
   return (
     <div
@@ -209,10 +209,10 @@ export function MultiFileDiffViewer({ files }: MultiFileDiffViewerProps) {
     setChangesOnly((prev) => !prev);
   }, []);
 
-  const fileStatsByPath = useMemo(() => {
-    const map = new Map<string, { additions: number; deletions: number }>();
+  const fileMetaByPath = useMemo(() => {
+    const map = new Map<string, { additions: number; deletions: number; changeKind: string }>();
     for (const f of files) {
-      map.set(f.path, { additions: f.additions, deletions: f.deletions });
+      map.set(f.path, { additions: f.additions, deletions: f.deletions, changeKind: f.changeKind });
     }
     return map;
   }, [files]);
@@ -221,22 +221,21 @@ export function MultiFileDiffViewer({ files }: MultiFileDiffViewerProps) {
     (item: CustomHeaderItem) => {
       const filePath = item.id;
       const isCollapsed = collapsedKeysRef.current.has(filePath);
-      const stats = fileStatsByPath.get(filePath);
+      const meta = fileMetaByPath.get(filePath);
       const name = item.fileDiff?.name ?? item.file?.name ?? filePath;
-      const changeType = item.fileDiff?.type ?? "change";
       return (
         <DiffFileHeader
           filePath={filePath}
           fileName={name}
-          changeType={changeType}
-          additions={stats?.additions ?? 0}
-          deletions={stats?.deletions ?? 0}
+          changeKind={meta?.changeKind}
+          additions={meta?.additions ?? 0}
+          deletions={meta?.deletions ?? 0}
           isCollapsed={isCollapsed}
           onToggle={handleToggleFile}
         />
       );
     },
-    [handleToggleFile, fileStatsByPath],
+    [handleToggleFile, fileMetaByPath],
   );
 
   return (
