@@ -16,6 +16,7 @@ import {
   LuRows2,
 } from "react-icons/lu";
 import type { FileDiffEntry } from "../store/types";
+import { getFileTreeIcon } from "./fileTreeIcons";
 
 type MultiFileDiffViewerProps = {
   files: FileDiffEntry[];
@@ -88,7 +89,7 @@ function DiffFileHeader({
         {isCollapsed ? <LuChevronRight size={14} /> : <LuChevronDown size={14} />}
       </span>
 
-      {<LuFileText size={14} style={{ flexShrink: 0, opacity: 0.5 }} />}
+      {<img src={getFileTreeIcon(fileName, false)} alt="" style={{ width: 14, height: 14, flexShrink: 0 }} />}
 
       <span
         style={{
