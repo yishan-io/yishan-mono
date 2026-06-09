@@ -82,7 +82,15 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
       <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
         <FileDiff
           fileDiff={fileDiff}
-          style={{ height: "100%", overflow: "auto" }}
+          style={
+            {
+              height: "100%",
+              overflow: "auto",
+              "--diffs-font-family": '"JetBrains Mono", "SF Mono", Menlo, monospace',
+              "--diffs-font-size": "13px",
+              "--diffs-line-height": "20px",
+            } as React.CSSProperties
+          }
           options={{
             theme: diffTheme,
             diffStyle: sideBySide ? "split" : "unified",

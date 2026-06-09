@@ -365,7 +365,16 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
           <CodeView
             ref={codeViewRef}
             initialItems={initialItems}
-            style={{ position: "absolute", inset: 0, overflow: "auto" }}
+            style={
+              {
+                position: "absolute",
+                inset: 0,
+                overflow: "auto",
+                "--diffs-font-family": '"JetBrains Mono", "SF Mono", Menlo, monospace',
+                "--diffs-font-size": "13px",
+                "--diffs-line-height": "20px",
+              } as React.CSSProperties
+            }
             options={options}
             renderCustomHeader={renderCustomHeader}
           />
