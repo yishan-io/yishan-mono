@@ -106,6 +106,31 @@ export function useChangesTabActions({
         });
       } catch (error) {
         console.error("Failed to load workspace commit file diff", error);
+
+        if (targetBranch) {
+          try {
+            const fallbackResponse = await readDiff({
+              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              relativePath: normalizedRelativePath,
+            });
+            openTab({
+              workspaceId: selectedWorkspaceId,
+              kind: "diff",
+              path: normalizedRelativePath,
+              changeKind: "modified",
+              additions: 0,
+              deletions: 0,
+              oldContent: fallbackResponse.oldContent,
+              newContent: fallbackResponse.newContent,
+              diffSource: { kind: "workspace" },
+              temporary: true,
+            });
+            return;
+          } catch (fallbackError) {
+            console.error("Failed to load workspace file diff fallback", fallbackError);
+          }
+        }
+
         openTab({
           workspaceId: selectedWorkspaceId,
           kind: "diff",
@@ -201,6 +226,8 @@ export function useChangesTabActions({
         const normalizedPath = normalizeWorkspaceRelativePath(file.path);
         if (!normalizedPath) continue;
 
+        const changeKind: DiffFileChangeKind = file.kind === "untracked" ? "added" : (file.kind as DiffFileChangeKind);
+
         try {
           let response: { oldContent: string; newContent: string };
           if (isCommitMode && commitHash) {
@@ -222,8 +249,6 @@ export function useChangesTabActions({
             });
           }
 
-          const changeKind: DiffFileChangeKind =
-            file.kind === "untracked" ? "added" : (file.kind as DiffFileChangeKind);
           diffFiles.push({
             path: normalizedPath,
             oldContent: response.oldContent,
@@ -233,7 +258,26 @@ export function useChangesTabActions({
             deletions: file.deletions,
           });
         } catch (error) {
-          console.error(`Failed to load diff for ${normalizedPath}`, error);
+          if (targetBranch) {
+            try {
+              const fallbackResponse = await readDiff({
+                workspaceWorktreePath: selectedWorkspaceWorktreePath,
+                relativePath: normalizedPath,
+              });
+              diffFiles.push({
+                path: normalizedPath,
+                oldContent: fallbackResponse.oldContent,
+                newContent: fallbackResponse.newContent,
+                changeKind,
+                additions: file.additions,
+                deletions: file.deletions,
+              });
+            } catch (fallbackError) {
+              console.error(`Failed to load diff for ${normalizedPath}`, error);
+            }
+          } else {
+            console.error(`Failed to load diff for ${normalizedPath}`, error);
+          }
         }
       }
 
