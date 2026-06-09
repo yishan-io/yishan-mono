@@ -65,11 +65,11 @@ func resolveDefaultArgs(command string, goos string) []string {
 
 func resolveEnv(baseEnv []string, requestEnv []string) []string {
 	env := append([]string{}, baseEnv...)
-	env = upsertEnv(env, "TERM", envValueOrDefault(env, "TERM", "xterm-256color"))
-	env = upsertEnv(env, "COLORTERM", envValueOrDefault(env, "COLORTERM", "truecolor"))
-	env = upsertEnv(env, "LANG", envValueOrDefault(env, "LANG", "en_US.UTF-8"))
+	env = shellenv.UpsertEnv(env, "TERM", shellenv.EnvValueOrDefault(env, "TERM", "xterm-256color"))
+	env = shellenv.UpsertEnv(env, "COLORTERM", shellenv.EnvValueOrDefault(env, "COLORTERM", "truecolor"))
+	env = shellenv.UpsertEnv(env, "LANG", shellenv.EnvValueOrDefault(env, "LANG", "en_US.UTF-8"))
 	env = mergeEnvOverrides(env, requestEnv)
-	env = resolveManagedRuntimeEnv(env, resolveDefaultCommand(runtime.GOOS, envValueOrDefault(env, "SHELL", "")))
+	env = shellenv.ResolveManagedRuntimeEnv(env, resolveDefaultCommand(runtime.GOOS, shellenv.EnvValueOrDefault(env, "SHELL", "")))
 	return env
 }
 
@@ -80,15 +80,8 @@ func mergeEnvOverrides(env []string, overrides []string) []string {
 			env = append(env, entry)
 			continue
 		}
-		env = upsertEnv(env, key, value)
+		env = shellenv.UpsertEnv(env, key, value)
 	}
 	return env
 }
 
-func envValueOrDefault(env []string, key string, fallback string) string {
-	return shellenv.EnvValueOrDefault(env, key, fallback)
-}
-
-func upsertEnv(env []string, key string, value string) []string {
-	return shellenv.UpsertEnv(env, key, value)
-}

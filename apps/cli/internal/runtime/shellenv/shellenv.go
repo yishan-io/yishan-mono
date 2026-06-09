@@ -1,9 +1,7 @@
 package shellenv
 
 import (
-	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -36,37 +34,6 @@ func ResolveUserShell(shellEnv string) string {
 	return "/bin/sh"
 }
 
-func EnvValueOrDefault(env []string, key string, fallback string) string {
-	prefix := key + "="
-	for _, entry := range env {
-		if strings.HasPrefix(entry, prefix) && strings.TrimSpace(strings.TrimPrefix(entry, prefix)) != "" {
-			return strings.TrimPrefix(entry, prefix)
-		}
-	}
-	return fallback
-}
-
-func UpsertEnv(env []string, key string, value string) []string {
-	prefix := key + "="
-	for index, entry := range env {
-		if strings.HasPrefix(entry, prefix) {
-			env[index] = prefix + value
-			return env
-		}
-	}
-	return append(env, prefix+value)
-}
-
-func PrependPathValue(pathValue string, directory string) string {
-	if strings.TrimSpace(directory) == "" {
-		return pathValue
-	}
-	if strings.TrimSpace(pathValue) == "" {
-		return directory
-	}
-	return directory + string(os.PathListSeparator) + pathValue
-}
-
 func ResolveManagedRuntimeEnv(baseEnv []string, command string) []string {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -85,51 +52,17 @@ func ResolveManagedRuntimeEnv(baseEnv []string, command string) []string {
 	return env
 }
 
-func EnsurePathHasExistingDirectories(env []string, directories []string) []string {
-	currentPath := EnvValueOrDefault(env, "PATH", "")
-	pathDirs := strings.Split(currentPath, string(os.PathListSeparator))
-	pathSet := make(map[string]bool, len(pathDirs))
-	for _, d := range pathDirs {
-		pathSet[d] = true
-	}
-
-	var toAppend []string
-	for _, dir := range directories {
-		if strings.TrimSpace(dir) == "" || pathSet[dir] {
-			continue
-		}
-		if info, err := os.Stat(dir); err == nil && info.IsDir() {
-			toAppend = append(toAppend, dir)
-			pathSet[dir] = true
-		}
-	}
-
-	if len(toAppend) == 0 {
-		return env
-	}
-
-	newPath := strings.Join(append(pathDirs, toAppend...), string(os.PathListSeparator))
-	if strings.TrimSpace(currentPath) == "" {
-		newPath = strings.Join(toAppend, string(os.PathListSeparator))
-	}
-	return UpsertEnv(env, "PATH", newPath)
-}
-
-func resolveLoginShellPath(shellCommand string) string {
-	if sh, err := GetLoginShell(); err == nil {
-		if loginPath := sh.Path(); strings.TrimSpace(loginPath) != "" {
-			return loginPath
-		}
-	}
-	return readLoginShellPath(shellCommand, loginShellPathTimeout)
-}
-
 func ResolveEnvWithUserPath(env []string, shellCommand string) []string {
-	pathValues := []string{EnvValueOrDefault(env, "PATH", os.Getenv("PATH"))}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		homeDir = ""
+	}
+
+	pathValues := []string{normalizePathValue(EnvValueOrDefault(env, "PATH", os.Getenv("PATH")), homeDir)}
 
 	if runtime.GOOS != "windows" {
 		if loginPath := resolveLoginShellPath(shellCommand); strings.TrimSpace(loginPath) != "" {
-			pathValues = append(pathValues, loginPath)
+			pathValues = append(pathValues, normalizePathValue(loginPath, homeDir))
 		}
 	}
 
@@ -144,7 +77,12 @@ func ResolveExecutablePathFromEnv(command string, env []string) string {
 		return ""
 	}
 
-	pathValue := EnvValueOrDefault(env, "PATH", "")
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		homeDir = ""
+	}
+
+	pathValue := normalizePathValue(EnvValueOrDefault(env, "PATH", ""), homeDir)
 	if strings.TrimSpace(pathValue) == "" {
 		return ""
 	}
@@ -166,41 +104,13 @@ func ResolveExecutablePathFromEnv(command string, env []string) string {
 	return ""
 }
 
-func CommonUserBinDirectories() []string {
-	directories := []string{"/opt/homebrew/bin", "/usr/local/bin"}
-	homeDir, err := os.UserHomeDir()
-	if err != nil || strings.TrimSpace(homeDir) == "" {
-		return directories
+func resolveLoginShellPath(shellCommand string) string {
+	if sh, err := GetLoginShell(); err == nil {
+		if loginPath := sh.Path(); strings.TrimSpace(loginPath) != "" {
+			return loginPath
+		}
 	}
-
-	return append(directories,
-		filepath.Join(homeDir, ManagedRuntimeRootDirName, "bin"),
-		filepath.Join(homeDir, ".opencode", "bin"),
-		filepath.Join(homeDir, ".local", "bin"),
-		filepath.Join(homeDir, ".bun", "bin"),
-		filepath.Join(homeDir, ".npm-global", "bin"),
-		filepath.Join(homeDir, "go", "bin"),
-		filepath.Join(homeDir, ".cargo", "bin"),
-	)
-}
-
-func readLoginShellPath(shellCommand string, timeout time.Duration) string {
-	shellPath := ResolveUserShell(shellCommand)
-	if strings.TrimSpace(shellPath) == "" {
-		return ""
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	command := exec.CommandContext(ctx, shellPath, "-lic", `printf %s "$PATH"`)
-	command.Stdin = nil
-	output, err := command.Output()
-	if err != nil {
-		return ""
-	}
-
-	return strings.TrimSpace(string(output))
+	return readLoginShellPath(shellCommand, loginShellPathTimeout)
 }
 
 func resolveOrigZdotdir(env []string, managedZshDir string, homeDir string) string {

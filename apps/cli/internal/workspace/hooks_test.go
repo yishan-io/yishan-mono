@@ -322,7 +322,7 @@ func TestResolveHookEnv_DoesNotMutateBaseEnv(t *testing.T) {
 func TestEnsureCommonPathDirectories_AppendsExistingDirs(t *testing.T) {
 	// /usr/local/bin should exist on macOS/Linux and get appended if missing.
 	env := []string{"PATH=/usr/bin"}
-	result := ensureCommonPathDirectories(env)
+	result := shellenv.EnsurePathHasExistingDirectories(env, shellenv.CommonUserBinDirectories())
 
 	pathValue := shellenv.EnvValueOrDefault(result, "PATH", "")
 	if !strings.Contains(pathValue, "/usr/bin") {
@@ -338,7 +338,7 @@ func TestEnsureCommonPathDirectories_AppendsExistingDirs(t *testing.T) {
 
 func TestEnsureCommonPathDirectories_SkipsDuplicates(t *testing.T) {
 	env := []string{"PATH=/usr/local/bin:/usr/bin"}
-	result := ensureCommonPathDirectories(env)
+	result := shellenv.EnsurePathHasExistingDirectories(env, shellenv.CommonUserBinDirectories())
 
 	pathValue := shellenv.EnvValueOrDefault(result, "PATH", "")
 	count := strings.Count(pathValue, "/usr/local/bin")

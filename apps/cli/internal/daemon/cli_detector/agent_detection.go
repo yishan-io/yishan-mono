@@ -405,7 +405,9 @@ func versionCommandArgsForAgent(agentKind string) [][]string {
 		return [][]string{{"--version"}, {}}
 	}
 
-	return [][]string{{"--version"}, {"version"}, {"-v"}}
+	// Try the most common version flags first, then fall back to a bare
+	// invocation for CLIs that print their version when run with no args.
+	return [][]string{{"--version"}, {"version"}, {"-v"}, {}}
 }
 
 func isManagedWrapperMissingRealOutput(output string) bool {

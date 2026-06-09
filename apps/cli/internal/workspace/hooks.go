@@ -156,7 +156,7 @@ func resolveHookUserShell() string {
 // managed ~/.yishan/bin directory, and injects hook-specific variables.
 func resolveHookEnv(baseEnv []string, workspaceID, workspacePath, hookName string) []string {
 	env := append([]string{}, baseEnv...)
-	env = ensureCommonPathDirectories(env)
+	env = shellenv.EnsurePathHasExistingDirectories(env, shellenv.CommonUserBinDirectories())
 	env = append(env,
 		"YISHAN_WORKSPACE_ID="+workspaceID,
 		"YISHAN_WORKSPACE_PATH="+workspacePath,
@@ -165,10 +165,3 @@ func resolveHookEnv(baseEnv []string, workspaceID, workspacePath, hookName strin
 	return env
 }
 
-// ensureCommonPathDirectories appends well-known user binary directories to
-// PATH if they exist on disk and are not already present. This provides a
-// safety net for finding tools like bun, node, go, etc. even if the login
-// shell profile doesn't fully initialize (e.g. non-interactive fallback).
-func ensureCommonPathDirectories(env []string) []string {
-	return shellenv.EnsurePathHasExistingDirectories(env, shellenv.CommonUserBinDirectories())
-}

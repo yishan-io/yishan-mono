@@ -29,17 +29,14 @@ func resolveManagedRuntimeEnv(baseEnv []string, command string) []string {
 func resolveSessionMetadataEnv(baseEnv []string, req StartRequest) []string {
 	env := baseEnv
 	if strings.TrimSpace(req.WorkspaceID) != "" {
-		env = upsertEnv(env, workspaceIDEnvKey, strings.TrimSpace(req.WorkspaceID))
+		env = shellenv.UpsertEnv(env, workspaceIDEnvKey, strings.TrimSpace(req.WorkspaceID))
 	}
 	if strings.TrimSpace(req.TabID) != "" {
-		env = upsertEnv(env, tabIDEnvKey, strings.TrimSpace(req.TabID))
+		env = shellenv.UpsertEnv(env, tabIDEnvKey, strings.TrimSpace(req.TabID))
 	}
 	if strings.TrimSpace(req.PaneID) != "" {
-		env = upsertEnv(env, paneIDEnvKey, strings.TrimSpace(req.PaneID))
+		env = shellenv.UpsertEnv(env, paneIDEnvKey, strings.TrimSpace(req.PaneID))
 	}
 	return env
 }
 
-func prependPathValue(pathValue string, directory string) string {
-	return shellenv.PrependPathValue(pathValue, directory)
-}
