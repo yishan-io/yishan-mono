@@ -63,14 +63,11 @@ export function FileDiffViewer({ filePath, oldContent, newContent }: FileDiffVie
             {changesOnly ? <LuFileText size={14} /> : <LuDiff size={14} />}
           </IconButton>
         </Tooltip>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, ml: 1 }}>
-          <IconButton size="small" onClick={() => setSideBySide(false)} disabled={!sideBySide}>
-            <LuStretchHorizontal size={14} />
+        <Tooltip title={sideBySide ? "Switch to inline view" : "Switch to side-by-side view"}>
+          <IconButton size="small" onClick={() => setSideBySide((prev) => !prev)} sx={{ ml: 0.5 }}>
+            {sideBySide ? <LuStretchVertical size={14} /> : <LuStretchHorizontal size={14} />}
           </IconButton>
-          <IconButton size="small" onClick={() => setSideBySide(true)} disabled={sideBySide} sx={{ ml: 0.25 }}>
-            <LuStretchVertical size={14} />
-          </IconButton>
-        </Box>
+        </Tooltip>
       </Box>
       <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
         <FileDiff
