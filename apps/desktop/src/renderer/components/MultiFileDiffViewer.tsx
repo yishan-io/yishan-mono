@@ -120,7 +120,13 @@ function DiffFileHeader({
 export function MultiFileDiffViewer({ files }: MultiFileDiffViewerProps) {
   const theme = useTheme();
   const codeViewRef = useRef<CodeViewHandle<undefined>>(null);
-  const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(new Set());
+  const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const f of files) {
+      if (f.changeKind === "deleted") initial.add(f.path);
+    }
+    return initial;
+  });
   const [sideBySide, setSideBySide] = useState(false);
   const [changesOnly, setChangesOnly] = useState(true);
 
@@ -153,7 +159,7 @@ export function MultiFileDiffViewer({ files }: MultiFileDiffViewerProps) {
           { name: file.path, contents: file.oldContent },
           { name: file.path, contents: file.newContent },
         ),
-        collapsed: false,
+        collapsed: file.changeKind === "deleted",
         version: 0,
       })),
     [files],
