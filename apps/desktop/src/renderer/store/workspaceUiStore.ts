@@ -7,6 +7,9 @@ export type WorkspaceListHierarchyMode = "by_project" | "by_node";
 /** Default right-pane tab when no per-workspace preference has been set. */
 export const DEFAULT_RIGHT_PANE_TAB: WorkspaceRightPaneTab = "files";
 
+/** Which overlay panel (if any) is shown in place of the main pane. */
+export type OverlayPanel = "overview" | "scheduledJob";
+
 type WorkspaceUiStoreState = {
   // ── file tree signals ──────────────────────────────────────────────────────
   selectedEntryPath: string;
@@ -19,10 +22,8 @@ type WorkspaceUiStoreState = {
   /** Whether the right pane is manually hidden per workspace. Falls back to `true` (hidden). */
   isRightPaneHiddenByWorkspaceId: Record<string, boolean>;
   fileSearchRequestKey: number;
-  /** Whether the scheduled job panel is visible in the main pane. */
-  isScheduledJobPanelOpen: boolean;
-  /** Whether the overview dashboard panel is visible in the main pane. */
-  isOverviewPanelOpen: boolean;
+  /** Which overlay panel is currently visible in the main pane, or `null` for none. */
+  overlayPanel: OverlayPanel | null;
 
   setSelectedEntryPath: (path: string) => void;
   setExpandedFileTreeItems: (workspaceId: string, paths: string[]) => void;
@@ -31,8 +32,10 @@ type WorkspaceUiStoreState = {
   setRightPaneTab: (workspaceId: string, tab: WorkspaceRightPaneTab) => void;
   setIsRightPaneHidden: (workspaceId: string, hidden: boolean) => void;
   requestFileSearch: () => void;
-  setScheduledJobPanelOpen: (isOpen: boolean) => void;
-  setOverviewPanelOpen: (isOpen: boolean) => void;
+  /** Opens the given overlay panel (closing any other). */
+  setOverlayPanel: (panel: OverlayPanel | null) => void;
+  /** Closes any open overlay panel. */
+  closeOverlayPanel: () => void;
 };
 
 /** Stores workspace-scoped UI signals: file-tree selection/commands and right-pane tab state. */
@@ -45,8 +48,7 @@ export const workspaceUiStore = create<WorkspaceUiStoreState>()(
     rightPaneTabByWorkspaceId: {},
     isRightPaneHiddenByWorkspaceId: {},
     fileSearchRequestKey: 0,
-    isScheduledJobPanelOpen: false,
-    isOverviewPanelOpen: false,
+    overlayPanel: null,
 
     setSelectedEntryPath: (selectedEntryPath) => {
       set({ selectedEntryPath });
@@ -81,11 +83,11 @@ export const workspaceUiStore = create<WorkspaceUiStoreState>()(
         state.fileSearchRequestKey += 1;
       });
     },
-    setScheduledJobPanelOpen: (isOpen) => {
-      set({ isScheduledJobPanelOpen: isOpen });
+    setOverlayPanel: (panel) => {
+      set({ overlayPanel: panel });
     },
-    setOverviewPanelOpen: (isOpen) => {
-      set({ isOverviewPanelOpen: isOpen });
+    closeOverlayPanel: () => {
+      set({ overlayPanel: null });
     },
   })),
 );

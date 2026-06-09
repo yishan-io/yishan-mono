@@ -32,37 +32,29 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
       })
     : t("layout.toggleLeftSidebar");
 
-  const isScheduledJobPanelOpen = workspaceUiStore((state) => state.isScheduledJobPanelOpen);
-  const setScheduledJobPanelOpen = workspaceUiStore((state) => state.setScheduledJobPanelOpen);
-  const isOverviewPanelOpen = workspaceUiStore((state) => state.isOverviewPanelOpen);
-  const setOverviewPanelOpen = workspaceUiStore((state) => state.setOverviewPanelOpen);
+  const overlayPanel = workspaceUiStore((state) => state.overlayPanel);
+  const setOverlayPanel = workspaceUiStore((state) => state.setOverlayPanel);
+  const isScheduledJobPanelOpen = overlayPanel === "scheduledJob";
+  const isOverviewPanelOpen = overlayPanel === "overview";
   const { setSelectedRepoId, setSelectedWorkspaceId } = useCommands();
 
   const handleToggleScheduledJobs = useCallback(() => {
-    const willOpen = !isScheduledJobPanelOpen;
-    setScheduledJobPanelOpen(willOpen);
-    setOverviewPanelOpen(false);
+    const willOpen = overlayPanel !== "scheduledJob";
+    setOverlayPanel(willOpen ? "scheduledJob" : null);
     if (willOpen) {
       setSelectedRepoId("");
       setSelectedWorkspaceId("");
     }
-  }, [
-    isScheduledJobPanelOpen,
-    setScheduledJobPanelOpen,
-    setOverviewPanelOpen,
-    setSelectedRepoId,
-    setSelectedWorkspaceId,
-  ]);
+  }, [overlayPanel, setOverlayPanel, setSelectedRepoId, setSelectedWorkspaceId]);
 
   const handleToggleOverview = useCallback(() => {
-    const willOpen = !isOverviewPanelOpen;
-    setOverviewPanelOpen(willOpen);
-    setScheduledJobPanelOpen(false);
+    const willOpen = overlayPanel !== "overview";
+    setOverlayPanel(willOpen ? "overview" : null);
     if (willOpen) {
       setSelectedRepoId("");
       setSelectedWorkspaceId("");
     }
-  }, [isOverviewPanelOpen, setOverviewPanelOpen, setScheduledJobPanelOpen, setSelectedRepoId, setSelectedWorkspaceId]);
+  }, [overlayPanel, setOverlayPanel, setSelectedRepoId, setSelectedWorkspaceId]);
 
   return (
     <Box

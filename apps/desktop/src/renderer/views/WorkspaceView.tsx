@@ -295,22 +295,16 @@ export function WorkspaceView() {
 
     return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
   });
-  const isScheduledJobPanelOpen = workspaceUiStore((state) => state.isScheduledJobPanelOpen);
-  const setScheduledJobPanelOpen = workspaceUiStore((state) => state.setScheduledJobPanelOpen);
-  const isOverviewPanelOpen = workspaceUiStore((state) => state.isOverviewPanelOpen);
-  const setOverviewPanelOpen = workspaceUiStore((state) => state.setOverviewPanelOpen);
+  const overlayPanel = workspaceUiStore((state) => state.overlayPanel);
+  const closeOverlayPanel = workspaceUiStore((state) => state.closeOverlayPanel);
   const cmd = useCommands();
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator());
   const { leftCollapsed, onToggleLeftPane } = paneVisibility;
 
-  const handleCloseScheduledJobPanel = useCallback(() => {
-    setScheduledJobPanelOpen(false);
-  }, [setScheduledJobPanelOpen]);
-
-  const handleCloseOverviewPanel = useCallback(() => {
-    setOverviewPanelOpen(false);
-  }, [setOverviewPanelOpen]);
+  const handleCloseOverlayPanel = useCallback(() => {
+    closeOverlayPanel();
+  }, [closeOverlayPanel]);
 
   useWorkspaceAppActions({ cmd, navigate });
   useWorkspaceBootstrap({ cmd, terminalRecoveryCoordinator });
@@ -386,10 +380,10 @@ export function WorkspaceView() {
           </Box>
         }
       >
-        {isScheduledJobPanelOpen ? (
-          <ScheduledJobView onClose={handleCloseScheduledJobPanel} />
-        ) : isOverviewPanelOpen ? (
-          <OverviewView onClose={handleCloseOverviewPanel} />
+        {overlayPanel === "scheduledJob" ? (
+          <ScheduledJobView onClose={handleCloseOverlayPanel} />
+        ) : overlayPanel === "overview" ? (
+          <OverviewView onClose={handleCloseOverlayPanel} />
         ) : (
           <MainPaneView />
         )}
