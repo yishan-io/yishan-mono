@@ -130,22 +130,54 @@ func scanCodexSessionFile(
 	}
 	defer fileHandle.Close()
 
+	var currentSessionID string
+	var currentCWD string
+	var currentModel string
+
 	scanner := bufio.NewScanner(fileHandle)
 	scanner.Buffer(make([]byte, 0, 64*1024), maxTokenUsageScanLineBytes)
 	for scanner.Scan() {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		event, ok := parseCodexEventLine(scanner.Bytes())
-		if !ok {
-			continue
+		line := parseCodexLine(scanner.Bytes())
+		switch line.kind {
+		case codexLineSessionMeta:
+			if line.sessionID != "" {
+				currentSessionID = line.sessionID
+			}
+			if line.cwd != "" {
+				currentCWD = line.cwd
+			}
+		case codexLineTurnContext:
+			if line.cwd != "" {
+				currentCWD = line.cwd
+			}
+			if line.model != "" {
+				currentModel = line.model
+			}
+		case codexLineTokenCount:
+			model := currentModel
+			if model == "" {
+				model = "unknown"
+			}
+			event := codexEvent{
+				SessionID: currentSessionID,
+				Model:     model,
+				CWD:       currentCWD,
+				Timestamp: line.timestamp,
+				Usage:     line.usage,
+			}
+			if event.SessionID == "" {
+				continue
+			}
+			if isBeforeScanWindow(event.Timestamp, input) {
+				state := getSessionState(states, event.SessionID)
+				state.LastTotals = &event.Usage
+				continue
+			}
+			applyCodexEvent(event, sessionFile, worktrees, states, buckets)
 		}
-		if isBeforeScanWindow(event.Timestamp, input) {
-			state := getSessionState(states, event.SessionID)
-			state.LastTotals = &event.Usage
-			continue
-		}
-		applyCodexEvent(event, sessionFile, worktrees, states, buckets)
 	}
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("scan codex session file %q: %w", sessionFile, err)
@@ -153,28 +185,72 @@ func scanCodexSessionFile(
 	return nil
 }
 
-func parseCodexEventLine(rawLine []byte) (codexEvent, bool) {
-	var payload map[string]any
-	if err := json.Unmarshal(rawLine, &payload); err != nil {
-		return codexEvent{}, false
-	}
-	eventTime, ok := parseEventTime(payload)
-	if !ok {
-		return codexEvent{}, false
-	}
-	sessionID := getString(payload, "session_id", "sessionId")
-	if sessionID == "" {
-		return codexEvent{}, false
-	}
-	usage, ok := parseUsage(payload)
-	if !ok {
-		return codexEvent{}, false
-	}
-	return codexEvent{SessionID: sessionID, Model: parseModel(payload), CWD: parseCWD(payload), Timestamp: eventTime, Usage: usage}, true
+type codexLineKind int
+
+const (
+	codexLineOther       codexLineKind = iota
+	codexLineSessionMeta
+	codexLineTurnContext
+	codexLineTokenCount
+)
+
+type codexParsedLine struct {
+	kind      codexLineKind
+	sessionID string
+	cwd       string
+	model     string
+	timestamp time.Time
+	usage     codexUsage
 }
 
-func parseEventTime(payload map[string]any) (time.Time, bool) {
-	rawTime := getString(payload, "timestamp", "time")
+func parseCodexLine(rawLine []byte) codexParsedLine {
+	var top map[string]any
+	if err := json.Unmarshal(rawLine, &top); err != nil {
+		return codexParsedLine{}
+	}
+	nested, _ := top["payload"].(map[string]any)
+	if nested == nil {
+		return codexParsedLine{}
+	}
+
+	lineType := getString(top, "type")
+	switch lineType {
+	case "session_meta":
+		return codexParsedLine{
+			kind:      codexLineSessionMeta,
+			sessionID: getString(nested, "id"),
+			cwd:       cleanCWDPath(getString(nested, "cwd")),
+		}
+	case "turn_context":
+		return codexParsedLine{
+			kind:  codexLineTurnContext,
+			cwd:   cleanCWDPath(getString(nested, "cwd")),
+			model: getString(nested, "model"),
+		}
+	case "event_msg":
+		if getString(nested, "type") != "token_count" {
+			return codexParsedLine{}
+		}
+		eventTime, ok := parseTimestamp(getString(top, "timestamp"))
+		if !ok {
+			return codexParsedLine{}
+		}
+		tokenInfo, _ := nested["info"].(map[string]any)
+		usage, ok := parseCodexTokenUsage(tokenInfo)
+		if !ok {
+			return codexParsedLine{}
+		}
+		return codexParsedLine{
+			kind:      codexLineTokenCount,
+			timestamp: eventTime,
+			usage:     usage,
+		}
+	default:
+		return codexParsedLine{}
+	}
+}
+
+func parseTimestamp(rawTime string) (time.Time, bool) {
 	if rawTime == "" {
 		return time.Time{}, false
 	}
@@ -185,15 +261,15 @@ func parseEventTime(payload map[string]any) (time.Time, bool) {
 	return parsed, true
 }
 
-func parseUsage(payload map[string]any) (codexUsage, bool) {
-	totalUsage, totalOK := usageFromAny(payload["total_usage"])
+func parseCodexTokenUsage(info map[string]any) (codexUsage, bool) {
+	totalUsage, totalOK := usageFromAny(info["total_token_usage"])
 	if !totalOK {
-		totalUsage, totalOK = usageFromAny(payload["usage"])
+		totalUsage, totalOK = usageFromAny(info["usage"])
 	}
 	if !totalOK {
 		return codexUsage{}, false
 	}
-	lastUsage, _ := usageFromAny(payload["last_usage"])
+	lastUsage, _ := usageFromAny(info["last_token_usage"])
 	if lastUsage.TotalTokens > 0 {
 		return lastUsage, true
 	}
@@ -217,16 +293,7 @@ func usageFromAny(value any) (codexUsage, bool) {
 	return codexUsage{InputTokens: input, OutputTokens: output, CachedInputTokens: cachedInput, CachedOutputTokens: cachedOutput, ReasoningTokens: reasoning, TotalTokens: total}, true
 }
 
-func parseModel(payload map[string]any) string {
-	model := getString(payload, "model")
-	if model == "" {
-		return "unknown"
-	}
-	return model
-}
-
-func parseCWD(payload map[string]any) string {
-	cwd := getString(payload, "cwd", "current_working_directory")
+func cleanCWDPath(cwd string) string {
 	if cwd == "" {
 		return ""
 	}
