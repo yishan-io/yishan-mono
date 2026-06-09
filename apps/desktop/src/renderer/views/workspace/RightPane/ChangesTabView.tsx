@@ -1,5 +1,6 @@
-import { Box } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import { LuEye } from "react-icons/lu";
 import { PaneLoadingBar } from "../../../components/PaneLoadingBar";
 import { ProjectCommitComparison } from "../../../components/ProjectCommitComparison";
 import { ProjectGitChangesList } from "../../../components/ProjectGitChangesList";
@@ -30,6 +31,7 @@ export function ChangesTabView() {
     unstagePaths,
     selectCommitChangedFile,
     selectWorkspaceFile,
+    viewAllDiffs,
     copyFilePath,
     copyRelativeFilePath,
   } = useChangesTabActions({
@@ -37,6 +39,17 @@ export function ChangesTabView() {
     selectedWorkspaceWorktreePath,
     refreshChanges,
   });
+
+  const allFiles = visibleChanges.flatMap((section) => section.files);
+  const hasFiles = allFiles.length > 0;
+
+  const handleViewAllDiffs = () => {
+    if (!hasFiles) return;
+    const commitHash =
+      selectedComparison !== "uncommitted" && selectedComparison !== "all" ? selectedComparison : undefined;
+    const targetBranch = selectedComparison === "all" ? selectedWorkspaceSourceBranch : undefined;
+    void viewAllDiffs(allFiles, isCommitChangesMode, commitHash, targetBranch);
+  };
 
   return (
     <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column" }}>
@@ -63,6 +76,20 @@ export function ChangesTabView() {
               comparisonScopeAriaLabel={t("files.git.changeScope")}
             />
           </Box>
+
+          {hasFiles && (
+            <Box sx={{ px: 1.5, pb: 0.5 }}>
+              <Button
+                size="small"
+                startIcon={<LuEye size={14} />}
+                onClick={handleViewAllDiffs}
+                variant="outlined"
+                sx={{ fontSize: 12, textTransform: "none" }}
+              >
+                View all diffs
+              </Button>
+            </Box>
+          )}
           <ProjectGitChangesList
             sections={visibleChanges}
             readOnly={isCommitChangesMode}

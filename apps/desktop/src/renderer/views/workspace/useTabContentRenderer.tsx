@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { FileDiffViewer } from "../../components/FileDiffViewer";
 import { FileEditor } from "../../components/FileEditor";
 import { ImagePreview } from "../../components/ImagePreview";
+import { MultiFileDiffViewer } from "../../components/MultiFileDiffViewer";
 import { TabPanel } from "../../components/TabPanel";
 import { UnsupportedFileView } from "../../components/UnsupportedFileView";
 import { copyToClipboard } from "../../helpers/clipboard";
@@ -41,6 +42,14 @@ export function useTabContentRenderer({
       const shouldFocusContent = isSelected && isInActivePane;
 
       if (tab.kind === "diff") {
+        if (tab.data.files && tab.data.files.length > 0) {
+          return (
+            <TabPanel key={tab.id} active={isSelected}>
+              <MultiFileDiffViewer files={tab.data.files} />
+            </TabPanel>
+          );
+        }
+
         return (
           <TabPanel key={tab.id} active={isSelected}>
             <FileDiffViewer
@@ -172,6 +181,15 @@ export function useTabContentRenderer({
 
       return null;
     },
-    [t, cmd, workspace, externalAppLabel, onOpenExternalApp, focusContentRequestKey, isWorkspaceActive, markdownDefaultViewMode],
+    [
+      t,
+      cmd,
+      workspace,
+      externalAppLabel,
+      onOpenExternalApp,
+      focusContentRequestKey,
+      isWorkspaceActive,
+      markdownDefaultViewMode,
+    ],
   );
 }

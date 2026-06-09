@@ -172,6 +172,7 @@
   "license": "Elastic-2.0",
   "dependencies": {
     "@mui/x-charts": "^9.4.0",
+    "@pierre/diffs": "^1.2.8",
     "electron-updater": "^6.8.3"
   }
 }

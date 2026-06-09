@@ -1,9 +1,10 @@
 import { useCallback } from "react";
-import type { DiffFileChangeKind } from "../../../store/types";
-import { useCommands } from "../../../hooks/useCommands";
 import { writeClipboardText } from "../../../commands/fileCommands";
-import { normalizeWorkspaceRelativePath } from "./useChangesTabState";
+import type { ProjectGitChangeItem } from "../../../components/ProjectGitChangesList";
+import { useCommands } from "../../../hooks/useCommands";
+import type { DiffFileChangeKind, FileDiffEntry } from "../../../store/types";
 import { resolveWorkspaceAbsolutePath } from "./fileTreeHelpers";
+import { normalizeWorkspaceRelativePath } from "./useChangesTabState";
 
 type UseChangesTabActionsInput = {
   selectedWorkspaceId: string;
@@ -16,8 +17,15 @@ export function useChangesTabActions({
   selectedWorkspaceWorktreePath,
   refreshChanges,
 }: UseChangesTabActionsInput) {
-  const { openTab, readBranchComparisonDiff, readCommitDiff, readDiff, revertGitChanges, trackGitChanges, unstageGitChanges } =
-    useCommands();
+  const {
+    openTab,
+    readBranchComparisonDiff,
+    readCommitDiff,
+    readDiff,
+    revertGitChanges,
+    trackGitChanges,
+    unstageGitChanges,
+  } = useCommands();
 
   const trackPaths = useCallback(
     async (relativePaths: string[]) => {
@@ -64,14 +72,21 @@ export function useChangesTabActions({
 
       try {
         const response = commitHash
-          ? await readCommitDiff({ workspaceWorktreePath: selectedWorkspaceWorktreePath, commitHash, relativePath: normalizedRelativePath })
+          ? await readCommitDiff({
+              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              commitHash,
+              relativePath: normalizedRelativePath,
+            })
           : targetBranch
             ? await readBranchComparisonDiff({
                 workspaceWorktreePath: selectedWorkspaceWorktreePath,
                 targetBranch,
                 relativePath: normalizedRelativePath,
               })
-            : await readDiff({ workspaceWorktreePath: selectedWorkspaceWorktreePath, relativePath: normalizedRelativePath });
+            : await readDiff({
+                workspaceWorktreePath: selectedWorkspaceWorktreePath,
+                relativePath: normalizedRelativePath,
+              });
 
         openTab({
           workspaceId: selectedWorkspaceId,
@@ -82,7 +97,11 @@ export function useChangesTabActions({
           deletions: 0,
           oldContent: response.oldContent,
           newContent: response.newContent,
-          diffSource: commitHash ? { kind: "commit", commitHash } : targetBranch ? { kind: "branch", targetBranch } : { kind: "workspace" },
+          diffSource: commitHash
+            ? { kind: "commit", commitHash }
+            : targetBranch
+              ? { kind: "branch", targetBranch }
+              : { kind: "workspace" },
           temporary: true,
         });
       } catch (error) {
@@ -102,7 +121,12 @@ export function useChangesTabActions({
   );
 
   const selectWorkspaceFile = useCallback(
-    async (file: { path: string; kind: "added" | "deleted" | "modified" | "renamed" | "untracked"; additions: number; deletions: number }) => {
+    async (file: {
+      path: string;
+      kind: "added" | "deleted" | "modified" | "renamed" | "untracked";
+      additions: number;
+      deletions: number;
+    }) => {
       if (!selectedWorkspaceWorktreePath) {
         return;
       }
@@ -112,7 +136,10 @@ export function useChangesTabActions({
       }
       const changeKind: DiffFileChangeKind = file.kind === "untracked" ? "added" : file.kind;
       try {
-        const response = await readDiff({ workspaceWorktreePath: selectedWorkspaceWorktreePath, relativePath: normalizedPath });
+        const response = await readDiff({
+          workspaceWorktreePath: selectedWorkspaceWorktreePath,
+          relativePath: normalizedPath,
+        });
         openTab({
           workspaceId: selectedWorkspaceId,
           kind: "diff",
@@ -163,12 +190,86 @@ export function useChangesTabActions({
     }
   }, []);
 
+  const viewAllDiffs = useCallback(
+    async (files: ProjectGitChangeItem[], isCommitMode: boolean, commitHash?: string, targetBranch?: string) => {
+      if (!selectedWorkspaceWorktreePath || files.length === 0) {
+        return;
+      }
+
+      const diffFiles: FileDiffEntry[] = [];
+      for (const file of files) {
+        const normalizedPath = normalizeWorkspaceRelativePath(file.path);
+        if (!normalizedPath) continue;
+
+        try {
+          let response: { oldContent: string; newContent: string };
+          if (isCommitMode && commitHash) {
+            response = await readCommitDiff({
+              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              commitHash,
+              relativePath: normalizedPath,
+            });
+          } else if (isCommitMode && targetBranch) {
+            response = await readBranchComparisonDiff({
+              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              targetBranch,
+              relativePath: normalizedPath,
+            });
+          } else {
+            response = await readDiff({
+              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              relativePath: normalizedPath,
+            });
+          }
+
+          const changeKind: DiffFileChangeKind =
+            file.kind === "untracked" ? "added" : (file.kind as DiffFileChangeKind);
+          diffFiles.push({
+            path: normalizedPath,
+            oldContent: response.oldContent,
+            newContent: response.newContent,
+            changeKind,
+            additions: file.additions,
+            deletions: file.deletions,
+          });
+        } catch (error) {
+          console.error(`Failed to load diff for ${normalizedPath}`, error);
+        }
+      }
+
+      if (diffFiles.length === 0) return;
+
+      const firstFile = diffFiles[0];
+      if (!firstFile) return;
+
+      openTab({
+        workspaceId: selectedWorkspaceId,
+        kind: "diff",
+        path: `${diffFiles.length} files changed`,
+        changeKind: "modified",
+        additions: 0,
+        deletions: 0,
+        oldContent: firstFile.oldContent,
+        newContent: firstFile.newContent,
+        diffSource: commitHash
+          ? { kind: "commit", commitHash }
+          : targetBranch
+            ? { kind: "branch", targetBranch }
+            : { kind: "workspace" },
+        temporary: true,
+        files: diffFiles,
+      });
+    },
+    [openTab, readBranchComparisonDiff, readCommitDiff, readDiff, selectedWorkspaceId, selectedWorkspaceWorktreePath],
+  );
+
   return {
     trackPaths,
     revertPaths,
     unstagePaths,
     selectCommitChangedFile,
     selectWorkspaceFile,
+    viewAllDiffs,
     copyFilePath,
     copyRelativeFilePath,
   };
