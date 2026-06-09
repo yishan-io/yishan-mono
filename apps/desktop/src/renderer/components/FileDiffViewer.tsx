@@ -17,10 +17,6 @@ export function FileDiffViewer({ filePath, oldContent, newContent }: FileDiffVie
   const [sideBySide, setSideBySide] = useState(false);
   const [changesOnly, setChangesOnly] = useState(true);
 
-  const handleToggleLayout = useCallback(() => {
-    setSideBySide((prev) => !prev);
-  }, []);
-
   const handleToggleChangesOnly = useCallback(() => {
     setChangesOnly((prev) => !prev);
   }, []);
@@ -68,9 +64,27 @@ export function FileDiffViewer({ filePath, oldContent, newContent }: FileDiffVie
           </IconButton>
         </Tooltip>
         <Tooltip title={sideBySide ? "Switch to inline view" : "Switch to side-by-side view"}>
-          <IconButton size="small" onClick={handleToggleLayout} sx={{ ml: 0.5 }}>
-            {sideBySide ? <LuRows2 size={14} /> : <LuColumns2 size={14} />}
-          </IconButton>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, ml: 1 }}>
+            <IconButton
+              size="small"
+              onClick={() => {
+                if (sideBySide) setSideBySide(false);
+              }}
+              disabled={!sideBySide}
+            >
+              <LuRows2 size={14} />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => {
+                if (!sideBySide) setSideBySide(true);
+              }}
+              disabled={sideBySide}
+              sx={{ ml: 0.25 }}
+            >
+              <LuColumns2 size={14} />
+            </IconButton>
+          </Box>
         </Tooltip>
       </Box>
       <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>

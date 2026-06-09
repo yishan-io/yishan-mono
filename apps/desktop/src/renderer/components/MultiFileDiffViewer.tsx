@@ -201,10 +201,6 @@ export function MultiFileDiffViewer({ files }: MultiFileDiffViewerProps) {
     setCollapsedKeys(new Set());
   }, []);
 
-  const handleToggleLayout = useCallback(() => {
-    setSideBySide((prev) => !prev);
-  }, []);
-
   const handleToggleChangesOnly = useCallback(() => {
     setChangesOnly((prev) => !prev);
   }, []);
@@ -300,9 +296,28 @@ export function MultiFileDiffViewer({ files }: MultiFileDiffViewerProps) {
         </Tooltip>
 
         <Tooltip title={sideBySide ? "Switch to inline view" : "Switch to side-by-side view"}>
-          <IconButton size="small" onClick={handleToggleLayout} sx={{ ml: 0.25 }}>
-            {sideBySide ? <LuRows2 size={14} /> : <LuColumns2 size={14} />}
-          </IconButton>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, ml: 1 }}>
+            <IconButton
+              size="small"
+              onClick={() => {
+                if (sideBySide) setSideBySide(false);
+              }}
+              disabled={!sideBySide}
+              sx={{ ml: 0.25 }}
+            >
+              <LuRows2 size={14} />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => {
+                if (!sideBySide) setSideBySide(true);
+              }}
+              disabled={sideBySide}
+              sx={{ ml: 0.25 }}
+            >
+              <LuColumns2 size={14} />
+            </IconButton>
+          </Box>
         </Tooltip>
       </Box>
 
