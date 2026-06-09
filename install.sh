@@ -65,9 +65,9 @@ fetch() {
 # --- checksum verification ---
 
 verify_checksum() {
-  archive="$1"
+  checksum_archive="$1"
   checksums="$2"
-  filename="$(basename "$archive")"
+  filename="$(basename "$checksum_archive")"
 
   expected="$(grep "$filename" "$checksums" | awk '{print $1}')"
   if [ -z "$expected" ]; then
@@ -76,9 +76,9 @@ verify_checksum() {
   fi
 
   if command -v sha256sum >/dev/null 2>&1; then
-    actual="$(sha256sum "$archive" | awk '{print $1}')"
+      actual="$(sha256sum "$checksum_archive" | awk '{print $1}')"
   elif command -v shasum >/dev/null 2>&1; then
-    actual="$(shasum -a 256 "$archive" | awk '{print $1}')"
+      actual="$(shasum -a 256 "$checksum_archive" | awk '{print $1}')"
   else
     warn "sha256sum/shasum not found, skipping checksum verification."
     return 0
@@ -246,16 +246,18 @@ main() {
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT
 
+  archive_path="$tmpdir/$archive"
+
   info "Downloading ${archive}..."
-  fetch "$archive_url" "$tmpdir/$archive"
+  fetch "$archive_url" "$archive_path"
 
   info "Downloading checksums..."
   fetch "$checksum_url" "$tmpdir/checksums.txt"
 
-  verify_checksum "$tmpdir/$archive" "$tmpdir/checksums.txt"
+  verify_checksum "$archive_path" "$tmpdir/checksums.txt"
 
   # Extract
-  tar -xzf "$tmpdir/$archive" -C "$tmpdir"
+  tar -xzf "$archive_path" -C "$tmpdir"
 
   # Install
   mkdir -p "$bin_dir"
