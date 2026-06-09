@@ -28,6 +28,10 @@ type RepoConfigUpdate = Pick<
   "name" | "worktreePath" | "contextEnabled" | "icon" | "color" | "setupScript" | "postScript" | "commands"
 >;
 
+function resolveWorkspaceProjectId(workspace: Pick<WorkspaceItem, "projectId" | "repoId">): string {
+  return workspace.projectId ?? workspace.repoId;
+}
+
 /** Returns persisted workspace preferences for one organization id when available. */
 export function readPersistedWorkspacePreferencesByOrg(
   storage: Storage | undefined,
@@ -184,6 +188,8 @@ export function applyHydratedStateFromApiData(
   const normalizedOrganizationId = organizationId.trim();
   const orgPreferences =
     normalizedOrganizationId.length > 0 ? state.organizationPreferencesById?.[normalizedOrganizationId] : undefined;
+  const previousSelectedProjectId = state.selectedProjectId;
+  const previousSelectedWorkspaceId = state.selectedWorkspaceId;
   const { projects: mappedProjects, workspaces } = mapApiData(projects, workspacesFromApi);
   const nextBaseState = buildWorkspaceStateFromData({
     projects: mappedProjects,
@@ -207,6 +213,16 @@ export function applyHydratedStateFromApiData(
     orgPreferences.displayProjectIds.length > 0 &&
     filteredDisplayProjectIds.length === 0 &&
     mappedProjects.length > 0;
+  const preservedSelectedWorkspace = workspaces.find((workspace) => workspace.id === previousSelectedWorkspaceId);
+  const preservedSelectedProjectId = preservedSelectedWorkspace
+    ? resolveWorkspaceProjectId(preservedSelectedWorkspace)
+    : nextProjectIdSet.has(previousSelectedProjectId)
+      ? previousSelectedProjectId
+      : nextBaseState.selectedProjectId;
+  const preservedSelectedWorkspaceId = preservedSelectedWorkspace
+    ? preservedSelectedWorkspace.id
+    : workspaces.find((workspace) => resolveWorkspaceProjectId(workspace) === preservedSelectedProjectId)?.id ??
+      nextBaseState.selectedWorkspaceId;
   const nextDisplayProjectIds =
     hasNoPersistedPreference && mappedProjects.length > 0
       ? mappedProjects.map((project) => project.id)
@@ -216,8 +232,8 @@ export function applyHydratedStateFromApiData(
 
   state.projects = nextBaseState.projects;
   state.workspaces = nextBaseState.workspaces;
-  state.selectedProjectId = nextBaseState.selectedProjectId;
-  state.selectedWorkspaceId = nextBaseState.selectedWorkspaceId;
+  state.selectedProjectId = preservedSelectedProjectId;
+  state.selectedWorkspaceId = preservedSelectedWorkspaceId;
   state.displayProjectIds = nextDisplayProjectIds;
   state.lastUsedExternalAppId = orgPreferences?.lastUsedExternalAppId;
 
