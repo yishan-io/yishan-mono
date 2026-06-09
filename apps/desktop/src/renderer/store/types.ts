@@ -59,6 +59,15 @@ export type DiffTabSource =
   | { kind: "commit"; commitHash: string }
   | { kind: "branch"; targetBranch: string };
 
+export type FileDiffEntry = {
+  path: string;
+  oldContent: string;
+  newContent: string;
+  changeKind: DiffFileChangeKind;
+  additions: number;
+  deletions: number;
+};
+
 export type WorkspaceGitChangeTotals = {
   additions: number;
   deletions: number;
@@ -70,7 +79,14 @@ export type WorkspaceTabDataByKind = {
     agentKind?: DesktopAgentKind;
     isInitializing?: boolean;
   };
-  diff: { path: string; oldContent: string; newContent: string; source?: DiffTabSource; isTemporary: boolean };
+  diff: {
+    path: string;
+    oldContent: string;
+    newContent: string;
+    source?: DiffTabSource;
+    isTemporary: boolean;
+    files?: FileDiffEntry[];
+  };
   file: {
     path: string;
     content: string;
@@ -144,6 +160,7 @@ export type OpenWorkspaceTabInput =
       newContent?: string;
       diffSource?: DiffTabSource;
       temporary?: boolean;
+      files?: FileDiffEntry[];
     }
   | {
       workspaceId?: string;

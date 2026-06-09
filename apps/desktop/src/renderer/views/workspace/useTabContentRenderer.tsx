@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { FileDiffViewer } from "../../components/FileDiffViewer";
 import { FileEditor } from "../../components/FileEditor";
 import { ImagePreview } from "../../components/ImagePreview";
+import { MultiFileDiffViewer } from "../../components/MultiFileDiffViewer";
 import { TabPanel } from "../../components/TabPanel";
 import { UnsupportedFileView } from "../../components/UnsupportedFileView";
 import { copyToClipboard } from "../../helpers/clipboard";
@@ -41,12 +42,38 @@ export function useTabContentRenderer({
       const shouldFocusContent = isSelected && isInActivePane;
 
       if (tab.kind === "diff") {
+        if (tab.data.files && tab.data.files.length > 0) {
+          return (
+            <TabPanel key={tab.id} active={isSelected}>
+              <MultiFileDiffViewer
+                files={tab.data.files}
+                onOpenFile={(filePath) => {
+                  cmd.openTab({
+                    workspaceId: tab.workspaceId,
+                    kind: "file",
+                    path: filePath,
+                    temporary: true,
+                  });
+                }}
+              />
+            </TabPanel>
+          );
+        }
+
         return (
           <TabPanel key={tab.id} active={isSelected}>
             <FileDiffViewer
               filePath={tab.data.path}
               oldContent={tab.data.oldContent ?? ""}
               newContent={tab.data.newContent ?? ""}
+              onOpenFile={(filePath) => {
+                cmd.openTab({
+                  workspaceId: tab.workspaceId,
+                  kind: "file",
+                  path: filePath,
+                  temporary: true,
+                });
+              }}
             />
           </TabPanel>
         );
@@ -172,6 +199,15 @@ export function useTabContentRenderer({
 
       return null;
     },
-    [t, cmd, workspace, externalAppLabel, onOpenExternalApp, focusContentRequestKey, isWorkspaceActive, markdownDefaultViewMode],
+    [
+      t,
+      cmd,
+      workspace,
+      externalAppLabel,
+      onOpenExternalApp,
+      focusContentRequestKey,
+      isWorkspaceActive,
+      markdownDefaultViewMode,
+    ],
   );
 }

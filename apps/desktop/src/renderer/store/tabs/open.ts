@@ -102,6 +102,17 @@ function createFileContent(path: string): string {
 /** Builds one tab data payload from a tab-open input. */
 export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): WorkspaceTabDataByKind[T["kind"]] {
   if (input.kind === "diff") {
+    if (input.files && input.files.length > 0) {
+      return {
+        path: input.path,
+        oldContent: input.oldContent ?? "",
+        newContent: input.newContent ?? "",
+        source: input.diffSource,
+        isTemporary: Boolean(input.temporary),
+        files: input.files,
+      } as WorkspaceTabDataByKind[T["kind"]];
+    }
+
     if (typeof input.oldContent === "string" && typeof input.newContent === "string") {
       return {
         path: input.path,
@@ -213,7 +224,7 @@ function createTabFromOpenInput(input: OpenWorkspaceTabInput, workspaceId: strin
     return {
       id: tabId,
       workspaceId,
-      title: getFileName(input.path),
+      title: `diff: ${getFileName(input.path)}`,
       pinned: false,
       kind: "diff",
       data: buildTabDataByInput(input),
