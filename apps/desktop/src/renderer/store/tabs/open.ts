@@ -224,7 +224,7 @@ function createTabFromOpenInput(input: OpenWorkspaceTabInput, workspaceId: strin
     return {
       id: tabId,
       workspaceId,
-      title: getFileName(input.path),
+      title: `diff: ${getFileName(input.path)}`,
       pinned: false,
       kind: "diff",
       data: buildTabDataByInput(input),
