@@ -1,7 +1,7 @@
 import * as monaco from "monaco-editor";
 import "monaco-editor/esm/vs/basic-languages/javascript/javascript.contribution";
 import "monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution";
-import { DARK_SURFACE_COLORS } from "../theme";
+import { EDITOR_COLORS } from "./diffTheme";
 
 // Configure Monaco to use locally bundled workers instead of loading from CDN.
 // The `new Worker(new URL(..., import.meta.url))` pattern is a web standard that
@@ -172,13 +172,13 @@ export function ensureEditorThemes() {
       { token: "attribute.value", foreground: "2d7a00" },
     ],
     colors: {
-      "editor.background": "#ffffff",
-      "editor.foreground": "#1f2430",
-      "editor.lineHighlightBackground": "#f1f3f7",
-      "editor.selectionBackground": "#ced7ec",
-      "editorLineNumber.foreground": "#7a8190",
-      "editorGutter.background": "#f5f6f8",
-      "editorCursor.foreground": "#2a2a31",
+      "editor.background": EDITOR_COLORS.light.background,
+      "editor.foreground": EDITOR_COLORS.light.foreground,
+      "editor.lineHighlightBackground": EDITOR_COLORS.light.lineHighlight,
+      "editor.selectionBackground": EDITOR_COLORS.light.selection,
+      "editorLineNumber.foreground": EDITOR_COLORS.light.lineNumber,
+      "editorGutter.background": EDITOR_COLORS.light.gutter,
+      "editorCursor.foreground": EDITOR_COLORS.light.cursor,
     },
   });
 
@@ -201,13 +201,13 @@ export function ensureEditorThemes() {
       { token: "attribute.value", foreground: "a7d56d" },
     ],
     colors: {
-      "editor.background": DARK_SURFACE_COLORS.mainPane,
-      "editor.foreground": "#d4dbe8",
-      "editor.lineHighlightBackground": DARK_SURFACE_COLORS.activeLine,
-      "editor.selectionBackground": "#dde2e91f",
-      "editorLineNumber.foreground": "#8e97ab",
-      "editorGutter.background": DARK_SURFACE_COLORS.gutter,
-      "editorCursor.foreground": "#d7deef",
+      "editor.background": EDITOR_COLORS.dark.background,
+      "editor.foreground": EDITOR_COLORS.dark.foreground,
+      "editor.lineHighlightBackground": EDITOR_COLORS.dark.lineHighlight,
+      "editor.selectionBackground": EDITOR_COLORS.dark.selection,
+      "editorLineNumber.foreground": EDITOR_COLORS.dark.lineNumber,
+      "editorGutter.background": EDITOR_COLORS.dark.gutter,
+      "editorCursor.foreground": EDITOR_COLORS.dark.cursor,
     },
   });
 }

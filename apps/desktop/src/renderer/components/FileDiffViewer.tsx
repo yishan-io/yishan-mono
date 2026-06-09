@@ -5,6 +5,7 @@ import { FileDiff } from "@pierre/diffs/react";
 import { useCallback, useMemo, useState } from "react";
 import { LuDiff, LuExternalLink, LuFileText, LuStretchHorizontal, LuStretchVertical, LuWrapText } from "react-icons/lu";
 import { isBinaryPath } from "../helpers/binaryExtensions";
+import { YISHAN_DIFF_THEME_DARK, YISHAN_DIFF_THEME_LIGHT, getDiffCssVariables } from "../helpers/diffTheme";
 
 type FileDiffViewerProps = {
   filePath: string;
@@ -28,7 +29,8 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
     [filePath, oldContent, newContent],
   );
 
-  const diffTheme = theme.palette.mode === "dark" ? "pierre-dark" : "pierre-light";
+  const diffTheme = theme.palette.mode === "dark" ? YISHAN_DIFF_THEME_DARK : YISHAN_DIFF_THEME_LIGHT;
+  const diffCssVars = useMemo(() => getDiffCssVariables(theme.palette.mode), [theme.palette.mode]);
 
   if (isBinaryPath(filePath)) {
     return (
@@ -95,6 +97,7 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
               "--diffs-font-family": '"JetBrains Mono", "SF Mono", Menlo, monospace',
               "--diffs-font-size": "13px",
               "--diffs-line-height": "20px",
+              ...diffCssVars,
             } as React.CSSProperties
           }
           options={{
