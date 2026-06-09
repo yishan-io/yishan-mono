@@ -13,6 +13,7 @@ import {
   overviewModelBreakdownQuerySchema,
   overviewOrgParamsSchema,
   overviewTokenUsageQuerySchema,
+  overviewWorkspaceInsightsQuerySchema,
 } from "@/validation/overview";
 
 export const overviewRouter = new Hono<AppEnv>();
@@ -34,8 +35,11 @@ router.get(
   (c) => getOverviewModelBreakdownHandler(c, c.req.valid("param"), c.req.valid("query")),
 );
 
-router.get("/overview/workspace-insights", zValidator("param", overviewOrgParamsSchema, validationErrorResponse), (c) =>
-  getOverviewWorkspaceInsightsHandler(c, c.req.valid("param")),
+router.get(
+  "/overview/workspace-insights",
+  zValidator("param", overviewOrgParamsSchema, validationErrorResponse),
+  zValidator("query", overviewWorkspaceInsightsQuerySchema, validationErrorResponse),
+  (c) => getOverviewWorkspaceInsightsHandler(c, c.req.valid("param"), c.req.valid("query")),
 );
 
 overviewRouter.route("/orgs/:orgId", router);

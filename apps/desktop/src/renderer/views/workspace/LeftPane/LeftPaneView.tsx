@@ -93,30 +93,6 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
       </PaneHeader>
       <Button
         variant="text"
-        startIcon={<LuZap size={14} />}
-        onClick={handleToggleScheduledJobs}
-        aria-label={t("scheduledJob.title")}
-        aria-pressed={isScheduledJobPanelOpen}
-        sx={{
-          justifyContent: "flex-start",
-          textTransform: "none",
-          color: isScheduledJobPanelOpen ? "primary.main" : "text.secondary",
-          bgcolor: isScheduledJobPanelOpen ? "action.selected" : "transparent",
-          borderRadius: 0,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          px: 2,
-          py: 0.875,
-          flexShrink: 0,
-          ":hover": {
-            bgcolor: isScheduledJobPanelOpen ? "action.selected" : "action.hover",
-          },
-        }}
-      >
-        {t("scheduledJob.title")}
-      </Button>
-      <Button
-        variant="text"
         startIcon={<LuChartBar size={14} />}
         onClick={handleToggleOverview}
         aria-label="Overview"
@@ -139,7 +115,30 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
       >
         Overview
       </Button>
-
+      <Button
+        variant="text"
+        startIcon={<LuZap size={14} />}
+        onClick={handleToggleScheduledJobs}
+        aria-label={t("scheduledJob.title")}
+        aria-pressed={isScheduledJobPanelOpen}
+        sx={{
+          justifyContent: "flex-start",
+          textTransform: "none",
+          color: isScheduledJobPanelOpen ? "primary.main" : "text.secondary",
+          bgcolor: isScheduledJobPanelOpen ? "action.selected" : "transparent",
+          borderRadius: 0,
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          px: 2,
+          py: 0.875,
+          flexShrink: 0,
+          ":hover": {
+            bgcolor: isScheduledJobPanelOpen ? "action.selected" : "action.hover",
+          },
+        }}
+      >
+        {t("scheduledJob.title")}
+      </Button>
       <Box
         sx={{
           px: 2,

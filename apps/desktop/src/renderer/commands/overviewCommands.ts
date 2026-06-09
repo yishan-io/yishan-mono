@@ -52,10 +52,12 @@ export async function refreshOverviewWorkspaceInsights(): Promise<void> {
     return;
   }
 
+  const { selectedProjectId } = overviewStore.getState();
+
   overviewStore.getState().setWorkspaceInsightsLoadState("loading");
 
   try {
-    const result = await loadOverviewWorkspaceInsights(orgId);
+    const result = await loadOverviewWorkspaceInsights(orgId, selectedProjectId);
     overviewStore.getState().setWorkspaceInsights(result);
     overviewStore.getState().setWorkspaceInsightsLoadState("loaded");
   } catch (error) {

@@ -169,13 +169,22 @@ export class OverviewService {
     organizationId: string;
     actorUserId: string;
     actorRole?: OrganizationMemberRole;
+    projectId?: string;
   }): Promise<WorkspaceInsightsResult> {
     await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId, input.actorRole);
+
+    const baseConditions = [
+      eq(workspaces.organizationId, input.organizationId),
+      eq(workspaces.status, "closed"),
+    ];
+    if (input.projectId) {
+      baseConditions.push(eq(workspaces.projectId, input.projectId));
+    }
 
     const closedCountRow = await this.db
       .select({ count: count() })
       .from(workspaces)
-      .where(and(eq(workspaces.organizationId, input.organizationId), eq(workspaces.status, "closed")));
+      .where(and(...baseConditions));
 
     const closedWorkspaceCount = closedCountRow[0]?.count ?? 0;
 
@@ -186,7 +195,7 @@ export class OverviewService {
         ),
       })
       .from(workspaces)
-      .where(and(eq(workspaces.organizationId, input.organizationId), eq(workspaces.status, "closed")));
+      .where(and(...baseConditions));
 
     const averageLifetimeHours = lifetimeRow[0]?.avgSeconds != null ? lifetimeRow[0].avgSeconds / 3600 : null;
 
@@ -199,7 +208,7 @@ export class OverviewService {
         closedAt: workspaces.updatedAt,
       })
       .from(workspaces)
-      .where(and(eq(workspaces.organizationId, input.organizationId), eq(workspaces.status, "closed")))
+      .where(and(...baseConditions))
       .orderBy(desc(workspaces.updatedAt))
       .limit(5);
 

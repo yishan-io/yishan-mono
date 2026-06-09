@@ -5,6 +5,7 @@ import type {
   OverviewModelBreakdownQueryInput,
   OverviewOrgParamsInput,
   OverviewTokenUsageQueryInput,
+  OverviewWorkspaceInsightsQueryInput,
 } from "@/validation/overview";
 
 export async function getOverviewTokenUsageHandler(
@@ -44,13 +45,18 @@ export async function getOverviewModelBreakdownHandler(
   return c.json(result, StatusCodes.OK);
 }
 
-export async function getOverviewWorkspaceInsightsHandler(c: AppContext, params: OverviewOrgParamsInput) {
+export async function getOverviewWorkspaceInsightsHandler(
+  c: AppContext,
+  params: OverviewOrgParamsInput,
+  query: OverviewWorkspaceInsightsQueryInput,
+) {
   const actorUser = c.get("sessionUser");
   const actorRole = c.get("organizationRole");
   const result = await c.get("services").overview.getWorkspaceInsights({
     organizationId: params.orgId,
     actorUserId: actorUser.id,
     actorRole,
+    projectId: query.projectId,
   });
 
   return c.json(result, StatusCodes.OK);

@@ -28,6 +28,16 @@ export async function loadOverviewModelBreakdown(
   return requestJson<{ models: ModelBreakdownItem[] }>(`/orgs/${orgId}/overview/model-breakdown?${params.toString()}`);
 }
 
-export async function loadOverviewWorkspaceInsights(orgId: string): Promise<WorkspaceInsightsResult> {
-  return requestJson<WorkspaceInsightsResult>(`/orgs/${orgId}/overview/workspace-insights`);
+export async function loadOverviewWorkspaceInsights(
+  orgId: string,
+  projectId?: string,
+): Promise<WorkspaceInsightsResult> {
+  const params = new URLSearchParams();
+  if (projectId) {
+    params.set("projectId", projectId);
+  }
+  const query = params.toString();
+  return requestJson<WorkspaceInsightsResult>(
+    `/orgs/${orgId}/overview/workspace-insights${query ? `?${query}` : ""}`,
+  );
 }
