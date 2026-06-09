@@ -40,6 +40,15 @@ export type TokenUsageSeriesItem = {
 
 export type ModelBreakdownItem = {
   modelNormalized: string;
+  agentKind: string;
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  percentage: number;
+};
+
+export type AgentKindBreakdownItem = {
+  agentKind: string;
   totalTokens: number;
   inputTokens: number;
   outputTokens: number;
@@ -143,19 +152,21 @@ export class OverviewService {
     const rows = await this.db
       .select({
         modelNormalized: tokenUsageHourly.modelNormalized,
+        agentKind: tokenUsageHourly.agentKind,
         totalTokens: sum(tokenUsageHourly.totalTokens).mapWith(Number),
         inputTokens: sum(tokenUsageHourly.inputTokens).mapWith(Number),
         outputTokens: sum(tokenUsageHourly.outputTokens).mapWith(Number),
       })
       .from(tokenUsageHourly)
       .where(and(...conditions))
-      .groupBy(tokenUsageHourly.modelNormalized)
+      .groupBy(tokenUsageHourly.modelNormalized, tokenUsageHourly.agentKind)
       .orderBy((fields) => [desc(fields.totalTokens)]);
 
     const grandTotal = rows.reduce((acc, row) => acc + (row.totalTokens ?? 0), 0);
 
     const models: ModelBreakdownItem[] = rows.map((row) => ({
       modelNormalized: row.modelNormalized,
+      agentKind: row.agentKind,
       totalTokens: row.totalTokens ?? 0,
       inputTokens: row.inputTokens ?? 0,
       outputTokens: row.outputTokens ?? 0,
@@ -163,6 +174,47 @@ export class OverviewService {
     }));
 
     return { models };
+  }
+
+  async getAgentKindBreakdown(input: OverviewModelBreakdownInput): Promise<{
+    agentKinds: AgentKindBreakdownItem[];
+  }> {
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId, input.actorRole);
+
+    const now = new Date();
+    const fromDate = new Date(now.getTime() - hoursToMillis(input.range));
+    const conditions = [
+      eq(tokenUsageHourly.organizationId, input.organizationId),
+      gte(tokenUsageHourly.bucketStartHourUtc, fromDate),
+      lte(tokenUsageHourly.bucketStartHourUtc, now),
+    ];
+    if (input.projectId) {
+      conditions.push(eq(tokenUsageHourly.projectId, input.projectId));
+    }
+
+    const rows = await this.db
+      .select({
+        agentKind: tokenUsageHourly.agentKind,
+        totalTokens: sum(tokenUsageHourly.totalTokens).mapWith(Number),
+        inputTokens: sum(tokenUsageHourly.inputTokens).mapWith(Number),
+        outputTokens: sum(tokenUsageHourly.outputTokens).mapWith(Number),
+      })
+      .from(tokenUsageHourly)
+      .where(and(...conditions))
+      .groupBy(tokenUsageHourly.agentKind)
+      .orderBy((fields) => [desc(fields.totalTokens)]);
+
+    const grandTotal = rows.reduce((acc, row) => acc + (row.totalTokens ?? 0), 0);
+
+    const agentKinds: AgentKindBreakdownItem[] = rows.map((row) => ({
+      agentKind: row.agentKind,
+      totalTokens: row.totalTokens ?? 0,
+      inputTokens: row.inputTokens ?? 0,
+      outputTokens: row.outputTokens ?? 0,
+      percentage: grandTotal > 0 ? ((row.totalTokens ?? 0) / grandTotal) * 100 : 0,
+    }));
+
+    return { agentKinds };
   }
 
   async getWorkspaceInsights(input: {

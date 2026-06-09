@@ -1,7 +1,12 @@
-import type { ModelBreakdownItem, OverviewTokenUsageResponse, WorkspaceInsightsResult } from "./overviewApi.types";
+import type {
+  AgentKindBreakdownItem,
+  ModelBreakdownItem,
+  OverviewTokenUsageResponse,
+  WorkspaceInsightsResult,
+} from "./overviewApi.types";
 import { requestJson } from "./restClient";
 
-export type { ModelBreakdownItem, OverviewTokenUsageResponse, WorkspaceInsightsResult };
+export type { AgentKindBreakdownItem, ModelBreakdownItem, OverviewTokenUsageResponse, WorkspaceInsightsResult };
 
 export async function loadOverviewTokenUsage(
   orgId: string,
@@ -37,7 +42,19 @@ export async function loadOverviewWorkspaceInsights(
     params.set("projectId", projectId);
   }
   const query = params.toString();
-  return requestJson<WorkspaceInsightsResult>(
-    `/orgs/${orgId}/overview/workspace-insights${query ? `?${query}` : ""}`,
+  return requestJson<WorkspaceInsightsResult>(`/orgs/${orgId}/overview/workspace-insights${query ? `?${query}` : ""}`);
+}
+
+export async function loadOverviewAgentKindBreakdown(
+  orgId: string,
+  range: string,
+  projectId?: string,
+): Promise<{ agentKinds: AgentKindBreakdownItem[] }> {
+  const params = new URLSearchParams({ range });
+  if (projectId) {
+    params.set("projectId", projectId);
+  }
+  return requestJson<{ agentKinds: AgentKindBreakdownItem[] }>(
+    `/orgs/${orgId}/overview/agent-kind-breakdown?${params.toString()}`,
   );
 }

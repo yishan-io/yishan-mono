@@ -1,4 +1,9 @@
-import { loadOverviewModelBreakdown, loadOverviewTokenUsage, loadOverviewWorkspaceInsights } from "../api/overviewApi";
+import {
+  loadOverviewAgentKindBreakdown,
+  loadOverviewModelBreakdown,
+  loadOverviewTokenUsage,
+  loadOverviewWorkspaceInsights,
+} from "../api/overviewApi";
 import type { OverviewTimeRange } from "../api/overviewApi.types";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { overviewStore } from "../store/overviewStore";
@@ -46,6 +51,25 @@ export async function refreshOverviewModelBreakdown(): Promise<void> {
   }
 }
 
+export async function refreshOverviewAgentKindBreakdown(): Promise<void> {
+  const orgId = await resolveOrgId();
+  if (!orgId) {
+    return;
+  }
+
+  const { timeRange, selectedProjectId } = overviewStore.getState();
+
+  overviewStore.getState().setAgentKindBreakdownLoadState("loading");
+
+  try {
+    const result = await loadOverviewAgentKindBreakdown(orgId, timeRange, selectedProjectId);
+    overviewStore.getState().setAgentKindBreakdown(result.agentKinds);
+    overviewStore.getState().setAgentKindBreakdownLoadState("loaded");
+  } catch (error) {
+    overviewStore.getState().setAgentKindBreakdownLoadState("error", getErrorMessage(error));
+  }
+}
+
 export async function refreshOverviewWorkspaceInsights(): Promise<void> {
   const orgId = await resolveOrgId();
   if (!orgId) {
@@ -71,7 +95,12 @@ export async function loadAllOverviewData(): Promise<void> {
     return;
   }
 
-  await Promise.all([refreshOverviewTokenUsage(), refreshOverviewModelBreakdown(), refreshOverviewWorkspaceInsights()]);
+  await Promise.all([
+    refreshOverviewTokenUsage(),
+    refreshOverviewModelBreakdown(),
+    refreshOverviewAgentKindBreakdown(),
+    refreshOverviewWorkspaceInsights(),
+  ]);
 }
 
 export function setOverviewTimeRange(range: OverviewTimeRange): void {

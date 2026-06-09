@@ -21,11 +21,17 @@ export const overviewModelBreakdownQuerySchema = z.object({
   projectId: nonEmptyStringSchema.optional(),
 });
 
+export const overviewAgentKindBreakdownQuerySchema = z.object({
+  range: z.enum(OVERVIEW_TIME_RANGES),
+  projectId: nonEmptyStringSchema.optional(),
+});
+
 export const overviewWorkspaceInsightsQuerySchema = z.object({
   projectId: nonEmptyStringSchema.optional(),
 });
 
 export type OverviewTokenUsageQueryInput = z.infer<typeof overviewTokenUsageQuerySchema>;
 export type OverviewModelBreakdownQueryInput = z.infer<typeof overviewModelBreakdownQuerySchema>;
+export type OverviewAgentKindBreakdownQueryInput = z.infer<typeof overviewAgentKindBreakdownQuerySchema>;
 export type OverviewWorkspaceInsightsQueryInput = z.infer<typeof overviewWorkspaceInsightsQuerySchema>;
 export type OverviewOrgParamsInput = z.infer<typeof orgIdParamSchema>;
