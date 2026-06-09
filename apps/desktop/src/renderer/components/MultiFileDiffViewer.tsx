@@ -10,10 +10,10 @@ import {
   LuChevronRight,
   LuChevronsDownUp,
   LuChevronsUpDown,
-  LuColumns2,
   LuDiff,
   LuFileText,
-  LuRows2,
+  LuStretchHorizontal,
+  LuStretchVertical,
 } from "react-icons/lu";
 import type { FileDiffEntry } from "../store/types";
 import { getFileTreeIcon } from "./fileTreeIcons";
@@ -295,30 +295,14 @@ export function MultiFileDiffViewer({ files }: MultiFileDiffViewerProps) {
           </IconButton>
         </Tooltip>
 
-        <Tooltip title={sideBySide ? "Switch to inline view" : "Switch to side-by-side view"}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, ml: 1 }}>
-            <IconButton
-              size="small"
-              onClick={() => {
-                if (sideBySide) setSideBySide(false);
-              }}
-              disabled={!sideBySide}
-              sx={{ ml: 0.25 }}
-            >
-              <LuRows2 size={14} />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => {
-                if (!sideBySide) setSideBySide(true);
-              }}
-              disabled={sideBySide}
-              sx={{ ml: 0.25 }}
-            >
-              <LuColumns2 size={14} />
-            </IconButton>
-          </Box>
-        </Tooltip>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, ml: 1 }}>
+          <IconButton size="small" onClick={() => setSideBySide(false)} disabled={!sideBySide} sx={{ ml: 0.25 }}>
+            <LuStretchHorizontal size={14} />
+          </IconButton>
+          <IconButton size="small" onClick={() => setSideBySide(true)} disabled={sideBySide} sx={{ ml: 0.25 }}>
+            <LuStretchVertical size={14} />
+          </IconButton>
+        </Box>
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}>

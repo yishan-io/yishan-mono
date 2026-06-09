@@ -3,7 +3,7 @@ import { useTheme } from "@mui/material/styles";
 import { parseDiffFromFile } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import { useCallback, useMemo, useState } from "react";
-import { LuColumns2, LuDiff, LuFileText, LuRows2 } from "react-icons/lu";
+import { LuDiff, LuFileText, LuStretchHorizontal, LuStretchVertical } from "react-icons/lu";
 import { isBinaryPath } from "../helpers/binaryExtensions";
 
 type FileDiffViewerProps = {
@@ -63,29 +63,14 @@ export function FileDiffViewer({ filePath, oldContent, newContent }: FileDiffVie
             {changesOnly ? <LuFileText size={14} /> : <LuDiff size={14} />}
           </IconButton>
         </Tooltip>
-        <Tooltip title={sideBySide ? "Switch to inline view" : "Switch to side-by-side view"}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, ml: 1 }}>
-            <IconButton
-              size="small"
-              onClick={() => {
-                if (sideBySide) setSideBySide(false);
-              }}
-              disabled={!sideBySide}
-            >
-              <LuRows2 size={14} />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => {
-                if (!sideBySide) setSideBySide(true);
-              }}
-              disabled={sideBySide}
-              sx={{ ml: 0.25 }}
-            >
-              <LuColumns2 size={14} />
-            </IconButton>
-          </Box>
-        </Tooltip>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, ml: 1 }}>
+          <IconButton size="small" onClick={() => setSideBySide(false)} disabled={!sideBySide}>
+            <LuStretchHorizontal size={14} />
+          </IconButton>
+          <IconButton size="small" onClick={() => setSideBySide(true)} disabled={sideBySide} sx={{ ml: 0.25 }}>
+            <LuStretchVertical size={14} />
+          </IconButton>
+        </Box>
       </Box>
       <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
         <FileDiff
