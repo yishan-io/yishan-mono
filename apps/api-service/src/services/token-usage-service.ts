@@ -1,8 +1,8 @@
 import type { AgentKind } from "@yishan/core";
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
-import { type OrganizationMemberRole, tokenUsageHourly } from "@/db/schema";
+import { type OrganizationMemberRole, tokenUsageHourly, workspaces } from "@/db/schema";
 import { newId } from "@/lib/id";
 import type { OrganizationService } from "@/services/organization-service";
 import { assertOrganizationMember } from "@/services/shared/assertOrganizationMember";
@@ -90,9 +90,14 @@ export class TokenUsageService {
       return { upserted: 0 };
     }
 
-    const now = new Date();
     const deduped = dedupeRows(input.rows);
-    const rowsToInsert = deduped.map((row) => ({
+    const validRows = await this.filterRowsWithKnownWorkspaces(input.organizationId, deduped);
+    if (validRows.length === 0) {
+      return { upserted: 0 };
+    }
+
+    const now = new Date();
+    const rowsToInsert = validRows.map((row) => ({
       id: newId(),
       organizationId: input.organizationId,
       projectId: row.projectId,
@@ -146,7 +151,37 @@ export class TokenUsageService {
         },
       });
 
-    return { upserted: input.rows.length };
+    return { upserted: validRows.length };
+  }
+
+  private async filterRowsWithKnownWorkspaces(
+    organizationId: string,
+    rows: UpsertTokenUsageHourlyInput["rows"],
+  ): Promise<UpsertTokenUsageHourlyInput["rows"]> {
+    const workspaceIds = Array.from(new Set(rows.map((row) => row.workspaceId.trim()).filter(Boolean)));
+    if (workspaceIds.length === 0) {
+      return [];
+    }
+
+    const existingWorkspaces = await this.db
+      .select({ id: workspaces.id, projectId: workspaces.projectId })
+      .from(workspaces)
+      .where(and(eq(workspaces.organizationId, organizationId), inArray(workspaces.id, workspaceIds)));
+
+    const workspaceById = new Map(existingWorkspaces.map((workspace) => [workspace.id, workspace]));
+    const filtered = rows.filter((row) => {
+      const workspace = workspaceById.get(row.workspaceId);
+      return workspace?.projectId === row.projectId;
+    });
+
+    const skippedCount = rows.length - filtered.length;
+    if (skippedCount > 0) {
+      console.warn(
+        `[TokenUsageService.upsertHourly] Skipped ${skippedCount} token usage rows with missing or mismatched workspace references for organization ${organizationId}`,
+      );
+    }
+
+    return filtered;
   }
 
   async listHourly(input: ListTokenUsageHourlyInput) {
