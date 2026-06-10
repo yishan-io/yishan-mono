@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { FileQuickOpenDialog } from "./FileQuickOpenDialog";
 
 vi.mock("./fileTreeIcons", () => ({
@@ -11,6 +11,10 @@ vi.mock("./fileTreeIcons", () => ({
 vi.mock("react-icons/bi", () => ({
   BiSearch: () => <svg data-testid="file-search-icon" />,
 }));
+
+afterEach(() => {
+  cleanup();
+});
 
 describe("FileQuickOpenDialog", () => {
   it("uses a compact search input", async () => {
