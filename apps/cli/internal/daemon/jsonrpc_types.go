@@ -90,6 +90,10 @@ type gitInspectParams struct {
 	WorkspaceID string `json:"workspaceId"`
 }
 
+type gitInspectPathParams struct {
+	Path string `json:"path"`
+}
+
 type gitPathsParams struct {
 	WorkspaceID string   `json:"workspaceId"`
 	Paths       []string `json:"paths"`

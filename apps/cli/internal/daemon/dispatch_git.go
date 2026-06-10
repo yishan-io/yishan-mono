@@ -29,6 +29,12 @@ func (h *JSONRPCHandler) dispatchGit(ctx context.Context, method string, params 
 			return nil, err
 		}
 		return handle.GitInspect(ctx)
+	case MethodGitInspectPath:
+		var req gitInspectPathParams
+		if err := decodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.manager.GitInspect(ctx, req.Path)
 	case MethodGitListChanges:
 		var req gitStatusParams
 		if err := decodeParams(params, &req); err != nil {

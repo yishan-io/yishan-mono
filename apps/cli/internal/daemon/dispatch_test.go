@@ -13,3 +13,11 @@ func TestIsGitMethod_IncludesPullRequestMethods(t *testing.T) {
 		t.Fatalf("expected %q to be treated as git method", MethodGitPrClose)
 	}
 }
+
+func TestIsGitMethod_IncludesInspectPath(t *testing.T) {
+	t.Parallel()
+
+	if !isGitMethod(MethodGitInspectPath) {
+		t.Fatalf("expected %q to be treated as git method", MethodGitInspectPath)
+	}
+}

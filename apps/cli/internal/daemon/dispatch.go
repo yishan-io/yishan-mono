@@ -42,7 +42,7 @@ func isContextMethod(method string) bool {
 
 func isGitMethod(method string) bool {
 	switch method {
-	case MethodGitStatus, MethodGitInspect, MethodGitListChanges, MethodGitTrack,
+	case MethodGitStatus, MethodGitInspect, MethodGitInspectPath, MethodGitListChanges, MethodGitTrack,
 		MethodGitUnstage, MethodGitRevert, MethodGitCommit, MethodGitBranchStatus,
 		MethodGitBranchPullRequest, MethodGitCommitsToTarget, MethodGitBranchDiffSummary,
 		MethodGitCommitDiff, MethodGitBranchDiff, MethodGitBranches, MethodGitPush,

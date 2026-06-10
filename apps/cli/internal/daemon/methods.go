@@ -10,16 +10,16 @@ const (
 	MethodWorkspaceSetActive       = "workspace.setActive"
 	MethodWorkspaceSyncContextLink = "workspace.syncContextLink"
 
-	MethodContextGetState          = "context.getState"
-	MethodContextSetCurrentOrg     = "context.setCurrentOrg"
-	MethodContextSetActiveProject  = "context.setActiveProject"
-	MethodContextSetActiveFile     = "context.setActiveFile"
+	MethodContextGetState         = "context.getState"
+	MethodContextSetCurrentOrg    = "context.setCurrentOrg"
+	MethodContextSetActiveProject = "context.setActiveProject"
+	MethodContextSetActiveFile    = "context.setActiveFile"
 
 	MethodProjectList = "project.list"
 	MethodNodeList    = "node.list"
 
 	MethodAgentListDetectionStatuses = "agent.listDetectionStatuses"
-	MethodAgentListModels           = "agent.listModels"
+	MethodAgentListModels            = "agent.listModels"
 	MethodIntegrationGitHubStatus    = "integration.githubStatus"
 	MethodCLIToolListStatuses        = "cliTools.listStatuses"
 	MethodFrontendEventsStream       = "events.frontendStream"
@@ -42,6 +42,7 @@ const (
 
 	MethodGitStatus            = "git.status"
 	MethodGitInspect           = "git.inspect"
+	MethodGitInspectPath       = "git.inspectPath"
 	MethodGitListChanges       = "git.listChanges"
 	MethodGitTrack             = "git.track"
 	MethodGitUnstage           = "git.unstage"
