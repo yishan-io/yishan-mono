@@ -230,6 +230,27 @@ func (s *GitService) RefExists(ctx context.Context, root string, ref string) boo
 	return err == nil
 }
 
+// resolveRefUnambiguous returns the full symbolic ref name (e.g.
+// "refs/remotes/origin/main") for a given short ref (e.g. "origin/main").
+// This prevents "fatal: ambiguous object name" errors that occur when a loose
+// ref and a stale packed-ref entry both exist for the same short name.
+// If git cannot resolve the ref to a unique symbolic name the original ref is
+// returned unchanged so callers still get a best-effort result.
+func resolveRefUnambiguous(ctx context.Context, root string, ref string) string {
+	if strings.TrimSpace(ref) == "" || ref == "HEAD" {
+		return ref
+	}
+	out, err := gitCommand(ctx, root, "rev-parse", "--verify", "--symbolic-full-name", ref)
+	if err != nil {
+		return ref
+	}
+	full := strings.TrimSpace(out)
+	if full == "" {
+		return ref
+	}
+	return full
+}
+
 // resolveRemote returns the preferred remote name for the given repo root.
 // It prefers "origin"; if absent it falls back to the first available remote.
 // Returns an empty string when no remotes are configured.
