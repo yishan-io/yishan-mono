@@ -201,6 +201,9 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 	if strings.TrimSpace(req.ProjectID) == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "projectId is required")
 	}
+	if h.tokenUsage != nil {
+		h.tokenUsage.SyncNow("close")
+	}
 	if err := closeRemoteWorkspace(ctx, h.runtime, WorkspaceClose{
 		WorkspaceID:    req.WorkspaceID,
 		OrganizationID: req.OrganizationID,

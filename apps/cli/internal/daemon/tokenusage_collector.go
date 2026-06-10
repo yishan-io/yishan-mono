@@ -80,6 +80,29 @@ func (c *tokenUsageCollector) StartStartupScan() {
 	c.mu.Unlock()
 }
 
+func (c *tokenUsageCollector) SyncNow(source string) {
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return
+	}
+	c.mu.Unlock()
+
+	for _, agentKind := range []string{"codex", "claude", "opencode"} {
+		c.mu.Lock()
+		if c.inFlight[agentKind] {
+			c.mu.Unlock()
+			continue
+		}
+		if timer := c.timers[agentKind]; timer != nil {
+			timer.Stop()
+			delete(c.timers, agentKind)
+		}
+		c.mu.Unlock()
+		c.runScan(agentKind, source)
+	}
+}
+
 func (c *tokenUsageCollector) Trigger(agentKind string, source string) {
 	normalizedAgentKind := normalizeTokenUsageAgentKind(agentKind)
 	if normalizedAgentKind == "" {
