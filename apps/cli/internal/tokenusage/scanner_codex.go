@@ -208,7 +208,7 @@ func usageFromAny(value any) (codexUsage, bool) {
 	input := getInt64(record, "input_tokens")
 	output := getInt64(record, "output_tokens")
 	cachedInput := getInt64(record, "cached_input_tokens", "cache_read_input_tokens")
-	cachedWrite := getInt64(record, "cached_write_tokens", "cache_creation_write_tokens")
+	cachedWrite := getInt64(record, "cached_output_tokens", "cache_creation_output_tokens", "cache_creation_input_tokens")
 	reasoning := getInt64(record, "reasoning_output_tokens")
 	total := getInt64(record, "total_tokens")
 	return codexUsage{InputTokens: input, OutputTokens: output, CachedInputTokens: cachedInput, CachedWriteTokens: cachedWrite, ReasoningTokens: reasoning, TotalTokens: total}, true
