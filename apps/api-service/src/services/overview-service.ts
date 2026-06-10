@@ -35,7 +35,7 @@ export type TokenUsageSeriesItem = {
   inputTokens: number;
   outputTokens: number;
   cachedInputTokens: number;
-  cachedOutputTokens: number;
+  cachedWriteTokens: number;
 };
 
 export type ModelBreakdownItem = {
@@ -108,7 +108,7 @@ export class OverviewService {
         COALESCE(SUM(input_tokens), 0)::bigint AS input_tokens,
         COALESCE(SUM(output_tokens), 0)::bigint AS output_tokens,
         COALESCE(SUM(cached_input_tokens), 0)::bigint AS cached_input_tokens,
-        COALESCE(SUM(cached_output_tokens), 0)::bigint AS cached_output_tokens
+        COALESCE(SUM(cached_write_tokens), 0)::bigint AS cached_write_tokens
       FROM token_usage_hourly
       WHERE organization_id = ${input.organizationId}
         AND bucket_start_hour_utc >= ${fromDate.toISOString()}
@@ -124,9 +124,9 @@ export class OverviewService {
       inputTokens: Number(row.input_tokens ?? 0),
       outputTokens: Number(row.output_tokens ?? 0),
       cachedInputTokens: Number(row.cached_input_tokens ?? 0),
-      cachedOutputTokens: Number(row.cached_output_tokens ?? 0),
+      cachedWriteTokens: Number(row.cached_write_tokens ?? 0),
     }));
-    const cachedTotal = series.reduce((acc, item) => acc + item.cachedInputTokens + item.cachedOutputTokens, 0);
+    const cachedTotal = series.reduce((acc, item) => acc + item.cachedInputTokens + item.cachedWriteTokens, 0);
     const grandTotal = series.reduce((acc, item) => acc + item.totalTokens, 0);
     const uncachedTotal = Math.max(0, grandTotal - cachedTotal);
 
@@ -225,10 +225,7 @@ export class OverviewService {
   }): Promise<WorkspaceInsightsResult> {
     await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId, input.actorRole);
 
-    const baseConditions = [
-      eq(workspaces.organizationId, input.organizationId),
-      eq(workspaces.status, "closed"),
-    ];
+    const baseConditions = [eq(workspaces.organizationId, input.organizationId), eq(workspaces.status, "closed")];
     if (input.projectId) {
       baseConditions.push(eq(workspaces.projectId, input.projectId));
     }

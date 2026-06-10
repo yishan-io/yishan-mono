@@ -1,8 +1,8 @@
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import type { AgentKind } from "@yishan/core";
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
-import { tokenUsageHourly, type OrganizationMemberRole } from "@/db/schema";
+import { type OrganizationMemberRole, tokenUsageHourly } from "@/db/schema";
 import { newId } from "@/lib/id";
 import type { OrganizationService } from "@/services/organization-service";
 import { assertOrganizationMember } from "@/services/shared/assertOrganizationMember";
@@ -22,7 +22,7 @@ type UpsertTokenUsageHourlyInput = {
     inputTokens: number;
     outputTokens: number;
     cachedInputTokens: number;
-    cachedOutputTokens: number;
+    cachedWriteTokens: number;
     reasoningTokens: number;
     totalTokens: number;
     eventCount: number;
@@ -47,9 +47,7 @@ type ListTokenUsageHourlyInput = {
 
 const CONFLICT_KEY_FIELDS = ["projectId", "workspaceId", "agentKind", "modelNormalized", "bucketStartHourUtc"] as const;
 
-function dedupeRows(
-  rows: UpsertTokenUsageHourlyInput["rows"],
-): UpsertTokenUsageHourlyInput["rows"] {
+function dedupeRows(rows: UpsertTokenUsageHourlyInput["rows"]): UpsertTokenUsageHourlyInput["rows"] {
   const byKey = new Map<string, UpsertTokenUsageHourlyInput["rows"][number]>();
 
   for (const row of rows) {
@@ -62,7 +60,7 @@ function dedupeRows(
     existing.inputTokens += row.inputTokens;
     existing.outputTokens += row.outputTokens;
     existing.cachedInputTokens += row.cachedInputTokens;
-    existing.cachedOutputTokens += row.cachedOutputTokens;
+    existing.cachedWriteTokens += row.cachedWriteTokens;
     existing.reasoningTokens += row.reasoningTokens;
     existing.totalTokens += row.totalTokens;
     existing.eventCount += row.eventCount;
@@ -107,7 +105,7 @@ export class TokenUsageService {
       inputTokens: row.inputTokens,
       outputTokens: row.outputTokens,
       cachedInputTokens: row.cachedInputTokens,
-      cachedOutputTokens: row.cachedOutputTokens,
+      cachedWriteTokens: row.cachedWriteTokens,
       reasoningTokens: row.reasoningTokens,
       totalTokens: row.totalTokens,
       eventCount: row.eventCount,
@@ -136,7 +134,7 @@ export class TokenUsageService {
           inputTokens: sql`excluded.input_tokens`,
           outputTokens: sql`excluded.output_tokens`,
           cachedInputTokens: sql`excluded.cached_input_tokens`,
-          cachedOutputTokens: sql`excluded.cached_output_tokens`,
+          cachedWriteTokens: sql`excluded.cached_write_tokens`,
           reasoningTokens: sql`excluded.reasoning_tokens`,
           totalTokens: sql`excluded.total_tokens`,
           eventCount: sql`excluded.event_count`,

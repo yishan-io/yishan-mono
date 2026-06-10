@@ -4,7 +4,7 @@ export type TokenUsageSeriesItem = {
   inputTokens: number;
   outputTokens: number;
   cachedInputTokens: number;
-  cachedOutputTokens: number;
+  cachedWriteTokens: number;
 };
 
 export type OverviewTokenUsageResponse = {

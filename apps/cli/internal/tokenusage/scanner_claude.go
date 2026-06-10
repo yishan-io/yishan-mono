@@ -128,7 +128,7 @@ func scanClaudeTranscriptFile(
 			InputTokens:        record.InputTokens,
 			OutputTokens:       record.OutputTokens,
 			CachedInputTokens:  record.CacheReadTokens,
-			CachedOutputTokens: 0,
+			CachedWriteTokens:  record.CacheWriteTokens,
 			ReasoningTokens:    0,
 			TotalTokens:        record.InputTokens + record.OutputTokens,
 		}
@@ -145,13 +145,14 @@ func scanClaudeTranscriptFile(
 }
 
 type parsedClaudeUsageRecord struct {
-	SessionID       string
-	Timestamp       time.Time
-	Model           string
-	CWD             string
-	InputTokens     int64
-	OutputTokens    int64
-	CacheReadTokens int64
+	SessionID        string
+	Timestamp        time.Time
+	Model            string
+	CWD              string
+	InputTokens      int64
+	OutputTokens     int64
+	CacheReadTokens  int64
+	CacheWriteTokens int64
 }
 
 func parseClaudeUsageRecord(rawLine []byte, fallbackSessionID string) (parsedClaudeUsageRecord, bool) {
@@ -181,13 +182,14 @@ func parseClaudeUsageRecord(rawLine []byte, fallbackSessionID string) (parsedCla
 		return parsedClaudeUsageRecord{}, false
 	}
 	return parsedClaudeUsageRecord{
-		SessionID:       sessionID,
-		Timestamp:       timestamp,
-		Model:           firstNonEmptyModel(record.Message.Model),
-		CWD:             strings.TrimSpace(record.CWD),
-		InputTokens:     inputTokens,
-		OutputTokens:    outputTokens,
-		CacheReadTokens: cacheReadTokens,
+		SessionID:        sessionID,
+		Timestamp:        timestamp,
+		Model:            firstNonEmptyModel(record.Message.Model),
+		CWD:              strings.TrimSpace(record.CWD),
+		InputTokens:      inputTokens,
+		OutputTokens:     outputTokens,
+		CacheReadTokens:  cacheReadTokens,
+		CacheWriteTokens: cacheWriteTokens,
 	}, true
 }
 

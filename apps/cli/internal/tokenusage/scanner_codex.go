@@ -19,7 +19,7 @@ type codexUsage struct {
 	InputTokens        int64
 	OutputTokens       int64
 	CachedInputTokens  int64
-	CachedOutputTokens int64
+	CachedWriteTokens int64
 	ReasoningTokens    int64
 	TotalTokens        int64
 }
@@ -52,7 +52,7 @@ type hourlyAccumulator struct {
 	InputTokens        int64
 	OutputTokens       int64
 	CachedInputTokens  int64
-	CachedOutputTokens int64
+	CachedWriteTokens int64
 	ReasoningTokens    int64
 	TotalTokens        int64
 	EventCount         int64
@@ -208,13 +208,10 @@ func usageFromAny(value any) (codexUsage, bool) {
 	input := getInt64(record, "input_tokens")
 	output := getInt64(record, "output_tokens")
 	cachedInput := getInt64(record, "cached_input_tokens", "cache_read_input_tokens")
-	cachedOutput := getInt64(record, "cached_output_tokens", "cache_creation_output_tokens")
+	cachedWrite := getInt64(record, "cached_write_tokens", "cache_creation_write_tokens")
 	reasoning := getInt64(record, "reasoning_output_tokens")
 	total := getInt64(record, "total_tokens")
-	if total == 0 {
-		total = input + output
-	}
-	return codexUsage{InputTokens: input, OutputTokens: output, CachedInputTokens: cachedInput, CachedOutputTokens: cachedOutput, ReasoningTokens: reasoning, TotalTokens: total}, true
+	return codexUsage{InputTokens: input, OutputTokens: output, CachedInputTokens: cachedInput, CachedWriteTokens: cachedWrite, ReasoningTokens: reasoning, TotalTokens: total}, true
 }
 
 func parseModel(payload map[string]any) string {
@@ -274,7 +271,7 @@ func computeDeltaUsage(current codexUsage, previous *codexUsage) codexUsage {
 		InputTokens:        maxInt64(current.InputTokens-previous.InputTokens, 0),
 		OutputTokens:       maxInt64(current.OutputTokens-previous.OutputTokens, 0),
 		CachedInputTokens:  maxInt64(current.CachedInputTokens-previous.CachedInputTokens, 0),
-		CachedOutputTokens: maxInt64(current.CachedOutputTokens-previous.CachedOutputTokens, 0),
+		CachedWriteTokens: maxInt64(current.CachedWriteTokens-previous.CachedWriteTokens, 0),
 		ReasoningTokens:    maxInt64(current.ReasoningTokens-previous.ReasoningTokens, 0),
 		TotalTokens:        maxInt64(current.TotalTokens-previous.TotalTokens, 0),
 	}
@@ -371,7 +368,7 @@ func accumulateDelta(acc *hourlyAccumulator, delta codexUsage, sessionID string)
 	acc.InputTokens += delta.InputTokens
 	acc.OutputTokens += delta.OutputTokens
 	acc.CachedInputTokens += delta.CachedInputTokens
-	acc.CachedOutputTokens += delta.CachedOutputTokens
+	acc.CachedWriteTokens += delta.CachedWriteTokens
 	acc.ReasoningTokens += delta.ReasoningTokens
 	acc.TotalTokens += delta.TotalTokens
 	acc.EventCount++
@@ -392,7 +389,7 @@ func materializeHourlyRows(buckets map[hourlyKey]*hourlyAccumulator, input ScanI
 			InputTokens:           acc.InputTokens,
 			OutputTokens:          acc.OutputTokens,
 			CachedInputTokens:     acc.CachedInputTokens,
-			CachedOutputTokens:    acc.CachedOutputTokens,
+			CachedWriteTokens:    acc.CachedWriteTokens,
 			ReasoningTokens:       acc.ReasoningTokens,
 			TotalTokens:           acc.TotalTokens,
 			EventCount:            acc.EventCount,

@@ -366,7 +366,7 @@ export const tokenUsageHourly = pgTable(
     inputTokens: bigint("input_tokens", { mode: "number" }).notNull().default(0),
     outputTokens: bigint("output_tokens", { mode: "number" }).notNull().default(0),
     cachedInputTokens: bigint("cached_input_tokens", { mode: "number" }).notNull().default(0),
-    cachedOutputTokens: bigint("cached_output_tokens", { mode: "number" }).notNull().default(0),
+    cachedWriteTokens: bigint("cached_write_tokens", { mode: "number" }).notNull().default(0),
     reasoningTokens: bigint("reasoning_tokens", { mode: "number" }).notNull().default(0),
     totalTokens: bigint("total_tokens", { mode: "number" }).notNull().default(0),
     eventCount: bigint("event_count", { mode: "number" }).notNull().default(0),

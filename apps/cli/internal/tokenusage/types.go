@@ -31,7 +31,7 @@ type HourlyUsageRow struct {
 	InputTokens           int64
 	OutputTokens          int64
 	CachedInputTokens     int64
-	CachedOutputTokens    int64
+	CachedWriteTokens    int64
 	ReasoningTokens       int64
 	TotalTokens           int64
 	EventCount            int64

@@ -53,8 +53,8 @@ export function TokenUsageChartView() {
     const dataByDate = new Map<string, { cachedTokens: number; uncachedTokens: number }>();
     for (const item of series) {
       const date = parseBucketDate(item.bucketStartUtc);
-      const cached = item.cachedInputTokens + item.cachedOutputTokens;
-      const uncached = Math.max(0, item.totalTokens - item.cachedInputTokens - item.cachedOutputTokens);
+      const cached = item.cachedInputTokens + item.cachedWriteTokens;
+      const uncached = Math.max(0, item.totalTokens - item.cachedInputTokens - item.cachedWriteTokens);
       dataByDate.set(date, { cachedTokens: cached, uncachedTokens: uncached });
     }
 

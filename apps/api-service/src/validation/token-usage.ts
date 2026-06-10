@@ -18,7 +18,7 @@ export const tokenUsageHourlyRowSchema = z.object({
   inputTokens: z.number().int().min(0),
   outputTokens: z.number().int().min(0),
   cachedInputTokens: z.number().int().min(0),
-  cachedOutputTokens: z.number().int().min(0),
+  cachedWriteTokens: z.number().int().min(0),
   reasoningTokens: z.number().int().min(0),
   totalTokens: z.number().int().min(0),
   eventCount: z.number().int().min(0),

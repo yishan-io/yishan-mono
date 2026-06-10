@@ -15,16 +15,17 @@ import (
 const opencodeAgentKind = "opencode"
 
 type openCodeSessionRow struct {
-	SessionID       string
-	Timestamp       string
-	Directory       string
-	WorkspaceDir    string
-	Worktree        string
-	SessionModel    string
-	TokensInput     int64
-	TokensOutput    int64
-	TokensReasoning int64
-	TokensCacheRead int64
+	SessionID        string
+	Timestamp        string
+	Directory        string
+	WorkspaceDir     string
+	Worktree         string
+	SessionModel     string
+	TokensInput      int64
+	TokensOutput     int64
+	TokensReasoning  int64
+	TokensCacheRead  int64
+	TokensCacheWrite int64
 }
 
 func ScanOpenCodeHourlyUsage(ctx context.Context, input ScanInput) ([]HourlyUsageRow, error) {
@@ -100,12 +101,14 @@ func queryOpenCodeSessionRows(ctx context.Context, databasePath string) ([]openC
 		"  COALESCE(s.tokens_input, 0) AS tokens_input,",
 		"  COALESCE(s.tokens_output, 0) AS tokens_output,",
 		"  COALESCE(s.tokens_reasoning, 0) AS tokens_reasoning,",
-		"  COALESCE(s.tokens_cache_read, 0) AS tokens_cache_read",
+		"  COALESCE(s.tokens_cache_read, 0) AS tokens_cache_read,",
+		"  COALESCE(s.tokens_cache_write, 0) AS tokens_cache_write",
 		"FROM session s",
 		"LEFT JOIN workspace w ON w.id = s.workspace_id",
 		"LEFT JOIN project p ON p.id = s.project_id",
 		"WHERE COALESCE(s.tokens_input, 0) + COALESCE(s.tokens_output, 0) +",
-		"      COALESCE(s.tokens_reasoning, 0) + COALESCE(s.tokens_cache_read, 0) > 0",
+		"      COALESCE(s.tokens_reasoning, 0) + COALESCE(s.tokens_cache_read, 0) +",
+		"      COALESCE(s.tokens_cache_write, 0) > 0",
 		"ORDER BY s.time_created ASC",
 	}, " ")
 
@@ -119,16 +122,17 @@ func queryOpenCodeSessionRows(ctx context.Context, databasePath string) ([]openC
 	}
 
 	type sqliteRow struct {
-		SessionID       string `json:"session_id"`
-		TimeCreated     any    `json:"time_created"`
-		Directory       string `json:"directory"`
-		WorkspaceDir    string `json:"workspace_directory"`
-		Worktree        string `json:"worktree"`
-		SessionModel    string `json:"session_model"`
-		TokensInput     int64  `json:"tokens_input"`
-		TokensOutput    int64  `json:"tokens_output"`
-		TokensReasoning int64  `json:"tokens_reasoning"`
-		TokensCacheRead int64  `json:"tokens_cache_read"`
+		SessionID        string `json:"session_id"`
+		TimeCreated      any    `json:"time_created"`
+		Directory        string `json:"directory"`
+		WorkspaceDir     string `json:"workspace_directory"`
+		Worktree         string `json:"worktree"`
+		SessionModel     string `json:"session_model"`
+		TokensInput      int64  `json:"tokens_input"`
+		TokensOutput     int64  `json:"tokens_output"`
+		TokensReasoning  int64  `json:"tokens_reasoning"`
+		TokensCacheRead  int64  `json:"tokens_cache_read"`
+		TokensCacheWrite int64  `json:"tokens_cache_write"`
 	}
 	parsedRows := make([]sqliteRow, 0)
 	if err := json.Unmarshal(rawOutput, &parsedRows); err != nil {
@@ -143,10 +147,11 @@ func queryOpenCodeSessionRows(ctx context.Context, databasePath string) ([]openC
 			WorkspaceDir:    row.WorkspaceDir,
 			Worktree:        row.Worktree,
 			SessionModel:    row.SessionModel,
-			TokensInput:     row.TokensInput,
-			TokensOutput:    row.TokensOutput,
-			TokensReasoning: row.TokensReasoning,
-			TokensCacheRead: row.TokensCacheRead,
+			TokensInput:      row.TokensInput,
+			TokensOutput:     row.TokensOutput,
+			TokensReasoning:  row.TokensReasoning,
+			TokensCacheRead:  row.TokensCacheRead,
+			TokensCacheWrite: row.TokensCacheWrite,
 		})
 	}
 	return rows, nil
@@ -185,11 +190,12 @@ func applyOpenCodeSessionRow(
 	workspace, confidence := resolveWorktree(cwd, worktrees)
 	event := codexEvent{SessionID: sessionRow.SessionID, Model: normalizeOpenCodeModel(sessionRow.SessionModel), Timestamp: timestamp}
 	delta := codexUsage{
-		InputTokens:       sessionRow.TokensInput,
+		InputTokens:       sessionRow.TokensInput + sessionRow.TokensCacheRead + sessionRow.TokensCacheWrite,
 		OutputTokens:      sessionRow.TokensOutput,
 		CachedInputTokens: sessionRow.TokensCacheRead,
+		CachedWriteTokens: sessionRow.TokensCacheWrite,
 		ReasoningTokens:   sessionRow.TokensReasoning,
-		TotalTokens:       sessionRow.TokensInput + sessionRow.TokensOutput + sessionRow.TokensReasoning,
+		TotalTokens:       sessionRow.TokensInput + sessionRow.TokensCacheRead + sessionRow.TokensCacheWrite + sessionRow.TokensOutput + sessionRow.TokensReasoning,
 	}
 	if delta.TotalTokens <= 0 {
 		return

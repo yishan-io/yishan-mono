@@ -212,7 +212,7 @@ type TokenUsageHourlyRowInput struct {
 	InputTokens           int64  `json:"inputTokens"`
 	OutputTokens          int64  `json:"outputTokens"`
 	CachedInputTokens     int64  `json:"cachedInputTokens"`
-	CachedOutputTokens    int64  `json:"cachedOutputTokens"`
+	CachedWriteTokens    int64  `json:"cachedWriteTokens"`
 	ReasoningTokens       int64  `json:"reasoningTokens"`
 	TotalTokens           int64  `json:"totalTokens"`
 	EventCount            int64  `json:"eventCount"`

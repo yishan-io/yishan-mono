@@ -459,7 +459,7 @@ func (c *tokenUsageCollector) syncRowsForOrg(orgID string, rows []tokenusage.Hou
 			InputTokens:           row.InputTokens,
 			OutputTokens:          row.OutputTokens,
 			CachedInputTokens:     row.CachedInputTokens,
-			CachedOutputTokens:    row.CachedOutputTokens,
+			CachedWriteTokens:    row.CachedWriteTokens,
 			ReasoningTokens:       row.ReasoningTokens,
 			TotalTokens:           row.TotalTokens,
 			EventCount:            row.EventCount,

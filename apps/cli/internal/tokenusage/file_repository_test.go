@@ -111,7 +111,7 @@ func newHourlyUsageRow(bucketStartHourUTC int64, totalTokens int64) HourlyUsageR
 		InputTokens:           totalTokens,
 		OutputTokens:          0,
 		CachedInputTokens:     0,
-		CachedOutputTokens:    0,
+		CachedWriteTokens:    0,
 		ReasoningTokens:       0,
 		TotalTokens:           totalTokens,
 		EventCount:            1,

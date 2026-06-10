@@ -227,7 +227,7 @@ func hourlyRowsMatchForSync(left HourlyUsageRow, right HourlyUsageRow) bool {
 		left.InputTokens == right.InputTokens &&
 		left.OutputTokens == right.OutputTokens &&
 		left.CachedInputTokens == right.CachedInputTokens &&
-		left.CachedOutputTokens == right.CachedOutputTokens &&
+		left.CachedWriteTokens == right.CachedWriteTokens &&
 		left.ReasoningTokens == right.ReasoningTokens &&
 		left.TotalTokens == right.TotalTokens &&
 		left.EventCount == right.EventCount &&
