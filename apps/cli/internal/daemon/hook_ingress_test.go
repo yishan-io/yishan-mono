@@ -128,7 +128,7 @@ func TestServeAgentHookPublishesPendingQuestionNotificationEvent(t *testing.T) {
 }
 
 func TestServeAgentHookNormalizesSupportedAgentNames(t *testing.T) {
-	for _, agent := range []string{"codex", "claude", "opencode", "gemini", "pi", "copilot", "cursor"} {
+	for _, agent := range allAgentKinds {
 		t.Run(agent, func(t *testing.T) {
 			handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 			subscriptionID, events := handler.events.Subscribe()

@@ -166,14 +166,13 @@ func hookNotificationPayload(event normalizedHookEvent, title string, body strin
 
 func normalizeHookAgent(agent string) string {
 	normalized := strings.ToLower(strings.TrimSpace(agent))
-	switch normalized {
-	case "codex", "claude", "opencode", "gemini", "pi", "copilot", "cursor":
-		return normalized
-	case "cursor-agent":
+	if normalized == "cursor-agent" {
 		return "cursor"
-	default:
-		return "unknown"
 	}
+	if isKnownAgentKind(normalized) {
+		return normalized
+	}
+	return "unknown"
 }
 
 // isPerToolHookEvent returns true for hook events that fire per tool invocation

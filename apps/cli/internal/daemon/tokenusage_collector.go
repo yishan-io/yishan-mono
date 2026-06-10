@@ -23,7 +23,7 @@ const (
 	tokenUsageScanOverlap  = 2 * time.Hour
 )
 
-var tokenUsageScannableAgentKinds = []string{"codex", "claude", "opencode"}
+var tokenUsageScannableAgentKinds = agentKindsWithActiveTokenScanners
 
 type tokenUsageCollector struct {
 	mu         sync.Mutex
@@ -244,14 +244,11 @@ func buildTokenUsageWorktreeRefs(workspaces []workspace.Workspace) []tokenusage.
 }
 
 func normalizeTokenUsageAgentKind(agentKind string) string {
-	switch strings.ToLower(strings.TrimSpace(agentKind)) {
-	case "codex", "claude", "opencode", "gemini", "pi":
-		return strings.ToLower(strings.TrimSpace(agentKind))
-	case "cursor", "cursor-agent", "copilot", "unknown", "":
-		return ""
-	default:
-		return ""
+	normalized := strings.ToLower(strings.TrimSpace(agentKind))
+	if isTokenTrackingAgentKind(normalized) {
+		return normalized
 	}
+	return ""
 }
 
 func (c *tokenUsageCollector) Close() {
