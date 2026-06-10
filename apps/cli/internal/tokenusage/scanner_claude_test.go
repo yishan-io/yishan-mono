@@ -110,7 +110,7 @@ func TestScanClaudeTranscriptFile(t *testing.T) {
 		totalInput += acc.InputTokens
 		totalOutput += acc.OutputTokens
 		totalCacheRead += acc.CachedInputTokens
-		totalCacheWrite += acc.CachedOutputTokens
+		totalCacheWrite += acc.CachedWriteTokens
 		totalTokens += acc.TotalTokens
 	}
 
