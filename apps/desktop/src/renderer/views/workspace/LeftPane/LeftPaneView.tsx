@@ -1,4 +1,4 @@
-import { Box, Button, Stack, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChartBar, LuPanelLeft, LuPlus, LuZap } from "react-icons/lu";
@@ -23,6 +23,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
   const { t } = useTranslation();
   const repos = workspaceStore((state) => state.projects);
   const displayRepoIds = workspaceStore((state) => state.displayProjectIds);
+  const isProjectsLoaded = workspaceStore((state) => state.isProjectsLoaded);
   const filteredRepos = repos.filter((repo) => displayRepoIds.includes(repo.id));
   const toggleLeftShortcutLabel = getShortcutDisplayLabelById("toggle-left-pane", getRendererPlatform());
   const toggleLeftTooltipLabel = toggleLeftShortcutLabel
@@ -159,7 +160,11 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
         </Box>
       </Box>
       <ProjectListView />
-      {filteredRepos.length === 0 ? (
+      {!isProjectsLoaded ? (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
+          <CircularProgress size={20} />
+        </Box>
+      ) : filteredRepos.length === 0 ? (
         <Box sx={{ px: 2, pb: 1.5 }}>
           <Typography variant="caption" color="text.secondary">
             {t("project.filter.empty")}

@@ -20,6 +20,7 @@ type TestState = {
     string,
     {
       displayProjectIds?: string[];
+      knownProjectIds?: string[];
     }
   >;
   workspaces: Array<{
@@ -179,6 +180,7 @@ describe("createWorkspaceRepoActions", () => {
     const state = getState();
     expect(state.organizationPreferencesById?.["org-1"]).toEqual({
       displayProjectIds: ["repo-1"],
+      knownProjectIds: ["repo-1"],
     });
   });
 
@@ -360,6 +362,83 @@ describe("createWorkspaceRepoActions", () => {
     );
 
     expect(harness.getState().displayProjectIds).toEqual(["repo-1"]);
+  });
+
+  it("discovers new projects on first load after restart when knownProjectIds is persisted", () => {
+    const harness = createHarness({
+      projects: [],
+      workspaces: [],
+      displayProjectIds: [],
+      organizationPreferencesById: {
+        "org-1": {
+          displayProjectIds: ["repo-1"],
+          knownProjectIds: ["repo-1", "repo-2"],
+        },
+      },
+    });
+
+    harness.actions.load(
+      "org-1",
+      [
+        {
+          id: "repo-1",
+          name: "Repo 1",
+          sourceType: "git-local",
+          repoProvider: null,
+          repoUrl: null,
+          repoKey: "repo-1",
+          icon: "folder",
+          color: "#1E66F5",
+          setupScript: "",
+          postScript: "",
+          contextEnabled: true,
+          organizationId: "org-1",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          createdByUserId: "user-1",
+        },
+        {
+          id: "repo-2",
+          name: "Repo 2",
+          sourceType: "git-local",
+          repoProvider: null,
+          repoUrl: null,
+          repoKey: "repo-2",
+          icon: "folder",
+          color: "#1E66F5",
+          setupScript: "",
+          postScript: "",
+          contextEnabled: true,
+          organizationId: "org-1",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          createdByUserId: "user-1",
+        },
+        {
+          id: "repo-3",
+          name: "Repo 3",
+          sourceType: "git-local",
+          repoProvider: null,
+          repoUrl: null,
+          repoKey: "repo-3",
+          icon: "folder",
+          color: "#1E66F5",
+          setupScript: "",
+          postScript: "",
+          contextEnabled: true,
+          organizationId: "org-1",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          createdByUserId: "user-1",
+        },
+      ],
+      [],
+    );
+
+    // repo-1 was in displayProjectIds (user wanted to see it)
+    // repo-2 was known but NOT in displayProjectIds (user intentionally hid it)
+    // repo-3 was NOT in knownProjectIds (truly new) → should be auto-discovered
+    expect(harness.getState().displayProjectIds).toEqual(["repo-1", "repo-3"]);
   });
 
   it("adds project state from backend create result", () => {
