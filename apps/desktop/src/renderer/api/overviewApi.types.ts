@@ -10,6 +10,7 @@ export type TokenUsageSeriesItem = {
 export type OverviewTokenUsageResponse = {
   series: TokenUsageSeriesItem[];
   cachedTotal: number;
+  cachedWriteTotal: number;
   uncachedTotal: number;
 };
 

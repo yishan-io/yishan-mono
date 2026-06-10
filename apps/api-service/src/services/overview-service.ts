@@ -89,6 +89,7 @@ export class OverviewService {
   async getTokenUsage(input: OverviewTokenUsageInput): Promise<{
     series: TokenUsageSeriesItem[];
     cachedTotal: number;
+    cachedWriteTotal: number;
     uncachedTotal: number;
   }> {
     await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId, input.actorRole);
@@ -126,11 +127,12 @@ export class OverviewService {
       cachedInputTokens: Number(row.cached_input_tokens ?? 0),
       cachedWriteTokens: Number(row.cached_write_tokens ?? 0),
     }));
-    const cachedTotal = series.reduce((acc, item) => acc + item.cachedInputTokens + item.cachedWriteTokens, 0);
+    const cachedTotal = series.reduce((acc, item) => acc + item.cachedInputTokens, 0);
+    const cachedWriteTotal = series.reduce((acc, item) => acc + item.cachedWriteTokens, 0);
     const grandTotal = series.reduce((acc, item) => acc + item.totalTokens, 0);
     const uncachedTotal = Math.max(0, grandTotal - cachedTotal);
 
-    return { series, cachedTotal, uncachedTotal };
+    return { series, cachedTotal, cachedWriteTotal, uncachedTotal };
   }
 
   async getModelBreakdown(input: OverviewModelBreakdownInput): Promise<{

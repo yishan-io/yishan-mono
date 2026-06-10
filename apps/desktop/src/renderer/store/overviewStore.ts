@@ -17,6 +17,7 @@ type OverviewStoreState = {
 
   tokenUsageSeries: TokenUsageSeriesItem[];
   cachedTotal: number;
+  cachedWriteTotal: number;
   uncachedTotal: number;
   tokenUsageLoadState: LoadState;
   tokenUsageLoadError: string | null;
@@ -37,7 +38,7 @@ type OverviewStoreState = {
   setSelectedProjectId: (projectId: string | undefined) => void;
   setGranularity: (granularity: "hour" | "day") => void;
 
-  setTokenUsageData: (series: TokenUsageSeriesItem[], cachedTotal: number, uncachedTotal: number) => void;
+  setTokenUsageData: (series: TokenUsageSeriesItem[], cachedTotal: number, cachedWriteTotal: number, uncachedTotal: number) => void;
   setTokenUsageLoadState: (state: LoadState, error?: string | null) => void;
 
   setModelBreakdown: (models: ModelBreakdownItem[]) => void;
@@ -58,6 +59,7 @@ export const overviewStore = create<OverviewStoreState>()(
 
     tokenUsageSeries: [],
     cachedTotal: 0,
+    cachedWriteTotal: 0,
     uncachedTotal: 0,
     tokenUsageLoadState: "idle",
     tokenUsageLoadError: null,
@@ -83,8 +85,8 @@ export const overviewStore = create<OverviewStoreState>()(
     setGranularity: (granularity) => {
       set({ granularity });
     },
-    setTokenUsageData: (tokenUsageSeries, cachedTotal, uncachedTotal) => {
-      set({ tokenUsageSeries, cachedTotal, uncachedTotal });
+    setTokenUsageData: (tokenUsageSeries, cachedTotal, cachedWriteTotal, uncachedTotal) => {
+      set({ tokenUsageSeries, cachedTotal, cachedWriteTotal, uncachedTotal });
     },
     setTokenUsageLoadState: (tokenUsageLoadState, tokenUsageLoadError = null) => {
       set({ tokenUsageLoadState, tokenUsageLoadError });
