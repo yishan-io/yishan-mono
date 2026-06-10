@@ -61,6 +61,7 @@ export function createWorkspaceRepoActions(
         state.organizationPreferencesById[normalizedOrganizationId] ??= {};
         const orgPrefs = state.organizationPreferencesById[normalizedOrganizationId];
         orgPrefs.displayProjectIds = state.displayProjectIds;
+        orgPrefs.knownProjectIds = state.projects.map((project) => project.id);
       }
     });
   };
@@ -69,6 +70,7 @@ export function createWorkspaceRepoActions(
     load: (organizationId, projects, workspaces) => {
       set((state) => {
         applyHydratedStateFromApiData(state, organizationId, projects, workspaces);
+        state.isProjectsLoaded = true;
       });
     },
     createProject,

@@ -207,6 +207,7 @@ export type WorkspaceStoreState = {
   selectedProjectId: string;
   selectedWorkspaceId: string;
   displayProjectIds: string[];
+  isProjectsLoaded: boolean;
   lastUsedExternalAppId?: ExternalAppId;
   organizationPreferencesById?: Record<string, WorkspaceStoreOrganizationPreference>;
   fileTreeRefreshVersion: number;
@@ -276,6 +277,7 @@ export type WorkspaceStoreState = {
 
 export type WorkspaceStoreOrganizationPreference = {
   displayProjectIds?: string[];
+  knownProjectIds?: string[];
   lastUsedExternalAppId?: ExternalAppId;
 };
 

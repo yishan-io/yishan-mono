@@ -48,6 +48,7 @@ describe("projectHelpers", () => {
 
     expect(readPersistedWorkspacePreferencesByOrg(storage, "org-1")).toEqual({
       displayProjectIds: ["repo-1", "repo-2"],
+      knownProjectIds: undefined,
       lastUsedExternalAppId: undefined,
     });
 

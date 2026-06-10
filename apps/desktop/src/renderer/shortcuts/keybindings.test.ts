@@ -61,6 +61,7 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
         selectedProjectId: "",
         selectedWorkspaceId: "workspace-1",
         displayProjectIds: [],
+        isProjectsLoaded: true,
         lastUsedExternalAppId: undefined,
         organizationPreferencesById: {},
         fileTreeRefreshVersion: 0,

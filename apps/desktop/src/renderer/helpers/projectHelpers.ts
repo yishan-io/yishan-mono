@@ -70,6 +70,9 @@ export function readPersistedWorkspacePreferencesByOrg(
         displayProjectIds: Array.isArray(scopedPreferences.displayProjectIds)
           ? scopedPreferences.displayProjectIds.filter((item): item is string => typeof item === "string")
           : undefined,
+        knownProjectIds: Array.isArray(scopedPreferences.knownProjectIds)
+          ? scopedPreferences.knownProjectIds.filter((item): item is string => typeof item === "string")
+          : undefined,
         lastUsedExternalAppId:
           typeof scopedPreferences.lastUsedExternalAppId === "string"
             ? (scopedPreferences.lastUsedExternalAppId as WorkspaceStoreOrganizationPreference["lastUsedExternalAppId"])
@@ -198,13 +201,20 @@ export function applyHydratedStateFromApiData(
 
   const nextProjectIdSet = new Set(mappedProjects.map((project) => project.id));
   const previousProjectIdSet = new Set(state.projects.map((project) => project.id));
+  const persistedKnownProjectIds = orgPreferences?.knownProjectIds;
+  const knownProjectIdSet =
+    previousProjectIdSet.size > 0
+      ? previousProjectIdSet
+      : persistedKnownProjectIds !== undefined
+        ? new Set(persistedKnownProjectIds)
+        : undefined;
   const baseDisplayProjectIds = orgPreferences?.displayProjectIds ?? [];
   const filteredDisplayProjectIds = baseDisplayProjectIds.filter((projectId) => nextProjectIdSet.has(projectId));
   const discoveredProjectIds =
-    state.projects.length > 0
+    knownProjectIdSet !== undefined
       ? mappedProjects
           .map((project) => project.id)
-          .filter((projectId) => !baseDisplayProjectIds.includes(projectId) && !previousProjectIdSet.has(projectId))
+          .filter((projectId) => !baseDisplayProjectIds.includes(projectId) && !knownProjectIdSet.has(projectId))
       : [];
   const hasNoPersistedPreference =
     orgPreferences?.displayProjectIds === undefined || orgPreferences.displayProjectIds.length === 0;
@@ -241,6 +251,7 @@ export function applyHydratedStateFromApiData(
     state.organizationPreferencesById ??= {};
     state.organizationPreferencesById[normalizedOrganizationId] = {
       displayProjectIds: nextDisplayProjectIds,
+      knownProjectIds: mappedProjects.map((project) => project.id),
       lastUsedExternalAppId: orgPreferences?.lastUsedExternalAppId,
     };
   }
