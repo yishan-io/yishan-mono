@@ -723,6 +723,7 @@
     "actions": {
       "addRepository": "添加仓库",
       "filter": "筛选",
+      "refresh": "刷新项目",
       "config": "配置",
       "collapse": "折叠仓库",
       "expand": "展开仓库",
@@ -774,6 +775,7 @@
     "actions": {
       "addRepository": "添加项目",
       "filter": "筛选",
+      "refresh": "刷新项目",
       "config": "配置",
       "collapse": "折叠项目",
       "expand": "展开项目",

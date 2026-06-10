@@ -756,6 +756,7 @@
     "actions": {
       "addRepository": "Add repository",
       "filter": "Filter",
+      "refresh": "Refresh projects",
       "config": "Config",
       "collapse": "Collapse repository",
       "expand": "Expand repository",
@@ -807,6 +808,7 @@
     "actions": {
       "addRepository": "Add project",
       "filter": "Filter",
+      "refresh": "Refresh projects",
       "config": "Config",
       "collapse": "Collapse project",
       "expand": "Expand project",

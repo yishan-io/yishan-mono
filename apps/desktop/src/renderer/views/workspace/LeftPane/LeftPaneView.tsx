@@ -1,7 +1,7 @@
-import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
-import { useCallback } from "react";
+import { Box, Button, CircularProgress, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuChartBar, LuPanelLeft, LuPlus, LuZap } from "react-icons/lu";
+import { LuChartBar, LuPanelLeft, LuPlus, LuRefreshCw, LuZap } from "react-icons/lu";
 import { PaneHeader } from "../../../components/PaneHeader";
 import { PaneToggleButton } from "../../../components/PaneToggleButton";
 import { getRendererPlatform } from "../../../helpers/platform";
@@ -37,7 +37,17 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
   const setOverlayPanel = workspaceUiStore((state) => state.setOverlayPanel);
   const isScheduledJobPanelOpen = overlayPanel === "scheduledJob";
   const isOverviewPanelOpen = overlayPanel === "overview";
-  const { setSelectedRepoId, setSelectedWorkspaceId } = useCommands();
+  const { setSelectedRepoId, setSelectedWorkspaceId, loadWorkspaceFromBackend } = useCommands();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefreshProjects = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await loadWorkspaceFromBackend();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [loadWorkspaceFromBackend]);
 
   const handleToggleScheduledJobs = useCallback(() => {
     const willOpen = overlayPanel !== "scheduledJob";
@@ -156,6 +166,23 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
           {t("project.list.workspaces")}
         </Typography>
         <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center" }}>
+          <Tooltip title={t("project.actions.refresh")} arrow>
+            <IconButton
+              size="small"
+              aria-label={t("project.actions.refresh")}
+              onClick={handleRefreshProjects}
+              disabled={isRefreshing}
+              sx={{
+                "@keyframes project-refresh-spin": {
+                  from: { transform: "rotate(0deg)" },
+                  to: { transform: "rotate(360deg)" },
+                },
+                ...(isRefreshing && { "& svg": { animation: "project-refresh-spin 1s linear infinite" } }),
+              }}
+            >
+              <LuRefreshCw size={13} />
+            </IconButton>
+          </Tooltip>
           <ProjectFilterPopoverView />
         </Box>
       </Box>
