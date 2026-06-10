@@ -1,7 +1,6 @@
-import { type ChildProcess, spawn, execFileSync } from "node:child_process";
+import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
-import { app } from "electron";
 import { isDevMode } from "../runtime/environment";
 import {
   DAEMON_HEALTH_RETRY_COUNT,
@@ -386,29 +385,11 @@ export class DaemonManager {
         retryDelayMs: DAEMON_PRECHECK_HEALTH_RETRY_DELAY_MS,
       });
 
-      // In release mode, check whether the running daemon is from an older app
-      // version (e.g. after an auto-update that did not stop the daemon).
-      // If the versions differ, stop the old daemon and fall through to restart.
-      // In dev mode the daemon always reports "dev" so we skip this check.
-      if (!isDevMode()) {
-        try {
-          const info = await this.getInfo();
-          if (info.version !== app.getVersion()) {
-            this.logger.log(
-              `Restarting daemon: running version ${info.version} does not match app version ${app.getVersion()}`,
-            );
-            await this.stop();
-            // Fall through to start path below.
-          } else {
-            return;
-          }
-        } catch {
-          // Could not read version — daemon healthy enough, leave it.
-          return;
-        }
-      } else {
-        return;
-      }
+      // Daemon is already healthy — leave it running regardless of version.
+      // If the daemon version is behind the app version, the renderer will
+      // display an "outdated daemon" warning and the user can restart manually
+      // from Settings when they are ready.
+      return;
     } catch {
       // Daemon not healthy — continue to active recovery path.
     }
