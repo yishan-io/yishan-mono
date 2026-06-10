@@ -90,7 +90,7 @@ func (c *tokenUsageCollector) SyncNow(source string) {
 	}
 	c.mu.Unlock()
 
-	for _, agentKind := range []string{"codex", "claude", "opencode"} {
+	for _, agentKind := range tokenUsageScannableAgentKinds {
 		c.mu.Lock()
 		if c.inFlight[agentKind] {
 			c.mu.Unlock()
