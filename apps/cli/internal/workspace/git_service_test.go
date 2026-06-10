@@ -636,3 +636,101 @@ func TestGitServiceListCommitsToTargetReturnsEmptyWhenTargetMissing(t *testing.T
 		t.Fatalf("expected no changed files when target branch is missing, got %d", len(comparison.AllChangedFiles))
 	}
 }
+
+// TestResolveRefUnambiguous verifies that resolveRefUnambiguous returns the
+// full symbolic ref path (e.g. refs/remotes/origin/main) for a short remote
+// tracking ref, preventing "ambiguous object name" errors when a loose ref and
+// a stale packed-ref entry exist for the same short name.
+func TestResolveRefUnambiguous(t *testing.T) {
+	remote := filepath.Join(t.TempDir(), "remote.git")
+	runGit(t, t.TempDir(), "init", "--bare", remote)
+
+	repo := filepath.Join(t.TempDir(), "repo")
+	runGit(t, t.TempDir(), "clone", remote, repo)
+	runGit(t, repo, "config", "user.name", "Test User")
+	runGit(t, repo, "config", "user.email", "test@example.com")
+
+	os.WriteFile(filepath.Join(repo, "seed.txt"), []byte("seed\n"), 0o644)
+	runGit(t, repo, "add", "seed.txt")
+	runGit(t, repo, "commit", "-m", "seed")
+	runGit(t, repo, "push", "origin", "HEAD:main")
+
+	ctx := context.Background()
+
+	// Short ref "origin/main" should resolve to "refs/remotes/origin/main".
+	full := resolveRefUnambiguous(ctx, repo, "origin/main")
+	if full != "refs/remotes/origin/main" {
+		t.Fatalf("expected refs/remotes/origin/main, got %q", full)
+	}
+
+	// Empty ref and HEAD should be returned unchanged.
+	if got := resolveRefUnambiguous(ctx, repo, ""); got != "" {
+		t.Fatalf("expected empty string unchanged, got %q", got)
+	}
+	if got := resolveRefUnambiguous(ctx, repo, "HEAD"); got != "HEAD" {
+		t.Fatalf("expected HEAD unchanged, got %q", got)
+	}
+
+	// Non-existent ref should be returned unchanged (graceful fallback).
+	if got := resolveRefUnambiguous(ctx, repo, "origin/does-not-exist"); got != "origin/does-not-exist" {
+		t.Fatalf("expected original ref unchanged for missing ref, got %q", got)
+	}
+}
+
+// TestCreateWorktreeWithAmbiguousRef verifies that worktree creation succeeds
+// even when the source branch ref (e.g. "origin/main") is technically ambiguous
+// due to a stale packed-ref entry pointing to an older commit while the loose
+// ref under refs/remotes/ points to a newer one.
+func TestCreateWorktreeWithAmbiguousRef(t *testing.T) {
+	remote := filepath.Join(t.TempDir(), "remote.git")
+	runGit(t, t.TempDir(), "init", "--bare", remote)
+
+	repo := filepath.Join(t.TempDir(), "repo")
+	runGit(t, t.TempDir(), "clone", remote, repo)
+	runGit(t, repo, "config", "user.name", "Test User")
+	runGit(t, repo, "config", "user.email", "test@example.com")
+
+	// First commit — push to establish origin/main.
+	os.WriteFile(filepath.Join(repo, "v1.txt"), []byte("v1\n"), 0o644)
+	runGit(t, repo, "add", "v1.txt")
+	runGit(t, repo, "commit", "-m", "v1")
+	runGit(t, repo, "push", "origin", "HEAD:main")
+
+	// Capture the first commit hash — this will become the stale packed-ref entry.
+	staleCommit := strings.TrimSpace(runGit(t, repo, "rev-parse", "origin/main"))
+
+	// Pack all refs so refs/remotes/origin/main lands in packed-refs.
+	runGit(t, repo, "pack-refs", "--all")
+
+	// Second commit — push again so the remote advances.
+	os.WriteFile(filepath.Join(repo, "v2.txt"), []byte("v2\n"), 0o644)
+	runGit(t, repo, "add", "v2.txt")
+	runGit(t, repo, "commit", "-m", "v2")
+	runGit(t, repo, "push", "origin", "HEAD:main")
+	runGit(t, repo, "fetch", "origin")
+
+	// Now refs/remotes/origin/main (loose) points to a newer commit than the
+	// packed-ref entry — this is the ambiguous state that caused the bug.
+	freshCommit := strings.TrimSpace(runGit(t, repo, "rev-parse", "origin/main"))
+	if staleCommit == freshCommit {
+		t.Fatal("expected loose ref to diverge from packed-ref after second push")
+	}
+
+	svc := NewGitService()
+	worktreePath := filepath.Join(t.TempDir(), "wt-from-ambiguous")
+	if err := svc.CreateWorktree(context.Background(), repo, "feature/from-ambiguous", worktreePath, true,
+		resolveRefUnambiguous(context.Background(), repo, "origin/main")); err != nil {
+		t.Fatalf("CreateWorktree with ambiguous ref: %v", err)
+	}
+
+	branch := strings.TrimSpace(runGit(t, worktreePath, "rev-parse", "--abbrev-ref", "HEAD"))
+	if branch != "feature/from-ambiguous" {
+		t.Fatalf("expected branch feature/from-ambiguous, got %q", branch)
+	}
+
+	// The worktree should be at the fresh (non-stale) commit.
+	worktreeCommit := strings.TrimSpace(runGit(t, worktreePath, "rev-parse", "HEAD"))
+	if worktreeCommit != freshCommit {
+		t.Fatalf("expected worktree at fresh commit %q, got %q", freshCommit, worktreeCommit)
+	}
+}

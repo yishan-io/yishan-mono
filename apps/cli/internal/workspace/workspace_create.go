@@ -191,7 +191,11 @@ func makeWorktreeStep(m *Manager, req CreateRequest, paths resolvedCreatePaths) 
 
 			// Fast path: ref already available locally — no network round-trip.
 			if m.gits.RefExists(stepCtx, paths.sourcePath, sourceBranch) {
-				err := m.gits.CreateWorktree(stepCtx, paths.sourcePath, req.TargetBranch, paths.worktreePath, true, sourceBranch)
+				// Resolve to the full symbolic ref name to avoid "ambiguous
+				// object name" errors when a loose ref and a stale packed-ref
+				// entry both exist for the same short name (e.g. "origin/main").
+				resolved := resolveRefUnambiguous(stepCtx, paths.sourcePath, sourceBranch)
+				err := m.gits.CreateWorktree(stepCtx, paths.sourcePath, req.TargetBranch, paths.worktreePath, true, resolved)
 				if err != nil {
 					return CreateProgressFailed, err.Error(), err
 				}
@@ -203,7 +207,10 @@ func makeWorktreeStep(m *Manager, req CreateRequest, paths resolvedCreatePaths) 
 				return CreateProgressFailed, fetchErr.Error(), fetchErr
 			}
 
-			if err := m.gits.CreateWorktree(stepCtx, paths.sourcePath, req.TargetBranch, paths.worktreePath, true, sourceBranch); err != nil {
+			// Re-resolve after fetch in case the ref is now available as a full
+			// remote-tracking ref (e.g. refs/remotes/origin/main).
+			resolved := resolveRefUnambiguous(stepCtx, paths.sourcePath, sourceBranch)
+			if err := m.gits.CreateWorktree(stepCtx, paths.sourcePath, req.TargetBranch, paths.worktreePath, true, resolved); err != nil {
 				return CreateProgressFailed, err.Error(), err
 			}
 			return CreateProgressCompleted, paths.worktreePath, nil
