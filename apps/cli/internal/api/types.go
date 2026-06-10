@@ -84,7 +84,6 @@ type Project struct {
 	RepoProvider   string `json:"repoProvider"`
 	RepoURL        string `json:"repoUrl"`
 	RepoKey        string `json:"repoKey"`
-	LocalPath      string `json:"localPath"`
 	ContextEnabled bool   `json:"contextEnabled"`
 	SetupScript    string `json:"setupScript"`
 	PostScript     string `json:"postScript"`

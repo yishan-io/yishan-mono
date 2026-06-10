@@ -12,6 +12,19 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
+// apiClient is the subset of api.Client used by Provisioner.
+type apiClient interface {
+	ListProjects(orgID string) (api.ListProjectsResponse, error)
+	ListWorkspaces(orgID string, projectID string) (api.ListWorkspacesResponse, error)
+	CreateWorkspace(orgID string, projectID string, input api.CreateWorkspaceInput) (api.CreateWorkspaceResponse, error)
+}
+
+// workspaceManager is the subset of workspace.Manager used by Provisioner.
+type workspaceManager interface {
+	SyncRepoSource(ctx context.Context, repoPath string) error
+	CreateWorkspace(ctx context.Context, req workspace.CreateRequest) (workspace.Workspace, error)
+}
+
 type CreateWorkspaceRequest struct {
 	OrganizationID string
 	ProjectID      string
@@ -24,8 +37,8 @@ type CreateWorkspaceRequest struct {
 }
 
 type Provisioner struct {
-	apiClient        *api.Client
-	workspaceManager *workspace.Manager
+	apiClient        apiClient
+	workspaceManager workspaceManager
 	localNodeID      string
 }
 
@@ -107,25 +120,46 @@ func (p *Provisioner) ensureWorkspaceProvisionedLocally(
 	sourceBranch string,
 	taskRun *workspace.TaskRunConfig,
 ) error {
-	localSourcePath := project.LocalPath
-	if project.RepoURL != "" && localSourcePath == "" {
-		repoPath, err := workspace.DefaultRepoPath(project.RepoKey)
+	// Prefer a primary workspace already on this node: it already has the
+	// full git history and avoids a redundant bare clone on local machines.
+	primaryWorkspace, err := p.resolvePrimaryWorkspace(orgID, projectID, nodeID)
+	if err == nil {
+		// Primary workspace found — use its path directly.
+		localSourcePath := primaryWorkspace.LocalPath
+		if err := p.workspaceManager.SyncRepoSource(ctx, localSourcePath); err != nil {
+			return err
+		}
+		_, err = p.workspaceManager.CreateWorkspace(ctx, workspace.CreateRequest{
+			ID:             workspaceItem.ID,
+			RepoKey:        project.RepoKey,
+			WorkspaceName:  workspaceItem.Branch,
+			SourcePath:     localSourcePath,
+			TargetBranch:   workspaceItem.Branch,
+			SourceBranch:   sourceBranch,
+			ContextEnabled: project.ContextEnabled,
+			SetupHook:      project.SetupScript,
+			TaskRun:        taskRun,
+		})
 		if err != nil {
-			return err
+			return fmt.Errorf("create workspace locally: %w", err)
 		}
-		if err := workspace.EnsureBareRepoClone(ctx, project.RepoURL, repoPath); err != nil {
-			return err
-		}
-		localSourcePath = repoPath
+		return nil
 	}
-	if project.RepoURL == "" && localSourcePath == "" {
-		baseWorkspace, err := p.resolvePrimaryWorkspace(orgID, projectID, nodeID)
-		if err != nil {
-			return err
-		}
-		localSourcePath = baseWorkspace.LocalPath
+
+	// No primary workspace on this node — fall back to a bare clone when the
+	// project has a remote repo URL (e.g. a CI/remote node with no primary).
+	if project.RepoURL == "" {
+		return fmt.Errorf("no primary workspace found on node %s for project %s and project has no repo URL; create a primary workspace first", nodeID, projectID)
 	}
-	if err := p.workspaceManager.SyncRepoSource(ctx, localSourcePath); err != nil {
+
+	repoPath, err := workspace.DefaultRepoPath(project.RepoKey)
+	if err != nil {
+		return err
+	}
+	if err := workspace.EnsureBareRepoClone(ctx, project.RepoURL, repoPath); err != nil {
+		return err
+	}
+	if err := p.workspaceManager.SyncRepoSource(ctx, repoPath); err != nil {
 		return err
 	}
 
@@ -133,7 +167,7 @@ func (p *Provisioner) ensureWorkspaceProvisionedLocally(
 		ID:             workspaceItem.ID,
 		RepoKey:        project.RepoKey,
 		WorkspaceName:  workspaceItem.Branch,
-		SourcePath:     localSourcePath,
+		SourcePath:     repoPath,
 		TargetBranch:   workspaceItem.Branch,
 		SourceBranch:   sourceBranch,
 		ContextEnabled: project.ContextEnabled,
