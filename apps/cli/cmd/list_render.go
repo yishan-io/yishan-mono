@@ -19,7 +19,6 @@ func renderProjectsList(response api.ListProjectsResponse, includeAll bool) outp
 			row["repoProvider"] = project.RepoProvider
 			row["repoUrl"] = project.RepoURL
 			row["repoKey"] = project.RepoKey
-			row["localPath"] = project.LocalPath
 			row["contextEnabled"] = project.ContextEnabled
 			row["setupScript"] = project.SetupScript
 			row["postScript"] = project.PostScript
@@ -31,7 +30,7 @@ func renderProjectsList(response api.ListProjectsResponse, includeAll bool) outp
 
 	columns := []string{"id", "name"}
 	if includeAll {
-		columns = []string{"id", "name", "organizationId", "nodeId", "sourceType", "repoProvider", "repoUrl", "repoKey", "localPath", "contextEnabled", "setupScript", "postScript", "createdAt", "updatedAt"}
+		columns = []string{"id", "name", "organizationId", "nodeId", "sourceType", "repoProvider", "repoUrl", "repoKey", "contextEnabled", "setupScript", "postScript", "createdAt", "updatedAt"}
 	}
 
 	return output.RenderData{Title: "projects", Columns: columns, Rows: rows}
