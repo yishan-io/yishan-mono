@@ -71,6 +71,13 @@
       "when": 1783000000000,
       "tag": "0009_token_usage_hourly",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783000000001,
+      "tag": "0010_rename_cached_write_tokens",
+      "breakpoints": true
     }
   ]
 }
