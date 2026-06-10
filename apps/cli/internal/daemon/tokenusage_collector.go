@@ -23,6 +23,8 @@ const (
 	tokenUsageScanOverlap  = 2 * time.Hour
 )
 
+var tokenUsageScannableAgentKinds = []string{"codex", "claude", "opencode"}
+
 type tokenUsageCollector struct {
 	mu         sync.Mutex
 	manager    *workspace.Manager
@@ -66,7 +68,7 @@ func (c *tokenUsageCollector) StartStartupScan() {
 	c.startSyncLoop()
 	c.startHourRolloverLoop()
 	timer := time.AfterFunc(tokenUsageStartupDelay, func() {
-		for _, agentKind := range []string{"codex", "claude", "opencode"} {
+		for _, agentKind := range tokenUsageScannableAgentKinds {
 			c.Trigger(agentKind, "startup")
 		}
 	})
