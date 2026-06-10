@@ -167,6 +167,7 @@ export function FileQuickOpenDialog({
             },
             htmlInput: {
               "aria-label": placeholder,
+              onKeyDown: onInputKeyDown,
               style: {
                 fontSize: "14px",
                 paddingLeft: "4px",
@@ -179,7 +180,6 @@ export function FileQuickOpenDialog({
           onChange={(event) => {
             onQueryChange(event.target.value);
           }}
-          onKeyDown={onInputKeyDown}
         />
         {!hasQuery ? null : !hasResults ? (
           <Typography sx={{ mt: 1, px: 1, py: 1.5 }} variant="body2" color="text.secondary">

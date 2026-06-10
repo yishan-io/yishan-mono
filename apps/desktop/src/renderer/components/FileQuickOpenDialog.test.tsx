@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { FileQuickOpenDialog } from "./FileQuickOpenDialog";
 
@@ -57,5 +57,36 @@ describe("FileQuickOpenDialog", () => {
 
     expect(await screen.findByText("No matching files.")).toBeTruthy();
     expect(screen.queryByTestId("file-quick-open-results")).toBeNull();
+  });
+
+  it("forwards keyboard events from the input element", async () => {
+    const onInputKeyDown = vi.fn();
+
+    render(
+      <FileQuickOpenDialog
+        open
+        query="but"
+        selectedResultIndex={0}
+        results={[
+          {
+            path: "src/components/Button.tsx",
+            score: 1,
+            highlightedPathIndexes: [0, 1, 2],
+          },
+        ]}
+        placeholder="Search files..."
+        emptyText="No matching files."
+        onClose={vi.fn()}
+        onQueryChange={vi.fn()}
+        onInputKeyDown={onInputKeyDown}
+        onSelectResultIndex={vi.fn()}
+        onOpenResult={vi.fn()}
+      />,
+    );
+
+    fireEvent.keyDown(await screen.findByRole("textbox", { name: "Search files..." }), { key: "ArrowDown" });
+
+    expect(onInputKeyDown).toHaveBeenCalledTimes(1);
+    expect(onInputKeyDown.mock.calls[0]?.[0].key).toBe("ArrowDown");
   });
 });

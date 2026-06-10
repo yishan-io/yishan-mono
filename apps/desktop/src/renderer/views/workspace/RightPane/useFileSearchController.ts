@@ -80,14 +80,22 @@ export function useFileSearchController({
     setSelectedSearchResultIndex(Math.max(0, fileSearchResults.length - 1));
   }, [fileSearchResults.length, selectedSearchResultIndex]);
 
+  const openSearchResultAndClose = useCallback(
+    async (path: string) => {
+      await openSearchResult(path);
+      setIsFileSearchOpen(false);
+    },
+    [openSearchResult],
+  );
+
   const openSelectedSearchResult = useCallback(async () => {
     const selectedResult = fileSearchResults[selectedSearchResultIndex];
     if (!selectedResult) {
       return;
     }
 
-    await openSearchResult(selectedResult.path);
-  }, [fileSearchResults, openSearchResult, selectedSearchResultIndex]);
+    await openSearchResultAndClose(selectedResult.path);
+  }, [fileSearchResults, openSearchResultAndClose, selectedSearchResultIndex]);
 
   const handleFileSearchInputKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -134,5 +142,6 @@ export function useFileSearchController({
     setSelectedSearchResultIndex,
     fileSearchResults,
     handleFileSearchInputKeyDown,
+    openSearchResultAndClose,
   };
 }

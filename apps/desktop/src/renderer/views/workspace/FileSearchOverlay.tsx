@@ -124,6 +124,7 @@ export function FileSearchOverlay() {
     setSelectedSearchResultIndex,
     fileSearchResults,
     handleFileSearchInputKeyDown,
+    openSearchResultAndClose,
   } = useFileSearchController({
     workspaceWorktreePath: selectedWorkspaceWorktreePath || undefined,
     openFileSearchRequestKey,
@@ -153,7 +154,7 @@ export function FileSearchOverlay() {
       onSelectResultIndex={setSelectedSearchResultIndex}
       onOpenResult={(path, index) => {
         setSelectedSearchResultIndex(index);
-        void openSearchResult(path);
+        void openSearchResultAndClose(path);
       }}
     />
   );
