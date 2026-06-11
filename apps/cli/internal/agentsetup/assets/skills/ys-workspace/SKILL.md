@@ -1,5 +1,5 @@
 ---
-name: yishan-workspace
+name: ys-workspace
 description: Quickly create and close Yishan workspaces for agent-driven development workflows.
 metadata:
   tool: yishan

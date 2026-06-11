@@ -1,0 +1,119 @@
+{{.PluginMarker}}
+// Reads .my-context/ from the current project root and injects a context
+// block into the system prompt at the start of every agent session.
+//
+// The injected block:
+//   1. Establishes .my-context/ as the primary lookup source for project context
+//   2. Lists the files available in .my-context/ so the agent knows what exists
+//   3. Inlines MEMORY.md as the session entry point
+//
+// Hooks used:
+//   experimental.chat.system.transform — prepends context block to the system prompt
+
+import type { Plugin } from "@opencode-ai/plugin";
+import { readFileSync, readdirSync, statSync, existsSync } from "fs";
+import { join } from "path";
+
+export const YishanMemoryPlugin = (async ({ project }) => {
+  if (globalThis.__yishanMemoryPluginV1) return {};
+  globalThis.__yishanMemoryPluginV1 = true;
+
+  const projectRoot = project?.root ?? process.cwd();
+  const myContextPath = join(projectRoot, ".my-context");
+  const memoryPath = join(myContextPath, "MEMORY.md");
+
+  const readFile = (p: string): string | null => {
+    try {
+      return readFileSync(p, "utf-8").trim();
+    } catch {
+      return null;
+    }
+  };
+
+  // Shallow scan: top-level .md files + subdirectory names.
+  // Gives the agent enough orientation without flooding context with every file path.
+  const scanMyContext = (dir: string): { files: string[]; dirs: string[] } => {
+    const files: string[] = [];
+    const dirs: string[] = [];
+    try {
+      for (const entry of readdirSync(dir)) {
+        if (entry.startsWith(".")) continue;
+        const full = join(dir, entry);
+        const stat = statSync(full);
+        if (stat.isDirectory()) {
+          dirs.push(entry);
+        } else if (entry.endsWith(".md") && entry !== "MEMORY.md") {
+          files.push(entry);
+        }
+      }
+    } catch {
+      // fail-open
+    }
+    return { files, dirs };
+  };
+
+  const myContextExists = existsSync(myContextPath);
+
+  return {
+    "experimental.chat.system.transform": async (_input, output) => {
+      if (!myContextExists) return;
+
+      const lines: string[] = [];
+
+      lines.push("## Personal Project Context (.my-context/)");
+      lines.push("");
+      lines.push(
+        "`.my-context/` is the owner's personal context directory — never committed, " +
+        "never shared. Check it before searching the codebase. It records where work " +
+        "was left off, decisions already made, and non-obvious things learned about this project."
+      );
+      lines.push("");
+      lines.push(
+        "**Lookup priority:** `.my-context/MEMORY.md` (personal session memory) → " +
+        "other `.my-context/` docs → codebase."
+      );
+      lines.push("");
+
+      // Surface the shallow structure so the agent knows what reference material exists.
+      const { files, dirs } = scanMyContext(myContextPath);
+      if (files.length > 0 || dirs.length > 0) {
+        lines.push("### Contents of .my-context/");
+        lines.push("");
+        for (const f of files) {
+          lines.push(`- \`.my-context/${f}\``);
+        }
+        for (const d of dirs) {
+          lines.push(`- \`.my-context/${d}/\` (subdirectory — list it when relevant)`);
+        }
+        lines.push("");
+        lines.push(
+          "When a task touches an area covered by one of the docs above, read that doc " +
+          "before proceeding. Do not re-derive information that is already recorded there."
+        );
+        lines.push("");
+      }
+
+      // Inline MEMORY.md as the entry-point summary.
+      const memory = readFile(memoryPath);
+      if (memory) {
+        lines.push("### Current session memory (.my-context/MEMORY.md)");
+        lines.push("");
+        lines.push(memory);
+        lines.push("");
+        lines.push(
+          "At the end of this session, update `.my-context/MEMORY.md`: rewrite " +
+          "\"Where I Left Off\", add to \"My Decisions\" for any choices made, and add to " +
+          "\"What I Learned\" for anything non-obvious discovered."
+        );
+      } else {
+        lines.push(
+          "`.my-context/MEMORY.md` does not exist yet. " +
+          "If you are about to do significant work, use the `ys-memory` skill to create it."
+        );
+      }
+
+      lines.push("");
+      output.system = lines.join("\n") + "\n\n" + (output.system ?? "");
+    },
+  };
+}) satisfies Plugin;

@@ -72,22 +72,24 @@ func GetInstalledState() (*InstalledState, error) {
 }
 
 func fillSkillState(state *InstalledState, yishanHome string, homeDir string) {
-	skillDir := filepath.Join(yishanHome, "skills", skillName)
-	skillPath := filepath.Join(skillDir, "SKILL.md")
-	if _, err := os.Stat(skillPath); err != nil {
-		return
-	}
-	state.Skill.Installed = true
-	state.Skill.SkillPath = skillPath
+	for _, name := range []string{workspaceSkillName, memorySkillName} {
+		skillDir := filepath.Join(yishanHome, "skills", name)
+		skillPath := filepath.Join(skillDir, "SKILL.md")
+		if _, err := os.Stat(skillPath); err != nil {
+			continue
+		}
+		state.Skill.Installed = true
+		state.Skill.SkillPath = skillPath // last one wins; SkillPath is legacy single-value field
 
-	linkDirs := []string{
-		filepath.Join(homeDir, ".config", "opencode", "skills", skillName),
-		filepath.Join(homeDir, ".claude", "skills", skillName),
-		filepath.Join(homeDir, ".agents", "skills", skillName),
-	}
-	for _, linkDir := range linkDirs {
-		if info, err := os.Lstat(linkDir); err == nil && info.Mode()&os.ModeSymlink != 0 {
-			state.Skill.Symlinks = append(state.Skill.Symlinks, linkDir)
+		linkDirs := []string{
+			filepath.Join(homeDir, ".config", "opencode", "skills", name),
+			filepath.Join(homeDir, ".claude", "skills", name),
+			filepath.Join(homeDir, ".agents", "skills", name),
+		}
+		for _, linkDir := range linkDirs {
+			if info, err := os.Lstat(linkDir); err == nil && info.Mode()&os.ModeSymlink != 0 {
+				state.Skill.Symlinks = append(state.Skill.Symlinks, linkDir)
+			}
 		}
 	}
 }

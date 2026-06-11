@@ -12,9 +12,14 @@ import (
 //go:embed assets/opencode-plugin.js.tmpl
 var openCodePluginTemplate string
 
+//go:embed assets/opencode-memory-plugin.ts.tmpl
+var openCodeMemoryPluginTemplate string
+
 const (
-	openCodePluginMarker   = "// Yishan opencode plugin v1"
-	openCodePluginFileName = "yishan-notify.js"
+	openCodePluginMarker        = "// Yishan opencode plugin v1"
+	openCodePluginFileName      = "yishan-notify.js"
+	openCodeMemoryPluginMarker   = "// Yishan memory plugin v1"
+	openCodeMemoryPluginFileName = "ys-memory.ts"
 )
 
 type openCodeHookInstaller struct{}
@@ -23,7 +28,10 @@ func (openCodeHookInstaller) Install(ctx hookSetupContext) error {
 	if err := ensureManagedOpenCodeConfigOverlay(ctx.configHome); err != nil {
 		return err
 	}
-	return ensureOpenCodePlugin(ctx.notifyScriptPath, ctx.configHome, ctx.goos)
+	if err := ensureOpenCodePlugin(ctx.notifyScriptPath, ctx.configHome, ctx.goos); err != nil {
+		return err
+	}
+	return ensureOpenCodeMemoryPlugin(ctx.configHome)
 }
 
 func ensureOpenCodePlugin(notifyScriptPath string, configHome string, goos string) error {
@@ -63,9 +71,30 @@ func buildOpenCodePluginContent(notifyScriptPath string, tabIDEnvKey string, plu
 	return rendered.String()
 }
 
+func ensureOpenCodeMemoryPlugin(configHome string) error {
+	pluginPath := filepath.Join(configHome, "plugin", openCodeMemoryPluginFileName)
+	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker)
+	return writeTextFileIfChanged(pluginPath, content, 0o644)
+}
+
+func buildOpenCodeMemoryPluginContent(pluginMarker string) string {
+	var rendered bytes.Buffer
+	tmpl := template.Must(template.New("opencode-memory-plugin").Parse(openCodeMemoryPluginTemplate))
+	if err := tmpl.Execute(&rendered, map[string]string{
+		"PluginMarker": pluginMarker,
+	}); err != nil {
+		panic(err)
+	}
+	return rendered.String()
+}
+
 func (openCodeHookInstaller) Remove(ctx hookSetupContext) error {
 	pluginPath := filepath.Join(ctx.configHome, "plugin", openCodePluginFileName)
 	if err := os.Remove(pluginPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	memoryPluginPath := filepath.Join(ctx.configHome, "plugin", openCodeMemoryPluginFileName)
+	if err := os.Remove(memoryPluginPath); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	return nil
