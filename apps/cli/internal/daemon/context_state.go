@@ -18,13 +18,13 @@ type AppContextStore struct {
 	ActiveOrgID       string
 	ActiveFilePath    string
 
-	configFilePath string
+	contextFilePath string
 }
 
-// NewAppContextStore creates a new AppContextStore. configFilePath is the
-// path to the profile's credential.yaml, used to persist org changes.
-func NewAppContextStore(configFilePath string) *AppContextStore {
-	return &AppContextStore{configFilePath: configFilePath}
+// NewAppContextStore creates a new AppContextStore. contextFilePath is the
+// path to the profile's context.yaml, used to persist org changes.
+func NewAppContextStore(contextFilePath string) *AppContextStore {
+	return &AppContextStore{contextFilePath: contextFilePath}
 }
 
 // GetState returns a snapshot of the current context.
@@ -61,18 +61,18 @@ func (s *AppContextStore) SetActiveFile(filePath string) {
 	s.mu.Unlock()
 }
 
-// SetCurrentOrg updates the current org ID and persists it to the config
-// file so that the CLI and MCP server pick up the change.
+// SetCurrentOrg updates the current org ID and persists it to context.yaml
+// so that the CLI and MCP server pick up the change.
 func (s *AppContextStore) SetCurrentOrg(orgID string) error {
 	s.mu.Lock()
 	s.ActiveOrgID = orgID
 	s.mu.Unlock()
 
-	if s.configFilePath == "" {
+	if s.contextFilePath == "" {
 		return nil
 	}
 
-	return config.UpdateFile(s.configFilePath, func(cfg *viper.Viper) {
-		cfg.Set(config.KeyCurrentOrgID, orgID)
+	return config.UpdateContext(s.contextFilePath, func(cfg *viper.Viper) {
+		cfg.Set(config.KeyContextOrgID, orgID)
 	})
 }

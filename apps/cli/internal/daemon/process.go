@@ -16,6 +16,7 @@ import (
 
 	"yishan/apps/cli/internal/buildinfo"
 	agentsetup "yishan/apps/cli/internal/agentsetup"
+	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/nodeid"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
@@ -82,8 +83,8 @@ func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
 	if err != nil {
 		return fmt.Errorf("create workspace cleanup store: %w", err)
 	}
-	configFilePath := filepath.Join(filepath.Dir(statePath), "credential.yaml")
-	contextStore := NewAppContextStore(configFilePath)
+	contextFilePath := config.ContextFilePath(filepath.Dir(statePath))
+	contextStore := NewAppContextStore(contextFilePath)
 	handler := NewJSONRPCHandler(workspaceManager, runtime, daemonID, cfg.LogFilePath, cleanupStore, statePath, contextStore)
 	if handler.tokenUsage != nil {
 		handler.tokenUsage.StartStartupScan()

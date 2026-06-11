@@ -19,7 +19,10 @@ const (
 	KeyAPIRefreshToken          = "api_refresh_token"
 	KeyAPIAccessTokenExpiresAt  = "api_access_token_expires_at"
 	KeyAPIRefreshTokenExpiresAt = "api_refresh_token_expires_at"
-	KeyCurrentOrgID             = "current_org_id"
+
+	// KeyCurrentOrgID is kept for migration reads from legacy credential.yaml.
+	// New writes go to context.yaml via KeyContextOrgID.
+	KeyCurrentOrgID = "current_org_id"
 )
 
 func HomeDir() (string, error) {
@@ -49,6 +52,7 @@ type Config struct {
 	LogLevel     string
 	LogFormat    string
 	ConfigPath   string
+	ContextPath  string
 	CurrentOrgID string
 	API          APIConfig
 	Daemon       DaemonConfig
@@ -64,11 +68,39 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 		return Config{}, err
 	}
 
+	contextPath := ContextFilePath(filepath.Dir(configPath))
+
+	// Load current org from context.yaml. If it is missing or empty, fall back
+	// to credential.yaml for backwards-compatibility and migrate the value.
+	contextCfg, err := LoadContext(contextPath)
+	if err != nil {
+		return Config{}, fmt.Errorf("load context file: %w", err)
+	}
+
+	currentOrgID := contextCfg.CurrentOrgID
+	if currentOrgID == "" {
+		// Migration: read from legacy credential.yaml location.
+		legacyOrgID := v.GetString(KeyCurrentOrgID)
+		if legacyOrgID != "" {
+			currentOrgID = legacyOrgID
+			// Persist to the new location so subsequent invocations use context.yaml.
+			if migrateErr := UpdateContext(contextPath, func(cfg *viper.Viper) {
+				cfg.Set(KeyContextOrgID, legacyOrgID)
+			}); migrateErr == nil {
+				// Clear from credential.yaml to avoid confusion going forward.
+				_ = UpdateFile(configPath, func(cfg *viper.Viper) {
+					cfg.Set(KeyCurrentOrgID, "")
+				})
+			}
+		}
+	}
+
 	return Config{
 		LogLevel:     v.GetString("log_level"),
 		LogFormat:    v.GetString("log_format"),
 		ConfigPath:   configPath,
-		CurrentOrgID: v.GetString(KeyCurrentOrgID),
+		ContextPath:  contextPath,
+		CurrentOrgID: currentOrgID,
 		API: APIConfig{
 			BaseURL:               v.GetString(KeyAPIBaseURL),
 			Token:                 v.GetString(KeyAPIToken),

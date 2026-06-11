@@ -189,8 +189,8 @@ in a future release:
 			orgID = selectedOrgID
 		}
 
-		if err := config.UpdateFile(appConfig.ConfigPath, func(cfg *viper.Viper) {
-			cfg.Set(config.KeyCurrentOrgID, orgID)
+		if err := config.UpdateContext(appConfig.ContextPath, func(cfg *viper.Viper) {
+			cfg.Set(config.KeyContextOrgID, orgID)
 		}); err != nil {
 			return err
 		}
@@ -275,8 +275,8 @@ var orgClearCmd = &cobra.Command{
 	Use:   "clear",
 	Short: "Clear current organization",
 	RunE: func(_ *cobra.Command, _ []string) error {
-		if err := config.UpdateFile(appConfig.ConfigPath, func(cfg *viper.Viper) {
-			cfg.Set(config.KeyCurrentOrgID, "")
+		if err := config.UpdateContext(appConfig.ContextPath, func(cfg *viper.Viper) {
+			cfg.Set(config.KeyContextOrgID, "")
 		}); err != nil {
 			return err
 		}
