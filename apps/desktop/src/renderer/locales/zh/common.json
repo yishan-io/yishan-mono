@@ -678,6 +678,7 @@
     "pr": {
       "tab": "PR",
       "empty": "当前工作区未关联拉取请求。",
+      "approved": "已批准",
       "refresh": "刷新",
       "refreshing": "正在刷新...",
       "open": "打开",

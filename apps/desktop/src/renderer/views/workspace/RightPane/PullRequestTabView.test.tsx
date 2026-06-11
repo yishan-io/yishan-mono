@@ -84,6 +84,7 @@ describe("PullRequestTabView", () => {
       number: 42,
       title: "Add PR tab",
       status: "review",
+      reviewDecision: "APPROVED",
       branch: "feature/pr-tab",
       baseBranch: "main",
       url: "https://github.com/acme/repo/pull/42",
@@ -110,6 +111,7 @@ describe("PullRequestTabView", () => {
     render(<PullRequestTabView />);
 
     expect(screen.getByText("#42 Add PR tab")).toBeTruthy();
+    expect(screen.getByText("workspace.pr.approved")).toBeTruthy();
     expect(screen.getByText("build / CI")).toBeTruthy();
     expect(screen.getByText("production")).toBeTruthy();
 

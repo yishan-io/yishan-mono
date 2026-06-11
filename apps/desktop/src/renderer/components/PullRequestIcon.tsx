@@ -2,6 +2,7 @@ import { LuGitPullRequest, LuGitPullRequestClosed } from "react-icons/lu";
 
 export type PullRequestIconState =
   | "open"
+  | "approved"
   | "closed"
   | "merged"
   | "draft"
@@ -19,6 +20,7 @@ export function pullRequestStateColor(state: PullRequestIconState, isDraft?: boo
   if (s === "merged") return "#9333ea";
   if (s === "closed") return "#dc2626";
   if (isDraft || s === "draft") return "#71717a";
+  if (s === "approved") return "#0f766e";
   return "#16a34a";
 }
 
@@ -33,7 +35,7 @@ type PullRequestIconProps = {
  * correct color. Use this wherever a PR status icon is displayed so that
  * the visual language is consistent across the left and right panes.
  *
- * - open / draft / review / merged → LuGitPullRequest
+ * - open / approved / draft / review / merged → LuGitPullRequest
  * - closed (cancelled)             → LuGitPullRequestClosed
  */
 export function PullRequestIcon({ state, isDraft, size = 14 }: PullRequestIconProps) {
