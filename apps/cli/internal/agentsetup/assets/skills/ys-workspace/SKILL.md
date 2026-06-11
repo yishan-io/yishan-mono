@@ -65,7 +65,7 @@ through these steps in order:
 3. **Set the active org**:
    ```bash
    yishan org list
-   yishan org use <org-id>
+   yishan org default --org-id <org-id>
    ```
 
 4. **Find the project**:
@@ -73,18 +73,14 @@ through these steps in order:
    yishan project list
    ```
 
-5. **Create the primary workspace** (a full checkout on this machine):
-   ```bash
-   yishan workspace create --project-id <project-id> --local-path /path/to/repo --kind primary
-   ```
-
-6. **Verify**:
+5. **Verify**:
    ```bash
    yishan workspace list --project-id <project-id>
    ```
 
-After the primary workspace exists, worktree workspaces can be created for
-individual feature branches (see the worktree section below).
+A primary workspace is created automatically when the project is created.
+Worktree workspaces can then be created for individual feature branches
+(see the worktree section below).
 
 ## Commands reference
 
@@ -106,18 +102,6 @@ yishan workspace list --project-id <project-id>
 
 ```bash
 yishan workspace find --project-id <project-id> --workspace-id <workspace-id>
-```
-
-### Create a primary workspace
-
-A primary workspace is a full checkout of the project repo at a local path.
-Create one first before creating worktree workspaces.
-
-```bash
-yishan workspace create \
-  --project-id <project-id> \
-  --local-path /absolute/path/to/repo \
-  --kind primary
 ```
 
 ### Create a worktree workspace
@@ -168,23 +152,60 @@ yishan workspace close \
 ### Starting a new feature
 
 1. **Find the project**: Ask the user for the project name or ID. If unknown, run
-   `yishan project list` and present options.
+   `yishan project list` and present options. Primary workspaces are created
+   automatically when the project is created — no manual primary setup needed.
 
-2. **Check for existing primary workspace**: Run
-   `yishan workspace list --project-id <project-id>`. Look for an entry with
-   `kind: "primary"` and a `localPath`. If one exists, note the path.
+2. **Prepare the task prompt**: Always auto-start an agent in the new workspace
+   by passing `--task-run-agent-kind opencode` and `--task-run-prompt` to the
+   create command. Determine the prompt as follows:
 
-3. **Create primary if missing**: If no primary workspace exists on this node,
-   create one. Ask the user for the repo path, or default to
-   `~/yishan/<project-id>`.
+   - **If a ticket/issue is provided** (e.g., `v-multica-issue` ticket content,
+     or a link to GitHub/Linear/Jira issue): Extract the full ticket description,
+     acceptance criteria, and any relevant discussion. Use this content verbatim
+     as the `--task-run-prompt`.
 
-4. **Create a worktree**: Determine a branch name from the task (agree with user).
-   Then run the worktree create command. The output includes a `localPath` —
-   navigate the agent to that directory.
+   - **If no ticket is given**: Synthesize the user's input into a well-structured
+     prompt. The prompt should include:
+     - A clear one-line summary of the task
+     - Context: what problem is being solved and why
+     - Acceptance criteria or expected outcome
+     - Any constraints, conventions, or references the user mentioned
+     - The user's exact phrasing where possible
 
-   To also start an agent in the workspace immediately, add `--task-run-agent-kind`
-   and `--task-run-prompt` to the create command. The workspace will open with
-   the agent running the given prompt as its initial task.
+   Example synthesized prompt:
+   ```
+   Task: Add rate limiting to the API gateway
+
+   Context: The API gateway currently has no rate limiting, which could lead to
+   abuse or accidental overuse. Add per-IP rate limiting with a configurable
+   limit (default 100 req/min).
+
+   Acceptance criteria:
+   - Rate limit is enforced per client IP
+   - Limit is configurable via environment variable RATE_LIMIT_PER_MINUTE
+   - Exceeded limit returns HTTP 429 with a Retry-After header
+   - Existing tests continue to pass
+   - Add unit tests for the rate limiter
+
+   Constraints:
+   - Use the existing Redis instance for rate limit counters
+   - Follow the middleware pattern used by auth middleware
+   ```
+
+3. **Create a worktree**: Determine a branch name from the task (agree with user).
+   Then run the worktree create command with the task-run flags. The output
+   includes a `localPath` — navigate the agent to that directory.
+
+   ```bash
+   yishan workspace create \
+     --project-id <project-id> \
+     --kind worktree \
+     --branch feature/my-branch \
+     --source-branch main \
+     --name feature-my-branch \
+     --task-run-agent-kind opencode \
+     --task-run-prompt "<prepared prompt>"
+   ```
 
 ### Finishing a task
 
@@ -212,6 +233,6 @@ When `yishan` exits non-zero, classify failures by the exit message:
 ## Tips
 
 - Use `--output json` for scriptable parsing.
-- Worktree paths are deterministic: `~/yishan/<repo-key>/worktrees/<workspace-name>`.
+- Worktree paths are deterministic: `~/.yishan/worktrees/<repo-key>/<workspace-name>`.
 - Always close workspaces after tasks — this cleans up git worktrees and releases server resources.
 - The local daemon node is the default; no need to pass `--node-id` unless the user specifies a different node.
