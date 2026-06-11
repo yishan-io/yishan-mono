@@ -212,9 +212,17 @@ describe("FileTree", () => {
   });
 
   it("marks ignored files and folders for greyed display", () => {
-    render(<FileTree files={["dist/", "bundle.js", "src/index.ts"]} ignoredPaths={["dist/", "bundle.js"]} />);
+    render(
+      <FileTree
+        files={["dist/", "dist/cache.bin", "bundle.js", "src/index.ts"]}
+        ignoredPaths={["dist/", "dist/cache.bin", "bundle.js"]}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("dist"));
 
     expect(screen.getByText("dist").getAttribute("data-ignored")).toBe("true");
+    expect(screen.getByText("cache.bin").getAttribute("data-ignored")).toBe("true");
     expect(screen.getByText("bundle.js").getAttribute("data-ignored")).toBe("true");
     expect(screen.getByText("index.ts").getAttribute("data-ignored")).toBe("false");
   });

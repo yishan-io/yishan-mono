@@ -316,6 +316,12 @@ func TestFileServiceRecursiveListInsideIgnoredPathIncludesDescendants(t *testing
 	if strings.Join(paths, ",") != strings.Join(expected, ",") {
 		t.Fatalf("expected ignored descendants %v, got %v", expected, paths)
 	}
+
+	for _, entry := range entries {
+		if !entry.IsIgnored {
+			t.Fatalf("expected ignored descendant %s to be marked ignored, got %+v", entry.Path, entry)
+		}
+	}
 }
 
 func TestFileServiceDirectListMarksGitIgnoredEntries(t *testing.T) {
@@ -448,6 +454,54 @@ func TestFileServiceRecursiveListIncludesContextSymlinkContents(t *testing.T) {
 	}
 	if !entryByPath[".my-context"].IsDir || !entryByPath[".my-context/docs"].IsDir {
 		t.Fatalf("expected context entries to be directories, got %+v", entryByPath)
+	}
+}
+
+func TestFileServiceMarksIgnoredContextDescendants(t *testing.T) {
+	root := t.TempDir()
+	initGitRepo(t, root)
+	svc := NewFileService()
+
+	contextDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(contextDir, "docs"), 0o755); err != nil {
+		t.Fatalf("mkdir context docs: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(contextDir, "docs", "brief.md"), []byte("brief"), 0o644); err != nil {
+		t.Fatalf("write context brief: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".my-context\n"), 0o644); err != nil {
+		t.Fatalf("write gitignore: %v", err)
+	}
+	if err := os.Symlink(contextDir, filepath.Join(root, ".my-context")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	entries, err := svc.List(root, "", true)
+	if err != nil {
+		t.Fatalf("recursive list root: %v", err)
+	}
+
+	ignoredByPath := map[string]bool{}
+	for _, entry := range entries {
+		ignoredByPath[entry.Path] = entry.IsIgnored
+	}
+	for _, path := range []string{".my-context", ".my-context/docs", ".my-context/docs/brief.md"} {
+		if !ignoredByPath[path] {
+			t.Fatalf("expected %s to be marked ignored, got %+v", path, entries)
+		}
+	}
+
+	childEntries, err := svc.List(root, ".my-context", false)
+	if err != nil {
+		t.Fatalf("list ignored context directory: %v", err)
+	}
+	if len(childEntries) != 1 || childEntries[0].Path != ".my-context/docs" {
+		t.Fatalf("expected ignored context descendants, got %+v", childEntries)
+	}
+	for _, entry := range childEntries {
+		if !entry.IsIgnored {
+			t.Fatalf("expected ignored context child %s to be marked ignored, got %+v", entry.Path, entry)
+		}
 	}
 }
 

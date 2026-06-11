@@ -3,6 +3,7 @@ package workspace
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,57 +16,57 @@ import (
 )
 
 const (
-	maxReadBytes            = 2 * 1024 * 1024
-	maxDiffFileBytes        = 512 * 1024
-	gitGutterDiffDebounce   = 150
+	maxReadBytes          = 2 * 1024 * 1024
+	maxDiffFileBytes      = 512 * 1024
+	gitGutterDiffDebounce = 150
 )
 
 var skippedDiffExtensions = map[string]struct{}{
-	".7z":   {},
-	".a":    {},
-	".ai":   {},
-	".avif": {},
-	".bin":  {},
-	".bmp":  {},
+	".7z":    {},
+	".a":     {},
+	".ai":    {},
+	".avif":  {},
+	".bin":   {},
+	".bmp":   {},
 	".class": {},
-	".dll":  {},
-	".dmg":  {},
-	".doc":  {},
-	".docx": {},
-	".exe":  {},
-	".gif":  {},
-	".gz":   {},
-	".heic": {},
-	".heif": {},
-	".ico":  {},
-	".jar":  {},
-	".jpeg": {},
-	".jpg":  {},
+	".dll":   {},
+	".dmg":   {},
+	".doc":   {},
+	".docx":  {},
+	".exe":   {},
+	".gif":   {},
+	".gz":    {},
+	".heic":  {},
+	".heif":  {},
+	".ico":   {},
+	".jar":   {},
+	".jpeg":  {},
+	".jpg":   {},
 	".lockb": {},
-	".m4a":  {},
-	".mkv":  {},
-	".mov":  {},
-	".mp3":  {},
-	".mp4":  {},
-	".o":    {},
-	".ogg":  {},
-	".otf":  {},
-	".pdf":  {},
-	".png":  {},
-	".pyc":  {},
-	".so":   {},
-	".tar":  {},
-	".tif":  {},
-	".tiff": {},
-	".ttf":  {},
-	".wav":  {},
-	".webm": {},
-	".webp": {},
-	".woff": {},
+	".m4a":   {},
+	".mkv":   {},
+	".mov":   {},
+	".mp3":   {},
+	".mp4":   {},
+	".o":     {},
+	".ogg":   {},
+	".otf":   {},
+	".pdf":   {},
+	".png":   {},
+	".pyc":   {},
+	".so":    {},
+	".tar":   {},
+	".tif":   {},
+	".tiff":  {},
+	".ttf":   {},
+	".wav":   {},
+	".webm":  {},
+	".webp":  {},
+	".woff":  {},
 	".woff2": {},
-	".xls":  {},
-	".xlsx": {},
-	".zip":  {},
+	".xls":   {},
+	".xlsx":  {},
+	".zip":   {},
 }
 
 type FileEntry struct {
@@ -141,7 +142,7 @@ func (s *FileService) List(root string, path string, recursive bool) ([]FileEntr
 		})
 	}
 
-	out = markIgnoredEntries(root, out)
+	out = markIgnoredEntries(root, path, out)
 	s.storeCachedDirectoryEntries(root, path, out)
 	return out, nil
 }
@@ -261,7 +262,7 @@ func withContextLinkEntries(root string, path string, entries []FileEntry) ([]Fi
 	sort.Slice(merged, func(left, right int) bool {
 		return merged[left].Path < merged[right].Path
 	})
-	return markIgnoredEntries(root, merged), nil
+	return markIgnoredEntries(root, path, merged), nil
 }
 
 func listContextLinkEntries(root string, path string) ([]FileEntry, error) {
@@ -363,21 +364,72 @@ func contextLinkFallbackEntry(linkPath string, cleanPath string) []FileEntry {
 	}}
 }
 
-func markIgnoredEntries(root string, entries []FileEntry) []FileEntry {
+func markIgnoredEntries(root string, listedPath string, entries []FileEntry) []FileEntry {
 	if len(entries) == 0 {
 		return entries
 	}
 
 	ignoredPathSet, ok := gitIgnoredPathSet(root, entries)
-	if !ok {
-		return entries
+	ignoredDirectoryPaths := make([]string, 0, len(entries)+1)
+	ignoredListedPath := filepath.ToSlash(strings.TrimSuffix(listedPath, "/"))
+	listedPathIsIgnored := isGitIgnoredPath(root, listedPath)
+	if listedPathIsIgnored {
+		ignoredDirectoryPaths = append(ignoredDirectoryPaths, ignoredListedPath)
 	}
 
 	for index := range entries {
 		normalizedPath := filepath.ToSlash(strings.TrimSuffix(entries[index].Path, "/"))
-		entries[index].IsIgnored = entries[index].IsIgnored || ignoredPathSet[normalizedPath]
+		if entries[index].IsDir && entries[index].IsIgnored {
+			ignoredDirectoryPaths = append(ignoredDirectoryPaths, normalizedPath)
+			continue
+		}
+		if entries[index].IsDir && ok && ignoredPathSet[normalizedPath] {
+			ignoredDirectoryPaths = append(ignoredDirectoryPaths, normalizedPath)
+		}
+	}
+
+	for index := range entries {
+		normalizedPath := filepath.ToSlash(strings.TrimSuffix(entries[index].Path, "/"))
+		entries[index].IsIgnored = entries[index].IsIgnored || (ok && ignoredPathSet[normalizedPath])
+		if !entries[index].IsIgnored && listedPathIsIgnored && normalizedPath == ignoredListedPath {
+			entries[index].IsIgnored = true
+		}
+		if entries[index].IsIgnored {
+			continue
+		}
+		entries[index].IsIgnored = hasIgnoredAncestor(normalizedPath, ignoredDirectoryPaths)
 	}
 	return entries
+}
+
+func hasIgnoredAncestor(path string, ignoredDirectoryPaths []string) bool {
+	for _, ignoredDirectoryPath := range ignoredDirectoryPaths {
+		if path != ignoredDirectoryPath && strings.HasPrefix(path, ignoredDirectoryPath+"/") {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isGitIgnoredPath(root string, path string) bool {
+	normalizedPath := filepath.ToSlash(strings.TrimSuffix(strings.TrimSpace(path), "/"))
+	if normalizedPath == "" {
+		return false
+	}
+
+	cmd := exec.Command("git", "-C", root, "check-ignore", "--quiet", "--", normalizedPath)
+	err := cmd.Run()
+	if err == nil {
+		return true
+	}
+
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+		return false
+	}
+
+	return false
 }
 
 func gitIgnoredPathSet(root string, entries []FileEntry) (map[string]bool, bool) {
@@ -486,7 +538,11 @@ func (s *FileService) listGitFiles(root string, path string) ([]FileEntry, bool,
 		}
 		for _, directoryPath := range parentDirectoryPaths(relPath) {
 			normalizedDirectoryPath := filepath.ToSlash(strings.TrimSuffix(directoryPath, "/"))
-			if _, exists := entryByPath[normalizedDirectoryPath]; exists {
+			if existingEntry, exists := entryByPath[normalizedDirectoryPath]; exists {
+				if ignoredPathSet[normalizedRelPath] {
+					existingEntry.IsIgnored = true
+					entryByPath[normalizedDirectoryPath] = existingEntry
+				}
 				continue
 			}
 			entry, err := fileEntryForRelativePath(root, directoryPath)
@@ -495,6 +551,9 @@ func (s *FileService) listGitFiles(root string, path string) ([]FileEntry, bool,
 					continue
 				}
 				return nil, true, err
+			}
+			if ignoredPathSet[normalizedRelPath] {
+				entry.IsIgnored = true
 			}
 			entryByPath[normalizedDirectoryPath] = entry
 		}
