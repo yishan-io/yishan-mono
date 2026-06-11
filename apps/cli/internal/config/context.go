@@ -9,13 +9,13 @@ import (
 
 const contextFileName = "context.yaml"
 
-// KeyContextOrgID is the YAML key for the current org in context.yaml.
-const KeyContextOrgID = "current_org_id"
+// KeyDefaultOrgID is the YAML key for the CLI default org in context.yaml.
+const KeyDefaultOrgID = "default_org_id"
 
 // ContextConfig holds workspace context that is persisted separately from
 // auth credentials. It lives in context.yaml alongside credential.yaml.
 type ContextConfig struct {
-	CurrentOrgID string
+	DefaultOrgID string
 }
 
 // ContextFilePath returns the path to context.yaml given the profile
@@ -24,8 +24,10 @@ func ContextFilePath(profileDir string) string {
 	return filepath.Join(profileDir, contextFileName)
 }
 
-// LoadContext reads current_org_id from context.yaml.
+// LoadContext reads default_org_id from context.yaml.
 // A missing file or missing key returns a zero-value ContextConfig, not an error.
+// If default_org_id is absent but the legacy current_org_id key exists (written
+// by a prior version), it is migrated in place automatically.
 func LoadContext(contextPath string) (ContextConfig, error) {
 	v := viper.New()
 	v.SetConfigFile(contextPath)
@@ -38,8 +40,20 @@ func LoadContext(contextPath string) (ContextConfig, error) {
 		return ContextConfig{}, err
 	}
 
+	defaultOrgID := v.GetString(KeyDefaultOrgID)
+	if defaultOrgID == "" {
+		// Migration: prior version wrote current_org_id into context.yaml.
+		if legacy := v.GetString("current_org_id"); legacy != "" {
+			defaultOrgID = legacy
+			_ = UpdateFile(contextPath, func(cfg *viper.Viper) {
+				cfg.Set(KeyDefaultOrgID, legacy)
+				cfg.Set("current_org_id", "")
+			})
+		}
+	}
+
 	return ContextConfig{
-		CurrentOrgID: v.GetString(KeyContextOrgID),
+		DefaultOrgID: defaultOrgID,
 	}, nil
 }
 

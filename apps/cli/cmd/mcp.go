@@ -107,7 +107,7 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 
 	server := mcp.NewServer(&mcp.Implementation{Name: "yishan", Version: "0.1.0"}, nil)
 
-	orgID := appConfig.CurrentOrgID
+	orgID := appConfig.DefaultOrgID
 
 	// Prefer daemon context (desktop-pushed) over CLI config.
 	if contextState := readDaemonContext(daemonClient); contextState != nil {

@@ -73,6 +73,6 @@ func (s *AppContextStore) SetCurrentOrg(orgID string) error {
 	}
 
 	return config.UpdateContext(s.contextFilePath, func(cfg *viper.Viper) {
-		cfg.Set(config.KeyContextOrgID, orgID)
+		cfg.Set(config.KeyDefaultOrgID, orgID)
 	})
 }
