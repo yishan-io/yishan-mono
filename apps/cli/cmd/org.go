@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/daemon"
 	"yishan/apps/cli/internal/output"
 )
 
@@ -189,10 +190,16 @@ in a future release:
 			orgID = selectedOrgID
 		}
 
+		// Persist to context.yaml so the CLI works even when the daemon is not running.
 		if err := config.UpdateContext(appConfig.ContextPath, func(cfg *viper.Viper) {
 			cfg.Set(config.KeyContextOrgID, orgID)
 		}); err != nil {
 			return err
+		}
+
+		// Notify the running daemon so the desktop app reflects the change immediately.
+		if client, err := resolveDaemonClient(); err == nil {
+			_ = client.Call(cmd.Context(), daemon.MethodContextSetCurrentOrg, map[string]string{"orgId": orgID}, nil)
 		}
 
 		appConfig.CurrentOrgID = orgID
@@ -240,9 +247,20 @@ func selectOrganizationInteractive(cmd *cobra.Command) (string, error) {
 var orgCurrentCmd = &cobra.Command{
 	Use:   "current",
 	Short: "Show current organization",
-	RunE: func(_ *cobra.Command, _ []string) error {
-		if appConfig.CurrentOrgID == "" {
-			return fmt.Errorf("no active org: run `yishan org use <org-id>`")
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		// Prefer the live daemon state; fall back to context.yaml.
+		currentOrgID := appConfig.CurrentOrgID
+		if client, err := resolveDaemonClient(); err == nil {
+			var state map[string]any
+			if err := client.Call(cmd.Context(), daemon.MethodContextGetState, nil, &state); err == nil {
+				if id, ok := state["activeOrgId"].(string); ok && id != "" {
+					currentOrgID = id
+				}
+			}
+		}
+
+		if currentOrgID == "" {
+			return fmt.Errorf("no active org: select one in the app, run `yishan org use <org-id>`")
 		}
 
 		response, err := apiClient.ListOrganizations()
@@ -251,10 +269,7 @@ var orgCurrentCmd = &cobra.Command{
 		}
 
 		for _, organization := range response.Organizations {
-			if organization.ID == appConfig.CurrentOrgID {
-				// In JSON mode emit a single combined object so consumers get
-				// one parseable document. In default mode keep the two-table
-				// human-readable layout.
+			if organization.ID == currentOrgID {
 				if output.IsJSONOutput() {
 					return output.PrintAny(toOrgCurrentCombinedObject(organization))
 				}
@@ -267,18 +282,23 @@ var orgCurrentCmd = &cobra.Command{
 			}
 		}
 
-		return fmt.Errorf("current org %s not found in accessible organizations", appConfig.CurrentOrgID)
+		return fmt.Errorf("current org %s not found in accessible organizations", currentOrgID)
 	},
 }
 
 var orgClearCmd = &cobra.Command{
 	Use:   "clear",
 	Short: "Clear current organization",
-	RunE: func(_ *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		if err := config.UpdateContext(appConfig.ContextPath, func(cfg *viper.Viper) {
 			cfg.Set(config.KeyContextOrgID, "")
 		}); err != nil {
 			return err
+		}
+
+		// Notify the running daemon so the desktop app reflects the change immediately.
+		if client, err := resolveDaemonClient(); err == nil {
+			_ = client.Call(cmd.Context(), daemon.MethodContextSetCurrentOrg, map[string]string{"orgId": ""}, nil)
 		}
 
 		appConfig.CurrentOrgID = ""
