@@ -72,7 +72,7 @@ func GetInstalledState() (*InstalledState, error) {
 }
 
 func fillSkillState(state *InstalledState, yishanHome string, homeDir string) {
-	for _, name := range []string{workspaceSkillName, memorySkillName} {
+	for _, name := range []string{workspaceSkillName, memorySkillName, tasksSkillName} {
 		skillDir := filepath.Join(yishanHome, "skills", name)
 		skillPath := filepath.Join(skillDir, "SKILL.md")
 		if _, err := os.Stat(skillPath); err != nil {

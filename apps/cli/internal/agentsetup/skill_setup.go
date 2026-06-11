@@ -19,9 +19,13 @@ var memorySkillContent string
 //go:embed assets/skills/ys-memory/MEMORY.md.tmpl
 var memoryFileTemplate string
 
+//go:embed assets/skills/ys-tasks/SKILL.md
+var tasksSkillContent string
+
 const (
 	workspaceSkillName = "ys-workspace"
 	memorySkillName    = "ys-memory"
+	tasksSkillName     = "ys-tasks"
 )
 
 type SkillInstallResult struct {
@@ -35,6 +39,10 @@ func EnsureWorkspaceSkill() (*SkillInstallResult, error) {
 
 func EnsureMemorySkill() (*SkillInstallResult, error) {
 	return ensureSkill(memorySkillName, memorySkillContent)
+}
+
+func EnsureTasksSkill() (*SkillInstallResult, error) {
+	return ensureSkill(tasksSkillName, tasksSkillContent)
 }
 
 // MemoryFileTemplate returns the starter MEMORY.md content to be written into a
@@ -88,6 +96,10 @@ func RemoveWorkspaceSkill() error {
 
 func RemoveMemorySkill() error {
 	return removeSkill(memorySkillName)
+}
+
+func RemoveTasksSkill() error {
+	return removeSkill(tasksSkillName)
 }
 
 func removeSkill(name string) error {
