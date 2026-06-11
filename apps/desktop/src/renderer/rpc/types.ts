@@ -30,6 +30,7 @@ export type DaemonRpcClient = {
   workspace: {
     list: (input?: unknown) => Promise<Rpc.DaemonWorkspace[]>;
     open: (input: Rpc.WorkspaceOpenInput) => Promise<Rpc.DaemonWorkspace>;
+    refreshPullRequest: (input: Rpc.WorkspaceRefreshPullRequestInput) => Promise<Rpc.DaemonWorkspace>;
     createWorkspace: (input: Rpc.WorkspaceCreateInput) => Promise<Rpc.WorkspaceCreateResponse>;
     close: (input: Rpc.WorkspaceCloseExecutionInput) => Promise<Rpc.WorkspaceCloseExecutionResponse | undefined>;
     syncContextLink: (input: Rpc.WorkspaceSyncContextLinkInput) => Promise<Rpc.WorkspaceSyncContextLinkResponse>;

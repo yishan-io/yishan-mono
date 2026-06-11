@@ -60,6 +60,11 @@ type OpenRequest struct {
 	PRAlreadyMerged bool   `json:"prAlreadyMerged,omitempty"`
 }
 
+type RefreshPullRequestRequest struct {
+	WorkspaceID string `json:"workspaceId,omitempty"`
+	Path        string `json:"path,omitempty"`
+}
+
 type CloseRequest struct {
 	WorkspaceID   string
 	Branch        string

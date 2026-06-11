@@ -23,6 +23,8 @@ func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, 
 		return h.manager.List(), nil
 	case MethodWorkspaceCreate:
 		return h.handleWorkspaceCreate(ctx, params)
+	case MethodWorkspaceRefreshPullRequest:
+		return h.handleWorkspaceRefreshPullRequest(ctx, params)
 	case MethodWorkspaceSyncContextLink:
 		var req workspace.SyncContextLinkRequest
 		if err := decodeParams(params, &req); err != nil {
@@ -54,6 +56,42 @@ func (h *JSONRPCHandler) handleOpen(_ context.Context, params json.RawMessage) (
 	log.Info().Str("workspaceId", ws.ID).Str("path", ws.Path).Bool("prAlreadyMerged", req.PRAlreadyMerged).Msg("daemon workspace opened")
 	h.watchAndTrack(ws.Path)
 	return ws, nil
+}
+
+func (h *JSONRPCHandler) handleWorkspaceRefreshPullRequest(_ context.Context, params json.RawMessage) (any, error) {
+	var req workspace.RefreshPullRequestRequest
+	if err := decodeParams(params, &req); err != nil {
+		return nil, err
+	}
+
+	workspaceID := strings.TrimSpace(req.WorkspaceID)
+	workspacePath := strings.TrimSpace(req.Path)
+	if workspaceID == "" && workspacePath == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "workspaceId or path is required")
+	}
+
+	ws, err := func() (workspace.Workspace, error) {
+		if workspaceID != "" {
+			return h.manager.GetWorkspace(workspaceID)
+		}
+		resolvedWorkspace, ok := h.manager.FindWorkspaceByPath(workspacePath)
+		if !ok {
+			return workspace.Workspace{}, workspace.NewRPCError(rpcCodeNotFound, "workspace not found")
+		}
+		return resolvedWorkspace, nil
+	}()
+	if err != nil {
+		return nil, err
+	}
+
+	h.prTracker.EnsureTracked(ws.Path, false)
+	h.prTracker.RefreshWorkspaceByPath(ws.Path)
+
+	refreshedWorkspace, err := h.manager.GetWorkspace(ws.ID)
+	if err != nil {
+		return nil, err
+	}
+	return refreshedWorkspace, nil
 }
 
 func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.RawMessage) (any, error) {

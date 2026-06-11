@@ -124,6 +124,7 @@ import {
   focusWorkspaceFileTree as focusWorkspaceFileTreeCommand,
   openCreateWorkspaceDialog as openCreateWorkspaceDialogCommand,
   openWorkspaceFileSearch as openWorkspaceFileSearchCommand,
+  refreshWorkspacePullRequest as refreshWorkspacePullRequestCommand,
   refreshWorkspaceGitChanges as refreshWorkspaceGitChangesCommand,
   renameWorkspaceBranch as renameWorkspaceBranchCommand,
   renameWorkspace as renameWorkspaceCommand,
@@ -251,6 +252,7 @@ export type Commands = {
     };
   }) => Promise<string | undefined>;
   closeWorkspace: (workspaceId: string, options?: { removeBranch?: boolean }) => Promise<void>;
+  refreshWorkspacePullRequest: (workspaceId: string, workspaceWorktreePath: string) => Promise<void>;
   refreshWorkspaceGitChanges: (workspaceId: string, workspaceWorktreePath: string) => Promise<void>;
   selectTab: typeof setSelectedTabCommand;
   createTab: (input?: { workspaceId?: string }) => Promise<void>;
@@ -303,6 +305,7 @@ export function useCommands(): Commands {
       deleteSelectedFileTreeEntry: deleteSelectedFileTreeEntryCommand,
       undoFileTreeOperation: undoFileTreeOperationCommand,
       openWorkspaceFileSearch: openWorkspaceFileSearchCommand,
+      refreshWorkspacePullRequest: refreshWorkspacePullRequestCommand,
       renameWorkspace: renameWorkspaceCommand,
       reorderWorkspace: reorderWorkspaceCommand,
       renameWorkspaceBranch: renameWorkspaceBranchCommand,

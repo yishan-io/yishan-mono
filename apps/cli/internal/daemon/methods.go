@@ -3,12 +3,13 @@ package daemon
 const (
 	MethodDaemonPing = "daemon.ping"
 
-	MethodOpen                     = "open"
-	MethodList                     = "list"
-	MethodWorkspaceCreate          = "workspace.create"
-	MethodWorkspaceClose           = "workspace.close"
-	MethodWorkspaceSetActive       = "workspace.setActive"
-	MethodWorkspaceSyncContextLink = "workspace.syncContextLink"
+	MethodOpen                        = "open"
+	MethodList                        = "list"
+	MethodWorkspaceCreate             = "workspace.create"
+	MethodWorkspaceClose              = "workspace.close"
+	MethodWorkspaceRefreshPullRequest = "workspace.refreshPullRequest"
+	MethodWorkspaceSetActive          = "workspace.setActive"
+	MethodWorkspaceSyncContextLink    = "workspace.syncContextLink"
 
 	MethodContextGetState         = "context.getState"
 	MethodContextSetCurrentOrg    = "context.setCurrentOrg"

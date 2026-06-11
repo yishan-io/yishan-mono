@@ -20,6 +20,7 @@ import type { WorkspacePullRequestRecord } from "../../../api/types";
 import { openLink } from "../../../commands/appCommands";
 import { closePullRequest, mergePullRequest } from "../../../commands/gitCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
+import { useCommands } from "../../../hooks/useCommands";
 import { BranchBadge } from "../../../components/BranchBadge";
 import { PaneLoadingBar } from "../../../components/PaneLoadingBar";
 import { PullRequestIcon } from "../../../components/PullRequestIcon";
@@ -96,7 +97,8 @@ function HistoricalPullRequestRow({ pr }: { pr: WorkspacePullRequestRecord }) {
 /** Renders pull request, checks, and deployment details for the selected workspace. */
 export function PullRequestTabView({ active = true }: { active?: boolean }) {
   const { t } = useTranslation();
-  const { pullRequest, historicalPullRequests, isLoading } = useWorkspacePullRequestState(active);
+  const { refreshWorkspacePullRequest } = useCommands();
+  const { selectedWorkspaceId, pullRequest, historicalPullRequests, isLoading } = useWorkspacePullRequestState(active);
   const worktreePath = workspaceStore((state) => state.workspaces.find((w) => w.id === state.selectedWorkspaceId)?.worktreePath);
 
   const hasLivePr = Boolean(pullRequest);
@@ -129,6 +131,7 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
   const [deleteBranch, setDeleteBranch] = useState(true);
   const [isMerging, setIsMerging] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const mergeMenuOpen = Boolean(mergeAnchorEl);
 
@@ -219,6 +222,23 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
     }
   }, [prNumber, worktreePath, isClosing, hasLivePr, pullRequest, prTitle, prUrl, prBranch, prBaseBranch]);
 
+  const handleRefresh = useCallback(async () => {
+    if (!selectedWorkspaceId || !worktreePath || isRefreshing) {
+      return;
+    }
+
+    setIsRefreshing(true);
+    setActionError(null);
+    try {
+      await refreshWorkspacePullRequest(selectedWorkspaceId, worktreePath);
+    } catch (error: unknown) {
+      console.error("[PullRequestTabView] refresh failed", error);
+      setActionError(getErrorMessage(error));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, refreshWorkspacePullRequest, selectedWorkspaceId, worktreePath]);
+
   if (isLoading && isEmpty) {
     return <PaneLoadingBar />;
   }
@@ -226,9 +246,15 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
   if (isEmpty) {
     return (
       <Box sx={{ flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", px: 3 }}>
-        <Typography variant="body2" sx={{ color: "#999" }}>
-          {t("workspace.pr.empty")}
-        </Typography>
+        <Stack spacing={1.5} alignItems="center">
+          <Typography variant="body2" sx={{ color: "#999", textAlign: "center" }}>
+            {t("workspace.pr.empty")}
+          </Typography>
+          <Button variant="outlined" size="small" onClick={() => void handleRefresh()} disabled={isRefreshing || !worktreePath}>
+            {isRefreshing ? t("workspace.pr.refreshing") : t("workspace.pr.refresh")}
+          </Button>
+          {actionError ? <Alert severity="error">{actionError}</Alert> : null}
+        </Stack>
       </Box>
     );
   }
@@ -242,10 +268,18 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
             <Stack spacing={0.75}>
               <Stack direction="row" spacing={1} alignItems="center">
                 <PullRequestIcon state={hasLivePr && pullRequest ? livePrStatus(pullRequest) : "open"} size={18} />
-                <Typography variant="subtitle1" noWrap>
+                <Typography variant="subtitle1" noWrap sx={{ flex: 1, minWidth: 0 }}>
                   #{prNumber}
                   {prTitle ? ` ${prTitle}` : ""}
                 </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => void handleRefresh()}
+                  disabled={isRefreshing || !worktreePath}
+                >
+                  {isRefreshing ? t("workspace.pr.refreshing") : t("workspace.pr.refresh")}
+                </Button>
               </Stack>
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0, overflow: "hidden", mt: 0.25 }}>
                 <BranchBadge name={prBranch || t("workspace.info.unavailable")} />

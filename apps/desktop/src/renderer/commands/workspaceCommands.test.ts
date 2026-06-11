@@ -15,6 +15,7 @@ import {
   focusWorkspaceFileTree,
   openCreateWorkspaceDialog,
   openWorkspaceFileSearch,
+  refreshWorkspacePullRequest,
   refreshWorkspaceGitChanges,
   renameWorkspace,
   renameWorkspaceBranch,
@@ -28,6 +29,7 @@ const rpcMocks = vi.hoisted(() => ({
   createWorkspace: vi.fn(),
   list: vi.fn(),
   openWorkspace: vi.fn(),
+  refreshWorkspacePullRequest: vi.fn(),
   closeWorkspace: vi.fn(),
   listGitChanges: vi.fn(),
   getBranchDiffSummary: vi.fn(),
@@ -54,6 +56,7 @@ vi.mock("../rpc/rpcTransport", () => ({
       createWorkspace: rpcMocks.createWorkspace,
       list: rpcMocks.list,
       open: rpcMocks.openWorkspace,
+      refreshPullRequest: rpcMocks.refreshWorkspacePullRequest,
       close: rpcMocks.closeWorkspace,
     },
   })),
@@ -174,6 +177,45 @@ describe("workspaceCommands", () => {
         projectId: "repo-1",
         pullRequestAlreadyMerged: false,
       });
+    });
+  });
+
+  it("refreshes one workspace pull request through the daemon", async () => {
+    workspaceStore.setState({
+      workspaces: [
+        {
+          id: "workspace-1",
+          repoId: "repo-1",
+          projectId: "repo-1",
+          organizationId: "org-1",
+          name: "Workspace 1",
+          title: "Workspace 1",
+          sourceBranch: "main",
+          branch: "feature-a",
+          summaryId: "summary-1",
+          worktreePath: "/tmp/workspaces/workspace-1",
+        },
+      ],
+    });
+    rpcMocks.refreshWorkspacePullRequest.mockResolvedValueOnce({
+      id: "workspace-1",
+      pullRequest: {
+        number: 42,
+        title: "Add refresh button",
+        status: "OPEN",
+      },
+    });
+
+    await refreshWorkspacePullRequest("workspace-1", "/tmp/workspaces/workspace-1");
+
+    expect(rpcMocks.refreshWorkspacePullRequest).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      workspaceWorktreePath: "/tmp/workspaces/workspace-1",
+    });
+    expect(workspaceStore.getState().pullRequestByWorkspaceId["workspace-1"]).toEqual({
+      number: 42,
+      title: "Add refresh button",
+      status: "OPEN",
     });
   });
 

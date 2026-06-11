@@ -162,6 +162,39 @@ export class DaemonWorkspaceClient {
     };
   }
 
+  async refreshPullRequest(input: Rpc.WorkspaceRefreshPullRequestInput): Promise<Rpc.DaemonWorkspace> {
+    const workspaceId = input.workspaceId?.trim();
+    const workspaceWorktreePath = input.workspaceWorktreePath
+      ? normalizeWorktreePath(input.workspaceWorktreePath)
+      : undefined;
+    if (!workspaceId && !workspaceWorktreePath) {
+      throw new Error("workspaceId or workspaceWorktreePath is required");
+    }
+
+    const record = asRecord(
+      await this.invoke("workspace.refreshPullRequest", {
+        ...(workspaceId ? { workspaceId } : {}),
+        ...(workspaceWorktreePath ? { path: workspaceWorktreePath } : {}),
+      }),
+    );
+    if (!record) {
+      throw new Error("daemon workspace refreshPullRequest returned invalid response");
+    }
+
+    const id = readOptionalString(record.id) || workspaceId || "";
+    const path = normalizeWorktreePath(readOptionalString(record.path) || workspaceWorktreePath || "");
+    if (id && path) {
+      this.workspaceIdByWorktreePath.set(path, id);
+    }
+    return {
+      id,
+      path,
+      orgId: readOptionalString(record.orgId),
+      projectId: readOptionalString(record.projectId),
+      pullRequest: readDaemonWorkspacePullRequest(record.pullRequest),
+    };
+  }
+
   async ensureIdByWorktreePath(worktreePath: string, preferredWorkspaceId?: string): Promise<string> {
     const normalizedWorktreePath = normalizeWorktreePath(worktreePath);
     const normalizedPreferredWorkspaceId = preferredWorkspaceId?.trim();

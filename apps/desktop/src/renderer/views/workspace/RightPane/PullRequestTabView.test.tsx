@@ -1,13 +1,17 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { workspaceStore } from "../../../store/workspaceStore";
 import { PullRequestTabView } from "./PullRequestTabView";
 
 const mocked = vi.hoisted(() => ({
   openLink: vi.fn(),
+  refreshWorkspacePullRequest: vi.fn(),
   state: {
+    selectedWorkspaceId: "workspace-1",
     pullRequest: undefined as any,
+    historicalPullRequests: [],
     isLoading: false,
   },
 }));
@@ -22,24 +26,60 @@ vi.mock("../../../commands/appCommands", () => ({
   openLink: (options: { url: string }) => mocked.openLink(options),
 }));
 
+vi.mock("../../../hooks/useCommands", () => ({
+  useCommands: () => ({
+    refreshWorkspacePullRequest: mocked.refreshWorkspacePullRequest,
+  }),
+}));
+
 vi.mock("./useWorkspacePullRequestState", () => ({
   useWorkspacePullRequestState: () => mocked.state,
 }));
 
+const initialWorkspaceStoreState = workspaceStore.getState();
+
 afterEach(() => {
+  cleanup();
+  workspaceStore.setState(initialWorkspaceStoreState, true);
   mocked.openLink.mockReset();
+  mocked.refreshWorkspacePullRequest.mockReset();
+  mocked.state.selectedWorkspaceId = "workspace-1";
   mocked.state.pullRequest = undefined;
+  mocked.state.historicalPullRequests = [];
   mocked.state.isLoading = false;
 });
 
 describe("PullRequestTabView", () => {
   it("renders empty state when no PR exists", () => {
+    workspaceStore.setState({
+      selectedWorkspaceId: "workspace-1",
+      workspaces: [{ id: "workspace-1", worktreePath: "/tmp/workspace-1" } as never],
+    });
+
     render(<PullRequestTabView />);
 
     expect(screen.getByText("workspace.pr.empty")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "workspace.pr.refresh" })).toBeTruthy();
+  });
+
+  it("refreshes daemon PR state from the empty state button", () => {
+    workspaceStore.setState({
+      selectedWorkspaceId: "workspace-1",
+      workspaces: [{ id: "workspace-1", worktreePath: "/tmp/workspace-1" } as never],
+    });
+
+    render(<PullRequestTabView />);
+
+    fireEvent.click(screen.getByRole("button", { name: "workspace.pr.refresh" }));
+
+    expect(mocked.refreshWorkspacePullRequest).toHaveBeenCalledWith("workspace-1", "/tmp/workspace-1");
   });
 
   it("renders PR checks and deployments", () => {
+    workspaceStore.setState({
+      selectedWorkspaceId: "workspace-1",
+      workspaces: [{ id: "workspace-1", worktreePath: "/tmp/workspace-1" } as never],
+    });
     mocked.state.pullRequest = {
       number: 42,
       title: "Add PR tab",
@@ -75,5 +115,8 @@ describe("PullRequestTabView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "workspace.pr.viewDetails" }));
     expect(mocked.openLink).toHaveBeenCalledWith({ url: "https://github.com/acme/repo/pull/42" });
+
+    fireEvent.click(screen.getByRole("button", { name: "workspace.pr.refresh" }));
+    expect(mocked.refreshWorkspacePullRequest).toHaveBeenCalledWith("workspace-1", "/tmp/workspace-1");
   });
 });

@@ -66,9 +66,8 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
   }, [enabled, selectedWorkspaceId, orgId, projectId]);
 
   // When the tab is active and there is no live daemon PR yet, trigger an immediate
-  // daemon workspace.open() call. The daemon will check the current branch for an
-  // associated PR and return it inline. If found, we feed the result directly into
-  // the store so it appears without waiting for the next polling interval.
+  // daemon PR refresh for this workspace so the current branch is re-checked without
+  // waiting for the polling interval.
   useEffect(() => {
     if (
       !enabled ||
@@ -86,14 +85,7 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
     let cancelled = false;
 
     getDaemonClient()
-      .then((client) =>
-        client.workspace.open({
-          workspaceId: selectedWorkspaceId,
-          workspaceWorktreePath: worktreePath,
-          orgId,
-          projectId,
-        }),
-      )
+      .then((client) => client.workspace.refreshPullRequest({ workspaceId: selectedWorkspaceId, workspaceWorktreePath: worktreePath }))
       .then((daemonWorkspace) => {
         if (!cancelled && daemonWorkspace.pullRequest) {
           workspaceStore.getState().setWorkspacePullRequest(selectedWorkspaceId, daemonWorkspace.pullRequest);

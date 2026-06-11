@@ -711,6 +711,8 @@
     "pr": {
       "tab": "PR",
       "empty": "No pull request is associated with this workspace.",
+      "refresh": "Refresh",
+      "refreshing": "Refreshing...",
       "open": "Open",
       "viewDetails": "View details",
       "checks": "Checks",

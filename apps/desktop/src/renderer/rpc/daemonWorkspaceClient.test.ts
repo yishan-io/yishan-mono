@@ -43,4 +43,35 @@ describe("DaemonWorkspaceClient", () => {
     expect(workspace.path).toBe("/tmp/repo");
     expect(workspaceIdByWorktreePath.get("/tmp/repo")).toBe("workspace-1");
   });
+
+  it("refreshes pull request state through the dedicated workspace RPC", async () => {
+    const invoke = vi.fn(async (method: string, params?: unknown) => {
+      if (method === "workspace.refreshPullRequest") {
+        expect(params).toEqual({
+          workspaceId: "workspace-1",
+          path: "/tmp/repo",
+        });
+        return {
+          id: "workspace-1",
+          path: "/tmp/repo/",
+          pullRequest: {
+            number: 42,
+            title: "Refresh me",
+          },
+        };
+      }
+
+      throw new Error(`Unexpected method: ${method}`);
+    });
+    const workspaceIdByWorktreePath = new Map<string, string>();
+    const client = new DaemonWorkspaceClient(invoke, workspaceIdByWorktreePath);
+
+    const workspace = await client.refreshPullRequest({
+      workspaceId: "workspace-1",
+      workspaceWorktreePath: "/tmp/repo/",
+    });
+
+    expect(workspace.pullRequest).toEqual({ number: 42, title: "Refresh me" });
+    expect(workspaceIdByWorktreePath.get("/tmp/repo")).toBe("workspace-1");
+  });
 });

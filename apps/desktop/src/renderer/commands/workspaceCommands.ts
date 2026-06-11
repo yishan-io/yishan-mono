@@ -107,6 +107,31 @@ export async function refreshWorkspaceGitChanges(workspaceId: string, workspaceW
   }
 }
 
+/** Re-queries the daemon for the selected workspace pull request state. */
+export async function refreshWorkspacePullRequest(workspaceId: string, workspaceWorktreePath: string): Promise<void> {
+  if (!workspaceId || !workspaceWorktreePath) {
+    return;
+  }
+
+  const workspace = readWorkspaceStoreState().workspaces.find((candidate) => candidate.id === workspaceId);
+  if (!workspace) {
+    return;
+  }
+
+  try {
+    const client = await getDaemonClient();
+    const refreshedWorkspace = await client.workspace.refreshPullRequest({
+      workspaceId,
+      workspaceWorktreePath,
+    });
+
+    readWorkspaceStoreState().setWorkspacePullRequest(workspaceId, refreshedWorkspace.pullRequest);
+  } catch (error) {
+    console.error("Failed to refresh workspace pull request", error);
+    throw error;
+  }
+}
+
 /** Stores visible repo ids for left-pane filtering state. */
 export function setDisplayRepoIds(repoIds: string[]) {
   readWorkspaceStoreState().setDisplayProjectIds(repoIds);

@@ -134,6 +134,11 @@ export type WorkspaceOpenInput = {
   pullRequestAlreadyMerged?: boolean;
 };
 
+export type WorkspaceRefreshPullRequestInput = {
+  workspaceId?: string;
+  workspaceWorktreePath?: string;
+};
+
 export type PersistAuthTokensInput = {
   accessToken: string;
   refreshToken?: string;
