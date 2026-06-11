@@ -87,12 +87,12 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 			if migrateErr := UpdateContext(contextPath, func(cfg *viper.Viper) {
 				cfg.Set(KeyDefaultOrgID, legacyOrgID)
 			}); migrateErr == nil {
-				// Clear from credential.yaml to avoid confusion going forward.
-				_ = UpdateFile(configPath, func(cfg *viper.Viper) {
-					cfg.Set(KeyCurrentOrgID, "")
-				})
+				_ = DeleteKeys(configPath, KeyCurrentOrgID)
 			}
 		}
+	} else {
+		// Already migrated — still clean up any leftover empty key in credential.yaml.
+		_ = DeleteKeys(configPath, KeyCurrentOrgID)
 	}
 
 	return Config{

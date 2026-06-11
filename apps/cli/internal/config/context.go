@@ -45,11 +45,17 @@ func LoadContext(contextPath string) (ContextConfig, error) {
 		// Migration: prior version wrote current_org_id into context.yaml.
 		if legacy := v.GetString("current_org_id"); legacy != "" {
 			defaultOrgID = legacy
-			_ = UpdateFile(contextPath, func(cfg *viper.Viper) {
+			// Write the new key and remove the old one atomically via two steps:
+			// first write default_org_id, then delete current_org_id.
+			if writeErr := UpdateFile(contextPath, func(cfg *viper.Viper) {
 				cfg.Set(KeyDefaultOrgID, legacy)
-				cfg.Set("current_org_id", "")
-			})
+			}); writeErr == nil {
+				_ = DeleteKeys(contextPath, "current_org_id")
+			}
 		}
+	} else {
+		// Already migrated — clean up any leftover current_org_id key.
+		_ = DeleteKeys(contextPath, "current_org_id")
 	}
 
 	return ContextConfig{
