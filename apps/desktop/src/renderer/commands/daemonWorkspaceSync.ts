@@ -57,7 +57,7 @@ export async function ensureVisibleWorkspacesOpen(mergedWorkspaceIds?: ReadonlyS
 
   const client = await getDaemonClient();
   const daemonWorkspaces = await client.workspace.list();
-  const openPaths = new Set(daemonWorkspaces.map((workspace) => workspace.path.trim()).filter(Boolean));
+  const daemonWorkspaceByPath = new Map(daemonWorkspaces.map((workspace) => [workspace.path.trim(), workspace]));
 
   // Seed daemon PR info from already-open workspaces so the popover can show
   // live PR data immediately without waiting for the next polling interval.
@@ -68,18 +68,23 @@ export async function ensureVisibleWorkspacesOpen(mergedWorkspaceIds?: ReadonlyS
   }
 
   if (import.meta.env.DEV) {
-    console.debug("[daemonWorkspaceSync] daemon already-open workspaces", [...openPaths]);
+    console.debug("[daemonWorkspaceSync] daemon already-open workspaces", [...daemonWorkspaceByPath.keys()]);
   }
 
   await Promise.all(
     targets.map(async (workspace) => {
       const worktreePath = workspace.worktreePath?.trim() ?? "";
-      if (!worktreePath || openPaths.has(worktreePath)) {
+      const existingDaemonWorkspace = daemonWorkspaceByPath.get(worktreePath);
+      const isAlreadyRegistered =
+        existingDaemonWorkspace?.id === workspace.id &&
+        existingDaemonWorkspace.orgId === workspace.organizationId &&
+        existingDaemonWorkspace.projectId === workspace.projectId;
+      if (!worktreePath || isAlreadyRegistered) {
         if (import.meta.env.DEV) {
           console.debug("[daemonWorkspaceSync] skipping workspace open", {
             workspaceId: workspace.id,
             worktreePath,
-            reason: !worktreePath ? "missing-path" : "already-open",
+            reason: !worktreePath ? "missing-path" : "already-registered",
           });
         }
         return;
@@ -101,7 +106,13 @@ export async function ensureVisibleWorkspacesOpen(mergedWorkspaceIds?: ReadonlyS
           projectId: workspace.projectId,
           pullRequestAlreadyMerged: mergedWorkspaceIds?.has(workspace.id) ?? false,
         });
-        openPaths.add(worktreePath);
+        daemonWorkspaceByPath.set(worktreePath, {
+          id: openedWorkspace.id,
+          path: openedWorkspace.path,
+          orgId: workspace.organizationId,
+          projectId: workspace.projectId,
+          pullRequest: openedWorkspace.pullRequest,
+        });
         if (openedWorkspace?.pullRequest) {
           workspaceStore.getState().setWorkspacePullRequest(openedWorkspace.id, openedWorkspace.pullRequest);
         }

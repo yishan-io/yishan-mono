@@ -45,10 +45,7 @@ export type DaemonRpcClient = {
     createFolder: (input: Rpc.FileCreateFolderInput) => Promise<Rpc.FileMutationOkResponse>;
     renameEntry: (input: Rpc.FileRenameInput) => Promise<Rpc.FileMutationOkResponse>;
     deleteEntry: (input: Rpc.FileDeleteInput) => Promise<Rpc.FileMutationOkResponse>;
-    pasteEntries: (input: unknown) => Promise<Rpc.FileMutationOkResponse>;
-    importEntries: (input: unknown) => Promise<Rpc.FileMutationOkResponse>;
-    importFilePayloads: (input: unknown) => Promise<Rpc.FileMutationOkResponse>;
-    readDiff: (input: { workspaceWorktreePath: string; relativePath: string }) => Promise<Rpc.FileDiffResponse>;
+    readDiff: (input: Rpc.FileReadInput) => Promise<Rpc.FileDiffResponse>;
   };
   git: {
     inspect: (input: Rpc.GitInspectInput) => Promise<Rpc.GitInspectResponse>;
@@ -72,7 +69,7 @@ export type DaemonRpcClient = {
     closePullRequest: (input: Rpc.GitPrCloseInput) => Promise<{ output: string }>;
   };
   terminal: {
-    createSession: (input?: Rpc.TerminalCreateSessionInput) => Promise<Rpc.TerminalCreateSessionResponse>;
+    createSession: (input: Rpc.TerminalCreateSessionInput) => Promise<Rpc.TerminalCreateSessionResponse>;
     writeInput: (input: Rpc.TerminalWriteInput) => Promise<Rpc.TerminalMutationOkResponse>;
     resize: (input: Rpc.TerminalResizeInput) => Promise<Rpc.TerminalMutationOkResponse>;
     readOutput: (input: Rpc.TerminalReadOutputInput) => Promise<Rpc.TerminalReadOutputResponse>;

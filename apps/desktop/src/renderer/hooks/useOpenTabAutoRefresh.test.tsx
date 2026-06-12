@@ -9,11 +9,11 @@ type DaemonConnectionStatus = "connected" | "connecting" | "disconnected";
 type BackendEvent =
   | {
       source: "workspaceFilesChanged";
-      payload: { workspaceWorktreePath: string; changedRelativePaths?: string[] };
+      payload: { workspaceId?: string; workspaceWorktreePath: string; changedRelativePaths?: string[] };
     }
   | {
       source: "gitChanged";
-      payload: { workspaceWorktreePath: string };
+      payload: { workspaceId?: string; workspaceWorktreePath: string };
     };
 
 type BackendEventName = "workspace.files.changed" | "git.changed";
@@ -109,7 +109,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     renderHook(() =>
       useOpenTabAutoRefresh({
-        workspaceWorktreePath: "/repo",
+        workspaceId: "workspace-1",
         tabs,
         commands: commands,
       }),
@@ -117,12 +117,12 @@ describe("useOpenTabAutoRefresh", () => {
 
     emitBackendEvent("workspace.files.changed", {
       source: "workspaceFilesChanged",
-      payload: { workspaceWorktreePath: "/repo", changedRelativePaths: ["src/changed.ts", "src/dirty.ts"] },
+      payload: { workspaceId: "workspace-1", workspaceWorktreePath: "/repo", changedRelativePaths: ["src/changed.ts", "src/dirty.ts"] },
     });
     await flushRefreshWork();
 
     expect(commands.readFile).toHaveBeenCalledTimes(1);
-    expect(commands.readFile).toHaveBeenCalledWith({ workspaceWorktreePath: "/repo", relativePath: "src/changed.ts" });
+    expect(commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/changed.ts" });
     expect(commands.refreshFileTabFromDisk).toHaveBeenCalledWith({
       tabId: "file-1",
       content: "content:src/changed.ts",
@@ -136,7 +136,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     renderHook(() =>
       useOpenTabAutoRefresh({
-        workspaceWorktreePath: "/repo",
+        workspaceId: "workspace-1",
         tabs,
         commands: commands,
       }),
@@ -144,7 +144,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     emitBackendEvent("workspace.files.changed", {
       source: "workspaceFilesChanged",
-      payload: { workspaceWorktreePath: "/other", changedRelativePaths: ["src/changed.ts"] },
+      payload: { workspaceId: "other", workspaceWorktreePath: "/other", changedRelativePaths: ["src/changed.ts"] },
     });
     await flushRefreshWork();
 
@@ -161,7 +161,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     renderHook(() =>
       useOpenTabAutoRefresh({
-        workspaceWorktreePath: "/repo",
+        workspaceId: "workspace-1",
         tabs,
         commands: commands,
       }),
@@ -169,14 +169,14 @@ describe("useOpenTabAutoRefresh", () => {
 
     emitBackendEvent("git.changed", {
       source: "gitChanged",
-      payload: { workspaceWorktreePath: "/repo" },
+      payload: { workspaceId: "workspace-1", workspaceWorktreePath: "/repo" },
     });
     await flushRefreshWork();
 
     expect(commands.readFile).toHaveBeenCalledTimes(1);
-    expect(commands.readDiff).toHaveBeenCalledWith({ workspaceWorktreePath: "/repo", relativePath: "src/changed.ts" });
+    expect(commands.readDiff).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/changed.ts" });
     expect(commands.readBranchComparisonDiff).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/repo",
+      workspaceId: "workspace-1",
       targetBranch: "main",
       relativePath: "src/branch.ts",
     });
@@ -189,7 +189,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     const { unmount } = renderHook(() =>
       useOpenTabAutoRefresh({
-        workspaceWorktreePath: "/repo",
+        workspaceId: "workspace-1",
         tabs,
         commands: commands,
       }),
@@ -218,7 +218,7 @@ describe("useOpenTabAutoRefresh", () => {
 
       renderHook(() =>
         useOpenTabAutoRefresh({
-          workspaceWorktreePath: "/repo",
+          workspaceId: "workspace-1",
           tabs,
           commands,
           subscribeDaemonConnectionStatus: daemonHarness.subscribe,
@@ -233,11 +233,11 @@ describe("useOpenTabAutoRefresh", () => {
       await flushRefreshWork();
 
       // Clean file tab should be re-read.
-      expect(commands.readFile).toHaveBeenCalledWith({ workspaceWorktreePath: "/repo", relativePath: "src/a.ts" });
+      expect(commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/a.ts" });
       // Dirty file tab should not be re-read.
-      expect(commands.readFile).not.toHaveBeenCalledWith({ workspaceWorktreePath: "/repo", relativePath: "src/b.ts" });
+      expect(commands.readFile).not.toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/b.ts" });
       // Diff tab should also be refreshed.
-      expect(commands.readDiff).toHaveBeenCalledWith({ workspaceWorktreePath: "/repo", relativePath: "src/c.ts" });
+      expect(commands.readDiff).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/c.ts" });
     });
 
     it("does not refresh when connected fires without prior disconnect", async () => {
@@ -248,7 +248,7 @@ describe("useOpenTabAutoRefresh", () => {
 
       renderHook(() =>
         useOpenTabAutoRefresh({
-          workspaceWorktreePath: "/repo",
+          workspaceId: "workspace-1",
           tabs,
           commands,
           subscribeDaemonConnectionStatus: daemonHarness.subscribe,
@@ -270,7 +270,7 @@ describe("useOpenTabAutoRefresh", () => {
 
       renderHook(() =>
         useOpenTabAutoRefresh({
-          workspaceWorktreePath: "/repo",
+          workspaceId: "workspace-1",
           tabs,
           commands,
           subscribeDaemonConnectionStatus: daemonHarness.subscribe,
@@ -299,7 +299,7 @@ describe("useOpenTabAutoRefresh", () => {
 
       const { unmount } = renderHook(() =>
         useOpenTabAutoRefresh({
-          workspaceWorktreePath: "/repo",
+          workspaceId: "workspace-1",
           tabs,
           commands,
           subscribeDaemonConnectionStatus: daemonHarness.subscribe,

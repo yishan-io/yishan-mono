@@ -79,7 +79,7 @@ export function useFileTreeCrud({
         }
 
         const response = await readFile({
-          workspaceWorktreePath: selectedWorkspaceWorktreePath,
+          workspaceId: selectedWorkspaceId ?? "",
           relativePath: path,
         });
 
@@ -126,7 +126,7 @@ export function useFileTreeCrud({
         if (!targetIsDirectory) {
           try {
             const response = await readFile({
-              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              workspaceId: selectedWorkspaceId ?? "",
               relativePath: targetPath,
             });
 
@@ -141,7 +141,7 @@ export function useFileTreeCrud({
         }
 
         await deleteEntry({
-          workspaceWorktreePath: selectedWorkspaceWorktreePath,
+          workspaceId: selectedWorkspaceId ?? "",
           relativePath: targetPath,
         });
 
@@ -172,7 +172,7 @@ export function useFileTreeCrud({
 
       try {
         await createFile({
-          workspaceWorktreePath: selectedWorkspaceWorktreePath,
+          workspaceId: selectedWorkspaceId ?? "",
           relativePath: path,
           content: "",
         });
@@ -204,7 +204,7 @@ export function useFileTreeCrud({
 
       try {
         await createFolder({
-          workspaceWorktreePath: selectedWorkspaceWorktreePath,
+          workspaceId: selectedWorkspaceId ?? "",
           relativePath: path,
         });
 
@@ -236,7 +236,7 @@ export function useFileTreeCrud({
 
       try {
         await renameEntry({
-          workspaceWorktreePath: selectedWorkspaceWorktreePath,
+          workspaceId: selectedWorkspaceId ?? "",
           fromRelativePath: path,
           toRelativePath: targetPath,
         });

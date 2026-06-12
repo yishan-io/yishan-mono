@@ -294,7 +294,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
         loadedDirectoryPathsRef.current,
       );
       const response = await listFilesBatch({
-        workspaceWorktreePath: selectedWorkspaceWorktreePath,
+        workspaceId: selectedWorkspaceId ?? "",
         requests: refreshDirectoryPaths.map((directoryPath) => ({
           relativePath: directoryPath || undefined,
           // Root fetch is recursive (full tree); loaded-subdirectory refreshes
@@ -356,7 +356,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
 
       try {
         const response = await listFiles({
-          workspaceWorktreePath: selectedWorkspaceWorktreePath,
+          workspaceId: selectedWorkspaceId ?? "",
           relativePath: normalizedPath,
           recursive: false,
         });
@@ -455,6 +455,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     onDropExternalEntries,
     onMoveEntries,
   } = useFileTreeClipboard({
+    selectedWorkspaceId,
     selectedWorkspaceWorktreePath,
     repoEntries,
     clipboardState,

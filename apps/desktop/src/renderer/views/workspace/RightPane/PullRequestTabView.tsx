@@ -164,12 +164,12 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
   }, []);
 
   const handleMerge = useCallback(async () => {
-    if (!prNumber || !worktreePath || isMerging) return;
+    if (!prNumber || !selectedWorkspaceId || !worktreePath || isMerging) return;
     setIsMerging(true);
     setActionError(null);
     try {
       await mergePullRequest({
-        workspaceWorktreePath: worktreePath,
+        workspaceId: selectedWorkspaceId,
         prNumber,
         method: mergeMethod,
         deleteBranch,
@@ -199,15 +199,15 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
     } finally {
       setIsMerging(false);
     }
-  }, [prNumber, worktreePath, mergeMethod, deleteBranch, isMerging, hasLivePr, pullRequest, prTitle, prUrl, prBranch, prBaseBranch]);
+  }, [prNumber, selectedWorkspaceId, worktreePath, mergeMethod, deleteBranch, isMerging, hasLivePr, pullRequest, prTitle, prUrl, prBranch, prBaseBranch]);
 
   const handleClose = useCallback(async () => {
-    if (!prNumber || !worktreePath || isClosing) return;
+    if (!prNumber || !selectedWorkspaceId || !worktreePath || isClosing) return;
     setIsClosing(true);
     setActionError(null);
     try {
       await closePullRequest({
-        workspaceWorktreePath: worktreePath,
+        workspaceId: selectedWorkspaceId,
         prNumber,
       });
       const state = workspaceStore.getState();
@@ -235,7 +235,7 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
     } finally {
       setIsClosing(false);
     }
-  }, [prNumber, worktreePath, isClosing, hasLivePr, pullRequest, prTitle, prUrl, prBranch, prBaseBranch]);
+  }, [prNumber, selectedWorkspaceId, worktreePath, isClosing, hasLivePr, pullRequest, prTitle, prUrl, prBranch, prBaseBranch]);
 
   const handleRefresh = useCallback(async () => {
     if (!selectedWorkspaceId || !worktreePath || isRefreshing) {
@@ -245,7 +245,7 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
     setIsRefreshing(true);
     setActionError(null);
     try {
-      await refreshWorkspacePullRequest(selectedWorkspaceId, worktreePath);
+      await refreshWorkspacePullRequest(selectedWorkspaceId);
     } catch (error: unknown) {
       console.error("[PullRequestTabView] refresh failed", error);
       setActionError(getErrorMessage(error));

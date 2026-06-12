@@ -114,7 +114,7 @@ export function usePaneTabHandlers({
       if (targetPath === tab.data.path) return;
 
       try {
-        await cmd.renameEntry({ workspaceWorktreePath, fromRelativePath: tab.data.path, toRelativePath: targetPath });
+        await cmd.renameEntry({ workspaceId, fromRelativePath: tab.data.path, toRelativePath: targetPath });
         cmd.renameTabsForEntryRename(workspaceId, tab.data.path, targetPath);
       } catch (error) {
         console.error("Failed to rename workspace file from tab", error);

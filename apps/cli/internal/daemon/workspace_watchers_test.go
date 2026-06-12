@@ -246,7 +246,7 @@ func TestWorktreeWatcher_DetectsGitChangesInResolvedDir(t *testing.T) {
 	subID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subID)
 
-	watchers.Watch(worktreeDir)
+	watchers.Watch("ws-test", worktreeDir)
 	time.Sleep(100 * time.Millisecond)
 	drainEvents(events, 300*time.Millisecond)
 
@@ -286,7 +286,7 @@ func TestWorktreeWatcher_DetectsGitChangesInStandardRepo(t *testing.T) {
 	subID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subID)
 
-	watchers.Watch(root)
+	watchers.Watch("ws-test", root)
 	time.Sleep(100 * time.Millisecond)
 	drainEvents(events, 300*time.Millisecond)
 
@@ -319,7 +319,7 @@ func TestWorktreeWatcher_InvokesGitChangedCallback(t *testing.T) {
 	})
 	defer watchers.Close()
 
-	watchers.Watch(root)
+	watchers.Watch("ws-test", root)
 	time.Sleep(500 * time.Millisecond)
 
 	if err := os.WriteFile(filepath.Join(gitDir, "index"), []byte("updated-index"), 0o644); err != nil {
@@ -351,7 +351,7 @@ func TestWorktreeWatcher_DetectsFileChangesInWorktree(t *testing.T) {
 	subID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subID)
 
-	watchers.Watch(root)
+	watchers.Watch("ws-test", root)
 	time.Sleep(100 * time.Millisecond)
 	drainEvents(events, 300*time.Millisecond)
 
@@ -384,7 +384,7 @@ func TestWorktreeWatcher_DetectsFileChangesInSubdirectory(t *testing.T) {
 	subID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subID)
 
-	watchers.Watch(root)
+	watchers.Watch("ws-test", root)
 	time.Sleep(100 * time.Millisecond)
 	drainEvents(events, 300*time.Millisecond)
 
@@ -410,7 +410,7 @@ func TestWorktreeWatcher_DetectsFileChangesInNewDirectories(t *testing.T) {
 	subID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subID)
 
-	watchers.Watch(root)
+	watchers.Watch("ws-test", root)
 	time.Sleep(100 * time.Millisecond)
 	drainEvents(events, 300*time.Millisecond)
 
@@ -455,7 +455,7 @@ func TestWorktreeWatcher_ExcludesCommonLargeDirectories(t *testing.T) {
 	subID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subID)
 
-	watchers.Watch(root)
+	watchers.Watch("ws-test", root)
 	time.Sleep(100 * time.Millisecond)
 	drainEvents(events, 300*time.Millisecond)
 
@@ -494,7 +494,7 @@ func TestWorktreeWatcher_ExcludesGitIgnoredDirectories(t *testing.T) {
 	subID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subID)
 
-	watchers.Watch(root)
+	watchers.Watch("ws-test", root)
 	time.Sleep(100 * time.Millisecond)
 	drainEvents(events, 300*time.Millisecond)
 
@@ -527,7 +527,7 @@ func TestWorktreeWatcher_AlwaysWatchesMyContextEvenIfIgnored(t *testing.T) {
 	subID, events := hub.Subscribe()
 	defer hub.Unsubscribe(subID)
 
-	watchers.Watch(root)
+	watchers.Watch("ws-test", root)
 	time.Sleep(100 * time.Millisecond)
 	drainEvents(events, 300*time.Millisecond)
 
@@ -572,8 +572,8 @@ func TestWorkspaceWatchers_ReusesSharedContextWatchers(t *testing.T) {
 	watchers := newWorkspaceWatchers(hub, nil)
 	defer watchers.Close()
 
-	watchers.Watch(workspaceOne)
-	watchers.Watch(workspaceTwo)
+	watchers.Watch(workspaceOne, workspaceOne)
+	watchers.Watch(workspaceTwo, workspaceTwo)
 
 	registration, ok := watchers.contexts[contextDir]
 	if !ok {

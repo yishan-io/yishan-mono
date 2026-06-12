@@ -1,28 +1,38 @@
 import { getDaemonClient } from "../rpc/rpcTransport";
 import type { GitChangesBySection } from "../rpc/daemonTypes";
+import { workspaceStore } from "../store/workspaceStore";
 
-const inFlightListGitChangesByWorktreePath = new Map<string, Promise<GitChangesBySection>>();
-const inFlightGitAuthorNameByWorktreePath = new Map<string, Promise<string | null>>();
-const gitAuthorNameByWorktreePath = new Map<string, string | null>();
+const inFlightListGitChangesByWorkspaceId = new Map<string, Promise<GitChangesBySection>>();
+const inFlightGitAuthorNameByWorkspaceId = new Map<string, Promise<string | null>>();
+const gitAuthorNameByWorkspaceId = new Map<string, string | null>();
+
+/** Resolves a workspaceId from store when only a worktreePath is available (repo-root branch listing). */
+function resolveWorkspaceIdFromPath(workspaceWorktreePath: string): string {
+  const workspace = workspaceStore.getState().workspaces.find((item) => item.worktreePath?.trim() === workspaceWorktreePath);
+  if (!workspace?.id) {
+    throw new Error(`workspaceId is required for worktree path: ${workspaceWorktreePath}`);
+  }
+  return workspace.id;
+}
 
 /** Reads old/new file content for one workspace diff view. */
-export async function readDiff(params: { workspaceWorktreePath: string; relativePath: string }) {
+export async function readDiff(params: { workspaceId: string; relativePath: string }) {
   const client = await getDaemonClient();
   return client.file.readDiff({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     relativePath: params.relativePath,
   });
 }
 
 /** Reads old/new file content for one specific commit file diff view. */
 export async function readCommitDiff(params: {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   commitHash: string;
   relativePath: string;
 }) {
   const client = await getDaemonClient();
   return client.git.readCommitDiff({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     commitHash: params.commitHash,
     relativePath: params.relativePath,
   });
@@ -30,76 +40,76 @@ export async function readCommitDiff(params: {
 
 /** Reads old/new file content for one target-branch-to-head file diff view. */
 export async function readBranchComparisonDiff(params: {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   targetBranch: string;
   relativePath: string;
 }) {
   const client = await getDaemonClient();
   return client.git.readBranchComparisonDiff({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     targetBranch: params.targetBranch,
     relativePath: params.relativePath,
   });
 }
 
-/** Lists git changes grouped by section for one workspace worktree path. */
-export async function listGitChanges(params: { workspaceWorktreePath: string }) {
-  const normalizedWorkspaceWorktreePath = params.workspaceWorktreePath.trim();
-  const inFlightRequest = inFlightListGitChangesByWorktreePath.get(normalizedWorkspaceWorktreePath);
+/** Lists git changes grouped by section for one workspace. */
+export async function listGitChanges(params: { workspaceId: string }) {
+  const workspaceId = params.workspaceId.trim();
+  const inFlightRequest = inFlightListGitChangesByWorkspaceId.get(workspaceId);
   if (inFlightRequest) {
     return await inFlightRequest;
   }
 
   const request = (async () => {
     const client = await getDaemonClient();
-    return await client.git.listChanges({ workspaceWorktreePath: normalizedWorkspaceWorktreePath });
+    return await client.git.listChanges({ workspaceId });
   })();
 
-  inFlightListGitChangesByWorktreePath.set(normalizedWorkspaceWorktreePath, request);
+  inFlightListGitChangesByWorkspaceId.set(workspaceId, request);
   try {
     return await request;
   } finally {
-    inFlightListGitChangesByWorktreePath.delete(normalizedWorkspaceWorktreePath);
+    inFlightListGitChangesByWorkspaceId.delete(workspaceId);
   }
 }
 
 /** Stages one or more changed paths for one workspace. */
-export async function trackGitChanges(params: { workspaceWorktreePath: string; relativePaths: string[] }) {
+export async function trackGitChanges(params: { workspaceId: string; relativePaths: string[] }) {
   const client = await getDaemonClient();
   return client.git.trackChanges({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     relativePaths: params.relativePaths,
   });
 }
 
 /** Unstages one or more changed paths for one workspace. */
-export async function unstageGitChanges(params: { workspaceWorktreePath: string; relativePaths: string[] }) {
+export async function unstageGitChanges(params: { workspaceId: string; relativePaths: string[] }) {
   const client = await getDaemonClient();
   return client.git.unstageChanges({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     relativePaths: params.relativePaths,
   });
 }
 
 /** Reverts one or more changed paths for one workspace. */
-export async function revertGitChanges(params: { workspaceWorktreePath: string; relativePaths: string[] }) {
+export async function revertGitChanges(params: { workspaceId: string; relativePaths: string[] }) {
   const client = await getDaemonClient();
   return client.git.revertChanges({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     relativePaths: params.relativePaths,
   });
 }
 
 /** Creates one git commit in one workspace. */
 export async function commitGitChanges(params: {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   message: string;
   amend?: boolean;
   signoff?: boolean;
 }) {
   const client = await getDaemonClient();
   return client.git.commitChanges({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     message: params.message,
     amend: params.amend,
     signoff: params.signoff,
@@ -107,16 +117,19 @@ export async function commitGitChanges(params: {
 }
 
 /** Reads upstream and ahead/behind status for one workspace branch. */
-export async function getGitBranchStatus(params: { workspaceWorktreePath: string }) {
+export async function getGitBranchStatus(params: { workspaceId: string }) {
   const client = await getDaemonClient();
-  return client.git.getBranchStatus({ workspaceWorktreePath: params.workspaceWorktreePath });
+  return client.git.getBranchStatus({ workspaceId: params.workspaceId });
 }
 
 /** Lists commits from current branch to one target branch. */
-export async function listGitCommitsToTarget(params: { workspaceWorktreePath: string; targetBranch: string }) {
+export async function listGitCommitsToTarget(params: {
+  workspaceId: string;
+  targetBranch: string;
+}) {
   const client = await getDaemonClient();
   return client.git.listCommitsToTarget({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     targetBranch: params.targetBranch,
   });
 }
@@ -132,62 +145,66 @@ export async function inspectGitRepository(params: { workspaceId: string }): Pro
 }
 
 /** Lists available branch names for one workspace. */
-export async function listGitBranches(params: { workspaceWorktreePath: string }) {
+export async function listGitBranches(params: { workspaceId?: string; workspaceWorktreePath?: string }) {
+  const workspaceId = params.workspaceId?.trim() || (params.workspaceWorktreePath ? resolveWorkspaceIdFromPath(params.workspaceWorktreePath.trim()) : "");
+  if (!workspaceId) {
+    throw new Error("workspaceId or workspaceWorktreePath is required");
+  }
   const client = await getDaemonClient();
-  return client.git.listBranches({ workspaceWorktreePath: params.workspaceWorktreePath });
+  return client.git.listBranches({ workspaceId });
 }
 
 /** Pushes one workspace branch to its upstream. */
-export async function pushGitBranch(params: { workspaceWorktreePath: string }) {
+export async function pushGitBranch(params: { workspaceId: string }) {
   const client = await getDaemonClient();
-  return client.git.pushBranch({ workspaceWorktreePath: params.workspaceWorktreePath });
+  return client.git.pushBranch({ workspaceId: params.workspaceId });
 }
 
 /** Publishes one workspace branch and configures upstream tracking. */
-export async function publishGitBranch(params: { workspaceWorktreePath: string }) {
+export async function publishGitBranch(params: { workspaceId: string }) {
   const client = await getDaemonClient();
-  return client.git.publishBranch({ workspaceWorktreePath: params.workspaceWorktreePath });
+  return client.git.publishBranch({ workspaceId: params.workspaceId });
 }
 
 /** Reads one repository's resolved git `user.name` value for branch-prefix `Git author` usage. */
-export async function getGitAuthorName(params: { workspaceWorktreePath: string }) {
-  const normalizedWorkspaceWorktreePath = params.workspaceWorktreePath.trim();
-  if (gitAuthorNameByWorktreePath.has(normalizedWorkspaceWorktreePath)) {
-    return gitAuthorNameByWorktreePath.get(normalizedWorkspaceWorktreePath) ?? null;
+export async function getGitAuthorName(params: { workspaceId: string }) {
+  const workspaceId = params.workspaceId.trim();
+  if (gitAuthorNameByWorkspaceId.has(workspaceId)) {
+    return gitAuthorNameByWorkspaceId.get(workspaceId) ?? null;
   }
 
-  const inFlightRequest = inFlightGitAuthorNameByWorktreePath.get(normalizedWorkspaceWorktreePath);
+  const inFlightRequest = inFlightGitAuthorNameByWorkspaceId.get(workspaceId);
   if (inFlightRequest) {
     return await inFlightRequest;
   }
 
   const request = (async () => {
     const client = await getDaemonClient();
-    return await client.git.getAuthorName({ workspaceWorktreePath: normalizedWorkspaceWorktreePath });
+    return await client.git.getAuthorName({ workspaceId });
   })();
 
-  inFlightGitAuthorNameByWorktreePath.set(normalizedWorkspaceWorktreePath, request);
+  inFlightGitAuthorNameByWorkspaceId.set(workspaceId, request);
   try {
     const authorName = (await request) ?? null;
     if (authorName !== null) {
-      gitAuthorNameByWorktreePath.set(normalizedWorkspaceWorktreePath, authorName);
+      gitAuthorNameByWorkspaceId.set(workspaceId, authorName);
     }
     return authorName;
   } finally {
-    inFlightGitAuthorNameByWorktreePath.delete(normalizedWorkspaceWorktreePath);
+    inFlightGitAuthorNameByWorkspaceId.delete(workspaceId);
   }
 }
 
 /** Merges one pull request for one workspace through the daemon gh CLI. */
 export async function mergePullRequest(params: {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   prNumber: number;
   method?: "merge" | "squash" | "rebase";
   deleteBranch?: boolean;
 }): Promise<{ output: string }> {
   const client = await getDaemonClient();
   return client.git.mergePullRequest({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     prNumber: params.prNumber,
     method: params.method,
     deleteBranch: params.deleteBranch,
@@ -196,12 +213,12 @@ export async function mergePullRequest(params: {
 
 /** Closes one pull request for one workspace through the daemon gh CLI. */
 export async function closePullRequest(params: {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   prNumber: number;
 }): Promise<{ output: string }> {
   const client = await getDaemonClient();
   return client.git.closePullRequest({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     prNumber: params.prNumber,
   });
 }

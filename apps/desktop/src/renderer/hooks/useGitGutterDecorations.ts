@@ -14,6 +14,8 @@ const MAX_LIVE_GUTTER_DIFF_LINES = 5000;
 export type UseGitGutterDecorationsInput = {
   /** Monaco editor instance to decorate. */
   editor: monaco.editor.IStandaloneCodeEditor | null;
+  /** Workspace identity used for daemon diff lookup. */
+  workspaceId?: string;
   /** Relative path of the file being edited. */
   path: string;
   /** Workspace worktree path (used to fetch the git HEAD content). */
@@ -30,6 +32,7 @@ export type UseGitGutterDecorationsInput = {
  */
 export function useGitGutterDecorations({
   editor,
+  workspaceId,
   path,
   worktreePath,
   currentContent,
@@ -44,7 +47,7 @@ export function useGitGutterDecorations({
 
   // Fetch the HEAD content when path or worktreePath changes.
   useEffect(() => {
-    if (!worktreePath || !path) {
+    if (!workspaceId || !worktreePath || !path) {
       setHeadContent(null);
       setShouldSkipDecorations(false);
       return;
@@ -52,7 +55,7 @@ export function useGitGutterDecorations({
 
     const requestId = ++pendingRequestRef.current;
 
-    readDiff({ workspaceWorktreePath: worktreePath, relativePath: path })
+    readDiff({ workspaceId, relativePath: path })
       .then((result) => {
         if (pendingRequestRef.current !== requestId) return;
         setShouldSkipDecorations(Boolean(result.shouldSkipDecorations));
@@ -67,7 +70,7 @@ export function useGitGutterDecorations({
     return () => {
       pendingRequestRef.current++;
     };
-  }, [path, worktreePath]);
+  }, [path, workspaceId, worktreePath]);
 
   const shouldThrottleLiveDiff = currentContent.split("\n").length > MAX_LIVE_GUTTER_DIFF_LINES;
 

@@ -12,10 +12,9 @@ type TerminalSnapshot = {
   exited: boolean;
 };
 type TerminalCreateSessionParams = {
-  cwd?: string;
   cols?: number;
   rows?: number;
-  workspaceId?: string;
+  workspaceId: string;
   tabId?: string;
   paneId?: string;
 };
@@ -32,7 +31,7 @@ const inFlightSessionResolutionByTabId = new Map<string, Promise<TerminalResolve
 export class TerminalSessionOrchestrator {
   constructor(
     private readonly commands: {
-      createTerminalSession: (params?: TerminalCreateSessionParams) => Promise<{ sessionId: string }>;
+      createTerminalSession: (params: TerminalCreateSessionParams) => Promise<{ sessionId: string }>;
       listTerminalSessions?: (params?: { includeExited?: boolean }) => Promise<Array<{ sessionId: string }>>;
       readTerminalOutput: (params: { sessionId: string; fromIndex: number }) => Promise<TerminalSnapshot>;
       writeTerminalInput: (params: { sessionId: string; data: string }) => Promise<{ ok: true }>;
@@ -65,11 +64,7 @@ export class TerminalSessionOrchestrator {
       return null;
     }
 
-    const workspaceWorktreePath = this.workspaceStoreAccess
-      .getState()
-      .workspaces.find((workspace) => workspace.id === tab.workspaceId)?.worktreePath;
-
-    const resolvedSession = await this.resolveSessionSnapshot(tab, workspaceWorktreePath);
+    const resolvedSession = await this.resolveSessionSnapshot(tab);
 
     try {
       input.fitAddon.fit();
@@ -112,14 +107,13 @@ export class TerminalSessionOrchestrator {
    */
   private async resolveSessionSnapshot(
     tab: TerminalTab,
-    workspaceWorktreePath: string | undefined,
   ): Promise<TerminalResolvedSession> {
     const existing = inFlightSessionResolutionByTabId.get(tab.id);
     if (existing) {
       return await existing;
     }
 
-    const resolution = this.resolveSessionSnapshotUncached(tab, workspaceWorktreePath);
+    const resolution = this.resolveSessionSnapshotUncached(tab);
     inFlightSessionResolutionByTabId.set(tab.id, resolution);
     try {
       return await resolution;
@@ -135,7 +129,6 @@ export class TerminalSessionOrchestrator {
    */
   private async resolveSessionSnapshotUncached(
     tab: TerminalTab,
-    workspaceWorktreePath: string | undefined,
   ): Promise<TerminalResolvedSession> {
     let sessionId = normalizeOptionalText(tab.data.sessionId);
     let snapshot: TerminalSnapshot | undefined;
@@ -164,7 +157,6 @@ export class TerminalSessionOrchestrator {
 
     if (!sessionId || !snapshot) {
       const created = await this.commands.createTerminalSession({
-        cwd: workspaceWorktreePath,
         workspaceId: tab.workspaceId,
         tabId: tab.id,
         paneId: resolveTerminalPaneId(tab.id, tab.data.paneId),

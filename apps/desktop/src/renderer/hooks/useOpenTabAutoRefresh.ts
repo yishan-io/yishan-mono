@@ -31,10 +31,9 @@ type OpenTabAutoRefreshCommands = Pick<
 >;
 
 type UseOpenTabAutoRefreshInput = {
-  workspaceWorktreePath?: string;
+  workspaceId?: string;
   tabs: RefreshableOpenTab[];
   commands: OpenTabAutoRefreshCommands;
-  /** Injectable for testing. Defaults to the shared transport implementation. */
   subscribeDaemonConnectionStatus?: typeof defaultSubscribeDaemonConnectionStatus;
 };
 
@@ -75,14 +74,14 @@ function isFileNotFoundError(error: unknown): boolean {
 
 /** Keeps open file and diff tabs synced with backend file and git change events. */
 export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
-  const { workspaceWorktreePath } = input;
+  const { workspaceId } = input;
   const tabsRef = useRef(input.tabs);
   const commandsRef = useRef(input.commands);
   tabsRef.current = input.tabs;
   commandsRef.current = input.commands;
 
   useEffect(() => {
-    if (!workspaceWorktreePath) {
+    if (!workspaceId) {
       return;
     }
 
@@ -132,7 +131,7 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
 
               try {
                 const response = await commands.readFile({
-                  workspaceWorktreePath,
+                  workspaceId,
                   relativePath: tab.path,
                 });
                 commands.refreshFileTabFromDisk({
@@ -158,18 +157,18 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
               const response =
                 tab.source?.kind === "commit"
                   ? await commands.readCommitDiff({
-                      workspaceWorktreePath,
+                      workspaceId,
                       commitHash: tab.source.commitHash,
                       relativePath: tab.path,
                     })
                   : tab.source?.kind === "branch"
                     ? await commands.readBranchComparisonDiff({
-                        workspaceWorktreePath,
+                        workspaceId,
                         targetBranch: tab.source.targetBranch,
                         relativePath: tab.path,
                       })
                     : await commands.readDiff({
-                        workspaceWorktreePath,
+                        workspaceId,
                         relativePath: tab.path,
                       });
 
@@ -214,7 +213,7 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
     };
 
     const unsubscribeWorkspaceFilesChanged = subscribeBackendEvent("workspace.files.changed", (event) => {
-      if (event.source !== "workspaceFilesChanged" || event.payload.workspaceWorktreePath !== workspaceWorktreePath) {
+      if (event.source !== "workspaceFilesChanged" || event.payload.workspaceId !== workspaceId) {
         return;
       }
 
@@ -222,7 +221,7 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
     });
 
     const unsubscribeGitChanged = subscribeBackendEvent("git.changed", (event) => {
-      if (event.source !== "gitChanged" || event.payload.workspaceWorktreePath !== workspaceWorktreePath) {
+      if (event.source !== "gitChanged" || event.payload.workspaceId !== workspaceId) {
         return;
       }
 
@@ -254,5 +253,5 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
       unsubscribeGitChanged();
       unsubscribeDaemonConnectionStatus();
     };
-  }, [workspaceWorktreePath]);
+  }, [workspaceId]);
 }

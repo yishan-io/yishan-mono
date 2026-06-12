@@ -26,7 +26,7 @@ type UseCreateWorkspaceDialogStateInput = {
   workspaces: WorkspaceItem[];
   prefixMode: GitBranchPrefixMode;
   customPrefix: string;
-  listGitBranches: (input: { workspaceWorktreePath: string }) => Promise<{
+  listGitBranches: (input: { workspaceId?: string; workspaceWorktreePath?: string }) => Promise<{
     branches?: string[];
     localBranches?: string[];
     remoteBranches?: string[];
@@ -112,6 +112,13 @@ export function useCreateWorkspaceDialogState({
   );
   const selectedProjectBranchListPath =
     selectedProject?.localPath?.trim() || selectedProject?.path?.trim() || selectedProject?.worktreePath?.trim() || "";
+  const selectedProjectBranchListWorkspaceId =
+    workspaces.find(
+      (workspace) =>
+        workspace.repoId === selectedProjectId &&
+        workspace.kind !== "local" &&
+        workspace.worktreePath?.trim() === selectedProjectBranchListPath,
+    )?.id ?? "";
   const gitAuthorNamePath = open && !isRenameMode && prefixMode === "user" ? selectedProjectBranchListPath : "";
   const resolvedGitUserName = useGitAuthorName(gitAuthorNamePath);
   const resolvedPrefix = resolveGitBranchPrefix({
@@ -251,7 +258,11 @@ export function useCreateWorkspaceDialogState({
     const loadSourceBranches = async () => {
       setIsLoadingSourceBranches(true);
       try {
-        const result = await listGitBranches({ workspaceWorktreePath: selectedProjectBranchListPath });
+        const result = await listGitBranches(
+          selectedProjectBranchListWorkspaceId
+            ? { workspaceId: selectedProjectBranchListWorkspaceId }
+            : { workspaceWorktreePath: selectedProjectBranchListPath },
+        );
         if (isCancelled) {
           return;
         }
@@ -286,6 +297,7 @@ export function useCreateWorkspaceDialogState({
     open,
     selectedProject?.defaultBranch,
     selectedProjectBranchListPath,
+    selectedProjectBranchListWorkspaceId,
     selectedWorkspace?.sourceBranch,
   ]);
 

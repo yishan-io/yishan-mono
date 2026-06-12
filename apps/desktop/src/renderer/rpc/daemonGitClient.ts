@@ -8,23 +8,29 @@ import {
 
 type InvokeFn = (method: string, params?: unknown) => Promise<unknown>;
 
+function readRequiredWorkspaceId(input: unknown): string {
+  const workspaceId = readOptionalString(asRecord(input)?.workspaceId);
+  if (!workspaceId) {
+    throw new Error("workspaceId is required");
+  }
+  return workspaceId;
+}
+
 /** Git namespace methods for the daemon RPC client. */
 export class DaemonGitClient {
   private readonly invoke: InvokeFn;
-  private readonly resolveWorkspaceId: (input: unknown) => Promise<string>;
 
-  constructor(invoke: InvokeFn, resolveWorkspaceId: (input: unknown) => Promise<string>) {
+  constructor(invoke: InvokeFn) {
     this.invoke = invoke;
-    this.resolveWorkspaceId = resolveWorkspaceId;
   }
 
   async listChanges(input: Rpc.GitWorktreeInput): Promise<Rpc.GitChangesBySection> {
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     return (await this.invoke("git.listChanges", { workspaceId })) as Rpc.GitChangesBySection;
   }
 
   async inspect(input: Rpc.GitInspectInput): Promise<Rpc.GitInspectResponse> {
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     return (await this.invoke("git.inspect", { workspaceId })) as Rpc.GitInspectResponse;
   }
 
@@ -39,7 +45,7 @@ export class DaemonGitClient {
 
   async trackChanges(input: Rpc.GitPathsInput): Promise<Rpc.GitStatusOperationResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     return (await this.invoke("git.track", {
       workspaceId,
       paths: readOptionalStringArray(record?.relativePaths) ?? [],
@@ -48,7 +54,7 @@ export class DaemonGitClient {
 
   async unstageChanges(input: Rpc.GitPathsInput): Promise<Rpc.GitStatusOperationResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     return (await this.invoke("git.unstage", {
       workspaceId,
       paths: readOptionalStringArray(record?.relativePaths) ?? [],
@@ -57,7 +63,7 @@ export class DaemonGitClient {
 
   async revertChanges(input: Rpc.GitPathsInput): Promise<Rpc.GitStatusOperationResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     return (await this.invoke("git.revert", {
       workspaceId,
       paths: readOptionalStringArray(record?.relativePaths) ?? [],
@@ -66,7 +72,7 @@ export class DaemonGitClient {
 
   async commitChanges(input: Rpc.GitCommitInput): Promise<string> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     return (await this.invoke("git.commit", {
       workspaceId,
       message: readOptionalString(record?.message) || "",
@@ -76,13 +82,13 @@ export class DaemonGitClient {
   }
 
   async getBranchStatus(input: Rpc.GitWorktreeInput): Promise<Rpc.GitBranchStatusResponse> {
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     return (await this.invoke("git.branchStatus", { workspaceId })) as Rpc.GitBranchStatusResponse;
   }
 
   async listCommitsToTarget(input: Rpc.GitTargetBranchInput): Promise<Rpc.GitCommitComparisonResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     const targetBranch = readOptionalString(record?.targetBranch);
     if (!targetBranch) {
       throw new Error("targetBranch is required");
@@ -95,7 +101,7 @@ export class DaemonGitClient {
 
   async getBranchDiffSummary(input: Rpc.GitTargetBranchInput): Promise<Rpc.GitBranchDiffSummaryResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     const targetBranch = readOptionalString(record?.targetBranch);
     if (!targetBranch) {
       throw new Error("targetBranch is required");
@@ -108,7 +114,7 @@ export class DaemonGitClient {
 
   async readCommitDiff(input: Rpc.GitCommitDiffInput): Promise<Rpc.GitDiffContentResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     const commitHash = readOptionalString(record?.commitHash);
     const relativePath = readOptionalString(record?.relativePath);
     if (!commitHash || !relativePath) {
@@ -123,7 +129,7 @@ export class DaemonGitClient {
 
   async readBranchComparisonDiff(input: Rpc.GitBranchDiffInput): Promise<Rpc.GitDiffContentResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     const targetBranch = readOptionalString(record?.targetBranch);
     const relativePath = readOptionalString(record?.relativePath);
     if (!targetBranch || !relativePath) {
@@ -137,23 +143,23 @@ export class DaemonGitClient {
   }
 
   async listBranches(input: Rpc.GitWorktreeInput): Promise<Rpc.GitBranchListResponse> {
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     return (await this.invoke("git.branches", { workspaceId })) as Rpc.GitBranchListResponse;
   }
 
   async pushBranch(input: Rpc.GitWorktreeInput): Promise<string> {
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     return (await this.invoke("git.push", { workspaceId })) as string;
   }
 
   async publishBranch(input: Rpc.GitWorktreeInput): Promise<string> {
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     return (await this.invoke("git.publish", { workspaceId })) as string;
   }
 
   async renameBranch(input: Rpc.GitRenameBranchInput): Promise<Rpc.GitStatusOperationResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     const nextBranch = readOptionalString(record?.nextBranch);
     if (!nextBranch) {
       throw new Error("nextBranch is required");
@@ -162,13 +168,13 @@ export class DaemonGitClient {
   }
 
   async getAuthorName(input: Rpc.GitWorktreeInput): Promise<string> {
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     return (await this.invoke("git.authorName", { workspaceId })) as string;
   }
 
   async mergePullRequest(input: Rpc.GitPrMergeInput): Promise<{ output: string }> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     const prNumber = record?.prNumber;
     if (typeof prNumber !== "number" || prNumber <= 0) {
       throw new Error("prNumber is required");
@@ -183,7 +189,7 @@ export class DaemonGitClient {
 
   async closePullRequest(input: Rpc.GitPrCloseInput): Promise<{ output: string }> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readRequiredWorkspaceId(input);
     const prNumber = record?.prNumber;
     if (typeof prNumber !== "number" || prNumber <= 0) {
       throw new Error("prNumber is required");

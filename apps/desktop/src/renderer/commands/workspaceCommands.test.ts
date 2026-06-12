@@ -158,7 +158,7 @@ describe("workspaceCommands", () => {
           projectId: "repo-1",
           name: "Workspace 1",
           title: "Workspace 1",
-          sourceBranch: "main",
+          sourceBranch: "",
           branch: "feature-a",
           summaryId: "summary-1",
           worktreePath: "/tmp/workspaces/workspace-1",
@@ -190,7 +190,7 @@ describe("workspaceCommands", () => {
           organizationId: "org-1",
           name: "Workspace 1",
           title: "Workspace 1",
-          sourceBranch: "main",
+          sourceBranch: "",
           branch: "feature-a",
           summaryId: "summary-1",
           worktreePath: "/tmp/workspaces/workspace-1",
@@ -206,11 +206,10 @@ describe("workspaceCommands", () => {
       },
     });
 
-    await refreshWorkspacePullRequest("workspace-1", "/tmp/workspaces/workspace-1");
+    await refreshWorkspacePullRequest("workspace-1");
 
     expect(rpcMocks.refreshWorkspacePullRequest).toHaveBeenCalledWith({
       workspaceId: "workspace-1",
-      workspaceWorktreePath: "/tmp/workspaces/workspace-1",
     });
     expect(workspaceStore.getState().pullRequestByWorkspaceId["workspace-1"]).toEqual({
       number: 42,
@@ -566,17 +565,32 @@ describe("workspaceCommands", () => {
   it("refreshes git changes count through backend service", async () => {
     const setWorkspaceGitChangesCount = vi.fn();
     const setWorkspaceGitChangeTotals = vi.fn();
-    workspaceStore.setState({ setWorkspaceGitChangesCount, setWorkspaceGitChangeTotals });
+    workspaceStore.setState({
+      workspaces: [
+        {
+          id: "workspace-1",
+          repoId: "repo-1",
+          name: "Existing",
+          title: "Existing",
+          summaryId: "",
+          sourceBranch: "",
+          branch: "feature-a",
+          worktreePath: "/tmp/repo-1/.worktrees/existing",
+        },
+      ],
+      setWorkspaceGitChangesCount,
+      setWorkspaceGitChangeTotals,
+    });
     rpcMocks.listGitChanges.mockResolvedValueOnce({
       staged: [{ path: "a.ts", kind: "modified", additions: 1, deletions: 0 }],
       unstaged: [{ path: "b.ts", kind: "modified", additions: 2, deletions: 1 }],
       untracked: [{ path: "c.ts", kind: "added", additions: 0, deletions: 0 }],
     });
 
-    await refreshWorkspaceGitChanges("workspace-1", "/tmp/repo-1/.worktrees/existing");
+    await refreshWorkspaceGitChanges("workspace-1");
 
     expect(rpcMocks.listGitChanges).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo-1/.worktrees/existing",
+      workspaceId: "workspace-1",
     });
     expect(setWorkspaceGitChangesCount).toHaveBeenCalledWith("workspace-1", 3);
     expect(setWorkspaceGitChangeTotals).toHaveBeenCalledWith("workspace-1", {
@@ -616,10 +630,10 @@ describe("workspaceCommands", () => {
       files: ["b.ts", "c.ts", "d.ts", "e.ts", "f.ts"],
     });
 
-    await refreshWorkspaceGitChanges("workspace-1", "/tmp/worktrees/feature-a");
+    await refreshWorkspaceGitChanges("workspace-1");
 
     expect(rpcMocks.getBranchDiffSummary).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/worktrees/feature-a",
+      workspaceId: "workspace-1",
       targetBranch: "origin/main",
     });
     expect(setWorkspaceGitChangesCount).toHaveBeenCalledWith("workspace-1", 6);
@@ -660,7 +674,7 @@ describe("workspaceCommands", () => {
       files: ["a.ts", "c.ts"],
     });
 
-    await refreshWorkspaceGitChanges("workspace-1", "/tmp/worktrees/feature-a");
+    await refreshWorkspaceGitChanges("workspace-1");
 
     // a.ts appears in both branch diff and staged; b.ts and c.ts are unique. Total unique = 3.
     expect(setWorkspaceGitChangesCount).toHaveBeenCalledWith("workspace-1", 3);
@@ -704,7 +718,7 @@ describe("workspaceCommands", () => {
       files: [],
     });
 
-    await refreshWorkspaceGitChanges("workspace-1", "/tmp/worktrees/feature-a");
+    await refreshWorkspaceGitChanges("workspace-1");
 
     // AGENTS.md (deleted) + AGENTS1.md (added) reconciled as one rename.
     // sample.jsonl (deleted) should NOT be reconciled with .superset/config.json (different extension/path context).
@@ -739,7 +753,7 @@ describe("workspaceCommands", () => {
     });
     rpcMocks.getBranchDiffSummary.mockRejectedValueOnce(new Error("target branch not found"));
 
-    await refreshWorkspaceGitChanges("workspace-1", "/tmp/worktrees/feature-a");
+    await refreshWorkspaceGitChanges("workspace-1");
 
     // Should fall back to uncommitted-only count
     expect(setWorkspaceGitChangesCount).toHaveBeenCalledWith("workspace-1", 1);
@@ -806,7 +820,7 @@ describe("workspaceCommands", () => {
     });
 
     expect(rpcMocks.renameGitBranch).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/worktrees/feature-a",
+      workspaceId: "workspace-1",
       nextBranch: "feature-b",
     });
     expect(renameWorkspaceBranchState).toHaveBeenCalledWith({

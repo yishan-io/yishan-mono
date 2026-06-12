@@ -71,8 +71,8 @@ export class DaemonClient {
     const resolveWorkspaceId = this.resolveWorkspaceId.bind(this);
 
     this._workspaceClient = new DaemonWorkspaceClient(invoke, this.workspaceIdByWorktreePath);
-    this._fileClient = new DaemonFileClient(invoke, resolveWorkspaceId);
-    this._gitClient = new DaemonGitClient(invoke, resolveWorkspaceId);
+    this._fileClient = new DaemonFileClient(invoke);
+    this._gitClient = new DaemonGitClient(invoke);
     this._terminalClient = new DaemonTerminalClient({
       invoke,
       resolveWorkspaceId,
@@ -102,9 +102,6 @@ export class DaemonClient {
     renameEntry: (input: Rpc.FileRenameInput) => this._fileClient.renameEntry(input),
     deleteEntry: (input: Rpc.FileDeleteInput) => this._fileClient.deleteEntry(input),
     readDiff: (input: Rpc.FileReadInput) => this._fileClient.readDiff(input),
-    pasteEntries: (input: unknown) => this._fileClient.pasteEntries(input),
-    importEntries: (input: unknown) => this._fileClient.importEntries(input),
-    importFilePayloads: (input: unknown) => this._fileClient.importFilePayloads(input),
   };
 
   readonly git = {

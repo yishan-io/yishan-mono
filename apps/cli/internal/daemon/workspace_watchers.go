@@ -24,6 +24,7 @@ const (
 
 type worktreeWatcher struct {
 	mu                   sync.Mutex
+	workspaceID          string
 	path                 string
 	contextDir           string
 	resolvedGitDir       string
@@ -101,7 +102,7 @@ func resolveGitDir(worktreePath string) string {
 	return resolved
 }
 
-func (ws *workspaceWatchers) Watch(worktreePath string) {
+func (ws *workspaceWatchers) Watch(workspaceID string, worktreePath string) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 
@@ -115,6 +116,7 @@ func (ws *workspaceWatchers) Watch(worktreePath string) {
 	}
 
 	entry := &worktreeWatcher{
+		workspaceID:    workspaceID,
 		path:           worktreePath,
 		resolvedGitDir: resolveGitDir(worktreePath),
 		events:         ws.events,
@@ -547,6 +549,7 @@ func (w *worktreeWatcher) scheduleFileEmit(relPath string) {
 		w.events.Publish(frontendEvent{
 			Topic: "workspaceFilesChanged",
 			Payload: map[string]any{
+				"workspaceId":           w.workspaceID,
 				"workspaceWorktreePath": w.path,
 				"changedRelativePaths":  changedPaths,
 			},
@@ -604,6 +607,7 @@ func (w *worktreeWatcher) scheduleGitEmit(affectsBranch bool) {
 		w.mu.Unlock()
 
 		payload := map[string]any{
+			"workspaceId":           w.workspaceID,
 			"workspaceWorktreePath": w.path,
 			"affectsBranch":         affects,
 		}

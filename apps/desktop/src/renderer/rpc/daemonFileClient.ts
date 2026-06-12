@@ -23,16 +23,17 @@ function normalizeDaemonFileEntries(files: Rpc.DaemonFileEntry[]): Rpc.DaemonFil
 /** File namespace methods for the daemon RPC client. */
 export class DaemonFileClient {
   private readonly invoke: InvokeFn;
-  private readonly resolveWorkspaceId: (input: unknown) => Promise<string>;
 
-  constructor(invoke: InvokeFn, resolveWorkspaceId: (input: unknown) => Promise<string>) {
+  constructor(invoke: InvokeFn) {
     this.invoke = invoke;
-    this.resolveWorkspaceId = resolveWorkspaceId;
   }
 
   async listFiles(input: Rpc.FileListInput): Promise<Rpc.FileListResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readOptionalString(record?.workspaceId);
+    if (!workspaceId) {
+      throw new Error("workspaceId is required");
+    }
     const relativePath = readOptionalString(record?.relativePath) || "";
     const recursive = readOptionalBoolean(record?.recursive) ?? true;
     const files = await this.invoke("file.list", { workspaceId, path: relativePath, recursive });
@@ -43,7 +44,10 @@ export class DaemonFileClient {
 
   async listFilesBatch(input: Rpc.FileListBatchInput): Promise<Rpc.FileListBatchResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readOptionalString(record?.workspaceId);
+    if (!workspaceId) {
+      throw new Error("workspaceId is required");
+    }
     const requests = Array.isArray(record?.requests) ? record.requests : [];
     const results = await Promise.all(
       requests.map(async (request) => {
@@ -70,7 +74,10 @@ export class DaemonFileClient {
 
   async searchFiles(input: Rpc.FileSearchInput): Promise<Rpc.FileSearchResult[]> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readOptionalString(record?.workspaceId);
+    if (!workspaceId) {
+      throw new Error("workspaceId is required");
+    }
     const query = readOptionalString(record?.query)?.trim() ?? "";
     if (!query) {
       return [];
@@ -83,7 +90,10 @@ export class DaemonFileClient {
 
   async readFile(input: Rpc.FileReadInput): Promise<Rpc.FileReadResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readOptionalString(record?.workspaceId);
+    if (!workspaceId) {
+      throw new Error("workspaceId is required");
+    }
     const relativePath = readOptionalString(record?.relativePath);
     if (!relativePath) {
       throw new Error("relativePath is required");
@@ -96,7 +106,10 @@ export class DaemonFileClient {
 
   async writeFile(input: Rpc.FileWriteInput): Promise<Rpc.FileWriteResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readOptionalString(record?.workspaceId);
+    if (!workspaceId) {
+      throw new Error("workspaceId is required");
+    }
     const relativePath = readOptionalString(record?.relativePath);
     if (!relativePath) {
       throw new Error("relativePath is required");
@@ -108,7 +121,10 @@ export class DaemonFileClient {
 
   async createFolder(input: Rpc.FileCreateFolderInput): Promise<Rpc.FileMutationOkResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readOptionalString(record?.workspaceId);
+    if (!workspaceId) {
+      throw new Error("workspaceId is required");
+    }
     const relativePath = readOptionalString(record?.relativePath);
     if (!relativePath) {
       throw new Error("relativePath is required");
@@ -119,7 +135,10 @@ export class DaemonFileClient {
 
   async renameEntry(input: Rpc.FileRenameInput): Promise<Rpc.FileMutationOkResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readOptionalString(record?.workspaceId);
+    if (!workspaceId) {
+      throw new Error("workspaceId is required");
+    }
     const fromRelativePath = readOptionalString(record?.fromRelativePath);
     const toRelativePath = readOptionalString(record?.toRelativePath);
     if (!fromRelativePath || !toRelativePath) {
@@ -131,7 +150,10 @@ export class DaemonFileClient {
 
   async deleteEntry(input: Rpc.FileDeleteInput): Promise<Rpc.FileMutationOkResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readOptionalString(record?.workspaceId);
+    if (!workspaceId) {
+      throw new Error("workspaceId is required");
+    }
     const relativePath = readOptionalString(record?.relativePath);
     if (!relativePath) {
       throw new Error("relativePath is required");
@@ -140,23 +162,12 @@ export class DaemonFileClient {
     return { ok: true };
   }
 
-  // These operations are not yet implemented in the daemon; stubs keep the
-  // DaemonRpcClient contract satisfied so callers get a clear error at runtime.
-  async pasteEntries(_input: unknown): Promise<Rpc.FileMutationOkResponse> {
-    throw new Error("file.pasteEntries is not yet implemented");
-  }
-
-  async importEntries(_input: unknown): Promise<Rpc.FileMutationOkResponse> {
-    throw new Error("file.importEntries is not yet implemented");
-  }
-
-  async importFilePayloads(_input: unknown): Promise<Rpc.FileMutationOkResponse> {
-    throw new Error("file.importFilePayloads is not yet implemented");
-  }
-
   async readDiff(input: Rpc.FileReadInput): Promise<Rpc.FileDiffResponse> {
     const record = asRecord(input);
-    const workspaceId = await this.resolveWorkspaceId(input);
+    const workspaceId = readOptionalString(record?.workspaceId);
+    if (!workspaceId) {
+      throw new Error("workspaceId is required");
+    }
     const relativePath = readOptionalString(record?.relativePath);
     if (!relativePath) {
       throw new Error("relativePath is required");

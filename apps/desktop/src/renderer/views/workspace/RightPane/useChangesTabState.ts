@@ -78,7 +78,7 @@ export function useChangesTabState() {
       commitComparisonRequestIdRef.current = requestId;
       try {
         const commitComparison = await listGitCommitsToTarget({
-          workspaceWorktreePath: selectedWorkspaceWorktreePath,
+          workspaceId: selectedWorkspaceId,
           targetBranch,
         });
         if (commitComparisonRequestIdRef.current === requestId) {
@@ -95,7 +95,7 @@ export function useChangesTabState() {
         }
       }
     },
-    [listGitCommitsToTarget, selectedWorkspaceWorktreePath],
+    [listGitCommitsToTarget, selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
   const refreshChanges = useCallback(async () => {
@@ -116,7 +116,7 @@ export function useChangesTabState() {
     }
 
     try {
-      const response = await listGitChanges({ workspaceWorktreePath: selectedWorkspaceWorktreePath });
+      const response = await listGitChanges({ workspaceId: selectedWorkspaceId });
       const dedupedResponse: RepoChangesBySection = {
         unstaged: dedupeRepoChangeFiles(
           response.unstaged.map((file) => ({ ...file, kind: normalizeProjectGitChangeKind(file.kind) })),
@@ -147,7 +147,7 @@ export function useChangesTabState() {
       }
       console.error("Failed to load workspace git changes", error);
     }
-  }, [listGitChanges, loadCommitComparison, selectedWorkspaceSourceBranch, selectedWorkspaceWorktreePath]);
+  }, [listGitChanges, loadCommitComparison, selectedWorkspaceId, selectedWorkspaceSourceBranch, selectedWorkspaceWorktreePath]);
 
   useEffect(() => {
     if (!selectedWorkspaceWorktreePath) {

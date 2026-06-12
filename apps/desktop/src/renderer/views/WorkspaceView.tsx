@@ -256,7 +256,7 @@ function useWorkspaceGitRefreshQueue(input: {
       inFlight = true;
 
       try {
-        await cmd.refreshWorkspaceGitChanges(selectedWorkspaceId, selectedWorkspaceWorktreePath);
+        await cmd.refreshWorkspaceGitChanges(selectedWorkspaceId);
       } finally {
         inFlight = false;
         if (queued) {

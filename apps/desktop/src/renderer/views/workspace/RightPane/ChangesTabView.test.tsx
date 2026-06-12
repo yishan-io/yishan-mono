@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   trackGitChanges: vi.fn(),
   revertGitChanges: vi.fn(),
   unstageGitChanges: vi.fn(),
-  subscribeWorkspaceGitChanged: vi.fn((_listener: (payload: { workspaceWorktreePath: string }) => void) => () => {}),
+  subscribeWorkspaceGitChanged: vi.fn((_listener: (payload: { workspaceId: string; workspaceWorktreePath: string }) => void) => () => {}),
   openTab: vi.fn(),
 }));
 
@@ -27,7 +27,7 @@ vi.mock("../../../commands/gitCommands", () => ({
   trackGitChanges: (...args: unknown[]) => mocks.trackGitChanges(...args),
   revertGitChanges: (...args: unknown[]) => mocks.revertGitChanges(...args),
   unstageGitChanges: (...args: unknown[]) => mocks.unstageGitChanges(...args),
-  subscribeWorkspaceGitChanged: (listener: (payload: { workspaceWorktreePath: string }) => void) =>
+  subscribeWorkspaceGitChanged: (listener: (payload: { workspaceId: string; workspaceWorktreePath: string }) => void) =>
     mocks.subscribeWorkspaceGitChanged(listener),
 }));
 
@@ -155,7 +155,7 @@ describe("ChangesTabView", () => {
     await waitFor(() => {
       expect(mocks.listGitCommitsToTarget.mock.calls.length).toBeGreaterThan(0);
       expect(mocks.listGitCommitsToTarget).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         targetBranch: "origin/main",
       });
     });
@@ -191,7 +191,7 @@ describe("ChangesTabView", () => {
 
     await waitFor(() => {
       expect(mocks.readCommitDiff).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         commitHash: "abc123456",
         relativePath: "src/a.ts",
       });
@@ -252,7 +252,7 @@ describe("ChangesTabView", () => {
 
     await waitFor(() => {
       expect(mocks.readBranchComparisonDiff).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         targetBranch: "origin/main",
         relativePath: "src/a.ts",
       });
@@ -302,7 +302,7 @@ describe("ChangesTabView", () => {
 
     await waitFor(() => {
       expect(mocks.readBranchComparisonDiff).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         targetBranch: "origin/main",
         relativePath: "src/a.ts",
       });

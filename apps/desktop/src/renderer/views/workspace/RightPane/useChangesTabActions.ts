@@ -32,7 +32,7 @@ export function useChangesTabActions({
       if (!selectedWorkspaceWorktreePath || relativePaths.length === 0) {
         return;
       }
-      await trackGitChanges({ workspaceWorktreePath: selectedWorkspaceWorktreePath, relativePaths });
+      await trackGitChanges({ workspaceId: selectedWorkspaceId, relativePaths });
       await refreshChanges();
     },
     [refreshChanges, selectedWorkspaceWorktreePath, trackGitChanges],
@@ -43,7 +43,7 @@ export function useChangesTabActions({
       if (!selectedWorkspaceWorktreePath || relativePaths.length === 0) {
         return;
       }
-      await revertGitChanges({ workspaceWorktreePath: selectedWorkspaceWorktreePath, relativePaths });
+      await revertGitChanges({ workspaceId: selectedWorkspaceId, relativePaths });
       await refreshChanges();
     },
     [refreshChanges, revertGitChanges, selectedWorkspaceWorktreePath],
@@ -54,7 +54,7 @@ export function useChangesTabActions({
       if (!selectedWorkspaceWorktreePath || relativePaths.length === 0) {
         return;
       }
-      await unstageGitChanges({ workspaceWorktreePath: selectedWorkspaceWorktreePath, relativePaths });
+      await unstageGitChanges({ workspaceId: selectedWorkspaceId, relativePaths });
       await refreshChanges();
     },
     [refreshChanges, selectedWorkspaceWorktreePath, unstageGitChanges],
@@ -71,20 +71,20 @@ export function useChangesTabActions({
       }
 
       try {
-        const response = commitHash
-          ? await readCommitDiff({
-              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+            const response = commitHash
+              ? await readCommitDiff({
+              workspaceId: selectedWorkspaceId,
               commitHash,
               relativePath: normalizedRelativePath,
             })
-          : targetBranch
-            ? await readBranchComparisonDiff({
-                workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              : targetBranch
+                ? await readBranchComparisonDiff({
+                workspaceId: selectedWorkspaceId,
                 targetBranch,
                 relativePath: normalizedRelativePath,
               })
-            : await readDiff({
-                workspaceWorktreePath: selectedWorkspaceWorktreePath,
+                : await readDiff({
+                workspaceId: selectedWorkspaceId,
                 relativePath: normalizedRelativePath,
               });
 
@@ -110,7 +110,7 @@ export function useChangesTabActions({
         if (targetBranch) {
           try {
             const fallbackResponse = await readDiff({
-              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              workspaceId: selectedWorkspaceId,
               relativePath: normalizedRelativePath,
             });
             openTab({
@@ -162,7 +162,7 @@ export function useChangesTabActions({
       const changeKind: DiffFileChangeKind = file.kind === "untracked" ? "added" : file.kind;
       try {
         const response = await readDiff({
-          workspaceWorktreePath: selectedWorkspaceWorktreePath,
+          workspaceId: selectedWorkspaceId,
           relativePath: normalizedPath,
         });
         openTab({
@@ -231,23 +231,23 @@ export function useChangesTabActions({
         try {
           let response: { oldContent: string; newContent: string };
           if (isCommitMode && commitHash) {
-            response = await readCommitDiff({
-              workspaceWorktreePath: selectedWorkspaceWorktreePath,
-              commitHash,
-              relativePath: normalizedPath,
-            });
-          } else if (isCommitMode && targetBranch) {
-            response = await readBranchComparisonDiff({
-              workspaceWorktreePath: selectedWorkspaceWorktreePath,
-              targetBranch,
-              relativePath: normalizedPath,
-            });
-          } else {
-            response = await readDiff({
-              workspaceWorktreePath: selectedWorkspaceWorktreePath,
-              relativePath: normalizedPath,
-            });
-          }
+              response = await readCommitDiff({
+                workspaceId: selectedWorkspaceId,
+                commitHash,
+                relativePath: normalizedPath,
+              });
+            } else if (isCommitMode && targetBranch) {
+              response = await readBranchComparisonDiff({
+                workspaceId: selectedWorkspaceId,
+                targetBranch,
+                relativePath: normalizedPath,
+              });
+            } else {
+              response = await readDiff({
+                workspaceId: selectedWorkspaceId,
+                relativePath: normalizedPath,
+              });
+            }
 
           diffFiles.push({
             path: normalizedPath,
@@ -261,7 +261,7 @@ export function useChangesTabActions({
           if (targetBranch) {
             try {
               const fallbackResponse = await readDiff({
-                workspaceWorktreePath: selectedWorkspaceWorktreePath,
+                workspaceId: selectedWorkspaceId,
                 relativePath: normalizedPath,
               });
               diffFiles.push({

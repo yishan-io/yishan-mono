@@ -11,6 +11,7 @@ import { MarkdownPreview } from "./MarkdownPreview";
 type MarkdownViewMode = "edit" | "split" | "preview";
 
 type FileEditorProps = {
+  workspaceId?: string;
   path: string;
   content: string;
   worktreePath?: string;
@@ -27,6 +28,7 @@ type FileEditorProps = {
 /** Renders a Monaco file editor with local edit tracking and Cmd/Ctrl+S save shortcut.
  *  For Markdown files, supports split-pane and preview-only modes. */
 export function FileEditor({
+  workspaceId,
   path,
   content,
   worktreePath,
@@ -228,6 +230,7 @@ export function FileEditor({
   // Apply git gutter decorations showing added/modified/deleted lines.
   useGitGutterDecorations({
     editor: editorInstance,
+    workspaceId,
     path,
     worktreePath,
     currentContent,

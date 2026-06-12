@@ -24,10 +24,10 @@ export type TerminalOutputEvent = TerminalStreamEvent;
 let cachedDaemonClient: DaemonRpcClient | null = null;
 
 /** Creates one PTY-backed terminal session and returns resolved dimensions. */
-export async function createTerminalSession(params?: TerminalCreateSessionParams) {
+export async function createTerminalSession(params: TerminalCreateSessionParams) {
   const client = await getDaemonClient();
   cachedDaemonClient = client;
-  return client.terminal.createSession(params ?? {});
+  return client.terminal.createSession(params);
 }
 
 /** Writes one raw keystroke/input chunk to one terminal session. */

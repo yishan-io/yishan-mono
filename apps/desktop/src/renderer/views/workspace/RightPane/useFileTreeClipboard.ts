@@ -3,9 +3,6 @@ import { useTranslation } from "react-i18next";
 import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
 import {
   copyFiles,
-  importEntries,
-  importFilePayloads,
-  pasteEntries,
   renameEntry,
   writeFileBase64,
 } from "../../../commands/fileCommands";
@@ -30,6 +27,7 @@ import {
 import type { FileTreeUndoAction } from "./useFileTreeUndo";
 
 type UseFileTreeClipboardInput = {
+  selectedWorkspaceId: string | undefined;
   selectedWorkspaceWorktreePath: string | undefined;
   repoEntries: WorkspaceFileEntry[];
   clipboardState: FileTreeClipboardState | null;
@@ -44,6 +42,7 @@ type UseFileTreeClipboardInput = {
 };
 
 export function useFileTreeClipboard({
+  selectedWorkspaceId,
   selectedWorkspaceWorktreePath,
   repoEntries,
   clipboardState,
@@ -103,7 +102,7 @@ export function useFileTreeClipboard({
 
   const onPasteEntries = useCallback(
     async (destinationPath: string) => {
-      if (!selectedWorkspaceWorktreePath) {
+      if (!selectedWorkspaceWorktreePath || !selectedWorkspaceId) {
         return;
       }
 
@@ -246,7 +245,7 @@ export function useFileTreeClipboard({
 
             const toRelativePath = destinationPath ? `${destinationPath}/${fileName}` : fileName;
             await renameEntry({
-              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              workspaceId: selectedWorkspaceId,
               fromRelativePath: sourcePath,
               toRelativePath,
             });
@@ -304,6 +303,7 @@ export function useFileTreeClipboard({
       pushUndoAction,
       repoEntries,
       requestFileTreeSelection,
+      selectedWorkspaceId,
       selectedWorkspaceWorktreePath,
       setClipboardState,
       setFileOperationError,
@@ -372,7 +372,7 @@ export function useFileTreeClipboard({
 
   const onMoveEntries = useCallback(
     async (sourceRelativePaths: string[], destinationPath: string) => {
-      if (!selectedWorkspaceWorktreePath) {
+      if (!selectedWorkspaceWorktreePath || !selectedWorkspaceId) {
         return;
       }
 
@@ -391,7 +391,7 @@ export function useFileTreeClipboard({
 
           const toRelativePath = destinationPath ? `${destinationPath}/${fileName}` : fileName;
           await renameEntry({
-            workspaceWorktreePath: selectedWorkspaceWorktreePath,
+            workspaceId: selectedWorkspaceId,
             fromRelativePath: sourcePath,
             toRelativePath,
           });
@@ -424,6 +424,7 @@ export function useFileTreeClipboard({
       pushUndoAction,
       repoEntries,
       requestFileTreeSelection,
+      selectedWorkspaceId,
       selectedWorkspaceWorktreePath,
     ],
   );
