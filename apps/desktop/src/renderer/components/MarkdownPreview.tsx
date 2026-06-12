@@ -1,4 +1,4 @@
-import { Box, Typography, useTheme } from "@mui/material";
+import { Box, Table, TableBody, TableCell, TableRow, Typography, useTheme } from "@mui/material";
 import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { openLink } from "../commands/appCommands";
@@ -6,7 +6,13 @@ import { buildWorkspaceFileUrl } from "../commands/fileCommands";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
-import { getTaskListItemChecked, isAbsoluteUrl, resolveRelativePath, toggleTaskListItem } from "./markdownHelpers";
+import {
+  getTaskListItemChecked,
+  isAbsoluteUrl,
+  parseFrontmatter,
+  resolveRelativePath,
+  toggleTaskListItem,
+} from "./markdownHelpers";
 import { useMarkdownStyles } from "./markdownStyles";
 import { markdownService } from "./markdownService";
 import { MermaidBlock } from "./MermaidBlock";
@@ -62,6 +68,8 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
   const [html, setHtml] = useState<string | null>(null);
   const [mermaidBlocks, setMermaidBlocks] = useState<Array<{ id: string; code: string }>>([]);
 
+  const { metadata, body } = useMemo(() => parseFrontmatter(content), [content]);
+
   const fileDir = useMemo(() => {
     if (!filePath) return "";
     const parts = filePath.split("/");
@@ -70,7 +78,7 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
 
   // Parse markdown in worker
   useEffect(() => {
-    if (!content.trim()) {
+    if (!body.trim()) {
       setHtml(null);
       setMermaidBlocks([]);
       return;
@@ -78,7 +86,7 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
 
     let cancelled = false;
 
-    markdownService.parse(content).then((result) => {
+    markdownService.parse(body).then((result) => {
       if (!cancelled) {
         setHtml(result);
       }
@@ -92,7 +100,7 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
     return () => {
       cancelled = true;
     };
-  }, [content]);
+  }, [body]);
 
   // Post-process rendered HTML: extract mermaid blocks, fix images, attach link handlers
   useEffect(() => {
@@ -204,7 +212,7 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
     });
   }, [html, worktreePath, fileDir, canEdit, content, onContentChange]);
 
-  if (!content.trim()) {
+  if (!body.trim() && !metadata) {
     return (
       <Box
         sx={{
@@ -231,6 +239,40 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
         py: 3,
       }}
     >
+      {metadata && (
+        <Box
+          sx={{
+            width: "100%",
+            maxWidth: markdownPreviewWidth === "full" ? "none" : 860,
+            mx: markdownPreviewWidth === "full" ? 0 : "auto",
+            mb: 3,
+            overflow: "auto",
+          }}
+        >
+          <Table size="small" sx={{ fontSize: "0.875em", border: 1, borderColor: "divider", "& td, & th": { border: 1, borderColor: "divider" } }}>
+            <TableBody>
+              {Object.entries(metadata).map(([key, value]) => (
+                <TableRow key={key}>
+                  <TableCell
+                    component="th"
+                    scope="row"
+                    sx={{
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      width: "1%",
+                      borderRight: 1,
+                      borderColor: "divider",
+                    }}
+                  >
+                    {key}
+                  </TableCell>
+                  <TableCell>{value}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
+      )}
       <Box
         ref={containerRef}
         sx={{
