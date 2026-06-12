@@ -105,7 +105,7 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 	}
 
 	if req.ProjectID != "" {
-		_ = createRemoteWorkspace(ctx, h.runtime, WorkspaceCreation{
+		_ = registerWorkspace(ctx, h.runtime, WorkspaceCreation{
 			ID:             req.ID,
 			NodeID:         req.NodeID,
 			OrganizationID: req.OrganizationID,
@@ -133,6 +133,24 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, req workspa
 		h.events.Publish(frontendEvent{Topic: "workspaceCreateProgress", Payload: event})
 	}
 
+	reportFailed := func(message string) {
+		reportProgress(workspace.CreateProgressEvent{
+			WorkspaceID: req.ID,
+			StepID:      "complete",
+			Label:       "Prepare workspace",
+			Status:      workspace.CreateProgressFailed,
+			Message:     message,
+			CreatedAt:   nowRFC3339Nano(),
+		})
+		h.events.Publish(frontendEvent{
+			Topic: "workspaceCreateFailed",
+			Payload: map[string]any{
+				"workspaceId": req.ID,
+				"message":     message,
+			},
+		})
+	}
+
 	resolvedCreateRequest, err := resolveCreateRequestForNode(ctx, h.runtime, workspaceCreateRequestInput{
 		organizationID: req.OrganizationID,
 		projectID:      req.ProjectID,
@@ -142,14 +160,7 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, req workspa
 		sourcePath:     req.SourcePath,
 	})
 	if err != nil {
-		reportProgress(workspace.CreateProgressEvent{
-			WorkspaceID: req.ID,
-			StepID:      "complete",
-			Label:       "Prepare workspace",
-			Status:      workspace.CreateProgressFailed,
-			Message:     err.Error(),
-			CreatedAt:   nowRFC3339Nano(),
-		})
+		reportFailed(err.Error())
 		return
 	}
 	req.NodeID = resolvedCreateRequest.nodeID
@@ -157,14 +168,7 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, req workspa
 
 	created, err := h.manager.CreateWorkspaceWithProgress(ctx, req, reportProgress)
 	if err != nil {
-		reportProgress(workspace.CreateProgressEvent{
-			WorkspaceID: req.ID,
-			StepID:      "complete",
-			Label:       "Prepare workspace",
-			Status:      workspace.CreateProgressFailed,
-			Message:     err.Error(),
-			CreatedAt:   nowRFC3339Nano(),
-		})
+		reportFailed(err.Error())
 		return
 	}
 
@@ -173,7 +177,7 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, req workspa
 
 	remoteSyncWarning := ""
 	if req.ProjectID != "" {
-		if err := createRemoteWorkspace(ctx, h.runtime, WorkspaceCreation{
+		if err := registerWorkspace(ctx, h.runtime, WorkspaceCreation{
 			ID:             created.ID,
 			NodeID:         req.NodeID,
 			OrganizationID: req.OrganizationID,

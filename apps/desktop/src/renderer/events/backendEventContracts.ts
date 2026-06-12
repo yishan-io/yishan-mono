@@ -10,6 +10,7 @@ const FRONTEND_MESSAGE_KEYS = [
   "workspaceFilesChanged",
   "workspaceCreateProgress",
   "workspaceCreateCompleted",
+  "workspaceCreateFailed",
   "workspacePullRequestUpdated",
   "workspaceSnapshotChanged",
   "openBrowserUrl",
@@ -25,6 +26,7 @@ export type BackendEventName =
   | "workspace.files.changed"
   | "workspace.create.progress"
   | "workspace.create.completed"
+  | "workspace.create.failed"
   | "workspace.pull_request.updated"
   | "workspace.snapshot.changed"
   | "open.browser.url";
@@ -66,6 +68,11 @@ export type NormalizedBackendEvent =
       payload: RpcFrontendMessagePayload<"workspaceCreateCompleted">;
     }
   | {
+      source: "workspaceCreateFailed";
+      name: "workspace.create.failed";
+      payload: RpcFrontendMessagePayload<"workspaceCreateFailed">;
+    }
+  | {
       source: "workspacePullRequestUpdated";
       name: "workspace.pull_request.updated";
       payload: RpcFrontendMessagePayload<"workspacePullRequestUpdated">;
@@ -92,6 +99,7 @@ export const BACKEND_EVENT_NAME_BY_SOURCE = {
   workspaceFilesChanged: "workspace.files.changed",
   workspaceCreateProgress: "workspace.create.progress",
   workspaceCreateCompleted: "workspace.create.completed",
+  workspaceCreateFailed: "workspace.create.failed",
   workspacePullRequestUpdated: "workspace.pull_request.updated",
   workspaceSnapshotChanged: "workspace.snapshot.changed",
   openBrowserUrl: "open.browser.url",
@@ -319,6 +327,18 @@ export function normalizeBackendEvent(envelope: DesktopRpcEventEnvelope): Normal
       source: "workspaceCreateCompleted",
       name: BACKEND_EVENT_NAME_BY_SOURCE.workspaceCreateCompleted,
       payload: payload as RpcFrontendMessagePayload<"workspaceCreateCompleted">,
+    };
+  }
+
+  if (envelope.method === "workspaceCreateFailed") {
+    if (typeof payload.workspaceId !== "string" || typeof payload.message !== "string") {
+      return null;
+    }
+
+    return {
+      source: "workspaceCreateFailed",
+      name: BACKEND_EVENT_NAME_BY_SOURCE.workspaceCreateFailed,
+      payload: payload as RpcFrontendMessagePayload<"workspaceCreateFailed">,
     };
   }
 

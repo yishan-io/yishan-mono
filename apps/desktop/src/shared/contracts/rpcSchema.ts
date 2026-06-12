@@ -68,6 +68,10 @@ export type RpcSchema = {
         taskRunAgentKind?: string;
         taskRunPrompt?: string;
       };
+      workspaceCreateFailed: {
+        workspaceId: string;
+        message: string;
+      };
       workspacePullRequestUpdated: {
         workspaceId: string;
         workspaceWorktreePath: string;

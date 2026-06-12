@@ -241,7 +241,15 @@ export function applyHydratedStateFromApiData(
         : [...filteredDisplayProjectIds, ...discoveredProjectIds];
 
   state.projects = nextBaseState.projects;
-  state.workspaces = nextBaseState.workspaces;
+  // Preserve workspaces that are still being created locally (pending with no
+  // worktreePath) but do not yet exist in the API response. Without this,
+  // a workspaceSnapshotChanged event triggered during async creation would
+  // replace the store and destroy the pending workspace entry.
+  const apiWorkspaceIdSet = new Set(workspaces.map((workspace) => workspace.id));
+  const pendingWorkspaces = state.workspaces.filter(
+    (workspace) => !apiWorkspaceIdSet.has(workspace.id) && !workspace.worktreePath,
+  );
+  state.workspaces = [...nextBaseState.workspaces, ...pendingWorkspaces];
   state.selectedProjectId = preservedSelectedProjectId;
   state.selectedWorkspaceId = preservedSelectedWorkspaceId;
   state.displayProjectIds = nextDisplayProjectIds;
@@ -256,7 +264,10 @@ export function applyHydratedStateFromApiData(
     };
   }
 
-  const nextWorkspaceIdSet = new Set(workspaces.map((workspace) => workspace.id));
+  const nextWorkspaceIdSet = new Set([
+    ...workspaces.map((workspace) => workspace.id),
+    ...pendingWorkspaces.map((workspace) => workspace.id),
+  ]);
   state.gitChangesCountByWorkspaceId = filterWorkspaceScopedRecord(
     { ...(state.gitChangesCountByWorkspaceId ?? {}) },
     nextWorkspaceIdSet,

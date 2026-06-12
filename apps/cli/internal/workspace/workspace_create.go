@@ -119,6 +119,7 @@ func (m *Manager) CreateWorkspaceWithProgress(ctx context.Context, req CreateReq
 	}
 
 	if err := runCreateSteps(ctx, req.ID, steps, reportProgress); err != nil {
+		m.cleanupFailedCreate(ctx, paths.sourcePath, paths.worktreePath, req.TargetBranch)
 		return Workspace{}, err
 	}
 
@@ -289,6 +290,27 @@ func runCreateSteps(ctx context.Context, workspaceID string, steps []createProgr
 		}
 	}
 	return nil
+}
+
+// cleanupFailedCreate removes a partially created worktree and its branch on
+// best-effort basis. This prevents orphaned branches and worktree directories
+// from accumulating when a creation step fails after the worktree step succeeded.
+func (m *Manager) cleanupFailedCreate(ctx context.Context, repoRoot string, worktreePath string, branch string) {
+	cleanupCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	// Try to remove the worktree first (this also cleans up .git/worktrees entry).
+	if _, err := os.Stat(worktreePath); err == nil {
+		if removeErr := m.gits.RemoveWorktree(cleanupCtx, repoRoot, worktreePath, true); removeErr != nil {
+			// Worktree removal via git failed — try removing directory directly.
+			_ = os.RemoveAll(worktreePath)
+		}
+	}
+
+	// Remove the branch that was created by `git worktree add -b`.
+	if strings.TrimSpace(branch) != "" && m.gits.RefExists(cleanupCtx, repoRoot, branch) {
+		_ = m.gits.RemoveBranch(cleanupCtx, repoRoot, branch, true)
+	}
 }
 
 func absUserPath(path string) (string, error) {

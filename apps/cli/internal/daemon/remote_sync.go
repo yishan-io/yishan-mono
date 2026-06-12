@@ -53,7 +53,7 @@ type WorkspaceClose struct {
 	ProjectID      string
 }
 
-func createRemoteWorkspace(ctx context.Context, runtime *cliruntime.Runtime, creation WorkspaceCreation) error {
+func registerWorkspace(ctx context.Context, runtime *cliruntime.Runtime, creation WorkspaceCreation) error {
 	if runtime == nil || !runtime.APIConfigured() {
 		return nil
 	}
