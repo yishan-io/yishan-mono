@@ -65,10 +65,10 @@ func ensureOpenCodeMCPConfig(homeDir string) (string, error) {
 		return "", err
 	}
 
-	if _, ok := config["mcpServers"]; !ok {
-		config["mcpServers"] = map[string]any{}
+	if _, ok := config["mcp"]; !ok {
+		config["mcp"] = map[string]any{}
 	}
-	mcpServers, _ := config["mcpServers"].(map[string]any)
+	mcpServers, _ := config["mcp"].(map[string]any)
 	mcpServers[yishanMCPServerName] = map[string]any{
 		"type":    "local",
 		"command": []string{"yishan", "mcp"},
@@ -95,10 +95,10 @@ func removeOpenCodeMCPConfig(homeDir string) error {
 		return err
 	}
 
-	if mcpServers, ok := config["mcpServers"].(map[string]any); ok {
+	if mcpServers, ok := config["mcp"].(map[string]any); ok {
 		delete(mcpServers, yishanMCPServerName)
 		if len(mcpServers) == 0 {
-			delete(config, "mcpServers")
+			delete(config, "mcp")
 		}
 	}
 
