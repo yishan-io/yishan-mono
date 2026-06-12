@@ -9,17 +9,25 @@ import (
 )
 
 type InstalledState struct {
-	Skill  SkillState  `json:"skill"`
-	MCP    MCPState    `json:"mcp"`
-	Hooks  HookState   `json:"hooks"`
-	Assets AssetState  `json:"assets"`
-	Shell  ShellState  `json:"shell"`
+	Skill  SkillState      `json:"skill"`
+	Skills []PerSkillState `json:"skills,omitempty"`
+	MCP    MCPState        `json:"mcp"`
+	Hooks  HookState       `json:"hooks"`
+	Assets AssetState      `json:"assets"`
+	Shell  ShellState      `json:"shell"`
 }
 
 type SkillState struct {
 	Installed bool     `json:"installed"`
 	SkillPath string   `json:"skillPath,omitempty"`
 	Symlinks  []string `json:"symlinks,omitempty"`
+}
+
+// PerSkillState tracks the install status for one individual skill.
+type PerSkillState struct {
+	Name               string   `json:"name"`
+	Installed          bool     `json:"installed"`
+	InstalledForAgents []string `json:"installedForAgents,omitempty"`
 }
 
 type MCPState struct {
@@ -72,25 +80,50 @@ func GetInstalledState() (*InstalledState, error) {
 }
 
 func fillSkillState(state *InstalledState, yishanHome string, homeDir string) {
+	// agentLinks maps a symlink directory (for one skill name) to its agent label.
+	// The slice order determines the display order.
+	type agentLink struct {
+		agent   string
+		linkDir func(name string) string
+	}
+	agentLinks := []agentLink{
+		{"opencode", func(name string) string {
+			return filepath.Join(homeDir, ".config", "opencode", "skills", name)
+		}},
+		{"claude", func(name string) string {
+			return filepath.Join(homeDir, ".claude", "skills", name)
+		}},
+		{"agents", func(name string) string {
+			return filepath.Join(homeDir, ".agents", "skills", name)
+		}},
+	}
+
 	for _, name := range []string{workspaceSkillName, memorySkillName, tasksSkillName} {
 		skillDir := filepath.Join(yishanHome, "skills", name)
 		skillPath := filepath.Join(skillDir, "SKILL.md")
-		if _, err := os.Stat(skillPath); err != nil {
-			continue
-		}
-		state.Skill.Installed = true
-		state.Skill.SkillPath = skillPath // last one wins; SkillPath is legacy single-value field
 
-		linkDirs := []string{
-			filepath.Join(homeDir, ".config", "opencode", "skills", name),
-			filepath.Join(homeDir, ".claude", "skills", name),
-			filepath.Join(homeDir, ".agents", "skills", name),
-		}
-		for _, linkDir := range linkDirs {
-			if info, err := os.Lstat(linkDir); err == nil && info.Mode()&os.ModeSymlink != 0 {
-				state.Skill.Symlinks = append(state.Skill.Symlinks, linkDir)
+		installed := false
+		var installedForAgents []string
+
+		if _, err := os.Stat(skillPath); err == nil {
+			installed = true
+			state.Skill.Installed = true
+			state.Skill.SkillPath = skillPath // last one wins; SkillPath is legacy single-value field
+
+			for _, al := range agentLinks {
+				linkDir := al.linkDir(name)
+				if info, err := os.Lstat(linkDir); err == nil && info.Mode()&os.ModeSymlink != 0 {
+					state.Skill.Symlinks = append(state.Skill.Symlinks, linkDir)
+					installedForAgents = append(installedForAgents, al.agent)
+				}
 			}
 		}
+
+		state.Skills = append(state.Skills, PerSkillState{
+			Name:               name,
+			Installed:          installed,
+			InstalledForAgents: installedForAgents,
+		})
 	}
 }
 

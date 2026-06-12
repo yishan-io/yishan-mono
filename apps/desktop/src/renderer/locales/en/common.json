@@ -366,6 +366,19 @@
         "notLoggedIn": "Not logged in"
       }
     },
+    "skills": {
+      "title": "Agent Skills",
+      "description": "Install built-in yishan skills to extend AI agent capabilities.",
+      "loadError": "Failed to load skill statuses.",
+      "installed": "Installed",
+      "notInstalled": "Not installed",
+      "actions": {
+        "install": "Install",
+        "installing": "Installing...",
+        "uninstall": "Uninstall",
+        "uninstalling": "Uninstalling..."
+      }
+    },
     "appearance": {
       "theme": {
         "title": "Theme",

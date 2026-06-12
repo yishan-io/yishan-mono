@@ -26,6 +26,11 @@ const (
 	workspaceSkillName = "ys-workspace"
 	memorySkillName    = "ys-memory"
 	tasksSkillName     = "ys-tasks"
+
+	// Exported for use by the daemon dispatcher.
+	WorkspaceSkillName = workspaceSkillName
+	MemorySkillName    = memorySkillName
+	TasksSkillName     = tasksSkillName
 )
 
 type SkillInstallResult struct {

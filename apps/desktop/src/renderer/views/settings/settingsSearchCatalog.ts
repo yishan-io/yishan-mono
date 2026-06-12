@@ -69,7 +69,6 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
   {
     titleKey: "settings.sections.organization",
     items: [
-      { tab: "integrations", labelKey: "settings.items.integrations", icon: BiPlug },
       { tab: "members", labelKey: "settings.items.members", icon: BiGroup },
       { tab: "nodes", labelKey: "settings.items.nodes", icon: BiDesktop },
       { tab: "serviceTokens", labelKey: "settings.items.serviceTokens", icon: BiKey },
@@ -78,6 +77,7 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
   {
     titleKey: "settings.sections.system",
     items: [
+      { tab: "integrations", labelKey: "settings.items.integrations", icon: BiPlug },
       { tab: "workspace", labelKey: "settings.items.workspace", icon: BiGitBranch },
       { tab: "terminal", labelKey: "settings.items.terminal", icon: BiTerminal },
       { tab: "daemon", labelKey: "settings.items.daemon", icon: BiChip },
@@ -105,10 +105,7 @@ const TERMINAL_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     icon: BiTerminal,
     labelKey: "settings.terminal.voice.autoEnter.label",
     sectionLabelKey: "settings.items.terminal",
-    keywordKeys: [
-      "settings.terminal.voice.autoEnter.description",
-      "settings.terminal.voice.title",
-    ],
+    keywordKeys: ["settings.terminal.voice.autoEnter.description", "settings.terminal.voice.title"],
   },
   {
     id: "terminal-voice-shortcut",
@@ -116,9 +113,7 @@ const TERMINAL_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     icon: BiSolidKeyboard,
     labelKey: "keybindings.actions.toggleVoiceInput",
     sectionLabelKey: "settings.items.keybindings",
-    keywordKeys: [
-      "settings.terminal.voice.title",
-    ],
+    keywordKeys: ["settings.terminal.voice.title"],
   },
   {
     id: "terminal-sessions",
