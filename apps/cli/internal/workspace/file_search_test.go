@@ -6,6 +6,32 @@ import (
 	"testing"
 )
 
+func TestFileServiceSearch_IncludesContextFiles(t *testing.T) {
+	root := t.TempDir()
+	initGitRepo(t, root)
+	svc := NewFileService()
+
+	contextDir := t.TempDir()
+	if err := writeSearchFile(contextDir, "MEMORY.md", "memory"); err != nil {
+		t.Fatalf("write context file: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".my-context\n"), 0o644); err != nil {
+		t.Fatalf("write gitignore: %v", err)
+	}
+	if err := os.Symlink(contextDir, filepath.Join(root, ".my-context")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	seedSearchFiles(t, root, "src/main.go")
+
+	results, err := svc.Search(root, "memory", 10)
+	if err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	if len(results) != 1 || results[0].Path != ".my-context/MEMORY.md" {
+		t.Fatalf("expected .my-context/MEMORY.md in results, got %+v", results)
+	}
+}
+
 func TestFileServiceSearch_PrefersFilenameMatchesOverPathOnlyMatches(t *testing.T) {
 	root := t.TempDir()
 	svc := NewFileService()

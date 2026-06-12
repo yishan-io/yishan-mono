@@ -37,7 +37,10 @@ func (s *FileService) Search(root string, rawQuery string, limit int) ([]FileSea
 	query := strings.TrimSpace(strings.ToLower(rawQuery))
 	results := make([]FileSearchResult, 0)
 	for _, entry := range entries {
-		if entry.IsDir || entry.IsIgnored {
+		if entry.IsDir {
+			continue
+		}
+		if entry.IsIgnored && !isContextEntry(entry.Path) {
 			continue
 		}
 		result, ok := resolveFilePathMatch(entry.Path, query)
@@ -139,6 +142,12 @@ func resolveSubsequenceMatch(target string, query string) (subsequenceMatch, boo
 		return match, true
 	}
 	return contiguousMatch, true
+}
+
+// isContextEntry reports whether path is inside the .my-context directory.
+// These entries are git-ignored locally but should still appear in file search.
+func isContextEntry(path string) bool {
+	return strings.HasPrefix(path, ContextLinkName+"/")
 }
 
 func resolveContiguousMatch(target string, query string) (subsequenceMatch, bool) {
