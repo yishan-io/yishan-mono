@@ -119,6 +119,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
   const visibleTreeFiles = ops.repoFiles;
   const gitChangesByPath = useFileTreeGitChanges({
     listGitChanges: cmd.listGitChanges,
+    selectedWorkspaceId,
     selectedWorkspaceWorktreePath,
     workspaceGitRefreshVersion,
   });

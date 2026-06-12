@@ -12,10 +12,9 @@ type TerminalSnapshot = {
   exited: boolean;
 };
 type TerminalCreateSessionParams = {
-  cwd?: string;
   cols?: number;
   rows?: number;
-  workspaceId?: string;
+  workspaceId: string;
   tabId?: string;
   paneId?: string;
 };
@@ -32,7 +31,7 @@ const inFlightSessionResolutionByTabId = new Map<string, Promise<TerminalResolve
 export class TerminalSessionOrchestrator {
   constructor(
     private readonly commands: {
-      createTerminalSession: (params?: TerminalCreateSessionParams) => Promise<{ sessionId: string }>;
+      createTerminalSession: (params: TerminalCreateSessionParams) => Promise<{ sessionId: string }>;
       listTerminalSessions?: (params?: { includeExited?: boolean }) => Promise<Array<{ sessionId: string }>>;
       readTerminalOutput: (params: { sessionId: string; fromIndex: number }) => Promise<TerminalSnapshot>;
       writeTerminalInput: (params: { sessionId: string; data: string }) => Promise<{ ok: true }>;
@@ -164,7 +163,6 @@ export class TerminalSessionOrchestrator {
 
     if (!sessionId || !snapshot) {
       const created = await this.commands.createTerminalSession({
-        cwd: workspaceWorktreePath,
         workspaceId: tab.workspaceId,
         tabId: tab.id,
         paneId: resolveTerminalPaneId(tab.id, tab.data.paneId),

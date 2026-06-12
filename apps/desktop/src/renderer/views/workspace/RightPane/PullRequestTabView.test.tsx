@@ -72,7 +72,7 @@ describe("PullRequestTabView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "workspace.pr.refresh" }));
 
-    expect(mocked.refreshWorkspacePullRequest).toHaveBeenCalledWith("workspace-1", "/tmp/workspace-1");
+    expect(mocked.refreshWorkspacePullRequest).toHaveBeenCalledWith("workspace-1");
   });
 
   it("renders PR checks and deployments", () => {
@@ -119,6 +119,6 @@ describe("PullRequestTabView", () => {
     expect(mocked.openLink).toHaveBeenCalledWith({ url: "https://github.com/acme/repo/pull/42" });
 
     fireEvent.click(screen.getByRole("button", { name: "workspace.pr.refresh" }));
-    expect(mocked.refreshWorkspacePullRequest).toHaveBeenCalledWith("workspace-1", "/tmp/workspace-1");
+    expect(mocked.refreshWorkspacePullRequest).toHaveBeenCalledWith("workspace-1");
   });
 });

@@ -74,7 +74,7 @@ function areGitChangeMapsEqual(
 }
 
 type ListGitChanges = (input: {
-  workspaceWorktreePath: string;
+  workspaceId: string;
 }) => Promise<{
   staged: Array<{ path: string; kind: string }>;
   unstaged: Array<{ path: string; kind: string }>;
@@ -83,6 +83,7 @@ type ListGitChanges = (input: {
 
 type UseFileTreeGitChangesInput = {
   listGitChanges: ListGitChanges;
+  selectedWorkspaceId: string;
   selectedWorkspaceWorktreePath: string;
   workspaceGitRefreshVersion: number;
 };
@@ -90,6 +91,7 @@ type UseFileTreeGitChangesInput = {
 /** Keeps file-tree git change badges synchronized with workspace git status. */
 export function useFileTreeGitChanges({
   listGitChanges,
+  selectedWorkspaceId,
   selectedWorkspaceWorktreePath,
   workspaceGitRefreshVersion,
 }: UseFileTreeGitChangesInput) {
@@ -100,7 +102,7 @@ export function useFileTreeGitChanges({
     const requestId = gitChangeLoadRequestIdRef.current + 1;
     gitChangeLoadRequestIdRef.current = requestId;
 
-    if (!selectedWorkspaceWorktreePath) {
+    if (!selectedWorkspaceWorktreePath || !selectedWorkspaceId) {
       setGitChangesByPath((currentMap) => (Object.keys(currentMap).length === 0 ? currentMap : {}));
       return;
     }
@@ -111,7 +113,7 @@ export function useFileTreeGitChanges({
     void (async () => {
       try {
         const sections = await listGitChanges({
-          workspaceWorktreePath: selectedWorkspaceWorktreePath,
+          workspaceId: selectedWorkspaceId,
         });
 
         if (cancelled || gitChangeLoadRequestIdRef.current !== requestId) {
@@ -143,7 +145,7 @@ export function useFileTreeGitChanges({
     return () => {
       cancelled = true;
     };
-  }, [listGitChanges, selectedWorkspaceWorktreePath, workspaceGitRefreshVersion]);
+  }, [listGitChanges, selectedWorkspaceId, selectedWorkspaceWorktreePath, workspaceGitRefreshVersion]);
 
   return gitChangesByPath;
 }

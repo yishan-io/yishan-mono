@@ -5,7 +5,7 @@ import type { FileSearchResult } from "../../../rpc/daemonTypes";
 const MAX_FILE_SEARCH_RESULTS = 100;
 
 type UseFileSearchControllerInput = {
-  workspaceWorktreePath?: string;
+  workspaceId?: string;
   openFileSearchRequestKey: number;
   lastHandledFileSearchRequestKey: number;
   onFileSearchRequestHandled?: (requestKey: number) => void;
@@ -14,7 +14,7 @@ type UseFileSearchControllerInput = {
 
 /** Manages quick-open file search state, filtering, keyboard navigation, and open actions. */
 export function useFileSearchController({
-  workspaceWorktreePath,
+  workspaceId,
   openFileSearchRequestKey,
   lastHandledFileSearchRequestKey,
   onFileSearchRequestHandled,
@@ -46,7 +46,7 @@ export function useFileSearchController({
       return;
     }
 
-    if (!deferredFileSearchQuery || !workspaceWorktreePath) {
+    if (!deferredFileSearchQuery || !workspaceId) {
       setFileSearchResults([]);
       return;
     }
@@ -54,7 +54,7 @@ export function useFileSearchController({
     searchRequestIdRef.current += 1;
     const requestId = searchRequestIdRef.current;
     void searchFiles({
-      workspaceWorktreePath,
+      workspaceId,
       query: deferredFileSearchQuery,
       limit: MAX_FILE_SEARCH_RESULTS,
     })
@@ -70,7 +70,7 @@ export function useFileSearchController({
         }
         setFileSearchResults([]);
       });
-  }, [deferredFileSearchQuery, isFileSearchOpen, workspaceWorktreePath]);
+  }, [deferredFileSearchQuery, isFileSearchOpen, workspaceId]);
 
   useEffect(() => {
     if (selectedSearchResultIndex < fileSearchResults.length) {

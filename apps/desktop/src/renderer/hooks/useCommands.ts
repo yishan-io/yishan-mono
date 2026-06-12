@@ -252,8 +252,8 @@ export type Commands = {
     };
   }) => Promise<string | undefined>;
   closeWorkspace: (workspaceId: string, options?: { removeBranch?: boolean }) => Promise<void>;
-  refreshWorkspacePullRequest: (workspaceId: string, workspaceWorktreePath: string) => Promise<void>;
-  refreshWorkspaceGitChanges: (workspaceId: string, workspaceWorktreePath: string) => Promise<void>;
+  refreshWorkspacePullRequest: (workspaceId: string) => Promise<void>;
+  refreshWorkspaceGitChanges: (workspaceId: string) => Promise<void>;
   selectTab: typeof setSelectedTabCommand;
   createTab: (input?: { workspaceId?: string }) => Promise<void>;
   openTab: typeof openTabCommand;

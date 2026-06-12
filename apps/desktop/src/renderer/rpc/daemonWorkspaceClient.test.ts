@@ -49,7 +49,6 @@ describe("DaemonWorkspaceClient", () => {
       if (method === "workspace.refreshPullRequest") {
         expect(params).toEqual({
           workspaceId: "workspace-1",
-          path: "/tmp/repo",
         });
         return {
           id: "workspace-1",
@@ -68,10 +67,39 @@ describe("DaemonWorkspaceClient", () => {
 
     const workspace = await client.refreshPullRequest({
       workspaceId: "workspace-1",
-      workspaceWorktreePath: "/tmp/repo/",
     });
 
     expect(workspace.pullRequest).toEqual({ number: 42, title: "Refresh me" });
     expect(workspaceIdByWorktreePath.get("/tmp/repo")).toBe("workspace-1");
+  });
+
+  it("reopens a path with the preferred workspace id when the daemon only knows a stale id", async () => {
+    const invoke = vi.fn(async (method: string, params?: unknown) => {
+      if (method === "list") {
+        return [{ id: "workspace-stale", path: "/tmp/repo" }];
+      }
+      if (method === "open") {
+        expect(params).toEqual({
+          id: "workspace-1",
+          path: "/tmp/repo",
+        });
+        return {
+          id: "workspace-1",
+          path: "/tmp/repo",
+        };
+      }
+
+      throw new Error(`Unexpected method: ${method}`);
+    });
+    const client = new DaemonWorkspaceClient(invoke, new Map());
+
+    const workspaceId = await client.ensureIdByWorktreePath("/tmp/repo", "workspace-1");
+
+    expect(workspaceId).toBe("workspace-1");
+    expect(invoke).toHaveBeenNthCalledWith(1, "list");
+    expect(invoke).toHaveBeenNthCalledWith(2, "open", {
+      id: "workspace-1",
+      path: "/tmp/repo",
+    });
   });
 });

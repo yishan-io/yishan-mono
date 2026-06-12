@@ -5,10 +5,14 @@ import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
 const WORKSPACE_FILE_PROTOCOL_URL = "yishan-file://workspace-image";
 
 /** Lists workspace files under one optional directory path, recursively by default. */
-export async function listFiles(params: { workspaceWorktreePath: string; relativePath?: string; recursive?: boolean }) {
+export async function listFiles(params: {
+  workspaceId: string;
+  relativePath?: string;
+  recursive?: boolean;
+}) {
   const client = await getDaemonClient();
   return client.file.listFiles({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     relativePath: params.relativePath,
     recursive: params.recursive,
   });
@@ -16,7 +20,7 @@ export async function listFiles(params: { workspaceWorktreePath: string; relativ
 
 /** Lists workspace files for multiple directory requests in one batch call. */
 export async function listFilesBatch(params: {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   requests: Array<{
     relativePath?: string;
     recursive?: boolean;
@@ -24,39 +28,39 @@ export async function listFilesBatch(params: {
 }) {
   const client = await getDaemonClient();
   return client.file.listFilesBatch({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     requests: params.requests,
   });
 }
 
 /** Searches workspace files through the daemon quick-open backend. */
-export async function searchFiles(params: { workspaceWorktreePath: string; query: string; limit?: number }) {
+export async function searchFiles(params: { workspaceId: string; query: string; limit?: number }) {
   const client = await getDaemonClient();
   return client.file.searchFiles({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     query: params.query,
     limit: params.limit,
   });
 }
 
 /** Reads one file from one workspace worktree path. */
-export async function readFile(params: { workspaceWorktreePath: string; relativePath: string }) {
+export async function readFile(params: { workspaceId: string; relativePath: string }) {
   const client = await getDaemonClient();
   return client.file.readFile({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     relativePath: params.relativePath,
   });
 }
 
 /** Writes one file into one workspace worktree path. */
 export async function writeFile(params: {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   relativePath: string;
   content: string;
 }) {
   const client = await getDaemonClient();
   return client.file.writeFile({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     relativePath: params.relativePath,
     content: params.content,
   });
@@ -64,46 +68,46 @@ export async function writeFile(params: {
 
 /** Creates one file inside one workspace worktree path. */
 export async function createFile(params: {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   relativePath: string;
   content: string;
 }) {
   const client = await getDaemonClient();
   return client.file.createFile({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     relativePath: params.relativePath,
     content: params.content,
   });
 }
 
 /** Creates one folder inside one workspace worktree path. */
-export async function createFolder(params: { workspaceWorktreePath: string; relativePath: string }) {
+export async function createFolder(params: { workspaceId: string; relativePath: string }) {
   const client = await getDaemonClient();
   return client.file.createFolder({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     relativePath: params.relativePath,
   });
 }
 
 /** Renames one file-system entry in one workspace worktree path. */
 export async function renameEntry(params: {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   fromRelativePath: string;
   toRelativePath: string;
 }) {
   const client = await getDaemonClient();
   return client.file.renameEntry({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     fromRelativePath: params.fromRelativePath,
     toRelativePath: params.toRelativePath,
   });
 }
 
 /** Deletes one file-system entry in one workspace worktree path. */
-export async function deleteEntry(params: { workspaceWorktreePath: string; relativePath: string }) {
+export async function deleteEntry(params: { workspaceId: string; relativePath: string }) {
   const client = await getDaemonClient();
   return client.file.deleteEntry({
-    workspaceWorktreePath: params.workspaceWorktreePath,
+    workspaceId: params.workspaceId,
     relativePath: params.relativePath,
   });
 }

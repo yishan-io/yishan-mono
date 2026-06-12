@@ -109,6 +109,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     renderHook(() =>
       useOpenTabAutoRefresh({
+        workspaceId: "workspace-1",
         workspaceWorktreePath: "/repo",
         tabs,
         commands: commands,
@@ -122,7 +123,7 @@ describe("useOpenTabAutoRefresh", () => {
     await flushRefreshWork();
 
     expect(commands.readFile).toHaveBeenCalledTimes(1);
-    expect(commands.readFile).toHaveBeenCalledWith({ workspaceWorktreePath: "/repo", relativePath: "src/changed.ts" });
+    expect(commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/changed.ts" });
     expect(commands.refreshFileTabFromDisk).toHaveBeenCalledWith({
       tabId: "file-1",
       content: "content:src/changed.ts",
@@ -136,6 +137,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     renderHook(() =>
       useOpenTabAutoRefresh({
+        workspaceId: "workspace-1",
         workspaceWorktreePath: "/repo",
         tabs,
         commands: commands,
@@ -161,6 +163,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     renderHook(() =>
       useOpenTabAutoRefresh({
+        workspaceId: "workspace-1",
         workspaceWorktreePath: "/repo",
         tabs,
         commands: commands,
@@ -174,9 +177,9 @@ describe("useOpenTabAutoRefresh", () => {
     await flushRefreshWork();
 
     expect(commands.readFile).toHaveBeenCalledTimes(1);
-    expect(commands.readDiff).toHaveBeenCalledWith({ workspaceWorktreePath: "/repo", relativePath: "src/changed.ts" });
+    expect(commands.readDiff).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/changed.ts" });
     expect(commands.readBranchComparisonDiff).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/repo",
+      workspaceId: "workspace-1",
       targetBranch: "main",
       relativePath: "src/branch.ts",
     });
@@ -189,6 +192,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     const { unmount } = renderHook(() =>
       useOpenTabAutoRefresh({
+        workspaceId: "workspace-1",
         workspaceWorktreePath: "/repo",
         tabs,
         commands: commands,
@@ -218,6 +222,7 @@ describe("useOpenTabAutoRefresh", () => {
 
       renderHook(() =>
         useOpenTabAutoRefresh({
+          workspaceId: "workspace-1",
           workspaceWorktreePath: "/repo",
           tabs,
           commands,
@@ -233,11 +238,11 @@ describe("useOpenTabAutoRefresh", () => {
       await flushRefreshWork();
 
       // Clean file tab should be re-read.
-      expect(commands.readFile).toHaveBeenCalledWith({ workspaceWorktreePath: "/repo", relativePath: "src/a.ts" });
+      expect(commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/a.ts" });
       // Dirty file tab should not be re-read.
-      expect(commands.readFile).not.toHaveBeenCalledWith({ workspaceWorktreePath: "/repo", relativePath: "src/b.ts" });
+      expect(commands.readFile).not.toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/b.ts" });
       // Diff tab should also be refreshed.
-      expect(commands.readDiff).toHaveBeenCalledWith({ workspaceWorktreePath: "/repo", relativePath: "src/c.ts" });
+      expect(commands.readDiff).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/c.ts" });
     });
 
     it("does not refresh when connected fires without prior disconnect", async () => {
@@ -248,6 +253,7 @@ describe("useOpenTabAutoRefresh", () => {
 
       renderHook(() =>
         useOpenTabAutoRefresh({
+          workspaceId: "workspace-1",
           workspaceWorktreePath: "/repo",
           tabs,
           commands,
@@ -270,6 +276,7 @@ describe("useOpenTabAutoRefresh", () => {
 
       renderHook(() =>
         useOpenTabAutoRefresh({
+          workspaceId: "workspace-1",
           workspaceWorktreePath: "/repo",
           tabs,
           commands,
@@ -299,6 +306,7 @@ describe("useOpenTabAutoRefresh", () => {
 
       const { unmount } = renderHook(() =>
         useOpenTabAutoRefresh({
+          workspaceId: "workspace-1",
           workspaceWorktreePath: "/repo",
           tabs,
           commands,

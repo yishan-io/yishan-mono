@@ -31,6 +31,7 @@ type OpenTabAutoRefreshCommands = Pick<
 >;
 
 type UseOpenTabAutoRefreshInput = {
+  workspaceId?: string;
   workspaceWorktreePath?: string;
   tabs: RefreshableOpenTab[];
   commands: OpenTabAutoRefreshCommands;
@@ -75,14 +76,14 @@ function isFileNotFoundError(error: unknown): boolean {
 
 /** Keeps open file and diff tabs synced with backend file and git change events. */
 export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
-  const { workspaceWorktreePath } = input;
+  const { workspaceId, workspaceWorktreePath } = input;
   const tabsRef = useRef(input.tabs);
   const commandsRef = useRef(input.commands);
   tabsRef.current = input.tabs;
   commandsRef.current = input.commands;
 
   useEffect(() => {
-    if (!workspaceWorktreePath) {
+    if (!workspaceId || !workspaceWorktreePath) {
       return;
     }
 
@@ -132,7 +133,7 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
 
               try {
                 const response = await commands.readFile({
-                  workspaceWorktreePath,
+                  workspaceId,
                   relativePath: tab.path,
                 });
                 commands.refreshFileTabFromDisk({
@@ -158,18 +159,18 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
               const response =
                 tab.source?.kind === "commit"
                   ? await commands.readCommitDiff({
-                      workspaceWorktreePath,
+                      workspaceId,
                       commitHash: tab.source.commitHash,
                       relativePath: tab.path,
                     })
                   : tab.source?.kind === "branch"
                     ? await commands.readBranchComparisonDiff({
-                        workspaceWorktreePath,
+                        workspaceId,
                         targetBranch: tab.source.targetBranch,
                         relativePath: tab.path,
                       })
                     : await commands.readDiff({
-                        workspaceWorktreePath,
+                        workspaceId,
                         relativePath: tab.path,
                       });
 

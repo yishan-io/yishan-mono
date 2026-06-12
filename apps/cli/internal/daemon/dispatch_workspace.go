@@ -54,7 +54,7 @@ func (h *JSONRPCHandler) handleOpen(_ context.Context, params json.RawMessage) (
 		return nil, err
 	}
 	log.Info().Str("workspaceId", ws.ID).Str("path", ws.Path).Bool("prAlreadyMerged", req.PRAlreadyMerged).Msg("daemon workspace opened")
-	h.watchAndTrack(ws.Path)
+	h.watchAndTrack(ws.ID, ws.Path)
 	return ws, nil
 }
 
@@ -172,7 +172,7 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, req workspa
 		return
 	}
 
-	h.watchAndTrack(created.Path)
+	h.watchAndTrack(created.ID, created.Path)
 	warnings := buildWorkspaceHookWarnings(req.SetupHook, created.SetupHookResult, h.logFilePath)
 
 	remoteSyncWarning := ""
@@ -301,8 +301,8 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 }
 
 // watchAndTrack starts filesystem watching and PR tracking for a workspace path.
-func (h *JSONRPCHandler) watchAndTrack(path string) {
-	h.watchers.Watch(path)
+func (h *JSONRPCHandler) watchAndTrack(workspaceID string, path string) {
+	h.watchers.Watch(workspaceID, path)
 	h.prTracker.EnsureTracked(path, true)
 }
 

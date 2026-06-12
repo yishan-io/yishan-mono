@@ -59,17 +59,17 @@ vi.mock("../rpc/rpcTransport", () => ({
 
 describe("fileCommands", () => {
   it("forwards file command requests to file service", async () => {
-    await listFiles({ workspaceWorktreePath: "/tmp/repo", relativePath: "src", recursive: false });
+    await listFiles({ workspaceId: "workspace-1", relativePath: "src", recursive: false });
     await listFilesBatch({
-      workspaceWorktreePath: "/tmp/repo/",
+      workspaceId: "workspace-1",
       requests: [{ relativePath: "src", recursive: false }],
     });
-    await readFile({ workspaceWorktreePath: "/tmp/repo", relativePath: "a.ts" });
-    await writeFile({ workspaceWorktreePath: "/tmp/repo", relativePath: "a.ts", content: "x" });
-    await createFile({ workspaceWorktreePath: "/tmp/repo", relativePath: "b.ts", content: "y" });
-    await createFolder({ workspaceWorktreePath: "/tmp/repo", relativePath: "src" });
-    await renameEntry({ workspaceWorktreePath: "/tmp/repo", fromRelativePath: "a.ts", toRelativePath: "c.ts" });
-    await deleteEntry({ workspaceWorktreePath: "/tmp/repo", relativePath: "c.ts" });
+    await readFile({ workspaceId: "workspace-1", relativePath: "a.ts" });
+    await writeFile({ workspaceId: "workspace-1", relativePath: "a.ts", content: "x" });
+    await createFile({ workspaceId: "workspace-1", relativePath: "b.ts", content: "y" });
+    await createFolder({ workspaceId: "workspace-1", relativePath: "src" });
+    await renameEntry({ workspaceId: "workspace-1", fromRelativePath: "a.ts", toRelativePath: "c.ts" });
+    await deleteEntry({ workspaceId: "workspace-1", relativePath: "c.ts" });
     await openEntryInExternalApp({
       workspaceWorktreePath: "/tmp/repo",
       appId: "system-file-manager",
@@ -95,32 +95,32 @@ describe("fileCommands", () => {
     });
 
     expect(mocks.listFiles).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo",
+      workspaceId: "workspace-1",
       relativePath: "src",
       recursive: false,
     });
     expect(mocks.listFilesBatch).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo/",
+      workspaceId: "workspace-1",
       requests: [{ relativePath: "src", recursive: false }],
     });
-    expect(mocks.readFile).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo", relativePath: "a.ts" });
+    expect(mocks.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "a.ts" });
     expect(mocks.writeFile).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo",
+      workspaceId: "workspace-1",
       relativePath: "a.ts",
       content: "x",
     });
     expect(mocks.createFile).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo",
+      workspaceId: "workspace-1",
       relativePath: "b.ts",
       content: "y",
     });
-    expect(mocks.createFolder).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo", relativePath: "src" });
+    expect(mocks.createFolder).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src" });
     expect(mocks.renameEntry).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo",
+      workspaceId: "workspace-1",
       fromRelativePath: "a.ts",
       toRelativePath: "c.ts",
     });
-    expect(mocks.deleteEntry).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo", relativePath: "c.ts" });
+    expect(mocks.deleteEntry).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "c.ts" });
     expect(mocks.openEntryInExternalApp).toHaveBeenNthCalledWith(1, {
       workspaceWorktreePath: "/tmp/repo",
       appId: "system-file-manager",

@@ -50,7 +50,7 @@ vi.mock("../rpc/rpcTransport", () => ({
 
 describe("terminalCommands", () => {
   it("forwards terminal requests to terminal service", async () => {
-    await createTerminalSession({ cwd: "/tmp/repo", cols: 120, rows: 40 });
+    await createTerminalSession({ workspaceId: "workspace-1", cols: 120, rows: 40 });
     await writeTerminalInput({ sessionId: "session-1", data: "ls\n" });
     await resizeTerminal({ sessionId: "session-1", cols: 140, rows: 42 });
     await readTerminalOutput({ sessionId: "session-1", fromIndex: 10 });
@@ -68,7 +68,7 @@ describe("terminalCommands", () => {
     await closeTerminalSession({ sessionId: "session-1" });
     await killTerminalProcess({ pid: 1234 });
 
-    expect(mocks.createSession).toHaveBeenCalledWith({ cwd: "/tmp/repo", cols: 120, rows: 40 });
+    expect(mocks.createSession).toHaveBeenCalledWith({ workspaceId: "workspace-1", cols: 120, rows: 40 });
     expect(mocks.writeInput).toHaveBeenCalledWith({ sessionId: "session-1", data: "ls\n" });
     expect(mocks.resize).toHaveBeenCalledWith({ sessionId: "session-1", cols: 140, rows: 42 });
     expect(mocks.readOutput).toHaveBeenCalledWith({ sessionId: "session-1", fromIndex: 10 });

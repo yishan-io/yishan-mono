@@ -71,8 +71,8 @@ export class DaemonClient {
     const resolveWorkspaceId = this.resolveWorkspaceId.bind(this);
 
     this._workspaceClient = new DaemonWorkspaceClient(invoke, this.workspaceIdByWorktreePath);
-    this._fileClient = new DaemonFileClient(invoke, resolveWorkspaceId);
-    this._gitClient = new DaemonGitClient(invoke, resolveWorkspaceId);
+    this._fileClient = new DaemonFileClient(invoke);
+    this._gitClient = new DaemonGitClient(invoke);
     this._terminalClient = new DaemonTerminalClient({
       invoke,
       resolveWorkspaceId,

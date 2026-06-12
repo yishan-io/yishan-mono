@@ -75,10 +75,7 @@ export function FileSearchOverlay() {
           return;
         }
 
-        const response = await readFile({
-          workspaceWorktreePath: selectedWorkspaceWorktreePath,
-          relativePath: path,
-        });
+        const response = await readFile({ workspaceId: selectedWorkspaceId, relativePath: path });
 
         if (getUtf8ByteLength(response.content) > LARGE_FILE_OPEN_THRESHOLD_BYTES) {
           tabStore.getState().openTab({
@@ -126,7 +123,7 @@ export function FileSearchOverlay() {
     handleFileSearchInputKeyDown,
     openSearchResultAndClose,
   } = useFileSearchController({
-    workspaceWorktreePath: selectedWorkspaceWorktreePath || undefined,
+    workspaceId: selectedWorkspaceId || undefined,
     openFileSearchRequestKey,
     lastHandledFileSearchRequestKey,
     onFileSearchRequestHandled: (requestKey) => {

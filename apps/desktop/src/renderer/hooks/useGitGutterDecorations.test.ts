@@ -55,6 +55,7 @@ describe("useGitGutterDecorations", () => {
     renderHook(() =>
       useGitGutterDecorations({
         editor: null,
+        workspaceId: "workspace-1",
         path: "src/a.ts",
         worktreePath: "/repo",
         currentContent: "line1\nline2\nline3",
@@ -69,6 +70,7 @@ describe("useGitGutterDecorations", () => {
     renderHook(() =>
       useGitGutterDecorations({
         editor: mockEditor as unknown as Parameters<typeof useGitGutterDecorations>[0]["editor"],
+        workspaceId: "workspace-1",
         path: "src/a.ts",
         worktreePath: undefined,
         currentContent: "line1\nline2\nline3",
@@ -84,6 +86,7 @@ describe("useGitGutterDecorations", () => {
     renderHook(() =>
       useGitGutterDecorations({
         editor: mockEditor as unknown as Parameters<typeof useGitGutterDecorations>[0]["editor"],
+        workspaceId: "workspace-1",
         path: "src/a.ts",
         worktreePath: "/workspace",
         currentContent: "modified",
@@ -91,7 +94,7 @@ describe("useGitGutterDecorations", () => {
     );
 
     expect(mockReadDiff).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/workspace",
+      workspaceId: "workspace-1",
       relativePath: "src/a.ts",
     });
   });
@@ -103,6 +106,7 @@ describe("useGitGutterDecorations", () => {
       ({ currentContent }) =>
         useGitGutterDecorations({
           editor: mockEditor as unknown as Parameters<typeof useGitGutterDecorations>[0]["editor"],
+          workspaceId: "workspace-1",
           path: "src/a.ts",
           worktreePath: "/workspace",
           currentContent,
@@ -135,6 +139,7 @@ describe("useGitGutterDecorations", () => {
       ({ currentContent }) =>
         useGitGutterDecorations({
           editor: mockEditor as unknown as Parameters<typeof useGitGutterDecorations>[0]["editor"],
+          workspaceId: "workspace-1",
           path: "src/a.ts",
           worktreePath: "/workspace",
           currentContent,
@@ -159,6 +164,7 @@ describe("useGitGutterDecorations", () => {
       ({ path }) =>
         useGitGutterDecorations({
           editor: mockEditor as unknown as Parameters<typeof useGitGutterDecorations>[0]["editor"],
+          workspaceId: "workspace-1",
           path,
           worktreePath: "/workspace",
           currentContent: "new content",
@@ -176,7 +182,7 @@ describe("useGitGutterDecorations", () => {
 
     expect(mockReadDiff).toHaveBeenCalledTimes(2);
     expect(mockReadDiff).toHaveBeenLastCalledWith({
-      workspaceWorktreePath: "/workspace",
+      workspaceId: "workspace-1",
       relativePath: "src/b.ts",
     });
   });

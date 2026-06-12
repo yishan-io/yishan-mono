@@ -1,4 +1,3 @@
-import { generateId } from "../helpers/generateId";
 import type * as Rpc from "./daemonTypes";
 import {
   asRecord,
@@ -163,26 +162,22 @@ export class DaemonWorkspaceClient {
   }
 
   async refreshPullRequest(input: Rpc.WorkspaceRefreshPullRequestInput): Promise<Rpc.DaemonWorkspace> {
-    const workspaceId = input.workspaceId?.trim();
-    const workspaceWorktreePath = input.workspaceWorktreePath
-      ? normalizeWorktreePath(input.workspaceWorktreePath)
-      : undefined;
-    if (!workspaceId && !workspaceWorktreePath) {
-      throw new Error("workspaceId or workspaceWorktreePath is required");
+    const workspaceId = input.workspaceId.trim();
+    if (!workspaceId) {
+      throw new Error("workspaceId is required");
     }
 
     const record = asRecord(
       await this.invoke("workspace.refreshPullRequest", {
-        ...(workspaceId ? { workspaceId } : {}),
-        ...(workspaceWorktreePath ? { path: workspaceWorktreePath } : {}),
+        workspaceId,
       }),
     );
     if (!record) {
       throw new Error("daemon workspace refreshPullRequest returned invalid response");
     }
 
-    const id = readOptionalString(record.id) || workspaceId || "";
-    const path = normalizeWorktreePath(readOptionalString(record.path) || workspaceWorktreePath || "");
+    const id = readOptionalString(record.id) || workspaceId;
+    const path = normalizeWorktreePath(readOptionalString(record.path) || "");
     if (id && path) {
       this.workspaceIdByWorktreePath.set(path, id);
     }
@@ -234,13 +229,7 @@ export class DaemonWorkspaceClient {
       return existingWorkspace.id;
     }
 
-    const workspaceId = generateId();
-    await this.invoke("open", {
-      id: workspaceId,
-      path: normalizedWorktreePath,
-    });
-    this.workspaceIdByWorktreePath.set(normalizedWorktreePath, workspaceId);
-    return workspaceId;
+    throw new Error(`daemon workspace is not open for path: ${normalizedWorktreePath}`);
   }
 
   async resolveId(input: unknown): Promise<string> {

@@ -67,8 +67,13 @@ function resolveWorkspaceTargetBranch(workspaceId: string): string | undefined {
  *
  * The totals (additions/deletions) similarly combine both sources.
  */
-export async function refreshWorkspaceGitChanges(workspaceId: string, workspaceWorktreePath: string): Promise<void> {
-  if (!workspaceId || !workspaceWorktreePath) {
+export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<void> {
+  if (!workspaceId) {
+    return;
+  }
+
+  const workspaceWorktreePath = readWorkspaceStoreState().workspaces.find((workspace) => workspace.id === workspaceId)?.worktreePath?.trim();
+  if (!workspaceWorktreePath) {
     return;
   }
 
@@ -78,9 +83,9 @@ export async function refreshWorkspaceGitChanges(workspaceId: string, workspaceW
 
     // Fetch uncommitted changes and (optionally) branch diff summary in parallel.
     const [sections, branchSummary] = await Promise.all([
-      client.git.listChanges({ workspaceWorktreePath }),
+      client.git.listChanges({ workspaceId }),
       targetBranch
-        ? client.git.getBranchDiffSummary({ workspaceWorktreePath, targetBranch }).catch(() => null)
+        ? client.git.getBranchDiffSummary({ workspaceId, targetBranch }).catch(() => null)
         : Promise.resolve(null),
     ]);
 
@@ -108,8 +113,8 @@ export async function refreshWorkspaceGitChanges(workspaceId: string, workspaceW
 }
 
 /** Re-queries the daemon for the selected workspace pull request state. */
-export async function refreshWorkspacePullRequest(workspaceId: string, workspaceWorktreePath: string): Promise<void> {
-  if (!workspaceId || !workspaceWorktreePath) {
+export async function refreshWorkspacePullRequest(workspaceId: string): Promise<void> {
+  if (!workspaceId) {
     return;
   }
 
@@ -122,7 +127,6 @@ export async function refreshWorkspacePullRequest(workspaceId: string, workspace
     const client = await getDaemonClient();
     const refreshedWorkspace = await client.workspace.refreshPullRequest({
       workspaceId,
-      workspaceWorktreePath,
     });
 
     readWorkspaceStoreState().setWorkspacePullRequest(workspaceId, refreshedWorkspace.pullRequest);
@@ -333,7 +337,7 @@ export async function renameWorkspaceBranch(input: {
   try {
     const client = await getDaemonClient();
     await client.git.renameBranch({
-      workspaceWorktreePath,
+      workspaceId: input.workspaceId,
       nextBranch: normalizedBranch,
     });
     store.renameWorkspaceBranch({

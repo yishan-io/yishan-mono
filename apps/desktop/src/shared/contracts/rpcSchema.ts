@@ -41,6 +41,7 @@ export type RpcSchema = {
         };
       };
       gitChanged: {
+        workspaceId?: string;
         workspaceWorktreePath: string;
         /** True when the change is branch-relevant (HEAD or refs/heads). False for index/FETCH_HEAD/etc. */
         affectsBranch?: boolean;
@@ -48,6 +49,7 @@ export type RpcSchema = {
         currentBranch?: string;
       };
       workspaceFilesChanged: {
+        workspaceId?: string;
         workspaceWorktreePath: string;
         changedRelativePaths?: string[];
       };

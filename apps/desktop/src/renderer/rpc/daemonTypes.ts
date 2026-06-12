@@ -136,8 +136,7 @@ export type WorkspaceOpenInput = {
 };
 
 export type WorkspaceRefreshPullRequestInput = {
-  workspaceId?: string;
-  workspaceWorktreePath?: string;
+  workspaceId: string;
 };
 
 export type PersistAuthTokensInput = {
@@ -187,13 +186,13 @@ export type WorkspaceCloseExecutionInput = {
 };
 
 export type FileListInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   relativePath?: string;
   recursive?: boolean;
 };
 
 export type FileListBatchInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   requests: Array<{
     relativePath?: string;
     recursive?: boolean;
@@ -201,44 +200,43 @@ export type FileListBatchInput = {
 };
 
 export type FileSearchInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   query: string;
   limit?: number;
 };
 
 export type FileReadInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   relativePath: string;
 };
 
 export type FileWriteInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   relativePath: string;
   content: string;
 };
 
 export type FileCreateFolderInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   relativePath: string;
 };
 
 export type FileRenameInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   fromRelativePath: string;
   toRelativePath: string;
 };
 
 export type FileDeleteInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   relativePath: string;
 };
 
 export type GitWorktreeInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
 };
 
 export type GitInspectInput = {
-  workspaceWorktreePath?: string;
   workspaceId: string;
 };
 
@@ -247,55 +245,53 @@ export type GitInspectPathInput = {
 };
 
 export type GitPathsInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   relativePaths: string[];
 };
 
 export type GitCommitInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   message: string;
   amend?: boolean;
   signoff?: boolean;
 };
 
 export type GitTargetBranchInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   targetBranch: string;
 };
 
 export type GitCommitDiffInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   commitHash: string;
   relativePath: string;
 };
 
 export type GitBranchDiffInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   targetBranch: string;
   relativePath: string;
 };
 
 export type GitRenameBranchInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   nextBranch: string;
 };
 
 export type GitPrMergeInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   prNumber: number;
   method?: "merge" | "squash" | "rebase";
   deleteBranch?: boolean;
 };
 
 export type GitPrCloseInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   prNumber: number;
 };
 
 export type TerminalCreateSessionInput = {
-  workspaceId?: string;
-  workspaceWorktreePath?: string;
-  cwd?: string;
+  workspaceId: string;
   command?: string;
   args?: string[];
   env?: string[];

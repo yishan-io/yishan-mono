@@ -85,7 +85,7 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
     let cancelled = false;
 
     getDaemonClient()
-      .then((client) => client.workspace.refreshPullRequest({ workspaceId: selectedWorkspaceId, workspaceWorktreePath: worktreePath }))
+      .then((client) => client.workspace.refreshPullRequest({ workspaceId: selectedWorkspaceId }))
       .then((daemonWorkspace) => {
         if (!cancelled && daemonWorkspace.pullRequest) {
           workspaceStore.getState().setWorkspacePullRequest(selectedWorkspaceId, daemonWorkspace.pullRequest);

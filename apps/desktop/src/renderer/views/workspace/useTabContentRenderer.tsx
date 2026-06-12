@@ -105,6 +105,7 @@ export function useTabContentRenderer({
         return (
           <TabPanel key={tab.id} active={isSelected}>
             <FileEditor
+              workspaceId={tab.workspaceId}
               path={tab.data.path}
               content={tab.data.content ?? ""}
               worktreePath={workspace?.worktreePath}
@@ -114,9 +115,9 @@ export function useTabContentRenderer({
               onContentChange={(nextContent) => cmd.updateFileTabContent(tab.id, nextContent)}
               onSave={async (nextContent) => {
                 const workspaceWorktreePath = workspace?.worktreePath;
-                if (!workspaceWorktreePath) return;
+                if (!workspaceWorktreePath || !tab.workspaceId) return;
                 try {
-                  await cmd.writeFile({ workspaceWorktreePath, relativePath: tab.data.path, content: nextContent });
+                  await cmd.writeFile({ workspaceId: tab.workspaceId, relativePath: tab.data.path, content: nextContent });
                   cmd.updateFileTabContent(tab.id, nextContent);
                   cmd.markFileTabSaved(tab.id);
                 } catch (error) {

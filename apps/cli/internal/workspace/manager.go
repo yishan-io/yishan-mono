@@ -106,11 +106,42 @@ func (m *Manager) Open(req OpenRequest) (Workspace, error) {
 		return Workspace{}, NewRPCError(rpcCodeInvalidParams, "workspace path must be a directory")
 	}
 
-	ws := Workspace{ID: req.ID, Path: absPath, OrgID: req.OrgID, ProjectID: req.ProjectID}
-
 	ensureGitExclude(absPath, ContextLinkName)
 
 	m.mu.Lock()
+	var existing Workspace
+	if current, ok := m.workspaces[req.ID]; ok {
+		existing = current
+	}
+	existingPathID := ""
+	for workspaceID, workspace := range m.workspaces {
+		if workspace.Path != absPath {
+			continue
+		}
+		existingPathID = workspaceID
+		if existing.ID == "" {
+			existing = workspace
+		}
+		break
+	}
+
+	ws := Workspace{
+		ID:              req.ID,
+		Path:            absPath,
+		OrgID:           req.OrgID,
+		ProjectID:       req.ProjectID,
+		SetupHookResult: existing.SetupHookResult,
+		PullRequest:     existing.PullRequest,
+	}
+	if ws.OrgID == "" {
+		ws.OrgID = existing.OrgID
+	}
+	if ws.ProjectID == "" {
+		ws.ProjectID = existing.ProjectID
+	}
+	if existingPathID != "" && existingPathID != req.ID {
+		delete(m.workspaces, existingPathID)
+	}
 	m.workspaces[req.ID] = ws
 	m.mu.Unlock()
 

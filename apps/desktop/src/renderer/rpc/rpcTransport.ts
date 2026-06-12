@@ -341,7 +341,7 @@ export async function getDaemonClient(): Promise<DaemonRpcClient> {
         file: transportClient.file,
         git: transportClient.git,
         terminal: {
-          createSession: (input) => transportClient.terminal.createSession(input ?? {}),
+          createSession: (input) => transportClient.terminal.createSession(input),
           writeInput: transportClient.terminal.writeInput,
           resize: transportClient.terminal.resize,
           readOutput: transportClient.terminal.readOutput,

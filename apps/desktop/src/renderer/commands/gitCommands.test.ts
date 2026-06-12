@@ -66,28 +66,24 @@ describe("gitCommands", () => {
   it("does not cache null git author name results", async () => {
     mocks.getGitAuthorName.mockResolvedValueOnce(null).mockResolvedValueOnce("Alice Chen");
 
-    const firstResult = await getGitAuthorName({ workspaceWorktreePath: "/tmp/repo-null-author" });
-    const secondResult = await getGitAuthorName({ workspaceWorktreePath: "/tmp/repo-null-author" });
+    const firstResult = await getGitAuthorName({ workspaceId: "workspace-null-author" });
+    const secondResult = await getGitAuthorName({ workspaceId: "workspace-null-author" });
 
     expect(firstResult).toBeNull();
     expect(secondResult).toBe("Alice Chen");
     expect(mocks.getGitAuthorName).toHaveBeenCalledTimes(2);
-    expect(mocks.getGitAuthorName).toHaveBeenNthCalledWith(1, {
-      workspaceWorktreePath: "/tmp/repo-null-author",
-    });
-    expect(mocks.getGitAuthorName).toHaveBeenNthCalledWith(2, {
-      workspaceWorktreePath: "/tmp/repo-null-author",
-    });
+    expect(mocks.getGitAuthorName).toHaveBeenNthCalledWith(1, { workspaceId: "workspace-null-author" });
+    expect(mocks.getGitAuthorName).toHaveBeenNthCalledWith(2, { workspaceId: "workspace-null-author" });
   });
 
   it("caches git author name by worktree path", async () => {
     mocks.getGitAuthorName.mockResolvedValue("Alice Chen");
 
-    await getGitAuthorName({ workspaceWorktreePath: "/tmp/repo" });
-    await getGitAuthorName({ workspaceWorktreePath: "/tmp/repo " });
+    await getGitAuthorName({ workspaceId: "workspace-1" });
+    await getGitAuthorName({ workspaceId: "workspace-1 " });
 
     expect(mocks.getGitAuthorName).toHaveBeenCalledTimes(1);
-    expect(mocks.getGitAuthorName).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo" });
+    expect(mocks.getGitAuthorName).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
   });
 
   it("deduplicates concurrent listGitChanges calls for one worktree", async () => {
@@ -97,62 +93,62 @@ describe("gitCommands", () => {
     });
     mocks.listGitChanges.mockReturnValueOnce(deferredListChanges);
 
-    const firstRequest = listGitChanges({ workspaceWorktreePath: "/tmp/repo" });
-    const secondRequest = listGitChanges({ workspaceWorktreePath: "/tmp/repo" });
+    const firstRequest = listGitChanges({ workspaceId: "workspace-1" });
+    const secondRequest = listGitChanges({ workspaceId: "workspace-1" });
     resolveListChanges?.({ unstaged: [], staged: [], untracked: [] });
 
     await Promise.all([firstRequest, secondRequest]);
 
     expect(mocks.listGitChanges).toHaveBeenCalledTimes(1);
-    expect(mocks.listGitChanges).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo" });
+    expect(mocks.listGitChanges).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
   });
 
   it("forwards git command requests to git service", async () => {
-    await readDiff({ workspaceWorktreePath: "/tmp/repo", relativePath: "a.ts" });
-    await readCommitDiff({ workspaceWorktreePath: "/tmp/repo", commitHash: "abc123", relativePath: "a.ts" });
-    await readBranchComparisonDiff({ workspaceWorktreePath: "/tmp/repo", targetBranch: "main", relativePath: "a.ts" });
-    await listGitChanges({ workspaceWorktreePath: "/tmp/repo" });
-    await trackGitChanges({ workspaceWorktreePath: "/tmp/repo", relativePaths: ["a.ts"] });
-    await unstageGitChanges({ workspaceWorktreePath: "/tmp/repo", relativePaths: ["a.ts"] });
-    await revertGitChanges({ workspaceWorktreePath: "/tmp/repo", relativePaths: ["a.ts"] });
-    await commitGitChanges({ workspaceWorktreePath: "/tmp/repo", message: "test" });
-    await getGitBranchStatus({ workspaceWorktreePath: "/tmp/repo" });
-    await listGitCommitsToTarget({ workspaceWorktreePath: "/tmp/repo", targetBranch: "main" });
-    await listGitBranches({ workspaceWorktreePath: "/tmp/repo" });
-    await getGitAuthorName({ workspaceWorktreePath: "/tmp/repo-author-forward" });
-    await pushGitBranch({ workspaceWorktreePath: "/tmp/repo" });
-    await publishGitBranch({ workspaceWorktreePath: "/tmp/repo" });
+    await readDiff({ workspaceId: "workspace-1", relativePath: "a.ts" });
+    await readCommitDiff({ workspaceId: "workspace-1", commitHash: "abc123", relativePath: "a.ts" });
+    await readBranchComparisonDiff({ workspaceId: "workspace-1", targetBranch: "main", relativePath: "a.ts" });
+    await listGitChanges({ workspaceId: "workspace-1" });
+    await trackGitChanges({ workspaceId: "workspace-1", relativePaths: ["a.ts"] });
+    await unstageGitChanges({ workspaceId: "workspace-1", relativePaths: ["a.ts"] });
+    await revertGitChanges({ workspaceId: "workspace-1", relativePaths: ["a.ts"] });
+    await commitGitChanges({ workspaceId: "workspace-1", message: "test" });
+    await getGitBranchStatus({ workspaceId: "workspace-1" });
+    await listGitCommitsToTarget({ workspaceId: "workspace-1", targetBranch: "main" });
+    await listGitBranches({ workspaceId: "workspace-1" });
+    await getGitAuthorName({ workspaceId: "workspace-author-forward" });
+    await pushGitBranch({ workspaceId: "workspace-1" });
+    await publishGitBranch({ workspaceId: "workspace-1" });
 
-    expect(mocks.readDiff).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo", relativePath: "a.ts" });
+    expect(mocks.readDiff).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "a.ts" });
     expect(mocks.readCommitDiff).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo",
+      workspaceId: "workspace-1",
       commitHash: "abc123",
       relativePath: "a.ts",
     });
     expect(mocks.readBranchComparisonDiff).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo",
+      workspaceId: "workspace-1",
       targetBranch: "main",
       relativePath: "a.ts",
     });
-    expect(mocks.listGitChanges).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo" });
-    expect(mocks.trackGitChanges).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo", relativePaths: ["a.ts"] });
+    expect(mocks.listGitChanges).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
+    expect(mocks.trackGitChanges).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePaths: ["a.ts"] });
     expect(mocks.unstageGitChanges).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo",
+      workspaceId: "workspace-1",
       relativePaths: ["a.ts"],
     });
     expect(mocks.revertGitChanges).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo",
+      workspaceId: "workspace-1",
       relativePaths: ["a.ts"],
     });
-    expect(mocks.commitGitChanges).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo", message: "test" });
-    expect(mocks.getGitBranchStatus).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo" });
+    expect(mocks.commitGitChanges).toHaveBeenCalledWith({ workspaceId: "workspace-1", message: "test" });
+    expect(mocks.getGitBranchStatus).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
     expect(mocks.listGitCommitsToTarget).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo",
+      workspaceId: "workspace-1",
       targetBranch: "main",
     });
-    expect(mocks.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo" });
-    expect(mocks.getGitAuthorName).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-author-forward" });
-    expect(mocks.pushGitBranch).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo" });
-    expect(mocks.publishGitBranch).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo" });
+    expect(mocks.listGitBranches).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
+    expect(mocks.getGitAuthorName).toHaveBeenCalledWith({ workspaceId: "workspace-author-forward" });
+    expect(mocks.pushGitBranch).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
+    expect(mocks.publishGitBranch).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
   });
 });

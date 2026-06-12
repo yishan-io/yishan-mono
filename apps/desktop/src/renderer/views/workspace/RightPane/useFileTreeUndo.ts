@@ -68,7 +68,7 @@ export function useFileTreeUndo({
       switch (latestUndoAction.kind) {
         case "create-file": {
           await deleteEntry({
-            workspaceWorktreePath: selectedWorkspaceWorktreePath,
+            workspaceId: selectedWorkspaceId ?? "",
             relativePath: latestUndoAction.path,
           });
 
@@ -80,7 +80,7 @@ export function useFileTreeUndo({
         }
         case "create-folder": {
           await deleteEntry({
-            workspaceWorktreePath: selectedWorkspaceWorktreePath,
+            workspaceId: selectedWorkspaceId ?? "",
             relativePath: latestUndoAction.path,
           });
 
@@ -92,7 +92,7 @@ export function useFileTreeUndo({
         }
         case "rename": {
           await renameEntry({
-            workspaceWorktreePath: selectedWorkspaceWorktreePath,
+            workspaceId: selectedWorkspaceId ?? "",
             fromRelativePath: latestUndoAction.toPath,
             toRelativePath: latestUndoAction.fromPath,
           });
@@ -106,7 +106,7 @@ export function useFileTreeUndo({
 
           for (const reverseEntry of reverseEntries) {
             await renameEntry({
-              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              workspaceId: selectedWorkspaceId ?? "",
               fromRelativePath: reverseEntry.toPath,
               toRelativePath: reverseEntry.fromPath,
             });
@@ -115,7 +115,7 @@ export function useFileTreeUndo({
         }
         case "delete-file": {
           await createFile({
-            workspaceWorktreePath: selectedWorkspaceWorktreePath,
+            workspaceId: selectedWorkspaceId ?? "",
             relativePath: latestUndoAction.path,
             content: latestUndoAction.content,
           });
