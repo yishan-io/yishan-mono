@@ -13,12 +13,16 @@ import {
   LuDiff,
   LuExternalLink,
   LuFileText,
+  LuSearch,
   LuStretchHorizontal,
   LuStretchVertical,
   LuWrapText,
 } from "react-icons/lu";
+import { findDiffMatches } from "../helpers/diffSearch";
+import type { DiffMatch } from "../helpers/diffSearch";
 import { YISHAN_DIFF_THEME_DARK, YISHAN_DIFF_THEME_LIGHT, getDiffCssVariables } from "../helpers/diffTheme";
 import type { FileDiffEntry } from "../store/types";
+import { DiffSearchPanel } from "./DiffSearchPanel";
 import { getFileTreeIcon } from "./fileTreeIcons";
 
 type MultiFileDiffViewerProps = {
@@ -187,6 +191,10 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
   const [changesOnly, setChangesOnly] = useState(true);
   const [wrapLines, setWrapLines] = useState(false);
 
+  const [searchActive, setSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+
   const collapsedKeysRef = useRef(collapsedKeys);
   collapsedKeysRef.current = collapsedKeys;
 
@@ -211,6 +219,81 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
     }),
     [diffTheme, sideBySide, changesOnly, wrapLines],
   );
+
+  const searchFiles = useMemo(
+    () =>
+      files.map((f) => ({
+        oldContent: f.oldContent,
+        newContent: f.newContent,
+        fileId: f.path,
+      })),
+    [files],
+  );
+
+  const searchMatches = useMemo(
+    () => findDiffMatches(searchFiles, searchQuery, false, sideBySide),
+    [searchFiles, searchQuery, sideBySide],
+  );
+
+  const currentMatch: DiffMatch | undefined = searchMatches[currentMatchIndex];
+
+  useEffect(() => {
+    const handle = codeViewRef.current;
+    if (!handle || !currentMatch) return;
+
+    handle.scrollTo({
+      type: "line",
+      id: currentMatch.fileId,
+      lineNumber: currentMatch.visualLineNumber,
+      side: currentMatch.side,
+      align: "center",
+    });
+
+    handle.setSelectedLines({
+      id: currentMatch.fileId,
+      range: {
+        start: currentMatch.visualLineNumber,
+        side: currentMatch.side,
+        end: currentMatch.visualLineNumber,
+      },
+    });
+  }, [currentMatch]);
+
+  useEffect(() => {
+    const handleKeyboard = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+        event.preventDefault();
+        setSearchActive(true);
+      }
+      if (event.key === "Escape" && searchActive) {
+        setSearchActive(false);
+        setSearchQuery("");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyboard);
+    return () => window.removeEventListener("keydown", handleKeyboard);
+  }, [searchActive]);
+
+  const handleSearchClose = useCallback(() => {
+    setSearchActive(false);
+    setSearchQuery("");
+    const handle = codeViewRef.current;
+    handle?.clearSelectedLines();
+  }, []);
+
+  const handleSearchPrevious = useCallback(() => {
+    setCurrentMatchIndex((prev) => (prev <= 0 ? searchMatches.length - 1 : prev - 1));
+  }, [searchMatches.length]);
+
+  const handleSearchNext = useCallback(() => {
+    setCurrentMatchIndex((prev) => (prev >= searchMatches.length - 1 ? 0 : prev + 1));
+  }, [searchMatches.length]);
+
+  const handleSearchQueryChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    setCurrentMatchIndex(0);
+  }, []);
 
   const initialItems: CodeViewDiffItem[] = useMemo(
     () =>
@@ -369,7 +452,26 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
             <LuWrapText size={14} />
           </IconButton>
         </Tooltip>
+
+        <Tooltip title="Find in diff (Ctrl+F)">
+          <IconButton size="small" onClick={() => setSearchActive((prev) => !prev)} sx={{ ml: 0.25 }}>
+            <LuSearch size={14} />
+          </IconButton>
+        </Tooltip>
       </Box>
+
+      {searchActive && (
+        <DiffSearchPanel
+          query={searchQuery}
+          onQueryChange={handleSearchQueryChange}
+          onPrevious={handleSearchPrevious}
+          onNext={handleSearchNext}
+          onClose={handleSearchClose}
+          matchCount={searchMatches.length}
+          currentMatchIndex={currentMatchIndex}
+          autoFocus
+        />
+      )}
 
       <Box sx={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}>
         {files.length > 0 && (
