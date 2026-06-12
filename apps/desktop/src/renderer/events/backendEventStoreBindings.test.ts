@@ -6,10 +6,10 @@ import { createBackendEventStoreBindings } from "./backendEventStoreBindings";
  * Creates one in-memory git.changed subscription harness.
  */
 function createGitChangedHarness() {
-  let listener: ((workspaceWorktreePath: string, affectsBranch: boolean, currentBranch?: string) => void) | null = null;
+  let listener: ((workspaceId: string | undefined, workspaceWorktreePath: string, affectsBranch: boolean, currentBranch?: string) => void) | null = null;
   const unsubscribe = vi.fn();
   const subscribeGitChanged = vi.fn(
-    (nextListener: (workspaceWorktreePath: string, affectsBranch: boolean, currentBranch?: string) => void) => {
+    (nextListener: (workspaceId: string | undefined, workspaceWorktreePath: string, affectsBranch: boolean, currentBranch?: string) => void) => {
       listener = nextListener;
       return () => {
         unsubscribe();
@@ -21,8 +21,8 @@ function createGitChangedHarness() {
   return {
     subscribeGitChanged,
     unsubscribe,
-    emit(workspaceWorktreePath: string, affectsBranch = true, currentBranch?: string) {
-      listener?.(workspaceWorktreePath, affectsBranch, currentBranch);
+    emit(workspaceId: string | undefined, workspaceWorktreePath: string, affectsBranch = true, currentBranch?: string) {
+      listener?.(workspaceId, workspaceWorktreePath, affectsBranch, currentBranch);
     },
   };
 }
@@ -31,10 +31,10 @@ function createGitChangedHarness() {
  * Creates one in-memory workspace.files.changed subscription harness.
  */
 function createWorkspaceFilesChangedHarness() {
-  let listener: ((workspaceWorktreePath: string, changedRelativePaths?: string[]) => void) | null = null;
+  let listener: ((workspaceId: string | undefined, workspaceWorktreePath: string, changedRelativePaths?: string[]) => void) | null = null;
   const unsubscribe = vi.fn();
   const subscribeWorkspaceFilesChanged = vi.fn(
-    (nextListener: (workspaceWorktreePath: string, changedRelativePaths?: string[]) => void) => {
+    (nextListener: (workspaceId: string | undefined, workspaceWorktreePath: string, changedRelativePaths?: string[]) => void) => {
       listener = nextListener;
       return () => {
         unsubscribe();
@@ -46,8 +46,8 @@ function createWorkspaceFilesChangedHarness() {
   return {
     subscribeWorkspaceFilesChanged,
     unsubscribe,
-    emit(workspaceWorktreePath: string, changedRelativePaths?: string[]) {
-      listener?.(workspaceWorktreePath, changedRelativePaths);
+    emit(workspaceId: string | undefined, workspaceWorktreePath: string, changedRelativePaths?: string[]) {
+      listener?.(workspaceId, workspaceWorktreePath, changedRelativePaths);
     },
   };
 }
@@ -173,7 +173,7 @@ describe("createBackendEventStoreBindings", () => {
     });
 
     const stopBindings = startBindings();
-    harness.emit("/tmp/repo/.worktrees/task-1");
+    harness.emit("ws-1", "/tmp/repo/.worktrees/task-1");
     vi.advanceTimersByTime(2_000);
 
     expect(harness.subscribeGitChanged).toHaveBeenCalledTimes(1);
@@ -302,7 +302,7 @@ describe("createBackendEventStoreBindings", () => {
     });
 
     const stopBindings = startBindings();
-    workspaceFilesHarness.emit("/tmp/repo/.worktrees/task-1", ["src/test.md"]);
+    workspaceFilesHarness.emit("ws-1", "/tmp/repo/.worktrees/task-1", ["src/test.md"]);
     vi.advanceTimersByTime(2_000);
 
     expect(incrementFileTreeRefreshVersion).toHaveBeenCalledTimes(1);

@@ -45,9 +45,6 @@ export type DaemonRpcClient = {
     createFolder: (input: Rpc.FileCreateFolderInput) => Promise<Rpc.FileMutationOkResponse>;
     renameEntry: (input: Rpc.FileRenameInput) => Promise<Rpc.FileMutationOkResponse>;
     deleteEntry: (input: Rpc.FileDeleteInput) => Promise<Rpc.FileMutationOkResponse>;
-    pasteEntries: (input: unknown) => Promise<Rpc.FileMutationOkResponse>;
-    importEntries: (input: unknown) => Promise<Rpc.FileMutationOkResponse>;
-    importFilePayloads: (input: unknown) => Promise<Rpc.FileMutationOkResponse>;
     readDiff: (input: Rpc.FileReadInput) => Promise<Rpc.FileDiffResponse>;
   };
   git: {

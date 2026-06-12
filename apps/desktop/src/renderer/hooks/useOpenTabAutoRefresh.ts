@@ -32,10 +32,8 @@ type OpenTabAutoRefreshCommands = Pick<
 
 type UseOpenTabAutoRefreshInput = {
   workspaceId?: string;
-  workspaceWorktreePath?: string;
   tabs: RefreshableOpenTab[];
   commands: OpenTabAutoRefreshCommands;
-  /** Injectable for testing. Defaults to the shared transport implementation. */
   subscribeDaemonConnectionStatus?: typeof defaultSubscribeDaemonConnectionStatus;
 };
 
@@ -76,14 +74,14 @@ function isFileNotFoundError(error: unknown): boolean {
 
 /** Keeps open file and diff tabs synced with backend file and git change events. */
 export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
-  const { workspaceId, workspaceWorktreePath } = input;
+  const { workspaceId } = input;
   const tabsRef = useRef(input.tabs);
   const commandsRef = useRef(input.commands);
   tabsRef.current = input.tabs;
   commandsRef.current = input.commands;
 
   useEffect(() => {
-    if (!workspaceId || !workspaceWorktreePath) {
+    if (!workspaceId) {
       return;
     }
 
@@ -215,7 +213,7 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
     };
 
     const unsubscribeWorkspaceFilesChanged = subscribeBackendEvent("workspace.files.changed", (event) => {
-      if (event.source !== "workspaceFilesChanged" || event.payload.workspaceWorktreePath !== workspaceWorktreePath) {
+      if (event.source !== "workspaceFilesChanged" || event.payload.workspaceId !== workspaceId) {
         return;
       }
 
@@ -223,7 +221,7 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
     });
 
     const unsubscribeGitChanged = subscribeBackendEvent("git.changed", (event) => {
-      if (event.source !== "gitChanged" || event.payload.workspaceWorktreePath !== workspaceWorktreePath) {
+      if (event.source !== "gitChanged" || event.payload.workspaceId !== workspaceId) {
         return;
       }
 
@@ -255,5 +253,5 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
       unsubscribeGitChanged();
       unsubscribeDaemonConnectionStatus();
     };
-  }, [workspaceWorktreePath]);
+  }, [workspaceId]);
 }

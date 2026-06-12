@@ -33,9 +33,9 @@ type AgentSessionLifecycleStatus = "running" | "waiting_input";
 
 type BackendEventStoreBindingsDependencies = {
   subscribeDaemonConnectionStatus?: (listener: (status: "connected" | "connecting" | "disconnected") => void) => () => void;
-  subscribeGitChanged: (listener: (workspaceWorktreePath: string, affectsBranch: boolean, currentBranch?: string) => void) => () => void;
+  subscribeGitChanged: (listener: (workspaceId: string | undefined, workspaceWorktreePath: string, affectsBranch: boolean, currentBranch?: string) => void) => () => void;
   subscribeWorkspaceFilesChanged: (
-    listener: (workspaceWorktreePath: string, changedRelativePaths?: string[]) => void,
+    listener: (workspaceId: string | undefined, workspaceWorktreePath: string, changedRelativePaths?: string[]) => void,
   ) => () => void;
   subscribeInAppNotification: (listener: (payload: NotificationEventPayload) => void) => () => void;
   subscribeWorkspaceCreateProgress?: (listener: (payload: WorkspaceCreateProgressPayload) => void) => () => void;
@@ -75,7 +75,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
         return;
       }
 
-      listener(event.payload.workspaceWorktreePath, event.payload.affectsBranch ?? true, event.payload.currentBranch);
+      listener(event.payload.workspaceId, event.payload.workspaceWorktreePath, event.payload.affectsBranch ?? true, event.payload.currentBranch);
     }),
   subscribeWorkspaceFilesChanged: (listener) =>
     subscribeBackendEvent("workspace.files.changed", (event) => {
@@ -83,7 +83,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
         return;
       }
 
-      listener(event.payload.workspaceWorktreePath, event.payload.changedRelativePaths);
+      listener(event.payload.workspaceId, event.payload.workspaceWorktreePath, event.payload.changedRelativePaths);
     }),
   subscribeInAppNotification: (listener) => {
     return subscribeInAppNotificationEvent(listener);
@@ -480,13 +480,13 @@ export function createBackendEventStoreBindings(
       }
     >();
 
-    const unsubscribeGitChanged = dependencies.subscribeGitChanged((workspaceWorktreePath, affectsBranch, currentBranch) => {
+    const unsubscribeGitChanged = dependencies.subscribeGitChanged((workspaceId, workspaceWorktreePath, affectsBranch, currentBranch) => {
       scheduleGitRefresh(workspaceWorktreePath);
 
       if (affectsBranch) {
-        const workspaceId = dependencies.resolveWorkspaceIdByWorktreePath?.(workspaceWorktreePath);
-        if (workspaceId) {
-          void dependencies.refreshWorkspaceCurrentBranch?.(workspaceId, currentBranch);
+        const resolvedId = workspaceId ?? dependencies.resolveWorkspaceIdByWorktreePath?.(workspaceWorktreePath);
+        if (resolvedId) {
+          void dependencies.refreshWorkspaceCurrentBranch?.(resolvedId, currentBranch);
         }
       }
     });
@@ -526,7 +526,7 @@ export function createBackendEventStoreBindings(
       },
     );
     const unsubscribeWorkspaceFilesChanged = dependencies.subscribeWorkspaceFilesChanged(
-      (workspaceWorktreePath, changedRelativePaths) => {
+      (_workspaceId, workspaceWorktreePath, changedRelativePaths) => {
         dependencies.incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
         scheduleGitRefresh(workspaceWorktreePath);
       },

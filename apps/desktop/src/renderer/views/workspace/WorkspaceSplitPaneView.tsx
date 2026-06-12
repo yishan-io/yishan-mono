@@ -152,7 +152,6 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
 
   useOpenTabAutoRefresh({
     workspaceId: workspace?.id,
-    workspaceWorktreePath: workspace?.worktreePath,
     tabs: refreshableTabs,
     commands: cmd,
   });

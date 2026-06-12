@@ -16,7 +16,7 @@ type TestFileTreeContextMenuRequest = {
 };
 
 type ListFilesBatchInput = {
-  workspaceWorktreePath: string;
+  workspaceId: string;
   requests: Array<{ relativePath?: string; recursive?: boolean }>;
 };
 
@@ -27,7 +27,7 @@ const mocks = vi.hoisted(() => {
     const results = await Promise.all(
       input.requests.map(async (request) => {
         const response = await listFiles({
-          workspaceWorktreePath: input.workspaceWorktreePath,
+          workspaceId: input.workspaceId,
           relativePath: request.relativePath,
           recursive: request.recursive,
         });
@@ -46,7 +46,7 @@ const mocks = vi.hoisted(() => {
     };
   });
   // Simulates daemon search by filtering the cached file list for the query.
-  const searchFiles = vi.fn(async (input: { workspaceWorktreePath: string; query: string }) => {
+  const searchFiles = vi.fn(async (input: { workspaceId: string; query: string }) => {
     const query = input.query.toLowerCase();
     const matched = lastLoadedFilesRef.current
       .filter((f) => !f.isIgnored && f.path.toLowerCase().includes(query))
@@ -72,9 +72,6 @@ const mocks = vi.hoisted(() => {
   const deleteEntry = vi.fn();
   const openEntryInExternalApp = vi.fn();
   const readExternalClipboardSourcePaths = vi.fn();
-  const pasteEntries = vi.fn();
-  const importEntries = vi.fn();
-  const importFilePayloads = vi.fn();
   const copyFiles = vi.fn();
   const writeFileBase64 = vi.fn();
   const listGitChanges = vi.fn();
@@ -128,9 +125,6 @@ const mocks = vi.hoisted(() => {
     deleteEntry,
     openEntryInExternalApp,
     readExternalClipboardSourcePaths,
-    pasteEntries,
-    importEntries,
-    importFilePayloads,
     copyFiles,
     writeFileBase64,
     listGitChanges,
@@ -148,7 +142,7 @@ const mocks = vi.hoisted(() => {
 vi.mock("../../../commands/fileCommands", () => ({
   listFiles: (input: unknown) => mocks.listFiles(input),
   listFilesBatch: (input: ListFilesBatchInput) => mocks.listFilesBatch(input),
-  searchFiles: (input: { workspaceWorktreePath: string; query: string }) => mocks.searchFiles(input),
+  searchFiles: (input: { workspaceId: string; query: string }) => mocks.searchFiles(input),
   readFile: (input: unknown) => mocks.readFile(input),
   writeFile: vi.fn(),
   createFile: (input: unknown) => mocks.createFile(input),
@@ -157,9 +151,6 @@ vi.mock("../../../commands/fileCommands", () => ({
   deleteEntry: (input: unknown) => mocks.deleteEntry(input),
   openEntryInExternalApp: (input: unknown) => mocks.openEntryInExternalApp(input),
   readExternalClipboardSourcePaths: () => mocks.readExternalClipboardSourcePaths(),
-  pasteEntries: (input: unknown) => mocks.pasteEntries(input),
-  importEntries: (input: unknown) => mocks.importEntries(input),
-  importFilePayloads: (input: unknown) => mocks.importFilePayloads(input),
   copyFiles: (input: unknown) => mocks.copyFiles(input),
   writeFileBase64: (input: unknown) => mocks.writeFileBase64(input),
   writeClipboardText: vi.fn().mockResolvedValue(undefined),
@@ -457,7 +448,7 @@ describe("FileManagerView file search", () => {
         { activePaneTabIds: undefined },
       );
       expect(mocks.readFile).not.toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         relativePath: "data/main.sqlite",
       });
     });
@@ -614,7 +605,7 @@ describe("FileManagerView file loading", () => {
 
     await waitFor(() => {
       expect(mocks.listFiles).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         recursive: true,
       });
     });
@@ -627,7 +618,7 @@ describe("FileManagerView file loading", () => {
 
   it("reconciles externally renamed loaded descendants on file-change refresh", async () => {
     mocks.listFiles.mockImplementation(async (input: {
-      workspaceWorktreePath: string;
+      workspaceId: string;
       relativePath?: string;
       recursive?: boolean;
     }) => {
@@ -676,7 +667,7 @@ describe("FileManagerView file loading", () => {
 
   it("evicts stale .my-context direct children when refresh reports parent directory changes", async () => {
     mocks.listFiles.mockImplementation(async (input: {
-      workspaceWorktreePath: string;
+      workspaceId: string;
       relativePath?: string;
       recursive?: boolean;
     }) => {
@@ -729,7 +720,7 @@ describe("FileManagerView file loading", () => {
 
   it("keeps loaded descendants after refresh when recursive root list only includes parent directory", async () => {
     mocks.listFiles.mockImplementation(async (input: {
-      workspaceWorktreePath: string;
+      workspaceId: string;
       relativePath?: string;
       recursive?: boolean;
     }) => {
@@ -775,7 +766,7 @@ describe("FileManagerView file loading", () => {
   it("fully replaces deep .my-context entries on file tree refresh", async () => {
     let recursiveCallCount = 0;
     mocks.listFiles.mockImplementation(async (input: {
-      workspaceWorktreePath: string;
+      workspaceId: string;
       relativePath?: string;
       recursive?: boolean;
     }) => {
@@ -814,7 +805,7 @@ describe("FileManagerView file loading", () => {
   it("keeps ignored marker stable across inconsistent refresh payloads", async () => {
     let recursiveCallCount = 0;
     mocks.listFiles.mockImplementation(async (input: {
-      workspaceWorktreePath: string;
+      workspaceId: string;
       relativePath?: string;
       recursive?: boolean;
     }) => {
@@ -850,7 +841,7 @@ describe("FileManagerView file loading", () => {
     let loadedLeafName = "a.txt";
 
     mocks.listFiles.mockImplementation(async (input: {
-      workspaceWorktreePath: string;
+      workspaceId: string;
       relativePath?: string;
       recursive?: boolean;
     }) => {
@@ -901,7 +892,7 @@ describe("FileManagerView file loading", () => {
 
     await waitFor(() => {
       expect(mocks.listFiles).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         recursive: true,
       });
     });
@@ -920,7 +911,7 @@ describe("FileManagerView file loading", () => {
 
     await waitFor(() => {
       expect(mocks.listFiles).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         recursive: true,
       });
     });
@@ -932,7 +923,7 @@ describe("FileManagerView file loading", () => {
 
   it("loads shallow directory contents when directory immediate children are ignored", async () => {
     mocks.listFiles.mockImplementation(async (input: {
-      workspaceWorktreePath: string;
+      workspaceId: string;
       relativePath?: string;
       recursive?: boolean;
     }) => {
@@ -970,7 +961,7 @@ describe("FileManagerView file loading", () => {
 
     await waitFor(() => {
       expect(mocks.listFiles).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         relativePath: "src",
         recursive: false,
       });
@@ -980,7 +971,7 @@ describe("FileManagerView file loading", () => {
 
   it("keeps collapsed directory when shallow response only echoes the directory", async () => {
     mocks.listFiles.mockImplementation(async (input: {
-      workspaceWorktreePath: string;
+      workspaceId: string;
       relativePath?: string;
       recursive?: boolean;
     }) => {
@@ -1013,7 +1004,7 @@ describe("FileManagerView file loading", () => {
 
     await waitFor(() => {
       expect(mocks.listFiles).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         relativePath: ".opencode",
         recursive: false,
       });
@@ -1052,21 +1043,21 @@ describe("FileManagerView external file tree refresh", () => {
         { id: "workspace-2", worktreePath: "/tmp/repo-b" },
       ];
       mocks.stateRef.current.selectedWorkspaceId = "workspace-1";
-      mocks.listFiles.mockImplementation(({ workspaceWorktreePath }: { workspaceWorktreePath: string }) =>
-        workspaceWorktreePath === "/tmp/repo-a" ? firstLoad.promise : secondLoad.promise,
+      mocks.listFiles.mockImplementation(({ workspaceId }: { workspaceId: string }) =>
+        workspaceId === "/tmp/repo-a" ? firstLoad.promise : secondLoad.promise,
       );
 
       const { rerender } = render(<FileManagerView />);
 
       await waitFor(() => {
-        expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-a", recursive: true });
+        expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceId: "workspace-1", recursive: true });
       });
 
       mocks.stateRef.current.selectedWorkspaceId = "workspace-2";
       rerender(<FileManagerView />);
 
       await waitFor(() => {
-        expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-b", recursive: true });
+        expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceId: "workspace-2", recursive: true });
       });
 
       secondLoad.resolve({ files: asEntries(["src/b.ts"]) });
@@ -1105,7 +1096,7 @@ describe("FileManagerView external file tree refresh", () => {
       const { rerender } = render(<FileManagerView />);
 
       await waitFor(() => {
-        expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/shared-repo", recursive: true });
+        expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceId: "workspace-1", recursive: true });
       });
 
       getFileTreeProps().onExpandedItemsChange?.(["src"]);
@@ -1215,7 +1206,7 @@ describe("FileManagerView external file tree refresh", () => {
     await waitFor(() => {
       expect(mocks.listFiles.mock.calls.length).toBeGreaterThan(callCountBeforeRefresh);
       expect(mocks.listFiles).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         recursive: true,
       });
     });
@@ -1258,7 +1249,7 @@ describe("FileManagerView undo operations", () => {
 
     await waitFor(() => {
       expect(mocks.deleteEntry).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         relativePath: "src/new-file.ts",
       });
     });
@@ -1281,12 +1272,12 @@ describe("FileManagerView undo operations", () => {
 
     await waitFor(() => {
       expect(mocks.renameEntry).toHaveBeenNthCalledWith(1, {
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         fromRelativePath: "src/a.ts",
         toRelativePath: "src/b.ts",
       });
       expect(mocks.renameEntry).toHaveBeenNthCalledWith(2, {
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         fromRelativePath: "src/b.ts",
         toRelativePath: "src/a.ts",
       });
@@ -1307,7 +1298,7 @@ describe("FileManagerView undo operations", () => {
     fireEvent.click(screen.getAllByText("Delete")[1]!);
     await waitFor(() => {
       expect(mocks.deleteEntry).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         relativePath: "src/a.ts",
       });
     });
@@ -1320,7 +1311,7 @@ describe("FileManagerView undo operations", () => {
 
     await waitFor(() => {
       expect(mocks.createFile).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         relativePath: "src/a.ts",
         content: "restored-file-content",
       });
@@ -1349,12 +1340,12 @@ describe("FileManagerView undo operations", () => {
 
     await waitFor(() => {
       expect(mocks.renameEntry).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         fromRelativePath: "src/a.ts",
         toRelativePath: "docs/a.ts",
       });
       expect(mocks.renameEntry).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         fromRelativePath: "docs/a.ts",
         toRelativePath: "src/a.ts",
       });
@@ -1441,8 +1432,6 @@ describe("FileManagerView external clipboard paste", () => {
     mocks.listFiles.mockResolvedValue({
       files: asEntries(["src/a.ts", "docs/"]),
     });
-    mocks.importEntries.mockResolvedValue({ ok: true });
-    mocks.importFilePayloads.mockResolvedValue({ ok: true });
     mocks.copyFiles.mockResolvedValue({ ok: true, copiedPaths: [] });
     mocks.writeFileBase64.mockResolvedValue({ ok: true });
   });
@@ -1581,7 +1570,6 @@ describe("FileManagerView external clipboard paste", () => {
         sourcePaths: [copiedPath],
         destinationDirectory: "/tmp/repo",
       });
-      expect(mocks.pasteEntries).not.toHaveBeenCalled();
     });
   });
 
@@ -1612,7 +1600,6 @@ describe("FileManagerView external clipboard paste", () => {
         sourcePaths: ["/tmp/repo/src/a.ts"],
         destinationDirectory: "/tmp/repo",
       });
-      expect(mocks.importEntries).not.toHaveBeenCalled();
     });
   });
 
@@ -1695,11 +1682,10 @@ describe("FileManagerView external clipboard paste", () => {
 
     await waitFor(() => {
       expect(mocks.renameEntry).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         fromRelativePath: "src/a.ts",
         toRelativePath: "docs/a.ts",
       });
-      expect(mocks.importEntries).not.toHaveBeenCalled();
     });
   });
 

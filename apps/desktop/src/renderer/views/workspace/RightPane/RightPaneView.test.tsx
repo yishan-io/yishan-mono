@@ -15,9 +15,6 @@ const renameEntry = vi.fn();
 const deleteEntry = vi.fn();
 const openEntryInExternalApp = vi.fn();
 const readExternalClipboardSourcePaths = vi.fn();
-const pasteEntries = vi.fn();
-const importEntries = vi.fn();
-const importFilePayloads = vi.fn();
 const copyFiles = vi.fn();
 const writeFileBase64 = vi.fn();
 const writeClipboardText = vi.fn();
@@ -56,11 +53,11 @@ vi.mock("@tanstack/react-virtual", () => ({
 
 vi.mock("../../../commands/fileCommands", () => ({
   listFiles: (...args: unknown[]) => listFiles(...args),
-  listFilesBatch: async (input: { workspaceWorktreePath: string; requests: Array<{ relativePath?: string; recursive?: boolean }> }) => {
+  listFilesBatch: async (input: { workspaceId: string; requests: Array<{ relativePath?: string; recursive?: boolean }> }) => {
     const results = await Promise.all(
       input.requests.map(async (request) => {
         const response = await listFiles({
-          workspaceWorktreePath: input.workspaceWorktreePath,
+          workspaceId: input.workspaceId,
           relativePath: request.relativePath,
           recursive: request.recursive,
         });
@@ -78,9 +75,6 @@ vi.mock("../../../commands/fileCommands", () => ({
   deleteEntry: (...args: unknown[]) => deleteEntry(...args),
   openEntryInExternalApp: (...args: unknown[]) => openEntryInExternalApp(...args),
   readExternalClipboardSourcePaths: (...args: unknown[]) => readExternalClipboardSourcePaths(...args),
-  pasteEntries: (...args: unknown[]) => pasteEntries(...args),
-  importEntries: (...args: unknown[]) => importEntries(...args),
-  importFilePayloads: (...args: unknown[]) => importFilePayloads(...args),
   copyFiles: (...args: unknown[]) => copyFiles(...args),
   writeFileBase64: (...args: unknown[]) => writeFileBase64(...args),
   writeClipboardText: (...args: unknown[]) => writeClipboardText(...args),
@@ -236,9 +230,6 @@ describe("RightPaneView delete flow", () => {
       clipboardFormats: [],
       strategy: "test",
     });
-    pasteEntries.mockResolvedValue({ ok: true });
-    importEntries.mockResolvedValue({ ok: true });
-    importFilePayloads.mockResolvedValue({ ok: true });
     copyFiles.mockResolvedValue({ ok: true, copiedPaths: [] });
     writeFileBase64.mockResolvedValue({ ok: true });
     openTab.mockReset();
@@ -273,7 +264,7 @@ describe("RightPaneView delete flow", () => {
 
     await waitFor(() => {
       expect(deleteEntry).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo",
+        workspaceId: "workspace-1",
         relativePath: "a.ts",
       });
     });

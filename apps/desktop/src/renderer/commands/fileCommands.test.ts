@@ -5,12 +5,9 @@ import {
   createFile,
   createFolder,
   deleteEntry,
-  importEntries,
-  importFilePayloads,
   listFiles,
   listFilesBatch,
   openEntryInExternalApp,
-  pasteEntries,
   readExternalClipboardSourcePaths,
   readFile,
   renameEntry,
@@ -21,12 +18,9 @@ const mocks = vi.hoisted(() => ({
   createFile: vi.fn(),
   createFolder: vi.fn(),
   deleteEntry: vi.fn(),
-  importEntries: vi.fn(),
-  importFilePayloads: vi.fn(),
   listFiles: vi.fn(),
   listFilesBatch: vi.fn(),
   openEntryInExternalApp: vi.fn(),
-  pasteEntries: vi.fn(),
   readExternalClipboardSourcePaths: vi.fn(),
   readFile: vi.fn(),
   renameEntry: vi.fn(),
@@ -39,12 +33,9 @@ vi.mock("../rpc/rpcTransport", () => ({
       createFile: mocks.createFile,
       createFolder: mocks.createFolder,
       deleteEntry: mocks.deleteEntry,
-      importEntries: mocks.importEntries,
-      importFilePayloads: mocks.importFilePayloads,
       listFiles: mocks.listFiles,
       listFilesBatch: mocks.listFilesBatch,
       openEntryInExternalApp: mocks.openEntryInExternalApp,
-      pasteEntries: mocks.pasteEntries,
       readExternalClipboardSourcePaths: mocks.readExternalClipboardSourcePaths,
       readFile: mocks.readFile,
       renameEntry: mocks.renameEntry,
@@ -77,22 +68,6 @@ describe("fileCommands", () => {
     });
     await openEntryInExternalApp({ workspaceWorktreePath: "/tmp/repo", appId: "cursor" });
     await readExternalClipboardSourcePaths();
-    await pasteEntries({
-      workspaceWorktreePath: "/tmp/repo",
-      sourceRelativePaths: ["a.ts"],
-      destinationRelativePath: "src",
-      mode: "copy",
-    });
-    await importEntries({
-      workspaceWorktreePath: "/tmp/repo",
-      sourcePaths: ["/tmp/from.txt"],
-      destinationRelativePath: "src",
-    });
-    await importFilePayloads({
-      workspaceWorktreePath: "/tmp/repo",
-      filePayloads: [{ relativePath: "x.txt", contentBase64: "eA==" }],
-      destinationRelativePath: "src",
-    });
 
     expect(mocks.listFiles).toHaveBeenCalledWith({
       workspaceId: "workspace-1",
@@ -131,21 +106,5 @@ describe("fileCommands", () => {
       appId: "cursor",
     });
     expect(mocks.readExternalClipboardSourcePaths).toHaveBeenCalledTimes(1);
-    expect(mocks.pasteEntries).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo",
-      sourceRelativePaths: ["a.ts"],
-      destinationRelativePath: "src",
-      mode: "copy",
-    });
-    expect(mocks.importEntries).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo",
-      sourcePaths: ["/tmp/from.txt"],
-      destinationRelativePath: "src",
-    });
-    expect(mocks.importFilePayloads).toHaveBeenCalledWith({
-      workspaceWorktreePath: "/tmp/repo",
-      filePayloads: [{ relativePath: "x.txt", contentBase64: "eA==" }],
-      destinationRelativePath: "src",
-    });
   });
 });

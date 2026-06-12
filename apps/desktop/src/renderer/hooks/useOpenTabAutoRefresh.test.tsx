@@ -9,11 +9,11 @@ type DaemonConnectionStatus = "connected" | "connecting" | "disconnected";
 type BackendEvent =
   | {
       source: "workspaceFilesChanged";
-      payload: { workspaceWorktreePath: string; changedRelativePaths?: string[] };
+      payload: { workspaceId?: string; workspaceWorktreePath: string; changedRelativePaths?: string[] };
     }
   | {
       source: "gitChanged";
-      payload: { workspaceWorktreePath: string };
+      payload: { workspaceId?: string; workspaceWorktreePath: string };
     };
 
 type BackendEventName = "workspace.files.changed" | "git.changed";
@@ -110,7 +110,6 @@ describe("useOpenTabAutoRefresh", () => {
     renderHook(() =>
       useOpenTabAutoRefresh({
         workspaceId: "workspace-1",
-        workspaceWorktreePath: "/repo",
         tabs,
         commands: commands,
       }),
@@ -118,7 +117,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     emitBackendEvent("workspace.files.changed", {
       source: "workspaceFilesChanged",
-      payload: { workspaceWorktreePath: "/repo", changedRelativePaths: ["src/changed.ts", "src/dirty.ts"] },
+      payload: { workspaceId: "workspace-1", workspaceWorktreePath: "/repo", changedRelativePaths: ["src/changed.ts", "src/dirty.ts"] },
     });
     await flushRefreshWork();
 
@@ -138,7 +137,6 @@ describe("useOpenTabAutoRefresh", () => {
     renderHook(() =>
       useOpenTabAutoRefresh({
         workspaceId: "workspace-1",
-        workspaceWorktreePath: "/repo",
         tabs,
         commands: commands,
       }),
@@ -146,7 +144,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     emitBackendEvent("workspace.files.changed", {
       source: "workspaceFilesChanged",
-      payload: { workspaceWorktreePath: "/other", changedRelativePaths: ["src/changed.ts"] },
+      payload: { workspaceId: "other", workspaceWorktreePath: "/other", changedRelativePaths: ["src/changed.ts"] },
     });
     await flushRefreshWork();
 
@@ -164,7 +162,6 @@ describe("useOpenTabAutoRefresh", () => {
     renderHook(() =>
       useOpenTabAutoRefresh({
         workspaceId: "workspace-1",
-        workspaceWorktreePath: "/repo",
         tabs,
         commands: commands,
       }),
@@ -172,7 +169,7 @@ describe("useOpenTabAutoRefresh", () => {
 
     emitBackendEvent("git.changed", {
       source: "gitChanged",
-      payload: { workspaceWorktreePath: "/repo" },
+      payload: { workspaceId: "workspace-1", workspaceWorktreePath: "/repo" },
     });
     await flushRefreshWork();
 
@@ -193,7 +190,6 @@ describe("useOpenTabAutoRefresh", () => {
     const { unmount } = renderHook(() =>
       useOpenTabAutoRefresh({
         workspaceId: "workspace-1",
-        workspaceWorktreePath: "/repo",
         tabs,
         commands: commands,
       }),
@@ -223,7 +219,6 @@ describe("useOpenTabAutoRefresh", () => {
       renderHook(() =>
         useOpenTabAutoRefresh({
           workspaceId: "workspace-1",
-          workspaceWorktreePath: "/repo",
           tabs,
           commands,
           subscribeDaemonConnectionStatus: daemonHarness.subscribe,
@@ -254,7 +249,6 @@ describe("useOpenTabAutoRefresh", () => {
       renderHook(() =>
         useOpenTabAutoRefresh({
           workspaceId: "workspace-1",
-          workspaceWorktreePath: "/repo",
           tabs,
           commands,
           subscribeDaemonConnectionStatus: daemonHarness.subscribe,
@@ -277,7 +271,6 @@ describe("useOpenTabAutoRefresh", () => {
       renderHook(() =>
         useOpenTabAutoRefresh({
           workspaceId: "workspace-1",
-          workspaceWorktreePath: "/repo",
           tabs,
           commands,
           subscribeDaemonConnectionStatus: daemonHarness.subscribe,
@@ -307,7 +300,6 @@ describe("useOpenTabAutoRefresh", () => {
       const { unmount } = renderHook(() =>
         useOpenTabAutoRefresh({
           workspaceId: "workspace-1",
-          workspaceWorktreePath: "/repo",
           tabs,
           commands,
           subscribeDaemonConnectionStatus: daemonHarness.subscribe,

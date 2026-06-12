@@ -160,49 +160,4 @@ export async function writeFileBase64(params: { absolutePath: string; contentBas
   });
 }
 
-/** Copies or moves one or more workspace entries into a destination path. */
-export async function pasteEntries(params: {
-  workspaceWorktreePath: string;
-  sourceRelativePaths: string[];
-  destinationRelativePath?: string;
-  mode: "copy" | "move";
-}) {
-  const client = await getDaemonClient();
-  return client.file.pasteEntries({
-    workspaceWorktreePath: params.workspaceWorktreePath,
-    sourceRelativePaths: params.sourceRelativePaths,
-    destinationRelativePath: params.destinationRelativePath,
-    mode: params.mode,
-  });
-}
 
-/** Imports external absolute paths into one workspace destination path. */
-export async function importEntries(params: {
-  workspaceWorktreePath: string;
-  sourcePaths: string[];
-  destinationRelativePath?: string;
-}) {
-  const client = await getDaemonClient();
-  return client.file.importEntries({
-    workspaceWorktreePath: params.workspaceWorktreePath,
-    sourcePaths: params.sourcePaths,
-    destinationRelativePath: params.destinationRelativePath,
-  });
-}
-
-/** Imports dropped payload blobs into one workspace destination path. */
-export async function importFilePayloads(params: {
-  workspaceWorktreePath: string;
-  filePayloads: Array<{
-    relativePath: string;
-    contentBase64: string;
-  }>;
-  destinationRelativePath?: string;
-}) {
-  const client = await getDaemonClient();
-  return client.file.importFilePayloads({
-    workspaceWorktreePath: params.workspaceWorktreePath,
-    filePayloads: params.filePayloads,
-    destinationRelativePath: params.destinationRelativePath,
-  });
-}

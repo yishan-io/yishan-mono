@@ -3,9 +3,6 @@ import { useTranslation } from "react-i18next";
 import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
 import {
   copyFiles,
-  importEntries,
-  importFilePayloads,
-  pasteEntries,
   renameEntry,
   writeFileBase64,
 } from "../../../commands/fileCommands";

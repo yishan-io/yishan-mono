@@ -28,11 +28,8 @@ import {
   createFile as createFileCommand,
   createFolder as createFolderCommand,
   deleteEntry as deleteEntryCommand,
-  importEntries as importEntriesCommand,
-  importFilePayloads as importFilePayloadsCommand,
   listFiles as listFilesCommand,
   openEntryInExternalApp as openEntryInExternalAppCommand,
-  pasteEntries as pasteEntriesCommand,
   readExternalClipboardSourcePaths as readExternalClipboardSourcePathsCommand,
   readFile as readFileCommand,
   renameEntry as renameEntryCommand,
@@ -196,9 +193,6 @@ export type Commands = {
   deleteEntry: typeof deleteEntryCommand;
   openEntryInExternalApp: typeof openEntryInExternalAppCommand;
   readExternalClipboardSourcePaths: typeof readExternalClipboardSourcePathsCommand;
-  pasteEntries: typeof pasteEntriesCommand;
-  importEntries: typeof importEntriesCommand;
-  importFilePayloads: typeof importFilePayloadsCommand;
   readDiff: typeof readDiffCommand;
   readCommitDiff: typeof readCommitDiffCommand;
   readBranchComparisonDiff: typeof readBranchComparisonDiffCommand;
@@ -334,9 +328,6 @@ export function useCommands(): Commands {
       deleteEntry: deleteEntryCommand,
       openEntryInExternalApp: openEntryInExternalAppCommand,
       readExternalClipboardSourcePaths: readExternalClipboardSourcePathsCommand,
-      pasteEntries: pasteEntriesCommand,
-      importEntries: importEntriesCommand,
-      importFilePayloads: importFilePayloadsCommand,
       readDiff: readDiffCommand,
       readCommitDiff: readCommitDiffCommand,
       readBranchComparisonDiff: readBranchComparisonDiffCommand,

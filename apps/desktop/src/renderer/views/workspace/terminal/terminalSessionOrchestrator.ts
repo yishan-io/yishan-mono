@@ -64,11 +64,7 @@ export class TerminalSessionOrchestrator {
       return null;
     }
 
-    const workspaceWorktreePath = this.workspaceStoreAccess
-      .getState()
-      .workspaces.find((workspace) => workspace.id === tab.workspaceId)?.worktreePath;
-
-    const resolvedSession = await this.resolveSessionSnapshot(tab, workspaceWorktreePath);
+    const resolvedSession = await this.resolveSessionSnapshot(tab);
 
     try {
       input.fitAddon.fit();
@@ -111,14 +107,13 @@ export class TerminalSessionOrchestrator {
    */
   private async resolveSessionSnapshot(
     tab: TerminalTab,
-    workspaceWorktreePath: string | undefined,
   ): Promise<TerminalResolvedSession> {
     const existing = inFlightSessionResolutionByTabId.get(tab.id);
     if (existing) {
       return await existing;
     }
 
-    const resolution = this.resolveSessionSnapshotUncached(tab, workspaceWorktreePath);
+    const resolution = this.resolveSessionSnapshotUncached(tab);
     inFlightSessionResolutionByTabId.set(tab.id, resolution);
     try {
       return await resolution;
@@ -134,7 +129,6 @@ export class TerminalSessionOrchestrator {
    */
   private async resolveSessionSnapshotUncached(
     tab: TerminalTab,
-    workspaceWorktreePath: string | undefined,
   ): Promise<TerminalResolvedSession> {
     let sessionId = normalizeOptionalText(tab.data.sessionId);
     let snapshot: TerminalSnapshot | undefined;
