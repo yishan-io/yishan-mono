@@ -23,6 +23,10 @@ const (
 	MethodAgentListModels            = "agent.listModels"
 	MethodIntegrationGitHubStatus    = "integration.githubStatus"
 	MethodCLIToolListStatuses        = "cliTools.listStatuses"
+
+	MethodSkillList      = "skill.list"
+	MethodSkillInstall   = "skill.install"
+	MethodSkillUninstall = "skill.uninstall"
 	MethodFrontendEventsStream       = "events.frontendStream"
 	MethodAppPersistAuthTokens       = "app.persistAuthTokens"
 	MethodAppGetAccessToken          = "app.getAccessToken"

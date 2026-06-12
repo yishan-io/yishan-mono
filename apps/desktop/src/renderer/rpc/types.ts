@@ -142,4 +142,9 @@ export type DaemonRpcClient = {
       ) => DaemonRpcSubscription;
     };
   };
+  skill: {
+    list: (input?: undefined) => Promise<Rpc.SkillListResponse>;
+    install: (input: { name: string }) => Promise<Rpc.SkillMutationOkResponse>;
+    uninstall: (input: { name: string }) => Promise<Rpc.SkillMutationOkResponse>;
+  };
 };

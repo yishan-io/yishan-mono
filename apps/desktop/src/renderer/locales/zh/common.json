@@ -348,6 +348,19 @@
         "notLoggedIn": "未登录"
       }
     },
+    "skills": {
+      "title": "Agent 技能",
+      "description": "安装内置移山技能以扩展 AI Agent 能力。",
+      "loadError": "加载技能状态失败。",
+      "installed": "已安装",
+      "notInstalled": "未安装",
+      "actions": {
+        "install": "安装",
+        "installing": "安装中...",
+        "uninstall": "卸载",
+        "uninstalling": "卸载中..."
+      }
+    },
     "appearance": {
       "theme": {
         "title": "主题",

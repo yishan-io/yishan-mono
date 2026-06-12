@@ -54,7 +54,8 @@ export type ApiNamespace =
   | "cliTools"
   | "integration"
   | "notification"
-  | "events";
+  | "events"
+  | "skill";
 
 export type ProcedureSubscriptionOptions = {
   namespace: ApiNamespace;
@@ -536,4 +537,18 @@ export type TerminalSessionSummary = {
 export type TerminalSessionLifecycleEvent = {
   type: "session.started" | "session.exited" | "session.updated";
   session: TerminalSessionSummary;
+};
+
+export type SkillInfo = {
+  name: string;
+  description: string;
+  installed: boolean;
+};
+
+export type SkillListResponse = {
+  skills: SkillInfo[];
+};
+
+export type SkillMutationOkResponse = {
+  ok: true;
 };

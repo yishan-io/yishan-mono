@@ -22,6 +22,7 @@ const API_NAMESPACES = new Set<ApiNamespace>([
   "integration",
   "notification",
   "events",
+  "skill",
 ]);
 const desktopRpcEventListeners = new Set<DesktopRpcEventListener>();
 const daemonConnectionStatusListeners = new Set<(status: DaemonConnectionStatus) => void>();
@@ -359,6 +360,7 @@ export async function getDaemonClient(): Promise<DaemonRpcClient> {
         integration: proxyClient.integration,
         notification: proxyClient.notification,
         events: proxyClient.events,
+        skill: proxyClient.skill,
         context: {
           getState: () => transportClient.context.getState(),
           setCurrentOrg: (orgId: string) => transportClient.context.setCurrentOrg(orgId),
