@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/api"
@@ -61,6 +62,10 @@ func (p *Provisioner) CreateWorkspace(ctx context.Context, req CreateWorkspaceRe
 	if workspaceName == "" {
 		workspaceName = req.Branch
 	}
+	// Sanitize workspaceName so that branch names like "feature/my-branch" do
+	// not produce nested directories — matching the sanitization applied by
+	// workspace.CreateWorkspace on the daemon side.
+	workspaceName = strings.ReplaceAll(workspaceName, "/", "-")
 	if req.Kind == workspace.KindWorktree {
 		if req.Branch == "" {
 			return api.CreateWorkspaceResponse{}, fmt.Errorf("branch is required for worktree workspace")

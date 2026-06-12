@@ -2,6 +2,7 @@ package provision
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"yishan/apps/cli/internal/api"
@@ -118,6 +119,128 @@ func TestEnsureWorkspaceProvisionedLocally_UsesPrimaryWorkspacePath(t *testing.T
 	}
 	if managerStub.createdPath != primaryLocalPath {
 		t.Errorf("CreateWorkspace SourcePath: expected %q (primary workspace path), got %q", primaryLocalPath, managerStub.createdPath)
+	}
+}
+
+// TestCreateWorkspace_SlashInBranch verifies that a branch name containing "/"
+// is sanitized to "-" in the localPath sent to the API. Without this, the path
+// stored in the API would have a "/" in the directory segment, which does not
+// match the actual git worktree directory (where git replaces "/" with "-"),
+// causing the desktop to fail to open the workspace and immediately close it.
+func TestCreateWorkspace_SlashInBranch(t *testing.T) {
+	const (
+		nodeID           = "node-local"
+		orgID            = "org-1"
+		projectID        = "proj-1"
+		primaryLocalPath = "/home/user/repos/myrepo"
+		repoKey          = "myorg/myrepo"
+	)
+
+	apiStub := &stubAPIClient{
+		projects: []api.Project{
+			{
+				ID:      projectID,
+				RepoKey: repoKey,
+				RepoURL: "https://github.com/myorg/myrepo.git",
+			},
+		},
+		workspaces: []api.Workspace{
+			{
+				ID:        "ws-primary",
+				Kind:      workspace.KindPrimary,
+				NodeID:    nodeID,
+				LocalPath: primaryLocalPath,
+				ProjectID: projectID,
+			},
+		},
+	}
+	managerStub := &stubWorkspaceManager{}
+
+	provisioner := &Provisioner{
+		apiClient:        apiStub,
+		workspaceManager: managerStub,
+		localNodeID:      nodeID,
+	}
+
+	_, err := provisioner.CreateWorkspace(context.Background(), CreateWorkspaceRequest{
+		OrganizationID: orgID,
+		ProjectID:      projectID,
+		Kind:           workspace.KindWorktree,
+		Branch:         "feature/my-feature",
+		SourceBranch:   "main",
+	})
+	if err != nil {
+		t.Fatalf("CreateWorkspace: %v", err)
+	}
+
+	if apiStub.createdWorkspace == nil {
+		t.Fatal("expected CreateWorkspace to be called on the API client")
+	}
+
+	localPath := apiStub.createdWorkspace.LocalPath
+	if strings.Contains(localPath, "/feature/") || strings.HasSuffix(localPath, "/feature") {
+		t.Errorf("localPath contains unescaped slash from branch name: %q", localPath)
+	}
+	if !strings.Contains(localPath, "feature-my-feature") {
+		t.Errorf("localPath should contain sanitized branch name %q, got %q", "feature-my-feature", localPath)
+	}
+}
+
+// TestCreateWorkspace_SlashInBranch_MultipleSlashes verifies that multiple "/"
+// in a branch name are all replaced (e.g. "a/b/c" → "a-b-c").
+func TestCreateWorkspace_SlashInBranch_MultipleSlashes(t *testing.T) {
+	const (
+		nodeID           = "node-local"
+		orgID            = "org-1"
+		projectID        = "proj-1"
+		primaryLocalPath = "/home/user/repos/myrepo"
+		repoKey          = "myorg/myrepo"
+	)
+
+	apiStub := &stubAPIClient{
+		projects: []api.Project{
+			{
+				ID:      projectID,
+				RepoKey: repoKey,
+				RepoURL: "https://github.com/myorg/myrepo.git",
+			},
+		},
+		workspaces: []api.Workspace{
+			{
+				ID:        "ws-primary",
+				Kind:      workspace.KindPrimary,
+				NodeID:    nodeID,
+				LocalPath: primaryLocalPath,
+				ProjectID: projectID,
+			},
+		},
+	}
+	managerStub := &stubWorkspaceManager{}
+
+	provisioner := &Provisioner{
+		apiClient:        apiStub,
+		workspaceManager: managerStub,
+		localNodeID:      nodeID,
+	}
+
+	_, err := provisioner.CreateWorkspace(context.Background(), CreateWorkspaceRequest{
+		OrganizationID: orgID,
+		ProjectID:      projectID,
+		Kind:           workspace.KindWorktree,
+		Branch:         "a/b/c",
+		SourceBranch:   "main",
+	})
+	if err != nil {
+		t.Fatalf("CreateWorkspace: %v", err)
+	}
+
+	if apiStub.createdWorkspace == nil {
+		t.Fatal("expected CreateWorkspace to be called on the API client")
+	}
+
+	localPath := apiStub.createdWorkspace.LocalPath
+	if !strings.Contains(localPath, "a-b-c") {
+		t.Errorf("localPath should contain sanitized branch name %q, got %q", "a-b-c", localPath)
 	}
 }
 
