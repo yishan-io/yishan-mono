@@ -517,11 +517,24 @@ describe("CreateWorkspaceDialogView", () => {
       true,
     );
 
+    workspaceStore.setState(
+      {
+        ...workspaceStore.getState(),
+        workspaces: [
+          {
+            id: "workspace-author-1",
+            worktreePath: "/tmp/repo-1",
+          },
+        ],
+      },
+      true,
+    );
+
     renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
     await waitFor(() => {
       expect(mocked.getGitAuthorName).toHaveBeenCalledWith({
-        workspaceWorktreePath: "/tmp/repo-1",
+        workspaceId: "workspace-author-1",
       });
     });
 

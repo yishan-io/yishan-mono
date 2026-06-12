@@ -35,6 +35,16 @@ describe("GitWorkspaceSettingsView", () => {
             missing: false,
           },
         ],
+        workspaces: [
+          {
+            id: "workspace-1",
+            worktreePath: "/tmp/worktrees-1",
+          },
+          {
+            id: "workspace-author-1",
+            worktreePath: "/tmp/repo-1",
+          },
+        ],
         selectedProjectId: "repo-1",
       },
       true,

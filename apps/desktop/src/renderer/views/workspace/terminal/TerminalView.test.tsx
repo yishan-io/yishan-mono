@@ -361,7 +361,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-host-click",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -396,7 +395,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-1",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -414,7 +412,7 @@ describe("TerminalView", () => {
     render(<TerminalView tabId="terminal-tab-1" />);
     await waitFor(() => {
       expect(mocked.createTerminalSession).toHaveBeenCalledWith({
-        cwd: "/tmp/workspace-1",
+
         workspaceId: "workspace-1",
         tabId: "terminal-tab-1",
         paneId: "pane-terminal-tab-1",
@@ -452,7 +450,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-2",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -482,7 +479,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-title",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -512,7 +508,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-escaped-title",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -542,7 +537,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-default-title",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -571,7 +565,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-osc-title",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -606,7 +599,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-output",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -658,7 +650,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-output-queued",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -730,8 +721,8 @@ describe("TerminalView", () => {
     ];
     mocked.stateRef.current = state;
     mocked.createTerminalSession
-      .mockResolvedValueOnce({ sessionId: "session-title-1", cwd: "/tmp/workspace-1", cols: 120, rows: 30 })
-      .mockResolvedValueOnce({ sessionId: "session-title-2", cwd: "/tmp/workspace-1", cols: 120, rows: 30 });
+      .mockResolvedValueOnce({ sessionId: "session-title-1", cols: 120, rows: 30 })
+      .mockResolvedValueOnce({ sessionId: "session-title-2", cols: 120, rows: 30 });
     mocked.readTerminalOutput
       .mockResolvedValueOnce({ nextIndex: 0, chunks: [], exited: false, exitCode: null, signalCode: null })
       .mockResolvedValueOnce({ nextIndex: 0, chunks: [], exited: false, exitCode: null, signalCode: null });
@@ -761,8 +752,8 @@ describe("TerminalView", () => {
     const state = buildStoreState();
     mocked.stateRef.current = state;
 
-    let resolveCreate: ((value: { sessionId: string; cwd: string; cols: number; rows: number }) => void) | undefined;
-    const createPromise = new Promise<{ sessionId: string; cwd: string; cols: number; rows: number }>((resolve) => {
+    let resolveCreate: ((value: { sessionId: string; cols: number; rows: number }) => void) | undefined;
+    const createPromise = new Promise<{ sessionId: string; cols: number; rows: number }>((resolve) => {
       resolveCreate = resolve;
     });
     mocked.createTerminalSession.mockReturnValueOnce(createPromise);
@@ -790,7 +781,6 @@ describe("TerminalView", () => {
     view.unmount();
     resolveCreate?.({
       sessionId: "session-after-unmount",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -827,7 +817,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-search-1",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -891,7 +880,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-focus",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -929,7 +917,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-mac-close",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -964,7 +951,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-ctrl-w",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -998,7 +984,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-cmd-k",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -1037,7 +1022,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-shift-enter",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });
@@ -1090,7 +1074,6 @@ describe("TerminalView", () => {
     mocked.stateRef.current = state;
     mocked.createTerminalSession.mockResolvedValueOnce({
       sessionId: "session-ascii-input",
-      cwd: "/tmp/workspace-1",
       cols: 120,
       rows: 30,
     });

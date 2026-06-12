@@ -163,7 +163,7 @@ describe("TerminalSessionOrchestrator", () => {
       exited: false,
     });
     expect(commands.createTerminalSession).toHaveBeenCalledWith({
-      cwd: "/tmp/workspace-1",
+
       workspaceId: "workspace-1",
       tabId: "tab-2",
       paneId: "pane-tab-2",
