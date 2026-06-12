@@ -505,6 +505,54 @@ func TestFileServiceMarksIgnoredContextDescendants(t *testing.T) {
 	}
 }
 
+func TestFileServiceRecursiveListIgnoredFolderDoesNotInfectSiblings(t *testing.T) {
+	root := t.TempDir()
+	initGitRepo(t, root)
+	svc := NewFileService()
+
+	if err := os.MkdirAll(filepath.Join(root, "src", "app"), 0o755); err != nil {
+		t.Fatalf("mkdir src/app: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "ignored-dir", "nested"), 0o755); err != nil {
+		t.Fatalf("mkdir ignored-dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte("ignored-dir/\n"), 0o644); err != nil {
+		t.Fatalf("write gitignore: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "src", "app", "main.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "ignored-dir", "nested", "data.bin"), []byte("binary"), 0o644); err != nil {
+		t.Fatalf("write ignored file: %v", err)
+	}
+
+	entries, err := svc.List(root, "", true)
+	if err != nil {
+		t.Fatalf("recursive list: %v", err)
+	}
+
+	ignoredByPath := map[string]bool{}
+	for _, entry := range entries {
+		ignoredByPath[entry.Path] = entry.IsIgnored
+	}
+
+	if !ignoredByPath["ignored-dir/"] && !ignoredByPath["ignored-dir"] {
+		t.Fatalf("expected ignored-dir to be marked ignored, got entries: %+v", entries)
+	}
+	if ignoredByPath["src"] {
+		t.Fatalf("expected src (sibling of ignored dir) to NOT be marked ignored, got entries: %+v", entries)
+	}
+	if ignoredByPath["src/app"] {
+		t.Fatalf("expected src/app to NOT be marked ignored, got entries: %+v", entries)
+	}
+	if ignoredByPath["src/app/main.go"] {
+		t.Fatalf("expected src/app/main.go to NOT be marked ignored, got entries: %+v", entries)
+	}
+	if ignoredByPath[".gitignore"] {
+		t.Fatalf("expected .gitignore to NOT be marked ignored, got entries: %+v", entries)
+	}
+}
+
 func TestFileServiceRecursiveListHidesContextGitMetadata(t *testing.T) {
 	root := t.TempDir()
 	initGitRepo(t, root)

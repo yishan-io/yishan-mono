@@ -244,7 +244,7 @@ func withContextLinkEntries(root string, path string, entries []FileEntry) ([]Fi
 		return nil, err
 	}
 	if len(contextEntries) == 0 {
-		return entries, nil
+		return markIgnoredEntries(root, path, entries), nil
 	}
 
 	entryByPath := make(map[string]FileEntry, len(entries)+len(contextEntries))
@@ -538,11 +538,7 @@ func (s *FileService) listGitFiles(root string, path string) ([]FileEntry, bool,
 		}
 		for _, directoryPath := range parentDirectoryPaths(relPath) {
 			normalizedDirectoryPath := filepath.ToSlash(strings.TrimSuffix(directoryPath, "/"))
-			if existingEntry, exists := entryByPath[normalizedDirectoryPath]; exists {
-				if ignoredPathSet[normalizedRelPath] {
-					existingEntry.IsIgnored = true
-					entryByPath[normalizedDirectoryPath] = existingEntry
-				}
+			if _, exists := entryByPath[normalizedDirectoryPath]; exists {
 				continue
 			}
 			entry, err := fileEntryForRelativePath(root, directoryPath)
@@ -552,7 +548,7 @@ func (s *FileService) listGitFiles(root string, path string) ([]FileEntry, bool,
 				}
 				return nil, true, err
 			}
-			if ignoredPathSet[normalizedRelPath] {
+			if ignoredPathSet[normalizedDirectoryPath] {
 				entry.IsIgnored = true
 			}
 			entryByPath[normalizedDirectoryPath] = entry
