@@ -5,9 +5,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import { AgentSettingsView } from "./AgentSettingsView";
 
-const mocked = vi.hoisted(() => ({
+const mocked = {
   listAgentDetectionStatuses: vi.fn(),
-}));
+};
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
