@@ -64,6 +64,14 @@ export function createWorkspaceSelectionActions(
         if (selectedWorkspace) {
           state.selectedProjectId = resolveWorkspaceProjectId(selectedWorkspace);
         }
+        // Clear any stale file-change paths accumulated for the incoming workspace
+        // while the user was viewing a different workspace. Keeping them would cause
+        // the file tree to do a narrow incremental refresh instead of the full
+        // recursive load needed on first visit, resulting in a partial tree.
+        const incomingWorktreePath = selectedWorkspace?.worktreePath?.trim() ?? "";
+        if (incomingWorktreePath && state.fileTreeChangedRelativePathsByWorktreePath?.[incomingWorktreePath]) {
+          delete state.fileTreeChangedRelativePathsByWorktreePath[incomingWorktreePath];
+        }
       });
     },
     setDisplayProjectIds: (projectIds) => {
