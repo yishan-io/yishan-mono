@@ -334,6 +334,7 @@ const AGENT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.agents.status.detected",
       "settings.agents.status.notDetected",
       "settings.agents.status.checking",
+      "settings.agents.default.label",
       "settings.agents.inUse",
       "settings.agents.actions.rescanAll",
     ],
@@ -344,7 +345,12 @@ const AGENT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     icon: BiBot,
     labelKey: AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind],
     sectionLabelKey: "settings.items.agents",
-    keywordKeys: ["settings.agents.inUse", "settings.agents.status.detected", "settings.agents.status.notDetected"],
+    keywordKeys: [
+      "settings.agents.default.label",
+      "settings.agents.inUse",
+      "settings.agents.status.detected",
+      "settings.agents.status.notDetected",
+    ],
   })),
 ];
 

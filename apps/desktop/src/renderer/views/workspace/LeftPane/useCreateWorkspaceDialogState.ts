@@ -24,6 +24,7 @@ type UseCreateWorkspaceDialogStateInput = {
   daemonId: string | undefined;
   projects: WorkspaceProjectRecord[];
   workspaces: WorkspaceItem[];
+  defaultTaskAgentKind?: DesktopAgentKind;
   prefixMode: GitBranchPrefixMode;
   customPrefix: string;
   listGitBranches: (input: { workspaceId?: string; workspaceWorktreePath?: string }) => Promise<{
@@ -78,6 +79,7 @@ export function useCreateWorkspaceDialogState({
   daemonId,
   projects,
   workspaces,
+  defaultTaskAgentKind,
   prefixMode,
   customPrefix,
   listGitBranches,
@@ -102,7 +104,7 @@ export function useCreateWorkspaceDialogState({
   const [selectedNodeId, setSelectedNodeId] = useState("");
   const [nodes, setNodes] = useState<NodeOption[]>([]);
   const [nodesError, setNodesError] = useState("");
-  const [taskAgentKind, setTaskAgentKind] = useState<DesktopAgentKind | "">("");
+  const [taskAgentKind, setTaskAgentKind] = useState<DesktopAgentKind | "">(defaultTaskAgentKind ?? "");
   const [taskPrompt, setTaskPrompt] = useState("");
   const [taskModel, setTaskModel] = useState("");
 
@@ -132,7 +134,7 @@ export function useCreateWorkspaceDialogState({
     setName("");
     setTargetBranch("");
     hasEditedTargetBranchRef.current = false;
-    setTaskAgentKind("");
+    setTaskAgentKind(defaultTaskAgentKind ?? "");
     setTaskPrompt("");
     setTaskModel("");
   };
@@ -147,6 +149,9 @@ export function useCreateWorkspaceDialogState({
     }
     hasSyncedRepoIdForOpenRef.current = true;
     hasEditedTargetBranchRef.current = false;
+    setTaskAgentKind(defaultTaskAgentKind ?? "");
+    setTaskPrompt("");
+    setTaskModel("");
     setSelectedProjectId((currentProjectId) => {
       if (projects.some((project) => project.id === projectId)) {
         return projectId;
@@ -156,7 +161,7 @@ export function useCreateWorkspaceDialogState({
       }
       return projects[0]?.id ?? "";
     });
-  }, [open, projectId, projects]);
+  }, [defaultTaskAgentKind, open, projectId, projects]);
 
   useEffect(() => {
     if (!open || isRenameMode || !organizationId) {

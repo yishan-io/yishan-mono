@@ -14,6 +14,7 @@ const DEFAULT_IN_USE_STATE = {
     copilot: true,
     cursor: true,
   },
+  defaultAgentKind: undefined,
 };
 
 describe("agentSettingsStore", () => {
@@ -29,13 +30,14 @@ describe("agentSettingsStore", () => {
     window.localStorage.setItem(
       AGENT_SETTINGS_STORE_STORAGE_KEY,
       JSON.stringify({
-        state: {
-          inUseByAgentKind: {
-            codex: false,
+          state: {
+            inUseByAgentKind: {
+              codex: false,
+            },
+            defaultAgentKind: "claude",
           },
-        },
-        version: 0,
-      }),
+          version: 0,
+        }),
     );
 
     void agentSettingsStore.persist.rehydrate();
@@ -49,12 +51,47 @@ describe("agentSettingsStore", () => {
       copilot: true,
       cursor: true,
     });
+    expect(agentSettingsStore.getState().defaultAgentKind).toBe("claude");
   });
 
   it("persists in-use toggle updates", () => {
     agentSettingsStore.getState().setAgentInUse("claude", false);
 
     expect(window.localStorage.getItem(AGENT_SETTINGS_STORE_STORAGE_KEY)).toContain('"claude":false');
+  });
+
+  it("clears the default agent when that agent is disabled", () => {
+    agentSettingsStore.setState({
+      ...DEFAULT_IN_USE_STATE,
+      defaultAgentKind: "claude",
+      customCommandByAgentKind: {},
+    });
+
+    agentSettingsStore.getState().setAgentInUse("claude", false);
+
+    expect(agentSettingsStore.getState().defaultAgentKind).toBeUndefined();
+  });
+
+  it("persists default-agent updates", () => {
+    agentSettingsStore.getState().setDefaultAgentKind("codex");
+
+    expect(agentSettingsStore.getState().defaultAgentKind).toBe("codex");
+    expect(window.localStorage.getItem(AGENT_SETTINGS_STORE_STORAGE_KEY)).toContain('"defaultAgentKind":"codex"');
+  });
+
+  it("ignores default-agent updates for disabled agents", () => {
+    agentSettingsStore.setState({
+      ...DEFAULT_IN_USE_STATE,
+      inUseByAgentKind: {
+        ...DEFAULT_IN_USE_STATE.inUseByAgentKind,
+        codex: false,
+      },
+      customCommandByAgentKind: {},
+    });
+
+    agentSettingsStore.getState().setDefaultAgentKind("codex");
+
+    expect(agentSettingsStore.getState().defaultAgentKind).toBeUndefined();
   });
 
   describe("setAgentCustomCommand", () => {
@@ -155,6 +192,46 @@ describe("agentSettingsStore", () => {
       void agentSettingsStore.persist.rehydrate();
 
       expect(agentSettingsStore.getState().customCommandByAgentKind.opencode).toBeUndefined();
+    });
+  });
+
+  describe("hydration of defaultAgentKind", () => {
+    it("drops unknown default-agent values during hydration", () => {
+      window.localStorage.setItem(
+        AGENT_SETTINGS_STORE_STORAGE_KEY,
+        JSON.stringify({
+          state: {
+            inUseByAgentKind: {},
+            defaultAgentKind: "unknown_agent",
+            customCommandByAgentKind: {},
+          },
+          version: 0,
+        }),
+      );
+
+      void agentSettingsStore.persist.rehydrate();
+
+      expect(agentSettingsStore.getState().defaultAgentKind).toBeUndefined();
+    });
+
+    it("drops disabled default-agent values during hydration", () => {
+      window.localStorage.setItem(
+        AGENT_SETTINGS_STORE_STORAGE_KEY,
+        JSON.stringify({
+          state: {
+            inUseByAgentKind: {
+              codex: false,
+            },
+            defaultAgentKind: "codex",
+            customCommandByAgentKind: {},
+          },
+          version: 0,
+        }),
+      );
+
+      void agentSettingsStore.persist.rehydrate();
+
+      expect(agentSettingsStore.getState().defaultAgentKind).toBeUndefined();
     });
   });
 });

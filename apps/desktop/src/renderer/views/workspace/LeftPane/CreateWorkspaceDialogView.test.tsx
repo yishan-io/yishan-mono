@@ -4,18 +4,40 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import type { ReactElement } from "react";
+import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
 import { workspaceSettingsStore as gitBranchStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
 
-const mocked = vi.hoisted(() => ({
-  createWorkspace: vi.fn(),
-  renameWorkspace: vi.fn(),
-  renameWorkspaceBranch: vi.fn(),
-  getGitAuthorName: vi.fn(),
-  listGitBranches: vi.fn(),
-  listNodesByOrg: vi.fn(),
-}));
+type MockedCommands = {
+  createWorkspace: ReturnType<typeof vi.fn>;
+  renameWorkspace: ReturnType<typeof vi.fn>;
+  renameWorkspaceBranch: ReturnType<typeof vi.fn>;
+  getGitAuthorName: ReturnType<typeof vi.fn>;
+  listGitBranches: ReturnType<typeof vi.fn>;
+  listAgentModels: ReturnType<typeof vi.fn>;
+  listNodesByOrg: ReturnType<typeof vi.fn>;
+};
+
+var mocked: MockedCommands | undefined;
+
+function getMocked(): MockedCommands {
+  if (mocked) {
+    return mocked;
+  }
+
+  mocked = {
+    createWorkspace: vi.fn(),
+    renameWorkspace: vi.fn(),
+    renameWorkspaceBranch: vi.fn(),
+    getGitAuthorName: vi.fn(),
+    listGitBranches: vi.fn(),
+    listAgentModels: vi.fn(),
+    listNodesByOrg: vi.fn(),
+  };
+
+  return mocked;
+}
 
 vi.mock("@tanstack/react-virtual", () => ({
   useVirtualizer: ({ count }: { count: number }) => ({
@@ -34,18 +56,19 @@ vi.mock("@tanstack/react-virtual", () => ({
 
 vi.mock("../../../hooks/useCommands", () => ({
   useCommands: () => ({
-    createWorkspace: mocked.createWorkspace,
-    renameWorkspace: mocked.renameWorkspace,
-    renameWorkspaceBranch: mocked.renameWorkspaceBranch,
-    getGitAuthorName: mocked.getGitAuthorName,
-    listGitBranches: mocked.listGitBranches,
+    createWorkspace: getMocked().createWorkspace,
+    renameWorkspace: getMocked().renameWorkspace,
+    renameWorkspaceBranch: getMocked().renameWorkspaceBranch,
+    getGitAuthorName: getMocked().getGitAuthorName,
+    listGitBranches: getMocked().listGitBranches,
+    listAgentModels: getMocked().listAgentModels,
   }),
 }));
 
 vi.mock("../../../api", () => ({
   api: {
     node: {
-      listByOrg: mocked.listNodesByOrg,
+      listByOrg: getMocked().listNodesByOrg,
     },
   },
 }));
@@ -118,7 +141,7 @@ describe("CreateWorkspaceDialogView", () => {
       true,
     );
 
-    mocked.listGitBranches.mockImplementation(
+    getMocked().listGitBranches.mockImplementation(
       async ({ workspaceWorktreePath }: { workspaceWorktreePath: string }): Promise<{ branches: string[] }> => {
         if (workspaceWorktreePath === "/tmp/repo-2") {
           return { branches: ["master", "develop", "release/1.0"] };
@@ -127,13 +150,27 @@ describe("CreateWorkspaceDialogView", () => {
         return { branches: ["main", "feature/alpha"] };
       },
     );
-    mocked.getGitAuthorName.mockResolvedValue("Alice Chen");
-    mocked.renameWorkspace.mockResolvedValue(undefined);
-    mocked.renameWorkspaceBranch.mockResolvedValue(undefined);
-    mocked.listNodesByOrg.mockResolvedValue([
+    getMocked().getGitAuthorName.mockResolvedValue("Alice Chen");
+    getMocked().renameWorkspace.mockResolvedValue(undefined);
+    getMocked().renameWorkspaceBranch.mockResolvedValue(undefined);
+    getMocked().listAgentModels.mockResolvedValue({ models: [] });
+    getMocked().listNodesByOrg.mockResolvedValue([
       { id: "daemon-1", name: "Local Node", scope: "private", canUse: true },
       { id: "node-2", name: "Shared Node", scope: "shared", canUse: true },
     ]);
+    agentSettingsStore.setState({
+      inUseByAgentKind: {
+        opencode: true,
+        codex: true,
+        claude: true,
+        gemini: true,
+        pi: true,
+        copilot: true,
+        cursor: true,
+      },
+      defaultAgentKind: undefined,
+      customCommandByAgentKind: {},
+    });
 
     gitBranchStore.setState(
       {
@@ -148,15 +185,29 @@ describe("CreateWorkspaceDialogView", () => {
   afterEach(() => {
     workspaceStore.setState(initialWorkspaceStoreState, true);
     gitBranchStore.setState(initialGitBranchStoreState, true);
+    agentSettingsStore.setState({
+      inUseByAgentKind: {
+        opencode: true,
+        codex: true,
+        claude: true,
+        gemini: true,
+        pi: true,
+        copilot: true,
+        cursor: true,
+      },
+      defaultAgentKind: undefined,
+      customCommandByAgentKind: {},
+    });
     cleanup();
     vi.clearAllMocks();
+    mocked = undefined;
   });
 
   it("shows manual-only create controls", async () => {
     renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
     await waitFor(() => {
-      expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
     });
 
     expect(screen.getByPlaceholderText("workspace.create.namePlaceholder")).toBeTruthy();
@@ -187,11 +238,11 @@ describe("CreateWorkspaceDialogView", () => {
 
   it("creates workspace using selected repo and source branch", async () => {
     const onClose = vi.fn();
-    mocked.createWorkspace.mockResolvedValueOnce("workspace-2");
+    getMocked().createWorkspace.mockResolvedValueOnce("workspace-2");
     renderDialogWithLocation(<CreateWorkspaceDialogView open projectId="repo-1" onClose={onClose} />);
 
     await waitFor(() => {
-      expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
     });
 
     fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
@@ -203,7 +254,7 @@ describe("CreateWorkspaceDialogView", () => {
     fireEvent.click(screen.getByRole("button", { name: /workspace\.actions\.create/ }));
 
     await waitFor(() => {
-      expect(mocked.createWorkspace).toHaveBeenCalledWith({
+      expect(getMocked().createWorkspace).toHaveBeenCalledWith({
         projectId: "repo-1",
         nodeId: undefined,
         name: "Feature Workspace",
@@ -223,7 +274,7 @@ describe("CreateWorkspaceDialogView", () => {
     renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
     await waitFor(() => {
-      expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
     });
 
     const repoSelect = screen.getAllByRole("combobox")[0];
@@ -234,7 +285,7 @@ describe("CreateWorkspaceDialogView", () => {
     fireEvent.click(await screen.findByRole("option", { name: "Repo Two" }));
 
     await waitFor(() => {
-      expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-2" });
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-2" });
     });
   });
 
@@ -242,14 +293,14 @@ describe("CreateWorkspaceDialogView", () => {
     const { rerender } = renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
     await waitFor(() => {
-      expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
     });
 
     rerender(<CreateWorkspaceDialogView open={false} projectId="repo-1" onClose={() => {}} />);
     rerender(<CreateWorkspaceDialogView open projectId="repo-2" onClose={() => {}} />);
 
     await waitFor(() => {
-      expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-2" });
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-2" });
     });
 
     fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
@@ -258,7 +309,7 @@ describe("CreateWorkspaceDialogView", () => {
     fireEvent.click(screen.getByRole("button", { name: /workspace\.actions\.create/ }));
 
     await waitFor(() => {
-      expect(mocked.createWorkspace).toHaveBeenCalledWith({
+      expect(getMocked().createWorkspace).toHaveBeenCalledWith({
         projectId: "repo-2",
         nodeId: undefined,
         name: "Repo Two Workspace",
@@ -273,7 +324,7 @@ describe("CreateWorkspaceDialogView", () => {
     const { rerender } = renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={onClose} />);
 
     await waitFor(() => {
-      expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
     });
 
     fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
@@ -282,7 +333,7 @@ describe("CreateWorkspaceDialogView", () => {
     fireEvent.click(screen.getByRole("button", { name: /workspace\.actions\.create/ }));
 
     await waitFor(() => {
-      expect(mocked.createWorkspace).toHaveBeenCalledWith({
+      expect(getMocked().createWorkspace).toHaveBeenCalledWith({
         projectId: "repo-1",
         nodeId: undefined,
         name: "Created Once",
@@ -305,11 +356,54 @@ describe("CreateWorkspaceDialogView", () => {
     });
   });
 
+  it("preselects the default agent for task runs when the dialog opens", async () => {
+    agentSettingsStore.setState({
+      ...agentSettingsStore.getState(),
+      defaultAgentKind: "codex",
+    });
+
+    renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
+
+    await waitFor(() => {
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+    });
+
+    expect(screen.getAllByRole("combobox")[2]?.textContent).toContain("settings.agents.items.codex");
+    await waitFor(() => {
+      expect(getMocked().listAgentModels).toHaveBeenCalledWith("codex");
+    });
+  });
+
+  it("resets the task-run agent back to the default when the dialog reopens", async () => {
+    agentSettingsStore.setState({
+      ...agentSettingsStore.getState(),
+      defaultAgentKind: "codex",
+    });
+
+    const { rerender } = renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
+
+    await waitFor(() => {
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+    });
+
+    const agentSelect = screen.getAllByRole("combobox")[2];
+    if (!agentSelect) {
+      throw new Error("Agent select not found");
+    }
+    fireEvent.mouseDown(agentSelect);
+    fireEvent.click(await screen.findByRole("option", { name: "settings.agents.items.opencode" }));
+
+    rerender(<CreateWorkspaceDialogView open={false} projectId="repo-1" onClose={() => {}} />);
+    rerender(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
+
+    expect(screen.getAllByRole("combobox")[2]?.textContent).toContain("settings.agents.items.codex");
+  });
+
   it("does not override manual repo selection while dialog stays open", async () => {
     renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
     await waitFor(() => {
-      expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
     });
 
     const repoSelect = screen.getAllByRole("combobox")[0];
@@ -320,7 +414,7 @@ describe("CreateWorkspaceDialogView", () => {
     fireEvent.click(await screen.findByRole("option", { name: "Repo Two" }));
 
     await waitFor(() => {
-      expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-2" });
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-2" });
     });
 
     const nextWorkspaceStoreState = workspaceStore.getState();
@@ -338,7 +432,7 @@ describe("CreateWorkspaceDialogView", () => {
     fireEvent.click(screen.getByRole("button", { name: /workspace\.actions\.create/ }));
 
     await waitFor(() => {
-      expect(mocked.createWorkspace).toHaveBeenCalledWith({
+      expect(getMocked().createWorkspace).toHaveBeenCalledWith({
         projectId: "repo-2",
         nodeId: undefined,
         name: "Keep Repo Two",
@@ -349,14 +443,14 @@ describe("CreateWorkspaceDialogView", () => {
   });
 
   it("prefers main when both main and master branches exist", async () => {
-    mocked.listGitBranches.mockResolvedValue({
+    getMocked().listGitBranches.mockResolvedValue({
       branches: ["master", "main", "feature/alpha"],
     });
 
     renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
     await waitFor(() => {
-      expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
     });
 
     fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
@@ -365,7 +459,7 @@ describe("CreateWorkspaceDialogView", () => {
     fireEvent.click(screen.getByRole("button", { name: /workspace\.actions\.create/ }));
 
     await waitFor(() => {
-      expect(mocked.createWorkspace).toHaveBeenCalledWith({
+      expect(getMocked().createWorkspace).toHaveBeenCalledWith({
         projectId: "repo-1",
         nodeId: undefined,
         name: "Prefer Main Workspace",
@@ -406,7 +500,7 @@ describe("CreateWorkspaceDialogView", () => {
     fireEvent.click(screen.getByRole("button", { name: /workspace\.actions\.create/ }));
 
     await waitFor(() => {
-      expect(mocked.createWorkspace).toHaveBeenCalledWith({
+      expect(getMocked().createWorkspace).toHaveBeenCalledWith({
         projectId: "repo-1",
         nodeId: undefined,
         name: "Fix Login Timeout",
@@ -443,7 +537,7 @@ describe("CreateWorkspaceDialogView", () => {
     fireEvent.click(screen.getByRole("button", { name: /workspace\.actions\.create/ }));
 
     await waitFor(() => {
-      expect(mocked.createWorkspace).toHaveBeenCalledWith({
+      expect(getMocked().createWorkspace).toHaveBeenCalledWith({
         projectId: "repo-1",
         nodeId: undefined,
         name: "Manual Prefix Workspace",
@@ -473,7 +567,7 @@ describe("CreateWorkspaceDialogView", () => {
     rerender(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
     await waitFor(() => {
-      expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
     });
 
     fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
@@ -486,7 +580,7 @@ describe("CreateWorkspaceDialogView", () => {
     fireEvent.click(screen.getByRole("button", { name: /workspace\.actions\.create/ }));
 
     await waitFor(() => {
-      expect(mocked.createWorkspace).toHaveBeenCalledWith({
+      expect(getMocked().createWorkspace).toHaveBeenCalledWith({
         projectId: "repo-1",
         nodeId: undefined,
         name: "Reopen Prefix Workspace",
@@ -500,12 +594,12 @@ describe("CreateWorkspaceDialogView", () => {
     renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
     await waitFor(() => {
-      expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
     });
 
     fireEvent.click(screen.getByRole("button", { name: /workspace\.actions\.create/ }));
 
-    expect(mocked.createWorkspace).not.toHaveBeenCalled();
+    expect(getMocked().createWorkspace).not.toHaveBeenCalled();
   });
 
   it("uses git author for user prefix when configured", async () => {
@@ -523,6 +617,12 @@ describe("CreateWorkspaceDialogView", () => {
         workspaces: [
           {
             id: "workspace-author-1",
+            repoId: "repo-1",
+            name: "Repo One",
+            title: "Repo One",
+            sourceBranch: "main",
+            branch: "main",
+            summaryId: "workspace-author-1",
             worktreePath: "/tmp/repo-1",
           },
         ],
@@ -533,7 +633,7 @@ describe("CreateWorkspaceDialogView", () => {
     renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
     await waitFor(() => {
-      expect(mocked.getGitAuthorName).toHaveBeenCalledWith({
+      expect(getMocked().getGitAuthorName).toHaveBeenCalledWith({
         workspaceId: "workspace-author-1",
       });
     });
@@ -569,7 +669,7 @@ describe("CreateWorkspaceDialogView", () => {
       <CreateWorkspaceDialogView open projectId="repo-1" mode="rename" workspaceId="workspace-1" onClose={() => {}} />,
     );
 
-    expect(mocked.listGitBranches).not.toHaveBeenCalled();
+    expect(getMocked().listGitBranches).not.toHaveBeenCalled();
     const comboBoxes = screen.getAllByRole("combobox");
     expect(comboBoxes).toHaveLength(1);
     expect(comboBoxes[0]?.getAttribute("aria-disabled")).toBe("true");
@@ -616,14 +716,14 @@ describe("CreateWorkspaceDialogView", () => {
     fireEvent.click(screen.getByRole("button", { name: /workspace\.actions\.rename/ }));
 
     await waitFor(() => {
-      expect(mocked.renameWorkspace).toHaveBeenCalledWith({
+      expect(getMocked().renameWorkspace).toHaveBeenCalledWith({
         repoId: "repo-1",
         workspaceId: "workspace-1",
         name: "Workspace Renamed",
       });
     });
     await waitFor(() => {
-      expect(mocked.renameWorkspaceBranch).toHaveBeenCalledWith({
+      expect(getMocked().renameWorkspaceBranch).toHaveBeenCalledWith({
         repoId: "repo-1",
         workspaceId: "workspace-1",
         branch: "feature/renamed",
@@ -636,7 +736,7 @@ describe("CreateWorkspaceDialogView", () => {
 
   it("does not close rename dialog when branch rename fails", async () => {
     const onClose = vi.fn();
-    mocked.renameWorkspaceBranch.mockRejectedValueOnce(new Error("rename failed"));
+    getMocked().renameWorkspaceBranch.mockRejectedValueOnce(new Error("rename failed"));
     workspaceStore.setState(
       {
         ...workspaceStore.getState(),
@@ -666,7 +766,7 @@ describe("CreateWorkspaceDialogView", () => {
     fireEvent.click(screen.getByRole("button", { name: /workspace\.actions\.rename/ }));
 
     await waitFor(() => {
-      expect(mocked.renameWorkspaceBranch).toHaveBeenCalled();
+      expect(getMocked().renameWorkspaceBranch).toHaveBeenCalled();
     });
     expect(onClose).not.toHaveBeenCalled();
   });
@@ -674,11 +774,11 @@ describe("CreateWorkspaceDialogView", () => {
   describe("Cmd+Enter keyboard shortcut", () => {
     it("submits create form when Cmd+Enter is pressed and form is valid", async () => {
       const onClose = vi.fn();
-      mocked.createWorkspace.mockResolvedValueOnce("workspace-new");
+      getMocked().createWorkspace.mockResolvedValueOnce("workspace-new");
       renderDialogWithLocation(<CreateWorkspaceDialogView open projectId="repo-1" onClose={onClose} />);
 
       await waitFor(() => {
-        expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+        expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
       });
 
       fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
@@ -688,7 +788,7 @@ describe("CreateWorkspaceDialogView", () => {
       fireEvent.keyDown(screen.getByRole("dialog"), { key: "Enter", metaKey: true });
 
       await waitFor(() => {
-        expect(mocked.createWorkspace).toHaveBeenCalledWith({
+        expect(getMocked().createWorkspace).toHaveBeenCalledWith({
           projectId: "repo-1",
         nodeId: undefined,
         name: "Shortcut Workspace",
@@ -703,11 +803,11 @@ describe("CreateWorkspaceDialogView", () => {
 
     it("submits create form when Ctrl+Enter is pressed and form is valid", async () => {
       const onClose = vi.fn();
-      mocked.createWorkspace.mockResolvedValueOnce("workspace-ctrl");
+      getMocked().createWorkspace.mockResolvedValueOnce("workspace-ctrl");
       renderDialogWithLocation(<CreateWorkspaceDialogView open projectId="repo-1" onClose={onClose} />);
 
       await waitFor(() => {
-        expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+        expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
       });
 
       fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
@@ -717,7 +817,7 @@ describe("CreateWorkspaceDialogView", () => {
       fireEvent.keyDown(screen.getByRole("dialog"), { key: "Enter", ctrlKey: true });
 
       await waitFor(() => {
-        expect(mocked.createWorkspace).toHaveBeenCalledWith({
+        expect(getMocked().createWorkspace).toHaveBeenCalledWith({
           projectId: "repo-1",
         nodeId: undefined,
         name: "Ctrl Workspace",
@@ -734,19 +834,19 @@ describe("CreateWorkspaceDialogView", () => {
       renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
       await waitFor(() => {
-        expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+        expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
       });
 
       fireEvent.keyDown(screen.getByRole("dialog"), { key: "Enter", metaKey: true });
 
-      expect(mocked.createWorkspace).not.toHaveBeenCalled();
+      expect(getMocked().createWorkspace).not.toHaveBeenCalled();
     });
 
     it("does not submit when Enter is pressed without modifier key", async () => {
       renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
       await waitFor(() => {
-        expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+        expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
       });
 
       fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
@@ -755,16 +855,16 @@ describe("CreateWorkspaceDialogView", () => {
 
       fireEvent.keyDown(screen.getByRole("dialog"), { key: "Enter" });
 
-      expect(mocked.createWorkspace).not.toHaveBeenCalled();
+      expect(getMocked().createWorkspace).not.toHaveBeenCalled();
     });
 
     it("submits the full name after incremental input changes via Cmd+Enter", async () => {
       const onClose = vi.fn();
-      mocked.createWorkspace.mockResolvedValueOnce("workspace-incremental");
+      getMocked().createWorkspace.mockResolvedValueOnce("workspace-incremental");
       renderDialogWithLocation(<CreateWorkspaceDialogView open projectId="repo-1" onClose={onClose} />);
 
       await waitFor(() => {
-        expect(mocked.listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+        expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
       });
 
       const nameInput = screen.getByPlaceholderText("workspace.create.namePlaceholder");
@@ -776,7 +876,7 @@ describe("CreateWorkspaceDialogView", () => {
       fireEvent.keyDown(screen.getByRole("dialog"), { key: "Enter", metaKey: true });
 
       await waitFor(() => {
-        expect(mocked.createWorkspace).toHaveBeenCalledWith({
+        expect(getMocked().createWorkspace).toHaveBeenCalledWith({
           projectId: "repo-1",
         nodeId: undefined,
         name: "2222",
@@ -821,7 +921,7 @@ describe("CreateWorkspaceDialogView", () => {
       fireEvent.keyDown(screen.getByRole("dialog"), { key: "Enter", metaKey: true });
 
       await waitFor(() => {
-        expect(mocked.renameWorkspace).toHaveBeenCalledWith({
+        expect(getMocked().renameWorkspace).toHaveBeenCalledWith({
           repoId: "repo-1",
           workspaceId: "workspace-1",
           name: "Renamed Via Shortcut",

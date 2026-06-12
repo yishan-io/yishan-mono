@@ -5,6 +5,7 @@ import {
   CircularProgress,
   IconButton,
   InputAdornment,
+  Radio,
   Stack,
   Switch,
   TextField,
@@ -154,8 +155,10 @@ export function CLIToolsSettingsView() {
   const { t } = useTranslation();
   const { listCLIToolStatuses } = useCommands();
   const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
+  const defaultAgentKind = agentSettingsStore((state) => state.defaultAgentKind);
   const customCommandByAgentKind = agentSettingsStore((state) => state.customCommandByAgentKind);
   const setAgentInUse = agentSettingsStore((state) => state.setAgentInUse);
+  const setDefaultAgentKind = agentSettingsStore((state) => state.setDefaultAgentKind);
   const setAgentCustomCommand = agentSettingsStore((state) => state.setAgentCustomCommand);
   const resetAgentCustomCommand = agentSettingsStore((state) => state.resetAgentCustomCommand);
 
@@ -250,6 +253,25 @@ export function CLIToolsSettingsView() {
                           {label}
                         </Box>
                       </Box>
+                      <Tooltip title={t("settings.agents.default.label")}>
+                        <Box>
+                          <Radio
+                            checked={defaultAgentKind === agentKind}
+                            disabled={!inUseByAgentKind[agentKind as DesktopAgentKind]}
+                            onChange={() => {
+                              if (!isDesktopAgentKind(agentKind)) {
+                                return;
+                              }
+                              setDefaultAgentKind(agentKind);
+                            }}
+                            slotProps={{
+                              input: {
+                                "aria-label": `${t("settings.agents.default.ariaLabel")} ${t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind as DesktopAgentKind])}`,
+                              },
+                            }}
+                          />
+                        </Box>
+                      </Tooltip>
                       <Switch
                         checked={inUseByAgentKind[agentKind as DesktopAgentKind]}
                         onChange={(event) => {

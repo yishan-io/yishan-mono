@@ -68,6 +68,7 @@ export function CreateWorkspaceDialogView({
   const prefixMode = workspaceSettingsStore((state) => state.prefixMode);
   const customPrefix = workspaceSettingsStore((state) => state.customPrefix);
   const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
+  const defaultAgentKind = agentSettingsStore((state) => state.defaultAgentKind);
   useDialogRegistration(open);
   const isRenameMode = mode === "rename";
   const branchInputPlaceholder = isRenameMode
@@ -113,6 +114,7 @@ export function CreateWorkspaceDialogView({
     daemonId,
     projects,
     workspaces,
+    defaultTaskAgentKind: defaultAgentKind && inUseByAgentKind[defaultAgentKind] ? defaultAgentKind : undefined,
     prefixMode,
     customPrefix,
     listGitBranches,
@@ -599,7 +601,7 @@ export function CreateWorkspaceDialogView({
                           <Stack direction="row" alignItems="center" gap={1}>
                             <AgentIcon agentKind={selectedKind} context="settingsRow" decorative />
                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {selectedKind}
+                              {t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[selectedKind])}
                             </Typography>
                           </Stack>
                         );

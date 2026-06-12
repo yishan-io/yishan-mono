@@ -12,9 +12,11 @@ export const AGENT_SETTINGS_STORE_STORAGE_KEY = "yishan-agent-settings-store";
 
 type AgentSettingsStoreState = {
   inUseByAgentKind: Record<DesktopAgentKind, boolean>;
+  defaultAgentKind?: DesktopAgentKind;
   /** User-defined custom launch command per agent. Absent key means "use system default". */
   customCommandByAgentKind: Partial<Record<DesktopAgentKind, string>>;
   setAgentInUse: (agentKind: DesktopAgentKind, inUse: boolean) => void;
+  setDefaultAgentKind: (agentKind: DesktopAgentKind | undefined) => void;
   /**
    * Persists a custom launch command for one agent kind.
    * An empty or whitespace-only value is treated as a reset to the system default.
@@ -27,8 +29,20 @@ type AgentSettingsStoreState = {
 
 type AgentSettingsStorePersistedState = {
   inUseByAgentKind: Partial<Record<DesktopAgentKind, boolean>>;
+  defaultAgentKind?: DesktopAgentKind;
   customCommandByAgentKind: Partial<Record<DesktopAgentKind, string>>;
 };
+
+function normalizeDefaultAgentKind(
+  candidate: DesktopAgentKind | undefined,
+  inUseByAgentKind: Record<DesktopAgentKind, boolean>,
+): DesktopAgentKind | undefined {
+  if (!candidate || !isDesktopAgentKind(candidate)) {
+    return undefined;
+  }
+
+  return inUseByAgentKind[candidate] ? candidate : undefined;
+}
 
 /** Normalizes one persisted agent in-use map so all supported agents always have explicit booleans. */
 function normalizeInUseByAgentKind(
@@ -82,13 +96,24 @@ export const agentSettingsStore = create<AgentSettingsStoreState>()(
   persist(
     immer((set) => ({
       inUseByAgentKind: createDefaultAgentInUseByKind(true),
+      defaultAgentKind: undefined,
       customCommandByAgentKind: {},
       setAgentInUse: (agentKind, inUse) => {
-        set((state) => ({
-          inUseByAgentKind: {
+        set((state) => {
+          const nextInUseByAgentKind = {
             ...state.inUseByAgentKind,
             [agentKind]: inUse,
-          },
+          };
+
+          return {
+            inUseByAgentKind: nextInUseByAgentKind,
+            defaultAgentKind: normalizeDefaultAgentKind(state.defaultAgentKind, nextInUseByAgentKind),
+          };
+        });
+      },
+      setDefaultAgentKind: (agentKind) => {
+        set((state) => ({
+          defaultAgentKind: normalizeDefaultAgentKind(agentKind, state.inUseByAgentKind),
         }));
       },
       setAgentCustomCommand: (agentKind, command) => {
@@ -124,6 +149,7 @@ export const agentSettingsStore = create<AgentSettingsStoreState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state): AgentSettingsStorePersistedState => ({
         inUseByAgentKind: state.inUseByAgentKind,
+        defaultAgentKind: state.defaultAgentKind,
         customCommandByAgentKind: state.customCommandByAgentKind,
       }),
       merge: (persistedState, currentState) => {
@@ -132,9 +158,12 @@ export const agentSettingsStore = create<AgentSettingsStoreState>()(
             ? (persistedState as Partial<AgentSettingsStorePersistedState>)
             : undefined;
 
+        const normalizedInUseByAgentKind = normalizeInUseByAgentKind(persisted?.inUseByAgentKind);
+
         return {
           ...currentState,
-          inUseByAgentKind: normalizeInUseByAgentKind(persisted?.inUseByAgentKind),
+          inUseByAgentKind: normalizedInUseByAgentKind,
+          defaultAgentKind: normalizeDefaultAgentKind(persisted?.defaultAgentKind, normalizedInUseByAgentKind),
           customCommandByAgentKind: normalizeCustomCommandByAgentKind(persisted?.customCommandByAgentKind),
         };
       },

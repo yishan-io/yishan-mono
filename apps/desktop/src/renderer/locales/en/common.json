@@ -310,6 +310,10 @@
       "description": "Manage which agents are available in tab creation and verify local CLI detection.",
       "loadError": "Failed to load agent detection statuses.",
       "inUse": "In use",
+      "default": {
+        "label": "Default agent",
+        "ariaLabel": "Set default agent"
+      },
       "actions": {
         "rescanAll": "Rescan All"
       },
