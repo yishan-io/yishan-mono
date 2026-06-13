@@ -187,7 +187,8 @@ export const tabStore = create<TabStoreState>()(
       },
       openTab: (input, options?) => {
         const selectedWorkspaceId = workspaceStore.getState().selectedWorkspaceId;
-        set((state) => openTabState(state, input, createClientTabId(), { ...options, selectedWorkspaceId }) ?? state);
+        const nextTabId = input.kind === "terminal" ? (input.tabId ?? createClientTabId()) : createClientTabId();
+        set((state) => openTabState(state, input, nextTabId, { ...options, selectedWorkspaceId }) ?? state);
       },
       closeTab: (tabId) => {
         set((state) => closeTabState(state, tabId) ?? state);

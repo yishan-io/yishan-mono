@@ -213,6 +213,8 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, req workspa
 		} else {
 			resp, startErr := h.manager.Terminals().Start(ctx, created.Path, terminal.StartRequest{
 				WorkspaceID: created.ID,
+				TabID:       "task-" + created.ID,
+				PaneID:      "pane-task-" + created.ID,
 			})
 			if startErr != nil {
 				log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("agentKind", req.TaskRun.AgentKind).Msg("task run: failed to start terminal session")
@@ -224,6 +226,8 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, req workspa
 				completionPayload["taskRunSessionId"] = resp.SessionID
 				completionPayload["taskRunAgentKind"] = req.TaskRun.AgentKind
 				completionPayload["taskRunPrompt"] = req.TaskRun.Prompt
+				completionPayload["taskRunTabId"] = "task-" + created.ID
+				completionPayload["taskRunPaneId"] = "pane-task-" + created.ID
 				log.Info().Str("workspaceId", created.ID).Str("sessionId", resp.SessionID).Str("agentKind", req.TaskRun.AgentKind).Str("prompt", req.TaskRun.Prompt).Msg("task run: terminal session started")
 			}
 		}

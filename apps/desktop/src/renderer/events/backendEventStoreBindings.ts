@@ -209,6 +209,8 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
         title,
         sessionId: payload.taskRunSessionId,
         agentKind: payload.taskRunAgentKind as DesktopAgentKind,
+        tabId: payload.taskRunTabId,
+        paneId: payload.taskRunPaneId,
       });
     }
   },

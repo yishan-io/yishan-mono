@@ -69,6 +69,8 @@ export type RpcSchema = {
         taskRunSessionId?: string;
         taskRunAgentKind?: string;
         taskRunPrompt?: string;
+        taskRunTabId?: string;
+        taskRunPaneId?: string;
       };
       workspaceCreateFailed: {
         workspaceId: string;

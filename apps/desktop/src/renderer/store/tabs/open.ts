@@ -272,7 +272,7 @@ function createTabFromOpenInput(input: OpenWorkspaceTabInput, workspaceId: strin
     kind: "terminal",
     data: {
       ...buildTabDataByInput(input),
-      paneId: `pane-${tabId}`,
+      paneId: input.paneId ?? `pane-${tabId}`,
     },
   };
 }
