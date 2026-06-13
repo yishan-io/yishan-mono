@@ -860,7 +860,19 @@
     "unknown": "Unknown project",
     "missing": "Path unavailable",
     "missingHint": "Project path is unavailable. Re-link to continue workspace actions.",
-    "relink": "Re-link"
+    "relink": "Re-link",
+    "commands": {
+      "title": "Project commands",
+      "runAria": "Run project command",
+      "empty": "No commands yet",
+      "add": "+ Add command",
+      "dialogTitle": "Add project command",
+      "nameLabel": "Name",
+      "namePlaceholder": "Start Dev Server",
+      "commandLabel": "Command line",
+      "commandPlaceholder": "bun run dev",
+      "submit": "Add"
+    }
   },
   "layout": {
     "sidebarTitle": "Sidebar",

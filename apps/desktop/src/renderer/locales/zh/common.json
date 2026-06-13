@@ -823,7 +823,19 @@
     "unknown": "未知项目",
     "missing": "路径不可用",
     "missingHint": "项目路径不可用，请重新关联后继续工作区操作。",
-    "relink": "重新关联"
+    "relink": "重新关联",
+    "commands": {
+      "title": "项目命令",
+      "runAria": "运行项目命令",
+      "empty": "暂无命令",
+      "add": "+ 添加命令",
+      "dialogTitle": "添加项目命令",
+      "nameLabel": "名称",
+      "namePlaceholder": "启动开发服务器",
+      "commandLabel": "命令行",
+      "commandPlaceholder": "bun run dev",
+      "submit": "添加"
+    }
   },
   "layout": {
     "sidebarTitle": "侧边栏",

@@ -1,4 +1,5 @@
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Menu, MenuItem, TextField, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { LuPlay } from "react-icons/lu";
 import { renderProjectIcon } from "../../components/projectIcons";
 import type { WorkspaceItem, WorkspaceProjectRecord } from "../../store/types";
@@ -159,6 +160,7 @@ export function ProjectCommandsMenu({
   terminalTitle,
   onOpenAddDialog,
 }: ProjectCommandsMenuProps) {
+  const { t } = useTranslation();
   return (
     <Menu
       open={open}
@@ -169,7 +171,7 @@ export function ProjectCommandsMenu({
       {projectCommands.length === 0 ? (
         <MenuItem disabled>
           <Typography variant="body2" color="text.secondary">
-            No commands yet
+            {t("project.commands.empty")}
           </Typography>
         </MenuItem>
       ) : null}
@@ -200,7 +202,7 @@ export function ProjectCommandsMenu({
       ))}
       <Divider />
       <MenuItem sx={{ color: "text.secondary", "&:hover": { bgcolor: "action.hover" } }} onClick={onOpenAddDialog}>
-        <Typography variant="body2">+ Add command</Typography>
+        <Typography variant="body2">{t("project.commands.add")}</Typography>
       </MenuItem>
     </Menu>
   );
@@ -233,29 +235,30 @@ export function AddProjectCommandDialog({
   isSubmitDisabled,
   cancelLabel,
 }: AddProjectCommandDialogProps) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onClose={isSaving ? undefined : onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Add project command</DialogTitle>
+      <DialogTitle>{t("project.commands.dialogTitle")}</DialogTitle>
       <DialogContent>
         <TextField
           autoFocus
           size="small"
           fullWidth
-          label="Name"
+          label={t("project.commands.nameLabel")}
           value={commandNameValue}
           disabled={isSaving}
           onChange={(event) => onNameChange(event.target.value)}
-          placeholder="Start Dev Server"
+          placeholder={t("project.commands.namePlaceholder")}
           sx={{ mt: 0.5 }}
         />
         <TextField
           size="small"
           fullWidth
-          label="Command line"
+          label={t("project.commands.commandLabel")}
           value={commandLineValue}
           disabled={isSaving}
           onChange={(event) => onCommandChange(event.target.value)}
-          placeholder="bun run dev"
+          placeholder={t("project.commands.commandPlaceholder")}
           sx={{ mt: 1.5 }}
         />
         {errorMessage ? (
@@ -269,7 +272,7 @@ export function AddProjectCommandDialog({
           {cancelLabel}
         </Button>
         <Button variant="contained" onClick={onSubmit} disabled={isSubmitDisabled}>
-          Add
+          {t("project.commands.submit")}
         </Button>
       </DialogActions>
     </Dialog>

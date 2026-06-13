@@ -244,12 +244,12 @@ export function MainPaneTitleBarView() {
           </Button>
         </Box>
         <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-          <Tooltip title="Project commands" arrow>
+          <Tooltip title={t("project.commands.title")} arrow>
             <span>
               <Button
                 size="small"
                 variant="outlined"
-                aria-label="Run project command"
+                aria-label={t("project.commands.runAria")}
                 disabled={!selectedRepo}
                 onClick={(event) => setCommandMenuAnchorEl(event.currentTarget)}
                 sx={{
