@@ -35,14 +35,14 @@ export async function loadOverviewModelBreakdown(
 
 export async function loadOverviewWorkspaceInsights(
   orgId: string,
+  range: string,
   projectId?: string,
 ): Promise<WorkspaceInsightsResult> {
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ range });
   if (projectId) {
     params.set("projectId", projectId);
   }
-  const query = params.toString();
-  return requestJson<WorkspaceInsightsResult>(`/orgs/${orgId}/overview/workspace-insights${query ? `?${query}` : ""}`);
+  return requestJson<WorkspaceInsightsResult>(`/orgs/${orgId}/overview/workspace-insights?${params.toString()}`);
 }
 
 export async function loadOverviewAgentKindBreakdown(

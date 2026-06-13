@@ -76,12 +76,12 @@ export async function refreshOverviewWorkspaceInsights(): Promise<void> {
     return;
   }
 
-  const { selectedProjectId } = overviewStore.getState();
+  const { timeRange, selectedProjectId } = overviewStore.getState();
 
   overviewStore.getState().setWorkspaceInsightsLoadState("loading");
 
   try {
-    const result = await loadOverviewWorkspaceInsights(orgId, selectedProjectId);
+    const result = await loadOverviewWorkspaceInsights(orgId, timeRange, selectedProjectId);
     overviewStore.getState().setWorkspaceInsights(result);
     overviewStore.getState().setWorkspaceInsightsLoadState("loaded");
   } catch (error) {
