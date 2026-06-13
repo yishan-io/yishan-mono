@@ -1,6 +1,6 @@
 import { Box, IconButton, InputAdornment, ListItemIcon, ListItemText, MenuList, MenuItem, Paper, Popper, TextField, Tooltip } from "@mui/material";
 import type { FormEvent } from "react";
-import { LuArrowLeft, LuArrowRight, LuGlobe, LuLock, LuLockOpen, LuRefreshCcw } from "react-icons/lu";
+import { LuArrowLeft, LuArrowRight, LuGlobe, LuLock, LuLockOpen, LuMousePointer2, LuRefreshCcw } from "react-icons/lu";
 import { RxExternalLink } from "react-icons/rx";
 import { openExternalUrl } from "../../../commands/appCommands";
 import type { BrowserHistoryGroup } from "../../../../main/ipc";
@@ -28,6 +28,8 @@ type UrlBarProps = {
   onGoForward: () => void;
   onReload: () => void;
   onToolsClick: (event: React.MouseEvent<HTMLElement>) => void;
+  inspecting: boolean;
+  onToggleInspect: () => void;
   children: React.ReactNode;
 };
 
@@ -54,6 +56,8 @@ export function UrlBar({
   onGoForward,
   onReload,
   onToolsClick,
+  inspecting,
+  onToggleInspect,
   children,
 }: UrlBarProps) {
   return (
@@ -160,6 +164,16 @@ export function UrlBar({
           </MenuList>
         </Paper>
       </Popper>
+      <Tooltip title="Select element on page" arrow>
+        <IconButton
+          aria-label="Select element on page"
+          onClick={onToggleInspect}
+          color={inspecting ? "primary" : "default"}
+          sx={inspecting ? { bgcolor: "primary.main", color: "primary.contrastText", "&:hover": { bgcolor: "primary.dark" } } : undefined}
+        >
+          <LuMousePointer2 size={14} />
+        </IconButton>
+      </Tooltip>
       <Tooltip title="Open in system default browser" arrow>
         <IconButton
           aria-label="Open in system default browser"
