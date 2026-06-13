@@ -1,6 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { BarChart } from "@mui/x-charts/BarChart";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { OverviewTimeRange } from "../../api/overviewApi.types";
 import { overviewStore } from "../../store/overviewStore";
 
@@ -43,6 +44,7 @@ function generateDateRange(days: number): string[] {
 }
 
 export function TokenUsageChartView() {
+  const { t } = useTranslation();
   const series = overviewStore((state) => state.tokenUsageSeries);
   const cachedTotal = overviewStore((state) => state.cachedTotal);
   const uncachedTotal = overviewStore((state) => state.uncachedTotal);
@@ -78,7 +80,7 @@ export function TokenUsageChartView() {
     return (
       <Box sx={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Typography variant="body2" color="text.secondary">
-          Loading chart...
+          {t("overview.tokenUsage.loading")}
         </Typography>
       </Box>
     );
@@ -87,14 +89,14 @@ export function TokenUsageChartView() {
   return (
     <Box>
       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-        Token Usage
+        {t("overview.tokenUsage.title")}
       </Typography>
 
       <Box sx={{ height: 240, width: "100%" }}>
         {chartData.length === 0 ? (
           <Box sx={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Typography variant="body2" color="text.secondary">
-              No token usage data available
+              {t("overview.tokenUsage.noData")}
             </Typography>
           </Box>
         ) : (
@@ -123,7 +125,7 @@ export function TokenUsageChartView() {
                 type: "bar",
                 dataKey: "cachedTokens",
                 stack: "total",
-                label: "Cached",
+                label: t("overview.tokenUsage.cached"),
                 color: "#4CAF50",
                 valueFormatter: formatTokens,
               },
@@ -131,7 +133,7 @@ export function TokenUsageChartView() {
                 type: "bar",
                 dataKey: "uncachedTokens",
                 stack: "total",
-                label: "Uncached",
+                label: t("overview.tokenUsage.uncached"),
                 color: "#FF9800",
                 valueFormatter: formatTokens,
               },
@@ -150,7 +152,7 @@ export function TokenUsageChartView() {
       <Box sx={{ display: "flex", gap: 3, mt: 1.5, flexWrap: "wrap" }}>
         <Box>
           <Typography variant="caption" color="text.secondary">
-            Total
+            {t("overview.tokenUsage.total")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
             {formatTokens(totalTokens)}
@@ -158,7 +160,7 @@ export function TokenUsageChartView() {
         </Box>
         <Box>
           <Typography variant="caption" color="text.secondary">
-            Cached
+            {t("overview.tokenUsage.cached")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace", color: "#4CAF50" }}>
             {formatTokens(cachedTotal)} ({cachedPercentage}%)
@@ -166,7 +168,7 @@ export function TokenUsageChartView() {
         </Box>
         <Box>
           <Typography variant="caption" color="text.secondary">
-            Uncached
+            {t("overview.tokenUsage.uncached")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace", color: "#FF9800" }}>
             {formatTokens(uncachedTotal)}

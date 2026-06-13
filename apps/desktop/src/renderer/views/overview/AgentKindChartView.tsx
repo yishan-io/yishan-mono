@@ -1,6 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { PieChart } from "@mui/x-charts/PieChart";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { overviewStore } from "../../store/overviewStore";
 
 const AGENT_KIND_COLORS: Record<string, string> = {
@@ -28,6 +29,7 @@ function formatTokens(value: number): string {
 }
 
 export function AgentKindChartView() {
+  const { t } = useTranslation();
   const agentKinds = overviewStore((state) => state.agentKindBreakdown);
   const loadState = overviewStore((state) => state.agentKindBreakdownLoadState);
   const cachedTotal = overviewStore((state) => state.cachedTotal);
@@ -52,10 +54,10 @@ export function AgentKindChartView() {
     return (
       <Box>
         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-          Agent Usage
+          {t("overview.agentUsage.title")}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Loading...
+          {t("overview.agentUsage.loading")}
         </Typography>
       </Box>
     );
@@ -64,12 +66,12 @@ export function AgentKindChartView() {
   return (
     <Box>
       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-        Agent Usage
+        {t("overview.agentUsage.title")}
       </Typography>
 
       {pieData.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
-          No data available
+          {t("overview.agentUsage.noData")}
         </Typography>
       ) : (
         <Box sx={{ height: 240, width: "100%" }}>
@@ -96,7 +98,7 @@ export function AgentKindChartView() {
         <Box sx={{ display: "flex", gap: 3, mt: 1.5, flexWrap: "wrap" }}>
           <Box>
             <Typography variant="caption" color="text.secondary">
-              Total Tokens
+              {t("overview.agentUsage.totalTokens")}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
               {formatTokens(totalTokens)}
@@ -104,7 +106,7 @@ export function AgentKindChartView() {
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
-              Agents
+              {t("overview.agentUsage.agents")}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
               {agentKinds.length}

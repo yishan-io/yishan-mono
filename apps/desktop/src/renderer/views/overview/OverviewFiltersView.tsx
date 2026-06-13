@@ -1,6 +1,7 @@
 import { Box, FormControl, MenuItem, Select, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
 import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import type { OverviewTimeRange } from "../../api/overviewApi.types";
 import { setOverviewProjectId, setOverviewTimeRange } from "../../commands/overviewCommands";
 import { overviewStore } from "../../store/overviewStore";
@@ -17,6 +18,7 @@ type OverviewFiltersViewProps = {
 };
 
 export function OverviewFiltersView({ projects }: OverviewFiltersViewProps) {
+  const { t } = useTranslation();
   const timeRange = overviewStore((state) => state.timeRange);
   const selectedProjectId = overviewStore((state) => state.selectedProjectId);
 
@@ -37,7 +39,7 @@ export function OverviewFiltersView({ projects }: OverviewFiltersViewProps) {
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3, flexWrap: "wrap" }}>
       <Typography variant="body2" sx={{ fontWeight: 500, color: "text.secondary" }}>
-        Time Range
+        {t("overview.filters.timeRange")}
       </Typography>
       <ToggleButtonGroup value={timeRange} exclusive onChange={handleTimeRangeChange} size="small" sx={{ mr: 2 }}>
         {TIME_RANGE_OPTIONS.map((option) => (
@@ -48,11 +50,11 @@ export function OverviewFiltersView({ projects }: OverviewFiltersViewProps) {
       </ToggleButtonGroup>
 
       <Typography variant="body2" sx={{ fontWeight: 500, color: "text.secondary" }}>
-        Project
+        {t("overview.filters.project")}
       </Typography>
       <FormControl size="small" sx={{ minWidth: 180 }}>
         <Select value={selectedProjectId ?? ""} onChange={handleProjectChange} displayEmpty sx={{ fontSize: 13 }}>
-          <MenuItem value="">All Projects</MenuItem>
+          <MenuItem value="">{t("overview.filters.allProjects")}</MenuItem>
           {projects.map((project) => (
             <MenuItem key={project.id} value={project.id}>
               {project.name}

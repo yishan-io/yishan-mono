@@ -1,4 +1,5 @@
 import { Box, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { LuArchive, LuClock, LuHistory } from "react-icons/lu";
 import { overviewStore } from "../../store/overviewStore";
 
@@ -53,6 +54,7 @@ const tdNumericSx = { ...tdSx, textAlign: "right" as const, fontFamily: "monospa
 const thNumericSx = { ...thSx, textAlign: "right" as const };
 
 export function WorkspaceInsightsView() {
+  const { t } = useTranslation();
   const insights = overviewStore((state) => state.workspaceInsights);
   const loadState = overviewStore((state) => state.workspaceInsightsLoadState);
 
@@ -60,10 +62,10 @@ export function WorkspaceInsightsView() {
     return (
       <Box>
         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-          Workspace Insights
+          {t("overview.workspaceInsights.title")}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Loading...
+          {t("overview.workspaceInsights.loading")}
         </Typography>
       </Box>
     );
@@ -73,10 +75,10 @@ export function WorkspaceInsightsView() {
     return (
       <Box>
         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-          Workspace Insights
+          {t("overview.workspaceInsights.title")}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          No data available
+          {t("overview.workspaceInsights.noData")}
         </Typography>
       </Box>
     );
@@ -85,7 +87,7 @@ export function WorkspaceInsightsView() {
   return (
     <Box>
       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-        Workspace Insights
+        {t("overview.workspaceInsights.title")}
       </Typography>
 
       <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
@@ -105,7 +107,7 @@ export function WorkspaceInsightsView() {
           <LuArchive size={18} style={{ opacity: 0.6 }} />
           <Box>
             <Typography variant="caption" color="text.secondary">
-              Closed
+              {t("overview.workspaceInsights.closed")}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
               {insights.closedWorkspaceCount}
@@ -129,10 +131,10 @@ export function WorkspaceInsightsView() {
           <LuClock size={18} style={{ opacity: 0.6 }} />
           <Box>
             <Typography variant="caption" color="text.secondary">
-              Avg Lifetime
+              {t("overview.workspaceInsights.avgLifetime")}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
-              {insights.averageLifetimeHours != null ? formatHours(insights.averageLifetimeHours) : "N/A"}
+              {insights.averageLifetimeHours != null ? formatHours(insights.averageLifetimeHours) : t("overview.workspaceInsights.notAvailable")}
             </Typography>
           </Box>
         </Box>
@@ -141,13 +143,13 @@ export function WorkspaceInsightsView() {
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 1 }}>
         <LuHistory size={14} style={{ opacity: 0.6 }} />
         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-          Last 5 Closed Workspaces
+          {t("overview.workspaceInsights.lastClosed")}
         </Typography>
       </Box>
 
       {insights.lastClosedWorkspaces.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
-          No closed workspaces yet
+          {t("overview.workspaceInsights.noClosed")}
         </Typography>
       ) : (
         <Box
@@ -165,16 +167,16 @@ export function WorkspaceInsightsView() {
           <Box component="thead">
             <Box component="tr">
               <Box component="th" sx={thSx}>
-                Project
+                {t("overview.workspaceInsights.project")}
               </Box>
               <Box component="th" sx={thSx}>
-                Branch
+                {t("overview.workspaceInsights.branch")}
               </Box>
               <Box component="th" sx={thNumericSx}>
-                Lifetime
+                {t("overview.workspaceInsights.lifetime")}
               </Box>
               <Box component="th" sx={thNumericSx}>
-                Tokens
+                {t("overview.workspaceInsights.tokens")}
               </Box>
             </Box>
           </Box>

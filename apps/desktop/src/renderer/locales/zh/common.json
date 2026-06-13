@@ -1172,5 +1172,56 @@
       "save": "保存",
       "saving": "保存中..."
     }
+  },
+  "overview": {
+    "title": "概览",
+    "toggleLeftSidebar": "切换左侧边栏",
+    "retry": "重试",
+    "loadError": "加载概览数据失败",
+    "filters": {
+      "timeRange": "时间范围",
+      "project": "项目",
+      "allProjects": "全部项目"
+    },
+    "tokenUsage": {
+      "title": "令牌用量",
+      "loading": "正在加载图表...",
+      "noData": "暂无令牌用量数据",
+      "cached": "已缓存",
+      "uncached": "未缓存",
+      "total": "合计"
+    },
+    "agentUsage": {
+      "title": "智能体用量",
+      "loading": "加载中...",
+      "noData": "暂无数据",
+      "totalTokens": "总令牌数",
+      "agents": "智能体"
+    },
+    "modelBreakdown": {
+      "title": "模型明细",
+      "loading": "加载中...",
+      "noData": "暂无数据",
+      "model": "模型",
+      "agent": "智能体",
+      "totalTokens": "总令牌数",
+      "input": "输入",
+      "output": "输出",
+      "percentage": "%"
+    },
+    "workspaceInsights": {
+      "title": "工作区洞察",
+      "loading": "加载中...",
+      "noData": "暂无数据",
+      "closed": "已关闭",
+      "avgLifetime": "平均生命周期",
+      "notAvailable": "无",
+      "lastClosed": "最近关闭的 5 个工作区",
+      "noClosed": "暂无已关闭的工作区",
+      "project": "项目",
+      "branch": "分支",
+      "lifetime": "生命周期",
+      "tokens": "令牌数"
+    }
   }
 }

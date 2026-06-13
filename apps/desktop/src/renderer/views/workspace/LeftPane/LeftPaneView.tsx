@@ -98,7 +98,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
         variant="text"
         startIcon={<LuChartBar size={14} />}
         onClick={handleToggleOverview}
-        aria-label="Overview"
+        aria-label={t("overview.title")}
         aria-pressed={isOverviewPanelOpen}
         sx={{
           justifyContent: "flex-start",
@@ -116,7 +116,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
           },
         }}
       >
-        Overview
+        {t("overview.title")}
       </Button>
       <Button
         variant="text"

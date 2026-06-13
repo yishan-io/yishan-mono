@@ -1209,5 +1209,56 @@
       "submit": "Create",
       "creating": "Creating..."
     }
+  },
+  "overview": {
+    "title": "Overview",
+    "toggleLeftSidebar": "Toggle left sidebar",
+    "retry": "Retry",
+    "loadError": "Failed to load overview data",
+    "filters": {
+      "timeRange": "Time Range",
+      "project": "Project",
+      "allProjects": "All Projects"
+    },
+    "tokenUsage": {
+      "title": "Token Usage",
+      "loading": "Loading chart...",
+      "noData": "No token usage data available",
+      "cached": "Cached",
+      "uncached": "Uncached",
+      "total": "Total"
+    },
+    "agentUsage": {
+      "title": "Agent Usage",
+      "loading": "Loading...",
+      "noData": "No data available",
+      "totalTokens": "Total Tokens",
+      "agents": "Agents"
+    },
+    "modelBreakdown": {
+      "title": "Model Breakdown",
+      "loading": "Loading...",
+      "noData": "No data available",
+      "model": "Model",
+      "agent": "Agent",
+      "totalTokens": "Total Tokens",
+      "input": "Input",
+      "output": "Output",
+      "percentage": "%"
+    },
+    "workspaceInsights": {
+      "title": "Workspace Insights",
+      "loading": "Loading...",
+      "noData": "No data available",
+      "closed": "Closed",
+      "avgLifetime": "Avg Lifetime",
+      "notAvailable": "N/A",
+      "lastClosed": "Last 5 Closed Workspaces",
+      "noClosed": "No closed workspaces yet",
+      "project": "Project",
+      "branch": "Branch",
+      "lifetime": "Lifetime",
+      "tokens": "Tokens"
+    }
   }
 }

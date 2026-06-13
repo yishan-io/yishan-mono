@@ -1,4 +1,5 @@
 import { Box, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { overviewStore } from "../../store/overviewStore";
 
 function formatTokens(value: number): string {
@@ -40,6 +41,7 @@ const tdNumericSx = { ...tdSx, textAlign: "right" as const, fontFamily: "monospa
 const thNumericSx = { ...thSx, textAlign: "right" as const };
 
 export function ModelBreakdownView() {
+  const { t } = useTranslation();
   const models = overviewStore((state) => state.modelBreakdown);
   const loadState = overviewStore((state) => state.modelBreakdownLoadState);
 
@@ -47,10 +49,10 @@ export function ModelBreakdownView() {
     return (
       <Box>
         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-          Model Breakdown
+          {t("overview.modelBreakdown.title")}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Loading...
+          {t("overview.modelBreakdown.loading")}
         </Typography>
       </Box>
     );
@@ -59,12 +61,12 @@ export function ModelBreakdownView() {
   return (
     <Box>
       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-        Model Breakdown
+        {t("overview.modelBreakdown.title")}
       </Typography>
 
       {models.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
-          No data available
+          {t("overview.modelBreakdown.noData")}
         </Typography>
       ) : (
         <Box
@@ -82,22 +84,22 @@ export function ModelBreakdownView() {
           <Box component="thead">
             <Box component="tr">
               <Box component="th" sx={thSx}>
-                Model
+                {t("overview.modelBreakdown.model")}
               </Box>
               <Box component="th" sx={thSx}>
-                Agent
+                {t("overview.modelBreakdown.agent")}
               </Box>
               <Box component="th" sx={thNumericSx}>
-                Total Tokens
+                {t("overview.modelBreakdown.totalTokens")}
               </Box>
               <Box component="th" sx={thNumericSx}>
-                Input
+                {t("overview.modelBreakdown.input")}
               </Box>
               <Box component="th" sx={thNumericSx}>
-                Output
+                {t("overview.modelBreakdown.output")}
               </Box>
               <Box component="th" sx={thNumericSx}>
-                %
+                {t("overview.modelBreakdown.percentage")}
               </Box>
             </Box>
           </Box>

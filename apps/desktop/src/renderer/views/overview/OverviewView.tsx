@@ -1,5 +1,6 @@
 import { Alert, Box, Button, CircularProgress, Paper, Typography } from "@mui/material";
 import { useCallback, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { LuChartBar } from "react-icons/lu";
 import { PaneHeader } from "../../components/PaneHeader";
 import { PaneToggleButton } from "../../components/PaneToggleButton";
@@ -28,6 +29,7 @@ const panelSx = {
 } as const;
 
 export function OverviewView({ onClose }: OverviewViewProps = {}) {
+  const { t } = useTranslation();
   const { leftCollapsed, onToggleLeftPane } = useWorkspacePaneVisibilityContext();
   const toggleLeftShortcutLabel = getShortcutDisplayLabelById("toggle-left-pane", getRendererPlatform());
   const toggleLeftTooltipLabel = `Toggle left sidebar (${toggleLeftShortcutLabel})`;
@@ -80,7 +82,7 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
           {leftCollapsed ? (
             <PaneToggleButton
               tooltipLabel={toggleLeftTooltipLabel}
-              ariaLabel="Toggle left sidebar"
+              ariaLabel={t("overview.toggleLeftSidebar")}
               icon={<LuChartBar size={16} />}
               onClick={onToggleLeftPane}
             />
@@ -88,7 +90,7 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
             <LuChartBar size={16} />
           )}
           <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            Overview
+            {t("overview.title")}
           </Typography>
         </Box>
       </PaneHeader>
@@ -108,7 +110,7 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
               severity="error"
               action={
                 <Button size="small" onClick={handleRetry}>
-                  Retry
+                  {t("overview.retry")}
                 </Button>
               }
             >
@@ -116,7 +118,7 @@ export function OverviewView({ onClose }: OverviewViewProps = {}) {
                 modelBreakdownLoadError ??
                 agentKindBreakdownLoadError ??
                 workspaceInsightsLoadError ??
-                "Failed to load overview data"}
+                t("overview.loadError")}
             </Alert>
           </Box>
         ) : null}
