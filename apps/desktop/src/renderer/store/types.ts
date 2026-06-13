@@ -186,6 +186,8 @@ export type OpenWorkspaceTabInput =
       launchCommand?: string;
       agentKind?: DesktopAgentKind;
       reuseExisting?: boolean;
+      tabId?: string;
+      paneId?: string;
     }
   | {
       workspaceId?: string;
