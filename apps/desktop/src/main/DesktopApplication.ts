@@ -14,6 +14,8 @@ import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "./daemon/daemonSetting
 import { DESKTOP_RPC_IPC_CHANNELS, type DesktopUpdateEventPayload, HOST_IPC_CHANNELS } from "./ipc";
 import { registerFileIpcHandlers } from "./ipc/fileHandlers";
 import { registerNotificationAndBrowserIpcHandlers } from "./ipc/notificationAndBrowserHandlers";
+import { readFile } from "node:fs/promises";
+import { resolveDaemonLogFilePath } from "./daemon/daemonHealthCheck";
 import { isDevMode } from "./runtime/environment";
 import { checkForUpdatesManually, downloadUpdate, startAutoUpdates } from "./updates/autoUpdateService";
 
@@ -253,6 +255,20 @@ export class DesktopApplication {
       } catch (error: unknown) {
         const reason = error instanceof Error ? error.message : "Failed to start daemon";
         return { success: false as const, error: reason };
+      }
+    });
+
+    ipcMain.handle(HOST_IPC_CHANNELS.readDaemonLog, async () => {
+      try {
+        const logFilePath = resolveDaemonLogFilePath();
+        const content = await readFile(logFilePath, "utf8");
+        return { ok: true as const, content };
+      } catch (error: unknown) {
+        if (typeof error === "object" && error !== null && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+          return { ok: true as const, content: "" };
+        }
+        const reason = error instanceof Error ? error.message : "Failed to read daemon log file";
+        return { ok: false as const, error: reason };
       }
     });
 

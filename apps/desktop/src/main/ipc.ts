@@ -78,6 +78,10 @@ export type DaemonRestartResult =
   | { success: true; daemonInfo: DaemonInfoResult }
   | { success: false; error: string };
 
+export type DaemonLogResult =
+  | { ok: true; content: string }
+  | { ok: false; error: string };
+
 export type AuthStatusResult = {
   authenticated: boolean;
   expiresAt?: string;
@@ -173,6 +177,7 @@ export type DesktopHostBridge = {
   login: () => Promise<AuthLoginResult>;
   getDaemonInfo: () => Promise<DaemonInfoResult>;
   restartDaemon: () => Promise<DaemonRestartResult>;
+  readDaemonLog: () => Promise<DaemonLogResult>;
   getDaemonQuitOnExit: () => Promise<boolean>;
   setDaemonQuitOnExit: (value: boolean) => Promise<{ ok: true }>;
   getDesktopCliInstallStatus: () => Promise<DesktopCliInstallStatusResult>;
@@ -217,6 +222,7 @@ export const HOST_IPC_CHANNELS = {
   login: "desktop:host/login",
   getDaemonInfo: "desktop:host/get-daemon-info",
   restartDaemon: "desktop:host/restart-daemon",
+  readDaemonLog: "desktop:host/read-daemon-log",
   getDaemonQuitOnExit: "desktop:host/get-daemon-quit-on-exit",
   setDaemonQuitOnExit: "desktop:host/set-daemon-quit-on-exit",
   getDesktopCliInstallStatus: "desktop:host/get-desktop-cli-install-status",

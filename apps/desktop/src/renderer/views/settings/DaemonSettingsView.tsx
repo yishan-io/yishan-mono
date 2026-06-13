@@ -1,7 +1,7 @@
-import { Alert, Box, Button, CircularProgress, Snackbar, Typography } from "@mui/material";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Alert, Box, Button, Chip, CircularProgress, Dialog, DialogContent, DialogTitle, IconButton, Snackbar, Typography } from "@mui/material";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuPower, LuRefreshCw } from "react-icons/lu";
+import { LuPower, LuRefreshCw, LuX } from "react-icons/lu";
 import type { DaemonInfoResult } from "../../../main/ipc";
 import { closeTerminalSession } from "../../commands/terminalCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
@@ -32,11 +32,18 @@ export function DaemonSettingsView() {
   const [restartSuccessOpen, setRestartSuccessOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [quitOnExit, setQuitOnExit] = useState(false);
-  useDialogRegistration(isConfirmOpen);
   const [isLoadingQuitOnExit, setIsLoadingQuitOnExit] = useState(true);
   const [isSavingQuitOnExit, setIsSavingQuitOnExit] = useState(false);
+  const [isLogOpen, setIsLogOpen] = useState(false);
+  const [isLoadingLog, setIsLoadingLog] = useState(false);
+  const [logContent, setLogContent] = useState<string | null>(null);
+  const [logError, setLogError] = useState<string | null>(null);
+  const [visibleEntryCount, setVisibleEntryCount] = useState(100);
+  useDialogRegistration(isConfirmOpen || isLogOpen);
   const latestLoadIdRef = useRef(0);
   const isMountedRef = useRef(true);
+  const logContainerRef = useRef<HTMLDivElement | null>(null);
+  const prevScrollHeightRef = useRef(0);
 
   const loadDaemonInfo = useCallback(async (isManualRefresh: boolean) => {
     const loadId = latestLoadIdRef.current + 1;
@@ -199,6 +206,83 @@ export function DaemonSettingsView() {
     }
   }, []);
 
+  const handleOpenLog = useCallback(async () => {
+    setIsLogOpen(true);
+    setIsLoadingLog(true);
+    setLogContent(null);
+    setLogError(null);
+    setVisibleEntryCount(100);
+    prevScrollHeightRef.current = 0;
+    try {
+      const result = await getDesktopHostBridge().readDaemonLog();
+      if (!isMountedRef.current) {
+        return;
+      }
+      if (result.ok) {
+        setLogContent(result.content);
+      } else {
+        setLogError(result.error);
+      }
+    } catch (error) {
+      if (isMountedRef.current) {
+        setLogError(error instanceof Error ? error.message : "Failed to read daemon log");
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoadingLog(false);
+      }
+    }
+  }, []);
+
+  const handleCloseLog = useCallback(() => {
+    setIsLogOpen(false);
+    setLogContent(null);
+    setLogError(null);
+  }, []);
+
+  const allLogEntries = useMemo(() => {
+    if (!logContent) return [];
+    return logContent
+      .split("\n")
+      .filter((line) => line.trim())
+      .map((line) => {
+        try {
+          return JSON.parse(line) as Record<string, unknown>;
+        } catch {
+          return { _raw: line };
+        }
+      });
+  }, [logContent]);
+
+  const logEntries = useMemo(() => {
+    return allLogEntries.slice(-visibleEntryCount);
+  }, [allLogEntries, visibleEntryCount]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: visibleEntryCount drives the expansion
+  useLayoutEffect(() => {
+    const container = logContainerRef.current;
+    if (!container) return;
+    if (prevScrollHeightRef.current === 0) {
+      container.scrollTop = container.scrollHeight;
+      prevScrollHeightRef.current = container.scrollHeight;
+      return;
+    }
+    const newScrollHeight = container.scrollHeight;
+    if (newScrollHeight > prevScrollHeightRef.current) {
+      container.scrollTop = newScrollHeight - prevScrollHeightRef.current;
+    }
+    prevScrollHeightRef.current = newScrollHeight;
+  }, [visibleEntryCount]);
+
+  const handleLogScroll = useCallback(() => {
+    const container = logContainerRef.current;
+    if (!container || container.scrollTop > 30) return;
+    if (allLogEntries.length > visibleEntryCount) {
+      prevScrollHeightRef.current = container.scrollHeight;
+      setVisibleEntryCount((prev) => Math.min(prev + 100, allLogEntries.length));
+    }
+  }, [allLogEntries.length, visibleEntryCount]);
+
   const statusLabel = daemonInfo ? t("settings.daemon.status.running") : t("settings.daemon.status.unavailable");
 
   return (
@@ -285,6 +369,23 @@ export function DaemonSettingsView() {
                   startIcon={isRestarting ? <CircularProgress size={14} color="inherit" /> : <LuPower />}
                 >
                   {isRestarting ? t("settings.daemon.restart.inProgress") : t("settings.daemon.restart.action")}
+                </Button>
+              }
+            />
+            <SettingsControlRow
+              title={t("settings.daemon.log.label")}
+              description={t("settings.daemon.log.description")}
+              control={
+                <Button
+                  size="small"
+                  variant="text"
+                  color="primary"
+                  onClick={() => {
+                    void handleOpenLog();
+                  }}
+                  disabled={isLoading}
+                >
+                  {t("settings.daemon.log.action")}
                 </Button>
               }
             />
@@ -382,6 +483,106 @@ export function DaemonSettingsView() {
           void handleRestart();
         }}
       />
+
+      <Dialog
+        open={isLogOpen}
+        onClose={handleCloseLog}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          {t("settings.daemon.log.title")}
+          <IconButton size="small" onClick={handleCloseLog}>
+            <LuX />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          {isLoadingLog ? (
+            <CenteredSpinner />
+          ) : logError ? (
+            <Box sx={{ p: 2 }}>
+              <Alert severity="error">{logError}</Alert>
+            </Box>
+          ) : (
+            <Box ref={logContainerRef} sx={{ maxHeight: "60vh", overflow: "auto", p: 1 }} onScroll={handleLogScroll}>
+              {logEntries.map((entry, index) => {
+                const level = typeof entry.level === "string" ? entry.level : undefined;
+                const time = typeof entry.time === "string" ? entry.time : undefined;
+                const message = typeof entry.message === "string"
+                  ? entry.message
+                  : entry._raw
+                    ? String(entry._raw)
+                    : JSON.stringify(entry);
+
+                const metadata = Object.entries(entry)
+                  .filter(([key]) => key !== "level" && key !== "time" && key !== "message" && key !== "_raw")
+                  .map(([key, value]) => `${key}=${typeof value === "string" ? value : JSON.stringify(value)}`)
+                  .join("  ");
+
+                const levelColor =
+                  level === "error" || level === "fatal"
+                    ? "error"
+                    : level === "warn"
+                      ? "warning"
+                      : level === "debug" || level === "trace"
+                        ? "default"
+                        : "info";
+
+                const formattedTime = time
+                  ? new Date(time).toLocaleString()
+                  : undefined;
+
+                const entryKey = `${index}-${time ?? ""}-${level ?? ""}-${message.slice(0, 40)}`;
+
+                return (
+                  <Box
+                    key={entryKey}
+                    sx={{
+                      display: "flex",
+                      gap: 1,
+                      py: 0.25,
+                      px: 1,
+                      fontFamily: "monospace",
+                      fontSize: "0.8rem",
+                      alignItems: "flex-start",
+                      borderBottom: "1px solid",
+                      borderColor: "divider",
+                    }}
+                  >
+                    {formattedTime ? (
+                      <Typography
+                        variant="caption"
+                        sx={{ fontFamily: "monospace", whiteSpace: "nowrap", color: "text.secondary", flexShrink: 0, minWidth: 140, pt: "2px" }}
+                      >
+                        {formattedTime}
+                      </Typography>
+                    ) : null}
+                    {level ? (
+                      <Chip label={level.toUpperCase()} size="small" color={levelColor as "error" | "warning" | "default" | "info"} sx={{ height: 20, fontSize: "0.65rem", flexShrink: 0, mt: "1px" }} />
+                    ) : null}
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{ fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all", lineHeight: 1.4 }}
+                      >
+                        {message}
+                      </Typography>
+                      {metadata ? (
+                        <Typography
+                          variant="caption"
+                          sx={{ fontFamily: "monospace", fontSize: "0.7rem", color: "text.disabled", whiteSpace: "pre-wrap", wordBreak: "break-all", display: "block" }}
+                        >
+                          {metadata}
+                        </Typography>
+                      ) : null}
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

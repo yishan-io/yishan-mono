@@ -484,6 +484,12 @@
         "label": "Quit daemon before app exits",
         "description": "When enabled, the daemon is stopped before the desktop app exits. When disabled, the daemon continues running in the background."
       },
+      "log": {
+        "label": "Daemon Log",
+        "description": "View the raw daemon log entries for troubleshooting and diagnostics.",
+        "action": "Show Log",
+        "title": "Daemon Log"
+      },
       "relay": {
         "title": "Relay Connection",
         "description": "Status of the outbound relay connection used for remote access.",
@@ -1102,7 +1108,8 @@
     "actions": {
       "cancel": "Cancel",
       "save": "Save",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "close": "Close"
     }
   },
   "scheduledJob": {

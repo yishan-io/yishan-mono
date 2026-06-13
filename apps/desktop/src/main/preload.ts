@@ -26,6 +26,7 @@ const bridge: DesktopBridge = {
     login: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.login),
     getDaemonInfo: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getDaemonInfo),
     restartDaemon: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.restartDaemon),
+    readDaemonLog: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.readDaemonLog),
     getDaemonQuitOnExit: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getDaemonQuitOnExit),
     setDaemonQuitOnExit: (value) => ipcRenderer.invoke(HOST_IPC_CHANNELS.setDaemonQuitOnExit, value),
     getDesktopCliInstallStatus: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getDesktopCliInstallStatus),

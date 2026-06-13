@@ -210,6 +210,10 @@ export async function fetchDaemonInfo(fetchFn: typeof fetch): Promise<DaemonInfo
   return result;
 }
 
+export function resolveDaemonLogFilePath(): string {
+  return resolve(homedir(), ".yishan", "profiles", resolveCliProfileName(), "logs", "daemon.log");
+}
+
 /** Checks if a path exists on disk. */
 export function firstExistingPath(candidates: Array<string | undefined>): string | undefined {
   for (const candidate of candidates) {
