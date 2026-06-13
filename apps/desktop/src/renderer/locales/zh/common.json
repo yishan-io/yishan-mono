@@ -1225,15 +1225,21 @@
       "title": "工作区洞察",
       "loading": "加载中...",
       "noData": "暂无数据",
+      "closedTab": "已关闭的工作区",
+      "primaryTab": "主工作区",
       "closed": "已关闭",
       "avgLifetime": "平均生命周期",
       "notAvailable": "无",
-      "lastClosed": "最近关闭的 5 个工作区",
+      "lastClosed": "最近关闭的 10 个工作区",
       "noClosed": "暂无已关闭的工作区",
       "project": "项目",
       "branch": "分支",
       "lifetime": "生命周期",
-      "tokens": "令牌数"
+      "tokens": "令牌数",
+      "primaryCount": "主工作区数量",
+      "tokenUsage": "令牌使用量",
+      "topPrimary": "核心主工作区",
+      "noPrimary": "暂无主工作区"
     }
   }
 }

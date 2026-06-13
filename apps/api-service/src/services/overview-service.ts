@@ -66,10 +66,22 @@ export type ClosedWorkspaceItem = {
   totalTokens: number;
 };
 
+export type PrimaryWorkspaceItem = {
+  id: string;
+  projectId: string;
+  projectName: string;
+  branch: string | null;
+  createdAt: string;
+  totalTokens: number;
+};
+
 export type WorkspaceInsightsResult = {
   closedWorkspaceCount: number;
   averageLifetimeHours: number | null;
   lastClosedWorkspaces: ClosedWorkspaceItem[];
+  primaryWorkspaceCount: number;
+  primaryWorkspaceTokens: number;
+  topPrimaryWorkspaces: PrimaryWorkspaceItem[];
 };
 
 function rangeHours(range: OverviewTimeRange): number {
@@ -223,19 +235,28 @@ export class OverviewService {
     organizationId: string;
     actorUserId: string;
     actorRole?: OrganizationMemberRole;
+    range: OverviewTimeRange;
     projectId?: string;
   }): Promise<WorkspaceInsightsResult> {
     await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId, input.actorRole);
 
-    const baseConditions = [eq(workspaces.organizationId, input.organizationId), eq(workspaces.status, "closed")];
+    const now = new Date();
+    const fromDate = new Date(now.getTime() - hoursToMillis(input.range));
+
+    const closedBaseConditions = [
+      eq(workspaces.organizationId, input.organizationId),
+      eq(workspaces.status, "closed"),
+      gte(workspaces.updatedAt, fromDate),
+      lte(workspaces.updatedAt, now),
+    ];
     if (input.projectId) {
-      baseConditions.push(eq(workspaces.projectId, input.projectId));
+      closedBaseConditions.push(eq(workspaces.projectId, input.projectId));
     }
 
     const closedCountRow = await this.db
       .select({ count: count() })
       .from(workspaces)
-      .where(and(...baseConditions));
+      .where(and(...closedBaseConditions));
 
     const closedWorkspaceCount = closedCountRow[0]?.count ?? 0;
 
@@ -246,7 +267,7 @@ export class OverviewService {
         ),
       })
       .from(workspaces)
-      .where(and(...baseConditions));
+      .where(and(...closedBaseConditions));
 
     const averageLifetimeHours = lifetimeRow[0]?.avgSeconds != null ? lifetimeRow[0].avgSeconds / 3600 : null;
 
@@ -259,9 +280,9 @@ export class OverviewService {
         closedAt: workspaces.updatedAt,
       })
       .from(workspaces)
-      .where(and(...baseConditions))
+      .where(and(...closedBaseConditions))
       .orderBy(desc(workspaces.updatedAt))
-      .limit(5);
+      .limit(10);
 
     const lastClosedWorkspaces: ClosedWorkspaceItem[] = [];
 
@@ -297,10 +318,94 @@ export class OverviewService {
       });
     }
 
+    const primaryBaseConditions = [
+      eq(workspaces.organizationId, input.organizationId),
+      eq(workspaces.kind, "primary"),
+      eq(workspaces.status, "active"),
+    ];
+    if (input.projectId) {
+      primaryBaseConditions.push(eq(workspaces.projectId, input.projectId));
+    }
+
+    const primaryCountRow = await this.db
+      .select({ count: count() })
+      .from(workspaces)
+      .where(and(...primaryBaseConditions));
+
+    const primaryWorkspaceCount = primaryCountRow[0]?.count ?? 0;
+
+    const primaryTokenRow = await this.db
+      .select({
+        totalTokens: sum(tokenUsageHourly.totalTokens).mapWith(Number),
+      })
+      .from(tokenUsageHourly)
+      .innerJoin(workspaces, eq(tokenUsageHourly.workspaceId, workspaces.id))
+      .where(
+        and(
+          eq(workspaces.organizationId, input.organizationId),
+          eq(workspaces.kind, "primary"),
+          eq(workspaces.status, "active"),
+          gte(tokenUsageHourly.bucketStartHourUtc, fromDate),
+          lte(tokenUsageHourly.bucketStartHourUtc, now),
+          ...(input.projectId ? [eq(workspaces.projectId, input.projectId)] : []),
+        ),
+      );
+
+    const primaryWorkspaceTokens = primaryTokenRow[0]?.totalTokens ?? 0;
+
+    const topPrimaryRows = await this.db
+      .select({
+        id: workspaces.id,
+        projectId: workspaces.projectId,
+        branch: workspaces.branch,
+        createdAt: workspaces.createdAt,
+      })
+      .from(workspaces)
+      .where(and(...primaryBaseConditions))
+      .orderBy(desc(workspaces.createdAt))
+      .limit(10);
+
+    const topPrimaryWorkspaces: PrimaryWorkspaceItem[] = [];
+
+    for (const ws of topPrimaryRows) {
+      const projectRow = await this.db
+        .select({ name: projects.name })
+        .from(projects)
+        .where(eq(projects.id, ws.projectId))
+        .limit(1);
+
+      const projectName = projectRow[0]?.name ?? ws.projectId;
+
+      const tokenRow = await this.db
+        .select({
+          totalTokens: sum(tokenUsageHourly.totalTokens).mapWith(Number),
+        })
+        .from(tokenUsageHourly)
+        .where(
+          and(
+            eq(tokenUsageHourly.workspaceId, ws.id),
+            gte(tokenUsageHourly.bucketStartHourUtc, fromDate),
+            lte(tokenUsageHourly.bucketStartHourUtc, now),
+          ),
+        );
+
+      topPrimaryWorkspaces.push({
+        id: ws.id,
+        projectId: ws.projectId,
+        projectName,
+        branch: ws.branch,
+        createdAt: ws.createdAt.toISOString(),
+        totalTokens: tokenRow[0]?.totalTokens ?? 0,
+      });
+    }
+
     return {
       closedWorkspaceCount,
       averageLifetimeHours: averageLifetimeHours != null ? Math.round(averageLifetimeHours * 10) / 10 : null,
       lastClosedWorkspaces,
+      primaryWorkspaceCount,
+      primaryWorkspaceTokens,
+      topPrimaryWorkspaces,
     };
   }
 }

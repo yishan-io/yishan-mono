@@ -1262,15 +1262,21 @@
       "title": "Workspace Insights",
       "loading": "Loading...",
       "noData": "No data available",
+      "closedTab": "Closed Workspaces",
+      "primaryTab": "Primary Workspaces",
       "closed": "Closed",
       "avgLifetime": "Avg Lifetime",
       "notAvailable": "N/A",
-      "lastClosed": "Last 5 Closed Workspaces",
+      "lastClosed": "Last 10 Closed Workspaces",
       "noClosed": "No closed workspaces yet",
       "project": "Project",
       "branch": "Branch",
       "lifetime": "Lifetime",
-      "tokens": "Tokens"
+      "tokens": "Tokens",
+      "primaryCount": "Primary Workspaces",
+      "tokenUsage": "Token Usage",
+      "topPrimary": "Top Primary Workspaces",
+      "noPrimary": "No primary workspaces yet"
     }
   }
 }

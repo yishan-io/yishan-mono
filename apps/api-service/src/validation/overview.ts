@@ -27,6 +27,7 @@ export const overviewAgentKindBreakdownQuerySchema = z.object({
 });
 
 export const overviewWorkspaceInsightsQuerySchema = z.object({
+  range: z.enum(OVERVIEW_TIME_RANGES),
   projectId: nonEmptyStringSchema.optional(),
 });
 

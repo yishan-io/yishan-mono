@@ -75,6 +75,7 @@ export async function getOverviewWorkspaceInsightsHandler(
     organizationId: params.orgId,
     actorUserId: actorUser.id,
     actorRole,
+    range: query.range,
     projectId: query.projectId,
   });
 

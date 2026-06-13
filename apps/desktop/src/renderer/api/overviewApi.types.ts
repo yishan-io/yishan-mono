@@ -42,10 +42,22 @@ export type ClosedWorkspaceItem = {
   totalTokens: number;
 };
 
+export type PrimaryWorkspaceItem = {
+  id: string;
+  projectId: string;
+  projectName: string;
+  branch: string | null;
+  createdAt: string;
+  totalTokens: number;
+};
+
 export type WorkspaceInsightsResult = {
   closedWorkspaceCount: number;
   averageLifetimeHours: number | null;
   lastClosedWorkspaces: ClosedWorkspaceItem[];
+  primaryWorkspaceCount: number;
+  primaryWorkspaceTokens: number;
+  topPrimaryWorkspaces: PrimaryWorkspaceItem[];
 };
 
 export type OverviewTimeRange = "7d" | "30d" | "90d";
