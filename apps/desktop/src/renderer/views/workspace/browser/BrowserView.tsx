@@ -10,6 +10,7 @@ import { WebviewPane } from "./WebviewPane";
 import { useBrowserHistory } from "./hooks/useBrowserHistory";
 import { useBrowserTools } from "./hooks/useBrowserTools";
 import { useBrowserUrl } from "./hooks/useBrowserUrl";
+import { useElementInspector } from "./hooks/useElementInspector";
 import { useWebviewEvents } from "./hooks/useWebviewEvents";
 import { tabStore } from "../../../store/tabStore";
 
@@ -63,6 +64,12 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
   });
 
   const tools = useBrowserTools(webviewRef);
+  const inspector = useElementInspector(webviewRef);
+
+  const snackbarMessage = tools.snackbarMessage;
+  const clearSnackbarMessage = useCallback(() => {
+    tools.setSnackbarMessage("");
+  }, [tools]);
 
   const navigateTo = useCallback(
     (rawUrl: string) => {
@@ -153,6 +160,8 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
         onGoForward={() => webviewRef.current?.goForward()}
         onReload={() => webviewRef.current?.reload()}
         onToolsClick={(event) => tools.setToolsAnchor(event.currentTarget)}
+        inspecting={inspector.inspecting}
+        onToggleInspect={inspector.toggleInspecting}
       >
         <LuWrench size={14} />
       </UrlBar>
@@ -171,9 +180,9 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
         tabId={tabId}
         resolvedUrl={resolvedUrl}
         errorMessage={tools.errorMessage}
-        snackbarMessage={tools.snackbarMessage}
+        snackbarMessage={snackbarMessage}
         onSetErrorMessage={tools.setErrorMessage}
-        onSetSnackbarMessage={tools.setSnackbarMessage}
+        onSetSnackbarMessage={clearSnackbarMessage}
         setWebviewRef={setWebviewRef}
         blankContent={<BlankView historyGroups={historyGroups} onNavigateTo={navigateTo} />}
       />
