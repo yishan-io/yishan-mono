@@ -24,7 +24,7 @@ func TestDispatchFile_Search(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open workspace: %v", err)
 	}
-	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, filepath.Join(root, "config.yml"), NewAppContextStore(""))
+	handler := NewJSONRPCHandler(manager, nil, "node-1", filepath.Join(root, "daemon.log"), nil, nil, filepath.Join(root, "config.yml"), NewAppContextStore(""))
 	defer handler.Shutdown()
 
 	params, err := json.Marshal(map[string]any{

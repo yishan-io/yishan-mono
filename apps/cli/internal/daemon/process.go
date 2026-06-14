@@ -17,6 +17,7 @@ import (
 	"yishan/apps/cli/internal/buildinfo"
 	agentsetup "yishan/apps/cli/internal/agentsetup"
 	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/nodeid"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
@@ -29,10 +30,11 @@ var ErrNotRunning = errors.New("daemon is not running")
 const detachedEnvKey = "YISHAN_DAEMON_DETACHED"
 
 type RunConfig struct {
-	Host         string
-	Port         int
-	RelayEnabled bool
-	RelayURL     string
+	Host               string
+	Port               int
+	RelayEnabled       bool
+	RelayURL           string
+	MemorySummarizer   bool
 	// LogFilePath is the resolved path to the daemon log file.
 	// Set by the command layer; passed through to handlers for diagnostics.
 	LogFilePath string
@@ -85,10 +87,24 @@ func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
 	}
 	contextFilePath := config.ContextFilePath(filepath.Dir(statePath))
 	contextStore := NewAppContextStore(contextFilePath)
-	handler := NewJSONRPCHandler(workspaceManager, runtime, daemonID, cfg.LogFilePath, cleanupStore, statePath, contextStore)
+	wsIndexStore, err := newWorkspaceIndexStore(statePath)
+	if err != nil {
+		return fmt.Errorf("create workspace index store: %w", err)
+	}
+	handler := NewJSONRPCHandler(workspaceManager, runtime, daemonID, cfg.LogFilePath, cleanupStore, wsIndexStore, statePath, contextStore)
+
+	memoryDBPath := filepath.Join(filepath.Dir(statePath), "memory.db")
+	memSvc, memErr := memory.NewService(memoryDBPath, memory.SummarizerConfig{Enabled: cfg.MemorySummarizer})
+	if memErr != nil {
+		log.Warn().Err(memErr).Msg("memory service initialization failed, memory features disabled")
+	} else {
+		handler.SetMemoryService(memSvc, context.Background())
+	}
+
 	if handler.tokenUsage != nil {
 		handler.tokenUsage.StartStartupScan()
 	}
+
 	relayStatus := NewRelayStatus(cfg.RelayEnabled, cfg.RelayURL)
 
 	// ── Phase 4: HTTP server ───────────────────────────────────────────────

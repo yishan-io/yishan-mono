@@ -9,6 +9,7 @@ import (
 	"time"
 
 	agentcmd "yishan/apps/cli/internal/daemon/agentcmd"
+	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/terminal"
 
@@ -55,6 +56,22 @@ func (h *JSONRPCHandler) handleOpen(_ context.Context, params json.RawMessage) (
 	}
 	log.Info().Str("workspaceId", ws.ID).Str("path", ws.Path).Bool("prAlreadyMerged", req.PRAlreadyMerged).Msg("daemon workspace opened")
 	h.watchAndTrack(ws.ID, ws.Path)
+	if h.wsIndexStore != nil && ws.Path != "" {
+		if err := h.wsIndexStore.Upsert(workspaceIndexEntry{
+			WorkspaceID:  ws.ID,
+			WorktreePath: ws.Path,
+			ProjectID:    ws.ProjectID,
+		}); err != nil {
+			log.Warn().Err(err).Str("workspaceId", ws.ID).Msg("workspace index store upsert failed")
+		}
+	}
+	if h.memory != nil && ws.Path != "" {
+		go func(ref memory.WorkspaceRef) {
+			if _, err := h.memory.ReconcileNow([]memory.WorkspaceRef{ref}); err != nil {
+				log.Warn().Err(err).Str("path", ref.WorktreePath).Msg("memory reconcile on workspace open failed")
+			}
+		}(memory.WorkspaceRef{WorktreePath: ws.Path, ProjectID: ws.ProjectID})
+	}
 	return ws, nil
 }
 
@@ -295,6 +312,11 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 	if h.cleanupStore != nil {
 		if err := h.cleanupStore.Remove(closeReq.WorkspaceID); err != nil {
 			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to remove completed workspace cleanup")
+		}
+	}
+	if h.wsIndexStore != nil {
+		if err := h.wsIndexStore.Remove(closeReq.WorkspaceID); err != nil {
+			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to remove workspace from index store")
 		}
 	}
 

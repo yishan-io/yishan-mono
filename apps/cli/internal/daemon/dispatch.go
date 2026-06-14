@@ -21,6 +21,8 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 		return h.dispatchTerminal(ctx, connState, method, params)
 	case isSkillMethod(method):
 		return h.dispatchSkill(ctx, method, params)
+	case isMemoryMethod(method):
+		return h.dispatchMemory(method, params)
 	default:
 		return h.dispatchSystem(ctx, connState, method, params)
 	}
@@ -78,6 +80,14 @@ func isTerminalMethod(method string) bool {
 func isSkillMethod(method string) bool {
 	switch method {
 	case MethodSkillList, MethodSkillInstall, MethodSkillUninstall:
+		return true
+	}
+	return false
+}
+
+func isMemoryMethod(method string) bool {
+	switch method {
+	case MethodMemorySearch, MethodMemoryReconcile, MethodMemoryStatus:
 		return true
 	}
 	return false

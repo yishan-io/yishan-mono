@@ -68,6 +68,13 @@ func (h *JSONRPCHandler) ServeAgentHook(w http.ResponseWriter, r *http.Request) 
 		h.tokenUsage.Trigger(event.agent, "hook")
 	}
 
+	if event.eventType == "stop" && h.memory != nil {
+		if handle, err := h.manager.WorkspaceHandle(event.workspaceID); err == nil {
+			ws := handle.Workspace()
+			h.memory.SummarizeSession(event.agent, ws.Path, ws.ProjectID)
+		}
+	}
+
 	if notification := buildHookNotificationPayload(event); notification != nil {
 		h.events.Publish(frontendEvent{Topic: "notificationEvent", Payload: notification})
 	}

@@ -5,12 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"path/filepath"
 	"sync"
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
-	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/modellist"
+	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -28,16 +30,19 @@ type JSONRPCHandler struct {
 	nodeID         string
 	logFilePath    string
 	cleanupStore   *workspaceCleanupStore
+	wsIndexStore   *workspaceIndexStore
 	context        *AppContextStore
 	events         *eventHub
 	watchers       *workspaceWatchers
 	prTracker      *workspacePRTracker
 	tokenUsage     *tokenUsageCollector
 	modelList      *modellist.Service
+	memory         *memory.Service
+	serverCtx      context.Context
 	fileCacheSubID uint64
 }
 
-func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, configPath string, context *AppContextStore) *JSONRPCHandler {
+func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, wsIndexStore *workspaceIndexStore, configPath string, context *AppContextStore) *JSONRPCHandler {
 	events := newEventHub()
 	prTracker := newWorkspacePRTracker(manager, runtime, events.Publish)
 	fileCacheSubID, fileCacheEvents := events.Subscribe()
@@ -53,7 +58,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 			},
 		})
 	})
-		handler := &JSONRPCHandler{
+	handler := &JSONRPCHandler{
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(_ *http.Request) bool { return true },
 		},
@@ -62,6 +67,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		nodeID:         nodeID,
 		logFilePath:    logFilePath,
 		cleanupStore:   cleanupStore,
+		wsIndexStore:   wsIndexStore,
 		context:        context,
 		events:         events,
 		watchers:       newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
@@ -74,13 +80,22 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 	return handler
 }
 
-// Shutdown stops background goroutines owned by the handler (PR tracker poll loop).
+// SetMemoryService wires the memory service into the handler.
+func (h *JSONRPCHandler) SetMemoryService(svc *memory.Service, ctx context.Context) {
+	h.memory = svc
+	h.serverCtx = ctx
+}
+
+// Shutdown stops background goroutines owned by the handler (PR tracker poll loop, token usage, memory).
 // It must be called when the daemon server shuts down.
 func (h *JSONRPCHandler) Shutdown() {
 	h.events.Unsubscribe(h.fileCacheSubID)
 	h.prTracker.Stop()
 	if h.tokenUsage != nil {
 		h.tokenUsage.Close()
+	}
+	if h.memory != nil {
+		h.memory.Close()
 	}
 	modellist.ShutdownShell()
 }
@@ -100,6 +115,25 @@ func (h *JSONRPCHandler) consumeFileCacheInvalidationEvents(events <-chan fronte
 			continue
 		}
 		h.manager.InvalidateWorkspaceFileCacheByPath(worktreePath, changedPaths)
+		if h.memory != nil {
+			h.forwardMemoryFileChanges(worktreePath, changedPaths)
+		}
+	}
+}
+
+func (h *JSONRPCHandler) forwardMemoryFileChanges(worktreePath string, relPaths []string) {
+	// Resolve projectID from the registered workspace (best-effort; empty is fine).
+	projectID := ""
+	if ws, err := h.manager.WorkspaceHandleByPath(worktreePath); err == nil {
+		projectID = ws.Workspace().ProjectID
+	}
+	for _, rel := range relPaths {
+		abs := filepath.Join(worktreePath, rel)
+		if h.memory.ShouldIndex(abs) {
+			if err := h.memory.OnFileChanged(abs, worktreePath, projectID); err != nil {
+				log.Warn().Err(err).Str("path", abs).Msg("memory index update failed")
+			}
+		}
 	}
 }
 

@@ -196,11 +196,12 @@ func restartDaemon(_ *cobra.Command, _ []string) error {
 // pass an empty string when building a config for StartDetached.
 func buildRunConfig(logFilePath string) daemon.RunConfig {
 	return daemon.RunConfig{
-		Host:         appConfig.Daemon.Host,
-		Port:         appConfig.Daemon.Port,
-		RelayEnabled: appConfig.Daemon.RelayEnabled,
-		RelayURL:     appConfig.Daemon.RelayURL,
-		LogFilePath:  logFilePath,
+		Host:              appConfig.Daemon.Host,
+		Port:              appConfig.Daemon.Port,
+		RelayEnabled:      appConfig.Daemon.RelayEnabled,
+		RelayURL:          appConfig.Daemon.RelayURL,
+		MemorySummarizer:  appConfig.Memory.SummarizerEnabled,
+		LogFilePath:       logFilePath,
 	}
 }
 

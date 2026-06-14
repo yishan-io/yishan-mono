@@ -60,10 +60,26 @@ _Last updated: YYYY-MM-DD_
 
 ### At the start of a session
 
-The hook injects `MEMORY.md` automatically. Read it, then proceed. If anything
-in it is outdated, correct it before starting work.
+Before ANY other action:
+1. Read `.my-context/MEMORY.md`
+2. If anything outdated — correct it first
+
+### During a session
+
+When you need to find something from past sessions:
+1. Use `memory.search` JSON-RPC method (or the agent's MCP memory_search tool) with 1-3 keywords
+2. Read the returned paths for full content
+3. If search returns 0 — retry with fewer/rarer terms
+
+When you discover something worth keeping across sessions:
+1. Edit `.my-context/MEMORY.md` immediately
+2. Format: `- YYYY-MM-DD — <description>`
+3. Don't wait — you might be interrupted
+4. If sections grow too large — extract older entries to `.my-context/architecture/<topic>.md` and leave an index line: `- See architecture/<topic>.md (N items)`
 
 ### At the end of a session
+
+The daemon also runs automatic summarization when the session stops (via hook → external LLM → write MEMORY.md). This catches what you forgot to write. Your manual writes help, but are supplemented by this auto-capture.
 
 1. Rewrite **Where I Left Off** to reflect the current state.
 2. Add to **My Decisions** for any choices made that the agent should not revisit.

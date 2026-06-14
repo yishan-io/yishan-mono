@@ -23,6 +23,8 @@ const (
 	// KeyCurrentOrgID is kept for migration reads from legacy credential.yaml.
 	// New writes go to context.yaml via KeyDefaultOrgID.
 	KeyCurrentOrgID = "current_org_id"
+
+	KeyMemorySummarizerEnabled = "memory.summarizer.enabled"
 )
 
 func HomeDir() (string, error) {
@@ -48,6 +50,10 @@ type DaemonConfig struct {
 	RelayURL     string
 }
 
+type MemoryConfig struct {
+	SummarizerEnabled bool
+}
+
 type Config struct {
 	LogLevel     string
 	LogFormat    string
@@ -56,6 +62,7 @@ type Config struct {
 	DefaultOrgID string
 	API          APIConfig
 	Daemon       DaemonConfig
+	Memory       MemoryConfig
 }
 
 func ResolveConfigPath(v *viper.Viper, explicitConfigPath string) (string, error) {
@@ -113,6 +120,9 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 			Port:         v.GetInt("daemon_port"),
 			RelayEnabled: v.GetBool("daemon_relay_enabled"),
 			RelayURL:     v.GetString("daemon_relay_url"),
+		},
+		Memory: MemoryConfig{
+			SummarizerEnabled: v.GetBool(KeyMemorySummarizerEnabled),
 		},
 	}, nil
 }
