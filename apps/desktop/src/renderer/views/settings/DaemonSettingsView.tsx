@@ -267,12 +267,14 @@ export function DaemonSettingsView() {
       prevScrollHeightRef.current = container.scrollHeight;
       return;
     }
+    // Subsequent loads: preserve the bottom-anchored position by
+    // adjusting scrollTop by the growth in scrollHeight
     const newScrollHeight = container.scrollHeight;
     if (newScrollHeight > prevScrollHeightRef.current) {
       container.scrollTop = newScrollHeight - prevScrollHeightRef.current;
     }
     prevScrollHeightRef.current = newScrollHeight;
-  }, [visibleEntryCount]);
+  }, [visibleEntryCount, logEntries.length]);
 
   const handleLogScroll = useCallback(() => {
     const container = logContainerRef.current;
