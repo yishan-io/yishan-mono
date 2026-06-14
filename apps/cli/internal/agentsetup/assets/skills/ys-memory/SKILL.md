@@ -75,7 +75,7 @@ When you discover something worth keeping across sessions:
 1. Edit `.my-context/MEMORY.md` immediately
 2. Format: `- YYYY-MM-DD — <description>`
 3. Don't wait — you might be interrupted
-4. If sections grow too large — extract older entries to `.my-context/architecture/<topic>.md` and leave an index line: `- See architecture/<topic>.md (N items)`
+4. If sections grow too large — the daemon budget guard automatically moves overflow to `.my-context/archive/<category>-<date>.md` (e.g. `archive/decisions-20260614.md`). You can manually extract older entries this way too. Leave an index line: `- See archive/<category>-<date>.md (N items)`
 
 ### At the end of a session
 
