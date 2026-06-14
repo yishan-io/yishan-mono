@@ -48,34 +48,66 @@ func RemoveOpenCodeCommands() error {
 }
 
 var openCodeCommands = map[string]string{
-	"ys-start": `Read ~/.config/opencode/skills/ys-start/SKILL.md and follow its workflow to start a new task.
+	"ys-start": `---
+description: Start a new task — create a ticket folder in .my-context/tasks/
+---
+
+Read ~/.config/opencode/skills/ys-start/SKILL.md and follow its workflow to start a new task.
 Ask me for: title, ticket URL/ID (optional), and acceptance criteria.
 Create the task folder under .my-context/tasks/active/<id>-<slug>/ with task.md, register it in state.json, then suggest the next step (/ys-research).`,
-	"ys-research": `Read ~/.config/opencode/skills/ys-research/SKILL.md and follow its workflow to research the current task.
+	"ys-research": `---
+description: Research a task — search project memory, explore codebase, record findings
+---
+
+Read ~/.config/opencode/skills/ys-research/SKILL.md and follow its workflow to research the current task.
 Read .my-context/tasks/state.json to find the active task, then read its task.md.
 Search project memory with: yishan memory search --output json --project-id $YISHAN_PROJECT_ID "<keywords>"
 Explore the codebase and read any relevant .my-context/ docs.
 Append findings to notes.md under a new date heading. When done, suggest /ys-plan.`,
-	"ys-plan": `Read ~/.config/opencode/skills/ys-plan/SKILL.md and follow its workflow to plan the current task.
+	"ys-plan": `---
+description: Plan a task — draft an execution plan with ordered steps
+---
+
+Read ~/.config/opencode/skills/ys-plan/SKILL.md and follow its workflow to plan the current task.
 Read the task's task.md and notes.md, then draft plan.md with approach and ordered concrete steps.
 Every step must reference specific files and be verifiable. Cover all acceptance criteria.
 Write plan.md and suggest /ys-build.`,
-	"ys-build": `Read ~/.config/opencode/skills/ys-build/SKILL.md and follow its workflow to build the planned task.
+	"ys-build": `---
+description: Build a task — execute the plan, write code, add tests
+---
+
+Read ~/.config/opencode/skills/ys-build/SKILL.md and follow its workflow to build the planned task.
 Read plan.md and execute each step in order. Write code, add unit tests.
 Run tests after each step — fix failures before proceeding.
 When all steps are done, run the full test suite, then suggest /ys-verify.`,
-	"ys-verify": `Read ~/.config/opencode/skills/ys-verify/SKILL.md and follow its workflow to verify the task.
+	"ys-verify": `---
+description: Verify a task — review code, run lint and tests
+---
+
+Read ~/.config/opencode/skills/ys-verify/SKILL.md and follow its workflow to verify the task.
 Run through all checks: acceptance criteria, code review, lint, typecheck, full test suite.
 Write a verification checklist at the bottom of notes.md.
 If all checks pass, suggest /ys-done. Fix any issues before proceeding.`,
-	"ys-done": `Read ~/.config/opencode/skills/ys-done/SKILL.md and follow its workflow to finalize the task.
+	"ys-done": `---
+description: Finalize a task — update docs, move to completed/, update MEMORY.md
+---
+
+Read ~/.config/opencode/skills/ys-done/SKILL.md and follow its workflow to finalize the task.
 Collect all PR URLs, write outcome.md with PRs, what was done, what changed, and future notes.
 Update architecture docs in .my-context/architecture/ if anything structural changed.
 Move the task folder from active/ to completed/, update state.json, and update MEMORY.md.`,
-	"ys-memory": `Read ~/.config/opencode/skills/ys-memory/SKILL.md.
+	"ys-memory": `---
+description: Search or update project memory (.my-context/)
+---
+
+Read ~/.config/opencode/skills/ys-memory/SKILL.md.
 If I ask to search: run yishan memory search --output json --project-id $YISHAN_PROJECT_ID "<keywords>".
 If I ask to update: edit .my-context/MEMORY.md following the template and rules in the skill.`,
-	"ys-workspace": `Read ~/.config/opencode/skills/ys-workspace/SKILL.md and follow its workflow.
+	"ys-workspace": `---
+description: Manage yishan workspaces — create, list, find, close
+---
+
+Read ~/.config/opencode/skills/ys-workspace/SKILL.md and follow its workflow.
 Use the yishan CLI to manage workspaces — list, create (with --task-run-agent-kind opencode), or close.
 Environment variables YISHAN_PROJECT_ID, YISHAN_WORKSPACE_ID, YISHAN_ORG_ID are already set.
 Use --output json for machine parsing. Always pass --project-id from the environment.`,
