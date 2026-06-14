@@ -170,7 +170,7 @@ func (s *Service) SummarizeSession(agent string, worktreePath string, projectID 
 		if len(writtenPaths) == 0 {
 			return
 		}
-		log.Debug().Str("agent", req.agent).Str("workspace", req.worktreePath).
+		log.Info().Str("agent", req.agent).Str("workspace", req.worktreePath).
 			Int("files", len(writtenPaths)).Msg("session summarized")
 
 		// Index only the files that were actually written — MEMORY.md and

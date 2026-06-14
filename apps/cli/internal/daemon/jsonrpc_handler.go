@@ -42,6 +42,9 @@ type JSONRPCHandler struct {
 	settingsPath   string
 	serverCtx      context.Context
 	fileCacheSubID uint64
+
+	agentUsageMu sync.Mutex
+	agentUsage   map[string]map[string]struct{}
 }
 
 func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, wsIndexStore *workspaceIndexStore, configPath string, context *AppContextStore) *JSONRPCHandler {
@@ -77,6 +80,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		tokenUsage:     collector,
 		modelList:      modellist.NewService(),
 		settingsPath:   config.SettingsFilePath(filepath.Dir(configPath)),
+		agentUsage:     make(map[string]map[string]struct{}),
 		fileCacheSubID: fileCacheSubID,
 	}
 	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)

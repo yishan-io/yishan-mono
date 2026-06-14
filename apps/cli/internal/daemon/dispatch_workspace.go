@@ -301,6 +301,7 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 		h.watchers.Unwatch(ws.Path)
 		h.prTracker.StopTracking(ws.ID)
 	}
+	h.summarizeUsedAgents(req.WorkspaceID, closeReq)
 	if _, err := h.manager.CloseWorkspace(ctx, closeReq); err != nil {
 		if h.cleanupStore != nil {
 			if markErr := h.cleanupStore.MarkFailure(closeReq.WorkspaceID, err); markErr != nil {
@@ -319,11 +320,31 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to remove workspace from index store")
 		}
 	}
+	h.clearAgentUsage(req.WorkspaceID)
 
 	return map[string]any{
 		"workspace":   map[string]string{"id": req.WorkspaceID, "status": "closed"},
 		"workspaceId": req.WorkspaceID,
 	}, nil
+}
+
+func (h *JSONRPCHandler) summarizeUsedAgents(workspaceID string, closeReq workspace.CloseRequest) {
+	if h.memory == nil {
+		return
+	}
+	agents := h.getAgentUsage(workspaceID)
+	if len(agents) == 0 {
+		return
+	}
+	ws, err := h.manager.GetWorkspace(workspaceID)
+	if err != nil {
+		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("cannot resolve workspace for agent summarization")
+		return
+	}
+	log.Info().Strs("agents", agents).Str("workspaceId", workspaceID).Msg("summarizing agents used in workspace")
+	for _, agent := range agents {
+		h.memory.SummarizeSession(agent, ws.Path, ws.ProjectID)
+	}
 }
 
 // watchAndTrack starts filesystem watching and PR tracking for a workspace path.
