@@ -70,9 +70,12 @@ type diskFile struct {
 	Path        string
 	Body        string
 	Fingerprint string
-	// ProjectPath is the canonical context root for this file.
+	// ProjectPath is the canonical context root for this file, used for filtering.
 	ProjectPath string
 	ProjectID   string
+	// explicitType overrides classifyFileType when non-empty.
+	// Set for global files which have a known type independent of path structure.
+	explicitType FileType
 }
 
 func scanWorkspaces(refs []WorkspaceRef, globalMemoryDir string) ([]diskFile, error) {
@@ -151,11 +154,12 @@ func scanGlobalDir(globalDir string) ([]diskFile, error) {
 			return nil
 		}
 		files = append(files, diskFile{
-			Path:        path,
-			Body:        string(body),
-			Fingerprint: fingerprint(body),
-			ProjectPath: globalDir,
-			ProjectID:   "",
+			Path:         path,
+			Body:         string(body),
+			Fingerprint:  fingerprint(body),
+			ProjectPath:  globalDir,
+			ProjectID:    "",
+			explicitType: FileTypeGlobal,
 		})
 		return nil
 	})
@@ -206,7 +210,10 @@ func (db *DB) Reconcile(refs []WorkspaceRef, globalMemoryDir string) (ReconcileR
 			continue
 		}
 
-		fileType := classifyFileType(df.Path, df.ProjectPath)
+		fileType := df.explicitType
+		if fileType == "" {
+			fileType = classifyFileType(df.Path, df.ProjectPath)
+		}
 
 		if err := db.UpsertFile(MemoryFile{
 			Path:        df.Path,
