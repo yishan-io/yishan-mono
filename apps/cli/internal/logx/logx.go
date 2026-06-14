@@ -59,16 +59,20 @@ func Configure(cfg Config) error {
 	// Determine the effective writer.
 	// If FileOut is configured, we use a multi-writer: the console/stderr output
 	// uses the configured format, while the file always gets JSON for machine parsing.
+	// When running detached (background daemon), stderr is redirected to the log
+	// file by the parent process. Skip the console writer in that case to avoid
+	// duplicate entries: once as console-formatted output and once as JSON via FileOut.
 	var writer io.Writer
-	if cfg.FileOut != nil {
+	if cfg.FileOut != nil && os.Getenv("YISHAN_DAEMON_DETACHED") != "1" {
 		var consoleOut io.Writer
 		if format == FormatJSON {
 			consoleOut = out
 		} else {
 			consoleOut = zerolog.ConsoleWriter{Out: out, TimeFormat: time.RFC3339}
 		}
-		// zerolog multi-level writer: writes each log entry to all writers.
 		writer = zerolog.MultiLevelWriter(consoleOut, cfg.FileOut)
+	} else if cfg.FileOut != nil {
+		writer = cfg.FileOut
 	} else {
 		if format == FormatJSON {
 			writer = out
