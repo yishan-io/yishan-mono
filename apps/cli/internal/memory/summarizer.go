@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -15,31 +14,36 @@ import (
 )
 
 type Summarizer struct {
-	enabled  bool
-	dbReader *agentDBReader
+	enabled   bool
+	agentKind string // override agent; empty = use session's own agent
+	model     string // optional model override
+	runAgent  RunAgentFunc
+	dbReader  *agentDBReader
 }
 
-func NewSummarizer(enabled bool) *Summarizer {
+func NewSummarizer(cfg SummarizerConfig, runAgent RunAgentFunc) *Summarizer {
 	return &Summarizer{
-		enabled:  enabled,
-		dbReader: newAgentDBReader(),
+		enabled:   cfg.Enabled,
+		agentKind: cfg.AgentKind,
+		model:     cfg.Model,
+		runAgent:  runAgent,
+		dbReader:  newAgentDBReader(),
 	}
 }
 
 func (s *Summarizer) Enabled() bool {
-	return s.enabled
+	return s.enabled && s.runAgent != nil
 }
 
-func (s *Summarizer) SummarizeSession(agent string, workspacePath string) error {
-	if !s.enabled {
+func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string) error {
+	if !s.Enabled() {
 		return nil
 	}
 
-	session, err := s.dbReader.ReadRecentSession(agent, workspacePath)
+	session, err := s.dbReader.ReadRecentSession(sessionAgent, workspacePath)
 	if err != nil {
 		return fmt.Errorf("read agent session: %w", err)
 	}
-
 	if len(session.Messages) == 0 {
 		return nil
 	}
@@ -52,9 +56,26 @@ func (s *Summarizer) SummarizeSession(agent string, workspacePath string) error 
 		existingContent = string(data)
 	}
 
-	extracted, err := s.summarizeViaCLI(agent, conversation, existingContent)
+	// Resolve which agent to use for summarization.
+	// Config override takes priority; fall back to the session's own agent.
+	summarizeAgent := s.agentKind
+	if summarizeAgent == "" {
+		summarizeAgent = sessionAgent
+	}
+
+	prompt := fmt.Sprintf(summarizationPrompt, existingContent, conversation)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
+	output, err := s.runAgent(ctx, summarizeAgent, s.model, prompt)
 	if err != nil {
-		return fmt.Errorf("llm summarization: %w", err)
+		return fmt.Errorf("llm summarization via %s: %w", summarizeAgent, err)
+	}
+
+	extracted, err := parseExtractedJSON(output)
+	if err != nil {
+		return fmt.Errorf("parse summarization output: %w", err)
 	}
 
 	return mergeAndWrite(existingPath, existingContent, extracted)
@@ -93,31 +114,6 @@ Existing memory content:
 
 Conversation:
 %s`
-
-func (s *Summarizer) summarizeViaCLI(agent string, conversation string, existingMemory string) (ExtractedKnowledge, error) {
-	prompt := fmt.Sprintf(summarizationPrompt, existingMemory, conversation)
-	today := time.Now().UTC().Format("2006-01-02")
-	_ = agent // All agents use the claude CLI for one-shot summarization.
-	return s.callClaudeCLI(prompt, today)
-}
-
-func (s *Summarizer) callClaudeCLI(prompt string, today string) (ExtractedKnowledge, error) {
-	_ = today
-	if _, err := exec.LookPath("claude"); err != nil {
-		return ExtractedKnowledge{}, fmt.Errorf("claude CLI not found in PATH — install claude CLI or disable memory.summarizer.enabled: %w", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "claude", "-p", prompt, "--print", "--output-format", "text")
-	output, err := cmd.Output()
-	if err != nil {
-		return ExtractedKnowledge{}, fmt.Errorf("claude CLI failed: %w (output: %s)", err, truncate(string(output), 500))
-	}
-
-	return parseExtractedJSON(string(output))
-}
 
 func parseExtractedJSON(text string) (ExtractedKnowledge, error) {
 	text = strings.TrimSpace(text)

@@ -1,6 +1,9 @@
 package memory
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 const (
 	MaxProjectMemoryChars = 5000
@@ -61,9 +64,20 @@ const (
 	SectionErrors    MemorySection = "## Errors"
 )
 
+// SummarizerConfig controls the automatic post-session summarizer.
+// AgentKind selects the agent CLI used for summarization (e.g. "claude",
+// "opencode"). When empty the session's own agent is used as the default.
+// Model is optional; when empty the agent's default model is used.
 type SummarizerConfig struct {
-	Enabled bool
+	Enabled   bool
+	AgentKind string
+	Model     string
 }
+
+// RunAgentFunc runs a non-interactive agent prompt and returns its text output.
+// The memory package accepts this as a dependency so it doesn't need to know
+// about agentcmd directly (avoids import cycle).
+type RunAgentFunc func(ctx context.Context, agentKind, model, prompt string) (string, error)
 
 type sessionMessages struct {
 	SessionID string

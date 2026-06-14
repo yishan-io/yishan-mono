@@ -24,7 +24,9 @@ const (
 	// New writes go to context.yaml via KeyDefaultOrgID.
 	KeyCurrentOrgID = "current_org_id"
 
-	KeyMemorySummarizerEnabled = "memory.summarizer.enabled"
+	KeyMemorySummarizerEnabled   = "memory.summarizer.enabled"
+	KeyMemorySummarizerAgentKind = "memory.summarizer.agent_kind"
+	KeyMemorySummarizerModel     = "memory.summarizer.model"
 )
 
 func HomeDir() (string, error) {
@@ -51,7 +53,9 @@ type DaemonConfig struct {
 }
 
 type MemoryConfig struct {
-	SummarizerEnabled bool
+	SummarizerEnabled   bool
+	SummarizerAgentKind string
+	SummarizerModel     string
 }
 
 type Config struct {
@@ -122,7 +126,9 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 			RelayURL:     v.GetString("daemon_relay_url"),
 		},
 		Memory: MemoryConfig{
-			SummarizerEnabled: v.GetBool(KeyMemorySummarizerEnabled),
+			SummarizerEnabled:   v.GetBool(KeyMemorySummarizerEnabled),
+			SummarizerAgentKind: v.GetString(KeyMemorySummarizerAgentKind),
+			SummarizerModel:     v.GetString(KeyMemorySummarizerModel),
 		},
 	}, nil
 }

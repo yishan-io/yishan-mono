@@ -16,7 +16,7 @@ type Service struct {
 	config     SummarizerConfig
 }
 
-func NewService(dbPath string, summarizerConfig SummarizerConfig) (*Service, error) {
+func NewService(dbPath string, summarizerConfig SummarizerConfig, runAgent RunAgentFunc) (*Service, error) {
 	db, err := OpenDB(dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("open memory db: %w", err)
@@ -26,7 +26,7 @@ func NewService(dbPath string, summarizerConfig SummarizerConfig) (*Service, err
 		db:     db,
 		config: summarizerConfig,
 	}
-	svc.summarizer = NewSummarizer(summarizerConfig.Enabled)
+	svc.summarizer = NewSummarizer(summarizerConfig, runAgent)
 	return svc, nil
 }
 
