@@ -81,6 +81,12 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 
 	prompt := fmt.Sprintf(summarizationPrompt, existingContent, conversation)
 
+	log.Info().
+		Str("agent", summarizeAgent).
+		Str("workspace", workspacePath).
+		Int("messages", len(session.Messages)).
+		Msg("starting memory summarization")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 

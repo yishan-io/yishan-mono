@@ -168,6 +168,10 @@ func (s *Service) SummarizeSession(agent string, worktreePath string, projectID 
 			return
 		}
 		if len(writtenPaths) == 0 {
+			log.Info().
+				Str("agent", req.agent).
+				Str("workspace", req.worktreePath).
+				Msg("session summarization produced no output")
 			return
 		}
 		log.Info().Str("agent", req.agent).Str("workspace", req.worktreePath).
