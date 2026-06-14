@@ -11,8 +11,14 @@
 //   2. Lists the files available in .my-context/ so the agent knows what exists
 //   3. Inlines MEMORY.md as the session entry point
 //
+// On session.idle, fires notify.sh with "MemoryUpdate" so the daemon can
+// run its external-LLM summarizer to capture what happened this session.
+// This is a best-effort supplement — the main notify plugin handles Stop
+// for daemon-managed sessions; this covers standalone opencode invocations.
+//
 // Hooks used:
 //   experimental.chat.messages.transform — prepends context block to first user message
+//   event(session.idle) — triggers daemon memory summarizer on session end
 
 import type { Plugin } from "@opencode-ai/plugin";
 import { readFileSync, readdirSync, statSync, existsSync } from "fs";
@@ -98,13 +104,14 @@ const buildStaticBlock = (myContextPath: string): string | null => {
   return _staticBlockCache;
 };
 
-export const YishanMemoryPlugin = (async ({ project }) => {
+export const YishanMemoryPlugin = (async ({ project, $ }) => {
   if (globalThis.__yishanMemoryPluginV1) return {};
   globalThis.__yishanMemoryPluginV1 = true;
 
   const projectRoot = project?.root ?? process.cwd();
   const myContextPath = join(projectRoot, ".my-context");
   const memoryPath = join(myContextPath, "MEMORY.md");
+  const notifyPath = {{.NotifyPathLiteral}};
 
   return {
     "experimental.chat.messages.transform": async (_input, output) => {
@@ -137,5 +144,18 @@ export const YishanMemoryPlugin = (async ({ project }) => {
         text: contextBlock,
       });
     },
+
+    event: async ({ event }) => {
+      if (event.type !== "session.idle") return;
+      // Notify the daemon to run the memory summarizer for this session.
+      // notify.sh silently exits if YISHAN_HOOK_INGRESS_URL is not set,
+      // so this is safe to call unconditionally (fail-open).
+      try {
+        await $`bash ${notifyPath} --agent opencode --event MemoryUpdate`;
+      } catch {
+        // fail-open: summarization is best-effort
+      }
+    },
   };
 }) satisfies Plugin;
+
