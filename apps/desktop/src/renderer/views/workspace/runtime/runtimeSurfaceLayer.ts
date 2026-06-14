@@ -102,11 +102,20 @@ export function createFixedRuntimeLayer(rootTestId: string) {
     }
   };
 
+  const refresh = (id: string): void => {
+    const entry = entries.get(id);
+    if (!entry?.placeholder) {
+      return;
+    }
+    applyElementRect(entry.element, entry.placeholder);
+  };
+
   return {
     register,
     attach,
     detach,
     remove,
+    refresh,
   };
 }
 import { getOrCreateRuntimeRoot } from "./runtimeRoot";

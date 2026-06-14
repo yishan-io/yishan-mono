@@ -177,8 +177,16 @@ export function attachTerminalRuntime(tabId: string, placeholder: HTMLElement): 
   // Notify resize handler so PTY gets the new dimensions after fit.
   notifyTerminalResizeIfNeeded(entry, didFitOnAttach);
 
-  // If this was a reattach from detached state, check for pending exit.
+  // If this was a reattach from detached state, refresh the renderer and check for pending exit.
   if (wasDetached) {
+    const refresh = (entry.terminal as { refresh?: (start: number, end: number) => void }).refresh;
+    if (typeof refresh === "function") {
+      try {
+        refresh.call(entry.terminal, 0, Math.max(0, entry.terminal.rows - 1));
+      } catch (error) {
+        reportTerminalAsyncError("refresh terminal after reattach", error);
+      }
+    }
     onTerminalReattached?.(tabId);
   }
 
@@ -339,6 +347,8 @@ export function recoverAttachedTerminalRuntime(tabId: string): void {
   if (!entry || entry.state !== "attached") {
     return;
   }
+
+  runtimeLayer.refresh(tabId);
 
   const didFit = safeFitTerminal(entry, true);
   notifyTerminalResizeIfNeeded(entry, didFit);
