@@ -84,6 +84,7 @@
       "keybindings": "Keyboard Shortcuts",
       "links": "Links",
       "members": "Members",
+      "memory": "Memory",
       "nodes": "Nodes",
       "notifications": "Notifications",
       "serviceTokens": "Service Tokens",
@@ -567,6 +568,28 @@
       "actions": {
         "kill": "KILL",
         "killing": "KILLING..."
+      }
+    },
+    "memory": {
+      "title": "Memory",
+      "description": "Configure project memory summarization and indexing for your workspaces.",
+      "summarizer": {
+        "title": "Session Summarizer",
+        "description": "When enabled, the daemon will automatically summarize each agent session using an external LLM and update your .my-context/MEMORY.md file.",
+        "enabled": {
+          "label": "Enable session summarization",
+          "description": "After each agent session, extract technical decisions, discoveries, and errors into the project memory file."
+        },
+        "agentKind": {
+          "label": "Summarizer agent",
+          "description": "The agent CLI used to run the summarization prompt."
+        },
+        "model": {
+          "label": "Model",
+          "description": "Optional model override. Leave empty to use the agent's default model.",
+          "placeholder": "e.g. gpt-4o-mini",
+          "defaultOption": "Use agent default"
+        }
       }
     },
     "comingSoon": "This settings page is coming soon."

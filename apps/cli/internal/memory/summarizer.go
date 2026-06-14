@@ -35,6 +35,12 @@ func (s *Summarizer) Enabled() bool {
 	return s.enabled && s.runAgent != nil
 }
 
+func (s *Summarizer) UpdateConfig(cfg SummarizerConfig) {
+	s.enabled = cfg.Enabled
+	s.agentKind = cfg.AgentKind
+	s.model = cfg.Model
+}
+
 // SummarizeSession runs the full summarize pipeline for the given workspace
 // and returns the paths of files written (MEMORY.md + any overflow files).
 // Returns (nil, nil) when summarization is skipped (disabled, unsupported agent, empty session).

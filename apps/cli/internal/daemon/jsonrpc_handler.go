@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/modellist"
 	cliruntime "yishan/apps/cli/internal/runtime"
@@ -38,6 +39,7 @@ type JSONRPCHandler struct {
 	tokenUsage     *tokenUsageCollector
 	modelList      *modellist.Service
 	memory         *memory.Service
+	settingsPath   string
 	serverCtx      context.Context
 	fileCacheSubID uint64
 }
@@ -74,6 +76,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		prTracker:      prTracker,
 		tokenUsage:     collector,
 		modelList:      modellist.NewService(),
+		settingsPath:   config.SettingsFilePath(filepath.Dir(configPath)),
 		fileCacheSubID: fileCacheSubID,
 	}
 	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)

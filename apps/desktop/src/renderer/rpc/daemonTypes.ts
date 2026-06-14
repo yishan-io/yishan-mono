@@ -55,7 +55,8 @@ export type ApiNamespace =
   | "integration"
   | "notification"
   | "events"
-  | "skill";
+  | "skill"
+  | "memory";
 
 export type ProcedureSubscriptionOptions = {
   namespace: ApiNamespace;
@@ -547,4 +548,35 @@ export type SkillListResponse = {
 
 export type SkillMutationOkResponse = {
   ok: true;
+};
+
+export type MemorySearchInput = {
+  query: string;
+  workspaceId?: string;
+  scope?: string;
+  limit?: number;
+};
+
+export type MemorySearchResult = {
+  path: string;
+  snippet: string;
+  score: number;
+};
+
+export type MemoryReconcileResult = {
+  inserted: number;
+  updated: number;
+  deleted: number;
+};
+
+export type MemoryUpdateConfigInput = {
+  enabled: boolean;
+  agentKind: string;
+  model: string;
+};
+
+export type MemoryConfig = {
+  enabled: boolean;
+  agentKind: string;
+  model: string;
 };

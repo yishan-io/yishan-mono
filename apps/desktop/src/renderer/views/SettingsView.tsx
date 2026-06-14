@@ -29,6 +29,7 @@ import { LanguageSettingsView } from "./settings/LanguageSettingsView";
 import { LinkSettingsView } from "./settings/LinkSettingsView";
 import { MemberSettingsView } from "./settings/MemberSettingsView";
 import { MarkdownSettingsView } from "./settings/MarkdownSettingsView";
+import { MemorySettingsView } from "./settings/MemorySettingsView";
 import { NodesSettingsView } from "./settings/NodesSettingsView";
 import { NotificationSettingsView } from "./settings/NotificationSettingsView";
 import { ServiceTokenSettingsView } from "./settings/ServiceTokenSettingsView";
@@ -108,6 +109,7 @@ export function SettingsView() {
       selectedTabParam === "language" ||
       selectedTabParam === "links" ||
       selectedTabParam === "members" ||
+      selectedTabParam === "memory" ||
       selectedTabParam === "nodes" ||
       selectedTabParam === "notifications" ||
       selectedTabParam === "serviceTokens" ||
@@ -186,6 +188,7 @@ export function SettingsView() {
       serviceTokens: <ServiceTokenSettingsView />,
       terminal: <TerminalSettingsView />,
       keybindings: <KeybindingsSettingsView />,
+      memory: <MemorySettingsView />,
       workspace: <WorkspaceSettingsView />,
     }),
     [focusedNotificationItemId, setThemePreference, t, themePreference],

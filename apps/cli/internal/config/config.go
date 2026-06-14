@@ -58,6 +58,11 @@ type MemoryConfig struct {
 	SummarizerModel     string
 }
 
+type SettingsConfig struct {
+	DefaultOrgID string
+	Memory       MemoryConfig
+}
+
 type Config struct {
 	LogLevel     string
 	LogFormat    string
@@ -79,39 +84,26 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 		return Config{}, err
 	}
 
-	contextPath := ContextFilePath(filepath.Dir(configPath))
+	profileDir := filepath.Dir(configPath)
+	contextPath := ContextFilePath(profileDir)
+	settingsPath := SettingsFilePath(profileDir)
 
-	// Load default org from context.yaml. If missing or empty, fall back to
-	// credential.yaml for backwards-compatibility and migrate the value.
-	contextCfg, err := LoadContext(contextPath)
+	// Load user preferences from settings.yaml (handles migration from legacy
+	// credential.yaml and context.yaml automatically).
+	settingsCfg, err := LoadSettings(settingsPath, v)
 	if err != nil {
-		return Config{}, fmt.Errorf("load context file: %w", err)
+		return Config{}, fmt.Errorf("load settings file: %w", err)
 	}
 
-	defaultOrgID := contextCfg.DefaultOrgID
-	if defaultOrgID == "" {
-		// Migration: read from legacy credential.yaml location.
-		legacyOrgID := v.GetString(KeyCurrentOrgID)
-		if legacyOrgID != "" {
-			defaultOrgID = legacyOrgID
-			// Persist to the new location so subsequent invocations use context.yaml.
-			if migrateErr := UpdateContext(contextPath, func(cfg *viper.Viper) {
-				cfg.Set(KeyDefaultOrgID, legacyOrgID)
-			}); migrateErr == nil {
-				_ = DeleteKeys(configPath, KeyCurrentOrgID)
-			}
-		}
-	} else {
-		// Already migrated — still clean up any leftover empty key in credential.yaml.
-		_ = DeleteKeys(configPath, KeyCurrentOrgID)
-	}
+	// Clean up any leftover current_org_id in credential.yaml (migrated to settings.yaml).
+	_ = DeleteKeys(configPath, KeyCurrentOrgID)
 
 	return Config{
 		LogLevel:     v.GetString("log_level"),
 		LogFormat:    v.GetString("log_format"),
 		ConfigPath:   configPath,
 		ContextPath:  contextPath,
-		DefaultOrgID: defaultOrgID,
+		DefaultOrgID: settingsCfg.DefaultOrgID,
 		API: APIConfig{
 			BaseURL:               v.GetString(KeyAPIBaseURL),
 			Token:                 v.GetString(KeyAPIToken),
@@ -125,11 +117,7 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 			RelayEnabled: v.GetBool("daemon_relay_enabled"),
 			RelayURL:     v.GetString("daemon_relay_url"),
 		},
-		Memory: MemoryConfig{
-			SummarizerEnabled:   v.GetBool(KeyMemorySummarizerEnabled),
-			SummarizerAgentKind: v.GetString(KeyMemorySummarizerAgentKind),
-			SummarizerModel:     v.GetString(KeyMemorySummarizerModel),
-		},
+		Memory: settingsCfg.Memory,
 	}, nil
 }
 

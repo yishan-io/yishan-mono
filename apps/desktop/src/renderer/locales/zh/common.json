@@ -84,6 +84,7 @@
       "keybindings": "键盘快捷键",
       "links": "链接",
       "members": "成员",
+      "memory": "记忆",
       "nodes": "节点",
       "notifications": "通知",
       "serviceTokens": "服务令牌",
@@ -530,6 +531,28 @@
       "actions": {
         "kill": "结束",
         "killing": "结束中..."
+      }
+    },
+    "memory": {
+      "title": "记忆",
+      "description": "配置工作区的项目记忆总结和索引功能。",
+      "summarizer": {
+        "title": "会话总结器",
+        "description": "启用后，守护进程会在每个智能体会话结束后自动使用外部 LLM 进行总结，并更新 .my-context/MEMORY.md 文件。",
+        "enabled": {
+          "label": "启用会话总结",
+          "description": "在每次智能体会话结束后，提取技术决策、发现和错误，写入项目记忆文件。"
+        },
+        "agentKind": {
+          "label": "总结器智能体",
+          "description": "用于执行总结提示的智能体 CLI。"
+        },
+        "model": {
+          "label": "模型",
+          "description": "可选模型覆盖。留空使用智能体的默认模型。",
+          "placeholder": "例如 gpt-4o-mini",
+          "defaultOption": "使用智能体默认"
+        }
       }
     },
     "comingSoon": "该设置项即将上线。"

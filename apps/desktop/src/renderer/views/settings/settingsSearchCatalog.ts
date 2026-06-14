@@ -30,6 +30,7 @@ export type SettingsTab =
   | "keybindings"
   | "links"
   | "members"
+  | "memory"
   | "nodes"
   | "notifications"
   | "serviceTokens"
@@ -82,6 +83,7 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
       { tab: "terminal", labelKey: "settings.items.terminal", icon: BiTerminal },
       { tab: "daemon", labelKey: "settings.items.daemon", icon: BiChip },
       { tab: "agents", labelKey: "settings.items.agents", icon: BiBot },
+      { tab: "memory", labelKey: "settings.items.memory", icon: BiChip },
     ],
   },
 ];
@@ -411,6 +413,23 @@ const SERVICE_TOKEN_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   },
 ];
 
+const MEMORY_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
+  {
+    id: "memory-summarizer",
+    tab: "memory",
+    icon: BiChip,
+    labelKey: "settings.memory.title",
+    sectionLabelKey: "settings.items.memory",
+    keywordKeys: [
+      "settings.memory.description",
+      "settings.memory.summarizer.title",
+      "settings.memory.summarizer.enabled.label",
+      "settings.memory.summarizer.agentKind.label",
+      "settings.memory.summarizer.model.label",
+    ],
+  },
+];
+
 export const SETTINGS_SEARCH_CATALOG: SettingsSearchCatalogItem[] = [
   ...SETTINGS_TAB_SEARCH_ITEMS,
   ...ACCOUNT_SEARCH_ITEMS,
@@ -423,6 +442,7 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchCatalogItem[] = [
   ...NODES_SEARCH_ITEMS,
   ...KEYBINDINGS_SEARCH_ITEMS,
   ...DAEMON_SEARCH_ITEMS,
+  ...MEMORY_SEARCH_ITEMS,
   ...GIT_WORKSPACE_SEARCH_ITEMS,
   ...TERMINAL_SEARCH_ITEMS,
   ...SERVICE_TOKEN_SEARCH_ITEMS,

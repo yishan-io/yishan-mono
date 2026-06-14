@@ -89,8 +89,8 @@ func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
 	if err != nil {
 		return fmt.Errorf("create workspace cleanup store: %w", err)
 	}
-	contextFilePath := config.ContextFilePath(filepath.Dir(statePath))
-	contextStore := NewAppContextStore(contextFilePath)
+	settingsFilePath := config.SettingsFilePath(filepath.Dir(statePath))
+	contextStore := NewAppContextStore(settingsFilePath)
 	wsIndexStore, err := newWorkspaceIndexStore(statePath)
 	if err != nil {
 		return fmt.Errorf("create workspace index store: %w", err)

@@ -144,4 +144,11 @@ export type DaemonRpcClient = {
     install: (input: { name: string }) => Promise<Rpc.SkillMutationOkResponse>;
     uninstall: (input: { name: string }) => Promise<Rpc.SkillMutationOkResponse>;
   };
+  memory: {
+    search: (input: Rpc.MemorySearchInput) => Promise<Rpc.MemorySearchResult[]>;
+    reconcile: (input?: unknown) => Promise<Rpc.MemoryReconcileResult>;
+    status: (input?: unknown) => Promise<{ enabled: boolean }>;
+    updateConfig: (input: Rpc.MemoryUpdateConfigInput) => Promise<{ ok: boolean }>;
+    getConfig: (input?: unknown) => Promise<Rpc.MemoryConfig>;
+  };
 };

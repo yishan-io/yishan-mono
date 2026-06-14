@@ -89,6 +89,17 @@ func (s *Service) SummarizerEnabled() bool {
 	return s.summarizer != nil && s.summarizer.Enabled()
 }
 
+func (s *Service) GetConfig() SummarizerConfig {
+	return s.config
+}
+
+func (s *Service) UpdateSummarizerConfig(cfg SummarizerConfig) {
+	s.config = cfg
+	if s.summarizer != nil {
+		s.summarizer.UpdateConfig(cfg)
+	}
+}
+
 func (s *Service) ReconcileNow(refs []WorkspaceRef) (ReconcileResult, error) {
 	globalDir, err := globalMemoryDir()
 	if err != nil {

@@ -87,7 +87,7 @@ func isSkillMethod(method string) bool {
 
 func isMemoryMethod(method string) bool {
 	switch method {
-	case MethodMemorySearch, MethodMemoryReconcile, MethodMemoryStatus:
+	case MethodMemorySearch, MethodMemoryReconcile, MethodMemoryStatus, MethodMemoryUpdateConfig, MethodMemoryGetConfig:
 		return true
 	}
 	return false
