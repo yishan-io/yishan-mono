@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/rs/zerolog/log"
 )
@@ -14,6 +15,56 @@ type Service struct {
 	db         *DB
 	summarizer *Summarizer
 	config     SummarizerConfig
+
+	// summarizeQ serializes summarization per context root.
+	// key: canonical context root path  value: *summarizeQueue
+	summarizeQ sync.Map
+}
+
+// summarizeQueue ensures at most one summarization is in flight per context
+// root while coalescing additional requests into a single pending retry.
+type summarizeQueue struct {
+	mu        sync.Mutex
+	inFlight  bool
+	pending   *summarizeRequest // at most one pending; newer replaces older
+}
+
+type summarizeRequest struct {
+	agent         string
+	worktreePath  string
+	projectID     string
+}
+
+func (q *summarizeQueue) submit(req summarizeRequest, run func(summarizeRequest)) {
+	q.mu.Lock()
+	if q.inFlight {
+		// A summarization is already running for this root.
+		// Overwrite any pending request with the newer one — the in-flight
+		// summarization will re-read MEMORY.md when it finishes, so the
+		// latest session data is what matters.
+		q.pending = &req
+		q.mu.Unlock()
+		return
+	}
+	q.inFlight = true
+	q.mu.Unlock()
+
+	go func() {
+		for {
+			run(req)
+
+			q.mu.Lock()
+			next := q.pending
+			q.pending = nil
+			if next == nil {
+				q.inFlight = false
+				q.mu.Unlock()
+				return
+			}
+			req = *next
+			q.mu.Unlock()
+		}
+	}()
 }
 
 func NewService(dbPath string, summarizerConfig SummarizerConfig, runAgent RunAgentFunc) (*Service, error) {
@@ -79,30 +130,44 @@ func (s *Service) OnFileDeleted(filePath string) error {
 	return s.db.DeleteByPath(filePath)
 }
 
-// SummarizeSession triggers async summarization for the workspace.
-// worktreePath is the git worktree directory.
+// SummarizeSession triggers summarization for the workspace, serialized per
+// context root so concurrent workspace-close events don't clobber MEMORY.md.
 func (s *Service) SummarizeSession(agent string, worktreePath string, projectID string) {
 	if !s.summarizer.Enabled() {
 		return
 	}
 
-	go func() {
-		if err := s.summarizer.SummarizeSession(agent, worktreePath); err != nil {
-			log.Warn().Err(err).Str("agent", agent).Str("workspace", worktreePath).Msg("session summarization failed")
-			return
-		}
-		log.Debug().Str("agent", agent).Str("workspace", worktreePath).Msg("session summarized")
+	contextRoot := resolveContextRoot(worktreePath)
+	if contextRoot == "" {
+		return
+	}
 
-		// Re-index MEMORY.md in the canonical context dir after writing.
-		contextRoot := resolveContextRoot(worktreePath)
-		if contextRoot == "" {
+	q := s.getOrCreateQueue(contextRoot)
+	q.submit(summarizeRequest{
+		agent:        agent,
+		worktreePath: worktreePath,
+		projectID:    projectID,
+	}, func(req summarizeRequest) {
+		if err := s.summarizer.SummarizeSession(req.agent, req.worktreePath); err != nil {
+			log.Warn().Err(err).
+				Str("agent", req.agent).
+				Str("workspace", req.worktreePath).
+				Msg("session summarization failed")
 			return
 		}
+		log.Debug().Str("agent", req.agent).Str("workspace", req.worktreePath).Msg("session summarized")
+
+		// Re-index MEMORY.md after writing.
 		memoryPath := filepath.Join(contextRoot, "MEMORY.md")
-		if idxErr := s.db.IndexFileOnDisk(memoryPath, contextRoot, projectID); idxErr != nil {
+		if idxErr := s.db.IndexFileOnDisk(memoryPath, contextRoot, req.projectID); idxErr != nil {
 			log.Warn().Err(idxErr).Msg("reindex MEMORY.md after summarization")
 		}
-	}()
+	})
+}
+
+func (s *Service) getOrCreateQueue(contextRoot string) *summarizeQueue {
+	v, _ := s.summarizeQ.LoadOrStore(contextRoot, &summarizeQueue{})
+	return v.(*summarizeQueue)
 }
 
 func GlobalMemoryDir() (string, error) {
