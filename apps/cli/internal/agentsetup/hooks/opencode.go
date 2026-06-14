@@ -31,7 +31,7 @@ func (openCodeHookInstaller) Install(ctx hookSetupContext) error {
 	if err := ensureOpenCodePlugin(ctx.notifyScriptPath, ctx.configHome, ctx.goos); err != nil {
 		return err
 	}
-	return ensureOpenCodeMemoryPlugin(ctx.notifyScriptPath, ctx.configHome)
+	return ensureOpenCodeMemoryPlugin(ctx.configHome)
 }
 
 func ensureOpenCodePlugin(notifyScriptPath string, configHome string, goos string) error {
@@ -71,19 +71,17 @@ func buildOpenCodePluginContent(notifyScriptPath string, tabIDEnvKey string, plu
 	return rendered.String()
 }
 
-func ensureOpenCodeMemoryPlugin(notifyScriptPath string, configHome string) error {
+func ensureOpenCodeMemoryPlugin(configHome string) error {
 	pluginPath := filepath.Join(configHome, "plugin", openCodeMemoryPluginFileName)
-	content := buildOpenCodeMemoryPluginContent(notifyScriptPath, openCodeMemoryPluginMarker)
+	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker)
 	return writeTextFileIfChanged(pluginPath, content, 0o644)
 }
 
-func buildOpenCodeMemoryPluginContent(notifyScriptPath string, pluginMarker string) string {
-	notifyPathLiteral, _ := json.Marshal(notifyScriptPath)
+func buildOpenCodeMemoryPluginContent(pluginMarker string) string {
 	var rendered bytes.Buffer
 	tmpl := template.Must(template.New("opencode-memory-plugin").Parse(openCodeMemoryPluginTemplate))
 	if err := tmpl.Execute(&rendered, map[string]string{
-		"PluginMarker":      pluginMarker,
-		"NotifyPathLiteral": string(notifyPathLiteral),
+		"PluginMarker": pluginMarker,
 	}); err != nil {
 		panic(err)
 	}

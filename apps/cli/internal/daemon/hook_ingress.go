@@ -68,17 +68,10 @@ func (h *JSONRPCHandler) ServeAgentHook(w http.ResponseWriter, r *http.Request) 
 		h.tokenUsage.Trigger(event.agent, "hook")
 	}
 
-	// Trigger memory summarization on session stop or explicit MemoryUpdate event.
-	// MemoryUpdate is fired by ys-memory.ts on session.idle as a direct summarize
-	// signal, separate from the stop notification path (which has a 2.5s debounce).
-	if h.memory != nil {
-		wantSummarize := event.eventType == "stop" ||
-			strings.EqualFold(strings.TrimSpace(event.rawEventType), "memoryupdate")
-		if wantSummarize {
-			if handle, err := h.manager.WorkspaceHandle(event.workspaceID); err == nil {
-				ws := handle.Workspace()
-				h.memory.SummarizeSession(event.agent, ws.Path, ws.ProjectID)
-			}
+	if event.eventType == "stop" && h.memory != nil {
+		if handle, err := h.manager.WorkspaceHandle(event.workspaceID); err == nil {
+			ws := handle.Workspace()
+			h.memory.SummarizeSession(event.agent, ws.Path, ws.ProjectID)
 		}
 	}
 
