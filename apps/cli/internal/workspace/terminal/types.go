@@ -2,6 +2,8 @@ package terminal
 
 type StartRequest struct {
 	WorkspaceID string   `json:"workspaceId"`
+	ProjectID   string   `json:"projectId,omitempty"`
+	OrgID       string   `json:"orgId,omitempty"`
 	Command     string   `json:"command"`
 	Args        []string `json:"args,omitempty"`
 	Env         []string `json:"env,omitempty"`

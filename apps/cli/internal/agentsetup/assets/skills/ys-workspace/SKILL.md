@@ -30,7 +30,28 @@ yishan whoami
 
 If it fails, guide the user to run `yishan login` first.
 
-## Node reference
+## Session environment
+
+Every terminal session started by yishan has these variables in its environment.
+Read them instead of hard-coding IDs or asking the user:
+
+| Variable | Value |
+|---|---|
+| `YISHAN_WORKSPACE_ID` | Current workspace ID |
+| `YISHAN_PROJECT_ID` | Project the workspace belongs to |
+| `YISHAN_ORG_ID` | Organisation the workspace belongs to |
+| `YISHAN_TAB_ID` | UI tab ID (used by hook notifications) |
+| `YISHAN_PANE_ID` | UI pane ID (used by hook notifications) |
+
+Example — pass the project ID directly without asking:
+```bash
+yishan workspace list --project-id "$YISHAN_PROJECT_ID"
+yishan workspace close \
+  --project-id "$YISHAN_PROJECT_ID" \
+  --workspace-id "$YISHAN_WORKSPACE_ID"
+```
+
+
 
 Workspace creation and closing only happens on the **current local node** (the
 machine where the yishan daemon is running). You cannot create or close

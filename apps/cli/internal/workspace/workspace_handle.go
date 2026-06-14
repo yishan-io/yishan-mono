@@ -54,6 +54,12 @@ func (h WorkspaceHandle) FileReadDiff(ctx context.Context, path string) (GitDiff
 }
 
 func (h WorkspaceHandle) TerminalStart(ctx context.Context, req TerminalStartRequest) (TerminalStartResponse, error) {
+	if req.ProjectID == "" {
+		req.ProjectID = h.workspace.ProjectID
+	}
+	if req.OrgID == "" {
+		req.OrgID = h.workspace.OrgID
+	}
 	return h.terminals.Start(ctx, h.workspace.Path, req)
 }
 

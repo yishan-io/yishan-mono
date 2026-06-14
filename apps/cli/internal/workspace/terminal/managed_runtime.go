@@ -11,8 +11,10 @@ import (
 const managedRuntimeRootDirName = shellenv.ManagedRuntimeRootDirName
 const managedRuntimeOrigZdotdirEnvKey = shellenv.ManagedRuntimeOrigZdotdirEnvKey
 const workspaceIDEnvKey = "YISHAN_WORKSPACE_ID"
-const tabIDEnvKey = "YISHAN_TAB_ID"
-const paneIDEnvKey = "YISHAN_PANE_ID"
+const projectIDEnvKey  = "YISHAN_PROJECT_ID"
+const orgIDEnvKey      = "YISHAN_ORG_ID"
+const tabIDEnvKey      = "YISHAN_TAB_ID"
+const paneIDEnvKey     = "YISHAN_PANE_ID"
 
 func resolveManagedBashRcfilePath() string {
 	homeDir, err := os.UserHomeDir()
@@ -30,6 +32,12 @@ func resolveSessionMetadataEnv(baseEnv []string, req StartRequest) []string {
 	env := baseEnv
 	if strings.TrimSpace(req.WorkspaceID) != "" {
 		env = shellenv.UpsertEnv(env, workspaceIDEnvKey, strings.TrimSpace(req.WorkspaceID))
+	}
+	if strings.TrimSpace(req.ProjectID) != "" {
+		env = shellenv.UpsertEnv(env, projectIDEnvKey, strings.TrimSpace(req.ProjectID))
+	}
+	if strings.TrimSpace(req.OrgID) != "" {
+		env = shellenv.UpsertEnv(env, orgIDEnvKey, strings.TrimSpace(req.OrgID))
 	}
 	if strings.TrimSpace(req.TabID) != "" {
 		env = shellenv.UpsertEnv(env, tabIDEnvKey, strings.TrimSpace(req.TabID))
