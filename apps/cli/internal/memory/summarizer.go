@@ -198,7 +198,7 @@ func mergeAndWrite(memoryPath string, existingContent string, extracted Extracte
 			Str("path", memoryPath).
 			Int("currentChars", budget.CurrentChars).
 			Int("limit", budget.Limit).
-			Msg("memory file exceeds budget, some entries will be moved to architecture/")
+			Msg("memory file exceeds budget, some entries will be moved to archive/")
 		newContent = budget.TrimmedContent
 		writtenPaths = append(writtenPaths, budget.OverflowPaths...)
 	}

@@ -344,11 +344,13 @@ func TestReconcile_ClassifiesTypes(t *testing.T) {
 	worktree := t.TempDir()
 	ctxDir := filepath.Join(worktree, ".my-context")
 	os.MkdirAll(filepath.Join(ctxDir, "architecture"), 0o755)
+	os.MkdirAll(filepath.Join(ctxDir, "archive"), 0o755)
 	os.MkdirAll(filepath.Join(ctxDir, "tasks", "t001"), 0o755)
 	os.MkdirAll(filepath.Join(ctxDir, "future-improvement"), 0o755)
 
 	os.WriteFile(filepath.Join(ctxDir, "MEMORY.md"), []byte("memory"), 0o644)
 	os.WriteFile(filepath.Join(ctxDir, "architecture", "decisions.md"), []byte("arch"), 0o644)
+	os.WriteFile(filepath.Join(ctxDir, "archive", "decisions-20260614.md"), []byte("overflow"), 0o644)
 	os.WriteFile(filepath.Join(ctxDir, "tasks", "t001", "plan.md"), []byte("task"), 0o644)
 	os.WriteFile(filepath.Join(ctxDir, "future-improvement", "idea.md"), []byte("future"), 0o644)
 
@@ -366,6 +368,7 @@ func TestReconcile_ClassifiesTypes(t *testing.T) {
 	}{
 		{"MEMORY.md", FileTypeMemory},
 		{filepath.Join("architecture", "decisions.md"), FileTypeArchitecture},
+		{filepath.Join("archive", "decisions-20260614.md"), FileTypeArchive},
 		{filepath.Join("tasks", "t001", "plan.md"), FileTypeTask},
 		{filepath.Join("future-improvement", "idea.md"), FileTypeFuture},
 	}

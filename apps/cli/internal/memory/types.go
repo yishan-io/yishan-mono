@@ -15,9 +15,10 @@ type FileType string
 const (
 	FileTypeMemory       FileType = "memory"
 	FileTypeArchitecture FileType = "architecture"
-	FileTypeTask         FileType = "task"
-	FileTypeFuture       FileType = "future"
-	FileTypeGlobal       FileType = "global"
+	FileTypeArchive     FileType = "archive"
+	FileTypeTask        FileType = "task"
+	FileTypeFuture      FileType = "future"
+	FileTypeGlobal      FileType = "global"
 )
 
 type MemoryFile struct {

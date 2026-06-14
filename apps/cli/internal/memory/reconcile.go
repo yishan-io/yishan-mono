@@ -12,6 +12,7 @@ import (
 const (
 	myContextDir    = ".my-context"
 	architectureDir = "architecture"
+	archiveDir      = "archive"
 	tasksDir        = "tasks"
 	futureDir       = "future-improvement"
 )
@@ -39,6 +40,8 @@ func classifyFileType(absPath string, contextRoot string) FileType {
 	switch parts[0] {
 	case architectureDir:
 		return FileTypeArchitecture
+	case archiveDir:
+		return FileTypeArchive
 	case tasksDir:
 		return FileTypeTask
 	case futureDir:

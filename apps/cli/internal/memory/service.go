@@ -163,7 +163,7 @@ func (s *Service) SummarizeSession(agent string, worktreePath string, projectID 
 			Int("files", len(writtenPaths)).Msg("session summarized")
 
 		// Index only the files that were actually written — MEMORY.md and
-		// any architecture/ overflow files. Avoids a full context dir scan.
+		// any archive/ overflow files. Avoids a full context dir scan.
 		ctxRoot := resolveContextRoot(req.worktreePath)
 		for _, p := range writtenPaths {
 			if idxErr := s.db.IndexFileOnDisk(p, ctxRoot, req.projectID); idxErr != nil {

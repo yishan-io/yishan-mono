@@ -21,6 +21,9 @@ func TestClassifyFileType(t *testing.T) {
 		// architecture subdir
 		{root + "/architecture/decisions.md", FileTypeArchitecture},
 		{root + "/architecture/deep/nested.md", FileTypeArchitecture},
+		// archive subdir
+		{root + "/archive/decisions-20260614.md", FileTypeArchive},
+		{root + "/archive/learned-20260614.md", FileTypeArchive},
 		// tasks subdir
 		{root + "/tasks/t001/plan.md", FileTypeTask},
 		// future-improvement subdir

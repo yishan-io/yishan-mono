@@ -364,8 +364,8 @@ func TestOverflowEntries_WritesFile(t *testing.T) {
 
 func TestOverflowEntries_AppendsToExistingFile(t *testing.T) {
 	ctxDir := t.TempDir()
-	archDir := filepath.Join(ctxDir, "architecture")
-	os.MkdirAll(archDir, 0o755)
+	archiveDir := filepath.Join(ctxDir, "archive")
+	os.MkdirAll(archiveDir, 0o755)
 
 	// Simulate a pre-existing overflow file from the same day.
 	overflowEntries(ctxDir, "learned", []string{"first batch"})

@@ -12,7 +12,7 @@ type BudgetCheck struct {
 	CurrentChars   int
 	Limit          int
 	TrimmedContent string
-	// OverflowPaths lists any architecture/ files written during overflow trimming.
+	// OverflowPaths lists any archive/ files written during overflow trimming.
 	OverflowPaths []string
 }
 
@@ -78,7 +78,7 @@ func trimToBudget(content string, limit int, contextRoot string) (string, []stri
 	return buildMemoryMarkdown(sections), overflowPaths
 }
 
-// overflowEntries writes overflow entries to <contextRoot>/architecture/<category>-<date>.md
+// overflowEntries writes overflow entries to <contextRoot>/archive/<category>-<date>.md
 // and returns the path written. Returns "" if contextRoot is empty (global memory)
 // or the write fails.
 func overflowEntries(contextRoot string, category string, entries []string) string {
@@ -87,8 +87,8 @@ func overflowEntries(contextRoot string, category string, entries []string) stri
 	}
 
 	now := time.Now().UTC().Format("20060102")
-	archDir := filepath.Join(contextRoot, architectureDir)
-	archFile := filepath.Join(archDir, category+"-"+now+".md")
+	archiveRoot := filepath.Join(contextRoot, archiveDir)
+	archFile := filepath.Join(archiveRoot, category+"-"+now+".md")
 
 	existingContent := ""
 	if data, err := os.ReadFile(archFile); err == nil {
@@ -106,7 +106,7 @@ func overflowEntries(contextRoot string, category string, entries []string) stri
 		buf.WriteString("- " + entry + "\n")
 	}
 
-	if err := os.MkdirAll(archDir, 0o755); err != nil {
+	if err := os.MkdirAll(archiveRoot, 0o755); err != nil {
 		return ""
 	}
 	if err := os.WriteFile(archFile, []byte(buf.String()), 0o644); err != nil {
