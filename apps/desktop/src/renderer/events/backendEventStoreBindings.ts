@@ -32,8 +32,17 @@ type WorkspaceSnapshotChangedPayload = RpcFrontendMessagePayload<"workspaceSnaps
 type AgentSessionLifecycleStatus = "running" | "waiting_input";
 
 type BackendEventStoreBindingsDependencies = {
-  subscribeDaemonConnectionStatus?: (listener: (status: "connected" | "connecting" | "disconnected") => void) => () => void;
-  subscribeGitChanged: (listener: (workspaceId: string | undefined, workspaceWorktreePath: string, affectsBranch: boolean, currentBranch?: string) => void) => () => void;
+  subscribeDaemonConnectionStatus?: (
+    listener: (status: "connected" | "connecting" | "disconnected") => void,
+  ) => () => void;
+  subscribeGitChanged: (
+    listener: (
+      workspaceId: string | undefined,
+      workspaceWorktreePath: string,
+      affectsBranch: boolean,
+      currentBranch?: string,
+    ) => void,
+  ) => () => void;
   subscribeWorkspaceFilesChanged: (
     listener: (workspaceId: string | undefined, workspaceWorktreePath: string, changedRelativePaths?: string[]) => void,
   ) => () => void;
@@ -41,7 +50,9 @@ type BackendEventStoreBindingsDependencies = {
   subscribeWorkspaceCreateProgress?: (listener: (payload: WorkspaceCreateProgressPayload) => void) => () => void;
   subscribeWorkspaceCreateCompleted?: (listener: (payload: WorkspaceCreateCompletedPayload) => void) => () => void;
   subscribeWorkspaceCreateFailed?: (listener: (payload: WorkspaceCreateFailedPayload) => void) => () => void;
-  subscribeWorkspacePullRequestUpdated?: (listener: (payload: WorkspacePullRequestUpdatedPayload) => void) => () => void;
+  subscribeWorkspacePullRequestUpdated?: (
+    listener: (payload: WorkspacePullRequestUpdatedPayload) => void,
+  ) => () => void;
   subscribeWorkspaceSnapshotChanged?: (listener: (payload: WorkspaceSnapshotChangedPayload) => void) => () => void;
   subscribeOpenBrowserUrl?: (listener: (payload: { url: string; workspaceId: string }) => void) => () => void;
   listWorkspaceWorktreePaths?: () => string[];
@@ -54,7 +65,10 @@ type BackendEventStoreBindingsDependencies = {
   applyWorkspaceCreateProgressEvent?: (payload: WorkspaceCreateProgressPayload) => void;
   applyWorkspaceCreateCompletedEvent?: (payload: WorkspaceCreateCompletedPayload) => void;
   applyWorkspaceCreateFailedEvent?: (payload: WorkspaceCreateFailedPayload) => void;
-  setWorkspacePullRequest?: (workspaceId: string, pullRequest: WorkspacePullRequestUpdatedPayload["pullRequest"]) => void;
+  setWorkspacePullRequest?: (
+    workspaceId: string,
+    pullRequest: WorkspacePullRequestUpdatedPayload["pullRequest"],
+  ) => void;
   loadWorkspaceSnapshot?: () => Promise<void>;
   getSelectedOrganizationId?: () => string | undefined;
   openBrowserTab?: (payload: { url: string; workspaceId: string }) => void;
@@ -75,7 +89,12 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
         return;
       }
 
-      listener(event.payload.workspaceId, event.payload.workspaceWorktreePath, event.payload.affectsBranch ?? true, event.payload.currentBranch);
+      listener(
+        event.payload.workspaceId,
+        event.payload.workspaceWorktreePath,
+        event.payload.affectsBranch ?? true,
+        event.payload.currentBranch,
+      );
     }),
   subscribeWorkspaceFilesChanged: (listener) =>
     subscribeBackendEvent("workspace.files.changed", (event) => {
@@ -149,9 +168,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
       .filter((workspaceWorktreePath) => workspaceWorktreePath.length > 0),
   resolveWorkspaceIdByWorktreePath: (worktreePath) => {
     const normalized = worktreePath.trim();
-    return workspaceStore
-      .getState()
-      .workspaces.find((ws) => ws.worktreePath?.trim() === normalized)?.id;
+    return workspaceStore.getState().workspaces.find((ws) => ws.worktreePath?.trim() === normalized)?.id;
   },
   refreshWorkspaceCurrentBranch: async (workspaceId, currentBranch) => {
     if (currentBranch !== undefined) {
@@ -390,7 +407,10 @@ function isRelevantTerminalFocusedForNotification(payload: NotificationEventPayl
   }
 
   const state = tabStore.getState();
-  if (workspaceStore.getState().selectedWorkspaceId !== sessionParts.workspaceId || state.selectedTabId !== sessionParts.tabId) {
+  if (
+    workspaceStore.getState().selectedWorkspaceId !== sessionParts.workspaceId ||
+    state.selectedTabId !== sessionParts.tabId
+  ) {
     return false;
   }
 
@@ -482,20 +502,23 @@ export function createBackendEventStoreBindings(
       }
     >();
 
-    const unsubscribeGitChanged = dependencies.subscribeGitChanged((workspaceId, workspaceWorktreePath, affectsBranch, currentBranch) => {
-      scheduleGitRefresh(workspaceWorktreePath);
+    const unsubscribeGitChanged = dependencies.subscribeGitChanged(
+      (workspaceId, workspaceWorktreePath, affectsBranch, currentBranch) => {
+        scheduleGitRefresh(workspaceWorktreePath);
 
-      if (affectsBranch) {
-        const resolvedId = workspaceId ?? dependencies.resolveWorkspaceIdByWorktreePath?.(workspaceWorktreePath);
-        if (resolvedId) {
-          void dependencies.refreshWorkspaceCurrentBranch?.(resolvedId, currentBranch);
+        if (affectsBranch) {
+          const resolvedId = workspaceId ?? dependencies.resolveWorkspaceIdByWorktreePath?.(workspaceWorktreePath);
+          if (resolvedId) {
+            void dependencies.refreshWorkspaceCurrentBranch?.(resolvedId, currentBranch);
+          }
         }
-      }
-    });
+      },
+    );
     let hasObservedConnectedState = false;
     let shouldRecoverWorkspaceViewsOnReconnect = false;
-    const unsubscribeDaemonConnectionStatus = (dependencies.subscribeDaemonConnectionStatus ?? subscribeDaemonConnectionStatus)(
-      (status) => {
+    const unsubscribeDaemonConnectionStatus = (
+      dependencies.subscribeDaemonConnectionStatus ?? subscribeDaemonConnectionStatus
+    )((status) => {
       if (status === "disconnected") {
         shouldRecoverWorkspaceViewsOnReconnect = true;
         return;
@@ -516,17 +539,20 @@ export function createBackendEventStoreBindings(
 
       shouldRecoverWorkspaceViewsOnReconnect = false;
 
-      try {
-        const workspaceWorktreePaths = dependencies.listWorkspaceWorktreePaths?.() ?? [];
-        for (const workspaceWorktreePath of workspaceWorktreePaths) {
-          dependencies.incrementFileTreeRefreshVersion(workspaceWorktreePath, []);
-          scheduleGitRefresh(workspaceWorktreePath);
+      void (async () => {
+        try {
+          await dependencies.loadWorkspaceSnapshot?.();
+
+          const workspaceWorktreePaths = dependencies.listWorkspaceWorktreePaths?.() ?? [];
+          for (const workspaceWorktreePath of workspaceWorktreePaths) {
+            dependencies.incrementFileTreeRefreshVersion(workspaceWorktreePath, []);
+            scheduleGitRefresh(workspaceWorktreePath);
+          }
+        } catch (error) {
+          console.error("[backendEventStoreBindings] Failed to recover workspace views after daemon reconnect", error);
         }
-      } catch (error) {
-        console.error("[backendEventStoreBindings] Failed to recover workspace views after daemon reconnect", error);
-      }
-      },
-    );
+      })();
+    });
     const unsubscribeWorkspaceFilesChanged = dependencies.subscribeWorkspaceFilesChanged(
       (_workspaceId, workspaceWorktreePath, changedRelativePaths) => {
         dependencies.incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
@@ -565,11 +591,9 @@ export function createBackendEventStoreBindings(
         });
       } else if (payload.showSystemNotification && !suppressNotificationEffects) {
         const notificationCopy = buildSystemNotificationCopy(payload, dependencies);
-        void dependencies
-          .dispatchSystemNotification(notificationCopy)
-          .catch(() => {
-            // Notification delivery failures should not block store state updates.
-          });
+        void dependencies.dispatchSystemNotification(notificationCopy).catch(() => {
+          // Notification delivery failures should not block store state updates.
+        });
       }
 
       if (payload.soundToPlay && !suppressNotificationEffects) {
@@ -585,79 +609,83 @@ export function createBackendEventStoreBindings(
       const tone: WorkspaceUnreadTone = payload.tone === "error" ? "error" : "success";
       dependencies.recordWorkspaceUnreadNotification(workspaceId, tone);
     });
-    const unsubscribeWorkspaceCreateProgress = dependencies.subscribeWorkspaceCreateProgress?.((payload) => {
-      dependencies.applyWorkspaceCreateProgressEvent?.(payload);
-    }) ?? (() => {});
-    const unsubscribeWorkspaceCreateCompleted = dependencies.subscribeWorkspaceCreateCompleted?.((payload) => {
-      dependencies.applyWorkspaceCreateCompletedEvent?.(payload);
-    }) ?? (() => {});
-    const unsubscribeWorkspaceCreateFailed = dependencies.subscribeWorkspaceCreateFailed?.((payload) => {
-      dependencies.applyWorkspaceCreateFailedEvent?.(payload);
-    }) ?? (() => {});
-    const unsubscribeWorkspacePullRequestUpdated = dependencies.subscribeWorkspacePullRequestUpdated?.((payload) => {
-      dependencies.setWorkspacePullRequest?.(payload.workspaceId, payload.pullRequest);
-    }) ?? (() => {});
-    const unsubscribeWorkspaceSnapshotChanged = dependencies.subscribeWorkspaceSnapshotChanged?.((payload) => {
-      const selectedOrganizationId = dependencies.getSelectedOrganizationId?.()?.trim();
-      const payloadOrganizationId = payload.organizationId.trim();
-      if (selectedOrganizationId && selectedOrganizationId !== payloadOrganizationId) {
+    const unsubscribeWorkspaceCreateProgress =
+      dependencies.subscribeWorkspaceCreateProgress?.((payload) => {
+        dependencies.applyWorkspaceCreateProgressEvent?.(payload);
+      }) ?? (() => {});
+    const unsubscribeWorkspaceCreateCompleted =
+      dependencies.subscribeWorkspaceCreateCompleted?.((payload) => {
+        dependencies.applyWorkspaceCreateCompletedEvent?.(payload);
+      }) ?? (() => {});
+    const unsubscribeWorkspaceCreateFailed =
+      dependencies.subscribeWorkspaceCreateFailed?.((payload) => {
+        dependencies.applyWorkspaceCreateFailedEvent?.(payload);
+      }) ?? (() => {});
+    const unsubscribeWorkspacePullRequestUpdated =
+      dependencies.subscribeWorkspacePullRequestUpdated?.((payload) => {
+        dependencies.setWorkspacePullRequest?.(payload.workspaceId, payload.pullRequest);
+      }) ?? (() => {});
+    const unsubscribeWorkspaceSnapshotChanged =
+      dependencies.subscribeWorkspaceSnapshotChanged?.((payload) => {
+        const selectedOrganizationId = dependencies.getSelectedOrganizationId?.()?.trim();
+        const payloadOrganizationId = payload.organizationId.trim();
+        if (selectedOrganizationId && selectedOrganizationId !== payloadOrganizationId) {
+          if (import.meta.env.DEV) {
+            console.debug("[backendEventStoreBindings] workspace snapshot invalidation ignored due to org mismatch", {
+              selectedOrganizationId,
+              payloadOrganizationId,
+              resource: payload.resource,
+              change: payload.change,
+              projectId: payload.projectId,
+              workspaceId: payload.workspaceId,
+            });
+          }
+          return;
+        }
+
+        // When the backend confirms a workspace was closed, skip the full reload
+        // if that workspace is already absent from the local store. This avoids a
+        // race where the snapshot refresh re-adds a workspace that was just
+        // optimistically removed by the local close action.
+        if (
+          payload.change === "closed" &&
+          payload.workspaceId &&
+          !workspaceStore.getState().workspaces.some((w) => w.id === payload.workspaceId)
+        ) {
+          if (import.meta.env.DEV) {
+            console.debug(
+              "[backendEventStoreBindings] workspace snapshot reload skipped: workspace already closed locally",
+              { workspaceId: payload.workspaceId },
+            );
+          }
+          return;
+        }
+
         if (import.meta.env.DEV) {
-          console.debug("[backendEventStoreBindings] workspace snapshot invalidation ignored due to org mismatch", {
-            selectedOrganizationId,
-            payloadOrganizationId,
+          console.debug("[backendEventStoreBindings] workspace snapshot invalidated", {
+            organizationId: payload.organizationId,
             resource: payload.resource,
             change: payload.change,
             projectId: payload.projectId,
             workspaceId: payload.workspaceId,
           });
         }
-        return;
-      }
 
-      // When the backend confirms a workspace was closed, skip the full reload
-      // if that workspace is already absent from the local store. This avoids a
-      // race where the snapshot refresh re-adds a workspace that was just
-      // optimistically removed by the local close action.
-      if (
-        payload.change === "closed" &&
-        payload.workspaceId &&
-        !workspaceStore.getState().workspaces.some((w) => w.id === payload.workspaceId)
-      ) {
-        if (import.meta.env.DEV) {
-          console.debug(
-            "[backendEventStoreBindings] workspace snapshot reload skipped: workspace already closed locally",
-            { workspaceId: payload.workspaceId },
-          );
+        if (workspaceSnapshotRefreshTimer) {
+          return;
         }
-        return;
-      }
 
-      if (import.meta.env.DEV) {
-        console.debug("[backendEventStoreBindings] workspace snapshot invalidated", {
-          organizationId: payload.organizationId,
-          resource: payload.resource,
-          change: payload.change,
-          projectId: payload.projectId,
-          workspaceId: payload.workspaceId,
-        });
-      }
-
-      if (workspaceSnapshotRefreshTimer) {
-        return;
-      }
-
-      workspaceSnapshotRefreshTimer = setTimeout(() => {
-        workspaceSnapshotRefreshTimer = undefined;
-        void dependencies
-          .loadWorkspaceSnapshot?.()
-          .catch((error) => {
+        workspaceSnapshotRefreshTimer = setTimeout(() => {
+          workspaceSnapshotRefreshTimer = undefined;
+          void dependencies.loadWorkspaceSnapshot?.().catch((error) => {
             console.error("[backendEventStoreBindings] Failed to refresh workspace snapshot after invalidation", error);
           });
-      }, 300);
-    }) ?? (() => {});
-    const unsubscribeOpenBrowserUrl = dependencies.subscribeOpenBrowserUrl?.((payload) => {
-      dependencies.openBrowserTab?.(payload);
-    }) ?? (() => {});
+        }, 300);
+      }) ?? (() => {});
+    const unsubscribeOpenBrowserUrl =
+      dependencies.subscribeOpenBrowserUrl?.((payload) => {
+        dependencies.openBrowserTab?.(payload);
+      }) ?? (() => {});
 
     return () => {
       unsubscribeGitChanged();

@@ -38,10 +38,22 @@ describe("GitWorkspaceSettingsView", () => {
         workspaces: [
           {
             id: "workspace-1",
+            repoId: "repo-1",
+            name: "Workspace One",
+            title: "Workspace One",
+            sourceBranch: "main",
+            branch: "main",
+            summaryId: "workspace-1",
             worktreePath: "/tmp/worktrees-1",
           },
           {
             id: "workspace-author-1",
+            repoId: "repo-1",
+            name: "Workspace Author One",
+            title: "Workspace Author One",
+            sourceBranch: "main",
+            branch: "main",
+            summaryId: "workspace-author-1",
             worktreePath: "/tmp/repo-1",
           },
         ],

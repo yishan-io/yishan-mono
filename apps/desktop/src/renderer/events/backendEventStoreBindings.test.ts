@@ -6,10 +6,24 @@ import { createBackendEventStoreBindings } from "./backendEventStoreBindings";
  * Creates one in-memory git.changed subscription harness.
  */
 function createGitChangedHarness() {
-  let listener: ((workspaceId: string | undefined, workspaceWorktreePath: string, affectsBranch: boolean, currentBranch?: string) => void) | null = null;
+  let listener:
+    | ((
+        workspaceId: string | undefined,
+        workspaceWorktreePath: string,
+        affectsBranch: boolean,
+        currentBranch?: string,
+      ) => void)
+    | null = null;
   const unsubscribe = vi.fn();
   const subscribeGitChanged = vi.fn(
-    (nextListener: (workspaceId: string | undefined, workspaceWorktreePath: string, affectsBranch: boolean, currentBranch?: string) => void) => {
+    (
+      nextListener: (
+        workspaceId: string | undefined,
+        workspaceWorktreePath: string,
+        affectsBranch: boolean,
+        currentBranch?: string,
+      ) => void,
+    ) => {
       listener = nextListener;
       return () => {
         unsubscribe();
@@ -31,10 +45,18 @@ function createGitChangedHarness() {
  * Creates one in-memory workspace.files.changed subscription harness.
  */
 function createWorkspaceFilesChangedHarness() {
-  let listener: ((workspaceId: string | undefined, workspaceWorktreePath: string, changedRelativePaths?: string[]) => void) | null = null;
+  let listener:
+    | ((workspaceId: string | undefined, workspaceWorktreePath: string, changedRelativePaths?: string[]) => void)
+    | null = null;
   const unsubscribe = vi.fn();
   const subscribeWorkspaceFilesChanged = vi.fn(
-    (nextListener: (workspaceId: string | undefined, workspaceWorktreePath: string, changedRelativePaths?: string[]) => void) => {
+    (
+      nextListener: (
+        workspaceId: string | undefined,
+        workspaceWorktreePath: string,
+        changedRelativePaths?: string[],
+      ) => void,
+    ) => {
       listener = nextListener;
       return () => {
         unsubscribe();
@@ -147,93 +169,97 @@ describe("createBackendEventStoreBindings", () => {
   it("subscribes once and forwards git changed events to store action", () => {
     vi.useFakeTimers();
     try {
-    const harness = createGitChangedHarness();
-    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
-    const inAppNotificationHarness = createInAppNotificationHarness();
-    const daemonConnectionHarness = createDaemonConnectionStatusHarness();
-    const incrementFileTreeRefreshVersion = vi.fn();
-    const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
-    const dispatchSystemNotification = vi.fn(async () => undefined);
-    const playNotificationSound = vi.fn(async () => undefined);
+      const harness = createGitChangedHarness();
+      const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+      const inAppNotificationHarness = createInAppNotificationHarness();
+      const daemonConnectionHarness = createDaemonConnectionStatusHarness();
+      const incrementFileTreeRefreshVersion = vi.fn();
+      const incrementGitRefreshVersion = vi.fn();
+      const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+      const recordWorkspaceUnreadNotification = vi.fn();
+      const dispatchSystemNotification = vi.fn(async () => undefined);
+      const playNotificationSound = vi.fn(async () => undefined);
 
-    const startBindings = createBackendEventStoreBindings({
-      subscribeGitChanged: harness.subscribeGitChanged,
-      subscribeDaemonConnectionStatus: daemonConnectionHarness.subscribeDaemonConnectionStatus,
-      listWorkspaceWorktreePaths: () => ["/tmp/repo/.worktrees/task-1"],
-      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
-      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      incrementFileTreeRefreshVersion,
-      incrementGitRefreshVersion,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
-      dispatchSystemNotification,
-      playNotificationSound,
-    });
+      const startBindings = createBackendEventStoreBindings({
+        subscribeGitChanged: harness.subscribeGitChanged,
+        subscribeDaemonConnectionStatus: daemonConnectionHarness.subscribeDaemonConnectionStatus,
+        listWorkspaceWorktreePaths: () => ["/tmp/repo/.worktrees/task-1"],
+        subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+        subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+        incrementFileTreeRefreshVersion,
+        incrementGitRefreshVersion,
+        setWorkspaceAgentStatusByWorkspaceId,
+        recordWorkspaceUnreadNotification,
+        dispatchSystemNotification,
+        playNotificationSound,
+      });
 
-    const stopBindings = startBindings();
-    harness.emit("ws-1", "/tmp/repo/.worktrees/task-1");
-    vi.advanceTimersByTime(2_000);
+      const stopBindings = startBindings();
+      harness.emit("ws-1", "/tmp/repo/.worktrees/task-1");
+      vi.advanceTimersByTime(2_000);
 
-    expect(harness.subscribeGitChanged).toHaveBeenCalledTimes(1);
-    expect(incrementGitRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1");
+      expect(harness.subscribeGitChanged).toHaveBeenCalledTimes(1);
+      expect(incrementGitRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1");
 
-    stopBindings();
-    expect(harness.unsubscribe).toHaveBeenCalledTimes(1);
-    expect(workspaceFilesHarness.unsubscribe).toHaveBeenCalledTimes(1);
-    expect(inAppNotificationHarness.unsubscribe).toHaveBeenCalledTimes(1);
-    expect(daemonConnectionHarness.unsubscribe).toHaveBeenCalledTimes(1);
+      stopBindings();
+      expect(harness.unsubscribe).toHaveBeenCalledTimes(1);
+      expect(workspaceFilesHarness.unsubscribe).toHaveBeenCalledTimes(1);
+      expect(inAppNotificationHarness.unsubscribe).toHaveBeenCalledTimes(1);
+      expect(daemonConnectionHarness.unsubscribe).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("forces file tree and git refresh after daemon reconnect", () => {
+  it("forces file tree and git refresh after daemon reconnect", async () => {
     vi.useFakeTimers();
     try {
-    const gitHarness = createGitChangedHarness();
-    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
-    const inAppNotificationHarness = createInAppNotificationHarness();
-    const daemonConnectionHarness = createDaemonConnectionStatusHarness();
-    const incrementFileTreeRefreshVersion = vi.fn();
-    const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
-    const dispatchSystemNotification = vi.fn(async () => undefined);
-    const playNotificationSound = vi.fn(async () => undefined);
+      const gitHarness = createGitChangedHarness();
+      const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+      const inAppNotificationHarness = createInAppNotificationHarness();
+      const daemonConnectionHarness = createDaemonConnectionStatusHarness();
+      const incrementFileTreeRefreshVersion = vi.fn();
+      const incrementGitRefreshVersion = vi.fn();
+      const loadWorkspaceSnapshot = vi.fn(async () => undefined);
+      const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+      const recordWorkspaceUnreadNotification = vi.fn();
+      const dispatchSystemNotification = vi.fn(async () => undefined);
+      const playNotificationSound = vi.fn(async () => undefined);
 
-    const startBindings = createBackendEventStoreBindings({
-      subscribeDaemonConnectionStatus: daemonConnectionHarness.subscribeDaemonConnectionStatus,
-      listWorkspaceWorktreePaths: () => ["/tmp/repo/.worktrees/task-1"],
-      subscribeGitChanged: gitHarness.subscribeGitChanged,
-      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
-      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      incrementFileTreeRefreshVersion,
-      incrementGitRefreshVersion,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
-      dispatchSystemNotification,
-      playNotificationSound,
-    });
+      const startBindings = createBackendEventStoreBindings({
+        subscribeDaemonConnectionStatus: daemonConnectionHarness.subscribeDaemonConnectionStatus,
+        listWorkspaceWorktreePaths: () => ["/tmp/repo/.worktrees/task-1"],
+        subscribeGitChanged: gitHarness.subscribeGitChanged,
+        subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+        subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+        loadWorkspaceSnapshot,
+        incrementFileTreeRefreshVersion,
+        incrementGitRefreshVersion,
+        setWorkspaceAgentStatusByWorkspaceId,
+        recordWorkspaceUnreadNotification,
+        dispatchSystemNotification,
+        playNotificationSound,
+      });
 
-    const stopBindings = startBindings();
-    daemonConnectionHarness.emit("connected");
-    daemonConnectionHarness.emit("disconnected");
-    daemonConnectionHarness.emit("connecting");
-    daemonConnectionHarness.emit("connected");
-    vi.advanceTimersByTime(2_000);
+      const stopBindings = startBindings();
+      daemonConnectionHarness.emit("connected");
+      daemonConnectionHarness.emit("disconnected");
+      daemonConnectionHarness.emit("connecting");
+      daemonConnectionHarness.emit("connected");
+      await Promise.resolve();
+      vi.advanceTimersByTime(2_000);
 
-    expect(incrementFileTreeRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1", []);
-    expect(incrementGitRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1");
+      expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+      expect(incrementFileTreeRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1", []);
+      expect(incrementGitRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1");
 
-    stopBindings();
+      stopBindings();
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it("logs clear diagnostics when reconnect recovery fails", () => {
+  it("logs clear diagnostics when reconnect recovery fails", async () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
@@ -266,6 +292,7 @@ describe("createBackendEventStoreBindings", () => {
     daemonConnectionHarness.emit("connected");
     daemonConnectionHarness.emit("disconnected");
     daemonConnectionHarness.emit("connected");
+    await Promise.resolve();
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       "[backendEventStoreBindings] Failed to recover workspace views after daemon reconnect",
@@ -279,38 +306,38 @@ describe("createBackendEventStoreBindings", () => {
   it("forwards workspace file updates to file tree and git refresh actions", () => {
     vi.useFakeTimers();
     try {
-    const gitHarness = createGitChangedHarness();
-    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
-    const inAppNotificationHarness = createInAppNotificationHarness();
-    const incrementFileTreeRefreshVersion = vi.fn();
-    const incrementGitRefreshVersion = vi.fn();
-    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
-    const recordWorkspaceUnreadNotification = vi.fn();
-    const dispatchSystemNotification = vi.fn(async () => undefined);
-    const playNotificationSound = vi.fn(async () => undefined);
+      const gitHarness = createGitChangedHarness();
+      const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+      const inAppNotificationHarness = createInAppNotificationHarness();
+      const incrementFileTreeRefreshVersion = vi.fn();
+      const incrementGitRefreshVersion = vi.fn();
+      const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+      const recordWorkspaceUnreadNotification = vi.fn();
+      const dispatchSystemNotification = vi.fn(async () => undefined);
+      const playNotificationSound = vi.fn(async () => undefined);
 
-    const startBindings = createBackendEventStoreBindings({
-      subscribeGitChanged: gitHarness.subscribeGitChanged,
-      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
-      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
-      incrementFileTreeRefreshVersion,
-      incrementGitRefreshVersion,
-      setWorkspaceAgentStatusByWorkspaceId,
-      recordWorkspaceUnreadNotification,
-      dispatchSystemNotification,
-      playNotificationSound,
-    });
+      const startBindings = createBackendEventStoreBindings({
+        subscribeGitChanged: gitHarness.subscribeGitChanged,
+        subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+        subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+        incrementFileTreeRefreshVersion,
+        incrementGitRefreshVersion,
+        setWorkspaceAgentStatusByWorkspaceId,
+        recordWorkspaceUnreadNotification,
+        dispatchSystemNotification,
+        playNotificationSound,
+      });
 
-    const stopBindings = startBindings();
-    workspaceFilesHarness.emit("ws-1", "/tmp/repo/.worktrees/task-1", ["src/test.md"]);
-    vi.advanceTimersByTime(2_000);
+      const stopBindings = startBindings();
+      workspaceFilesHarness.emit("ws-1", "/tmp/repo/.worktrees/task-1", ["src/test.md"]);
+      vi.advanceTimersByTime(2_000);
 
-    expect(incrementFileTreeRefreshVersion).toHaveBeenCalledTimes(1);
-    expect(incrementFileTreeRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1", ["src/test.md"]);
-    expect(incrementGitRefreshVersion).toHaveBeenCalledTimes(1);
-    expect(incrementGitRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1");
+      expect(incrementFileTreeRefreshVersion).toHaveBeenCalledTimes(1);
+      expect(incrementFileTreeRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1", ["src/test.md"]);
+      expect(incrementGitRefreshVersion).toHaveBeenCalledTimes(1);
+      expect(incrementGitRefreshVersion).toHaveBeenCalledWith("/tmp/repo/.worktrees/task-1");
 
-    stopBindings();
+      stopBindings();
     } finally {
       vi.useRealTimers();
     }
