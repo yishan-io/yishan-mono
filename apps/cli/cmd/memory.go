@@ -41,9 +41,9 @@ var memorySearchCmd = &cobra.Command{
 	Use:   "search <query>",
 	Short: "Search project memory",
 	Long:  `Search the FTS5 memory index. Reconciles from the profile's known workspaces before searching.`,
-	Example: `  yishan memory search "permission deadlock"
-  yishan memory search --scope global "coding style"
-  yishan memory search --project-id proj_abc123 "auth"`,
+	Example: `  yishan memory search --output json "permission deadlock"
+  yishan memory search --output json --scope global "coding style"
+  yishan memory search --output json --project-id proj_abc123 "auth"`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		db, err := openAndReconcileMemoryDB()

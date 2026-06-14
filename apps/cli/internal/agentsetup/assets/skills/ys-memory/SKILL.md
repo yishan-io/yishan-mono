@@ -1,6 +1,6 @@
 ---
 name: ys-memory
-description: Keep .my-context/MEMORY.md up to date with your personal project context. Use when asked to update memory, record a decision, or after a session where you learned something non-obvious.
+description: Manage .my-context/MEMORY.md and search project memory. Use when asked to update memory, record a decision, search past context, or after a session where you learned something non-obvious.
 metadata:
   tool: yishan
   scope: project-memory
@@ -66,10 +66,46 @@ Before ANY other action:
 
 ### During a session
 
-When you need to find something from past sessions:
-1. Use `memory.search` JSON-RPC method (or the agent's MCP memory_search tool) with 1-3 keywords
-2. Read the returned paths for full content
-3. If search returns 0 — retry with fewer/rarer terms
+When you need to look up any project context — past session memory,
+architecture decisions, task history, learned discoveries, etc. — all indexed
+from `.my-context/`:
+1. Run `yishan memory search --output json --project-id $YISHAN_PROJECT_ID "<query>"` from the workspace root. Use 1-3 keywords.
+2. Read the returned paths for full content.
+3. If search returns 0 — retry with fewer/rarer terms.
+
+**Command:** `yishan memory search --output json --project-id $YISHAN_PROJECT_ID <query>`
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--output` | string | default | Set to `json` for machine-readable output |
+| `--project-id` | string | `$YISHAN_PROJECT_ID` | Project ID (falls back to env var) |
+| `--scope` | string | project | `project` or `global` |
+| `--limit` | int | 20 | Max results (capped at 100) |
+
+Returns a JSON array of `{path, snippet, score}` objects. The `snippet`
+wraps matching terms in `<mark>` tags and `score` is the FTS5 relevance rank (lower is better).
+
+**Example:**
+
+```bash
+yishan memory search --output json --project-id $YISHAN_PROJECT_ID "permission deadlock"
+```
+```json
+[
+  {
+    "path": "/Users/…/workspace/.my-context/MEMORY.md",
+    "snippet": "...fixed the <mark>permission</mark> <mark>deadlock</mark> by...",
+    "score": 0.15
+  },
+  {
+    "path": "/Users/…/workspace/.my-context/architecture/decisions-20260614.md",
+    "snippet": "...resolved a <mark>deadlock</mark> when checking <mark>permission</mark>...",
+    "score": 0.42
+  }
+]
+```
+
+The returned paths are absolute. Read them to get the full content.
 
 When you discover something worth keeping across sessions:
 1. Edit `.my-context/MEMORY.md` immediately

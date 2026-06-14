@@ -19,18 +19,43 @@ var memorySkillContent string
 //go:embed assets/skills/ys-memory/MEMORY.md.tmpl
 var memoryFileTemplate string
 
-//go:embed assets/skills/ys-tasks/SKILL.md
-var tasksSkillContent string
+//go:embed assets/skills/ys-start/SKILL.md
+var startSkillContent string
+
+//go:embed assets/skills/ys-research/SKILL.md
+var researchSkillContent string
+
+//go:embed assets/skills/ys-plan/SKILL.md
+var planSkillContent string
+
+//go:embed assets/skills/ys-build/SKILL.md
+var buildSkillContent string
+
+//go:embed assets/skills/ys-verify/SKILL.md
+var verifySkillContent string
+
+//go:embed assets/skills/ys-done/SKILL.md
+var doneSkillContent string
 
 const (
 	workspaceSkillName = "ys-workspace"
 	memorySkillName    = "ys-memory"
-	tasksSkillName     = "ys-tasks"
+	startSkillName     = "ys-start"
+	researchSkillName  = "ys-research"
+	planSkillName      = "ys-plan"
+	buildSkillName     = "ys-build"
+	verifySkillName    = "ys-verify"
+	doneSkillName      = "ys-done"
 
 	// Exported for use by the daemon dispatcher.
 	WorkspaceSkillName = workspaceSkillName
 	MemorySkillName    = memorySkillName
-	TasksSkillName     = tasksSkillName
+	StartSkillName     = startSkillName
+	ResearchSkillName  = researchSkillName
+	PlanSkillName      = planSkillName
+	BuildSkillName     = buildSkillName
+	VerifySkillName    = verifySkillName
+	DoneSkillName      = doneSkillName
 )
 
 type SkillInstallResult struct {
@@ -46,8 +71,28 @@ func EnsureMemorySkill() (*SkillInstallResult, error) {
 	return ensureSkill(memorySkillName, memorySkillContent)
 }
 
-func EnsureTasksSkill() (*SkillInstallResult, error) {
-	return ensureSkill(tasksSkillName, tasksSkillContent)
+func EnsureStartSkill() (*SkillInstallResult, error) {
+	return ensureSkill(startSkillName, startSkillContent)
+}
+
+func EnsureResearchSkill() (*SkillInstallResult, error) {
+	return ensureSkill(researchSkillName, researchSkillContent)
+}
+
+func EnsurePlanSkill() (*SkillInstallResult, error) {
+	return ensureSkill(planSkillName, planSkillContent)
+}
+
+func EnsureBuildSkill() (*SkillInstallResult, error) {
+	return ensureSkill(buildSkillName, buildSkillContent)
+}
+
+func EnsureVerifySkill() (*SkillInstallResult, error) {
+	return ensureSkill(verifySkillName, verifySkillContent)
+}
+
+func EnsureDoneSkill() (*SkillInstallResult, error) {
+	return ensureSkill(doneSkillName, doneSkillContent)
 }
 
 // MemoryFileTemplate returns the starter MEMORY.md content to be written into a
@@ -103,8 +148,28 @@ func RemoveMemorySkill() error {
 	return removeSkill(memorySkillName)
 }
 
-func RemoveTasksSkill() error {
-	return removeSkill(tasksSkillName)
+func RemoveStartSkill() error {
+	return removeSkill(startSkillName)
+}
+
+func RemoveResearchSkill() error {
+	return removeSkill(researchSkillName)
+}
+
+func RemovePlanSkill() error {
+	return removeSkill(planSkillName)
+}
+
+func RemoveBuildSkill() error {
+	return removeSkill(buildSkillName)
+}
+
+func RemoveVerifySkill() error {
+	return removeSkill(verifySkillName)
+}
+
+func RemoveDoneSkill() error {
+	return removeSkill(doneSkillName)
 }
 
 func removeSkill(name string) error {

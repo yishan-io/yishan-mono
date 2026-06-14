@@ -109,12 +109,30 @@ Creates symlinks in opencode, claude, and agents config directories.`,
 			if err := setup.RemoveMemorySkill(); err != nil {
 				return err
 			}
-			if err := setup.RemoveTasksSkill(); err != nil {
+			if err := setup.RemoveStartSkill(); err != nil {
+				return err
+			}
+			if err := setup.RemoveResearchSkill(); err != nil {
+				return err
+			}
+			if err := setup.RemovePlanSkill(); err != nil {
+				return err
+			}
+			if err := setup.RemoveBuildSkill(); err != nil {
+				return err
+			}
+			if err := setup.RemoveVerifySkill(); err != nil {
+				return err
+			}
+			if err := setup.RemoveDoneSkill(); err != nil {
+				return err
+			}
+			if err := setup.RemoveOpenCodeCommands(); err != nil {
 				return err
 			}
 			return output.PrintAny(map[string]any{
 				"action":  "removed",
-				"message": "ys-workspace, ys-memory, and ys-tasks skills removed from all agent config directories",
+				"message": "All yishan skills removed from all agent config directories",
 			})
 		}
 		wsResult, err := setup.EnsureWorkspaceSkill()
@@ -125,15 +143,54 @@ Creates symlinks in opencode, claude, and agents config directories.`,
 		if err != nil {
 			return err
 		}
-		tasksResult, err := setup.EnsureTasksSkill()
+		startResult, err := setup.EnsureStartSkill()
 		if err != nil {
 			return err
 		}
+		researchResult, err := setup.EnsureResearchSkill()
+		if err != nil {
+			return err
+		}
+		planResult, err := setup.EnsurePlanSkill()
+		if err != nil {
+			return err
+		}
+		buildResult, err := setup.EnsureBuildSkill()
+		if err != nil {
+			return err
+		}
+		verifyResult, err := setup.EnsureVerifySkill()
+		if err != nil {
+			return err
+		}
+		doneResult, err := setup.EnsureDoneSkill()
+		if err != nil {
+			return err
+		}
+		if err := setup.EnsureOpenCodeCommands(); err != nil {
+			return err
+		}
 		return output.PrintAny(map[string]any{
-			"action":   "installed",
-			"skills":   []string{wsResult.SkillPath, memResult.SkillPath, tasksResult.SkillPath},
-			"symlinks": append(append(wsResult.Symlinks, memResult.Symlinks...), tasksResult.Symlinks...),
-			"message":  "ys-workspace, ys-memory, and ys-tasks skills installed for opencode, claude, and other agents",
+			"action": "installed",
+			"skills": []string{
+				wsResult.SkillPath, memResult.SkillPath,
+				startResult.SkillPath, researchResult.SkillPath, planResult.SkillPath,
+				buildResult.SkillPath, verifyResult.SkillPath, doneResult.SkillPath,
+			},
+			"symlinks": append(
+				append(
+					append(
+						append(
+							append(
+								append(
+									append(wsResult.Symlinks, memResult.Symlinks...),
+									startResult.Symlinks...),
+								researchResult.Symlinks...),
+							planResult.Symlinks...),
+						buildResult.Symlinks...),
+					verifyResult.Symlinks...),
+				doneResult.Symlinks...),
+			"message": "All yishan skills installed for opencode, claude, and other agents",
 		})
 	},
 }
@@ -173,9 +230,39 @@ func runSetupAll(_ *cobra.Command, _ []string) error {
 		allErrors = append(allErrors, "skill(ys-memory): "+err.Error())
 	}
 
-	if _, err := setup.EnsureTasksSkill(); err != nil {
-		log.Warn().Err(err).Msg("setup: tasks skill install failed")
-		allErrors = append(allErrors, "skill(ys-tasks): "+err.Error())
+	if _, err := setup.EnsureStartSkill(); err != nil {
+		log.Warn().Err(err).Msg("setup: start skill install failed")
+		allErrors = append(allErrors, "skill(ys-start): "+err.Error())
+	}
+
+	if _, err := setup.EnsureResearchSkill(); err != nil {
+		log.Warn().Err(err).Msg("setup: research skill install failed")
+		allErrors = append(allErrors, "skill(ys-research): "+err.Error())
+	}
+
+	if _, err := setup.EnsurePlanSkill(); err != nil {
+		log.Warn().Err(err).Msg("setup: plan skill install failed")
+		allErrors = append(allErrors, "skill(ys-plan): "+err.Error())
+	}
+
+	if _, err := setup.EnsureBuildSkill(); err != nil {
+		log.Warn().Err(err).Msg("setup: build skill install failed")
+		allErrors = append(allErrors, "skill(ys-build): "+err.Error())
+	}
+
+	if _, err := setup.EnsureVerifySkill(); err != nil {
+		log.Warn().Err(err).Msg("setup: verify skill install failed")
+		allErrors = append(allErrors, "skill(ys-verify): "+err.Error())
+	}
+
+	if _, err := setup.EnsureDoneSkill(); err != nil {
+		log.Warn().Err(err).Msg("setup: done skill install failed")
+		allErrors = append(allErrors, "skill(ys-done): "+err.Error())
+	}
+
+	if err := setup.EnsureOpenCodeCommands(); err != nil {
+		log.Warn().Err(err).Msg("setup: opencode commands install failed")
+		allErrors = append(allErrors, "opencode-commands: "+err.Error())
 	}
 
 	if len(allErrors) > 0 {

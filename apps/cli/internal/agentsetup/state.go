@@ -98,7 +98,11 @@ func fillSkillState(state *InstalledState, yishanHome string, homeDir string) {
 		}},
 	}
 
-	for _, name := range []string{workspaceSkillName, memorySkillName, tasksSkillName} {
+	for _, name := range []string{
+		workspaceSkillName, memorySkillName,
+		startSkillName, researchSkillName, planSkillName,
+		buildSkillName, verifySkillName, doneSkillName,
+	} {
 		skillDir := filepath.Join(yishanHome, "skills", name)
 		skillPath := filepath.Join(skillDir, "SKILL.md")
 
