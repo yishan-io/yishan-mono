@@ -157,10 +157,13 @@ func (s *Service) SummarizeSession(agent string, worktreePath string, projectID 
 		}
 		log.Debug().Str("agent", req.agent).Str("workspace", req.worktreePath).Msg("session summarized")
 
-		// Re-index MEMORY.md after writing.
-		memoryPath := filepath.Join(contextRoot, "MEMORY.md")
-		if idxErr := s.db.IndexFileOnDisk(memoryPath, contextRoot, req.projectID); idxErr != nil {
-			log.Warn().Err(idxErr).Msg("reindex MEMORY.md after summarization")
+		// Re-index the full context root so MEMORY.md and any newly-written
+		// architecture/ overflow files all appear in the FTS index.
+		if _, idxErr := s.db.Reconcile(
+			[]WorkspaceRef{{WorktreePath: req.worktreePath, ProjectID: req.projectID}},
+			"",
+		); idxErr != nil {
+			log.Warn().Err(idxErr).Msg("re-index after summarization failed")
 		}
 	})
 }

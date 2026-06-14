@@ -52,9 +52,19 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 
 	conversation := buildConversationText(session.Messages)
 
-	existingPath := filepath.Join(workspacePath, myContextDir, "MEMORY.md")
+	// Resolve the canonical context root so budget overflow goes to the right
+	// architecture/ directory. Fall back to the symlink path if unresolvable.
+	contextRoot := resolveContextRoot(workspacePath)
+	var memoryPath string
+	if contextRoot != "" {
+		memoryPath = filepath.Join(contextRoot, "MEMORY.md")
+	} else {
+		memoryPath = filepath.Join(workspacePath, myContextDir, "MEMORY.md")
+		contextRoot = filepath.Join(workspacePath, myContextDir)
+	}
+
 	existingContent := ""
-	if data, err := os.ReadFile(existingPath); err == nil {
+	if data, err := os.ReadFile(memoryPath); err == nil {
 		existingContent = string(data)
 	}
 
@@ -80,7 +90,7 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 		return fmt.Errorf("parse summarization output: %w", err)
 	}
 
-	return mergeAndWrite(existingPath, existingContent, extracted)
+	return mergeAndWrite(memoryPath, existingContent, extracted, contextRoot)
 }
 
 func buildConversationText(messages []sessionMessage) string {
@@ -151,7 +161,7 @@ func truncate(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-func mergeAndWrite(memoryPath string, existingContent string, extracted ExtractedKnowledge) error {
+func mergeAndWrite(memoryPath string, existingContent string, extracted ExtractedKnowledge, contextRoot string) error {
 	existing := parseMemorySections(existingContent)
 
 	if extracted.LeaveOff != "" {
@@ -183,7 +193,7 @@ func mergeAndWrite(memoryPath string, existingContent string, extracted Extracte
 		return fmt.Errorf("create memory dir: %w", err)
 	}
 
-	budget := checkBudget(newContent, memoryPath)
+	budget := checkBudget(newContent, memoryPath, contextRoot)
 	if budget.Exceeded {
 		log.Warn().
 			Str("path", memoryPath).

@@ -14,9 +14,13 @@ type BudgetCheck struct {
 	TrimmedContent string
 }
 
-func checkBudget(content string, filePath string) BudgetCheck {
+// checkBudget checks whether content exceeds the size limit for memoryPath.
+// contextRoot is the canonical context directory (~/.yishan/contexts/<repoKey>/)
+// used to derive the overflow archive path. Pass "" for global memory files
+// (which have a lower limit but no overflow target).
+func checkBudget(content string, memoryPath string, contextRoot string) BudgetCheck {
 	limit := MaxProjectMemoryChars
-	if strings.Contains(filepath.ToSlash(filePath), "/.yishan/memory/global/") {
+	if strings.Contains(filepath.ToSlash(memoryPath), "/.yishan/memory/global/") {
 		limit = MaxGlobalMemoryChars
 	}
 
@@ -29,32 +33,30 @@ func checkBudget(content string, filePath string) BudgetCheck {
 	}
 
 	result.Exceeded = true
-	// Derive worktree root: MEMORY.md lives at <root>/.my-context/MEMORY.md.
-	worktreeRoot := filepath.Dir(filepath.Dir(filePath))
-	result.TrimmedContent = trimToBudget(content, limit, worktreeRoot)
+	result.TrimmedContent = trimToBudget(content, limit, contextRoot)
 	return result
 }
 
-func trimToBudget(content string, limit int, worktreeRoot string) string {
+func trimToBudget(content string, limit int, contextRoot string) string {
 	sections := parseMemorySections(content)
 
 	for len([]rune(buildMemoryMarkdown(sections))) > limit {
 		trimmed := false
 		if len(sections.Errors) > 0 {
-			overflowEntries(worktreeRoot, "errors", sections.Errors)
+			overflowEntries(contextRoot, "errors", sections.Errors)
 			sections.Errors = nil
 			trimmed = true
 		}
 		if !trimmed || len([]rune(buildMemoryMarkdown(sections))) > limit {
 			if len(sections.Learned) > 3 {
-				overflowEntries(worktreeRoot, "learned", sections.Learned[3:])
+				overflowEntries(contextRoot, "learned", sections.Learned[3:])
 				sections.Learned = sections.Learned[:3]
 				trimmed = true
 			}
 		}
 		if !trimmed || len([]rune(buildMemoryMarkdown(sections))) > limit {
 			if len(sections.Decisions) > 3 {
-				overflowEntries(worktreeRoot, "decisions", sections.Decisions[3:])
+				overflowEntries(contextRoot, "decisions", sections.Decisions[3:])
 				sections.Decisions = sections.Decisions[:3]
 				trimmed = true
 			}
@@ -67,13 +69,16 @@ func trimToBudget(content string, limit int, worktreeRoot string) string {
 	return buildMemoryMarkdown(sections)
 }
 
-func overflowEntries(worktreeRoot string, category string, entries []string) {
-	if len(entries) == 0 {
+// overflowEntries writes overflow entries to <contextRoot>/architecture/<category>-<date>.md.
+// If contextRoot is empty (global memory), overflow is skipped — global memory
+// is managed manually without an architecture overflow target.
+func overflowEntries(contextRoot string, category string, entries []string) {
+	if len(entries) == 0 || contextRoot == "" {
 		return
 	}
 
 	now := time.Now().UTC().Format("20060102")
-	archDir := filepath.Join(worktreeRoot, myContextDir, architectureDir)
+	archDir := filepath.Join(contextRoot, architectureDir)
 	archFile := filepath.Join(archDir, category+"-"+now+".md")
 
 	existingContent := ""
