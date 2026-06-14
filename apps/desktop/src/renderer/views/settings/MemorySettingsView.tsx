@@ -1,16 +1,19 @@
 import {
   Alert,
   Box,
+  CircularProgress,
   FormControl,
+  IconButton,
   MenuItem,
   Select,
   type SelectChangeEvent,
   Stack,
-  Typography,
 } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { LuRefreshCw } from "react-icons/lu";
 import { AgentIcon } from "../../components/AgentIcon";
+import { ModelAutocomplete, type ModelOption } from "../../components/ModelAutocomplete";
 import {
   SettingsCard,
   SettingsControlRow,
@@ -18,21 +21,23 @@ import {
   SettingsSectionHeader,
   SettingsToggleRow,
 } from "../../components/settings";
-import { getErrorMessage } from "../../helpers/errorHelpers";
 import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
-import { getDaemonClient } from "../../rpc/rpcTransport";
+import { getErrorMessage } from "../../helpers/errorHelpers";
 import type { MemoryConfig } from "../../rpc/daemonTypes";
-
-type ModelOption = { id: string; name: string };
+import { getDaemonClient } from "../../rpc/rpcTransport";
+import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
 
 export function MemorySettingsView() {
   const { t } = useTranslation();
+  const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
+  const enabledAgentKinds = SUPPORTED_DESKTOP_AGENT_KINDS.filter((kind) => inUseByAgentKind[kind]);
   const [config, setConfig] = useState<MemoryConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [models, setModels] = useState<ModelOption[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
+  const [isRefreshingModels, setIsRefreshingModels] = useState(false);
   const modelsRequestIdRef = useRef(0);
 
   const fetchModels = useCallback(async (agentKind: string) => {
@@ -87,19 +92,16 @@ export function MemorySettingsView() {
     fetchConfig();
   }, [fetchConfig]);
 
-  const persistConfig = useCallback(
-    async (next: MemoryConfig) => {
-      setConfig(next);
-      try {
-        const client = await getDaemonClient();
-        await client.memory.updateConfig(next);
-        setSaveError(null);
-      } catch (error) {
-        setSaveError(getErrorMessage(error));
-      }
-    },
-    [],
-  );
+  const persistConfig = useCallback(async (next: MemoryConfig) => {
+    setConfig(next);
+    try {
+      const client = await getDaemonClient();
+      await client.memory.updateConfig(next);
+      setSaveError(null);
+    } catch (error) {
+      setSaveError(getErrorMessage(error));
+    }
+  }, []);
 
   const handleEnabledChange = useCallback(
     (checked: boolean) => {
@@ -121,22 +123,36 @@ export function MemorySettingsView() {
   );
 
   const handleModelChange = useCallback(
-    (event: SelectChangeEvent<string>) => {
+    (model: string) => {
       if (!config) return;
-      persistConfig({ ...config, model: event.target.value });
+      persistConfig({ ...config, model });
     },
     [config, persistConfig],
   );
+
+  const handleRefreshModels = useCallback(async () => {
+    const agentKind = config?.agentKind;
+    if (!agentKind) return;
+    setIsRefreshingModels(true);
+    setModelsError(null);
+    try {
+      const client = await getDaemonClient();
+      const result = await client.agent.listModels({ agentKind, forceRefresh: true });
+      setModels(result.models ?? []);
+    } catch (error) {
+      setModelsError(getErrorMessage(error));
+      setModels([]);
+    } finally {
+      setIsRefreshingModels(false);
+    }
+  }, [config?.agentKind]);
 
   const modelValue = config?.model ?? "";
 
   return (
     <Stack spacing={2} data-testid="memory-settings-panel">
       <Box>
-        <SettingsSectionHeader
-          title={t("settings.memory.title")}
-          description={t("settings.memory.description")}
-        />
+        <SettingsSectionHeader title={t("settings.memory.title")} description={t("settings.memory.description")} />
         <SettingsCard>
           <SettingsRows>
             <SettingsToggleRow
@@ -163,12 +179,8 @@ export function MemorySettingsView() {
                 description={t("settings.memory.summarizer.agentKind.description")}
                 control={
                   <FormControl size="small" sx={{ minWidth: 140 }}>
-                    <Select
-                      value={config.agentKind}
-                      disabled={loading}
-                      onChange={handleAgentKindChange}
-                    >
-                      {SUPPORTED_DESKTOP_AGENT_KINDS.map((kind) => (
+                    <Select value={config.agentKind} disabled={loading} onChange={handleAgentKindChange}>
+                      {enabledAgentKinds.map((kind) => (
                         <MenuItem key={kind} value={kind}>
                           <AgentIcon agentKind={kind} context="settingsRow" decorative />
                           <Box component="span" sx={{ ml: 1 }}>
@@ -184,28 +196,26 @@ export function MemorySettingsView() {
                 title={t("settings.memory.summarizer.model.label")}
                 description={t("settings.memory.summarizer.model.description")}
                 control={
-                  <FormControl size="small" sx={{ minWidth: 180 }}>
-                    <Select
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <ModelAutocomplete
+                      options={models}
                       value={modelValue}
-                      disabled={loading || modelsLoading || !config.agentKind}
                       onChange={handleModelChange}
-                      displayEmpty
+                      loading={modelsLoading}
+                      disabled={loading || !config.agentKind}
+                      placeholder={t("settings.memory.summarizer.model.placeholder")}
+                      noOptionsText={modelsError ?? undefined}
+                      sx={{ minWidth: 280 }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={handleRefreshModels}
+                      disabled={loading || isRefreshingModels || !config.agentKind}
+                      aria-label={t("settings.memory.summarizer.model.refresh")}
                     >
-                      <MenuItem value="">
-                        <em>{t("settings.memory.summarizer.model.defaultOption")}</em>
-                      </MenuItem>
-                      {models.map((m) => (
-                        <MenuItem key={m.id} value={m.id}>
-                          {m.name || m.id}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {modelsError ? (
-                      <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                        {modelsError}
-                      </Typography>
-                    ) : null}
-                  </FormControl>
+                      {isRefreshingModels || modelsLoading ? <CircularProgress size={16} /> : <LuRefreshCw size={16} />}
+                    </IconButton>
+                  </Box>
                 }
               />
             </SettingsRows>

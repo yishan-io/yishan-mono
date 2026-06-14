@@ -551,7 +551,8 @@
           "label": "模型",
           "description": "可选模型覆盖。留空使用智能体的默认模型。",
           "placeholder": "例如 gpt-4o-mini",
-          "defaultOption": "使用智能体默认"
+          "defaultOption": "使用智能体默认",
+          "refresh": "刷新模型列表"
         }
       }
     },

@@ -588,7 +588,8 @@
           "label": "Model",
           "description": "Optional model override. Leave empty to use the agent's default model.",
           "placeholder": "e.g. gpt-4o-mini",
-          "defaultOption": "Use agent default"
+          "defaultOption": "Use agent default",
+          "refresh": "Refresh model list"
         }
       }
     },

@@ -1,6 +1,7 @@
 package modellist
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -25,9 +26,14 @@ func (f opencodeFetcher) Fetch() ([]ModelInfo, error) {
 
 	cmd := exec.Command(opencodePath, "models")
 	isolateCmd(cmd)
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = &stderrBuf
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, err
+		if stderrBuf.Len() > 0 {
+			return nil, fmt.Errorf("opencode models: %w (stderr: %s)", err, stderrBuf.String())
+		}
+		return nil, fmt.Errorf("opencode models: %w", err)
 	}
 	return parseOpenCodeModels(string(output)), nil
 }

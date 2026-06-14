@@ -7,6 +7,7 @@ const MAX_VISIBLE_ITEMS = 8;
 /**
  * Custom listbox component for MUI Autocomplete that virtualises its items
  * with @tanstack/react-virtual, keeping the DOM lean for large option sets.
+ * Supports horizontal scroll for long item content.
  */
 export const VirtualizedListbox = forwardRef<HTMLUListElement, React.HTMLAttributes<HTMLElement>>(
   function VirtualizedListbox({ children, ...rest }, ref) {
@@ -26,8 +27,8 @@ export const VirtualizedListbox = forwardRef<HTMLUListElement, React.HTMLAttribu
 
     return (
       <ul ref={ref} {...rest} style={{ ...rest.style, padding: 0, margin: 0, listStyle: "none" }}>
-        <div ref={containerRef} style={{ overflow: "auto", maxHeight: visibleHeight }}>
-          <div style={{ height: totalHeight, position: "relative" }}>
+        <div ref={containerRef} style={{ overflow: "auto", overflowX: "auto", maxHeight: visibleHeight }}>
+          <div style={{ height: totalHeight, position: "relative", minWidth: "max-content" }}>
             {virtualizer.getVirtualItems().map((virtualItem) => (
               <div
                 key={virtualItem.key}
@@ -36,8 +37,10 @@ export const VirtualizedListbox = forwardRef<HTMLUListElement, React.HTMLAttribu
                   top: 0,
                   left: 0,
                   width: "100%",
+                  minWidth: "max-content",
                   height: virtualItem.size,
                   transform: `translateY(${virtualItem.start}px)`,
+                  whiteSpace: "nowrap",
                 }}
               >
                 {items[virtualItem.index]}

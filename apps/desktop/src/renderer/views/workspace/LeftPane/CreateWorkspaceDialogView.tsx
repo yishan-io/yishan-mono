@@ -1,5 +1,4 @@
 import {
-  Autocomplete,
   Avatar,
   Box,
   Button,
@@ -19,23 +18,23 @@ import { type KeyboardEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown, LuCloud, LuCpu, LuFolderGit2, LuGitBranch, LuServer, LuSparkles } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
+import type { AgentModelInfo } from "../../../commands/agentCommands";
 import { AgentIcon } from "../../../components/AgentIcon";
 import { BranchDropdown, type BranchDropdownGroups } from "../../../components/BranchDropdown";
-import { VirtualizedListbox } from "../../../components/VirtualizedListbox";
+import { ModelAutocomplete } from "../../../components/ModelAutocomplete";
 import { renderProjectIcon } from "../../../components/projectIcons";
 import {
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
   type DesktopAgentKind,
   SUPPORTED_DESKTOP_AGENT_KINDS,
 } from "../../../helpers/agentSettings";
-import type { AgentModelInfo } from "../../../commands/agentCommands";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { resolveTargetBranchForCreate } from "../../../helpers/workspaceBranchNaming";
 import { useCommands } from "../../../hooks/useCommands";
 import { useDialogRegistration } from "../../../hooks/useDialogRegistration";
 import { buildWorkspaceNavigationPath } from "../../../navigation/workspaceNavigation";
-import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
 import { sessionStore } from "../../../store/sessionStore";
+import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { compactSelectSx, resolveSourceBranchGroups } from "./createWorkspaceHelpers";
@@ -539,24 +538,24 @@ export function CreateWorkspaceDialogView({
                 }}
               >
                 {nodes.map((node) => (
-                    <MenuItem key={node.id} value={node.id} disabled={!node.canUse || !node.isOnline}>
-                      <Stack direction="row" alignItems="center" gap={1}>
-                        <Box component="span" sx={{ display: "inline-flex", color: "text.secondary" }}>
-                          {node.scope === "shared" ? <LuCloud size={14} /> : <LuServer size={14} />}
-                        </Box>
-                        <Box
-                          component="span"
-                          sx={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: "50%",
-                            bgcolor: node.isOnline ? "success.main" : "text.disabled",
-                          }}
-                        />
-                        <Typography variant="body2">{node.name}</Typography>
-                      </Stack>
-                    </MenuItem>
-                  ))}
+                  <MenuItem key={node.id} value={node.id} disabled={!node.canUse || !node.isOnline}>
+                    <Stack direction="row" alignItems="center" gap={1}>
+                      <Box component="span" sx={{ display: "inline-flex", color: "text.secondary" }}>
+                        {node.scope === "shared" ? <LuCloud size={14} /> : <LuServer size={14} />}
+                      </Box>
+                      <Box
+                        component="span"
+                        sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          bgcolor: node.isOnline ? "success.main" : "text.disabled",
+                        }}
+                      />
+                      <Typography variant="body2">{node.name}</Typography>
+                    </Stack>
+                  </MenuItem>
+                ))}
               </TextField>
               {nodesError ? (
                 <Typography variant="caption" color="error" sx={{ mt: 0.5, display: "block" }}>
@@ -580,9 +579,7 @@ export function CreateWorkspaceDialogView({
                   size="small"
                   fullWidth
                   value={taskAgentKind}
-                  onChange={(event) =>
-                    setTaskAgentKind(event.target.value as DesktopAgentKind | "")
-                  }
+                  onChange={(event) => setTaskAgentKind(event.target.value as DesktopAgentKind | "")}
                   sx={compactSelectSx}
                   disabled={isCreatingWorkspace}
                   slotProps={{
@@ -613,9 +610,7 @@ export function CreateWorkspaceDialogView({
                     <MenuItem key={kind} value={kind}>
                       <Stack direction="row" alignItems="center" gap={1}>
                         <AgentIcon agentKind={kind} context="settingsRow" decorative />
-                        <Typography variant="body2">
-                          {t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[kind])}
-                        </Typography>
+                        <Typography variant="body2">{t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[kind])}</Typography>
                       </Stack>
                     </MenuItem>
                   ))}
@@ -632,23 +627,16 @@ export function CreateWorkspaceDialogView({
                   maxRows={4}
                 />
                 {taskAgentKind ? (
-                  <Autocomplete
-                    size="small"
-                    fullWidth
-                    freeSolo
-                    forcePopupIcon
-                    ListboxComponent={VirtualizedListbox}
+                  <ModelAutocomplete
                     options={agentModels}
-                    getOptionLabel={(option) => (typeof option === "string" ? option : option.name)}
-                    value={taskModel || null}
-                    onChange={(_event, value) =>
-                      setTaskModel(typeof value === "string" ? value : (value?.id ?? ""))
-                    }
-                    onInputChange={(_event, value) => setTaskModel(value)}
+                    value={taskModel}
+                    onChange={setTaskModel}
                     loading={loadingAgentModels}
                     disabled={isCreatingWorkspace}
-                    isOptionEqualToValue={(option, value) => option.id === (typeof value === "string" ? value : value.id)}
+                    placeholder="Model (optional)"
+                    startAdornment={<LuCpu size={14} />}
                     sx={{
+                      width: "100%",
                       "& .MuiOutlinedInput-root": {
                         borderRadius: 2.5,
                         backgroundColor: "action.hover",
@@ -666,31 +654,6 @@ export function CreateWorkspaceDialogView({
                       "& .MuiOutlinedInput-input": {
                         py: 0.5,
                       },
-                      "& .MuiAutocomplete-popupIndicator": {
-                        color: "text.secondary",
-                      },
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        placeholder="Model (optional)"
-                        InputProps={{
-                          ...params.InputProps,
-                          startAdornment: (
-                            <InputAdornment position="start" sx={{ ml: 1 }}>
-                              <LuCpu size={14} />
-                            </InputAdornment>
-                          ),
-                        }}
-                      />
-                    )}
-                    renderOption={(props, option) => {
-                      const { key, ...rest } = props;
-                      return (
-                        <li key={key} {...rest}>
-                          <Typography variant="body2">{option.name}</Typography>
-                        </li>
-                      );
                     }}
                   />
                 ) : null}
