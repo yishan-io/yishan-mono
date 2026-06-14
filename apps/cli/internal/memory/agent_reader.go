@@ -14,20 +14,39 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// Agent kind constants — must match daemon/agent_kinds.go allAgentKinds.
+const (
+	AgentKindOpenCode = "opencode"
+	AgentKindClaude   = "claude"
+	AgentKindCodex    = "codex"
+	AgentKindGemini   = "gemini"
+	AgentKindCopilot  = "copilot"
+	AgentKindCursor   = "cursor"
+	AgentKindPi       = "pi"
+)
+
 type agentDBReader struct{}
 
 func newAgentDBReader() *agentDBReader {
 	return &agentDBReader{}
 }
 
+// ReadRecentSession reads the most recent session for the given agent that
+// matches workspacePath. Returns an error for agents whose session format is
+// not supported (only opencode and claude store readable conversation text).
 func (r *agentDBReader) ReadRecentSession(agent string, workspacePath string) (*sessionMessages, error) {
 	switch strings.ToLower(agent) {
-	case "opencode":
+	case AgentKindOpenCode:
 		return r.readOpenCodeSession(workspacePath)
-	case "claude":
+	case AgentKindClaude:
 		return r.readClaudeSession(workspacePath)
+	case AgentKindCodex, AgentKindGemini, AgentKindCopilot, AgentKindCursor, AgentKindPi:
+		// These agents either store no local conversation text (gemini, copilot,
+		// cursor, pi) or store only token usage data without message content
+		// (codex .jsonl format). Summarization is not supported for them.
+		return nil, fmt.Errorf("agent %q does not store readable conversation text locally", agent)
 	default:
-		return nil, fmt.Errorf("unsupported agent for session reading: %s", agent)
+		return nil, fmt.Errorf("unknown agent kind: %q", agent)
 	}
 }
 

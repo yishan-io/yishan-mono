@@ -42,7 +42,9 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 
 	session, err := s.dbReader.ReadRecentSession(sessionAgent, workspacePath)
 	if err != nil {
-		return fmt.Errorf("read agent session: %w", err)
+		// Not all agents store readable conversation text — treat as non-fatal.
+		log.Debug().Err(err).Str("agent", sessionAgent).Msg("skip memory summarization: cannot read session")
+		return nil
 	}
 	if len(session.Messages) == 0 {
 		return nil
