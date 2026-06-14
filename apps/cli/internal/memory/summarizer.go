@@ -35,25 +35,25 @@ func (s *Summarizer) Enabled() bool {
 	return s.enabled && s.runAgent != nil
 }
 
-func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string) error {
+// SummarizeSession runs the full summarize pipeline for the given workspace
+// and returns the paths of files written (MEMORY.md + any overflow files).
+// Returns (nil, nil) when summarization is skipped (disabled, unsupported agent, empty session).
+func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string) ([]string, error) {
 	if !s.Enabled() {
-		return nil
+		return nil, nil
 	}
 
 	session, err := s.dbReader.ReadRecentSession(sessionAgent, workspacePath)
 	if err != nil {
-		// Not all agents store readable conversation text — treat as non-fatal.
 		log.Debug().Err(err).Str("agent", sessionAgent).Msg("skip memory summarization: cannot read session")
-		return nil
+		return nil, nil
 	}
 	if len(session.Messages) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	conversation := buildConversationText(session.Messages)
 
-	// Resolve the canonical context root so budget overflow goes to the right
-	// architecture/ directory. Fall back to the symlink path if unresolvable.
 	contextRoot := resolveContextRoot(workspacePath)
 	var memoryPath string
 	if contextRoot != "" {
@@ -68,8 +68,6 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 		existingContent = string(data)
 	}
 
-	// Resolve which agent to use for summarization.
-	// Config override takes priority; fall back to the session's own agent.
 	summarizeAgent := s.agentKind
 	if summarizeAgent == "" {
 		summarizeAgent = sessionAgent
@@ -82,17 +80,16 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 
 	output, err := s.runAgent(ctx, summarizeAgent, s.model, prompt)
 	if err != nil {
-		return fmt.Errorf("llm summarization via %s: %w", summarizeAgent, err)
+		return nil, fmt.Errorf("llm summarization via %s: %w", summarizeAgent, err)
 	}
 
 	extracted, err := parseExtractedJSON(output)
 	if err != nil {
-		return fmt.Errorf("parse summarization output: %w", err)
+		return nil, fmt.Errorf("parse summarization output: %w", err)
 	}
 
 	return mergeAndWrite(memoryPath, existingContent, extracted, contextRoot)
 }
-
 func buildConversationText(messages []sessionMessage) string {
 	var buf strings.Builder
 	recentMessages := messages
@@ -161,7 +158,7 @@ func truncate(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-func mergeAndWrite(memoryPath string, existingContent string, extracted ExtractedKnowledge, contextRoot string) error {
+func mergeAndWrite(memoryPath string, existingContent string, extracted ExtractedKnowledge, contextRoot string) ([]string, error) {
 	existing := parseMemorySections(existingContent)
 
 	if extracted.LeaveOff != "" {
@@ -190,8 +187,10 @@ func mergeAndWrite(memoryPath string, existingContent string, extracted Extracte
 	newContent := buildMemoryMarkdown(existing)
 
 	if err := os.MkdirAll(filepath.Dir(memoryPath), 0o755); err != nil {
-		return fmt.Errorf("create memory dir: %w", err)
+		return nil, fmt.Errorf("create memory dir: %w", err)
 	}
+
+	var writtenPaths []string
 
 	budget := checkBudget(newContent, memoryPath, contextRoot)
 	if budget.Exceeded {
@@ -201,13 +200,15 @@ func mergeAndWrite(memoryPath string, existingContent string, extracted Extracte
 			Int("limit", budget.Limit).
 			Msg("memory file exceeds budget, some entries will be moved to architecture/")
 		newContent = budget.TrimmedContent
+		writtenPaths = append(writtenPaths, budget.OverflowPaths...)
 	}
 
 	if err := os.WriteFile(memoryPath, []byte(newContent), 0o644); err != nil {
-		return fmt.Errorf("write memory file: %w", err)
+		return nil, fmt.Errorf("write memory file: %w", err)
 	}
+	writtenPaths = append(writtenPaths, memoryPath)
 
-	return nil
+	return writtenPaths, nil
 }
 
 type memorySections struct {

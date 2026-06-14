@@ -12,6 +12,8 @@ type BudgetCheck struct {
 	CurrentChars   int
 	Limit          int
 	TrimmedContent string
+	// OverflowPaths lists any architecture/ files written during overflow trimming.
+	OverflowPaths []string
 }
 
 // checkBudget checks whether content exceeds the size limit for memoryPath.
@@ -33,30 +35,37 @@ func checkBudget(content string, memoryPath string, contextRoot string) BudgetCh
 	}
 
 	result.Exceeded = true
-	result.TrimmedContent = trimToBudget(content, limit, contextRoot)
+	result.TrimmedContent, result.OverflowPaths = trimToBudget(content, limit, contextRoot)
 	return result
 }
 
-func trimToBudget(content string, limit int, contextRoot string) string {
+func trimToBudget(content string, limit int, contextRoot string) (string, []string) {
 	sections := parseMemorySections(content)
+	var overflowPaths []string
 
 	for len([]rune(buildMemoryMarkdown(sections))) > limit {
 		trimmed := false
 		if len(sections.Errors) > 0 {
-			overflowEntries(contextRoot, "errors", sections.Errors)
+			if p := overflowEntries(contextRoot, "errors", sections.Errors); p != "" {
+				overflowPaths = append(overflowPaths, p)
+			}
 			sections.Errors = nil
 			trimmed = true
 		}
 		if !trimmed || len([]rune(buildMemoryMarkdown(sections))) > limit {
 			if len(sections.Learned) > 3 {
-				overflowEntries(contextRoot, "learned", sections.Learned[3:])
+				if p := overflowEntries(contextRoot, "learned", sections.Learned[3:]); p != "" {
+					overflowPaths = append(overflowPaths, p)
+				}
 				sections.Learned = sections.Learned[:3]
 				trimmed = true
 			}
 		}
 		if !trimmed || len([]rune(buildMemoryMarkdown(sections))) > limit {
 			if len(sections.Decisions) > 3 {
-				overflowEntries(contextRoot, "decisions", sections.Decisions[3:])
+				if p := overflowEntries(contextRoot, "decisions", sections.Decisions[3:]); p != "" {
+					overflowPaths = append(overflowPaths, p)
+				}
 				sections.Decisions = sections.Decisions[:3]
 				trimmed = true
 			}
@@ -66,15 +75,15 @@ func trimToBudget(content string, limit int, contextRoot string) string {
 		}
 	}
 
-	return buildMemoryMarkdown(sections)
+	return buildMemoryMarkdown(sections), overflowPaths
 }
 
-// overflowEntries writes overflow entries to <contextRoot>/architecture/<category>-<date>.md.
-// If contextRoot is empty (global memory), overflow is skipped — global memory
-// is managed manually without an architecture overflow target.
-func overflowEntries(contextRoot string, category string, entries []string) {
+// overflowEntries writes overflow entries to <contextRoot>/architecture/<category>-<date>.md
+// and returns the path written. Returns "" if contextRoot is empty (global memory)
+// or the write fails.
+func overflowEntries(contextRoot string, category string, entries []string) string {
 	if len(entries) == 0 || contextRoot == "" {
-		return
+		return ""
 	}
 
 	now := time.Now().UTC().Format("20060102")
@@ -97,7 +106,12 @@ func overflowEntries(contextRoot string, category string, entries []string) {
 		buf.WriteString("- " + entry + "\n")
 	}
 
-	_ = os.MkdirAll(archDir, 0o755)
-	_ = os.WriteFile(archFile, []byte(buf.String()), 0o644)
+	if err := os.MkdirAll(archDir, 0o755); err != nil {
+		return ""
+	}
+	if err := os.WriteFile(archFile, []byte(buf.String()), 0o644); err != nil {
+		return ""
+	}
+	return archFile
 }
 

@@ -148,22 +148,27 @@ func (s *Service) SummarizeSession(agent string, worktreePath string, projectID 
 		worktreePath: worktreePath,
 		projectID:    projectID,
 	}, func(req summarizeRequest) {
-		if err := s.summarizer.SummarizeSession(req.agent, req.worktreePath); err != nil {
+		writtenPaths, err := s.summarizer.SummarizeSession(req.agent, req.worktreePath)
+		if err != nil {
 			log.Warn().Err(err).
 				Str("agent", req.agent).
 				Str("workspace", req.worktreePath).
 				Msg("session summarization failed")
 			return
 		}
-		log.Debug().Str("agent", req.agent).Str("workspace", req.worktreePath).Msg("session summarized")
+		if len(writtenPaths) == 0 {
+			return
+		}
+		log.Debug().Str("agent", req.agent).Str("workspace", req.worktreePath).
+			Int("files", len(writtenPaths)).Msg("session summarized")
 
-		// Re-index the full context root so MEMORY.md and any newly-written
-		// architecture/ overflow files all appear in the FTS index.
-		if _, idxErr := s.db.Reconcile(
-			[]WorkspaceRef{{WorktreePath: req.worktreePath, ProjectID: req.projectID}},
-			"",
-		); idxErr != nil {
-			log.Warn().Err(idxErr).Msg("re-index after summarization failed")
+		// Index only the files that were actually written — MEMORY.md and
+		// any architecture/ overflow files. Avoids a full context dir scan.
+		ctxRoot := resolveContextRoot(req.worktreePath)
+		for _, p := range writtenPaths {
+			if idxErr := s.db.IndexFileOnDisk(p, ctxRoot, req.projectID); idxErr != nil {
+				log.Warn().Err(idxErr).Str("path", p).Msg("index written file after summarization failed")
+			}
 		}
 	})
 }
