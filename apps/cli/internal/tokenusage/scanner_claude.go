@@ -10,9 +10,11 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"yishan/apps/cli/internal/agentkind"
 )
 
-const claudeAgentKind = "claude"
+const claudeAgentKind = agentkind.Claude
 
 type claudeSourceRecord struct {
 	Type      string `json:"type"`

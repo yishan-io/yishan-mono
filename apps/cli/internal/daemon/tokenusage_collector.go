@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/agentkind"
 	"yishan/apps/cli/internal/api"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/tokenusage"
@@ -201,15 +202,15 @@ func (c *tokenUsageCollector) scanAgent(agentKind string) ([]tokenusage.HourlyUs
 		Worktrees:          buildTokenUsageWorktreeRefs(c.manager.List()),
 	}
 	switch agentKind {
-	case "codex":
+	case agentkind.Codex:
 		return tokenusage.ScanCodexHourlyUsage(context.Background(), scanInput)
-	case "claude":
+	case agentkind.Claude:
 		return tokenusage.ScanClaudeHourlyUsage(context.Background(), scanInput)
-	case "opencode":
+	case agentkind.OpenCode:
 		return tokenusage.ScanOpenCodeHourlyUsage(context.Background(), scanInput)
-	case "gemini":
+	case agentkind.Gemini:
 		return tokenusage.ScanGeminiHourlyUsage(context.Background(), scanInput)
-	case "pi":
+	case agentkind.Pi:
 		return tokenusage.ScanPiHourlyUsage(context.Background(), scanInput)
 	default:
 		return []tokenusage.HourlyUsageRow{}, nil

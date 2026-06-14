@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"yishan/apps/cli/internal/agentkind"
 	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
@@ -25,7 +26,12 @@ const loginShellPathTimeout = 3 * time.Second
 var versionPattern = regexp.MustCompile(`\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?`)
 
 // SupportedAgentCLIKinds contains all supported agent CLIs that can be detected on one node.
-var SupportedAgentCLIKinds = []string{"opencode", "codex", "claude", "gemini", "pi", "copilot", "cursor-agent"}
+// "cursor-agent" is kept as a distinct detection kind because the cursor binary reports itself
+// differently to the hook system.
+var SupportedAgentCLIKinds = []string{
+	agentkind.OpenCode, agentkind.Codex, agentkind.Claude,
+	agentkind.Gemini, agentkind.Pi, agentkind.Copilot, "cursor-agent",
+}
 
 type supportedAgentCLI struct {
 	Kind     string
@@ -33,13 +39,13 @@ type supportedAgentCLI struct {
 }
 
 var supportedAgentCLIs = []supportedAgentCLI{
-	{Kind: "opencode", Commands: []string{"opencode"}},
-	{Kind: "codex", Commands: []string{"codex"}},
-	{Kind: "claude", Commands: []string{"claude"}},
-	{Kind: "gemini", Commands: []string{"gemini"}},
-	{Kind: "pi", Commands: []string{"pi"}},
-	{Kind: "copilot", Commands: []string{"copilot"}},
-	{Kind: "cursor-agent", Commands: []string{"cursor"}},
+	{Kind: agentkind.OpenCode, Commands: []string{agentkind.OpenCode}},
+	{Kind: agentkind.Codex, Commands: []string{agentkind.Codex}},
+	{Kind: agentkind.Claude, Commands: []string{agentkind.Claude}},
+	{Kind: agentkind.Gemini, Commands: []string{agentkind.Gemini}},
+	{Kind: agentkind.Pi, Commands: []string{agentkind.Pi}},
+	{Kind: agentkind.Copilot, Commands: []string{agentkind.Copilot}},
+	{Kind: "cursor-agent", Commands: []string{agentkind.Cursor}},
 }
 
 type cachedAgentDetectionResult struct {

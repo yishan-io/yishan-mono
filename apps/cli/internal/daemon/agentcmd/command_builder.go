@@ -2,6 +2,8 @@ package agentcmd
 
 import (
 	"fmt"
+
+	"yishan/apps/cli/internal/agentkind"
 )
 
 type Command struct {
@@ -15,15 +17,15 @@ type runCommandBuilder interface {
 }
 
 var commandBuilders = map[string]runCommandBuilder{
-	"":             opencodeBuilder{},
-	"opencode":     opencodeBuilder{},
-	"claude":       claudeBuilder{},
-	"codex":        codexBuilder{},
-	"pi":           piBuilder{},
-	"gemini":       geminiBuilder{},
-	"copilot":      copilotBuilder{},
-	"cursor":       cursorBuilder{},
-	"cursor-agent": cursorBuilder{},
+	"":                     opencodeBuilder{},
+	agentkind.OpenCode:     opencodeBuilder{},
+	agentkind.Claude:       claudeBuilder{},
+	agentkind.Codex:        codexBuilder{},
+	agentkind.Pi:           piBuilder{},
+	agentkind.Gemini:       geminiBuilder{},
+	agentkind.Copilot:      copilotBuilder{},
+	agentkind.Cursor:       cursorBuilder{},
+	"cursor-agent":         cursorBuilder{},
 }
 
 func BuildRunCommand(agentKind, prompt, model string, interactive bool) (Command, error) {

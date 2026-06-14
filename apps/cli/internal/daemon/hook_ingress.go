@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"yishan/apps/cli/internal/agentkind"
 )
 
 const agentHookIngestPath = "/v1/agent-hook/ingest"
@@ -174,7 +176,7 @@ func hookNotificationPayload(event normalizedHookEvent, title string, body strin
 func normalizeHookAgent(agent string) string {
 	normalized := strings.ToLower(strings.TrimSpace(agent))
 	if normalized == "cursor-agent" {
-		return "cursor"
+		return agentkind.Cursor
 	}
 	if isKnownAgentKind(normalized) {
 		return normalized

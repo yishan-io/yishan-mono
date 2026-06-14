@@ -1,8 +1,12 @@
 package tokenusage
 
-import "context"
+import (
+	"context"
 
-const geminiAgentKind = "gemini"
+	"yishan/apps/cli/internal/agentkind"
+)
+
+const geminiAgentKind = agentkind.Gemini
 
 // ScanGeminiHourlyUsage returns Gemini hourly usage rows.
 //

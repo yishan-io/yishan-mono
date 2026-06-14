@@ -10,9 +10,11 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"yishan/apps/cli/internal/agentkind"
 )
 
-const opencodeAgentKind = "opencode"
+const opencodeAgentKind = agentkind.OpenCode
 
 type openCodeSessionRow struct {
 	SessionID        string

@@ -11,18 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"yishan/apps/cli/internal/agentkind"
 	_ "modernc.org/sqlite"
-)
-
-// Agent kind constants — must match daemon/agent_kinds.go allAgentKinds.
-const (
-	AgentKindOpenCode = "opencode"
-	AgentKindClaude   = "claude"
-	AgentKindCodex    = "codex"
-	AgentKindGemini   = "gemini"
-	AgentKindCopilot  = "copilot"
-	AgentKindCursor   = "cursor"
-	AgentKindPi       = "pi"
 )
 
 type agentDBReader struct{}
@@ -36,11 +26,11 @@ func newAgentDBReader() *agentDBReader {
 // not supported (only opencode and claude store readable conversation text).
 func (r *agentDBReader) ReadRecentSession(agent string, workspacePath string) (*sessionMessages, error) {
 	switch strings.ToLower(agent) {
-	case AgentKindOpenCode:
+	case agentkind.OpenCode:
 		return r.readOpenCodeSession(workspacePath)
-	case AgentKindClaude:
+	case agentkind.Claude:
 		return r.readClaudeSession(workspacePath)
-	case AgentKindCodex, AgentKindGemini, AgentKindCopilot, AgentKindCursor, AgentKindPi:
+	case agentkind.Codex, agentkind.Gemini, agentkind.Copilot, agentkind.Cursor, agentkind.Pi:
 		// These agents either store no local conversation text (gemini, copilot,
 		// cursor, pi) or store only token usage data without message content
 		// (codex .jsonl format). Summarization is not supported for them.
