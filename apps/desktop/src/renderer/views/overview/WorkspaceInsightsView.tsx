@@ -2,17 +2,8 @@ import { Box, Tab, Tabs, Typography } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArchive, LuClock, LuHistory } from "react-icons/lu";
+import { formatTokens } from "../../helpers/formatters";
 import { overviewStore } from "../../store/overviewStore";
-
-function formatTokens(value: number): string {
-  if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1)}M`;
-  }
-  if (value >= 1_000) {
-    return `${(value / 1_000).toFixed(1)}K`;
-  }
-  return String(value);
-}
 
 function formatHours(hours: number): string {
   if (hours < 1) {

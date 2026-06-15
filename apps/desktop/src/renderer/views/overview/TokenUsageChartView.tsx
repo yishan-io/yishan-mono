@@ -3,20 +3,8 @@ import { BarChart } from "@mui/x-charts/BarChart";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { OverviewTimeRange } from "../../api/overviewApi.types";
+import { formatTokens } from "../../helpers/formatters";
 import { overviewStore } from "../../store/overviewStore";
-
-function formatTokens(value: number | null): string {
-  if (value == null) {
-    return "0";
-  }
-  if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1)}M`;
-  }
-  if (value >= 1_000) {
-    return `${(value / 1_000).toFixed(1)}K`;
-  }
-  return String(value);
-}
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
