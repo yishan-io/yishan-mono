@@ -1413,7 +1413,13 @@ describe("FileManagerView undo operations", () => {
       expect(mocks.deleteEntry).toHaveBeenCalledTimes(1);
     });
 
-    expect(screen.getByTestId("confirmation-dialog")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByTestId("confirmation-dialog")).toBeNull();
+    });
+
+    await getFileTreeProps().onDeleteEntry?.("src/a.ts");
+
+    expect(mocks.deleteEntry).toHaveBeenCalledTimes(1);
 
     resolveDelete?.();
     await Promise.all([firstDelete, secondDelete]);
