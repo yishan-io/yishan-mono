@@ -311,6 +311,22 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 		s.queue.HandleResult(nodeID, result)
 		return true
 
+	case MethodTerminalSessionChanged:
+		var terminalParams struct {
+			OrganizationID string `json:"organizationId"`
+		}
+		if err := json.Unmarshal(req.Params, &terminalParams); err != nil {
+			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid terminal.session.changed params")
+			return true
+		}
+		orgID := strings.TrimSpace(terminalParams.OrganizationID)
+		if orgID == "" {
+			log.Warn().Str("nodeId", nodeID).Msg("terminal.session.changed missing organizationId")
+			return true
+		}
+		go s.broadcastOrgNotification(orgID, MethodTerminalSessionChanged, req.Params)
+		return true
+
 	default:
 		return false
 	}

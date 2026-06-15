@@ -84,6 +84,7 @@ const (
 	MethodTerminalResize       = "terminal.resize"
 	MethodTerminalSubscribe    = "terminal.subscribe"
 	MethodTerminalUnsubscribe  = "terminal.unsubscribe"
+	RelayMethodTerminalSessionChanged = "terminal.session.changed"
 
 	MethodMemorySearch       = "memory.search"
 	MethodMemoryReconcile    = "memory.reconcile"

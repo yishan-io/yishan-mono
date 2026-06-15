@@ -247,4 +247,161 @@ describe("TerminalRecoveryCoordinator", () => {
 
     unsubscribe();
   });
+
+  it("restoreTerminalTabsFromDaemon creates tabs for active daemon sessions", async () => {
+    const storage = createMemoryStorage();
+    const tabStoreAccess = createTabStoreAccess({
+      tabs: [],
+      selectedTabId: "",
+      selectedTabIdByWorkspaceId: {},
+    });
+    const coordinator = new TerminalRecoveryCoordinator(
+      tabStoreAccess as never,
+      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1") as never,
+      storage,
+    );
+
+    const listTerminalSessionsMock = vi.fn().mockResolvedValue([
+      {
+        sessionId: "term-1",
+        workspaceId: "workspace-1",
+        pid: 1234,
+        status: "running",
+        startedAt: "2026-06-16T00:00:00Z",
+      },
+    ]);
+
+    const restoredWorkspaceId = await coordinator.restoreTerminalTabsFromDaemon({
+      listTerminalSessions: listTerminalSessionsMock,
+    });
+
+    expect(restoredWorkspaceId).toBe("workspace-1");
+    const tabs = tabStoreAccess.getState().tabs;
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0]).toMatchObject({
+      workspaceId: "workspace-1",
+      kind: "terminal",
+      data: { sessionId: "term-1", title: "Terminal" },
+    });
+  });
+
+  it("restoreTerminalTabsFromDaemon skips sessions that already have tabs", async () => {
+    const storage = createMemoryStorage();
+    const tabStoreAccess = createTabStoreAccess({
+      tabs: [
+        {
+          id: "existing-tab",
+          workspaceId: "workspace-1",
+          title: "My Terminal",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "My Terminal", sessionId: "term-1" },
+        } as never,
+      ],
+      selectedTabId: "",
+      selectedTabIdByWorkspaceId: {},
+    });
+    const coordinator = new TerminalRecoveryCoordinator(
+      tabStoreAccess as never,
+      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1") as never,
+      storage,
+    );
+
+    const listTerminalSessionsMock = vi.fn().mockResolvedValue([
+      {
+        sessionId: "term-1",
+        workspaceId: "workspace-1",
+        pid: 1234,
+        status: "running",
+      },
+    ]);
+
+    const restoredWorkspaceId = await coordinator.restoreTerminalTabsFromDaemon({
+      listTerminalSessions: listTerminalSessionsMock,
+    });
+
+    expect(restoredWorkspaceId).toBeUndefined();
+    expect(tabStoreAccess.getState().tabs).toHaveLength(1);
+  });
+
+  it("restoreTerminalTabsFromDaemon merges with localStorage data for matching sessionId", async () => {
+    const storage = createMemoryStorage();
+    storage.setItem(
+      "yishan-terminal-recovery-v1",
+      JSON.stringify({
+        selectedTabId: "persisted-tab-1",
+        tabs: [
+          {
+            tabId: "persisted-tab-1",
+            workspaceId: "workspace-1",
+            title: "My Saved Terminal",
+            pinned: true,
+            sessionId: "term-1",
+            launchCommand: "echo hello",
+          },
+        ],
+      }),
+    );
+    const tabStoreAccess = createTabStoreAccess({
+      tabs: [],
+      selectedTabId: "",
+      selectedTabIdByWorkspaceId: {},
+    });
+
+    const coordinator = new TerminalRecoveryCoordinator(
+      tabStoreAccess as never,
+      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1") as never,
+      storage,
+    );
+
+    const listTerminalSessionsMock = vi.fn().mockResolvedValue([
+      {
+        sessionId: "term-1",
+        workspaceId: "workspace-1",
+        pid: 1234,
+        status: "running",
+      },
+    ]);
+
+    await coordinator.restoreTerminalTabsFromDaemon({
+      listTerminalSessions: listTerminalSessionsMock,
+    });
+
+    const tabs = tabStoreAccess.getState().tabs;
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0]).toMatchObject({
+      id: "persisted-tab-1",
+      workspaceId: "workspace-1",
+      title: "My Saved Terminal",
+      pinned: true,
+      kind: "terminal",
+      data: {
+        sessionId: "term-1",
+        launchCommand: "echo hello",
+      },
+    });
+  });
+
+  it("restoreTerminalTabsFromDaemon handles errors gracefully", async () => {
+    const storage = createMemoryStorage();
+    const tabStoreAccess = createTabStoreAccess({
+      tabs: [],
+      selectedTabId: "",
+      selectedTabIdByWorkspaceId: {},
+    });
+    const coordinator = new TerminalRecoveryCoordinator(
+      tabStoreAccess as never,
+      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1") as never,
+      storage,
+    );
+
+    const listTerminalSessionsMock = vi.fn().mockRejectedValue(new Error("daemon unavailable"));
+
+    const restoredWorkspaceId = await coordinator.restoreTerminalTabsFromDaemon({
+      listTerminalSessions: listTerminalSessionsMock,
+    });
+
+    expect(restoredWorkspaceId).toBeUndefined();
+    expect(tabStoreAccess.getState().tabs).toHaveLength(0);
+  });
 });

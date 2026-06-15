@@ -43,9 +43,10 @@ const (
 	MethodWorkspaceSnapshotChanged = "workspace.snapshot.changed"
 
 	// Node -> Server
-	MethodPong      = "relay.pong"
-	MethodJobAck    = "job.ack"
-	MethodJobResult = "job.result"
+	MethodPong                     = "relay.pong"
+	MethodJobAck                   = "job.ack"
+	MethodJobResult                = "job.result"
+	MethodTerminalSessionChanged   = "terminal.session.changed"
 )
 
 // ---------------------------------------------------------------------------

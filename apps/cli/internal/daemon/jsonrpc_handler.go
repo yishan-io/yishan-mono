@@ -63,6 +63,19 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 			},
 		})
 	})
+	manager.Terminals().SetSessionsChangedListener(func(event workspace.TerminalSessionLifecycleEvent) {
+		events.Publish(frontendEvent{
+			Topic: "terminalSessionChanged",
+			Payload: map[string]any{
+				"action":      event.Action,
+				"sessionId":   event.SessionID,
+				"workspaceId": event.WorkspaceID,
+				"pid":         event.PID,
+				"status":      event.Status,
+				"startedAt":   event.StartedAt,
+			},
+		})
+	})
 	handler := &JSONRPCHandler{
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(_ *http.Request) bool { return true },

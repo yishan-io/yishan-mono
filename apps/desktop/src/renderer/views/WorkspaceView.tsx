@@ -168,6 +168,8 @@ function useWorkspaceBootstrap(input: {
   selectedOrganizationId: string | undefined;
 }) {
   const { cmd, terminalRecoveryCoordinator, selectedOrganizationId } = input;
+  const restoreTerminalTabs =
+    terminalRecoveryCoordinator.restoreTerminalTabsFromDaemon.bind(terminalRecoveryCoordinator);
 
   useEffect(() => {
     if (!selectedOrganizationId?.trim()) {
@@ -181,15 +183,18 @@ function useWorkspaceBootstrap(input: {
       if (disposed) {
         return;
       }
+
+      await restoreTerminalTabs({
+        listTerminalSessions: () => cmd.listTerminalSessions({ includeExited: false }),
+      });
     };
 
-    // fire-and-forget: workspace view owns top-level snapshot loading.
     void loadWorkspaceData();
 
     return () => {
       disposed = true;
     };
-  }, [cmd, selectedOrganizationId]);
+  }, [cmd, selectedOrganizationId, restoreTerminalTabs]);
 
   useEffect(() => {
     let disposed = false;
@@ -209,7 +214,6 @@ function useWorkspaceBootstrap(input: {
       unsubscribePersist = terminalRecoveryCoordinator.startPersistingTerminalTabs();
     };
 
-    // fire-and-forget: terminal tab persistence is managed independently of snapshot reloads.
     void restoreAndPersist();
 
     return () => {

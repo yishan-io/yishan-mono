@@ -44,6 +44,8 @@ type Manager struct {
 	lastPortSnapshotKey  string
 	portScopeWorkspaceID string
 	portScanHintCh       chan struct{}
+	sessionsListenerMu   sync.RWMutex
+	onSessionsChanged    SessionLifecycleListener
 }
 
 type session struct {
@@ -60,12 +62,9 @@ type session struct {
 	lastActivityUnixNano atomic.Int64
 	subsMu               sync.Mutex
 	subs                 map[uint64]chan Event
-	// portHintFn is called when the session output looks like it contains a
-	// port-start announcement. Set once at session creation; never nil.
 	portHintFn func()
-	// portScanTail holds the tail of recent PTY output used to detect port
-	// announcements that span multiple small read chunks.
 	portScanTail []byte
+	destroyedPublished atomic.Bool
 }
 
 func NewManager() *Manager {
@@ -76,6 +75,12 @@ func (m *Manager) SetPortsChangedListener(listener portsChangedListener) {
 	m.portsListenerMu.Lock()
 	m.onPortsChanged = listener
 	m.portsListenerMu.Unlock()
+}
+
+func (m *Manager) SetSessionsChangedListener(listener SessionLifecycleListener) {
+	m.sessionsListenerMu.Lock()
+	m.onSessionsChanged = listener
+	m.sessionsListenerMu.Unlock()
 }
 
 func (m *Manager) Start(_ context.Context, cwd string, req StartRequest) (StartResponse, error) {
@@ -102,6 +107,15 @@ func (m *Manager) Start(_ context.Context, cwd string, req StartRequest) (StartR
 	m.mu.Unlock()
 	m.ensurePortScanLoop()
 
+	m.publishSessionChanged(SessionLifecycleEvent{
+		Action:      "created",
+		SessionID:   s.id,
+		WorkspaceID: s.workspaceID,
+		PID:         s.cmd.Process.Pid,
+		Status:      "running",
+		StartedAt:   s.startedAt.Format(time.RFC3339Nano),
+	})
+
 	go s.capture()
 	go func() {
 		err := cmd.Wait()
@@ -124,6 +138,17 @@ func (m *Manager) Start(_ context.Context, cwd string, req StartRequest) (StartR
 		exit := int(code)
 		s.broadcast(Event{SessionID: s.id, Type: "exit", ExitCode: &exit})
 		s.closeSubscribers()
+
+		if s.destroyedPublished.CompareAndSwap(false, true) {
+			m.publishSessionChanged(SessionLifecycleEvent{
+				Action:      "destroyed",
+				SessionID:   s.id,
+				WorkspaceID: s.workspaceID,
+				PID:         s.cmd.Process.Pid,
+				Status:      "exited",
+				StartedAt:   s.startedAt.Format(time.RFC3339Nano),
+			})
+		}
 	}()
 
 	return StartResponse{SessionID: id}, nil
@@ -509,6 +534,16 @@ func (m *Manager) Read(req ReadRequest) (ReadResponse, error) {
 	return ReadResponse{Output: out, ExitCode: &code, Running: false}, nil
 }
 
+func (m *Manager) publishSessionChanged(event SessionLifecycleEvent) {
+	m.sessionsListenerMu.RLock()
+	listener := m.onSessionsChanged
+	m.sessionsListenerMu.RUnlock()
+	if listener == nil {
+		return
+	}
+	listener(event)
+}
+
 func (m *Manager) Stop(req StopRequest) (StopResponse, error) {
 	s, err := m.session(req.SessionID)
 	if err != nil {
@@ -526,6 +561,17 @@ func (m *Manager) Stop(req StopRequest) (StopResponse, error) {
 	}
 	_ = s.pty.Close()
 	s.closeSubscribers()
+
+	if s.destroyedPublished.CompareAndSwap(false, true) {
+		m.publishSessionChanged(SessionLifecycleEvent{
+			Action:      "destroyed",
+			SessionID:   s.id,
+			WorkspaceID: s.workspaceID,
+			PID:         s.cmd.Process.Pid,
+			Status:      "exited",
+			StartedAt:   s.startedAt.Format(time.RFC3339Nano),
+		})
+	}
 
 	m.mu.Lock()
 	delete(m.sessions, s.id)
@@ -558,6 +604,17 @@ func (m *Manager) StopAllForWorkspace(workspaceID string) []error {
 		}
 		_ = s.pty.Close()
 		s.closeSubscribers()
+
+		if s.destroyedPublished.CompareAndSwap(false, true) {
+			m.publishSessionChanged(SessionLifecycleEvent{
+				Action:      "destroyed",
+				SessionID:   s.id,
+				WorkspaceID: s.workspaceID,
+				PID:         s.cmd.Process.Pid,
+				Status:      "exited",
+				StartedAt:   s.startedAt.Format(time.RFC3339Nano),
+			})
+		}
 
 		m.mu.Lock()
 		delete(m.sessions, s.id)
