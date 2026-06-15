@@ -122,7 +122,7 @@ describe("projectCommands", () => {
     expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
   });
 
-  it("opens visible hydrated workspaces in daemon", async () => {
+  it("loads visible hydrated workspaces without reopening them in daemon", async () => {
     sessionStore.setState({
       organizations: [{ id: "org-1", name: "Org 1" }],
       selectedOrganizationId: "org-1",
@@ -132,7 +132,6 @@ describe("projectCommands", () => {
     workspaceStore.setState({
       displayProjectIds: ["project-1"],
     });
-    rpcMocks.workspaceOpen.mockResolvedValueOnce({ id: "workspace-1", path: "/tmp/workspaces/project-1/feature-a" });
     apiMocks.listProjects.mockResolvedValueOnce([
       {
         id: "project-1",
@@ -166,14 +165,8 @@ describe("projectCommands", () => {
 
     await loadWorkspaceSnapshot();
 
-    expect(rpcMocks.workspaceList).toHaveBeenCalledTimes(1);
-    expect(rpcMocks.workspaceOpen).toHaveBeenCalledWith({
-      workspaceId: "workspace-1",
-      workspaceWorktreePath: "/tmp/workspaces/project-1/feature-a",
-      orgId: "org-1",
-      projectId: "project-1",
-      pullRequestAlreadyMerged: false,
-    });
+    expect(rpcMocks.workspaceList).not.toHaveBeenCalled();
+    expect(rpcMocks.workspaceOpen).not.toHaveBeenCalled();
   });
 
   it("does not open visible hydrated workspaces from another node", async () => {
@@ -219,6 +212,7 @@ describe("projectCommands", () => {
 
     await loadWorkspaceSnapshot();
 
+    expect(rpcMocks.workspaceList).not.toHaveBeenCalled();
     expect(rpcMocks.workspaceOpen).not.toHaveBeenCalled();
   });
 

@@ -11,7 +11,6 @@ import { sessionStore } from "../store/sessionStore";
 import type { WorkspaceStoreState } from "../store/types";
 import { workspaceStore } from "../store/workspaceStore";
 import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, workspaceUiStore } from "../store/workspaceUiStore";
-import { ensureVisibleWorkspacesOpen } from "./daemonWorkspaceSync";
 
 export { createWorkspace } from "./workspaceCreateCommand";
 export { closeWorkspace } from "./workspaceCloseCommand";
@@ -139,7 +138,6 @@ export async function refreshWorkspacePullRequest(workspaceId: string): Promise<
 /** Stores visible repo ids for left-pane filtering state. */
 export function setDisplayRepoIds(repoIds: string[]) {
   readWorkspaceStoreState().setDisplayProjectIds(repoIds);
-  void ensureVisibleWorkspacesOpen();
 }
 
 /** Stores last used external app id for quick-open actions. */

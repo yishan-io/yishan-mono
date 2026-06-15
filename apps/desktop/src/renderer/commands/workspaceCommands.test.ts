@@ -149,7 +149,7 @@ describe("workspaceCommands", () => {
     expect(rpcMocks.enqueueWorkspaceLifecycleWarnings).not.toHaveBeenCalled();
   });
 
-  it("opens visible workspaces in daemon when display repo ids change", async () => {
+  it("updates visible repo ids without reopening workspaces in daemon", async () => {
     workspaceStore.setState({
       workspaces: [
         {
@@ -165,19 +165,12 @@ describe("workspaceCommands", () => {
         },
       ],
     });
-    rpcMocks.list.mockResolvedValueOnce([]);
-    rpcMocks.gitInspect.mockResolvedValueOnce({ isGitRepository: true });
 
     setDisplayRepoIds(["repo-1"]);
-    await vi.waitFor(() => {
-      expect(rpcMocks.openWorkspace).toHaveBeenCalledWith({
-        workspaceId: "workspace-1",
-        workspaceWorktreePath: "/tmp/workspaces/workspace-1",
-        orgId: undefined,
-        projectId: "repo-1",
-        pullRequestAlreadyMerged: false,
-      });
-    });
+
+    expect(workspaceStore.getState().displayProjectIds).toEqual(["repo-1"]);
+    expect(rpcMocks.list).not.toHaveBeenCalled();
+    expect(rpcMocks.openWorkspace).not.toHaveBeenCalled();
   });
 
   it("refreshes one workspace pull request through the daemon", async () => {
