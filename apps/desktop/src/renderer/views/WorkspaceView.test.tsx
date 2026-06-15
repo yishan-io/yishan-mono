@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
-import { render, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { switchOrganization } from "../commands/orgCommands";
 import { sessionStore } from "../store/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
@@ -33,6 +34,10 @@ const terminalRecoveryMocks = {
   startPersistingTerminalTabs: vi.fn(() => vi.fn()),
 };
 
+const rpcMocks = vi.hoisted(() => ({
+  setCurrentOrg: vi.fn(async () => undefined),
+}));
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -45,6 +50,14 @@ vi.mock("../components/SplitPaneLayout", () => ({
 
 vi.mock("../events", () => ({
   subscribeAppActionEvent: vi.fn(() => () => undefined),
+}));
+
+vi.mock("../rpc/rpcTransport", () => ({
+  getDaemonClient: vi.fn(async () => ({
+    context: {
+      setCurrentOrg: rpcMocks.setCurrentOrg,
+    },
+  })),
 }));
 
 vi.mock("../hooks/useAllWorkspacesGitSync", () => ({
@@ -112,7 +125,10 @@ describe("WorkspaceView", () => {
       currentUser: null,
       isAuthenticated: true,
       loaded: true,
-      organizations: [{ id: "org-1", name: "Org 1" }],
+      organizations: [
+        { id: "org-1", name: "Org 1" },
+        { id: "org-2", name: "Org 2" },
+      ],
       selectedOrganizationId: "org-1",
     });
     tabStore.setState({ tabs: [], selectedTabId: null });
@@ -129,8 +145,15 @@ describe("WorkspaceView", () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.unstubAllGlobals();
   });
+
+  function setWorkspaceProjectsLoaded() {
+    workspaceStore.setState({
+      projects: [{ id: "project-1", name: "Project 1" }],
+    });
+  }
 
   it("loads the workspace snapshot on mount and again when selected organization changes", async () => {
     render(
@@ -178,5 +201,59 @@ describe("WorkspaceView", () => {
 
     expect(terminalRecoveryMocks.restoreTerminalTabsFromRegistry).toHaveBeenCalledTimes(1);
     expect(terminalRecoveryMocks.startPersistingTerminalTabs).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns from the overview overlay to the workspace pane on organization switch", async () => {
+    setWorkspaceProjectsLoaded();
+    workspaceUiStore.setState({ overlayPanel: "overview" });
+
+    render(
+      <MemoryRouter>
+        <WorkspaceView />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("overview-view")).toBeTruthy();
+
+    await waitFor(() => {
+      expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      await switchOrganization("org-2");
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("main-pane-view")).toBeTruthy();
+      expect(screen.queryByTestId("overview-view")).toBeNull();
+      expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("returns from the scheduled job overlay to the workspace pane on organization switch", async () => {
+    setWorkspaceProjectsLoaded();
+    workspaceUiStore.setState({ overlayPanel: "scheduledJob" });
+
+    render(
+      <MemoryRouter>
+        <WorkspaceView />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("scheduled-job-view")).toBeTruthy();
+
+    await waitFor(() => {
+      expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      await switchOrganization("org-2");
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("main-pane-view")).toBeTruthy();
+      expect(screen.queryByTestId("scheduled-job-view")).toBeNull();
+      expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(2);
+    });
   });
 });

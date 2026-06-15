@@ -2,12 +2,14 @@ import { api } from "../api";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
+import { workspaceUiStore } from "../store/workspaceUiStore";
 
 /**
  * Switches the current organization in both the session store and the daemon
  * context, so the CLI and MCP server know which org is active.
  */
 export async function switchOrganization(orgId: string): Promise<void> {
+  workspaceUiStore.getState().closeOverlayPanel();
   sessionStore.getState().setSelectedOrganizationId(orgId);
 
   try {
