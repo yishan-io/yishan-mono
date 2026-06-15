@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
 import { listFiles, listFilesBatch } from "../../../commands/fileCommands";
-import { loadWorkspaceFromBackend } from "../../../commands/projectCommands";
+import { loadWorkspaceSnapshot } from "../../../commands/projectCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { useCommands } from "../../../hooks/useCommands";
 import { tabStore } from "../../../store/tabStore";
@@ -325,7 +325,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
       setRepoEntries([]);
       repoEntriesRef.current = [];
       if (isMissingWorkspacePathError(error)) {
-        void loadWorkspaceFromBackend();
+        void loadWorkspaceSnapshot();
         return [];
       }
       console.error("Failed to load workspace files", error);

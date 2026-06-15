@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBuilding2 } from "react-icons/lu";
 import { createOrganization } from "../../api";
-import { loadWorkspaceFromBackend } from "../../commands/projectCommands";
+import { loadWorkspaceSnapshot } from "../../commands/projectCommands";
 import { rendererQueryClient } from "../../queryClient";
 import { sessionStore } from "../../store/sessionStore";
 import { AppMenuView } from "./AppMenuView";
@@ -41,7 +41,7 @@ export function OnboardOrgView() {
         rendererQueryClient.invalidateQueries({ queryKey: ["session-bootstrap"] });
 
         setOrganizationName("");
-        await loadWorkspaceFromBackend();
+        await loadWorkspaceSnapshot();
       } catch {
         setErrorMessage(t("org.menu.newOrganizationFailed"));
       } finally {

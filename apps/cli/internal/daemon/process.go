@@ -109,6 +109,10 @@ func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
 		handler.SetMemoryService(memSvc, context.Background())
 	}
 
+	if err := restoreIndexedWorkspaces(handler); err != nil {
+		return fmt.Errorf("restore indexed workspaces: %w", err)
+	}
+
 	if handler.tokenUsage != nil {
 		handler.tokenUsage.StartStartupScan()
 	}
@@ -222,6 +226,40 @@ func startDaemonServices(cfg RunConfig, statePath string, actualAddr string, dae
 			}
 		}
 	}
+	return nil
+}
+
+func restoreIndexedWorkspaces(handler *JSONRPCHandler) error {
+	if handler == nil || handler.wsIndexStore == nil {
+		return nil
+	}
+
+	entries, err := handler.wsIndexStore.List()
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		workspaceID := entry.WorkspaceID
+		worktreePath := entry.WorktreePath
+		if workspaceID == "" || worktreePath == "" {
+			continue
+		}
+
+		ws, openErr := handler.manager.Open(workspace.OpenRequest{
+			ID:        workspaceID,
+			Path:      worktreePath,
+			ProjectID: entry.ProjectID,
+		})
+		if openErr != nil {
+			log.Warn().Err(openErr).Str("workspaceId", workspaceID).Str("path", worktreePath).Msg("failed to restore indexed workspace")
+			continue
+		}
+
+		handler.watchAndTrack(ws.ID, ws.Path)
+		log.Info().Str("workspaceId", ws.ID).Str("path", ws.Path).Msg("restored indexed workspace")
+	}
+
 	return nil
 }
 

@@ -67,7 +67,7 @@ import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
   inspectLocalProjectSource as inspectLocalProjectSourceCommand,
-  loadWorkspaceFromBackend as loadWorkspaceFromBackendCommand,
+  loadWorkspaceSnapshot as loadWorkspaceSnapshotCommand,
   updateProjectConfig as updateProjectConfigCommand,
 } from "../commands/projectCommands";
 import {
@@ -223,7 +223,7 @@ export type Commands = {
   updateNotificationPreferences: typeof updateNotificationPreferencesCommand;
   previewNotification: typeof previewNotificationCommand;
   playNotificationSound: typeof playNotificationSoundCommand;
-  loadWorkspaceFromBackend: () => Promise<void>;
+  loadWorkspaceSnapshot: () => Promise<void>;
   inspectLocalProjectSource: typeof inspectLocalProjectSourceCommand;
   createProject: (input: {
     name: string;
@@ -359,7 +359,7 @@ export function useCommands(): Commands {
       previewNotification: previewNotificationCommand,
       playNotificationSound: playNotificationSoundCommand,
       selectTab: setSelectedTabCommand,
-      loadWorkspaceFromBackend: loadWorkspaceFromBackendCommand,
+      loadWorkspaceSnapshot: loadWorkspaceSnapshotCommand,
       inspectLocalProjectSource: inspectLocalProjectSourceCommand,
       createProject: createProjectCommand,
       deleteProject: deleteProjectCommand,

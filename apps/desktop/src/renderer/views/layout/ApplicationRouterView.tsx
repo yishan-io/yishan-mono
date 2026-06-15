@@ -6,7 +6,7 @@ import { api } from "../../api";
 import { RestApiError } from "../../api/restClient";
 import { getSessionBootstrapData } from "../../api/sessionApi";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../commands/appCommands";
-import { loadWorkspaceFromBackend } from "../../commands/projectCommands";
+import { loadWorkspaceSnapshot } from "../../commands/projectCommands";
 import { setAppLanguage } from "../../i18n";
 import { rendererQueryClient } from "../../queryClient";
 import { sessionStore } from "../../store/sessionStore";
@@ -177,7 +177,7 @@ export function ApplicationRouterView() {
           bootstrappedSessionData = true;
         }
 
-        await loadWorkspaceFromBackend();
+        await loadWorkspaceSnapshot();
         if (disposed) {
           return;
         }

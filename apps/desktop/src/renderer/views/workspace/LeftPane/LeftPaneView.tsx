@@ -37,17 +37,17 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
   const setOverlayPanel = workspaceUiStore((state) => state.setOverlayPanel);
   const isScheduledJobPanelOpen = overlayPanel === "scheduledJob";
   const isOverviewPanelOpen = overlayPanel === "overview";
-  const { setSelectedRepoId, setSelectedWorkspaceId, loadWorkspaceFromBackend } = useCommands();
+  const { setSelectedRepoId, setSelectedWorkspaceId, loadWorkspaceSnapshot } = useCommands();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefreshProjects = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await loadWorkspaceFromBackend();
+      await loadWorkspaceSnapshot();
     } finally {
       setIsRefreshing(false);
     }
-  }, [loadWorkspaceFromBackend]);
+  }, [loadWorkspaceSnapshot]);
 
   const handleToggleScheduledJobs = useCallback(() => {
     const willOpen = overlayPanel !== "scheduledJob";

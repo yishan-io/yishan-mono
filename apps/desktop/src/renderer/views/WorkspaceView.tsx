@@ -172,7 +172,7 @@ function useWorkspaceBootstrap(input: {
     let unsubscribePersist: (() => void) | undefined;
 
     const loadAndRestore = async () => {
-      await cmd.loadWorkspaceFromBackend();
+      await cmd.loadWorkspaceSnapshot();
       if (disposed) {
         return;
       }

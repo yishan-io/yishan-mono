@@ -6,7 +6,7 @@ import type {
   ProjectCommitComparisonSelection,
 } from "../../../components/ProjectCommitComparison";
 import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
-import { loadWorkspaceFromBackend } from "../../../commands/projectCommands";
+import { loadWorkspaceSnapshot } from "../../../commands/projectCommands";
 import { useCommands } from "../../../hooks/useCommands";
 import { workspaceStore } from "../../../store/workspaceStore";
 import {
@@ -142,7 +142,7 @@ export function useChangesTabState() {
       setRepoChangesBySection(createEmptyRepoChangesBySection());
       setRepoCommitComparison(createEmptyRepoCommitComparison());
       if (isMissingWorkspacePathError(error)) {
-        void loadWorkspaceFromBackend();
+        void loadWorkspaceSnapshot();
         return;
       }
       console.error("Failed to load workspace git changes", error);

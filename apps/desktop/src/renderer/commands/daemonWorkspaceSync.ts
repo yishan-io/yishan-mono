@@ -1,20 +1,11 @@
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
+import { sessionStore } from "../store/sessionStore";
 import { workspaceStore } from "../store/workspaceStore";
-
-type WorkspaceSnapshotRecord = {
-  id: string;
-  organizationId: string;
-  projectId: string;
-  worktreePath?: string;
-};
-
-function normalizeWorkspacePath(path: string | undefined): string {
-  return path?.trim() ?? "";
-}
 
 function resolveVisibleWorkspaceTargets() {
   const state = workspaceStore.getState();
+  const daemonId = sessionStore.getState().daemonId?.trim() ?? "";
   const visibleProjectIds = new Set(
     (state.displayProjectIds ?? []).map((projectId) => projectId.trim()).filter(Boolean),
   );
@@ -22,6 +13,10 @@ function resolveVisibleWorkspaceTargets() {
   return state.workspaces.filter((workspace) => {
     const worktreePath = workspace.worktreePath?.trim();
     if (!worktreePath) {
+      return false;
+    }
+    const workspaceNodeId = workspace.nodeId?.trim() ?? "";
+    if (!daemonId || !workspaceNodeId || workspaceNodeId !== daemonId) {
       return false;
     }
     const projectId = (workspace.projectId ?? workspace.repoId).trim();
@@ -117,62 +112,10 @@ export async function ensureVisibleWorkspacesOpen(mergedWorkspaceIds?: ReadonlyS
           workspaceStore.getState().setWorkspacePullRequest(openedWorkspace.id, openedWorkspace.pullRequest);
         }
       } catch (error) {
-        console.warn("[daemonWorkspaceSync] failed to open workspace in daemon; closing stale entry", {
+        console.warn("[daemonWorkspaceSync] failed to open workspace in daemon", {
           workspaceId: workspace.id,
           worktreePath,
           error: getErrorMessage(error),
-        });
-        try {
-          await client.workspace.close({
-            workspaceId: workspace.id,
-            organizationId: workspace.organizationId,
-            projectId: workspace.projectId,
-            branch: workspace.branch,
-            removeBranch: true,
-          });
-        } catch (closeError) {
-          console.warn("[daemonWorkspaceSync] failed to close stale workspace after open failure", {
-            workspaceId: workspace.id,
-            worktreePath,
-            error: getErrorMessage(closeError),
-          });
-        }
-      }
-    }),
-  );
-}
-
-/**
- * Closes daemon workspaces that are no longer present in the latest backend snapshot.
- */
-export async function reconcileDaemonWorkspaces(snapshotWorkspaces: WorkspaceSnapshotRecord[]): Promise<void> {
-  const client = await getDaemonClient();
-  const daemonWorkspaces = await client.workspace.list();
-  const snapshotPathSet = new Set(
-    snapshotWorkspaces.map((workspace) => normalizeWorkspacePath(workspace.worktreePath)).filter(Boolean),
-  );
-
-  await Promise.all(
-    daemonWorkspaces.map(async (daemonWorkspace) => {
-      const daemonPath = daemonWorkspace.path.trim();
-      if (!daemonPath || snapshotPathSet.has(daemonPath)) {
-        return;
-      }
-
-      const snapshotMatch = snapshotWorkspaces.find(
-        (workspace) => normalizeWorkspacePath(workspace.worktreePath) === daemonPath,
-      );
-      try {
-        await client.workspace.close({
-          workspaceId: daemonWorkspace.id,
-          organizationId: snapshotMatch?.organizationId ?? daemonWorkspace.orgId,
-          projectId: snapshotMatch?.projectId ?? daemonWorkspace.projectId,
-        });
-      } catch (error) {
-        console.warn("[daemonWorkspaceSync] failed to close stale daemon workspace", {
-          workspaceId: daemonWorkspace.id,
-          worktreePath: daemonPath,
-          error,
         });
       }
     }),

@@ -8,7 +8,7 @@ import {
   getNotificationPreferences,
   playNotificationSound,
 } from "../commands/notificationCommands";
-import { loadWorkspaceFromBackend } from "../commands/projectCommands";
+import { loadWorkspaceSnapshot } from "../commands/projectCommands";
 import type { DesktopAgentKind } from "../helpers/agentSettings";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../rpc/rpcTransport";
@@ -250,7 +250,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   setWorkspacePullRequest: (workspaceId, pullRequest) => {
     workspaceStore.getState().setWorkspacePullRequest(workspaceId, pullRequest);
   },
-  loadWorkspaceSnapshot: loadWorkspaceFromBackend,
+  loadWorkspaceSnapshot,
   getSelectedOrganizationId: () => sessionStore.getState().selectedOrganizationId,
   openBrowserTab: (payload) => {
     tabStore.getState().openTab({ kind: "browser", workspaceId: payload.workspaceId, url: payload.url });
