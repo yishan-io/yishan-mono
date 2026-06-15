@@ -30,14 +30,14 @@ describe("agentSettingsStore", () => {
     window.localStorage.setItem(
       AGENT_SETTINGS_STORE_STORAGE_KEY,
       JSON.stringify({
-          state: {
-            inUseByAgentKind: {
-              codex: false,
-            },
-            defaultAgentKind: "claude",
+        state: {
+          inUseByAgentKind: {
+            codex: false,
           },
-          version: 0,
-        }),
+          defaultAgentKind: "claude",
+        },
+        version: 0,
+      }),
     );
 
     void agentSettingsStore.persist.rehydrate();

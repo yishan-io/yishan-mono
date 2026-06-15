@@ -54,7 +54,9 @@ export function useBrowserHistory() {
         return allEntries.slice().reverse();
       }
       const lower = urlInput.toLowerCase();
-      return allEntries.filter((entry) => entry.url.toLowerCase().includes(lower) || entry.title.toLowerCase().includes(lower)).reverse();
+      return allEntries
+        .filter((entry) => entry.url.toLowerCase().includes(lower) || entry.title.toLowerCase().includes(lower))
+        .reverse();
     },
     [historyGroups],
   );

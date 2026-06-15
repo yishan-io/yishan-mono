@@ -159,5 +159,3 @@ export async function writeFileBase64(params: { absolutePath: string; contentBas
     contentBase64: params.contentBase64,
   });
 }
-
-

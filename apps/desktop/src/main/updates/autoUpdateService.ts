@@ -1,5 +1,5 @@
-import type { App } from "electron";
 import { resolve } from "node:path";
+import type { App } from "electron";
 import { autoUpdater } from "electron-updater";
 import type { DesktopUpdateEventPayload } from "../ipc";
 import { isDevMode } from "../runtime/environment";

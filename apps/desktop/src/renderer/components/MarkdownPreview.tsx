@@ -1,11 +1,13 @@
 import { Box, Table, TableBody, TableCell, TableRow, Typography, useTheme } from "@mui/material";
-import React, { memo, useEffect, useMemo, useRef, useState } from "react";
+import type React from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { openLink } from "../commands/appCommands";
 import { buildWorkspaceFileUrl } from "../commands/fileCommands";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
+import { MermaidBlock } from "./MermaidBlock";
 import {
   getTaskListItemChecked,
   isAbsoluteUrl,
@@ -13,9 +15,8 @@ import {
   resolveRelativePath,
   toggleTaskListItem,
 } from "./markdownHelpers";
-import { useMarkdownStyles } from "./markdownStyles";
 import { markdownService } from "./markdownService";
-import { MermaidBlock } from "./MermaidBlock";
+import { useMarkdownStyles } from "./markdownStyles";
 
 const MARKDOWN_RENDER_DEBOUNCE_MS = 400;
 const MARKDOWN_PREVIEW_BASE_FONT_SIZE_BY_MODE = {
@@ -44,7 +45,7 @@ async function openMarkdownLink(url: string): Promise<void> {
 
   enqueueWorkspaceErrorNotice({
     title: "Failed to open link",
-    message: "Could not open link in external app (" + result.reason + ").",
+    message: `Could not open link in external app (${result.reason}).`,
   });
 }
 
@@ -86,16 +87,19 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
 
     let cancelled = false;
 
-    markdownService.parse(body).then((result) => {
-      if (!cancelled) {
-        setHtml(result);
-      }
-    }).catch((err) => {
-      if (!cancelled) {
-        console.error("[MarkdownPreview] Worker parse error", err);
-        setHtml(`<p style="color: red;">Failed to render markdown</p>`);
-      }
-    });
+    markdownService
+      .parse(body)
+      .then((result) => {
+        if (!cancelled) {
+          setHtml(result);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error("[MarkdownPreview] Worker parse error", err);
+          setHtml(`<p style="color: red;">Failed to render markdown</p>`);
+        }
+      });
 
     return () => {
       cancelled = true;
@@ -115,30 +119,32 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
     // 1) <pre class="mermaid">...</pre>
     // 2) <pre><code class="language-mermaid">...</code></pre>
     const mermaidPres = new Set<HTMLElement>();
-    container.querySelectorAll("pre.mermaid").forEach((pre) => {
+    for (const pre of container.querySelectorAll("pre.mermaid")) {
       mermaidPres.add(pre as HTMLElement);
-    });
-    container.querySelectorAll("pre code.language-mermaid").forEach((codeEl) => {
+    }
+    for (const codeEl of container.querySelectorAll("pre code.language-mermaid")) {
       const pre = codeEl.closest("pre");
       if (pre) {
         mermaidPres.add(pre as HTMLElement);
       }
-    });
+    }
     const blocks: Array<{ id: string; code: string }> = [];
-    Array.from(mermaidPres).forEach((pre, index) => {
+    let mermaidIndex = 0;
+    for (const pre of mermaidPres) {
       const code = pre.textContent?.replace(/\n$/, "") ?? "";
-      const id = `mermaid-placeholder-${index}`;
+      const id = `mermaid-placeholder-${mermaidIndex}`;
       const placeholder = document.createElement("div");
       placeholder.setAttribute("data-mermaid-id", id);
       pre.replaceWith(placeholder);
       blocks.push({ id, code });
-    });
+      mermaidIndex += 1;
+    }
     setMermaidBlocks(blocks);
 
     // Fix images: resolve relative paths to workspace file URLs
     if (worktreePath) {
       const images = container.querySelectorAll("img");
-      images.forEach((img) => {
+      for (const img of images) {
         const src = img.getAttribute("src");
         if (!src || isAbsoluteUrl(src)) return;
 
@@ -159,12 +165,12 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
         } catch {
           // Leave original src on failure
         }
-      });
+      }
     }
 
     // Attach link click handlers
     const links = container.querySelectorAll("a[href]");
-    links.forEach((link) => {
+    for (const link of links) {
       link.addEventListener("click", (e) => {
         e.preventDefault();
         const href = link.getAttribute("href");
@@ -186,14 +192,14 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
           }
         }
       });
-    });
+    }
 
     // Attach task-list checkbox handlers
     const checkboxes = container.querySelectorAll<HTMLInputElement>("input[type='checkbox']");
-    checkboxes.forEach((checkbox, index) => {
+    for (const [index, checkbox] of checkboxes.entries()) {
       checkbox.disabled = !canEdit;
       if (!canEdit) {
-        return;
+        continue;
       }
 
       checkbox.addEventListener("click", (event) => {
@@ -209,7 +215,7 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
           onContentChange?.(nextContent);
         }
       });
-    });
+    }
   }, [html, worktreePath, fileDir, canEdit, content, onContentChange]);
 
   if (!body.trim() && !metadata) {
@@ -249,7 +255,15 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
             overflow: "auto",
           }}
         >
-          <Table size="small" sx={{ fontSize: "0.875em", border: 1, borderColor: "divider", "& td, & th": { border: 1, borderColor: "divider" } }}>
+          <Table
+            size="small"
+            sx={{
+              fontSize: "0.875em",
+              border: 1,
+              borderColor: "divider",
+              "& td, & th": { border: 1, borderColor: "divider" },
+            }}
+          >
             <TableBody>
               {Object.entries(metadata).map(([key, value]) => (
                 <TableRow key={key}>

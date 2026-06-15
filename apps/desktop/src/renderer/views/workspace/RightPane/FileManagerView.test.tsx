@@ -55,7 +55,11 @@ const mocks = vi.hoisted(() => {
         const highlightedPathIndexes: number[] = [];
         let searchFrom = 0;
         for (let qi = 0; qi < query.length; qi++) {
-          const idx = pathLower.indexOf(query[qi]!, searchFrom);
+          const queryCharacter = query[qi];
+          if (!queryCharacter) {
+            continue;
+          }
+          const idx = pathLower.indexOf(queryCharacter, searchFrom);
           if (idx !== -1) {
             highlightedPathIndexes.push(idx);
             searchFrom = idx + 1;
@@ -617,22 +621,24 @@ describe("FileManagerView file loading", () => {
   });
 
   it("reconciles externally renamed loaded descendants on file-change refresh", async () => {
-    mocks.listFiles.mockImplementation(async (input: {
-      workspaceId: string;
-      relativePath?: string;
-      recursive?: boolean;
-    }) => {
-      if (input.recursive === false && input.relativePath === "src") {
-        // After the rename, the shallow read returns only the new name.
-        return { files: asEntries(["src/new-name.ts"]) };
-      }
+    mocks.listFiles.mockImplementation(
+      async (input: {
+        workspaceId: string;
+        relativePath?: string;
+        recursive?: boolean;
+      }) => {
+        if (input.recursive === false && input.relativePath === "src") {
+          // After the rename, the shallow read returns only the new name.
+          return { files: asEntries(["src/new-name.ts"]) };
+        }
 
-      if (input.recursive) {
-        return { files: asEntries(["src/", "src/new-name.ts"]) };
-      }
+        if (input.recursive) {
+          return { files: asEntries(["src/", "src/new-name.ts"]) };
+        }
 
-      return { files: asEntries([]) };
-    });
+        return { files: asEntries([]) };
+      },
+    );
 
     const { rerender } = render(<FileManagerView />);
 
@@ -645,10 +651,7 @@ describe("FileManagerView file loading", () => {
     // After ensurePathLoaded the shallow response returns new-name.ts, merged
     // into the tree (which already had it from the initial recursive load).
     await waitFor(() => {
-      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
-        "src/",
-        "src/new-name.ts",
-      ]);
+      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual(["src/", "src/new-name.ts"]);
     });
 
     mocks.stateRef.current.fileTreeChangedRelativePathsByWorktreePath = {
@@ -666,21 +669,23 @@ describe("FileManagerView file loading", () => {
   });
 
   it("evicts stale .my-context direct children when refresh reports parent directory changes", async () => {
-    mocks.listFiles.mockImplementation(async (input: {
-      workspaceId: string;
-      relativePath?: string;
-      recursive?: boolean;
-    }) => {
-      if (input.recursive === false && input.relativePath === ".my-context") {
-        return { files: asEntries([".my-context/sub/", ".my-context/sub/moved.md"]) };
-      }
+    mocks.listFiles.mockImplementation(
+      async (input: {
+        workspaceId: string;
+        relativePath?: string;
+        recursive?: boolean;
+      }) => {
+        if (input.recursive === false && input.relativePath === ".my-context") {
+          return { files: asEntries([".my-context/sub/", ".my-context/sub/moved.md"]) };
+        }
 
-      if (input.recursive) {
-        return { files: asEntries([".my-context/", ".my-context/old.md"]) };
-      }
+        if (input.recursive) {
+          return { files: asEntries([".my-context/", ".my-context/old.md"]) };
+        }
 
-      return { files: asEntries([]) };
-    });
+        return { files: asEntries([]) };
+      },
+    );
 
     const { rerender } = render(<FileManagerView />);
 
@@ -719,21 +724,23 @@ describe("FileManagerView file loading", () => {
   });
 
   it("keeps loaded descendants after refresh when recursive root list only includes parent directory", async () => {
-    mocks.listFiles.mockImplementation(async (input: {
-      workspaceId: string;
-      relativePath?: string;
-      recursive?: boolean;
-    }) => {
-      if (input.recursive === false && input.relativePath === ".opencode") {
-        return { files: asEntries([".opencode/agents/", ".opencode/agents/main.md"]) };
-      }
+    mocks.listFiles.mockImplementation(
+      async (input: {
+        workspaceId: string;
+        relativePath?: string;
+        recursive?: boolean;
+      }) => {
+        if (input.recursive === false && input.relativePath === ".opencode") {
+          return { files: asEntries([".opencode/agents/", ".opencode/agents/main.md"]) };
+        }
 
-      if (input.recursive) {
-        return { files: asEntries([".opencode/"]) };
-      }
+        if (input.recursive) {
+          return { files: asEntries([".opencode/"]) };
+        }
 
-      return { files: asEntries([]) };
-    });
+        return { files: asEntries([]) };
+      },
+    );
 
     const { rerender } = render(<FileManagerView />);
 
@@ -765,22 +772,24 @@ describe("FileManagerView file loading", () => {
 
   it("fully replaces deep .my-context entries on file tree refresh", async () => {
     let recursiveCallCount = 0;
-    mocks.listFiles.mockImplementation(async (input: {
-      workspaceId: string;
-      relativePath?: string;
-      recursive?: boolean;
-    }) => {
-      if (input.recursive) {
-        recursiveCallCount += 1;
-        if (recursiveCallCount === 1) {
-          return { files: asEntries([".my-context/", ".my-context/sub/", ".my-context/sub/old.md"]) };
+    mocks.listFiles.mockImplementation(
+      async (input: {
+        workspaceId: string;
+        relativePath?: string;
+        recursive?: boolean;
+      }) => {
+        if (input.recursive) {
+          recursiveCallCount += 1;
+          if (recursiveCallCount === 1) {
+            return { files: asEntries([".my-context/", ".my-context/sub/", ".my-context/sub/old.md"]) };
+          }
+
+          return { files: asEntries([".my-context/", ".my-context/new.md"]) };
         }
 
-        return { files: asEntries([".my-context/", ".my-context/new.md"]) };
-      }
-
-      return { files: asEntries([]) };
-    });
+        return { files: asEntries([]) };
+      },
+    );
 
     render(<FileManagerView />);
 
@@ -804,22 +813,24 @@ describe("FileManagerView file loading", () => {
 
   it("keeps ignored marker stable across inconsistent refresh payloads", async () => {
     let recursiveCallCount = 0;
-    mocks.listFiles.mockImplementation(async (input: {
-      workspaceId: string;
-      relativePath?: string;
-      recursive?: boolean;
-    }) => {
-      if (input.recursive) {
-        recursiveCallCount += 1;
-        if (recursiveCallCount === 1) {
-          return { files: asEntries([".opencode/"], [".opencode/"]) };
+    mocks.listFiles.mockImplementation(
+      async (input: {
+        workspaceId: string;
+        relativePath?: string;
+        recursive?: boolean;
+      }) => {
+        if (input.recursive) {
+          recursiveCallCount += 1;
+          if (recursiveCallCount === 1) {
+            return { files: asEntries([".opencode/"], [".opencode/"]) };
+          }
+
+          return { files: asEntries([".opencode/"]) };
         }
 
-        return { files: asEntries([".opencode/"]) };
-      }
-
-      return { files: asEntries([]) };
-    });
+        return { files: asEntries([]) };
+      },
+    );
 
     const { rerender } = render(<FileManagerView />);
 
@@ -840,21 +851,23 @@ describe("FileManagerView file loading", () => {
     let recursiveLeafName = "a.txt";
     let loadedLeafName = "a.txt";
 
-    mocks.listFiles.mockImplementation(async (input: {
-      workspaceId: string;
-      relativePath?: string;
-      recursive?: boolean;
-    }) => {
-      if (input.recursive === false && input.relativePath === "src") {
-        return { files: asEntries(["src/", `src/${loadedLeafName}`]) };
-      }
+    mocks.listFiles.mockImplementation(
+      async (input: {
+        workspaceId: string;
+        relativePath?: string;
+        recursive?: boolean;
+      }) => {
+        if (input.recursive === false && input.relativePath === "src") {
+          return { files: asEntries(["src/", `src/${loadedLeafName}`]) };
+        }
 
-      if (input.recursive) {
-        return { files: asEntries([...directoryEntries, `src/${recursiveLeafName}`]) };
-      }
+        if (input.recursive) {
+          return { files: asEntries([...directoryEntries, `src/${recursiveLeafName}`]) };
+        }
 
-      return { files: asEntries([]) };
-    });
+        return { files: asEntries([]) };
+      },
+    );
 
     const { rerender } = render(<FileManagerView />);
 
@@ -904,7 +917,14 @@ describe("FileManagerView file loading", () => {
 
   it("includes .my-context files in the initial recursive load", async () => {
     mocks.listFiles.mockResolvedValue({
-      files: asEntries([".my-context/", ".my-context/brief.md", ".my-context/notes/", ".my-context/notes/todo.md", "src/", "src/index.ts"]),
+      files: asEntries([
+        ".my-context/",
+        ".my-context/brief.md",
+        ".my-context/notes/",
+        ".my-context/notes/todo.md",
+        "src/",
+        "src/index.ts",
+      ]),
     });
 
     render(<FileManagerView />);
@@ -922,34 +942,34 @@ describe("FileManagerView file loading", () => {
   });
 
   it("loads shallow directory contents when directory immediate children are ignored", async () => {
-    mocks.listFiles.mockImplementation(async (input: {
-      workspaceId: string;
-      relativePath?: string;
-      recursive?: boolean;
-    }) => {
-      if (input.recursive === false && input.relativePath === "src") {
-        return {
-          files: asEntries(["src/.cache/", "src/.cache/nested/"], ["src/.cache/", "src/.cache/nested/"]),
-        };
-      }
+    mocks.listFiles.mockImplementation(
+      async (input: {
+        workspaceId: string;
+        relativePath?: string;
+        recursive?: boolean;
+      }) => {
+        if (input.recursive === false && input.relativePath === "src") {
+          return {
+            files: asEntries(["src/.cache/", "src/.cache/nested/"], ["src/.cache/", "src/.cache/nested/"]),
+          };
+        }
 
-      if (input.recursive === true && input.relativePath === "src") {
-        return {
-          files: asEntries([
-            "src/.cache/",
-            "src/.cache/nested/",
-            "src/.cache/nested/keep.ts",
-            "src/.cache/nested/ignore.log",
-          ], ["src/.cache/", "src/.cache/nested/", "src/.cache/nested/ignore.log"]),
-        };
-      }
+        if (input.recursive === true && input.relativePath === "src") {
+          return {
+            files: asEntries(
+              ["src/.cache/", "src/.cache/nested/", "src/.cache/nested/keep.ts", "src/.cache/nested/ignore.log"],
+              ["src/.cache/", "src/.cache/nested/", "src/.cache/nested/ignore.log"],
+            ),
+          };
+        }
 
-      if (input.recursive) {
-        return { files: asEntries(["src/"]) };
-      }
+        if (input.recursive) {
+          return { files: asEntries(["src/"]) };
+        }
 
-      return { files: asEntries([]) };
-    });
+        return { files: asEntries([]) };
+      },
+    );
 
     render(<FileManagerView />);
 
@@ -970,29 +990,31 @@ describe("FileManagerView file loading", () => {
   });
 
   it("keeps collapsed directory when shallow response only echoes the directory", async () => {
-    mocks.listFiles.mockImplementation(async (input: {
-      workspaceId: string;
-      relativePath?: string;
-      recursive?: boolean;
-    }) => {
-      if (input.recursive === false && input.relativePath === ".opencode") {
-        return {
-          files: asEntries([".opencode/"]),
-        };
-      }
+    mocks.listFiles.mockImplementation(
+      async (input: {
+        workspaceId: string;
+        relativePath?: string;
+        recursive?: boolean;
+      }) => {
+        if (input.recursive === false && input.relativePath === ".opencode") {
+          return {
+            files: asEntries([".opencode/"]),
+          };
+        }
 
-      if (input.recursive === true && input.relativePath === ".opencode") {
-        return {
-          files: asEntries([".opencode/", ".opencode/agents/", ".opencode/agents/main.md"]),
-        };
-      }
+        if (input.recursive === true && input.relativePath === ".opencode") {
+          return {
+            files: asEntries([".opencode/", ".opencode/agents/", ".opencode/agents/main.md"]),
+          };
+        }
 
-      if (input.recursive) {
-        return { files: asEntries([".opencode/"]) };
-      }
+        if (input.recursive) {
+          return { files: asEntries([".opencode/"]) };
+        }
 
-      return { files: asEntries([]) };
-    });
+        return { files: asEntries([]) };
+      },
+    );
 
     render(<FileManagerView />);
 
@@ -1295,7 +1317,13 @@ describe("FileManagerView undo operations", () => {
     await waitFor(() => {
       expect(screen.getByTestId("confirmation-dialog")).toBeTruthy();
     });
-    fireEvent.click(screen.getAllByText("Delete")[1]!);
+    const deleteButtons = screen.getAllByText("Delete");
+    const confirmDeleteButton = deleteButtons[1];
+    expect(confirmDeleteButton).toBeTruthy();
+    if (!confirmDeleteButton) {
+      throw new Error("Expected delete confirmation button");
+    }
+    fireEvent.click(confirmDeleteButton);
     await waitFor(() => {
       expect(mocks.deleteEntry).toHaveBeenCalledWith({
         workspaceId: "workspace-1",
@@ -1373,7 +1401,13 @@ describe("FileManagerView undo operations", () => {
     await waitFor(() => {
       expect(screen.getByTestId("confirmation-dialog")).toBeTruthy();
     });
-    fireEvent.click(screen.getAllByText("Delete")[1]!);
+    const duplicateDeleteButtons = screen.getAllByText("Delete");
+    const duplicateConfirmDeleteButton = duplicateDeleteButtons[1];
+    expect(duplicateConfirmDeleteButton).toBeTruthy();
+    if (!duplicateConfirmDeleteButton) {
+      throw new Error("Expected delete confirmation button");
+    }
+    fireEvent.click(duplicateConfirmDeleteButton);
 
     await waitFor(() => {
       expect(mocks.deleteEntry).toHaveBeenCalledTimes(1);

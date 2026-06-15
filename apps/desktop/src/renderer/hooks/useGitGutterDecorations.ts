@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { monaco } from "../helpers/monacoSetup";
-import { computeGitLineChanges, getHunkForLine, type GitLineChange, type GitLineChangeKind } from "../helpers/gitGutterDiff";
 import { readDiff } from "../commands/gitCommands";
+import {
+  type GitLineChange,
+  type GitLineChangeKind,
+  computeGitLineChanges,
+  getHunkForLine,
+} from "../helpers/gitGutterDiff";
+import { monaco } from "../helpers/monacoSetup";
 
 // CSS class names injected for gutter decorations.
 // These are defined in style.css and matched by Monaco's margin decoration class mechanism.
@@ -200,7 +205,7 @@ export function useGitGutterDecorations({
         removeViewZone(editor, viewZoneRef);
       }
     };
-  }, [editor, path]);
+  }, [editor]);
 
   // Clean up decorations on unmount.
   useEffect(() => {
@@ -232,11 +237,7 @@ function removeViewZone(
  * Dismissal is handled via click-on-zone or Escape key (not via a DOM button,
  * since Monaco's scroll overlay intercepts clicks on ViewZone content).
  */
-function createInlineDiffDom(
-  oldLines: string[],
-  newLines: string[],
-  kind: GitLineChangeKind,
-): HTMLDivElement {
+function createInlineDiffDom(oldLines: string[], newLines: string[], kind: GitLineChangeKind): HTMLDivElement {
   const container = document.createElement("div");
   container.className = "git-inline-diff-zone";
 
@@ -288,9 +289,7 @@ function createInlineDiffDom(
 /**
  * Converts computed line changes to Monaco model decoration options.
  */
-function changesToDecorations(
-  changes: GitLineChange[],
-): monaco.editor.IModelDeltaDecoration[] {
+function changesToDecorations(changes: GitLineChange[]): monaco.editor.IModelDeltaDecoration[] {
   return changes.map((change) => {
     const className = getGutterClassName(change.kind);
 

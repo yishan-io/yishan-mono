@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
+import { subscribeDesktopRpcEvent } from "../rpc/rpcTransport";
 import { getShortcutDefinitions } from "../shortcuts/keybindings";
 import { compileShortcutDefinitions, processShortcuts } from "../shortcuts/shortcutRunner";
-import { subscribeDesktopRpcEvent } from "../rpc/rpcTransport";
 import { keybindingSettingsStore } from "../store/settings/keybindingSettingsStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import { splitPaneStore } from "../store/splitPaneStore";

@@ -2,8 +2,8 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { chatStore } from "../store/chatStore";
-import { layoutStore } from "../store/settings/layoutStore";
 import { sessionStore } from "../store/sessionStore";
+import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
 import { workspacePaneStore } from "../store/workspacePaneStore";
@@ -15,8 +15,8 @@ import {
   focusWorkspaceFileTree,
   openCreateWorkspaceDialog,
   openWorkspaceFileSearch,
-  refreshWorkspacePullRequest,
   refreshWorkspaceGitChanges,
+  refreshWorkspacePullRequest,
   renameWorkspace,
   renameWorkspaceBranch,
   setDisplayRepoIds,
@@ -143,9 +143,12 @@ describe("workspaceCommands", () => {
       });
     });
     expect(rpcMocks.list).not.toHaveBeenCalled();
-    await vi.waitFor(() => {
-      expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
-    }, { timeout: 3_500 });
+    await vi.waitFor(
+      () => {
+        expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 3_500 },
+    );
     expect(rpcMocks.enqueueWorkspaceLifecycleWarnings).not.toHaveBeenCalled();
   });
 
@@ -536,7 +539,11 @@ describe("workspaceCommands", () => {
     rpcMocks.closeWorkspace.mockReturnValueOnce(
       new Promise((resolve) => {
         resolveClose = () => {
-          resolve({ workspace: { id: "workspace-1", status: "closed" }, workspaceId: "workspace-1", lifecycleScriptWarnings: [] });
+          resolve({
+            workspace: { id: "workspace-1", status: "closed" },
+            workspaceId: "workspace-1",
+            lifecycleScriptWarnings: [],
+          });
         };
       }),
     );

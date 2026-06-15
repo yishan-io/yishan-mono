@@ -160,6 +160,7 @@ export function useChangesTabState() {
   }, [selectedWorkspaceWorktreePath]);
 
   useEffect(() => {
+    void selectedWorkspaceSourceBranch;
     setSelectedComparison("uncommitted");
   }, [selectedWorkspaceSourceBranch]);
 

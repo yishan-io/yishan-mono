@@ -72,7 +72,9 @@ describe("buildApplicationMenuTemplate", () => {
     const toggleRightPaneItem = viewMenu.find((item) => "label" in item && item.label === "Toggle right sidebar");
 
     expect(toggleRightPaneItem).toBeTruthy();
-    expect(toggleRightPaneItem && "accelerator" in toggleRightPaneItem ? toggleRightPaneItem.accelerator : undefined).toBeUndefined();
+    expect(
+      toggleRightPaneItem && "accelerator" in toggleRightPaneItem ? toggleRightPaneItem.accelerator : undefined,
+    ).toBeUndefined();
   });
 
   it("uses Chinese labels for Chinese locales", () => {

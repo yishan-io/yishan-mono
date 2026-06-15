@@ -1,11 +1,7 @@
 import { useCallback, useRef } from "react";
+import { createFile, deleteEntry, renameEntry } from "../../../commands/fileCommands";
 import type { WorkspaceTab } from "../../../store/types";
-import {
-  createFile,
-  deleteEntry,
-  renameEntry,
-} from "../../../commands/fileCommands";
-import { resolveTabIdsToCloseAfterDelete, isDeletedPathDirectory } from "./rightPaneDelete";
+import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "./rightPaneDelete";
 
 type FileTreeUndoAction =
   | { kind: "create-file"; path: string }
@@ -43,13 +39,16 @@ export function useFileTreeUndo({
 }: UseFileTreeUndoInput) {
   const isApplyingUndoRef = useRef(false);
 
-  const pushUndoAction = useCallback((action: FileTreeUndoAction) => {
-    if (isApplyingUndoRef.current) {
-      return;
-    }
+  const pushUndoAction = useCallback(
+    (action: FileTreeUndoAction) => {
+      if (isApplyingUndoRef.current) {
+        return;
+      }
 
-    setUndoStack((currentStack) => [action, ...currentStack].slice(0, 30));
-  }, [setUndoStack]);
+      setUndoStack((currentStack) => [action, ...currentStack].slice(0, 30));
+    },
+    [setUndoStack],
+  );
 
   const handleUndoLastFileTreeOperation = useCallback(async () => {
     if (isApplyingUndoRef.current) {

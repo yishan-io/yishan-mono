@@ -203,11 +203,16 @@ function reconstructLCSFull(oldLines: string[], newLines: string[]): Array<[numb
   const dp: number[][] = Array.from({ length: N + 1 }, () => new Array(M + 1).fill(0) as number[]);
 
   for (let i = 1; i <= N; i++) {
+    const currentRow = dp[i];
+    const previousRow = dp[i - 1];
+    if (!currentRow || !previousRow) {
+      continue;
+    }
     for (let j = 1; j <= M; j++) {
       if (oldLines[i - 1] === newLines[j - 1]) {
-        dp[i]![j] = dp[i - 1]![j - 1]! + 1;
+        currentRow[j] = (previousRow[j - 1] ?? 0) + 1;
       } else {
-        dp[i]![j] = Math.max(dp[i - 1]![j]!, dp[i]![j - 1]!);
+        currentRow[j] = Math.max(previousRow[j] ?? 0, currentRow[j - 1] ?? 0);
       }
     }
   }
@@ -217,11 +222,16 @@ function reconstructLCSFull(oldLines: string[], newLines: string[]): Array<[numb
   let i = N;
   let j = M;
   while (i > 0 && j > 0) {
+    const currentRow = dp[i];
+    const previousRow = dp[i - 1];
+    if (!currentRow || !previousRow) {
+      break;
+    }
     if (oldLines[i - 1] === newLines[j - 1]) {
       pairs.unshift([i - 1, j - 1]);
       i--;
       j--;
-    } else if (dp[i - 1]![j]! >= dp[i]![j - 1]!) {
+    } else if ((previousRow[j] ?? 0) >= (currentRow[j - 1] ?? 0)) {
       i--;
     } else {
       j--;

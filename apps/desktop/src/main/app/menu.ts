@@ -177,7 +177,14 @@ export function buildApplicationMenuTemplate(input: ConfigureApplicationMenuInpu
     },
     {
       label: "Window",
-      submenu: [{ role: "minimize" }, { role: "zoom" }, { type: "separator" }, { role: "close" }, { type: "separator" }, { role: "front" }],
+      submenu: [
+        { role: "minimize" },
+        { role: "zoom" },
+        { type: "separator" },
+        { role: "close" },
+        { type: "separator" },
+        { role: "front" },
+      ],
     },
     {
       label: "Help",

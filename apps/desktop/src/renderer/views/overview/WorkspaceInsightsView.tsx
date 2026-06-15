@@ -92,13 +92,17 @@ export function WorkspaceInsightsView() {
         {t("overview.workspaceInsights.title")}
       </Typography>
 
-      <Tabs
-        value={tab}
-        onChange={(_e, v) => setTab(v)}
-        sx={{ mb: 1.5, minHeight: 36 }}
-      >
-        <Tab value="closed" label={t("overview.workspaceInsights.closedTab")} sx={{ minHeight: 36, py: 0.5, textTransform: "none", fontSize: 13 }} />
-        <Tab value="primary" label={t("overview.workspaceInsights.primaryTab")} sx={{ minHeight: 36, py: 0.5, textTransform: "none", fontSize: 13 }} />
+      <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ mb: 1.5, minHeight: 36 }}>
+        <Tab
+          value="closed"
+          label={t("overview.workspaceInsights.closedTab")}
+          sx={{ minHeight: 36, py: 0.5, textTransform: "none", fontSize: 13 }}
+        />
+        <Tab
+          value="primary"
+          label={t("overview.workspaceInsights.primaryTab")}
+          sx={{ minHeight: 36, py: 0.5, textTransform: "none", fontSize: 13 }}
+        />
       </Tabs>
 
       {tab === "closed" ? (
@@ -163,7 +167,9 @@ function ClosedTabContent({
               {t("overview.workspaceInsights.avgLifetime")}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
-              {insights.averageLifetimeHours != null ? formatHours(insights.averageLifetimeHours) : t("overview.workspaceInsights.notAvailable")}
+              {insights.averageLifetimeHours != null
+                ? formatHours(insights.averageLifetimeHours)
+                : t("overview.workspaceInsights.notAvailable")}
             </Typography>
           </Box>
         </Box>

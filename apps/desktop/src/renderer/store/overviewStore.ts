@@ -38,7 +38,12 @@ type OverviewStoreState = {
   setSelectedProjectId: (projectId: string | undefined) => void;
   setGranularity: (granularity: "hour" | "day") => void;
 
-  setTokenUsageData: (series: TokenUsageSeriesItem[], cachedTotal: number, cachedWriteTotal: number, uncachedTotal: number) => void;
+  setTokenUsageData: (
+    series: TokenUsageSeriesItem[],
+    cachedTotal: number,
+    cachedWriteTotal: number,
+    uncachedTotal: number,
+  ) => void;
   setTokenUsageLoadState: (state: LoadState, error?: string | null) => void;
 
   setModelBreakdown: (models: ModelBreakdownItem[]) => void;

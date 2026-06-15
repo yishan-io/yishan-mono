@@ -2,7 +2,10 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { WORKSPACE_SETTINGS_STORE_STORAGE_KEY, workspaceSettingsStore } from "../../store/settings/workspaceSettingsStore";
+import {
+  WORKSPACE_SETTINGS_STORE_STORAGE_KEY,
+  workspaceSettingsStore,
+} from "../../store/settings/workspaceSettingsStore";
 import { WorkspaceSettingsView } from "./WorkspaceSettingsView";
 
 describe("WorkspaceSettingsView", () => {

@@ -21,6 +21,7 @@ import { LuClock3, LuCloud, LuGlobe, LuServer } from "react-icons/lu";
 import { api } from "../../api";
 import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
 import { AgentIcon } from "../../components/AgentIcon";
+import { VirtualizedListbox } from "../../components/VirtualizedListbox";
 import { renderProjectIcon } from "../../components/projectIcons";
 import {
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
@@ -28,7 +29,6 @@ import {
   SUPPORTED_DESKTOP_AGENT_KINDS,
   isDesktopAgentKind,
 } from "../../helpers/agentSettings";
-import { VirtualizedListbox } from "../../components/VirtualizedListbox";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { useCommands } from "../../hooks/useCommands";
 import { useDialogRegistration } from "../../hooks/useDialogRegistration";
@@ -139,11 +139,16 @@ export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduled
     } catch {
       return null;
     }
-  }, [draft.cronExpression, draft.timezone, scheduleType, scheduleTime, weeklyDay]);
+  }, [draft.cronExpression, draft.timezone]);
   const cronDescription = useMemo(() => describeCronExpression(draft.cronExpression), [draft.cronExpression]);
 
   const isSubmitDisabled =
-    isSaving || !draft.name.trim() || !draft.projectId || !draft.nodeId || !draft.cronExpression.trim() || !draft.prompt.trim();
+    isSaving ||
+    !draft.name.trim() ||
+    !draft.projectId ||
+    !draft.nodeId ||
+    !draft.cronExpression.trim() ||
+    !draft.prompt.trim();
 
   const handleClose = () => {
     if (isSaving) return;

@@ -27,8 +27,8 @@ import { IntegrationSettingsView } from "./settings/IntegrationSettingsView";
 import { KeybindingsSettingsView } from "./settings/KeybindingsSettingsView";
 import { LanguageSettingsView } from "./settings/LanguageSettingsView";
 import { LinkSettingsView } from "./settings/LinkSettingsView";
-import { MemberSettingsView } from "./settings/MemberSettingsView";
 import { MarkdownSettingsView } from "./settings/MarkdownSettingsView";
+import { MemberSettingsView } from "./settings/MemberSettingsView";
 import { MemorySettingsView } from "./settings/MemorySettingsView";
 import { NodesSettingsView } from "./settings/NodesSettingsView";
 import { NotificationSettingsView } from "./settings/NotificationSettingsView";
@@ -234,84 +234,84 @@ export function SettingsView() {
 
           {/* ── Scrollable nav list below search ── */}
           <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", px: 1.25, pb: 1.5 }}>
-          {normalizedSearchQuery ? (
-            <Box sx={{ mt: 1.5 }}>
-              <List disablePadding>
-                {searchResults.map((result) => {
-                  const Icon = result.icon;
-                  const isSelected =
-                    selectedTab === result.tab &&
-                    (result.focusItemId === undefined || focusedNotificationItemId === result.focusItemId);
-                  return (
-                    <ListItemButton
-                      key={result.id}
-                      selected={isSelected}
-                      onClick={() => {
-                        if (result.focusItemId) {
-                          setSearchParams({
-                            tab: result.tab,
-                            focus: result.focusItemId,
-                          });
-                          return;
-                        }
-                        setSearchParams({ tab: result.tab });
-                      }}
-                      sx={{ borderRadius: 1, minHeight: 38 }}
-                    >
-                      <ListItemIcon sx={{ minWidth: 28 }}>
-                        <Icon size={16} />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={renderSidebarLabel(result.label)}
-                        secondary={
-                          <Typography variant="caption" color="text.secondary">
-                            {result.sectionLabel}
-                          </Typography>
-                        }
-                      />
-                    </ListItemButton>
-                  );
-                })}
-              </List>
-              {searchResults.length === 0 ? (
-                <Typography variant="caption" color="text.secondary" sx={{ px: 1.25 }}>
-                  {t("settings.searchNoResults")}
-                </Typography>
-              ) : null}
-            </Box>
-          ) : (
-            <Stack spacing={1.5} sx={{ mt: 1.5 }}>
-              {SETTINGS_NAV_SECTIONS.map((section) => (
-                <Box key={section.titleKey}>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ px: 1, textTransform: "uppercase", letterSpacing: "0.08em" }}
-                  >
-                    {t(section.titleKey)}
+            {normalizedSearchQuery ? (
+              <Box sx={{ mt: 1.5 }}>
+                <List disablePadding>
+                  {searchResults.map((result) => {
+                    const Icon = result.icon;
+                    const isSelected =
+                      selectedTab === result.tab &&
+                      (result.focusItemId === undefined || focusedNotificationItemId === result.focusItemId);
+                    return (
+                      <ListItemButton
+                        key={result.id}
+                        selected={isSelected}
+                        onClick={() => {
+                          if (result.focusItemId) {
+                            setSearchParams({
+                              tab: result.tab,
+                              focus: result.focusItemId,
+                            });
+                            return;
+                          }
+                          setSearchParams({ tab: result.tab });
+                        }}
+                        sx={{ borderRadius: 1, minHeight: 38 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 28 }}>
+                          <Icon size={16} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={renderSidebarLabel(result.label)}
+                          secondary={
+                            <Typography variant="caption" color="text.secondary">
+                              {result.sectionLabel}
+                            </Typography>
+                          }
+                        />
+                      </ListItemButton>
+                    );
+                  })}
+                </List>
+                {searchResults.length === 0 ? (
+                  <Typography variant="caption" color="text.secondary" sx={{ px: 1.25 }}>
+                    {t("settings.searchNoResults")}
                   </Typography>
-                  <List disablePadding sx={{ mt: 0.5 }}>
-                    {section.items.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <ListItemButton
-                          key={item.tab}
-                          selected={selectedTab === item.tab}
-                          onClick={() => setSearchParams({ tab: item.tab })}
-                          sx={{ borderRadius: 1, minHeight: 34 }}
-                        >
-                          <ListItemIcon sx={{ minWidth: 28 }}>
-                            <Icon size={16} />
-                          </ListItemIcon>
-                          <ListItemText primary={renderSidebarLabel(t(item.labelKey))} />
-                        </ListItemButton>
-                      );
-                    })}
-                  </List>
-                </Box>
-              ))}
-            </Stack>
-          )}
+                ) : null}
+              </Box>
+            ) : (
+              <Stack spacing={1.5} sx={{ mt: 1.5 }}>
+                {SETTINGS_NAV_SECTIONS.map((section) => (
+                  <Box key={section.titleKey}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ px: 1, textTransform: "uppercase", letterSpacing: "0.08em" }}
+                    >
+                      {t(section.titleKey)}
+                    </Typography>
+                    <List disablePadding sx={{ mt: 0.5 }}>
+                      {section.items.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <ListItemButton
+                            key={item.tab}
+                            selected={selectedTab === item.tab}
+                            onClick={() => setSearchParams({ tab: item.tab })}
+                            sx={{ borderRadius: 1, minHeight: 34 }}
+                          >
+                            <ListItemIcon sx={{ minWidth: 28 }}>
+                              <Icon size={16} />
+                            </ListItemIcon>
+                            <ListItemText primary={renderSidebarLabel(t(item.labelKey))} />
+                          </ListItemButton>
+                        );
+                      })}
+                    </List>
+                  </Box>
+                ))}
+              </Stack>
+            )}
           </Box>
         </>
       }

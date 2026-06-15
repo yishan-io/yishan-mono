@@ -4,10 +4,10 @@ import { useTranslation } from "react-i18next";
 import { MessageList } from "../../components/MessageList";
 import { RichComposer } from "../../components/RichComposer";
 import { subscribeWorkspaceChatEvent } from "../../events";
+import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { generateId } from "../../helpers/generateId";
 import { useCommands } from "../../hooks/useCommands";
-import type { DesktopAgentKind } from "../../helpers/agentSettings";
 import { chatStore } from "../../store/chatStore";
 import type { AvailableModel, ChatMessage } from "../../store/workspaceStore";
 

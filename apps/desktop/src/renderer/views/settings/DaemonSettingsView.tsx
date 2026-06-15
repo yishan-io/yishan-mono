@@ -1,4 +1,16 @@
-import { Alert, Box, Button, Chip, CircularProgress, Dialog, DialogContent, DialogTitle, IconButton, Snackbar, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Snackbar,
+  Typography,
+} from "@mui/material";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPower, LuRefreshCw, LuX } from "react-icons/lu";
@@ -486,12 +498,7 @@ export function DaemonSettingsView() {
         }}
       />
 
-      <Dialog
-        open={isLogOpen}
-        onClose={handleCloseLog}
-        fullWidth
-        maxWidth="lg"
-      >
+      <Dialog open={isLogOpen} onClose={handleCloseLog} fullWidth maxWidth="lg">
         <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {t("settings.daemon.log.title")}
           <IconButton size="small" onClick={handleCloseLog}>
@@ -510,11 +517,12 @@ export function DaemonSettingsView() {
               {logEntries.map((entry, index) => {
                 const level = typeof entry.level === "string" ? entry.level : undefined;
                 const time = typeof entry.time === "string" ? entry.time : undefined;
-                const message = typeof entry.message === "string"
-                  ? entry.message
-                  : entry._raw
-                    ? String(entry._raw)
-                    : JSON.stringify(entry);
+                const message =
+                  typeof entry.message === "string"
+                    ? entry.message
+                    : entry._raw
+                      ? String(entry._raw)
+                      : JSON.stringify(entry);
 
                 const metadata = Object.entries(entry)
                   .filter(([key]) => key !== "level" && key !== "time" && key !== "message" && key !== "_raw")
@@ -530,9 +538,7 @@ export function DaemonSettingsView() {
                         ? "default"
                         : "info";
 
-                const formattedTime = time
-                  ? new Date(time).toLocaleString()
-                  : undefined;
+                const formattedTime = time ? new Date(time).toLocaleString() : undefined;
 
                 const entryKey = `${index}-${time ?? ""}-${level ?? ""}-${message.slice(0, 40)}`;
 
@@ -554,25 +560,49 @@ export function DaemonSettingsView() {
                     {formattedTime ? (
                       <Typography
                         variant="caption"
-                        sx={{ fontFamily: "monospace", whiteSpace: "nowrap", color: "text.secondary", flexShrink: 0, minWidth: 140, pt: "2px" }}
+                        sx={{
+                          fontFamily: "monospace",
+                          whiteSpace: "nowrap",
+                          color: "text.secondary",
+                          flexShrink: 0,
+                          minWidth: 140,
+                          pt: "2px",
+                        }}
                       >
                         {formattedTime}
                       </Typography>
                     ) : null}
                     {level ? (
-                      <Chip label={level.toUpperCase()} size="small" color={levelColor as "error" | "warning" | "default" | "info"} sx={{ height: 20, fontSize: "0.65rem", flexShrink: 0, mt: "1px" }} />
+                      <Chip
+                        label={level.toUpperCase()}
+                        size="small"
+                        color={levelColor as "error" | "warning" | "default" | "info"}
+                        sx={{ height: 20, fontSize: "0.65rem", flexShrink: 0, mt: "1px" }}
+                      />
                     ) : null}
                     <Box sx={{ minWidth: 0 }}>
                       <Typography
                         variant="caption"
-                        sx={{ fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all", lineHeight: 1.4 }}
+                        sx={{
+                          fontFamily: "monospace",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-all",
+                          lineHeight: 1.4,
+                        }}
                       >
                         {message}
                       </Typography>
                       {metadata ? (
                         <Typography
                           variant="caption"
-                          sx={{ fontFamily: "monospace", fontSize: "0.7rem", color: "text.disabled", whiteSpace: "pre-wrap", wordBreak: "break-all", display: "block" }}
+                          sx={{
+                            fontFamily: "monospace",
+                            fontSize: "0.7rem",
+                            color: "text.disabled",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-all",
+                            display: "block",
+                          }}
                         >
                           {metadata}
                         </Typography>

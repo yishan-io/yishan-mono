@@ -21,19 +21,9 @@ function createTestBranch(overrides?: Partial<PaneBranch>): PaneBranch {
 describe("SplitPaneContainer", () => {
   it("renders a single leaf pane", () => {
     const leaf = createLeaf("pane-root", ["tab-1", "tab-2"], "tab-1");
-    const renderPane = vi.fn((pane: PaneLeaf) => (
-      <div data-testid={`pane-${pane.id}`}>
-        {pane.tabIds.join(", ")}
-      </div>
-    ));
+    const renderPane = vi.fn((pane: PaneLeaf) => <div data-testid={`pane-${pane.id}`}>{pane.tabIds.join(", ")}</div>);
 
-    render(
-      <SplitPaneContainer
-        node={leaf}
-        renderPane={renderPane}
-        onSplitRatioChange={() => {}}
-      />,
-    );
+    render(<SplitPaneContainer node={leaf} renderPane={renderPane} onSplitRatioChange={() => {}} />);
 
     expect(renderPane).toHaveBeenCalledOnce();
     expect(screen.getByTestId("pane-pane-root")).toBeTruthy();
@@ -42,17 +32,9 @@ describe("SplitPaneContainer", () => {
 
   it("renders a horizontal split with two panes", () => {
     const branch = createTestBranch();
-    const renderPane = vi.fn((pane: PaneLeaf) => (
-      <div data-testid={`pane-${pane.id}`}>{pane.id}</div>
-    ));
+    const renderPane = vi.fn((pane: PaneLeaf) => <div data-testid={`pane-${pane.id}`}>{pane.id}</div>);
 
-    render(
-      <SplitPaneContainer
-        node={branch}
-        renderPane={renderPane}
-        onSplitRatioChange={() => {}}
-      />,
-    );
+    render(<SplitPaneContainer node={branch} renderPane={renderPane} onSplitRatioChange={() => {}} />);
 
     expect(renderPane).toHaveBeenCalledTimes(2);
     expect(screen.getByTestId("pane-pane-left")).toBeTruthy();
@@ -65,16 +47,10 @@ describe("SplitPaneContainer", () => {
       id: "branch-vertical",
       direction: "vertical",
     });
-    const renderPane = vi.fn((pane: PaneLeaf) => (
-      <div data-testid={`pane-${pane.id}`}>{pane.id}</div>
-    ));
+    const renderPane = vi.fn((pane: PaneLeaf) => <div data-testid={`pane-${pane.id}`}>{pane.id}</div>);
 
     const { container } = render(
-      <SplitPaneContainer
-        node={branch}
-        renderPane={renderPane}
-        onSplitRatioChange={() => {}}
-      />,
+      <SplitPaneContainer node={branch} renderPane={renderPane} onSplitRatioChange={() => {}} />,
     );
 
     expect(container.querySelector('[data-testid="split-branch-branch-vertical"]')).toBeTruthy();
@@ -102,16 +78,10 @@ describe("SplitPaneContainer", () => {
       second: innerBranch,
     };
 
-    const renderPane = vi.fn((pane: PaneLeaf) => (
-      <div data-testid={`pane-${pane.id}`}>{pane.id}</div>
-    ));
+    const renderPane = vi.fn((pane: PaneLeaf) => <div data-testid={`pane-${pane.id}`}>{pane.id}</div>);
 
     const { container } = render(
-      <SplitPaneContainer
-        node={outerBranch}
-        renderPane={renderPane}
-        onSplitRatioChange={() => {}}
-      />,
+      <SplitPaneContainer node={outerBranch} renderPane={renderPane} onSplitRatioChange={() => {}} />,
     );
 
     expect(renderPane).toHaveBeenCalledTimes(3);

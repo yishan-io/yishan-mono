@@ -16,11 +16,7 @@ const TERMINAL_SEARCH_OPTIONS = {
   incremental: true,
 };
 
-export function useTerminalSearchState({
-  searchInputRef,
-  xtermRef,
-  searchAddonRef,
-}: UseTerminalSearchStateInput) {
+export function useTerminalSearchState({ searchInputRef, xtermRef, searchAddonRef }: UseTerminalSearchStateInput) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 

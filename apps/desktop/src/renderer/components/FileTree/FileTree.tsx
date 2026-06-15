@@ -5,9 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isEditableTarget } from "../../shortcuts/editableTarget";
 import { FlatTreeRow } from "./FlatTreeRow";
 import { ROW_HEIGHT } from "./FlatTreeRow";
-import {
-  extractSourcePathsFromDataTransferAsync,
-} from "./dataTransfer";
+import { extractSourcePathsFromDataTransferAsync } from "./dataTransfer";
 import {
   collectAncestorDirectoryPaths,
   getEntryName,
@@ -15,12 +13,7 @@ import {
   resolveDestinationDirectoryPath,
   resolveUniqueChildName,
 } from "./treeUtils";
-import type {
-  EditingEntry,
-  FileTreeGitChangeKind,
-  FileTreeProps,
-  VisibleRow,
-} from "./types";
+import type { EditingEntry, FileTreeGitChangeKind, FileTreeProps, VisibleRow } from "./types";
 import { useFileTreeDragDrop } from "./useFileTreeDragDrop";
 import { useFileTreeKeyboard } from "./useFileTreeKeyboard";
 import { useVisibleFileTree } from "./useVisibleFileTree";
@@ -100,7 +93,11 @@ export function FileTree({
   const rowByPath = useMemo(() => {
     const map = new Map<string, { row: VisibleRow; index: number }>();
     for (let i = 0; i < visibleRows.length; i++) {
-      map.set(visibleRows[i]!.path, { row: visibleRows[i]!, index: i });
+      const row = visibleRows[i];
+      if (!row) {
+        continue;
+      }
+      map.set(row.path, { row, index: i });
     }
     return map;
   }, [visibleRows]);

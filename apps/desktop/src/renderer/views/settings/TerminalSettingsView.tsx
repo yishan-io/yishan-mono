@@ -6,8 +6,8 @@ import { StatusIndicator } from "../../components/StatusIndicator";
 import { SettingsCard, SettingsRows, SettingsSectionHeader, SettingsToggleRow } from "../../components/settings";
 import { MONOSPACE_SX } from "../../helpers/styles";
 import { useCommands } from "../../hooks/useCommands";
-import { layoutStore } from "../../store/settings/layoutStore";
 import type { TerminalSessionLifecycleEvent, TerminalSessionSummary } from "../../rpc/daemonTypes";
+import { layoutStore } from "../../store/settings/layoutStore";
 import { tabStore } from "../../store/tabStore";
 import { workspaceStore } from "../../store/workspaceStore";
 

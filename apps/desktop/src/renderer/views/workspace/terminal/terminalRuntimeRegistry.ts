@@ -601,20 +601,20 @@ function ensureXtermViewportStyle(): void {
   const style = document.createElement("style");
   style.id = XTERM_VIEWPORT_STYLE_ID;
   style.textContent = [
-    `[data-terminal-tab-id] {`,
-    `  overflow: hidden !important;`,
-    `}`,
-    `[data-terminal-tab-id] .xterm-screen {`,
+    "[data-terminal-tab-id] {",
+    "  overflow: hidden !important;",
+    "}",
+    "[data-terminal-tab-id] .xterm-screen {",
     `  width: calc(100% + ${XTERM_RIGHT_OVERSCAN_PX}px) !important;`,
     `  height: calc(100% + ${XTERM_BOTTOM_OVERSCAN_PX}px) !important;`,
-    `}`,
-    `[data-terminal-tab-id] .xterm-viewport {`,
-    `  overflow-y: scroll !important;`,
-    `  scrollbar-width: none !important;`,
-    `}`,
-    `[data-terminal-tab-id] .xterm-viewport::-webkit-scrollbar {`,
-    `  display: none !important;`,
-    `}`,
+    "}",
+    "[data-terminal-tab-id] .xterm-viewport {",
+    "  overflow-y: scroll !important;",
+    "  scrollbar-width: none !important;",
+    "}",
+    "[data-terminal-tab-id] .xterm-viewport::-webkit-scrollbar {",
+    "  display: none !important;",
+    "}",
   ].join("\n");
   document.head.appendChild(style);
 }

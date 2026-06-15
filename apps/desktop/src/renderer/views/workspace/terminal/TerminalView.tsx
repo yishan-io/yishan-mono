@@ -3,17 +3,15 @@ import type { SearchAddon } from "@xterm/addon-search";
 import type { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { memo, useCallback, useEffect, useRef } from "react";
-import { FloatingVoiceButton, type FloatingVoiceButtonHandle } from "../../../components/FloatingVoiceButton";
 import { writeTerminalInput } from "../../../commands/terminalCommands";
+import { FloatingVoiceButton, type FloatingVoiceButtonHandle } from "../../../components/FloatingVoiceButton";
 import { useCommands } from "../../../hooks/useCommands";
-import { layoutStore } from "../../../store/settings/layoutStore";
-import { keybindingSettingsStore } from "../../../store/settings/keybindingSettingsStore";
-import { getShortcutKeysById } from "../../../shortcuts/keybindings";
 import { useWorkspacePaneVisibilityContext } from "../../../hooks/useWorkspacePaneVisibility";
+import { getShortcutKeysById } from "../../../shortcuts/keybindings";
+import { keybindingSettingsStore } from "../../../store/settings/keybindingSettingsStore";
+import { layoutStore } from "../../../store/settings/layoutStore";
 import { VOICE_RECORD_REQUEST_EVENT } from "../RightPane/RightPaneTabBar";
-import { useTerminalSearchState } from "./useTerminalSearchState";
 import { TerminalSearchPanel } from "./TerminalSearchPanel";
-import { useTerminalFileDrop } from "./useTerminalFileDrop";
 import {
   attachTerminalRuntime,
   detachTerminalRuntime,
@@ -23,6 +21,8 @@ import {
   requestTerminalRuntimeFocus,
 } from "./terminalRuntimeRegistry";
 import { initTerminalSessionLifecycle } from "./terminalSessionService";
+import { useTerminalFileDrop } from "./useTerminalFileDrop";
+import { useTerminalSearchState } from "./useTerminalSearchState";
 
 type TerminalViewProps = {
   tabId: string;
@@ -39,7 +39,11 @@ type TerminalViewProps = {
  * 3. Detaches on unmount (terminal stays alive in offscreen parking area).
  * 4. Manages UI-only concerns: search panel, drag/drop overlay, focus, keyboard shortcuts.
  */
-export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey = 0, showVoiceButton = false }: TerminalViewProps) {
+export const TerminalView = memo(function TerminalView({
+  tabId,
+  focusRequestKey = 0,
+  showVoiceButton = false,
+}: TerminalViewProps) {
   const cmd = useCommands();
   const isVoiceInputEnabled = layoutStore((state) => state.isVoiceInputEnabled);
   const voiceAutoEnter = layoutStore((state) => state.voiceAutoEnter);
@@ -63,15 +67,18 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
     sessionIdRef.current = entry.sessionId;
   }
 
-  const handleVoiceText = useCallback(async (text: string) => {
-    const sessionId = getTerminalRuntime(tabId)?.sessionId ?? sessionIdRef.current;
-    if (!sessionId) {
-      throw new Error("Terminal session is not ready yet.");
-    }
+  const handleVoiceText = useCallback(
+    async (text: string) => {
+      const sessionId = getTerminalRuntime(tabId)?.sessionId ?? sessionIdRef.current;
+      if (!sessionId) {
+        throw new Error("Terminal session is not ready yet.");
+      }
 
-    const dataToWrite = voiceAutoEnter ? `${text}\r` : text;
-    await writeTerminalInput({ sessionId, data: dataToWrite });
-  }, [tabId, voiceAutoEnter]);
+      const dataToWrite = voiceAutoEnter ? `${text}\r` : text;
+      await writeTerminalInput({ sessionId, data: dataToWrite });
+    },
+    [tabId, voiceAutoEnter],
+  );
 
   // ─── Voice shortcut ──────────────────────────────────────────────────────────
 
@@ -282,7 +289,7 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
           }}
           onClose={closeSearchPanel}
         />
-       ) : null}
+      ) : null}
       <Box
         ref={placeholderRef}
         sx={{
@@ -293,7 +300,12 @@ export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey 
         }}
       />
       {isVoiceInputEnabled ? (
-        <FloatingVoiceButton ref={voiceButtonRef} onText={handleVoiceText} rightOffset={rightCollapsed ? 0 : rightWidth} hideIdleButton />
+        <FloatingVoiceButton
+          ref={voiceButtonRef}
+          onText={handleVoiceText}
+          rightOffset={rightCollapsed ? 0 : rightWidth}
+          hideIdleButton
+        />
       ) : null}
     </Box>
   );

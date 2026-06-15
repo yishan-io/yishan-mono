@@ -1,9 +1,9 @@
-import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { app } from "electron";
-import { isDevMode } from "../runtime/environment";
 import type { BrowserHistoryEntry, BrowserHistoryGroup } from "../ipc";
+import { isDevMode } from "../runtime/environment";
 
 const MAX_ENTRIES = 500;
 const PRUNE_THRESHOLD = 1000;
@@ -59,7 +59,7 @@ async function pruneIfNeeded(entries: BrowserHistoryEntry[]): Promise<void> {
   }
   const pruned = entries.slice(0, MAX_ENTRIES);
   const filePath = resolveHistoryFilePath();
-  const lines = pruned.map((e) => JSON.stringify(e)).join("\n") + "\n";
+  const lines = `${pruned.map((e) => JSON.stringify(e)).join("\n")}\n`;
   await writeFile(filePath, lines, "utf8");
 }
 
@@ -81,7 +81,7 @@ export async function appendBrowserHistoryEntry(entry: BrowserHistoryEntry): Pro
   if (!existsSync(dir)) {
     await mkdir(dir, { recursive: true });
   }
-  await appendFile(filePath, JSON.stringify(entry) + "\n", "utf8");
+  await appendFile(filePath, `${JSON.stringify(entry)}\n`, "utf8");
   appendCountSincePruneCheck += 1;
   const shouldCheckByCount = appendCountSincePruneCheck >= PRUNE_CHECK_APPEND_INTERVAL;
   const now = Date.now();

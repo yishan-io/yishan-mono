@@ -21,12 +21,12 @@ import { LuArrowRight, LuCheck, LuChevronDown, LuCircleDashed, LuRefreshCw, LuX 
 import type { WorkspacePullRequestRecord } from "../../../api/types";
 import { openLink } from "../../../commands/appCommands";
 import { closePullRequest, mergePullRequest } from "../../../commands/gitCommands";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { useCommands } from "../../../hooks/useCommands";
 import { BranchBadge } from "../../../components/BranchBadge";
 import { PaneLoadingBar } from "../../../components/PaneLoadingBar";
 import { PullRequestIcon } from "../../../components/PullRequestIcon";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { livePrStatus } from "../../../helpers/pullRequestUtils";
+import { useCommands } from "../../../hooks/useCommands";
 import type { DaemonWorkspacePullRequest, DaemonWorkspacePullRequestCheck } from "../../../rpc/daemonTypes";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { useWorkspacePullRequestState } from "./useWorkspacePullRequestState";
@@ -113,7 +113,9 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
   const { t } = useTranslation();
   const { refreshWorkspacePullRequest } = useCommands();
   const { selectedWorkspaceId, pullRequest, historicalPullRequests, isLoading } = useWorkspacePullRequestState(active);
-  const worktreePath = workspaceStore((state) => state.workspaces.find((w) => w.id === state.selectedWorkspaceId)?.worktreePath);
+  const worktreePath = workspaceStore(
+    (state) => state.workspaces.find((w) => w.id === state.selectedWorkspaceId)?.worktreePath,
+  );
 
   const hasLivePr = Boolean(pullRequest);
   const liveStatus = pullRequest ? livePrStatus(pullRequest) : undefined;
@@ -122,9 +124,7 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
   const livePrId = pullRequest?.number != null ? String(pullRequest.number) : null;
 
   // If no live daemon PR, promote the latest open PR from history as the current PR.
-  const bestOpenHistoryPr = !hasLivePr
-    ? (historicalPullRequests ?? []).find((pr) => pr.state === "open")
-    : undefined;
+  const bestOpenHistoryPr = !hasLivePr ? (historicalPullRequests ?? []).find((pr) => pr.state === "open") : undefined;
 
   const pastPullRequests = (historicalPullRequests ?? []).filter(
     (pr) => pr.prId !== livePrId && (!bestOpenHistoryPr || pr.id !== bestOpenHistoryPr.id),
@@ -137,9 +137,8 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
   const prBranch = pullRequest?.branch ?? bestOpenHistoryPr?.branch ?? undefined;
   const prBaseBranch = pullRequest?.baseBranch ?? bestOpenHistoryPr?.baseBranch ?? undefined;
   const mergeEnabled = pullRequest ? canMergePR(pullRequest) : true;
-  const prOpen = hasLivePr && pullRequest
-    ? !pullRequest.complete && liveStatus !== "closed"
-    : Boolean(bestOpenHistoryPr);
+  const prOpen =
+    hasLivePr && pullRequest ? !pullRequest.complete && liveStatus !== "closed" : Boolean(bestOpenHistoryPr);
 
   const [mergeAnchorEl, setMergeAnchorEl] = useState<null | HTMLElement>(null);
   const [mergeMethod, setMergeMethod] = useState<MergeMethod>("merge");
@@ -199,7 +198,20 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
     } finally {
       setIsMerging(false);
     }
-  }, [prNumber, selectedWorkspaceId, worktreePath, mergeMethod, deleteBranch, isMerging, hasLivePr, pullRequest, prTitle, prUrl, prBranch, prBaseBranch]);
+  }, [
+    prNumber,
+    selectedWorkspaceId,
+    worktreePath,
+    mergeMethod,
+    deleteBranch,
+    isMerging,
+    hasLivePr,
+    pullRequest,
+    prTitle,
+    prUrl,
+    prBranch,
+    prBaseBranch,
+  ]);
 
   const handleClose = useCallback(async () => {
     if (!prNumber || !selectedWorkspaceId || !worktreePath || isClosing) return;
@@ -235,7 +247,18 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
     } finally {
       setIsClosing(false);
     }
-  }, [prNumber, selectedWorkspaceId, worktreePath, isClosing, hasLivePr, pullRequest, prTitle, prUrl, prBranch, prBaseBranch]);
+  }, [
+    prNumber,
+    selectedWorkspaceId,
+    worktreePath,
+    isClosing,
+    hasLivePr,
+    pullRequest,
+    prTitle,
+    prUrl,
+    prBranch,
+    prBaseBranch,
+  ]);
 
   const handleRefresh = useCallback(async () => {
     if (!selectedWorkspaceId || !worktreePath || isRefreshing) {
@@ -265,7 +288,12 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
           <Typography variant="body2" sx={{ color: "#999", textAlign: "center" }}>
             {t("workspace.pr.empty")}
           </Typography>
-          <Button variant="outlined" size="small" onClick={() => void handleRefresh()} disabled={isRefreshing || !worktreePath}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => void handleRefresh()}
+            disabled={isRefreshing || !worktreePath}
+          >
             {isRefreshing ? t("workspace.pr.refreshing") : t("workspace.pr.refresh")}
           </Button>
           {actionError ? <Alert severity="error">{actionError}</Alert> : null}
@@ -282,7 +310,7 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
           <>
             <Stack spacing={0.75}>
               <Stack direction="row" spacing={1} alignItems="center">
-                <PullRequestIcon state={hasLivePr && pullRequest ? liveStatus ?? "open" : "open"} size={18} />
+                <PullRequestIcon state={hasLivePr && pullRequest ? (liveStatus ?? "open") : "open"} size={18} />
                 <Typography variant="subtitle1" noWrap sx={{ flex: 1, minWidth: 0 }}>
                   #{prNumber}
                   {prTitle ? ` ${prTitle}` : ""}
@@ -437,25 +465,13 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
                     anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
                     transformOrigin={{ vertical: "top", horizontal: "left" }}
                   >
-                    <MenuItem
-                      selected={mergeMethod === "merge"}
-                      onClick={() => selectMergeMethod("merge")}
-                      dense
-                    >
+                    <MenuItem selected={mergeMethod === "merge"} onClick={() => selectMergeMethod("merge")} dense>
                       {t("workspace.pr.mergeCommit")}
                     </MenuItem>
-                    <MenuItem
-                      selected={mergeMethod === "squash"}
-                      onClick={() => selectMergeMethod("squash")}
-                      dense
-                    >
+                    <MenuItem selected={mergeMethod === "squash"} onClick={() => selectMergeMethod("squash")} dense>
                       {t("workspace.pr.squashMerge")}
                     </MenuItem>
-                    <MenuItem
-                      selected={mergeMethod === "rebase"}
-                      onClick={() => selectMergeMethod("rebase")}
-                      dense
-                    >
+                    <MenuItem selected={mergeMethod === "rebase"} onClick={() => selectMergeMethod("rebase")} dense>
                       {t("workspace.pr.rebaseMerge")}
                     </MenuItem>
                   </Menu>
@@ -476,8 +492,8 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
                       onChange={(_, checked) => setDeleteBranch(checked)}
                       disabled={!mergeEnabled || isMerging}
                       sx={{ py: 0 }}
-                />
-                }
+                    />
+                  }
                   label={t("workspace.pr.deleteBranch")}
                   sx={{ mx: 0, "& .MuiFormControlLabel-label": { fontSize: 12 } }}
                 />
@@ -495,7 +511,7 @@ export function PullRequestTabView({ active = true }: { active?: boolean }) {
         {/* ── Historical PRs (from api-service) ── */}
         {hasHistory ? (
           <>
-            {(pullRequest || bestOpenHistoryPr) ? <Divider /> : null}
+            {pullRequest || bestOpenHistoryPr ? <Divider /> : null}
             <Stack spacing={0.5}>
               <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
                 {t("workspace.pr.history")}

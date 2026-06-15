@@ -53,7 +53,10 @@ vi.mock("@tanstack/react-virtual", () => ({
 
 vi.mock("../../../commands/fileCommands", () => ({
   listFiles: (...args: unknown[]) => listFiles(...args),
-  listFilesBatch: async (input: { workspaceId: string; requests: Array<{ relativePath?: string; recursive?: boolean }> }) => {
+  listFilesBatch: async (input: {
+    workspaceId: string;
+    requests: Array<{ relativePath?: string; recursive?: boolean }>;
+  }) => {
     const results = await Promise.all(
       input.requests.map(async (request) => {
         const response = await listFiles({

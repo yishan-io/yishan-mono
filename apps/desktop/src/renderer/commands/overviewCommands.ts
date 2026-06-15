@@ -25,7 +25,9 @@ export async function refreshOverviewTokenUsage(): Promise<void> {
 
   try {
     const result = await loadOverviewTokenUsage(orgId, timeRange, selectedProjectId, granularity);
-    overviewStore.getState().setTokenUsageData(result.series, result.cachedTotal, result.cachedWriteTotal, result.uncachedTotal);
+    overviewStore
+      .getState()
+      .setTokenUsageData(result.series, result.cachedTotal, result.cachedWriteTotal, result.uncachedTotal);
     overviewStore.getState().setTokenUsageLoadState("loaded");
   } catch (error) {
     overviewStore.getState().setTokenUsageLoadState("error", getErrorMessage(error));

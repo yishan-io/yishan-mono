@@ -163,7 +163,6 @@ describe("TerminalSessionOrchestrator", () => {
       exited: false,
     });
     expect(commands.createTerminalSession).toHaveBeenCalledWith({
-
       workspaceId: "workspace-1",
       tabId: "tab-2",
       paneId: "pane-tab-2",

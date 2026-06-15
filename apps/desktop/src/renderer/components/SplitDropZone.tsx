@@ -4,10 +4,12 @@ import type { SplitDirection } from "../store/split-pane";
 
 export type SplitDropRegion = "left" | "right" | "top" | "bottom" | "center" | null;
 
-export type SplitDropResult = {
-  direction: SplitDirection;
-  placement: "first" | "second";
-} | { center: true };
+export type SplitDropResult =
+  | {
+      direction: SplitDirection;
+      placement: "first" | "second";
+    }
+  | { center: true };
 
 /** Maps a drop region to the split parameters. */
 export function resolveDropResult(region: SplitDropRegion): SplitDropResult | null {
@@ -88,7 +90,8 @@ export function SplitDropZone({ paneId, active, onDrop, children }: SplitDropZon
       event.preventDefault();
       event.stopPropagation();
       const region = resolveRegion(event, event.currentTarget);
-      const draggedTabId = event.dataTransfer.getData("application/x-tab-id") || event.dataTransfer.getData("text/plain");
+      const draggedTabId =
+        event.dataTransfer.getData("application/x-tab-id") || event.dataTransfer.getData("text/plain");
       onDrop(paneId, region, draggedTabId);
       setActiveRegion(null);
     },

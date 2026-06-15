@@ -4,7 +4,15 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WorkspacePaneVisibilityProvider } from "../../hooks/useWorkspacePaneVisibility";
 import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "../../store/settings/agentSettingsStore";
+import type { SplitPaneNode } from "../../store/split-pane";
 import { MainPaneView } from "./MainPaneView";
+
+type MockLeafPane = {
+  kind: "leaf";
+  id: string;
+  tabIds: string[];
+  selectedTabId: string;
+};
 
 const mocked = vi.hoisted(() => {
   const stateRef: { current: Record<string, unknown> } = {
@@ -56,7 +64,8 @@ vi.mock("../../store/chatStore", () => ({
   ) =>
     selector({
       workspaceUnreadToneByWorkspaceId:
-        (mocked.stateRef.current.workspaceUnreadToneByWorkspaceId as Record<string, "success" | "error"> | undefined) ?? {},
+        (mocked.stateRef.current.workspaceUnreadToneByWorkspaceId as Record<string, "success" | "error"> | undefined) ??
+        {},
       workspaceAgentStatusByWorkspaceId:
         (mocked.stateRef.current.workspaceAgentStatusByWorkspaceId as
           | Record<string, "running" | "waiting_input" | "idle">
@@ -177,8 +186,12 @@ vi.mock("../../components/SplitPaneContainer", () => ({
     renderPane: (pane: { id: string; tabIds: string[]; selectedTabId: string }) => React.ReactNode;
   }) => {
     // For a leaf, render the pane directly
-    if (node.kind === "leaf") {
-      return <div data-testid="split-container">{renderPane(node as any)}</div>;
+    if (node.kind === "leaf" && node.tabIds && typeof node.selectedTabId === "string") {
+      return (
+        <div data-testid="split-container">
+          {renderPane({ id: node.id, tabIds: node.tabIds, selectedTabId: node.selectedTabId })}
+        </div>
+      );
     }
     // For a branch, render both children
     return <div data-testid="split-container">split-branch</div>;
@@ -214,13 +227,11 @@ vi.mock("./RightPane/RightPaneTabBar", () => ({
 
 vi.mock("../../store/splitPaneStore", () => {
   // Builds a root pane for a given workspace from the current test state.
-  function buildRootPaneForWorkspace(workspaceId: string) {
+  function buildRootPaneForWorkspace(workspaceId: string): MockLeafPane {
     const state = mocked.stateRef.current as Record<string, unknown>;
     const tabs = (state.tabs ?? []) as Array<{ id: string; workspaceId: string }>;
     const selectedTabId = (state.selectedTabId ?? "") as string;
-    const workspaceTabIds = tabs
-      .filter((tab) => tab.workspaceId === workspaceId)
-      .map((tab) => tab.id);
+    const workspaceTabIds = tabs.filter((tab) => tab.workspaceId === workspaceId).map((tab) => tab.id);
     return {
       kind: "leaf" as const,
       id: "root-pane",
@@ -233,7 +244,7 @@ vi.mock("../../store/splitPaneStore", () => {
     const state = mocked.stateRef.current as Record<string, unknown>;
     const tabs = (state.tabs ?? []) as Array<{ id: string; workspaceId: string }>;
     const workspaceIds = new Set(tabs.map((tab) => tab.workspaceId));
-    const result: Record<string, { root: any; activePaneId: string }> = {};
+    const result: Record<string, { root: SplitPaneNode; activePaneId: string }> = {};
     for (const wsId of workspaceIds) {
       result[wsId] = { root: buildRootPaneForWorkspace(wsId), activePaneId: "root-pane" };
     }
@@ -242,12 +253,13 @@ vi.mock("../../store/splitPaneStore", () => {
 
   return {
     splitPaneStore: Object.assign(
-      (selector: (state: any) => any) => {
+      (selector: (state: { layoutByWorkspaceId: ReturnType<typeof buildLayoutByWorkspaceId> }) => unknown) => {
         return selector({ layoutByWorkspaceId: buildLayoutByWorkspaceId() });
       },
       {
         getState: () => {
-          const selectedWorkspaceId = (mocked.stateRef.current as Record<string, unknown>).selectedWorkspaceId as string ?? "";
+          const selectedWorkspaceId =
+            ((mocked.stateRef.current as Record<string, unknown>).selectedWorkspaceId as string) ?? "";
           const rootPane = buildRootPaneForWorkspace(selectedWorkspaceId);
           return {
             layoutByWorkspaceId: buildLayoutByWorkspaceId(),

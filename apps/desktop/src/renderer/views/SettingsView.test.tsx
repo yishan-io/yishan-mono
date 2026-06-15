@@ -4,8 +4,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppThemePreferenceProvider } from "../hooks/useThemePreference";
-import { LAYOUT_STORE_STORAGE_KEY, layoutStore } from "../store/settings/layoutStore";
 import { sessionStore } from "../store/sessionStore";
+import { LAYOUT_STORE_STORAGE_KEY, layoutStore } from "../store/settings/layoutStore";
 import { SettingsView } from "./SettingsView";
 
 vi.mock("react-i18next", () => ({
@@ -167,7 +167,9 @@ describe("SettingsView", () => {
     );
 
     fireEvent.mouseDown(screen.getByLabelText("settings.appearance.markdown.defaultViewMode.label"));
-    fireEvent.click(screen.getByRole("option", { name: "settings.appearance.markdown.defaultViewMode.options.preview" }));
+    fireEvent.click(
+      screen.getByRole("option", { name: "settings.appearance.markdown.defaultViewMode.options.preview" }),
+    );
 
     expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownDefaultViewMode":"preview"');
   });

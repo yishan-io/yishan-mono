@@ -37,7 +37,11 @@ export type UseVoiceRecordingResult = {
  * Manages the voice recording state machine: start → recording → ready/transcribing → idle.
  * Handles MediaRecorder lifecycle, timers, and transcription API calls.
  */
-export function useVoiceRecording({ onText, disabled = false, disabledMessage }: UseVoiceRecordingInput): UseVoiceRecordingResult {
+export function useVoiceRecording({
+  onText,
+  disabled = false,
+  disabledMessage,
+}: UseVoiceRecordingInput): UseVoiceRecordingResult {
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [recordedAudio, setRecordedAudio] = useState<{ audio: Blob; durationSeconds: number } | null>(null);
@@ -226,7 +230,7 @@ export function useVoiceRecording({ onText, disabled = false, disabledMessage }:
       setRecordingState("idle");
       setErrorMessage(getErrorMessage(error));
     }
-  }, [cleanupRecording, clearRecordedAudio, disabled, disabledMessage, stopRecording]);
+  }, [cleanupRecording, clearRecordedAudio, disabled, disabledMessage, stopRecording, transcribeRecording]);
 
   const handleSubmit = useCallback(async () => {
     if (recordingState === "recording") {

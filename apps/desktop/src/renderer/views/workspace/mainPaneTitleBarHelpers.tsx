@@ -19,7 +19,11 @@ export function resolvePrimaryWorkspaceId(project: WorkspaceProjectRecord | unde
 }
 
 /** Renders the same workspace kind icon used by left-pane workspace rows. */
-export function renderWorkspaceKindIcon(workspace: WorkspaceItem | undefined, isPrimaryWorkspace: boolean, size: number) {
+export function renderWorkspaceKindIcon(
+  workspace: WorkspaceItem | undefined,
+  isPrimaryWorkspace: boolean,
+  size: number,
+) {
   if (workspace?.kind === "local" || isPrimaryWorkspace) {
     return <HiOutlineCube size={size} />;
   }

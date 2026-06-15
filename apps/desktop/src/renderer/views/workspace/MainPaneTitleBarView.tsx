@@ -12,14 +12,14 @@ import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneV
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { chatStore } from "../../store/chatStore";
 import { workspaceStore } from "../../store/workspaceStore";
+import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";
+import { renderWorkspaceKindIcon, resolvePrimaryWorkspaceId } from "./mainPaneTitleBarHelpers";
 import {
   AddProjectCommandDialog,
   ProjectCommandsMenu,
   RepoSelectorMenu,
   WorkspaceSelectorMenu,
 } from "./mainPaneTitleBarMenus";
-import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";
-import { renderWorkspaceKindIcon, resolvePrimaryWorkspaceId } from "./mainPaneTitleBarHelpers";
 
 /** Renders the main pane title bar with repo/workspace selectors and pane toggle controls. */
 export function MainPaneTitleBarView() {
@@ -72,7 +72,10 @@ export function MainPaneTitleBarView() {
   const trimmedNewCommandNameValue = newCommandNameValue.trim();
   const trimmedNewCommandLineValue = newCommandLineValue.trim();
   const isAddCommandDisabled =
-    !selectedRepo || trimmedNewCommandNameValue.length === 0 || trimmedNewCommandLineValue.length === 0 || isSavingCommand;
+    !selectedRepo ||
+    trimmedNewCommandNameValue.length === 0 ||
+    trimmedNewCommandLineValue.length === 0 ||
+    isSavingCommand;
   const resolveWorkspaceIconColor = (
     workspaceId: string,
   ): "warning.main" | "error.main" | "success.main" | "text.secondary" => {

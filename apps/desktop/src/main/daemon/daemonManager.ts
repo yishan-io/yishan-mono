@@ -86,15 +86,8 @@ function resolveCliOnPath(): string | undefined {
   const home = process.env.HOME || process.env.USERPROFILE || "";
   const commonPaths =
     process.platform === "win32"
-      ? [
-          resolve(home, "AppData", "Local", "Yishan", "bin", binaryName),
-          resolve(home, ".local", "bin", binaryName),
-        ]
-      : [
-          resolve(home, ".local", "bin", binaryName),
-          `/usr/local/bin/${binaryName}`,
-          `/opt/homebrew/bin/${binaryName}`,
-        ];
+      ? [resolve(home, "AppData", "Local", "Yishan", "bin", binaryName), resolve(home, ".local", "bin", binaryName)]
+      : [resolve(home, ".local", "bin", binaryName), `/usr/local/bin/${binaryName}`, `/opt/homebrew/bin/${binaryName}`];
   for (const candidate of commonPaths) {
     if (candidate.startsWith(bundledDir)) continue;
     if (existsSync(candidate)) {

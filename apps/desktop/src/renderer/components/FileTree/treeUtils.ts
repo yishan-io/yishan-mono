@@ -14,10 +14,7 @@ export function sortNodes(a: TreeNode, b: TreeNode): number {
 }
 
 /** Computes visible rows from a flat file path list + expanded directories, without building a tree. */
-export function computeVisibleRows(
-  files: string[],
-  expandedPathSet: Set<string>,
-): VisibleRow[] {
+export function computeVisibleRows(files: string[], expandedPathSet: Set<string>): VisibleRow[] {
   type Node = { name: string; path: string; isDirectory: boolean; children: Node[] };
   const root: Node = { name: "", path: "", isDirectory: true, children: [] };
 
@@ -29,7 +26,10 @@ export function computeVisibleRows(
 
     let current = root;
     for (let i = 0; i < parts.length; i++) {
-      const part = parts[i]!;
+      const part = parts[i];
+      if (!part) {
+        continue;
+      }
       const childPath = parts.slice(0, i + 1).join("/");
       let child = current.children.find((c) => c.name === part);
       if (!child) {

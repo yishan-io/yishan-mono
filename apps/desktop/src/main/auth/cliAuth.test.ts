@@ -7,9 +7,11 @@ vi.mock("../runtime/environment", () => ({
 
 describe("cliAuth", () => {
   it("returns authenticated status when CLI status reports signed-in state", async () => {
-    const run = vi
-      .fn()
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '{"authenticated":true,"expiresAt":"2030-01-01T00:00:00.000Z"}', stderr: "" });
+    const run = vi.fn().mockResolvedValueOnce({
+      exitCode: 0,
+      stdout: '{"authenticated":true,"expiresAt":"2030-01-01T00:00:00.000Z"}',
+      stderr: "",
+    });
 
     const status = await getAuthStatus({ run });
 
@@ -34,9 +36,7 @@ describe("cliAuth", () => {
   });
 
   it("skips login command when status already authenticated", async () => {
-    const run = vi
-      .fn()
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '{"authenticated":true}', stderr: "" });
+    const run = vi.fn().mockResolvedValueOnce({ exitCode: 0, stdout: '{"authenticated":true}', stderr: "" });
 
     const result = await login({ run });
 

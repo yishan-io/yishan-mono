@@ -1,6 +1,6 @@
 import type { ExternalClipboardReadOutcome, WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
-import type { ClipboardFilePayload } from "./clipboardSourceResolvers";
 import { generateId } from "../../../helpers/generateId";
+import type { ClipboardFilePayload } from "./clipboardSourceResolvers";
 
 export const LARGE_FILE_OPEN_THRESHOLD_BYTES = 2 * 1024 * 1024;
 

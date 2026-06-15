@@ -1,9 +1,21 @@
-import { Box, IconButton, InputAdornment, ListItemIcon, ListItemText, MenuList, MenuItem, Paper, Popper, TextField, Tooltip } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  InputAdornment,
+  ListItemIcon,
+  ListItemText,
+  MenuItem,
+  MenuList,
+  Paper,
+  Popper,
+  TextField,
+  Tooltip,
+} from "@mui/material";
 import type { FormEvent } from "react";
 import { LuArrowLeft, LuArrowRight, LuGlobe, LuLock, LuLockOpen, LuMousePointer2, LuRefreshCcw } from "react-icons/lu";
 import { RxExternalLink } from "react-icons/rx";
-import { openExternalUrl } from "../../../commands/appCommands";
 import type { BrowserHistoryGroup } from "../../../../main/ipc";
+import { openExternalUrl } from "../../../commands/appCommands";
 
 type UrlBarProps = {
   displayUrl: string;
@@ -103,7 +115,12 @@ export function UrlBar({
           },
         }}
       />
-      <Popper open={urlFocused && historyGroups.length > 0} anchorEl={textFieldRef.current} placement="bottom-start" style={{ zIndex: 1300 }}>
+      <Popper
+        open={urlFocused && historyGroups.length > 0}
+        anchorEl={textFieldRef.current}
+        placement="bottom-start"
+        style={{ zIndex: 1300 }}
+      >
         <Paper
           sx={{
             mt: 0.5,
@@ -126,15 +143,37 @@ export function UrlBar({
                 return null;
               }
               return [
-                <MenuItem key={`header-${group.host}`} disabled sx={{ opacity: 1, fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, minHeight: 28 }}>
+                <MenuItem
+                  key={`header-${group.host}`}
+                  disabled
+                  sx={{
+                    opacity: 1,
+                    fontWeight: 600,
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    minHeight: 28,
+                  }}
+                >
                   <ListItemIcon sx={{ minWidth: 28 }}>
                     {group.faviconUrl ? (
-                      <img src={group.faviconUrl} alt="" width={14} height={14} style={{ objectFit: "contain" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                      <img
+                        src={group.faviconUrl}
+                        alt=""
+                        width={14}
+                        height={14}
+                        style={{ objectFit: "contain" }}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
                     ) : (
                       <LuGlobe size={13} />
                     )}
                   </ListItemIcon>
-                  <Box sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{group.host}</Box>
+                  <Box sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {group.host}
+                  </Box>
                 </MenuItem>,
                 ...entries.map((entry) => {
                   const flatIdx = filteredHistory.indexOf(entry);
@@ -153,8 +192,19 @@ export function UrlBar({
                         primary={entry.title}
                         secondary={entry.url}
                         sx={{ minWidth: 0 }}
-                        primaryTypographyProps={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                        secondaryTypographyProps={{ fontSize: 11, color: "text.disabled", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        primaryTypographyProps={{
+                          fontSize: 13,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                        secondaryTypographyProps={{
+                          fontSize: 11,
+                          color: "text.disabled",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
                       />
                     </MenuItem>
                   );
@@ -169,7 +219,11 @@ export function UrlBar({
           aria-label="Select element on page"
           onClick={onToggleInspect}
           color={inspecting ? "primary" : "default"}
-          sx={inspecting ? { bgcolor: "primary.main", color: "primary.contrastText", "&:hover": { bgcolor: "primary.dark" } } : undefined}
+          sx={
+            inspecting
+              ? { bgcolor: "primary.main", color: "primary.contrastText", "&:hover": { bgcolor: "primary.dark" } }
+              : undefined
+          }
         >
           <LuMousePointer2 size={14} />
         </IconButton>

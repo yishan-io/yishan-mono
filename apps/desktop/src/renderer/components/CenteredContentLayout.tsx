@@ -28,12 +28,7 @@ export type CenteredContentLayoutProps = {
  * </CenteredContentLayout>
  * ```
  */
-export function CenteredContentLayout({
-  children,
-  maxWidth = 460,
-  px = 3,
-  className,
-}: CenteredContentLayoutProps) {
+export function CenteredContentLayout({ children, maxWidth = 460, px = 3, className }: CenteredContentLayoutProps) {
   return (
     <Box
       className={className}
@@ -47,9 +42,7 @@ export function CenteredContentLayout({
         userSelect: "none",
       }}
     >
-      <Box sx={{ width: "100%", maxWidth }}>
-        {children}
-      </Box>
+      <Box sx={{ width: "100%", maxWidth }}>{children}</Box>
     </Box>
   );
 }

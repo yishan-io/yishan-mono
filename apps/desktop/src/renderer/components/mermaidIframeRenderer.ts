@@ -150,7 +150,10 @@ class MermaidIframeRenderer {
 
         // Render response
         if (data.id && this.pendingRenders.has(data.id)) {
-          const pending = this.pendingRenders.get(data.id)!;
+          const pending = this.pendingRenders.get(data.id);
+          if (!pending) {
+            return;
+          }
           this.pendingRenders.delete(data.id);
           clearTimeout(pending.timer);
 
@@ -179,10 +182,7 @@ class MermaidIframeRenderer {
    * Renders a mermaid diagram in the hidden iframe and returns the SVG string.
    * The main thread is not blocked during rendering.
    */
-  async render(
-    code: string,
-    options: { isDark: boolean; fontFamily: string },
-  ): Promise<string> {
+  async render(code: string, options: { isDark: boolean; fontFamily: string }): Promise<string> {
     await this.ensureIframe();
 
     const id = `mr-${++this.nextId}`;

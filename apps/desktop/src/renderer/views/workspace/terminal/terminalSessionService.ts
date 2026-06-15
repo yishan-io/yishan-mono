@@ -10,7 +10,11 @@ import {
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import { tabStore } from "../../../store/tabStore";
 import type { WorkspaceTab } from "../../../store/types";
-import { shouldClearTerminalOutputShortcut, shouldReleaseCommandWForTabCloseShortcut, shouldReleaseWorkspaceNavigationShortcut } from "./terminalKeyboardUtils";
+import {
+  shouldClearTerminalOutputShortcut,
+  shouldReleaseCommandWForTabCloseShortcut,
+  shouldReleaseWorkspaceNavigationShortcut,
+} from "./terminalKeyboardUtils";
 import {
   ensureTerminalRuntime,
   getActiveTerminalRuntimes,

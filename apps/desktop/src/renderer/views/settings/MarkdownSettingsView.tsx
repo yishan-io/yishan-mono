@@ -1,6 +1,11 @@
 import { MenuItem } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { SettingsCard, SettingsCompactSelect, SettingsControlRow, SettingsSectionHeader } from "../../components/settings";
+import {
+  SettingsCard,
+  SettingsCompactSelect,
+  SettingsControlRow,
+  SettingsSectionHeader,
+} from "../../components/settings";
 import {
   type MarkdownDefaultViewMode,
   type MarkdownPreviewFontSize,

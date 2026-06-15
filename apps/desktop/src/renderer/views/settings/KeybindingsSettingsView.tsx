@@ -2,11 +2,11 @@ import { Alert, Box, Button, Stack, SvgIcon, Tooltip, Typography } from "@mui/ma
 import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { HotkeyDisplay } from "../../components/KeybindingDisplay";
+import { SettingsSectionHeader } from "../../components/settings";
 import { getRendererPlatform } from "../../helpers/platform";
 import { detectShortcutConflicts, normalizeKeysString } from "../../shortcuts/customKeybindings";
 import { getShortcutDefinitions, getSupportedKeyBindings } from "../../shortcuts/keybindings";
 import { keybindingSettingsStore } from "../../store/settings/keybindingSettingsStore";
-import { SettingsSectionHeader } from "../../components/settings";
 
 type EditingState = {
   shortcutId: string;
@@ -199,7 +199,8 @@ export function KeybindingsSettingsView() {
 
     const pendingCombos = new Set(normalized.split(","));
     // descriptionKey of the action being edited (the "source")
-    const editingDescKey = definitions.find((d) => d.id === editingState.shortcutId)?.descriptionKey ?? editingState.shortcutId;
+    const editingDescKey =
+      definitions.find((d) => d.id === editingState.shortcutId)?.descriptionKey ?? editingState.shortcutId;
 
     const result = new Map<string, string>();
     for (const definition of definitions) {
@@ -250,7 +251,9 @@ export function KeybindingsSettingsView() {
         </Button>
       </Stack>
 
-      <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden", bgcolor: "background.default" }}>
+      <Box
+        sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden", bgcolor: "background.default" }}
+      >
         <Box
           sx={{
             display: "grid",
@@ -281,9 +284,10 @@ export function KeybindingsSettingsView() {
           const hasPendingConflict = pendingConflictIds.has(binding.id);
           const isEditing = editingState?.shortcutId === binding.id;
           const capturedKeys = isEditing && editingState.keys ? toDisplayKeysForCombo(editingState.keys) : null;
-          const isCapturedConflict = isEditing && editingState.keys
-            ? Boolean(normalizeKeysString(editingState.keys)) && pendingConflictIds.size > 0
-            : false;
+          const isCapturedConflict =
+            isEditing && editingState.keys
+              ? Boolean(normalizeKeysString(editingState.keys)) && pendingConflictIds.size > 0
+              : false;
 
           // Tooltip for the row icon: "Conflicts with: <editing action name>"
           const pendingConflictSource = hasPendingConflict ? pendingConflictMap.get(binding.id) : undefined;
@@ -292,9 +296,10 @@ export function KeybindingsSettingsView() {
             : "";
 
           // Tooltip for the capture box icon: "Conflicts with: A, B, ..."
-          const captureConflictTooltip = captureConflictNames.length > 0
-            ? t("keybindings.captureConflict", { actions: captureConflictNames.map((k) => t(k)).join(", ") })
-            : "";
+          const captureConflictTooltip =
+            captureConflictNames.length > 0
+              ? t("keybindings.captureConflict", { actions: captureConflictNames.map((k) => t(k)).join(", ") })
+              : "";
 
           return (
             <Box
@@ -336,9 +341,9 @@ export function KeybindingsSettingsView() {
               {isEditing ? (
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Box
+                    component="button"
+                    type="button"
                     ref={captureBoxRef}
-                    tabIndex={0}
-                    role="button"
                     aria-label={t("keybindings.inputHint")}
                     sx={{
                       minWidth: 180,

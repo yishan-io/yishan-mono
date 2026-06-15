@@ -2,7 +2,7 @@ import { Box } from "@mui/material";
 import { type FormEvent, useCallback, useMemo, useRef } from "react";
 import { LuWrench } from "react-icons/lu";
 import { useCommands } from "../../../hooks/useCommands";
-import { normalizeUrl } from "./normalizeUrl";
+import { tabStore } from "../../../store/tabStore";
 import { BlankView } from "./BlankView";
 import { ToolsMenu } from "./ToolsMenu";
 import { UrlBar } from "./UrlBar";
@@ -12,7 +12,7 @@ import { useBrowserTools } from "./hooks/useBrowserTools";
 import { useBrowserUrl } from "./hooks/useBrowserUrl";
 import { useElementInspector } from "./hooks/useElementInspector";
 import { useWebviewEvents } from "./hooks/useWebviewEvents";
-import { tabStore } from "../../../store/tabStore";
+import { normalizeUrl } from "./normalizeUrl";
 
 type BrowserViewProps = {
   tabId: string;
@@ -129,7 +129,10 @@ export function BrowserView({ tabId, initialUrl }: BrowserViewProps) {
         setHighlightIndex((prev) => (prev > 0 ? prev - 1 : filteredHistory.length - 1));
       } else if (event.key === "Enter" && highlightIndex >= 0 && highlightIndex < filteredHistory.length) {
         event.preventDefault();
-        navigateTo(filteredHistory[highlightIndex]!.url);
+        const highlightedHistoryEntry = filteredHistory[highlightIndex];
+        if (highlightedHistoryEntry) {
+          navigateTo(highlightedHistoryEntry.url);
+        }
       }
     },
     [urlFocused, filteredHistory, highlightIndex, setHighlightIndex, navigateTo],

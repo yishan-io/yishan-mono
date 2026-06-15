@@ -1,11 +1,7 @@
 import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
-import {
-  copyFiles,
-  renameEntry,
-  writeFileBase64,
-} from "../../../commands/fileCommands";
+import { copyFiles, renameEntry, writeFileBase64 } from "../../../commands/fileCommands";
 import {
   DEFAULT_CLIPBOARD_SOURCE_RESOLVERS,
   type FileTreeClipboardState,
@@ -15,15 +11,8 @@ import {
   captureNativeExternalClipboardSourcePathsSnapshot,
   resolveExternalClipboardSourcePaths,
 } from "./fileTreeClipboardResolvers";
-import {
-  type FileTreeMoveUndoEntry,
-  buildMoveUndoEntries,
-  resolvePreferredImportedPath,
-} from "./fileTreePathHelpers";
-import {
-  mapWorkspaceEntryPaths,
-  resolveExternalClipboardFilePayloads,
-} from "./fileTreeHelpers";
+import { mapWorkspaceEntryPaths, resolveExternalClipboardFilePayloads } from "./fileTreeHelpers";
+import { type FileTreeMoveUndoEntry, buildMoveUndoEntries, resolvePreferredImportedPath } from "./fileTreePathHelpers";
 import type { FileTreeUndoAction } from "./useFileTreeUndo";
 
 type UseFileTreeClipboardInput = {
@@ -318,7 +307,11 @@ export function useFileTreeClipboard({
         return;
       }
 
-      console.info("[FileTree drop] External file drop:", { sourcePaths, destinationPath, selectedWorkspaceWorktreePath });
+      console.info("[FileTree drop] External file drop:", {
+        sourcePaths,
+        destinationPath,
+        selectedWorkspaceWorktreePath,
+      });
 
       const repoFilesBeforeDropImport = mapWorkspaceEntryPaths(repoEntries);
       if (!beginExternalImportLock()) {

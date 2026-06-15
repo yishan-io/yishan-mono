@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, type Mock } from "vitest";
+import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("node:fs/promises", () => ({
   access: vi.fn(),
@@ -18,8 +18,8 @@ vi.mock("node:os", () => ({
   homedir: () => "/home/testuser",
 }));
 
-import { access, lstat, mkdir, readlink, symlink, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { access, lstat, mkdir, readlink, symlink, unlink } from "node:fs/promises";
 import { getDesktopCliInstallStatus, installDesktopCli, uninstallDesktopCli } from "./cliInstaller";
 
 Object.defineProperty(process, "resourcesPath", {

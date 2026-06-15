@@ -1,12 +1,7 @@
 import { Box, MenuItem, Stack, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  SettingsCard,
-  SettingsCompactTextField,
-  SettingsControlRow,
-  SettingsRows,
-} from "../../components/settings";
+import { SettingsCard, SettingsCompactTextField, SettingsControlRow, SettingsRows } from "../../components/settings";
 import { useGitAuthorName } from "../../hooks/useGitAuthorName";
 import {
   type GitBranchPrefixMode,

@@ -35,8 +35,8 @@ vi.mock("../api", () => ({
 }));
 
 const rpcMocks = vi.hoisted(() => ({
-  gitInspect: vi.fn(async () =>
-    ({ isGitRepository: true } as { isGitRepository: boolean; remoteUrl?: string; currentBranch?: string }),
+  gitInspect: vi.fn(
+    async () => ({ isGitRepository: true }) as { isGitRepository: boolean; remoteUrl?: string; currentBranch?: string },
   ),
   workspaceList: vi.fn(async () => []),
   workspaceOpen: vi.fn(),
@@ -295,10 +295,7 @@ describe("projectCommands", () => {
       gitUrl: "https://github.com/test/remote-repo.git",
     });
 
-    expect(apiMocks.createProject).toHaveBeenCalledWith(
-      "org-1",
-      expect.objectContaining({ contextEnabled: false }),
-    );
+    expect(apiMocks.createProject).toHaveBeenCalledWith("org-1", expect.objectContaining({ contextEnabled: false }));
   });
 
   it("adds created backend workspace entries for remote projects", async () => {

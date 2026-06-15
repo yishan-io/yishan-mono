@@ -2,7 +2,7 @@
 
 import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useOpenTabAutoRefresh, type RefreshableOpenTab } from "./useOpenTabAutoRefresh";
+import { type RefreshableOpenTab, useOpenTabAutoRefresh } from "./useOpenTabAutoRefresh";
 
 type DaemonConnectionStatus = "connected" | "connecting" | "disconnected";
 
@@ -117,7 +117,11 @@ describe("useOpenTabAutoRefresh", () => {
 
     emitBackendEvent("workspace.files.changed", {
       source: "workspaceFilesChanged",
-      payload: { workspaceId: "workspace-1", workspaceWorktreePath: "/repo", changedRelativePaths: ["src/changed.ts", "src/dirty.ts"] },
+      payload: {
+        workspaceId: "workspace-1",
+        workspaceWorktreePath: "/repo",
+        changedRelativePaths: ["src/changed.ts", "src/dirty.ts"],
+      },
     });
     await flushRefreshWork();
 

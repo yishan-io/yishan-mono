@@ -13,7 +13,9 @@ const mocks = vi.hoisted(() => ({
   trackGitChanges: vi.fn(),
   revertGitChanges: vi.fn(),
   unstageGitChanges: vi.fn(),
-  subscribeWorkspaceGitChanged: vi.fn((_listener: (payload: { workspaceId: string; workspaceWorktreePath: string }) => void) => () => {}),
+  subscribeWorkspaceGitChanged: vi.fn(
+    (_listener: (payload: { workspaceId: string; workspaceWorktreePath: string }) => void) => () => {},
+  ),
   openTab: vi.fn(),
 }));
 

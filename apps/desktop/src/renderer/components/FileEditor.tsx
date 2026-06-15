@@ -2,7 +2,7 @@ import { Box, IconButton, Tooltip, Typography, useTheme } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuCode, LuColumns2, LuEye } from "react-icons/lu";
 import { getLanguageId, isMarkdownFile } from "../helpers/editorLanguage";
-import { ensureEditorThemes, monaco, YISHAN_THEME_DARK, YISHAN_THEME_LIGHT } from "../helpers/monacoSetup";
+import { YISHAN_THEME_DARK, YISHAN_THEME_LIGHT, ensureEditorThemes, monaco } from "../helpers/monacoSetup";
 import { useGitGutterDecorations } from "../hooks/useGitGutterDecorations";
 import type { MarkdownDefaultViewMode } from "../store/settings/layoutStore";
 import { FileViewerToolbar } from "./FileViewerToolbar";
@@ -117,8 +117,7 @@ export function FileEditor({
     // and understand the project structure even when the file lives outside the app.
     const fileUri = monaco.Uri.file(path);
     const existingModel = monaco.editor.getModel(fileUri);
-    const model =
-      existingModel ?? monaco.editor.createModel(contentRef.current, language, fileUri);
+    const model = existingModel ?? monaco.editor.createModel(contentRef.current, language, fileUri);
 
     if (existingModel) {
       // Reuse existing model but update language if needed.
@@ -202,6 +201,7 @@ export function FileEditor({
   // Trigger Monaco layout when the editor pane visibility changes, so it
   // recalculates its dimensions after being hidden/shown.
   useEffect(() => {
+    void editorPaneRatio;
     if (showEditor) {
       const frame = window.requestAnimationFrame(() => {
         editorRef.current?.layout();

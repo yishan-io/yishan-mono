@@ -1,8 +1,8 @@
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 import { useCallback, useState } from "react";
 import { LuMaximize2, LuMinus, LuPlus } from "react-icons/lu";
-import { FileViewerToolbar } from "./FileViewerToolbar";
 import { getFileName } from "../store/tabs";
+import { FileViewerToolbar } from "./FileViewerToolbar";
 
 type ImagePreviewProps = {
   path: string;
@@ -157,8 +157,6 @@ export function ImagePreview({
           }
         />
       </Box>
-
-
     </Box>
   );
 }

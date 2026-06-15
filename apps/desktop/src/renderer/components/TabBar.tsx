@@ -262,7 +262,9 @@ export function TabBar({
       onDragOver={handleTabDragOver}
       onDrop={handleTabDrop}
       onDragEnd={resetDragState}
-      itemRef={(element) => { tabItemRefs.current[tab.id] = element; }}
+      itemRef={(element) => {
+        tabItemRefs.current[tab.id] = element;
+      }}
     />
   );
 

@@ -17,9 +17,7 @@ export type WorkspacePullRequestState = {
 export function useWorkspacePullRequestState(enabled = true): WorkspacePullRequestState {
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const pullRequest = workspaceStore((state) => state.pullRequestByWorkspaceId[state.selectedWorkspaceId]);
-  const workspace = workspaceStore((state) =>
-    state.workspaces.find((w) => w.id === state.selectedWorkspaceId),
-  );
+  const workspace = workspaceStore((state) => state.workspaces.find((w) => w.id === state.selectedWorkspaceId));
 
   const [historicalPullRequests, setHistoricalPullRequests] = useState<WorkspacePullRequestRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -98,11 +96,12 @@ export function useWorkspacePullRequestState(enabled = true): WorkspacePullReque
     return () => {
       cancelled = true;
     };
-  }, [enabled, selectedWorkspaceId, worktreePath, orgId, projectId, pullRequest]);
+  }, [enabled, selectedWorkspaceId, worktreePath, pullRequest]);
 
   // Reset the daemon refresh tracker when the workspace changes so a new workspace
   // gets its own on-demand check.
   useEffect(() => {
+    void selectedWorkspaceId;
     daemonRefreshAttemptedRef.current = null;
   }, [selectedWorkspaceId]);
 

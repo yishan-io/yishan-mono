@@ -231,8 +231,8 @@ export function applyHydratedStateFromApiData(
       : nextBaseState.selectedProjectId;
   const preservedSelectedWorkspaceId = preservedSelectedWorkspace
     ? preservedSelectedWorkspace.id
-    : workspaces.find((workspace) => resolveWorkspaceProjectId(workspace) === preservedSelectedProjectId)?.id ??
-      nextBaseState.selectedWorkspaceId;
+    : (workspaces.find((workspace) => resolveWorkspaceProjectId(workspace) === preservedSelectedProjectId)?.id ??
+      nextBaseState.selectedWorkspaceId);
   const nextDisplayProjectIds =
     hasNoPersistedPreference && mappedProjects.length > 0
       ? mappedProjects.map((project) => project.id)

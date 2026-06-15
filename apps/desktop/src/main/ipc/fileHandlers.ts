@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import {
   copyFile as copyFileAsync,
   cp as cpAsync,
@@ -5,7 +6,6 @@ import {
   stat as statAsync,
   writeFile as writeFileAsync,
 } from "node:fs/promises";
-import { statSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { clipboard, ipcMain } from "electron";
 import { getErrorMessage } from "../../shared/helpers/errorHelpers";

@@ -29,9 +29,12 @@ describe("scheduleWorkspaceRefresh", () => {
 
   it("queues at most one refresh when a call is already in-flight", async () => {
     const stateMap = new Map<string, WorkspaceRefreshState>();
-    let resolveRefresh: (() => void) | null = null;
+    let resolveRefresh!: () => void;
     const doRefresh = vi.fn(
-      () => new Promise<void>((resolve) => { resolveRefresh = resolve; }),
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRefresh = () => resolve();
+        }),
     );
 
     // Start first refresh (will block)
@@ -44,7 +47,7 @@ describe("scheduleWorkspaceRefresh", () => {
     expect(doRefresh).toHaveBeenCalledTimes(1);
 
     // Complete the first call
-    resolveRefresh!();
+    resolveRefresh();
     await firstCall;
 
     // The queued refresh should be scheduled immediately (no throttle since lastFinishedAt just changed)

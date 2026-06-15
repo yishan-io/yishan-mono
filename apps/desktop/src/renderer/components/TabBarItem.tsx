@@ -128,10 +128,12 @@ export function TabBarItem({
     ...(dropTarget?.tabId === tab.id && {
       ...(dropTarget.position === "before"
         ? {
-            boxShadow: (theme: { palette: { primary: { main: string } } }) => `inset 2px 0 0 ${theme.palette.primary.main}`,
+            boxShadow: (theme: { palette: { primary: { main: string } } }) =>
+              `inset 2px 0 0 ${theme.palette.primary.main}`,
           }
         : {
-            boxShadow: (theme: { palette: { primary: { main: string } } }) => `inset -2px 0 0 ${theme.palette.primary.main}`,
+            boxShadow: (theme: { palette: { primary: { main: string } } }) =>
+              `inset -2px 0 0 ${theme.palette.primary.main}`,
           }),
     }),
     opacity: draggedTabId === tab.id ? 0.9 : 1,

@@ -25,7 +25,7 @@ type TestState = {
 
 /** Creates a minimal state harness for workspace store actions with immer-style mutation. */
 function createHarness() {
-  let state: TestState = {
+  const state: TestState = {
     projects: [
       {
         id: "repo-1",

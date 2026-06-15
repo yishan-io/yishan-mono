@@ -85,9 +85,7 @@ export function useAllWorkspacesGitSync() {
   const refreshStateByWorkspaceId = useRef(new Map<string, WorkspaceRefreshState>());
   const lastSeenVersionByWorktreePath = useRef<Record<string, number>>({});
 
-  const gitRefreshVersionByWorktreePath = workspaceStore(
-    (state) => state.gitRefreshVersionByWorktreePath,
-  );
+  const gitRefreshVersionByWorktreePath = workspaceStore((state) => state.gitRefreshVersionByWorktreePath);
 
   useEffect(() => {
     const state = workspaceStore.getState();

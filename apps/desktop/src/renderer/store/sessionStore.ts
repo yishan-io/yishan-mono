@@ -43,7 +43,10 @@ type SessionStoreState = {
     selectedOrganizationId?: string;
   }) => void;
   setSelectedOrganizationId: (organizationId: string) => void;
-  setOrganizationVoiceUsage: (organizationId: string, voiceUsage: NonNullable<SessionOrganization["voiceUsage"]>) => void;
+  setOrganizationVoiceUsage: (
+    organizationId: string,
+    voiceUsage: NonNullable<SessionOrganization["voiceUsage"]>,
+  ) => void;
   setDaemonInfo: (input: { daemonId: string; daemonVersion: string }) => void;
   setAppVersion: (appVersion: string) => void;
   clearSessionData: () => void;

@@ -1,4 +1,3 @@
-import { runCommandForExitCode } from "./process";
 import { shell } from "electron";
 import {
   type ExternalAppId,
@@ -6,6 +5,7 @@ import {
   isExternalAppPlatformSupported,
 } from "../../shared/contracts/externalApps";
 import type { OpenExternalUrlResult } from "../ipc";
+import { runCommandForExitCode } from "./process";
 
 export type LaunchPathInput =
   | {

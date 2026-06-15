@@ -239,7 +239,7 @@ export const tabStore = create<TabStoreState>()(
                   if (normalizedFaviconUrl) {
                     nextData.faviconUrl = normalizedFaviconUrl;
                   } else {
-                    delete nextData.faviconUrl;
+                    nextData.faviconUrl = undefined;
                   }
 
                   return {

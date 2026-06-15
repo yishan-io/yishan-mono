@@ -60,7 +60,9 @@ function normalizeGitBranchPrefixMode(value: unknown): GitBranchPrefixMode {
   return "none";
 }
 
-function readLegacyGitBranchSettings(): Partial<Pick<WorkspaceSettingsStorePersistedState, "prefixMode" | "customPrefix">> {
+function readLegacyGitBranchSettings(): Partial<
+  Pick<WorkspaceSettingsStorePersistedState, "prefixMode" | "customPrefix">
+> {
   if (typeof window === "undefined") {
     return {};
   }

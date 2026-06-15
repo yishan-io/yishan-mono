@@ -20,11 +20,11 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiCopy, BiTrash } from "react-icons/bi";
+import { api } from "../../api/client";
+import type { ServiceTokenRecord } from "../../api/serviceTokenTypes";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { StatusIndicator } from "../../components/StatusIndicator";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
-import { api } from "../../api/client";
-import type { ServiceTokenRecord } from "../../api/serviceTokenTypes";
 import { copyToClipboard } from "../../helpers/clipboard";
 
 function formatTokenDate(dateString: string | null): string {
@@ -198,10 +198,7 @@ export function ServiceTokenSettingsView() {
           <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
             {t("settings.serviceTokens.createdWarning")}
           </Typography>
-          <Typography
-            variant="body2"
-            sx={{ fontFamily: "monospace", fontSize: "0.8rem", wordBreak: "break-all" }}
-          >
+          <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: "0.8rem", wordBreak: "break-all" }}>
             {createdToken}
           </Typography>
         </Alert>
@@ -225,9 +222,7 @@ export function ServiceTokenSettingsView() {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setRevokeTarget(null)}>
-            {t("settings.serviceTokens.revokeDialog.cancel")}
-          </Button>
+          <Button onClick={() => setRevokeTarget(null)}>{t("settings.serviceTokens.revokeDialog.cancel")}</Button>
           <Button color="error" variant="contained" onClick={() => revokeTarget && handleRevoke(revokeTarget.id)}>
             {t("settings.serviceTokens.revokeDialog.confirm")}
           </Button>

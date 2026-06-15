@@ -23,7 +23,12 @@ self.MonacoEnvironment = {
         type: "module",
       });
     }
-    if (label === "typescript" || label === "typescriptreact" || label === "javascript" || label === "javascriptreact") {
+    if (
+      label === "typescript" ||
+      label === "typescriptreact" ||
+      label === "javascript" ||
+      label === "javascriptreact"
+    ) {
       return new Worker(new URL("monaco-editor/esm/vs/language/typescript/ts.worker.js", import.meta.url), {
         type: "module",
       });
@@ -78,16 +83,53 @@ monaco.languages.setMonarchTokensProvider("mermaid", {
   tokenPostfix: ".mermaid",
 
   keywords: [
-    "graph", "flowchart", "sequenceDiagram", "classDiagram", "stateDiagram",
-    "stateDiagram-v2", "erDiagram", "gantt", "pie", "gitGraph", "journey",
-    "quadrantChart", "requirementDiagram", "mindmap", "timeline", "sankey-beta",
-    "xychart-beta", "block-beta",
-    "subgraph", "end",
-    "participant", "actor", "activate", "deactivate", "loop", "alt", "else",
-    "opt", "par", "critical", "break", "rect", "note", "over",
-    "class", "section", "title", "dateFormat", "axisFormat", "excludes",
-    "state", "direction",
-    "LR", "RL", "TB", "BT", "TD",
+    "graph",
+    "flowchart",
+    "sequenceDiagram",
+    "classDiagram",
+    "stateDiagram",
+    "stateDiagram-v2",
+    "erDiagram",
+    "gantt",
+    "pie",
+    "gitGraph",
+    "journey",
+    "quadrantChart",
+    "requirementDiagram",
+    "mindmap",
+    "timeline",
+    "sankey-beta",
+    "xychart-beta",
+    "block-beta",
+    "subgraph",
+    "end",
+    "participant",
+    "actor",
+    "activate",
+    "deactivate",
+    "loop",
+    "alt",
+    "else",
+    "opt",
+    "par",
+    "critical",
+    "break",
+    "rect",
+    "note",
+    "over",
+    "class",
+    "section",
+    "title",
+    "dateFormat",
+    "axisFormat",
+    "excludes",
+    "state",
+    "direction",
+    "LR",
+    "RL",
+    "TB",
+    "BT",
+    "TD",
   ],
 
   operators: ["-->", "---", "-.->", "==>", "--", "-..-", "==", "-->|", "|", ":::", "->", "<->"],
@@ -102,10 +144,16 @@ monaco.languages.setMonarchTokensProvider("mermaid", {
       [/'[^']*'/, "string"],
 
       // Diagram type declarations (first keyword on a line)
-      [/^\s*(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|gantt|pie|gitGraph|journey|quadrantChart|requirementDiagram|mindmap|timeline|sankey-beta|xychart-beta|block-beta)\b/, "type"],
+      [
+        /^\s*(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|gantt|pie|gitGraph|journey|quadrantChart|requirementDiagram|mindmap|timeline|sankey-beta|xychart-beta|block-beta)\b/,
+        "type",
+      ],
 
       // Keywords
-      [/\b(subgraph|end|participant|actor|activate|deactivate|loop|alt|else|opt|par|critical|break|rect|note|over|class|section|title|dateFormat|axisFormat|excludes|state|direction|LR|RL|TB|BT|TD)\b/, "keyword"],
+      [
+        /\b(subgraph|end|participant|actor|activate|deactivate|loop|alt|else|opt|par|critical|break|rect|note|over|class|section|title|dateFormat|axisFormat|excludes|state|direction|LR|RL|TB|BT|TD)\b/,
+        "keyword",
+      ],
 
       // Arrow operators and connections
       [/-->\|[^|]*\|/, "operator"],

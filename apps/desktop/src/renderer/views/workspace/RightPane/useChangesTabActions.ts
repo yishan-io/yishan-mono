@@ -35,7 +35,7 @@ export function useChangesTabActions({
       await trackGitChanges({ workspaceId: selectedWorkspaceId, relativePaths });
       await refreshChanges();
     },
-    [refreshChanges, selectedWorkspaceWorktreePath, trackGitChanges],
+    [refreshChanges, selectedWorkspaceId, selectedWorkspaceWorktreePath, trackGitChanges],
   );
 
   const revertPaths = useCallback(
@@ -46,7 +46,7 @@ export function useChangesTabActions({
       await revertGitChanges({ workspaceId: selectedWorkspaceId, relativePaths });
       await refreshChanges();
     },
-    [refreshChanges, revertGitChanges, selectedWorkspaceWorktreePath],
+    [refreshChanges, revertGitChanges, selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
   const unstagePaths = useCallback(
@@ -57,7 +57,7 @@ export function useChangesTabActions({
       await unstageGitChanges({ workspaceId: selectedWorkspaceId, relativePaths });
       await refreshChanges();
     },
-    [refreshChanges, selectedWorkspaceWorktreePath, unstageGitChanges],
+    [refreshChanges, selectedWorkspaceId, selectedWorkspaceWorktreePath, unstageGitChanges],
   );
 
   const selectCommitChangedFile = useCallback(
@@ -71,19 +71,19 @@ export function useChangesTabActions({
       }
 
       try {
-            const response = commitHash
-              ? await readCommitDiff({
+        const response = commitHash
+          ? await readCommitDiff({
               workspaceId: selectedWorkspaceId,
               commitHash,
               relativePath: normalizedRelativePath,
             })
-              : targetBranch
-                ? await readBranchComparisonDiff({
+          : targetBranch
+            ? await readBranchComparisonDiff({
                 workspaceId: selectedWorkspaceId,
                 targetBranch,
                 relativePath: normalizedRelativePath,
               })
-                : await readDiff({
+            : await readDiff({
                 workspaceId: selectedWorkspaceId,
                 relativePath: normalizedRelativePath,
               });
@@ -231,23 +231,23 @@ export function useChangesTabActions({
         try {
           let response: { oldContent: string; newContent: string };
           if (isCommitMode && commitHash) {
-              response = await readCommitDiff({
-                workspaceId: selectedWorkspaceId,
-                commitHash,
-                relativePath: normalizedPath,
-              });
-            } else if (isCommitMode && targetBranch) {
-              response = await readBranchComparisonDiff({
-                workspaceId: selectedWorkspaceId,
-                targetBranch,
-                relativePath: normalizedPath,
-              });
-            } else {
-              response = await readDiff({
-                workspaceId: selectedWorkspaceId,
-                relativePath: normalizedPath,
-              });
-            }
+            response = await readCommitDiff({
+              workspaceId: selectedWorkspaceId,
+              commitHash,
+              relativePath: normalizedPath,
+            });
+          } else if (isCommitMode && targetBranch) {
+            response = await readBranchComparisonDiff({
+              workspaceId: selectedWorkspaceId,
+              targetBranch,
+              relativePath: normalizedPath,
+            });
+          } else {
+            response = await readDiff({
+              workspaceId: selectedWorkspaceId,
+              relativePath: normalizedPath,
+            });
+          }
 
           diffFiles.push({
             path: normalizedPath,

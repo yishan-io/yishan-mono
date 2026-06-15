@@ -59,7 +59,10 @@ export function collectSessionIdsToCloseOtherTabs(tabs: ReadonlyArray<WorkspaceT
   }
 
   return tabs
-    .filter((tab) => tab.workspaceId === current.workspaceId && tab.id !== activeTabId && !tab.pinned && tab.kind === "session")
+    .filter(
+      (tab) =>
+        tab.workspaceId === current.workspaceId && tab.id !== activeTabId && !tab.pinned && tab.kind === "session",
+    )
     .map((tab) => (tab.kind === "session" ? tab.data.sessionId : undefined))
     .filter((sessionId): sessionId is string => Boolean(sessionId));
 }
