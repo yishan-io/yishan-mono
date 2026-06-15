@@ -36,6 +36,17 @@ func OpenDB(dbPath string) (*DB, error) {
 	return &DB{conn: conn, path: dbPath}, nil
 }
 
+func OpenReadOnly(dbPath string) (*DB, error) {
+	conn, err := sql.Open("sqlite", "file:"+dbPath+"?mode=ro")
+	if err != nil {
+		return nil, fmt.Errorf("open read-only memory database: %w", err)
+	}
+
+	conn.SetMaxOpenConns(1)
+
+	return &DB{conn: conn, path: dbPath}, nil
+}
+
 func (db *DB) Close() error {
 	db.mu.Lock()
 	defer db.mu.Unlock()

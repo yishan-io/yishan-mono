@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -40,13 +41,13 @@ Reads the workspace index written by the daemon — no running daemon required.`
 var memorySearchCmd = &cobra.Command{
 	Use:   "search <query>",
 	Short: "Search project memory",
-	Long:  `Search the FTS5 memory index. Reconciles from the profile's known workspaces before searching.`,
+	Long:  `Search the FTS5 memory index. Open read-only — run 'yishan memory reconcile' separately to refresh the index.`,
 	Example: `  yishan memory search --output json "permission deadlock"
   yishan memory search --output json --scope global "coding style"
   yishan memory search --output json --project-id proj_abc123 "auth"`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
-		db, err := openAndReconcileMemoryDB()
+		db, err := openMemoryForSearch()
 		if err != nil {
 			return err
 		}
@@ -106,6 +107,31 @@ func openAndReconcileMemoryDB() (*memory.DB, error) {
 			Int("updated", result.Updated).
 			Int("deleted", result.Deleted).
 			Msg("memory reconciled")
+	}
+
+	return db, nil
+}
+
+// openMemoryForSearch opens the memory DB read-only for searching.
+// It does not reconcile or write to the DB, so it is safe for sandboxed
+// environments. If the DB file does not exist, it returns an error prompting
+// the user to run 'yishan memory reconcile' first.
+func openMemoryForSearch() (*memory.DB, error) {
+	dbPath, err := resolveMemoryDBPath()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := os.Stat(dbPath); err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("no memory index found — run 'yishan memory reconcile' first to build the index")
+		}
+		return nil, fmt.Errorf("check memory database: %w", err)
+	}
+
+	db, err := memory.OpenReadOnly(dbPath)
+	if err != nil {
+		return nil, err
 	}
 
 	return db, nil
