@@ -1,10 +1,5 @@
 import { useMemo, useState } from "react";
-import type {
-  WorkspaceTreeNode,
-  WorkspaceTreeProject,
-  WorkspaceTreeRow,
-  WorkspaceTreeWorkspace,
-} from "./types";
+import type { WorkspaceTreeNode, WorkspaceTreeProject, WorkspaceTreeRow, WorkspaceTreeWorkspace } from "./types";
 
 type UseVisibleWorkspaceTreeInput = {
   projects: WorkspaceTreeProject[];
@@ -144,6 +139,7 @@ export function useVisibleWorkspaceTree({
               runtimeStatus: workspace.runtimeStatus,
               notificationTone: workspace.notificationTone,
               isCreating: workspace.isCreating,
+              lifecycleState: workspace.lifecycleState,
             });
           }
         }

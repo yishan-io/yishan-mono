@@ -30,9 +30,7 @@ describe("WorkspaceTree", () => {
           { id: "node-1", name: "Node 1" },
           { id: "node-2", name: "Node 2" },
         ]}
-        workspaces={[
-          { id: "workspace-1", name: "Workspace 1", projectId: "project-1", nodeId: "node-1" },
-        ]}
+        workspaces={[{ id: "workspace-1", name: "Workspace 1", projectId: "project-1", nodeId: "node-1" }]}
         expandedItems={["project:project-1"]}
       />,
     );

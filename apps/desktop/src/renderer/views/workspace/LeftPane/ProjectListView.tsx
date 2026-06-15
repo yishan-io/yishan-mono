@@ -10,7 +10,11 @@ import {
   findExternalAppPreset,
   isExternalAppPlatformSupported,
 } from "../../../../shared/contracts/externalApps";
-import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../commands/workspaceCommands";
+import {
+  OPEN_CREATE_WORKSPACE_DIALOG_EVENT,
+  forgetWorkspace,
+  repairWorkspace,
+} from "../../../commands/workspaceCommands";
 import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextMenu";
 import { WorkspaceTree } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
@@ -29,8 +33,8 @@ import { parseNodeRowNodeId, parseProjectRowProjectId, reconcileOrder, reorderId
 import { useProjectDeletionFlow } from "./useProjectDeletionFlow";
 import { useProjectListDialogState } from "./useProjectListDialogState";
 import { useProjectListFoldState } from "./useProjectListFoldState";
-import { useProjectListTreeHandlers } from "./useProjectListTreeHandlers";
 import { useProjectListTreeData } from "./useProjectListTreeData";
+import { useProjectListTreeHandlers } from "./useProjectListTreeHandlers";
 import { useWorkspaceDeletionFlow } from "./useWorkspaceDeletionFlow";
 import { useWorkspaceInfoHover } from "./useWorkspaceInfoHover";
 
@@ -204,7 +208,8 @@ export function ProjectListView() {
   const workspaceContextTarget =
     workspaceContextMenu &&
     workspaces.find(
-      (workspace) => workspace.repoId === workspaceContextMenu.repoId && workspace.id === workspaceContextMenu.workspaceId,
+      (workspace) =>
+        workspace.repoId === workspaceContextMenu.repoId && workspace.id === workspaceContextMenu.workspaceId,
     );
   const isWorkspaceContextTargetLocal = Boolean(
     workspaceContextTarget &&
@@ -230,22 +235,21 @@ export function ProjectListView() {
   });
 
   useEffect(() => {
-      const handleOpenCreateWorkspaceDialog = (event: Event) => {
-        const customEvent = event as CustomEvent<{ repoId?: string }>;
-        const requestedProjectId = customEvent.detail?.repoId?.trim();
-        if (!requestedProjectId) {
-          return;
-        }
+    const handleOpenCreateWorkspaceDialog = (event: Event) => {
+      const customEvent = event as CustomEvent<{ repoId?: string }>;
+      const requestedProjectId = customEvent.detail?.repoId?.trim();
+      if (!requestedProjectId) {
+        return;
+      }
 
-        handleOpenCreateWorkspace(requestedProjectId);
-      };
+      handleOpenCreateWorkspace(requestedProjectId);
+    };
 
     window.addEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, handleOpenCreateWorkspaceDialog as EventListener);
     return () => {
       window.removeEventListener(OPEN_CREATE_WORKSPACE_DIALOG_EVENT, handleOpenCreateWorkspaceDialog as EventListener);
     };
   }, [handleOpenCreateWorkspace]);
-
 
   useSuppressNativeContextMenuWhileOpen(isProjectContextMenuOpen || isWorkspaceContextMenuOpen);
 
@@ -347,6 +351,8 @@ export function ProjectListView() {
     handleWorkspaceInfoMouseEnter,
     handleWorkspaceInfoMouseLeave,
     handleRequestWorkspaceDeletion,
+    handleRepairWorkspace: repairWorkspace,
+    handleForgetWorkspace: forgetWorkspace,
   });
 
   return (
@@ -372,6 +378,8 @@ export function ProjectListView() {
           onWorkspaceMouseEnter={treeHandlers.onWorkspaceMouseEnter}
           onWorkspaceMouseLeave={treeHandlers.onWorkspaceMouseLeave}
           onWorkspaceRequestDelete={treeHandlers.onWorkspaceRequestDelete}
+          onWorkspaceRequestRepair={treeHandlers.onWorkspaceRequestRepair}
+          onWorkspaceRequestForget={treeHandlers.onWorkspaceRequestForget}
           onRowReorder={treeHandlers.onRowReorder}
         />
       </Box>

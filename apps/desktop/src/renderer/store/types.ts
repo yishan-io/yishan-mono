@@ -50,7 +50,13 @@ export type WorkspaceItem = {
   worktreePath?: string;
   nodeId?: string;
   kind?: "managed" | "local";
+  state?: WorkspaceLifecycleState;
+  health?: WorkspaceHealth;
 };
+
+export type WorkspaceLifecycleState = "active" | "degraded" | "closing" | "orphaned" | "stale_index";
+
+export type WorkspaceHealth = "path-missing" | "not-worktree";
 
 export type DiffFileChangeKind = "added" | "modified" | "deleted" | "renamed";
 

@@ -1,14 +1,15 @@
 import { Box, IconButton, Tooltip, useTheme } from "@mui/material";
+import type { DragEvent, MouseEvent } from "react";
 import { CgSpinner } from "react-icons/cg";
+import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
 import { LuChevronRight, LuCloud, LuFolder, LuFolderOpen, LuLaptop, LuServer } from "react-icons/lu";
 import { LuEllipsis } from "react-icons/lu";
 import { LuPlus } from "react-icons/lu";
 import { LuArchive } from "react-icons/lu";
-import { HiCubeTransparent, HiOutlineCube } from "react-icons/hi2";
-import type { DragEvent, MouseEvent } from "react";
-import { renderProjectIcon } from "../projectIcons";
-import { GitChangeTotals } from "../GitChangeTotals";
+import { LuTrash2, LuWrench } from "react-icons/lu";
 import { CliSpinner } from "../CliSpinner";
+import { GitChangeTotals } from "../GitChangeTotals";
+import { renderProjectIcon } from "../projectIcons";
 import type { WorkspaceTreeRow } from "./types";
 
 export const WORKSPACE_TREE_ROW_HEIGHT = 30;
@@ -27,6 +28,8 @@ type WorkspaceTreeRowViewProps = {
   onProjectActionsClick?: (event: MouseEvent<HTMLElement>) => void;
   deleteWorkspaceLabel?: string;
   onWorkspaceRequestDelete?: () => void;
+  onWorkspaceRequestRepair?: () => void;
+  onWorkspaceRequestForget?: () => void;
   createWorkspaceTooltipLabel?: string;
   draggable?: boolean;
   onDragStart?: (event: DragEvent<HTMLElement>) => void;
@@ -49,6 +52,8 @@ export function WorkspaceTreeRowView({
   onProjectActionsClick,
   deleteWorkspaceLabel,
   onWorkspaceRequestDelete,
+  onWorkspaceRequestRepair,
+  onWorkspaceRequestForget,
   createWorkspaceTooltipLabel,
   draggable = false,
   onDragStart,
@@ -59,6 +64,7 @@ export function WorkspaceTreeRowView({
   const theme = useTheme();
   const isFolderLike = row.kind !== "workspace";
   const workspaceId = row.kind === "workspace" ? row.id.replace(/^workspace:/, "") : "";
+  const isBroken = row.lifecycleState && row.lifecycleState !== "active";
   const workspaceIconColor =
     row.notificationTone === "waiting_input"
       ? "warning.main"
@@ -252,7 +258,7 @@ export function WorkspaceTreeRowView({
           ml: 0.75,
           typography: "body2",
           fontSize: row.kind === "project" ? 14 : undefined,
-          color: "text.primary",
+          color: isBroken ? "error.main" : "text.primary",
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",
@@ -280,25 +286,56 @@ export function WorkspaceTreeRowView({
                 right: 0,
                 top: "50%",
                 transform: "translateY(-50%)",
-                width: 24,
-                height: 24,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
+                justifyContent: "flex-end",
+                gap: 0,
               }}
             >
-              <Tooltip title={deleteWorkspaceLabel ?? "Close workspace"} arrow>
-                <IconButton
-                  size="small"
-                  aria-label={deleteWorkspaceLabel ?? "Close workspace"}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onWorkspaceRequestDelete?.();
-                  }}
-                >
-                  <LuArchive size={13} />
-                </IconButton>
-              </Tooltip>
+              {row.lifecycleState && row.lifecycleState !== "active" ? (
+                <>
+                  <Tooltip title="Repair workspace" arrow>
+                    <IconButton
+                      size="small"
+                      aria-label="Repair workspace"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onWorkspaceRequestRepair?.();
+                      }}
+                      sx={{ width: 24, height: 24 }}
+                    >
+                      <LuWrench size={13} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Forget workspace" arrow>
+                    <IconButton
+                      size="small"
+                      aria-label="Forget workspace"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onWorkspaceRequestForget?.();
+                      }}
+                      sx={{ width: 24, height: 24 }}
+                    >
+                      <LuTrash2 size={13} />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              ) : (
+                <Tooltip title={deleteWorkspaceLabel ?? "Close workspace"} arrow>
+                  <IconButton
+                    size="small"
+                    aria-label={deleteWorkspaceLabel ?? "Close workspace"}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onWorkspaceRequestDelete?.();
+                    }}
+                    sx={{ width: 24, height: 24 }}
+                  >
+                    <LuArchive size={13} />
+                  </IconButton>
+                </Tooltip>
+              )}
             </Box>
           )}
         </Box>

@@ -123,6 +123,12 @@ export type RpcSchema = {
         tabId: string;
         paneId: string;
       };
+      workspaceStateChanged: {
+        workspaceId: string;
+        state: string;
+        health?: string;
+        removed: boolean;
+      };
     };
   };
 };

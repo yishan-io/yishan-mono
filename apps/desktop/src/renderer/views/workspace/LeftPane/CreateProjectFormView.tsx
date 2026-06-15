@@ -219,7 +219,7 @@ export function CreateProjectFormView({
                 gitUrl: repoDraft.source === "local" ? "" : nextLocation,
                 sourceTypeHint: repoDraft.source === "remote" ? "git" : undefined,
               };
-            })
+            });
           }}
           fullWidth
           placeholder={repoDraft.source === "remote" ? "https://github.com/org/repo.git" : undefined}

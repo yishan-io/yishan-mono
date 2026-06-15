@@ -68,6 +68,8 @@ export type ProcedureSubscriptionOptions = {
 export type DaemonWorkspace = {
   id: string;
   path: string;
+  state?: string;
+  health?: string;
   orgId?: string;
   projectId?: string;
   pullRequest?: DaemonWorkspacePullRequest;
@@ -184,6 +186,45 @@ export type WorkspaceCloseExecutionInput = {
   branch?: string;
   removeBranch?: boolean;
   postHook?: string;
+};
+
+export type WorkspaceHealthInput = {
+  workspaceId: string;
+};
+
+export type WorkspaceHealthOutput = {
+  workspaceId: string;
+  state: string;
+  health?: string;
+  path: string;
+  error?: string;
+};
+
+export type WorkspaceRepairInput = {
+  workspaceId: string;
+};
+
+export type WorkspaceRepairOutput = {
+  workspaceId: string;
+  state: string;
+  health?: string;
+  error?: string;
+};
+
+export type WorkspaceForgetInput = {
+  workspaceId: string;
+};
+
+export type WorkspaceForgetOutput = {
+  workspaceId: string;
+  removed: boolean;
+};
+
+export type WorkspaceStateChangedEvent = {
+  workspaceId: string;
+  state: string;
+  health?: string;
+  removed: boolean;
 };
 
 export type FileListInput = {

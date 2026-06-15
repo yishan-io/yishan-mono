@@ -3,8 +3,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../commands/workspaceCommands";
 import { inspectGitRepository } from "../../../commands/gitCommands";
+import { OPEN_CREATE_WORKSPACE_DIALOG_EVENT } from "../../../commands/workspaceCommands";
 import { ProjectListView } from "./ProjectListView";
 
 const mocked = vi.hoisted(() => {
@@ -19,7 +19,7 @@ const mocked = vi.hoisted(() => {
   let rendererPlatform = "darwin";
 
   const stateRef: {
-      current: {
+    current: {
       projects: Array<{
         id: string;
         name: string;
@@ -257,13 +257,13 @@ function renderRepoList(
     ],
     selectedProjectId: "repo-1",
     selectedWorkspaceId,
-      displayProjectIds: ["repo-1"],
-      lastUsedExternalAppId,
-      pullRequestByWorkspaceId: {},
-      latestPullRequestByWorkspaceId: {},
-      currentBranchByWorkspaceId: { "workspace-1": "feature/live-branch" },
-      setWorkspaceCurrentBranch: mocked.setWorkspaceCurrentBranch,
-      gitChangeTotalsByWorkspaceId: {
+    displayProjectIds: ["repo-1"],
+    lastUsedExternalAppId,
+    pullRequestByWorkspaceId: {},
+    latestPullRequestByWorkspaceId: {},
+    currentBranchByWorkspaceId: { "workspace-1": "feature/live-branch" },
+    setWorkspaceCurrentBranch: mocked.setWorkspaceCurrentBranch,
+    gitChangeTotalsByWorkspaceId: {
       "workspace-1": { additions: 12, deletions: 4 },
     },
     setSelectedRepoId: mocked.setSelectedRepoId,
@@ -355,7 +355,6 @@ describe("ProjectListView", () => {
       gitChangeTotalsByWorkspaceId: {},
       setWorkspaceCurrentBranch: mocked.setWorkspaceCurrentBranch,
     };
-
 
     renderProjectListView();
 
@@ -815,7 +814,10 @@ describe("ProjectListView", () => {
 
   it("does not show source branch for primary workspace", async () => {
     vi.useFakeTimers();
-    vi.mocked(inspectGitRepository).mockResolvedValueOnce({ isGitRepository: true, currentBranch: "feature/live-branch" });
+    vi.mocked(inspectGitRepository).mockResolvedValueOnce({
+      isGitRepository: true,
+      currentBranch: "feature/live-branch",
+    });
     mocked.stateRef.current = {
       ...mocked.stateRef.current,
       projects: [

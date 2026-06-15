@@ -1,5 +1,5 @@
-import type * as Rpc from "./daemonTypes";
 import type { NotificationPreferences } from "../../shared/notifications/notificationPreferences";
+import type * as Rpc from "./daemonTypes";
 
 export type ApiSubscriptionHandlers = {
   onData: (event: unknown) => void;
@@ -34,6 +34,9 @@ export type DaemonRpcClient = {
     createWorkspace: (input: Rpc.WorkspaceCreateInput) => Promise<Rpc.WorkspaceCreateResponse>;
     close: (input: Rpc.WorkspaceCloseExecutionInput) => Promise<Rpc.WorkspaceCloseExecutionResponse | undefined>;
     syncContextLink: (input: Rpc.WorkspaceSyncContextLinkInput) => Promise<Rpc.WorkspaceSyncContextLinkResponse>;
+    health: (input: Rpc.WorkspaceHealthInput) => Promise<Rpc.WorkspaceHealthOutput>;
+    repair: (input: Rpc.WorkspaceRepairInput) => Promise<Rpc.WorkspaceRepairOutput>;
+    forget: (input: Rpc.WorkspaceForgetInput) => Promise<Rpc.WorkspaceForgetOutput>;
   };
   file: {
     listFiles: (input: Rpc.FileListInput) => Promise<Rpc.FileListResponse>;

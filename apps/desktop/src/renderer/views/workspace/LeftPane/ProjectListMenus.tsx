@@ -1,17 +1,17 @@
-import { type Dispatch, type SetStateAction } from "react";
 import { Box, ListItemIcon, Menu, MenuItem } from "@mui/material";
-import { LuSettings, LuTrash2 } from "react-icons/lu";
 import type { TFunction } from "i18next";
-import type { WorkspacePullRequestSummary } from "../../../api/types";
-import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
-import type { WorkspaceItem } from "../../../store/types";
+import type { Dispatch, SetStateAction } from "react";
+import { LuSettings, LuTrash2 } from "react-icons/lu";
 import {
   EXTERNAL_APP_MENU_ENTRIES,
   type ExternalAppId,
   JETBRAINS_EXTERNAL_APP_IDS,
   findExternalAppPreset,
 } from "../../../../shared/contracts/externalApps";
+import type { WorkspacePullRequestSummary } from "../../../api/types";
 import { ContextMenu, type ContextMenuEntry } from "../../../components/ContextMenu";
+import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
+import type { WorkspaceItem } from "../../../store/types";
 import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
 import { ProjectConfigDialogView } from "./ProjectConfigDialogView";
 import { ProjectDeleteDialogView } from "./ProjectDeleteDialogView";
@@ -228,7 +228,8 @@ export function ProjectListMenus({
   const workspaceContextTarget =
     workspaceContextMenu &&
     workspaces.find(
-      (workspace) => workspace.repoId === workspaceContextMenu.repoId && workspace.id === workspaceContextMenu.workspaceId,
+      (workspace) =>
+        workspace.repoId === workspaceContextMenu.repoId && workspace.id === workspaceContextMenu.workspaceId,
     );
   const isWorkspaceContextTargetLocal = Boolean(
     workspaceContextTarget &&

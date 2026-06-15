@@ -29,6 +29,7 @@ export type BackendEventName =
   | "workspace.create.failed"
   | "workspace.pull_request.updated"
   | "workspace.snapshot.changed"
+  | "workspace.state.changed"
   | "open.browser.url";
 
 export type NormalizedBackendEvent =
@@ -86,6 +87,11 @@ export type NormalizedBackendEvent =
       source: "openBrowserUrl";
       name: "open.browser.url";
       payload: RpcFrontendMessagePayload<"openBrowserUrl">;
+    }
+  | {
+      source: "workspaceStateChanged";
+      name: "workspace.state.changed";
+      payload: RpcFrontendMessagePayload<"workspaceStateChanged">;
     };
 
 /**
@@ -102,6 +108,7 @@ export const BACKEND_EVENT_NAME_BY_SOURCE = {
   workspaceCreateFailed: "workspace.create.failed",
   workspacePullRequestUpdated: "workspace.pull_request.updated",
   workspaceSnapshotChanged: "workspace.snapshot.changed",
+  workspaceStateChanged: "workspace.state.changed",
   openBrowserUrl: "open.browser.url",
 } as const satisfies Record<RpcFrontendMessageKey, BackendEventName>;
 

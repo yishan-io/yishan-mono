@@ -26,6 +26,7 @@ export type WorkspaceTreeWorkspace = {
   runtimeStatus?: "running" | "waiting_input" | "idle";
   notificationTone?: "none" | "waiting_input" | "done" | "failed";
   isCreating?: boolean;
+  lifecycleState?: string;
 };
 
 export type WorkspaceTreeRow = {
@@ -46,6 +47,7 @@ export type WorkspaceTreeRow = {
   runtimeStatus?: "running" | "waiting_input" | "idle";
   notificationTone?: "none" | "waiting_input" | "done" | "failed";
   isCreating?: boolean;
+  lifecycleState?: string;
 };
 
 export type WorkspaceTreeProps = {
@@ -67,6 +69,8 @@ export type WorkspaceTreeProps = {
   onWorkspaceMouseEnter?: (event: React.MouseEvent<HTMLElement>, workspaceId: string) => void;
   onWorkspaceMouseLeave?: () => void;
   onWorkspaceRequestDelete?: (workspaceId: string, projectId: string) => void;
+  onWorkspaceRequestRepair?: (workspaceId: string) => void;
+  onWorkspaceRequestForget?: (workspaceId: string) => void;
   createWorkspaceTooltipLabel?: string;
   onProjectCreateWorkspaceClick?: (event: React.MouseEvent<HTMLElement>, projectId: string) => void;
   onProjectActionsClick?: (event: React.MouseEvent<HTMLElement>, projectId: string) => void;

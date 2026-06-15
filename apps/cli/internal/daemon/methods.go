@@ -10,6 +10,9 @@ const (
 	MethodWorkspaceRefreshPullRequest = "workspace.refreshPullRequest"
 	MethodWorkspaceSetActive          = "workspace.setActive"
 	MethodWorkspaceSyncContextLink    = "workspace.syncContextLink"
+	MethodWorkspaceHealth             = "workspace.health"
+	MethodWorkspaceRepair             = "workspace.repair"
+	MethodWorkspaceForget             = "workspace.forget"
 
 	MethodContextGetState         = "context.getState"
 	MethodContextSetCurrentOrg    = "context.setCurrentOrg"

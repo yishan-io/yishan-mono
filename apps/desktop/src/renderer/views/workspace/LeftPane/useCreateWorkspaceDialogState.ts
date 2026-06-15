@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../../api";
 import type { BranchDropdownGroups } from "../../../components/BranchDropdown";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import type { DesktopAgentKind } from "../../../helpers/agentSettings";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import {
   resolveSourceBranchState,
   resolveTargetBranchForCreate,
   suggestTargetBranchName,
 } from "../../../helpers/workspaceBranchNaming";
 import { useGitAuthorName } from "../../../hooks/useGitAuthorName";
-import { resolveGitBranchPrefix, type GitBranchPrefixMode } from "../../../store/settings/workspaceSettingsStore";
+import { type GitBranchPrefixMode, resolveGitBranchPrefix } from "../../../store/settings/workspaceSettingsStore";
 import type { WorkspaceItem, WorkspaceProjectRecord } from "../../../store/types";
 import { resolveSourceBranchGroups } from "./createWorkspaceHelpers";
 
@@ -203,7 +203,9 @@ export function useCreateWorkspaceDialogState({
       if (currentNodeId && nodes.some((node) => node.id === currentNodeId && node.canUse && node.isOnline)) {
         return currentNodeId;
       }
-      const daemonNode = daemonId ? nodes.find((node) => node.id === daemonId && node.canUse && node.isOnline) : undefined;
+      const daemonNode = daemonId
+        ? nodes.find((node) => node.id === daemonId && node.canUse && node.isOnline)
+        : undefined;
       if (daemonNode) {
         return daemonNode.id;
       }

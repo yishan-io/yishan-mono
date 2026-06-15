@@ -10,7 +10,7 @@ const mocked = vi.hoisted(() => {
   });
 
   const stateRef: {
-      current: {
+    current: {
       projects: Array<{ id: string; name: string; path: string }>;
       workspaces: Array<{ id: string; repoId: string; name: string; branch: string }>;
       displayProjectIds: string[];

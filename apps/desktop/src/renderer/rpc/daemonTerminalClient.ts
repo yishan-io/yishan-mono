@@ -1,11 +1,6 @@
-import type * as Rpc from "./daemonTypes";
-import {
-  asRecord,
-  readOptionalNumber,
-  readOptionalString,
-  readOptionalStringArray,
-} from "./helpers";
 import { generateId } from "../helpers/generateId";
+import type * as Rpc from "./daemonTypes";
+import { asRecord, readOptionalNumber, readOptionalString, readOptionalStringArray } from "./helpers";
 
 type InvokeFn = (method: string, params?: unknown) => Promise<unknown>;
 type SendBinaryFn = (sessionId: string, data: string | Uint8Array) => void;

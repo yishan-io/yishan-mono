@@ -6,14 +6,15 @@ import {
   summarizeReconciledWorkspaceGitChangeTotals,
 } from "../helpers/workspaceHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
-import { layoutStore } from "../store/settings/layoutStore";
 import { sessionStore } from "../store/sessionStore";
+import { layoutStore } from "../store/settings/layoutStore";
 import type { WorkspaceStoreState } from "../store/types";
 import { workspaceStore } from "../store/workspaceStore";
 import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, workspaceUiStore } from "../store/workspaceUiStore";
 
 export { createWorkspace } from "./workspaceCreateCommand";
 export { closeWorkspace } from "./workspaceCloseCommand";
+import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
 
 type WorkspaceStoreFacade = typeof workspaceStore & {
   getState?: () => WorkspaceStoreState;
@@ -71,7 +72,17 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
     return;
   }
 
-  const workspaceWorktreePath = readWorkspaceStoreState().workspaces.find((workspace) => workspace.id === workspaceId)?.worktreePath?.trim();
+  const store = readWorkspaceStoreState();
+  const workspace = store.workspaces.find((workspace) => workspace.id === workspaceId);
+  if (!workspace) {
+    return;
+  }
+
+  if (workspace.state && workspace.state !== "active") {
+    return;
+  }
+
+  const workspaceWorktreePath = workspace.worktreePath?.trim();
   if (!workspaceWorktreePath) {
     return;
   }
@@ -345,6 +356,39 @@ export async function renameWorkspaceBranch(input: {
     });
   } catch (error) {
     console.error("Failed to rename workspace branch", error);
+    throw error;
+  }
+}
+
+export async function repairWorkspace(workspaceId: string): Promise<void> {
+  try {
+    const client = await getDaemonClient();
+    const result = await client.workspace.repair({ workspaceId });
+    const store = readWorkspaceStoreState();
+    const workspace = store.workspaces.find((item) => item.id === workspaceId);
+    if (workspace && result.state === "active") {
+      await refreshWorkspaceGitChanges(workspaceId);
+    }
+  } catch (error) {
+    console.error("Failed to repair workspace", error);
+    throw error;
+  }
+}
+
+export async function forgetWorkspace(workspaceId: string): Promise<void> {
+  try {
+    const client = await getDaemonClient();
+    await client.workspace.forget({ workspaceId });
+    const store = readWorkspaceStoreState();
+    const previousWorkspaces = store.workspaces;
+    const workspace = store.workspaces.find((item) => item.id === workspaceId);
+    if (workspace) {
+      const projectId = workspace.projectId ?? workspace.repoId;
+      workspaceStore.getState().removeWorkspace({ repoId: projectId, workspaceId });
+    }
+    syncTabStoreWithWorkspace(previousWorkspaces);
+  } catch (error) {
+    console.error("Failed to forget workspace", error);
     throw error;
   }
 }

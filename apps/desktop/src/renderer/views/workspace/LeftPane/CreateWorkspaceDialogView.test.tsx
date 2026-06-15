@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import type { ReactElement } from "react";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
 import { workspaceSettingsStore as gitBranchStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -790,8 +790,8 @@ describe("CreateWorkspaceDialogView", () => {
       await waitFor(() => {
         expect(getMocked().createWorkspace).toHaveBeenCalledWith({
           projectId: "repo-1",
-        nodeId: undefined,
-        name: "Shortcut Workspace",
+          nodeId: undefined,
+          name: "Shortcut Workspace",
           sourceBranch: "main",
           targetBranch: "shortcut-workspace",
         });
@@ -819,8 +819,8 @@ describe("CreateWorkspaceDialogView", () => {
       await waitFor(() => {
         expect(getMocked().createWorkspace).toHaveBeenCalledWith({
           projectId: "repo-1",
-        nodeId: undefined,
-        name: "Ctrl Workspace",
+          nodeId: undefined,
+          name: "Ctrl Workspace",
           sourceBranch: "main",
           targetBranch: "ctrl-workspace",
         });
@@ -878,8 +878,8 @@ describe("CreateWorkspaceDialogView", () => {
       await waitFor(() => {
         expect(getMocked().createWorkspace).toHaveBeenCalledWith({
           projectId: "repo-1",
-        nodeId: undefined,
-        name: "2222",
+          nodeId: undefined,
+          name: "2222",
           sourceBranch: "main",
           targetBranch: "2222",
         });

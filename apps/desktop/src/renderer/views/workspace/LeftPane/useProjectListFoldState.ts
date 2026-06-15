@@ -107,8 +107,7 @@ export function useProjectListFoldState(): ProjectListFoldStateResult {
       ...current,
       [activeHierarchyMode]: {
         ...current[activeHierarchyMode],
-        foldedNodeKeys:
-          typeof updater === "function" ? updater(current[activeHierarchyMode].foldedNodeKeys) : updater,
+        foldedNodeKeys: typeof updater === "function" ? updater(current[activeHierarchyMode].foldedNodeKeys) : updater,
       },
     }));
   };

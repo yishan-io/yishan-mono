@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  DEFAULT_PROJECT_ICON_ID,
-  findProjectIconOption,
-} from "../../../components/projectIcons";
+import { DEFAULT_PROJECT_ICON_ID, findProjectIconOption } from "../../../components/projectIcons";
 
 export type ProjectConfigDraft = {
   name: string;

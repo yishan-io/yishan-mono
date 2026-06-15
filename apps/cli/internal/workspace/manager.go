@@ -10,11 +10,24 @@ import (
 	"yishan/apps/cli/internal/workspace/terminal"
 )
 
+const (
+	WorkspaceStateActive      = "active"
+	WorkspaceStateDegraded    = "degraded"
+	WorkspaceStateClosing     = "closing"
+	WorkspaceStateOrphaned    = "orphaned"
+	WorkspaceStateStaleIndex  = "stale_index"
+
+	WorkspaceHealthPathMissing = "path-missing"
+	WorkspaceHealthNotWorktree = "not-worktree"
+)
+
 type Workspace struct {
 	ID              string                `json:"id"`
 	Path            string                `json:"path"`
 	OrgID           string                `json:"orgId,omitempty"`
 	ProjectID       string                `json:"projectId,omitempty"`
+	State           string                `json:"state"`
+	Health          string                `json:"health,omitempty"`
 	SetupHookResult *HookResult           `json:"setupHookResult,omitempty"`
 	PullRequest     *WorkspacePullRequest `json:"pullRequest,omitempty"`
 }
@@ -130,6 +143,7 @@ func (m *Manager) Open(req OpenRequest) (Workspace, error) {
 		Path:            absPath,
 		OrgID:           req.OrgID,
 		ProjectID:       req.ProjectID,
+		State:           WorkspaceStateActive,
 		SetupHookResult: existing.SetupHookResult,
 		PullRequest:     existing.PullRequest,
 	}
@@ -323,8 +337,29 @@ func (m *Manager) SetWorkspacePullRequest(workspaceID string, pr *WorkspacePullR
 	return nil
 }
 
+func (m *Manager) SetWorkspaceState(workspaceID string, state string, health string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	ws, ok := m.workspaces[workspaceID]
+	if !ok {
+		return NewRPCError(rpcCodeNotFound, "workspace not found")
+	}
+
+	ws.State = state
+	ws.Health = health
+	m.workspaces[workspaceID] = ws
+	return nil
+}
+
 func (m *Manager) InvalidateWorkspaceFileCacheByPath(worktreePath string, changedPaths []string) {
 	m.files.InvalidateWorkspacePaths(worktreePath, changedPaths)
+}
+
+func (m *Manager) RemoveWorkspaceFromMemory(workspaceID string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.workspaces, workspaceID)
 }
 
 func (m *Manager) GitInspect(ctx context.Context, path string) (GitInspectResult, error) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { inspectGitRepository } from "../../../commands/gitCommands";
-import { workspaceStore } from "../../../store/workspaceStore";
 import type { WorkspaceItem } from "../../../store/types";
+import { workspaceStore } from "../../../store/workspaceStore";
 
 type UseWorkspaceInfoHoverInput = {
   workspaces: WorkspaceItem[];
@@ -102,14 +102,17 @@ export function useWorkspaceInfoHover({
   }, [hoveredWorkspaceId, workspaces]);
 
   const hoveredWorkspace = workspaces.find((workspace) => workspace.id === hoveredWorkspaceId);
-  const hoveredWorkspaceCurrentBranch = workspaceStore(
-    (state) => (hoveredWorkspaceId ? state.currentBranchByWorkspaceId[hoveredWorkspaceId] ?? "" : ""),
+  const hoveredWorkspaceCurrentBranch = workspaceStore((state) =>
+    hoveredWorkspaceId ? (state.currentBranchByWorkspaceId[hoveredWorkspaceId] ?? "") : "",
   );
   const hoveredWorkspacePullRequest = workspaceStore((state) => state.pullRequestByWorkspaceId?.[hoveredWorkspaceId]);
-  const hoveredWorkspaceLatestPullRequest = workspaceStore((state) => state.latestPullRequestByWorkspaceId?.[hoveredWorkspaceId]);
+  const hoveredWorkspaceLatestPullRequest = workspaceStore(
+    (state) => state.latestPullRequestByWorkspaceId?.[hoveredWorkspaceId],
+  );
   const isHoveredWorkspacePrimary = Boolean(
     hoveredWorkspace &&
-      (hoveredWorkspace.kind === "local" || displayWorkspaceIdByProjectId[hoveredWorkspace.repoId] === hoveredWorkspace.id),
+      (hoveredWorkspace.kind === "local" ||
+        displayWorkspaceIdByProjectId[hoveredWorkspace.repoId] === hoveredWorkspace.id),
   );
   const isWorkspaceInfoOpen = Boolean(workspaceInfoAnchorEl) && Boolean(hoveredWorkspace);
 

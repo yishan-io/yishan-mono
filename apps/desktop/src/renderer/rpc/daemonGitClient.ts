@@ -1,10 +1,5 @@
 import type * as Rpc from "./daemonTypes";
-import {
-  asRecord,
-  readOptionalBoolean,
-  readOptionalString,
-  readOptionalStringArray,
-} from "./helpers";
+import { asRecord, readOptionalBoolean, readOptionalString, readOptionalStringArray } from "./helpers";
 
 type InvokeFn = (method: string, params?: unknown) => Promise<unknown>;
 

@@ -16,7 +16,11 @@ type UseProjectListTreeHandlersInput = {
   setNodeOrderByParentId: (updater: (prev: Record<string, string[]>) => Record<string, string[]>) => void;
   setSelectedRepoId: (projectId: string) => void;
   setSelectedWorkspaceId: (workspaceId: string) => void;
-  reorderWorkspace: (input: { draggedWorkspaceId: string; targetWorkspaceId: string; position: "before" | "after" }) => void;
+  reorderWorkspace: (input: {
+    draggedWorkspaceId: string;
+    targetWorkspaceId: string;
+    position: "before" | "after";
+  }) => void;
   closeWorkspaceMenus: () => void;
   closeProjectContextMenu: () => void;
   closeAllContextMenus: () => void;
@@ -28,6 +32,8 @@ type UseProjectListTreeHandlersInput = {
   handleWorkspaceInfoMouseEnter: (workspaceId: string, anchorEl: HTMLElement) => void;
   handleWorkspaceInfoMouseLeave: () => void;
   handleRequestWorkspaceDeletion: (projectId: string, workspaceId: string) => void;
+  handleRepairWorkspace: (workspaceId: string) => void;
+  handleForgetWorkspace: (workspaceId: string) => void;
 };
 
 export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInput) {
@@ -56,17 +62,23 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
     handleWorkspaceInfoMouseEnter,
     handleWorkspaceInfoMouseLeave,
     handleRequestWorkspaceDeletion,
+    handleRepairWorkspace,
+    handleForgetWorkspace,
   } = input;
 
   const onExpandedItemsChange = useCallback(
     (items: string[]) => {
       if (workspaceListHierarchyMode === "by_node") {
-        const expandedNodeIds = new Set(items.filter((item) => item.startsWith("node:")).map((item) => item.replace(/^node:/, "")));
+        const expandedNodeIds = new Set(
+          items.filter((item) => item.startsWith("node:")).map((item) => item.replace(/^node:/, "")),
+        );
         const expandedProjectKeys = new Set(
           items.filter((item) => item.startsWith("project:")).map((item) => item.replace(/^project:/, "")),
         );
         const visibleNodeIds = Array.from(new Set(treeWorkspaces.map((workspace) => workspace.nodeId)));
-        const visibleProjectKeys = Array.from(new Set(treeWorkspaces.map((workspace) => `${workspace.nodeId}:${workspace.projectId}`)));
+        const visibleProjectKeys = Array.from(
+          new Set(treeWorkspaces.map((workspace) => `${workspace.nodeId}:${workspace.projectId}`)),
+        );
         setFoldedProjectIds(visibleNodeIds.filter((nodeId) => !expandedNodeIds.has(nodeId)));
         setFoldedNodeKeys((current) => {
           const next = new Set(current);
@@ -96,8 +108,12 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
       const expandedNodeKeys = new Set(
         items.filter((item) => item.startsWith("node:")).map((item) => item.replace(/^node:/, "")),
       );
-      const nextFoldedProjectIds = filteredProjects.map((project) => project.id).filter((projectId) => !expandedProjectIds.has(projectId));
-      const visibleNodeKeys = Array.from(new Set(treeWorkspaces.map((workspace) => `${workspace.projectId}:${workspace.nodeId}`)));
+      const nextFoldedProjectIds = filteredProjects
+        .map((project) => project.id)
+        .filter((projectId) => !expandedProjectIds.has(projectId));
+      const visibleNodeKeys = Array.from(
+        new Set(treeWorkspaces.map((workspace) => `${workspace.projectId}:${workspace.nodeId}`)),
+      );
       setFoldedProjectIds(nextFoldedProjectIds);
       setFoldedNodeKeys((current) => {
         const next = new Set(current);
@@ -124,7 +140,14 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
         return Array.from(next);
       });
     },
-    [filteredProjects, foldedProjectIds, setFoldedNodeKeys, setFoldedProjectIds, treeWorkspaces, workspaceListHierarchyMode],
+    [
+      filteredProjects,
+      foldedProjectIds,
+      setFoldedNodeKeys,
+      setFoldedProjectIds,
+      treeWorkspaces,
+      workspaceListHierarchyMode,
+    ],
   );
 
   const onSelectProject = useCallback(
@@ -225,10 +248,19 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
         if (workspaceListHierarchyMode === "by_node" && parentId) {
           const parentNodeId = parentId.replace(/^node:/, "").split(":")[0] ?? "";
           const projectIdsUnderNode = Array.from(
-            new Set(treeWorkspaces.filter((workspace) => workspace.nodeId === parentNodeId).map((workspace) => workspace.projectId)),
+            new Set(
+              treeWorkspaces
+                .filter((workspace) => workspace.nodeId === parentNodeId)
+                .map((workspace) => workspace.projectId),
+            ),
           );
           const currentOrder = reconcileOrder(nodeOrderByParentId[parentId] ?? [], projectIdsUnderNode);
-          const nextOrder = reorderIds({ ids: currentOrder, draggedId: draggedProjectId, targetId: targetProjectId, position });
+          const nextOrder = reorderIds({
+            ids: currentOrder,
+            draggedId: draggedProjectId,
+            targetId: targetProjectId,
+            position,
+          });
           setNodeOrderByParentId((current) => ({ ...current, [parentId]: nextOrder }));
           return;
         }
@@ -294,6 +326,12 @@ export function useProjectListTreeHandlers(input: UseProjectListTreeHandlersInpu
     onWorkspaceMouseLeave: handleWorkspaceInfoMouseLeave,
     onWorkspaceRequestDelete: (workspaceId: string, projectId: string) => {
       handleRequestWorkspaceDeletion(projectId, workspaceId);
+    },
+    onWorkspaceRequestRepair: (workspaceId: string) => {
+      handleRepairWorkspace(workspaceId);
+    },
+    onWorkspaceRequestForget: (workspaceId: string) => {
+      handleForgetWorkspace(workspaceId);
     },
     onRowReorder,
   };

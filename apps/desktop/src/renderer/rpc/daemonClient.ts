@@ -1,4 +1,9 @@
+import { generateId } from "../helpers/generateId";
+import { DaemonFileClient } from "./daemonFileClient";
+import { DaemonGitClient } from "./daemonGitClient";
+import { DaemonTerminalClient } from "./daemonTerminalClient";
 import type * as Rpc from "./daemonTypes";
+import { DaemonWorkspaceClient } from "./daemonWorkspaceClient";
 import {
   asRecord,
   buildRequest,
@@ -6,11 +11,6 @@ import {
   parseJsonRpcMessage,
   readOptionalString,
 } from "./helpers";
-import { generateId } from "../helpers/generateId";
-import { DaemonWorkspaceClient } from "./daemonWorkspaceClient";
-import { DaemonFileClient } from "./daemonFileClient";
-import { DaemonGitClient } from "./daemonGitClient";
-import { DaemonTerminalClient } from "./daemonTerminalClient";
 
 const RPC_REQUEST_TIMEOUT_MS = 30_000;
 // workspace.create can take a very long time for large repos (shallow fetch +
@@ -85,10 +85,14 @@ export class DaemonClient {
   readonly workspace = {
     list: () => this._workspaceClient.list(),
     open: (input: Rpc.WorkspaceOpenInput) => this._workspaceClient.open(input),
-    refreshPullRequest: (input: Rpc.WorkspaceRefreshPullRequestInput) => this._workspaceClient.refreshPullRequest(input),
+    refreshPullRequest: (input: Rpc.WorkspaceRefreshPullRequestInput) =>
+      this._workspaceClient.refreshPullRequest(input),
     createWorkspace: (input: Rpc.WorkspaceCreateInput) => this._workspaceClient.createWorkspace(input),
     close: (input: Rpc.WorkspaceCloseExecutionInput) => this._workspaceClient.close(input),
     syncContextLink: (input: Rpc.WorkspaceSyncContextLinkInput) => this._workspaceClient.syncContextLink(input),
+    health: (input: Rpc.WorkspaceHealthInput) => this._workspaceClient.health(input),
+    repair: (input: Rpc.WorkspaceRepairInput) => this._workspaceClient.repair(input),
+    forget: (input: Rpc.WorkspaceForgetInput) => this._workspaceClient.forget(input),
   };
 
   readonly file = {

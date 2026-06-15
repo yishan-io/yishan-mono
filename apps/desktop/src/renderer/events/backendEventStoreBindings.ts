@@ -29,6 +29,7 @@ type WorkspaceCreateCompletedPayload = RpcFrontendMessagePayload<"workspaceCreat
 type WorkspaceCreateFailedPayload = RpcFrontendMessagePayload<"workspaceCreateFailed">;
 type WorkspacePullRequestUpdatedPayload = RpcFrontendMessagePayload<"workspacePullRequestUpdated">;
 type WorkspaceSnapshotChangedPayload = RpcFrontendMessagePayload<"workspaceSnapshotChanged">;
+type WorkspaceStateChangedPayload = RpcFrontendMessagePayload<"workspaceStateChanged">;
 type AgentSessionLifecycleStatus = "running" | "waiting_input";
 
 type BackendEventStoreBindingsDependencies = {
@@ -54,6 +55,7 @@ type BackendEventStoreBindingsDependencies = {
     listener: (payload: WorkspacePullRequestUpdatedPayload) => void,
   ) => () => void;
   subscribeWorkspaceSnapshotChanged?: (listener: (payload: WorkspaceSnapshotChangedPayload) => void) => () => void;
+  subscribeWorkspaceStateChanged?: (listener: (payload: WorkspaceStateChangedPayload) => void) => () => void;
   subscribeOpenBrowserUrl?: (listener: (payload: { url: string; workspaceId: string }) => void) => () => void;
   listWorkspaceWorktreePaths?: () => string[];
   resolveWorkspaceIdByWorktreePath?: (worktreePath: string) => string | undefined;
@@ -146,6 +148,15 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   subscribeWorkspaceSnapshotChanged: (listener) => {
     return subscribeBackendEvent("workspace.snapshot.changed", (event) => {
       if (event.source !== "workspaceSnapshotChanged") {
+        return;
+      }
+
+      listener(event.payload);
+    });
+  },
+  subscribeWorkspaceStateChanged: (listener) => {
+    return subscribeBackendEvent("workspace.state.changed", (event) => {
+      if (event.source !== "workspaceStateChanged") {
         return;
       }
 
@@ -682,6 +693,15 @@ export function createBackendEventStoreBindings(
           });
         }, 300);
       }) ?? (() => {});
+    const unsubscribeWorkspaceStateChanged =
+      dependencies.subscribeWorkspaceStateChanged?.((_payload) => {
+        if (import.meta.env.DEV) {
+          console.debug("[backendEventStoreBindings] workspace state changed", _payload);
+        }
+        void dependencies.loadWorkspaceSnapshot?.().catch((error) => {
+          console.error("[backendEventStoreBindings] Failed to refresh workspace snapshot after state change", error);
+        });
+      }) ?? (() => {});
     const unsubscribeOpenBrowserUrl =
       dependencies.subscribeOpenBrowserUrl?.((payload) => {
         dependencies.openBrowserTab?.(payload);
@@ -697,6 +717,7 @@ export function createBackendEventStoreBindings(
       unsubscribeWorkspaceCreateFailed();
       unsubscribeWorkspacePullRequestUpdated();
       unsubscribeWorkspaceSnapshotChanged();
+      unsubscribeWorkspaceStateChanged();
       unsubscribeOpenBrowserUrl();
       if (workspaceSnapshotRefreshTimer) {
         clearTimeout(workspaceSnapshotRefreshTimer);

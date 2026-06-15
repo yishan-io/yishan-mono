@@ -250,9 +250,22 @@ func restoreIndexedWorkspaces(handler *JSONRPCHandler) error {
 			ID:        workspaceID,
 			Path:      worktreePath,
 			ProjectID: entry.ProjectID,
+			OrgID:     entry.OrgID,
 		})
 		if openErr != nil {
 			log.Warn().Err(openErr).Str("workspaceId", workspaceID).Str("path", worktreePath).Msg("failed to restore indexed workspace")
+			if handler.wsIndexStore != nil {
+				if upsertErr := handler.wsIndexStore.Upsert(workspaceIndexEntry{
+					WorkspaceID:  workspaceID,
+					WorktreePath: worktreePath,
+					ProjectID:    entry.ProjectID,
+					OrgID:        entry.OrgID,
+					State:        workspace.WorkspaceStateStaleIndex,
+					Error:        openErr.Error(),
+				}); upsertErr != nil {
+					log.Warn().Err(upsertErr).Str("workspaceId", workspaceID).Msg("failed to update stale index entry")
+				}
+			}
 			continue
 		}
 

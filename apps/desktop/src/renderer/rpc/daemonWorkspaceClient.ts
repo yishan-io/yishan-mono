@@ -279,19 +279,23 @@ export class DaemonWorkspaceClient {
     const contextEnabled = readOptionalBoolean(record?.contextEnabled) ?? false;
     const setupHook = readOptionalString(record?.setupHook) || "";
 
-    const createdWorkspace = (await this.invoke("workspace.create", {
-      organizationId,
-      nodeId: readOptionalString(record?.nodeId) || undefined,
-      projectId: readOptionalString(record?.projectId) || "",
-      repoKey,
-      workspaceName,
-      sourcePath,
-      targetBranch,
-      sourceBranch,
-      contextEnabled,
-      setupHook,
-      taskRun: record?.taskRun,
-    }, WORKSPACE_CREATE_TIMEOUT_MS)) as Rpc.DaemonWorkspace & { lifecycleScriptWarnings?: unknown[]; remoteSyncWarning?: unknown };
+    const createdWorkspace = (await this.invoke(
+      "workspace.create",
+      {
+        organizationId,
+        nodeId: readOptionalString(record?.nodeId) || undefined,
+        projectId: readOptionalString(record?.projectId) || "",
+        repoKey,
+        workspaceName,
+        sourcePath,
+        targetBranch,
+        sourceBranch,
+        contextEnabled,
+        setupHook,
+        taskRun: record?.taskRun,
+      },
+      WORKSPACE_CREATE_TIMEOUT_MS,
+    )) as Rpc.DaemonWorkspace & { lifecycleScriptWarnings?: unknown[]; remoteSyncWarning?: unknown };
 
     const createdWorktreePath = createdWorkspace.path || "";
     const resolvedId = createdWorkspace.id || "";
@@ -368,5 +372,17 @@ export class DaemonWorkspaceClient {
       forceBranch: true,
       postHook,
     })) as Rpc.WorkspaceCloseExecutionResponse;
+  }
+
+  async health(input: Rpc.WorkspaceHealthInput): Promise<Rpc.WorkspaceHealthOutput> {
+    return (await this.invoke("workspace.health", input)) as Rpc.WorkspaceHealthOutput;
+  }
+
+  async repair(input: Rpc.WorkspaceRepairInput): Promise<Rpc.WorkspaceRepairOutput> {
+    return (await this.invoke("workspace.repair", input)) as Rpc.WorkspaceRepairOutput;
+  }
+
+  async forget(input: Rpc.WorkspaceForgetInput): Promise<Rpc.WorkspaceForgetOutput> {
+    return (await this.invoke("workspace.forget", input)) as Rpc.WorkspaceForgetOutput;
   }
 }

@@ -50,6 +50,8 @@ export function WorkspaceTree({
   onWorkspaceMouseEnter,
   onWorkspaceMouseLeave,
   onWorkspaceRequestDelete,
+  onWorkspaceRequestRepair,
+  onWorkspaceRequestForget,
   createWorkspaceTooltipLabel,
   onProjectCreateWorkspaceClick,
   onProjectActionsClick,
@@ -98,7 +100,9 @@ export function WorkspaceTree({
    * walking up the parentId chain (i.e. the cursor is over a descendant, which
    * always means "after" position relative to the target).
    */
-  const findValidDropTarget = (hoveredRow: WorkspaceTreeRow): { targetRow: WorkspaceTreeRow; isDescendant: boolean } | null => {
+  const findValidDropTarget = (
+    hoveredRow: WorkspaceTreeRow,
+  ): { targetRow: WorkspaceTreeRow; isDescendant: boolean } | null => {
     const activeDraggedRowId = draggedRowIdRef.current;
     const activeDraggedRowKind = draggedRowKindRef.current;
     const activeDraggedParentId = draggedParentIdRef.current;
@@ -245,7 +249,9 @@ export function WorkspaceTree({
           const expanded = row.hasChildren && isExpanded(row.id);
           const parsedProject = row.kind === "project" ? parseProjectRowId(row.id) : null;
           const isSelected =
-            (row.kind === "project" && !selectedWorkspaceId && parsedProject?.projectId === (selectedProjectId ?? "")) ||
+            (row.kind === "project" &&
+              !selectedWorkspaceId &&
+              parsedProject?.projectId === (selectedProjectId ?? "")) ||
             (row.kind === "node" &&
               (hierarchyMode === "by_project"
                 ? row.id === `node:${selectedProjectId ?? ""}:${selectedNodeId ?? ""}`
@@ -278,73 +284,73 @@ export function WorkspaceTree({
                   setDropTargetRowId("");
                   setDropTargetPosition("before");
                 }}
-                 onDragOver={(event) => {
-                    const found = findValidDropTarget(row);
-                    if (!found) {
-                      return;
-                    }
+                onDragOver={(event) => {
+                  const found = findValidDropTarget(row);
+                  if (!found) {
+                    return;
+                  }
 
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = "move";
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
 
-                    let nextPosition: "before" | "after";
-                    if (found.isDescendant) {
-                      // Cursor is inside the target's subtree → always "after"
-                      nextPosition = "after";
-                    } else {
-                      const { top, height } = event.currentTarget.getBoundingClientRect();
-                      nextPosition = event.clientY >= top + height / 2 ? "after" : "before";
-                    }
+                  let nextPosition: "before" | "after";
+                  if (found.isDescendant) {
+                    // Cursor is inside the target's subtree → always "after"
+                    nextPosition = "after";
+                  } else {
+                    const { top, height } = event.currentTarget.getBoundingClientRect();
+                    nextPosition = event.clientY >= top + height / 2 ? "after" : "before";
+                  }
 
-                    dropTargetRowIdRef.current = found.targetRow.id;
-                    dropTargetPositionRef.current = nextPosition;
-                    setDropTargetRowId(found.targetRow.id);
-                    setDropTargetPosition(nextPosition);
-                  }}
-                 onDrop={(event) => {
-                    const activeDraggedRowId = draggedRowIdRef.current;
-                    const activeDraggedRowKind = draggedRowKindRef.current;
-                    const resolvedTargetRowId = dropTargetRowIdRef.current;
-                    const resolvedPosition = dropTargetPositionRef.current;
-                    if (!activeDraggedRowId || !activeDraggedRowKind || !resolvedTargetRowId) {
-                      return;
-                    }
+                  dropTargetRowIdRef.current = found.targetRow.id;
+                  dropTargetPositionRef.current = nextPosition;
+                  setDropTargetRowId(found.targetRow.id);
+                  setDropTargetPosition(nextPosition);
+                }}
+                onDrop={(event) => {
+                  const activeDraggedRowId = draggedRowIdRef.current;
+                  const activeDraggedRowKind = draggedRowKindRef.current;
+                  const resolvedTargetRowId = dropTargetRowIdRef.current;
+                  const resolvedPosition = dropTargetPositionRef.current;
+                  if (!activeDraggedRowId || !activeDraggedRowKind || !resolvedTargetRowId) {
+                    return;
+                  }
 
-                    if (activeDraggedRowId === resolvedTargetRowId) {
-                      return;
-                    }
+                  if (activeDraggedRowId === resolvedTargetRowId) {
+                    return;
+                  }
 
-                    event.preventDefault();
-                    event.stopPropagation();
+                  event.preventDefault();
+                  event.stopPropagation();
 
-                    const targetRow = rowById.get(resolvedTargetRowId);
-                    if (!targetRow) {
-                      return;
-                    }
+                  const targetRow = rowById.get(resolvedTargetRowId);
+                  if (!targetRow) {
+                    return;
+                  }
 
-                    onRowReorder?.({
-                      draggedRowId: activeDraggedRowId,
-                      targetRowId: resolvedTargetRowId,
-                      rowKind: activeDraggedRowKind,
-                      parentId: targetRow.parentId,
-                      position: resolvedPosition,
-                    });
+                  onRowReorder?.({
+                    draggedRowId: activeDraggedRowId,
+                    targetRowId: resolvedTargetRowId,
+                    rowKind: activeDraggedRowKind,
+                    parentId: targetRow.parentId,
+                    position: resolvedPosition,
+                  });
 
-                    dropTargetRowIdRef.current = "";
-                    dropTargetPositionRef.current = "before";
-                    setDropTargetRowId("");
-                    setDropTargetPosition("before");
-                  }}
-                 onDragEnd={() => {
-                    draggedRowIdRef.current = "";
-                    draggedRowKindRef.current = null;
-                    draggedParentIdRef.current = null;
-                    dropTargetRowIdRef.current = "";
-                    dropTargetPositionRef.current = "before";
-                    setDraggedRowId("");
-                    setDropTargetRowId("");
-                    setDropTargetPosition("before");
-                  }}
+                  dropTargetRowIdRef.current = "";
+                  dropTargetPositionRef.current = "before";
+                  setDropTargetRowId("");
+                  setDropTargetPosition("before");
+                }}
+                onDragEnd={() => {
+                  draggedRowIdRef.current = "";
+                  draggedRowKindRef.current = null;
+                  draggedParentIdRef.current = null;
+                  dropTargetRowIdRef.current = "";
+                  dropTargetPositionRef.current = "before";
+                  setDraggedRowId("");
+                  setDropTargetRowId("");
+                  setDropTargetPosition("before");
+                }}
                 onToggle={() => {
                   if (!row.hasChildren) {
                     return;
@@ -366,6 +372,22 @@ export function WorkspaceTree({
                   }
 
                   onWorkspaceRequestDelete?.(workspaceId, workspace.projectId);
+                }}
+                onWorkspaceRequestRepair={() => {
+                  if (row.kind !== "workspace") {
+                    return;
+                  }
+
+                  const workspaceId = row.id.replace(/^workspace:/, "");
+                  onWorkspaceRequestRepair?.(workspaceId);
+                }}
+                onWorkspaceRequestForget={() => {
+                  if (row.kind !== "workspace") {
+                    return;
+                  }
+
+                  const workspaceId = row.id.replace(/^workspace:/, "");
+                  onWorkspaceRequestForget?.(workspaceId);
                 }}
                 onMouseEnter={(event) => {
                   if (row.kind !== "workspace") {

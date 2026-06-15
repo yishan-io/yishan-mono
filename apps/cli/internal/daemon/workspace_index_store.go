@@ -15,11 +15,14 @@ const workspaceIndexFileName = "workspace-index.json"
 // profile's daemon at least once. The daemon writes this file on every open/close
 // so the CLI can read the correct worktree set without the daemon running.
 type workspaceIndexEntry struct {
-	WorkspaceID string `json:"workspaceId"`
-	// WorktreePath is the absolute path of the git worktree directory.
+	WorkspaceID  string `json:"workspaceId"`
 	WorktreePath string `json:"worktreePath"`
-	// ProjectID is the API project ID, empty when the workspace has no API context.
-	ProjectID string `json:"projectId,omitempty"`
+	ProjectID    string `json:"projectId,omitempty"`
+	OrgID        string `json:"orgId,omitempty"`
+	State        string `json:"state"`
+	Health       string `json:"health,omitempty"`
+	LastSeen     string `json:"lastSeen,omitempty"`
+	Error        string `json:"error,omitempty"`
 }
 
 type workspaceIndexFile struct {

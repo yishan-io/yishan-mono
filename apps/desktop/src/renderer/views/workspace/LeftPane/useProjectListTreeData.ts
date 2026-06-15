@@ -1,8 +1,8 @@
-import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
-import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
+import { useMemo } from "react";
 import { api } from "../../../api/client";
+import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
+import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
 import { chatStore } from "../../../store/chatStore";
 import { sessionStore } from "../../../store/sessionStore";
 import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
@@ -13,7 +13,15 @@ type TreeProject = WorkspaceTreeProject;
 type TreeNode = WorkspaceTreeNode;
 
 export type ProjectListTreeDataResult = {
-  filteredProjects: Array<{ id: string; name: string; icon?: string | null; color?: string | null; localPath?: string | null; path?: string | null; worktreePath?: string | null }>;
+  filteredProjects: Array<{
+    id: string;
+    name: string;
+    icon?: string | null;
+    color?: string | null;
+    localPath?: string | null;
+    path?: string | null;
+    worktreePath?: string | null;
+  }>;
   treeProjects: TreeProject[];
   treeNodes: TreeNode[];
   treeWorkspaces: WorkspaceTreeWorkspace[];
@@ -61,11 +69,15 @@ export function useProjectListTreeData(input: {
   }, {});
 
   const filteredProjects = useMemo(() => {
-    const projectById = new Map(projects.filter((project) => displayProjectIds.includes(project.id)).map((project) => [project.id, project]));
+    const projectById = new Map(
+      projects.filter((project) => displayProjectIds.includes(project.id)).map((project) => [project.id, project]),
+    );
     const orderedIds = projectOrderIds.filter((projectId) => projectById.has(projectId));
     const missingIds = Array.from(projectById.keys()).filter((projectId) => !orderedIds.includes(projectId));
     const nextIds = [...orderedIds, ...missingIds];
-    return nextIds.map((projectId) => projectById.get(projectId)).filter((project): project is NonNullable<typeof project> => Boolean(project));
+    return nextIds
+      .map((projectId) => projectById.get(projectId))
+      .filter((project): project is NonNullable<typeof project> => Boolean(project));
   }, [displayProjectIds, projectOrderIds, projects]);
 
   const treeProjects = filteredProjects.map((project) => ({
@@ -87,7 +99,8 @@ export function useProjectListTreeData(input: {
     const rows: WorkspaceTreeWorkspace[] = [];
     for (const project of filteredProjects) {
       const projectWorkspaces = workspaceByProjectId[project.id] ?? [];
-      const preferredProjectPath = project.localPath?.trim() || project.path?.trim() || project.worktreePath?.trim() || "";
+      const preferredProjectPath =
+        project.localPath?.trim() || project.path?.trim() || project.worktreePath?.trim() || "";
       const localDisplayWorkspaceId = preferredProjectPath
         ? (projectWorkspaces.find(
             (workspace) => workspace.kind !== "local" && workspace.worktreePath?.trim() === preferredProjectPath,
@@ -127,6 +140,7 @@ export function useProjectListTreeData(input: {
             unreadTone: workspaceUnreadToneByWorkspaceId[workspace.id],
           }),
           isCreating,
+          lifecycleState: workspace.state,
         });
       }
     }
@@ -179,9 +193,7 @@ export function useProjectListTreeData(input: {
         items.push(`node:${nodeId}`);
         const projectIds = Array.from(
           new Set(
-            treeWorkspaces
-              .filter((workspace) => workspace.nodeId === nodeId)
-              .map((workspace) => workspace.projectId),
+            treeWorkspaces.filter((workspace) => workspace.nodeId === nodeId).map((workspace) => workspace.projectId),
           ),
         );
         for (const projectId of projectIds) {
@@ -200,7 +212,9 @@ export function useProjectListTreeData(input: {
       }
 
       items.push(`project:${project.id}`);
-      const projectNodeIds = new Set(treeWorkspaces.filter((workspace) => workspace.projectId === project.id).map((w) => w.nodeId));
+      const projectNodeIds = new Set(
+        treeWorkspaces.filter((workspace) => workspace.projectId === project.id).map((w) => w.nodeId),
+      );
       for (const nodeId of projectNodeIds) {
         const nodeKey = `${project.id}:${nodeId}`;
         if (!foldedChildSet.has(nodeKey)) {
@@ -216,7 +230,8 @@ export function useProjectListTreeData(input: {
 
     for (const project of projects) {
       const projectWorkspaces = workspaceByProjectId[project.id] ?? [];
-      const preferredProjectPath = project.localPath?.trim() || project.path?.trim() || project.worktreePath?.trim() || "";
+      const preferredProjectPath =
+        project.localPath?.trim() || project.path?.trim() || project.worktreePath?.trim() || "";
       if (!preferredProjectPath) {
         continue;
       }

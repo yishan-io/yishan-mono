@@ -21,13 +21,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  LuCircleHelp,
-  LuExternalLink,
-  LuFolderOpen,
-  LuPlus,
-  LuTrash2,
-} from "react-icons/lu";
+import { LuCircleHelp, LuExternalLink, LuFolderOpen, LuPlus, LuTrash2 } from "react-icons/lu";
 import { PROJECT_ICON_OPTIONS, renderProjectIcon } from "../../../components/projectIcons";
 import { useCommands } from "../../../hooks/useCommands";
 import { useDialogRegistration } from "../../../hooks/useDialogRegistration";

@@ -86,6 +86,38 @@ type workspaceCloseParams struct {
 	PostHook       string `json:"postHook,omitempty"`
 }
 
+type workspaceHealthParams struct {
+	WorkspaceID string `json:"workspaceId"`
+}
+
+type workspaceHealthResult struct {
+	WorkspaceID string `json:"workspaceId"`
+	State       string `json:"state"`
+	Health      string `json:"health,omitempty"`
+	Path        string `json:"path"`
+	Error       string `json:"error,omitempty"`
+}
+
+type workspaceRepairParams struct {
+	WorkspaceID string `json:"workspaceId"`
+}
+
+type workspaceRepairResult struct {
+	WorkspaceID string `json:"workspaceId"`
+	State       string `json:"state"`
+	Health      string `json:"health,omitempty"`
+	Error       string `json:"error,omitempty"`
+}
+
+type workspaceForgetParams struct {
+	WorkspaceID string `json:"workspaceId"`
+}
+
+type workspaceForgetResult struct {
+	WorkspaceID string `json:"workspaceId"`
+	Removed     bool   `json:"removed"`
+}
+
 type gitInspectParams struct {
 	WorkspaceID string `json:"workspaceId"`
 }

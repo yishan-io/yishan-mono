@@ -42,6 +42,7 @@ describe("BACKEND_EVENT_NAME_BY_SOURCE", () => {
       workspaceCreateFailed: "workspace.create.failed",
       workspacePullRequestUpdated: "workspace.pull_request.updated",
       workspaceSnapshotChanged: "workspace.snapshot.changed",
+      workspaceStateChanged: "workspace.state.changed",
       openBrowserUrl: "open.browser.url",
     });
   });
