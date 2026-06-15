@@ -50,15 +50,12 @@ export function MainPaneView() {
     [rightCollapsed, rightWidth],
   );
 
-  const resizeRightMove = useCallback(
-    (clientX: number) => {
-      const { startX, startWidth } = rightDragRef.current;
-      const delta = startX - clientX;
-      const nextWidth = clamp(startWidth + delta, RIGHT_MIN_WIDTH, 800);
-      layoutStore.getState().setRightPaneWidth(nextWidth);
-    },
-    [],
-  );
+  const resizeRightMove = useCallback((clientX: number) => {
+    const { startX, startWidth } = rightDragRef.current;
+    const delta = startX - clientX;
+    const nextWidth = clamp(startWidth + delta, RIGHT_MIN_WIDTH, 800);
+    layoutStore.getState().setRightPaneWidth(nextWidth);
+  }, []);
 
   useEffect(() => {
     const browserTabIds = new Set(tabs.filter((tab) => tab.kind === "browser").map((tab) => tab.id));

@@ -7,6 +7,22 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
 
+type RehypeNode = {
+  type: string;
+  children?: RehypeNode[];
+};
+
+type RehypeElementNode = RehypeNode & {
+  type: "element";
+  tagName: string;
+  properties?: Record<string, unknown>;
+  children?: RehypeNode[];
+};
+
+function isRehypeElementNode(node: RehypeNode | undefined): node is RehypeElementNode {
+  return node?.type === "element" && typeof (node as RehypeElementNode).tagName === "string";
+}
+
 /**
  * Rehype plugin: transforms mermaid fenced code blocks into <pre class="mermaid">
  * elements so that rehypeHighlight does not attempt to syntax-highlight them.
@@ -15,7 +31,7 @@ import { unified } from "unified";
  * rehypeSanitize and rehypeHighlight.
  */
 function rehypeMermaid() {
-  return (tree: any) => {
+  return (tree: RehypeNode) => {
     function toClassList(value: unknown): string[] {
       if (Array.isArray(value)) {
         return value.map(String);
@@ -26,19 +42,15 @@ function rehypeMermaid() {
       return [];
     }
 
-    function walk(node: any, parent?: any) {
-      if (node.type === "element") {
+    function walk(node: RehypeNode, parent?: RehypeElementNode) {
+      if (isRehypeElementNode(node)) {
         const classList = toClassList(node.properties?.className);
-        if (
-          node.tagName === "code" &&
-          classList.includes("language-mermaid")
-        ) {
+        if (node.tagName === "code" && classList.includes("language-mermaid")) {
           // Strip language-mermaid class so rehypeHighlight skips this node.
-          node.properties.className = classList.filter(
-            (c: string) => c !== "language-mermaid",
-          );
+          node.properties = node.properties ?? {};
+          node.properties.className = classList.filter((c: string) => c !== "language-mermaid");
           // Add a mermaid class on the parent <pre> for the MarkdownPreview selector.
-          if (parent && parent.type === "element" && parent.tagName === "pre") {
+          if (parent?.tagName === "pre") {
             parent.properties = parent.properties ?? {};
             const parentClassList = toClassList(parent.properties.className);
             if (!parentClassList.includes("mermaid")) {
@@ -92,35 +104,11 @@ const sanitizeSchema = {
   ],
   attributes: {
     ...defaultSchema.attributes,
-    "*": [
-      ...(defaultSchema.attributes?.["*"] ?? []),
-      "className",
-      "style",
-      "title",
-      "role",
-      "aria-*",
-      "data-*",
-    ],
-    img: [
-      ...(defaultSchema.attributes?.img ?? []),
-      "width",
-      "height",
-    ],
-    td: [
-      ...(defaultSchema.attributes?.td ?? []),
-      "colspan",
-      "rowspan",
-    ],
-    th: [
-      ...(defaultSchema.attributes?.th ?? []),
-      "colspan",
-      "rowspan",
-    ],
-    input: [
-      ...(defaultSchema.attributes?.input ?? []),
-      "checked",
-      "disabled",
-    ],
+    "*": [...(defaultSchema.attributes?.["*"] ?? []), "className", "style", "title", "role", "aria-*", "data-*"],
+    img: [...(defaultSchema.attributes?.img ?? []), "width", "height"],
+    td: [...(defaultSchema.attributes?.td ?? []), "colspan", "rowspan"],
+    th: [...(defaultSchema.attributes?.th ?? []), "colspan", "rowspan"],
+    input: [...(defaultSchema.attributes?.input ?? []), "checked", "disabled"],
   },
 };
 

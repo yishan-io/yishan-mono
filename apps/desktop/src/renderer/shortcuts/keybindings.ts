@@ -455,8 +455,7 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     keys: "ctrl+backspace,ctrl+delete,command+backspace,command+delete",
     target: { command: ACTIONS.FILE_DELETE },
     shouldRun: (context, event) =>
-      Boolean(context.workspaceStoreState.selectedWorkspaceId) &&
-      shouldRunFileTreeShortcut(event),
+      Boolean(context.workspaceStoreState.selectedWorkspaceId) && shouldRunFileTreeShortcut(event),
   },
   {
     id: ACTIONS.FILE_UNDO,
@@ -465,9 +464,7 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     keys: "ctrl+z,command+z",
     target: { command: ACTIONS.FILE_UNDO },
     shouldRun: (context, event) =>
-      Boolean(context.workspaceStoreState.selectedWorkspaceId) &&
-      !event.shiftKey &&
-      shouldRunFileTreeShortcut(event),
+      Boolean(context.workspaceStoreState.selectedWorkspaceId) && !event.shiftKey && shouldRunFileTreeShortcut(event),
   },
   {
     id: "select-tab-by-index",

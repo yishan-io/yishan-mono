@@ -91,8 +91,7 @@ const MermaidBlock = memo(function MermaidBlock({ code }: MermaidBlockProps) {
           borderRadius: 1,
           border: 1,
           borderColor: "error.main",
-          bgcolor: (t) =>
-            t.palette.mode === "dark" ? "rgba(211, 47, 47, 0.08)" : "rgba(211, 47, 47, 0.04)",
+          bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(211, 47, 47, 0.08)" : "rgba(211, 47, 47, 0.04)"),
         }}
       >
         <Typography variant="caption" color="error.main" sx={{ fontWeight: 500 }}>

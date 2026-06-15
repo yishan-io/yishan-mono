@@ -32,11 +32,7 @@ export type SettingsPageLayoutProps = {
  * </SettingsPageLayout>
  * ```
  */
-export function SettingsPageLayout({
-  sidebar,
-  children,
-  sidebarWidth = 240,
-}: SettingsPageLayoutProps) {
+export function SettingsPageLayout({ sidebar, children, sidebarWidth = 240 }: SettingsPageLayoutProps) {
   const shouldReserveMacWindowControlsInset = getRendererPlatform() === "darwin";
 
   return (

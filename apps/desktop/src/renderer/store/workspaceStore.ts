@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import { immer } from "zustand/middleware/immer";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { immer } from "zustand/middleware/immer";
+import type { WorkspaceStoreState } from "./types";
 import { createWorkspaceStoreActions } from "./workspace/actions";
 import { initialWorkspaceState, partializeWorkspaceState } from "./workspace/state";
-import type { WorkspaceStoreState } from "./types";
 
 export type {
   AvailableCommand,

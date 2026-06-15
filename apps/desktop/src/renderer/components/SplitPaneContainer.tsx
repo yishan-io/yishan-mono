@@ -70,11 +70,7 @@ function SplitBranch({
       }}
     >
       <Box sx={{ [isVertical ? "height" : "width"]: firstSize, minWidth: 0, minHeight: 0, overflow: "hidden" }}>
-        <SplitPaneContainerNode
-          node={branch.first}
-          renderPane={renderPane}
-          onSplitRatioChange={onSplitRatioChange}
-        />
+        <SplitPaneContainerNode node={branch.first} renderPane={renderPane} onSplitRatioChange={onSplitRatioChange} />
       </Box>
       <ColumnSeparator
         orientation={isVertical ? "vertical" : "horizontal"}
@@ -84,33 +80,19 @@ function SplitBranch({
         onResizeEnd={handleResizeEnd}
       />
       <Box sx={{ [isVertical ? "height" : "width"]: secondSize, minWidth: 0, minHeight: 0, overflow: "hidden" }}>
-        <SplitPaneContainerNode
-          node={branch.second}
-          renderPane={renderPane}
-          onSplitRatioChange={onSplitRatioChange}
-        />
+        <SplitPaneContainerNode node={branch.second} renderPane={renderPane} onSplitRatioChange={onSplitRatioChange} />
       </Box>
     </Box>
   );
 }
 
 /** Recursively renders split-pane layout tree nodes. */
-function SplitPaneContainerNode({
-  node,
-  renderPane,
-  onSplitRatioChange,
-}: SplitPaneContainerProps) {
+function SplitPaneContainerNode({ node, renderPane, onSplitRatioChange }: SplitPaneContainerProps) {
   if (node.kind === "leaf") {
     return <>{renderPane(node)}</>;
   }
 
-  return (
-    <SplitBranch
-      branch={node}
-      renderPane={renderPane}
-      onSplitRatioChange={onSplitRatioChange}
-    />
-  );
+  return <SplitBranch branch={node} renderPane={renderPane} onSplitRatioChange={onSplitRatioChange} />;
 }
 
 /**
@@ -119,18 +101,10 @@ function SplitPaneContainerNode({
  * Walks the layout tree and renders each leaf as a SplitPaneGroup
  * with ColumnSeparators between split branches.
  */
-export function SplitPaneContainer({
-  node,
-  renderPane,
-  onSplitRatioChange,
-}: SplitPaneContainerProps) {
+export function SplitPaneContainer({ node, renderPane, onSplitRatioChange }: SplitPaneContainerProps) {
   return (
     <Box sx={{ width: "100%", height: "100%", overflow: "hidden" }}>
-      <SplitPaneContainerNode
-        node={node}
-        renderPane={renderPane}
-        onSplitRatioChange={onSplitRatioChange}
-      />
+      <SplitPaneContainerNode node={node} renderPane={renderPane} onSplitRatioChange={onSplitRatioChange} />
     </Box>
   );
 }

@@ -75,7 +75,10 @@ function buildDisplayKeysForPlatformCombos(combos: readonly string[], platform: 
     return [...firstCombo.modifiers.map((t) => toDisplayKeyToken(t, platform)), "1-9"];
   }
 
-  return [...firstCombo.modifiers.map((t) => toDisplayKeyToken(t, platform)), toDisplayKeyToken(firstCombo.key, platform)];
+  return [
+    ...firstCombo.modifiers.map((t) => toDisplayKeyToken(t, platform)),
+    toDisplayKeyToken(firstCombo.key, platform),
+  ];
 }
 
 /** Derives per-platform display keys from one hotkeys-js key string. */

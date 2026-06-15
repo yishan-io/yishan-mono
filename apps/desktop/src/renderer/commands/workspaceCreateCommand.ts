@@ -171,7 +171,8 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     return;
   }
 
-  const workspaceId = (typeof created.id === "string" ? created.id : "") ||
+  const workspaceId =
+    (typeof created.id === "string" ? created.id : "") ||
     (typeof created.workspaceId === "string" ? created.workspaceId : "");
   if (!workspaceId) {
     enqueueWorkspaceErrorNotice({

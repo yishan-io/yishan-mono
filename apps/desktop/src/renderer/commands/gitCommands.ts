@@ -1,5 +1,5 @@
-import { getDaemonClient } from "../rpc/rpcTransport";
 import type { GitChangesBySection } from "../rpc/daemonTypes";
+import { getDaemonClient } from "../rpc/rpcTransport";
 import { workspaceStore } from "../store/workspaceStore";
 
 const inFlightListGitChangesByWorkspaceId = new Map<string, Promise<GitChangesBySection>>();
@@ -8,7 +8,9 @@ const gitAuthorNameByWorkspaceId = new Map<string, string | null>();
 
 /** Resolves a workspaceId from store when only a worktreePath is available (repo-root branch listing). */
 function resolveWorkspaceIdFromPath(workspaceWorktreePath: string): string {
-  const workspace = workspaceStore.getState().workspaces.find((item) => item.worktreePath?.trim() === workspaceWorktreePath);
+  const workspace = workspaceStore
+    .getState()
+    .workspaces.find((item) => item.worktreePath?.trim() === workspaceWorktreePath);
   if (!workspace?.id) {
     throw new Error(`workspaceId is required for worktree path: ${workspaceWorktreePath}`);
   }
@@ -146,7 +148,9 @@ export async function inspectGitRepository(params: { workspaceId: string }): Pro
 
 /** Lists available branch names for one workspace. */
 export async function listGitBranches(params: { workspaceId?: string; workspaceWorktreePath?: string }) {
-  const workspaceId = params.workspaceId?.trim() || (params.workspaceWorktreePath ? resolveWorkspaceIdFromPath(params.workspaceWorktreePath.trim()) : "");
+  const workspaceId =
+    params.workspaceId?.trim() ||
+    (params.workspaceWorktreePath ? resolveWorkspaceIdFromPath(params.workspaceWorktreePath.trim()) : "");
   if (!workspaceId) {
     throw new Error("workspaceId or workspaceWorktreePath is required");
   }

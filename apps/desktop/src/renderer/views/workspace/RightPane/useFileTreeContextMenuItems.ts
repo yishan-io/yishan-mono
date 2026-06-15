@@ -174,7 +174,6 @@ export function useFileTreeContextMenuItems({
         },
       }),
     [
-      canOpenInExternalApp,
       canPasteEntries,
       closeContextMenu,
       contextMenu,

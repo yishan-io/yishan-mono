@@ -74,13 +74,9 @@ export type DaemonInfoResult = {
   relay?: DaemonRelayStatus;
 };
 
-export type DaemonRestartResult =
-  | { success: true; daemonInfo: DaemonInfoResult }
-  | { success: false; error: string };
+export type DaemonRestartResult = { success: true; daemonInfo: DaemonInfoResult } | { success: false; error: string };
 
-export type DaemonLogResult =
-  | { ok: true; content: string }
-  | { ok: false; error: string };
+export type DaemonLogResult = { ok: true; content: string } | { ok: false; error: string };
 
 export type AuthStatusResult = {
   authenticated: boolean;
@@ -120,9 +116,7 @@ export type CopyFilesInput = {
   destinationDirectory: string;
 };
 
-export type CopyFilesResult =
-  | { ok: true; copiedPaths: string[] }
-  | { ok: false; error: string };
+export type CopyFilesResult = { ok: true; copiedPaths: string[] } | { ok: false; error: string };
 
 export type WriteFileBase64Input = {
   /** Absolute path of the file to write. */
@@ -131,9 +125,7 @@ export type WriteFileBase64Input = {
   contentBase64: string;
 };
 
-export type WriteFileBase64Result =
-  | { ok: true }
-  | { ok: false; error: string };
+export type WriteFileBase64Result = { ok: true } | { ok: false; error: string };
 
 export type BrowserHistoryEntry = {
   url: string;

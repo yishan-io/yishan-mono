@@ -1,4 +1,16 @@
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Menu, MenuItem, TextField, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Menu,
+  MenuItem,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { LuPlay } from "react-icons/lu";
 import { renderProjectIcon } from "../../components/projectIcons";
@@ -145,7 +157,13 @@ type ProjectCommandsMenuProps = {
   onClose: () => void;
   projectCommands: ProjectCommand[];
   selectedWorkspaceId: string;
-  openTab: (input: { workspaceId: string; kind: "terminal"; title: string; launchCommand: string; reuseExisting: false }) => void;
+  openTab: (input: {
+    workspaceId: string;
+    kind: "terminal";
+    title: string;
+    launchCommand: string;
+    reuseExisting: false;
+  }) => void;
   terminalTitle: string;
   onOpenAddDialog: () => void;
 };

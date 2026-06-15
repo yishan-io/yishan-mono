@@ -1,10 +1,7 @@
 import { ipcMain, systemPreferences } from "electron";
-import { createDesktopNotificationHostAdapter } from "../notifications/service";
+import { appendBrowserHistoryEntry, loadBrowserHistoryGroups } from "../browser/browserHistory";
 import { HOST_IPC_CHANNELS } from "../ipc";
-import {
-  appendBrowserHistoryEntry,
-  loadBrowserHistoryGroups,
-} from "../browser/browserHistory";
+import { createDesktopNotificationHostAdapter } from "../notifications/service";
 
 /**
  * Registers IPC handlers for notifications (dispatch, sound, microphone)

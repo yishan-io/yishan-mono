@@ -94,9 +94,7 @@ export function extractSourcePathsFromDataTransfer(dataTransfer: DataTransfer): 
     return (file as File & { path?: string }).path?.trim() ?? "";
   };
 
-  const filePaths = Array.from(dataTransfer.files)
-    .map(getFilePath)
-    .filter(Boolean);
+  const filePaths = Array.from(dataTransfer.files).map(getFilePath).filter(Boolean);
   const itemPaths = Array.from(dataTransfer.items)
     .map((item) => item.getAsFile())
     .filter((file): file is File => file != null)

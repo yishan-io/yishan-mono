@@ -1,9 +1,9 @@
+import { NOTIFICATION_PREFERENCES_STORAGE_KEY } from "../../shared/notifications/notificationConstants";
 import type {
   NotificationEventType,
   NotificationPreferences,
   NotificationSoundId,
 } from "../../shared/notifications/notificationPreferences";
-import { NOTIFICATION_PREFERENCES_STORAGE_KEY } from "../../shared/notifications/notificationConstants";
 import {
   CURRENT_NOTIFICATION_PREFERENCES_SCHEMA_VERSION,
   DEFAULT_NOTIFICATION_PREFERENCES,
@@ -108,7 +108,9 @@ function cacheNotificationPreferences(preferences: NotificationPreferences): voi
   storage?.setItem(NOTIFICATION_PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));
 }
 
-function normalizeNotificationPreferences(input: Partial<NotificationPreferences> | undefined): NotificationPreferences {
+function normalizeNotificationPreferences(
+  input: Partial<NotificationPreferences> | undefined,
+): NotificationPreferences {
   const fallback = DEFAULT_NOTIFICATION_PREFERENCES;
   const candidate = input ?? fallback;
   return {

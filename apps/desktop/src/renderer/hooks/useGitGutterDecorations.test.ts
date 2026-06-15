@@ -30,8 +30,7 @@ function createMockEditor() {
     clear: vi.fn(),
   };
   return {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    createDecorationsCollection: vi.fn((..._args: any[]) => decorationsCollection),
+    createDecorationsCollection: vi.fn((..._args: unknown[]) => decorationsCollection),
     onMouseDown: vi.fn(() => ({ dispose: vi.fn() })),
     onKeyDown: vi.fn(() => ({ dispose: vi.fn() })),
     changeViewZones: vi.fn(),

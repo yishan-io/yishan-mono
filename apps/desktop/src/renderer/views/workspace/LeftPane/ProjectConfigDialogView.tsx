@@ -372,7 +372,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                 </Typography>
                 <Stack spacing={1}>
                   {draft.commands.map((item, index) => (
-                    <Stack key={index} direction="row" spacing={1} alignItems="center">
+                    <Stack key={`${item.name}:${item.command}`} direction="row" spacing={1} alignItems="center">
                       <TextField
                         size="small"
                         value={item.name}

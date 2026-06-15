@@ -1,21 +1,19 @@
+import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { BrowserWindow, Menu, app, dialog, ipcMain, net, protocol, session } from "electron";
+import { net, BrowserWindow, Menu, app, dialog, ipcMain, protocol, session } from "electron";
 import { autoUpdater } from "electron-updater";
 import { ACTIONS, type AppActionPayload } from "../shared/contracts/actions";
-import {
-  flushBrowserHistoryPruneCheck,
-} from "./browser/browserHistory";
 import { configureApplicationMenu } from "./app/menu";
 import { getAuthStatus, login } from "./auth/cliAuth";
+import { flushBrowserHistoryPruneCheck } from "./browser/browserHistory";
 import { getDesktopCliInstallStatus, installDesktopCli, uninstallDesktopCli } from "./cli/cliInstaller";
+import { resolveDaemonLogFilePath } from "./daemon/daemonHealthCheck";
 import { DaemonManager } from "./daemon/daemonManager";
 import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "./daemon/daemonSettings";
 import { DESKTOP_RPC_IPC_CHANNELS, type DesktopUpdateEventPayload, HOST_IPC_CHANNELS } from "./ipc";
 import { registerFileIpcHandlers } from "./ipc/fileHandlers";
 import { registerNotificationAndBrowserIpcHandlers } from "./ipc/notificationAndBrowserHandlers";
-import { readFile } from "node:fs/promises";
-import { resolveDaemonLogFilePath } from "./daemon/daemonHealthCheck";
 import { isDevMode } from "./runtime/environment";
 import { checkForUpdatesManually, downloadUpdate, startAutoUpdates } from "./updates/autoUpdateService";
 
@@ -29,9 +27,7 @@ const WORKSPACE_FILE_PROTOCOL_HOST = "workspace-image";
 function isPathWithinOrEqual(rootPath: string, candidatePath: string): boolean {
   const normalizedRootPath = resolve(rootPath);
   const normalizedCandidatePath = resolve(candidatePath);
-  return (
-    normalizedCandidatePath === normalizedRootPath || normalizedCandidatePath.startsWith(`${normalizedRootPath}/`)
-  );
+  return normalizedCandidatePath === normalizedRootPath || normalizedCandidatePath.startsWith(`${normalizedRootPath}/`);
 }
 
 /**
@@ -264,7 +260,12 @@ export class DesktopApplication {
         const content = await readFile(logFilePath, "utf8");
         return { ok: true as const, content };
       } catch (error: unknown) {
-        if (typeof error === "object" && error !== null && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          (error as NodeJS.ErrnoException).code === "ENOENT"
+        ) {
           return { ok: true as const, content: "" };
         }
         const reason = error instanceof Error ? error.message : "Failed to read daemon log file";
@@ -554,14 +555,32 @@ export class DesktopApplication {
       }
 
       if (input.shift) {
-        return normalizedKey === "b" || normalizedKey === "r" || normalizedKey === "f" || normalizedKey === "g" || normalizedKey === "w";
+        return (
+          normalizedKey === "b" ||
+          normalizedKey === "r" ||
+          normalizedKey === "f" ||
+          normalizedKey === "g" ||
+          normalizedKey === "w"
+        );
       }
 
-      if (normalizedKey === "/" || normalizedKey === "w" || normalizedKey === "y" || normalizedKey === "n" || normalizedKey === "t") {
+      if (
+        normalizedKey === "/" ||
+        normalizedKey === "w" ||
+        normalizedKey === "y" ||
+        normalizedKey === "n" ||
+        normalizedKey === "t"
+      ) {
         return true;
       }
 
-      if (normalizedKey === "b" || normalizedKey === "l" || normalizedKey === "p" || normalizedKey === "o" || normalizedKey === "z") {
+      if (
+        normalizedKey === "b" ||
+        normalizedKey === "l" ||
+        normalizedKey === "p" ||
+        normalizedKey === "o" ||
+        normalizedKey === "z"
+      ) {
         return true;
       }
 
@@ -607,7 +626,9 @@ export class DesktopApplication {
       }
 
       const normalizedKey = input.key.trim().toLowerCase();
-      return input.control && input.meta && !input.alt && !input.shift && (normalizedKey === "j" || normalizedKey === "k");
+      return (
+        input.control && input.meta && !input.alt && !input.shift && (normalizedKey === "j" || normalizedKey === "k")
+      );
     };
 
     mainWindow.webContents.on("before-input-event", (inputEvent, input) => {

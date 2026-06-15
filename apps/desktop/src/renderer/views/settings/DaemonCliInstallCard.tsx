@@ -1,13 +1,9 @@
 import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { BiTerminal } from "react-icons/bi";
-import {
-  SettingsCard,
-  SettingsControlRow,
-  SettingsRows,
-} from "../../components/settings";
-import { MONOSPACE_SX } from "../../helpers/styles";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
+import { SettingsCard, SettingsControlRow, SettingsRows } from "../../components/settings";
+import { MONOSPACE_SX } from "../../helpers/styles";
 
 type CliStatus = {
   isAvailableInPath: boolean;
@@ -53,7 +49,11 @@ export function DaemonCliInstallCard(props: DaemonCliInstallCardProps) {
             <SettingsRows>
               <SettingsControlRow
                 title={
-                  <Typography variant="body2" component="div" sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
+                  <Typography
+                    variant="body2"
+                    component="div"
+                    sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}
+                  >
                     <BiTerminal size={18} />
                     <Box component="span">{t("settings.daemon.cli.title")}</Box>
                   </Typography>

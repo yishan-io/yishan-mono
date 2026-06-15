@@ -13,15 +13,15 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuArrowLeftRight, LuTrash2 } from "react-icons/lu";
+import { api } from "../../api/client";
+import type { NodeRecord, OrganizationMemberRecord } from "../../api/types";
+import { unregisterNode, updateNodeScope } from "../../commands/nodeCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 import { StatusIndicator } from "../../components/StatusIndicator";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
-import { api } from "../../api/client";
-import type { NodeRecord, OrganizationMemberRecord } from "../../api/types";
-import { unregisterNode, updateNodeScope } from "../../commands/nodeCommands";
-import { sessionStore } from "../../store/sessionStore";
 import { getErrorMessage } from "../../helpers/errorHelpers";
+import { sessionStore } from "../../store/sessionStore";
 
 function resolveOwnerLabel(node: NodeRecord, members: OrganizationMemberRecord[], fallbackLabel: string): string {
   if (!node.ownerUserId) {
@@ -122,7 +122,7 @@ export function NodesSettingsView() {
     return () => {
       cancelled = true;
     };
-  }, [organizations, selectedOrganizationId]);
+  }, [organizationId]);
 
   function canChangeScope(node: NodeRecord): boolean {
     if (node.scope === "private") {
@@ -259,11 +259,11 @@ export function NodesSettingsView() {
               </TableHead>
               <TableBody>
                 {nodes.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7}>
-                        <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
-                          {t("settings.nodes.empty")}
-                        </Typography>
+                  <TableRow>
+                    <TableCell colSpan={7}>
+                      <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                        {t("settings.nodes.empty")}
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (

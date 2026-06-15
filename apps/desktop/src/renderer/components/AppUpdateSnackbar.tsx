@@ -171,7 +171,9 @@ export function AppUpdateSnackbar() {
               onClick={() => {
                 setIsBusy(true);
                 const request =
-                  update.status === "downloaded" ? getDesktopHostBridge().installUpdate() : getDesktopHostBridge().downloadUpdate();
+                  update.status === "downloaded"
+                    ? getDesktopHostBridge().installUpdate()
+                    : getDesktopHostBridge().downloadUpdate();
                 void request
                   .then((result) => {
                     if ("ok" in result && !result.ok) {

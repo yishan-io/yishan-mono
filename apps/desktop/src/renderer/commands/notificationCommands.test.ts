@@ -90,7 +90,7 @@ describe("notificationCommands", () => {
     mocks.sessionState.currentUser = {
       ...mocks.sessionState.currentUser,
       notificationPreferences: undefined,
-    } as (typeof mocks.sessionState.currentUser);
+    } as typeof mocks.sessionState.currentUser;
     window.localStorage.setItem(
       "notifications.preferences.v1",
       JSON.stringify({

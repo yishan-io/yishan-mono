@@ -302,10 +302,7 @@ describe("createWorkspaceRepoActions", () => {
     );
 
     expect(harness.getState().displayProjectIds).toEqual(["repo-1", "repo-3"]);
-    expect(harness.getState().organizationPreferencesById?.["org-1"]?.displayProjectIds).toEqual([
-      "repo-1",
-      "repo-3",
-    ]);
+    expect(harness.getState().organizationPreferencesById?.["org-1"]?.displayProjectIds).toEqual(["repo-1", "repo-3"]);
   });
 
   it("does not re-show projects the user hid on initial hydration", () => {

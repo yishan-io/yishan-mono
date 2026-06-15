@@ -117,7 +117,11 @@ export function useTabContentRenderer({
                 const workspaceWorktreePath = workspace?.worktreePath;
                 if (!workspaceWorktreePath || !tab.workspaceId) return;
                 try {
-                  await cmd.writeFile({ workspaceId: tab.workspaceId, relativePath: tab.data.path, content: nextContent });
+                  await cmd.writeFile({
+                    workspaceId: tab.workspaceId,
+                    relativePath: tab.data.path,
+                    content: nextContent,
+                  });
                   cmd.updateFileTabContent(tab.id, nextContent);
                   cmd.markFileTabSaved(tab.id);
                 } catch (error) {

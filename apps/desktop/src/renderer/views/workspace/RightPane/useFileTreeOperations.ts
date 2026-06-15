@@ -369,11 +369,10 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
         }
       }
     },
-    [selectedWorkspaceWorktreePath],
+    [selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
   useEffect(() => {
-    void selectedWorkspaceWorktreePath;
     const cachedEntries = selectedWorkspaceId ? treeCacheByWorkspaceIdRef.current.get(selectedWorkspaceId) : null;
     const cachedLoadedDirectoryPaths = selectedWorkspaceId
       ? loadedDirectoryPathsByWorkspaceIdRef.current.get(selectedWorkspaceId)
@@ -387,7 +386,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     setUndoStack([]);
     setFileTreeSelectionRequest(null);
     loadedDirectoryPathsRef.current = new Set(cachedLoadedDirectoryPaths ?? expandedItems);
-  }, [expandedFileTreeItemsByWorkspaceId, selectedWorkspaceId, selectedWorkspaceWorktreePath]);
+  }, [expandedFileTreeItemsByWorkspaceId, resetFileOperationState, selectedWorkspaceId, setFileOperationError]);
 
   const requestFileTreeSelection = useCallback((path: string | null, focus = true) => {
     const normalizedPath = normalizeRelativePath(path ?? "");
@@ -456,6 +455,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
   });
 
   useEffect(() => {
+    void fileTreeRefreshVersion;
     void refreshLoadedRepoFiles(changedRelativePathsForSelectedWorkspace);
   }, [changedRelativePathsForSelectedWorkspace, fileTreeRefreshVersion, refreshLoadedRepoFiles]);
 

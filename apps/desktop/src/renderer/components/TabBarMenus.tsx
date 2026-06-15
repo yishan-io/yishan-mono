@@ -1,6 +1,6 @@
 import { Box, Divider, Menu, MenuItem, Typography } from "@mui/material";
-import { LuColumns2, LuRows2 } from "react-icons/lu";
 import type { ReactNode } from "react";
+import { LuColumns2, LuRows2 } from "react-icons/lu";
 import type { TabBarCreateOption } from "./TabBar";
 
 type CreateMenuOption = {
@@ -66,7 +66,13 @@ export function CreateTabMenu({
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, width: "100%" }}>
               <Box component="span">{item.label}</Box>
               {item.shortcutLabel ? (
-                <Typography variant="caption" color="text.secondary" component="span" aria-hidden="true" sx={{ fontSize: 13, lineHeight: 1 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  component="span"
+                  aria-hidden="true"
+                  sx={{ fontSize: 13, lineHeight: 1 }}
+                >
                   {item.shortcutLabel}
                 </Typography>
               ) : null}
@@ -88,9 +94,21 @@ type SplitPaneMenuProps = {
   onSplitDown?: () => void;
 };
 
-export function SplitPaneMenu({ anchorEl, onClose, disabled, selectedTabId, onSplitRight, onSplitDown }: SplitPaneMenuProps) {
+export function SplitPaneMenu({
+  anchorEl,
+  onClose,
+  disabled,
+  selectedTabId,
+  onSplitRight,
+  onSplitDown,
+}: SplitPaneMenuProps) {
   return (
-    <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={onClose} slotProps={{ paper: { sx: { minWidth: 160 } } }}>
+    <Menu
+      anchorEl={anchorEl}
+      open={Boolean(anchorEl)}
+      onClose={onClose}
+      slotProps={{ paper: { sx: { minWidth: 160 } } }}
+    >
       {onSplitRight && (
         <MenuItem
           onClick={() => {

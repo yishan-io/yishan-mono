@@ -1,6 +1,6 @@
-import type { TerminalResourceUsageSnapshot } from "../rpc/daemonTypes";
 import { useEffect, useRef, useState } from "react";
 import { withTimeout } from "../helpers/withTimeout";
+import type { TerminalResourceUsageSnapshot } from "../rpc/daemonTypes";
 
 const INTERACTIVE_POLL_INTERVAL_MS = 2000;
 const IDLE_POLL_INTERVAL_MS = 15_000;

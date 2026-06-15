@@ -1,6 +1,6 @@
 import { Box, InputAdornment, ListSubheader, MenuItem, Tab, Tabs, TextField, Tooltip, Typography } from "@mui/material";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuFolderGit2, LuGitBranch, LuSearch } from "react-icons/lu";
 
 export type BranchDropdownGroups = {
@@ -146,7 +146,16 @@ export function BranchDropdown({
         emptyWorktreeLabel,
         emptyRemoteLabel,
       ),
-    [activeSection, branchesLabel, emptyLocalLabel, emptyRemoteLabel, emptyWorktreeLabel, groups, searchQuery, worktreesLabel],
+    [
+      activeSection,
+      branchesLabel,
+      emptyLocalLabel,
+      emptyRemoteLabel,
+      emptyWorktreeLabel,
+      groups,
+      searchQuery,
+      worktreesLabel,
+    ],
   );
 
   const virtualizer = useVirtualizer({
@@ -166,6 +175,8 @@ export function BranchDropdown({
   }, []);
 
   useEffect(() => {
+    void activeSection;
+    void searchQuery;
     if (scrollRef.current) {
       scrollRef.current.scrollTop = 0;
     }
@@ -194,7 +205,14 @@ export function BranchDropdown({
         <Tooltip title={row.label} placement="top" arrow enterDelay={500} enterTouchDelay={500}>
           <Box
             component="span"
-            sx={{ display: "inline-flex", alignItems: "center", gap: 0.75, minWidth: 0, width: "100%", maxWidth: "100%" }}
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.75,
+              minWidth: 0,
+              width: "100%",
+              maxWidth: "100%",
+            }}
           >
             <Box component="span" sx={{ display: "inline-flex", flexShrink: 0 }}>
               {row.kind === "worktree" ? <LuFolderGit2 size={14} /> : <LuGitBranch size={14} />}
@@ -202,7 +220,14 @@ export function BranchDropdown({
             <Typography
               variant="body2"
               noWrap
-              sx={{ display: "block", flex: 1, minWidth: 0, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" }}
+              sx={{
+                display: "block",
+                flex: 1,
+                minWidth: 0,
+                maxWidth: "100%",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
             >
               {row.label}
             </Typography>
@@ -261,10 +286,7 @@ export function BranchDropdown({
         />
       </Box>
 
-      <Box
-        ref={scrollRef}
-        sx={{ overflowY: "auto", overflowX: "hidden", maxHeight: MAX_LIST_HEIGHT }}
-      >
+      <Box ref={scrollRef} sx={{ overflowY: "auto", overflowX: "hidden", maxHeight: MAX_LIST_HEIGHT }}>
         <div style={{ height: virtualizer.getTotalSize(), width: "100%", position: "relative" }}>
           {virtualizer.getVirtualItems().map((virtualItem) => {
             const row = flatRows[virtualItem.index];

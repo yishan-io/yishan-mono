@@ -1,8 +1,8 @@
-import { api } from "./client";
-import type { OrganizationRecord } from "./types";
-import { requestJson } from "./restClient";
 import type { NotificationPreferences } from "../../shared/notifications/notificationPreferences";
 import type { SupportedLanguageCode } from "../i18n";
+import { api } from "./client";
+import { requestJson } from "./restClient";
+import type { OrganizationRecord } from "./types";
 
 export type CurrentUserRecord = {
   id: string;
@@ -13,7 +13,9 @@ export type CurrentUserRecord = {
   notificationPreferences: NotificationPreferences;
 };
 
-export async function updateLanguagePreference(languagePreference: SupportedLanguageCode): Promise<SupportedLanguageCode> {
+export async function updateLanguagePreference(
+  languagePreference: SupportedLanguageCode,
+): Promise<SupportedLanguageCode> {
   const response = await requestJson<{ languagePreference: SupportedLanguageCode }>("/language-preference", {
     method: "PUT",
     body: { languagePreference },

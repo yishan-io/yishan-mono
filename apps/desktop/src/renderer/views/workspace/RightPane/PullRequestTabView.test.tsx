@@ -2,6 +2,8 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { WorkspacePullRequestRecord } from "../../../api/types";
+import type { DaemonWorkspacePullRequest } from "../../../rpc/daemonTypes";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { PullRequestTabView } from "./PullRequestTabView";
 
@@ -10,8 +12,8 @@ const mocked = vi.hoisted(() => ({
   refreshWorkspacePullRequest: vi.fn(),
   state: {
     selectedWorkspaceId: "workspace-1",
-    pullRequest: undefined as any,
-    historicalPullRequests: [],
+    pullRequest: undefined as DaemonWorkspacePullRequest | undefined,
+    historicalPullRequests: [] as WorkspacePullRequestRecord[],
     isLoading: false,
   },
 }));

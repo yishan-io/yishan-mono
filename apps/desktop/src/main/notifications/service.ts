@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
-import { createSoundPlayer } from "./soundRuntime";
 import { createElectrobunNotificationDriver } from "./electrobunNotificationDriver";
 import { resolveDesktopSoundDirectory } from "./soundDirectory";
 import { resolveSoundFilePath } from "./soundMapping";
+import { createSoundPlayer } from "./soundRuntime";
 export type {
   DesktopNotificationHostAdapter,
   NativeNotificationRequest,

@@ -2,14 +2,14 @@ import { Badge, Box, IconButton, Tooltip } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuFolderTree, LuGitBranch, LuGitPullRequest, LuMic } from "react-icons/lu";
-import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab } from "../../../store/workspaceUiStore";
-import { workspaceStore } from "../../../store/workspaceStore";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
-import { layoutStore } from "../../../store/settings/layoutStore";
-import { DARK_SURFACE_COLORS } from "../../../theme";
 import { PANE_HEADER_MIN_HEIGHT } from "../../../components/PaneHeader";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
+import { layoutStore } from "../../../store/settings/layoutStore";
+import { workspaceStore } from "../../../store/workspaceStore";
+import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab } from "../../../store/workspaceUiStore";
+import { workspaceUiStore } from "../../../store/workspaceUiStore";
+import { DARK_SURFACE_COLORS } from "../../../theme";
 
 /** Custom event name dispatched when the voice mic button in the tab bar is clicked. */
 export const VOICE_RECORD_REQUEST_EVENT = "yishan:voice-record-request";
@@ -136,9 +136,7 @@ export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPa
                       ml: "-1px",
                       pl: "1px",
                       bgcolor: (theme) =>
-                        theme.palette.mode === "dark"
-                          ? DARK_SURFACE_COLORS.mainPane
-                          : theme.palette.background.default,
+                        theme.palette.mode === "dark" ? DARK_SURFACE_COLORS.mainPane : theme.palette.background.default,
                       boxShadow: (theme) => `inset 0 -1px 0 0 ${theme.palette.divider}99`,
                       borderTopLeftRadius: 0,
                       borderBottomLeftRadius: 0,

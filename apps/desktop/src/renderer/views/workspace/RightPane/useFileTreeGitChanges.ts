@@ -51,7 +51,10 @@ function normalizeGitChangePath(path: string): string {
     normalizedPath = renamedParts[renamedParts.length - 1] ?? normalizedPath;
   }
 
-  return normalizedPath.trim().replace(/^"+|"+$/g, "").replace(/^\/+|\/+$/g, "");
+  return normalizedPath
+    .trim()
+    .replace(/^"+|"+$/g, "")
+    .replace(/^\/+|\/+$/g, "");
 }
 
 function areGitChangeMapsEqual(

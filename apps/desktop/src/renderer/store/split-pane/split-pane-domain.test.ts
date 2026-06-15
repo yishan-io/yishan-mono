@@ -13,7 +13,7 @@ import {
   setSplitRatio,
   splitPaneWithTab,
 } from ".";
-import type { PaneBranch, SplitPaneStateSlice } from "./types";
+import type { PaneBranch, PaneLeaf, SplitPaneStateSlice } from "./types";
 
 function createSinglePaneState(tabIds: string[] = ["tab-1", "tab-2", "tab-3"]): SplitPaneStateSlice {
   return {
@@ -36,6 +36,14 @@ function createTwoPaneState(): SplitPaneStateSlice {
     },
     activePaneId: "pane-left",
   };
+}
+
+function expectNextState(next: SplitPaneStateSlice | null): SplitPaneStateSlice {
+  expect(next).toBeTruthy();
+  if (!next) {
+    throw new Error("Expected pane operation to return a state");
+  }
+  return next;
 }
 
 // ─── findLeaf / findLeafByTabId ────────────────────────────────────────────────
@@ -112,9 +120,9 @@ describe("splitPaneWithTab", () => {
     });
 
     expect(next).toBeTruthy();
-    expect(next!.root.kind).toBe("branch");
+    expect(next?.root.kind).toBe("branch");
 
-    const branch = next!.root as PaneBranch;
+    const branch = next?.root as PaneBranch;
     expect(branch.direction).toBe("horizontal");
     expect(branch.ratio).toBe(0.5);
 
@@ -132,7 +140,7 @@ describe("splitPaneWithTab", () => {
       expect(branch.second.selectedTabId).toBe("tab-3");
     }
 
-    expect(next!.activePaneId).toBe("pane-new");
+    expect(next?.activePaneId).toBe("pane-new");
   });
 
   it("splits a single pane vertically by placing a tab on top", () => {
@@ -147,7 +155,7 @@ describe("splitPaneWithTab", () => {
     });
 
     expect(next).toBeTruthy();
-    const branch = next!.root as PaneBranch;
+    const branch = next?.root as PaneBranch;
     expect(branch.direction).toBe("vertical");
 
     // First = new pane (top) with tab-1
@@ -184,13 +192,13 @@ describe("splitPaneWithTab", () => {
       newBranchId: "branch-new",
     });
 
-    expect(next).toBeTruthy();
+    const ensuredNext = expectNextState(next);
     // tab-1 should no longer be in pane-left
-    const leftLeaf = findLeafByTabId(next!.root, "tab-1");
+    const leftLeaf = findLeafByTabId(ensuredNext.root, "tab-1");
     expect(leftLeaf?.id).toBe("pane-new");
 
     // pane-left should still exist with tab-2
-    const originalLeft = findLeaf(next!.root, "pane-left");
+    const originalLeft = findLeaf(ensuredNext.root, "pane-left");
     expect(originalLeft?.tabIds).toEqual(["tab-2"]);
   });
 
@@ -219,11 +227,11 @@ describe("splitPaneWithTab", () => {
       newBranchId: "branch-new",
     });
 
-    expect(next).toBeTruthy();
+    const ensuredNext = expectNextState(next);
     // pane-left should be collapsed (removed)
-    expect(findLeaf(next!.root, "pane-left")).toBeNull();
+    expect(findLeaf(ensuredNext.root, "pane-left")).toBeNull();
     // tab-1 should be in the new pane
-    expect(findLeafByTabId(next!.root, "tab-1")?.id).toBe("pane-new");
+    expect(findLeafByTabId(ensuredNext.root, "tab-1")?.id).toBe("pane-new");
   });
 });
 
@@ -234,9 +242,9 @@ describe("moveTabToPane", () => {
     const state = createTwoPaneState(); // left: [tab-1, tab-2], right: [tab-3, tab-4]
     const next = moveTabToPane(state, { tabId: "tab-1", targetPaneId: "pane-right" });
 
-    expect(next).toBeTruthy();
-    const left = findLeaf(next!.root, "pane-left");
-    const right = findLeaf(next!.root, "pane-right");
+    const ensuredNext = expectNextState(next);
+    const left = findLeaf(ensuredNext.root, "pane-left");
+    const right = findLeaf(ensuredNext.root, "pane-right");
     expect(left?.tabIds).toEqual(["tab-2"]);
     expect(right?.tabIds).toEqual(["tab-3", "tab-4", "tab-1"]);
     expect(right?.selectedTabId).toBe("tab-1");
@@ -264,10 +272,10 @@ describe("moveTabToPane", () => {
     };
 
     const next = moveTabToPane(state, { tabId: "tab-1", targetPaneId: "pane-right" });
-    expect(next).toBeTruthy();
+    const ensuredNext = expectNextState(next);
     // Left pane should be collapsed, root should be the right pane
-    expect(findLeaf(next!.root, "pane-left")).toBeNull();
-    const rightLeaf = findLeaf(next!.root, "pane-right");
+    expect(findLeaf(ensuredNext.root, "pane-left")).toBeNull();
+    const rightLeaf = findLeaf(ensuredNext.root, "pane-right");
     expect(rightLeaf?.tabIds).toEqual(["tab-2", "tab-1"]);
   });
 });
@@ -279,17 +287,17 @@ describe("addTabToPane", () => {
     const state = createSinglePaneState(["tab-1"]);
     const next = addTabToPane(state, "tab-new");
     expect(next).toBeTruthy();
-    if (next!.root.kind === "leaf") {
-      expect(next!.root.tabIds).toEqual(["tab-1", "tab-new"]);
-      expect(next!.root.selectedTabId).toBe("tab-new");
+    if (next?.root.kind === "leaf") {
+      expect(next?.root.tabIds).toEqual(["tab-1", "tab-new"]);
+      expect(next?.root.selectedTabId).toBe("tab-new");
     }
   });
 
   it("adds a tab to a specific pane", () => {
     const state = createTwoPaneState();
     const next = addTabToPane(state, "tab-new", "pane-right");
-    expect(next).toBeTruthy();
-    const right = findLeaf(next!.root, "pane-right");
+    const ensuredNext = expectNextState(next);
+    const right = findLeaf(ensuredNext.root, "pane-right");
     expect(right?.tabIds).toEqual(["tab-3", "tab-4", "tab-new"]);
   });
 
@@ -308,14 +316,14 @@ describe("removeTabFromPane", () => {
     // Select tab-2 first
     const withSelected: SplitPaneStateSlice = {
       ...state,
-      root: { ...state.root, kind: "leaf", selectedTabId: "tab-2" } as any,
+      root: { ...state.root, kind: "leaf", selectedTabId: "tab-2" } as PaneLeaf,
     };
     const next = removeTabFromPane(withSelected, "tab-2");
     expect(next).toBeTruthy();
-    if (next!.root.kind === "leaf") {
-      expect(next!.root.tabIds).toEqual(["tab-1", "tab-3"]);
+    if (next?.root.kind === "leaf") {
+      expect(next?.root.tabIds).toEqual(["tab-1", "tab-3"]);
       // Should select the tab at the same index (tab-3 at index 1)
-      expect(next!.root.selectedTabId).toBe("tab-3");
+      expect(next?.root.selectedTabId).toBe("tab-3");
     }
   });
 
@@ -323,21 +331,20 @@ describe("removeTabFromPane", () => {
     const state = createTwoPaneState();
     // Remove both tabs from pane-left
     let next = removeTabFromPane(state, "tab-1");
-    expect(next).toBeTruthy();
-    next = removeTabFromPane(next!, "tab-2");
-    expect(next).toBeTruthy();
+    next = removeTabFromPane(expectNextState(next), "tab-2");
+    const ensuredNext = expectNextState(next);
     // pane-left should be collapsed
-    expect(findLeaf(next!.root, "pane-left")).toBeNull();
+    expect(findLeaf(ensuredNext.root, "pane-left")).toBeNull();
   });
 
   it("keeps an empty root pane (does not collapse)", () => {
     const state = createSinglePaneState(["tab-1"]);
     const next = removeTabFromPane(state, "tab-1");
     expect(next).toBeTruthy();
-    expect(next!.root.kind).toBe("leaf");
-    if (next!.root.kind === "leaf") {
-      expect(next!.root.tabIds).toEqual([]);
-      expect(next!.root.selectedTabId).toBe("");
+    expect(next?.root.kind).toBe("leaf");
+    if (next?.root.kind === "leaf") {
+      expect(next?.root.tabIds).toEqual([]);
+      expect(next?.root.selectedTabId).toBe("");
     }
   });
 
@@ -354,9 +361,9 @@ describe("selectTabInPane", () => {
   it("selects a tab and activates the pane", () => {
     const state = createTwoPaneState();
     const next = selectTabInPane(state, "pane-right", "tab-4");
-    expect(next).toBeTruthy();
-    expect(next!.activePaneId).toBe("pane-right");
-    const right = findLeaf(next!.root, "pane-right");
+    const ensuredNext = expectNextState(next);
+    expect(next?.activePaneId).toBe("pane-right");
+    const right = findLeaf(ensuredNext.root, "pane-right");
     expect(right?.selectedTabId).toBe("tab-4");
   });
 
@@ -380,7 +387,7 @@ describe("setActivePaneState", () => {
     const state = createTwoPaneState();
     const next = setActivePaneState(state, "pane-right");
     expect(next).toBeTruthy();
-    expect(next!.activePaneId).toBe("pane-right");
+    expect(next?.activePaneId).toBe("pane-right");
   });
 
   it("returns null when already active", () => {
@@ -403,17 +410,17 @@ describe("setSplitRatio", () => {
     const state = createTwoPaneState();
     const next = setSplitRatio(state, "branch-root", 0.7);
     expect(next).toBeTruthy();
-    const branch = next!.root as PaneBranch;
+    const branch = next?.root as PaneBranch;
     expect(branch.ratio).toBe(0.7);
   });
 
   it("clamps ratio to 0.1..0.9 range", () => {
     const state = createTwoPaneState();
     const tooSmall = setSplitRatio(state, "branch-root", 0.01);
-    expect((tooSmall!.root as PaneBranch).ratio).toBe(0.1);
+    expect((tooSmall?.root as PaneBranch).ratio).toBe(0.1);
 
     const tooLarge = setSplitRatio(state, "branch-root", 0.99);
-    expect((tooLarge!.root as PaneBranch).ratio).toBe(0.9);
+    expect((tooLarge?.root as PaneBranch).ratio).toBe(0.9);
   });
 
   it("returns null for non-existent branch", () => {
@@ -430,9 +437,9 @@ describe("reorderTabInPane", () => {
     const state = createSinglePaneState(["tab-1", "tab-2", "tab-3"]);
     const next = reorderTabInPane(state, "pane-root", "tab-3", "tab-1", "before");
     expect(next).toBeTruthy();
-    if (next!.root.kind === "leaf") {
-      expect(next!.root.tabIds).toEqual(["tab-3", "tab-1", "tab-2"]);
-      expect(next!.root.selectedTabId).toBe("tab-3");
+    if (next?.root.kind === "leaf") {
+      expect(next?.root.tabIds).toEqual(["tab-3", "tab-1", "tab-2"]);
+      expect(next?.root.selectedTabId).toBe("tab-3");
     }
   });
 
@@ -440,8 +447,8 @@ describe("reorderTabInPane", () => {
     const state = createSinglePaneState(["tab-1", "tab-2", "tab-3"]);
     const next = reorderTabInPane(state, "pane-root", "tab-1", "tab-3", "after");
     expect(next).toBeTruthy();
-    if (next!.root.kind === "leaf") {
-      expect(next!.root.tabIds).toEqual(["tab-2", "tab-3", "tab-1"]);
+    if (next?.root.kind === "leaf") {
+      expect(next?.root.tabIds).toEqual(["tab-2", "tab-3", "tab-1"]);
     }
   });
 

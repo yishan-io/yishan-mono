@@ -147,7 +147,10 @@ describe("LeftPaneView deletion", () => {
     // Uncheck one project
     const repo1Option = screen.getAllByText("Repo 1").at(-1);
     expect(repo1Option).toBeTruthy();
-    fireEvent.click(repo1Option!);
+    if (!repo1Option) {
+      throw new Error("Expected Repo 1 option");
+    }
+    fireEvent.click(repo1Option);
     rerender(<LeftPaneView />);
 
     expect(screen.queryByTestId("visible-repo-repo-1")).toBeNull();

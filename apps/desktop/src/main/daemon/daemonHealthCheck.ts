@@ -46,7 +46,6 @@ function resolveDaemonStateFilePath(): string {
   return resolve(homedir(), ".yishan", "profiles", resolveCliProfileName(), DAEMON_STATE_FILE_NAME);
 }
 
-
 function resolveDaemonIdFilePath(): string {
   return resolve(homedir(), ".yishan", "profiles", resolveCliProfileName(), DAEMON_ID_FILE_NAME);
 }

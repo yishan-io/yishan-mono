@@ -1,5 +1,5 @@
-import type { WorkspaceTabStateSlice } from "./types";
 import type { DesktopAgentKind } from "../../helpers/agentSettings";
+import type { WorkspaceTabStateSlice } from "./types";
 
 /** Creates an optimistic session tab and marks it selected for its workspace. */
 export function createSessionTabOptimisticState(input: {

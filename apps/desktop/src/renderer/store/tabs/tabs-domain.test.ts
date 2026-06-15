@@ -9,8 +9,8 @@ import {
   openTabState,
   refreshDiffTabContentState,
   refreshFileTabFromDiskState,
-  renameTabsForEntryRenameState,
   renameTabState,
+  renameTabsForEntryRenameState,
   reorderTabState,
   resolveSessionTabState,
   updateFileTabContentState,
@@ -247,9 +247,7 @@ describe("tabs-domain open", () => {
       ...state,
       tabs: [
         ...state.tabs.map((tab) =>
-          tab.id === "file-1" && tab.kind === "file"
-            ? { ...tab, data: { ...tab.data, isTemporary: true } }
-            : tab,
+          tab.id === "file-1" && tab.kind === "file" ? { ...tab, data: { ...tab.data, isTemporary: true } } : tab,
         ),
         {
           id: "file-2",
@@ -308,9 +306,7 @@ describe("tabs-domain open", () => {
     const previewState: WorkspaceTabStateSlice = {
       ...state,
       tabs: state.tabs.map((tab) =>
-        tab.id === "file-1" && tab.kind === "file"
-          ? { ...tab, data: { ...tab.data, isTemporary: true } }
-          : tab,
+        tab.id === "file-1" && tab.kind === "file" ? { ...tab, data: { ...tab.data, isTemporary: true } } : tab,
       ),
     };
 
@@ -672,7 +668,10 @@ describe("tabs-domain rename", () => {
     expect(patch).toBeTruthy();
     const renamedTab = patch?.tabs?.find((tab) => tab.id === "session-1");
     expect(renamedTab?.title).toBe("New Title");
-    expect("userRenamed" in (renamedTab as any)?.data === false || (renamedTab as any)?.data?.userRenamed === undefined).toBe(true);
+    if (!renamedTab || renamedTab.kind === "terminal") {
+      throw new Error("Expected renamed tab to be a non-terminal tab");
+    }
+    expect("userRenamed" in renamedTab.data).toBe(false);
   });
 
   it("renames one file tab path and syncs title via entry-rename mapping", () => {

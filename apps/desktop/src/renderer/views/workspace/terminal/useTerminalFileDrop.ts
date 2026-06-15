@@ -114,7 +114,11 @@ function extractDroppedPaths(dataTransfer: DataTransfer): string[] {
  *   clipboard paste and Shift+Enter already work in TerminalView.
  * - Multiple files are space-separated, each independently escaped.
  */
-export function useTerminalFileDrop({ tabId, xtermRef, sessionIdRef }: UseTerminalFileDropOptions): UseTerminalFileDropResult {
+export function useTerminalFileDrop({
+  tabId,
+  xtermRef,
+  sessionIdRef,
+}: UseTerminalFileDropOptions): UseTerminalFileDropResult {
   const [isFileDragOver, setIsFileDragOver] = useState(false);
   const dragEnterCountRef = useRef(0);
 

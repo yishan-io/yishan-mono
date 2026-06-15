@@ -71,10 +71,7 @@ export async function listAgentDetectionStatuses(forceRefresh = false): Promise<
 }
 
 /** Fetches available models for one agent kind from the daemon cache. */
-export async function listAgentModels(
-  agentKind: string,
-  forceRefresh = false,
-): Promise<AgentModelsResult> {
+export async function listAgentModels(agentKind: string, forceRefresh = false): Promise<AgentModelsResult> {
   const client = await getDaemonClient();
   return (await client.agent.listModels({ agentKind, forceRefresh })) as AgentModelsResult;
 }

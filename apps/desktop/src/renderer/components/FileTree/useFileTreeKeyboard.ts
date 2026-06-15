@@ -1,5 +1,5 @@
-import type { KeyboardEvent } from "react";
 import type { Virtualizer } from "@tanstack/react-virtual";
+import type { KeyboardEvent } from "react";
 import { isEditableTarget } from "../../shortcuts/editableTarget";
 import { handleFileTreeShortcutFromRegistry } from "../fileTreeActionRegistry";
 import { resolveDestinationDirectoryPath } from "./treeUtils";
@@ -104,7 +104,7 @@ export function useFileTreeKeyboard({
           setExpandedItems((items) => [...new Set([...items, selectedEntryPath])]);
         } else {
           const firstChild = visibleRows[current.index + 1];
-          if (firstChild && firstChild.path.startsWith(selectedEntryPath + "/")) {
+          if (firstChild?.path.startsWith(`${selectedEntryPath}/`)) {
             setSelectedEntryPath(firstChild.path);
             onSelectEntry?.({ path: firstChild.path, isDirectory: firstChild.isDirectory });
           }

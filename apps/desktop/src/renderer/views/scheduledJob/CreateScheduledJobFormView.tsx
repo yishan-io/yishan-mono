@@ -18,13 +18,13 @@ import { LuClock3, LuCloud, LuGlobe, LuServer } from "react-icons/lu";
 import { api } from "../../api";
 import type { CreateScheduledJobInput } from "../../api/scheduledJobApi";
 import { AgentIcon } from "../../components/AgentIcon";
+import { VirtualizedListbox } from "../../components/VirtualizedListbox";
 import { renderProjectIcon } from "../../components/projectIcons";
 import {
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
   type DesktopAgentKind,
   SUPPORTED_DESKTOP_AGENT_KINDS,
 } from "../../helpers/agentSettings";
-import { VirtualizedListbox } from "../../components/VirtualizedListbox";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { useCommands } from "../../hooks/useCommands";
 import { sessionStore } from "../../store/sessionStore";
@@ -164,7 +164,7 @@ export function CreateScheduledJobFormView({ onCreated, onCancel, onBusyChange }
     } catch {
       return null;
     }
-  }, [draft.cronExpression, draft.timezone, scheduleType, scheduleTime, weeklyDay]);
+  }, [draft.cronExpression, draft.timezone]);
   const cronDescription = useMemo(() => describeCronExpression(draft.cronExpression), [draft.cronExpression]);
 
   return (

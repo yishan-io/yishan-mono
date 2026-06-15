@@ -1,4 +1,11 @@
-import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { searchFiles } from "../../../commands/fileCommands";
 import type { FileSearchResult } from "../../../rpc/daemonTypes";
 

@@ -15,10 +15,10 @@ import { tabStore } from "../../store/tabStore";
 import type { WorkspaceTab } from "../../store/types";
 import { workspaceStore } from "../../store/workspaceStore";
 import { WorkspaceTabSurfaceLayer } from "./WorkspaceTabSurfaceLayer";
-import { FaviconIcon, toTabBarDescriptor } from "./workspaceSplitPaneHelpers";
-import { useWorkspaceTabPlacements } from "./useWorkspaceTabPlacements";
 import { usePaneTabHandlers } from "./usePaneTabHandlers";
 import { useTabContentRenderer } from "./useTabContentRenderer";
+import { useWorkspaceTabPlacements } from "./useWorkspaceTabPlacements";
+import { FaviconIcon, toTabBarDescriptor } from "./workspaceSplitPaneHelpers";
 
 // ─── Per-workspace split pane ─────────────────────────────────────────────────
 

@@ -412,7 +412,6 @@ describe("TerminalView", () => {
     render(<TerminalView tabId="terminal-tab-1" />);
     await waitFor(() => {
       expect(mocked.createTerminalSession).toHaveBeenCalledWith({
-
         workspaceId: "workspace-1",
         tabId: "terminal-tab-1",
         paneId: "pane-terminal-tab-1",
@@ -806,7 +805,10 @@ describe("TerminalView", () => {
 
     render(<TerminalView tabId="terminal-tab-1" />);
     await waitFor(() => {
-      expect(errorSpy).toHaveBeenCalledWith("[TerminalRegistry] Failed to init terminal session lifecycle", attachError);
+      expect(errorSpy).toHaveBeenCalledWith(
+        "[TerminalRegistry] Failed to init terminal session lifecycle",
+        attachError,
+      );
     });
 
     errorSpy.mockRestore();

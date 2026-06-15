@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import type { TerminalSessionLifecycleEvent } from "../../rpc/daemonTypes";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { TerminalSessionLifecycleEvent } from "../../rpc/daemonTypes";
 import { tabStore } from "../../store/tabStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { TerminalSettingsView } from "./TerminalSettingsView";

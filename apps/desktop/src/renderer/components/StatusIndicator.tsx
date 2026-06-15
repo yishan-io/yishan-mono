@@ -46,10 +46,7 @@ export function StatusIndicator({ label, color, dotSize = 8 }: StatusIndicatorPr
           flexShrink: 0,
         }}
       />
-      <Typography
-        variant="body2"
-        color={color === "disabled" ? "text.secondary" : "text.primary"}
-      >
+      <Typography variant="body2" color={color === "disabled" ? "text.secondary" : "text.primary"}>
         {label}
       </Typography>
     </Box>

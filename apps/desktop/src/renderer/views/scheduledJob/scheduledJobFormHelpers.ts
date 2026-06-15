@@ -105,7 +105,11 @@ export function inferScheduleFromCron(cronExpression: string): {
     return { scheduleType: "weekly", scheduleTime: time, weeklyDay: dayOfWeek };
   }
   if (parts[2] === "*" && parts[3] === "*" && dayOfWeek === "*" && hour === "*") {
-    return { scheduleType: "hourly", scheduleTime: `00:${String(Number.parseInt(minute, 10) || 0).padStart(2, "0")}`, weeklyDay: "1" };
+    return {
+      scheduleType: "hourly",
+      scheduleTime: `00:${String(Number.parseInt(minute, 10) || 0).padStart(2, "0")}`,
+      weeklyDay: "1",
+    };
   }
 
   return { scheduleType: "custom", scheduleTime: time, weeklyDay: "1" };

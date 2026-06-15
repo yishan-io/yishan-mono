@@ -253,5 +253,5 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
       unsubscribeGitChanged();
       unsubscribeDaemonConnectionStatus();
     };
-  }, [workspaceId]);
+  }, [input.subscribeDaemonConnectionStatus, workspaceId]);
 }

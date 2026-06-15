@@ -1,18 +1,18 @@
 import { useCallback, useRef } from "react";
-import type { WorkspaceTab, OpenWorkspaceTabInput } from "../../../store/types";
+import { type ExternalAppId, SYSTEM_FILE_MANAGER_APP_ID } from "../../../../shared/contracts/externalApps";
 import {
+  buildWorkspaceFileUrl,
   createFile,
   createFolder,
   deleteEntry,
   openEntryInExternalApp,
   readFile,
-  buildWorkspaceFileUrl,
   renameEntry,
   writeClipboardText,
 } from "../../../commands/fileCommands";
 import { isImageFile, isUnsupportedFileTab } from "../../../helpers/editorLanguage";
-import { SYSTEM_FILE_MANAGER_APP_ID, type ExternalAppId } from "../../../../shared/contracts/externalApps";
-import { getUtf8ByteLength, LARGE_FILE_OPEN_THRESHOLD_BYTES, resolveWorkspaceAbsolutePath } from "./fileTreeHelpers";
+import type { OpenWorkspaceTabInput, WorkspaceTab } from "../../../store/types";
+import { LARGE_FILE_OPEN_THRESHOLD_BYTES, getUtf8ByteLength, resolveWorkspaceAbsolutePath } from "./fileTreeHelpers";
 import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "./rightPaneDelete";
 import type { FileTreeUndoAction } from "./useFileTreeUndo";
 
@@ -71,7 +71,10 @@ export function useFileTreeCrud({
             workspaceId: selectedWorkspaceId,
             kind: "image",
             path,
-            dataUrl: buildWorkspaceFileUrl({ workspaceWorktreePath: selectedWorkspaceWorktreePath, relativePath: path }),
+            dataUrl: buildWorkspaceFileUrl({
+              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              relativePath: path,
+            }),
             temporary: Boolean(options?.temporary),
           });
           requestFileTreeSelection(path, false);
@@ -161,7 +164,7 @@ export function useFileTreeCrud({
         isDeletingEntryRef.current = false;
       }
     },
-    [closeTab, loadAllRepoFiles, pushUndoAction, repoFiles, selectedWorkspaceWorktreePath, tabs],
+    [closeTab, loadAllRepoFiles, pushUndoAction, repoFiles, selectedWorkspaceId, selectedWorkspaceWorktreePath, tabs],
   );
 
   const onCreateFile = useCallback(
@@ -217,7 +220,7 @@ export function useFileTreeCrud({
         console.error("Failed to create workspace folder", error);
       }
     },
-    [pushUndoAction, loadAllRepoFiles, selectedWorkspaceWorktreePath],
+    [loadAllRepoFiles, pushUndoAction, selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
   const onRenameEntry = useCallback(

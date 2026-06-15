@@ -1,7 +1,7 @@
+import { existsSync, constants as fsConstants } from "node:fs";
 import { access, lstat, mkdir, readlink, symlink, unlink } from "node:fs/promises";
-import { constants as fsConstants, existsSync } from "node:fs";
-import { dirname, delimiter, resolve } from "node:path";
 import { homedir } from "node:os";
+import { delimiter, dirname, resolve } from "node:path";
 
 export type DesktopCliInstallStatus = {
   isAvailableInPath: boolean;

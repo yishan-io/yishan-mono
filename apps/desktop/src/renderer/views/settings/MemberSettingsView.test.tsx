@@ -167,7 +167,13 @@ describe("MemberSettingsView", () => {
       expect(screen.getByText("Member User")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getAllByLabelText("settings.members.removeAriaLabel")[1]!);
+    const removeButtons = screen.getAllByLabelText("settings.members.removeAriaLabel");
+    const memberRemoveButton = removeButtons[1];
+    expect(memberRemoveButton).toBeTruthy();
+    if (!memberRemoveButton) {
+      throw new Error("Expected member remove button");
+    }
+    fireEvent.click(memberRemoveButton);
     fireEvent.click(screen.getByText("settings.members.removeDialog.confirm"));
 
     await waitFor(() => {

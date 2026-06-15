@@ -126,7 +126,12 @@ export function TerminalSearchPanel({
         >
           Next
         </IconButton>
-        <IconButton aria-label="Close terminal search" size="small" onClick={onClose} sx={{ color: "#e7ebf0", fontSize: 11 }}>
+        <IconButton
+          aria-label="Close terminal search"
+          size="small"
+          onClick={onClose}
+          sx={{ color: "#e7ebf0", fontSize: 11 }}
+        >
           Close
         </IconButton>
       </Stack>

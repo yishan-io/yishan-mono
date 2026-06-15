@@ -23,6 +23,7 @@ export function useWebviewEvents(args: {
   onNavigatedRef.current = onNavigated;
 
   useEffect(() => {
+    void resolvedUrl;
     isWebviewReadyRef.current = false;
     setIsWebviewReady(false);
     setCanGoBack(false);

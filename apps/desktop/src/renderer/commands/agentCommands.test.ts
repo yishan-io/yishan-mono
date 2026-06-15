@@ -38,9 +38,7 @@ describe("agentCommands", () => {
       { agentKind: "cursor", detected: false },
     ]);
 
-    expect(consoleInfoSpy).toHaveBeenCalledWith(
-      "[agentCommands] Ignoring unsupported detected CLI tools: ignored",
-    );
+    expect(consoleInfoSpy).toHaveBeenCalledWith("[agentCommands] Ignoring unsupported detected CLI tools: ignored");
     consoleInfoSpy.mockRestore();
   });
 

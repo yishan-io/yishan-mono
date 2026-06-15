@@ -53,17 +53,16 @@ export function createTerminalWriteQueue(terminal: Terminal): TerminalWriteQueue
         flushNextBatch();
       }, DETACHED_WRITE_INTERVAL_MS);
       return;
-    } else {
-      if (attachedFlushAnimationFrameId !== null) {
-        return; // already scheduled
-      }
-      // Attached mode: align writes to a frame budget to batch bursty output
-      // and reduce renderer churn under high-throughput streams.
-      attachedFlushAnimationFrameId = requestAnimationFrame(() => {
-        attachedFlushAnimationFrameId = null;
-        flushNextBatch();
-      });
     }
+    if (attachedFlushAnimationFrameId !== null) {
+      return; // already scheduled
+    }
+    // Attached mode: align writes to a frame budget to batch bursty output
+    // and reduce renderer churn under high-throughput streams.
+    attachedFlushAnimationFrameId = requestAnimationFrame(() => {
+      attachedFlushAnimationFrameId = null;
+      flushNextBatch();
+    });
   };
 
   const writeChunk = (chunk: TerminalWriteChunk): void => {
@@ -101,7 +100,13 @@ export function createTerminalWriteQueue(terminal: Terminal): TerminalWriteQueue
       return;
     }
 
-    if (!detached && !writeInFlight && chunks.length === 0 && isInteractiveTerminalChunk(chunk) && !isBurstingOutput(lastWriteCompletedAt)) {
+    if (
+      !detached &&
+      !writeInFlight &&
+      chunks.length === 0 &&
+      isInteractiveTerminalChunk(chunk) &&
+      !isBurstingOutput(lastWriteCompletedAt)
+    ) {
       writeChunk(chunk);
       return;
     }

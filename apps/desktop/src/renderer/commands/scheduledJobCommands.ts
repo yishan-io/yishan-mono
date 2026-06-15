@@ -111,7 +111,9 @@ export async function resumeScheduledJob(jobId: string): Promise<void> {
 }
 
 /** Triggers one scheduled job immediately. */
-export async function runScheduledJobNow(jobId: string): Promise<import("../api/scheduledJobApi").ScheduledJobRunRecord | null> {
+export async function runScheduledJobNow(
+  jobId: string,
+): Promise<import("../api/scheduledJobApi").ScheduledJobRunRecord | null> {
   const orgId = sessionStore.getState().selectedOrganizationId;
   if (!orgId) {
     return null;

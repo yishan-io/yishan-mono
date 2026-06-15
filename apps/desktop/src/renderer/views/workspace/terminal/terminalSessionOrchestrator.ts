@@ -105,9 +105,7 @@ export class TerminalSessionOrchestrator {
   /**
    * Resolves one stable terminal session snapshot per tab and deduplicates concurrent creation requests.
    */
-  private async resolveSessionSnapshot(
-    tab: TerminalTab,
-  ): Promise<TerminalResolvedSession> {
+  private async resolveSessionSnapshot(tab: TerminalTab): Promise<TerminalResolvedSession> {
     const existing = inFlightSessionResolutionByTabId.get(tab.id);
     if (existing) {
       return await existing;
@@ -127,9 +125,7 @@ export class TerminalSessionOrchestrator {
   /**
    * Resolves one terminal session snapshot by reusing one existing session or creating a replacement when missing.
    */
-  private async resolveSessionSnapshotUncached(
-    tab: TerminalTab,
-  ): Promise<TerminalResolvedSession> {
+  private async resolveSessionSnapshotUncached(tab: TerminalTab): Promise<TerminalResolvedSession> {
     let sessionId = normalizeOptionalText(tab.data.sessionId);
     let snapshot: TerminalSnapshot | undefined;
     let isNewSession = false;

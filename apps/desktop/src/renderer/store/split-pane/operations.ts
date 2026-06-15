@@ -1,5 +1,5 @@
-import type { PaneBranch, PaneLeaf, SplitDirection, SplitPaneNode, SplitPaneStateSlice } from "./types";
 import { generateId } from "../../helpers/generateId";
+import type { PaneBranch, PaneLeaf, SplitDirection, SplitPaneNode, SplitPaneStateSlice } from "./types";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -121,9 +121,10 @@ export function splitPaneWithTab(
     const updatedSource: PaneLeaf = {
       ...sourceLeaf,
       tabIds: remainingTabIds,
-      selectedTabId: sourceLeaf.selectedTabId === tabId
-        ? (remainingTabIds[Math.min(removedIndex, remainingTabIds.length - 1)] ?? "")
-        : sourceLeaf.selectedTabId,
+      selectedTabId:
+        sourceLeaf.selectedTabId === tabId
+          ? (remainingTabIds[Math.min(removedIndex, remainingTabIds.length - 1)] ?? "")
+          : sourceLeaf.selectedTabId,
     };
 
     const newLeaf = createLeaf(newPaneId, [tabId], tabId);
@@ -154,9 +155,7 @@ export function splitPaneWithTab(
       const updatedSource: PaneLeaf = {
         ...sourceLeaf,
         tabIds: remainingTabIds,
-        selectedTabId: sourceLeaf.selectedTabId === tabId
-          ? (remainingTabIds[0] ?? "")
-          : sourceLeaf.selectedTabId,
+        selectedTabId: sourceLeaf.selectedTabId === tabId ? (remainingTabIds[0] ?? "") : sourceLeaf.selectedTabId,
       };
       nextRoot = replaceNode(nextRoot, sourceLeaf.id, updatedSource);
     }
@@ -231,9 +230,7 @@ export function moveTabToPane(
     const updatedSource: PaneLeaf = {
       ...sourceLeaf,
       tabIds: remainingTabIds,
-      selectedTabId: sourceLeaf.selectedTabId === tabId
-        ? (remainingTabIds[0] ?? "")
-        : sourceLeaf.selectedTabId,
+      selectedTabId: sourceLeaf.selectedTabId === tabId ? (remainingTabIds[0] ?? "") : sourceLeaf.selectedTabId,
     };
     nextRoot = replaceNode(nextRoot, sourceLeaf.id, updatedSource);
   }
@@ -260,11 +257,7 @@ export function moveTabToPane(
 /**
  * Adds a new tab to the specified pane (or the active pane if not specified).
  */
-export function addTabToPane(
-  state: SplitPaneStateSlice,
-  tabId: string,
-  paneId?: string,
-): SplitPaneStateSlice | null {
+export function addTabToPane(state: SplitPaneStateSlice, tabId: string, paneId?: string): SplitPaneStateSlice | null {
   const targetPaneId = paneId ?? state.activePaneId;
   const leaf = findLeaf(state.root, targetPaneId);
   if (!leaf) {
@@ -286,10 +279,7 @@ export function addTabToPane(
 /**
  * Removes a tab from its pane. If the pane becomes empty, collapse it.
  */
-export function removeTabFromPane(
-  state: SplitPaneStateSlice,
-  tabId: string,
-): SplitPaneStateSlice | null {
+export function removeTabFromPane(state: SplitPaneStateSlice, tabId: string): SplitPaneStateSlice | null {
   const leaf = findLeafByTabId(state.root, tabId);
   if (!leaf) {
     return null;
@@ -321,9 +311,7 @@ export function removeTabFromPane(
     const nextRoot = replaceNode(state.root, parent.id, sibling);
     // If active pane was the collapsed one, move to sibling
     const leaves = collectLeaves(nextRoot);
-    const nextActivePaneId = state.activePaneId === leaf.id
-      ? (leaves[0]?.id ?? "")
-      : state.activePaneId;
+    const nextActivePaneId = state.activePaneId === leaf.id ? (leaves[0]?.id ?? "") : state.activePaneId;
 
     return {
       root: nextRoot,
@@ -335,9 +323,10 @@ export function removeTabFromPane(
   const updatedLeaf: PaneLeaf = {
     ...leaf,
     tabIds: remainingTabIds,
-    selectedTabId: leaf.selectedTabId === tabId
-      ? (remainingTabIds[Math.min(leaf.tabIds.indexOf(tabId), remainingTabIds.length - 1)] ?? "")
-      : leaf.selectedTabId,
+    selectedTabId:
+      leaf.selectedTabId === tabId
+        ? (remainingTabIds[Math.min(leaf.tabIds.indexOf(tabId), remainingTabIds.length - 1)] ?? "")
+        : leaf.selectedTabId,
   };
 
   return {
@@ -349,11 +338,7 @@ export function removeTabFromPane(
 /**
  * Sets the selected tab within a pane.
  */
-export function selectTabInPane(
-  state: SplitPaneStateSlice,
-  paneId: string,
-  tabId: string,
-): SplitPaneStateSlice | null {
+export function selectTabInPane(state: SplitPaneStateSlice, paneId: string, tabId: string): SplitPaneStateSlice | null {
   const leaf = findLeaf(state.root, paneId);
   if (!leaf || !leaf.tabIds.includes(tabId)) {
     return null;
@@ -373,10 +358,7 @@ export function selectTabInPane(
 /**
  * Sets the active pane focus.
  */
-export function setActivePaneState(
-  state: SplitPaneStateSlice,
-  paneId: string,
-): SplitPaneStateSlice | null {
+export function setActivePaneState(state: SplitPaneStateSlice, paneId: string): SplitPaneStateSlice | null {
   if (state.activePaneId === paneId) {
     return null;
   }
@@ -390,11 +372,7 @@ export function setActivePaneState(
 /**
  * Updates the split ratio for a branch node.
  */
-export function setSplitRatio(
-  state: SplitPaneStateSlice,
-  branchId: string,
-  ratio: number,
-): SplitPaneStateSlice | null {
+export function setSplitRatio(state: SplitPaneStateSlice, branchId: string, ratio: number): SplitPaneStateSlice | null {
   const clamped = Math.max(0.1, Math.min(0.9, ratio));
 
   function updateBranch(node: SplitPaneNode): SplitPaneNode | null {

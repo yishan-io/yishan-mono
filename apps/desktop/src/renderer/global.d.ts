@@ -10,5 +10,3 @@ declare global {
     __YISHAN__: DesktopBridge;
   }
 }
-
-export {};

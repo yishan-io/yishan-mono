@@ -1,6 +1,6 @@
 import { Box, CircularProgress, TextField } from "@mui/material";
-import { MdOutlineKeyboardArrowRight } from "react-icons/md";
 import type { DragEvent, KeyboardEvent, MouseEvent } from "react";
+import { MdOutlineKeyboardArrowRight } from "react-icons/md";
 import { getFileTreeIcon } from "../fileTreeIcons";
 import { FILETREE_DRAG_MIME } from "./dataTransfer";
 import type { FileTreeGitChangeKind, VisibleRow } from "./types";
@@ -207,11 +207,7 @@ export function FlatTreeRow({
             "& svg": { display: "block" },
           }}
         >
-          {isLoading ? (
-            <CircularProgress size={12} color="inherit" />
-          ) : (
-            <MdOutlineKeyboardArrowRight size={16} />
-          )}
+          {isLoading ? <CircularProgress size={12} color="inherit" /> : <MdOutlineKeyboardArrowRight size={16} />}
         </Box>
       ) : (
         <Box sx={{ width: 16, flexShrink: 0 }} />
@@ -224,7 +220,7 @@ export function FlatTreeRow({
         sx={{
           ml: 0.75,
           typography: "body2",
-          color: isIgnored ? "text.disabled" : indicatorMeta?.textColor ?? "text.primary",
+          color: isIgnored ? "text.disabled" : (indicatorMeta?.textColor ?? "text.primary"),
           fontWeight: indicatorMeta ? 500 : 400,
           whiteSpace: "nowrap",
         }}

@@ -13,7 +13,7 @@ type TestState = {
 };
 
 function createHarness() {
-  let state: TestState = {
+  const state: TestState = {
     workspaces: [
       { id: "workspace-1", repoId: "repo-1", projectId: "repo-1" },
       { id: "workspace-2", repoId: "repo-2", projectId: "repo-2" },
@@ -41,7 +41,6 @@ function createHarness() {
 }
 
 describe("createWorkspaceSelectionActions", () => {
-
   it("selects workspace and aligns selected project with workspace project", () => {
     const harness = createHarness();
 

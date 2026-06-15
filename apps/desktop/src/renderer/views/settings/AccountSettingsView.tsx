@@ -188,14 +188,21 @@ export function AccountSettingsView() {
         </Box>
 
         <Box>
-          <SettingsSectionHeader title={t("settings.account.usage.title")} description={t("settings.account.usage.description")} />
+          <SettingsSectionHeader
+            title={t("settings.account.usage.title")}
+            description={t("settings.account.usage.description")}
+          />
           <SettingsCard>
             <SettingsRows>
               <SettingsControlRow
                 title={t("settings.account.usage.voiceInput")}
                 control={
                   <Box sx={{ width: 360, maxWidth: "56vw" }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.75, textAlign: "right" }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mb: 0.75, textAlign: "right" }}
+                    >
                       {voiceUsage
                         ? t("settings.account.usage.summary", {
                             used: formatVoiceUsageSeconds(voiceUsage.usedSeconds),

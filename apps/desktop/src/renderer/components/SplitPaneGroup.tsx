@@ -153,8 +153,7 @@ export function SplitPaneGroup({
           minWidth: 0,
           ...(hasTabs
             ? {
-                bgcolor: (theme: Theme) =>
-                  darken(theme.palette.background.default, 0.2),
+                bgcolor: (theme: Theme) => darken(theme.palette.background.default, 0.2),
               }
             : {}),
         }}

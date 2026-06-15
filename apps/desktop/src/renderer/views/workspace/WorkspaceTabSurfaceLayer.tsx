@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
-import { createPortal } from "react-dom";
 import { useCallback } from "react";
+import { createPortal } from "react-dom";
 import type { PaneLeaf } from "../../store/split-pane";
 import type { WorkspaceTab } from "../../store/types";
 import { getOrCreateRuntimeRoot } from "./runtime/runtimeRoot";

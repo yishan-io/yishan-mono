@@ -32,10 +32,7 @@ export function promoteTemporaryTabState(
 ): Partial<WorkspaceTabStateSlice> | null {
   const tab = state.tabs.find((t) => t.id === tabId);
   if (!tab) return null;
-  if (
-    (tab.kind === "file" || tab.kind === "image" || tab.kind === "diff") &&
-    tab.data.isTemporary
-  ) {
+  if ((tab.kind === "file" || tab.kind === "image" || tab.kind === "diff") && tab.data.isTemporary) {
     return {
       tabs: state.tabs.map((t): WorkspaceTab => {
         if (t.id !== tabId) return t;
@@ -52,11 +49,7 @@ export function promoteTemporaryTabState(
 /** Toggles pinned state for one tab id. */
 export function toggleTabPinnedState(state: WorkspaceTabStateSlice, tabId: string): Partial<WorkspaceTabStateSlice> {
   return {
-    tabs: state.tabs.map((tab) =>
-      tab.id === tabId
-        ? clearTemporaryOnPin(tab)
-        : tab,
-    ),
+    tabs: state.tabs.map((tab) => (tab.id === tabId ? clearTemporaryOnPin(tab) : tab)),
   };
 }
 
@@ -163,13 +156,13 @@ export function updateFileTabContentState(
         ? {
             ...tab,
             data: {
-                ...tab.data,
-                content,
-                isDirty: content !== tab.data.savedContent,
-                isDeleted: false,
-              },
-            }
-          : tab,
+              ...tab.data,
+              content,
+              isDirty: content !== tab.data.savedContent,
+              isDeleted: false,
+            },
+          }
+        : tab,
     ),
   };
 }
@@ -182,13 +175,13 @@ export function markFileTabSavedState(state: WorkspaceTabStateSlice, tabId: stri
         ? {
             ...tab,
             data: {
-                ...tab.data,
-                savedContent: tab.data.content,
-                isDirty: false,
-                isDeleted: false,
-              },
-            }
-          : tab,
+              ...tab.data,
+              savedContent: tab.data.content,
+              isDirty: false,
+              isDeleted: false,
+            },
+          }
+        : tab,
     ),
   };
 }
@@ -212,7 +205,11 @@ export function refreshFileTabFromDiskState(
   }
 
   const nextContent = input.deleted ? "" : input.content;
-  if (targetTab.data.content === nextContent && targetTab.data.savedContent === nextContent && !!targetTab.data.isDeleted === input.deleted) {
+  if (
+    targetTab.data.content === nextContent &&
+    targetTab.data.savedContent === nextContent &&
+    !!targetTab.data.isDeleted === input.deleted
+  ) {
     return null;
   }
 

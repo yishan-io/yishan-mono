@@ -146,17 +146,7 @@ export function isMarkdownFile(path: string): boolean {
 }
 
 /** Set of file extensions recognized as previewable image formats. */
-const IMAGE_EXTENSIONS = new Set([
-  "png",
-  "jpg",
-  "jpeg",
-  "gif",
-  "svg",
-  "webp",
-  "bmp",
-  "ico",
-  "avif",
-]);
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "ico", "avif"]);
 
 /** Returns true when the given file path refers to a previewable image format. */
 export function isImageFile(path: string): boolean {

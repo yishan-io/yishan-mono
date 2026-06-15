@@ -151,7 +151,7 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
               sx={{
                 display: "flex",
                 alignItems: "flex-start",
-              gap: 1.5,
+                gap: 1.5,
                 border: 1,
                 borderColor: "divider",
                 borderRadius: 1,

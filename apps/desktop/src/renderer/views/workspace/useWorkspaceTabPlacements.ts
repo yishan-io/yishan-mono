@@ -23,6 +23,7 @@ export function useWorkspaceTabPlacements(input: {
   }, []);
 
   const tabPlacements = useMemo(() => {
+    void layoutVersion;
     const placements = new Map<string, WorkspaceTabPlacement>();
     if (!splitRoot) {
       return placements;

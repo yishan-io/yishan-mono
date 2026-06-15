@@ -1,7 +1,13 @@
 import { Alert, Box, Button, Snackbar, Typography } from "@mui/material";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { LuRefreshCcw, LuTriangle } from "react-icons/lu";
-import { attachWebviewPlaceholder, detachWebviewPlaceholder, getOrCreateWebview, parkWebview, syncWebviewUrl } from "./webviewRegistry";
+import {
+  attachWebviewPlaceholder,
+  detachWebviewPlaceholder,
+  getOrCreateWebview,
+  parkWebview,
+  syncWebviewUrl,
+} from "./webviewRegistry";
 
 type WebviewPaneProps = {
   tabId: string;
@@ -69,6 +75,7 @@ export function WebviewPane({
   }, [tabId, resolvedUrl, hasError, setWebviewRef]);
 
   useEffect(() => {
+    void resolvedUrl;
     const webview = webviewElRef.current;
     if (!webview) {
       return;
@@ -118,16 +125,50 @@ export function WebviewPane({
           {snackbarMessage}
         </Alert>
       </Snackbar>
-      <Box sx={{ flex: 1, minHeight: 0, border: "1px solid", borderColor: "divider", borderRadius: 1, overflow: "hidden", position: "relative" }}>
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 1,
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
         {resolvedUrl ? (
           <>
             <Box ref={webviewHostRef} sx={{ width: "100%", height: "100%" }} />
             {hasError ? (
-              <Box sx={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, p: 4, bgcolor: "background.paper" }}>
-                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", width: 56, height: 56, borderRadius: "50%", bgcolor: "error.lighter" }}>
+              <Box
+                sx={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 2,
+                  p: 4,
+                  bgcolor: "background.paper",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 56,
+                    height: 56,
+                    borderRadius: "50%",
+                    bgcolor: "error.lighter",
+                  }}
+                >
                   <LuTriangle size={24} color="#f44336" />
                 </Box>
-                <Typography sx={{ fontSize: 16, fontWeight: 600, color: "text.primary" }}>This page can't be loaded</Typography>
+                <Typography sx={{ fontSize: 16, fontWeight: 600, color: "text.primary" }}>
+                  This page can't be loaded
+                </Typography>
                 <Typography sx={{ fontSize: 13, color: "text.secondary", textAlign: "center", maxWidth: 400 }}>
                   {errorMessage}
                 </Typography>

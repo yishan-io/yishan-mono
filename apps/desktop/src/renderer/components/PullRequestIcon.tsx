@@ -1,13 +1,6 @@
 import { LuGitPullRequest, LuGitPullRequestClosed } from "react-icons/lu";
 
-export type PullRequestIconState =
-  | "open"
-  | "approved"
-  | "closed"
-  | "merged"
-  | "draft"
-  | "review"
-  | string;
+export type PullRequestIconState = "open" | "approved" | "closed" | "merged" | "draft" | "review" | string;
 
 /**
  * Returns the display color for a pull request state.
