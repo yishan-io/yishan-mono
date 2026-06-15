@@ -9,7 +9,6 @@ import { createOrganization } from "../../api";
 import { RestApiError } from "../../api/restClient";
 import { getSessionBootstrapData } from "../../api/sessionApi";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../commands/appCommands";
-import { loadWorkspaceSnapshot } from "../../commands/projectCommands";
 import { rendererQueryClient } from "../../queryClient";
 import { authStore } from "../../store/authStore";
 import { sessionStore } from "../../store/sessionStore";
@@ -61,10 +60,6 @@ vi.mock("../../api/sessionApi", () => ({
       },
     ],
   })),
-}));
-
-vi.mock("../../commands/projectCommands", () => ({
-  loadWorkspaceSnapshot: vi.fn(async () => undefined),
 }));
 
 vi.mock("../../api", () => ({
@@ -186,7 +181,6 @@ describe("ApplicationRouterView", () => {
         },
       ],
     });
-    vi.mocked(loadWorkspaceSnapshot).mockResolvedValue(undefined);
     vi.mocked(api.node.listByOrg).mockResolvedValue([]);
     vi.mocked(createOrganization).mockResolvedValue({ id: "org-2", name: "New Organization" });
   });

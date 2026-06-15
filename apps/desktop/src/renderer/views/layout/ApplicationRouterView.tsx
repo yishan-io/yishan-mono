@@ -6,7 +6,6 @@ import { api } from "../../api";
 import { RestApiError } from "../../api/restClient";
 import { getSessionBootstrapData } from "../../api/sessionApi";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../commands/appCommands";
-import { loadWorkspaceSnapshot } from "../../commands/projectCommands";
 import { setAppLanguage } from "../../i18n";
 import { rendererQueryClient } from "../../queryClient";
 import { sessionStore } from "../../store/sessionStore";
@@ -59,7 +58,6 @@ export function ApplicationRouterView() {
   const authStatusResolved = sessionStore((state) => state.authStatusResolved);
   const setAuthState = sessionStore((state) => state.setAuthState);
   const organizations = sessionStore((state) => state.organizations);
-  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
   const [appBootstrapReady, setAppBootstrapReady] = useState(false);
   const [appBootstrapError, setAppBootstrapError] = useState<string | null>(null);
   const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
@@ -136,7 +134,6 @@ export function ApplicationRouterView() {
     }
 
     void bootstrapAttempt;
-    void selectedOrganizationId;
 
     let disposed = false;
     const bootstrapSession = async () => {
@@ -175,11 +172,6 @@ export function ApplicationRouterView() {
             await setAppLanguage(sessionData.currentUser.languagePreference);
           }
           bootstrappedSessionData = true;
-        }
-
-        await loadWorkspaceSnapshot();
-        if (disposed) {
-          return;
         }
 
         const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
@@ -221,7 +213,7 @@ export function ApplicationRouterView() {
     return () => {
       disposed = true;
     };
-  }, [authStatusResolved, bootstrapAttempt, isAuthenticated, selectedOrganizationId]);
+  }, [authStatusResolved, bootstrapAttempt, isAuthenticated]);
 
   if (!authStatusResolved) {
     return <AppBootstrapLoadingView hasError={false} onRetry={() => {}} />;

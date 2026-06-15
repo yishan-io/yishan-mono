@@ -2,7 +2,6 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextF
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createOrganization, listOrganizations } from "../../api";
-import { loadWorkspaceSnapshot } from "../../commands/projectCommands";
 import { switchOrganization } from "../../commands/orgCommands";
 import { useDialogRegistration } from "../../hooks/useDialogRegistration";
 import { sessionStore } from "../../store/sessionStore";
@@ -52,8 +51,8 @@ export function CreateOrganizationDialogView({ open, onClose }: CreateOrganizati
         setErrorMessage(null);
         setIsCreating(false);
         onClose();
+        // fire-and-forget: workspace view owns snapshot refresh after org selection changes.
         void switchOrganization(createdOrganization.id);
-        void loadWorkspaceSnapshot();
       } catch {
         setErrorMessage(t("org.menu.newOrganizationFailed"));
         setIsCreating(false);

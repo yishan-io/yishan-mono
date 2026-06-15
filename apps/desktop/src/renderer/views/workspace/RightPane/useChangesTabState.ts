@@ -6,7 +6,6 @@ import type {
   ProjectCommitComparisonSelection,
 } from "../../../components/ProjectCommitComparison";
 import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
-import { loadWorkspaceSnapshot } from "../../../commands/projectCommands";
 import { useCommands } from "../../../hooks/useCommands";
 import { workspaceStore } from "../../../store/workspaceStore";
 import {
@@ -17,7 +16,6 @@ import {
   createEmptyRepoCommitComparison,
   dedupeChangedPaths,
   dedupeRepoChangeFiles,
-  isMissingWorkspacePathError,
   normalizeProjectGitChangeKind,
   normalizeWorkspaceRelativePath,
   reconcileRenameLikePairs,
@@ -141,13 +139,15 @@ export function useChangesTabState() {
     } catch (error) {
       setRepoChangesBySection(createEmptyRepoChangesBySection());
       setRepoCommitComparison(createEmptyRepoCommitComparison());
-      if (isMissingWorkspacePathError(error)) {
-        void loadWorkspaceSnapshot();
-        return;
-      }
       console.error("Failed to load workspace git changes", error);
     }
-  }, [listGitChanges, loadCommitComparison, selectedWorkspaceId, selectedWorkspaceSourceBranch, selectedWorkspaceWorktreePath]);
+  }, [
+    listGitChanges,
+    loadCommitComparison,
+    selectedWorkspaceId,
+    selectedWorkspaceSourceBranch,
+    selectedWorkspaceWorktreePath,
+  ]);
 
   useEffect(() => {
     if (!selectedWorkspaceWorktreePath) {

@@ -11,6 +11,7 @@ import { useCommands } from "../hooks/useCommands";
 import { WorkspacePaneVisibilityProvider, useWorkspacePaneVisibility } from "../hooks/useWorkspacePaneVisibility";
 import { parseWorkspaceSessionNavigationPath } from "../navigation/workspaceNavigation";
 import { isEditableActiveElement } from "../shortcuts/editableTarget";
+import { sessionStore } from "../store/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
@@ -164,19 +165,37 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
 function useWorkspaceBootstrap(input: {
   cmd: WorkspaceViewCommands;
   terminalRecoveryCoordinator: TerminalRecoveryCoordinator;
+  selectedOrganizationId: string | undefined;
 }) {
-  const { cmd, terminalRecoveryCoordinator } = input;
+  const { cmd, terminalRecoveryCoordinator, selectedOrganizationId } = input;
+
+  useEffect(() => {
+    if (!selectedOrganizationId?.trim()) {
+      return;
+    }
+
+    let disposed = false;
+
+    const loadWorkspaceData = async () => {
+      await cmd.loadWorkspaceSnapshot();
+      if (disposed) {
+        return;
+      }
+    };
+
+    // fire-and-forget: workspace view owns top-level snapshot loading.
+    void loadWorkspaceData();
+
+    return () => {
+      disposed = true;
+    };
+  }, [cmd, selectedOrganizationId]);
 
   useEffect(() => {
     let disposed = false;
     let unsubscribePersist: (() => void) | undefined;
 
-    const loadAndRestore = async () => {
-      await cmd.loadWorkspaceSnapshot();
-      if (disposed) {
-        return;
-      }
-
+    const restoreAndPersist = async () => {
       const restoredWorkspaceId = terminalRecoveryCoordinator.restoreTerminalTabsFromRegistry();
       if (restoredWorkspaceId) {
         const currentSelectedWorkspaceId = workspaceStore.getState().selectedWorkspaceId;
@@ -190,7 +209,8 @@ function useWorkspaceBootstrap(input: {
       unsubscribePersist = terminalRecoveryCoordinator.startPersistingTerminalTabs();
     };
 
-    void loadAndRestore();
+    // fire-and-forget: terminal tab persistence is managed independently of snapshot reloads.
+    void restoreAndPersist();
 
     return () => {
       disposed = true;
@@ -297,6 +317,7 @@ export function WorkspaceView() {
   });
   const overlayPanel = workspaceUiStore((state) => state.overlayPanel);
   const closeOverlayPanel = workspaceUiStore((state) => state.closeOverlayPanel);
+  const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
   const cmd = useCommands();
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator());
@@ -307,7 +328,7 @@ export function WorkspaceView() {
   }, [closeOverlayPanel]);
 
   useWorkspaceAppActions({ cmd, navigate });
-  useWorkspaceBootstrap({ cmd, terminalRecoveryCoordinator });
+  useWorkspaceBootstrap({ cmd, terminalRecoveryCoordinator, selectedOrganizationId });
   useElementWidthObserver({
     elementRef: layoutRef,
     onWidthChange: setContainerWidth,

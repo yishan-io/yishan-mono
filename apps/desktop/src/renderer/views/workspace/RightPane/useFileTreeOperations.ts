@@ -2,27 +2,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
 import { listFiles, listFilesBatch } from "../../../commands/fileCommands";
-import { loadWorkspaceSnapshot } from "../../../commands/projectCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { useCommands } from "../../../hooks/useCommands";
 import { tabStore } from "../../../store/tabStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
 import type { FileTreeClipboardState } from "./clipboardSourceResolvers";
-import {
-  getFileOperationErrorMessage,
-  mapIgnoredWorkspaceEntryPaths,
-  mapWorkspaceEntryPaths,
-} from "./fileTreeHelpers";
-import {
-  isMissingWorkspacePathError,
-  mergeWorkspaceEntries,
-} from "./fileTreeOperationHelpers";
+import { getFileOperationErrorMessage, mapIgnoredWorkspaceEntryPaths, mapWorkspaceEntryPaths } from "./fileTreeHelpers";
+import { mergeWorkspaceEntries } from "./fileTreeOperationHelpers";
 import { getParentRelativePath, normalizeRelativePath } from "./fileTreePathHelpers";
-import { useFileOperationState, type FileOperationState } from "./useFileOperationState";
+import { type FileOperationState, useFileOperationState } from "./useFileOperationState";
 import { useFileTreeClipboard } from "./useFileTreeClipboard";
 import { useFileTreeCrud } from "./useFileTreeCrud";
-import { useFileTreeUndo, type FileTreeUndoAction } from "./useFileTreeUndo";
+import { type FileTreeUndoAction, useFileTreeUndo } from "./useFileTreeUndo";
 
 export type FileTreeSelectionRequest = {
   path: string;
@@ -164,9 +156,10 @@ function applyDirectoryRefreshes(
     // this directory that (a) are in the changed-path set AND (b) are not
     // present in the incoming refresh result. Entries that were not changed
     // are left untouched — they will be merged by mergeWorkspaceEntries below.
-    const normalizedChangedPaths = changedRelativePaths && changedRelativePaths.length > 0
-      ? new Set(changedRelativePaths.map((p) => normalizeRelativePath(p)).filter(Boolean))
-      : null;
+    const normalizedChangedPaths =
+      changedRelativePaths && changedRelativePaths.length > 0
+        ? new Set(changedRelativePaths.map((p) => normalizeRelativePath(p)).filter(Boolean))
+        : null;
 
     if (directoryPath === "" && !normalizedChangedPaths) {
       nextEntries = [];
@@ -196,8 +189,7 @@ function applyDirectoryRefreshes(
 
       // Also evict descendants whose parent directory was removed from loadedPaths.
       return !removedLoadedDirectories.some(
-        (removedPath) =>
-          normalizedEntryPath === removedPath || normalizedEntryPath.startsWith(`${removedPath}/`),
+        (removedPath) => normalizedEntryPath === removedPath || normalizedEntryPath.startsWith(`${removedPath}/`),
       );
     });
     nextEntries = mergeWorkspaceEntries(nextEntries, files);
@@ -282,56 +274,55 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     }
   }, [workspaces]);
 
-  const refreshLoadedRepoFiles = useCallback(async (changedRelativePaths?: string[]): Promise<WorkspaceFileEntry[]> => {
-    if (!selectedWorkspaceWorktreePath) {
-      setRepoEntries([]);
-      return [];
-    }
-
-    try {
-      const refreshDirectoryPaths = resolveRefreshDirectoryPaths(
-        changedRelativePaths ?? [],
-        loadedDirectoryPathsRef.current,
-      );
-      const response = await listFilesBatch({
-        workspaceId: selectedWorkspaceId ?? "",
-        requests: refreshDirectoryPaths.map((directoryPath) => ({
-          relativePath: directoryPath || undefined,
-          // Root fetch is recursive (full tree); loaded-subdirectory refreshes
-          // are shallow — the applyDirectoryRefreshes + changedRelativePaths
-          // filter handles evicting renamed/deleted entries without re-reading
-          // entire subtrees on every file-change event.
-          recursive: !directoryPath,
-        })),
-      });
-      const refreshResults = response.results
-        .filter((result) => !result.error)
-        .map((result) => ({
-          directoryPath: normalizeRelativePath(result.request.relativePath ?? ""),
-          files: result.files,
-        }));
-
-      const nextEntries = applyDirectoryRefreshes(
-        repoEntriesRef.current,
-        refreshResults,
-        loadedDirectoryPathsRef.current,
-        changedRelativePaths,
-      );
-      repoEntriesWorkspaceIdRef.current = selectedWorkspaceId ?? undefined;
-      repoEntriesRef.current = nextEntries;
-      setRepoEntries(nextEntries);
-      return nextEntries;
-    } catch (error) {
-      setRepoEntries([]);
-      repoEntriesRef.current = [];
-      if (isMissingWorkspacePathError(error)) {
-        void loadWorkspaceSnapshot();
+  const refreshLoadedRepoFiles = useCallback(
+    async (changedRelativePaths?: string[]): Promise<WorkspaceFileEntry[]> => {
+      if (!selectedWorkspaceWorktreePath) {
+        setRepoEntries([]);
         return [];
       }
-      console.error("Failed to load workspace files", error);
-      return [];
-    }
-  }, [selectedWorkspaceId, selectedWorkspaceWorktreePath]);
+
+      try {
+        const refreshDirectoryPaths = resolveRefreshDirectoryPaths(
+          changedRelativePaths ?? [],
+          loadedDirectoryPathsRef.current,
+        );
+        const response = await listFilesBatch({
+          workspaceId: selectedWorkspaceId ?? "",
+          requests: refreshDirectoryPaths.map((directoryPath) => ({
+            relativePath: directoryPath || undefined,
+            // Root fetch is recursive (full tree); loaded-subdirectory refreshes
+            // are shallow — the applyDirectoryRefreshes + changedRelativePaths
+            // filter handles evicting renamed/deleted entries without re-reading
+            // entire subtrees on every file-change event.
+            recursive: !directoryPath,
+          })),
+        });
+        const refreshResults = response.results
+          .filter((result) => !result.error)
+          .map((result) => ({
+            directoryPath: normalizeRelativePath(result.request.relativePath ?? ""),
+            files: result.files,
+          }));
+
+        const nextEntries = applyDirectoryRefreshes(
+          repoEntriesRef.current,
+          refreshResults,
+          loadedDirectoryPathsRef.current,
+          changedRelativePaths,
+        );
+        repoEntriesWorkspaceIdRef.current = selectedWorkspaceId ?? undefined;
+        repoEntriesRef.current = nextEntries;
+        setRepoEntries(nextEntries);
+        return nextEntries;
+      } catch (error) {
+        setRepoEntries([]);
+        repoEntriesRef.current = [];
+        console.error("Failed to load workspace files", error);
+        return [];
+      }
+    },
+    [selectedWorkspaceId, selectedWorkspaceWorktreePath],
+  );
 
   const loadAllRepoFiles = useCallback(async (): Promise<string[]> => {
     const entries = await refreshLoadedRepoFiles();
@@ -449,12 +440,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     requestFileTreeSelection,
   });
 
-  const {
-    setInternalClipboardState,
-    onPasteEntries,
-    onDropExternalEntries,
-    onMoveEntries,
-  } = useFileTreeClipboard({
+  const { setInternalClipboardState, onPasteEntries, onDropExternalEntries, onMoveEntries } = useFileTreeClipboard({
     selectedWorkspaceId,
     selectedWorkspaceWorktreePath,
     repoEntries,

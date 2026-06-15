@@ -1,9 +1,9 @@
-import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
 import type {
   ProjectCommitComparisonCommit,
   ProjectCommitComparisonData,
   ProjectCommitComparisonSelection,
 } from "../../../components/ProjectCommitComparison";
+import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -200,12 +200,6 @@ export function normalizeProjectGitChangeKind(kind: string): ProjectGitChangeKin
   }
 
   return "modified";
-}
-
-export function isMissingWorkspacePathError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error ?? "");
-  const normalizedMessage = message.toLowerCase();
-  return normalizedMessage.includes("no such file or directory") && normalizedMessage.includes("stat ");
 }
 
 export function createEmptyRepoChangesBySection(): RepoChangesBySection {

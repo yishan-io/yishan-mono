@@ -1,8 +1,10 @@
 import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { normalizeRelativePath } from "./fileTreePathHelpers";
 
-export function mergeWorkspaceEntries(current: WorkspaceFileEntry[], incoming: WorkspaceFileEntry[]): WorkspaceFileEntry[] {
+export function mergeWorkspaceEntries(
+  current: WorkspaceFileEntry[],
+  incoming: WorkspaceFileEntry[],
+): WorkspaceFileEntry[] {
   const mergedByPath = new Map<string, WorkspaceFileEntry>();
 
   for (const entry of current) {
@@ -61,9 +63,4 @@ export function hasVisibleImmediateChildren(directoryPath: string, entries: Work
 
     return normalizedEntryPath.startsWith(`${normalizedDirectoryPath}/`);
   });
-}
-
-export function isMissingWorkspacePathError(error: unknown): boolean {
-  const message = getErrorMessage(error).toLowerCase();
-  return message.includes("no such file or directory") && message.includes("stat ");
 }
