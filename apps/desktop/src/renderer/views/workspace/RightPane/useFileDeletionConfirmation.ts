@@ -19,7 +19,7 @@ export function useFileDeletionConfirmation({ repoFiles, deleteEntry }: UseFileD
 
   const handleRequestFileDeletion = useCallback(
     (path: string) => {
-      if (!path) {
+      if (!path || isDeletingEntry) {
         return;
       }
 
@@ -28,7 +28,7 @@ export function useFileDeletionConfirmation({ repoFiles, deleteEntry }: UseFileD
         isDirectory: repoFiles.some((repoPath) => repoPath === `${path}/`),
       });
     },
-    [repoFiles],
+    [isDeletingEntry, repoFiles],
   );
 
   const handleCancelFileDeletion = useCallback(() => {
@@ -44,10 +44,14 @@ export function useFileDeletionConfirmation({ repoFiles, deleteEntry }: UseFileD
       return;
     }
 
+    const targetPath = pendingFileDeletion.path;
+
+    // Close the modal before the full delete workflow finishes so a slow
+    // post-delete refresh cannot trap the user in a submitting dialog.
+    setPendingFileDeletion(null);
     setIsDeletingEntry(true);
     try {
-      await deleteEntryRef.current(pendingFileDeletion.path);
-      setPendingFileDeletion(null);
+      await deleteEntryRef.current(targetPath);
     } catch (error) {
       console.error("Failed to delete file tree entry", error);
     } finally {
