@@ -18,7 +18,7 @@ type Summarizer struct {
 	agentKind string // override agent; empty = use session's own agent
 	model     string // optional model override
 	runAgent  RunAgentFunc
-	dbReader  *agentDBReader
+	dbReader  sessionReader
 }
 
 func NewSummarizer(cfg SummarizerConfig, runAgent RunAgentFunc) *Summarizer {
@@ -41,21 +41,21 @@ func (s *Summarizer) UpdateConfig(cfg SummarizerConfig) {
 	s.model = cfg.Model
 }
 
-// SummarizeSession runs the full summarize pipeline for the given workspace
-// and returns the paths of files written (MEMORY.md + any overflow files).
-// Returns (nil, nil) when summarization is skipped (disabled, unsupported agent, empty session).
-func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string) ([]string, error) {
+// SummarizeSession runs the full summarize pipeline for the given workspace.
+// Skipped sessions are returned explicitly so callers can distinguish them
+// from real summarize runs that wrote no files.
+func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string) (SummarizeResult, error) {
 	if !s.Enabled() {
-		return nil, nil
+		return SummarizeResult{Skipped: true}, nil
 	}
 
 	session, err := s.dbReader.ReadRecentSession(sessionAgent, workspacePath)
 	if err != nil {
 		log.Debug().Err(err).Str("agent", sessionAgent).Msg("skip memory summarization: cannot read session")
-		return nil, nil
+		return SummarizeResult{Skipped: true}, nil
 	}
 	if len(session.Messages) == 0 {
-		return nil, nil
+		return SummarizeResult{Skipped: true}, nil
 	}
 
 	conversation := buildConversationText(session.Messages)
@@ -92,15 +92,19 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 
 	output, err := s.runAgent(ctx, summarizeAgent, s.model, prompt)
 	if err != nil {
-		return nil, fmt.Errorf("llm summarization via %s: %w", summarizeAgent, err)
+		return SummarizeResult{}, fmt.Errorf("llm summarization via %s: %w", summarizeAgent, err)
 	}
 
 	extracted, err := parseExtractedJSON(output)
 	if err != nil {
-		return nil, fmt.Errorf("parse summarization output: %w", err)
+		return SummarizeResult{}, fmt.Errorf("parse summarization output: %w", err)
 	}
 
-	return mergeAndWrite(memoryPath, existingContent, extracted, contextRoot)
+	writtenPaths, err := mergeAndWrite(memoryPath, existingContent, extracted, contextRoot)
+	if err != nil {
+		return SummarizeResult{}, err
+	}
+	return SummarizeResult{WrittenPaths: writtenPaths}, nil
 }
 func buildConversationText(messages []sessionMessage) string {
 	var buf strings.Builder

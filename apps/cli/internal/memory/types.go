@@ -85,8 +85,17 @@ type sessionMessages struct {
 	Messages  []sessionMessage
 }
 
+type sessionReader interface {
+	ReadRecentSession(agent string, workspacePath string) (*sessionMessages, error)
+}
+
 type sessionMessage struct {
 	Role      string
 	Content   string
 	Timestamp time.Time
+}
+
+type SummarizeResult struct {
+	WrittenPaths []string
+	Skipped      bool
 }
