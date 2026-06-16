@@ -25,3 +25,5 @@ type TerminalUnsubscribeRequest = terminal.UnsubscribeRequest
 type TerminalUnsubscribeResponse = terminal.UnsubscribeResponse
 type TerminalEvent = terminal.Event
 type TerminalSubscription = terminal.Subscription
+type TerminalSessionLifecycleEvent = terminal.SessionLifecycleEvent
+type TerminalSessionLifecycleListener = terminal.SessionLifecycleListener

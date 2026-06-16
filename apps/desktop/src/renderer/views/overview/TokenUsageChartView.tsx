@@ -6,12 +6,29 @@ import type { OverviewTimeRange } from "../../api/overviewApi.types";
 import { formatTokens } from "../../helpers/formatters";
 import { overviewStore } from "../../store/overviewStore";
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+type TokenUnit = "B" | "M" | "K" | "raw";
+
+function resolveUnit(total: number): TokenUnit {
+  if (total >= 1_000_000_000) return "B";
+  if (total >= 1_000_000) return "M";
+  if (total >= 1_000) return "K";
+  return "raw";
+}
+
+function formatTokensInUnit(value: number | null, unit: TokenUnit): string {
+  if (value == null) return "0";
+  if (unit === "B") return `${(value / 1_000_000_000).toFixed(2)}B`;
+  if (unit === "M") return `${(value / 1_000_000).toFixed(2)}M`;
+  if (unit === "K") return `${(value / 1_000).toFixed(2)}K`;
+  return String(value);
+}
+
+function formatUtcDate(utcDate: Date): string {
+  return utcDate.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 function parseBucketDate(dateStr: string): string {
-  return formatDate(new Date(dateStr));
+  return formatUtcDate(new Date(dateStr));
 }
 
 const RANGE_DAYS: Record<OverviewTimeRange, number> = {
@@ -23,10 +40,9 @@ const RANGE_DAYS: Record<OverviewTimeRange, number> = {
 function generateDateRange(days: number): string[] {
   const dates: string[] = [];
   const now = new Date();
+  const todayUtcMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    dates.push(formatDate(d));
+    dates.push(formatUtcDate(new Date(todayUtcMs - i * 86_400_000)));
   }
   return dates;
 }
@@ -34,8 +50,6 @@ function generateDateRange(days: number): string[] {
 export function TokenUsageChartView() {
   const { t } = useTranslation();
   const series = overviewStore((state) => state.tokenUsageSeries);
-  const cachedTotal = overviewStore((state) => state.cachedTotal);
-  const uncachedTotal = overviewStore((state) => state.uncachedTotal);
   const loadState = overviewStore((state) => state.tokenUsageLoadState);
   const timeRange = overviewStore((state) => state.timeRange);
 
@@ -61,8 +75,11 @@ export function TokenUsageChartView() {
     });
   }, [series, timeRange]);
 
-  const totalTokens = cachedTotal + uncachedTotal;
-  const cachedPercentage = totalTokens > 0 ? ((cachedTotal / totalTokens) * 100).toFixed(1) : "0";
+  const chartCachedTotal = chartData.reduce((acc, d) => acc + d.cachedTokens, 0);
+  const chartUncachedTotal = chartData.reduce((acc, d) => acc + d.uncachedTokens, 0);
+  const chartTotalTokens = chartCachedTotal + chartUncachedTotal;
+  const statUnit = resolveUnit(chartTotalTokens);
+  const cachedPercentage = chartTotalTokens > 0 ? ((chartCachedTotal / chartTotalTokens) * 100).toFixed(1) : "0";
 
   if (loadState === "loading" || loadState === "idle") {
     return (
@@ -143,7 +160,7 @@ export function TokenUsageChartView() {
             {t("overview.tokenUsage.total")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
-            {formatTokens(totalTokens)}
+            {formatTokensInUnit(chartTotalTokens, statUnit)}
           </Typography>
         </Box>
         <Box>
@@ -151,7 +168,7 @@ export function TokenUsageChartView() {
             {t("overview.tokenUsage.cached")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace", color: "#4CAF50" }}>
-            {formatTokens(cachedTotal)} ({cachedPercentage}%)
+            {formatTokensInUnit(chartCachedTotal, statUnit)} ({cachedPercentage}%)
           </Typography>
         </Box>
         <Box>
@@ -159,7 +176,7 @@ export function TokenUsageChartView() {
             {t("overview.tokenUsage.uncached")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace", color: "#FF9800" }}>
-            {formatTokens(uncachedTotal)}
+            {formatTokensInUnit(chartUncachedTotal, statUnit)}
           </Typography>
         </Box>
       </Box>

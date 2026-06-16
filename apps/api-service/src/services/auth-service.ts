@@ -11,7 +11,13 @@ import type { OAuthProfile, OAuthProvider, ServiceConfig } from "@/types";
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const DEFAULT_TOKEN_SCOPE = "api:read api:write";
 
-export type SessionUser = Pick<typeof users.$inferSelect, "id" | "email" | "name" | "avatarUrl" | "userPreferences">;
+export type SessionUser = {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  avatarUrl?: string | null;
+  userPreferences?: unknown;
+};
 
 export class AuthService {
   constructor(
@@ -199,7 +205,7 @@ export class AuthService {
       return null;
     }
 
-    return this.userService.getById(claims.sub);
+    return { id: claims.sub };
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────

@@ -44,6 +44,7 @@ describe("BACKEND_EVENT_NAME_BY_SOURCE", () => {
       workspaceSnapshotChanged: "workspace.snapshot.changed",
       workspaceStateChanged: "workspace.state.changed",
       openBrowserUrl: "open.browser.url",
+      terminalSessionChanged: "terminal.session.changed",
     });
   });
 });
@@ -115,6 +116,34 @@ describe("normalizeBackendEvent", () => {
 
     expect(normalized.name).toBe("notification.event");
     expect(normalized.source).toBe("notificationEvent");
+  });
+
+  it("normalizes terminal session events with correlation fields", () => {
+    const normalized = assertNormalized(
+      normalizeBackendEvent(
+        createEnvelope({
+          method: "terminalSessionChanged",
+          payload: {
+            action: "created",
+            sessionId: "term-1",
+            workspaceId: "workspace-1",
+            tabId: "tab-1",
+            paneId: "pane-1",
+            pid: 1234,
+            status: "running",
+          },
+        }),
+      ),
+    );
+
+    expect(normalized.source).toBe("terminalSessionChanged");
+    expect(normalized.payload).toMatchObject({
+      action: "created",
+      sessionId: "term-1",
+      workspaceId: "workspace-1",
+      tabId: "tab-1",
+      paneId: "pane-1",
+    });
   });
 
   it("returns null when notification observer status payload is invalid", () => {

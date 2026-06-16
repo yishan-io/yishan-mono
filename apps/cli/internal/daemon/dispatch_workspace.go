@@ -11,7 +11,6 @@ import (
 	"time"
 
 	agentcmd "yishan/apps/cli/internal/daemon/agentcmd"
-	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/workspace"
 	"yishan/apps/cli/internal/workspace/terminal"
 
@@ -20,8 +19,6 @@ import (
 
 func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, method string, params json.RawMessage) (any, error) {
 	switch method {
-	case MethodOpen:
-		return h.handleOpen(ctx, params)
 	case MethodList:
 		return h.manager.List(), nil
 	case MethodWorkspaceCreate:
@@ -51,38 +48,6 @@ func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, 
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown workspace method: "+method)
 	}
-}
-
-func (h *JSONRPCHandler) handleOpen(_ context.Context, params json.RawMessage) (any, error) {
-	var req workspace.OpenRequest
-	if err := decodeParams(params, &req); err != nil {
-		return nil, err
-	}
-	ws, err := h.manager.Open(req)
-	if err != nil {
-		return nil, err
-	}
-	log.Info().Str("workspaceId", ws.ID).Str("path", ws.Path).Bool("prAlreadyMerged", req.PRAlreadyMerged).Msg("daemon workspace opened")
-	h.watchAndTrack(ws.ID, ws.Path)
-	if h.wsIndexStore != nil && ws.Path != "" {
-		if err := h.wsIndexStore.Upsert(workspaceIndexEntry{
-			WorkspaceID:  ws.ID,
-			WorktreePath: ws.Path,
-			ProjectID:    ws.ProjectID,
-			OrgID:        ws.OrgID,
-			State:        ws.State,
-		}); err != nil {
-			log.Warn().Err(err).Str("workspaceId", ws.ID).Msg("workspace index store upsert failed")
-		}
-	}
-	if h.memory != nil && ws.Path != "" {
-		go func(ref memory.WorkspaceRef) {
-			if _, err := h.memory.ReconcileNow([]memory.WorkspaceRef{ref}); err != nil {
-				log.Warn().Err(err).Str("path", ref.WorktreePath).Msg("memory reconcile on workspace open failed")
-			}
-		}(memory.WorkspaceRef{WorktreePath: ws.Path, ProjectID: ws.ProjectID})
-	}
-	return ws, nil
 }
 
 func (h *JSONRPCHandler) handleWorkspaceRefreshPullRequest(_ context.Context, params json.RawMessage) (any, error) {
@@ -200,6 +165,17 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, req workspa
 	}
 
 	h.watchAndTrack(created.ID, created.Path)
+	if h.wsIndexStore != nil && created.Path != "" {
+		if err := h.wsIndexStore.Upsert(workspaceIndexEntry{
+			WorkspaceID:  created.ID,
+			WorktreePath: created.Path,
+			ProjectID:    created.ProjectID,
+			OrgID:        created.OrgID,
+			State:        created.State,
+		}); err != nil {
+			log.Warn().Err(err).Str("workspaceId", created.ID).Msg("workspace index store upsert failed on create")
+		}
+	}
 	warnings := buildWorkspaceHookWarnings(req.SetupHook, created.SetupHookResult, h.logFilePath)
 
 	remoteSyncWarning := ""

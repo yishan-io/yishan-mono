@@ -3,7 +3,6 @@ package daemon
 const (
 	MethodDaemonPing = "daemon.ping"
 
-	MethodOpen                        = "open"
 	MethodList                        = "list"
 	MethodWorkspaceCreate             = "workspace.create"
 	MethodWorkspaceClose              = "workspace.close"
@@ -84,6 +83,7 @@ const (
 	MethodTerminalResize       = "terminal.resize"
 	MethodTerminalSubscribe    = "terminal.subscribe"
 	MethodTerminalUnsubscribe  = "terminal.unsubscribe"
+	RelayMethodTerminalSessionChanged = "terminal.session.changed"
 
 	MethodMemorySearch       = "memory.search"
 	MethodMemoryReconcile    = "memory.reconcile"

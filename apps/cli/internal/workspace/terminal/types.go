@@ -121,3 +121,16 @@ type Subscription struct {
 	ID     uint64
 	Events <-chan Event
 }
+
+type SessionLifecycleEvent struct {
+	Action      string `json:"action"`
+	SessionID   string `json:"sessionId"`
+	WorkspaceID string `json:"workspaceId"`
+	TabID       string `json:"tabId,omitempty"`
+	PaneID      string `json:"paneId,omitempty"`
+	PID         int    `json:"pid"`
+	Status      string `json:"status"`
+	StartedAt   string `json:"startedAt,omitempty"`
+}
+
+type SessionLifecycleListener func(SessionLifecycleEvent)

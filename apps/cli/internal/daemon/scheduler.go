@@ -5,10 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -16,7 +13,6 @@ import (
 	agentcmd "yishan/apps/cli/internal/daemon/agentcmd"
 	"yishan/apps/cli/internal/api"
 	cliruntime "yishan/apps/cli/internal/runtime"
-	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
 const (
@@ -196,17 +192,9 @@ func sendJobResult(connState *wsConnState, runID, status string, durationMs int6
 // ---------------------------------------------------------------------------
 
 func runAgent(agentKind, prompt, model, projectPath string) (output string, err error) {
-	runCommand, err := agentcmd.BuildRunCommand(agentKind, prompt, model, false)
+	cmd, err := agentcmd.ResolveCommand(agentKind, prompt, model, false)
 	if err != nil {
 		return "", err
-	}
-
-	resolvedEnv := shellenv.ResolveEnvWithUserPath(os.Environ(), os.Getenv("SHELL"))
-	binaryPath := runCommand.Binary
-	if !filepath.IsAbs(binaryPath) {
-		if resolvedBinary := strings.TrimSpace(shellenv.ResolveExecutablePathFromEnv(binaryPath, resolvedEnv)); resolvedBinary != "" {
-			binaryPath = resolvedBinary
-		}
 	}
 
 	// exec.CommandContext kills the process when the context deadline fires,
@@ -215,15 +203,15 @@ func runAgent(agentKind, prompt, model, projectPath string) (output string, err 
 	ctx, cancel := context.WithTimeout(context.Background(), agentExecTimeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, binaryPath, runCommand.Args...)
+	execCmd := exec.CommandContext(ctx, cmd.ResolvedBinary, cmd.Args...)
 	if projectPath != "" {
-		cmd.Dir = projectPath
+		execCmd.Dir = projectPath
 	}
 	// Scheduled jobs should not emit desktop hook notifications. The managed
 	// notify bridge only forwards events when these YISHAN_* hook context vars
 	// are present, so we explicitly clear them for scheduler-spawned agent runs.
-	cmd.Env = append(
-		resolvedEnv,
+	execCmd.Env = append(
+		cmd.Env,
 		"YISHAN_WORKSPACE_ID=",
 		"YISHAN_TAB_ID=",
 		"YISHAN_PANE_ID=",
@@ -231,10 +219,10 @@ func runAgent(agentKind, prompt, model, projectPath string) (output string, err 
 		"YISHAN_OBSERVER_TOKEN=",
 	)
 	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	execCmd.Stdout = &stdout
+	execCmd.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
+	if err := execCmd.Run(); err != nil {
 		combined := stdout.String()
 		if stderr.Len() > 0 {
 			combined += "\n" + stderr.String()

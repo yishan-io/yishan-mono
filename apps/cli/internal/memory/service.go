@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -158,16 +159,38 @@ func (s *Service) SummarizeSession(agent string, worktreePath string, projectID 
 		agent:        agent,
 		worktreePath: worktreePath,
 		projectID:    projectID,
-	}, func(req summarizeRequest) {
-		writtenPaths, err := s.summarizer.SummarizeSession(req.agent, req.worktreePath)
-		if err != nil {
+	}, s.runSummarize)
+}
+
+// runSummarize executes one summarization request and handles the result.
+// It is extracted from the SummarizeSession closure so it can be tested directly.
+func (s *Service) runSummarize(req summarizeRequest) {
+	result, err := s.summarizer.SummarizeSession(req.agent, req.worktreePath)
+	if err != nil {
+		if errors.Is(err, ErrAgentNotFound) {
+			log.Debug().Err(err).
+				Str("agent", req.agent).
+				Msg("skip session summarization: agent binary not installed")
+		} else {
 			log.Warn().Err(err).
 				Str("agent", req.agent).
 				Str("workspace", req.worktreePath).
 				Msg("session summarization failed")
-			return
 		}
-		if len(writtenPaths) == 0 {
+		return
+	}
+	s.handleSummarizeResult(req, result)
+}
+
+func (s *Service) handleSummarizeResult(req summarizeRequest, result SummarizeResult) {
+	if result.Skipped {
+		log.Debug().
+			Str("agent", req.agent).
+			Str("workspace", req.worktreePath).
+			Msg("session summarization skipped")
+		return
+	}
+	if len(result.WrittenPaths) == 0 {
 			log.Info().
 				Str("agent", req.agent).
 				Str("workspace", req.worktreePath).
@@ -175,17 +198,16 @@ func (s *Service) SummarizeSession(agent string, worktreePath string, projectID 
 			return
 		}
 		log.Info().Str("agent", req.agent).Str("workspace", req.worktreePath).
-			Int("files", len(writtenPaths)).Msg("session summarized")
+			Int("files", len(result.WrittenPaths)).Msg("session summarized")
 
 		// Index only the files that were actually written — MEMORY.md and
 		// any archive/ overflow files. Avoids a full context dir scan.
 		ctxRoot := resolveContextRoot(req.worktreePath)
-		for _, p := range writtenPaths {
+		for _, p := range result.WrittenPaths {
 			if idxErr := s.db.IndexFileOnDisk(p, ctxRoot, req.projectID); idxErr != nil {
 				log.Warn().Err(idxErr).Str("path", p).Msg("index written file after summarization failed")
 			}
 		}
-	})
 }
 
 func (s *Service) getOrCreateQueue(contextRoot string) *summarizeQueue {

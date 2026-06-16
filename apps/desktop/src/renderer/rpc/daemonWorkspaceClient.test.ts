@@ -21,29 +21,6 @@ describe("DaemonWorkspaceClient", () => {
     expect(invoke).toHaveBeenCalledWith("list");
   });
 
-  it("caches daemon-opened workspace paths without trailing slashes", async () => {
-    const invoke = vi.fn(async (method: string, params?: unknown) => {
-      if (method === "open") {
-        return {
-          id: "workspace-1",
-          path: "/tmp/repo/",
-        };
-      }
-
-      throw new Error(`Unexpected method: ${method}`);
-    });
-    const workspaceIdByWorktreePath = new Map<string, string>();
-    const client = new DaemonWorkspaceClient(invoke, workspaceIdByWorktreePath);
-
-    const workspace = await client.open({
-      workspaceId: "workspace-1",
-      workspaceWorktreePath: "/tmp/repo/",
-    });
-
-    expect(workspace.path).toBe("/tmp/repo");
-    expect(workspaceIdByWorktreePath.get("/tmp/repo")).toBe("workspace-1");
-  });
-
   it("refreshes pull request state through the dedicated workspace RPC", async () => {
     const invoke = vi.fn(async (method: string, params?: unknown) => {
       if (method === "workspace.refreshPullRequest") {
@@ -73,33 +50,20 @@ describe("DaemonWorkspaceClient", () => {
     expect(workspaceIdByWorktreePath.get("/tmp/repo")).toBe("workspace-1");
   });
 
-  it("reopens a path with the preferred workspace id when the daemon only knows a stale id", async () => {
-    const invoke = vi.fn(async (method: string, params?: unknown) => {
+  it("throws when preferred workspace id is not found in the daemon list", async () => {
+    const invoke = vi.fn(async (method: string) => {
       if (method === "list") {
         return [{ id: "workspace-stale", path: "/tmp/repo" }];
-      }
-      if (method === "open") {
-        expect(params).toEqual({
-          id: "workspace-1",
-          path: "/tmp/repo",
-        });
-        return {
-          id: "workspace-1",
-          path: "/tmp/repo",
-        };
       }
 
       throw new Error(`Unexpected method: ${method}`);
     });
     const client = new DaemonWorkspaceClient(invoke, new Map());
 
-    const workspaceId = await client.ensureIdByWorktreePath("/tmp/repo", "workspace-1");
-
-    expect(workspaceId).toBe("workspace-1");
-    expect(invoke).toHaveBeenNthCalledWith(1, "list");
-    expect(invoke).toHaveBeenNthCalledWith(2, "open", {
-      id: "workspace-1",
-      path: "/tmp/repo",
-    });
+    await expect(client.ensureIdByWorktreePath("/tmp/repo", "workspace-1")).rejects.toThrow(
+      "daemon workspace not found for id: workspace-1",
+    );
+    expect(invoke).toHaveBeenCalledTimes(1);
+    expect(invoke).toHaveBeenCalledWith("list");
   });
 });

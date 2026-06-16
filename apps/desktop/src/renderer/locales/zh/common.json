@@ -1224,7 +1224,8 @@
     "filters": {
       "timeRange": "时间范围",
       "project": "项目",
-      "allProjects": "全部项目"
+      "allProjects": "全部项目",
+      "utcNote": "所有时间均为 UTC"
     },
     "tokenUsage": {
       "title": "令牌用量",

@@ -57,15 +57,14 @@ func (r *agentDBReader) readOpenCodeSession(workspacePath string) (*sessionMessa
 
 	// Try newest DBs first; stop at first one that has messages for this workspace.
 	for i := len(dbPaths) - 1; i >= 0; i-- {
-		messages, err := readOpenCodeMessages(dbPaths[i], workspacePath)
+		session, err := readOpenCodeMessages(dbPaths[i], workspacePath)
 		if err != nil {
 			continue
 		}
-		if len(messages) == 0 {
+		if session == nil || len(session.Messages) == 0 {
 			continue
 		}
-		sessionID := strings.TrimSuffix(filepath.Base(dbPaths[i]), ".db")
-		return &sessionMessages{SessionID: sessionID, Messages: messages}, nil
+		return session, nil
 	}
 
 	return nil, fmt.Errorf("no opencode session found for workspace %s", workspacePath)
@@ -121,7 +120,7 @@ func listFilesByMtime(dir string, nameFilter func(string) bool) ([]string, error
 	return paths, nil
 }
 
-func readOpenCodeMessages(dbPath string, workspacePath string) ([]sessionMessage, error) {
+func readOpenCodeMessages(dbPath string, workspacePath string) (*sessionMessages, error) {
 	conn, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("open opencode db %s: %w", dbPath, err)
@@ -129,32 +128,21 @@ func readOpenCodeMessages(dbPath string, workspacePath string) ([]sessionMessage
 	defer conn.Close()
 	conn.SetMaxOpenConns(1)
 
-	// Filter to the session whose directory matches workspacePath.
-	// Fall back to no filter if workspacePath is empty.
-	var (
-		query string
-		args  []any
-	)
-	if workspacePath != "" {
-		query = `SELECT p.type, p.data, m.time_created
-			FROM part p
-			JOIN message m ON p.message_id = m.id
-			JOIN session s ON m.session_id = s.id
-			WHERE p.type = 'text'
-			  AND (s.directory = ? OR s.directory LIKE ?)
-			ORDER BY m.time_created ASC, p.id ASC
-			LIMIT 200`
-		args = []any{workspacePath, workspacePath + "/%"}
-	} else {
-		query = `SELECT p.type, p.data, m.time_created
-			FROM part p
-			JOIN message m ON p.message_id = m.id
-			WHERE p.type = 'text'
-			ORDER BY m.time_created ASC, p.id ASC
-			LIMIT 200`
+	sessionID, err := findLatestOpenCodeSessionID(conn, workspacePath)
+	if err != nil {
+		return nil, err
+	}
+	if sessionID == "" {
+		return nil, nil
 	}
 
-	rows, err := conn.QueryContext(context.Background(), query, args...)
+	rows, err := conn.QueryContext(context.Background(), `SELECT m.data, p.data, m.time_created
+		FROM message m
+		JOIN part p ON p.message_id = m.id
+		WHERE m.session_id = ?
+		  AND p.session_id = m.session_id
+		ORDER BY m.time_created ASC, p.id ASC
+		LIMIT 200`, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("query opencode messages: %w", err)
 	}
@@ -162,26 +150,59 @@ func readOpenCodeMessages(dbPath string, workspacePath string) ([]sessionMessage
 
 	var messages []sessionMessage
 	for rows.Next() {
-		var partType, dataJSON string
+		var messageDataJSON, partDataJSON string
 		var timeCreated int64
-		if err := rows.Scan(&partType, &dataJSON, &timeCreated); err != nil {
+		if err := rows.Scan(&messageDataJSON, &partDataJSON, &timeCreated); err != nil {
 			continue
 		}
-		content := extractContentFromData(dataJSON)
+		content := extractOpenCodePartText(partDataJSON)
 		if content == "" {
 			continue
 		}
-		role := extractRole(dataJSON)
+		role := extractOpenCodeRole(messageDataJSON)
+		if role == "unknown" {
+			continue
+		}
 		messages = append(messages, sessionMessage{
 			Role:      role,
 			Content:   content,
 			Timestamp: time.UnixMilli(timeCreated),
 		})
 	}
-	return messages, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &sessionMessages{SessionID: sessionID, Messages: messages}, nil
 }
 
-func extractRole(dataJSON string) string {
+func findLatestOpenCodeSessionID(conn *sql.DB, workspacePath string) (string, error) {
+	query := `SELECT id
+		FROM session
+		ORDER BY time_created DESC
+		LIMIT 1`
+	args := []any{}
+	if workspacePath != "" {
+		query = `SELECT id
+			FROM session
+			WHERE directory = ? OR directory LIKE ?
+			ORDER BY time_created DESC
+			LIMIT 1`
+		args = append(args, workspacePath, workspacePath+"/%")
+	}
+
+	var sessionID string
+	err := conn.QueryRowContext(context.Background(), query, args...).Scan(&sessionID)
+	if err == nil {
+		return sessionID, nil
+	}
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return "", fmt.Errorf("query latest opencode session: %w", err)
+}
+
+func extractOpenCodeRole(dataJSON string) string {
 	var parsed struct {
 		Role string `json:"role"`
 	}
@@ -196,33 +217,18 @@ func extractRole(dataJSON string) string {
 	}
 }
 
-func extractContentFromData(dataJSON string) string {
+func extractOpenCodePartText(dataJSON string) string {
 	var parsed struct {
-		Content any `json:"content"`
+		Type string `json:"type"`
+		Text string `json:"text"`
 	}
 	if err := json.Unmarshal([]byte(dataJSON), &parsed); err != nil {
 		return ""
 	}
-
-	switch c := parsed.Content.(type) {
-	case string:
-		return c
-	case []any:
-		var parts []string
-		for _, item := range c {
-			m, ok := item.(map[string]any)
-			if !ok {
-				continue
-			}
-			if t, _ := m["type"].(string); t == "text" {
-				if text, _ := m["text"].(string); text != "" {
-					parts = append(parts, text)
-				}
-			}
-		}
-		return strings.Join(parts, "\n")
+	if parsed.Type != "text" {
+		return ""
 	}
-	return ""
+	return strings.TrimSpace(parsed.Text)
 }
 
 // ── claude ───────────────────────────────────────────────────────────────────

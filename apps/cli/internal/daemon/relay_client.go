@@ -22,6 +22,7 @@ const relayMethodPing = "relay.ping"
 const relayMethodPong = "relay.pong"
 const relayMethodJobRun = "job.run"
 const relayMethodWorkspaceSnapshotChanged = "workspace.snapshot.changed"
+const relayMethodTerminalSessionChanged = "terminal.session.changed"
 
 const relayReconnectInitialDelay = 2 * time.Second
 const relayReconnectMaxDelay = 30 * time.Second
@@ -215,6 +216,11 @@ func runRelaySession(handler *JSONRPCHandler, runtime *cliruntime.Runtime, nodeI
 	connState := newWSConnState(conn)
 	defer connState.Close()
 
+	subID, subEvents := handler.events.Subscribe()
+	defer handler.events.Unsubscribe(subID)
+
+	go forwardTerminalEventsToRelay(connState, subEvents)
+
 	for {
 		msgType, payload, err := conn.ReadMessage()
 		if err != nil {
@@ -296,6 +302,9 @@ func handleRelayMessage(handler *JSONRPCHandler, runtime *cliruntime.Runtime, co
 	case relayMethodWorkspaceSnapshotChanged:
 		publishWorkspaceSnapshotChanged(handler, msg.Params)
 		return true
+	case relayMethodTerminalSessionChanged:
+		publishTerminalSessionChanged(handler, msg.Params)
+		return true
 	default:
 		return false
 	}
@@ -327,6 +336,51 @@ func publishWorkspaceSnapshotChanged(handler *JSONRPCHandler, params json.RawMes
 		Msg("relay: workspace snapshot change received")
 
 	handler.events.Publish(frontendEvent{Topic: "workspaceSnapshotChanged", Payload: payload})
+}
+
+func publishTerminalSessionChanged(handler *JSONRPCHandler, params json.RawMessage) {
+	var payload map[string]any
+	if len(params) > 0 {
+		if err := json.Unmarshal(params, &payload); err != nil {
+			log.Warn().Err(err).Msg("relay: invalid terminal session changed params")
+			return
+		}
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+
+	sessionID, _ := payload["sessionId"].(string)
+	workspaceID, _ := payload["workspaceId"].(string)
+	action, _ := payload["action"].(string)
+	log.Info().
+		Str("sessionId", strings.TrimSpace(sessionID)).
+		Str("workspaceId", strings.TrimSpace(workspaceID)).
+		Str("action", strings.TrimSpace(action)).
+		Msg("relay: terminal session change received")
+
+	handler.events.Publish(frontendEvent{Topic: "terminalSessionChanged", Payload: payload})
+}
+
+func forwardTerminalEventsToRelay(connState *wsConnState, events <-chan frontendEvent) {
+	for event := range events {
+		if event.Topic != "terminalSessionChanged" {
+			continue
+		}
+		payload, ok := event.Payload.(map[string]any)
+		if !ok {
+			continue
+		}
+		notification := notification{
+			JSONRPC: "2.0",
+			Method:  relayMethodTerminalSessionChanged,
+			Params:  payload,
+		}
+		if err := connState.WriteJSON(notification); err != nil {
+			log.Warn().Err(err).Msg("relay: failed to forward terminal session changed")
+			return
+		}
+	}
 }
 
 func mintRelayToken(runtime *cliruntime.Runtime, nodeID string) (string, time.Time, error) {

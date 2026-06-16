@@ -57,6 +57,15 @@ type BackendEventStoreBindingsDependencies = {
   subscribeWorkspaceSnapshotChanged?: (listener: (payload: WorkspaceSnapshotChangedPayload) => void) => () => void;
   subscribeWorkspaceStateChanged?: (listener: (payload: WorkspaceStateChangedPayload) => void) => () => void;
   subscribeOpenBrowserUrl?: (listener: (payload: { url: string; workspaceId: string }) => void) => () => void;
+  subscribeTerminalSessionChanged?: (
+    listener: (payload: {
+      action: "created" | "destroyed";
+      sessionId: string;
+      workspaceId: string;
+      tabId?: string;
+      paneId?: string;
+    }) => void,
+  ) => () => void;
   listWorkspaceWorktreePaths?: () => string[];
   resolveWorkspaceIdByWorktreePath?: (worktreePath: string) => string | undefined;
   refreshWorkspaceCurrentBranch?: (workspaceId: string, currentBranch?: string) => Promise<void>;
@@ -166,6 +175,15 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   subscribeOpenBrowserUrl: (listener) => {
     return subscribeBackendEvent("open.browser.url", (event) => {
       if (event.source !== "openBrowserUrl") {
+        return;
+      }
+
+      listener(event.payload);
+    });
+  },
+  subscribeTerminalSessionChanged: (listener) => {
+    return subscribeBackendEvent("terminal.session.changed", (event) => {
+      if (event.source !== "terminalSessionChanged") {
         return;
       }
 
@@ -706,6 +724,10 @@ export function createBackendEventStoreBindings(
       dependencies.subscribeOpenBrowserUrl?.((payload) => {
         dependencies.openBrowserTab?.(payload);
       }) ?? (() => {});
+    const unsubscribeTerminalSessionChanged =
+      dependencies.subscribeTerminalSessionChanged?.((payload) => {
+        handleTerminalSessionEvent(payload);
+      }) ?? (() => {});
 
     return () => {
       unsubscribeGitChanged();
@@ -719,6 +741,7 @@ export function createBackendEventStoreBindings(
       unsubscribeWorkspaceSnapshotChanged();
       unsubscribeWorkspaceStateChanged();
       unsubscribeOpenBrowserUrl();
+      unsubscribeTerminalSessionChanged();
       if (workspaceSnapshotRefreshTimer) {
         clearTimeout(workspaceSnapshotRefreshTimer);
       }
@@ -729,6 +752,58 @@ export function createBackendEventStoreBindings(
       lifecycleBySessionKey.clear();
     };
   };
+}
+
+function handleTerminalSessionEvent(payload: {
+  action: "created" | "destroyed";
+  sessionId: string;
+  workspaceId: string;
+  tabId?: string;
+  paneId?: string;
+}): void {
+  const tabState = tabStore.getState();
+
+  if (payload.action === "created") {
+    const existingTerminalTab = tabState.tabs.find(
+      (tab) => tab.kind === "terminal" && tab.data.sessionId === payload.sessionId,
+    );
+    if (existingTerminalTab) {
+      return;
+    }
+
+    const requestedTabId = payload.tabId?.trim();
+    if (requestedTabId) {
+      const requestedTerminalTab = tabState.tabs.find(
+        (tab) =>
+          tab.id === requestedTabId &&
+          tab.workspaceId === payload.workspaceId &&
+          tab.kind === "terminal" &&
+          !tab.data.sessionId,
+      );
+      if (requestedTerminalTab) {
+        tabState.setTerminalTabSessionId(requestedTabId, payload.sessionId);
+        return;
+      }
+    }
+
+    const workspaces = workspaceStore.getState().workspaces;
+    if (!workspaces.some((workspace) => workspace.id === payload.workspaceId)) {
+      return;
+    }
+
+    tabState.openTab({
+      workspaceId: payload.workspaceId,
+      kind: "terminal",
+      title: "Terminal",
+      sessionId: payload.sessionId,
+    });
+    return;
+  }
+
+  const matchingTab = tabState.tabs.find((tab) => tab.kind === "terminal" && tab.data.sessionId === payload.sessionId);
+  if (matchingTab) {
+    tabState.closeTab(matchingTab.id);
+  }
 }
 
 /**

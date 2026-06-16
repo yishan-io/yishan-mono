@@ -44,11 +44,15 @@ type Manager struct {
 	lastPortSnapshotKey  string
 	portScopeWorkspaceID string
 	portScanHintCh       chan struct{}
+	sessionsListenerMu   sync.RWMutex
+	onSessionsChanged    SessionLifecycleListener
 }
 
 type session struct {
 	id                   string
 	workspaceID          string
+	tabID                string
+	paneID               string
 	cmd                  *exec.Cmd
 	pty                  *os.File
 	output               bytes.Buffer
@@ -60,12 +64,9 @@ type session struct {
 	lastActivityUnixNano atomic.Int64
 	subsMu               sync.Mutex
 	subs                 map[uint64]chan Event
-	// portHintFn is called when the session output looks like it contains a
-	// port-start announcement. Set once at session creation; never nil.
-	portHintFn func()
-	// portScanTail holds the tail of recent PTY output used to detect port
-	// announcements that span multiple small read chunks.
-	portScanTail []byte
+	portHintFn           func()
+	portScanTail         []byte
+	destroyedPublished   atomic.Bool
 }
 
 func NewManager() *Manager {
@@ -76,6 +77,12 @@ func (m *Manager) SetPortsChangedListener(listener portsChangedListener) {
 	m.portsListenerMu.Lock()
 	m.onPortsChanged = listener
 	m.portsListenerMu.Unlock()
+}
+
+func (m *Manager) SetSessionsChangedListener(listener SessionLifecycleListener) {
+	m.sessionsListenerMu.Lock()
+	m.onSessionsChanged = listener
+	m.sessionsListenerMu.Unlock()
 }
 
 func (m *Manager) Start(_ context.Context, cwd string, req StartRequest) (StartResponse, error) {
@@ -91,7 +98,16 @@ func (m *Manager) Start(_ context.Context, cwd string, req StartRequest) (StartR
 	}
 
 	id := fmt.Sprintf("term-%d", m.nextID.Add(1))
-	s := &session{id: id, workspaceID: req.WorkspaceID, cmd: cmd, pty: ptyFile, startedAt: time.Now().UTC(), subs: make(map[uint64]chan Event)}
+	s := &session{
+		id:          id,
+		workspaceID: req.WorkspaceID,
+		tabID:       strings.TrimSpace(req.TabID),
+		paneID:      strings.TrimSpace(req.PaneID),
+		cmd:         cmd,
+		pty:         ptyFile,
+		startedAt:   time.Now().UTC(),
+		subs:        make(map[uint64]chan Event),
+	}
 	s.portHintFn = m.requestPortScanHint
 	s.running.Store(true)
 	s.exitCode.Store(-1)
@@ -101,6 +117,8 @@ func (m *Manager) Start(_ context.Context, cwd string, req StartRequest) (StartR
 	m.sessions[id] = s
 	m.mu.Unlock()
 	m.ensurePortScanLoop()
+
+	m.publishSessionChanged(m.buildSessionLifecycleEvent(s, "created", "running"))
 
 	go s.capture()
 	go func() {
@@ -124,6 +142,10 @@ func (m *Manager) Start(_ context.Context, cwd string, req StartRequest) (StartR
 		exit := int(code)
 		s.broadcast(Event{SessionID: s.id, Type: "exit", ExitCode: &exit})
 		s.closeSubscribers()
+
+		if s.destroyedPublished.CompareAndSwap(false, true) {
+			m.publishSessionChanged(m.buildSessionLifecycleEvent(s, "destroyed", "exited"))
+		}
 	}()
 
 	return StartResponse{SessionID: id}, nil
@@ -509,6 +531,29 @@ func (m *Manager) Read(req ReadRequest) (ReadResponse, error) {
 	return ReadResponse{Output: out, ExitCode: &code, Running: false}, nil
 }
 
+func (m *Manager) publishSessionChanged(event SessionLifecycleEvent) {
+	m.sessionsListenerMu.RLock()
+	listener := m.onSessionsChanged
+	m.sessionsListenerMu.RUnlock()
+	if listener == nil {
+		return
+	}
+	listener(event)
+}
+
+func (m *Manager) buildSessionLifecycleEvent(s *session, action string, status string) SessionLifecycleEvent {
+	return SessionLifecycleEvent{
+		Action:      action,
+		SessionID:   s.id,
+		WorkspaceID: s.workspaceID,
+		TabID:       s.tabID,
+		PaneID:      s.paneID,
+		PID:         s.cmd.Process.Pid,
+		Status:      status,
+		StartedAt:   s.startedAt.Format(time.RFC3339Nano),
+	}
+}
+
 func (m *Manager) Stop(req StopRequest) (StopResponse, error) {
 	s, err := m.session(req.SessionID)
 	if err != nil {
@@ -526,6 +571,10 @@ func (m *Manager) Stop(req StopRequest) (StopResponse, error) {
 	}
 	_ = s.pty.Close()
 	s.closeSubscribers()
+
+	if s.destroyedPublished.CompareAndSwap(false, true) {
+		m.publishSessionChanged(m.buildSessionLifecycleEvent(s, "destroyed", "exited"))
+	}
 
 	m.mu.Lock()
 	delete(m.sessions, s.id)
@@ -558,6 +607,10 @@ func (m *Manager) StopAllForWorkspace(workspaceID string) []error {
 		}
 		_ = s.pty.Close()
 		s.closeSubscribers()
+
+		if s.destroyedPublished.CompareAndSwap(false, true) {
+			m.publishSessionChanged(m.buildSessionLifecycleEvent(s, "destroyed", "exited"))
+		}
 
 		m.mu.Lock()
 		delete(m.sessions, s.id)

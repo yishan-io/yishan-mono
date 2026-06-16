@@ -129,6 +129,16 @@ export type RpcSchema = {
         health?: string;
         removed: boolean;
       };
+      terminalSessionChanged: {
+        action: "created" | "destroyed";
+        sessionId: string;
+        workspaceId: string;
+        tabId?: string;
+        paneId?: string;
+        pid: number;
+        status: string;
+        startedAt?: string;
+      };
     };
   };
 };

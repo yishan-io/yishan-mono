@@ -39,7 +39,6 @@ const rpcMocks = vi.hoisted(() => ({
     async () => ({ isGitRepository: true }) as { isGitRepository: boolean; remoteUrl?: string; currentBranch?: string },
   ),
   workspaceList: vi.fn(async () => []),
-  workspaceOpen: vi.fn(),
   workspaceSyncContextLink: vi.fn(async () => ({ updated: [], skipped: [], errors: {} })),
 }));
 
@@ -50,7 +49,6 @@ vi.mock("../rpc/rpcTransport", () => ({
     },
     workspace: {
       list: rpcMocks.workspaceList,
-      open: rpcMocks.workspaceOpen,
       syncContextLink: rpcMocks.workspaceSyncContextLink,
     },
   })),
@@ -166,7 +164,6 @@ describe("projectCommands", () => {
     await loadWorkspaceSnapshot();
 
     expect(rpcMocks.workspaceList).not.toHaveBeenCalled();
-    expect(rpcMocks.workspaceOpen).not.toHaveBeenCalled();
   });
 
   it("does not open visible hydrated workspaces from another node", async () => {
@@ -213,7 +210,6 @@ describe("projectCommands", () => {
     await loadWorkspaceSnapshot();
 
     expect(rpcMocks.workspaceList).not.toHaveBeenCalled();
-    expect(rpcMocks.workspaceOpen).not.toHaveBeenCalled();
   });
 
   it("creates backend project and then appends store state", async () => {

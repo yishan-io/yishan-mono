@@ -1,5 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RpcFrontendMessagePayload } from "../../shared/contracts/rpcSchema";
+import { tabStore } from "../store/tabStore";
+import { workspaceStore } from "../store/workspaceStore";
 import { createBackendEventStoreBindings } from "./backendEventStoreBindings";
 
 /**
@@ -165,7 +167,42 @@ function createWorkspaceSnapshotChangedHarness() {
   };
 }
 
+function createTerminalSessionChangedHarness() {
+  let listener: ((payload: RpcFrontendMessagePayload<"terminalSessionChanged">) => void) | null = null;
+  const unsubscribe = vi.fn();
+  const subscribeTerminalSessionChanged = vi.fn(
+    (nextListener: (payload: RpcFrontendMessagePayload<"terminalSessionChanged">) => void) => {
+      listener = nextListener;
+      return () => {
+        unsubscribe();
+        listener = null;
+      };
+    },
+  );
+
+  return {
+    subscribeTerminalSessionChanged,
+    unsubscribe,
+    emit(payload: RpcFrontendMessagePayload<"terminalSessionChanged">) {
+      listener?.(payload);
+    },
+  };
+}
+
+const initialTabStoreState = tabStore.getState();
+const initialWorkspaceStoreState = workspaceStore.getState();
+
 describe("createBackendEventStoreBindings", () => {
+  beforeEach(() => {
+    tabStore.setState(initialTabStoreState, true);
+    workspaceStore.setState(initialWorkspaceStoreState, true);
+  });
+
+  afterEach(() => {
+    tabStore.setState(initialTabStoreState, true);
+    workspaceStore.setState(initialWorkspaceStoreState, true);
+  });
+
   it("subscribes once and forwards git changed events to store action", () => {
     vi.useFakeTimers();
     try {
@@ -656,6 +693,162 @@ describe("createBackendEventStoreBindings", () => {
     expect(recordWorkspaceUnreadNotification).toHaveBeenCalledTimes(2);
     expect(dispatchSystemNotification).not.toHaveBeenCalled();
     expect(playNotificationSound).not.toHaveBeenCalled();
+
+    stopBindings();
+  });
+
+  it("binds a created terminal session back onto the requesting tab without opening a duplicate", () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const terminalSessionHarness = createTerminalSessionChangedHarness();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+
+    workspaceStore.setState({
+      ...workspaceStore.getState(),
+      workspaces: [
+        {
+          id: "workspace-1",
+          name: "Workspace 1",
+          title: "Workspace 1",
+          repoId: "repo-1",
+          sourceBranch: "main",
+          branch: "main",
+          summaryId: "summary-1",
+        },
+      ],
+      selectedWorkspaceId: "workspace-1",
+    });
+    tabStore.setState({
+      ...tabStore.getState(),
+      tabs: [
+        {
+          id: "tab-1",
+          workspaceId: "workspace-1",
+          title: "Terminal",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Terminal", paneId: "pane-tab-1" },
+        },
+      ],
+      selectedTabId: "tab-1",
+      selectedTabIdByWorkspaceId: { "workspace-1": "tab-1" },
+    });
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      subscribeTerminalSessionChanged: terminalSessionHarness.subscribeTerminalSessionChanged,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+    });
+
+    const stopBindings = startBindings();
+    terminalSessionHarness.emit({
+      action: "created",
+      sessionId: "term-1",
+      workspaceId: "workspace-1",
+      tabId: "tab-1",
+      paneId: "pane-tab-1",
+      pid: 1234,
+      status: "running",
+    });
+
+    expect(tabStore.getState().tabs).toHaveLength(1);
+    expect(tabStore.getState().tabs[0]).toMatchObject({
+      id: "tab-1",
+      kind: "terminal",
+      data: { sessionId: "term-1" },
+    });
+
+    stopBindings();
+  });
+
+  it("closes only the single correlated terminal tab after created and destroyed events", () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const terminalSessionHarness = createTerminalSessionChangedHarness();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+
+    workspaceStore.setState({
+      ...workspaceStore.getState(),
+      workspaces: [
+        {
+          id: "workspace-1",
+          name: "Workspace 1",
+          title: "Workspace 1",
+          repoId: "repo-1",
+          sourceBranch: "main",
+          branch: "main",
+          summaryId: "summary-1",
+        },
+      ],
+      selectedWorkspaceId: "workspace-1",
+    });
+    tabStore.setState({
+      ...tabStore.getState(),
+      tabs: [
+        {
+          id: "tab-1",
+          workspaceId: "workspace-1",
+          title: "Terminal",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Terminal" },
+        },
+      ],
+      selectedTabId: "tab-1",
+      selectedTabIdByWorkspaceId: { "workspace-1": "tab-1" },
+    });
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      subscribeTerminalSessionChanged: terminalSessionHarness.subscribeTerminalSessionChanged,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+    });
+
+    const stopBindings = startBindings();
+    terminalSessionHarness.emit({
+      action: "created",
+      sessionId: "term-1",
+      workspaceId: "workspace-1",
+      tabId: "tab-1",
+      pid: 1234,
+      status: "running",
+    });
+    terminalSessionHarness.emit({
+      action: "destroyed",
+      sessionId: "term-1",
+      workspaceId: "workspace-1",
+      tabId: "tab-1",
+      pid: 1234,
+      status: "exited",
+    });
+
+    expect(tabStore.getState().tabs).toHaveLength(0);
 
     stopBindings();
   });

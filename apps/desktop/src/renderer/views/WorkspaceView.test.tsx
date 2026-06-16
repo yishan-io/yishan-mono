@@ -15,6 +15,7 @@ import { WorkspaceView } from "./WorkspaceView";
 const commandMocks = {
   closeTab: vi.fn(),
   deleteSelectedFileTreeEntry: vi.fn(),
+  listTerminalSessions: vi.fn(async () => []),
   loadWorkspaceSnapshot: vi.fn(async () => undefined),
   openEntryInExternalApp: vi.fn(async () => undefined),
   openTab: vi.fn(),
@@ -31,6 +32,7 @@ const commandMocks = {
 
 const terminalRecoveryMocks = {
   restoreTerminalTabsFromRegistry: vi.fn(() => undefined),
+  restoreTerminalTabsFromDaemon: vi.fn(async () => undefined),
   startPersistingTerminalTabs: vi.fn(() => vi.fn()),
 };
 
@@ -105,6 +107,7 @@ vi.mock("./workspace/terminal/terminalRecovery", () => ({
   TerminalRecoveryCoordinator: vi.fn(
     class {
       restoreTerminalTabsFromRegistry = terminalRecoveryMocks.restoreTerminalTabsFromRegistry;
+      restoreTerminalTabsFromDaemon = terminalRecoveryMocks.restoreTerminalTabsFromDaemon;
       startPersistingTerminalTabs = terminalRecoveryMocks.startPersistingTerminalTabs;
     },
   ),
@@ -174,6 +177,22 @@ describe("WorkspaceView", () => {
 
     await waitFor(() => {
       expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("selects the workspace restored from daemon terminal recovery", async () => {
+    terminalRecoveryMocks.restoreTerminalTabsFromDaemon.mockResolvedValueOnce("workspace-2");
+
+    render(
+      <MemoryRouter>
+        <WorkspaceView />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+      expect(terminalRecoveryMocks.restoreTerminalTabsFromDaemon).toHaveBeenCalledTimes(1);
+      expect(commandMocks.setSelectedWorkspaceId).toHaveBeenCalledWith("workspace-2");
     });
   });
 

@@ -175,48 +175,33 @@ function useWorkspaceBootstrap(input: {
     }
 
     let disposed = false;
+    let unsubscribePersist: (() => void) | undefined;
 
     const loadWorkspaceData = async () => {
       await cmd.loadWorkspaceSnapshot();
       if (disposed) {
         return;
       }
+
+      const restoredWorkspaceId = await terminalRecoveryCoordinator.restoreTerminalTabsFromDaemon({
+        listTerminalSessions: () => cmd.listTerminalSessions({ includeExited: false }),
+      });
+      if (restoredWorkspaceId && restoredWorkspaceId !== workspaceStore.getState().selectedWorkspaceId) {
+        cmd.setSelectedWorkspaceId(restoredWorkspaceId);
+      }
+
+      if (!disposed) {
+        unsubscribePersist = terminalRecoveryCoordinator.startPersistingTerminalTabs();
+      }
     };
 
-    // fire-and-forget: workspace view owns top-level snapshot loading.
     void loadWorkspaceData();
-
-    return () => {
-      disposed = true;
-    };
-  }, [cmd, selectedOrganizationId]);
-
-  useEffect(() => {
-    let disposed = false;
-    let unsubscribePersist: (() => void) | undefined;
-
-    const restoreAndPersist = async () => {
-      const restoredWorkspaceId = terminalRecoveryCoordinator.restoreTerminalTabsFromRegistry();
-      if (restoredWorkspaceId) {
-        const currentSelectedWorkspaceId = workspaceStore.getState().selectedWorkspaceId;
-        if (restoredWorkspaceId !== currentSelectedWorkspaceId) {
-          cmd.setSelectedWorkspaceId(restoredWorkspaceId);
-        }
-      }
-      if (disposed) {
-        return;
-      }
-      unsubscribePersist = terminalRecoveryCoordinator.startPersistingTerminalTabs();
-    };
-
-    // fire-and-forget: terminal tab persistence is managed independently of snapshot reloads.
-    void restoreAndPersist();
 
     return () => {
       disposed = true;
       unsubscribePersist?.();
     };
-  }, [cmd, terminalRecoveryCoordinator]);
+  }, [cmd, selectedOrganizationId, terminalRecoveryCoordinator]);
 }
 
 /** Observes one container element and reports its width whenever it changes. */

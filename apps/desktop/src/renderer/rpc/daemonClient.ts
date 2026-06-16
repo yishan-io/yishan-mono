@@ -84,7 +84,6 @@ export class DaemonClient {
 
   readonly workspace = {
     list: () => this._workspaceClient.list(),
-    open: (input: Rpc.WorkspaceOpenInput) => this._workspaceClient.open(input),
     refreshPullRequest: (input: Rpc.WorkspaceRefreshPullRequestInput) =>
       this._workspaceClient.refreshPullRequest(input),
     createWorkspace: (input: Rpc.WorkspaceCreateInput) => this._workspaceClient.createWorkspace(input),

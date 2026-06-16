@@ -2,8 +2,14 @@ package memory
 
 import (
 	"context"
+	"errors"
 	"time"
 )
+
+// ErrAgentNotFound is returned by RunAgentFunc when the agent binary cannot be
+// located on the system. Callers should treat this as a configuration issue
+// (agent not installed) and skip gracefully rather than reporting an error.
+var ErrAgentNotFound = errors.New("agent binary not found")
 
 const (
 	MaxProjectMemoryChars = 5000
@@ -76,17 +82,28 @@ type SummarizerConfig struct {
 }
 
 // RunAgentFunc runs a non-interactive agent prompt and returns its text output.
+// workDir is the working directory for the agent process; pass the workspace
+// path so the agent uses the correct project context for config discovery.
 // The memory package accepts this as a dependency so it doesn't need to know
 // about agentcmd directly (avoids import cycle).
-type RunAgentFunc func(ctx context.Context, agentKind, model, prompt string) (string, error)
+type RunAgentFunc func(ctx context.Context, agentKind, model, prompt, workDir string) (string, error)
 
 type sessionMessages struct {
 	SessionID string
 	Messages  []sessionMessage
 }
 
+type sessionReader interface {
+	ReadRecentSession(agent string, workspacePath string) (*sessionMessages, error)
+}
+
 type sessionMessage struct {
 	Role      string
 	Content   string
 	Timestamp time.Time
+}
+
+type SummarizeResult struct {
+	WrittenPaths []string
+	Skipped      bool
 }

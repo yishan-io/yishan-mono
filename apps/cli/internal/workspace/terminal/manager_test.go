@@ -444,3 +444,133 @@ func TestBuildPIDToRootMap(t *testing.T) {
 		t.Fatalf("expected unrelated process to be excluded, got %+v", pidToRoot)
 	}
 }
+
+func TestSessionLifecycleEventsOnStartAndStop(t *testing.T) {
+	m := NewManager()
+
+	var events []SessionLifecycleEvent
+	m.SetSessionsChangedListener(func(e SessionLifecycleEvent) {
+		events = append(events, e)
+	})
+
+	start, err := m.Start(context.Background(), t.TempDir(), StartRequest{
+		Command:     "sleep",
+		Args:        []string{"10"},
+		WorkspaceID: "ws-1",
+		TabID:       "tab-1",
+		PaneID:      "pane-1",
+	})
+	if err != nil {
+		t.Fatalf("start terminal: %v", err)
+	}
+
+	if len(events) < 1 {
+		t.Fatal("expected at least one lifecycle event after start")
+	}
+	created := events[0]
+	if created.Action != "created" {
+		t.Fatalf("expected created action, got %q", created.Action)
+	}
+	if created.SessionID != start.SessionID {
+		t.Fatalf("expected sessionId %q, got %q", start.SessionID, created.SessionID)
+	}
+	if created.WorkspaceID != "ws-1" {
+		t.Fatalf("expected workspaceId ws-1, got %q", created.WorkspaceID)
+	}
+	if created.TabID != "tab-1" {
+		t.Fatalf("expected tabId tab-1, got %q", created.TabID)
+	}
+	if created.PaneID != "pane-1" {
+		t.Fatalf("expected paneId pane-1, got %q", created.PaneID)
+	}
+	if created.Status != "running" {
+		t.Fatalf("expected status running, got %q", created.Status)
+	}
+
+	_, err = m.Stop(StopRequest{SessionID: start.SessionID})
+	if err != nil {
+		t.Fatalf("stop terminal: %v", err)
+	}
+
+	if len(events) < 2 {
+		t.Fatalf("expected at least two lifecycle events, got %d", len(events))
+	}
+	destroyed := events[1]
+	if destroyed.Action != "destroyed" {
+		t.Fatalf("expected destroyed action, got %q", destroyed.Action)
+	}
+	if destroyed.SessionID != start.SessionID {
+		t.Fatalf("expected sessionId %q, got %q", start.SessionID, destroyed.SessionID)
+	}
+	if destroyed.TabID != "tab-1" {
+		t.Fatalf("expected destroyed tabId tab-1, got %q", destroyed.TabID)
+	}
+	if destroyed.PaneID != "pane-1" {
+		t.Fatalf("expected destroyed paneId pane-1, got %q", destroyed.PaneID)
+	}
+}
+
+func TestSessionLifecycleEventOnNaturalExit(t *testing.T) {
+	m := NewManager()
+
+	var events []SessionLifecycleEvent
+	m.SetSessionsChangedListener(func(e SessionLifecycleEvent) {
+		events = append(events, e)
+	})
+
+	start, err := m.Start(context.Background(), t.TempDir(), StartRequest{
+		Command:     "true",
+		WorkspaceID: "ws-2",
+	})
+	if err != nil {
+		t.Fatalf("start terminal: %v", err)
+	}
+
+	// Wait for the process to exit naturally.
+	requireEvent := func() {
+		deadline := time.After(3 * time.Second)
+		for {
+			for _, e := range events {
+				if e.Action == "destroyed" && e.SessionID == start.SessionID {
+					return
+				}
+			}
+			select {
+			case <-deadline:
+				t.Fatal("timed out waiting for destroyed lifecycle event")
+			case <-time.After(10 * time.Millisecond):
+			}
+		}
+	}
+	requireEvent()
+
+	// Session should be in the map until Stop() is called.
+	summary := m.ListSessions(ListSessionsRequest{IncludeExited: true})
+	found := false
+	for _, s := range summary {
+		if s.SessionID == start.SessionID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected session to still be listed after natural exit")
+	}
+
+	// Stop should not fire a second destroyed event.
+	beforeCount := len(events)
+	_, err = m.Stop(StopRequest{SessionID: start.SessionID})
+	if err != nil {
+		t.Fatalf("stop after natural exit: %v", err)
+	}
+	destroyedCount := 0
+	for _, e := range events {
+		if e.Action == "destroyed" && e.SessionID == start.SessionID {
+			destroyedCount++
+		}
+	}
+	if destroyedCount != 1 {
+		t.Fatalf("expected exactly one destroyed lifecycle event, got %d", destroyedCount)
+	}
+	_ = beforeCount
+}

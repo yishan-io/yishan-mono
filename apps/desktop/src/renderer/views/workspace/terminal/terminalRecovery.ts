@@ -1,3 +1,5 @@
+import { generateId } from "../../../helpers/generateId";
+import type { TerminalSessionSummary } from "../../../rpc/daemonTypes";
 import { tabStore } from "../../../store/tabStore";
 import type { TabStoreState } from "../../../store/tabStore";
 import { workspaceStore } from "../../../store/workspaceStore";
@@ -24,14 +26,6 @@ const EMPTY_PERSISTED_TERMINAL_PAYLOAD: PersistedTerminalTabPayload = {
   tabs: [],
 };
 
-/** Clears persisted terminal recovery data from localStorage. */
-export function clearTerminalRecoveryStorage(storage: Storage | undefined = resolveBrowserStorage()): void {
-  if (!storage) {
-    return;
-  }
-  storage.removeItem(TERMINAL_RECOVERY_STORAGE_KEY);
-}
-
 /**
  * Coordinates terminal tab persistence and restore.
  */
@@ -43,65 +37,100 @@ export class TerminalRecoveryCoordinator {
   ) {}
 
   /**
-   * Restores persisted terminal tabs into tab store once workspace metadata is available.
+   * Restores terminal tabs from active daemon sessions, merging with localStorage data.
    * Returns workspace id for the selected tab after restore, if any.
    */
-  restoreTerminalTabsFromRegistry(): string | undefined {
-    const persisted = this.loadPersistedTerminalTabs();
-    if (persisted.tabs.length === 0) {
-      return undefined;
-    }
-
+  async restoreTerminalTabsFromDaemon(params: {
+    listTerminalSessions: () => Promise<TerminalSessionSummary[]>;
+  }): Promise<string | undefined> {
     const workspaceIdSet = new Set(this.workspaceStoreAccess.getState().workspaces.map((workspace) => workspace.id));
     if (workspaceIdSet.size === 0) {
       return undefined;
     }
 
-    this.tabStoreAccess.setState((state) => {
-      const existingTabIds = new Set(state.tabs.map((tab) => tab.id));
-      const restoredTabs: TerminalTab[] = persisted.tabs
-        .filter((entry) => workspaceIdSet.has(entry.workspaceId))
-        .filter((entry) => !existingTabIds.has(entry.tabId))
-        .map((entry) => ({
-          id: entry.tabId,
-          workspaceId: entry.workspaceId,
-          title: entry.title,
-          pinned: entry.pinned,
-          kind: "terminal" as const,
-          data: {
-            title: entry.title,
-            sessionId: entry.sessionId,
-            launchCommand: entry.launchCommand,
-          },
-        }));
+    let daemonSessions: TerminalSessionSummary[];
+    try {
+      daemonSessions = await params.listTerminalSessions();
+    } catch {
+      return undefined;
+    }
 
-      if (restoredTabs.length === 0) {
-        return state;
+    const activeSessions = daemonSessions.filter(
+      (session) => session.status === "running" && workspaceIdSet.has(session.workspaceId),
+    );
+    if (activeSessions.length === 0) {
+      return undefined;
+    }
+
+    const persisted = this.loadPersistedTerminalTabs();
+    const persistedBySessionId = new Map<string, PersistedTerminalTabEntry>();
+    for (const entry of persisted.tabs) {
+      if (entry.sessionId) {
+        persistedBySessionId.set(entry.sessionId, entry);
+      }
+    }
+
+    const state = this.tabStoreAccess.getState();
+    const existingTabIds = new Set(state.tabs.map((tab) => tab.id));
+    const existingSessionIds = new Set(
+      state.tabs
+        .filter((tab): tab is TerminalTab => tab.kind === "terminal")
+        .map((tab) => tab.data.sessionId)
+        .filter(Boolean) as string[],
+    );
+
+    const unrestoredSessions = activeSessions.filter((session) => !existingSessionIds.has(session.sessionId));
+    if (unrestoredSessions.length === 0) {
+      return undefined;
+    }
+
+    const nextTabs = [...state.tabs];
+    const nextSelectedByWorkspaceId = { ...state.selectedTabIdByWorkspaceId };
+    let restoredSelectedTabWorkspaceId: string | undefined;
+
+    for (const session of unrestoredSessions) {
+      const persistedEntry = persistedBySessionId.get(session.sessionId);
+      const tabId = persistedEntry?.tabId ?? generateId();
+      const title = persistedEntry?.title ?? "Terminal";
+      const pinned = persistedEntry?.pinned ?? false;
+      const launchCommand = persistedEntry?.launchCommand;
+
+      if (existingTabIds.has(tabId)) {
+        continue;
       }
 
-      const nextTabs = [...state.tabs, ...restoredTabs];
-      const nextSelectedByWorkspaceId = { ...state.selectedTabIdByWorkspaceId };
-      for (const tab of restoredTabs) {
-        if (!nextSelectedByWorkspaceId[tab.workspaceId]) {
-          nextSelectedByWorkspaceId[tab.workspaceId] = tab.id;
-        }
-      }
-
-      const shouldRestoreSelectedTab =
-        persisted.selectedTabId && nextTabs.some((tab) => tab.id === persisted.selectedTabId);
-      if (shouldRestoreSelectedTab) {
-        const restoredSelectedTab = nextTabs.find((tab) => tab.id === persisted.selectedTabId);
-        if (restoredSelectedTab) {
-          nextSelectedByWorkspaceId[restoredSelectedTab.workspaceId] = restoredSelectedTab.id;
-        }
-      }
-
-      return {
-        tabs: nextTabs,
-        selectedTabIdByWorkspaceId: nextSelectedByWorkspaceId,
-        selectedTabId: shouldRestoreSelectedTab ? persisted.selectedTabId : state.selectedTabId,
+      const tab: TerminalTab = {
+        id: tabId,
+        workspaceId: session.workspaceId,
+        title,
+        pinned,
+        kind: "terminal" as const,
+        data: {
+          title,
+          sessionId: session.sessionId,
+          launchCommand,
+        },
       };
+
+      nextTabs.push(tab);
+      existingTabIds.add(tabId);
+
+      if (!nextSelectedByWorkspaceId[session.workspaceId]) {
+        nextSelectedByWorkspaceId[session.workspaceId] = tabId;
+        restoredSelectedTabWorkspaceId = session.workspaceId;
+      }
+    }
+
+    const shouldRestoreSelectedTab =
+      persisted.selectedTabId && nextTabs.some((tab) => tab.id === persisted.selectedTabId);
+    const nextSelectedTabId = shouldRestoreSelectedTab ? persisted.selectedTabId : state.selectedTabId;
+
+    this.tabStoreAccess.setState({
+      tabs: nextTabs,
+      selectedTabIdByWorkspaceId: nextSelectedByWorkspaceId,
+      selectedTabId: nextSelectedTabId,
     });
+
     const restoredState = this.tabStoreAccess.getState();
     if (this.storage) {
       this.storage.setItem(
@@ -109,7 +138,8 @@ export class TerminalRecoveryCoordinator {
         JSON.stringify(this.buildPersistedTerminalTabsPayload(restoredState)),
       );
     }
-    return restoredState.tabs.find((tab) => tab.id === restoredState.selectedTabId)?.workspaceId;
+
+    return restoredSelectedTabWorkspaceId;
   }
 
   /**

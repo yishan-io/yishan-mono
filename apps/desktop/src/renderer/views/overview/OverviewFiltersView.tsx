@@ -62,6 +62,10 @@ export function OverviewFiltersView({ projects }: OverviewFiltersViewProps) {
           ))}
         </Select>
       </FormControl>
+
+      <Typography variant="caption" sx={{ ml: "auto", color: "text.disabled" }}>
+        {t("overview.filters.utcNote")}
+      </Typography>
     </Box>
   );
 }
