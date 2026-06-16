@@ -26,14 +26,6 @@ const EMPTY_PERSISTED_TERMINAL_PAYLOAD: PersistedTerminalTabPayload = {
   tabs: [],
 };
 
-/** Clears persisted terminal recovery data from localStorage. */
-export function clearTerminalRecoveryStorage(storage: Storage | undefined = resolveBrowserStorage()): void {
-  if (!storage) {
-    return;
-  }
-  storage.removeItem(TERMINAL_RECOVERY_STORAGE_KEY);
-}
-
 /**
  * Coordinates terminal tab persistence and restore.
  */
@@ -43,76 +35,6 @@ export class TerminalRecoveryCoordinator {
     private readonly workspaceStoreAccess: Pick<typeof workspaceStore, "getState"> = workspaceStore,
     private readonly storage: Storage | undefined = resolveBrowserStorage(),
   ) {}
-
-  /**
-   * Restores persisted terminal tabs into tab store once workspace metadata is available.
-   * Returns workspace id for the selected tab after restore, if any.
-   */
-  restoreTerminalTabsFromRegistry(): string | undefined {
-    const persisted = this.loadPersistedTerminalTabs();
-    if (persisted.tabs.length === 0) {
-      return undefined;
-    }
-
-    const workspaceIdSet = new Set(this.workspaceStoreAccess.getState().workspaces.map((workspace) => workspace.id));
-    if (workspaceIdSet.size === 0) {
-      return undefined;
-    }
-
-    this.tabStoreAccess.setState((state) => {
-      const existingTabIds = new Set(state.tabs.map((tab) => tab.id));
-      const restoredTabs: TerminalTab[] = persisted.tabs
-        .filter((entry) => workspaceIdSet.has(entry.workspaceId))
-        .filter((entry) => !existingTabIds.has(entry.tabId))
-        .map((entry) => ({
-          id: entry.tabId,
-          workspaceId: entry.workspaceId,
-          title: entry.title,
-          pinned: entry.pinned,
-          kind: "terminal" as const,
-          data: {
-            title: entry.title,
-            sessionId: entry.sessionId,
-            launchCommand: entry.launchCommand,
-          },
-        }));
-
-      if (restoredTabs.length === 0) {
-        return state;
-      }
-
-      const nextTabs = [...state.tabs, ...restoredTabs];
-      const nextSelectedByWorkspaceId = { ...state.selectedTabIdByWorkspaceId };
-      for (const tab of restoredTabs) {
-        if (!nextSelectedByWorkspaceId[tab.workspaceId]) {
-          nextSelectedByWorkspaceId[tab.workspaceId] = tab.id;
-        }
-      }
-
-      const shouldRestoreSelectedTab =
-        persisted.selectedTabId && nextTabs.some((tab) => tab.id === persisted.selectedTabId);
-      if (shouldRestoreSelectedTab) {
-        const restoredSelectedTab = nextTabs.find((tab) => tab.id === persisted.selectedTabId);
-        if (restoredSelectedTab) {
-          nextSelectedByWorkspaceId[restoredSelectedTab.workspaceId] = restoredSelectedTab.id;
-        }
-      }
-
-      return {
-        tabs: nextTabs,
-        selectedTabIdByWorkspaceId: nextSelectedByWorkspaceId,
-        selectedTabId: shouldRestoreSelectedTab ? persisted.selectedTabId : state.selectedTabId,
-      };
-    });
-    const restoredState = this.tabStoreAccess.getState();
-    if (this.storage) {
-      this.storage.setItem(
-        TERMINAL_RECOVERY_STORAGE_KEY,
-        JSON.stringify(this.buildPersistedTerminalTabsPayload(restoredState)),
-      );
-    }
-    return restoredState.tabs.find((tab) => tab.id === restoredState.selectedTabId)?.workspaceId;
-  }
 
   /**
    * Restores terminal tabs from active daemon sessions, merging with localStorage data.

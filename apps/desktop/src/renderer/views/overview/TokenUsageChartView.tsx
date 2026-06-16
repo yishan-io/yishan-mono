@@ -3,11 +3,13 @@ import { BarChart } from "@mui/x-charts/BarChart";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { OverviewTimeRange } from "../../api/overviewApi.types";
+import { formatTokens } from "../../helpers/formatters";
 import { overviewStore } from "../../store/overviewStore";
 
-type TokenUnit = "M" | "K" | "raw";
+type TokenUnit = "B" | "M" | "K" | "raw";
 
 function resolveUnit(total: number): TokenUnit {
+  if (total >= 1_000_000_000) return "B";
   if (total >= 1_000_000) return "M";
   if (total >= 1_000) return "K";
   return "raw";
@@ -15,16 +17,9 @@ function resolveUnit(total: number): TokenUnit {
 
 function formatTokensInUnit(value: number | null, unit: TokenUnit): string {
   if (value == null) return "0";
+  if (unit === "B") return `${(value / 1_000_000_000).toFixed(2)}B`;
   if (unit === "M") return `${(value / 1_000_000).toFixed(2)}M`;
   if (unit === "K") return `${(value / 1_000).toFixed(2)}K`;
-  return String(value);
-}
-
-/** Used by the bar chart axis / tooltip — picks unit independently per value. */
-function formatTokens(value: number | null): string {
-  if (value == null) return "0";
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
   return String(value);
 }
 

@@ -2,6 +2,7 @@ import { Box, Typography } from "@mui/material";
 import { PieChart } from "@mui/x-charts/PieChart";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { formatTokens } from "../../helpers/formatters";
 import { overviewStore } from "../../store/overviewStore";
 
 const AGENT_KIND_COLORS: Record<string, string> = {
@@ -16,16 +17,6 @@ const AGENT_KIND_COLORS: Record<string, string> = {
 
 function capitalize(word: string): string {
   return word.charAt(0).toUpperCase() + word.slice(1);
-}
-
-function formatTokens(value: number): string {
-  if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1)}M`;
-  }
-  if (value >= 1_000) {
-    return `${(value / 1_000).toFixed(1)}K`;
-  }
-  return String(value);
 }
 
 export function AgentKindChartView() {

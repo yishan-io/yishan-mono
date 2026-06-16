@@ -97,6 +97,20 @@ describe("TokenUsageChartView", () => {
     expect(screen.getByText("0.50M")).toBeTruthy();
   });
 
+  it("stat numbers use B when the visible total is in the billions", () => {
+    overviewStore.setState({
+      tokenUsageSeries: [makeBucket(utcDateIso(1), 3_750_000_000, 2_500_000_000)],
+      cachedTotal: 2_500_000_000,
+      uncachedTotal: 1_250_000_000,
+    });
+
+    render(<TokenUsageChartView />);
+
+    expect(screen.getByText("3.75B")).toBeTruthy();
+    expect(screen.getByText(/2\.50B.*66\.7%/)).toBeTruthy();
+    expect(screen.getByText("1.25B")).toBeTruthy();
+  });
+
   it("total reflects only visible bars when a bucket falls outside the date range", () => {
     // Bucket from 10 days ago UTC — outside the 7d window, will be dropped from chartData
     const droppedBucket = makeBucket(utcDateIso(10), 1000, 400);
