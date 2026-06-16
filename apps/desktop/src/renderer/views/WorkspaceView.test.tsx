@@ -31,7 +31,6 @@ const commandMocks = {
 };
 
 const terminalRecoveryMocks = {
-  restoreTerminalTabsFromRegistry: vi.fn(() => undefined),
   restoreTerminalTabsFromDaemon: vi.fn(async () => undefined),
   startPersistingTerminalTabs: vi.fn(() => vi.fn()),
 };
@@ -106,7 +105,6 @@ vi.mock("./workspace/WorkspaceLifecycleNoticeView", () => ({
 vi.mock("./workspace/terminal/terminalRecovery", () => ({
   TerminalRecoveryCoordinator: vi.fn(
     class {
-      restoreTerminalTabsFromRegistry = terminalRecoveryMocks.restoreTerminalTabsFromRegistry;
       restoreTerminalTabsFromDaemon = terminalRecoveryMocks.restoreTerminalTabsFromDaemon;
       startPersistingTerminalTabs = terminalRecoveryMocks.startPersistingTerminalTabs;
     },
@@ -196,7 +194,7 @@ describe("WorkspaceView", () => {
     });
   });
 
-  it("restores terminal tabs only once across organization changes", async () => {
+  it("re-runs daemon terminal recovery when the selected organization changes", async () => {
     render(
       <MemoryRouter>
         <WorkspaceView />
@@ -204,7 +202,7 @@ describe("WorkspaceView", () => {
     );
 
     await waitFor(() => {
-      expect(terminalRecoveryMocks.restoreTerminalTabsFromRegistry).toHaveBeenCalledTimes(1);
+      expect(terminalRecoveryMocks.restoreTerminalTabsFromDaemon).toHaveBeenCalledTimes(1);
       expect(terminalRecoveryMocks.startPersistingTerminalTabs).toHaveBeenCalledTimes(1);
     });
 
@@ -216,10 +214,9 @@ describe("WorkspaceView", () => {
 
     await waitFor(() => {
       expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(2);
+      expect(terminalRecoveryMocks.restoreTerminalTabsFromDaemon).toHaveBeenCalledTimes(2);
+      expect(terminalRecoveryMocks.startPersistingTerminalTabs).toHaveBeenCalledTimes(2);
     });
-
-    expect(terminalRecoveryMocks.restoreTerminalTabsFromRegistry).toHaveBeenCalledTimes(1);
-    expect(terminalRecoveryMocks.startPersistingTerminalTabs).toHaveBeenCalledTimes(1);
   });
 
   it("returns from the overview overlay to the workspace pane on organization switch", async () => {
