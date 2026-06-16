@@ -131,36 +131,6 @@ export class DaemonWorkspaceClient {
     return workspaces;
   }
 
-  async open(input: Rpc.WorkspaceOpenInput): Promise<Rpc.DaemonWorkspace> {
-    const workspaceId = input.workspaceId.trim();
-    const workspaceWorktreePath = normalizeWorktreePath(input.workspaceWorktreePath);
-    if (!workspaceId || !workspaceWorktreePath) {
-      throw new Error("workspaceId and workspaceWorktreePath are required");
-    }
-
-    const record = asRecord(
-      await this.invoke("open", {
-        id: workspaceId,
-        path: workspaceWorktreePath,
-        ...(input.orgId ? { orgId: input.orgId } : {}),
-        ...(input.projectId ? { projectId: input.projectId } : {}),
-        ...(input.pullRequestAlreadyMerged ? { pullRequestAlreadyMerged: true } : {}),
-      }),
-    );
-    if (!record) {
-      throw new Error("daemon workspace open returned invalid response");
-    }
-
-    const id = readOptionalString(record.id) || workspaceId;
-    const path = normalizeWorktreePath(readOptionalString(record.path) || workspaceWorktreePath);
-    this.workspaceIdByWorktreePath.set(path, id);
-    return {
-      id,
-      path,
-      pullRequest: readDaemonWorkspacePullRequest(record.pullRequest),
-    };
-  }
-
   async refreshPullRequest(input: Rpc.WorkspaceRefreshPullRequestInput): Promise<Rpc.DaemonWorkspace> {
     const workspaceId = input.workspaceId.trim();
     if (!workspaceId) {
@@ -206,12 +176,7 @@ export class DaemonWorkspaceClient {
         return existingPreferredWorkspace.id;
       }
 
-      await this.invoke("open", {
-        id: normalizedPreferredWorkspaceId,
-        path: normalizedWorktreePath,
-      });
-      this.workspaceIdByWorktreePath.set(normalizedWorktreePath, normalizedPreferredWorkspaceId);
-      return normalizedPreferredWorkspaceId;
+      throw new Error(`daemon workspace not found for id: ${normalizedPreferredWorkspaceId}`);
     }
 
     const cachedWorkspaceId = this.workspaceIdByWorktreePath.get(normalizedWorktreePath);

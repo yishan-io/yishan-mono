@@ -129,15 +129,6 @@ export type WorkspaceCreateInput = {
   };
 };
 
-export type WorkspaceOpenInput = {
-  workspaceId: string;
-  workspaceWorktreePath: string;
-  orgId?: string;
-  projectId?: string;
-  /** When true the daemon skips PR polling — the latest PR is already merged. */
-  pullRequestAlreadyMerged?: boolean;
-};
-
 export type WorkspaceRefreshPullRequestInput = {
   workspaceId: string;
 };

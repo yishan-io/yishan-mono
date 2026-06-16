@@ -30,7 +30,6 @@ import { MONOSPACE_SX } from "../../helpers/styles";
 import { useDialogRegistration } from "../../hooks/useDialogRegistration";
 import { getDesktopHostBridge, subscribeDesktopRpcEvent } from "../../rpc/rpcTransport";
 import { tabStore } from "../../store/tabStore";
-import { clearTerminalRecoveryStorage } from "../workspace/terminal/terminalRecovery";
 
 /** Renders one settings panel for inspecting the local daemon connection. */
 export function DaemonSettingsView() {
@@ -163,7 +162,6 @@ export function DaemonSettingsView() {
         }
 
         tabStore.getState().closeAllTerminalTabs();
-        clearTerminalRecoveryStorage();
 
         if (closeErrors.length > 0) {
           if (!isMountedRef.current) {
