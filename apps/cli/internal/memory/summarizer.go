@@ -90,7 +90,7 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
-	output, err := s.runAgent(ctx, summarizeAgent, s.model, prompt)
+	output, err := s.runAgent(ctx, summarizeAgent, s.model, prompt, workspacePath)
 	if err != nil {
 		return SummarizeResult{}, fmt.Errorf("llm summarization via %s: %w", summarizeAgent, err)
 	}

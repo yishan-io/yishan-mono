@@ -2,6 +2,8 @@ package memory
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -31,6 +33,38 @@ func TestHandleSummarizeResult_UsesDistinctLogsForSkippedAndNoOutput(t *testing.
 	}
 }
 
+func TestSummarizeSession_BinaryNotFoundLogsDebugNotWarn(t *testing.T) {
+	// RunAgentFunc that returns ErrAgentNotFound (as buildRunAgentFunc does when
+	// ResolveCommand cannot locate the binary).
+	runAgent := RunAgentFunc(func(_ context.Context, _, _, _, _ string) (string, error) {
+		return "", fmt.Errorf("%w: opencode", ErrAgentNotFound)
+	})
+
+	svc := &Service{
+		summarizer: NewSummarizer(SummarizerConfig{Enabled: true}, runAgent),
+	}
+	// Inject a fake reader that returns a real session so runAgent is reached.
+	svc.summarizer.dbReader = fakeSessionReader2{
+		session: &sessionMessages{
+			Messages: []sessionMessage{{Role: "user", Content: "hello"}},
+		},
+	}
+
+	req := summarizeRequest{agent: "opencode", worktreePath: t.TempDir()}
+
+	var debugLogs, warnLogs string
+	captureMemoryLogsLevel(t, zerolog.DebugLevel, func() {
+		svc.runSummarize(req)
+	}, &debugLogs, &warnLogs)
+
+	if strings.Contains(warnLogs, "session summarization failed") {
+		t.Error("binary-not-found should not log at warn level")
+	}
+	if !strings.Contains(debugLogs, "agent binary not installed") {
+		t.Errorf("expected debug log 'agent binary not installed', got debug=%q warn=%q", debugLogs, warnLogs)
+	}
+}
+
 func captureMemoryLogs(t *testing.T, run func()) string {
 	t.Helper()
 	var buf bytes.Buffer
@@ -41,4 +75,50 @@ func captureMemoryLogs(t *testing.T, run func()) string {
 	})
 	run()
 	return buf.String()
+}
+
+func captureMemoryLogsLevel(t *testing.T, level zerolog.Level, run func(), debugOut, warnOut *string) {
+	t.Helper()
+	var debugBuf, warnBuf bytes.Buffer
+	previous := log.Logger
+	log.Logger = zerolog.New(zerolog.MultiLevelWriter(
+		zerolog.LevelWriterAdapter{Writer: levelFilter{w: &debugBuf, minLevel: zerolog.DebugLevel, maxLevel: zerolog.DebugLevel}},
+		zerolog.LevelWriterAdapter{Writer: levelFilter{w: &warnBuf, minLevel: zerolog.WarnLevel, maxLevel: zerolog.WarnLevel}},
+	)).With().Timestamp().Logger().Level(level)
+	t.Cleanup(func() {
+		log.Logger = previous
+	})
+	run()
+	*debugOut = debugBuf.String()
+	*warnOut = warnBuf.String()
+}
+
+// levelFilter passes only log entries whose level falls within [minLevel, maxLevel].
+type levelFilter struct {
+	w        *bytes.Buffer
+	minLevel zerolog.Level
+	maxLevel zerolog.Level
+}
+
+func (f levelFilter) Write(p []byte) (int, error) {
+	return f.w.Write(p)
+}
+
+func (f levelFilter) WriteLevel(l zerolog.Level, p []byte) (int, error) {
+	if l < f.minLevel || l > f.maxLevel {
+		return len(p), nil
+	}
+	return f.w.Write(p)
+}
+
+type fakeSessionReader2 struct {
+	session *sessionMessages
+	err     error
+}
+
+func (r fakeSessionReader2) ReadRecentSession(_ string, _ string) (*sessionMessages, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	return r.session, nil
 }

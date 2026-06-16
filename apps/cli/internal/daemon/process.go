@@ -399,15 +399,28 @@ func restoreIndexedWorkspaces(handler *JSONRPCHandler) error {
 
 // buildRunAgentFunc returns a memory.RunAgentFunc that uses agentcmd to
 // invoke the appropriate agent CLI in non-interactive (print) mode.
+// The binary is resolved via the user's full login-shell PATH so the daemon
+// process (which inherits only a sparse launchd/systemd PATH) can find CLIs
+// installed in locations like ~/.opencode/bin or /opt/homebrew/bin.
 func buildRunAgentFunc() memory.RunAgentFunc {
-	return func(ctx context.Context, agentKind, model, prompt string) (string, error) {
-		cmd, err := agentcmd.BuildRunCommand(agentKind, prompt, model, false)
+	return func(ctx context.Context, agentKind, model, prompt, workDir string) (string, error) {
+		cmd, err := agentcmd.ResolveCommand(agentKind, prompt, model, false)
 		if err != nil {
-			return "", fmt.Errorf("build agent command: %w", err)
+			// Wrap binary-not-found as the stable sentinel so callers can use
+			// errors.Is(err, memory.ErrAgentNotFound) without string matching.
+			if errors.Is(err, agentcmd.ErrBinaryNotFound) {
+				return "", fmt.Errorf("%w: %s", memory.ErrAgentNotFound, agentKind)
+			}
+			return "", fmt.Errorf("run %s: %w", agentKind, err)
 		}
-		out, err := exec.CommandContext(ctx, cmd.Binary, cmd.Args...).Output()
+		execCmd := exec.CommandContext(ctx, cmd.ResolvedBinary, cmd.Args...)
+		execCmd.Env = cmd.Env
+		if workDir != "" {
+			execCmd.Dir = workDir
+		}
+		out, err := execCmd.Output()
 		if err != nil {
-			return "", fmt.Errorf("run %s: %w", cmd.Binary, err)
+			return "", fmt.Errorf("run %s: %w", cmd.ResolvedBinary, err)
 		}
 		return string(out), nil
 	}

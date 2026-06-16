@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -158,17 +159,27 @@ func (s *Service) SummarizeSession(agent string, worktreePath string, projectID 
 		agent:        agent,
 		worktreePath: worktreePath,
 		projectID:    projectID,
-	}, func(req summarizeRequest) {
-		result, err := s.summarizer.SummarizeSession(req.agent, req.worktreePath)
-		if err != nil {
+	}, s.runSummarize)
+}
+
+// runSummarize executes one summarization request and handles the result.
+// It is extracted from the SummarizeSession closure so it can be tested directly.
+func (s *Service) runSummarize(req summarizeRequest) {
+	result, err := s.summarizer.SummarizeSession(req.agent, req.worktreePath)
+	if err != nil {
+		if errors.Is(err, ErrAgentNotFound) {
+			log.Debug().Err(err).
+				Str("agent", req.agent).
+				Msg("skip session summarization: agent binary not installed")
+		} else {
 			log.Warn().Err(err).
 				Str("agent", req.agent).
 				Str("workspace", req.worktreePath).
 				Msg("session summarization failed")
-			return
 		}
-		s.handleSummarizeResult(req, result)
-	})
+		return
+	}
+	s.handleSummarizeResult(req, result)
 }
 
 func (s *Service) handleSummarizeResult(req summarizeRequest, result SummarizeResult) {

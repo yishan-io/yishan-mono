@@ -10,7 +10,7 @@ import (
 )
 
 func TestSummarizeSession_SkipsWhenReaderFails(t *testing.T) {
-	summarizer := NewSummarizer(SummarizerConfig{Enabled: true}, func(context.Context, string, string, string) (string, error) {
+	summarizer := NewSummarizer(SummarizerConfig{Enabled: true}, func(context.Context, string, string, string, string) (string, error) {
 		t.Fatal("runAgent should not be called when reader fails")
 		return "", nil
 	})
@@ -34,7 +34,7 @@ func TestSummarizeSession_BuildsConversationAndWritesMemory(t *testing.T) {
 	memoryPath := filepath.Join(contextRoot, "MEMORY.md")
 	var prompt string
 
-	summarizer := NewSummarizer(SummarizerConfig{Enabled: true}, func(_ context.Context, agentKind string, model string, gotPrompt string) (string, error) {
+	summarizer := NewSummarizer(SummarizerConfig{Enabled: true}, func(_ context.Context, agentKind string, model string, gotPrompt string, workDir string) (string, error) {
 		prompt = gotPrompt
 		if agentKind != "opencode" {
 			t.Fatalf("unexpected agent kind: %q", agentKind)
