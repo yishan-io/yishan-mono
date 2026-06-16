@@ -1261,7 +1261,8 @@
     "filters": {
       "timeRange": "Time Range",
       "project": "Project",
-      "allProjects": "All Projects"
+      "allProjects": "All Projects",
+      "utcNote": "All times in UTC"
     },
     "tokenUsage": {
       "title": "Token Usage",
