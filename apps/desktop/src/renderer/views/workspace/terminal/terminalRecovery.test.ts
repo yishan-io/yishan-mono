@@ -101,6 +101,30 @@ function createWorkspaceStoreAccess(workspaceId: string, worktreePath: string) {
   };
 }
 
+/** Creates a minimal workspace-store facade for multi-workspace daemon recovery tests. */
+function createWorkspaceStoreAccessForWorkspaces(
+  workspaces: Array<{ id: string; worktreePath: string }>,
+  selectedWorkspaceId = workspaces[0]?.id ?? "",
+) {
+  const state = {
+    selectedWorkspaceId,
+    workspaces: workspaces.map((workspace) => ({
+      id: workspace.id,
+      repoId: `repo-${workspace.id}`,
+      name: workspace.id,
+      title: workspace.id,
+      sourceBranch: "origin/main",
+      branch: "main",
+      summaryId: `summary-${workspace.id}`,
+      worktreePath: workspace.worktreePath,
+    })),
+  } as unknown as WorkspaceStoreState;
+
+  return {
+    getState: () => state,
+  };
+}
+
 describe("TerminalRecoveryCoordinator", () => {
   it("restores persisted terminal tabs for existing workspaces", () => {
     const storage = createMemoryStorage();
@@ -379,6 +403,42 @@ describe("TerminalRecoveryCoordinator", () => {
         sessionId: "term-1",
         launchCommand: "echo hello",
       },
+    });
+  });
+
+  it("restoreTerminalTabsFromDaemon returns the restored workspace id for sessions outside the current workspace", async () => {
+    const storage = createMemoryStorage();
+    const tabStoreAccess = createTabStoreAccess({
+      tabs: [],
+      selectedTabId: "",
+      selectedTabIdByWorkspaceId: {},
+    });
+    const coordinator = new TerminalRecoveryCoordinator(
+      tabStoreAccess as never,
+      createWorkspaceStoreAccessForWorkspaces([
+        { id: "workspace-1", worktreePath: "/tmp/workspace-1" },
+        { id: "workspace-2", worktreePath: "/tmp/workspace-2" },
+      ]) as never,
+      storage,
+    );
+
+    const restoredWorkspaceId = await coordinator.restoreTerminalTabsFromDaemon({
+      listTerminalSessions: vi.fn().mockResolvedValue([
+        {
+          sessionId: "term-2",
+          workspaceId: "workspace-2",
+          pid: 5678,
+          status: "running",
+        },
+      ]),
+    });
+
+    expect(restoredWorkspaceId).toBe("workspace-2");
+    expect(tabStoreAccess.getState().tabs).toHaveLength(1);
+    expect(tabStoreAccess.getState().tabs[0]).toMatchObject({
+      workspaceId: "workspace-2",
+      kind: "terminal",
+      data: { sessionId: "term-2" },
     });
   });
 

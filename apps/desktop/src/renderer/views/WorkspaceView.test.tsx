@@ -180,6 +180,22 @@ describe("WorkspaceView", () => {
     });
   });
 
+  it("selects the workspace restored from daemon terminal recovery", async () => {
+    terminalRecoveryMocks.restoreTerminalTabsFromDaemon.mockResolvedValueOnce("workspace-2");
+
+    render(
+      <MemoryRouter>
+        <WorkspaceView />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+      expect(terminalRecoveryMocks.restoreTerminalTabsFromDaemon).toHaveBeenCalledTimes(1);
+      expect(commandMocks.setSelectedWorkspaceId).toHaveBeenCalledWith("workspace-2");
+    });
+  });
+
   it("restores terminal tabs only once across organization changes", async () => {
     render(
       <MemoryRouter>
