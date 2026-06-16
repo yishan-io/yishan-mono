@@ -168,8 +168,6 @@ function useWorkspaceBootstrap(input: {
   selectedOrganizationId: string | undefined;
 }) {
   const { cmd, terminalRecoveryCoordinator, selectedOrganizationId } = input;
-  const restoreTerminalTabs =
-    terminalRecoveryCoordinator.restoreTerminalTabsFromDaemon.bind(terminalRecoveryCoordinator);
 
   useEffect(() => {
     if (!selectedOrganizationId?.trim()) {
@@ -184,7 +182,7 @@ function useWorkspaceBootstrap(input: {
         return;
       }
 
-      const restoredWorkspaceId = await restoreTerminalTabs({
+      const restoredWorkspaceId = await terminalRecoveryCoordinator.restoreTerminalTabsFromDaemon({
         listTerminalSessions: () => cmd.listTerminalSessions({ includeExited: false }),
       });
       if (restoredWorkspaceId && restoredWorkspaceId !== workspaceStore.getState().selectedWorkspaceId) {
@@ -197,7 +195,7 @@ function useWorkspaceBootstrap(input: {
     return () => {
       disposed = true;
     };
-  }, [cmd, selectedOrganizationId, restoreTerminalTabs]);
+  }, [cmd, selectedOrganizationId, terminalRecoveryCoordinator]);
 
   useEffect(() => {
     let disposed = false;
