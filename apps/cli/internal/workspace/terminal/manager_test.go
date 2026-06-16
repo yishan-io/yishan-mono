@@ -457,6 +457,8 @@ func TestSessionLifecycleEventsOnStartAndStop(t *testing.T) {
 		Command:     "sleep",
 		Args:        []string{"10"},
 		WorkspaceID: "ws-1",
+		TabID:       "tab-1",
+		PaneID:      "pane-1",
 	})
 	if err != nil {
 		t.Fatalf("start terminal: %v", err)
@@ -474,6 +476,12 @@ func TestSessionLifecycleEventsOnStartAndStop(t *testing.T) {
 	}
 	if created.WorkspaceID != "ws-1" {
 		t.Fatalf("expected workspaceId ws-1, got %q", created.WorkspaceID)
+	}
+	if created.TabID != "tab-1" {
+		t.Fatalf("expected tabId tab-1, got %q", created.TabID)
+	}
+	if created.PaneID != "pane-1" {
+		t.Fatalf("expected paneId pane-1, got %q", created.PaneID)
 	}
 	if created.Status != "running" {
 		t.Fatalf("expected status running, got %q", created.Status)
@@ -493,6 +501,12 @@ func TestSessionLifecycleEventsOnStartAndStop(t *testing.T) {
 	}
 	if destroyed.SessionID != start.SessionID {
 		t.Fatalf("expected sessionId %q, got %q", start.SessionID, destroyed.SessionID)
+	}
+	if destroyed.TabID != "tab-1" {
+		t.Fatalf("expected destroyed tabId tab-1, got %q", destroyed.TabID)
+	}
+	if destroyed.PaneID != "pane-1" {
+		t.Fatalf("expected destroyed paneId pane-1, got %q", destroyed.PaneID)
 	}
 }
 

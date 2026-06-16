@@ -118,6 +118,34 @@ describe("normalizeBackendEvent", () => {
     expect(normalized.source).toBe("notificationEvent");
   });
 
+  it("normalizes terminal session events with correlation fields", () => {
+    const normalized = assertNormalized(
+      normalizeBackendEvent(
+        createEnvelope({
+          method: "terminalSessionChanged",
+          payload: {
+            action: "created",
+            sessionId: "term-1",
+            workspaceId: "workspace-1",
+            tabId: "tab-1",
+            paneId: "pane-1",
+            pid: 1234,
+            status: "running",
+          },
+        }),
+      ),
+    );
+
+    expect(normalized.source).toBe("terminalSessionChanged");
+    expect(normalized.payload).toMatchObject({
+      action: "created",
+      sessionId: "term-1",
+      workspaceId: "workspace-1",
+      tabId: "tab-1",
+      paneId: "pane-1",
+    });
+  });
+
   it("returns null when notification observer status payload is invalid", () => {
     const normalized = normalizeBackendEvent(
       createEnvelope({

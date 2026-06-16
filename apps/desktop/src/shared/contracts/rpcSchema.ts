@@ -133,6 +133,8 @@ export type RpcSchema = {
         action: "created" | "destroyed";
         sessionId: string;
         workspaceId: string;
+        tabId?: string;
+        paneId?: string;
         pid: number;
         status: string;
         startedAt?: string;

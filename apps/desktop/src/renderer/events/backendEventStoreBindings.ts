@@ -58,7 +58,13 @@ type BackendEventStoreBindingsDependencies = {
   subscribeWorkspaceStateChanged?: (listener: (payload: WorkspaceStateChangedPayload) => void) => () => void;
   subscribeOpenBrowserUrl?: (listener: (payload: { url: string; workspaceId: string }) => void) => () => void;
   subscribeTerminalSessionChanged?: (
-    listener: (payload: { action: "created" | "destroyed"; sessionId: string; workspaceId: string }) => void,
+    listener: (payload: {
+      action: "created" | "destroyed";
+      sessionId: string;
+      workspaceId: string;
+      tabId?: string;
+      paneId?: string;
+    }) => void,
   ) => () => void;
   listWorkspaceWorktreePaths?: () => string[];
   resolveWorkspaceIdByWorktreePath?: (worktreePath: string) => string | undefined;
@@ -752,6 +758,8 @@ function handleTerminalSessionEvent(payload: {
   action: "created" | "destroyed";
   sessionId: string;
   workspaceId: string;
+  tabId?: string;
+  paneId?: string;
 }): void {
   const tabState = tabStore.getState();
 
@@ -761,6 +769,21 @@ function handleTerminalSessionEvent(payload: {
     );
     if (existingTerminalTab) {
       return;
+    }
+
+    const requestedTabId = payload.tabId?.trim();
+    if (requestedTabId) {
+      const requestedTerminalTab = tabState.tabs.find(
+        (tab) =>
+          tab.id === requestedTabId &&
+          tab.workspaceId === payload.workspaceId &&
+          tab.kind === "terminal" &&
+          !tab.data.sessionId,
+      );
+      if (requestedTerminalTab) {
+        tabState.setTerminalTabSessionId(requestedTabId, payload.sessionId);
+        return;
+      }
     }
 
     const workspaces = workspaceStore.getState().workspaces;

@@ -184,9 +184,12 @@ function useWorkspaceBootstrap(input: {
         return;
       }
 
-      await restoreTerminalTabs({
+      const restoredWorkspaceId = await restoreTerminalTabs({
         listTerminalSessions: () => cmd.listTerminalSessions({ includeExited: false }),
       });
+      if (restoredWorkspaceId && restoredWorkspaceId !== workspaceStore.getState().selectedWorkspaceId) {
+        cmd.setSelectedWorkspaceId(restoredWorkspaceId);
+      }
     };
 
     void loadWorkspaceData();
