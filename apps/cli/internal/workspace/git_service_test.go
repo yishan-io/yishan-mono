@@ -637,11 +637,11 @@ func TestGitServiceListCommitsToTargetReturnsEmptyWhenTargetMissing(t *testing.T
 	}
 }
 
-// TestResolveRefUnambiguous verifies that resolveRefUnambiguous returns the
-// full symbolic ref path (e.g. refs/remotes/origin/main) for a short remote
-// tracking ref, preventing "ambiguous object name" errors when a loose ref and
-// a stale packed-ref entry exist for the same short name.
-func TestResolveRefUnambiguous(t *testing.T) {
+// TestResolveRef verifies that resolveRef returns the full symbolic ref path
+// (e.g. refs/remotes/origin/main) for a short remote tracking ref, preventing
+// "ambiguous object name" errors when a loose ref and a stale packed-ref entry
+// exist for the same short name.
+func TestResolveRef(t *testing.T) {
 	remote := filepath.Join(t.TempDir(), "remote.git")
 	runGit(t, t.TempDir(), "init", "--bare", remote)
 
@@ -658,22 +658,90 @@ func TestResolveRefUnambiguous(t *testing.T) {
 	ctx := context.Background()
 
 	// Short ref "origin/main" should resolve to "refs/remotes/origin/main".
-	full := resolveRefUnambiguous(ctx, repo, "origin/main")
+	full := resolveRef(ctx, repo, "origin/main")
 	if full != "refs/remotes/origin/main" {
 		t.Fatalf("expected refs/remotes/origin/main, got %q", full)
 	}
 
 	// Empty ref and HEAD should be returned unchanged.
-	if got := resolveRefUnambiguous(ctx, repo, ""); got != "" {
+	if got := resolveRef(ctx, repo, ""); got != "" {
 		t.Fatalf("expected empty string unchanged, got %q", got)
 	}
-	if got := resolveRefUnambiguous(ctx, repo, "HEAD"); got != "HEAD" {
+	if got := resolveRef(ctx, repo, "HEAD"); got != "HEAD" {
 		t.Fatalf("expected HEAD unchanged, got %q", got)
 	}
 
 	// Non-existent ref should be returned unchanged (graceful fallback).
-	if got := resolveRefUnambiguous(ctx, repo, "origin/does-not-exist"); got != "origin/does-not-exist" {
+	if got := resolveRef(ctx, repo, "origin/does-not-exist"); got != "origin/does-not-exist" {
 		t.Fatalf("expected original ref unchanged for missing ref, got %q", got)
+	}
+}
+
+// TestResolveRefWithLocalBranchCollision verifies that when both a local branch
+// named "origin/main" and a remote tracking ref "refs/remotes/origin/main"
+// exist, resolveRef resolves to the remote tracking ref rather than falling
+// back to the ambiguous short name.
+// In this state git rev-parse --verify --symbolic-full-name origin/main exits
+// 0 but produces empty stdout — the old code returned "origin/main" unchanged.
+func TestResolveRefWithLocalBranchCollision(t *testing.T) {
+	remote := filepath.Join(t.TempDir(), "remote.git")
+	runGit(t, t.TempDir(), "init", "--bare", remote)
+
+	repo := filepath.Join(t.TempDir(), "repo")
+	runGit(t, t.TempDir(), "clone", remote, repo)
+	runGit(t, repo, "config", "user.name", "Test User")
+	runGit(t, repo, "config", "user.email", "test@example.com")
+
+	os.WriteFile(filepath.Join(repo, "seed.txt"), []byte("seed\n"), 0o644)
+	runGit(t, repo, "add", "seed.txt")
+	runGit(t, repo, "commit", "-m", "seed")
+	runGit(t, repo, "push", "origin", "HEAD:main")
+	// refs/remotes/origin/main is now available via the clone's fetch.
+
+	// Introduce the collision: a local branch named "origin/main".
+	// After this, git treats "origin/main" as ambiguous.
+	runGit(t, repo, "branch", "origin/main", "HEAD")
+
+	ctx := context.Background()
+	got := resolveRef(ctx, repo, "origin/main")
+	if got != "refs/remotes/origin/main" {
+		t.Fatalf("expected refs/remotes/origin/main, got %q", got)
+	}
+}
+
+// TestCreateWorktreeWithLocalBranchCollision verifies that worktree creation
+// succeeds when a local branch named "origin/main" coexists with the remote
+// tracking ref refs/remotes/origin/main, causing git to treat the short name
+// as ambiguous. resolveRef must return the unambiguous full path so
+// git worktree add does not fail with "fatal: ambiguous object name".
+func TestCreateWorktreeWithLocalBranchCollision(t *testing.T) {
+	remote := filepath.Join(t.TempDir(), "remote.git")
+	runGit(t, t.TempDir(), "init", "--bare", remote)
+
+	repo := filepath.Join(t.TempDir(), "repo")
+	runGit(t, t.TempDir(), "clone", remote, repo)
+	runGit(t, repo, "config", "user.name", "Test User")
+	runGit(t, repo, "config", "user.email", "test@example.com")
+
+	os.WriteFile(filepath.Join(repo, "seed.txt"), []byte("seed\n"), 0o644)
+	runGit(t, repo, "add", "seed.txt")
+	runGit(t, repo, "commit", "-m", "seed")
+	runGit(t, repo, "push", "origin", "HEAD:main")
+
+	// Introduce the collision: local branch "origin/main" + remote tracking ref.
+	runGit(t, repo, "branch", "origin/main", "HEAD")
+
+	ctx := context.Background()
+	svc := NewGitService()
+	worktreePath := filepath.Join(t.TempDir(), "wt-collision")
+	resolved := resolveRef(ctx, repo, "origin/main")
+	if err := svc.CreateWorktree(ctx, repo, "feature/from-collision", worktreePath, true, resolved); err != nil {
+		t.Fatalf("CreateWorktree with local-branch collision: %v", err)
+	}
+
+	branch := strings.TrimSpace(runGit(t, worktreePath, "rev-parse", "--abbrev-ref", "HEAD"))
+	if branch != "feature/from-collision" {
+		t.Fatalf("expected branch feature/from-collision, got %q", branch)
 	}
 }
 
@@ -719,7 +787,7 @@ func TestCreateWorktreeWithAmbiguousRef(t *testing.T) {
 	svc := NewGitService()
 	worktreePath := filepath.Join(t.TempDir(), "wt-from-ambiguous")
 	if err := svc.CreateWorktree(context.Background(), repo, "feature/from-ambiguous", worktreePath, true,
-		resolveRefUnambiguous(context.Background(), repo, "origin/main")); err != nil {
+		resolveRef(context.Background(), repo, "origin/main")); err != nil {
 		t.Fatalf("CreateWorktree with ambiguous ref: %v", err)
 	}
 

@@ -230,16 +230,38 @@ func (s *GitService) RefExists(ctx context.Context, root string, ref string) boo
 	return err == nil
 }
 
-// resolveRefUnambiguous returns the full symbolic ref name (e.g.
+// resolveRef returns the full symbolic ref name (e.g.
 // "refs/remotes/origin/main") for a given short ref (e.g. "origin/main").
-// This prevents "fatal: ambiguous object name" errors that occur when a loose
-// ref and a stale packed-ref entry both exist for the same short name.
-// If git cannot resolve the ref to a unique symbolic name the original ref is
-// returned unchanged so callers still get a best-effort result.
-func resolveRefUnambiguous(ctx context.Context, root string, ref string) string {
+// This prevents "fatal: ambiguous object name" errors in two known scenarios:
+//
+//  1. Stale packed-ref divergence: a packed-ref entry and a newer loose ref
+//     both exist for the same short name after git pack-refs + fetch.
+//
+//  2. Local branch collision: a local branch named "origin/main" coexists with
+//     the remote tracking ref refs/remotes/origin/main, causing
+//     git rev-parse --verify --symbolic-full-name to exit 0 with empty stdout.
+//
+// For remote-style short refs (containing "/" but not starting with "refs/"),
+// refs/remotes/<ref> is tried first so the remote tracking path is always
+// preferred unambiguously. The --symbolic-full-name path handles any other ref
+// form. If no unambiguous resolution is possible the original ref is returned
+// so callers still get a best-effort result.
+func resolveRef(ctx context.Context, root string, ref string) string {
 	if strings.TrimSpace(ref) == "" || ref == "HEAD" {
 		return ref
 	}
+	// Fast path for remote-style short refs (e.g. "origin/main"): try the
+	// explicit remote tracking path first. This avoids ambiguity when a local
+	// branch with the same slash-delimited name also exists, and is faster
+	// than relying on --symbolic-full-name which can return empty stdout on
+	// ambiguous refs while still exiting 0.
+	if strings.Contains(ref, "/") && !strings.HasPrefix(ref, "refs/") {
+		candidate := "refs/remotes/" + ref
+		if _, err := gitCommand(ctx, root, "rev-parse", "--verify", candidate); err == nil {
+			return candidate
+		}
+	}
+	// General case: let git expand to the canonical full symbolic name.
 	out, err := gitCommand(ctx, root, "rev-parse", "--verify", "--symbolic-full-name", ref)
 	if err != nil {
 		return ref
