@@ -150,6 +150,7 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
       ...(input.isUnsupported ? { isUnsupported: true } : {}),
       ...(input.unsupportedReason ? { unsupportedReason: input.unsupportedReason } : {}),
       isDeleted: false,
+      isIgnored: input.isIgnored ?? false,
     } as WorkspaceTabDataByKind[T["kind"]];
   }
 

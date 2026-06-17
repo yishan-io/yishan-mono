@@ -6,7 +6,7 @@ import {
   computeGitLineChanges,
   getHunkForLine,
 } from "../helpers/gitGutterDiff";
-import { monaco } from "../helpers/monacoSetup";
+import { YISHAN_THEME_DARK, monaco } from "../helpers/monacoSetup";
 
 // CSS class names injected for gutter decorations.
 // These are defined in style.css and matched by Monaco's margin decoration class mechanism.
@@ -15,6 +15,14 @@ const GUTTER_MODIFIED_CLASS = "git-gutter-modified";
 const GUTTER_DELETED_CLASS = "git-gutter-deleted";
 const GIT_GUTTER_DIFF_DEBOUNCE_MS = 150;
 const MAX_LIVE_GUTTER_DIFF_LINES = 5000;
+
+// Overview ruler colors — match the CSS gutter colors in style.css (light and dark variants).
+const RULER_ADDED_LIGHT = "#2ea043";
+const RULER_MODIFIED_LIGHT = "#1a7fd4";
+const RULER_DELETED_LIGHT = "#f85149";
+const RULER_ADDED_DARK = "#3fb950";
+const RULER_MODIFIED_DARK = "#58a6ff";
+const RULER_DELETED_DARK = "#f85149";
 
 export type UseGitGutterDecorationsInput = {
   /** Monaco editor instance to decorate. */
@@ -27,13 +35,21 @@ export type UseGitGutterDecorationsInput = {
   worktreePath?: string;
   /** Current editor content (tracks real-time edits). */
   currentContent: string;
+  /** When true, the file is git-ignored — skip decorations entirely. */
+  isIgnored?: boolean;
+  /** Active Monaco theme name — used to select light/dark overview ruler colors. */
+  monacoTheme?: string;
 };
 
 /**
  * Fetches the git HEAD version of the file and applies line-level gutter
  * decorations (added/modified/deleted) to the Monaco editor. Decorations
  * are updated whenever the editor content changes. Clicking a gutter
- * decoration shows an inline diff view zone.
+ * decoration shows an inline diff view zone. Overview ruler marks are also
+ * painted on the right-rail scrollbar for a quick diff overview.
+ *
+ * When `isIgnored` is true the hook is a no-op — no RPC call is made and no
+ * decorations are applied.
  */
 export function useGitGutterDecorations({
   editor,
@@ -41,6 +57,8 @@ export function useGitGutterDecorations({
   path,
   worktreePath,
   currentContent,
+  isIgnored = false,
+  monacoTheme,
 }: UseGitGutterDecorationsInput): void {
   const decorationsRef = useRef<monaco.editor.IEditorDecorationsCollection | null>(null);
   const [headContent, setHeadContent] = useState<string | null>(null);
@@ -51,7 +69,14 @@ export function useGitGutterDecorations({
   const viewZoneDomRef = useRef<HTMLDivElement | null>(null);
 
   // Fetch the HEAD content when path or worktreePath changes.
+  // Short-circuit immediately when the file is git-ignored.
   useEffect(() => {
+    if (isIgnored) {
+      setHeadContent(null);
+      setShouldSkipDecorations(false);
+      return;
+    }
+
     if (!workspaceId || !worktreePath || !path) {
       setHeadContent(null);
       setShouldSkipDecorations(false);
@@ -75,9 +100,10 @@ export function useGitGutterDecorations({
     return () => {
       pendingRequestRef.current++;
     };
-  }, [path, workspaceId, worktreePath]);
+  }, [isIgnored, path, workspaceId, worktreePath]);
 
   const shouldThrottleLiveDiff = currentContent.split("\n").length > MAX_LIVE_GUTTER_DIFF_LINES;
+  const isDark = monacoTheme === YISHAN_THEME_DARK;
 
   // Compute and apply decorations whenever content or HEAD changes.
   useEffect(() => {
@@ -94,7 +120,7 @@ export function useGitGutterDecorations({
     const applyChanges = () => {
       const changes = computeGitLineChanges(headContent, currentContent);
       changesRef.current = changes;
-      const decorations = changesToDecorations(changes);
+      const decorations = changesToDecorations(changes, isDark);
 
       if (decorationsRef.current) {
         decorationsRef.current.set(decorations);
@@ -111,7 +137,7 @@ export function useGitGutterDecorations({
     }
 
     applyChanges();
-  }, [editor, currentContent, headContent, shouldSkipDecorations, shouldThrottleLiveDiff]);
+  }, [editor, currentContent, headContent, isDark, shouldSkipDecorations, shouldThrottleLiveDiff]);
 
   // Register gutter click handler for showing inline diff.
   useEffect(() => {
@@ -288,10 +314,13 @@ function createInlineDiffDom(oldLines: string[], newLines: string[], kind: GitLi
 
 /**
  * Converts computed line changes to Monaco model decoration options.
+ * Each decoration also carries overview ruler metadata so diff positions
+ * are visible on the right-rail scrollbar without scrolling.
  */
-function changesToDecorations(changes: GitLineChange[]): monaco.editor.IModelDeltaDecoration[] {
+function changesToDecorations(changes: GitLineChange[], isDark: boolean): monaco.editor.IModelDeltaDecoration[] {
   return changes.map((change) => {
     const className = getGutterClassName(change.kind);
+    const rulerColor = getRulerColor(change.kind, isDark);
 
     if (change.kind === "deleted") {
       return {
@@ -304,6 +333,8 @@ function changesToDecorations(changes: GitLineChange[]): monaco.editor.IModelDel
         options: {
           isWholeLine: false,
           linesDecorationsClassName: className,
+          overviewRulerColor: rulerColor,
+          overviewRulerLane: monaco.editor.OverviewRulerLane.Full,
         },
       };
     }
@@ -318,6 +349,8 @@ function changesToDecorations(changes: GitLineChange[]): monaco.editor.IModelDel
       options: {
         isWholeLine: true,
         linesDecorationsClassName: className,
+        overviewRulerColor: rulerColor,
+        overviewRulerLane: monaco.editor.OverviewRulerLane.Full,
       },
     };
   });
@@ -331,5 +364,16 @@ function getGutterClassName(kind: GitLineChange["kind"]): string {
       return GUTTER_MODIFIED_CLASS;
     case "deleted":
       return GUTTER_DELETED_CLASS;
+  }
+}
+
+function getRulerColor(kind: GitLineChangeKind, isDark: boolean): string {
+  switch (kind) {
+    case "added":
+      return isDark ? RULER_ADDED_DARK : RULER_ADDED_LIGHT;
+    case "modified":
+      return isDark ? RULER_MODIFIED_DARK : RULER_MODIFIED_LIGHT;
+    case "deleted":
+      return isDark ? RULER_DELETED_DARK : RULER_DELETED_LIGHT;
   }
 }

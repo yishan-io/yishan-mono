@@ -394,6 +394,7 @@ describe("FileManagerView file search", () => {
           path: "src/readme.md",
           content: "test-file-content",
           temporary: true,
+          isIgnored: false,
         },
         { activePaneTabIds: undefined },
       );
@@ -420,6 +421,7 @@ describe("FileManagerView file search", () => {
           path: "src/readme.md",
           content: "test-file-content",
           temporary: false,
+          isIgnored: false,
         },
         { activePaneTabIds: undefined },
       );
@@ -448,6 +450,7 @@ describe("FileManagerView file search", () => {
           temporary: false,
           isUnsupported: true,
           unsupportedReason: "type",
+          isIgnored: false,
         },
         { activePaneTabIds: undefined },
       );
@@ -481,6 +484,7 @@ describe("FileManagerView file search", () => {
           temporary: false,
           isUnsupported: true,
           unsupportedReason: "size",
+          isIgnored: false,
         },
         { activePaneTabIds: undefined },
       );

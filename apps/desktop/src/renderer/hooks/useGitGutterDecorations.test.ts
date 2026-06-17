@@ -12,6 +12,7 @@ vi.mock("../commands/gitCommands", () => ({
 
 // Mock monaco-editor setup module
 vi.mock("../helpers/monacoSetup", () => ({
+  YISHAN_THEME_DARK: "yishan-dark",
   monaco: {
     KeyCode: { Escape: 9 },
     editor: {
@@ -19,6 +20,7 @@ vi.mock("../helpers/monacoSetup", () => ({
         GUTTER_LINE_DECORATIONS: 4,
         CONTENT_VIEW_ZONE: 8,
       },
+      OverviewRulerLane: { Right: 4, Full: 7 },
     },
   },
 }));
@@ -121,7 +123,7 @@ describe("useGitGutterDecorations", () => {
     expect(mockEditor.createDecorationsCollection).toHaveBeenCalled();
     const firstCallArgs = mockEditor.createDecorationsCollection.mock.calls[0] as unknown[];
     const decorations = firstCallArgs[0] as Array<{
-      options: { linesDecorationsClassName: string };
+      options: { linesDecorationsClassName: string; overviewRulerColor: string; overviewRulerLane: number };
     }>;
     expect(decorations).toBeDefined();
     expect(decorations.length).toBeGreaterThan(0);
@@ -129,6 +131,39 @@ describe("useGitGutterDecorations", () => {
     // Check that at least one decoration class matches a git-gutter style
     const classNames = decorations.map((d) => d.options.linesDecorationsClassName);
     expect(classNames.some((c) => c === "git-gutter-added" || c === "git-gutter-modified")).toBe(true);
+
+    // Check overview ruler fields are present on every decoration (F2)
+    for (const decoration of decorations) {
+      expect(decoration.options.overviewRulerColor).toBeTruthy();
+      expect(typeof decoration.options.overviewRulerColor).toBe("string");
+      expect(decoration.options.overviewRulerLane).toBe(7); // OverviewRulerLane.Full
+    }
+  });
+
+  it("uses dark theme ruler colors when monacoTheme is yishan-dark", async () => {
+    mockReadDiff.mockResolvedValue({ oldContent: "line1\nline2", newContent: "" });
+
+    renderHook(() =>
+      useGitGutterDecorations({
+        editor: mockEditor as unknown as Parameters<typeof useGitGutterDecorations>[0]["editor"],
+        workspaceId: "workspace-1",
+        path: "src/a.ts",
+        worktreePath: "/workspace",
+        currentContent: "line1\nline2\nnew line",
+        monacoTheme: "yishan-dark",
+      }),
+    );
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(mockEditor.createDecorationsCollection).toHaveBeenCalled();
+    const firstCallArgs = mockEditor.createDecorationsCollection.mock.calls[0] as unknown[];
+    const decorations = firstCallArgs[0] as Array<{ options: { overviewRulerColor: string } }>;
+    // At least one decoration should use a dark-theme color
+    const rulerColors = decorations.map((d) => d.options.overviewRulerColor);
+    expect(rulerColors.some((c) => c === "#3fb950" || c === "#58a6ff" || c === "#f85149")).toBe(true);
   });
 
   it("clears decorations when readDiff fails", async () => {
@@ -184,5 +219,58 @@ describe("useGitGutterDecorations", () => {
       workspaceId: "workspace-1",
       relativePath: "src/b.ts",
     });
+  });
+
+  // ─── F1: isIgnored suppresses all decoration activity ────────────────────
+
+  it("skips readDiff and applies no decorations when isIgnored is true", async () => {
+    renderHook(() =>
+      useGitGutterDecorations({
+        editor: mockEditor as unknown as Parameters<typeof useGitGutterDecorations>[0]["editor"],
+        workspaceId: "workspace-1",
+        path: "dist/bundle.js",
+        worktreePath: "/workspace",
+        currentContent: "some content",
+        isIgnored: true,
+      }),
+    );
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(mockReadDiff).not.toHaveBeenCalled();
+    expect(mockEditor.createDecorationsCollection).not.toHaveBeenCalled();
+  });
+
+  it("resumes decorations when isIgnored transitions from true to false", async () => {
+    mockReadDiff.mockResolvedValue({ oldContent: "line1", newContent: "" });
+
+    const { rerender } = renderHook(
+      ({ isIgnored }) =>
+        useGitGutterDecorations({
+          editor: mockEditor as unknown as Parameters<typeof useGitGutterDecorations>[0]["editor"],
+          workspaceId: "workspace-1",
+          path: "src/a.ts",
+          worktreePath: "/workspace",
+          currentContent: "line1\nnew line",
+          isIgnored,
+        }),
+      { initialProps: { isIgnored: true } },
+    );
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+
+    expect(mockReadDiff).not.toHaveBeenCalled();
+
+    rerender({ isIgnored: false });
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(mockReadDiff).toHaveBeenCalledTimes(1);
   });
 });

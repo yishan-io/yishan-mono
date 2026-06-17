@@ -716,3 +716,42 @@ describe("tabs-domain rename", () => {
     expect(renamedDiff?.title).toBe("b.ts");
   });
 });
+
+describe("tabs-domain isIgnored flag", () => {
+  it("preserves isIgnored: true when opening a new file tab", () => {
+    const state = createBaseState();
+    const patch = openTabState(
+      state,
+      {
+        kind: "file",
+        path: "dist/bundle.js",
+        content: "",
+        isIgnored: true,
+      },
+      "ignored-tab",
+      { selectedWorkspaceId: "workspace-1" },
+    );
+
+    expect(patch).toBeTruthy();
+    const created = patch?.tabs?.find((tab) => tab.id === "ignored-tab");
+    expect(created && created.kind === "file" ? created.data.isIgnored : undefined).toBe(true);
+  });
+
+  it("defaults isIgnored to false when not provided", () => {
+    const state = createBaseState();
+    const patch = openTabState(
+      state,
+      {
+        kind: "file",
+        path: "src/new.ts",
+        content: "hello",
+      },
+      "regular-tab",
+      { selectedWorkspaceId: "workspace-1" },
+    );
+
+    expect(patch).toBeTruthy();
+    const created = patch?.tabs?.find((tab) => tab.id === "regular-tab");
+    expect(created && created.kind === "file" ? created.data.isIgnored : undefined).toBe(false);
+  });
+});

@@ -430,6 +430,7 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
     selectedWorkspaceId,
     tabs,
     repoFiles,
+    repoEntries,
     closeTab,
     renameTabsForEntryRename,
     openTab,

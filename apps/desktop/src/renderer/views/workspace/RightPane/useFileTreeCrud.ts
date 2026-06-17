@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
 import { type ExternalAppId, SYSTEM_FILE_MANAGER_APP_ID } from "../../../../shared/contracts/externalApps";
+import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
 import {
   buildWorkspaceFileUrl,
   createFile,
@@ -21,6 +22,8 @@ type UseFileTreeCrudInput = {
   selectedWorkspaceId: string | undefined;
   tabs: WorkspaceTab[];
   repoFiles: string[];
+  /** Full entry list from the daemon — used to look up isIgnored at tab-open time. */
+  repoEntries: WorkspaceFileEntry[];
   closeTab: (tabId: string) => void;
   renameTabsForEntryRename: (workspaceId: string, fromPath: string, toPath: string) => void;
   openTab: (tab: OpenWorkspaceTabInput) => void;
@@ -35,6 +38,7 @@ export function useFileTreeCrud({
   selectedWorkspaceId,
   tabs,
   repoFiles,
+  repoEntries,
   closeTab,
   renameTabsForEntryRename,
   openTab,
@@ -51,6 +55,9 @@ export function useFileTreeCrud({
         return;
       }
 
+      const entry = repoEntries.find((e) => e.path === path);
+      const isIgnored = entry?.isIgnored ?? false;
+
       try {
         if (isUnsupportedFileTab(path)) {
           openTab({
@@ -61,6 +68,7 @@ export function useFileTreeCrud({
             temporary: Boolean(options?.temporary),
             isUnsupported: true,
             unsupportedReason: "type",
+            isIgnored,
           });
           requestFileTreeSelection(path, false);
           return;
@@ -95,6 +103,7 @@ export function useFileTreeCrud({
             temporary: Boolean(options?.temporary),
             isUnsupported: true,
             unsupportedReason: "size",
+            isIgnored,
           });
           requestFileTreeSelection(path, false);
           return;
@@ -106,13 +115,14 @@ export function useFileTreeCrud({
           path,
           content: response.content,
           temporary: Boolean(options?.temporary),
+          isIgnored,
         });
         requestFileTreeSelection(path, false);
       } catch (error) {
         console.error("Failed to load workspace workspace file", error);
       }
     },
-    [openTab, requestFileTreeSelection, selectedWorkspaceId, selectedWorkspaceWorktreePath],
+    [openTab, repoEntries, requestFileTreeSelection, selectedWorkspaceId, selectedWorkspaceWorktreePath],
   );
 
   const handleDeleteEntry = useCallback(

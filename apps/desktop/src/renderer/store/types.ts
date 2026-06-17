@@ -102,6 +102,8 @@ export type WorkspaceTabDataByKind = {
     isUnsupported?: boolean;
     unsupportedReason?: "type" | "size";
     isDeleted?: boolean;
+    /** True when the file is git-ignored; suppresses diff gutter decorations. */
+    isIgnored?: boolean;
   };
   image: { path: string; dataUrl: string; isTemporary: boolean };
   terminal: {
@@ -176,6 +178,8 @@ export type OpenWorkspaceTabInput =
       temporary?: boolean;
       isUnsupported?: boolean;
       unsupportedReason?: "type" | "size";
+      /** When true, diff gutter decorations will be suppressed for this file. */
+      isIgnored?: boolean;
     }
   | {
       workspaceId?: string;

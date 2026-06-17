@@ -16,6 +16,8 @@ type FileEditorProps = {
   content: string;
   worktreePath?: string;
   isDeleted?: boolean;
+  /** When true, diff gutter decorations are suppressed (file is git-ignored). */
+  isIgnored?: boolean;
   defaultMarkdownViewMode?: MarkdownDefaultViewMode;
   focusRequestKey?: number;
   onContentChange?: (content: string) => void;
@@ -33,6 +35,7 @@ export function FileEditor({
   content,
   worktreePath,
   isDeleted = false,
+  isIgnored = false,
   defaultMarkdownViewMode = "split",
   focusRequestKey = 0,
   onContentChange,
@@ -234,6 +237,7 @@ export function FileEditor({
     path,
     worktreePath,
     currentContent,
+    isIgnored,
   });
 
   const handleStartSplitDrag = useCallback((event: React.MouseEvent<HTMLDivElement>) => {

@@ -110,6 +110,7 @@ export function useTabContentRenderer({
               content={tab.data.content ?? ""}
               worktreePath={workspace?.worktreePath}
               isDeleted={Boolean(tab.data.isDeleted)}
+              isIgnored={Boolean(tab.data.isIgnored)}
               defaultMarkdownViewMode={markdownDefaultViewMode}
               focusRequestKey={shouldFocusContent ? focusContentRequestKey : 0}
               onContentChange={(nextContent) => cmd.updateFileTabContent(tab.id, nextContent)}
