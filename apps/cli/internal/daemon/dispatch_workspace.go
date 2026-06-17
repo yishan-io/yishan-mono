@@ -96,19 +96,6 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 		req.WorkspaceName = req.ID
 	}
 
-	if req.ProjectID != "" {
-		_ = registerWorkspace(ctx, h.runtime, WorkspaceCreation{
-			ID:             req.ID,
-			NodeID:         req.NodeID,
-			OrganizationID: req.OrganizationID,
-			ProjectID:      req.ProjectID,
-			Kind:           workspace.KindWorktree,
-			Branch:         req.TargetBranch,
-			SourceBranch:   req.SourceBranch,
-			LocalPath:      "",
-		})
-	}
-
 	go h.executeWorkspaceCreate(context.Background(), req)
 
 	return map[string]any{"id": req.ID, "status": "pending"}, nil
