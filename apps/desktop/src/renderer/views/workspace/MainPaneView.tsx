@@ -129,21 +129,27 @@ export function MainPaneView() {
         </Box>
 
         {/* Right pane resize separator — hidden when collapsed */}
-        {!rightCollapsed && (
+        <Box sx={{ display: rightCollapsed ? "none" : "block" }}>
           <ColumnSeparator
             orientation="horizontal"
             ariaLabel={t("layout.resize.right")}
             onResizeStart={resizeRightStart}
             onResizeMove={resizeRightMove}
           />
-        )}
+        </Box>
 
-        {/* Right pane content — hidden when collapsed */}
-        {!rightCollapsed && (
-          <Box sx={{ width: rightWidth, minWidth: RIGHT_MIN_WIDTH, height: "100%", overflow: "hidden" }}>
-            <RightPaneView />
-          </Box>
-        )}
+        {/* Right pane content — hidden when collapsed but kept mounted so file-tree state survives */}
+        <Box
+          sx={{
+            display: rightCollapsed ? "none" : undefined,
+            width: rightWidth,
+            minWidth: RIGHT_MIN_WIDTH,
+            height: "100%",
+            overflow: "hidden",
+          }}
+        >
+          <RightPaneView />
+        </Box>
 
         {/* Vertical tab bar — always visible on far right */}
         <RightPaneTabBar

@@ -119,10 +119,10 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
     // 1) <pre class="mermaid">...</pre>
     // 2) <pre><code class="language-mermaid">...</code></pre>
     const mermaidPres = new Set<HTMLElement>();
-    for (const pre of container.querySelectorAll("pre.mermaid")) {
+    for (const pre of Array.from(container.querySelectorAll("pre.mermaid"))) {
       mermaidPres.add(pre as HTMLElement);
     }
-    for (const codeEl of container.querySelectorAll("pre code.language-mermaid")) {
+    for (const codeEl of Array.from(container.querySelectorAll("pre code.language-mermaid"))) {
       const pre = codeEl.closest("pre");
       if (pre) {
         mermaidPres.add(pre as HTMLElement);
@@ -143,7 +143,7 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
 
     // Fix images: resolve relative paths to workspace file URLs
     if (worktreePath) {
-      const images = container.querySelectorAll("img");
+      const images = Array.from(container.querySelectorAll("img"));
       for (const img of images) {
         const src = img.getAttribute("src");
         if (!src || isAbsoluteUrl(src)) return;
@@ -169,10 +169,10 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
     }
 
     // Attach link click handlers
-    const links = container.querySelectorAll("a[href]");
+    const links = Array.from(container.querySelectorAll("a[href]"));
     for (const link of links) {
-      link.addEventListener("click", (e) => {
-        e.preventDefault();
+      link.addEventListener("click", (event: Event) => {
+        event.preventDefault();
         const href = link.getAttribute("href");
         if (!href || href.startsWith("#")) return;
 
@@ -195,14 +195,14 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
     }
 
     // Attach task-list checkbox handlers
-    const checkboxes = container.querySelectorAll<HTMLInputElement>("input[type='checkbox']");
+    const checkboxes = Array.from(container.querySelectorAll<HTMLInputElement>("input[type='checkbox']"));
     for (const [index, checkbox] of checkboxes.entries()) {
       checkbox.disabled = !canEdit;
       if (!canEdit) {
         continue;
       }
 
-      checkbox.addEventListener("click", (event) => {
+      checkbox.addEventListener("click", (event: Event) => {
         event.preventDefault();
         event.stopPropagation();
         const currentChecked = getTaskListItemChecked(content, index);

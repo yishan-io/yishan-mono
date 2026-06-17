@@ -25,18 +25,23 @@ export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPa
     <Box
       data-testid="dashboard-sidebar"
       sx={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
         width: "100%",
         minWidth: 0,
         height: "100%",
-        display: "flex",
-        flexDirection: "column",
         overflow: "hidden",
       }}
     >
       <Box
         sx={{
-          display: activeTab === "files" ? "block" : "none",
-          flex: 1,
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          visibility: activeTab === "files" ? "visible" : "hidden",
+          zIndex: activeTab === "files" ? 1 : 0,
           minWidth: 0,
           minHeight: 0,
           overflow: "hidden",
@@ -46,8 +51,12 @@ export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPa
       </Box>
       <Box
         sx={{
-          display: activeTab === "changes" ? "flex" : "none",
-          flex: 1,
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          visibility: activeTab === "changes" ? "visible" : "hidden",
+          zIndex: activeTab === "changes" ? 1 : 0,
           minWidth: 0,
           minHeight: 0,
           overflow: "hidden",
@@ -57,8 +66,12 @@ export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPa
       </Box>
       <Box
         sx={{
-          display: activeTab === "pr" ? "flex" : "none",
-          flex: 1,
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          visibility: activeTab === "pr" ? "visible" : "hidden",
+          zIndex: activeTab === "pr" ? 1 : 0,
           minWidth: 0,
           minHeight: 0,
           overflow: "hidden",
