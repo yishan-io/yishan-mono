@@ -60,6 +60,21 @@ const initialChatStoreState = chatStore.getState();
 const initialSessionStoreState = sessionStore.getState();
 const initialWorkspaceSettingsStoreState = workspaceSettingsStore.getState();
 
+function createDeferredPromise<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return {
+    promise,
+    resolve,
+    reject,
+  };
+}
+
 afterEach(() => {
   localStorage.clear();
   workspaceStore.setState(initialWorkspaceStoreState, true);
@@ -210,6 +225,163 @@ describe("projectCommands", () => {
     await loadWorkspaceSnapshot();
 
     expect(rpcMocks.workspaceList).not.toHaveBeenCalled();
+  });
+
+  it("ignores stale overlapping snapshot responses that would remove a visible workspace", async () => {
+    sessionStore.setState({
+      organizations: [{ id: "org-1", name: "Org 1" }],
+      selectedOrganizationId: "org-1",
+      loaded: true,
+    });
+
+    const olderSnapshot =
+      createDeferredPromise<
+        Array<{
+          id: string;
+          name: string;
+          sourceType: "git";
+          repoProvider: string;
+          repoUrl: string;
+          repoKey: string;
+          createdAt: string;
+          updatedAt: string;
+          createdByUserId: string;
+          workspaces: Array<Record<string, unknown>>;
+        }>
+      >();
+    const newerSnapshot =
+      createDeferredPromise<
+        Array<{
+          id: string;
+          name: string;
+          sourceType: "git";
+          repoProvider: string;
+          repoUrl: string;
+          repoKey: string;
+          createdAt: string;
+          updatedAt: string;
+          createdByUserId: string;
+          workspaces: Array<Record<string, unknown>>;
+        }>
+      >();
+
+    apiMocks.listProjects
+      .mockImplementationOnce(() => olderSnapshot.promise)
+      .mockImplementationOnce(() => newerSnapshot.promise);
+
+    const olderLoad = loadWorkspaceSnapshot();
+
+    workspaceStore.setState((state) => ({
+      ...state,
+      projects: [
+        {
+          id: "project-1",
+          name: "Project 1",
+          key: "project-1",
+          path: "/tmp/project-1",
+          localPath: "/tmp/project-1",
+          worktreePath: "/tmp/project-1",
+          sourceType: "git",
+          repoProvider: "github",
+          repoUrl: "https://github.com/test/project-1.git",
+          repoKey: "project-1",
+          icon: "folder",
+          color: "#1E66F5",
+          setupScript: "",
+          postScript: "",
+          contextEnabled: true,
+          organizationId: "org-1",
+          createdByUserId: "user-1",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          missing: false,
+          defaultBranch: "main",
+          commands: [],
+        },
+      ],
+      workspaces: [
+        {
+          id: "workspace-1",
+          organizationId: "org-1",
+          projectId: "project-1",
+          repoId: "project-1",
+          name: "feature-a",
+          title: "feature-a",
+          sourceBranch: "main",
+          branch: "feature-a",
+          summaryId: "workspace-1",
+          worktreePath: "/tmp/project-1/.worktrees/feature-a",
+          nodeId: "node-1",
+          kind: "managed",
+        },
+      ],
+      selectedProjectId: "project-1",
+      selectedWorkspaceId: "workspace-1",
+    }));
+
+    const newerLoad = loadWorkspaceSnapshot();
+
+    newerSnapshot.resolve([
+      {
+        id: "project-1",
+        name: "Project 1",
+        sourceType: "git",
+        repoProvider: "github",
+        repoUrl: "https://github.com/test/project-1.git",
+        repoKey: "project-1",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        createdByUserId: "user-1",
+        workspaces: [
+          {
+            id: "workspace-1",
+            organizationId: "org-1",
+            projectId: "project-1",
+            userId: "user-1",
+            nodeId: "node-1",
+            kind: "worktree",
+            status: "active",
+            branch: "feature-a",
+            sourceBranch: "main",
+            localPath: "/tmp/project-1/.worktrees/feature-a",
+            latestPullRequest: null,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+      },
+    ]);
+    await newerLoad;
+
+    expect(workspaceStore.getState().workspaces).toEqual([
+      expect.objectContaining({
+        id: "workspace-1",
+        worktreePath: "/tmp/project-1/.worktrees/feature-a",
+      }),
+    ]);
+
+    olderSnapshot.resolve([
+      {
+        id: "project-1",
+        name: "Project 1",
+        sourceType: "git",
+        repoProvider: "github",
+        repoUrl: "https://github.com/test/project-1.git",
+        repoKey: "project-1",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        createdByUserId: "user-1",
+        workspaces: [],
+      },
+    ]);
+    await olderLoad;
+
+    expect(workspaceStore.getState().workspaces).toEqual([
+      expect.objectContaining({
+        id: "workspace-1",
+        worktreePath: "/tmp/project-1/.worktrees/feature-a",
+      }),
+    ]);
   });
 
   it("creates backend project and then appends store state", async () => {

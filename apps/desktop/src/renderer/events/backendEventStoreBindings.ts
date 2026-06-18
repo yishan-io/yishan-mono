@@ -74,7 +74,7 @@ type BackendEventStoreBindingsDependencies = {
   setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId: Record<string, WorkspaceAgentStatus>) => void;
   recordWorkspaceUnreadNotification: (workspaceId: string, tone: WorkspaceUnreadTone) => void;
   applyWorkspaceCreateProgressEvent?: (payload: WorkspaceCreateProgressPayload) => void;
-  applyWorkspaceCreateCompletedEvent?: (payload: WorkspaceCreateCompletedPayload) => void;
+  applyWorkspaceCreateCompletedEvent?: (payload: WorkspaceCreateCompletedPayload) => boolean;
   applyWorkspaceCreateFailedEvent?: (payload: WorkspaceCreateFailedPayload) => void;
   setWorkspacePullRequest?: (
     workspaceId: string,
@@ -259,6 +259,8 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
         paneId: payload.taskRunPaneId,
       });
     }
+
+    return Boolean(existing);
   },
   applyWorkspaceCreateFailedEvent: (payload) => {
     workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(payload.workspaceId);
@@ -500,6 +502,11 @@ async function dispatchPreferenceBackedNotification(
 export function createBackendEventStoreBindings(
   dependencies: BackendEventStoreBindingsDependencies = DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES,
 ) {
+  const resolvedDependencies = {
+    ...DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES,
+    ...dependencies,
+  } satisfies BackendEventStoreBindingsDependencies;
+
   /**
    * Starts backend event listeners that mutate renderer store state and returns one teardown function.
    */
@@ -531,14 +538,15 @@ export function createBackendEventStoreBindings(
       }
     >();
 
-    const unsubscribeGitChanged = dependencies.subscribeGitChanged(
+    const unsubscribeGitChanged = resolvedDependencies.subscribeGitChanged(
       (workspaceId, workspaceWorktreePath, affectsBranch, currentBranch) => {
         scheduleGitRefresh(workspaceWorktreePath);
 
         if (affectsBranch) {
-          const resolvedId = workspaceId ?? dependencies.resolveWorkspaceIdByWorktreePath?.(workspaceWorktreePath);
+          const resolvedId =
+            workspaceId ?? resolvedDependencies.resolveWorkspaceIdByWorktreePath?.(workspaceWorktreePath);
           if (resolvedId) {
-            void dependencies.refreshWorkspaceCurrentBranch?.(resolvedId, currentBranch);
+            void resolvedDependencies.refreshWorkspaceCurrentBranch?.(resolvedId, currentBranch);
           }
         }
       },
@@ -546,7 +554,7 @@ export function createBackendEventStoreBindings(
     let hasObservedConnectedState = false;
     let shouldRecoverWorkspaceViewsOnReconnect = false;
     const unsubscribeDaemonConnectionStatus = (
-      dependencies.subscribeDaemonConnectionStatus ?? subscribeDaemonConnectionStatus
+      resolvedDependencies.subscribeDaemonConnectionStatus ?? subscribeDaemonConnectionStatus
     )((status) => {
       if (status === "disconnected") {
         shouldRecoverWorkspaceViewsOnReconnect = true;
@@ -570,11 +578,11 @@ export function createBackendEventStoreBindings(
 
       void (async () => {
         try {
-          await dependencies.loadWorkspaceSnapshot?.();
+          await resolvedDependencies.loadWorkspaceSnapshot?.();
 
-          const workspaceWorktreePaths = dependencies.listWorkspaceWorktreePaths?.() ?? [];
+          const workspaceWorktreePaths = resolvedDependencies.listWorkspaceWorktreePaths?.() ?? [];
           for (const workspaceWorktreePath of workspaceWorktreePaths) {
-            dependencies.incrementFileTreeRefreshVersion(workspaceWorktreePath, []);
+            resolvedDependencies.incrementFileTreeRefreshVersion(workspaceWorktreePath, []);
             scheduleGitRefresh(workspaceWorktreePath);
           }
         } catch (error) {
@@ -582,13 +590,13 @@ export function createBackendEventStoreBindings(
         }
       })();
     });
-    const unsubscribeWorkspaceFilesChanged = dependencies.subscribeWorkspaceFilesChanged(
+    const unsubscribeWorkspaceFilesChanged = resolvedDependencies.subscribeWorkspaceFilesChanged(
       (_workspaceId, workspaceWorktreePath, changedRelativePaths) => {
-        dependencies.incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
+        resolvedDependencies.incrementFileTreeRefreshVersion(workspaceWorktreePath, changedRelativePaths);
         scheduleGitRefresh(workspaceWorktreePath);
       },
     );
-    const unsubscribeInAppNotification = dependencies.subscribeInAppNotification((payload) => {
+    const unsubscribeInAppNotification = resolvedDependencies.subscribeInAppNotification((payload) => {
       const workspaceId = payload.workspaceId?.trim();
 
       const observerStatus = payload.observerStatus;
@@ -606,27 +614,27 @@ export function createBackendEventStoreBindings(
             });
           }
 
-          dependencies.setWorkspaceAgentStatusByWorkspaceId(
+          resolvedDependencies.setWorkspaceAgentStatusByWorkspaceId(
             deriveWorkspaceAgentStatusByWorkspaceId(lifecycleBySessionKey),
           );
         }
       }
 
-      const suppressNotificationEffects = shouldSuppressNotificationEffects(payload, dependencies);
+      const suppressNotificationEffects = shouldSuppressNotificationEffects(payload, resolvedDependencies);
 
       if (payload.notificationEventType) {
-        void dispatchPreferenceBackedNotification(payload, dependencies).catch(() => {
+        void dispatchPreferenceBackedNotification(payload, resolvedDependencies).catch(() => {
           // Preference resolution and delivery failures should not block store state updates.
         });
       } else if (payload.showSystemNotification && !suppressNotificationEffects) {
-        const notificationCopy = buildSystemNotificationCopy(payload, dependencies);
-        void dependencies.dispatchSystemNotification(notificationCopy).catch(() => {
+        const notificationCopy = buildSystemNotificationCopy(payload, resolvedDependencies);
+        void resolvedDependencies.dispatchSystemNotification(notificationCopy).catch(() => {
           // Notification delivery failures should not block store state updates.
         });
       }
 
       if (payload.soundToPlay && !suppressNotificationEffects) {
-        void dependencies.playNotificationSound(payload.soundToPlay).catch(() => {
+        void resolvedDependencies.playNotificationSound(payload.soundToPlay).catch(() => {
           // Sound playback failures should not block store state updates.
         });
       }
@@ -636,27 +644,39 @@ export function createBackendEventStoreBindings(
       }
 
       const tone: WorkspaceUnreadTone = payload.tone === "error" ? "error" : "success";
-      dependencies.recordWorkspaceUnreadNotification(workspaceId, tone);
+      resolvedDependencies.recordWorkspaceUnreadNotification(workspaceId, tone);
     });
     const unsubscribeWorkspaceCreateProgress =
-      dependencies.subscribeWorkspaceCreateProgress?.((payload) => {
-        dependencies.applyWorkspaceCreateProgressEvent?.(payload);
+      resolvedDependencies.subscribeWorkspaceCreateProgress?.((payload) => {
+        resolvedDependencies.applyWorkspaceCreateProgressEvent?.(payload);
       }) ?? (() => {});
     const unsubscribeWorkspaceCreateCompleted =
-      dependencies.subscribeWorkspaceCreateCompleted?.((payload) => {
-        dependencies.applyWorkspaceCreateCompletedEvent?.(payload);
+      resolvedDependencies.subscribeWorkspaceCreateCompleted?.((payload) => {
+        const wasApplied = resolvedDependencies.applyWorkspaceCreateCompletedEvent?.(payload) ?? true;
+        if (wasApplied) {
+          return;
+        }
+
+        // The completion payload does not include enough fields to safely rebuild
+        // a missing workspace row from scratch, so repair via an immediate reload.
+        void resolvedDependencies.loadWorkspaceSnapshot?.().catch((error) => {
+          console.error(
+            "[backendEventStoreBindings] Failed to refresh workspace snapshot after create completion",
+            error,
+          );
+        });
       }) ?? (() => {});
     const unsubscribeWorkspaceCreateFailed =
-      dependencies.subscribeWorkspaceCreateFailed?.((payload) => {
-        dependencies.applyWorkspaceCreateFailedEvent?.(payload);
+      resolvedDependencies.subscribeWorkspaceCreateFailed?.((payload) => {
+        resolvedDependencies.applyWorkspaceCreateFailedEvent?.(payload);
       }) ?? (() => {});
     const unsubscribeWorkspacePullRequestUpdated =
-      dependencies.subscribeWorkspacePullRequestUpdated?.((payload) => {
-        dependencies.setWorkspacePullRequest?.(payload.workspaceId, payload.pullRequest);
+      resolvedDependencies.subscribeWorkspacePullRequestUpdated?.((payload) => {
+        resolvedDependencies.setWorkspacePullRequest?.(payload.workspaceId, payload.pullRequest);
       }) ?? (() => {});
     const unsubscribeWorkspaceSnapshotChanged =
-      dependencies.subscribeWorkspaceSnapshotChanged?.((payload) => {
-        const selectedOrganizationId = dependencies.getSelectedOrganizationId?.()?.trim();
+      resolvedDependencies.subscribeWorkspaceSnapshotChanged?.((payload) => {
+        const selectedOrganizationId = resolvedDependencies.getSelectedOrganizationId?.()?.trim();
         const payloadOrganizationId = payload.organizationId.trim();
         if (selectedOrganizationId && selectedOrganizationId !== payloadOrganizationId) {
           if (import.meta.env.DEV) {
@@ -706,26 +726,26 @@ export function createBackendEventStoreBindings(
 
         workspaceSnapshotRefreshTimer = setTimeout(() => {
           workspaceSnapshotRefreshTimer = undefined;
-          void dependencies.loadWorkspaceSnapshot?.().catch((error) => {
+          void resolvedDependencies.loadWorkspaceSnapshot?.().catch((error) => {
             console.error("[backendEventStoreBindings] Failed to refresh workspace snapshot after invalidation", error);
           });
         }, 300);
       }) ?? (() => {});
     const unsubscribeWorkspaceStateChanged =
-      dependencies.subscribeWorkspaceStateChanged?.((_payload) => {
+      resolvedDependencies.subscribeWorkspaceStateChanged?.((_payload) => {
         if (import.meta.env.DEV) {
           console.debug("[backendEventStoreBindings] workspace state changed", _payload);
         }
-        void dependencies.loadWorkspaceSnapshot?.().catch((error) => {
+        void resolvedDependencies.loadWorkspaceSnapshot?.().catch((error) => {
           console.error("[backendEventStoreBindings] Failed to refresh workspace snapshot after state change", error);
         });
       }) ?? (() => {});
     const unsubscribeOpenBrowserUrl =
-      dependencies.subscribeOpenBrowserUrl?.((payload) => {
-        dependencies.openBrowserTab?.(payload);
+      resolvedDependencies.subscribeOpenBrowserUrl?.((payload) => {
+        resolvedDependencies.openBrowserTab?.(payload);
       }) ?? (() => {});
     const unsubscribeTerminalSessionChanged =
-      dependencies.subscribeTerminalSessionChanged?.((payload) => {
+      resolvedDependencies.subscribeTerminalSessionChanged?.((payload) => {
         handleTerminalSessionEvent(payload);
       }) ?? (() => {});
 
