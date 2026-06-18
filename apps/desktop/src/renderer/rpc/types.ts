@@ -36,6 +36,8 @@ export type DaemonRpcClient = {
     health: (input: Rpc.WorkspaceHealthInput) => Promise<Rpc.WorkspaceHealthOutput>;
     repair: (input: Rpc.WorkspaceRepairInput) => Promise<Rpc.WorkspaceRepairOutput>;
     forget: (input: Rpc.WorkspaceForgetInput) => Promise<Rpc.WorkspaceForgetOutput>;
+    openProject: (input: Rpc.WorkspaceOpenProjectInput) => Promise<Rpc.WorkspaceOpenProjectOutput>;
+    closeProject: (input: Rpc.WorkspaceCloseProjectInput) => Promise<Rpc.WorkspaceCloseProjectOutput>;
   };
   file: {
     listFiles: (input: Rpc.FileListInput) => Promise<Rpc.FileListResponse>;

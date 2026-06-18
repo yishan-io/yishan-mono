@@ -821,6 +821,7 @@
     "actions": {
       "addRepository": "添加项目",
       "filter": "筛选",
+      "pin": "固定项目",
       "refresh": "刷新项目",
       "config": "配置",
       "collapse": "折叠项目",
@@ -846,6 +847,21 @@
       },
       "actions": {
         "all": "全选"
+      }
+    },
+    "pin": {
+      "searchPlaceholder": "搜索项目",
+      "searchAriaLabel": "搜索项目",
+      "sections": {
+        "hirarchy": "层级",
+        "projects": "项目"
+      },
+      "hierarchy": {
+        "byProject": "按项目",
+        "byNode": "按节点"
+      },
+      "actions": {
+        "all": "全部"
       }
     },
     "registered": "已注册项目",

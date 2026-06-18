@@ -29,6 +29,8 @@ const rpcMocks = vi.hoisted(() => ({
   createWorkspace: vi.fn(),
   list: vi.fn(),
   openWorkspace: vi.fn(),
+  openProject: vi.fn(async () => ({ opened: [], skipped: [], errors: [] })),
+  closeProject: vi.fn(async () => ({ stopped: [] })),
   refreshWorkspacePullRequest: vi.fn(),
   closeWorkspace: vi.fn(),
   listGitChanges: vi.fn(),
@@ -56,6 +58,8 @@ vi.mock("../rpc/rpcTransport", () => ({
       createWorkspace: rpcMocks.createWorkspace,
       list: rpcMocks.list,
       open: rpcMocks.openWorkspace,
+      openProject: rpcMocks.openProject,
+      closeProject: rpcMocks.closeProject,
       refreshPullRequest: rpcMocks.refreshWorkspacePullRequest,
       close: rpcMocks.closeWorkspace,
     },
@@ -152,7 +156,7 @@ describe("workspaceCommands", () => {
     expect(rpcMocks.enqueueWorkspaceLifecycleWarnings).not.toHaveBeenCalled();
   });
 
-  it("updates visible repo ids without reopening workspaces in daemon", async () => {
+  it("updates visible repo ids and triggers daemon warmup for newly pinned projects", async () => {
     workspaceStore.setState({
       workspaces: [
         {
@@ -167,13 +171,50 @@ describe("workspaceCommands", () => {
           worktreePath: "/tmp/workspaces/workspace-1",
         },
       ],
+      displayProjectIds: [],
     });
 
     setDisplayRepoIds(["repo-1"]);
 
     expect(workspaceStore.getState().displayProjectIds).toEqual(["repo-1"]);
-    expect(rpcMocks.list).not.toHaveBeenCalled();
-    expect(rpcMocks.openWorkspace).not.toHaveBeenCalled();
+    // Warmup fires asynchronously — flush the promise queue.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(rpcMocks.openProject).toHaveBeenCalledTimes(1);
+    expect(rpcMocks.openProject).toHaveBeenCalledWith({
+      workspaces: [
+        expect.objectContaining({ workspaceId: "workspace-1", worktreePath: "/tmp/workspaces/workspace-1" }),
+      ],
+    });
+    expect(rpcMocks.closeProject).not.toHaveBeenCalled();
+  });
+
+  it("triggers daemon close for removed projects when unpinning", async () => {
+    workspaceStore.setState({
+      workspaces: [
+        {
+          id: "workspace-2",
+          repoId: "repo-2",
+          projectId: "repo-2",
+          name: "Workspace 2",
+          title: "Workspace 2",
+          sourceBranch: "",
+          branch: "main",
+          summaryId: "summary-2",
+          worktreePath: "/tmp/workspaces/workspace-2",
+        },
+      ],
+      displayProjectIds: ["repo-1", "repo-2"],
+    });
+
+    setDisplayRepoIds(["repo-1"]);
+
+    expect(workspaceStore.getState().displayProjectIds).toEqual(["repo-1"]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(rpcMocks.closeProject).toHaveBeenCalledTimes(1);
+    expect(rpcMocks.closeProject).toHaveBeenCalledWith({
+      workspaceIds: ["workspace-2"],
+    });
+    expect(rpcMocks.openProject).not.toHaveBeenCalled();
   });
 
   it("refreshes one workspace pull request through the daemon", async () => {

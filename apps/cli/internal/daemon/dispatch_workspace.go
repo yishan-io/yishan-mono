@@ -45,6 +45,10 @@ func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, 
 		return h.handleWorkspaceRepair(ctx, params)
 	case MethodWorkspaceForget:
 		return h.handleWorkspaceForget(ctx, params)
+	case MethodWorkspaceOpenProject:
+		return h.handleWorkspaceOpenProject(ctx, params)
+	case MethodWorkspaceCloseProject:
+		return h.handleWorkspaceCloseProject(ctx, params)
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown workspace method: "+method)
 	}
@@ -520,6 +524,86 @@ func (h *JSONRPCHandler) summarizeUsedAgents(workspaceID string, closeReq worksp
 func (h *JSONRPCHandler) watchAndTrack(workspaceID string, path string) {
 	h.watchers.Watch(workspaceID, path)
 	h.prTracker.EnsureTracked(path, true)
+}
+
+// handleWorkspaceOpenProject opens one or more workspaces on the daemon side,
+// writes each to workspace-index.json, and starts file watching + PR tracking.
+// Already-open workspaces are skipped (idempotent).
+func (h *JSONRPCHandler) handleWorkspaceOpenProject(_ context.Context, params json.RawMessage) (any, error) {
+	var req workspaceOpenProjectParams
+	if err := decodeParams(params, &req); err != nil {
+		return nil, err
+	}
+
+	opened, skipped, openErrors := []string{}, []string{}, []string{}
+	for _, entry := range req.Workspaces {
+		wsID := strings.TrimSpace(entry.WorkspaceID)
+		wsPath := strings.TrimSpace(entry.WorktreePath)
+		if wsID == "" || wsPath == "" {
+			openErrors = append(openErrors, "missing workspaceId or worktreePath")
+			continue
+		}
+		// Idempotent: skip if already open in the manager.
+		if _, err := h.manager.GetWorkspace(wsID); err == nil {
+			skipped = append(skipped, wsID)
+			continue
+		}
+		ws, err := h.manager.Open(workspace.OpenRequest{
+			ID:        wsID,
+			Path:      wsPath,
+			ProjectID: entry.ProjectID,
+			OrgID:     entry.OrgID,
+		})
+		if err != nil {
+			log.Warn().Err(err).Str("workspaceId", wsID).Str("path", wsPath).
+				Msg("workspace.openProject: failed to open workspace")
+			openErrors = append(openErrors, wsID+": "+err.Error())
+			continue
+		}
+		if h.wsIndexStore != nil {
+			if upsertErr := h.wsIndexStore.Upsert(workspaceIndexEntry{
+				WorkspaceID:  ws.ID,
+				WorktreePath: ws.Path,
+				ProjectID:    ws.ProjectID,
+				OrgID:        ws.OrgID,
+				State:        workspace.WorkspaceStateActive,
+				LastSeen:     time.Now().UTC().Format(time.RFC3339),
+			}); upsertErr != nil {
+				log.Warn().Err(upsertErr).Str("workspaceId", ws.ID).
+					Msg("workspace.openProject: index upsert failed")
+			}
+		}
+		h.watchAndTrack(ws.ID, ws.Path)
+		opened = append(opened, ws.ID)
+	}
+
+	return workspaceOpenProjectResult{
+		Opened:  opened,
+		Skipped: skipped,
+		Errors:  openErrors,
+	}, nil
+}
+
+// handleWorkspaceCloseProject stops all live terminal sessions for the given
+// workspace IDs. It does not remove workspaces from memory or the index —
+// those are preserved for daemon-restart recovery.
+func (h *JSONRPCHandler) handleWorkspaceCloseProject(_ context.Context, params json.RawMessage) (any, error) {
+	var req workspaceCloseProjectParams
+	if err := decodeParams(params, &req); err != nil {
+		return nil, err
+	}
+
+	stopped := []string{}
+	for _, wsID := range req.WorkspaceIDs {
+		wsID = strings.TrimSpace(wsID)
+		if wsID == "" {
+			continue
+		}
+		h.manager.Terminals().StopAllForWorkspace(wsID)
+		stopped = append(stopped, wsID)
+	}
+
+	return workspaceCloseProjectResult{Stopped: stopped}, nil
 }
 
 // buildWorkspaceHookWarnings builds the lifecycle script warning list from a HookResult.

@@ -30,7 +30,10 @@ func (h *JSONRPCHandler) dispatch(ctx context.Context, connState *wsConnState, m
 
 func isWorkspaceMethod(method string) bool {
 	switch method {
-	case MethodList, MethodWorkspaceCreate, MethodWorkspaceSyncContextLink, MethodWorkspaceClose, MethodWorkspaceSetActive, MethodWorkspaceRefreshPullRequest:
+	case MethodList, MethodWorkspaceCreate, MethodWorkspaceSyncContextLink, MethodWorkspaceClose,
+		MethodWorkspaceSetActive, MethodWorkspaceRefreshPullRequest,
+		MethodWorkspaceHealth, MethodWorkspaceRepair, MethodWorkspaceForget,
+		MethodWorkspaceOpenProject, MethodWorkspaceCloseProject:
 		return true
 	}
 	return false

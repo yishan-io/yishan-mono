@@ -350,4 +350,12 @@ export class DaemonWorkspaceClient {
   async forget(input: Rpc.WorkspaceForgetInput): Promise<Rpc.WorkspaceForgetOutput> {
     return (await this.invoke("workspace.forget", input)) as Rpc.WorkspaceForgetOutput;
   }
+
+  async openProject(input: Rpc.WorkspaceOpenProjectInput): Promise<Rpc.WorkspaceOpenProjectOutput> {
+    return (await this.invoke("workspace.openProject", input)) as Rpc.WorkspaceOpenProjectOutput;
+  }
+
+  async closeProject(input: Rpc.WorkspaceCloseProjectInput): Promise<Rpc.WorkspaceCloseProjectOutput> {
+    return (await this.invoke("workspace.closeProject", input)) as Rpc.WorkspaceCloseProjectOutput;
+  }
 }

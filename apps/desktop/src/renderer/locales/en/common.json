@@ -858,6 +858,7 @@
     "actions": {
       "addRepository": "Add project",
       "filter": "Filter",
+      "pin": "Pin projects",
       "refresh": "Refresh projects",
       "config": "Config",
       "collapse": "Collapse project",
@@ -883,6 +884,21 @@
       },
       "actions": {
         "all": "Select all"
+      }
+    },
+    "pin": {
+      "searchPlaceholder": "Search projects",
+      "searchAriaLabel": "Search projects",
+      "sections": {
+        "hirarchy": "Hierarchy",
+        "projects": "Projects"
+      },
+      "hierarchy": {
+        "byProject": "By project",
+        "byNode": "By node"
+      },
+      "actions": {
+        "all": "All"
       }
     },
     "registered": "Registered projects",

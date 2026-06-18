@@ -92,6 +92,8 @@ export class DaemonClient {
     health: (input: Rpc.WorkspaceHealthInput) => this._workspaceClient.health(input),
     repair: (input: Rpc.WorkspaceRepairInput) => this._workspaceClient.repair(input),
     forget: (input: Rpc.WorkspaceForgetInput) => this._workspaceClient.forget(input),
+    openProject: (input: Rpc.WorkspaceOpenProjectInput) => this._workspaceClient.openProject(input),
+    closeProject: (input: Rpc.WorkspaceCloseProjectInput) => this._workspaceClient.closeProject(input),
   };
 
   readonly file = {
