@@ -7,111 +7,104 @@ import (
 	"testing"
 )
 
-// ── parseMemorySections ───────────────────────────────────────────────────────
-
-func TestParseMemorySections_FullFile(t *testing.T) {
+func TestParseMemorySections_CurrentStructure(t *testing.T) {
 	content := `# Project Memory
 
 _Last updated: 2026-06-14_
 
-## Where I Left Off
+## Locked Decisions
 
-Working on the memory system. Implementing FTS5 indexing.
+- 2026-06-14 — Used modernc.org/sqlite. Why: avoids CGO.
 
-## My Decisions
+## Durable Discoveries
 
-- 2026-06-14 — Used modernc.org/sqlite for CGo-free SQLite
-- 2026-06-13 — Stored memory.db in profile directory
+- [Invariant] 2026-06-14 — .my-context is a symlink to contexts/<repoKey>
 
-## What I Learned
+## Open Questions
 
-- 2026-06-14 — FTS5 content tables require manual trigger sync
-- 2026-06-13 — .my-context is a symlink to contexts/<repoKey>
+- 2026-06-14 — Should search index archive files by default?
 `
 
-	s := parseMemorySections(content)
+	sections := parseMemorySections(content)
 
-	if !strings.Contains(s.LeaveOff, "memory system") {
-		t.Errorf("LeaveOff should contain prose, got: %q", s.LeaveOff)
+	if len(sections.LockedDecisions) != 1 {
+		t.Errorf("expected 1 locked decision, got %d", len(sections.LockedDecisions))
 	}
-	if len(s.Decisions) != 2 {
-		t.Errorf("expected 2 decisions, got %d", len(s.Decisions))
+	if len(sections.DurableDiscoveries) != 1 {
+		t.Errorf("expected 1 durable discovery, got %d", len(sections.DurableDiscoveries))
 	}
-	if len(s.Learned) != 2 {
-		t.Errorf("expected 2 learned, got %d", len(s.Learned))
-	}
-	if len(s.Errors) != 0 {
-		t.Errorf("expected 0 errors, got %d", len(s.Errors))
+	if len(sections.OpenQuestions) != 1 {
+		t.Errorf("expected 1 open question, got %d", len(sections.OpenQuestions))
 	}
 }
 
-func TestParseMemorySections_ProseLeaveOff(t *testing.T) {
-	content := `## Where I Left Off
+func TestParseMemorySections_LegacyStructure(t *testing.T) {
+	content := `## My Decisions
 
-First line of prose.
-Second line of prose.
+- 2026-06-13 — Old decision
 
-## My Decisions
+## What I Learned
+
+- 2026-06-13 — Old learning
+
+## Errors
+
+- 2026-06-13 — old error root cause
 `
-	s := parseMemorySections(content)
-	if !strings.Contains(s.LeaveOff, "First line") || !strings.Contains(s.LeaveOff, "Second line") {
-		t.Errorf("LeaveOff should preserve both prose lines, got: %q", s.LeaveOff)
+
+	sections := parseMemorySections(content)
+
+	if len(sections.LockedDecisions) != 1 {
+		t.Errorf("expected 1 locked decision, got %d", len(sections.LockedDecisions))
+	}
+	if len(sections.DurableDiscoveries) != 2 {
+		t.Errorf("expected 2 durable discoveries, got %d", len(sections.DurableDiscoveries))
 	}
 }
 
 func TestParseMemorySections_Empty(t *testing.T) {
-	s := parseMemorySections("")
-	if s.LeaveOff != "" || len(s.Decisions) != 0 || len(s.Learned) != 0 {
+	sections := parseMemorySections("")
+	if len(sections.LockedDecisions) != 0 || len(sections.DurableDiscoveries) != 0 || len(sections.OpenQuestions) != 0 {
 		t.Error("empty content should produce empty sections")
 	}
 }
 
-func TestParseMemorySections_ErrorsSection(t *testing.T) {
-	content := `## Errors
-
-- 2026-06-14 — null pointer dereference — added nil check
-`
-	s := parseMemorySections(content)
-	if len(s.Errors) != 1 {
-		t.Errorf("expected 1 error, got %d", len(s.Errors))
-	}
-}
-
-// ── buildMemoryMarkdown ───────────────────────────────────────────────────────
-
 func TestBuildMemoryMarkdown_RoundTrip(t *testing.T) {
 	sections := memorySections{
-		LeaveOff:  "Working on authentication",
-		Decisions: []string{"2026-06-14 — Used JWT"},
-		Learned:   []string{"2026-06-14 — JWT expiry is 1h"},
-		Errors:    []string{},
+		LockedDecisions:    []string{"2026-06-14 — Used JWT. Why: simple auth."},
+		DurableDiscoveries: []string{"[Test Trap] 2026-06-14 — JWT expiry is 1h"},
+		OpenQuestions:      []string{"2026-06-14 — Should refresh tokens rotate?"},
 	}
 	md := buildMemoryMarkdown(sections)
 
-	if !strings.Contains(md, "# Project Memory") {
-		t.Error("missing header")
+	if !strings.Contains(md, string(SectionLockedDecisions)) {
+		t.Error("missing locked decisions header")
 	}
-	if !strings.Contains(md, "Working on authentication") {
-		t.Error("missing leaveOff")
-	}
-	if !strings.Contains(md, "- 2026-06-14 — Used JWT") {
+	if !strings.Contains(md, "- 2026-06-14 — Used JWT. Why: simple auth.") {
 		t.Error("missing decision")
 	}
-	if !strings.Contains(md, "- 2026-06-14 — JWT expiry is 1h") {
-		t.Error("missing learned")
+	if !strings.Contains(md, "- [Test Trap] 2026-06-14 — JWT expiry is 1h") {
+		t.Error("missing durable discovery")
+	}
+	if !strings.Contains(md, "- 2026-06-14 — Should refresh tokens rotate?") {
+		t.Error("missing open question")
 	}
 }
 
-// ── containsEntry ─────────────────────────────────────────────────────────────
-
 func TestContainsEntry(t *testing.T) {
-	entries := []string{"foo bar baz", "hello world"}
+	entries := []string{
+		"[Root Cause] 2026-06-18 — Duplicate tab came from stale session id on daemon restart",
+		"hello world",
+	}
 
-	if !containsEntry(entries, "foo bar baz") {
+	if !containsEntry(entries, "hello world") {
 		t.Error("exact match should return true")
 	}
-	if !containsEntry(entries, "  FOO BAR BAZ  ") {
+	if !containsEntry(entries, "  HELLO WORLD  ") {
 		t.Error("case-insensitive trimmed match should return true")
+	}
+	if !containsEntry(entries, "duplicate tab came from stale session id") {
+		t.Error("containment match should return true")
 	}
 	if containsEntry(entries, "not found") {
 		t.Error("missing entry should return false")
@@ -121,37 +114,43 @@ func TestContainsEntry(t *testing.T) {
 	}
 }
 
-// ── parseExtractedJSON ────────────────────────────────────────────────────────
-
 func TestParseExtractedJSON_Valid(t *testing.T) {
 	raw := `{
-		"decisions": ["2026-06-14 — Used SQLite — lightweight"],
-		"learned": ["2026-06-14 — FTS5 requires triggers"],
-		"errors": ["2026-06-14 — nil panic — added guard"],
-		"leaveOff": "Working on FTS indexing"
+		"lockedDecisions": ["2026-06-14 — Used SQLite. Why: lightweight."],
+		"durableDiscoveries": ["[Invariant] 2026-06-14 — FTS5 requires triggers"],
+		"openQuestions": ["2026-06-14 — Should we index archives?"]
 	}`
 
-	k, err := parseExtractedJSON(raw)
+	knowledge, err := parseExtractedJSON(raw)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(k.Decisions) != 1 {
-		t.Errorf("expected 1 decision, got %d", len(k.Decisions))
+	if len(knowledge.LockedDecisions) != 1 {
+		t.Errorf("expected 1 locked decision, got %d", len(knowledge.LockedDecisions))
 	}
-	if len(k.Learned) != 1 {
-		t.Errorf("expected 1 learned, got %d", len(k.Learned))
+	if len(knowledge.DurableDiscoveries) != 1 {
+		t.Errorf("expected 1 durable discovery, got %d", len(knowledge.DurableDiscoveries))
 	}
-	if len(k.Errors) != 1 {
-		t.Errorf("expected 1 error, got %d", len(k.Errors))
+	if len(knowledge.OpenQuestions) != 1 {
+		t.Errorf("expected 1 open question, got %d", len(knowledge.OpenQuestions))
 	}
-	if k.LeaveOff != "Working on FTS indexing" {
-		t.Errorf("unexpected leaveOff: %q", k.LeaveOff)
+}
+
+func TestParseExtractedJSON_LegacyFallback(t *testing.T) {
+	knowledge, err := parseExtractedJSON(`{"decisions":["decision"],"learned":["learned"],"errors":["error"],"openQuestions":[]}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(knowledge.LockedDecisions) != 1 {
+		t.Errorf("expected 1 locked decision, got %d", len(knowledge.LockedDecisions))
+	}
+	if len(knowledge.DurableDiscoveries) != 2 {
+		t.Errorf("expected learned+errors fallback, got %d", len(knowledge.DurableDiscoveries))
 	}
 }
 
 func TestParseExtractedJSON_StrippedFences(t *testing.T) {
-	// LLM sometimes wraps in markdown fences — parser should handle it.
-	raw := "```json\n{\"decisions\":[],\"learned\":[],\"errors\":[],\"leaveOff\":\"\"}\n```"
+	raw := "```json\n{\"lockedDecisions\":[],\"durableDiscoveries\":[],\"openQuestions\":[]}\n```"
 	_, err := parseExtractedJSON(raw)
 	if err != nil {
 		t.Fatalf("should handle stripped fences, got: %v", err)
@@ -165,41 +164,31 @@ func TestParseExtractedJSON_InvalidJSON(t *testing.T) {
 	}
 }
 
-func TestParseExtractedJSON_EmptyArrays(t *testing.T) {
-	k, err := parseExtractedJSON(`{"decisions":[],"learned":[],"errors":[],"leaveOff":""}`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(k.Decisions) != 0 || len(k.Learned) != 0 || len(k.Errors) != 0 {
-		t.Error("expected all empty slices")
-	}
-}
-
-// ── mergeAndWrite ─────────────────────────────────────────────────────────────
-
 func TestMergeAndWrite_AppendsNewEntries(t *testing.T) {
 	ctxDir := t.TempDir()
 	memPath := filepath.Join(ctxDir, "MEMORY.md")
 	existing := `# Project Memory
 
-## Where I Left Off
-
-Existing work.
-
-## My Decisions
+## Locked Decisions
 
 - 2026-06-13 — Old decision
 
-## What I Learned
+## Durable Discoveries
 
-- 2026-06-13 — Old learning
+- [Invariant] 2026-06-13 — Old learning
+
+## Open Questions
+
+- 2026-06-13 — Old question
 `
-	os.WriteFile(memPath, []byte(existing), 0o644)
+	if err := os.WriteFile(memPath, []byte(existing), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	extracted := ExtractedKnowledge{
-		Decisions: []string{"2026-06-14 — New decision"},
-		Learned:   []string{"2026-06-14 — New learning"},
-		LeaveOff:  "Updated work",
+		LockedDecisions:    []string{"2026-06-14 — New decision. Why: important."},
+		DurableDiscoveries: []string{"[Workflow Trap] 2026-06-14 — New learning"},
+		OpenQuestions:      []string{"2026-06-14 — New question?"},
 	}
 
 	written, err := mergeAndWrite(memPath, existing, extracted, ctxDir)
@@ -210,56 +199,58 @@ Existing work.
 		t.Fatal("expected at least one written path")
 	}
 
-	result, _ := os.ReadFile(memPath)
+	result, err := os.ReadFile(memPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	content := string(result)
 
-	if !strings.Contains(content, "Old decision") {
-		t.Error("should preserve existing decisions")
+	if !strings.Contains(content, "Old decision") || !strings.Contains(content, "New decision") {
+		t.Error("should preserve and append decisions")
 	}
-	if !strings.Contains(content, "New decision") {
-		t.Error("should append new decisions")
+	if !strings.Contains(content, "Old learning") || !strings.Contains(content, "New learning") {
+		t.Error("should preserve and append discoveries")
 	}
-	if !strings.Contains(content, "Old learning") {
-		t.Error("should preserve existing learned")
-	}
-	if !strings.Contains(content, "New learning") {
-		t.Error("should append new learned")
-	}
-	if !strings.Contains(content, "Updated work") {
-		t.Error("should update leaveOff")
+	if !strings.Contains(content, "Old question") || !strings.Contains(content, "New question") {
+		t.Error("should preserve and append open questions")
 	}
 }
 
 func TestMergeAndWrite_Deduplicates(t *testing.T) {
 	ctxDir := t.TempDir()
 	memPath := filepath.Join(ctxDir, "MEMORY.md")
-	existing := `## My Decisions
+	existing := `## Durable Discoveries
 
-- 2026-06-14 — Existing decision
+- [Root Cause] 2026-06-14 — Duplicate tabs came from stale session ids on restart
 `
-	os.WriteFile(memPath, []byte(existing), 0o644)
-
-	extracted := ExtractedKnowledge{
-		Decisions: []string{"2026-06-14 — Existing decision"}, // exact duplicate
+	if err := os.WriteFile(memPath, []byte(existing), 0o644); err != nil {
+		t.Fatal(err)
 	}
 
-	mergeAndWrite(memPath, existing, extracted, ctxDir)
+	extracted := ExtractedKnowledge{
+		DurableDiscoveries: []string{"duplicate tabs came from stale session ids"},
+	}
 
-	result, _ := os.ReadFile(memPath)
-	count := strings.Count(string(result), "Existing decision")
+	if _, err := mergeAndWrite(memPath, existing, extracted, ctxDir); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := os.ReadFile(memPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	count := strings.Count(string(result), "Duplicate tabs")
 	if count != 1 {
-		t.Errorf("expected 1 occurrence of duplicate, got %d", count)
+		t.Errorf("expected 1 occurrence of duplicate topic, got %d", count)
 	}
 }
 
 func TestMergeAndWrite_CreatesFile(t *testing.T) {
 	ctxDir := t.TempDir()
 	memPath := filepath.Join(ctxDir, "MEMORY.md")
-	// File does not exist yet.
 
 	extracted := ExtractedKnowledge{
-		Decisions: []string{"2026-06-14 — First decision"},
-		LeaveOff:  "Starting fresh",
+		LockedDecisions: []string{"2026-06-14 — First decision. Why: bootstrap."},
 	}
 
 	written, err := mergeAndWrite(memPath, "", extracted, ctxDir)
@@ -273,26 +264,6 @@ func TestMergeAndWrite_CreatesFile(t *testing.T) {
 		t.Errorf("memPath should be in written paths, got %v", written)
 	}
 }
-
-func TestMergeAndWrite_LeaveOffEmptyDoesNotOverwrite(t *testing.T) {
-	ctxDir := t.TempDir()
-	memPath := filepath.Join(ctxDir, "MEMORY.md")
-	existing := `## Where I Left Off
-
-Important existing context.
-`
-	os.WriteFile(memPath, []byte(existing), 0o644)
-
-	extracted := ExtractedKnowledge{LeaveOff: ""} // empty — should not overwrite
-	mergeAndWrite(memPath, existing, extracted, ctxDir)
-
-	result, _ := os.ReadFile(memPath)
-	if !strings.Contains(string(result), "Important existing context") {
-		t.Error("existing leaveOff should be preserved when extracted.LeaveOff is empty")
-	}
-}
-
-// ── checkBudget ───────────────────────────────────────────────────────────────
 
 func TestCheckBudget_UnderLimit(t *testing.T) {
 	content := strings.Repeat("x", 100)
@@ -309,7 +280,6 @@ func TestCheckBudget_UnderLimit(t *testing.T) {
 }
 
 func TestCheckBudget_GlobalLimit(t *testing.T) {
-	// Global memory has a lower limit (1000 chars).
 	content := strings.Repeat("x", MaxGlobalMemoryChars+1)
 	b := checkBudget(content, "/home/user/.yishan/memory/global/MEMORY.md", "")
 	if !b.Exceeded {
@@ -318,7 +288,6 @@ func TestCheckBudget_GlobalLimit(t *testing.T) {
 	if b.Limit != MaxGlobalMemoryChars {
 		t.Errorf("expected global limit %d, got %d", MaxGlobalMemoryChars, b.Limit)
 	}
-	// No overflow target for global — OverflowPaths should be empty.
 	if len(b.OverflowPaths) != 0 {
 		t.Errorf("global memory should have no overflow paths, got %v", b.OverflowPaths)
 	}
@@ -335,13 +304,11 @@ func TestCheckBudget_ProjectLimit(t *testing.T) {
 	}
 }
 
-// ── overflowEntries ───────────────────────────────────────────────────────────
-
 func TestOverflowEntries_WritesFile(t *testing.T) {
 	ctxDir := t.TempDir()
 	entries := []string{"decision one", "decision two"}
 
-	path := overflowEntries(ctxDir, "decisions", entries)
+	path := overflowEntries(ctxDir, "locked-decisions", entries)
 
 	if path == "" {
 		t.Fatal("expected a non-empty path to be returned")
@@ -349,40 +316,45 @@ func TestOverflowEntries_WritesFile(t *testing.T) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		t.Fatal("overflow file should exist on disk")
 	}
-	data, _ := os.ReadFile(path)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 	content := string(data)
 	if !strings.Contains(content, "decision one") || !strings.Contains(content, "decision two") {
 		t.Errorf("overflow file should contain entries: %q", content)
 	}
-	if !strings.Contains(content, "# Overflow: Decisions") {
-		t.Error("overflow file should have header")
+	if !strings.Contains(content, "# Overflow: Locked Decisions") {
+		t.Error("overflow file should have normalized header")
 	}
-	if !strings.HasPrefix(filepath.Base(path), "decisions-") {
-		t.Errorf("filename should start with decisions-, got %q", filepath.Base(path))
+	if !strings.HasPrefix(filepath.Base(path), "locked-decisions-") {
+		t.Errorf("filename should start with locked-decisions-, got %q", filepath.Base(path))
 	}
 }
 
-func TestOverflowEntries_AppendsToExistingFile(t *testing.T) {
+func TestOverflowEntries_RewritesExistingFileWithoutDuplicateHeadings(t *testing.T) {
 	ctxDir := t.TempDir()
-	archiveDir := filepath.Join(ctxDir, "archive")
-	os.MkdirAll(archiveDir, 0o755)
+	path := overflowEntries(ctxDir, "durable-discoveries", []string{"first batch"})
+	path = overflowEntries(ctxDir, "durable-discoveries", []string{"second batch", "first batch"})
 
-	// Simulate a pre-existing overflow file from the same day.
-	overflowEntries(ctxDir, "learned", []string{"first batch"})
-	path := overflowEntries(ctxDir, "learned", []string{"second batch"})
-
-	data, _ := os.ReadFile(path)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 	content := string(data)
-	if !strings.Contains(content, "first batch") {
-		t.Error("should preserve existing content")
+	if strings.Count(content, "# Overflow: Durable Discoveries") != 1 {
+		t.Fatalf("expected a single heading, got: %q", content)
+	}
+	if strings.Count(content, "first batch") != 1 {
+		t.Fatalf("expected deduped existing entry, got: %q", content)
 	}
 	if !strings.Contains(content, "second batch") {
-		t.Error("should append new content")
+		t.Fatalf("missing appended batch: %q", content)
 	}
 }
 
 func TestOverflowEntries_EmptyContextRoot(t *testing.T) {
-	path := overflowEntries("", "errors", []string{"some error"})
+	path := overflowEntries("", "open-questions", []string{"some question"})
 	if path != "" {
 		t.Error("empty contextRoot should return empty path (no write)")
 	}
@@ -390,13 +362,11 @@ func TestOverflowEntries_EmptyContextRoot(t *testing.T) {
 
 func TestOverflowEntries_EmptyEntries(t *testing.T) {
 	ctxDir := t.TempDir()
-	path := overflowEntries(ctxDir, "decisions", nil)
+	path := overflowEntries(ctxDir, "locked-decisions", nil)
 	if path != "" {
 		t.Error("nil entries should return empty path (no write)")
 	}
 }
-
-// ── SearchMemory ──────────────────────────────────────────────────────────────
 
 func TestSearchMemory_ScopeGlobal(t *testing.T) {
 	db := openTestDB(t)
@@ -414,7 +384,6 @@ func TestSearchMemory_ScopeGlobal(t *testing.T) {
 }
 
 func TestSearchMemory_DefaultLimit(t *testing.T) {
-	// Limit 0 should use defaultSearchLimit (20), not return 0 results.
 	db := openTestDB(t)
 	db.UpsertFile(MemoryFile{Path: "/ctx/a.md", ProjectPath: "/ctx", Type: FileTypeMemory, Body: "test content", Fingerprint: "fp", IndexedAt: 1})
 

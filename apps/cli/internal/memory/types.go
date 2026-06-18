@@ -21,15 +21,15 @@ type FileType string
 const (
 	FileTypeMemory       FileType = "memory"
 	FileTypeArchitecture FileType = "architecture"
-	FileTypeArchive     FileType = "archive"
-	FileTypeTask        FileType = "task"
-	FileTypeFuture      FileType = "future"
-	FileTypeGlobal      FileType = "global"
+	FileTypeArchive      FileType = "archive"
+	FileTypeTask         FileType = "task"
+	FileTypeFuture       FileType = "future"
+	FileTypeGlobal       FileType = "global"
 )
 
 type MemoryFile struct {
-	ID          int64
-	Path        string
+	ID   int64
+	Path string
 	// ProjectPath is the canonical context directory (~/.yishan/contexts/<repoKey>/).
 	// Derived by resolving the .my-context symlink in the worktree.
 	ProjectPath string
@@ -55,20 +55,17 @@ type MemorySearchResult struct {
 }
 
 type ExtractedKnowledge struct {
-	Rules     []string
-	Decisions []string
-	Learned   []string
-	Errors    []string
-	LeaveOff  string
+	LockedDecisions    []string
+	DurableDiscoveries []string
+	OpenQuestions      []string
 }
 
 type MemorySection string
 
 const (
-	SectionRules     MemorySection = "## Rules"
-	SectionDecisions MemorySection = "## My Decisions"
-	SectionLearned   MemorySection = "## What I Learned"
-	SectionErrors    MemorySection = "## Errors"
+	SectionLockedDecisions    MemorySection = "## Locked Decisions"
+	SectionDurableDiscoveries MemorySection = "## Durable Discoveries"
+	SectionOpenQuestions      MemorySection = "## Open Questions"
 )
 
 // SummarizerConfig controls the automatic post-session summarizer.

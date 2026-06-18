@@ -45,28 +45,28 @@ func trimToBudget(content string, limit int, contextRoot string) (string, []stri
 
 	for len([]rune(buildMemoryMarkdown(sections))) > limit {
 		trimmed := false
-		if len(sections.Errors) > 0 {
-			if p := overflowEntries(contextRoot, "errors", sections.Errors); p != "" {
+		if len(sections.OpenQuestions) > 0 {
+			if p := overflowEntries(contextRoot, "open-questions", sections.OpenQuestions); p != "" {
 				overflowPaths = append(overflowPaths, p)
 			}
-			sections.Errors = nil
+			sections.OpenQuestions = nil
 			trimmed = true
 		}
 		if !trimmed || len([]rune(buildMemoryMarkdown(sections))) > limit {
-			if len(sections.Learned) > 3 {
-				if p := overflowEntries(contextRoot, "learned", sections.Learned[3:]); p != "" {
+			if len(sections.DurableDiscoveries) > 3 {
+				if p := overflowEntries(contextRoot, "durable-discoveries", sections.DurableDiscoveries[3:]); p != "" {
 					overflowPaths = append(overflowPaths, p)
 				}
-				sections.Learned = sections.Learned[:3]
+				sections.DurableDiscoveries = sections.DurableDiscoveries[:3]
 				trimmed = true
 			}
 		}
 		if !trimmed || len([]rune(buildMemoryMarkdown(sections))) > limit {
-			if len(sections.Decisions) > 3 {
-				if p := overflowEntries(contextRoot, "decisions", sections.Decisions[3:]); p != "" {
+			if len(sections.LockedDecisions) > 3 {
+				if p := overflowEntries(contextRoot, "locked-decisions", sections.LockedDecisions[3:]); p != "" {
 					overflowPaths = append(overflowPaths, p)
 				}
-				sections.Decisions = sections.Decisions[:3]
+				sections.LockedDecisions = sections.LockedDecisions[:3]
 				trimmed = true
 			}
 		}
@@ -95,14 +95,16 @@ func overflowEntries(contextRoot string, category string, entries []string) stri
 		existingContent = string(data)
 	}
 
-	title := strings.ToUpper(category[:1]) + category[1:]
-	var buf strings.Builder
-	if existingContent != "" {
-		buf.WriteString(existingContent)
-		buf.WriteString("\n")
-	}
-	buf.WriteString("# Overflow: " + title + "\n\n")
+	allEntries := parseArchiveEntries(existingContent)
 	for _, entry := range entries {
+		if !containsEntry(allEntries, entry) {
+			allEntries = append(allEntries, entry)
+		}
+	}
+
+	var buf strings.Builder
+	buf.WriteString("# Overflow: " + archiveCategoryTitle(category) + "\n\n")
+	for _, entry := range allEntries {
 		buf.WriteString("- " + entry + "\n")
 	}
 
@@ -115,3 +117,28 @@ func overflowEntries(contextRoot string, category string, entries []string) stri
 	return archFile
 }
 
+func parseArchiveEntries(content string) []string {
+	if content == "" {
+		return nil
+	}
+
+	var entries []string
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "- ") {
+			entries = append(entries, strings.TrimPrefix(trimmed, "- "))
+		}
+	}
+	return entries
+}
+
+func archiveCategoryTitle(category string) string {
+	parts := strings.Split(category, "-")
+	for i, part := range parts {
+		if part == "" {
+			continue
+		}
+		parts[i] = strings.ToUpper(part[:1]) + part[1:]
+	}
+	return strings.Join(parts, " ")
+}

@@ -9,9 +9,10 @@ metadata:
 ## What I do
 
 I manage `.my-context/MEMORY.md` — your personal working memory for this project.
-It records where you left off, decisions you have already made, and things you
-discovered about the codebase. The agent reads it at the start of every session
-so you do not have to re-explain context.
+It records only durable, high-value context: decisions you have already made,
+non-obvious discoveries worth preserving, and unresolved questions that should
+resurface later. The agent reads it at the start of every session so you do not
+have to re-explain context.
 
 `.my-context/` is personal and never committed. It is excluded from git
 automatically by yishan.
@@ -20,7 +21,7 @@ automatically by yishan.
 
 - You want to record a decision so the agent does not re-open it
 - You discovered something non-obvious and want the agent to remember it
-- You are ending a session and want to capture where you left off
+- You want to preserve an unresolved question that should resurface later
 - The agent is getting something wrong that you have already figured out
 
 ## MEMORY.md structure
@@ -33,28 +34,59 @@ belongs in a dedicated `.my-context/` doc instead.
 
 _Last updated: YYYY-MM-DD_
 
-## Where I Left Off
-<!-- Current focus, what is in progress, any dead ends hit.
-     Rewrite this section each session rather than appending. -->
+## Locked Decisions
+<!-- Durable choices already made, so the agent does not re-open them.
+     Format: YYYY-MM-DD — <decision>. Why: <reason>. -->
 
-## My Decisions
-<!-- Choices already made so the agent does not re-open them.
-     Format: YYYY-MM-DD — <decision and why> -->
+## Durable Discoveries
+<!-- High-value, non-obvious facts only.
+     Prefix each item with one label:
+     [Root Cause] [Invariant] [Workflow Trap] [Env Trap] [Test Trap] -->
 
-## What I Learned
-<!-- Non-obvious discoveries about this codebase.
-     Things the agent keeps getting wrong or that took effort to figure out. -->
+## Open Questions
+<!-- Short-lived unresolved questions worth resurfacing next session.
+     Remove once answered. -->
 ```
 
 ## Rules
 
 1. **Read the file before writing** — always edit, never overwrite blind.
-2. **Where I Left Off is rewritten each session** — it reflects now, not history.
-3. **My Decisions only grows** — remove an entry only if you reverse the decision.
-4. **What I Learned only grows** — remove an entry only if it is no longer true.
-5. **Keep it short** — if an entry needs more than 2–3 lines, write a dedicated
-   `.my-context/` doc and link to it from here.
-6. **Update the timestamp** on every write.
+2. **Do not use MEMORY.md as a session diary** — active work belongs in task docs,
+   workspaces, git diff, or dedicated `.my-context/` notes.
+3. **Do not duplicate active state** that is already visible elsewhere.
+4. **Locked Decisions only keep durable choices** — remove an entry only if you
+   reverse the decision.
+5. **Durable Discoveries only keep future-useful facts** — remove an entry only if
+   it is no longer true.
+6. **Every Durable Discovery must include one type label**:
+   `[Root Cause]`, `[Invariant]`, `[Workflow Trap]`, `[Env Trap]`, or `[Test Trap]`.
+7. **Use the future-me test** — ask: `Will future me need this if task docs and code
+   are not open?` If no, do not store it here.
+8. **Deduplicate before appending** — never keep the same fact twice with slightly
+   different wording.
+9. **Keep it short** — if an entry needs more than 2–3 lines, move it to a dedicated
+   `.my-context/` doc and link to it.
+10. **Archive overflow as curated summaries** — normalize headings and dedupe before
+    writing to `.my-context/archive/`.
+11. **Update the timestamp** on every write.
+
+## Keep / Drop Guide
+
+Keep:
+
+- Decisions that should not be re-opened casually
+- Root causes that took real investigation to uncover
+- Invariants the agent might break by making a plausible but wrong change
+- Environment, workflow, or test traps that can waste time repeatedly
+- Unresolved questions that should be resurfaced later
+
+Drop:
+
+- Play-by-play task logs
+- "tests ready to run" or other transient status notes
+- Facts already obvious from current code or a git diff
+- PR/merge bookkeeping unless it changes future work
+- One-off implementation details with no reuse value
 
 ## Workflow
 
@@ -62,7 +94,7 @@ _Last updated: YYYY-MM-DD_
 
 Before ANY other action:
 1. Read `.my-context/MEMORY.md`
-2. If anything outdated — correct it first
+2. If anything is stale, duplicate, or no longer durable — correct it first
 
 ### During a session
 
@@ -109,18 +141,20 @@ The returned paths are absolute. Read them to get the full content.
 
 When you discover something worth keeping across sessions:
 1. Edit `.my-context/MEMORY.md` immediately
-2. Format: `- YYYY-MM-DD — <description>`
-3. Don't wait — you might be interrupted
-4. If sections grow too large — the daemon budget guard automatically moves overflow to `.my-context/archive/<category>-<date>.md` (e.g. `archive/decisions-20260614.md`). You can manually extract older entries this way too. Leave an index line: `- See archive/<category>-<date>.md (N items)`
+2. Use the correct section and keep the entry self-contained
+3. For Durable Discoveries, include a type label
+4. Don't wait — you might be interrupted
+5. If sections grow too large, move older entries to `.my-context/archive/<category>-<date>.md` (for example `archive/decisions-20260614.md`) as a curated, deduplicated overflow file. Leave an index line such as `- See archive/<category>-<date>.md (N items)`.
 
 ### At the end of a session
 
 The daemon also runs automatic summarization when the session stops (via hook → external LLM → write MEMORY.md). This catches what you forgot to write. Your manual writes help, but are supplemented by this auto-capture.
 
-1. Rewrite **Where I Left Off** to reflect the current state.
-2. Add to **My Decisions** for any choices made that the agent should not revisit.
-3. Add to **What I Learned** for anything non-obvious discovered.
-4. Update the timestamp.
+1. Add to **Locked Decisions** for any choices the agent should not revisit.
+2. Add to **Durable Discoveries** for any high-value non-obvious facts discovered.
+3. Add to **Open Questions** only for unresolved items worth resurfacing later.
+4. Remove stale or duplicate entries.
+5. Update the timestamp.
 
 ### Creating for the first time
 

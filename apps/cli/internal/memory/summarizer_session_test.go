@@ -39,7 +39,7 @@ func TestSummarizeSession_BuildsConversationAndWritesMemory(t *testing.T) {
 		if agentKind != "opencode" {
 			t.Fatalf("unexpected agent kind: %q", agentKind)
 		}
-		return `{"decisions":["2026-06-16 — Fixed reader"],"learned":[],"errors":[],"leaveOff":"Working on summarizer"}`,
+		return `{"lockedDecisions":["2026-06-16 — Fixed reader. Why: reader was broken."],"durableDiscoveries":["[Workflow Trap] 2026-06-16 — Summarizer writes MEMORY.md on normal runs"],"openQuestions":[]}`,
 			nil
 	})
 	summarizer.dbReader = fakeSessionReader{session: &sessionMessages{Messages: []sessionMessage{{Role: "user", Content: "hello", Timestamp: time.UnixMilli(1000)}, {Role: "assistant", Content: "world", Timestamp: time.UnixMilli(2000)}}}}
@@ -56,6 +56,9 @@ func TestSummarizeSession_BuildsConversationAndWritesMemory(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "**user**: hello") || !strings.Contains(prompt, "**assistant**: world") {
 		t.Fatalf("prompt missing conversation text: %q", prompt)
+	}
+	if !strings.Contains(prompt, "lockedDecisions") || !strings.Contains(prompt, "durableDiscoveries") {
+		t.Fatalf("prompt missing durable-memory schema: %q", prompt)
 	}
 }
 
