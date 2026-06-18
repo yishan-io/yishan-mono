@@ -90,9 +90,9 @@ export function useProjectConfigActions({
         setupScript: draft.setupScript,
         postScript: draft.postScript,
         commands: draft.commands
-          .map((item) => ({
-            name: item.name.trim(),
-            command: item.command.trim(),
+          .map(({ id: _id, name, command }) => ({
+            name: name.trim(),
+            command: command.trim(),
           }))
           .filter((item) => item.name.length > 0 && item.command.length > 0),
       },

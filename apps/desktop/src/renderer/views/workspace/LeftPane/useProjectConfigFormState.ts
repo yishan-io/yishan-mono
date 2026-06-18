@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
 import { DEFAULT_PROJECT_ICON_ID, findProjectIconOption } from "../../../components/projectIcons";
+import { generateId } from "../../../helpers/generateId";
+
+export type ProjectConfigCommandDraft = {
+  id: string;
+  name: string;
+  command: string;
+};
 
 export type ProjectConfigDraft = {
   name: string;
@@ -9,7 +16,7 @@ export type ProjectConfigDraft = {
   color: string;
   setupScript: string;
   postScript: string;
-  commands: Array<{ name: string; command: string }>;
+  commands: ProjectConfigCommandDraft[];
 };
 
 type ProjectLike = {
@@ -31,6 +38,14 @@ type ProjectLike = {
 };
 
 export const DEFAULT_ICON_BG_COLOR = "#1E66F5";
+
+export function createProjectConfigCommandDraft(name: string, command: string): ProjectConfigCommandDraft {
+  return {
+    id: generateId(),
+    name,
+    command,
+  };
+}
 
 function getDefaultDraft(): ProjectConfigDraft {
   return {
@@ -104,16 +119,16 @@ export function useProjectConfigFormState({
                   if (!command) {
                     return null;
                   }
-                  return { name: command, command };
+                  return createProjectConfigCommandDraft(command, command);
                 }
                 const command = item.command?.trim() || "";
                 const name = item.name?.trim() || command;
                 if (!command || !name) {
                   return null;
                 }
-                return { name, command };
+                return createProjectConfigCommandDraft(name, command);
               })
-              .filter((item): item is { name: string; command: string } => item !== null)
+              .filter((item): item is ProjectConfigCommandDraft => item !== null)
           : [],
       });
     };

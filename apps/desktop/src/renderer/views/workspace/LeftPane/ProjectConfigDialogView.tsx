@@ -27,7 +27,7 @@ import { useCommands } from "../../../hooks/useCommands";
 import { useDialogRegistration } from "../../../hooks/useDialogRegistration";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { useProjectConfigActions } from "./useProjectConfigActions";
-import { useProjectConfigFormState } from "./useProjectConfigFormState";
+import { createProjectConfigCommandDraft, useProjectConfigFormState } from "./useProjectConfigFormState";
 
 type ProjectConfigDialogViewProps = {
   open: boolean;
@@ -372,7 +372,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                 </Typography>
                 <Stack spacing={1}>
                   {draft.commands.map((item, index) => (
-                    <Stack key={`${item.name}:${item.command}`} direction="row" spacing={1} alignItems="center">
+                    <Stack key={item.id} direction="row" spacing={1} alignItems="center">
                       <TextField
                         size="small"
                         value={item.name}
@@ -426,7 +426,7 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
                     onClick={() =>
                       setDraft((previous) => ({
                         ...previous,
-                        commands: [...previous.commands, { name: "", command: "" }],
+                        commands: [...previous.commands, createProjectConfigCommandDraft("", "")],
                       }))
                     }
                     sx={{ alignSelf: "flex-start", textTransform: "none" }}

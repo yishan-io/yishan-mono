@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { ProjectConfigDialogView } from "./ProjectConfigDialogView";
@@ -88,5 +88,43 @@ describe("ProjectConfigDialogView", () => {
     expect(screen.getByText("Context")).toBeTruthy();
     expect(screen.getByLabelText("What is context?")).toBeTruthy();
     expect(screen.queryByText("Private context hook")).toBeNull();
+  });
+
+  it("keeps focus while editing a quick command name", () => {
+    workspaceStore.setState({
+      projects: [
+        {
+          id: "repo-1",
+          key: "core-repo",
+          name: "Core Repo",
+          path: "/Users/test/core-repo",
+          localPath: "/Users/test/core-repo",
+          worktreePath: "/Users/test/worktrees",
+          gitUrl: "git@github.com:acme/core-repo.git",
+          missing: false,
+        },
+      ],
+      workspaces: [],
+    });
+
+    renderProjectConfigDialog();
+
+    fireEvent.click(screen.getByRole("button", { name: "Quick commands" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add command" }));
+
+    const nameInput = screen.getByPlaceholderText("Name") as HTMLInputElement;
+    nameInput.focus();
+
+    fireEvent.change(nameInput, { target: { value: "a" } });
+
+    const updatedNameInput = screen.getByDisplayValue("a") as HTMLInputElement;
+    expect(updatedNameInput).toBe(nameInput);
+    expect(updatedNameInput).toBe(document.activeElement);
+
+    fireEvent.change(updatedNameInput, { target: { value: "ab" } });
+
+    const finalNameInput = screen.getByDisplayValue("ab") as HTMLInputElement;
+    expect(finalNameInput).toBe(nameInput);
+    expect(finalNameInput).toBe(document.activeElement);
   });
 });
