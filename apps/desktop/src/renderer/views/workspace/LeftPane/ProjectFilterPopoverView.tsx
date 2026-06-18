@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MdOutlineFilterList } from "react-icons/md";
+import { LuEye } from "react-icons/lu";
 import { useCommands } from "../../../hooks/useCommands";
 import { workspaceStore } from "../../../store/workspaceStore";
 
@@ -47,13 +47,13 @@ export function ProjectFilterPopoverView() {
 
   return (
     <>
-      <Tooltip title={t("project.actions.filter")} arrow>
+      <Tooltip title={t("project.actions.pin")} arrow>
         <IconButton
           size="small"
-          aria-label={t("project.actions.filter")}
+          aria-label={t("project.actions.pin")}
           onClick={(event) => setRepoFilterAnchor(event.currentTarget)}
         >
-          <MdOutlineFilterList size={15} />
+          <LuEye size={15} />
         </IconButton>
       </Tooltip>
       <Popover
@@ -93,7 +93,7 @@ export function ProjectFilterPopoverView() {
       >
         <Box sx={{ width: 240, p: 1 }}>
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
-            {t("project.filter.sections.hirarchy")}
+            {t("project.pin.sections.hirarchy")}
           </Typography>
           <ButtonGroup size="small" fullWidth sx={{ mb: 1 }}>
             <Button
@@ -101,22 +101,22 @@ export function ProjectFilterPopoverView() {
               sx={{ fontSize: 11, textTransform: "none" }}
               onClick={() => setWorkspaceListHierarchyMode("by_project")}
             >
-              {t("project.filter.hierarchy.byProject")}
+              {t("project.pin.hierarchy.byProject")}
             </Button>
             <Button
               variant={workspaceListHierarchyMode === "by_node" ? "contained" : "outlined"}
               sx={{ fontSize: 11, textTransform: "none" }}
               onClick={() => setWorkspaceListHierarchyMode("by_node")}
             >
-              {t("project.filter.hierarchy.byNode")}
+              {t("project.pin.hierarchy.byNode")}
             </Button>
           </ButtonGroup>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
             <Typography variant="caption" color="text.secondary">
-              {t("project.filter.sections.projects")}
+              {t("project.pin.sections.projects")}
             </Typography>
             <Button size="small" sx={{ minWidth: 0, px: 0.75, py: 0.25, fontSize: 11 }} onClick={handleSelectAll}>
-              {t("project.filter.actions.all")}
+              {t("project.pin.actions.all")}
             </Button>
           </Stack>
           <TextField
@@ -124,7 +124,7 @@ export function ProjectFilterPopoverView() {
             size="small"
             fullWidth
             autoFocus
-            placeholder={t("project.filter.searchPlaceholder")}
+            placeholder={t("project.pin.searchPlaceholder")}
             onChange={(event) => setRepoQuickSearch(event.target.value)}
             sx={{
               "& .MuiInputBase-root": {
@@ -137,7 +137,7 @@ export function ProjectFilterPopoverView() {
             }}
             slotProps={{
               htmlInput: {
-                "aria-label": t("project.filter.searchAriaLabel"),
+                "aria-label": t("project.pin.searchAriaLabel"),
               },
             }}
           />

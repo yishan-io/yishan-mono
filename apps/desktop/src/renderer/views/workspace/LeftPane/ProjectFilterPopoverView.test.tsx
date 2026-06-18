@@ -37,14 +37,14 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
-        "project.actions.filter": "Filter",
-        "project.filter.actions.all": "Select all",
-        "project.filter.searchPlaceholder": "Quick search projects",
-        "project.filter.searchAriaLabel": "Quick search projects",
-        "project.filter.sections.hirarchy": "Hirarchy",
-        "project.filter.sections.projects": "Projects",
-        "project.filter.hierarchy.byProject": "By project",
-        "project.filter.hierarchy.byNode": "By node",
+        "project.actions.pin": "Pin projects",
+        "project.pin.actions.all": "All",
+        "project.pin.searchPlaceholder": "Search projects",
+        "project.pin.searchAriaLabel": "Search projects",
+        "project.pin.sections.hirarchy": "Hierarchy",
+        "project.pin.sections.projects": "Projects",
+        "project.pin.hierarchy.byProject": "By project",
+        "project.pin.hierarchy.byNode": "By node",
       };
 
       return translations[key] ?? key;
@@ -68,7 +68,7 @@ describe("ProjectFilterPopoverView", () => {
       </ThemeProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pin projects" }));
 
     const paper = document.querySelector(".MuiPopover-paper") as HTMLElement | null;
     expect(paper).toBeTruthy();

@@ -12,6 +12,8 @@ const (
 	MethodWorkspaceHealth             = "workspace.health"
 	MethodWorkspaceRepair             = "workspace.repair"
 	MethodWorkspaceForget             = "workspace.forget"
+	MethodWorkspaceOpenProject        = "workspace.openProject"
+	MethodWorkspaceCloseProject       = "workspace.closeProject"
 
 	MethodContextGetState         = "context.getState"
 	MethodContextSetCurrentOrg    = "context.setCurrentOrg"

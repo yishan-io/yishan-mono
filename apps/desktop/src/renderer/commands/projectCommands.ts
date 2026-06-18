@@ -8,6 +8,7 @@ import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
+import { warmupWorkspacesForProjects } from "./workspaceWarmupCommand";
 
 let latestWorkspaceSnapshotRequestId = 0;
 
@@ -110,6 +111,13 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
 
     workspaceStore.getState().load(selectedOrganization.id, projects, workspaces);
     syncTabStoreWithWorkspace(previousWorkspaces);
+
+    // Warm up workspaces for currently pinned projects so the daemon has them
+    // open and indexed for restart recovery. Already-open workspaces are skipped.
+    const pinnedProjectIds = workspaceStore.getState().displayProjectIds;
+    if (pinnedProjectIds.length > 0) {
+      void warmupWorkspacesForProjects(pinnedProjectIds);
+    }
   } catch (error) {
     console.error("Failed to load workspace snapshot", error);
   }

@@ -118,6 +118,31 @@ type workspaceForgetResult struct {
 	Removed     bool   `json:"removed"`
 }
 
+type workspaceOpenProjectEntry struct {
+	WorkspaceID  string `json:"workspaceId"`
+	WorktreePath string `json:"worktreePath"`
+	ProjectID    string `json:"projectId,omitempty"`
+	OrgID        string `json:"orgId,omitempty"`
+}
+
+type workspaceOpenProjectParams struct {
+	Workspaces []workspaceOpenProjectEntry `json:"workspaces"`
+}
+
+type workspaceOpenProjectResult struct {
+	Opened  []string `json:"opened"`
+	Skipped []string `json:"skipped"`
+	Errors  []string `json:"errors"`
+}
+
+type workspaceCloseProjectParams struct {
+	WorkspaceIDs []string `json:"workspaceIds"`
+}
+
+type workspaceCloseProjectResult struct {
+	Stopped []string `json:"stopped"`
+}
+
 type gitInspectParams struct {
 	WorkspaceID string `json:"workspaceId"`
 }

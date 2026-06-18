@@ -50,10 +50,18 @@ vi.mock("react-i18next", () => ({
         "project.filter.searchPlaceholder": "Quick search projects",
         "project.filter.searchAriaLabel": "Quick search projects",
         "project.filter.actions.all": "Select all",
+        "project.pin.actions.all": "All",
+        "project.pin.searchPlaceholder": "Search projects",
+        "project.pin.searchAriaLabel": "Search projects",
+        "project.pin.sections.hirarchy": "Hierarchy",
+        "project.pin.sections.projects": "Projects",
+        "project.pin.hierarchy.byProject": "By project",
+        "project.pin.hierarchy.byNode": "By node",
         "common.actions.cancel": "Cancel",
         "org.settings.title": "Organization settings",
         "project.list.title": "Projects",
         "project.actions.filter": "Filter",
+        "project.actions.pin": "Pin projects",
         "project.actions.addRepository": "Add project",
       };
 
@@ -142,7 +150,7 @@ describe("LeftPaneView deletion", () => {
     expect(screen.getByTestId("visible-repo-repo-1")).toBeTruthy();
     expect(screen.getByTestId("visible-repo-repo-2")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pin projects" }));
 
     // Uncheck one project
     const repo1Option = screen.getAllByText("Repo 1").at(-1);
@@ -157,7 +165,7 @@ describe("LeftPaneView deletion", () => {
     expect(screen.getByTestId("visible-repo-repo-2")).toBeTruthy();
 
     // Select all restores everything
-    fireEvent.click(screen.getByRole("button", { name: "Select all" }));
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
     rerender(<LeftPaneView />);
 
     expect(screen.getByTestId("visible-repo-repo-1")).toBeTruthy();
@@ -179,8 +187,8 @@ describe("LeftPaneView deletion", () => {
     expect(screen.getByTestId("visible-repo-repo-1")).toBeTruthy();
     expect(screen.queryByTestId("visible-repo-repo-2")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Quick search projects" }), {
+    fireEvent.click(screen.getByRole("button", { name: "Pin projects" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Search projects" }), {
       target: { value: "client" },
     });
     const popoverRepoOption = screen.getAllByText("Client Portal").at(-1);

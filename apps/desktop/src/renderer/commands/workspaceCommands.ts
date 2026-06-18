@@ -11,6 +11,7 @@ import { layoutStore } from "../store/settings/layoutStore";
 import type { WorkspaceStoreState } from "../store/types";
 import { workspaceStore } from "../store/workspaceStore";
 import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, workspaceUiStore } from "../store/workspaceUiStore";
+import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./workspaceWarmupCommand";
 
 export { createWorkspace } from "./workspaceCreateCommand";
 export { closeWorkspace } from "./workspaceCloseCommand";
@@ -146,9 +147,23 @@ export async function refreshWorkspacePullRequest(workspaceId: string): Promise<
   }
 }
 
-/** Stores visible repo ids for left-pane filtering state. */
+/** Stores visible repo ids for left-pane pinning state and triggers daemon warmup/close. */
 export function setDisplayRepoIds(repoIds: string[]) {
+  const previousDisplayIds = readWorkspaceStoreState().displayProjectIds;
   readWorkspaceStoreState().setDisplayProjectIds(repoIds);
+
+  const repoIdSet = new Set(repoIds);
+  const prevSet = new Set(previousDisplayIds);
+
+  const addedIds = repoIds.filter((id) => !prevSet.has(id));
+  const removedIds = previousDisplayIds.filter((id) => !repoIdSet.has(id));
+
+  if (addedIds.length > 0) {
+    void warmupWorkspacesForProjects(addedIds);
+  }
+  if (removedIds.length > 0) {
+    void closeWorkspacesForProjects(removedIds);
+  }
 }
 
 /** Stores last used external app id for quick-open actions. */

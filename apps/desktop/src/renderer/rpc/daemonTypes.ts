@@ -211,6 +211,29 @@ export type WorkspaceForgetOutput = {
   removed: boolean;
 };
 
+export type WorkspaceOpenProjectInput = {
+  workspaces: Array<{
+    workspaceId: string;
+    worktreePath: string;
+    projectId?: string;
+    orgId?: string;
+  }>;
+};
+
+export type WorkspaceOpenProjectOutput = {
+  opened: string[];
+  skipped: string[];
+  errors: string[];
+};
+
+export type WorkspaceCloseProjectInput = {
+  workspaceIds: string[];
+};
+
+export type WorkspaceCloseProjectOutput = {
+  stopped: string[];
+};
+
 export type WorkspaceStateChangedEvent = {
   workspaceId: string;
   state: string;
