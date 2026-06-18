@@ -1,5 +1,7 @@
-import { Box, Typography, useTheme } from "@mui/material";
-import { memo, useEffect, useId, useRef, useState } from "react";
+import { Box, IconButton, Tooltip, Typography, useTheme } from "@mui/material";
+import { memo, useEffect, useRef, useState } from "react";
+import { LuMaximize2 } from "react-icons/lu";
+import { DiagramZoomOverlay } from "./DiagramZoomOverlay";
 import { mermaidIframeRenderer } from "./mermaidIframeRenderer";
 
 type MermaidBlockProps = {
@@ -30,6 +32,8 @@ const MermaidBlock = memo(function MermaidBlock({ code }: MermaidBlockProps) {
   const theme = useTheme();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [svgContent, setSvgContent] = useState<string | null>(null);
+  const [overlayOpen, setOverlayOpen] = useState(false);
   const isDark = theme.palette.mode === "dark";
 
   // Per-component cache: stores last successful render to avoid redundant render calls.
@@ -44,6 +48,7 @@ const MermaidBlock = memo(function MermaidBlock({ code }: MermaidBlockProps) {
     // Skip render if code+theme haven't changed — reuse cached SVG.
     if (cachedRenderRef.current?.key === cacheKey) {
       containerRef.current.innerHTML = cachedRenderRef.current.svg;
+      setSvgContent(cachedRenderRef.current.svg);
       setError(null);
       return;
     }
@@ -60,11 +65,13 @@ const MermaidBlock = memo(function MermaidBlock({ code }: MermaidBlockProps) {
         if (!cancelled && containerRef.current) {
           containerRef.current.innerHTML = svg;
           cachedRenderRef.current = { key: cacheKey, svg };
+          setSvgContent(svg);
           setError(null);
         }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to render diagram");
+          setSvgContent(null);
           // Clear cache on error so next attempt with same code retries rendering.
           cachedRenderRef.current = null;
         }
@@ -115,18 +122,52 @@ const MermaidBlock = memo(function MermaidBlock({ code }: MermaidBlockProps) {
 
   return (
     <Box
-      ref={containerRef}
       sx={{
+        position: "relative",
         my: 1.5,
-        display: "flex",
-        justifyContent: "center",
-        overflow: "auto",
-        "& svg": {
-          maxWidth: "100%",
-          height: "auto",
-        },
+        "&:hover .diagram-expand-btn": { opacity: 1 },
       }}
-    />
+    >
+      <Box
+        ref={containerRef}
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          overflow: "auto",
+          "& svg": {
+            maxWidth: "100%",
+            height: "auto",
+          },
+        }}
+      />
+      <Tooltip title="Expand diagram">
+        <span>
+          <IconButton
+            className="diagram-expand-btn"
+            size="small"
+            onClick={() => setOverlayOpen(true)}
+            disabled={!svgContent}
+            sx={{
+              position: "absolute",
+              top: 4,
+              right: 4,
+              opacity: 0,
+              transition: "opacity 0.15s",
+              bgcolor: "background.paper",
+              border: 1,
+              borderColor: "divider",
+              "&:hover": { bgcolor: "action.hover" },
+              p: 0.5,
+            }}
+          >
+            <LuMaximize2 size={14} />
+          </IconButton>
+        </span>
+      </Tooltip>
+      {overlayOpen && svgContent && (
+        <DiagramZoomOverlay svgContent={svgContent} onClose={() => setOverlayOpen(false)} />
+      )}
+    </Box>
   );
 });
 
