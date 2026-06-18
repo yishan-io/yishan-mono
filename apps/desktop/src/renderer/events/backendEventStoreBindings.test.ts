@@ -167,6 +167,28 @@ function createWorkspaceSnapshotChangedHarness() {
   };
 }
 
+function createWorkspaceCreateCompletedHarness() {
+  let listener: ((payload: RpcFrontendMessagePayload<"workspaceCreateCompleted">) => void) | null = null;
+  const unsubscribe = vi.fn();
+  const subscribeWorkspaceCreateCompleted = vi.fn(
+    (nextListener: (payload: RpcFrontendMessagePayload<"workspaceCreateCompleted">) => void) => {
+      listener = nextListener;
+      return () => {
+        unsubscribe();
+        listener = null;
+      };
+    },
+  );
+
+  return {
+    subscribeWorkspaceCreateCompleted,
+    unsubscribe,
+    emit(payload: RpcFrontendMessagePayload<"workspaceCreateCompleted">) {
+      listener?.(payload);
+    },
+  };
+}
+
 function createTerminalSessionChangedHarness() {
   let listener: ((payload: RpcFrontendMessagePayload<"terminalSessionChanged">) => void) | null = null;
   const unsubscribe = vi.fn();
@@ -307,6 +329,7 @@ describe("createBackendEventStoreBindings", () => {
     const recordWorkspaceUnreadNotification = vi.fn();
     const dispatchSystemNotification = vi.fn(async () => undefined);
     const playNotificationSound = vi.fn(async () => undefined);
+    const loadWorkspaceSnapshot = vi.fn(async () => undefined);
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const startBindings = createBackendEventStoreBindings({
@@ -323,6 +346,7 @@ describe("createBackendEventStoreBindings", () => {
       recordWorkspaceUnreadNotification,
       dispatchSystemNotification,
       playNotificationSound,
+      loadWorkspaceSnapshot,
     });
 
     const stopBindings = startBindings();
@@ -513,6 +537,108 @@ describe("createBackendEventStoreBindings", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("refreshes workspace snapshot when create completion arrives before the placeholder exists", async () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const createCompletedHarness = createWorkspaceCreateCompletedHarness();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+    const loadWorkspaceSnapshot = vi.fn(async () => undefined);
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      subscribeWorkspaceCreateCompleted: createCompletedHarness.subscribeWorkspaceCreateCompleted,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+      loadWorkspaceSnapshot,
+    });
+
+    const stopBindings = startBindings();
+    createCompletedHarness.emit({
+      workspaceId: "workspace-1",
+      worktreePath: "/tmp/repo/.worktrees/feature-a",
+    });
+    await Promise.resolve();
+
+    expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+    stopBindings();
+  });
+
+  it("updates the placeholder workspace on create completion without forcing a snapshot reload", async () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const createCompletedHarness = createWorkspaceCreateCompletedHarness();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+    const loadWorkspaceSnapshot = vi.fn(async () => undefined);
+
+    workspaceStore.setState((state) => ({
+      ...state,
+      workspaces: [
+        {
+          id: "workspace-1",
+          organizationId: "org-1",
+          projectId: "project-1",
+          repoId: "project-1",
+          name: "feature-a",
+          title: "feature-a",
+          sourceBranch: "main",
+          branch: "feature-a",
+          summaryId: "workspace-1",
+          worktreePath: "",
+          nodeId: "node-1",
+          kind: "managed",
+        },
+      ],
+    }));
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      subscribeWorkspaceCreateCompleted: createCompletedHarness.subscribeWorkspaceCreateCompleted,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+      loadWorkspaceSnapshot,
+    });
+
+    const stopBindings = startBindings();
+    createCompletedHarness.emit({
+      workspaceId: "workspace-1",
+      worktreePath: "/tmp/repo/.worktrees/feature-a",
+    });
+    await Promise.resolve();
+
+    expect(workspaceStore.getState().workspaces).toEqual([
+      expect.objectContaining({
+        id: "workspace-1",
+        worktreePath: "/tmp/repo/.worktrees/feature-a",
+      }),
+    ]);
+    expect(loadWorkspaceSnapshot).not.toHaveBeenCalled();
+    stopBindings();
   });
 
   it("tracks running counts from observer lifecycle notification payloads without double-counting duplicates", () => {

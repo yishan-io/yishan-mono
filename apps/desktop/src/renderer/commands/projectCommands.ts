@@ -9,6 +9,12 @@ import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
 
+let latestWorkspaceSnapshotRequestId = 0;
+
+function isLatestWorkspaceSnapshotRequest(requestId: number): boolean {
+  return requestId === latestWorkspaceSnapshotRequestId;
+}
+
 async function inspectLocalRepository(path: string): Promise<{
   isGitRepository: boolean;
   remoteUrl?: string;
@@ -54,6 +60,7 @@ export async function inspectLocalProjectSource(path: string): Promise<{
 
 /** Loads the latest workspace snapshot and syncs local desktop/daemon state to it. */
 export async function loadWorkspaceSnapshot(): Promise<void> {
+  const requestId = ++latestWorkspaceSnapshotRequestId;
   const previousWorkspaces = workspaceStore.getState().workspaces;
 
   try {
@@ -66,6 +73,10 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
         : organizations[0];
 
     if (!selectedOrganization) {
+      if (!isLatestWorkspaceSnapshotRequest(requestId)) {
+        return;
+      }
+
       workspaceStore.getState().load("", [], []);
       syncTabStoreWithWorkspace(previousWorkspaces);
       return;
@@ -76,6 +87,10 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     });
     const projects: ProjectRecord[] = projectsWithWorkspaces.map(({ workspaces: _, ...project }) => project);
     const workspaces = projectsWithWorkspaces.flatMap((project) => project.workspaces ?? []);
+
+    if (!isLatestWorkspaceSnapshotRequest(requestId)) {
+      return;
+    }
 
     const persistedWorkspacePreferences = readPersistedWorkspacePreferencesByOrg(
       typeof localStorage === "undefined" ? undefined : localStorage,
