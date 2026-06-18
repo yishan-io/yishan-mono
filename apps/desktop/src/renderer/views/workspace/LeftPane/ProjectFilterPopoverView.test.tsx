@@ -14,6 +14,7 @@ const mocked = vi.hoisted(() => {
       setDisplayProjectIds: (repoIds: string[]) => void;
       workspaceListHierarchyMode: "by_project" | "by_node";
       setWorkspaceListHierarchyMode: (mode: "by_project" | "by_node") => void;
+      setOrderedWorkspaceIds: (ids: string[]) => void;
     };
   } = {
     current: {
@@ -22,6 +23,7 @@ const mocked = vi.hoisted(() => {
       setDisplayProjectIds: () => undefined,
       workspaceListHierarchyMode: "by_project",
       setWorkspaceListHierarchyMode: () => undefined,
+      setOrderedWorkspaceIds: () => undefined,
     },
   };
 

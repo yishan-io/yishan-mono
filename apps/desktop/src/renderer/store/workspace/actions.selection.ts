@@ -13,6 +13,7 @@ type WorkspaceSelectionActions = Pick<
   | "setDisplayProjectIds"
   | "setLastUsedExternalAppId"
   | "setWorkspaceListHierarchyMode"
+  | "setOrderedWorkspaceIds"
 >;
 
 export function createWorkspaceSelectionActions(
@@ -96,6 +97,9 @@ export function createWorkspaceSelectionActions(
     },
     setWorkspaceListHierarchyMode: (mode) => {
       set({ workspaceListHierarchyMode: mode });
+    },
+    setOrderedWorkspaceIds: (ids) => {
+      set({ orderedWorkspaceIds: ids });
     },
   };
 }

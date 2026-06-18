@@ -59,6 +59,8 @@ const mocked = vi.hoisted(() => {
       workspaceAgentStatusByWorkspaceId: Record<string, "running" | "waiting_input">;
       workspaceUnreadToneByWorkspaceId: Record<string, "success" | "error">;
       markWorkspaceNotificationsRead: (workspaceId: string) => void;
+      orderedWorkspaceIds: string[];
+      setOrderedWorkspaceIds: (ids: string[]) => void;
     };
   } = {
     current: {
@@ -88,6 +90,8 @@ const mocked = vi.hoisted(() => {
       workspaceAgentStatusByWorkspaceId: {},
       workspaceUnreadToneByWorkspaceId: {},
       markWorkspaceNotificationsRead: () => {},
+      orderedWorkspaceIds: [],
+      setOrderedWorkspaceIds: () => {},
     },
   };
 
@@ -276,6 +280,8 @@ function renderRepoList(
     workspaceAgentStatusByWorkspaceId: {},
     workspaceUnreadToneByWorkspaceId: {},
     markWorkspaceNotificationsRead: mocked.markWorkspaceNotificationsRead,
+    orderedWorkspaceIds: [],
+    setOrderedWorkspaceIds: vi.fn(),
   };
 
   const queryClient = new QueryClient();
@@ -430,6 +436,8 @@ describe("ProjectListView", () => {
       workspaceAgentStatusByWorkspaceId: {},
       workspaceUnreadToneByWorkspaceId: {},
       markWorkspaceNotificationsRead: mocked.markWorkspaceNotificationsRead,
+      orderedWorkspaceIds: [],
+      setOrderedWorkspaceIds: vi.fn(),
     };
     renderProjectListView();
 

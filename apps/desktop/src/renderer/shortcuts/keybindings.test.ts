@@ -66,6 +66,7 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       organizationPreferencesById: {},
       fileTreeRefreshVersion: 0,
       workspaceListHierarchyMode: "by_project",
+      orderedWorkspaceIds: [],
       setSelectedProjectId: vi.fn(),
       setSelectedWorkspaceId: vi.fn(),
       setDisplayProjectIds: vi.fn(),
@@ -86,6 +87,7 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       setWorkspacePullRequest: vi.fn(),
       setWorkspaceCurrentBranch: vi.fn(),
       incrementGitRefreshVersion: vi.fn(),
+      setOrderedWorkspaceIds: vi.fn(),
     } as WorkspaceStoreState,
 
     splitPaneStoreState: {

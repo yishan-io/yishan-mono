@@ -205,24 +205,20 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
 
   if (target.command === "workspace.selectPreviousWorkspace" || target.command === "workspace.selectNextWorkspace") {
     const direction = target.command === "workspace.selectNextWorkspace" ? 1 : -1;
-    const displayProjectIds = new Set(context.workspaceStoreState.displayProjectIds ?? []);
-    const visibleWorkspaces = context.workspaceStoreState.workspaces.filter((workspace) => {
-      const projectId = workspace.projectId ?? workspace.repoId;
-      return displayProjectIds.has(projectId);
-    });
-    if (visibleWorkspaces.length === 0) {
+    const orderedIds = context.workspaceStoreState.orderedWorkspaceIds;
+    if (orderedIds.length === 0) {
       return false;
     }
 
     const currentId = context.workspaceStoreState.selectedWorkspaceId;
-    const currentIndex = visibleWorkspaces.findIndex((workspace) => workspace.id === currentId);
-    const nextIndex = (currentIndex + direction + visibleWorkspaces.length) % visibleWorkspaces.length;
-    const nextWorkspace = visibleWorkspaces[nextIndex];
-    if (!nextWorkspace || nextWorkspace.id === currentId) {
+    const currentIndex = orderedIds.findIndex((id) => id === currentId);
+    const nextIndex = (currentIndex + direction + orderedIds.length) % orderedIds.length;
+    const nextId = orderedIds[nextIndex];
+    if (!nextId || nextId === currentId) {
       return false;
     }
 
-    setSelectedWorkspace(nextWorkspace.id);
+    setSelectedWorkspace(nextId);
     event.preventDefault();
     return true;
   }

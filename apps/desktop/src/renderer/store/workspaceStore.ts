@@ -34,6 +34,7 @@ export const workspaceStore = create<WorkspaceStoreState>()(
       organizationPreferencesById: {},
       fileTreeRefreshVersion: 0,
       workspaceListHierarchyMode: "by_project",
+      orderedWorkspaceIds: [],
       ...createWorkspaceStoreActions(set, get),
     })),
     {

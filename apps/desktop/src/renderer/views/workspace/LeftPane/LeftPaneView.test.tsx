@@ -15,6 +15,7 @@ const mocked = vi.hoisted(() => {
       workspaces: Array<{ id: string; repoId: string; name: string; branch: string }>;
       displayProjectIds: string[];
       setDisplayProjectIds: (repoIds: string[]) => void;
+      setOrderedWorkspaceIds: (ids: string[]) => void;
     };
   } = {
     current: {
@@ -22,6 +23,7 @@ const mocked = vi.hoisted(() => {
       workspaces: [],
       displayProjectIds: [],
       setDisplayProjectIds,
+      setOrderedWorkspaceIds: () => {},
     },
   };
 
@@ -123,6 +125,7 @@ describe("LeftPaneView deletion", () => {
       workspaces: [{ id: "workspace-1", repoId: "repo-1", name: "Feature A", branch: "feature-a" }],
       displayProjectIds: ["repo-1"],
       setDisplayProjectIds: mocked.setDisplayProjectIds,
+      setOrderedWorkspaceIds: () => {},
     };
   });
 

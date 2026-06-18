@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { api } from "../../../api/client";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
@@ -177,6 +177,10 @@ export function useProjectListTreeData(input: {
     workspaceByProjectId,
     workspaceUnreadToneByWorkspaceId,
   ]);
+
+  useEffect(() => {
+    workspaceStore.getState().setOrderedWorkspaceIds(treeWorkspaces.map((workspace) => workspace.id));
+  }, [treeWorkspaces]);
 
   const expandedTreeItems = useMemo(() => {
     const items: string[] = [];
