@@ -794,11 +794,7 @@ function handleTerminalSessionEvent(payload: {
     const requestedTabId = payload.tabId?.trim();
     if (requestedTabId) {
       const requestedTerminalTab = tabState.tabs.find(
-        (tab) =>
-          tab.id === requestedTabId &&
-          tab.workspaceId === payload.workspaceId &&
-          tab.kind === "terminal" &&
-          !tab.data.sessionId,
+        (tab) => tab.id === requestedTabId && tab.workspaceId === payload.workspaceId && tab.kind === "terminal",
       );
       if (requestedTerminalTab) {
         tabState.setTerminalTabSessionId(requestedTabId, payload.sessionId);

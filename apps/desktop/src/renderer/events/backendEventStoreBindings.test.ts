@@ -1347,4 +1347,89 @@ describe("createBackendEventStoreBindings", () => {
     });
     stopBindings();
   });
+
+  it("binds a created terminal session onto the requesting tab even when the tab already has a stale session id (daemon restart)", () => {
+    // Regression: when the daemon restarts, existing terminal tabs keep their old
+    // (now-stale) sessionId in the store.  reconnectAllTerminalSessions creates a new
+    // daemon session carrying the original tabId.  The lifecycle event must update the
+    // existing tab rather than opening a duplicate.
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const terminalSessionHarness = createTerminalSessionChangedHarness();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+
+    workspaceStore.setState({
+      ...workspaceStore.getState(),
+      workspaces: [
+        {
+          id: "workspace-1",
+          name: "Workspace 1",
+          title: "Workspace 1",
+          repoId: "repo-1",
+          sourceBranch: "main",
+          branch: "main",
+          summaryId: "summary-1",
+        },
+      ],
+      selectedWorkspaceId: "workspace-1",
+    });
+    // Tab already has a stale sessionId from the previous daemon run.
+    tabStore.setState({
+      ...tabStore.getState(),
+      tabs: [
+        {
+          id: "tab-1",
+          workspaceId: "workspace-1",
+          title: "Terminal",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Terminal", sessionId: "old-session-1", paneId: "pane-tab-1" },
+        },
+      ],
+      selectedTabId: "tab-1",
+      selectedTabIdByWorkspaceId: { "workspace-1": "tab-1" },
+    });
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      subscribeTerminalSessionChanged: terminalSessionHarness.subscribeTerminalSessionChanged,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+    });
+
+    const stopBindings = startBindings();
+    // New daemon created a replacement session and sent the event with the original tabId.
+    terminalSessionHarness.emit({
+      action: "created",
+      sessionId: "new-session-1",
+      workspaceId: "workspace-1",
+      tabId: "tab-1",
+      paneId: "pane-tab-1",
+      pid: 5678,
+      status: "running",
+    });
+
+    // Must remain exactly one tab — no duplicate opened.
+    expect(tabStore.getState().tabs).toHaveLength(1);
+    // The existing tab must now carry the new session id.
+    expect(tabStore.getState().tabs[0]).toMatchObject({
+      id: "tab-1",
+      kind: "terminal",
+      data: { sessionId: "new-session-1" },
+    });
+
+    stopBindings();
+  });
 });
