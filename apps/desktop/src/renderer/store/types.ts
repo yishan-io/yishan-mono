@@ -224,6 +224,7 @@ export type WorkspaceStoreState = {
   organizationPreferencesById?: Record<string, WorkspaceStoreOrganizationPreference>;
   fileTreeRefreshVersion: number;
   workspaceListHierarchyMode: "by_project" | "by_node";
+  orderedWorkspaceIds: string[];
   setSelectedProjectId: (projectId: string) => void;
   setSelectedWorkspaceId: (workspaceId: string) => void;
   setDisplayProjectIds: (projectIds: string[]) => void;
@@ -285,6 +286,7 @@ export type WorkspaceStoreState = {
   setWorkspacePullRequest: (workspaceId: string, pullRequest?: DaemonWorkspacePullRequest) => void;
   setWorkspaceCurrentBranch: (workspaceId: string, branch: string) => void;
   incrementGitRefreshVersion: (workspaceWorktreePath: string) => void;
+  setOrderedWorkspaceIds: (ids: string[]) => void;
 };
 
 export type WorkspaceStoreOrganizationPreference = {
@@ -320,6 +322,7 @@ export type WorkspaceStoreActions = Pick<
   | "setWorkspacePullRequest"
   | "setWorkspaceCurrentBranch"
   | "incrementGitRefreshVersion"
+  | "setOrderedWorkspaceIds"
 >;
 
 export type WorkspaceStoreCreator = StateCreator<
