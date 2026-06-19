@@ -384,3 +384,51 @@ func commandFromDefinition(t *testing.T, definition any) string {
 	}
 	return command
 }
+
+// ── opencode memory plugin persona injection ──────────────────────────────────
+
+func TestOpenCodeMemoryPlugin_ContainsPersonaMarker(t *testing.T) {
+	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker)
+
+	if !strings.Contains(content, "PERSONA_MARKER") {
+		t.Error("memory plugin should define PERSONA_MARKER constant")
+	}
+	if !strings.Contains(content, ".yishan/memory/PERSONA.md") {
+		t.Error("memory plugin should reference PERSONA.md path")
+	}
+	if !strings.Contains(content, "PERSONA_PATH") {
+		t.Error("memory plugin should define PERSONA_PATH")
+	}
+}
+
+func TestOpenCodeMemoryPlugin_DoubleInjectionGuardCoversPersonaMarker(t *testing.T) {
+	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker)
+
+	// The guard must check for PERSONA_MARKER, not just CONTEXT_MARKER,
+	// so sessions that only have persona (no project context) are also guarded.
+	if !strings.Contains(content, "PERSONA_MARKER") {
+		t.Error("memory plugin guard should reference PERSONA_MARKER")
+	}
+	// Verify it does NOT only check CONTEXT_MARKER (old single-marker guard).
+	// It should check both.
+	if !strings.Contains(content, "CONTEXT_MARKER") {
+		t.Error("memory plugin guard should still reference CONTEXT_MARKER")
+	}
+}
+
+func TestOpenCodeMemoryPlugin_PersonaPrependedBeforeProjectContext(t *testing.T) {
+	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker)
+
+	// Verify the persona prepend pattern: persona wraps around contextBlock.
+	// The template should have: contextBlock = `${PERSONA_MARKER}...\n\n---\n\n${contextBlock}`
+	// This ensures persona comes before project context in the injected message.
+	if !strings.Contains(content, "${PERSONA_MARKER}") {
+		t.Error("memory plugin should embed persona marker in injected block")
+	}
+	// The persona prepend line should include both the persona marker and a reference
+	// to the existing contextBlock, meaning persona + separator + project context.
+	// Check for the "---" separator that signals persona ends and project begins.
+	if !strings.Contains(content, "---") {
+		t.Error("memory plugin should use a separator between persona and project context")
+	}
+}

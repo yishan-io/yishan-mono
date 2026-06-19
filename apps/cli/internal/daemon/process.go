@@ -403,6 +403,13 @@ func restoreIndexedWorkspaces(handler *JSONRPCHandler) error {
 // process (which inherits only a sparse launchd/systemd PATH) can find CLIs
 // installed in locations like ~/.opencode/bin or /opt/homebrew/bin.
 func buildRunAgentFunc() memory.RunAgentFunc {
+	return BuildRunAgentFunc()
+}
+
+// BuildRunAgentFunc is the exported version of buildRunAgentFunc.
+// It allows CLI commands (outside the daemon process) to build an agent runner
+// using the same resolution logic the daemon uses.
+func BuildRunAgentFunc() memory.RunAgentFunc {
 	return func(ctx context.Context, agentKind, model, prompt, workDir string) (string, error) {
 		cmd, err := agentcmd.ResolveCommand(agentKind, prompt, model, false)
 		if err != nil {

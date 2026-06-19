@@ -265,6 +265,11 @@ func runSetupAll(_ *cobra.Command, _ []string) error {
 		allErrors = append(allErrors, "opencode-commands: "+err.Error())
 	}
 
+	if err := setup.EnsurePersonaSetup(); err != nil {
+		log.Warn().Err(err).Msg("setup: persona template install failed")
+		allErrors = append(allErrors, "persona: "+err.Error())
+	}
+
 	if len(allErrors) > 0 {
 		return output.PrintAny(map[string]any{
 			"action":  "partial",

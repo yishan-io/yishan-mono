@@ -77,6 +77,9 @@ func (h *JSONRPCHandler) ServeAgentHook(w http.ResponseWriter, r *http.Request) 
 			ws := handle.Workspace()
 			h.memory.SummarizeSession(event.agent, ws.Path, ws.ProjectID)
 		}
+		// Trigger the daily persona batch independently of workspace lookup — persona
+		// extraction is user-level (not workspace-level) so it fires on every stop.
+		h.memory.MaybeRunDailyPersonaBatch(event.agent)
 	}
 
 	if notification := buildHookNotificationPayload(event); notification != nil {

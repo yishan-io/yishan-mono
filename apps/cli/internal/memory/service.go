@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 )
@@ -20,6 +21,9 @@ type Service struct {
 	// summarizeQ serializes summarization per context root.
 	// key: canonical context root path  value: *summarizeQueue
 	summarizeQ sync.Map
+
+	// persona holds the daily persona batch extraction state.
+	persona *personaService
 }
 
 // summarizeQueue ensures at most one summarization is in flight per context
@@ -79,6 +83,7 @@ func NewService(dbPath string, summarizerConfig SummarizerConfig, runAgent RunAg
 		config: summarizerConfig,
 	}
 	svc.summarizer = NewSummarizer(summarizerConfig, runAgent)
+	svc.persona = newPersonaService(summarizerConfig, runAgent)
 	return svc, nil
 }
 
@@ -98,6 +103,9 @@ func (s *Service) UpdateSummarizerConfig(cfg SummarizerConfig) {
 	s.config = cfg
 	if s.summarizer != nil {
 		s.summarizer.UpdateConfig(cfg)
+	}
+	if s.persona != nil {
+		s.persona.summarizer.UpdateConfig(cfg)
 	}
 }
 
@@ -213,6 +221,83 @@ func (s *Service) handleSummarizeResult(req summarizeRequest, result SummarizeRe
 func (s *Service) getOrCreateQueue(contextRoot string) *summarizeQueue {
 	v, _ := s.summarizeQ.LoadOrStore(contextRoot, &summarizeQueue{})
 	return v.(*summarizeQueue)
+}
+
+// MaybeRunDailyPersonaBatch fires a daily persona extraction batch if the calendar
+// day has changed since the last run. It is called from hook_ingress on every
+// session stop event. The batch runs asynchronously so it never blocks the hook.
+func (s *Service) MaybeRunDailyPersonaBatch(agent string) {
+	if s.persona == nil {
+		return
+	}
+	s.persona.maybeRunBatch(agent)
+}
+
+// personaService manages the daily persona batch extraction state.
+type personaService struct {
+	summarizer         *PersonaSummarizer
+	dbReader           *agentDBReader
+	mu                 sync.Mutex
+	lastExtractionDate string // "YYYY-MM-DD" UTC, empty = never run
+}
+
+func newPersonaService(cfg SummarizerConfig, runAgent RunAgentFunc) *personaService {
+	return &personaService{
+		summarizer: NewPersonaSummarizer(cfg, runAgent),
+		dbReader:   newAgentDBReader(),
+	}
+}
+
+// maybeRunBatch starts the daily batch goroutine when the calendar day has
+// advanced past lastExtractionDate. Guards against concurrent runs with a mutex.
+func (p *personaService) maybeRunBatch(agent string) {
+	today := time.Now().UTC().Format("2006-01-02")
+
+	p.mu.Lock()
+	if today == p.lastExtractionDate {
+		p.mu.Unlock()
+		return
+	}
+	p.lastExtractionDate = today
+	p.mu.Unlock()
+
+	// Skip the goroutine entirely if the summarizer isn't configured, but still
+	// advance the date so we don't re-trigger on every subsequent session stop.
+	if !p.summarizer.Enabled() {
+		return
+	}
+
+	// Extract for yesterday's sessions.
+	yesterday := time.Now().UTC().AddDate(0, 0, -1)
+	go p.runBatch(agent, yesterday)
+}
+
+// runBatch performs the actual extraction for the given date. Runs in a goroutine.
+func (p *personaService) runBatch(agent string, date time.Time) {
+	sessions, err := p.dbReader.ReadSessionsForDate(agent, date)
+	if err != nil {
+		log.Debug().Err(err).Str("agent", agent).Msg("persona batch: read sessions failed")
+		return
+	}
+	if len(sessions) == 0 {
+		log.Debug().Str("agent", agent).Str("date", date.Format("2006-01-02")).Msg("persona batch: no sessions found")
+		return
+	}
+
+	result, err := p.summarizer.SummarizeForPersona(agent, sessions)
+	if err != nil {
+		if errors.Is(err, ErrAgentNotFound) {
+			log.Debug().Err(err).Str("agent", agent).Msg("persona batch: agent binary not found, skipping")
+		} else {
+			log.Warn().Err(err).Str("agent", agent).Msg("persona batch: extraction failed")
+		}
+		return
+	}
+	if result.Skipped {
+		log.Debug().Str("agent", agent).Msg("persona batch: skipped")
+		return
+	}
+	log.Info().Str("agent", agent).Str("path", result.WrittenPath).Msg("persona batch: written")
 }
 
 func GlobalMemoryDir() (string, error) {

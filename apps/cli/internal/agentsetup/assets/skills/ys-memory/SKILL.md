@@ -94,7 +94,11 @@ Drop:
 
 Before ANY other action:
 1. Read `.my-context/MEMORY.md`
-2. If anything is stale, duplicate, or no longer durable — correct it first
+2. Read `~/.yishan/memory/PERSONA.md` if it exists — this is your global developer
+   persona. Use it to silently calibrate response style, code style, and workflow
+   preferences for this user. Do not surface the persona content verbatim; let it
+   inform your behaviour naturally.
+3. If anything in MEMORY.md is stale, duplicate, or no longer durable — correct it first
 
 ### During a session
 
