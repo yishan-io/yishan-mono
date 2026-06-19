@@ -34,6 +34,16 @@ Use me after `ys-plan` and before `ys-verify`.
 6. **Use `getErrorMessage(error)` not inline error handling.** Use `generateId()` not `crypto.randomUUID()`.
 7. **Never commit unless explicitly asked.**
 
+## Simplicity Rules
+
+Apply these while building each step:
+
+1. **Prefer deletion over addition.** Remove parallel code paths, duplicate sources of truth, and scaffolding if the task does not require them.
+2. **Prefer stdlib/native behavior before custom code.** Use built-in language or platform features before adding helpers or dependencies.
+3. **Prefer the fewest files possible.** If the change can stay in one existing file cleanly, do that.
+4. **Do not add abstractions for one caller.** No interface, factory, config, or layer unless the task already needs multiple real consumers.
+5. **Leave one minimal check for non-trivial logic.** Keep tests small and targeted; do not overbuild the test surface for trivial code.
+
 ## Workflow
 
 ### Building a task
@@ -43,7 +53,7 @@ Use me after `ys-plan` and before `ys-verify`.
 3. For each step:
    a. Announce the step being executed.
    b. Read any files the step references.
-   c. Write or edit the code.
+   c. Write or edit the code, following the simplicity rules before adding any new structure.
    d. Write unit tests for the new/changed code.
    e. Run the tests for the affected area. If they fail, fix before proceeding.
    f. Mark the step as done in `plan.md` by appending ` (done)` or adding a checkmark.

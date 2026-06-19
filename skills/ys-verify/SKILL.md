@@ -34,12 +34,17 @@ Run through every item. Do not skip.
 - Review all changed files (`git diff` or `git status`).
 - Look for:
   - Dead code or commented-out blocks
+  - Over-engineering: duplicate sources of truth, speculative abstractions, config nobody sets, or layers with one caller
+  - Hand-rolled standard-library or platform behavior that should be replaced with the built-in equivalent
+  - Dependencies or helper modules used for one trivial behavior the language or platform already provides
+  - Longer code paths that can be safely shrunk without changing behavior
   - Missing error handling
   - Hardcoded values that should be configurable
   - Logging of secrets or sensitive data
   - Race conditions (Go goroutines without exit conditions)
   - Missing cleanup (subscriptions, intervals, file handles)
   - Violations of the coding guide (`docs/coding-guide.md`)
+- Prefer deleting complexity over adding more structure. If you find over-engineering, cut it before sign-off.
 - Flag any issues found and fix them.
 
 ### 3. Lint and typecheck
