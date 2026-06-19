@@ -11,9 +11,6 @@ import (
 	"yishan/apps/relay/internal/auth"
 )
 
-// ErrNodeOffline is returned when attempting to send to a disconnected node.
-var ErrNodeOffline = errNodeOffline
-
 // ---------------------------------------------------------------------------
 // NodeSession represents a single connected node.
 // ---------------------------------------------------------------------------

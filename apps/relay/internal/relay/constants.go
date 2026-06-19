@@ -6,7 +6,7 @@ import (
 )
 
 // errNodeOffline is returned when attempting to send to a disconnected node.
-var errNodeOffline = errors.New("node is offline")
+var ErrNodeOffline = errors.New("node is offline")
 
 // WebSocket close codes.
 const (
@@ -39,6 +39,3 @@ const (
 	// shutdownTimeout is the maximum time for graceful HTTP server shutdown.
 	shutdownTimeout = 10 * time.Second
 )
-
-// Minute-bucket format for idempotency keys.
-const minuteBucketFormat = "2006-01-02T15:04"

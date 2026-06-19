@@ -124,7 +124,7 @@ func (s *Server) HandlePublishOrgEvent(w http.ResponseWriter, r *http.Request) {
 		params["metadata"] = body.Metadata
 	}
 
-	notified := s.broadcastOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, params)
+	notified := s.sessions.SendOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, params)
 	log.Info().
 		Str("organizationId", organizationID).
 		Str("resource", resource).
@@ -324,7 +324,7 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 			log.Warn().Str("nodeId", nodeID).Msg("terminal.session.changed missing organizationId")
 			return true
 		}
-		go s.broadcastOrgNotification(orgID, MethodTerminalSessionChanged, req.Params)
+		go s.sessions.SendOrgNotification(orgID, MethodTerminalSessionChanged, req.Params)
 		return true
 
 	default:
@@ -525,10 +525,6 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		log.Error().Err(err).Msg("failed to write json response")
 	}
-}
-
-func (s *Server) broadcastOrgNotification(organizationID string, method string, params any) int {
-	return s.sessions.SendOrgNotification(organizationID, method, params)
 }
 
 func (s *Server) addClient(client *clientConn) {
