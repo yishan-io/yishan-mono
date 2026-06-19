@@ -1,10 +1,9 @@
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
-import type { WorkspaceStoreState } from "../store/types";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../store/workspaceStore";
 import { workspaceUiStore } from "../store/workspaceUiStore";
 import { notifyLifecycleScriptWarnings } from "./workspaceCreateCommand";
+import { readWorkspaceStoreState } from "./workspaceStoreHelpers";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
 
 type CloseWorkspaceResponse = {
@@ -13,22 +12,6 @@ type CloseWorkspaceResponse = {
   lifecycleScriptWarnings: import("../store/workspaceLifecycleNoticeStore").WorkspaceLifecycleScriptWarning[];
   terminalCleanupErrors?: string[];
 };
-
-type WorkspaceStoreFacade = typeof workspaceStore & {
-  getState?: () => WorkspaceStoreState;
-};
-
-/** Reads workspace store state for both real Zustand stores and selector-only test doubles. */
-function readWorkspaceStoreState(): WorkspaceStoreState {
-  const facade = workspaceStore as WorkspaceStoreFacade;
-  if (typeof facade.getState === "function") {
-    return facade.getState();
-  }
-
-  return (
-    workspaceStore as unknown as (selector: (state: WorkspaceStoreState) => WorkspaceStoreState) => WorkspaceStoreState
-  )((state) => state);
-}
 
 function formatWorkspaceCloseError(error: unknown): string {
   const message = error instanceof Error ? error.message : "Workspace close failed.";

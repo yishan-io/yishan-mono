@@ -3,14 +3,13 @@ import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
 import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore";
 import { tabStore } from "../store/tabStore";
-import type { WorkspaceStoreState } from "../store/types";
 import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
 import {
   type WorkspaceLifecycleScriptWarning,
   enqueueWorkspaceErrorNotice,
   enqueueWorkspaceLifecycleWarnings,
 } from "../store/workspaceLifecycleNoticeStore";
-import { workspaceStore } from "../store/workspaceStore";
+import { readWorkspaceStoreState } from "./workspaceStoreHelpers";
 
 type CreateWorkspaceInput = {
   projectId: string;
@@ -35,10 +34,6 @@ type CreateWorkspaceResponse = {
   status: string;
   lifecycleScriptWarnings: WorkspaceLifecycleScriptWarning[];
   remoteSyncWarning?: string;
-};
-
-type WorkspaceStoreFacade = typeof workspaceStore & {
-  getState?: () => WorkspaceStoreState;
 };
 
 /**
@@ -100,18 +95,6 @@ export function notifyLifecycleScriptWarnings(
 
 function isReauthRequiredRemoteSyncWarning(message: string): boolean {
   return /authenticated api session|refresh token|unauthorized|yishan login/i.test(message);
-}
-
-/** Reads workspace store state for both real Zustand stores and selector-only test doubles. */
-function readWorkspaceStoreState(): WorkspaceStoreState {
-  const facade = workspaceStore as WorkspaceStoreFacade;
-  if (typeof facade.getState === "function") {
-    return facade.getState();
-  }
-
-  return (
-    workspaceStore as unknown as (selector: (state: WorkspaceStoreState) => WorkspaceStoreState) => WorkspaceStoreState
-  )((state) => state);
 }
 
 /** Creates one workspace by calling backend service when available, then appending it in store state. */

@@ -2,32 +2,28 @@ import { api } from "../api";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { sessionStore } from "../store/sessionStore";
 
-/** Updates one organization node scope in the selected organization. */
-export async function updateNodeScope(nodeId: string, scope: "private" | "shared") {
+const errNoOrgSelected = "No organization selected.";
+
+function resolveOrgId(): string {
   const orgId = sessionStore.getState().selectedOrganizationId;
-
   if (!orgId) {
-    throw new Error("No organization selected.");
+    throw new Error(errNoOrgSelected);
   }
+  return orgId;
+}
 
-  try {
-    return await api.node.updateScope(orgId, nodeId, scope);
-  } catch (error) {
+function wrapNodeCommand<T>(fn: (orgId: string) => Promise<T>): Promise<T> {
+  return fn(resolveOrgId()).catch((error) => {
     throw new Error(getErrorMessage(error));
-  }
+  });
+}
+
+/** Updates one organization node scope in the selected organization. */
+export function updateNodeScope(nodeId: string, scope: "private" | "shared") {
+  return wrapNodeCommand((orgId) => api.node.updateScope(orgId, nodeId, scope));
 }
 
 /** Unregisters one organization node in the selected organization. */
-export async function unregisterNode(nodeId: string): Promise<void> {
-  const orgId = sessionStore.getState().selectedOrganizationId;
-
-  if (!orgId) {
-    throw new Error("No organization selected.");
-  }
-
-  try {
-    await api.node.unregister(orgId, nodeId);
-  } catch (error) {
-    throw new Error(getErrorMessage(error));
-  }
+export function unregisterNode(nodeId: string): Promise<void> {
+  return wrapNodeCommand((orgId) => api.node.unregister(orgId, nodeId));
 }

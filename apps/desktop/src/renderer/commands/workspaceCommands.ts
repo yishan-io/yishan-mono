@@ -8,18 +8,14 @@ import {
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
-import type { WorkspaceStoreState } from "../store/types";
 import { workspaceStore } from "../store/workspaceStore";
 import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab, workspaceUiStore } from "../store/workspaceUiStore";
 import { closeWorkspacesForProjects, warmupWorkspacesForProjects } from "./workspaceWarmupCommand";
 
 export { createWorkspace } from "./workspaceCreateCommand";
 export { closeWorkspace } from "./workspaceCloseCommand";
+import { readWorkspaceStoreState } from "./workspaceStoreHelpers";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
-
-type WorkspaceStoreFacade = typeof workspaceStore & {
-  getState?: () => WorkspaceStoreState;
-};
 
 export const OPEN_CREATE_WORKSPACE_DIALOG_EVENT = "workspace:open-create-workspace-dialog";
 
@@ -27,18 +23,6 @@ type OpenCreateWorkspaceDialogDetail = {
   projectId: string;
   repoId?: string;
 };
-
-/** Reads workspace store state for both real Zustand stores and selector-only test doubles. */
-function readWorkspaceStoreState(): WorkspaceStoreState {
-  const facade = workspaceStore as WorkspaceStoreFacade;
-  if (typeof facade.getState === "function") {
-    return facade.getState();
-  }
-
-  return (
-    workspaceStore as unknown as (selector: (state: WorkspaceStoreState) => WorkspaceStoreState) => WorkspaceStoreState
-  )((state) => state);
-}
 
 /**
  * Resolves the normalized target branch (origin-prefixed) for a workspace,

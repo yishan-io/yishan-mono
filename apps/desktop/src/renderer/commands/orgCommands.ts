@@ -4,6 +4,22 @@ import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
 import { workspaceUiStore } from "../store/workspaceUiStore";
 
+const errNoOrgSelected = "No organization selected.";
+
+function resolveOrgId(): string {
+  const orgId = sessionStore.getState().selectedOrganizationId;
+  if (!orgId) {
+    throw new Error(errNoOrgSelected);
+  }
+  return orgId;
+}
+
+function wrapOrgCommand<T>(fn: (orgId: string) => Promise<T>): Promise<T> {
+  return fn(resolveOrgId()).catch((error) => {
+    throw new Error(getErrorMessage(error));
+  });
+}
+
 /**
  * Switches the current organization in both the session store and the daemon
  * context, so the CLI and MCP server know which org is active.
@@ -29,18 +45,10 @@ export async function switchOrganization(orgId: string): Promise<void> {
  * when the caller lacks permission, or when a pending invite already exists.
  */
 export async function addOrgMember(email: string, role: "member" | "admin" = "member"): Promise<{ invited: boolean }> {
-  const orgId = sessionStore.getState().selectedOrganizationId;
-
-  if (!orgId) {
-    throw new Error("No organization selected.");
-  }
-
-  try {
+  return wrapOrgCommand(async (orgId) => {
     const result = await api.org.addMember(orgId, email, role);
     return { invited: result.invited };
-  } catch (error) {
-    throw new Error(getErrorMessage(error));
-  }
+  });
 }
 
 /**
@@ -48,17 +56,9 @@ export async function addOrgMember(email: string, role: "member" | "admin" = "me
  * Throws with a human-readable message on failure.
  */
 export async function cancelOrgInvite(inviteId: string): Promise<void> {
-  const orgId = sessionStore.getState().selectedOrganizationId;
-
-  if (!orgId) {
-    throw new Error("No organization selected.");
-  }
-
-  try {
+  return wrapOrgCommand(async (orgId) => {
     await api.org.cancelInvite(orgId, inviteId);
-  } catch (error) {
-    throw new Error(getErrorMessage(error));
-  }
+  });
 }
 
 /**
@@ -66,17 +66,9 @@ export async function cancelOrgInvite(inviteId: string): Promise<void> {
  * Throws with a human-readable message on failure.
  */
 export async function removeOrgMember(memberUserId: string): Promise<void> {
-  const orgId = sessionStore.getState().selectedOrganizationId;
-
-  if (!orgId) {
-    throw new Error("No organization selected.");
-  }
-
-  try {
+  return wrapOrgCommand(async (orgId) => {
     await api.org.removeMember(orgId, memberUserId);
-  } catch (error) {
-    throw new Error(getErrorMessage(error));
-  }
+  });
 }
 
 /**
@@ -85,15 +77,7 @@ export async function removeOrgMember(memberUserId: string): Promise<void> {
  * other members still exist.
  */
 export async function leaveOrg(): Promise<void> {
-  const orgId = sessionStore.getState().selectedOrganizationId;
-
-  if (!orgId) {
-    throw new Error("No organization selected.");
-  }
-
-  try {
+  return wrapOrgCommand(async (orgId) => {
     await api.org.leave(orgId);
-  } catch (error) {
-    throw new Error(getErrorMessage(error));
-  }
+  });
 }
