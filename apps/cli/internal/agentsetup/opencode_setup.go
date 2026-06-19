@@ -110,5 +110,6 @@ description: Manage yishan workspaces — create, list, find, close
 Read ~/.config/opencode/skills/ys-workspace/SKILL.md and follow its workflow.
 Use the yishan CLI to manage workspaces — list, create (with --task-run-agent-kind opencode), or close.
 Environment variables YISHAN_PROJECT_ID, YISHAN_WORKSPACE_ID, YISHAN_ORG_ID are already set.
-Use --output json for machine parsing. Always pass --project-id from the environment.`,
+Use --output json for machine parsing. Always pass --project-id from the environment.
+Do not switch the current session into a newly created workspace; treat --task-run-prompt as launching a separate terminal session there.`,
 }
