@@ -900,6 +900,58 @@ describe("FileManagerView file loading", () => {
     });
   });
 
+  it("removes deleted file from tree when parent directory was not explicitly loaded", async () => {
+    // Regression test: when an AI deletes src/foo.ts and "src" is not in
+    // loadedDirectoryPaths, the refresh falls back to root (recursive). The
+    // root result is authoritative and must not be merged with stale entries —
+    // the deleted file must disappear from the tree rather than persisting as
+    // an orange "changed" entry.
+    let deleted = false;
+
+    mocks.listFiles.mockImplementation(
+      async (input: {
+        workspaceId: string;
+        relativePath?: string;
+        recursive?: boolean;
+      }) => {
+        if (input.recursive) {
+          if (deleted) {
+            // After deletion: foo.ts is gone, bar.ts survives.
+            return { files: asEntries(["src/", "src/bar.ts"]) };
+          }
+          return { files: asEntries(["src/", "src/foo.ts", "src/bar.ts"]) };
+        }
+
+        return { files: asEntries([]) };
+      },
+    );
+
+    const { rerender } = render(<FileManagerView />);
+
+    await waitFor(() => {
+      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual([
+        "src/",
+        "src/bar.ts",
+        "src/foo.ts",
+      ]);
+    });
+
+    // AI deletes src/foo.ts — daemon sends file-change event with that path.
+    // "src" was never explicitly loaded (no onEnsurePathLoaded call), so the
+    // refresh resolves to the root directory.
+    deleted = true;
+    mocks.stateRef.current.fileTreeChangedRelativePathsByWorktreePath = {
+      "/tmp/repo": ["src/foo.ts"],
+    };
+    mocks.stateRef.current.fileTreeRefreshVersion += 1;
+
+    rerender(<FileManagerView />);
+
+    await waitFor(() => {
+      expect((mocks.repoFileTreePropsRef.current?.files as string[]) ?? []).toEqual(["src/", "src/bar.ts"]);
+    });
+  });
+
   it("includes ignored directories in the initial recursive load", async () => {
     mocks.listFiles.mockResolvedValue({
       files: asEntries(["node_modules/", "node_modules/pkg/index.js", "src/", "src/index.ts"], ["node_modules/"]),

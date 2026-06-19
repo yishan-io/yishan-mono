@@ -161,9 +161,13 @@ function applyDirectoryRefreshes(
         ? new Set(changedRelativePaths.map((p) => normalizeRelativePath(p)).filter(Boolean))
         : null;
 
-    if (directoryPath === "" && !normalizedChangedPaths) {
-      nextEntries = [];
-      nextEntries = mergeWorkspaceEntries(nextEntries, files);
+    // Root fetch is always recursive and its result is authoritative for the
+    // entire workspace tree — replace unconditionally regardless of whether
+    // specific changed paths are known. This ensures deleted files are removed
+    // from the tree even when the incremental-eviction filter cannot see them
+    // (it only inspects direct children of the refreshed directory).
+    if (directoryPath === "") {
+      nextEntries = mergeWorkspaceEntries([], files);
       continue;
     }
 
