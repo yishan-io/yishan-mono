@@ -24,7 +24,7 @@ const (
 	tokenUsageScanOverlap  = 2 * time.Hour
 )
 
-var tokenUsageScannableAgentKinds = agentKindsWithActiveTokenScanners
+var tokenUsageScannableAgentKinds = agentkind.WithActiveTokenScanners
 
 type tokenUsageCollector struct {
 	mu         sync.Mutex

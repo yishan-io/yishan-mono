@@ -48,13 +48,9 @@ func (r Runner) CommandContext(ctx context.Context, args ...string) (*exec.Cmd, 
 	return command, true
 }
 
-func Default() Runner {
-	return New(os.Environ(), os.Getenv("SHELL"))
-}
-
 func DefaultRunner() Runner {
 	defaultRunnerOnce.Do(func() {
-		defaultRunner = Default()
+		defaultRunner = New(os.Environ(), os.Getenv("SHELL"))
 	})
 	return defaultRunner
 }

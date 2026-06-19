@@ -20,18 +20,7 @@ func normalizeDecoded(decoded any) (any, bool) {
 	case map[string]any, []any:
 		return decoded, true
 	}
-
-	encoded, err := json.Marshal(decoded)
-	if err != nil {
-		return nil, false
-	}
-
-	var normalized any
-	if err := json.Unmarshal(encoded, &normalized); err != nil {
-		return nil, false
-	}
-
-	return normalized, true
+	return decoded, true
 }
 
 func inferRenderData(decoded any) RenderData {

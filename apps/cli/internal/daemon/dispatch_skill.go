@@ -87,10 +87,13 @@ func handleSkillInstall(params json.RawMessage) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := installSkillByName(name); err != nil {
-		return nil, fmt.Errorf("install skill %q: %w", name, err)
+	if fn, ok := installSkillFns[name]; ok {
+		if err := fn(); err != nil {
+			return nil, fmt.Errorf("install skill %q: %w", name, err)
+		}
+		return map[string]bool{"ok": true}, nil
 	}
-	return map[string]bool{"ok": true}, nil
+	return nil, workspace.NewRPCError(rpcCodeInvalidParams, fmt.Sprintf("unknown skill %q", name))
 }
 
 func handleSkillUninstall(params json.RawMessage) (any, error) {
@@ -98,10 +101,13 @@ func handleSkillUninstall(params json.RawMessage) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := removeSkillByName(name); err != nil {
-		return nil, fmt.Errorf("uninstall skill %q: %w", name, err)
+	if fn, ok := removeSkillFns[name]; ok {
+		if err := fn(); err != nil {
+			return nil, fmt.Errorf("uninstall skill %q: %w", name, err)
+		}
+		return map[string]bool{"ok": true}, nil
 	}
-	return map[string]bool{"ok": true}, nil
+	return nil, workspace.NewRPCError(rpcCodeInvalidParams, fmt.Sprintf("unknown skill %q", name))
 }
 
 func parseSkillNameParam(params json.RawMessage) (string, error) {
@@ -123,56 +129,24 @@ func parseSkillNameParam(params json.RawMessage) (string, error) {
 	return "", workspace.NewRPCError(rpcCodeInvalidParams, fmt.Sprintf("unknown skill %q", name))
 }
 
-func installSkillByName(name string) error {
-	switch name {
-	case setup.WorkspaceSkillName:
-		_, err := setup.EnsureWorkspaceSkill()
-		return err
-	case setup.MemorySkillName:
-		_, err := setup.EnsureMemorySkill()
-		return err
-	case setup.StartSkillName:
-		_, err := setup.EnsureStartSkill()
-		return err
-	case setup.ResearchSkillName:
-		_, err := setup.EnsureResearchSkill()
-		return err
-	case setup.PlanSkillName:
-		_, err := setup.EnsurePlanSkill()
-		return err
-	case setup.BuildSkillName:
-		_, err := setup.EnsureBuildSkill()
-		return err
-	case setup.VerifySkillName:
-		_, err := setup.EnsureVerifySkill()
-		return err
-	case setup.DoneSkillName:
-		_, err := setup.EnsureDoneSkill()
-		return err
-	default:
-		return fmt.Errorf("unknown skill: %s", name)
-	}
+var installSkillFns = map[string]func() error{
+	setup.WorkspaceSkillName: func() error { _, err := setup.EnsureWorkspaceSkill(); return err },
+	setup.MemorySkillName:    func() error { _, err := setup.EnsureMemorySkill(); return err },
+	setup.StartSkillName:     func() error { _, err := setup.EnsureStartSkill(); return err },
+	setup.ResearchSkillName:  func() error { _, err := setup.EnsureResearchSkill(); return err },
+	setup.PlanSkillName:      func() error { _, err := setup.EnsurePlanSkill(); return err },
+	setup.BuildSkillName:     func() error { _, err := setup.EnsureBuildSkill(); return err },
+	setup.VerifySkillName:    func() error { _, err := setup.EnsureVerifySkill(); return err },
+	setup.DoneSkillName:      func() error { _, err := setup.EnsureDoneSkill(); return err },
 }
 
-func removeSkillByName(name string) error {
-	switch name {
-	case setup.WorkspaceSkillName:
-		return setup.RemoveWorkspaceSkill()
-	case setup.MemorySkillName:
-		return setup.RemoveMemorySkill()
-	case setup.StartSkillName:
-		return setup.RemoveStartSkill()
-	case setup.ResearchSkillName:
-		return setup.RemoveResearchSkill()
-	case setup.PlanSkillName:
-		return setup.RemovePlanSkill()
-	case setup.BuildSkillName:
-		return setup.RemoveBuildSkill()
-	case setup.VerifySkillName:
-		return setup.RemoveVerifySkill()
-	case setup.DoneSkillName:
-		return setup.RemoveDoneSkill()
-	default:
-		return fmt.Errorf("unknown skill: %s", name)
-	}
+var removeSkillFns = map[string]func() error{
+	setup.WorkspaceSkillName: setup.RemoveWorkspaceSkill,
+	setup.MemorySkillName:    setup.RemoveMemorySkill,
+	setup.StartSkillName:     setup.RemoveStartSkill,
+	setup.ResearchSkillName:  setup.RemoveResearchSkill,
+	setup.PlanSkillName:      setup.RemovePlanSkill,
+	setup.BuildSkillName:     setup.RemoveBuildSkill,
+	setup.VerifySkillName:    setup.RemoveVerifySkill,
+	setup.DoneSkillName:      setup.RemoveDoneSkill,
 }

@@ -3,9 +3,9 @@ package daemon
 import (
 	"encoding/json"
 	"errors"
+	"time"
 
 	"yishan/apps/cli/internal/workspace"
-	"yishan/apps/cli/internal/workspace/terminal"
 )
 
 // JSON-RPC 2.0 reserved error codes.
@@ -44,9 +44,9 @@ func mapRPCError(err error) *rpcError {
 	if errors.As(err, &e) {
 		return &rpcError{Code: e.Code, Message: e.Message}
 	}
-	var terminalError *terminal.RPCError
-	if errors.As(err, &terminalError) {
-		return &rpcError{Code: terminalError.Code, Message: terminalError.Message}
-	}
 	return &rpcError{Code: rpcCodeServerError, Message: err.Error()}
+}
+
+func nowRFC3339Nano() string {
+	return time.Now().UTC().Format(time.RFC3339Nano)
 }

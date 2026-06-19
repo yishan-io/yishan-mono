@@ -75,8 +75,8 @@ func ReleaseForVersion(version string) *Release {
 }
 
 func releaseForVersion(version string) *Release {
-	os := normalizeOS(runtime.GOOS)
-	arch := normalizeArch(runtime.GOARCH)
+	os := runtime.GOOS
+	arch := runtime.GOARCH
 	archive := fmt.Sprintf("%s_%s_%s_%s.tar.gz", project, version, os, arch)
 	base := fmt.Sprintf("https://github.com/%s/releases/download/v%s", repo, version)
 
@@ -184,8 +184,8 @@ func verifyChecksum(archivePath, checksumPath string) error {
 
 	// checksums.txt contains the original archive name, not "archive.tar.gz".
 	// We need to find the entry matching our OS/arch.
-	osName := normalizeOS(runtime.GOOS)
-	archName := normalizeArch(runtime.GOARCH)
+	osName := runtime.GOOS
+	archName := runtime.GOARCH
 
 	var expectedHash string
 	for _, line := range strings.Split(string(checksumData), "\n") {
@@ -365,10 +365,3 @@ func applyViaHomebrew(_ context.Context, progress func(string)) error {
 	return nil
 }
 
-func normalizeOS(goos string) string {
-	return goos // "darwin", "linux", "windows" — already correct.
-}
-
-func normalizeArch(goarch string) string {
-	return goarch // "amd64", "arm64" — already correct.
-}

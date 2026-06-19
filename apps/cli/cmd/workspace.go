@@ -24,10 +24,6 @@ var workspaceListCmd = &cobra.Command{
 	Example: `  yishan workspace list --project-id <id>
   yishan workspace list --project-id <id> --output json`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		showAll, err := cmd.Flags().GetBool("all")
-		if err != nil {
-			return err
-		}
 		verbose, err := cmd.Flags().GetBool("verbose")
 		if err != nil {
 			return err
@@ -49,7 +45,7 @@ var workspaceListCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			return output.PrintRenderData(renderWorkspacesList(response, showAll || verbose, false, projectNames))
+			return output.PrintRenderData(renderWorkspacesList(response, verbose, false, projectNames))
 		}
 
 		projectsResponse, err := apiClient.ListProjects(orgID)
@@ -66,7 +62,7 @@ var workspaceListCmd = &cobra.Command{
 			response.Workspaces = append(response.Workspaces, projectWorkspaces.Workspaces...)
 		}
 
-		return output.PrintRenderData(renderWorkspacesList(response, showAll || verbose, true, projectNames))
+		return output.PrintRenderData(renderWorkspacesList(response, verbose, true, projectNames))
 	},
 }
 
@@ -257,7 +253,6 @@ func init() {
 	workspaceCmd.AddCommand(workspaceCloseCmd)
 
 	addOrgIDFlag(workspaceListCmd)
-	workspaceListCmd.Flags().Bool("all", false, "show full response fields")
 	workspaceListCmd.Flags().BoolP("verbose", "v", false, "show full response fields")
 	workspaceListCmd.Flags().String("project-id", "", "project ID (optional; if omitted, lists workspaces across all projects)")
 

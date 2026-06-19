@@ -164,11 +164,3 @@ func defaultConfigPath(profile string) (string, error) {
 
 	return filepath.Join(yishanHome, "profiles", profile, "credential.yaml"), nil
 }
-
-func DefaultConfigPathForProfile(profile string) (string, error) {
-	if !profileNamePattern.MatchString(profile) {
-		return "", fmt.Errorf("invalid profile %q: use letters, numbers, dash, or underscore", profile)
-	}
-
-	return defaultConfigPath(strings.ToLower(profile))
-}

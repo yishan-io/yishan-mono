@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"yishan/apps/cli/internal/agentkind"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -128,7 +129,7 @@ func TestServeAgentHookPublishesPendingQuestionNotificationEvent(t *testing.T) {
 }
 
 func TestServeAgentHookNormalizesSupportedAgentNames(t *testing.T) {
-	for _, agent := range allAgentKinds {
+	for _, agent := range agentkind.All {
 		t.Run(agent, func(t *testing.T) {
 			handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, nil, "", NewAppContextStore(""))
 			subscriptionID, events := handler.events.Subscribe()

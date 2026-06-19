@@ -20,10 +20,6 @@ var orgListCmd = &cobra.Command{
 	Example: `  yishan org list
   yishan org list --output json`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		showAll, err := cmd.Flags().GetBool("all")
-		if err != nil {
-			return err
-		}
 		verbose, err := cmd.Flags().GetBool("verbose")
 		if err != nil {
 			return err
@@ -34,7 +30,7 @@ var orgListCmd = &cobra.Command{
 			return err
 		}
 
-		renderData, err := toOrgListRenderData(response, showAll || verbose)
+		renderData, err := toOrgListRenderData(response, verbose)
 		if err != nil {
 			return err
 		}
@@ -265,7 +261,6 @@ func init() {
 	orgCreateCmd.Flags().String("name", "", "organization name")
 	orgCreateCmd.Flags().StringSlice("member-user-id", []string{}, "additional member user id")
 	cobra.CheckErr(orgCreateCmd.MarkFlagRequired("name"))
-	orgListCmd.Flags().Bool("all", false, "show full response fields")
 	orgListCmd.Flags().BoolP("verbose", "v", false, "show full response fields")
 
 	addOrgIDFlag(orgDeleteCmd)

@@ -19,10 +19,6 @@ var projectListCmd = &cobra.Command{
 	Example: `  yishan project list
   yishan project list --output json`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		showAll, err := cmd.Flags().GetBool("all")
-		if err != nil {
-			return err
-		}
 		verbose, err := cmd.Flags().GetBool("verbose")
 		if err != nil {
 			return err
@@ -38,7 +34,7 @@ var projectListCmd = &cobra.Command{
 			return err
 		}
 
-		return output.PrintRenderData(renderProjectsList(response, showAll || verbose))
+		return output.PrintRenderData(renderProjectsList(response, verbose))
 	},
 }
 
@@ -120,7 +116,6 @@ func init() {
 	projectCmd.AddCommand(projectDeleteCmd)
 
 	addOrgIDFlag(projectListCmd)
-	projectListCmd.Flags().Bool("all", false, "show full response fields")
 	projectListCmd.Flags().BoolP("verbose", "v", false, "show full response fields")
 
 	addOrgIDFlag(projectCreateCmd)

@@ -21,10 +21,6 @@ var terminalListCmd = &cobra.Command{
   yishan terminal list --include-exited
   yishan terminal list --output json`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		showAll, err := cmd.Flags().GetBool("all")
-		if err != nil {
-			return err
-		}
 		verbose, err := cmd.Flags().GetBool("verbose")
 		if err != nil {
 			return err
@@ -48,7 +44,7 @@ var terminalListCmd = &cobra.Command{
 			return err
 		}
 
-		return output.PrintRenderData(renderTerminalSessionsList(result, showAll || verbose))
+		return output.PrintRenderData(renderTerminalSessionsList(result, verbose))
 	},
 }
 
@@ -122,10 +118,6 @@ var terminalPortsCmd = &cobra.Command{
 	Example: `  yishan terminal ports
   yishan terminal ports --output json`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		showAll, err := cmd.Flags().GetBool("all")
-		if err != nil {
-			return err
-		}
 		verbose, err := cmd.Flags().GetBool("verbose")
 		if err != nil {
 			return err
@@ -141,7 +133,7 @@ var terminalPortsCmd = &cobra.Command{
 			return err
 		}
 
-		return output.PrintRenderData(renderTerminalPortsList(result, showAll || verbose))
+		return output.PrintRenderData(renderTerminalPortsList(result, verbose))
 	},
 }
 
@@ -153,7 +145,6 @@ func init() {
 	terminalCmd.AddCommand(terminalPortsCmd)
 
 	terminalListCmd.Flags().Bool("include-exited", false, "include already-exited sessions")
-	terminalListCmd.Flags().Bool("all", false, "show full response fields")
 	terminalListCmd.Flags().BoolP("verbose", "v", false, "show full response fields")
 
 	terminalStartCmd.Flags().String("workspace-id", "", "workspace ID")
@@ -163,7 +154,6 @@ func init() {
 	terminalStopCmd.Flags().String("session-id", "", "terminal session ID")
 	cobra.CheckErr(terminalStopCmd.MarkFlagRequired("session-id"))
 
-	terminalPortsCmd.Flags().Bool("all", false, "show full response fields")
 	terminalPortsCmd.Flags().BoolP("verbose", "v", false, "show full response fields")
 }
 

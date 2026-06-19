@@ -21,10 +21,6 @@ var nodeListCmd = &cobra.Command{
 	Example: `  yishan node list
   yishan node list --output json`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		showAll, err := cmd.Flags().GetBool("all")
-		if err != nil {
-			return err
-		}
 		verbose, err := cmd.Flags().GetBool("verbose")
 		if err != nil {
 			return err
@@ -40,7 +36,7 @@ var nodeListCmd = &cobra.Command{
 			return err
 		}
 
-		return output.PrintRenderData(renderNodesList(response, showAll || verbose))
+		return output.PrintRenderData(renderNodesList(response, verbose))
 	},
 }
 
@@ -140,7 +136,6 @@ func init() {
 	nodeCmd.AddCommand(nodeSetScopeCmd)
 
 	addOrgIDFlag(nodeListCmd)
-	nodeListCmd.Flags().Bool("all", false, "show full response fields")
 	nodeListCmd.Flags().BoolP("verbose", "v", false, "show full response fields")
 
 	addOrgIDFlag(nodeDeleteCmd)

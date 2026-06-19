@@ -1,23 +1,26 @@
 package daemon
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
-func TestIsGitMethod_IncludesPullRequestMethods(t *testing.T) {
+func TestDispatch_NamespaceRouting(t *testing.T) {
 	t.Parallel()
 
-	if !isGitMethod(MethodGitPrMerge) {
-		t.Fatalf("expected %q to be treated as git method", MethodGitPrMerge)
+	gitMethods := []string{MethodGitPrMerge, MethodGitPrClose, MethodGitInspectPath}
+	for _, method := range gitMethods {
+		ns, _, found := strings.Cut(method, ".")
+		if !found || ns != "git" {
+			t.Fatalf("expected %q to route to git namespace", method)
+		}
 	}
 
-	if !isGitMethod(MethodGitPrClose) {
-		t.Fatalf("expected %q to be treated as git method", MethodGitPrClose)
-	}
-}
-
-func TestIsGitMethod_IncludesInspectPath(t *testing.T) {
-	t.Parallel()
-
-	if !isGitMethod(MethodGitInspectPath) {
-		t.Fatalf("expected %q to be treated as git method", MethodGitInspectPath)
+	nonGitMethods := []string{"list", MethodWorkspaceCreate, MethodTerminalStart}
+	for _, method := range nonGitMethods {
+		ns, _, found := strings.Cut(method, ".")
+		if found && ns == "git" {
+			t.Fatalf("expected %q NOT to route to git namespace", method)
+		}
 	}
 }

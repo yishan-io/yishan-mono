@@ -1,5 +1,7 @@
 package workspace
 
+import "yishan/apps/cli/internal/rpcerror"
+
 const (
 	rpcCodeInvalidParams   = -32602
 	rpcCodeNotFound        = -32004
@@ -8,15 +10,8 @@ const (
 	rpcCodeSessionInactive = -32005
 )
 
-type RPCError struct {
-	Code    int
-	Message string
-}
-
-func (e *RPCError) Error() string {
-	return e.Message
-}
+type RPCError = rpcerror.Error
 
 func NewRPCError(code int, message string) error {
-	return &RPCError{Code: code, Message: message}
+	return rpcerror.New(code, message)
 }
