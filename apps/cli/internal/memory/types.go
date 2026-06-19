@@ -14,6 +14,7 @@ var ErrAgentNotFound = errors.New("agent binary not found")
 const (
 	MaxProjectMemoryChars = 5000
 	MaxGlobalMemoryChars  = 1000
+	MaxPersonaChars       = 2000
 )
 
 type FileType string
@@ -103,4 +104,30 @@ type sessionMessage struct {
 type SummarizeResult struct {
 	WrittenPaths []string
 	Skipped      bool
+}
+
+// PersonaSection identifies a section heading in PERSONA.md.
+type PersonaSection string
+
+const (
+	PersonaSectionCodeStyle       PersonaSection = "## Code Style"
+	PersonaSectionWorkflowHabits  PersonaSection = "## Workflow Habits"
+	PersonaSectionDomainExpertise PersonaSection = "## Domain Expertise"
+	PersonaSectionToolPreferences PersonaSection = "## Tool Preferences"
+	PersonaSectionCommunication   PersonaSection = "## Communication Style"
+)
+
+// ExtractedPersona holds persona signals extracted from session transcripts by the LLM.
+type ExtractedPersona struct {
+	CodeStyle          []string
+	WorkflowHabits     []string
+	DomainExpertise    []string
+	ToolPreferences    []string
+	CommunicationStyle []string
+}
+
+// PersonaSummarizeResult is returned by PersonaSummarizer.SummarizeForPersona.
+type PersonaSummarizeResult struct {
+	WrittenPath string
+	Skipped     bool
 }

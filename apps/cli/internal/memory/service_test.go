@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -121,4 +122,45 @@ func (r fakeSessionReader2) ReadRecentSession(_ string, _ string) (*sessionMessa
 		return nil, r.err
 	}
 	return r.session, nil
+}
+
+// ── personaService.maybeRunBatch ─────────────────────────────────────────────
+
+func TestPersonaService_MaybeRunBatch_DateGate(t *testing.T) {
+	// personaService should only trigger extraction once per calendar day.
+	// Verify the date-gate: after advancing past today's date, lastExtractionDate updates.
+	ps := &personaService{
+		summarizer:         &PersonaSummarizer{enabled: false}, // disabled — no LLM calls
+		dbReader:           newAgentDBReader(),
+		lastExtractionDate: "2026-06-18", // simulate last run was yesterday
+	}
+
+	// maybeRunBatch with a past date: the gate should advance to today.
+	ps.maybeRunBatch("opencode")
+	today := time.Now().UTC().Format("2006-01-02")
+	if ps.lastExtractionDate != today {
+		t.Errorf("lastExtractionDate should advance to today (%q), got %q", today, ps.lastExtractionDate)
+	}
+
+	// A second call on the same day must be a no-op (date already matches today).
+	// We verify it doesn't reset the date or panic.
+	ps.maybeRunBatch("opencode")
+	if ps.lastExtractionDate != today {
+		t.Errorf("second call should not change lastExtractionDate, got %q", ps.lastExtractionDate)
+	}
+}
+
+func TestPersonaService_MaybeRunBatch_NoPanicWhenDisabled(t *testing.T) {
+	ps := &personaService{
+		summarizer: &PersonaSummarizer{enabled: false, runAgent: nil},
+		dbReader:   newAgentDBReader(),
+	}
+	// Should not panic even with nil runAgent.
+	ps.maybeRunBatch("opencode")
+}
+
+func TestService_MaybeRunDailyPersonaBatch_NilPersona(t *testing.T) {
+	svc := &Service{persona: nil}
+	// Must not panic when persona is nil.
+	svc.MaybeRunDailyPersonaBatch("opencode")
 }

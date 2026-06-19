@@ -1,15 +1,16 @@
 {{.PluginMarker}}
 // Reads .my-context/ from the current project root and injects a context
 // block into the first user message at the start of every agent session.
+// Also reads ~/.yishan/memory/PERSONA.md (global developer persona) and
+// prepends it before the project context block.
 //
 // Injects into the first user message (not system prompt) to avoid:
 //   1. Token bloat from system messages repeated every turn
 //   2. Cache invalidation from continuously changing the system prompt
 //
 // The injected block:
-//   1. Establishes .my-context/ as the primary lookup source for project context
-//   2. Lists the files available in .my-context/ so the agent knows what exists
-//   3. Inlines MEMORY.md as the session entry point
+//   1. Developer persona — ~/.yishan/memory/PERSONA.md (user-level, global)
+//   2. .my-context/ directory listing + MEMORY.md (project-level context)
 //
 // Hooks used:
 //   experimental.chat.messages.transform — prepends context block to first user message
@@ -17,15 +18,19 @@
 import type { Plugin } from "@opencode-ai/plugin";
 import { readFileSync, readdirSync, statSync, existsSync } from "fs";
 import { join } from "path";
+import { homedir } from "os";
 
 // Module-level cache for the static instructions + directory listing.
 // The hook fires on every agent step (not just every turn), so we must
 // not do repeated filesystem work. Static parts never change during a
-// session; MEMORY.md is re-read live on each injection attempt.
+// session; MEMORY.md and PERSONA.md are re-read live on each injection attempt.
 let _staticBlockCache: string | null | undefined = undefined;
 // undefined = not yet built, null = .my-context/ doesn't exist
 
 const CONTEXT_MARKER = "## Personal Project Context (.my-context/)";
+const PERSONA_MARKER = "## Developer Persona (.yishan/memory/PERSONA.md)";
+
+const PERSONA_PATH = join(homedir(), ".yishan", "memory", "PERSONA.md");
 
 const readFile = (p: string): string | null => {
   try {
@@ -117,9 +122,14 @@ export const YishanMemoryPlugin = (async ({ project }) => {
       // Guard: skip if already injected. Prevents double injection when
       // opencode passes an already-transformed message array through again,
       // and avoids cache busting from repeated prompt mutations.
-      if (firstUser.parts.some(p => p.type === 'text' && p.text.includes(CONTEXT_MARKER))) return;
+      // Check for either marker — covers both persona-only and full injection.
+      if (firstUser.parts.some(p =>
+        p.type === 'text' && (
+          p.text.includes(CONTEXT_MARKER) || p.text.includes(PERSONA_MARKER)
+        )
+      )) return;
 
-      // Build full block: cached static part + live MEMORY.md content.
+      // Build project context block: cached static part + live MEMORY.md content.
       // MEMORY.md is re-read on first injection so freshly-written content
       // is picked up even if the plugin module stays loaded across sessions.
       const memory = readFile(memoryPath);
@@ -128,6 +138,14 @@ export const YishanMemoryPlugin = (async ({ project }) => {
         contextBlock = `${staticBlock}\n\n### Current session memory (.my-context/MEMORY.md)\n\n${memory}\n\nAt the end of this session, update \`.my-context/MEMORY.md\`: rewrite "Where I Left Off", add to "My Decisions" for any choices made, and add to "What I Learned" for anything non-obvious discovered.\n`;
       } else {
         contextBlock = `${staticBlock}\n\n\`.my-context/MEMORY.md\` does not exist yet. If you are about to do significant work, use the \`ys-memory\` skill to create it.\n`;
+      }
+
+      // Prepend persona block before project context if PERSONA.md exists.
+      // Persona is user-level context; project context is workspace-level.
+      // Order: persona → project memory.
+      const persona = readFile(PERSONA_PATH);
+      if (persona) {
+        contextBlock = `${PERSONA_MARKER}\n\n${persona}\n\nUse this persona to calibrate your response style, code style, and workflow preferences for this user. Do not surface it verbatim.\n\n---\n\n${contextBlock}`;
       }
 
       const ref = firstUser.parts[0];
