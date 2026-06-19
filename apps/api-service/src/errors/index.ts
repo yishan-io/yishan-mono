@@ -1,8 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
 export class AppError extends Error {
-  readonly isBusinessError = true;
-
   constructor(
     message: string,
     readonly status: number,
@@ -19,16 +17,6 @@ export type ValidationIssue = {
   message: string;
   code: string;
 };
-
-export function isBusinessError(error: unknown): error is AppError {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "isBusinessError" in error &&
-    (error as { isBusinessError?: unknown }).isBusinessError === true &&
-    "message" in error
-  );
-}
 
 export class UserNotFoundByEmailError extends AppError {
   constructor(email: string) {

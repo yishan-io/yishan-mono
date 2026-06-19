@@ -16,20 +16,14 @@ export const overviewTokenUsageQuerySchema = z.object({
   granularity: z.enum(OVERVIEW_GRANULARITIES).optional().default("day"),
 });
 
-export const overviewModelBreakdownQuerySchema = z.object({
+const overviewQuerySchema = z.object({
   range: z.enum(OVERVIEW_TIME_RANGES),
   projectId: nonEmptyStringSchema.optional(),
 });
 
-export const overviewAgentKindBreakdownQuerySchema = z.object({
-  range: z.enum(OVERVIEW_TIME_RANGES),
-  projectId: nonEmptyStringSchema.optional(),
-});
-
-export const overviewWorkspaceInsightsQuerySchema = z.object({
-  range: z.enum(OVERVIEW_TIME_RANGES),
-  projectId: nonEmptyStringSchema.optional(),
-});
+export const overviewModelBreakdownQuerySchema = overviewQuerySchema;
+export const overviewAgentKindBreakdownQuerySchema = overviewQuerySchema;
+export const overviewWorkspaceInsightsQuerySchema = overviewQuerySchema;
 
 export type OverviewTokenUsageQueryInput = z.infer<typeof overviewTokenUsageQuerySchema>;
 export type OverviewModelBreakdownQueryInput = z.infer<typeof overviewModelBreakdownQuerySchema>;

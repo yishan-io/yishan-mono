@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import type { SessionUser } from "@/auth/session";
+import type { SessionUser } from "@/services/auth-service";
 import type { OrganizationMemberRole } from "@/db/schema";
 import type { AppServices } from "@/services";
 import type { OAuthProvider, ServiceConfig } from "@/types";

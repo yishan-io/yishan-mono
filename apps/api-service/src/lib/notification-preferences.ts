@@ -43,17 +43,17 @@ export function normalizeNotificationPreferences(
 ): NotificationPreferences {
   const candidate = stored && typeof stored === "object" ? (stored as Record<string, unknown>) : {};
 
-  const enabledEventTypes = dedupe(
+  const enabledEventTypes = [...new Set(
     [
       ...(Array.isArray(candidate.enabledEventTypes) ? candidate.enabledEventTypes : fallback.enabledEventTypes),
       ...fallback.enabledEventTypes,
     ].filter(isNotificationEventType),
-  );
-  const enabledCategories = dedupe(
+  )];
+  const enabledCategories = [...new Set(
     (Array.isArray(candidate.enabledCategories) ? candidate.enabledCategories : fallback.enabledCategories).filter(
       isNotificationCategory,
     ),
-  );
+  )];
 
   const eventSoundsCandidate =
     candidate.eventSounds && typeof candidate.eventSounds === "object"
@@ -94,8 +94,4 @@ function isNotificationCategory(value: unknown): value is NotificationCategory {
 
 function isNotificationSoundId(value: unknown): value is NotificationSoundId {
   return typeof value === "string" && SUPPORTED_NOTIFICATION_SOUND_IDS.includes(value as NotificationSoundId);
-}
-
-function dedupe<T>(input: T[]): T[] {
-  return [...new Set(input)];
 }
