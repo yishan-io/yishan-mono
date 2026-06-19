@@ -51,6 +51,23 @@ yishan workspace close \
   --workspace-id "$YISHAN_WORKSPACE_ID"
 ```
 
+## Workspace boundary rules
+
+- The current agent session is bound to its current workspace. Do not switch this
+  session into another workspace.
+- If you create a workspace with `--task-run-agent-kind` and
+  `--task-run-prompt`, that launches a separate agent terminal inside the new
+  workspace. Treat that as a handoff, not a workspace switch for the current
+  session.
+- After creating a new workspace, do not read, edit, grep, glob, or run bash in
+  the new workspace path from the current session unless the user explicitly
+  asks to move this session there.
+- Cross-workspace operations are not allowed. A session that started in the
+  primary workspace must keep working in the primary workspace.
+- After delegated workspace creation, report the created workspace details to the
+  user and stop there unless they asked for follow-up work in the current
+  workspace.
+
 
 
 Workspace creation and closing only happens on the **current local node** (the
@@ -73,10 +90,18 @@ without needing to specify a node ID.
 If the user is new to yishan or hasn't set up their machine yet, guide them
 through these steps in order:
 
-1. **Install the CLI**: Follow the [install guide](https://github.com/yishan-io/yishan-mono?tab=readme-ov-file#yishan-cli).
-   ```bash
-   curl -fsSL https://raw.githubusercontent.com/yishan-io/yishan-mono/main/install.sh | sh
-   ```
+1. **Make sure the CLI command is available**: Choose the setup path that
+   matches the machine:
+
+   - **Local desktop usage**: If the user is running Yishan Desktop on their
+     own machine, use the desktop-managed CLI install. The desktop app can
+     install a symlink to the bundled CLI at `~/.local/bin/yishan`.
+   - **Remote host / daemon setup**: If the user is setting up Yishan on a
+     remote machine that will run the daemon directly, the curl-based install
+     flow is still valid there.
+
+   `yishan setup` installs the managed agent and skill integrations after the
+   CLI is available.
 
 2. **Log in**:
    ```bash
@@ -172,9 +197,11 @@ yishan workspace close \
 
 ### Starting a new feature
 
-1. **Find the project**: Ask the user for the project name or ID. If unknown, run
-   `yishan project list` and present options. Primary workspaces are created
-   automatically when the project is created — no manual primary setup needed.
+1. **Find the project**: Default to `YISHAN_PROJECT_ID` from the environment.
+   Only ask the user for a project name/ID or run `yishan project list` if that
+   variable is missing or the user explicitly wants a different project.
+   Primary workspaces are created automatically when the project is created — no
+   manual primary setup needed.
 
 2. **Prepare the task prompt**: Always auto-start an agent in the new workspace
    by passing `--task-run-agent-kind opencode` and `--task-run-prompt` to the
@@ -213,22 +240,29 @@ yishan workspace close \
    - Follow the middleware pattern used by auth middleware
    ```
 
-3. **Create a worktree**: Determine a branch name from the task (agree with user).
-   Then run the worktree create command with the task-run flags. The output
-   includes a `localPath` — navigate the agent to that directory.
+3. **Create a workspace**: Determine a branch name from the task (agree with user).
+   Then run the workspace create command with the task-run flags. This launches a
+   separate agent session in the new workspace. Do not continue the task from
+   the current session inside that new workspace.
 
-   ```bash
-   yishan workspace create \
-     --project-id <project-id> \
-     --kind worktree \
-     --branch feature/my-branch \
-     --source-branch main \
-     --name feature-my-branch \
-     --task-run-agent-kind opencode \
-     --task-run-prompt "<prepared prompt>"
-   ```
+    ```bash
+    yishan workspace create \
+      --project-id <project-id> \
+      --kind worktree \
+      --branch feature/my-branch \
+      --source-branch main \
+      --name feature-my-branch \
+      --task-run-agent-kind opencode \
+      --task-run-prompt "<prepared prompt>"
+    ```
+
+4. **Return control to the user**: Share the created workspace ID, branch, and
+   `localPath`, and state that the task was launched in a new terminal session.
+   Do not inspect or modify that workspace from the current session.
 
 ### Finishing a task
+
+Only close a workspace when the user explicitly asks to close it.
 
 1. **Find the workspace**: Run `yishan workspace list --project-id <project-id>`
    and locate the workspace for the branch.
@@ -255,5 +289,5 @@ When `yishan` exits non-zero, classify failures by the exit message:
 
 - Use `--output json` for scriptable parsing.
 - Worktree paths are deterministic: `~/.yishan/worktrees/<repo-key>/<workspace-name>`.
-- Always close workspaces after tasks — this cleans up git worktrees and releases server resources.
+- Do not close a workspace automatically after a task. The user decides when to close it.
 - The local daemon node is the default; no need to pass `--node-id` unless the user specifies a different node.
