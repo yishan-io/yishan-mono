@@ -1,42 +1,13 @@
 package setup
 
 import (
-	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/memory"
 )
-
-//go:embed assets/skills/ys-workspace/SKILL.md
-var workspaceSkillContent string
-
-//go:embed assets/skills/ys-memory/SKILL.md
-var memorySkillContent string
-
-//go:embed assets/skills/ys-memory/MEMORY.md.tmpl
-var memoryFileTemplate string
-
-//go:embed assets/skills/ys-start/SKILL.md
-var startSkillContent string
-
-//go:embed assets/skills/ys-research/SKILL.md
-var researchSkillContent string
-
-//go:embed assets/skills/ys-plan/SKILL.md
-var planSkillContent string
-
-//go:embed assets/skills/ys-build/SKILL.md
-var buildSkillContent string
-
-//go:embed assets/skills/ys-verify/SKILL.md
-var verifySkillContent string
-
-//go:embed assets/skills/ys-done/SKILL.md
-var doneSkillContent string
 
 const (
 	workspaceSkillName = "ys-workspace"
@@ -65,149 +36,77 @@ type SkillInstallResult struct {
 }
 
 func EnsureWorkspaceSkill() (*SkillInstallResult, error) {
-	return ensureSkill(workspaceSkillName, workspaceSkillContent)
+	return AddSkill(workspaceSkillName)
 }
 
 func EnsureMemorySkill() (*SkillInstallResult, error) {
-	return ensureSkill(memorySkillName, memorySkillContent)
+	return AddSkill(memorySkillName)
 }
 
 func EnsureStartSkill() (*SkillInstallResult, error) {
-	return ensureSkill(startSkillName, startSkillContent)
+	return AddSkill(startSkillName)
 }
 
 func EnsureResearchSkill() (*SkillInstallResult, error) {
-	return ensureSkill(researchSkillName, researchSkillContent)
+	return AddSkill(researchSkillName)
 }
 
 func EnsurePlanSkill() (*SkillInstallResult, error) {
-	return ensureSkill(planSkillName, planSkillContent)
+	return AddSkill(planSkillName)
 }
 
 func EnsureBuildSkill() (*SkillInstallResult, error) {
-	return ensureSkill(buildSkillName, buildSkillContent)
+	return AddSkill(buildSkillName)
 }
 
 func EnsureVerifySkill() (*SkillInstallResult, error) {
-	return ensureSkill(verifySkillName, verifySkillContent)
+	return AddSkill(verifySkillName)
 }
 
 func EnsureDoneSkill() (*SkillInstallResult, error) {
-	return ensureSkill(doneSkillName, doneSkillContent)
+	return AddSkill(doneSkillName)
 }
 
 // MemoryFileTemplate returns the starter MEMORY.md content to be written into a
 // new project's .my-context/ directory.
 func MemoryFileTemplate() string {
-	return memoryFileTemplate
-}
-
-func ensureSkill(name string, content string) (*SkillInstallResult, error) {
-	yishanHome, err := config.HomeDir()
+	content, err := readCanonicalSkillFile(memorySkillName, "MEMORY.md.tmpl")
 	if err != nil {
-		return nil, fmt.Errorf("resolve yishan home: %w", err)
+		return ""
 	}
-
-	skillDir := filepath.Join(yishanHome, "skills", name)
-	skillPath := filepath.Join(skillDir, "SKILL.md")
-
-	if err := os.MkdirAll(skillDir, 0o755); err != nil {
-		return nil, fmt.Errorf("create skill dir: %w", err)
-	}
-	if err := os.WriteFile(skillPath, []byte(content), 0o644); err != nil {
-		return nil, fmt.Errorf("write skill file: %w", err)
-	}
-
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("resolve home dir: %w", err)
-	}
-
-	linkDirs := []string{
-		filepath.Join(homeDir, ".config", "opencode", "skills", name),
-		filepath.Join(homeDir, ".claude", "skills", name),
-		filepath.Join(homeDir, ".agents", "skills", name),
-	}
-
-	result := &SkillInstallResult{SkillPath: skillPath}
-
-	for _, linkDir := range linkDirs {
-		if err := ensureSkillSymlink(linkDir, skillDir); err != nil {
-			return result, fmt.Errorf("symlink %s: %w", linkDir, err)
-		}
-		result.Symlinks = append(result.Symlinks, linkDir)
-	}
-
-	return result, nil
+	return string(content)
 }
 
 func RemoveWorkspaceSkill() error {
-	return removeSkill(workspaceSkillName)
+	return RemoveSkill(workspaceSkillName)
 }
 
 func RemoveMemorySkill() error {
-	return removeSkill(memorySkillName)
+	return RemoveSkill(memorySkillName)
 }
 
 func RemoveStartSkill() error {
-	return removeSkill(startSkillName)
+	return RemoveSkill(startSkillName)
 }
 
 func RemoveResearchSkill() error {
-	return removeSkill(researchSkillName)
+	return RemoveSkill(researchSkillName)
 }
 
 func RemovePlanSkill() error {
-	return removeSkill(planSkillName)
+	return RemoveSkill(planSkillName)
 }
 
 func RemoveBuildSkill() error {
-	return removeSkill(buildSkillName)
+	return RemoveSkill(buildSkillName)
 }
 
 func RemoveVerifySkill() error {
-	return removeSkill(verifySkillName)
+	return RemoveSkill(verifySkillName)
 }
 
 func RemoveDoneSkill() error {
-	return removeSkill(doneSkillName)
-}
-
-func removeSkill(name string) error {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("resolve home dir: %w", err)
-	}
-
-	linkDirs := []string{
-		filepath.Join(homeDir, ".config", "opencode", "skills", name),
-		filepath.Join(homeDir, ".claude", "skills", name),
-		filepath.Join(homeDir, ".agents", "skills", name),
-	}
-
-	for _, linkDir := range linkDirs {
-		if info, err := os.Lstat(linkDir); err == nil && info.Mode()&os.ModeSymlink != 0 {
-			if err := os.Remove(linkDir); err != nil && !os.IsNotExist(err) {
-				return fmt.Errorf("remove symlink %s: %w", linkDir, err)
-			}
-		} else if err == nil {
-			return fmt.Errorf("expected symlink at %s but found regular entry; refusing to remove", linkDir)
-		} else if !os.IsNotExist(err) {
-			return err
-		}
-	}
-
-	yishanHome, err := config.HomeDir()
-	if err != nil {
-		return fmt.Errorf("resolve yishan home: %w", err)
-	}
-
-	skillDir := filepath.Join(yishanHome, "skills", name)
-	if err := os.RemoveAll(skillDir); err != nil {
-		return fmt.Errorf("remove skill dir: %w", err)
-	}
-
-	return nil
+	return RemoveSkill(doneSkillName)
 }
 
 func ensureSkillSymlink(linkPath string, target string) error {

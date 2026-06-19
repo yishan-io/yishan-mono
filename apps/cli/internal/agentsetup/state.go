@@ -70,7 +70,9 @@ func GetInstalledState() (*InstalledState, error) {
 		return nil, err
 	}
 
-	fillSkillState(state, yishanHome, homeDir)
+	if err := fillSkillState(state, yishanHome, homeDir); err != nil {
+		return nil, err
+	}
 	fillMCPState(state, homeDir)
 	fillHookState(state, homeDir)
 	fillAssetState(state, yishanHome)
@@ -79,55 +81,42 @@ func GetInstalledState() (*InstalledState, error) {
 	return state, nil
 }
 
-func fillSkillState(state *InstalledState, yishanHome string, homeDir string) {
-	// agentLinks maps a symlink directory (for one skill name) to its agent label.
-	// The slice order determines the display order.
-	type agentLink struct {
-		agent   string
-		linkDir func(name string) string
+func fillSkillState(state *InstalledState, yishanHome string, homeDir string) error {
+	infos, err := ListSkills()
+	if err != nil {
+		return err
 	}
-	agentLinks := []agentLink{
-		{"opencode", func(name string) string {
-			return filepath.Join(homeDir, ".config", "opencode", "skills", name)
-		}},
-		{"claude", func(name string) string {
-			return filepath.Join(homeDir, ".claude", "skills", name)
-		}},
-		{"agents", func(name string) string {
-			return filepath.Join(homeDir, ".agents", "skills", name)
-		}},
-	}
-
-	for _, name := range []string{
-		workspaceSkillName, memorySkillName,
-		startSkillName, researchSkillName, planSkillName,
-		buildSkillName, verifySkillName, doneSkillName,
-	} {
-		skillDir := filepath.Join(yishanHome, "skills", name)
-		skillPath := filepath.Join(skillDir, "SKILL.md")
-
-		installed := false
-		var installedForAgents []string
-
-		if _, err := os.Stat(skillPath); err == nil {
-			installed = true
-			state.Skill.Installed = true
-			state.Skill.SkillPath = skillPath // last one wins; SkillPath is legacy single-value field
-
-			for _, al := range agentLinks {
-				linkDir := al.linkDir(name)
-				if info, err := os.Lstat(linkDir); err == nil && info.Mode()&os.ModeSymlink != 0 {
-					state.Skill.Symlinks = append(state.Skill.Symlinks, linkDir)
-					installedForAgents = append(installedForAgents, al.agent)
-				}
-			}
+	for _, info := range infos {
+		if !info.Installed {
+			state.Skills = append(state.Skills, PerSkillState{
+				Name:               info.Name,
+				Installed:          false,
+				InstalledForAgents: info.InstalledForAgents,
+			})
+			continue
 		}
-
+		state.Skill.Installed = true
+		state.Skill.SkillPath = filepath.Join(yishanHome, "skills", info.Name, "SKILL.md")
+		for _, agent := range info.InstalledForAgents {
+			state.Skill.Symlinks = append(state.Skill.Symlinks, filepath.Join(homeDir, agentSkillDirName(agent), "skills", info.Name))
+		}
 		state.Skills = append(state.Skills, PerSkillState{
-			Name:               name,
-			Installed:          installed,
-			InstalledForAgents: installedForAgents,
+			Name:               info.Name,
+			Installed:          true,
+			InstalledForAgents: info.InstalledForAgents,
 		})
+	}
+	return nil
+}
+
+func agentSkillDirName(agent string) string {
+	switch agent {
+	case "opencode":
+		return ".config/opencode"
+	case "claude":
+		return ".claude"
+	default:
+		return ".agents"
 	}
 }
 
@@ -156,10 +145,10 @@ func fillMCPState(state *InstalledState, homeDir string) {
 func fillHookState(state *InstalledState, homeDir string) {
 	marker := "YISHAN_MANAGED_HOOK"
 	agentDirs := map[string]string{
-		"claude":  filepath.Join(homeDir, ".claude", "settings.json"),
-		"gemini":  filepath.Join(homeDir, ".gemini", "settings.json"),
-		"codex":   filepath.Join(homeDir, ".codex", "hooks.json"),
-		"cursor":  filepath.Join(homeDir, ".cursor", "hooks.json"),
+		"claude": filepath.Join(homeDir, ".claude", "settings.json"),
+		"gemini": filepath.Join(homeDir, ".gemini", "settings.json"),
+		"codex":  filepath.Join(homeDir, ".codex", "hooks.json"),
+		"cursor": filepath.Join(homeDir, ".cursor", "hooks.json"),
 	}
 
 	configHome := os.Getenv("XDG_CONFIG_HOME")

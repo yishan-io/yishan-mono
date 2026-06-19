@@ -373,13 +373,21 @@
     },
     "skills": {
       "title": "Agent Skills",
-      "description": "Install built-in yishan skills to extend AI agent capabilities.",
+      "description": "Browse official skills, install third-party skills from a source, and manage skill lifecycle from the desktop.",
       "loadError": "Failed to load skill statuses.",
       "installed": "Installed",
       "notInstalled": "Not installed",
+      "official": "Official",
+      "thirdParty": "Third-party",
+      "sourceLabel": "Install from source",
+      "sourcePlaceholder": "Official name or URL",
       "actions": {
+        "add": "Add",
+        "adding": "Adding...",
         "install": "Install",
         "installing": "Installing...",
+        "update": "Update",
+        "updating": "Updating...",
         "uninstall": "Uninstall",
         "uninstalling": "Uninstalling..."
       }

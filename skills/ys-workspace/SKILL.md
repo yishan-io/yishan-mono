@@ -16,7 +16,7 @@ after the work is complete.
 
 - The user asks you to "create a workspace for ..." or "start working on ..."
 - You need a fresh worktree to implement a feature or fix a bug
-- You need to close a workspace after completing a task
+- You need to close a workspace after completing the work
 - You are unsure how to translate a task into the correct yishan workspace commands
 - The user mentions branches, worktrees, or workspace lifecycle
 
