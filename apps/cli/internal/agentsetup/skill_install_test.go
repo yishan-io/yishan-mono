@@ -75,8 +75,9 @@ func TestRemoveSkill_RemovesRegistryAndSymlinks(t *testing.T) {
 	}
 
 	for _, path := range []string{
-		filepath.Join(homeDir, ".config", "opencode", "skills", StartSkillName),
+		filepath.Join(homeDir, ".yishan", "opencode-config-home", "skills", StartSkillName),
 		filepath.Join(homeDir, ".claude", "skills", StartSkillName),
+		filepath.Join(homeDir, ".codex", "skills", StartSkillName),
 		filepath.Join(homeDir, ".agents", "skills", StartSkillName),
 	} {
 		if _, err := os.Lstat(path); !os.IsNotExist(err) {

@@ -341,9 +341,14 @@ func agentSkillLinkDirs(name string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("resolve home dir: %w", err)
 	}
+	yishanHome, err := config.HomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("resolve yishan home: %w", err)
+	}
 	return []string{
-		filepath.Join(homeDir, ".config", "opencode", "skills", name),
+		filepath.Join(yishanHome, "opencode-config-home", "skills", name),
 		filepath.Join(homeDir, ".claude", "skills", name),
+		filepath.Join(homeDir, ".codex", "skills", name),
 		filepath.Join(homeDir, ".agents", "skills", name),
 	}, nil
 }
@@ -354,7 +359,7 @@ func installedAgentsForSkill(name string) []string {
 		return []string{}
 	}
 	agents := []string{}
-	labels := []string{"opencode", "claude", "agents"}
+	labels := []string{"opencode", "claude", "codex", "agents"}
 	for idx, linkDir := range linkDirs {
 		if info, statErr := os.Lstat(linkDir); statErr == nil && info.Mode()&os.ModeSymlink != 0 {
 			agents = append(agents, labels[idx])

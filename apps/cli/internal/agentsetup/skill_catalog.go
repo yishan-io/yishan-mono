@@ -68,10 +68,7 @@ func ListSkills() ([]SkillInfo, error) {
 
 	infos := make([]SkillInfo, 0, len(registry.Skills)+len(OfficialSkillNames()))
 	for _, name := range OfficialSkillNames() {
-		info, err := buildOfficialSkillInfo(name, installedByName[name])
-		if err != nil {
-			return nil, err
-		}
+		info := buildOfficialSkillInfo(name, installedByName[name])
 		infos = append(infos, info)
 	}
 
@@ -147,15 +144,16 @@ func readInstalledSkillFiles(name string) (map[string][]byte, error) {
 	return readSkillDir(dir)
 }
 
-func buildOfficialSkillInfo(name string, record InstalledSkillRecord) (SkillInfo, error) {
+func buildOfficialSkillInfo(name string, record InstalledSkillRecord) SkillInfo {
 	files, version, err := loadOfficialSkillFiles(name)
-	if err != nil {
-		return SkillInfo{}, err
+	description := ""
+	if err == nil {
+		frontMatter := parseSkillFrontMatter(files["SKILL.md"])
+		description = frontMatter.Description
 	}
-	frontMatter := parseSkillFrontMatter(files["SKILL.md"])
 	info := SkillInfo{
 		Name:               name,
-		Description:        frontMatter.Description,
+		Description:        description,
 		Version:            version,
 		Source:             string(SkillSourceOfficial),
 		SourceKind:         SkillSourceOfficial,
@@ -164,10 +162,13 @@ func buildOfficialSkillInfo(name string, record InstalledSkillRecord) (SkillInfo
 		Official:           true,
 		CanUpdate:          true,
 	}
+	if err != nil {
+		info.CanUpdate = installedSkillDirExists(name)
+	}
 	if record.Version != "" {
 		info.Version = record.Version
 	}
-	return info, nil
+	return info
 }
 
 func buildInstalledSkillInfo(record InstalledSkillRecord) SkillInfo {
@@ -187,11 +188,19 @@ func buildInstalledSkillInfo(record InstalledSkillRecord) SkillInfo {
 func loadOfficialSkillFiles(name string) (map[string][]byte, string, error) {
 	dir, err := resolveCanonicalSkillDir(name)
 	if err != nil {
-		return nil, "", err
+		return readInstalledSkillFilesFallback(name)
 	}
 	files, err := readSkillDir(dir)
 	if err != nil {
-		return nil, "", err
+		return readInstalledSkillFilesFallback(name)
+	}
+	return files, "workspace", nil
+}
+
+func readInstalledSkillFilesFallback(name string) (map[string][]byte, string, error) {
+	files, err := readInstalledSkillFiles(name)
+	if err != nil {
+		return nil, "", fmt.Errorf("unknown official skill %q: %w", name, err)
 	}
 	return files, "workspace", nil
 }
