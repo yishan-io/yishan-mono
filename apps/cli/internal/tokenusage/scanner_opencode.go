@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,9 +17,15 @@ import (
 
 const opencodeAgentKind = agentkind.OpenCode
 
-type openCodeSessionRow struct {
+// openCodeMessageRow holds one assistant message with its session context.
+// The scanner reads at message granularity so that each message's tokens are
+// attributed to the hourly bucket matching the API call time, not the session
+// creation time. This prevents long-running sessions from being dropped by the
+// sliding scan window (which is anchored to session.time_created in the old
+// session-level query).
+type openCodeMessageRow struct {
 	SessionID        string
-	Timestamp        string
+	MsgTimestamp     string // message.time_created — used for bucket + window gate
 	Directory        string
 	WorkspaceDir     string
 	Worktree         string
@@ -37,12 +44,12 @@ func ScanOpenCodeHourlyUsage(ctx context.Context, input ScanInput) ([]HourlyUsag
 	}
 	buckets := make(map[hourlyKey]*hourlyAccumulator)
 	for _, databasePath := range databasePaths {
-		rows, rowErr := queryOpenCodeSessionRows(ctx, databasePath)
+		rows, rowErr := queryOpenCodeMessageRows(ctx, databasePath, input.ScanSinceUnixMilli)
 		if rowErr != nil {
 			continue
 		}
-		for _, sessionRow := range rows {
-			applyOpenCodeSessionRow(sessionRow, databasePath, input, input.Worktrees, buckets)
+		for _, msgRow := range rows {
+			applyOpenCodeMessageRow(msgRow, databasePath, input, input.Worktrees, buckets)
 		}
 	}
 	return materializeHourlyRows(buckets, input), nil
@@ -91,27 +98,44 @@ func resolveOpenCodeDataDir(sessionRoot string) (string, error) {
 	return filepath.Join(homeDir, ".local", "share", "opencode"), nil
 }
 
-func queryOpenCodeSessionRows(ctx context.Context, databasePath string) ([]openCodeSessionRow, error) {
+// queryOpenCodeMessageRows queries the OpenCode SQLite database at message
+// granularity. Each returned row represents one assistant message.
+//
+// The scan window is pushed into SQL (m.time_created >= scanSinceMillis) so
+// that SQLite can skip old rows efficiently. scanSinceMillis == 0 means no
+// window (full scan).
+func queryOpenCodeMessageRows(ctx context.Context, databasePath string, scanSinceMillis int64) ([]openCodeMessageRow, error) {
+	windowClause := ""
+	if scanSinceMillis > 0 {
+		windowClause = "AND m.time_created >= " + strconv.FormatInt(scanSinceMillis, 10)
+	}
 	query := strings.Join([]string{
 		"SELECT",
-		"  s.id AS session_id,",
-		"  s.time_created AS time_created,",
-		"  s.directory AS directory,",
+		"  m.session_id AS session_id,",
+		"  m.time_created AS msg_time,",
+		"  COALESCE(s.directory, '') AS directory,",
 		"  COALESCE(w.directory, '') AS workspace_directory,",
 		"  COALESCE(p.worktree, '') AS worktree,",
 		"  COALESCE(s.model, 'unknown') AS session_model,",
-		"  COALESCE(s.tokens_input, 0) AS tokens_input,",
-		"  COALESCE(s.tokens_output, 0) AS tokens_output,",
-		"  COALESCE(s.tokens_reasoning, 0) AS tokens_reasoning,",
-		"  COALESCE(s.tokens_cache_read, 0) AS tokens_cache_read,",
-		"  COALESCE(s.tokens_cache_write, 0) AS tokens_cache_write",
-		"FROM session s",
+		"  COALESCE(json_extract(m.data, '$.tokens.input'), 0) AS tokens_input,",
+		"  COALESCE(json_extract(m.data, '$.tokens.output'), 0) AS tokens_output,",
+		"  COALESCE(json_extract(m.data, '$.tokens.reasoning'), 0) AS tokens_reasoning,",
+		"  COALESCE(json_extract(m.data, '$.tokens.cache.read'), 0) AS tokens_cache_read,",
+		"  COALESCE(json_extract(m.data, '$.tokens.cache.write'), 0) AS tokens_cache_write",
+		"FROM message m",
+		"JOIN session s ON s.id = m.session_id",
 		"LEFT JOIN workspace w ON w.id = s.workspace_id",
 		"LEFT JOIN project p ON p.id = s.project_id",
-		"WHERE COALESCE(s.tokens_input, 0) + COALESCE(s.tokens_output, 0) +",
-		"      COALESCE(s.tokens_reasoning, 0) + COALESCE(s.tokens_cache_read, 0) +",
-		"      COALESCE(s.tokens_cache_write, 0) > 0",
-		"ORDER BY s.time_created ASC",
+		"WHERE json_extract(m.data, '$.role') = 'assistant'",
+		windowClause,
+		"  AND (",
+		"    COALESCE(json_extract(m.data, '$.tokens.input'), 0) +",
+		"    COALESCE(json_extract(m.data, '$.tokens.output'), 0) +",
+		"    COALESCE(json_extract(m.data, '$.tokens.reasoning'), 0) +",
+		"    COALESCE(json_extract(m.data, '$.tokens.cache.read'), 0) +",
+		"    COALESCE(json_extract(m.data, '$.tokens.cache.write'), 0)",
+		"  ) > 0",
+		"ORDER BY m.time_created ASC",
 	}, " ")
 
 	cmd := exec.CommandContext(ctx, "sqlite3", "-json", databasePath, query)
@@ -125,7 +149,7 @@ func queryOpenCodeSessionRows(ctx context.Context, databasePath string) ([]openC
 
 	type sqliteRow struct {
 		SessionID        string `json:"session_id"`
-		TimeCreated      any    `json:"time_created"`
+		MsgTime          any    `json:"msg_time"`
 		Directory        string `json:"directory"`
 		WorkspaceDir     string `json:"workspace_directory"`
 		Worktree         string `json:"worktree"`
@@ -140,15 +164,15 @@ func queryOpenCodeSessionRows(ctx context.Context, databasePath string) ([]openC
 	if err := json.Unmarshal(rawOutput, &parsedRows); err != nil {
 		return nil, fmt.Errorf("parse opencode sqlite result from %q: %w", databasePath, err)
 	}
-	rows := make([]openCodeSessionRow, 0, len(parsedRows))
+	rows := make([]openCodeMessageRow, 0, len(parsedRows))
 	for _, row := range parsedRows {
-		rows = append(rows, openCodeSessionRow{
-			SessionID:       row.SessionID,
-			Timestamp:       parseOpenCodeTimestamp(row.TimeCreated),
-			Directory:       row.Directory,
-			WorkspaceDir:    row.WorkspaceDir,
-			Worktree:        row.Worktree,
-			SessionModel:    row.SessionModel,
+		rows = append(rows, openCodeMessageRow{
+			SessionID:        row.SessionID,
+			MsgTimestamp:     parseOpenCodeTimestamp(row.MsgTime),
+			Directory:        row.Directory,
+			WorkspaceDir:     row.WorkspaceDir,
+			Worktree:         row.Worktree,
+			SessionModel:     row.SessionModel,
 			TokensInput:      row.TokensInput,
 			TokensOutput:     row.TokensOutput,
 			TokensReasoning:  row.TokensReasoning,
@@ -171,40 +195,49 @@ func parseOpenCodeTimestamp(rawValue any) string {
 	return time.UnixMilli(millis).UTC().Format(time.RFC3339Nano)
 }
 
-func applyOpenCodeSessionRow(
-	sessionRow openCodeSessionRow,
+func applyOpenCodeMessageRow(
+	msgRow openCodeMessageRow,
 	databasePath string,
 	input ScanInput,
 	worktrees []WorktreeRef,
 	buckets map[hourlyKey]*hourlyAccumulator,
 ) {
-	if sessionRow.Timestamp == "" {
+	if msgRow.MsgTimestamp == "" {
 		return
 	}
-	timestamp, err := time.Parse(time.RFC3339Nano, sessionRow.Timestamp)
+	msgTime, err := time.Parse(time.RFC3339Nano, msgRow.MsgTimestamp)
 	if err != nil {
 		return
 	}
-	if isBeforeScanWindow(timestamp, input) {
+	// The SQL window clause already filters old rows; this is a belt-and-suspenders
+	// guard against clock skew between the Go process and SQLite.
+	if isBeforeScanWindow(msgTime, input) {
 		return
 	}
-	cwd := firstNonEmptyPath(sessionRow.Directory, sessionRow.WorkspaceDir, sessionRow.Worktree)
+	cwd := firstNonEmptyPath(msgRow.Directory, msgRow.WorkspaceDir, msgRow.Worktree)
 	workspace, confidence := resolveWorktree(cwd, worktrees)
-	event := codexEvent{SessionID: sessionRow.SessionID, Model: normalizeOpenCodeModel(sessionRow.SessionModel), Timestamp: timestamp}
+	// Bucket and event timestamp are the message's own time, not the session
+	// creation time. This ensures tokens are attributed to the hour the API
+	// call actually happened.
+	event := codexEvent{
+		SessionID: msgRow.SessionID,
+		Model:     normalizeOpenCodeModel(msgRow.SessionModel),
+		Timestamp: msgTime,
+	}
 	delta := codexUsage{
-		InputTokens:       sessionRow.TokensInput + sessionRow.TokensCacheRead + sessionRow.TokensCacheWrite,
-		OutputTokens:      sessionRow.TokensOutput,
-		CachedInputTokens: sessionRow.TokensCacheRead,
-		CachedWriteTokens: sessionRow.TokensCacheWrite,
-		ReasoningTokens:   sessionRow.TokensReasoning,
-		TotalTokens:       sessionRow.TokensInput + sessionRow.TokensCacheRead + sessionRow.TokensCacheWrite + sessionRow.TokensOutput + sessionRow.TokensReasoning,
+		InputTokens:       msgRow.TokensInput + msgRow.TokensCacheRead + msgRow.TokensCacheWrite,
+		OutputTokens:      msgRow.TokensOutput,
+		CachedInputTokens: msgRow.TokensCacheRead,
+		CachedWriteTokens: msgRow.TokensCacheWrite,
+		ReasoningTokens:   msgRow.TokensReasoning,
+		TotalTokens:       msgRow.TokensInput + msgRow.TokensCacheRead + msgRow.TokensCacheWrite + msgRow.TokensOutput + msgRow.TokensReasoning,
 	}
 	if delta.TotalTokens <= 0 {
 		return
 	}
 	key := makeOpenCodeHourlyKey(event, workspace, confidence, databasePath)
 	acc := getAccumulator(buckets, key)
-	accumulateDelta(acc, delta, sessionRow.SessionID)
+	accumulateDelta(acc, delta, msgRow.SessionID)
 }
 
 func normalizeOpenCodeModel(rawModel string) string {
