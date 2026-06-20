@@ -225,8 +225,23 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 }
 
 func initMemoryService(handler *JSONRPCHandler, statePath string, cfg RunConfig) error {
-	memoryDBPath := filepath.Join(filepath.Dir(statePath), "memory.db")
-	memSvc, memErr := memory.NewService(memoryDBPath, memory.SummarizerConfig{
+	dir := filepath.Dir(statePath)
+	oldPath := filepath.Join(dir, "memory.db")
+	newPath := filepath.Join(dir, "memory", "memory.db")
+
+	if _, err := os.Stat(oldPath); err == nil {
+		if _, err := os.Stat(newPath); os.IsNotExist(err) {
+			if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
+				log.Warn().Err(err).Msg("failed to create memory directory for migration")
+			} else if err := os.Rename(oldPath, newPath); err != nil {
+				log.Warn().Err(err).Str("from", oldPath).Str("to", newPath).Msg("failed to migrate memory.db")
+			} else {
+				log.Info().Str("from", oldPath).Str("to", newPath).Msg("migrated memory.db to memory/ directory")
+			}
+		}
+	}
+
+	memSvc, memErr := memory.NewService(newPath, memory.SummarizerConfig{
 		Enabled:   cfg.MemorySummarizer,
 		AgentKind: cfg.MemorySummarizerAgent,
 		Model:     cfg.MemorySummarizerModel,
