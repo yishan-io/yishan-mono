@@ -251,6 +251,8 @@ jobs:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
         run: |
+          # Computer Use daemon signing follow-up notes:
+          # docs/computer-use-macos-packaging.md
           if [[ -z "$CSC_LINK" ]]; then
             echo "::warning::No macOS signing certificate configured. Skipping."
             exit 0

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/modellist"
@@ -37,6 +38,7 @@ type JSONRPCHandler struct {
 	watchers       *workspaceWatchers
 	prTracker      *workspacePRTracker
 	tokenUsage     *tokenUsageCollector
+	computer       *computerService
 	modelList      *modellist.Service
 	memory         *memory.Service
 	settingsPath   string
@@ -93,6 +95,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		watchers:       newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
 		prTracker:      prTracker,
 		tokenUsage:     collector,
+		computer:       newComputerService(computer.NewUnavailableRuntime("unknown")),
 		modelList:      modellist.NewService(),
 		settingsPath:   config.SettingsFilePath(filepath.Dir(configPath)),
 		agentUsage:     make(map[string]map[string]struct{}),
@@ -100,6 +103,13 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 	}
 	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)
 	return handler
+}
+
+func (h *JSONRPCHandler) SetComputerService(svc *computerService) {
+	if svc == nil {
+		return
+	}
+	h.computer = svc
 }
 
 // SetMemoryService wires the memory service into the handler.

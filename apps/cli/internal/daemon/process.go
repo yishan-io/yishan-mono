@@ -15,8 +15,8 @@ import (
 	"syscall"
 	"time"
 
-	"yishan/apps/cli/internal/buildinfo"
 	agentsetup "yishan/apps/cli/internal/agentsetup"
+	"yishan/apps/cli/internal/buildinfo"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/daemon/agentcmd"
 	"yishan/apps/cli/internal/memory"
@@ -32,13 +32,13 @@ var ErrNotRunning = errors.New("daemon is not running")
 const detachedEnvKey = "YISHAN_DAEMON_DETACHED"
 
 type RunConfig struct {
-	Host                    string
-	Port                    int
-	RelayEnabled            bool
-	RelayURL                string
-	MemorySummarizer        bool
-	MemorySummarizerAgent   string
-	MemorySummarizerModel   string
+	Host                  string
+	Port                  int
+	RelayEnabled          bool
+	RelayURL              string
+	MemorySummarizer      bool
+	MemorySummarizerAgent string
+	MemorySummarizerModel string
 	// LogFilePath is the resolved path to the daemon log file.
 	// Set by the command layer; passed through to handlers for diagnostics.
 	LogFilePath string
@@ -229,6 +229,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 		return nil, nil, fmt.Errorf("create workspace index store: %w", err)
 	}
 	handler := NewJSONRPCHandler(workspaceManager, runtime, daemonID, cfg.LogFilePath, cleanupStore, wsIndexStore, statePath, contextStore)
+	handler.SetComputerService(newDefaultComputerService())
 
 	if err := initMemoryService(handler, statePath, cfg, runtime); err != nil {
 		return nil, nil, err

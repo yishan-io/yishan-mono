@@ -23,8 +23,9 @@ type notification struct {
 }
 
 type rpcError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+	Code    int            `json:"code"`
+	Message string         `json:"message"`
+	Data    map[string]any `json:"data,omitempty"`
 }
 
 type fileListParams struct {

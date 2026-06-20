@@ -10,6 +10,7 @@ import (
 
 const terminalOutputFlushInterval = 16 * time.Millisecond
 const terminalOutputMaxBatchBytes = 32 * 1024
+const websocketWriteTimeout = 5 * time.Second
 
 type wsConnState struct {
 	conn                            *websocket.Conn
@@ -46,6 +47,10 @@ func (c *wsConnState) terminalInputSessionID(raw []byte) string {
 func (c *wsConnState) WriteJSON(v any) error {
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
+	if err := c.conn.SetWriteDeadline(time.Now().Add(websocketWriteTimeout)); err != nil {
+		return err
+	}
+	defer c.conn.SetWriteDeadline(time.Time{})
 	return c.conn.WriteJSON(v)
 }
 
@@ -54,6 +59,10 @@ func (c *wsConnState) WriteJSON(v any) error {
 func (c *wsConnState) WriteBinary(data []byte) error {
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
+	if err := c.conn.SetWriteDeadline(time.Now().Add(websocketWriteTimeout)); err != nil {
+		return err
+	}
+	defer c.conn.SetWriteDeadline(time.Time{})
 	return c.conn.WriteMessage(websocket.BinaryMessage, data)
 }
 

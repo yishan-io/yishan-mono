@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -43,6 +44,18 @@ func mapRPCError(err error) *rpcError {
 	var e *workspace.RPCError
 	if errors.As(err, &e) {
 		return &rpcError{Code: e.Code, Message: e.Message}
+	}
+	var computerErr *computer.Error
+	if errors.As(err, &computerErr) {
+		return &rpcError{
+			Code:    rpcCodeServerError,
+			Message: computerErr.Message,
+			Data: map[string]any{
+				"code":      computerErr.Code,
+				"details":   computerErr.Details,
+				"retryable": computerErr.Retryable,
+			},
+		}
 	}
 	return &rpcError{Code: rpcCodeServerError, Message: err.Error()}
 }

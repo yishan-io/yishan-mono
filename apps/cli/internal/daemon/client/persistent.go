@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -50,6 +51,8 @@ type daemonResponse struct {
 	Error   *RPCError       `json:"error,omitempty"`
 }
 
+const daemonWriteTimeout = 5 * time.Second
+
 // NewPersistent creates a PersistentClient, connects to the daemon, and
 // starts the read loop.
 func NewPersistent(ctx context.Context, url string, token string) (*PersistentClient, error) {
@@ -80,6 +83,10 @@ func NewPersistent(ctx context.Context, url string, token string) (*PersistentCl
 // the matching response. It returns an *RPCError if the daemon responds with
 // a JSON-RPC error.
 func (c *PersistentClient) Call(method string, params any, out any) error {
+	return c.CallContext(context.Background(), method, params, out)
+}
+
+func (c *PersistentClient) CallContext(ctx context.Context, method string, params any, out any) error {
 	if err := c.checkClosed(); err != nil {
 		return err
 	}
@@ -101,12 +108,18 @@ func (c *PersistentClient) Call(method string, params any, out any) error {
 		return fmt.Errorf("send daemon RPC request: %w", err)
 	}
 
-	resp, ok := <-responseCh
-	if !ok {
-		if err := c.checkClosed(); err != nil {
-			return err
+	var resp daemonResponse
+	var ok bool
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case resp, ok = <-responseCh:
+		if !ok {
+			if err := c.checkClosed(); err != nil {
+				return err
+			}
+			return fmt.Errorf("daemon connection closed while waiting for response")
 		}
-		return fmt.Errorf("daemon connection closed while waiting for response")
 	}
 
 	if resp.Error != nil {
@@ -161,6 +174,10 @@ func (c *PersistentClient) Close() error {
 func (c *PersistentClient) writeRequest(id int64, method string, params any) error {
 	c.connMu.Lock()
 	defer c.connMu.Unlock()
+	if err := c.conn.SetWriteDeadline(time.Now().Add(daemonWriteTimeout)); err != nil {
+		return fmt.Errorf("set write deadline: %w", err)
+	}
+	defer c.conn.SetWriteDeadline(time.Time{})
 
 	return c.conn.WriteJSON(daemonRequest{
 		JSONRPC: "2.0",

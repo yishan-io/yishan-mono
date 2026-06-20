@@ -18,6 +18,9 @@ const cliVersion =
   (typeof packageJson.version === "string" ? packageJson.version.trim() : "") ||
   "0.0.0";
 
+// Computer Use runtime packaging/signing follow-up notes:
+// docs/computer-use-macos-packaging.md
+
 mkdirSync(resourcesDir, { recursive: true });
 
 const buildResult = spawnSync("make", ["build-release", `VERSION=${cliVersion}`], {

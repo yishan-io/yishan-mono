@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -40,6 +41,8 @@ type RPCError struct {
 	Message string
 }
 
+const oneShotWriteTimeout = 5 * time.Second
+
 func (e *RPCError) Error() string {
 	return fmt.Sprintf("daemon RPC error %d: %s", e.Code, e.Message)
 }
@@ -59,10 +62,14 @@ func (c *Client) Call(ctx context.Context, method string, params any, out any) e
 		return fmt.Errorf("connect daemon websocket: %w", err)
 	}
 	defer conn.Close()
+	if err := conn.SetWriteDeadline(time.Now().Add(oneShotWriteTimeout)); err != nil {
+		return fmt.Errorf("set write deadline: %w", err)
+	}
 
 	if err := conn.WriteJSON(request{JSONRPC: "2.0", ID: 1, Method: method, Params: params}); err != nil {
 		return fmt.Errorf("send daemon RPC request: %w", err)
 	}
+	_ = conn.SetWriteDeadline(time.Time{})
 
 	_, payload, err := conn.ReadMessage()
 	if err != nil {

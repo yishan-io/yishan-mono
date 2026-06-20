@@ -45,17 +45,17 @@ type daemonWorkspace struct {
 }
 
 type workspaceCreateArgs struct {
-	RepoKey        string `json:"repoKey" jsonschema:"The project repo key (relative path used for git worktree naming)"`
-	SourcePath     string `json:"sourcePath" jsonschema:"Source path of the primary workspace or bare repo to branch from"`
-	TargetBranch   string `json:"targetBranch" jsonschema:"Branch name for the new workspace"`
-	SourceBranch   string `json:"sourceBranch" jsonschema:"Base branch to create the new branch from"`
-	ProjectID      string `json:"projectId,omitempty" jsonschema:"Project ID to associate the workspace with"`
-	NodeID         string `json:"nodeId,omitempty" jsonschema:"Node ID to create the workspace on (defaults to local daemon node)"`
-	WorkspaceName  string `json:"workspaceName,omitempty" jsonschema:"Name for the workspace directory (defaults to branch name)"`
-	SetupHook      string `json:"setupHook,omitempty" jsonschema:"Shell command to run after workspace is created (e.g. npm install)"`
-	TaskRunKind    string `json:"taskRunAgentKind,omitempty" jsonschema:"Agent kind for init task run (e.g. opencode, claude)"`
-	TaskRunPrompt  string `json:"taskRunPrompt,omitempty" jsonschema:"Initial prompt for the task run agent"`
-	TaskRunModel   string `json:"taskRunModel,omitempty" jsonschema:"Model override for the task run agent"`
+	RepoKey       string `json:"repoKey" jsonschema:"The project repo key (relative path used for git worktree naming)"`
+	SourcePath    string `json:"sourcePath" jsonschema:"Source path of the primary workspace or bare repo to branch from"`
+	TargetBranch  string `json:"targetBranch" jsonschema:"Branch name for the new workspace"`
+	SourceBranch  string `json:"sourceBranch" jsonschema:"Base branch to create the new branch from"`
+	ProjectID     string `json:"projectId,omitempty" jsonschema:"Project ID to associate the workspace with"`
+	NodeID        string `json:"nodeId,omitempty" jsonschema:"Node ID to create the workspace on (defaults to local daemon node)"`
+	WorkspaceName string `json:"workspaceName,omitempty" jsonschema:"Name for the workspace directory (defaults to branch name)"`
+	SetupHook     string `json:"setupHook,omitempty" jsonschema:"Shell command to run after workspace is created (e.g. npm install)"`
+	TaskRunKind   string `json:"taskRunAgentKind,omitempty" jsonschema:"Agent kind for init task run (e.g. opencode, claude)"`
+	TaskRunPrompt string `json:"taskRunPrompt,omitempty" jsonschema:"Initial prompt for the task run agent"`
+	TaskRunModel  string `json:"taskRunModel,omitempty" jsonschema:"Model override for the task run agent"`
 }
 
 type workspaceCloseArgs struct {
@@ -364,6 +364,8 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 			return textResult(string(encoded)), nil, nil
 		},
 	)
+
+	registerComputerTools(server, daemonClient)
 
 	return server.Run(context.Background(), &mcp.StdioTransport{})
 }

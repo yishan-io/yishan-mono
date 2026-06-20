@@ -2,6 +2,12 @@ version: 2
 
 project_name: yishan-cli
 
+# Computer Use packaging/signing notes live in:
+# docs/computer-use-macos-packaging.md
+# If the daemon starts shipping ScreenCaptureKit/global-input functionality,
+# keep the release identity and permission-retention notes there in sync with
+# any macOS signing changes made in this file or the desktop release workflow.
+
 before:
   hooks:
     - go mod tidy
