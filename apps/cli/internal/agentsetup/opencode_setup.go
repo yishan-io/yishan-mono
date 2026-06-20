@@ -9,6 +9,20 @@ import (
 )
 
 func EnsureOpenCodeCommands() error {
+	for name := range openCodeCommands {
+		if err := EnsureOpenCodeCommand(name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func EnsureOpenCodeCommand(name string) error {
+	content, ok := openCodeCommands[name]
+	if !ok {
+		return nil
+	}
+
 	yishanHome, err := config.HomeDir()
 	if err != nil {
 		return fmt.Errorf("resolve yishan home: %w", err)
@@ -21,28 +35,32 @@ func EnsureOpenCodeCommands() error {
 		return fmt.Errorf("create opencode commands dir: %w", err)
 	}
 
-	for name, content := range openCodeCommands {
-		cmdPath := filepath.Join(commandsDir, name+".md")
-		if err := os.WriteFile(cmdPath, []byte(content), 0o644); err != nil {
-			return fmt.Errorf("write command file %s: %w", name, err)
-		}
+	cmdPath := filepath.Join(commandsDir, name+".md")
+	if err := os.WriteFile(cmdPath, []byte(content), 0o644); err != nil {
+		return fmt.Errorf("write command file %s: %w", name, err)
 	}
 
 	return nil
 }
 
 func RemoveOpenCodeCommands() error {
+	for name := range openCodeCommands {
+		if err := RemoveOpenCodeCommand(name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func RemoveOpenCodeCommand(name string) error {
 	yishanHome, err := config.HomeDir()
 	if err != nil {
 		return fmt.Errorf("resolve yishan home: %w", err)
 	}
 
 	commandsDir := filepath.Join(yishanHome, "opencode-config-home", "commands")
-
-	for name := range openCodeCommands {
-		cmdPath := filepath.Join(commandsDir, name+".md")
-		os.Remove(cmdPath)
-	}
+	cmdPath := filepath.Join(commandsDir, name+".md")
+	_ = os.Remove(cmdPath)
 
 	return nil
 }

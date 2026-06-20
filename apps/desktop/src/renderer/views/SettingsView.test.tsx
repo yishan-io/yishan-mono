@@ -52,6 +52,10 @@ vi.mock("./settings/MemberSettingsView", () => ({
   MemberSettingsView: () => <div data-testid="member-settings-panel" />,
 }));
 
+vi.mock("./settings/SkillsSettingsView", () => ({
+  SkillsSettingsView: () => <div data-testid="skills-settings-panel" />,
+}));
+
 describe("SettingsView", () => {
   afterEach(() => {
     window.localStorage.removeItem(LAYOUT_STORE_STORAGE_KEY);
@@ -323,6 +327,20 @@ describe("SettingsView", () => {
     );
 
     expect(screen.getByTestId("agent-settings-panel")).toBeTruthy();
+  });
+
+  it("renders skills panel when skills tab is selected", () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=skills"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    expect(screen.getByTestId("skills-settings-panel")).toBeTruthy();
   });
 
   it("renders current user profile details on account tab", () => {

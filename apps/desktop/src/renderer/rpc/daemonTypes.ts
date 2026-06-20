@@ -594,7 +594,18 @@ export type TerminalSessionLifecycleEvent = {
 export type SkillInfo = {
   name: string;
   description: string;
+  version: string;
+  source: string;
+  sourceKind: string;
   installed: boolean;
+  installedForAgents: string[];
+  official: boolean;
+  canUpdate: boolean;
+  hasUpdate: boolean;
+};
+
+export type SkillDetail = SkillInfo & {
+  files: Record<string, string>;
 };
 
 export type SkillListResponse = {

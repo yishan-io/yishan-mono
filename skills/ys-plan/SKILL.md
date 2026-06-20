@@ -54,6 +54,17 @@ _Last updated: YYYY-MM-DD_
 5. **Cover tests.** Include steps for writing or updating unit tests.
 6. **Account for acceptance criteria.** Every criterion from `task.md` must be addressed by at least one step.
 
+## Minimal Change Heuristics
+
+Before locking the plan, check these in order and stop at the first one that fits:
+
+1. **Can the task be narrowed or skipped?** If part of the request is speculative or not needed for the acceptance criteria, leave it out.
+2. **Can existing code already cover it?** Prefer extending an existing path over adding a parallel one.
+3. **Can stdlib, native platform behavior, or an already-installed dependency handle it?** Prefer that over custom helpers or new dependencies.
+4. **Can the plan touch fewer files?** Prefer the shortest diff that still satisfies the task.
+
+Do not plan abstractions with one implementation, config nobody sets, or scaffolding "for later". If two plans are both correct, choose the smaller one.
+
 ## Workflow
 
 ### Planning a task
@@ -64,6 +75,7 @@ _Last updated: YYYY-MM-DD_
 4. Draft `plan.md`:
    - **Approach**: Summarize the strategy in 2-4 sentences. Reference relevant architecture docs or patterns.
    - **Steps**: List ordered, concrete steps. Each step should mention specific files.
+   - **Apply the minimal change heuristics**: delete scope, reuse existing code, use stdlib/native behavior, and minimize files before planning new structure.
 5. Review the plan against acceptance criteria — every criterion must map to at least one step.
 6. Write `plan.md`.
 7. Suggest the next step: `ys-build`.

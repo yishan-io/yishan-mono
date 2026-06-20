@@ -10,104 +10,88 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-// skillInfo describes one built-in skill returned by skill.list.
-type skillInfo struct {
-	Name               string   `json:"name"`
-	Description        string   `json:"description"`
-	Installed          bool     `json:"installed"`
-	InstalledForAgents []string `json:"installedForAgents"`
-}
-
-// allSkillNames is the canonical ordered list of built-in skills.
-var allSkillNames = []string{
-	setup.WorkspaceSkillName,
-	setup.MemorySkillName,
-	setup.StartSkillName,
-	setup.ResearchSkillName,
-	setup.PlanSkillName,
-	setup.BuildSkillName,
-	setup.VerifySkillName,
-	setup.DoneSkillName,
-}
-
-var skillDescriptions = map[string]string{
-	setup.WorkspaceSkillName: "Workspace management — open, close, and navigate yishan workspaces from an agent.",
-	setup.MemorySkillName:    "Project memory — keep a persistent MEMORY.md context file up to date across sessions.",
-	setup.StartSkillName:     "Start a new task — create a ticket folder in .my-context/tasks/ and register it.",
-	setup.ResearchSkillName:  "Task research — investigate requirements, search project memory, and record findings.",
-	setup.PlanSkillName:      "Task planning — draft an execution plan with ordered steps based on research.",
-	setup.BuildSkillName:     "Task build — execute the plan, write code, and ensure unit tests are covered.",
-	setup.VerifySkillName:    "Task verification — review code, run lint/typecheck, and ensure tests pass.",
-	setup.DoneSkillName:      "Task finalization — update architecture docs, move to completed/, update MEMORY.md.",
-}
-
 func (h *JSONRPCHandler) dispatchSkill(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodSkillList:
 		return handleSkillList()
-	case MethodSkillInstall:
-		return handleSkillInstall(params)
-	case MethodSkillUninstall:
-		return handleSkillUninstall(params)
+	case MethodSkillInfo:
+		return handleSkillInfo(params)
+	case MethodSkillAdd:
+		return handleSkillAdd(params)
+	case MethodSkillRemove:
+		return handleSkillRemove(params)
+	case MethodSkillUpdate:
+		return handleSkillUpdate(params)
+	case MethodSkillDetail:
+		return handleSkillDetail(params)
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, fmt.Sprintf("method not found: %s", method))
 	}
 }
 
 func handleSkillList() (any, error) {
-	state, err := setup.GetInstalledState()
+	skills, err := setup.ListSkills()
 	if err != nil {
-		return nil, fmt.Errorf("read skill state: %w", err)
-	}
-
-	perSkill := make(map[string]setup.PerSkillState, len(state.Skills))
-	for _, s := range state.Skills {
-		perSkill[s.Name] = s
-	}
-
-	skills := make([]skillInfo, 0, len(allSkillNames))
-	for _, name := range allSkillNames {
-		ps := perSkill[name]
-		agents := ps.InstalledForAgents
-		if agents == nil {
-			agents = []string{}
-		}
-		skills = append(skills, skillInfo{
-			Name:               name,
-			Description:        skillDescriptions[name],
-			Installed:          ps.Installed,
-			InstalledForAgents: agents,
-		})
+		return nil, fmt.Errorf("list skills: %w", err)
 	}
 	return map[string]any{"skills": skills}, nil
 }
 
-func handleSkillInstall(params json.RawMessage) (any, error) {
+func handleSkillInfo(params json.RawMessage) (any, error) {
 	name, err := parseSkillNameParam(params)
 	if err != nil {
 		return nil, err
 	}
-	if fn, ok := installSkillFns[name]; ok {
-		if err := fn(); err != nil {
-			return nil, fmt.Errorf("install skill %q: %w", name, err)
-		}
-		return map[string]bool{"ok": true}, nil
+	info, err := setup.GetSkillInfo(name)
+	if err != nil {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, err.Error())
 	}
-	return nil, workspace.NewRPCError(rpcCodeInvalidParams, fmt.Sprintf("unknown skill %q", name))
+	return info, nil
 }
 
-func handleSkillUninstall(params json.RawMessage) (any, error) {
+func handleSkillDetail(params json.RawMessage) (any, error) {
 	name, err := parseSkillNameParam(params)
 	if err != nil {
 		return nil, err
 	}
-	if fn, ok := removeSkillFns[name]; ok {
-		if err := fn(); err != nil {
-			return nil, fmt.Errorf("uninstall skill %q: %w", name, err)
-		}
-		return map[string]bool{"ok": true}, nil
+	detail, err := setup.GetSkillDetail(name)
+	if err != nil {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, err.Error())
 	}
-	return nil, workspace.NewRPCError(rpcCodeInvalidParams, fmt.Sprintf("unknown skill %q", name))
+	return detail, nil
+}
+
+func handleSkillAdd(params json.RawMessage) (any, error) {
+	source, err := parseSkillSourceParam(params)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := setup.AddSkill(source); err != nil {
+		return nil, fmt.Errorf("add skill %q: %w", source, err)
+	}
+	return map[string]bool{"ok": true}, nil
+}
+
+func handleSkillRemove(params json.RawMessage) (any, error) {
+	name, err := parseSkillNameParam(params)
+	if err != nil {
+		return nil, err
+	}
+	if err := setup.RemoveSkill(name); err != nil {
+		return nil, fmt.Errorf("remove skill %q: %w", name, err)
+	}
+	return map[string]bool{"ok": true}, nil
+}
+
+func handleSkillUpdate(params json.RawMessage) (any, error) {
+	name, err := parseSkillNameParam(params)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := setup.UpdateSkill(name); err != nil {
+		return nil, fmt.Errorf("update skill %q: %w", name, err)
+	}
+	return map[string]bool{"ok": true}, nil
 }
 
 func parseSkillNameParam(params json.RawMessage) (string, error) {
@@ -121,32 +105,19 @@ func parseSkillNameParam(params json.RawMessage) (string, error) {
 	if name == "" {
 		return "", workspace.NewRPCError(rpcCodeInvalidParams, "name is required")
 	}
-	for _, valid := range allSkillNames {
-		if name == valid {
-			return name, nil
-		}
+	return name, nil
+}
+
+func parseSkillSourceParam(params json.RawMessage) (string, error) {
+	var req struct {
+		Source string `json:"source"`
 	}
-	return "", workspace.NewRPCError(rpcCodeInvalidParams, fmt.Sprintf("unknown skill %q", name))
-}
-
-var installSkillFns = map[string]func() error{
-	setup.WorkspaceSkillName: func() error { _, err := setup.EnsureWorkspaceSkill(); return err },
-	setup.MemorySkillName:    func() error { _, err := setup.EnsureMemorySkill(); return err },
-	setup.StartSkillName:     func() error { _, err := setup.EnsureStartSkill(); return err },
-	setup.ResearchSkillName:  func() error { _, err := setup.EnsureResearchSkill(); return err },
-	setup.PlanSkillName:      func() error { _, err := setup.EnsurePlanSkill(); return err },
-	setup.BuildSkillName:     func() error { _, err := setup.EnsureBuildSkill(); return err },
-	setup.VerifySkillName:    func() error { _, err := setup.EnsureVerifySkill(); return err },
-	setup.DoneSkillName:      func() error { _, err := setup.EnsureDoneSkill(); return err },
-}
-
-var removeSkillFns = map[string]func() error{
-	setup.WorkspaceSkillName: setup.RemoveWorkspaceSkill,
-	setup.MemorySkillName:    setup.RemoveMemorySkill,
-	setup.StartSkillName:     setup.RemoveStartSkill,
-	setup.ResearchSkillName:  setup.RemoveResearchSkill,
-	setup.PlanSkillName:      setup.RemovePlanSkill,
-	setup.BuildSkillName:     setup.RemoveBuildSkill,
-	setup.VerifySkillName:    setup.RemoveVerifySkill,
-	setup.DoneSkillName:      setup.RemoveDoneSkill,
+	if err := decodeParams(params, &req); err != nil {
+		return "", err
+	}
+	source := strings.TrimSpace(req.Source)
+	if source == "" {
+		return "", workspace.NewRPCError(rpcCodeInvalidParams, "source is required")
+	}
+	return source, nil
 }

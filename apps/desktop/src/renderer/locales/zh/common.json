@@ -88,6 +88,7 @@
       "nodes": "节点",
       "notifications": "通知",
       "serviceTokens": "服务令牌",
+      "skills": "技能",
       "terminal": "终端",
       "workspace": "工作区"
     },
@@ -351,13 +352,26 @@
     },
     "skills": {
       "title": "Agent 技能",
-      "description": "安装内置移山技能以扩展 AI Agent 能力。",
+      "description": "浏览官方技能、从外部来源安装第三方技能，并在桌面端管理完整技能生命周期。",
       "loadError": "加载技能状态失败。",
       "installed": "已安装",
       "notInstalled": "未安装",
+      "official": "官方",
+      "thirdParty": "第三方",
+      "sourceLabel": "从来源安装",
+      "sourcePlaceholder": "官方名称或 URL",
+      "confirmRemoveTitle": "移除技能？",
+      "confirmRemoveDescription": "确认要移除 \"{{name}}\" 吗？",
+      "instruction": "使用说明",
+      "success": "技能已安装。重启 Agent 后生效。",
       "actions": {
+        "add": "添加",
+        "adding": "添加中...",
+        "cancel": "取消",
         "install": "安装",
         "installing": "安装中...",
+        "update": "更新",
+        "updating": "更新中...",
         "uninstall": "卸载",
         "uninstalling": "卸载中..."
       }
