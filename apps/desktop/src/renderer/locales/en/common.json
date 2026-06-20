@@ -384,6 +384,8 @@
       "sourcePlaceholder": "Official name or URL",
       "confirmRemoveTitle": "Remove skill?",
       "confirmRemoveDescription": "Are you sure you want to remove \"{{name}}\"?",
+      "instruction": "Instruction",
+      "success": "Skill installed. Restart your agent to take effect.",
       "actions": {
         "add": "Add",
         "adding": "Adding...",

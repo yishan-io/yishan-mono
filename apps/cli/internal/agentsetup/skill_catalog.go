@@ -145,11 +145,13 @@ func readInstalledSkillFiles(name string) (map[string][]byte, error) {
 }
 
 func buildOfficialSkillInfo(name string, record InstalledSkillRecord) SkillInfo {
+	description := record.Description
 	files, version, err := loadOfficialSkillFiles(name)
-	description := ""
 	if err == nil {
 		frontMatter := parseSkillFrontMatter(files["SKILL.md"])
-		description = frontMatter.Description
+		if frontMatter.Description != "" {
+			description = frontMatter.Description
+		}
 	}
 	info := SkillInfo{
 		Name:               name,
@@ -269,8 +271,8 @@ func parseSkillFrontMatter(content []byte) skillFrontMatter {
 		return skillFrontMatter{}
 	}
 	meta := skillFrontMatter{}
-	for _, line := range lines[1:] {
-		trimmed := strings.TrimSpace(line)
+	for i := 1; i < len(lines); i++ {
+		trimmed := strings.TrimSpace(lines[i])
 		if trimmed == "---" {
 			break
 		}
@@ -278,11 +280,33 @@ func parseSkillFrontMatter(content []byte) skillFrontMatter {
 		if !ok {
 			continue
 		}
-		switch strings.TrimSpace(key) {
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		if value == "" {
+			var parts []string
+			for i+1 < len(lines) {
+				next := lines[i+1]
+				nextTrimmed := strings.TrimSpace(next)
+				if strings.TrimSpace(next) == "---" {
+					break
+				}
+				if nextTrimmed == "" {
+					i++
+					continue
+				}
+				if next[0] != ' ' && next[0] != '\t' {
+					break
+				}
+				parts = append(parts, nextTrimmed)
+				i++
+			}
+			value = strings.Join(parts, " ")
+		}
+		switch key {
 		case "name":
-			meta.Name = strings.TrimSpace(value)
+			meta.Name = value
 		case "description":
-			meta.Description = strings.TrimSpace(value)
+			meta.Description = value
 		}
 	}
 	return meta

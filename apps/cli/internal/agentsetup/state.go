@@ -98,11 +98,7 @@ func fillSkillState(state *InstalledState, yishanHome string, homeDir string) er
 		state.Skill.Installed = true
 		state.Skill.SkillPath = filepath.Join(yishanHome, "skills", info.Name, "SKILL.md")
 		for _, agent := range info.InstalledForAgents {
-			if agent == "opencode" {
-				state.Skill.Symlinks = append(state.Skill.Symlinks, filepath.Join(yishanHome, "opencode-config-home", "skills", info.Name))
-			} else {
-				state.Skill.Symlinks = append(state.Skill.Symlinks, filepath.Join(homeDir, agentSkillDirName(agent), "skills", info.Name))
-			}
+			state.Skill.Symlinks = append(state.Skill.Symlinks, filepath.Join(homeDir, agentSkillDirName(agent), "skills", info.Name))
 		}
 		state.Skills = append(state.Skills, PerSkillState{
 			Name:               info.Name,
@@ -115,8 +111,6 @@ func fillSkillState(state *InstalledState, yishanHome string, homeDir string) er
 
 func agentSkillDirName(agent string) string {
 	switch agent {
-	case "opencode":
-		return ".config/opencode"
 	case "claude":
 		return ".claude"
 	case "codex":

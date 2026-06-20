@@ -362,6 +362,8 @@
       "sourcePlaceholder": "官方名称或 URL",
       "confirmRemoveTitle": "移除技能？",
       "confirmRemoveDescription": "确认要移除 \"{{name}}\" 吗？",
+      "instruction": "使用说明",
+      "success": "技能已安装。重启 Agent 后生效。",
       "actions": {
         "add": "添加",
         "adding": "添加中...",

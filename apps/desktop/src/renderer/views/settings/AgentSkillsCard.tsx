@@ -9,13 +9,15 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  Snackbar,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PiFlowArrowBold, PiXBold } from "react-icons/pi";
-import { LuCheck, LuTrash2 } from "react-icons/lu";
+import { LuBadgeCheck, LuCheck, LuTrash2 } from "react-icons/lu";
 import {
   addSkill,
   getSkillDetail,
@@ -39,7 +41,6 @@ type SkillCardProps = {
 
 function SkillCard({ skill, isBusy, onInstall, onUpdate, onRemove, onClick }: SkillCardProps) {
   const { t } = useTranslation();
-  const metadata = [skill.version, skill.sourceKind, skill.installedForAgents.join(", ")].filter(Boolean).join(" • ");
 
   return (
     <Box
@@ -60,10 +61,17 @@ function SkillCard({ skill, isBusy, onInstall, onUpdate, onRemove, onClick }: Sk
     >
       <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5 }}>
         <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1, minWidth: 0 }}>
-          <PiFlowArrowBold size={16} />
-          <Box component="span" sx={{ typography: "subtitle2", fontWeight: 600 }}>
+          <PiFlowArrowBold size={18} />
+          <Box component="span" sx={{ typography: "h6", fontWeight: 600 }}>
             {skill.name}
           </Box>
+          {skill.official ? (
+            <Tooltip title={t("settings.skills.official")}>
+              <Box component="span" sx={{ display: "inline-flex", color: "primary.main" }}>
+                <LuBadgeCheck size={18} />
+              </Box>
+            </Tooltip>
+          ) : null}
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -74,20 +82,11 @@ function SkillCard({ skill, isBusy, onInstall, onUpdate, onRemove, onClick }: Sk
             color={skill.installed ? "success" : "default"}
             variant={skill.installed ? "filled" : "outlined"}
           />
-          <Chip
-            size="small"
-            label={skill.official ? t("settings.skills.official") : t("settings.skills.thirdParty")}
-            variant="outlined"
-          />
         </Box>
       </Box>
 
       <Typography variant="body2" color="text.secondary">
         {skill.description}
-      </Typography>
-
-      <Typography variant="caption" color="text.secondary">
-        {metadata || skill.source}
       </Typography>
 
       {skill.installedForAgents.length > 0 ? (
@@ -132,14 +131,13 @@ function SkillCard({ skill, isBusy, onInstall, onUpdate, onRemove, onClick }: Sk
       {skill.installed ? (
         <IconButton
           size="small"
-          color="error"
           disabled={isBusy}
           onClick={(event) => {
             event.stopPropagation();
             onRemove();
           }}
           aria-label={t("settings.skills.actions.uninstall")}
-          sx={{ position: "absolute", bottom: 8, right: 8 }}
+          sx={{ position: "absolute", bottom: 8, right: 8, color: "text.secondary", "&:hover": { color: "error.main" } }}
         >
           {isBusy ? <CircularProgress size={14} color="inherit" /> : <LuTrash2 size={16} />}
         </IconButton>
@@ -210,7 +208,7 @@ function SkillDetailDialog({ skill, onClose }: SkillDetailDialogProps) {
 
             <Box>
               <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                {detail.name} SKILL.md
+                {t("settings.skills.instruction")}
               </Typography>
               <Box
                 component="pre"
@@ -239,7 +237,6 @@ function SkillDetailDialog({ skill, onClose }: SkillDetailDialogProps) {
   );
 }
 
-/** Renders the skill manager section inside the agent settings view. */
 export function AgentSkillsCard() {
   const { t } = useTranslation();
   const isMountedRef = useRef(true);
@@ -251,6 +248,7 @@ export function AgentSkillsCard() {
   const [isAddingSource, setIsAddingSource] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<SkillInfo | null>(null);
   const [confirmSkillName, setConfirmSkillName] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const loadSkills = useCallback(async () => {
     setIsLoading(true);
@@ -283,6 +281,9 @@ export function AgentSkillsCard() {
       try {
         await action();
         await loadSkills();
+        if (isMountedRef.current) {
+          setSuccessMessage(t("settings.skills.success"));
+        }
       } catch (error) {
         if (isMountedRef.current) {
           setLoadError(getErrorMessage(error));
@@ -297,7 +298,7 @@ export function AgentSkillsCard() {
         }
       }
     },
-    [loadSkills],
+    [loadSkills, t],
   );
 
   const handleAddSource = useCallback(async () => {
@@ -311,6 +312,9 @@ export function AgentSkillsCard() {
       if (!isMountedRef.current) return;
       setSourceInput("");
       await loadSkills();
+      if (isMountedRef.current) {
+        setSuccessMessage(t("settings.skills.success"));
+      }
     } catch (error) {
       if (isMountedRef.current) {
         setLoadError(getErrorMessage(error));
@@ -320,7 +324,7 @@ export function AgentSkillsCard() {
         setIsAddingSource(false);
       }
     }
-  }, [loadSkills, sourceInput]);
+  }, [loadSkills, sourceInput, t]);
 
   return (
     <Box>
@@ -413,10 +417,7 @@ export function AgentSkillsCard() {
             </Typography>
           </DialogContent>
           <DialogActions>
-            <Button
-              size="small"
-              onClick={() => setConfirmSkillName(null)}
-            >
+            <Button size="small" onClick={() => setConfirmSkillName(null)}>
               {t("settings.skills.actions.cancel")}
             </Button>
             <Button
@@ -434,6 +435,17 @@ export function AgentSkillsCard() {
           </DialogActions>
         </Dialog>
       ) : null}
+
+      <Snackbar
+        open={successMessage !== null}
+        autoHideDuration={4000}
+        onClose={() => setSuccessMessage(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert severity="success" onClose={() => setSuccessMessage(null)} variant="filled">
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

@@ -50,7 +50,6 @@ describe("AgentSkillsCard", () => {
 
     expect(await screen.findByText("ys-start")).toBeTruthy();
     expect(screen.getByText(/Start tasks/)).toBeTruthy();
-    expect(screen.getByText(/workspace • official • opencode, claude/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "settings.skills.actions.update" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "settings.skills.actions.uninstall" })).toBeTruthy();
   });
