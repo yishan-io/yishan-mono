@@ -74,9 +74,11 @@ const (
 // "opencode"). When empty the session's own agent is used as the default.
 // Model is optional; when empty the agent's default model is used.
 type SummarizerConfig struct {
-	Enabled   bool
-	AgentKind string
-	Model     string
+	Enabled              bool
+	DisableProjectMemory bool
+	DisablePersona       bool
+	AgentKind            string
+	Model                string
 }
 
 // RunAgentFunc runs a non-interactive agent prompt and returns its text output.

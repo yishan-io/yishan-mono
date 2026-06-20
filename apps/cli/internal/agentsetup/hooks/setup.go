@@ -12,6 +12,7 @@ type AgentHookSetupConfig struct {
 	HomeDir          string
 	XDGConfigHome    string
 	GOOS             string
+	DisablePersona   bool
 }
 
 type hookSetupContext struct {
@@ -19,6 +20,7 @@ type hookSetupContext struct {
 	homeDir          string
 	configHome       string
 	goos             string
+	disablePersona   bool
 }
 
 type agentHookInstaller interface {
@@ -107,6 +109,7 @@ func buildHookContext(cfg AgentHookSetupConfig) (hookSetupContext, error) {
 		homeDir:          homeDir,
 		configHome:       configHome,
 		goos:             goos,
+		disablePersona:   cfg.DisablePersona,
 	}, nil
 }
 

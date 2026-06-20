@@ -69,6 +69,26 @@ type shutdownContext struct {
 	serverErr <-chan error
 }
 
+func usesRemoteHostPolicy(runtime *cliruntime.Runtime) bool {
+	if runtime == nil {
+		return false
+	}
+	return runtime.UsesServiceTokenAuth()
+}
+
+func buildMemorySummarizerConfig(cfg RunConfig, runtime *cliruntime.Runtime) memory.SummarizerConfig {
+	memoryCfg := memory.SummarizerConfig{
+		Enabled:   cfg.MemorySummarizer,
+		AgentKind: cfg.MemorySummarizerAgent,
+		Model:     cfg.MemorySummarizerModel,
+	}
+	if usesRemoteHostPolicy(runtime) {
+		memoryCfg.DisableProjectMemory = true
+		memoryCfg.DisablePersona = true
+	}
+	return memoryCfg
+}
+
 func (sc *shutdownContext) cleanup() {
 	signal.Stop(sc.stop)
 	sc.cancel()
@@ -210,7 +230,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 	}
 	handler := NewJSONRPCHandler(workspaceManager, runtime, daemonID, cfg.LogFilePath, cleanupStore, wsIndexStore, statePath, contextStore)
 
-	if err := initMemoryService(handler, statePath, cfg); err != nil {
+	if err := initMemoryService(handler, statePath, cfg, runtime); err != nil {
 		return nil, nil, err
 	}
 	if err := restoreIndexedWorkspaces(handler); err != nil {
@@ -224,7 +244,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 	return handler, relayStatus, nil
 }
 
-func initMemoryService(handler *JSONRPCHandler, statePath string, cfg RunConfig) error {
+func initMemoryService(handler *JSONRPCHandler, statePath string, cfg RunConfig, runtime *cliruntime.Runtime) error {
 	dir := filepath.Dir(statePath)
 	oldPath := filepath.Join(dir, "memory.db")
 	newPath := filepath.Join(dir, "memory", "memory.db")
@@ -241,11 +261,7 @@ func initMemoryService(handler *JSONRPCHandler, statePath string, cfg RunConfig)
 		}
 	}
 
-	memSvc, memErr := memory.NewService(newPath, memory.SummarizerConfig{
-		Enabled:   cfg.MemorySummarizer,
-		AgentKind: cfg.MemorySummarizerAgent,
-		Model:     cfg.MemorySummarizerModel,
-	}, buildRunAgentFunc())
+	memSvc, memErr := memory.NewService(newPath, buildMemorySummarizerConfig(cfg, runtime), buildRunAgentFunc())
 	if memErr != nil {
 		log.Warn().Err(memErr).Msg("memory service initialization failed, memory features disabled")
 		return nil
@@ -283,7 +299,12 @@ func saveDaemonState(cfg RunConfig, dr *daemonRuntime) error {
 		return fmt.Errorf("save daemon state: %w", err)
 	}
 	_ = os.Setenv("YISHAN_HOOK_INGRESS_URL", "http://"+dr.actualAddr+agentHookIngestPath)
-	agentsetup.EnsureManagedAgentRuntime()
+	if usesRemoteHostPolicy(dr.handler.runtime) {
+		_ = os.Setenv(agentsetup.RemoteHostPolicyEnvKey, "1")
+	} else {
+		_ = os.Unsetenv(agentsetup.RemoteHostPolicyEnvKey)
+	}
+	agentsetup.EnsureManagedAgentRuntime(usesRemoteHostPolicy(dr.handler.runtime))
 	return nil
 }
 

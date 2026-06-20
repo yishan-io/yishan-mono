@@ -43,6 +43,10 @@ func APIToken() string {
 	return defaultRuntime.APIToken()
 }
 
+func UsesServiceTokenAuth() bool {
+	return defaultRuntime.UsesServiceTokenAuth()
+}
+
 func PersistAuthTokens(update api.TokenUpdate) error {
 	return defaultRuntime.PersistAuthTokens(update)
 }
@@ -93,6 +97,10 @@ func (r *Runtime) APIToken() string {
 		return ""
 	}
 	return r.appCfg.API.Token
+}
+
+func (r *Runtime) UsesServiceTokenAuth() bool {
+	return api.IsServiceToken(r.APIToken())
 }
 
 func (r *Runtime) PersistAuthTokens(update api.TokenUpdate) error {

@@ -164,3 +164,34 @@ func TestService_MaybeRunDailyPersonaBatch_NilPersona(t *testing.T) {
 	// Must not panic when persona is nil.
 	svc.MaybeRunDailyPersonaBatch("opencode")
 }
+
+func TestService_ProjectMemoryEnabledFalseWhenDisabledByPolicy(t *testing.T) {
+	svc := &Service{
+		config:     SummarizerConfig{Enabled: true, DisableProjectMemory: true},
+		summarizer: NewSummarizer(SummarizerConfig{Enabled: true}, nil),
+	}
+
+	if svc.ProjectMemoryEnabled() {
+		t.Fatal("expected project memory to be disabled by policy")
+	}
+	if svc.SummarizerEnabled() {
+		t.Fatal("expected summarizer enabled status to follow project memory policy")
+	}
+}
+
+func TestService_PersonaEnabledFalseWhenDisabledByPolicy(t *testing.T) {
+	svc := &Service{
+		config: SummarizerConfig{Enabled: true, DisablePersona: true},
+		persona: &personaService{
+			summarizer: &PersonaSummarizer{enabled: true, runAgent: RunAgentFunc(func(_ context.Context, _, _, _, _ string) (string, error) {
+				return "", nil
+			})},
+		},
+	}
+
+	if svc.PersonaEnabled() {
+		t.Fatal("expected persona to be disabled by policy")
+	}
+	// Must remain a no-op when persona is policy-disabled.
+	svc.MaybeRunDailyPersonaBatch("opencode")
+}

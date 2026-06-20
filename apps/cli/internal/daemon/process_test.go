@@ -5,7 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/memory"
+	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -101,7 +103,7 @@ func TestInitMemoryService_MigratesOldDB(t *testing.T) {
 	defer handler.Shutdown()
 
 	cfg := RunConfig{}
-	if err := initMemoryService(handler, statePath, cfg); err != nil {
+	if err := initMemoryService(handler, statePath, cfg, nil); err != nil {
 		t.Fatalf("initMemoryService: %v", err)
 	}
 
@@ -124,7 +126,7 @@ func TestInitMemoryService_NewPathOnly(t *testing.T) {
 	defer handler.Shutdown()
 
 	cfg := RunConfig{}
-	if err := initMemoryService(handler, statePath, cfg); err != nil {
+	if err := initMemoryService(handler, statePath, cfg, nil); err != nil {
 		t.Fatalf("initMemoryService: %v", err)
 	}
 
@@ -157,7 +159,7 @@ func TestInitMemoryService_BothExistKeepsOld(t *testing.T) {
 	defer handler.Shutdown()
 
 	cfg := RunConfig{}
-	if err := initMemoryService(handler, statePath, cfg); err != nil {
+	if err := initMemoryService(handler, statePath, cfg, nil); err != nil {
 		t.Fatalf("initMemoryService: %v", err)
 	}
 
@@ -170,5 +172,76 @@ func TestInitMemoryService_BothExistKeepsOld(t *testing.T) {
 	}
 	if _, err := os.Stat(newPath); err != nil {
 		t.Fatalf("expected new memory/memory.db to exist: %v", err)
+	}
+}
+
+func TestUsesRemoteHostPolicyReturnsTrueForServiceTokenRuntime(t *testing.T) {
+	runtime := cliruntime.New(&config.Config{
+		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
+		API: config.APIConfig{
+			Token: "yst_service_token_value",
+		},
+	})
+
+	if !usesRemoteHostPolicy(runtime) {
+		t.Fatal("expected remote host policy for service token runtime")
+	}
+}
+
+func TestUsesRemoteHostPolicyReturnsFalseForNilRuntime(t *testing.T) {
+	if usesRemoteHostPolicy(nil) {
+		t.Fatal("expected nil runtime not to use remote host policy")
+	}
+}
+
+func TestUsesRemoteHostPolicyReturnsFalseForJWTAuthRuntime(t *testing.T) {
+	runtime := cliruntime.New(&config.Config{
+		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
+		API: config.APIConfig{
+			Token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig",
+		},
+	})
+
+	if usesRemoteHostPolicy(runtime) {
+		t.Fatal("expected jwt auth runtime not to use remote host policy")
+	}
+}
+
+func TestBuildMemorySummarizerConfigDisablesMemoryForRemoteHostPolicy(t *testing.T) {
+	runtime := cliruntime.New(&config.Config{
+		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
+		API: config.APIConfig{Token: "yst_service_token_value"},
+	})
+
+	cfg := buildMemorySummarizerConfig(RunConfig{
+		MemorySummarizer:      true,
+		MemorySummarizerAgent: "opencode",
+		MemorySummarizerModel: "gpt-5",
+	}, runtime)
+
+	if !cfg.Enabled {
+		t.Fatal("expected base memory config to stay enabled")
+	}
+	if !cfg.DisableProjectMemory {
+		t.Fatal("expected project memory to be disabled for remote host policy")
+	}
+	if !cfg.DisablePersona {
+		t.Fatal("expected persona to be disabled for remote host policy")
+	}
+}
+
+func TestBuildMemorySummarizerConfigPreservesLocalDefaults(t *testing.T) {
+	runtime := cliruntime.New(&config.Config{
+		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
+		API: config.APIConfig{Token: "jwt-token"},
+	})
+
+	cfg := buildMemorySummarizerConfig(RunConfig{MemorySummarizer: true}, runtime)
+
+	if cfg.DisableProjectMemory {
+		t.Fatal("expected local project memory to remain enabled")
+	}
+	if cfg.DisablePersona {
+		t.Fatal("expected local persona to remain enabled")
 	}
 }

@@ -31,7 +31,7 @@ func (openCodeHookInstaller) Install(ctx hookSetupContext) error {
 	if err := ensureOpenCodePlugin(ctx.notifyScriptPath, ctx.configHome, ctx.goos); err != nil {
 		return err
 	}
-	return ensureOpenCodeMemoryPlugin(ctx.configHome)
+	return ensureOpenCodeMemoryPlugin(ctx.configHome, ctx.disablePersona)
 }
 
 func ensureOpenCodePlugin(notifyScriptPath string, configHome string, goos string) error {
@@ -71,17 +71,18 @@ func buildOpenCodePluginContent(notifyScriptPath string, tabIDEnvKey string, plu
 	return rendered.String()
 }
 
-func ensureOpenCodeMemoryPlugin(configHome string) error {
+func ensureOpenCodeMemoryPlugin(configHome string, disablePersona bool) error {
 	pluginPath := filepath.Join(configHome, "plugin", openCodeMemoryPluginFileName)
-	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker)
+	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker, disablePersona)
 	return writeTextFileIfChanged(pluginPath, content, 0o644)
 }
 
-func buildOpenCodeMemoryPluginContent(pluginMarker string) string {
+func buildOpenCodeMemoryPluginContent(pluginMarker string, disablePersona bool) string {
 	var rendered bytes.Buffer
 	tmpl := template.Must(template.New("opencode-memory-plugin").Parse(openCodeMemoryPluginTemplate))
-	if err := tmpl.Execute(&rendered, map[string]string{
-		"PluginMarker": pluginMarker,
+	if err := tmpl.Execute(&rendered, map[string]any{
+		"PluginMarker":   pluginMarker,
+		"DisablePersona": disablePersona,
 	}); err != nil {
 		panic(err)
 	}
