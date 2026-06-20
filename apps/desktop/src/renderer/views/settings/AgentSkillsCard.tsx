@@ -1,39 +1,75 @@
-import { Alert, Box, Button, Chip, CircularProgress, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PiFlowArrowBold } from "react-icons/pi";
-import { addSkill, listSkills, removeSkill, updateSkill } from "../../commands/skillCommands";
+import { PiFlowArrowBold, PiXBold } from "react-icons/pi";
+import { LuCheck, LuTrash2 } from "react-icons/lu";
+import {
+  addSkill,
+  getSkillDetail,
+  listSkills,
+  removeSkill,
+  updateSkill,
+} from "../../commands/skillCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
-import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
+import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import type { SkillInfo } from "../../rpc/daemonTypes";
+import type { SkillDetail, SkillInfo } from "../../rpc/daemonTypes";
 
-type SkillRowProps = {
+type SkillCardProps = {
   skill: SkillInfo;
   isBusy: boolean;
   onInstall: () => void;
   onUpdate: () => void;
   onRemove: () => void;
+  onClick: () => void;
 };
 
-function SkillRow({ skill, isBusy, onInstall, onUpdate, onRemove }: SkillRowProps) {
+function SkillCard({ skill, isBusy, onInstall, onUpdate, onRemove, onClick }: SkillCardProps) {
   const { t } = useTranslation();
   const metadata = [skill.version, skill.sourceKind, skill.installedForAgents.join(", ")].filter(Boolean).join(" • ");
-  const description = [skill.description, metadata || skill.source].filter(Boolean).join("\n");
 
   return (
-    <SettingsControlRow
-      title={
-        <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
+    <Box
+      onClick={onClick}
+      sx={{
+        border: 1,
+        borderColor: "divider",
+        borderRadius: 2,
+        p: 2,
+        display: "flex",
+        flexDirection: "column",
+        gap: 1.5,
+        minHeight: 190,
+        cursor: "pointer",
+        position: "relative",
+        "&:hover": { borderColor: "primary.main" },
+      }}
+    >
+      <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5 }}>
+        <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1, minWidth: 0 }}>
           <PiFlowArrowBold size={16} />
-          <Box component="span">{skill.name}</Box>
+          <Box component="span" sx={{ typography: "subtitle2", fontWeight: 600 }}>
+            {skill.name}
+          </Box>
         </Box>
-      }
-      description={description}
-      control={
+
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", justifyContent: "flex-end" }}>
           <Chip
             size="small"
+            icon={skill.installed ? <LuCheck size={14} /> : undefined}
             label={skill.installed ? t("settings.skills.installed") : t("settings.skills.notInstalled")}
             color={skill.installed ? "success" : "default"}
             variant={skill.installed ? "filled" : "outlined"}
@@ -43,44 +79,163 @@ function SkillRow({ skill, isBusy, onInstall, onUpdate, onRemove }: SkillRowProp
             label={skill.official ? t("settings.skills.official") : t("settings.skills.thirdParty")}
             variant="outlined"
           />
-          {skill.installed ? (
-            <>
-              {skill.canUpdate ? (
-                <Button
-                  size="small"
-                  variant="text"
-                  disabled={isBusy}
-                  onClick={onUpdate}
-                  startIcon={isBusy ? <CircularProgress size={14} color="inherit" /> : undefined}
-                >
-                  {isBusy ? t("settings.skills.actions.updating") : t("settings.skills.actions.update")}
-                </Button>
-              ) : null}
+        </Box>
+      </Box>
+
+      <Typography variant="body2" color="text.secondary">
+        {skill.description}
+      </Typography>
+
+      <Typography variant="caption" color="text.secondary">
+        {metadata || skill.source}
+      </Typography>
+
+      {skill.installedForAgents.length > 0 ? (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
+          {skill.installedForAgents.map((agent) => (
+            <Chip key={`${skill.name}-${agent}`} size="small" label={agent} variant="outlined" />
+          ))}
+        </Box>
+      ) : null}
+
+      <Box
+        sx={{ mt: "auto", display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {skill.installed ? (
+          <>
+            {skill.canUpdate ? (
               <Button
                 size="small"
-                variant="text"
-                color="error"
+                variant="outlined"
                 disabled={isBusy}
-                onClick={onRemove}
+                onClick={onUpdate}
                 startIcon={isBusy ? <CircularProgress size={14} color="inherit" /> : undefined}
               >
-                {isBusy ? t("settings.skills.actions.uninstalling") : t("settings.skills.actions.uninstall")}
+                {isBusy ? t("settings.skills.actions.updating") : t("settings.skills.actions.update")}
               </Button>
-            </>
-          ) : (
-            <Button
-              size="small"
-              variant="text"
-              disabled={isBusy}
-              onClick={onInstall}
-              startIcon={isBusy ? <CircularProgress size={14} color="inherit" /> : undefined}
-            >
-              {isBusy ? t("settings.skills.actions.installing") : t("settings.skills.actions.install")}
-            </Button>
-          )}
+            ) : null}
+          </>
+        ) : (
+          <Button
+            size="small"
+            variant="contained"
+            disabled={isBusy}
+            onClick={onInstall}
+            startIcon={isBusy ? <CircularProgress size={14} color="inherit" /> : undefined}
+          >
+            {isBusy ? t("settings.skills.actions.installing") : t("settings.skills.actions.install")}
+          </Button>
+        )}
+      </Box>
+
+      {skill.installed ? (
+        <IconButton
+          size="small"
+          color="error"
+          disabled={isBusy}
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove();
+          }}
+          aria-label={t("settings.skills.actions.uninstall")}
+          sx={{ position: "absolute", bottom: 8, right: 8 }}
+        >
+          {isBusy ? <CircularProgress size={14} color="inherit" /> : <LuTrash2 size={16} />}
+        </IconButton>
+      ) : null}
+    </Box>
+  );
+}
+
+const DIALOG_SIZE = { xs: "100%", sm: 800 };
+
+type SkillDetailDialogProps = {
+  skill: SkillInfo;
+  onClose: () => void;
+};
+
+function SkillDetailDialog({ skill, onClose }: SkillDetailDialogProps) {
+  const { t } = useTranslation();
+  const [detail, setDetail] = useState<SkillDetail | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSkillDetail(skill.name)
+      .then((result) => {
+        if (!cancelled) {
+          setDetail(result);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setLoadError(getErrorMessage(error));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [skill.name]);
+
+  const readme = detail?.files["SKILL.md"] ?? "";
+
+  return (
+    <Dialog open onClose={onClose} maxWidth={false} fullWidth sx={{ "& .MuiDialog-paper": { maxWidth: DIALOG_SIZE } }}>
+      <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+        <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
+          <PiFlowArrowBold size={16} />
+          <Box component="span">{skill.name}</Box>
         </Box>
-      }
-    />
+        <IconButton size="small" onClick={onClose} aria-label={t("settings.back")}>
+          <PiXBold size={16} />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        {loadError ? <Alert severity="error">{loadError}</Alert> : null}
+        {detail ? (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              {skill.description}
+            </Typography>
+
+            {detail.source ? (
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  {t("settings.skills.sourceLabel")}
+                </Typography>
+                <Typography variant="body2">{detail.source}</Typography>
+              </Box>
+            ) : null}
+
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                {detail.name} SKILL.md
+              </Typography>
+              <Box
+                component="pre"
+                sx={{
+                  whiteSpace: "pre-wrap",
+                  fontFamily: "monospace",
+                  fontSize: "0.8rem",
+                  p: 1.5,
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  backgroundColor: "action.hover",
+                  maxHeight: "calc(100vh - 300px)",
+                  overflow: "auto",
+                }}
+              >
+                {readme}
+              </Box>
+            </Box>
+          </Box>
+        ) : loadError ? null : (
+          <CenteredSpinner />
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -94,6 +249,8 @@ export function AgentSkillsCard() {
   const [busySkills, setBusySkills] = useState<Set<string>>(new Set());
   const [sourceInput, setSourceInput] = useState("");
   const [isAddingSource, setIsAddingSource] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState<SkillInfo | null>(null);
+  const [confirmSkillName, setConfirmSkillName] = useState<string | null>(null);
 
   const loadSkills = useCallback(async () => {
     setIsLoading(true);
@@ -183,7 +340,6 @@ export function AgentSkillsCard() {
               <TextField
                 fullWidth
                 size="small"
-                label={t("settings.skills.sourceLabel")}
                 placeholder={t("settings.skills.sourcePlaceholder")}
                 value={sourceInput}
                 onChange={(event) => {
@@ -207,12 +363,21 @@ export function AgentSkillsCard() {
                 {t("settings.skills.loadError")}
               </Typography>
             ) : (
-              <SettingsRows>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" },
+                  gap: 1.5,
+                }}
+              >
                 {skills.map((skill) => (
-                  <SkillRow
+                  <SkillCard
                     key={skill.name}
                     skill={skill}
                     isBusy={busySkills.has(skill.name)}
+                    onClick={() => {
+                      setSelectedSkill(skill);
+                    }}
                     onInstall={() => {
                       void runSkillAction(skill.name, () => addSkill(skill.name));
                     }}
@@ -220,15 +385,55 @@ export function AgentSkillsCard() {
                       void runSkillAction(skill.name, () => updateSkill(skill.name));
                     }}
                     onRemove={() => {
-                      void runSkillAction(skill.name, () => removeSkill(skill.name));
+                      setConfirmSkillName(skill.name);
                     }}
                   />
                 ))}
-              </SettingsRows>
+              </Box>
             )}
           </>
         )}
       </SettingsCard>
+
+      {selectedSkill ? (
+        <SkillDetailDialog
+          skill={selectedSkill}
+          onClose={() => {
+            setSelectedSkill(null);
+          }}
+        />
+      ) : null}
+
+      {confirmSkillName ? (
+        <Dialog open onClose={() => setConfirmSkillName(null)} maxWidth="xs" fullWidth>
+          <DialogTitle>{t("settings.skills.confirmRemoveTitle")}</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2">
+              {t("settings.skills.confirmRemoveDescription", { name: confirmSkillName })}
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              size="small"
+              onClick={() => setConfirmSkillName(null)}
+            >
+              {t("settings.skills.actions.cancel")}
+            </Button>
+            <Button
+              size="small"
+              color="error"
+              variant="contained"
+              onClick={() => {
+                const name = confirmSkillName;
+                setConfirmSkillName(null);
+                void runSkillAction(name, () => removeSkill(name));
+              }}
+            >
+              {t("settings.skills.actions.uninstall")}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      ) : null}
     </Box>
   );
 }

@@ -29,7 +29,6 @@ import {
 import { useCommands } from "../../hooks/useCommands";
 import { useRefreshableLoader } from "../../hooks/useRefreshableLoader";
 import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
-import { AgentSkillsCard } from "./AgentSkillsCard";
 
 const CLI_TOOLS_STATUS_TIMEOUT_MS = 15_000;
 const CLI_TOOLS_RECHECK_MIN_DURATION_MS = 500;
@@ -302,10 +301,6 @@ export function CLIToolsSettingsView() {
           </SettingsRows>
         </SettingsCard>
       </Stack>
-
-      <Box sx={{ mt: 3 }}>
-        <AgentSkillsCard />
-      </Box>
     </Box>
   );
 }

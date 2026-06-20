@@ -1,8 +1,6 @@
 package setup
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,44 +47,6 @@ func TestAddSkill_OfficialSkillUsesCanonicalSource(t *testing.T) {
 	}
 	if !info.Installed || info.SourceKind != SkillSourceOfficial || info.Version == "" {
 		t.Fatalf("unexpected skill info: %#v", info)
-	}
-}
-
-func TestAddSkill_URLSourceAndUpdateSkill(t *testing.T) {
-	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
-
-	skillContent := "---\nname: custom-skill\ndescription: First version\n---\n"
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(skillContent))
-	}))
-	defer server.Close()
-
-	if _, err := AddSkill(server.URL); err != nil {
-		t.Fatalf("add URL skill: %v", err)
-	}
-
-	installedPath := filepath.Join(homeDir, ".yishan", "skills", "custom-skill", "SKILL.md")
-	content, err := os.ReadFile(installedPath)
-	if err != nil {
-		t.Fatalf("read installed URL skill: %v", err)
-	}
-	if !strings.Contains(string(content), "First version") {
-		t.Fatalf("expected first version content, got %q", string(content))
-	}
-
-	skillContent = "---\nname: custom-skill\ndescription: Second version\n---\n"
-
-	if _, err := UpdateSkill("custom-skill"); err != nil {
-		t.Fatalf("update URL skill: %v", err)
-	}
-
-	updatedContent, err := os.ReadFile(installedPath)
-	if err != nil {
-		t.Fatalf("read updated URL skill: %v", err)
-	}
-	if !strings.Contains(string(updatedContent), "Second version") {
-		t.Fatalf("expected updated content, got %q", string(updatedContent))
 	}
 }
 

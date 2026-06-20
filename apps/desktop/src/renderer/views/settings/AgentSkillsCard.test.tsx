@@ -74,7 +74,7 @@ describe("AgentSkillsCard", () => {
 
     render(<AgentSkillsCard />);
 
-    const input = await screen.findByLabelText("settings.skills.sourceLabel");
+    const input = await screen.findByPlaceholderText("settings.skills.sourcePlaceholder");
     fireEvent.change(input, { target: { value: "https://example.com/skill.md" } });
     fireEvent.click(screen.getByRole("button", { name: "settings.skills.actions.add" }));
 

@@ -33,6 +33,7 @@ import { MemorySettingsView } from "./settings/MemorySettingsView";
 import { NodesSettingsView } from "./settings/NodesSettingsView";
 import { NotificationSettingsView } from "./settings/NotificationSettingsView";
 import { ServiceTokenSettingsView } from "./settings/ServiceTokenSettingsView";
+import { SkillsSettingsView } from "./settings/SkillsSettingsView";
 import { TerminalSettingsView } from "./settings/TerminalSettingsView";
 import { WorkspaceSettingsView } from "./settings/WorkspaceSettingsView";
 import {
@@ -113,6 +114,7 @@ export function SettingsView() {
       selectedTabParam === "nodes" ||
       selectedTabParam === "notifications" ||
       selectedTabParam === "serviceTokens" ||
+      selectedTabParam === "skills" ||
       selectedTabParam === "terminal" ||
       selectedTabParam === "workspace"
     ) {
@@ -186,6 +188,7 @@ export function SettingsView() {
       members: <MemberSettingsView />,
       nodes: <NodesSettingsView />,
       serviceTokens: <ServiceTokenSettingsView />,
+      skills: <SkillsSettingsView />,
       terminal: <TerminalSettingsView />,
       keybindings: <KeybindingsSettingsView />,
       memory: <MemorySettingsView />,

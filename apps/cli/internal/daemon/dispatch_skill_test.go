@@ -3,8 +3,6 @@ package daemon
 import (
 	"context"
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	setup "yishan/apps/cli/internal/agentsetup"
@@ -31,22 +29,15 @@ func TestDispatchSkillListIncludesOfficialSkills(t *testing.T) {
 }
 
 func TestDispatchSkillAddInfoUpdateAndRemove(t *testing.T) {
-	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
+	t.Setenv("HOME", t.TempDir())
 	handler := newTestHandler(t)
 
-	skillContent := "---\nname: rpc-skill\ndescription: RPC test\n---\n"
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(skillContent))
-	}))
-	defer server.Close()
-
-	addParams := mustMarshalSkillParams(t, map[string]any{"source": server.URL})
+	addParams := mustMarshalSkillParams(t, map[string]any{"source": setup.StartSkillName})
 	if _, err := handler.dispatchSkill(context.Background(), MethodSkillAdd, addParams); err != nil {
 		t.Fatalf("dispatch add: %v", err)
 	}
 
-	infoParams := mustMarshalSkillParams(t, map[string]any{"name": "rpc-skill"})
+	infoParams := mustMarshalSkillParams(t, map[string]any{"name": setup.StartSkillName})
 	infoResult, err := handler.dispatchSkill(context.Background(), MethodSkillInfo, infoParams)
 	if err != nil {
 		t.Fatalf("dispatch info: %v", err)
@@ -55,7 +46,7 @@ func TestDispatchSkillAddInfoUpdateAndRemove(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected *setup.SkillInfo, got %T", infoResult)
 	}
-	if !info.Installed || info.SourceKind != setup.SkillSourceURL {
+	if !info.Installed || info.SourceKind != setup.SkillSourceOfficial {
 		t.Fatalf("unexpected info payload: %#v", info)
 	}
 

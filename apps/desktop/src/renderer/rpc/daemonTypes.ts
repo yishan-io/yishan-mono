@@ -604,6 +604,10 @@ export type SkillInfo = {
   hasUpdate: boolean;
 };
 
+export type SkillDetail = SkillInfo & {
+  files: Record<string, string>;
+};
+
 export type SkillListResponse = {
   skills: SkillInfo[];
 };

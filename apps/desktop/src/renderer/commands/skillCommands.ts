@@ -1,4 +1,4 @@
-import type { SkillInfo } from "../rpc/daemonTypes";
+import type { SkillDetail, SkillInfo } from "../rpc/daemonTypes";
 import { getDaemonClient } from "../rpc/rpcTransport";
 
 function parseSkillInfo(entry: Record<string, unknown>): SkillInfo {
@@ -41,6 +41,22 @@ export async function addSkill(source: string): Promise<void> {
 export async function removeSkill(name: string): Promise<void> {
   const client = await getDaemonClient();
   await client.skill.remove({ name });
+}
+
+/** Fetches detailed skill info including file contents. */
+export async function getSkillDetail(name: string): Promise<SkillDetail> {
+  const client = await getDaemonClient();
+  const payload = await client.skill.detail({ name });
+  const entry = payload as Record<string, unknown>;
+  return {
+    ...parseSkillInfo(entry),
+    files:
+      typeof entry.files === "object" && entry.files !== null
+        ? Object.fromEntries(
+            Object.entries(entry.files as Record<string, unknown>).map(([k, v]) => [k, String(v)]),
+          )
+        : {},
+  };
 }
 
 /** Reinstalls an installed skill from its recorded source. */

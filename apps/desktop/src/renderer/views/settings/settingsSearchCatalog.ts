@@ -15,6 +15,7 @@ import {
   BiUser,
   BiWorld,
 } from "react-icons/bi";
+import { LuHammer } from "react-icons/lu";
 import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
 import {
   NOTIFICATION_SETTINGS_SEARCH_ITEMS,
@@ -34,6 +35,7 @@ export type SettingsTab =
   | "nodes"
   | "notifications"
   | "serviceTokens"
+  | "skills"
   | "terminal"
   | "workspace";
 
@@ -79,6 +81,7 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
     titleKey: "settings.sections.system",
     items: [
       { tab: "integrations", labelKey: "settings.items.integrations", icon: BiPlug },
+      { tab: "skills", labelKey: "settings.items.skills", icon: LuHammer },
       { tab: "workspace", labelKey: "settings.items.workspace", icon: BiGitBranch },
       { tab: "terminal", labelKey: "settings.items.terminal", icon: BiTerminal },
       { tab: "daemon", labelKey: "settings.items.daemon", icon: BiChip },
@@ -250,6 +253,29 @@ const LINKS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.links.targetLabel",
       "settings.links.options.built-in",
       "settings.links.options.external",
+    ],
+  },
+];
+
+const SKILLS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
+  {
+    id: "skills-manager",
+    tab: "skills",
+    icon: LuHammer,
+    labelKey: "settings.skills.title",
+    sectionLabelKey: "settings.items.skills",
+    keywordKeys: [
+      "settings.skills.description",
+      "settings.skills.sourceLabel",
+      "settings.skills.sourcePlaceholder",
+      "settings.skills.installed",
+      "settings.skills.notInstalled",
+      "settings.skills.official",
+      "settings.skills.thirdParty",
+      "settings.skills.actions.add",
+      "settings.skills.actions.install",
+      "settings.skills.actions.update",
+      "settings.skills.actions.uninstall",
     ],
   },
 ];
@@ -438,6 +464,7 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchCatalogItem[] = [
   ...INTEGRATION_SEARCH_ITEMS,
   ...LANGUAGE_SEARCH_ITEMS,
   ...LINKS_SEARCH_ITEMS,
+  ...SKILLS_SEARCH_ITEMS,
   ...MEMBERS_SEARCH_ITEMS,
   ...NODES_SEARCH_ITEMS,
   ...KEYBINDINGS_SEARCH_ITEMS,

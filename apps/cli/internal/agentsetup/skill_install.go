@@ -3,9 +3,8 @@ package setup
 import (
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -93,10 +92,108 @@ func resolveSkillDefinition(source string) (*skillDefinition, error) {
 	if isOfficialSkillName(trimmed) {
 		return officialSkillDefinition(trimmed)
 	}
-	if strings.HasPrefix(trimmed, "http://") || strings.HasPrefix(trimmed, "https://") {
-		return urlSkillDefinition(trimmed)
+	if def, err := tryGitHubInstall(trimmed); err == nil {
+		return def, nil
+	} else if isGitHubSource(trimmed) {
+		return nil, err
 	}
-	return nil, fmt.Errorf("skill source must be an official skill name or URL")
+	return nil, fmt.Errorf("skill source must be an official skill name, GitHub URL, or owner/repo shorthand")
+}
+
+func tryGitHubInstall(source string) (*skillDefinition, error) {
+	owner, repo, ref, subPath, ok := parseGitHubSource(source)
+	if !ok {
+		return nil, fmt.Errorf("not a GitHub source")
+	}
+	cloneURL := fmt.Sprintf("https://github.com/%s/%s.git", owner, repo)
+	cloneDir, err := os.MkdirTemp("", "yishan-skill-")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(cloneDir)
+
+	args := []string{"clone", "--depth=1", "--single-branch"}
+	if ref != "" && ref != "HEAD" {
+		args = append(args, "--branch="+ref)
+	}
+	args = append(args, cloneURL, cloneDir)
+	if output, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("git clone: %s", string(output))
+	}
+	if subPath != "" {
+		return readSkillDirDefinition(filepath.Join(cloneDir, subPath), source)
+	}
+	def, err := discoverSkillFromClone(cloneDir, source)
+	if err == nil {
+		return def, nil
+	}
+	return readSkillDirDefinition(cloneDir, source)
+}
+
+func isGitHubSource(source string) bool {
+	_, _, _, _, ok := parseGitHubSource(source)
+	return ok
+}
+
+func parseGitHubSource(source string) (owner, repo, ref, subPath string, ok bool) {
+	for _, prefix := range []string{"https://github.com/", "http://github.com/"} {
+		if !strings.HasPrefix(source, prefix) {
+			continue
+		}
+		rest := strings.TrimPrefix(source, prefix)
+		rest = strings.TrimSuffix(rest, ".git")
+		parts := strings.SplitN(rest, "/", 4)
+		if len(parts) < 2 {
+			return
+		}
+		owner = parts[0]
+		repo = parts[1]
+		if len(parts) >= 3 && len(parts) >= 4 {
+			ref = parts[3]
+			if idx := strings.Index(ref, "/"); idx >= 0 {
+				subPath = ref[idx+1:]
+				ref = ref[:idx]
+			}
+		}
+		ok = true
+		return
+	}
+	if shorthandParts := strings.SplitN(source, "/", 2); len(shorthandParts) == 2 && !strings.Contains(shorthandParts[0], ".") {
+		owner = shorthandParts[0]
+		repo = shorthandParts[1]
+		ok = true
+	}
+	return
+}
+
+func discoverSkillFromClone(cloneDir string, source string) (*skillDefinition, error) {
+	skillDir := filepath.Join(cloneDir, "skills")
+	if _, err := os.Stat(skillDir); err != nil {
+		return nil, err
+	}
+	entries, err := os.ReadDir(skillDir)
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		dir := filepath.Join(skillDir, entry.Name())
+		skillPath := filepath.Join(dir, "SKILL.md")
+		if _, err := os.Stat(skillPath); err == nil {
+			return readSkillDirDefinition(dir, source)
+		}
+	}
+	return nil, fmt.Errorf("no skills found in %s", cloneDir)
+}
+
+func readSkillDirDefinition(dir string, source string) (*skillDefinition, error) {
+	files, err := readSkillDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	return definitionFromFiles(source, SkillSourceURL, files)
 }
 
 func officialSkillDefinition(name string) (*skillDefinition, error) {
@@ -115,22 +212,6 @@ func officialSkillDefinition(name string) (*skillDefinition, error) {
 		Official:    true,
 		Files:       files,
 	}, nil
-}
-
-func urlSkillDefinition(source string) (*skillDefinition, error) {
-	resp, err := http.Get(source)
-	if err != nil {
-		return nil, fmt.Errorf("download skill source: %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("download skill source: unexpected status %d", resp.StatusCode)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read skill source: %w", err)
-	}
-	return definitionFromFiles(source, SkillSourceURL, map[string][]byte{"SKILL.md": body})
 }
 
 func definitionFromFiles(source string, sourceKind SkillSourceKind, files map[string][]byte) (*skillDefinition, error) {

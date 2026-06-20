@@ -88,6 +88,7 @@
       "nodes": "节点",
       "notifications": "通知",
       "serviceTokens": "服务令牌",
+      "skills": "技能",
       "terminal": "终端",
       "workspace": "工作区"
     },
@@ -359,9 +360,12 @@
       "thirdParty": "第三方",
       "sourceLabel": "从来源安装",
       "sourcePlaceholder": "官方名称或 URL",
+      "confirmRemoveTitle": "移除技能？",
+      "confirmRemoveDescription": "确认要移除 \"{{name}}\" 吗？",
       "actions": {
         "add": "添加",
         "adding": "添加中...",
+        "cancel": "取消",
         "install": "安装",
         "installing": "安装中...",
         "update": "更新",

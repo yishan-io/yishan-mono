@@ -22,6 +22,8 @@ func (h *JSONRPCHandler) dispatchSkill(ctx context.Context, method string, param
 		return handleSkillRemove(params)
 	case MethodSkillUpdate:
 		return handleSkillUpdate(params)
+	case MethodSkillDetail:
+		return handleSkillDetail(params)
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, fmt.Sprintf("method not found: %s", method))
 	}
@@ -45,6 +47,18 @@ func handleSkillInfo(params json.RawMessage) (any, error) {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, err.Error())
 	}
 	return info, nil
+}
+
+func handleSkillDetail(params json.RawMessage) (any, error) {
+	name, err := parseSkillNameParam(params)
+	if err != nil {
+		return nil, err
+	}
+	detail, err := setup.GetSkillDetail(name)
+	if err != nil {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, err.Error())
+	}
+	return detail, nil
 }
 
 func handleSkillAdd(params json.RawMessage) (any, error) {

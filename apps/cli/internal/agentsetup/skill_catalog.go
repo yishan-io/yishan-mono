@@ -32,6 +32,11 @@ type SkillInfo struct {
 	HasUpdate          bool            `json:"hasUpdate"`
 }
 
+type SkillDetail struct {
+	SkillInfo
+	Files map[string]string `json:"files"`
+}
+
 type skillFrontMatter struct {
 	Name        string
 	Description string
@@ -103,6 +108,43 @@ func GetSkillInfo(name string) (*SkillInfo, error) {
 		}
 	}
 	return nil, fmt.Errorf("unknown skill %q", trimmed)
+}
+
+func GetSkillDetail(name string) (*SkillDetail, error) {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return nil, fmt.Errorf("skill name is required")
+	}
+	info, err := GetSkillInfo(trimmed)
+	if err != nil {
+		return nil, err
+	}
+	var fileMap map[string][]byte
+	if info.Official {
+		fileMap, _, err = loadOfficialSkillFiles(trimmed)
+	} else {
+		fileMap, err = readInstalledSkillFiles(trimmed)
+	}
+	if err != nil {
+		return nil, err
+	}
+	files := make(map[string]string, len(fileMap))
+	for path, content := range fileMap {
+		files[path] = string(content)
+	}
+	return &SkillDetail{SkillInfo: *info, Files: files}, nil
+}
+
+func readInstalledSkillFiles(name string) (map[string][]byte, error) {
+	yishanHome, err := config.HomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("resolve yishan home: %w", err)
+	}
+	dir := filepath.Join(yishanHome, "skills", name)
+	if _, statErr := os.Stat(filepath.Join(dir, "SKILL.md")); statErr != nil {
+		return nil, fmt.Errorf("skill %q is not installed: %w", name, statErr)
+	}
+	return readSkillDir(dir)
 }
 
 func buildOfficialSkillInfo(name string, record InstalledSkillRecord) (SkillInfo, error) {
