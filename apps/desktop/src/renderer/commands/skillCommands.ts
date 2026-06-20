@@ -52,9 +52,7 @@ export async function getSkillDetail(name: string): Promise<SkillDetail> {
     ...parseSkillInfo(entry),
     files:
       typeof entry.files === "object" && entry.files !== null
-        ? Object.fromEntries(
-            Object.entries(entry.files as Record<string, unknown>).map(([k, v]) => [k, String(v)]),
-          )
+        ? Object.fromEntries(Object.entries(entry.files as Record<string, unknown>).map(([k, v]) => [k, String(v)]))
         : {},
   };
 }
