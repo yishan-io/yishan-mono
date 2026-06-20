@@ -306,7 +306,7 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "global",
     keys: "esc",
     target: { command: ACTIONS.NAVIGATE, payload: { path: WORKSPACE_ROUTE } },
-    shouldRun: (context) => context.pathname === SETTINGS_ROUTE,
+    shouldRun: (context) => context.pathname === SETTINGS_ROUTE && document.querySelector(".MuiDialog-root") === null,
   },
   {
     id: "new-tab",

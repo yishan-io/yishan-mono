@@ -179,7 +179,13 @@ function SkillDetailDialog({ skill, onClose }: SkillDetailDialogProps) {
   const readme = detail?.files["SKILL.md"] ?? "";
 
   return (
-    <Dialog open onClose={onClose} maxWidth={false} fullWidth sx={{ "& .MuiDialog-paper": { maxWidth: DIALOG_SIZE } }}>
+    <Dialog
+      open
+      onClose={onClose}
+      maxWidth={false}
+      fullWidth
+      sx={{ "& .MuiDialog-paper": { maxWidth: DIALOG_SIZE } }}
+    >
       <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
         <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
           <PiFlowArrowBold size={16} />
@@ -409,7 +415,12 @@ export function AgentSkillsCard() {
       ) : null}
 
       {confirmSkillName ? (
-        <Dialog open onClose={() => setConfirmSkillName(null)} maxWidth="xs" fullWidth>
+        <Dialog
+          open
+          onClose={() => setConfirmSkillName(null)}
+          maxWidth="xs"
+          fullWidth
+        >
           <DialogTitle>{t("settings.skills.confirmRemoveTitle")}</DialogTitle>
           <DialogContent>
             <Typography variant="body2">
