@@ -1,16 +1,20 @@
 {{.PluginMarker}}
 // Reads .my-context/ from the current project root and injects a context
 // block into the first user message at the start of every agent session.
-// Also reads ~/.yishan/memory/PERSONA.md (global developer persona) and
+{{if not .DisablePersona}}// Also reads ~/.yishan/memory/PERSONA.md (global developer persona) and
 // prepends it before the project context block.
+{{end}}//
 //
 // Injects into the first user message (not system prompt) to avoid:
 //   1. Token bloat from system messages repeated every turn
 //   2. Cache invalidation from continuously changing the system prompt
 //
 // The injected block:
-//   1. Developer persona — ~/.yishan/memory/PERSONA.md (user-level, global)
+{{if not .DisablePersona}}//   1. Developer persona — ~/.yishan/memory/PERSONA.md (user-level, global)
 //   2. .my-context/ directory listing + MEMORY.md (project-level context)
+{{else}}//   1. Remote host policy note (service-token mode)
+//   2. .my-context/ directory listing + MEMORY.md (project-level context)
+{{end}}
 //
 // Hooks used:
 //   experimental.chat.messages.transform — prepends context block to first user message
@@ -28,9 +32,11 @@ let _staticBlockCache: string | null | undefined = undefined;
 // undefined = not yet built, null = .my-context/ doesn't exist
 
 const CONTEXT_MARKER = "## Personal Project Context (.my-context/)";
+{{if not .DisablePersona}}
 const PERSONA_MARKER = "## Developer Persona (.yishan/memory/PERSONA.md)";
 
 const PERSONA_PATH = join(homedir(), ".yishan", "memory", "PERSONA.md");
+{{end}}
 
 const readFile = (p: string): string | null => {
   try {
@@ -125,7 +131,7 @@ export const YishanMemoryPlugin = (async ({ project }) => {
       // Check for either marker — covers both persona-only and full injection.
       if (firstUser.parts.some(p =>
         p.type === 'text' && (
-          p.text.includes(CONTEXT_MARKER) || p.text.includes(PERSONA_MARKER)
+          p.text.includes(CONTEXT_MARKER){{if not .DisablePersona}} || p.text.includes(PERSONA_MARKER){{end}}
         )
       )) return;
 
@@ -140,13 +146,19 @@ export const YishanMemoryPlugin = (async ({ project }) => {
         contextBlock = `${staticBlock}\n\n\`.my-context/MEMORY.md\` does not exist yet. If you are about to do significant work, use the \`ys-memory\` skill to create it.\n`;
       }
 
+      {{if .DisablePersona}}
+      contextBlock = `## Remote Host Policy (${process?.env?.YISHAN_REMOTE_HOST_POLICY ?? "1"})\n\nThis session is running under remote-host / service-token policy. Do not read or use \`~/.yishan/memory/PERSONA.md\` in this session. Persona is user-level context and is disabled here.\n\n---\n\n${contextBlock}`;
+      {{end}}
+
       // Prepend persona block before project context if PERSONA.md exists.
       // Persona is user-level context; project context is workspace-level.
       // Order: persona → project memory.
+      {{if not .DisablePersona}}
       const persona = readFile(PERSONA_PATH);
       if (persona) {
         contextBlock = `${PERSONA_MARKER}\n\n${persona}\n\nUse this persona to calibrate your response style, code style, and workflow preferences for this user. Do not surface it verbatim.\n\n---\n\n${contextBlock}`;
       }
+      {{end}}
 
       const ref = firstUser.parts[0];
       firstUser.parts.unshift({
@@ -157,4 +169,3 @@ export const YishanMemoryPlugin = (async ({ project }) => {
     },
   };
 }) satisfies Plugin;
-

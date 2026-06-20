@@ -92,7 +92,15 @@ func (s *Service) Close() error {
 }
 
 func (s *Service) SummarizerEnabled() bool {
-	return s.summarizer != nil && s.summarizer.Enabled()
+	return s.ProjectMemoryEnabled()
+}
+
+func (s *Service) ProjectMemoryEnabled() bool {
+	return s.summarizer != nil && s.summarizer.Enabled() && !s.config.DisableProjectMemory
+}
+
+func (s *Service) PersonaEnabled() bool {
+	return s.persona != nil && s.persona.summarizer.Enabled() && !s.config.DisablePersona
 }
 
 func (s *Service) GetConfig() SummarizerConfig {
@@ -153,7 +161,7 @@ func (s *Service) OnFileDeleted(filePath string) error {
 // SummarizeSession triggers summarization for the workspace, serialized per
 // context root so concurrent workspace-close events don't clobber MEMORY.md.
 func (s *Service) SummarizeSession(agent string, worktreePath string, projectID string) {
-	if !s.summarizer.Enabled() {
+	if !s.ProjectMemoryEnabled() {
 		return
 	}
 
@@ -227,7 +235,7 @@ func (s *Service) getOrCreateQueue(contextRoot string) *summarizeQueue {
 // day has changed since the last run. It is called from hook_ingress on every
 // session stop event. The batch runs asynchronously so it never blocks the hook.
 func (s *Service) MaybeRunDailyPersonaBatch(agent string) {
-	if s.persona == nil {
+	if !s.PersonaEnabled() {
 		return
 	}
 	s.persona.maybeRunBatch(agent)

@@ -27,6 +27,10 @@ func AddSkill(source string) (*SkillInstallResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	return installAndRecordSkillDefinition(definition)
+}
+
+func installAndRecordSkillDefinition(definition *skillDefinition) (*SkillInstallResult, error) {
 	result, err := installSkillDefinition(definition)
 	if err != nil {
 		return nil, err

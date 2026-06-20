@@ -84,3 +84,28 @@ func TestRemoveSkill_RemovesRegistryAndSymlinks(t *testing.T) {
 		}
 	}
 }
+
+func TestEnsureMemorySkill_InstallsCanonicalSkillInstructions(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	result, err := EnsureMemorySkill()
+	if err != nil {
+		t.Fatalf("ensure memory skill: %v", err)
+	}
+
+	content, err := os.ReadFile(result.SkillPath)
+	if err != nil {
+		t.Fatalf("read installed skill: %v", err)
+	}
+	text := string(content)
+	if !strings.Contains(text, "skip PERSONA.md entirely") {
+		t.Fatal("expected canonical memory skill to mention remote-host persona skip")
+	}
+	if !strings.Contains(text, "YISHAN_REMOTE_HOST_POLICY=1") {
+		t.Fatal("expected canonical memory skill to mention remote host policy env key")
+	}
+	if !strings.Contains(text, "Read `~/.yishan/memory/PERSONA.md` if it exists") {
+		t.Fatal("expected canonical memory skill to retain persona guidance")
+	}
+}

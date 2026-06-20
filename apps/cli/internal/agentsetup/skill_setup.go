@@ -136,7 +136,10 @@ func ensureSkillSymlink(linkPath string, target string) error {
 // EnsurePersonaSetup writes the initial PERSONA.md template to
 // ~/.yishan/memory/PERSONA.md if the file does not already exist.
 // This is called during `yishan setup` so new users get a starter file.
-func EnsurePersonaSetup() error {
+func EnsurePersonaSetup(disablePersona bool) error {
+	if disablePersona {
+		return nil
+	}
 	personaPath, err := memory.PersonaFilePath()
 	if err != nil {
 		return fmt.Errorf("resolve persona path: %w", err)

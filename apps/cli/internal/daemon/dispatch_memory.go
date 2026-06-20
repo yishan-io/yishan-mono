@@ -64,22 +64,31 @@ func (h *JSONRPCHandler) dispatchMemory(method string, params json.RawMessage) (
 		return result, nil
 
 	case MethodMemoryStatus:
-		log.Debug().Bool("enabled", h.memory.SummarizerEnabled()).Msg("memory status requested")
+		log.Debug().
+			Bool("enabled", h.memory.SummarizerEnabled()).
+			Bool("personaEnabled", h.memory.PersonaEnabled()).
+			Msg("memory status requested")
 		return map[string]any{
-			"enabled": h.memory.SummarizerEnabled(),
+			"enabled":        h.memory.SummarizerEnabled(),
+			"personaEnabled": h.memory.PersonaEnabled(),
 		}, nil
 
 	case MethodMemoryGetConfig:
 		cfg := h.memory.GetConfig()
 		log.Debug().
 			Bool("enabled", cfg.Enabled).
+			Bool("disableProjectMemory", cfg.DisableProjectMemory).
+			Bool("disablePersona", cfg.DisablePersona).
 			Str("agentKind", cfg.AgentKind).
 			Str("model", cfg.Model).
 			Msg("memory config requested")
 		return map[string]any{
-			"enabled":   cfg.Enabled,
-			"agentKind": cfg.AgentKind,
-			"model":     cfg.Model,
+			"enabled":              cfg.Enabled,
+			"disableProjectMemory": cfg.DisableProjectMemory,
+			"disablePersona":       cfg.DisablePersona,
+			"personaEnabled":       h.memory.PersonaEnabled(),
+			"agentKind":            cfg.AgentKind,
+			"model":                cfg.Model,
 		}, nil
 
 	case MethodMemoryUpdateConfig:
@@ -91,11 +100,10 @@ func (h *JSONRPCHandler) dispatchMemory(method string, params json.RawMessage) (
 		if err := decodeParams(params, &req); err != nil {
 			return nil, err
 		}
-		cfg := memory.SummarizerConfig{
-			Enabled:   req.Enabled,
-			AgentKind: req.AgentKind,
-			Model:     req.Model,
-		}
+		cfg := h.memory.GetConfig()
+		cfg.Enabled = req.Enabled
+		cfg.AgentKind = req.AgentKind
+		cfg.Model = req.Model
 		if h.settingsPath != "" {
 			if err := config.UpdateSettings(h.settingsPath, func(v *viper.Viper) {
 				v.Set("memory.summarizer.enabled", cfg.Enabled)

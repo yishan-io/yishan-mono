@@ -14,13 +14,15 @@ import (
 
 type AgentHookSetupConfig = hooksetup.AgentHookSetupConfig
 
+const RemoteHostPolicyEnvKey = "YISHAN_REMOTE_HOST_POLICY"
+
 // EnsureAgentHookSetup installs managed Claude, Gemini, and OpenCode hook integrations.
 func EnsureAgentHookSetup(cfg AgentHookSetupConfig) error {
 	return hooksetup.EnsureAgentHookSetup(cfg)
 }
 
 // EnsureManagedAgentRuntime materializes managed agent wrapper assets and hook configuration.
-func EnsureManagedAgentRuntime() {
+func EnsureManagedAgentRuntime(disablePersona bool) {
 	managedRootDir, err := resolveManagedHookRootDir()
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to resolve agent hook root")
@@ -44,6 +46,7 @@ func EnsureManagedAgentRuntime() {
 	if err := EnsureAgentHookSetup(AgentHookSetupConfig{
 		NotifyScriptPath: notifyScriptPath,
 		XDGConfigHome:    managedOpenCodeConfigHome,
+		DisablePersona:   disablePersona,
 	}); err != nil {
 		log.Warn().Err(err).Msg("failed to install agent hook setup")
 	}

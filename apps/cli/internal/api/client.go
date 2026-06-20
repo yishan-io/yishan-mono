@@ -79,6 +79,10 @@ func isServiceToken(token string) bool {
 	return strings.HasPrefix(token, serviceTokenPrefix)
 }
 
+func IsServiceToken(token string) bool {
+	return isServiceToken(strings.TrimSpace(token))
+}
+
 func (c *Client) DoRaw(method string, path string, body any) ([]byte, error) {
 	// Service tokens are long-lived and never need refresh
 	if isServiceToken(c.accessToken) {

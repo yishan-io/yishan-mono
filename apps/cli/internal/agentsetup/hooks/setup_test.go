@@ -388,7 +388,7 @@ func commandFromDefinition(t *testing.T, definition any) string {
 // ── opencode memory plugin persona injection ──────────────────────────────────
 
 func TestOpenCodeMemoryPlugin_ContainsPersonaMarker(t *testing.T) {
-	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker)
+	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker, false)
 
 	if !strings.Contains(content, "PERSONA_MARKER") {
 		t.Error("memory plugin should define PERSONA_MARKER constant")
@@ -402,7 +402,7 @@ func TestOpenCodeMemoryPlugin_ContainsPersonaMarker(t *testing.T) {
 }
 
 func TestOpenCodeMemoryPlugin_DoubleInjectionGuardCoversPersonaMarker(t *testing.T) {
-	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker)
+	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker, false)
 
 	// The guard must check for PERSONA_MARKER, not just CONTEXT_MARKER,
 	// so sessions that only have persona (no project context) are also guarded.
@@ -417,7 +417,7 @@ func TestOpenCodeMemoryPlugin_DoubleInjectionGuardCoversPersonaMarker(t *testing
 }
 
 func TestOpenCodeMemoryPlugin_PersonaPrependedBeforeProjectContext(t *testing.T) {
-	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker)
+	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker, false)
 
 	// Verify the persona prepend pattern: persona wraps around contextBlock.
 	// The template should have: contextBlock = `${PERSONA_MARKER}...\n\n---\n\n${contextBlock}`
@@ -430,5 +430,25 @@ func TestOpenCodeMemoryPlugin_PersonaPrependedBeforeProjectContext(t *testing.T)
 	// Check for the "---" separator that signals persona ends and project begins.
 	if !strings.Contains(content, "---") {
 		t.Error("memory plugin should use a separator between persona and project context")
+	}
+}
+
+func TestOpenCodeMemoryPlugin_DisablePersonaRemovesPersonaInjection(t *testing.T) {
+	content := buildOpenCodeMemoryPluginContent(openCodeMemoryPluginMarker, true)
+
+	if !strings.Contains(content, "const CONTEXT_MARKER") {
+		t.Fatal("expected persona-disabled plugin to still define context marker")
+	}
+	if !strings.Contains(content, "Remote Host Policy") {
+		t.Fatal("expected persona-disabled plugin to inject remote host policy note")
+	}
+	if !strings.Contains(content, "YISHAN_REMOTE_HOST_POLICY") {
+		t.Fatal("expected persona-disabled plugin to reference remote host policy env key")
+	}
+	if strings.Contains(content, "PERSONA_MARKER") {
+		t.Fatal("expected persona-disabled plugin not to define persona marker")
+	}
+	if strings.Contains(content, "PERSONA_PATH") {
+		t.Fatal("expected persona-disabled plugin not to define persona path")
 	}
 }

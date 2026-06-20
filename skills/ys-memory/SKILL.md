@@ -97,7 +97,10 @@ Before ANY other action:
 2. Read `~/.yishan/memory/PERSONA.md` if it exists — this is your global developer
    persona. Use it to silently calibrate response style, code style, and workflow
    preferences for this user. Do not surface the persona content verbatim; let it
-   inform your behaviour naturally.
+   inform your behaviour naturally. If this host is operating under remote-host /
+   service-token policy and `YISHAN_REMOTE_HOST_POLICY=1` is present in the
+   environment, skip PERSONA.md entirely — persona is user-level context and is
+   disabled in that mode.
 3. If anything in MEMORY.md is stale, duplicate, or no longer durable — correct it first
 
 ### During a session
