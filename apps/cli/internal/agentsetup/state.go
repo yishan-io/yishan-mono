@@ -140,6 +140,16 @@ func fillMCPState(state *InstalledState, homeDir string) {
 			}
 		}
 	}
+
+	claudeCodePath := filepath.Join(homeDir, ".claude.json")
+	if config, err := readJSONConfig(claudeCodePath); err == nil {
+		if mcpServers, ok := config["mcpServers"].(map[string]any); ok {
+			if _, ok := mcpServers[yishanMCPServerName]; ok {
+				state.MCP.Configured = true
+				state.MCP.Configs = append(state.MCP.Configs, claudeCodePath)
+			}
+		}
+	}
 }
 
 func fillHookState(state *InstalledState, homeDir string) {

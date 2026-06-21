@@ -31,6 +31,12 @@ func EnsureMCPConfig() (*MCPInstallResult, error) {
 		result.ConfigPaths = append(result.ConfigPaths, path)
 	}
 
+	if path, err := ensureClaudeCodeMCPConfig(homeDir); err != nil {
+		return result, fmt.Errorf("claude-code mcp: %w", err)
+	} else if path != "" {
+		result.ConfigPaths = append(result.ConfigPaths, path)
+	}
+
 	return result, nil
 }
 
@@ -46,6 +52,10 @@ func RemoveMCPConfig() error {
 
 	if err := removeClaudeMCPConfig(homeDir); err != nil {
 		return fmt.Errorf("claude mcp: %w", err)
+	}
+
+	if err := removeClaudeCodeMCPConfig(homeDir); err != nil {
+		return fmt.Errorf("claude-code mcp: %w", err)
 	}
 
 	return nil
@@ -133,6 +143,47 @@ func ensureClaudeMCPConfig(homeDir string) (string, error) {
 
 func removeClaudeMCPConfig(homeDir string) error {
 	configPath := filepath.Join(homeDir, ".claude", "claude_desktop_config.json")
+
+	config, err := readJSONConfig(configPath)
+	if err != nil {
+		return err
+	}
+
+	if mcpServers, ok := config["mcpServers"].(map[string]any); ok {
+		delete(mcpServers, yishanMCPServerName)
+		if len(mcpServers) == 0 {
+			delete(config, "mcpServers")
+		}
+	}
+
+	return writeJSONConfig(configPath, config)
+}
+
+func ensureClaudeCodeMCPConfig(homeDir string) (string, error) {
+	configPath := filepath.Join(homeDir, ".claude.json")
+
+	config, err := readJSONConfig(configPath)
+	if err != nil {
+		return "", err
+	}
+
+	if _, ok := config["mcpServers"]; !ok {
+		config["mcpServers"] = map[string]any{}
+	}
+	mcpServers, _ := config["mcpServers"].(map[string]any)
+	mcpServers[yishanMCPServerName] = map[string]any{
+		"command": "yishan",
+		"args":    []string{"mcp"},
+	}
+
+	if err := writeJSONConfig(configPath, config); err != nil {
+		return "", err
+	}
+	return configPath, nil
+}
+
+func removeClaudeCodeMCPConfig(homeDir string) error {
+	configPath := filepath.Join(homeDir, ".claude.json")
 
 	config, err := readJSONConfig(configPath)
 	if err != nil {

@@ -85,7 +85,13 @@ function SkillCard({ skill, isBusy, onInstall, onUpdate, onRemove, onClick }: Sk
       {skill.installedForAgents.length > 0 ? (
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
           {skill.installedForAgents.map((agent) => (
-            <Chip key={`${skill.name}-${agent}`} size="small" label={agent} variant="outlined" sx={{ fontSize: "0.7rem", height: 22 }} />
+            <Chip
+              key={`${skill.name}-${agent}`}
+              size="small"
+              label={agent}
+              variant="outlined"
+              sx={{ fontSize: "0.7rem", height: 22 }}
+            />
           ))}
         </Box>
       ) : null}

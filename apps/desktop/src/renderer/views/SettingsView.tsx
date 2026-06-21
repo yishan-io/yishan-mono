@@ -66,14 +66,14 @@ function renderSidebarLabel(label: ReactNode) {
 }
 
 function renderExperimentalSidebarLabel(label: string, chipLabel: string) {
-	return (
-	  <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
-	    <Typography variant="body2" sx={{ lineHeight: 1.35 }} noWrap>
-	      {label}
-	    </Typography>
-	    <Chip size="small" label={chipLabel} variant="outlined" sx={{ height: 18, flexShrink: 0 }} />
-	  </Box>
-	);
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+      <Typography variant="body2" sx={{ lineHeight: 1.35 }} noWrap>
+        {label}
+      </Typography>
+      <Chip size="small" label={chipLabel} variant="outlined" sx={{ height: 18, flexShrink: 0 }} />
+    </Box>
+  );
 }
 
 /**
@@ -261,7 +261,7 @@ export function SettingsView() {
                       selectedTab === result.tab &&
                       (result.focusItemId === undefined || focusedNotificationItemId === result.focusItemId);
                     return (
-                        <ListItemButton
+                      <ListItemButton
                         key={result.id}
                         selected={isSelected}
                         onClick={() => {
@@ -275,19 +275,19 @@ export function SettingsView() {
                           setSearchParams({ tab: result.tab });
                         }}
                         sx={{ borderRadius: 1, minHeight: 38 }}
-                        >
-                          <ListItemIcon sx={{ minWidth: 28 }}>
-                            <Icon size={16} />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={
-							  result.tab === "computerUse"
-							    ? renderExperimentalSidebarLabel(result.label, t("settings.computerUse.experimental"))
-							    : renderSidebarLabel(result.label)
-							}
-                            secondary={
-                              <Typography variant="caption" color="text.secondary">
-                                {result.sectionLabel}
+                      >
+                        <ListItemIcon sx={{ minWidth: 28 }}>
+                          <Icon size={16} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            result.tab === "computerUse"
+                              ? renderExperimentalSidebarLabel(result.label, t("settings.computerUse.experimental"))
+                              : renderSidebarLabel(result.label)
+                          }
+                          secondary={
+                            <Typography variant="caption" color="text.secondary">
+                              {result.sectionLabel}
                             </Typography>
                           }
                         />
@@ -326,12 +326,15 @@ export function SettingsView() {
                               <Icon size={16} />
                             </ListItemIcon>
                             <ListItemText
-							  primary={
-							    item.tab === "computerUse"
-							      ? renderExperimentalSidebarLabel(t(item.labelKey), t("settings.computerUse.experimental"))
-							      : renderSidebarLabel(t(item.labelKey))
-							  }
-							/>
+                              primary={
+                                item.tab === "computerUse"
+                                  ? renderExperimentalSidebarLabel(
+                                      t(item.labelKey),
+                                      t("settings.computerUse.experimental"),
+                                    )
+                                  : renderSidebarLabel(t(item.labelKey))
+                              }
+                            />
                           </ListItemButton>
                         );
                       })}

@@ -65,7 +65,9 @@ describe("ComputerUseSettingsView", () => {
   it("opens macOS permission settings", async () => {
     render(<ComputerUseSettingsView />);
 
-    const button = await screen.findByRole("button", { name: "settings.computerUse.permissions.openScreenRecordingButton" });
+    const button = await screen.findByRole("button", {
+      name: "settings.computerUse.permissions.openScreenRecordingButton",
+    });
     fireEvent.click(button);
 
     await waitFor(() => {

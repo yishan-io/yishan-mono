@@ -3,12 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BiBluetooth, BiCamera, BiChip, BiHdd, BiShield, BiSolidKeyboard, BiUsb, BiWindow } from "react-icons/bi";
 import { LuGlobe } from "react-icons/lu";
-import {
-  SettingsCard,
-  SettingsControlRow,
-  SettingsRows,
-  SettingsSectionHeader,
-} from "../../components/settings";
+import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { getRendererPlatform } from "../../helpers/platform";
 import type { ComputerPermissionState, ComputerPermissionStatus } from "../../rpc/daemonTypes";
@@ -118,15 +113,20 @@ export function ComputerUseSettingsView() {
     void loadPermissions();
   }, [loadPermissions]);
 
-  const openPermissionSettings = useCallback(async (permission: "accessibility" | "screenRecording" | "camera" | "fullDiskAccess" | "localNetwork" | "bluetooth") => {
-    try {
-      const client = await getDaemonClient();
-      await client.computer.openPermissionSettings({ permission });
-      setActionError(null);
-    } catch (error) {
-      setActionError(getErrorMessage(error));
-    }
-  }, []);
+  const openPermissionSettings = useCallback(
+    async (
+      permission: "accessibility" | "screenRecording" | "camera" | "fullDiskAccess" | "localNetwork" | "bluetooth",
+    ) => {
+      try {
+        const client = await getDaemonClient();
+        await client.computer.openPermissionSettings({ permission });
+        setActionError(null);
+      } catch (error) {
+        setActionError(getErrorMessage(error));
+      }
+    },
+    [],
+  );
 
   if (platform !== "darwin") {
     return (
@@ -158,7 +158,17 @@ export function ComputerUseSettingsView() {
                 <SettingsControlRow
                   title={
                     <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, minWidth: 0 }}>
-                      <Box sx={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.25 }}>
+                      <Box
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          mt: 0.25,
+                        }}
+                      >
                         <row.icon size={20} />
                       </Box>
                       <Box sx={{ minWidth: 0 }}>
@@ -181,10 +191,14 @@ export function ComputerUseSettingsView() {
                   control={
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       {row.key === "accessibility" && permissions?.accessibility !== "granted" ? (
-                        <Button size="small" onClick={() => void openPermissionSettings("accessibility")}>{t("settings.computerUse.permissions.openAccessibilityButton")}</Button>
+                        <Button size="small" onClick={() => void openPermissionSettings("accessibility")}>
+                          {t("settings.computerUse.permissions.openAccessibilityButton")}
+                        </Button>
                       ) : null}
                       {row.key === "screenRecording" && permissions?.screenRecording !== "granted" ? (
-                        <Button size="small" onClick={() => void openPermissionSettings("screenRecording")}>{t("settings.computerUse.permissions.openScreenRecordingButton")}</Button>
+                        <Button size="small" onClick={() => void openPermissionSettings("screenRecording")}>
+                          {t("settings.computerUse.permissions.openScreenRecordingButton")}
+                        </Button>
                       ) : null}
                     </Box>
                   }
@@ -196,7 +210,17 @@ export function ComputerUseSettingsView() {
                 <SettingsControlRow
                   title={
                     <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5, minWidth: 0 }}>
-                      <Box sx={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, mt: 0.25 }}>
+                      <Box
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          mt: 0.25,
+                        }}
+                      >
                         <row.icon size={20} />
                       </Box>
                       <Box sx={{ minWidth: 0 }}>
@@ -219,11 +243,14 @@ export function ComputerUseSettingsView() {
                   control={
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       {row.actionLabelKey && row.actionPermission ? (
-                        <Button size="small" onClick={() => {
-								const permission = row.actionPermission;
-								if (!permission) return;
-								void openPermissionSettings(permission);
-							}}>
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            const permission = row.actionPermission;
+                            if (!permission) return;
+                            void openPermissionSettings(permission);
+                          }}
+                        >
                           {t(`settings.computerUse.permissions.${row.actionLabelKey}`)}
                         </Button>
                       ) : null}
@@ -256,11 +283,11 @@ function capabilityColor(permission: ComputerPermissionState) {
 }
 
 function informationalStatusColor(statusKey: ComputerPermissionState) {
-	if (statusKey === "entitled") {
-		return "success" as const;
-	}
-	if (statusKey === "checkManually") {
-		return "default" as const;
-	}
-	return "warning" as const;
+  if (statusKey === "entitled") {
+    return "success" as const;
+  }
+  if (statusKey === "checkManually") {
+    return "default" as const;
+  }
+  return "warning" as const;
 }

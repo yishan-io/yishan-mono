@@ -19,7 +19,7 @@ type MockedCommands = {
   listNodesByOrg: ReturnType<typeof vi.fn>;
 };
 
-var mocked: MockedCommands | undefined;
+let mocked: MockedCommands | undefined;
 
 function getMocked(): MockedCommands {
   if (mocked) {
