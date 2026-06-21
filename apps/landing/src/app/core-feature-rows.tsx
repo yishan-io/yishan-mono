@@ -411,6 +411,70 @@ function MyContextVisual() {
   );
 }
 
+// ── Visual: Skills ─────────────────────────────────────────────────────────
+
+const SKILLS = [
+  { name: "code review",     icon: "CR" },
+  { name: "test generation", icon: "TG" },
+  { name: "refactoring",     icon: "RF" },
+  { name: "PR checklist",    icon: "PR" },
+];
+
+function SkillsVisual() {
+  const [active, setActive] = useState<number | null>(null);
+
+  useEffect(() => {
+    function cycle() {
+      setActive(null);
+      const timers = [0, 1, 2, 3].map((i) => setTimeout(() => setActive(i), 600 + i * 1000));
+      const next = setTimeout(cycle, 6500);
+      return [...timers, next];
+    }
+    const timers = cycle();
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  return (
+    <div className="flex h-full w-full flex-col justify-center gap-3 p-8">
+      <div className="mb-2 flex items-center gap-2">
+        <div className="text-[10px] uppercase tracking-[0.18em] text-[#4A5A4E]">Skill templates</div>
+        <span className="rounded border border-[#2A342F] px-1.5 py-0.5 text-[9px] text-[#A5B0A8]">{SKILLS.length} available</span>
+      </div>
+
+      {SKILLS.map((skill, i) => (
+        <div
+          key={skill.name}
+          className="rounded-2xl border bg-[#0F1412] p-3 transition-all duration-500"
+          style={{
+            opacity: active === i ? 1 : 0.4,
+            borderColor: active === i ? "rgba(143,203,153,0.3)" : "rgba(42,52,47,1)",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#2A342F] bg-[#151B18] text-[9px] font-medium transition-colors duration-500"
+              style={{ color: active === i ? "#8FCB99" : "#4A5A4E" }}
+            >
+              {skill.icon}
+            </div>
+            <span className="flex-1 text-[11px] font-medium text-[#A5B0A8]">{skill.name}</span>
+            {active === i && (
+              <span className="shrink-0 rounded-full bg-[#8FCB99]/10 px-2 py-0.5 text-[9px] text-[#8FCB99]">applied</span>
+            )}
+          </div>
+        </div>
+      ))}
+
+      <div className="mt-1 rounded-xl border border-[#2A342F] bg-[#0A0E0C] px-3 py-2 text-[10px]">
+        <span className="text-[#4A5A4E]">Workspace · </span>
+        <span className="text-[#A5B0A8]">
+          {active !== null ? `following ${SKILLS[active].name} rules` : "select a skill to apply →"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ── Layout ─────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -418,10 +482,9 @@ interface Props {
 }
 
 const rows = [
-  { visual: <IsolatedVisual />,    titleKey: "features.0.title", descKey: "features.0.desc" },
-  { visual: <LiveStatusVisual />,  titleKey: "features.1.title", descKey: "features.1.desc" },
-  { visual: <ResumeVisual />,      titleKey: "features.2.title", descKey: "features.2.desc" },
-  { visual: <MyContextVisual />,   titleKey: "features.4.title", descKey: "features.4.desc" },
+  { visual: <IsolatedVisual />,  titleKey: "features.0.title", descKey: "features.0.desc" },
+  { visual: <MyContextVisual />, titleKey: "features.1.title", descKey: "features.1.desc" },
+  { visual: <SkillsVisual />,    titleKey: "features.2.title", descKey: "features.2.desc" },
 ];
 
 export function CoreFeatureRows({ t }: Props) {
