@@ -661,13 +661,25 @@ export type ComputerUseFeatureConfig = {
   applicationControl: boolean;
 };
 
-export type ComputerPermissionState = "granted" | "denied" | "unknown" | "notRequired";
+export type ComputerPermissionState =
+  | "granted"
+  | "denied"
+  | "unknown"
+  | "notRequired"
+  | "notRequested"
+  | "checkManually"
+  | "entitled";
 
 export type ComputerPermissionStatus = {
   accessibility: ComputerPermissionState;
   screenRecording: ComputerPermissionState;
   inputMonitoring: ComputerPermissionState;
   automation: ComputerPermissionState;
+  camera: ComputerPermissionState;
+  fullDiskAccess: ComputerPermissionState;
+  localNetwork: ComputerPermissionState;
+  usbDevices: ComputerPermissionState;
+  bluetooth: ComputerPermissionState;
   prompted?: boolean;
   remediation?: string[];
 };

@@ -583,7 +583,8 @@
         "bluetoothDescription": "Bluetooth device tools and local hardware experiments. Reserved for future runtime support.",
         "openAccessibilityButton": "Open Accessibility",
         "openScreenRecordingButton": "Open Screen Recording",
-        "requestButton": "Request",
+        "openCameraButton": "Open Camera",
+        "openLocalNetworkButton": "Open Local Network",
         "openSettingsButton": "Open Settings",
         "triggerPromptButton": "Trigger Prompt"
       }

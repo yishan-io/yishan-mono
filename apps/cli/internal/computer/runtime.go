@@ -44,6 +44,11 @@ func (r NoopRuntime) Permissions(_ context.Context) (PermissionStatus, error) {
 		ScreenRecording: PermissionStateUnknown,
 		InputMonitoring: PermissionStateUnknown,
 		Automation:      PermissionStateUnknown,
+		Camera:          PermissionStateUnknown,
+		FullDiskAccess:  PermissionStateUnknown,
+		LocalNetwork:    PermissionStateUnknown,
+		USBDevices:      PermissionStateUnknown,
+		Bluetooth:       PermissionStateUnknown,
 		Remediation:     []string{r.Reason},
 	}, nil
 }

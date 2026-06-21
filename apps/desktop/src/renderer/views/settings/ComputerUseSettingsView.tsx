@@ -49,51 +49,49 @@ const PERMISSION_ROWS: Array<{
 ];
 
 const INFORMATIONAL_ROWS: Array<{
-  key: string;
+  key: "camera" | "fullDiskAccess" | "localNetwork" | "usbDevices" | "bluetooth";
   titleKey: string;
   descriptionKey: string;
-  statusKey: string;
-  actionLabelKey: string;
+  actionLabelKey?: string;
+  actionPermission?: "camera" | "fullDiskAccess" | "localNetwork" | "bluetooth";
   icon: React.ComponentType<{ size?: number }>;
 }> = [
   {
     key: "camera",
     titleKey: "settings.computerUse.permissions.camera",
     descriptionKey: "settings.computerUse.permissions.cameraDescription",
-    statusKey: "notRequested",
-    actionLabelKey: "requestButton",
+    actionLabelKey: "openCameraButton",
+    actionPermission: "camera",
     icon: BiCamera,
   },
   {
     key: "fullDiskAccess",
     titleKey: "settings.computerUse.permissions.fullDiskAccess",
     descriptionKey: "settings.computerUse.permissions.fullDiskAccessDescription",
-    statusKey: "checkManually",
     actionLabelKey: "openSettingsButton",
+    actionPermission: "fullDiskAccess",
     icon: BiHdd,
   },
   {
     key: "localNetwork",
     titleKey: "settings.computerUse.permissions.localNetwork",
     descriptionKey: "settings.computerUse.permissions.localNetworkDescription",
-    statusKey: "checkManually",
-    actionLabelKey: "triggerPromptButton",
+    actionLabelKey: "openLocalNetworkButton",
+    actionPermission: "localNetwork",
     icon: LuGlobe,
   },
   {
     key: "usbDevices",
     titleKey: "settings.computerUse.permissions.usbDevices",
     descriptionKey: "settings.computerUse.permissions.usbDevicesDescription",
-    statusKey: "entitled",
-    actionLabelKey: "openSettingsButton",
     icon: BiUsb,
   },
   {
     key: "bluetooth",
     titleKey: "settings.computerUse.permissions.bluetooth",
     descriptionKey: "settings.computerUse.permissions.bluetoothDescription",
-    statusKey: "entitled",
     actionLabelKey: "openSettingsButton",
+    actionPermission: "bluetooth",
     icon: BiBluetooth,
   },
 ];
@@ -120,7 +118,7 @@ export function ComputerUseSettingsView() {
     void loadPermissions();
   }, [loadPermissions]);
 
-  const openPermissionSettings = useCallback(async (permission: "accessibility" | "screenRecording") => {
+  const openPermissionSettings = useCallback(async (permission: "accessibility" | "screenRecording" | "camera" | "fullDiskAccess" | "localNetwork" | "bluetooth") => {
     try {
       const client = await getDaemonClient();
       await client.computer.openPermissionSettings({ permission });
@@ -206,8 +204,8 @@ export function ComputerUseSettingsView() {
                           <Box sx={{ typography: "body2", lineHeight: 1.35 }}>{t(row.titleKey)}</Box>
                           <Chip
                             size="small"
-                            label={t(`settings.computerUse.status.${row.statusKey}`)}
-                            color={informationalStatusColor(row.statusKey)}
+                            label={t(`settings.computerUse.status.${permissions?.[row.key] ?? "unknown"}`)}
+                            color={informationalStatusColor(permissions?.[row.key] ?? "unknown")}
                             variant="outlined"
                             sx={{ height: 18, "& .MuiChip-label": { px: 0.75, fontSize: 11 } }}
                           />
@@ -220,7 +218,15 @@ export function ComputerUseSettingsView() {
                   }
                   control={
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <Button size="small" disabled>{t(`settings.computerUse.permissions.${row.actionLabelKey}`)}</Button>
+                      {row.actionLabelKey && row.actionPermission ? (
+                        <Button size="small" onClick={() => {
+								const permission = row.actionPermission;
+								if (!permission) return;
+								void openPermissionSettings(permission);
+							}}>
+                          {t(`settings.computerUse.permissions.${row.actionLabelKey}`)}
+                        </Button>
+                      ) : null}
                     </Box>
                   }
                 />
@@ -249,7 +255,7 @@ function capabilityColor(permission: ComputerPermissionState) {
   }
 }
 
-function informationalStatusColor(statusKey: string) {
+function informationalStatusColor(statusKey: ComputerPermissionState) {
 	if (statusKey === "entitled") {
 		return "success" as const;
 	}

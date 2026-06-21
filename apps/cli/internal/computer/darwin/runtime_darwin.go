@@ -26,6 +26,11 @@ func (r *Runtime) Permissions(_ context.Context) (computer.PermissionStatus, err
 		ScreenRecording: permissionState(preflightScreenCapture()),
 		InputMonitoring: computer.PermissionStateUnknown,
 		Automation:      computer.PermissionStateNotRequired,
+		Camera:          computer.PermissionStateNotRequested,
+		FullDiskAccess:  computer.PermissionStateCheckManually,
+		LocalNetwork:    computer.PermissionStateCheckManually,
+		USBDevices:      computer.PermissionStateEntitled,
+		Bluetooth:       computer.PermissionStateEntitled,
 	}
 	if status.Accessibility != computer.PermissionStateGranted {
 		status.Remediation = append(status.Remediation, "Grant Accessibility in System Settings > Privacy & Security > Accessibility")

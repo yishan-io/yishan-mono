@@ -3,10 +3,13 @@ package computer
 type PermissionState string
 
 const (
-	PermissionStateGranted     PermissionState = "granted"
-	PermissionStateDenied      PermissionState = "denied"
-	PermissionStateUnknown     PermissionState = "unknown"
-	PermissionStateNotRequired PermissionState = "notRequired"
+	PermissionStateGranted       PermissionState = "granted"
+	PermissionStateDenied        PermissionState = "denied"
+	PermissionStateUnknown       PermissionState = "unknown"
+	PermissionStateNotRequired   PermissionState = "notRequired"
+	PermissionStateNotRequested  PermissionState = "notRequested"
+	PermissionStateCheckManually PermissionState = "checkManually"
+	PermissionStateEntitled      PermissionState = "entitled"
 )
 
 type RuntimeHealth struct {
@@ -20,6 +23,11 @@ type PermissionStatus struct {
 	ScreenRecording PermissionState `json:"screenRecording"`
 	InputMonitoring PermissionState `json:"inputMonitoring"`
 	Automation      PermissionState `json:"automation"`
+	Camera          PermissionState `json:"camera"`
+	FullDiskAccess  PermissionState `json:"fullDiskAccess"`
+	LocalNetwork    PermissionState `json:"localNetwork"`
+	USBDevices      PermissionState `json:"usbDevices"`
+	Bluetooth       PermissionState `json:"bluetooth"`
 	Prompted        bool            `json:"prompted,omitempty"`
 	Remediation     []string        `json:"remediation,omitempty"`
 }

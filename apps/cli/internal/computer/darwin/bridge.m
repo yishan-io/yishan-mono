@@ -759,11 +759,23 @@ static NSString *ys_permission_anchor(const char *permission) {
     if ([value isEqualToString:@"screenRecording"]) {
         return @"Privacy_ScreenCapture";
     }
+    if ([value isEqualToString:@"camera"]) {
+        return @"Privacy_Camera";
+    }
+    if ([value isEqualToString:@"fullDiskAccess"]) {
+        return @"Privacy_AllFiles";
+    }
+    if ([value isEqualToString:@"localNetwork"]) {
+        return @"Privacy_LocalNetwork";
+    }
     if ([value isEqualToString:@"inputMonitoring"]) {
         return @"Privacy_ListenEvent";
     }
     if ([value isEqualToString:@"automation"]) {
         return @"Privacy_Automation";
+    }
+    if ([value isEqualToString:@"bluetooth"]) {
+        return @"Privacy_Bluetooth";
     }
     return nil;
 }

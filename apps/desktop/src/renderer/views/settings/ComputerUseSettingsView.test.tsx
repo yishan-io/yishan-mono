@@ -37,6 +37,11 @@ describe("ComputerUseSettingsView", () => {
       screenRecording: "denied",
       inputMonitoring: "unknown",
       automation: "notRequired",
+      camera: "notRequested",
+      fullDiskAccess: "checkManually",
+      localNetwork: "checkManually",
+      usbDevices: "entitled",
+      bluetooth: "entitled",
     });
     mocked.openPermissionSettings.mockResolvedValue({ ok: true });
   });

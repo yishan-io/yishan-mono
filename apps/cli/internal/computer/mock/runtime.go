@@ -45,6 +45,11 @@ func (r Runtime) Permissions(ctx context.Context) (computer.PermissionStatus, er
 		ScreenRecording: computer.PermissionStateGranted,
 		InputMonitoring: computer.PermissionStateGranted,
 		Automation:      computer.PermissionStateNotRequired,
+		Camera:          computer.PermissionStateNotRequested,
+		FullDiskAccess:  computer.PermissionStateCheckManually,
+		LocalNetwork:    computer.PermissionStateCheckManually,
+		USBDevices:      computer.PermissionStateEntitled,
+		Bluetooth:       computer.PermissionStateEntitled,
 	}, nil
 }
 
