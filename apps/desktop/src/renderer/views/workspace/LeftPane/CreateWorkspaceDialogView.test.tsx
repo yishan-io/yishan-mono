@@ -19,7 +19,8 @@ type MockedCommands = {
   listNodesByOrg: ReturnType<typeof vi.fn>;
 };
 
-let mocked: MockedCommands | undefined;
+// biome-ignore lint/style/noVar: var hoisting is required for vi.mock factory
+var mocked: MockedCommands | undefined;
 
 function getMocked(): MockedCommands {
   if (mocked) {
