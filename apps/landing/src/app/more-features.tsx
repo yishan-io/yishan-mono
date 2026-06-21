@@ -377,6 +377,57 @@ function AutopilotVisual() {
   );
 }
 
+// ── Visual: Works with your tools ──────────────────────────────────────────
+
+const EDITORS = ["VS Code", "Cursor", "JetBrains", "Sublime", "Xcode"];
+
+function ToolsVisual() {
+  return (
+    <div className="flex h-full w-full flex-col justify-center gap-3 p-8">
+      <div className="text-[10px] uppercase tracking-[0.18em] text-[#4A5A4E]">Open in</div>
+      <div className="flex flex-col gap-2">
+        {EDITORS.map((name) => (
+          <div key={name} className="flex items-center justify-between rounded-xl border border-[#2A342F] bg-[#0F1412] px-4 py-2.5">
+            <span className="text-[12px] text-[#A5B0A8]">{name}</span>
+            <span className="rounded-lg border border-[#2A342F] bg-[#151B18] px-2.5 py-1 text-[10px] text-[#4A5A4E]">Open</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Visual: Bring your own agent ───────────────────────────────────────────
+
+const AGENTS_LIST = [
+  { name: "OpenCode", icon: "/opencode.svg" },
+  { name: "Claude",   icon: "/claude.svg"   },
+  { name: "Codex",    icon: "/codex.svg"    },
+  { name: "Gemini",   icon: "/gemini.svg"   },
+  { name: "Cursor",   icon: "/cursor.svg"   },
+  { name: "Pi",       icon: "/pi.svg"       },
+];
+
+function AgentCompatVisual() {
+  return (
+    <div className="flex h-full w-full flex-col justify-center gap-3 p-8">
+      <div className="text-[10px] uppercase tracking-[0.18em] text-[#4A5A4E]">Works with</div>
+      <div className="grid grid-cols-3 gap-2">
+        {AGENTS_LIST.map((agent) => (
+          <div key={agent.name} className="flex flex-col items-center gap-2 rounded-2xl border border-[#2A342F] bg-[#0F1412] px-3 py-4">
+            <div
+              className="h-6 w-6 bg-[#D1B06A]"
+              style={{ mask: `url(${agent.icon}) center/contain no-repeat`, WebkitMask: `url(${agent.icon}) center/contain no-repeat` }}
+              aria-label={agent.name}
+            />
+            <span className="text-[10px] text-[#A5B0A8]">{agent.name}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Layout ─────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -384,10 +435,10 @@ interface Props {
 }
 
 const features = [
-  { visual: <TeamVisual />,      titleKey: "more.2.title", descKey: "more.2.desc" },
-  { visual: <AutopilotVisual />, titleKey: "more.3.title", descKey: "more.3.desc" },
-  { visual: <PRVisual />,        titleKey: "more.1.title", descKey: "more.1.desc" },
-  { visual: <VoiceVisual />,     titleKey: "more.0.title", descKey: "more.0.desc" },
+  { visual: <AutopilotVisual />,    titleKey: "more.0.title", descKey: "more.0.desc" },
+  { visual: <PRVisual />,           titleKey: "more.1.title", descKey: "more.1.desc" },
+  { visual: <ToolsVisual />,        titleKey: "more.2.title", descKey: "more.2.desc" },
+  { visual: <AgentCompatVisual />,  titleKey: "more.3.title", descKey: "more.3.desc" },
 ];
 
 export function MoreFeatures({ t }: Props) {
@@ -400,26 +451,17 @@ export function MoreFeatures({ t }: Props) {
           <h2 className="mt-4 text-3xl font-semibold tracking-tight text-[#E8ECE8] md:text-4xl">
             {t("more.title")}
           </h2>
-          <p className="mt-4 text-base leading-8 text-[#A5B0A8]">
-            {t("more.desc")}
-          </p>
         </div>
 
         <div className="mt-10 grid gap-5 md:grid-cols-2">
           {features.map((f, i) => (
             <div key={i} className="overflow-hidden rounded-[28px]">
-              {/* Visual */}
               <div className="h-[320px] overflow-hidden rounded-[28px] bg-[#0D1110]">
                 {f.visual}
               </div>
-              {/* Text */}
               <div className="p-5">
-                <h3 className="text-base font-semibold text-[#E8ECE8]">
-                  {t(f.titleKey)}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-[#A5B0A8]">
-                  {t(f.descKey)}
-                </p>
+                <h3 className="text-base font-semibold text-[#E8ECE8]">{t(f.titleKey)}</h3>
+                <p className="mt-2 text-sm leading-6 text-[#A5B0A8]">{t(f.descKey)}</p>
               </div>
             </div>
           ))}

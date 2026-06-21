@@ -6,9 +6,6 @@ import { DownloadButton } from "./download-button";
 import { HeroImage } from "./hero-image";
 import { LanguageSwitcher } from "./language-switcher";
 import { MoreFeatures } from "./more-features";
-import { ProblemImage } from "./problem-image";
-import { RoadmapTimeline } from "./roadmap-timeline";
-import { SolutionImage } from "./solution-image";
 import { WorkflowDemo } from "./workflow-demo";
 
 const logoUrl =
@@ -53,27 +50,23 @@ export default function LandingPage() {
             </div>
             <div className="text-lg font-semibold tracking-wide text-[#E8ECE8]">{t("brand")}</div>
           </div>
-
-          <div className="flex items-center gap-3">
-            <LanguageSwitcher />
-          </div>
+          <LanguageSwitcher />
         </div>
       </header>
 
-      {/* Main content */}
       <main className="relative">
         {/* Hero */}
         <section className="mx-auto max-w-7xl px-6 pb-20 pt-16 lg:px-8 lg:pb-28 lg:pt-24">
-          <div className="mx-auto max-w-3xl text-center">
+          <div className="mx-auto max-w-5xl text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#2A342F] bg-[#151B18] px-3 py-1 text-xs text-[#D1B06A]">
               {t("hero.badge")}
             </div>
 
             <h1 className="mt-6 text-5xl font-semibold leading-tight tracking-tight text-[#E8ECE8] md:text-6xl lg:text-7xl">
-              {t("hero.title")}
+              {t("hero.title.1")}<br />{t("hero.title.2")}
             </h1>
 
-            <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-[#A5B0A8] md:text-lg">
+            <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-[#A5B0A8]">
               {t("hero.desc")}
             </p>
 
@@ -87,45 +80,24 @@ export default function LandingPage() {
                 {t("hero.github")}
               </a>
             </div>
+
+            {/* Agent compat — compact inline */}
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
+              <span className="text-xs text-[#4A5A4E]">{t("agents.label")}</span>
+              {agents.map((agent) => (
+                <span key={agent.name} className="flex items-center gap-1.5 rounded-full border border-[#2A342F] bg-[#151B18] px-3 py-1 text-xs">
+                  <span
+                    className={`${agent.size ?? "h-3.5 w-3.5"} bg-[#D1B06A]`}
+                    style={{ mask: `url(${agent.icon}) center/contain no-repeat`, WebkitMask: `url(${agent.icon}) center/contain no-repeat` }}
+                    aria-label={agent.name}
+                  />
+                  <span className="text-[#A5B0A8]">{agent.name}</span>
+                </span>
+              ))}
+            </div>
           </div>
 
           <HeroImage />
-        </section>
-
-        {/* Problem */}
-        <section className="mx-auto max-w-7xl px-6 py-6 lg:px-8 lg:py-8">
-          <div className="rounded-[36px] border border-[#2A342F] bg-[#121715] px-8 py-10 lg:px-10">
-            <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
-              <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-[#A5B0A8]">{t("problem.label")}</div>
-                <h2 className="mt-4 text-3xl font-semibold tracking-tight text-[#E8ECE8] md:text-4xl">
-                  {t("problem.title")}
-                </h2>
-                <p className="mt-4 text-base leading-8 text-[#A5B0A8]">
-                  {t("problem.desc")}
-                </p>
-              </div>
-              <ProblemImage />
-            </div>
-          </div>
-        </section>
-
-        {/* Solution */}
-        <section className="mx-auto max-w-7xl px-6 py-6 lg:px-8 lg:py-8">
-          <div className="rounded-[36px] border border-[#2A342F] bg-[#121715] px-8 py-10 lg:px-10">
-            <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
-              <div>
-                <div className="text-xs uppercase tracking-[0.24em] text-[#A5B0A8]">{t("solution.label")}</div>
-                <h2 className="mt-4 text-3xl font-semibold tracking-tight text-[#E8ECE8] md:text-4xl">
-                  {t("solution.title")}
-                </h2>
-                <p className="mt-4 text-base leading-8 text-[#A5B0A8]">
-                  {t("solution.desc")}
-                </p>
-              </div>
-              <SolutionImage />
-            </div>
-          </div>
         </section>
 
         {/* Core features */}
@@ -136,65 +108,14 @@ export default function LandingPage() {
               {t("features.title")}
             </h2>
           </div>
-
           <CoreFeatureRows t={t} />
         </section>
 
+        {/* More features */}
         <MoreFeatures t={t} />
-
-        {/* Agents compatibility strip */}
-        <section className="mx-auto max-w-7xl px-6 py-6 lg:px-8 lg:py-8">
-          <h2 className="text-center text-xs uppercase tracking-[0.24em] text-[#A5B0A8]">{t("agents.label")}</h2>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            {agents.map((agent) => (
-              <div
-                key={agent.name}
-                className="inline-flex items-center gap-3 rounded-full border border-[#2A342F] bg-[#151B18] px-5 py-3"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#2A342F] bg-[#0F1412]">
-                  <div
-                    className={`${agent.size ?? "h-5 w-5"} bg-[#D1B06A]`}
-                    style={{ mask: `url(${agent.icon}) center/contain no-repeat`, WebkitMask: `url(${agent.icon}) center/contain no-repeat` }}
-                    aria-label={agent.name}
-                  />
-                </div>
-                <div className="text-sm font-medium text-[#E8ECE8]">{agent.name}</div>
-              </div>
-            ))}
-          </div>
-        </section>
 
         {/* Workflow */}
         <WorkflowDemo t={t} />
-
-        {/* Roadmap */}
-        <RoadmapTimeline t={t} />
-
-        {/* CTA */}
-        <section className="mx-auto max-w-7xl px-6 pb-24 pt-20 lg:px-8">
-          <div className="flex flex-col gap-8 rounded-[36px] border border-[#2A342F] bg-[#151B18] p-8 lg:flex-row lg:items-end lg:justify-between lg:p-10">
-            <div className="max-w-2xl">
-              <div className="text-xs uppercase tracking-[0.24em] text-[#A5B0A8]">{t("cta.label")}</div>
-              <h2 className="mt-4 text-3xl font-semibold tracking-tight text-[#E8ECE8] md:text-4xl">
-                {t("cta.title")}
-              </h2>
-              <p className="mt-4 text-base leading-8 text-[#A5B0A8]">
-                {t("cta.desc")}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-4">
-              <DownloadButton />
-              <a
-                href="https://github.com/yishan-io/yishan-mono"
-                className="inline-flex items-center gap-2 rounded-2xl border border-[#2A342F] bg-[#151B18] px-6 py-3 text-sm text-[#E8ECE8] transition hover:bg-[#1B2420]"
-              >
-                <GitHubIcon />
-                {t("cta.github")}
-              </a>
-            </div>
-          </div>
-        </section>
       </main>
 
       {/* Footer */}
@@ -214,51 +135,34 @@ export default function LandingPage() {
             <p className="mt-4 text-sm leading-7 text-[#A5B0A8]">
               {t("footer.desc")}
             </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <DownloadButton />
+              <a
+                href="https://github.com/yishan-io/yishan-mono"
+                className="inline-flex items-center gap-2 rounded-2xl border border-[#2A342F] bg-[#151B18] px-5 py-2.5 text-sm text-[#E8ECE8] transition hover:bg-[#1B2420]"
+              >
+                <GitHubIcon />
+                GitHub
+              </a>
+            </div>
           </div>
 
-          <div className="grid gap-8 sm:grid-cols-3">
+          <div className="grid gap-8 sm:grid-cols-2">
             <div>
               <div className="text-xs uppercase tracking-[0.22em] text-[#A5B0A8]">{t("footer.product")}</div>
               <div className="mt-4 space-y-3 text-sm text-[#A5B0A8]">
-                <a href="#features" className="block transition hover:text-[#E8ECE8]">
-                  {t("nav.product")}
-                </a>
-                <a href="#workflow" className="block transition hover:text-[#E8ECE8]">
-                  {t("nav.workflow")}
-                </a>
-                <a href="#roadmap" className="block transition hover:text-[#E8ECE8]">
-                  {t("nav.roadmap")}
-                </a>
-              </div>
-            </div>
-
-            <div>
-              <div className="text-xs uppercase tracking-[0.22em] text-[#A5B0A8]">{t("footer.links")}</div>
-              <div className="mt-4 space-y-3 text-sm text-[#A5B0A8]">
-                <a href="#" className="block transition hover:text-[#E8ECE8]">
-                  {t("footer.download")}
-                </a>
-                <a href="https://github.com/yishan-io/yishan-mono" className="block transition hover:text-[#E8ECE8]">
-                  GitHub
-                </a>
-                <a href="https://github.com/yishan-io/yishan-mono/releases" className="block transition hover:text-[#E8ECE8]">
-                  {t("nav.changelog")}
-                </a>
+                <a href="#features" className="block transition hover:text-[#E8ECE8]">{t("nav.product")}</a>
+                <a href="#workflow" className="block transition hover:text-[#E8ECE8]">{t("nav.workflow")}</a>
+                <a href="https://github.com/yishan-io/yishan-mono/releases" className="block transition hover:text-[#E8ECE8]">{t("nav.changelog")}</a>
               </div>
             </div>
 
             <div>
               <div className="text-xs uppercase tracking-[0.22em] text-[#A5B0A8]">{t("footer.company")}</div>
               <div className="mt-4 space-y-3 text-sm text-[#A5B0A8]">
-                <a href="#" className="block transition hover:text-[#E8ECE8]">
-                  {t("footer.about")}
-                </a>
-                <a href="#" className="block transition hover:text-[#E8ECE8]">
-                  {t("footer.contact")}
-                </a>
-                <a href="#" className="block transition hover:text-[#E8ECE8]">
-                  {t("footer.privacy")}
-                </a>
+                <a href="#" className="block transition hover:text-[#E8ECE8]">{t("footer.about")}</a>
+                <a href="#" className="block transition hover:text-[#E8ECE8]">{t("footer.contact")}</a>
+                <a href="#" className="block transition hover:text-[#E8ECE8]">{t("footer.privacy")}</a>
               </div>
             </div>
           </div>
