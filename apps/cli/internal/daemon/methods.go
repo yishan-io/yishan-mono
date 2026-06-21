@@ -40,6 +40,8 @@ const (
 	MethodComputerSendKey                = "computer.sendKey"
 	MethodComputerReadClipboard          = "computer.readClipboard"
 	MethodComputerWriteClipboard         = "computer.writeClipboard"
+	MethodComputerGetConfig              = "computer.getConfig"
+	MethodComputerUpdateConfig           = "computer.updateConfig"
 
 	MethodProjectList = "project.list"
 	MethodNodeList    = "node.list"

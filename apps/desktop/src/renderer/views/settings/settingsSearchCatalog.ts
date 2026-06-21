@@ -2,6 +2,7 @@ import {
   BiBell,
   BiBot,
   BiChip,
+  BiCommand,
   type BiCog,
   BiDesktop,
   BiGitBranch,
@@ -26,6 +27,7 @@ export type SettingsTab =
   | "account"
   | "agents"
   | "appearance"
+  | "computerUse"
   | "daemon"
   | "integrations"
   | "keybindings"
@@ -82,6 +84,7 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
     items: [
       { tab: "integrations", labelKey: "settings.items.integrations", icon: BiPlug },
       { tab: "skills", labelKey: "settings.items.skills", icon: LuHammer },
+      { tab: "computerUse", labelKey: "settings.items.computerUse", icon: BiCommand },
       { tab: "workspace", labelKey: "settings.items.workspace", icon: BiGitBranch },
       { tab: "terminal", labelKey: "settings.items.terminal", icon: BiTerminal },
       { tab: "daemon", labelKey: "settings.items.daemon", icon: BiChip },
@@ -166,6 +169,29 @@ const DAEMON_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.daemon.restart.action",
       "settings.daemon.quitOnExit.label",
       "settings.daemon.quitOnExit.description",
+    ],
+  },
+];
+
+const COMPUTER_USE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
+  {
+    id: "computer-use-features",
+    tab: "computerUse",
+    icon: BiCommand,
+    labelKey: "settings.computerUse.title",
+    sectionLabelKey: "settings.items.computerUse",
+    keywordKeys: [
+      "settings.computerUse.description",
+      "settings.computerUse.enabled.label",
+      "settings.computerUse.observe.label",
+      "settings.computerUse.capture.label",
+      "settings.computerUse.inspect.label",
+      "settings.computerUse.actions.label",
+      "settings.computerUse.mouse.label",
+      "settings.computerUse.keyboard.label",
+      "settings.computerUse.clipboardRead.label",
+      "settings.computerUse.clipboardWrite.label",
+      "settings.computerUse.applicationControl.label",
     ],
   },
 ];
@@ -468,6 +494,7 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchCatalogItem[] = [
   ...MEMBERS_SEARCH_ITEMS,
   ...NODES_SEARCH_ITEMS,
   ...KEYBINDINGS_SEARCH_ITEMS,
+  ...COMPUTER_USE_SEARCH_ITEMS,
   ...DAEMON_SEARCH_ITEMS,
   ...MEMORY_SEARCH_ITEMS,
   ...GIT_WORKSPACE_SEARCH_ITEMS,

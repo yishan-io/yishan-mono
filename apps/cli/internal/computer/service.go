@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 )
 
 type sensitiveTargetRuntime interface {
@@ -14,14 +15,44 @@ type Service struct {
 	runtime            Runtime
 	audit              *AuditLog
 	maxTypedCharacters int
+	configMu           sync.RWMutex
+	config             FeatureConfig
 }
 
 func NewService(runtime Runtime) *Service {
-	return &Service{runtime: runtime, audit: &AuditLog{}, maxTypedCharacters: 10000}
+	return &Service{
+		runtime:            runtime,
+		audit:              &AuditLog{},
+		maxTypedCharacters: 10000,
+		config: FeatureConfig{
+			Enabled:            true,
+			Observe:            true,
+			Capture:            true,
+			Inspect:            true,
+			Actions:            true,
+			Mouse:              true,
+			Keyboard:           true,
+			ClipboardRead:      true,
+			ClipboardWrite:     true,
+			ApplicationControl: true,
+		},
+	}
 }
 
 func (s *Service) AuditEvents() []AuditEvent {
 	return s.audit.Snapshot()
+}
+
+func (s *Service) Config() FeatureConfig {
+	s.configMu.RLock()
+	defer s.configMu.RUnlock()
+	return s.config
+}
+
+func (s *Service) UpdateConfig(config FeatureConfig) {
+	s.configMu.Lock()
+	s.config = config
+	s.configMu.Unlock()
 }
 
 func (s *Service) Health(ctx context.Context) (RuntimeHealth, error) { return s.runtime.Health(ctx) }
@@ -32,26 +63,47 @@ func (s *Service) OpenPermissionSettings(ctx context.Context, permission string)
 	return s.runtime.OpenPermissionSettings(ctx, permission)
 }
 func (s *Service) ListDisplays(ctx context.Context) ([]Display, error) {
+	if !s.Config().Enabled || !s.Config().Observe {
+		return nil, NewError(ErrorCodeApprovalDenied, "computer observation is disabled")
+	}
 	return s.runtime.ListDisplays(ctx)
 }
 func (s *Service) ListApplications(ctx context.Context) ([]Application, error) {
+	if !s.Config().Enabled || !s.Config().Observe {
+		return nil, NewError(ErrorCodeApprovalDenied, "computer observation is disabled")
+	}
 	return s.runtime.ListApplications(ctx)
 }
 func (s *Service) ListWindows(ctx context.Context, filter WindowFilter) ([]Window, error) {
+	if !s.Config().Enabled || !s.Config().Observe {
+		return nil, NewError(ErrorCodeApprovalDenied, "computer observation is disabled")
+	}
 	return s.runtime.ListWindows(ctx, filter)
 }
 func (s *Service) CaptureDisplay(ctx context.Context, displayID string, options CaptureOptions) (Image, error) {
+	if !s.Config().Enabled || !s.Config().Capture {
+		return Image{}, NewError(ErrorCodeApprovalDenied, "computer capture is disabled")
+	}
 	return s.runtime.CaptureDisplay(ctx, displayID, options)
 }
 func (s *Service) CaptureWindow(ctx context.Context, windowID string, options CaptureOptions) (Image, error) {
+	if !s.Config().Enabled || !s.Config().Capture {
+		return Image{}, NewError(ErrorCodeApprovalDenied, "computer capture is disabled")
+	}
 	return s.runtime.CaptureWindow(ctx, windowID, options)
 }
 func (s *Service) GetAccessibilityTree(ctx context.Context, target Target, options TreeOptions) (AccessibilityNode, error) {
+	if !s.Config().Enabled || !s.Config().Inspect {
+		return AccessibilityNode{}, NewError(ErrorCodeApprovalDenied, "computer accessibility inspection is disabled")
+	}
 	return s.runtime.GetAccessibilityTree(ctx, target, options)
 }
 
 func (s *Service) PerformAccessibilityAction(ctx context.Context, request AccessibilityActionRequest) error {
 	bundleID, _ := s.bundleIDForElementID(ctx, request.ElementID)
+	if !s.Config().Enabled || !s.Config().Actions {
+		return NewError(ErrorCodeApprovalDenied, "computer accessibility actions are disabled")
+	}
 	if strings.TrimSpace(bundleID) == "" {
 		s.audit.Add(AuditEvent{Operation: "accessibility.action", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeTargetNotFound)})
 		return NewErrorWithDetails(ErrorCodeTargetNotFound, "target element was not found", map[string]any{"elementId": request.ElementID}, false)
@@ -62,6 +114,9 @@ func (s *Service) PerformAccessibilityAction(ctx context.Context, request Access
 }
 
 func (s *Service) FocusWindow(ctx context.Context, windowID string) error {
+	if !s.Config().Enabled || !s.Config().ApplicationControl {
+		return NewError(ErrorCodeApprovalDenied, "computer application control is disabled")
+	}
 	bundleID, title := s.bundleIDForWindowID(ctx, windowID)
 	if strings.TrimSpace(bundleID) == "" {
 		s.audit.Add(AuditEvent{Operation: "window.focus", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeTargetNotFound)})
@@ -73,12 +128,18 @@ func (s *Service) FocusWindow(ctx context.Context, windowID string) error {
 }
 
 func (s *Service) LaunchApplication(ctx context.Context, bundleID string) error {
+	if !s.Config().Enabled || !s.Config().ApplicationControl {
+		return NewError(ErrorCodeApprovalDenied, "computer application control is disabled")
+	}
 	return s.runMutation(ctx, "application.launch", bundleID, "", func() error {
 		return s.runtime.LaunchApplication(ctx, bundleID)
 	})
 }
 
 func (s *Service) MovePointer(ctx context.Context, point Point) error {
+	if !s.Config().Enabled || !s.Config().Mouse {
+		return NewError(ErrorCodeApprovalDenied, "computer mouse control is disabled")
+	}
 	bundleID := s.frontmostBundleID(ctx)
 	return s.runMutation(ctx, "pointer.move", bundleID, "", func() error {
 		return s.runtime.MovePointer(ctx, point)
@@ -86,6 +147,9 @@ func (s *Service) MovePointer(ctx context.Context, point Point) error {
 }
 
 func (s *Service) Click(ctx context.Context, request ClickRequest) error {
+	if !s.Config().Enabled || !s.Config().Mouse {
+		return NewError(ErrorCodeApprovalDenied, "computer mouse control is disabled")
+	}
 	bundleID := s.frontmostBundleID(ctx)
 	return s.runMutation(ctx, "pointer.click", bundleID, "", func() error {
 		return s.runtime.Click(ctx, request)
@@ -93,6 +157,9 @@ func (s *Service) Click(ctx context.Context, request ClickRequest) error {
 }
 
 func (s *Service) Drag(ctx context.Context, request DragRequest) error {
+	if !s.Config().Enabled || !s.Config().Mouse {
+		return NewError(ErrorCodeApprovalDenied, "computer mouse control is disabled")
+	}
 	bundleID := s.frontmostBundleID(ctx)
 	return s.runMutation(ctx, "pointer.drag", bundleID, "", func() error {
 		return s.runtime.Drag(ctx, request)
@@ -100,6 +167,9 @@ func (s *Service) Drag(ctx context.Context, request DragRequest) error {
 }
 
 func (s *Service) Scroll(ctx context.Context, request ScrollRequest) error {
+	if !s.Config().Enabled || !s.Config().Mouse {
+		return NewError(ErrorCodeApprovalDenied, "computer mouse control is disabled")
+	}
 	bundleID := s.frontmostBundleID(ctx)
 	return s.runMutation(ctx, "pointer.scroll", bundleID, "", func() error {
 		return s.runtime.Scroll(ctx, request)
@@ -107,6 +177,9 @@ func (s *Service) Scroll(ctx context.Context, request ScrollRequest) error {
 }
 
 func (s *Service) TypeText(ctx context.Context, text string) error {
+	if !s.Config().Enabled || !s.Config().Keyboard {
+		return NewError(ErrorCodeApprovalDenied, "computer keyboard input is disabled")
+	}
 	if len(text) > s.maxTypedCharacters {
 		s.audit.Add(AuditEvent{Operation: "keyboard.type", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeRateLimited)})
 		return NewErrorWithDetails(ErrorCodeRateLimited, "typed text exceeds limit", map[string]any{"limit": s.maxTypedCharacters}, false)
@@ -122,6 +195,9 @@ func (s *Service) TypeText(ctx context.Context, text string) error {
 }
 
 func (s *Service) SendKey(ctx context.Context, request KeyRequest) error {
+	if !s.Config().Enabled || !s.Config().Keyboard {
+		return NewError(ErrorCodeApprovalDenied, "computer keyboard input is disabled")
+	}
 	if s.focusedElementIsSensitive(ctx) {
 		s.audit.Add(AuditEvent{Operation: "keyboard.key", Decision: "denied", Result: "error", ErrorCode: string(ErrorCodeSensitiveTarget)})
 		return NewError(ErrorCodeSensitiveTarget, "keyboard input into a secure text field is blocked")
@@ -133,6 +209,9 @@ func (s *Service) SendKey(ctx context.Context, request KeyRequest) error {
 }
 
 func (s *Service) ReadClipboard(ctx context.Context) (ClipboardContent, error) {
+	if !s.Config().Enabled || !s.Config().ClipboardRead {
+		return ClipboardContent{}, NewError(ErrorCodeApprovalDenied, "computer clipboard read is disabled")
+	}
 	if !ApprovalFromContext(ctx) {
 		s.audit.Add(AuditEvent{Operation: "clipboard.read", Decision: "approval_required", Result: "denied", ErrorCode: string(ErrorCodeApprovalRequired)})
 		return ClipboardContent{}, NewError(ErrorCodeApprovalRequired, "clipboard read requires approval")
@@ -147,6 +226,9 @@ func (s *Service) ReadClipboard(ctx context.Context) (ClipboardContent, error) {
 }
 
 func (s *Service) WriteClipboard(ctx context.Context, content ClipboardContent) error {
+	if !s.Config().Enabled || !s.Config().ClipboardWrite {
+		return NewError(ErrorCodeApprovalDenied, "computer clipboard write is disabled")
+	}
 	if !ApprovalFromContext(ctx) {
 		s.audit.Add(AuditEvent{Operation: "clipboard.write", Decision: "approval_required", Result: "denied", ErrorCode: string(ErrorCodeApprovalRequired)})
 		return NewError(ErrorCodeApprovalRequired, "clipboard write requires approval")

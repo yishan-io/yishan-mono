@@ -162,3 +162,16 @@ type ClipboardContent struct {
 	HasText bool   `json:"hasText,omitempty"`
 	Type    string `json:"type,omitempty"`
 }
+
+type FeatureConfig struct {
+	Enabled            bool `json:"enabled"`
+	Observe            bool `json:"observe"`
+	Capture            bool `json:"capture"`
+	Inspect            bool `json:"inspect"`
+	Actions            bool `json:"actions"`
+	Mouse              bool `json:"mouse"`
+	Keyboard           bool `json:"keyboard"`
+	ClipboardRead      bool `json:"clipboardRead"`
+	ClipboardWrite     bool `json:"clipboardWrite"`
+	ApplicationControl bool `json:"applicationControl"`
+}

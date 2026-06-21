@@ -58,9 +58,23 @@ type MemoryConfig struct {
 	SummarizerModel     string
 }
 
+type ComputerUseConfig struct {
+	Enabled            bool
+	Observe            bool
+	Capture            bool
+	Inspect            bool
+	Actions            bool
+	Mouse              bool
+	Keyboard           bool
+	ClipboardRead      bool
+	ClipboardWrite     bool
+	ApplicationControl bool
+}
+
 type SettingsConfig struct {
 	DefaultOrgID string
 	Memory       MemoryConfig
+	ComputerUse  ComputerUseConfig
 }
 
 type Config struct {
@@ -72,6 +86,7 @@ type Config struct {
 	API          APIConfig
 	Daemon       DaemonConfig
 	Memory       MemoryConfig
+	ComputerUse  ComputerUseConfig
 }
 
 func ResolveConfigPath(v *viper.Viper, explicitConfigPath string) (string, error) {
@@ -117,7 +132,8 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 			RelayEnabled: v.GetBool("daemon_relay_enabled"),
 			RelayURL:     v.GetString("daemon_relay_url"),
 		},
-		Memory: settingsCfg.Memory,
+		Memory:      settingsCfg.Memory,
+		ComputerUse: settingsCfg.ComputerUse,
 	}, nil
 }
 

@@ -44,6 +44,7 @@ export type ProcedureNotification = {
 
 export type ApiNamespace =
   | "app"
+  | "computer"
   | "context"
   | "workspace"
   | "file"
@@ -645,4 +646,28 @@ export type MemoryConfig = {
   enabled: boolean;
   agentKind: string;
   model: string;
+};
+
+export type ComputerUseFeatureConfig = {
+  enabled: boolean;
+  observe: boolean;
+  capture: boolean;
+  inspect: boolean;
+  actions: boolean;
+  mouse: boolean;
+  keyboard: boolean;
+  clipboardRead: boolean;
+  clipboardWrite: boolean;
+  applicationControl: boolean;
+};
+
+export type ComputerPermissionState = "granted" | "denied" | "unknown" | "notRequired";
+
+export type ComputerPermissionStatus = {
+  accessibility: ComputerPermissionState;
+  screenRecording: ComputerPermissionState;
+  inputMonitoring: ComputerPermissionState;
+  automation: ComputerPermissionState;
+  prompted?: boolean;
+  remediation?: string[];
 };

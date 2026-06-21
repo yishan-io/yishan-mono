@@ -21,6 +21,12 @@ export type DaemonRpcClient = {
     logout: (input?: unknown) => Promise<Rpc.LogoutOutput>;
     reloadAuthConfig: (input?: unknown) => Promise<Rpc.ReloadAuthConfigOutput>;
   };
+  computer: {
+    permissions: (input?: unknown) => Promise<Rpc.ComputerPermissionStatus>;
+    openPermissionSettings: (input: { permission: string }) => Promise<{ ok: boolean }>;
+    getConfig: (input?: unknown) => Promise<Rpc.ComputerUseFeatureConfig>;
+    updateConfig: (input: Rpc.ComputerUseFeatureConfig) => Promise<{ ok: boolean }>;
+  };
   context: {
     getState: () => Promise<unknown>;
     setCurrentOrg: (orgId: string) => Promise<unknown>;

@@ -79,6 +79,7 @@
       "account": "账号",
       "agents": "智能体",
       "appearance": "外观",
+      "computerUse": "计算机使用",
       "daemon": "守护进程",
       "integrations": "集成",
       "keybindings": "键盘快捷键",
@@ -508,6 +509,46 @@
           "action": "卸载",
           "inProgress": "卸载中..."
         }
+      }
+    },
+    "computerUse": {
+      "title": "计算机使用",
+      "experimental": "实验性",
+      "description": "查看计算机使用依赖的 macOS 权限，以及每项权限会为智能体解锁哪些能力。",
+      "approvalNotice": "由智能体调用的变更型计算机使用操作仍然需要审批。",
+      "status": {
+        "granted": "已授权",
+        "denied": "需要权限",
+        "unknown": "未知",
+        "notRequired": "不需要",
+        "notRequested": "未请求",
+        "checkManually": "手动检查",
+        "entitled": "已具备权限"
+      },
+      "permissions": {
+        "accessibility": "辅助功能",
+        "screenRecording": "屏幕录制",
+        "inputMonitoring": "输入监控",
+        "automation": "自动化",
+        "camera": "相机",
+        "fullDiskAccess": "完全磁盘访问",
+        "localNetwork": "本地网络",
+        "usbDevices": "USB 设备",
+        "bluetooth": "蓝牙",
+        "accessibilityDescription": "UI 检查、UI 操作、鼠标控制和键盘输入都依赖此权限。",
+        "screenRecordingDescription": "显示器和窗口截图捕获依赖此权限。",
+        "inputMonitoringDescription": "某些系统会用它限制全局输入投递。如果输入工具不稳定，请手动检查。",
+        "automationDescription": "未来当运行时需要 Apple Events 控制其他应用时会使用此权限。",
+        "cameraDescription": "网络摄像头捕获和基于相机的本地测试应用。当前计算机使用运行时尚未使用。",
+        "fullDiskAccessDescription": "用于终端会话访问受保护文件夹，以及未来的本地自动化工作流。",
+        "localNetworkDescription": "用于访问本地网络中的开发服务器。保留给未来运行时支持。",
+        "usbDevicesDescription": "用于与 USB 设备通信的硬件调试和设备工具。保留给未来运行时支持。",
+        "bluetoothDescription": "用于蓝牙设备工具和本地硬件实验。保留给未来运行时支持。",
+        "openAccessibilityButton": "打开辅助功能",
+        "openScreenRecordingButton": "打开屏幕录制",
+        "requestButton": "请求",
+        "openSettingsButton": "打开设置",
+        "triggerPromptButton": "触发提示"
       }
     },
     "terminal": {

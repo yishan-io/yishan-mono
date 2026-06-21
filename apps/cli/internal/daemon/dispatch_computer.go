@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/spf13/viper"
 	"yishan/apps/cli/internal/computer"
+	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -20,6 +22,31 @@ func (h *JSONRPCHandler) dispatchComputer(ctx context.Context, method string, pa
 		return h.computer.Health(ctx)
 	case MethodComputerPermissions:
 		return h.computer.Permissions(ctx)
+	case MethodComputerGetConfig:
+		return h.computer.Config(), nil
+	case MethodComputerUpdateConfig:
+		var req computer.FeatureConfig
+		if err := decodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		h.computer.UpdateConfig(req)
+		if h.settingsPath != "" {
+			if err := config.UpdateSettings(h.settingsPath, func(v *viper.Viper) {
+				v.Set("computer_use.enabled", req.Enabled)
+				v.Set("computer_use.observe", req.Observe)
+				v.Set("computer_use.capture", req.Capture)
+				v.Set("computer_use.inspect", req.Inspect)
+				v.Set("computer_use.actions", req.Actions)
+				v.Set("computer_use.mouse", req.Mouse)
+				v.Set("computer_use.keyboard", req.Keyboard)
+				v.Set("computer_use.clipboard_read", req.ClipboardRead)
+				v.Set("computer_use.clipboard_write", req.ClipboardWrite)
+				v.Set("computer_use.application_control", req.ApplicationControl)
+			}); err != nil {
+				return nil, workspace.NewRPCError(rpcCodeServerError, "persist computer config: "+err.Error())
+			}
+		}
+		return map[string]bool{"ok": true}, nil
 	case MethodComputerListDisplays:
 		return h.computer.ListDisplays(ctx)
 	case MethodComputerListApplications:

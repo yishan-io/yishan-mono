@@ -17,6 +17,7 @@ import (
 
 	agentsetup "yishan/apps/cli/internal/agentsetup"
 	"yishan/apps/cli/internal/buildinfo"
+	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/daemon/agentcmd"
 	"yishan/apps/cli/internal/memory"
@@ -230,6 +231,9 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 	}
 	handler := NewJSONRPCHandler(workspaceManager, runtime, daemonID, cfg.LogFilePath, cleanupStore, wsIndexStore, statePath, contextStore)
 	handler.SetComputerService(newDefaultComputerService())
+	if err := initComputerConfig(handler); err != nil {
+		return nil, nil, err
+	}
 
 	if err := initMemoryService(handler, statePath, cfg, runtime); err != nil {
 		return nil, nil, err
@@ -243,6 +247,29 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 
 	relayStatus := NewRelayStatus(cfg.RelayEnabled, cfg.RelayURL)
 	return handler, relayStatus, nil
+}
+
+func initComputerConfig(handler *JSONRPCHandler) error {
+	if handler.settingsPath == "" || handler.computer == nil {
+		return nil
+	}
+	cfg, err := config.LoadSettings(handler.settingsPath, nil)
+	if err != nil {
+		return fmt.Errorf("load computer settings: %w", err)
+	}
+	handler.computer.UpdateConfig(computer.FeatureConfig{
+		Enabled:            cfg.ComputerUse.Enabled,
+		Observe:            cfg.ComputerUse.Observe,
+		Capture:            cfg.ComputerUse.Capture,
+		Inspect:            cfg.ComputerUse.Inspect,
+		Actions:            cfg.ComputerUse.Actions,
+		Mouse:              cfg.ComputerUse.Mouse,
+		Keyboard:           cfg.ComputerUse.Keyboard,
+		ClipboardRead:      cfg.ComputerUse.ClipboardRead,
+		ClipboardWrite:     cfg.ComputerUse.ClipboardWrite,
+		ApplicationControl: cfg.ComputerUse.ApplicationControl,
+	})
+	return nil
 }
 
 func initMemoryService(handler *JSONRPCHandler, statePath string, cfg RunConfig, runtime *cliruntime.Runtime) error {

@@ -40,6 +40,10 @@ vi.mock("./settings/DaemonSettingsView", () => ({
   DaemonSettingsView: () => <div data-testid="daemon-settings-panel" />,
 }));
 
+vi.mock("./settings/ComputerUseSettingsView", () => ({
+  ComputerUseSettingsView: () => <div data-testid="computer-use-settings-panel" />,
+}));
+
 vi.mock("./settings/GitWorkspaceSettingsView", () => ({
   GitWorkspaceSettingsView: () => <div data-testid="git-workspace-settings-panel" />,
 }));
@@ -299,6 +303,20 @@ describe("SettingsView", () => {
     fireEvent.click(screen.getByRole("button", { name: /settings\.daemon\.title/ }));
 
     expect(screen.getByTestId("daemon-settings-panel")).toBeTruthy();
+  });
+
+  it("renders computer use panel when computerUse tab is selected", () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=computerUse"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    expect(screen.getByTestId("computer-use-settings-panel")).toBeTruthy();
   });
 
   it("renders git workspace settings panel when workspace tab is selected", () => {

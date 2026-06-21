@@ -11,6 +11,7 @@ const SOCKET_CONNECT_RETRY_COUNT = 30;
 const SOCKET_CONNECT_RETRY_DELAY_MS = 500;
 const API_NAMESPACES = new Set<ApiNamespace>([
   "app",
+  "computer",
   "context",
   "workspace",
   "file",
@@ -338,6 +339,7 @@ export async function getDaemonClient(): Promise<DaemonRpcClient> {
       const proxyClient = createRpcPathProxy([]) as DaemonRpcClient;
       return {
         app: proxyClient.app,
+        computer: proxyClient.computer,
         workspace: transportClient.workspace,
         file: transportClient.file,
         git: transportClient.git,

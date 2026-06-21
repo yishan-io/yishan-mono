@@ -79,6 +79,7 @@
       "account": "Account",
       "agents": "Agents",
       "appearance": "Appearance",
+      "computerUse": "Computer Use",
       "daemon": "Daemon",
       "integrations": "Integrations",
       "keybindings": "Keyboard Shortcuts",
@@ -545,6 +546,46 @@
           "action": "Uninstall",
           "inProgress": "Uninstalling..."
         }
+      }
+    },
+    "computerUse": {
+      "title": "Computer Use",
+      "experimental": "Experimental",
+      "description": "Review the macOS permissions Computer Use depends on and what each permission unlocks for agents.",
+      "approvalNotice": "Mutating Computer Use actions still require approval when called by an agent.",
+      "status": {
+        "granted": "Granted",
+        "denied": "Permission required",
+        "unknown": "Unknown",
+        "notRequired": "Not required",
+        "notRequested": "Not requested",
+        "checkManually": "Check manually",
+        "entitled": "Entitled"
+      },
+      "permissions": {
+        "accessibility": "Accessibility",
+        "screenRecording": "Screen Recording",
+        "inputMonitoring": "Input Monitoring",
+        "automation": "Automation",
+        "camera": "Camera",
+        "fullDiskAccess": "Full Disk Access",
+        "localNetwork": "Local Network",
+        "usbDevices": "USB Devices",
+        "bluetooth": "Bluetooth",
+        "accessibilityDescription": "Required for UI inspection, UI actions, mouse control, and keyboard input.",
+        "screenRecordingDescription": "Required for display and window screenshot capture.",
+        "inputMonitoringDescription": "Used by some systems to gate global input delivery. Check manually if input tools are unreliable.",
+        "automationDescription": "Used for app-to-app automation paths when the runtime needs Apple Events in future workflows.",
+        "cameraDescription": "Webcam capture and camera-driven local test apps. Not currently used by the Computer Use runtime.",
+        "fullDiskAccessDescription": "Persistent access to protected folders from terminal sessions and future local automation workflows.",
+        "localNetworkDescription": "Discovery and access for development servers on your network. Reserved for future runtime support.",
+        "usbDevicesDescription": "Hardware debugging and device tools that talk to USB devices. Reserved for future runtime support.",
+        "bluetoothDescription": "Bluetooth device tools and local hardware experiments. Reserved for future runtime support.",
+        "openAccessibilityButton": "Open Accessibility",
+        "openScreenRecordingButton": "Open Screen Recording",
+        "requestButton": "Request",
+        "openSettingsButton": "Open Settings",
+        "triggerPromptButton": "Trigger Prompt"
       }
     },
     "terminal": {

@@ -97,3 +97,11 @@ func (s *computerService) ReadClipboard(ctx context.Context) (computer.Clipboard
 func (s *computerService) WriteClipboard(ctx context.Context, content computer.ClipboardContent) error {
 	return s.service.WriteClipboard(ctx, content)
 }
+
+func (s *computerService) Config() computer.FeatureConfig {
+	return s.service.Config()
+}
+
+func (s *computerService) UpdateConfig(config computer.FeatureConfig) {
+	s.service.UpdateConfig(config)
+}

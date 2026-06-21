@@ -7,7 +7,7 @@ export type SettingsPageLayoutProps = {
   sidebar: ReactNode;
   /** The main settings content area (right pane). */
   children: ReactNode;
-  /** Sidebar fixed width in pixels. Defaults to 240. */
+  /** Sidebar fixed width in pixels. Defaults to 272. */
   sidebarWidth?: number;
 };
 
@@ -32,7 +32,7 @@ export type SettingsPageLayoutProps = {
  * </SettingsPageLayout>
  * ```
  */
-export function SettingsPageLayout({ sidebar, children, sidebarWidth = 240 }: SettingsPageLayoutProps) {
+export function SettingsPageLayout({ sidebar, children, sidebarWidth = 272 }: SettingsPageLayoutProps) {
   const shouldReserveMacWindowControlsInset = getRendererPlatform() === "darwin";
 
   return (
