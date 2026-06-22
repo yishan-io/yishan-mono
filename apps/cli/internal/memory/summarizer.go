@@ -89,7 +89,14 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
-	output, err := s.runAgent(ctx, summarizeAgent, s.model, prompt, workspacePath)
+	agentWorkDir := workspacePath
+	if _, statErr := os.Stat(workspacePath); os.IsNotExist(statErr) {
+		log.Debug().Str("workspace", workspacePath).
+			Msg("worktree gone at summarize time; running agent without project CWD")
+		agentWorkDir = ""
+	}
+
+	output, err := s.runAgent(ctx, summarizeAgent, s.model, prompt, agentWorkDir)
 	if err != nil {
 		return SummarizeResult{}, fmt.Errorf("llm summarization via %s: %w", summarizeAgent, err)
 	}
