@@ -195,3 +195,34 @@ func TestService_PersonaEnabledFalseWhenDisabledByPolicy(t *testing.T) {
 	// Must remain a no-op when persona is policy-disabled.
 	svc.MaybeRunDailyPersonaBatch("opencode")
 }
+
+// ── shouldIndexPath ───────────────────────────────────────────────────────────
+
+// TestShouldIndexPath documents the invariant: shouldIndexPath only accepts
+// canonical (symlink-resolved) paths. Worktree paths that contain a .my-context
+// symlink are NOT matched — the resolution burden sits with the caller
+// (forwardMemoryFileChanges in jsonrpc_handler.go).
+func TestShouldIndexPath(t *testing.T) {
+	cases := []struct {
+		path string
+		want bool
+	}{
+		// Canonical contexts path → accepted.
+		{"/Users/user/.yishan/contexts/my-repo/MEMORY.md", true},
+		{"/Users/user/.yishan/contexts/my-repo/tasks/t01/notes.md", true},
+		// Global memory path → accepted.
+		{"/Users/user/.yishan/memory/global/MEMORY.md", true},
+		// Unresolved worktree symlink path → rejected (caller must resolve first).
+		{"/Users/user/.yishan/worktrees/my-repo/ws/.my-context/MEMORY.md", false},
+		// Non-markdown file → rejected.
+		{"/Users/user/.yishan/contexts/my-repo/state.json", false},
+		// Unrelated path → rejected.
+		{"/Users/user/code/project/README.md", false},
+	}
+	for _, tc := range cases {
+		got := shouldIndexPath(tc.path)
+		if got != tc.want {
+			t.Errorf("shouldIndexPath(%q) = %v; want %v", tc.path, got, tc.want)
+		}
+	}
+}

@@ -161,7 +161,17 @@ func (h *JSONRPCHandler) forwardMemoryFileChanges(worktreePath string, relPaths 
 	}
 	for _, rel := range relPaths {
 		abs := filepath.Join(worktreePath, rel)
-		if h.memory.ShouldIndex(abs) {
+		// Resolve symlinks before the ShouldIndex check: .my-context/ inside a
+		// worktree is a symlink to ~/.yishan/contexts/…, so the unresolved abs
+		// path contains "/.yishan/worktrees/" and would never match the filter.
+		// EvalSymlinks fails for deleted files; in that case resolved stays as
+		// abs and ShouldIndex will return false — delete events for context files
+		// are not currently propagated via this path (pre-existing limitation).
+		resolved := abs
+		if r, err := filepath.EvalSymlinks(abs); err == nil {
+			resolved = r
+		}
+		if h.memory.ShouldIndex(resolved) {
 			if err := h.memory.OnFileChanged(abs, worktreePath, projectID); err != nil {
 				log.Warn().Err(err).Str("path", abs).Msg("memory index update failed")
 			}

@@ -525,3 +525,57 @@ func TestOpenReadOnly_RejectsMissingFile(t *testing.T) {
 		t.Error("expected error when querying non-existent read-only database")
 	}
 }
+
+// ── escapeFTS5 ────────────────────────────────────────────────────────────────
+
+func TestEscapeFTS5(t *testing.T) {
+	cases := []struct {
+		input string
+		want  string
+	}{
+		{"", `""`},
+		{"deadlock", `"deadlock"`},
+		{"permission deadlock", `"permission" OR "deadlock"`},
+		{"a b c", `"a" OR "b" OR "c"`},
+		// Internal double-quote must be escaped as two double-quotes.
+		// strings.Fields splits `say "hi"` into tokens [say, "hi"], so "hi"
+		// (including its surrounding quotes) becomes a token whose quotes are doubled.
+		{`say "hi"`, `"say" OR """hi"""`},
+		// Extra whitespace is collapsed by strings.Fields.
+		{"  foo   bar  ", `"foo" OR "bar"`},
+	}
+	for _, tc := range cases {
+		got := escapeFTS5(tc.input)
+		if got != tc.want {
+			t.Errorf("escapeFTS5(%q) = %q; want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
+func TestDB_Search_MultiWordORQuery(t *testing.T) {
+	// Regression: multi-word queries previously returned zero results because
+	// escapeFTS5 wrapped the whole string as a phrase match.
+	// Now each token is OR-joined so either word independently triggers a hit.
+	db := openTestDB(t)
+
+	upsert := func(path, body string) {
+		t.Helper()
+		if err := db.UpsertFile(MemoryFile{
+			Path: path, ProjectPath: "/ctx", ProjectID: "p1",
+			Type: FileTypeMemory, Body: body, Fingerprint: path, IndexedAt: 1,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	upsert("/ctx/a.md", "The permission check failed due to missing role.")
+	upsert("/ctx/b.md", "A deadlock was introduced by the mutex ordering.")
+
+	// "permission deadlock" must match both docs (OR semantics), not zero.
+	results, err := db.Search("permission deadlock", "p1", "", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 2 {
+		t.Errorf("expected 2 results for multi-word OR query, got %d", len(results))
+	}
+}
