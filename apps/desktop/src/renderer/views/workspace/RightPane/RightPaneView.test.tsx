@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { workspacePaneStore } from "../../../store/workspacePaneStore";
+import { workspaceUiStore } from "../../../store/workspaceUiStore";
 import { RightPaneView } from "./RightPaneView";
 
 const listFiles = vi.fn();
@@ -243,7 +243,7 @@ describe("RightPaneView delete flow", () => {
     changesUnmountTracker.mockReset();
     prTabState.pullRequest = undefined;
     prTabState.isLoading = false;
-    workspacePaneStore.setState({
+    workspaceUiStore.setState({
       rightPaneTabByWorkspaceId: { "workspace-1": "files" },
       isRightPaneHiddenByWorkspaceId: {},
       fileSearchRequestKey: 0,
@@ -432,25 +432,25 @@ describe("RightPaneView delete flow", () => {
   it("renders PR content when PR pane is active", async () => {
     render(<RightPaneView />);
 
-    workspacePaneStore.getState().setRightPaneTab("workspace-1", "pr");
+    workspaceUiStore.getState().setRightPaneTab("workspace-1", "pr");
     expect(await screen.findByTestId("mock-pr-tab")).toBeTruthy();
   });
 
   it("activates the PR pane from store state", async () => {
     render(<RightPaneView />);
 
-    workspacePaneStore.getState().setRightPaneTab("workspace-1", "pr");
+    workspaceUiStore.getState().setRightPaneTab("workspace-1", "pr");
     expect(screen.getByTestId("mock-pr-tab")).toBeTruthy();
   });
 
   it("opens quick-open search when file-search request key increments without switching tabs", async () => {
     render(<RightPaneView />);
 
-    workspacePaneStore.getState().setRightPaneTab("workspace-1", "changes");
+    workspaceUiStore.getState().setRightPaneTab("workspace-1", "changes");
     expect(await screen.findByTestId("mock-changes-tab")).toBeTruthy();
     expect(screen.queryByRole("textbox", { name: "Search files..." })).toBeNull();
 
-    workspacePaneStore.getState().requestFileSearch();
+    workspaceUiStore.getState().requestFileSearch();
 
     expect(screen.queryByRole("textbox", { name: "Search files..." })).toBeNull();
     expect(screen.getByTestId("mock-changes-tab")).toBeTruthy();
@@ -459,19 +459,19 @@ describe("RightPaneView delete flow", () => {
   it("activates files pane from store state", async () => {
     render(<RightPaneView />);
 
-    workspacePaneStore.getState().setRightPaneTab("workspace-1", "changes");
+    workspaceUiStore.getState().setRightPaneTab("workspace-1", "changes");
     expect(await screen.findByTestId("mock-changes-tab")).toBeTruthy();
 
-    workspacePaneStore.getState().setRightPaneTab("workspace-1", "files");
+    workspaceUiStore.getState().setRightPaneTab("workspace-1", "files");
     await waitFor(() => {
-      expect(workspacePaneStore.getState().rightPaneTabByWorkspaceId["workspace-1"]).toBe("files");
+      expect(workspaceUiStore.getState().rightPaneTabByWorkspaceId["workspace-1"]).toBe("files");
     });
   });
 
   it("activates changes pane from store state", async () => {
     render(<RightPaneView />);
 
-    workspacePaneStore.getState().setRightPaneTab("workspace-1", "changes");
+    workspaceUiStore.getState().setRightPaneTab("workspace-1", "changes");
     expect(await screen.findByTestId("mock-changes-tab")).toBeTruthy();
   });
 });

@@ -6,8 +6,8 @@ import { sessionStore } from "../store/sessionStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
-import { workspacePaneStore } from "../store/workspacePaneStore";
 import { workspaceStore } from "../store/workspaceStore";
+import { workspaceUiStore } from "../store/workspaceUiStore";
 import {
   OPEN_CREATE_WORKSPACE_DIALOG_EVENT,
   closeWorkspace,
@@ -71,7 +71,7 @@ const initialLayoutStoreState = layoutStore.getState();
 const initialSessionStoreState = sessionStore.getState();
 const initialTabStoreState = tabStore.getState();
 const initialWorkspaceCreateProgressStoreState = workspaceCreateProgressStore.getState();
-const initialWorkspacePaneStoreState = workspacePaneStore.getState();
+const initialWorkspacePaneStoreState = workspaceUiStore.getState();
 const initialChatStoreState = chatStore.getState();
 
 afterEach(() => {
@@ -80,7 +80,7 @@ afterEach(() => {
   sessionStore.setState(initialSessionStoreState, true);
   tabStore.setState(initialTabStoreState, true);
   workspaceCreateProgressStore.setState(initialWorkspaceCreateProgressStoreState, true);
-  workspacePaneStore.setState(initialWorkspacePaneStoreState, true);
+  workspaceUiStore.setState(initialWorkspacePaneStoreState, true);
   chatStore.setState(initialChatStoreState, true);
   vi.clearAllMocks();
 });
@@ -932,7 +932,7 @@ describe("workspaceCommands", () => {
 
   it("shows files pane and focuses file tree when requested", () => {
     workspaceStore.setState({ selectedWorkspaceId: "ws-test" });
-    workspacePaneStore.setState({
+    workspaceUiStore.setState({
       isRightPaneHiddenByWorkspaceId: { "ws-test": true },
       rightPaneTabByWorkspaceId: { "ws-test": "changes" },
     });
@@ -948,8 +948,8 @@ describe("workspaceCommands", () => {
 
     focusWorkspaceFileTree();
 
-    expect(workspacePaneStore.getState().isRightPaneHiddenByWorkspaceId["ws-test"]).toBe(false);
-    expect(workspacePaneStore.getState().rightPaneTabByWorkspaceId["ws-test"]).toBe("files");
+    expect(workspaceUiStore.getState().isRightPaneHiddenByWorkspaceId["ws-test"]).toBe(false);
+    expect(workspaceUiStore.getState().rightPaneTabByWorkspaceId["ws-test"]).toBe("files");
     expect(document.activeElement).toBe(treeItem);
 
     treeArea.remove();
@@ -957,7 +957,7 @@ describe("workspaceCommands", () => {
 
   it("opens file search without forcing the file tree pane open", () => {
     workspaceStore.setState({ selectedWorkspaceId: "ws-test" });
-    workspacePaneStore.setState({
+    workspaceUiStore.setState({
       isRightPaneHiddenByWorkspaceId: { "ws-test": true },
       rightPaneTabByWorkspaceId: { "ws-test": "changes" },
       fileSearchRequestKey: 4,
@@ -965,9 +965,9 @@ describe("workspaceCommands", () => {
 
     openWorkspaceFileSearch();
 
-    expect(workspacePaneStore.getState().isRightPaneHiddenByWorkspaceId["ws-test"]).toBe(true);
-    expect(workspacePaneStore.getState().rightPaneTabByWorkspaceId["ws-test"]).toBe("changes");
-    expect(workspacePaneStore.getState().fileSearchRequestKey).toBe(5);
+    expect(workspaceUiStore.getState().isRightPaneHiddenByWorkspaceId["ws-test"]).toBe(true);
+    expect(workspaceUiStore.getState().rightPaneTabByWorkspaceId["ws-test"]).toBe("changes");
+    expect(workspaceUiStore.getState().fileSearchRequestKey).toBe(5);
   });
 
   it("dispatches open-create-workspace event using selected repo context", () => {

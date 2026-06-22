@@ -10,7 +10,6 @@ import { RestApiError } from "../../api/restClient";
 import { getSessionBootstrapData } from "../../api/sessionApi";
 import { getAuthStatus, getDaemonInfo, getDesktopAppVersion } from "../../commands/appCommands";
 import { rendererQueryClient } from "../../queryClient";
-import { authStore } from "../../store/authStore";
 import { sessionStore } from "../../store/sessionStore";
 import { ApplicationRouterView, NotFoundRouteView } from "./ApplicationRouterView";
 
@@ -147,7 +146,7 @@ describe("ApplicationRouterView", () => {
     vi.clearAllMocks();
     localStorage.clear();
     rendererQueryClient.clear();
-    authStore.setState({ isAuthenticated: false, authStatusResolved: true });
+    sessionStore.setState({ isAuthenticated: false, authStatusResolved: true });
     sessionStore.getState().clearSessionData();
     vi.mocked(getAuthStatus).mockResolvedValue({ authenticated: false });
     vi.mocked(getDaemonInfo).mockResolvedValue({ daemonId: "daemon-1", version: "0.0.0", wsUrl: "ws://127.0.0.1:0" });
@@ -197,7 +196,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("renders workspace view on / route after user is authenticated", async () => {
-    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
+    sessionStore.setState({ isAuthenticated: true, authStatusResolved: true });
     renderApplicationRouter("/");
 
     expect(await screen.findByTestId("workspace-input")).toBeTruthy();
@@ -205,7 +204,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("renders first organization setup when authenticated user has no organizations", async () => {
-    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
+    sessionStore.setState({ isAuthenticated: true, authStatusResolved: true });
     vi.mocked(getSessionBootstrapData).mockResolvedValueOnce({
       currentUser: {
         id: "user-1",
@@ -239,7 +238,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("creates first organization and enters workspace", async () => {
-    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
+    sessionStore.setState({ isAuthenticated: true, authStatusResolved: true });
     vi.mocked(getSessionBootstrapData).mockResolvedValueOnce({
       currentUser: {
         id: "user-1",
@@ -276,7 +275,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("uses created organization directly from create response without extra list call", async () => {
-    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
+    sessionStore.setState({ isAuthenticated: true, authStatusResolved: true });
     vi.mocked(getSessionBootstrapData).mockResolvedValueOnce({
       currentUser: {
         id: "user-1",
@@ -319,7 +318,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("invalidates session-bootstrap cache after org creation", async () => {
-    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
+    sessionStore.setState({ isAuthenticated: true, authStatusResolved: true });
     vi.mocked(getSessionBootstrapData).mockResolvedValueOnce({
       currentUser: {
         id: "user-1",
@@ -360,7 +359,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("does not flash bootstrap loading view when transitioning from org creation to workspace", async () => {
-    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
+    sessionStore.setState({ isAuthenticated: true, authStatusResolved: true });
     vi.mocked(getSessionBootstrapData).mockResolvedValueOnce({
       currentUser: {
         id: "user-1",
@@ -399,7 +398,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("keeps workspace mounted while showing settings overlay", async () => {
-    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
+    sessionStore.setState({ isAuthenticated: true, authStatusResolved: true });
     renderApplicationRouter("/");
 
     const input = (await screen.findByTestId("workspace-input")) as HTMLInputElement;
@@ -416,7 +415,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("shows settings overlay with keybindings tab while preserving workspace state", async () => {
-    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
+    sessionStore.setState({ isAuthenticated: true, authStatusResolved: true });
     renderApplicationRouter("/");
 
     fireEvent.click(screen.getByText("to-settings"));
@@ -425,7 +424,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("shows not-found state for unknown routes and allows returning", async () => {
-    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
+    sessionStore.setState({ isAuthenticated: true, authStatusResolved: true });
     renderApplicationRouter("/unknown");
 
     expect(screen.getByText("routing.notFound.title")).toBeTruthy();
@@ -436,7 +435,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("resolves auth status through CLI command before showing authenticated app", async () => {
-    authStore.setState({ isAuthenticated: false, authStatusResolved: false });
+    sessionStore.setState({ isAuthenticated: false, authStatusResolved: false });
     vi.mocked(getAuthStatus).mockResolvedValueOnce({ authenticated: true });
 
     renderApplicationRouter("/");
@@ -445,7 +444,7 @@ describe("ApplicationRouterView", () => {
   });
 
   it("returns to login view when session bootstrap fails with 401", async () => {
-    authStore.setState({ isAuthenticated: true, authStatusResolved: true });
+    sessionStore.setState({ isAuthenticated: true, authStatusResolved: true });
     vi.mocked(getSessionBootstrapData).mockRejectedValue(new RestApiError("Unauthorized", 401));
 
     renderApplicationRouter("/");
