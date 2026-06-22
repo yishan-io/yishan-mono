@@ -12,6 +12,7 @@ import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneV
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
 import { chatStore } from "../../store/chatStore";
 import { workspaceStore } from "../../store/workspaceStore";
+import { DaemonVersionWarningControl } from "./DaemonVersionWarningControl";
 import { WorkspacePortsMenuControl } from "./WorkspacePortsMenuControl";
 import { renderWorkspaceKindIcon, resolvePrimaryWorkspaceId } from "./mainPaneTitleBarHelpers";
 import {
@@ -272,6 +273,7 @@ export function MainPaneTitleBarView() {
             </span>
           </Tooltip>
           <WorkspacePortsMenuControl />
+          <DaemonVersionWarningControl />
         </Box>
       </PaneHeader>
       <RepoSelectorMenu

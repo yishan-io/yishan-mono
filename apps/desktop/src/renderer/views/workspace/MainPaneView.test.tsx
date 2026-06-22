@@ -47,6 +47,16 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
+vi.mock("react-router-dom", () => ({
+  useNavigate: () => vi.fn(),
+  useInRouterContext: () => false,
+}));
+
+vi.mock("../../store/sessionStore", () => ({
+  sessionStore: (selector: (state: { daemonVersion?: string; appVersion?: string }) => unknown) =>
+    selector({ daemonVersion: "1.0.0", appVersion: "1.0.0" }),
+}));
+
 vi.mock("../../store/workspaceStore", () => ({
   workspaceStore: mocked.workspaceStore,
 }));

@@ -1,11 +1,8 @@
-import { Alert, Box, IconButton, LinearProgress, Snackbar, Tooltip } from "@mui/material";
+import { Alert, Box, LinearProgress, Snackbar } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { LuTriangleAlert } from "react-icons/lu";
 import { Outlet } from "react-router-dom";
-import { isDaemonVersionOutdated } from "../../helpers/versionHelpers";
 import { useDaemonConnectionMonitor } from "../../hooks/useDaemonConnectionMonitor";
 import { useShortcuts } from "../../hooks/useShortcuts";
-import { sessionStore } from "../../store/sessionStore";
 
 /** Renders the app frame and route content. */
 export function AppShell() {
@@ -13,9 +10,6 @@ export function AppShell() {
   useShortcuts();
   const daemonConnectionStatus = useDaemonConnectionMonitor();
   const isReconnecting = daemonConnectionStatus !== "connected";
-  const daemonVersion = sessionStore((state) => state.daemonVersion);
-  const appVersion = sessionStore((state) => state.appVersion);
-  const isDaemonOutdated = isDaemonVersionOutdated({ daemonVersion, appVersion });
 
   return (
     <Box
@@ -42,34 +36,6 @@ export function AppShell() {
           {t("daemon.connection.reconnecting")}
         </Alert>
       </Snackbar>
-      {isDaemonOutdated ? (
-        <Tooltip
-          arrow
-          placement="left"
-          title={t("daemon.version.outdatedMessage", {
-            daemonVersion: daemonVersion ?? t("settings.daemon.values.unknown"),
-            appVersion: appVersion ?? t("settings.daemon.values.unknown"),
-          })}
-        >
-          <IconButton
-            size="small"
-            color="warning"
-            sx={{
-              position: "absolute",
-              right: 12,
-              bottom: 12,
-              zIndex: (theme) => theme.zIndex.snackbar,
-              backgroundColor: "background.paper",
-              border: (theme) => `1px solid ${theme.palette.warning.main}`,
-              "&:hover": {
-                backgroundColor: "background.paper",
-              },
-            }}
-          >
-            <LuTriangleAlert size={16} />
-          </IconButton>
-        </Tooltip>
-      ) : null}
     </Box>
   );
 }
