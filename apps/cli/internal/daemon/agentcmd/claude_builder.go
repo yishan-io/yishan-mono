@@ -16,5 +16,10 @@ func (b claudeBuilder) Args(prompt, model string, interactive bool) []string {
 	if model != "" {
 		args = append(args, "--model", model)
 	}
+	if !interactive {
+		args = append(args, "--no-session-persistence")
+	}
 	return args
 }
+
+func (b claudeBuilder) ExtraEnv(_ bool) []string { return nil }

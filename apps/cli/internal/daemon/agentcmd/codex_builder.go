@@ -16,5 +16,10 @@ func (b codexBuilder) Args(prompt, model string, interactive bool) []string {
 	if model != "" {
 		args = append(args, "--model", model)
 	}
+	if !interactive {
+		args = append(args, "--ephemeral")
+	}
 	return args
 }
+
+func (b codexBuilder) ExtraEnv(_ bool) []string { return nil }

@@ -485,7 +485,7 @@ func BuildRunAgentFunc() memory.RunAgentFunc {
 			return "", fmt.Errorf("run %s: %w", agentKind, err)
 		}
 		execCmd := exec.CommandContext(ctx, cmd.ResolvedBinary, cmd.Args...)
-		execCmd.Env = cmd.Env
+		execCmd.Env = append(cmd.Env, cmd.ExtraEnv...)
 		if workDir != "" {
 			execCmd.Dir = workDir
 		}

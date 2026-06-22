@@ -18,3 +18,6 @@ func (b copilotBuilder) Args(prompt, model string, interactive bool) []string {
 	}
 	return args
 }
+
+func (b copilotBuilder) ExtraEnv(_ bool) []string { return nil }
+

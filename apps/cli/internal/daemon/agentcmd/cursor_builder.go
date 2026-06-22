@@ -18,3 +18,6 @@ func (b cursorBuilder) Args(prompt, model string, interactive bool) []string {
 	}
 	return args
 }
+
+func (b cursorBuilder) ExtraEnv(_ bool) []string { return nil }
+
