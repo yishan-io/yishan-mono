@@ -34,14 +34,29 @@ func newWSConnState(conn *websocket.Conn) *wsConnState {
 	return &wsConnState{conn: conn, subscriptions: make(map[string]subscriptionHandle)}
 }
 
-func (c *wsConnState) terminalInputSessionID(raw []byte) string {
+func (c *wsConnState) terminalInputSessionID(raw []byte) (string, bool) {
 	if stringBytesEqual(raw, c.lastTerminalInputSessionIDBytes) {
-		return c.lastTerminalInputSessionID
+		c.subsMu.Lock()
+		_, ok := c.subscriptions[c.lastTerminalInputSessionID]
+		c.subsMu.Unlock()
+		if !ok {
+			return "", false
+		}
+		return c.lastTerminalInputSessionID, true
 	}
 
-	c.lastTerminalInputSessionID = string(raw)
+	sessionID := string(raw)
+
+	c.subsMu.Lock()
+	_, ok := c.subscriptions[sessionID]
+	c.subsMu.Unlock()
+	if !ok {
+		return "", false
+	}
+
+	c.lastTerminalInputSessionID = sessionID
 	c.lastTerminalInputSessionIDBytes = append(c.lastTerminalInputSessionIDBytes[:0], raw...)
-	return c.lastTerminalInputSessionID
+	return sessionID, true
 }
 
 func (c *wsConnState) WriteJSON(v any) error {

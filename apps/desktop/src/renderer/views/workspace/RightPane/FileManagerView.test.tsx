@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { workspaceFileTreeStore } from "../../../store/workspaceFileTreeStore";
 import { FileManagerView } from "./FileManagerView";
 
 type TestFileTreeContextMenuRequest = {
@@ -261,6 +262,31 @@ vi.mock("react-i18next", () => ({
     },
   }),
 }));
+
+function resetWorkspaceState() {
+  mocks.stateRef.current = {
+    selectedWorkspaceId: "workspace-1",
+    workspaces: [{ id: "workspace-1", worktreePath: "/tmp/repo" }],
+    fileTreeRefreshVersion: 0,
+    fileTreeChangedRelativePathsByWorktreePath: {},
+    gitRefreshVersionByWorktreePath: {},
+    selectedTabId: "",
+    tabs: [],
+    openTab: mocks.openTab,
+    closeTab: mocks.closeTab,
+    renameTabsForEntryRename: mocks.renameTabsForEntryRename,
+    setLastUsedExternalAppId: mocks.setLastUsedExternalAppId,
+  };
+}
+
+beforeEach(() => {
+  resetWorkspaceState();
+  workspaceFileTreeStore.setState({
+    selectedEntryPathByWorkspaceId: {},
+    deleteSelectionRequestId: 0,
+    undoRequestId: 0,
+  });
+});
 
 function getFileTreeProps() {
   if (!mocks.repoFileTreePropsRef.current) {
@@ -1479,6 +1505,58 @@ describe("FileManagerView undo operations", () => {
 
     resolveDelete?.();
     await Promise.all([firstDelete, secondDelete]);
+  });
+
+  it("scopes delete requests to the selected workspace file-tree selection", async () => {
+    mocks.stateRef.current = {
+      ...mocks.stateRef.current,
+      selectedWorkspaceId: "workspace-1",
+      workspaces: [
+        { id: "workspace-1", worktreePath: "/tmp/repo-1" },
+        { id: "workspace-2", worktreePath: "/tmp/repo-2" },
+      ],
+    };
+    mocks.listFiles.mockImplementation(async ({ workspaceWorktreePath }: { workspaceWorktreePath: string }) => ({
+      files:
+        workspaceWorktreePath === "/tmp/repo-1"
+          ? asEntries(["src/workspace-one.ts"])
+          : asEntries(["src/workspace-two.ts"]),
+    }));
+
+    const { rerender } = render(<FileManagerView />);
+
+    await waitFor(() => {
+      expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1", recursive: true });
+    });
+
+    getFileTreeProps().onSelectEntry?.({ path: "src/workspace-one.ts", isDirectory: false });
+
+    mocks.stateRef.current = {
+      ...mocks.stateRef.current,
+      selectedWorkspaceId: "workspace-2",
+    };
+    rerender(<FileManagerView />);
+
+    await waitFor(() => {
+      expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-2", recursive: true });
+    });
+
+    getFileTreeProps().onSelectEntry?.({ path: "src/workspace-two.ts", isDirectory: false });
+    await waitFor(() => {
+      expect(workspaceFileTreeStore.getState().selectedEntryPathByWorkspaceId["workspace-2"]).toBe("src/workspace-two.ts");
+    });
+    workspaceFileTreeStore.getState().requestDeleteSelection();
+
+    await waitFor(() => {
+      expect(mocks.deleteEntry).toHaveBeenCalledWith({
+        workspaceWorktreePath: "/tmp/repo-2",
+        relativePath: "src/workspace-two.ts",
+      });
+    });
+    expect(mocks.deleteEntry).not.toHaveBeenCalledWith({
+      workspaceWorktreePath: "/tmp/repo-2",
+      relativePath: "src/workspace-one.ts",
+    });
   });
 
   it("ignores duplicate undo requests while one undo is already in flight", async () => {

@@ -36,6 +36,7 @@ export type SplitPaneStoreState = {
   getPane: (workspaceId: string, paneId: string) => PaneLeaf | null;
   getPaneForTab: (workspaceId: string, tabId: string) => PaneLeaf | null;
   getAllPanes: (workspaceId: string) => PaneLeaf[];
+  retainWorkspaceLayouts: (workspaceIds: string[]) => void;
 
   // Mutations (workspace-scoped)
   setActivePane: (workspaceId: string, paneId: string) => void;
@@ -101,6 +102,17 @@ export const splitPaneStore = create<SplitPaneStoreState>()(
       const layout = get().layoutByWorkspaceId[workspaceId];
       if (!layout) return [];
       return collectLeaves(layout.root);
+    },
+
+    retainWorkspaceLayouts: (workspaceIds) => {
+      const workspaceIdSet = new Set(workspaceIds);
+      set((state) => {
+        for (const workspaceId of Object.keys(state.layoutByWorkspaceId)) {
+          if (!workspaceIdSet.has(workspaceId)) {
+            delete state.layoutByWorkspaceId[workspaceId];
+          }
+        }
+      });
     },
 
     setActivePane: (workspaceId, paneId) => {

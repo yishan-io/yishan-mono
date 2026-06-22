@@ -1,59 +1,12 @@
-/**
- * Resolves source-branch options and default selection.
- * Prefers `main/master` when available, but uses `repoDefaultBranch` when branch data is unavailable.
- */
-export function resolveSourceBranchState(
-  branches: string[],
-  repoDefaultBranch: string,
-): { options: string[]; preferred: string } {
-  const uniqueBranches = Array.from(new Set(branches.map((branch) => branch.trim()).filter(Boolean)));
-  const normalizedRepoDefaultBranch = repoDefaultBranch.trim();
-  const primaryBranch = normalizedRepoDefaultBranch === "master" ? "master" : "main";
-  const secondaryBranch = primaryBranch === "main" ? "master" : "main";
-  if (uniqueBranches.length === 0) {
-    const fallbackBranch = normalizedRepoDefaultBranch || primaryBranch;
-    return {
-      options: [fallbackBranch],
-      preferred: fallbackBranch,
-    };
-  }
+import {
+  resolveWorkspaceSourceBranchState,
+  suggestWorkspaceTargetBranchName,
+  toWorkspaceBranchName,
+} from "@yishan/core";
 
-  const preferredCandidates = [primaryBranch, secondaryBranch, normalizedRepoDefaultBranch];
-  const preferred =
-    preferredCandidates.find((candidate) => candidate && uniqueBranches.includes(candidate)) ?? uniqueBranches[0] ?? "";
-
-  return {
-    options: uniqueBranches,
-    preferred,
-  };
-}
-
-/**
- * Normalizes one branch candidate into a git-branch-friendly name.
- */
-export function toBranchName(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9/-]+/g, "-")
-    .replace(/-{2,}/g, "-")
-    .replace(/\/{2,}/g, "/")
-    .replace(/^[-/]+|[-/]+$/g, "")
-    .slice(0, 64)
-    .replace(/[-/]+$/g, "");
-}
-
-/**
- * Returns one suggested branch name from workspace name and configured prefix.
- */
-export function suggestTargetBranchName(workspaceName: string, branchPrefix: string): string {
-  const normalizedWorkspaceName = workspaceName.trim();
-  if (!normalizedWorkspaceName) {
-    return branchPrefix;
-  }
-
-  return toBranchName(`${branchPrefix}${normalizedWorkspaceName}`);
-}
+export const resolveSourceBranchState = resolveWorkspaceSourceBranchState;
+export const suggestTargetBranchName = suggestWorkspaceTargetBranchName;
+export const toBranchName = toWorkspaceBranchName;
 
 /**
  * Returns true when branch input is only the configured prefix placeholder.

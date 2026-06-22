@@ -1,12 +1,12 @@
 import { api } from "../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../api";
 import { RestApiError } from "../api/restClient";
-import { readPersistedWorkspacePreferencesByOrg } from "../helpers/projectHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
 import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
+import { readPersistedWorkspacePreferencesByOrg } from "../helpers/projectHelpers";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
 import { warmupWorkspacesForProjects } from "./workspaceWarmupCommand";
 
@@ -108,7 +108,6 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
         },
       }));
     }
-
     workspaceStore.getState().load(selectedOrganization.id, projects, workspaces);
     syncTabStoreWithWorkspace(previousWorkspaces);
 

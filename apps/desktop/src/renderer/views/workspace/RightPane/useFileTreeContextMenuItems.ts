@@ -1,15 +1,9 @@
 import type { TFunction } from "i18next";
 import { useMemo } from "react";
-import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
+import type { ExternalAppId, ExternalAppPreset } from "../../../../shared/contracts/externalApps";
 import { resolveDestinationDirectoryPath } from "../../../components/FileTree/treeUtils";
 import type { FileTreeContextMenuRequest } from "../../../components/FileTree/types";
 import { buildWorkspaceFileTreeContextMenuItems } from "./buildWorkspaceFileTreeContextMenuItems";
-
-type ExternalAppPresetLike = {
-  id: ExternalAppId;
-  label: string;
-  iconSrc: string;
-};
 
 type UseFileTreeContextMenuItemsInput = {
   t: TFunction;
@@ -17,7 +11,7 @@ type UseFileTreeContextMenuItemsInput = {
   contextMenu: FileTreeContextMenuRequest | null;
   closeContextMenu: () => void;
   canOpenInExternalApp: boolean;
-  lastUsedWorkspaceExternalAppPreset: ExternalAppPresetLike | null;
+  lastUsedWorkspaceExternalAppPreset: ExternalAppPreset | null;
   canPasteEntries: boolean;
   handlers: {
     onCreateFile?: (path: string) => Promise<void>;

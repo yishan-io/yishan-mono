@@ -62,7 +62,7 @@ export function RightPaneView({ onToggleRightPane: _onToggleRightPane }: RightPa
           overflow: "hidden",
         }}
       >
-        <ChangesTabView />
+        <ChangesTabView active={activeTab === "changes"} />
       </Box>
       <Box
         sx={{

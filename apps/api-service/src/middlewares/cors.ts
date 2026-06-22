@@ -11,6 +11,10 @@ const DEFAULT_DEV_ORIGINS = ["http://localhost:3000", "http://localhost:5173", "
  */
 const allowedOriginsCache = new Map<string, Set<string>>();
 
+function isLoopbackHost(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
 function readEnv(c: Context, key: string): string | undefined {
   const bindings = c.env as Record<string, string | undefined> | undefined;
   const runtimeEnv =
@@ -23,6 +27,21 @@ function normalizeOrigin(value: string): string | null {
     return new URL(value).origin;
   } catch {
     return null;
+  }
+}
+
+function isEquivalentLoopbackOrigin(left: string, right: string): boolean {
+  try {
+    const leftUrl = new URL(left);
+    const rightUrl = new URL(right);
+    return (
+      leftUrl.protocol === rightUrl.protocol &&
+      leftUrl.port === rightUrl.port &&
+      isLoopbackHost(leftUrl.hostname) &&
+      isLoopbackHost(rightUrl.hostname)
+    );
+  } catch {
+    return false;
   }
 }
 
@@ -71,14 +90,25 @@ export const corsMiddleware = cors({
       return "";
     }
 
+    const normalizedOrigin = normalizeOrigin(origin);
+    if (!normalizedOrigin) {
+      return "";
+    }
+
     const allowedOrigins = getAllowedOrigins(c);
 
     if (allowedOrigins.has("*")) {
-      return origin;
+      return normalizedOrigin;
     }
 
-    if (allowedOrigins.has(origin)) {
-      return origin;
+    if (allowedOrigins.has(normalizedOrigin)) {
+      return normalizedOrigin;
+    }
+
+    for (const allowedOrigin of allowedOrigins) {
+      if (isEquivalentLoopbackOrigin(allowedOrigin, normalizedOrigin)) {
+        return normalizedOrigin;
+      }
     }
 
     return "";

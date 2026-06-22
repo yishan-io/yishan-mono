@@ -64,6 +64,7 @@ type session struct {
 	cmd                  *exec.Cmd
 	pty                  *os.File
 	output               bytes.Buffer
+	snapshotOutput       bytes.Buffer
 	outputMu             sync.Mutex
 	running              atomic.Bool
 	exitCode             atomic.Int32
@@ -163,6 +164,9 @@ func (m *Manager) ListSessions(req ListSessionsRequest) []SessionSummary {
 	m.mu.RLock()
 	sessions := make([]*session, 0, len(m.sessions))
 	for _, s := range m.sessions {
+		if req.WorkspaceID != "" && s.workspaceID != req.WorkspaceID {
+			continue
+		}
 		sessions = append(sessions, s)
 	}
 	m.mu.RUnlock()
@@ -182,6 +186,8 @@ func (m *Manager) ListSessions(req ListSessionsRequest) []SessionSummary {
 		summary := SessionSummary{
 			SessionID:   s.id,
 			WorkspaceID: s.workspaceID,
+			TabID:       s.tabID,
+			PaneID:      s.paneID,
 			PID:         s.cmd.Process.Pid,
 			Status:      status,
 			StartedAt:   s.startedAt.Format(time.RFC3339Nano),
@@ -479,7 +485,7 @@ func (m *Manager) publishPortsChanged(ports []DetectedPort) {
 }
 
 func (m *Manager) Send(req SendRequest) (SendResponse, error) {
-	s, err := m.session(req.SessionID)
+	s, err := m.session(req.SessionID, req.WorkspaceID)
 	if err != nil {
 		return SendResponse{}, err
 	}
@@ -502,7 +508,7 @@ func (m *Manager) Send(req SendRequest) (SendResponse, error) {
 // SendRaw writes raw bytes directly to a PTY session without any
 // string conversion. Used by the binary WebSocket fast-path.
 func (m *Manager) SendRaw(sessionID string, data []byte) {
-	s, err := m.session(sessionID)
+	s, err := m.session(sessionID, "")
 	if err != nil {
 		return
 	}
@@ -520,7 +526,7 @@ func (m *Manager) SendRaw(sessionID string, data []byte) {
 }
 
 func (m *Manager) Read(req ReadRequest) (ReadResponse, error) {
-	s, err := m.session(req.SessionID)
+	s, err := m.session(req.SessionID, req.WorkspaceID)
 	if err != nil {
 		return ReadResponse{}, err
 	}
@@ -563,7 +569,7 @@ func (m *Manager) buildSessionLifecycleEvent(s *session, action string, status s
 }
 
 func (m *Manager) Stop(req StopRequest) (StopResponse, error) {
-	s, err := m.session(req.SessionID)
+	s, err := m.session(req.SessionID, req.WorkspaceID)
 	if err != nil {
 		return StopResponse{}, err
 	}
@@ -712,7 +718,7 @@ func buildPIDToRootMap(rootPIDs []int, processes []processInfo) map[int]int {
 }
 
 func (m *Manager) Resize(req ResizeRequest) (ResizeResponse, error) {
-	s, err := m.session(req.SessionID)
+	s, err := m.session(req.SessionID, req.WorkspaceID)
 	if err != nil {
 		return ResizeResponse{}, err
 	}
@@ -729,7 +735,7 @@ func (m *Manager) Resize(req ResizeRequest) (ResizeResponse, error) {
 }
 
 func (m *Manager) Subscribe(req SubscribeRequest) (Subscription, error) {
-	s, err := m.session(req.SessionID)
+	s, err := m.session(req.SessionID, req.WorkspaceID)
 	if err != nil {
 		return Subscription{}, err
 	}
@@ -737,15 +743,37 @@ func (m *Manager) Subscribe(req SubscribeRequest) (Subscription, error) {
 	id := m.nextSubID.Add(1)
 	ch := make(chan Event, 256)
 
+	s.outputMu.Lock()
+	snapshotOutput := s.snapshotOutput.String()
+	snapshotRunning := s.running.Load()
+	var snapshotExitCode *int
+	if !snapshotRunning {
+		code := int(s.exitCode.Load())
+		snapshotExitCode = &code
+	}
+	s.outputMu.Unlock()
+
 	s.subsMu.Lock()
 	s.subs[id] = ch
+	if !snapshotRunning {
+		close(ch)
+		delete(s.subs, id)
+	}
 	s.subsMu.Unlock()
 
-	return Subscription{ID: id, Events: ch}, nil
+	return Subscription{
+		ID:     id,
+		Events: ch,
+		Snapshot: SubscribeResult{
+			Output:   snapshotOutput,
+			ExitCode: snapshotExitCode,
+			Running:  snapshotRunning,
+		},
+	}, nil
 }
 
 func (m *Manager) Unsubscribe(req UnsubscribeRequest) (UnsubscribeResponse, error) {
-	s, err := m.session(req.SessionID)
+	s, err := m.session(req.SessionID, req.WorkspaceID)
 	if err != nil {
 		return UnsubscribeResponse{}, err
 	}
@@ -765,7 +793,7 @@ func (m *Manager) Unsubscribe(req UnsubscribeRequest) (UnsubscribeResponse, erro
 	return UnsubscribeResponse{Unsubscribed: true}, nil
 }
 
-func (m *Manager) session(id string) (*session, error) {
+func (m *Manager) session(id string, workspaceID string) (*session, error) {
 	if id == "" {
 		return nil, rpcerror.New(rpcCodeInvalidParams, "sessionId is required")
 	}
@@ -774,6 +802,9 @@ func (m *Manager) session(id string) (*session, error) {
 	s, ok := m.sessions[id]
 	m.mu.RUnlock()
 	if !ok {
+		return nil, rpcerror.New(rpcCodeNotFound, "terminal session not found")
+	}
+	if workspaceID != "" && s.workspaceID != workspaceID {
 		return nil, rpcerror.New(rpcCodeNotFound, "terminal session not found")
 	}
 	return s, nil
@@ -790,7 +821,8 @@ func (s *session) capture() {
 			copy(raw, buf[:n])
 			chunk := string(raw)
 			s.outputMu.Lock()
-			s.appendOutput(chunk)
+			s.appendReadOutput(chunk)
+			s.appendSnapshotOutput(chunk)
 			s.outputMu.Unlock()
 			s.broadcast(Event{SessionID: s.id, Type: "output", Chunk: chunk, RawChunk: raw})
 			// Scan tail+chunk so that port announcements split across read
@@ -817,26 +849,33 @@ func (s *session) capture() {
 	}
 }
 
-func (s *session) appendOutput(chunk string) {
-	if len(chunk) >= maxSessionOutputBytes {
-		s.output.Reset()
-		_, _ = s.output.WriteString(chunk[len(chunk)-maxSessionOutputBytes:])
+func (s *session) appendReadOutput(chunk string) {
+	appendBoundedOutput(&s.output, chunk)
+}
+
+func (s *session) appendSnapshotOutput(chunk string) {
+	appendBoundedOutput(&s.snapshotOutput, chunk)
+}
+
+func appendBoundedOutput(buffer *bytes.Buffer, chunk string) {
+	if chunk == "" {
 		return
 	}
 
-	if s.output.Len()+len(chunk) > maxSessionOutputBytes {
-		current := s.output.String()
-		retainedBytes := maxSessionOutputBytes/2 - len(chunk)
-		if retainedBytes < 0 {
-			retainedBytes = 0
-		}
-		if retainedBytes > len(current) {
-			retainedBytes = len(current)
-		}
-		s.output.Reset()
-		_, _ = s.output.WriteString(current[len(current)-retainedBytes:])
+	if len(chunk) >= maxSessionOutputBytes {
+		buffer.Reset()
+		_, _ = buffer.WriteString(trimTerminalOutputToMaxBytes(chunk, maxSessionOutputBytes))
+		return
 	}
-	_, _ = s.output.WriteString(chunk)
+
+	if buffer.Len()+len(chunk) > maxSessionOutputBytes {
+		current := buffer.String() + chunk
+		buffer.Reset()
+		_, _ = buffer.WriteString(trimTerminalOutputToMaxBytes(current, maxSessionOutputBytes))
+		return
+	}
+
+	_, _ = buffer.WriteString(chunk)
 }
 
 func (s *session) broadcast(event Event) {

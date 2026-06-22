@@ -39,7 +39,7 @@ function closeTerminalSessionsForTabs(tabs: TerminalTab[]): void {
 
     void getDaemonClient()
       .then((client) => {
-        return client.terminal.closeSession({ sessionId });
+        return client.terminal.closeSession({ workspaceId: tab.workspaceId, sessionId });
       })
       .catch((error) => {
         const message = getErrorMessage(error);

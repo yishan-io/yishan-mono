@@ -185,7 +185,12 @@ func TestSessionSendReadStop(t *testing.T) {
 func TestListSessions(t *testing.T) {
 	m := NewManager()
 
-	running, err := m.Start(context.Background(), t.TempDir(), StartRequest{WorkspaceID: "workspace-1", Command: "cat"})
+	running, err := m.Start(context.Background(), t.TempDir(), StartRequest{
+		WorkspaceID: "workspace-1",
+		Command:     "cat",
+		PaneID:      "pane-1",
+		TabID:       "tab-1",
+	})
 	if err != nil {
 		t.Fatalf("start running terminal: %v", err)
 	}
@@ -201,7 +206,7 @@ func TestListSessions(t *testing.T) {
 	deadline := time.Now().Add(2 * time.Second)
 	var sawExited bool
 	for time.Now().Before(deadline) {
-		sessions := m.ListSessions(ListSessionsRequest{IncludeExited: true})
+		sessions := m.ListSessions(ListSessionsRequest{WorkspaceID: "workspace-2", IncludeExited: true})
 		for _, session := range sessions {
 			if session.SessionID == exited.SessionID && session.Status == "exited" {
 				sawExited = true
@@ -217,7 +222,7 @@ func TestListSessions(t *testing.T) {
 		t.Fatal("timed out waiting for terminal session to exit")
 	}
 
-	runningOnly := m.ListSessions(ListSessionsRequest{})
+	runningOnly := m.ListSessions(ListSessionsRequest{WorkspaceID: "workspace-1"})
 	if len(runningOnly) != 1 {
 		t.Fatalf("expected one running session, got %d", len(runningOnly))
 	}
@@ -226,6 +231,12 @@ func TestListSessions(t *testing.T) {
 	}
 	if runningOnly[0].WorkspaceID != "workspace-1" {
 		t.Fatalf("expected workspace id workspace-1, got %q", runningOnly[0].WorkspaceID)
+	}
+	if runningOnly[0].TabID != "tab-1" {
+		t.Fatalf("expected tab id tab-1, got %q", runningOnly[0].TabID)
+	}
+	if runningOnly[0].PaneID != "pane-1" {
+		t.Fatalf("expected pane id pane-1, got %q", runningOnly[0].PaneID)
 	}
 	if runningOnly[0].PID <= 0 {
 		t.Fatalf("expected pid to be set, got %d", runningOnly[0].PID)
@@ -237,9 +248,9 @@ func TestListSessions(t *testing.T) {
 		t.Fatal("expected startedAt to be set")
 	}
 
-	all := m.ListSessions(ListSessionsRequest{IncludeExited: true})
-	if len(all) != 2 {
-		t.Fatalf("expected running and exited sessions, got %d", len(all))
+	all := m.ListSessions(ListSessionsRequest{WorkspaceID: "workspace-2", IncludeExited: true})
+	if len(all) != 1 {
+		t.Fatalf("expected one exited session for workspace-2, got %d", len(all))
 	}
 	var foundExited bool
 	for _, session := range all {
@@ -255,6 +266,34 @@ func TestListSessions(t *testing.T) {
 	}
 	if !foundExited {
 		t.Fatal("expected exited session in includeExited list")
+	}
+}
+
+func TestSessionOperationsRejectWorkspaceMismatch(t *testing.T) {
+	m := NewManager()
+
+	start, err := m.Start(context.Background(), t.TempDir(), StartRequest{WorkspaceID: "workspace-1", Command: "cat"})
+	if err != nil {
+		t.Fatalf("start terminal: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = m.Stop(StopRequest{SessionID: start.SessionID})
+	})
+
+	if _, err := m.Send(SendRequest{WorkspaceID: "workspace-2", SessionID: start.SessionID, Input: "ping\n"}); err == nil {
+		t.Fatal("expected send to reject workspace mismatch")
+	}
+	if _, err := m.Read(ReadRequest{WorkspaceID: "workspace-2", SessionID: start.SessionID}); err == nil {
+		t.Fatal("expected read to reject workspace mismatch")
+	}
+	if _, err := m.Resize(ResizeRequest{WorkspaceID: "workspace-2", SessionID: start.SessionID, Cols: 80, Rows: 24}); err == nil {
+		t.Fatal("expected resize to reject workspace mismatch")
+	}
+	if _, err := m.Subscribe(SubscribeRequest{WorkspaceID: "workspace-2", SessionID: start.SessionID}); err == nil {
+		t.Fatal("expected subscribe to reject workspace mismatch")
+	}
+	if _, err := m.Stop(StopRequest{WorkspaceID: "workspace-2", SessionID: start.SessionID}); err == nil {
+		t.Fatal("expected stop to reject workspace mismatch")
 	}
 }
 
@@ -314,10 +353,138 @@ func TestSubscriptionStreamsOutputAndExit(t *testing.T) {
 	}
 }
 
+func TestSubscribeReturnsBufferedSnapshot(t *testing.T) {
+	m := NewManager()
+
+	start, err := m.Start(context.Background(), t.TempDir(), StartRequest{
+		Command: "sh",
+		Args:    []string{"-c", `printf "ready\n"; sleep 1`},
+	})
+	if err != nil {
+		t.Fatalf("start terminal: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = m.Stop(StopRequest{SessionID: start.SessionID})
+	})
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		s := mustSession(t, m, start.SessionID)
+		s.outputMu.Lock()
+		hasReady := strings.Contains(s.snapshotOutput.String(), "ready")
+		s.outputMu.Unlock()
+		if hasReady {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	sub, err := m.Subscribe(SubscribeRequest{SessionID: start.SessionID})
+	if err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+
+	if !sub.Snapshot.Running {
+		t.Fatal("expected running snapshot")
+	}
+	if !strings.Contains(sub.Snapshot.Output, "ready") {
+		t.Fatalf("expected snapshot output to include buffered terminal output, got %q", sub.Snapshot.Output)
+	}
+}
+
+func TestReadDrainsOnlyReadBufferAndPreservesSubscribeSnapshot(t *testing.T) {
+	m := NewManager()
+
+	start, err := m.Start(context.Background(), t.TempDir(), StartRequest{
+		Command: "sh",
+		Args:    []string{"-c", `printf "ready\n"; sleep 1`},
+	})
+	if err != nil {
+		t.Fatalf("start terminal: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = m.Stop(StopRequest{SessionID: start.SessionID})
+	})
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		resp, readErr := m.Read(ReadRequest{SessionID: start.SessionID})
+		if readErr != nil {
+			t.Fatalf("read output: %v", readErr)
+		}
+		if strings.Contains(resp.Output, "ready") {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	drained, err := m.Read(ReadRequest{SessionID: start.SessionID})
+	if err != nil {
+		t.Fatalf("read drained output: %v", err)
+	}
+	if drained.Output != "" {
+		t.Fatalf("expected read buffer to be drained, got %q", drained.Output)
+	}
+
+	sub, err := m.Subscribe(SubscribeRequest{SessionID: start.SessionID})
+	if err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+
+	if !strings.Contains(sub.Snapshot.Output, "ready") {
+		t.Fatalf("expected subscribe snapshot to retain output after read drain, got %q", sub.Snapshot.Output)
+	}
+}
+
+func TestSubscribeToExitedSessionReturnsSnapshotAndClosedChannel(t *testing.T) {
+	m := NewManager()
+
+	start, err := m.Start(context.Background(), t.TempDir(), StartRequest{
+		Command: "sh",
+		Args:    []string{"-c", `printf "done\n"; exit 7`},
+	})
+	if err != nil {
+		t.Fatalf("start terminal: %v", err)
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		s := mustSession(t, m, start.SessionID)
+		if !s.running.Load() {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	sub, err := m.Subscribe(SubscribeRequest{SessionID: start.SessionID})
+	if err != nil {
+		t.Fatalf("subscribe exited session: %v", err)
+	}
+
+	if sub.Snapshot.Running {
+		t.Fatal("expected exited snapshot")
+	}
+	if sub.Snapshot.ExitCode == nil || *sub.Snapshot.ExitCode != 7 {
+		t.Fatalf("expected exit code 7, got %+v", sub.Snapshot.ExitCode)
+	}
+	if !strings.Contains(sub.Snapshot.Output, "done") {
+		t.Fatalf("expected exited snapshot output to include buffered output, got %q", sub.Snapshot.Output)
+	}
+
+	select {
+	case _, ok := <-sub.Events:
+		if ok {
+			t.Fatal("expected exited subscription channel to be closed")
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("timed out waiting for exited subscription channel to close")
+	}
+}
+
 func TestSessionOutputBufferIsBounded(t *testing.T) {
 	s := &session{}
 	s.outputMu.Lock()
-	s.appendOutput(strings.Repeat("a", maxSessionOutputBytes+128))
+	s.appendReadOutput(strings.Repeat("a", maxSessionOutputBytes+128))
 	if got := s.output.Len(); got != maxSessionOutputBytes {
 		t.Fatalf("expected output buffer to be capped at %d bytes, got %d", maxSessionOutputBytes, got)
 	}
@@ -325,14 +492,32 @@ func TestSessionOutputBufferIsBounded(t *testing.T) {
 		t.Fatal("expected capped buffer to retain chunk suffix")
 	}
 
-	s.appendOutput(strings.Repeat("b", 256))
+	s.appendReadOutput(strings.Repeat("b", 256))
 	if got := s.output.Len(); got > maxSessionOutputBytes {
 		t.Fatalf("expected output buffer to remain capped at %d bytes, got %d", maxSessionOutputBytes, got)
 	}
 	if !strings.HasSuffix(s.output.String(), strings.Repeat("b", 256)) {
 		t.Fatal("expected capped buffer to retain newest output")
 	}
+
+	s.appendSnapshotOutput(strings.Repeat("c", maxSessionOutputBytes+64))
+	if got := s.snapshotOutput.Len(); got != maxSessionOutputBytes {
+		t.Fatalf("expected snapshot buffer to be capped at %d bytes, got %d", maxSessionOutputBytes, got)
+	}
+	if !strings.HasSuffix(s.snapshotOutput.String(), strings.Repeat("c", maxSessionOutputBytes)) {
+		t.Fatal("expected snapshot buffer to retain newest output")
+	}
 	s.outputMu.Unlock()
+}
+
+func mustSession(t *testing.T, m *Manager, sessionID string) *session {
+	t.Helper()
+
+	s, err := m.session(sessionID, "")
+	if err != nil {
+		t.Fatalf("load session %s: %v", sessionID, err)
+	}
+	return s
 }
 
 func TestResolveManagedRuntimeEnvResolvesOrigZdotdirWhenAlreadyManaged(t *testing.T) {
@@ -420,6 +605,38 @@ func TestResizeAndUnsubscribe(t *testing.T) {
 		}
 	case <-time.After(500 * time.Millisecond):
 		t.Fatal("timed out waiting for subscription channel close")
+	}
+}
+
+func TestExitedSessionsRemainReadableUntilStopped(t *testing.T) {
+	m := NewManager()
+
+	start, err := m.Start(context.Background(), t.TempDir(), StartRequest{WorkspaceID: "workspace-1", Command: "sh", Args: []string{"-c", "exit 0"}})
+	if err != nil {
+		t.Fatalf("start exiting terminal: %v", err)
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		m.mu.RLock()
+		session := m.sessions[start.SessionID]
+		exitedAtUnixNano := int64(0)
+		if session != nil {
+			exitedAtUnixNano = session.exitedAtUnixNano.Load()
+		}
+		m.mu.RUnlock()
+		if exitedAtUnixNano > 0 {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	sessions := m.ListSessions(ListSessionsRequest{WorkspaceID: "workspace-1", IncludeExited: true})
+	if len(sessions) != 1 {
+		t.Fatalf("expected exited session to remain listed until stop, got %d session(s)", len(sessions))
+	}
+	if _, err := m.Read(ReadRequest{WorkspaceID: "workspace-1", SessionID: start.SessionID}); err != nil {
+		t.Fatalf("expected exited session to remain readable until stop, got %v", err)
 	}
 }
 

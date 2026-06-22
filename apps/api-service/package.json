@@ -4,9 +4,11 @@
   "type": "module",
   "scripts": {
     "dev:bun": "bun --watch src/server.ts",
+    "dev:bun:lan": "HOST=0.0.0.0 bun --watch src/server.ts",
     "dev:worker": "wrangler dev",
     "db:local": "docker compose up -d postgres",
     "start": "bun run src/server.ts",
+    "start:lan": "HOST=0.0.0.0 bun run src/server.ts",
     "check": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",

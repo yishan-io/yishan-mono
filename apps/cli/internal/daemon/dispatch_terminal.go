@@ -69,7 +69,10 @@ func (h *JSONRPCHandler) dispatchTerminal(ctx context.Context, connState *wsConn
 		connState.AttachSubscription(req.SessionID, subscription.ID, subscription.Events, func(sessionID string, subscriptionID uint64) {
 			_, _ = h.manager.Terminals().Unsubscribe(workspace.TerminalUnsubscribeRequest{SessionID: sessionID, SubscriptionID: subscriptionID})
 		})
-		return workspace.TerminalSubscribeResponse{Subscribed: true}, nil
+		return workspace.TerminalSubscribeResponse{
+			Subscribed: true,
+			Snapshot:   &subscription.Snapshot,
+		}, nil
 	case MethodTerminalUnsubscribe:
 		var req workspace.TerminalUnsubscribeRequest
 		if err := decodeParams(params, &req); err != nil {

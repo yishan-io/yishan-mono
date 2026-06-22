@@ -102,6 +102,16 @@ describe("ChangesTabView", () => {
     vi.restoreAllMocks();
   });
 
+  it("does not load git changes while inactive", async () => {
+    render(<ChangesTabView active={false} />);
+
+    await waitFor(() => {
+      expect(mocks.listGitChanges).not.toHaveBeenCalled();
+      expect(mocks.listGitCommitsToTarget).not.toHaveBeenCalled();
+    });
+    expect(screen.queryByTestId("changes-tab-loading-progress")).toBeNull();
+  });
+
   it("shows a progress bar while workspace changes are loading", async () => {
     let resolveListGitChanges: ((value: { unstaged: []; staged: []; untracked: [] }) => void) | undefined;
     mocks.listGitChanges.mockImplementation(
@@ -185,6 +195,9 @@ describe("ChangesTabView", () => {
     render(<ChangesTabView />);
 
     const scopeInput = await screen.findByRole("combobox", { name: "Change scope" });
+    await waitFor(() => {
+      expect(mocks.listGitCommitsToTarget).toHaveBeenCalled();
+    });
     fireEvent.change(scopeInput, { target: { value: "abc1234" } });
     fireEvent.mouseDown(scopeInput);
     fireEvent.click(await screen.findByRole("option", { name: "abc1234 feat: improve flow" }));
@@ -240,6 +253,9 @@ describe("ChangesTabView", () => {
     render(<ChangesTabView />);
 
     const scopeInput = await screen.findByRole("combobox", { name: "Change scope" });
+    await waitFor(() => {
+      expect(mocks.listGitCommitsToTarget).toHaveBeenCalled();
+    });
     fireEvent.change(scopeInput, { target: { value: "All changes" } });
     fireEvent.mouseDown(scopeInput);
     fireEvent.click(await screen.findByRole("option", { name: "All changes (3)" }));
@@ -293,6 +309,9 @@ describe("ChangesTabView", () => {
     render(<ChangesTabView />);
 
     const scopeInput = await screen.findByRole("combobox", { name: "Change scope" });
+    await waitFor(() => {
+      expect(mocks.listGitCommitsToTarget).toHaveBeenCalled();
+    });
     fireEvent.change(scopeInput, { target: { value: "All changes" } });
     fireEvent.mouseDown(scopeInput);
     fireEvent.click(await screen.findByRole("option", { name: "All changes (2)" }));
@@ -388,6 +407,9 @@ describe("ChangesTabView", () => {
     render(<ChangesTabView />);
 
     const scopeInput = await screen.findByRole("combobox", { name: "Change scope" });
+    await waitFor(() => {
+      expect(mocks.listGitCommitsToTarget).toHaveBeenCalled();
+    });
     fireEvent.change(scopeInput, { target: { value: "All changes" } });
     fireEvent.mouseDown(scopeInput);
     fireEvent.click(await screen.findByRole("option", { name: "All changes (2)" }));
@@ -414,6 +436,9 @@ describe("ChangesTabView", () => {
     render(<ChangesTabView />);
 
     const scopeInput = await screen.findByRole("combobox", { name: "Change scope" });
+    await waitFor(() => {
+      expect(mocks.listGitCommitsToTarget).toHaveBeenCalled();
+    });
     fireEvent.change(scopeInput, { target: { value: "All changes" } });
     fireEvent.mouseDown(scopeInput);
     fireEvent.click(await screen.findByRole("option", { name: "All changes (2)" }));

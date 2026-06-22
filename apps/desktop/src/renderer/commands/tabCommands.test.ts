@@ -126,7 +126,10 @@ describe("tabCommands", () => {
     closeTab("tab-terminal-1");
     await Promise.resolve();
 
-    expect(rpcMocks.closeSession).toHaveBeenCalledWith({ sessionId: "terminal-session-1" });
+    expect(rpcMocks.closeSession).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      sessionId: "terminal-session-1",
+    });
     expect(closeTabState).toHaveBeenCalledWith("tab-terminal-1");
     expect(removeTabData).toHaveBeenCalledWith(["tab-terminal-1"]);
   });
@@ -219,8 +222,14 @@ describe("tabCommands", () => {
     closeOtherTabs("tab-terminal-keep");
     await Promise.resolve();
 
-    expect(rpcMocks.closeSession).toHaveBeenCalledWith({ sessionId: "terminal-session-2" });
-    expect(rpcMocks.closeSession).not.toHaveBeenCalledWith({ sessionId: "terminal-session-pinned" });
+    expect(rpcMocks.closeSession).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      sessionId: "terminal-session-2",
+    });
+    expect(rpcMocks.closeSession).not.toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      sessionId: "terminal-session-pinned",
+    });
     expect(closeOtherTabsState).toHaveBeenCalledWith("tab-terminal-keep");
     expect(removeTabData).toHaveBeenCalledWith(["tab-terminal-close"]);
   });
@@ -336,9 +345,18 @@ describe("tabCommands", () => {
     closeAllTabs("tab-terminal-1");
     await Promise.resolve();
 
-    expect(rpcMocks.closeSession).toHaveBeenCalledWith({ sessionId: "terminal-session-3" });
-    expect(rpcMocks.closeSession).toHaveBeenCalledWith({ sessionId: "terminal-session-4" });
-    expect(rpcMocks.closeSession).not.toHaveBeenCalledWith({ sessionId: "terminal-session-pinned" });
+    expect(rpcMocks.closeSession).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      sessionId: "terminal-session-3",
+    });
+    expect(rpcMocks.closeSession).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      sessionId: "terminal-session-4",
+    });
+    expect(rpcMocks.closeSession).not.toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      sessionId: "terminal-session-pinned",
+    });
     expect(closeAllTabsState).toHaveBeenCalledWith("tab-terminal-1");
     expect(removeTabData).toHaveBeenCalledWith(["tab-terminal-1", "tab-terminal-2"]);
   });

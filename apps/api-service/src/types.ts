@@ -1,4 +1,5 @@
 export type OAuthProvider = "google" | "github";
+export type MobileOAuthProvider = "google";
 
 export type OAuthProfile = {
   provider: OAuthProvider;
@@ -25,6 +26,7 @@ export type ServiceConfig = {
   cookieDomain?: string;
   googleClientId: string;
   googleClientSecret: string;
+  googleMobileClientIds: string[];
   githubClientId: string;
   githubClientSecret: string;
   resendApiKey: string;

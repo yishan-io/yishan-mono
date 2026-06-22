@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { projects, workspaces } from "@/db/schema";
 import type { ProjectSourceType } from "@/db/schema";
-import { ProjectNotFoundError } from "@/errors";
+import { ProjectInvalidGitUrlError, ProjectNotFoundError } from "@/errors";
 import { newId } from "@/lib/id";
 import { inferRepoSource } from "@/lib/repo";
 import type { OrganizationService } from "@/services/organization-service";
@@ -91,7 +91,11 @@ export class ProjectService {
     const localPath = input.localPath?.trim() ?? null;
 
     if (sourceType === "git") {
-      const inferred = inferRepoSource(repoUrl!);
+      if (!repoUrl) {
+        throw new ProjectInvalidGitUrlError("");
+      }
+
+      const inferred = inferRepoSource(repoUrl);
       repoProvider = inferred.repoProvider;
       repoKey = inferred.repoKey;
     }
@@ -138,7 +142,10 @@ export class ProjectService {
           })
           .returning();
 
-        createdWorkspaces.push({ ...insertedWorkspaces[0]!, latestPullRequest: null });
+        const createdWorkspace = insertedWorkspaces[0];
+        if (createdWorkspace) {
+          createdWorkspaces.push({ ...createdWorkspace, latestPullRequest: null });
+        }
       }
 
       return { ...project, workspaces: createdWorkspaces };
@@ -210,6 +217,27 @@ export class ProjectService {
       ...row,
       workspaces: workspacesByProjectId.get(row.id) ?? [],
     }));
+  }
+
+  async getProject(input: {
+    organizationId: string;
+    projectId: string;
+    actorUserId: string;
+  }): Promise<ProjectView> {
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
+
+    const rows = await this.db
+      .select()
+      .from(projects)
+      .where(and(eq(projects.id, input.projectId), eq(projects.organizationId, input.organizationId)))
+      .limit(1);
+
+    const project = rows[0];
+    if (!project) {
+      throw new ProjectNotFoundError(input.projectId);
+    }
+
+    return project;
   }
 
   async deleteProject(input: {

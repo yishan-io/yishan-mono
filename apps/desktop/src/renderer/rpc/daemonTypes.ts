@@ -1,3 +1,13 @@
+import type {
+  WorkspaceCurrentPullRequest,
+  WorkspaceCurrentPullRequestCheck,
+  WorkspaceCurrentPullRequestDeployment,
+  WorkspaceFileDiff,
+  WorkspaceFileEntry,
+  WorkspaceGitChange,
+  WorkspaceGitChanges,
+} from "@yishan/core";
+
 export type JsonRpcRequest = {
   jsonrpc: "2.0";
   id: string;
@@ -76,40 +86,11 @@ export type DaemonWorkspace = {
   pullRequest?: DaemonWorkspacePullRequest;
 };
 
-export type DaemonWorkspacePullRequest = {
-  number: number;
-  title?: string;
-  url?: string;
-  branch?: string;
-  baseBranch?: string;
-  githubState?: string;
-  status?: string;
-  reviewDecision?: string;
-  isDraft?: boolean;
-  complete?: boolean;
-  updatedAt?: string;
-  checks?: DaemonWorkspacePullRequestCheck[];
-  deployments?: DaemonWorkspacePullRequestDeployment[];
-};
+export type DaemonWorkspacePullRequest = WorkspaceCurrentPullRequest;
 
-export type DaemonWorkspacePullRequestCheck = {
-  name: string;
-  workflow?: string;
-  state: string;
-  description?: string;
-  url?: string;
-};
+export type DaemonWorkspacePullRequestCheck = WorkspaceCurrentPullRequestCheck;
 
-export type DaemonWorkspacePullRequestDeployment = {
-  id: number;
-  environment?: string;
-  state?: string;
-  description?: string;
-  environmentUrl?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  originalPayload?: string;
-};
+export type DaemonWorkspacePullRequestDeployment = WorkspaceCurrentPullRequestDeployment;
 
 export type WorkspaceCreateInput = {
   workspaceId?: string;
@@ -359,17 +340,20 @@ export type TerminalCreateSessionInput = {
 };
 
 export type TerminalWriteInput = {
+  workspaceId?: string;
   sessionId: string;
   data: string | Uint8Array;
 };
 
 export type TerminalResizeInput = {
+  workspaceId?: string;
   sessionId: string;
   cols: number;
   rows: number;
 };
 
 export type TerminalCloseInput = {
+  workspaceId?: string;
   sessionId: string;
 };
 
@@ -378,11 +362,13 @@ export type TerminalKillProcessInput = {
 };
 
 export type TerminalReadOutputInput = {
+  workspaceId?: string;
   sessionId: string;
   fromIndex: number;
 };
 
 export type TerminalListSessionsInput = {
+  workspaceId?: string;
   includeExited?: boolean;
 };
 
@@ -410,13 +396,8 @@ export type WorkspaceCloseExecutionResponse = {
   lifecycleScriptWarnings: unknown[];
 };
 
-export type DaemonFileEntry = {
-  path: string;
-  name: string;
-  isDir: boolean;
+export type DaemonFileEntry = WorkspaceFileEntry & {
   isIgnored: boolean;
-  size: number;
-  mode: number;
   modifiedAt: string;
 };
 
@@ -454,24 +435,13 @@ export type FileMutationOkResponse = {
   ok: true;
 };
 
-export type FileDiffResponse = {
-  oldContent: string;
-  newContent: string;
+export type FileDiffResponse = Pick<WorkspaceFileDiff, "oldContent" | "newContent"> & {
   shouldSkipDecorations?: boolean;
 };
 
-export type GitChange = {
-  path: string;
-  kind: string;
-  additions: number;
-  deletions: number;
-};
+export type GitChange = WorkspaceGitChange;
 
-export type GitChangesBySection = {
-  unstaged: GitChange[];
-  staged: GitChange[];
-  untracked: GitChange[];
-};
+export type GitChangesBySection = WorkspaceGitChanges;
 
 export type GitStatusOperationResponse = {
   tracked?: boolean;
@@ -543,6 +513,17 @@ export type TerminalReadOutputResponse = {
   nextIndex: number;
   chunks: string[];
   exited: boolean;
+};
+
+export type TerminalSubscribeSnapshot = {
+  output: string;
+  running: boolean;
+  exitCode?: number;
+};
+
+export type TerminalSubscribeResponse = {
+  subscribed: boolean;
+  snapshot?: TerminalSubscribeSnapshot;
 };
 
 export type TerminalStreamEvent =

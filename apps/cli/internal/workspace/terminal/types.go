@@ -6,7 +6,9 @@ type StartRequest struct {
 	OrgID       string   `json:"orgId,omitempty"`
 	Command     string   `json:"command"`
 	Args        []string `json:"args,omitempty"`
+	Cols        uint16   `json:"cols,omitempty"`
 	Env         []string `json:"env,omitempty"`
+	Rows        uint16   `json:"rows,omitempty"`
 	TabID       string   `json:"tabId,omitempty"`
 	PaneID      string   `json:"paneId,omitempty"`
 }
@@ -16,8 +18,9 @@ type StartResponse struct {
 }
 
 type SendRequest struct {
-	SessionID string `json:"sessionId"`
-	Input     string `json:"input"`
+	WorkspaceID string `json:"workspaceId,omitempty"`
+	SessionID   string `json:"sessionId"`
+	Input       string `json:"input"`
 }
 
 type SendResponse struct {
@@ -25,7 +28,8 @@ type SendResponse struct {
 }
 
 type ReadRequest struct {
-	SessionID string `json:"sessionId"`
+	WorkspaceID string `json:"workspaceId,omitempty"`
+	SessionID   string `json:"sessionId"`
 }
 
 type ReadResponse struct {
@@ -35,7 +39,8 @@ type ReadResponse struct {
 }
 
 type StopRequest struct {
-	SessionID string `json:"sessionId"`
+	WorkspaceID string `json:"workspaceId,omitempty"`
+	SessionID   string `json:"sessionId"`
 }
 
 type StopResponse struct {
@@ -51,12 +56,15 @@ type KillProcessResponse struct {
 }
 
 type ListSessionsRequest struct {
-	IncludeExited bool `json:"includeExited,omitempty"`
+	WorkspaceID   string `json:"workspaceId,omitempty"`
+	IncludeExited bool   `json:"includeExited,omitempty"`
 }
 
 type SessionSummary struct {
 	SessionID   string `json:"sessionId"`
 	WorkspaceID string `json:"workspaceId"`
+	TabID       string `json:"tabId,omitempty"`
+	PaneID      string `json:"paneId,omitempty"`
 	PID         int    `json:"pid"`
 	Status      string `json:"status"`
 	StartedAt   string `json:"startedAt,omitempty"`
@@ -81,9 +89,10 @@ type SetActiveWorkspaceResponse struct {
 }
 
 type ResizeRequest struct {
-	SessionID string `json:"sessionId"`
-	Cols      uint16 `json:"cols"`
-	Rows      uint16 `json:"rows"`
+	WorkspaceID string `json:"workspaceId,omitempty"`
+	SessionID   string `json:"sessionId"`
+	Cols        uint16 `json:"cols"`
+	Rows        uint16 `json:"rows"`
 }
 
 type ResizeResponse struct {
@@ -91,14 +100,17 @@ type ResizeResponse struct {
 }
 
 type SubscribeRequest struct {
-	SessionID string `json:"sessionId"`
+	WorkspaceID string `json:"workspaceId,omitempty"`
+	SessionID   string `json:"sessionId"`
 }
 
 type SubscribeResponse struct {
-	Subscribed bool `json:"subscribed"`
+	Subscribed bool             `json:"subscribed"`
+	Snapshot   *SubscribeResult `json:"snapshot,omitempty"`
 }
 
 type UnsubscribeRequest struct {
+	WorkspaceID    string `json:"workspaceId,omitempty"`
 	SessionID      string `json:"sessionId"`
 	SubscriptionID uint64 `json:"subscriptionId"`
 }
@@ -118,8 +130,15 @@ type Event struct {
 }
 
 type Subscription struct {
-	ID     uint64
-	Events <-chan Event
+	ID       uint64
+	Events   <-chan Event
+	Snapshot SubscribeResult
+}
+
+type SubscribeResult struct {
+	Output   string `json:"output"`
+	ExitCode *int   `json:"exitCode,omitempty"`
+	Running  bool   `json:"running"`
 }
 
 type SessionLifecycleEvent struct {

@@ -204,6 +204,30 @@ describe("TerminalRecoveryCoordinator", () => {
     tabStoreAccess.emit();
     expect(setItemSpy).toHaveBeenCalledTimes(1);
 
+    tabStoreAccess.setState({
+      selectedTabId: "file-tab-1",
+      selectedTabIdByWorkspaceId: {
+        "workspace-1": "file-tab-1",
+      },
+    });
+    tabStoreAccess.emit();
+    expect(setItemSpy).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(storage.getItem("yishan-terminal-recovery-v1") ?? "{}")).toEqual({
+      selectedTabId: "",
+      tabs: [
+        {
+          tabId: "terminal-tab-1",
+          workspaceId: "workspace-1",
+          title: "Terminal",
+          pinned: false,
+          sessionId: "session-2",
+        },
+      ],
+    });
+
+    tabStoreAccess.emit();
+    expect(setItemSpy).toHaveBeenCalledTimes(2);
+
     unsubscribe();
   });
 

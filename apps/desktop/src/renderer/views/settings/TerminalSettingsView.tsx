@@ -299,7 +299,10 @@ export function TerminalSettingsView() {
                                 return next;
                               });
 
-                              void closeTerminalSession({ sessionId: session.sessionId })
+                              void closeTerminalSession({
+                                workspaceId: session.workspaceId,
+                                sessionId: session.sessionId,
+                              })
                                 .then(() => {
                                   setSessions((previousSessions) =>
                                     previousSessions.filter((candidate) => candidate.sessionId !== session.sessionId),

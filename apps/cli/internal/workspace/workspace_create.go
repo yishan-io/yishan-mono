@@ -161,16 +161,9 @@ func resolveCreatePaths(req CreateRequest) (resolvedCreatePaths, error) {
 	if err != nil {
 		return resolvedCreatePaths{}, err
 	}
-	workspaceName, err := safeRelativePath(req.WorkspaceName, "workspaceName")
+	workspaceName, err := resolveWorkspaceNameForPath(req.WorkspaceName)
 	if err != nil {
 		return resolvedCreatePaths{}, err
-	}
-	// Sanitize workspaceName so that branch names like "feature/my-branch" do
-	// not produce nested directories. Only the filesystem path component is
-	// changed; TargetBranch is left untouched.
-	workspaceName = strings.ReplaceAll(workspaceName, "/", "-")
-	if workspaceName == "" {
-		return resolvedCreatePaths{}, NewRPCError(rpcCodeInvalidParams, "workspaceName is empty after sanitization")
 	}
 	worktreePath, err := DefaultWorktreePath(repoKey, workspaceName)
 	if err != nil {
@@ -339,4 +332,30 @@ func safeRelativePath(input string, field string) (string, error) {
 		return "", NewRPCError(rpcCodeInvalidParams, field+" must not escape .yishan")
 	}
 	return cleaned, nil
+}
+
+func resolveWorkspaceNameForPath(workspaceName string) (string, error) {
+	safeWorkspaceName, err := safeRelativePath(workspaceName, "workspaceName")
+	if err != nil {
+		return "", err
+	}
+	safeWorkspaceName = strings.ReplaceAll(safeWorkspaceName, "/", "-")
+	if safeWorkspaceName == "" {
+		return "", NewRPCError(rpcCodeInvalidParams, "workspaceName is empty after sanitization")
+	}
+	return safeWorkspaceName, nil
+}
+
+// ResolveCreateWorktreePath returns the deterministic worktree path that a
+// CreateRequest will use on the local node.
+func ResolveCreateWorktreePath(repoKey string, workspaceName string) (string, error) {
+	safeRepoKey, err := safeRelativePath(repoKey, "repoKey")
+	if err != nil {
+		return "", err
+	}
+	safeWorkspaceName, err := resolveWorkspaceNameForPath(workspaceName)
+	if err != nil {
+		return "", err
+	}
+	return DefaultWorktreePath(safeRepoKey, safeWorkspaceName)
 }

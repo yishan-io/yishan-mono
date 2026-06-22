@@ -31,7 +31,7 @@ export async function createTerminalSession(params: TerminalCreateSessionParams)
 }
 
 /** Writes one raw keystroke/input chunk to one terminal session. */
-export async function writeTerminalInput(params: { sessionId: string; data: string | Uint8Array }) {
+export async function writeTerminalInput(params: { workspaceId?: string; sessionId: string; data: string | Uint8Array }) {
   // Fast path: use cached client to avoid microtask overhead on every keystroke.
   if (cachedDaemonClient) {
     return cachedDaemonClient.terminal.writeInput(params);
@@ -42,19 +42,19 @@ export async function writeTerminalInput(params: { sessionId: string; data: stri
 }
 
 /** Resizes one terminal session viewport. */
-export async function resizeTerminal(params: { sessionId: string; cols: number; rows: number }) {
+export async function resizeTerminal(params: { workspaceId?: string; sessionId: string; cols: number; rows: number }) {
   const client = await getDaemonClient();
   return client.terminal.resize(params);
 }
 
 /** Reads buffered output from one terminal session at one index cursor. */
-export async function readTerminalOutput(params: { sessionId: string; fromIndex: number }) {
+export async function readTerminalOutput(params: { workspaceId?: string; sessionId: string; fromIndex: number }) {
   const client = await getDaemonClient();
   return client.terminal.readOutput(params);
 }
 
 /** Closes one active terminal session and releases runtime resources. */
-export async function closeTerminalSession(params: { sessionId: string }) {
+export async function closeTerminalSession(params: { workspaceId?: string; sessionId: string }) {
   const client = await getDaemonClient();
   return client.terminal.closeSession(params);
 }
@@ -91,13 +91,14 @@ export async function listTerminalSessions(params?: TerminalListSessionsInput): 
 
 /** Subscribes one listener to live terminal output and exit events over websocket. */
 export async function subscribeTerminalOutput(params: {
+  workspaceId?: string;
   sessionId: string;
   onData: (event: TerminalOutputEvent) => void;
   onError?: (error: unknown) => void;
 }) {
   const client = await getDaemonClient();
   return client.terminal.subscribeOutput.subscribe(
-    { sessionId: params.sessionId },
+    { sessionId: params.sessionId, workspaceId: params.workspaceId },
     {
       onData: (event) => params.onData(event as TerminalOutputEvent),
       onError: params.onError,

@@ -9,7 +9,9 @@ import { getErrorMessage } from "../../helpers/errorHelpers";
 import { generateId } from "../../helpers/generateId";
 import { useCommands } from "../../hooks/useCommands";
 import { chatStore } from "../../store/chatStore";
+import { workspaceStore } from "../../store/workspaceStore";
 import type { AvailableModel, ChatMessage } from "../../store/workspaceStore";
+import { resolveChatClipboardAttachmentPaths } from "./chatClipboardAttachments";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const filterModelOptions = createFilterOptions<AvailableModel>({
@@ -69,6 +71,9 @@ export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: 
   const messages = messagesByTabId[tabId] ?? EMPTY_MESSAGES;
   const availableModelsByTabId = chatStore((state) => state.availableModelsByTabId);
   const currentModelByTabId = chatStore((state) => state.currentModelByTabId);
+  const workspaceWorktreePath = workspaceStore(
+    (state) => state.workspaces.find((workspace) => workspace.id === workspaceId)?.worktreePath?.trim() ?? "",
+  );
   const [isSending, setIsSending] = useState(false);
   const [resolvedSessionId, setResolvedSessionId] = useState(sessionId);
   const activeAssistantMessageIdRef = useRef<string | null>(null);
@@ -227,6 +232,23 @@ export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: 
     }
   };
 
+  const handleComposerPaste = async (clipboardData: DataTransfer) => {
+    if (!workspaceWorktreePath) {
+      return undefined;
+    }
+
+    try {
+      const attachmentPaths = await resolveChatClipboardAttachmentPaths({
+        clipboardData,
+        workspaceWorktreePath,
+      });
+      return attachmentPaths.length > 0 ? attachmentPaths.join("\n") : undefined;
+    } catch (error) {
+      console.error("Failed to persist pasted chat attachments", error);
+      return undefined;
+    }
+  };
+
   /** Switches the active ACP model by sending the built-in `/model` command. */
   const handleModelChange = async (option: AvailableModel | null) => {
     if (!option || !workspaceId || !resolvedSessionId) {
@@ -283,7 +305,12 @@ export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: 
             flexDirection: "column",
           }}
         >
-          <RichComposer placeholder={t("chat.composerPlaceholder")} disabled={!canSend} onSubmit={handleSubmit} />
+          <RichComposer
+            placeholder={t("chat.composerPlaceholder")}
+            disabled={!canSend}
+            onPasteData={handleComposerPaste}
+            onSubmit={handleSubmit}
+          />
           <Box
             sx={{
               mt: "auto",

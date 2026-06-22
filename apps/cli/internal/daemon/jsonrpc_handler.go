@@ -243,7 +243,10 @@ func (h *JSONRPCHandler) handleBinaryFrame(connState *wsConnState, payload []byt
 		if nullIdx < 0 {
 			return
 		}
-		sessionID := connState.terminalInputSessionID(rest[:nullIdx])
+		sessionID, ok := connState.terminalInputSessionID(rest[:nullIdx])
+		if !ok {
+			return
+		}
 		inputData := rest[nullIdx+1:]
 		if len(inputData) == 0 {
 			return

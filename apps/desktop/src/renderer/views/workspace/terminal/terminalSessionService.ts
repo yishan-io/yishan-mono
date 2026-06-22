@@ -95,7 +95,7 @@ export function initTerminalSessionLifecycle(tabId: string): void {
 
   // Set up keyboard shortcuts, input forwarding, and title tracking.
   setupKeyboardShortcuts(entry);
-  setupInputForwarding(entry);
+  setupInputForwarding(entry, tabId);
   setupTitleTracking(entry, tabId);
 
   // Kick off session resolution asynchronously.
@@ -126,11 +126,13 @@ export function getTerminalSessionId(tabId: string): string | null {
  */
 export function sendTerminalResize(tabId: string): void {
   const entry = getTerminalRuntime(tabId);
-  if (!entry?.sessionId) {
+  const tab = findTerminalTab(tabId);
+  if (!entry?.sessionId || !tab?.workspaceId) {
     return;
   }
 
   void resizeTerminal({
+    workspaceId: tab.workspaceId,
     sessionId: entry.sessionId,
     cols: entry.terminal.cols,
     rows: entry.terminal.rows,
@@ -236,14 +238,15 @@ function setupKeyboardShortcuts(entry: TerminalRuntimeEntry): void {
   });
 }
 
-function setupInputForwarding(entry: TerminalRuntimeEntry): void {
+function setupInputForwarding(entry: TerminalRuntimeEntry, tabId: string): void {
   entry.terminal.onData((data) => {
     const sessionId = entry.sessionId;
-    if (!sessionId) {
+    const workspaceId = findTerminalTab(tabId)?.workspaceId;
+    if (!sessionId || !workspaceId) {
       return;
     }
 
-    void writeTerminalInput({ sessionId, data }).catch((error) => {
+    void writeTerminalInput({ workspaceId, sessionId, data }).catch((error) => {
       reportTerminalAsyncError("write terminal input", error);
     });
   });
@@ -298,6 +301,7 @@ async function resolveAndSubscribeSession(entry: TerminalRuntimeEntry, tabId: st
 
   // Subscribe to live output — this subscription survives detach/attach.
   const subscription = await subscribeTerminalOutput({
+    workspaceId: terminalTab?.workspaceId,
     sessionId: restored.sessionId,
     onData: (payload) => {
       // Guard against stale callbacks if runtime was disposed.

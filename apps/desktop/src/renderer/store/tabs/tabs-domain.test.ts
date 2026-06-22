@@ -370,6 +370,16 @@ describe("tabs-domain close", () => {
     expect(patch?.selectedTabIdByWorkspaceId?.["workspace-1"]).toBe("session-1");
   });
 
+  it("keeps workspace-local selection when closing a tab in another workspace", () => {
+    const state = createBaseState();
+
+    const patch = closeTabState(state, "terminal-1");
+
+    expect(patch?.selectedTabId).toBe("file-1");
+    expect(patch?.selectedTabIdByWorkspaceId?.["workspace-1"]).toBe("file-1");
+    expect(patch?.selectedTabIdByWorkspaceId?.["workspace-2"]).toBe("");
+  });
+
   it("keeps target and pinned tabs while removing siblings in closeOtherTabsState", () => {
     const state = createBaseState();
     const expanded: WorkspaceTabStateSlice = {
@@ -423,6 +433,39 @@ describe("tabs-domain close", () => {
     expect(patch?.tabs?.some((tab) => tab.id === "file-1")).toBe(false);
     expect(patch?.tabs?.some((tab) => tab.id === "pinned-1")).toBe(true);
     expect(patch?.selectedTabIdByWorkspaceId?.["workspace-1"]).toBe("pinned-1");
+  });
+
+  it("does not overwrite another workspace selection in closeAllTabsState", () => {
+    const state: WorkspaceTabStateSlice = {
+      ...createBaseState(),
+      tabs: [
+        ...createBaseState().tabs,
+        {
+          id: "file-2",
+          workspaceId: "workspace-2",
+          title: "logs.txt",
+          pinned: false,
+          kind: "file",
+          data: {
+            path: "logs.txt",
+            content: "hello",
+            savedContent: "hello",
+            isDirty: false,
+            isTemporary: false,
+          },
+        },
+      ],
+      selectedTabIdByWorkspaceId: {
+        "workspace-1": "file-1",
+        "workspace-2": "terminal-1",
+      },
+    };
+
+    const patch = closeAllTabsState(state, "terminal-1");
+
+    expect(patch?.selectedTabId).toBe("file-1");
+    expect(patch?.selectedTabIdByWorkspaceId?.["workspace-1"]).toBe("file-1");
+    expect(patch?.selectedTabIdByWorkspaceId?.["workspace-2"]).toBe("");
   });
 });
 

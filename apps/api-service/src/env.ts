@@ -23,6 +23,17 @@ const RUNTIME_ENV: Record<string, string | undefined> =
  */
 const serviceConfigCache = new WeakMap<object, ServiceConfig>();
 
+function parseCsvEnvValue(value: string | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+}
+
 function readEnv(c: Context, key: string): string | undefined {
   const bindings = c.env as Record<string, string | undefined> | undefined;
   return bindings?.[key] ?? RUNTIME_ENV[key];
@@ -96,6 +107,7 @@ function buildServiceConfig(c: Context): ServiceConfig {
     cookieDomain,
     googleClientId: requireEnv(c, "GOOGLE_CLIENT_ID"),
     googleClientSecret: requireEnv(c, "GOOGLE_CLIENT_SECRET"),
+    googleMobileClientIds: parseCsvEnvValue(readEnv(c, "GOOGLE_MOBILE_CLIENT_IDS")),
     githubClientId: requireEnv(c, "GITHUB_CLIENT_ID"),
     githubClientSecret: requireEnv(c, "GITHUB_CLIENT_SECRET"),
     resendApiKey: requireEnv(c, "RESEND_API_KEY"),

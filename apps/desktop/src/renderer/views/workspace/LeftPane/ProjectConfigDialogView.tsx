@@ -19,7 +19,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuCircleHelp, LuExternalLink, LuFolderOpen, LuPlus, LuTrash2 } from "react-icons/lu";
 import { PROJECT_ICON_OPTIONS, renderProjectIcon } from "../../../components/projectIcons";
@@ -39,7 +39,22 @@ const ICON_BG_COLOR_PRESETS = ["#1E66F5", "#0F766E", "#CA8A04", "#DC2626", "#7C3
 
 export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfigDialogViewProps) {
   const { t } = useTranslation();
-  const projects = workspaceStore((state) => state.projects);
+  const rawProjects = workspaceStore((state) => state.projects);
+  const projects = useMemo(
+    () =>
+      rawProjects.map((project) => ({
+        ...project,
+        localPath: project.localPath ?? undefined,
+        repoUrl: project.repoUrl ?? undefined,
+        repoKey: project.repoKey ?? undefined,
+        worktreePath: project.worktreePath ?? undefined,
+        icon: project.icon ?? undefined,
+        color: project.color ?? undefined,
+        setupScript: project.setupScript ?? undefined,
+        postScript: project.postScript ?? undefined,
+      })),
+    [rawProjects],
+  );
   const { getDefaultWorktreeLocation } = useCommands();
   const {
     repo,

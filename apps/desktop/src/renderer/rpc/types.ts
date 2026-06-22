@@ -90,7 +90,7 @@ export type DaemonRpcClient = {
     getResourceUsage: (input?: unknown) => Promise<Rpc.TerminalResourceUsageSnapshot>;
     listSessions: (input?: Rpc.TerminalListSessionsInput) => Promise<Rpc.TerminalSessionSummary[]>;
     subscribeOutput: {
-      subscribe: (input: { sessionId: string }, handlers: ApiSubscriptionHandlers) => DaemonRpcSubscription;
+      subscribe: (input: { sessionId: string; workspaceId?: string }, handlers: ApiSubscriptionHandlers) => DaemonRpcSubscription;
     };
     subscribeSessions: {
       subscribe: (input: undefined, handlers: ApiSubscriptionHandlers) => DaemonRpcSubscription;

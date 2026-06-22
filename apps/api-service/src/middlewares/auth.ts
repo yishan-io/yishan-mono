@@ -7,7 +7,7 @@ import type { AppContext } from "@/hono";
 
 const SERVICE_TOKEN_PREFIX = "yst_";
 
-function readBearerToken(c: AppContext): string | null {
+export function readBearerToken(c: AppContext): string | null {
   const authorization = c.req.header("Authorization");
   if (!authorization) {
     return null;
@@ -19,6 +19,16 @@ function readBearerToken(c: AppContext): string | null {
   }
 
   return token;
+}
+
+export function readAccessToken(c: AppContext): string | null {
+  const bearerToken = readBearerToken(c);
+  if (bearerToken) {
+    return bearerToken;
+  }
+
+  const queryToken = c.req.query("accessToken");
+  return queryToken && queryToken.trim().length > 0 ? queryToken : null;
 }
 
 export async function requireAuthUser(c: AppContext, next: Next) {
@@ -34,7 +44,7 @@ export async function requireAuthUser(c: AppContext, next: Next) {
     }
   }
 
-  const bearerToken = readBearerToken(c);
+  const bearerToken = readAccessToken(c);
   if (bearerToken) {
     // Check service tokens first (opaque, prefixed with yst_)
     if (bearerToken.startsWith(SERVICE_TOKEN_PREFIX)) {
