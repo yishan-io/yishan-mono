@@ -65,6 +65,29 @@ Before locking the plan, check these in order and stop at the first one that fit
 
 Do not plan abstractions with one implementation, config nobody sets, or scaffolding "for later". If two plans are both correct, choose the smaller one.
 
+## Grilling Mode
+
+When research leaves approach decisions unresolved, switch into grilling mode
+before writing `plan.md`.
+
+**Activate when any of these is true:**
+
+- Multiple approaches are viable and the choice significantly impacts scope,
+  architecture, or future work.
+- A planned step requires a design decision that was not resolved during
+  research.
+
+**Rules:**
+
+1. Ask one question at a time — never multiple at once.
+2. Provide your own recommended answer with every question.
+3. If a question can be answered by exploring the codebase, explore first and
+   skip asking.
+4. Wait for the user's response before asking the next question.
+
+**Exit:** Grilling ends when the approach is chosen. Record the decision in
+`notes.md` before writing `plan.md`.
+
 ## Workflow
 
 ### Planning a task

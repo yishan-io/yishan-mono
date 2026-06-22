@@ -47,6 +47,30 @@ Search in this priority order:
 
 3. **Codebase** — Use search tools to find relevant code, patterns, and existing implementations.
 
+## Grilling Mode
+
+When research surfaces ambiguity that codebase exploration cannot resolve,
+switch into grilling mode to resolve it before writing `notes.md`.
+
+**Activate when any of these is true:**
+
+- The requirement is underspecified and the codebase gives no clear answer.
+- Two or more equally valid interpretations exist with different implementation
+  consequences.
+- A non-obvious risk or constraint is discovered that the user may not have
+  considered.
+
+**Rules:**
+
+1. Ask one question at a time — never multiple at once.
+2. Provide your own recommended answer with every question.
+3. If a question can be answered by exploring the codebase, explore first and
+   skip asking.
+4. Wait for the user's response before asking the next question.
+
+**Exit:** Grilling ends when all blocking ambiguities are resolved. Record each
+resolved decision in `notes.md` before continuing research.
+
 ## notes.md format
 
 Append-only. Add findings under a date heading. Never rewrite previous entries.

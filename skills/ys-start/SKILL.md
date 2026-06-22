@@ -19,7 +19,7 @@ automatically by yishan.
 ## When to use me
 
 - The user asks to create a new task or track a piece of work
-- A ticket (GitHub, Linear, Jira) needs a local task folder
+- A ticket (GitHub, GitLab, Linear, Jira) needs a local task folder
 - Before starting any of the other task workflow skills
 
 ## Session environment
@@ -45,6 +45,63 @@ Every terminal session started by yishan has these variables in its environment:
 - If the task has a ticket ID (e.g. from Linear, Jira, GitHub): use it as-is — `PROJ-123`
 - If there is no ticket: generate a short random ID — 3 lowercase letters + 2 digits, e.g. `xkf42`
 - Folder name is always `<id>-<slug>` where slug is the title lowercased, spaces replaced with hyphens, truncated to 40 chars — e.g. `PROJ-123-fix-auth-token-expiry`
+
+## Ticket Auto-Fetch
+
+When the user provides a ticket URL or ID, attempt to fetch the ticket content
+automatically to pre-populate `task.md`. This avoids asking the user to retype
+information that already exists in the tracker.
+
+### Detection
+
+| Source | URL pattern | Bare ID pattern |
+|---|---|---|
+| Linear | contains `linear.app` and `/issue/` | `^[A-Z]+-\d+$` |
+| GitHub | contains `github.com` and `/issues/` | plain number (needs repo context) |
+| GitLab | contains `gitlab.` and `/-/issues/` | plain number (needs repo context) |
+| Jira | contains `atlassian.net/browse/` | `^[A-Z]+-\d+$` |
+
+Linear and Jira share the same bare-ID format (`^[A-Z]+-\d+$`). A URL is always
+unambiguous. For bare IDs, attempt the Linear CLI first; if it fails with a
+not-found error, try Jira.
+
+### Fetch — priority order per source
+
+Try each option in order and stop at the first success. Fall back to asking the
+user if all options fail or no tool is available.
+
+**Linear**
+1. MCP: call `mcp__linear__get_issue` with the issue ID.
+2. CLI: `linear issue view <id> --json`
+
+**GitHub**
+1. MCP: call `mcp__github__get_issue` with owner, repo, and number.
+2. CLI: `gh issue view <url>` (URL is self-contained) or
+   `gh issue view <number> --repo owner/repo --json title,body,labels`
+
+**GitLab**
+1. CLI: `glab issue view <id> --output json` (run from the repo directory).
+2. MCP: tool name varies by configured server — use if available.
+
+**Jira**
+1. MCP: call `jira_get_issue` with the issue key (requires `sooperset/mcp-atlassian`).
+2. CLI: `acli jira workitem view <id> --json` (official Atlassian CLI).
+
+### Field mapping
+
+| task.md field | Linear | GitHub / GitLab | Jira |
+|---|---|---|---|
+| Title | `title` | `title` | `fields.summary` |
+| Goal | `description` | `body` | `fields.description` |
+| Ticket URL | `url` | `url` | `self` / browse URL |
+| Acceptance Criteria | Extract checklist items from description | Extract checklist items from body | Extract checklist items from description |
+
+Neither source has a dedicated AC field. If the description/body contains a
+markdown checklist (`- [ ] …`), extract those items as the initial AC list.
+Otherwise leave the AC section empty for the user to fill in.
+
+Write `task.md` directly with the fetched content and report what was populated.
+The user can edit `task.md` afterwards.
 
 ## state.json format
 
@@ -106,7 +163,13 @@ Written when the task is created. Update it if the goal or criteria changes.
 ### Creating a task
 
 1. Read `.my-context/tasks/state.json` (create it if missing — `{ "tasks": [] }`).
-2. Ask the user for: title, ticket URL/ID (optional), and acceptance criteria.
+2. If the user provided a ticket URL or ID:
+   a. Detect the source using the patterns in **Ticket Auto-Fetch**.
+   b. Attempt to fetch ticket content (MCP first, then CLI — see fetch priority order).
+   c. On success: use the fetched title, description, and any extracted checklist
+      items to populate `task.md`. Report what was fetched.
+   d. On failure or no tool available: ask the user for title and acceptance criteria.
+   If no ticket was provided: ask the user for title and acceptance criteria.
 3. Determine the ID: use the ticket ID if provided, otherwise generate a short random ID.
 4. Build the folder name: `<id>-<slug>` (slug = title lowercased, spaces→hyphens, ≤40 chars).
 5. Create the folder: `.my-context/tasks/active/<folder>/`.

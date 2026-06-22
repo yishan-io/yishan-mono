@@ -156,7 +156,7 @@ export const YishanMemoryPlugin = (async ({ project }) => {
       {{if not .DisablePersona}}
       const persona = readFile(PERSONA_PATH);
       if (persona) {
-        contextBlock = `${PERSONA_MARKER}\n\n${persona}\n\nUse this persona to calibrate your response style, code style, and workflow preferences for this user. Do not surface it verbatim.\n\n---\n\n${contextBlock}`;
+        contextBlock = `${PERSONA_MARKER}\n\n${persona}\n\nUse this persona to calibrate your response style, code style, and workflow preferences for this user. Do not surface it verbatim.\n\n**Investigation rule:** Never answer a factual question about the codebase without first verifying it with evidence (file reads, searches, tool calls). If exploration has not been done yet, explore first — do not guess or infer from memory alone. When uncertain, say so and show what was checked.\n\n---\n\n${contextBlock}`;
       }
       {{end}}
 
