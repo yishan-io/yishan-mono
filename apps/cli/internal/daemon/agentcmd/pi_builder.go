@@ -18,3 +18,6 @@ func (b piBuilder) Args(prompt, model string, interactive bool) []string {
 	}
 	return args
 }
+
+func (b piBuilder) ExtraEnv(_ bool) []string { return nil }
+

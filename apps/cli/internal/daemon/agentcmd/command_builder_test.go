@@ -58,6 +58,81 @@ func TestBuildRunCommand_EmptyAgentKind_DefaultsToOpenCode(t *testing.T) {
 	}
 }
 
+// ── Session isolation: ExtraEnv and persistence flags ────────────────────────
+
+func TestBuildRunCommand_OpenCode_NonInteractive_HasOPENCODE_DB(t *testing.T) {
+	cmd, err := agentcmd.BuildRunCommand("opencode", "summarize", "", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	found := false
+	for _, e := range cmd.ExtraEnv {
+		if strings.HasPrefix(e, "OPENCODE_DB=") {
+			found = true
+			// Verify the path was actually created.
+			path := strings.TrimPrefix(e, "OPENCODE_DB=")
+			if _, statErr := os.Stat(path); statErr != nil {
+				t.Errorf("OPENCODE_DB temp file does not exist: %v", statErr)
+			}
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected OPENCODE_DB in ExtraEnv, got %v", cmd.ExtraEnv)
+	}
+}
+
+func TestBuildRunCommand_OpenCode_Interactive_NoExtraEnv(t *testing.T) {
+	cmd, err := agentcmd.BuildRunCommand("opencode", "hello", "", true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cmd.ExtraEnv) != 0 {
+		t.Errorf("expected no ExtraEnv for interactive run, got %v", cmd.ExtraEnv)
+	}
+}
+
+func TestBuildRunCommand_Claude_NonInteractive_HasNoSessionFlag(t *testing.T) {
+	cmd, err := agentcmd.BuildRunCommand("claude", "hello", "", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	found := false
+	for _, a := range cmd.Args {
+		if a == "--no-session-persistence" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected --no-session-persistence in args, got %v", cmd.Args)
+	}
+	// No extra env needed for claude.
+	if len(cmd.ExtraEnv) != 0 {
+		t.Errorf("expected no ExtraEnv for claude, got %v", cmd.ExtraEnv)
+	}
+}
+
+func TestBuildRunCommand_Codex_NonInteractive_HasEphemeralFlag(t *testing.T) {
+	cmd, err := agentcmd.BuildRunCommand("codex", "hello", "", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	found := false
+	for _, a := range cmd.Args {
+		if a == "--ephemeral" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected --ephemeral in args, got %v", cmd.Args)
+	}
+	if len(cmd.ExtraEnv) != 0 {
+		t.Errorf("expected no ExtraEnv for codex, got %v", cmd.ExtraEnv)
+	}
+}
+
 // ── ResolveCommandWithEnv ─────────────────────────────────────────────────────
 
 func TestResolveCommandWithEnv_BinaryNotFound_ReturnsError(t *testing.T) {
@@ -155,3 +230,4 @@ func TestResolveCommandWithEnv_ArgsPreserved(t *testing.T) {
 		t.Errorf("expected prompt in args, got %v", cmd.Args)
 	}
 }
+

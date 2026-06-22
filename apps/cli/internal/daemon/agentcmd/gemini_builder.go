@@ -18,3 +18,6 @@ func (b geminiBuilder) Args(prompt, model string, interactive bool) []string {
 	}
 	return args
 }
+
+func (b geminiBuilder) ExtraEnv(_ bool) []string { return nil }
+

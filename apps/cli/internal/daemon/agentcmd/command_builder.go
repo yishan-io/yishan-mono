@@ -16,11 +16,13 @@ import (
 // as a configuration issue (agent not installed) and skip gracefully.
 var ErrBinaryNotFound = errors.New("agent binary not found in PATH")
 
-// Command holds a bare agent CLI invocation: the binary name and its arguments.
+// Command holds a bare agent CLI invocation: the binary name, its arguments,
+// and any extra environment variables the agent needs for isolated execution.
 // Binary is the unresolved name (e.g. "opencode"). Use ResolveCommand for execution.
 type Command struct {
-	Binary string
-	Args   []string
+	Binary   string
+	Args     []string
+	ExtraEnv []string
 }
 
 // ResolvedCommand extends Command with a fully resolved binary path and the
@@ -39,6 +41,11 @@ type ResolvedCommand struct {
 type runCommandBuilder interface {
 	Binary() string
 	Args(prompt, model string, interactive bool) []string
+	// ExtraEnv returns additional environment variables to set for the agent
+	// subprocess. When interactive is false (background/summarization runs),
+	// implementations should return env vars that suppress session persistence.
+	// Return nil when no extra env is needed.
+	ExtraEnv(interactive bool) []string
 }
 
 var commandBuilders = map[string]runCommandBuilder{
@@ -67,7 +74,7 @@ func BuildRunCommand(agentKind, prompt, model string, interactive bool) (Command
 		return Command{}, fmt.Errorf("unsupported agent kind: %s", agentKind)
 	}
 
-	return Command{Binary: binary, Args: builder.Args(prompt, model, interactive)}, nil
+	return Command{Binary: binary, Args: builder.Args(prompt, model, interactive), ExtraEnv: builder.ExtraEnv(interactive)}, nil
 }
 
 // ResolveCommand builds a Command and resolves the binary to an absolute path
