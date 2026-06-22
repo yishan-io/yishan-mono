@@ -11,7 +11,9 @@ import {
   WorkspaceNodeNotFoundError,
   WorkspaceNotFoundError,
 } from "@/errors";
-import { RelayRpcError, invokeRelayJsonRpc } from "@/lib/relay-client";
+import { getErrorMessage } from "@/lib/errors";
+import { invokeRelayJsonRpc } from "@/lib/relay-client";
+import { RelayRpcError } from "@/lib/relay-websocket";
 import type { OrganizationService } from "@/services/organization-service";
 import type { ServiceConfig } from "@/types";
 
@@ -169,7 +171,7 @@ export async function invokeWorkspaceRelay<T>({
     }
 
     throw new RelayRequestFailedError(method, {
-      cause: error instanceof Error ? error.message : String(error),
+      cause: getErrorMessage(error),
       nodeId: workspace.nodeId,
       workspaceId: workspace.id,
     });

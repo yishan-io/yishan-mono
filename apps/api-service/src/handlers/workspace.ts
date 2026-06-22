@@ -16,8 +16,6 @@ import type {
   WorkspacePullRequestParamsInput,
   WorkspaceTerminalListQueryInput,
   WorkspaceTerminalParamsInput,
-  WorkspaceTerminalResizeBodyInput,
-  WorkspaceTerminalSendBodyInput,
   WorkspaceTerminalSessionParamsInput,
   WorkspaceTerminalStartBodyInput,
 } from "@/validation/project";
@@ -217,24 +215,6 @@ export async function startWorkspaceTerminalHandler(
   return c.json({ session }, StatusCodes.CREATED);
 }
 
-export async function sendWorkspaceTerminalInputHandler(
-  c: AppContext,
-  params: WorkspaceTerminalSessionParamsInput,
-  body: WorkspaceTerminalSendBodyInput,
-) {
-  const actorUser = c.get("sessionUser");
-  await c.get("services").workspace.sendWorkspaceTerminalInput({
-    actorUserId: actorUser.id,
-    data: body.input,
-    organizationId: params.orgId,
-    projectId: params.projectId,
-    sessionId: params.sessionId,
-    workspaceId: params.workspaceId,
-  });
-
-  return c.json({ ok: true });
-}
-
 export async function readWorkspaceTerminalOutputHandler(c: AppContext, params: WorkspaceTerminalSessionParamsInput) {
   const actorUser = c.get("sessionUser");
   const output = await c.get("services").workspace.readWorkspaceTerminalOutput({
@@ -246,25 +226,6 @@ export async function readWorkspaceTerminalOutputHandler(c: AppContext, params: 
   });
 
   return c.json({ output });
-}
-
-export async function resizeWorkspaceTerminalHandler(
-  c: AppContext,
-  params: WorkspaceTerminalSessionParamsInput,
-  body: WorkspaceTerminalResizeBodyInput,
-) {
-  const actorUser = c.get("sessionUser");
-  await c.get("services").workspace.resizeWorkspaceTerminal({
-    actorUserId: actorUser.id,
-    cols: body.cols,
-    organizationId: params.orgId,
-    projectId: params.projectId,
-    rows: body.rows,
-    sessionId: params.sessionId,
-    workspaceId: params.workspaceId,
-  });
-
-  return c.json({ ok: true });
 }
 
 export async function stopWorkspaceTerminalHandler(c: AppContext, params: WorkspaceTerminalSessionParamsInput) {

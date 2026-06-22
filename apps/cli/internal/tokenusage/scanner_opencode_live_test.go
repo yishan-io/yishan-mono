@@ -68,6 +68,10 @@ func TestLiveDBScanSkillManager(t *testing.T) {
 	t.Logf("%-30s  %12d", "TOTAL", grandTotal)
 	t.Logf("Rows returned: %d", len(skillRows))
 
+	if len(skillRows) == 0 {
+		t.Skip("live skill-manager workspace rows not present in local opencode data")
+	}
+
 	// Ground truth from direct SQL (computed during investigation):
 	//   SELECT SUM(input+cache_read+cache_write+output+reasoning)
 	//   FROM message JOIN session WHERE directory LIKE '%skill-manager%' AND role='assistant'

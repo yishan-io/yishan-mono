@@ -24,6 +24,8 @@ const defaultAgentDetectionCacheTTL = time.Hour
 const loginShellPathTimeout = 3 * time.Second
 
 var versionPattern = regexp.MustCompile(`\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?`)
+var resolveDetectionPathValueFunc = resolveDetectionPathValue
+var resolveDetectionCommandEnvFunc = resolveDetectionCommandEnv
 
 // SupportedAgentCLIKinds contains all supported agent CLIs that can be detected on one node.
 // "cursor-agent" is kept as a distinct detection kind because the cursor binary reports itself
@@ -157,9 +159,9 @@ func ListAgentCLIDetectionStatusesWithRefresh(forceRefresh bool) []AgentCLIDetec
 	}
 
 	options := agentDetectionOptions{
-		PathValue:      resolveDetectionPathValue(),
+		PathValue:      resolveDetectionPathValueFunc(),
 		PathExtValue:   os.Getenv("PATHEXT"),
-		CommandEnv:     resolveDetectionCommandEnv(),
+		CommandEnv:     resolveDetectionCommandEnvFunc(),
 		IsWindows:      runtime.GOOS == "windows",
 		ExcludedDirs:   resolveExcludedDirectories(),
 		VersionTimeout: 2 * time.Second,

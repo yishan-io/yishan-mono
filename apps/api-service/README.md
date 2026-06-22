@@ -13,7 +13,7 @@ API service built with Hono + Bun, deployed to both Cloudflare Workers and a rem
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` (Bun) and `.dev.vars.example` to `.dev.vars` (Wrangler local dev):
+Copy `.dev.vars.example` to `.dev.vars` for Wrangler local dev. Reuse the same values for Bun local dev in your shell environment or local env loader:
 
 - `DATABASE_URL` (Bun runtime and Drizzle CLI; defaults to local Postgres in examples. Workers prefer the `HYPERDRIVE` binding when present)
 - `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` (optional override for Wrangler local Hyperdrive emulation)

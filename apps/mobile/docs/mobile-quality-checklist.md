@@ -121,7 +121,7 @@ Role of this file:
 - shell pane state 现在已有 4 个直接回归测试，覆盖 explicit terminal route、explicit preview route、preview temporary reuse disabled、terminal tab sanitize。
 - shell pane tab helper 里的未使用 `workspaceTabFromPaneTab` 已删除，避免保留伪公共 API。
 - `useTerminalRuntimeSessionCommands.ts` 已收回为 runtime session orchestration；start/restore/close 拆到 `useTerminalStartSessionCommand.ts`、`useTerminalRestoreSessionCommand.ts`、`useTerminalCloseSessionCommand.ts`，启动 payload / optimistic session summary / runtime snapshot reset 下沉到 `terminal-runtime-session-helpers.ts`。
-- `useTerminalStartSessionCommand.ts` 已继续把 agent launch input 发送剥离到 `useTerminalLaunchAgentCommand.ts`，`buildTerminalLaunchInput` 也已提到 helper 并补测试；session start 与 agent launch 现在是两条明确命令路径。
+- `buildTerminalLaunchInput` 继续留在 `terminal-runtime-session-helpers.ts`；agent launch 发送在 attach/create flow 内直接走 live transport，避免再包一层只有单处调用的 hook。
 - `useShellRecoveryCommands.ts` 已瘦身成恢复流编排入口；selection repair、home fallback、missing terminal recovery、drawer auto-dismiss 已拆到独立 hooks，纯判断下沉到 `shell-recovery-helpers.ts`。
 - `useShellStateMaintenance.ts` 已把 workspace/project drop 的纯状态裁剪和 recent terminal derive 下沉到 `shell-state-maintenance-domain.ts`，state maintenance 主体只保留存储/导航编排。
 - `useShellStateMaintenance.ts` 现在又把 workspace/project drop 后共用的 shell/browser 持久化清理收进 `shell-state-maintenance-persistence.ts`，纯 snapshot/state-id 规则下沉到 `shell-state-maintenance-persistence-domain.ts`；`useShellState.ts` 里遗留的 storage/browser import 也已清掉。

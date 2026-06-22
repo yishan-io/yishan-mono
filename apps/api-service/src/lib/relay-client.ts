@@ -1,50 +1,11 @@
-type RelayRpcErrorShape = {
-  code: number;
-  data?: unknown;
-  message: string;
-};
-
-type RelayJsonRpcResponse = {
-  error?: RelayRpcErrorShape;
-  id?: string | number | null;
-  jsonrpc?: string;
-  result?: unknown;
-};
-
-export class RelayRpcError extends Error {
-  constructor(
-    readonly code: number,
-    message: string,
-    readonly data?: unknown,
-  ) {
-    super(message);
-    this.name = "RelayRpcError";
-  }
-}
-
-function buildRequestId(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function parseMessage(data: unknown): RelayJsonRpcResponse {
-  if (typeof data === "string") {
-    return JSON.parse(data) as RelayJsonRpcResponse;
-  }
-
-  if (data instanceof ArrayBuffer) {
-    return JSON.parse(new TextDecoder().decode(data)) as RelayJsonRpcResponse;
-  }
-
-  if (ArrayBuffer.isView(data)) {
-    return JSON.parse(new TextDecoder().decode(data)) as RelayJsonRpcResponse;
-  }
-
-  throw new Error("Unsupported relay websocket payload");
-}
+import {
+  type RelayJsonRpcMessage,
+  RelayRpcError,
+  buildRelayJsonRpcRequestMessage,
+  buildRelayRequestId,
+  buildRelayWebSocketUrl,
+  parseRelayJsonMessage,
+} from "@/lib/relay-websocket";
 
 export async function invokeRelayJsonRpc<T>({
   apiToken,
@@ -61,10 +22,12 @@ export async function invokeRelayJsonRpc<T>({
   relayUrl: string;
   timeoutMs?: number;
 }): Promise<T> {
-  const requestId = buildRequestId();
-  const url = new URL("/client/ws", relayUrl);
-  url.searchParams.set("nodeId", nodeId);
-  url.searchParams.set("token", apiToken);
+  const requestId = buildRelayRequestId();
+  const url = buildRelayWebSocketUrl({
+    apiToken,
+    nodeId,
+    relayUrl,
+  });
 
   return new Promise<T>((resolve, reject) => {
     const socket = new WebSocket(url.toString());
@@ -86,21 +49,14 @@ export async function invokeRelayJsonRpc<T>({
     }, timeoutMs);
 
     socket.addEventListener("open", () => {
-      socket.send(
-        JSON.stringify({
-          id: requestId,
-          jsonrpc: "2.0",
-          method,
-          params: params ?? {},
-        }),
-      );
+      socket.send(buildRelayJsonRpcRequestMessage({ id: requestId, method, params }));
     });
 
     socket.addEventListener("message", (event) => {
-      let payload: RelayJsonRpcResponse;
+      let payload: RelayJsonRpcMessage;
 
       try {
-        payload = parseMessage(event.data);
+        payload = parseRelayJsonMessage(event.data);
       } catch (error) {
         finalize(() => reject(error));
         return;

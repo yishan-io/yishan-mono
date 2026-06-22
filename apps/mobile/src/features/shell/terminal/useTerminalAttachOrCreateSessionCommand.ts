@@ -13,17 +13,18 @@ import type { TerminalItem, TerminalMessage } from "../state/shell.types";
 import {
   bindTerminalSessionStartLease,
   buildStartWorkspaceTerminalInput,
+  buildTerminalLaunchInput,
   releaseTerminalSessionStartLease,
   resetTerminalSessionStartLease,
   tryClaimTerminalSessionStartLease,
 } from "./terminal-runtime-session-helpers";
+import type { TerminalTransport } from "./terminal-transport";
 import {
   type RuntimeSnapshot,
   type TerminalMeasuredSize,
   isCurrentRuntimeSnapshot,
 } from "./terminal-transport-controller-domain";
 import { TerminalSessionOrchestrator } from "./terminalSessionOrchestrator";
-import { useTerminalLaunchAgentCommand } from "./useTerminalLaunchAgentCommand";
 
 type TerminalPatchFn = (
   terminal: Pick<TerminalItem, "id" | "workspaceId">,
@@ -47,7 +48,7 @@ export function useTerminalAttachOrCreateSessionCommand({
 }: {
   accessToken: string | null;
   appendSystemMessage: (terminalId: string, text: string, status?: TerminalMessage["status"]) => void;
-  attachTransport: (terminal: TerminalItem, sessionId: string) => { connect: () => void } | null;
+  attachTransport: (terminal: TerminalItem, sessionId: string) => TerminalTransport | null;
   getRuntimeSnapshot: (terminalId: string) => RuntimeSnapshot;
   patchTerminal: TerminalPatchFn;
   peekRuntimeSnapshot: (terminalId: string) => RuntimeSnapshot | null;
@@ -58,8 +59,6 @@ export function useTerminalAttachOrCreateSessionCommand({
   ) => void;
   status: AuthStatus;
 }) {
-  const { launchTerminalAgent } = useTerminalLaunchAgentCommand({ accessToken });
-
   return useCallback(
     async (terminal: TerminalItem, initialSize?: TerminalMeasuredSize | null) => {
       const snapshot = getRuntimeSnapshot(terminal.id);
@@ -172,7 +171,15 @@ export function useTerminalAttachOrCreateSessionCommand({
         }
 
         if (restoreResult.created) {
-          await launchTerminalAgent(terminal, restoreResult.session.sessionId);
+          const launchInput = buildTerminalLaunchInput(terminal);
+          if (launchInput) {
+            const transport = attachTransport(terminal, restoreResult.session.sessionId);
+            if (!transport) {
+              throw new Error("Terminal transport is unavailable.");
+            }
+
+            await transport.send(launchInput);
+          }
         }
 
         if (restoreResult.output.running) {
@@ -202,7 +209,6 @@ export function useTerminalAttachOrCreateSessionCommand({
       appendSystemMessage,
       attachTransport,
       getRuntimeSnapshot,
-      launchTerminalAgent,
       patchTerminal,
       peekRuntimeSnapshot,
       restoreTerminalOutput,

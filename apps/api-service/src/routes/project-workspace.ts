@@ -13,8 +13,6 @@ import {
   readWorkspaceFileHandler,
   readWorkspaceTerminalOutputHandler,
   refreshWorkspacePullRequestHandler,
-  resizeWorkspaceTerminalHandler,
-  sendWorkspaceTerminalInputHandler,
   startWorkspaceTerminalHandler,
   stopWorkspaceTerminalHandler,
 } from "@/handlers/workspace";
@@ -38,8 +36,6 @@ import {
   workspacePullRequestParamsSchema,
   workspaceTerminalListQuerySchema,
   workspaceTerminalParamsSchema,
-  workspaceTerminalResizeBodySchema,
-  workspaceTerminalSendBodySchema,
   workspaceTerminalSessionParamsSchema,
   workspaceTerminalStartBodySchema,
 } from "@/validation/project";
@@ -121,20 +117,6 @@ workspaceRouter.get(
   "/:workspaceId/terminal/sessions/:sessionId/output",
   zValidator("param", workspaceTerminalSessionParamsSchema, validationErrorResponse),
   (c) => readWorkspaceTerminalOutputHandler(c, c.req.valid("param")),
-);
-
-workspaceRouter.post(
-  "/:workspaceId/terminal/sessions/:sessionId/input",
-  zValidator("param", workspaceTerminalSessionParamsSchema, validationErrorResponse),
-  zValidator("json", workspaceTerminalSendBodySchema, validationErrorResponse),
-  (c) => sendWorkspaceTerminalInputHandler(c, c.req.valid("param"), c.req.valid("json")),
-);
-
-workspaceRouter.post(
-  "/:workspaceId/terminal/sessions/:sessionId/resize",
-  zValidator("param", workspaceTerminalSessionParamsSchema, validationErrorResponse),
-  zValidator("json", workspaceTerminalResizeBodySchema, validationErrorResponse),
-  (c) => resizeWorkspaceTerminalHandler(c, c.req.valid("param"), c.req.valid("json")),
 );
 
 workspaceRouter.delete(

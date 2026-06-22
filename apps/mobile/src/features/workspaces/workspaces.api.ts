@@ -304,24 +304,6 @@ export async function startWorkspaceTerminal(
   return readStartedWorkspaceTerminalSessionResponse(response);
 }
 
-export async function sendWorkspaceTerminalInput(
-  accessToken: string,
-  organizationId: string,
-  projectId: string,
-  workspaceId: string,
-  sessionId: string,
-  input: string,
-): Promise<void> {
-  await apiRequest<{ ok: true }>(
-    `/orgs/${organizationId}/projects/${projectId}/workspaces/${workspaceId}/terminal/sessions/${sessionId}/input`,
-    {
-      method: "POST",
-      accessToken,
-      body: { input },
-    },
-  );
-}
-
 export async function readWorkspaceTerminalOutput(
   accessToken: string,
   organizationId: string,
@@ -337,27 +319,6 @@ export async function readWorkspaceTerminalOutput(
   );
 
   return readWorkspaceTerminalOutputResponse(response);
-}
-
-export async function resizeWorkspaceTerminal(
-  accessToken: string,
-  organizationId: string,
-  projectId: string,
-  workspaceId: string,
-  sessionId: string,
-  size: {
-    cols: number;
-    rows: number;
-  },
-): Promise<void> {
-  await apiRequest<{ ok: true }>(
-    `/orgs/${organizationId}/projects/${projectId}/workspaces/${workspaceId}/terminal/sessions/${sessionId}/resize`,
-    {
-      method: "POST",
-      accessToken,
-      body: size,
-    },
-  );
 }
 
 export async function stopWorkspaceTerminal(

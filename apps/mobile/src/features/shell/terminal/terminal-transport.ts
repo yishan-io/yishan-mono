@@ -67,10 +67,13 @@ export function createWebSocketTerminalTransport({
   let connectionSequence = 0;
   let disposed = false;
   let lastSize: TerminalTransportSize | null = null;
+  let lastSentSizeKey: string | null = null;
   let socket: WebSocket | null = null;
   let ready = false;
   let connectPromise: Promise<void> | null = null;
   let terminalExited = false;
+
+  const getSizeKey = (size: TerminalTransportSize) => `${size.cols}x${size.rows}`;
 
   const cleanupSocket = () => {
     if (!socket) {
@@ -84,7 +87,22 @@ export function createWebSocketTerminalTransport({
     socket.close();
     socket = null;
     ready = false;
+    lastSentSizeKey = null;
     connectPromise = null;
+  };
+
+  const flushPendingResize = () => {
+    if (!ready || socket?.readyState !== WebSocket.OPEN || !lastSize) {
+      return;
+    }
+
+    const nextSizeKey = getSizeKey(lastSize);
+    if (lastSentSizeKey === nextSizeKey) {
+      return;
+    }
+
+    lastSentSizeKey = nextSizeKey;
+    socket.send(JSON.stringify({ ...lastSize, type: "resize" }));
   };
 
   const handleSocketFailure = (error: Error) => {
@@ -186,9 +204,7 @@ export function createWebSocketTerminalTransport({
             switch (message.type) {
               case "ready":
                 settleReady();
-                if (lastSize) {
-                  void nextSocket.send(JSON.stringify({ ...lastSize, type: "resize" }));
-                }
+                flushPendingResize();
                 return;
               case "output": {
                 const wasReady = ready;
@@ -290,9 +306,8 @@ export function createWebSocketTerminalTransport({
       }
 
       lastSize = size;
-
       await ensureConnected();
-      socket?.send(JSON.stringify({ cols: size.cols, rows: size.rows, type: "resize" }));
+      flushPendingResize();
     },
     send: async (input) => {
       if (disposed || !input) {

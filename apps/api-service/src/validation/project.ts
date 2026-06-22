@@ -94,15 +94,6 @@ export const workspaceTerminalStartBodySchema = z.object({
   tabId: nonEmptyStringSchema.optional(),
 });
 
-export const workspaceTerminalSendBodySchema = z.object({
-  input: z.string(),
-});
-
-export const workspaceTerminalResizeBodySchema = z.object({
-  cols: z.number().int().positive(),
-  rows: z.number().int().positive(),
-});
-
 export const workspaceFileListParamsSchema = z.object({
   orgId: nonEmptyStringSchema,
   projectId: nonEmptyStringSchema,
@@ -179,8 +170,6 @@ export type WorkspaceTerminalParamsInput = z.infer<typeof workspaceTerminalParam
 export type WorkspaceTerminalSessionParamsInput = z.infer<typeof workspaceTerminalSessionParamsSchema>;
 export type WorkspaceTerminalListQueryInput = z.infer<typeof workspaceTerminalListQuerySchema>;
 export type WorkspaceTerminalStartBodyInput = z.infer<typeof workspaceTerminalStartBodySchema>;
-export type WorkspaceTerminalSendBodyInput = z.infer<typeof workspaceTerminalSendBodySchema>;
-export type WorkspaceTerminalResizeBodyInput = z.infer<typeof workspaceTerminalResizeBodySchema>;
 export type WorkspaceFileListParamsInput = z.infer<typeof workspaceFileListParamsSchema>;
 export type WorkspaceFileListQueryInput = z.infer<typeof workspaceFileListQuerySchema>;
 export type WorkspaceFileReadParamsInput = z.infer<typeof workspaceFileReadParamsSchema>;

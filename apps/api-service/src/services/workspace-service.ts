@@ -42,8 +42,6 @@ import {
   type WorkspaceTerminalStartView,
   listWorkspaceTerminalSessionsViaRelay,
   readWorkspaceTerminalOutputViaRelay,
-  resizeWorkspaceTerminalViaRelay,
-  sendWorkspaceTerminalInputViaRelay,
   startWorkspaceTerminalViaRelay,
   stopWorkspaceTerminalViaRelay,
 } from "@/services/workspace-relay-terminal-operations";
@@ -136,10 +134,7 @@ type WorkspaceCreateMutationResult = {
 
 function isWorkspaceCreateConflictError(error: unknown): error is { code: string } {
   return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === "23505"
+    typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "23505"
   );
 }
 
@@ -532,17 +527,6 @@ export class WorkspaceService {
     return startWorkspaceTerminalViaRelay(this.getRelayDeps(), input);
   }
 
-  async sendWorkspaceTerminalInput(input: {
-    actorUserId: string;
-    data: string;
-    organizationId: string;
-    projectId: string;
-    sessionId: string;
-    workspaceId: string;
-  }): Promise<void> {
-    return sendWorkspaceTerminalInputViaRelay(this.getRelayDeps(), input);
-  }
-
   async readWorkspaceTerminalOutput(input: {
     actorUserId: string;
     organizationId: string;
@@ -551,18 +535,6 @@ export class WorkspaceService {
     workspaceId: string;
   }): Promise<WorkspaceTerminalReadView> {
     return readWorkspaceTerminalOutputViaRelay(this.getRelayDeps(), input);
-  }
-
-  async resizeWorkspaceTerminal(input: {
-    actorUserId: string;
-    cols: number;
-    organizationId: string;
-    projectId: string;
-    rows: number;
-    sessionId: string;
-    workspaceId: string;
-  }): Promise<void> {
-    return resizeWorkspaceTerminalViaRelay(this.getRelayDeps(), input);
   }
 
   async stopWorkspaceTerminal(input: {

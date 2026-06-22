@@ -139,34 +139,6 @@ export async function startWorkspaceTerminalViaRelay(
   return { sessionId };
 }
 
-export async function sendWorkspaceTerminalInputViaRelay(
-  deps: WorkspaceRelayDeps,
-  input: {
-    actorUserId: string;
-    data: string;
-    organizationId: string;
-    projectId: string;
-    sessionId: string;
-    workspaceId: string;
-  },
-): Promise<void> {
-  await invokeWorkspaceRelay({
-    actorUserId: input.actorUserId,
-    config: deps.config,
-    db: deps.db,
-    method: "terminal.send",
-    organizationId: input.organizationId,
-    organizationService: deps.organizationService,
-    params: {
-      input: input.data,
-      sessionId: input.sessionId,
-      workspaceId: input.workspaceId,
-    },
-    projectId: input.projectId,
-    workspaceId: input.workspaceId,
-  });
-}
-
 export async function readWorkspaceTerminalOutputViaRelay(
   deps: WorkspaceRelayDeps,
   input: {
@@ -199,36 +171,6 @@ export async function readWorkspaceTerminalOutputViaRelay(
     output: typeof record.output === "string" ? record.output : "",
     running: record.running === true,
   };
-}
-
-export async function resizeWorkspaceTerminalViaRelay(
-  deps: WorkspaceRelayDeps,
-  input: {
-    actorUserId: string;
-    cols: number;
-    organizationId: string;
-    projectId: string;
-    rows: number;
-    sessionId: string;
-    workspaceId: string;
-  },
-): Promise<void> {
-  await invokeWorkspaceRelay({
-    actorUserId: input.actorUserId,
-    config: deps.config,
-    db: deps.db,
-    method: "terminal.resize",
-    organizationId: input.organizationId,
-    organizationService: deps.organizationService,
-    params: {
-      cols: input.cols,
-      rows: input.rows,
-      sessionId: input.sessionId,
-      workspaceId: input.workspaceId,
-    },
-    projectId: input.projectId,
-    workspaceId: input.workspaceId,
-  });
 }
 
 export async function stopWorkspaceTerminalViaRelay(

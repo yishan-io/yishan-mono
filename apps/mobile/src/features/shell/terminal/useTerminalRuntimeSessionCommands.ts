@@ -2,6 +2,7 @@ import { useCallback } from "react";
 
 import type { AuthStatus } from "@/features/auth";
 import type { TerminalItem, TerminalMessage } from "../state/shell.types";
+import type { TerminalTransport } from "./terminal-transport";
 import type { TerminalMeasuredSize } from "./terminal-transport-controller-domain";
 import { useTerminalAttachOrCreateSessionCommand } from "./useTerminalAttachOrCreateSessionCommand";
 import { useTerminalCloseSessionCommand } from "./useTerminalCloseSessionCommand";
@@ -33,7 +34,7 @@ export function useTerminalRuntimeSessionCommands({
 }: {
   accessToken: string | null;
   appendSystemMessage: (terminalId: string, text: string, status?: TerminalMessage["status"]) => void;
-  attachTransport: (terminal: TerminalItem, sessionId: string) => { connect: () => void } | null;
+  attachTransport: (terminal: TerminalItem, sessionId: string) => TerminalTransport | null;
   clearMeasuredSize: (terminalId: string) => void;
   clearPendingStartTimeout: (terminalId: string) => void;
   clearTerminalTransientState: (terminalId: string) => void;

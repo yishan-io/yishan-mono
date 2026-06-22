@@ -1,6 +1,8 @@
 import type { WorkspaceKind } from "@/db/schema";
 import { RelayNodeOfflineError, RelayRequestFailedError, RelayUnavailableError } from "@/errors";
-import { RelayRpcError, invokeRelayJsonRpc } from "@/lib/relay-client";
+import { getErrorMessage } from "@/lib/errors";
+import { invokeRelayJsonRpc } from "@/lib/relay-client";
+import { RelayRpcError } from "@/lib/relay-websocket";
 import type { ServiceConfig } from "@/types";
 
 export type WorkspaceProvisionRequest = {
@@ -108,7 +110,7 @@ export class RelayWorkspaceProvisioner implements WorkspaceProvisioner {
       }
 
       throw new RelayRequestFailedError("workspace.create", {
-        cause: error instanceof Error ? error.message : String(error),
+        cause: getErrorMessage(error),
         nodeId: request.nodeId,
         workspaceId: request.workspaceId,
       });

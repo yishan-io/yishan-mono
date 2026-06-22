@@ -1,4 +1,13 @@
-import { RelayRpcError } from "@/lib/relay-client";
+import {
+  type RelayJsonRpcMessage,
+  RelayRpcError,
+  buildRelayJsonRpcRequestMessage,
+  buildRelayRequestId,
+  buildRelayWebSocketUrl,
+  decodeRelayBinaryPayload,
+  decodeRelayText,
+  parseRelayJsonMessage,
+} from "@/lib/relay-websocket";
 
 type RelayStreamEventHandlers = {
   onFrontendEvent?: (event: { payload: Record<string, unknown>; topic: string }) => void;
@@ -14,56 +23,7 @@ type PendingRequest = {
   timeoutId: ReturnType<typeof setTimeout>;
 };
 
-type RelayJsonRpcResponse = {
-  error?: {
-    code: number;
-    data?: unknown;
-    message: string;
-  };
-  id?: string | number | null;
-  jsonrpc?: string;
-  method?: string;
-  params?: Record<string, unknown>;
-  result?: unknown;
-};
-
 const RELAY_TERMINAL_OUTPUT_OPCODE = 0x02;
-
-function buildRequestId(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function parseJsonMessage(data: unknown): RelayJsonRpcResponse {
-  if (typeof data === "string") {
-    return JSON.parse(data) as RelayJsonRpcResponse;
-  }
-
-  if (data instanceof ArrayBuffer) {
-    return JSON.parse(new TextDecoder().decode(data)) as RelayJsonRpcResponse;
-  }
-
-  if (ArrayBuffer.isView(data)) {
-    return JSON.parse(new TextDecoder().decode(data)) as RelayJsonRpcResponse;
-  }
-
-  throw new Error("Unsupported relay websocket payload");
-}
-
-function decodeBinaryPayload(data: unknown): Uint8Array {
-  if (data instanceof ArrayBuffer) {
-    return new Uint8Array(data);
-  }
-
-  if (ArrayBuffer.isView(data)) {
-    return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-  }
-
-  throw new Error("Unsupported relay websocket binary payload");
-}
 
 export class RelayStreamClient {
   private readonly handlers: RelayStreamEventHandlers;
@@ -92,9 +52,7 @@ export class RelayStreamClient {
       return this.openPromise;
     }
 
-    const url = new URL("/client/ws", this.input.relayUrl);
-    url.searchParams.set("nodeId", this.input.nodeId);
-    url.searchParams.set("token", this.input.apiToken);
+    const url = buildRelayWebSocketUrl(this.input);
 
     this.openPromise = new Promise<void>((resolve, reject) => {
       const socket = new WebSocket(url.toString());
@@ -154,7 +112,7 @@ export class RelayStreamClient {
       throw new Error("Relay websocket is not connected");
     }
 
-    const requestId = buildRequestId();
+    const requestId = buildRelayRequestId();
 
     return new Promise<T>((resolve, reject) => {
       const timeoutId = setTimeout(() => {
@@ -168,14 +126,7 @@ export class RelayStreamClient {
         timeoutId,
       });
 
-      socket.send(
-        JSON.stringify({
-          id: requestId,
-          jsonrpc: "2.0",
-          method,
-          params: params ?? {},
-        }),
-      );
+      socket.send(buildRelayJsonRpcRequestMessage({ id: requestId, method, params }));
     });
   }
 
@@ -201,7 +152,7 @@ export class RelayStreamClient {
 
     if (typeof data !== "string") {
       try {
-        const buffer = decodeBinaryPayload(data);
+        const buffer = decodeRelayBinaryPayload(data);
         this.handleBinaryMessage(buffer);
       } catch (error) {
         this.handlers.onError?.(error instanceof Error ? error : new Error(String(error)));
@@ -209,10 +160,10 @@ export class RelayStreamClient {
       return;
     }
 
-    let payload: RelayJsonRpcResponse;
+    let payload: RelayJsonRpcMessage;
 
     try {
-      payload = parseJsonMessage(data);
+      payload = parseRelayJsonMessage(data);
     } catch (error) {
       this.handlers.onError?.(error instanceof Error ? error : new Error(String(error)));
       return;
@@ -282,12 +233,12 @@ export class RelayStreamClient {
       return;
     }
 
-    const sessionId = new TextDecoder().decode(buffer.slice(1, separatorIndex));
+    const sessionId = decodeRelayText(buffer.slice(1, separatorIndex));
     if (!sessionId) {
       return;
     }
 
-    const chunk = new TextDecoder().decode(buffer.slice(separatorIndex + 1));
+    const chunk = decodeRelayText(buffer.slice(separatorIndex + 1));
     if (!chunk) {
       return;
     }
