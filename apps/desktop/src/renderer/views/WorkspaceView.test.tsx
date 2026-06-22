@@ -136,6 +136,7 @@ describe("WorkspaceView", () => {
     workspaceStore.setState({
       displayProjectIds: [],
       gitRefreshVersionByWorktreePath: {},
+      isProjectsLoaded: false,
       lastUsedExternalAppId: null,
       projects: [],
       selectedRepoId: "",
@@ -152,6 +153,7 @@ describe("WorkspaceView", () => {
 
   function setWorkspaceProjectsLoaded() {
     workspaceStore.setState({
+      isProjectsLoaded: true,
       projects: [{ id: "project-1", name: "Project 1" }],
     });
   }
@@ -271,5 +273,31 @@ describe("WorkspaceView", () => {
       expect(screen.queryByTestId("scheduled-job-view")).toBeNull();
       expect(commandMocks.loadWorkspaceSnapshot).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it("renders nothing while projects have not yet loaded", () => {
+    // isProjectsLoaded starts false — snapshot not yet fetched
+    const { container } = render(
+      <MemoryRouter>
+        <WorkspaceView />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByTestId("onboarding-view")).toBeNull();
+    expect(screen.queryByTestId("split-pane-layout")).toBeNull();
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("renders onboarding view when projects are loaded but empty", () => {
+    workspaceStore.setState({ isProjectsLoaded: true, projects: [] });
+
+    render(
+      <MemoryRouter>
+        <WorkspaceView />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("onboarding-view")).toBeTruthy();
+    expect(screen.queryByTestId("split-pane-layout")).toBeNull();
   });
 });

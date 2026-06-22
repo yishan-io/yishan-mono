@@ -289,6 +289,7 @@ export function WorkspaceView() {
   const paneVisibility = useWorkspacePaneVisibility();
   const leftWidth = layoutStore((state) => state.leftWidth);
   const projects = workspaceStore((state) => state.projects);
+  const isProjectsLoaded = workspaceStore((state) => state.isProjectsLoaded);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const selectedWorkspaceWorktreePath = workspaceStore(
     (state) => state.workspaces.find((workspace) => workspace.id === state.selectedWorkspaceId)?.worktreePath,
@@ -354,6 +355,10 @@ export function WorkspaceView() {
     },
     [cmd, maxLeftWidth],
   );
+
+  if (!isProjectsLoaded) {
+    return null;
+  }
 
   if (!hasProjects) {
     return (
