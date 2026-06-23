@@ -1,4 +1,4 @@
-import { Box, IconButton, InputBase, Tooltip, Typography, useTheme } from "@mui/material";
+import { Box, IconButton, InputBase, Typography, useTheme } from "@mui/material";
 import type React from "react";
 import { useEffect, useRef } from "react";
 import { LuChevronDown, LuChevronUp, LuX } from "react-icons/lu";
@@ -115,39 +115,33 @@ export function MarkdownFindBar({
 
       <Box sx={{ width: "1px", height: 16, bgcolor: borderColor, flexShrink: 0, mx: 0.25 }} />
 
-      <Tooltip title="Previous match (Shift+Enter)" arrow>
-        <IconButton
-          size="small"
-          onClick={onPrev}
-          aria-label="Previous match"
-          sx={{ borderRadius: 0, p: 0.5, color: "text.secondary" }}
-        >
-          <LuChevronUp size={14} />
-        </IconButton>
-      </Tooltip>
-      <Tooltip title="Next match (Enter)" arrow>
-        <IconButton
-          size="small"
-          onClick={onNext}
-          aria-label="Next match"
-          sx={{ borderRadius: 0, p: 0.5, color: "text.secondary" }}
-        >
-          <LuChevronDown size={14} />
-        </IconButton>
-      </Tooltip>
-
-      <Box sx={{ width: "1px", height: 16, bgcolor: borderColor, mx: 0.25, flexShrink: 0 }} />
-
-      <Tooltip title="Close (Escape)" arrow>
-        <IconButton
-          size="small"
-          onClick={onClose}
-          aria-label="Close find bar"
-          sx={{ borderRadius: 0, p: 0.5, mr: 0.25, color: "text.secondary" }}
-        >
-          <LuX size={14} />
-        </IconButton>
-      </Tooltip>
+      <IconButton
+        size="small"
+        onClick={onPrev}
+        aria-label="Previous match"
+        title="Previous match (Shift+Enter)"
+        sx={{ borderRadius: 0, p: 0.5, color: "text.secondary" }}
+      >
+        <LuChevronUp size={14} />
+      </IconButton>
+      <IconButton
+        size="small"
+        onClick={onNext}
+        aria-label="Next match"
+        title="Next match (Enter)"
+        sx={{ borderRadius: 0, p: 0.5, color: "text.secondary" }}
+      >
+        <LuChevronDown size={14} />
+      </IconButton>
+      <IconButton
+        size="small"
+        onClick={onClose}
+        aria-label="Close find bar"
+        title="Close (Escape)"
+        sx={{ borderRadius: 0, p: 0.5, color: "text.secondary" }}
+      >
+        <LuX size={14} />
+      </IconButton>
     </Box>
   );
 }
