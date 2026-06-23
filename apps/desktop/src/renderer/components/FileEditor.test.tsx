@@ -1,14 +1,24 @@
 // @vitest-environment jsdom
 
 import { ThemeProvider } from "@mui/material/styles";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAppTheme } from "../theme";
 import { FileEditor } from "./FileEditor";
 
+// Capture props passed to MarkdownPreview so tests can inspect findOpen etc.
+const capturedMarkdownPreviewProps: { current: Record<string, unknown> } = { current: {} };
+vi.mock("./MarkdownPreview", () => ({
+  MarkdownPreview: (props: Record<string, unknown>) => {
+    capturedMarkdownPreviewProps.current = props;
+    return null;
+  },
+}));
+
 const mockEditorState: {
   editorValue: string;
   editorFocus: () => void;
+  editorFindAction: { run: () => void };
   addCommandCalls: Array<{ keybinding: number; handler: () => void }>;
   contentChangeListener: null | (() => void);
   disposeCount: number;
@@ -19,6 +29,7 @@ const mockEditorState: {
 } = {
   editorValue: "",
   editorFocus: vi.fn(),
+  editorFindAction: { run: vi.fn() },
   addCommandCalls: [],
   contentChangeListener: null,
   disposeCount: 0,
@@ -51,6 +62,7 @@ vi.mock("../helpers/monacoSetup", () => ({
           },
           focus: () => mockEditorState.editorFocus(),
           layout: vi.fn(),
+          getAction: (id: string) => id === "actions.find" ? mockEditorState.editorFindAction : null,
           addCommand: (keybinding: number, handler: () => void) => {
             mockEditorState.addCommandCalls.push({ keybinding, handler });
           },
@@ -111,8 +123,10 @@ vi.mock("./fileTreeIcons", () => ({
 
 afterEach(() => {
   cleanup();
+  capturedMarkdownPreviewProps.current = {};
   mockEditorState.editorValue = "";
   mockEditorState.editorFocus = vi.fn();
+  mockEditorState.editorFindAction = { run: vi.fn() };
   mockEditorState.addCommandCalls = [];
   mockEditorState.contentChangeListener = null;
   mockEditorState.disposeCount = 0;
@@ -325,5 +339,66 @@ describe("FileEditor", () => {
     );
 
     expect(screen.getByRole("button", { name: "Preview" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  describe("preview find bar (Cmd+F)", () => {
+    it("opens the find bar when Cmd+F is pressed in preview-only mode", () => {
+      const { getByTestId } = render(
+        <ThemeProvider theme={createAppTheme("dark")}>
+          <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />
+        </ThemeProvider>,
+      );
+
+      // findOpen should start false
+      expect(capturedMarkdownPreviewProps.current.findOpen).toBeFalsy();
+
+      const previewPane = getByTestId("markdown-preview-pane");
+      act(() => {
+        fireEvent.keyDown(previewPane, { key: "f", metaKey: true });
+      });
+
+      expect(capturedMarkdownPreviewProps.current.findOpen).toBe(true);
+    });
+
+    it("does not open find bar on Cmd+F in split mode — triggers Monaco find instead", () => {
+      const { getByTestId } = render(
+        <ThemeProvider theme={createAppTheme("dark")}>
+          <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="split" />
+        </ThemeProvider>,
+      );
+
+      const previewPane = getByTestId("markdown-preview-pane");
+      act(() => {
+        fireEvent.keyDown(previewPane, { key: "f", metaKey: true });
+      });
+
+      // find bar should NOT open in split mode
+      expect(capturedMarkdownPreviewProps.current.findOpen).toBeFalsy();
+      // editor focus + find action should have been called
+      expect(mockEditorState.editorFocus).toHaveBeenCalled();
+      expect(mockEditorState.editorFindAction.run).toHaveBeenCalled();
+    });
+
+    it("closes the find bar on Escape when it is open", () => {
+      const { getByTestId } = render(
+        <ThemeProvider theme={createAppTheme("dark")}>
+          <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />
+        </ThemeProvider>,
+      );
+
+      const previewPane = getByTestId("markdown-preview-pane");
+
+      // Open it first
+      act(() => {
+        fireEvent.keyDown(previewPane, { key: "f", metaKey: true });
+      });
+      expect(capturedMarkdownPreviewProps.current.findOpen).toBe(true);
+
+      // Now close with Escape
+      act(() => {
+        fireEvent.keyDown(previewPane, { key: "Escape" });
+      });
+      expect(capturedMarkdownPreviewProps.current.findOpen).toBe(false);
+    });
   });
 });
