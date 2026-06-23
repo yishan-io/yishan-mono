@@ -28,7 +28,7 @@
   "more.title": "其他所需能力",
   "more.desc": "",
 
-  "more.0.title": "自动驾驶",
+  "more.0.title": "定时任务",
   "more.0.desc": "按计划触发定时 Agent 任务——代码审查、健康检查、周报汇总——在你专注其他事情时自动运行。",
 
   "more.1.title": "PR 状态",

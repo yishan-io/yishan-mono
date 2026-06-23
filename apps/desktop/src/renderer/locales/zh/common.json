@@ -1157,7 +1157,7 @@
     }
   },
   "scheduledJob": {
-    "title": "自动驾驶",
+    "title": "定时任务",
     "loadError": "加载自动任务失败。",
     "empty": "当前组织尚未配置自动任务。",
     "status": {
