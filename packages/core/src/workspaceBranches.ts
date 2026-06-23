@@ -1,5 +1,3 @@
-import type { WorkspaceGitBranchList } from "./workspace";
-
 export type WorkspaceSourceBranchGroups = {
   localBranches: string[];
   remoteBranches: string[];
@@ -81,13 +79,6 @@ export function resolveWorkspaceSourceBranchGroups(input: {
 }
 
 /**
- * Flattens grouped branch sections into the stable local/worktree/remote display order.
- */
-export function listWorkspaceSourceBranches(groups: WorkspaceSourceBranchGroups): string[] {
-  return [...groups.localBranches, ...groups.worktreeBranches, ...groups.remoteBranches];
-}
-
-/**
  * Resolves source-branch options and default selection.
  * Prefers `main/master` when available, but falls back to `repoDefaultBranch` when branch data is unavailable.
  */
@@ -115,28 +106,6 @@ export function resolveWorkspaceSourceBranchState(
     options: uniqueBranches,
     preferred,
   };
-}
-
-/**
- * Resolves the preferred source branch using the desktop ordering rules.
- */
-export function resolvePreferredWorkspaceSourceBranch(args: {
-  branchList: WorkspaceGitBranchList | null | undefined;
-  repoDefaultBranch?: string;
-}): string {
-  const groups = resolveWorkspaceSourceBranchGroups({
-    branches: args.branchList?.branches ?? [],
-    localBranches: args.branchList?.localBranches,
-    remoteBranches: args.branchList?.remoteBranches,
-    worktreeBranches: args.branchList?.worktreeBranches,
-  });
-  const remotePreferredBranch =
-    groups.remoteBranches.find((branch) => branch === "origin/main" || branch === "origin/master") ?? "";
-  if (remotePreferredBranch) {
-    return remotePreferredBranch;
-  }
-
-  return resolveWorkspaceSourceBranchState(listWorkspaceSourceBranches(groups), args.repoDefaultBranch ?? "").preferred;
 }
 
 /**

@@ -3,9 +3,8 @@ import type { CreateWorkspaceInput } from "@/features/workspaces/workspaces.api"
 import type { WorkspaceGitBranchList } from "@/features/workspaces/workspaces.types";
 import {
   type WorkspaceSourceBranchGroups,
-  listWorkspaceSourceBranches,
-  resolvePreferredWorkspaceSourceBranch as resolveSharedPreferredWorkspaceSourceBranch,
   resolveWorkspaceSourceBranchGroups,
+  resolveWorkspaceSourceBranchState,
 } from "@yishan/core";
 
 export type WorkspaceCreateDraft = {
@@ -77,10 +76,12 @@ export function resolveWorkspaceCreateSourceBranchGroups(
   });
 }
 
+/** Returns source branches in the stable local/worktree/remote display order used by mobile. */
 export function listWorkspaceCreateSourceBranches(groups: WorkspaceCreateSourceBranchGroups): string[] {
-  return listWorkspaceSourceBranches(groups);
+  return [...groups.localBranches, ...groups.worktreeBranches, ...groups.remoteBranches];
 }
 
+/** Resolves the preferred source branch for workspace creation using the shared branch ordering rules. */
 export function resolvePreferredWorkspaceCreateSourceBranch(args: {
   branchList: WorkspaceGitBranchList | null | undefined;
   fallbackSourceBranch: string;
@@ -89,9 +90,14 @@ export function resolvePreferredWorkspaceCreateSourceBranch(args: {
     return args.fallbackSourceBranch.trim();
   }
 
-  return resolveSharedPreferredWorkspaceSourceBranch({
-    branchList: args.branchList,
-  });
+  const groups = resolveWorkspaceCreateSourceBranchGroups(args.branchList);
+  const remotePreferredBranch =
+    groups.remoteBranches.find((branch) => branch === "origin/main" || branch === "origin/master") ?? "";
+  if (remotePreferredBranch) {
+    return remotePreferredBranch;
+  }
+
+  return resolveWorkspaceSourceBranchState(listWorkspaceCreateSourceBranches(groups), "").preferred;
 }
 
 export function syncWorkspaceCreateLoadedSourceBranch(

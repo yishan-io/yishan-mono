@@ -1,7 +1,5 @@
 export { AGENT_KINDS, type AgentKind } from "./agentKinds";
 export {
-  listWorkspaceSourceBranches,
-  resolvePreferredWorkspaceSourceBranch,
   resolveWorkspaceSourceBranchGroups,
   resolveWorkspaceSourceBranchState,
   sortWorkspaceBranchNames,
