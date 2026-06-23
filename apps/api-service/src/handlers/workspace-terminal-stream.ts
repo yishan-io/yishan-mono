@@ -1,6 +1,18 @@
 import { upgradeWebSocket } from "hono/bun";
 
-import { RelayStreamClient } from "@/lib/relay-stream-client";
+import {
+  closeRelayBridgeConnection,
+  connectWorkspaceRelayStream,
+  createRelayBridgeState,
+  createRelayStreamEventHandlers,
+  handleRelayBridgeControlMessage,
+  handleRelayBridgeSocketClose,
+  handleRelayBridgeSocketError,
+  readRelayBridgeMessageRecord,
+  sendRelayBridgeError,
+  sendRelayBridgeJson,
+} from "@/handlers/shared/workspaceRelayStreamBridge";
+import { getErrorMessage } from "@/lib/errors";
 import type { WorkspaceTerminalSessionParamsInput } from "@/validation/project";
 
 type ClientMessage =
@@ -32,11 +44,8 @@ type TerminalSubscribeResult = {
 };
 
 function parseClientMessage(payload: string): ClientMessage {
-  const decoded = JSON.parse(payload) as Record<string, unknown>;
-  const type = typeof decoded.type === "string" ? decoded.type : null;
-  if (!type) {
-    throw new Error("Terminal websocket message type is required");
-  }
+  const decoded = readRelayBridgeMessageRecord(payload, "Terminal");
+  const type = decoded.type;
 
   switch (type) {
     case "input":
@@ -68,25 +77,15 @@ export const workspaceTerminalStreamHandler = upgradeWebSocket((c) => {
   const actorUser = c.get("sessionUser");
   const services = c.get("services");
 
-  let relayClient: RelayStreamClient | null = null;
+  const state = createRelayBridgeState();
   let ready = false;
-  let closed = false;
-
-  const closeRelay = () => {
-    relayClient?.close();
-    relayClient = null;
-  };
 
   return {
     onClose: () => {
-      closed = true;
-      closeRelay();
+      handleRelayBridgeSocketClose(state);
     },
     onError: (_event, ws) => {
-      if (!closed && ws.readyState === 1) {
-        ws.send(JSON.stringify({ message: "Terminal websocket failed.", type: "error" }));
-      }
-      closeRelay();
+      handleRelayBridgeSocketError(state, ws, "Terminal websocket failed.");
     },
     onMessage: (event, ws) => {
       void (async () => {
@@ -96,22 +95,14 @@ export const workspaceTerminalStreamHandler = upgradeWebSocket((c) => {
           }
 
           const message = parseClientMessage(event.data);
-          if (message.type === "ping") {
-            if (ws.readyState === 1) {
-              ws.send(JSON.stringify({ type: "pong" }));
-            }
+          if (message.type === "ping" || message.type === "unsubscribe") {
+            handleRelayBridgeControlMessage(ws, message);
             return;
           }
 
-          if (message.type === "unsubscribe") {
-            ws.close(1000, "Client unsubscribed");
-            return;
-          }
-
+          const relayClient = state.relayClient;
           if (!relayClient || !ready) {
-            if (ws.readyState === 1) {
-              ws.send(JSON.stringify({ message: "Terminal websocket is not ready.", type: "error" }));
-            }
+            sendRelayBridgeError(ws, "Terminal websocket is not ready.");
             return;
           }
 
@@ -139,13 +130,8 @@ export const workspaceTerminalStreamHandler = upgradeWebSocket((c) => {
             workspaceId: params.workspaceId,
           });
         } catch (error) {
-          if (!closed && ws.readyState === 1) {
-            ws.send(
-              JSON.stringify({
-                message: error instanceof Error ? error.message : "Terminal websocket request failed.",
-                type: "error",
-              }),
-            );
+          if (!state.closed) {
+            sendRelayBridgeError(ws, getErrorMessage(error));
           }
         }
       })();
@@ -153,45 +139,34 @@ export const workspaceTerminalStreamHandler = upgradeWebSocket((c) => {
     onOpen: (_event, ws) => {
       void (async () => {
         try {
-          const relayAccess = await services.workspace.resolveRelayAccess({
-            actorUserId: actorUser.id,
-            organizationId: params.orgId,
-            projectId: params.projectId,
-            workspaceId: params.workspaceId,
+          const { relayAccess, relayClient } = await connectWorkspaceRelayStream({
+            handlers: createRelayStreamEventHandlers({
+              handlers: {
+                onTerminalExit: ({ exitCode, sessionId }) => {
+                  if (sessionId === params.sessionId) {
+                    sendRelayBridgeJson(ws, { exitCode, sessionId, type: "exit" });
+                  }
+                },
+                onTerminalOutput: ({ output, sessionId }) => {
+                  if (sessionId === params.sessionId) {
+                    sendRelayBridgeJson(ws, { output, sessionId, type: "output" });
+                  }
+                },
+              },
+              relayDisconnectedMessage: "Terminal relay disconnected.",
+              state,
+              ws,
+            }),
+            relayAccessInput: {
+              actorUserId: actorUser.id,
+              orgId: params.orgId,
+              projectId: params.projectId,
+              workspaceId: params.workspaceId,
+            },
+            services,
+            state,
           });
 
-          relayClient = new RelayStreamClient(
-            {
-              apiToken: relayAccess.relayApiToken,
-              nodeId: relayAccess.workspace.nodeId,
-              relayUrl: relayAccess.relayUrl,
-            },
-            {
-              onClose: () => {
-                if (!closed && ws.readyState === 1) {
-                  ws.send(JSON.stringify({ message: "Terminal relay disconnected.", type: "error" }));
-                  ws.close(1011, "Relay disconnected");
-                }
-              },
-              onError: (error) => {
-                if (!closed && ws.readyState === 1) {
-                  ws.send(JSON.stringify({ message: error.message, type: "error" }));
-                }
-              },
-              onTerminalExit: ({ exitCode, sessionId }) => {
-                if (!closed && ws.readyState === 1 && sessionId === params.sessionId) {
-                  ws.send(JSON.stringify({ exitCode, sessionId, type: "exit" }));
-                }
-              },
-              onTerminalOutput: ({ output, sessionId }) => {
-                if (!closed && ws.readyState === 1 && sessionId === params.sessionId) {
-                  ws.send(JSON.stringify({ output, sessionId, type: "output" }));
-                }
-              },
-            },
-          );
-
-          await relayClient.connect();
           await relayClient.sendRequest("workspace.open", {
             id: relayAccess.workspace.id,
             path: relayAccess.workspace.localPath,
@@ -202,34 +177,25 @@ export const workspaceTerminalStreamHandler = upgradeWebSocket((c) => {
           });
 
           const snapshot = subscribeResult.snapshot;
-          if (snapshot?.output && !closed && ws.readyState === 1) {
-            ws.send(JSON.stringify({ output: snapshot.output, sessionId: params.sessionId, type: "output" }));
+          if (snapshot?.output) {
+            sendRelayBridgeJson(ws, { output: snapshot.output, sessionId: params.sessionId, type: "output" });
           }
-          if (snapshot && !snapshot.running && !closed && ws.readyState === 1) {
-            ws.send(
-              JSON.stringify({
-                exitCode: snapshot.exitCode ?? null,
-                sessionId: params.sessionId,
-                type: "exit",
-              }),
-            );
+          if (snapshot && !snapshot.running) {
+            sendRelayBridgeJson(ws, {
+              exitCode: snapshot.exitCode ?? null,
+              sessionId: params.sessionId,
+              type: "exit",
+            });
           }
 
           ready = true;
-          if (!closed && ws.readyState === 1) {
-            ws.send(JSON.stringify({ sessionId: params.sessionId, type: "ready" }));
-          }
+          sendRelayBridgeJson(ws, { sessionId: params.sessionId, type: "ready" });
         } catch (error) {
-          if (!closed && ws.readyState === 1) {
-            ws.send(
-              JSON.stringify({
-                message: error instanceof Error ? error.message : "Failed to connect terminal websocket.",
-                type: "error",
-              }),
-            );
+          if (!state.closed) {
+            sendRelayBridgeError(ws, getErrorMessage(error));
             ws.close(1011, "Terminal stream setup failed");
           }
-          closeRelay();
+          closeRelayBridgeConnection(state);
         }
       })();
     },

@@ -1,8 +1,5 @@
-import type { AppDb } from "@/db/client";
 import { RelayRequestFailedError } from "@/errors";
-import type { OrganizationService } from "@/services/organization-service";
-import { invokeWorkspaceRelay } from "@/services/workspace-relay";
-import type { ServiceConfig } from "@/types";
+import { type WorkspaceRelayContext, type WorkspaceRelayDeps, invokeWorkspaceRelay } from "@/services/workspace-relay";
 
 export type WorkspaceTerminalSessionView = {
   sessionId: string;
@@ -25,35 +22,20 @@ export type WorkspaceTerminalReadView = {
   exitCode?: number | null;
 };
 
-type WorkspaceRelayDeps = {
-  config: ServiceConfig;
-  db: AppDb;
-  organizationService: OrganizationService;
-};
-
 export async function listWorkspaceTerminalSessionsViaRelay(
   deps: WorkspaceRelayDeps,
-  input: {
-    actorUserId: string;
+  input: WorkspaceRelayContext & {
     includeExited?: boolean;
-    organizationId: string;
-    projectId: string;
-    workspaceId: string;
   },
 ): Promise<WorkspaceTerminalSessionView[]> {
   const { result } = await invokeWorkspaceRelay<unknown[]>({
-    actorUserId: input.actorUserId,
-    config: deps.config,
-    db: deps.db,
+    ...deps,
+    ...input,
     method: "terminal.listSessions",
-    organizationId: input.organizationId,
-    organizationService: deps.organizationService,
     params: {
       includeExited: input.includeExited ?? false,
       workspaceId: input.workspaceId,
     },
-    projectId: input.projectId,
-    workspaceId: input.workspaceId,
   });
 
   if (!Array.isArray(result)) {
@@ -92,27 +74,20 @@ export async function listWorkspaceTerminalSessionsViaRelay(
 
 export async function startWorkspaceTerminalViaRelay(
   deps: WorkspaceRelayDeps,
-  input: {
-    actorUserId: string;
+  input: WorkspaceRelayContext & {
     args?: string[];
     cols?: number;
     command?: string;
     env?: Record<string, string> | string[];
-    organizationId: string;
     paneId?: string;
-    projectId: string;
     rows?: number;
     tabId?: string;
-    workspaceId: string;
   },
 ): Promise<WorkspaceTerminalStartView> {
   const { result } = await invokeWorkspaceRelay<unknown>({
-    actorUserId: input.actorUserId,
-    config: deps.config,
-    db: deps.db,
+    ...deps,
+    ...input,
     method: "terminal.start",
-    organizationId: input.organizationId,
-    organizationService: deps.organizationService,
     params: {
       args: input.args ?? [],
       cols: typeof input.cols === "number" ? input.cols : undefined,
@@ -123,8 +98,6 @@ export async function startWorkspaceTerminalViaRelay(
       tabId: input.tabId?.trim() ?? "",
       workspaceId: input.workspaceId,
     },
-    projectId: input.projectId,
-    workspaceId: input.workspaceId,
   });
 
   const record = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
@@ -141,27 +114,18 @@ export async function startWorkspaceTerminalViaRelay(
 
 export async function readWorkspaceTerminalOutputViaRelay(
   deps: WorkspaceRelayDeps,
-  input: {
-    actorUserId: string;
-    organizationId: string;
-    projectId: string;
+  input: WorkspaceRelayContext & {
     sessionId: string;
-    workspaceId: string;
   },
 ): Promise<WorkspaceTerminalReadView> {
   const { result } = await invokeWorkspaceRelay<unknown>({
-    actorUserId: input.actorUserId,
-    config: deps.config,
-    db: deps.db,
+    ...deps,
+    ...input,
     method: "terminal.read",
-    organizationId: input.organizationId,
-    organizationService: deps.organizationService,
     params: {
       sessionId: input.sessionId,
       workspaceId: input.workspaceId,
     },
-    projectId: input.projectId,
-    workspaceId: input.workspaceId,
   });
 
   const record = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
@@ -175,27 +139,18 @@ export async function readWorkspaceTerminalOutputViaRelay(
 
 export async function stopWorkspaceTerminalViaRelay(
   deps: WorkspaceRelayDeps,
-  input: {
-    actorUserId: string;
-    organizationId: string;
-    projectId: string;
+  input: WorkspaceRelayContext & {
     sessionId: string;
-    workspaceId: string;
   },
 ): Promise<void> {
   await invokeWorkspaceRelay({
-    actorUserId: input.actorUserId,
-    config: deps.config,
-    db: deps.db,
+    ...deps,
+    ...input,
     method: "terminal.stop",
-    organizationId: input.organizationId,
-    organizationService: deps.organizationService,
     params: {
       sessionId: input.sessionId,
       workspaceId: input.workspaceId,
     },
-    projectId: input.projectId,
-    workspaceId: input.workspaceId,
   });
 }
 

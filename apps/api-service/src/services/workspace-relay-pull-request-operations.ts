@@ -4,18 +4,9 @@ import type {
   WorkspaceCurrentPullRequestDeployment,
 } from "@yishan/core";
 
-import type { AppDb } from "@/db/client";
-import type { OrganizationService } from "@/services/organization-service";
-import { invokeWorkspaceRelay } from "@/services/workspace-relay";
-import type { ServiceConfig } from "@/types";
+import { type WorkspaceRelayContext, type WorkspaceRelayDeps, invokeWorkspaceRelay } from "@/services/workspace-relay";
 
 export type WorkspaceCurrentPullRequestView = WorkspaceCurrentPullRequest | null;
-
-type WorkspaceRelayPullRequestDeps = {
-  config: ServiceConfig;
-  db: AppDb;
-  organizationService: OrganizationService;
-};
 
 function readWorkspaceCurrentPullRequestCheck(value: unknown): WorkspaceCurrentPullRequestCheck | undefined {
   if (!value || typeof value !== "object") {
@@ -98,26 +89,16 @@ function readWorkspaceCurrentPullRequest(value: unknown): WorkspaceCurrentPullRe
 }
 
 export async function refreshWorkspacePullRequestViaRelay(
-  deps: WorkspaceRelayPullRequestDeps,
-  input: {
-    actorUserId: string;
-    organizationId: string;
-    projectId: string;
-    workspaceId: string;
-  },
+  deps: WorkspaceRelayDeps,
+  input: WorkspaceRelayContext,
 ): Promise<WorkspaceCurrentPullRequestView> {
   const { result } = await invokeWorkspaceRelay<unknown>({
-    actorUserId: input.actorUserId,
-    config: deps.config,
-    db: deps.db,
+    ...deps,
+    ...input,
     method: "workspace.refreshPullRequest",
-    organizationId: input.organizationId,
-    organizationService: deps.organizationService,
     params: {
       workspaceId: input.workspaceId,
     },
-    projectId: input.projectId,
-    workspaceId: input.workspaceId,
   });
 
   if (!result || typeof result !== "object") {

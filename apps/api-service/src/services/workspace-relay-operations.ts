@@ -9,14 +9,12 @@ import {
   type WorkspaceGitChanges,
 } from "@yishan/core";
 
-import type { AppDb } from "@/db/client";
-import type { OrganizationService } from "@/services/organization-service";
 import {
   type RelayWorkspaceConnectionAccess,
+  type WorkspaceRelayContext,
+  type WorkspaceRelayDeps,
   invokeWorkspaceRelay,
-  resolveWorkspaceRelayAccess,
 } from "@/services/workspace-relay";
-import type { ServiceConfig } from "@/types";
 
 export type WorkspaceFileView = WorkspaceFileEntry;
 
@@ -33,12 +31,6 @@ export type WorkspaceGitChangesView = WorkspaceGitChanges;
 export type WorkspaceGitBranchListView = WorkspaceGitBranchList;
 
 export type WorkspaceRelayConnectionView = RelayWorkspaceConnectionAccess;
-
-type WorkspaceRelayDeps = {
-  config: ServiceConfig;
-  db: AppDb;
-  organizationService: OrganizationService;
-};
 
 function readBranchNames(value: unknown): string[] {
   if (!Array.isArray(value)) {
@@ -68,51 +60,22 @@ function readWorkspaceFileContent(result: unknown): string {
   return typeof content === "string" ? content : "";
 }
 
-export async function resolveRelayAccessForWorkspace(
-  deps: WorkspaceRelayDeps,
-  input: {
-    actorUserId: string;
-    organizationId: string;
-    projectId: string;
-    workspaceId: string;
-  },
-): Promise<WorkspaceRelayConnectionView> {
-  return resolveWorkspaceRelayAccess({
-    actorUserId: input.actorUserId,
-    config: deps.config,
-    db: deps.db,
-    organizationId: input.organizationId,
-    organizationService: deps.organizationService,
-    projectId: input.projectId,
-    workspaceId: input.workspaceId,
-  });
-}
-
 export async function listWorkspaceFilesViaRelay(
   deps: WorkspaceRelayDeps,
-  input: {
-    actorUserId: string;
-    organizationId: string;
+  input: WorkspaceRelayContext & {
     path?: string;
-    projectId: string;
     recursive?: boolean;
-    workspaceId: string;
   },
 ): Promise<WorkspaceFileView[]> {
   const { result } = await invokeWorkspaceRelay<unknown[]>({
-    actorUserId: input.actorUserId,
-    config: deps.config,
-    db: deps.db,
+    ...deps,
+    ...input,
     method: "file.list",
-    organizationId: input.organizationId,
-    organizationService: deps.organizationService,
     params: {
       path: input.path?.trim() ?? "",
       recursive: input.recursive ?? false,
       workspaceId: input.workspaceId,
     },
-    projectId: input.projectId,
-    workspaceId: input.workspaceId,
   });
 
   if (!Array.isArray(result)) {
@@ -148,28 +111,19 @@ export async function listWorkspaceFilesViaRelay(
 
 export async function readWorkspaceFileViaRelay(
   deps: WorkspaceRelayDeps,
-  input: {
-    actorUserId: string;
+  input: WorkspaceRelayContext & {
     maxChars?: number;
-    organizationId: string;
     path: string;
-    projectId: string;
-    workspaceId: string;
   },
 ): Promise<WorkspaceFileContentView> {
   const { result } = await invokeWorkspaceRelay<unknown>({
-    actorUserId: input.actorUserId,
-    config: deps.config,
-    db: deps.db,
+    ...deps,
+    ...input,
     method: "file.read",
-    organizationId: input.organizationId,
-    organizationService: deps.organizationService,
     params: {
       path: input.path.trim(),
       workspaceId: input.workspaceId,
     },
-    projectId: input.projectId,
-    workspaceId: input.workspaceId,
   });
 
   const content = readWorkspaceFileContent(result);
@@ -185,28 +139,19 @@ export async function readWorkspaceFileViaRelay(
 
 export async function readWorkspaceDiffViaRelay(
   deps: WorkspaceRelayDeps,
-  input: {
-    actorUserId: string;
+  input: WorkspaceRelayContext & {
     maxChars?: number;
-    organizationId: string;
     path: string;
-    projectId: string;
-    workspaceId: string;
   },
 ): Promise<WorkspaceFileDiffView> {
   const { result } = await invokeWorkspaceRelay<unknown>({
-    actorUserId: input.actorUserId,
-    config: deps.config,
-    db: deps.db,
+    ...deps,
+    ...input,
     method: "file.diff",
-    organizationId: input.organizationId,
-    organizationService: deps.organizationService,
     params: {
       path: input.path.trim(),
       workspaceId: input.workspaceId,
     },
-    projectId: input.projectId,
-    workspaceId: input.workspaceId,
   });
 
   const record = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
@@ -225,25 +170,15 @@ export async function readWorkspaceDiffViaRelay(
 
 export async function listWorkspaceGitChangesViaRelay(
   deps: WorkspaceRelayDeps,
-  input: {
-    actorUserId: string;
-    organizationId: string;
-    projectId: string;
-    workspaceId: string;
-  },
+  input: WorkspaceRelayContext,
 ): Promise<WorkspaceGitChangesView> {
   const { result } = await invokeWorkspaceRelay<unknown>({
-    actorUserId: input.actorUserId,
-    config: deps.config,
-    db: deps.db,
+    ...deps,
+    ...input,
     method: "git.listChanges",
-    organizationId: input.organizationId,
-    organizationService: deps.organizationService,
     params: {
       workspaceId: input.workspaceId,
     },
-    projectId: input.projectId,
-    workspaceId: input.workspaceId,
   });
 
   const record = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
@@ -257,25 +192,15 @@ export async function listWorkspaceGitChangesViaRelay(
 
 export async function listWorkspaceGitBranchesViaRelay(
   deps: WorkspaceRelayDeps,
-  input: {
-    actorUserId: string;
-    organizationId: string;
-    projectId: string;
-    workspaceId: string;
-  },
+  input: WorkspaceRelayContext,
 ): Promise<WorkspaceGitBranchListView> {
   const { result } = await invokeWorkspaceRelay<unknown>({
-    actorUserId: input.actorUserId,
-    config: deps.config,
-    db: deps.db,
+    ...deps,
+    ...input,
     method: "git.branches",
-    organizationId: input.organizationId,
-    organizationService: deps.organizationService,
     params: {
       workspaceId: input.workspaceId,
     },
-    projectId: input.projectId,
-    workspaceId: input.workspaceId,
   });
 
   const record = result && typeof result === "object" ? (result as Record<string, unknown>) : {};

@@ -17,6 +17,19 @@ import { RelayRpcError } from "@/lib/relay-websocket";
 import type { OrganizationService } from "@/services/organization-service";
 import type { ServiceConfig } from "@/types";
 
+export type WorkspaceRelayDeps = {
+  config: ServiceConfig;
+  db: AppDb;
+  organizationService: OrganizationService;
+};
+
+export type WorkspaceRelayContext = {
+  actorUserId: string;
+  organizationId: string;
+  projectId: string;
+  workspaceId: string;
+};
+
 export type RelayWorkspaceAccess = {
   id: string;
   localPath: string;
@@ -37,15 +50,7 @@ export async function resolveWorkspaceRelayAccess({
   organizationService,
   projectId,
   workspaceId,
-}: {
-  actorUserId: string;
-  config: ServiceConfig;
-  db: AppDb;
-  organizationId: string;
-  organizationService: OrganizationService;
-  projectId: string;
-  workspaceId: string;
-}): Promise<RelayWorkspaceConnectionAccess> {
+}: WorkspaceRelayDeps & WorkspaceRelayContext): Promise<RelayWorkspaceConnectionAccess> {
   const role = await organizationService.getMembershipRole({
     organizationId,
     userId: actorUserId,
@@ -123,17 +128,11 @@ export async function invokeWorkspaceRelay<T>({
   params,
   projectId,
   workspaceId,
-}: {
-  actorUserId: string;
-  config: ServiceConfig;
-  db: AppDb;
-  method: string;
-  organizationId: string;
-  organizationService: OrganizationService;
-  params: unknown;
-  projectId: string;
-  workspaceId: string;
-}): Promise<{ result: T; workspace: RelayWorkspaceAccess }> {
+}: WorkspaceRelayDeps &
+  WorkspaceRelayContext & {
+    method: string;
+    params: unknown;
+  }): Promise<{ result: T; workspace: RelayWorkspaceAccess }> {
   const { relayApiToken, relayUrl, workspace } = await resolveWorkspaceRelayAccess({
     actorUserId,
     config,

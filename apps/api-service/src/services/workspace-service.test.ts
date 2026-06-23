@@ -7,8 +7,10 @@ import {
   WorkspaceNotFoundError,
 } from "@/errors";
 import type { WorkspaceProvisioner } from "@/services/workspace-provisioner";
+import { resolveWorkspaceRelayAccess } from "@/services/workspace-relay";
 import { listWorkspaceGitBranchesViaRelay } from "@/services/workspace-relay-operations";
 import { WorkspaceService } from "@/services/workspace-service";
+import type { ServiceConfig } from "@/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/services/workspace-relay-operations", () => {
@@ -18,11 +20,14 @@ vi.mock("@/services/workspace-relay-operations", () => {
     listWorkspaceGitChangesViaRelay: vi.fn(),
     readWorkspaceDiffViaRelay: vi.fn(),
     readWorkspaceFileViaRelay: vi.fn(),
-    resolveRelayAccessForWorkspace: vi.fn(),
   };
 });
+vi.mock("@/services/workspace-relay", () => ({
+  resolveWorkspaceRelayAccess: vi.fn(),
+}));
 
 const listWorkspaceGitBranchesViaRelayMock = listWorkspaceGitBranchesViaRelay as ReturnType<typeof vi.fn>;
+const resolveWorkspaceRelayAccessMock = vi.mocked(resolveWorkspaceRelayAccess);
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────
 
@@ -341,6 +346,57 @@ describe("WorkspaceService.listWorkspaces", () => {
     });
 
     expect(result).toEqual([]);
+  });
+});
+
+describe("WorkspaceService.resolveRelayAccess", () => {
+  beforeEach(() => {
+    resolveWorkspaceRelayAccessMock.mockReset();
+  });
+
+  it("resolves access through the shared workspace relay boundary", async () => {
+    const relayAccess = {
+      relayApiToken: "relay-token",
+      relayUrl: "wss://relay.example.com",
+      workspace: {
+        id: "ws-1",
+        localPath: "/repos/proj",
+        nodeId: "node-1",
+      },
+    };
+    resolveWorkspaceRelayAccessMock.mockResolvedValueOnce(relayAccess);
+
+    const relayConfig = {
+      relayApiToken: "relay-token",
+      relayUrl: "wss://relay.example.com",
+    } as unknown as ServiceConfig;
+    const { db } = makeDb();
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner, {
+      ...relayConfig,
+    });
+
+    const result = await service.resolveRelayAccess({
+      actorUserId: "user-1",
+      organizationId: "org-1",
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+    });
+
+    expect(resolveWorkspaceRelayAccessMock).toHaveBeenCalledWith({
+      actorUserId: "user-1",
+      config: {
+        relayApiToken: "relay-token",
+        relayUrl: "wss://relay.example.com",
+      },
+      db,
+      organizationId: "org-1",
+      organizationService: expect.objectContaining({
+        getMembershipRole: expect.any(Function),
+      }),
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+    });
+    expect(result).toEqual(relayAccess);
   });
 });
 

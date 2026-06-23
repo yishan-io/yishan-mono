@@ -9,7 +9,8 @@ import {
   parseRelayJsonMessage,
 } from "@/lib/relay-websocket";
 
-type RelayStreamEventHandlers = {
+/** Handles persistent relay stream events forwarded to higher-level bridge code. */
+export type RelayStreamEventHandlers = {
   onFrontendEvent?: (event: { payload: Record<string, unknown>; topic: string }) => void;
   onClose?: (event: CloseEvent) => void;
   onError?: (error: Error) => void;

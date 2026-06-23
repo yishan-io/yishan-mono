@@ -18,6 +18,7 @@ import { assertNodeOwnedByActor } from "@/services/shared/assertNodeOwnedByActor
 import { assertOrganizationMember } from "@/services/shared/assertOrganizationMember";
 import type { WorkspaceProvisioner } from "@/services/workspace-provisioner";
 import { fetchLatestPrByWorkspaceId } from "@/services/workspace-pull-request-service";
+import { type WorkspaceRelayDeps, resolveWorkspaceRelayAccess } from "@/services/workspace-relay";
 import {
   type WorkspaceFileContentView,
   type WorkspaceFileDiffView,
@@ -30,7 +31,6 @@ import {
   listWorkspaceGitChangesViaRelay,
   readWorkspaceDiffViaRelay,
   readWorkspaceFileViaRelay,
-  resolveRelayAccessForWorkspace,
 } from "@/services/workspace-relay-operations";
 import {
   type WorkspaceCurrentPullRequestView,
@@ -152,7 +152,10 @@ export class WorkspaceService {
     projectId: string;
     workspaceId: string;
   }): Promise<WorkspaceRelayConnectionView> {
-    return resolveRelayAccessForWorkspace(this.getRelayDeps(), input);
+    return resolveWorkspaceRelayAccess({
+      ...this.getRelayDeps(),
+      ...input,
+    });
   }
 
   async createWorkspace(input: CreateWorkspaceInput): Promise<WorkspaceView> {
@@ -630,11 +633,7 @@ export class WorkspaceService {
     };
   }
 
-  private getRelayDeps(): {
-    config: ServiceConfig;
-    db: AppDb;
-    organizationService: OrganizationService;
-  } {
+  private getRelayDeps(): WorkspaceRelayDeps {
     if (!this.config) {
       throw new RelayUnavailableError();
     }
