@@ -366,13 +366,6 @@ const copy = {
       projectFallbackTitle: desktopValue("en", "project.unknown", "Project"),
       nodeFallbackTitle: "Select node",
       organizationFallbackTitle: "Organization",
-      projectDetails: "Project details",
-      projectMetadata: "Project metadata",
-      projectMetadataSummaryLinked:
-        "This project is currently a registered record in Yishan. It does not guarantee a local workspace already exists on your desktop node.",
-      projectMetadataSummaryUnlinked:
-        "This project is currently just a registered record in Yishan. It is not yet linked to a repository or local desktop workspace.",
-      openProjectDetails: desktopValue("en", "layout.rightTabs.details", "Details"),
       repositoryUrl: "Repository URL",
       repositoryProvider: "Repository provider",
       repositoryKey: "Repository key",
@@ -713,13 +706,6 @@ const copy = {
       projectFallbackTitle: desktopValue("zh", "project.unknown", "项目"),
       nodeFallbackTitle: "选择节点",
       organizationFallbackTitle: "组织",
-      projectDetails: "项目详情",
-      projectMetadata: "项目元数据",
-      projectMetadataSummaryLinked:
-        "这个项目当前只是移山中的一条注册记录，并不保证它已经在 desktop 节点上存在本地工作区。",
-      projectMetadataSummaryUnlinked:
-        "这个项目当前只是移山中的一条注册记录，还没有和仓库或 desktop 本地工作区建立关联。",
-      openProjectDetails: desktopValue("zh", "layout.rightTabs.details", "详情"),
       repositoryUrl: "仓库地址",
       repositoryProvider: "仓库提供方",
       repositoryKey: "仓库标识",

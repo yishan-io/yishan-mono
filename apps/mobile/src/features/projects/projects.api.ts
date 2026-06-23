@@ -31,14 +31,6 @@ export async function listProjects(
   return response.projects;
 }
 
-export async function getProject(accessToken: string, organizationId: string, projectId: string): Promise<Project> {
-  const response = await apiRequest<{ project: Project }>(`/orgs/${organizationId}/projects/${projectId}`, {
-    accessToken,
-  });
-
-  return response.project;
-}
-
 export async function createProject(accessToken: string, organizationId: string, input: CreateProjectInput) {
   const response = await apiRequest<{ project: Project }>(`/orgs/${organizationId}/projects`, {
     method: "POST",

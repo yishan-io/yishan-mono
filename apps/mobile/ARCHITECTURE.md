@@ -346,7 +346,6 @@ Phase-1 route map:
 - `/(public)` -> direct Google sign-in
 - `/(app)/shell` -> authenticated shell root
 - `/(app)/organizations/[orgId]` -> organization-scoped focus route
-- `/(app)/organizations/[orgId]/projects/[projectId]` -> repo/project focus route
 - `/(app)/settings` -> utility settings screen
 
 Rules:

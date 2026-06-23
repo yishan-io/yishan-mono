@@ -219,27 +219,6 @@ export class ProjectService {
     }));
   }
 
-  async getProject(input: {
-    organizationId: string;
-    projectId: string;
-    actorUserId: string;
-  }): Promise<ProjectView> {
-    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
-
-    const rows = await this.db
-      .select()
-      .from(projects)
-      .where(and(eq(projects.id, input.projectId), eq(projects.organizationId, input.organizationId)))
-      .limit(1);
-
-    const project = rows[0];
-    if (!project) {
-      throw new ProjectNotFoundError(input.projectId);
-    }
-
-    return project;
-  }
-
   async deleteProject(input: {
     organizationId: string;
     projectId: string;

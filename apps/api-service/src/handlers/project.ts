@@ -24,17 +24,6 @@ export async function listProjectsHandler(
   return c.json({ projects });
 }
 
-export async function getProjectHandler(c: AppContext, params: ProjectWorkspaceParamsInput) {
-  const actorUser = c.get("sessionUser");
-  const project = await c.get("services").project.getProject({
-    actorUserId: actorUser.id,
-    organizationId: params.orgId,
-    projectId: params.projectId
-  });
-
-  return c.json({ project });
-}
-
 export async function createProjectHandler(
   c: AppContext,
   params: OrganizationProjectParamsInput,

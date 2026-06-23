@@ -98,8 +98,7 @@ Role of this file:
 - `SettingsNotificationsSection.tsx` 已把 option/source-of-truth 判定下沉到 `settings-notifications-domain.ts` 并补单测；section 组件现在只负责 selection UI 与 action dispatch，`SettingsSelectorSheet.tsx` 继续只拥有 modal/open-close 状态。
 - `nodes.api.ts` / `useNodesQuery.ts` / `nodes.types.ts` 复查后保持单一路径：query 只负责 auth + fetch gate，Node shape 只由 `nodes.types.ts` 定义；`NodeGlyph.tsx` 和 `NodesListCard.tsx` 继续保持纯显示组件，没有吸收 selection/filter 规则。
 - `useSettingsNodesScreenModel.ts` / `SettingsNodesScreen.tsx` 复查后保持自包含：settings 子页只拥有 route param -> nodes query -> list render 这条链，没有把行为散回 profile/shell 其它 screen。
-- `projects.api.ts` / `projects.types.ts` / `useProjectsQuery.ts` / `useProjectQuery.ts` 复查后保持单一数据入口；project feature 的类型 owner 只在 `projects.types.ts`，query/api 没再向 UI 泄漏额外 backend wrapper shape。
-- `useProjectDetailModel.ts` 已把 metadata rows 和 summary derive 下沉到 `project-detail-domain.ts` 并补单测；`ProjectDetailScreen.tsx` 继续保持纯 composition screen。
+- `projects.api.ts` / `projects.types.ts` / `useProjectsQuery.ts` 复查后保持单一数据入口；project feature 的类型 owner 只在 `projects.types.ts`，query/api 没再向 UI 泄漏额外 backend wrapper shape。
 - `projects/forms/project-form.ts` 现有验证和 payload mapper 已补直接单测，继续保持纯 helper；`project-icons.tsx` 仍是单一 icon 映射表，没有吸收业务状态。
 - `me.api.ts` / `me.types.ts` / `useMeQuery.ts` 现已明确 current-user owner：`me-domain.ts` 承担 `/me` DTO -> feature model 归一化，`useMeQuery.ts` 继续作为 shell/profile/settings/notifications 共用的单一 authenticated current-user query，settings 侧的语言偏好类型也已回收到 `me` feature owner。
 - `useNotificationRuntimeModel.ts` 已把 workspace meta derive、stream 连接资格、seen-id dedupe、lifecycle state reduce、unread tone update、banner payload 构建下沉到 `notification-runtime-domain.ts`，并补了直接单测；runtime hook 现在主要保留 query/runtime wiring，banner 生命周期继续留在 `useNotificationBannerController.ts`。

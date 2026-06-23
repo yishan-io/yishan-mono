@@ -43,10 +43,9 @@ Copy `.dev.vars.example` to `.dev.vars` for Wrangler local dev. Reuse the same v
 ## Scripts
 
 - `bun run dev:bun` - run the remote service locally via Bun
-- `bun run dev:bun:lan` - run the Bun server on LAN (`0.0.0.0`) for real-device testing
 - `bun run dev:worker` - run the Cloudflare Worker locally with Wrangler
 - `bun run db:local` - start the local Postgres database used by Wrangler Hyperdrive emulation
-- `bun run start:lan` - start the Bun server on LAN (`0.0.0.0`)
+- `bun run start` - start the Bun server locally
 - `bun run check` - typecheck
 - `bun run db:generate` - generate Drizzle migrations
 - `bun run db:migrate` - apply committed SQL migrations to target database
@@ -74,7 +73,6 @@ Copy `.dev.vars.example` to `.dev.vars` for Wrangler local dev. Reuse the same v
 - `POST /orgs/:orgId/nodes`
 - `DELETE /orgs/:orgId/nodes/:nodeId`
 - `GET /orgs/:orgId/projects`
-- `GET /orgs/:orgId/projects/:projectId`
 - `POST /orgs/:orgId/projects`
 - `PUT /orgs/:orgId/projects/:projectId`
 - `DELETE /orgs/:orgId/projects/:projectId`

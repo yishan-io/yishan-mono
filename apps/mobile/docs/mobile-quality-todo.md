@@ -746,18 +746,10 @@ Every feature should have:
 - [x] Project data boundary is explicit.
   Action: `review -> refactor`
   Priority: `P2`
-  Files: `projects.api.ts`, `projects.types.ts`, `useProjectsQuery.ts`, `useProjectQuery.ts`
+  Files: `projects.api.ts`, `projects.types.ts`, `useProjectsQuery.ts`
   Depends on: shared API review
-  Unlocks: cleaner project detail flow and workspace creation integration
+  Unlocks: cleaner workspace creation integration
   Done when: project feature has a clear DTO-to-feature-data boundary.
-
-- [x] Project detail model and screen stay separated by role.
-  Action: `review`
-  Priority: `P3`
-  Files: `useProjectDetailModel.ts`, `ProjectDetailScreen.tsx`
-  Depends on: project data review
-  Unlocks: easier project detail changes
-  Done when: screen composes and model derives without role overlap.
 
 - [x] Project forms/icons stay narrow and boring.
   Action: `review`
