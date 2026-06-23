@@ -9,7 +9,7 @@ import {
   playNotificationSound,
 } from "../commands/notificationCommands";
 import { loadWorkspaceSnapshot } from "../commands/projectCommands";
-import type { DesktopAgentKind } from "../helpers/agentSettings";
+import { type DesktopAgentKind, isDesktopAgentKind } from "../helpers/agentSettings";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../rpc/rpcTransport";
 import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../store/chatStore";
@@ -66,6 +66,7 @@ type BackendEventStoreBindingsDependencies = {
       paneId?: string;
     }) => void,
   ) => () => void;
+  subscribeTerminalAgentChanged?: (listener: (payload: { tabId: string; agent: string }) => void) => () => void;
   listWorkspaceWorktreePaths?: () => string[];
   resolveWorkspaceIdByWorktreePath?: (worktreePath: string) => string | undefined;
   refreshWorkspaceCurrentBranch?: (workspaceId: string, currentBranch?: string) => Promise<void>;
@@ -184,6 +185,15 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   subscribeTerminalSessionChanged: (listener) => {
     return subscribeBackendEvent("terminal.session.changed", (event) => {
       if (event.source !== "terminalSessionChanged") {
+        return;
+      }
+
+      listener(event.payload);
+    });
+  },
+  subscribeTerminalAgentChanged: (listener) => {
+    return subscribeBackendEvent("terminal.agent.changed", (event) => {
+      if (event.source !== "terminalAgentChanged") {
         return;
       }
 
@@ -748,6 +758,15 @@ export function createBackendEventStoreBindings(
       resolvedDependencies.subscribeTerminalSessionChanged?.((payload) => {
         handleTerminalSessionEvent(payload);
       }) ?? (() => {});
+    const unsubscribeTerminalAgentChanged =
+      resolvedDependencies.subscribeTerminalAgentChanged?.((payload) => {
+        const tabId = payload.tabId.trim();
+        if (!tabId) {
+          return;
+        }
+        const agentKind = isDesktopAgentKind(payload.agent) ? payload.agent : undefined;
+        tabStore.getState().setTerminalTabAgentKind(tabId, agentKind);
+      }) ?? (() => {});
 
     return () => {
       unsubscribeGitChanged();
@@ -762,6 +781,7 @@ export function createBackendEventStoreBindings(
       unsubscribeWorkspaceStateChanged();
       unsubscribeOpenBrowserUrl();
       unsubscribeTerminalSessionChanged();
+      unsubscribeTerminalAgentChanged();
       if (workspaceSnapshotRefreshTimer) {
         clearTimeout(workspaceSnapshotRefreshTimer);
       }

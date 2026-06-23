@@ -52,6 +52,7 @@ handle_interrupt() {
 trap 'handle_interrupt INT' INT
 trap 'handle_interrupt TERM' TERM
 
+notify_event "claude" "Start"
 "$REAL_BIN" "${extra_dir_args[@]}" "$@"
 status=$?
 
