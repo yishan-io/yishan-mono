@@ -11,7 +11,6 @@ import {
   listWorkspacesHandler,
   readWorkspaceDiffHandler,
   readWorkspaceFileHandler,
-  readWorkspaceTerminalOutputHandler,
   refreshWorkspacePullRequestHandler,
   startWorkspaceTerminalHandler,
   stopWorkspaceTerminalHandler,
@@ -111,12 +110,6 @@ workspaceRouter.get(
   "/:workspaceId/terminal/sessions/:sessionId/ws",
   zValidator("param", workspaceTerminalSessionParamsSchema, validationErrorResponse),
   workspaceTerminalStreamHandler,
-);
-
-workspaceRouter.get(
-  "/:workspaceId/terminal/sessions/:sessionId/output",
-  zValidator("param", workspaceTerminalSessionParamsSchema, validationErrorResponse),
-  (c) => readWorkspaceTerminalOutputHandler(c, c.req.valid("param")),
 );
 
 workspaceRouter.delete(

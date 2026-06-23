@@ -1,5 +1,4 @@
 export type OAuthProvider = "google" | "github";
-export type MobileOAuthProvider = "google";
 
 export type OAuthProfile = {
   provider: OAuthProvider;

@@ -1,4 +1,4 @@
-import type { WorkspaceTerminalOutput, WorkspaceTerminalSession } from "@/features/workspaces/workspaces.types";
+import type { WorkspaceTerminalSession } from "@/features/workspaces/workspaces.types";
 import { logMobileDebug } from "@/lib/debug/mobileDebug";
 import type { TerminalBackendSession } from "../state/shell.types";
 
@@ -11,29 +11,27 @@ export type MobileTerminalSessionCreateInput = {
 
 type MobileTerminalResolvedSession = {
   created: boolean;
-  output: WorkspaceTerminalOutput;
   session: TerminalBackendSession;
 };
 
 /**
- * Mirrors desktop terminal attach/create/restore semantics while staying
- * transport-agnostic for the mobile runtime boundary.
+ * Resolves one backend terminal session for the mobile runtime boundary
+ * without taking ownership of transcript restore.
  */
 export class TerminalSessionOrchestrator {
   constructor(
     private readonly commands: {
       listTerminalSessions: (params?: { includeExited?: boolean }) => Promise<WorkspaceTerminalSession[]>;
-      readTerminalOutput: (sessionId: string) => Promise<WorkspaceTerminalOutput>;
       startTerminalSession: (input?: MobileTerminalSessionCreateInput) => Promise<{ sessionId: string }>;
     },
   ) {}
 
   /**
    * Resolves one existing session when available, otherwise creates one
-   * replacement session, and restores buffered output before live transport
-   * attaches.
+   * replacement session. Transcript restore is handled by daemon-backed
+   * websocket snapshot delivery after attach.
    */
-  async attachOrCreateAndRestore(input: {
+  async attachOrCreateSession(input: {
     createSessionInput?: MobileTerminalSessionCreateInput;
     existingSessionId?: string | null;
     workspaceId: string;
@@ -48,48 +46,28 @@ export class TerminalSessionOrchestrator {
       : undefined;
 
     if (existingSession) {
-      logMobileDebug("terminal.restore", "read output", {
+      logMobileDebug("terminal.restore", "reuse existing session", {
         created: false,
-        sessionId: existingSession.sessionId,
-        workspaceId: input.workspaceId,
-      });
-      const output = await this.commands.readTerminalOutput(existingSession.sessionId);
-      logMobileDebug("terminal.restore", "read output result", {
-        created: false,
-        exitCode: output.exitCode ?? null,
-        outputLength: output.output.length,
-        running: output.running,
         sessionId: existingSession.sessionId,
         workspaceId: input.workspaceId,
       });
       return {
         created: false,
-        output,
-        session: normalizeTerminalSessionStatus(existingSession, output),
+        session: normalizeTerminalSessionStatus(existingSession),
       };
     }
 
     const createdSession = await this.commands.startTerminalSession(input.createSessionInput);
-    logMobileDebug("terminal.restore", "read output", {
+    logMobileDebug("terminal.restore", "created replacement session", {
       created: true,
-      sessionId: createdSession.sessionId,
-      workspaceId: input.workspaceId,
-    });
-    const output = await this.commands.readTerminalOutput(createdSession.sessionId);
-    logMobileDebug("terminal.restore", "read output result", {
-      created: true,
-      exitCode: output.exitCode ?? null,
-      outputLength: output.output.length,
-      running: output.running,
       sessionId: createdSession.sessionId,
       workspaceId: input.workspaceId,
     });
     return {
       created: true,
-      output,
       session: {
         sessionId: createdSession.sessionId,
-        status: output.running ? "running" : "exited",
+        status: "running",
         workspaceId: input.workspaceId,
       },
     };
@@ -101,17 +79,14 @@ export class TerminalSessionOrchestrator {
   }
 }
 
-function normalizeTerminalSessionStatus(
-  session: WorkspaceTerminalSession,
-  output: WorkspaceTerminalOutput,
-): TerminalBackendSession {
+function normalizeTerminalSessionStatus(session: WorkspaceTerminalSession): TerminalBackendSession {
   return {
     exitedAt: session.exitedAt,
     paneId: session.paneId,
     pid: session.pid,
     sessionId: session.sessionId,
     startedAt: session.startedAt,
-    status: output.running ? "running" : "exited",
+    status: session.status,
     tabId: session.tabId,
     workspaceId: session.workspaceId,
   };

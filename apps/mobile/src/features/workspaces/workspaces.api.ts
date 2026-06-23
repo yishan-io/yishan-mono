@@ -10,7 +10,6 @@ import {
   type WorkspacePullRequestRefreshResponseRecord,
   type WorkspacePullRequestsResponseRecord,
   type WorkspaceResponseRecord,
-  type WorkspaceTerminalOutputResponseRecord,
   type WorkspaceTerminalSessionsResponseRecord,
   type WorkspacesResponseRecord,
   buildWorkspaceWebSocketUrl,
@@ -23,7 +22,6 @@ import {
   readWorkspaceGitBranchesResponse,
   readWorkspacePullRequestsResponse,
   readWorkspaceResponse,
-  readWorkspaceTerminalOutputResponse,
   readWorkspaceTerminalSessionsResponse,
   readWorkspacesResponse,
 } from "./workspaces-api-domain";
@@ -36,7 +34,6 @@ import type {
   WorkspaceGitBranchList,
   WorkspaceGitChanges,
   WorkspacePullRequestSummary,
-  WorkspaceTerminalOutput,
   WorkspaceTerminalSession,
 } from "./workspaces.types";
 
@@ -302,23 +299,6 @@ export async function startWorkspaceTerminal(
   );
 
   return readStartedWorkspaceTerminalSessionResponse(response);
-}
-
-export async function readWorkspaceTerminalOutput(
-  accessToken: string,
-  organizationId: string,
-  projectId: string,
-  workspaceId: string,
-  sessionId: string,
-): Promise<WorkspaceTerminalOutput> {
-  const response = await apiRequest<WorkspaceTerminalOutputResponseRecord>(
-    `/orgs/${organizationId}/projects/${projectId}/workspaces/${workspaceId}/terminal/sessions/${sessionId}/output`,
-    {
-      accessToken,
-    },
-  );
-
-  return readWorkspaceTerminalOutputResponse(response);
 }
 
 export async function stopWorkspaceTerminal(

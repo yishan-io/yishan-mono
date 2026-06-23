@@ -28,7 +28,6 @@ export function useTerminalRuntimeSessionCommands({
   patchTerminal,
   peekRuntimeSnapshot,
   removeTerminal,
-  restoreTerminalOutput,
   status,
   setPendingStartTimeout,
 }: {
@@ -58,15 +57,6 @@ export function useTerminalRuntimeSessionCommands({
     transportSessionId: string | null;
   } | null;
   removeTerminal: (terminal: Pick<TerminalItem, "id" | "workspaceId">) => void;
-  restoreTerminalOutput: (
-    terminal: TerminalItem,
-    sessionId: string,
-    output: {
-      output: string;
-      running: boolean;
-      exitCode?: number | null;
-    },
-  ) => void;
   status: AuthStatus;
   setPendingStartTimeout: (terminalId: string, handle: ReturnType<typeof setTimeout>) => void;
 }) {
@@ -77,7 +67,6 @@ export function useTerminalRuntimeSessionCommands({
     getRuntimeSnapshot,
     peekRuntimeSnapshot,
     patchTerminal,
-    restoreTerminalOutput,
     status,
   });
 

@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
+import type { WorkspaceTerminalOutput } from "@/features/workspaces/workspaces.types";
 import type { TerminalItem, TerminalMessage } from "../state/shell.types";
 import type { RuntimeSnapshot } from "./terminal-transport-controller-domain";
-import {
-  buildExitedTerminalRuntimePatch,
-  buildTrimmedTerminalOutput,
-  mergePendingTerminalOutputMap,
-} from "./terminal-transport-output-domain";
+import { buildExitedTerminalRuntimePatch, mergePendingTerminalOutputMap } from "./terminal-transport-output-domain";
 import {
   appendTerminalOutputRuntime,
   deleteTerminalOutputRuntime,
@@ -82,32 +79,60 @@ export function useTerminalTransportOutputBuffer({
   }, [flushPendingTerminalOutput]);
 
   const applyTerminalOutput = useCallback(
-    (
-      terminal: TerminalItem,
-      sessionId: string,
-      output: { output: string; running: boolean; exitCode?: number | null; replace?: boolean },
-    ) => {
+    (terminal: TerminalItem, sessionId: string, output: WorkspaceTerminalOutput) => {
       const snapshot = getRuntimeSnapshot(terminal.id);
       snapshot.ensuredSessionId = sessionId;
       snapshot.exited = !output.running;
 
-      const previousOutput = readTerminalOutputRuntimeSnapshot(terminal.id, terminal.cachedOutput ?? "");
-      const nextRawOutput = buildTrimmedTerminalOutput(previousOutput, output.output, output.replace);
-      const nextAppendedChunk = nextRawOutput.startsWith(previousOutput)
-        ? nextRawOutput.slice(previousOutput.length)
-        : null;
-      if (output.replace) {
-        replaceTerminalOutputRuntime(terminal.id, nextRawOutput);
-      } else if (nextAppendedChunk === null) {
-        replaceTerminalOutputRuntime(terminal.id, nextRawOutput);
-      } else {
-        appendTerminalOutputRuntime(terminal.id, nextAppendedChunk, terminal.cachedOutput ?? "");
-      }
+      replaceTerminalOutputRuntime(terminal.id, output.output);
+      const nextRawOutput = readTerminalOutputRuntimeSnapshot(terminal.id, terminal.cachedOutput ?? "");
       pendingOutputByTerminalIdRef.current[terminal.id] = nextRawOutput;
       pendingRuntimePatchByTerminalIdRef.current[terminal.id] = {
         exitCode: output.exitCode,
         output: nextRawOutput,
         running: output.running,
+        terminal,
+      };
+      schedulePendingTerminalOutputFlush();
+    },
+    [getRuntimeSnapshot, schedulePendingTerminalOutputFlush],
+  );
+
+  const appendTerminalOutput = useCallback(
+    (terminal: TerminalItem, sessionId: string, outputChunk: string) => {
+      if (!outputChunk) {
+        return;
+      }
+
+      const snapshot = getRuntimeSnapshot(terminal.id);
+      snapshot.ensuredSessionId = sessionId;
+      snapshot.exited = false;
+
+      appendTerminalOutputRuntime(terminal.id, outputChunk, terminal.cachedOutput ?? "");
+      const nextRawOutput = readTerminalOutputRuntimeSnapshot(terminal.id, terminal.cachedOutput ?? "");
+      pendingOutputByTerminalIdRef.current[terminal.id] = nextRawOutput;
+      pendingRuntimePatchByTerminalIdRef.current[terminal.id] = {
+        output: nextRawOutput,
+        running: true,
+        terminal,
+      };
+      schedulePendingTerminalOutputFlush();
+    },
+    [getRuntimeSnapshot, schedulePendingTerminalOutputFlush],
+  );
+
+  const applyTerminalExit = useCallback(
+    (terminal: TerminalItem, sessionId: string, exitCode?: number | null) => {
+      const snapshot = getRuntimeSnapshot(terminal.id);
+      snapshot.ensuredSessionId = sessionId;
+      snapshot.exited = true;
+
+      const nextRawOutput = readTerminalOutputRuntimeSnapshot(terminal.id, terminal.cachedOutput ?? "");
+      pendingOutputByTerminalIdRef.current[terminal.id] = nextRawOutput;
+      pendingRuntimePatchByTerminalIdRef.current[terminal.id] = {
+        exitCode,
+        output: nextRawOutput,
+        running: false,
         terminal,
       };
       schedulePendingTerminalOutputFlush();
@@ -163,9 +188,8 @@ export function useTerminalTransportOutputBuffer({
   );
 
   return {
+    appendTerminalOutput,
+    applyTerminalExit,
     applyTerminalOutput,
-    readTerminalOutput: (terminal: TerminalItem) =>
-      pendingOutputByTerminalIdRef.current[terminal.id] ??
-      readTerminalOutputRuntimeSnapshot(terminal.id, terminal.cachedOutput ?? ""),
   };
 }

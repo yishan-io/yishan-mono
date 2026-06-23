@@ -177,14 +177,13 @@ export const workspaceTerminalStreamHandler = upgradeWebSocket((c) => {
           });
 
           const snapshot = subscribeResult.snapshot;
-          if (snapshot?.output) {
-            sendRelayBridgeJson(ws, { output: snapshot.output, sessionId: params.sessionId, type: "output" });
-          }
-          if (snapshot && !snapshot.running) {
+          if (snapshot) {
             sendRelayBridgeJson(ws, {
               exitCode: snapshot.exitCode ?? null,
+              output: snapshot.output,
+              running: snapshot.running,
               sessionId: params.sessionId,
-              type: "exit",
+              type: "snapshot",
             });
           }
 

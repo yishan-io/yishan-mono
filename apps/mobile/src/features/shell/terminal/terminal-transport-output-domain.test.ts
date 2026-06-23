@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { TerminalItem } from "../state/shell.types";
-import {
-  buildExitedTerminalRuntimePatch,
-  buildTrimmedTerminalOutput,
-  mergePendingTerminalOutputMap,
-} from "./terminal-transport-output-domain";
+import { buildExitedTerminalRuntimePatch, mergePendingTerminalOutputMap } from "./terminal-transport-output-domain";
 
 function createTerminal(overrides: Partial<TerminalItem> = {}): TerminalItem {
   return {
@@ -20,35 +16,6 @@ function createTerminal(overrides: Partial<TerminalItem> = {}): TerminalItem {
 }
 
 describe("terminal-transport-output-domain", () => {
-  it("builds trimmed terminal output in append and replace modes", () => {
-    expect(buildTrimmedTerminalOutput("hello", " world")).toBe("hello world");
-    expect(buildTrimmedTerminalOutput("hello", "reset", true)).toBe("reset");
-  });
-
-  it("ignores replayed output that is already present at the end of the buffer", () => {
-    const output = "If you want, I can also give you a quick map of the repo by folder.\n";
-
-    expect(buildTrimmedTerminalOutput(output, output)).toBe(output);
-  });
-
-  it("merges overlapping replay output without duplicating the shared suffix", () => {
-    const previousOutput = [
-      "Working (0s • esc to interrupt)\n",
-      "Running 3 UserPromptSubmit hooks\n",
-      "If you want, I can also give you a quick map of the repo by folder, ",
-    ].join("");
-    const nextChunk =
-      "If you want, I can also give you a quick map of the repo by folder, or explain how the desktop app and CLI fit together.\n";
-
-    expect(buildTrimmedTerminalOutput(previousOutput, nextChunk)).toBe(
-      `${previousOutput}or explain how the desktop app and CLI fit together.\n`,
-    );
-  });
-
-  it("still appends short repeated chunks normally", () => {
-    expect(buildTrimmedTerminalOutput("ok\n", "ok\n")).toBe("ok\nok\n");
-  });
-
   it("builds the exited runtime patch from rendered output", () => {
     const terminal = createTerminal({
       lastMessagePreview: "old",

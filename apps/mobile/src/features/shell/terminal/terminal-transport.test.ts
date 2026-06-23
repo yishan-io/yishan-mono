@@ -64,11 +64,15 @@ describe("terminal-transport", () => {
   });
 
   it("waits for ready before sending terminal input", async () => {
+    const onExit = vi.fn();
     const onOutput = vi.fn();
+    const onSnapshot = vi.fn();
     const transport = createWebSocketTerminalTransport({
       handlers: {
         onError: vi.fn(),
+        onExit,
         onOutput,
+        onSnapshot,
       },
       url: "ws://example.test/terminal",
     });
@@ -92,13 +96,17 @@ describe("terminal-transport", () => {
 
     expect(socket.sentMessages).toEqual([JSON.stringify({ input: "exec codex\r", type: "input" })]);
     expect(onOutput).not.toHaveBeenCalled();
+    expect(onExit).not.toHaveBeenCalled();
+    expect(onSnapshot).not.toHaveBeenCalled();
   });
 
   it("replays the latest resize once the socket becomes ready", async () => {
     const transport = createWebSocketTerminalTransport({
       handlers: {
         onError: vi.fn(),
+        onExit: vi.fn(),
         onOutput: vi.fn(),
+        onSnapshot: vi.fn(),
       },
       url: "ws://example.test/terminal",
     });
@@ -119,5 +127,92 @@ describe("terminal-transport", () => {
     await resizePromise;
 
     expect(socket.sentMessages).toEqual([JSON.stringify({ cols: 120, rows: 40, type: "resize" })]);
+  });
+
+  it("treats snapshot as the restore source before ready", async () => {
+    const onExit = vi.fn();
+    const onOutput = vi.fn();
+    const onSnapshot = vi.fn();
+    const transport = createWebSocketTerminalTransport({
+      handlers: {
+        onError: vi.fn(),
+        onExit,
+        onOutput,
+        onSnapshot,
+      },
+      url: "ws://example.test/terminal",
+    });
+
+    transport.connect();
+    const socket = socketInstances[0];
+
+    expect(socket).toBeDefined();
+    if (!socket) {
+      throw new Error("Expected websocket connection to be created.");
+    }
+
+    socket.emitOpen();
+    await Promise.resolve();
+    socket.emitMessage(
+      JSON.stringify({
+        exitCode: null,
+        output: "hello world",
+        running: true,
+        sessionId: "session-1",
+        type: "snapshot",
+      }),
+    );
+    await Promise.resolve();
+
+    expect(onSnapshot).toHaveBeenCalledWith({
+      exitCode: null,
+      output: "hello world",
+      running: true,
+    });
+    expect(onOutput).not.toHaveBeenCalled();
+    expect(onExit).not.toHaveBeenCalled();
+  });
+
+  it("streams later output and exit separately after the snapshot", async () => {
+    const onExit = vi.fn();
+    const onOutput = vi.fn();
+    const onSnapshot = vi.fn();
+    const transport = createWebSocketTerminalTransport({
+      handlers: {
+        onError: vi.fn(),
+        onExit,
+        onOutput,
+        onSnapshot,
+      },
+      url: "ws://example.test/terminal",
+    });
+
+    transport.connect();
+    const socket = socketInstances[0];
+
+    expect(socket).toBeDefined();
+    if (!socket) {
+      throw new Error("Expected websocket connection to be created.");
+    }
+
+    socket.emitOpen();
+    await Promise.resolve();
+    socket.emitMessage(
+      JSON.stringify({
+        exitCode: null,
+        output: "hello",
+        running: true,
+        sessionId: "session-1",
+        type: "snapshot",
+      }),
+    );
+    await Promise.resolve();
+    socket.emitMessage(JSON.stringify({ output: " world", sessionId: "session-1", type: "output" }));
+    socket.emitMessage(JSON.stringify({ exitCode: 0, sessionId: "session-1", type: "exit" }));
+    await Promise.resolve();
+
+    expect(onSnapshot).toHaveBeenCalledTimes(1);
+    expect(onOutput).toHaveBeenCalledWith(" world");
+    expect(onExit).toHaveBeenCalledWith(0);
   });
 });

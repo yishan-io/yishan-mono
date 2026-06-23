@@ -84,7 +84,6 @@ export function useTerminalSessionRuntime({
     getTransportTerminalIds,
     hasPendingStartTimeout,
     peekRuntimeSnapshot,
-    restoreTerminalOutput,
     setMeasuredSize,
     setPendingStartTimeout,
     terminals,
@@ -113,7 +112,6 @@ export function useTerminalSessionRuntime({
     patchTerminal,
     peekRuntimeSnapshot,
     removeTerminal,
-    restoreTerminalOutput,
     setPendingStartTimeout,
     status,
   });

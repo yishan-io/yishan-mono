@@ -37,11 +37,9 @@ import {
   refreshWorkspacePullRequestViaRelay,
 } from "@/services/workspace-relay-pull-request-operations";
 import {
-  type WorkspaceTerminalReadView,
   type WorkspaceTerminalSessionView,
   type WorkspaceTerminalStartView,
   listWorkspaceTerminalSessionsViaRelay,
-  readWorkspaceTerminalOutputViaRelay,
   startWorkspaceTerminalViaRelay,
   stopWorkspaceTerminalViaRelay,
 } from "@/services/workspace-relay-terminal-operations";
@@ -88,7 +86,6 @@ export type {
 } from "@/services/workspace-relay-operations";
 export type { WorkspaceCurrentPullRequestView } from "@/services/workspace-relay-pull-request-operations";
 export type {
-  WorkspaceTerminalReadView,
   WorkspaceTerminalSessionView,
   WorkspaceTerminalStartView,
 } from "@/services/workspace-relay-terminal-operations";
@@ -528,16 +525,6 @@ export class WorkspaceService {
     workspaceId: string;
   }): Promise<WorkspaceTerminalStartView> {
     return startWorkspaceTerminalViaRelay(this.getRelayDeps(), input);
-  }
-
-  async readWorkspaceTerminalOutput(input: {
-    actorUserId: string;
-    organizationId: string;
-    projectId: string;
-    sessionId: string;
-    workspaceId: string;
-  }): Promise<WorkspaceTerminalReadView> {
-    return readWorkspaceTerminalOutputViaRelay(this.getRelayDeps(), input);
   }
 
   async stopWorkspaceTerminal(input: {

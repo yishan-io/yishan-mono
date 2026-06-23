@@ -9,8 +9,10 @@ export type TerminalTransportSize = {
 
 export type TerminalTransportHandlers = {
   onError: (error: Error) => void;
+  onExit: (exitCode?: number | null) => void;
   onMessageDebug?: (payload: unknown) => void;
-  onOutput: (output: WorkspaceTerminalOutput & { replace?: boolean }) => void;
+  onOutput: (output: string) => void;
+  onSnapshot: (snapshot: WorkspaceTerminalOutput) => void;
   onStateDebug?: (payload: unknown) => void;
 };
 
@@ -22,6 +24,13 @@ export type TerminalTransport = {
 };
 
 type TerminalWebSocketMessage =
+  | {
+      exitCode?: number | null;
+      output: string;
+      running: boolean;
+      sessionId: string;
+      type: "snapshot";
+    }
   | {
       sessionId: string;
       type: "ready";
@@ -202,32 +211,34 @@ export function createWebSocketTerminalTransport({
             handlers.onStateDebug?.({ connectionId, phase: "message", type: message.type });
 
             switch (message.type) {
+              case "snapshot":
+                settleReady();
+                flushPendingResize();
+                terminalExited = !message.running;
+                handlers.onSnapshot({
+                  exitCode: message.exitCode ?? null,
+                  output: message.output,
+                  running: message.running,
+                });
+                return;
               case "ready":
                 settleReady();
                 flushPendingResize();
                 return;
-              case "output": {
-                const wasReady = ready;
-                if (!wasReady) {
+              case "output":
+                if (!ready) {
                   settleReady();
+                  flushPendingResize();
                 }
-                handlers.onOutput({
-                  output: message.output,
-                  replace: !wasReady,
-                  running: true,
-                });
+                handlers.onOutput(message.output);
                 return;
-              }
               case "exit":
                 if (!ready) {
                   settleReady();
+                  flushPendingResize();
                 }
                 terminalExited = true;
-                handlers.onOutput({
-                  exitCode: message.exitCode ?? null,
-                  output: "",
-                  running: false,
-                });
+                handlers.onExit(message.exitCode ?? null);
                 return;
               case "error": {
                 const wsError = new Error(message.message || "Terminal websocket failed.");

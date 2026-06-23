@@ -3,7 +3,6 @@ import { useCallback } from "react";
 import type { AuthStatus } from "@/features/auth";
 import {
   listWorkspaceTerminalSessions,
-  readWorkspaceTerminalOutput,
   startWorkspaceTerminal,
   stopWorkspaceTerminal,
 } from "@/features/workspaces/workspaces.api";
@@ -33,8 +32,8 @@ type TerminalPatchFn = (
 ) => void;
 
 /**
- * Owns one desktop-equivalent mobile attach/create/restore flow:
- * resolve session, restore buffered output, then attach live transport.
+ * Owns one mobile attach/create flow:
+ * resolve a session, then let daemon-backed websocket snapshot restore output.
  */
 export function useTerminalAttachOrCreateSessionCommand({
   accessToken,
@@ -43,7 +42,6 @@ export function useTerminalAttachOrCreateSessionCommand({
   getRuntimeSnapshot,
   patchTerminal,
   peekRuntimeSnapshot,
-  restoreTerminalOutput,
   status,
 }: {
   accessToken: string | null;
@@ -52,11 +50,6 @@ export function useTerminalAttachOrCreateSessionCommand({
   getRuntimeSnapshot: (terminalId: string) => RuntimeSnapshot;
   patchTerminal: TerminalPatchFn;
   peekRuntimeSnapshot: (terminalId: string) => RuntimeSnapshot | null;
-  restoreTerminalOutput: (
-    terminal: TerminalItem,
-    sessionId: string,
-    output: { output: string; running: boolean; exitCode?: number | null },
-  ) => void;
   status: AuthStatus;
 }) {
   return useCallback(
@@ -96,6 +89,7 @@ export function useTerminalAttachOrCreateSessionCommand({
           // Ignore cleanup failure once the local lifecycle has already moved on.
         }
       };
+      let createdSessionId: string | null = null;
 
       try {
         logMobileDebug("terminal.restore", "attach or create start", {
@@ -114,76 +108,67 @@ export function useTerminalAttachOrCreateSessionCommand({
               terminal.workspaceId,
               options,
             ),
-          readTerminalOutput: (sessionId) =>
-            readWorkspaceTerminalOutput(
-              accessToken,
-              terminal.orgId,
-              terminal.projectId,
-              terminal.workspaceId,
-              sessionId,
-            ),
           startTerminalSession: (input) =>
             startWorkspaceTerminal(accessToken, terminal.orgId, terminal.projectId, terminal.workspaceId, input),
         });
 
-        const restoreResult = await orchestrator.attachOrCreateAndRestore({
+        const resolvedSession = await orchestrator.attachOrCreateSession({
           createSessionInput: buildStartWorkspaceTerminalInput(terminal.workspaceId, terminal.id, initialSize),
           existingSessionId,
           workspaceId: terminal.workspaceId,
         });
         logMobileDebug("terminal.restore", "attach or create result", {
-          created: restoreResult.created,
-          exitCode: restoreResult.output.exitCode ?? null,
-          outputLength: restoreResult.output.output.length,
-          running: restoreResult.output.running,
-          sessionId: restoreResult.session.sessionId,
+          created: resolvedSession.created,
+          sessionId: resolvedSession.session.sessionId,
           terminalId: terminal.id,
           workspaceId: terminal.workspaceId,
         });
+        if (resolvedSession.created) {
+          createdSessionId = resolvedSession.session.sessionId;
+        }
 
         if (!isCurrentRuntimeSnapshot(peekRuntimeSnapshot(terminal.id), snapshot)) {
-          if (restoreResult.created) {
-            await stopOrphanedSession(restoreResult.session.sessionId);
+          if (createdSessionId) {
+            await stopOrphanedSession(createdSessionId);
+            createdSessionId = null;
           }
           return;
         }
 
-        snapshot.ensuredSessionId = restoreResult.session.sessionId;
-        snapshot.exited = !restoreResult.output.running;
-        bindTerminalSessionStartLease(terminal.id, restoreResult.session.sessionId);
+        snapshot.ensuredSessionId = resolvedSession.session.sessionId;
+        snapshot.exited = resolvedSession.session.status !== "running";
+        bindTerminalSessionStartLease(terminal.id, resolvedSession.session.sessionId);
         didBindLease = true;
 
-        restoreTerminalOutput(terminal, restoreResult.session.sessionId, restoreResult.output);
         patchTerminal(
           terminal,
           {
-            session: restoreResult.session,
-            status: restoreResult.output.running ? "running" : "idle",
+            session: resolvedSession.session,
+            status: resolvedSession.session.status === "running" ? "running" : "idle",
           },
           { touchUpdatedAt: false },
         );
 
         if (!isCurrentRuntimeSnapshot(peekRuntimeSnapshot(terminal.id), snapshot)) {
-          if (restoreResult.created) {
-            await stopOrphanedSession(restoreResult.session.sessionId);
+          if (createdSessionId) {
+            await stopOrphanedSession(createdSessionId);
+            createdSessionId = null;
           }
           return;
         }
 
-        if (restoreResult.created) {
-          const launchInput = buildTerminalLaunchInput(terminal);
-          if (launchInput) {
-            const transport = attachTransport(terminal, restoreResult.session.sessionId);
-            if (!transport) {
-              throw new Error("Terminal transport is unavailable.");
-            }
-
-            await transport.send(launchInput);
-          }
+        const transport = attachTransport(terminal, resolvedSession.session.sessionId);
+        if (!transport) {
+          throw new Error("Terminal transport is unavailable.");
         }
 
-        if (restoreResult.output.running) {
-          attachTransport(terminal, restoreResult.session.sessionId)?.connect();
+        transport.connect();
+
+        if (resolvedSession.created) {
+          const launchInput = buildTerminalLaunchInput(terminal);
+          if (launchInput) {
+            await transport.send(launchInput);
+          }
         }
       } catch (error) {
         logMobileDebug("terminal.restore", "attach or create error", {
@@ -192,6 +177,9 @@ export function useTerminalAttachOrCreateSessionCommand({
           terminalId: terminal.id,
           workspaceId: terminal.workspaceId,
         });
+        if (createdSessionId) {
+          await stopOrphanedSession(createdSessionId);
+        }
         if (!existingSessionId) {
           resetTerminalSessionStartLease(terminal.id);
         }
@@ -204,15 +192,6 @@ export function useTerminalAttachOrCreateSessionCommand({
         snapshot.ensuring = false;
       }
     },
-    [
-      accessToken,
-      appendSystemMessage,
-      attachTransport,
-      getRuntimeSnapshot,
-      patchTerminal,
-      peekRuntimeSnapshot,
-      restoreTerminalOutput,
-      status,
-    ],
+    [accessToken, appendSystemMessage, attachTransport, getRuntimeSnapshot, patchTerminal, peekRuntimeSnapshot, status],
   );
 }

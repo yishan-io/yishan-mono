@@ -16,12 +16,6 @@ export type WorkspaceTerminalStartView = {
   sessionId: string;
 };
 
-export type WorkspaceTerminalReadView = {
-  output: string;
-  running: boolean;
-  exitCode?: number | null;
-};
-
 export async function listWorkspaceTerminalSessionsViaRelay(
   deps: WorkspaceRelayDeps,
   input: WorkspaceRelayContext & {
@@ -110,31 +104,6 @@ export async function startWorkspaceTerminalViaRelay(
   }
 
   return { sessionId };
-}
-
-export async function readWorkspaceTerminalOutputViaRelay(
-  deps: WorkspaceRelayDeps,
-  input: WorkspaceRelayContext & {
-    sessionId: string;
-  },
-): Promise<WorkspaceTerminalReadView> {
-  const { result } = await invokeWorkspaceRelay<unknown>({
-    ...deps,
-    ...input,
-    method: "terminal.read",
-    params: {
-      sessionId: input.sessionId,
-      workspaceId: input.workspaceId,
-    },
-  });
-
-  const record = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
-
-  return {
-    exitCode: typeof record.exitCode === "number" ? record.exitCode : null,
-    output: typeof record.output === "string" ? record.output : "",
-    running: record.running === true,
-  };
 }
 
 export async function stopWorkspaceTerminalViaRelay(

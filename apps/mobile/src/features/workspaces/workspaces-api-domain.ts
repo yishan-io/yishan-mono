@@ -7,7 +7,6 @@ import type {
   WorkspaceGitBranchList,
   WorkspaceGitChanges,
   WorkspacePullRequestSummary,
-  WorkspaceTerminalOutput,
   WorkspaceTerminalSession,
 } from "./workspaces.types";
 
@@ -49,10 +48,6 @@ export type WorkspacePullRequestRefreshResponseRecord = {
 
 export type WorkspaceTerminalSessionsResponseRecord = {
   sessions: WorkspaceTerminalSession[];
-};
-
-export type WorkspaceTerminalOutputResponseRecord = {
-  output: WorkspaceTerminalOutput;
 };
 
 export type StartWorkspaceTerminalResponseRecord = {
@@ -105,12 +100,6 @@ export function readWorkspaceTerminalSessionsResponse(
   response: WorkspaceTerminalSessionsResponseRecord,
 ): WorkspaceTerminalSession[] {
   return response.sessions;
-}
-
-export function readWorkspaceTerminalOutputResponse(
-  response: WorkspaceTerminalOutputResponseRecord,
-): WorkspaceTerminalOutput {
-  return response.output;
 }
 
 export function readStartedWorkspaceTerminalSessionResponse(response: StartWorkspaceTerminalResponseRecord): {

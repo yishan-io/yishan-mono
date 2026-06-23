@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { TerminalSessionOrchestrator } from "./terminalSessionOrchestrator";
 
 describe("TerminalSessionOrchestrator", () => {
-  it("reuses one existing session and restores buffered output", async () => {
+  it("reuses one existing session without reading transcript output", async () => {
     const commands = {
       listTerminalSessions: vi.fn().mockResolvedValue([
         {
@@ -15,25 +15,17 @@ describe("TerminalSessionOrchestrator", () => {
           workspaceId: "workspace-1",
         },
       ]),
-      readTerminalOutput: vi.fn().mockResolvedValue({
-        output: "hello world",
-        running: true,
-      }),
       startTerminalSession: vi.fn(),
     };
     const orchestrator = new TerminalSessionOrchestrator(commands);
 
-    const restored = await orchestrator.attachOrCreateAndRestore({
+    const resolved = await orchestrator.attachOrCreateSession({
       existingSessionId: "session-1",
       workspaceId: "workspace-1",
     });
 
-    expect(restored).toEqual({
+    expect(resolved).toEqual({
       created: false,
-      output: {
-        output: "hello world",
-        running: true,
-      },
       session: {
         paneId: "pane-workspace-1",
         pid: 42,
@@ -45,21 +37,16 @@ describe("TerminalSessionOrchestrator", () => {
     });
     expect(commands.startTerminalSession).not.toHaveBeenCalled();
     expect(commands.listTerminalSessions).toHaveBeenCalledWith({ includeExited: true });
-    expect(commands.readTerminalOutput).toHaveBeenCalledWith("session-1");
   });
 
   it("creates a replacement session when the existing one is gone", async () => {
     const commands = {
       listTerminalSessions: vi.fn().mockResolvedValue([]),
-      readTerminalOutput: vi.fn().mockResolvedValue({
-        output: "",
-        running: true,
-      }),
       startTerminalSession: vi.fn().mockResolvedValue({ sessionId: "session-2" }),
     };
     const orchestrator = new TerminalSessionOrchestrator(commands);
 
-    const restored = await orchestrator.attachOrCreateAndRestore({
+    const resolved = await orchestrator.attachOrCreateSession({
       createSessionInput: {
         cols: 120,
         rows: 40,
@@ -70,12 +57,8 @@ describe("TerminalSessionOrchestrator", () => {
       workspaceId: "workspace-1",
     });
 
-    expect(restored).toEqual({
+    expect(resolved).toEqual({
       created: true,
-      output: {
-        output: "",
-        running: true,
-      },
       session: {
         sessionId: "session-2",
         status: "running",
@@ -88,21 +71,16 @@ describe("TerminalSessionOrchestrator", () => {
       paneId: "pane-workspace-1",
       tabId: "terminal-1",
     });
-    expect(commands.readTerminalOutput).toHaveBeenCalledWith("session-2");
   });
 
   it("creates a new session when the terminal has no existing session id", async () => {
     const commands = {
       listTerminalSessions: vi.fn(),
-      readTerminalOutput: vi.fn().mockResolvedValue({
-        output: "",
-        running: true,
-      }),
       startTerminalSession: vi.fn().mockResolvedValue({ sessionId: "session-3" }),
     };
     const orchestrator = new TerminalSessionOrchestrator(commands);
 
-    const restored = await orchestrator.attachOrCreateAndRestore({
+    const resolved = await orchestrator.attachOrCreateSession({
       createSessionInput: {
         paneId: "pane-workspace-1",
         tabId: "terminal-1",
@@ -110,7 +88,7 @@ describe("TerminalSessionOrchestrator", () => {
       workspaceId: "workspace-1",
     });
 
-    expect(restored.created).toBe(true);
+    expect(resolved.created).toBe(true);
     expect(commands.listTerminalSessions).not.toHaveBeenCalled();
     expect(commands.startTerminalSession).toHaveBeenCalledWith({
       paneId: "pane-workspace-1",
@@ -118,38 +96,30 @@ describe("TerminalSessionOrchestrator", () => {
     });
   });
 
-  it("preserves exited session reuse and normalizes status from restore output", async () => {
+  it("preserves exited session status when reusing an existing exited session", async () => {
     const commands = {
       listTerminalSessions: vi.fn().mockResolvedValue([
         {
+          exitedAt: "2026-06-23T00:00:00.000Z",
           pid: 42,
           sessionId: "session-4",
-          status: "running",
+          status: "exited",
           workspaceId: "workspace-1",
         },
       ]),
-      readTerminalOutput: vi.fn().mockResolvedValue({
-        exitCode: 0,
-        output: "done",
-        running: false,
-      }),
       startTerminalSession: vi.fn(),
     };
     const orchestrator = new TerminalSessionOrchestrator(commands);
 
-    const restored = await orchestrator.attachOrCreateAndRestore({
+    const resolved = await orchestrator.attachOrCreateSession({
       existingSessionId: "session-4",
       workspaceId: "workspace-1",
     });
 
-    expect(restored).toEqual({
+    expect(resolved).toEqual({
       created: false,
-      output: {
-        exitCode: 0,
-        output: "done",
-        running: false,
-      },
       session: {
+        exitedAt: "2026-06-23T00:00:00.000Z",
         pid: 42,
         sessionId: "session-4",
         status: "exited",

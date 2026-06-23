@@ -1,8 +1,6 @@
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolveCliInvocation } from "../cli/cliInvocation";
 import type { AuthLoginResult, AuthStatusResult } from "../ipc";
-import { isDevMode } from "../runtime/environment";
 
 const CLI_WHOAMI_ARGS = ["whoami"];
 const CLI_LOGIN_ARGS = ["login"];
@@ -16,55 +14,8 @@ type CliCommandResult = {
 
 type CliCommandRunner = (args: string[]) => Promise<CliCommandResult>;
 
-type CliInvocation = {
-  executablePath: string;
-  prefixArgs: string[];
-  cwd?: string;
-};
-
-function resolveCliInvocation(): CliInvocation {
-  const explicitCliPath = process.env.YISHAN_CLI_PATH?.trim();
-  if (explicitCliPath) {
-    return {
-      executablePath: explicitCliPath,
-      prefixArgs: [],
-    };
-  }
-
-  if (isDevMode()) {
-    const configuredDevCliDir = process.env.YISHAN_CLI_DEV_DIR?.trim();
-    const candidateDir = configuredDevCliDir || resolve(process.cwd(), "..", "cli");
-    const cliDir = existsSync(candidateDir) ? candidateDir : undefined;
-    const devApiBaseUrl = process.env.VITE_API_BASE_URL?.trim() || "http://localhost:8787";
-
-    return {
-      executablePath: "go",
-      prefixArgs: ["run", ".", "--profile", "dev", "--api-base-url", devApiBaseUrl],
-      cwd: cliDir,
-    };
-  }
-
-  const bundledCliName = process.platform === "win32" ? "yishan.exe" : "yishan";
-  const bundledCliPath = resolve(process.resourcesPath, bundledCliName);
-  if (!existsSync(bundledCliPath)) {
-    const fallbackDevCliDir = process.env.YISHAN_CLI_DEV_DIR?.trim() || resolve(process.cwd(), "..", "cli");
-    const cliDir = existsSync(fallbackDevCliDir) ? fallbackDevCliDir : undefined;
-
-    return {
-      executablePath: "go",
-      prefixArgs: ["run", ".", "--profile", "dev"],
-      cwd: cliDir,
-    };
-  }
-
-  return {
-    executablePath: bundledCliPath,
-    prefixArgs: [],
-  };
-}
-
 async function runCliCommand(args: string[]): Promise<CliCommandResult> {
-  const invocation = resolveCliInvocation();
+  const invocation = resolveCliInvocation({ includeDevApiBaseUrl: true });
 
   return await new Promise<CliCommandResult>((resolve) => {
     let settled = false;

@@ -215,19 +215,6 @@ export async function startWorkspaceTerminalHandler(
   return c.json({ session }, StatusCodes.CREATED);
 }
 
-export async function readWorkspaceTerminalOutputHandler(c: AppContext, params: WorkspaceTerminalSessionParamsInput) {
-  const actorUser = c.get("sessionUser");
-  const output = await c.get("services").workspace.readWorkspaceTerminalOutput({
-    actorUserId: actorUser.id,
-    organizationId: params.orgId,
-    projectId: params.projectId,
-    sessionId: params.sessionId,
-    workspaceId: params.workspaceId,
-  });
-
-  return c.json({ output });
-}
-
 export async function stopWorkspaceTerminalHandler(c: AppContext, params: WorkspaceTerminalSessionParamsInput) {
   const actorUser = c.get("sessionUser");
   await c.get("services").workspace.stopWorkspaceTerminal({

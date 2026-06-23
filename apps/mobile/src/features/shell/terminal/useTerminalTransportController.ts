@@ -61,7 +61,7 @@ export function useTerminalTransportController({
     [],
   );
 
-  const { applyTerminalOutput } = useTerminalTransportOutputBuffer({
+  const { appendTerminalOutput, applyTerminalExit, applyTerminalOutput } = useTerminalTransportOutputBuffer({
     appendSystemMessage,
     getRuntimeSnapshot,
     patchTerminal,
@@ -152,8 +152,14 @@ export function useTerminalTransportController({
             });
             patchTerminal(terminal, { status: "error" }, { touchUpdatedAt: false });
           },
+          onExit: (exitCode) => {
+            applyTerminalExit(terminal, sessionId, exitCode);
+          },
           onOutput: (output) => {
-            applyTerminalOutput(terminal, sessionId, output);
+            appendTerminalOutput(terminal, sessionId, output);
+          },
+          onSnapshot: (snapshotOutput) => {
+            applyTerminalOutput(terminal, sessionId, snapshotOutput);
           },
         },
         url: buildWorkspaceTerminalWebSocketUrl(
@@ -169,26 +175,16 @@ export function useTerminalTransportController({
       snapshot.transportSessionId = sessionId;
       return transport;
     },
-    [accessToken, applyTerminalOutput, detachTransport, getRuntimeSnapshot, patchTerminal, status],
-  );
-
-  const restoreTerminalOutput = useCallback(
-    (
-      terminal: TerminalItem,
-      sessionId: string,
-      output: { output: string; running: boolean; exitCode?: number | null },
-    ) => {
-      logMobileDebug("terminal.restore", "apply restored output", {
-        exitCode: output.exitCode ?? null,
-        outputLength: output.output.length,
-        running: output.running,
-        sessionId,
-        terminalId: terminal.id,
-        workspaceId: terminal.workspaceId,
-      });
-      applyTerminalOutput(terminal, sessionId, { ...output, replace: true });
-    },
-    [applyTerminalOutput],
+    [
+      accessToken,
+      appendTerminalOutput,
+      applyTerminalExit,
+      applyTerminalOutput,
+      detachTransport,
+      getRuntimeSnapshot,
+      patchTerminal,
+      status,
+    ],
   );
 
   return {
@@ -203,7 +199,6 @@ export function useTerminalTransportController({
     getRuntimeTerminalIds,
     getTransportTerminalIds,
     hasPendingStartTimeout,
-    restoreTerminalOutput,
     setMeasuredSize,
     setPendingStartTimeout,
     terminals,
