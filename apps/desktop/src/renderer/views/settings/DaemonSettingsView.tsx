@@ -143,22 +143,22 @@ export function DaemonSettingsView() {
     try {
       const terminalTabs = tabStore.getState().tabs.filter((tab) => tab.kind === "terminal");
       if (terminalTabs.length > 0) {
-        const terminalSessions = new Map<string, { sessionId: string; workspaceId?: string }>();
+        const terminalSessions = new Set<string>();
         for (const tab of terminalTabs) {
           const sessionId = tab.data.sessionId?.trim();
           if (!sessionId) {
             continue;
           }
-          terminalSessions.set(sessionId, { sessionId, workspaceId: tab.workspaceId });
+          terminalSessions.add(sessionId);
         }
 
         const closeErrors: string[] = [];
-        for (const terminalSession of terminalSessions.values()) {
+        for (const sessionId of terminalSessions.values()) {
           try {
-            await closeTerminalSession(terminalSession);
+            await closeTerminalSession({ sessionId });
           } catch (error) {
-            closeErrors.push(terminalSession.sessionId);
-            console.warn("[DaemonSettingsView] Failed to close terminal session", terminalSession.sessionId, error);
+            closeErrors.push(sessionId);
+            console.warn("[DaemonSettingsView] Failed to close terminal session", sessionId, error);
           }
         }
 

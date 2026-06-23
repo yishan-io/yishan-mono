@@ -300,7 +300,6 @@ export function TerminalSettingsView() {
                               });
 
                               void closeTerminalSession({
-                                workspaceId: session.workspaceId,
                                 sessionId: session.sessionId,
                               })
                                 .then(() => {

@@ -6,7 +6,6 @@ type RichComposerProps = {
   placeholder: string;
   onChange?: (value: string) => void;
   onSubmit?: (value: string) => void | Promise<void>;
-  onPasteData?: (clipboardData: DataTransfer) => Promise<string | null | undefined>;
   minHeight?: number;
   disabled?: boolean;
 };
@@ -91,14 +90,7 @@ function setCaretOffset(root: HTMLElement, offset: number): void {
   selection.addRange(range);
 }
 
-export function RichComposer({
-  placeholder,
-  onChange,
-  onSubmit,
-  onPasteData,
-  minHeight = 84,
-  disabled = false,
-}: RichComposerProps) {
+export function RichComposer({ placeholder, onChange, onSubmit, minHeight = 84, disabled = false }: RichComposerProps) {
   const composerRef = useRef<HTMLDivElement | null>(null);
 
   const handleComposerInput = (event: SyntheticEvent<HTMLDivElement>) => {
@@ -115,16 +107,13 @@ export function RichComposer({
     }
   };
 
-  const handleComposerPaste = async (event: ClipboardEvent<HTMLDivElement>) => {
+  const handleComposerPaste = (event: ClipboardEvent<HTMLDivElement>) => {
     if (disabled) {
       return;
     }
     event.preventDefault();
-    const nextText = (await onPasteData?.(event.clipboardData)) ?? event.clipboardData.getData("text/plain");
-    if (!nextText) {
-      return;
-    }
-    document.execCommand("insertText", false, nextText);
+    const plainText = event.clipboardData.getData("text/plain");
+    document.execCommand("insertText", false, plainText);
   };
 
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {

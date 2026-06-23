@@ -127,7 +127,6 @@ describe("tabCommands", () => {
     await Promise.resolve();
 
     expect(rpcMocks.closeSession).toHaveBeenCalledWith({
-      workspaceId: "workspace-1",
       sessionId: "terminal-session-1",
     });
     expect(closeTabState).toHaveBeenCalledWith("tab-terminal-1");
@@ -223,11 +222,9 @@ describe("tabCommands", () => {
     await Promise.resolve();
 
     expect(rpcMocks.closeSession).toHaveBeenCalledWith({
-      workspaceId: "workspace-1",
       sessionId: "terminal-session-2",
     });
     expect(rpcMocks.closeSession).not.toHaveBeenCalledWith({
-      workspaceId: "workspace-1",
       sessionId: "terminal-session-pinned",
     });
     expect(closeOtherTabsState).toHaveBeenCalledWith("tab-terminal-keep");
@@ -346,15 +343,12 @@ describe("tabCommands", () => {
     await Promise.resolve();
 
     expect(rpcMocks.closeSession).toHaveBeenCalledWith({
-      workspaceId: "workspace-1",
       sessionId: "terminal-session-3",
     });
     expect(rpcMocks.closeSession).toHaveBeenCalledWith({
-      workspaceId: "workspace-1",
       sessionId: "terminal-session-4",
     });
     expect(rpcMocks.closeSession).not.toHaveBeenCalledWith({
-      workspaceId: "workspace-1",
       sessionId: "terminal-session-pinned",
     });
     expect(closeAllTabsState).toHaveBeenCalledWith("tab-terminal-1");

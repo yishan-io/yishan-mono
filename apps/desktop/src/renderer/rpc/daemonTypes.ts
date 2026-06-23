@@ -340,20 +340,17 @@ export type TerminalCreateSessionInput = {
 };
 
 export type TerminalWriteInput = {
-  workspaceId?: string;
   sessionId: string;
   data: string | Uint8Array;
 };
 
 export type TerminalResizeInput = {
-  workspaceId?: string;
   sessionId: string;
   cols: number;
   rows: number;
 };
 
 export type TerminalCloseInput = {
-  workspaceId?: string;
   sessionId: string;
 };
 
@@ -362,13 +359,11 @@ export type TerminalKillProcessInput = {
 };
 
 export type TerminalReadOutputInput = {
-  workspaceId?: string;
   sessionId: string;
   fromIndex: number;
 };
 
 export type TerminalListSessionsInput = {
-  workspaceId?: string;
   includeExited?: boolean;
 };
 
@@ -513,17 +508,6 @@ export type TerminalReadOutputResponse = {
   nextIndex: number;
   chunks: string[];
   exited: boolean;
-};
-
-export type TerminalSubscribeSnapshot = {
-  output: string;
-  running: boolean;
-  exitCode?: number;
-};
-
-export type TerminalSubscribeResponse = {
-  subscribed: boolean;
-  snapshot?: TerminalSubscribeSnapshot;
 };
 
 export type TerminalStreamEvent =

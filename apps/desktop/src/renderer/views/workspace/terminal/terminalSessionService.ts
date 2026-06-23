@@ -126,13 +126,11 @@ export function getTerminalSessionId(tabId: string): string | null {
  */
 export function sendTerminalResize(tabId: string): void {
   const entry = getTerminalRuntime(tabId);
-  const tab = findTerminalTab(tabId);
-  if (!entry?.sessionId || !tab?.workspaceId) {
+  if (!entry?.sessionId) {
     return;
   }
 
   void resizeTerminal({
-    workspaceId: tab.workspaceId,
     sessionId: entry.sessionId,
     cols: entry.terminal.cols,
     rows: entry.terminal.rows,
@@ -241,12 +239,11 @@ function setupKeyboardShortcuts(entry: TerminalRuntimeEntry): void {
 function setupInputForwarding(entry: TerminalRuntimeEntry, tabId: string): void {
   entry.terminal.onData((data) => {
     const sessionId = entry.sessionId;
-    const workspaceId = findTerminalTab(tabId)?.workspaceId;
-    if (!sessionId || !workspaceId) {
+    if (!sessionId) {
       return;
     }
 
-    void writeTerminalInput({ workspaceId, sessionId, data }).catch((error) => {
+    void writeTerminalInput({ sessionId, data }).catch((error) => {
       reportTerminalAsyncError("write terminal input", error);
     });
   });
@@ -301,7 +298,6 @@ async function resolveAndSubscribeSession(entry: TerminalRuntimeEntry, tabId: st
 
   // Subscribe to live output — this subscription survives detach/attach.
   const subscription = await subscribeTerminalOutput({
-    workspaceId: terminalTab?.workspaceId,
     sessionId: restored.sessionId,
     onData: (payload) => {
       // Guard against stale callbacks if runtime was disposed.

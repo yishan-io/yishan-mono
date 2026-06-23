@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChatView } from "./ChatView";
 
 type WorkspaceStoreSlice = {
-  workspaces: Array<{ id: string; worktreePath?: string }>;
   messagesByTabId: Record<
     string,
     Array<{ id: string; role: "user" | "assistant"; content: string; thinking?: string }>
@@ -115,7 +114,6 @@ const mockedStore = vi.hoisted(() => {
     };
   } = {
     current: {
-      workspaces: [{ id: "workspace-1", worktreePath: "/tmp/workspace-1" }],
       messagesByTabId: {},
       availableCommandsByTabId: {},
       availableModelsByTabId: {},
@@ -302,7 +300,6 @@ function createStoreHarness() {
     availableModelsByTabId: Record<string, Array<{ id: string; name: string }>>;
     currentModelByTabId: Record<string, string>;
   } = {
-    workspaces: [{ id: "workspace-1", worktreePath: "/tmp/workspace-1" }],
     messagesByTabId: {},
     availableCommandsByTabId: {},
     availableModelsByTabId: {},
