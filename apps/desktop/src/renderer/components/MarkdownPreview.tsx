@@ -8,6 +8,8 @@ import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
 import { MermaidBlock } from "./MermaidBlock";
+import { MarkdownFindBar } from "./MarkdownFindBar";
+import { clearHighlights, highlightMatches, setActiveMatch } from "./markdownSearch";
 import {
   getTaskListItemChecked,
   isAbsoluteUrl,
@@ -32,6 +34,14 @@ type MarkdownPreviewProps = {
   canEdit?: boolean;
   onContentChange?: (content: string) => void;
   immediateUpdateToken?: number;
+  findOpen?: boolean;
+  findQuery?: string;
+  findActiveIndex?: number;
+  onFindMatchCountChange?: (count: number) => void;
+  onFindQueryChange?: (query: string) => void;
+  onFindNext?: () => void;
+  onFindPrev?: () => void;
+  onFindClose?: () => void;
 };
 
 const workspaceImageUrlCache = new Map<string, string>();
@@ -59,6 +69,14 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
   worktreePath,
   canEdit = false,
   onContentChange,
+  findOpen = false,
+  findQuery = "",
+  findActiveIndex = 0,
+  onFindMatchCountChange,
+  onFindQueryChange,
+  onFindNext,
+  onFindPrev,
+  onFindClose,
 }: MarkdownPreviewProps) {
   const theme = useTheme();
   const markdownPreviewFontSize = layoutStore((state) => state.markdownPreviewFontSize);
@@ -68,6 +86,7 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [html, setHtml] = useState<string | null>(null);
   const [mermaidBlocks, setMermaidBlocks] = useState<Array<{ id: string; code: string }>>([]);
+  const [localMatchCount, setLocalMatchCount] = useState(0);
 
   const { metadata, body } = useMemo(() => parseFrontmatter(content), [content]);
 
@@ -218,6 +237,22 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
     }
   }, [html, worktreePath, fileDir, canEdit, content, onContentChange]);
 
+  // Apply find highlights whenever the rendered HTML, query, or active index changes.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    if (!findOpen || !findQuery) {
+      clearHighlights(container);
+      setLocalMatchCount(0);
+      onFindMatchCountChange?.(0);
+      return;
+    }
+    const count = highlightMatches(container, findQuery);
+    setLocalMatchCount(count);
+    onFindMatchCountChange?.(count);
+    setActiveMatch(container, findActiveIndex);
+  }, [html, findOpen, findQuery, findActiveIndex, onFindMatchCountChange]);
+
   if (!body.trim() && !metadata) {
     return (
       <Box
@@ -237,69 +272,83 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
   }
 
   return (
-    <Box
-      sx={{
-        flex: 1,
-        overflow: "auto",
-        px: markdownPreviewWidth === "full" ? 3 : 4,
-        py: 3,
-      }}
-    >
-      {metadata && (
+    <Box sx={{ flex: 1, minHeight: 0, position: "relative" }}>
+      {findOpen && (
+        <MarkdownFindBar
+          query={findQuery}
+          activeIndex={findActiveIndex}
+          matchCount={localMatchCount}
+          onQueryChange={onFindQueryChange}
+          onNext={onFindNext}
+          onPrev={onFindPrev}
+          onClose={onFindClose}
+        />
+      )}
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          overflow: "auto",
+          px: markdownPreviewWidth === "full" ? 3 : 4,
+          py: 3,
+        }}
+      >
+        {metadata && (
+          <Box
+            sx={{
+              width: "100%",
+              maxWidth: markdownPreviewWidth === "full" ? "none" : 860,
+              mx: markdownPreviewWidth === "full" ? 0 : "auto",
+              mb: 3,
+              overflow: "auto",
+            }}
+          >
+            <Table
+              size="small"
+              sx={{
+                fontSize: "0.875em",
+                border: 1,
+                borderColor: "divider",
+                "& td, & th": { border: 1, borderColor: "divider" },
+              }}
+            >
+              <TableBody>
+                {Object.entries(metadata).map(([key, value]) => (
+                  <TableRow key={key}>
+                    <TableCell
+                      component="th"
+                      scope="row"
+                      sx={{
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                        width: "1%",
+                        borderRight: 1,
+                        borderColor: "divider",
+                      }}
+                    >
+                      {key}
+                    </TableCell>
+                    <TableCell>{value}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        )}
         <Box
+          ref={containerRef}
           sx={{
             width: "100%",
             maxWidth: markdownPreviewWidth === "full" ? "none" : 860,
             mx: markdownPreviewWidth === "full" ? 0 : "auto",
-            mb: 3,
-            overflow: "auto",
+            ...styles.container,
           }}
-        >
-          <Table
-            size="small"
-            sx={{
-              fontSize: "0.875em",
-              border: 1,
-              borderColor: "divider",
-              "& td, & th": { border: 1, borderColor: "divider" },
-            }}
-          >
-            <TableBody>
-              {Object.entries(metadata).map(([key, value]) => (
-                <TableRow key={key}>
-                  <TableCell
-                    component="th"
-                    scope="row"
-                    sx={{
-                      fontWeight: 600,
-                      whiteSpace: "nowrap",
-                      width: "1%",
-                      borderRight: 1,
-                      borderColor: "divider",
-                    }}
-                  >
-                    {key}
-                  </TableCell>
-                  <TableCell>{value}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Box>
-      )}
-      <Box
-        ref={containerRef}
-        sx={{
-          width: "100%",
-          maxWidth: markdownPreviewWidth === "full" ? "none" : 860,
-          mx: markdownPreviewWidth === "full" ? 0 : "auto",
-          ...styles.container,
-        }}
-      />
-      {/* Render mermaid blocks as React portals into their placeholder divs */}
-      {mermaidBlocks.map((block) => (
-        <MermaidPortal key={block.id} targetId={block.id} code={block.code} containerRef={containerRef} />
-      ))}
+        />
+        {/* Render mermaid blocks as React portals into their placeholder divs */}
+        {mermaidBlocks.map((block) => (
+          <MermaidPortal key={block.id} targetId={block.id} code={block.code} containerRef={containerRef} />
+        ))}
+      </Box>
     </Box>
   );
 });
@@ -351,6 +400,14 @@ export function MarkdownPreview({
   canEdit = false,
   onContentChange,
   immediateUpdateToken = 0,
+  findOpen,
+  findQuery,
+  findActiveIndex,
+  onFindMatchCountChange,
+  onFindQueryChange,
+  onFindNext,
+  onFindPrev,
+  onFindClose,
 }: MarkdownPreviewProps) {
   const [debouncedContent, setDebouncedContent] = useState(content);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -397,6 +454,14 @@ export function MarkdownPreview({
       worktreePath={worktreePath}
       canEdit={canEdit}
       onContentChange={onContentChange}
+      findOpen={findOpen}
+      findQuery={findQuery}
+      findActiveIndex={findActiveIndex}
+      onFindMatchCountChange={onFindMatchCountChange}
+      onFindQueryChange={onFindQueryChange}
+      onFindNext={onFindNext}
+      onFindPrev={onFindPrev}
+      onFindClose={onFindClose}
     />
   );
 }
