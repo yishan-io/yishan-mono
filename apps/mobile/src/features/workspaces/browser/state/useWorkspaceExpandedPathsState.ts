@@ -1,5 +1,6 @@
-import { buildAncestorPaths } from "@yishan/file-browser-core";
 import { useEffect, useState } from "react";
+
+import { buildAncestorPaths } from "@/features/workspaces/file-browser";
 
 const MAX_EXPANDED_DIRECTORIES = 24;
 const expandedPathsCache = new Map<string, string[]>();

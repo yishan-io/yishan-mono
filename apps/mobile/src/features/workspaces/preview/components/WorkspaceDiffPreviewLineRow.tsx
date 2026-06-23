@@ -1,4 +1,4 @@
-import type { buildUnifiedDiffLines } from "@yishan/file-browser-core";
+import type { buildUnifiedDiffLines } from "@/features/workspaces/file-browser";
 import { Text, XStack, useTheme } from "tamagui";
 
 type WorkspaceDiffPreviewLineRowProps = {

@@ -1,6 +1,6 @@
-import { detectFilePreviewKind, splitPreviewLines } from "@yishan/file-browser-core";
 import { useMemo } from "react";
 
+import { detectFilePreviewKind, splitPreviewLines } from "@/features/workspaces/file-browser";
 import { useWorkspaceFileQuery } from "@/features/workspaces/queries/useWorkspaceFileQuery";
 
 const MAX_PREVIEW_CHARS = 20_000;

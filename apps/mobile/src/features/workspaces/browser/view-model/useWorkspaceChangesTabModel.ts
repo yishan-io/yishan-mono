@@ -1,6 +1,5 @@
-import { getBaseName, getParentPath } from "@yishan/file-browser-core";
-
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
+import { getBaseName, getParentPath } from "@/features/workspaces/file-browser";
 import { useWorkspaceChangesQuery } from "@/features/workspaces/queries/useWorkspaceChangesQuery";
 import type {
   WorkspaceGitChange,

@@ -1,4 +1,3 @@
-import { detectFilePreviewKind, splitPreviewLines } from "@yishan/file-browser-core";
 import { FlatList, ScrollView, View } from "react-native";
 import { Paragraph, Text, XStack, useTheme } from "tamagui";
 
@@ -7,6 +6,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingView } from "@/components/ui/LoadingView";
 import { PaneBodyNotice, PaneBodyScrollView } from "@/components/ui/PaneBody";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
+import { detectFilePreviewKind, splitPreviewLines } from "@/features/workspaces/file-browser";
 import {
   type WorkspaceFilePreviewModel,
   useWorkspaceFilePreviewModel,

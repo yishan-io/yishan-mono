@@ -1,8 +1,8 @@
 import { useQueries } from "@tanstack/react-query";
-import { sortFileBrowserEntries } from "@yishan/file-browser-core";
 import { useMemo } from "react";
 
 import { useAuth } from "@/features/auth";
+import { sortFileBrowserEntries } from "@/features/workspaces/file-browser";
 import { useWorkspaceFilesQuery } from "@/features/workspaces/queries/useWorkspaceFilesQuery";
 import { WORKSPACE_BROWSER_QUERY_STALE_TIME_MS } from "@/features/workspaces/queries/workspace-browser-query.constants";
 import {

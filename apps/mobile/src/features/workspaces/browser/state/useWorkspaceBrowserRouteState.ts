@@ -1,6 +1,6 @@
-import { normalizePath } from "@yishan/file-browser-core";
 import { useLocalSearchParams } from "expo-router";
 
+import { normalizePath } from "@/features/workspaces/file-browser";
 import { readRouteParam } from "@/lib/navigation/read-route-param";
 import { useWorkspaceBrowserTabState } from "./useWorkspaceBrowserTabState";
 import { type WorkspaceBrowserTab, createWorkspaceBrowserStateId } from "./workspaceBrowserState";

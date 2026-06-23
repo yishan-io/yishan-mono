@@ -7,9 +7,6 @@ export default defineConfig({
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
       "@yishan/core": fileURLToPath(new URL("../../packages/core/src/index.ts", import.meta.url)),
-      "@yishan/file-browser-core": fileURLToPath(
-        new URL("../../packages/file-browser-core/src/index.ts", import.meta.url),
-      ),
     },
   },
 });

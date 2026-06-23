@@ -1,6 +1,6 @@
-import { buildAncestorPaths, sortFileBrowserEntries } from "@yishan/file-browser-core";
 import { useCallback, useMemo } from "react";
 
+import { buildAncestorPaths, sortFileBrowserEntries } from "@/features/workspaces/file-browser";
 import type { WorkspaceFileEntry } from "@/features/workspaces/workspaces.types";
 import { useWorkspaceDirectoryQueries } from "./useWorkspaceDirectoryQueries";
 import { useWorkspaceEntryMenu } from "./useWorkspaceEntryMenu";

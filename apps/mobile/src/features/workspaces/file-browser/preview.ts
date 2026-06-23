@@ -71,6 +71,9 @@ function getExtension(path: string): string {
   return baseName.slice(lastDotIndex + 1).toLowerCase();
 }
 
+/**
+ * Chooses the preview renderer kind for a workspace file path.
+ */
 export function detectFilePreviewKind(path: string): FilePreviewKind {
   const extension = getExtension(path);
   if (MARKDOWN_EXTENSIONS.has(extension)) {
@@ -88,6 +91,9 @@ export function detectFilePreviewKind(path: string): FilePreviewKind {
   return "text";
 }
 
+/**
+ * Sorts file browser entries with directories first and natural case-insensitive ordering.
+ */
 export function sortFileBrowserEntries(entries: readonly FileBrowserEntry[]): FileBrowserEntry[] {
   return [...entries].sort((left, right) => {
     if (left.isDir !== right.isDir) {
@@ -97,11 +103,17 @@ export function sortFileBrowserEntries(entries: readonly FileBrowserEntry[]): Fi
   });
 }
 
+/**
+ * Splits preview content into display lines using normalized newlines.
+ */
 export function splitPreviewLines(content: string): string[] {
   const normalized = content.replace(/\r\n/g, "\n");
   return normalized.split("\n");
 }
 
+/**
+ * Formats a byte size for compact mobile display.
+ */
 export function formatFileSize(size: number): string {
   if (size < 1024) {
     return `${size} B`;

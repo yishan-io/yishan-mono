@@ -127,7 +127,6 @@
         "@xterm/xterm": "^6.0.0",
         "@yishan/core": "workspace:*",
         "@yishan/design-tokens": "workspace:*",
-        "@yishan/file-browser-core": "workspace:*",
         "expo": "~55.0.23",
         "expo-auth-session": "55.0.16",
         "expo-clipboard": "~55.0.13",
@@ -168,10 +167,6 @@
         "@emotion/styled": "^11.14.0",
         "@mui/material": "^7.0.2",
       },
-    },
-    "packages/file-browser-core": {
-      "name": "@yishan/file-browser-core",
-      "version": "0.1.0",
     },
   },
   "packages": {
@@ -1354,8 +1349,6 @@
     "@yishan/design-tokens": ["@yishan/design-tokens@workspace:packages/design-tokens"],
 
     "@yishan/desktop": ["@yishan/desktop@workspace:apps/desktop"],
-
-    "@yishan/file-browser-core": ["@yishan/file-browser-core@workspace:packages/file-browser-core"],
 
     "@yishan/landing": ["@yishan/landing@workspace:apps/landing"],
 

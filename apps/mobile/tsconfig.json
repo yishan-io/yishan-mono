@@ -20,9 +20,6 @@
       "@yishan/core": [
         "../../packages/core/src/index.ts"
       ],
-      "@yishan/file-browser-core": [
-        "../../packages/file-browser-core/src/index.ts"
-      ],
       "@/*": [
         "./src/*"
       ]

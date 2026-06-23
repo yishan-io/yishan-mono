@@ -1,6 +1,6 @@
-import { buildUnifiedDiffLines } from "@yishan/file-browser-core";
 import { useMemo } from "react";
 
+import { buildUnifiedDiffLines } from "@/features/workspaces/file-browser";
 import { useWorkspaceDiffQuery } from "@/features/workspaces/queries/useWorkspaceDiffQuery";
 import type { WorkspaceGitChangeKind } from "@/features/workspaces/workspaces.types";
 

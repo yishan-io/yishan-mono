@@ -1,5 +1,11 @@
+/**
+ * One rendered line kind in the mobile unified diff preview.
+ */
 export type UnifiedDiffLineKind = "hunk" | "context" | "added" | "deleted";
 
+/**
+ * One rendered unified diff line in the mobile file preview.
+ */
 export type UnifiedDiffLine = {
   kind: UnifiedDiffLineKind;
   content: string;
@@ -16,6 +22,9 @@ type DiffOp = {
 
 const CONTEXT_LINE_COUNT = 2;
 
+/**
+ * Builds a bounded unified diff model for mobile workspace preview rendering.
+ */
 export function buildUnifiedDiffLines(oldContent: string, newContent: string): UnifiedDiffLine[] {
   if (oldContent === newContent) {
     return [];

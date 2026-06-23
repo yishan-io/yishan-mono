@@ -1,4 +1,3 @@
-import { getBaseName, getParentPath } from "@yishan/file-browser-core";
 import { Pressable, SectionList } from "react-native";
 import { Text, XStack, YStack, useTheme } from "tamagui";
 
@@ -6,6 +5,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingView } from "@/components/ui/LoadingView";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
+import { getBaseName, getParentPath } from "@/features/workspaces/file-browser";
 import type {
   WorkspaceGitChange,
   WorkspaceGitChangeKind,

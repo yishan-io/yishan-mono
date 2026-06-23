@@ -1,6 +1,6 @@
-import { getParentPath } from "@yishan/file-browser-core";
 import { useCallback, useEffect, useState } from "react";
 
+import { getParentPath } from "@/features/workspaces/file-browser";
 import {
   type WorkspaceBrowserTab,
   clearCachedWorkspaceBrowserTab,
