@@ -42,9 +42,10 @@ export function highlightMatches(container: HTMLElement, query: string): number 
   });
 
   const textNodes: Text[] = [];
-  let node: Node | null;
-  while ((node = walker.nextNode())) {
+  let node = walker.nextNode();
+  while (node) {
     textNodes.push(node as Text);
+    node = walker.nextNode();
   }
 
   for (const textNode of textNodes) {
@@ -65,7 +66,7 @@ export function highlightMatches(container: HTMLElement, query: string): number 
 
     // Split the text node and wrap each match in a <mark>.
     // We work right-to-left so earlier offsets remain valid after each split.
-    let remaining: Text = textNode;
+    const remaining: Text = textNode;
     for (let i = offsets.length - 1; i >= 0; i--) {
       const offset = offsets[i] as number;
       // Split off everything after the match.

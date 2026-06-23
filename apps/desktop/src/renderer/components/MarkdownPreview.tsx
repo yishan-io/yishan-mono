@@ -7,9 +7,8 @@ import { buildWorkspaceFileUrl } from "../commands/fileCommands";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
-import { MermaidBlock } from "./MermaidBlock";
 import { MarkdownFindBar } from "./MarkdownFindBar";
-import { clearHighlights, highlightMatches, setActiveMatch } from "./markdownSearch";
+import { MermaidBlock } from "./MermaidBlock";
 import {
   getTaskListItemChecked,
   isAbsoluteUrl,
@@ -17,6 +16,7 @@ import {
   resolveRelativePath,
   toggleTaskListItem,
 } from "./markdownHelpers";
+import { clearHighlights, highlightMatches, setActiveMatch } from "./markdownSearch";
 import { markdownService } from "./markdownService";
 import { useMarkdownStyles } from "./markdownStyles";
 
@@ -238,6 +238,9 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
   }, [html, worktreePath, fileDir, canEdit, content, onContentChange]);
 
   // Apply find highlights whenever the rendered HTML, query, or active index changes.
+  // html is intentionally included: containerRef.current.innerHTML is updated by the
+  // html effect, so highlights must re-run after every re-parse.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: html drives innerHTML mutation via containerRef
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;

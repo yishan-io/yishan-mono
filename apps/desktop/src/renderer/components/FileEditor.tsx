@@ -430,9 +430,7 @@ export function FileEditor({
                 setPreviewFindActiveIndex(0);
               }}
               onFindNext={() =>
-                setPreviewFindActiveIndex((i) =>
-                  previewFindMatchCount > 0 ? (i + 1) % previewFindMatchCount : 0,
-                )
+                setPreviewFindActiveIndex((i) => (previewFindMatchCount > 0 ? (i + 1) % previewFindMatchCount : 0))
               }
               onFindPrev={() =>
                 setPreviewFindActiveIndex((i) =>

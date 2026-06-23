@@ -50,10 +50,7 @@ export function MarkdownFindBar({
     }
   };
 
-  const matchLabel =
-    matchCount === 0
-      ? "No results"
-      : `${activeIndex + 1} of ${matchCount}`;
+  const matchLabel = matchCount === 0 ? "No results" : `${activeIndex + 1} of ${matchCount}`;
 
   return (
     <Box
