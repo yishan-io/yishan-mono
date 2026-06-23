@@ -86,6 +86,20 @@ func (h *JSONRPCHandler) ServeAgentHook(w http.ResponseWriter, r *http.Request) 
 		h.events.Publish(frontendEvent{Topic: "notificationEvent", Payload: notification})
 	}
 
+	if event.tabID != "" && (event.eventType == "start" || event.eventType == "stop") {
+		agentForEvent := event.agent
+		if event.eventType == "stop" {
+			agentForEvent = ""
+		}
+		h.events.Publish(frontendEvent{
+			Topic: "terminalAgentChanged",
+			Payload: map[string]any{
+				"tabId": event.tabID,
+				"agent": agentForEvent,
+			},
+		})
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 

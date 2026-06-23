@@ -48,6 +48,7 @@ handle_interrupt() {
 trap 'handle_interrupt INT' INT
 trap 'handle_interrupt TERM' TERM
 
+notify_event "opencode" "Start"
 "$REAL_BIN" "$@"
 status=$?
 

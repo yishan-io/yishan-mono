@@ -2,6 +2,7 @@ import { Box } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuSquareTerminal } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../shared/contracts/externalApps";
+import { AgentIcon } from "../../components/AgentIcon";
 import { SplitPaneContainer } from "../../components/SplitPaneContainer";
 import { SplitPaneGroup } from "../../components/SplitPaneGroup";
 import { getFileTreeIcon } from "../../components/fileTreeIcons";
@@ -205,7 +206,12 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
   const getTabIcon = useCallback(
     (tab: { id: string; kind?: string }) => {
       const fullTab = tabById.get(tab.id);
-      if (fullTab?.kind === "terminal") return <LuSquareTerminal size={14} />;
+      if (fullTab?.kind === "terminal") {
+        if (fullTab.data.agentKind) {
+          return <AgentIcon agentKind={fullTab.data.agentKind} context="tabMenu" decorative />;
+        }
+        return <LuSquareTerminal size={14} />;
+      }
       if (fullTab?.kind === "browser") return <FaviconIcon url={fullTab.data.faviconUrl} size={14} />;
       if (fullTab?.kind === "file" || fullTab?.kind === "diff" || fullTab?.kind === "image") {
         return (

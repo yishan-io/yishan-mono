@@ -45,6 +45,7 @@ describe("BACKEND_EVENT_NAME_BY_SOURCE", () => {
       workspaceStateChanged: "workspace.state.changed",
       openBrowserUrl: "open.browser.url",
       terminalSessionChanged: "terminal.session.changed",
+      terminalAgentChanged: "terminal.agent.changed",
     });
   });
 });
