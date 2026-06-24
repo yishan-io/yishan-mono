@@ -88,6 +88,17 @@ export function useChangesTabActions({
                 relativePath: normalizedRelativePath,
               });
 
+        // If the branch-comparison diff returned identical content on both sides
+        // the file has no committed difference from the target branch — it is an
+        // uncommitted change that exists only in the working tree. Fall back to
+        // the workspace diff so the user sees the actual modifications.
+        const effectiveResponse =
+          targetBranch && response.oldContent === response.newContent
+            ? await readDiff({ workspaceId: selectedWorkspaceId, relativePath: normalizedRelativePath }).catch(
+                () => response,
+              )
+            : response;
+
         openTab({
           workspaceId: selectedWorkspaceId,
           kind: "diff",
@@ -95,8 +106,8 @@ export function useChangesTabActions({
           changeKind: "modified",
           additions: 0,
           deletions: 0,
-          oldContent: response.oldContent,
-          newContent: response.newContent,
+          oldContent: effectiveResponse.oldContent,
+          newContent: effectiveResponse.newContent,
           diffSource: commitHash
             ? { kind: "commit", commitHash }
             : targetBranch
