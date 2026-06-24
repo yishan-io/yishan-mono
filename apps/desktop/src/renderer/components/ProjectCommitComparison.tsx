@@ -42,19 +42,25 @@ function BranchBadge({ name, testId }: { name: string; testId: string }) {
   );
 }
 
+export type ProjectCommitComparisonFile = {
+  path: string;
+  oldPath?: string;
+  status: string;
+};
+
 export type ProjectCommitComparisonCommit = {
   hash: string;
   shortHash: string;
   authorName: string;
   committedAt: string;
   subject: string;
-  changedFiles: string[];
+  changedFiles: ProjectCommitComparisonFile[];
 };
 
 export type ProjectCommitComparisonData = {
   currentBranch: string;
   targetBranch: string;
-  allChangedFiles: string[];
+  allChangedFiles: ProjectCommitComparisonFile[];
   commits: ProjectCommitComparisonCommit[];
 };
 
@@ -117,7 +123,7 @@ export function formatRelativeCommitTime(committedAt: string, nowMs = Date.now()
 /** Builds compact scope options with uncommitted, aggregate, and per-commit entries. */
 function buildComparisonScopeOptions(comparison: ProjectCommitComparisonData): ProjectComparisonScopeOption[] {
   const dedupedAllChangedFileCount = new Set(
-    comparison.allChangedFiles.map((path) => path.trim().replace(/\\/g, "/")).filter((path) => path.length > 0),
+    comparison.allChangedFiles.map((f) => f.path.trim().replace(/\\/g, "/")).filter((path) => path.length > 0),
   ).size;
 
   const scopeOptions: ProjectComparisonScopeOption[] = [

@@ -65,20 +65,26 @@ type GitPullRequestDeployment struct {
 	OriginalPayload string `json:"originalPayload,omitempty"`
 }
 
+type GitCommitFile struct {
+	Path    string `json:"path"`
+	OldPath string `json:"oldPath,omitempty"` // populated for renames/copies
+	Status  string `json:"status"`             // A, M, D, R, C, T, U, X
+}
+
 type GitCommit struct {
-	Hash         string   `json:"hash"`
-	ShortHash    string   `json:"shortHash"`
-	AuthorName   string   `json:"authorName"`
-	CommittedAt  string   `json:"committedAt"`
-	Subject      string   `json:"subject"`
-	ChangedFiles []string `json:"changedFiles"`
+	Hash         string          `json:"hash"`
+	ShortHash    string          `json:"shortHash"`
+	AuthorName   string          `json:"authorName"`
+	CommittedAt  string          `json:"committedAt"`
+	Subject      string          `json:"subject"`
+	ChangedFiles []GitCommitFile `json:"changedFiles"`
 }
 
 type GitCommitComparison struct {
-	CurrentBranch   string      `json:"currentBranch"`
-	TargetBranch    string      `json:"targetBranch"`
-	AllChangedFiles []string    `json:"allChangedFiles"`
-	Commits         []GitCommit `json:"commits"`
+	CurrentBranch   string          `json:"currentBranch"`
+	TargetBranch    string          `json:"targetBranch"`
+	AllChangedFiles []GitCommitFile `json:"allChangedFiles"`
+	Commits         []GitCommit     `json:"commits"`
 }
 
 type GitBranchDiffSummary struct {

@@ -29,7 +29,10 @@ describe("ProjectCommitComparison", () => {
         comparison={{
           currentBranch: "feature/work",
           targetBranch: "main",
-          allChangedFiles: ["src/a.ts", "src/b.ts"],
+          allChangedFiles: [
+            { path: "src/a.ts", status: "M" },
+            { path: "src/b.ts", status: "A" },
+          ],
           commits: [
             {
               hash: "abc123456",
@@ -37,7 +40,10 @@ describe("ProjectCommitComparison", () => {
               authorName: "Pat",
               committedAt: "2026-03-23T08:00:00+00:00",
               subject: "feat: improve flow",
-              changedFiles: ["src/a.ts", "src/b.ts"],
+              changedFiles: [
+                { path: "src/a.ts", status: "M" },
+                { path: "src/b.ts", status: "A" },
+              ],
             },
           ],
         }}
@@ -117,7 +123,10 @@ describe("ProjectCommitComparison", () => {
         comparison={{
           currentBranch: "feature/work",
           targetBranch: "main",
-          allChangedFiles: ["src/a.ts", "src/b.ts"],
+          allChangedFiles: [
+            { path: "src/a.ts", status: "M" },
+            { path: "src/b.ts", status: "A" },
+          ],
           commits: [
             {
               hash: "abc123456",
@@ -125,7 +134,7 @@ describe("ProjectCommitComparison", () => {
               authorName: "Pat",
               committedAt: "2026-03-23T08:00:00+00:00",
               subject: "feat: improve flow",
-              changedFiles: ["src/a.ts"],
+              changedFiles: [{ path: "src/a.ts", status: "M" }],
             },
           ],
         }}
@@ -151,7 +160,10 @@ describe("ProjectCommitComparison", () => {
         comparison={{
           currentBranch: "feature/work",
           targetBranch: "main",
-          allChangedFiles: ["src/a.ts", "src/b.ts"],
+          allChangedFiles: [
+            { path: "src/a.ts", status: "M" },
+            { path: "src/b.ts", status: "D" },
+          ],
           commits: [
             {
               hash: "abc123456",
@@ -159,7 +171,7 @@ describe("ProjectCommitComparison", () => {
               authorName: "Pat",
               committedAt: "2026-03-23T08:00:00+00:00",
               subject: "feat: improve flow",
-              changedFiles: ["src/a.ts"],
+              changedFiles: [{ path: "src/a.ts", status: "M" }],
             },
             {
               hash: "def789012",
@@ -167,7 +179,7 @@ describe("ProjectCommitComparison", () => {
               authorName: "Sam",
               committedAt: "2026-03-22T08:00:00+00:00",
               subject: "fix: resolve issue",
-              changedFiles: ["src/b.ts"],
+              changedFiles: [{ path: "src/b.ts", status: "D" }],
             },
           ],
         }}
@@ -195,7 +207,7 @@ describe("ProjectCommitComparison", () => {
         comparison={{
           currentBranch: "feature/work",
           targetBranch: "main",
-          allChangedFiles: ["src/a.ts"],
+          allChangedFiles: [{ path: "src/a.ts", status: "A" }],
           commits: [
             {
               hash: "abc123456",
@@ -203,7 +215,7 @@ describe("ProjectCommitComparison", () => {
               authorName: "Pat",
               committedAt: "2026-03-23T08:00:00+00:00",
               subject: "feat: improve flow",
-              changedFiles: ["src/a.ts"],
+              changedFiles: [{ path: "src/a.ts", status: "A" }],
             },
           ],
         }}
@@ -229,7 +241,10 @@ describe("ProjectCommitComparison", () => {
         comparison={{
           currentBranch: "feature/work",
           targetBranch: "main",
-          allChangedFiles: ["src/a.ts", "src/b.ts"],
+          allChangedFiles: [
+            { path: "src/a.ts", status: "M" },
+            { path: "src/b.ts", status: "R" },
+          ],
           commits: [
             {
               hash: "abc123456",
@@ -237,7 +252,7 @@ describe("ProjectCommitComparison", () => {
               authorName: "Pat",
               committedAt: "2026-03-23T08:00:00+00:00",
               subject: "feat: improve flow",
-              changedFiles: ["src/a.ts"],
+              changedFiles: [{ path: "src/a.ts", status: "M" }],
             },
           ],
         }}

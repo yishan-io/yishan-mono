@@ -561,8 +561,8 @@ func TestGitServiceBranchDiffSummaryDivergedBranch(t *testing.T) {
 	if len(comparison.AllChangedFiles) != 1 {
 		t.Fatalf("expected 1 changed file (feature.txt only), got %d: %v", len(comparison.AllChangedFiles), comparison.AllChangedFiles)
 	}
-	if comparison.AllChangedFiles[0] != "feature.txt" {
-		t.Fatalf("expected changed file feature.txt, got %q", comparison.AllChangedFiles[0])
+	if comparison.AllChangedFiles[0].Path != "feature.txt" {
+		t.Fatalf("expected changed file feature.txt, got %q", comparison.AllChangedFiles[0].Path)
 	}
 }
 
@@ -800,5 +800,128 @@ func TestCreateWorktreeWithAmbiguousRef(t *testing.T) {
 	worktreeCommit := strings.TrimSpace(runGit(t, worktreePath, "rev-parse", "HEAD"))
 	if worktreeCommit != freshCommit {
 		t.Fatalf("expected worktree at fresh commit %q, got %q", freshCommit, worktreeCommit)
+	}
+}
+
+func TestParseNameStatusLines(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		expect []GitCommitFile
+	}{
+		{
+			name:   "empty",
+			input:  "",
+			expect: []GitCommitFile{},
+		},
+		{
+			name:  "modified and added",
+			input: "M\tsrc/foo.ts\nA\tsrc/bar.ts\n",
+			expect: []GitCommitFile{
+				{Path: "src/foo.ts", Status: "M"},
+				{Path: "src/bar.ts", Status: "A"},
+			},
+		},
+		{
+			name:  "deleted",
+			input: "D\told.ts",
+			expect: []GitCommitFile{
+				{Path: "old.ts", Status: "D"},
+			},
+		},
+		{
+			name:  "rename with similarity score",
+			input: "R100\told.ts\tnew.ts",
+			expect: []GitCommitFile{
+				{Path: "new.ts", OldPath: "old.ts", Status: "R"},
+			},
+		},
+		{
+			name:  "copy",
+			input: "C085\tsrc.ts\tdst.ts",
+			expect: []GitCommitFile{
+				{Path: "dst.ts", OldPath: "src.ts", Status: "C"},
+			},
+		},
+		{
+			name:  "ignores blank lines",
+			input: "\nM\ta.ts\n\nD\tb.ts\n",
+			expect: []GitCommitFile{
+				{Path: "a.ts", Status: "M"},
+				{Path: "b.ts", Status: "D"},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := parseNameStatusLines(tc.input)
+			if len(got) != len(tc.expect) {
+				t.Fatalf("expected %d files, got %d: %+v", len(tc.expect), len(got), got)
+			}
+			for i, f := range got {
+				e := tc.expect[i]
+				if f.Path != e.Path || f.Status != e.Status || f.OldPath != e.OldPath {
+					t.Errorf("index %d: expected %+v, got %+v", i, e, f)
+				}
+			}
+		})
+	}
+}
+
+func TestListCommitsToTargetFileStatus(t *testing.T) {
+	root := t.TempDir()
+	initGitRepo(t, root)
+	runGit(t, root, "checkout", "-b", "base")
+
+	// Seed base commit
+	os.WriteFile(filepath.Join(root, "existing.txt"), []byte("original\n"), 0o644)
+	runGit(t, root, "add", "existing.txt")
+	runGit(t, root, "commit", "-m", "base")
+
+	// Feature branch
+	runGit(t, root, "checkout", "-b", "feature")
+
+	// Added file
+	os.WriteFile(filepath.Join(root, "added.txt"), []byte("new\n"), 0o644)
+	runGit(t, root, "add", "added.txt")
+	// Modified file
+	os.WriteFile(filepath.Join(root, "existing.txt"), []byte("changed\n"), 0o644)
+	runGit(t, root, "add", "existing.txt")
+	runGit(t, root, "commit", "-m", "add and modify")
+
+	// Deleted file
+	os.Remove(filepath.Join(root, "existing.txt"))
+	runGit(t, root, "add", "existing.txt")
+	runGit(t, root, "commit", "-m", "delete existing")
+
+	svc := NewGitService()
+	comparison, err := svc.ListCommitsToTarget(context.Background(), root, "base")
+	if err != nil {
+		t.Fatalf("ListCommitsToTarget: %v", err)
+	}
+
+	// AllChangedFiles: cumulative diff should show added.txt (A) and existing.txt (D).
+	statusByPath := make(map[string]string)
+	for _, f := range comparison.AllChangedFiles {
+		statusByPath[f.Path] = f.Status
+	}
+	if statusByPath["added.txt"] != "A" {
+		t.Errorf("expected added.txt status A, got %q", statusByPath["added.txt"])
+	}
+	if statusByPath["existing.txt"] != "D" {
+		t.Errorf("expected existing.txt status D, got %q", statusByPath["existing.txt"])
+	}
+
+	// Per-commit: first commit (most recent) deleted existing.txt.
+	if len(comparison.Commits) < 1 {
+		t.Fatal("expected at least 1 commit")
+	}
+	firstCommitStatusByPath := make(map[string]string)
+	for _, f := range comparison.Commits[0].ChangedFiles {
+		firstCommitStatusByPath[f.Path] = f.Status
+	}
+	if firstCommitStatusByPath["existing.txt"] != "D" {
+		t.Errorf("first commit: expected existing.txt status D, got %q", firstCommitStatusByPath["existing.txt"])
 	}
 }
