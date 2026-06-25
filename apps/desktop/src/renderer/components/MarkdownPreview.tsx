@@ -1,14 +1,14 @@
-import { Box, Table, TableBody, TableCell, TableRow, Typography, useTheme } from "@mui/material";
-import type React from "react";
+import { Box, Typography, useTheme } from "@mui/material";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import ReactDOM from "react-dom";
 import { openLink } from "../commands/appCommands";
 import { buildWorkspaceFileUrl } from "../commands/fileCommands";
 import { layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
 import { MarkdownFindBar } from "./MarkdownFindBar";
-import { MermaidBlock } from "./MermaidBlock";
+import { MarkdownOutline } from "./MarkdownOutline";
+import { MarkdownPreviewMetadataTable } from "./MarkdownPreviewMetadataTable";
+import { MermaidPortal } from "./MermaidPortal";
 import {
   getTaskListItemChecked,
   isAbsoluteUrl,
@@ -16,11 +16,14 @@ import {
   resolveRelativePath,
   toggleTaskListItem,
 } from "./markdownHelpers";
+import { type MarkdownOutlineData, extractMarkdownOutline } from "./markdownOutlineTree";
 import { clearHighlights, highlightMatches, setActiveMatch } from "./markdownSearch";
 import { markdownService } from "./markdownService";
 import { useMarkdownStyles } from "./markdownStyles";
 
 const MARKDOWN_RENDER_DEBOUNCE_MS = 400;
+const FLOATING_OUTLINE_WIDTH_PX = 280;
+const FLOATING_OUTLINE_GAP_PX = 16;
 const MARKDOWN_PREVIEW_BASE_FONT_SIZE_BY_MODE = {
   small: 14,
   medium: 16,
@@ -81,12 +84,19 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
   const theme = useTheme();
   const markdownPreviewFontSize = layoutStore((state) => state.markdownPreviewFontSize);
   const markdownPreviewWidth = layoutStore((state) => state.markdownPreviewWidth);
+  const isMarkdownOutlineVisible = layoutStore((state) => state.isMarkdownOutlineVisible);
+  const setIsMarkdownOutlineVisible = layoutStore((state) => state.setIsMarkdownOutlineVisible);
   const baseFontSize = MARKDOWN_PREVIEW_BASE_FONT_SIZE_BY_MODE[markdownPreviewFontSize];
   const styles = useMarkdownStyles(theme, baseFontSize);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [html, setHtml] = useState<string | null>(null);
   const [mermaidBlocks, setMermaidBlocks] = useState<Array<{ id: string; code: string }>>([]);
   const [localMatchCount, setLocalMatchCount] = useState(0);
+  const [outlineData, setOutlineData] = useState<MarkdownOutlineData>({ items: [], entries: [] });
+  const [collapsedOutlineIds, setCollapsedOutlineIds] = useState<Set<string>>(new Set());
+  const [activeOutlineId, setActiveOutlineId] = useState<string | null>(null);
+  const floatingOutlineOffsetTop = findOpen ? 40 : 8;
+  const shouldShowFloatingOutline = isMarkdownOutlineVisible && outlineData.items.length > 0;
 
   const { metadata, body } = useMemo(() => parseFrontmatter(content), [content]);
 
@@ -101,6 +111,7 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
     if (!body.trim()) {
       setHtml(null);
       setMermaidBlocks([]);
+      setOutlineData({ items: [], entries: [] });
       return;
     }
 
@@ -235,7 +246,39 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
         }
       });
     }
+
+    setOutlineData(extractMarkdownOutline(container));
   }, [html, worktreePath, fileDir, canEdit, content, onContentChange]);
+
+  useEffect(() => {
+    const entryIds = new Set(outlineData.entries.map((entry) => entry.id));
+    setCollapsedOutlineIds((previous) => new Set(Array.from(previous).filter((id) => entryIds.has(id))));
+    setActiveOutlineId((previous) =>
+      previous && entryIds.has(previous) ? previous : (outlineData.entries[0]?.id ?? null),
+    );
+  }, [outlineData]);
+
+  const handleToggleOutlineCollapse = (id: string) => {
+    setCollapsedOutlineIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectOutlineItem = (id: string) => {
+    const entry = outlineData.entries.find((candidate) => candidate.id === id);
+    if (!entry) {
+      return;
+    }
+
+    setActiveOutlineId(id);
+    entry.element.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
 
   // Apply find highlights whenever the rendered HTML, query, or active index changes.
   // html is intentionally included: containerRef.current.innerHTML is updated by the
@@ -287,6 +330,30 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
           onClose={onFindClose}
         />
       )}
+      {!isMarkdownOutlineVisible && outlineData.items.length > 0 ? (
+        <Box
+          component="button"
+          type="button"
+          aria-label="Show outline"
+          onClick={() => setIsMarkdownOutlineVisible(true)}
+          sx={{
+            position: "absolute",
+            top: findOpen ? 40 : 8,
+            right: 8,
+            zIndex: 9,
+            border: 1,
+            borderColor: "divider",
+            borderRadius: 1,
+            bgcolor: "background.paper",
+            color: "text.secondary",
+            px: 1,
+            py: 0.5,
+            cursor: "pointer",
+          }}
+        >
+          Outline
+        </Box>
+      ) : null}
       <Box
         sx={{
           position: "absolute",
@@ -294,50 +361,12 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
           overflow: "auto",
           px: markdownPreviewWidth === "full" ? 3 : 4,
           py: 3,
+          pr: shouldShowFloatingOutline ? `${FLOATING_OUTLINE_WIDTH_PX + FLOATING_OUTLINE_GAP_PX + 24}px` : undefined,
         }}
       >
-        {metadata && (
-          <Box
-            sx={{
-              width: "100%",
-              maxWidth: markdownPreviewWidth === "full" ? "none" : 860,
-              mx: markdownPreviewWidth === "full" ? 0 : "auto",
-              mb: 3,
-              overflow: "auto",
-            }}
-          >
-            <Table
-              size="small"
-              sx={{
-                fontSize: "0.875em",
-                border: 1,
-                borderColor: "divider",
-                "& td, & th": { border: 1, borderColor: "divider" },
-              }}
-            >
-              <TableBody>
-                {Object.entries(metadata).map(([key, value]) => (
-                  <TableRow key={key}>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{
-                        fontWeight: 600,
-                        whiteSpace: "nowrap",
-                        width: "1%",
-                        borderRight: 1,
-                        borderColor: "divider",
-                      }}
-                    >
-                      {key}
-                    </TableCell>
-                    <TableCell>{value}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Box>
-        )}
+        {metadata ? (
+          <MarkdownPreviewMetadataTable metadata={metadata} fullWidth={markdownPreviewWidth === "full"} />
+        ) : null}
         <Box
           ref={containerRef}
           sx={{
@@ -347,52 +376,34 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
             ...styles.container,
           }}
         />
-        {/* Render mermaid blocks as React portals into their placeholder divs */}
         {mermaidBlocks.map((block) => (
           <MermaidPortal key={block.id} targetId={block.id} code={block.code} containerRef={containerRef} />
         ))}
       </Box>
+      {shouldShowFloatingOutline ? (
+        <Box
+          sx={{
+            position: "absolute",
+            top: floatingOutlineOffsetTop,
+            right: 8,
+            zIndex: 8,
+            width: `min(${FLOATING_OUTLINE_WIDTH_PX}px, calc(100% - 16px))`,
+            maxHeight: `calc(100% - ${floatingOutlineOffsetTop + 8}px)`,
+          }}
+        >
+          <MarkdownOutline
+            items={outlineData.items}
+            collapsedIds={collapsedOutlineIds}
+            activeId={activeOutlineId}
+            onSelect={handleSelectOutlineItem}
+            onToggleCollapse={handleToggleOutlineCollapse}
+            onHide={() => setIsMarkdownOutlineVisible(false)}
+          />
+        </Box>
+      ) : null}
     </Box>
   );
 });
-
-/** Renders a MermaidBlock into a placeholder div found within the container. */
-function MermaidPortal({
-  targetId,
-  code,
-  containerRef,
-}: {
-  targetId: string;
-  code: string;
-  containerRef: React.RefObject<HTMLDivElement | null>;
-}) {
-  const portalRef = useRef<HTMLDivElement | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const target = container.querySelector(`[data-mermaid-id="${targetId}"]`);
-    if (!target) return;
-
-    // Render directly into the existing placeholder node.
-    portalRef.current = target as HTMLDivElement;
-    setMounted(true);
-
-    return () => {
-      if (portalRef.current) {
-        portalRef.current.innerHTML = "";
-      }
-      portalRef.current = null;
-      setMounted(false);
-    };
-  }, [targetId, containerRef]);
-
-  if (!mounted || !portalRef.current) return null;
-
-  return ReactDOM.createPortal(<MermaidBlock code={code} />, portalRef.current);
-}
 
 /** Renders a Markdown string as styled HTML using react-markdown with GFM and syntax highlighting support.
  *  Debounces content updates to avoid re-running the expensive rehype pipeline on every keystroke or file-change event. */

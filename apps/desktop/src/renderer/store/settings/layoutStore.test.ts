@@ -12,6 +12,7 @@ describe("layoutStore", () => {
       markdownDefaultViewMode: "split",
       markdownPreviewFontSize: "medium",
       markdownPreviewWidth: "readable",
+      isMarkdownOutlineVisible: false,
     });
     window.localStorage.clear();
   });
@@ -99,5 +100,11 @@ describe("layoutStore", () => {
 
     expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownPreviewFontSize":"large"');
     expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownPreviewWidth":"full"');
+  });
+
+  it("persists markdown outline visibility", () => {
+    layoutStore.getState().setIsMarkdownOutlineVisible(true);
+
+    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"isMarkdownOutlineVisible":true');
   });
 });
