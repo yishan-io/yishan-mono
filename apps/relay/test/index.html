@@ -3,242 +3,175 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Relay Terminal Test</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css" />
+  <title>Relay Node Test</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; display: flex; flex-direction: column; }
     header { padding: 16px 24px; background: #16213e; border-bottom: 1px solid #333; }
     header h1 { font-size: 18px; font-weight: 600; }
-    .controls { padding: 16px 24px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; background: #0f3460; }
-    .controls input, .controls button { font-size: 14px; padding: 8px 12px; border-radius: 4px; border: 1px solid #444; }
-    .controls input { background: #1a1a2e; color: #eee; min-width: 200px; }
-    .controls button { background: #e94560; color: #fff; border: none; cursor: pointer; font-weight: 500; }
-    .controls button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .controls button.secondary { background: #533483; }
-    .status { padding: 8px 24px; font-size: 12px; color: #aaa; background: #16213e; }
-    .status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-    .status .dot.connected { background: #4caf50; }
-    .status .dot.disconnected { background: #f44336; }
-    #terminal-container { flex: 1; padding: 16px 24px; min-height: 400px; }
+    header p { font-size: 12px; color: #aaa; margin-top: 4px; }
+    .section { padding: 16px 24px; background: #0f3460; border-bottom: 1px solid #333; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+    .section label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #aaa; }
+    .section input { font-size: 13px; padding: 7px 10px; border-radius: 4px; border: 1px solid #444; background: #1a1a2e; color: #eee; min-width: 200px; }
+    .section button { font-size: 13px; padding: 8px 14px; border-radius: 4px; border: none; cursor: pointer; font-weight: 500; align-self: flex-end; }
+    .btn-primary { background: #e94560; color: #fff; }
+    .btn-secondary { background: #533483; color: #fff; }
+    .btn-primary:disabled, .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .status-bar { padding: 6px 24px; font-size: 12px; color: #aaa; background: #16213e; display: flex; align-items: center; gap: 8px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #f44336; }
+    .dot.on { background: #4caf50; }
+    #log { flex: 1; padding: 16px 24px; font-family: "SF Mono", "Fira Code", monospace; font-size: 13px; line-height: 1.6; overflow-y: auto; white-space: pre-wrap; }
+    .log-in  { color: #81d4fa; }
+    .log-out { color: #a5d6a7; }
+    .log-err { color: #ef9a9a; }
+    .log-sys { color: #aaa; }
   </style>
 </head>
 <body>
   <header>
-    <h1>Relay Terminal Test</h1>
+    <h1>Relay Node Test (/ws)</h1>
+    <p>Connects as a node (not a client). JWT is minted in-browser from the known dev secret.</p>
   </header>
 
-  <div class="controls">
-    <input id="relay-url" type="text" placeholder="Relay URL" value="wss://relay.yishan.io" />
-    <input id="node-id" type="text" placeholder="Node ID" value="b15d27b8101a408f109656114c0279f2" />
-    <input id="api-token" type="text" placeholder="Relay API Token" value="dev-token" />
-    <button id="btn-connect" onclick="connectRelay()">Connect</button>
-    <button id="btn-disconnect" class="secondary" onclick="disconnectRelay()" disabled>Disconnect</button>
+  <div class="section">
+    <label>Relay URL
+      <input id="relay-url" value="ws://localhost:8788" />
+    </label>
+    <label>JWT Secret
+      <input id="jwt-secret" value="yishan" />
+    </label>
+    <label>Node ID
+      <input id="node-id" value="test-node-1" />
+    </label>
+    <label>User ID (sub)
+      <input id="user-id" value="test-user-1" />
+    </label>
+    <label>Org IDs (comma-separated)
+      <input id="org-ids" value="org-1" />
+    </label>
+    <button class="btn-primary" id="btn-connect" onclick="connect()">Connect</button>
+    <button class="btn-secondary" id="btn-disconnect" onclick="disconnect()" disabled>Disconnect</button>
   </div>
 
-  <div class="controls" id="session-controls" style="display: none;">
-    <input id="workspace-path" type="text" placeholder="Workspace Path (e.g. /Users/you/project)" />
-    <input id="workspace-id" type="text" placeholder="Workspace ID (auto-generated)" />
-    <button id="btn-session" class="secondary" onclick="startSession()">New Session</button>
+  <div class="section" id="actions" style="display:none">
+    <label>terminal.session.changed payload (JSON)
+      <input id="tsc-payload" value='{"sessionId":"sess-1","workspaceId":"ws-1","action":"created"}' style="min-width:420px" />
+    </label>
+    <button class="btn-secondary" onclick="sendTerminalSessionChanged()">Send terminal.session.changed</button>
+    <button class="btn-secondary" onclick="sendPong()">Send relay.pong</button>
   </div>
 
-  <div class="status">
-    <span class="dot disconnected" id="status-dot"></span>
+  <div class="status-bar">
+    <span class="dot" id="dot"></span>
     <span id="status-text">Disconnected</span>
   </div>
 
-  <div id="terminal-container"></div>
+  <div id="log"><span class="log-sys">Ready. Fill in the fields above and click Connect.\n</span></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
-  <script>
+  <!-- jose for client-side HS256 JWT minting (ESM via CDN) -->
+  <script type="module">
+    import { SignJWT } from 'https://cdn.jsdelivr.net/npm/jose@5/+esm';
+
     let ws = null;
-    let term = null;
-    let fitAddon = null;
-    let sessionId = null;
-    let heartbeatInterval = null;
 
-    const OPCODE_INPUT = 0x01;
-    const OPCODE_OUTPUT = 0x02;
-
-    function initTerminal() {
-      if (term) { term.dispose(); }
-      term = new window.Terminal({ cursorBlink: true, fontSize: 14, theme: { background: '#1a1a2e' } });
-      fitAddon = new window.FitAddon.FitAddon();
-      term.loadAddon(fitAddon);
-      term.open(document.getElementById('terminal-container'));
-      fitAddon.fit();
-
-      term.onData((data) => {
-        if (ws && ws.readyState === WebSocket.OPEN && sessionId) {
-          sendTerminalInput(data);
-        }
-      });
-
-      window.addEventListener('resize', () => { if (fitAddon) fitAddon.fit(); });
+    function log(text, cls = 'log-sys') {
+      const el = document.getElementById('log');
+      const span = document.createElement('span');
+      span.className = cls;
+      span.textContent = `[${new Date().toISOString().slice(11,23)}] ${text}\n`;
+      el.appendChild(span);
+      el.scrollTop = el.scrollHeight;
     }
 
-    function setStatus(connected, text) {
-      const dot = document.getElementById('status-dot');
-      const label = document.getElementById('status-text');
-      dot.className = 'dot ' + (connected ? 'connected' : 'disconnected');
-      label.textContent = text;
+    function setConnected(on, label) {
+      document.getElementById('dot').className = 'dot' + (on ? ' on' : '');
+      document.getElementById('status-text').textContent = label;
+      document.getElementById('btn-connect').disabled = on;
+      document.getElementById('btn-disconnect').disabled = !on;
+      document.getElementById('actions').style.display = on ? 'flex' : 'none';
     }
 
-    function connectRelay() {
-      const relayUrl = document.getElementById('relay-url').value.trim();
+    async function mintJWT() {
+      const secret = document.getElementById('jwt-secret').value.trim();
       const nodeId = document.getElementById('node-id').value.trim();
-      const apiToken = document.getElementById('api-token').value.trim();
+      const userId = document.getElementById('user-id').value.trim();
+      const orgIds = document.getElementById('org-ids').value.split(',').map(s => s.trim()).filter(Boolean);
 
-      if (!relayUrl || !nodeId || !apiToken) {
-        alert('Relay URL, Node ID, and API Token are required');
-        return;
-      }
+      const key = await crypto.subtle.importKey(
+        'raw', new TextEncoder().encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+      );
 
-      const url = `${relayUrl}/client/ws?nodeId=${encodeURIComponent(nodeId)}&token=${encodeURIComponent(apiToken)}`;
-      ws = new WebSocket(url);
-      ws.binaryType = 'arraybuffer';
-
-      ws.onopen = () => {
-        setStatus(true, `Connected to ${nodeId}`);
-        document.getElementById('btn-connect').disabled = true;
-        document.getElementById('btn-disconnect').disabled = false;
-        document.getElementById('session-controls').style.display = 'flex';
-        initTerminal();
-        term.writeln('\x1b[32m[relay] Connected. Enter a workspace path and click "New Session".\x1b[0m');
-
-        // Send periodic pings to keep the connection alive through
-        // Cloudflare (100s idle timeout) and nginx (300s read timeout).
-        heartbeatInterval = setInterval(() => {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            sendJsonRpc('ping', {}, nextId());
-          }
-        }, 30000);
-      };
-
-      ws.onmessage = (event) => {
-        if (event.data instanceof ArrayBuffer) {
-          handleBinaryFrame(new Uint8Array(event.data));
-        } else {
-          handleJsonMessage(JSON.parse(event.data));
-        }
-      };
-
-      ws.onclose = (event) => {
-        if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
-        setStatus(false, `Disconnected (${event.code})`);
-        document.getElementById('btn-connect').disabled = false;
-        document.getElementById('btn-disconnect').disabled = true;
-        document.getElementById('session-controls').style.display = 'none';
-        sessionId = null;
-        if (term) term.writeln('\x1b[31m[relay] Disconnected.\x1b[0m');
-      };
-
-      ws.onerror = () => {
-        setStatus(false, 'Connection error');
-      };
+      return new SignJWT({ nodeId, organizationIds: orgIds })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setSubject(userId)
+        .setExpirationTime('1h')
+        .sign(key);
     }
 
-    function disconnectRelay() {
-      if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+    window.connect = async function() {
+      const relayUrl = document.getElementById('relay-url').value.trim().replace(/\/+$/, '');
+      try {
+        const token = await mintJWT();
+        log(`Minted JWT: ${token.slice(0, 40)}…`);
+        const url = `${relayUrl}/ws?access_token=${encodeURIComponent(token)}`;
+        ws = new WebSocket(url);
+
+        ws.onopen = () => {
+          setConnected(true, `Connected as ${document.getElementById('node-id').value}`);
+          log('WebSocket open', 'log-out');
+        };
+
+        ws.onmessage = (event) => {
+          const raw = event.data;
+          log(`← ${raw}`, 'log-in');
+          try {
+            const msg = JSON.parse(raw);
+            if (msg.method === 'relay.ping') {
+              const pong = JSON.stringify({ jsonrpc: '2.0', method: 'relay.pong' });
+              ws.send(pong);
+              log(`→ ${pong} (auto-pong)`, 'log-out');
+            }
+          } catch (_) {}
+        };
+
+        ws.onclose = (e) => {
+          setConnected(false, `Disconnected (${e.code})`);
+          log(`WebSocket closed: code=${e.code} reason=${e.reason || '—'}`, 'log-err');
+          ws = null;
+        };
+
+        ws.onerror = () => log('WebSocket error', 'log-err');
+
+      } catch (err) {
+        log(`Error: ${err.message}`, 'log-err');
+      }
+    };
+
+    window.disconnect = function() {
       if (ws) { ws.close(); ws = null; }
-    }
+    };
 
-    let rpcId = 0;
-    function nextId() { return ++rpcId; }
-
-    function startSession() {
-      const workspacePath = document.getElementById('workspace-path').value.trim();
-      if (!workspacePath) {
-        alert('Workspace Path is required');
-        return;
-      }
-
-      let workspaceId = document.getElementById('workspace-id').value.trim();
-      if (!workspaceId) {
-        workspaceId = 'ws-' + Date.now().toString(36);
-        document.getElementById('workspace-id').value = workspaceId;
-      }
-
-      term.writeln('\x1b[90m[relay] Opening workspace...\x1b[0m');
-      const openId = nextId();
-      const startId = nextId();
-
-      // Track which IDs correspond to which step
-      window._pendingOpen = openId;
-      window._pendingStart = startId;
-      window._workspaceId = workspaceId;
-
-      sendJsonRpc('open', { id: workspaceId, path: workspacePath }, openId);
-    }
-
-    function handleJsonMessage(msg) {
-      // Response to workspace open
-      if (msg.id === window._pendingOpen) {
-        if (msg.error) {
-          term.writeln(`\x1b[31m[error] workspace open failed: ${msg.error.message}\x1b[0m`);
-          return;
-        }
-        term.writeln('\x1b[90m[relay] Workspace opened. Starting terminal...\x1b[0m');
-        sendJsonRpc('terminal.start', { workspaceId: window._workspaceId }, window._pendingStart);
-        return;
-      }
-
-      // Response to terminal.start
-      if (msg.id === window._pendingStart && msg.result && msg.result.sessionId) {
-        sessionId = msg.result.sessionId;
-        term.writeln(`\x1b[32m[relay] Session started: ${sessionId}\x1b[0m`);
-        sendJsonRpc('terminal.subscribe', { sessionId }, nextId());
-
-        setTimeout(() => {
-          sendJsonRpc('terminal.resize', { sessionId, cols: term.cols, rows: term.rows }, nextId());
-        }, 100);
-        return;
-      }
-
-      // terminal.exit notification
-      if (msg.method === 'terminal.exit') {
-        term.writeln(`\x1b[33m[relay] Session exited (code ${msg.params?.exitCode})\x1b[0m`);
-        sessionId = null;
-        return;
-      }
-
-      // Log errors
-      if (msg.error) {
-        term.writeln(`\x1b[31m[error] ${msg.error.message}\x1b[0m`);
-      }
-    }
-
-    function handleBinaryFrame(data) {
-      if (data.length < 3) return;
-      const opcode = data[0];
-
-      if (opcode === OPCODE_OUTPUT) {
-        const nullIdx = data.indexOf(0, 1);
-        if (nullIdx < 0) return;
-        const output = data.slice(nullIdx + 1);
-        term.write(new Uint8Array(output));
-      }
-    }
-
-    function sendTerminalInput(text) {
-      const encoder = new TextEncoder();
-      const sidBytes = encoder.encode(sessionId);
-      const inputBytes = encoder.encode(text);
-
-      const frame = new Uint8Array(1 + sidBytes.length + 1 + inputBytes.length);
-      frame[0] = OPCODE_INPUT;
-      frame.set(sidBytes, 1);
-      frame[1 + sidBytes.length] = 0x00; // null terminator
-      frame.set(inputBytes, 1 + sidBytes.length + 1);
-
-      ws.send(frame.buffer);
-    }
-
-    function sendJsonRpc(method, params, id) {
+    window.sendTerminalSessionChanged = function() {
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      ws.send(JSON.stringify({ jsonrpc: '2.0', id, method, params }));
-    }
+      let params;
+      try {
+        params = JSON.parse(document.getElementById('tsc-payload').value);
+      } catch (e) {
+        log(`Invalid JSON: ${e.message}`, 'log-err');
+        return;
+      }
+      const msg = JSON.stringify({ jsonrpc: '2.0', method: 'terminal.session.changed', params });
+      ws.send(msg);
+      log(`→ ${msg}`, 'log-out');
+    };
+
+    window.sendPong = function() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      const msg = JSON.stringify({ jsonrpc: '2.0', method: 'relay.pong' });
+      ws.send(msg);
+      log(`→ ${msg}`, 'log-out');
+    };
   </script>
 </body>
 </html>

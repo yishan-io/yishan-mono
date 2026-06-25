@@ -50,6 +50,7 @@ type DaemonConfig struct {
 	Port         int
 	RelayEnabled bool
 	RelayURL     string
+	RelayToken   string // static JWT for local dev; bypasses API token minting
 }
 
 type MemoryConfig struct {
@@ -131,6 +132,7 @@ func Load(v *viper.Viper, explicitConfigPath string) (Config, error) {
 			Port:         v.GetInt("daemon_port"),
 			RelayEnabled: v.GetBool("daemon_relay_enabled"),
 			RelayURL:     v.GetString("daemon_relay_url"),
+			RelayToken:   v.GetString("daemon_relay_token"),
 		},
 		Memory:      settingsCfg.Memory,
 		ComputerUse: settingsCfg.ComputerUse,

@@ -26,6 +26,9 @@ type Server struct {
 	metricsCache  *metricsSnapshot
 	clientMu      sync.RWMutex
 	clientsByNode map[string]map[*clientConn]struct{}
+	streamMu      sync.RWMutex
+	streamSubs    map[string]map[string]struct{} // sessionId → set of subscribing nodeIDs
+	streamOwners  map[string]string              // sessionId → owner nodeID
 }
 
 type metricsSnapshot struct {
@@ -53,6 +56,8 @@ func NewServer(sessions *SessionManager, authenticator *auth.Authenticator, queu
 		},
 		startedAt:     time.Now(),
 		clientsByNode: make(map[string]map[*clientConn]struct{}),
+		streamSubs:    make(map[string]map[string]struct{}),
+		streamOwners:  make(map[string]string),
 	}
 
 	// Wire session events to the job queue for reconnect/disconnect handling.
@@ -63,6 +68,7 @@ func NewServer(sessions *SessionManager, authenticator *auth.Authenticator, queu
 		switch event.Type {
 		case "disconnected", "replaced":
 			queue.HandleNodeDisconnect(event.NodeID)
+			s.cancelStreamSubsForNode(event.NodeID)
 		case "connected":
 			go queue.HandleNodeReconnect(event.NodeID)
 		}
@@ -250,6 +256,7 @@ func (s *Server) readLoop(session *NodeSession) {
 
 		if msgType != websocket.TextMessage {
 			s.broadcastToNodeClients(nodeID, msgType, payload)
+			s.routeBinaryToStreamSubs(nodeID, msgType, payload)
 			continue
 		}
 
@@ -312,19 +319,45 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 		return true
 
 	case MethodTerminalSessionChanged:
-		var terminalParams struct {
-			OrganizationID string `json:"organizationId"`
-		}
-		if err := json.Unmarshal(req.Params, &terminalParams); err != nil {
-			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid terminal.session.changed params")
+		session := s.sessions.Get(nodeID)
+		if session == nil {
+			log.Warn().Str("nodeId", nodeID).Msg("terminal.session.changed from unknown node")
 			return true
 		}
-		orgID := strings.TrimSpace(terminalParams.OrganizationID)
-		if orgID == "" {
-			log.Warn().Str("nodeId", nodeID).Msg("terminal.session.changed missing organizationId")
+		for _, orgID := range session.Identity.OrganizationIDs {
+			go s.sessions.SendOrgNotification(orgID, MethodTerminalSessionChanged, req.Params)
+		}
+		return true
+
+	case MethodTerminalStreamRequest:
+		var params terminalStreamRequestParams
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid terminal.stream.request params")
 			return true
 		}
-		go s.sessions.SendOrgNotification(orgID, MethodTerminalSessionChanged, req.Params)
+		s.setStreamOwner(params.SessionID, params.OwnerNode)
+		s.addStreamSub(params.SessionID, params.FromNode)
+		go s.sessions.SendNotification(params.OwnerNode, MethodTerminalStreamRequest, req.Params)
+		return true
+
+	case MethodTerminalStreamAccept:
+		var params terminalStreamAcceptParams
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid terminal.stream.accept params")
+			return true
+		}
+		for _, sub := range s.streamSubsForSession(params.SessionID) {
+			go s.sessions.SendNotification(sub, MethodTerminalStreamAccept, req.Params)
+		}
+		return true
+
+	case MethodTerminalStreamCancel:
+		var params terminalStreamCancelParams
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			log.Warn().Err(err).Str("nodeId", nodeID).Msg("invalid terminal.stream.cancel params")
+			return true
+		}
+		s.removeStreamSub(params.SessionID, params.FromNode)
 		return true
 
 	default:

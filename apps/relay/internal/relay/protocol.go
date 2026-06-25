@@ -47,6 +47,9 @@ const (
 	MethodJobAck                   = "job.ack"
 	MethodJobResult                = "job.result"
 	MethodTerminalSessionChanged   = "terminal.session.changed"
+	MethodTerminalStreamRequest    = "terminal.stream.request"
+	MethodTerminalStreamAccept     = "terminal.stream.accept"
+	MethodTerminalStreamCancel     = "terminal.stream.cancel"
 )
 
 // ---------------------------------------------------------------------------
@@ -103,4 +106,27 @@ type jobError struct {
 	Code    string `json:"code,omitempty"`
 	Message string `json:"message"`
 	Details any    `json:"details,omitempty"`
+}
+
+// ---------------------------------------------------------------------------
+// terminal.stream.* params (node <-> server)
+// ---------------------------------------------------------------------------
+
+// terminalStreamRequestParams is sent by a subscribing node to request PTY
+// streaming for a session owned by another node.
+type terminalStreamRequestParams struct {
+	SessionID string `json:"sessionId"`
+	OwnerNode string `json:"ownerNode"`
+	FromNode  string `json:"fromNode"`
+}
+
+// terminalStreamAcceptParams is sent by the owning node to confirm the stream.
+type terminalStreamAcceptParams struct {
+	SessionID string `json:"sessionId"`
+}
+
+// terminalStreamCancelParams is sent by either side to tear down a stream.
+type terminalStreamCancelParams struct {
+	SessionID string `json:"sessionId"`
+	FromNode  string `json:"fromNode"`
 }

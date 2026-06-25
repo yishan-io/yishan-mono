@@ -201,6 +201,7 @@ func buildRunConfig(logFilePath string) daemon.RunConfig {
 		Port:                  appConfig.Daemon.Port,
 		RelayEnabled:          appConfig.Daemon.RelayEnabled,
 		RelayURL:              appConfig.Daemon.RelayURL,
+		RelayToken:            appConfig.Daemon.RelayToken,
 		MemorySummarizer:      appConfig.Memory.SummarizerEnabled,
 		MemorySummarizerAgent: appConfig.Memory.SummarizerAgentKind,
 		MemorySummarizerModel: appConfig.Memory.SummarizerModel,
@@ -285,12 +286,14 @@ func init() {
 	daemonCmd.PersistentFlags().Int("port", 0, "daemon listen port (0 = random)")
 	daemonCmd.PersistentFlags().Bool("relay-enabled", true, "connect daemon to relay over outbound websocket")
 	daemonCmd.PersistentFlags().String("relay-url", "https://relay.yishan.io", "relay websocket URL (wss://.../ws)")
+	daemonCmd.PersistentFlags().String("relay-token", "", "static relay JWT for local dev (bypasses API token minting)")
 	daemonCmd.PersistentFlags().String("log-file", "", "daemon log file path (default: ~/.yishan/profiles/<profile>/logs/daemon.log)")
 
 	cobra.CheckErr(viper.BindPFlag("daemon_host", daemonCmd.PersistentFlags().Lookup("host")))
 	cobra.CheckErr(viper.BindPFlag("daemon_port", daemonCmd.PersistentFlags().Lookup("port")))
 	cobra.CheckErr(viper.BindPFlag("daemon_relay_enabled", daemonCmd.PersistentFlags().Lookup("relay-enabled")))
 	cobra.CheckErr(viper.BindPFlag("daemon_relay_url", daemonCmd.PersistentFlags().Lookup("relay-url")))
+	cobra.CheckErr(viper.BindPFlag("daemon_relay_token", daemonCmd.PersistentFlags().Lookup("relay-token")))
 	cobra.CheckErr(viper.BindPFlag("daemon_log_file", daemonCmd.PersistentFlags().Lookup("log-file")))
 }
 
