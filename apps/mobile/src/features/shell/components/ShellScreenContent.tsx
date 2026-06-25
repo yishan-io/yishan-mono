@@ -11,6 +11,8 @@ type ShellScreenContentProps = {
   drawerPanHandlers: ReturnType<typeof useShellDrawer>["drawerPanHandlers"];
   drawerTranslateX: ReturnType<typeof useShellDrawer>["drawerTranslateX"];
   edgePanHandlers: ReturnType<typeof useShellDrawer>["edgePanHandlers"];
+  onDismissKeyboard: () => void;
+  onRegisterKeyboardDismissHandler?: ((handler: (() => void) | null) => void) | null;
   openDrawer: ReturnType<typeof useShellDrawer>["openDrawer"];
   overlayOpacity: ReturnType<typeof useShellDrawer>["overlayOpacity"];
   screenModel: ShellScreenModel;
@@ -22,6 +24,8 @@ export function ShellScreenContent({
   drawerPanHandlers,
   drawerTranslateX,
   edgePanHandlers,
+  onDismissKeyboard,
+  onRegisterKeyboardDismissHandler,
   openDrawer,
   overlayOpacity,
   screenModel,
@@ -33,6 +37,7 @@ export function ShellScreenContent({
         closeDrawer={closeDrawer}
         drawerPanHandlers={drawerPanHandlers}
         drawerTranslateX={drawerTranslateX}
+        onInteractionStart={onDismissKeyboard}
         onSelectWorkspace={screenModel.onSelectWorkspace}
         openDrawer={openDrawer}
         overlayOpacity={overlayOpacity}
@@ -58,6 +63,7 @@ export function ShellScreenContent({
         <ShellFocusPane
           activeTab={shell.activePaneTab}
           chat={screenModel.focusPaneChat}
+          onRegisterKeyboardDismissHandler={onRegisterKeyboardDismissHandler}
           onOpenPaneTabs={screenModel.openPaneTabSheet}
           previewContext={screenModel.focusPanePreviewContext}
         />

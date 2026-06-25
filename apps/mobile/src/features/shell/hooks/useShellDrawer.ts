@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef } from "react";
 import { Animated, PanResponder, Platform } from "react-native";
 
 import { blurActiveElement } from "@/lib/accessibility/blurActiveElement";
+import { dismissActiveKeyboard } from "@/lib/accessibility/dismissActiveKeyboard";
 
 const DRAWER_EDGE_GESTURE_THRESHOLD_PX = 10;
 const DRAWER_OPEN_VELOCITY_THRESHOLD = 0.5;
@@ -11,25 +12,36 @@ const DRAWER_CLOSE_DISTANCE_RATIO = 0.2;
 type UseShellDrawerOptions = {
   drawerWidth: number;
   isNavOpen: boolean;
+  onInteractionStart?: (() => void) | null;
   setNavOpen: (open: boolean) => void;
 };
 
-export function useShellDrawer({ drawerWidth, isNavOpen, setNavOpen }: UseShellDrawerOptions) {
+export function useShellDrawer({ drawerWidth, isNavOpen, onInteractionStart, setNavOpen }: UseShellDrawerOptions) {
   const drawerTranslateX = useRef(new Animated.Value(0)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const useAnimatedNativeDriver = Platform.OS !== "web";
+  const handleInteractionStart = useCallback(() => {
+    if (onInteractionStart) {
+      onInteractionStart();
+      return;
+    }
+
+    dismissActiveKeyboard();
+  }, [onInteractionStart]);
 
   const dismissDrawer = useCallback(() => {
+    handleInteractionStart();
     blurActiveElement();
     drawerTranslateX.stopAnimation();
     overlayOpacity.stopAnimation();
     drawerTranslateX.setValue(-drawerWidth);
     overlayOpacity.setValue(0);
     setNavOpen(false);
-  }, [drawerTranslateX, drawerWidth, overlayOpacity, setNavOpen]);
+  }, [drawerTranslateX, drawerWidth, handleInteractionStart, overlayOpacity, setNavOpen]);
 
   const closeDrawer = useCallback(
     (onClosed?: () => void) => {
+      handleInteractionStart();
       blurActiveElement();
       const onClosedCallback = typeof onClosed === "function" ? onClosed : null;
       if (!isNavOpen) {
@@ -55,7 +67,7 @@ export function useShellDrawer({ drawerWidth, isNavOpen, setNavOpen }: UseShellD
         }
       });
     },
-    [drawerTranslateX, drawerWidth, isNavOpen, overlayOpacity, setNavOpen, useAnimatedNativeDriver],
+    [drawerTranslateX, drawerWidth, handleInteractionStart, isNavOpen, overlayOpacity, setNavOpen, useAnimatedNativeDriver],
   );
 
   const openDrawer = useCallback(() => {
@@ -63,6 +75,7 @@ export function useShellDrawer({ drawerWidth, isNavOpen, setNavOpen }: UseShellD
       return;
     }
 
+    handleInteractionStart();
     drawerTranslateX.setValue(-drawerWidth);
     overlayOpacity.setValue(0);
     setNavOpen(true);
@@ -80,7 +93,7 @@ export function useShellDrawer({ drawerWidth, isNavOpen, setNavOpen }: UseShellD
         }),
       ]).start();
     });
-  }, [drawerTranslateX, drawerWidth, isNavOpen, overlayOpacity, setNavOpen, useAnimatedNativeDriver]);
+  }, [drawerTranslateX, drawerWidth, handleInteractionStart, isNavOpen, overlayOpacity, setNavOpen, useAnimatedNativeDriver]);
 
   const edgePanResponder = useMemo(
     () =>
@@ -95,6 +108,7 @@ export function useShellDrawer({ drawerWidth, isNavOpen, setNavOpen }: UseShellD
           gestureState.dx > DRAWER_EDGE_GESTURE_THRESHOLD_PX &&
           Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
         onPanResponderGrant: () => {
+          handleInteractionStart();
           drawerTranslateX.setValue(-drawerWidth);
           overlayOpacity.setValue(0);
           setNavOpen(true);
@@ -142,7 +156,7 @@ export function useShellDrawer({ drawerWidth, isNavOpen, setNavOpen }: UseShellD
           });
         },
       }),
-    [drawerTranslateX, drawerWidth, isNavOpen, overlayOpacity, setNavOpen, useAnimatedNativeDriver],
+    [drawerTranslateX, drawerWidth, handleInteractionStart, isNavOpen, overlayOpacity, setNavOpen, useAnimatedNativeDriver],
   );
 
   const drawerPanResponder = useMemo(
@@ -157,6 +171,9 @@ export function useShellDrawer({ drawerWidth, isNavOpen, setNavOpen }: UseShellD
           isNavOpen &&
           gestureState.dx < -DRAWER_EDGE_GESTURE_THRESHOLD_PX &&
           Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+        onPanResponderGrant: () => {
+          handleInteractionStart();
+        },
         onPanResponderMove: (_event, gestureState) => {
           const nextTranslateX = Math.min(0, Math.max(-drawerWidth, gestureState.dx));
           drawerTranslateX.setValue(nextTranslateX);
@@ -185,7 +202,7 @@ export function useShellDrawer({ drawerWidth, isNavOpen, setNavOpen }: UseShellD
           ]).start();
         },
       }),
-    [closeDrawer, drawerTranslateX, drawerWidth, isNavOpen, overlayOpacity, useAnimatedNativeDriver],
+    [closeDrawer, drawerTranslateX, drawerWidth, handleInteractionStart, isNavOpen, overlayOpacity, useAnimatedNativeDriver],
   );
 
   return {

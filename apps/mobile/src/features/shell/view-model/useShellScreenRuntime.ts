@@ -14,10 +14,12 @@ type Translate = (key: string, params?: Record<string, string | number>) => stri
 export function useShellScreenRuntime({
   drawerWidth,
   isScreenFocused,
+  onDismissKeyboard,
   t,
 }: {
   drawerWidth: number;
   isScreenFocused: boolean;
+  onDismissKeyboard: () => void;
   t: Translate;
 }) {
   const shell = useShellState({ isScreenFocused });
@@ -25,6 +27,7 @@ export function useShellScreenRuntime({
   const drawer = useShellDrawer({
     drawerWidth,
     isNavOpen: shell.isNavOpen,
+    onInteractionStart: onDismissKeyboard,
     setNavOpen: shell.setNavOpen,
   });
   const sheets = useShellSheets();
@@ -62,6 +65,7 @@ export function useShellScreenRuntime({
     closeDrawer: drawer.closeDrawer,
     dismissDrawer: drawer.dismissDrawer,
     mutations,
+    onDismissKeyboard,
     sheets,
     shell,
     paneTabSheet: {

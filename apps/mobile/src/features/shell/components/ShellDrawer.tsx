@@ -50,6 +50,7 @@ type ShellDrawerProps = {
   closeDrawer: (onClosed?: () => void) => void;
   drawerPanHandlers: PanResponderInstance["panHandlers"];
   drawerTranslateX: Animated.Value;
+  onInteractionStart?: (() => void) | null;
   onSelectWorkspace: (workspace: Workspace) => void;
   openDrawer: () => void;
   overlayOpacity: Animated.Value;
@@ -62,6 +63,7 @@ export function ShellDrawer({
   closeDrawer,
   drawerPanHandlers,
   drawerTranslateX,
+  onInteractionStart,
   onSelectWorkspace,
   openDrawer,
   overlayOpacity,
@@ -141,7 +143,14 @@ export function ShellDrawer({
               organizationCount={panel.organizationCount}
               onOpenProfileControls={panel.onOpenProfileControls}
               onOpenOrganizationSelector={panel.onOpenOrganizationSelector}
-              onOpenWorkspaceTreeFilter={projects.length > 0 ? workspaceTreeFilter.openSheet : null}
+              onOpenWorkspaceTreeFilter={
+                projects.length > 0
+                  ? () => {
+                      onInteractionStart?.();
+                      workspaceTreeFilter.openSheet();
+                    }
+                  : null
+              }
               userAvatarUrl={panel.userAvatarUrl}
               userName={panel.userName}
             />

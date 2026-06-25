@@ -22,6 +22,7 @@ type UseShellScreenModelInput = {
   closeDrawer: () => void;
   dismissDrawer: () => void;
   mutations: ReturnType<typeof useShellMutations>;
+  onDismissKeyboard: () => void;
   sheets: ReturnType<typeof useShellSheets>;
   shell: ShellState;
   paneTabSheet: {
@@ -38,6 +39,7 @@ export function useShellScreenModel({
   closeDrawer,
   dismissDrawer,
   mutations,
+  onDismissKeyboard,
   sheets,
   shell,
   paneTabSheet,
@@ -72,6 +74,7 @@ export function useShellScreenModel({
     closeDrawer,
     dismissDrawer,
     mutations,
+    onDismissKeyboard,
     paneTabSheet,
     screenContext,
     sheets,
@@ -113,7 +116,10 @@ export function useShellScreenModel({
     isProjectsError: screenContext.currentOrgProjectsQuery.isError,
     isProjectsLoading: screenContext.currentOrgProjectsQuery.isLoading,
     onOpenProfileControls: openProfileControls,
-    onOpenOrganizationSelector: sheets.openOrgSelector,
+    onOpenOrganizationSelector: () => {
+      onDismissKeyboard();
+      sheets.openOrgSelector();
+    },
     onOpenProjectMenu: openProjectMenu,
     onRefreshWorkspaceTree: refreshWorkspaceTreeHandler,
     onOpenWorkspaceMenu: openWorkspaceMenu,

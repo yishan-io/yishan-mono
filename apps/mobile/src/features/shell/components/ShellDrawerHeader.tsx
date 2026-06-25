@@ -45,6 +45,7 @@ export function ShellTopBar({
 }: ShellTopBarProps) {
   const { t } = useAppLanguage();
   const theme = useTheme();
+
   return (
     <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
       <ScreenHeader

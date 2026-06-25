@@ -1,4 +1,5 @@
 import { useIsFocused } from "expo-router";
+import { useRef } from "react";
 import { View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -6,6 +7,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingView } from "@/components/ui/LoadingView";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
 import { useAppTheme } from "@/features/theme/AppThemeProvider";
+import { dismissActiveKeyboard } from "@/lib/accessibility/dismissActiveKeyboard";
 import { getThemeBackgroundAppColor } from "@/lib/theme/tamaguiThemes";
 import { ShellScreenContent } from "../components/ShellScreenContent";
 import { ShellScreenSheets } from "../components/ShellScreenSheets";
@@ -16,9 +18,15 @@ export function ShellScreen() {
   const { t } = useAppLanguage();
   const { width } = useWindowDimensions();
   const isFocused = useIsFocused();
+  const keyboardDismissHandlerRef = useRef<(() => void) | null>(null);
+  const dismissKeyboard = () => {
+    keyboardDismissHandlerRef.current?.();
+    dismissActiveKeyboard();
+  };
   const { drawer, screenContext, screenModel, sheets, shell } = useShellScreenRuntime({
     drawerWidth: width,
     isScreenFocused: isFocused,
+    onDismissKeyboard: dismissKeyboard,
     t,
   });
 
@@ -38,6 +46,10 @@ export function ShellScreen() {
           drawerPanHandlers={drawer.drawerPanHandlers}
           drawerTranslateX={drawer.drawerTranslateX}
           edgePanHandlers={drawer.edgePanHandlers}
+          onDismissKeyboard={dismissKeyboard}
+          onRegisterKeyboardDismissHandler={(handler) => {
+            keyboardDismissHandlerRef.current = handler;
+          }}
           openDrawer={drawer.openDrawer}
           overlayOpacity={drawer.overlayOpacity}
           screenModel={screenModel}

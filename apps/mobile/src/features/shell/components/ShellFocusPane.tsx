@@ -15,15 +15,22 @@ export type ShellFocusPanePreviewContext = {
 type ShellFocusPaneProps = {
   activeTab: ShellPaneTab | null;
   chat: ShellChatModel;
+  onRegisterKeyboardDismissHandler?: ((handler: (() => void) | null) => void) | null;
   onOpenPaneTabs?: (() => void) | null;
   previewContext: ShellFocusPanePreviewContext;
 };
 
-export function ShellFocusPane({ activeTab, chat, onOpenPaneTabs, previewContext }: ShellFocusPaneProps) {
+export function ShellFocusPane({
+  activeTab,
+  chat,
+  onOpenPaneTabs,
+  onRegisterKeyboardDismissHandler,
+  previewContext,
+}: ShellFocusPaneProps) {
   if (!activeTab || activeTab.kind === "terminal") {
     return (
       <View style={{ flex: 1, minHeight: 0 }}>
-        <ShellChatSurface chat={chat} />
+        <ShellChatSurface chat={chat} onRegisterKeyboardDismissHandler={onRegisterKeyboardDismissHandler} />
       </View>
     );
   }

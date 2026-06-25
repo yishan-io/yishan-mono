@@ -1,7 +1,7 @@
 import type { ITheme } from "@xterm/xterm";
 import type { DOMProps } from "expo/dom";
 import type { RefObject } from "react";
-import { Platform, Pressable, ScrollView, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text, XStack, YStack, useTheme } from "tamagui";
 
 import { PaneBody } from "@/components/ui/PaneBody";
@@ -87,6 +87,13 @@ export function ShellTerminalActivePane({
             terminalId={selectedTerminal.id}
             terminalTheme={terminalTheme}
           />
+          {keyboardVisible ? (
+            <Pressable
+              accessibilityLabel="Dismiss keyboard"
+              onPress={onDismissKeyboard}
+              style={styles.keyboardDismissOverlay}
+            />
+          ) : null}
         </View>
         {showTimeline || showNativeTerminalKeyBar ? (
           <View
@@ -127,6 +134,8 @@ export function ShellTerminalActivePane({
       <ShellTerminalTextOutput
         emptyDescription={emptyDescription}
         emptyStatusLabel={emptyStatusLabel}
+        keyboardVisible={keyboardVisible}
+        onDismissKeyboard={onDismissKeyboard}
         output={displayOutput}
         selectedTerminal={selectedTerminal}
       />
@@ -138,6 +147,8 @@ export function ShellTerminalActivePane({
 type ShellTerminalTextOutputProps = {
   emptyDescription: string;
   emptyStatusLabel: string;
+  keyboardVisible: boolean;
+  onDismissKeyboard: () => void;
   output: string;
   selectedTerminal: TerminalItem;
 };
@@ -145,6 +156,8 @@ type ShellTerminalTextOutputProps = {
 function ShellTerminalTextOutput({
   emptyDescription,
   emptyStatusLabel,
+  keyboardVisible,
+  onDismissKeyboard,
   output,
   selectedTerminal,
 }: ShellTerminalTextOutputProps) {
@@ -191,9 +204,24 @@ function ShellTerminalTextOutput({
           </YStack>
         )}
       </ScrollView>
+      {keyboardVisible ? (
+        <Pressable
+          accessibilityLabel="Dismiss keyboard"
+          onPress={onDismissKeyboard}
+          style={styles.keyboardDismissOverlay}
+        />
+      ) : null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  keyboardDismissOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "transparent",
+    zIndex: 10,
+  },
+});
 
 export function getShellTerminalEmptyCopy(selectedTerminal: TerminalItem, t: (key: string) => string) {
   return {

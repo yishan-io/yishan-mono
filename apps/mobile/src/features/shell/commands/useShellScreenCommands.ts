@@ -20,6 +20,7 @@ type UseShellScreenCommandsInput = {
   closeDrawer: () => void;
   dismissDrawer: () => void;
   mutations: ReturnType<typeof useShellMutations>;
+  onDismissKeyboard: () => void;
   paneTabSheet: {
     close: () => void;
     isOpen: boolean;
@@ -36,6 +37,7 @@ export function useShellScreenCommands({
   closeDrawer,
   dismissDrawer,
   mutations,
+  onDismissKeyboard,
   paneTabSheet,
   screenContext,
   sheets,
@@ -59,7 +61,7 @@ export function useShellScreenCommands({
     shell,
     t,
   });
-  const { onOpenProjectCreate, projectMenuActions, workspaceMenuActions } = useShellMenuActions({
+  const { onOpenProjectCreate: rawOpenProjectCreate, projectMenuActions, workspaceMenuActions } = useShellMenuActions({
     currentOrganizationId: screenContext.currentOrganizationId,
     mutations,
     sheets,
@@ -67,12 +69,12 @@ export function useShellScreenCommands({
   });
   const {
     agentQuickActions,
-    browserOpenHandler,
-    createTerminalHandler,
-    openChangesHandler,
-    openFilesHandler,
-    openPullRequestsHandler,
-    refreshSessionsHandler,
+    browserOpenHandler: rawBrowserOpenHandler,
+    createTerminalHandler: rawCreateTerminalHandler,
+    openChangesHandler: rawOpenChangesHandler,
+    openFilesHandler: rawOpenFilesHandler,
+    openPullRequestsHandler: rawOpenPullRequestsHandler,
+    refreshSessionsHandler: rawRefreshSessionsHandler,
   } = useShellQuickActionCommands({
     createTerminal,
     openWorkspaceBrowser: navigationCommands.openWorkspaceBrowser,
@@ -107,20 +109,73 @@ export function useShellScreenCommands({
   });
 
   const hasQuickActions =
-    !!createTerminalHandler ||
-    !!openFilesHandler ||
-    !!openChangesHandler ||
-    !!openPullRequestsHandler ||
+    !!rawCreateTerminalHandler ||
+    !!rawOpenFilesHandler ||
+    !!rawOpenChangesHandler ||
+    !!rawOpenPullRequestsHandler ||
     !!agentQuickActions?.length;
   const canOpenQuickActionsFromTopBar = hasQuickActions && shell.paneTabs.length > 0;
-  const openQuickActions = canOpenQuickActionsFromTopBar ? sheets.openQuickActions : null;
-  const openPaneTabSheet = shell.paneTabs.length > 0 ? paneTabSheet.open : null;
+  const openQuickActions = canOpenQuickActionsFromTopBar
+    ? () => {
+        onDismissKeyboard();
+        sheets.openQuickActions();
+      }
+    : null;
+  const openPaneTabSheet =
+    shell.paneTabs.length > 0
+      ? () => {
+          onDismissKeyboard();
+          paneTabSheet.open();
+        }
+      : null;
 
   useEffect(() => {
     if (!canOpenQuickActionsFromTopBar && sheets.quickActionsOpen) {
       sheets.closeQuickActions();
     }
   }, [canOpenQuickActionsFromTopBar, sheets]);
+
+  const createTerminalHandler = rawCreateTerminalHandler
+    ? () => {
+        onDismissKeyboard();
+        rawCreateTerminalHandler();
+      }
+    : null;
+
+  const browserOpenHandler = rawBrowserOpenHandler
+    ? () => {
+        onDismissKeyboard();
+        rawBrowserOpenHandler();
+      }
+    : null;
+
+  const openFilesHandler = rawOpenFilesHandler
+    ? () => {
+        onDismissKeyboard();
+        rawOpenFilesHandler();
+      }
+    : null;
+
+  const openChangesHandler = rawOpenChangesHandler
+    ? () => {
+        onDismissKeyboard();
+        rawOpenChangesHandler();
+      }
+    : null;
+
+  const openPullRequestsHandler = rawOpenPullRequestsHandler
+    ? () => {
+        onDismissKeyboard();
+        rawOpenPullRequestsHandler();
+      }
+    : null;
+
+  const refreshSessionsHandler = rawRefreshSessionsHandler
+    ? () => {
+        onDismissKeyboard();
+        rawRefreshSessionsHandler();
+      }
+    : null;
 
   useEffect(() => {
     const selectedWorkspaceContext = screenContext.selectedWorkspaceContext;
@@ -143,41 +198,56 @@ export function useShellScreenCommands({
   }, [screenContext.selectedWorkspaceContext, terminalMessages]);
 
   const retryProjects = useCallback(() => {
+    onDismissKeyboard();
     void screenContext.currentOrgProjectsQuery.refetch();
-  }, [screenContext.currentOrgProjectsQuery]);
+  }, [onDismissKeyboard, screenContext.currentOrgProjectsQuery]);
 
   const refreshWorkspaceTreeHandler = useCallback(() => {
+    onDismissKeyboard();
     void Promise.all([screenContext.currentOrgNodesQuery.refetch(), screenContext.currentOrgProjectsQuery.refetch()]);
-  }, [screenContext.currentOrgNodesQuery, screenContext.currentOrgProjectsQuery]);
+  }, [onDismissKeyboard, screenContext.currentOrgNodesQuery, screenContext.currentOrgProjectsQuery]);
 
   const selectOrganization = useCallback(
     (orgId: string) => {
+      onDismissKeyboard();
       sheets.closeOrgSelector();
       shell.selectOrganization(orgId, { keepNavOpen: true });
     },
-    [sheets, shell],
+    [onDismissKeyboard, sheets, shell],
   );
 
   const openProjectMenu = useCallback(
     (project: Parameters<ReturnType<typeof useShellSheets>["openProjectMenu"]>[0]) => {
+      onDismissKeyboard();
       sheets.openProjectMenu(project, screenContext.currentOrganizationId ?? null);
     },
-    [screenContext.currentOrganizationId, sheets],
+    [onDismissKeyboard, screenContext.currentOrganizationId, sheets],
   );
 
   const openWorkspaceMenu = useCallback(
     (...args: Parameters<ReturnType<typeof useShellSheets>["openWorkspaceMenu"]>) => {
+      onDismissKeyboard();
       sheets.openWorkspaceMenu(...args);
     },
-    [sheets],
+    [onDismissKeyboard, sheets],
   );
+
+  const openProfileControls = useCallback(() => {
+    onDismissKeyboard();
+    navigationCommands.openProfileControls();
+  }, [navigationCommands, onDismissKeyboard]);
+
+  const onOpenProjectCreate = useCallback(() => {
+    onDismissKeyboard();
+    rawOpenProjectCreate();
+  }, [onDismissKeyboard, rawOpenProjectCreate]);
 
   return {
     agentQuickActions,
     browserOpenHandler,
     closePaneTab,
     createTerminalHandler,
-    openProfileControls: navigationCommands.openProfileControls,
+    openProfileControls,
     onOpenProjectCreate,
     openChangesHandler,
     openFilesHandler,

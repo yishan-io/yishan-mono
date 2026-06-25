@@ -1,6 +1,6 @@
 import { SquareTerminal } from "@tamagui/lucide-icons";
-import type { ReactNode } from "react";
-import { View } from "react-native";
+import { type ReactNode, useEffect } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useTheme } from "tamagui";
 
 import { MOBILE_UI_TOKENS } from "@/components/ui/ui-tokens";
@@ -35,9 +35,10 @@ export type ShellChatModel = {
 
 type ShellChatSurfaceProps = {
   chat: ShellChatModel;
+  onRegisterKeyboardDismissHandler?: ((handler: (() => void) | null) => void) | null;
 };
 
-export function ShellChatSurface({ chat }: ShellChatSurfaceProps) {
+export function ShellChatSurface({ chat, onRegisterKeyboardDismissHandler }: ShellChatSurfaceProps) {
   const {
     agentQuickActions,
     draft,
@@ -82,6 +83,14 @@ export function ShellChatSurface({ chat }: ShellChatSurfaceProps) {
     dismissActiveKeyboard();
   };
 
+  useEffect(() => {
+    onRegisterKeyboardDismissHandler?.(dismissKeyboard);
+
+    return () => {
+      onRegisterKeyboardDismissHandler?.(null);
+    };
+  }, [onRegisterKeyboardDismissHandler, dismissKeyboard]);
+
   if (!selectedTerminal) {
     return (
       <ShellTerminalEmptyState
@@ -102,16 +111,21 @@ export function ShellChatSurface({ chat }: ShellChatSurfaceProps) {
 
   return (
     <View style={{ flex: 1, minHeight: 0 }}>
-      <PaneHeader
-        leadingIcon={<SquareTerminal color="$color11" size={15} />}
-        onPress={() => {
-          dismissKeyboard();
-          onOpenPaneTabs?.();
-        }}
-        title={selectedTerminalTitle ?? selectedTerminal.label}
-        trailing={<TerminalActivityIndicator status={selectedTerminal.status} terminalId={selectedTerminal.id} />}
-        typeLabel={t("shell.terminal")}
-      />
+      <View style={styles.headerContainer}>
+        <PaneHeader
+          leadingIcon={<SquareTerminal color="$color11" size={15} />}
+          onPress={() => {
+            dismissKeyboard();
+            onOpenPaneTabs?.();
+          }}
+          title={selectedTerminalTitle ?? selectedTerminal.label}
+          trailing={<TerminalActivityIndicator status={selectedTerminal.status} terminalId={selectedTerminal.id} />}
+          typeLabel={t("shell.terminal")}
+        />
+        {keyboardVisible ? (
+          <Pressable accessibilityLabel="Dismiss keyboard" onPress={dismissKeyboard} style={styles.dismissOverlay} />
+        ) : null}
+      </View>
 
       <ShellTerminalActivePane
         blurRequestToken={blurRequestToken}
@@ -169,3 +183,14 @@ function ComposerContainer({ children }: { children: ReactNode }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  dismissOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "transparent",
+    zIndex: 10,
+  },
+  headerContainer: {
+    position: "relative",
+  },
+});
