@@ -6,7 +6,6 @@ import (
 
 	"yishan/apps/cli/internal/workspace"
 )
-
 func (h *JSONRPCHandler) dispatchTerminal(ctx context.Context, connState *wsConnState, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodTerminalStart:
@@ -77,6 +76,18 @@ func (h *JSONRPCHandler) dispatchTerminal(ctx context.Context, connState *wsConn
 		}
 		connState.DetachSubscription(req.SessionID)
 		return workspace.TerminalUnsubscribeResponse{Unsubscribed: true}, nil
+	case MethodTerminalRemoteSubscribe:
+		var req terminalRemoteSubscribeRequest
+		if err := decodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.remoteSubscribe(connState, req)
+	case MethodTerminalRemoteUnsubscribe:
+		var req terminalRemoteUnsubscribeRequest
+		if err := decodeParams(params, &req); err != nil {
+			return nil, err
+		}
+		return h.remoteUnsubscribe(connState, req)
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown terminal method: "+method)
 	}

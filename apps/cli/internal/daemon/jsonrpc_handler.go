@@ -47,6 +47,15 @@ type JSONRPCHandler struct {
 
 	agentUsageMu sync.Mutex
 	agentUsage   map[string]map[string]struct{}
+
+	remoteStreamMu   sync.Mutex
+	remoteStreamSubs map[string]map[*wsConnState]struct{}
+
+	// relayConn is the active relay WebSocket connection, set while a relay
+	// session is running. Used by terminal.remote.subscribe to send stream
+	// requests to the relay on behalf of the desktop.
+	relayConnMu sync.RWMutex
+	relayConn   *wsConnState
 }
 
 func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, wsIndexStore *workspaceIndexStore, configPath string, context *AppContextStore) *JSONRPCHandler {
@@ -99,6 +108,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		modelList:      modellist.NewService(),
 		settingsPath:   config.SettingsFilePath(filepath.Dir(configPath)),
 		agentUsage:     make(map[string]map[string]struct{}),
+		remoteStreamSubs: make(map[string]map[*wsConnState]struct{}),
 		fileCacheSubID: fileCacheSubID,
 	}
 	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)
@@ -245,21 +255,25 @@ func (h *JSONRPCHandler) handleBinaryFrame(connState *wsConnState, payload []byt
 
 	opcode := payload[0]
 	rest := payload[1:]
+	nullIdx := bytes.IndexByte(rest, 0)
+	if nullIdx < 0 {
+		return
+	}
+	sessionID := connState.terminalInputSessionID(rest[:nullIdx])
 
 	switch opcode {
 	case binOpcodeTerminalInput:
-		// Find the null-terminated session ID.
-		nullIdx := bytes.IndexByte(rest, 0)
-		if nullIdx < 0 {
-			return
-		}
-		sessionID := connState.terminalInputSessionID(rest[:nullIdx])
 		inputData := rest[nullIdx+1:]
 		if len(inputData) == 0 {
 			return
 		}
+		if h.forwardRemoteTerminalInput(sessionID, payload) {
+			return
+		}
 		// Write raw bytes directly to PTY — avoids JSON unmarshal + string conversion.
 		h.manager.Terminals().SendRaw(sessionID, inputData)
+	case binOpcodeTerminalOutput:
+		h.forwardRemoteTerminalOutput(sessionID, payload)
 	}
 }
 

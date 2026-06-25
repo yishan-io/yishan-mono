@@ -23,6 +23,9 @@ const relayMethodPong = "relay.pong"
 const relayMethodJobRun = "job.run"
 const relayMethodWorkspaceSnapshotChanged = "workspace.snapshot.changed"
 const relayMethodTerminalSessionChanged = "terminal.session.changed"
+const relayMethodTerminalStreamRequest = "terminal.stream.request"
+const relayMethodTerminalStreamAccept = "terminal.stream.accept"
+const relayMethodTerminalStreamCancel = "terminal.stream.cancel"
 
 const relayReconnectInitialDelay = 2 * time.Second
 const relayReconnectMaxDelay = 30 * time.Second
@@ -99,7 +102,7 @@ func (s *RelayStatus) Snapshot() RelayStatusSnapshot {
 	return snap
 }
 
-func runRelayClientLoop(ctx context.Context, runtime *cliruntime.Runtime, handler *JSONRPCHandler, nodeID string, relayURL string, status *RelayStatus) {
+func runRelayClientLoop(ctx context.Context, runtime *cliruntime.Runtime, handler *JSONRPCHandler, nodeID string, relayURL string, staticToken string, status *RelayStatus) {
 	endpoint, err := normalizeRelayWSURL(relayURL)
 	if err != nil {
 		log.Warn().Err(err).Str("relay_url", relayURL).Msg("invalid relay url; relay client disabled")
@@ -110,6 +113,12 @@ func runRelayClientLoop(ctx context.Context, runtime *cliruntime.Runtime, handle
 	var cachedToken string
 	var cachedTokenExpiry time.Time
 
+	// Static token provided (local dev) — use it directly, skip API minting.
+	if staticToken != "" {
+		cachedToken = staticToken
+		cachedTokenExpiry = time.Now().Add(365 * 24 * time.Hour) // effectively never expires
+	}
+
 	delay := relayReconnectInitialDelay
 	for {
 		select {
@@ -119,7 +128,7 @@ func runRelayClientLoop(ctx context.Context, runtime *cliruntime.Runtime, handle
 		default:
 		}
 
-		if runtime == nil || !runtime.APIConfigured() {
+		if staticToken == "" && (runtime == nil || !runtime.APIConfigured()) {
 			log.Warn().Msg("relay client waiting for API credentials")
 			status.setDisconnected("waiting for API credentials")
 			select {
@@ -134,7 +143,7 @@ func runRelayClientLoop(ctx context.Context, runtime *cliruntime.Runtime, handle
 		// Reuse the cached token if it is still valid; only mint a new one
 		// when the token is missing or about to expire.
 		now := time.Now()
-		if cachedToken == "" || now.After(cachedTokenExpiry.Add(-relayTokenEarlyRefreshWindow)) {
+		if staticToken == "" && (cachedToken == "" || now.After(cachedTokenExpiry.Add(-relayTokenEarlyRefreshWindow))) {
 			token, expiry, err := mintRelayToken(runtime, nodeID)
 			if err != nil {
 				log.Warn().Err(err).Str("nodeId", nodeID).Msg("relay token mint failed")
@@ -215,6 +224,15 @@ func appendRelayClientMetadata(endpoint string) string {
 func runRelaySession(handler *JSONRPCHandler, runtime *cliruntime.Runtime, nodeID string, conn *websocket.Conn) {
 	connState := newWSConnState(conn)
 	defer connState.Close()
+
+	handler.relayConnMu.Lock()
+	handler.relayConn = connState
+	handler.relayConnMu.Unlock()
+	defer func() {
+		handler.relayConnMu.Lock()
+		handler.relayConn = nil
+		handler.relayConnMu.Unlock()
+	}()
 
 	subID, subEvents := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subID)
@@ -304,6 +322,15 @@ func handleRelayMessage(handler *JSONRPCHandler, runtime *cliruntime.Runtime, co
 		return true
 	case relayMethodTerminalSessionChanged:
 		publishTerminalSessionChanged(handler, msg.Params)
+		return true
+	case relayMethodTerminalStreamRequest:
+		handleTerminalStreamRequest(handler, connState, msg.Params)
+		return true
+	case relayMethodTerminalStreamAccept:
+		publishTerminalStreamAccept(handler, msg.Params)
+		return true
+	case relayMethodTerminalStreamCancel:
+		publishTerminalStreamCancel(handler, msg.Params)
 		return true
 	default:
 		return false
