@@ -68,6 +68,7 @@ describe("SettingsView", () => {
       markdownDefaultViewMode: "split",
       markdownPreviewFontSize: "medium",
       markdownPreviewWidth: "readable",
+      isMarkdownOutlineVisible: false,
     });
     sessionStore.setState({ currentUser: null, organizations: [], selectedOrganizationId: undefined, loaded: false });
     cleanup();
@@ -201,6 +202,22 @@ describe("SettingsView", () => {
 
     expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownPreviewFontSize":"large"');
     expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownPreviewWidth":"full"');
+  });
+
+  it("persists markdown outline visibility", () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=appearance"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    fireEvent.click(screen.getByLabelText("settings.appearance.markdown.outlineVisible.label"));
+
+    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"isMarkdownOutlineVisible":true');
   });
 
   it("matches appearance theme settings in search and opens appearance tab", () => {

@@ -20,6 +20,7 @@ type LayoutStoreState = {
   markdownDefaultViewMode: MarkdownDefaultViewMode;
   markdownPreviewFontSize: MarkdownPreviewFontSize;
   markdownPreviewWidth: MarkdownPreviewWidth;
+  isMarkdownOutlineVisible: boolean;
   isLeftPaneManuallyHidden: boolean;
   // ── persisted link setting (from former linkSettingsStore) ─────────────────
   linkTarget: LinkTarget;
@@ -35,6 +36,7 @@ type LayoutStoreState = {
   setMarkdownDefaultViewMode: (mode: MarkdownDefaultViewMode) => void;
   setMarkdownPreviewFontSize: (size: MarkdownPreviewFontSize) => void;
   setMarkdownPreviewWidth: (width: MarkdownPreviewWidth) => void;
+  setIsMarkdownOutlineVisible: (visible: boolean) => void;
   setIsLeftPaneManuallyHidden: (hidden: boolean) => void;
   setLinkTarget: (target: LinkTarget) => void;
   setIsVoiceInputEnabled: (enabled: boolean) => void;
@@ -53,6 +55,7 @@ export const layoutStore = create<LayoutStoreState>()(
       markdownDefaultViewMode: "split" as MarkdownDefaultViewMode,
       markdownPreviewFontSize: "medium" as MarkdownPreviewFontSize,
       markdownPreviewWidth: "readable" as MarkdownPreviewWidth,
+      isMarkdownOutlineVisible: false,
       isLeftPaneManuallyHidden: false,
       linkTarget: "built-in" as LinkTarget,
       isVoiceInputEnabled: false,
@@ -77,6 +80,9 @@ export const layoutStore = create<LayoutStoreState>()(
       },
       setMarkdownPreviewWidth: (markdownPreviewWidth) => {
         set({ markdownPreviewWidth });
+      },
+      setIsMarkdownOutlineVisible: (isMarkdownOutlineVisible) => {
+        set({ isMarkdownOutlineVisible });
       },
       setIsLeftPaneManuallyHidden: (isLeftPaneManuallyHidden) => {
         set({ isLeftPaneManuallyHidden });
@@ -115,6 +121,7 @@ export const layoutStore = create<LayoutStoreState>()(
         markdownDefaultViewMode: state.markdownDefaultViewMode,
         markdownPreviewFontSize: state.markdownPreviewFontSize,
         markdownPreviewWidth: state.markdownPreviewWidth,
+        isMarkdownOutlineVisible: state.isMarkdownOutlineVisible,
         linkTarget: state.linkTarget,
         isVoiceInputEnabled: state.isVoiceInputEnabled,
         voiceAutoEnter: state.voiceAutoEnter,

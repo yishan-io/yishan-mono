@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { layoutStore } from "../store/settings/layoutStore";
 import { MarkdownPreview } from "./MarkdownPreview";
 
 const parseMock = vi.fn<(content: string) => Promise<string>>();
@@ -16,6 +17,7 @@ describe("MarkdownPreview outline", () => {
   const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
 
   beforeEach(() => {
+    layoutStore.setState({ isMarkdownOutlineVisible: true });
     parseMock.mockResolvedValue(`
       <h1>Intro</h1>
       <p>Start</p>
@@ -28,8 +30,21 @@ describe("MarkdownPreview outline", () => {
 
   afterEach(() => {
     cleanup();
+    layoutStore.setState({ isMarkdownOutlineVisible: false });
     HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
     parseMock.mockReset();
+  });
+
+  it("stays hidden by default when outline visibility setting is off", async () => {
+    layoutStore.setState({ isMarkdownOutlineVisible: false });
+
+    render(<MarkdownPreview content="# placeholder" />);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Intro" })).toBeNull();
+    });
+
+    expect(await screen.findByRole("button", { name: "Show outline" })).toBeTruthy();
   });
 
   it("renders an outline from nested headings", async () => {

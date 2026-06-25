@@ -84,6 +84,8 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
   const theme = useTheme();
   const markdownPreviewFontSize = layoutStore((state) => state.markdownPreviewFontSize);
   const markdownPreviewWidth = layoutStore((state) => state.markdownPreviewWidth);
+  const isMarkdownOutlineVisible = layoutStore((state) => state.isMarkdownOutlineVisible);
+  const setIsMarkdownOutlineVisible = layoutStore((state) => state.setIsMarkdownOutlineVisible);
   const baseFontSize = MARKDOWN_PREVIEW_BASE_FONT_SIZE_BY_MODE[markdownPreviewFontSize];
   const styles = useMarkdownStyles(theme, baseFontSize);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -91,11 +93,10 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
   const [mermaidBlocks, setMermaidBlocks] = useState<Array<{ id: string; code: string }>>([]);
   const [localMatchCount, setLocalMatchCount] = useState(0);
   const [outlineData, setOutlineData] = useState<MarkdownOutlineData>({ items: [], entries: [] });
-  const [outlineHidden, setOutlineHidden] = useState(false);
   const [collapsedOutlineIds, setCollapsedOutlineIds] = useState<Set<string>>(new Set());
   const [activeOutlineId, setActiveOutlineId] = useState<string | null>(null);
   const floatingOutlineOffsetTop = findOpen ? 40 : 8;
-  const shouldShowFloatingOutline = !outlineHidden && outlineData.items.length > 0;
+  const shouldShowFloatingOutline = isMarkdownOutlineVisible && outlineData.items.length > 0;
 
   const { metadata, body } = useMemo(() => parseFrontmatter(content), [content]);
 
@@ -329,12 +330,12 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
           onClose={onFindClose}
         />
       )}
-      {outlineHidden && outlineData.items.length > 0 ? (
+      {!isMarkdownOutlineVisible && outlineData.items.length > 0 ? (
         <Box
           component="button"
           type="button"
           aria-label="Show outline"
-          onClick={() => setOutlineHidden(false)}
+          onClick={() => setIsMarkdownOutlineVisible(true)}
           sx={{
             position: "absolute",
             top: findOpen ? 40 : 8,
@@ -396,7 +397,7 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
             activeId={activeOutlineId}
             onSelect={handleSelectOutlineItem}
             onToggleCollapse={handleToggleOutlineCollapse}
-            onHide={() => setOutlineHidden(true)}
+            onHide={() => setIsMarkdownOutlineVisible(false)}
           />
         </Box>
       ) : null}
