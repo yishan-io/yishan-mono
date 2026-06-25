@@ -21,6 +21,7 @@ type ShellTerminalDomEmulatorProps = {
   resizeRequestToken?: number;
   scrollbarThumbColor?: string;
   streamKey: string;
+  terminalId: string;
   terminalTheme: ITheme;
 };
 
@@ -45,6 +46,7 @@ export default function ShellTerminalDomEmulator({
   resizeRequestToken = 0,
   scrollbarThumbColor,
   streamKey,
+  terminalId,
   terminalTheme,
 }: ShellTerminalDomEmulatorProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -81,6 +83,7 @@ export default function ShellTerminalDomEmulator({
     resizeFrameRef,
     resizeRequestToken,
     streamKey,
+    terminalId,
     terminalRef,
     terminalTheme,
     themeRef,

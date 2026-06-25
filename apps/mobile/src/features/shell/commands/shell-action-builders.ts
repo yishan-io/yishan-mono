@@ -138,30 +138,11 @@ export function buildProjectMenuActions(args: {
 
 export function buildWorkspaceMenuActions(args: {
   closeWorkspaceLabel: string;
-  newTerminalLabel: string;
   onCloseWorkspace: () => void;
-  onCreateTerminal: () => void;
-  onOpenFileTree: () => void;
-  viewFileTreeLabel: string;
 }): ShellActionItem[] {
-  const {
-    closeWorkspaceLabel,
-    newTerminalLabel,
-    onCloseWorkspace,
-    onCreateTerminal,
-    onOpenFileTree,
-    viewFileTreeLabel,
-  } = args;
+  const { closeWorkspaceLabel, onCloseWorkspace } = args;
 
   return [
-    {
-      label: viewFileTreeLabel,
-      onPress: onOpenFileTree,
-    },
-    {
-      label: newTerminalLabel,
-      onPress: onCreateTerminal,
-    },
     {
       destructive: true,
       label: closeWorkspaceLabel,

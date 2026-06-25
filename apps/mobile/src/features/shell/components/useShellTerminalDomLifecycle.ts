@@ -1,16 +1,15 @@
 import { FitAddon } from "@xterm/addon-fit";
 import { type ITheme, Terminal } from "@xterm/xterm";
-import { type RefObject, useEffect, useRef } from "react";
+import { type RefObject, useEffect } from "react";
 
 import { buildShellTerminalOptions } from "./shell-terminal-dom-emulator-domain";
 import {
   attachTerminalTouchScrollFallback,
   blurTerminal,
   focusTerminal,
-  resetTerminalFromCache,
   stabilizeTerminalViewport,
-  syncTerminalFromCache,
 } from "./shell-terminal-dom-emulator-runtime";
+import { mountTerminalOutputRuntime, unmountTerminalOutputRuntime } from "../terminal/terminalOutputRuntimeRegistry";
 
 type UseShellTerminalDomLifecycleInput = {
   blurRequestToken: number;
@@ -25,6 +24,7 @@ type UseShellTerminalDomLifecycleInput = {
   resizeFrameRef: RefObject<number | null>;
   resizeRequestToken: number;
   streamKey: string;
+  terminalId: string;
   terminalRef: RefObject<Terminal | null>;
   terminalTheme: ITheme;
   themeRef: RefObject<ITheme>;
@@ -46,12 +46,11 @@ export function useShellTerminalDomLifecycle({
   resizeFrameRef,
   resizeRequestToken,
   streamKey,
+  terminalId,
   terminalRef,
   terminalTheme,
   themeRef,
 }: UseShellTerminalDomLifecycleInput) {
-  const renderedOutputRef = useRef("");
-
   useEffect(() => {
     const host = hostRef.current;
     if (!host) {
@@ -103,8 +102,11 @@ export function useShellTerminalDomLifecycle({
 
     resizeObserver.observe(host);
 
-    renderedOutputRef.current = outputRef.current;
-    resetTerminalFromCache(terminal, outputRef.current);
+    mountTerminalOutputRuntime({
+      fallbackOutput: outputRef.current,
+      terminal,
+      terminalId,
+    });
     reportSize();
     focusFrameRef.current = requestAnimationFrame(() => {
       focusFrameRef.current = null;
@@ -126,10 +128,13 @@ export function useShellTerminalDomLifecycle({
       handleInput.dispose();
       cancelViewportStabilize?.();
       detachTouchScrollFallback?.();
+      unmountTerminalOutputRuntime({
+        terminal,
+        terminalId,
+      });
       terminal.dispose();
       terminalRef.current = null;
       reportSizeRef.current = null;
-      renderedOutputRef.current = "";
     };
   }, [
     focusFrameRef,
@@ -140,19 +145,10 @@ export function useShellTerminalDomLifecycle({
     reportSizeRef,
     resizeFrameRef,
     streamKey,
+    terminalId,
     terminalRef,
     themeRef,
   ]);
-
-  useEffect(() => {
-    const terminal = terminalRef.current;
-    if (!terminal) {
-      renderedOutputRef.current = output;
-      return;
-    }
-
-    renderedOutputRef.current = syncTerminalFromCache(terminal, renderedOutputRef.current, output);
-  }, [output, terminalRef]);
 
   useEffect(() => {
     const terminal = terminalRef.current;

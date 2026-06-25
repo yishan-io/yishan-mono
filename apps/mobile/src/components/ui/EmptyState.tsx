@@ -1,4 +1,4 @@
-import { Button, Paragraph, Text, YStack } from "tamagui";
+import { Button, Paragraph, Text, YStack, useTheme } from "tamagui";
 
 type EmptyStateProps = {
   title: string;
@@ -9,13 +9,22 @@ type EmptyStateProps = {
 
 /** Owns generic empty-state rendering only. */
 export function EmptyState({ title, message, actionLabel, onAction }: EmptyStateProps) {
+  const theme = useTheme();
+
   return (
-    <YStack gap="$3" px="$5" py="$4" style={{ alignItems: "center", flex: 1, justifyContent: "center" }}>
-      <Text fontSize="$8" fontWeight="700" style={{ textAlign: "center" }}>
+    <YStack
+      gap="$3"
+      px="$5"
+      py="$4"
+      style={{ alignItems: "center", backgroundColor: theme.background.val, flex: 1, justifyContent: "center" }}
+    >
+      <Text color="$color" fontSize="$8" fontWeight="700" style={{ textAlign: "center" }}>
         {title}
       </Text>
-      <Paragraph style={{ textAlign: "center" }}>{message}</Paragraph>
-      {actionLabel && onAction ? <Button onPress={onAction}>{actionLabel}</Button> : null}
+      <Paragraph color="$gray11" style={{ textAlign: "center" }}>
+        {message}
+      </Paragraph>
+      {actionLabel && onAction ? <Button onPress={onAction} themeInverse>{actionLabel}</Button> : null}
     </YStack>
   );
 }

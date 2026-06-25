@@ -170,28 +170,18 @@ describe("shell-action-builders", () => {
     expect(deleteProject).toHaveBeenCalledTimes(1);
   });
 
-  it("builds workspace menu actions in the expected order", () => {
-    const openFileTree = vi.fn();
-    const createTerminal = vi.fn();
+  it("builds workspace menu actions with only close workspace", () => {
     const closeWorkspace = vi.fn();
     const actions = buildWorkspaceMenuActions({
       closeWorkspaceLabel: "Close workspace",
-      newTerminalLabel: "New terminal",
       onCloseWorkspace: closeWorkspace,
-      onCreateTerminal: createTerminal,
-      onOpenFileTree: openFileTree,
-      viewFileTreeLabel: "View file tree",
     });
 
-    expect(actions.map((action) => action.label)).toEqual(["View file tree", "New terminal", "Close workspace"]);
-    expect(actions[2]?.destructive).toBe(true);
+    expect(actions.map((action) => action.label)).toEqual(["Close workspace"]);
+    expect(actions[0]?.destructive).toBe(true);
 
     actions[0]?.onPress();
-    actions[1]?.onPress();
-    actions[2]?.onPress();
 
-    expect(openFileTree).toHaveBeenCalledTimes(1);
-    expect(createTerminal).toHaveBeenCalledTimes(1);
     expect(closeWorkspace).toHaveBeenCalledTimes(1);
   });
 });

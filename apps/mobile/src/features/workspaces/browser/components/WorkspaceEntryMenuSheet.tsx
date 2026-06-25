@@ -1,6 +1,5 @@
+import { ActionSheetContent } from "@/components/ui/ActionSheetContent";
 import { AppModalSheet } from "@/components/ui/AppModalSheet";
-import { View } from "react-native";
-import { Button, Text } from "tamagui";
 
 type WorkspaceEntryMenuSheetProps = {
   entryName: string;
@@ -15,32 +14,21 @@ type WorkspaceEntryMenuSheetProps = {
 };
 
 export function WorkspaceEntryMenuSheet({ actions, entryName, onClose, open }: WorkspaceEntryMenuSheetProps) {
+  const handledActions = actions.map((action) => ({
+    ...action,
+    onPress: () => {
+      if (action.disabled) {
+        return;
+      }
+
+      action.onPress();
+      onClose();
+    },
+  }));
+
   return (
     <AppModalSheet open={open} onClose={onClose} position="bottom">
-      {entryName ? (
-        <Text fontSize="$7" fontWeight="700" numberOfLines={1}>
-          {entryName}
-        </Text>
-      ) : null}
-      <View style={{ gap: 8 }}>
-        {actions.map((action) => (
-          <Button
-            key={action.label}
-            disabled={action.disabled}
-            onPress={() => {
-              if (action.disabled) {
-                return;
-              }
-
-              action.onPress();
-              onClose();
-            }}
-            themeInverse={!action.destructive}
-          >
-            {action.label}
-          </Button>
-        ))}
-      </View>
+      <ActionSheetContent actions={handledActions} title={entryName} />
     </AppModalSheet>
   );
 }

@@ -17,6 +17,7 @@ export const MOBILE_UI_TOKENS = {
     surface: 16,
   },
   sheet: {
+    actionMenuMinHeight: 164,
     backdrop: "rgba(15, 23, 42, 0.36)",
     cardWidth: "88%" as const,
     dialogPadding: 18,

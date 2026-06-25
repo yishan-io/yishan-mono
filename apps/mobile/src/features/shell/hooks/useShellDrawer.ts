@@ -3,6 +3,11 @@ import { Animated, PanResponder, Platform } from "react-native";
 
 import { blurActiveElement } from "@/lib/accessibility/blurActiveElement";
 
+const DRAWER_EDGE_GESTURE_THRESHOLD_PX = 10;
+const DRAWER_OPEN_VELOCITY_THRESHOLD = 0.5;
+const DRAWER_OPEN_DISTANCE_RATIO = 0.25;
+const DRAWER_CLOSE_DISTANCE_RATIO = 0.2;
+
 type UseShellDrawerOptions = {
   drawerWidth: number;
   isNavOpen: boolean;
@@ -80,8 +85,15 @@ export function useShellDrawer({ drawerWidth, isNavOpen, setNavOpen }: UseShellD
   const edgePanResponder = useMemo(
     () =>
       PanResponder.create({
+        onPanResponderTerminationRequest: () => false,
+        onMoveShouldSetPanResponderCapture: (_event, gestureState) =>
+          !isNavOpen &&
+          gestureState.dx > DRAWER_EDGE_GESTURE_THRESHOLD_PX &&
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
         onMoveShouldSetPanResponder: (_event, gestureState) =>
-          !isNavOpen && gestureState.dx > 12 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+          !isNavOpen &&
+          gestureState.dx > DRAWER_EDGE_GESTURE_THRESHOLD_PX &&
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
         onPanResponderGrant: () => {
           drawerTranslateX.setValue(-drawerWidth);
           overlayOpacity.setValue(0);
@@ -93,7 +105,10 @@ export function useShellDrawer({ drawerWidth, isNavOpen, setNavOpen }: UseShellD
           overlayOpacity.setValue(Math.min(1, Math.max(0, gestureState.dx / drawerWidth)));
         },
         onPanResponderRelease: (_event, gestureState) => {
-          if (gestureState.dx > drawerWidth * 0.25 || gestureState.vx > 0.5) {
+          if (
+            gestureState.dx > drawerWidth * DRAWER_OPEN_DISTANCE_RATIO ||
+            gestureState.vx > DRAWER_OPEN_VELOCITY_THRESHOLD
+          ) {
             Animated.parallel([
               Animated.timing(drawerTranslateX, {
                 toValue: 0,
@@ -133,15 +148,25 @@ export function useShellDrawer({ drawerWidth, isNavOpen, setNavOpen }: UseShellD
   const drawerPanResponder = useMemo(
     () =>
       PanResponder.create({
+        onPanResponderTerminationRequest: () => false,
+        onMoveShouldSetPanResponderCapture: (_event, gestureState) =>
+          isNavOpen &&
+          gestureState.dx < -DRAWER_EDGE_GESTURE_THRESHOLD_PX &&
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
         onMoveShouldSetPanResponder: (_event, gestureState) =>
-          isNavOpen && gestureState.dx < -12 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+          isNavOpen &&
+          gestureState.dx < -DRAWER_EDGE_GESTURE_THRESHOLD_PX &&
+          Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
         onPanResponderMove: (_event, gestureState) => {
           const nextTranslateX = Math.min(0, Math.max(-drawerWidth, gestureState.dx));
           drawerTranslateX.setValue(nextTranslateX);
           overlayOpacity.setValue(Math.min(1, Math.max(0, 1 + gestureState.dx / drawerWidth)));
         },
         onPanResponderRelease: (_event, gestureState) => {
-          if (gestureState.dx < -drawerWidth * 0.2 || gestureState.vx < -0.5) {
+          if (
+            gestureState.dx < -drawerWidth * DRAWER_CLOSE_DISTANCE_RATIO ||
+            gestureState.vx < -DRAWER_OPEN_VELOCITY_THRESHOLD
+          ) {
             closeDrawer();
             return;
           }

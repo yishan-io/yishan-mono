@@ -1,5 +1,5 @@
 import { usePathname, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import type { useShellMutations } from "../commands/useShellMutations";
 import type { useShellSheets } from "../hooks/useShellSheets";
@@ -45,6 +45,7 @@ export function useShellScreenCommands({
 }: UseShellScreenCommandsInput) {
   const pathname = usePathname();
   const router = useRouter();
+  const lastAutoRefreshedWorkspaceKeyRef = useRef<string | null>(null);
 
   const navigationCommands = useShellNavigationCommands({
     closeDrawer,
@@ -59,10 +60,8 @@ export function useShellScreenCommands({
     t,
   });
   const { onOpenProjectCreate, projectMenuActions, workspaceMenuActions } = useShellMenuActions({
-    createTerminal: (workspace) => createTerminal(workspace, { label: t("shell.newTerminal") }),
     currentOrganizationId: screenContext.currentOrganizationId,
     mutations,
-    openWorkspaceBrowser: navigationCommands.openWorkspaceBrowser,
     sheets,
     t,
   });
@@ -122,6 +121,26 @@ export function useShellScreenCommands({
       sheets.closeQuickActions();
     }
   }, [canOpenQuickActionsFromTopBar, sheets]);
+
+  useEffect(() => {
+    const selectedWorkspaceContext = screenContext.selectedWorkspaceContext;
+    if (!selectedWorkspaceContext) {
+      lastAutoRefreshedWorkspaceKeyRef.current = null;
+      return;
+    }
+
+    const workspaceKey = [
+      selectedWorkspaceContext.organizationId,
+      selectedWorkspaceContext.projectId,
+      selectedWorkspaceContext.workspaceId,
+    ].join(":");
+    if (lastAutoRefreshedWorkspaceKeyRef.current === workspaceKey) {
+      return;
+    }
+
+    lastAutoRefreshedWorkspaceKeyRef.current = workspaceKey;
+    void terminalMessages.refreshSessionSync();
+  }, [screenContext.selectedWorkspaceContext, terminalMessages]);
 
   const retryProjects = useCallback(() => {
     void screenContext.currentOrgProjectsQuery.refetch();

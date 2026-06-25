@@ -41,7 +41,20 @@ export function ShellScreenContent({
         visible={shell.isNavOpen}
       />
 
-      <View {...(!shell.isNavOpen ? edgePanHandlers : {})} style={{ flex: 1, minHeight: 0 }}>
+      <View style={{ flex: 1, minHeight: 0 }}>
+        <View
+          {...edgePanHandlers}
+          pointerEvents={shell.isNavOpen ? "none" : "box-only"}
+          style={{
+            bottom: 0,
+            left: 0,
+            position: "absolute",
+            top: 0,
+            width: 40,
+            zIndex: 20,
+          }}
+        />
+
         <ShellFocusPane
           activeTab={shell.activePaneTab}
           chat={screenModel.focusPaneChat}

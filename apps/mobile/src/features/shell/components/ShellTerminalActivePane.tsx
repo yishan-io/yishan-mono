@@ -84,6 +84,7 @@ export function ShellTerminalActivePane({
             resizeRequestToken={resizeRequestToken}
             scrollbarThumbColor={scrollbarThumbColor}
             streamKey={streamKey}
+            terminalId={selectedTerminal.id}
             terminalTheme={terminalTheme}
           />
         </View>
