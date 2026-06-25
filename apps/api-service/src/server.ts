@@ -6,7 +6,7 @@ Bun.serve({
   port,
   fetch(request) {
     return app.fetch(request);
-  }
+  },
 });
 
 console.log(`API service listening on http://localhost:${port}`);

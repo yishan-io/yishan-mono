@@ -1,5 +1,5 @@
-import type { OAuthProfile, OAuthProvider, ServiceConfig } from "@/types";
 import { randomToken, sha256Base64Url } from "@/auth/security";
+import type { OAuthProfile, OAuthProvider, ServiceConfig } from "@/types";
 
 const GOOGLE_SCOPES = ["openid", "email", "profile"];
 const GITHUB_SCOPES = ["read:user", "user:email"];
@@ -13,7 +13,7 @@ export type OAuthStart = {
 export async function buildAuthorizationUrl(
   provider: OAuthProvider,
   config: ServiceConfig,
-  callbackBaseUrl?: string
+  callbackBaseUrl?: string,
 ): Promise<OAuthStart> {
   const baseUrl = callbackBaseUrl ?? config.appBaseUrl;
   const state = randomToken(24);
@@ -30,13 +30,13 @@ export async function buildAuthorizationUrl(
       code_challenge: codeChallenge,
       code_challenge_method: "S256",
       access_type: "offline",
-      prompt: "consent"
+      prompt: "consent",
     });
 
     return {
       state,
       codeVerifier,
-      authorizationUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+      authorizationUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
     };
   }
 
@@ -47,13 +47,13 @@ export async function buildAuthorizationUrl(
     scope: GITHUB_SCOPES.join(" "),
     state,
     code_challenge: codeChallenge,
-    code_challenge_method: "S256"
+    code_challenge_method: "S256",
   });
 
   return {
     state,
     codeVerifier,
-    authorizationUrl: `https://github.com/login/oauth/authorize?${params.toString()}`
+    authorizationUrl: `https://github.com/login/oauth/authorize?${params.toString()}`,
   };
 }
 
@@ -71,7 +71,7 @@ export async function exchangeCodeForProfile(
   code: string,
   codeVerifier: string,
   config: ServiceConfig,
-  callbackBaseUrl?: string
+  callbackBaseUrl?: string,
 ): Promise<OAuthProfile> {
   const baseUrl = callbackBaseUrl ?? config.appBaseUrl;
   if (provider === "google") {
@@ -87,12 +87,12 @@ async function exchangeGoogleToken(
   code: string,
   codeVerifier: string,
   config: ServiceConfig,
-  callbackBaseUrl: string
+  callbackBaseUrl: string,
 ): Promise<TokenResponse> {
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
+      "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams({
       grant_type: "authorization_code",
@@ -100,8 +100,8 @@ async function exchangeGoogleToken(
       client_secret: config.googleClientSecret,
       code,
       redirect_uri: buildCallbackUrl(callbackBaseUrl, "google"),
-      code_verifier: codeVerifier
-    })
+      code_verifier: codeVerifier,
+    }),
   });
 
   if (!response.ok) {
@@ -113,7 +113,7 @@ async function exchangeGoogleToken(
     }
 
     throw new Error(
-      `Failed to exchange Google OAuth code (status=${response.status}${details ? `, body=${details}` : ""})`
+      `Failed to exchange Google OAuth code (status=${response.status}${details ? `, body=${details}` : ""})`,
     );
   }
 
@@ -131,8 +131,8 @@ type GoogleProfileResponse = {
 async function getGoogleProfile(accessToken: string): Promise<OAuthProfile> {
   const response = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
     headers: {
-      Authorization: `Bearer ${accessToken}`
-    }
+      Authorization: `Bearer ${accessToken}`,
+    },
   });
 
   if (!response.ok) {
@@ -155,7 +155,7 @@ async function getGoogleProfile(accessToken: string): Promise<OAuthProfile> {
     email: profile.email.toLowerCase(),
     emailVerified: true,
     name: profile.name ?? null,
-    avatarUrl: profile.picture ?? null
+    avatarUrl: profile.picture ?? null,
   };
 }
 
@@ -163,21 +163,21 @@ async function exchangeGithubToken(
   code: string,
   codeVerifier: string,
   config: ServiceConfig,
-  callbackBaseUrl: string
+  callbackBaseUrl: string,
 ): Promise<TokenResponse> {
   const response = await fetch("https://github.com/login/oauth/access_token", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      Accept: "application/json"
+      Accept: "application/json",
     },
     body: new URLSearchParams({
       client_id: config.githubClientId,
       client_secret: config.githubClientSecret,
       code,
       redirect_uri: buildCallbackUrl(callbackBaseUrl, "github"),
-      code_verifier: codeVerifier
-    })
+      code_verifier: codeVerifier,
+    }),
   });
 
   if (!response.ok) {
@@ -204,7 +204,7 @@ async function getGithubProfile(accessToken: string): Promise<OAuthProfile> {
   const baseHeaders = {
     Authorization: `Bearer ${accessToken}`,
     Accept: "application/vnd.github+json",
-    "User-Agent": "yishan-api-service"
+    "User-Agent": "yishan-api-service",
   };
 
   // Both GitHub API calls are independent — fetch them concurrently.
@@ -224,8 +224,7 @@ async function getGithubProfile(accessToken: string): Promise<OAuthProfile> {
   const user = (await userResponse.json()) as GithubUserResponse;
   const emails = (await emailResponse.json()) as GithubEmailResponse[];
   const primaryVerified =
-    emails.find((entry) => entry.primary && entry.verified) ??
-    emails.find((entry) => entry.verified);
+    emails.find((entry) => entry.primary && entry.verified) ?? emails.find((entry) => entry.verified);
 
   const email = primaryVerified?.email ?? null;
 
@@ -239,6 +238,6 @@ async function getGithubProfile(accessToken: string): Promise<OAuthProfile> {
     email: email.toLowerCase(),
     emailVerified: true,
     name: user.name,
-    avatarUrl: user.avatar_url
+    avatarUrl: user.avatar_url,
   };
 }

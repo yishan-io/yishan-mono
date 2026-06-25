@@ -1,5 +1,5 @@
-import { StatusCodes } from "http-status-codes";
 import { HTTPException } from "hono/http-exception";
+import { StatusCodes } from "http-status-codes";
 
 import type { AppContext } from "@/hono";
 import type { DispatchMessage } from "@/scheduled/queue";

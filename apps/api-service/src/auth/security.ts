@@ -41,13 +41,10 @@ export type AccessTokenClaims = {
   exp: number;
 };
 
-export async function signAccessToken(
-  payload: Omit<AccessTokenClaims, "type">,
-  secret: string
-): Promise<string> {
+export async function signAccessToken(payload: Omit<AccessTokenClaims, "type">, secret: string): Promise<string> {
   const claims: AccessTokenClaims = {
     type: "access",
-    ...payload
+    ...payload,
   };
 
   return sign(claims, secret, "HS256");
@@ -72,7 +69,7 @@ const RELAY_TOKEN_TTL_SECONDS = 300; // 5 minutes
 
 export async function signRelayToken(
   payload: { sub: string; nodeId: string; organizationIds: string[]; iss: string; aud: string },
-  secret: string
+  secret: string,
 ): Promise<{ token: string; expiresAt: string }> {
   const nowSeconds = Math.floor(Date.now() / 1000);
   const exp = nowSeconds + RELAY_TOKEN_TTL_SECONDS;
@@ -100,7 +97,7 @@ export async function verifyAccessToken(
   token: string,
   secret: string,
   expectedIssuer: string,
-  expectedAudience: string
+  expectedAudience: string,
 ): Promise<AccessTokenClaims | null> {
   let payload: Record<string, unknown>;
 

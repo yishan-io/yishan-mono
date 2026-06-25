@@ -1,3 +1,4 @@
+import type { AppDb } from "@/db/client";
 import { workspaces } from "@/db/schema";
 import {
   OrganizationMembershipRequiredError,
@@ -37,14 +38,16 @@ function makeOrgService(role: string | null = "member") {
  * Build a mock db whose outer select chain handles assertNodeOwnedByActor,
  * and whose transaction mock provides project/membership checks via inner tx.
  */
-function makeDb(options: {
-  nodeScope?: "private" | "shared";
-  nodeOwner?: string;
-  projectExists?: boolean;
-  ownerIsMember?: boolean;
-  reactivatedRows?: unknown[];
-  insertedRows?: unknown[];
-} = {}) {
+function makeDb(
+  options: {
+    nodeScope?: "private" | "shared";
+    nodeOwner?: string;
+    projectExists?: boolean;
+    ownerIsMember?: boolean;
+    reactivatedRows?: unknown[];
+    insertedRows?: unknown[];
+  } = {},
+) {
   const {
     nodeScope = "private",
     nodeOwner = "user-1",
@@ -55,9 +58,7 @@ function makeDb(options: {
   } = options;
 
   // Outer db: handles assertNodeOwnedByActor (uses this.db directly)
-  const outerLimit = vi.fn().mockResolvedValue([
-    { id: "node-1", scope: nodeScope, ownerUserId: nodeOwner },
-  ]);
+  const outerLimit = vi.fn().mockResolvedValue([{ id: "node-1", scope: nodeScope, ownerUserId: nodeOwner }]);
   const outerSelect = vi.fn().mockReturnValue({
     from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: outerLimit }) }),
   });
@@ -83,9 +84,9 @@ function makeDb(options: {
   const txInsertValues = vi.fn().mockReturnValue({ returning: txInsertReturning });
   const txInsert = vi.fn().mockReturnValue({ values: txInsertValues });
 
-  const transaction = vi.fn().mockImplementation((fn: (tx: unknown) => unknown) =>
-    fn({ select: txSelect, update: txUpdate, insert: txInsert }),
-  );
+  const transaction = vi
+    .fn()
+    .mockImplementation((fn: (tx: unknown) => unknown) => fn({ select: txSelect, update: txUpdate, insert: txInsert }));
 
   // biome-ignore lint/suspicious/noExplicitAny: mock DB for unit testing
   const db = { select: outerSelect, transaction } as any;
@@ -219,14 +220,13 @@ describe("WorkspaceService.listWorkspaces", () => {
   });
 
   it("returns empty array when no active workspaces exist", async () => {
-    // biome-ignore lint/suspicious/noExplicitAny: mock DB for unit testing
     const db = {
       select: vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([]),
         }),
       }),
-    } as any;
+    } as unknown as AppDb;
     const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
 
     const result = await service.listWorkspaces({
@@ -251,17 +251,16 @@ describe("WorkspaceService.closeWorkspace", () => {
     status: "closed" as const,
   };
 
-  function makeCloseDb(options: {
-    existingRows?: unknown[];
-    updatedRows?: unknown[];
-    fallbackRows?: unknown[];
-  } = {}) {
+  function makeCloseDb(
+    options: {
+      existingRows?: unknown[];
+      updatedRows?: unknown[];
+      fallbackRows?: unknown[];
+    } = {},
+  ) {
     const { existingRows = [WORKTREE_ACTIVE_ROW], updatedRows = [WORKTREE_CLOSED_ROW], fallbackRows = [] } = options;
 
-    const limit = vi
-      .fn()
-      .mockResolvedValueOnce(existingRows)
-      .mockResolvedValueOnce(fallbackRows);
+    const limit = vi.fn().mockResolvedValueOnce(existingRows).mockResolvedValueOnce(fallbackRows);
     const whereSelect = vi.fn().mockReturnValue({ limit });
     const from = vi.fn().mockReturnValue({ where: whereSelect });
     const select = vi.fn().mockReturnValue({ from });
@@ -320,7 +319,10 @@ describe("WorkspaceService.closeWorkspace", () => {
   });
 
   it("returns changed true when active workspace is newly closed", async () => {
-    const { db, updateWhere } = makeCloseDb({ existingRows: [WORKTREE_ACTIVE_ROW], updatedRows: [WORKTREE_CLOSED_ROW] });
+    const { db, updateWhere } = makeCloseDb({
+      existingRows: [WORKTREE_ACTIVE_ROW],
+      updatedRows: [WORKTREE_CLOSED_ROW],
+    });
     const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
 
     const result = await service.closeWorkspace({

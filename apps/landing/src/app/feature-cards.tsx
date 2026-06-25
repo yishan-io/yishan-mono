@@ -26,7 +26,13 @@ function IconLiveStatus() {
       <circle cx="5" cy="14" r="2" stroke="#A5B0A8" strokeWidth="1.5" />
       <rect x="10" y="12.5" width="9" height="3" rx="1.5" fill="#A5B0A8" opacity="0.35" />
       <circle cx="5" cy="20" r="2.5" fill="#4A5A4E" />
-      <path d="M3.8 20 L4.8 21 L6.2 19" stroke="#8FCB99" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M3.8 20 L4.8 21 L6.2 19"
+        stroke="#8FCB99"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       <rect x="10" y="18.5" width="11" height="3" rx="1.5" fill="#4A5A4E" opacity="0.6" />
     </svg>
   );
@@ -36,7 +42,14 @@ function IconResume() {
   return (
     <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
       <path d="M22 10 A9 9 0 1 0 22 18" stroke="#8FCB99" strokeWidth="1.6" strokeLinecap="round" fill="none" />
-      <path d="M20 7 L22 10 L19 11" stroke="#8FCB99" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path
+        d="M20 7 L22 10 L19 11"
+        stroke="#8FCB99"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
       <path d="M11 10.5 L11 17.5 L18 14 Z" fill="#8FCB99" opacity="0.8" />
     </svg>
   );
@@ -70,32 +83,41 @@ function IconContext() {
 // ── Card data ──────────────────────────────────────────────────────────────
 
 const cards = [
-  { icon: <IconIsolated />,   titleKey: "features.0.title", descKey: "features.0.desc" },
+  { icon: <IconIsolated />, titleKey: "features.0.title", descKey: "features.0.desc" },
   { icon: <IconLiveStatus />, titleKey: "features.1.title", descKey: "features.1.desc" },
-  { icon: <IconResume />,     titleKey: "features.2.title", descKey: "features.2.desc" },
-  { icon: <IconAgent />,      titleKey: "features.3.title", descKey: "features.3.desc" },
-  { icon: <IconContext />,    titleKey: "features.4.title", descKey: "features.4.desc" },
+  { icon: <IconResume />, titleKey: "features.2.title", descKey: "features.2.desc" },
+  { icon: <IconAgent />, titleKey: "features.3.title", descKey: "features.3.desc" },
+  { icon: <IconContext />, titleKey: "features.4.title", descKey: "features.4.desc" },
 ] as const;
 
 // Fixed positions as % [left, top] — deliberately scattered, not grid-aligned
 // Chosen so cards don't overlap on desktop (card ~260px wide, container ~1200px)
 const positions: [number, number][] = [
-  [4,   3],   // 0 — top left
-  [62,  2],   // 1 — top right
-  [32, 34],   // 2 — centre
-  [8,  58],   // 3 — bottom left
-  [64, 54],   // 4 — bottom right
+  [4, 3], // 0 — top left
+  [62, 2], // 1 — top right
+  [32, 34], // 2 — centre
+  [8, 58], // 3 — bottom left
+  [64, 54], // 4 — bottom right
 ];
 
 // Each card lights up for 4s, then the next one takes over — equal round-robin
-const CYCLE_INTERVAL = 800;  // ms dim gap between cards
-const LIT_DURATION   = 4000; // ms each card stays lit
+const CYCLE_INTERVAL = 800; // ms dim gap between cards
+const LIT_DURATION = 4000; // ms each card stays lit
 
 // Tiny background star dots [left%, top%]
 const bgStars: [number, number, number][] = [
-  [15, 20, 1.5], [40, 8, 1], [72, 25, 1.5], [88, 14, 1],
-  [50, 72, 1.5], [20, 80, 1], [80, 78, 1.5], [35, 55, 1],
-  [90, 45, 1], [10, 45, 1.5], [65, 40, 1], [48, 90, 1],
+  [15, 20, 1.5],
+  [40, 8, 1],
+  [72, 25, 1.5],
+  [88, 14, 1],
+  [50, 72, 1.5],
+  [20, 80, 1],
+  [80, 78, 1.5],
+  [35, 55, 1],
+  [90, 45, 1],
+  [10, 45, 1.5],
+  [65, 40, 1],
+  [48, 90, 1],
 ];
 
 interface Props {
@@ -129,10 +151,7 @@ export function FeatureCards({ t }: Props) {
   }, []);
 
   return (
-    <div
-      className="relative mt-10 rounded-[36px]"
-      style={{ height: "680px" }}
-    >
+    <div className="relative mt-10 rounded-[36px]" style={{ height: "680px" }}>
       {/* Background nebula glow */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[20%] top-[10%] h-64 w-64 rounded-full bg-[#8FCB99]/4 blur-3xl" />
@@ -140,9 +159,9 @@ export function FeatureCards({ t }: Props) {
       </div>
 
       {/* Background star dots */}
-      {bgStars.map(([l, t2, r], i) => (
+      {bgStars.map(([l, t2, r]) => (
         <div
-          key={i}
+          key={`${l}-${t2}-${r}`}
           className="pointer-events-none absolute rounded-full bg-[#8FCB99] opacity-20"
           style={{ left: `${l}%`, top: `${t2}%`, width: r, height: r }}
         />
@@ -154,16 +173,16 @@ export function FeatureCards({ t }: Props) {
         const isLit = lit === i;
 
         return (
-        <div
-          key={i}
-          className="absolute cursor-default"
-          style={{
-            left: `min(${left}%, calc(100% - 340px))`,
-            top: `${top}%`,
-            width: "320px",
-            zIndex: isLit ? 10 : 1,
-          }}
-        >
+          <div
+            key={card.titleKey}
+            className="absolute cursor-default"
+            style={{
+              left: `min(${left}%, calc(100% - 340px))`,
+              top: `${top}%`,
+              width: "320px",
+              zIndex: isLit ? 10 : 1,
+            }}
+          >
             {/* Star glow halo — only when lit */}
             <div
               className="pointer-events-none absolute inset-0 rounded-[28px] transition-opacity duration-1000"

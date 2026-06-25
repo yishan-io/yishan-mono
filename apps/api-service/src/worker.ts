@@ -1,7 +1,7 @@
 import { app } from "@/app";
 import type { CleanupEnv } from "@/scheduled/cleanup";
 import { handleCleanup } from "@/scheduled/cleanup";
-import { handleDispatchMessage, type RelayDispatchEnv } from "@/scheduled/consumer";
+import { type RelayDispatchEnv, handleDispatchMessage } from "@/scheduled/consumer";
 import { type ScheduledDbEnv, runWithScheduledDb } from "@/scheduled/db";
 import type { EvaluatorEnv } from "@/scheduled/evaluator";
 import { handleEvaluateJobs } from "@/scheduled/evaluator";

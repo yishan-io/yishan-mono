@@ -90,8 +90,8 @@ export class ProjectService {
     const nodeId = input.nodeId?.trim() ?? null;
     const localPath = input.localPath?.trim() ?? null;
 
-    if (sourceType === "git") {
-      const inferred = inferRepoSource(repoUrl!);
+    if (sourceType === "git" && repoUrl) {
+      const inferred = inferRepoSource(repoUrl);
       repoProvider = inferred.repoProvider;
       repoKey = inferred.repoKey;
     }
@@ -138,7 +138,10 @@ export class ProjectService {
           })
           .returning();
 
-        createdWorkspaces.push({ ...insertedWorkspaces[0]!, latestPullRequest: null });
+        const createdPrimaryWorkspace = insertedWorkspaces[0];
+        if (createdPrimaryWorkspace) {
+          createdWorkspaces.push({ ...createdPrimaryWorkspace, latestPullRequest: null });
+        }
       }
 
       return { ...project, workspaces: createdWorkspaces };

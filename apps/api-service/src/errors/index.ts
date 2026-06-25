@@ -356,7 +356,12 @@ export class SpeechToTextTranscriptionFailedError extends AppError {
 
 export class SpeechToTextNoSpeechDetectedError extends AppError {
   constructor(details?: Record<string, unknown>) {
-    super("No speech detected in audio", StatusCodes.UNPROCESSABLE_ENTITY, "SPEECH_TO_TEXT_NO_SPEECH_DETECTED", details);
+    super(
+      "No speech detected in audio",
+      StatusCodes.UNPROCESSABLE_ENTITY,
+      "SPEECH_TO_TEXT_NO_SPEECH_DETECTED",
+      details,
+    );
     this.name = "SpeechToTextNoSpeechDetectedError";
   }
 }
@@ -370,14 +375,23 @@ export class SpeechToTextOptimizationFailedError extends AppError {
 
 export class VoiceTranscriptionPlanRequiredError extends AppError {
   constructor() {
-    super("Voice transcription is not available on the free plan", StatusCodes.FORBIDDEN, "VOICE_TRANSCRIPTION_PLAN_REQUIRED");
+    super(
+      "Voice transcription is not available on the free plan",
+      StatusCodes.FORBIDDEN,
+      "VOICE_TRANSCRIPTION_PLAN_REQUIRED",
+    );
     this.name = "VoiceTranscriptionPlanRequiredError";
   }
 }
 
 export class VoiceTranscriptionQuotaExceededError extends AppError {
   constructor(details: Record<string, unknown>) {
-    super("Voice transcription quota exceeded", StatusCodes.PAYMENT_REQUIRED, "VOICE_TRANSCRIPTION_QUOTA_EXCEEDED", details);
+    super(
+      "Voice transcription quota exceeded",
+      StatusCodes.PAYMENT_REQUIRED,
+      "VOICE_TRANSCRIPTION_QUOTA_EXCEEDED",
+      details,
+    );
     this.name = "VoiceTranscriptionQuotaExceededError";
   }
 }

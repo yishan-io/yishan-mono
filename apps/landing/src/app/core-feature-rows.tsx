@@ -28,9 +28,9 @@ function IsolatedVisual() {
   }, []);
 
   const workspaces = [
-    { branch: "fix/login-bug",       agent: "Claude", status: "running", statusColor: "#D1B06A", changes: "+12 −3" },
-    { branch: "refactor/data-layer", agent: "Codex",  status: "waiting", statusColor: "#8FCB99", changes: "+89 −41" },
-    { branch: "feat/api-v2",         agent: "Gemini", status: "running", statusColor: "#D1B06A", changes: "+204 −17" },
+    { branch: "fix/login-bug", agent: "Claude", status: "running", statusColor: "#D1B06A", changes: "+12 −3" },
+    { branch: "refactor/data-layer", agent: "Codex", status: "waiting", statusColor: "#8FCB99", changes: "+89 −41" },
+    { branch: "feat/api-v2", agent: "Gemini", status: "running", statusColor: "#D1B06A", changes: "+204 −17" },
   ];
 
   return (
@@ -38,7 +38,7 @@ function IsolatedVisual() {
       {/* Create button */}
       <div className="mb-2 flex items-center gap-2">
         <div className="flex h-7 items-center gap-1.5 rounded-lg border border-[#8FCB99]/30 bg-[#8FCB99]/10 px-3 text-[11px] font-medium text-[#8FCB99]">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
             <line x1="6" y1="2" x2="6" y2="10" stroke="#8FCB99" strokeWidth="1.5" strokeLinecap="round" />
             <line x1="2" y1="6" x2="10" y2="6" stroke="#8FCB99" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
@@ -75,7 +75,9 @@ function IsolatedVisual() {
               <span className="text-[#8FCB99]">{ws.changes.split(" ")[0]}</span>
               <span className="text-[#FF5F56]/70">{ws.changes.split(" ")[1]}</span>
               <span className="rounded border border-[#2A342F] px-1.5 py-0.5 text-[#A5B0A8]">{ws.agent}</span>
-              <span style={{ color: ws.statusColor }} className="text-[10px]">{ws.status}</span>
+              <span style={{ color: ws.statusColor }} className="text-[10px]">
+                {ws.status}
+              </span>
             </div>
           </div>
           {/* Mini terminal line */}
@@ -96,17 +98,17 @@ function IsolatedVisual() {
 type WStatus = "running" | "waiting" | "done" | "failed";
 
 const STATUS_META: Record<WStatus, { color: string; label: string; pulse: boolean }> = {
-  running: { color: "#D1B06A", label: "running",  pulse: true  },
-  waiting: { color: "#8FCB99", label: "waiting",  pulse: true  },
-  done:    { color: "#8FCB99", label: "done",     pulse: false },
-  failed:  { color: "#FF5F56", label: "failed",   pulse: false },
+  running: { color: "#D1B06A", label: "running", pulse: true },
+  waiting: { color: "#8FCB99", label: "waiting", pulse: true },
+  done: { color: "#8FCB99", label: "done", pulse: false },
+  failed: { color: "#FF5F56", label: "failed", pulse: false },
 };
 
 const STATUS_PHASES: WStatus[][] = [
-  ["running", "waiting", "done",    "running"],
-  ["running", "done",    "running", "waiting"],
-  ["done",    "running", "waiting", "failed" ],
-  ["waiting", "running", "done",    "running"],
+  ["running", "waiting", "done", "running"],
+  ["running", "done", "running", "waiting"],
+  ["done", "running", "waiting", "failed"],
+  ["waiting", "running", "done", "running"],
 ];
 
 function LiveStatusVisual() {
@@ -118,10 +120,10 @@ function LiveStatusVisual() {
   }, []);
 
   const items = [
-    { branch: "fix/login-bug",       agent: "Claude", changes: "+12 −3"   },
-    { branch: "refactor/data-layer", agent: "Codex",  changes: "+89 −41"  },
-    { branch: "feat/api-v2",         agent: "Gemini", changes: "+204 −17" },
-    { branch: "chore/deps-update",   agent: "Claude", changes: "+8 −8"    },
+    { branch: "fix/login-bug", agent: "Claude", changes: "+12 −3" },
+    { branch: "refactor/data-layer", agent: "Codex", changes: "+89 −41" },
+    { branch: "feat/api-v2", agent: "Gemini", changes: "+204 −17" },
+    { branch: "chore/deps-update", agent: "Claude", changes: "+8 −8" },
   ];
 
   const statuses = STATUS_PHASES[phase];
@@ -151,13 +153,22 @@ function LiveStatusVisual() {
         const s = statuses[i];
         const meta = STATUS_META[s];
         return (
-          <div key={item.branch} className="flex items-center gap-3 rounded-2xl border border-[#2A342F] bg-[#0F1412] px-4 py-3 transition-all duration-500">
+          <div
+            key={item.branch}
+            className="flex items-center gap-3 rounded-2xl border border-[#2A342F] bg-[#0F1412] px-4 py-3 transition-all duration-500"
+          >
             {/* Status dot */}
             <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
               {meta.pulse && (
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-40" style={{ background: meta.color }} />
+                <span
+                  className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-40"
+                  style={{ background: meta.color }}
+                />
               )}
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full transition-colors duration-500" style={{ background: meta.color }} />
+              <span
+                className="relative inline-flex h-2.5 w-2.5 rounded-full transition-colors duration-500"
+                style={{ background: meta.color }}
+              />
             </span>
 
             {/* Branch */}
@@ -168,10 +179,15 @@ function LiveStatusVisual() {
             <span className="text-[10px] text-[#FF5F56]/70">{item.changes.split(" ")[1]}</span>
 
             {/* Agent */}
-            <span className="rounded border border-[#2A342F] px-1.5 py-0.5 text-[9px] text-[#A5B0A8]">{item.agent}</span>
+            <span className="rounded border border-[#2A342F] px-1.5 py-0.5 text-[9px] text-[#A5B0A8]">
+              {item.agent}
+            </span>
 
             {/* Status label */}
-            <span className="min-w-[48px] text-right text-[10px] transition-colors duration-500" style={{ color: meta.color }}>
+            <span
+              className="min-w-[48px] text-right text-[10px] transition-colors duration-500"
+              style={{ color: meta.color }}
+            >
               {meta.label}
             </span>
           </div>
@@ -180,9 +196,15 @@ function LiveStatusVisual() {
 
       {/* Notification toast popping */}
       <div className="mt-1 flex items-center gap-2 rounded-xl border border-[#2A342F] bg-[#151B18] px-3 py-2 text-[10px]">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="shrink-0">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="shrink-0" aria-hidden="true">
           <circle cx="6" cy="6" r="5" fill="#8FCB99" opacity="0.15" />
-          <path d="M4 6 L5.5 7.5 L8 4.5" stroke="#8FCB99" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M4 6 L5.5 7.5 L8 4.5"
+            stroke="#8FCB99"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
         <span className="text-[#A5B0A8]">refactor/data-layer</span>
         <span className="text-[#8FCB99]">just finished</span>
@@ -237,8 +259,8 @@ function ResumeVisual() {
         <div className="space-y-0.5 font-mono text-[10px]">
           <div className="text-[#8FCB99]">$ npm test -- auth</div>
           <div style={{ color: resumed ? "#D1B06A" : "#4A5A4E" }}>● 4 tests running...</div>
-          <div style={{ color: resumed ? "#8FCB99" : "#4A5A4E" }}>  ✓ token refresh</div>
-          <div style={{ color: resumed ? "#8FCB99" : "#4A5A4E" }}>  ✓ session expiry</div>
+          <div style={{ color: resumed ? "#8FCB99" : "#4A5A4E" }}> ✓ token refresh</div>
+          <div style={{ color: resumed ? "#8FCB99" : "#4A5A4E" }}> ✓ session expiry</div>
           {resumed && (
             <div className="flex items-center gap-1 text-[#4A5A4E]">
               <span className="animate-pulse">▊</span>
@@ -254,14 +276,42 @@ function ResumeVisual() {
       >
         <div className="flex items-center justify-between text-[11px]">
           <div className="flex items-center gap-2 text-[#A5B0A8]">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <rect x="2" y="1" width="8" height="10" rx="1.5" stroke={resumed ? "#8FCB99" : "#4A5A4E"} strokeWidth="1" />
-              <line x1="4" y1="4" x2="8" y2="4" stroke={resumed ? "#8FCB99" : "#4A5A4E"} strokeWidth="1" strokeLinecap="round" opacity="0.5" />
-              <line x1="4" y1="6" x2="7" y2="6" stroke={resumed ? "#8FCB99" : "#4A5A4E"} strokeWidth="1" strokeLinecap="round" opacity="0.5" />
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <rect
+                x="2"
+                y="1"
+                width="8"
+                height="10"
+                rx="1.5"
+                stroke={resumed ? "#8FCB99" : "#4A5A4E"}
+                strokeWidth="1"
+              />
+              <line
+                x1="4"
+                y1="4"
+                x2="8"
+                y2="4"
+                stroke={resumed ? "#8FCB99" : "#4A5A4E"}
+                strokeWidth="1"
+                strokeLinecap="round"
+                opacity="0.5"
+              />
+              <line
+                x1="4"
+                y1="6"
+                x2="7"
+                y2="6"
+                stroke={resumed ? "#8FCB99" : "#4A5A4E"}
+                strokeWidth="1"
+                strokeLinecap="round"
+                opacity="0.5"
+              />
             </svg>
             3 files open
           </div>
-          <span className="text-[#8FCB99]" style={{ opacity: resumed ? 1 : 0 }}>unsaved changes preserved</span>
+          <span className="text-[#8FCB99]" style={{ opacity: resumed ? 1 : 0 }}>
+            unsaved changes preserved
+          </span>
         </div>
       </div>
 
@@ -304,24 +354,24 @@ function MyContextVisual() {
   }, []);
 
   const workspaces = [
-    { branch: "fix/login-bug",       label: "Bug fix"  },
+    { branch: "fix/login-bug", label: "Bug fix" },
     { branch: "refactor/data-layer", label: "Refactor" },
   ];
 
   const notes = [
-    { file: "auth.md",    content: "Auth flow needs review before merge — token refresh has edge case on expiry" },
-    { file: "notes.md",   content: "Data layer refactor: keep legacy adapter for v1 compat, remove in v2" },
+    { file: "auth.md", content: "Auth flow needs review before merge — token refresh has edge case on expiry" },
+    { file: "notes.md", content: "Data layer refactor: keep legacy adapter for v1 compat, remove in v2" },
     { file: "handoff.md", content: "PR ready to review — ask Alice to check the session middleware changes" },
   ];
 
   return (
     <div className="flex h-full w-full flex-col justify-center gap-3 p-8">
-
       {/* Workspace tabs */}
       <div className="flex gap-2">
         {workspaces.map((ws, i) => (
           <button
             key={ws.branch}
+            type="button"
             onClick={() => setActiveWorkspace(i)}
             className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] transition-all duration-300"
             style={{
@@ -346,8 +396,13 @@ function MyContextVisual() {
       {/* .my-context folder contents */}
       <div className="rounded-2xl border border-[#2A342F] bg-[#0F1412] p-4">
         <div className="mb-3 flex items-center gap-2">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M2 4.5 C2 3.4 2.9 2.5 4 2.5 H6 L7 4 H11 C12.1 4 13 4.9 13 6 V10 C13 11.1 12.1 12 11 12 H3 C1.9 12 1 11.1 1 10 V4.5Z" stroke="#D1B06A" strokeWidth="1.1" fill="none" />
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path
+              d="M2 4.5 C2 3.4 2.9 2.5 4 2.5 H6 L7 4 H11 C12.1 4 13 4.9 13 6 V10 C13 11.1 12.1 12 11 12 H3 C1.9 12 1 11.1 1 10 V4.5Z"
+              stroke="#D1B06A"
+              strokeWidth="1.1"
+              fill="none"
+            />
           </svg>
           <span className="font-mono text-[10px] text-[#D1B06A]">.my-context/</span>
           <span className="text-[9px] text-[#4A5A4E]">visible in all workspaces</span>
@@ -364,10 +419,28 @@ function MyContextVisual() {
               }}
             >
               <div className="flex items-center gap-2 text-[10px]">
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                   <rect x="1" y="1" width="8" height="8" rx="1" stroke="#8FCB99" strokeWidth="1" opacity="0.5" />
-                  <line x1="3" y1="3.5" x2="7" y2="3.5" stroke="#8FCB99" strokeWidth="0.8" strokeLinecap="round" opacity="0.5" />
-                  <line x1="3" y1="5.5" x2="6" y2="5.5" stroke="#8FCB99" strokeWidth="0.8" strokeLinecap="round" opacity="0.5" />
+                  <line
+                    x1="3"
+                    y1="3.5"
+                    x2="7"
+                    y2="3.5"
+                    stroke="#8FCB99"
+                    strokeWidth="0.8"
+                    strokeLinecap="round"
+                    opacity="0.5"
+                  />
+                  <line
+                    x1="3"
+                    y1="5.5"
+                    x2="6"
+                    y2="5.5"
+                    stroke="#8FCB99"
+                    strokeWidth="0.8"
+                    strokeLinecap="round"
+                    opacity="0.5"
+                  />
                 </svg>
                 <span className="font-mono text-[#8FCB99]">{note.file}</span>
                 {i === 2 && noteVisible && (
@@ -391,12 +464,8 @@ function MyContextVisual() {
         }}
       >
         <div className="flex items-center justify-between text-[10px]">
-          <span className="text-[#4A5A4E]">
-            {workspaces[activeWorkspace].branch}
-          </span>
-          {activeWorkspace === 1 && (
-            <span className="text-[#D1B06A]">reading shared context</span>
-          )}
+          <span className="text-[#4A5A4E]">{workspaces[activeWorkspace].branch}</span>
+          {activeWorkspace === 1 && <span className="text-[#D1B06A]">reading shared context</span>}
         </div>
         <div
           className="mt-1.5 text-[11px] leading-5 transition-colors duration-700"
@@ -414,10 +483,10 @@ function MyContextVisual() {
 // ── Visual: Skills ─────────────────────────────────────────────────────────
 
 const SKILLS = [
-  { name: "code review",     icon: "CR" },
+  { name: "code review", icon: "CR" },
   { name: "test generation", icon: "TG" },
-  { name: "refactoring",     icon: "RF" },
-  { name: "PR checklist",    icon: "PR" },
+  { name: "refactoring", icon: "RF" },
+  { name: "PR checklist", icon: "PR" },
 ];
 
 function SkillsVisual() {
@@ -438,7 +507,9 @@ function SkillsVisual() {
     <div className="flex h-full w-full flex-col justify-center gap-3 p-8">
       <div className="mb-2 flex items-center gap-2">
         <div className="text-[10px] uppercase tracking-[0.18em] text-[#4A5A4E]">Skill templates</div>
-        <span className="rounded border border-[#2A342F] px-1.5 py-0.5 text-[9px] text-[#A5B0A8]">{SKILLS.length} available</span>
+        <span className="rounded border border-[#2A342F] px-1.5 py-0.5 text-[9px] text-[#A5B0A8]">
+          {SKILLS.length} available
+        </span>
       </div>
 
       {SKILLS.map((skill, i) => (
@@ -459,7 +530,9 @@ function SkillsVisual() {
             </div>
             <span className="flex-1 text-[11px] font-medium text-[#A5B0A8]">{skill.name}</span>
             {active === i && (
-              <span className="shrink-0 rounded-full bg-[#8FCB99]/10 px-2 py-0.5 text-[9px] text-[#8FCB99]">applied</span>
+              <span className="shrink-0 rounded-full bg-[#8FCB99]/10 px-2 py-0.5 text-[9px] text-[#8FCB99]">
+                applied
+              </span>
             )}
           </div>
         </div>
@@ -482,9 +555,9 @@ interface Props {
 }
 
 const rows = [
-  { visual: <IsolatedVisual />,  titleKey: "features.0.title", descKey: "features.0.desc" },
+  { visual: <IsolatedVisual />, titleKey: "features.0.title", descKey: "features.0.desc" },
   { visual: <MyContextVisual />, titleKey: "features.1.title", descKey: "features.1.desc" },
-  { visual: <SkillsVisual />,    titleKey: "features.2.title", descKey: "features.2.desc" },
+  { visual: <SkillsVisual />, titleKey: "features.2.title", descKey: "features.2.desc" },
 ];
 
 export function CoreFeatureRows({ t }: Props) {
@@ -494,12 +567,8 @@ export function CoreFeatureRows({ t }: Props) {
         const isEven = i % 2 === 0;
         const content = (
           <div className="flex flex-col justify-center px-2 py-6 lg:px-8">
-            <h3 className="text-2xl font-semibold leading-8 text-[#E8ECE8]">
-              {t(row.titleKey)}
-            </h3>
-            <p className="mt-4 text-base leading-8 text-[#A5B0A8]">
-              {t(row.descKey)}
-            </p>
+            <h3 className="text-2xl font-semibold leading-8 text-[#E8ECE8]">{t(row.titleKey)}</h3>
+            <p className="mt-4 text-base leading-8 text-[#A5B0A8]">{t(row.descKey)}</p>
           </div>
         );
         const visual = (
@@ -509,7 +578,7 @@ export function CoreFeatureRows({ t }: Props) {
         );
 
         return (
-          <div key={i} className="grid gap-4 overflow-hidden rounded-[28px] lg:grid-cols-2">
+          <div key={row.titleKey} className="grid gap-4 overflow-hidden rounded-[28px] lg:grid-cols-2">
             {isEven ? (
               <>
                 <div className="lg:order-1">{visual}</div>

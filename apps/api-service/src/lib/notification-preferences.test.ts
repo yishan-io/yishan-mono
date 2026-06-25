@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { CURRENT_NOTIFICATION_PREFERENCES_SCHEMA_VERSION, normalizeNotificationPreferences } from "./notification-preferences";
+import {
+  CURRENT_NOTIFICATION_PREFERENCES_SCHEMA_VERSION,
+  normalizeNotificationPreferences,
+} from "./notification-preferences";
 
 describe("normalizeNotificationPreferences", () => {
   it("enables newly added notification events for existing preference snapshots", () => {

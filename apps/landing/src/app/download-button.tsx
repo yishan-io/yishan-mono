@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/i18n";
+import { useEffect, useRef, useState } from "react";
 
 type Platform = "mac-arm" | "mac-intel" | "linux-appimage" | "linux-deb" | "linux-rpm";
 
@@ -130,7 +130,11 @@ export function DownloadButton({ variant = "primary" }: { variant?: "primary" | 
 
   const fallbackUrl = "https://github.com/yishan-io/yishan-mono/releases/latest";
   const currentUrl = urls?.[detected] ?? fallbackUrl;
-  const currentOption = platformOptions.find((p) => p.key === detected) ?? platformOptions[0]!;
+  const currentOption = platformOptions.find((p) => p.key === detected) ?? platformOptions[0];
+  if (!currentOption) {
+    return null;
+  }
+
   const label = locale === "zh" ? currentOption.labelZh : currentOption.label;
   const downloadLabel = locale === "zh" ? "下载" : "Download";
 
@@ -164,9 +168,7 @@ export function DownloadButton({ variant = "primary" }: { variant?: "primary" | 
 
       {open && (
         <div className="absolute top-full right-0 z-50 mt-2 min-w-[220px] rounded-xl border border-[#2A342F] bg-[#151B18] p-1 shadow-[0_16px_48px_rgba(0,0,0,0.5)]">
-          {version && (
-            <div className="px-3 py-1.5 text-xs text-[#A5B0A8]">v{version}</div>
-          )}
+          {version && <div className="px-3 py-1.5 text-xs text-[#A5B0A8]">v{version}</div>}
           {platformOptions.map((p) => {
             const url = urls?.[p.key] ?? fallbackUrl;
             const isActive = urls?.[p.key] != null;

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  type IconThemeManifest,
   buildMaterialFileExtensions,
   findMissingMaterialExtensionAliases,
   resolveMaterialFileIconId,
-  type IconThemeManifest,
 } from "./materialIconTheme";
 
 const baseManifest = {

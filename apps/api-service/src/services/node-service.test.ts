@@ -7,6 +7,8 @@ import {
   OrganizationNodePermissionRequiredError,
 } from "@/errors";
 import { NodeService } from "@/services/node-service";
+import type { OrganizationService } from "@/services/organization-service";
+import type { ServiceConfig } from "@/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const defaultRow = {
@@ -61,9 +63,8 @@ function createMockDb() {
   };
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: mock organization service for unit testing
-const stubOrganizationService = {} as any;
-const stubConfig = {} as any;
+const stubOrganizationService = {} as unknown as OrganizationService;
+const stubConfig = {} as unknown as ServiceConfig;
 
 describe("NodeService", () => {
   describe("registerNode (updateIfExists=true, default)", () => {
@@ -385,7 +386,7 @@ describe("NodeService.deleteNode", () => {
       actorRole: "member",
       nodeKind: "external",
       nodeScope: "private",
-      nodeOwner: "user-99",  // different owner
+      nodeOwner: "user-99", // different owner
     });
     // biome-ignore lint/suspicious/noExplicitAny: stub
     const service = new NodeService(mockDb, {} as any, {} as any);

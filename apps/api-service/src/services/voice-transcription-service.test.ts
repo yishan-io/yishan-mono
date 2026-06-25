@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { SpeechToTextInvalidAudioError, SpeechToTextNoSpeechDetectedError, VoiceTranscriptionPlanRequiredError } from "@/errors";
+import {
+  SpeechToTextInvalidAudioError,
+  SpeechToTextNoSpeechDetectedError,
+  VoiceTranscriptionPlanRequiredError,
+} from "@/errors";
 import { VoiceTranscriptionService } from "@/services/voice-transcription-service";
 import type { ServiceConfig } from "@/types";
 
@@ -105,7 +109,8 @@ describe("VoiceTranscriptionService", () => {
   });
 
   it("transcribes audio, optimizes it, and records usage", async () => {
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ text: "fix the broken tests and commit it" }),

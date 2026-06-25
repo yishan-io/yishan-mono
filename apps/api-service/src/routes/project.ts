@@ -1,11 +1,11 @@
-import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
 
 import {
   createProjectHandler,
   deleteProjectHandler,
   listProjectsHandler,
-  updateProjectHandler
+  updateProjectHandler,
 } from "@/handlers/project";
 import type { AppEnv } from "@/hono";
 import { requireOrganizationMemberFromParam } from "@/middlewares/organization-access";
@@ -19,7 +19,7 @@ import {
   organizationProjectListQuerySchema,
   organizationProjectParamsSchema,
   projectWorkspaceParamsSchema,
-  updateProjectBodySchema
+  updateProjectBodySchema,
 } from "@/validation/project";
 
 export const projectRouter = new Hono<AppEnv>();
@@ -31,30 +31,31 @@ router.get(
   "/",
   zValidator("param", organizationProjectParamsSchema, validationErrorResponse),
   zValidator("query", organizationProjectListQuerySchema, validationErrorResponse),
-  (c) => listProjectsHandler(c, c.req.valid("param"), c.req.valid("query"))
+  (c) => listProjectsHandler(c, c.req.valid("param"), c.req.valid("query")),
 );
 
 router.post(
   "/",
   zValidator("param", organizationProjectParamsSchema, validationErrorResponse),
   zValidator("json", createProjectBodySchema, validationErrorResponse),
-  (c) => createProjectHandler(c, c.req.valid("param"), c.req.valid("json"))
+  (c) => createProjectHandler(c, c.req.valid("param"), c.req.valid("json")),
 );
 
-router.delete(
-  "/:projectId",
-  zValidator("param", projectWorkspaceParamsSchema, validationErrorResponse),
-  (c) => deleteProjectHandler(c, c.req.valid("param"))
+router.delete("/:projectId", zValidator("param", projectWorkspaceParamsSchema, validationErrorResponse), (c) =>
+  deleteProjectHandler(c, c.req.valid("param")),
 );
 
 router.put(
   "/:projectId",
   zValidator("param", projectWorkspaceParamsSchema, validationErrorResponse),
   zValidator("json", updateProjectBodySchema, validationErrorResponse),
-  (c) => updateProjectHandler(c, c.req.valid("param"), c.req.valid("json"))
+  (c) => updateProjectHandler(c, c.req.valid("param"), c.req.valid("json")),
 );
 
 projectRouter.route("/orgs/:orgId/projects", router);
 projectRouter.route("/orgs/:orgId/projects/:projectId/workspaces", workspaceRouter);
-projectRouter.route("/orgs/:orgId/projects/:projectId/workspaces/:workspaceId/pull-requests", workspacePullRequestRouter);
+projectRouter.route(
+  "/orgs/:orgId/projects/:projectId/workspaces/:workspaceId/pull-requests",
+  workspacePullRequestRouter,
+);
 projectRouter.route("/orgs/:orgId/scheduled-jobs", scheduledJobRouter);

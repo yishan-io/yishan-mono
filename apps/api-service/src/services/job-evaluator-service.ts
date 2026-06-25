@@ -103,15 +103,16 @@ export class JobEvaluatorService {
     );
 
     // Collect claimed jobs; log optimistic-lock misses for diagnosability.
-    const claimedWork = jobWork.filter(({ dueJob }, i) => {
+    const claimedWork = jobWork.flatMap((work, i) => {
       const updated = updateResults[i]?.[0];
       if (!updated) {
         console.debug(
-          `[JobEvaluatorService.evaluateDueJobs] Optimistic lock miss — job already claimed or paused: jobId=${dueJob.id}`,
+          `[JobEvaluatorService.evaluateDueJobs] Optimistic lock miss — job already claimed or paused: jobId=${work.dueJob.id}`,
         );
-        return false;
+        return [];
       }
-      return true;
+
+      return [{ work, updated }] as const;
     });
 
     if (claimedWork.length === 0) {
@@ -121,17 +122,16 @@ export class JobEvaluatorService {
     // Conflict guard: unique index on (job_id, scheduled_for) prevents duplicate runs.
     // Run INSERT concurrently for all claimed jobs — one round-trip instead of N.
     const insertResults = await Promise.all(
-      claimedWork.map(({ dueJob, runId, scheduledFor }, i) => {
-        const updated = updateResults[jobWork.indexOf(claimedWork[i]!)]![0]!;
+      claimedWork.map(({ work, updated }) => {
         return this.db
           .insert(scheduledJobRuns)
           .values({
-            id: runId,
+            id: work.runId,
             jobId: updated.id,
             organizationId: updated.organizationId,
             projectId: updated.projectId,
             nodeId: updated.nodeId,
-            scheduledFor,
+            scheduledFor: work.scheduledFor,
             status: "pending",
           })
           .onConflictDoNothing()
@@ -142,15 +142,16 @@ export class JobEvaluatorService {
     const pending: PendingRun[] = [];
 
     for (let i = 0; i < claimedWork.length; i++) {
-      const work = claimedWork[i]!;
-      if (insertResults[i]!.length === 0) {
+      const claimed = claimedWork[i];
+      const insertedRuns = insertResults[i];
+      if (!claimed || !insertedRuns || insertedRuns.length === 0) {
         continue;
       }
-      const updatedJob = updateResults[jobWork.indexOf(work)]![0]!;
+
       pending.push({
-        runId: work.runId,
-        scheduledFor: work.scheduledFor,
-        job: toScheduledJobView(updatedJob),
+        runId: claimed.work.runId,
+        scheduledFor: claimed.work.scheduledFor,
+        job: toScheduledJobView(claimed.updated),
       });
     }
 

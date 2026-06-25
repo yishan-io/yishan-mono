@@ -12,7 +12,6 @@ export function ProblemImage() {
 
       {/* Scattered windows — intentionally misaligned */}
       <div className="relative h-56">
-
         {/* Terminal A — top left */}
         <div className="absolute left-0 top-0 w-[42%] rounded-2xl border border-[#2A342F] bg-[#0F1412] p-3 shadow-xl shadow-black/40">
           <div className="mb-2 flex items-center gap-1.5">
@@ -47,7 +46,10 @@ export function ProblemImage() {
             <span className="text-[9px] text-[#4A5A4E]">editor — db/model.ts</span>
           </div>
           <div className="space-y-1 font-mono text-[10px]">
-            <div><span className="text-[#8FCB99]">export</span><span className="text-[#A5B0A8]"> type User = {"{"}</span></div>
+            <div>
+              <span className="text-[#8FCB99]">export</span>
+              <span className="text-[#A5B0A8]"> type User = {"{"}</span>
+            </div>
             <div className="pl-3 text-[#A5B0A8]">id: string</div>
             <div className="pl-3 text-[#D1B06A]">role: Role</div>
           </div>
@@ -78,12 +80,11 @@ export function ProblemImage() {
             <div className="h-2 w-2/3 animate-pulse rounded bg-[#1B2420]" />
           </div>
         </div>
-
       </div>
 
       {/* Bottom callout */}
       <div className="mt-4 flex items-center gap-2 text-[11px] text-[#4A5A4E]">
-        <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 12 12">
+        <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 12 12" aria-hidden="true">
           <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2" />
           <line x1="6" y1="4" x2="6" y2="6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
           <circle cx="6" cy="8.5" r="0.6" fill="currentColor" />

@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 
-import type { SessionUser } from "@/services/auth-service";
 import type { OrganizationMemberRole } from "@/db/schema";
 import type { AppServices } from "@/services";
+import type { SessionUser } from "@/services/auth-service";
 import type { OAuthProvider, ServiceConfig } from "@/types";
 
 type HyperdriveBinding = {

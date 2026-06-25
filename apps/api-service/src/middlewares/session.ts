@@ -1,5 +1,5 @@
-import { getCookie } from "hono/cookie";
 import type { Next } from "hono";
+import { getCookie } from "hono/cookie";
 import { StatusCodes } from "http-status-codes";
 
 import { SESSION_COOKIE_NAME } from "@/auth/http";

@@ -1,8 +1,5 @@
 import { scheduledJobs } from "@/db/schema";
-import {
-  OrganizationMembershipRequiredError,
-  ScheduledJobNotFoundError,
-} from "@/errors";
+import { OrganizationMembershipRequiredError, ScheduledJobNotFoundError } from "@/errors";
 import { ScheduledJobService } from "@/services/scheduled-job-service";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -155,9 +152,9 @@ describe("ScheduledJobService.listScheduledJobs", () => {
     const { db } = createMockDb();
     const service = new ScheduledJobService(db, makeOrgService(null));
 
-    await expect(
-      service.listScheduledJobs({ organizationId: "org-1", actorUserId: "user-x" }),
-    ).rejects.toBeInstanceOf(OrganizationMembershipRequiredError);
+    await expect(service.listScheduledJobs({ organizationId: "org-1", actorUserId: "user-x" })).rejects.toBeInstanceOf(
+      OrganizationMembershipRequiredError,
+    );
   });
 
   it("returns an empty array when no jobs exist", async () => {
@@ -183,8 +180,7 @@ describe("ScheduledJobService status mutations", () => {
     const { db, mockLimit, mockUpdateReturning } = createMockDb();
     // getMembershipRole: member
     // getJobOrThrow: returns the job
-    mockLimit
-      .mockResolvedValueOnce([{ ...JOB_ROW, status }]); // getJobOrThrow
+    mockLimit.mockResolvedValueOnce([{ ...JOB_ROW, status }]); // getJobOrThrow
 
     mockUpdateReturning.mockResolvedValue([{ ...JOB_ROW, status }]);
     const service = new ScheduledJobService(db, makeOrgService("member"));

@@ -1,5 +1,5 @@
-import { Client, Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
+import { Client, Pool } from "pg";
 
 import * as schema from "@/db/schema";
 
@@ -29,7 +29,7 @@ export async function createRequestDb(databaseUrl: string) {
     db: drizzle({ client, schema }),
     close: async () => {
       await client.end();
-    }
+    },
   };
 }
 

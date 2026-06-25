@@ -49,7 +49,6 @@ export function SolutionImage() {
 
       {/* Unified workspace window */}
       <div className="overflow-hidden rounded-2xl border border-[#2A342F] bg-[#0F1412] shadow-xl shadow-black/40">
-
         {/* Window chrome */}
         <div className="flex items-center gap-2 border-b border-[#2A342F] px-4 py-2.5">
           <div className="h-2 w-2 rounded-full bg-[#FF5F56]/60" />
@@ -78,7 +77,6 @@ export function SolutionImage() {
 
           {/* Right pane — active workspace detail */}
           <div className="flex-1 p-3 space-y-2.5">
-
             {/* Active workspace header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -109,7 +107,10 @@ export function SolutionImage() {
             {/* Other workstreams — mini status */}
             <div className="flex gap-2">
               {workstreams.slice(1).map((ws) => (
-                <div key={ws.branch} className="flex flex-1 items-center gap-1.5 rounded-lg border border-[#2A342F] bg-[#0C100E] px-2 py-1.5 text-[9px]">
+                <div
+                  key={ws.branch}
+                  className="flex flex-1 items-center gap-1.5 rounded-lg border border-[#2A342F] bg-[#0C100E] px-2 py-1.5 text-[9px]"
+                >
                   <StatusDot className={ws.statusDot} />
                   <div className="min-w-0">
                     <div className="truncate text-[#A5B0A8]">{ws.label}</div>
@@ -118,16 +119,21 @@ export function SolutionImage() {
                 </div>
               ))}
             </div>
-
           </div>
         </div>
       </div>
 
       {/* Bottom callout */}
       <div className="mt-4 flex items-center gap-2 text-[11px] text-[#4A5A4E]">
-        <svg className="h-3 w-3 shrink-0 text-[#8FCB99]" fill="none" viewBox="0 0 12 12">
+        <svg className="h-3 w-3 shrink-0 text-[#8FCB99]" fill="none" viewBox="0 0 12 12" aria-hidden="true">
           <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1.2" />
-          <path d="M4 6l1.5 1.5L8 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M4 6l1.5 1.5L8 4"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
         Switch to Refactor — terminal, files, and agent session are exactly where you left them.
       </div>

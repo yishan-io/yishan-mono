@@ -5,9 +5,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export async function createServiceTokenHandler(c: AppContext, body: CreateServiceTokenBodyInput) {
   const actorUser = c.get("sessionUser");
-  const expiresAt = body.expiresInDays
-    ? new Date(Date.now() + body.expiresInDays * MS_PER_DAY)
-    : undefined;
+  const expiresAt = body.expiresInDays ? new Date(Date.now() + body.expiresInDays * MS_PER_DAY) : undefined;
 
   const result = await c.get("services").serviceToken.create({
     actorUserId: actorUser.id,

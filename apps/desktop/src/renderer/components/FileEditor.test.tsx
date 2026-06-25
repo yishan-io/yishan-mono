@@ -62,7 +62,7 @@ vi.mock("../helpers/monacoSetup", () => ({
           },
           focus: () => mockEditorState.editorFocus(),
           layout: vi.fn(),
-          getAction: (id: string) => id === "actions.find" ? mockEditorState.editorFindAction : null,
+          getAction: (id: string) => (id === "actions.find" ? mockEditorState.editorFindAction : null),
           addCommand: (keybinding: number, handler: () => void) => {
             mockEditorState.addCommandCalls.push({ keybinding, handler });
           },

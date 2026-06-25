@@ -43,17 +43,21 @@ export function normalizeNotificationPreferences(
 ): NotificationPreferences {
   const candidate = stored && typeof stored === "object" ? (stored as Record<string, unknown>) : {};
 
-  const enabledEventTypes = [...new Set(
-    [
-      ...(Array.isArray(candidate.enabledEventTypes) ? candidate.enabledEventTypes : fallback.enabledEventTypes),
-      ...fallback.enabledEventTypes,
-    ].filter(isNotificationEventType),
-  )];
-  const enabledCategories = [...new Set(
-    (Array.isArray(candidate.enabledCategories) ? candidate.enabledCategories : fallback.enabledCategories).filter(
-      isNotificationCategory,
+  const enabledEventTypes = [
+    ...new Set(
+      [
+        ...(Array.isArray(candidate.enabledEventTypes) ? candidate.enabledEventTypes : fallback.enabledEventTypes),
+        ...fallback.enabledEventTypes,
+      ].filter(isNotificationEventType),
     ),
-  )];
+  ];
+  const enabledCategories = [
+    ...new Set(
+      (Array.isArray(candidate.enabledCategories) ? candidate.enabledCategories : fallback.enabledCategories).filter(
+        isNotificationCategory,
+      ),
+    ),
+  ];
 
   const eventSoundsCandidate =
     candidate.eventSounds && typeof candidate.eventSounds === "object"

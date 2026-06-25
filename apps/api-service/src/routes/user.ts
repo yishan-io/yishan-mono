@@ -1,11 +1,7 @@
-import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
 
-import {
-  meHandler,
-  updateLanguagePreferenceHandler,
-  updateNotificationPreferencesHandler,
-} from "@/handlers/user";
+import { meHandler, updateLanguagePreferenceHandler, updateNotificationPreferencesHandler } from "@/handlers/user";
 import type { AppEnv } from "@/hono";
 import { validationErrorResponse } from "@/validation/error-response";
 import { updateLanguagePreferenceBodySchema, updateNotificationPreferencesBodySchema } from "@/validation/user";

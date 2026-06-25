@@ -1,6 +1,6 @@
-import { and, isNotNull, lt } from "drizzle-orm";
 import { refreshTokens, sessions } from "@/db/schema";
 import { CleanupService } from "@/services/cleanup-service";
+import { and, isNotNull, lt } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const NOW = new Date("2026-06-15T03:00:00Z");
@@ -119,10 +119,7 @@ describe("CleanupService", () => {
       // The cutoff is NOW - 30 days
       const cutoff = new Date(NOW);
       cutoff.setDate(cutoff.getDate() - 30);
-      const expectedExpr = and(
-        isNotNull(refreshTokens.revokedAt),
-        lt(refreshTokens.revokedAt, cutoff),
-      );
+      const expectedExpr = and(isNotNull(refreshTokens.revokedAt), lt(refreshTokens.revokedAt, cutoff));
 
       expect(toSqlString(actualWhereArg)).toBe(toSqlString(expectedExpr));
     });
@@ -142,9 +139,7 @@ describe("CleanupService", () => {
     it("runs all cleanup operations and returns aggregate results", async () => {
       let callCount = 0;
       const rowCounts = [10, 5, 3];
-      mock.mockWhere.mockImplementation(() =>
-        Promise.resolve({ rowCount: rowCounts[callCount++] }),
-      );
+      mock.mockWhere.mockImplementation(() => Promise.resolve({ rowCount: rowCounts[callCount++] }));
 
       const service = new CleanupService(mock.db);
       const result = await service.runAll();

@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  computeNextRunAt,
-  ensureTimezoneSupported,
-  parseCronExpression,
-} from "./cron";
+import { computeNextRunAt, ensureTimezoneSupported, parseCronExpression } from "./cron";
 
 // ── parseCronExpression ────────────────────────────────────────────────────────
 
@@ -70,15 +66,11 @@ describe("parseCronExpression", () => {
   });
 
   it("throws for fewer than 5 fields", () => {
-    expect(() => parseCronExpression("* * * *")).toThrow(
-      "Cron expression must have exactly 5 fields",
-    );
+    expect(() => parseCronExpression("* * * *")).toThrow("Cron expression must have exactly 5 fields");
   });
 
   it("throws for more than 5 fields", () => {
-    expect(() => parseCronExpression("* * * * * *")).toThrow(
-      "Cron expression must have exactly 5 fields",
-    );
+    expect(() => parseCronExpression("* * * * * *")).toThrow("Cron expression must have exactly 5 fields");
   });
 
   it("throws for an out-of-range minute (60)", () => {
