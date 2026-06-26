@@ -40,6 +40,16 @@ func TestAddSkill_OfficialSkillUsesCanonicalSource(t *testing.T) {
 	if _, err := os.Stat(commandsPath); err != nil {
 		t.Fatalf("expected opencode command file: %v", err)
 	}
+	commandContent, err := os.ReadFile(commandsPath)
+	if err != nil {
+		t.Fatalf("read opencode command file: %v", err)
+	}
+	if !strings.Contains(string(commandContent), "YISHAN_COMMAND: ys-start") {
+		t.Fatalf("expected path-free opencode command marker, got %q", string(commandContent))
+	}
+	if strings.Contains(string(commandContent), "Read ~/.agents/skills/") {
+		t.Fatalf("expected command body to avoid installed skill paths, got %q", string(commandContent))
+	}
 
 	info, err := GetSkillInfo(StartSkillName)
 	if err != nil {

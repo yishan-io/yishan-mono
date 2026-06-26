@@ -18,7 +18,7 @@ const claudeMultiSessionFixture = `{"type":"assistant","uuid":"a","sessionId":"s
 {"type":"assistant","uuid":"b","sessionId":"session-b","timestamp":"2026-05-25T21:01:00.000Z","cwd":"/proj/b","message":{"id":"mb1","model":"claude-opus-4-6","role":"assistant","usage":{"input_tokens":200,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":80}}}
 `
 
-const claudeActivityFixture = `{"type":"user","sessionId":"session-a","timestamp":"2026-05-25T21:00:00.000Z","cwd":"/proj/a","message":{"role":"user","content":"Read ~/.agents/skills/ys-start/SKILL.md and follow its workflow"}}
+const claudeActivityFixture = `{"type":"user","sessionId":"session-a","timestamp":"2026-05-25T21:00:00.000Z","cwd":"/proj/a","message":{"role":"user","content":"YISHAN_COMMAND: ys-start\n\nStart a new task using the ys-start workflow."}}
 {"type":"assistant","sessionId":"session-a","timestamp":"2026-05-25T21:00:01.000Z","cwd":"/proj/a","message":{"id":"ma1","model":"claude-sonnet-4-5","role":"assistant","content":[{"type":"tool_use","id":"tool-1","name":"Read","input":{"file_path":"/tmp/a"}}],"usage":{"input_tokens":100,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":50}}}
 `
 
