@@ -1,9 +1,9 @@
 import { ChevronDown } from "@tamagui/lucide-icons";
 import type { ReactNode } from "react";
-import { Pressable, View } from "react-native";
-import { Text, XStack, useTheme } from "tamagui";
+import { Pressable } from "react-native";
+import { Text, XStack } from "tamagui";
 
-import { MOBILE_UI_TOKENS } from "@/components/ui/ui-tokens";
+import { WorkbenchSecondaryBarFrame } from "@/components/screens/WorkbenchSecondaryBarFrame";
 
 type PaneHeaderProps = {
   leadingIcon: ReactNode;
@@ -14,17 +14,12 @@ type PaneHeaderProps = {
 };
 
 export function PaneHeader({ leadingIcon, onPress, title, trailing, typeLabel }: PaneHeaderProps) {
-  const theme = useTheme();
   const expandIndicator = onPress ? <ChevronDown color="$gray11" size={16} /> : null;
   const content = (
     <XStack
       style={{
         alignItems: "center",
-        borderBottomColor: theme.gray4.val,
-        borderBottomWidth: 1,
         gap: 8,
-        paddingBottom: 6,
-        paddingTop: 2,
       }}
     >
       <XStack style={{ alignItems: "center", flex: 1, gap: 8, minWidth: 0 }}>
@@ -46,7 +41,7 @@ export function PaneHeader({ leadingIcon, onPress, title, trailing, typeLabel }:
   );
 
   return (
-    <View style={{ paddingHorizontal: MOBILE_UI_TOKENS.pane.headerX }}>
+    <WorkbenchSecondaryBarFrame showBottomShadow>
       {onPress ? (
         <Pressable accessibilityRole="button" hitSlop={8} onPress={onPress}>
           {content}
@@ -54,6 +49,6 @@ export function PaneHeader({ leadingIcon, onPress, title, trailing, typeLabel }:
       ) : (
         content
       )}
-    </View>
+    </WorkbenchSecondaryBarFrame>
   );
 }

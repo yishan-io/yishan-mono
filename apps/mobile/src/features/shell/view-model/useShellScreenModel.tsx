@@ -7,7 +7,8 @@ import {
 import type { useShellMutations } from "../commands/useShellMutations";
 import { useShellScreenCommands } from "../commands/useShellScreenCommands";
 import type { ShellChatModel } from "../components/ShellChatSurface";
-import type { ShellDrawerPanelModel, ShellDrawerTopBarModel } from "../components/ShellDrawer";
+import type { ShellDrawerPanelModel } from "../components/ShellDrawer";
+import type { ShellDrawerTopBarModel } from "../components/ShellDrawerHeader";
 import type { ShellFocusPanePreviewContext } from "../components/ShellFocusPane";
 import { WorkspaceStatusIndicator } from "../components/WorkspaceStatusIndicator";
 import type { useShellSheets } from "../hooks/useShellSheets";

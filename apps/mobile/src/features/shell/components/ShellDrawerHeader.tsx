@@ -1,9 +1,10 @@
 import { Building2, ChevronDown, ListFilter, Menu, PanelRightOpen, Plus, RefreshCw } from "@tamagui/lucide-icons";
 import type { ReactNode } from "react";
 import { ActivityIndicator, Image, Pressable, View } from "react-native";
-import { Separator, Text, XStack, useTheme } from "tamagui";
+import { Text, XStack, useTheme } from "tamagui";
 
-import { ScreenHeader } from "@/components/screens/ScreenScaffold";
+import { WorkbenchHeader } from "@/components/screens/WorkbenchFrame";
+import { WorkbenchPaneHeaderFrame } from "@/components/screens/WorkbenchPaneHeaderFrame";
 import { StatusDot } from "@/components/ui/StatusDot";
 import { MOBILE_UI_TOKENS } from "@/components/ui/ui-tokens";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
@@ -20,6 +21,12 @@ type ShellTopBarProps = {
   subtitle?: string | null;
   subtitleLeading?: ReactNode;
   title: string;
+};
+
+export type ShellDrawerTopBarModel = Omit<ShellTopBarProps, "onOpenDrawer">;
+
+type ShellTopBarViewProps = ShellDrawerTopBarModel & {
+  onOpenDrawer: () => void;
 };
 
 type ShellDrawerPanelHeaderProps = {
@@ -42,67 +49,63 @@ export function ShellTopBar({
   subtitle,
   subtitleLeading,
   title,
-}: ShellTopBarProps) {
+}: ShellTopBarViewProps) {
   const { t } = useAppLanguage();
   const theme = useTheme();
 
   return (
-    <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-      <ScreenHeader
-        actions={
-          <XStack style={{ alignItems: "center", gap: 4 }}>
-            {onRefreshSessions ? (
-              <ShellIconButton
-                accessibilityLabel={t("shell.refreshSessions")}
-                disabled={refreshingSessions}
-                onPress={onRefreshSessions}
-              >
-                {refreshingSessions ? (
-                  <ActivityIndicator color={theme.color11.val} size="small" />
-                ) : (
-                  <RefreshCw color="$color11" size={18} />
-                )}
-              </ShellIconButton>
-            ) : null}
-            {onOpenQuickActions ? (
-              <ShellIconButton accessibilityLabel={t("shell.whatsNext")} onPress={onOpenQuickActions}>
-                <View
-                  style={{
-                    alignItems: "center",
-                    backgroundColor: theme.color12.val,
-                    borderRadius: 9,
-                    height: 24,
-                    justifyContent: "center",
-                    width: 24,
-                  }}
-                >
-                  <Plus color="$color1" size={16} strokeWidth={3} />
-                </View>
-              </ShellIconButton>
-            ) : null}
-            {onOpenBrowser ? (
-              <ShellIconButton accessibilityLabel={t("shell.openWorkspaceBrowser")} onPress={onOpenBrowser}>
-                <PanelRightOpen color="$color11" size={20} />
-              </ShellIconButton>
-            ) : null}
-          </XStack>
-        }
-        leading={
-          <View style={{ position: "relative" }}>
-            <ShellIconButton accessibilityLabel={t("shell.openNavigation")} onPress={onOpenDrawer}>
-              <Menu color="$color11" size={20} />
+    <WorkbenchHeader
+      actions={
+        <XStack style={{ alignItems: "center", gap: 4 }}>
+          {onRefreshSessions ? (
+            <ShellIconButton
+              accessibilityLabel={t("shell.refreshSessions")}
+              disabled={refreshingSessions}
+              onPress={onRefreshSessions}
+            >
+              {refreshingSessions ? (
+                <ActivityIndicator color={theme.color11.val} size="small" />
+              ) : (
+                <RefreshCw color="$color11" size={18} />
+              )}
             </ShellIconButton>
-            <ShellTopBarAggregateStatusDot indicator={aggregateIndicator} />
-          </View>
-        }
-        subtitle={subtitle ?? undefined}
-        subtitleLeading={subtitleLeading}
-        title={title}
-        titleNumberOfLines={1}
-        titleVariant="prominent"
-      />
-      <View style={{ backgroundColor: theme.borderColor.val, height: 1, marginTop: 12 }} />
-    </View>
+          ) : null}
+          {onOpenQuickActions ? (
+            <ShellIconButton accessibilityLabel={t("shell.whatsNext")} onPress={onOpenQuickActions}>
+              <View
+                style={{
+                  alignItems: "center",
+                  backgroundColor: theme.color12.val,
+                  borderRadius: 9,
+                  height: 24,
+                  justifyContent: "center",
+                  width: 24,
+                }}
+              >
+                <Plus color="$color1" size={16} strokeWidth={3} />
+              </View>
+            </ShellIconButton>
+          ) : null}
+          {onOpenBrowser ? (
+            <ShellIconButton accessibilityLabel={t("shell.openWorkspaceBrowser")} onPress={onOpenBrowser}>
+              <PanelRightOpen color="$color11" size={20} />
+            </ShellIconButton>
+          ) : null}
+        </XStack>
+      }
+      leading={
+        <View style={{ position: "relative" }}>
+          <ShellIconButton accessibilityLabel={t("shell.openNavigation")} onPress={onOpenDrawer}>
+            <Menu color="$color11" size={20} />
+          </ShellIconButton>
+          <ShellTopBarAggregateStatusDot indicator={aggregateIndicator} />
+        </View>
+      }
+      subtitle={subtitle ?? undefined}
+      subtitleLeading={subtitleLeading}
+      title={title}
+      titleNumberOfLines={1}
+    />
   );
 }
 
@@ -160,7 +163,7 @@ export function ShellDrawerPanelHeader({
   const { t } = useAppLanguage();
 
   return (
-    <>
+    <WorkbenchPaneHeaderFrame>
       <View style={{ alignItems: "center", flexDirection: "row", gap: 8 }}>
         <XStack style={{ alignItems: "center", flex: 1, gap: 4, minWidth: 0 }}>
           <OrganizationSelectorButton
@@ -178,9 +181,7 @@ export function ShellDrawerPanelHeader({
         </XStack>
         <AvatarButton avatarUrl={userAvatarUrl} name={userName} onPress={onOpenProfileControls} />
       </View>
-
-      <Separator />
-    </>
+    </WorkbenchPaneHeaderFrame>
   );
 }
 

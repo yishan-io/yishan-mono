@@ -9,6 +9,16 @@ export const MOBILE_UI_TOKENS = {
     headerX: 16,
     insetX: 16,
     noticeBottom: 8,
+    secondaryBarInsetY: 8,
+    secondaryBarMinHeight: 40,
+  },
+  shellChrome: {
+    dividerTopGap: 12,
+    headerInsetX: 16,
+    headerMinHeight: 60,
+    headerInsetY: 12,
+    panelBottomInset: 20,
+    panelTopInset: 12,
   },
   radius: {
     dialog: 20,

@@ -45,7 +45,7 @@ export function ShellQuickActionsSheet({
 
   return (
     <AppModalSheet
-      contentStyle={{ gap: 0, paddingBottom: 24, paddingTop: 12 }}
+      contentStyle={{ gap: 0, paddingBottom: 24, paddingTop: 20 }}
       onClose={onClose}
       open={open}
       position="bottom"

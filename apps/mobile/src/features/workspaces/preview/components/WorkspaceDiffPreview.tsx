@@ -85,7 +85,7 @@ export function WorkspaceDiffPreview({ model }: WorkspaceDiffPreviewProps) {
         <View style={{ width: minPreviewWidth || undefined }}>
           <FlatList
             contentContainerStyle={{
-              paddingBottom: 20,
+              paddingBottom: MOBILE_UI_TOKENS.pane.bodyBottom,
               paddingTop: model.truncated ? 0 : MOBILE_UI_TOKENS.pane.bodyTop,
             }}
             data={model.lines}

@@ -1,9 +1,9 @@
-import { ScrollView, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StyleSheet, View } from "react-native";
 import { Paragraph } from "tamagui";
 
 import { AuthEntryActions } from "@/features/auth/components/AuthEntryActions";
 import { AuthHero } from "@/features/auth/components/AuthHero";
+import { AuthScreenFrame } from "@/features/auth/components/AuthScreenFrame";
 import { AuthVersion } from "@/features/auth/components/AuthVersion";
 import { useSignInScreenModel } from "@/features/auth/hooks/useSignInScreenModel";
 
@@ -11,27 +11,25 @@ export function SignInScreen() {
   const model = useSignInScreenModel();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: model.backgroundColor }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.page}>
-          <AuthHero />
+    <AuthScreenFrame backgroundColor={model.backgroundColor}>
+      <View style={styles.page}>
+        <AuthHero />
 
-          <AuthEntryActions
-            googleAvailable={model.googleAvailable}
-            googleLoading={model.googleLoading}
-            onContinueWithGoogle={model.startGoogle}
-          />
+        <AuthEntryActions
+          googleAvailable={model.googleAvailable}
+          googleLoading={model.googleLoading}
+          onContinueWithGoogle={model.startGoogle}
+        />
 
-          {model.authError ? (
-            <Paragraph color="$red10" style={styles.authError}>
-              {model.authError}
-            </Paragraph>
-          ) : null}
+        {model.authError ? (
+          <Paragraph color="$red10" style={styles.authError}>
+            {model.authError}
+          </Paragraph>
+        ) : null}
 
-          <AuthVersion version={model.version} />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        <AuthVersion version={model.version} />
+      </View>
+    </AuthScreenFrame>
   );
 }
 
@@ -47,11 +45,5 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     paddingHorizontal: 24,
     paddingTop: 40,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
   },
 });

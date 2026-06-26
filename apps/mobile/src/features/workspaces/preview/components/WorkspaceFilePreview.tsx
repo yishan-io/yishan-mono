@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingView } from "@/components/ui/LoadingView";
 import { PaneBodyNotice, PaneBodyScrollView } from "@/components/ui/PaneBody";
+import { MOBILE_UI_TOKENS } from "@/components/ui/ui-tokens";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
 import { detectFilePreviewKind, splitPreviewLines } from "@/features/workspaces/file-browser";
 import {
@@ -85,7 +86,10 @@ export function WorkspaceFilePreview({ model }: WorkspaceFilePreviewProps) {
       {model.truncated ? <PaneBodyNotice>{t("shell.filePreviewTruncatedMessage")}</PaneBodyNotice> : null}
       <ScrollView horizontal showsHorizontalScrollIndicator>
         <FlatList
-          contentContainerStyle={{ paddingBottom: 20, paddingHorizontal: 16 }}
+          contentContainerStyle={{
+            paddingBottom: MOBILE_UI_TOKENS.pane.bodyBottom,
+            paddingHorizontal: MOBILE_UI_TOKENS.pane.insetX,
+          }}
           data={model.previewLines}
           getItemLayout={(_, index) => ({
             index,
@@ -97,7 +101,7 @@ export function WorkspaceFilePreview({ model }: WorkspaceFilePreviewProps) {
           removeClippedSubviews
           renderItem={({ index, item }) => <PreviewLineRow index={index} line={item} />}
           showsVerticalScrollIndicator
-          style={{ minWidth: "100%", paddingTop: 12 }}
+          style={{ minWidth: "100%", paddingTop: MOBILE_UI_TOKENS.pane.bodyTop }}
           windowSize={8}
         />
       </ScrollView>

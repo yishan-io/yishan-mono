@@ -1,30 +1,30 @@
 import { useIsFocused } from "expo-router";
 import { useRef } from "react";
-import { View, useWindowDimensions } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useWindowDimensions } from "react-native";
 
+import { WorkbenchFrame } from "@/components/screens/WorkbenchFrame";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingView } from "@/components/ui/LoadingView";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
-import { useAppTheme } from "@/features/theme/AppThemeProvider";
 import { dismissActiveKeyboard } from "@/lib/accessibility/dismissActiveKeyboard";
-import { getThemeBackgroundAppColor } from "@/lib/theme/tamaguiThemes";
+import { ShellDrawer } from "../components/ShellDrawer";
+import { ShellTopBar } from "../components/ShellDrawerHeader";
 import { ShellScreenContent } from "../components/ShellScreenContent";
 import { ShellScreenSheets } from "../components/ShellScreenSheets";
 import { useShellScreenRuntime } from "../view-model/useShellScreenRuntime";
 
 export function ShellScreen() {
-  const { resolvedTheme } = useAppTheme();
   const { t } = useAppLanguage();
   const { width } = useWindowDimensions();
   const isFocused = useIsFocused();
+  const drawerWidth = width;
   const keyboardDismissHandlerRef = useRef<(() => void) | null>(null);
   const dismissKeyboard = () => {
     keyboardDismissHandlerRef.current?.();
     dismissActiveKeyboard();
   };
   const { drawer, screenContext, screenModel, sheets, shell } = useShellScreenRuntime({
-    drawerWidth: width,
+    drawerWidth,
     isScreenFocused: isFocused,
     onDismissKeyboard: dismissKeyboard,
     t,
@@ -39,25 +39,47 @@ export function ShellScreen() {
   }
 
   return (
-    <SafeAreaView style={{ backgroundColor: getThemeBackgroundAppColor(resolvedTheme), flex: 1 }}>
-      <View style={{ flex: 1, minHeight: 0 }}>
-        <ShellScreenContent
+    <WorkbenchFrame
+      bodyDensity="flush"
+      header={
+        <ShellTopBar
+          aggregateIndicator={screenModel.drawerTopBar.aggregateIndicator}
+          onOpenBrowser={screenModel.drawerTopBar.onOpenBrowser}
+          onOpenDrawer={drawer.openDrawer}
+          onOpenQuickActions={screenModel.drawerTopBar.onOpenQuickActions}
+          onRefreshSessions={screenModel.drawerTopBar.onRefreshSessions}
+          refreshingSessions={screenModel.drawerTopBar.refreshingSessions}
+          subtitle={screenModel.drawerTopBar.subtitle}
+          subtitleLeading={screenModel.drawerTopBar.subtitleLeading}
+          title={screenModel.drawerTopBar.title}
+        />
+      }
+      overlay={
+        <ShellDrawer
           closeDrawer={drawer.closeDrawer}
           drawerPanHandlers={drawer.drawerPanHandlers}
           drawerTranslateX={drawer.drawerTranslateX}
+          drawerWidth={drawerWidth}
+          onInteractionStart={dismissKeyboard}
+          onSelectWorkspace={screenModel.onSelectWorkspace}
+          overlayOpacity={drawer.overlayOpacity}
+          panel={screenModel.drawerPanel}
+          visible={shell.isNavOpen}
+        />
+      }
+    >
+      <>
+        <ShellScreenContent
           edgePanHandlers={drawer.edgePanHandlers}
-          onDismissKeyboard={dismissKeyboard}
           onRegisterKeyboardDismissHandler={(handler) => {
             keyboardDismissHandlerRef.current = handler;
           }}
-          openDrawer={drawer.openDrawer}
-          overlayOpacity={drawer.overlayOpacity}
           screenModel={screenModel}
           shell={shell}
         />
 
         <ShellScreenSheets screenContext={screenContext} screenModel={screenModel} sheets={sheets} shell={shell} />
-      </View>
-    </SafeAreaView>
+      </>
+    </WorkbenchFrame>
   );
 }

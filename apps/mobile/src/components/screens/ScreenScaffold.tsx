@@ -20,9 +20,10 @@ type ScreenScaffoldProps = PropsWithChildren<{
   titleVariant?: "default" | "compact" | "prominent";
 }>;
 
-type ScreenHeaderProps = {
+export type ScreenHeaderProps = {
   actions?: ReactNode;
   backButtonVariant?: "back" | "close";
+  contentTopInset?: number;
   leading?: ReactNode;
   onBack?: () => void;
   showSeparator?: boolean;
@@ -36,6 +37,7 @@ type ScreenHeaderProps = {
 export function ScreenHeader({
   actions,
   backButtonVariant = "back",
+  contentTopInset = 8,
   leading,
   onBack,
   showSeparator = false,
@@ -53,7 +55,7 @@ export function ScreenHeader({
 
   return (
     <>
-      <XStack style={{ alignItems: "center", justifyContent: "space-between", paddingTop: 8 }}>
+      <XStack style={{ alignItems: "center", justifyContent: "space-between", paddingTop: contentTopInset }}>
         <XStack style={{ alignItems: "center", flex: 1, gap: 8 }}>
           {leading ??
             (onBack ? (

@@ -1,5 +1,5 @@
 import { SquareTerminal } from "@tamagui/lucide-icons";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useCallback, useEffect } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useTheme } from "tamagui";
 
@@ -78,10 +78,10 @@ export function ShellChatSurface({ chat, onRegisterKeyboardDismissHandler }: She
     selectedTerminal,
     terminalOutput,
   });
-  const dismissKeyboard = () => {
+  const dismissKeyboard = useCallback(() => {
     requestBlur();
     dismissActiveKeyboard();
-  };
+  }, [requestBlur]);
 
   useEffect(() => {
     onRegisterKeyboardDismissHandler?.(dismissKeyboard);

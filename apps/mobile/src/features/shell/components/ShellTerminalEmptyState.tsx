@@ -35,7 +35,7 @@ export function ShellTerminalEmptyState({
         alignItems: "center",
         flex: 1,
         justifyContent: "flex-start",
-        paddingHorizontal: 28,
+        paddingHorizontal: MOBILE_UI_TOKENS.pane.insetX,
         paddingTop: 84,
       }}
     >

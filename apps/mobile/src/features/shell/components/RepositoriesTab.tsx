@@ -3,6 +3,7 @@ import { FlatList, RefreshControl, View } from "react-native";
 import { Paragraph, Text, useTheme } from "tamagui";
 
 import { ErrorState } from "@/components/ui/ErrorState";
+import { MOBILE_UI_TOKENS } from "@/components/ui/ui-tokens";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
 import type { Node } from "@/features/nodes/nodes.types";
 import type { ProjectWithWorkspaces } from "@/features/projects/projects.types";
@@ -92,13 +93,22 @@ export const RepositoriesTab = memo(function RepositoriesTab({
     <RefreshControl onRefresh={handleRefresh} refreshing={refreshingProjects} />
   ) : undefined;
   const listContentContainerStyle = { flexGrow: 1, gap: 8, paddingBottom: 24 };
+  const inlineMessageInset = { paddingHorizontal: MOBILE_UI_TOKENS.pane.insetX };
 
   if (organizationCount === 0) {
-    return <Paragraph>{t("shell.orgProjectsEmptyMessage")}</Paragraph>;
+    return (
+      <View style={inlineMessageInset}>
+        <Paragraph>{t("shell.orgProjectsEmptyMessage")}</Paragraph>
+      </View>
+    );
   }
 
   if (isProjectsLoading) {
-    return <Paragraph>{t("shell.loadingProjects")}</Paragraph>;
+    return (
+      <View style={inlineMessageInset}>
+        <Paragraph>{t("shell.loadingProjects")}</Paragraph>
+      </View>
+    );
   }
 
   if (isProjectsError) {
@@ -134,7 +144,11 @@ export const RepositoriesTab = memo(function RepositoriesTab({
           showsVerticalScrollIndicator={false}
           removeClippedSubviews
           contentContainerStyle={listContentContainerStyle}
-          ListEmptyComponent={<Paragraph>{t("shell.noProjectsYet")}</Paragraph>}
+          ListEmptyComponent={
+            <View style={inlineMessageInset}>
+              <Paragraph>{t("shell.noProjectsYet")}</Paragraph>
+            </View>
+          }
           refreshControl={refreshControl}
           renderItem={({ item }) => (
             <NodeSidebarNode
@@ -194,7 +208,11 @@ export const RepositoriesTab = memo(function RepositoriesTab({
           showsVerticalScrollIndicator={false}
           removeClippedSubviews
           contentContainerStyle={listContentContainerStyle}
-          ListEmptyComponent={<Paragraph>{t("shell.noProjectsYet")}</Paragraph>}
+          ListEmptyComponent={
+            <View style={inlineMessageInset}>
+              <Paragraph>{t("shell.noProjectsYet")}</Paragraph>
+            </View>
+          }
           refreshControl={refreshControl}
           renderItem={({ item }) => (
             <ProjectSidebarNode

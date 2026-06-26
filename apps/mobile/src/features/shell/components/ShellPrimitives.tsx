@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { Pressable, View } from "react-native";
 import { Text, XStack, useTheme } from "tamagui";
 
+import { MOBILE_UI_TOKENS } from "@/components/ui/ui-tokens";
+
 type ShellIconButtonProps = {
   accessibilityLabel: string;
   children: ReactNode;
@@ -119,8 +121,8 @@ export function ShellTreeRow({
         borderRadius: 8,
         gap: 8,
         minHeight,
-        paddingLeft: 8 + indent,
-        paddingRight: 8,
+        paddingLeft: MOBILE_UI_TOKENS.pane.insetX + indent,
+        paddingRight: MOBILE_UI_TOKENS.pane.insetX,
         paddingVertical,
       }}
     >
