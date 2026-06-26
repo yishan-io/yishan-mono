@@ -23,6 +23,8 @@ export const tokenUsageHourlyRowSchema = z.object({
   totalTokens: z.number().int().min(0),
   eventCount: z.number().int().min(0),
   sessionCount: z.number().int().min(0),
+  turnCount: z.number().int().min(0),
+  toolCallCount: z.number().int().min(0),
   attributionConfidence: attributionConfidenceSchema,
   ingestedAt: z.string().datetime(),
   runId: nonEmptyStringSchema,

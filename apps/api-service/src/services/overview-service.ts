@@ -36,6 +36,8 @@ export type TokenUsageSeriesItem = {
   outputTokens: number;
   cachedInputTokens: number;
   cachedWriteTokens: number;
+  turnCount: number;
+  toolCallCount: number;
 };
 
 export type ModelBreakdownItem = {
@@ -103,6 +105,8 @@ export class OverviewService {
     cachedTotal: number;
     cachedWriteTotal: number;
     uncachedTotal: number;
+    turnTotal: number;
+    toolCallTotal: number;
   }> {
     await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId, input.actorRole);
 
@@ -121,7 +125,9 @@ export class OverviewService {
         COALESCE(SUM(input_tokens), 0)::bigint AS input_tokens,
         COALESCE(SUM(output_tokens), 0)::bigint AS output_tokens,
         COALESCE(SUM(cached_input_tokens), 0)::bigint AS cached_input_tokens,
-        COALESCE(SUM(cached_write_tokens), 0)::bigint AS cached_write_tokens
+        COALESCE(SUM(cached_write_tokens), 0)::bigint AS cached_write_tokens,
+        COALESCE(SUM(turn_count), 0)::bigint AS turn_count,
+        COALESCE(SUM(tool_call_count), 0)::bigint AS tool_call_count
       FROM token_usage_hourly
       WHERE organization_id = ${input.organizationId}
         AND bucket_start_hour_utc >= ${fromDate.toISOString()}
@@ -138,13 +144,17 @@ export class OverviewService {
       outputTokens: Number(row.output_tokens ?? 0),
       cachedInputTokens: Number(row.cached_input_tokens ?? 0),
       cachedWriteTokens: Number(row.cached_write_tokens ?? 0),
+      turnCount: Number(row.turn_count ?? 0),
+      toolCallCount: Number(row.tool_call_count ?? 0),
     }));
     const cachedTotal = series.reduce((acc, item) => acc + item.cachedInputTokens, 0);
     const cachedWriteTotal = series.reduce((acc, item) => acc + item.cachedWriteTokens, 0);
     const grandTotal = series.reduce((acc, item) => acc + item.totalTokens, 0);
     const uncachedTotal = Math.max(0, grandTotal - cachedTotal);
+    const turnTotal = series.reduce((acc, item) => acc + item.turnCount, 0);
+    const toolCallTotal = series.reduce((acc, item) => acc + item.toolCallCount, 0);
 
-    return { series, cachedTotal, cachedWriteTotal, uncachedTotal };
+    return { series, cachedTotal, cachedWriteTotal, uncachedTotal, turnTotal, toolCallTotal };
   }
 
   async getModelBreakdown(input: OverviewModelBreakdownInput): Promise<{

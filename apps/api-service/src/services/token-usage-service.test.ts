@@ -47,6 +47,8 @@ function buildRow(overrides?: Partial<Parameters<TokenUsageService["upsertHourly
     totalTokens: 21,
     eventCount: 1,
     sessionCount: 1,
+    turnCount: 1,
+    toolCallCount: 2,
     attributionConfidence: "exact" as const,
     ingestedAt: "2026-06-10T09:29:26.894Z",
     runId: "daemon-opencode",

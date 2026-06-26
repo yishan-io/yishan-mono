@@ -1309,7 +1309,9 @@
       "noData": "暂无令牌用量数据",
       "cached": "已缓存",
       "uncached": "未缓存",
-      "total": "合计"
+      "total": "合计",
+      "turns": "轮次",
+      "toolCalls": "工具调用"
     },
     "agentUsage": {
       "title": "智能体用量",

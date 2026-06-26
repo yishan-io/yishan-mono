@@ -5,6 +5,8 @@ export type TokenUsageSeriesItem = {
   outputTokens: number;
   cachedInputTokens: number;
   cachedWriteTokens: number;
+  turnCount: number;
+  toolCallCount: number;
 };
 
 export type OverviewTokenUsageResponse = {
@@ -12,6 +14,8 @@ export type OverviewTokenUsageResponse = {
   cachedTotal: number;
   cachedWriteTotal: number;
   uncachedTotal: number;
+  turnTotal: number;
+  toolCallTotal: number;
 };
 
 export type ModelBreakdownItem = {

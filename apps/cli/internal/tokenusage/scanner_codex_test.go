@@ -15,6 +15,13 @@ const codexSessionFixture = `{"timestamp":"2026-06-08T05:08:10.774Z","type":"ses
 {"timestamp":"2026-06-08T05:08:15.338Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":2000,"cached_input_tokens":400,"output_tokens":100,"reasoning_output_tokens":20,"total_tokens":2100},"last_token_usage":{"input_tokens":2000,"cached_input_tokens":400,"output_tokens":100,"reasoning_output_tokens":20,"total_tokens":2100},"model_context_window":258400}}}
 `
 
+const codexActivityFixture = `{"timestamp":"2026-06-08T05:08:10.774Z","type":"session_meta","payload":{"id":"session-1","cwd":"/tmp/codex"}}
+{"timestamp":"2026-06-08T05:08:12.147Z","type":"turn_context","payload":{"turn_id":"turn-1","cwd":"/tmp/codex","model":"gpt-5.4-mini"}}
+{"timestamp":"2026-06-08T05:08:12.148Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Read ~/.agents/skills/ys-start/SKILL.md and follow its workflow"}]}}
+{"timestamp":"2026-06-08T05:08:12.149Z","type":"response_item","payload":{"type":"function_call","name":"shell","arguments":"{}","call_id":"call-1"}}
+{"timestamp":"2026-06-08T05:08:15.338Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1000,"cached_input_tokens":200,"output_tokens":50,"reasoning_output_tokens":10,"total_tokens":1050},"last_token_usage":{"input_tokens":1000,"cached_input_tokens":200,"output_tokens":50,"reasoning_output_tokens":10,"total_tokens":1050}}}}
+`
+
 func TestParseCodexLineSessionMeta(t *testing.T) {
 	t.Parallel()
 
@@ -214,5 +221,36 @@ func TestScanCodexSessionFileModelFallback(t *testing.T) {
 		if key.model != "unknown" {
 			t.Fatalf("expected model unknown (no turn_context), got %q", key.model)
 		}
+	}
+}
+
+func TestScanCodexCountsTurnsToolsAndSkills(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	sessionFilePath := filepath.Join(tmpDir, "session.jsonl")
+	if err := os.WriteFile(sessionFilePath, []byte(codexActivityFixture), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir}
+	rows, err := ScanCodexHourlyUsage(context.Background(), input)
+	if err != nil {
+		t.Fatalf("scan hourly usage: %v", err)
+	}
+
+	var turns, tools, skills int64
+	for _, row := range rows {
+		turns += row.TurnCount
+		tools += row.ToolCallCount
+	}
+	if turns != 1 {
+		t.Fatalf("expected 1 turn, got %d", turns)
+	}
+	if tools != 1 {
+		t.Fatalf("expected 1 tool call, got %d", tools)
+	}
+	if skills != 0 {
+		t.Fatalf("expected 0 skills, got %d", skills)
 	}
 }
