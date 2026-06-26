@@ -11,7 +11,10 @@ import {
 import { loadWorkspaceSnapshot } from "../commands/projectCommands";
 import { type DesktopAgentKind, isDesktopAgentKind } from "../helpers/agentSettings";
 import { getErrorMessage } from "../helpers/errorHelpers";
-import { consumeExplicitlyClosedTerminalTabId } from "../helpers/terminalCloseTombstones";
+import {
+  consumeExplicitlyClosedTerminalTabId,
+  recordExplicitlyClosedTerminalTabId,
+} from "../helpers/terminalCloseTombstones";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../rpc/rpcTransport";
 import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../store/chatStore";
@@ -513,6 +516,42 @@ async function dispatchPreferenceBackedNotification(
   }
 }
 
+const lifecycleBySessionKey = new Map<
+  string,
+  {
+    workspaceId: string;
+    status: AgentSessionLifecycleStatus;
+  }
+>();
+
+/**
+ * Clears agent-status lifecycle entries for one terminal tab and re-derives
+ * the workspace-level agent status map. Called when a terminal tab is
+ * explicitly closed to prevent stale "running" state when the agent process
+ * is killed without emitting a Stop hook.
+ */
+export function clearTerminalAgentStatus(tabId: string): void {
+  const normalizedTabId = tabId.trim();
+  if (!normalizedTabId) {
+    return;
+  }
+
+  let changed = false;
+  for (const sessionKey of lifecycleBySessionKey.keys()) {
+    const parsed = parseObserverSessionKey(sessionKey);
+    if (parsed?.tabId === normalizedTabId) {
+      lifecycleBySessionKey.delete(sessionKey);
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    chatStore
+      .getState()
+      .setWorkspaceAgentStatusByWorkspaceId(deriveWorkspaceAgentStatusByWorkspaceId(lifecycleBySessionKey));
+  }
+}
+
 /**
  * Creates one binding function that connects normalized backend events to workspace store actions.
  */
@@ -546,14 +585,6 @@ export function createBackendEventStoreBindings(
       }, GIT_REFRESH_COALESCE_MS);
       gitRefreshTimersByWorktreePath.set(normalizedPath, timeoutId);
     };
-
-    const lifecycleBySessionKey = new Map<
-      string,
-      {
-        workspaceId: string;
-        status: AgentSessionLifecycleStatus;
-      }
-    >();
 
     const unsubscribeGitChanged = resolvedDependencies.subscribeGitChanged(
       (workspaceId, workspaceWorktreePath, affectsBranch, currentBranch) => {
@@ -859,6 +890,8 @@ function handleTerminalSessionEvent(
 
   const matchingTab = tabState.tabs.find((tab) => tab.kind === "terminal" && tab.data.sessionId === payload.sessionId);
   if (matchingTab) {
+    recordExplicitlyClosedTerminalTabId(matchingTab.id);
+    clearTerminalAgentStatus(matchingTab.id);
     tabState.closeTab(matchingTab.id);
   }
 }

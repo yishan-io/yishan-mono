@@ -341,4 +341,50 @@ describe("TerminalSessionOrchestrator", () => {
       data: "codex\r",
     });
   });
+
+  it("cleans up orphan session and throws when tab is closed during session creation", async () => {
+    const tab = createTerminalTab("tab-gone", "workspace-1", undefined, "opencode");
+    const tabStoreAccess = createTabStoreAccess(tab);
+    const closeTerminalSession = vi.fn().mockResolvedValue(undefined);
+    const deferredCreated = createDeferred<{ sessionId: string }>();
+    const commands = {
+      createTerminalSession: vi.fn().mockReturnValue(deferredCreated.promise),
+      readTerminalOutput: vi.fn().mockResolvedValue({
+        nextIndex: 0,
+        chunks: [],
+        exited: false,
+      }),
+      writeTerminalInput: vi.fn().mockResolvedValue({ ok: true }),
+      resizeTerminal: vi.fn().mockResolvedValue({ ok: true }),
+      closeTerminalSession,
+    };
+
+    const orchestrator = new TerminalSessionOrchestrator(
+      commands,
+      tabStoreAccess,
+      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1"),
+    );
+
+    const pending = orchestrator.attachOrCreateAndRestore({
+      tabId: "tab-gone",
+      terminal: { write: vi.fn(), cols: 80, rows: 24 },
+      fitAddon: { fit: vi.fn() },
+    });
+
+    await Promise.resolve();
+    expect(commands.createTerminalSession).toHaveBeenCalledTimes(1);
+
+    tabStoreAccess.getState = () => ({
+      tabs: [],
+      setTerminalTabSessionId: tabStoreAccess.setTerminalTabSessionId,
+    });
+
+    deferredCreated.resolve({ sessionId: "orphan-session" });
+
+    await expect(pending).rejects.toThrow("Terminal tab was closed before session could be attached");
+
+    expect(closeTerminalSession).toHaveBeenCalledWith({ sessionId: "orphan-session" });
+    expect(commands.readTerminalOutput).not.toHaveBeenCalled();
+    expect(commands.writeTerminalInput).not.toHaveBeenCalled();
+  });
 });

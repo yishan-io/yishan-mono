@@ -561,6 +561,55 @@ func TestHandleMessage_TerminalSessionChanged_BroadcastsToOrg(t *testing.T) {	se
 	}
 }
 
+func TestHandleMessage_TerminalSessionChanged_ExcludesSenderFromBroadcast(t *testing.T) {
+	sessions := NewSessionManager()
+
+	senderSrv, senderCli, cleanup1 := pipeWebSocket(t)
+	defer cleanup1()
+	receiverSrv, receiverCli, cleanup2 := pipeWebSocket(t)
+	defer cleanup2()
+
+	sessions.Register(senderSrv, auth.NodeIdentity{NodeID: "node-1", UserID: "u", OrganizationIDs: []string{"org-1"}})
+	sessions.Register(receiverSrv, auth.NodeIdentity{NodeID: "node-2", UserID: "u", OrganizationIDs: []string{"org-1"}})
+
+	transport := &testTransport{online: map[string]bool{"node-1": true, "node-2": true}}
+	queue := jobqueue.NewManager(transport, jobqueue.Config{
+		AckTimeout: time.Second, ResultTimeout: time.Second, MaxRetries: 3,
+	})
+	srv := &Server{
+		sessions:      sessions,
+		queue:         queue,
+		apiToken:      testAPIToken,
+		clientsByNode: make(map[string]map[*clientConn]struct{}),
+	}
+
+	params, _ := json.Marshal(map[string]any{"sessionId": "sess-1", "action": "created"})
+	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": MethodTerminalSessionChanged, "params": json.RawMessage(params)})
+
+	if !srv.handleMessage("node-1", payload) {
+		t.Fatal("handleMessage should return true for MethodTerminalSessionChanged")
+	}
+
+	var received map[string]any
+	if err := receiverCli.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatalf("set deadline: %v", err)
+	}
+	if err := receiverCli.ReadJSON(&received); err != nil {
+		t.Fatalf("receiver should get the notification: %v", err)
+	}
+	if received["method"] != MethodTerminalSessionChanged {
+		t.Errorf("receiver got method %v, want %s", received["method"], MethodTerminalSessionChanged)
+	}
+
+	if err := senderCli.SetReadDeadline(time.Now().Add(200 * time.Millisecond)); err != nil {
+		t.Fatalf("set deadline: %v", err)
+	}
+	var loopback map[string]any
+	if err := senderCli.ReadJSON(&loopback); err == nil {
+		t.Errorf("sender should NOT receive its own broadcast, got: %v", loopback)
+	}
+}
+
 func TestHandleMessage_TerminalSessionChanged_UnknownNode_ReturnsTrueNoOp(t *testing.T) {
 	srv := newTestServer(t)
 	params, _ := json.Marshal(map[string]any{"sessionId": "sess-1"})

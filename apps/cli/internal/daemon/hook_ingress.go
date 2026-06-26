@@ -86,7 +86,7 @@ func (h *JSONRPCHandler) ServeAgentHook(w http.ResponseWriter, r *http.Request) 
 		h.events.Publish(frontendEvent{Topic: "notificationEvent", Payload: notification})
 	}
 
-	if event.tabID != "" && (event.eventType == "start" || event.eventType == "stop") {
+	if event.tabID != "" && (event.eventType == "start" || event.eventType == "stop" || event.eventType == "launched") {
 		agentForEvent := event.agent
 		if event.eventType == "stop" {
 			agentForEvent = ""
@@ -225,6 +225,14 @@ func normalizeHookEventType(rawEventType string) string {
 	// lifecycle transitions and must not trigger start/stop/wait_input notifications.
 	if isPerToolHookEvent(normalized) {
 		return "unknown"
+	}
+	// "Launched" is emitted by wrapper scripts when the agent process starts.
+	// It sets the tab icon (via terminalAgentChanged) but does NOT trigger
+	// workspace-running status (no notificationEvent with observerStatus).
+	// The plugin's "Start" event handles workspace-running when the agent
+	// actually begins processing.
+	if normalized == "launched" {
+		return "launched"
 	}
 	if strings.Contains(normalized, "start") || strings.Contains(normalized, "begin") || strings.Contains(normalized, "submit") {
 		return "start"

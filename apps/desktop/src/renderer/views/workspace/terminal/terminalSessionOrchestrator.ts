@@ -36,6 +36,7 @@ export class TerminalSessionOrchestrator {
       readTerminalOutput: (params: { sessionId: string; fromIndex: number }) => Promise<TerminalSnapshot>;
       writeTerminalInput: (params: { sessionId: string; data: string }) => Promise<{ ok: true }>;
       resizeTerminal: (params: { sessionId: string; cols: number; rows: number }) => Promise<{ ok: true }>;
+      closeTerminalSession?: (params: { sessionId: string }) => Promise<unknown>;
     },
     private readonly tabStoreAccess: {
       getState: () => Pick<TabStoreState, "tabs" | "setTerminalTabSessionId">;
@@ -158,6 +159,15 @@ export class TerminalSessionOrchestrator {
         paneId: resolveTerminalPaneId(tab.id, tab.data.paneId),
       });
       sessionId = created.sessionId;
+
+      const stillExists = this.tabStoreAccess
+        .getState()
+        .tabs.some((candidate) => candidate.id === tab.id && candidate.kind === "terminal");
+      if (!stillExists) {
+        await this.commands.closeTerminalSession?.({ sessionId }).catch(() => {});
+        throw new Error("Terminal tab was closed before session could be attached");
+      }
+
       snapshot = await this.commands.readTerminalOutput({ sessionId, fromIndex: 0 });
       isNewSession = true;
     }

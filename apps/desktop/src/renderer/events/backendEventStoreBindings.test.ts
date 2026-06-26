@@ -4,9 +4,10 @@ import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   recordExplicitlyClosedTerminalTabId,
 } from "../helpers/terminalCloseTombstones";
+import { chatStore } from "../store/chatStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
-import { createBackendEventStoreBindings } from "./backendEventStoreBindings";
+import { clearTerminalAgentStatus, createBackendEventStoreBindings } from "./backendEventStoreBindings";
 
 /**
  * Creates one in-memory git.changed subscription harness.
@@ -1060,12 +1061,99 @@ describe("createBackendEventStoreBindings", () => {
       status: "running",
     });
 
-    expect(tabStore.getState().tabs).toHaveLength(1);
-    expect(tabStore.getState().tabs[0]).toMatchObject({
-      kind: "terminal",
-      workspaceId: "workspace-1",
-      data: { sessionId: "term-cross-client-1" },
+    expect(tabStore.getState().tabs).toHaveLength(0);
+    expect(closeTerminalSession).toHaveBeenCalledWith("term-cross-client-1");
+
+    stopBindings();
+  });
+
+  it("records a tombstone on destroyed-triggered close so a late created does not reopen", async () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const terminalSessionHarness = createTerminalSessionChangedHarness();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+    const closeTerminalSession = vi.fn(async () => undefined);
+
+    workspaceStore.setState({
+      ...workspaceStore.getState(),
+      workspaces: [
+        {
+          id: "workspace-1",
+          name: "Workspace 1",
+          title: "Workspace 1",
+          repoId: "repo-1",
+          sourceBranch: "main",
+          branch: "main",
+          summaryId: "summary-1",
+        },
+      ],
+      selectedWorkspaceId: "workspace-1",
     });
+    tabStore.setState({
+      ...tabStore.getState(),
+      tabs: [
+        {
+          id: "tab-1",
+          workspaceId: "workspace-1",
+          title: "Terminal",
+          pinned: false,
+          kind: "terminal" as const,
+          data: { title: "Terminal", sessionId: "sess-1" },
+        },
+      ],
+      selectedTabId: "tab-1",
+      selectedTabIdByWorkspaceId: { "workspace-1": "tab-1" },
+    });
+    __resetExplicitlyClosedTerminalTabIdsForTests();
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      subscribeTerminalSessionChanged: terminalSessionHarness.subscribeTerminalSessionChanged,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+      closeTerminalSession,
+    });
+
+    const stopBindings = startBindings();
+
+    terminalSessionHarness.emit({
+      action: "destroyed",
+      sessionId: "sess-1",
+      workspaceId: "workspace-1",
+      tabId: "tab-1",
+      paneId: "pane-tab-1",
+      pid: 1234,
+      status: "exited",
+    });
+    await Promise.resolve();
+
+    expect(tabStore.getState().tabs).toHaveLength(0);
+
+    terminalSessionHarness.emit({
+      action: "created",
+      sessionId: "sess-2",
+      workspaceId: "workspace-1",
+      tabId: "tab-1",
+      paneId: "pane-tab-1",
+      pid: 9999,
+      status: "running",
+    });
+    await Promise.resolve();
+
+    expect(tabStore.getState().tabs).toHaveLength(0);
+    expect(closeTerminalSession).toHaveBeenCalledWith("sess-2");
 
     stopBindings();
   });
@@ -1522,5 +1610,59 @@ describe("createBackendEventStoreBindings", () => {
     });
 
     stopBindings();
+  });
+
+  it("clearTerminalAgentStatus removes lifecycle entries for a closed tab and clears workspace status", async () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+
+    const initialChatState = chatStore.getState();
+    chatStore.setState({
+      setWorkspaceAgentStatusByWorkspaceId,
+    });
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+    });
+
+    const stopBindings = startBindings();
+
+    inAppNotificationHarness.emit({
+      id: "notif-1",
+      title: "Run started",
+      tone: "success",
+      createdAt: "2026-06-26T10:00:00.000Z",
+      workspaceId: "workspace-1",
+      silent: true,
+      observerStatus: {
+        normalizedEventType: "start",
+        sessionKey: "workspace-1:tab-agent-1:pane-1",
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenLastCalledWith({ "workspace-1": "running" });
+
+    clearTerminalAgentStatus("tab-agent-1");
+
+    expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenLastCalledWith({});
+
+    stopBindings();
+    chatStore.setState(initialChatState, true);
   });
 });

@@ -57,6 +57,7 @@ const mockReadTerminalOutput = vi.fn();
 const mockResizeTerminal = vi.fn();
 const mockSubscribeTerminalOutput = vi.fn();
 const mockWriteTerminalInput = vi.fn();
+const mockCloseTerminalSession = vi.fn();
 
 vi.mock("../../../commands/terminalCommands", () => ({
   createTerminalSession: (...args: unknown[]) => mockCreateTerminalSession(...args),
@@ -65,11 +66,19 @@ vi.mock("../../../commands/terminalCommands", () => ({
   resizeTerminal: (...args: unknown[]) => mockResizeTerminal(...args),
   subscribeTerminalOutput: (...args: unknown[]) => mockSubscribeTerminalOutput(...args),
   writeTerminalInput: (...args: unknown[]) => mockWriteTerminalInput(...args),
+  closeTerminalSession: (...args: unknown[]) => mockCloseTerminalSession(...args),
 }));
 
 vi.mock("../../../commands/tabCommands", () => ({
   closeTab: vi.fn(),
   renameTab: vi.fn(),
+}));
+
+const mockEnqueueWorkspaceErrorNotice = vi.fn();
+const mockTabStoreCloseTab = vi.fn();
+
+vi.mock("../../../store/workspaceLifecycleNoticeStore", () => ({
+  enqueueWorkspaceErrorNotice: (...args: unknown[]) => mockEnqueueWorkspaceErrorNotice(...args),
 }));
 
 vi.mock("./terminalSessionOrchestrator", async (importOriginal) => {
@@ -99,6 +108,7 @@ vi.mock("../../../store/tabStore", () => ({
           }))
         : [],
       setTerminalTabSessionId: vi.fn(),
+      closeTab: (...args: unknown[]) => mockTabStoreCloseTab(...args),
     }),
   },
 }));
@@ -325,5 +335,26 @@ describe("terminal session reconnect after daemon restart", () => {
     await Promise.resolve();
 
     expect(mockCreateTerminalSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("surfaces error notice and closes tab when session creation fails", async () => {
+    mockListTerminalSessions.mockResolvedValue([]);
+    mockCreateTerminalSession.mockRejectedValue(new Error("workspace not found"));
+
+    const entry = buildStubRuntime("tab-fail", {
+      sessionId: "old-fail-session",
+      outputSubscription: buildOutputSubscription(),
+    });
+    stubActiveRuntimes = [entry];
+    sessionIdByTabId = { "tab-fail": "old-fail-session" };
+
+    simulateDaemonRestart();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mockEnqueueWorkspaceErrorNotice).toHaveBeenCalledWith({
+      title: "Failed to create terminal session",
+      message: "workspace not found",
+    });
+    expect(mockTabStoreCloseTab).toHaveBeenCalledWith("tab-fail");
   });
 });
