@@ -160,6 +160,11 @@ vi.mock("../../../commands/terminalCommands", () => ({
   resizeTerminal: mocked.resizeTerminal,
   subscribeTerminalOutput: mocked.subscribeTerminalOutput,
   writeTerminalInput: mocked.writeTerminalInput,
+  closeTerminalSession: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("../../../store/workspaceLifecycleNoticeStore", () => ({
+  enqueueWorkspaceErrorNotice: vi.fn(),
 }));
 
 vi.mock("../../../hooks/useCommands", () => ({

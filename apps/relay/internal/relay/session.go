@@ -407,11 +407,16 @@ func (m *SessionManager) SendNotificationWithError(nodeID, method string, params
 }
 
 // SendOrgNotification sends a JSON-RPC notification to every connected node in one organization.
-func (m *SessionManager) SendOrgNotification(organizationID string, method string, params any) int {
+// excludeNodeID, when non-empty, skips the sending node so it does not receive
+// its own broadcast back (prevents duplicate event processing on the origin).
+func (m *SessionManager) SendOrgNotification(organizationID string, method string, params any, excludeNodeID string) int {
 	m.mu.RLock()
 	sessions := make([]*NodeSession, 0, len(m.sessions))
 	for _, session := range m.sessions {
 		if !session.isConnected() {
+			continue
+		}
+		if excludeNodeID != "" && session.Identity.NodeID == excludeNodeID {
 			continue
 		}
 		for _, sessionOrganizationID := range session.Identity.OrganizationIDs {
