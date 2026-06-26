@@ -61,6 +61,12 @@ export function FileEditor({
   const [editorPaneRatio, setEditorPaneRatio] = useState(0.5);
   const [markdownPreviewImmediateUpdateToken, setMarkdownPreviewImmediateUpdateToken] = useState(0);
 
+  // Preview find bar state — owned here so FileEditor can intercept Cmd+F.
+  const [previewFindOpen, setPreviewFindOpen] = useState(false);
+  const [previewFindQuery, setPreviewFindQuery] = useState("");
+  const [previewFindMatchCount, setPreviewFindMatchCount] = useState(0);
+  const [previewFindActiveIndex, setPreviewFindActiveIndex] = useState(0);
+
   // Reset view mode when switching between markdown and non-markdown files.
   // When entering a markdown file from a non-markdown file (viewMode is "edit"),
   // use user-configured markdown default. When leaving markdown, always reset to "edit".
@@ -217,6 +223,43 @@ export function FileEditor({
     setViewMode(mode);
   }, []);
 
+  // Close the preview find bar when leaving preview-only mode.
+  useEffect(() => {
+    if (viewMode !== "preview") {
+      setPreviewFindOpen(false);
+      setPreviewFindQuery("");
+      setPreviewFindActiveIndex(0);
+    }
+  }, [viewMode]);
+
+  /** Handles Cmd+F / Ctrl+F keydown on the preview pane.
+   *  In split mode: focuses the Monaco editor and opens its built-in find widget.
+   *  In preview-only mode: opens the in-preview find bar.
+   *  Escape closes the find bar when it is open. */
+  const handlePreviewKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const isCmdF = (event.metaKey || event.ctrlKey) && event.key === "f";
+      if (isCmdF) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (viewMode === "split") {
+          editorRef.current?.focus();
+          editorRef.current?.getAction("actions.find")?.run();
+        } else {
+          setPreviewFindOpen(true);
+        }
+        return;
+      }
+      if (event.key === "Escape" && previewFindOpen) {
+        event.preventDefault();
+        setPreviewFindOpen(false);
+        setPreviewFindQuery("");
+        setPreviewFindActiveIndex(0);
+      }
+    },
+    [viewMode, previewFindOpen],
+  );
+
   const handleMarkdownPreviewContentChange = useCallback((nextContent: string) => {
     const editor = editorRef.current;
     if (editor && editor.getValue() !== nextContent) {
@@ -355,6 +398,9 @@ export function FileEditor({
         {/* Markdown preview pane */}
         {isMarkdown && showPreview ? (
           <Box
+            data-testid="markdown-preview-pane"
+            onKeyDown={handlePreviewKeyDown}
+            tabIndex={0}
             sx={{
               flex: showEditor ? `0 0 ${Math.round((1 - editorPaneRatio) * 100)}%` : 1,
               minHeight: 0,
@@ -362,6 +408,7 @@ export function FileEditor({
               display: "flex",
               flexDirection: "column",
               overflow: "hidden",
+              outline: "none",
             }}
           >
             <MarkdownPreview
@@ -371,6 +418,30 @@ export function FileEditor({
               canEdit={!isDeleted}
               onContentChange={handleMarkdownPreviewContentChange}
               immediateUpdateToken={markdownPreviewImmediateUpdateToken}
+              findOpen={previewFindOpen}
+              findQuery={previewFindQuery}
+              findActiveIndex={previewFindActiveIndex}
+              onFindMatchCountChange={(count) => {
+                setPreviewFindMatchCount(count);
+                setPreviewFindActiveIndex((i) => Math.min(i, Math.max(0, count - 1)));
+              }}
+              onFindQueryChange={(q) => {
+                setPreviewFindQuery(q);
+                setPreviewFindActiveIndex(0);
+              }}
+              onFindNext={() =>
+                setPreviewFindActiveIndex((i) => (previewFindMatchCount > 0 ? (i + 1) % previewFindMatchCount : 0))
+              }
+              onFindPrev={() =>
+                setPreviewFindActiveIndex((i) =>
+                  previewFindMatchCount > 0 ? (i - 1 + previewFindMatchCount) % previewFindMatchCount : 0,
+                )
+              }
+              onFindClose={() => {
+                setPreviewFindOpen(false);
+                setPreviewFindQuery("");
+                setPreviewFindActiveIndex(0);
+              }}
             />
           </Box>
         ) : null}

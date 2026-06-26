@@ -175,6 +175,7 @@ trap 'handle_interrupt TERM' TERM
 trap 'handle_interrupt HUP' HUP
 trap 'cleanup_watcher; emit_exit_terminal_event "$?"' EXIT
 
+notify_event "codex" "Start"
 if [ -x "${NOTIFY_SCRIPT_PATH:-}" ]; then
   "$REAL_BIN" "${extra_dir_args[@]}" -c "notify=[\"bash\",\"$NOTIFY_SCRIPT_PATH\",\"--agent\",\"codex\"]" "$@"
 else

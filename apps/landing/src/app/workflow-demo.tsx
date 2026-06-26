@@ -128,21 +128,17 @@ export function WorkflowDemo({ t }: Props) {
   return (
     <section id="workflow" className="mx-auto max-w-7xl px-6 py-6 lg:px-8 lg:py-8">
       <div className="rounded-[36px] border border-[#2A342F] bg-[#121715] px-8 py-10 lg:px-10">
-
         {/* Header */}
         <div className="max-w-2xl">
           <div className="text-xs uppercase tracking-[0.24em] text-[#A5B0A8]">{t("workflow.label")}</div>
           <h2 className="mt-4 text-3xl font-semibold tracking-tight text-[#E8ECE8] md:text-4xl">
             {t("workflow.title")}
           </h2>
-          <p className="mt-4 text-base leading-8 text-[#A5B0A8]">
-            {t("workflow.desc")}
-          </p>
+          <p className="mt-4 text-base leading-8 text-[#A5B0A8]">{t("workflow.desc")}</p>
         </div>
 
         {/* Interactive demo */}
         <div className="mt-10 overflow-hidden rounded-2xl border border-[#2A342F] bg-[#0D1110]">
-
           {/* Window chrome */}
           <div className="flex items-center gap-2 border-b border-[#2A342F] px-4 py-2.5">
             <div className="h-2.5 w-2.5 rounded-full bg-[#FF5F56]/50" />
@@ -152,12 +148,9 @@ export function WorkflowDemo({ t }: Props) {
           </div>
 
           <div className="flex min-h-[280px]">
-
             {/* Left sidebar — workspace list */}
             <div className="w-48 shrink-0 border-r border-[#2A342F] p-3">
-              <div className="mb-3 px-2 text-[9px] uppercase tracking-[0.18em] text-[#4A5A4E]">
-                Workstreams
-              </div>
+              <div className="mb-3 px-2 text-[9px] uppercase tracking-[0.18em] text-[#4A5A4E]">Workstreams</div>
               <div className="space-y-1">
                 {workstreams.map((w, i) => {
                   const c = statusConfig[w.status];
@@ -165,18 +158,15 @@ export function WorkflowDemo({ t }: Props) {
                   return (
                     <button
                       key={w.branch}
+                      type="button"
                       onClick={() => select(i)}
                       className={`w-full rounded-xl px-2 py-2 text-left transition-colors duration-150 ${
-                        isActive
-                          ? "bg-[#1B2420]"
-                          : "hover:bg-[#151B18]"
+                        isActive ? "bg-[#1B2420]" : "hover:bg-[#151B18]"
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <span className={`h-2 w-2 shrink-0 rounded-full ${c.dot}`} />
-                        <span className="truncate text-[11px] font-medium text-[#E8ECE8]">
-                          {w.label}
-                        </span>
+                        <span className="truncate text-[11px] font-medium text-[#E8ECE8]">{w.label}</span>
                       </div>
                       <div className="mt-0.5 flex items-center justify-between pl-4">
                         <span className="truncate text-[9px] text-[#4A5A4E]">{w.branch}</span>
@@ -188,9 +178,7 @@ export function WorkflowDemo({ t }: Props) {
               </div>
 
               {/* Hint */}
-              <div className="mt-4 px-2 text-[9px] text-[#2A342F]">
-                click to switch →
-              </div>
+              <div className="mt-4 px-2 text-[9px] text-[#2A342F]">click to switch →</div>
             </div>
 
             {/* Right pane — active workspace */}
@@ -208,9 +196,7 @@ export function WorkflowDemo({ t }: Props) {
                 <div className="flex items-center gap-2 text-[10px]">
                   <span className="text-[#8FCB99]">{ws.changes.split(" ")[0]}</span>
                   <span className="text-[#FF5F56]/70">{ws.changes.split(" ")[1]}</span>
-                  <span className="rounded border border-[#2A342F] px-1.5 py-0.5 text-[#A5B0A8]">
-                    {ws.agent}
-                  </span>
+                  <span className="rounded border border-[#2A342F] px-1.5 py-0.5 text-[#A5B0A8]">{ws.agent}</span>
                 </div>
               </div>
 
@@ -218,7 +204,7 @@ export function WorkflowDemo({ t }: Props) {
               <div className="flex-1 rounded-xl border border-[#2A342F] bg-[#080C0A] px-3 py-2.5 font-mono text-[11px]">
                 <div className="space-y-0.5">
                   {ws.terminal.map((line, idx) => (
-                    <div key={idx} className={terminalLineColor(line)}>
+                    <div key={`${ws.branch}-${idx}-${line}`} className={terminalLineColor(line)}>
                       {line || "\u00a0"}
                     </div>
                   ))}
@@ -230,24 +216,22 @@ export function WorkflowDemo({ t }: Props) {
                 <span className="text-[#4A5A4E]">.my-context / </span>
                 <span className="text-[#A5B0A8]">{ws.context}</span>
               </div>
-
             </div>
           </div>
         </div>
 
         {/* Steps — below the demo */}
         <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="flex gap-3">
-              <div className="mt-0.5 text-sm font-medium text-[#D1B06A]">{`0${i + 1}`}</div>
+          {[0, 1, 2].map((step) => (
+            <div key={step} className="flex gap-3">
+              <div className="mt-0.5 text-sm font-medium text-[#D1B06A]">{`0${step + 1}`}</div>
               <div>
-                <div className="text-sm font-semibold text-[#E8ECE8]">{t(`workflow.${i}.title`)}</div>
-                <div className="mt-1 text-xs leading-6 text-[#A5B0A8]">{t(`workflow.${i}.desc`)}</div>
+                <div className="text-sm font-semibold text-[#E8ECE8]">{t(`workflow.${step}.title`)}</div>
+                <div className="mt-1 text-xs leading-6 text-[#A5B0A8]">{t(`workflow.${step}.desc`)}</div>
               </div>
             </div>
           ))}
         </div>
-
       </div>
     </section>
   );

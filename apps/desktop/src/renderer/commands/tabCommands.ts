@@ -1,5 +1,6 @@
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../helpers/tabHelpers";
+import { recordExplicitlyClosedTerminalTabId } from "../helpers/terminalCloseTombstones";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { chatStore } from "../store/chatStore";
 import { splitPaneStore } from "../store/splitPaneStore";
@@ -91,6 +92,7 @@ export function closeTab(tabId: string): void {
       });
   }
   if (tab.kind === "terminal") {
+    recordExplicitlyClosedTerminalTabId(tab.id);
     closeTerminalSessionsForTabs([tab]);
   }
   snapshot.closeTab(tabId);

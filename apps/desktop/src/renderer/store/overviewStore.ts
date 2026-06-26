@@ -19,6 +19,8 @@ type OverviewStoreState = {
   cachedTotal: number;
   cachedWriteTotal: number;
   uncachedTotal: number;
+  turnTotal: number;
+  toolCallTotal: number;
   tokenUsageLoadState: LoadState;
   tokenUsageLoadError: string | null;
 
@@ -43,6 +45,8 @@ type OverviewStoreState = {
     cachedTotal: number,
     cachedWriteTotal: number,
     uncachedTotal: number,
+    turnTotal: number,
+    toolCallTotal: number,
   ) => void;
   setTokenUsageLoadState: (state: LoadState, error?: string | null) => void;
 
@@ -66,6 +70,8 @@ export const overviewStore = create<OverviewStoreState>()(
     cachedTotal: 0,
     cachedWriteTotal: 0,
     uncachedTotal: 0,
+    turnTotal: 0,
+    toolCallTotal: 0,
     tokenUsageLoadState: "idle",
     tokenUsageLoadError: null,
 
@@ -90,8 +96,8 @@ export const overviewStore = create<OverviewStoreState>()(
     setGranularity: (granularity) => {
       set({ granularity });
     },
-    setTokenUsageData: (tokenUsageSeries, cachedTotal, cachedWriteTotal, uncachedTotal) => {
-      set({ tokenUsageSeries, cachedTotal, cachedWriteTotal, uncachedTotal });
+    setTokenUsageData: (tokenUsageSeries, cachedTotal, cachedWriteTotal, uncachedTotal, turnTotal, toolCallTotal) => {
+      set({ tokenUsageSeries, cachedTotal, cachedWriteTotal, uncachedTotal, turnTotal, toolCallTotal });
     },
     setTokenUsageLoadState: (tokenUsageLoadState, tokenUsageLoadError = null) => {
       set({ tokenUsageLoadState, tokenUsageLoadError });

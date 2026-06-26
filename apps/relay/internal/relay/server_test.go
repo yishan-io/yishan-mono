@@ -537,7 +537,153 @@ func TestExtractBearerToken_HeaderPreferredOverQuery(t *testing.T) {
 	}
 }
 
+func TestHandleMessage_TerminalSessionChanged_BroadcastsToOrg(t *testing.T) {	sessions := NewSessionManager()
+	// Register a node that belongs to org-1.
+	identity := auth.NodeIdentity{NodeID: "node-1", UserID: "user-1", OrganizationIDs: []string{"org-1"}}
+	sessions.Register(nil, identity)
+
+	transport := &testTransport{online: map[string]bool{"node-1": true}}
+	queue := jobqueue.NewManager(transport, jobqueue.Config{
+		AckTimeout: time.Second, ResultTimeout: time.Second, MaxRetries: 3,
+	})
+	srv := &Server{
+		sessions:      sessions,
+		queue:         queue,
+		apiToken:      testAPIToken,
+		clientsByNode: make(map[string]map[*clientConn]struct{}),
+	}
+
+	params, _ := json.Marshal(map[string]any{"sessionId": "sess-1", "action": "created"})
+	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": MethodTerminalSessionChanged, "params": json.RawMessage(params)})
+
+	if !srv.handleMessage("node-1", payload) {
+		t.Error("handleMessage should return true for MethodTerminalSessionChanged")
+	}
+}
+
+func TestHandleMessage_TerminalSessionChanged_UnknownNode_ReturnsTrueNoOp(t *testing.T) {
+	srv := newTestServer(t)
+	params, _ := json.Marshal(map[string]any{"sessionId": "sess-1"})
+	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": MethodTerminalSessionChanged, "params": json.RawMessage(params)})
+
+	// Node "ghost" is not registered — handler must return true (consumed) without panic.
+	if !srv.handleMessage("ghost", payload) {
+		t.Error("handleMessage should return true for MethodTerminalSessionChanged even for unknown node")
+	}
+}
+
 // pipeWebSocket is shared with session_test.go via the relay package.
 // The helper is defined in session_test.go; this file relies on it.
 // Verify it compiles correctly by referencing strings.
 var _ = strings.TrimSpace
+
+// ---------------------------------------------------------------------------
+// Stream subscription tests
+// ---------------------------------------------------------------------------
+
+func newStreamServer(t *testing.T) *Server {
+	t.Helper()
+	sessions := NewSessionManager()
+	authenticator := auth.NewAuthenticator(auth.Config{Secret: "test-secret"})
+	transport := &testTransport{online: map[string]bool{}}
+	queue := jobqueue.NewManager(transport, jobqueue.Config{
+		AckTimeout: time.Second, ResultTimeout: time.Second, MaxRetries: 3,
+	})
+	return NewServer(sessions, authenticator, queue, testAPIToken)
+}
+
+func streamRequestPayload(t *testing.T, sessionID, ownerNode, fromNode string) []byte {
+	t.Helper()
+	params, _ := json.Marshal(terminalStreamRequestParams{SessionID: sessionID, OwnerNode: ownerNode, FromNode: fromNode})
+	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": MethodTerminalStreamRequest, "params": json.RawMessage(params)})
+	return payload
+}
+
+func TestStreamSub_RequestForwardsToOwner(t *testing.T) {
+	srv := newStreamServer(t)
+
+	// Register owner node with a real websocket so SendNotification can write.
+	ownerSrv, ownerCli, cleanup := pipeWebSocket(t)
+	defer cleanup()
+	srv.sessions.Register(ownerSrv, auth.NodeIdentity{NodeID: "owner", UserID: "u"})
+
+	payload := streamRequestPayload(t, "sess-1", "owner", "node-b")
+	if !srv.handleMessage("node-b", payload) {
+		t.Fatal("handleMessage should return true for MethodTerminalStreamRequest")
+	}
+
+	// node-b should be in streamSubs for sess-1.
+	subs := srv.streamSubsForSession("sess-1")
+	if len(subs) != 1 || subs[0] != "node-b" {
+		t.Errorf("expected [node-b] in streamSubs, got %v", subs)
+	}
+
+	// Owner should receive the forwarded request.
+	_ = ownerCli.SetReadDeadline(time.Now().Add(time.Second))
+	var msg map[string]any
+	if err := ownerCli.ReadJSON(&msg); err != nil {
+		t.Fatalf("owner did not receive stream.request: %v", err)
+	}
+	if msg["method"] != MethodTerminalStreamRequest {
+		t.Errorf("expected %s, got %v", MethodTerminalStreamRequest, msg["method"])
+	}
+}
+
+func TestStreamSub_CancelRemovesSubscriber(t *testing.T) {
+	srv := newStreamServer(t)
+	srv.addStreamSub("sess-1", "node-b")
+
+	params, _ := json.Marshal(terminalStreamCancelParams{SessionID: "sess-1", FromNode: "node-b"})
+	payload, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": MethodTerminalStreamCancel, "params": json.RawMessage(params)})
+
+	if !srv.handleMessage("node-b", payload) {
+		t.Fatal("handleMessage should return true for MethodTerminalStreamCancel")
+	}
+	if subs := srv.streamSubsForSession("sess-1"); len(subs) != 0 {
+		t.Errorf("expected empty subs after cancel, got %v", subs)
+	}
+}
+
+func TestStreamSub_NodeDisconnect_CleansUp(t *testing.T) {
+	srv := newStreamServer(t)
+	srv.addStreamSub("sess-1", "node-b")
+	srv.addStreamSub("sess-2", "node-b")
+
+	srv.cancelStreamSubsForNode("node-b")
+
+	if subs := srv.streamSubsForSession("sess-1"); len(subs) != 0 {
+		t.Errorf("sess-1 should be cleaned up, got %v", subs)
+	}
+	if subs := srv.streamSubsForSession("sess-2"); len(subs) != 0 {
+		t.Errorf("sess-2 should be cleaned up, got %v", subs)
+	}
+}
+
+func TestStreamSub_BinaryFrameRoutedToSubscriber(t *testing.T) {
+	srv := newStreamServer(t)
+
+	// Register subscriber with a real websocket.
+	subSrv, subCli, cleanup := pipeWebSocket(t)
+	defer cleanup()
+	srv.sessions.Register(subSrv, auth.NodeIdentity{NodeID: "node-b", UserID: "u"})
+	srv.addStreamSub("sess-1", "node-b")
+
+	// Build a binary frame: [opcode=0x02][sess-1\0][payload]
+	sessionID := "sess-1"
+	frame := make([]byte, 1+len(sessionID)+1+5)
+	frame[0] = 0x02
+	copy(frame[1:], []byte(sessionID))
+	frame[1+len(sessionID)] = 0x00
+	copy(frame[1+len(sessionID)+1:], []byte("hello"))
+
+	srv.routeBinaryToStreamSubs("owner", 2 /* BinaryMessage */, frame)
+
+	_ = subCli.SetReadDeadline(time.Now().Add(time.Second))
+	_, received, err := subCli.ReadMessage()
+	if err != nil {
+		t.Fatalf("subscriber did not receive binary frame: %v", err)
+	}
+	if string(received) != string(frame) {
+		t.Errorf("received frame mismatch: got %v", received)
+	}
+}

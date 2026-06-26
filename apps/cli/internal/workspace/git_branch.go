@@ -345,15 +345,15 @@ func (s *GitService) ListCommitsToTarget(ctx context.Context, root string, targe
 		return GitCommitComparison{
 			CurrentBranch:   strings.TrimSpace(currentBranch),
 			TargetBranch:    resolvedTargetBranch,
-			AllChangedFiles: []string{},
+			AllChangedFiles: []GitCommitFile{},
 			Commits:         []GitCommit{},
 		}, nil
 	}
-	logOut, err := gitCommand(ctx, root, "log", "--no-decorate", "--date=iso-strict", "--name-only", "--pretty=format:%x1e%H%x1f%h%x1f%an%x1f%aI%x1f%s", fmt.Sprintf("%s..HEAD", resolvedTargetBranch))
+	logOut, err := gitCommand(ctx, root, "log", "--no-decorate", "--date=iso-strict", "--name-status", "--pretty=format:%x1e%H%x1f%h%x1f%an%x1f%aI%x1f%s", fmt.Sprintf("%s..HEAD", resolvedTargetBranch))
 	if err != nil {
 		return GitCommitComparison{}, err
 	}
-	allChanged, err := gitCommand(ctx, root, "diff", "--name-only", fmt.Sprintf("%s...HEAD", resolvedTargetBranch))
+	allChanged, err := gitCommand(ctx, root, "diff", "--name-status", fmt.Sprintf("%s...HEAD", resolvedTargetBranch))
 	if err != nil {
 		return GitCommitComparison{}, err
 	}
@@ -372,37 +372,52 @@ func (s *GitService) ListCommitsToTarget(ctx context.Context, root string, targe
 		if len(meta) < 5 {
 			continue
 		}
-		changed := make([]string, 0)
-		for _, line := range lines[1:] {
-			line = strings.TrimSpace(line)
-			if line != "" {
-				changed = append(changed, line)
-			}
-		}
+		fileLines := strings.Join(lines[1:], "\n")
 		commits = append(commits, GitCommit{
 			Hash:         meta[0],
 			ShortHash:    meta[1],
 			AuthorName:   meta[2],
 			CommittedAt:  meta[3],
 			Subject:      meta[4],
-			ChangedFiles: changed,
+			ChangedFiles: parseNameStatusLines(fileLines),
 		})
-	}
-
-	allChangedFiles := make([]string, 0)
-	for line := range strings.SplitSeq(allChanged, "\n") {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			allChangedFiles = append(allChangedFiles, line)
-		}
 	}
 
 	return GitCommitComparison{
 		CurrentBranch:   strings.TrimSpace(currentBranch),
 		TargetBranch:    resolvedTargetBranch,
-		AllChangedFiles: allChangedFiles,
+		AllChangedFiles: parseNameStatusLines(allChanged),
 		Commits:         commits,
 	}, nil
+}
+
+// parseNameStatusLines parses output from git --name-status into GitCommitFile
+// entries. Rename/copy lines have three tab-separated fields: status, old path,
+// new path. All other lines have two fields: status, path.
+func parseNameStatusLines(output string) []GitCommitFile {
+	files := make([]GitCommitFile, 0)
+	for line := range strings.SplitSeq(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.Split(line, "\t")
+		if len(parts) < 2 {
+			continue
+		}
+		status := strings.ToUpper(parts[0])
+		// Normalise Rnn/Cnn similarity scores (e.g. "R100") to "R"/"C".
+		if len(status) > 1 && (status[0] == 'R' || status[0] == 'C') {
+			status = string(status[0])
+		}
+		f := GitCommitFile{Path: parts[1], Status: status}
+		if (status == "R" || status == "C") && len(parts) >= 3 {
+			f.OldPath = parts[1]
+			f.Path = parts[2]
+		}
+		files = append(files, f)
+	}
+	return files
 }
 
 func resolveCommitComparisonTarget(ctx context.Context, root string, targetBranch string) (string, error) {

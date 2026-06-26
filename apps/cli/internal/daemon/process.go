@@ -40,6 +40,7 @@ type RunConfig struct {
 	Port                  int
 	RelayEnabled          bool
 	RelayURL              string
+	RelayToken            string // static JWT for local dev; bypasses API token minting
 	MemorySummarizer      bool
 	MemorySummarizerAgent string
 	MemorySummarizerModel string
@@ -359,7 +360,7 @@ func startServing(cfg RunConfig, dr *daemonRuntime) (*shutdownContext, error) {
 	shutdownCtx, cancelShutdown := context.WithCancel(context.Background())
 
 	if cfg.RelayEnabled && cfg.RelayURL != "" {
-		go runRelayClientLoop(shutdownCtx, dr.handler.runtime, dr.handler, dr.daemonID, cfg.RelayURL, dr.relayStatus)
+		go runRelayClientLoop(shutdownCtx, dr.handler.runtime, dr.handler, dr.daemonID, cfg.RelayURL, cfg.RelayToken, dr.relayStatus)
 	}
 
 	go handleShutdownSignal(stop, cancelShutdown, dr.handler, dr.server)

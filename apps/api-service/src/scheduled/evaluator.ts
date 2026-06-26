@@ -17,9 +17,7 @@ const EVALUATOR_TIMEOUT_MS = 50_000;
 export type EvaluatorEnv = ScheduledDbEnv & QueueEnv;
 
 function timeoutAfter(ms: number): Promise<never> {
-  return new Promise((_, reject) =>
-    setTimeout(() => reject(new Error(`[evaluator] Timed out after ${ms}ms`)), ms),
-  );
+  return new Promise((_, reject) => setTimeout(() => reject(new Error(`[evaluator] Timed out after ${ms}ms`)), ms));
 }
 
 export async function handleEvaluateJobs(jobEvaluatorService: JobEvaluatorService, env: EvaluatorEnv): Promise<void> {

@@ -139,6 +139,10 @@ export type RpcSchema = {
         status: string;
         startedAt?: string;
       };
+      terminalAgentChanged: {
+        tabId: string;
+        agent: string;
+      };
     };
   };
 };

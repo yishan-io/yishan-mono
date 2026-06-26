@@ -112,6 +112,8 @@ const (
 	MethodTerminalResize              = "terminal.resize"
 	MethodTerminalSubscribe           = "terminal.subscribe"
 	MethodTerminalUnsubscribe         = "terminal.unsubscribe"
+	MethodTerminalRemoteSubscribe     = "terminal.remote.subscribe"
+	MethodTerminalRemoteUnsubscribe   = "terminal.remote.unsubscribe"
 	RelayMethodTerminalSessionChanged = "terminal.session.changed"
 
 	MethodMemorySearch       = "memory.search"

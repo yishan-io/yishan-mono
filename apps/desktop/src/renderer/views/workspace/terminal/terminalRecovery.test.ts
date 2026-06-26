@@ -231,6 +231,53 @@ describe("TerminalRecoveryCoordinator", () => {
     unsubscribe();
   });
 
+  it("startPersistingTerminalTabs includes agentKind in serialized payload", () => {
+    const storage = createMemoryStorage();
+    const tabStoreAccess = createTabStoreAccess({
+      tabs: [
+        {
+          id: "tab-opencode",
+          workspaceId: "workspace-1",
+          title: "OpenCode",
+          pinned: false,
+          kind: "terminal",
+          data: {
+            title: "OpenCode",
+            sessionId: "session-oc",
+            launchCommand: "opencode",
+            agentKind: "opencode",
+          },
+        },
+      ],
+      selectedTabId: "tab-opencode",
+      selectedTabIdByWorkspaceId: { "workspace-1": "tab-opencode" },
+    });
+    const coordinator = new TerminalRecoveryCoordinator(
+      tabStoreAccess as never,
+      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1") as never,
+      storage,
+    );
+    const unsubscribe = coordinator.startPersistingTerminalTabs();
+
+    // Trigger a change so the subscriber fires and writes to storage
+    tabStoreAccess.setState((state: TabStoreState) => ({
+      tabs: state.tabs.map((tab) =>
+        tab.id === "tab-opencode" && tab.kind === "terminal"
+          ? { ...tab, data: { ...tab.data, sessionId: "session-oc-2" } }
+          : tab,
+      ),
+    }));
+    tabStoreAccess.emit();
+
+    const raw = storage.getItem("yishan-terminal-recovery-v1");
+    expect(raw).not.toBeNull();
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    expect(parsed.tabs[0]).toMatchObject({ agentKind: "opencode" });
+
+    unsubscribe();
+  });
+
   it("restoreTerminalTabsFromDaemon creates tabs for active daemon sessions", async () => {
     const storage = createMemoryStorage();
     const tabStoreAccess = createTabStoreAccess({
@@ -321,6 +368,7 @@ describe("TerminalRecoveryCoordinator", () => {
             pinned: true,
             sessionId: "term-1",
             launchCommand: "echo hello",
+            agentKind: "opencode",
           },
         ],
       }),
@@ -361,8 +409,96 @@ describe("TerminalRecoveryCoordinator", () => {
       data: {
         sessionId: "term-1",
         launchCommand: "echo hello",
+        agentKind: "opencode",
       },
     });
+  });
+
+  it("agentKind is persisted and restored across recovery cycles", async () => {
+    // Simulate persist: write storage the same way startPersistingTerminalTabs would
+    const storage = createMemoryStorage();
+    storage.setItem(
+      "yishan-terminal-recovery-v1",
+      JSON.stringify({
+        selectedTabId: "tab-1",
+        tabs: [
+          {
+            tabId: "tab-1",
+            workspaceId: "workspace-1",
+            title: "Claude",
+            pinned: false,
+            sessionId: "session-1",
+            launchCommand: "claude",
+            agentKind: "claude",
+          },
+        ],
+      }),
+    );
+
+    const tabStoreAccess = createTabStoreAccess({
+      tabs: [],
+      selectedTabId: "",
+      selectedTabIdByWorkspaceId: {},
+    });
+    const coordinator = new TerminalRecoveryCoordinator(
+      tabStoreAccess as never,
+      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1") as never,
+      storage,
+    );
+
+    await coordinator.restoreTerminalTabsFromDaemon({
+      listTerminalSessions: vi
+        .fn()
+        .mockResolvedValue([{ sessionId: "session-1", workspaceId: "workspace-1", pid: 100, status: "running" }]),
+    });
+
+    const tabs = tabStoreAccess.getState().tabs;
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0]).toMatchObject({
+      kind: "terminal",
+      data: { agentKind: "claude" },
+    });
+  });
+
+  it("unknown agentKind in localStorage is silently dropped on restore", async () => {
+    const storage = createMemoryStorage();
+    storage.setItem(
+      "yishan-terminal-recovery-v1",
+      JSON.stringify({
+        selectedTabId: "tab-bad-agent",
+        tabs: [
+          {
+            tabId: "tab-bad-agent",
+            workspaceId: "workspace-1",
+            title: "Terminal",
+            pinned: false,
+            sessionId: "session-bad",
+            agentKind: "not-a-real-agent",
+          },
+        ],
+      }),
+    );
+    const tabStoreAccess = createTabStoreAccess({
+      tabs: [],
+      selectedTabId: "",
+      selectedTabIdByWorkspaceId: {},
+    });
+    const coordinator = new TerminalRecoveryCoordinator(
+      tabStoreAccess as never,
+      createWorkspaceStoreAccess("workspace-1", "/tmp/workspace-1") as never,
+      storage,
+    );
+
+    await coordinator.restoreTerminalTabsFromDaemon({
+      listTerminalSessions: vi
+        .fn()
+        .mockResolvedValue([{ sessionId: "session-bad", workspaceId: "workspace-1", pid: 200, status: "running" }]),
+    });
+
+    const tabs = tabStoreAccess.getState().tabs;
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0]).toMatchObject({ kind: "terminal" });
+    expect((tabs[0] as Extract<(typeof tabs)[0], { kind: "terminal" }>).data.agentKind).toBeUndefined();
   });
 
   it("restoreTerminalTabsFromDaemon returns the restored workspace id for sessions outside the current workspace", async () => {

@@ -168,7 +168,7 @@ describe("ChangesTabView", () => {
     mocks.listGitCommitsToTarget.mockResolvedValue({
       currentBranch: "feature/work",
       targetBranch: "main",
-      allChangedFiles: ["src/a.ts"],
+      allChangedFiles: [{ path: "src/a.ts", status: "M" }],
       commits: [
         {
           hash: "abc123456",
@@ -176,7 +176,7 @@ describe("ChangesTabView", () => {
           authorName: "Pat",
           committedAt: "2026-03-23T08:00:00+00:00",
           subject: "feat: improve flow",
-          changedFiles: ["src/a.ts"],
+          changedFiles: [{ path: "src/a.ts", status: "M" }],
         },
       ],
     });
@@ -219,7 +219,11 @@ describe("ChangesTabView", () => {
     mocks.listGitCommitsToTarget.mockResolvedValue({
       currentBranch: "feature/work",
       targetBranch: "main",
-      allChangedFiles: ["src/a.ts", "src/b.ts", "src/c.ts"],
+      allChangedFiles: [
+        { path: "src/a.ts", status: "M" },
+        { path: "src/b.ts", status: "M" },
+        { path: "src/c.ts", status: "M" },
+      ],
       commits: [
         {
           hash: "abc123456",
@@ -227,7 +231,10 @@ describe("ChangesTabView", () => {
           authorName: "Pat",
           committedAt: "2026-03-23T08:00:00+00:00",
           subject: "feat: part one",
-          changedFiles: ["src/a.ts", "src/b.ts"],
+          changedFiles: [
+            { path: "src/a.ts", status: "M" },
+            { path: "src/b.ts", status: "M" },
+          ],
         },
         {
           hash: "def987654",
@@ -235,7 +242,10 @@ describe("ChangesTabView", () => {
           authorName: "Pat",
           committedAt: "2026-03-24T08:00:00+00:00",
           subject: "feat: part two",
-          changedFiles: ["src/b.ts", "src/c.ts"],
+          changedFiles: [
+            { path: "src/b.ts", status: "M" },
+            { path: "src/c.ts", status: "M" },
+          ],
         },
       ],
     });
@@ -279,6 +289,92 @@ describe("ChangesTabView", () => {
     });
   });
 
+  it("falls back to readDiff when branch comparison returns identical content on both sides (uncommitted-only change)", async () => {
+    mocks.listGitCommitsToTarget.mockResolvedValue({
+      currentBranch: "main",
+      targetBranch: "main",
+      allChangedFiles: [],
+      commits: [],
+    });
+    mocks.listGitChanges.mockResolvedValue({
+      unstaged: [{ path: "apps/desktop/src/main/ipc.ts", kind: "modified", additions: 3, deletions: 1 }],
+      staged: [],
+      untracked: [],
+    });
+    // Branch comparison returns identical content — no committed diff
+    const sameContent = "const x = 1;\n";
+    mocks.readBranchComparisonDiff.mockResolvedValue({ oldContent: sameContent, newContent: sameContent });
+    mocks.readDiff.mockResolvedValue({ oldContent: "old content\n", newContent: "new content\n" });
+
+    render(<ChangesTabView />);
+
+    const scopeInput = await screen.findByRole("combobox", { name: "Change scope" });
+    fireEvent.change(scopeInput, { target: { value: "All changes" } });
+    fireEvent.mouseDown(scopeInput);
+    fireEvent.click(await screen.findByRole("option", { name: "All changes (1)" }));
+
+    fireEvent.click(screen.getByText("ipc.ts"));
+
+    await waitFor(() => {
+      expect(mocks.readBranchComparisonDiff).toHaveBeenCalled();
+      expect(mocks.readDiff).toHaveBeenCalledWith({
+        workspaceId: "workspace-1",
+        relativePath: "apps/desktop/src/main/ipc.ts",
+      });
+      expect(mocks.openTab).toHaveBeenCalledWith(
+        expect.objectContaining({
+          path: "apps/desktop/src/main/ipc.ts",
+          oldContent: "old content\n",
+          newContent: "new content\n",
+        }),
+      );
+    });
+  });
+
+  it("falls back to readDiff when branch comparison returns empty content for both sides", async () => {
+    mocks.listGitCommitsToTarget.mockResolvedValue({
+      currentBranch: "feature/work",
+      targetBranch: "main",
+      allChangedFiles: [{ path: "src/new.ts", status: "A" }],
+      commits: [
+        {
+          hash: "abc123456",
+          shortHash: "abc1234",
+          authorName: "Pat",
+          committedAt: "2026-03-23T08:00:00+00:00",
+          subject: "feat: add file",
+          changedFiles: [{ path: "src/new.ts", status: "A" }],
+        },
+      ],
+    });
+    // Branch comparison returns empty (file not on target branch, not yet committed)
+    mocks.readBranchComparisonDiff.mockResolvedValue({ oldContent: "", newContent: "" });
+    mocks.readDiff.mockResolvedValue({ oldContent: "", newContent: "const x = 1;\n" });
+
+    render(<ChangesTabView />);
+
+    const scopeInput = await screen.findByRole("combobox", { name: "Change scope" });
+    fireEvent.change(scopeInput, { target: { value: "All changes" } });
+    fireEvent.mouseDown(scopeInput);
+    fireEvent.click(await screen.findByRole("option", { name: "All changes (1)" }));
+
+    fireEvent.click(screen.getByText("new.ts"));
+
+    await waitFor(() => {
+      expect(mocks.readBranchComparisonDiff).toHaveBeenCalled();
+      expect(mocks.readDiff).toHaveBeenCalledWith({
+        workspaceId: "workspace-1",
+        relativePath: "src/new.ts",
+      });
+      expect(mocks.openTab).toHaveBeenCalledWith(
+        expect.objectContaining({
+          path: "src/new.ts",
+          newContent: "const x = 1;\n",
+        }),
+      );
+    });
+  });
+
   it("removes commit editor controls from the active changes pane", async () => {
     render(<ChangesTabView />);
 
@@ -291,7 +387,12 @@ describe("ChangesTabView", () => {
     mocks.listGitCommitsToTarget.mockResolvedValue({
       currentBranch: "feature/work",
       targetBranch: "main",
-      allChangedFiles: [" src\\a.ts ", "src/a.ts", "src/b.ts", ""],
+      allChangedFiles: [
+        { path: " src\\a.ts ", status: "M" },
+        { path: "src/a.ts", status: "M" },
+        { path: "src/b.ts", status: "A" },
+        { path: "", status: "M" },
+      ],
       commits: [],
     });
     mocks.readBranchComparisonDiff.mockResolvedValue({ oldContent: "old", newContent: "new" });
@@ -419,7 +520,10 @@ describe("ChangesTabView", () => {
     mocks.listGitCommitsToTarget.mockResolvedValue({
       currentBranch: "feature/work",
       targetBranch: "main",
-      allChangedFiles: ["src/shared.ts", "src/other.ts"],
+      allChangedFiles: [
+        { path: "src/shared.ts", status: "M" },
+        { path: "src/other.ts", status: "A" },
+      ],
       commits: [],
     });
 

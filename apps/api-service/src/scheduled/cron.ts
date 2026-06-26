@@ -83,7 +83,11 @@ function expandToken(token: string, min: number, max: number, label: string): nu
 
   if (step === null) return values;
 
-  const start = values[0]!;
+  const [start] = values;
+  if (start === undefined) {
+    return values;
+  }
+
   return values.filter((v) => (v - start) % step === 0);
 }
 

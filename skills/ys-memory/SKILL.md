@@ -108,9 +108,11 @@ Before ANY other action:
 When you need to look up any project context — past session memory,
 architecture decisions, task history, learned discoveries, etc. — all indexed
 from `.my-context/`:
-1. Run `yishan memory search --output json --project-id $YISHAN_PROJECT_ID "<query>"` from the workspace root. Use 1-3 keywords.
+1. Run `yishan memory search --output json --project-id $YISHAN_PROJECT_ID "<query>"` from the workspace root.
+   Use 1-3 keywords. Multi-word queries OR-search each keyword independently —
+   `"permission deadlock"` matches any doc containing either word.
 2. Read the returned paths for full content.
-3. If search returns 0 — retry with fewer/rarer terms.
+3. If results are too broad, retry with a single more-specific keyword.
 
 **Command:** `yishan memory search --output json --project-id $YISHAN_PROJECT_ID <query>`
 

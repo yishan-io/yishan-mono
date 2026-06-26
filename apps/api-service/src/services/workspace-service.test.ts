@@ -1,3 +1,4 @@
+import type { AppDb } from "@/db/client";
 import { workspaces } from "@/db/schema";
 import {
   OrganizationMembershipRequiredError,
@@ -47,11 +48,9 @@ const WORKSPACE_ROW = {
 };
 
 const stubProvisioner = {
-  enqueueWorkspaceProvision: vi
-    .fn()
-    .mockImplementation(async (request: { localPath: string }) => ({
-      localPath: request.localPath,
-    })),
+  enqueueWorkspaceProvision: vi.fn().mockImplementation(async (request: { localPath: string }) => ({
+    localPath: request.localPath,
+  })),
 } satisfies WorkspaceProvisioner;
 function makeOrgService(role: string | null = "member") {
   // biome-ignore lint/suspicious/noExplicitAny: stub
@@ -334,7 +333,7 @@ describe("WorkspaceService.listWorkspaces", () => {
           where: vi.fn().mockResolvedValue([]),
         }),
       }),
-    } as never;
+    } as unknown as AppDb;
     const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
 
     const result = await service.listWorkspaces({

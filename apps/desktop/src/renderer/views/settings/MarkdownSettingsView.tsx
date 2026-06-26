@@ -1,4 +1,4 @@
-import { MenuItem } from "@mui/material";
+import { MenuItem, Stack, Switch } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import {
   SettingsCard,
@@ -22,6 +22,8 @@ export function MarkdownSettingsView() {
   const setMarkdownPreviewFontSize = layoutStore((state) => state.setMarkdownPreviewFontSize);
   const markdownPreviewWidth = layoutStore((state) => state.markdownPreviewWidth);
   const setMarkdownPreviewWidth = layoutStore((state) => state.setMarkdownPreviewWidth);
+  const isMarkdownOutlineVisible = layoutStore((state) => state.isMarkdownOutlineVisible);
+  const setIsMarkdownOutlineVisible = layoutStore((state) => state.setIsMarkdownOutlineVisible);
 
   return (
     <>
@@ -93,6 +95,26 @@ export function MarkdownSettingsView() {
               <MenuItem value="readable">{t("settings.appearance.markdown.previewWidth.options.readable")}</MenuItem>
               <MenuItem value="full">{t("settings.appearance.markdown.previewWidth.options.full")}</MenuItem>
             </SettingsCompactSelect>
+          }
+        />
+        <SettingsControlRow
+          title={t("settings.appearance.markdown.outlineVisible.label")}
+          description={t("settings.appearance.markdown.outlineVisible.description")}
+          control={
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexShrink: 0 }}>
+              <Switch
+                checked={isMarkdownOutlineVisible}
+                onChange={(event) => {
+                  setIsMarkdownOutlineVisible(event.target.checked);
+                }}
+                slotProps={{
+                  input: {
+                    "aria-label": t("settings.appearance.markdown.outlineVisible.label"),
+                    role: "switch",
+                  },
+                }}
+              />
+            </Stack>
           }
         />
       </SettingsCard>

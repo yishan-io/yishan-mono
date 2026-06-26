@@ -31,11 +31,13 @@ type HourlyUsageRow struct {
 	InputTokens           int64
 	OutputTokens          int64
 	CachedInputTokens     int64
-	CachedWriteTokens    int64
+	CachedWriteTokens     int64
 	ReasoningTokens       int64
 	TotalTokens           int64
 	EventCount            int64
 	SessionCount          int64
+	TurnCount             int64
+	ToolCallCount         int64
 	AttributionConfidence AttributionConfidence
 	ScannerSourceKind     ScannerSourceKind
 	ScannerSourceID       string

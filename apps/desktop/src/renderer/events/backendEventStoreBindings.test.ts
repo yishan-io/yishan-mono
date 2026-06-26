@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RpcFrontendMessagePayload } from "../../shared/contracts/rpcSchema";
+import {
+  __resetExplicitlyClosedTerminalTabIdsForTests,
+  recordExplicitlyClosedTerminalTabId,
+} from "../helpers/terminalCloseTombstones";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
 import { createBackendEventStoreBindings } from "./backendEventStoreBindings";
@@ -218,11 +222,13 @@ describe("createBackendEventStoreBindings", () => {
   beforeEach(() => {
     tabStore.setState(initialTabStoreState, true);
     workspaceStore.setState(initialWorkspaceStoreState, true);
+    __resetExplicitlyClosedTerminalTabIdsForTests();
   });
 
   afterEach(() => {
     tabStore.setState(initialTabStoreState, true);
     workspaceStore.setState(initialWorkspaceStoreState, true);
+    __resetExplicitlyClosedTerminalTabIdsForTests();
   });
 
   it("subscribes once and forwards git changed events to store action", () => {
@@ -975,6 +981,91 @@ describe("createBackendEventStoreBindings", () => {
     });
 
     expect(tabStore.getState().tabs).toHaveLength(0);
+
+    stopBindings();
+  });
+
+  it("ignores late created terminal events for explicitly closed tabs and cleans up the orphan session", async () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const terminalSessionHarness = createTerminalSessionChangedHarness();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+    const closeTerminalSession = vi.fn(async () => undefined);
+
+    workspaceStore.setState({
+      ...workspaceStore.getState(),
+      workspaces: [
+        {
+          id: "workspace-1",
+          name: "Workspace 1",
+          title: "Workspace 1",
+          repoId: "repo-1",
+          sourceBranch: "main",
+          branch: "main",
+          summaryId: "summary-1",
+        },
+      ],
+      selectedWorkspaceId: "workspace-1",
+    });
+    tabStore.setState({
+      ...tabStore.getState(),
+      tabs: [],
+      selectedTabId: "",
+      selectedTabIdByWorkspaceId: {},
+    });
+    recordExplicitlyClosedTerminalTabId("tab-closed-1");
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      subscribeTerminalSessionChanged: terminalSessionHarness.subscribeTerminalSessionChanged,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+      closeTerminalSession,
+    });
+
+    const stopBindings = startBindings();
+    terminalSessionHarness.emit({
+      action: "created",
+      sessionId: "term-orphan-1",
+      workspaceId: "workspace-1",
+      tabId: "tab-closed-1",
+      paneId: "pane-tab-closed-1",
+      pid: 1234,
+      status: "running",
+    });
+    await Promise.resolve();
+
+    expect(tabStore.getState().tabs).toHaveLength(0);
+    expect(closeTerminalSession).toHaveBeenCalledWith("term-orphan-1");
+
+    terminalSessionHarness.emit({
+      action: "created",
+      sessionId: "term-cross-client-1",
+      workspaceId: "workspace-1",
+      tabId: "tab-closed-1",
+      paneId: "pane-tab-closed-1",
+      pid: 5678,
+      status: "running",
+    });
+
+    expect(tabStore.getState().tabs).toHaveLength(1);
+    expect(tabStore.getState().tabs[0]).toMatchObject({
+      kind: "terminal",
+      workspaceId: "workspace-1",
+      data: { sessionId: "term-cross-client-1" },
+    });
 
     stopBindings();
   });

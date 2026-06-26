@@ -9,7 +9,9 @@ import {
   playNotificationSound,
 } from "../commands/notificationCommands";
 import { loadWorkspaceSnapshot } from "../commands/projectCommands";
-import type { DesktopAgentKind } from "../helpers/agentSettings";
+import { type DesktopAgentKind, isDesktopAgentKind } from "../helpers/agentSettings";
+import { getErrorMessage } from "../helpers/errorHelpers";
+import { consumeExplicitlyClosedTerminalTabId } from "../helpers/terminalCloseTombstones";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../rpc/rpcTransport";
 import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../store/chatStore";
@@ -66,6 +68,7 @@ type BackendEventStoreBindingsDependencies = {
       paneId?: string;
     }) => void,
   ) => () => void;
+  subscribeTerminalAgentChanged?: (listener: (payload: { tabId: string; agent: string }) => void) => () => void;
   listWorkspaceWorktreePaths?: () => string[];
   resolveWorkspaceIdByWorktreePath?: (worktreePath: string) => string | undefined;
   refreshWorkspaceCurrentBranch?: (workspaceId: string, currentBranch?: string) => Promise<void>;
@@ -85,6 +88,7 @@ type BackendEventStoreBindingsDependencies = {
   openBrowserTab?: (payload: { url: string; workspaceId: string }) => void;
   dispatchSystemNotification: (input: { title: string; body?: string }) => Promise<void>;
   playNotificationSound: (input: NotificationSoundPayload) => Promise<void>;
+  closeTerminalSession?: (sessionId: string) => Promise<void>;
   getNotificationPreferences?: () => Promise<NotificationPreferences>;
   isRelevantTerminalFocused?: (payload: NotificationEventPayload) => boolean;
   resolveWorkspaceLabel?: (workspaceId: string) => string | undefined;
@@ -184,6 +188,15 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   subscribeTerminalSessionChanged: (listener) => {
     return subscribeBackendEvent("terminal.session.changed", (event) => {
       if (event.source !== "terminalSessionChanged") {
+        return;
+      }
+
+      listener(event.payload);
+    });
+  },
+  subscribeTerminalAgentChanged: (listener) => {
+    return subscribeBackendEvent("terminal.agent.changed", (event) => {
+      if (event.source !== "terminalAgentChanged") {
         return;
       }
 
@@ -291,6 +304,10 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   },
   playNotificationSound: async (input) => {
     await playNotificationSound(input);
+  },
+  closeTerminalSession: async (sessionId) => {
+    const client = await getDaemonClient();
+    await client.terminal.closeSession({ sessionId });
   },
   getNotificationPreferences,
   isRelevantTerminalFocused: isRelevantTerminalFocusedForNotification,
@@ -746,7 +763,16 @@ export function createBackendEventStoreBindings(
       }) ?? (() => {});
     const unsubscribeTerminalSessionChanged =
       resolvedDependencies.subscribeTerminalSessionChanged?.((payload) => {
-        handleTerminalSessionEvent(payload);
+        handleTerminalSessionEvent(payload, resolvedDependencies);
+      }) ?? (() => {});
+    const unsubscribeTerminalAgentChanged =
+      resolvedDependencies.subscribeTerminalAgentChanged?.((payload) => {
+        const tabId = payload.tabId.trim();
+        if (!tabId) {
+          return;
+        }
+        const agentKind = isDesktopAgentKind(payload.agent) ? payload.agent : undefined;
+        tabStore.getState().setTerminalTabAgentKind(tabId, agentKind);
       }) ?? (() => {});
 
     return () => {
@@ -762,6 +788,7 @@ export function createBackendEventStoreBindings(
       unsubscribeWorkspaceStateChanged();
       unsubscribeOpenBrowserUrl();
       unsubscribeTerminalSessionChanged();
+      unsubscribeTerminalAgentChanged();
       if (workspaceSnapshotRefreshTimer) {
         clearTimeout(workspaceSnapshotRefreshTimer);
       }
@@ -774,13 +801,16 @@ export function createBackendEventStoreBindings(
   };
 }
 
-function handleTerminalSessionEvent(payload: {
-  action: "created" | "destroyed";
-  sessionId: string;
-  workspaceId: string;
-  tabId?: string;
-  paneId?: string;
-}): void {
+function handleTerminalSessionEvent(
+  payload: {
+    action: "created" | "destroyed";
+    sessionId: string;
+    workspaceId: string;
+    tabId?: string;
+    paneId?: string;
+  },
+  dependencies: Pick<BackendEventStoreBindingsDependencies, "closeTerminalSession">,
+): void {
   const tabState = tabStore.getState();
 
   if (payload.action === "created") {
@@ -793,6 +823,17 @@ function handleTerminalSessionEvent(payload: {
 
     const requestedTabId = payload.tabId?.trim();
     if (requestedTabId) {
+      if (consumeExplicitlyClosedTerminalTabId(requestedTabId)) {
+        void dependencies.closeTerminalSession?.(payload.sessionId).catch((error) => {
+          console.warn(
+            "[backendEventStoreBindings] Failed to clean up orphan terminal session after local close",
+            payload.sessionId,
+            getErrorMessage(error),
+          );
+        });
+        return;
+      }
+
       const requestedTerminalTab = tabState.tabs.find(
         (tab) => tab.id === requestedTabId && tab.workspaceId === payload.workspaceId && tab.kind === "terminal",
       );

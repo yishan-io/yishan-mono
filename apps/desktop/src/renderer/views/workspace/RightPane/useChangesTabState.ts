@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type {
   ProjectCommitComparisonCommit,
   ProjectCommitComparisonData,
+  ProjectCommitComparisonFile,
   ProjectCommitComparisonSelection,
 } from "../../../components/ProjectCommitComparison";
 import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
@@ -14,11 +15,11 @@ import {
   buildCommitChangesSection,
   createEmptyRepoChangesBySection,
   createEmptyRepoCommitComparison,
-  dedupeChangedPaths,
   dedupeRepoChangeFiles,
   normalizeProjectGitChangeKind,
   normalizeWorkspaceRelativePath,
   reconcileRenameLikePairs,
+  toCommitFile,
 } from "./changesTabHelpers";
 
 export { normalizeWorkspaceRelativePath } from "./changesTabHelpers";
@@ -80,7 +81,17 @@ export function useChangesTabState() {
           targetBranch,
         });
         if (commitComparisonRequestIdRef.current === requestId) {
-          setRepoCommitComparison(commitComparison);
+          // Normalize wire response: old daemons send string[] for allChangedFiles
+          // and changedFiles; new daemons send GitCommitFile[].
+          const normalized: ProjectCommitComparisonData = {
+            ...commitComparison,
+            allChangedFiles: (commitComparison.allChangedFiles as unknown[]).map(toCommitFile),
+            commits: commitComparison.commits.map((c) => ({
+              ...c,
+              changedFiles: (c.changedFiles as unknown[]).map(toCommitFile),
+            })),
+          };
+          setRepoCommitComparison(normalized);
         }
       } catch (error) {
         if (commitComparisonRequestIdRef.current === requestId) {
@@ -221,12 +232,10 @@ export function useChangesTabState() {
   );
 
   const mergedAllChangedFiles = useMemo(() => {
-    const allPaths = new Set<string>();
-    for (const path of repoCommitComparison.allChangedFiles) {
-      const normalized = normalizeWorkspaceRelativePath(path);
-      if (normalized) {
-        allPaths.add(normalized);
-      }
+    const seen = new Map<string, ProjectCommitComparisonFile>();
+    for (const f of repoCommitComparison.allChangedFiles) {
+      const norm = normalizeWorkspaceRelativePath(f.path);
+      if (norm) seen.set(norm, { ...f, path: norm });
     }
     for (const section of [
       repoChangesBySection.staged,
@@ -234,13 +243,13 @@ export function useChangesTabState() {
       repoChangesBySection.untracked,
     ]) {
       for (const file of section) {
-        const normalized = normalizeWorkspaceRelativePath(file.path);
-        if (normalized) {
-          allPaths.add(normalized);
+        const norm = normalizeWorkspaceRelativePath(file.path);
+        if (norm && !seen.has(norm)) {
+          seen.set(norm, { path: norm, status: "M" });
         }
       }
     }
-    return [...allPaths];
+    return [...seen.values()];
   }, [
     repoCommitComparison.allChangedFiles,
     repoChangesBySection.staged,

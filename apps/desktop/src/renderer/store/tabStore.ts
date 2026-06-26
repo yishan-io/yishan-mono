@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import type { DesktopAgentKind } from "../helpers/agentSettings";
 import { generateId } from "../helpers/generateId";
 import { resolveSelectedTabIdForWorkspace } from "./tabs";
 import {
@@ -47,6 +48,8 @@ export type TabStoreState = {
   closeAllTerminalTabs: () => void;
   /** Persists one backend terminal session id on one terminal tab. */
   setTerminalTabSessionId: (tabId: string, sessionId: string) => void;
+  /** Updates the detected agent kind on one terminal tab. Pass undefined to clear. */
+  setTerminalTabAgentKind: (tabId: string, agentKind: DesktopAgentKind | undefined) => void;
   setBrowserTabFaviconUrl: (tabId: string, faviconUrl: string | undefined) => void;
   /** Persists the current navigated URL on a browser tab so it survives unmount/remount cycles. */
   setBrowserTabUrl: (tabId: string, url: string) => void;
@@ -221,6 +224,18 @@ export const tabStore = create<TabStoreState>()(
                   },
                 }
               : tab,
+          ),
+        }));
+      },
+      setTerminalTabAgentKind: (tabId, agentKind) => {
+        const normalizedTabId = tabId.trim();
+        if (!normalizedTabId) {
+          return;
+        }
+
+        set((state) => ({
+          tabs: state.tabs.map((tab: WorkspaceTab) =>
+            tab.id === normalizedTabId && tab.kind === "terminal" ? { ...tab, data: { ...tab.data, agentKind } } : tab,
           ),
         }));
       },

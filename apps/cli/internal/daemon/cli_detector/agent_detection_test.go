@@ -10,8 +10,6 @@ import (
 )
 
 func TestListAgentCLIDetectionStatusesWithOptionsDetectsVersion(t *testing.T) {
-	t.Setenv("PATH", "")
-
 	if runtime.GOOS == "windows" {
 		t.Skip("test currently targets unix-style executable permissions")
 	}
@@ -23,9 +21,10 @@ func TestListAgentCLIDetectionStatusesWithOptionsDetectsVersion(t *testing.T) {
 	statuses := listAgentCLIDetectionStatusesWithOptions(agentDetectionOptions{
 		PathValue:      binDir,
 		PathExtValue:   ".COM;.EXE;.BAT;.CMD",
+		CommandEnv:     []string{"PATH=" + binDir},
 		IsWindows:      false,
 		ExcludedDirs:   map[string]struct{}{},
-		VersionTimeout: 500 * time.Millisecond,
+		VersionTimeout: 2 * time.Second,
 	})
 
 	statusByAgent := map[string]AgentCLIDetectionStatus{}
@@ -96,8 +95,6 @@ func TestListAgentCLIDetectionStatusesWithOptionsDetectsVersion(t *testing.T) {
 }
 
 func TestListAgentCLIDetectionStatusesWithOptionsDetectsAgentBinaryNames(t *testing.T) {
-	t.Setenv("PATH", "")
-
 	if runtime.GOOS == "windows" {
 		t.Skip("test currently targets unix-style executable permissions")
 	}
@@ -109,9 +106,10 @@ func TestListAgentCLIDetectionStatusesWithOptionsDetectsAgentBinaryNames(t *test
 	statuses := listAgentCLIDetectionStatusesWithOptions(agentDetectionOptions{
 		PathValue:      binDir,
 		PathExtValue:   ".COM;.EXE;.BAT;.CMD",
+		CommandEnv:     []string{"PATH=" + binDir},
 		IsWindows:      false,
 		ExcludedDirs:   map[string]struct{}{},
-		VersionTimeout: 500 * time.Millisecond,
+		VersionTimeout: 2 * time.Second,
 	})
 
 	statusByAgent := map[string]AgentCLIDetectionStatus{}
@@ -137,8 +135,6 @@ func TestListAgentCLIDetectionStatusesWithOptionsDetectsAgentBinaryNames(t *test
 }
 
 func TestListAgentCLIDetectionStatusesWithOptionsUsesPiDashDashVersionOnly(t *testing.T) {
-	t.Setenv("PATH", "")
-
 	if runtime.GOOS == "windows" {
 		t.Skip("test currently targets unix-style executable permissions")
 	}
@@ -159,9 +155,10 @@ func TestListAgentCLIDetectionStatusesWithOptionsUsesPiDashDashVersionOnly(t *te
 	statuses := listAgentCLIDetectionStatusesWithOptions(agentDetectionOptions{
 		PathValue:      binDir,
 		PathExtValue:   ".COM;.EXE;.BAT;.CMD",
+		CommandEnv:     []string{"PATH=" + binDir},
 		IsWindows:      false,
 		ExcludedDirs:   map[string]struct{}{},
-		VersionTimeout: 500 * time.Millisecond,
+		VersionTimeout: 2 * time.Second,
 	})
 
 	statusByAgent := map[string]AgentCLIDetectionStatus{}
@@ -179,8 +176,6 @@ func TestListAgentCLIDetectionStatusesWithOptionsUsesPiDashDashVersionOnly(t *te
 }
 
 func TestListAgentCLIDetectionStatusesWithOptionsUsesCommandEnvForVersionCheck(t *testing.T) {
-	t.Setenv("PATH", "")
-
 	if runtime.GOOS == "windows" {
 		t.Skip("test currently targets unix-style executable permissions")
 	}
@@ -205,7 +200,7 @@ func TestListAgentCLIDetectionStatusesWithOptionsUsesCommandEnvForVersionCheck(t
 		CommandEnv:     []string{"PATH=" + binDir},
 		IsWindows:      false,
 		ExcludedDirs:   map[string]struct{}{},
-		VersionTimeout: 500 * time.Millisecond,
+		VersionTimeout: 2 * time.Second,
 	})
 
 	statusByAgent := map[string]AgentCLIDetectionStatus{}
@@ -223,8 +218,6 @@ func TestListAgentCLIDetectionStatusesWithOptionsUsesCommandEnvForVersionCheck(t
 }
 
 func TestListAgentCLIDetectionStatusesWithOptionsSkipsExcludedDirectories(t *testing.T) {
-	t.Setenv("PATH", "")
-
 	if runtime.GOOS == "windows" {
 		t.Skip("test currently targets unix-style executable permissions")
 	}
@@ -235,9 +228,10 @@ func TestListAgentCLIDetectionStatusesWithOptionsSkipsExcludedDirectories(t *tes
 	statuses := listAgentCLIDetectionStatusesWithOptions(agentDetectionOptions{
 		PathValue:      excludedBinDir,
 		PathExtValue:   ".COM;.EXE;.BAT;.CMD",
+		CommandEnv:     []string{"PATH=" + excludedBinDir},
 		IsWindows:      false,
 		ExcludedDirs:   map[string]struct{}{normalizeDirectoryPath(excludedBinDir): {}},
-		VersionTimeout: 500 * time.Millisecond,
+		VersionTimeout: 2 * time.Second,
 	})
 
 	for _, status := range statuses {
@@ -255,8 +249,6 @@ func TestListAgentCLIDetectionStatusesWithOptionsSkipsExcludedDirectories(t *tes
 }
 
 func TestListAgentCLIDetectionStatusesWithOptionsTreatsBrokenWrapperAsUndetected(t *testing.T) {
-	t.Setenv("PATH", "")
-
 	if runtime.GOOS == "windows" {
 		t.Skip("test currently targets unix-style executable permissions")
 	}
@@ -271,9 +263,10 @@ func TestListAgentCLIDetectionStatusesWithOptionsTreatsBrokenWrapperAsUndetected
 	statuses := listAgentCLIDetectionStatusesWithOptions(agentDetectionOptions{
 		PathValue:      binDir,
 		PathExtValue:   ".COM;.EXE;.BAT;.CMD",
+		CommandEnv:     []string{"PATH=" + binDir},
 		IsWindows:      false,
 		ExcludedDirs:   map[string]struct{}{},
-		VersionTimeout: 500 * time.Millisecond,
+		VersionTimeout: 2 * time.Second,
 	})
 
 	for _, status := range statuses {

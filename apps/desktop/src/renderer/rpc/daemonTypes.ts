@@ -456,19 +456,25 @@ export type GitBranchStatusResponse = {
   aheadCount: number;
 };
 
+export type GitCommitFile = {
+  path: string;
+  oldPath?: string;
+  status: string; // "A" | "M" | "D" | "R" | "C" | ...
+};
+
 export type GitCommit = {
   hash: string;
   shortHash: string;
   authorName: string;
   committedAt: string;
   subject: string;
-  changedFiles: string[];
+  changedFiles: GitCommitFile[];
 };
 
 export type GitCommitComparisonResponse = {
   currentBranch: string;
   targetBranch: string;
-  allChangedFiles: string[];
+  allChangedFiles: GitCommitFile[];
   commits: GitCommit[];
 };
 

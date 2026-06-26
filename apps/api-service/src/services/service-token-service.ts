@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, desc } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 
 import { randomToken, sha256Hex } from "@/auth/security";
 import type { AppDb } from "@/db/client";
@@ -17,7 +17,14 @@ export class ServiceTokenService {
     actorUserId: string;
     name: string;
     expiresAt?: Date;
-  }): Promise<{ id: string; token: string; tokenPrefix: string; name: string; expiresAt: Date | null; createdAt: Date }> {
+  }): Promise<{
+    id: string;
+    token: string;
+    tokenPrefix: string;
+    name: string;
+    expiresAt: Date | null;
+    createdAt: Date;
+  }> {
     const raw = randomToken(32);
     const token = SERVICE_TOKEN_PREFIX + raw;
     const tokenHash = await sha256Hex(token);
@@ -74,13 +81,7 @@ export class ServiceTokenService {
     const rows = await this.db
       .select({ id: serviceTokens.id })
       .from(serviceTokens)
-      .where(
-        and(
-          eq(serviceTokens.id, tokenId),
-          eq(serviceTokens.userId, actorUserId),
-          isNull(serviceTokens.revokedAt),
-        ),
-      )
+      .where(and(eq(serviceTokens.id, tokenId), eq(serviceTokens.userId, actorUserId), isNull(serviceTokens.revokedAt)))
       .limit(1);
 
     if (!rows[0]) {
@@ -112,12 +113,7 @@ export class ServiceTokenService {
       })
       .from(serviceTokens)
       .innerJoin(users, eq(users.id, serviceTokens.userId))
-      .where(
-        and(
-          eq(serviceTokens.tokenHash, tokenHash),
-          isNull(serviceTokens.revokedAt),
-        ),
-      )
+      .where(and(eq(serviceTokens.tokenHash, tokenHash), isNull(serviceTokens.revokedAt)))
       .limit(1);
 
     const row = rows[0];

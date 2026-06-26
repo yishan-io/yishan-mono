@@ -94,7 +94,6 @@ export class ProjectService {
       if (!repoUrl) {
         throw new ProjectInvalidGitUrlError("");
       }
-
       const inferred = inferRepoSource(repoUrl);
       repoProvider = inferred.repoProvider;
       repoKey = inferred.repoKey;

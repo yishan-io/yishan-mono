@@ -415,6 +415,10 @@
             "readable": "易读列宽",
             "full": "全宽"
           }
+        },
+        "outlineVisible": {
+          "label": "显示 Markdown 大纲",
+          "description": "在 Markdown 文件旁显示文档大纲。"
         }
       }
     },
@@ -1157,7 +1161,7 @@
     }
   },
   "scheduledJob": {
-    "title": "自动驾驶",
+    "title": "定时任务",
     "loadError": "加载自动任务失败。",
     "empty": "当前组织尚未配置自动任务。",
     "status": {
@@ -1305,7 +1309,9 @@
       "noData": "暂无令牌用量数据",
       "cached": "已缓存",
       "uncached": "未缓存",
-      "total": "合计"
+      "total": "合计",
+      "turns": "轮次",
+      "toolCalls": "工具调用"
     },
     "agentUsage": {
       "title": "智能体用量",

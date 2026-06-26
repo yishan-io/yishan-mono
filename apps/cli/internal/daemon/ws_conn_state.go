@@ -16,6 +16,8 @@ type wsConnState struct {
 	conn                            *websocket.Conn
 	writeMu                         sync.Mutex
 	closeOnce                       sync.Once
+	closeHooksMu                    sync.Mutex
+	closeHooks                      []func()
 	subsMu                          sync.Mutex
 	subscriptions                   map[string]subscriptionHandle
 	eventsMu                        sync.Mutex
@@ -87,6 +89,15 @@ func (c *wsConnState) Notify(method string, params any) error {
 
 func (c *wsConnState) Close() {
 	c.closeOnce.Do(func() {
+		c.closeHooksMu.Lock()
+		hooks := append([]func(){}, c.closeHooks...)
+		c.closeHooks = nil
+		c.closeHooksMu.Unlock()
+
+		for _, hook := range hooks {
+			hook()
+		}
+
 		c.subsMu.Lock()
 		handles := make([]subscriptionHandle, 0, len(c.subscriptions))
 		for key, handle := range c.subscriptions {
@@ -101,6 +112,12 @@ func (c *wsConnState) Close() {
 		c.DetachEventStream()
 		_ = c.conn.Close()
 	})
+}
+
+func (c *wsConnState) AddCloseHook(hook func()) {
+	c.closeHooksMu.Lock()
+	c.closeHooks = append(c.closeHooks, hook)
+	c.closeHooksMu.Unlock()
 }
 
 func (c *wsConnState) AttachSubscription(sessionID string, subscriptionID uint64, events <-chan terminal.Event, cancel func(sessionID string, subscriptionID uint64)) {

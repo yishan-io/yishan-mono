@@ -6,19 +6,19 @@ import type {
   OrganizationProjectListQueryInput,
   OrganizationProjectParamsInput,
   ProjectWorkspaceParamsInput,
-  UpdateProjectBodyInput
+  UpdateProjectBodyInput,
 } from "@/validation/project";
 
 export async function listProjectsHandler(
   c: AppContext,
   params: OrganizationProjectParamsInput,
-  query: OrganizationProjectListQueryInput
+  query: OrganizationProjectListQueryInput,
 ) {
   const actorUser = c.get("sessionUser");
   const projects = await c.get("services").project.listProjects({
     actorUserId: actorUser.id,
     organizationId: params.orgId,
-    withWorkspaces: query.withWorkspaces === true
+    withWorkspaces: query.withWorkspaces === true,
   });
 
   return c.json({ projects });
@@ -27,7 +27,7 @@ export async function listProjectsHandler(
 export async function createProjectHandler(
   c: AppContext,
   params: OrganizationProjectParamsInput,
-  body: CreateProjectBodyInput
+  body: CreateProjectBodyInput,
 ) {
   const actorUser = c.get("sessionUser");
   const project = await c.get("services").project.createProject({
@@ -55,7 +55,7 @@ export async function deleteProjectHandler(c: AppContext, params: ProjectWorkspa
   await c.get("services").project.deleteProject({
     actorUserId: actorUser.id,
     organizationId: params.orgId,
-    projectId: params.projectId
+    projectId: params.projectId,
   });
   await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
     organizationId: params.orgId,
@@ -70,7 +70,7 @@ export async function deleteProjectHandler(c: AppContext, params: ProjectWorkspa
 export async function updateProjectHandler(
   c: AppContext,
   params: ProjectWorkspaceParamsInput,
-  body: UpdateProjectBodyInput
+  body: UpdateProjectBodyInput,
 ) {
   const actorUser = c.get("sessionUser");
   const project = await c.get("services").project.updateProject({
@@ -83,7 +83,7 @@ export async function updateProjectHandler(
     setupScript: body.setupScript,
     postScript: body.postScript,
     commands: body.commands,
-    contextEnabled: body.contextEnabled
+    contextEnabled: body.contextEnabled,
   });
   await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
     organizationId: params.orgId,

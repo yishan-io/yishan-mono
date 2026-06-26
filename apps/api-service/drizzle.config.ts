@@ -10,8 +10,8 @@ export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "./drizzle",
   dbCredentials: {
-    url: databaseUrl
+    url: databaseUrl,
   },
   strict: true,
-  verbose: true
+  verbose: true,
 });

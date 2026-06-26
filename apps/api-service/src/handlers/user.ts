@@ -22,7 +22,9 @@ export async function meHandler(c: AppContext) {
 
 export async function updateLanguagePreferenceHandler(c: AppContext, body: UpdateLanguagePreferenceBodyInput) {
   const actorUser = c.get("sessionUser");
-  const languagePreference = await c.get("services").user.updateLanguagePreference(actorUser.id, body.languagePreference);
+  const languagePreference = await c
+    .get("services")
+    .user.updateLanguagePreference(actorUser.id, body.languagePreference);
   return c.json({ languagePreference });
 }
 

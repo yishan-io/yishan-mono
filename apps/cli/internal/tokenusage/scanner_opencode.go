@@ -35,6 +35,17 @@ type openCodeMessageRow struct {
 	TokensReasoning  int64
 	TokensCacheRead  int64
 	TokensCacheWrite int64
+	ToolCallCount    int64
+}
+
+type openCodeTurnRow struct {
+	SessionID    string
+	MsgTimestamp string
+	Directory    string
+	WorkspaceDir string
+	Worktree     string
+	SessionModel string
+	TurnCount    int64
 }
 
 func ScanOpenCodeHourlyUsage(ctx context.Context, input ScanInput) ([]HourlyUsageRow, error) {
@@ -44,12 +55,19 @@ func ScanOpenCodeHourlyUsage(ctx context.Context, input ScanInput) ([]HourlyUsag
 	}
 	buckets := make(map[hourlyKey]*hourlyAccumulator)
 	for _, databasePath := range databasePaths {
-		rows, rowErr := queryOpenCodeMessageRows(ctx, databasePath, input.ScanSinceUnixMilli)
+		messageRows, rowErr := queryOpenCodeMessageRows(ctx, databasePath, input.ScanSinceUnixMilli)
 		if rowErr != nil {
 			continue
 		}
-		for _, msgRow := range rows {
+		for _, msgRow := range messageRows {
 			applyOpenCodeMessageRow(msgRow, databasePath, input, input.Worktrees, buckets)
+		}
+		turnRows, turnErr := queryOpenCodeTurnRows(ctx, databasePath, input.ScanSinceUnixMilli)
+		if turnErr != nil {
+			continue
+		}
+		for _, turnRow := range turnRows {
+			applyOpenCodeTurnRow(turnRow, databasePath, input, input.Worktrees, buckets)
 		}
 	}
 	return materializeHourlyRows(buckets, input), nil
@@ -121,11 +139,18 @@ func queryOpenCodeMessageRows(ctx context.Context, databasePath string, scanSinc
 		"  COALESCE(json_extract(m.data, '$.tokens.output'), 0) AS tokens_output,",
 		"  COALESCE(json_extract(m.data, '$.tokens.reasoning'), 0) AS tokens_reasoning,",
 		"  COALESCE(json_extract(m.data, '$.tokens.cache.read'), 0) AS tokens_cache_read,",
-		"  COALESCE(json_extract(m.data, '$.tokens.cache.write'), 0) AS tokens_cache_write",
+		"  COALESCE(json_extract(m.data, '$.tokens.cache.write'), 0) AS tokens_cache_write,",
+		"  COALESCE(tool_parts.tool_call_count, 0) AS tool_call_count",
 		"FROM message m",
 		"JOIN session s ON s.id = m.session_id",
 		"LEFT JOIN workspace w ON w.id = s.workspace_id",
 		"LEFT JOIN project p ON p.id = s.project_id",
+		"LEFT JOIN (",
+		"  SELECT message_id, COUNT(*) AS tool_call_count",
+		"  FROM part",
+		"  WHERE json_extract(data, '$.type') = 'tool'",
+		"  GROUP BY message_id",
+		") AS tool_parts ON tool_parts.message_id = m.id",
 		"WHERE json_extract(m.data, '$.role') = 'assistant'",
 		windowClause,
 		"  AND (",
@@ -159,6 +184,7 @@ func queryOpenCodeMessageRows(ctx context.Context, databasePath string, scanSinc
 		TokensReasoning  int64  `json:"tokens_reasoning"`
 		TokensCacheRead  int64  `json:"tokens_cache_read"`
 		TokensCacheWrite int64  `json:"tokens_cache_write"`
+		ToolCallCount    int64  `json:"tool_call_count"`
 	}
 	parsedRows := make([]sqliteRow, 0)
 	if err := json.Unmarshal(rawOutput, &parsedRows); err != nil {
@@ -178,6 +204,70 @@ func queryOpenCodeMessageRows(ctx context.Context, databasePath string, scanSinc
 			TokensReasoning:  row.TokensReasoning,
 			TokensCacheRead:  row.TokensCacheRead,
 			TokensCacheWrite: row.TokensCacheWrite,
+			ToolCallCount:    row.ToolCallCount,
+		})
+	}
+	return rows, nil
+}
+
+func queryOpenCodeTurnRows(ctx context.Context, databasePath string, scanSinceMillis int64) ([]openCodeTurnRow, error) {
+	windowClause := ""
+	if scanSinceMillis > 0 {
+		windowClause = "AND m.time_created >= " + strconv.FormatInt(scanSinceMillis, 10)
+	}
+	query := strings.Join([]string{
+		"SELECT",
+		"  m.session_id AS session_id,",
+		"  m.time_created AS msg_time,",
+		"  COALESCE(s.directory, '') AS directory,",
+		"  COALESCE(w.directory, '') AS workspace_directory,",
+		"  COALESCE(p.worktree, '') AS worktree,",
+		"  COALESCE(s.model, 'unknown') AS session_model,",
+		"  1 AS turn_count",
+		"FROM message m",
+		"JOIN session s ON s.id = m.session_id",
+		"LEFT JOIN workspace w ON w.id = s.workspace_id",
+		"LEFT JOIN project p ON p.id = s.project_id",
+		"JOIN part pt ON pt.message_id = m.id AND pt.session_id = m.session_id",
+		"WHERE json_extract(m.data, '$.role') = 'user'",
+		windowClause,
+		"  AND json_extract(pt.data, '$.type') = 'text'",
+		"GROUP BY m.id, m.session_id, m.time_created, s.directory, w.directory, p.worktree, s.model",
+		"ORDER BY m.time_created ASC",
+	}, " ")
+
+	cmd := exec.CommandContext(ctx, "sqlite3", "-json", databasePath, query)
+	rawOutput, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("query opencode turn rows from %q: %w", databasePath, err)
+	}
+	if len(rawOutput) == 0 {
+		return nil, nil
+	}
+
+	type sqliteRow struct {
+		SessionID    string `json:"session_id"`
+		MsgTime      any    `json:"msg_time"`
+		Directory    string `json:"directory"`
+		WorkspaceDir string `json:"workspace_directory"`
+		Worktree     string `json:"worktree"`
+		SessionModel string `json:"session_model"`
+		TurnCount    int64  `json:"turn_count"`
+	}
+	parsedRows := make([]sqliteRow, 0)
+	if err := json.Unmarshal(rawOutput, &parsedRows); err != nil {
+		return nil, fmt.Errorf("parse opencode turn rows from %q: %w", databasePath, err)
+	}
+	rows := make([]openCodeTurnRow, 0, len(parsedRows))
+	for _, row := range parsedRows {
+		rows = append(rows, openCodeTurnRow{
+			SessionID:    row.SessionID,
+			MsgTimestamp: parseOpenCodeTimestamp(row.MsgTime),
+			Directory:    row.Directory,
+			WorkspaceDir: row.WorkspaceDir,
+			Worktree:     row.Worktree,
+			SessionModel: row.SessionModel,
+			TurnCount:    row.TurnCount,
 		})
 	}
 	return rows, nil
@@ -238,6 +328,36 @@ func applyOpenCodeMessageRow(
 	key := makeOpenCodeHourlyKey(event, workspace, confidence, databasePath)
 	acc := getAccumulator(buckets, key)
 	accumulateDelta(acc, delta, msgRow.SessionID)
+	accumulateEngagementCounts(acc, msgRow.SessionID, 0, msgRow.ToolCallCount)
+}
+
+func applyOpenCodeTurnRow(
+	turnRow openCodeTurnRow,
+	databasePath string,
+	input ScanInput,
+	worktrees []WorktreeRef,
+	buckets map[hourlyKey]*hourlyAccumulator,
+) {
+	if turnRow.MsgTimestamp == "" {
+		return
+	}
+	msgTime, err := time.Parse(time.RFC3339Nano, turnRow.MsgTimestamp)
+	if err != nil {
+		return
+	}
+	if isBeforeScanWindow(msgTime, input) {
+		return
+	}
+	cwd := firstNonEmptyPath(turnRow.Directory, turnRow.WorkspaceDir, turnRow.Worktree)
+	workspace, confidence := resolveWorktree(cwd, worktrees)
+	event := codexEvent{
+		SessionID: turnRow.SessionID,
+		Model:     normalizeOpenCodeModel(turnRow.SessionModel),
+		Timestamp: msgTime,
+	}
+	key := makeOpenCodeHourlyKey(event, workspace, confidence, databasePath)
+	acc := getAccumulator(buckets, key)
+	accumulateEngagementCounts(acc, turnRow.SessionID, turnRow.TurnCount, 0)
 }
 
 func normalizeOpenCodeModel(rawModel string) string {

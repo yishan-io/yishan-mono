@@ -158,7 +158,7 @@ export class NodeService {
       // For online nodes, prefer the live daemon version reported by the relay session
       // over the potentially stale version stored in the DB metadata.
       if (isOnline && liveDaemonVersion) {
-        baseMetadata["version"] = liveDaemonVersion;
+        baseMetadata.version = liveDaemonVersion;
       }
 
       return {

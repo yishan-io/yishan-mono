@@ -25,6 +25,8 @@ function makeBucket(bucketStartUtc: string, totalTokens: number, cachedInputToke
     outputTokens: 0,
     cachedInputTokens,
     cachedWriteTokens: 0,
+    turnCount: 0,
+    toolCallCount: 0,
   };
 }
 
@@ -45,6 +47,8 @@ describe("TokenUsageChartView", () => {
       cachedTotal: 0,
       cachedWriteTotal: 0,
       uncachedTotal: 0,
+      turnTotal: 0,
+      toolCallTotal: 0,
     });
   });
 
@@ -66,6 +70,8 @@ describe("TokenUsageChartView", () => {
       tokenUsageSeries: [makeBucket(utcDateIso(1), 500, 200), makeBucket(utcDateIso(3), 300, 100)],
       cachedTotal: 300, // API aggregate — intentionally same as chart sum here
       uncachedTotal: 500,
+      turnTotal: 7,
+      toolCallTotal: 11,
     });
 
     render(<TokenUsageChartView />);
@@ -78,6 +84,8 @@ describe("TokenUsageChartView", () => {
     expect(screen.getByText("800")).toBeTruthy();
     expect(screen.getByText(/300.*37\.5%/)).toBeTruthy();
     expect(screen.getByText("500")).toBeTruthy();
+    expect(screen.getByText("7")).toBeTruthy();
+    expect(screen.getByText("11")).toBeTruthy();
   });
 
   it("stat numbers use a consistent unit derived from the total", () => {

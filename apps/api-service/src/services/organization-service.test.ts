@@ -283,13 +283,7 @@ describe("OrganizationService.addOrganizationMember", () => {
 
 describe("OrganizationService.removeOrganizationMember", () => {
   it("removes a member when actor is an owner", async () => {
-    const { db, txDelete, txDeleteWhere } = makeTxDb(
-      [[{ id: "org-1" }]],
-      [
-        [{ role: "owner" }],
-        [{ role: "member" }],
-      ],
-    );
+    const { db, txDelete, txDeleteWhere } = makeTxDb([[{ id: "org-1" }]], [[{ role: "owner" }], [{ role: "member" }]]);
     const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     await service.removeOrganizationMember({
@@ -303,13 +297,7 @@ describe("OrganizationService.removeOrganizationMember", () => {
   });
 
   it("removes a member when actor is an admin", async () => {
-    const { db, txDelete, txDeleteWhere } = makeTxDb(
-      [[{ id: "org-1" }]],
-      [
-        [{ role: "admin" }],
-        [{ role: "member" }],
-      ],
-    );
+    const { db, txDelete, txDeleteWhere } = makeTxDb([[{ id: "org-1" }]], [[{ role: "admin" }], [{ role: "member" }]]);
     const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     await service.removeOrganizationMember({
@@ -332,10 +320,7 @@ describe("OrganizationService.removeOrganizationMember", () => {
   });
 
   it("throws OrganizationManageMembersPermissionRequiredError when actor is a plain member", async () => {
-    const { db } = makeTxDb(
-      [[{ id: "org-1" }]],
-      [[{ role: "member" }]],
-    );
+    const { db } = makeTxDb([[{ id: "org-1" }]], [[{ role: "member" }]]);
     const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     await expect(
@@ -348,13 +333,7 @@ describe("OrganizationService.removeOrganizationMember", () => {
   });
 
   it("throws OrganizationMemberNotFoundError when target is not part of the org", async () => {
-    const { db } = makeTxDb(
-      [[{ id: "org-1" }]],
-      [
-        [{ role: "admin" }],
-        [],
-      ],
-    );
+    const { db } = makeTxDb([[{ id: "org-1" }]], [[{ role: "admin" }], []]);
     const service = new OrganizationService(db, makeUserService(null), makeInviteService());
 
     await expect(

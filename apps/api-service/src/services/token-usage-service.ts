@@ -27,6 +27,8 @@ type UpsertTokenUsageHourlyInput = {
     totalTokens: number;
     eventCount: number;
     sessionCount: number;
+    turnCount: number;
+    toolCallCount: number;
     attributionConfidence: "exact" | "prefix_match" | "fallback_unknown";
     ingestedAt: string;
     runId: string;
@@ -65,6 +67,8 @@ function dedupeRows(rows: UpsertTokenUsageHourlyInput["rows"]): UpsertTokenUsage
     existing.totalTokens += row.totalTokens;
     existing.eventCount += row.eventCount;
     existing.sessionCount += row.sessionCount;
+    existing.turnCount += row.turnCount;
+    existing.toolCallCount += row.toolCallCount;
     if (new Date(row.ingestedAt) > new Date(existing.ingestedAt)) {
       existing.workspacePath = row.workspacePath;
       existing.model = row.model;
@@ -115,6 +119,8 @@ export class TokenUsageService {
       totalTokens: row.totalTokens,
       eventCount: row.eventCount,
       sessionCount: row.sessionCount,
+      turnCount: row.turnCount,
+      toolCallCount: row.toolCallCount,
       attributionConfidence: row.attributionConfidence,
       ingestedAt: new Date(row.ingestedAt),
       runId: row.runId,
@@ -144,6 +150,8 @@ export class TokenUsageService {
           totalTokens: sql`excluded.total_tokens`,
           eventCount: sql`excluded.event_count`,
           sessionCount: sql`excluded.session_count`,
+          turnCount: sql`excluded.turn_count`,
+          toolCallCount: sql`excluded.tool_call_count`,
           attributionConfidence: sql`excluded.attribution_confidence`,
           ingestedAt: sql`excluded.ingested_at`,
           runId: sql`excluded.run_id`,

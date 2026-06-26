@@ -63,12 +63,12 @@ export default function LandingPage() {
             </div>
 
             <h1 className="mt-6 text-5xl font-semibold leading-tight tracking-tight text-[#E8ECE8] md:text-6xl lg:text-7xl">
-              {t("hero.title.1")}<br />{t("hero.title.2")}
+              {t("hero.title.1")}
+              <br />
+              {t("hero.title.2")}
             </h1>
 
-            <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-[#A5B0A8]">
-              {t("hero.desc")}
-            </p>
+            <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-[#A5B0A8]">{t("hero.desc")}</p>
 
             <div className="mt-8 flex flex-wrap justify-center gap-4">
               <DownloadButton />
@@ -85,10 +85,16 @@ export default function LandingPage() {
             <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
               <span className="text-xs text-[#4A5A4E]">{t("agents.label")}</span>
               {agents.map((agent) => (
-                <span key={agent.name} className="flex items-center gap-1.5 rounded-full border border-[#2A342F] bg-[#151B18] px-3 py-1 text-xs">
+                <span
+                  key={agent.name}
+                  className="flex items-center gap-1.5 rounded-full border border-[#2A342F] bg-[#151B18] px-3 py-1 text-xs"
+                >
                   <span
                     className={`${agent.size ?? "h-3.5 w-3.5"} bg-[#D1B06A]`}
-                    style={{ mask: `url(${agent.icon}) center/contain no-repeat`, WebkitMask: `url(${agent.icon}) center/contain no-repeat` }}
+                    style={{
+                      mask: `url(${agent.icon}) center/contain no-repeat`,
+                      WebkitMask: `url(${agent.icon}) center/contain no-repeat`,
+                    }}
                     aria-label={agent.name}
                   />
                   <span className="text-[#A5B0A8]">{agent.name}</span>
@@ -132,9 +138,7 @@ export default function LandingPage() {
                 <div className="text-xs text-[#A5B0A8]">{t("footer.tagline")}</div>
               </div>
             </div>
-            <p className="mt-4 text-sm leading-7 text-[#A5B0A8]">
-              {t("footer.desc")}
-            </p>
+            <p className="mt-4 text-sm leading-7 text-[#A5B0A8]">{t("footer.desc")}</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <DownloadButton />
               <a
@@ -151,18 +155,33 @@ export default function LandingPage() {
             <div>
               <div className="text-xs uppercase tracking-[0.22em] text-[#A5B0A8]">{t("footer.product")}</div>
               <div className="mt-4 space-y-3 text-sm text-[#A5B0A8]">
-                <a href="#features" className="block transition hover:text-[#E8ECE8]">{t("nav.product")}</a>
-                <a href="#workflow" className="block transition hover:text-[#E8ECE8]">{t("nav.workflow")}</a>
-                <a href="https://github.com/yishan-io/yishan-mono/releases" className="block transition hover:text-[#E8ECE8]">{t("nav.changelog")}</a>
+                <a href="#features" className="block transition hover:text-[#E8ECE8]">
+                  {t("nav.product")}
+                </a>
+                <a href="#workflow" className="block transition hover:text-[#E8ECE8]">
+                  {t("nav.workflow")}
+                </a>
+                <a
+                  href="https://github.com/yishan-io/yishan-mono/releases"
+                  className="block transition hover:text-[#E8ECE8]"
+                >
+                  {t("nav.changelog")}
+                </a>
               </div>
             </div>
 
             <div>
               <div className="text-xs uppercase tracking-[0.22em] text-[#A5B0A8]">{t("footer.company")}</div>
               <div className="mt-4 space-y-3 text-sm text-[#A5B0A8]">
-                <a href="#" className="block transition hover:text-[#E8ECE8]">{t("footer.about")}</a>
-                <a href="#" className="block transition hover:text-[#E8ECE8]">{t("footer.contact")}</a>
-                <a href="#" className="block transition hover:text-[#E8ECE8]">{t("footer.privacy")}</a>
+                <a href="/about" className="block transition hover:text-[#E8ECE8]">
+                  {t("footer.about")}
+                </a>
+                <a href="mailto:support@yishan.io" className="block transition hover:text-[#E8ECE8]">
+                  {t("footer.contact")}
+                </a>
+                <a href="/privacy" className="block transition hover:text-[#E8ECE8]">
+                  {t("footer.privacy")}
+                </a>
               </div>
             </div>
           </div>

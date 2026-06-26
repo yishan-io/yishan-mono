@@ -6,6 +6,16 @@ export type InferredRepoSource = {
   repoKey: string;
 };
 
+function buildRepoKey(segments: string[], rawUrl: string): string {
+  const owner = segments.at(-2)?.toLowerCase();
+  const repo = segments.at(-1)?.toLowerCase();
+  if (!owner || !repo) {
+    throw new ProjectInvalidGitUrlError(rawUrl);
+  }
+
+  return `${owner}/${repo}`;
+}
+
 function isValidGitUrl(value: string): boolean {
   if (value.startsWith("git@") && value.includes(":")) {
     return true;
@@ -56,12 +66,10 @@ export function inferRepoSource(repoUrl: string): InferredRepoSource {
       throw new ProjectInvalidGitUrlError(trimmed);
     }
 
-    const owner = segments[segments.length - 2]!.toLowerCase();
-    const repo = segments[segments.length - 1]!.toLowerCase();
     return {
       sourceType: "git",
       repoProvider: inferProviderFromHost(host),
-      repoKey: `${owner}/${repo}`,
+      repoKey: buildRepoKey(segments, trimmed),
     };
   }
 
@@ -81,11 +89,9 @@ export function inferRepoSource(repoUrl: string): InferredRepoSource {
     throw new ProjectInvalidGitUrlError(trimmed);
   }
 
-  const owner = segments[segments.length - 2]!.toLowerCase();
-  const repo = segments[segments.length - 1]!.toLowerCase();
   return {
     sourceType: "git",
     repoProvider: inferProviderFromHost(parsed.host),
-    repoKey: `${owner}/${repo}`,
+    repoKey: buildRepoKey(segments, trimmed),
   };
 }

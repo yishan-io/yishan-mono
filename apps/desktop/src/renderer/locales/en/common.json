@@ -437,6 +437,10 @@
             "readable": "Readable column",
             "full": "Full width"
           }
+        },
+        "outlineVisible": {
+          "label": "Show markdown outline",
+          "description": "Display the document outline beside markdown files."
         }
       }
     },
@@ -1342,7 +1346,9 @@
       "noData": "No token usage data available",
       "cached": "Cached",
       "uncached": "Uncached",
-      "total": "Total"
+      "total": "Total",
+      "turns": "Turns",
+      "toolCalls": "Tool Calls"
     },
     "agentUsage": {
       "title": "Agent Usage",

@@ -11,13 +11,13 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Elastic--2.0-blue.svg" alt="License" /></a>
   <a href="https://github.com/yishan-io/yishan-mono/actions/workflows/pr-unit-tests.yml"><img src="https://github.com/yishan-io/yishan-mono/actions/workflows/pr-unit-tests.yml/badge.svg" alt="PR Unit Tests" /></a>
-  <a href="https://github.com/yishan-io/yishan-mono/actions/workflows/desktop-release.yml"><img src="https://github.com/yishan-io/yishan-mono/actions/workflows/desktop-release.yml/badge.svg" alt="Desktop Release" /></a>
+   <a href="https://github.com/yishan-io/yishan-mono/actions/workflows/release.yml"><img src="https://github.com/yishan-io/yishan-mono/actions/workflows/release.yml/badge.svg" alt="Release" /></a>
   <a href="https://github.com/yishan-io/yishan-mono/stargazers"><img src="https://img.shields.io/github/stars/yishan-io/yishan-mono?style=social" alt="GitHub stars" /></a>
 </p>
 
-**The workspace built for parallel minds.**
+**Yishan helps agents know your projects better.**
 
-Agents made parallel work easy. Managing it is still on you. Yishan fixes that.
+Spend less time explaining. More time deciding.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/yishan-io/yishan-mono/main/apps/landing/public/app.png" alt="Yishan — from zero to multiple parallel workstreams" width="100%" />
@@ -25,30 +25,22 @@ Agents made parallel work easy. Managing it is still on you. Yishan fixes that.
 
 ## Why Yishan?
 
-Tools were built for serial work. The work is now parallel.
+Every time you start a new agent session, you repeat the same context — project structure, conventions, decisions already made. The burden of explanation falls on you, every time.
 
-Agents let you spin up concurrent tasks — fixing a bug, refactoring a module, reviewing code — all at once. But each workstream runs in its own terminal, repo, or chat tab. The burden of monitoring, switching, and resuming still falls entirely on you.
-
-Yishan gives every task a living workspace. Switch between them without losing state.
+Yishan gives agents persistent project memory, shared context, and repeatable workflows. They find what they need on their own. You stop repeating yourself.
 
 ## Core Features
 
-- **Isolated workspaces** — each task gets its own branch, terminal, and file state. Parallel work never collides.
-- **Live status across all workstreams** — see every task's state — running, waiting, done — in one view without opening each terminal.
-- **Leave it running, come back when ready** — start a task, switch to something more urgent, return later without paying any setup cost. Everything stays exactly as you left it.
-- **Built-in shared context** — `.my-context` keeps notes, plans, and handoff details attached to the project, visible across every workspace. Pick up any task without rebuilding context from scratch.
-- **Agent sessions tied to the workspace** — agent work runs inside the workspace alongside the repo and terminal, not in a detached chat tab that loses context the moment you close it.
+- **Isolated workspaces** — each task gets its own branch, terminal, and file state. Switch between tasks without losing anything.
+- **Memory that grows with your project** — `.my-context` and built-in memory accumulate decisions, notes, and session summaries automatically. Agents find context on their own.
+- **Skills that remove the ceremony** — define how you work once — review patterns, test rules, handoff steps. Every agent follows the same playbook, every time.
 
-## More Ways to Work
+## More
 
-- **Team collaboration** — share workspace status and hosts across your team. Everyone sees what's running, what's blocked, and who owns what.
-- **Autopilot** — schedule recurring agent jobs on a cron cadence. Code review passes, health checks, weekly summaries — running automatically while you focus elsewhere.
-- **PR status without leaving Yishan** — see pull request state, CI checks, and review status inline with the workspace.
-- **Voice input** — dictate prompts and instructions hands-free. Works while you're away from the keyboard.
-
-## Works With Your Tools
-
-Yishan works alongside the agent CLIs you already use — OpenCode, Codex, Claude, Gemini, Cursor Agent, Pi, and Copilot.
+- **Autopilot** — schedule recurring agent jobs on a cadence — code reviews, health checks, weekly summaries — running automatically while you focus elsewhere.
+- **PR visibility** — see pull request state, checks, and review status without leaving Yishan.
+- **Works with your tools** — open files in VS Code, Cursor, JetBrains, Sublime, Xcode, and more. Yishan bridges to your tools instead of replacing them.
+- **Bring your own agent** — works with OpenCode, Claude, Codex, Gemini, Cursor, and Pi. Use the agents you already know.
 
 ## Roadmap
 

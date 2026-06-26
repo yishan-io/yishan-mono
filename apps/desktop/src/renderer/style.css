@@ -40,7 +40,32 @@ html[data-app-theme-mode="dark"] .MuiTreeItem-content[aria-selected="true"]:hove
   background-image: none !important;
 }
 
-/* ─── Git gutter change indicators ────────────────────────────────────────── */
+.monaco-editor .find-widget > .button.codicon-widget-close {
+  font-size: 20px !important;
+}
+
+.monaco-editor .find-widget .button {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+
+/* Monaco sets widget height dynamically from inputBox.height. Our global CSS   */
+/* inflates the input, making the widget taller while the close button stays at */
+/* the CSS-hardcoded top:5px. Fix: constrain the input height so Monaco's JS    */
+/* measures the same height it expects, keeping close button vertically centred.*/
+
+.monaco-editor .find-widget .monaco-inputbox {
+  height: 25px !important;
+  min-height: 25px !important;
+  max-height: 25px !important;
+}
+
+.monaco-editor .find-widget .monaco-inputbox .ibwrapper,
+.monaco-editor .find-widget .monaco-inputbox .ibwrapper .input {
+  height: 25px !important;
+  line-height: 21px !important;
+}
 
 .git-gutter-added {
   width: 3px !important;

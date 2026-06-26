@@ -4,43 +4,6 @@ import { workspaceStore } from "../../../store/workspaceStore";
 const MAX_TERMINAL_COMMAND_TITLE_LENGTH = 32;
 const ASCII_ESCAPE_CODE = 27;
 
-/** Tracks typed terminal input and returns the most recent command submitted by Enter. */
-export function collectExecutedTerminalCommand(
-  previousBuffer: string,
-  data: string,
-): { buffer: string; executedCommand?: string } {
-  let buffer = previousBuffer;
-  let executedCommand: string | undefined;
-  const commandData = stripTerminalEscapeSequences(data);
-
-  for (const character of commandData) {
-    if (character === "\r" || character === "\n") {
-      const normalizedCommand = normalizeTerminalCommandForTitle(buffer);
-      if (normalizedCommand) {
-        executedCommand = normalizedCommand;
-      }
-      buffer = "";
-      continue;
-    }
-
-    if (character === "\u0003") {
-      buffer = "";
-      continue;
-    }
-
-    if (character === "\b" || character === "\u007f") {
-      buffer = buffer.slice(0, -1);
-      continue;
-    }
-
-    if (character >= " " && character !== "\u001b") {
-      buffer += character;
-    }
-  }
-
-  return { buffer, executedCommand };
-}
-
 /** Resolves one terminal tab's workspace root for the default terminal title. */
 export function resolveTerminalWorkspacePath(
   tab: Extract<WorkspaceTab, { kind: "terminal" }> | undefined,

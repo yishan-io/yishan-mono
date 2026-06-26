@@ -133,6 +133,32 @@ describe("tabCommands", () => {
     expect(removeTabData).toHaveBeenCalledWith(["tab-terminal-1"]);
   });
 
+  it("closes terminal tab locally when no backend session id is bound yet", async () => {
+    const closeTabState = vi.fn();
+    const removeTabData = vi.fn();
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-terminal-pending",
+          workspaceId: "workspace-1",
+          title: "Terminal",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Terminal" },
+        },
+      ],
+      closeTab: closeTabState,
+    });
+    chatStore.setState({ removeTabData });
+
+    closeTab("tab-terminal-pending");
+    await Promise.resolve();
+
+    expect(rpcMocks.closeSession).not.toHaveBeenCalled();
+    expect(closeTabState).toHaveBeenCalledWith("tab-terminal-pending");
+    expect(removeTabData).toHaveBeenCalledWith(["tab-terminal-pending"]);
+  });
+
   it("closes other tabs and backend sessions for same workspace", async () => {
     const closeOtherTabsState = vi.fn();
     const removeTabData = vi.fn();

@@ -1,6 +1,6 @@
 import type { AppDb } from "@/db/client";
-import { CleanupService } from "@/services/cleanup-service";
 import type { ScheduledDbEnv } from "@/scheduled/db";
+import { CleanupService } from "@/services/cleanup-service";
 
 export type CleanupEnv = ScheduledDbEnv & {
   REVOKED_TOKEN_RETENTION_DAYS?: string;

@@ -246,6 +246,8 @@ const APPEARANCE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.appearance.markdown.previewWidth.label",
       "settings.appearance.markdown.previewWidth.options.readable",
       "settings.appearance.markdown.previewWidth.options.full",
+      "settings.appearance.markdown.outlineVisible.label",
+      "settings.appearance.markdown.outlineVisible.description",
       "settings.items.appearance",
     ],
   },

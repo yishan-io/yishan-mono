@@ -232,6 +232,8 @@ func hourlyRowsMatchForSync(left HourlyUsageRow, right HourlyUsageRow) bool {
 		left.TotalTokens == right.TotalTokens &&
 		left.EventCount == right.EventCount &&
 		left.SessionCount == right.SessionCount &&
+		left.TurnCount == right.TurnCount &&
+		left.ToolCallCount == right.ToolCallCount &&
 		left.AttributionConfidence == right.AttributionConfidence
 }
 

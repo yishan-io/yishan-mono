@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -72,4 +73,31 @@ func (r fakeSessionReader) ReadRecentSession(_ string, _ string) (*sessionMessag
 		return nil, r.err
 	}
 	return r.session, nil
+}
+
+func TestSummarizeSession_WorktreeGone(t *testing.T) {
+	workspacePath := t.TempDir()
+	if err := os.RemoveAll(workspacePath); err != nil {
+		t.Fatalf("RemoveAll: %v", err)
+	}
+
+	var gotWorkDir string
+	summarizer := NewSummarizer(SummarizerConfig{Enabled: true}, func(_ context.Context, _ string, _ string, _ string, workDir string) (string, error) {
+		gotWorkDir = workDir
+		return `{"lockedDecisions":["2026-06-23 — Worktree gone. Why: test."],"durableDiscoveries":[],"openQuestions":[]}`, nil
+	})
+	summarizer.dbReader = fakeSessionReader{session: &sessionMessages{Messages: []sessionMessage{
+		{Role: "user", Content: "hello", Timestamp: time.UnixMilli(1000)},
+	}}}
+
+	result, err := summarizer.SummarizeSession("opencode", workspacePath)
+	if err != nil {
+		t.Fatalf("SummarizeSession: %v", err)
+	}
+	if result.Skipped {
+		t.Fatal("expected summarize run, got skipped")
+	}
+	if gotWorkDir != "" {
+		t.Fatalf("expected empty workDir when worktree gone, got %q", gotWorkDir)
+	}
 }

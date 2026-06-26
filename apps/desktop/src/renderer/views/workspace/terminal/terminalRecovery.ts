@@ -1,3 +1,4 @@
+import { type DesktopAgentKind, isDesktopAgentKind } from "../../../helpers/agentSettings";
 import { generateId } from "../../../helpers/generateId";
 import type { TerminalSessionSummary } from "../../../rpc/daemonTypes";
 import { tabStore } from "../../../store/tabStore";
@@ -13,6 +14,7 @@ type PersistedTerminalTabEntry = {
   pinned: boolean;
   sessionId?: string;
   launchCommand?: string;
+  agentKind?: string;
 };
 
 type PersistedTerminalTabPayload = {
@@ -94,6 +96,10 @@ export class TerminalRecoveryCoordinator {
       const title = persistedEntry?.title ?? "Terminal";
       const pinned = persistedEntry?.pinned ?? false;
       const launchCommand = persistedEntry?.launchCommand;
+      const rawAgentKind = persistedEntry?.agentKind;
+      const agentKind: DesktopAgentKind | undefined = isDesktopAgentKind(rawAgentKind ?? "")
+        ? (rawAgentKind as DesktopAgentKind)
+        : undefined;
 
       if (existingTabIds.has(tabId)) {
         continue;
@@ -109,6 +115,7 @@ export class TerminalRecoveryCoordinator {
           title,
           sessionId: session.sessionId,
           launchCommand,
+          agentKind,
         },
       };
 
@@ -210,6 +217,7 @@ export class TerminalRecoveryCoordinator {
           pinned: tab.pinned,
           sessionId: normalizeOptionalText(tab.data.sessionId),
           launchCommand: normalizeOptionalText(tab.data.launchCommand),
+          agentKind: normalizeOptionalText(tab.data.agentKind),
         })),
     };
   }
@@ -251,6 +259,7 @@ function normalizePersistedTerminalTabEntry(value: unknown): PersistedTerminalTa
     pinned: Boolean(entry.pinned),
     sessionId: normalizeOptionalText(entry.sessionId),
     launchCommand: normalizeOptionalText(entry.launchCommand),
+    agentKind: normalizeOptionalText(entry.agentKind),
   };
 }
 

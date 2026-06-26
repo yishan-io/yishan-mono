@@ -47,6 +47,15 @@ type JSONRPCHandler struct {
 
 	agentUsageMu sync.Mutex
 	agentUsage   map[string]map[string]struct{}
+
+	remoteStreamMu   sync.Mutex
+	remoteStreamSubs map[string]map[*wsConnState]struct{}
+
+	// relayConn is the active relay WebSocket connection, set while a relay
+	// session is running. Used by terminal.remote.subscribe to send stream
+	// requests to the relay on behalf of the desktop.
+	relayConnMu sync.RWMutex
+	relayConn   *wsConnState
 }
 
 func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, wsIndexStore *workspaceIndexStore, configPath string, context *AppContextStore) *JSONRPCHandler {
@@ -84,22 +93,23 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(_ *http.Request) bool { return true },
 		},
-		manager:        manager,
-		runtime:        runtime,
-		nodeID:         nodeID,
-		logFilePath:    logFilePath,
-		cleanupStore:   cleanupStore,
-		wsIndexStore:   wsIndexStore,
-		context:        context,
-		events:         events,
-		watchers:       newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
-		prTracker:      prTracker,
-		tokenUsage:     collector,
-		computer:       newComputerService(computer.NewUnavailableRuntime("unknown")),
-		modelList:      modellist.NewService(),
-		settingsPath:   config.SettingsFilePath(filepath.Dir(configPath)),
-		agentUsage:     make(map[string]map[string]struct{}),
-		fileCacheSubID: fileCacheSubID,
+		manager:          manager,
+		runtime:          runtime,
+		nodeID:           nodeID,
+		logFilePath:      logFilePath,
+		cleanupStore:     cleanupStore,
+		wsIndexStore:     wsIndexStore,
+		context:          context,
+		events:           events,
+		watchers:         newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
+		prTracker:        prTracker,
+		tokenUsage:       collector,
+		computer:         newComputerService(computer.NewUnavailableRuntime("unknown")),
+		modelList:        modellist.NewService(),
+		settingsPath:     config.SettingsFilePath(filepath.Dir(configPath)),
+		agentUsage:       make(map[string]map[string]struct{}),
+		remoteStreamSubs: make(map[string]map[*wsConnState]struct{}),
+		fileCacheSubID:   fileCacheSubID,
 	}
 	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)
 	return handler
@@ -161,7 +171,17 @@ func (h *JSONRPCHandler) forwardMemoryFileChanges(worktreePath string, relPaths 
 	}
 	for _, rel := range relPaths {
 		abs := filepath.Join(worktreePath, rel)
-		if h.memory.ShouldIndex(abs) {
+		// Resolve symlinks before the ShouldIndex check: .my-context/ inside a
+		// worktree is a symlink to ~/.yishan/contexts/…, so the unresolved abs
+		// path contains "/.yishan/worktrees/" and would never match the filter.
+		// EvalSymlinks fails for deleted files; in that case resolved stays as
+		// abs and ShouldIndex will return false — delete events for context files
+		// are not currently propagated via this path (pre-existing limitation).
+		resolved := abs
+		if r, err := filepath.EvalSymlinks(abs); err == nil {
+			resolved = r
+		}
+		if h.memory.ShouldIndex(resolved) {
 			if err := h.memory.OnFileChanged(abs, worktreePath, projectID); err != nil {
 				log.Warn().Err(err).Str("path", abs).Msg("memory index update failed")
 			}
@@ -235,15 +255,15 @@ func (h *JSONRPCHandler) handleBinaryFrame(connState *wsConnState, payload []byt
 
 	opcode := payload[0]
 	rest := payload[1:]
+	nullIdx := bytes.IndexByte(rest, 0)
+	if nullIdx < 0 {
+		return
+	}
+	sessionIDRaw := rest[:nullIdx]
 
 	switch opcode {
 	case binOpcodeTerminalInput:
-		// Find the null-terminated session ID.
-		nullIdx := bytes.IndexByte(rest, 0)
-		if nullIdx < 0 {
-			return
-		}
-		sessionID, ok := connState.terminalInputSessionID(rest[:nullIdx])
+		sessionID, ok := connState.terminalInputSessionID(sessionIDRaw)
 		if !ok {
 			return
 		}
@@ -251,8 +271,14 @@ func (h *JSONRPCHandler) handleBinaryFrame(connState *wsConnState, payload []byt
 		if len(inputData) == 0 {
 			return
 		}
+		if h.forwardRemoteTerminalInput(sessionID, payload) {
+			return
+		}
 		// Write raw bytes directly to PTY — avoids JSON unmarshal + string conversion.
 		h.manager.Terminals().SendRaw(sessionID, inputData)
+	case binOpcodeTerminalOutput:
+		sessionID := string(sessionIDRaw)
+		h.forwardRemoteTerminalOutput(sessionID, payload)
 	}
 }
 

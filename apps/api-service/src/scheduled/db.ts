@@ -1,4 +1,4 @@
-import { createRequestDb, getDb, type AppDb } from "@/db/client";
+import { type AppDb, createRequestDb, getDb } from "@/db/client";
 
 export type ScheduledDbEnv = {
   HYPERDRIVE?: { connectionString: string };
@@ -8,7 +8,7 @@ export type ScheduledDbEnv = {
 export async function runWithScheduledDb<T>(
   env: ScheduledDbEnv,
   taskName: string,
-  callback: (db: AppDb) => Promise<T>
+  callback: (db: AppDb) => Promise<T>,
 ): Promise<T | undefined> {
   const databaseUrl = env.HYPERDRIVE?.connectionString ?? env.DATABASE_URL;
   if (!databaseUrl) {

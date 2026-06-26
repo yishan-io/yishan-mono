@@ -50,21 +50,17 @@ export function RoadmapTimeline({ t }: Props) {
   return (
     <section id="roadmap" className="mx-auto max-w-7xl px-6 py-6 lg:px-8 lg:py-8">
       <div className="rounded-[36px] border border-[#2A342F] bg-[#121715] px-8 py-10 lg:px-10">
-
         {/* Header */}
         <div className="max-w-2xl">
           <div className="text-xs uppercase tracking-[0.24em] text-[#A5B0A8]">{t("roadmap.label")}</div>
           <h2 className="mt-4 text-3xl font-semibold tracking-tight text-[#E8ECE8] md:text-4xl">
             {t("roadmap.title")}
           </h2>
-          <p className="mt-4 text-base leading-8 text-[#A5B0A8]">
-            {t("roadmap.desc")}
-          </p>
+          <p className="mt-4 text-base leading-8 text-[#A5B0A8]">{t("roadmap.desc")}</p>
         </div>
 
         {/* Timeline — horizontal on lg, vertical stack on mobile */}
         <div className="mt-12">
-
           {/* Desktop: horizontal timeline */}
           <div className="hidden lg:block">
             {/* Track + nodes */}
@@ -82,9 +78,7 @@ export function RoadmapTimeline({ t }: Props) {
                       <h3 className="mt-3 text-base font-semibold leading-6 text-[#E8ECE8]">
                         {t(`roadmap.${i}.title`)}
                       </h3>
-                      <p className="mt-2 text-sm leading-6 text-[#A5B0A8]">
-                        {t(`roadmap.${i}.desc`)}
-                      </p>
+                      <p className="mt-2 text-sm leading-6 text-[#A5B0A8]">{t(`roadmap.${i}.desc`)}</p>
                     </div>
                   </div>
                 );
@@ -106,27 +100,20 @@ export function RoadmapTimeline({ t }: Props) {
                     </div>
                     {!isLast && (
                       <div
-                        className={`mt-1 w-px flex-1 ${
-                          status === "in_progress" ? "bg-[#8FCB99]/40" : "bg-[#2A342F]"
-                        }`}
+                        className={`mt-1 w-px flex-1 ${status === "in_progress" ? "bg-[#8FCB99]/40" : "bg-[#2A342F]"}`}
                       />
                     )}
                   </div>
                   {/* Right: content */}
                   <div className={`pb-8 ${isLast ? "pb-0" : ""}`}>
                     <StatusBadge status={status} t={t} />
-                    <h3 className="mt-3 text-base font-semibold leading-6 text-[#E8ECE8]">
-                      {t(`roadmap.${i}.title`)}
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-[#A5B0A8]">
-                      {t(`roadmap.${i}.desc`)}
-                    </p>
+                    <h3 className="mt-3 text-base font-semibold leading-6 text-[#E8ECE8]">{t(`roadmap.${i}.title`)}</h3>
+                    <p className="mt-2 text-sm leading-6 text-[#A5B0A8]">{t(`roadmap.${i}.desc`)}</p>
                   </div>
                 </div>
               );
             })}
           </div>
-
         </div>
       </div>
     </section>

@@ -11,9 +11,9 @@ export function handleAppError(error: unknown, c: AppContext) {
       {
         error: error.message,
         code: error.code,
-        ...(error.details ?? {})
+        ...(error.details ?? {}),
       },
-      error.status as ContentfulStatusCode
+      error.status as ContentfulStatusCode,
     );
   }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	_ "modernc.org/sqlite"
@@ -266,16 +267,20 @@ func (db *DB) Search(query string, projectID string, fileType FileType, limit in
 	return results, rows.Err()
 }
 
+// escapeFTS5 converts a user query into an FTS5 MATCH expression.
+// Each whitespace-separated token is individually quoted and OR-joined so that
+// "permission deadlock" matches any document containing either word, not only
+// documents where both words appear adjacently (phrase match).
+// A single-token query produces the same output as before: "token".
+// An empty query returns "" (callers guard against empty queries).
 func escapeFTS5(query string) string {
-	result := make([]byte, 0, len(query)+4)
-	result = append(result, '"')
-	for _, ch := range query {
-		if ch == '"' {
-			result = append(result, '"', '"')
-		} else {
-			result = append(result, byte(ch))
-		}
+	tokens := strings.Fields(query)
+	if len(tokens) == 0 {
+		return `""`
 	}
-	result = append(result, '"')
-	return string(result)
+	parts := make([]string, len(tokens))
+	for i, tok := range tokens {
+		parts[i] = `"` + strings.ReplaceAll(tok, `"`, `""`) + `"`
+	}
+	return strings.Join(parts, " OR ")
 }

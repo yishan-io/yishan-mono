@@ -1,6 +1,7 @@
 import type {
   ProjectCommitComparisonCommit,
   ProjectCommitComparisonData,
+  ProjectCommitComparisonFile,
   ProjectCommitComparisonSelection,
 } from "../../../components/ProjectCommitComparison";
 import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
@@ -202,6 +203,29 @@ export function normalizeProjectGitChangeKind(kind: string): ProjectGitChangeKin
   return "modified";
 }
 
+/** Maps a git --name-status letter to a ProjectGitChangeKind. */
+function gitStatusToChangeKind(status: string): ProjectGitChangeKind {
+  if (status === "A") return "added";
+  if (status === "D") return "deleted";
+  if (status === "R" || status === "C") return "renamed";
+  return "modified";
+}
+
+/**
+ * Coerces a raw daemon response value (either a string path from old daemons,
+ * or a typed GitCommitFile from new daemons) to ProjectCommitComparisonFile.
+ * Provides backward compatibility during rolling daemon updates.
+ */
+export function toCommitFile(raw: unknown): ProjectCommitComparisonFile {
+  if (typeof raw === "string") {
+    return { path: raw, status: "M" };
+  }
+  if (raw && typeof raw === "object" && "path" in raw) {
+    return raw as ProjectCommitComparisonFile;
+  }
+  return { path: "", status: "M" };
+}
+
 export function createEmptyRepoChangesBySection(): RepoChangesBySection {
   return { unstaged: [], staged: [], untracked: [] };
 }
@@ -211,30 +235,27 @@ export function createEmptyRepoCommitComparison(): ProjectCommitComparisonData {
 }
 
 export function buildCommitChangesSection(commit: ProjectCommitComparisonCommit): ProjectGitChangesSection {
-  return {
-    id: "commit-files",
-    label: `Changes in ${commit.shortHash}`,
-    files: dedupeChangedPaths(commit.changedFiles).map((path) => ({
-      path,
-      kind: "modified" as const,
-      additions: 0,
-      deletions: 0,
-    })),
-  };
+  const seen = new Set<string>();
+  const files = commit.changedFiles.flatMap((f) => {
+    const path = normalizeWorkspaceRelativePath(f.path);
+    if (!path || seen.has(path)) return [];
+    seen.add(path);
+    return [{ path, kind: gitStatusToChangeKind(f.status), additions: 0, deletions: 0 }];
+  });
+  return { id: "commit-files", label: `Changes in ${commit.shortHash}`, files };
 }
 
 export function buildAllCommitChangesSection(
-  allChangedFiles: string[],
+  allChangedFiles: ProjectCommitComparisonFile[],
   uncommittedKindByPath: Map<string, ProjectGitChangeKind>,
 ): ProjectGitChangesSection {
-  return {
-    id: "all-commit-files",
-    label: "Changes in all",
-    files: dedupeChangedPaths(allChangedFiles).map((path) => ({
-      path,
-      kind: uncommittedKindByPath.get(path) ?? ("modified" as const),
-      additions: 0,
-      deletions: 0,
-    })),
-  };
+  const seen = new Set<string>();
+  const files = allChangedFiles.flatMap((f) => {
+    const path = normalizeWorkspaceRelativePath(f.path);
+    if (!path || seen.has(path)) return [];
+    seen.add(path);
+    const kind = uncommittedKindByPath.get(path) ?? gitStatusToChangeKind(f.status);
+    return [{ path, kind, additions: 0, deletions: 0 }];
+  });
+  return { id: "all-commit-files", label: "Changes in all", files };
 }
