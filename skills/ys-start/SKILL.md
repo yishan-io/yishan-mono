@@ -22,6 +22,17 @@ automatically by yishan.
 - A ticket (GitHub, GitLab, Linear, Jira) needs a local task folder
 - Before starting any of the other task workflow skills
 
+## Primary rule
+
+- If the user does not provide a title, goal/description, or acceptance
+  criteria, generate them from the user's request as the default behavior.
+- Treat asking the user for missing task details as the fallback, not the
+  primary path.
+- Keep the generated title concise and specific.
+- Keep the generated goal focused on what should change and why.
+- Keep the generated acceptance criteria concrete and verifiable.
+- The user can revise any generated task content later.
+
 ## Session environment
 
 Every terminal session started by yishan has these variables in its environment:
@@ -67,8 +78,10 @@ not-found error, try Jira.
 
 ### Fetch — priority order per source
 
-Try each option in order and stop at the first success. Fall back to asking the
-user if all options fail or no tool is available.
+Try each option in order and stop at the first success. If all options fail or
+no tool is available, generate the missing task details from the user's request
+instead of blocking on follow-up questions unless the request is too ambiguous
+to infer safely.
 
 **Linear**
 1. MCP: call `mcp__linear__get_issue` with the issue ID.
@@ -98,7 +111,7 @@ user if all options fail or no tool is available.
 
 Neither source has a dedicated AC field. If the description/body contains a
 markdown checklist (`- [ ] …`), extract those items as the initial AC list.
-Otherwise leave the AC section empty for the user to fill in.
+Otherwise generate an initial AC list from the request/ticket content.
 
 Write `task.md` directly with the fetched content and report what was populated.
 The user can edit `task.md` afterwards.
@@ -167,14 +180,19 @@ Written when the task is created. Update it if the goal or criteria changes.
    a. Detect the source using the patterns in **Ticket Auto-Fetch**.
    b. Attempt to fetch ticket content (MCP first, then CLI — see fetch priority order).
    c. On success: use the fetched title, description, and any extracted checklist
-      items to populate `task.md`. Report what was fetched.
-   d. On failure or no tool available: ask the user for title and acceptance criteria.
-   If no ticket was provided: ask the user for title and acceptance criteria.
-3. Determine the ID: use the ticket ID if provided, otherwise generate a short random ID.
-4. Build the folder name: `<id>-<slug>` (slug = title lowercased, spaces→hyphens, ≤40 chars).
-5. Create the folder: `.my-context/tasks/active/<folder>/`.
-6. Write `task.md` using the template above.
-7. Add entry to `state.json`:
+      items to populate `task.md`. If fields are still missing, generate them
+      from the fetched content. Report what was fetched.
+   d. On failure or no tool available: generate title, goal, and acceptance
+      criteria from the user's request.
+   If no ticket was provided: generate title, goal, and acceptance criteria
+   from the user's request.
+3. Ask follow-up questions only if the request is too ambiguous to infer a
+   reasonable task safely.
+4. Determine the ID: use the ticket ID if provided, otherwise generate a short random ID.
+5. Build the folder name: `<id>-<slug>` (slug = title lowercased, spaces→hyphens, ≤40 chars).
+6. Create the folder: `.my-context/tasks/active/<folder>/`.
+7. Write `task.md` using the template above.
+8. Add entry to `state.json`:
 
 ```json
 {
@@ -186,5 +204,6 @@ Written when the task is created. Update it if the goal or criteria changes.
 }
 ```
 
-8. Write `state.json`.
-9. Report the task path to the user and suggest the next step: `ys-research`.
+9. Write `state.json`.
+10. Report the task path to the user, mention any generated assumptions briefly,
+    and suggest the next step: `ys-research`.

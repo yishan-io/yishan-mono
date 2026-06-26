@@ -360,7 +360,7 @@ func TestStripYishanInjectedContent_realUserMessage(t *testing.T) {
 }
 
 func TestStripYishanInjectedContent_skillInvocation(t *testing.T) {
-	msg := "Read ~/.config/opencode/skills/ys-research/SKILL.md and follow its workflow to research the current task.\nRead .my-context/tasks/state.json..."
+	msg := "YISHAN_COMMAND: ys-research\n\nResearch the current task using the ys-research workflow.\nRead .my-context/tasks/state.json..."
 	got := stripYishanInjectedContent(msg)
 	if got != "" {
 		t.Errorf("skill invocation should be stripped entirely, got %q", got)
@@ -386,7 +386,7 @@ func TestStripYishanInjectedContent_projectContextPrepended(t *testing.T) {
 
 func TestStripYishanInjectedContent_emptyAfterSkillStrip(t *testing.T) {
 	// A skill invocation with no real user content following.
-	msg := "Read ~/.config/opencode/skills/ys-done/SKILL.md and follow its workflow..."
+	msg := "YISHAN_COMMAND: ys-done\n\nFinalize the current task using the ys-done workflow..."
 	got := stripYishanInjectedContent(msg)
 	if got != "" {
 		t.Errorf("pure skill invocation should return empty: %q", got)
@@ -406,14 +406,14 @@ func TestStripYishanInjectedContent_clauedSkillPath(t *testing.T) {
 func TestBuildCombinedTranscript_stripsSkillInvocations(t *testing.T) {
 	sessions := []*sessionMessages{
 		{Messages: []sessionMessage{
-			{Role: "user", Content: "Read ~/.config/opencode/skills/ys-research/SKILL.md and follow its workflow"},
+			{Role: "user", Content: "YISHAN_COMMAND: ys-research\n\nResearch the current task using the ys-research workflow."},
 			{Role: "assistant", Content: "I'll research now..."},
 			{Role: "user", Content: "looks good, ship it"},
 		}},
 	}
 	result := buildCombinedTranscript(sessions)
 	// Skill invocation should be absent; real user messages should remain.
-	if strings.Contains(result, "ys-research") {
+	if strings.Contains(result, "YISHAN_COMMAND") {
 		t.Error("skill invocation should be stripped from transcript")
 	}
 	if !strings.Contains(result, "ship it") {
