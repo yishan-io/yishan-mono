@@ -371,6 +371,8 @@ export const tokenUsageHourly = pgTable(
     totalTokens: bigint("total_tokens", { mode: "number" }).notNull().default(0),
     eventCount: bigint("event_count", { mode: "number" }).notNull().default(0),
     sessionCount: bigint("session_count", { mode: "number" }).notNull().default(0),
+    turnCount: bigint("turn_count", { mode: "number" }).notNull().default(0),
+    toolCallCount: bigint("tool_call_count", { mode: "number" }).notNull().default(0),
     attributionConfidence: text("attribution_confidence").$type<TokenUsageAttributionConfidence>().notNull(),
     ingestedAt: timestamp("ingested_at", { withTimezone: true }).notNull(),
     runId: text("run_id").notNull(),

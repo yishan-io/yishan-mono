@@ -18,6 +18,10 @@ const claudeMultiSessionFixture = `{"type":"assistant","uuid":"a","sessionId":"s
 {"type":"assistant","uuid":"b","sessionId":"session-b","timestamp":"2026-05-25T21:01:00.000Z","cwd":"/proj/b","message":{"id":"mb1","model":"claude-opus-4-6","role":"assistant","usage":{"input_tokens":200,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":80}}}
 `
 
+const claudeActivityFixture = `{"type":"user","sessionId":"session-a","timestamp":"2026-05-25T21:00:00.000Z","cwd":"/proj/a","message":{"role":"user","content":"Read ~/.agents/skills/ys-start/SKILL.md and follow its workflow"}}
+{"type":"assistant","sessionId":"session-a","timestamp":"2026-05-25T21:00:01.000Z","cwd":"/proj/a","message":{"id":"ma1","model":"claude-sonnet-4-5","role":"assistant","content":[{"type":"tool_use","id":"tool-1","name":"Read","input":{"file_path":"/tmp/a"}}],"usage":{"input_tokens":100,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":50}}}
+`
+
 func TestParseClaudeUsageRecordWithCacheWrite(t *testing.T) {
 	t.Parallel()
 
@@ -174,5 +178,36 @@ func TestScanClaudeHourlyUsageIntegration(t *testing.T) {
 	}
 	if len(sessionIDs) != 1 {
 		t.Fatalf("expected 1 source, got %d", len(sessionIDs))
+	}
+}
+
+func TestScanClaudeCountsTurnsToolsAndSkills(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	transcriptPath := filepath.Join(tmpDir, "transcript.jsonl")
+	if err := os.WriteFile(transcriptPath, []byte(claudeActivityFixture), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir}
+	rows, err := ScanClaudeHourlyUsage(context.Background(), input)
+	if err != nil {
+		t.Fatalf("scan hourly: %v", err)
+	}
+
+	var turns, tools, skills int64
+	for _, row := range rows {
+		turns += row.TurnCount
+		tools += row.ToolCallCount
+	}
+	if turns != 1 {
+		t.Fatalf("expected 1 turn, got %d", turns)
+	}
+	if tools != 1 {
+		t.Fatalf("expected 1 tool call, got %d", tools)
+	}
+	if skills != 0 {
+		t.Fatalf("expected 0 skills, got %d", skills)
 	}
 }

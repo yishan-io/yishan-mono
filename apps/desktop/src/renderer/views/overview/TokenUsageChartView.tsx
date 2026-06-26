@@ -52,6 +52,8 @@ export function TokenUsageChartView() {
   const series = overviewStore((state) => state.tokenUsageSeries);
   const loadState = overviewStore((state) => state.tokenUsageLoadState);
   const timeRange = overviewStore((state) => state.timeRange);
+  const turnTotal = overviewStore((state) => state.turnTotal);
+  const toolCallTotal = overviewStore((state) => state.toolCallTotal);
 
   const chartData = useMemo(() => {
     const dataByDate = new Map<string, { cachedTokens: number; uncachedTokens: number }>();
@@ -177,6 +179,22 @@ export function TokenUsageChartView() {
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace", color: "#FF9800" }}>
             {formatTokensInUnit(chartUncachedTotal, statUnit)}
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="caption" color="text.secondary">
+            {t("overview.tokenUsage.turns")}
+          </Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
+            {turnTotal}
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="caption" color="text.secondary">
+            {t("overview.tokenUsage.toolCalls")}
+          </Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
+            {toolCallTotal}
           </Typography>
         </Box>
       </Box>

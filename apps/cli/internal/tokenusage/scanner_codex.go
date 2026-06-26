@@ -18,12 +18,12 @@ const codexAgentKind = agentkind.Codex
 const maxTokenUsageScanLineBytes = 16 * 1024 * 1024
 
 type codexUsage struct {
-	InputTokens        int64
-	OutputTokens       int64
-	CachedInputTokens  int64
+	InputTokens       int64
+	OutputTokens      int64
+	CachedInputTokens int64
 	CachedWriteTokens int64
-	ReasoningTokens    int64
-	TotalTokens        int64
+	ReasoningTokens   int64
+	TotalTokens       int64
 }
 
 type codexEvent struct {
@@ -51,14 +51,16 @@ type hourlyKey struct {
 }
 
 type hourlyAccumulator struct {
-	InputTokens        int64
-	OutputTokens       int64
-	CachedInputTokens  int64
+	InputTokens       int64
+	OutputTokens      int64
+	CachedInputTokens int64
 	CachedWriteTokens int64
-	ReasoningTokens    int64
-	TotalTokens        int64
-	EventCount         int64
-	Sessions           map[string]struct{}
+	ReasoningTokens   int64
+	TotalTokens       int64
+	EventCount        int64
+	TurnCount         int64
+	ToolCallCount     int64
+	Sessions          map[string]struct{}
 }
 
 func ScanCodexHourlyUsage(ctx context.Context, input ScanInput) ([]HourlyUsageRow, error) {
@@ -158,6 +160,14 @@ func scanCodexSessionFile(
 			if line.model != "" {
 				currentModel = line.model
 			}
+			if line.text != "" {
+				applyCodexEngagementEvent(codexEvent{
+					SessionID: currentSessionID,
+					Model:     currentModel,
+					CWD:       currentCWD,
+					Timestamp: line.timestamp,
+				}, sessionFile, worktrees, buckets, 1, 0)
+			}
 		case codexLineTokenCount:
 			model := currentModel
 			if model == "" {
@@ -179,6 +189,15 @@ func scanCodexSessionFile(
 				continue
 			}
 			applyCodexEvent(event, sessionFile, worktrees, states, buckets)
+		default:
+			if line.toolCalls > 0 {
+				applyCodexEngagementEvent(codexEvent{
+					SessionID: currentSessionID,
+					Model:     currentModel,
+					CWD:       currentCWD,
+					Timestamp: line.timestamp,
+				}, sessionFile, worktrees, buckets, 0, line.toolCalls)
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -190,7 +209,7 @@ func scanCodexSessionFile(
 type codexLineKind int
 
 const (
-	codexLineOther       codexLineKind = iota
+	codexLineOther codexLineKind = iota
 	codexLineSessionMeta
 	codexLineTurnContext
 	codexLineTokenCount
@@ -203,6 +222,8 @@ type codexParsedLine struct {
 	model     string
 	timestamp time.Time
 	usage     codexUsage
+	text      string
+	toolCalls int64
 }
 
 func parseCodexLine(rawLine []byte) codexParsedLine {
@@ -225,9 +246,11 @@ func parseCodexLine(rawLine []byte) codexParsedLine {
 		}
 	case "turn_context":
 		return codexParsedLine{
-			kind:  codexLineTurnContext,
-			cwd:   cleanCWDPath(getString(nested, "cwd")),
-			model: getString(nested, "model"),
+			kind:      codexLineTurnContext,
+			cwd:       cleanCWDPath(getString(nested, "cwd")),
+			model:     getString(nested, "model"),
+			timestamp: mustParseCodexTimestamp(getString(top, "timestamp")),
+			text:      getCodexUserInputText(top),
 		}
 	case "event_msg":
 		if getString(nested, "type") != "token_count" {
@@ -248,8 +271,86 @@ func parseCodexLine(rawLine []byte) codexParsedLine {
 			usage:     usage,
 		}
 	default:
+		if lineType == "response_item" {
+			return parseCodexResponseItem(top)
+		}
 		return codexParsedLine{}
 	}
+}
+
+func parseCodexResponseItem(top map[string]any) codexParsedLine {
+	payload, _ := top["payload"].(map[string]any)
+	if payload == nil {
+		return codexParsedLine{}
+	}
+	eventTime, ok := parseTimestamp(getString(top, "timestamp"))
+	if !ok {
+		return codexParsedLine{}
+	}
+	switch getString(payload, "type") {
+	case "message":
+		if getString(payload, "role") != "user" {
+			return codexParsedLine{}
+		}
+		text := getCodexInputTextFromContent(payload["content"])
+		if shouldSkipCodexUserText(text) {
+			return codexParsedLine{}
+		}
+		return codexParsedLine{
+			kind:      codexLineTurnContext,
+			timestamp: eventTime,
+			text:      text,
+		}
+	case "function_call", "custom_tool_call":
+		return codexParsedLine{kind: codexLineOther, timestamp: eventTime, toolCalls: 1}
+	default:
+		return codexParsedLine{}
+	}
+}
+
+func getCodexUserInputText(top map[string]any) string {
+	payload, _ := top["payload"].(map[string]any)
+	if payload == nil {
+		return ""
+	}
+	text := getCodexInputTextFromContent(payload["content"])
+	if shouldSkipCodexUserText(text) {
+		return ""
+	}
+	return text
+}
+
+func getCodexInputTextFromContent(content any) string {
+	items, ok := content.([]any)
+	if !ok {
+		return ""
+	}
+	for _, item := range items {
+		entry, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		if getString(entry, "type") == "input_text" {
+			return normalizeInjectedUserText(getString(entry, "text"))
+		}
+	}
+	return ""
+}
+
+func shouldSkipCodexUserText(text string) bool {
+	trimmed := normalizeInjectedUserText(text)
+	if trimmed == "" {
+		return true
+	}
+	return strings.HasPrefix(trimmed, "<turn_aborted>")
+}
+
+func mustParseCodexTimestamp(rawTime string) time.Time {
+	timestamp, ok := parseTimestamp(rawTime)
+	if !ok {
+		return time.Time{}
+	}
+	return timestamp
 }
 
 func parseTimestamp(rawTime string) (time.Time, bool) {
@@ -322,6 +423,23 @@ func applyCodexEvent(
 	accumulateDelta(acc, delta, event.SessionID)
 }
 
+func applyCodexEngagementEvent(
+	event codexEvent,
+	sessionFile string,
+	worktrees []WorktreeRef,
+	buckets map[hourlyKey]*hourlyAccumulator,
+	turnCount int64,
+	toolCallCount int64,
+) {
+	if event.SessionID == "" || event.Timestamp.IsZero() {
+		return
+	}
+	workspace, confidence := resolveWorktree(event.CWD, worktrees)
+	key := makeHourlyKey(event, workspace, confidence, sessionFile)
+	acc := getAccumulator(buckets, key)
+	accumulateEngagementCounts(acc, event.SessionID, turnCount, toolCallCount)
+}
+
 func getSessionState(states map[string]*codexSessionState, sessionID string) *codexSessionState {
 	state, ok := states[sessionID]
 	if ok {
@@ -337,12 +455,12 @@ func computeDeltaUsage(current codexUsage, previous *codexUsage) codexUsage {
 		return current
 	}
 	return codexUsage{
-		InputTokens:        maxInt64(current.InputTokens-previous.InputTokens, 0),
-		OutputTokens:       maxInt64(current.OutputTokens-previous.OutputTokens, 0),
-		CachedInputTokens:  maxInt64(current.CachedInputTokens-previous.CachedInputTokens, 0),
+		InputTokens:       maxInt64(current.InputTokens-previous.InputTokens, 0),
+		OutputTokens:      maxInt64(current.OutputTokens-previous.OutputTokens, 0),
+		CachedInputTokens: maxInt64(current.CachedInputTokens-previous.CachedInputTokens, 0),
 		CachedWriteTokens: maxInt64(current.CachedWriteTokens-previous.CachedWriteTokens, 0),
-		ReasoningTokens:    maxInt64(current.ReasoningTokens-previous.ReasoningTokens, 0),
-		TotalTokens:        maxInt64(current.TotalTokens-previous.TotalTokens, 0),
+		ReasoningTokens:   maxInt64(current.ReasoningTokens-previous.ReasoningTokens, 0),
+		TotalTokens:       maxInt64(current.TotalTokens-previous.TotalTokens, 0),
 	}
 }
 
@@ -444,6 +562,19 @@ func accumulateDelta(acc *hourlyAccumulator, delta codexUsage, sessionID string)
 	acc.Sessions[sessionID] = struct{}{}
 }
 
+func accumulateEngagementCounts(
+	acc *hourlyAccumulator,
+	sessionID string,
+	turnCount int64,
+	toolCallCount int64,
+) {
+	acc.TurnCount += turnCount
+	acc.ToolCallCount += toolCallCount
+	if strings.TrimSpace(sessionID) != "" {
+		acc.Sessions[sessionID] = struct{}{}
+	}
+}
+
 func materializeHourlyRows(buckets map[hourlyKey]*hourlyAccumulator, input ScanInput) []HourlyUsageRow {
 	rows := make([]HourlyUsageRow, 0, len(buckets))
 	for key, acc := range buckets {
@@ -458,11 +589,13 @@ func materializeHourlyRows(buckets map[hourlyKey]*hourlyAccumulator, input ScanI
 			InputTokens:           acc.InputTokens,
 			OutputTokens:          acc.OutputTokens,
 			CachedInputTokens:     acc.CachedInputTokens,
-			CachedWriteTokens:    acc.CachedWriteTokens,
+			CachedWriteTokens:     acc.CachedWriteTokens,
 			ReasoningTokens:       acc.ReasoningTokens,
 			TotalTokens:           acc.TotalTokens,
 			EventCount:            acc.EventCount,
 			SessionCount:          int64(len(acc.Sessions)),
+			TurnCount:             acc.TurnCount,
+			ToolCallCount:         acc.ToolCallCount,
 			AttributionConfidence: key.confidence,
 			ScannerSourceKind:     key.sourceKind,
 			ScannerSourceID:       key.sourceID,

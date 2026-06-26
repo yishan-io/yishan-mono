@@ -42,6 +42,14 @@ CREATE TABLE message (
   time_updated INTEGER NOT NULL,
   data TEXT NOT NULL
 );
+CREATE TABLE part (
+  id TEXT PRIMARY KEY,
+  message_id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  time_created INTEGER NOT NULL,
+  time_updated INTEGER NOT NULL,
+  data TEXT NOT NULL
+);
 CREATE TABLE workspace (id TEXT PRIMARY KEY, directory TEXT);
 CREATE TABLE project  (id TEXT PRIMARY KEY, worktree TEXT);
 `
@@ -53,6 +61,14 @@ func makeMsg(input, output, cacheRead, cacheWrite, reasoning int64) string {
 		`{"role":"assistant","tokens":{"input":%d,"output":%d,"cache":{"read":%d,"write":%d},"reasoning":%d}}`,
 		input, output, cacheRead, cacheWrite, reasoning,
 	)
+}
+
+func makeTextPart(text string) string {
+	return fmt.Sprintf(`{"type":"text","text":%q}`, text)
+}
+
+func makeToolPart(tool string) string {
+	return fmt.Sprintf(`{"type":"tool","tool":%q}`, tool)
 }
 
 // TestScanOpenCodeMessageLevelBuckets verifies that tokens are attributed to
@@ -135,10 +151,10 @@ INSERT INTO message VALUES('msg-3','ses-1',%d,%d,'%s');
 	// msg2: input=200+1000=1200, output=20, cache_read=1000, reasoning=10, total=1230
 	// msg3: input=300+1500=1800, output=30, cache_read=1500, reasoning=15, total=1845
 	// combined: input=3000, output=50, cache_read=2500, reasoning=25, total=3075
-	wantInput := int64(200+1000) + int64(300+1500)    // 3000
-	wantOutput := int64(20 + 30)                       // 50
-	wantCacheRead := int64(1000 + 1500)                // 2500
-	wantReasoning := int64(10 + 15)                    // 25
+	wantInput := int64(200+1000) + int64(300+1500)      // 3000
+	wantOutput := int64(20 + 30)                        // 50
+	wantCacheRead := int64(1000 + 1500)                 // 2500
+	wantReasoning := int64(10 + 15)                     // 25
 	wantTotal := wantInput + wantOutput + wantReasoning // 3075
 
 	if totalInput != wantInput {
@@ -251,6 +267,66 @@ func TestNormalizeOpenCodeModel(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("normalizeOpenCodeModel(%q) = %q, want %q", tc.raw, got, tc.want)
 		}
+	}
+}
+
+func TestScanOpenCodeCollectsTurnsToolCallsAndSkills(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now().UTC()
+	turnTime := now.Truncate(time.Hour).Add(10 * time.Minute)
+	if turnTime.After(now) {
+		turnTime = turnTime.Add(-time.Hour)
+	}
+	assistantTime := turnTime.Add(2 * time.Minute)
+
+	ddl := openCodeTestSchema + fmt.Sprintf(`
+INSERT INTO session VALUES('ses-1', NULL, NULL, '/work/myproject', 'deepseek', %d, %d);
+INSERT INTO message VALUES('msg-user','ses-1',%d,%d,'{"role":"user"}');
+INSERT INTO part VALUES('part-user-1','msg-user','ses-1',%d,%d,'%s');
+INSERT INTO message VALUES('msg-assistant','ses-1',%d,%d,'%s');
+INSERT INTO part VALUES('part-tool-1','msg-assistant','ses-1',%d,%d,'%s');
+INSERT INTO part VALUES('part-tool-2','msg-assistant','ses-1',%d,%d,'%s');
+`,
+		now.UnixMilli(), now.UnixMilli(),
+		turnTime.UnixMilli(), turnTime.UnixMilli(),
+		turnTime.UnixMilli(), turnTime.UnixMilli(), makeTextPart("Read ~/.agents/skills/ys-start/SKILL.md and follow its workflow"),
+		assistantTime.UnixMilli(), assistantTime.UnixMilli(), makeMsg(100, 10, 0, 0, 5),
+		assistantTime.UnixMilli(), assistantTime.UnixMilli(), makeToolPart("bash"),
+		assistantTime.UnixMilli(), assistantTime.UnixMilli(), makeToolPart("read"),
+	)
+	dbPath := createOpenCodeTestDB(t, ddl)
+
+	input := ScanInput{
+		RunID:              "test",
+		IngestedAt:         now.UnixMilli(),
+		ScanSinceUnixMilli: now.Add(-2 * time.Hour).UnixMilli(),
+		Worktrees: []WorktreeRef{
+			{ProjectID: "proj-1", WorkspaceID: "ws-1", WorkspacePath: "/work/myproject"},
+		},
+		SessionRoot: filepath.Dir(dbPath),
+	}
+
+	rows, err := ScanOpenCodeHourlyUsage(context.Background(), input)
+	if err != nil {
+		t.Fatalf("ScanOpenCodeHourlyUsage: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(rows))
+	}
+
+	row := rows[0]
+	if row.TurnCount != 1 {
+		t.Fatalf("expected TurnCount=1, got %d", row.TurnCount)
+	}
+	if row.ToolCallCount != 2 {
+		t.Fatalf("expected ToolCallCount=2, got %d", row.ToolCallCount)
+	}
+	if row.EventCount != 1 {
+		t.Fatalf("expected EventCount=1, got %d", row.EventCount)
+	}
+	if row.SessionCount != 1 {
+		t.Fatalf("expected SessionCount=1, got %d", row.SessionCount)
 	}
 }
 
