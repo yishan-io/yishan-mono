@@ -6,6 +6,7 @@ import type { ShellCreateTerminalActionInput } from "./shell-create-terminal-dom
 export type OpenWorkspaceBrowserInput = {
   branchLabel?: string | null;
   focusPath?: string | null;
+  nodeId?: string | null;
   organizationId: string;
   projectId: string;
   projectLabel: string | null;
@@ -31,6 +32,7 @@ type ShellQuickActionItem = {
 export type ShellWorkspaceBrowserSelectionContext = {
   activePreviewKind: "diff" | "file" | "terminal" | null;
   activePreviewPath: string | null;
+  nodeId: string | null;
   organizationId: string;
   projectId: string;
   projectLabel: string | null;
@@ -62,6 +64,7 @@ export function buildWorkspaceBrowserInputFromSelection(
   return {
     branchLabel: context.workspaceBranch,
     focusPath,
+    nodeId: context.nodeId,
     organizationId: context.organizationId,
     projectId: context.projectId,
     projectLabel: context.projectLabel,
@@ -85,6 +88,7 @@ export function buildWorkspaceBrowserInputFromWorkspace(args: {
 
   return {
     branchLabel: workspace.branch ?? null,
+    nodeId: workspace.nodeId,
     organizationId: workspace.organizationId,
     projectId: workspace.projectId,
     projectLabel,

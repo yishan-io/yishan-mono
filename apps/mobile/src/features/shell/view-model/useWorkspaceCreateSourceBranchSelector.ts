@@ -34,6 +34,7 @@ export function useWorkspaceCreateSourceBranchSelector({
     selectedWorkspaceId,
     {
       enabled: open && isSourceBranchSelectorOpen && !!project && selectedWorkspaceId.length > 0,
+      nodeId: selectedNode?.nodeId ?? null,
     },
   );
 

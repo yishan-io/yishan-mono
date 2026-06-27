@@ -9,6 +9,7 @@ type UseWorkspaceFileTreeModelOptions = {
   activeDirectoryPath: string;
   browserStateId: string;
   focusedPath?: string;
+  nodeId: string | null;
   onOpenFile: (path: string) => void;
   organizationId: string;
   projectId: string;
@@ -39,6 +40,7 @@ export function useWorkspaceFileTreeModel({
   activeDirectoryPath,
   browserStateId,
   focusedPath,
+  nodeId,
   onOpenFile,
   organizationId,
   projectId,
@@ -47,6 +49,7 @@ export function useWorkspaceFileTreeModel({
   const tree = useWorkspaceFileTree({
     activeDirectoryPath,
     browserStateId,
+    nodeId,
     organizationId,
     projectId,
     workspaceId,

@@ -38,6 +38,7 @@ export function useShellQuickActionCommands({
               shell.activePaneTab?.kind === "file" || shell.activePaneTab?.kind === "diff"
                 ? shell.activePaneTab.path
                 : null,
+            nodeId: screenContext.selectedWorkspace?.nodeId ?? screenContext.selectedTerminal?.nodeId ?? null,
             organizationId: screenContext.selectedWorkspaceContext.organizationId,
             projectId: screenContext.selectedWorkspaceContext.projectId,
             projectLabel: screenContext.selectedProjectName,
@@ -53,7 +54,9 @@ export function useShellQuickActionCommands({
       screenContext.selectedProjectName,
       screenContext.selectedTerminal?.id,
       screenContext.selectedTerminal?.label,
+      screenContext.selectedTerminal?.nodeId,
       screenContext.selectedWorkspace?.branch,
+      screenContext.selectedWorkspace?.nodeId,
       screenContext.selectedWorkspaceContext,
       screenContext.selectedWorkspaceLabel,
     ],

@@ -12,8 +12,11 @@ import {
   type WorkspaceFilePreviewModel,
   useWorkspaceFilePreviewModel,
 } from "@/features/workspaces/preview/view-model/useWorkspaceFilePreviewModel";
+import { hasRelayWorkspaceQueryContext } from "@/features/workspaces/queries/workspace-query-runtime";
+import { WorkspacePreviewMissingContext } from "./WorkspacePreviewMissingContext";
 
 type WorkspaceFilePreviewPaneProps = {
+  nodeId: string | null;
   organizationId: string;
   path: string;
   projectId: string;
@@ -26,12 +29,43 @@ type WorkspaceFilePreviewProps = {
 };
 
 export function WorkspaceFilePreviewPane({
+  nodeId,
+  organizationId,
+  path,
+  projectId,
+  workspaceId,
+}: WorkspaceFilePreviewPaneProps) {
+  if (
+    !hasRelayWorkspaceQueryContext({
+      nodeId,
+      organizationId,
+      projectId,
+      workspaceId,
+    })
+  ) {
+    return <WorkspacePreviewMissingContext />;
+  }
+
+  return (
+    <WorkspaceFilePreviewPaneContent
+      nodeId={nodeId}
+      organizationId={organizationId}
+      path={path}
+      projectId={projectId}
+      workspaceId={workspaceId}
+    />
+  );
+}
+
+function WorkspaceFilePreviewPaneContent({
+  nodeId,
   organizationId,
   path,
   projectId,
   workspaceId,
 }: WorkspaceFilePreviewPaneProps) {
   const model = useWorkspaceFilePreviewModel({
+    nodeId,
     organizationId,
     path,
     projectId,

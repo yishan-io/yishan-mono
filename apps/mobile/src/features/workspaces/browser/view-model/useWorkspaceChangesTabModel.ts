@@ -11,6 +11,7 @@ import { useWorkspaceChangesScrollState } from "../state/useWorkspaceChangesScro
 type UseWorkspaceChangesTabModelOptions = {
   browserStateId: string;
   focusedPath?: string;
+  nodeId: string | null;
   onOpenDiff: (path: string, changeKind: WorkspaceGitChangeKind) => void;
   organizationId: string;
   projectId: string;
@@ -43,6 +44,7 @@ export type WorkspaceChangesTabModel = {
 export function useWorkspaceChangesTabModel({
   browserStateId,
   focusedPath,
+  nodeId,
   onOpenDiff,
   organizationId,
   projectId,
@@ -51,6 +53,7 @@ export function useWorkspaceChangesTabModel({
   const { t } = useAppLanguage();
   const changesQuery = useWorkspaceChangesQuery(organizationId, projectId, workspaceId, {
     enabled: organizationId.length > 0 && projectId.length > 0 && workspaceId.length > 0,
+    nodeId,
   });
   const sections = buildSections(changesQuery.data ?? createEmptyChanges(), t);
   const focusedLocation = focusedPath ? findChangeLocation(sections, focusedPath) : null;

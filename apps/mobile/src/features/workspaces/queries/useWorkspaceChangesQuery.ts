@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth";
-import { listWorkspaceGitChanges } from "@/features/workspaces/workspaces.api";
+import { listRelayWorkspaceGitChanges } from "@/features/workspaces/workspaces.relay";
 import { queryKeys } from "@/lib/query/query-keys";
 import { WORKSPACE_BROWSER_QUERY_STALE_TIME_MS } from "./workspace-browser-query.constants";
-import { isWorkspaceQueryEnabled, requireWorkspaceQueryAccessToken } from "./workspace-query-runtime";
+import { isRelayWorkspaceQueryEnabled, requireWorkspaceQueryAccessToken } from "./workspace-query-runtime";
 
 export function useWorkspaceChangesQuery(
   organizationId: string,
@@ -12,25 +12,27 @@ export function useWorkspaceChangesQuery(
   workspaceId: string,
   options?: {
     enabled?: boolean;
+    nodeId?: string | null;
   },
 ) {
   const { session, status } = useAuth();
   const accessToken = session?.accessToken;
   const enabled = options?.enabled ?? true;
+  const nodeId = options?.nodeId ?? null;
 
   return useQuery({
     queryKey: queryKeys.workspaceChanges(organizationId, projectId, workspaceId),
     queryFn: async () => {
-      return listWorkspaceGitChanges(
-        requireWorkspaceQueryAccessToken(accessToken),
-        organizationId,
-        projectId,
+      return listRelayWorkspaceGitChanges({
+        accessToken: requireWorkspaceQueryAccessToken(accessToken),
+        nodeId,
         workspaceId,
-      );
+      });
     },
-    enabled: isWorkspaceQueryEnabled({
+    enabled: isRelayWorkspaceQueryEnabled({
       accessToken,
       enabled,
+      nodeId,
       organizationId,
       projectId,
       status,

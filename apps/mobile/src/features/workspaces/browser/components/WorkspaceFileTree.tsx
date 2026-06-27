@@ -16,6 +16,7 @@ type WorkspaceFileTreePaneProps = {
   activeDirectoryPath: string;
   browserStateId: string;
   focusedPath?: string;
+  nodeId: string | null;
   organizationId: string;
   projectId: string;
   workspaceId: string;
@@ -36,6 +37,7 @@ export function WorkspaceFileTreePane({
   activeDirectoryPath,
   browserStateId,
   focusedPath,
+  nodeId,
   organizationId,
   projectId,
   workspaceId,
@@ -45,6 +47,7 @@ export function WorkspaceFileTreePane({
     activeDirectoryPath,
     browserStateId,
     focusedPath,
+    nodeId,
     onOpenFile,
     organizationId,
     projectId,

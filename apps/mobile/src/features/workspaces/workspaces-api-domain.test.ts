@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildWorkspaceWebSocketUrl,
-  readStartedWorkspaceTerminalSessionResponse,
   readWorkspaceCurrentPullRequestResponse,
-  readWorkspaceGitBranchesResponse,
+  readWorkspacePullRequestsResponse,
   readWorkspaceResponse,
-  readWorkspaceTerminalSessionsResponse,
   readWorkspacesResponse,
 } from "./workspaces-api-domain";
 
@@ -32,91 +29,49 @@ describe("workspaces-api-domain", () => {
     expect(readWorkspaceResponse({ workspace })).toEqual(workspace);
   });
 
-  it("unwraps current pull request and started session payloads", () => {
+  it("unwraps current pull request payloads", () => {
     expect(
       readWorkspaceCurrentPullRequestResponse({
         pullRequest: null,
       }),
     ).toBeNull();
-
-    expect(
-      readStartedWorkspaceTerminalSessionResponse({
-        session: {
-          sessionId: "session-1",
-        },
-      }),
-    ).toEqual({ sessionId: "session-1" });
   });
 
-  it("unwraps workspace branch list responses", () => {
+  it("unwraps workspace pull request list payloads", () => {
     expect(
-      readWorkspaceGitBranchesResponse({
-        branches: {
-          branches: ["origin/main", "feature/mobile"],
-          currentBranch: "feature/mobile",
-          localBranches: ["feature/mobile"],
-          remoteBranches: ["origin/main"],
-          worktreeBranches: [],
-        },
-      }),
-    ).toEqual({
-      branches: ["origin/main", "feature/mobile"],
-      currentBranch: "feature/mobile",
-      localBranches: ["feature/mobile"],
-      remoteBranches: ["origin/main"],
-      worktreeBranches: [],
-    });
-  });
-
-  it("unwraps terminal session responses including correlation metadata", () => {
-    expect(
-      readWorkspaceTerminalSessionsResponse({
-        sessions: [
+      readWorkspacePullRequestsResponse({
+        pullRequests: [
           {
-            paneId: "pane-1",
-            pid: 123,
-            sessionId: "session-1",
-            startedAt: "2026-06-18T00:00:00.000Z",
-            status: "running",
-            tabId: "terminal-1",
-            workspaceId: "workspace-1",
+            baseBranch: "main",
+            branch: "feature/mobile",
+            detectedAt: "2026-06-18T00:00:00.000Z",
+            id: "pr-summary-1",
+            metadata: null,
+            prId: "123",
+            resolvedAt: null,
+            state: "open",
+            title: "Mobile relay migration",
+            url: "https://github.com/yishan-io/yishan-mono/pull/123",
           },
         ],
       }),
-    ).toEqual([
+    ).toEqual(
       {
-        paneId: "pane-1",
-        pid: 123,
-        sessionId: "session-1",
-        startedAt: "2026-06-18T00:00:00.000Z",
-        status: "running",
-        tabId: "terminal-1",
-        workspaceId: "workspace-1",
-      },
-    ]);
-  });
-
-  it("builds websocket urls from the configured api base url", () => {
-    expect(
-      buildWorkspaceWebSocketUrl({
-        apiBaseUrl: "https://api.example.com",
-        pathname: "/orgs/org-1/projects/project-1/workspaces/ws-1/terminal/sessions/session-1/ws",
-      }),
-    ).toBe("wss://api.example.com/orgs/org-1/projects/project-1/workspaces/ws-1/terminal/sessions/session-1/ws");
-
-    expect(
-      buildWorkspaceWebSocketUrl({
-        apiBaseUrl: "http://127.0.0.1:8789",
-        pathname: "/orgs/org-1/projects/project-1/workspaces/ws-1/events/ws",
-      }),
-    ).toBe("ws://127.0.0.1:8789/orgs/org-1/projects/project-1/workspaces/ws-1/events/ws");
-
-    expect(
-      buildWorkspaceWebSocketUrl({
-        accessToken: "token-1",
-        apiBaseUrl: "http://127.0.0.1:8789",
-        pathname: "/orgs/org-1/projects/project-1/workspaces/ws-1/events/ws",
-      }),
-    ).toBe("ws://127.0.0.1:8789/orgs/org-1/projects/project-1/workspaces/ws-1/events/ws?accessToken=token-1");
+        pullRequests: [
+          {
+            baseBranch: "main",
+            branch: "feature/mobile",
+            detectedAt: "2026-06-18T00:00:00.000Z",
+            id: "pr-summary-1",
+            metadata: null,
+            prId: "123",
+            resolvedAt: null,
+            state: "open",
+            title: "Mobile relay migration",
+            url: "https://github.com/yishan-io/yishan-mono/pull/123",
+          },
+        ],
+      }.pullRequests,
+    );
   });
 });

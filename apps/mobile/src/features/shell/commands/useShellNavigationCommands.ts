@@ -26,6 +26,7 @@ export function useShellNavigationCommands({
         params: {
           branchLabel: context.branchLabel ?? "",
           focusPath: context.focusPath ?? "",
+          nodeId: context.nodeId ?? "",
           orgId: context.organizationId,
           projectId: context.projectId,
           projectLabel: context.projectLabel ?? "",

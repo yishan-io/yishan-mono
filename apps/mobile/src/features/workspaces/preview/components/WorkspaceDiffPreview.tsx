@@ -11,12 +11,15 @@ import {
   type WorkspaceDiffPreviewModel,
   useWorkspaceDiffPreviewModel,
 } from "@/features/workspaces/preview/view-model/useWorkspaceDiffPreviewModel";
+import { hasRelayWorkspaceQueryContext } from "@/features/workspaces/queries/workspace-query-runtime";
 import type { WorkspaceGitChangeKind } from "@/features/workspaces/workspaces.types";
 import { WorkspaceDiffPreviewLineRow } from "./WorkspaceDiffPreviewLineRow";
+import { WorkspacePreviewMissingContext } from "./WorkspacePreviewMissingContext";
 import { useWorkspaceDiffPreviewLayout } from "./useWorkspaceDiffPreviewLayout";
 
 type WorkspaceDiffPreviewPaneProps = {
   changeKind: WorkspaceGitChangeKind | null;
+  nodeId: string | null;
   organizationId: string;
   path: string;
   projectId: string;
@@ -31,6 +34,38 @@ type WorkspaceDiffPreviewProps = {
 
 export function WorkspaceDiffPreviewPane({
   changeKind,
+  nodeId,
+  organizationId,
+  path,
+  projectId,
+  workspaceId,
+}: WorkspaceDiffPreviewPaneProps) {
+  if (
+    !hasRelayWorkspaceQueryContext({
+      nodeId,
+      organizationId,
+      projectId,
+      workspaceId,
+    })
+  ) {
+    return <WorkspacePreviewMissingContext />;
+  }
+
+  return (
+    <WorkspaceDiffPreviewPaneContent
+      changeKind={changeKind}
+      nodeId={nodeId}
+      organizationId={organizationId}
+      path={path}
+      projectId={projectId}
+      workspaceId={workspaceId}
+    />
+  );
+}
+
+function WorkspaceDiffPreviewPaneContent({
+  changeKind,
+  nodeId,
   organizationId,
   path,
   projectId,
@@ -38,6 +73,7 @@ export function WorkspaceDiffPreviewPane({
 }: WorkspaceDiffPreviewPaneProps) {
   const model = useWorkspaceDiffPreviewModel({
     changeKind,
+    nodeId,
     organizationId,
     path,
     projectId,
@@ -58,6 +94,12 @@ export function WorkspaceDiffPreview({ model }: WorkspaceDiffPreviewProps) {
 
   if (model.error) {
     return <ErrorState onRetry={() => void model.refetch()} />;
+  }
+
+  if (model.previewUnavailable) {
+    return (
+      <EmptyState title={t("shell.diffPreviewUnavailableTitle")} message={t("shell.diffPreviewUnavailableMessage")} />
+    );
   }
 
   if (model.lines.length === 0) {

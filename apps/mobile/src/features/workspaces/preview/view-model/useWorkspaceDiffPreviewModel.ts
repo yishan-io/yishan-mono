@@ -9,6 +9,7 @@ const MAX_DIFF_LINES = 1_200;
 
 type UseWorkspaceDiffPreviewModelOptions = {
   changeKind: WorkspaceGitChangeKind | null;
+  nodeId: string | null;
   organizationId: string;
   path: string;
   projectId: string;
@@ -20,12 +21,14 @@ export type WorkspaceDiffPreviewModel = {
   error: boolean;
   loading: boolean;
   lines: ReturnType<typeof buildUnifiedDiffLines>;
+  previewUnavailable: boolean;
   refetch: () => Promise<unknown>;
   truncated: boolean;
 };
 
 export function useWorkspaceDiffPreviewModel({
   changeKind,
+  nodeId,
   organizationId,
   path,
   projectId,
@@ -34,6 +37,7 @@ export function useWorkspaceDiffPreviewModel({
   const diffQuery = useWorkspaceDiffQuery(organizationId, projectId, workspaceId, path, {
     enabled: path.trim().length > 0,
     maxChars: MAX_DIFF_CHARS,
+    nodeId,
   });
 
   const diffLines = useMemo(
@@ -48,6 +52,7 @@ export function useWorkspaceDiffPreviewModel({
     error: diffQuery.isError,
     lines,
     loading: diffQuery.isLoading,
+    previewUnavailable: Boolean(diffQuery.data?.previewUnavailable),
     refetch: diffQuery.refetch,
     truncated,
   };

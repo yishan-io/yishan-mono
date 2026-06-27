@@ -6,15 +6,16 @@ import { sortFileBrowserEntries } from "@/features/workspaces/file-browser";
 import { useWorkspaceFilesQuery } from "@/features/workspaces/queries/useWorkspaceFilesQuery";
 import { WORKSPACE_BROWSER_QUERY_STALE_TIME_MS } from "@/features/workspaces/queries/workspace-browser-query.constants";
 import {
-  isWorkspaceQueryEnabled,
+  isRelayWorkspaceQueryEnabled,
   requireWorkspaceQueryAccessToken,
 } from "@/features/workspaces/queries/workspace-query-runtime";
-import { listWorkspaceFiles } from "@/features/workspaces/workspaces.api";
+import { listRelayWorkspaceFiles } from "@/features/workspaces/workspaces.relay";
 import type { WorkspaceFileEntry } from "@/features/workspaces/workspaces.types";
 import { queryKeys } from "@/lib/query/query-keys";
 
 type UseWorkspaceDirectoryQueriesOptions = {
   expandedDirectoryPaths: string[];
+  nodeId: string | null;
   organizationId: string;
   projectId: string;
   workspaceId: string;
@@ -22,6 +23,7 @@ type UseWorkspaceDirectoryQueriesOptions = {
 
 export function useWorkspaceDirectoryQueries({
   expandedDirectoryPaths,
+  nodeId,
   organizationId,
   projectId,
   workspaceId,
@@ -31,31 +33,30 @@ export function useWorkspaceDirectoryQueries({
 
   const rootQuery = useWorkspaceFilesQuery(organizationId, projectId, workspaceId, {
     enabled: organizationId.length > 0 && projectId.length > 0 && workspaceId.length > 0,
+    nodeId,
     path: "",
     recursive: false,
   });
 
   const childQueries = useQueries({
     queries: expandedDirectoryPaths.map((path) => ({
-      enabled: isWorkspaceQueryEnabled({
+      enabled: isRelayWorkspaceQueryEnabled({
         accessToken,
         enabled: true,
+        nodeId,
         organizationId,
         projectId,
         status,
         workspaceId,
       }),
       queryFn: async () => {
-        return listWorkspaceFiles(
-          requireWorkspaceQueryAccessToken(accessToken),
-          organizationId,
-          projectId,
+        return listRelayWorkspaceFiles({
+          accessToken: requireWorkspaceQueryAccessToken(accessToken),
+          nodeId,
+          path,
+          recursive: false,
           workspaceId,
-          {
-            path,
-            recursive: false,
-          },
-        );
+        });
       },
       queryKey: queryKeys.workspaceFiles(organizationId, projectId, workspaceId, path, false),
       staleTime: WORKSPACE_BROWSER_QUERY_STALE_TIME_MS,

@@ -36,6 +36,7 @@ export type WorkspaceFileDiff = {
   path: string;
   oldContent: string;
   newContent: string;
+  previewUnavailable?: boolean;
   truncated?: boolean;
 };
 

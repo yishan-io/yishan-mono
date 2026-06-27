@@ -7,6 +7,7 @@ const MAX_PREVIEW_CHARS = 20_000;
 const MAX_PREVIEW_LINES = 1_200;
 
 type UseWorkspaceFilePreviewModelOptions = {
+  nodeId: string | null;
   organizationId: string;
   path: string;
   projectId: string;
@@ -25,6 +26,7 @@ export type WorkspaceFilePreviewModel = {
 };
 
 export function useWorkspaceFilePreviewModel({
+  nodeId,
   organizationId,
   path,
   projectId,
@@ -34,6 +36,7 @@ export function useWorkspaceFilePreviewModel({
   const fileQuery = useWorkspaceFileQuery(organizationId, projectId, workspaceId, path, {
     enabled: previewKind !== null && previewKind !== "image" && previewKind !== "unsupported",
     maxChars: MAX_PREVIEW_CHARS,
+    nodeId,
   });
   const previewText = fileQuery.data?.content ?? "";
   const allPreviewLines = useMemo(() => splitPreviewLines(previewText), [previewText]);

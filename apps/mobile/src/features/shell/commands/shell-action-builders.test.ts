@@ -36,6 +36,7 @@ describe("shell-action-builders", () => {
         {
           activePreviewKind: "diff",
           activePreviewPath: "src/features/shell/index.ts",
+          nodeId: "node-1",
           organizationId: "org-1",
           projectId: "project-1",
           projectLabel: "nile",
@@ -50,6 +51,7 @@ describe("shell-action-builders", () => {
     ).toEqual({
       branchLabel: "feature/mobile",
       focusPath: "src/features/shell/index.ts",
+      nodeId: "node-1",
       organizationId: "org-1",
       projectId: "project-1",
       projectLabel: "nile",
@@ -67,6 +69,7 @@ describe("shell-action-builders", () => {
         {
           activePreviewKind: "file",
           activePreviewPath: "README.md",
+          nodeId: "node-1",
           organizationId: "org-1",
           projectId: "project-1",
           projectLabel: "nile",
@@ -88,6 +91,7 @@ describe("shell-action-builders", () => {
         {
           activePreviewKind: "terminal",
           activePreviewPath: null,
+          nodeId: "node-1",
           organizationId: "org-1",
           projectId: "project-1",
           projectLabel: "nile",
@@ -116,6 +120,7 @@ describe("shell-action-builders", () => {
       }),
     ).toEqual({
       branchLabel: "feature/mobile",
+      nodeId: "node-1",
       organizationId: "org-1",
       projectId: "project-1",
       projectLabel: "nile",

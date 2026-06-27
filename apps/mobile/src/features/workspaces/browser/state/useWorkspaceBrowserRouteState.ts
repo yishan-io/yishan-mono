@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from "expo-router";
 
 import { normalizePath } from "@/features/workspaces/file-browser";
+import { hasRelayWorkspaceQueryContext } from "@/features/workspaces/queries/workspace-query-runtime";
 import { readRouteParam } from "@/lib/navigation/read-route-param";
 import { useWorkspaceBrowserTabState } from "./useWorkspaceBrowserTabState";
 import { type WorkspaceBrowserTab, createWorkspaceBrowserStateId } from "./workspaceBrowserState";
@@ -8,6 +9,7 @@ import { type WorkspaceBrowserTab, createWorkspaceBrowserStateId } from "./works
 type BrowserParams = {
   branchLabel?: string | string[];
   focusPath?: string | string[];
+  nodeId?: string | string[];
   orgId?: string | string[];
   projectId?: string | string[];
   projectLabel?: string | string[];
@@ -25,6 +27,7 @@ export function useWorkspaceBrowserRouteState() {
   const organizationId = readRouteParam(params.orgId);
   const projectId = readRouteParam(params.projectId);
   const projectLabel = readRouteParam(params.projectLabel);
+  const nodeId = readRouteParam(params.nodeId);
   const branchLabel = readRouteParam(params.branchLabel);
   const focusPath = normalizePath(readRouteParam(params.focusPath));
   const workspaceId = readRouteParam(params.workspaceId);
@@ -36,7 +39,12 @@ export function useWorkspaceBrowserRouteState() {
   const routeTab: WorkspaceBrowserTab =
     routeTabParam === "changes" ? "changes" : routeTabParam === "prs" ? "prs" : "files";
   const explicitDirectoryPath = normalizePath(readRouteParam(params.directoryPath));
-  const hasContext = organizationId.length > 0 && projectId.length > 0 && workspaceId.length > 0;
+  const hasContext = hasRelayWorkspaceQueryContext({
+    nodeId,
+    organizationId,
+    projectId,
+    workspaceId,
+  });
   const browserStateId = createWorkspaceBrowserStateId(organizationId, projectId, workspaceId);
   const browserTabState = useWorkspaceBrowserTabState({
     browserStateId,
@@ -52,6 +60,7 @@ export function useWorkspaceBrowserRouteState() {
     browserStateId,
     branchLabel,
     hasContext,
+    nodeId,
     organizationId,
     projectId,
     projectLabel,

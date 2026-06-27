@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
 import { useWorkspaceBrowserCommands } from "@/features/workspaces/browser/commands/useWorkspaceBrowserCommands";
+import { useWorkspaceLiveQueryInvalidation } from "@/features/workspaces/queries/useWorkspaceLiveQueryInvalidation";
 import { useWorkspaceBrowserRouteState } from "../state/useWorkspaceBrowserRouteState";
 
 export function useWorkspaceBrowserModel() {
@@ -16,6 +17,17 @@ export function useWorkspaceBrowserModel() {
     setFocusedChangePath: route.setFocusedChangePath,
     setFocusedFilePath: route.setFocusedFilePath,
     workspaceId: route.workspaceId,
+  });
+  useWorkspaceLiveQueryInvalidation({
+    enabled: route.hasContext,
+    workspace: route.hasContext
+      ? {
+          id: route.workspaceId,
+          nodeId: route.nodeId,
+          organizationId: route.organizationId,
+          projectId: route.projectId,
+        }
+      : null,
   });
 
   const title =
@@ -43,6 +55,7 @@ export function useWorkspaceBrowserModel() {
     changesPane: {
       browserStateId: route.browserStateId,
       focusedPath: route.focusedChangePath,
+      nodeId: route.nodeId,
       onOpenDiff: commands.openDiff,
       organizationId: route.organizationId,
       projectId: route.projectId,
@@ -52,6 +65,7 @@ export function useWorkspaceBrowserModel() {
       activeDirectoryPath: route.directoryPath,
       browserStateId: route.browserStateId,
       focusedPath: route.focusedFilePath,
+      nodeId: route.nodeId,
       onOpenFile: commands.openFile,
       organizationId: route.organizationId,
       projectId: route.projectId,

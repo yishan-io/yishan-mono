@@ -9,6 +9,7 @@ import { useWorkspaceExpandedPathsState } from "./useWorkspaceExpandedPathsState
 type UseWorkspaceFileTreeOptions = {
   activeDirectoryPath: string;
   browserStateId: string;
+  nodeId: string | null;
   organizationId: string;
   projectId: string;
   workspaceId: string;
@@ -29,6 +30,7 @@ function createInitialExpandedPaths(activeDirectoryPath: string) {
 export function useWorkspaceFileTree({
   activeDirectoryPath,
   browserStateId,
+  nodeId,
   organizationId,
   projectId,
   workspaceId,
@@ -42,6 +44,7 @@ export function useWorkspaceFileTree({
   const expandedDirectoryPaths = useMemo(() => [...expandedPaths].sort(), [expandedPaths]);
   const { childEntriesByPath, childQueryByPath, rootQuery } = useWorkspaceDirectoryQueries({
     expandedDirectoryPaths,
+    nodeId,
     organizationId,
     projectId,
     workspaceId,

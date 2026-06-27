@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/features/auth";
-import { readWorkspaceFile } from "@/features/workspaces/workspaces.api";
+import { readRelayWorkspaceFile } from "@/features/workspaces/workspaces.relay";
 import { queryKeys } from "@/lib/query/query-keys";
 import {
   hasWorkspaceQueryPath,
-  isWorkspaceQueryEnabled,
+  isRelayWorkspaceQueryEnabled,
   requireWorkspaceQueryAccessToken,
 } from "./workspace-query-runtime";
 
@@ -17,31 +17,31 @@ export function useWorkspaceFileQuery(
   options?: {
     enabled?: boolean;
     maxChars?: number;
+    nodeId?: string | null;
   },
 ) {
   const { session, status } = useAuth();
   const accessToken = session?.accessToken;
   const enabled = options?.enabled ?? true;
   const maxChars = options?.maxChars ?? 0;
+  const nodeId = options?.nodeId ?? null;
 
   return useQuery({
     queryKey: queryKeys.workspaceFile(organizationId, projectId, workspaceId, path, maxChars),
     queryFn: async () => {
-      return readWorkspaceFile(
-        requireWorkspaceQueryAccessToken(accessToken),
-        organizationId,
-        projectId,
+      return readRelayWorkspaceFile({
+        accessToken: requireWorkspaceQueryAccessToken(accessToken),
+        maxChars: maxChars > 0 ? maxChars : undefined,
+        nodeId,
         workspaceId,
         path,
-        {
-          maxChars: maxChars > 0 ? maxChars : undefined,
-        },
-      );
+      });
     },
     enabled:
-      isWorkspaceQueryEnabled({
+      isRelayWorkspaceQueryEnabled({
         accessToken,
         enabled,
+        nodeId,
         organizationId,
         projectId,
         status,

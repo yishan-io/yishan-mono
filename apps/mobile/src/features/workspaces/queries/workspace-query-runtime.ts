@@ -1,6 +1,7 @@
 import type { AuthStatus } from "@/features/auth";
 
 type WorkspaceQueryContext = {
+  nodeId?: string | null;
   organizationId: string;
   projectId: string;
   workspaceId?: string;
@@ -22,6 +23,26 @@ export function hasWorkspaceQueryPath(path: string): boolean {
   return path.trim().length > 0;
 }
 
+export function hasWorkspaceQueryNodeId(nodeId: string | null | undefined): boolean {
+  return (nodeId?.trim() ?? "").length > 0;
+}
+
+/** Returns true when a relay-backed workspace query has both workspace ids and a node id. */
+export function hasRelayWorkspaceQueryContext({
+  nodeId,
+  organizationId,
+  projectId,
+  workspaceId,
+}: WorkspaceQueryContext): boolean {
+  return (
+    hasWorkspaceQueryContext({
+      organizationId,
+      projectId,
+      workspaceId,
+    }) && hasWorkspaceQueryNodeId(nodeId)
+  );
+}
+
 export function isWorkspaceQueryEnabled({
   accessToken,
   enabled,
@@ -39,6 +60,32 @@ export function isWorkspaceQueryEnabled({
     status === "authenticated" &&
     !!accessToken &&
     hasWorkspaceQueryContext({
+      organizationId,
+      projectId,
+      workspaceId,
+    })
+  );
+}
+
+export function isRelayWorkspaceQueryEnabled({
+  accessToken,
+  enabled,
+  nodeId,
+  organizationId,
+  projectId,
+  status,
+  workspaceId,
+}: WorkspaceQueryContext & {
+  accessToken: string | null | undefined;
+  enabled: boolean;
+  status: AuthStatus;
+}): boolean {
+  return (
+    enabled &&
+    status === "authenticated" &&
+    !!accessToken &&
+    hasRelayWorkspaceQueryContext({
+      nodeId,
       organizationId,
       projectId,
       workspaceId,

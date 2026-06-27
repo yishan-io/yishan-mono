@@ -7,6 +7,7 @@ import { type ShellChatModel, ShellChatSurface } from "./ShellChatSurface";
 import { ShellPreviewSurface } from "./ShellPreviewSurface";
 
 export type ShellFocusPanePreviewContext = {
+  nodeId?: string | null;
   organizationId?: string | null;
   projectId?: string | null;
   workspaceId?: string | null;
@@ -43,6 +44,7 @@ export function ShellFocusPane({
     return (
       <ShellPreviewSurface onOpenPaneTabs={onOpenPaneTabs} path={activeTab.path} tabKind={activeTab.kind}>
         <WorkspaceFilePreviewPane
+          nodeId={previewContext.nodeId ?? null}
           organizationId={previewContext.organizationId}
           path={activeTab.path}
           projectId={previewContext.projectId}
@@ -56,6 +58,7 @@ export function ShellFocusPane({
     <ShellPreviewSurface onOpenPaneTabs={onOpenPaneTabs} path={activeTab.path} tabKind={activeTab.kind}>
       <WorkspaceDiffPreviewPane
         changeKind={activeTab.changeKind}
+        nodeId={previewContext.nodeId ?? null}
         organizationId={previewContext.organizationId}
         path={activeTab.path}
         projectId={previewContext.projectId}

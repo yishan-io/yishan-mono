@@ -166,6 +166,7 @@ export function useShellScreenModel({
   };
 
   const focusPanePreviewContext: ShellFocusPanePreviewContext = {
+    nodeId: screenContext.selectedWorkspace?.nodeId ?? screenContext.selectedTerminal?.nodeId ?? null,
     organizationId: screenContext.selectedWorkspaceContext?.organizationId ?? null,
     projectId: screenContext.selectedWorkspaceContext?.projectId ?? null,
     workspaceId: screenContext.selectedWorkspaceContext?.workspaceId ?? null,

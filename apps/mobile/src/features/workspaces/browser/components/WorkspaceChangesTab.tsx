@@ -20,6 +20,7 @@ import {
 type WorkspaceChangesTabPaneProps = {
   browserStateId: string;
   focusedPath?: string;
+  nodeId: string | null;
   organizationId: string;
   projectId: string;
   workspaceId: string;
@@ -33,6 +34,7 @@ type WorkspaceChangesTabProps = {
 export function WorkspaceChangesTabPane({
   browserStateId,
   focusedPath,
+  nodeId,
   organizationId,
   projectId,
   workspaceId,
@@ -41,6 +43,7 @@ export function WorkspaceChangesTabPane({
   const model = useWorkspaceChangesTabModel({
     browserStateId,
     focusedPath,
+    nodeId,
     onOpenDiff,
     organizationId,
     projectId,

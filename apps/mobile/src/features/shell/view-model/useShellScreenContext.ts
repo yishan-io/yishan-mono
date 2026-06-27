@@ -124,6 +124,7 @@ export function useShellScreenContext({
     shell.selectedWorkspaceContext?.workspaceId ?? "",
     {
       enabled: !!shell.selectedWorkspaceContext,
+      nodeId: selectedWorkspace?.nodeId ?? shell.selectedTerminal?.nodeId ?? null,
       recursive: false,
     },
   );

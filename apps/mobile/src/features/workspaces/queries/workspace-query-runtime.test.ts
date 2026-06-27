@@ -1,51 +1,42 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  hasWorkspaceQueryContext,
-  hasWorkspaceQueryPath,
-  isWorkspaceQueryEnabled,
-  requireWorkspaceQueryAccessToken,
-} from "./workspace-query-runtime";
+  hasRelayWorkspaceQueryContext,
+  isRelayWorkspaceQueryEnabled,
+} from "@/features/workspaces/queries/workspace-query-runtime";
 
 describe("workspace-query-runtime", () => {
-  it("accepts project-level and workspace-level query contexts", () => {
-    expect(hasWorkspaceQueryContext({ organizationId: "org-1", projectId: "project-1" })).toBe(true);
-    expect(hasWorkspaceQueryContext({ organizationId: "org-1", projectId: "project-1", workspaceId: "ws-1" })).toBe(
-      true,
-    );
-    expect(hasWorkspaceQueryContext({ organizationId: "", projectId: "project-1", workspaceId: "ws-1" })).toBe(false);
-    expect(hasWorkspaceQueryContext({ organizationId: "org-1", projectId: "project-1", workspaceId: "" })).toBe(false);
-  });
-
-  it("treats only non-empty trimmed paths as valid file/diff targets", () => {
-    expect(hasWorkspaceQueryPath("README.md")).toBe(true);
-    expect(hasWorkspaceQueryPath("   ")).toBe(false);
-  });
-
-  it("shares one enabled gate across workspace queries", () => {
+  it("requires nodeId for relay workspace context", () => {
     expect(
-      isWorkspaceQueryEnabled({
-        accessToken: "token",
-        enabled: true,
+      hasRelayWorkspaceQueryContext({
+        nodeId: null,
         organizationId: "org-1",
         projectId: "project-1",
-        status: "authenticated",
-      }),
-    ).toBe(true);
-
-    expect(
-      isWorkspaceQueryEnabled({
-        accessToken: null,
-        enabled: true,
-        organizationId: "org-1",
-        projectId: "project-1",
-        status: "authenticated",
+        workspaceId: "workspace-1",
       }),
     ).toBe(false);
+
+    expect(
+      hasRelayWorkspaceQueryContext({
+        nodeId: "node-1",
+        organizationId: "org-1",
+        projectId: "project-1",
+        workspaceId: "workspace-1",
+      }),
+    ).toBe(true);
   });
 
-  it("throws a consistent missing-token error when a query function runs without auth", () => {
-    expect(() => requireWorkspaceQueryAccessToken(undefined)).toThrow("Missing access token");
-    expect(requireWorkspaceQueryAccessToken("token")).toBe("token");
+  it("disables relay queries when nodeId is missing", () => {
+    expect(
+      isRelayWorkspaceQueryEnabled({
+        accessToken: "access-token",
+        enabled: true,
+        nodeId: "",
+        organizationId: "org-1",
+        projectId: "project-1",
+        status: "authenticated",
+        workspaceId: "workspace-1",
+      }),
+    ).toBe(false);
   });
 });
