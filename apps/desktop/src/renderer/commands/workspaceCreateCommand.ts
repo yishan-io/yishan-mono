@@ -9,7 +9,7 @@ import {
   enqueueWorkspaceErrorNotice,
   enqueueWorkspaceLifecycleWarnings,
 } from "../store/workspaceLifecycleNoticeStore";
-import { readWorkspaceStoreState } from "./workspaceStoreHelpers";
+import { buildWorkspaceCreatePlaceholder, readWorkspaceStoreState } from "./workspaceStoreHelpers";
 
 type CreateWorkspaceInput = {
   projectId: string;
@@ -165,16 +165,18 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
     return;
   }
 
-  store.addWorkspace({
-    repoId: projectId,
-    name: normalizedName,
-    sourceBranch,
-    branch: targetBranch,
-    worktreePath: "",
-    nodeId: normalizedNodeId || undefined,
-    workspaceId,
-    organizationId,
-  });
+  store.addWorkspace(
+    buildWorkspaceCreatePlaceholder({
+      repoId: projectId,
+      name: normalizedName,
+      sourceBranch,
+      branch: targetBranch,
+      worktreePath: "",
+      nodeId: normalizedNodeId || undefined,
+      workspaceId,
+      organizationId,
+    }),
+  );
   tabStore.getState().resolveTabForWorkspace(workspaceId);
 
   return workspaceId;

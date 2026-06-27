@@ -91,6 +91,57 @@ func TestHandleWorkspaceCreate_ReturnsPendingWithoutAPICall(t *testing.T) {
 	}
 }
 
+func TestHandleWorkspaceCreate_PublishesCreateStartedEvent(t *testing.T) {
+	handler := newTestHandler(t)
+	subscriptionID, events := handler.events.Subscribe()
+	defer handler.events.Unsubscribe(subscriptionID)
+
+	root := t.TempDir()
+	params, err := json.Marshal(map[string]any{
+		"organizationId": "org-1",
+		"projectId":      "project-1",
+		"repoKey":        "owner/repo",
+		"workspaceName":  "feature-test",
+		"sourcePath":     root,
+		"targetBranch":   "feature-test",
+		"sourceBranch":   "main",
+		"nodeId":         "node-1",
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+
+	result, err := handler.handleWorkspaceCreate(context.Background(), params)
+	if err != nil {
+		t.Fatalf("handleWorkspaceCreate returned unexpected error: %v", err)
+	}
+	resultMap, ok := result.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map result, got %T", result)
+	}
+
+	event := <-events
+	if event.Topic != "workspaceCreateStarted" {
+		t.Fatalf("expected first event topic %q, got %q", "workspaceCreateStarted", event.Topic)
+	}
+	payload, ok := event.Payload.(workspaceCreateStartedEvent)
+	if !ok {
+		t.Fatalf("expected workspaceCreateStarted payload, got %T", event.Payload)
+	}
+	if payload.WorkspaceID != resultMap["id"] {
+		t.Fatalf("expected workspace id %v, got %s", resultMap["id"], payload.WorkspaceID)
+	}
+	if payload.OrganizationID != "org-1" || payload.ProjectID != "project-1" {
+		t.Fatalf("unexpected payload org/project: %+v", payload)
+	}
+	if payload.WorkspaceName != "feature-test" || payload.SourceBranch != "main" || payload.Branch != "feature-test" {
+		t.Fatalf("unexpected payload branches: %+v", payload)
+	}
+	if payload.NodeID != "node-1" {
+		t.Fatalf("expected node-1, got %s", payload.NodeID)
+	}
+}
+
 // TestHandleWorkspaceOpenProject_Success verifies that a valid, previously
 // unknown workspace is opened, indexed, and returned in the opened list.
 func TestHandleWorkspaceOpenProject_Success(t *testing.T) {

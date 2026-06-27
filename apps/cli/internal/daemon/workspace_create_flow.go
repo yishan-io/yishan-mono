@@ -40,11 +40,22 @@ type preparedWorkspaceCreate struct {
 	workspaceID      string
 	organizationID   string
 	projectID        string
+	startedEvent     workspaceCreateStartedEvent
 	relayReplyNodeID string
 	localCreate      *workspace.CreateRequest
 	localOpen        *workspace.OpenRequest
 	registration     *WorkspaceCreation
 	remoteRequest    *workspaceCreateParams
+}
+
+type workspaceCreateStartedEvent struct {
+	WorkspaceID    string `json:"workspaceId"`
+	OrganizationID string `json:"organizationId"`
+	ProjectID      string `json:"projectId"`
+	WorkspaceName  string `json:"workspaceName"`
+	SourceBranch   string `json:"sourceBranch"`
+	Branch         string `json:"branch"`
+	NodeID         string `json:"nodeId,omitempty"`
 }
 
 func (h *JSONRPCHandler) prepareWorkspaceCreate(ctx context.Context, req workspaceCreateParams) (preparedWorkspaceCreate, error) {
@@ -117,6 +128,7 @@ func prepareDirectWorkspaceCreate(req workspaceCreateParams) preparedWorkspaceCr
 		workspaceID:    req.ID,
 		organizationID: req.OrganizationID,
 		projectID:      req.ProjectID,
+		startedEvent:   buildWorkspaceCreateStartedEvent(req, req.NodeID, req.TargetBranch),
 		localCreate:    &createReq,
 	}
 }
@@ -137,7 +149,7 @@ func (h *JSONRPCHandler) preparePrimaryWorkspaceCreate(ctx context.Context, req 
 	}
 	openReq := workspace.OpenRequest{ID: req.ID, Path: req.LocalPath, OrgID: req.OrganizationID, ProjectID: req.ProjectID}
 	registration := WorkspaceCreation{ID: req.ID, NodeID: nodeID, OrganizationID: req.OrganizationID, ProjectID: req.ProjectID, Kind: workspace.KindPrimary, LocalPath: req.LocalPath}
-	return preparedWorkspaceCreate{workspaceID: req.ID, organizationID: req.OrganizationID, projectID: req.ProjectID, localOpen: &openReq, registration: &registration}, nil
+	return preparedWorkspaceCreate{workspaceID: req.ID, organizationID: req.OrganizationID, projectID: req.ProjectID, startedEvent: buildWorkspaceCreateStartedEvent(req, nodeID, ""), localOpen: &openReq, registration: &registration}, nil
 }
 
 func (h *JSONRPCHandler) prepareWorktreeWorkspaceCreate(ctx context.Context, req workspaceCreateParams) (preparedWorkspaceCreate, error) {
@@ -164,13 +176,29 @@ func (h *JSONRPCHandler) prepareWorktreeWorkspaceCreate(ctx context.Context, req
 	}
 	createReq := workspace.CreateRequest{ID: req.ID, OrganizationID: req.OrganizationID, NodeID: nodeID, ProjectID: req.ProjectID, RepoKey: project.RepoKey, WorkspaceName: req.WorkspaceName, SourcePath: sourcePath, TargetBranch: req.Branch, SourceBranch: req.SourceBranch, ContextEnabled: project.ContextEnabled, SetupHook: project.SetupScript, TaskRun: req.TaskRun}
 	registration := WorkspaceCreation{ID: req.ID, NodeID: nodeID, OrganizationID: req.OrganizationID, ProjectID: req.ProjectID, Kind: workspace.KindWorktree, Branch: req.Branch, SourceBranch: req.SourceBranch}
-	return preparedWorkspaceCreate{workspaceID: req.ID, organizationID: req.OrganizationID, projectID: req.ProjectID, relayReplyNodeID: req.ReplyNodeID, localCreate: &createReq, registration: &registration}, nil
+	return preparedWorkspaceCreate{workspaceID: req.ID, organizationID: req.OrganizationID, projectID: req.ProjectID, startedEvent: buildWorkspaceCreateStartedEvent(req, nodeID, req.Branch), relayReplyNodeID: req.ReplyNodeID, localCreate: &createReq, registration: &registration}, nil
 }
 
 func prepareRemoteWorkspaceCreate(req workspaceCreateParams, targetNodeID string, replyNodeID string) preparedWorkspaceCreate {
 	req.NodeID = targetNodeID
 	req.ReplyNodeID = replyNodeID
-	return preparedWorkspaceCreate{workspaceID: req.ID, organizationID: req.OrganizationID, projectID: req.ProjectID, remoteRequest: &req}
+	branch := req.Branch
+	if branch == "" {
+		branch = req.TargetBranch
+	}
+	return preparedWorkspaceCreate{workspaceID: req.ID, organizationID: req.OrganizationID, projectID: req.ProjectID, startedEvent: buildWorkspaceCreateStartedEvent(req, targetNodeID, branch), remoteRequest: &req}
+}
+
+func buildWorkspaceCreateStartedEvent(req workspaceCreateParams, nodeID string, branch string) workspaceCreateStartedEvent {
+	return workspaceCreateStartedEvent{
+		WorkspaceID:    req.ID,
+		OrganizationID: req.OrganizationID,
+		ProjectID:      req.ProjectID,
+		WorkspaceName:  req.WorkspaceName,
+		SourceBranch:   req.SourceBranch,
+		Branch:         strings.TrimSpace(branch),
+		NodeID:         strings.TrimSpace(nodeID),
+	}
 }
 
 func resolveWorkspaceCreateNode(ctx context.Context, runtime *cliruntime.Runtime, localNodeID string, organizationID string, requestedNodeID string) (string, error) {

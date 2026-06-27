@@ -53,6 +53,15 @@ export type RpcSchema = {
         workspaceWorktreePath: string;
         changedRelativePaths?: string[];
       };
+      workspaceCreateStarted: {
+        workspaceId: string;
+        organizationId: string;
+        projectId: string;
+        workspaceName: string;
+        sourceBranch: string;
+        branch: string;
+        nodeId?: string;
+      };
       workspaceCreateProgress: {
         workspaceId: string;
         stepId: string;

@@ -18,6 +18,7 @@ type relayWorkspaceCreateEnvelope struct {
 	SourceNodeID   string                         `json:"sourceNodeId,omitempty"`
 	TargetNodeID   string                         `json:"targetNodeId,omitempty"`
 	Change         string                         `json:"change,omitempty"`
+	Started        *workspaceCreateStartedEvent   `json:"started,omitempty"`
 	Request        *workspaceCreateParams         `json:"request,omitempty"`
 	Progress       *workspace.CreateProgressEvent `json:"progress,omitempty"`
 	Completed      map[string]any                 `json:"completed,omitempty"`
@@ -37,6 +38,7 @@ func (h *JSONRPCHandler) dispatchRemoteWorkspaceCreate(req workspaceCreateParams
 		SourceNodeID:   h.nodeID,
 		TargetNodeID:   req.NodeID,
 		Change:         workspaceRelayChangeCreateRequest,
+		Started:        pointerToWorkspaceCreateStartedEvent(buildWorkspaceCreateStartedEvent(req, req.NodeID, req.Branch)),
 		Request:        &req,
 	}
 	return h.sendWorkspaceSnapshotRelayNotification(payload)
@@ -100,23 +102,37 @@ func (h *JSONRPCHandler) handleRelayedWorkspaceCreate(payload relayWorkspaceCrea
 }
 
 func (h *JSONRPCHandler) republishRelayedWorkspaceCreate(payload relayWorkspaceCreateEnvelope) {
-	if strings.TrimSpace(payload.TargetNodeID) != h.nodeID {
-		return
-	}
 	switch payload.Change {
+	case workspaceRelayChangeCreateRequest:
+		if payload.Started != nil && strings.TrimSpace(payload.SourceNodeID) == h.nodeID {
+			h.events.Publish(frontendEvent{Topic: "workspaceCreateStarted", Payload: *payload.Started})
+		}
 	case workspaceRelayChangeCreateProgress:
+		if strings.TrimSpace(payload.TargetNodeID) != h.nodeID {
+			return
+		}
 		if payload.Progress != nil {
 			h.events.Publish(frontendEvent{Topic: "workspaceCreateProgress", Payload: *payload.Progress})
 		}
 	case workspaceRelayChangeCreateCompleted:
+		if strings.TrimSpace(payload.TargetNodeID) != h.nodeID {
+			return
+		}
 		if payload.Completed != nil {
 			h.events.Publish(frontendEvent{Topic: "workspaceCreateCompleted", Payload: payload.Completed})
 		}
 	case workspaceRelayChangeCreateFailed:
+		if strings.TrimSpace(payload.TargetNodeID) != h.nodeID {
+			return
+		}
 		if payload.Failed != nil {
 			h.events.Publish(frontendEvent{Topic: "workspaceCreateFailed", Payload: *payload.Failed})
 		}
 	}
+}
+
+func pointerToWorkspaceCreateStartedEvent(event workspaceCreateStartedEvent) *workspaceCreateStartedEvent {
+	return &event
 }
 
 func decodeRelayWorkspaceCreateEnvelope(params json.RawMessage) (relayWorkspaceCreateEnvelope, bool) {

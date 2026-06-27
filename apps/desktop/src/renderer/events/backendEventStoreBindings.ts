@@ -9,6 +9,7 @@ import {
   playNotificationSound,
 } from "../commands/notificationCommands";
 import { loadWorkspaceSnapshot } from "../commands/projectCommands";
+import { buildWorkspaceCreatePlaceholder } from "../commands/workspaceStoreHelpers";
 import { type DesktopAgentKind, isDesktopAgentKind } from "../helpers/agentSettings";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import {
@@ -29,6 +30,7 @@ import { subscribeInAppNotificationEvent } from "./backendEventSubscriptions";
 type NotificationEventPayload = RpcFrontendMessagePayload<"notificationEvent">;
 type ObserverStatusPayload = NonNullable<NotificationEventPayload["observerStatus"]>;
 type NotificationSoundPayload = NonNullable<NotificationEventPayload["soundToPlay"]>;
+type WorkspaceCreateStartedPayload = RpcFrontendMessagePayload<"workspaceCreateStarted">;
 type WorkspaceCreateProgressPayload = RpcFrontendMessagePayload<"workspaceCreateProgress">;
 type WorkspaceCreateCompletedPayload = RpcFrontendMessagePayload<"workspaceCreateCompleted">;
 type WorkspaceCreateFailedPayload = RpcFrontendMessagePayload<"workspaceCreateFailed">;
@@ -53,6 +55,7 @@ type BackendEventStoreBindingsDependencies = {
     listener: (workspaceId: string | undefined, workspaceWorktreePath: string, changedRelativePaths?: string[]) => void,
   ) => () => void;
   subscribeInAppNotification: (listener: (payload: NotificationEventPayload) => void) => () => void;
+  subscribeWorkspaceCreateStarted?: (listener: (payload: WorkspaceCreateStartedPayload) => void) => () => void;
   subscribeWorkspaceCreateProgress?: (listener: (payload: WorkspaceCreateProgressPayload) => void) => () => void;
   subscribeWorkspaceCreateCompleted?: (listener: (payload: WorkspaceCreateCompletedPayload) => void) => () => void;
   subscribeWorkspaceCreateFailed?: (listener: (payload: WorkspaceCreateFailedPayload) => void) => () => void;
@@ -79,6 +82,7 @@ type BackendEventStoreBindingsDependencies = {
   incrementGitRefreshVersion: (workspaceWorktreePath: string) => void;
   setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId: Record<string, WorkspaceAgentStatus>) => void;
   recordWorkspaceUnreadNotification: (workspaceId: string, tone: WorkspaceUnreadTone) => void;
+  applyWorkspaceCreateStartedEvent?: (payload: WorkspaceCreateStartedPayload) => void;
   applyWorkspaceCreateProgressEvent?: (payload: WorkspaceCreateProgressPayload) => void;
   applyWorkspaceCreateCompletedEvent?: (payload: WorkspaceCreateCompletedPayload) => boolean;
   applyWorkspaceCreateFailedEvent?: (payload: WorkspaceCreateFailedPayload) => void;
@@ -124,6 +128,15 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
     }),
   subscribeInAppNotification: (listener) => {
     return subscribeInAppNotificationEvent(listener);
+  },
+  subscribeWorkspaceCreateStarted: (listener) => {
+    return subscribeBackendEvent("workspace.create.started", (event) => {
+      if (event.source !== "workspaceCreateStarted") {
+        return;
+      }
+
+      listener(event.payload);
+    });
   },
   subscribeWorkspaceCreateProgress: (listener) => {
     return subscribeBackendEvent("workspace.create.progress", (event) => {
@@ -239,6 +252,21 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   },
   recordWorkspaceUnreadNotification: (workspaceId, tone) => {
     chatStore.getState().recordWorkspaceUnreadNotification(workspaceId, tone);
+  },
+  applyWorkspaceCreateStartedEvent: (payload) => {
+    workspaceStore.getState().addWorkspace(
+      buildWorkspaceCreatePlaceholder({
+        workspaceId: payload.workspaceId,
+        projectId: payload.projectId,
+        repoId: payload.projectId,
+        organizationId: payload.organizationId,
+        name: payload.workspaceName,
+        sourceBranch: payload.sourceBranch,
+        branch: payload.branch,
+        worktreePath: "",
+        nodeId: payload.nodeId,
+      }),
+    );
   },
   applyWorkspaceCreateProgressEvent: (payload) => {
     workspaceCreateProgressStore.getState().applyWorkspaceCreateProgressEvent(payload);
@@ -694,6 +722,10 @@ export function createBackendEventStoreBindings(
       const tone: WorkspaceUnreadTone = payload.tone === "error" ? "error" : "success";
       resolvedDependencies.recordWorkspaceUnreadNotification(workspaceId, tone);
     });
+    const unsubscribeWorkspaceCreateStarted =
+      resolvedDependencies.subscribeWorkspaceCreateStarted?.((payload) => {
+        resolvedDependencies.applyWorkspaceCreateStartedEvent?.(payload);
+      }) ?? (() => {});
     const unsubscribeWorkspaceCreateProgress =
       resolvedDependencies.subscribeWorkspaceCreateProgress?.((payload) => {
         resolvedDependencies.applyWorkspaceCreateProgressEvent?.(payload);
@@ -811,6 +843,7 @@ export function createBackendEventStoreBindings(
       unsubscribeDaemonConnectionStatus();
       unsubscribeWorkspaceFilesChanged();
       unsubscribeInAppNotification();
+      unsubscribeWorkspaceCreateStarted();
       unsubscribeWorkspaceCreateProgress();
       unsubscribeWorkspaceCreateCompleted();
       unsubscribeWorkspaceCreateFailed();

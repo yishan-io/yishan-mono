@@ -99,6 +99,7 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 	if err != nil {
 		return nil, err
 	}
+	h.events.Publish(frontendEvent{Topic: "workspaceCreateStarted", Payload: prepared.startedEvent})
 
 	go h.executeWorkspaceCreate(context.Background(), prepared)
 

@@ -6,6 +6,7 @@ import {
 } from "../helpers/terminalCloseTombstones";
 import { chatStore } from "../store/chatStore";
 import { tabStore } from "../store/tabStore";
+import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../store/workspaceStore";
 import { clearTerminalAgentStatus, createBackendEventStoreBindings } from "./backendEventStoreBindings";
 
@@ -194,6 +195,50 @@ function createWorkspaceCreateCompletedHarness() {
   };
 }
 
+function createWorkspaceCreateStartedHarness() {
+  let listener: ((payload: RpcFrontendMessagePayload<"workspaceCreateStarted">) => void) | null = null;
+  const unsubscribe = vi.fn();
+  const subscribeWorkspaceCreateStarted = vi.fn(
+    (nextListener: (payload: RpcFrontendMessagePayload<"workspaceCreateStarted">) => void) => {
+      listener = nextListener;
+      return () => {
+        unsubscribe();
+        listener = null;
+      };
+    },
+  );
+
+  return {
+    subscribeWorkspaceCreateStarted,
+    unsubscribe,
+    emit(payload: RpcFrontendMessagePayload<"workspaceCreateStarted">) {
+      listener?.(payload);
+    },
+  };
+}
+
+function createWorkspaceCreateProgressHarness() {
+  let listener: ((payload: RpcFrontendMessagePayload<"workspaceCreateProgress">) => void) | null = null;
+  const unsubscribe = vi.fn();
+  const subscribeWorkspaceCreateProgress = vi.fn(
+    (nextListener: (payload: RpcFrontendMessagePayload<"workspaceCreateProgress">) => void) => {
+      listener = nextListener;
+      return () => {
+        unsubscribe();
+        listener = null;
+      };
+    },
+  );
+
+  return {
+    subscribeWorkspaceCreateProgress,
+    unsubscribe,
+    emit(payload: RpcFrontendMessagePayload<"workspaceCreateProgress">) {
+      listener?.(payload);
+    },
+  };
+}
+
 function createTerminalSessionChangedHarness() {
   let listener: ((payload: RpcFrontendMessagePayload<"terminalSessionChanged">) => void) | null = null;
   const unsubscribe = vi.fn();
@@ -218,17 +263,20 @@ function createTerminalSessionChangedHarness() {
 
 const initialTabStoreState = tabStore.getState();
 const initialWorkspaceStoreState = workspaceStore.getState();
+const initialWorkspaceCreateProgressStoreState = workspaceCreateProgressStore.getState();
 
 describe("createBackendEventStoreBindings", () => {
   beforeEach(() => {
     tabStore.setState(initialTabStoreState, true);
     workspaceStore.setState(initialWorkspaceStoreState, true);
+    workspaceCreateProgressStore.setState(initialWorkspaceCreateProgressStoreState, true);
     __resetExplicitlyClosedTerminalTabIdsForTests();
   });
 
   afterEach(() => {
     tabStore.setState(initialTabStoreState, true);
     workspaceStore.setState(initialWorkspaceStoreState, true);
+    workspaceCreateProgressStore.setState(initialWorkspaceCreateProgressStoreState, true);
     __resetExplicitlyClosedTerminalTabIdsForTests();
   });
 
@@ -645,6 +693,84 @@ describe("createBackendEventStoreBindings", () => {
       }),
     ]);
     expect(loadWorkspaceSnapshot).not.toHaveBeenCalled();
+    stopBindings();
+  });
+
+  it("adds a placeholder row on create start, tracks progress, and finalizes on completion", async () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const createStartedHarness = createWorkspaceCreateStartedHarness();
+    const createProgressHarness = createWorkspaceCreateProgressHarness();
+    const createCompletedHarness = createWorkspaceCreateCompletedHarness();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+    const loadWorkspaceSnapshot = vi.fn(async () => undefined);
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      subscribeWorkspaceCreateStarted: createStartedHarness.subscribeWorkspaceCreateStarted,
+      subscribeWorkspaceCreateProgress: createProgressHarness.subscribeWorkspaceCreateProgress,
+      subscribeWorkspaceCreateCompleted: createCompletedHarness.subscribeWorkspaceCreateCompleted,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+      loadWorkspaceSnapshot,
+    });
+
+    const stopBindings = startBindings();
+    createStartedHarness.emit({
+      workspaceId: "workspace-1",
+      organizationId: "org-1",
+      projectId: "project-1",
+      workspaceName: "feature-a",
+      sourceBranch: "main",
+      branch: "feature-a",
+      nodeId: "node-1",
+    });
+    createProgressHarness.emit({
+      workspaceId: "workspace-1",
+      stepId: "worktree",
+      label: "Fetch & create worktree",
+      status: "running",
+      createdAt: "2026-06-28T01:00:00.000Z",
+    });
+    createCompletedHarness.emit({
+      workspaceId: "workspace-1",
+      worktreePath: "/tmp/repo/.worktrees/feature-a",
+    });
+    await Promise.resolve();
+
+    expect(workspaceStore.getState().workspaces).toEqual([
+      expect.objectContaining({
+        id: "workspace-1",
+        organizationId: "org-1",
+        projectId: "project-1",
+        repoId: "project-1",
+        name: "feature-a",
+        sourceBranch: "main",
+        branch: "feature-a",
+        worktreePath: "/tmp/repo/.worktrees/feature-a",
+        nodeId: "node-1",
+      }),
+    ]);
+    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-1"]).toEqual(
+      expect.objectContaining({
+        workspaceId: "workspace-1",
+        isComplete: true,
+      }),
+    );
+    expect(loadWorkspaceSnapshot).not.toHaveBeenCalled();
+
     stopBindings();
   });
 

@@ -342,6 +342,7 @@ func publishWorkspaceSnapshotChanged(handler *JSONRPCHandler, params json.RawMes
 		switch payload.Change {
 		case workspaceRelayChangeCreateRequest:
 			handler.handleRelayedWorkspaceCreate(payload)
+			handler.republishRelayedWorkspaceCreate(payload)
 		default:
 			handler.republishRelayedWorkspaceCreate(payload)
 		}
