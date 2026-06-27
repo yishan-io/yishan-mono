@@ -338,6 +338,16 @@ func handleRelayMessage(handler *JSONRPCHandler, runtime *cliruntime.Runtime, co
 }
 
 func publishWorkspaceSnapshotChanged(handler *JSONRPCHandler, params json.RawMessage) {
+	if payload, ok := decodeRelayWorkspaceCreateEnvelope(params); ok {
+		switch payload.Change {
+		case workspaceRelayChangeCreateRequest:
+			handler.handleRelayedWorkspaceCreate(payload)
+		default:
+			handler.republishRelayedWorkspaceCreate(payload)
+		}
+		return
+	}
+
 	var payload map[string]any
 	if len(params) > 0 {
 		if err := json.Unmarshal(params, &payload); err != nil {

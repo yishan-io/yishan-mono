@@ -11,49 +11,6 @@ import (
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
-func resolveCreateRequestForNode(ctx context.Context, runtime *cliruntime.Runtime, req workspaceCreateRequestInput) (workspaceCreateRequestInput, error) {
-	resolvedNodeID := strings.TrimSpace(req.nodeID)
-	if resolvedNodeID == "" {
-		resolvedNodeID = strings.TrimSpace(req.localNodeID)
-	}
-	if resolvedNodeID == "" {
-		return req, fmt.Errorf("workspace node id is required")
-	}
-		req.nodeID = resolvedNodeID
-	if resolvedNodeID == strings.TrimSpace(req.localNodeID) {
-		return req, nil
-	}
-
-	if runtime == nil || !runtime.APIConfigured() {
-		return req, fmt.Errorf("creating a workspace on node %s requires an authenticated API session", resolvedNodeID)
-	}
-	if strings.TrimSpace(req.organizationID) == "" || strings.TrimSpace(req.projectID) == "" {
-		return req, fmt.Errorf("organizationId and projectId are required for cross-node workspace creation")
-	}
-	if err := ensureNodeUsableForWorkspace(runtime, req.organizationID, resolvedNodeID); err != nil {
-		return req, err
-	}
-
-	repoURL, err := resolveProjectRepoURL(runtime, req.organizationID, req.projectID)
-	if err != nil {
-		return req, err
-	}
-	repoPath, err := ensureSharedRepoClone(ctx, req.repoKey, repoURL)
-	if err != nil {
-		return req, err
-	}
-	req.sourcePath = repoPath
-	return req, nil
-}
-
-type workspaceCreateRequestInput struct {
-	organizationID string
-	projectID      string
-	localNodeID    string
-	nodeID         string
-	repoKey        string
-	sourcePath     string
-}
 
 func ensureNodeUsableForWorkspace(runtime *cliruntime.Runtime, organizationID string, nodeID string) error {
 	nodesResponse, err := runtime.APIClient().ListNodes(organizationID)
@@ -68,23 +25,6 @@ func ensureNodeUsableForWorkspace(runtime *cliruntime.Runtime, organizationID st
 	return fmt.Errorf("node %s was not found in this organization", nodeID)
 }
 
-func resolveProjectRepoURL(runtime *cliruntime.Runtime, organizationID string, projectID string) (string, error) {
-	projectsResponse, err := runtime.APIClient().ListProjects(organizationID)
-	if err != nil {
-		return "", fmt.Errorf("load project metadata: %w", err)
-	}
-	for _, project := range projectsResponse.Projects {
-		if project.ID != projectID {
-			continue
-		}
-		repoURL := strings.TrimSpace(project.RepoURL)
-		if repoURL == "" {
-			return "", fmt.Errorf("project %s has no remote repository URL; cannot prepare cross-node workspace", projectID)
-		}
-		return repoURL, nil
-	}
-	return "", fmt.Errorf("project %s not found in organization %s", projectID, organizationID)
-}
 
 func ensureSharedRepoClone(ctx context.Context, repoKey string, repoURL string) (string, error) {
 	normalizedKey := strings.TrimSpace(repoKey)

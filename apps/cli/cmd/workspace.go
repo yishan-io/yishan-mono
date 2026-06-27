@@ -11,7 +11,6 @@ import (
 
 	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/output"
-	"yishan/apps/cli/internal/provision"
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/spf13/cobra"
@@ -123,72 +122,7 @@ Examples:
   # Create a worktree workspace on a new branch
   yishan workspace create --project-id <id> --kind worktree --branch feature/foo`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		orgID, err := resolveOrgID(cmd)
-		if err != nil {
-			return err
-		}
-		projectID, err := cmd.Flags().GetString("project-id")
-		if err != nil {
-			return err
-		}
-		localPath, err := cmd.Flags().GetString("local-path")
-		if err != nil {
-			return err
-		}
-		kind, err := cmd.Flags().GetString("kind")
-		if err != nil {
-			return err
-		}
-		branch, err := cmd.Flags().GetString("branch")
-		if err != nil {
-			return err
-		}
-		sourceBranch, err := cmd.Flags().GetString("source-branch")
-		if err != nil {
-			return err
-		}
-		name, err := cmd.Flags().GetString("name")
-		if err != nil {
-			return err
-		}
-		taskRunAgentKind, err := cmd.Flags().GetString("task-run-agent-kind")
-		if err != nil {
-			return err
-		}
-		taskRunPrompt, err := cmd.Flags().GetString("task-run-prompt")
-		if err != nil {
-			return err
-		}
-		taskRunModel, err := cmd.Flags().GetString("task-run-model")
-		if err != nil {
-			return err
-		}
-		if kind == workspace.KindPrimary && strings.TrimSpace(localPath) == "" {
-			return fmt.Errorf("local-path is required for primary workspaces")
-		}
-		if err := validateWorkspaceKind(kind); err != nil {
-			return err
-		}
-
-		provisioner := provision.NewRuntimeProvisioner(apiClient, provision.RuntimeConfig{
-			ConfigPath: appConfig.ConfigPath,
-		})
-
-		response, err := provisioner.CreateWorkspace(cmd.Context(), provision.CreateWorkspaceRequest{
-			OrganizationID: orgID,
-			ProjectID:      projectID,
-			LocalPath:      localPath,
-			Kind:           kind,
-			Branch:         branch,
-			SourceBranch:   sourceBranch,
-			WorkspaceName:  name,
-			TaskRun:        buildTaskRunConfig(taskRunAgentKind, taskRunPrompt, taskRunModel),
-		})
-		if err != nil {
-			return formatWorkspaceLifecycleError("create", err)
-		}
-
-		return output.PrintAny(response)
+		return runWorkspaceCreateViaDaemon(cmd)
 	},
 }
 
@@ -268,6 +202,7 @@ func init() {
 	workspaceCreateCmd.Flags().String("kind", "primary", "workspace kind (primary|worktree)")
 	workspaceCreateCmd.Flags().String("branch", "", "branch name for worktree")
 	workspaceCreateCmd.Flags().String("source-branch", "", "source branch for worktree")
+	workspaceCreateCmd.Flags().String("target-node", "", "target node ID (defaults to local daemon node)")
 	workspaceCreateCmd.Flags().String("name", "", "workspace name for worktree path")
 	workspaceCreateCmd.Flags().String("task-run-agent-kind", "", "agent kind for init task run (e.g. opencode)")
 	workspaceCreateCmd.Flags().String("task-run-prompt", "", "initial prompt for task run agent")

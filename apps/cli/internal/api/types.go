@@ -106,6 +106,7 @@ type Workspace struct {
 	NodeID         string `json:"nodeId"`
 	Kind           string `json:"kind"`
 	Branch         string `json:"branch"`
+	SourceBranch   string `json:"sourceBranch"`
 	LocalPath      string `json:"localPath"`
 	CreatedAt      string `json:"createdAt"`
 	UpdatedAt      string `json:"updatedAt"`
