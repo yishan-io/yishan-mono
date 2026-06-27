@@ -118,6 +118,10 @@ export type CopyFilesInput = {
 
 export type CopyFilesResult = { ok: true; copiedPaths: string[] } | { ok: false; error: string };
 
+export type ResolveRealPathResult = {
+  path: string;
+};
+
 export type WriteFileBase64Input = {
   /** Absolute path of the file to write. */
   absolutePath: string;
@@ -154,6 +158,7 @@ export type DesktopHostBridge = {
   openEntryInExternalApp: (input: OpenEntryInExternalAppInput) => Promise<{ ok: true }>;
   openExternalUrl: (input: OpenExternalUrlInput) => Promise<OpenExternalUrlResult>;
   readExternalClipboardSourcePaths: () => Promise<ExternalClipboardReadOutcome>;
+  resolveRealPath: (path: string) => Promise<ResolveRealPathResult>;
   copyFiles: (input: CopyFilesInput) => Promise<CopyFilesResult>;
   writeFileBase64: (input: WriteFileBase64Input) => Promise<WriteFileBase64Result>;
   loadBrowserHistory: () => Promise<LoadBrowserHistoryResult>;
@@ -199,6 +204,7 @@ export const HOST_IPC_CHANNELS = {
   openEntryInExternalApp: "desktop:host/open-entry-in-external-app",
   openExternalUrl: "desktop:host/open-external-url",
   readExternalClipboardSourcePaths: "desktop:host/read-external-clipboard-source-paths",
+  resolveRealPath: "desktop:host/resolve-real-path",
   copyFiles: "desktop:host/copy-files",
   writeFileBase64: "desktop:host/write-file-base64",
   loadBrowserHistory: "desktop:host/load-browser-history",
