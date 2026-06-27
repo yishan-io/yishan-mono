@@ -20,6 +20,7 @@ import { LuBadgeCheck, LuCheck, LuTrash2 } from "react-icons/lu";
 import { PiFlowArrowBold, PiXBold } from "react-icons/pi";
 import { addSkill, getSkillDetail, listSkills, removeSkill, updateSkill } from "../../commands/skillCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
+import { MarkdownPreview } from "../../components/MarkdownPreview";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import type { SkillDetail, SkillInfo } from "../../rpc/daemonTypes";
@@ -206,28 +207,23 @@ function SkillDetailDialog({ skill, onClose }: SkillDetailDialogProps) {
               </Box>
             ) : null}
 
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-                {t("settings.skills.instruction")}
-              </Typography>
-              <Box
-                component="pre"
-                sx={{
-                  whiteSpace: "pre-wrap",
-                  fontFamily: "monospace",
-                  fontSize: "0.8rem",
-                  p: 1.5,
-                  border: 1,
-                  borderColor: "divider",
-                  borderRadius: 1,
-                  backgroundColor: "action.hover",
-                  maxHeight: "calc(100vh - 300px)",
-                  overflow: "auto",
-                }}
-              >
-                {readme}
+            {readme ? (
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                  {t("settings.skills.instruction")}
+                </Typography>
+                <Box
+                  sx={{
+                    height: "calc(100vh - 350px)",
+                    display: "flex",
+                    flexDirection: "column",
+                    overflow: "hidden",
+                  }}
+                >
+                  <MarkdownPreview content={readme} />
+                </Box>
               </Box>
-            </Box>
+            ) : null}
           </Box>
         ) : loadError ? null : (
           <CenteredSpinner />
