@@ -165,7 +165,7 @@ describe("workspaceCommands", () => {
           projectId: "repo-1",
           name: "Workspace 1",
           title: "Workspace 1",
-          sourceBranch: "",
+          sourceBranch: "main",
           branch: "feature-a",
           summaryId: "summary-1",
           worktreePath: "/tmp/workspaces/workspace-1",
@@ -197,7 +197,7 @@ describe("workspaceCommands", () => {
           projectId: "repo-2",
           name: "Workspace 2",
           title: "Workspace 2",
-          sourceBranch: "",
+          sourceBranch: "main",
           branch: "main",
           summaryId: "summary-2",
           worktreePath: "/tmp/workspaces/workspace-2",
@@ -367,7 +367,7 @@ describe("workspaceCommands", () => {
           title: "Feature A",
           summaryId: "",
           branch: "feature-a",
-          sourceBranch: "main",
+          sourceBranch: "",
           worktreePath: "/tmp/worktrees/feature-a",
         },
       ],
@@ -405,7 +405,7 @@ describe("workspaceCommands", () => {
           title: "Feature A",
           summaryId: "",
           branch: "feature-a",
-          sourceBranch: "main",
+          sourceBranch: "",
           worktreePath: "/tmp/worktrees/feature-a",
         },
       ],
@@ -802,6 +802,36 @@ describe("workspaceCommands", () => {
       additions: 2,
       deletions: 1,
     });
+  });
+
+  it("silently ignores transient workspace-not-found git refresh errors", async () => {
+    const setWorkspaceGitChangesCount = vi.fn();
+    const setWorkspaceGitChangeTotals = vi.fn();
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    workspaceStore.setState({
+      workspaces: [
+        {
+          id: "workspace-1",
+          repoId: "repo-1",
+          name: "Feature A",
+          title: "Feature A",
+          summaryId: "",
+          sourceBranch: "",
+          branch: "feature-a",
+          worktreePath: "/tmp/worktrees/feature-a",
+        },
+      ],
+      setWorkspaceGitChangesCount,
+      setWorkspaceGitChangeTotals,
+    });
+    rpcMocks.listGitChanges.mockRejectedValueOnce(new Error("workspace not found"));
+
+    await refreshWorkspaceGitChanges("workspace-1");
+
+    expect(setWorkspaceGitChangesCount).not.toHaveBeenCalled();
+    expect(setWorkspaceGitChangeTotals).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).not.toHaveBeenCalledWith("Failed to refresh workspace git changes", expect.anything());
+    consoleErrorSpy.mockRestore();
   });
 
   it("delegates workspace view-state updates to workspace and layout stores", () => {

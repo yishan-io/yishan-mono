@@ -8,7 +8,11 @@ import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
-import { warmupWorkspacesForProjects } from "./workspaceWarmupCommand";
+import {
+  buildWorkspaceOpenProjectEntries,
+  openWorkspaceEntries,
+  warmupWorkspacesForProjects,
+} from "./workspaceWarmupCommand";
 
 let latestWorkspaceSnapshotRequestId = 0;
 
@@ -263,6 +267,23 @@ export async function createProject(input: {
       worktreePath: workspace.localPath,
       nodeId: workspace.nodeId,
     });
+  }
+
+  if (isLocalSource) {
+    const importedPrimaryWorkspaceIds = new Set(
+      workspaces.filter((workspace) => workspace.kind === "primary").map((workspace) => workspace.id),
+    );
+    if (importedPrimaryWorkspaceIds.size > 0) {
+      const importedPrimaryWorkspaces = workspaceStore
+        .getState()
+        .workspaces.filter((workspace) => importedPrimaryWorkspaceIds.has(workspace.id));
+      const openEntries = buildWorkspaceOpenProjectEntries(importedPrimaryWorkspaces, selectedOrganizationId);
+      await openWorkspaceEntries(openEntries);
+      for (const entry of openEntries) {
+        workspaceStore.getState().incrementFileTreeRefreshVersion(entry.worktreePath, []);
+        workspaceStore.getState().incrementGitRefreshVersion(entry.worktreePath);
+      }
+    }
   }
 
   tabStore.getState().resolveTabForWorkspace(workspaceStore.getState().selectedWorkspaceId);

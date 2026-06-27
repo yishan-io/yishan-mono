@@ -39,6 +39,7 @@ const rpcMocks = vi.hoisted(() => ({
     async () => ({ isGitRepository: true }) as { isGitRepository: boolean; remoteUrl?: string; currentBranch?: string },
   ),
   workspaceList: vi.fn(async () => []),
+  workspaceOpenProject: vi.fn(async () => ({ opened: [], skipped: [], errors: [] })),
   workspaceSyncContextLink: vi.fn(async () => ({ updated: [], skipped: [], errors: {} })),
 }));
 
@@ -49,6 +50,7 @@ vi.mock("../rpc/rpcTransport", () => ({
     },
     workspace: {
       list: rpcMocks.workspaceList,
+      openProject: rpcMocks.workspaceOpenProject,
       syncContextLink: rpcMocks.workspaceSyncContextLink,
     },
   })),
@@ -434,6 +436,7 @@ describe("projectCommands", () => {
     });
     expect(appendRepo).toHaveBeenCalledTimes(1);
     expect(addWorkspace).not.toHaveBeenCalled();
+    expect(rpcMocks.workspaceOpenProject).not.toHaveBeenCalled();
     expect(appendRepo.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
         backendProject: expect.objectContaining({
@@ -441,6 +444,87 @@ describe("projectCommands", () => {
         }),
       }),
     );
+  });
+
+  it("opens imported local primary workspace immediately on the daemon", async () => {
+    sessionStore.setState({ selectedOrganizationId: "org-1", daemonId: "daemon-1" });
+    apiMocks.listOrganizationNodes.mockResolvedValueOnce([
+      {
+        id: "daemon-1",
+        name: "local",
+        scope: "private",
+        endpoint: null,
+        metadata: null,
+        ownerUserId: "user-1",
+        organizationId: null,
+        canUse: true,
+        createdByUserId: "user-1",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    rpcMocks.gitInspect.mockResolvedValueOnce({
+      isGitRepository: true,
+      remoteUrl: "https://github.com/test/repo-1.git",
+      currentBranch: "main",
+    });
+    apiMocks.createProject.mockResolvedValueOnce({
+      id: "project-1",
+      name: "Repo 1",
+      sourceType: "git",
+      repoProvider: null,
+      repoUrl: "https://github.com/test/repo-1.git",
+      repoKey: "repo-1",
+      contextEnabled: true,
+      workspaces: [
+        {
+          id: "workspace-1",
+          organizationId: "org-1",
+          projectId: "project-1",
+          userId: "user-1",
+          nodeId: "daemon-1",
+          kind: "primary",
+          status: "active",
+          branch: "main",
+          sourceBranch: "main",
+          localPath: "/tmp/repo-1",
+          latestPullRequest: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+
+    await createProject({
+      name: "Repo 1",
+      path: "/tmp/repo-1",
+    });
+
+    expect(rpcMocks.workspaceOpenProject).toHaveBeenCalledWith({
+      workspaces: [
+        {
+          workspaceId: "workspace-1",
+          worktreePath: "/tmp/repo-1",
+          projectId: "project-1",
+          orgId: "org-1",
+        },
+      ],
+    });
+    expect(workspaceStore.getState().fileTreeRefreshVersion).toBe(1);
+    expect(workspaceStore.getState().fileTreeChangedRelativePathsByWorktreePath).toEqual({
+      "/tmp/repo-1": [],
+    });
+    expect(workspaceStore.getState().gitRefreshVersionByWorktreePath).toEqual({
+      "/tmp/repo-1": 1,
+    });
+    expect(workspaceStore.getState().selectedWorkspaceId).toBe("workspace-1");
+    expect(workspaceStore.getState().workspaces).toEqual([
+      expect.objectContaining({
+        id: "workspace-1",
+        projectId: "project-1",
+        worktreePath: "/tmp/repo-1",
+      }),
+    ]);
   });
 
   it("uses workspace default context setting during project creation", async () => {
@@ -520,6 +604,7 @@ describe("projectCommands", () => {
       worktreePath: "/tmp/remote-repo",
       nodeId: "node-1",
     });
+    expect(rpcMocks.workspaceOpenProject).not.toHaveBeenCalled();
   });
 
   it("deletes backend project and then removes project from store", async () => {

@@ -2,6 +2,47 @@ import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
 import { workspaceStore } from "../store/workspaceStore";
 
+type WorkspaceOpenProjectEntry = {
+  workspaceId: string;
+  worktreePath: string;
+  projectId: string;
+  orgId: string;
+};
+
+type WorkspaceOpenCandidate = {
+  id: string;
+  projectId?: string;
+  repoId?: string;
+  worktreePath?: string;
+};
+
+export function buildWorkspaceOpenProjectEntries(
+  workspaces: WorkspaceOpenCandidate[],
+  organizationId: string,
+): WorkspaceOpenProjectEntry[] {
+  return workspaces.flatMap((workspace) => {
+    const projectId = workspace.projectId ?? workspace.repoId ?? "";
+    const worktreePath = workspace.worktreePath?.trim() ?? "";
+    if (!projectId || !workspace.id || !worktreePath) {
+      return [];
+    }
+    return [{ workspaceId: workspace.id, worktreePath, projectId, orgId: organizationId }];
+  });
+}
+
+export async function openWorkspaceEntries(entries: WorkspaceOpenProjectEntry[]): Promise<void> {
+  if (entries.length === 0) {
+    return;
+  }
+
+  try {
+    const client = await getDaemonClient();
+    await client.workspace.openProject({ workspaces: entries });
+  } catch (error) {
+    console.error("[warmup] workspace.openProject failed", error);
+  }
+}
+
 /**
  * Opens (warms up) all workspaces belonging to the given project IDs on the
  * daemon side. Each workspace is written to workspace-index.json so daemon
@@ -16,28 +57,15 @@ export async function warmupWorkspacesForProjects(projectIds: string[]): Promise
   const { workspaces } = workspaceStore.getState();
   const orgId = sessionStore.getState().selectedOrganizationId ?? "";
 
-  const entries = workspaces.flatMap((ws) => {
-    const projectId = ws.projectId ?? ws.repoId ?? "";
-    if (!projectIdSet.has(projectId)) {
-      return [];
-    }
-    const path = ws.worktreePath?.trim();
-    if (!path || !ws.id) {
-      return [];
-    }
-    return [{ workspaceId: ws.id, worktreePath: path, projectId, orgId }];
-  });
+  const entries = buildWorkspaceOpenProjectEntries(
+    workspaces.filter((workspace) => {
+      const projectId = workspace.projectId ?? workspace.repoId ?? "";
+      return projectIdSet.has(projectId);
+    }),
+    orgId,
+  );
 
-  if (entries.length === 0) {
-    return;
-  }
-
-  try {
-    const client = await getDaemonClient();
-    await client.workspace.openProject({ workspaces: entries });
-  } catch (error) {
-    console.error("[warmup] workspace.openProject failed", error);
-  }
+  await openWorkspaceEntries(entries);
 }
 
 /**
