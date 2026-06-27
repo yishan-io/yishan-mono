@@ -114,10 +114,11 @@ export function useShellState({ isScreenFocused = true }: { isScreenFocused?: bo
     () =>
       resolveShellRuntimeAuthority({
         activeTerminalId,
+        selectedNodeIdByOrganization: storedState.selectedNodeIdByOrganization,
         selection,
         terminalsByWorkspaceId: storedState.terminalsByWorkspaceId,
       }),
-    [activeTerminalId, selection, storedState.terminalsByWorkspaceId],
+    [activeTerminalId, selection, storedState.selectedNodeIdByOrganization, storedState.terminalsByWorkspaceId],
   );
 
   return {

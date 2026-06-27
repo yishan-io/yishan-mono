@@ -176,4 +176,34 @@ describe("relay-frontend-event-hub", () => {
     unsubscribeFirst();
     unsubscribeSecond();
   });
+
+  it("closes an in-flight frontend stream connection when the last subscriber unsubscribes before open", async () => {
+    const onMessage = vi.fn();
+
+    const unsubscribe = subscribeRelayFrontendEvents({
+      accessToken: "access-token",
+      node: {
+        nodeId: "node-1",
+        orgId: "org-1",
+        projectId: "project-1",
+        workspaceId: generateId("workspace"),
+      },
+      onMessage,
+      relayUrl: "http://relay.test",
+    });
+
+    await vi.waitFor(() => {
+      expect(socketInstances).toHaveLength(1);
+    });
+
+    const socket = socketInstances[0];
+    unsubscribe();
+    socket?.emitOpen();
+
+    await vi.waitFor(() => {
+      expect(socket?.readyState).toBe(MockWebSocket.CLOSED);
+    });
+    expect(socket?.sentMessages).toEqual([]);
+    expect(onMessage).not.toHaveBeenCalled();
+  });
 });

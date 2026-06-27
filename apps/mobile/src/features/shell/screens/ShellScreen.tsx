@@ -49,6 +49,7 @@ export function ShellScreen() {
           onOpenQuickActions={screenModel.drawerTopBar.onOpenQuickActions}
           onRefreshSessions={screenModel.drawerTopBar.onRefreshSessions}
           refreshingSessions={screenModel.drawerTopBar.refreshingSessions}
+          sessionSyncError={screenModel.drawerTopBar.sessionSyncError}
           subtitle={screenModel.drawerTopBar.subtitle}
           subtitleLeading={screenModel.drawerTopBar.subtitleLeading}
           title={screenModel.drawerTopBar.title}

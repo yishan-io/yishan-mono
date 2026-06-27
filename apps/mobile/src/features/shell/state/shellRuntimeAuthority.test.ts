@@ -37,6 +37,7 @@ describe("shellRuntimeAuthority", () => {
     expect(
       resolveShellRuntimeAuthority({
         activeTerminalId: "terminal-1",
+        selectedNodeIdByOrganization: {},
         selection: { kind: "home" },
         terminalsByWorkspaceId: {
           "workspace-1": [createTerminal()],
@@ -54,6 +55,7 @@ describe("shellRuntimeAuthority", () => {
   it("resolves terminal authority only from the selected workspace runtime terminals", () => {
     const authority = resolveShellRuntimeAuthority({
       activeTerminalId: "terminal-2",
+      selectedNodeIdByOrganization: {},
       selection: {
         kind: "workspace",
         orgId: "org-1",
@@ -83,6 +85,7 @@ describe("shellRuntimeAuthority", () => {
   it("falls back to the primary terminal for workspace node and label when no terminal is active", () => {
     const authority = resolveShellRuntimeAuthority({
       activeTerminalId: null,
+      selectedNodeIdByOrganization: {},
       selection: {
         kind: "workspace",
         orgId: "org-1",
@@ -103,5 +106,27 @@ describe("shellRuntimeAuthority", () => {
       projectId: "project-1",
     });
     expect(authority.selectedWorkspaceLabel).toBe("local");
+  });
+
+  it("falls back to the persisted selected node when the workspace has no local terminals yet", () => {
+    const authority = resolveShellRuntimeAuthority({
+      activeTerminalId: null,
+      selectedNodeIdByOrganization: { "org-1": "node-7" },
+      selection: {
+        kind: "workspace",
+        orgId: "org-1",
+        projectId: "project-1",
+        workspaceId: "workspace-1",
+      },
+      terminalsByWorkspaceId: {},
+    });
+
+    expect(authority.selectedTerminal).toBeNull();
+    expect(authority.selectedTerminalWorkspace).toEqual({
+      id: "workspace-1",
+      nodeId: "node-7",
+      organizationId: "org-1",
+      projectId: "project-1",
+    });
   });
 });

@@ -6,12 +6,18 @@ export type WorkspaceBrowserTab = "files" | "changes" | "prs";
 
 const browserTabCache = new Map<string, WorkspaceBrowserTab>();
 
-export function createWorkspaceBrowserStateId(organizationId: string, projectId: string, workspaceId: string) {
-  if (!organizationId || !projectId || !workspaceId) {
+export function createWorkspaceBrowserStateId(
+  organizationId: string,
+  projectId: string,
+  workspaceId: string,
+  nodeId?: string | null,
+) {
+  const normalizedNodeId = nodeId?.trim() ?? "";
+  if (!organizationId || !projectId || !workspaceId || !normalizedNodeId) {
     return "";
   }
 
-  return `${organizationId}:${projectId}:${workspaceId}`;
+  return `${organizationId}:${projectId}:${workspaceId}:${normalizedNodeId}`;
 }
 
 export function getCachedWorkspaceBrowserTab(browserStateId: string): WorkspaceBrowserTab {

@@ -58,7 +58,7 @@ export function useWorkspaceDirectoryQueries({
           workspaceId,
         });
       },
-      queryKey: queryKeys.workspaceFiles(organizationId, projectId, workspaceId, path, false),
+      queryKey: queryKeys.workspaceFiles(organizationId, projectId, workspaceId, nodeId?.trim() ?? "", path, false),
       staleTime: WORKSPACE_BROWSER_QUERY_STALE_TIME_MS,
     })),
   });

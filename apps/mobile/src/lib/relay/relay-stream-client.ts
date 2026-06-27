@@ -49,6 +49,10 @@ export class RelayStreamClient {
   }
 
   async connect(): Promise<void> {
+    if (this.closed) {
+      throw new Error("Relay websocket client is closed.");
+    }
+
     if (this.socket?.readyState === WebSocket.OPEN) {
       return;
     }
@@ -64,6 +68,11 @@ export class RelayStreamClient {
             accessToken: this.input.accessToken,
             nodeId: this.input.nodeId,
           });
+          if (this.closed || this.openPromise === null) {
+            reject(new Error("Relay websocket client is closed."));
+            return;
+          }
+
           const socket = new WebSocket(
             buildRelayWebSocketUrl({
               accessToken: relayToken.token,
@@ -71,6 +80,7 @@ export class RelayStreamClient {
               relayUrl: this.input.relayUrl,
             }).toString(),
           );
+          this.socket = socket;
           let settled = false;
 
           const finalize = (callback: () => void) => {
@@ -84,6 +94,12 @@ export class RelayStreamClient {
           };
 
           socket.addEventListener("open", () => {
+            if (this.closed || this.openPromise === null) {
+              socket.close();
+              finalize(() => reject(new Error("Relay websocket client is closed.")));
+              return;
+            }
+
             this.socket = socket;
             finalize(resolve);
           });
@@ -103,7 +119,9 @@ export class RelayStreamClient {
           });
 
           socket.addEventListener("close", (event) => {
-            this.socket = null;
+            if (this.socket === socket) {
+              this.socket = null;
+            }
             this.rejectPending(new Error(event.reason || "Relay websocket closed."));
             if (!settled) {
               finalize(() => reject(new Error(event.reason || "Relay websocket closed before connect.")));
@@ -116,6 +134,10 @@ export class RelayStreamClient {
           });
         } catch (error) {
           const nextError = error instanceof Error ? error : new Error(getErrorMessage(error));
+          if (this.socket && this.socket.readyState !== WebSocket.CLOSED) {
+            this.socket.close();
+          }
+          this.socket = null;
           this.openPromise = null;
           reject(nextError);
         }

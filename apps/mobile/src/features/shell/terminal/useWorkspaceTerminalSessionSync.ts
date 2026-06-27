@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { AuthStatus } from "@/features/auth";
 import type { Workspace } from "@/features/workspaces/workspaces.types";
-import { logMobileDebug } from "@/lib/debug/mobileDebug";
+import { logMobileDebug, summarizeDebugError } from "@/lib/debug/mobileDebug";
 import { isClosedBackendSessionSuppressed } from "../state/shell-closed-backend-session-guard";
 import type { TerminalItem } from "../state/shell.types";
 import { listRelayTerminalSessions } from "./relay-terminal-sessions";
@@ -62,6 +62,7 @@ export function useWorkspaceTerminalSessionSync({
   workspaceLabel: string | null;
 }) {
   const lastSyncedWorkspaceKeyRef = useRef<string | null>(null);
+  const [didRefreshSessionSyncFail, setDidRefreshSessionSyncFail] = useState(false);
   const [isRefreshingSessionSync, setIsRefreshingSessionSync] = useState(false);
 
   const refreshSessionSync = useCallback(async () => {
@@ -85,6 +86,7 @@ export function useWorkspaceTerminalSessionSync({
 
     const localTerminals = terminalsByWorkspaceId[workspace.id] ?? [];
     const syncPromise = (async () => {
+      setDidRefreshSessionSyncFail(false);
       logMobileDebug("terminal.sync", "request", {
         localTerminalCount: localTerminals.length,
         localTerminals: summarizeLocalTerminals(localTerminals),
@@ -141,8 +143,9 @@ export function useWorkspaceTerminalSessionSync({
           removeTerminal(workspace.id, terminalId);
         }
       } catch (error) {
+        setDidRefreshSessionSyncFail(true);
         logMobileDebug("terminal.sync", "error", {
-          error,
+          error: summarizeDebugError(error),
           workspaceId: workspace.id,
         });
       }
@@ -215,6 +218,7 @@ export function useWorkspaceTerminalSessionSync({
   }, [accessToken, enabled, refreshSessionSync, status, workspace]);
 
   return {
+    didRefreshSessionSyncFail,
     isRefreshingSessionSync,
     refreshSessionSync,
   };

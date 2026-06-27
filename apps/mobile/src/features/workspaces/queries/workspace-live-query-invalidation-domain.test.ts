@@ -6,6 +6,7 @@ import {
 } from "./workspace-live-query-invalidation-domain";
 
 const scope = {
+  nodeId: "node-1",
   organizationId: "org-1",
   projectId: "project-1",
   workspaceId: "workspace-1",
@@ -98,7 +99,19 @@ describe("workspace-live-query-invalidation-domain", () => {
   it("matches workspace browser read query keys for the current workspace", () => {
     expect(
       isWorkspaceReadQueryKey(
-        ["organizations", "org-1", "projects", "project-1", "workspaces", "workspace-1", "files", "", false],
+        [
+          "organizations",
+          "org-1",
+          "projects",
+          "project-1",
+          "workspaces",
+          "workspace-1",
+          "nodes",
+          "node-1",
+          "files",
+          "",
+          false,
+        ],
         scope,
       ),
     ).toBe(true);
@@ -110,7 +123,37 @@ describe("workspace-live-query-invalidation-domain", () => {
     ).toBe(false);
     expect(
       isWorkspaceReadQueryKey(
-        ["organizations", "org-1", "projects", "project-1", "workspaces", "workspace-2", "files", "", false],
+        [
+          "organizations",
+          "org-1",
+          "projects",
+          "project-1",
+          "workspaces",
+          "workspace-2",
+          "nodes",
+          "node-1",
+          "files",
+          "",
+          false,
+        ],
+        scope,
+      ),
+    ).toBe(false);
+    expect(
+      isWorkspaceReadQueryKey(
+        [
+          "organizations",
+          "org-1",
+          "projects",
+          "project-1",
+          "workspaces",
+          "workspace-1",
+          "nodes",
+          "node-2",
+          "files",
+          "",
+          false,
+        ],
         scope,
       ),
     ).toBe(false);

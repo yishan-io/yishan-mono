@@ -19,9 +19,10 @@ export function useWorkspaceChangesQuery(
   const accessToken = session?.accessToken;
   const enabled = options?.enabled ?? true;
   const nodeId = options?.nodeId ?? null;
+  const normalizedNodeId = nodeId?.trim() ?? "";
 
   return useQuery({
-    queryKey: queryKeys.workspaceChanges(organizationId, projectId, workspaceId),
+    queryKey: queryKeys.workspaceChanges(organizationId, projectId, workspaceId, normalizedNodeId),
     queryFn: async () => {
       return listRelayWorkspaceGitChanges({
         accessToken: requireWorkspaceQueryAccessToken(accessToken),

@@ -36,6 +36,7 @@ export function readSelectedWorkspaceContext(selection: ShellSelection): ShellSe
 
 export function resolveShellRuntimeAuthority(input: {
   activeTerminalId: string | null;
+  selectedNodeIdByOrganization: Record<string, string>;
   selection: ShellSelection;
   terminalsByWorkspaceId: Record<string, TerminalItem[]>;
 }): ShellRuntimeAuthority {
@@ -54,13 +55,14 @@ export function resolveShellRuntimeAuthority(input: {
   const selectedTerminalId = input.activeTerminalId;
   const selectedTerminal = selectedTerminalId ? findTerminal(workspaceTerminals, selectedTerminalId) : null;
   const selectedWorkspaceLabel = workspaceTerminals[0]?.subtitle ?? null;
+  const persistedNodeId = input.selectedNodeIdByOrganization[selectedWorkspaceContext.organizationId] ?? null;
 
   return {
     selectedTerminal,
     selectedTerminalId,
     selectedTerminalWorkspace: {
       id: selectedWorkspaceContext.workspaceId,
-      nodeId: selectedTerminal?.nodeId ?? workspaceTerminals[0]?.nodeId ?? null,
+      nodeId: selectedTerminal?.nodeId ?? workspaceTerminals[0]?.nodeId ?? persistedNodeId,
       organizationId: selectedWorkspaceContext.organizationId,
       projectId: selectedWorkspaceContext.projectId,
     },

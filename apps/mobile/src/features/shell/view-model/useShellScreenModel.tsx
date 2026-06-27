@@ -140,6 +140,7 @@ export function useShellScreenModel({
     onOpenQuickActions: openQuickActions,
     onRefreshSessions: refreshSessionsHandler,
     refreshingSessions: terminalMessages.isRefreshingSessionSync,
+    sessionSyncError: terminalMessages.didRefreshSessionSyncFail,
     subtitle: topBarSubtitle,
     subtitleLeading: topBarSubtitleLeading,
     title: topBarTitle,

@@ -45,7 +45,7 @@ export function useWorkspaceBrowserRouteState() {
     projectId,
     workspaceId,
   });
-  const browserStateId = createWorkspaceBrowserStateId(organizationId, projectId, workspaceId);
+  const browserStateId = createWorkspaceBrowserStateId(organizationId, projectId, workspaceId, nodeId);
   const browserTabState = useWorkspaceBrowserTabState({
     browserStateId,
     explicitFocusedChangePath: routeTab === "changes" ? focusPath : "",

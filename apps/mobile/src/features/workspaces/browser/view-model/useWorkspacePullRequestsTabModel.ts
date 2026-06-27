@@ -39,6 +39,7 @@ export type WorkspacePullRequestsTabModel = {
   loading: boolean;
   onOpenPullRequest: (url: string | null) => Promise<void>;
   refetch: () => Promise<void>;
+  refreshError: boolean;
   refreshing: boolean;
   checks: WorkspaceCurrentPullRequestCheck[];
   deployments: WorkspaceCurrentPullRequestDeployment[];
@@ -164,6 +165,7 @@ export function useWorkspacePullRequestsTabModel({
     refetch: async () => {
       await Promise.all([currentQuery.refetch(), historyQuery.refetch()]);
     },
+    refreshError: currentQuery.isError || historyQuery.isError,
     refreshing: currentQuery.isFetching || historyQuery.isFetching,
   };
 }

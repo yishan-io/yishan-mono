@@ -3,6 +3,8 @@ import { YStack } from "tamagui";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingView } from "@/components/ui/LoadingView";
+import { TransientNoticePill } from "@/components/ui/TransientNoticePill";
+import { useActionCompletionNotice } from "@/components/ui/useActionCompletionNotice";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
 import type { WorkspacePullRequestsTabModel } from "../view-model/useWorkspacePullRequestsTabModel";
 import { WorkspacePullRequestCard } from "./WorkspacePullRequestCard";
@@ -16,6 +18,13 @@ type WorkspacePullRequestsTabProps = {
 
 export function WorkspacePullRequestsTab({ model }: WorkspacePullRequestsTabProps) {
   const { t } = useAppLanguage();
+  const { handleAction: handleRefresh, showNotice: showRefreshNotice } = useActionCompletionNotice({
+    hasError: model.refreshError,
+    isRefreshing: model.refreshing,
+    onAction: () => {
+      void model.refetch();
+    },
+  });
 
   if (model.loading && !model.refreshing) {
     return <LoadingView label={t("shell.loadingPullRequests")} />;
@@ -31,9 +40,10 @@ export function WorkspacePullRequestsTab({ model }: WorkspacePullRequestsTabProp
 
   return (
     <YStack style={{ flex: 1, paddingBottom: 20 }}>
+      {showRefreshNotice ? <TransientNoticePill label={t("shell.pullRequestStatusChecked")} /> : null}
       <WorkspacePullRequestSectionHeader
         disabled={model.refreshing}
-        onRefresh={() => void model.refetch()}
+        onRefresh={handleRefresh}
         refreshLabel={t("shell.pullRequestRefresh")}
         refreshingLabel={t("shell.pullRequestRefreshing")}
         title={t("shell.pullRequestsLatest")}

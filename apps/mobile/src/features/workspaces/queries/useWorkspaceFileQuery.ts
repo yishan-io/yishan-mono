@@ -25,9 +25,10 @@ export function useWorkspaceFileQuery(
   const enabled = options?.enabled ?? true;
   const maxChars = options?.maxChars ?? 0;
   const nodeId = options?.nodeId ?? null;
+  const normalizedNodeId = nodeId?.trim() ?? "";
 
   return useQuery({
-    queryKey: queryKeys.workspaceFile(organizationId, projectId, workspaceId, path, maxChars),
+    queryKey: queryKeys.workspaceFile(organizationId, projectId, workspaceId, normalizedNodeId, path, maxChars),
     queryFn: async () => {
       return readRelayWorkspaceFile({
         accessToken: requireWorkspaceQueryAccessToken(accessToken),

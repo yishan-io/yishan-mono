@@ -1,6 +1,7 @@
 import type { WorkspaceFrontendEventsMessage } from "@/features/workspaces/workspace-frontend-events";
 
 type WorkspaceLiveQueryScope = {
+  nodeId: string;
   organizationId: string;
   projectId: string;
   workspaceId: string;
@@ -135,10 +136,12 @@ export function isWorkspaceReadQueryKey(queryKey: readonly unknown[], scope: Wor
     queryKey[3] === scope.projectId &&
     queryKey[4] === "workspaces" &&
     queryKey[5] === scope.workspaceId &&
-    (queryKey[6] === "files" ||
-      queryKey[6] === "file" ||
-      queryKey[6] === "diff" ||
-      queryKey[6] === "changes" ||
-      queryKey[6] === "git")
+    queryKey[6] === "nodes" &&
+    queryKey[7] === scope.nodeId &&
+    (queryKey[8] === "files" ||
+      queryKey[8] === "file" ||
+      queryKey[8] === "diff" ||
+      queryKey[8] === "changes" ||
+      queryKey[8] === "git")
   );
 }

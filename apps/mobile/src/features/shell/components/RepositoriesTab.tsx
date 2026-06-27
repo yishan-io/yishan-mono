@@ -1,9 +1,11 @@
 import { memo, useMemo, useState } from "react";
 import { FlatList, RefreshControl, View } from "react-native";
-import { Paragraph, Text, useTheme } from "tamagui";
+import { Paragraph } from "tamagui";
 
 import { ErrorState } from "@/components/ui/ErrorState";
+import { TransientNoticePill } from "@/components/ui/TransientNoticePill";
 import { MOBILE_UI_TOKENS } from "@/components/ui/ui-tokens";
+import { useActionCompletionNotice } from "@/components/ui/useActionCompletionNotice";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
 import type { Node } from "@/features/nodes/nodes.types";
 import type { ProjectWithWorkspaces } from "@/features/projects/projects.types";
@@ -16,7 +18,6 @@ import { SIDEBAR_TREE_INDENT } from "@/features/shell/state/shell.constants";
 import type { ShellSelection } from "@/features/shell/state/shell.types";
 import type { Workspace } from "@/features/workspaces/workspaces.types";
 import { NodeSidebarNode, ProjectSidebarNode, WorkspaceSidebarNode } from "./RepoSidebarNode";
-import { useRepositoriesRefreshNotice } from "./useRepositoriesRefreshNotice";
 
 type RepositoriesTabProps = {
   currentNodes: Node[];
@@ -56,7 +57,6 @@ export const RepositoriesTab = memo(function RepositoriesTab({
   workspacesByProjectId,
 }: RepositoriesTabProps) {
   const { t } = useAppLanguage();
-  const theme = useTheme();
   const projects = currentProjects ?? [];
   const [foldedNodeIds, setFoldedNodeIds] = useState<string[]>([]);
   const [foldedProjectRowIds, setFoldedProjectRowIds] = useState<string[]>([]);
@@ -64,10 +64,10 @@ export const RepositoriesTab = memo(function RepositoriesTab({
     () => projects.filter((project) => displayProjectIds.includes(project.id)),
     [displayProjectIds, projects],
   );
-  const { handleRefresh, showRefreshNotice } = useRepositoriesRefreshNotice({
+  const { handleAction: handleRefresh, showNotice: showRefreshNotice } = useActionCompletionNotice({
     hasError: isProjectsError,
     isRefreshing: refreshingProjects,
-    onRefresh: onRefreshProjects,
+    onAction: onRefreshProjects,
   });
   // Tree projection stays in the dedicated state helper so this surface only manages fold state and rendering.
   const nodeGroups = useMemo(
@@ -117,24 +117,7 @@ export const RepositoriesTab = memo(function RepositoriesTab({
 
   return (
     <View style={{ flex: 1 }}>
-      {showRefreshNotice ? (
-        <View
-          style={{
-            alignSelf: "center",
-            backgroundColor: theme.color3.val,
-            borderColor: theme.color6.val,
-            borderRadius: 999,
-            borderWidth: 1,
-            marginBottom: 12,
-            paddingHorizontal: 12,
-            paddingVertical: 6,
-          }}
-        >
-          <Text color="$color11" fontSize="$3" fontWeight="500">
-            {t("shell.workspaceTreeRefreshed")}
-          </Text>
-        </View>
-      ) : null}
+      {showRefreshNotice ? <TransientNoticePill label={t("shell.workspaceTreeRefreshed")} /> : null}
       {workspaceListHierarchyMode === "by_node" ? (
         <FlatList
           alwaysBounceVertical

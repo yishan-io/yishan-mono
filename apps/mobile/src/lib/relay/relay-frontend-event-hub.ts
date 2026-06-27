@@ -82,7 +82,17 @@ async function ensureRelayFrontendEventEntryConnected(key: string, entry: RelayF
 
   entry.connectPromise = (async () => {
     await entry.client.connect();
+    if (entry.disposed || entry.subscribers.size === 0) {
+      entry.client.close();
+      return;
+    }
+
     await entry.client.sendRequest("events.frontendStream", {});
+    if (entry.disposed || entry.subscribers.size === 0) {
+      entry.client.close();
+      return;
+    }
+
     fanOutRelayFrontendEvent(entry, { type: "ready" });
   })()
     .catch(() => {

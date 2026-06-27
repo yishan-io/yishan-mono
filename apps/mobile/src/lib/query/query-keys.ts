@@ -8,7 +8,14 @@ export const queryKeys = {
     ["organizations", organizationId, "projects", projectId] as const,
   workspaces: (organizationId: string, projectId: string) =>
     ["organizations", organizationId, "projects", projectId, "workspaces"] as const,
-  workspaceFiles: (organizationId: string, projectId: string, workspaceId: string, path = "", recursive = false) =>
+  workspaceFiles: (
+    organizationId: string,
+    projectId: string,
+    workspaceId: string,
+    nodeId = "",
+    path = "",
+    recursive = false,
+  ) =>
     [
       "organizations",
       organizationId,
@@ -16,11 +23,20 @@ export const queryKeys = {
       projectId,
       "workspaces",
       workspaceId,
+      "nodes",
+      nodeId,
       "files",
       path,
       recursive,
     ] as const,
-  workspaceFile: (organizationId: string, projectId: string, workspaceId: string, path: string, maxChars = 0) =>
+  workspaceFile: (
+    organizationId: string,
+    projectId: string,
+    workspaceId: string,
+    nodeId: string,
+    path: string,
+    maxChars = 0,
+  ) =>
     [
       "organizations",
       organizationId,
@@ -28,11 +44,20 @@ export const queryKeys = {
       projectId,
       "workspaces",
       workspaceId,
+      "nodes",
+      nodeId,
       "file",
       path,
       maxChars,
     ] as const,
-  workspaceDiff: (organizationId: string, projectId: string, workspaceId: string, path: string, maxChars = 0) =>
+  workspaceDiff: (
+    organizationId: string,
+    projectId: string,
+    workspaceId: string,
+    nodeId: string,
+    path: string,
+    maxChars = 0,
+  ) =>
     [
       "organizations",
       organizationId,
@@ -40,14 +65,37 @@ export const queryKeys = {
       projectId,
       "workspaces",
       workspaceId,
+      "nodes",
+      nodeId,
       "diff",
       path,
       maxChars,
     ] as const,
-  workspaceChanges: (organizationId: string, projectId: string, workspaceId: string) =>
-    ["organizations", organizationId, "projects", projectId, "workspaces", workspaceId, "changes"] as const,
-  workspaceBranches: (organizationId: string, projectId: string, workspaceId: string) =>
-    ["organizations", organizationId, "projects", projectId, "workspaces", workspaceId, "git", "branches"] as const,
+  workspaceChanges: (organizationId: string, projectId: string, workspaceId: string, nodeId: string) =>
+    [
+      "organizations",
+      organizationId,
+      "projects",
+      projectId,
+      "workspaces",
+      workspaceId,
+      "nodes",
+      nodeId,
+      "changes",
+    ] as const,
+  workspaceBranches: (organizationId: string, projectId: string, workspaceId: string, nodeId: string) =>
+    [
+      "organizations",
+      organizationId,
+      "projects",
+      projectId,
+      "workspaces",
+      workspaceId,
+      "nodes",
+      nodeId,
+      "git",
+      "branches",
+    ] as const,
   workspaceCurrentPullRequest: (organizationId: string, projectId: string, workspaceId: string) =>
     [
       "organizations",

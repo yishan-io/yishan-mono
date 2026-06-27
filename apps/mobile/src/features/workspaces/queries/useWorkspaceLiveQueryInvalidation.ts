@@ -53,6 +53,7 @@ export function useWorkspaceLiveQueryInvalidation({
       const plan = buildWorkspaceLiveQueryInvalidationPlan({
         message,
         scope: {
+          nodeId: workspace.nodeId?.trim() ?? "",
           organizationId: workspace.organizationId,
           projectId: workspace.projectId,
           workspaceId: workspace.id,
@@ -92,6 +93,7 @@ export function useWorkspaceLiveQueryInvalidation({
           queryClient.invalidateQueries({
             predicate: (query) =>
               isWorkspaceReadQueryKey(query.queryKey, {
+                nodeId: workspace.nodeId?.trim() ?? "",
                 organizationId: workspace.organizationId,
                 projectId: workspace.projectId,
                 workspaceId: workspace.id,

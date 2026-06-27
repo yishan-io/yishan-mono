@@ -21,11 +21,12 @@ export function useWorkspaceFilesQuery(
   const accessToken = session?.accessToken;
   const enabled = options?.enabled ?? true;
   const nodeId = options?.nodeId ?? null;
+  const normalizedNodeId = nodeId?.trim() ?? "";
   const path = options?.path ?? "";
   const recursive = options?.recursive ?? false;
 
   return useQuery({
-    queryKey: queryKeys.workspaceFiles(organizationId, projectId, workspaceId, path, recursive),
+    queryKey: queryKeys.workspaceFiles(organizationId, projectId, workspaceId, normalizedNodeId, path, recursive),
     queryFn: async () => {
       return listRelayWorkspaceFiles({
         accessToken: requireWorkspaceQueryAccessToken(accessToken),

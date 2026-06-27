@@ -1,12 +1,14 @@
 import { Building2, ChevronDown, ListFilter, Menu, PanelRightOpen, Plus, RefreshCw } from "@tamagui/lucide-icons";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { ActivityIndicator, Image, Pressable, View } from "react-native";
 import { Text, XStack, useTheme } from "tamagui";
 
 import { WorkbenchHeader } from "@/components/screens/WorkbenchFrame";
 import { WorkbenchPaneHeaderFrame } from "@/components/screens/WorkbenchPaneHeaderFrame";
 import { StatusDot } from "@/components/ui/StatusDot";
+import { TransientNoticePill } from "@/components/ui/TransientNoticePill";
 import { MOBILE_UI_TOKENS } from "@/components/ui/ui-tokens";
+import { useActionCompletionNotice } from "@/components/ui/useActionCompletionNotice";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
 import type { WorkspaceAggregateIndicator } from "@/features/notifications/notification-runtime-context";
 import { ShellIconButton } from "./ShellPrimitives";
@@ -17,6 +19,7 @@ type ShellTopBarProps = {
   onOpenQuickActions?: (() => void) | null;
   onOpenDrawer: () => void;
   onRefreshSessions?: (() => void) | null;
+  sessionSyncError?: boolean;
   refreshingSessions?: boolean;
   subtitle?: string | null;
   subtitleLeading?: ReactNode;
@@ -45,6 +48,7 @@ export function ShellTopBar({
   onOpenQuickActions,
   onOpenDrawer,
   onRefreshSessions,
+  sessionSyncError = false,
   refreshingSessions = false,
   subtitle,
   subtitleLeading,
@@ -52,60 +56,68 @@ export function ShellTopBar({
 }: ShellTopBarViewProps) {
   const { t } = useAppLanguage();
   const theme = useTheme();
+  const { handleAction: handleRefreshSessions, showNotice: showSessionSyncNotice } = useActionCompletionNotice({
+    hasError: sessionSyncError,
+    isRefreshing: refreshingSessions,
+    onAction: onRefreshSessions,
+  });
 
   return (
-    <WorkbenchHeader
-      actions={
-        <XStack style={{ alignItems: "center", gap: 4 }}>
-          {onRefreshSessions ? (
-            <ShellIconButton
-              accessibilityLabel={t("shell.refreshSessions")}
-              disabled={refreshingSessions}
-              onPress={onRefreshSessions}
-            >
-              {refreshingSessions ? (
-                <ActivityIndicator color={theme.color11.val} size="small" />
-              ) : (
-                <RefreshCw color="$color11" size={18} />
-              )}
-            </ShellIconButton>
-          ) : null}
-          {onOpenQuickActions ? (
-            <ShellIconButton accessibilityLabel={t("shell.whatsNext")} onPress={onOpenQuickActions}>
-              <View
-                style={{
-                  alignItems: "center",
-                  backgroundColor: theme.color12.val,
-                  borderRadius: 9,
-                  height: 24,
-                  justifyContent: "center",
-                  width: 24,
-                }}
+    <Fragment>
+      <WorkbenchHeader
+        actions={
+          <XStack style={{ alignItems: "center", gap: 4 }}>
+            {onRefreshSessions ? (
+              <ShellIconButton
+                accessibilityLabel={t("shell.refreshSessions")}
+                disabled={refreshingSessions}
+                onPress={handleRefreshSessions}
               >
-                <Plus color="$color1" size={16} strokeWidth={3} />
-              </View>
+                {refreshingSessions ? (
+                  <ActivityIndicator color={theme.color11.val} size="small" />
+                ) : (
+                  <RefreshCw color="$color11" size={18} />
+                )}
+              </ShellIconButton>
+            ) : null}
+            {onOpenQuickActions ? (
+              <ShellIconButton accessibilityLabel={t("shell.whatsNext")} onPress={onOpenQuickActions}>
+                <View
+                  style={{
+                    alignItems: "center",
+                    backgroundColor: theme.color12.val,
+                    borderRadius: 9,
+                    height: 24,
+                    justifyContent: "center",
+                    width: 24,
+                  }}
+                >
+                  <Plus color="$color1" size={16} strokeWidth={3} />
+                </View>
+              </ShellIconButton>
+            ) : null}
+            {onOpenBrowser ? (
+              <ShellIconButton accessibilityLabel={t("shell.openWorkspaceBrowser")} onPress={onOpenBrowser}>
+                <PanelRightOpen color="$color11" size={20} />
+              </ShellIconButton>
+            ) : null}
+          </XStack>
+        }
+        leading={
+          <View style={{ position: "relative" }}>
+            <ShellIconButton accessibilityLabel={t("shell.openNavigation")} onPress={onOpenDrawer}>
+              <Menu color="$color11" size={20} />
             </ShellIconButton>
-          ) : null}
-          {onOpenBrowser ? (
-            <ShellIconButton accessibilityLabel={t("shell.openWorkspaceBrowser")} onPress={onOpenBrowser}>
-              <PanelRightOpen color="$color11" size={20} />
-            </ShellIconButton>
-          ) : null}
-        </XStack>
-      }
-      leading={
-        <View style={{ position: "relative" }}>
-          <ShellIconButton accessibilityLabel={t("shell.openNavigation")} onPress={onOpenDrawer}>
-            <Menu color="$color11" size={20} />
-          </ShellIconButton>
-          <ShellTopBarAggregateStatusDot indicator={aggregateIndicator} />
-        </View>
-      }
-      subtitle={subtitle ?? undefined}
-      subtitleLeading={subtitleLeading}
-      title={title}
-      titleNumberOfLines={1}
-    />
+            <ShellTopBarAggregateStatusDot indicator={aggregateIndicator} />
+          </View>
+        }
+        subtitle={subtitle ?? undefined}
+        subtitleLeading={subtitleLeading}
+        title={title}
+        titleNumberOfLines={1}
+      />
+      {showSessionSyncNotice ? <TransientNoticePill label={t("shell.sessionsSynced")} /> : null}
+    </Fragment>
   );
 }
 

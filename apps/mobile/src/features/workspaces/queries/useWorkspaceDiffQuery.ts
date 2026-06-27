@@ -25,9 +25,10 @@ export function useWorkspaceDiffQuery(
   const enabled = options?.enabled ?? true;
   const maxChars = options?.maxChars ?? 0;
   const nodeId = options?.nodeId ?? null;
+  const normalizedNodeId = nodeId?.trim() ?? "";
 
   return useQuery({
-    queryKey: queryKeys.workspaceDiff(organizationId, projectId, workspaceId, path, maxChars),
+    queryKey: queryKeys.workspaceDiff(organizationId, projectId, workspaceId, normalizedNodeId, path, maxChars),
     queryFn: async () => {
       return readRelayWorkspaceDiff({
         accessToken: requireWorkspaceQueryAccessToken(accessToken),
