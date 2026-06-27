@@ -1,4 +1,5 @@
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
+import { isWorkspaceNotFoundError } from "../helpers/errorHelpers";
 import {
   computeUniqueGitChangeFileCount,
   countWorkspaceGitChanges,
@@ -103,6 +104,9 @@ export async function refreshWorkspaceGitChanges(workspaceId: string): Promise<v
     readWorkspaceStoreState().setWorkspaceGitChangesCount(workspaceId, combinedCount);
     readWorkspaceStoreState().setWorkspaceGitChangeTotals(workspaceId, combinedTotals);
   } catch (error) {
+    if (isWorkspaceNotFoundError(error)) {
+      return;
+    }
     console.error("Failed to refresh workspace git changes", error);
   }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { FileTreeGitChangeKind } from "../../../components/FileTree/types";
+import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 
 function normalizeGitChangeKind(kind: string): FileTreeGitChangeKind {
   if (kind === "added" || kind === "modified" || kind === "deleted" || kind === "renamed") {
@@ -136,7 +137,9 @@ export function useFileTreeGitChanges({
 
         setGitChangesByPath((currentMap) => (areGitChangeMapsEqual(currentMap, nextMap) ? currentMap : nextMap));
       } catch (error) {
-        console.error("Failed to load file-tree git changes", error);
+        if (!isWorkspaceNotFoundError(error)) {
+          console.error("Failed to load file-tree git changes", error);
+        }
         if (cancelled || gitChangeLoadRequestIdRef.current !== requestId) {
           return;
         }

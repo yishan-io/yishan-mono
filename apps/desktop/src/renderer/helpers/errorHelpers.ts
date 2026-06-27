@@ -5,4 +5,4 @@
  * implementation now lives in `shared/helpers/errorHelpers.ts` so the main
  * process can share it without duplication.
  */
-export { getErrorMessage } from "../../shared/helpers/errorHelpers";
+export { getErrorMessage, isWorkspaceNotFoundError } from "../../shared/helpers/errorHelpers";
