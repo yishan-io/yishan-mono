@@ -62,29 +62,7 @@ func (r *fileHourlyUsageRepository) ReplaceAgentHourlyRows(
 	if err != nil {
 		return err
 	}
-	existingByKey := make(map[string]HourlyUsageRow)
-	for _, row := range state.Rows {
-		if row.AgentKind != agentKind {
-			continue
-		}
-		existingByKey[hourlyUsageRowKey(row)] = row
-	}
-
-	mergedRows := make([]HourlyUsageRow, 0, len(rows))
-	for _, row := range rows {
-		key := hourlyUsageRowKey(row)
-		existing, ok := existingByKey[key]
-		if ok && hourlyRowsMatchForSync(existing, row) {
-			mergedRows = append(mergedRows, existing)
-			continue
-		}
-
-		row.Dirty = true
-		if ok {
-			row.LastSyncedAt = existing.LastSyncedAt
-		}
-		mergedRows = append(mergedRows, row)
-	}
+	mergedRows := mergeAgentHourlyRows(state.Rows, agentKind, rows)
 
 	sort.Slice(mergedRows, func(i, j int) bool {
 		return compareHourlyUsageRows(mergedRows[i], mergedRows[j]) < 0
@@ -97,6 +75,51 @@ func (r *fileHourlyUsageRepository) ReplaceAgentHourlyRows(
 		return err
 	}
 	return nil
+}
+
+func mergeAgentHourlyRows(existingRows []HourlyUsageRow, agentKind string, scannedRows []HourlyUsageRow) []HourlyUsageRow {
+	existingByKey := make(map[string]HourlyUsageRow)
+	for _, row := range existingRows {
+		if row.AgentKind != agentKind {
+			continue
+		}
+		existingByKey[hourlyUsageRowKey(row)] = row
+	}
+
+	mergedRows := make([]HourlyUsageRow, 0, maxInt(len(existingByKey), len(scannedRows)))
+	seenKeys := make(map[string]struct{}, len(scannedRows))
+	for _, row := range scannedRows {
+		key := hourlyUsageRowKey(row)
+		seenKeys[key] = struct{}{}
+		existing, hasExisting := existingByKey[key]
+		mergedRows = append(mergedRows, mergeHourlyUsageRow(existing, hasExisting, row))
+	}
+
+	for key, row := range existingByKey {
+		if _, alreadyMerged := seenKeys[key]; alreadyMerged {
+			continue
+		}
+		mergedRows = append(mergedRows, row)
+	}
+
+	return mergedRows
+}
+
+func mergeHourlyUsageRow(existingRow HourlyUsageRow, hasExisting bool, scannedRow HourlyUsageRow) HourlyUsageRow {
+	if !hasExisting {
+		scannedRow.Dirty = true
+		return scannedRow
+	}
+	if existingRow.TotalTokens > scannedRow.TotalTokens {
+		return existingRow
+	}
+	if hourlyRowsMatchForSync(existingRow, scannedRow) {
+		return existingRow
+	}
+
+	scannedRow.Dirty = true
+	scannedRow.LastSyncedAt = existingRow.LastSyncedAt
+	return scannedRow
 }
 
 func (r *fileHourlyUsageRepository) ListDirtyHourlyRows(ctx context.Context) ([]HourlyUsageRow, error) {
@@ -253,6 +276,13 @@ func compareHourlyUsageRows(left HourlyUsageRow, right HourlyUsageRow) int {
 		return 1
 	}
 	return 0
+}
+
+func maxInt(left int, right int) int {
+	if left > right {
+		return left
+	}
+	return right
 }
 
 func pruneExpiredHourlyUsageRows(file *hourlyUsageFile, now time.Time) {

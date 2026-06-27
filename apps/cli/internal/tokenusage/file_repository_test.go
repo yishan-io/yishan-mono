@@ -99,6 +99,132 @@ func TestFileHourlyUsageRepositoryTracksDirtyRowsIncrementally(t *testing.T) {
 	}
 }
 
+func TestFileHourlyUsageRepositoryKeepsHigherTokenRowOnPartialRescan(t *testing.T) {
+	t.Parallel()
+
+	repo := newTestFileHourlyUsageRepository(t)
+	bucketStart := time.Now().UTC().Add(-time.Hour).UnixMilli()
+
+	if err := repo.ReplaceAgentHourlyRows(context.Background(), "claude", []HourlyUsageRow{newHourlyUsageRow(bucketStart, 100)}); err != nil {
+		t.Fatalf("seed rows: %v", err)
+	}
+	dirtyRows, err := repo.ListDirtyHourlyRows(context.Background())
+	if err != nil {
+		t.Fatalf("list dirty rows after seed: %v", err)
+	}
+	if err := repo.MarkHourlyRowsSynced(context.Background(), dirtyRows, time.Now().UTC().UnixMilli()); err != nil {
+		t.Fatalf("mark synced: %v", err)
+	}
+
+	partialRow := newHourlyUsageRow(bucketStart, 50)
+	partialRow.UpdatedAt = partialRow.UpdatedAt + time.Minute.Milliseconds()
+	if err := repo.ReplaceAgentHourlyRows(context.Background(), "claude", []HourlyUsageRow{partialRow}); err != nil {
+		t.Fatalf("replace with lower-token partial row: %v", err)
+	}
+
+	storedRows := loadTestRepositoryRows(t, repo)
+	if len(storedRows) != 1 {
+		t.Fatalf("expected 1 stored row, got %d", len(storedRows))
+	}
+	if storedRows[0].TotalTokens != 100 {
+		t.Fatalf("expected stored row total tokens 100, got %d", storedRows[0].TotalTokens)
+	}
+
+	dirtyRows, err = repo.ListDirtyHourlyRows(context.Background())
+	if err != nil {
+		t.Fatalf("list dirty rows after partial re-scan: %v", err)
+	}
+	if len(dirtyRows) != 0 {
+		t.Fatalf("expected lower-token partial re-scan to keep row clean, got %d dirty rows", len(dirtyRows))
+	}
+}
+
+func TestFileHourlyUsageRepositoryPreservesOmittedBucketsOnPartialRescan(t *testing.T) {
+	t.Parallel()
+
+	repo := newTestFileHourlyUsageRepository(t)
+	now := time.Now().UTC()
+	olderBucket := now.Add(-2 * time.Hour).UnixMilli()
+	recentBucket := now.Add(-time.Hour).UnixMilli()
+	seedRows := []HourlyUsageRow{
+		newHourlyUsageRow(olderBucket, 100),
+		newHourlyUsageRow(recentBucket, 200),
+	}
+
+	if err := repo.ReplaceAgentHourlyRows(context.Background(), "claude", seedRows); err != nil {
+		t.Fatalf("seed rows: %v", err)
+	}
+	dirtyRows, err := repo.ListDirtyHourlyRows(context.Background())
+	if err != nil {
+		t.Fatalf("list dirty rows after seed: %v", err)
+	}
+	if err := repo.MarkHourlyRowsSynced(context.Background(), dirtyRows, now.UnixMilli()); err != nil {
+		t.Fatalf("mark synced: %v", err)
+	}
+
+	changedRecentRow := newHourlyUsageRow(recentBucket, 300)
+	changedRecentRow.UpdatedAt = changedRecentRow.UpdatedAt + time.Minute.Milliseconds()
+	if err := repo.ReplaceAgentHourlyRows(context.Background(), "claude", []HourlyUsageRow{changedRecentRow}); err != nil {
+		t.Fatalf("replace recent bucket with changed row: %v", err)
+	}
+
+	if err := repo.ReplaceAgentHourlyRows(context.Background(), "claude", []HourlyUsageRow{newHourlyUsageRow(olderBucket, 100)}); err != nil {
+		t.Fatalf("partial re-scan with omitted dirty bucket: %v", err)
+	}
+
+	state, err := repo.GetHourlyUsageSyncState(context.Background())
+	if err != nil {
+		t.Fatalf("get sync state: %v", err)
+	}
+	if state.TotalRows != 2 {
+		t.Fatalf("expected 2 rows after omitted-bucket partial re-scan, got %d", state.TotalRows)
+	}
+	if state.DirtyRows != 1 {
+		t.Fatalf("expected 1 dirty row after omitted-bucket partial re-scan, got %d", state.DirtyRows)
+	}
+
+	dirtyRows, err = repo.ListDirtyHourlyRows(context.Background())
+	if err != nil {
+		t.Fatalf("list dirty rows after omitted-bucket partial re-scan: %v", err)
+	}
+	if len(dirtyRows) != 1 {
+		t.Fatalf("expected 1 dirty row after omitted-bucket partial re-scan, got %d", len(dirtyRows))
+	}
+	if dirtyRows[0].BucketStartHourUTC != recentBucket {
+		t.Fatalf("expected dirty row bucket %d, got %d", recentBucket, dirtyRows[0].BucketStartHourUTC)
+	}
+	if dirtyRows[0].TotalTokens != 300 {
+		t.Fatalf("expected dirty row total tokens 300, got %d", dirtyRows[0].TotalTokens)
+	}
+}
+
+func newTestFileHourlyUsageRepository(t *testing.T) *fileHourlyUsageRepository {
+	t.Helper()
+
+	repository, err := NewFileHourlyUsageRepository(filepath.Join(t.TempDir(), "credential.yaml"))
+	if err != nil {
+		t.Fatalf("new repository: %v", err)
+	}
+	fileRepository, ok := repository.(*fileHourlyUsageRepository)
+	if !ok {
+		t.Fatalf("expected file repository implementation")
+	}
+	return fileRepository
+}
+
+func loadTestRepositoryRows(t *testing.T, repo *fileHourlyUsageRepository) []HourlyUsageRow {
+	t.Helper()
+
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	state, err := repo.loadLocked()
+	if err != nil {
+		t.Fatalf("load repository rows: %v", err)
+	}
+	return append([]HourlyUsageRow(nil), state.Rows...)
+}
+
 func newHourlyUsageRow(bucketStartHourUTC int64, totalTokens int64) HourlyUsageRow {
 	return HourlyUsageRow{
 		ProjectID:             "project-1",
