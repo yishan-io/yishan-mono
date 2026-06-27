@@ -12,12 +12,7 @@ export function hasInternalFileTreeDragIntent(event: DragEvent<HTMLElement>): bo
   return Boolean(event.dataTransfer?.types.includes(FILETREE_DRAG_MIME));
 }
 
-/**
- * Extracts relative file paths from an internal file-tree drag payload.
- * The payload contains absolute paths; this function strips the worktree prefix
- * to return workspace-relative paths.
- */
-export function extractInternalDragRelativePaths(dataTransfer: DataTransfer, worktreePath: string): string[] {
+function parseInternalFileTreeDragPaths(dataTransfer: DataTransfer): string[] {
   const raw = dataTransfer.getData(FILETREE_DRAG_MIME);
   if (!raw) {
     return [];
@@ -29,14 +24,48 @@ export function extractInternalDragRelativePaths(dataTransfer: DataTransfer, wor
       return [];
     }
 
-    const prefix = worktreePath.endsWith("/") ? worktreePath : `${worktreePath}/`;
-    return parsed
-      .filter((item): item is string => typeof item === "string" && item.length > 0)
-      .map((absolutePath) => (absolutePath.startsWith(prefix) ? absolutePath.slice(prefix.length) : absolutePath))
-      .filter(Boolean);
+    return parsed.filter((item): item is string => typeof item === "string" && item.length > 0);
   } catch {
     return [];
   }
+}
+
+/** Resolves internal file-tree drag paths to their canonical filesystem paths. */
+export async function resolveInternalFileTreeDragPaths(dataTransfer: DataTransfer): Promise<string[]> {
+  const sourcePaths = parseInternalFileTreeDragPaths(dataTransfer);
+  if (sourcePaths.length === 0) {
+    return [];
+  }
+
+  const resolveRealPath = window.__YISHAN__?.host.resolveRealPath;
+  if (!resolveRealPath) {
+    return sourcePaths;
+  }
+
+  const resolvedPaths = await Promise.all(
+    sourcePaths.map(async (sourcePath) => {
+      try {
+        const result = await resolveRealPath(sourcePath);
+        return result.path.trim() || sourcePath;
+      } catch {
+        return sourcePath;
+      }
+    }),
+  );
+
+  return [...new Set(resolvedPaths.filter(Boolean))];
+}
+
+/**
+ * Extracts relative file paths from an internal file-tree drag payload.
+ * The payload contains absolute paths; this function strips the worktree prefix
+ * to return workspace-relative paths.
+ */
+export function extractInternalDragRelativePaths(dataTransfer: DataTransfer, worktreePath: string): string[] {
+  const prefix = worktreePath.endsWith("/") ? worktreePath : `${worktreePath}/`;
+  return parseInternalFileTreeDragPaths(dataTransfer)
+    .map((absolutePath) => (absolutePath.startsWith(prefix) ? absolutePath.slice(prefix.length) : absolutePath))
+    .filter(Boolean);
 }
 
 /** Returns true when drag metadata indicates one or more external filesystem entries are included.

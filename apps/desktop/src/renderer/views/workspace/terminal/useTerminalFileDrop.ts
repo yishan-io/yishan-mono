@@ -6,6 +6,7 @@ import {
   FILETREE_DRAG_MIME,
   extractSourcePathsFromDataTransfer,
   hasExternalFileDragIntent,
+  resolveInternalFileTreeDragPaths,
 } from "../../../components/FileTree/dataTransfer";
 import { escapePathsForShell } from "./terminalPathEscape";
 import { getTerminalRuntime } from "./terminalRuntimeRegistry";
@@ -52,6 +53,15 @@ function extractFileTreeDragPaths(dataTransfer: DataTransfer): string[] {
   } catch {
     return [];
   }
+}
+
+async function extractDroppedPathsForDrop(dataTransfer: DataTransfer): Promise<string[]> {
+  const fileTreePaths = await resolveInternalFileTreeDragPaths(dataTransfer);
+  if (fileTreePaths.length > 0) {
+    return fileTreePaths;
+  }
+
+  return extractSourcePathsFromDataTransfer(dataTransfer);
 }
 
 /**
@@ -155,7 +165,7 @@ export function useTerminalFileDrop({
   }, []);
 
   const handleDrop = useCallback(
-    (event: globalThis.DragEvent) => {
+    async (event: globalThis.DragEvent) => {
       dragEnterCountRef.current = 0;
       setIsFileDragOver(false);
 
@@ -174,7 +184,7 @@ export function useTerminalFileDrop({
       event.preventDefault();
       event.stopPropagation();
 
-      const paths = extractDroppedPaths(dt);
+      const paths = await extractDroppedPathsForDrop(dt);
       if (paths.length === 0) {
         return;
       }
