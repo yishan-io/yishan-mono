@@ -32,6 +32,11 @@ function resolveWorkspaceProjectId(workspace: Pick<WorkspaceItem, "projectId" | 
   return workspace.projectId ?? workspace.repoId;
 }
 
+/** Returns projects that are currently visible in UI order, based on `displayProjectIds`. */
+export function filterVisibleProjects<T extends { id: string }>(projects: T[], displayProjectIds: string[]): T[] {
+  return projects.filter((project) => displayProjectIds.includes(project.id));
+}
+
 /** Returns persisted workspace preferences for one organization id when available. */
 export function readPersistedWorkspacePreferencesByOrg(
   storage: Storage | undefined,

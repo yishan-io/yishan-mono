@@ -29,6 +29,7 @@ import {
   SUPPORTED_DESKTOP_AGENT_KINDS,
 } from "../../../helpers/agentSettings";
 import { getRendererPlatform } from "../../../helpers/platform";
+import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { resolveTargetBranchForCreate } from "../../../helpers/workspaceBranchNaming";
 import { useCommands } from "../../../hooks/useCommands";
 import { useDialogRegistration } from "../../../hooks/useDialogRegistration";
@@ -62,6 +63,7 @@ export function CreateWorkspaceDialogView({
   const organizationId = sessionStore((state) => state.selectedOrganizationId);
   const daemonId = sessionStore((state) => state.daemonId);
   const projects = workspaceStore((state) => state.projects);
+  const displayProjectIds = workspaceStore((state) => state.displayProjectIds);
   const workspaces = workspaceStore((state) => state.workspaces);
   const { createWorkspace, renameWorkspace, renameWorkspaceBranch, listGitBranches, listAgentModels } = useCommands();
   const prefixMode = workspaceSettingsStore((state) => state.prefixMode);
@@ -70,6 +72,7 @@ export function CreateWorkspaceDialogView({
   const defaultAgentKind = agentSettingsStore((state) => state.defaultAgentKind);
   useDialogRegistration(open);
   const isRenameMode = mode === "rename";
+  const selectableProjects = isRenameMode ? projects : filterVisibleProjects(projects, displayProjectIds);
   const branchInputPlaceholder = isRenameMode
     ? t("workspace.rename.branchNameLabel")
     : t("workspace.create.branchNameLabel");
@@ -111,7 +114,7 @@ export function CreateWorkspaceDialogView({
     isRenameMode,
     organizationId,
     daemonId,
-    projects,
+    projects: selectableProjects,
     workspaces,
     defaultTaskAgentKind: defaultAgentKind && inUseByAgentKind[defaultAgentKind] ? defaultAgentKind : undefined,
     prefixMode,
@@ -330,7 +333,7 @@ export function CreateWorkspaceDialogView({
                     },
                     renderValue: (value) => {
                       const selectedValue = typeof value === "string" ? value : "";
-                      const selectedValueRepo = projects.find((project) => project.id === selectedValue);
+                      const selectedValueRepo = selectableProjects.find((project) => project.id === selectedValue);
                       const repoName = selectedValueRepo?.name ?? t("project.unknown");
 
                       return (
@@ -357,7 +360,7 @@ export function CreateWorkspaceDialogView({
                   },
                 }}
               >
-                {projects.map((repo) => (
+                {selectableProjects.map((repo) => (
                   <MenuItem key={repo.id} value={repo.id}>
                     <Stack direction="row" alignItems="center" gap={1}>
                       <Avatar

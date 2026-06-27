@@ -116,6 +116,7 @@ describe("CreateWorkspaceDialogView", () => {
     workspaceStore.setState(
       {
         ...initialWorkspaceStoreState,
+        displayProjectIds: ["repo-1", "repo-2"],
         projects: [
           {
             id: "repo-1",
@@ -316,6 +317,62 @@ describe("CreateWorkspaceDialogView", () => {
         name: "Repo Two Workspace",
         sourceBranch: "master",
         targetBranch: "repo-two-workspace",
+      });
+    });
+  });
+
+  it("hides projects that are hidden from the left pane in create mode", async () => {
+    workspaceStore.setState(
+      {
+        ...workspaceStore.getState(),
+        displayProjectIds: ["repo-1"],
+      },
+      true,
+    );
+
+    renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
+
+    await waitFor(() => {
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+    });
+
+    const repoSelect = screen.getAllByRole("combobox")[0];
+    if (!repoSelect) {
+      throw new Error("Repository select not found");
+    }
+    fireEvent.mouseDown(repoSelect);
+
+    expect(await screen.findByRole("option", { name: "Repo One" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Repo Two" })).toBeNull();
+  });
+
+  it("falls back to the first visible project when opened with a hidden project id", async () => {
+    workspaceStore.setState(
+      {
+        ...workspaceStore.getState(),
+        displayProjectIds: ["repo-1"],
+      },
+      true,
+    );
+
+    renderDialog(<CreateWorkspaceDialogView open projectId="repo-2" onClose={() => {}} />);
+
+    await waitFor(() => {
+      expect(getMocked().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("workspace.create.namePlaceholder"), {
+      target: { value: "Visible Repo Workspace" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /workspace\.actions\.create/ }));
+
+    await waitFor(() => {
+      expect(getMocked().createWorkspace).toHaveBeenCalledWith({
+        projectId: "repo-1",
+        nodeId: undefined,
+        name: "Visible Repo Workspace",
+        sourceBranch: "main",
+        targetBranch: "visible-repo-workspace",
       });
     });
   });
