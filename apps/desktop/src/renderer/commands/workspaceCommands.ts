@@ -1,5 +1,6 @@
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
 import { isWorkspaceNotFoundError } from "../helpers/errorHelpers";
+import { filterVisibleProjects } from "../helpers/projectHelpers";
 import {
   computeUniqueGitChangeFileCount,
   countWorkspaceGitChanges,
@@ -218,7 +219,7 @@ export function openCreateWorkspaceDialog() {
   const selectedWorkspaceRepoId = state.workspaces.find(
     (workspace) => workspace.id === state.selectedWorkspaceId,
   )?.repoId;
-  const fallbackProjectId = state.projects.find((project) => state.displayProjectIds.includes(project.id))?.id;
+  const fallbackProjectId = filterVisibleProjects(state.projects, state.displayProjectIds)[0]?.id;
   const projectId = selectedProjectId || selectedWorkspaceProjectId || selectedWorkspaceRepoId || fallbackProjectId;
 
   if (!projectId) {

@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import { api } from "../../../api/client";
 import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
+import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { chatStore } from "../../../store/chatStore";
 import { sessionStore } from "../../../store/sessionStore";
 import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
@@ -70,7 +71,7 @@ export function useProjectListTreeData(input: {
 
   const filteredProjects = useMemo(() => {
     const projectById = new Map(
-      projects.filter((project) => displayProjectIds.includes(project.id)).map((project) => [project.id, project]),
+      filterVisibleProjects(projects, displayProjectIds).map((project) => [project.id, project]),
     );
     const orderedIds = projectOrderIds.filter((projectId) => projectById.has(projectId));
     const missingIds = Array.from(projectById.keys()).filter((projectId) => !orderedIds.includes(projectId));
