@@ -69,7 +69,6 @@ export function ShellChatSurface({ chat, onRegisterKeyboardDismissHandler }: She
     resizeRequestToken,
     scrollbarThumbColor,
     terminalDomProps,
-    terminalHandleRef,
     terminalTheme,
     usesTerminalEmulator,
     viewportBottomInset,
@@ -146,7 +145,6 @@ export function ShellChatSurface({ chat, onRegisterKeyboardDismissHandler }: She
         selectedTerminal={selectedTerminal}
         streamKey={nativeStreamKey ?? selectedTerminal.id}
         terminalDomProps={terminalDomProps}
-        terminalHandleRef={terminalHandleRef}
         terminalOutput={terminalOutput}
         terminalTheme={terminalTheme}
         usesTerminalEmulator={usesTerminalEmulator}

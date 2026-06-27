@@ -172,7 +172,7 @@ describe("shell-terminal-dom-emulator-runtime", () => {
     expect(cancelledFrameIds).toEqual([]);
   });
 
-  it("scrolls terminal lines for touch drags when xterm viewport gestures are intercepted", () => {
+  it("scrolls terminal lines for touch drags without reopening the keyboard", () => {
     const terminal = createTerminalRuntime();
     const { helperTextarea, host, viewport } = createHostWithViewportAndTextarea();
 
@@ -194,12 +194,13 @@ describe("shell-terminal-dom-emulator-runtime", () => {
 
     expect(viewport.scrollTop).toBe(0);
     expect(terminal.scrollLines).toHaveBeenCalledWith(2);
-    expect(helperTextarea.focus).toHaveBeenCalledTimes(1);
+    expect(helperTextarea.focus).not.toHaveBeenCalled();
+    expect(terminal.focus).not.toHaveBeenCalled();
 
     cleanup();
   });
 
-  it("scrolls terminal lines for pointer drags when the webview forwards touch pointers", () => {
+  it("scrolls terminal lines for pointer drags without reopening the keyboard", () => {
     const terminal = createTerminalRuntime();
     const { helperTextarea, host, viewport } = createHostWithViewportAndTextarea();
 
@@ -223,12 +224,13 @@ describe("shell-terminal-dom-emulator-runtime", () => {
 
     expect(viewport.scrollTop).toBe(0);
     expect(terminal.scrollLines).toHaveBeenCalledWith(2);
-    expect(helperTextarea.focus).toHaveBeenCalledTimes(1);
+    expect(helperTextarea.focus).not.toHaveBeenCalled();
+    expect(terminal.focus).not.toHaveBeenCalled();
 
     cleanup();
   });
 
-  it("reactivates the input session for mouse presses in simulator-driven taps", () => {
+  it("does not reactivate the input session for mouse presses in simulator-driven taps", () => {
     const terminal = createTerminalRuntime();
     const { helperTextarea, host, viewport } = createHostWithViewportAndTextarea();
 
@@ -236,8 +238,8 @@ describe("shell-terminal-dom-emulator-runtime", () => {
 
     viewport.dispatchEvent(new Event("mousedown", { bubbles: true, cancelable: true }));
 
-    expect(terminal.focus).toHaveBeenCalledTimes(1);
-    expect(helperTextarea.focus).toHaveBeenCalledTimes(1);
+    expect(terminal.focus).not.toHaveBeenCalled();
+    expect(helperTextarea.focus).not.toHaveBeenCalled();
 
     cleanup();
   });

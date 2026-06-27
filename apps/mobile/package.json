@@ -16,7 +16,7 @@
   "scripts": {
     "dev": "expo start",
     "android": "expo run:android",
-    "ios": "LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 expo run:ios",
+    "ios": "node ./scripts/patchExpoCliAppleDevice.mjs && LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "biome check . --files-ignore-unknown=true --ignore=.expo",

@@ -2,12 +2,10 @@
 
 import type { ITheme, Terminal } from "@xterm/xterm";
 import type { DOMProps } from "expo/dom";
-import { type Ref, useRef } from "react";
+import { useRef } from "react";
 import "@xterm/xterm/css/xterm.css";
 
 import { buildShellTerminalRootStyle, getShellTerminalViewportCss } from "./shell-terminal-dom-emulator-domain";
-import type { ShellTerminalDomEmulatorHandle } from "./shell-terminal-dom-emulator.types";
-import { useShellTerminalDomImperativeHandle } from "./useShellTerminalDomImperativeHandle";
 import { useShellTerminalDomLifecycle } from "./useShellTerminalDomLifecycle";
 
 type ShellTerminalDomEmulatorProps = {
@@ -17,7 +15,6 @@ type ShellTerminalDomEmulatorProps = {
   onInput: (data: string) => Promise<void> | void;
   onResize: (size: { cols: number; rows: number }) => Promise<void> | void;
   output?: string;
-  ref: Ref<ShellTerminalDomEmulatorHandle>;
   resizeRequestToken?: number;
   scrollbarThumbColor?: string;
   streamKey: string;
@@ -42,7 +39,6 @@ export default function ShellTerminalDomEmulator({
   onInput,
   onResize,
   output = "",
-  ref,
   resizeRequestToken = 0,
   scrollbarThumbColor,
   streamKey,
@@ -64,12 +60,6 @@ export default function ShellTerminalDomEmulator({
   onResizeRef.current = onResize;
   outputRef.current = output;
   themeRef.current = terminalTheme;
-
-  useShellTerminalDomImperativeHandle({
-    ref,
-    reportSizeRef,
-    terminalRef,
-  });
 
   useShellTerminalDomLifecycle({
     blurRequestToken,

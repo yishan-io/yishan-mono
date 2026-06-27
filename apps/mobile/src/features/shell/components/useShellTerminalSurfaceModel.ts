@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 import { useTheme } from "tamagui";
 
 import type { TerminalItem } from "../state/shell.types";
 import { sanitizeTerminalDisplayOutput } from "../state/terminal-output";
-import type { ShellTerminalDomEmulatorHandle } from "./shell-terminal-dom-emulator.types";
 import {
   buildNativeTerminalStreamKey,
   buildTerminalDomProps,
@@ -26,7 +25,6 @@ export function useShellTerminalSurfaceModel({
   const theme = useTheme();
   const usesTerminalEmulator = Platform.OS !== "web";
   const displayOutput = usesTerminalEmulator ? terminalOutput : sanitizeTerminalDisplayOutput(terminalOutput);
-  const terminalHandleRef = useRef<ShellTerminalDomEmulatorHandle>(null);
   const [blurRequestToken, setBlurRequestToken] = useState(0);
   const [focusRequestToken, setFocusRequestToken] = useState(0);
   const [resizeRequestToken, setResizeRequestToken] = useState(0);
@@ -74,7 +72,6 @@ export function useShellTerminalSurfaceModel({
     resizeRequestToken,
     scrollbarThumbColor,
     terminalDomProps,
-    terminalHandleRef,
     terminalTheme,
     usesTerminalEmulator,
     viewportBottomInset,

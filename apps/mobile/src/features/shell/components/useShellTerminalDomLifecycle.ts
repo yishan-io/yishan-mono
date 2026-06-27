@@ -112,10 +112,6 @@ export function useShellTerminalDomLifecycle({
     });
     renderedOutputRef.current = outputRef.current;
     reportSize();
-    focusFrameRef.current = requestAnimationFrame(() => {
-      focusFrameRef.current = null;
-      activateTerminalInputSession(host, terminal);
-    });
 
     return () => {
       if (resizeFrameRef.current !== null) {
@@ -174,7 +170,7 @@ export function useShellTerminalDomLifecycle({
     const previousOutput = renderedOutputRef.current;
     const nextRenderedOutput = syncTerminalFromCache(terminal, previousOutput, output);
     renderedOutputRef.current = nextRenderedOutput;
-  }, [output, renderedOutputRef, terminalId, terminalRef]);
+  }, [output, renderedOutputRef, terminalRef]);
 
   useEffect(() => {
     if (blurRequestToken <= 0) {

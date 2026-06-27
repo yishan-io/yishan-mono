@@ -249,7 +249,6 @@ export function attachTerminalTouchScrollFallback(
     }
 
     viewport ??= host.querySelector<HTMLElement>(".xterm-viewport");
-    activateTerminalInputSession(host, terminal);
     lastY = nextY;
     pixelCarry = 0;
     emitDebugOnce("touchstart", "touchstart received", {
@@ -308,7 +307,6 @@ export function attachTerminalTouchScrollFallback(
     }
 
     viewport ??= host.querySelector<HTMLElement>(".xterm-viewport");
-    activateTerminalInputSession(host, terminal);
     activePointerId = event.pointerId;
     lastY = event.clientY;
     pixelCarry = 0;
@@ -318,9 +316,7 @@ export function attachTerminalTouchScrollFallback(
     });
   };
 
-  const handleMouseDown = () => {
-    activateTerminalInputSession(host, terminal);
-  };
+  const handleMouseDown = () => {};
 
   const handlePointerMove = (event: PointerEvent) => {
     if (event.pointerType !== "touch" || activePointerId !== event.pointerId || lastY === null) {
