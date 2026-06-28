@@ -39,6 +39,7 @@ const mocked = vi.hoisted(() => {
         summaryId: string;
         worktreePath?: string;
         kind?: "managed" | "local";
+        status?: "active" | "closed" | "provisioning";
       }>;
       selectedProjectId: string;
       selectedWorkspaceId: string;
@@ -701,6 +702,25 @@ describe("ProjectListView", () => {
     expect(screen.queryByTestId("workspace-status-waiting-input-badge-workspace-1")).toBeNull();
     expect(screen.queryByTestId("workspace-status-done-badge-workspace-1")).toBeNull();
     expect(screen.queryByTestId("workspace-status-failed-badge-workspace-1")).toBeNull();
+  });
+
+  it("renders a create spinner for provisioning workspaces from the snapshot", () => {
+    renderRepoList();
+    const existingWorkspace = mocked.stateRef.current.workspaces[0];
+    if (!existingWorkspace) {
+      throw new Error("Expected seeded workspace");
+    }
+
+    mocked.stateRef.current.workspaces = [
+      {
+        ...existingWorkspace,
+        status: "provisioning",
+        worktreePath: "",
+      },
+    ];
+    cleanup();
+    renderProjectListView();
+    expect(screen.getByTestId("workspace-creating-spinner-workspace-1")).toBeTruthy();
   });
 
   it("renders done indicator for background workspace notifications", () => {

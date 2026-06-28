@@ -28,7 +28,6 @@ type workspaceCreateRPCRequest struct {
 	OrganizationID string                   `json:"organizationId"`
 	ProjectID      string                   `json:"projectId"`
 	NodeID         string                   `json:"nodeId,omitempty"`
-	LocalPath      string                   `json:"localPath,omitempty"`
 	Kind           string                   `json:"kind,omitempty"`
 	Branch         string                   `json:"branch,omitempty"`
 	SourceBranch   string                   `json:"sourceBranch,omitempty"`
@@ -174,18 +173,23 @@ func buildWorkspaceCreateRPCRequest(cmd *cobra.Command) (workspaceCreateRPCReque
 		return workspaceCreateRPCRequest{}, err
 	}
 
-	if kind == workspace.KindPrimary && strings.TrimSpace(localPath) == "" {
-		return workspaceCreateRPCRequest{}, fmt.Errorf("local-path is required for primary workspaces")
+	if strings.TrimSpace(localPath) != "" {
+		return workspaceCreateRPCRequest{}, fmt.Errorf("workspace create only supports worktree workspaces; create a new project to create a primary workspace")
 	}
 	if err := validateWorkspaceKind(kind); err != nil {
 		return workspaceCreateRPCRequest{}, err
+	}
+	if strings.TrimSpace(branch) == "" {
+		return workspaceCreateRPCRequest{}, fmt.Errorf("branch is required for worktree workspaces")
+	}
+	if strings.TrimSpace(sourceBranch) == "" {
+		return workspaceCreateRPCRequest{}, fmt.Errorf("source-branch is required for worktree workspaces")
 	}
 
 	return workspaceCreateRPCRequest{
 		OrganizationID: orgID,
 		ProjectID:      projectID,
 		NodeID:         strings.TrimSpace(targetNode),
-		LocalPath:      strings.TrimSpace(localPath),
 		Kind:           strings.TrimSpace(kind),
 		Branch:         strings.TrimSpace(branch),
 		SourceBranch:   strings.TrimSpace(sourceBranch),

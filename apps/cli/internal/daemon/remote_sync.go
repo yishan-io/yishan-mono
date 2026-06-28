@@ -79,6 +79,27 @@ func registerWorkspace(ctx context.Context, runtime *cliruntime.Runtime, creatio
 	return nil
 }
 
+func updateWorkspace(_ context.Context, runtime *cliruntime.Runtime, creation WorkspaceCreation, localPath string) error {
+	if runtime == nil || !runtime.APIConfigured() {
+		return nil
+	}
+	orgID := strings.TrimSpace(creation.OrganizationID)
+	if orgID == "" || strings.TrimSpace(creation.ID) == "" {
+		return fmt.Errorf("organizationId and workspaceId are required")
+	}
+	_, err := runtime.APIClient().UpdateWorkspace(orgID, creation.ProjectID, api.UpdateWorkspaceInput{
+		WorkspaceID: creation.ID,
+		LocalPath:   localPath,
+	})
+	if err != nil {
+		if isReauthRequiredError(err) {
+			return fmt.Errorf("%s: %w", formatReauthRequiredMessage("remote workspace path update"), err)
+		}
+		return fmt.Errorf("update API workspace %q with local path: %w", creation.ID, err)
+	}
+	return nil
+}
+
 func closeRemoteWorkspace(_ context.Context, runtime *cliruntime.Runtime, closing WorkspaceClose) error {
 	if runtime == nil || !runtime.APIConfigured() {
 		return nil

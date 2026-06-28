@@ -274,19 +274,6 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   applyWorkspaceCreateCompletedEvent: (payload) => {
     const store = workspaceStore.getState();
     const existing = store.workspaces.find((ws) => ws.id === payload.workspaceId);
-    if (existing) {
-      store.addWorkspace({
-        workspaceId: payload.workspaceId,
-        projectId: existing.projectId,
-        repoId: existing.repoId,
-        organizationId: existing.organizationId,
-        name: existing.name,
-        sourceBranch: existing.sourceBranch,
-        branch: existing.branch,
-        worktreePath: payload.worktreePath,
-        nodeId: existing.nodeId,
-      });
-    }
     workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(payload.workspaceId);
 
     if (payload.taskRunSessionId && payload.taskRunAgentKind) {
@@ -304,7 +291,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
       });
     }
 
-    return Boolean(existing);
+    return Boolean(existing?.worktreePath?.trim());
   },
   applyWorkspaceCreateFailedEvent: (payload) => {
     workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(payload.workspaceId);
@@ -597,6 +584,46 @@ export function createBackendEventStoreBindings(
   return function startBackendEventStoreBindings() {
     const gitRefreshTimersByWorktreePath = new Map<string, ReturnType<typeof setTimeout>>();
     let workspaceSnapshotRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+    let isWorkspaceSnapshotRefreshRunning = false;
+    let shouldRunWorkspaceSnapshotRefreshAgain = false;
+
+    const runWorkspaceSnapshotRefresh = () => {
+      if (isWorkspaceSnapshotRefreshRunning) {
+        shouldRunWorkspaceSnapshotRefreshAgain = true;
+        return;
+      }
+
+      isWorkspaceSnapshotRefreshRunning = true;
+      void resolvedDependencies
+        .loadWorkspaceSnapshot?.()
+        .catch((error) => {
+          console.error("[backendEventStoreBindings] Failed to refresh workspace snapshot after invalidation", error);
+        })
+        .finally(() => {
+          isWorkspaceSnapshotRefreshRunning = false;
+          if (!shouldRunWorkspaceSnapshotRefreshAgain) {
+            return;
+          }
+
+          shouldRunWorkspaceSnapshotRefreshAgain = false;
+          workspaceSnapshotRefreshTimer = setTimeout(() => {
+            workspaceSnapshotRefreshTimer = undefined;
+            runWorkspaceSnapshotRefresh();
+          }, 300);
+        });
+    };
+
+    const scheduleWorkspaceSnapshotRefresh = () => {
+      if (workspaceSnapshotRefreshTimer) {
+        shouldRunWorkspaceSnapshotRefreshAgain = true;
+        return;
+      }
+
+      workspaceSnapshotRefreshTimer = setTimeout(() => {
+        workspaceSnapshotRefreshTimer = undefined;
+        runWorkspaceSnapshotRefresh();
+      }, 300);
+    };
 
     const scheduleGitRefresh = (workspaceWorktreePath: string) => {
       const normalizedPath = workspaceWorktreePath.trim();
@@ -800,16 +827,7 @@ export function createBackendEventStoreBindings(
           });
         }
 
-        if (workspaceSnapshotRefreshTimer) {
-          return;
-        }
-
-        workspaceSnapshotRefreshTimer = setTimeout(() => {
-          workspaceSnapshotRefreshTimer = undefined;
-          void resolvedDependencies.loadWorkspaceSnapshot?.().catch((error) => {
-            console.error("[backendEventStoreBindings] Failed to refresh workspace snapshot after invalidation", error);
-          });
-        }, 300);
+        scheduleWorkspaceSnapshotRefresh();
       }) ?? (() => {});
     const unsubscribeWorkspaceStateChanged =
       resolvedDependencies.subscribeWorkspaceStateChanged?.((_payload) => {

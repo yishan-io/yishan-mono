@@ -65,7 +65,7 @@ func TestBuildWorkspaceCreateRPCRequest(t *testing.T) {
 	}
 }
 
-func TestBuildWorkspaceCreateRPCRequest_PrimaryRequiresLocalPath(t *testing.T) {
+func TestBuildWorkspaceCreateRPCRequest_RejectsPrimaryWorkspaceCreate(t *testing.T) {
 	originalConfig := appConfig
 	appConfig.DefaultOrgID = "org-default"
 	defer func() {
@@ -77,8 +77,29 @@ func TestBuildWorkspaceCreateRPCRequest_PrimaryRequiresLocalPath(t *testing.T) {
 	cmd.Flags().Set("kind", workspace.KindPrimary)
 
 	_, err := buildWorkspaceCreateRPCRequest(cmd)
-	if err == nil || err.Error() != "local-path is required for primary workspaces" {
-		t.Fatalf("err = %v, want local-path validation error", err)
+	want := "workspace create only supports worktree workspaces; create a new project to create a primary workspace"
+	if err == nil || err.Error() != want {
+		t.Fatalf("err = %v, want %q", err, want)
+	}
+}
+
+func TestBuildWorkspaceCreateRPCRequest_RejectsLocalPathWorkspaceCreate(t *testing.T) {
+	originalConfig := appConfig
+	appConfig.DefaultOrgID = "org-default"
+	defer func() {
+		appConfig = originalConfig
+	}()
+
+	cmd := newWorkspaceCreateTestCommand()
+	cmd.Flags().Set("project-id", "proj-1")
+	cmd.Flags().Set("local-path", "/tmp/repo")
+	cmd.Flags().Set("branch", "feature/test")
+	cmd.Flags().Set("source-branch", "main")
+
+	_, err := buildWorkspaceCreateRPCRequest(cmd)
+	want := "workspace create only supports worktree workspaces; create a new project to create a primary workspace"
+	if err == nil || err.Error() != want {
+		t.Fatalf("err = %v, want %q", err, want)
 	}
 }
 
@@ -152,7 +173,7 @@ func newWorkspaceCreateTestCommand() *cobra.Command {
 	addOrgIDFlag(cmd)
 	cmd.Flags().String("project-id", "", "")
 	cmd.Flags().String("local-path", "", "")
-	cmd.Flags().String("kind", "primary", "")
+	cmd.Flags().String("kind", workspace.KindWorktree, "")
 	cmd.Flags().String("branch", "", "")
 	cmd.Flags().String("source-branch", "", "")
 	cmd.Flags().String("target-node", "", "")

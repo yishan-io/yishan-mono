@@ -13,6 +13,15 @@ import (
 	"time"
 )
 
+const runLiveOpenCodeTokenUsageTestsEnv = "YISHAN_RUN_LIVE_OPENCODE_TOKENUSAGE_TESTS"
+
+func skipUnlessLiveOpenCodeTokenUsageTestsEnabled(t *testing.T) {
+	t.Helper()
+	if os.Getenv(runLiveOpenCodeTokenUsageTestsEnv) != "1" {
+		t.Skipf("set %s=1 to run live OpenCode token usage tests", runLiveOpenCodeTokenUsageTestsEnv)
+	}
+}
+
 // TestLiveDBScanSkillManager exercises the new message-level scanner against
 // the real OpenCode database and checks totals against ground truth from a
 // direct SQL query.
@@ -21,6 +30,8 @@ import (
 //
 // Skipped automatically when the live DB is not present.
 func TestLiveDBScanSkillManager(t *testing.T) {
+	skipUnlessLiveOpenCodeTokenUsageTestsEnabled(t)
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		t.Skip("cannot resolve home dir:", err)
@@ -106,6 +117,8 @@ func formatMillions(n int64) string {
 }
 
 func TestLiveDBScanCurrentWorkspaceActivityCounts(t *testing.T) {
+	skipUnlessLiveOpenCodeTokenUsageTestsEnabled(t)
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		t.Skip("cannot resolve home dir:", err)

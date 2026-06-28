@@ -107,20 +107,14 @@ var workspaceFindCmd = &cobra.Command{
 
 var workspaceCreateCmd = &cobra.Command{
 	Use:   "create",
-	Short: "Create project workspace",
-	Long: `Create a new workspace inside a project.
+	Short: "Create project worktree",
+	Long: `Create a new worktree workspace inside a project.
 
-Workspace kinds:
-  primary   A full checkout of the project. Requires --local-path.
-  worktree  A git worktree branched from an existing primary workspace.
-            Requires --branch. --source-branch defaults to the primary branch.
+Primary workspaces are created only during project creation.
 
 Examples:
-  # Create a primary workspace at a local path
-  yishan workspace create --project-id <id> --local-path /path/to/repo
-
   # Create a worktree workspace on a new branch
-  yishan workspace create --project-id <id> --kind worktree --branch feature/foo`,
+  yishan workspace create --project-id <id> --branch feature/foo --source-branch main`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		return runWorkspaceCreateViaDaemon(cmd)
 	},
@@ -198,8 +192,8 @@ func init() {
 
 	addOrgIDFlag(workspaceCreateCmd)
 	workspaceCreateCmd.Flags().String("project-id", "", "project ID")
-	workspaceCreateCmd.Flags().String("local-path", "", "local path")
-	workspaceCreateCmd.Flags().String("kind", "primary", "workspace kind (primary|worktree)")
+	workspaceCreateCmd.Flags().String("local-path", "", "deprecated: primary workspaces are created with projects")
+	workspaceCreateCmd.Flags().String("kind", "worktree", "deprecated: workspace create only supports worktree")
 	workspaceCreateCmd.Flags().String("branch", "", "branch name for worktree")
 	workspaceCreateCmd.Flags().String("source-branch", "", "source branch for worktree")
 	workspaceCreateCmd.Flags().String("target-node", "", "target node ID (defaults to local daemon node)")
@@ -208,6 +202,8 @@ func init() {
 	workspaceCreateCmd.Flags().String("task-run-prompt", "", "initial prompt for task run agent")
 	workspaceCreateCmd.Flags().String("task-run-model", "", "model override for task run agent")
 	cobra.CheckErr(workspaceCreateCmd.MarkFlagRequired("project-id"))
+	cobra.CheckErr(workspaceCreateCmd.Flags().MarkHidden("local-path"))
+	cobra.CheckErr(workspaceCreateCmd.Flags().MarkHidden("kind"))
 
 	addOrgIDFlag(workspaceCloseCmd)
 	workspaceCloseCmd.Flags().String("project-id", "", "project ID")
@@ -218,10 +214,12 @@ func init() {
 
 func validateWorkspaceKind(kind string) error {
 	switch strings.TrimSpace(kind) {
-	case workspace.KindPrimary, workspace.KindWorktree:
+	case workspace.KindWorktree:
 		return nil
+	case workspace.KindPrimary:
+		return fmt.Errorf("workspace create only supports worktree workspaces; create a new project to create a primary workspace")
 	default:
-		return fmt.Errorf("invalid kind %q: expected primary or worktree", kind)
+		return fmt.Errorf("invalid kind %q: expected worktree", kind)
 	}
 }
 

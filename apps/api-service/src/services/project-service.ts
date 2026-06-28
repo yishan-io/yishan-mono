@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
 import { projects, workspaces } from "@/db/schema";
-import type { ProjectSourceType } from "@/db/schema";
+import type { ProjectSourceType, WorkspaceStatus } from "@/db/schema";
 import { ProjectNotFoundError } from "@/errors";
 import { newId } from "@/lib/id";
 import { inferRepoSource } from "@/lib/repo";
@@ -39,7 +39,7 @@ export type ProjectWithWorkspacesView = ProjectView & {
     userId: string;
     nodeId: string;
     kind: "primary" | "worktree";
-    status: "active" | "closed";
+    status: WorkspaceStatus;
     branch: string | null;
     localPath: string;
     latestPullRequest: WorkspacePullRequestSummary | null;
@@ -173,7 +173,7 @@ export class ProjectService {
         and(
           eq(workspaces.organizationId, input.organizationId),
           eq(workspaces.userId, input.actorUserId),
-          eq(workspaces.status, "active"),
+          inArray(workspaces.status, ["active", "provisioning"]),
           inArray(workspaces.projectId, projectIds),
         ),
       );

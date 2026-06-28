@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"yishan/apps/cli/internal/workspace"
 )
@@ -39,6 +40,30 @@ func newTestHandler(t *testing.T) *JSONRPCHandler {
 // any pre-creation API call. With runtime == nil, any attempt to call
 // registerWorkspace before the goroutine would cause a nil-pointer panic; the
 // absence of a panic confirms the pre-creation registration block was removed.
+func TestPublishWorkspaceSnapshotChanged_PublishesLocalInvalidationEvent(t *testing.T) {
+	h := newTestHandler(t)
+	subscriptionID, events := h.events.Subscribe()
+	defer h.events.Unsubscribe(subscriptionID)
+
+	h.publishWorkspaceSnapshotChanged("org-1", "project-1", "workspace-1", "updated")
+
+	select {
+	case event := <-events:
+		if event.Topic != "workspaceSnapshotChanged" {
+			t.Fatalf("event topic = %q, want %q", event.Topic, "workspaceSnapshotChanged")
+		}
+		payload, ok := event.Payload.(map[string]any)
+		if !ok {
+			t.Fatalf("event payload type = %T, want map[string]any", event.Payload)
+		}
+		if payload["organizationId"] != "org-1" || payload["projectId"] != "project-1" || payload["workspaceId"] != "workspace-1" || payload["change"] != "updated" {
+			t.Fatalf("unexpected payload: %#v", payload)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for workspace snapshot changed event")
+	}
+}
+
 func TestHandleWorkspaceCreate_ReturnsPendingWithoutAPICall(t *testing.T) {
 	root := t.TempDir()
 	statePath := filepath.Join(root, "daemon.state.json")

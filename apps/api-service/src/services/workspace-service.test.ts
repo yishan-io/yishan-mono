@@ -10,6 +10,14 @@ import {
 import { WorkspaceService } from "@/services/workspace-service";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const workspacePullRequestMocks = vi.hoisted(() => ({
+  fetchLatestPrByWorkspaceId: vi.fn(),
+}));
+
+vi.mock("@/services/workspace-pull-request-service", () => ({
+  fetchLatestPrByWorkspaceId: workspacePullRequestMocks.fetchLatestPrByWorkspaceId,
+}));
+
 // ── Fixtures ───────────────────────────────────────────────────────────────────
 
 const WORKSPACE_ROW = {
@@ -91,16 +99,18 @@ function makeDb(
   // biome-ignore lint/suspicious/noExplicitAny: mock DB for unit testing
   const db = { select: outerSelect, transaction } as any;
 
-  return { db, outerSelect, txSelect, txUpdate, txInsert, txInsertReturning, txUpdateReturning };
+  return { db, outerSelect, txSelect, txUpdate, txInsert, txInsertValues, txInsertReturning, txUpdateReturning };
 }
 
 // ── createWorkspace ────────────────────────────────────────────────────────────
 
-describe("WorkspaceService.createWorkspace", () => {
-  beforeEach(() => {
-    stubProvisioner.enqueueWorkspaceProvision.mockClear();
-  });
+beforeEach(() => {
+  stubProvisioner.enqueueWorkspaceProvision.mockClear();
+  workspacePullRequestMocks.fetchLatestPrByWorkspaceId.mockReset();
+  workspacePullRequestMocks.fetchLatestPrByWorkspaceId.mockResolvedValue(new Map());
+});
 
+describe("WorkspaceService.createWorkspace", () => {
   it("throws OrganizationMembershipRequiredError when actor is not a member", async () => {
     const { db } = makeDb();
     const service = new WorkspaceService(db, makeOrgService(null), stubProvisioner);
@@ -187,6 +197,33 @@ describe("WorkspaceService.createWorkspace", () => {
     expect(result.id).toBe("ws-1");
   });
 
+  it("creates a provisioning workspace when localPath is omitted", async () => {
+    const provisioningRow = {
+      ...WORKSPACE_ROW,
+      status: "provisioning" as const,
+      localPath: "",
+    };
+    const { db, txInsertValues } = makeDb({ insertedRows: [provisioningRow] });
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.createWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      nodeId: "node-1",
+      kind: "primary",
+    });
+
+    expect(txInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        localPath: "",
+        status: "provisioning",
+      }),
+    );
+    expect(result.status).toBe("provisioning");
+    expect(result.localPath).toBe("");
+  });
+
   it("enqueues provisioning with the actor user id", async () => {
     const { db } = makeDb({ insertedRows: [WORKSPACE_ROW] });
     const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
@@ -236,6 +273,64 @@ describe("WorkspaceService.listWorkspaces", () => {
     });
 
     expect(result).toEqual([]);
+  });
+
+  it("returns provisioning workspaces for in-flight creates", async () => {
+    const provisioningRow = {
+      ...WORKSPACE_ROW,
+      kind: "worktree" as const,
+      status: "provisioning" as const,
+      branch: "feature-a",
+      sourceBranch: "main",
+      localPath: "",
+    };
+    const db = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([provisioningRow]),
+        }),
+      }),
+    } as unknown as AppDb;
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.listWorkspaces({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      actorUserId: "user-1",
+    });
+
+    expect(result).toEqual([{ ...provisioningRow, latestPullRequest: null }]);
+  });
+});
+
+describe("WorkspaceService.updateWorkspace", () => {
+  it("promotes a provisioning workspace to active", async () => {
+    const updatedRow = {
+      ...WORKSPACE_ROW,
+      kind: "worktree" as const,
+      status: "active" as const,
+      branch: "feature-a",
+      sourceBranch: "main",
+      localPath: "/repos/proj/.worktrees/feature-a",
+    };
+    const updateReturning = vi.fn().mockResolvedValue([updatedRow]);
+    const updateWhere = vi.fn().mockReturnValue({ returning: updateReturning });
+    const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
+    const update = vi.fn().mockReturnValue({ set: updateSet });
+    const db = { update } as unknown as AppDb;
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.updateWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+      localPath: " /repos/proj/.worktrees/feature-a ",
+    });
+
+    expect(update).toHaveBeenCalledWith(workspaces);
+    expect(updateWhere).toHaveBeenCalledOnce();
+    expect(result).toEqual({ ...updatedRow, latestPullRequest: null });
   });
 });
 

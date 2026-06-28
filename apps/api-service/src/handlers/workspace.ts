@@ -5,6 +5,8 @@ import type {
   CloseWorkspaceBodyInput,
   CreateWorkspaceBodyInput,
   ProjectWorkspaceParamsInput,
+  UpdateWorkspaceBodyInput,
+  UpdateWorkspaceParamsInput,
 } from "@/validation/project";
 
 export async function listWorkspacesHandler(c: AppContext, params: ProjectWorkspaceParamsInput) {
@@ -69,4 +71,28 @@ export async function closeWorkspaceHandler(
   }
 
   return c.json({ workspace: closeResult.workspace });
+}
+
+export async function updateWorkspaceHandler(
+  c: AppContext,
+  params: UpdateWorkspaceParamsInput,
+  body: UpdateWorkspaceBodyInput,
+) {
+  const actorUser = c.get("sessionUser");
+  const workspace = await c.get("services").workspace.updateWorkspace({
+    workspaceId: params.workspaceId,
+    actorUserId: actorUser.id,
+    organizationId: params.orgId,
+    projectId: params.projectId,
+    localPath: body.localPath,
+  });
+  await c.get("services").relayEvent.publishWorkspaceSnapshotChanged({
+    organizationId: params.orgId,
+    resource: "workspace",
+    change: "updated",
+    projectId: params.projectId,
+    workspaceId: workspace.id,
+  });
+
+  return c.json({ workspace });
 }

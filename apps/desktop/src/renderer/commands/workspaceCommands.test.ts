@@ -132,6 +132,7 @@ describe("workspaceCommands", () => {
       branch: "feature-a",
       worktreePath: "",
       nodeId: undefined,
+      status: "provisioning",
     });
     await vi.waitFor(() => {
       expect(rpcMocks.createWorkspace).toHaveBeenCalledWith({

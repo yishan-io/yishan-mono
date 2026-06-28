@@ -1,8 +1,8 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";
 import { organizationMembers, projects, workspaces } from "@/db/schema";
-import type { WorkspaceKind, WorkspacePullRequestState } from "@/db/schema";
+import type { WorkspaceKind, WorkspacePullRequestState, WorkspaceStatus } from "@/db/schema";
 import {
   PrimaryWorkspaceCloseNotAllowedError,
   ProjectNotFoundError,
@@ -37,7 +37,7 @@ export type WorkspaceView = {
   userId: string;
   nodeId: string;
   kind: WorkspaceKind;
-  status: "active" | "closed";
+  status: WorkspaceStatus;
   branch: string | null;
   sourceBranch: string | null;
   localPath: string;
@@ -55,7 +55,7 @@ type CreateWorkspaceInput = {
   kind: WorkspaceKind;
   branch?: string;
   sourceBranch?: string;
-  localPath: string;
+  localPath?: string;
 };
 
 type CloseWorkspaceInput = {
@@ -68,6 +68,14 @@ type CloseWorkspaceInput = {
 export type CloseWorkspaceResult = {
   workspace: WorkspaceView;
   changed: boolean;
+};
+
+type UpdateWorkspaceInput = {
+  workspaceId: string;
+  organizationId: string;
+  actorUserId: string;
+  projectId: string;
+  localPath: string;
 };
 
 export class WorkspaceService {
@@ -114,7 +122,7 @@ export class WorkspaceService {
 
       const reactivatedRows = await tx
         .update(workspaces)
-        .set({ status: "active", localPath: input.localPath.trim(), updatedAt: new Date() })
+        .set({ status: "active", localPath: input.localPath?.trim() ?? "", updatedAt: new Date() })
         .where(
           and(
             eq(workspaces.organizationId, input.organizationId),
@@ -134,6 +142,8 @@ export class WorkspaceService {
       }
 
       const sourceBranch = input.sourceBranch?.trim() ?? null;
+      const localPath = input.localPath?.trim() ?? "";
+      const status: WorkspaceStatus = localPath ? "active" : "provisioning";
 
       const insertedRows = await tx
         .insert(workspaces)
@@ -146,7 +156,8 @@ export class WorkspaceService {
           kind: input.kind,
           branch,
           sourceBranch,
-          localPath: input.localPath.trim(),
+          localPath,
+          status,
         })
         .returning();
 
@@ -181,7 +192,7 @@ export class WorkspaceService {
           eq(workspaces.organizationId, input.organizationId),
           eq(workspaces.projectId, input.projectId),
           eq(workspaces.userId, input.actorUserId),
-          eq(workspaces.status, "active"),
+          inArray(workspaces.status, ["active", "provisioning"]),
         ),
       );
 
@@ -295,5 +306,50 @@ export class WorkspaceService {
       workspace: { ...workspace, latestPullRequest: null },
       changed: true,
     };
+  }
+
+  async updateWorkspace(input: UpdateWorkspaceInput): Promise<WorkspaceView> {
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
+
+    const localPath = input.localPath.trim();
+
+    const rows = await this.db
+      .update(workspaces)
+      .set({ status: "active", localPath, updatedAt: new Date() })
+      .where(
+        and(
+          eq(workspaces.id, input.workspaceId),
+          eq(workspaces.organizationId, input.organizationId),
+          eq(workspaces.projectId, input.projectId),
+          eq(workspaces.userId, input.actorUserId),
+          eq(workspaces.status, "provisioning"),
+        ),
+      )
+      .returning();
+
+    const updated = rows[0];
+    if (!updated) {
+      const existingRows = await this.db
+        .select()
+        .from(workspaces)
+        .where(
+          and(
+            eq(workspaces.id, input.workspaceId),
+            eq(workspaces.organizationId, input.organizationId),
+            eq(workspaces.projectId, input.projectId),
+            eq(workspaces.userId, input.actorUserId),
+          ),
+        )
+        .limit(1);
+
+      const existing = existingRows[0];
+      if (!existing) {
+        throw new WorkspaceNotFoundError({ workspaceId: input.workspaceId, projectId: input.projectId });
+      }
+      // Already active (idempotent) — return current state.
+      return { ...existing, latestPullRequest: null };
+    }
+
+    return { ...updated, latestPullRequest: null };
   }
 }

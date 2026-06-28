@@ -594,6 +594,67 @@ describe("createBackendEventStoreBindings", () => {
     }
   });
 
+  it("runs a follow-up workspace snapshot refresh when another invalidation arrives before the first refresh runs", async () => {
+    vi.useFakeTimers();
+    try {
+      const gitHarness = createGitChangedHarness();
+      const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+      const inAppNotificationHarness = createInAppNotificationHarness();
+      const snapshotHarness = createWorkspaceSnapshotChangedHarness();
+      const incrementFileTreeRefreshVersion = vi.fn();
+      const incrementGitRefreshVersion = vi.fn();
+      const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+      const recordWorkspaceUnreadNotification = vi.fn();
+      const dispatchSystemNotification = vi.fn(async () => undefined);
+      const playNotificationSound = vi.fn(async () => undefined);
+      const loadWorkspaceSnapshot = vi.fn(async () => undefined);
+
+      const startBindings = createBackendEventStoreBindings({
+        subscribeGitChanged: gitHarness.subscribeGitChanged,
+        subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+        subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+        subscribeWorkspaceSnapshotChanged: snapshotHarness.subscribeWorkspaceSnapshotChanged,
+        incrementFileTreeRefreshVersion,
+        incrementGitRefreshVersion,
+        setWorkspaceAgentStatusByWorkspaceId,
+        recordWorkspaceUnreadNotification,
+        dispatchSystemNotification,
+        playNotificationSound,
+        loadWorkspaceSnapshot,
+        getSelectedOrganizationId: () => "org-1",
+      });
+
+      const stopBindings = startBindings();
+      snapshotHarness.emit({
+        organizationId: "org-1",
+        resource: "workspace",
+        change: "created",
+        projectId: "project-1",
+        workspaceId: "workspace-1",
+      });
+      snapshotHarness.emit({
+        organizationId: "org-1",
+        resource: "workspace",
+        change: "updated",
+        projectId: "project-1",
+        workspaceId: "workspace-1",
+      });
+
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(2);
+      stopBindings();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("refreshes workspace snapshot when create completion arrives before the placeholder exists", async () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
@@ -632,7 +693,7 @@ describe("createBackendEventStoreBindings", () => {
     stopBindings();
   });
 
-  it("updates the placeholder workspace on create completion without forcing a snapshot reload", async () => {
+  it("keeps the placeholder worktree path unchanged and triggers snapshot reload for a placeholder workspace", async () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
@@ -661,6 +722,7 @@ describe("createBackendEventStoreBindings", () => {
           worktreePath: "",
           nodeId: "node-1",
           kind: "managed",
+          status: "provisioning",
         },
       ],
     }));
@@ -689,10 +751,11 @@ describe("createBackendEventStoreBindings", () => {
     expect(workspaceStore.getState().workspaces).toEqual([
       expect.objectContaining({
         id: "workspace-1",
-        worktreePath: "/tmp/repo/.worktrees/feature-a",
+        worktreePath: "",
+        status: "provisioning",
       }),
     ]);
-    expect(loadWorkspaceSnapshot).not.toHaveBeenCalled();
+    expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
     stopBindings();
   });
 

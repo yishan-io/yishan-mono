@@ -30,7 +30,6 @@ type workspaceCreateParams struct {
 	ContextEnabled bool                     `json:"contextEnabled,omitempty"`
 	SetupHook      string                   `json:"setupHook,omitempty"`
 	TaskRun        *workspace.TaskRunConfig `json:"taskRun,omitempty"`
-	LocalPath      string                   `json:"localPath,omitempty"`
 	Kind           string                   `json:"kind,omitempty"`
 	Branch         string                   `json:"branch,omitempty"`
 	ReplyNodeID    string                   `json:"replyNodeId,omitempty"`
@@ -42,8 +41,8 @@ type preparedWorkspaceCreate struct {
 	projectID        string
 	startedEvent     workspaceCreateStartedEvent
 	relayReplyNodeID string
+	isRelayed        bool // true when this create was dispatched from another node via relay
 	localCreate      *workspace.CreateRequest
-	localOpen        *workspace.OpenRequest
 	registration     *WorkspaceCreation
 	remoteRequest    *workspaceCreateParams
 }
@@ -66,11 +65,14 @@ func (h *JSONRPCHandler) prepareWorkspaceCreate(ctx context.Context, req workspa
 	if normalized.WorkspaceName == "" {
 		normalized.WorkspaceName = fallbackWorkspaceName(normalized)
 	}
-	if isDirectWorkspaceCreateRequest(normalized) {
-		return prepareDirectWorkspaceCreate(normalized), nil
-	}
 	if normalized.Kind == workspace.KindPrimary {
-		return h.preparePrimaryWorkspaceCreate(ctx, normalized)
+		return preparedWorkspaceCreate{}, fmt.Errorf("workspace create only supports worktree workspaces; create a new project to create a primary workspace")
+	}
+	if isDirectWorkspaceCreateRequest(normalized) {
+		if normalized.NodeID == "" {
+			normalized.NodeID = h.nodeID
+		}
+		return prepareDirectWorkspaceCreate(normalized), nil
 	}
 	return h.prepareWorktreeWorkspaceCreate(ctx, normalized)
 }
@@ -86,7 +88,6 @@ func normalizeWorkspaceCreateParams(req workspaceCreateParams) workspaceCreatePa
 	req.TargetBranch = strings.TrimSpace(req.TargetBranch)
 	req.SourceBranch = strings.TrimSpace(req.SourceBranch)
 	req.SetupHook = strings.TrimSpace(req.SetupHook)
-	req.LocalPath = strings.TrimSpace(req.LocalPath)
 	req.Kind = strings.TrimSpace(req.Kind)
 	req.Branch = strings.TrimSpace(req.Branch)
 	req.ReplyNodeID = strings.TrimSpace(req.ReplyNodeID)
@@ -124,32 +125,26 @@ func prepareDirectWorkspaceCreate(req workspaceCreateParams) preparedWorkspaceCr
 		SetupHook:      req.SetupHook,
 		TaskRun:        req.TaskRun,
 	}
+	var registration *WorkspaceCreation
+	if req.OrganizationID != "" && req.ProjectID != "" && req.NodeID != "" {
+		registration = &WorkspaceCreation{
+			ID:             req.ID,
+			NodeID:         req.NodeID,
+			OrganizationID: req.OrganizationID,
+			ProjectID:      req.ProjectID,
+			Kind:           req.Kind,
+			Branch:         req.TargetBranch,
+			SourceBranch:   req.SourceBranch,
+		}
+	}
 	return preparedWorkspaceCreate{
 		workspaceID:    req.ID,
 		organizationID: req.OrganizationID,
 		projectID:      req.ProjectID,
 		startedEvent:   buildWorkspaceCreateStartedEvent(req, req.NodeID, req.TargetBranch),
 		localCreate:    &createReq,
+		registration:   registration,
 	}
-}
-
-func (h *JSONRPCHandler) preparePrimaryWorkspaceCreate(ctx context.Context, req workspaceCreateParams) (preparedWorkspaceCreate, error) {
-	if req.OrganizationID == "" || req.ProjectID == "" {
-		return preparedWorkspaceCreate{}, fmt.Errorf("organizationId and projectId are required")
-	}
-	if req.LocalPath == "" {
-		return preparedWorkspaceCreate{}, fmt.Errorf("localPath is required for primary workspace creation")
-	}
-	nodeID, err := resolveWorkspaceCreateNode(ctx, h.runtime, h.nodeID, req.OrganizationID, req.NodeID)
-	if err != nil {
-		return preparedWorkspaceCreate{}, err
-	}
-	if nodeID != h.nodeID {
-		return prepareRemoteWorkspaceCreate(req, nodeID, h.nodeID), nil
-	}
-	openReq := workspace.OpenRequest{ID: req.ID, Path: req.LocalPath, OrgID: req.OrganizationID, ProjectID: req.ProjectID}
-	registration := WorkspaceCreation{ID: req.ID, NodeID: nodeID, OrganizationID: req.OrganizationID, ProjectID: req.ProjectID, Kind: workspace.KindPrimary, LocalPath: req.LocalPath}
-	return preparedWorkspaceCreate{workspaceID: req.ID, organizationID: req.OrganizationID, projectID: req.ProjectID, startedEvent: buildWorkspaceCreateStartedEvent(req, nodeID, ""), localOpen: &openReq, registration: &registration}, nil
 }
 
 func (h *JSONRPCHandler) prepareWorktreeWorkspaceCreate(ctx context.Context, req workspaceCreateParams) (preparedWorkspaceCreate, error) {
@@ -176,7 +171,7 @@ func (h *JSONRPCHandler) prepareWorktreeWorkspaceCreate(ctx context.Context, req
 	}
 	createReq := workspace.CreateRequest{ID: req.ID, OrganizationID: req.OrganizationID, NodeID: nodeID, ProjectID: req.ProjectID, RepoKey: project.RepoKey, WorkspaceName: req.WorkspaceName, SourcePath: sourcePath, TargetBranch: req.Branch, SourceBranch: req.SourceBranch, ContextEnabled: project.ContextEnabled, SetupHook: project.SetupScript, TaskRun: req.TaskRun}
 	registration := WorkspaceCreation{ID: req.ID, NodeID: nodeID, OrganizationID: req.OrganizationID, ProjectID: req.ProjectID, Kind: workspace.KindWorktree, Branch: req.Branch, SourceBranch: req.SourceBranch}
-	return preparedWorkspaceCreate{workspaceID: req.ID, organizationID: req.OrganizationID, projectID: req.ProjectID, startedEvent: buildWorkspaceCreateStartedEvent(req, nodeID, req.Branch), relayReplyNodeID: req.ReplyNodeID, localCreate: &createReq, registration: &registration}, nil
+	return preparedWorkspaceCreate{workspaceID: req.ID, organizationID: req.OrganizationID, projectID: req.ProjectID, startedEvent: buildWorkspaceCreateStartedEvent(req, nodeID, req.Branch), relayReplyNodeID: req.ReplyNodeID, isRelayed: req.ReplyNodeID != "", localCreate: &createReq, registration: &registration}, nil
 }
 
 func prepareRemoteWorkspaceCreate(req workspaceCreateParams, targetNodeID string, replyNodeID string) preparedWorkspaceCreate {

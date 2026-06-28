@@ -126,7 +126,7 @@ export function useProjectListTreeData(input: {
 
       for (const workspace of sortedWorkspaces) {
         const createProgress = progressByWorkspaceId[workspace.id];
-        const isCreating = Boolean(createProgress && !createProgress.isComplete);
+        const isCreating = workspace.status === "provisioning" || Boolean(createProgress && !createProgress.isComplete);
         rows.push({
           id: workspace.id,
           name: workspace.kind === "local" || localDisplayWorkspaceId === workspace.id ? "local" : workspace.title,

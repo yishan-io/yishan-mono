@@ -136,13 +136,11 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, prepared pr
 	}
 
 	if prepared.remoteRequest != nil {
-		if err := h.dispatchRemoteWorkspaceCreate(*prepared.remoteRequest); err != nil {
+		if err := h.registerPreparedWorkspace(ctx, prepared, ""); err != nil {
 			reportFailed(err.Error())
+			return
 		}
-		return
-	}
-	if prepared.localOpen != nil {
-		if err := h.executePrimaryWorkspaceCreate(ctx, prepared); err != nil {
+		if err := h.dispatchRemoteWorkspaceCreate(*prepared.remoteRequest); err != nil {
 			reportFailed(err.Error())
 		}
 		return
@@ -154,46 +152,66 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, prepared pr
 	}
 }
 
-func (h *JSONRPCHandler) executePrimaryWorkspaceCreate(ctx context.Context, prepared preparedWorkspaceCreate) error {
-	if prepared.registration != nil {
-		if err := registerWorkspace(ctx, h.runtime, *prepared.registration); err != nil {
+func (h *JSONRPCHandler) executeWorktreeWorkspaceCreate(ctx context.Context, prepared preparedWorkspaceCreate, reportProgress workspace.CreateProgressReporter) error {
+	if !prepared.isRelayed {
+		if err := h.registerPreparedWorkspace(ctx, prepared, ""); err != nil {
 			return err
 		}
 	}
-	opened, err := h.manager.Open(*prepared.localOpen)
-	if err != nil {
-		return err
-	}
-	h.watchAndTrack(opened.ID, opened.Path)
-	h.upsertWorkspaceIndex(opened)
-	h.publishWorkspaceCreateCompleted(prepared, opened, nil, "")
-	return nil
-}
-
-func (h *JSONRPCHandler) executeWorktreeWorkspaceCreate(ctx context.Context, prepared preparedWorkspaceCreate, reportProgress workspace.CreateProgressReporter) error {
 	created, err := h.manager.CreateWorkspaceWithProgress(ctx, *prepared.localCreate, reportProgress)
 	if err != nil {
 		return err
 	}
 	h.watchAndTrack(created.ID, created.Path)
 	h.upsertWorkspaceIndex(created)
-	remoteSyncWarning := h.registerPreparedWorkspace(ctx, prepared, created.Path)
+	remoteSyncWarning := h.updatePreparedWorkspace(ctx, prepared, created.Path)
 	warnings := buildWorkspaceHookWarnings(prepared.localCreate.SetupHook, created.SetupHookResult, h.logFilePath)
 	reportProgress(workspace.CreateProgressEvent{WorkspaceID: created.ID, StepID: "complete", Label: "Prepare workspace", Status: workspace.CreateProgressCompleted, CreatedAt: nowRFC3339Nano()})
 	h.publishWorkspaceCreateCompleted(prepared, created, warnings, remoteSyncWarning)
 	return nil
 }
 
-func (h *JSONRPCHandler) registerPreparedWorkspace(ctx context.Context, prepared preparedWorkspaceCreate, localPath string) string {
+func (h *JSONRPCHandler) registerPreparedWorkspace(ctx context.Context, prepared preparedWorkspaceCreate, localPath string) error {
 	if prepared.registration == nil {
-		return ""
+		return nil
 	}
 	registration := *prepared.registration
 	registration.LocalPath = localPath
 	if err := registerWorkspace(ctx, h.runtime, registration); err != nil {
+		return err
+	}
+	h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, registration.ID, "created")
+	return nil
+}
+
+func (h *JSONRPCHandler) updatePreparedWorkspace(ctx context.Context, prepared preparedWorkspaceCreate, localPath string) string {
+	if prepared.registration == nil {
+		return ""
+	}
+	if err := updateWorkspace(ctx, h.runtime, *prepared.registration, localPath); err != nil {
 		return err.Error()
 	}
+	h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, prepared.registration.ID, "updated")
 	return ""
+}
+
+func (h *JSONRPCHandler) publishWorkspaceSnapshotChanged(
+	organizationID string,
+	projectID string,
+	workspaceID string,
+	change string,
+) {
+	if strings.TrimSpace(organizationID) == "" || strings.TrimSpace(projectID) == "" || strings.TrimSpace(workspaceID) == "" {
+		return
+	}
+
+	h.events.Publish(frontendEvent{Topic: "workspaceSnapshotChanged", Payload: map[string]any{
+		"organizationId": organizationID,
+		"resource":       "workspace",
+		"change":         change,
+		"projectId":      projectID,
+		"workspaceId":    workspaceID,
+	}})
 }
 
 func (h *JSONRPCHandler) upsertWorkspaceIndex(created workspace.Workspace) {
