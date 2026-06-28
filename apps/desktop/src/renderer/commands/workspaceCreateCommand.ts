@@ -175,6 +175,7 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
       nodeId: normalizedNodeId || undefined,
       workspaceId,
       organizationId,
+      status: "provisioning",
     }),
   );
   tabStore.getState().resolveTabForWorkspace(workspaceId);

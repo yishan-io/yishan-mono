@@ -265,6 +265,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
         branch: payload.branch,
         worktreePath: "",
         nodeId: payload.nodeId,
+        status: "provisioning",
       }),
     );
   },
@@ -274,6 +275,21 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   applyWorkspaceCreateCompletedEvent: (payload) => {
     const store = workspaceStore.getState();
     const existing = store.workspaces.find((ws) => ws.id === payload.workspaceId);
+    const progressEntry = workspaceCreateProgressStore.getState().progressByWorkspaceId[payload.workspaceId];
+    if (existing && progressEntry) {
+      store.addWorkspace({
+        workspaceId: existing.id,
+        organizationId: existing.organizationId,
+        projectId: existing.projectId,
+        repoId: existing.repoId,
+        name: existing.name,
+        sourceBranch: existing.sourceBranch,
+        branch: existing.branch,
+        worktreePath: payload.worktreePath,
+        nodeId: existing.nodeId,
+        status: existing.status,
+      });
+    }
     workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(payload.workspaceId);
 
     if (payload.taskRunSessionId && payload.taskRunAgentKind) {
@@ -291,7 +307,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
       });
     }
 
-    return Boolean(existing?.worktreePath?.trim());
+    return Boolean(existing && progressEntry);
   },
   applyWorkspaceCreateFailedEvent: (payload) => {
     workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(payload.workspaceId);

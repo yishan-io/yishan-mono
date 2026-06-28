@@ -33,5 +33,6 @@ export function buildWorkspaceCreatePlaceholder(
     worktreePath: input.worktreePath ?? "",
     nodeId: input.nodeId,
     workspaceId: input.workspaceId,
+    status: input.status,
   };
 }
