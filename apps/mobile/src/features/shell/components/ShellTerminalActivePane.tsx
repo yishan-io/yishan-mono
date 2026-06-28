@@ -1,6 +1,7 @@
 import type { ITheme } from "@xterm/xterm";
 import type { DOMProps } from "expo/dom";
-import { Platform, Pressable, ScrollView, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import { Text, XStack, YStack, useTheme } from "tamagui";
 
 import { PaneBody } from "@/components/ui/PaneBody";
@@ -10,15 +11,25 @@ import type { TerminalItem, TerminalMessage } from "../state/shell.types";
 import { SessionStatusIndicator } from "./SessionStatusIndicator";
 import { ShellMessageTimeline } from "./ShellMessageTimeline";
 import { ShellNativeTerminalKeyBar } from "./ShellNativeTerminalKeyBar";
-import ShellTerminalDomEmulator from "./ShellTerminalDomEmulator";
+import ShellTerminalDomEmulator, { type ShellTerminalDomEmulatorHandle } from "./ShellTerminalDomEmulator";
 import { getTerminalAccessoryBottomInset } from "./shell-terminal-active-pane-domain";
+
+const NATIVE_KEYBOARD_INPUT_STYLE = {
+  fontSize: 16,
+  height: 1,
+  left: 0,
+  opacity: 0.01,
+  position: "absolute" as const,
+  top: 0,
+  width: 1,
+  zIndex: 1,
+};
 
 type ShellTerminalActivePaneProps = {
   blurRequestToken: number;
   displayOutput: string;
   emptyDescription: string;
   emptyStatusLabel: string;
-  focusRequestToken: number;
   isComposerDisabled: boolean;
   keyboardVisible: boolean;
   keyboardViewportInset: number;
@@ -26,7 +37,6 @@ type ShellTerminalActivePaneProps = {
   onDismissKeyboard: () => void;
   onTerminalInput: (data: string) => void;
   onTerminalResize: (size: { cols: number; rows: number }) => void;
-  requestFocus: () => void;
   resizeRequestToken: number;
   scrollbarThumbColor: string;
   selectedTerminal: TerminalItem;
@@ -42,7 +52,6 @@ export function ShellTerminalActivePane({
   displayOutput,
   emptyDescription,
   emptyStatusLabel,
-  focusRequestToken,
   isComposerDisabled,
   keyboardVisible,
   keyboardViewportInset,
@@ -50,7 +59,6 @@ export function ShellTerminalActivePane({
   onDismissKeyboard,
   onTerminalInput,
   onTerminalResize,
-  requestFocus,
   resizeRequestToken,
   scrollbarThumbColor,
   selectedTerminal,
@@ -62,6 +70,35 @@ export function ShellTerminalActivePane({
 }: ShellTerminalActivePaneProps) {
   const showNativeTerminalKeyBar = usesTerminalEmulator && Platform.OS !== "web";
   const accessoryBottomInset = getTerminalAccessoryBottomInset(keyboardViewportInset);
+  const nativeKeyboardInputRef = useRef<TextInput | null>(null);
+  const nativeKeyboardInputValueRef = useRef("");
+  const terminalDomRef = useRef<ShellTerminalDomEmulatorHandle | null>(null);
+  const [nativeKeyboardInputValue, setNativeKeyboardInputValue] = useState("");
+
+  const focusNativeKeyboardInput = () => {
+    nativeKeyboardInputValueRef.current = "";
+    setNativeKeyboardInputValue("");
+    nativeKeyboardInputRef.current?.focus();
+  };
+
+  const dismissTerminalKeyboard = () => {
+    nativeKeyboardInputValueRef.current = "";
+    setNativeKeyboardInputValue("");
+    nativeKeyboardInputRef.current?.blur();
+    terminalDomRef.current?.blurInputSession();
+    onDismissKeyboard();
+  };
+
+  const resetNativeKeyboardInput = () => {
+    nativeKeyboardInputValueRef.current = "";
+    setNativeKeyboardInputValue("");
+  };
+
+  useEffect(() => {
+    if (!keyboardVisible) {
+      nativeKeyboardInputRef.current?.blur();
+    }
+  }, [keyboardVisible]);
 
   if (usesTerminalEmulator) {
     const showTimeline = messages.length > 0;
@@ -72,8 +109,9 @@ export function ShellTerminalActivePane({
           <ShellTerminalDomEmulator
             blurRequestToken={blurRequestToken}
             dom={terminalDomProps}
-            focusRequestToken={focusRequestToken}
+            ref={terminalDomRef}
             onInput={async (data) => onTerminalInput(data)}
+            onTapDismissKeyboard={dismissTerminalKeyboard}
             onResize={async (size) => onTerminalResize(size)}
             output={terminalOutput}
             resizeRequestToken={resizeRequestToken}
@@ -81,6 +119,51 @@ export function ShellTerminalActivePane({
             streamKey={streamKey}
             terminalId={selectedTerminal.id}
             terminalTheme={terminalTheme}
+          />
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            blurOnSubmit={false}
+            caretHidden
+            contextMenuHidden
+            onChangeText={(nextValue) => {
+              const containsLineBreak = /[\r\n]/.test(nextValue);
+              const currentValue = nativeKeyboardInputValueRef.current;
+              const nextValueWithoutNewlines = nextValue.replace(/\r?\n/g, "");
+              let insertedText = "";
+
+              if (nextValueWithoutNewlines.startsWith(currentValue)) {
+                insertedText = nextValueWithoutNewlines.slice(currentValue.length);
+              } else if (!currentValue) {
+                insertedText = nextValueWithoutNewlines;
+              }
+
+              if (insertedText) {
+                onTerminalInput(insertedText);
+              }
+
+              if (containsLineBreak) {
+                onTerminalInput("\r");
+              }
+
+              resetNativeKeyboardInput();
+            }}
+            onKeyPress={({ nativeEvent }) => {
+              if (nativeEvent.key === "Backspace") {
+                onTerminalInput("\u007f");
+                return;
+              }
+            }}
+            onSubmitEditing={() => {
+              onTerminalInput("\r");
+              resetNativeKeyboardInput();
+            }}
+            ref={nativeKeyboardInputRef}
+            selection={{ end: nativeKeyboardInputValue.length, start: nativeKeyboardInputValue.length }}
+            showSoftInputOnFocus
+            spellCheck={false}
+            style={NATIVE_KEYBOARD_INPUT_STYLE}
+            value={nativeKeyboardInputValue}
           />
         </View>
         {showTimeline || showNativeTerminalKeyBar ? (
@@ -91,7 +174,7 @@ export function ShellTerminalActivePane({
             }}
           >
             {showTimeline ? (
-              <Pressable onPress={onDismissKeyboard} style={{ flexShrink: 0 }}>
+              <Pressable onPress={dismissTerminalKeyboard} style={{ flexShrink: 0 }}>
                 <PaneBody
                   style={{
                     paddingBottom: keyboardVisible ? 12 : 16,
@@ -106,8 +189,8 @@ export function ShellTerminalActivePane({
               <ShellNativeTerminalKeyBar
                 disabled={isComposerDisabled}
                 keyboardVisible={keyboardVisible}
-                onDismissKeyboard={onDismissKeyboard}
-                onFocusKeyboard={requestFocus}
+                onDismissKeyboard={dismissTerminalKeyboard}
+                onFocusKeyboard={focusNativeKeyboardInput}
                 onPressKey={(input) => onTerminalInput(input)}
               />
             ) : null}

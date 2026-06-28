@@ -1,8 +1,10 @@
 import { Keyboard as KeyboardIcon } from "@tamagui/lucide-icons";
+import { useRef } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Text, useTheme } from "tamagui";
 
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
+
 const NATIVE_TERMINAL_KEY_BUTTONS: Array<{
   id: string;
   input?: string;
@@ -35,6 +37,7 @@ export function ShellNativeTerminalKeyBar({
   const { t } = useAppLanguage();
   const theme = useTheme();
   const keyboardToggleLabel = keyboardVisible ? t("shell.terminalKeyHideKeyboard") : t("shell.terminalKeyShowKeyboard");
+  const keyboardVisibleAtPressStartRef = useRef(false);
 
   return (
     <View
@@ -55,8 +58,20 @@ export function ShellNativeTerminalKeyBar({
           accessibilityLabel={keyboardToggleLabel}
           accessibilityRole="button"
           disabled={disabled}
+          onPressIn={() => {
+            keyboardVisibleAtPressStartRef.current = keyboardVisible;
+            if (disabled || keyboardVisible) {
+              return;
+            }
+
+            onFocusKeyboard();
+          }}
           onPress={() => {
             if (disabled) {
+              return;
+            }
+
+            if (!keyboardVisibleAtPressStartRef.current) {
               return;
             }
 
@@ -64,8 +79,6 @@ export function ShellNativeTerminalKeyBar({
               onDismissKeyboard();
               return;
             }
-
-            onFocusKeyboard();
           }}
           style={({ pressed }) => ({
             alignItems: "center",

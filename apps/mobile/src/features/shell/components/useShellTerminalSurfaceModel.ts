@@ -26,10 +26,9 @@ export function useShellTerminalSurfaceModel({
   const usesTerminalEmulator = Platform.OS !== "web";
   const displayOutput = usesTerminalEmulator ? terminalOutput : sanitizeTerminalDisplayOutput(terminalOutput);
   const [blurRequestToken, setBlurRequestToken] = useState(0);
-  const [focusRequestToken, setFocusRequestToken] = useState(0);
   const [resizeRequestToken, setResizeRequestToken] = useState(0);
   const nativeStreamKey = buildNativeTerminalStreamKey(selectedTerminal, usesTerminalEmulator);
-  const { keyboardVisible, viewportBottomInset } = useMemo(
+  const { keyboardVisible: systemKeyboardVisible, viewportBottomInset } = useMemo(
     () => getTerminalKeyboardLayout({ keyboardBottomInset, usesTerminalEmulator }),
     [keyboardBottomInset, usesTerminalEmulator],
   );
@@ -37,7 +36,10 @@ export function useShellTerminalSurfaceModel({
     () => getTerminalPalette(theme.background.val, theme.color12.val),
     [theme],
   );
-  const terminalDomProps = buildTerminalDomProps(usesTerminalEmulator && Platform.OS !== "web");
+  const terminalDomProps = useMemo(
+    () => buildTerminalDomProps(usesTerminalEmulator && Platform.OS !== "web"),
+    [usesTerminalEmulator],
+  );
 
   useEffect(() => {
     if (!usesTerminalEmulator || !nativeStreamKey) {
@@ -63,11 +65,9 @@ export function useShellTerminalSurfaceModel({
   return {
     blurRequestToken,
     displayOutput,
-    focusRequestToken,
-    keyboardVisible,
+    keyboardVisible: systemKeyboardVisible,
     nativeStreamKey,
     requestBlur: () => setBlurRequestToken((current) => current + 1),
-    requestFocus: () => setFocusRequestToken((current) => current + 1),
     requestResize: () => setResizeRequestToken((current) => current + 1),
     resizeRequestToken,
     scrollbarThumbColor,

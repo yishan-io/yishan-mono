@@ -46,7 +46,7 @@ function createEventTarget() {
 
 function createHostWithViewportAndTextarea() {
   const viewport = { ...createEventTarget(), scrollTop: 0 };
-  const helperTextarea = { focus: vi.fn() };
+  const helperTextarea = { focus: vi.fn(), style: {} };
   const host = {
     ...createEventTarget(),
     clientHeight: 320,
@@ -60,6 +60,23 @@ function createHostWithViewportAndTextarea() {
   } as unknown as HTMLElement;
 
   return { helperTextarea, host, viewport };
+}
+
+function createHostWithoutViewport() {
+  const helperTextarea = { focus: vi.fn(), style: {} };
+  const host = {
+    ...createEventTarget(),
+    clientHeight: 320,
+    querySelector(selector?: string) {
+      if (selector === ".xterm-helper-textarea") {
+        return helperTextarea;
+      }
+
+      return null;
+    },
+  } as unknown as HTMLElement;
+
+  return { helperTextarea, host };
 }
 
 describe("shell-terminal-dom-emulator-runtime", () => {
@@ -172,7 +189,43 @@ describe("shell-terminal-dom-emulator-runtime", () => {
     expect(cancelledFrameIds).toEqual([]);
   });
 
-  it("scrolls terminal lines for touch drags without reopening the keyboard", () => {
+  it("allows native viewport scrolling for touch drags when the viewport advances", () => {
+    const terminal = createTerminalRuntime();
+    const { helperTextarea, host, viewport } = createHostWithViewportAndTextarea();
+
+    const cleanup = attachTerminalTouchScrollFallback(host, terminal);
+
+    const touchStartEvent = new Event("touchstart", { bubbles: true, cancelable: true });
+    Object.defineProperty(touchStartEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 200 }],
+    });
+    const touchMoveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperty(touchMoveEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 192 }],
+    });
+    const followUpTouchMoveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperty(followUpTouchMoveEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 160 }],
+    });
+
+    viewport.dispatchEvent(touchStartEvent);
+    viewport.dispatchEvent(touchMoveEvent);
+    viewport.scrollTop = 24;
+    viewport.dispatchEvent(followUpTouchMoveEvent);
+
+    expect(viewport.scrollTop).toBe(24);
+    expect(terminal.scrollLines).not.toHaveBeenCalled();
+    expect(followUpTouchMoveEvent.defaultPrevented).toBe(false);
+    expect(helperTextarea.focus).not.toHaveBeenCalled();
+    expect(terminal.focus).not.toHaveBeenCalled();
+
+    cleanup();
+  });
+
+  it("falls back to programmatic viewport scrolling for touch drags when native scrolling stays stuck", () => {
     const terminal = createTerminalRuntime();
     const { helperTextarea, host, viewport } = createHostWithViewportAndTextarea();
 
@@ -188,19 +241,88 @@ describe("shell-terminal-dom-emulator-runtime", () => {
       configurable: true,
       value: [{ clientY: 160 }],
     });
+    const secondTouchMoveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperty(secondTouchMoveEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 120 }],
+    });
 
     viewport.dispatchEvent(touchStartEvent);
     viewport.dispatchEvent(touchMoveEvent);
+    viewport.dispatchEvent(secondTouchMoveEvent);
 
-    expect(viewport.scrollTop).toBe(0);
-    expect(terminal.scrollLines).toHaveBeenCalledWith(2);
+    expect(viewport.scrollTop).toBeGreaterThan(0);
+    expect(terminal.scrollLines).not.toHaveBeenCalled();
+    expect(touchMoveEvent.defaultPrevented).toBe(false);
+    expect(secondTouchMoveEvent.defaultPrevented).toBe(true);
     expect(helperTextarea.focus).not.toHaveBeenCalled();
     expect(terminal.focus).not.toHaveBeenCalled();
 
     cleanup();
   });
 
-  it("scrolls terminal lines for pointer drags without reopening the keyboard", () => {
+  it("continues scrolling with inertia after a fallback touch fling ends", () => {
+    const terminal = createTerminalRuntime();
+    const { host, viewport } = createHostWithViewportAndTextarea();
+    const frameCallbacks: Array<FrameRequestCallback> = [];
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    const previousCancelAnimationFrame = globalThis.cancelAnimationFrame;
+
+    globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    }) as typeof requestAnimationFrame;
+    globalThis.cancelAnimationFrame = vi.fn() as typeof cancelAnimationFrame;
+
+    const cleanup = attachTerminalTouchScrollFallback(host, terminal);
+
+    const touchStartEvent = new Event("touchstart", { bubbles: true, cancelable: true });
+    Object.defineProperties(touchStartEvent, {
+      timeStamp: { configurable: true, value: 0 },
+      touches: {
+        configurable: true,
+        value: [{ clientY: 200 }],
+      },
+    });
+    const touchMoveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperties(touchMoveEvent, {
+      timeStamp: { configurable: true, value: 16 },
+      touches: {
+        configurable: true,
+        value: [{ clientY: 160 }],
+      },
+    });
+    const secondTouchMoveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperties(secondTouchMoveEvent, {
+      timeStamp: { configurable: true, value: 32 },
+      touches: {
+        configurable: true,
+        value: [{ clientY: 120 }],
+      },
+    });
+    const touchEndEvent = new Event("touchend", { bubbles: true, cancelable: true });
+    Object.defineProperty(touchEndEvent, "timeStamp", {
+      configurable: true,
+      value: 48,
+    });
+
+    viewport.dispatchEvent(touchStartEvent);
+    viewport.dispatchEvent(touchMoveEvent);
+    viewport.dispatchEvent(secondTouchMoveEvent);
+    viewport.dispatchEvent(touchEndEvent);
+
+    const scrollTopBeforeInertia = viewport.scrollTop;
+
+    frameCallbacks.at(-1)?.(64);
+
+    expect(viewport.scrollTop).toBeGreaterThan(scrollTopBeforeInertia);
+
+    cleanup();
+    globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = previousCancelAnimationFrame;
+  });
+
+  it("falls back to programmatic viewport scrolling for pointer drags when native scrolling stays stuck", () => {
     const terminal = createTerminalRuntime();
     const { helperTextarea, host, viewport } = createHostWithViewportAndTextarea();
 
@@ -218,14 +340,55 @@ describe("shell-terminal-dom-emulator-runtime", () => {
       pointerId: { configurable: true, value: 7 },
       pointerType: { configurable: true, value: "touch" },
     });
+    const secondPointerMoveEvent = new Event("pointermove", { bubbles: true, cancelable: true });
+    Object.defineProperties(secondPointerMoveEvent, {
+      clientY: { configurable: true, value: 140 },
+      pointerId: { configurable: true, value: 7 },
+      pointerType: { configurable: true, value: "touch" },
+    });
 
     viewport.dispatchEvent(pointerDownEvent);
     viewport.dispatchEvent(pointerMoveEvent);
+    viewport.dispatchEvent(secondPointerMoveEvent);
 
-    expect(viewport.scrollTop).toBe(0);
-    expect(terminal.scrollLines).toHaveBeenCalledWith(2);
+    expect(viewport.scrollTop).toBeGreaterThan(0);
+    expect(terminal.scrollLines).not.toHaveBeenCalled();
+    expect(pointerMoveEvent.defaultPrevented).toBe(false);
+    expect(secondPointerMoveEvent.defaultPrevented).toBe(true);
     expect(helperTextarea.focus).not.toHaveBeenCalled();
     expect(terminal.focus).not.toHaveBeenCalled();
+
+    cleanup();
+  });
+
+  it("falls back to terminal line scrolling when no viewport is available", () => {
+    const terminal = createTerminalRuntime();
+    const { host } = createHostWithoutViewport();
+
+    const cleanup = attachTerminalTouchScrollFallback(host, terminal);
+
+    const touchStartEvent = new Event("touchstart", { bubbles: true, cancelable: true });
+    Object.defineProperty(touchStartEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 200 }],
+    });
+    const touchMoveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperty(touchMoveEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 160 }],
+    });
+    const secondTouchMoveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperty(secondTouchMoveEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 120 }],
+    });
+
+    host.dispatchEvent(touchStartEvent);
+    host.dispatchEvent(touchMoveEvent);
+    host.dispatchEvent(secondTouchMoveEvent);
+
+    expect(terminal.scrollLines).toHaveBeenCalledWith(2);
+    expect(secondTouchMoveEvent.defaultPrevented).toBe(true);
 
     cleanup();
   });
@@ -236,10 +399,12 @@ describe("shell-terminal-dom-emulator-runtime", () => {
 
     const cleanup = attachTerminalTouchScrollFallback(host, terminal);
 
-    viewport.dispatchEvent(new Event("mousedown", { bubbles: true, cancelable: true }));
+    const mouseDownEvent = new Event("mousedown", { bubbles: true, cancelable: true });
+    viewport.dispatchEvent(mouseDownEvent);
 
     expect(terminal.focus).not.toHaveBeenCalled();
     expect(helperTextarea.focus).not.toHaveBeenCalled();
+    expect(mouseDownEvent.defaultPrevented).toBe(true);
 
     cleanup();
   });

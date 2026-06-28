@@ -7,6 +7,8 @@ import type { ShellState } from "../state/useShellState";
 import type { ShellScreenModel } from "../view-model/useShellScreenModel";
 import { ShellFocusPane } from "./ShellFocusPane";
 
+const DRAWER_EDGE_TOUCH_WIDTH = 16;
+
 type ShellScreenContentProps = {
   edgePanHandlers: ReturnType<typeof useShellDrawer>["edgePanHandlers"];
   onRegisterKeyboardDismissHandler?: ((handler: (() => void) | null) => void) | null;
@@ -52,7 +54,7 @@ function ShellWorkbenchCenterPaneSurface({
           left: 0,
           position: "absolute",
           top: 0,
-          width: 40,
+          width: DRAWER_EDGE_TOUCH_WIDTH,
           zIndex: 20,
         }}
       />

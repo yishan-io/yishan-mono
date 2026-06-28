@@ -61,11 +61,9 @@ export function ShellChatSurface({ chat, onRegisterKeyboardDismissHandler }: She
   const {
     blurRequestToken,
     displayOutput,
-    focusRequestToken,
     keyboardVisible,
     nativeStreamKey,
     requestBlur,
-    requestFocus,
     resizeRequestToken,
     scrollbarThumbColor,
     terminalDomProps,
@@ -131,7 +129,6 @@ export function ShellChatSurface({ chat, onRegisterKeyboardDismissHandler }: She
         displayOutput={displayOutput}
         emptyDescription={emptyDescription}
         emptyStatusLabel={emptyStatusLabel}
-        focusRequestToken={focusRequestToken}
         isComposerDisabled={isComposerDisabled}
         keyboardVisible={keyboardVisible}
         keyboardViewportInset={viewportBottomInset}
@@ -139,7 +136,6 @@ export function ShellChatSurface({ chat, onRegisterKeyboardDismissHandler }: She
         onTerminalInput={onTerminalInput}
         onTerminalResize={onTerminalResize}
         onDismissKeyboard={dismissKeyboard}
-        requestFocus={requestFocus}
         resizeRequestToken={resizeRequestToken}
         scrollbarThumbColor={scrollbarThumbColor}
         selectedTerminal={selectedTerminal}

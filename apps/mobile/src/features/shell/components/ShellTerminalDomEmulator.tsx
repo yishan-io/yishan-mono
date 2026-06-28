@@ -1,18 +1,23 @@
 "use dom";
 
 import type { ITheme, Terminal } from "@xterm/xterm";
-import type { DOMProps } from "expo/dom";
-import { useRef } from "react";
+import { type DOMImperativeFactory, type DOMProps, useDOMImperativeHandle } from "expo/dom";
+import { type Ref, forwardRef, useRef } from "react";
 import "@xterm/xterm/css/xterm.css";
 
 import { buildShellTerminalRootStyle, getShellTerminalViewportCss } from "./shell-terminal-dom-emulator-domain";
+import { blurTerminal } from "./shell-terminal-dom-emulator-runtime";
 import { useShellTerminalDomLifecycle } from "./useShellTerminalDomLifecycle";
+
+export type ShellTerminalDomEmulatorHandle = {
+  blurInputSession: () => void;
+};
 
 type ShellTerminalDomEmulatorProps = {
   blurRequestToken?: number;
   dom?: DOMProps;
-  focusRequestToken?: number;
   onInput: (data: string) => Promise<void> | void;
+  onTapDismissKeyboard?: (() => void) | null;
   onResize: (size: { cols: number; rows: number }) => Promise<void> | void;
   output?: string;
   resizeRequestToken?: number;
@@ -33,60 +38,77 @@ const HOST_STYLE: React.CSSProperties = {
   width: "100%",
 };
 
-export default function ShellTerminalDomEmulator({
-  blurRequestToken = 0,
-  focusRequestToken = 0,
-  onInput,
-  onResize,
-  output = "",
-  resizeRequestToken = 0,
-  scrollbarThumbColor,
-  streamKey,
-  terminalId,
-  terminalTheme,
-}: ShellTerminalDomEmulatorProps) {
-  const hostRef = useRef<HTMLDivElement | null>(null);
-  const terminalRef = useRef<Terminal | null>(null);
-  const onInputRef = useRef(onInput);
-  const onResizeRef = useRef(onResize);
-  const outputRef = useRef(output);
-  const renderedOutputRef = useRef(output);
-  const reportSizeRef = useRef<(() => void) | null>(null);
-  const themeRef = useRef(terminalTheme);
-  const resizeFrameRef = useRef<number | null>(null);
-  const focusFrameRef = useRef<number | null>(null);
+const ShellTerminalDomEmulator = forwardRef<ShellTerminalDomEmulatorHandle, ShellTerminalDomEmulatorProps>(
+  function ShellTerminalDomEmulator(
+    {
+      blurRequestToken = 0,
+      onInput,
+      onTapDismissKeyboard,
+      onResize,
+      output = "",
+      resizeRequestToken = 0,
+      scrollbarThumbColor,
+      streamKey,
+      terminalId,
+      terminalTheme,
+    }: ShellTerminalDomEmulatorProps,
+    ref,
+  ) {
+    const hostRef = useRef<HTMLDivElement | null>(null);
+    const terminalRef = useRef<Terminal | null>(null);
+    const onInputRef = useRef(onInput);
+    const onTapDismissKeyboardRef = useRef(onTapDismissKeyboard);
+    const onResizeRef = useRef(onResize);
+    const outputRef = useRef(output);
+    const renderedOutputRef = useRef(output);
+    const reportSizeRef = useRef<(() => void) | null>(null);
+    const themeRef = useRef(terminalTheme);
+    const resizeFrameRef = useRef<number | null>(null);
 
-  onInputRef.current = onInput;
-  onResizeRef.current = onResize;
-  outputRef.current = output;
-  themeRef.current = terminalTheme;
+    onInputRef.current = onInput;
+    onTapDismissKeyboardRef.current = onTapDismissKeyboard;
+    onResizeRef.current = onResize;
+    outputRef.current = output;
+    themeRef.current = terminalTheme;
 
-  useShellTerminalDomLifecycle({
-    blurRequestToken,
-    focusFrameRef,
-    focusRequestToken,
-    hostRef,
-    onInputRef,
-    onResizeRef,
-    output,
-    outputRef,
-    renderedOutputRef,
-    reportSizeRef,
-    resizeFrameRef,
-    resizeRequestToken,
-    streamKey,
-    terminalId,
-    terminalRef,
-    terminalTheme,
-    themeRef,
-  });
+    useDOMImperativeHandle(
+      ref as Ref<DOMImperativeFactory>,
+      () => ({
+        blurInputSession() {
+          blurTerminal(terminalRef.current);
+        },
+      }),
+      [],
+    );
 
-  const rootStyle = buildShellTerminalRootStyle(terminalTheme, scrollbarThumbColor);
+    useShellTerminalDomLifecycle({
+      blurRequestToken,
+      hostRef,
+      onInputRef,
+      onTapDismissKeyboardRef,
+      onResizeRef,
+      output,
+      outputRef,
+      renderedOutputRef,
+      reportSizeRef,
+      resizeFrameRef,
+      resizeRequestToken,
+      streamKey,
+      terminalId,
+      terminalRef,
+      terminalTheme,
+      themeRef,
+    });
 
-  return (
-    <div data-testid="shell-terminal-dom-root" style={rootStyle}>
-      <style>{getShellTerminalViewportCss()}</style>
-      <div ref={hostRef} style={HOST_STYLE} />
-    </div>
-  );
-}
+    const rootStyle = buildShellTerminalRootStyle(terminalTheme, scrollbarThumbColor);
+
+    return (
+      <div data-testid="shell-terminal-dom-root" style={rootStyle}>
+        <style>{getShellTerminalViewportCss()}</style>
+        <div ref={hostRef} style={HOST_STYLE} />
+      </div>
+    );
+  },
+);
+
+export default ShellTerminalDomEmulator;

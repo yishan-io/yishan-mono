@@ -3,6 +3,7 @@ import type { ITerminalOptions, ITheme } from "@xterm/xterm";
 const DEFAULT_TERMINAL_BACKGROUND = "#ffffff";
 const DEFAULT_TERMINAL_FOREGROUND = "#111111";
 const DEFAULT_SCROLLBAR_THUMB = "rgba(107, 114, 128, 0.55)";
+const HIDDEN_OVERVIEW_RULER_WIDTH = 0.1;
 
 /**
  * Builds the xterm terminal options for the mobile shell emulator.
@@ -16,6 +17,11 @@ export function buildShellTerminalOptions(theme: ITheme): ITerminalOptions {
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
     fontSize: 12,
     lineHeight: 1.3,
+    overviewRuler: {
+      // xterm falls back with `width || 14`, so a tiny positive number avoids
+      // the 14px gutter while still rounding to a hidden scrollbar internally.
+      width: HIDDEN_OVERVIEW_RULER_WIDTH,
+    },
     scrollback: 5000,
     theme,
   };
@@ -80,6 +86,11 @@ export function getShellTerminalViewportCss() {
       width: 100%;
     }
 
+    .xterm-screen,
+    .xterm-screen canvas {
+      pointer-events: none;
+    }
+
     .xterm-viewport {
       background-color: var(--terminal-bg) !important;
       -webkit-overflow-scrolling: touch;
@@ -88,18 +99,16 @@ export function getShellTerminalViewportCss() {
       overflow-y: auto !important;
       overscroll-behavior-x: none;
       overscroll-behavior-y: contain;
-      scrollbar-color: var(--terminal-scrollbar-thumb) transparent;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
       touch-action: pan-y;
       width: 100%;
     }
 
     .xterm-viewport::-webkit-scrollbar {
-      width: 10px;
-    }
-
-    .xterm-viewport::-webkit-scrollbar-thumb {
-      background: var(--terminal-scrollbar-thumb);
-      border-radius: 999px;
+      display: none;
+      height: 0;
+      width: 0;
     }
   `;
 }

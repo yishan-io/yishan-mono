@@ -15,6 +15,7 @@ describe("shell-terminal-dom-emulator-domain", () => {
 
     expect(options.cursorStyle).toBe("bar");
     expect(options.fontSize).toBe(12);
+    expect(options.overviewRuler?.width).toBe(0.1);
     expect(options.scrollback).toBe(5000);
     expect(options.theme?.background).toBe("#101214");
   });
@@ -39,8 +40,10 @@ describe("shell-terminal-dom-emulator-domain", () => {
 
     expect(css).toContain(".xterm");
     expect(css).toContain(".xterm-viewport");
+    expect(css).toContain("pointer-events: none");
     expect(css).toContain("-webkit-overflow-scrolling: touch");
-    expect(css).toContain("scrollbar-color");
+    expect(css).toContain("scrollbar-width: none");
+    expect(css).toContain("display: none");
     expect(css).toContain("touch-action: pan-y");
     expect(css).not.toContain("touch-action: none");
   });
