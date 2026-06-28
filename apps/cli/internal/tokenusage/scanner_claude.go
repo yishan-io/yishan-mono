@@ -151,13 +151,14 @@ func scanClaudeTranscriptFile(
 		key := makeClaudeHourlyKey(activity.Timestamp, activity.Model, workspace, confidence, transcriptFile)
 		acc := getAccumulator(buckets, key)
 		if activity.Kind == claudeActivityAssistantUsage {
+			normalizedInputTokens := activity.InputTokens + activity.CacheReadTokens + activity.CacheWriteTokens
 			delta := codexUsage{
-				InputTokens:       activity.InputTokens,
+				InputTokens:       normalizedInputTokens,
 				OutputTokens:      activity.OutputTokens,
 				CachedInputTokens: activity.CacheReadTokens,
 				CachedWriteTokens: activity.CacheWriteTokens,
 				ReasoningTokens:   0,
-				TotalTokens:       activity.InputTokens + activity.OutputTokens,
+				TotalTokens:       normalizedInputTokens + activity.OutputTokens,
 			}
 			if delta.TotalTokens <= 0 {
 				continue

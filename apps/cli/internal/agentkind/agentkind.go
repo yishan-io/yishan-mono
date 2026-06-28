@@ -19,7 +19,7 @@ var All = []string{OpenCode, Claude, Codex, Gemini, Pi, Copilot, Cursor}
 var WithTokenTracking = []string{OpenCode, Claude, Codex, Gemini, Pi}
 
 // WithActiveTokenScanners lists agents whose local scanners produce real token data.
-var WithActiveTokenScanners = []string{OpenCode, Claude, Codex}
+var WithActiveTokenScanners = []string{OpenCode, Claude, Codex, Pi}
 
 // WithReadableSessionText lists agents whose local session storage contains
 // readable conversation text (usable for memory summarization).

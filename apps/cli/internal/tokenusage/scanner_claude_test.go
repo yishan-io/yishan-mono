@@ -118,8 +118,8 @@ func TestScanClaudeTranscriptFile(t *testing.T) {
 		totalTokens += acc.TotalTokens
 	}
 
-	if totalInput != 3 {
-		t.Fatalf("expected input 3, got %d", totalInput)
+	if totalInput != 174698 {
+		t.Fatalf("expected input 174698, got %d", totalInput)
 	}
 	if totalOutput != 669 {
 		t.Fatalf("expected output 669 (159+510), got %d", totalOutput)
@@ -130,8 +130,8 @@ func TestScanClaudeTranscriptFile(t *testing.T) {
 	if totalCacheWrite != 30305 {
 		t.Fatalf("expected cache write 30305, got %d", totalCacheWrite)
 	}
-	if totalTokens != 672 {
-		t.Fatalf("expected total tokens 672 (3+669), got %d", totalTokens)
+	if totalTokens != 175367 {
+		t.Fatalf("expected total tokens 175367, got %d", totalTokens)
 	}
 }
 
