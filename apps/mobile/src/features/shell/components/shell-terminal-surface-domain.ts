@@ -2,12 +2,15 @@ import type { ITheme } from "@xterm/xterm";
 import type { DOMProps } from "expo/dom";
 
 import { MOBILE_UI_TOKENS } from "@/components/ui/ui-tokens";
+import type { TerminalRendererPreference } from "@/lib/storage/terminal-renderer-preference-storage";
 import type { TerminalItem } from "../state/shell.types";
 
 type TerminalKeyboardLayoutInput = {
   keyboardBottomInset: number;
   usesTerminalEmulator: boolean;
 };
+
+export type TerminalRendererKind = "native" | "xterm";
 
 function getHexChannel(channel: string) {
   return Number.parseInt(channel, 16);
@@ -118,6 +121,20 @@ function getTerminalTheme(background: string, foreground: string): ITheme {
     white: darkBackground ? "#e5e7eb" : "#4b5563",
     yellow: "#d97706",
   };
+}
+
+/**
+ * Resolves the renderer that the current platform can actually use for terminal output.
+ */
+export function resolveTerminalRendererKind(
+  preference: TerminalRendererPreference,
+  platformOs: string,
+): TerminalRendererKind {
+  if (platformOs === "web") {
+    return "native";
+  }
+
+  return preference;
 }
 
 /**

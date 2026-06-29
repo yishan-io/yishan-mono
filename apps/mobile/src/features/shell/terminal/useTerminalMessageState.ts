@@ -1,5 +1,4 @@
 import { useCallback, useRef, useState } from "react";
-import { Platform } from "react-native";
 
 import type { TerminalItem, TerminalMessage } from "../state/shell.types";
 import {
@@ -16,14 +15,15 @@ const MAX_TERMINAL_MESSAGES = 64;
 
 export function useTerminalMessageState({
   patchTerminal,
+  usesTerminalEmulator,
 }: {
   patchTerminal: (
     terminal: Pick<TerminalItem, "id" | "workspaceId">,
     patch: Partial<Omit<TerminalItem, "id" | "workspaceId">>,
     options?: { touchUpdatedAt?: boolean },
   ) => void;
+  usesTerminalEmulator: boolean;
 }) {
-  const usesTerminalEmulator = Platform.OS !== "web";
   const [terminalMessagesById, setTerminalMessagesById] = useState<TerminalMessagesState>({});
   const [terminalOutputById, setTerminalOutputById] = useState<TerminalOutputState>({});
   const [terminalDraftsById, setTerminalDraftsById] = useState<TerminalDraftsState>({});

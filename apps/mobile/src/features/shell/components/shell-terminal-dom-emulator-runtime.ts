@@ -19,7 +19,6 @@ type TerminalFocusRuntime = Pick<TerminalWriteRuntime, "focus">;
 
 type GestureScrollMode = "fallback_active" | "native_active" | "native_pending";
 
-const TERMINAL_TOUCH_SCROLL_TARGET_SELECTORS = [".xterm-viewport", ".xterm-screen", ".xterm-screen canvas"] as const;
 const FALLBACK_ACTIVATION_PIXELS = 24;
 const INERTIA_FRICTION_PER_MS = 0.992;
 const MAX_INERTIA_FRAME_MS = 32;
@@ -208,9 +207,9 @@ export function stabilizeTerminalViewport(
 }
 
 /**
- * Adds a mobile-friendly single-finger drag fallback that first nudges the
- * xterm viewport's native scroll container and only falls back to line-based
- * scrollback when the host does not expose a movable viewport.
+ * Adds a mobile-friendly single-finger drag fallback that lets the xterm
+ * viewport keep native scroll ownership whenever it is moving and only falls
+ * back to programmatic scrolling when the viewport stays stuck.
  */
 export function attachTerminalTouchScrollFallback(
   host: HTMLElement,
@@ -271,15 +270,41 @@ export function attachTerminalTouchScrollFallback(
     return true;
   };
 
+  const isViewportBlockedAtEdge = (activeViewport: HTMLElement, deltaPixels: number) => {
+    const maxScrollTop = Math.max(0, activeViewport.scrollHeight - activeViewport.clientHeight);
+    if (maxScrollTop <= 0) {
+      return false;
+    }
+
+    const currentScrollTop = activeViewport.scrollTop;
+
+    if (deltaPixels < 0 && currentScrollTop <= 0) {
+      return true;
+    }
+
+    if (deltaPixels > 0 && currentScrollTop >= maxScrollTop) {
+      return true;
+    }
+
+    return false;
+  };
+
   const applyFallbackScroll = (deltaPixels: number) => {
     const activeViewport = viewport;
     if (activeViewport) {
+      if (isViewportBlockedAtEdge(activeViewport, deltaPixels)) {
+        pixelCarry = 0;
+        return false;
+      }
+
       const previousScrollTop = activeViewport.scrollTop;
       activeViewport.scrollTop += deltaPixels;
       if (activeViewport.scrollTop !== previousScrollTop) {
         lastViewportScrollTop = activeViewport.scrollTop;
         return true;
       }
+
+      return applyLineScrollFallback(deltaPixels);
     }
 
     return applyLineScrollFallback(deltaPixels);
@@ -300,7 +325,12 @@ export function attachTerminalTouchScrollFallback(
     const step = (timestamp: number) => {
       const deltaMs = Math.min(MAX_INERTIA_FRAME_MS, Math.max(1, timestamp - previousTimestamp));
       previousTimestamp = timestamp;
-      applyFallbackScroll(fallbackVelocityPxPerMs * deltaMs);
+      if (!applyFallbackScroll(fallbackVelocityPxPerMs * deltaMs)) {
+        inertiaFrameId = null;
+        fallbackVelocityPxPerMs = 0;
+        pixelCarry = 0;
+        return;
+      }
       fallbackVelocityPxPerMs *= INERTIA_FRICTION_PER_MS ** deltaMs;
 
       if (Math.abs(fallbackVelocityPxPerMs) < MIN_INERTIA_VELOCITY_PX_PER_MS) {
@@ -350,17 +380,11 @@ export function attachTerminalTouchScrollFallback(
 
   const getTouchTargets = () => {
     viewport ??= host.querySelector<HTMLElement>(".xterm-viewport");
-    const targets = new Set<HTMLElement>([host]);
-    if (viewport) {
-      targets.add(viewport);
-    }
-    for (const selector of TERMINAL_TOUCH_SCROLL_TARGET_SELECTORS) {
-      const target = host.querySelector<HTMLElement>(selector);
-      if (target) {
-        targets.add(target);
-      }
-    }
-    return [...targets];
+    // Use a single capture owner for touch/pointer gestures. Binding the same
+    // handlers to host + viewport + nested xterm layers causes one physical
+    // move event to be processed multiple times near the scroll edges, which
+    // shows up as visible boundary jitter.
+    return [host];
   };
 
   const noteNativeScrollProgress = () => {

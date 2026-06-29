@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 import { useTheme } from "tamagui";
 
+import { useAppTerminalRenderer } from "@/features/shell/AppTerminalRendererProvider";
 import type { TerminalItem } from "../state/shell.types";
 import { sanitizeTerminalDisplayOutput } from "../state/terminal-output";
 import {
@@ -9,6 +10,7 @@ import {
   buildTerminalDomProps,
   getTerminalKeyboardLayout,
   getTerminalPalette,
+  resolveTerminalRendererKind,
 } from "./shell-terminal-surface-domain";
 
 type UseShellTerminalSurfaceModelInput = {
@@ -23,7 +25,8 @@ export function useShellTerminalSurfaceModel({
   terminalOutput,
 }: UseShellTerminalSurfaceModelInput) {
   const theme = useTheme();
-  const usesTerminalEmulator = Platform.OS !== "web";
+  const { preference: terminalRendererPreference } = useAppTerminalRenderer();
+  const usesTerminalEmulator = resolveTerminalRendererKind(terminalRendererPreference, Platform.OS) === "xterm";
   const displayOutput = usesTerminalEmulator ? terminalOutput : sanitizeTerminalDisplayOutput(terminalOutput);
   const [blurRequestToken, setBlurRequestToken] = useState(0);
   const [resizeRequestToken, setResizeRequestToken] = useState(0);

@@ -6,6 +6,7 @@ import {
   buildTerminalDomProps,
   getTerminalKeyboardLayout,
   getTerminalPalette,
+  resolveTerminalRendererKind,
 } from "./shell-terminal-surface-domain";
 
 function createTerminal(input: Partial<TerminalItem> = {}): TerminalItem {
@@ -24,6 +25,12 @@ function createTerminal(input: Partial<TerminalItem> = {}): TerminalItem {
 }
 
 describe("shell-terminal-surface-domain", () => {
+  it("falls back to the native renderer on web even when xterm is preferred", () => {
+    expect(resolveTerminalRendererKind("xterm", "web")).toBe("native");
+    expect(resolveTerminalRendererKind("native", "ios")).toBe("native");
+    expect(resolveTerminalRendererKind("xterm", "ios")).toBe("xterm");
+  });
+
   it("builds a native stream key from terminal and session ids", () => {
     expect(
       buildNativeTerminalStreamKey(

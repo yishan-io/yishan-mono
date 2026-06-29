@@ -62,6 +62,44 @@ function createHostWithViewportAndTextarea() {
   return { helperTextarea, host, viewport };
 }
 
+function createHostWithClampedViewportAndTextarea({ initialScrollTop = 0, maxScrollTop = 120 } = {}) {
+  let currentScrollTop = initialScrollTop;
+  const viewport = {
+    ...createEventTarget(),
+    clientHeight: 320,
+    scrollHeight: 320 + maxScrollTop,
+  } as ReturnType<typeof createEventTarget> & {
+    clientHeight: number;
+    scrollHeight: number;
+    scrollTop: number;
+  };
+
+  Object.defineProperty(viewport, "scrollTop", {
+    configurable: true,
+    get() {
+      return currentScrollTop;
+    },
+    set(nextValue: number) {
+      currentScrollTop = Math.max(0, Math.min(maxScrollTop, nextValue));
+    },
+  });
+
+  const helperTextarea = { focus: vi.fn(), style: {} };
+  const host = {
+    ...createEventTarget(),
+    clientHeight: 320,
+    querySelector(selector?: string) {
+      if (selector === ".xterm-helper-textarea") {
+        return helperTextarea;
+      }
+
+      return viewport;
+    },
+  } as unknown as HTMLElement;
+
+  return { helperTextarea, host, viewport };
+}
+
 function createHostWithoutViewport() {
   const helperTextarea = { focus: vi.fn(), style: {} };
   const host = {
@@ -211,10 +249,10 @@ describe("shell-terminal-dom-emulator-runtime", () => {
       value: [{ clientY: 160 }],
     });
 
-    viewport.dispatchEvent(touchStartEvent);
-    viewport.dispatchEvent(touchMoveEvent);
+    host.dispatchEvent(touchStartEvent);
+    host.dispatchEvent(touchMoveEvent);
     viewport.scrollTop = 24;
-    viewport.dispatchEvent(followUpTouchMoveEvent);
+    host.dispatchEvent(followUpTouchMoveEvent);
 
     expect(viewport.scrollTop).toBe(24);
     expect(terminal.scrollLines).not.toHaveBeenCalled();
@@ -247,9 +285,9 @@ describe("shell-terminal-dom-emulator-runtime", () => {
       value: [{ clientY: 120 }],
     });
 
-    viewport.dispatchEvent(touchStartEvent);
-    viewport.dispatchEvent(touchMoveEvent);
-    viewport.dispatchEvent(secondTouchMoveEvent);
+    host.dispatchEvent(touchStartEvent);
+    host.dispatchEvent(touchMoveEvent);
+    host.dispatchEvent(secondTouchMoveEvent);
 
     expect(viewport.scrollTop).toBeGreaterThan(0);
     expect(terminal.scrollLines).not.toHaveBeenCalled();
@@ -257,6 +295,115 @@ describe("shell-terminal-dom-emulator-runtime", () => {
     expect(secondTouchMoveEvent.defaultPrevented).toBe(true);
     expect(helperTextarea.focus).not.toHaveBeenCalled();
     expect(terminal.focus).not.toHaveBeenCalled();
+
+    cleanup();
+  });
+
+  it("does not fall back to line scrolling when a real viewport is already at the top edge", () => {
+    const terminal = createTerminalRuntime();
+    const { host, viewport } = createHostWithClampedViewportAndTextarea({ initialScrollTop: 0, maxScrollTop: 120 });
+
+    const cleanup = attachTerminalTouchScrollFallback(host, terminal);
+
+    const touchStartEvent = new Event("touchstart", { bubbles: true, cancelable: true });
+    Object.defineProperty(touchStartEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 120 }],
+    });
+    const touchMoveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperty(touchMoveEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 152 }],
+    });
+    const secondTouchMoveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperty(secondTouchMoveEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 188 }],
+    });
+
+    host.dispatchEvent(touchStartEvent);
+    host.dispatchEvent(touchMoveEvent);
+    host.dispatchEvent(secondTouchMoveEvent);
+
+    expect(viewport.scrollTop).toBe(0);
+    expect(terminal.scrollLines).not.toHaveBeenCalled();
+    expect(secondTouchMoveEvent.defaultPrevented).toBe(true);
+
+    cleanup();
+  });
+
+  it("keeps native scroll ownership after the viewport has already advanced", () => {
+    const terminal = createTerminalRuntime();
+    const { host, viewport } = createHostWithClampedViewportAndTextarea({ initialScrollTop: 24, maxScrollTop: 120 });
+
+    const cleanup = attachTerminalTouchScrollFallback(host, terminal);
+
+    const touchStartEvent = new Event("touchstart", { bubbles: true, cancelable: true });
+    Object.defineProperty(touchStartEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 200 }],
+    });
+    const touchMoveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperty(touchMoveEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 208 }],
+    });
+    const edgeTouchMoveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperty(edgeTouchMoveEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 236 }],
+    });
+
+    host.dispatchEvent(touchStartEvent);
+    viewport.scrollTop = 0;
+    host.dispatchEvent(touchMoveEvent);
+    host.dispatchEvent(edgeTouchMoveEvent);
+
+    expect(edgeTouchMoveEvent.defaultPrevented).toBe(false);
+    expect(terminal.scrollLines).not.toHaveBeenCalled();
+
+    cleanup();
+  });
+
+  it("still falls back to line scrolling when a viewport exists but is not at an edge", () => {
+    const terminal = createTerminalRuntime();
+    const { host, viewport } = createHostWithClampedViewportAndTextarea({ initialScrollTop: 60, maxScrollTop: 120 });
+
+    Object.defineProperty(viewport, "scrollTop", {
+      configurable: true,
+      get() {
+        return 60;
+      },
+      set() {
+        // Simulate a stubborn viewport that reports a valid mid-range position
+        // but does not advance synchronously for this gesture.
+      },
+    });
+
+    const cleanup = attachTerminalTouchScrollFallback(host, terminal);
+
+    const touchStartEvent = new Event("touchstart", { bubbles: true, cancelable: true });
+    Object.defineProperty(touchStartEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 200 }],
+    });
+    const touchMoveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperty(touchMoveEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 160 }],
+    });
+    const secondTouchMoveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperty(secondTouchMoveEvent, "touches", {
+      configurable: true,
+      value: [{ clientY: 120 }],
+    });
+
+    host.dispatchEvent(touchStartEvent);
+    host.dispatchEvent(touchMoveEvent);
+    host.dispatchEvent(secondTouchMoveEvent);
+
+    expect(terminal.scrollLines).toHaveBeenCalled();
+    expect(secondTouchMoveEvent.defaultPrevented).toBe(true);
 
     cleanup();
   });
@@ -306,10 +453,10 @@ describe("shell-terminal-dom-emulator-runtime", () => {
       value: 48,
     });
 
-    viewport.dispatchEvent(touchStartEvent);
-    viewport.dispatchEvent(touchMoveEvent);
-    viewport.dispatchEvent(secondTouchMoveEvent);
-    viewport.dispatchEvent(touchEndEvent);
+    host.dispatchEvent(touchStartEvent);
+    host.dispatchEvent(touchMoveEvent);
+    host.dispatchEvent(secondTouchMoveEvent);
+    host.dispatchEvent(touchEndEvent);
 
     const scrollTopBeforeInertia = viewport.scrollTop;
 
@@ -347,9 +494,9 @@ describe("shell-terminal-dom-emulator-runtime", () => {
       pointerType: { configurable: true, value: "touch" },
     });
 
-    viewport.dispatchEvent(pointerDownEvent);
-    viewport.dispatchEvent(pointerMoveEvent);
-    viewport.dispatchEvent(secondPointerMoveEvent);
+    host.dispatchEvent(pointerDownEvent);
+    host.dispatchEvent(pointerMoveEvent);
+    host.dispatchEvent(secondPointerMoveEvent);
 
     expect(viewport.scrollTop).toBeGreaterThan(0);
     expect(terminal.scrollLines).not.toHaveBeenCalled();
@@ -400,7 +547,7 @@ describe("shell-terminal-dom-emulator-runtime", () => {
     const cleanup = attachTerminalTouchScrollFallback(host, terminal);
 
     const mouseDownEvent = new Event("mousedown", { bubbles: true, cancelable: true });
-    viewport.dispatchEvent(mouseDownEvent);
+    host.dispatchEvent(mouseDownEvent);
 
     expect(terminal.focus).not.toHaveBeenCalled();
     expect(helperTextarea.focus).not.toHaveBeenCalled();

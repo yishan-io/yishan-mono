@@ -6,6 +6,7 @@ import { LoadingView } from "@/components/ui/LoadingView";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { SettingsLanguageSection } from "@/features/settings/components/SettingsLanguageSection";
 import { SettingsNotificationsSection } from "@/features/settings/components/SettingsNotificationsSection";
+import { SettingsTerminalRendererSection } from "@/features/settings/components/SettingsTerminalRendererSection";
 import { SettingsThemeSection } from "@/features/settings/components/SettingsThemeSection";
 import { useSettingsScreenModel } from "@/features/settings/hooks/useSettingsScreenModel";
 
@@ -31,6 +32,12 @@ export function SettingsScreen() {
               pending={model.languageMutation.isPending}
             />
             <SettingsThemeSection preference={model.themePreference} onSelectTheme={model.onSelectTheme} />
+            {model.showTerminalRendererSetting ? (
+              <SettingsTerminalRendererSection
+                preference={model.terminalRendererPreference}
+                onSelectRenderer={model.onSelectTerminalRenderer}
+              />
+            ) : null}
             <SettingsNotificationsSection
               enabled={model.meQuery.data.notificationPreferences.enabled}
               isLoading={model.notificationPermission.isLoading}

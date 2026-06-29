@@ -1,7 +1,10 @@
 import { useCallback } from "react";
+import { Platform } from "react-native";
 
 import { useAuth } from "@/features/auth";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
+import { useAppTerminalRenderer } from "@/features/shell/AppTerminalRendererProvider";
+import { resolveTerminalRendererKind } from "../components/shell-terminal-surface-domain";
 import type { TerminalItem } from "../state/shell.types";
 import { useTerminalMessageState } from "../terminal/useTerminalMessageState";
 import { useTerminalSessionRuntime } from "../terminal/useTerminalSessionRuntime";
@@ -50,7 +53,9 @@ export function useShellTerminalMessages({
 }) {
   const { session, status } = useAuth();
   const { t } = useAppLanguage();
+  const { preference: terminalRendererPreference } = useAppTerminalRenderer();
   const accessToken = session?.accessToken ?? null;
+  const usesTerminalEmulator = resolveTerminalRendererKind(terminalRendererPreference, Platform.OS) === "xterm";
 
   const patchTerminal = useCallback(
     (
@@ -67,7 +72,7 @@ export function useShellTerminalMessages({
     [updateTerminal],
   );
 
-  const messageState = useTerminalMessageState({ patchTerminal });
+  const messageState = useTerminalMessageState({ patchTerminal, usesTerminalEmulator });
   const runtime = useTerminalSessionRuntime({
     accessToken,
     appendSystemMessage: messageState.appendSystemMessage,

@@ -76,11 +76,13 @@ export function WorkspaceTreeFilterSheet({
             active={workspaceListHierarchyMode === "by_project"}
             label={t("shell.workspaceTreeHierarchyByProject")}
             onPress={() => onSetHierarchyMode("by_project")}
+            side="left"
           />
           <HierarchyModeButton
             active={workspaceListHierarchyMode === "by_node"}
             label={t("shell.workspaceTreeHierarchyByNode")}
             onPress={() => onSetHierarchyMode("by_node")}
+            side="right"
           />
         </XStack>
       </View>
@@ -180,10 +182,12 @@ function HierarchyModeButton({
   active,
   label,
   onPress,
+  side,
 }: {
   active: boolean;
   label: string;
   onPress: () => void;
+  side: "left" | "right";
 }) {
   const theme = useTheme();
 
@@ -192,10 +196,11 @@ function HierarchyModeButton({
       accessibilityRole="button"
       onPress={onPress}
       style={{
-        backgroundColor: active ? theme.green10.val : "transparent",
-        borderRightColor: theme.borderColor.val,
-        borderRightWidth: 1,
+        backgroundColor: active ? theme.green10.val : theme.background.val,
+        borderLeftColor: side === "right" ? theme.green10.val : undefined,
+        borderLeftWidth: side === "right" ? 1 : 0,
         flex: 1,
+        minWidth: 0,
         paddingHorizontal: 12,
         paddingVertical: 10,
       }}
