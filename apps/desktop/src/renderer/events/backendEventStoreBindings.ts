@@ -775,13 +775,11 @@ export function createBackendEventStoreBindings(
       }) ?? (() => {});
     const unsubscribeWorkspaceCreateCompleted =
       resolvedDependencies.subscribeWorkspaceCreateCompleted?.((payload) => {
-        const wasApplied = resolvedDependencies.applyWorkspaceCreateCompletedEvent?.(payload) ?? true;
-        if (wasApplied) {
-          return;
-        }
+        resolvedDependencies.applyWorkspaceCreateCompletedEvent?.(payload);
 
-        // The completion payload does not include enough fields to safely rebuild
-        // a missing workspace row from scratch, so repair via an immediate reload.
+        // Always reload the snapshot after completion so the desktop picks up
+        // the authoritative API status (clears the provisioning spinner even
+        // when the daemon PATCH event was dropped or arrived late).
         void resolvedDependencies.loadWorkspaceSnapshot?.().catch((error) => {
           console.error(
             "[backendEventStoreBindings] Failed to refresh workspace snapshot after create completion",

@@ -759,7 +759,7 @@ describe("createBackendEventStoreBindings", () => {
     stopBindings();
   });
 
-  it("adds a placeholder row on create start, tracks progress, and finalizes on completion", async () => {
+  it("adds a placeholder row on create start, tracks progress, finalizes on completion, and reloads snapshot", async () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
@@ -832,7 +832,10 @@ describe("createBackendEventStoreBindings", () => {
         isComplete: true,
       }),
     );
-    expect(loadWorkspaceSnapshot).not.toHaveBeenCalled();
+    // Snapshot reload always fires on completion to pick up authoritative API
+    // status and clear the provisioning spinner (even if daemon PATCH event
+    // was dropped).
+    expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
 
     stopBindings();
   });

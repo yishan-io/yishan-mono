@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"yishan/apps/cli/internal/config"
+	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -312,5 +314,91 @@ func TestHandleWorkspaceCloseProject(t *testing.T) {
 	}
 	if result.Stopped[0] != "ws-a" || result.Stopped[1] != "ws-b" {
 		t.Errorf("unexpected stopped order: %v", result.Stopped)
+	}
+}
+
+// TestUpdatePreparedWorkspace_SnapshotFiredOnSuccess verifies that
+// updatePreparedWorkspace fires workspaceSnapshotChanged when the API PATCH
+// succeeds (runtime == nil short-circuits the HTTP call, returning no error).
+func TestUpdatePreparedWorkspace_SnapshotFiredOnSuccess(t *testing.T) {
+	h := newTestHandler(t)
+	subID, events := h.events.Subscribe()
+	defer h.events.Unsubscribe(subID)
+
+	prepared := preparedWorkspaceCreate{
+		workspaceID:    "ws-snap-1",
+		organizationID: "org-1",
+		projectID:      "proj-1",
+		registration: &WorkspaceCreation{
+			ID:             "ws-snap-1",
+			OrganizationID: "org-1",
+			ProjectID:      "proj-1",
+		},
+	}
+
+	// runtime == nil → updateWorkspace returns nil (no HTTP call) → snapshot fires.
+	warning := h.updatePreparedWorkspace(context.Background(), prepared, "/some/path")
+	if warning != "" {
+		t.Fatalf("expected empty warning with nil runtime, got %q", warning)
+	}
+
+	select {
+	case event := <-events:
+		if event.Topic != "workspaceSnapshotChanged" {
+			t.Fatalf("expected workspaceSnapshotChanged, got %q", event.Topic)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for workspaceSnapshotChanged event")
+	}
+}
+
+// TestUpdatePreparedWorkspace_SnapshotNotFiredOnAPIError verifies that
+// updatePreparedWorkspace does NOT fire workspaceSnapshotChanged when the
+// API PATCH fails — the outer executeWorktreeWorkspaceCreate is responsible
+// for firing the fallback snapshot in that case.
+func TestUpdatePreparedWorkspace_SnapshotNotFiredOnAPIError(t *testing.T) {
+	// Wire a runtime with an unreachable API URL so the PATCH will fail.
+	rt := cliruntime.New(&config.Config{
+		API: config.APIConfig{
+			BaseURL: "http://127.0.0.1:1", // port 1 is always refused
+			Token:   "test-token",
+		},
+	})
+
+	root := t.TempDir()
+	statePath := filepath.Join(root, "daemon.state.json")
+	indexStore, err := newWorkspaceIndexStore(statePath)
+	if err != nil {
+		t.Fatalf("newWorkspaceIndexStore: %v", err)
+	}
+	h := NewJSONRPCHandler(workspace.NewManager(), rt, "node-1", "", nil, indexStore, "", NewAppContextStore(""))
+	t.Cleanup(func() { h.Shutdown() })
+
+	subID, events := h.events.Subscribe()
+	defer h.events.Unsubscribe(subID)
+
+	prepared := preparedWorkspaceCreate{
+		workspaceID:    "ws-snap-2",
+		organizationID: "org-1",
+		projectID:      "proj-1",
+		registration: &WorkspaceCreation{
+			ID:             "ws-snap-2",
+			OrganizationID: "org-1",
+			ProjectID:      "proj-1",
+		},
+	}
+
+	warning := h.updatePreparedWorkspace(context.Background(), prepared, "/some/path")
+	if warning == "" {
+		t.Fatal("expected non-empty warning when API PATCH fails")
+	}
+
+	// The snapshot must NOT arrive from updatePreparedWorkspace itself —
+	// the outer executeWorktreeWorkspaceCreate fires it via the fallback guard.
+	select {
+	case event := <-events:
+		t.Fatalf("unexpected event from updatePreparedWorkspace on error: topic=%q", event.Topic)
+	case <-time.After(100 * time.Millisecond):
+		// correct: no event fired from within updatePreparedWorkspace
 	}
 }
