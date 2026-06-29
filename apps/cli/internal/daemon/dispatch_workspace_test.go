@@ -3,6 +3,8 @@ package daemon
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -337,9 +339,9 @@ func TestUpdatePreparedWorkspace_SnapshotFiredOnSuccess(t *testing.T) {
 	}
 
 	// runtime == nil → updateWorkspace returns nil (no HTTP call) → snapshot fires.
-	warning := h.updatePreparedWorkspace(context.Background(), prepared, "/some/path")
-	if warning != "" {
-		t.Fatalf("expected empty warning with nil runtime, got %q", warning)
+	err := h.updatePreparedWorkspace(context.Background(), prepared, "/some/path")
+	if err != nil {
+		t.Fatalf("expected nil error with nil runtime, got %v", err)
 	}
 
 	select {
@@ -388,9 +390,9 @@ func TestUpdatePreparedWorkspace_SnapshotNotFiredOnAPIError(t *testing.T) {
 		},
 	}
 
-	warning := h.updatePreparedWorkspace(context.Background(), prepared, "/some/path")
-	if warning == "" {
-		t.Fatal("expected non-empty warning when API PATCH fails")
+	err = h.updatePreparedWorkspace(context.Background(), prepared, "/some/path")
+	if err == nil {
+		t.Fatal("expected non-nil error when API PATCH fails")
 	}
 
 	// The snapshot must NOT arrive from updatePreparedWorkspace itself —
@@ -400,5 +402,100 @@ func TestUpdatePreparedWorkspace_SnapshotNotFiredOnAPIError(t *testing.T) {
 		t.Fatalf("unexpected event from updatePreparedWorkspace on error: topic=%q", event.Topic)
 	case <-time.After(100 * time.Millisecond):
 		// correct: no event fired from within updatePreparedWorkspace
+	}
+}
+
+func TestExecuteWorktreeWorkspaceCreate_RemoteSyncFailureRollsBackLocalWorkspace(t *testing.T) {
+	rt := cliruntime.New(&config.Config{
+		API: config.APIConfig{
+			BaseURL: "http://127.0.0.1:1",
+			Token:   "test-token",
+		},
+	})
+
+	root := t.TempDir()
+	statePath := filepath.Join(root, "daemon.state.json")
+	indexStore, err := newWorkspaceIndexStore(statePath)
+	if err != nil {
+		t.Fatalf("newWorkspaceIndexStore: %v", err)
+	}
+	h := NewJSONRPCHandler(workspace.NewManager(), rt, "node-1", filepath.Join(root, "daemon.log"), nil, indexStore, "", NewAppContextStore(""))
+	t.Cleanup(func() { h.Shutdown() })
+
+	srcDir := filepath.Join(root, "src-repo")
+	initDispatchWorkspaceTestGitRepoWithCommit(t, srcDir)
+	worktreePath, err := workspace.DefaultWorktreePath("test/repo", "feature-sync-fail")
+	if err != nil {
+		t.Fatalf("DefaultWorktreePath: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.RemoveAll(worktreePath)
+	})
+
+	prepared := preparedWorkspaceCreate{
+		workspaceID:    "ws-sync-fail",
+		organizationID: "org-1",
+		projectID:      "proj-1",
+		registration: &WorkspaceCreation{
+			ID:             "ws-sync-fail",
+			OrganizationID: "org-1",
+			ProjectID:      "proj-1",
+		},
+		localCreate: &workspace.CreateRequest{
+			ID:             "ws-sync-fail",
+			OrganizationID: "org-1",
+			ProjectID:      "proj-1",
+			RepoKey:        "test/repo",
+			WorkspaceName:  "feature-sync-fail",
+			SourcePath:     srcDir,
+			TargetBranch:   "feature-sync-fail",
+			SourceBranch:   "main",
+		},
+		isRelayed: true,
+	}
+
+	err = h.executeWorktreeWorkspaceCreate(context.Background(), prepared, nil)
+	if err == nil {
+		t.Fatal("expected remote sync failure")
+	}
+	if _, getErr := h.manager.GetWorkspace("ws-sync-fail"); getErr == nil {
+		t.Fatal("workspace still present in manager after rollback")
+	}
+	if _, statErr := os.Stat(worktreePath); !os.IsNotExist(statErr) {
+		t.Fatalf("worktree path still exists after rollback: stat err=%v", statErr)
+	}
+	entries, listErr := indexStore.List()
+	if listErr != nil {
+		t.Fatalf("index List: %v", listErr)
+	}
+	for _, entry := range entries {
+		if entry.WorkspaceID == "ws-sync-fail" {
+			t.Fatal("workspace still present in index store after rollback")
+		}
+	}
+}
+
+func initDispatchWorkspaceTestGitRepoWithCommit(t *testing.T, root string) {
+	t.Helper()
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatalf("mkdir repo root: %v", err)
+	}
+	runDispatchWorkspaceTestGitCmd(t, root, "init", "-b", "main")
+	runDispatchWorkspaceTestGitCmd(t, root, "config", "user.name", "Test")
+	runDispatchWorkspaceTestGitCmd(t, root, "config", "user.email", "test@example.com")
+	seedFile := filepath.Join(root, "seed.txt")
+	if err := os.WriteFile(seedFile, []byte("seed\n"), 0o644); err != nil {
+		t.Fatalf("write seed file: %v", err)
+	}
+	runDispatchWorkspaceTestGitCmd(t, root, "add", "seed.txt")
+	runDispatchWorkspaceTestGitCmd(t, root, "commit", "-m", "initial commit")
+}
+
+func runDispatchWorkspaceTestGitCmd(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, string(out))
 	}
 }

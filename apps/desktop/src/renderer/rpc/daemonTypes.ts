@@ -401,7 +401,6 @@ export type WorkspaceCreateResponse = {
   worktreePath: string;
   status: string;
   lifecycleScriptWarnings: unknown[];
-  remoteSyncWarning?: string;
 };
 
 export type WorkspaceCloseExecutionResponse = {

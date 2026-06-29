@@ -268,7 +268,7 @@ export class WorkspaceService {
           eq(workspaces.projectId, input.projectId),
           eq(workspaces.userId, input.actorUserId),
           eq(workspaces.id, input.workspaceId),
-          eq(workspaces.status, "active"),
+          inArray(workspaces.status, ["active", "provisioning"]),
         ),
       )
       .returning();

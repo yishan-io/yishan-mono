@@ -164,18 +164,13 @@ func (h *JSONRPCHandler) executeWorktreeWorkspaceCreate(ctx context.Context, pre
 	}
 	h.watchAndTrack(created.ID, created.Path)
 	h.upsertWorkspaceIndex(created)
-	remoteSyncWarning := h.updatePreparedWorkspace(ctx, prepared, created.Path)
-	// Always invalidate the snapshot after successful local provisioning so the
-	// desktop reloads regardless of whether the API PATCH above succeeded.
-	// updatePreparedWorkspace already fires this on PATCH success; firing it
-	// again here on PATCH failure ensures the desktop is never left on the
-	// provisioning placeholder when the PATCH fails silently.
-	if remoteSyncWarning != "" {
-		h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, prepared.workspaceID, "updated")
+	if err := h.updatePreparedWorkspace(ctx, prepared, created.Path); err != nil {
+		h.rollbackWorkspaceCreateFailure(ctx, prepared, created)
+		return err
 	}
 	warnings := buildWorkspaceHookWarnings(prepared.localCreate.SetupHook, created.SetupHookResult, h.logFilePath)
 	reportProgress(workspace.CreateProgressEvent{WorkspaceID: created.ID, StepID: "complete", Label: "Prepare workspace", Status: workspace.CreateProgressCompleted, CreatedAt: nowRFC3339Nano()})
-	h.publishWorkspaceCreateCompleted(prepared, created, warnings, remoteSyncWarning)
+	h.publishWorkspaceCreateCompleted(prepared, created, warnings)
 	return nil
 }
 
@@ -192,16 +187,85 @@ func (h *JSONRPCHandler) registerPreparedWorkspace(ctx context.Context, prepared
 	return nil
 }
 
-func (h *JSONRPCHandler) updatePreparedWorkspace(ctx context.Context, prepared preparedWorkspaceCreate, localPath string) string {
+func (h *JSONRPCHandler) updatePreparedWorkspace(ctx context.Context, prepared preparedWorkspaceCreate, localPath string) error {
 	if prepared.registration == nil {
-		return ""
+		return nil
 	}
 	if err := updateWorkspace(ctx, h.runtime, *prepared.registration, localPath); err != nil {
-		log.Warn().Err(err).Str("workspaceId", prepared.registration.ID).Msg("workspace API update failed after local provisioning; snapshot will still be invalidated")
-		return err.Error()
+		return err
 	}
 	h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, prepared.registration.ID, "updated")
-	return ""
+	return nil
+}
+
+func (h *JSONRPCHandler) rollbackWorkspaceCreateFailure(
+	ctx context.Context,
+	prepared preparedWorkspaceCreate,
+	created workspace.Workspace,
+) {
+	if prepared.registration != nil {
+		if err := closeRemoteWorkspace(ctx, h.runtime, WorkspaceClose{
+			WorkspaceID:    prepared.registration.ID,
+			OrganizationID: prepared.organizationID,
+			ProjectID:      prepared.projectID,
+		}); err != nil {
+			log.Warn().Err(err).Str("workspaceId", prepared.registration.ID).Msg("workspace API close failed after workspace create rollback")
+		}
+	}
+
+	closeReq := workspace.ClosePathRequest{
+		WorkspaceID:   created.ID,
+		Path:          created.Path,
+		Branch:        prepared.localCreate.TargetBranch,
+		RemoveBranch:  true,
+		ForceWorktree: true,
+		ForceBranch:   true,
+	}
+	h.cleanupLocalWorkspaceCreateFailure(ctx, closeReq)
+}
+
+func (h *JSONRPCHandler) cleanupLocalWorkspaceCreateFailure(ctx context.Context, closeReq workspace.ClosePathRequest) {
+	if strings.TrimSpace(closeReq.Path) == "" {
+		return
+	}
+
+	h.watchers.Unwatch(closeReq.Path)
+	h.prTracker.StopTracking(closeReq.WorkspaceID)
+
+	if h.cleanupStore != nil {
+		if err := h.cleanupStore.Add(pendingWorkspaceCleanup{
+			WorkspaceID:   closeReq.WorkspaceID,
+			Path:          closeReq.Path,
+			Branch:        closeReq.Branch,
+			RemoveBranch:  closeReq.RemoveBranch,
+			ForceWorktree: closeReq.ForceWorktree,
+			ForceBranch:   closeReq.ForceBranch,
+			PostHook:      closeReq.PostHook,
+		}); err != nil {
+			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to register workspace create rollback cleanup")
+		}
+	}
+
+	if _, err := h.manager.CloseWorkspacePath(ctx, closeReq); err != nil {
+		if h.cleanupStore != nil {
+			if markErr := h.cleanupStore.MarkFailure(closeReq.WorkspaceID, err); markErr != nil {
+				log.Warn().Err(markErr).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to mark workspace create rollback cleanup failure")
+			}
+		}
+		log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Str("path", closeReq.Path).Msg("workspace create rollback cleanup failed")
+	} else if h.cleanupStore != nil {
+		if err := h.cleanupStore.Remove(closeReq.WorkspaceID); err != nil {
+			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to remove completed workspace create rollback cleanup")
+		}
+	}
+
+	h.manager.RemoveWorkspaceFromMemory(closeReq.WorkspaceID)
+	if h.wsIndexStore != nil {
+		if err := h.wsIndexStore.Remove(closeReq.WorkspaceID); err != nil {
+			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to remove rolled back workspace from index store")
+		}
+	}
+	h.clearAgentUsage(closeReq.WorkspaceID)
 }
 
 func (h *JSONRPCHandler) publishWorkspaceSnapshotChanged(
@@ -232,8 +296,8 @@ func (h *JSONRPCHandler) upsertWorkspaceIndex(created workspace.Workspace) {
 	}
 }
 
-func (h *JSONRPCHandler) publishWorkspaceCreateCompleted(prepared preparedWorkspaceCreate, created workspace.Workspace, warnings []any, remoteSyncWarning string) {
-	completionPayload := map[string]any{"workspaceId": created.ID, "worktreePath": created.Path, "lifecycleScriptWarnings": warnings, "remoteSyncWarning": remoteSyncWarning}
+func (h *JSONRPCHandler) publishWorkspaceCreateCompleted(prepared preparedWorkspaceCreate, created workspace.Workspace, warnings []any) {
+	completionPayload := map[string]any{"workspaceId": created.ID, "worktreePath": created.Path, "lifecycleScriptWarnings": warnings}
 	h.maybeStartTaskRun(context.Background(), prepared, created, completionPayload)
 	h.events.Publish(frontendEvent{Topic: "workspaceCreateCompleted", Payload: completionPayload})
 	h.relayWorkspaceCreateCompleted(prepared, completionPayload)

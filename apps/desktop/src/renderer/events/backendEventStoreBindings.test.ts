@@ -693,10 +693,11 @@ describe("createBackendEventStoreBindings", () => {
     stopBindings();
   });
 
-  it("keeps the placeholder worktree path unchanged and triggers snapshot reload for a placeholder workspace", async () => {
+  it("marks the placeholder workspace active on completion and triggers snapshot reload", async () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
+    const createProgressHarness = createWorkspaceCreateProgressHarness();
     const createCompletedHarness = createWorkspaceCreateCompletedHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
@@ -731,6 +732,7 @@ describe("createBackendEventStoreBindings", () => {
       subscribeGitChanged: gitHarness.subscribeGitChanged,
       subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      subscribeWorkspaceCreateProgress: createProgressHarness.subscribeWorkspaceCreateProgress,
       subscribeWorkspaceCreateCompleted: createCompletedHarness.subscribeWorkspaceCreateCompleted,
       incrementFileTreeRefreshVersion,
       incrementGitRefreshVersion,
@@ -742,6 +744,13 @@ describe("createBackendEventStoreBindings", () => {
     });
 
     const stopBindings = startBindings();
+    createProgressHarness.emit({
+      workspaceId: "workspace-1",
+      stepId: "worktree",
+      label: "Fetch & create worktree",
+      status: "running",
+      createdAt: "2026-06-28T01:00:00.000Z",
+    });
     createCompletedHarness.emit({
       workspaceId: "workspace-1",
       worktreePath: "/tmp/repo/.worktrees/feature-a",
@@ -751,8 +760,8 @@ describe("createBackendEventStoreBindings", () => {
     expect(workspaceStore.getState().workspaces).toEqual([
       expect.objectContaining({
         id: "workspace-1",
-        worktreePath: "",
-        status: "provisioning",
+        worktreePath: "/tmp/repo/.worktrees/feature-a",
+        status: "active",
       }),
     ]);
     expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);

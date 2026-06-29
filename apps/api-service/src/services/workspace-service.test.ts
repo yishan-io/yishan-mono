@@ -345,6 +345,12 @@ describe("WorkspaceService.closeWorkspace", () => {
     kind: "worktree" as const,
     status: "closed" as const,
   };
+  const WORKTREE_PROVISIONING_ROW = {
+    ...WORKSPACE_ROW,
+    kind: "worktree" as const,
+    status: "provisioning" as const,
+    localPath: "",
+  };
 
   function makeCloseDb(
     options: {
@@ -416,6 +422,25 @@ describe("WorkspaceService.closeWorkspace", () => {
   it("returns changed true when active workspace is newly closed", async () => {
     const { db, updateWhere } = makeCloseDb({
       existingRows: [WORKTREE_ACTIVE_ROW],
+      updatedRows: [WORKTREE_CLOSED_ROW],
+    });
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.closeWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+    });
+
+    expect(result.changed).toBe(true);
+    expect(result.workspace.status).toBe("closed");
+    expect(updateWhere).toHaveBeenCalledOnce();
+  });
+
+  it("returns changed true when provisioning workspace is rolled back and closed", async () => {
+    const { db, updateWhere } = makeCloseDb({
+      existingRows: [WORKTREE_PROVISIONING_ROW],
       updatedRows: [WORKTREE_CLOSED_ROW],
     });
     const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);

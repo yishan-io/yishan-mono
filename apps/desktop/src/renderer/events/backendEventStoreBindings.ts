@@ -287,7 +287,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
         branch: existing.branch,
         worktreePath: payload.worktreePath,
         nodeId: existing.nodeId,
-        status: existing.status,
+        status: "active",
       });
     }
     workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(payload.workspaceId);
