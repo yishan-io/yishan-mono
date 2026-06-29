@@ -51,6 +51,7 @@ export type ApiNamespace =
   | "git"
   | "terminal"
   | "chat"
+  | "pi"
   | "agent"
   | "cliTools"
   | "integration"
