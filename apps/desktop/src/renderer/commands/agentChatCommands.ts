@@ -228,7 +228,15 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
 // ─── Streaming helpers ───────────────────────────────────────────────────────
 
 function applyStreamDelta(message: AgentMessage, delta: AgentStreamEvent): void {
-  const content = Array.isArray(message.content) ? message.content : [];
+  const content: AgentContentBlock[] = Array.isArray(message.content) ? [...message.content] : [];
+
+  // Ensure the content array has enough slots for contentIndex-based deltas.
+  const ensureIndex = (idx: number, block: AgentContentBlock): void => {
+    while (content.length <= idx) {
+      content.push({ type: "text", text: "" });
+    }
+    content[idx] = block;
+  };
 
   switch (delta.type) {
     case "text_start":
@@ -239,6 +247,9 @@ function applyStreamDelta(message: AgentMessage, delta: AgentStreamEvent): void 
       const block = content[delta.contentIndex];
       if (block && block.type === "text") {
         block.text += delta.delta;
+      } else {
+        // Block doesn't exist yet — some providers skip text_start.
+        ensureIndex(delta.contentIndex, { type: "text", text: delta.delta });
       }
       break;
     }
@@ -251,6 +262,8 @@ function applyStreamDelta(message: AgentMessage, delta: AgentStreamEvent): void 
       const block = content[delta.contentIndex];
       if (block && block.type === "thinking") {
         block.thinking += delta.delta;
+      } else {
+        ensureIndex(delta.contentIndex, { type: "thinking", thinking: delta.delta });
       }
       break;
     }
