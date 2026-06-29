@@ -37,7 +37,7 @@ type AgentChatStoreState = {
 function emptySession(sessionId: string): AgentSessionData {
   return {
     sessionId,
-    state: "starting",
+    state: "idle",
     messages: [],
     streamingMessage: null,
     availableModels: [],
