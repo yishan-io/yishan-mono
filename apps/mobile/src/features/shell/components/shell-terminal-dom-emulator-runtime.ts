@@ -18,17 +18,11 @@ type TerminalTouchScrollRuntime = Pick<TerminalWriteRuntime, "blur" | "focus" | 
 type TerminalFocusRuntime = Pick<TerminalWriteRuntime, "focus">;
 
 type GestureScrollMode = "fallback_active" | "native_active" | "native_pending";
+type GestureInputSource = "pointer" | "touch" | null;
 
 const FALLBACK_ACTIVATION_PIXELS = 24;
-const INERTIA_FRICTION_PER_MS = 0.992;
-const MAX_INERTIA_FRAME_MS = 32;
-const MIN_INERTIA_VELOCITY_PX_PER_MS = 0.02;
 const MIN_TERMINAL_TOUCH_SCROLL_PIXELS = 2;
 const TAP_MAX_MOVEMENT_PX = 8;
-
-function readEventTimestamp(event: Event) {
-  return Number.isFinite(event.timeStamp) ? event.timeStamp : Date.now();
-}
 
 /**
  * Appends a terminal output chunk to the active xterm instance.
@@ -225,14 +219,12 @@ export function attachTerminalTouchScrollFallback(
   let blockedMoveCount = 0;
   let gestureScrollMode: GestureScrollMode = "native_pending";
   let fallbackPendingPixels = 0;
-  let fallbackVelocityPxPerMs = 0;
-  let inertiaFrameId: number | null = null;
-  let lastGestureTimestamp = 0;
   let pixelCarry = 0;
   let viewport: HTMLElement | null = null;
   let rebindFrameId: number | null = null;
   let gestureTravelPixels = 0;
   let activePointerId: number | null = null;
+  let activeGestureSource: GestureInputSource = null;
   const attachedTargets = new Set<HTMLElement>();
   let lastViewportScrollTop = 0;
 
@@ -243,14 +235,6 @@ export function attachTerminalTouchScrollFallback(
       return hostHeight / rows;
     }
     return defaultLineHeight;
-  };
-
-  const cancelInertia = () => {
-    if (inertiaFrameId !== null && typeof cancelAnimationFrame === "function") {
-      cancelAnimationFrame(inertiaFrameId);
-    }
-    inertiaFrameId = null;
-    fallbackVelocityPxPerMs = 0;
   };
 
   const applyLineScrollFallback = (deltaPixels: number) => {
@@ -310,43 +294,6 @@ export function attachTerminalTouchScrollFallback(
     return applyLineScrollFallback(deltaPixels);
   };
 
-  const startInertia = () => {
-    const initialVelocityPxPerMs = fallbackVelocityPxPerMs;
-    if (
-      typeof requestAnimationFrame !== "function" ||
-      Math.abs(initialVelocityPxPerMs) < MIN_INERTIA_VELOCITY_PX_PER_MS
-    ) {
-      fallbackVelocityPxPerMs = 0;
-      return;
-    }
-
-    let previousTimestamp = lastGestureTimestamp || Date.now();
-
-    const step = (timestamp: number) => {
-      const deltaMs = Math.min(MAX_INERTIA_FRAME_MS, Math.max(1, timestamp - previousTimestamp));
-      previousTimestamp = timestamp;
-      if (!applyFallbackScroll(fallbackVelocityPxPerMs * deltaMs)) {
-        inertiaFrameId = null;
-        fallbackVelocityPxPerMs = 0;
-        pixelCarry = 0;
-        return;
-      }
-      fallbackVelocityPxPerMs *= INERTIA_FRICTION_PER_MS ** deltaMs;
-
-      if (Math.abs(fallbackVelocityPxPerMs) < MIN_INERTIA_VELOCITY_PX_PER_MS) {
-        inertiaFrameId = null;
-        fallbackVelocityPxPerMs = 0;
-        return;
-      }
-
-      inertiaFrameId = requestAnimationFrame(step);
-    };
-
-    cancelInertia();
-    fallbackVelocityPxPerMs = initialVelocityPxPerMs;
-    inertiaFrameId = requestAnimationFrame(step);
-  };
-
   const resetGesture = () => {
     blockedMoveCount = 0;
     lastY = null;
@@ -355,7 +302,17 @@ export function attachTerminalTouchScrollFallback(
     pixelCarry = 0;
     gestureTravelPixels = 0;
     activePointerId = null;
+    activeGestureSource = null;
     lastViewportScrollTop = viewport?.scrollTop ?? 0;
+  };
+
+  const releaseFallbackOwnership = () => {
+    blockedMoveCount = 0;
+    fallbackPendingPixels = 0;
+    pixelCarry = 0;
+    if (gestureScrollMode === "fallback_active") {
+      gestureScrollMode = "native_pending";
+    }
   };
 
   const finishGesture = () => {
@@ -364,7 +321,6 @@ export function attachTerminalTouchScrollFallback(
     }
 
     const shouldHandleTap = gestureScrollMode !== "fallback_active" && gestureTravelPixels <= TAP_MAX_MOVEMENT_PX;
-    const shouldStartInertia = gestureScrollMode === "fallback_active";
     if (shouldHandleTap) {
       const inputSessionActive = hasActiveTerminalInputSession(host);
       if (onTapInputSession) {
@@ -374,16 +330,42 @@ export function attachTerminalTouchScrollFallback(
       }
     }
     resetGesture();
-    if (shouldStartInertia) {
-      startInertia();
-    } else {
-      cancelInertia();
-    }
   };
 
   const cancelGesture = () => {
     resetGesture();
-    cancelInertia();
+  };
+
+  const handleTouchGestureFinish = () => {
+    if (activeGestureSource !== "touch") {
+      return;
+    }
+
+    finishGesture();
+  };
+
+  const handleTouchGestureCancel = () => {
+    if (activeGestureSource !== "touch") {
+      return;
+    }
+
+    cancelGesture();
+  };
+
+  const handlePointerGestureFinish = (event: PointerEvent) => {
+    if (event.pointerType !== "touch" || activeGestureSource !== "pointer" || activePointerId !== event.pointerId) {
+      return;
+    }
+
+    finishGesture();
+  };
+
+  const handlePointerGestureCancel = (event: PointerEvent) => {
+    if (event.pointerType !== "touch" || activeGestureSource !== "pointer" || activePointerId !== event.pointerId) {
+      return;
+    }
+
+    cancelGesture();
   };
 
   const getTouchTargets = () => {
@@ -427,19 +409,18 @@ export function attachTerminalTouchScrollFallback(
     }
 
     viewport ??= host.querySelector<HTMLElement>(".xterm-viewport");
-    cancelInertia();
     blockedMoveCount = 0;
     lastY = nextY;
     gestureScrollMode = "native_pending";
     fallbackPendingPixels = 0;
-    fallbackVelocityPxPerMs = 0;
     pixelCarry = 0;
-    lastGestureTimestamp = readEventTimestamp(event);
+    activePointerId = null;
+    activeGestureSource = "touch";
     lastViewportScrollTop = viewport?.scrollTop ?? 0;
   };
 
   const handleTouchMove = (event: TouchEvent) => {
-    if (event.touches.length !== 1 || lastY === null) {
+    if (activeGestureSource !== "touch" || event.touches.length !== 1 || lastY === null) {
       return;
     }
 
@@ -448,12 +429,17 @@ export function attachTerminalTouchScrollFallback(
       return;
     }
 
-    const timestamp = readEventTimestamp(event);
     const deltaY = nextY - lastY;
     lastY = nextY;
     gestureTravelPixels += Math.abs(deltaY);
 
     if (noteNativeScrollProgress()) {
+      return;
+    }
+
+    if (viewport && isViewportBlockedAtEdge(viewport, -deltaY)) {
+      releaseFallbackOwnership();
+      event.preventDefault();
       return;
     }
 
@@ -471,11 +457,9 @@ export function attachTerminalTouchScrollFallback(
     }
 
     gestureScrollMode = "fallback_active";
-    const deltaMs = Math.max(1, timestamp - lastGestureTimestamp);
-    lastGestureTimestamp = timestamp;
-    fallbackVelocityPxPerMs = fallbackVelocityPxPerMs * 0.35 + (-deltaY / deltaMs) * 0.65;
 
     if (!applyFallbackScroll(-deltaY)) {
+      releaseFallbackOwnership();
       event.preventDefault();
       return;
     }
@@ -487,16 +471,18 @@ export function attachTerminalTouchScrollFallback(
       return;
     }
 
+    if (activeGestureSource === "touch") {
+      return;
+    }
+
     viewport ??= host.querySelector<HTMLElement>(".xterm-viewport");
     activePointerId = event.pointerId;
-    cancelInertia();
+    activeGestureSource = "pointer";
     blockedMoveCount = 0;
     lastY = event.clientY;
     gestureScrollMode = "native_pending";
     fallbackPendingPixels = 0;
-    fallbackVelocityPxPerMs = 0;
     pixelCarry = 0;
-    lastGestureTimestamp = readEventTimestamp(event);
     lastViewportScrollTop = viewport?.scrollTop ?? 0;
   };
 
@@ -507,16 +493,26 @@ export function attachTerminalTouchScrollFallback(
   };
 
   const handlePointerMove = (event: PointerEvent) => {
-    if (event.pointerType !== "touch" || activePointerId !== event.pointerId || lastY === null) {
+    if (
+      activeGestureSource !== "pointer" ||
+      event.pointerType !== "touch" ||
+      activePointerId !== event.pointerId ||
+      lastY === null
+    ) {
       return;
     }
 
-    const timestamp = readEventTimestamp(event);
     const deltaY = event.clientY - lastY;
     lastY = event.clientY;
     gestureTravelPixels += Math.abs(deltaY);
 
     if (noteNativeScrollProgress()) {
+      return;
+    }
+
+    if (viewport && isViewportBlockedAtEdge(viewport, -deltaY)) {
+      releaseFallbackOwnership();
+      event.preventDefault();
       return;
     }
 
@@ -534,11 +530,9 @@ export function attachTerminalTouchScrollFallback(
     }
 
     gestureScrollMode = "fallback_active";
-    const deltaMs = Math.max(1, timestamp - lastGestureTimestamp);
-    lastGestureTimestamp = timestamp;
-    fallbackVelocityPxPerMs = fallbackVelocityPxPerMs * 0.35 + (-deltaY / deltaMs) * 0.65;
 
     if (!applyFallbackScroll(-deltaY)) {
+      releaseFallbackOwnership();
       event.preventDefault();
       return;
     }
@@ -552,12 +546,12 @@ export function attachTerminalTouchScrollFallback(
 
     target.addEventListener("touchstart", handleTouchStart, { capture: true, passive: true });
     target.addEventListener("touchmove", handleTouchMove, { capture: true, passive: false });
-    target.addEventListener("touchend", finishGesture, true);
-    target.addEventListener("touchcancel", cancelGesture, true);
+    target.addEventListener("touchend", handleTouchGestureFinish, true);
+    target.addEventListener("touchcancel", handleTouchGestureCancel, true);
     target.addEventListener("pointerdown", handlePointerDown, { capture: true, passive: true });
     target.addEventListener("pointermove", handlePointerMove, { capture: true, passive: false });
-    target.addEventListener("pointerup", finishGesture, true);
-    target.addEventListener("pointercancel", cancelGesture, true);
+    target.addEventListener("pointerup", handlePointerGestureFinish, true);
+    target.addEventListener("pointercancel", handlePointerGestureCancel, true);
     target.addEventListener("mousedown", handleMouseDown, true);
     attachedTargets.add(target);
   };
@@ -569,12 +563,12 @@ export function attachTerminalTouchScrollFallback(
 
     target.removeEventListener("touchstart", handleTouchStart, true);
     target.removeEventListener("touchmove", handleTouchMove, true);
-    target.removeEventListener("touchend", finishGesture, true);
-    target.removeEventListener("touchcancel", cancelGesture, true);
+    target.removeEventListener("touchend", handleTouchGestureFinish, true);
+    target.removeEventListener("touchcancel", handleTouchGestureCancel, true);
     target.removeEventListener("pointerdown", handlePointerDown, true);
     target.removeEventListener("pointermove", handlePointerMove, true);
-    target.removeEventListener("pointerup", finishGesture, true);
-    target.removeEventListener("pointercancel", cancelGesture, true);
+    target.removeEventListener("pointerup", handlePointerGestureFinish, true);
+    target.removeEventListener("pointercancel", handlePointerGestureCancel, true);
     target.removeEventListener("mousedown", handleMouseDown, true);
     attachedTargets.delete(target);
   };
@@ -591,16 +585,16 @@ export function attachTerminalTouchScrollFallback(
       return () => {};
     }
 
-    window.addEventListener("touchend", finishGesture, true);
-    window.addEventListener("touchcancel", cancelGesture, true);
-    window.addEventListener("pointerup", finishGesture, true);
-    window.addEventListener("pointercancel", cancelGesture, true);
+    window.addEventListener("touchend", handleTouchGestureFinish, true);
+    window.addEventListener("touchcancel", handleTouchGestureCancel, true);
+    window.addEventListener("pointerup", handlePointerGestureFinish, true);
+    window.addEventListener("pointercancel", handlePointerGestureCancel, true);
 
     return () => {
-      window.removeEventListener("touchend", finishGesture, true);
-      window.removeEventListener("touchcancel", cancelGesture, true);
-      window.removeEventListener("pointerup", finishGesture, true);
-      window.removeEventListener("pointercancel", cancelGesture, true);
+      window.removeEventListener("touchend", handleTouchGestureFinish, true);
+      window.removeEventListener("touchcancel", handleTouchGestureCancel, true);
+      window.removeEventListener("pointerup", handlePointerGestureFinish, true);
+      window.removeEventListener("pointercancel", handlePointerGestureCancel, true);
     };
   };
 
@@ -624,6 +618,5 @@ export function attachTerminalTouchScrollFallback(
     }
 
     detachGlobalListeners();
-    cancelInertia();
   };
 }

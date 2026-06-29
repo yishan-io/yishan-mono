@@ -46,10 +46,11 @@ describe("shell-terminal-surface-domain", () => {
 
   it("returns dom props only when the emulator is enabled", () => {
     expect(buildTerminalDomProps(false)).toBeUndefined();
-    expect(buildTerminalDomProps(true)).toMatchObject({
+    expect(buildTerminalDomProps(true)).toEqual({
       bounces: false,
-      directionalLockEnabled: true,
-      scrollEnabled: true,
+      hideKeyboardAccessoryView: true,
+      keyboardDisplayRequiresUserAction: false,
+      overScrollMode: "never",
       style: { flex: 1, minHeight: 0 },
     });
   });

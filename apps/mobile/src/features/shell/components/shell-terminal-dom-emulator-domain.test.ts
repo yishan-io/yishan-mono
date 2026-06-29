@@ -45,6 +45,6 @@ describe("shell-terminal-dom-emulator-domain", () => {
     expect(css).toContain("scrollbar-width: none");
     expect(css).toContain("display: none");
     expect(css).toContain("touch-action: pan-y");
-    expect(css).not.toContain("touch-action: none");
+    expect(css).toContain("overscroll-behavior-y: contain");
   });
 });
