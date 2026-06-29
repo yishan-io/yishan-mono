@@ -20,6 +20,7 @@ const bridge: DesktopBridge = {
     playNotificationSound: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.playNotificationSound, input),
     requestMicrophoneAccess: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.requestMicrophoneAccess),
     getPendingUpdate: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getPendingUpdate),
+    dismissUpdate: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.dismissUpdate),
     checkForUpdates: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.checkForUpdates),
     downloadUpdate: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.downloadUpdate),
     installUpdate: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.installUpdate),

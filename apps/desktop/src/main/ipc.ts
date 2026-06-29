@@ -167,6 +167,7 @@ export type DesktopHostBridge = {
   playNotificationSound: (input: PlayNotificationSoundInput) => Promise<NotificationSoundPreviewResult>;
   requestMicrophoneAccess: () => Promise<{ granted: boolean }>;
   getPendingUpdate: () => Promise<DesktopUpdateEventPayload | null>;
+  dismissUpdate: () => Promise<{ ok: true }>;
   checkForUpdates: () => Promise<{ ok: true }>;
   downloadUpdate: () => Promise<{ ok: true } | { ok: false; error: string }>;
   installUpdate: () => Promise<{ ok: true }>;
@@ -213,6 +214,7 @@ export const HOST_IPC_CHANNELS = {
   playNotificationSound: "desktop:host/play-notification-sound",
   requestMicrophoneAccess: "desktop:host/request-microphone-access",
   getPendingUpdate: "desktop:host/get-pending-update",
+  dismissUpdate: "desktop:host/dismiss-update",
   checkForUpdates: "desktop:host/check-for-updates",
   downloadUpdate: "desktop:host/download-update",
   installUpdate: "desktop:host/install-update",
