@@ -165,6 +165,14 @@ func (h *JSONRPCHandler) executeWorktreeWorkspaceCreate(ctx context.Context, pre
 	h.watchAndTrack(created.ID, created.Path)
 	h.upsertWorkspaceIndex(created)
 	remoteSyncWarning := h.updatePreparedWorkspace(ctx, prepared, created.Path)
+	// Always invalidate the snapshot after successful local provisioning so the
+	// desktop reloads regardless of whether the API PATCH above succeeded.
+	// updatePreparedWorkspace already fires this on PATCH success; firing it
+	// again here on PATCH failure ensures the desktop is never left on the
+	// provisioning placeholder when the PATCH fails silently.
+	if remoteSyncWarning != "" {
+		h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, prepared.workspaceID, "updated")
+	}
 	warnings := buildWorkspaceHookWarnings(prepared.localCreate.SetupHook, created.SetupHookResult, h.logFilePath)
 	reportProgress(workspace.CreateProgressEvent{WorkspaceID: created.ID, StepID: "complete", Label: "Prepare workspace", Status: workspace.CreateProgressCompleted, CreatedAt: nowRFC3339Nano()})
 	h.publishWorkspaceCreateCompleted(prepared, created, warnings, remoteSyncWarning)
@@ -189,6 +197,7 @@ func (h *JSONRPCHandler) updatePreparedWorkspace(ctx context.Context, prepared p
 		return ""
 	}
 	if err := updateWorkspace(ctx, h.runtime, *prepared.registration, localPath); err != nil {
+		log.Warn().Err(err).Str("workspaceId", prepared.registration.ID).Msg("workspace API update failed after local provisioning; snapshot will still be invalidated")
 		return err.Error()
 	}
 	h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, prepared.registration.ID, "updated")
