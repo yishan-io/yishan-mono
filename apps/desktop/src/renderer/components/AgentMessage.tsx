@@ -39,6 +39,11 @@ export function AgentMessage({ message }: AgentMessageProps) {
         </Typography>
       )}
 
+      {isAssistant && blocks.length === 0 && (
+        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
+          thinking…
+        </Typography>
+      )}
       {isAssistant &&
         blocks.map((block, i) => {
           switch (block.type) {
