@@ -145,7 +145,12 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     case "message_start": {
       const msg = event.message as AgentMessage | undefined;
       if (msg && msg.role === "assistant") {
-        store.updateStreamingMessage(tabId, { ...msg, id: msg.id ?? generateId() });
+        // Start with a fresh content array for streaming accumulation.
+        store.updateStreamingMessage(tabId, {
+          ...msg,
+          id: msg.id ?? generateId(),
+          content: [],
+        });
       }
       break;
     }
@@ -156,15 +161,26 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       const streaming = store.sessionsByTabId[tabId]?.streamingMessage;
       if (!streaming) break;
       applyStreamDelta(streaming, delta);
-      store.updateStreamingMessage(tabId, { ...streaming });
+      // New content array so React detects the change.
+      store.updateStreamingMessage(tabId, {
+        ...streaming,
+        content: Array.isArray(streaming.content) ? [...streaming.content] : [],
+      });
       break;
     }
 
     case "message_end": {
       const msg = event.message as AgentMessage | undefined;
-      if (msg) {
+      if (!msg) break;
+      if (msg.role === "assistant") {
+        // Streaming message was built up from deltas; move it to messages.
         store.finalizeStreamingMessage(tabId);
-        store.appendMessage(tabId, msg);
+      } else {
+        // User and toolResult messages arrive complete.
+        store.appendMessage(tabId, {
+          ...msg,
+          id: msg.id ?? generateId(),
+        });
       }
       break;
     }
