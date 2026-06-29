@@ -3,6 +3,7 @@ import {
   copyFile as copyFileAsync,
   cp as cpAsync,
   mkdir as mkdirAsync,
+  realpath as realpathAsync,
   stat as statAsync,
   writeFile as writeFileAsync,
 } from "node:fs/promises";
@@ -50,6 +51,19 @@ export function registerFileIpcHandlers() {
 
   ipcMain.handle(HOST_IPC_CHANNELS.readExternalClipboardSourcePaths, async () => {
     return await readExternalClipboardSourcePathsFromSystem();
+  });
+
+  ipcMain.handle(HOST_IPC_CHANNELS.resolveRealPath, async (_event, input: string) => {
+    const path = String(input ?? "").trim();
+    if (!path) {
+      return { path: "" };
+    }
+
+    try {
+      return { path: await realpathAsync(path) };
+    } catch {
+      return { path };
+    }
   });
 
   ipcMain.handle(HOST_IPC_CHANNELS.writeClipboardText, (_event, text: string) => {

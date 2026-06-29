@@ -4,9 +4,11 @@ import {
   __resetExplicitlyClosedTerminalTabIdsForTests,
   recordExplicitlyClosedTerminalTabId,
 } from "../helpers/terminalCloseTombstones";
+import { chatStore } from "../store/chatStore";
 import { tabStore } from "../store/tabStore";
+import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../store/workspaceStore";
-import { createBackendEventStoreBindings } from "./backendEventStoreBindings";
+import { clearTerminalAgentStatus, createBackendEventStoreBindings } from "./backendEventStoreBindings";
 
 /**
  * Creates one in-memory git.changed subscription harness.
@@ -193,6 +195,50 @@ function createWorkspaceCreateCompletedHarness() {
   };
 }
 
+function createWorkspaceCreateStartedHarness() {
+  let listener: ((payload: RpcFrontendMessagePayload<"workspaceCreateStarted">) => void) | null = null;
+  const unsubscribe = vi.fn();
+  const subscribeWorkspaceCreateStarted = vi.fn(
+    (nextListener: (payload: RpcFrontendMessagePayload<"workspaceCreateStarted">) => void) => {
+      listener = nextListener;
+      return () => {
+        unsubscribe();
+        listener = null;
+      };
+    },
+  );
+
+  return {
+    subscribeWorkspaceCreateStarted,
+    unsubscribe,
+    emit(payload: RpcFrontendMessagePayload<"workspaceCreateStarted">) {
+      listener?.(payload);
+    },
+  };
+}
+
+function createWorkspaceCreateProgressHarness() {
+  let listener: ((payload: RpcFrontendMessagePayload<"workspaceCreateProgress">) => void) | null = null;
+  const unsubscribe = vi.fn();
+  const subscribeWorkspaceCreateProgress = vi.fn(
+    (nextListener: (payload: RpcFrontendMessagePayload<"workspaceCreateProgress">) => void) => {
+      listener = nextListener;
+      return () => {
+        unsubscribe();
+        listener = null;
+      };
+    },
+  );
+
+  return {
+    subscribeWorkspaceCreateProgress,
+    unsubscribe,
+    emit(payload: RpcFrontendMessagePayload<"workspaceCreateProgress">) {
+      listener?.(payload);
+    },
+  };
+}
+
 function createTerminalSessionChangedHarness() {
   let listener: ((payload: RpcFrontendMessagePayload<"terminalSessionChanged">) => void) | null = null;
   const unsubscribe = vi.fn();
@@ -217,17 +263,20 @@ function createTerminalSessionChangedHarness() {
 
 const initialTabStoreState = tabStore.getState();
 const initialWorkspaceStoreState = workspaceStore.getState();
+const initialWorkspaceCreateProgressStoreState = workspaceCreateProgressStore.getState();
 
 describe("createBackendEventStoreBindings", () => {
   beforeEach(() => {
     tabStore.setState(initialTabStoreState, true);
     workspaceStore.setState(initialWorkspaceStoreState, true);
+    workspaceCreateProgressStore.setState(initialWorkspaceCreateProgressStoreState, true);
     __resetExplicitlyClosedTerminalTabIdsForTests();
   });
 
   afterEach(() => {
     tabStore.setState(initialTabStoreState, true);
     workspaceStore.setState(initialWorkspaceStoreState, true);
+    workspaceCreateProgressStore.setState(initialWorkspaceCreateProgressStoreState, true);
     __resetExplicitlyClosedTerminalTabIdsForTests();
   });
 
@@ -545,6 +594,67 @@ describe("createBackendEventStoreBindings", () => {
     }
   });
 
+  it("runs a follow-up workspace snapshot refresh when another invalidation arrives before the first refresh runs", async () => {
+    vi.useFakeTimers();
+    try {
+      const gitHarness = createGitChangedHarness();
+      const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+      const inAppNotificationHarness = createInAppNotificationHarness();
+      const snapshotHarness = createWorkspaceSnapshotChangedHarness();
+      const incrementFileTreeRefreshVersion = vi.fn();
+      const incrementGitRefreshVersion = vi.fn();
+      const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+      const recordWorkspaceUnreadNotification = vi.fn();
+      const dispatchSystemNotification = vi.fn(async () => undefined);
+      const playNotificationSound = vi.fn(async () => undefined);
+      const loadWorkspaceSnapshot = vi.fn(async () => undefined);
+
+      const startBindings = createBackendEventStoreBindings({
+        subscribeGitChanged: gitHarness.subscribeGitChanged,
+        subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+        subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+        subscribeWorkspaceSnapshotChanged: snapshotHarness.subscribeWorkspaceSnapshotChanged,
+        incrementFileTreeRefreshVersion,
+        incrementGitRefreshVersion,
+        setWorkspaceAgentStatusByWorkspaceId,
+        recordWorkspaceUnreadNotification,
+        dispatchSystemNotification,
+        playNotificationSound,
+        loadWorkspaceSnapshot,
+        getSelectedOrganizationId: () => "org-1",
+      });
+
+      const stopBindings = startBindings();
+      snapshotHarness.emit({
+        organizationId: "org-1",
+        resource: "workspace",
+        change: "created",
+        projectId: "project-1",
+        workspaceId: "workspace-1",
+      });
+      snapshotHarness.emit({
+        organizationId: "org-1",
+        resource: "workspace",
+        change: "updated",
+        projectId: "project-1",
+        workspaceId: "workspace-1",
+      });
+
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(2);
+      stopBindings();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("refreshes workspace snapshot when create completion arrives before the placeholder exists", async () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
@@ -583,10 +693,11 @@ describe("createBackendEventStoreBindings", () => {
     stopBindings();
   });
 
-  it("updates the placeholder workspace on create completion without forcing a snapshot reload", async () => {
+  it("marks the placeholder workspace active on completion and triggers snapshot reload", async () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
     const inAppNotificationHarness = createInAppNotificationHarness();
+    const createProgressHarness = createWorkspaceCreateProgressHarness();
     const createCompletedHarness = createWorkspaceCreateCompletedHarness();
     const incrementFileTreeRefreshVersion = vi.fn();
     const incrementGitRefreshVersion = vi.fn();
@@ -612,6 +723,7 @@ describe("createBackendEventStoreBindings", () => {
           worktreePath: "",
           nodeId: "node-1",
           kind: "managed",
+          status: "provisioning",
         },
       ],
     }));
@@ -620,6 +732,7 @@ describe("createBackendEventStoreBindings", () => {
       subscribeGitChanged: gitHarness.subscribeGitChanged,
       subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
       subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      subscribeWorkspaceCreateProgress: createProgressHarness.subscribeWorkspaceCreateProgress,
       subscribeWorkspaceCreateCompleted: createCompletedHarness.subscribeWorkspaceCreateCompleted,
       incrementFileTreeRefreshVersion,
       incrementGitRefreshVersion,
@@ -631,6 +744,13 @@ describe("createBackendEventStoreBindings", () => {
     });
 
     const stopBindings = startBindings();
+    createProgressHarness.emit({
+      workspaceId: "workspace-1",
+      stepId: "worktree",
+      label: "Fetch & create worktree",
+      status: "running",
+      createdAt: "2026-06-28T01:00:00.000Z",
+    });
     createCompletedHarness.emit({
       workspaceId: "workspace-1",
       worktreePath: "/tmp/repo/.worktrees/feature-a",
@@ -641,9 +761,91 @@ describe("createBackendEventStoreBindings", () => {
       expect.objectContaining({
         id: "workspace-1",
         worktreePath: "/tmp/repo/.worktrees/feature-a",
+        status: "active",
       }),
     ]);
-    expect(loadWorkspaceSnapshot).not.toHaveBeenCalled();
+    expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+    stopBindings();
+  });
+
+  it("adds a placeholder row on create start, tracks progress, finalizes on completion, and reloads snapshot", async () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const createStartedHarness = createWorkspaceCreateStartedHarness();
+    const createProgressHarness = createWorkspaceCreateProgressHarness();
+    const createCompletedHarness = createWorkspaceCreateCompletedHarness();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+    const loadWorkspaceSnapshot = vi.fn(async () => undefined);
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      subscribeWorkspaceCreateStarted: createStartedHarness.subscribeWorkspaceCreateStarted,
+      subscribeWorkspaceCreateProgress: createProgressHarness.subscribeWorkspaceCreateProgress,
+      subscribeWorkspaceCreateCompleted: createCompletedHarness.subscribeWorkspaceCreateCompleted,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+      loadWorkspaceSnapshot,
+    });
+
+    const stopBindings = startBindings();
+    createStartedHarness.emit({
+      workspaceId: "workspace-1",
+      organizationId: "org-1",
+      projectId: "project-1",
+      workspaceName: "feature-a",
+      sourceBranch: "main",
+      branch: "feature-a",
+      nodeId: "node-1",
+    });
+    createProgressHarness.emit({
+      workspaceId: "workspace-1",
+      stepId: "worktree",
+      label: "Fetch & create worktree",
+      status: "running",
+      createdAt: "2026-06-28T01:00:00.000Z",
+    });
+    createCompletedHarness.emit({
+      workspaceId: "workspace-1",
+      worktreePath: "/tmp/repo/.worktrees/feature-a",
+    });
+    await Promise.resolve();
+
+    expect(workspaceStore.getState().workspaces).toEqual([
+      expect.objectContaining({
+        id: "workspace-1",
+        organizationId: "org-1",
+        projectId: "project-1",
+        repoId: "project-1",
+        name: "feature-a",
+        sourceBranch: "main",
+        branch: "feature-a",
+        worktreePath: "/tmp/repo/.worktrees/feature-a",
+        nodeId: "node-1",
+      }),
+    ]);
+    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-1"]).toEqual(
+      expect.objectContaining({
+        workspaceId: "workspace-1",
+        isComplete: true,
+      }),
+    );
+    // Snapshot reload always fires on completion to pick up authoritative API
+    // status and clear the provisioning spinner (even if daemon PATCH event
+    // was dropped).
+    expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+
     stopBindings();
   });
 
@@ -1060,12 +1262,99 @@ describe("createBackendEventStoreBindings", () => {
       status: "running",
     });
 
-    expect(tabStore.getState().tabs).toHaveLength(1);
-    expect(tabStore.getState().tabs[0]).toMatchObject({
-      kind: "terminal",
-      workspaceId: "workspace-1",
-      data: { sessionId: "term-cross-client-1" },
+    expect(tabStore.getState().tabs).toHaveLength(0);
+    expect(closeTerminalSession).toHaveBeenCalledWith("term-cross-client-1");
+
+    stopBindings();
+  });
+
+  it("records a tombstone on destroyed-triggered close so a late created does not reopen", async () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const terminalSessionHarness = createTerminalSessionChangedHarness();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+    const closeTerminalSession = vi.fn(async () => undefined);
+
+    workspaceStore.setState({
+      ...workspaceStore.getState(),
+      workspaces: [
+        {
+          id: "workspace-1",
+          name: "Workspace 1",
+          title: "Workspace 1",
+          repoId: "repo-1",
+          sourceBranch: "main",
+          branch: "main",
+          summaryId: "summary-1",
+        },
+      ],
+      selectedWorkspaceId: "workspace-1",
     });
+    tabStore.setState({
+      ...tabStore.getState(),
+      tabs: [
+        {
+          id: "tab-1",
+          workspaceId: "workspace-1",
+          title: "Terminal",
+          pinned: false,
+          kind: "terminal" as const,
+          data: { title: "Terminal", sessionId: "sess-1" },
+        },
+      ],
+      selectedTabId: "tab-1",
+      selectedTabIdByWorkspaceId: { "workspace-1": "tab-1" },
+    });
+    __resetExplicitlyClosedTerminalTabIdsForTests();
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      subscribeTerminalSessionChanged: terminalSessionHarness.subscribeTerminalSessionChanged,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+      closeTerminalSession,
+    });
+
+    const stopBindings = startBindings();
+
+    terminalSessionHarness.emit({
+      action: "destroyed",
+      sessionId: "sess-1",
+      workspaceId: "workspace-1",
+      tabId: "tab-1",
+      paneId: "pane-tab-1",
+      pid: 1234,
+      status: "exited",
+    });
+    await Promise.resolve();
+
+    expect(tabStore.getState().tabs).toHaveLength(0);
+
+    terminalSessionHarness.emit({
+      action: "created",
+      sessionId: "sess-2",
+      workspaceId: "workspace-1",
+      tabId: "tab-1",
+      paneId: "pane-tab-1",
+      pid: 9999,
+      status: "running",
+    });
+    await Promise.resolve();
+
+    expect(tabStore.getState().tabs).toHaveLength(0);
+    expect(closeTerminalSession).toHaveBeenCalledWith("sess-2");
 
     stopBindings();
   });
@@ -1522,5 +1811,59 @@ describe("createBackendEventStoreBindings", () => {
     });
 
     stopBindings();
+  });
+
+  it("clearTerminalAgentStatus removes lifecycle entries for a closed tab and clears workspace status", async () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+
+    const initialChatState = chatStore.getState();
+    chatStore.setState({
+      setWorkspaceAgentStatusByWorkspaceId,
+    });
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+    });
+
+    const stopBindings = startBindings();
+
+    inAppNotificationHarness.emit({
+      id: "notif-1",
+      title: "Run started",
+      tone: "success",
+      createdAt: "2026-06-26T10:00:00.000Z",
+      workspaceId: "workspace-1",
+      silent: true,
+      observerStatus: {
+        normalizedEventType: "start",
+        sessionKey: "workspace-1:tab-agent-1:pane-1",
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenLastCalledWith({ "workspace-1": "running" });
+
+    clearTerminalAgentStatus("tab-agent-1");
+
+    expect(setWorkspaceAgentStatusByWorkspaceId).toHaveBeenLastCalledWith({});
+
+    stopBindings();
+    chatStore.setState(initialChatState, true);
   });
 });

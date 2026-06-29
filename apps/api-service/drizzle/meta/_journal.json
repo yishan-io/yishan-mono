@@ -78,6 +78,13 @@
       "when": 1783000000001,
       "tag": "0010_rename_cached_write_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1783000000002,
+      "tag": "0011_token_usage_counts",
+      "breakpoints": true
     }
   ]
 }

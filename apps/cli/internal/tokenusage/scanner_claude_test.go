@@ -18,7 +18,7 @@ const claudeMultiSessionFixture = `{"type":"assistant","uuid":"a","sessionId":"s
 {"type":"assistant","uuid":"b","sessionId":"session-b","timestamp":"2026-05-25T21:01:00.000Z","cwd":"/proj/b","message":{"id":"mb1","model":"claude-opus-4-6","role":"assistant","usage":{"input_tokens":200,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":80}}}
 `
 
-const claudeActivityFixture = `{"type":"user","sessionId":"session-a","timestamp":"2026-05-25T21:00:00.000Z","cwd":"/proj/a","message":{"role":"user","content":"Read ~/.agents/skills/ys-start/SKILL.md and follow its workflow"}}
+const claudeActivityFixture = `{"type":"user","sessionId":"session-a","timestamp":"2026-05-25T21:00:00.000Z","cwd":"/proj/a","message":{"role":"user","content":"YISHAN_COMMAND: ys-start\n\nStart a new task using the ys-start workflow."}}
 {"type":"assistant","sessionId":"session-a","timestamp":"2026-05-25T21:00:01.000Z","cwd":"/proj/a","message":{"id":"ma1","model":"claude-sonnet-4-5","role":"assistant","content":[{"type":"tool_use","id":"tool-1","name":"Read","input":{"file_path":"/tmp/a"}}],"usage":{"input_tokens":100,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":50}}}
 `
 
@@ -118,8 +118,8 @@ func TestScanClaudeTranscriptFile(t *testing.T) {
 		totalTokens += acc.TotalTokens
 	}
 
-	if totalInput != 3 {
-		t.Fatalf("expected input 3, got %d", totalInput)
+	if totalInput != 174698 {
+		t.Fatalf("expected input 174698, got %d", totalInput)
 	}
 	if totalOutput != 669 {
 		t.Fatalf("expected output 669 (159+510), got %d", totalOutput)
@@ -130,8 +130,8 @@ func TestScanClaudeTranscriptFile(t *testing.T) {
 	if totalCacheWrite != 30305 {
 		t.Fatalf("expected cache write 30305, got %d", totalCacheWrite)
 	}
-	if totalTokens != 672 {
-		t.Fatalf("expected total tokens 672 (3+669), got %d", totalTokens)
+	if totalTokens != 175367 {
+		t.Fatalf("expected total tokens 175367, got %d", totalTokens)
 	}
 }
 

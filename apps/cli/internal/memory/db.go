@@ -232,11 +232,12 @@ func (db *DB) Search(query string, projectID string, fileType FileType, limit in
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
+	ftsQuery := escapeFTS5(query)
 	stmt := `SELECT m.path, snippet(memory_fts, 2, '<mark>', '</mark>', '...', 40), rank
 		FROM memory_fts
 		JOIN memory_files m ON memory_fts.rowid = m.id
-		WHERE memory_fts MATCH ?`
-	args := []any{escapeFTS5(query)}
+		WHERE memory_fts MATCH '` + escapeSQLString(ftsQuery) + `'`
+	args := []any{}
 
 	if projectID != "" {
 		stmt += ` AND m.project_id = ?`
@@ -283,4 +284,8 @@ func escapeFTS5(query string) string {
 		parts[i] = `"` + strings.ReplaceAll(tok, `"`, `""`) + `"`
 	}
 	return strings.Join(parts, " OR ")
+}
+
+func escapeSQLString(s string) string {
+	return strings.ReplaceAll(s, "'", "''")
 }

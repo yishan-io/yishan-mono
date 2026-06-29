@@ -1,4 +1,6 @@
-const explicitlyClosedTerminalTabIds = new Set<string>();
+const TOMBSTONE_TTL_MS = 5000;
+
+const explicitlyClosedTerminalTabIds = new Map<string, number>();
 
 export function recordExplicitlyClosedTerminalTabId(tabId: string): void {
   const normalizedTabId = tabId.trim();
@@ -6,7 +8,8 @@ export function recordExplicitlyClosedTerminalTabId(tabId: string): void {
     return;
   }
 
-  explicitlyClosedTerminalTabIds.add(normalizedTabId);
+  explicitlyClosedTerminalTabIds.set(normalizedTabId, Date.now() + TOMBSTONE_TTL_MS);
+  pruneExpiredTombstones();
 }
 
 export function consumeExplicitlyClosedTerminalTabId(tabId: string): boolean {
@@ -15,12 +18,26 @@ export function consumeExplicitlyClosedTerminalTabId(tabId: string): boolean {
     return false;
   }
 
-  if (!explicitlyClosedTerminalTabIds.has(normalizedTabId)) {
+  const expiry = explicitlyClosedTerminalTabIds.get(normalizedTabId);
+  if (expiry === undefined) {
     return false;
   }
 
-  explicitlyClosedTerminalTabIds.delete(normalizedTabId);
+  if (Date.now() > expiry) {
+    explicitlyClosedTerminalTabIds.delete(normalizedTabId);
+    return false;
+  }
+
   return true;
+}
+
+function pruneExpiredTombstones(): void {
+  const now = Date.now();
+  for (const [tabId, expiry] of explicitlyClosedTerminalTabIds) {
+    if (now > expiry) {
+      explicitlyClosedTerminalTabIds.delete(tabId);
+    }
+  }
 }
 
 export function __resetExplicitlyClosedTerminalTabIdsForTests(): void {

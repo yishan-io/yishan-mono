@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyHydratedStateFromApiData,
+  filterVisibleProjects,
   normalizeCreateRepoInput,
   readPersistedWorkspacePreferencesByOrg,
 } from "./projectHelpers";
@@ -30,6 +31,22 @@ describe("projectHelpers", () => {
       normalizedGitUrl: "https://example.com/repo.git",
       resolvedPath: "https://example.com/repo.git",
     });
+  });
+
+  it("filters visible projects by display ids while preserving project order", () => {
+    expect(
+      filterVisibleProjects(
+        [
+          { id: "repo-1", name: "Repo 1" },
+          { id: "repo-2", name: "Repo 2" },
+          { id: "repo-3", name: "Repo 3" },
+        ],
+        ["repo-3", "repo-1"],
+      ),
+    ).toEqual([
+      { id: "repo-1", name: "Repo 1" },
+      { id: "repo-3", name: "Repo 3" },
+    ]);
   });
 
   it("reads persisted organization workspace preferences and ignores invalid payloads", () => {

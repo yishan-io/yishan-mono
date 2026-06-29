@@ -345,6 +345,7 @@ function buildStoreState(isInitializing: boolean) {
         path: "/tmp/repo-1",
       },
     ],
+    displayProjectIds: ["repo-1"],
     selectedProjectId: "repo-1",
     workspaces: [
       {
@@ -869,6 +870,7 @@ describe("MainPaneView", () => {
         { id: "repo-1", name: "Repo One", path: "/tmp/repo-1" },
         { id: "repo-2", name: "Repo Two", path: "/tmp/repo-2" },
       ],
+      displayProjectIds: ["repo-1", "repo-2"],
       selectedProjectId: "repo-1",
       workspaces: [
         { id: "workspace-1", repoId: "repo-1", name: "Workspace 1", branch: "origin/main", title: "Workspace 1" },
@@ -899,6 +901,7 @@ describe("MainPaneView", () => {
         { id: "repo-1", name: "Alpha Repo", path: "/tmp/repo-1" },
         { id: "repo-2", name: "Beta Repo", path: "/tmp/repo-2" },
       ],
+      displayProjectIds: ["repo-1", "repo-2"],
       selectedProjectId: "repo-1",
       workspaces: [
         { id: "workspace-1", repoId: "repo-1", name: "Alpha Workspace", branch: "origin/main", title: "Alpha" },
@@ -922,6 +925,31 @@ describe("MainPaneView", () => {
     });
     expect(screen.queryByRole("menuitem", { name: "Alpha Workspace" })).toBeNull();
     expect(screen.getByRole("menuitem", { name: "Beta Workspace" })).toBeTruthy();
+  });
+
+  it("hides projects removed from the left pane from the header repo menu", () => {
+    mocked.stateRef.current = {
+      ...buildStoreState(false),
+      projects: [
+        { id: "repo-1", name: "Repo One", path: "/tmp/repo-1" },
+        { id: "repo-2", name: "Repo Two", path: "/tmp/repo-2" },
+      ],
+      displayProjectIds: ["repo-1"],
+      selectedProjectId: "repo-1",
+    };
+
+    render(<MainPaneView />);
+
+    fireEvent.click(screen.getByRole("button", { name: "project.selected" }));
+
+    expect(screen.getByRole("menuitem", { name: "Repo One" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Repo Two" })).toBeNull();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "org.menu.search.repo" }), {
+      target: { value: "repo two" },
+    });
+
+    expect(screen.queryByRole("menuitem", { name: "Repo Two" })).toBeNull();
   });
 
   it("shows workspace ports summary and popup entries", async () => {

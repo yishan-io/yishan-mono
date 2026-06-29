@@ -141,10 +141,9 @@ Organization context:
 
 Workspace lifecycle examples:
 
-- Create a primary workspace:
-  - `yishan workspace create --project-id <project-id> --kind primary --local-path /absolute/path/to/repo`
 - Create a worktree workspace:
-  - `yishan workspace create --project-id <project-id> --kind worktree --branch feature/my-branch --source-branch main --name feature-my-branch`
+  - `yishan workspace create --project-id <project-id> --branch feature/my-branch --source-branch main --name feature-my-branch`
+- Primary workspaces are created when you create a new project.
 - Close a workspace by id:
   - `yishan workspace close --project-id <project-id> --workspace-id <workspace-id>`
 - Get a workspace by id:

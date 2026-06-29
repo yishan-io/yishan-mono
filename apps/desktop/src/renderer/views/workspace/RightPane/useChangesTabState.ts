@@ -7,6 +7,7 @@ import type {
   ProjectCommitComparisonSelection,
 } from "../../../components/ProjectCommitComparison";
 import type { ProjectGitChangeKind, ProjectGitChangesSection } from "../../../components/ProjectGitChangesList";
+import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 import { useCommands } from "../../../hooks/useCommands";
 import { workspaceStore } from "../../../store/workspaceStore";
 import {
@@ -150,7 +151,9 @@ export function useChangesTabState() {
     } catch (error) {
       setRepoChangesBySection(createEmptyRepoChangesBySection());
       setRepoCommitComparison(createEmptyRepoCommitComparison());
-      console.error("Failed to load workspace git changes", error);
+      if (!isWorkspaceNotFoundError(error)) {
+        console.error("Failed to load workspace git changes", error);
+      }
     }
   }, [
     listGitChanges,

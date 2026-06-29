@@ -25,3 +25,8 @@ export function getErrorMessage(error: unknown): string {
 
   return String(error);
 }
+
+/** Returns true when one daemon/workspace RPC failed because the workspace is not open yet. */
+export function isWorkspaceNotFoundError(error: unknown): boolean {
+  return /workspace not found/i.test(getErrorMessage(error));
+}

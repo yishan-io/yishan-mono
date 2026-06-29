@@ -108,6 +108,16 @@ export function AppUpdateSnackbar() {
   const title = resolveUpdateTitle({ update, versionLabel, t });
   const description = resolveUpdateDescription({ update, t });
   const progressValue = update?.status === "downloading" ? Math.max(0, Math.min(100, update.percent ?? 0)) : 0;
+  const shouldDismissAutoUpdate = update?.status === "available" && update.source === "auto";
+
+  const handleClose = () => {
+    if (shouldDismissAutoUpdate) {
+      // fire-and-forget: dismissal only needs best-effort persistence in the main process.
+      void getDesktopHostBridge().dismissUpdate();
+    }
+
+    setUpdate(null);
+  };
 
   return (
     <Snackbar
@@ -141,9 +151,7 @@ export function AppUpdateSnackbar() {
             <IconButton
               aria-label={t("app.update.closeAria")}
               size="small"
-              onClick={() => {
-                setUpdate(null);
-              }}
+              onClick={handleClose}
               sx={{ mt: -0.5, mr: -0.5 }}
             >
               ×

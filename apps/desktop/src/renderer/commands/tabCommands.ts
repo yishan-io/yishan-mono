@@ -1,3 +1,4 @@
+import { clearTerminalAgentStatus } from "../events/backendEventStoreBindings";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../helpers/tabHelpers";
 import { recordExplicitlyClosedTerminalTabId } from "../helpers/terminalCloseTombstones";
@@ -93,6 +94,7 @@ export function closeTab(tabId: string): void {
   }
   if (tab.kind === "terminal") {
     recordExplicitlyClosedTerminalTabId(tab.id);
+    clearTerminalAgentStatus(tab.id);
     closeTerminalSessionsForTabs([tab]);
   }
   snapshot.closeTab(tabId);
@@ -122,6 +124,10 @@ export function closeOtherTabs(tabId: string): void {
         return;
       });
   }
+  for (const removedTerminalTab of removedTerminalTabs) {
+    recordExplicitlyClosedTerminalTabId(removedTerminalTab.id);
+    clearTerminalAgentStatus(removedTerminalTab.id);
+  }
   closeTerminalSessionsForTabs(removedTerminalTabs);
   snapshot.closeOtherTabs(tabId);
   if (removedTabIds.length > 0) {
@@ -149,6 +155,10 @@ export function closeAllTabs(tabId: string): void {
       .catch(() => {
         return;
       });
+  }
+  for (const removedTerminalTab of removedTerminalTabs) {
+    recordExplicitlyClosedTerminalTabId(removedTerminalTab.id);
+    clearTerminalAgentStatus(removedTerminalTab.id);
   }
   closeTerminalSessionsForTabs(removedTerminalTabs);
   snapshot.closeAllTabs(tabId);

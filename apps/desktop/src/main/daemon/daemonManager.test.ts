@@ -1,5 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DaemonManager } from "./daemonManager";
+
+const originalDaemonHealthUrl = process.env.YISHAN_DAEMON_HEALTH_URL;
+
+afterEach(() => {
+  process.env.YISHAN_DAEMON_HEALTH_URL = originalDaemonHealthUrl;
+});
 
 describe("DaemonManager", () => {
   it("starts the daemon service through CLI", async () => {
@@ -51,5 +57,48 @@ describe("DaemonManager", () => {
     await manager.stop();
 
     expect(logger.warn).toHaveBeenCalledOnce();
+  });
+
+  it("restarts the daemon when daemon info cannot be loaded initially", async () => {
+    process.env.YISHAN_DAEMON_HEALTH_URL = "http://127.0.0.1:65000/healthz";
+
+    const run = vi.fn().mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockRejectedValueOnce(new Error("missing daemon state"))
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce({ ok: true } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ version: "1.2.3", daemonId: "daemon-1" }),
+      } as Response);
+    const logger = { warn: vi.fn(), log: vi.fn() };
+    const manager = new DaemonManager({ run, fetch, logger });
+
+    await expect(manager.getInfo()).resolves.toEqual({
+      version: "1.2.3",
+      daemonId: "daemon-1",
+      wsUrl: "ws://127.0.0.1:65000/ws",
+    });
+
+    expect(run).toHaveBeenCalledWith(["daemon", "start", "--profile", "default"]);
+    expect(logger.warn).not.toHaveBeenCalled();
+  });
+
+  it("logs and throws when daemon info still cannot be loaded after recovery", async () => {
+    process.env.YISHAN_DAEMON_HEALTH_URL = "http://127.0.0.1:65000/healthz";
+
+    const run = vi.fn().mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockRejectedValueOnce(new Error("missing daemon state"))
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce({ ok: true } as Response)
+      .mockRejectedValueOnce(new Error("still offline"));
+    const logger = { warn: vi.fn(), log: vi.fn() };
+    const manager = new DaemonManager({ run, fetch, logger });
+
+    await expect(manager.getInfo()).rejects.toThrow("Failed to load daemon info: still offline");
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("after recovery"));
   });
 });

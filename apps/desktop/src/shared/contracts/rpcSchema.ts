@@ -53,6 +53,15 @@ export type RpcSchema = {
         workspaceWorktreePath: string;
         changedRelativePaths?: string[];
       };
+      workspaceCreateStarted: {
+        workspaceId: string;
+        organizationId: string;
+        projectId: string;
+        workspaceName: string;
+        sourceBranch: string;
+        branch: string;
+        nodeId?: string;
+      };
       workspaceCreateProgress: {
         workspaceId: string;
         stepId: string;
@@ -65,7 +74,6 @@ export type RpcSchema = {
         workspaceId: string;
         worktreePath: string;
         lifecycleScriptWarnings?: unknown[];
-        remoteSyncWarning?: string;
         taskRunSessionId?: string;
         taskRunAgentKind?: string;
         taskRunPrompt?: string;

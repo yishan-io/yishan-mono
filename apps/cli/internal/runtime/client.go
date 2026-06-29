@@ -118,29 +118,17 @@ func (r *Runtime) PersistAuthTokens(update api.TokenUpdate) error {
 	if err := config.UpdateFile(r.appCfg.ConfigPath, func(cfg *viper.Viper) {
 		cfg.Set(config.KeyAPIBaseURL, r.appCfg.API.BaseURL)
 		cfg.Set(config.KeyAPIToken, update.AccessToken)
-		if update.RefreshToken != "" {
-			cfg.Set(config.KeyAPIRefreshToken, update.RefreshToken)
-		}
-		if update.AccessTokenExpiresAt != "" {
-			cfg.Set(config.KeyAPIAccessTokenExpiresAt, update.AccessTokenExpiresAt)
-		}
-		if update.RefreshTokenExpiresAt != "" {
-			cfg.Set(config.KeyAPIRefreshTokenExpiresAt, update.RefreshTokenExpiresAt)
-		}
+		cfg.Set(config.KeyAPIRefreshToken, update.RefreshToken)
+		cfg.Set(config.KeyAPIAccessTokenExpiresAt, update.AccessTokenExpiresAt)
+		cfg.Set(config.KeyAPIRefreshTokenExpiresAt, update.RefreshTokenExpiresAt)
 	}); err != nil {
 		return fmt.Errorf("persist auth tokens: %w", err)
 	}
 
 	r.appCfg.API.Token = update.AccessToken
-	if update.RefreshToken != "" {
-		r.appCfg.API.RefreshToken = update.RefreshToken
-	}
-	if update.AccessTokenExpiresAt != "" {
-		r.appCfg.API.AccessTokenExpiresAt = update.AccessTokenExpiresAt
-	}
-	if update.RefreshTokenExpiresAt != "" {
-		r.appCfg.API.RefreshTokenExpiresAt = update.RefreshTokenExpiresAt
-	}
+	r.appCfg.API.RefreshToken = update.RefreshToken
+	r.appCfg.API.AccessTokenExpiresAt = update.AccessTokenExpiresAt
+	r.appCfg.API.RefreshTokenExpiresAt = update.RefreshTokenExpiresAt
 
 	return nil
 }

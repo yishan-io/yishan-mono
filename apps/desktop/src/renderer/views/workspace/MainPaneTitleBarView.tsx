@@ -7,6 +7,7 @@ import { PaneHeader } from "../../components/PaneHeader";
 import { PaneToggleButton } from "../../components/PaneToggleButton";
 import { renderProjectIcon } from "../../components/projectIcons";
 import { getRendererPlatform } from "../../helpers/platform";
+import { filterVisibleProjects } from "../../helpers/projectHelpers";
 import { useCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
@@ -27,6 +28,7 @@ export function MainPaneTitleBarView() {
   const { t } = useTranslation();
   const { leftCollapsed, onToggleLeftPane } = useWorkspacePaneVisibilityContext();
   const projects = workspaceStore((state) => state.projects);
+  const displayProjectIds = workspaceStore((state) => state.displayProjectIds) ?? [];
   const workspaces = workspaceStore((state) => state.workspaces);
   const selectedProjectId = workspaceStore((state) => state.selectedProjectId);
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
@@ -64,7 +66,8 @@ export function MainPaneTitleBarView() {
   const projectCommands = (selectedRepo?.commands ?? []).filter(
     (item) => item.name.trim().length > 0 && item.command.trim().length > 0,
   );
-  const filteredRepoOptions = projects.filter((project) =>
+  const visibleProjects = filterVisibleProjects(projects, displayProjectIds);
+  const filteredRepoOptions = visibleProjects.filter((project) =>
     project.name.toLowerCase().includes(repoSearchValue.trim().toLowerCase()),
   );
   const filteredWorkspaceOptions = workspacesForSelectedRepo.filter((workspace) =>

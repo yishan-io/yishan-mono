@@ -1,5 +1,6 @@
 import { closeTab, renameTab } from "../../../commands/tabCommands";
 import {
+  closeTerminalSession,
   createTerminalSession,
   listTerminalSessions,
   readTerminalOutput,
@@ -7,9 +8,11 @@ import {
   subscribeTerminalOutput,
   writeTerminalInput,
 } from "../../../commands/terminalCommands";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus } from "../../../rpc/rpcTransport";
 import { tabStore } from "../../../store/tabStore";
 import type { WorkspaceTab } from "../../../store/types";
+import { enqueueWorkspaceErrorNotice } from "../../../store/workspaceLifecycleNoticeStore";
 import {
   shouldClearTerminalOutputShortcut,
   shouldReleaseCommandWForTabCloseShortcut,
@@ -101,7 +104,20 @@ export function initTerminalSessionLifecycle(tabId: string): void {
   // Kick off session resolution asynchronously.
   void resolveAndSubscribeSession(entry, tabId).catch((error) => {
     reportTerminalAsyncError("init terminal session lifecycle", error);
+    handleTerminalSessionFailure(tabId, error);
   });
+}
+
+function handleTerminalSessionFailure(tabId: string, error: unknown): void {
+  const message = getErrorMessage(error);
+  if (message.includes("Terminal tab was closed before session could be attached")) {
+    return;
+  }
+  enqueueWorkspaceErrorNotice({
+    title: "Failed to create terminal session",
+    message,
+  });
+  tabStore.getState().closeTab(tabId);
 }
 
 /**
@@ -198,6 +214,7 @@ function reconnectAllTerminalSessions(): void {
     // Kick off session resolution for this entry.
     void resolveAndSubscribeSession(entry, entry.tabId).catch((error) => {
       reportTerminalAsyncError("reconnect terminal session after daemon restart", error);
+      handleTerminalSessionFailure(entry.tabId, error);
     });
   }
 }
@@ -262,6 +279,7 @@ async function resolveAndSubscribeSession(entry: TerminalRuntimeEntry, tabId: st
     readTerminalOutput,
     resizeTerminal,
     writeTerminalInput,
+    closeTerminalSession,
   });
 
   const restored = await orchestrator.attachOrCreateAndRestore({

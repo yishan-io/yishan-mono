@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import type {
   WorkspaceFileContent,
   WorkspaceFileDiff,
@@ -10,6 +10,7 @@ import type {
 import type { AppDb } from "@/db/client";
 import { organizationMembers, projects, workspaces } from "@/db/schema";
 import type { Workspace, WorkspaceKind, WorkspacePullRequestState } from "@/db/schema";
+import type { WorkspaceStatus } from "@/db/schema";
 import {
   PrimaryWorkspaceCloseNotAllowedError,
   ProjectNotFoundError,
@@ -70,7 +71,7 @@ export type WorkspaceView = {
   userId: string;
   nodeId: string;
   kind: WorkspaceKind;
-  status: "active" | "closed";
+  status: WorkspaceStatus;
   branch: string | null;
   sourceBranch: string | null;
   localPath: string;
@@ -105,7 +106,7 @@ type CreateWorkspaceInput = {
   name?: string;
   branch?: string;
   sourceBranch?: string;
-  localPath: string;
+  localPath?: string;
 };
 
 type CloseWorkspaceInput = {
@@ -140,6 +141,14 @@ function isWorkspaceCreateConflictError(error: unknown): error is { code: string
   );
 }
 
+type UpdateWorkspaceInput = {
+  workspaceId: string;
+  organizationId: string;
+  actorUserId: string;
+  projectId: string;
+  localPath: string;
+};
+
 export class WorkspaceService {
   constructor(
     private readonly db: AppDb,
@@ -170,8 +179,9 @@ export class WorkspaceService {
     }
 
     const sourceBranch = input.sourceBranch?.trim() ?? null;
-    const requestedLocalPath = input.localPath.trim();
+    const requestedLocalPath = input.localPath?.trim() ?? "";
     const requestedWorkspaceName = input.name?.trim() || branch || null;
+    const requestedStatus: WorkspaceStatus = requestedLocalPath ? "active" : "provisioning";
 
     let mutationResult: WorkspaceCreateMutationResult;
     try {
@@ -214,7 +224,7 @@ export class WorkspaceService {
           nodeId: input.nodeId,
           organizationId: input.organizationId,
           projectId: input.projectId,
-          status: "active",
+          statuses: ["active", "provisioning"],
         });
         if (activeWorkspace) {
           return {
@@ -232,13 +242,13 @@ export class WorkspaceService {
           nodeId: input.nodeId,
           organizationId: input.organizationId,
           projectId: input.projectId,
-          status: "closed",
+          statuses: ["closed"],
         });
         if (closedWorkspace) {
           const reactivatedRows = await tx
             .update(workspaces)
             .set({
-              status: "active",
+              status: requestedStatus,
               sourceBranch,
               localPath: requestedLocalPath,
               updatedAt: new Date(),
@@ -271,6 +281,7 @@ export class WorkspaceService {
             branch,
             sourceBranch,
             localPath: requestedLocalPath,
+            status: requestedStatus,
           })
           .returning();
 
@@ -298,7 +309,7 @@ export class WorkspaceService {
         nodeId: input.nodeId,
         organizationId: input.organizationId,
         projectId: input.projectId,
-        status: "active",
+        statuses: ["active", "provisioning"],
       });
       if (!existingWorkspace) {
         throw new WorkspaceCreateFailedError("workspace-create-conflict");
@@ -375,7 +386,7 @@ export class WorkspaceService {
       nodeId: string;
       organizationId: string;
       projectId: string;
-      status: "active" | "closed";
+      statuses: WorkspaceStatus[];
     },
   ): Promise<Workspace | null> {
     const branchMatcher = input.branch ? eq(workspaces.branch, input.branch) : isNull(workspaces.branch);
@@ -390,7 +401,9 @@ export class WorkspaceService {
           eq(workspaces.nodeId, input.nodeId),
           eq(workspaces.kind, input.kind),
           branchMatcher,
-          eq(workspaces.status, input.status),
+          input.statuses.length === 1
+            ? eq(workspaces.status, input.statuses[0]!)
+            : inArray(workspaces.status, input.statuses),
         ),
       )
       .limit(1);
@@ -413,7 +426,7 @@ export class WorkspaceService {
           eq(workspaces.organizationId, input.organizationId),
           eq(workspaces.projectId, input.projectId),
           eq(workspaces.userId, input.actorUserId),
-          eq(workspaces.status, "active"),
+          inArray(workspaces.status, ["active", "provisioning"]),
         ),
       );
 
@@ -585,7 +598,7 @@ export class WorkspaceService {
           eq(workspaces.projectId, input.projectId),
           eq(workspaces.userId, input.actorUserId),
           eq(workspaces.id, input.workspaceId),
-          eq(workspaces.status, "active"),
+          inArray(workspaces.status, ["active", "provisioning"]),
         ),
       )
       .returning();
@@ -635,5 +648,50 @@ export class WorkspaceService {
       db: this.db,
       organizationService: this.organizationService,
     };
+  }
+
+  async updateWorkspace(input: UpdateWorkspaceInput): Promise<WorkspaceView> {
+    await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
+
+    const localPath = input.localPath.trim();
+
+    const rows = await this.db
+      .update(workspaces)
+      .set({ status: "active", localPath, updatedAt: new Date() })
+      .where(
+        and(
+          eq(workspaces.id, input.workspaceId),
+          eq(workspaces.organizationId, input.organizationId),
+          eq(workspaces.projectId, input.projectId),
+          eq(workspaces.userId, input.actorUserId),
+          eq(workspaces.status, "provisioning"),
+        ),
+      )
+      .returning();
+
+    const updated = rows[0];
+    if (!updated) {
+      const existingRows = await this.db
+        .select()
+        .from(workspaces)
+        .where(
+          and(
+            eq(workspaces.id, input.workspaceId),
+            eq(workspaces.organizationId, input.organizationId),
+            eq(workspaces.projectId, input.projectId),
+            eq(workspaces.userId, input.actorUserId),
+          ),
+        )
+        .limit(1);
+
+      const existing = existingRows[0];
+      if (!existing) {
+        throw new WorkspaceNotFoundError({ workspaceId: input.workspaceId, projectId: input.projectId });
+      }
+      // Already active (idempotent) — return current state.
+      return { ...existing, latestPullRequest: null };
+    }
+
+    return { ...updated, latestPullRequest: null };
   }
 }

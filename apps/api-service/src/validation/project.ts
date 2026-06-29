@@ -57,7 +57,7 @@ export const createWorkspaceBodySchema = z.object({
   branch: nonEmptyStringSchema.optional(),
   sourceBranch: nonEmptyStringSchema.optional(),
   nodeId: nonEmptyStringSchema,
-  localPath: nonEmptyStringSchema,
+  localPath: nonEmptyStringSchema.optional(),
 });
 
 export const closeWorkspaceBodySchema = z.object({
@@ -65,6 +65,12 @@ export const closeWorkspaceBodySchema = z.object({
 });
 
 export const workspaceTerminalParamsSchema = z.object({
+  orgId: nonEmptyStringSchema,
+  projectId: nonEmptyStringSchema,
+  workspaceId: nonEmptyStringSchema,
+});
+
+export const updateWorkspaceParamsSchema = z.object({
   orgId: nonEmptyStringSchema,
   projectId: nonEmptyStringSchema,
   workspaceId: nonEmptyStringSchema,
@@ -142,6 +148,10 @@ export const workspaceGitBranchesParamsSchema = z.object({
   workspaceId: nonEmptyStringSchema,
 });
 
+export const updateWorkspaceBodySchema = z.object({
+  localPath: nonEmptyStringSchema,
+});
+
 export const workspacePullRequestParamsSchema = z.object({
   orgId: nonEmptyStringSchema,
   projectId: nonEmptyStringSchema,
@@ -178,5 +188,7 @@ export type WorkspaceFileDiffParamsInput = z.infer<typeof workspaceFileDiffParam
 export type WorkspaceFileDiffQueryInput = z.infer<typeof workspaceFileDiffQuerySchema>;
 export type WorkspaceGitChangesParamsInput = z.infer<typeof workspaceGitChangesParamsSchema>;
 export type WorkspaceGitBranchesParamsInput = z.infer<typeof workspaceGitBranchesParamsSchema>;
+export type UpdateWorkspaceParamsInput = z.infer<typeof updateWorkspaceParamsSchema>;
+export type UpdateWorkspaceBodyInput = z.infer<typeof updateWorkspaceBodySchema>;
 export type WorkspacePullRequestParamsInput = z.infer<typeof workspacePullRequestParamsSchema>;
 export type UpsertWorkspacePullRequestBodyInput = z.infer<typeof upsertWorkspacePullRequestBodySchema>;

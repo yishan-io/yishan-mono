@@ -290,7 +290,7 @@ INSERT INTO part VALUES('part-tool-2','msg-assistant','ses-1',%d,%d,'%s');
 `,
 		now.UnixMilli(), now.UnixMilli(),
 		turnTime.UnixMilli(), turnTime.UnixMilli(),
-		turnTime.UnixMilli(), turnTime.UnixMilli(), makeTextPart("Read ~/.agents/skills/ys-start/SKILL.md and follow its workflow"),
+		turnTime.UnixMilli(), turnTime.UnixMilli(), makeTextPart("YISHAN_COMMAND: ys-start\n\nStart a new task using the ys-start workflow."),
 		assistantTime.UnixMilli(), assistantTime.UnixMilli(), makeMsg(100, 10, 0, 0, 5),
 		assistantTime.UnixMilli(), assistantTime.UnixMilli(), makeToolPart("bash"),
 		assistantTime.UnixMilli(), assistantTime.UnixMilli(), makeToolPart("read"),

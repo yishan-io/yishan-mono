@@ -107,6 +107,55 @@ func TestPersistAuthTokensAcceptsNewerExpiryUpdate(t *testing.T) {
 	}
 }
 
+func TestPersistAuthTokensClearsRefreshFieldsWhenUpdateOmitsThem(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "credential.yaml")
+	cfg := &config.Config{
+		ConfigPath: configPath,
+		API: config.APIConfig{
+			BaseURL:               "https://api.yishan.io",
+			Token:                 "old-access",
+			RefreshToken:          "old-refresh",
+			AccessTokenExpiresAt:  "2026-05-11T09:10:00Z",
+			RefreshTokenExpiresAt: "2026-05-11T10:10:00Z",
+		},
+	}
+	Configure(cfg)
+	t.Cleanup(func() {
+		Configure(nil)
+	})
+
+	if err := PersistAuthTokens(api.TokenUpdate{AccessToken: "service-token"}); err != nil {
+		t.Fatalf("persist service token update: %v", err)
+	}
+
+	if cfg.API.Token != "service-token" {
+		t.Fatalf("expected in-memory token to update, got %q", cfg.API.Token)
+	}
+	if cfg.API.RefreshToken != "" {
+		t.Fatalf("expected in-memory refresh token to clear, got %q", cfg.API.RefreshToken)
+	}
+	if cfg.API.AccessTokenExpiresAt != "" {
+		t.Fatalf("expected in-memory access expiry to clear, got %q", cfg.API.AccessTokenExpiresAt)
+	}
+	if cfg.API.RefreshTokenExpiresAt != "" {
+		t.Fatalf("expected in-memory refresh expiry to clear, got %q", cfg.API.RefreshTokenExpiresAt)
+	}
+
+	stored := loadConfigForTest(t, configPath)
+	if got := stored.GetString("api_token"); got != "service-token" {
+		t.Fatalf("expected persisted token to update, got %q", got)
+	}
+	if got := stored.GetString("api_refresh_token"); got != "" {
+		t.Fatalf("expected persisted refresh token to clear, got %q", got)
+	}
+	if got := stored.GetString("api_access_token_expires_at"); got != "" {
+		t.Fatalf("expected persisted access expiry to clear, got %q", got)
+	}
+	if got := stored.GetString("api_refresh_token_expires_at"); got != "" {
+		t.Fatalf("expected persisted refresh expiry to clear, got %q", got)
+	}
+}
+
 func loadConfigForTest(t *testing.T, configPath string) *viper.Viper {
 	t.Helper()
 	v := viper.New()

@@ -37,6 +37,7 @@ describe("BACKEND_EVENT_NAME_BY_SOURCE", () => {
       notificationEvent: "notification.event",
       gitChanged: "git.changed",
       workspaceFilesChanged: "workspace.files.changed",
+      workspaceCreateStarted: "workspace.create.started",
       workspaceCreateProgress: "workspace.create.progress",
       workspaceCreateCompleted: "workspace.create.completed",
       workspaceCreateFailed: "workspace.create.failed",
@@ -234,6 +235,28 @@ describe("normalizeBackendEvent", () => {
 
     expect(normalized.name).toBe("workspace.create.progress");
     expect(normalized.source).toBe("workspaceCreateProgress");
+  });
+
+  it("normalizes workspace create started events", () => {
+    const normalized = assertNormalized(
+      normalizeBackendEvent(
+        createEnvelope({
+          method: "workspaceCreateStarted",
+          payload: {
+            workspaceId: "workspace-1",
+            organizationId: "org-1",
+            projectId: "project-1",
+            workspaceName: "feature-a",
+            sourceBranch: "main",
+            branch: "feature-a",
+            nodeId: "node-1",
+          },
+        }),
+      ),
+    );
+
+    expect(normalized.name).toBe("workspace.create.started");
+    expect(normalized.source).toBe("workspaceCreateStarted");
   });
 
   it("normalizes workspace pull request updated events", () => {

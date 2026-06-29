@@ -14,6 +14,7 @@ import {
   refreshWorkspacePullRequestHandler,
   startWorkspaceTerminalHandler,
   stopWorkspaceTerminalHandler,
+  updateWorkspaceHandler,
 } from "@/handlers/workspace";
 import { workspaceFrontendEventsStreamHandler } from "@/handlers/workspace-frontend-events-stream";
 import { workspaceTerminalStreamHandler } from "@/handlers/workspace-terminal-stream";
@@ -37,6 +38,8 @@ import {
   workspaceTerminalParamsSchema,
   workspaceTerminalSessionParamsSchema,
   workspaceTerminalStartBodySchema,
+  updateWorkspaceBodySchema,
+  updateWorkspaceParamsSchema,
 } from "@/validation/project";
 
 export const workspaceRouter = new Hono<AppEnv>();
@@ -130,4 +133,11 @@ workspaceRouter.patch(
   zValidator("param", projectWorkspaceParamsSchema, validationErrorResponse),
   zValidator("json", closeWorkspaceBodySchema, validationErrorResponse),
   (c) => closeWorkspaceHandler(c, c.req.valid("param"), c.req.valid("json")),
+);
+
+workspaceRouter.patch(
+  "/:workspaceId",
+  zValidator("param", updateWorkspaceParamsSchema, validationErrorResponse),
+  zValidator("json", updateWorkspaceBodySchema, validationErrorResponse),
+  (c) => updateWorkspaceHandler(c, c.req.valid("param"), c.req.valid("json")),
 );

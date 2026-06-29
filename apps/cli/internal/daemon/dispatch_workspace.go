@@ -120,45 +120,37 @@ func (h *JSONRPCHandler) handleWorkspaceRefreshPullRequest(_ context.Context, pa
 }
 
 func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.RawMessage) (any, error) {
-	var req workspace.CreateRequest
+	var req workspaceCreateParams
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
 	}
-	req.ID = strings.TrimSpace(req.ID)
-	if req.ID == "" {
-		req.ID = generateWorkspaceID()
-	}
-	if strings.TrimSpace(req.WorkspaceName) == "" {
-		req.WorkspaceName = req.ID
-	}
-	worktreePath, err := workspace.ResolveCreateWorktreePath(req.RepoKey, req.WorkspaceName)
+	prepared, err := h.prepareWorkspaceCreate(ctx, req)
 	if err != nil {
 		return nil, err
 	}
+	h.events.Publish(frontendEvent{Topic: "workspaceCreateStarted", Payload: prepared.startedEvent})
 
-	go h.executeWorkspaceCreate(context.Background(), req)
+	go h.executeWorkspaceCreate(context.Background(), prepared)
 
-	return map[string]any{
-		"id":           req.ID,
-		"status":       "pending",
-		"worktreePath": worktreePath,
-	}, nil
+	return map[string]any{"id": prepared.workspaceID, "status": "pending"}, nil
 }
 
-func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, req workspace.CreateRequest) {
+func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, prepared preparedWorkspaceCreate) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error().Interface("panic", r).Str("workspaceId", req.ID).Msg("panic in executeWorkspaceCreate")
+			log.Error().Interface("panic", r).Str("workspaceId", prepared.workspaceID).Msg("panic in executeWorkspaceCreate")
 		}
 	}()
 
 	reportProgress := func(event workspace.CreateProgressEvent) {
 		h.events.Publish(frontendEvent{Topic: "workspaceCreateProgress", Payload: event})
+		h.relayWorkspaceCreateProgress(prepared, event)
 	}
 
 	reportFailed := func(message string) {
+		failedEvent := workspaceCreateFailedEvent{WorkspaceID: prepared.workspaceID, Message: message}
 		reportProgress(workspace.CreateProgressEvent{
-			WorkspaceID: req.ID,
+			WorkspaceID: prepared.workspaceID,
 			StepID:      "complete",
 			Label:       "Prepare workspace",
 			Status:      workspace.CreateProgressFailed,
@@ -166,111 +158,201 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, req workspa
 			CreatedAt:   nowRFC3339Nano(),
 		})
 		h.events.Publish(frontendEvent{
-			Topic: "workspaceCreateFailed",
-			Payload: map[string]any{
-				"workspaceId": req.ID,
-				"message":     message,
-			},
+			Topic:   "workspaceCreateFailed",
+			Payload: failedEvent,
 		})
+		h.relayWorkspaceCreateFailed(prepared, failedEvent)
 	}
 
-	resolvedCreateRequest, err := resolveCreateRequestForNode(ctx, h.runtime, workspaceCreateRequestInput{
-		organizationID: req.OrganizationID,
-		projectID:      req.ProjectID,
-		localNodeID:    h.nodeID,
-		nodeID:         req.NodeID,
-		repoKey:        req.RepoKey,
-		sourcePath:     req.SourcePath,
-	})
-	if err != nil {
-		reportFailed(err.Error())
+	if prepared.remoteRequest != nil {
+		if err := h.registerPreparedWorkspace(ctx, prepared, ""); err != nil {
+			reportFailed(err.Error())
+			return
+		}
+		if err := h.dispatchRemoteWorkspaceCreate(*prepared.remoteRequest); err != nil {
+			reportFailed(err.Error())
+		}
 		return
 	}
-	req.NodeID = resolvedCreateRequest.nodeID
-	req.SourcePath = resolvedCreateRequest.sourcePath
-
-	created, err := h.manager.CreateWorkspaceWithProgress(ctx, req, reportProgress)
-	if err != nil {
-		reportFailed(err.Error())
-		return
+	if prepared.localCreate != nil {
+		if err := h.executeWorktreeWorkspaceCreate(ctx, prepared, reportProgress); err != nil {
+			reportFailed(err.Error())
+		}
 	}
+}
 
+func (h *JSONRPCHandler) executeWorktreeWorkspaceCreate(ctx context.Context, prepared preparedWorkspaceCreate, reportProgress workspace.CreateProgressReporter) error {
+	if !prepared.isRelayed {
+		if err := h.registerPreparedWorkspace(ctx, prepared, ""); err != nil {
+			return err
+		}
+	}
+	created, err := h.manager.CreateWorkspaceWithProgress(ctx, *prepared.localCreate, reportProgress)
+	if err != nil {
+		return err
+	}
 	h.watchAndTrack(created.ID, created.Path)
-	if h.wsIndexStore != nil && created.Path != "" {
-		if err := h.wsIndexStore.Upsert(workspaceIndexEntry{
-			WorkspaceID:  created.ID,
-			WorktreePath: created.Path,
-			ProjectID:    created.ProjectID,
-			OrgID:        created.OrgID,
-			State:        created.State,
+	h.upsertWorkspaceIndex(created)
+	if err := h.updatePreparedWorkspace(ctx, prepared, created.Path); err != nil {
+		h.rollbackWorkspaceCreateFailure(ctx, prepared, created)
+		return err
+	}
+	warnings := buildWorkspaceHookWarnings(prepared.localCreate.SetupHook, created.SetupHookResult, h.logFilePath)
+	reportProgress(workspace.CreateProgressEvent{WorkspaceID: created.ID, StepID: "complete", Label: "Prepare workspace", Status: workspace.CreateProgressCompleted, CreatedAt: nowRFC3339Nano()})
+	h.publishWorkspaceCreateCompleted(prepared, created, warnings)
+	return nil
+}
+
+func (h *JSONRPCHandler) registerPreparedWorkspace(ctx context.Context, prepared preparedWorkspaceCreate, localPath string) error {
+	if prepared.registration == nil {
+		return nil
+	}
+	registration := *prepared.registration
+	registration.LocalPath = localPath
+	if err := registerWorkspace(ctx, h.runtime, registration); err != nil {
+		return err
+	}
+	h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, registration.ID, "created")
+	return nil
+}
+
+func (h *JSONRPCHandler) updatePreparedWorkspace(ctx context.Context, prepared preparedWorkspaceCreate, localPath string) error {
+	if prepared.registration == nil {
+		return nil
+	}
+	if err := updateWorkspace(ctx, h.runtime, *prepared.registration, localPath); err != nil {
+		return err
+	}
+	h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, prepared.registration.ID, "updated")
+	return nil
+}
+
+func (h *JSONRPCHandler) rollbackWorkspaceCreateFailure(
+	ctx context.Context,
+	prepared preparedWorkspaceCreate,
+	created workspace.Workspace,
+) {
+	if prepared.registration != nil {
+		if err := closeRemoteWorkspace(ctx, h.runtime, WorkspaceClose{
+			WorkspaceID:    prepared.registration.ID,
+			OrganizationID: prepared.organizationID,
+			ProjectID:      prepared.projectID,
 		}); err != nil {
-			log.Warn().Err(err).Str("workspaceId", created.ID).Msg("workspace index store upsert failed on create")
+			log.Warn().Err(err).Str("workspaceId", prepared.registration.ID).Msg("workspace API close failed after workspace create rollback")
 		}
 	}
-	warnings := buildWorkspaceHookWarnings(req.SetupHook, created.SetupHookResult, h.logFilePath)
 
-	remoteSyncWarning := ""
-	if req.ProjectID != "" {
-		if err := registerWorkspace(ctx, h.runtime, WorkspaceCreation{
-			ID:             created.ID,
-			NodeID:         req.NodeID,
-			OrganizationID: req.OrganizationID,
-			ProjectID:      req.ProjectID,
-			Kind:           workspace.KindWorktree,
-			Branch:         req.TargetBranch,
-			SourceBranch:   req.SourceBranch,
-			LocalPath:      created.Path,
+	closeReq := workspace.ClosePathRequest{
+		WorkspaceID:   created.ID,
+		Path:          created.Path,
+		Branch:        prepared.localCreate.TargetBranch,
+		RemoveBranch:  true,
+		ForceWorktree: true,
+		ForceBranch:   true,
+	}
+	h.cleanupLocalWorkspaceCreateFailure(ctx, closeReq)
+}
+
+func (h *JSONRPCHandler) cleanupLocalWorkspaceCreateFailure(ctx context.Context, closeReq workspace.ClosePathRequest) {
+	if strings.TrimSpace(closeReq.Path) == "" {
+		return
+	}
+
+	h.watchers.Unwatch(closeReq.Path)
+	h.prTracker.StopTracking(closeReq.WorkspaceID)
+
+	if h.cleanupStore != nil {
+		if err := h.cleanupStore.Add(pendingWorkspaceCleanup{
+			WorkspaceID:   closeReq.WorkspaceID,
+			Path:          closeReq.Path,
+			Branch:        closeReq.Branch,
+			RemoveBranch:  closeReq.RemoveBranch,
+			ForceWorktree: closeReq.ForceWorktree,
+			ForceBranch:   closeReq.ForceBranch,
+			PostHook:      closeReq.PostHook,
 		}); err != nil {
-			remoteSyncWarning = err.Error()
+			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to register workspace create rollback cleanup")
 		}
 	}
 
-	reportProgress(workspace.CreateProgressEvent{
-		WorkspaceID: created.ID,
-		StepID:      "complete",
-		Label:       "Prepare workspace",
-		Status:      workspace.CreateProgressCompleted,
-		CreatedAt:   nowRFC3339Nano(),
-	})
-
-	completionPayload := map[string]any{
-		"workspaceId":             created.ID,
-		"worktreePath":            created.Path,
-		"lifecycleScriptWarnings": warnings,
-		"remoteSyncWarning":       remoteSyncWarning,
-	}
-
-	if req.TaskRun != nil {
-		cmd, buildErr := agentcmd.BuildRunCommand(req.TaskRun.AgentKind, req.TaskRun.Prompt, req.TaskRun.Model, true)
-		if buildErr != nil {
-			log.Warn().Err(buildErr).Str("workspaceId", created.ID).Str("agentKind", req.TaskRun.AgentKind).Msg("task run: failed to build agent command")
-		} else {
-			resp, startErr := h.manager.Terminals().Start(ctx, created.Path, terminal.StartRequest{
-				WorkspaceID: created.ID,
-				TabID:       "task-" + created.ID,
-				PaneID:      "pane-task-" + created.ID,
-			})
-			if startErr != nil {
-				log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("agentKind", req.TaskRun.AgentKind).Msg("task run: failed to start terminal session")
-			} else {
-				h.manager.Terminals().Send(terminal.SendRequest{
-					SessionID: resp.SessionID,
-					Input:     shellCommandLine(cmd.Binary, cmd.Args) + "\r",
-				})
-				completionPayload["taskRunSessionId"] = resp.SessionID
-				completionPayload["taskRunAgentKind"] = req.TaskRun.AgentKind
-				completionPayload["taskRunPrompt"] = req.TaskRun.Prompt
-				completionPayload["taskRunTabId"] = "task-" + created.ID
-				completionPayload["taskRunPaneId"] = "pane-task-" + created.ID
-				log.Info().Str("workspaceId", created.ID).Str("sessionId", resp.SessionID).Str("agentKind", req.TaskRun.AgentKind).Str("prompt", req.TaskRun.Prompt).Msg("task run: terminal session started")
+	if _, err := h.manager.CloseWorkspacePath(ctx, closeReq); err != nil {
+		if h.cleanupStore != nil {
+			if markErr := h.cleanupStore.MarkFailure(closeReq.WorkspaceID, err); markErr != nil {
+				log.Warn().Err(markErr).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to mark workspace create rollback cleanup failure")
 			}
 		}
+		log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Str("path", closeReq.Path).Msg("workspace create rollback cleanup failed")
+	} else if h.cleanupStore != nil {
+		if err := h.cleanupStore.Remove(closeReq.WorkspaceID); err != nil {
+			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to remove completed workspace create rollback cleanup")
+		}
 	}
 
-	h.events.Publish(frontendEvent{
-		Topic:   "workspaceCreateCompleted",
-		Payload: completionPayload,
-	})
+	h.manager.RemoveWorkspaceFromMemory(closeReq.WorkspaceID)
+	if h.wsIndexStore != nil {
+		if err := h.wsIndexStore.Remove(closeReq.WorkspaceID); err != nil {
+			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to remove rolled back workspace from index store")
+		}
+	}
+	h.clearAgentUsage(closeReq.WorkspaceID)
+}
+
+func (h *JSONRPCHandler) publishWorkspaceSnapshotChanged(
+	organizationID string,
+	projectID string,
+	workspaceID string,
+	change string,
+) {
+	if strings.TrimSpace(organizationID) == "" || strings.TrimSpace(projectID) == "" || strings.TrimSpace(workspaceID) == "" {
+		return
+	}
+
+	h.events.Publish(frontendEvent{Topic: "workspaceSnapshotChanged", Payload: map[string]any{
+		"organizationId": organizationID,
+		"resource":       "workspace",
+		"change":         change,
+		"projectId":      projectID,
+		"workspaceId":    workspaceID,
+	}})
+}
+
+func (h *JSONRPCHandler) upsertWorkspaceIndex(created workspace.Workspace) {
+	if h.wsIndexStore == nil || created.Path == "" {
+		return
+	}
+	if err := h.wsIndexStore.Upsert(workspaceIndexEntry{WorkspaceID: created.ID, WorktreePath: created.Path, ProjectID: created.ProjectID, OrgID: created.OrgID, State: created.State}); err != nil {
+		log.Warn().Err(err).Str("workspaceId", created.ID).Msg("workspace index store upsert failed on create")
+	}
+}
+
+func (h *JSONRPCHandler) publishWorkspaceCreateCompleted(prepared preparedWorkspaceCreate, created workspace.Workspace, warnings []any) {
+	completionPayload := map[string]any{"workspaceId": created.ID, "worktreePath": created.Path, "lifecycleScriptWarnings": warnings}
+	h.maybeStartTaskRun(context.Background(), prepared, created, completionPayload)
+	h.events.Publish(frontendEvent{Topic: "workspaceCreateCompleted", Payload: completionPayload})
+	h.relayWorkspaceCreateCompleted(prepared, completionPayload)
+}
+
+func (h *JSONRPCHandler) maybeStartTaskRun(ctx context.Context, prepared preparedWorkspaceCreate, created workspace.Workspace, completionPayload map[string]any) {
+	if prepared.localCreate == nil || prepared.localCreate.TaskRun == nil {
+		return
+	}
+	cmd, buildErr := agentcmd.BuildRunCommand(prepared.localCreate.TaskRun.AgentKind, prepared.localCreate.TaskRun.Prompt, prepared.localCreate.TaskRun.Model, true)
+	if buildErr != nil {
+		log.Warn().Err(buildErr).Str("workspaceId", created.ID).Str("agentKind", prepared.localCreate.TaskRun.AgentKind).Msg("task run: failed to build agent command")
+		return
+	}
+	resp, startErr := h.manager.Terminals().Start(ctx, created.Path, terminal.StartRequest{WorkspaceID: created.ID, TabID: "task-" + created.ID, PaneID: "pane-task-" + created.ID})
+	if startErr != nil {
+		log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("agentKind", prepared.localCreate.TaskRun.AgentKind).Msg("task run: failed to start terminal session")
+		return
+	}
+	h.manager.Terminals().Send(terminal.SendRequest{SessionID: resp.SessionID, Input: shellCommandLine(cmd.Binary, cmd.Args) + "\r"})
+	completionPayload["taskRunSessionId"] = resp.SessionID
+	completionPayload["taskRunAgentKind"] = prepared.localCreate.TaskRun.AgentKind
+	completionPayload["taskRunPrompt"] = prepared.localCreate.TaskRun.Prompt
+	completionPayload["taskRunTabId"] = "task-" + created.ID
+	completionPayload["taskRunPaneId"] = "pane-task-" + created.ID
+	log.Info().Str("workspaceId", created.ID).Str("sessionId", resp.SessionID).Str("agentKind", prepared.localCreate.TaskRun.AgentKind).Str("prompt", prepared.localCreate.TaskRun.Prompt).Msg("task run: terminal session started")
 }
 
 func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.RawMessage) (any, error) {

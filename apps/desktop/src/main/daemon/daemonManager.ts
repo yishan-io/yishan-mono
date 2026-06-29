@@ -1,6 +1,7 @@
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { delimiter, resolve } from "node:path";
+import { getErrorMessage } from "../../shared/helpers/errorHelpers";
 import { isDevMode } from "../runtime/environment";
 import {
   DAEMON_HEALTH_RETRY_COUNT,
@@ -438,6 +439,18 @@ export class DaemonManager {
   }
 
   async getInfo(): Promise<DaemonInfo> {
-    return fetchDaemonInfo(this.fetchFn);
+    try {
+      return await fetchDaemonInfo(this.fetchFn);
+    } catch {
+      await this.ensureStarted();
+    }
+
+    try {
+      return await fetchDaemonInfo(this.fetchFn);
+    } catch (error) {
+      const reason = getErrorMessage(error);
+      this.logger.warn(`Failed to load daemon info after recovery: ${reason}`);
+      throw new Error(`Failed to load daemon info: ${reason}`);
+    }
   }
 }

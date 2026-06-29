@@ -206,7 +206,9 @@ var yishanInjectedPrefixes = []string{
 	"## Developer Persona (.yishan/memory/PERSONA.md)",
 	// Plugin-injected project context block
 	"## Personal Project Context (.my-context/)",
-	// Skill slash command expansions — all follow the pattern of reading a skill file
+	// Skill slash command expansions — either the legacy path-based form or the
+	// current path-free command marker.
+	"YISHAN_COMMAND:",
 	"Read ~/.config/opencode/skills/",
 	"Read ~/.claude/skills/",
 	"Read ~/.agents/skills/",

@@ -148,7 +148,7 @@ func (s *Server) HandlePublishOrgEvent(w http.ResponseWriter, r *http.Request) {
 		params["metadata"] = body.Metadata
 	}
 
-	notified := s.sessions.SendOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, params)
+	notified := s.sessions.SendOrgNotification(organizationID, MethodWorkspaceSnapshotChanged, params, "")
 	log.Info().
 		Str("organizationId", organizationID).
 		Str("resource", resource).
@@ -375,7 +375,7 @@ func (s *Server) handleMessage(nodeID string, payload []byte) bool {
 			return true
 		}
 		for _, orgID := range session.Identity.OrganizationIDs {
-			go s.sessions.SendOrgNotificationExceptNode(orgID, nodeID, MethodTerminalSessionChanged, req.Params)
+			go s.sessions.SendOrgNotification(orgID, MethodTerminalSessionChanged, req.Params, nodeID)
 		}
 		return true
 

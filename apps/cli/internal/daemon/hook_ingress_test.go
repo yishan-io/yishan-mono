@@ -332,3 +332,48 @@ func TestServeAgentHookNoTerminalAgentChangedWhenTabIdMissing(t *testing.T) {
 		// correct — nothing published
 	}
 }
+
+func TestServeAgentHookLaunchedPublishesTerminalAgentChangedButNoNotification(t *testing.T) {
+	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, nil, "", NewAppContextStore(""))
+	subscriptionID, events := handler.events.Subscribe()
+	defer handler.events.Unsubscribe(subscriptionID)
+
+	response := postHookPayload(t, handler, map[string]any{
+		"agent":       "opencode",
+		"workspaceId": "ws-1",
+		"tabId":       "tab-1",
+		"paneId":      "pane-1",
+		"event":       "Launched",
+	})
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, response.Code)
+	}
+
+	published := drainHookEvents(t, events)
+
+	var agentEvent *frontendEvent
+	var notificationEvent *frontendEvent
+	for i := range published {
+		if published[i].Topic == "terminalAgentChanged" {
+			agentEvent = &published[i]
+		}
+		if published[i].Topic == "notificationEvent" {
+			notificationEvent = &published[i]
+		}
+	}
+
+	if agentEvent == nil {
+		t.Fatal("terminalAgentChanged should be published for Launched event (tab icon)")
+	}
+	payload, ok := agentEvent.Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map payload, got %T", agentEvent.Payload)
+	}
+	if payload["tabId"] != "tab-1" || payload["agent"] != "opencode" {
+		t.Fatalf("unexpected terminalAgentChanged payload: %#v", payload)
+	}
+
+	if notificationEvent != nil {
+		t.Fatalf("notificationEvent should NOT be published for Launched (no workspace spin), got: %#v", notificationEvent.Payload)
+	}
+}

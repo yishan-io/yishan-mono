@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  __resetExplicitlyClosedTerminalTabIdsForTests,
+  consumeExplicitlyClosedTerminalTabId,
+} from "../helpers/terminalCloseTombstones";
 import { chatStore } from "../store/chatStore";
 import { tabStore } from "../store/tabStore";
 import {
@@ -28,6 +32,10 @@ vi.mock("../store/workspaceLifecycleNoticeStore", () => ({
   enqueueWorkspaceErrorNotice: rpcMocks.enqueueWorkspaceErrorNotice,
 }));
 
+vi.mock("../events/backendEventStoreBindings", () => ({
+  clearTerminalAgentStatus: vi.fn(),
+}));
+
 vi.mock("../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     chat: {
@@ -47,6 +55,7 @@ afterEach(() => {
   tabStore.setState(initialTabStoreState, true);
   chatStore.setState(initialChatStoreState, true);
   vi.clearAllMocks();
+  __resetExplicitlyClosedTerminalTabIdsForTests();
 });
 
 describe("tabCommands", () => {
@@ -257,6 +266,39 @@ describe("tabCommands", () => {
     expect(removeTabData).toHaveBeenCalledWith(["tab-terminal-close"]);
   });
 
+  it("records tombstones for terminal tabs closed via closeOtherTabs", async () => {
+    const closeOtherTabsState = vi.fn();
+    const removeTabData = vi.fn();
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-terminal-keep",
+          workspaceId: "workspace-1",
+          title: "Keep",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Keep", sessionId: "terminal-session-keep" },
+        },
+        {
+          id: "tab-terminal-close",
+          workspaceId: "workspace-1",
+          title: "Close",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Close", sessionId: "terminal-session-2" },
+        },
+      ],
+      closeOtherTabs: closeOtherTabsState,
+    });
+    chatStore.setState({ removeTabData });
+
+    closeOtherTabs("tab-terminal-keep");
+    await Promise.resolve();
+
+    expect(consumeExplicitlyClosedTerminalTabId("tab-terminal-close")).toBe(true);
+    expect(consumeExplicitlyClosedTerminalTabId("tab-terminal-keep")).toBe(false);
+  });
+
   it("shows an error notice when terminal cleanup fails", async () => {
     const closeTabState = vi.fn();
     const removeTabData = vi.fn();
@@ -379,6 +421,39 @@ describe("tabCommands", () => {
     });
     expect(closeAllTabsState).toHaveBeenCalledWith("tab-terminal-1");
     expect(removeTabData).toHaveBeenCalledWith(["tab-terminal-1", "tab-terminal-2"]);
+  });
+
+  it("records tombstones for terminal tabs closed via closeAllTabs", async () => {
+    const closeAllTabsState = vi.fn();
+    const removeTabData = vi.fn();
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-terminal-1",
+          workspaceId: "workspace-1",
+          title: "A",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Terminal A", sessionId: "terminal-session-3" },
+        },
+        {
+          id: "tab-terminal-2",
+          workspaceId: "workspace-1",
+          title: "B",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Terminal B", sessionId: "terminal-session-4" },
+        },
+      ],
+      closeAllTabs: closeAllTabsState,
+    });
+    chatStore.setState({ removeTabData });
+
+    closeAllTabs("tab-terminal-1");
+    await Promise.resolve();
+
+    expect(consumeExplicitlyClosedTerminalTabId("tab-terminal-1")).toBe(true);
+    expect(consumeExplicitlyClosedTerminalTabId("tab-terminal-2")).toBe(true);
   });
 
   it("delegates tab state updates to tab store", () => {

@@ -18,7 +18,7 @@ export type Workspace = {
   userId: string;
   nodeId: string;
   kind: "primary" | "worktree";
-  status: "active" | "closed";
+  status: "active" | "closed" | "provisioning";
   branch: string | null;
   sourceBranch: string | null;
   localPath: string;

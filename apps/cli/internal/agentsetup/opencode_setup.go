@@ -70,14 +70,19 @@ var openCodeCommands = map[string]string{
 description: Start a new task — create a ticket folder in .my-context/tasks/
 ---
 
-Read ~/.agents/skills/ys-start/SKILL.md and follow its workflow to start a new task.
-Ask me for: title, ticket URL/ID (optional), and acceptance criteria.
+YISHAN_COMMAND: ys-start
+
+Start a new task using the ys-start workflow.
+If I did not provide task details, generate the title, goal, and acceptance criteria from my request by default.
+Only ask follow-up questions if the request is too ambiguous to infer safely.
 Create the task folder under .my-context/tasks/active/<id>-<slug>/ with task.md, register it in state.json, then suggest the next step (/ys-research).`,
 	"ys-research": `---
 description: Research a task — search project memory, explore codebase, record findings
 ---
 
-Read ~/.agents/skills/ys-research/SKILL.md and follow its workflow to research the current task.
+YISHAN_COMMAND: ys-research
+
+Research the current task using the ys-research workflow.
 Read .my-context/tasks/state.json to find the active task, then read its task.md.
 Search project memory with: yishan memory search --output json --project-id $YISHAN_PROJECT_ID "<keywords>"
 Explore the codebase and read any relevant .my-context/ docs.
@@ -86,7 +91,9 @@ Append findings to notes.md under a new date heading. When done, suggest /ys-pla
 description: Plan a task — draft an execution plan with ordered steps
 ---
 
-Read ~/.agents/skills/ys-plan/SKILL.md and follow its workflow to plan the current task.
+YISHAN_COMMAND: ys-plan
+
+Plan the current task using the ys-plan workflow.
 Read the task's task.md and notes.md, then draft plan.md with approach and ordered concrete steps.
 Every step must reference specific files and be verifiable. Cover all acceptance criteria.
 Write plan.md and suggest /ys-build.`,
@@ -94,7 +101,9 @@ Write plan.md and suggest /ys-build.`,
 description: Build a task — execute the plan, write code, add tests
 ---
 
-Read ~/.agents/skills/ys-build/SKILL.md and follow its workflow to build the planned task.
+YISHAN_COMMAND: ys-build
+
+Build the current task using the ys-build workflow.
 Read plan.md and execute each step in order. Write code, add unit tests.
 Run tests after each step — fix failures before proceeding.
 When all steps are done, run the full test suite, then suggest /ys-verify.`,
@@ -102,7 +111,9 @@ When all steps are done, run the full test suite, then suggest /ys-verify.`,
 description: Verify a task — review code, run lint and tests
 ---
 
-Read ~/.agents/skills/ys-verify/SKILL.md and follow its workflow to verify the task.
+YISHAN_COMMAND: ys-verify
+
+Verify the current task using the ys-verify workflow.
 Run through all checks: acceptance criteria, code review, lint, typecheck, full test suite.
 Write a verification checklist at the bottom of notes.md.
 If all checks pass, suggest /ys-done. Fix any issues before proceeding.`,
@@ -110,7 +121,9 @@ If all checks pass, suggest /ys-done. Fix any issues before proceeding.`,
 description: Finalize a task — update docs, move to completed/, update MEMORY.md
 ---
 
-Read ~/.agents/skills/ys-done/SKILL.md and follow its workflow to finalize the task.
+YISHAN_COMMAND: ys-done
+
+Finalize the current task using the ys-done workflow.
 Collect all PR URLs, write outcome.md with PRs, what was done, what changed, and future notes.
 Update architecture docs in .my-context/architecture/ if anything structural changed.
 Move the task folder from active/ to completed/, update state.json, and update MEMORY.md.`,
@@ -118,14 +131,18 @@ Move the task folder from active/ to completed/, update state.json, and update M
 description: Search or update project memory (.my-context/)
 ---
 
-Read ~/.agents/skills/ys-memory/SKILL.md.
+YISHAN_COMMAND: ys-memory
+
+Handle project memory using the ys-memory workflow.
 If I ask to search: run yishan memory search --output json --project-id $YISHAN_PROJECT_ID "<keywords>".
 If I ask to update: edit .my-context/MEMORY.md following the template and rules in the skill.`,
 	"ys-workspace": `---
 description: Manage yishan workspaces — create, list, find, close
 ---
 
-Read ~/.agents/skills/ys-workspace/SKILL.md and follow its workflow.
+YISHAN_COMMAND: ys-workspace
+
+Manage workspaces using the ys-workspace workflow.
 Use the yishan CLI to manage workspaces — list, create (with --task-run-agent-kind opencode), or close.
 Environment variables YISHAN_PROJECT_ID, YISHAN_WORKSPACE_ID, YISHAN_ORG_ID are already set.
 Use --output json for machine parsing. Always pass --project-id from the environment.

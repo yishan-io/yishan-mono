@@ -118,6 +118,10 @@ export type CopyFilesInput = {
 
 export type CopyFilesResult = { ok: true; copiedPaths: string[] } | { ok: false; error: string };
 
+export type ResolveRealPathResult = {
+  path: string;
+};
+
 export type WriteFileBase64Input = {
   /** Absolute path of the file to write. */
   absolutePath: string;
@@ -154,6 +158,7 @@ export type DesktopHostBridge = {
   openEntryInExternalApp: (input: OpenEntryInExternalAppInput) => Promise<{ ok: true }>;
   openExternalUrl: (input: OpenExternalUrlInput) => Promise<OpenExternalUrlResult>;
   readExternalClipboardSourcePaths: () => Promise<ExternalClipboardReadOutcome>;
+  resolveRealPath: (path: string) => Promise<ResolveRealPathResult>;
   copyFiles: (input: CopyFilesInput) => Promise<CopyFilesResult>;
   writeFileBase64: (input: WriteFileBase64Input) => Promise<WriteFileBase64Result>;
   loadBrowserHistory: () => Promise<LoadBrowserHistoryResult>;
@@ -162,6 +167,7 @@ export type DesktopHostBridge = {
   playNotificationSound: (input: PlayNotificationSoundInput) => Promise<NotificationSoundPreviewResult>;
   requestMicrophoneAccess: () => Promise<{ granted: boolean }>;
   getPendingUpdate: () => Promise<DesktopUpdateEventPayload | null>;
+  dismissUpdate: () => Promise<{ ok: true }>;
   checkForUpdates: () => Promise<{ ok: true }>;
   downloadUpdate: () => Promise<{ ok: true } | { ok: false; error: string }>;
   installUpdate: () => Promise<{ ok: true }>;
@@ -199,6 +205,7 @@ export const HOST_IPC_CHANNELS = {
   openEntryInExternalApp: "desktop:host/open-entry-in-external-app",
   openExternalUrl: "desktop:host/open-external-url",
   readExternalClipboardSourcePaths: "desktop:host/read-external-clipboard-source-paths",
+  resolveRealPath: "desktop:host/resolve-real-path",
   copyFiles: "desktop:host/copy-files",
   writeFileBase64: "desktop:host/write-file-base64",
   loadBrowserHistory: "desktop:host/load-browser-history",
@@ -207,6 +214,7 @@ export const HOST_IPC_CHANNELS = {
   playNotificationSound: "desktop:host/play-notification-sound",
   requestMicrophoneAccess: "desktop:host/request-microphone-access",
   getPendingUpdate: "desktop:host/get-pending-update",
+  dismissUpdate: "desktop:host/dismiss-update",
   checkForUpdates: "desktop:host/check-for-updates",
   downloadUpdate: "desktop:host/download-update",
   installUpdate: "desktop:host/install-update",

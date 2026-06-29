@@ -454,9 +454,11 @@ func sendOrgNotificationToSessions(
 }
 
 // SendOrgNotification sends a JSON-RPC notification to every connected node in one organization.
-func (m *SessionManager) SendOrgNotification(organizationID string, method string, params any) int {
+// excludeNodeID, when non-empty, skips the sending node so it does not receive
+// its own broadcast back.
+func (m *SessionManager) SendOrgNotification(organizationID string, method string, params any, excludeNodeID string) int {
 	return sendOrgNotificationToSessions(
-		m.collectConnectedOrganizationSessions(organizationID, ""),
+		m.collectConnectedOrganizationSessions(organizationID, excludeNodeID),
 		organizationID,
 		method,
 		params,

@@ -9,9 +9,13 @@ import {
   playNotificationSound,
 } from "../commands/notificationCommands";
 import { loadWorkspaceSnapshot } from "../commands/projectCommands";
+import { buildWorkspaceCreatePlaceholder } from "../commands/workspaceStoreHelpers";
 import { type DesktopAgentKind, isDesktopAgentKind } from "../helpers/agentSettings";
 import { getErrorMessage } from "../helpers/errorHelpers";
-import { consumeExplicitlyClosedTerminalTabId } from "../helpers/terminalCloseTombstones";
+import {
+  consumeExplicitlyClosedTerminalTabId,
+  recordExplicitlyClosedTerminalTabId,
+} from "../helpers/terminalCloseTombstones";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../rpc/rpcTransport";
 import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../store/chatStore";
@@ -26,6 +30,7 @@ import { subscribeInAppNotificationEvent } from "./backendEventSubscriptions";
 type NotificationEventPayload = RpcFrontendMessagePayload<"notificationEvent">;
 type ObserverStatusPayload = NonNullable<NotificationEventPayload["observerStatus"]>;
 type NotificationSoundPayload = NonNullable<NotificationEventPayload["soundToPlay"]>;
+type WorkspaceCreateStartedPayload = RpcFrontendMessagePayload<"workspaceCreateStarted">;
 type WorkspaceCreateProgressPayload = RpcFrontendMessagePayload<"workspaceCreateProgress">;
 type WorkspaceCreateCompletedPayload = RpcFrontendMessagePayload<"workspaceCreateCompleted">;
 type WorkspaceCreateFailedPayload = RpcFrontendMessagePayload<"workspaceCreateFailed">;
@@ -50,6 +55,7 @@ type BackendEventStoreBindingsDependencies = {
     listener: (workspaceId: string | undefined, workspaceWorktreePath: string, changedRelativePaths?: string[]) => void,
   ) => () => void;
   subscribeInAppNotification: (listener: (payload: NotificationEventPayload) => void) => () => void;
+  subscribeWorkspaceCreateStarted?: (listener: (payload: WorkspaceCreateStartedPayload) => void) => () => void;
   subscribeWorkspaceCreateProgress?: (listener: (payload: WorkspaceCreateProgressPayload) => void) => () => void;
   subscribeWorkspaceCreateCompleted?: (listener: (payload: WorkspaceCreateCompletedPayload) => void) => () => void;
   subscribeWorkspaceCreateFailed?: (listener: (payload: WorkspaceCreateFailedPayload) => void) => () => void;
@@ -76,6 +82,7 @@ type BackendEventStoreBindingsDependencies = {
   incrementGitRefreshVersion: (workspaceWorktreePath: string) => void;
   setWorkspaceAgentStatusByWorkspaceId: (statusByWorkspaceId: Record<string, WorkspaceAgentStatus>) => void;
   recordWorkspaceUnreadNotification: (workspaceId: string, tone: WorkspaceUnreadTone) => void;
+  applyWorkspaceCreateStartedEvent?: (payload: WorkspaceCreateStartedPayload) => void;
   applyWorkspaceCreateProgressEvent?: (payload: WorkspaceCreateProgressPayload) => void;
   applyWorkspaceCreateCompletedEvent?: (payload: WorkspaceCreateCompletedPayload) => boolean;
   applyWorkspaceCreateFailedEvent?: (payload: WorkspaceCreateFailedPayload) => void;
@@ -121,6 +128,15 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
     }),
   subscribeInAppNotification: (listener) => {
     return subscribeInAppNotificationEvent(listener);
+  },
+  subscribeWorkspaceCreateStarted: (listener) => {
+    return subscribeBackendEvent("workspace.create.started", (event) => {
+      if (event.source !== "workspaceCreateStarted") {
+        return;
+      }
+
+      listener(event.payload);
+    });
   },
   subscribeWorkspaceCreateProgress: (listener) => {
     return subscribeBackendEvent("workspace.create.progress", (event) => {
@@ -237,23 +253,41 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
   recordWorkspaceUnreadNotification: (workspaceId, tone) => {
     chatStore.getState().recordWorkspaceUnreadNotification(workspaceId, tone);
   },
+  applyWorkspaceCreateStartedEvent: (payload) => {
+    workspaceStore.getState().addWorkspace(
+      buildWorkspaceCreatePlaceholder({
+        workspaceId: payload.workspaceId,
+        projectId: payload.projectId,
+        repoId: payload.projectId,
+        organizationId: payload.organizationId,
+        name: payload.workspaceName,
+        sourceBranch: payload.sourceBranch,
+        branch: payload.branch,
+        worktreePath: "",
+        nodeId: payload.nodeId,
+        status: "provisioning",
+      }),
+    );
+  },
   applyWorkspaceCreateProgressEvent: (payload) => {
     workspaceCreateProgressStore.getState().applyWorkspaceCreateProgressEvent(payload);
   },
   applyWorkspaceCreateCompletedEvent: (payload) => {
     const store = workspaceStore.getState();
     const existing = store.workspaces.find((ws) => ws.id === payload.workspaceId);
-    if (existing) {
+    const progressEntry = workspaceCreateProgressStore.getState().progressByWorkspaceId[payload.workspaceId];
+    if (existing && progressEntry) {
       store.addWorkspace({
-        workspaceId: payload.workspaceId,
+        workspaceId: existing.id,
+        organizationId: existing.organizationId,
         projectId: existing.projectId,
         repoId: existing.repoId,
-        organizationId: existing.organizationId,
         name: existing.name,
         sourceBranch: existing.sourceBranch,
         branch: existing.branch,
         worktreePath: payload.worktreePath,
         nodeId: existing.nodeId,
+        status: "active",
       });
     }
     workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(payload.workspaceId);
@@ -273,7 +307,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
       });
     }
 
-    return Boolean(existing);
+    return Boolean(existing && progressEntry);
   },
   applyWorkspaceCreateFailedEvent: (payload) => {
     workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(payload.workspaceId);
@@ -513,6 +547,42 @@ async function dispatchPreferenceBackedNotification(
   }
 }
 
+const lifecycleBySessionKey = new Map<
+  string,
+  {
+    workspaceId: string;
+    status: AgentSessionLifecycleStatus;
+  }
+>();
+
+/**
+ * Clears agent-status lifecycle entries for one terminal tab and re-derives
+ * the workspace-level agent status map. Called when a terminal tab is
+ * explicitly closed to prevent stale "running" state when the agent process
+ * is killed without emitting a Stop hook.
+ */
+export function clearTerminalAgentStatus(tabId: string): void {
+  const normalizedTabId = tabId.trim();
+  if (!normalizedTabId) {
+    return;
+  }
+
+  let changed = false;
+  for (const sessionKey of lifecycleBySessionKey.keys()) {
+    const parsed = parseObserverSessionKey(sessionKey);
+    if (parsed?.tabId === normalizedTabId) {
+      lifecycleBySessionKey.delete(sessionKey);
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    chatStore
+      .getState()
+      .setWorkspaceAgentStatusByWorkspaceId(deriveWorkspaceAgentStatusByWorkspaceId(lifecycleBySessionKey));
+  }
+}
+
 /**
  * Creates one binding function that connects normalized backend events to workspace store actions.
  */
@@ -530,6 +600,46 @@ export function createBackendEventStoreBindings(
   return function startBackendEventStoreBindings() {
     const gitRefreshTimersByWorktreePath = new Map<string, ReturnType<typeof setTimeout>>();
     let workspaceSnapshotRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+    let isWorkspaceSnapshotRefreshRunning = false;
+    let shouldRunWorkspaceSnapshotRefreshAgain = false;
+
+    const runWorkspaceSnapshotRefresh = () => {
+      if (isWorkspaceSnapshotRefreshRunning) {
+        shouldRunWorkspaceSnapshotRefreshAgain = true;
+        return;
+      }
+
+      isWorkspaceSnapshotRefreshRunning = true;
+      void resolvedDependencies
+        .loadWorkspaceSnapshot?.()
+        .catch((error) => {
+          console.error("[backendEventStoreBindings] Failed to refresh workspace snapshot after invalidation", error);
+        })
+        .finally(() => {
+          isWorkspaceSnapshotRefreshRunning = false;
+          if (!shouldRunWorkspaceSnapshotRefreshAgain) {
+            return;
+          }
+
+          shouldRunWorkspaceSnapshotRefreshAgain = false;
+          workspaceSnapshotRefreshTimer = setTimeout(() => {
+            workspaceSnapshotRefreshTimer = undefined;
+            runWorkspaceSnapshotRefresh();
+          }, 300);
+        });
+    };
+
+    const scheduleWorkspaceSnapshotRefresh = () => {
+      if (workspaceSnapshotRefreshTimer) {
+        shouldRunWorkspaceSnapshotRefreshAgain = true;
+        return;
+      }
+
+      workspaceSnapshotRefreshTimer = setTimeout(() => {
+        workspaceSnapshotRefreshTimer = undefined;
+        runWorkspaceSnapshotRefresh();
+      }, 300);
+    };
 
     const scheduleGitRefresh = (workspaceWorktreePath: string) => {
       const normalizedPath = workspaceWorktreePath.trim();
@@ -546,14 +656,6 @@ export function createBackendEventStoreBindings(
       }, GIT_REFRESH_COALESCE_MS);
       gitRefreshTimersByWorktreePath.set(normalizedPath, timeoutId);
     };
-
-    const lifecycleBySessionKey = new Map<
-      string,
-      {
-        workspaceId: string;
-        status: AgentSessionLifecycleStatus;
-      }
-    >();
 
     const unsubscribeGitChanged = resolvedDependencies.subscribeGitChanged(
       (workspaceId, workspaceWorktreePath, affectsBranch, currentBranch) => {
@@ -663,19 +765,21 @@ export function createBackendEventStoreBindings(
       const tone: WorkspaceUnreadTone = payload.tone === "error" ? "error" : "success";
       resolvedDependencies.recordWorkspaceUnreadNotification(workspaceId, tone);
     });
+    const unsubscribeWorkspaceCreateStarted =
+      resolvedDependencies.subscribeWorkspaceCreateStarted?.((payload) => {
+        resolvedDependencies.applyWorkspaceCreateStartedEvent?.(payload);
+      }) ?? (() => {});
     const unsubscribeWorkspaceCreateProgress =
       resolvedDependencies.subscribeWorkspaceCreateProgress?.((payload) => {
         resolvedDependencies.applyWorkspaceCreateProgressEvent?.(payload);
       }) ?? (() => {});
     const unsubscribeWorkspaceCreateCompleted =
       resolvedDependencies.subscribeWorkspaceCreateCompleted?.((payload) => {
-        const wasApplied = resolvedDependencies.applyWorkspaceCreateCompletedEvent?.(payload) ?? true;
-        if (wasApplied) {
-          return;
-        }
+        resolvedDependencies.applyWorkspaceCreateCompletedEvent?.(payload);
 
-        // The completion payload does not include enough fields to safely rebuild
-        // a missing workspace row from scratch, so repair via an immediate reload.
+        // Always reload the snapshot after completion so the desktop picks up
+        // the authoritative API status (clears the provisioning spinner even
+        // when the daemon PATCH event was dropped or arrived late).
         void resolvedDependencies.loadWorkspaceSnapshot?.().catch((error) => {
           console.error(
             "[backendEventStoreBindings] Failed to refresh workspace snapshot after create completion",
@@ -737,16 +841,7 @@ export function createBackendEventStoreBindings(
           });
         }
 
-        if (workspaceSnapshotRefreshTimer) {
-          return;
-        }
-
-        workspaceSnapshotRefreshTimer = setTimeout(() => {
-          workspaceSnapshotRefreshTimer = undefined;
-          void resolvedDependencies.loadWorkspaceSnapshot?.().catch((error) => {
-            console.error("[backendEventStoreBindings] Failed to refresh workspace snapshot after invalidation", error);
-          });
-        }, 300);
+        scheduleWorkspaceSnapshotRefresh();
       }) ?? (() => {});
     const unsubscribeWorkspaceStateChanged =
       resolvedDependencies.subscribeWorkspaceStateChanged?.((_payload) => {
@@ -780,6 +875,7 @@ export function createBackendEventStoreBindings(
       unsubscribeDaemonConnectionStatus();
       unsubscribeWorkspaceFilesChanged();
       unsubscribeInAppNotification();
+      unsubscribeWorkspaceCreateStarted();
       unsubscribeWorkspaceCreateProgress();
       unsubscribeWorkspaceCreateCompleted();
       unsubscribeWorkspaceCreateFailed();
@@ -859,6 +955,8 @@ function handleTerminalSessionEvent(
 
   const matchingTab = tabState.tabs.find((tab) => tab.kind === "terminal" && tab.data.sessionId === payload.sessionId);
   if (matchingTab) {
+    recordExplicitlyClosedTerminalTabId(matchingTab.id);
+    clearTerminalAgentStatus(matchingTab.id);
     tabState.closeTab(matchingTab.id);
   }
 }

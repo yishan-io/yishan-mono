@@ -50,6 +50,7 @@ export type WorkspaceItem = {
   worktreePath?: string;
   nodeId?: string;
   kind?: "managed" | "local";
+  status?: WorkspaceRecord["status"];
   state?: WorkspaceLifecycleState;
   health?: WorkspaceHealth;
 };
@@ -258,6 +259,7 @@ export type WorkspaceStoreState = {
     worktreePath?: string;
     nodeId?: string;
     workspaceId: string;
+    status?: WorkspaceRecord["status"];
   }) => void;
   removeWorkspace: (input: {
     projectId?: string;

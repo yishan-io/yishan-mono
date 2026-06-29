@@ -185,7 +185,7 @@ func resolveMemoryDBPath() (string, error) {
 	if profile == "" {
 		profile = "default"
 	}
-	return filepath.Join(yishanHome, "profiles", profile, "memory.db"), nil
+	return filepath.Join(yishanHome, "profiles", profile, "memory", "memory.db"), nil
 }
 
 func init() {

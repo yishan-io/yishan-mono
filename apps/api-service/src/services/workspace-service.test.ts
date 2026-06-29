@@ -14,6 +14,10 @@ import { WorkspaceService } from "@/services/workspace-service";
 import type { ServiceConfig } from "@/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const workspacePullRequestMocks = vi.hoisted(() => ({
+  fetchLatestPrByWorkspaceId: vi.fn(),
+}));
+
 vi.mock("@/services/workspace-relay-operations", () => {
   return {
     listWorkspaceFilesViaRelay: vi.fn(),
@@ -25,6 +29,9 @@ vi.mock("@/services/workspace-relay-operations", () => {
 });
 vi.mock("@/services/workspace-relay", () => ({
   resolveWorkspaceRelayAccess: vi.fn(),
+}));
+vi.mock("@/services/workspace-pull-request-service", () => ({
+  fetchLatestPrByWorkspaceId: workspacePullRequestMocks.fetchLatestPrByWorkspaceId,
 }));
 
 const listWorkspaceGitBranchesViaRelayMock = listWorkspaceGitBranchesViaRelay as ReturnType<typeof vi.fn>;
@@ -135,6 +142,7 @@ function makeDb(
     outerUpdate,
     outerUpdateReturning,
     txInsert,
+    txInsertValues,
     txInsertReturning,
     txSelect,
     txUpdate,
@@ -144,11 +152,13 @@ function makeDb(
 
 // ── createWorkspace ────────────────────────────────────────────────────────────
 
-describe("WorkspaceService.createWorkspace", () => {
-  beforeEach(() => {
-    stubProvisioner.enqueueWorkspaceProvision.mockClear();
-  });
+beforeEach(() => {
+  stubProvisioner.enqueueWorkspaceProvision.mockClear();
+  workspacePullRequestMocks.fetchLatestPrByWorkspaceId.mockReset();
+  workspacePullRequestMocks.fetchLatestPrByWorkspaceId.mockResolvedValue(new Map());
+});
 
+describe("WorkspaceService.createWorkspace", () => {
   it("throws OrganizationMembershipRequiredError when actor is not a member", async () => {
     const { db } = makeDb();
     const service = new WorkspaceService(db, makeOrgService(null), stubProvisioner);
@@ -237,6 +247,7 @@ describe("WorkspaceService.createWorkspace", () => {
 
   it("returns the existing active workspace instead of inserting a duplicate", async () => {
     const { db, txInsert, txUpdate } = makeDb({ activeRows: [WORKSPACE_ROW] });
+
     const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
 
     const result = await service.createWorkspace({
@@ -252,6 +263,33 @@ describe("WorkspaceService.createWorkspace", () => {
     expect(txUpdate).not.toHaveBeenCalled();
     expect(stubProvisioner.enqueueWorkspaceProvision).not.toHaveBeenCalled();
     expect(result.id).toBe("ws-1");
+  });
+
+  it("creates a provisioning workspace when localPath is omitted", async () => {
+    const provisioningRow = {
+      ...WORKSPACE_ROW,
+      status: "provisioning" as const,
+      localPath: "",
+    };
+    const { db, txInsertValues } = makeDb({ insertedRows: [provisioningRow] });
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.createWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      nodeId: "node-1",
+      kind: "primary",
+    });
+
+    expect(txInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        localPath: "",
+        status: "provisioning",
+      }),
+    );
+    expect(result.status).toBe("provisioning");
+    expect(result.localPath).toBe("");
   });
 
   it("passes the created workspace id to the provisioner", async () => {
@@ -343,6 +381,64 @@ describe("WorkspaceService.listWorkspaces", () => {
     });
 
     expect(result).toEqual([]);
+  });
+
+  it("returns provisioning workspaces for in-flight creates", async () => {
+    const provisioningRow = {
+      ...WORKSPACE_ROW,
+      kind: "worktree" as const,
+      status: "provisioning" as const,
+      branch: "feature-a",
+      sourceBranch: "main",
+      localPath: "",
+    };
+    const db = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([provisioningRow]),
+        }),
+      }),
+    } as unknown as AppDb;
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.listWorkspaces({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      actorUserId: "user-1",
+    });
+
+    expect(result).toEqual([{ ...provisioningRow, latestPullRequest: null }]);
+  });
+});
+
+describe("WorkspaceService.updateWorkspace", () => {
+  it("promotes a provisioning workspace to active", async () => {
+    const updatedRow = {
+      ...WORKSPACE_ROW,
+      kind: "worktree" as const,
+      status: "active" as const,
+      branch: "feature-a",
+      sourceBranch: "main",
+      localPath: "/repos/proj/.worktrees/feature-a",
+    };
+    const updateReturning = vi.fn().mockResolvedValue([updatedRow]);
+    const updateWhere = vi.fn().mockReturnValue({ returning: updateReturning });
+    const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
+    const update = vi.fn().mockReturnValue({ set: updateSet });
+    const db = { update } as unknown as AppDb;
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.updateWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+      localPath: " /repos/proj/.worktrees/feature-a ",
+    });
+
+    expect(update).toHaveBeenCalledWith(workspaces);
+    expect(updateWhere).toHaveBeenCalledOnce();
+    expect(result).toEqual({ ...updatedRow, latestPullRequest: null });
   });
 });
 
@@ -451,6 +547,12 @@ describe("WorkspaceService.closeWorkspace", () => {
     kind: "worktree" as const,
     status: "closed" as const,
   };
+  const WORKTREE_PROVISIONING_ROW = {
+    ...WORKSPACE_ROW,
+    kind: "worktree" as const,
+    status: "provisioning" as const,
+    localPath: "",
+  };
 
   function makeCloseDb(
     options: {
@@ -522,6 +624,25 @@ describe("WorkspaceService.closeWorkspace", () => {
   it("returns changed true when active workspace is newly closed", async () => {
     const { db, updateWhere } = makeCloseDb({
       existingRows: [WORKTREE_ACTIVE_ROW],
+      updatedRows: [WORKTREE_CLOSED_ROW],
+    });
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.closeWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+    });
+
+    expect(result.changed).toBe(true);
+    expect(result.workspace.status).toBe("closed");
+    expect(updateWhere).toHaveBeenCalledOnce();
+  });
+
+  it("returns changed true when provisioning workspace is rolled back and closed", async () => {
+    const { db, updateWhere } = makeCloseDb({
+      existingRows: [WORKTREE_PROVISIONING_ROW],
       updatedRows: [WORKTREE_CLOSED_ROW],
     });
     const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);

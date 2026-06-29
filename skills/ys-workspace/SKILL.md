@@ -166,8 +166,9 @@ yishan workspace create \
 
 ### Create a workspace with a task run
 
-Start an agent in the workspace immediately after creation. The agent runs
-in a terminal session with the given prompt as the initial task.
+Start an agent in the workspace immediately after creation. The task content
+should already exist in `.my-context/tasks/active/<id>-<slug>/task.md` — the
+prompt is a short pointer to that file, not the full task description.
 
 ```bash
 yishan workspace create \
@@ -176,13 +177,12 @@ yishan workspace create \
   --branch feature/my-branch \
   --source-branch main \
   --task-run-agent-kind opencode \
-  --task-run-prompt "Implement the login page" \
-  --task-run-model sonnet
+  --task-run-prompt "Read .my-context/tasks/active/<id>-<slug>/task.md and use ys-plan then ys-build to implement the task."
 ```
 
 Flags:
 - `--task-run-agent-kind` — Agent binary to launch (opencode, claude, codex, pi, gemini, copilot, cursor)
-- `--task-run-prompt` — Initial task prompt for the agent
+- `--task-run-prompt` — Short prompt (1-2 lines) directing the agent to the task file — NOT the full task description
 - `--task-run-model` — Optional model override for the agent
 
 ### Close a workspace
@@ -203,47 +203,17 @@ yishan workspace close \
    Primary workspaces are created automatically when the project is created — no
    manual primary setup needed.
 
-2. **Prepare the task prompt**: Always auto-start an agent in the new workspace
-   by passing `--task-run-agent-kind opencode` and `--task-run-prompt` to the
-   create command. Determine the prompt as follows:
+2. **Create the task in `.my-context/` first**: Use the `ys-start` skill to create
+   the task folder under `.my-context/tasks/active/<id>-<slug>/` with `task.md`.
+   This persists the task content on disk so it cannot be lost during workspace
+   creation. Do NOT synthesize a large `--task-run-prompt`.
 
-   - **If a ticket/issue is provided** (e.g., `v-multica-issue` ticket content,
-     or a link to GitHub/Linear/Jira issue): Extract the full ticket description,
-     acceptance criteria, and any relevant discussion. Use this content verbatim
-     as the `--task-run-prompt`.
+   If the user has not yet navigated a task, use `ys-start` now. If a task already
+   exists, note its ID and path.
 
-   - **If no ticket is given**: Synthesize the user's input into a well-structured
-     prompt. The prompt should include:
-     - A clear one-line summary of the task
-     - Context: what problem is being solved and why
-     - Acceptance criteria or expected outcome
-     - Any constraints, conventions, or references the user mentioned
-     - The user's exact phrasing where possible
-
-   Example synthesized prompt:
-   ```
-   Task: Add rate limiting to the API gateway
-
-   Context: The API gateway currently has no rate limiting, which could lead to
-   abuse or accidental overuse. Add per-IP rate limiting with a configurable
-   limit (default 100 req/min).
-
-   Acceptance criteria:
-   - Rate limit is enforced per client IP
-   - Limit is configurable via environment variable RATE_LIMIT_PER_MINUTE
-   - Exceeded limit returns HTTP 429 with a Retry-After header
-   - Existing tests continue to pass
-   - Add unit tests for the rate limiter
-
-   Constraints:
-   - Use the existing Redis instance for rate limit counters
-   - Follow the middleware pattern used by auth middleware
-   ```
-
-3. **Create a workspace**: Determine a branch name from the task (agree with user).
-   Then run the workspace create command with the task-run flags. This launches a
-   separate agent session in the new workspace. Do not continue the task from
-   the current session inside that new workspace.
+3. **Create the workspace**: Determine a branch name from the task (agree with user).
+   Pass the task path as a short, stable prompt — the agent in the new workspace
+   will read `task.md` and follow `ys-plan` / `ys-build` from there.
 
     ```bash
     yishan workspace create \
@@ -253,7 +223,7 @@ yishan workspace close \
       --source-branch main \
       --name feature-my-branch \
       --task-run-agent-kind opencode \
-      --task-run-prompt "<prepared prompt>"
+      --task-run-prompt "Read .my-context/tasks/active/<id>-<slug>/task.md and use ys-plan then ys-build to implement the task."
     ```
 
 4. **Return control to the user**: Share the created workspace ID, branch, and

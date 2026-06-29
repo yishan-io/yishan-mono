@@ -9,10 +9,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/buildinfo"
-	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/daemon"
 	"yishan/apps/cli/internal/login"
 	"yishan/apps/cli/internal/nodeid"
@@ -61,8 +59,18 @@ service token created via "yishan auth create-service-token".`,
 			return err
 		}
 
-		if err := persistAPITokens(result); err != nil {
+		persistenceResult, err := persistAuthTokensForLogin(cmd.Context(), api.TokenUpdate{
+			AccessToken:           result.AccessToken,
+			RefreshToken:          result.RefreshToken,
+			AccessTokenExpiresAt:  result.AccessTokenExpiresAt,
+			RefreshTokenExpiresAt: result.RefreshTokenExpiresAt,
+		})
+		if err != nil {
 			return err
+		}
+		if persistenceResult.Warning != nil {
+			log.Warn().Err(persistenceResult.Warning).Msg("failed to sync auth tokens to running daemon after login")
+			_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: running daemon auth session was not refreshed; restart the daemon or login again if daemon requests re-authentication: %v\n", persistenceResult.Warning)
 		}
 
 		if err := registerLocalNodeAfterLogin(); err != nil {
@@ -83,21 +91,14 @@ func init() {
 }
 
 func loginWithServiceToken(cmd *cobra.Command, token string) error {
-	// Persist the service token as the API token (no refresh token needed)
-	if err := config.UpdateFile(appConfig.ConfigPath, func(cfg *viper.Viper) {
-		cfg.Set(config.KeyAPIBaseURL, appConfig.API.BaseURL)
-		cfg.Set(config.KeyAPIToken, token)
-		cfg.Set(config.KeyAPIRefreshToken, "")
-		cfg.Set(config.KeyAPIAccessTokenExpiresAt, "")
-		cfg.Set(config.KeyAPIRefreshTokenExpiresAt, "")
-	}); err != nil {
+	persistenceResult, err := persistAuthTokensForLogin(cmd.Context(), api.TokenUpdate{AccessToken: token})
+	if err != nil {
 		return err
 	}
-
-	appConfig.API.Token = token
-	appConfig.API.RefreshToken = ""
-	appConfig.API.AccessTokenExpiresAt = ""
-	appConfig.API.RefreshTokenExpiresAt = ""
+	if persistenceResult.Warning != nil {
+		log.Warn().Err(persistenceResult.Warning).Msg("failed to sync auth tokens to running daemon after service token login")
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: running daemon auth session was not refreshed; restart the daemon or login again if daemon requests re-authentication: %v\n", persistenceResult.Warning)
+	}
 
 	// Verify the token works
 	client := api.NewClient(appConfig.API.BaseURL, token, "", "", "", nil)
@@ -114,24 +115,6 @@ func loginWithServiceToken(cmd *cobra.Command, token string) error {
 	}
 
 	return output.PrintAny(map[string]string{"status": "ok", "message": "login successful (service token)"})
-}
-
-func persistAPITokens(result login.FlowResult) error {
-	if err := config.UpdateFile(appConfig.ConfigPath, func(cfg *viper.Viper) {
-		cfg.Set(config.KeyAPIBaseURL, appConfig.API.BaseURL)
-		cfg.Set(config.KeyAPIToken, result.AccessToken)
-		cfg.Set(config.KeyAPIRefreshToken, result.RefreshToken)
-		cfg.Set(config.KeyAPIAccessTokenExpiresAt, result.AccessTokenExpiresAt)
-		cfg.Set(config.KeyAPIRefreshTokenExpiresAt, result.RefreshTokenExpiresAt)
-	}); err != nil {
-		return err
-	}
-
-	appConfig.API.Token = result.AccessToken
-	appConfig.API.RefreshToken = result.RefreshToken
-	appConfig.API.AccessTokenExpiresAt = result.AccessTokenExpiresAt
-	appConfig.API.RefreshTokenExpiresAt = result.RefreshTokenExpiresAt
-	return nil
 }
 
 // registerLocalNodeAfterLogin registers the local daemon node with the API

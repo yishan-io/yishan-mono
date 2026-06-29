@@ -17,7 +17,7 @@ const codexSessionFixture = `{"timestamp":"2026-06-08T05:08:10.774Z","type":"ses
 
 const codexActivityFixture = `{"timestamp":"2026-06-08T05:08:10.774Z","type":"session_meta","payload":{"id":"session-1","cwd":"/tmp/codex"}}
 {"timestamp":"2026-06-08T05:08:12.147Z","type":"turn_context","payload":{"turn_id":"turn-1","cwd":"/tmp/codex","model":"gpt-5.4-mini"}}
-{"timestamp":"2026-06-08T05:08:12.148Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Read ~/.agents/skills/ys-start/SKILL.md and follow its workflow"}]}}
+{"timestamp":"2026-06-08T05:08:12.148Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"YISHAN_COMMAND: ys-start\n\nStart a new task using the ys-start workflow."}]}}
 {"timestamp":"2026-06-08T05:08:12.149Z","type":"response_item","payload":{"type":"function_call","name":"shell","arguments":"{}","call_id":"call-1"}}
 {"timestamp":"2026-06-08T05:08:15.338Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1000,"cached_input_tokens":200,"output_tokens":50,"reasoning_output_tokens":10,"total_tokens":1050},"last_token_usage":{"input_tokens":1000,"cached_input_tokens":200,"output_tokens":50,"reasoning_output_tokens":10,"total_tokens":1050}}}}
 `
