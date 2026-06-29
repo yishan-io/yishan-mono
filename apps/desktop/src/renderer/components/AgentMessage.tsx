@@ -1,7 +1,16 @@
 import { Box, Collapse, IconButton, Paper, Typography } from "@mui/material";
 import { useState } from "react";
-import type { AgentMessage as AgentMessageType } from "../store/agentChatTypes";
+import type { AgentContentBlock, AgentMessage as AgentMessageType } from "../store/agentChatTypes";
 import { AgentToolCallCard } from "./AgentToolCallCard";
+
+/** Extracts text from a message's content regardless of string or array format. */
+function extractText(content: string | AgentContentBlock[]): string {
+  if (typeof content === "string") return content;
+  return content
+    .filter((b): b is Extract<AgentContentBlock, { type: "text" }> => b.type === "text")
+    .map((b) => b.text)
+    .join("\n");
+}
 
 type AgentMessageProps = {
   message: AgentMessageType;
@@ -26,7 +35,7 @@ export function AgentMessage({ message }: AgentMessageProps) {
     >
       {isUser && (
         <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-          {typeof message.content === "string" ? message.content : ""}
+          {extractText(message.content)}
         </Typography>
       )}
 
@@ -58,7 +67,7 @@ export function AgentMessage({ message }: AgentMessageProps) {
             variant="body2"
             sx={{ whiteSpace: "pre-wrap", mt: 0.5, color: message.isError ? "error.main" : undefined }}
           >
-            {typeof message.content === "string" ? message.content : ""}
+            {extractText(message.content)}
           </Typography>
         </Box>
       )}

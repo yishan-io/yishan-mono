@@ -145,11 +145,15 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     case "message_start": {
       const msg = event.message as AgentMessage | undefined;
       if (msg && msg.role === "assistant") {
-        // Start with a fresh content array for streaming accumulation.
+        // Preserve content blocks pi sent (models may pre-fill thinking/text).
+        // Deltas will append to these blocks by contentIndex.
+        const content = Array.isArray(msg.content)
+          ? (msg.content as AgentContentBlock[])
+          : [];
         store.updateStreamingMessage(tabId, {
           ...msg,
           id: msg.id ?? generateId(),
-          content: [],
+          content,
         });
       }
       break;
