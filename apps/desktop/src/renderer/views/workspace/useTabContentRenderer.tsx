@@ -13,6 +13,7 @@ import { layoutStore } from "../../store/settings/layoutStore";
 import type { WorkspaceTab } from "../../store/types";
 import { BrowserView } from "./browser/BrowserView";
 import { TerminalView } from "./terminal/TerminalView";
+import { AgentChatView } from "./AgentChatView";
 
 type TabContentRendererProps = {
   workspace: { worktreePath?: string } | undefined;
@@ -198,6 +199,18 @@ export function useTabContentRenderer({
               tabId={tab.id}
               focusRequestKey={shouldFocusContent ? focusContentRequestKey : 0}
               showVoiceButton={shouldFocusContent && isWorkspaceActive}
+            />
+          </Box>
+        );
+      }
+
+      if (tab.kind === "agent-chat") {
+        return (
+          <Box key={tab.id} sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            <AgentChatView
+              tabId={tab.id}
+              workspaceId={tab.workspaceId}
+              cwd={tab.data.cwd}
             />
           </Box>
         );

@@ -168,6 +168,12 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
     } as WorkspaceTabDataByKind[T["kind"]];
   }
 
+  if (input.kind === "agent-chat") {
+    return {
+      cwd: input.cwd || "",
+    } as WorkspaceTabDataByKind[T["kind"]];
+  }
+
   return {
     title: input.title?.trim() || "Terminal",
     sessionId: input.sessionId?.trim() || undefined,
@@ -261,6 +267,17 @@ function createTabFromOpenInput(input: OpenWorkspaceTabInput, workspaceId: strin
       title: "Browser",
       pinned: false,
       kind: "browser",
+      data: buildTabDataByInput(input),
+    };
+  }
+
+  if (input.kind === "agent-chat") {
+    return {
+      id: tabId,
+      workspaceId,
+      title: input.title?.trim() || "Agent Chat",
+      pinned: false,
+      kind: "agent-chat",
       data: buildTabDataByInput(input),
     };
   }
