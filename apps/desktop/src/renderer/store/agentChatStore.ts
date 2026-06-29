@@ -85,6 +85,8 @@ export const agentChatStore = create<AgentChatStoreState>()(
       set((state) => {
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
+        // Deduplicate: skip if message with same id already exists.
+        if (session.messages.some((m) => m.id === message.id)) return;
         session.messages.push(message);
         if (session.messages.length > MAX_MESSAGES_PER_TAB) {
           session.messages = session.messages.slice(-MAX_MESSAGES_PER_TAB);
@@ -104,7 +106,11 @@ export const agentChatStore = create<AgentChatStoreState>()(
       set((state) => {
         const session = state.sessionsByTabId[tabId];
         if (!session || !session.streamingMessage) return;
-        session.messages.push(session.streamingMessage);
+        const msg = session.streamingMessage;
+        // Deduplicate: skip if message with same id already in messages.
+        if (!session.messages.some((m) => m.id === msg.id)) {
+          session.messages.push(msg);
+        }
         session.streamingMessage = null;
       });
     },
