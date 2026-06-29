@@ -1105,6 +1105,9 @@
       "medium": "中等"
     }
   },
+  "agentChat": {
+    "title": "AI 对话"
+  },
   "launch": {
     "title": "接下来做什么？",
     "hint": "选择一个操作以开始。",
@@ -1112,6 +1115,7 @@
     "actions": {
       "openTerminal": "打开终端",
       "openBrowser": "打开浏览器标签",
+      "openAgentChat": "打开 AI 对话",
       "openChat": "打开聊天",
       "searchFiles": "搜索文件"
     }

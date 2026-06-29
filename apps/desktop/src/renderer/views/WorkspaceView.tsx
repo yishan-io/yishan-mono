@@ -115,6 +115,22 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
         return;
       }
 
+      if (payload.action === ACTIONS.OPEN_AGENT_CHAT_TAB) {
+        const workspaceId = workspaceStore.getState().selectedWorkspaceId;
+        const selectedWorkspace = workspaceStore.getState().workspaces.find((w) => w.id === workspaceId);
+        if (!workspaceId) {
+          return;
+        }
+
+        cmd.openTab({
+          workspaceId,
+          kind: "agent-chat",
+          title: "Agent Chat",
+          cwd: selectedWorkspace?.worktreePath ?? undefined,
+        });
+        return;
+      }
+
       if (payload.action === ACTIONS.TOGGLE_LEFT_PANE) {
         cmd.toggleLeftPaneVisibility();
         return;

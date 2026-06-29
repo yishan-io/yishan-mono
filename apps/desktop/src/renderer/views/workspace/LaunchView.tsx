@@ -7,6 +7,7 @@ import {
   LuGlobe,
   LuLoaderCircle,
   LuSearch,
+  LuSparkles,
   LuSquareTerminal,
   LuTriangleAlert,
 } from "react-icons/lu";
@@ -75,8 +76,10 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
   const workspace = workspaceStore((state) => state.workspaces.find((item) => item.id === workspaceId));
   const workspaceCreateProgress = workspaceCreateProgressStore((state) => state.progressByWorkspaceId[workspaceId]);
   const { openTab, openWorkspaceFileSearch } = useCommands();
+  const workspaces = workspaceStore((state) => state.workspaces);
   const platform = getRendererPlatform();
   const isPreparingWorkspace = workspace?.status === "provisioning" && Boolean(workspaceCreateProgress);
+  const selectedWorkspace = workspaces.find((w) => w.id === workspaceId);
 
   const launchActions = [
     {
@@ -102,6 +105,19 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
           workspaceId,
           kind: "browser",
           url: "",
+        }),
+    },
+    {
+      id: "agent-chat",
+      label: t("launch.actions.openAgentChat"),
+      shortcutLabel: getShortcutDisplayLabelById("open-agent-chat", platform),
+      icon: <LuSparkles size={16} />,
+      onClick: () =>
+        openTab({
+          workspaceId,
+          kind: "agent-chat",
+          title: t("agentChat.title"),
+          cwd: selectedWorkspace?.worktreePath || undefined,
         }),
     },
     {
