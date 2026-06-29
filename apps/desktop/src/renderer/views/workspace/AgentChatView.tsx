@@ -37,26 +37,32 @@ export function AgentChatView({ tabId, workspaceId, cwd }: AgentChatViewProps) {
     let unsubscribe: (() => void) | undefined;
 
     (async () => {
-      sessionId = await startAgentSession({ tabId, workspaceId, cwd });
-      await fetchAgentModels({ tabId, sessionId });
+      try {
+        sessionId = await startAgentSession({ tabId, workspaceId, cwd });
+        await fetchAgentModels({ tabId, sessionId });
 
-      // Subscribe to agent.pi.event via daemon events stream.
-      const client = await getDaemonClient();
-      unsubscribe = client.events.frontendStream.subscribe(undefined, {
-        onData: (event: { topic: string; payload: unknown }) => {
-          if (event.topic === "agent.pi.event") {
-            const p = event.payload as {
-              sessionId: string;
-              tabId: string;
-              workspaceId: string;
-              event: Record<string, unknown>;
-            };
-            if (p.tabId === tabId) {
-              handleAgentPiEvent(p);
+        // Subscribe to agent.pi.event via daemon events stream.
+        const client = await getDaemonClient();
+        unsubscribe = client.events.frontendStream.subscribe(undefined, {
+          onData: (event: { topic: string; payload: unknown }) => {
+            if (event.topic === "agent.pi.event") {
+              const p = event.payload as {
+                sessionId: string;
+                tabId: string;
+                workspaceId: string;
+                event: Record<string, unknown>;
+              };
+              if (p.tabId === tabId) {
+                handleAgentPiEvent(p);
+              }
             }
-          }
-        },
-      }).unsubscribe;
+          },
+        }).unsubscribe;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        agentChatStore.getState().initSession(tabId, tabId);
+        agentChatStore.getState().setSessionError(tabId, message);
+      }
     })();
 
     return () => {
@@ -121,6 +127,17 @@ export function AgentChatView({ tabId, workspaceId, cwd }: AgentChatViewProps) {
     return (
       <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
         <Typography color="text.secondary">Starting agent session…</Typography>
+      </Box>
+    );
+  }
+
+  if (session.state === "error") {
+    return (
+      <Box sx={{ p: 2, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 1 }}>
+        <Typography color="error.main" variant="body2">Failed to start agent session.</Typography>
+        <Typography color="text.secondary" variant="caption" sx={{ maxWidth: 400, textAlign: "center" }}>
+          {session.error}
+        </Typography>
       </Box>
     );
   }
