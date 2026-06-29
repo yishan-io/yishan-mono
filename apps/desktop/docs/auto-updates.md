@@ -17,3 +17,5 @@ To use this successfully, provide a valid `dev-app-update.yml` for your update p
 Update checks never auto-download or auto-install releases. When an update is detected, the renderer shows the in-app update snackbar and waits for the user to start the download. The snackbar then reports download progress and asks the user to restart after the download completes.
 
 The native `Check for Updates` menu item uses the same in-app snackbar flow as automatic checks. Native update dialogs are intentionally not used.
+
+If a user closes an automatically surfaced update-available snackbar, the app suppresses additional automatic update-available prompts for the rest of that app session on the same local calendar day. Manual `Check for Updates` remains available and is not suppressed.

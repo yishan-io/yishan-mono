@@ -15,6 +15,7 @@ import { DESKTOP_RPC_IPC_CHANNELS, type DesktopUpdateEventPayload, HOST_IPC_CHAN
 import { registerFileIpcHandlers } from "./ipc/fileHandlers";
 import { registerNotificationAndBrowserIpcHandlers } from "./ipc/notificationAndBrowserHandlers";
 import { isDevMode } from "./runtime/environment";
+import { resolveLocalCalendarDate, shouldSuppressAutoUpdateEvent } from "./updates/autoUpdateDismissalState";
 import { checkForUpdatesManually, downloadUpdate, startAutoUpdates } from "./updates/autoUpdateService";
 
 type DispatchActionOptions = {
@@ -40,6 +41,7 @@ export class DesktopApplication {
   private isQuitting = false;
   private pendingProtocolUrl: string | null = null;
   private pendingUpdateReady: DesktopUpdateEventPayload | null = null;
+  private dismissedAutoUpdateDate: string | null = null;
   private cachedDaemonQuitOnExit: boolean | null = null;
 
   /**
@@ -370,6 +372,11 @@ export class DesktopApplication {
       return this.pendingUpdateReady;
     });
 
+    ipcMain.handle(HOST_IPC_CHANNELS.dismissUpdate, async () => {
+      await this.dismissUpdate();
+      return { ok: true as const };
+    });
+
     ipcMain.handle(HOST_IPC_CHANNELS.checkForUpdates, async () => {
       await this.handleManualUpdateCheck();
       return { ok: true as const };
@@ -453,11 +460,29 @@ export class DesktopApplication {
 
   /** Forwards app update events to renderer update prompts. */
   private dispatchUpdateEvent(payload: DesktopUpdateEventPayload): void {
+    if (shouldSuppressAutoUpdateEvent(payload, this.dismissedAutoUpdateDate)) {
+      this.pendingUpdateReady = null;
+      return;
+    }
+
     this.pendingUpdateReady = payload.status === "not-available" || payload.status === "error" ? null : payload;
     this.mainWindow?.webContents.send(DESKTOP_RPC_IPC_CHANNELS.event, {
       method: "desktopUpdate",
       payload,
     });
+  }
+
+  /** Dismisses the current update prompt and records same-day auto-update suppression when needed. */
+  private async dismissUpdate(): Promise<void> {
+    const pendingUpdate = this.pendingUpdateReady;
+    this.pendingUpdateReady = null;
+
+    if (pendingUpdate?.status !== "available" || pendingUpdate.source !== "auto") {
+      return;
+    }
+
+    const dismissedDate = resolveLocalCalendarDate();
+    this.dismissedAutoUpdateDate = dismissedDate;
   }
 
   /** Handles a manual "Check for Updates" request from the native menu. */
