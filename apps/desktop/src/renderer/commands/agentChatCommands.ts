@@ -99,19 +99,17 @@ export async function setAgentThinkingLevel(opts: {
   agentChatStore.getState().setThinkingLevel(opts.tabId, opts.level);
 }
 
-/** Fetches available models from the pi session. */
+/** Fetches available models from the pi session. Result arrives via agent.pi.event. */
 export async function fetchAgentModels(opts: {
   tabId: string;
   sessionId: string;
 }): Promise<void> {
   const client = await getDaemonClient();
-  const result = (await client.pi.send({
+  await client.pi.send({
     sessionId: opts.sessionId,
     command: { type: "get_available_models" },
-  })) as { data?: { models?: AgentModel[] } };
-
-  const models = result?.data?.models ?? [];
-  agentChatStore.getState().setAvailableModels(opts.tabId, models);
+  });
+  // Response arrives asynchronously via agent.pi.event → handlePiResponse.
 }
 
 // ─── Pi event handler ────────────────────────────────────────────────────────
@@ -196,6 +194,12 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       // Lifecycle events; no store action needed.
       break;
 
+    case "response": {
+      // Command responses from pi (e.g., get_available_models result).
+      handlePiResponse(tabId, event);
+      break;
+    }
+
     default:
       break;
   }
@@ -262,4 +266,35 @@ function applyStreamDelta(message: AgentMessage, delta: AgentStreamEvent): void 
   }
 
   message.content = content;
+}
+
+// ─── Response handler ─────────────────────────────────────────────────────────
+
+function handlePiResponse(tabId: string, event: Record<string, unknown>): void {
+  const command = event.command as string | undefined;
+  const success = event.success as boolean | undefined;
+
+  if (!success || !command) return;
+
+  switch (command) {
+    case "get_available_models": {
+      const data = event.data as { models?: AgentModel[] } | undefined;
+      const models = data?.models ?? [];
+      agentChatStore.getState().setAvailableModels(tabId, models);
+      break;
+    }
+    case "get_state": {
+      const data = event.data as Record<string, unknown> | undefined;
+      if (data?.model && typeof data.model === "object") {
+        const model = data.model as AgentModel;
+        agentChatStore.getState().setCurrentModel(tabId, model);
+      }
+      if (typeof data?.thinkingLevel === "string") {
+        agentChatStore.getState().setThinkingLevel(tabId, data.thinkingLevel);
+      }
+      break;
+    }
+    default:
+      break;
+  }
 }
