@@ -43,7 +43,6 @@ type workspaceCreateAccepted struct {
 type workspaceCreateCompletedEvent struct {
 	WorkspaceID             string `json:"workspaceId"`
 	WorktreePath            string `json:"worktreePath"`
-	RemoteSyncWarning       string `json:"remoteSyncWarning,omitempty"`
 	TaskRunSessionID        string `json:"taskRunSessionId,omitempty"`
 	TaskRunAgentKind        string `json:"taskRunAgentKind,omitempty"`
 	TaskRunPrompt           string `json:"taskRunPrompt,omitempty"`
@@ -120,9 +119,6 @@ func runWorkspaceCreateViaDaemon(cmd *cobra.Command) error {
 		fmt.Fprintf(cmd.OutOrStdout(), "  %s", path)
 	}
 	fmt.Fprintln(cmd.OutOrStdout())
-	if warning := strings.TrimSpace(result.completed.RemoteSyncWarning); warning != "" {
-		fmt.Fprintf(cmd.OutOrStdout(), "Warning: %s\n", warning)
-	}
 
 	return nil
 }

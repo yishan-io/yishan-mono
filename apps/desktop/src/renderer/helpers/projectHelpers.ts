@@ -109,6 +109,90 @@ function filterWorkspaceScopedRecord<T>(record: Record<string, T>, workspaceIdSe
   return record;
 }
 
+function resolveNextDisplayProjectIds(input: {
+  mappedProjects: WorkspaceProjectRecord[];
+  orgPreferences: WorkspaceStoreOrganizationPreference | undefined;
+  previousProjects: WorkspaceProjectRecord[];
+}): string[] {
+  const nextProjectIdSet = new Set(input.mappedProjects.map((project) => project.id));
+  const previousProjectIdSet = new Set(input.previousProjects.map((project) => project.id));
+  const persistedKnownProjectIds = input.orgPreferences?.knownProjectIds;
+  const knownProjectIdSet =
+    previousProjectIdSet.size > 0
+      ? previousProjectIdSet
+      : persistedKnownProjectIds !== undefined
+        ? new Set(persistedKnownProjectIds)
+        : undefined;
+  const baseDisplayProjectIds = input.orgPreferences?.displayProjectIds ?? [];
+  const filteredDisplayProjectIds = baseDisplayProjectIds.filter((projectId) => nextProjectIdSet.has(projectId));
+  const discoveredProjectIds =
+    knownProjectIdSet !== undefined
+      ? input.mappedProjects
+          .map((project) => project.id)
+          .filter((projectId) => !baseDisplayProjectIds.includes(projectId) && !knownProjectIdSet.has(projectId))
+      : [];
+  const hasNoPersistedPreference =
+    input.orgPreferences?.displayProjectIds === undefined || input.orgPreferences.displayProjectIds.length === 0;
+  const shouldResetPersistedDisplayProjectIds =
+    input.orgPreferences?.displayProjectIds !== undefined &&
+    input.orgPreferences.displayProjectIds.length > 0 &&
+    filteredDisplayProjectIds.length === 0 &&
+    input.mappedProjects.length > 0;
+
+  return hasNoPersistedPreference && input.mappedProjects.length > 0
+    ? input.mappedProjects.map((project) => project.id)
+    : shouldResetPersistedDisplayProjectIds
+      ? input.mappedProjects.map((project) => project.id)
+      : [...filteredDisplayProjectIds, ...discoveredProjectIds];
+}
+
+function resolveHydratedSelection(input: {
+  workspaces: WorkspaceItem[];
+  nextBaseState: Pick<WorkspaceStoreState, "selectedProjectId" | "selectedWorkspaceId">;
+  previousSelectedProjectId: string;
+  previousSelectedWorkspaceId: string;
+  mappedProjects: WorkspaceProjectRecord[];
+}): { selectedProjectId: string; selectedWorkspaceId: string } {
+  const nextProjectIdSet = new Set(input.mappedProjects.map((project) => project.id));
+  const preservedSelectedWorkspace = input.workspaces.find(
+    (workspace) => workspace.id === input.previousSelectedWorkspaceId,
+  );
+  const selectedProjectId = preservedSelectedWorkspace
+    ? resolveWorkspaceProjectId(preservedSelectedWorkspace)
+    : nextProjectIdSet.has(input.previousSelectedProjectId)
+      ? input.previousSelectedProjectId
+      : input.nextBaseState.selectedProjectId;
+  const selectedWorkspaceId = preservedSelectedWorkspace
+    ? preservedSelectedWorkspace.id
+    : (input.workspaces.find((workspace) => resolveWorkspaceProjectId(workspace) === selectedProjectId)?.id ??
+      input.nextBaseState.selectedWorkspaceId);
+
+  return {
+    selectedProjectId,
+    selectedWorkspaceId,
+  };
+}
+
+function resolvePendingHydrationWorkspaces(
+  previousWorkspaces: WorkspaceItem[],
+  workspaces: WorkspaceItem[],
+): WorkspaceItem[] {
+  const apiWorkspaceIdSet = new Set(workspaces.map((workspace) => workspace.id));
+  return previousWorkspaces.filter((workspace) => !apiWorkspaceIdSet.has(workspace.id) && !workspace.worktreePath);
+}
+
+function buildLatestPullRequestByWorkspaceId(
+  workspacesFromApi: WorkspaceRecord[],
+): WorkspaceStoreState["latestPullRequestByWorkspaceId"] {
+  const nextLatestPrByWorkspaceId: WorkspaceStoreState["latestPullRequestByWorkspaceId"] = {};
+  for (const workspace of workspacesFromApi) {
+    if (workspace.latestPullRequest) {
+      nextLatestPrByWorkspaceId[workspace.id] = workspace.latestPullRequest;
+    }
+  }
+  return nextLatestPrByWorkspaceId;
+}
+
 /** Maps backend API data into workspace projects and open workspaces. */
 function mapApiData(
   projects: ProjectRecord[],
@@ -204,60 +288,28 @@ export function applyHydratedStateFromApiData(
     projects: mappedProjects,
     workspaces,
   });
-
-  const nextProjectIdSet = new Set(mappedProjects.map((project) => project.id));
-  const previousProjectIdSet = new Set(state.projects.map((project) => project.id));
-  const persistedKnownProjectIds = orgPreferences?.knownProjectIds;
-  const knownProjectIdSet =
-    previousProjectIdSet.size > 0
-      ? previousProjectIdSet
-      : persistedKnownProjectIds !== undefined
-        ? new Set(persistedKnownProjectIds)
-        : undefined;
-  const baseDisplayProjectIds = orgPreferences?.displayProjectIds ?? [];
-  const filteredDisplayProjectIds = baseDisplayProjectIds.filter((projectId) => nextProjectIdSet.has(projectId));
-  const discoveredProjectIds =
-    knownProjectIdSet !== undefined
-      ? mappedProjects
-          .map((project) => project.id)
-          .filter((projectId) => !baseDisplayProjectIds.includes(projectId) && !knownProjectIdSet.has(projectId))
-      : [];
-  const hasNoPersistedPreference =
-    orgPreferences?.displayProjectIds === undefined || orgPreferences.displayProjectIds.length === 0;
-  const shouldResetPersistedDisplayProjectIds =
-    orgPreferences?.displayProjectIds !== undefined &&
-    orgPreferences.displayProjectIds.length > 0 &&
-    filteredDisplayProjectIds.length === 0 &&
-    mappedProjects.length > 0;
-  const preservedSelectedWorkspace = workspaces.find((workspace) => workspace.id === previousSelectedWorkspaceId);
-  const preservedSelectedProjectId = preservedSelectedWorkspace
-    ? resolveWorkspaceProjectId(preservedSelectedWorkspace)
-    : nextProjectIdSet.has(previousSelectedProjectId)
-      ? previousSelectedProjectId
-      : nextBaseState.selectedProjectId;
-  const preservedSelectedWorkspaceId = preservedSelectedWorkspace
-    ? preservedSelectedWorkspace.id
-    : (workspaces.find((workspace) => resolveWorkspaceProjectId(workspace) === preservedSelectedProjectId)?.id ??
-      nextBaseState.selectedWorkspaceId);
-  const nextDisplayProjectIds =
-    hasNoPersistedPreference && mappedProjects.length > 0
-      ? mappedProjects.map((project) => project.id)
-      : shouldResetPersistedDisplayProjectIds
-        ? mappedProjects.map((project) => project.id)
-        : [...filteredDisplayProjectIds, ...discoveredProjectIds];
+  const nextDisplayProjectIds = resolveNextDisplayProjectIds({
+    mappedProjects,
+    orgPreferences,
+    previousProjects: state.projects,
+  });
+  const nextSelection = resolveHydratedSelection({
+    workspaces,
+    nextBaseState,
+    previousSelectedProjectId,
+    previousSelectedWorkspaceId,
+    mappedProjects,
+  });
 
   state.projects = nextBaseState.projects;
   // Preserve workspaces that are still being created locally (pending with no
   // worktreePath) but do not yet exist in the API response. Without this,
   // a workspaceSnapshotChanged event triggered during async creation would
   // replace the store and destroy the pending workspace entry.
-  const apiWorkspaceIdSet = new Set(workspaces.map((workspace) => workspace.id));
-  const pendingWorkspaces = state.workspaces.filter(
-    (workspace) => !apiWorkspaceIdSet.has(workspace.id) && !workspace.worktreePath,
-  );
+  const pendingWorkspaces = resolvePendingHydrationWorkspaces(state.workspaces, workspaces);
   state.workspaces = [...nextBaseState.workspaces, ...pendingWorkspaces];
-  state.selectedProjectId = preservedSelectedProjectId;
-  state.selectedWorkspaceId = preservedSelectedWorkspaceId;
+  state.selectedProjectId = nextSelection.selectedProjectId;
+  state.selectedWorkspaceId = nextSelection.selectedWorkspaceId;
   state.displayProjectIds = nextDisplayProjectIds;
   state.lastUsedExternalAppId = orgPreferences?.lastUsedExternalAppId;
 
@@ -287,14 +339,7 @@ export function applyHydratedStateFromApiData(
     nextWorkspaceIdSet,
   );
 
-  // Populate latestPullRequest from the api-service workspace list.
-  const nextLatestPrByWorkspaceId: WorkspaceStoreState["latestPullRequestByWorkspaceId"] = {};
-  for (const workspace of workspacesFromApi) {
-    if (workspace.latestPullRequest) {
-      nextLatestPrByWorkspaceId[workspace.id] = workspace.latestPullRequest;
-    }
-  }
-  state.latestPullRequestByWorkspaceId = nextLatestPrByWorkspaceId;
+  state.latestPullRequestByWorkspaceId = buildLatestPullRequestByWorkspaceId(workspacesFromApi);
 }
 
 /** Normalizes create-repo input and returns empty strings when invalid. */

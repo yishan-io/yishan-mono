@@ -260,7 +260,7 @@ export class DaemonWorkspaceClient {
         taskRun: record?.taskRun,
       },
       WORKSPACE_CREATE_TIMEOUT_MS,
-    )) as Rpc.DaemonWorkspace & { lifecycleScriptWarnings?: unknown[]; remoteSyncWarning?: unknown };
+    )) as Rpc.DaemonWorkspace & { lifecycleScriptWarnings?: unknown[] };
 
     const createdWorktreePath = createdWorkspace.path || "";
     const resolvedId = createdWorkspace.id || "";
@@ -279,7 +279,6 @@ export class DaemonWorkspaceClient {
       lifecycleScriptWarnings: Array.isArray(createdWorkspace.lifecycleScriptWarnings)
         ? createdWorkspace.lifecycleScriptWarnings
         : [],
-      remoteSyncWarning: readOptionalString(createdWorkspace.remoteSyncWarning),
     };
   }
 

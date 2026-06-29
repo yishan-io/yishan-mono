@@ -33,7 +33,6 @@ type CreateWorkspaceResponse = {
   worktreePath: string;
   status: string;
   lifecycleScriptWarnings: WorkspaceLifecycleScriptWarning[];
-  remoteSyncWarning?: string;
 };
 
 /**

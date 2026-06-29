@@ -25,12 +25,17 @@ type TestState = {
   >;
   workspaces: Array<{
     id: string;
+    organizationId?: string;
+    projectId?: string;
     repoId: string;
     name: string;
     title: string;
     sourceBranch: string;
     branch: string;
     summaryId: string;
+    nodeId?: string;
+    kind?: string;
+    status?: string;
     worktreePath?: string;
   }>;
   selectedProjectId: string;
