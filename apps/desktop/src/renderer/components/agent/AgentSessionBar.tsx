@@ -1,5 +1,5 @@
 import { Box, Chip, LinearProgress, Typography } from "@mui/material";
-import type { AgentQueueState, AgentSessionState } from "../store/agentChatTypes";
+import type { AgentQueueState, AgentSessionState } from "../../store/agentChatTypes";
 
 type AgentSessionBarProps = {
   state: AgentSessionState;
@@ -29,9 +29,7 @@ export function AgentSessionBar({ state, modelName, thinkingLevel, queue, error 
 
   return (
     <Box>
-      {isStreaming && (
-        <LinearProgress sx={{ mb: 0.5 }} />
-      )}
+      {isStreaming && <LinearProgress sx={{ mb: 0.5 }} />}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1, py: 0.5, flexWrap: "wrap" }}>
         <Chip
           label={modelName || "No model"}

@@ -1,7 +1,11 @@
-import { Box, Collapse, IconButton, Paper, Typography } from "@mui/material";
+import { Box, CircularProgress, Collapse, IconButton, Paper, Typography } from "@mui/material";
 import { useState } from "react";
-import type { AgentContentBlock, AgentMessage as AgentMessageType } from "../store/agentChatTypes";
+import { LuChevronDown, LuChevronUp } from "react-icons/lu";
+import type { AgentContentBlock, AgentMessage as AgentMessageType } from "../../store/agentChatTypes";
+import { AgentMarkdownContent } from "./AgentMarkdownContent";
 import { AgentToolCallCard } from "./AgentToolCallCard";
+
+export type AgentToolResultMap = Record<string, AgentMessageType | undefined>;
 
 /** Extracts text from a message's content regardless of string or array format. */
 function extractText(content: string | AgentContentBlock[]): string {
@@ -14,23 +18,34 @@ function extractText(content: string | AgentContentBlock[]): string {
 
 type AgentMessageProps = {
   message: AgentMessageType;
+  mergedToolResults?: AgentToolResultMap;
 };
 
+function formatDuration(durationMs: number): string {
+  if (durationMs < 1000) {
+    return `${durationMs}ms`;
+  }
+  const seconds = durationMs / 1000;
+  return seconds >= 10 ? `${seconds.toFixed(0)}s` : `${seconds.toFixed(1)}s`;
+}
+
 /** Renders a single agent conversation message with support for text, thinking, and tool calls. */
-export function AgentMessage({ message }: AgentMessageProps) {
+export function AgentMessage({ message, mergedToolResults = {} }: AgentMessageProps) {
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
   const isToolResult = message.role === "toolResult";
   const blocks = Array.isArray(message.content) ? message.content : [];
+  let textBlockCount = 0;
+  let thinkingBlockCount = 0;
 
   return (
     <Paper
-      variant="outlined"
+      elevation={0}
       sx={{
         p: 1.5,
-        alignSelf: isUser ? "flex-end" : "flex-start",
-        maxWidth: isToolResult ? "95%" : "80%",
-        bgcolor: isToolResult ? "action.hover" : "background.paper",
+        width: "100%",
+        borderRadius: 0,
+        bgcolor: isUser ? "action.selected" : isToolResult ? "action.hover" : "transparent",
       }}
     >
       {isUser && (
@@ -40,23 +55,32 @@ export function AgentMessage({ message }: AgentMessageProps) {
       )}
 
       {isAssistant && blocks.length === 0 && (
-        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
-          thinking…
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, minHeight: 24 }}>
+          <CircularProgress size={14} thickness={5} />
+          <Typography variant="caption" color="text.secondary">
+            responding…
+          </Typography>
+        </Box>
       )}
+
       {isAssistant &&
-        blocks.map((block, i) => {
+        blocks.map((block) => {
           switch (block.type) {
-            case "text":
-              return (
-                <Typography key={i} variant="body2" sx={{ whiteSpace: "pre-wrap", mb: 0.5 }}>
-                  {block.text}
-                </Typography>
-              );
-            case "thinking":
-              return <ThinkingBlock key={i} thinking={block.thinking} />;
+            case "text": {
+              const key = `${message.id}-text-${textBlockCount}`;
+              textBlockCount += 1;
+              return <AgentMarkdownContent key={key} content={block.text} />;
+            }
+            case "thinking": {
+              if (block.thinking.trim().length === 0) {
+                return null;
+              }
+              const key = `${message.id}-thinking-${thinkingBlockCount}`;
+              thinkingBlockCount += 1;
+              return <ThinkingBlock key={key} thinking={block.thinking} />;
+            }
             case "toolCall":
-              return <AgentToolCallCard key={block.id || i} toolCall={block} />;
+              return <AgentToolCallCard key={block.id} toolCall={block} result={mergedToolResults[block.id] ?? null} />;
             default:
               return null;
           }
@@ -77,9 +101,9 @@ export function AgentMessage({ message }: AgentMessageProps) {
         </Box>
       )}
 
-      {message.usage && (
+      {isAssistant && typeof message.durationMs === "number" && (
         <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, display: "block" }}>
-          ↑{message.usage.input} ↓{message.usage.output}
+          time took: {formatDuration(message.durationMs)}
         </Typography>
       )}
     </Paper>
@@ -107,8 +131,8 @@ function ThinkingBlock({ thinking }: { thinking: string }) {
         <Typography variant="caption" color="text.secondary">
           thinking
         </Typography>
-        <IconButton size="small" sx={{ ml: "auto", fontSize: "0.75rem", width: 20, height: 20 }}>
-          {open ? "▲" : "▼"}
+        <IconButton size="small" sx={{ ml: "auto", width: 20, height: 20 }}>
+          {open ? <LuChevronUp size={14} /> : <LuChevronDown size={14} />}
         </IconButton>
       </Box>
       <Collapse in={open}>

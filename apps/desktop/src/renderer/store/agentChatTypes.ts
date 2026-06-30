@@ -28,6 +28,8 @@ export type AgentMessage = {
   /** Stop reason from assistant messages. */
   stopReason?: string;
   timestamp?: number;
+  startedAtMs?: number;
+  durationMs?: number;
 };
 
 /** An AI model available for selection. */
@@ -50,7 +52,12 @@ export type AgentStreamEvent =
   | { type: "thinking_end"; contentIndex: number; content: string }
   | { type: "toolcall_start"; contentIndex: number; toolCallId: string; toolName: string }
   | { type: "toolcall_delta"; contentIndex: number; toolCallId: string; delta: string }
-  | { type: "toolcall_end"; contentIndex: number; toolCallId: string; toolCall: { id: string; name: string; arguments: Record<string, unknown> } }
+  | {
+      type: "toolcall_end";
+      contentIndex: number;
+      toolCallId: string;
+      toolCall: { id: string; name: string; arguments: Record<string, unknown> };
+    }
   | { type: "done"; reason: string }
   | { type: "error"; reason: string };
 

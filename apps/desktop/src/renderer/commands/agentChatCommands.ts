@@ -30,15 +30,23 @@ export async function startAgentSession(opts: {
     cwd: opts.cwd,
   })) as PiStartResult;
 
-  agentChatStore.getState().initSession(opts.tabId, result.sessionId);
   return result.sessionId;
+}
+
+/** Registers a started agent session in the renderer store. */
+export function registerAgentSession(opts: { tabId: string; sessionId: string }): void {
+  agentChatStore.getState().initSession(opts.tabId, opts.sessionId);
 }
 
 /** Stops a pi RPC session. */
 export async function stopAgentSession(opts: { tabId: string; sessionId: string }): Promise<void> {
   const client = await getDaemonClient();
   await client.pi.stop({ sessionId: opts.sessionId });
-  agentChatStore.getState().removeSession(opts.tabId);
+
+  const currentSession = agentChatStore.getState().sessionsByTabId[opts.tabId];
+  if (currentSession?.sessionId === opts.sessionId) {
+    agentChatStore.getState().removeSession(opts.tabId);
+  }
 }
 
 /** Sends a prompt command to the pi session. */
@@ -59,6 +67,14 @@ export async function sendAgentPrompt(opts: {
     },
   });
 
+  if (!agentChatStore.getState().sessionsByTabId[opts.tabId]?.streamingMessage) {
+    agentChatStore.getState().updateStreamingMessage(opts.tabId, {
+      id: generateId(),
+      role: "assistant",
+      content: [],
+      startedAtMs: Date.now(),
+    });
+  }
   agentChatStore.getState().setSessionState(opts.tabId, "running");
 }
 
@@ -126,11 +142,15 @@ type PiEventPayload = {
  * Routes to the correct tab's store based on the tabId in the payload.
  */
 export function handleAgentPiEvent(payload: PiEventPayload): void {
-  const { tabId, event } = payload;
+  const { sessionId, tabId, event } = payload;
   const store = agentChatStore.getState();
+  const currentSession = store.sessionsByTabId[tabId];
 
-  if (!store.sessionsByTabId[tabId]) {
+  if (!currentSession) {
     return; // Tab not yet initialized or already closed.
+  }
+  if (currentSession.sessionId !== sessionId) {
+    return; // Ignore stale events from an older session for the same tab.
   }
 
   switch (event.type) {
@@ -147,23 +167,34 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       if (msg && msg.role === "assistant") {
         // Preserve content blocks pi sent (models may pre-fill thinking/text).
         // Deltas will append to these blocks by contentIndex.
-        const content = Array.isArray(msg.content)
-          ? (msg.content as AgentContentBlock[])
-          : [];
+        const content = Array.isArray(msg.content) ? (msg.content as AgentContentBlock[]) : [];
         store.updateStreamingMessage(tabId, {
           ...msg,
           id: msg.id ?? generateId(),
           content,
+          startedAtMs: Date.now(),
         });
       }
       break;
     }
 
     case "message_update": {
-      const delta = event.assistantMessageEvent as AgentStreamEvent | undefined;
-      if (!delta) break;
+      const snapshot = event.message as AgentMessage | undefined;
       const streaming = store.sessionsByTabId[tabId]?.streamingMessage;
-      if (!streaming) break;
+
+      if (snapshot?.role === "assistant") {
+        store.updateStreamingMessage(tabId, {
+          ...snapshot,
+          id: streaming?.id ?? snapshot.id ?? generateId(),
+          content: Array.isArray(snapshot.content) ? [...snapshot.content] : [],
+          startedAtMs: streaming?.startedAtMs,
+          durationMs: streaming?.durationMs,
+        });
+        break;
+      }
+
+      const delta = event.assistantMessageEvent as AgentStreamEvent | undefined;
+      if (!delta || !streaming) break;
       applyStreamDelta(streaming, delta);
       // New content array so React detects the change.
       store.updateStreamingMessage(tabId, {
@@ -177,7 +208,14 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       const msg = event.message as AgentMessage | undefined;
       if (!msg) break;
       if (msg.role === "assistant") {
-        // Streaming message was built up from deltas; move it to messages.
+        const startedAtMs = store.sessionsByTabId[tabId]?.streamingMessage?.startedAtMs ?? Date.now();
+        store.updateStreamingMessage(tabId, {
+          ...msg,
+          id: store.sessionsByTabId[tabId]?.streamingMessage?.id ?? msg.id ?? generateId(),
+          content: Array.isArray(msg.content) ? [...msg.content] : [],
+          startedAtMs,
+          durationMs: Math.max(0, Date.now() - startedAtMs),
+        });
         store.finalizeStreamingMessage(tabId);
       } else {
         // User and toolResult messages arrive complete.
