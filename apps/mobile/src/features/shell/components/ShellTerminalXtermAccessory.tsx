@@ -27,7 +27,7 @@ type ShellTerminalXtermAccessoryProps = {
   t: (labelKey: string) => string;
 };
 
-/** Renders the mobile xterm accessory area, including controls and upload sheet. */
+/** Renders the mobile xterm accessory area, including controls and image-path insertion. */
 export function ShellTerminalXtermAccessory({
   accessoryBottomInset,
   clipboardText,

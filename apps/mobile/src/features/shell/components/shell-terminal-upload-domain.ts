@@ -2,6 +2,12 @@ const SHELL_SAFE_CHARS = /^[a-zA-Z0-9_\-./~:@]+$/;
 const TERMINAL_UPLOAD_DIRECTORY = ".my-context/uploads";
 const FALLBACK_IMAGE_EXTENSION = "png";
 
+export type TerminalInsertedImagePath = {
+  absolutePath: string;
+  relativePath: string;
+  shellInput: string;
+};
+
 /**
  * Escapes one shell path so it can be inserted into the active terminal input safely.
  */
@@ -19,7 +25,8 @@ export function escapePathForShell(path: string) {
 }
 
 /**
- * Builds one ignored workspace-relative upload path for a picked image.
+ * Builds one ignored workspace-relative path for a picked image that will be
+ * referenced from terminal input.
  */
 export function buildTerminalUploadRelativePath(fileName: string, mimeType: string) {
   const normalizedFileName = sanitizeUploadFileName(fileName, mimeType);
@@ -36,6 +43,26 @@ export function buildTerminalUploadAbsolutePath(workspaceLocalPath: string, rela
   }
 
   return `${normalizedWorkspacePath}/${relativePath}`;
+}
+
+/**
+ * Resolves the file target and terminal input string for one picked image.
+ * The terminal model stays text-only: we write the image into the workspace,
+ * then paste its shell-safe path into the PTY input.
+ */
+export function buildTerminalInsertedImagePath(input: {
+  fileName: string;
+  mimeType: string;
+  workspaceLocalPath: string;
+}): TerminalInsertedImagePath {
+  const relativePath = buildTerminalUploadRelativePath(input.fileName, input.mimeType);
+  const absolutePath = buildTerminalUploadAbsolutePath(input.workspaceLocalPath, relativePath);
+
+  return {
+    absolutePath,
+    relativePath,
+    shellInput: `${escapePathForShell(absolutePath)} `,
+  };
 }
 
 function sanitizeUploadFileName(fileName: string, mimeType: string) {

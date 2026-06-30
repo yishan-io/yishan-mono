@@ -13,7 +13,7 @@ type ShellTerminalUploadImageSheetProps = {
   takePhotoLabel: string;
 };
 
-/** Owns the upload-source picker shown from the terminal photo action. */
+/** Owns the source picker used before inserting one image path into the terminal. */
 export function ShellTerminalUploadImageSheet({
   chooseFileLabel,
   onChooseFile,

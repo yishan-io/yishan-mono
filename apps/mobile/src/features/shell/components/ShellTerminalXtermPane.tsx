@@ -15,15 +15,8 @@ import { ShellTerminalKeyboardBridgeInput } from "./ShellTerminalKeyboardBridgeI
 import { ShellTerminalReaderPane } from "./ShellTerminalReaderPane";
 import { ShellTerminalXtermAccessory } from "./ShellTerminalXtermAccessory";
 import { getTerminalAccessoryBottomInset } from "./shell-terminal-active-pane-domain";
-import {
-  type TerminalUploadImageSource,
-  pickTerminalUploadImage,
-} from "./shell-terminal-native-upload-domain";
-import {
-  buildTerminalUploadAbsolutePath,
-  buildTerminalUploadRelativePath,
-  escapePathForShell,
-} from "./shell-terminal-upload-domain";
+import { type TerminalUploadImageSource, pickTerminalUploadImage } from "./shell-terminal-native-upload-domain";
+import { buildTerminalInsertedImagePath } from "./shell-terminal-upload-domain";
 type ShellTerminalXtermPaneProps = {
   blurRequestToken: number;
   isComposerDisabled: boolean;
@@ -145,13 +138,17 @@ export function ShellTerminalXtermPane({
       return;
     }
 
-    const relativePath = buildTerminalUploadRelativePath(pickedImage.fileName, pickedImage.mimeType);
+    const insertedImagePath = buildTerminalInsertedImagePath({
+      fileName: pickedImage.fileName,
+      mimeType: pickedImage.mimeType,
+      workspaceLocalPath: normalizedWorkspaceLocalPath,
+    });
     await writeRelayWorkspaceFile({
       accessToken,
       content: pickedImage.base64Data,
       encoding: "base64",
       nodeId,
-      path: relativePath,
+      path: insertedImagePath.relativePath,
       workspaceId: selectedTerminal.workspaceId,
     });
     await queryClient.invalidateQueries({
@@ -167,8 +164,7 @@ export function ShellTerminalXtermPane({
       ],
     });
 
-    const absolutePath = buildTerminalUploadAbsolutePath(normalizedWorkspaceLocalPath, relativePath);
-    onTerminalInput(`${escapePathForShell(absolutePath)} `);
+    onTerminalInput(insertedImagePath.shellInput);
     focusNativeKeyboardInput();
   };
 
