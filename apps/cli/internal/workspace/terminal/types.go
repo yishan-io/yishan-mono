@@ -6,9 +6,7 @@ type StartRequest struct {
 	OrgID       string   `json:"orgId,omitempty"`
 	Command     string   `json:"command"`
 	Args        []string `json:"args,omitempty"`
-	Cols        uint16   `json:"cols,omitempty"`
 	Env         []string `json:"env,omitempty"`
-	Rows        uint16   `json:"rows,omitempty"`
 	TabID       string   `json:"tabId,omitempty"`
 	PaneID      string   `json:"paneId,omitempty"`
 }

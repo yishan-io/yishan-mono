@@ -32,9 +32,6 @@ var ErrNotRunning = errors.New("daemon is not running")
 
 const detachedEnvKey = "YISHAN_DAEMON_DETACHED"
 
-var ensureManagedAgentRuntime = agentsetup.EnsureManagedAgentRuntime
-var registerStartupRemoteNode = registerRemoteNode
-
 type RunConfig struct {
 	Host                  string
 	Port                  int
@@ -336,7 +333,7 @@ func saveDaemonState(cfg RunConfig, dr *daemonRuntime) error {
 	} else {
 		_ = os.Unsetenv(agentsetup.RemoteHostPolicyEnvKey)
 	}
-	ensureManagedAgentRuntime(usesRemoteHostPolicy(dr.handler.runtime))
+	agentsetup.EnsureManagedAgentRuntime(usesRemoteHostPolicy(dr.handler.runtime))
 	return nil
 }
 
@@ -391,9 +388,11 @@ func registerNode(dr *daemonRuntime, runtime *cliruntime.Runtime) error {
 	if runtime == nil || !runtime.APIConfigured() {
 		return nil
 	}
-	if err := registerStartupRemoteNode(runtime, NodeRegistration{
-		ID:       dr.daemonID,
-		Endpoint: "http://" + dr.actualAddr,
+	agentDetectionStatus := listAgentDetectionStatuses(false)
+	if err := registerRemoteNode(runtime, NodeRegistration{
+		ID:                   dr.daemonID,
+		Endpoint:             "http://" + dr.actualAddr,
+		AgentDetectionStatus: agentDetectionStatus,
 	}); err != nil {
 		if isReauthRequiredError(err) {
 			log.Warn().Err(err).Msg("daemon started without remote node registration; re-authentication required")

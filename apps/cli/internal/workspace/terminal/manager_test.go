@@ -513,7 +513,7 @@ func TestSessionOutputBufferIsBounded(t *testing.T) {
 func mustSession(t *testing.T, m *Manager, sessionID string) *session {
 	t.Helper()
 
-	s, err := m.session(sessionID, "")
+	s, err := m.session(sessionID)
 	if err != nil {
 		t.Fatalf("load session %s: %v", sessionID, err)
 	}
