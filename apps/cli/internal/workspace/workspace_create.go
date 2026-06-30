@@ -165,9 +165,6 @@ func resolveCreatePaths(req CreateRequest) (resolvedCreatePaths, error) {
 	if err != nil {
 		return resolvedCreatePaths{}, err
 	}
-	// Sanitize workspaceName so that branch names like "feature/my-branch" do
-	// not produce nested directories. Only the filesystem path component is
-	// changed; TargetBranch is left untouched.
 	workspaceName = strings.ReplaceAll(workspaceName, "/", "-")
 	if workspaceName == "" {
 		return resolvedCreatePaths{}, NewRPCError(rpcCodeInvalidParams, "workspaceName is empty after sanitization")

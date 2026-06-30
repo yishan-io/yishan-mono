@@ -7,16 +7,35 @@ import {
   WorkspaceBranchRequiredError,
   WorkspaceNotFoundError,
 } from "@/errors";
+import type { WorkspaceProvisioner } from "@/services/workspace-provisioner";
+import { resolveWorkspaceRelayAccess } from "@/services/workspace-relay";
+import { listWorkspaceGitBranchesViaRelay } from "@/services/workspace-relay-operations";
 import { WorkspaceService } from "@/services/workspace-service";
+import type { ServiceConfig } from "@/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const workspacePullRequestMocks = vi.hoisted(() => ({
   fetchLatestPrByWorkspaceId: vi.fn(),
 }));
 
+vi.mock("@/services/workspace-relay-operations", () => {
+  return {
+    listWorkspaceFilesViaRelay: vi.fn(),
+    listWorkspaceGitBranchesViaRelay: vi.fn(),
+    listWorkspaceGitChangesViaRelay: vi.fn(),
+    readWorkspaceDiffViaRelay: vi.fn(),
+    readWorkspaceFileViaRelay: vi.fn(),
+  };
+});
+vi.mock("@/services/workspace-relay", () => ({
+  resolveWorkspaceRelayAccess: vi.fn(),
+}));
 vi.mock("@/services/workspace-pull-request-service", () => ({
   fetchLatestPrByWorkspaceId: workspacePullRequestMocks.fetchLatestPrByWorkspaceId,
 }));
+
+const listWorkspaceGitBranchesViaRelayMock = listWorkspaceGitBranchesViaRelay as ReturnType<typeof vi.fn>;
+const resolveWorkspaceRelayAccessMock = vi.mocked(resolveWorkspaceRelayAccess);
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────
 
@@ -35,8 +54,11 @@ const WORKSPACE_ROW = {
   updatedAt: new Date("2026-06-15T00:00:00Z"),
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: stub
-const stubProvisioner = { enqueueWorkspaceProvision: vi.fn().mockResolvedValue(undefined) } as any;
+const stubProvisioner = {
+  enqueueWorkspaceProvision: vi.fn().mockImplementation(async (request: { localPath: string }) => ({
+    localPath: request.localPath,
+  })),
+} satisfies WorkspaceProvisioner;
 function makeOrgService(role: string | null = "member") {
   // biome-ignore lint/suspicious/noExplicitAny: stub
   return { getMembershipRole: vi.fn().mockResolvedValue(role) } as any;
@@ -48,6 +70,7 @@ function makeOrgService(role: string | null = "member") {
  */
 function makeDb(
   options: {
+    activeRows?: unknown[];
     nodeScope?: "private" | "shared";
     nodeOwner?: string;
     projectExists?: boolean;
@@ -57,6 +80,7 @@ function makeDb(
   } = {},
 ) {
   const {
+    activeRows = [],
     nodeScope = "private",
     nodeOwner = "user-1",
     projectExists = true,
@@ -70,13 +94,25 @@ function makeDb(
   const outerSelect = vi.fn().mockReturnValue({
     from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: outerLimit }) }),
   });
+  const outerUpdateReturning = vi.fn().mockResolvedValue([]);
+  const outerUpdateWhere = vi.fn().mockReturnValue({ returning: outerUpdateReturning });
+  const outerUpdateSet = vi.fn().mockReturnValue({ where: outerUpdateWhere });
+  const outerUpdate = vi.fn().mockReturnValue({ set: outerUpdateSet });
+  const outerDeleteWhere = vi.fn().mockResolvedValue(undefined);
+  const outerDelete = vi.fn().mockReturnValue({ where: outerDeleteWhere });
 
-  // Transaction inner tx: project check, then org membership check
+  // Transaction inner tx: project check, org membership check, then closed-workspace lookup
   let txSelectCall = 0;
   const txLimit = vi.fn().mockImplementation(() => {
     txSelectCall++;
-    if (txSelectCall === 1) return Promise.resolve(projectExists ? [{ id: "proj-1" }] : []);
+    if (txSelectCall === 1) {
+      return Promise.resolve(
+        projectExists ? [{ id: "proj-1", contextEnabled: true, repoKey: "owner/repo", setupScript: "" }] : [],
+      );
+    }
     if (txSelectCall === 2) return Promise.resolve(ownerIsMember ? [{ userId: nodeOwner }] : []);
+    if (txSelectCall === 3) return Promise.resolve(activeRows);
+    if (txSelectCall === 4) return Promise.resolve(reactivatedRows);
     return Promise.resolve([]);
   });
   const txWhere = vi.fn().mockReturnValue({ limit: txLimit });
@@ -97,9 +133,21 @@ function makeDb(
     .mockImplementation((fn: (tx: unknown) => unknown) => fn({ select: txSelect, update: txUpdate, insert: txInsert }));
 
   // biome-ignore lint/suspicious/noExplicitAny: mock DB for unit testing
-  const db = { select: outerSelect, transaction } as any;
+  const db = { delete: outerDelete, select: outerSelect, transaction, update: outerUpdate } as any;
 
-  return { db, outerSelect, txSelect, txUpdate, txInsert, txInsertValues, txInsertReturning, txUpdateReturning };
+  return {
+    db,
+    outerDelete,
+    outerSelect,
+    outerUpdate,
+    outerUpdateReturning,
+    txInsert,
+    txInsertValues,
+    txInsertReturning,
+    txSelect,
+    txUpdate,
+    txUpdateReturning,
+  };
 }
 
 // ── createWorkspace ────────────────────────────────────────────────────────────
@@ -197,6 +245,26 @@ describe("WorkspaceService.createWorkspace", () => {
     expect(result.id).toBe("ws-1");
   });
 
+  it("returns the existing active workspace instead of inserting a duplicate", async () => {
+    const { db, txInsert, txUpdate } = makeDb({ activeRows: [WORKSPACE_ROW] });
+
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.createWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      nodeId: "node-1",
+      kind: "primary",
+      localPath: "/repos/proj",
+    });
+
+    expect(txInsert).not.toHaveBeenCalled();
+    expect(txUpdate).not.toHaveBeenCalled();
+    expect(stubProvisioner.enqueueWorkspaceProvision).not.toHaveBeenCalled();
+    expect(result.id).toBe("ws-1");
+  });
+
   it("creates a provisioning workspace when localPath is omitted", async () => {
     const provisioningRow = {
       ...WORKSPACE_ROW,
@@ -224,7 +292,7 @@ describe("WorkspaceService.createWorkspace", () => {
     expect(result.localPath).toBe("");
   });
 
-  it("enqueues provisioning with the actor user id", async () => {
+  it("passes the created workspace id to the provisioner", async () => {
     const { db } = makeDb({ insertedRows: [WORKSPACE_ROW] });
     const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
 
@@ -238,7 +306,47 @@ describe("WorkspaceService.createWorkspace", () => {
     });
 
     expect(stubProvisioner.enqueueWorkspaceProvision).toHaveBeenCalledWith(
-      expect.objectContaining({ actorUserId: "user-1" }),
+      expect.objectContaining({ workspaceId: "ws-1" }),
+    );
+  });
+
+  it("updates the workspace path from the provisioner result for worktrees", async () => {
+    const worktreeRow = {
+      ...WORKSPACE_ROW,
+      branch: "feature/mobile",
+      kind: "worktree" as const,
+      localPath: "/repos/source",
+      sourceBranch: "origin/main",
+    };
+    const provisionedPath = "/Users/test/.yishan/worktrees/owner/repo/mobile-workspace";
+    stubProvisioner.enqueueWorkspaceProvision.mockResolvedValueOnce({
+      localPath: provisionedPath,
+    });
+
+    const { db, outerUpdate } = makeDb({ insertedRows: [worktreeRow] });
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
+
+    const result = await service.createWorkspace({
+      organizationId: "org-1",
+      actorUserId: "user-1",
+      projectId: "proj-1",
+      nodeId: "node-1",
+      kind: "worktree",
+      name: "mobile workspace",
+      branch: "feature/mobile",
+      sourceBranch: "origin/main",
+      localPath: "/repos/source",
+    });
+
+    expect(outerUpdate).toHaveBeenCalledWith(workspaces);
+    expect(result.localPath).toBe(provisionedPath);
+    expect(stubProvisioner.enqueueWorkspaceProvision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        branch: "feature/mobile",
+        localPath: "/repos/source",
+        repoKey: "owner/repo",
+        workspaceName: "mobile workspace",
+      }),
     );
   });
 });
@@ -331,6 +439,100 @@ describe("WorkspaceService.updateWorkspace", () => {
     expect(update).toHaveBeenCalledWith(workspaces);
     expect(updateWhere).toHaveBeenCalledOnce();
     expect(result).toEqual({ ...updatedRow, latestPullRequest: null });
+  });
+});
+
+describe("WorkspaceService.resolveRelayAccess", () => {
+  beforeEach(() => {
+    resolveWorkspaceRelayAccessMock.mockReset();
+  });
+
+  it("resolves access through the shared workspace relay boundary", async () => {
+    const relayAccess = {
+      relayApiToken: "relay-token",
+      relayUrl: "wss://relay.example.com",
+      workspace: {
+        id: "ws-1",
+        localPath: "/repos/proj",
+        nodeId: "node-1",
+      },
+    };
+    resolveWorkspaceRelayAccessMock.mockResolvedValueOnce(relayAccess);
+
+    const relayConfig = {
+      relayApiToken: "relay-token",
+      relayUrl: "wss://relay.example.com",
+    } as unknown as ServiceConfig;
+    const { db } = makeDb();
+    const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner, {
+      ...relayConfig,
+    });
+
+    const result = await service.resolveRelayAccess({
+      actorUserId: "user-1",
+      organizationId: "org-1",
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+    });
+
+    expect(resolveWorkspaceRelayAccessMock).toHaveBeenCalledWith({
+      actorUserId: "user-1",
+      config: {
+        relayApiToken: "relay-token",
+        relayUrl: "wss://relay.example.com",
+      },
+      db,
+      organizationId: "org-1",
+      organizationService: expect.objectContaining({
+        getMembershipRole: expect.any(Function),
+      }),
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+    });
+    expect(result).toEqual(relayAccess);
+  });
+});
+
+describe("WorkspaceService.listWorkspaceGitBranches", () => {
+  beforeEach(() => {
+    listWorkspaceGitBranchesViaRelayMock.mockReset();
+  });
+
+  it("delegates to the relay-backed branch list operation", async () => {
+    listWorkspaceGitBranchesViaRelayMock.mockResolvedValueOnce({
+      branches: ["origin/main", "feature/mobile"],
+      currentBranch: "feature/mobile",
+      localBranches: ["feature/mobile"],
+      remoteBranches: ["origin/main"],
+      worktreeBranches: [],
+    });
+
+    const stubDb = {} as never;
+    const stubConfig = {} as never;
+    const organizationService = makeOrgService("member");
+    const service = new WorkspaceService(stubDb, organizationService, stubProvisioner, stubConfig);
+
+    const result = await service.listWorkspaceGitBranches({
+      actorUserId: "user-1",
+      organizationId: "org-1",
+      projectId: "proj-1",
+      workspaceId: "ws-1",
+    });
+
+    expect(listWorkspaceGitBranchesViaRelayMock).toHaveBeenCalledWith(
+      {
+        config: stubConfig,
+        db: stubDb,
+        organizationService,
+      },
+      {
+        actorUserId: "user-1",
+        organizationId: "org-1",
+        projectId: "proj-1",
+        workspaceId: "ws-1",
+      },
+    );
+    expect(result.currentBranch).toBe("feature/mobile");
   });
 });
 

@@ -1,12 +1,22 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
+import type {
+  WorkspaceFileContent,
+  WorkspaceFileDiff,
+  WorkspaceFileEntry,
+  WorkspaceGitBranchList,
+  WorkspaceGitChanges,
+} from "@yishan/core";
 
 import type { AppDb } from "@/db/client";
 import { organizationMembers, projects, workspaces } from "@/db/schema";
-import type { WorkspaceKind, WorkspacePullRequestState, WorkspaceStatus } from "@/db/schema";
+import type { Workspace, WorkspaceKind, WorkspacePullRequestState } from "@/db/schema";
+import type { WorkspaceStatus } from "@/db/schema";
 import {
   PrimaryWorkspaceCloseNotAllowedError,
   ProjectNotFoundError,
+  RelayUnavailableError,
   WorkspaceBranchRequiredError,
+  WorkspaceCreateFailedError,
   WorkspaceNodeNotFoundError,
   WorkspaceNotFoundError,
 } from "@/errors";
@@ -16,6 +26,30 @@ import { assertNodeOwnedByActor } from "@/services/shared/assertNodeOwnedByActor
 import { assertOrganizationMember } from "@/services/shared/assertOrganizationMember";
 import type { WorkspaceProvisioner } from "@/services/workspace-provisioner";
 import { fetchLatestPrByWorkspaceId } from "@/services/workspace-pull-request-service";
+import {
+  type RelayWorkspaceConnectionAccess,
+  type WorkspaceRelayDeps,
+  resolveWorkspaceRelayAccess,
+} from "@/services/workspace-relay";
+import {
+  listWorkspaceFilesViaRelay,
+  listWorkspaceGitBranchesViaRelay,
+  listWorkspaceGitChangesViaRelay,
+  readWorkspaceDiffViaRelay,
+  readWorkspaceFileViaRelay,
+} from "@/services/workspace-relay-operations";
+import {
+  type WorkspaceCurrentPullRequestView,
+  refreshWorkspacePullRequestViaRelay,
+} from "@/services/workspace-relay-pull-request-operations";
+import {
+  type WorkspaceTerminalSessionView,
+  type WorkspaceTerminalStartView,
+  listWorkspaceTerminalSessionsViaRelay,
+  startWorkspaceTerminalViaRelay,
+  stopWorkspaceTerminalViaRelay,
+} from "@/services/workspace-relay-terminal-operations";
+import type { ServiceConfig } from "@/types";
 
 export type WorkspacePullRequestSummary = {
   id: string;
@@ -46,6 +80,22 @@ export type WorkspaceView = {
   updatedAt: Date;
 };
 
+export type {
+  WorkspaceFileContent as WorkspaceFileContentView,
+  WorkspaceFileDiff as WorkspaceFileDiffView,
+  WorkspaceFileEntry as WorkspaceFileView,
+  WorkspaceGitBranchList as WorkspaceGitBranchListView,
+  WorkspaceGitChange as WorkspaceGitChangeView,
+  WorkspaceGitChangeKind,
+  WorkspaceGitChanges as WorkspaceGitChangesView,
+} from "@yishan/core";
+export type { RelayWorkspaceConnectionAccess as WorkspaceRelayConnectionView } from "@/services/workspace-relay";
+export type { WorkspaceCurrentPullRequestView } from "@/services/workspace-relay-pull-request-operations";
+export type {
+  WorkspaceTerminalSessionView,
+  WorkspaceTerminalStartView,
+} from "@/services/workspace-relay-terminal-operations";
+
 type CreateWorkspaceInput = {
   id?: string;
   organizationId: string;
@@ -53,6 +103,7 @@ type CreateWorkspaceInput = {
   projectId: string;
   nodeId: string;
   kind: WorkspaceKind;
+  name?: string;
   branch?: string;
   sourceBranch?: string;
   localPath?: string;
@@ -70,6 +121,26 @@ export type CloseWorkspaceResult = {
   changed: boolean;
 };
 
+type WorkspaceCreateProjectRecord = {
+  id: string;
+  contextEnabled: boolean;
+  repoKey: string | null;
+  setupScript: string;
+};
+
+type WorkspaceCreateMutationResult = {
+  project: WorkspaceCreateProjectRecord;
+  workspace: Workspace;
+  change: "existing" | "inserted" | "reactivated";
+  previousWorkspace: Workspace | null;
+};
+
+function isWorkspaceCreateConflictError(error: unknown): error is { code: string } {
+  return (
+    typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "23505"
+  );
+}
+
 type UpdateWorkspaceInput = {
   workspaceId: string;
   organizationId: string;
@@ -83,98 +154,261 @@ export class WorkspaceService {
     private readonly db: AppDb,
     private readonly organizationService: OrganizationService,
     private readonly workspaceProvisioner: WorkspaceProvisioner,
+    private readonly config?: ServiceConfig,
   ) {}
+
+  async resolveRelayAccess(input: {
+    actorUserId: string;
+    organizationId: string;
+    projectId: string;
+    workspaceId: string;
+  }): Promise<RelayWorkspaceConnectionAccess> {
+    return resolveWorkspaceRelayAccess({
+      ...this.getRelayDeps(),
+      ...input,
+    });
+  }
 
   async createWorkspace(input: CreateWorkspaceInput): Promise<WorkspaceView> {
     await assertOrganizationMember(this.organizationService, input.organizationId, input.actorUserId);
     await assertNodeOwnedByActor(this.db, input.nodeId, input.actorUserId);
 
-    const workspaceRow = await this.db.transaction(async (tx) => {
-      const branch = input.branch?.trim() ?? null;
-      if (input.kind === "worktree" && !branch) {
-        throw new WorkspaceBranchRequiredError();
-      }
+    const branch = input.branch?.trim() ?? null;
+    if (input.kind === "worktree" && !branch) {
+      throw new WorkspaceBranchRequiredError();
+    }
 
-      const projectRows = await tx
-        .select({ id: projects.id })
-        .from(projects)
-        .where(and(eq(projects.id, input.projectId), eq(projects.organizationId, input.organizationId)))
-        .limit(1);
+    const sourceBranch = input.sourceBranch?.trim() ?? null;
+    const requestedLocalPath = input.localPath?.trim() ?? "";
+    const requestedWorkspaceName = input.name?.trim() || branch || null;
+    const requestedStatus: WorkspaceStatus = requestedLocalPath ? "active" : "provisioning";
 
-      if (projectRows.length === 0) {
-        throw new ProjectNotFoundError(input.projectId);
-      }
+    let mutationResult: WorkspaceCreateMutationResult;
+    try {
+      mutationResult = await this.db.transaction(async (tx) => {
+        const projectRows = await tx
+          .select({
+            id: projects.id,
+            contextEnabled: projects.contextEnabled,
+            repoKey: projects.repoKey,
+            setupScript: projects.setupScript,
+          })
+          .from(projects)
+          .where(and(eq(projects.id, input.projectId), eq(projects.organizationId, input.organizationId)))
+          .limit(1);
 
-      const ownerMembershipRows = await tx
-        .select({ userId: organizationMembers.userId })
-        .from(organizationMembers)
-        .where(
-          and(
-            eq(organizationMembers.organizationId, input.organizationId),
-            eq(organizationMembers.userId, input.actorUserId),
-          ),
-        )
-        .limit(1);
+        const project = projectRows[0];
+        if (!project) {
+          throw new ProjectNotFoundError(input.projectId);
+        }
 
-      if (ownerMembershipRows.length === 0) {
-        throw new WorkspaceNodeNotFoundError(input.nodeId);
-      }
+        const ownerMembershipRows = await tx
+          .select({ userId: organizationMembers.userId })
+          .from(organizationMembers)
+          .where(
+            and(
+              eq(organizationMembers.organizationId, input.organizationId),
+              eq(organizationMembers.userId, input.actorUserId),
+            ),
+          )
+          .limit(1);
 
-      const reactivatedRows = await tx
-        .update(workspaces)
-        .set({ status: "active", localPath: input.localPath?.trim() ?? "", updatedAt: new Date() })
-        .where(
-          and(
-            eq(workspaces.organizationId, input.organizationId),
-            eq(workspaces.projectId, input.projectId),
-            eq(workspaces.userId, input.actorUserId),
-            eq(workspaces.nodeId, input.nodeId),
-            eq(workspaces.kind, input.kind),
-            branch ? eq(workspaces.branch, branch) : isNull(workspaces.branch),
-            eq(workspaces.status, "closed"),
-          ),
-        )
-        .returning();
+        if (ownerMembershipRows.length === 0) {
+          throw new WorkspaceNodeNotFoundError(input.nodeId);
+        }
 
-      const reactivatedWorkspace = reactivatedRows[0];
-      if (reactivatedWorkspace) {
-        return reactivatedWorkspace;
-      }
-
-      const sourceBranch = input.sourceBranch?.trim() ?? null;
-      const localPath = input.localPath?.trim() ?? "";
-      const status: WorkspaceStatus = localPath ? "active" : "provisioning";
-
-      const insertedRows = await tx
-        .insert(workspaces)
-        .values({
-          id: input.id?.trim() || newId(),
+        const activeWorkspace = await this.findExistingWorkspaceForCreate(tx, {
+          actorUserId: input.actorUserId,
+          branch,
+          kind: input.kind,
+          nodeId: input.nodeId,
           organizationId: input.organizationId,
           projectId: input.projectId,
-          userId: input.actorUserId,
-          nodeId: input.nodeId,
-          kind: input.kind,
-          branch,
-          sourceBranch,
-          localPath,
-          status,
-        })
-        .returning();
+          statuses: ["active", "provisioning"],
+        });
+        if (activeWorkspace) {
+          return {
+            change: "existing",
+            previousWorkspace: null,
+            project,
+            workspace: activeWorkspace,
+          } satisfies WorkspaceCreateMutationResult;
+        }
 
-      const workspace = insertedRows[0];
-      if (!workspace) {
-        throw new Error("Failed to create workspace");
+        const closedWorkspace = await this.findExistingWorkspaceForCreate(tx, {
+          actorUserId: input.actorUserId,
+          branch,
+          kind: input.kind,
+          nodeId: input.nodeId,
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          statuses: ["closed"],
+        });
+        if (closedWorkspace) {
+          const reactivatedRows = await tx
+            .update(workspaces)
+            .set({
+              status: requestedStatus,
+              sourceBranch,
+              localPath: requestedLocalPath,
+              updatedAt: new Date(),
+            })
+            .where(eq(workspaces.id, closedWorkspace.id))
+            .returning();
+
+          const reactivatedWorkspace = reactivatedRows[0];
+          if (!reactivatedWorkspace) {
+            throw new WorkspaceCreateFailedError("reactivate-returned-empty");
+          }
+
+          return {
+            change: "reactivated",
+            previousWorkspace: closedWorkspace,
+            project,
+            workspace: reactivatedWorkspace,
+          } satisfies WorkspaceCreateMutationResult;
+        }
+
+        const insertedRows = await tx
+          .insert(workspaces)
+          .values({
+            id: input.id?.trim() || newId(),
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            userId: input.actorUserId,
+            nodeId: input.nodeId,
+            kind: input.kind,
+            branch,
+            sourceBranch,
+            localPath: requestedLocalPath,
+            status: requestedStatus,
+          })
+          .returning();
+
+        const workspace = insertedRows[0];
+        if (!workspace) {
+          throw new WorkspaceCreateFailedError("insert-returned-empty");
+        }
+
+        return {
+          change: "inserted",
+          previousWorkspace: null,
+          project,
+          workspace,
+        } satisfies WorkspaceCreateMutationResult;
+      });
+    } catch (error) {
+      if (!isWorkspaceCreateConflictError(error)) {
+        throw error;
       }
 
-      return workspace;
-    });
+      const existingWorkspace = await this.findExistingWorkspaceForCreate(this.db, {
+        actorUserId: input.actorUserId,
+        branch,
+        kind: input.kind,
+        nodeId: input.nodeId,
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        statuses: ["active", "provisioning"],
+      });
+      if (!existingWorkspace) {
+        throw new WorkspaceCreateFailedError("workspace-create-conflict");
+      }
 
-    await this.workspaceProvisioner.enqueueWorkspaceProvision({
-      workspace: workspaceRow,
-      actorUserId: input.actorUserId,
-    });
+      return { ...existingWorkspace, latestPullRequest: null };
+    }
 
-    return { ...workspaceRow, latestPullRequest: null };
+    if (mutationResult.change === "existing") {
+      return { ...mutationResult.workspace, latestPullRequest: null };
+    }
+
+    let provisionedWorkspace = mutationResult.workspace;
+    try {
+      const provisioned = await this.workspaceProvisioner.enqueueWorkspaceProvision({
+        branch,
+        contextEnabled: mutationResult.project.contextEnabled,
+        kind: input.kind,
+        localPath: requestedLocalPath,
+        nodeId: input.nodeId,
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        repoKey: mutationResult.project.repoKey ?? mutationResult.project.id,
+        setupHook: mutationResult.project.setupScript,
+        sourceBranch,
+        workspaceId: mutationResult.workspace.id,
+        workspaceName: requestedWorkspaceName,
+      });
+
+      if (provisioned.localPath !== mutationResult.workspace.localPath) {
+        const updatedRows = await this.db
+          .update(workspaces)
+          .set({ localPath: provisioned.localPath, updatedAt: new Date() })
+          .where(eq(workspaces.id, mutationResult.workspace.id))
+          .returning();
+
+        provisionedWorkspace = updatedRows[0] ?? { ...mutationResult.workspace, localPath: provisioned.localPath };
+      }
+    } catch (error) {
+      await this.rollbackFailedWorkspaceCreate(mutationResult);
+      throw error;
+    }
+
+    return { ...provisionedWorkspace, latestPullRequest: null };
+  }
+
+  private async rollbackFailedWorkspaceCreate(result: WorkspaceCreateMutationResult): Promise<void> {
+    if (result.change === "inserted") {
+      await this.db.delete(workspaces).where(eq(workspaces.id, result.workspace.id));
+      return;
+    }
+
+    if (!result.previousWorkspace) {
+      return;
+    }
+
+    await this.db
+      .update(workspaces)
+      .set({
+        status: result.previousWorkspace.status,
+        sourceBranch: result.previousWorkspace.sourceBranch,
+        localPath: result.previousWorkspace.localPath,
+        updatedAt: new Date(),
+      })
+      .where(eq(workspaces.id, result.previousWorkspace.id));
+  }
+
+  private async findExistingWorkspaceForCreate(
+    db: Pick<AppDb, "select">,
+    input: {
+      actorUserId: string;
+      branch: string | null;
+      kind: WorkspaceKind;
+      nodeId: string;
+      organizationId: string;
+      projectId: string;
+      statuses: WorkspaceStatus[];
+    },
+  ): Promise<Workspace | null> {
+    const branchMatcher = input.branch ? eq(workspaces.branch, input.branch) : isNull(workspaces.branch);
+    const workspaceRows = await db
+      .select()
+      .from(workspaces)
+      .where(
+        and(
+          eq(workspaces.organizationId, input.organizationId),
+          eq(workspaces.projectId, input.projectId),
+          eq(workspaces.userId, input.actorUserId),
+          eq(workspaces.nodeId, input.nodeId),
+          eq(workspaces.kind, input.kind),
+          branchMatcher,
+          input.statuses.length === 1
+            ? eq(workspaces.status, input.statuses[0]!)
+            : inArray(workspaces.status, input.statuses),
+        ),
+      )
+      .limit(1);
+
+    return workspaceRows[0] ?? null;
   }
 
   async listWorkspaces(input: {
@@ -223,6 +457,102 @@ export class WorkspaceService {
           : null,
       };
     });
+  }
+
+  async listWorkspaceFiles(input: {
+    actorUserId: string;
+    organizationId: string;
+    path?: string;
+    projectId: string;
+    recursive?: boolean;
+    workspaceId: string;
+  }): Promise<WorkspaceFileEntry[]> {
+    return listWorkspaceFilesViaRelay(this.getRelayDeps(), input);
+  }
+
+  async readWorkspaceFile(input: {
+    actorUserId: string;
+    maxChars?: number;
+    organizationId: string;
+    path: string;
+    projectId: string;
+    workspaceId: string;
+  }): Promise<WorkspaceFileContent> {
+    return readWorkspaceFileViaRelay(this.getRelayDeps(), input);
+  }
+
+  async readWorkspaceDiff(input: {
+    actorUserId: string;
+    maxChars?: number;
+    organizationId: string;
+    path: string;
+    projectId: string;
+    workspaceId: string;
+  }): Promise<WorkspaceFileDiff> {
+    return readWorkspaceDiffViaRelay(this.getRelayDeps(), input);
+  }
+
+  async listWorkspaceGitChanges(input: {
+    actorUserId: string;
+    organizationId: string;
+    projectId: string;
+    workspaceId: string;
+  }): Promise<WorkspaceGitChanges> {
+    return listWorkspaceGitChangesViaRelay(this.getRelayDeps(), input);
+  }
+
+  async listWorkspaceGitBranches(input: {
+    actorUserId: string;
+    organizationId: string;
+    projectId: string;
+    workspaceId: string;
+  }): Promise<WorkspaceGitBranchList> {
+    return listWorkspaceGitBranchesViaRelay(this.getRelayDeps(), input);
+  }
+
+  async refreshWorkspacePullRequest(input: {
+    actorUserId: string;
+    organizationId: string;
+    projectId: string;
+    workspaceId: string;
+  }): Promise<WorkspaceCurrentPullRequestView> {
+    return refreshWorkspacePullRequestViaRelay(this.getRelayDeps(), input);
+  }
+
+  async listWorkspaceTerminalSessions(input: {
+    actorUserId: string;
+    includeExited?: boolean;
+    organizationId: string;
+    projectId: string;
+    workspaceId: string;
+  }): Promise<WorkspaceTerminalSessionView[]> {
+    return listWorkspaceTerminalSessionsViaRelay(this.getRelayDeps(), input);
+  }
+
+  async startWorkspaceTerminal(input: {
+    actorUserId: string;
+    args?: string[];
+    cols?: number;
+    command?: string;
+    env?: Record<string, string> | string[];
+    organizationId: string;
+    paneId?: string;
+    projectId: string;
+    rows?: number;
+    tabId?: string;
+    workspaceId: string;
+  }): Promise<WorkspaceTerminalStartView> {
+    return startWorkspaceTerminalViaRelay(this.getRelayDeps(), input);
+  }
+
+  async stopWorkspaceTerminal(input: {
+    actorUserId: string;
+    organizationId: string;
+    projectId: string;
+    sessionId: string;
+    workspaceId: string;
+  }): Promise<void> {
+    return stopWorkspaceTerminalViaRelay(this.getRelayDeps(), input);
   }
 
   async closeWorkspace(input: CloseWorkspaceInput): Promise<CloseWorkspaceResult> {
@@ -305,6 +635,18 @@ export class WorkspaceService {
     return {
       workspace: { ...workspace, latestPullRequest: null },
       changed: true,
+    };
+  }
+
+  private getRelayDeps(): WorkspaceRelayDeps {
+    if (!this.config) {
+      throw new RelayUnavailableError();
+    }
+
+    return {
+      config: this.config,
+      db: this.db,
+      organizationService: this.organizationService,
     };
   }
 

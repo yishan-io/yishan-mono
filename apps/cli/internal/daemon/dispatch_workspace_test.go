@@ -120,6 +120,100 @@ func TestHandleWorkspaceCreate_ReturnsPendingWithoutAPICall(t *testing.T) {
 	}
 }
 
+func TestHandleWorkspaceCreate_PreservesProvidedID(t *testing.T) {
+	root := t.TempDir()
+	statePath := filepath.Join(root, "daemon.state.json")
+	indexStore, err := newWorkspaceIndexStore(statePath)
+	if err != nil {
+		t.Fatalf("newWorkspaceIndexStore: %v", err)
+	}
+
+	manager := workspace.NewManager()
+	handler := NewJSONRPCHandler(
+		manager,
+		nil,
+		"node-1",
+		filepath.Join(root, "daemon.log"),
+		nil,
+		indexStore,
+		filepath.Join(root, "config.yml"),
+		NewAppContextStore(""),
+	)
+	defer handler.Shutdown()
+
+	params, err := json.Marshal(map[string]any{
+		"id":             "workspace-fixed-id",
+		"organizationId": "org-1",
+		"projectId":      "project-1",
+		"repoKey":        "owner/repo",
+		"workspaceName":  "feature/mobile",
+		"sourcePath":     root,
+		"targetBranch":   "feature/mobile",
+		"sourceBranch":   "main",
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+
+	result, err := handler.handleWorkspaceCreate(context.Background(), params)
+	if err != nil {
+		t.Fatalf("handleWorkspaceCreate returned unexpected error: %v", err)
+	}
+
+	record, ok := result.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map result, got %T", result)
+	}
+	if got := record["id"]; got != "workspace-fixed-id" {
+		t.Fatalf("expected provided workspace id to be preserved, got %v", got)
+	}
+}
+
+func TestHandleWorkspaceOpen_RegistersWorkspace(t *testing.T) {
+	root := t.TempDir()
+	statePath := filepath.Join(root, "daemon.state.json")
+	indexStore, err := newWorkspaceIndexStore(statePath)
+	if err != nil {
+		t.Fatalf("newWorkspaceIndexStore: %v", err)
+	}
+
+	manager := workspace.NewManager()
+	handler := NewJSONRPCHandler(
+		manager,
+		nil,
+		"node-1",
+		filepath.Join(root, "daemon.log"),
+		nil,
+		indexStore,
+		filepath.Join(root, "config.yml"),
+		NewAppContextStore(""),
+	)
+	defer handler.Shutdown()
+
+	params, err := json.Marshal(map[string]any{
+		"id":        "workspace-open-1",
+		"path":      root,
+		"projectId": "project-1",
+		"orgId":     "org-1",
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+
+	result, err := handler.dispatchWorkspace(context.Background(), nil, MethodWorkspaceOpen, params)
+	if err != nil {
+		t.Fatalf("%s returned unexpected error: %v", MethodWorkspaceOpen, err)
+	}
+
+	record, ok := result.(workspace.Workspace)
+	if !ok {
+		t.Fatalf("expected workspace result for %s, got %T", MethodWorkspaceOpen, result)
+	}
+	if record.ID != "workspace-open-1" {
+		t.Fatalf("expected workspace id to be registered for %s, got %q", MethodWorkspaceOpen, record.ID)
+	}
+}
+
 func TestHandleWorkspaceCreate_PublishesCreateStartedEvent(t *testing.T) {
 	handler := newTestHandler(t)
 	subscriptionID, events := handler.events.Subscribe()

@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { projects, workspaces } from "@/db/schema";
 import type { ProjectSourceType, WorkspaceStatus } from "@/db/schema";
-import { ProjectNotFoundError } from "@/errors";
+import { ProjectInvalidGitUrlError, ProjectNotFoundError } from "@/errors";
 import { newId } from "@/lib/id";
 import { inferRepoSource } from "@/lib/repo";
 import type { OrganizationService } from "@/services/organization-service";
@@ -90,7 +90,10 @@ export class ProjectService {
     const nodeId = input.nodeId?.trim() ?? null;
     const localPath = input.localPath?.trim() ?? null;
 
-    if (sourceType === "git" && repoUrl) {
+    if (sourceType === "git") {
+      if (!repoUrl) {
+        throw new ProjectInvalidGitUrlError("");
+      }
       const inferred = inferRepoSource(repoUrl);
       repoProvider = inferred.repoProvider;
       repoKey = inferred.repoKey;

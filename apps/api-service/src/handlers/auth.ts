@@ -46,11 +46,47 @@ function parseCliRedirectUri(value: string | undefined): string | null {
   return parsed.toString();
 }
 
+function resolveRequestAwareAppBaseUrl(c: AppContext, configuredBaseUrl: string): string {
+  try {
+    const requestUrl = new URL(c.req.url);
+    if (isLoopbackHost(requestUrl.hostname)) {
+      return requestUrl.origin;
+    }
+  } catch {
+    // Fall back to the configured base URL if the request URL is somehow invalid.
+  }
+
+  return configuredBaseUrl;
+}
+
+function normalizeReturnToPath(value: string | undefined, appBaseUrl: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) {
+    return undefined;
+  }
+
+  try {
+    const absolute = new URL(trimmed, appBaseUrl);
+    const appOrigin = new URL(appBaseUrl).origin;
+    if (absolute.origin !== appOrigin) {
+      return undefined;
+    }
+
+    return `${absolute.pathname}${absolute.search}${absolute.hash}`;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function startOAuthHandler(c: AppContext, query: OAuthStartQueryInput) {
   const providerParam = c.get("oauthProvider");
   const config = c.get("config");
   const authService = c.get("services").auth;
-  const oauthBaseUrl = config.appBaseUrl;
+  const oauthBaseUrl = resolveRequestAwareAppBaseUrl(c, config.appBaseUrl);
   const { authorizationUrl, state, codeVerifier } = await authService.buildOAuthAuthorizationUrl(
     providerParam,
     oauthBaseUrl,
@@ -58,6 +94,7 @@ export async function startOAuthHandler(c: AppContext, query: OAuthStartQueryInp
 
   const responseMode = query.mode;
   const cliRedirectUri = parseCliRedirectUri(query.redirect_uri);
+  const returnTo = normalizeReturnToPath(query.return_to, oauthBaseUrl);
   const cliState = query.state;
 
   if (responseMode === "cli" && (!cliRedirectUri || !cliState)) {
@@ -73,6 +110,7 @@ export async function startOAuthHandler(c: AppContext, query: OAuthStartQueryInp
     codeVerifier,
     createdAt: Date.now(),
     callbackBaseUrl: oauthBaseUrl,
+    returnTo,
     responseMode,
     cliRedirectUri: responseMode === "cli" ? (cliRedirectUri ?? undefined) : undefined,
     cliState: responseMode === "cli" ? (cliState ?? undefined) : undefined,
@@ -161,7 +199,11 @@ export async function callbackOAuthHandler(c: AppContext) {
     expires: session.expiresAt,
   });
 
-  return c.redirect(new URL("/", config.appBaseUrl).toString(), StatusCodes.MOVED_TEMPORARILY);
+  const redirectBaseUrl = oauthContext.callbackBaseUrl ?? config.appBaseUrl;
+  const nextUrl = oauthContext.returnTo
+    ? new URL(oauthContext.returnTo, redirectBaseUrl).toString()
+    : new URL("/", redirectBaseUrl).toString();
+  return c.redirect(nextUrl, StatusCodes.MOVED_TEMPORARILY);
 }
 
 export async function logoutHandler(c: AppContext) {

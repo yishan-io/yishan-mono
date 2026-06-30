@@ -93,23 +93,23 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(_ *http.Request) bool { return true },
 		},
-		manager:        manager,
-		runtime:        runtime,
-		nodeID:         nodeID,
-		logFilePath:    logFilePath,
-		cleanupStore:   cleanupStore,
-		wsIndexStore:   wsIndexStore,
-		context:        context,
-		events:         events,
-		watchers:       newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
-		prTracker:      prTracker,
-		tokenUsage:     collector,
-		computer:       newComputerService(computer.NewUnavailableRuntime("unknown")),
-		modelList:      modellist.NewService(),
-		settingsPath:   config.SettingsFilePath(filepath.Dir(configPath)),
-		agentUsage:     make(map[string]map[string]struct{}),
+		manager:          manager,
+		runtime:          runtime,
+		nodeID:           nodeID,
+		logFilePath:      logFilePath,
+		cleanupStore:     cleanupStore,
+		wsIndexStore:     wsIndexStore,
+		context:          context,
+		events:           events,
+		watchers:         newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
+		prTracker:        prTracker,
+		tokenUsage:       collector,
+		computer:         newComputerService(computer.NewUnavailableRuntime("unknown")),
+		modelList:        modellist.NewService(),
+		settingsPath:     config.SettingsFilePath(filepath.Dir(configPath)),
+		agentUsage:       make(map[string]map[string]struct{}),
 		remoteStreamSubs: make(map[string]map[*wsConnState]struct{}),
-		fileCacheSubID: fileCacheSubID,
+		fileCacheSubID:   fileCacheSubID,
 	}
 	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)
 	return handler
@@ -259,10 +259,14 @@ func (h *JSONRPCHandler) handleBinaryFrame(connState *wsConnState, payload []byt
 	if nullIdx < 0 {
 		return
 	}
-	sessionID := connState.terminalInputSessionID(rest[:nullIdx])
+	sessionIDRaw := rest[:nullIdx]
 
 	switch opcode {
 	case binOpcodeTerminalInput:
+		sessionID, ok := connState.terminalInputSessionID(sessionIDRaw)
+		if !ok {
+			return
+		}
 		inputData := rest[nullIdx+1:]
 		if len(inputData) == 0 {
 			return
@@ -273,6 +277,7 @@ func (h *JSONRPCHandler) handleBinaryFrame(connState *wsConnState, payload []byt
 		// Write raw bytes directly to PTY — avoids JSON unmarshal + string conversion.
 		h.manager.Terminals().SendRaw(sessionID, inputData)
 	case binOpcodeTerminalOutput:
+		sessionID := string(sessionIDRaw)
 		h.forwardRemoteTerminalOutput(sessionID, payload)
 	}
 }

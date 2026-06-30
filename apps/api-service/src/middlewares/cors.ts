@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { cors } from "hono/cors";
 
 /** Origins allowed in development when no CORS_ORIGINS env var is set. */
-const DEFAULT_DEV_ORIGINS = ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173"] as const;
+const DEFAULT_DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"] as const;
 
 /**
  * Cache of already-computed allowed-origins sets, keyed by the raw CORS_ORIGINS
@@ -71,14 +71,19 @@ export const corsMiddleware = cors({
       return "";
     }
 
+    const normalizedOrigin = normalizeOrigin(origin);
+    if (!normalizedOrigin) {
+      return "";
+    }
+
     const allowedOrigins = getAllowedOrigins(c);
 
     if (allowedOrigins.has("*")) {
-      return origin;
+      return normalizedOrigin;
     }
 
-    if (allowedOrigins.has(origin)) {
-      return origin;
+    if (allowedOrigins.has(normalizedOrigin)) {
+      return normalizedOrigin;
     }
 
     return "";

@@ -1,0 +1,311 @@
+console.js:662 Running "main" with {"rootTag":11,"initialProps":{},"fabric":true}
+mobileDebug.ts:15 [mobile:projects.query] request Object
+mobileDebug.ts:15 [mobile:shell.restore] restoring persisted selection Object
+mobileDebug.ts:15 [mobile:shell.restore] restored shell state Object
+mobileDebug.ts:15 [mobile:shell.restore] restored shell state Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:projects.query] error Object
+mobileDebug.ts:15 [mobile:terminal.sync] error Object
+mobileDebug.ts:15 [mobile:terminal.sync] error Object
+mobileDebug.ts:15 [mobile:terminal.sync] error Object
+mobileDebug.ts:15 [mobile:projects.query] request Object
+mobileDebug.ts:15 [mobile:shell.restore] restoring persisted selection Object
+mobileDebug.ts:15 [mobile:shell.restore] restored shell state Object
+mobileDebug.ts:15 [mobile:shell.restore] restored shell state Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:projects.query] error Object
+mobileDebug.ts:15 [mobile:terminal.sync] error Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:projects.query] request Object
+mobileDebug.ts:15 [mobile:shell.selection] selected organization missing from current organizations Object
+mobileDebug.ts:15 [mobile:shell.restore] restored shell state Object
+mobileDebug.ts:15 [mobile:terminal.sync] error Object
+mobileDebug.ts:15 [mobile:terminal.sync] error Object
+mobileDebug.ts:15 [mobile:projects.query] success Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:shell.restore] restored shell state Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:terminal.sync] success Object
+mobileDebug.ts:15 [mobile:terminal.sync] success Object
+mobileDebug.ts:15 [mobile:shell.restore] restored shell state Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:terminal.sync] success Object
+mobileDebug.ts:15 [mobile:terminal.sync] success Object
+mobileDebug.ts:15 [mobile:terminal.sync] success Object
+mobileDebug.ts:15 [mobile:terminal.sync] success Object
+console.js:662 Error evaluating injectedJavaScript: This is possibly due to an unsupported return type. Try adding true to the end of your injectedJavaScript string. Error Domain=WKErrorDomain Code=5 "JavaScript execution returned a result of an unsupported type" UserInfo={NSLocalizedDescription=JavaScript execution returned a result of an unsupported type}
+anonymous @ console.js:662
+overrideMethod @ backend.js:17418
+anonymous @ setUpDeveloperTools.js:44
+registerWarning @ LogBox.js:225
+anonymous @ LogBox.js:97
+logIfNoNativeHook @ RCTLog.js:36
+mobileDebug.ts:15 [mobile:shell.restore] restored shell state Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:terminal.sync] request Object
+mobileDebug.ts:15 [mobile:terminal.sync] success Object
+mobileDebug.ts:15 [mobile:terminal.sync] success Object
+mobileDebug.ts:15 [mobile:terminal.sync] success Object
+mobileDebug.ts:15 [mobile:terminal.sync] success Object
+mobileDebug.ts:15 [mobile:terminal.sync] success Object
+Welcome to React Native DevTools
+Debugger integration: iOS Bridgeless (RCTHost)
+mobileDebug.ts:15 [mobile:shell.restore] restored shell state {hasExplicitSelectionParams: true, restoredSelection: {…}, storedWorkspaceIds: Array(2)}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 2, workspaceId: '019ebbb6-30c1-76af-8255-86f09dc005fd'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(4), workspaceId: '019ebbb6-30c1-76af-8255-86f09dc005fd'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ebbb6-30c1-76af-8255-86f09dc005fd'}
+mobileDebug.ts:15 [mobile:shell.restore] restored shell state {hasExplicitSelectionParams: true, restoredSelection: {…}, storedWorkspaceIds: Array(2)}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 1, workspaceId: '019ebbb6-30c1-76af-8255-86f09dc005fd'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ebbb6-30c1-76af-8255-86f09dc005fd'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ebbb6-30c1-76af-8255-86f09dc005fd'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:projects.query] request {organizationId: '019ebbb6-0fb5-710e-bf7b-c39e71a8840f', queryEnabled: true, withWorkspaces: true}
+mobileDebug.ts:15 [mobile:shell.restore] restored shell state {hasExplicitSelectionParams: true, restoredSelection: {…}, storedWorkspaceIds: Array(2)}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:projects.query] success {organizationId: '019ebbb6-0fb5-710e-bf7b-c39e71a8840f', projectIds: Array(1), projectNames: Array(1), withWorkspaces: true, workspaceCounts: Array(1)}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+mobileDebug.ts:15 [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] success {sessionIds: Array(0), workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}
+ [mobile:terminal.sync] request {localTerminalCount: 0, workspaceId: '019ed0b8-cf39-7067-80e4-6702bb40d498'}

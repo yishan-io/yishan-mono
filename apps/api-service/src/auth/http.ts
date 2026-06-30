@@ -14,6 +14,7 @@ export const oauthCookiePayloadSchema = z.object({
   codeVerifier: z.string().min(1),
   createdAt: z.number().int(),
   callbackBaseUrl: z.string().optional(),
+  returnTo: z.string().optional(),
   responseMode: z.enum(["token", "cli"]).optional(),
   cliRedirectUri: z.string().optional(),
   cliState: z.string().optional(),

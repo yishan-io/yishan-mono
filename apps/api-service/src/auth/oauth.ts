@@ -3,6 +3,7 @@ import type { OAuthProfile, OAuthProvider, ServiceConfig } from "@/types";
 
 const GOOGLE_SCOPES = ["openid", "email", "profile"];
 const GITHUB_SCOPES = ["read:user", "user:email"];
+const OAUTH_FETCH_TIMEOUT_MS = 15_000;
 
 export type OAuthStart = {
   state: string;
@@ -73,13 +74,27 @@ export async function exchangeCodeForProfile(
   config: ServiceConfig,
   callbackBaseUrl?: string,
 ): Promise<OAuthProfile> {
-  const baseUrl = callbackBaseUrl ?? config.appBaseUrl;
+  const redirectUri = buildCallbackUrl(callbackBaseUrl ?? config.appBaseUrl, provider);
+  return exchangeCodeForProfileWithRedirectUri(provider, code, codeVerifier, config, redirectUri);
+}
+
+export async function exchangeCodeForProfileWithRedirectUri(
+  provider: OAuthProvider,
+  code: string,
+  codeVerifier: string,
+  config: ServiceConfig,
+  redirectUri: string,
+  options?: {
+    clientId?: string;
+    clientSecret?: string | null;
+  },
+): Promise<OAuthProfile> {
   if (provider === "google") {
-    const token = await exchangeGoogleToken(code, codeVerifier, config, baseUrl);
+    const token = await exchangeGoogleToken(code, codeVerifier, config, redirectUri, options);
     return getGoogleProfile(token.access_token);
   }
 
-  const token = await exchangeGithubToken(code, codeVerifier, config, baseUrl);
+  const token = await exchangeGithubToken(code, codeVerifier, config, redirectUri);
   return getGithubProfile(token.access_token);
 }
 
@@ -87,21 +102,36 @@ async function exchangeGoogleToken(
   code: string,
   codeVerifier: string,
   config: ServiceConfig,
-  callbackBaseUrl: string,
+  redirectUri: string,
+  options?: {
+    clientId?: string;
+    clientSecret?: string | null;
+  },
 ): Promise<TokenResponse> {
+  const clientId = options?.clientId ?? config.googleClientId;
+  const clientSecret =
+    options && Object.prototype.hasOwnProperty.call(options, "clientSecret")
+      ? options.clientSecret
+      : config.googleClientSecret;
+  const requestBody = new URLSearchParams({
+    grant_type: "authorization_code",
+    client_id: clientId,
+    code,
+    redirect_uri: redirectUri,
+    code_verifier: codeVerifier,
+  });
+
+  if (clientSecret) {
+    requestBody.set("client_secret", clientSecret);
+  }
+
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      client_id: config.googleClientId,
-      client_secret: config.googleClientSecret,
-      code,
-      redirect_uri: buildCallbackUrl(callbackBaseUrl, "google"),
-      code_verifier: codeVerifier,
-    }),
+    body: requestBody,
+    signal: AbortSignal.timeout(OAUTH_FETCH_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -133,6 +163,7 @@ async function getGoogleProfile(accessToken: string): Promise<OAuthProfile> {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
+    signal: AbortSignal.timeout(OAUTH_FETCH_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -163,7 +194,7 @@ async function exchangeGithubToken(
   code: string,
   codeVerifier: string,
   config: ServiceConfig,
-  callbackBaseUrl: string,
+  redirectUri: string,
 ): Promise<TokenResponse> {
   const response = await fetch("https://github.com/login/oauth/access_token", {
     method: "POST",
@@ -175,9 +206,10 @@ async function exchangeGithubToken(
       client_id: config.githubClientId,
       client_secret: config.githubClientSecret,
       code,
-      redirect_uri: buildCallbackUrl(callbackBaseUrl, "github"),
+      redirect_uri: redirectUri,
       code_verifier: codeVerifier,
     }),
+    signal: AbortSignal.timeout(OAUTH_FETCH_TIMEOUT_MS),
   });
 
   if (!response.ok) {

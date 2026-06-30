@@ -21,6 +21,8 @@ func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, 
 	switch method {
 	case MethodList:
 		return h.manager.List(), nil
+	case MethodWorkspaceOpen:
+		return h.handleWorkspaceOpen(params)
 	case MethodWorkspaceCreate:
 		return h.handleWorkspaceCreate(ctx, params)
 	case MethodWorkspaceRefreshPullRequest:
@@ -52,6 +54,33 @@ func (h *JSONRPCHandler) dispatchWorkspace(ctx context.Context, _ *wsConnState, 
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown workspace method: "+method)
 	}
+}
+
+func (h *JSONRPCHandler) handleWorkspaceOpen(params json.RawMessage) (any, error) {
+	var req workspace.OpenRequest
+	if err := decodeParams(params, &req); err != nil {
+		return nil, err
+	}
+
+	openedWorkspace, err := h.manager.Open(req)
+	if err != nil {
+		return nil, err
+	}
+
+	h.watchAndTrack(openedWorkspace.ID, openedWorkspace.Path)
+	if h.wsIndexStore != nil {
+		if upsertErr := h.wsIndexStore.Upsert(workspaceIndexEntry{
+			WorkspaceID:  openedWorkspace.ID,
+			WorktreePath: openedWorkspace.Path,
+			ProjectID:    openedWorkspace.ProjectID,
+			OrgID:        openedWorkspace.OrgID,
+			State:        openedWorkspace.State,
+		}); upsertErr != nil {
+			log.Warn().Err(upsertErr).Str("workspaceId", openedWorkspace.ID).Msg("workspace index store upsert failed on open")
+		}
+	}
+
+	return openedWorkspace, nil
 }
 
 func (h *JSONRPCHandler) handleWorkspaceRefreshPullRequest(_ context.Context, params json.RawMessage) (any, error) {

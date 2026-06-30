@@ -11,8 +11,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	daemonclient "yishan/apps/cli/internal/daemon/client"
 	"yishan/apps/cli/internal/daemon"
+	daemonclient "yishan/apps/cli/internal/daemon/client"
 	"yishan/apps/cli/internal/output"
 )
 

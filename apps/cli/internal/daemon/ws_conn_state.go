@@ -22,6 +22,7 @@ type wsConnState struct {
 	subscriptions                   map[string]subscriptionHandle
 	eventsMu                        sync.Mutex
 	eventsCancel                    func()
+	eventsGeneration                uint64
 	lastTerminalInputSessionID      string
 	lastTerminalInputSessionIDBytes []byte
 }
@@ -36,14 +37,29 @@ func newWSConnState(conn *websocket.Conn) *wsConnState {
 	return &wsConnState{conn: conn, subscriptions: make(map[string]subscriptionHandle)}
 }
 
-func (c *wsConnState) terminalInputSessionID(raw []byte) string {
+func (c *wsConnState) terminalInputSessionID(raw []byte) (string, bool) {
 	if stringBytesEqual(raw, c.lastTerminalInputSessionIDBytes) {
-		return c.lastTerminalInputSessionID
+		c.subsMu.Lock()
+		_, ok := c.subscriptions[c.lastTerminalInputSessionID]
+		c.subsMu.Unlock()
+		if !ok {
+			return "", false
+		}
+		return c.lastTerminalInputSessionID, true
 	}
 
-	c.lastTerminalInputSessionID = string(raw)
+	sessionID := string(raw)
+
+	c.subsMu.Lock()
+	_, ok := c.subscriptions[sessionID]
+	c.subsMu.Unlock()
+	if !ok {
+		return "", false
+	}
+
+	c.lastTerminalInputSessionID = sessionID
 	c.lastTerminalInputSessionIDBytes = append(c.lastTerminalInputSessionIDBytes[:0], raw...)
-	return c.lastTerminalInputSessionID
+	return sessionID, true
 }
 
 func (c *wsConnState) WriteJSON(v any) error {
@@ -95,7 +111,9 @@ func (c *wsConnState) Close() {
 			handle.cancel(handle.sessionID, handle.subscriptionID)
 		}
 		c.DetachEventStream()
-		_ = c.conn.Close()
+		if c.conn != nil {
+			_ = c.conn.Close()
+		}
 	})
 }
 
@@ -242,6 +260,8 @@ func (c *wsConnState) DetachSubscription(sessionID string) {
 func (c *wsConnState) AttachEventStream(events <-chan frontendEvent, cancel func()) {
 	c.eventsMu.Lock()
 	previousCancel := c.eventsCancel
+	c.eventsGeneration++
+	streamGeneration := c.eventsGeneration
 	c.eventsCancel = cancel
 	c.eventsMu.Unlock()
 
@@ -259,6 +279,10 @@ func (c *wsConnState) AttachEventStream(events <-chan frontendEvent, cancel func
 				return
 			}
 		}
+
+		if c.isCurrentEventStreamGeneration(streamGeneration) {
+			c.Close()
+		}
 	}()
 }
 
@@ -266,11 +290,19 @@ func (c *wsConnState) DetachEventStream() {
 	c.eventsMu.Lock()
 	cancel := c.eventsCancel
 	c.eventsCancel = nil
+	c.eventsGeneration++
 	c.eventsMu.Unlock()
 
 	if cancel != nil {
 		cancel()
 	}
+}
+
+func (c *wsConnState) isCurrentEventStreamGeneration(expected uint64) bool {
+	c.eventsMu.Lock()
+	defer c.eventsMu.Unlock()
+
+	return c.eventsGeneration == expected && c.eventsCancel != nil
 }
 
 func stringBytesEqual(value []byte, candidate []byte) bool {

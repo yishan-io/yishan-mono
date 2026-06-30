@@ -1,0 +1,68 @@
+{
+  "name": "@yishan/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "expo": {
+    "autolinking": {
+      "ios": {
+        "exclude": [
+          "react-native-reanimated",
+          "react-native-worklets"
+        ]
+      }
+    }
+  },
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo run:android",
+    "ios": "node ./scripts/patchExpoCliAppleDevice.mjs && LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 expo run:ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check . --files-ignore-unknown=true --ignore=.expo",
+    "format": "biome check . --write --files-ignore-unknown=true --ignore=.expo",
+    "test:unit": "vitest run"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
+    "@tamagui/animations-react-native": "^1.140.4",
+    "@tamagui/lucide-icons": "^1.140.4",
+    "@tamagui/shorthands": "^1.140.4",
+    "@tamagui/themes": "^1.140.4",
+    "@tanstack/react-query": "^5.100.1",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/headless": "^6.0.0",
+    "@xterm/xterm": "^6.0.0",
+    "@yishan/core": "workspace:*",
+    "@yishan/design-tokens": "workspace:*",
+    "expo": "~55.0.23",
+    "expo-auth-session": "55.0.16",
+    "expo-clipboard": "~55.0.13",
+    "expo-constants": "~55.0.16",
+    "expo-crypto": "^55.0.15",
+    "expo-document-picker": "~55.0.14",
+    "expo-file-system": "~55.0.23",
+    "expo-image-picker": "~55.0.21",
+    "expo-linking": "~55.0.15",
+    "expo-notifications": "~55.0.23",
+    "expo-router": "~55.0.14",
+    "expo-secure-store": "~55.0.14",
+    "expo-splash-screen": "~55.0.21",
+    "expo-status-bar": "~55.0.6",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.6",
+    "react-native-gesture-handler": "~2.30.0",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-svg": "^15.15.5",
+    "react-native-swipe-list-view": "^3.2.9",
+    "react-native-web": "~0.21.0",
+    "react-native-webview": "^13.16.1",
+    "tamagui": "^1.140.4"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~5.9.2"
+  }
+}
