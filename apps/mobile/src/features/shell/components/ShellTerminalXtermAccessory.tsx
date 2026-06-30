@@ -10,7 +10,6 @@ import type { TerminalUploadImageSource } from "./shell-terminal-native-upload-d
 
 type ShellTerminalXtermAccessoryProps = {
   accessoryBottomInset: number;
-  clipboardHasImage: boolean;
   clipboardText: string;
   imageUploadSheetOpen: boolean;
   isComposerDisabled: boolean;
@@ -23,7 +22,6 @@ type ShellTerminalXtermAccessoryProps = {
   onOpenImageUploadSheet: () => void;
   onOpenReaderMode: () => void;
   onPressKey: (input: string) => void;
-  onPressPasteImage: () => Promise<void>;
   onPressPaste: () => Promise<void>;
   readerModeEnabled: boolean;
   t: (labelKey: string) => string;
@@ -32,7 +30,6 @@ type ShellTerminalXtermAccessoryProps = {
 /** Renders the mobile xterm accessory area, including controls and upload sheet. */
 export function ShellTerminalXtermAccessory({
   accessoryBottomInset,
-  clipboardHasImage,
   clipboardText,
   imageUploadSheetOpen,
   isComposerDisabled,
@@ -45,7 +42,6 @@ export function ShellTerminalXtermAccessory({
   onOpenImageUploadSheet,
   onOpenReaderMode,
   onPressKey,
-  onPressPasteImage,
   onPressPaste,
   readerModeEnabled,
   t,
@@ -89,17 +85,6 @@ export function ShellTerminalXtermAccessory({
                   keepKeyboardFocused: false,
                   onPress: onOpenImageUploadSheet,
                 },
-                ...(clipboardHasImage
-                  ? [
-                      {
-                        accessibilityLabel: t("shell.terminalActionPasteImage"),
-                        icon: <Image color="$gray11" size={16} />,
-                        id: "paste-image",
-                        label: t("shell.terminalActionPasteImage"),
-                        onPress: onPressPasteImage,
-                      },
-                    ]
-                  : []),
                 ...(clipboardText
                   ? [
                       {

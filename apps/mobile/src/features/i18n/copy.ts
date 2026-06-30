@@ -353,6 +353,8 @@ const copy = {
       workspaceCreateNoEligiblePrimary:
         "Create a local workspace on an available node first, then mobile can create additional worktrees.",
       createWorkspaceFailed: "Failed to create workspace.",
+      workspaceCreatePendingStatus: "Preparing workspace...",
+      workspaceCreateRefreshingStatus: "Refreshing workspace...",
       workspaceCreateMobilePending:
         "Mobile does not have the desktop workspace-create flow yet. " +
         "Create this workspace from desktop where source and target branches are resolved automatically.",
@@ -717,6 +719,8 @@ const copy = {
       workspaceCreateSubmit: desktopValue("zh", "workspace.actions.create", "创建工作区"),
       workspaceCreateNoEligiblePrimary: "请先在可用节点上创建 local 工作区，之后手机端才能继续创建新的 worktree。",
       createWorkspaceFailed: "创建工作区失败。",
+      workspaceCreatePendingStatus: "正在准备工作区...",
+      workspaceCreateRefreshingStatus: "正在刷新工作区...",
       workspaceCreateMobilePending:
         "移动端还没有接入 desktop 那套工作区创建流程。请先在 desktop 上创建，这样源分支和目标分支会被自动处理。",
       homeWelcomeNamed: "欢迎回来，{{name}}。",

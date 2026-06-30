@@ -57,6 +57,12 @@ export function WorkspaceCreateSheet({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (model.isCreatingWorkspace) {
+      setNodeSelectorOpen(false);
+    }
+  }, [model.isCreatingWorkspace]);
+
   return (
     <>
       <AppModalSheet
@@ -73,7 +79,13 @@ export function WorkspaceCreateSheet({
         open={open}
         position="center"
         headerRight={
-          <Pressable accessibilityRole="button" hitSlop={8} onPress={model.handleClose} style={{ padding: 4 }}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={model.isCreatingWorkspace}
+            hitSlop={8}
+            onPress={model.handleClose}
+            style={{ opacity: model.isCreatingWorkspace ? 0.45 : 1, padding: 4 }}
+          >
             <X color="$color11" size={20} />
           </Pressable>
         }
@@ -104,7 +116,7 @@ export function WorkspaceCreateSheet({
               emptyLabel={model.t("shell.workspaceCreateSourceBranchEmpty")}
               errorMessage={model.sourceBranchError}
               groups={model.sourceBranchGroups}
-              isDisabled={model.isSourceBranchSelectorDisabled}
+              isDisabled={model.isSourceBranchSelectorDisabled || model.isCreatingWorkspace}
               isLoading={model.isLoadingSourceBranches}
               loadingLabel={model.t("shell.workspaceCreateSourceBranchLoading")}
               localGroupLabel={model.t("shell.workspaceCreateSourceBranchLocalGroup")}
@@ -128,6 +140,7 @@ export function WorkspaceCreateSheet({
                 <Input
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!model.isCreatingWorkspace}
                   onChangeText={model.onChangeName}
                   placeholder={model.t("shell.workspaceCreateNamePlaceholder")}
                   style={inputStyle}
@@ -139,6 +152,7 @@ export function WorkspaceCreateSheet({
                 <Input
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!model.isCreatingWorkspace}
                   onChangeText={model.handleChangeTargetBranch}
                   placeholder={model.t("shell.workspaceCreateBranchPlaceholder")}
                   style={inputStyle}
@@ -150,10 +164,10 @@ export function WorkspaceCreateSheet({
             <FieldLabel label={model.t("shell.workspaceCreateNodeLabel")} />
             <Pressable
               accessibilityRole="button"
-              disabled={model.nodeOptions.length <= 1}
+              disabled={model.isCreatingWorkspace || model.nodeOptions.length <= 1}
               onPress={() => setNodeSelectorOpen(true)}
               style={({ pressed }) => ({
-                opacity: model.nodeOptions.length <= 1 ? 1 : pressed ? 0.72 : 1,
+                opacity: model.isCreatingWorkspace || model.nodeOptions.length <= 1 ? 1 : pressed ? 0.72 : 1,
               })}
             >
               <StaticFieldCard>
@@ -179,6 +193,7 @@ export function WorkspaceCreateSheet({
             </Pressable>
 
             {model.submitError ? <Paragraph color="$red10">{model.submitError}</Paragraph> : null}
+            {model.progressMessage ? <Paragraph color="$gray11">{model.progressMessage}</Paragraph> : null}
             {!model.selectedNode ? (
               <Paragraph color="$gray11">{model.t("shell.workspaceCreateNoEligiblePrimary")}</Paragraph>
             ) : null}

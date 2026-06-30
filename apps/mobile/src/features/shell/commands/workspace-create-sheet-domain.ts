@@ -1,5 +1,4 @@
 import { type WorkspaceCreateNodeOption, suggestWorkspaceCreateBranchName } from "@/features/workspaces/create";
-import type { CreateWorkspaceInput } from "@/features/workspaces/workspaces.api";
 import type { WorkspaceGitBranchList } from "@/features/workspaces/workspaces.types";
 import {
   type WorkspaceSourceBranchGroups,
@@ -16,6 +15,14 @@ export type WorkspaceCreateDraft = {
 };
 
 export type WorkspaceCreateSourceBranchGroups = WorkspaceSourceBranchGroups;
+
+export type WorkspaceCreateInput = {
+  branch: string;
+  kind: "worktree";
+  nodeId: string;
+  sourceBranch: string;
+  workspaceName: string;
+};
 
 export function createEmptyWorkspaceCreateDraft(): WorkspaceCreateDraft {
   return {
@@ -149,12 +156,11 @@ export function isWorkspaceCreateSubmitDisabled(args: {
 export function buildCreateWorkspaceInput(
   draft: WorkspaceCreateDraft,
   selectedNode: WorkspaceCreateNodeOption,
-): CreateWorkspaceInput {
+): WorkspaceCreateInput {
   return {
     branch: draft.targetBranch.trim(),
     kind: "worktree",
-    localPath: selectedNode.localPath,
-    name: draft.name.trim(),
+    workspaceName: draft.name.trim(),
     nodeId: selectedNode.nodeId,
     sourceBranch: draft.sourceBranch.trim(),
   };

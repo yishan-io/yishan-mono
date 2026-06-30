@@ -48,9 +48,13 @@ export function useWorkspaceCreateSheetModel({
   });
 
   const handleClose = useCallback(() => {
+    if (submit.isCreatingWorkspace) {
+      return;
+    }
+
     draft.resetDraft();
     onClose();
-  }, [draft.resetDraft, onClose]);
+  }, [draft.resetDraft, onClose, submit.isCreatingWorkspace]);
 
   return {
     handleChangeTargetBranch: draft.handleChangeTargetBranch,
@@ -60,12 +64,13 @@ export function useWorkspaceCreateSheetModel({
     handleRetrySourceBranches: sourceBranchSelector.handleRetrySourceBranches,
     handleSelectNode: draft.handleSelectNode,
     handleSelectSourceBranch: sourceBranchSelector.handleSelectSourceBranch,
+    isCreatingWorkspace: submit.isCreatingWorkspace,
     isLoadingSourceBranches: sourceBranchSelector.isLoadingSourceBranches,
     isSourceBranchSelectorDisabled: sourceBranchSelector.isSourceBranchSelectorDisabled,
     isSourceBranchSelectorOpen: sourceBranchSelector.isSourceBranchSelectorOpen,
     isSubmitDisabled: isWorkspaceCreateSubmitDisabled({
       draft: draft.workspaceCreateDraft,
-      pending: submit.createMutation.isPending,
+      pending: submit.isCreatingWorkspace,
       projectPresent: !!project,
       selectedNode: draft.selectedNode,
     }),
@@ -75,6 +80,7 @@ export function useWorkspaceCreateSheetModel({
     onChangeSourceBranch: draft.onChangeSourceBranch,
     onSubmit: submit.onSubmit,
     project,
+    progressMessage: submit.progressMessage,
     selectedNode: draft.selectedNode,
     sourceBranch: draft.sourceBranch,
     sourceBranchError: sourceBranchSelector.sourceBranchError,

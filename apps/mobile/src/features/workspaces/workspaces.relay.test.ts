@@ -8,6 +8,7 @@ import {
   listRelayWorkspaceGitChanges,
   readRelayWorkspaceDiff,
   readRelayWorkspaceFile,
+  startRelayWorkspaceCreate,
   writeRelayWorkspaceFile,
 } from "./workspaces.relay";
 
@@ -282,6 +283,48 @@ describe("workspaces.relay", () => {
     );
 
     await expect(writePromise).resolves.toBe(5);
+  });
+
+  it("starts workspace creation over relay", async () => {
+    const createPromise = startRelayWorkspaceCreate({
+      accessToken: "access-token",
+      id: "workspace-1",
+      organizationId: "org-1",
+      projectId: "project-1",
+      nodeId: "node-1",
+      workspaceName: "feature-mobile",
+      sourceBranch: "origin/main",
+      branch: "feature-mobile",
+    });
+
+    const { request, socket } = await waitForRequest();
+    expect(request.method).toBe("workspace.create");
+    expect(request.params).toEqual({
+      id: "workspace-1",
+      organizationId: "org-1",
+      projectId: "project-1",
+      nodeId: "node-1",
+      workspaceName: "feature-mobile",
+      sourceBranch: "origin/main",
+      branch: "feature-mobile",
+      kind: "worktree",
+    });
+
+    socket.emitMessage(
+      JSON.stringify({
+        id: request.id,
+        jsonrpc: "2.0",
+        result: {
+          id: "workspace-1",
+          status: "pending",
+        },
+      }),
+    );
+
+    await expect(createPromise).resolves.toEqual({
+      id: "workspace-1",
+      status: "pending",
+    });
   });
 
   it("treats skipped relay diffs as unavailable instead of invalid payloads", async () => {

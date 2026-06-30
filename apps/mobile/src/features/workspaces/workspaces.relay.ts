@@ -16,6 +16,22 @@ import type {
   WorkspaceGitChanges,
 } from "./workspaces.types";
 
+export type RelayWorkspaceCreateInput = {
+  id: string;
+  organizationId: string;
+  projectId: string;
+  nodeId: string | null | undefined;
+  workspaceName: string;
+  sourceBranch: string;
+  branch: string;
+  kind?: "worktree";
+};
+
+export type RelayWorkspaceCreateAccepted = {
+  id: string;
+  status: string;
+};
+
 function requireNodeId(nodeId: string | null | undefined) {
   const normalizedNodeId = nodeId?.trim() ?? "";
   if (!normalizedNodeId) {
@@ -57,6 +73,30 @@ export async function listRelayWorkspaceFiles(input: {
     });
 
     return normalizeRelayWorkspaceFilesResult(input.workspaceId, result);
+  });
+}
+
+export async function startRelayWorkspaceCreate(
+  input: {
+    accessToken: string;
+  } & RelayWorkspaceCreateInput,
+): Promise<RelayWorkspaceCreateAccepted> {
+  return withRelayWorkspaceClient(input, async (client) => {
+    const result = await client.sendRequest<Record<string, unknown>>("workspace.create", {
+      id: input.id.trim(),
+      organizationId: input.organizationId.trim(),
+      projectId: input.projectId.trim(),
+      nodeId: requireNodeId(input.nodeId),
+      workspaceName: input.workspaceName.trim(),
+      sourceBranch: input.sourceBranch.trim(),
+      branch: input.branch.trim(),
+      kind: input.kind ?? "worktree",
+    });
+
+    return {
+      id: typeof result.id === "string" ? result.id.trim() : "",
+      status: typeof result.status === "string" ? result.status.trim() : "",
+    };
   });
 }
 

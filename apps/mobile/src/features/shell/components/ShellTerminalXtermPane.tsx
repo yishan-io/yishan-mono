@@ -18,7 +18,6 @@ import { getTerminalAccessoryBottomInset } from "./shell-terminal-active-pane-do
 import {
   type TerminalUploadImageSource,
   pickTerminalUploadImage,
-  readTerminalClipboardImage,
 } from "./shell-terminal-native-upload-domain";
 import {
   buildTerminalUploadAbsolutePath,
@@ -71,7 +70,6 @@ export function ShellTerminalXtermPane({
   const nativeKeyboardInputValueRef = useRef("");
   const terminalDomRef = useRef<ShellTerminalDomEmulatorHandle | null>(null);
   const imageUploadSheetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [clipboardHasImage, setClipboardHasImage] = useState(false);
   const [clipboardText, setClipboardText] = useState("");
   const [imageUploadSheetOpen, setImageUploadSheetOpen] = useState(false);
   const [nativeKeyboardInputValue, setNativeKeyboardInputValue] = useState("");
@@ -121,12 +119,8 @@ export function ShellTerminalXtermPane({
   };
 
   const refreshClipboardState = useCallback(async () => {
-    const [nextClipboardText, nextClipboardHasImage] = await Promise.all([
-      Clipboard.getStringAsync(),
-      Clipboard.hasImageAsync(),
-    ]);
+    const nextClipboardText = await Clipboard.getStringAsync();
     setClipboardText(nextClipboardText);
-    setClipboardHasImage(nextClipboardHasImage);
   }, []);
 
   const openReaderMode = () => {
@@ -185,15 +179,6 @@ export function ShellTerminalXtermPane({
     }
 
     await insertTerminalImagePath(pickedImage);
-  };
-
-  const pasteImageFromClipboard = async () => {
-    const clipboardImage = await readTerminalClipboardImage();
-    if (!clipboardImage) {
-      return;
-    }
-
-    await insertTerminalImagePath(clipboardImage);
   };
 
   const openImageUploadSheet = () => {
@@ -277,7 +262,6 @@ export function ShellTerminalXtermPane({
       </View>
       <ShellTerminalXtermAccessory
         accessoryBottomInset={accessoryBottomInset}
-        clipboardHasImage={clipboardHasImage}
         clipboardText={clipboardText}
         imageUploadSheetOpen={imageUploadSheetOpen}
         isComposerDisabled={isComposerDisabled}
@@ -290,7 +274,6 @@ export function ShellTerminalXtermPane({
         onOpenImageUploadSheet={openImageUploadSheet}
         onOpenReaderMode={openReaderMode}
         onPressKey={(input) => onTerminalInput(input)}
-        onPressPasteImage={pasteImageFromClipboard}
         onPressPaste={pasteFromClipboard}
         readerModeEnabled={readerModeEnabled}
         t={(labelKey) => t(labelKey)}

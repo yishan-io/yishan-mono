@@ -207,10 +207,9 @@ describe("workspace-create-sheet-domain", () => {
     ).toEqual({
       branch: "feature-mobile",
       kind: "worktree",
-      localPath: "/tmp/nile",
-      name: "local",
       nodeId: "node-1",
       sourceBranch: "origin/main",
+      workspaceName: "local",
     });
   });
 });
