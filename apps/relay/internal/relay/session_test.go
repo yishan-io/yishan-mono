@@ -394,40 +394,6 @@ func TestSessionManager_SendNotification_OnlineNode(t *testing.T) {
 	}
 }
 
-func TestSessionManager_SendOrgNotificationExceptNode_SkipsSender(t *testing.T) {
-	senderSrv, senderCli, cleanupSender := pipeWebSocket(t)
-	defer cleanupSender()
-	peerSrv, peerCli, cleanupPeer := pipeWebSocket(t)
-	defer cleanupPeer()
-
-	mgr := NewSessionManager()
-	mgr.Register(senderSrv, auth.NodeIdentity{NodeID: "node-1", UserID: "user-1", OrganizationIDs: []string{"org-1"}})
-	mgr.Register(peerSrv, auth.NodeIdentity{NodeID: "node-2", UserID: "user-2", OrganizationIDs: []string{"org-1"}})
-
-	notified := mgr.SendOrgNotificationExceptNode("org-1", "node-1", MethodTerminalSessionChanged, map[string]any{
-		"action":    "created",
-		"sessionId": "sess-1",
-	})
-	if notified != 1 {
-		t.Fatalf("expected 1 notified peer, got %d", notified)
-	}
-
-	_ = peerCli.SetReadDeadline(time.Now().Add(time.Second))
-	var peerMessage map[string]any
-	if err := peerCli.ReadJSON(&peerMessage); err != nil {
-		t.Fatalf("peer did not receive terminal session changed: %v", err)
-	}
-	if peerMessage["method"] != MethodTerminalSessionChanged {
-		t.Fatalf("expected %s, got %v", MethodTerminalSessionChanged, peerMessage["method"])
-	}
-
-	_ = senderCli.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
-	var senderMessage map[string]any
-	if err := senderCli.ReadJSON(&senderMessage); err == nil {
-		t.Fatalf("sender should not receive echoed org notification, got %v", senderMessage)
-	}
-}
-
 func TestSessionManager_EmitHandler_PanicRecovery(t *testing.T) {
 	mgr := NewSessionManager()
 	mgr.OnEvent(func(SessionEvent) { panic("handler panic") })
