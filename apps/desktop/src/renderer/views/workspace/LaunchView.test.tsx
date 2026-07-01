@@ -7,6 +7,8 @@ import { LaunchView } from "./LaunchView";
 const mocks = vi.hoisted(() => ({
   openTab: vi.fn(),
   openWorkspaceFileSearch: vi.fn(),
+  workspaces: [] as Array<{ id: string; status?: "active" | "closed" | "provisioning" }>,
+  progressByWorkspaceId: {} as Record<string, unknown>,
 }));
 
 vi.mock("react-i18next", () => ({
@@ -55,7 +57,12 @@ vi.mock("../../shortcuts/shortcutDisplay", () => ({
 
 vi.mock("../../store/workspaceCreateProgressStore", () => ({
   workspaceCreateProgressStore: (selector: (state: { progressByWorkspaceId: Record<string, unknown> }) => unknown) =>
-    selector({ progressByWorkspaceId: {} }),
+    selector({ progressByWorkspaceId: mocks.progressByWorkspaceId }),
+}));
+
+vi.mock("../../store/workspaceStore", () => ({
+  workspaceStore: (selector: (state: { workspaces: Array<{ id: string; status?: string }> }) => unknown) =>
+    selector({ workspaces: mocks.workspaces }),
 }));
 
 vi.mock("../../store/settings/agentSettingsStore", () => ({
@@ -67,6 +74,8 @@ describe("LaunchView", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    mocks.workspaces = [];
+    mocks.progressByWorkspaceId = {};
   });
 
   it("shows shortcut labels for launch actions", () => {
@@ -86,5 +95,22 @@ describe("LaunchView", () => {
 
     expect(mocks.openTab).toHaveBeenCalledTimes(2);
     expect(mocks.openWorkspaceFileSearch).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not show progress detail for active workspaces with stale progress entries", () => {
+    mocks.workspaces = [{ id: "workspace-1", status: "active" }];
+    mocks.progressByWorkspaceId = {
+      "workspace-1": {
+        workspaceId: "workspace-1",
+        isComplete: false,
+        updatedAt: "2026-07-01T00:00:00.000Z",
+        steps: [{ id: "worktree", label: "Fetch & create worktree", status: "running" }],
+      },
+    };
+
+    render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={[]} />);
+
+    expect(screen.queryByText("You can follow setup progress here while the daemon finishes provisioning.")).toBeNull();
+    expect(screen.getByRole("button", { name: "Open terminal" })).toBeTruthy();
   });
 });

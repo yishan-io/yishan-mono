@@ -38,7 +38,7 @@ afterEach(() => {
 });
 
 describe("loadWorkspaceSnapshot progress reconciliation", () => {
-  it("completes stale create progress for hydrated active workspaces", async () => {
+  it("clears stale create progress for hydrated active workspaces", async () => {
     sessionStore.setState({
       organizations: [{ id: "org-1", name: "Org 1" }],
       selectedOrganizationId: "org-1",
@@ -78,7 +78,7 @@ describe("loadWorkspaceSnapshot progress reconciliation", () => {
 
     await loadWorkspaceSnapshot();
 
-    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-1"]?.isComplete).toBe(true);
+    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-1"]).toBeUndefined();
   });
 
   it("keeps create progress incomplete for provisioning or pathless hydrated workspaces", async () => {

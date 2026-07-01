@@ -4,9 +4,9 @@ import { RestApiError } from "../api/restClient";
 import { readPersistedWorkspacePreferencesByOrg } from "../helpers/projectHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
-import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
 import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore";
 import { tabStore } from "../store/tabStore";
+import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../store/workspaceStore";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
 import {

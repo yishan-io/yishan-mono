@@ -7,7 +7,6 @@ import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { resolveWorkspaceListDisplayName } from "../../../helpers/workspaceDisplayNames";
 import { chatStore } from "../../../store/chatStore";
 import { sessionStore } from "../../../store/sessionStore";
-import { workspaceCreateProgressStore } from "../../../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { reconcileOrder, resolveWorkspaceNotificationTone } from "./projectListHelpers";
 
@@ -51,7 +50,6 @@ export function useProjectListTreeData(input: {
   const gitChangeTotalsByWorkspaceId = workspaceStore((state) => state.gitChangeTotalsByWorkspaceId);
   const workspaceAgentStatusByWorkspaceId = chatStore((state) => state.workspaceAgentStatusByWorkspaceId);
   const workspaceUnreadToneByWorkspaceId = chatStore((state) => state.workspaceUnreadToneByWorkspaceId);
-  const progressByWorkspaceId = workspaceCreateProgressStore((state) => state.progressByWorkspaceId) ?? {};
   const selectedOrganizationId = sessionStore((state) => state.selectedOrganizationId);
 
   const nodesQuery = useQuery({
@@ -126,8 +124,7 @@ export function useProjectListTreeData(input: {
       });
 
       for (const workspace of sortedWorkspaces) {
-        const createProgress = progressByWorkspaceId[workspace.id];
-        const isCreating = workspace.status === "provisioning" || Boolean(createProgress && !createProgress.isComplete);
+        const isCreating = workspace.status === "provisioning";
         rows.push({
           id: workspace.id,
           name: resolveWorkspaceListDisplayName(workspace, localDisplayWorkspaceId),
@@ -173,7 +170,6 @@ export function useProjectListTreeData(input: {
     filteredProjects,
     gitChangeTotalsByWorkspaceId,
     nodeOrderByParentId,
-    progressByWorkspaceId,
     workspaceListHierarchyMode,
     workspaceAgentStatusByWorkspaceId,
     workspaceByProjectId,

@@ -22,7 +22,7 @@ type WorkspaceCreateProgressStoreState = {
   progressByWorkspaceId: Record<string, WorkspaceCreateProgressEntry>;
   startWorkspaceCreateProgress: (workspaceId: string) => void;
   applyWorkspaceCreateProgressEvent: (event: RpcFrontendMessagePayload<"workspaceCreateProgress">) => void;
-  finishWorkspaceCreateProgress: (workspaceId: string) => void;
+  clearWorkspaceCreateProgress: (workspaceId: string) => void;
   reconcileHydratedWorkspaceCreateProgress: (
     workspaces: Array<Pick<WorkspaceItem, "id" | "status" | "worktreePath">>,
   ) => void;
@@ -99,29 +99,21 @@ export const workspaceCreateProgressStore = create<WorkspaceCreateProgressStoreS
       };
     });
   },
-  finishWorkspaceCreateProgress: (workspaceId) => {
+  clearWorkspaceCreateProgress: (workspaceId) => {
     const normalizedWorkspaceId = workspaceId.trim();
     if (!normalizedWorkspaceId) {
       return;
     }
 
     set((state) => {
-      const existingRecord = state.progressByWorkspaceId[normalizedWorkspaceId] ?? {
-        workspaceId: normalizedWorkspaceId,
-        steps: createDefaultSteps(),
-        updatedAt: new Date().toISOString(),
-        isComplete: false,
-      };
+      if (!state.progressByWorkspaceId[normalizedWorkspaceId]) {
+        return state;
+      }
 
+      const nextProgressByWorkspaceId = { ...state.progressByWorkspaceId };
+      delete nextProgressByWorkspaceId[normalizedWorkspaceId];
       return {
-        progressByWorkspaceId: {
-          ...state.progressByWorkspaceId,
-          [normalizedWorkspaceId]: {
-            ...existingRecord,
-            isComplete: true,
-            updatedAt: new Date().toISOString(),
-          },
-        },
+        progressByWorkspaceId: nextProgressByWorkspaceId,
       };
     });
   },
@@ -136,16 +128,11 @@ export const workspaceCreateProgressStore = create<WorkspaceCreateProgressStoreS
           continue;
         }
 
-        const existingRecord = nextProgressByWorkspaceId[normalizedWorkspaceId];
-        if (!existingRecord || existingRecord.isComplete) {
+        if (!nextProgressByWorkspaceId[normalizedWorkspaceId]) {
           continue;
         }
 
-        nextProgressByWorkspaceId[normalizedWorkspaceId] = {
-          ...existingRecord,
-          isComplete: true,
-          updatedAt: new Date().toISOString(),
-        };
+        delete nextProgressByWorkspaceId[normalizedWorkspaceId];
         changed = true;
       }
 

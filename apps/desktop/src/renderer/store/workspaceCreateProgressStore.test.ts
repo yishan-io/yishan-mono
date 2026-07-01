@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 describe("workspaceCreateProgressStore", () => {
-  it("completes only hydrated active workspaces with a real worktree path", () => {
+  it("clears only hydrated active workspaces with a real worktree path", () => {
     workspaceCreateProgressStore.getState().startWorkspaceCreateProgress("workspace-active");
     workspaceCreateProgressStore.getState().startWorkspaceCreateProgress("workspace-provisioning");
     workspaceCreateProgressStore.getState().startWorkspaceCreateProgress("workspace-pathless");
@@ -20,15 +20,24 @@ describe("workspaceCreateProgressStore", () => {
     ]);
 
     const state = workspaceCreateProgressStore.getState();
-    expect(state.progressByWorkspaceId["workspace-active"]?.isComplete).toBe(true);
+    expect(state.progressByWorkspaceId["workspace-active"]).toBeUndefined();
     expect(state.progressByWorkspaceId["workspace-provisioning"]?.isComplete).toBe(false);
     expect(state.progressByWorkspaceId["workspace-pathless"]?.isComplete).toBe(false);
   });
 
+  it("clears one tracked progress entry explicitly", () => {
+    workspaceCreateProgressStore.getState().startWorkspaceCreateProgress("workspace-active");
+    workspaceCreateProgressStore.getState().clearWorkspaceCreateProgress("workspace-active");
+
+    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-active"]).toBeUndefined();
+  });
+
   it("does not create new progress entries for hydrated workspaces that were never tracked", () => {
-    workspaceCreateProgressStore.getState().reconcileHydratedWorkspaceCreateProgress([
-      { id: "workspace-active", status: "active", worktreePath: "/tmp/workspace-active" },
-    ]);
+    workspaceCreateProgressStore
+      .getState()
+      .reconcileHydratedWorkspaceCreateProgress([
+        { id: "workspace-active", status: "active", worktreePath: "/tmp/workspace-active" },
+      ]);
 
     expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-active"]).toBeUndefined();
   });

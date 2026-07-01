@@ -830,12 +830,7 @@ describe("createBackendEventStoreBindings", () => {
         status: "active",
       }),
     ]);
-    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-1"]).toEqual(
-      expect.objectContaining({
-        workspaceId: "workspace-1",
-        isComplete: true,
-      }),
-    );
+    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-1"]).toBeUndefined();
     expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
     stopBindings();
   });
@@ -907,12 +902,7 @@ describe("createBackendEventStoreBindings", () => {
         nodeId: "node-1",
       }),
     ]);
-    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-1"]).toEqual(
-      expect.objectContaining({
-        workspaceId: "workspace-1",
-        isComplete: true,
-      }),
-    );
+    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-1"]).toBeUndefined();
     // Snapshot reload always fires on completion to pick up authoritative API
     // status and clear the provisioning spinner (even if daemon PATCH event
     // was dropped).

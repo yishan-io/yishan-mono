@@ -290,7 +290,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
         status: "active",
       });
     }
-    workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(payload.workspaceId);
+    workspaceCreateProgressStore.getState().clearWorkspaceCreateProgress(payload.workspaceId);
 
     if (payload.taskRunSessionId && payload.taskRunAgentKind) {
       const title = payload.taskRunPrompt
@@ -310,7 +310,7 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
     return Boolean(existing);
   },
   applyWorkspaceCreateFailedEvent: (payload) => {
-    workspaceCreateProgressStore.getState().finishWorkspaceCreateProgress(payload.workspaceId);
+    workspaceCreateProgressStore.getState().clearWorkspaceCreateProgress(payload.workspaceId);
     const store = workspaceStore.getState();
     const existing = store.workspaces.find((ws) => ws.id === payload.workspaceId);
     if (existing) {
