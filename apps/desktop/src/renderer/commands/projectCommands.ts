@@ -4,6 +4,7 @@ import { RestApiError } from "../api/restClient";
 import { readPersistedWorkspacePreferencesByOrg } from "../helpers/projectHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
+import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
 import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
@@ -114,6 +115,9 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     }
 
     workspaceStore.getState().load(selectedOrganization.id, projects, workspaces);
+    workspaceCreateProgressStore
+      .getState()
+      .reconcileHydratedWorkspaceCreateProgress(workspaceStore.getState().workspaces);
     syncTabStoreWithWorkspace(previousWorkspaces);
 
     // Warm up workspaces for currently pinned projects so the daemon has them

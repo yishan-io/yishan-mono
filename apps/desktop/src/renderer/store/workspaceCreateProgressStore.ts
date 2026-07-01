@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { RpcFrontendMessagePayload } from "../../shared/contracts/rpcSchema";
+import type { WorkspaceItem } from "./types";
 
 export type WorkspaceCreateProgressStatus = RpcFrontendMessagePayload<"workspaceCreateProgress">["status"];
 
@@ -22,6 +23,9 @@ type WorkspaceCreateProgressStoreState = {
   startWorkspaceCreateProgress: (workspaceId: string) => void;
   applyWorkspaceCreateProgressEvent: (event: RpcFrontendMessagePayload<"workspaceCreateProgress">) => void;
   finishWorkspaceCreateProgress: (workspaceId: string) => void;
+  reconcileHydratedWorkspaceCreateProgress: (
+    workspaces: Array<Pick<WorkspaceItem, "id" | "status" | "worktreePath">>,
+  ) => void;
 };
 
 const DEFAULT_CREATE_STEPS: WorkspaceCreateProgressStep[] = [
@@ -118,6 +122,39 @@ export const workspaceCreateProgressStore = create<WorkspaceCreateProgressStoreS
             updatedAt: new Date().toISOString(),
           },
         },
+      };
+    });
+  },
+  reconcileHydratedWorkspaceCreateProgress: (workspaces) => {
+    set((state) => {
+      const nextProgressByWorkspaceId = { ...state.progressByWorkspaceId };
+      let changed = false;
+
+      for (const workspace of workspaces) {
+        const normalizedWorkspaceId = workspace.id.trim();
+        if (!normalizedWorkspaceId || workspace.status !== "active" || !workspace.worktreePath?.trim()) {
+          continue;
+        }
+
+        const existingRecord = nextProgressByWorkspaceId[normalizedWorkspaceId];
+        if (!existingRecord || existingRecord.isComplete) {
+          continue;
+        }
+
+        nextProgressByWorkspaceId[normalizedWorkspaceId] = {
+          ...existingRecord,
+          isComplete: true,
+          updatedAt: new Date().toISOString(),
+        };
+        changed = true;
+      }
+
+      if (!changed) {
+        return state;
+      }
+
+      return {
+        progressByWorkspaceId: nextProgressByWorkspaceId,
       };
     });
   },
