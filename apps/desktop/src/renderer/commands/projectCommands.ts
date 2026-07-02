@@ -6,6 +6,7 @@ import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
 import { workspaceSettingsStore } from "../store/settings/workspaceSettingsStore";
 import { tabStore } from "../store/tabStore";
+import { workspaceCreateProgressStore } from "../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../store/workspaceStore";
 import { syncTabStoreWithWorkspace } from "./workspaceTabSync";
 import {
@@ -114,6 +115,9 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     }
 
     workspaceStore.getState().load(selectedOrganization.id, projects, workspaces);
+    workspaceCreateProgressStore
+      .getState()
+      .reconcileHydratedWorkspaceCreateProgress(workspaceStore.getState().workspaces);
     syncTabStoreWithWorkspace(previousWorkspaces);
 
     // Warm up workspaces for currently pinned projects so the daemon has them

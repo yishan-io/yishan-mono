@@ -9,13 +9,14 @@ import type {
 
 import type { AppDb } from "@/db/client";
 import { organizationMembers, projects, workspaces } from "@/db/schema";
-import type { Workspace, WorkspaceKind, WorkspacePullRequestState } from "@/db/schema";
+import type { WorkspaceKind, WorkspacePullRequestState } from "@/db/schema";
 import type { WorkspaceStatus } from "@/db/schema";
 import {
   PrimaryWorkspaceProvisionNotSupportedError,
   PrimaryWorkspaceCloseNotAllowedError,
   ProjectNotFoundError,
   RelayUnavailableError,
+  WorkspaceAlreadyExistsError,
   WorkspaceBranchRequiredError,
   WorkspaceCreateFailedError,
   WorkspaceNodeNotFoundError,
@@ -124,26 +125,6 @@ export type CloseWorkspaceResult = {
   changed: boolean;
 };
 
-type WorkspaceCreateProjectRecord = {
-  id: string;
-  contextEnabled: boolean;
-  repoKey: string | null;
-  setupScript: string;
-};
-
-type WorkspaceCreateMutationResult = {
-  project: WorkspaceCreateProjectRecord;
-  workspace: Workspace;
-  change: "existing" | "inserted" | "reactivated";
-  previousWorkspace: Workspace | null;
-};
-
-function isWorkspaceCreateConflictError(error: unknown): error is { code: string } {
-  return (
-    typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "23505"
-  );
-}
-
 type UpdateWorkspaceInput = {
   workspaceId: string;
   organizationId: string;
@@ -151,6 +132,15 @@ type UpdateWorkspaceInput = {
   projectId: string;
   localPath: string;
 };
+
+function isWorkspaceLiveUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const record = error as { code?: unknown; constraint?: unknown };
+  return record.code === "23505" && record.constraint === "workspaces_project_user_node_kind_branch_uq";
+}
 
 export class WorkspaceService {
   constructor(
@@ -189,96 +179,68 @@ export class WorkspaceService {
       throw new PrimaryWorkspaceProvisionNotSupportedError();
     }
 
-    let mutationResult: WorkspaceCreateMutationResult;
-    try {
-      mutationResult = await this.db.transaction(async (tx) => {
-        const projectRows = await tx
-          .select({
-            id: projects.id,
-            contextEnabled: projects.contextEnabled,
-            repoKey: projects.repoKey,
-            setupScript: projects.setupScript,
-          })
-          .from(projects)
-          .where(and(eq(projects.id, input.projectId), eq(projects.organizationId, input.organizationId)))
-          .limit(1);
+    const createResult = await this.db.transaction(async (tx) => {
+      const projectRows = await tx
+        .select({
+          id: projects.id,
+          contextEnabled: projects.contextEnabled,
+          repoKey: projects.repoKey,
+          setupScript: projects.setupScript,
+        })
+        .from(projects)
+        .where(and(eq(projects.id, input.projectId), eq(projects.organizationId, input.organizationId)))
+        .limit(1);
 
-        const project = projectRows[0];
-        if (!project) {
-          throw new ProjectNotFoundError(input.projectId);
-        }
+      const project = projectRows[0];
+      if (!project) {
+        throw new ProjectNotFoundError(input.projectId);
+      }
 
-        const ownerMembershipRows = await tx
-          .select({ userId: organizationMembers.userId })
-          .from(organizationMembers)
-          .where(
-            and(
-              eq(organizationMembers.organizationId, input.organizationId),
-              eq(organizationMembers.userId, input.actorUserId),
-            ),
-          )
-          .limit(1);
+      const ownerMembershipRows = await tx
+        .select({ userId: organizationMembers.userId })
+        .from(organizationMembers)
+        .where(
+          and(
+            eq(organizationMembers.organizationId, input.organizationId),
+            eq(organizationMembers.userId, input.actorUserId),
+          ),
+        )
+        .limit(1);
 
-        if (ownerMembershipRows.length === 0) {
-          throw new WorkspaceNodeNotFoundError(input.nodeId);
-        }
+      if (ownerMembershipRows.length === 0) {
+        throw new WorkspaceNodeNotFoundError(input.nodeId);
+      }
 
-        const activeWorkspace = await this.findExistingWorkspaceForCreate(tx, {
-          actorUserId: input.actorUserId,
-          branch,
-          kind: input.kind,
-          nodeId: input.nodeId,
-          organizationId: input.organizationId,
+      const existingLiveRows = await tx
+        .select({ id: workspaces.id })
+        .from(workspaces)
+        .where(
+          and(
+            eq(workspaces.organizationId, input.organizationId),
+            eq(workspaces.projectId, input.projectId),
+            eq(workspaces.userId, input.actorUserId),
+            eq(workspaces.nodeId, input.nodeId),
+            eq(workspaces.kind, input.kind),
+            branch ? eq(workspaces.branch, branch) : isNull(workspaces.branch),
+            inArray(workspaces.status, ["active", "provisioning"]),
+          ),
+        )
+        .limit(1);
+
+      if (existingLiveRows.length > 0) {
+        throw new WorkspaceAlreadyExistsError({
           projectId: input.projectId,
-          statuses: ["active", "provisioning"],
-        });
-        if (activeWorkspace) {
-          return {
-            change: "existing",
-            previousWorkspace: null,
-            project,
-            workspace: activeWorkspace,
-          } satisfies WorkspaceCreateMutationResult;
-        }
-
-        const closedWorkspace = await this.findExistingWorkspaceForCreate(tx, {
-          actorUserId: input.actorUserId,
-          branch,
-          kind: input.kind,
           nodeId: input.nodeId,
-          organizationId: input.organizationId,
-          projectId: input.projectId,
-          statuses: ["closed"],
+          kind: input.kind,
+          branch,
         });
-        if (closedWorkspace) {
-          const reactivatedRows = await tx
-            .update(workspaces)
-            .set({
-              status: requestedStatus,
-              sourceBranch,
-              localPath: requestedLocalPath,
-              updatedAt: new Date(),
-            })
-            .where(eq(workspaces.id, closedWorkspace.id))
-            .returning();
+      }
 
-          const reactivatedWorkspace = reactivatedRows[0];
-          if (!reactivatedWorkspace) {
-            throw new WorkspaceCreateFailedError("reactivate-returned-empty");
-          }
-
-          return {
-            change: "reactivated",
-            previousWorkspace: closedWorkspace,
-            project,
-            workspace: reactivatedWorkspace,
-          } satisfies WorkspaceCreateMutationResult;
-        }
-
+      try {
         const insertedRows = await tx
           .insert(workspaces)
           .values({
-            id: input.id?.trim() || newId(),
+            id: newId(),
             organizationId: input.organizationId,
             projectId: input.projectId,
             userId: input.actorUserId,
@@ -293,128 +255,50 @@ export class WorkspaceService {
 
         const workspace = insertedRows[0];
         if (!workspace) {
-          throw new WorkspaceCreateFailedError("insert-returned-empty");
+          throw new WorkspaceCreateFailedError();
         }
 
-        return {
-          change: "inserted",
-          previousWorkspace: null,
-          project,
-          workspace,
-        } satisfies WorkspaceCreateMutationResult;
-      });
-    } catch (error) {
-      if (!isWorkspaceCreateConflictError(error)) {
+        return { project, workspace };
+      } catch (error) {
+        if (isWorkspaceLiveUniqueViolation(error)) {
+          throw new WorkspaceAlreadyExistsError({
+            projectId: input.projectId,
+            nodeId: input.nodeId,
+            kind: input.kind,
+            branch,
+          });
+        }
         throw error;
       }
+    });
 
-      const existingWorkspace = await this.findExistingWorkspaceForCreate(this.db, {
-        actorUserId: input.actorUserId,
-        branch,
-        kind: input.kind,
-        nodeId: input.nodeId,
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        statuses: ["active", "provisioning"],
-      });
-      if (!existingWorkspace) {
-        throw new WorkspaceCreateFailedError("workspace-create-conflict");
-      }
+    const provisioned = await this.workspaceProvisioner.enqueueWorkspaceProvision({
+      branch,
+      contextEnabled: createResult.project.contextEnabled,
+      kind: input.kind,
+      localPath: requestedLocalPath,
+      nodeId: input.nodeId,
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      repoKey: createResult.project.repoKey ?? createResult.project.id,
+      setupHook: createResult.project.setupScript,
+      sourceBranch,
+      workspaceId: createResult.workspace.id,
+      workspaceName: requestedWorkspaceName,
+    });
 
-      return { ...existingWorkspace, latestPullRequest: null };
+    if (provisioned.localPath === createResult.workspace.localPath) {
+      return { ...createResult.workspace, latestPullRequest: null };
     }
 
-    if (mutationResult.change === "existing") {
-      return { ...mutationResult.workspace, latestPullRequest: null };
-    }
-
-    let provisionedWorkspace = mutationResult.workspace;
-    try {
-      const provisioned = await this.workspaceProvisioner.enqueueWorkspaceProvision({
-        branch,
-        contextEnabled: mutationResult.project.contextEnabled,
-        kind: input.kind,
-        localPath: requestedLocalPath,
-        nodeId: input.nodeId,
-        organizationId: input.organizationId,
-        projectId: input.projectId,
-        repoKey: mutationResult.project.repoKey ?? mutationResult.project.id,
-        setupHook: mutationResult.project.setupScript,
-        sourceBranch,
-        workspaceId: mutationResult.workspace.id,
-        workspaceName: requestedWorkspaceName,
-      });
-
-      if (provisioned.localPath !== mutationResult.workspace.localPath) {
-        const updatedRows = await this.db
-          .update(workspaces)
-          .set({ localPath: provisioned.localPath, updatedAt: new Date() })
-          .where(eq(workspaces.id, mutationResult.workspace.id))
-          .returning();
-
-        provisionedWorkspace = updatedRows[0] ?? { ...mutationResult.workspace, localPath: provisioned.localPath };
-      }
-    } catch (error) {
-      await this.rollbackFailedWorkspaceCreate(mutationResult);
-      throw error;
-    }
-
-    return { ...provisionedWorkspace, latestPullRequest: null };
-  }
-
-  private async rollbackFailedWorkspaceCreate(result: WorkspaceCreateMutationResult): Promise<void> {
-    if (result.change === "inserted") {
-      await this.db.delete(workspaces).where(eq(workspaces.id, result.workspace.id));
-      return;
-    }
-
-    if (!result.previousWorkspace) {
-      return;
-    }
-
-    await this.db
+    const updatedRows = await this.db
       .update(workspaces)
-      .set({
-        status: result.previousWorkspace.status,
-        sourceBranch: result.previousWorkspace.sourceBranch,
-        localPath: result.previousWorkspace.localPath,
-        updatedAt: new Date(),
-      })
-      .where(eq(workspaces.id, result.previousWorkspace.id));
-  }
+      .set({ localPath: provisioned.localPath, updatedAt: new Date() })
+      .where(eq(workspaces.id, createResult.workspace.id))
+      .returning();
 
-  private async findExistingWorkspaceForCreate(
-    db: Pick<AppDb, "select">,
-    input: {
-      actorUserId: string;
-      branch: string | null;
-      kind: WorkspaceKind;
-      nodeId: string;
-      organizationId: string;
-      projectId: string;
-      statuses: WorkspaceStatus[];
-    },
-  ): Promise<Workspace | null> {
-    const branchMatcher = input.branch ? eq(workspaces.branch, input.branch) : isNull(workspaces.branch);
-    const workspaceRows = await db
-      .select()
-      .from(workspaces)
-      .where(
-        and(
-          eq(workspaces.organizationId, input.organizationId),
-          eq(workspaces.projectId, input.projectId),
-          eq(workspaces.userId, input.actorUserId),
-          eq(workspaces.nodeId, input.nodeId),
-          eq(workspaces.kind, input.kind),
-          branchMatcher,
-          input.statuses.length === 1
-            ? eq(workspaces.status, input.statuses[0]!)
-            : inArray(workspaces.status, input.statuses),
-        ),
-      )
-      .limit(1);
-
-    return workspaceRows[0] ?? null;
+    const workspace = updatedRows[0] ?? { ...createResult.workspace, localPath: provisioned.localPath };
+    return { ...workspace, latestPullRequest: null };
   }
 
   async listWorkspaces(input: {

@@ -255,9 +255,16 @@ export class WorkspaceBranchRequiredError extends AppError {
   }
 }
 
+export class WorkspaceAlreadyExistsError extends AppError {
+  constructor(details: { projectId: string; nodeId: string; kind: string; branch: string | null }) {
+    super("Workspace already exists", StatusCodes.CONFLICT, "WORKSPACE_ALREADY_EXISTS", details);
+    this.name = "WorkspaceAlreadyExistsError";
+  }
+}
+
 export class WorkspaceCreateFailedError extends AppError {
-  constructor(reason: string) {
-    super("Failed to create workspace", StatusCodes.INTERNAL_SERVER_ERROR, "WORKSPACE_CREATE_FAILED", { reason });
+  constructor() {
+    super("Failed to create workspace", StatusCodes.INTERNAL_SERVER_ERROR, "WORKSPACE_CREATE_FAILED");
     this.name = "WorkspaceCreateFailedError";
   }
 }

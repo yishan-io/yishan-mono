@@ -1,5 +1,5 @@
 import type { AgentKind } from "@yishan/core";
-import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+import { type InferInsertModel, type InferSelectModel, sql } from "drizzle-orm";
 import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export type NodeScope = "private" | "shared";
@@ -226,13 +226,9 @@ export const workspaces = pgTable(
     index("workspaces_node_id_idx").on(table.nodeId),
     index("workspaces_kind_idx").on(table.kind),
     index("workspaces_status_idx").on(table.status),
-    uniqueIndex("workspaces_project_user_node_kind_branch_uq").on(
-      table.projectId,
-      table.userId,
-      table.nodeId,
-      table.kind,
-      table.branch,
-    ),
+    uniqueIndex("workspaces_project_user_node_kind_branch_uq")
+      .on(table.projectId, table.userId, table.nodeId, table.kind, table.branch)
+      .where(sql`${table.status} in ('active', 'provisioning')`),
   ],
 );
 

@@ -3,6 +3,8 @@ package daemon
 import (
 	"sync"
 	"sync/atomic"
+
+	"github.com/rs/zerolog/log"
 )
 
 type frontendEvent struct {
@@ -22,7 +24,7 @@ func newEventHub() *eventHub {
 
 func (h *eventHub) Subscribe() (uint64, <-chan frontendEvent) {
 	id := h.nextID.Add(1)
-	events := make(chan frontendEvent, 32)
+	events := make(chan frontendEvent, 128)
 
 	h.mu.Lock()
 	h.subscribers[id] = events
@@ -46,17 +48,13 @@ func (h *eventHub) Unsubscribe(id uint64) {
 
 func (h *eventHub) Publish(event frontendEvent) {
 	h.mu.Lock()
-	deferredUnsubscribe := make([]uint64, 0)
+	defer h.mu.Unlock()
+
 	for id, subscriber := range h.subscribers {
 		select {
 		case subscriber <- event:
 		default:
-			deferredUnsubscribe = append(deferredUnsubscribe, id)
+			log.Warn().Uint64("subscriberId", id).Str("topic", event.Topic).Msg("frontend event subscriber backlog full; dropping event")
 		}
-	}
-	h.mu.Unlock()
-
-	for _, id := range deferredUnsubscribe {
-		h.Unsubscribe(id)
 	}
 }

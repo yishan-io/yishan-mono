@@ -175,8 +175,10 @@ export async function createWorkspace(input: CreateWorkspaceInput): Promise<stri
       workspaceId,
       organizationId,
       status: "provisioning",
+      preserveOnMissingSnapshot: true,
     }),
   );
+  workspaceCreateProgressStore.getState().startWorkspaceCreateProgress(workspaceId);
   tabStore.getState().resolveTabForWorkspace(workspaceId);
 
   return workspaceId;

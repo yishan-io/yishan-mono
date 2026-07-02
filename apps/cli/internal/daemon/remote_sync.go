@@ -53,17 +53,16 @@ type WorkspaceClose struct {
 	ProjectID      string
 }
 
-func registerWorkspace(ctx context.Context, runtime *cliruntime.Runtime, creation WorkspaceCreation) error {
+func registerWorkspace(ctx context.Context, runtime *cliruntime.Runtime, creation WorkspaceCreation) (api.Workspace, error) {
 	if runtime == nil || !runtime.APIConfigured() {
-		return nil
+		return api.Workspace{}, nil
 	}
 	orgID := strings.TrimSpace(creation.OrganizationID)
 	if orgID == "" {
-		return fmt.Errorf("organizationId is required")
+		return api.Workspace{}, fmt.Errorf("organizationId is required")
 	}
 
-	_, err := runtime.APIClient().CreateWorkspace(orgID, creation.ProjectID, api.CreateWorkspaceInput{
-		ID:           creation.ID,
+	response, err := runtime.APIClient().CreateWorkspace(orgID, creation.ProjectID, api.CreateWorkspaceInput{
 		NodeID:       creation.NodeID,
 		LocalPath:    creation.LocalPath,
 		Kind:         creation.Kind,
@@ -72,11 +71,11 @@ func registerWorkspace(ctx context.Context, runtime *cliruntime.Runtime, creatio
 	})
 	if err != nil {
 		if isReauthRequiredError(err) {
-			return fmt.Errorf("%s: %w", formatReauthRequiredMessage("remote workspace creation"), err)
+			return api.Workspace{}, fmt.Errorf("%s: %w", formatReauthRequiredMessage("remote workspace creation"), err)
 		}
-		return fmt.Errorf("create API workspace for project %q: %w", creation.ProjectID, err)
+		return api.Workspace{}, fmt.Errorf("create API workspace for project %q: %w", creation.ProjectID, err)
 	}
-	return nil
+	return response.Workspace, nil
 }
 
 func updateWorkspace(_ context.Context, runtime *cliruntime.Runtime, creation WorkspaceCreation, localPath string) error {

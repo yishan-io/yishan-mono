@@ -39,6 +39,7 @@ export function createWorkspaceActions(set: WorkspaceStoreSetState, _get: Worksp
       workspaceId,
       nodeId,
       status,
+      preserveOnMissingSnapshot,
     }) => {
       if (!workspaceId) {
         return;
@@ -63,6 +64,7 @@ export function createWorkspaceActions(set: WorkspaceStoreSetState, _get: Worksp
             worktreePath: worktreePath ?? "",
             nodeId,
             status,
+            preserveOnMissingSnapshot,
           },
         });
       });

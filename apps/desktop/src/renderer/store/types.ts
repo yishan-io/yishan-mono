@@ -51,6 +51,7 @@ export type WorkspaceItem = {
   nodeId?: string;
   kind?: "managed" | "local";
   status?: WorkspaceRecord["status"];
+  preserveOnMissingSnapshot?: boolean;
   state?: WorkspaceLifecycleState;
   health?: WorkspaceHealth;
 };
@@ -260,6 +261,7 @@ export type WorkspaceStoreState = {
     nodeId?: string;
     workspaceId: string;
     status?: WorkspaceRecord["status"];
+    preserveOnMissingSnapshot?: boolean;
   }) => void;
   removeWorkspace: (input: {
     projectId?: string;

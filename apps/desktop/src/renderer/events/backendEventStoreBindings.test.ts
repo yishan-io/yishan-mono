@@ -768,6 +768,73 @@ describe("createBackendEventStoreBindings", () => {
     stopBindings();
   });
 
+  it("marks the placeholder workspace active on completion even when no progress entry exists", async () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const createCompletedHarness = createWorkspaceCreateCompletedHarness();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+    const loadWorkspaceSnapshot = vi.fn(async () => undefined);
+
+    workspaceStore.setState((state) => ({
+      ...state,
+      workspaces: [
+        {
+          id: "workspace-1",
+          organizationId: "org-1",
+          projectId: "project-1",
+          repoId: "project-1",
+          name: "feature-a",
+          title: "feature-a",
+          sourceBranch: "main",
+          branch: "feature-a",
+          summaryId: "workspace-1",
+          worktreePath: "",
+          nodeId: "node-1",
+          kind: "managed",
+          status: "provisioning",
+        },
+      ],
+    }));
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      subscribeWorkspaceCreateCompleted: createCompletedHarness.subscribeWorkspaceCreateCompleted,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+      loadWorkspaceSnapshot,
+    });
+
+    const stopBindings = startBindings();
+    createCompletedHarness.emit({
+      workspaceId: "workspace-1",
+      worktreePath: "/tmp/repo/.worktrees/feature-a",
+    });
+    await Promise.resolve();
+
+    expect(workspaceStore.getState().workspaces).toEqual([
+      expect.objectContaining({
+        id: "workspace-1",
+        worktreePath: "/tmp/repo/.worktrees/feature-a",
+        status: "active",
+      }),
+    ]);
+    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-1"]).toBeUndefined();
+    expect(loadWorkspaceSnapshot).toHaveBeenCalledTimes(1);
+    stopBindings();
+  });
+
   it("adds a placeholder row on create start, tracks progress, finalizes on completion, and reloads snapshot", async () => {
     const gitHarness = createGitChangedHarness();
     const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
@@ -835,12 +902,7 @@ describe("createBackendEventStoreBindings", () => {
         nodeId: "node-1",
       }),
     ]);
-    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-1"]).toEqual(
-      expect.objectContaining({
-        workspaceId: "workspace-1",
-        isComplete: true,
-      }),
-    );
+    expect(workspaceCreateProgressStore.getState().progressByWorkspaceId["workspace-1"]).toBeUndefined();
     // Snapshot reload always fires on completion to pick up authoritative API
     // status and clear the provisioning spinner (even if daemon PATCH event
     // was dropped).

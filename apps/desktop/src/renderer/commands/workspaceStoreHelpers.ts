@@ -34,5 +34,6 @@ export function buildWorkspaceCreatePlaceholder(
     nodeId: input.nodeId,
     workspaceId: input.workspaceId,
     status: input.status,
+    preserveOnMissingSnapshot: input.preserveOnMissingSnapshot,
   };
 }

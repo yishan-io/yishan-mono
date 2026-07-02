@@ -62,6 +62,7 @@ const mocked = vi.hoisted(() => {
       markWorkspaceNotificationsRead: (workspaceId: string) => void;
       orderedWorkspaceIds: string[];
       setOrderedWorkspaceIds: (ids: string[]) => void;
+      progressByWorkspaceId: Record<string, { isComplete: boolean }>;
     };
   } = {
     current: {
@@ -93,6 +94,7 @@ const mocked = vi.hoisted(() => {
       markWorkspaceNotificationsRead: () => {},
       orderedWorkspaceIds: [],
       setOrderedWorkspaceIds: () => {},
+      progressByWorkspaceId: {},
     },
   };
 
@@ -183,7 +185,10 @@ vi.mock("../../../store/chatStore", () => ({
 }));
 
 vi.mock("../../../store/workspaceCreateProgressStore", () => ({
-  workspaceCreateProgressStore: vi.fn(() => undefined),
+  workspaceCreateProgressStore: vi.fn(
+    (selector: (state: { progressByWorkspaceId: Record<string, { isComplete: boolean }> }) => unknown) =>
+      selector({ progressByWorkspaceId: mocked.stateRef.current.progressByWorkspaceId }),
+  ),
 }));
 
 vi.mock("../../../hooks/useCommands", () => ({
@@ -215,6 +220,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   mocked.rendererPlatform = "darwin";
+  mocked.stateRef.current.progressByWorkspaceId = {};
 });
 
 function renderProjectListView() {
@@ -283,6 +289,7 @@ function renderRepoList(
     markWorkspaceNotificationsRead: mocked.markWorkspaceNotificationsRead,
     orderedWorkspaceIds: [],
     setOrderedWorkspaceIds: vi.fn(),
+    progressByWorkspaceId: {},
   };
 
   const queryClient = new QueryClient();
@@ -416,6 +423,7 @@ describe("ProjectListView", () => {
           kind: "local",
         },
       ],
+      progressByWorkspaceId: {},
       selectedProjectId: "repo-1",
       selectedWorkspaceId: "workspace-local-1",
       displayProjectIds: ["repo-1"],
@@ -721,6 +729,16 @@ describe("ProjectListView", () => {
     cleanup();
     renderProjectListView();
     expect(screen.getByTestId("workspace-creating-spinner-workspace-1")).toBeTruthy();
+  });
+
+  it("does not render a create spinner for active workspaces with stale progress entries", () => {
+    renderRepoList();
+    mocked.stateRef.current.progressByWorkspaceId = {
+      "workspace-1": { isComplete: false },
+    };
+    cleanup();
+    renderProjectListView();
+    expect(screen.queryByTestId("workspace-creating-spinner-workspace-1")).toBeNull();
   });
 
   it("renders done indicator for background workspace notifications", () => {

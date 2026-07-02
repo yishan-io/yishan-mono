@@ -3,6 +3,9 @@ package daemon
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -39,11 +42,6 @@ func newTestHandler(t *testing.T) *JSONRPCHandler {
 	return h
 }
 
-// TestHandleWorkspaceCreate_ReturnsPendingWithoutAPICall verifies that
-// handleWorkspaceCreate returns a pending response immediately without making
-// any pre-creation API call. With runtime == nil, any attempt to call
-// registerWorkspace before the goroutine would cause a nil-pointer panic; the
-// absence of a panic confirms the pre-creation registration block was removed.
 func TestPublishWorkspaceSnapshotChanged_PublishesLocalInvalidationEvent(t *testing.T) {
 	h := newTestHandler(t)
 	subscriptionID, events := h.events.Subscribe()
@@ -68,7 +66,7 @@ func TestPublishWorkspaceSnapshotChanged_PublishesLocalInvalidationEvent(t *test
 	}
 }
 
-func TestHandleWorkspaceCreate_ReturnsPendingWithoutAPICall(t *testing.T) {
+func TestHandleWorkspaceCreate_ReturnsPendingWhenAPIRegistrationIsSkipped(t *testing.T) {
 	root := t.TempDir()
 	statePath := filepath.Join(root, "daemon.state.json")
 	indexStore, err := newWorkspaceIndexStore(statePath)
@@ -76,11 +74,10 @@ func TestHandleWorkspaceCreate_ReturnsPendingWithoutAPICall(t *testing.T) {
 		t.Fatalf("newWorkspaceIndexStore: %v", err)
 	}
 
-	// runtime is nil — any pre-creation registerWorkspace call would panic.
 	manager := workspace.NewManager()
 	handler := NewJSONRPCHandler(
 		manager,
-		nil, // runtime: nil; pre-creation API call would panic here
+		nil,
 		"node-1",
 		filepath.Join(root, "daemon.log"),
 		nil,
@@ -91,13 +88,11 @@ func TestHandleWorkspaceCreate_ReturnsPendingWithoutAPICall(t *testing.T) {
 	defer handler.Shutdown()
 
 	params, err := json.Marshal(map[string]any{
-		"organizationId": "org-1",
-		"projectId":      "project-1",
-		"repoKey":        "owner/repo",
-		"workspaceName":  "feature-test",
-		"sourcePath":     root,
-		"targetBranch":   "feature-test",
-		"sourceBranch":   "main",
+		"repoKey":       "owner/repo",
+		"workspaceName": "feature-test",
+		"sourcePath":    root,
+		"targetBranch":  "feature-test",
+		"sourceBranch":  "main",
 	})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
@@ -120,18 +115,26 @@ func TestHandleWorkspaceCreate_ReturnsPendingWithoutAPICall(t *testing.T) {
 	}
 }
 
-func TestHandleWorkspaceCreate_PreservesProvidedID(t *testing.T) {
+func TestHandleWorkspaceCreate_UsesAuthoritativeAPIWorkspaceID(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/orgs/org-1/projects/project-1/workspaces" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(`{"workspace":{"id":"ws-api-1","organizationId":"org-1","projectId":"project-1","userId":"user-1","nodeId":"node-1","kind":"worktree","status":"provisioning","branch":"feature-test","sourceBranch":"main","localPath":"","createdAt":"2026-06-30T00:00:00.000Z","updatedAt":"2026-06-30T00:00:00.000Z"}}`))
+	}))
+	defer server.Close()
 	root := t.TempDir()
 	statePath := filepath.Join(root, "daemon.state.json")
 	indexStore, err := newWorkspaceIndexStore(statePath)
 	if err != nil {
 		t.Fatalf("newWorkspaceIndexStore: %v", err)
 	}
-
 	manager := workspace.NewManager()
+	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
 	handler := NewJSONRPCHandler(
 		manager,
-		nil,
+		runtime,
 		"node-1",
 		filepath.Join(root, "daemon.log"),
 		nil,
@@ -140,16 +143,18 @@ func TestHandleWorkspaceCreate_PreservesProvidedID(t *testing.T) {
 		NewAppContextStore(""),
 	)
 	defer handler.Shutdown()
+	subscriptionID, events := handler.events.Subscribe()
+	defer handler.events.Unsubscribe(subscriptionID)
 
 	params, err := json.Marshal(map[string]any{
-		"id":             "workspace-fixed-id",
 		"organizationId": "org-1",
 		"projectId":      "project-1",
 		"repoKey":        "owner/repo",
-		"workspaceName":  "feature/mobile",
+		"workspaceName":  "feature-test",
 		"sourcePath":     root,
-		"targetBranch":   "feature/mobile",
+		"targetBranch":   "feature-test",
 		"sourceBranch":   "main",
+		"nodeId":         "node-1",
 	})
 	if err != nil {
 		t.Fatalf("marshal params: %v", err)
@@ -159,13 +164,37 @@ func TestHandleWorkspaceCreate_PreservesProvidedID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("handleWorkspaceCreate returned unexpected error: %v", err)
 	}
-
-	record, ok := result.(map[string]any)
+	resultMap, ok := result.(map[string]any)
 	if !ok {
 		t.Fatalf("expected map result, got %T", result)
 	}
-	if got := record["id"]; got != "workspace-fixed-id" {
-		t.Fatalf("expected provided workspace id to be preserved, got %v", got)
+	if got := resultMap["id"]; got != "ws-api-1" {
+		t.Fatalf("result id = %v, want %q", got, "ws-api-1")
+	}
+
+	snapshotEvent := <-events
+	if snapshotEvent.Topic != "workspaceSnapshotChanged" {
+		t.Fatalf("expected first event topic %q, got %q", "workspaceSnapshotChanged", snapshotEvent.Topic)
+	}
+	startedEvent := <-events
+	if startedEvent.Topic != "workspaceCreateStarted" {
+		t.Fatalf("expected second event topic %q, got %q", "workspaceCreateStarted", startedEvent.Topic)
+	}
+	payload, ok := startedEvent.Payload.(workspaceCreateStartedEvent)
+	if !ok {
+		t.Fatalf("expected workspaceCreateStarted payload, got %T", startedEvent.Payload)
+	}
+	if payload.WorkspaceID != "ws-api-1" {
+		t.Fatalf("expected workspace id %q, got %s", "ws-api-1", payload.WorkspaceID)
+	}
+	if payload.OrganizationID != "org-1" || payload.ProjectID != "project-1" {
+		t.Fatalf("unexpected payload org/project: %+v", payload)
+	}
+	if payload.WorkspaceName != "feature-test" || payload.SourceBranch != "main" || payload.Branch != "feature-test" {
+		t.Fatalf("unexpected payload branches: %+v", payload)
+	}
+	if payload.NodeID != "node-1" {
+		t.Fatalf("expected node-1, got %s", payload.NodeID)
 	}
 }
 
@@ -211,57 +240,6 @@ func TestHandleWorkspaceOpen_RegistersWorkspace(t *testing.T) {
 	}
 	if record.ID != "workspace-open-1" {
 		t.Fatalf("expected workspace id to be registered for %s, got %q", MethodWorkspaceOpen, record.ID)
-	}
-}
-
-func TestHandleWorkspaceCreate_PublishesCreateStartedEvent(t *testing.T) {
-	handler := newTestHandler(t)
-	subscriptionID, events := handler.events.Subscribe()
-	defer handler.events.Unsubscribe(subscriptionID)
-
-	root := t.TempDir()
-	params, err := json.Marshal(map[string]any{
-		"organizationId": "org-1",
-		"projectId":      "project-1",
-		"repoKey":        "owner/repo",
-		"workspaceName":  "feature-test",
-		"sourcePath":     root,
-		"targetBranch":   "feature-test",
-		"sourceBranch":   "main",
-		"nodeId":         "node-1",
-	})
-	if err != nil {
-		t.Fatalf("marshal params: %v", err)
-	}
-
-	result, err := handler.handleWorkspaceCreate(context.Background(), params)
-	if err != nil {
-		t.Fatalf("handleWorkspaceCreate returned unexpected error: %v", err)
-	}
-	resultMap, ok := result.(map[string]any)
-	if !ok {
-		t.Fatalf("expected map result, got %T", result)
-	}
-
-	event := <-events
-	if event.Topic != "workspaceCreateStarted" {
-		t.Fatalf("expected first event topic %q, got %q", "workspaceCreateStarted", event.Topic)
-	}
-	payload, ok := event.Payload.(workspaceCreateStartedEvent)
-	if !ok {
-		t.Fatalf("expected workspaceCreateStarted payload, got %T", event.Payload)
-	}
-	if payload.WorkspaceID != resultMap["id"] {
-		t.Fatalf("expected workspace id %v, got %s", resultMap["id"], payload.WorkspaceID)
-	}
-	if payload.OrganizationID != "org-1" || payload.ProjectID != "project-1" {
-		t.Fatalf("unexpected payload org/project: %+v", payload)
-	}
-	if payload.WorkspaceName != "feature-test" || payload.SourceBranch != "main" || payload.Branch != "feature-test" {
-		t.Fatalf("unexpected payload branches: %+v", payload)
-	}
-	if payload.NodeID != "node-1" {
-		t.Fatalf("expected node-1, got %s", payload.NodeID)
 	}
 }
 
@@ -496,6 +474,74 @@ func TestUpdatePreparedWorkspace_SnapshotNotFiredOnAPIError(t *testing.T) {
 		t.Fatalf("unexpected event from updatePreparedWorkspace on error: topic=%q", event.Topic)
 	case <-time.After(100 * time.Millisecond):
 		// correct: no event fired from within updatePreparedWorkspace
+	}
+}
+
+func TestExecuteWorktreeWorkspaceCreate_LocalProvisionFailureRollsBackRegisteredWorkspace(t *testing.T) {
+	var closedWorkspaceID string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/orgs/org-1/projects/project-1/workspaces":
+			_, _ = w.Write([]byte(`{"workspace":{"id":"ws-api-rollback","organizationId":"org-1","projectId":"project-1","userId":"user-1","nodeId":"node-1","kind":"worktree","status":"provisioning","branch":"feature-fail","sourceBranch":"main","localPath":"","createdAt":"2026-06-30T00:00:00.000Z","updatedAt":"2026-06-30T00:00:00.000Z"}}`))
+		case "/orgs/org-1/projects/project-1/workspaces/close":
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("read close body: %v", err)
+			}
+			var payload map[string]string
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("decode close body: %v", err)
+			}
+			closedWorkspaceID = payload["workspaceId"]
+			_, _ = w.Write([]byte(`{"workspace":{"id":"ws-api-rollback","organizationId":"org-1","projectId":"project-1","userId":"user-1","nodeId":"node-1","kind":"worktree","status":"closed","branch":"feature-fail","sourceBranch":"main","localPath":"","createdAt":"2026-06-30T00:00:00.000Z","updatedAt":"2026-06-30T00:00:00.000Z"}}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
+	h := NewJSONRPCHandler(workspace.NewManager(), runtime, "node-1", filepath.Join(t.TempDir(), "daemon.log"), nil, nil, filepath.Join(t.TempDir(), "config.yml"), NewAppContextStore(""))
+	defer h.Shutdown()
+
+	sourcePath := t.TempDir()
+	prepared, err := h.registerPreparedWorkspace(context.Background(), preparedWorkspaceCreate{
+		workspaceID:    "ws-local-1",
+		organizationID: "org-1",
+		projectID:      "project-1",
+		localCreate: &workspace.CreateRequest{
+			ID:             "ws-local-1",
+			OrganizationID: "org-1",
+			ProjectID:      "project-1",
+			RepoKey:        "owner/repo",
+			WorkspaceName:  "feature-fail",
+			SourcePath:     sourcePath,
+			TargetBranch:   "feature-fail",
+			SourceBranch:   "main",
+		},
+		registration: &WorkspaceCreation{
+			ID:             "ws-local-1",
+			NodeID:         "node-1",
+			OrganizationID: "org-1",
+			ProjectID:      "project-1",
+			Kind:           workspace.KindWorktree,
+			Branch:         "feature-fail",
+			SourceBranch:   "main",
+		},
+	}, "")
+	if err != nil {
+		t.Fatalf("registerPreparedWorkspace: %v", err)
+	}
+	if prepared.workspaceID != "ws-api-rollback" {
+		t.Fatalf("prepared.workspaceID = %q, want %q", prepared.workspaceID, "ws-api-rollback")
+	}
+
+	err = h.executeWorktreeWorkspaceCreate(context.Background(), prepared, nil)
+	if err == nil {
+		t.Fatal("expected local provisioning failure")
+	}
+	if closedWorkspaceID != "ws-api-rollback" {
+		t.Fatalf("closed workspace id = %q, want %q", closedWorkspaceID, "ws-api-rollback")
 	}
 }
 

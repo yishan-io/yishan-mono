@@ -128,6 +128,10 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 	if err != nil {
 		return nil, err
 	}
+	prepared, err = h.registerPreparedWorkspace(ctx, prepared, "")
+	if err != nil {
+		return nil, err
+	}
 	h.events.Publish(frontendEvent{Topic: "workspaceCreateStarted", Payload: prepared.startedEvent})
 
 	go h.executeWorkspaceCreate(context.Background(), prepared)
@@ -165,11 +169,8 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, prepared pr
 	}
 
 	if prepared.remoteRequest != nil {
-		if err := h.registerPreparedWorkspace(ctx, prepared, ""); err != nil {
-			reportFailed(err.Error())
-			return
-		}
 		if err := h.dispatchRemoteWorkspaceCreate(*prepared.remoteRequest); err != nil {
+			h.rollbackWorkspaceCreateRegistration(ctx, prepared)
 			reportFailed(err.Error())
 		}
 		return
@@ -182,13 +183,9 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, prepared pr
 }
 
 func (h *JSONRPCHandler) executeWorktreeWorkspaceCreate(ctx context.Context, prepared preparedWorkspaceCreate, reportProgress workspace.CreateProgressReporter) error {
-	if !prepared.isRelayed {
-		if err := h.registerPreparedWorkspace(ctx, prepared, ""); err != nil {
-			return err
-		}
-	}
 	created, err := h.manager.CreateWorkspaceWithProgress(ctx, *prepared.localCreate, reportProgress)
 	if err != nil {
+		h.rollbackWorkspaceCreateRegistration(ctx, prepared)
 		return err
 	}
 	h.watchAndTrack(created.ID, created.Path)
@@ -203,17 +200,40 @@ func (h *JSONRPCHandler) executeWorktreeWorkspaceCreate(ctx context.Context, pre
 	return nil
 }
 
-func (h *JSONRPCHandler) registerPreparedWorkspace(ctx context.Context, prepared preparedWorkspaceCreate, localPath string) error {
+func applyAuthoritativeWorkspaceID(prepared preparedWorkspaceCreate, workspaceID string) preparedWorkspaceCreate {
+	normalizedWorkspaceID := strings.TrimSpace(workspaceID)
+	if normalizedWorkspaceID == "" {
+		return prepared
+	}
+	prepared.workspaceID = normalizedWorkspaceID
+	prepared.startedEvent.WorkspaceID = normalizedWorkspaceID
+	if prepared.registration != nil {
+		prepared.registration.ID = normalizedWorkspaceID
+	}
+	if prepared.localCreate != nil {
+		prepared.localCreate.ID = normalizedWorkspaceID
+	}
+	if prepared.remoteRequest != nil {
+		prepared.remoteRequest.ID = normalizedWorkspaceID
+	}
+	return prepared
+}
+
+func (h *JSONRPCHandler) registerPreparedWorkspace(ctx context.Context, prepared preparedWorkspaceCreate, localPath string) (preparedWorkspaceCreate, error) {
 	if prepared.registration == nil {
-		return nil
+		return prepared, nil
 	}
 	registration := *prepared.registration
 	registration.LocalPath = localPath
-	if err := registerWorkspace(ctx, h.runtime, registration); err != nil {
-		return err
+	registeredWorkspace, err := registerWorkspace(ctx, h.runtime, registration)
+	if err != nil {
+		return preparedWorkspaceCreate{}, err
 	}
-	h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, registration.ID, "created")
-	return nil
+	prepared = applyAuthoritativeWorkspaceID(prepared, registeredWorkspace.ID)
+	if strings.TrimSpace(registeredWorkspace.ID) != "" {
+		h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, prepared.workspaceID, "created")
+	}
+	return prepared, nil
 }
 
 func (h *JSONRPCHandler) updatePreparedWorkspace(ctx context.Context, prepared preparedWorkspaceCreate, localPath string) error {
@@ -225,6 +245,19 @@ func (h *JSONRPCHandler) updatePreparedWorkspace(ctx context.Context, prepared p
 	}
 	h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, prepared.registration.ID, "updated")
 	return nil
+}
+
+func (h *JSONRPCHandler) rollbackWorkspaceCreateRegistration(ctx context.Context, prepared preparedWorkspaceCreate) {
+	if prepared.registration == nil {
+		return
+	}
+	if err := closeRemoteWorkspace(ctx, h.runtime, WorkspaceClose{
+		WorkspaceID:    prepared.registration.ID,
+		OrganizationID: prepared.organizationID,
+		ProjectID:      prepared.projectID,
+	}); err != nil {
+		log.Warn().Err(err).Str("workspaceId", prepared.registration.ID).Msg("workspace API close failed after workspace create registration")
+	}
 }
 
 func (h *JSONRPCHandler) rollbackWorkspaceCreateFailure(

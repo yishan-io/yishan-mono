@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev:bun": "bun --watch src/server.ts",
-    "dev:worker": "wrangler dev",
+    "clean:wrangler": "node -e \"require('node:fs').rmSync('.wrangler', { recursive: true, force: true })\"",
+    "dev:worker": "bun run clean:wrangler && wrangler dev",
     "db:local": "docker compose up -d postgres",
     "start": "bun run src/server.ts",
     "check": "tsc --noEmit",
@@ -29,6 +30,6 @@
     "@types/pg": "^8.15.6",
     "drizzle-kit": "^0.31.7",
     "typescript": "^5.8.3",
-    "wrangler": "^4.12.0"
+    "wrangler": "4.84.1"
   }
 }

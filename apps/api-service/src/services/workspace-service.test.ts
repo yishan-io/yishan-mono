@@ -5,6 +5,7 @@ import {
   PrimaryWorkspaceProvisionNotSupportedError,
   PrimaryWorkspaceCloseNotAllowedError,
   ProjectNotFoundError,
+  WorkspaceAlreadyExistsError,
   WorkspaceBranchRequiredError,
   WorkspaceNotFoundError,
 } from "@/errors";
@@ -73,22 +74,20 @@ function makeOrgService(role: string | null = "member") {
  */
 function makeDb(
   options: {
-    activeRows?: unknown[];
     nodeScope?: "private" | "shared";
     nodeOwner?: string;
     projectExists?: boolean;
     ownerIsMember?: boolean;
-    reactivatedRows?: unknown[];
+    existingLiveRows?: unknown[];
     insertedRows?: unknown[];
   } = {},
 ) {
   const {
-    activeRows = [],
     nodeScope = "private",
     nodeOwner = "user-1",
     projectExists = true,
     ownerIsMember = true,
-    reactivatedRows = [],
+    existingLiveRows = [],
     insertedRows = [WORKSPACE_ROW],
   } = options;
 
@@ -101,10 +100,8 @@ function makeDb(
   const outerUpdateWhere = vi.fn().mockReturnValue({ returning: outerUpdateReturning });
   const outerUpdateSet = vi.fn().mockReturnValue({ where: outerUpdateWhere });
   const outerUpdate = vi.fn().mockReturnValue({ set: outerUpdateSet });
-  const outerDeleteWhere = vi.fn().mockResolvedValue(undefined);
-  const outerDelete = vi.fn().mockReturnValue({ where: outerDeleteWhere });
 
-  // Transaction inner tx: project check, org membership check, then closed-workspace lookup
+  // Transaction inner tx: project check, org membership check, then live workspace conflict check.
   let txSelectCall = 0;
   const txLimit = vi.fn().mockImplementation(() => {
     txSelectCall++;
@@ -114,18 +111,12 @@ function makeDb(
       );
     }
     if (txSelectCall === 2) return Promise.resolve(ownerIsMember ? [{ userId: nodeOwner }] : []);
-    if (txSelectCall === 3) return Promise.resolve(activeRows);
-    if (txSelectCall === 4) return Promise.resolve(reactivatedRows);
+    if (txSelectCall === 3) return Promise.resolve(existingLiveRows);
     return Promise.resolve([]);
   });
   const txWhere = vi.fn().mockReturnValue({ limit: txLimit });
   const txFrom = vi.fn().mockReturnValue({ where: txWhere });
   const txSelect = vi.fn().mockReturnValue({ from: txFrom });
-
-  const txUpdateReturning = vi.fn().mockResolvedValue(reactivatedRows);
-  const txUpdateWhere = vi.fn().mockReturnValue({ returning: txUpdateReturning });
-  const txUpdateSet = vi.fn().mockReturnValue({ where: txUpdateWhere });
-  const txUpdate = vi.fn().mockReturnValue({ set: txUpdateSet });
 
   const txInsertReturning = vi.fn().mockResolvedValue(insertedRows);
   const txInsertValues = vi.fn().mockReturnValue({ returning: txInsertReturning });
@@ -133,24 +124,12 @@ function makeDb(
 
   const transaction = vi
     .fn()
-    .mockImplementation((fn: (tx: unknown) => unknown) => fn({ select: txSelect, update: txUpdate, insert: txInsert }));
+    .mockImplementation((fn: (tx: unknown) => unknown) => fn({ select: txSelect, insert: txInsert }));
 
   // biome-ignore lint/suspicious/noExplicitAny: mock DB for unit testing
-  const db = { delete: outerDelete, select: outerSelect, transaction, update: outerUpdate } as any;
+  const db = { select: outerSelect, transaction, update: outerUpdate } as any;
 
-  return {
-    db,
-    outerDelete,
-    outerSelect,
-    outerUpdate,
-    outerUpdateReturning,
-    txInsert,
-    txInsertValues,
-    txInsertReturning,
-    txSelect,
-    txUpdate,
-    txUpdateReturning,
-  };
+  return { db, outerSelect, outerUpdate, txInsert, txInsertValues, txInsertReturning, txSelect };
 }
 
 // ── createWorkspace ────────────────────────────────────────────────────────────
@@ -246,8 +225,8 @@ describe("WorkspaceService.createWorkspace", () => {
     expect(result.latestPullRequest).toBeNull();
   });
 
-  it("reactivates a closed workspace instead of inserting a new one", async () => {
-    const { db, txUpdate, txInsert } = makeDb({ reactivatedRows: [WORKSPACE_ROW] });
+  it("creates a new workspace row with the requested active state", async () => {
+    const { db, txInsert, txInsertValues } = makeDb({ insertedRows: [WORKSPACE_ROW] });
     const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
 
     const result = await service.createWorkspace({
@@ -259,29 +238,38 @@ describe("WorkspaceService.createWorkspace", () => {
       localPath: "/repos/proj",
     });
 
-    expect(txUpdate).toHaveBeenCalledWith(workspaces);
-    expect(txInsert).not.toHaveBeenCalled();
+    expect(txInsert).toHaveBeenCalledWith(workspaces);
+    expect(txInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: "org-1",
+        projectId: "proj-1",
+        userId: "user-1",
+        nodeId: "node-1",
+        kind: "primary",
+        localPath: "/repos/proj",
+        status: "active",
+      }),
+    );
     expect(result.id).toBe("ws-1");
   });
 
-  it("returns the existing active workspace instead of inserting a duplicate", async () => {
-    const { db, txInsert, txUpdate } = makeDb({ activeRows: [WORKSPACE_ROW] });
-
+  it("throws WorkspaceAlreadyExistsError when a live workspace already exists", async () => {
+    const { db, txInsert } = makeDb({ existingLiveRows: [{ id: "ws-live" }] });
     const service = new WorkspaceService(db, makeOrgService("member"), stubProvisioner);
 
-    const result = await service.createWorkspace({
-      organizationId: "org-1",
-      actorUserId: "user-1",
-      projectId: "proj-1",
-      nodeId: "node-1",
-      kind: "primary",
-      localPath: "/repos/proj",
-    });
+    await expect(
+      service.createWorkspace({
+        organizationId: "org-1",
+        actorUserId: "user-1",
+        projectId: "proj-1",
+        nodeId: "node-1",
+        kind: "worktree",
+        branch: "feature/a",
+        sourceBranch: "main",
+      }),
+    ).rejects.toBeInstanceOf(WorkspaceAlreadyExistsError);
 
     expect(txInsert).not.toHaveBeenCalled();
-    expect(txUpdate).not.toHaveBeenCalled();
-    expect(stubProvisioner.enqueueWorkspaceProvision).not.toHaveBeenCalled();
-    expect(result.id).toBe("ws-1");
   });
 
   it("creates a provisioning workspace when localPath is omitted", async () => {

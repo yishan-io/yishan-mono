@@ -181,7 +181,8 @@ func prepareRemoteWorkspaceCreate(req workspaceCreateParams, targetNodeID string
 	if branch == "" {
 		branch = req.TargetBranch
 	}
-	return preparedWorkspaceCreate{workspaceID: req.ID, organizationID: req.OrganizationID, projectID: req.ProjectID, startedEvent: buildWorkspaceCreateStartedEvent(req, targetNodeID, branch), remoteRequest: &req}
+	registration := WorkspaceCreation{ID: req.ID, NodeID: targetNodeID, OrganizationID: req.OrganizationID, ProjectID: req.ProjectID, Kind: workspace.KindWorktree, Branch: branch, SourceBranch: req.SourceBranch}
+	return preparedWorkspaceCreate{workspaceID: req.ID, organizationID: req.OrganizationID, projectID: req.ProjectID, startedEvent: buildWorkspaceCreateStartedEvent(req, targetNodeID, branch), registration: &registration, remoteRequest: &req}
 }
 
 func buildWorkspaceCreateStartedEvent(req workspaceCreateParams, nodeID string, branch string) workspaceCreateStartedEvent {

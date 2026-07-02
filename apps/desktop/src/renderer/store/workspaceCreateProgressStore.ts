@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { RpcFrontendMessagePayload } from "../../shared/contracts/rpcSchema";
+import type { WorkspaceItem } from "./types";
 
 export type WorkspaceCreateProgressStatus = RpcFrontendMessagePayload<"workspaceCreateProgress">["status"];
 
@@ -21,7 +22,10 @@ type WorkspaceCreateProgressStoreState = {
   progressByWorkspaceId: Record<string, WorkspaceCreateProgressEntry>;
   startWorkspaceCreateProgress: (workspaceId: string) => void;
   applyWorkspaceCreateProgressEvent: (event: RpcFrontendMessagePayload<"workspaceCreateProgress">) => void;
-  finishWorkspaceCreateProgress: (workspaceId: string) => void;
+  clearWorkspaceCreateProgress: (workspaceId: string) => void;
+  reconcileHydratedWorkspaceCreateProgress: (
+    workspaces: Array<Pick<WorkspaceItem, "id" | "status" | "worktreePath">>,
+  ) => void;
 };
 
 const DEFAULT_CREATE_STEPS: WorkspaceCreateProgressStep[] = [
@@ -43,17 +47,23 @@ export const workspaceCreateProgressStore = create<WorkspaceCreateProgressStoreS
       return;
     }
 
-    set((state) => ({
-      progressByWorkspaceId: {
-        ...state.progressByWorkspaceId,
-        [normalizedWorkspaceId]: {
-          workspaceId: normalizedWorkspaceId,
-          steps: createDefaultSteps(),
-          updatedAt: new Date().toISOString(),
-          isComplete: false,
+    set((state) => {
+      if (state.progressByWorkspaceId[normalizedWorkspaceId]) {
+        return state;
+      }
+
+      return {
+        progressByWorkspaceId: {
+          ...state.progressByWorkspaceId,
+          [normalizedWorkspaceId]: {
+            workspaceId: normalizedWorkspaceId,
+            steps: createDefaultSteps(),
+            updatedAt: new Date().toISOString(),
+            isComplete: false,
+          },
         },
-      },
-    }));
+      };
+    });
   },
   applyWorkspaceCreateProgressEvent: (event) => {
     const workspaceId = event.workspaceId.trim();
@@ -89,27 +99,49 @@ export const workspaceCreateProgressStore = create<WorkspaceCreateProgressStoreS
       };
     });
   },
-  finishWorkspaceCreateProgress: (workspaceId) => {
+  clearWorkspaceCreateProgress: (workspaceId) => {
     const normalizedWorkspaceId = workspaceId.trim();
     if (!normalizedWorkspaceId) {
       return;
     }
 
     set((state) => {
-      const existingRecord = state.progressByWorkspaceId[normalizedWorkspaceId];
-      if (!existingRecord) {
+      if (!state.progressByWorkspaceId[normalizedWorkspaceId]) {
+        return state;
+      }
+
+      const nextProgressByWorkspaceId = { ...state.progressByWorkspaceId };
+      delete nextProgressByWorkspaceId[normalizedWorkspaceId];
+      return {
+        progressByWorkspaceId: nextProgressByWorkspaceId,
+      };
+    });
+  },
+  reconcileHydratedWorkspaceCreateProgress: (workspaces) => {
+    set((state) => {
+      const nextProgressByWorkspaceId = { ...state.progressByWorkspaceId };
+      let changed = false;
+
+      for (const workspace of workspaces) {
+        const normalizedWorkspaceId = workspace.id.trim();
+        if (!normalizedWorkspaceId || workspace.status !== "active" || !workspace.worktreePath?.trim()) {
+          continue;
+        }
+
+        if (!nextProgressByWorkspaceId[normalizedWorkspaceId]) {
+          continue;
+        }
+
+        delete nextProgressByWorkspaceId[normalizedWorkspaceId];
+        changed = true;
+      }
+
+      if (!changed) {
         return state;
       }
 
       return {
-        progressByWorkspaceId: {
-          ...state.progressByWorkspaceId,
-          [normalizedWorkspaceId]: {
-            ...existingRecord,
-            isComplete: true,
-            updatedAt: new Date().toISOString(),
-          },
-        },
+        progressByWorkspaceId: nextProgressByWorkspaceId,
       };
     });
   },

@@ -25,6 +25,7 @@ import {
   type WorkspaceCreateProgressStep,
   workspaceCreateProgressStore,
 } from "../../store/workspaceCreateProgressStore";
+import { workspaceStore } from "../../store/workspaceStore";
 
 function CreateProgressStepIcon({ step }: { step: WorkspaceCreateProgressStep }) {
   if (step.status === "completed") {
@@ -71,10 +72,11 @@ export type LaunchViewProps = {
 export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) {
   const { t } = useTranslation();
   const customCommandByAgentKind = agentSettingsStore((state) => state.customCommandByAgentKind);
+  const workspace = workspaceStore((state) => state.workspaces.find((item) => item.id === workspaceId));
   const workspaceCreateProgress = workspaceCreateProgressStore((state) => state.progressByWorkspaceId[workspaceId]);
   const { openTab, openWorkspaceFileSearch } = useCommands();
   const platform = getRendererPlatform();
-  const isPreparingWorkspace = Boolean(workspaceCreateProgress && !workspaceCreateProgress.isComplete);
+  const isPreparingWorkspace = workspace?.status === "provisioning" && Boolean(workspaceCreateProgress);
 
   const launchActions = [
     {

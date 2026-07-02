@@ -74,7 +74,8 @@ export function WorkspaceRow({
   const deletions = changeTotals?.deletions ?? 0;
   const shouldShowChangeTotals = additions > 0 || deletions > 0;
   const workspaceCreateProgress = workspaceCreateProgressStore((state) => state.progressByWorkspaceId[workspace.id]);
-  const isSetupRunning = Boolean(workspaceCreateProgress && !workspaceCreateProgress.isComplete);
+  const isSetupRunning =
+    workspace.status === "provisioning" && Boolean(workspaceCreateProgress && !workspaceCreateProgress.isComplete);
 
   const renderWorkspaceIcon = () => {
     if (indicator === "running") {
