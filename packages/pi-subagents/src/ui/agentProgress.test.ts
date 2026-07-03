@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentRecord } from "../agents/types";
-import { bindAgentProgressUi, renderAgentProgress } from "./agentProgress";
+import { bindAgentProgressUi, renderAgentProgress, renderPendingDelegation } from "./agentProgress";
 
 function createRecord(overrides: Partial<AgentRecord> = {}): AgentRecord {
   return {
@@ -56,7 +56,7 @@ describe("renderAgentProgress", () => {
       "<accent>⠋</accent> Explore · running · fg · agent-1",
       "<muted>…</muted> Reviewer · queued · bg · agent-2",
     ]);
-    expect(ui.setWorkingMessage).toHaveBeenCalledWith("Sub-agents: 1 running · 1 queued");
+    expect(ui.setWorkingMessage).toHaveBeenCalledWith();
     expect(ui.setWorkingVisible).toHaveBeenCalledWith(true);
   });
 
@@ -69,6 +69,23 @@ describe("renderAgentProgress", () => {
     expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-progress", undefined);
     expect(ui.setWorkingMessage).toHaveBeenCalledWith();
     expect(ui.setWorkingVisible).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("renderPendingDelegation", () => {
+  it("shows immediate preparing state before the Agent tool starts", () => {
+    const ui = createUiHarness();
+
+    renderPendingDelegation(ui as never, ["Explore", "Reviewer"]);
+
+    expect(ui.setStatus).toHaveBeenCalledWith("pi-subagents", "<warning>🤖 preparing delegation</warning>");
+    expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-progress", [
+      "<accent>Sub-agents</accent>",
+      "<warning>…</warning> Explore · preparing",
+      "<warning>…</warning> Reviewer · preparing",
+    ]);
+    expect(ui.setWorkingMessage).toHaveBeenCalledWith();
+    expect(ui.setWorkingVisible).toHaveBeenCalledWith(true);
   });
 });
 

@@ -4,10 +4,10 @@ import { AgentRegistry } from "./agents/registry";
 import { registerAgentCommands } from "./commands/registerAgentCommands";
 import { createAgentAutocompleteProvider } from "./input/autocompleteProvider";
 import { parseAgentInvocation } from "./input/invocationParser";
+import { rewriteDelegationMessage } from "./input/rewriteDelegationMessage";
 import { AgentManager } from "./runtime/agentManager";
-import { buildAgentTask } from "./runtime/buildAgentTask";
 import { registerAgentTool } from "./tools/agentTool";
-import { bindAgentProgressUi } from "./ui/agentProgress";
+import { bindAgentProgressUi, clearAgentProgress, renderPendingDelegation } from "./ui/agentProgress";
 
 const DELEGATION_GUIDANCE = `You can delegate work to sub-agents using the Agent tool.
 
@@ -31,6 +31,7 @@ export function createPiSubagentsExtension(pi: ExtensionAPI): void {
   const registry = new AgentRegistry({ cwd: process.cwd() });
   const manager = new AgentManager();
   let disposeAgentProgressUi: (() => void) | undefined;
+  let pendingDelegationAgentNames: string[] | undefined;
 
   registerAgentCommands(pi, registry, manager);
   registerAgentTool(pi, registry, manager);
@@ -57,27 +58,43 @@ export function createPiSubagentsExtension(pi: ExtensionAPI): void {
       return { action: "handled" };
     }
 
-    const tasks = parsedInvocation.invocation.agents
-      .map((agentName) => registry.getByName(agentName))
-      .filter((agentDefinition): agentDefinition is NonNullable<typeof agentDefinition> => Boolean(agentDefinition))
-      .map((agentDefinition) =>
-        buildAgentTask({
-          agentName: agentDefinition.name,
-          agentDefinition,
-          prompt: parsedInvocation.invocation.prompt,
-          cwd: ctx.cwd,
-          mode: parsedInvocation.invocation.mode,
-        }),
-      );
+    pendingDelegationAgentNames = [...parsedInvocation.invocation.agents];
+    renderPendingDelegation(ctx.ui, pendingDelegationAgentNames);
+    return { action: "continue" };
+  });
 
-    const results =
-      tasks.length === 1 && tasks[0] !== undefined ? [await manager.run(tasks[0])] : await manager.runParallel(tasks);
-    const summary = results.map(
-      (result) => `${result.agentName} (${result.status}): ${result.responseText ?? result.error ?? "(no output)"}`,
-    );
-    const hasOnlyCompletedResults = results.every((result) => result.status === "completed");
-    ctx.ui.notify(summary.join("\n\n"), hasOnlyCompletedResults ? "info" : "warning");
-    return { action: "handled" };
+  pi.on("tool_execution_start", async (event) => {
+    if (event.toolName !== "Agent") {
+      return;
+    }
+
+    pendingDelegationAgentNames = undefined;
+  });
+
+  pi.on("agent_end", async (_event, ctx) => {
+    if (!pendingDelegationAgentNames) {
+      return;
+    }
+
+    pendingDelegationAgentNames = undefined;
+    if (manager.list().every((record) => record.status !== "queued" && record.status !== "running")) {
+      clearAgentProgress(ctx.ui);
+    }
+  });
+
+  pi.on("context", async (event) => {
+    registry.reload();
+    const knownAgentNames = registry.list().map((agentDefinition) => agentDefinition.name);
+
+    return {
+      messages: event.messages.map((message) => {
+        if (message.role !== "user") {
+          return message;
+        }
+
+        return rewriteDelegationMessage(message, knownAgentNames);
+      }),
+    };
   });
 
   pi.on("before_agent_start", async (event) => ({
@@ -85,6 +102,7 @@ export function createPiSubagentsExtension(pi: ExtensionAPI): void {
   }));
 
   pi.on("session_shutdown", async () => {
+    pendingDelegationAgentNames = undefined;
     disposeAgentProgressUi?.();
     disposeAgentProgressUi = undefined;
 

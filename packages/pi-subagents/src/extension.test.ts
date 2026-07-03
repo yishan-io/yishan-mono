@@ -3,18 +3,21 @@ import { describe, expect, it, vi } from "vitest";
 const {
   addAutocompleteProviderMock,
   bindAgentProgressUiMock,
+  clearAgentProgressMock,
   disposeAgentProgressUiMock,
   managerMock,
   notifyMock,
   registerAgentCommandsMock,
   registerAgentToolMock,
   registryMock,
+  renderPendingDelegationMock,
 } = vi.hoisted(() => {
   const disposeAgentProgressUiMock = vi.fn();
 
   return {
     addAutocompleteProviderMock: vi.fn(),
     bindAgentProgressUiMock: vi.fn(() => disposeAgentProgressUiMock),
+    clearAgentProgressMock: vi.fn(),
     disposeAgentProgressUiMock,
     managerMock: {
       run: vi.fn(async (_task: unknown) => ({
@@ -39,6 +42,7 @@ const {
     notifyMock: vi.fn(),
     registerAgentCommandsMock: vi.fn(),
     registerAgentToolMock: vi.fn(),
+    renderPendingDelegationMock: vi.fn(),
     registryMock: {
       reload: vi.fn(),
       list: vi.fn(() => [
@@ -113,6 +117,8 @@ vi.mock("./input/autocompleteProvider", () => ({
 
 vi.mock("./ui/agentProgress", () => ({
   bindAgentProgressUi: bindAgentProgressUiMock,
+  clearAgentProgress: clearAgentProgressMock,
+  renderPendingDelegation: renderPendingDelegationMock,
 }));
 
 import { createPiSubagentsExtension } from "./extension";
@@ -144,15 +150,62 @@ describe("createPiSubagentsExtension", () => {
       throw new Error("Expected input handler");
     }
     const inputResult = await inputHandler(
+      { text: "@agent:Explore inspect auth", images: [{ type: "image", data: "abc", mimeType: "image/png" }] },
+      {
+        cwd: "/tmp/project",
+        ui: { notify: notifyMock },
+      },
+    );
+    expect(managerMock.run).not.toHaveBeenCalled();
+    expect(inputResult).toEqual({ action: "continue" });
+    expect(renderPendingDelegationMock).toHaveBeenCalledWith(expect.any(Object), ["Explore"]);
+    expect(notifyMock).not.toHaveBeenCalled();
+
+    const contextHandler = handlers.get("context");
+    if (!contextHandler) {
+      throw new Error("Expected context handler");
+    }
+    const contextResult = await contextHandler({
+      messages: [
+        {
+          role: "user",
+          content: "@agent:Explore inspect auth",
+          timestamp: 1,
+        },
+      ],
+    });
+    expect(contextResult).toEqual({
+      messages: [
+        {
+          role: "user",
+          content:
+            "Use the Agent tool to delegate the task below to the named sub-agent. Call the Agent tool immediately without any preamble, explanation, or user-facing planning text. Wait for the sub-agent result, continue the work yourself, and then give the final response to the user.\n\nSub-agent: Explore\n\nTask:\ninspect auth",
+          timestamp: 1,
+        },
+      ],
+    });
+
+    const toolExecutionStartHandler = handlers.get("tool_execution_start");
+    if (!toolExecutionStartHandler) {
+      throw new Error("Expected tool_execution_start handler");
+    }
+    await toolExecutionStartHandler({ toolName: "Agent" });
+
+    await inputHandler(
       { text: "@agent:Explore inspect auth" },
       {
         cwd: "/tmp/project",
         ui: { notify: notifyMock },
       },
     );
-    expect(managerMock.run).toHaveBeenCalledTimes(1);
-    expect(inputResult).toEqual({ action: "handled" });
-    expect(notifyMock).toHaveBeenCalledWith("Explore (completed): Done", "info");
+
+    const agentEndHandler = handlers.get("agent_end");
+    if (!agentEndHandler) {
+      throw new Error("Expected agent_end handler");
+    }
+    managerMock.list.mockReturnValue([]);
+    await agentEndHandler({}, { ui: {} });
+    expect(clearAgentProgressMock).toHaveBeenCalledTimes(1);
 
     const beforeAgentStartHandler = handlers.get("before_agent_start");
     if (!beforeAgentStartHandler) {
@@ -167,6 +220,7 @@ describe("createPiSubagentsExtension", () => {
     if (!sessionShutdownHandler) {
       throw new Error("Expected session_shutdown handler");
     }
+    managerMock.list.mockReturnValue([{ id: "agent-1", status: "running" }]);
     await sessionShutdownHandler({});
     expect(disposeAgentProgressUiMock).toHaveBeenCalledTimes(1);
     expect(managerMock.stop).toHaveBeenCalledWith("agent-1");

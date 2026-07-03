@@ -13,13 +13,15 @@ export {
   type LoadAgentDefinitionsOptions,
 } from "./agents/loader";
 export { AgentRegistry } from "./agents/registry";
+export { createAgentAutocompleteProvider } from "./input/autocompleteProvider";
+export { buildDelegationPrompt } from "./input/delegationPrompt";
+export { rewriteDelegationMessage } from "./input/rewriteDelegationMessage";
 export {
   type ParsedAgentInvocation,
   type ParsedAgentInvocationMode,
   type ParseAgentInvocationResult,
   parseAgentInvocation,
 } from "./input/invocationParser";
-export { createAgentAutocompleteProvider } from "./input/autocompleteProvider";
 export {
   emptyAgentUsageStats,
   type AgentDefinition,

@@ -22,6 +22,7 @@ function createToolHarness() {
           onUpdate?: unknown,
           ctx?: unknown,
         ) => Promise<unknown>;
+        renderResult?: (result: unknown, options: { expanded: boolean; isPartial: boolean }, theme: unknown) => unknown;
       }
     | undefined;
 
@@ -34,6 +35,7 @@ function createToolHarness() {
         onUpdate?: unknown,
         ctx?: unknown,
       ) => Promise<unknown>;
+      renderResult?: (result: unknown, options: { expanded: boolean; isPartial: boolean }, theme: unknown) => unknown;
     }) {
       registeredTool = tool;
     },
@@ -102,9 +104,55 @@ describe("registerAgentTool", () => {
       content: [{ type: "text", text: "Done" }],
       details: {
         agentId: "agent-1",
+        mode: "foreground",
         status: "completed",
         transcriptPath: "/tmp/project/.pi/output/agents/agent-1.jsonl",
       },
     });
+  });
+
+  it("renders compact collapsed output and full expanded output", () => {
+    const { pi, getRegisteredTool } = createToolHarness();
+    registerAgentTool(pi as never, { reload: vi.fn(), getByName: vi.fn() } as never, { run: vi.fn() } as never);
+
+    const renderResult = getRegisteredTool().renderResult;
+    if (!renderResult) {
+      throw new Error("Expected renderResult to be registered");
+    }
+
+    const theme = {
+      fg: (_color: string, text: string) => text,
+      bold: (text: string) => text,
+    };
+    const collapsedComponent = renderResult(
+      {
+        content: [{ type: "text", text: "Full sub-agent output" }],
+        details: {
+          agentId: "agent-1",
+          mode: "foreground",
+          status: "completed",
+          transcriptPath: "/tmp/project/.pi/output/agents/agent-1.jsonl",
+        },
+      },
+      { expanded: false, isPartial: false },
+      theme,
+    ) as { render(width: number): string[] };
+    const expandedComponent = renderResult(
+      {
+        content: [{ type: "text", text: "Full sub-agent output" }],
+        details: {
+          agentId: "agent-1",
+          mode: "foreground",
+          status: "completed",
+          transcriptPath: "/tmp/project/.pi/output/agents/agent-1.jsonl",
+        },
+      },
+      { expanded: true, isPartial: false },
+      theme,
+    ) as { render(width: number): string[] };
+
+    expect(collapsedComponent.render(120).join("\n")).toContain("completed · agent-1");
+    expect(collapsedComponent.render(120).join("\n")).not.toContain("Full sub-agent output");
+    expect(expandedComponent.render(120).join("\n")).toContain("Full sub-agent output");
   });
 });

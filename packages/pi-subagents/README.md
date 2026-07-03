@@ -69,6 +69,8 @@ Override precedence:
 
 ### Direct invocation
 
+`@agent:` is shorthand for the main agent to delegate through the `Agent` tool, receive the sub-agent result, and continue the work. The original shorthand stays visible in the transcript; the expanded delegation prompt is applied only to LLM context.
+
 Single agent:
 
 ```text

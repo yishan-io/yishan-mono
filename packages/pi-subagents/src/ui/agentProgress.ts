@@ -8,7 +8,7 @@ const WIDGET_KEY = "pi-subagents-progress";
 const MAX_VISIBLE_ACTIVE_AGENTS = 5;
 const ACTIVE_AGENT_STATUSES = new Set(["queued", "running"]);
 const RUNNING_AGENT_STATUSES = new Set(["running"]);
-const WORKING_MESSAGE_PREFIX = "Sub-agents";
+const PREPARING_MESSAGE = "preparing delegation";
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const SPINNER_INTERVAL_MS = 80;
 
@@ -79,11 +79,28 @@ export function renderAgentProgress(ui: ExtensionUIContext, records: AgentRecord
 
   ui.setStatus(STATUS_KEY, ui.theme.fg("accent", `🤖 ${statusSummary}`));
   ui.setWidget(WIDGET_KEY, buildWidgetLines(ui, activeRecords, spinnerFrameIndex));
-  ui.setWorkingMessage(`${WORKING_MESSAGE_PREFIX}: ${statusSummary}`);
+  ui.setWorkingMessage();
   ui.setWorkingVisible(true);
 }
 
-function clearAgentProgress(ui: ExtensionUIContext): void {
+export function renderPendingDelegation(ui: ExtensionUIContext, agentNames: string[]): void {
+  const lines = [ui.theme.fg("accent", "Sub-agents")];
+
+  for (const agentName of agentNames.slice(0, MAX_VISIBLE_ACTIVE_AGENTS)) {
+    lines.push(`${ui.theme.fg("warning", "…")} ${agentName} · preparing`);
+  }
+
+  if (agentNames.length > MAX_VISIBLE_ACTIVE_AGENTS) {
+    lines.push(ui.theme.fg("muted", `… ${agentNames.length - MAX_VISIBLE_ACTIVE_AGENTS} more`));
+  }
+
+  ui.setStatus(STATUS_KEY, ui.theme.fg("warning", `🤖 ${PREPARING_MESSAGE}`));
+  ui.setWidget(WIDGET_KEY, lines);
+  ui.setWorkingMessage();
+  ui.setWorkingVisible(true);
+}
+
+export function clearAgentProgress(ui: ExtensionUIContext): void {
   ui.setStatus(STATUS_KEY, undefined);
   ui.setWidget(WIDGET_KEY, undefined);
   ui.setWorkingMessage();
