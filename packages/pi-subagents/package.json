@@ -1,0 +1,37 @@
+{
+  "name": "@yishan/pi-subagents",
+  "version": "0.1.0",
+  "type": "module",
+  "keywords": ["pi-package"],
+  "exports": {
+    ".": "./src/index.ts",
+    "./extension": "./extensions/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check src extensions"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-agent-core": "*",
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-agent-core": "^0.80.3",
+    "@earendil-works/pi-ai": "^0.80.3",
+    "@earendil-works/pi-coding-agent": "^0.80.3",
+    "@earendil-works/pi-tui": "^0.80.3",
+    "@types/node": "^24.12.4",
+    "typebox": "1.1.38"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  },
+  "license": "Elastic-2.0"
+}
