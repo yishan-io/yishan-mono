@@ -7,17 +7,52 @@ const STATUS_KEY = "pi-subagents";
 const WIDGET_KEY = "pi-subagents-progress";
 const MAX_VISIBLE_ACTIVE_AGENTS = 5;
 const ACTIVE_AGENT_STATUSES = new Set(["queued", "running"]);
+const RUNNING_AGENT_STATUSES = new Set(["running"]);
 const WORKING_MESSAGE_PREFIX = "Sub-agents";
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const SPINNER_INTERVAL_MS = 80;
 
 /**
  * Subscribes the current session UI to live agent-progress updates.
  */
 export function bindAgentProgressUi(manager: AgentManager, ui: ExtensionUIContext): () => void {
+  let latestRecords: AgentRecord[] = [];
+  let spinnerFrameIndex = 0;
+  let spinnerInterval: ReturnType<typeof setInterval> | undefined;
+
+  const stopSpinner = () => {
+    if (spinnerInterval) {
+      clearInterval(spinnerInterval);
+      spinnerInterval = undefined;
+    }
+  };
+
+  const syncSpinner = () => {
+    const hasRunningAgents = latestRecords.some((record) => RUNNING_AGENT_STATUSES.has(record.status));
+    if (!hasRunningAgents) {
+      stopSpinner();
+      spinnerFrameIndex = 0;
+      return;
+    }
+
+    if (spinnerInterval) {
+      return;
+    }
+
+    spinnerInterval = setInterval(() => {
+      spinnerFrameIndex = (spinnerFrameIndex + 1) % SPINNER_FRAMES.length;
+      renderAgentProgress(ui, latestRecords, spinnerFrameIndex);
+    }, SPINNER_INTERVAL_MS);
+  };
+
   const unsubscribe = manager.subscribe((records) => {
-    renderAgentProgress(ui, records);
+    latestRecords = records;
+    syncSpinner();
+    renderAgentProgress(ui, latestRecords, spinnerFrameIndex);
   });
 
   return () => {
+    stopSpinner();
     unsubscribe();
     clearAgentProgress(ui);
   };
@@ -26,7 +61,7 @@ export function bindAgentProgressUi(manager: AgentManager, ui: ExtensionUIContex
 /**
  * Renders live footer and widget updates for active sub-agents.
  */
-export function renderAgentProgress(ui: ExtensionUIContext, records: AgentRecord[]): void {
+export function renderAgentProgress(ui: ExtensionUIContext, records: AgentRecord[], spinnerFrameIndex = 0): void {
   const activeRecords = records.filter((record) => ACTIVE_AGENT_STATUSES.has(record.status));
   if (activeRecords.length === 0) {
     clearAgentProgress(ui);
@@ -43,7 +78,7 @@ export function renderAgentProgress(ui: ExtensionUIContext, records: AgentRecord
   const statusSummary = statusParts.join(" · ");
 
   ui.setStatus(STATUS_KEY, ui.theme.fg("accent", `🤖 ${statusSummary}`));
-  ui.setWidget(WIDGET_KEY, buildWidgetLines(ui, activeRecords));
+  ui.setWidget(WIDGET_KEY, buildWidgetLines(ui, activeRecords, spinnerFrameIndex));
   ui.setWorkingMessage(`${WORKING_MESSAGE_PREFIX}: ${statusSummary}`);
   ui.setWorkingVisible(true);
 }
@@ -55,13 +90,13 @@ function clearAgentProgress(ui: ExtensionUIContext): void {
   ui.setWorkingVisible(false);
 }
 
-function buildWidgetLines(ui: ExtensionUIContext, records: AgentRecord[]): string[] {
+function buildWidgetLines(ui: ExtensionUIContext, records: AgentRecord[], spinnerFrameIndex: number): string[] {
   const visibleRecords = records.slice(0, MAX_VISIBLE_ACTIVE_AGENTS);
   const hiddenCount = records.length - visibleRecords.length;
   const lines = [ui.theme.fg("accent", "Sub-agents")];
 
   for (const record of visibleRecords) {
-    lines.push(formatAgentLine(ui, record));
+    lines.push(formatAgentLine(ui, record, spinnerFrameIndex));
   }
 
   if (hiddenCount > 0) {
@@ -71,8 +106,9 @@ function buildWidgetLines(ui: ExtensionUIContext, records: AgentRecord[]): strin
   return lines;
 }
 
-function formatAgentLine(ui: ExtensionUIContext, record: AgentRecord): string {
-  const statusSymbol = record.status === "running" ? ui.theme.fg("accent", "▶") : ui.theme.fg("muted", "…");
+function formatAgentLine(ui: ExtensionUIContext, record: AgentRecord, spinnerFrameIndex: number): string {
+  const spinnerFrame = SPINNER_FRAMES[spinnerFrameIndex] ?? "⠋";
+  const statusSymbol = record.status === "running" ? ui.theme.fg("accent", spinnerFrame) : ui.theme.fg("muted", "…");
   const modeLabel = record.mode === "background" ? "bg" : "fg";
   return `${statusSymbol} ${record.agentName} · ${record.status} · ${modeLabel} · ${record.id}`;
 }

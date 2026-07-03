@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentRecord } from "../agents/types";
 import { bindAgentProgressUi, renderAgentProgress } from "./agentProgress";
@@ -36,6 +36,10 @@ function createUiHarness() {
   };
 }
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("renderAgentProgress", () => {
   it("shows footer status and widget lines for active agents", () => {
     const ui = createUiHarness();
@@ -49,7 +53,7 @@ describe("renderAgentProgress", () => {
     expect(ui.setStatus).toHaveBeenCalledWith("pi-subagents", "<accent>🤖 1 running · 1 queued</accent>");
     expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-progress", [
       "<accent>Sub-agents</accent>",
-      "<accent>▶</accent> Explore · running · fg · agent-1",
+      "<accent>⠋</accent> Explore · running · fg · agent-1",
       "<muted>…</muted> Reviewer · queued · bg · agent-2",
     ]);
     expect(ui.setWorkingMessage).toHaveBeenCalledWith("Sub-agents: 1 running · 1 queued");
@@ -69,7 +73,7 @@ describe("renderAgentProgress", () => {
 });
 
 describe("bindAgentProgressUi", () => {
-  it("subscribes to manager updates and clears UI on dispose", () => {
+  it("subscribes to manager updates, animates running agents, and clears UI on dispose", async () => {
     const ui = createUiHarness();
     const unsubscribe = vi.fn();
     const subscribe = vi.fn((listener: (records: AgentRecord[]) => void) => {
@@ -77,11 +81,24 @@ describe("bindAgentProgressUi", () => {
       return unsubscribe;
     });
 
+    vi.useFakeTimers();
+
     const dispose = bindAgentProgressUi({ subscribe } as never, ui as never);
 
     expect(subscribe).toHaveBeenCalledTimes(1);
     expect(ui.setStatus).toHaveBeenCalledWith("pi-subagents", "<accent>🤖 1 running</accent>");
+    expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-progress", [
+      "<accent>Sub-agents</accent>",
+      "<accent>⠋</accent> Explore · running · fg · agent-1",
+    ]);
     expect(ui.setWorkingVisible).toHaveBeenCalledWith(true);
+
+    await vi.advanceTimersByTimeAsync(80);
+
+    expect(ui.setWidget).toHaveBeenLastCalledWith("pi-subagents-progress", [
+      "<accent>Sub-agents</accent>",
+      "<accent>⠙</accent> Explore · running · fg · agent-1",
+    ]);
 
     dispose();
 
