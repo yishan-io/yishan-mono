@@ -82,18 +82,6 @@ func RemoveManagedAgentRuntime() error {
 	return removeErr
 }
 
-// NotifyScriptPath returns the absolute path to the notify script for the current platform.
-func NotifyScriptPath() (string, error) {
-	rootDir, err := config.HomeDir()
-	if err != nil {
-		return "", err
-	}
-	if runtime.GOOS == "windows" {
-		return filepath.Join(rootDir, "notify.ps1"), nil
-	}
-	return filepath.Join(rootDir, "notify.sh"), nil
-}
-
 func ensurePiNotifyPackage() error {
 	cmd := exec.Command("pi", "install", "npm:@yishan/pi-notify")
 	cmd.Stdout = nil

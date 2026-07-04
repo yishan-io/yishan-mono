@@ -64,10 +64,10 @@ export function createPiNotifyExtension(pi: ExtensionAPI): void {
     }
   });
 
-  // pi.on("tool_execution_end", (_event: unknown, ctx: { hasUI?: boolean }) => {
-  //   if (skip(ctx)) return;
-  //   fire("PostToolUse");
-  // });
+  pi.on("tool_execution_end", (_event: unknown, ctx: { hasUI?: boolean }) => {
+    if (skip(ctx)) return;
+    fire("PostToolUse");
+  });
 
   pi.on("agent_end", (_event: unknown, ctx: { hasUI?: boolean }) => {
     if (skip(ctx)) return;
