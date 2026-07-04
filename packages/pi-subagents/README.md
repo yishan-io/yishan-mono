@@ -1,4 +1,4 @@
-# @yishan/pi-subagents
+# @yishan-io/pi-subagents
 
 Pi sub-agent orchestration package for Yishan.
 

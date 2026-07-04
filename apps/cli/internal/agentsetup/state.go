@@ -214,5 +214,5 @@ func isPiNotifyInstalled() bool {
 	if err != nil {
 		return false
 	}
-	return bytes.Contains(out, []byte("@yishan/pi-notify"))
+	return bytes.Contains(out, []byte("@yishan-io/pi-notify"))
 }

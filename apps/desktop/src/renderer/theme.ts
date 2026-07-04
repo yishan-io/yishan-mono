@@ -1,7 +1,7 @@
 import { createTheme } from "@mui/material/styles";
-import { DARK_SURFACE_COLORS as _DARK_SURFACE_COLORS } from "@yishan/design-tokens/v1";
-import type { DesignTokenThemeMode } from "@yishan/design-tokens/v1";
-import { createMuiThemeOptions } from "@yishan/design-tokens/v1/mui";
+import { DARK_SURFACE_COLORS as _DARK_SURFACE_COLORS } from "@yishan-io/design-tokens/v1";
+import type { DesignTokenThemeMode } from "@yishan-io/design-tokens/v1";
+import { createMuiThemeOptions } from "@yishan-io/design-tokens/v1/mui";
 
 export type AppThemeMode = DesignTokenThemeMode;
 export type AppThemePreference = AppThemeMode | "system";

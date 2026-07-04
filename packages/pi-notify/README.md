@@ -1,4 +1,4 @@
-# @yishan/pi-notify
+# @yishan-io/pi-notify
 
 Pi extension that forwards lifecycle events to the Yishan daemon for usage tracking and session monitoring.
 
@@ -13,7 +13,7 @@ The extension only activates in Yishan-managed terminals (detected via `YISHAN_T
 As a Pi package (installed automatically by the Yishan daemon):
 
 ```bash
-pi install npm:@yishan/pi-notify
+pi install npm:@yishan-io/pi-notify
 ```
 
 ## Environment variables

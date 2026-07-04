@@ -83,14 +83,14 @@ func RemoveManagedAgentRuntime() error {
 }
 
 func ensurePiNotifyPackage() error {
-	cmd := exec.Command("pi", "install", "npm:@yishan/pi-notify")
+	cmd := exec.Command("pi", "install", "npm:@yishan-io/pi-notify")
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	return cmd.Run()
 }
 
 func removePiNotifyPackage() error {
-	cmd := exec.Command("pi", "uninstall", "@yishan/pi-notify")
+	cmd := exec.Command("pi", "uninstall", "@yishan-io/pi-notify")
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	return cmd.Run()

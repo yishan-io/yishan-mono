@@ -1,4 +1,4 @@
-import type { AgentKind } from "@yishan/core";
+import type { AgentKind } from "@yishan-io/core";
 import { and, desc, eq, inArray } from "drizzle-orm";
 
 import type { OrganizationMemberRole } from "@/db/schema";

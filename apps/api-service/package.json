@@ -1,5 +1,5 @@
 {
-  "name": "@yishan/api-service",
+  "name": "@yishan-io/api-service",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,7 +16,7 @@
     "deploy:worker": "wrangler deploy"
   },
   "dependencies": {
-    "@yishan/core": "workspace:*",
+    "@yishan-io/core": "workspace:*",
     "@hono/zod-validator": "^0.7.6",
     "drizzle-orm": "^0.44.6",
     "hono": "^4.10.1",
