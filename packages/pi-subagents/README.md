@@ -9,7 +9,7 @@ This package adds a lightweight multi-agent layer on top of Pi using Pi's SDK se
 Current MVP features:
 - `@agent:<name>` direct invocation
 - Multiple leading `@agent:<name>` tokens with one shared task
-- `/agent`, `/agents`, `/agent-result`, `/agent-stop`, `/agent-steer`, `/agent-send`
+- `/agent`, `/agents`, `/agent-result`, `/agent-stop`, `/agent-steer`, `/agent-send`, `/agent-view`, `/agent-view-clear`
 - Main-agent `Agent` tool for delegation
 - User/project agent overrides
 - Background runs, stop/steer support, transcript capture
@@ -96,7 +96,14 @@ Investigate the current authentication implementation.
 /agent-stop agent-abc123
 /agent-steer agent-abc123 focus on tests too
 /agent-send agent-abc123
+/agent-view
+/agent-view agent-abc123
+/agent-view-clear
 ```
+
+Keyboard shortcuts:
+- `Ctrl+J` opens the sub-agent detail selector
+- double `Esc` clears the selected sub-agent detail panel
 
 ### Main-agent tool
 
@@ -118,6 +125,7 @@ Background runs return the new agent id immediately.
 While agents are queued or running, the extension shows:
 - a footer status like `🤖 1 running · 2 queued`
 - a widget above the editor listing active agent ids, names, and modes
+- an optional selected-agent detail panel below the editor via `/agent-view`
 
 ## Transcripts
 
@@ -134,6 +142,10 @@ Each run writes a transcript to:
 - Built-in agent definitions are loaded from this package manually because Pi packages do not auto-discover agent-definition directories.
 - The package currently exposes only the single-agent `Agent` tool; result/stop/steer remain slash-command driven.
 - The progress widget is intentionally lightweight for MVP; it does not yet stream per-agent transcript output or provide a dedicated selector/details pane.
+
+## License
+
+This package is licensed under the MIT License. See [`LICENSE`](./LICENSE).
 
 ## Development
 

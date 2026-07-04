@@ -187,6 +187,7 @@ export class AgentManager {
             timeoutMs: task.timeoutMs,
             agentDefinition,
           });
+          record.session = runningHandle.session;
           runningAgentState.handle = runningHandle;
           if (runningAgentState.stopRequested) {
             await runningHandle.cancel();

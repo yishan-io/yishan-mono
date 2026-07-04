@@ -4,13 +4,16 @@ const {
   addAutocompleteProviderMock,
   bindAgentProgressUiMock,
   clearAgentProgressMock,
+  clearSelectedAgentDetailsMock,
   disposeAgentProgressUiMock,
   managerMock,
   notifyMock,
+  onTerminalInputMock,
   registerAgentCommandsMock,
   registerAgentToolMock,
   registryMock,
   renderPendingDelegationMock,
+  renderSelectedAgentDetailsMock,
 } = vi.hoisted(() => {
   const disposeAgentProgressUiMock = vi.fn();
 
@@ -18,7 +21,9 @@ const {
     addAutocompleteProviderMock: vi.fn(),
     bindAgentProgressUiMock: vi.fn(() => disposeAgentProgressUiMock),
     clearAgentProgressMock: vi.fn(),
+    clearSelectedAgentDetailsMock: vi.fn(),
     disposeAgentProgressUiMock,
+    onTerminalInputMock: vi.fn(() => vi.fn()),
     managerMock: {
       run: vi.fn(async (_task: unknown) => ({
         agentId: "agent-1",
@@ -36,13 +41,35 @@ const {
         },
       })),
       runParallel: vi.fn(async (_tasks: unknown[]) => []),
-      list: vi.fn(() => [{ id: "agent-1", status: "running" }]),
+      get: vi.fn((_agentId: string) => ({
+        id: "agent-1",
+        agentName: "Explore",
+        prompt: "Inspect auth",
+        status: "running",
+        mode: "foreground",
+        createdAt: 1,
+        usage: {
+          input: 0,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+          cost: 0,
+          contextTokens: 0,
+          turns: 0,
+        },
+      })),
+      list: vi.fn(() => [{ id: "agent-1", agentName: "Explore", status: "running" }]),
+      subscribe: vi.fn((listener: (records: unknown[]) => void) => {
+        listener([]);
+        return vi.fn();
+      }),
       stop: vi.fn(async (_agentId: string) => {}),
     },
     notifyMock: vi.fn(),
     registerAgentCommandsMock: vi.fn(),
     registerAgentToolMock: vi.fn(),
     renderPendingDelegationMock: vi.fn(),
+    renderSelectedAgentDetailsMock: vi.fn(),
     registryMock: {
       reload: vi.fn(),
       list: vi.fn(() => [
@@ -93,8 +120,16 @@ vi.mock("./runtime/agentManager", () => ({
       return managerMock.runParallel(tasks);
     }
 
+    get(agentId: string) {
+      return managerMock.get(agentId);
+    }
+
     list() {
       return managerMock.list();
+    }
+
+    subscribe(listener: (records: unknown[]) => void) {
+      return managerMock.subscribe(listener);
     }
 
     stop(agentId: string) {
@@ -121,14 +156,27 @@ vi.mock("./ui/agentProgress", () => ({
   renderPendingDelegation: renderPendingDelegationMock,
 }));
 
+vi.mock("./ui/agentDetails", () => ({
+  clearSelectedAgentDetails: clearSelectedAgentDetailsMock,
+  renderSelectedAgentDetails: renderSelectedAgentDetailsMock,
+}));
+
 import { createPiSubagentsExtension } from "./extension";
 
 describe("createPiSubagentsExtension", () => {
   it("registers commands/tools and wires lifecycle handlers", async () => {
+    const commands = new Map<string, { handler: (args: string, ctx: unknown) => Promise<void> }>();
+    const shortcuts = new Map<string, { handler: (ctx: unknown) => Promise<void> }>();
     const handlers = new Map<string, (event: unknown, ctx?: unknown) => unknown>();
     const pi = {
       on(eventName: string, handler: (event: unknown, ctx?: unknown) => unknown) {
         handlers.set(eventName, handler);
+      },
+      registerCommand(name: string, options: { handler: (args: string, ctx: unknown) => Promise<void> }) {
+        commands.set(name, options);
+      },
+      registerShortcut(key: string, options: { handler: (ctx: unknown) => Promise<void> }) {
+        shortcuts.set(key, options);
       },
     };
 
@@ -141,9 +189,13 @@ describe("createPiSubagentsExtension", () => {
     if (!sessionStartHandler) {
       throw new Error("Expected session_start handler");
     }
-    await sessionStartHandler({}, { ui: { addAutocompleteProvider: addAutocompleteProviderMock } });
+    await sessionStartHandler(
+      {},
+      { ui: { addAutocompleteProvider: addAutocompleteProviderMock, onTerminalInput: onTerminalInputMock } },
+    );
     expect(addAutocompleteProviderMock).toHaveBeenCalledTimes(1);
     expect(bindAgentProgressUiMock).toHaveBeenCalledTimes(1);
+    expect(onTerminalInputMock).toHaveBeenCalledTimes(1);
 
     const inputHandler = handlers.get("input");
     if (!inputHandler) {
@@ -207,6 +259,30 @@ describe("createPiSubagentsExtension", () => {
     await agentEndHandler({}, { ui: {} });
     expect(clearAgentProgressMock).toHaveBeenCalledTimes(1);
 
+    const agentViewCommand = commands.get("agent-view");
+    if (!agentViewCommand) {
+      throw new Error("Expected agent-view command");
+    }
+    managerMock.list.mockReturnValue([{ id: "agent-1", agentName: "Explore", status: "running" }]);
+    await agentViewCommand.handler("agent-1", { ui: { notify: notifyMock } });
+    expect(renderSelectedAgentDetailsMock).toHaveBeenCalledTimes(1);
+
+    const agentViewClearCommand = commands.get("agent-view-clear");
+    if (!agentViewClearCommand) {
+      throw new Error("Expected agent-view-clear command");
+    }
+    await agentViewClearCommand.handler("", { ui: { notify: notifyMock } });
+    expect(clearSelectedAgentDetailsMock).toHaveBeenCalledTimes(1);
+
+    const agentViewShortcut = shortcuts.get("ctrl+j");
+    if (!agentViewShortcut) {
+      throw new Error("Expected ctrl+j shortcut");
+    }
+    await agentViewShortcut.handler({
+      ui: { notify: notifyMock, select: vi.fn(async () => "agent-1 · Explore · running") },
+    });
+    expect(renderSelectedAgentDetailsMock).toHaveBeenCalledTimes(2);
+
     const beforeAgentStartHandler = handlers.get("before_agent_start");
     if (!beforeAgentStartHandler) {
       throw new Error("Expected before_agent_start handler");
@@ -220,7 +296,7 @@ describe("createPiSubagentsExtension", () => {
     if (!sessionShutdownHandler) {
       throw new Error("Expected session_shutdown handler");
     }
-    managerMock.list.mockReturnValue([{ id: "agent-1", status: "running" }]);
+    managerMock.list.mockReturnValue([{ id: "agent-1", agentName: "Explore", status: "running" }]);
     await sessionShutdownHandler({});
     expect(disposeAgentProgressUiMock).toHaveBeenCalledTimes(1);
     expect(managerMock.stop).toHaveBeenCalledWith("agent-1");
