@@ -77,6 +77,14 @@ export type PrimaryWorkspaceItem = {
   totalTokens: number;
 };
 
+type PrimaryWorkspaceRow = {
+  id: string;
+  projectId: string;
+  branch: string | null;
+  createdAt: Date;
+  localPath: string;
+};
+
 export type WorkspaceInsightsResult = {
   closedWorkspaceCount: number;
   averageLifetimeHours: number | null;
@@ -337,75 +345,45 @@ export class OverviewService {
       primaryBaseConditions.push(eq(workspaces.projectId, input.projectId));
     }
 
-    const primaryCountRow = await this.db
-      .select({ count: count() })
-      .from(workspaces)
-      .where(and(...primaryBaseConditions));
-
-    const primaryWorkspaceCount = primaryCountRow[0]?.count ?? 0;
-
-    const primaryTokenRow = await this.db
-      .select({
-        totalTokens: sum(tokenUsageHourly.totalTokens).mapWith(Number),
-      })
-      .from(tokenUsageHourly)
-      .innerJoin(workspaces, eq(tokenUsageHourly.workspaceId, workspaces.id))
-      .where(
-        and(
-          eq(workspaces.organizationId, input.organizationId),
-          eq(workspaces.kind, "primary"),
-          eq(workspaces.status, "active"),
-          gte(tokenUsageHourly.bucketStartHourUtc, fromDate),
-          lte(tokenUsageHourly.bucketStartHourUtc, now),
-          ...(input.projectId ? [eq(workspaces.projectId, input.projectId)] : []),
-        ),
-      );
-
-    const primaryWorkspaceTokens = primaryTokenRow[0]?.totalTokens ?? 0;
-
-    const topPrimaryRows = await this.db
+    const primaryRows = await this.db
       .select({
         id: workspaces.id,
         projectId: workspaces.projectId,
         branch: workspaces.branch,
         createdAt: workspaces.createdAt,
+        localPath: workspaces.localPath,
       })
       .from(workspaces)
       .where(and(...primaryBaseConditions))
-      .orderBy(desc(workspaces.createdAt))
-      .limit(10);
+      .orderBy(desc(workspaces.createdAt));
+
+    const primaryWorkspaceCount = primaryRows.length;
+    const primaryWorkspaceTokensById = new Map<string, number>();
+    let primaryWorkspaceTokens = 0;
+
+    for (const primaryRow of primaryRows) {
+      const totalTokens = await this.sumPrimaryWorkspacePathTokens({
+        organizationId: input.organizationId,
+        projectId: primaryRow.projectId,
+        workspacePath: primaryRow.localPath,
+        fromDate,
+        now,
+      });
+      primaryWorkspaceTokensById.set(primaryRow.id, totalTokens);
+      primaryWorkspaceTokens += totalTokens;
+    }
 
     const topPrimaryWorkspaces: PrimaryWorkspaceItem[] = [];
 
-    for (const ws of topPrimaryRows) {
-      const projectRow = await this.db
-        .select({ name: projects.name })
-        .from(projects)
-        .where(eq(projects.id, ws.projectId))
-        .limit(1);
-
-      const projectName = projectRow[0]?.name ?? ws.projectId;
-
-      const tokenRow = await this.db
-        .select({
-          totalTokens: sum(tokenUsageHourly.totalTokens).mapWith(Number),
-        })
-        .from(tokenUsageHourly)
-        .where(
-          and(
-            eq(tokenUsageHourly.workspaceId, ws.id),
-            gte(tokenUsageHourly.bucketStartHourUtc, fromDate),
-            lte(tokenUsageHourly.bucketStartHourUtc, now),
-          ),
-        );
-
+    for (const primaryRow of primaryRows.slice(0, 10)) {
+      const projectName = await this.getProjectName(primaryRow.projectId);
       topPrimaryWorkspaces.push({
-        id: ws.id,
-        projectId: ws.projectId,
+        id: primaryRow.id,
+        projectId: primaryRow.projectId,
         projectName,
-        branch: ws.branch,
-        createdAt: ws.createdAt.toISOString(),
-        totalTokens: tokenRow[0]?.totalTokens ?? 0,
+        branch: primaryRow.branch,
+        createdAt: primaryRow.createdAt.toISOString(),
+        totalTokens: primaryWorkspaceTokensById.get(primaryRow.id) ?? 0,
       });
     }
 
@@ -417,5 +395,39 @@ export class OverviewService {
       primaryWorkspaceTokens,
       topPrimaryWorkspaces,
     };
+  }
+
+  private async getProjectName(projectId: string): Promise<string> {
+    const projectRow = await this.db
+      .select({ name: projects.name })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+    return projectRow[0]?.name ?? projectId;
+  }
+
+  private async sumPrimaryWorkspacePathTokens(input: {
+    organizationId: string;
+    projectId: string;
+    workspacePath: string;
+    fromDate: Date;
+    now: Date;
+  }): Promise<number> {
+    const tokenRow = await this.db
+      .select({
+        totalTokens: sum(tokenUsageHourly.totalTokens).mapWith(Number),
+      })
+      .from(tokenUsageHourly)
+      .where(
+        and(
+          eq(tokenUsageHourly.organizationId, input.organizationId),
+          eq(tokenUsageHourly.projectId, input.projectId),
+          eq(tokenUsageHourly.workspacePath, input.workspacePath),
+          gte(tokenUsageHourly.bucketStartHourUtc, input.fromDate),
+          lte(tokenUsageHourly.bucketStartHourUtc, input.now),
+        ),
+      );
+
+    return tokenRow[0]?.totalTokens ?? 0;
   }
 }

@@ -14,6 +14,7 @@ import (
 
 	"yishan/apps/cli/internal/config"
 	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -40,6 +41,23 @@ func newTestHandler(t *testing.T) *JSONRPCHandler {
 	)
 	t.Cleanup(func() { h.Shutdown() })
 	return h
+}
+
+func installTokenUsageRecoveryProbe(t *testing.T, h *JSONRPCHandler) string {
+	t.Helper()
+	previousAgentKinds := tokenUsageScannableAgentKinds
+	tokenUsageScannableAgentKinds = []string{"recovery-probe"}
+	t.Cleanup(func() { tokenUsageScannableAgentKinds = previousAgentKinds })
+
+	h.tokenUsage = &tokenUsageCollector{
+		repo:                 &stubHourlyUsageRepository{},
+		timers:               make(map[string]*time.Timer),
+		inFlight:             map[string]bool{"recovery-probe": true},
+		needsRerun:           make(map[string]bool),
+		recoverySinceByAgent: make(map[string]int64),
+		pending:              make(map[string][]tokenusage.HourlyUsageRow),
+	}
+	return "recovery-probe"
 }
 
 func TestPublishWorkspaceSnapshotChanged_PublishesLocalInvalidationEvent(t *testing.T) {
@@ -204,6 +222,7 @@ func TestHandleWorkspaceCreate_UsesAuthoritativeAPIWorkspaceID(t *testing.T) {
 func TestHandleWorkspaceOpenProject_Success(t *testing.T) {
 	dir := t.TempDir()
 	h := newTestHandler(t)
+	recoveryProbeAgentKind := installTokenUsageRecoveryProbe(t, h)
 
 	params, err := json.Marshal(workspaceOpenProjectParams{
 		Workspaces: []workspaceOpenProjectEntry{
@@ -253,22 +272,29 @@ func TestHandleWorkspaceOpenProject_Success(t *testing.T) {
 	if !found {
 		t.Errorf("ws-1 was not written to workspace-index.json")
 	}
+	if h.tokenUsage.recoverySinceByAgent[recoveryProbeAgentKind] == 0 {
+		t.Fatalf("expected recovery scan to be requested for opened workspace")
+	}
+	if !h.tokenUsage.needsRerun[recoveryProbeAgentKind] {
+		t.Fatalf("expected recovery scan to mark in-flight agent for rerun")
+	}
 }
 
 // TestHandleWorkspaceOpenProject_Idempotent verifies that calling openProject
-// for a workspace already in the manager skips it without error.
+// for a workspace already in the manager skips it when metadata already matches.
 func TestHandleWorkspaceOpenProject_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	h := newTestHandler(t)
+	recoveryProbeAgentKind := installTokenUsageRecoveryProbe(t, h)
 
-	// Pre-open the workspace directly in the manager.
-	if _, err := h.manager.Open(workspace.OpenRequest{ID: "ws-2", Path: dir}); err != nil {
+	// Pre-open the workspace directly in the manager with matching metadata.
+	if _, err := h.manager.Open(workspace.OpenRequest{ID: "ws-2", Path: dir, ProjectID: "proj-2", OrgID: "org-2"}); err != nil {
 		t.Fatalf("pre-open: %v", err)
 	}
 
 	params, err := json.Marshal(workspaceOpenProjectParams{
 		Workspaces: []workspaceOpenProjectEntry{
-			{WorkspaceID: "ws-2", WorktreePath: dir},
+			{WorkspaceID: "ws-2", WorktreePath: dir, ProjectID: "proj-2", OrgID: "org-2"},
 		},
 	})
 	if err != nil {
@@ -290,6 +316,76 @@ func TestHandleWorkspaceOpenProject_Idempotent(t *testing.T) {
 	if len(result.Errors) != 0 {
 		t.Errorf("expected no errors, got %v", result.Errors)
 	}
+	if h.tokenUsage.recoverySinceByAgent[recoveryProbeAgentKind] != 0 {
+		t.Fatalf("expected no recovery scan request for pure skip")
+	}
+}
+
+func TestHandleWorkspaceOpenProject_ReconcilesMissingMetadata(t *testing.T) {
+	dir := t.TempDir()
+	h := newTestHandler(t)
+	recoveryProbeAgentKind := installTokenUsageRecoveryProbe(t, h)
+
+	if _, err := h.manager.Open(workspace.OpenRequest{ID: "ws-3", Path: dir}); err != nil {
+		t.Fatalf("pre-open: %v", err)
+	}
+
+	params, err := json.Marshal(workspaceOpenProjectParams{
+		Workspaces: []workspaceOpenProjectEntry{{
+			WorkspaceID:  "ws-3",
+			WorktreePath: dir,
+			ProjectID:    "proj-3",
+			OrgID:        "org-3",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	raw, err := h.handleWorkspaceOpenProject(context.Background(), params)
+	if err != nil {
+		t.Fatalf("handleWorkspaceOpenProject: %v", err)
+	}
+
+	result := raw.(workspaceOpenProjectResult)
+	if len(result.Opened) != 1 || result.Opened[0] != "ws-3" {
+		t.Fatalf("expected opened=[ws-3], got %v", result.Opened)
+	}
+	if len(result.Skipped) != 0 {
+		t.Fatalf("expected no skipped entries, got %v", result.Skipped)
+	}
+
+	repairedWorkspace, err := h.manager.GetWorkspace("ws-3")
+	if err != nil {
+		t.Fatalf("GetWorkspace: %v", err)
+	}
+	if repairedWorkspace.ProjectID != "proj-3" {
+		t.Fatalf("expected repaired project id %q, got %q", "proj-3", repairedWorkspace.ProjectID)
+	}
+	if repairedWorkspace.OrgID != "org-3" {
+		t.Fatalf("expected repaired org id %q, got %q", "org-3", repairedWorkspace.OrgID)
+	}
+
+	entries, err := h.wsIndexStore.List()
+	if err != nil {
+		t.Fatalf("index List: %v", err)
+	}
+	for _, entry := range entries {
+		if entry.WorkspaceID != "ws-3" {
+			continue
+		}
+		if entry.ProjectID != "proj-3" || entry.OrgID != "org-3" || entry.State != workspace.WorkspaceStateActive {
+			t.Fatalf("expected repaired index entry, got %+v", entry)
+		}
+		if h.tokenUsage.recoverySinceByAgent[recoveryProbeAgentKind] == 0 {
+			t.Fatalf("expected recovery scan to be requested after metadata reconciliation")
+		}
+		if !h.tokenUsage.needsRerun[recoveryProbeAgentKind] {
+			t.Fatalf("expected recovery scan to mark in-flight agent for rerun after metadata reconciliation")
+		}
+		return
+	}
+	t.Fatal("expected repaired workspace to be written to workspace-index.json")
 }
 
 // TestHandleWorkspaceOpenProject_MissingFields verifies that entries with
