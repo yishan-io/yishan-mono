@@ -7,7 +7,7 @@ import { MOBILE_UI_TOKENS } from "@/components/ui/ui-tokens";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
 import { useKeyboardBottomInset } from "@/features/shell/hooks/useKeyboardBottomInset";
 import { dismissActiveKeyboard } from "@/lib/accessibility/dismissActiveKeyboard";
-import type { TerminalItem, TerminalMessage } from "../state/shell.types";
+import type { ShellChatModel } from "../shell-screen.types";
 import { PaneHeader } from "./PaneHeader";
 import { SessionComposer, type SessionComposerHandle } from "./SessionComposer";
 import { ShellNativeTerminalKeyBar } from "./ShellNativeTerminalKeyBar";
@@ -15,25 +15,6 @@ import { ShellTerminalActivePane, getShellTerminalEmptyCopy } from "./ShellTermi
 import { ShellTerminalEmptyState } from "./ShellTerminalEmptyState";
 import { TerminalActivityIndicator } from "./TerminalActivityIndicator";
 import { useShellTerminalSurfaceModel } from "./useShellTerminalSurfaceModel";
-
-export type ShellChatModel = {
-  agentQuickActions?: Array<{ id: string; label: string; onPress: () => void }> | null;
-  draft: string;
-  messages: TerminalMessage[];
-  onCreateTerminal?: (() => void) | null;
-  onDraftChange: (value: string) => void;
-  onOpenChanges?: (() => void) | null;
-  onOpenFiles?: (() => void) | null;
-  onOpenPaneTabs?: (() => void) | null;
-  onOpenPullRequests?: (() => void) | null;
-  onSend: (draft: string) => void;
-  onTerminalInput: (data: string) => void;
-  onTerminalResize: (size: { cols: number; rows: number }) => void;
-  selectedTerminal: TerminalItem | null;
-  selectedTerminalTitle?: string | null;
-  terminalOutput: string;
-  workspaceLocalPath?: string | null;
-};
 
 type ShellChatSurfaceProps = {
   chat: ShellChatModel;

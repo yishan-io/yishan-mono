@@ -4,14 +4,14 @@ import { Text as NativeText, Platform, ScrollView, View } from "react-native";
 import { Text, useTheme } from "tamagui";
 
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
-import type { TerminalItem } from "../state/shell.types";
-import { SessionStatusIndicator } from "./SessionStatusIndicator";
-import { ShellNativeTerminalKeyBar } from "./ShellNativeTerminalKeyBar";
 import {
   buildNativeTerminalOutputSurfaceStyle,
   buildNativeTerminalScrollContentStyle,
   buildNativeTerminalTextStyle,
-} from "./shell-terminal-native-pane-domain";
+} from "../domain/shell-terminal-native-pane-domain";
+import type { TerminalItem } from "../state/shell.types";
+import { SessionStatusIndicator } from "./SessionStatusIndicator";
+import { ShellNativeTerminalKeyBar } from "./ShellNativeTerminalKeyBar";
 
 const NATIVE_TERMINAL_READER_BOTTOM_THRESHOLD = 24;
 

@@ -6,13 +6,14 @@ import {
 } from "@/features/notifications/notification-runtime-context";
 import type { useShellMutations } from "../commands/useShellMutations";
 import { useShellScreenCommands } from "../commands/useShellScreenCommands";
-import type { ShellChatModel } from "../components/ShellChatSurface";
-import type { ShellDrawerPanelModel } from "../components/ShellDrawer";
-import type { ShellDrawerTopBarModel } from "../components/ShellDrawerHeader";
-import type { ShellFocusPanePreviewContext } from "../components/ShellFocusPane";
-import { WorkspaceStatusIndicator } from "../components/WorkspaceStatusIndicator";
 import type { useShellSheets } from "../hooks/useShellSheets";
 import type { ShellTerminalMessages } from "../hooks/useShellTerminalMessages";
+import type {
+  ShellChatModel,
+  ShellDrawerPanelModel,
+  ShellDrawerTopBarModel,
+  ShellFocusPanePreviewContext,
+} from "../shell-screen.types";
 import type { ShellState } from "../state/useShellState";
 import { formatTerminalDisplayLabel, workspaceDisplayName } from "./shell-labels";
 import type { ShellScreenContext } from "./useShellScreenContext";
@@ -91,15 +92,12 @@ export function useShellScreenModel({
   const topBarSubtitle = screenContext.selectedWorkspace
     ? workspaceDisplayName(screenContext.selectedWorkspace, t)
     : (screenContext.selectedNode?.name ?? screenContext.currentNode?.name ?? t("shell.overview"));
-  const topBarSubtitleLeading = screenContext.selectedWorkspace ? (
-    <WorkspaceStatusIndicator
-      runningMode="icon"
-      workspaceId={screenContext.selectedWorkspace.id}
-      workspaceKind={screenContext.selectedWorkspace.kind}
-      size={14}
-      width={14}
-    />
-  ) : null;
+  const topBarSubtitleStatus = screenContext.selectedWorkspace
+    ? {
+        workspaceId: screenContext.selectedWorkspace.id,
+        workspaceKind: screenContext.selectedWorkspace.kind,
+      }
+    : null;
   const topBarAggregateIndicator = useMemo(
     () =>
       resolveAggregateWorkspaceIndicator({
@@ -142,7 +140,7 @@ export function useShellScreenModel({
     refreshingSessions: terminalMessages.isRefreshingSessionSync,
     sessionSyncError: terminalMessages.didRefreshSessionSyncFail,
     subtitle: topBarSubtitle,
-    subtitleLeading: topBarSubtitleLeading,
+    subtitleStatus: topBarSubtitleStatus,
     title: topBarTitle,
   };
 

@@ -2,8 +2,8 @@ import { FitAddon } from "@xterm/addon-fit";
 import { type ITheme, Terminal } from "@xterm/xterm";
 import { type RefObject, useEffect } from "react";
 
+import { buildShellTerminalOptions } from "../domain/shell-terminal-dom-emulator-domain";
 import { mountTerminalOutputRuntime, unmountTerminalOutputRuntime } from "../terminal/terminalOutputRuntimeRegistry";
-import { buildShellTerminalOptions } from "./shell-terminal-dom-emulator-domain";
 import {
   attachTerminalTouchScrollFallback,
   blurTerminal,

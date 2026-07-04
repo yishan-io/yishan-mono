@@ -3,14 +3,14 @@ import { Platform, ScrollView, View } from "react-native";
 import { Text, XStack, YStack } from "tamagui";
 
 import { PaneBody } from "@/components/ui/PaneBody";
-import type { TerminalItem, TerminalMessage } from "../state/shell.types";
-import { SessionStatusIndicator } from "./SessionStatusIndicator";
-import { ShellMessageTimeline } from "./ShellMessageTimeline";
 import {
   buildNativeTerminalOutputSurfaceStyle,
   buildNativeTerminalScrollContentStyle,
   buildNativeTerminalTextStyle,
-} from "./shell-terminal-native-pane-domain";
+} from "../domain/shell-terminal-native-pane-domain";
+import type { TerminalItem, TerminalMessage } from "../state/shell.types";
+import { SessionStatusIndicator } from "./SessionStatusIndicator";
+import { ShellMessageTimeline } from "./ShellMessageTimeline";
 
 type ShellTerminalNativePaneProps = {
   displayOutput: string;

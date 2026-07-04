@@ -2,16 +2,10 @@ import { View } from "react-native";
 
 import { WorkspaceDiffPreviewPane } from "@/features/workspaces/preview/components/WorkspaceDiffPreview";
 import { WorkspaceFilePreviewPane } from "@/features/workspaces/preview/components/WorkspaceFilePreview";
+import type { ShellChatModel, ShellFocusPanePreviewContext } from "../shell-screen.types";
 import type { ShellPaneTab } from "../state/shell.types";
-import { type ShellChatModel, ShellChatSurface } from "./ShellChatSurface";
+import { ShellChatSurface } from "./ShellChatSurface";
 import { ShellPreviewSurface } from "./ShellPreviewSurface";
-
-export type ShellFocusPanePreviewContext = {
-  nodeId?: string | null;
-  organizationId?: string | null;
-  projectId?: string | null;
-  workspaceId?: string | null;
-};
 
 type ShellFocusPaneProps = {
   activeTab: ShellPaneTab | null;

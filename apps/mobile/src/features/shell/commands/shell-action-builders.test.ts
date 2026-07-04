@@ -4,9 +4,12 @@ import type { Workspace } from "@/features/workspaces/workspaces.types";
 import {
   buildAgentQuickActions,
   buildProjectMenuActions,
+  buildSelectedWorkspaceContextKey,
   buildWorkspaceBrowserInputFromSelection,
   buildWorkspaceBrowserInputFromWorkspace,
   buildWorkspaceMenuActions,
+  wrapActionWithBeforeEffect,
+  wrapOptionalActionWithBeforeEffect,
 } from "./shell-action-builders";
 
 const workspace: Workspace = {
@@ -26,6 +29,51 @@ const workspace: Workspace = {
 };
 
 describe("shell-action-builders", () => {
+  it("returns null workspace key when no workspace context is selected", () => {
+    expect(buildSelectedWorkspaceContextKey(null)).toBeNull();
+  });
+
+  it("builds a stable workspace context key", () => {
+    expect(
+      buildSelectedWorkspaceContextKey({
+        organizationId: "org-1",
+        projectId: "project-1",
+        workspaceId: "workspace-1",
+      }),
+    ).toBe("org-1:project-1:workspace-1");
+  });
+
+  it("wraps an action so the before-effect runs first", () => {
+    const calls: string[] = [];
+    const wrapped = wrapActionWithBeforeEffect(
+      () => {
+        calls.push("before");
+      },
+      (value: string) => {
+        calls.push(`action:${value}`);
+      },
+    );
+
+    wrapped("test");
+
+    expect(calls).toEqual(["before", "action:test"]);
+  });
+
+  it("returns null when wrapping a missing optional action", () => {
+    expect(wrapOptionalActionWithBeforeEffect(() => undefined, null)).toBeNull();
+  });
+
+  it("wraps an optional action when it exists", () => {
+    const before = vi.fn();
+    const action = vi.fn();
+    const wrapped = wrapOptionalActionWithBeforeEffect(before, action);
+
+    wrapped?.();
+
+    expect(before).toHaveBeenCalledTimes(1);
+    expect(action).toHaveBeenCalledTimes(1);
+  });
+
   it("returns null for browser selection input without a selected workspace context", () => {
     expect(buildWorkspaceBrowserInputFromSelection(null, "files")).toBeNull();
   });

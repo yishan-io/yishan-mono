@@ -2,11 +2,11 @@ import { BookText, Image } from "@tamagui/lucide-icons";
 import { Platform, Pressable, View } from "react-native";
 
 import { PaneBody } from "@/components/ui/PaneBody";
+import type { TerminalUploadImageSource } from "../domain/shell-terminal-native-upload-domain";
 import type { TerminalMessage } from "../state/shell.types";
 import { ShellMessageTimeline } from "./ShellMessageTimeline";
 import { ShellNativeTerminalKeyBar } from "./ShellNativeTerminalKeyBar";
 import { ShellTerminalUploadImageSheet } from "./ShellTerminalUploadImageSheet";
-import type { TerminalUploadImageSource } from "./shell-terminal-native-upload-domain";
 
 type ShellTerminalXtermAccessoryProps = {
   accessoryBottomInset: number;

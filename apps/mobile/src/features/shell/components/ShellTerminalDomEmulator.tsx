@@ -5,7 +5,7 @@ import { type DOMImperativeFactory, type DOMProps, useDOMImperativeHandle } from
 import { type Ref, forwardRef, useRef } from "react";
 import "@xterm/xterm/css/xterm.css";
 
-import { buildShellTerminalRootStyle, getShellTerminalViewportCss } from "./shell-terminal-dom-emulator-domain";
+import { buildShellTerminalRootStyle, getShellTerminalViewportCss } from "../domain/shell-terminal-dom-emulator-domain";
 import { blurTerminal, readTerminalPlainTextSnapshot } from "./shell-terminal-dom-emulator-runtime";
 import { useShellTerminalDomLifecycle } from "./useShellTerminalDomLifecycle";
 

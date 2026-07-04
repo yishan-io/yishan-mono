@@ -1,6 +1,7 @@
 import type { Workspace } from "@/features/workspaces/workspaces.types";
 import type { MobileShellAgentPresetKind } from "../state/shell-agent-presets";
 import { getShellAgentLaunchCommand } from "../state/shell-agent-presets";
+import type { ShellSelectedWorkspaceContext } from "../state/shellRuntimeAuthority";
 import type { ShellCreateTerminalActionInput } from "./shell-create-terminal-domain";
 
 export type OpenWorkspaceBrowserInput = {
@@ -46,6 +47,41 @@ export type ShellWorkspaceBrowserSelectionContext = {
 type AgentActionLabelMap = Record<MobileShellAgentPresetKind, string>;
 
 const SHELL_AGENT_PRESET_ORDER: MobileShellAgentPresetKind[] = ["opencode", "codex", "claude"];
+
+export function buildSelectedWorkspaceContextKey(
+  selectedWorkspaceContext: ShellSelectedWorkspaceContext | null,
+): string | null {
+  if (!selectedWorkspaceContext) {
+    return null;
+  }
+
+  return [
+    selectedWorkspaceContext.organizationId,
+    selectedWorkspaceContext.projectId,
+    selectedWorkspaceContext.workspaceId,
+  ].join(":");
+}
+
+export function wrapActionWithBeforeEffect<ActionArgs extends unknown[]>(
+  before: () => void,
+  action: (...args: ActionArgs) => void,
+): (...args: ActionArgs) => void {
+  return (...args: ActionArgs) => {
+    before();
+    action(...args);
+  };
+}
+
+export function wrapOptionalActionWithBeforeEffect<ActionArgs extends unknown[]>(
+  before: () => void,
+  action: ((...args: ActionArgs) => void) | null | undefined,
+): ((...args: ActionArgs) => void) | null {
+  if (!action) {
+    return null;
+  }
+
+  return wrapActionWithBeforeEffect(before, action);
+}
 
 export function buildWorkspaceBrowserInputFromSelection(
   context: ShellWorkspaceBrowserSelectionContext | null,

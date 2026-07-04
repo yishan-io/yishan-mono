@@ -2,38 +2,14 @@ import { Animated, type PanResponderInstance, Pressable, View } from "react-nati
 
 import { WorkbenchPanelSurface } from "@/components/screens/WorkbenchPanelSurface";
 import { MOBILE_UI_TOKENS } from "@/components/ui/ui-tokens";
-import type { Node } from "@/features/nodes/nodes.types";
-import type { ProjectWithWorkspaces } from "@/features/projects/projects.types";
-import type { ShellSelection } from "@/features/shell/state/shell.types";
 import { useAppTheme } from "@/features/theme/AppThemeProvider";
 import type { Workspace } from "@/features/workspaces/workspaces.types";
 import { getThemeBackgroundAppColor } from "@/lib/theme/tamaguiThemes";
+import type { ShellDrawerPanelModel } from "../shell-screen.types";
 import { useWorkspaceTreeFilterModel } from "../view-model/useWorkspaceTreeFilterModel";
 import { RepositoriesTab } from "./RepositoriesTab";
 import { ShellDrawerPanelHeader } from "./ShellDrawerHeader";
 import { WorkspaceTreeFilterSheet } from "./WorkspaceTreeFilterSheet";
-
-export type ShellDrawerPanelModel = {
-  currentNodes: Node[];
-  currentOrganizationId: string | null;
-  currentOrganizationName: string;
-  currentProjects: ProjectWithWorkspaces[] | undefined;
-  isProjectsError: boolean;
-  isProjectsLoading: boolean;
-  isReadOnly?: boolean;
-  onOpenProfileControls: () => void;
-  onOpenOrganizationSelector: () => void;
-  onOpenProjectMenu: (project: ProjectWithWorkspaces) => void;
-  onRefreshWorkspaceTree?: (() => void) | null;
-  onOpenWorkspaceMenu: (project: ProjectWithWorkspaces, workspace: Workspace) => void;
-  onRetryProjects?: () => void;
-  organizationCount: number;
-  refreshingWorkspaceTree?: boolean;
-  selectedSelection: Extract<ShellSelection, { kind: "workspace" }> | null;
-  userAvatarUrl?: string | null;
-  userName: string;
-  workspacesByProjectId?: Record<string, Workspace[]>;
-};
 
 type ShellDrawerProps = {
   closeDrawer: (onClosed?: () => void) => void;

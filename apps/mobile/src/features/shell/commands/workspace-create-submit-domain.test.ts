@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { Workspace } from "@/features/workspaces/workspaces.types";
-import { waitForCreatedWorkspace } from "./workspace-create-submit-domain";
+import {
+  shouldHandleWorkspaceCreateEvent,
+  syncPendingWorkspaceCreateId,
+  waitForCreatedWorkspace,
+} from "./workspace-create-submit-domain";
 
 function createWorkspace(id: string): Workspace {
   return {
@@ -22,6 +26,73 @@ function createWorkspace(id: string): Workspace {
 }
 
 describe("workspace-create-submit-domain", () => {
+  it("matches started events by stable create metadata before the authoritative workspace id is known", () => {
+    expect(
+      shouldHandleWorkspaceCreateEvent({
+        currentCreate: {
+          branch: "feature/mobile",
+          nodeId: "node-1",
+          requestedWorkspaceId: "workspace-requested-1",
+          sourceBranch: "origin/main",
+          workspaceId: "workspace-requested-1",
+          workspaceName: "feature-mobile",
+        },
+        event: {
+          type: "started",
+          workspaceId: "workspace-api-1",
+          organizationId: "org-1",
+          projectId: "project-1",
+          workspaceName: "feature-mobile",
+          sourceBranch: "origin/main",
+          branch: "feature/mobile",
+          nodeId: "node-1",
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it("does not match unrelated create events", () => {
+    expect(
+      shouldHandleWorkspaceCreateEvent({
+        currentCreate: {
+          branch: "feature/mobile",
+          nodeId: "node-1",
+          requestedWorkspaceId: "workspace-requested-1",
+          sourceBranch: "origin/main",
+          workspaceId: "workspace-requested-1",
+          workspaceName: "feature-mobile",
+        },
+        event: {
+          type: "progress",
+          workspaceId: "workspace-other",
+          stepId: "clone",
+          label: "Clone repository",
+          status: "running",
+          createdAt: "2026-06-30T00:00:00.000Z",
+        },
+      }),
+    ).toBe(false);
+  });
+
+  it("switches tracking to the authoritative workspace id once it is known", () => {
+    expect(
+      syncPendingWorkspaceCreateId({
+        currentCreate: {
+          branch: "feature/mobile",
+          nodeId: "node-1",
+          requestedWorkspaceId: "workspace-requested-1",
+          sourceBranch: "origin/main",
+          workspaceId: "workspace-requested-1",
+          workspaceName: "feature-mobile",
+        },
+        workspaceId: " workspace-api-1 ",
+      }),
+    ).toMatchObject({
+      requestedWorkspaceId: "workspace-requested-1",
+      workspaceId: "workspace-api-1",
+    });
+  });
+
   it("retries until the created workspace becomes visible", async () => {
     const loadWorkspaces = vi
       .fn<() => Promise<Workspace[]>>()

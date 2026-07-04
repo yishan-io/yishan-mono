@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { getRelayBaseUrl } from "@/lib/config/env";
 import { subscribeRelayFrontendEvents } from "@/lib/relay/relay-frontend-event-hub";
@@ -21,6 +21,12 @@ export function useWorkspaceFrontendEventsStream({
   nodes,
   onMessage,
 }: UseWorkspaceFrontendEventsStreamOptions) {
+  const onMessageRef = useRef(onMessage);
+
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
+
   useEffect(() => {
     if (!enabled || !accessToken) {
       return;
@@ -31,7 +37,9 @@ export function useWorkspaceFrontendEventsStream({
       subscribeRelayFrontendEvents({
         accessToken,
         node,
-        onMessage,
+        onMessage: (input) => {
+          onMessageRef.current(input);
+        },
         relayUrl,
       }),
     );
@@ -41,5 +49,5 @@ export function useWorkspaceFrontendEventsStream({
         unsubscribe();
       }
     };
-  }, [accessToken, enabled, nodes, onMessage]);
+  }, [accessToken, enabled, nodes]);
 }

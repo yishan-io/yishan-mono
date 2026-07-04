@@ -2,15 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 import { useTheme } from "tamagui";
 
-import type { TerminalItem } from "../state/shell.types";
-import { sanitizeTerminalDisplayOutput } from "../state/terminal-output";
 import {
   buildNativeTerminalStreamKey,
   buildTerminalDomProps,
   getTerminalKeyboardLayout,
   getTerminalPalette,
   resolveTerminalRendererKind,
-} from "./shell-terminal-surface-domain";
+} from "../domain/shell-terminal-surface-domain";
+import type { TerminalItem } from "../state/shell.types";
+import { sanitizeTerminalDisplayOutput } from "../state/terminal-output";
 
 type UseShellTerminalSurfaceModelInput = {
   keyboardBottomInset?: number;

@@ -1,5 +1,5 @@
 import { usePathname, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import type { useShellMutations } from "../commands/useShellMutations";
 import type { useShellSheets } from "../hooks/useShellSheets";
@@ -7,12 +7,14 @@ import type { ShellTerminalMessages } from "../hooks/useShellTerminalMessages";
 import type { TerminalMap } from "../state/shell.types";
 import type { ShellState } from "../state/useShellState";
 import type { ShellScreenContext } from "../view-model/useShellScreenContext";
+import { wrapActionWithBeforeEffect, wrapOptionalActionWithBeforeEffect } from "./shell-action-builders";
 import { useShellCreateTerminalAction } from "./useShellCreateTerminalAction";
 import { useShellMenuActions } from "./useShellMenuActions";
 import { useShellNavigationCommands } from "./useShellNavigationCommands";
 import { useShellPaneTabActions } from "./useShellPaneTabActions";
 import { useShellQuickActionCommands } from "./useShellQuickActionCommands";
 import { useShellRecoveryCommands } from "./useShellRecoveryCommands";
+import { useShellWorkspaceSessionAutoSync } from "./useShellWorkspaceSessionAutoSync";
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
@@ -47,7 +49,6 @@ export function useShellScreenCommands({
 }: UseShellScreenCommandsInput) {
   const pathname = usePathname();
   const router = useRouter();
-  const lastAutoRefreshedWorkspaceKeyRef = useRef<string | null>(null);
 
   const navigationCommands = useShellNavigationCommands({
     closeDrawer,
@@ -120,18 +121,10 @@ export function useShellScreenCommands({
     !!agentQuickActions?.length;
   const canOpenQuickActionsFromTopBar = hasQuickActions && shell.paneTabs.length > 0;
   const openQuickActions = canOpenQuickActionsFromTopBar
-    ? () => {
-        onDismissKeyboard();
-        sheets.openQuickActions();
-      }
+    ? wrapActionWithBeforeEffect(onDismissKeyboard, sheets.openQuickActions)
     : null;
   const openPaneTabSheet =
-    shell.paneTabs.length > 0
-      ? () => {
-          onDismissKeyboard();
-          paneTabSheet.open();
-        }
-      : null;
+    shell.paneTabs.length > 0 ? wrapActionWithBeforeEffect(onDismissKeyboard, paneTabSheet.open) : null;
 
   useEffect(() => {
     if (!canOpenQuickActionsFromTopBar && sheets.quickActionsOpen) {
@@ -139,67 +132,17 @@ export function useShellScreenCommands({
     }
   }, [canOpenQuickActionsFromTopBar, sheets]);
 
-  const createTerminalHandler = rawCreateTerminalHandler
-    ? () => {
-        onDismissKeyboard();
-        rawCreateTerminalHandler();
-      }
-    : null;
+  const createTerminalHandler = wrapOptionalActionWithBeforeEffect(onDismissKeyboard, rawCreateTerminalHandler);
+  const browserOpenHandler = wrapOptionalActionWithBeforeEffect(onDismissKeyboard, rawBrowserOpenHandler);
+  const openFilesHandler = wrapOptionalActionWithBeforeEffect(onDismissKeyboard, rawOpenFilesHandler);
+  const openChangesHandler = wrapOptionalActionWithBeforeEffect(onDismissKeyboard, rawOpenChangesHandler);
+  const openPullRequestsHandler = wrapOptionalActionWithBeforeEffect(onDismissKeyboard, rawOpenPullRequestsHandler);
+  const refreshSessionsHandler = wrapOptionalActionWithBeforeEffect(onDismissKeyboard, rawRefreshSessionsHandler);
 
-  const browserOpenHandler = rawBrowserOpenHandler
-    ? () => {
-        onDismissKeyboard();
-        rawBrowserOpenHandler();
-      }
-    : null;
-
-  const openFilesHandler = rawOpenFilesHandler
-    ? () => {
-        onDismissKeyboard();
-        rawOpenFilesHandler();
-      }
-    : null;
-
-  const openChangesHandler = rawOpenChangesHandler
-    ? () => {
-        onDismissKeyboard();
-        rawOpenChangesHandler();
-      }
-    : null;
-
-  const openPullRequestsHandler = rawOpenPullRequestsHandler
-    ? () => {
-        onDismissKeyboard();
-        rawOpenPullRequestsHandler();
-      }
-    : null;
-
-  const refreshSessionsHandler = rawRefreshSessionsHandler
-    ? () => {
-        onDismissKeyboard();
-        rawRefreshSessionsHandler();
-      }
-    : null;
-
-  useEffect(() => {
-    const selectedWorkspaceContext = screenContext.selectedWorkspaceContext;
-    if (!selectedWorkspaceContext) {
-      lastAutoRefreshedWorkspaceKeyRef.current = null;
-      return;
-    }
-
-    const workspaceKey = [
-      selectedWorkspaceContext.organizationId,
-      selectedWorkspaceContext.projectId,
-      selectedWorkspaceContext.workspaceId,
-    ].join(":");
-    if (lastAutoRefreshedWorkspaceKeyRef.current === workspaceKey) {
-      return;
-    }
-
-    lastAutoRefreshedWorkspaceKeyRef.current = workspaceKey;
-    void terminalMessages.refreshSessionSync();
-  }, [screenContext.selectedWorkspaceContext, terminalMessages]);
+  useShellWorkspaceSessionAutoSync({
+    refreshSessionSync: terminalMessages.refreshSessionSync,
+    selectedWorkspaceContext: screenContext.selectedWorkspaceContext,
+  });
 
   const retryProjects = useCallback(() => {
     onDismissKeyboard();
@@ -237,13 +180,11 @@ export function useShellScreenCommands({
   );
 
   const openProfileControls = useCallback(() => {
-    onDismissKeyboard();
-    navigationCommands.openProfileControls();
-  }, [navigationCommands, onDismissKeyboard]);
+    wrapActionWithBeforeEffect(onDismissKeyboard, navigationCommands.openProfileControls)();
+  }, [navigationCommands.openProfileControls, onDismissKeyboard]);
 
   const onOpenProjectCreate = useCallback(() => {
-    onDismissKeyboard();
-    rawOpenProjectCreate();
+    wrapActionWithBeforeEffect(onDismissKeyboard, rawOpenProjectCreate)();
   }, [onDismissKeyboard, rawOpenProjectCreate]);
 
   return {

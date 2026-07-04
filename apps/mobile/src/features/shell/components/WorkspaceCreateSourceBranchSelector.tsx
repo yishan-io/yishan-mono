@@ -4,7 +4,7 @@ import { Check, ChevronDown, GitBranch } from "@tamagui/lucide-icons";
 import { Pressable, ScrollView } from "react-native";
 import { Button, Input, Paragraph, Spinner, Text, XStack, YStack, useTheme } from "tamagui";
 
-import { resolveWorkspaceCreateSourceBranchSections } from "./workspace-create-source-branch-selector-domain";
+import { resolveWorkspaceCreateSourceBranchSections } from "../domain/workspace-create-source-branch-selector-domain";
 
 type WorkspaceCreateSourceBranchSelectorProps = {
   emptyLabel: string;

@@ -8,9 +8,9 @@ import { LoadingView } from "@/components/ui/LoadingView";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
 import { dismissActiveKeyboard } from "@/lib/accessibility/dismissActiveKeyboard";
 import { ShellDrawer } from "../components/ShellDrawer";
-import { ShellTopBar } from "../components/ShellDrawerHeader";
 import { ShellScreenContent } from "../components/ShellScreenContent";
 import { ShellScreenSheets } from "../components/ShellScreenSheets";
+import { ShellTopBar } from "../components/ShellTopBar";
 import { useShellScreenRuntime } from "../view-model/useShellScreenRuntime";
 
 export function ShellScreen() {
@@ -51,7 +51,7 @@ export function ShellScreen() {
           refreshingSessions={screenModel.drawerTopBar.refreshingSessions}
           sessionSyncError={screenModel.drawerTopBar.sessionSyncError}
           subtitle={screenModel.drawerTopBar.subtitle}
-          subtitleLeading={screenModel.drawerTopBar.subtitleLeading}
+          subtitleStatus={screenModel.drawerTopBar.subtitleStatus}
           title={screenModel.drawerTopBar.title}
         />
       }

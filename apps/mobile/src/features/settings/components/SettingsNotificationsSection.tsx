@@ -2,14 +2,14 @@ import { Bell } from "@tamagui/lucide-icons";
 
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
 import type { DeviceNotificationPermissionStatus } from "@/features/notifications/notifications.types";
-import { type SettingsSelectorOption, SettingsSelectorSheet } from "./SettingsSelectorSheet";
 import {
   type NotificationOptionValue,
   buildNotificationOptions,
   getNotificationSelectedValue,
   getNotificationValueLabel,
   resolveNotificationSelectionAction,
-} from "./settings-notifications-domain";
+} from "../domain/settings-notifications-domain";
+import { type SettingsSelectorOption, SettingsSelectorSheet } from "./SettingsSelectorSheet";
 
 type SettingsNotificationsSectionProps = {
   enabled: boolean;

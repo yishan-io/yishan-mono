@@ -2,8 +2,8 @@ import { View } from "react-native";
 
 import { AppModalSheet } from "@/components/ui/AppModalSheet";
 import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
+import { wrapActionsWithClose } from "../domain/shell-quick-actions-domain";
 import { ShellQuickActionsPanel, buildPrimaryQuickActions } from "./ShellTerminalEmptyState";
-import { wrapActionsWithClose } from "./shell-quick-actions-domain";
 
 type ShellQuickActionsSheetProps = {
   agentQuickActions?: Array<{ id: string; label: string; onPress: () => void }> | null;

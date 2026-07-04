@@ -91,3 +91,5 @@ export function useWorkspaceCreateSheetModel({
     targetBranch: draft.targetBranch,
   };
 }
+
+export type WorkspaceCreateSheetModel = ReturnType<typeof useWorkspaceCreateSheetModel>;

@@ -19,7 +19,7 @@ import {
   COMPOSER_MAX_LINES,
   COMPOSER_MIN_HEIGHT,
 } from "@/features/shell/state/shell.constants";
-import { getSessionComposerLayout } from "./session-composer-domain";
+import { getSessionComposerLayout } from "../domain/session-composer-domain";
 
 const COMPACT_COMPOSER_MIN_HEIGHT = 44;
 const COMPACT_COMPOSER_RADIUS = 16;
