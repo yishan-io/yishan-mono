@@ -1,0 +1,7 @@
+node_modules
+coverage
+tsconfig.json
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
