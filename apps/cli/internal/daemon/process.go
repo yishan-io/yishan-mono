@@ -441,7 +441,11 @@ func restoreIndexedWorkspaces(handler *JSONRPCHandler) error {
 		if openErr != nil {
 			log.Warn().Err(openErr).Str("workspaceId", workspaceID).Str("path", worktreePath).Msg("failed to restore indexed workspace")
 			if handler.wsIndexStore != nil {
-				if upsertErr := handler.wsIndexStore.Upsert(workspaceIndexEntry{
+				if os.IsNotExist(openErr) {
+					if removeErr := handler.wsIndexStore.Remove(workspaceID); removeErr != nil {
+						log.Warn().Err(removeErr).Str("workspaceId", workspaceID).Msg("failed to prune missing workspace index entry")
+					}
+				} else if upsertErr := handler.wsIndexStore.Upsert(workspaceIndexEntry{
 					WorkspaceID:  workspaceID,
 					WorktreePath: worktreePath,
 					ProjectID:    entry.ProjectID,
@@ -455,6 +459,7 @@ func restoreIndexedWorkspaces(handler *JSONRPCHandler) error {
 			continue
 		}
 
+		handler.upsertActiveWorkspaceIndexEntry(ws)
 		handler.watchAndTrack(ws.ID, ws.Path)
 		log.Info().Str("workspaceId", ws.ID).Str("path", ws.Path).Msg("restored indexed workspace")
 	}

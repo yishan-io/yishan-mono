@@ -49,3 +49,36 @@ func TestRecentScanStartUnixMilliUsesLastSuccessfulSyncOverlap(t *testing.T) {
 		t.Fatalf("expected scan start %d, got %d", want, got)
 	}
 }
+
+func TestResolveScanStartUnixMilliUsesRecoveryWindowWhenEarlier(t *testing.T) {
+	t.Parallel()
+
+	lastSuccessfulSyncAt := time.Date(2026, time.June, 3, 12, 0, 0, 0, time.UTC).UnixMilli()
+	recoverySinceUnixMilli := time.Date(2026, time.May, 30, 12, 0, 0, 0, time.UTC).UnixMilli()
+	collector := &tokenUsageCollector{
+		repo:                 &stubHourlyUsageRepository{state: tokenusage.HourlyUsageSyncState{LastSuccessfulSyncAt: lastSuccessfulSyncAt}},
+		recoverySinceByAgent: map[string]int64{"opencode": recoverySinceUnixMilli},
+	}
+
+	got := collector.resolveScanStartUnixMilli("opencode")
+	if got != recoverySinceUnixMilli {
+		t.Fatalf("expected recovery scan start %d, got %d", recoverySinceUnixMilli, got)
+	}
+}
+
+func TestResolveScanStartUnixMilliKeepsNormalWindowWhenRecoveryIsLater(t *testing.T) {
+	t.Parallel()
+
+	lastSuccessfulSyncAt := time.Date(2026, time.June, 3, 12, 0, 0, 0, time.UTC).UnixMilli()
+	normalScanStartUnixMilli := time.UnixMilli(lastSuccessfulSyncAt).UTC().Add(-tokenUsageScanOverlap).UnixMilli()
+	recoverySinceUnixMilli := normalScanStartUnixMilli + int64(time.Hour)
+	collector := &tokenUsageCollector{
+		repo:                 &stubHourlyUsageRepository{state: tokenusage.HourlyUsageSyncState{LastSuccessfulSyncAt: lastSuccessfulSyncAt}},
+		recoverySinceByAgent: map[string]int64{"opencode": recoverySinceUnixMilli},
+	}
+
+	got := collector.resolveScanStartUnixMilli("opencode")
+	if got != normalScanStartUnixMilli {
+		t.Fatalf("expected normal scan start %d, got %d", normalScanStartUnixMilli, got)
+	}
+}
