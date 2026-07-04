@@ -34,6 +34,11 @@
       "./extensions"
     ]
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yishan-io/yishan-mono",
+    "directory": "packages/pi-subagents"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
