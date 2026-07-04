@@ -2,7 +2,9 @@ import { Box, Button, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo } from "react";
 import {
   abortAgent,
+  fetchAgentMessages,
   fetchAgentModels,
+  fetchAgentState,
   handleAgentPiEvent,
   registerAgentSession,
   sendAgentPrompt,
@@ -71,6 +73,9 @@ export function AgentChatView({ tabId, workspaceId, cwd }: AgentChatViewProps) {
           },
         }).unsubscribe;
 
+        // Restore session state and message history.
+        await fetchAgentState({ tabId, sessionId: startedSessionId });
+        await fetchAgentMessages({ tabId, sessionId: startedSessionId });
         await fetchAgentModels({ tabId, sessionId: startedSessionId });
       } catch (error) {
         if (isDisposed) {
@@ -170,6 +175,7 @@ export function AgentChatView({ tabId, workspaceId, cwd }: AgentChatViewProps) {
         messages={finalizedMessages}
         trailingMessage={trailingMessage}
         emptyPrompt="Send a message to start the conversation."
+        workspacePath={cwd}
       />
 
       {/* Composer + controls */}

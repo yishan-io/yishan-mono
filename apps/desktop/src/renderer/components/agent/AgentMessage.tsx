@@ -19,6 +19,7 @@ function extractText(content: string | AgentContentBlock[]): string {
 type AgentMessageProps = {
   message: AgentMessageType;
   mergedToolResults?: AgentToolResultMap;
+  workspacePath?: string;
 };
 
 function formatDuration(durationMs: number): string {
@@ -30,7 +31,7 @@ function formatDuration(durationMs: number): string {
 }
 
 /** Renders a single agent conversation message with support for text, thinking, and tool calls. */
-export function AgentMessage({ message, mergedToolResults = {} }: AgentMessageProps) {
+export function AgentMessage({ message, mergedToolResults = {}, workspacePath }: AgentMessageProps) {
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
   const isToolResult = message.role === "toolResult";
@@ -69,7 +70,7 @@ export function AgentMessage({ message, mergedToolResults = {} }: AgentMessagePr
             case "text": {
               const key = `${message.id}-text-${textBlockCount}`;
               textBlockCount += 1;
-              return <AgentMarkdownContent key={key} content={block.text} />;
+              return <AgentMarkdownContent key={key} content={block.text} workspacePath={workspacePath} />;
             }
             case "thinking": {
               if (block.thinking.trim().length === 0) {
@@ -136,7 +137,7 @@ function ThinkingBlock({ thinking }: { thinking: string }) {
         </IconButton>
       </Box>
       <Collapse in={open}>
-        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", px: 1, py: 0.5, color: "text.secondary" }}>
+        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", px: 1, py: 0.5, color: "text.disabled", fontStyle: "italic" }}>
           {thinking}
         </Typography>
       </Collapse>

@@ -128,6 +128,32 @@ export async function fetchAgentModels(opts: {
   // Response arrives asynchronously via agent.pi.event → handlePiResponse.
 }
 
+/** Fetches session state (model, thinkingLevel) from the pi session. */
+export async function fetchAgentState(opts: {
+  tabId: string;
+  sessionId: string;
+}): Promise<void> {
+  const client = await getDaemonClient();
+  await client.pi.send({
+    sessionId: opts.sessionId,
+    command: { type: "get_state" },
+  });
+  // Response arrives asynchronously via agent.pi.event → handlePiResponse.
+}
+
+/** Fetches all conversation messages from the pi session. */
+export async function fetchAgentMessages(opts: {
+  tabId: string;
+  sessionId: string;
+}): Promise<void> {
+  const client = await getDaemonClient();
+  await client.pi.send({
+    sessionId: opts.sessionId,
+    command: { type: "get_messages" },
+  });
+  // Response arrives asynchronously via agent.pi.event → handlePiResponse.
+}
+
 // ─── Pi event handler ────────────────────────────────────────────────────────
 
 type PiEventPayload = {
@@ -362,6 +388,22 @@ function handlePiResponse(tabId: string, event: Record<string, unknown>): void {
       }
       if (typeof data?.thinkingLevel === "string") {
         agentChatStore.getState().setThinkingLevel(tabId, data.thinkingLevel);
+      }
+      if (typeof data?.isStreaming === "boolean" && data.isStreaming) {
+        agentChatStore.getState().setSessionState(tabId, "running");
+      } else {
+        agentChatStore.getState().setSessionState(tabId, "idle");
+      }
+      break;
+    }
+    case "get_messages": {
+      const data = event.data as { messages?: AgentMessage[] } | undefined;
+      const messages = data?.messages ?? [];
+      for (const msg of messages) {
+        agentChatStore.getState().appendMessage(tabId, {
+          ...msg,
+          id: msg.id ?? generateId(),
+        });
       }
       break;
     }
