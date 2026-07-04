@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "keywords": ["pi-package"],
+  "files": ["agents", "extensions", "src", "!src/**/*.test.ts", "LICENSE", "README.md"],
   "exports": {
     ".": "./src/index.ts",
     "./extension": "./extensions/index.ts"
@@ -32,6 +33,10 @@
     "extensions": [
       "./extensions"
     ]
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "license": "MIT"
 }
