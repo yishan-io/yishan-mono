@@ -224,6 +224,7 @@ func (h *JSONRPCHandler) rollbackWorkspaceCreateRegistration(ctx context.Context
 	}
 	if err := closeRemoteWorkspace(ctx, h.runtime, WorkspaceClose{
 		WorkspaceID:    prepared.registration.ID,
+		SourceNodeID:   prepared.registration.SourceNodeID,
 		OrganizationID: prepared.organizationID,
 		ProjectID:      prepared.projectID,
 	}); err != nil {
@@ -239,6 +240,7 @@ func (h *JSONRPCHandler) rollbackWorkspaceCreateFailure(
 	if prepared.registration != nil {
 		if err := closeRemoteWorkspace(ctx, h.runtime, WorkspaceClose{
 			WorkspaceID:    prepared.registration.ID,
+			SourceNodeID:   prepared.registration.SourceNodeID,
 			OrganizationID: prepared.organizationID,
 			ProjectID:      prepared.projectID,
 		}); err != nil {
@@ -375,6 +377,7 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 	}
 	if err := closeRemoteWorkspace(ctx, h.runtime, WorkspaceClose{
 		WorkspaceID:    req.WorkspaceID,
+		SourceNodeID:   h.nodeID,
 		OrganizationID: req.OrganizationID,
 		ProjectID:      req.ProjectID,
 	}); err != nil {

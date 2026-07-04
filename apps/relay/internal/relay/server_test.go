@@ -21,7 +21,7 @@ type testTransport struct {
 	online map[string]bool
 }
 
-func (t *testTransport) IsOnline(nodeID string) bool      { return t.online[nodeID] }
+func (t *testTransport) IsOnline(nodeID string) bool                         { return t.online[nodeID] }
 func (t *testTransport) SendNotificationWithError(string, string, any) error { return nil }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +122,49 @@ func TestHandleMetrics_WrongMethod_Returns405(t *testing.T) {
 	srv.HandleMetrics(w, authorizedRequest(t, http.MethodPost, "/api/v1/metrics", nil))
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("expected 405, got %d", w.Code)
+	}
+}
+
+func TestHandlePublishOrgEvent_ForwardsSourceNodeID(t *testing.T) {
+	srv := newTestServer(t)
+	receiverSrv, receiverCli, cleanup := pipeWebSocket(t)
+	defer cleanup()
+	srv.sessions.Register(receiverSrv, auth.NodeIdentity{NodeID: "node-2", UserID: "user-1", OrganizationIDs: []string{"org-1"}})
+
+	body, err := json.Marshal(map[string]any{
+		"organizationId": "org-1",
+		"resource":       "workspace",
+		"change":         "updated",
+		"projectId":      "project-1",
+		"workspaceId":    "workspace-1",
+		"sourceNodeId":   "node-1",
+	})
+	if err != nil {
+		t.Fatalf("marshal body: %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	srv.HandlePublishOrgEvent(w, authorizedRequest(t, http.MethodPost, "/api/v1/org-events", body))
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	if err := receiverCli.SetReadDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatalf("set deadline: %v", err)
+	}
+	var message map[string]any
+	if err := receiverCli.ReadJSON(&message); err != nil {
+		t.Fatalf("receiver should get the notification: %v", err)
+	}
+	if message["method"] != MethodWorkspaceSnapshotChanged {
+		t.Fatalf("expected method %s, got %v", MethodWorkspaceSnapshotChanged, message["method"])
+	}
+	params, ok := message["params"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected params map, got %T", message["params"])
+	}
+	if params["sourceNodeId"] != "node-1" {
+		t.Fatalf("expected sourceNodeId=node-1, got %#v", params["sourceNodeId"])
 	}
 }
 
@@ -537,7 +580,8 @@ func TestExtractBearerToken_HeaderPreferredOverQuery(t *testing.T) {
 	}
 }
 
-func TestHandleMessage_TerminalSessionChanged_BroadcastsToOrg(t *testing.T) {	sessions := NewSessionManager()
+func TestHandleMessage_TerminalSessionChanged_BroadcastsToOrg(t *testing.T) {
+	sessions := NewSessionManager()
 	// Register a node that belongs to org-1.
 	identity := auth.NodeIdentity{NodeID: "node-1", UserID: "user-1", OrganizationIDs: []string{"org-1"}}
 	sessions.Register(nil, identity)

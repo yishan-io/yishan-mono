@@ -30,15 +30,18 @@ type CreateWorkspaceInput struct {
 	Kind         string
 	Branch       string
 	SourceBranch string
+	SourceNodeID string
 }
 
 type UpdateWorkspaceInput struct {
-	WorkspaceID string
-	LocalPath   string
+	WorkspaceID  string
+	LocalPath    string
+	SourceNodeID string
 }
 
 type CloseWorkspaceInput struct {
-	WorkspaceID string
+	WorkspaceID  string
+	SourceNodeID string
 }
 
 func (c *Client) Health() (HealthResponse, error) {
@@ -192,6 +195,9 @@ func (c *Client) CreateWorkspace(orgID string, projectID string, input CreateWor
 	if input.SourceBranch != "" {
 		payload["sourceBranch"] = input.SourceBranch
 	}
+	if input.SourceNodeID != "" {
+		payload["sourceNodeId"] = input.SourceNodeID
+	}
 
 	var response CreateWorkspaceResponse
 	err := c.DoDecode("POST", "/orgs/"+orgID+"/projects/"+projectID+"/workspaces", payload, &response)
@@ -250,6 +256,9 @@ func (c *Client) CloseWorkspace(orgID string, projectID string, input CloseWorks
 	payload := map[string]string{
 		"workspaceId": input.WorkspaceID,
 	}
+	if input.SourceNodeID != "" {
+		payload["sourceNodeId"] = input.SourceNodeID
+	}
 
 	var response CreateWorkspaceResponse
 	err := c.DoDecode("PATCH", "/orgs/"+orgID+"/projects/"+projectID+"/workspaces/close", payload, &response)
@@ -259,6 +268,9 @@ func (c *Client) CloseWorkspace(orgID string, projectID string, input CloseWorks
 func (c *Client) UpdateWorkspace(orgID string, projectID string, input UpdateWorkspaceInput) (CreateWorkspaceResponse, error) {
 	payload := map[string]string{
 		"localPath": input.LocalPath,
+	}
+	if input.SourceNodeID != "" {
+		payload["sourceNodeId"] = input.SourceNodeID
 	}
 
 	var response CreateWorkspaceResponse
