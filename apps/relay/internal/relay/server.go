@@ -118,6 +118,7 @@ func (s *Server) HandlePublishOrgEvent(w http.ResponseWriter, r *http.Request) {
 		Change         string         `json:"change"`
 		ProjectID      string         `json:"projectId,omitempty"`
 		WorkspaceID    string         `json:"workspaceId,omitempty"`
+		SourceNodeID   string         `json:"sourceNodeId,omitempty"`
 		Metadata       map[string]any `json:"metadata,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -144,6 +145,9 @@ func (s *Server) HandlePublishOrgEvent(w http.ResponseWriter, r *http.Request) {
 	if workspaceID := strings.TrimSpace(body.WorkspaceID); workspaceID != "" {
 		params["workspaceId"] = workspaceID
 	}
+	if sourceNodeID := strings.TrimSpace(body.SourceNodeID); sourceNodeID != "" {
+		params["sourceNodeId"] = sourceNodeID
+	}
 	if len(body.Metadata) > 0 {
 		params["metadata"] = body.Metadata
 	}
@@ -155,6 +159,7 @@ func (s *Server) HandlePublishOrgEvent(w http.ResponseWriter, r *http.Request) {
 		Str("change", change).
 		Str("projectId", strings.TrimSpace(body.ProjectID)).
 		Str("workspaceId", strings.TrimSpace(body.WorkspaceID)).
+		Str("sourceNodeId", strings.TrimSpace(body.SourceNodeID)).
 		Int("notified", notified).
 		Msg("org event broadcast")
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "notified": notified})

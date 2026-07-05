@@ -1,4 +1,4 @@
-import { AGENT_KINDS } from "@yishan/core";
+import { AGENT_KINDS } from "@yishan-io/core";
 import { z } from "zod";
 
 import { nonEmptyStringSchema, orgIdParamSchema } from "@/validation/common";

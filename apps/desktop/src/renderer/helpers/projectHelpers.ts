@@ -200,9 +200,21 @@ function preservePendingWorkspaceDisplayMetadata(
       return workspace;
     }
 
-    const hasPreviousPlaceholderPath = !(previousWorkspace.worktreePath?.trim() ?? "");
-    const hasHydratedPath = Boolean(workspace.worktreePath?.trim());
+    const previousPath = previousWorkspace.worktreePath?.trim() ?? "";
+    const hydratedPath = workspace.worktreePath?.trim() ?? "";
+    const hasPreviousPlaceholderPath = !previousPath;
+    const hasHydratedPath = Boolean(hydratedPath);
     const isProvisioning = workspace.status === "provisioning" || previousWorkspace.status === "provisioning";
+    if (!hasPreviousPlaceholderPath && previousWorkspace.status === "active" && !hasHydratedPath) {
+      return {
+        ...workspace,
+        name: previousWorkspace.name,
+        title: previousWorkspace.title,
+        status: previousWorkspace.status,
+        worktreePath: previousWorkspace.worktreePath,
+      };
+    }
+
     if (!hasPreviousPlaceholderPath || hasHydratedPath || !isProvisioning) {
       return workspace;
     }

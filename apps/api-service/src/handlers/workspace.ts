@@ -57,6 +57,7 @@ export async function createWorkspaceHandler(
     change: "created",
     projectId: params.projectId,
     workspaceId: workspace.id,
+    sourceNodeId: body.sourceNodeId,
   });
 
   return c.json({ workspace }, StatusCodes.CREATED);
@@ -82,6 +83,7 @@ export async function closeWorkspaceHandler(
       change: "closed",
       projectId: params.projectId,
       workspaceId: closeResult.workspace.id,
+      sourceNodeId: body.sourceNodeId,
     });
   }
 
@@ -250,6 +252,7 @@ export async function updateWorkspaceHandler(
     change: "updated",
     projectId: params.projectId,
     workspaceId: workspace.id,
+    sourceNodeId: body.sourceNodeId,
   });
 
   return c.json({ workspace });

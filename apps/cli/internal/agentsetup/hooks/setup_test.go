@@ -220,22 +220,6 @@ func TestEnsureAgentHookSetupMergesClaudeGeminiHooksAndOpenCodePlugin(t *testing
 		t.Fatalf("expected default OpenCode config overlay, got %q", string(configRaw))
 	}
 
-	piExtensionRaw, err := os.ReadFile(filepath.Join(homeDir, ".pi", "agent", "extensions", piExtensionFileName))
-	if err != nil {
-		t.Fatalf("read Pi extension: %v", err)
-	}
-	piExtensionText := string(piExtensionRaw)
-	if !strings.Contains(piExtensionText, piExtensionMarker) {
-		t.Fatalf("expected Pi extension marker")
-	}
-	if !strings.Contains(piExtensionText, `pi.on("before_agent_start"`) ||
-		!strings.Contains(piExtensionText, `pi.on("session_shutdown"`) {
-		t.Fatalf("expected Pi extension lifecycle hooks")
-	}
-	if !strings.Contains(piExtensionText, `"--agent"`) || !strings.Contains(piExtensionText, `"pi"`) || !strings.Contains(piExtensionText, `"--event"`) {
-		t.Fatalf("expected Pi extension to call notify script with pi agent args")
-	}
-
 	geminiSettingsRaw, err := os.ReadFile(filepath.Join(homeDir, ".gemini", "settings.json"))
 	if err != nil {
 		t.Fatalf("read Gemini settings: %v", err)
@@ -350,17 +334,6 @@ func TestEnsureAgentHookSetupUsesPowerShellCommandsOnWindows(t *testing.T) {
 	if !strings.Contains(string(cursorHookScriptRaw), `powershell.exe -NoProfile -ExecutionPolicy Bypass -File`) ||
 		!strings.Contains(string(cursorHookScriptRaw), "notify.ps1") {
 		t.Fatalf("expected PowerShell cursor hook script forwarding, got %q", string(cursorHookScriptRaw))
-	}
-
-	piExtensionRaw, err := os.ReadFile(filepath.Join(homeDir, ".pi", "agent", "extensions", piExtensionFileName))
-	if err != nil {
-		t.Fatalf("read Pi extension: %v", err)
-	}
-	if !strings.Contains(string(piExtensionRaw), `"powershell.exe"`) ||
-		!strings.Contains(string(piExtensionRaw), `"-File"`) ||
-		!strings.Contains(string(piExtensionRaw), `"--agent"`) ||
-		!strings.Contains(string(piExtensionRaw), `"pi"`) {
-		t.Fatalf("expected PowerShell Pi extension command, got %q", string(piExtensionRaw))
 	}
 }
 

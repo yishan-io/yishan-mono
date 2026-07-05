@@ -3,6 +3,7 @@ package setup
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 
@@ -15,6 +16,9 @@ import (
 type AgentHookSetupConfig = hooksetup.AgentHookSetupConfig
 
 const RemoteHostPolicyEnvKey = "YISHAN_REMOTE_HOST_POLICY"
+
+// NotifyScriptPathEnvKey is the env var set in managed terminals pointing to the notify script.
+const NotifyScriptPathEnvKey = "YISHAN_NOTIFY_SCRIPT_PATH"
 
 // EnsureAgentHookSetup installs managed Claude, Gemini, and OpenCode hook integrations.
 func EnsureAgentHookSetup(cfg AgentHookSetupConfig) error {
@@ -50,6 +54,10 @@ func EnsureManagedAgentRuntime(disablePersona bool) {
 	}); err != nil {
 		log.Warn().Err(err).Msg("failed to install agent hook setup")
 	}
+
+	if err := ensurePiNotifyPackage(); err != nil {
+		log.Warn().Err(err).Msg("failed to install pi notify package")
+	}
 }
 
 // RemoveManagedAgentRuntime removes managed hook entries from all agent configs.
@@ -58,9 +66,34 @@ func RemoveManagedAgentRuntime() error {
 	if err != nil {
 		return fmt.Errorf("resolve home dir: %w", err)
 	}
-	return hooksetup.RemoveAgentHookSetup(hooksetup.AgentHookSetupConfig{
+	var removeErr error
+	if err := hooksetup.RemoveAgentHookSetup(hooksetup.AgentHookSetupConfig{
 		HomeDir: homeDir,
-	})
+	}); err != nil {
+		removeErr = err
+	}
+	if err := removePiNotifyPackage(); err != nil {
+		if removeErr != nil {
+			removeErr = fmt.Errorf("%v; %w", removeErr, err)
+		} else {
+			removeErr = err
+		}
+	}
+	return removeErr
+}
+
+func ensurePiNotifyPackage() error {
+	cmd := exec.Command("pi", "install", "npm:@yishan-io/pi-notify")
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.Run()
+}
+
+func removePiNotifyPackage() error {
+	cmd := exec.Command("pi", "uninstall", "@yishan-io/pi-notify")
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	return cmd.Run()
 }
 
 func resolveManagedHookRootDir() (string, error) {

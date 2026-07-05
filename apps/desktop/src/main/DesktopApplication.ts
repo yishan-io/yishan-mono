@@ -94,7 +94,7 @@ export class DesktopApplication {
 
     // Override the runtime app name so native menus, About dialog, and
     // other OS-level surfaces show "Yishan" instead of the scoped
-    // package name "@yishan/desktop".
+    // package name "@yishan-io/desktop".
     app.setName("Yishan");
 
     // Pre-load daemon settings so before-quit has the correct value even

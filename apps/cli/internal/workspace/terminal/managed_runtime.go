@@ -3,6 +3,7 @@ package terminal
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"yishan/apps/cli/internal/runtime/shellenv"
@@ -15,6 +16,7 @@ const projectIDEnvKey  = "YISHAN_PROJECT_ID"
 const orgIDEnvKey      = "YISHAN_ORG_ID"
 const tabIDEnvKey      = "YISHAN_TAB_ID"
 const paneIDEnvKey     = "YISHAN_PANE_ID"
+const notifyScriptPathEnvKey = "YISHAN_NOTIFY_SCRIPT_PATH"
 
 func resolveManagedBashRcfilePath() string {
 	homeDir, err := os.UserHomeDir()
@@ -44,6 +46,15 @@ func resolveSessionMetadataEnv(baseEnv []string, req StartRequest) []string {
 	}
 	if strings.TrimSpace(req.PaneID) != "" {
 		env = shellenv.UpsertEnv(env, paneIDEnvKey, strings.TrimSpace(req.PaneID))
+	}
+	// Set the notify script path for pi-notify extension.
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		notifyName := "notify.sh"
+		if runtime.GOOS == "windows" {
+			notifyName = "notify.ps1"
+		}
+		notifyPath := filepath.Join(homeDir, ".yishan", notifyName)
+		env = shellenv.UpsertEnv(env, notifyScriptPathEnvKey, notifyPath)
 	}
 	return env
 }

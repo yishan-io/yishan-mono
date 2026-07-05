@@ -1,14 +1,14 @@
-# @yishan/design-tokens
+# @yishan-io/design-tokens
 
 Shared, framework-agnostic design tokens for Yishan clients.
 
 ## Versioned exports
 
-- `@yishan/design-tokens/v1`: token primitives + semantic values
-- `@yishan/design-tokens/v1/mui`: MUI adapter payload factory
-- `@yishan/design-tokens/v1/react-native`: React Native adapter payload factory
+- `@yishan-io/design-tokens/v1`: token primitives + semantic values
+- `@yishan-io/design-tokens/v1/mui`: MUI adapter payload factory
+- `@yishan-io/design-tokens/v1/react-native`: React Native adapter payload factory
 
-For convenience, latest aliases are also available at `@yishan/design-tokens`, `@yishan/design-tokens/mui`, and `@yishan/design-tokens/react-native`.
+For convenience, latest aliases are also available at `@yishan-io/design-tokens`, `@yishan-io/design-tokens/mui`, and `@yishan-io/design-tokens/react-native`.
 
 ## Token structure
 
@@ -23,7 +23,7 @@ For convenience, latest aliases are also available at `@yishan/design-tokens`, `
 
 ```ts
 import { createTheme } from "@mui/material/styles";
-import { createMuiThemeOptions } from "@yishan/design-tokens/v1/mui";
+import { createMuiThemeOptions } from "@yishan-io/design-tokens/v1/mui";
 
 const theme = createTheme(createMuiThemeOptions("dark"));
 ```
@@ -31,7 +31,7 @@ const theme = createTheme(createMuiThemeOptions("dark"));
 ### React Native
 
 ```ts
-import { createReactNativeThemeTokens } from "@yishan/design-tokens/v1/react-native";
+import { createReactNativeThemeTokens } from "@yishan-io/design-tokens/v1/react-native";
 
 const nativeTheme = createReactNativeThemeTokens("light");
 ```

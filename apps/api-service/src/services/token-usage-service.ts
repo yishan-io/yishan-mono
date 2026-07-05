@@ -1,4 +1,4 @@
-import type { AgentKind } from "@yishan/core";
+import type { AgentKind } from "@yishan-io/core";
 import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
 import type { AppDb } from "@/db/client";

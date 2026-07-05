@@ -365,13 +365,19 @@ func publishWorkspaceSnapshotChanged(handler *JSONRPCHandler, params json.RawMes
 	change, _ := payload["change"].(string)
 	projectID, _ := payload["projectId"].(string)
 	workspaceID, _ := payload["workspaceId"].(string)
+	sourceNodeID, _ := payload["sourceNodeId"].(string)
 	log.Info().
 		Str("organizationId", strings.TrimSpace(organizationID)).
 		Str("resource", strings.TrimSpace(resource)).
 		Str("change", strings.TrimSpace(change)).
 		Str("projectId", strings.TrimSpace(projectID)).
 		Str("workspaceId", strings.TrimSpace(workspaceID)).
+		Str("sourceNodeId", strings.TrimSpace(sourceNodeID)).
 		Msg("relay: workspace snapshot change received")
+
+	if sourceNodeID != "" && strings.TrimSpace(sourceNodeID) == strings.TrimSpace(handler.nodeID) {
+		return
+	}
 
 	handler.events.Publish(frontendEvent{Topic: "workspaceSnapshotChanged", Payload: payload})
 }

@@ -58,11 +58,13 @@ export const createWorkspaceBodySchema = z.object({
   sourceBranch: nonEmptyStringSchema.optional(),
   nodeId: nonEmptyStringSchema,
   localPath: nonEmptyStringSchema.optional(),
+  sourceNodeId: nonEmptyStringSchema.optional(),
 });
 
 export const closeWorkspaceBodySchema = z.object({
   workspaceId: nonEmptyStringSchema,
   source: z.enum(["daemon"]).optional(),
+  sourceNodeId: nonEmptyStringSchema.optional(),
 });
 
 export const workspaceTerminalParamsSchema = z.object({
@@ -151,6 +153,7 @@ export const workspaceGitBranchesParamsSchema = z.object({
 
 export const updateWorkspaceBodySchema = z.object({
   localPath: nonEmptyStringSchema,
+  sourceNodeId: nonEmptyStringSchema.optional(),
 });
 
 export const workspacePullRequestParamsSchema = z.object({

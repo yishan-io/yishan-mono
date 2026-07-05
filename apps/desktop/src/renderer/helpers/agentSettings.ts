@@ -1,8 +1,8 @@
-import { AGENT_KINDS } from "@yishan/core";
+import { AGENT_KINDS } from "@yishan-io/core";
 
 /**
  * The canonical agent kind list for this desktop app.
- * Values come from `@yishan/core` — do not duplicate inline.
+ * Values come from `@yishan-io/core` — do not duplicate inline.
  */
 export const SUPPORTED_DESKTOP_AGENT_KINDS = AGENT_KINDS;
 

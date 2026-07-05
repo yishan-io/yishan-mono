@@ -1,7 +1,9 @@
 package setup
 
 import (
+	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -166,7 +168,6 @@ func fillHookState(state *InstalledState, homeDir string) {
 		configHome = filepath.Join(homeDir, ".config")
 	}
 	opencodePlugin := filepath.Join(configHome, "opencode", "plugin", "yishan-notify.js")
-	piExtension := filepath.Join(homeDir, ".pi", "agent", "extensions", "yishan-notify.ts")
 
 	for agent, path := range agentDirs {
 		if data, err := os.ReadFile(path); err == nil && strings.Contains(string(data), marker) {
@@ -176,7 +177,7 @@ func fillHookState(state *InstalledState, homeDir string) {
 	if _, err := os.Stat(opencodePlugin); err == nil {
 		state.Hooks.Agents = append(state.Hooks.Agents, "opencode")
 	}
-	if _, err := os.Stat(piExtension); err == nil {
+	if isPiNotifyInstalled() {
 		state.Hooks.Agents = append(state.Hooks.Agents, "pi")
 	}
 
@@ -205,4 +206,13 @@ func fillShellState(state *InstalledState, yishanHome string) {
 		state.Shell.Configured = true
 		state.Shell.ShellDir = zshDir
 	}
+}
+
+func isPiNotifyInstalled() bool {
+	cmd := exec.Command("pi", "package", "list")
+	out, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	return bytes.Contains(out, []byte("@yishan-io/pi-notify"))
 }

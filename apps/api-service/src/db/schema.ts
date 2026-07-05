@@ -1,4 +1,4 @@
-import type { AgentKind } from "@yishan/core";
+import type { AgentKind } from "@yishan-io/core";
 import { type InferInsertModel, type InferSelectModel, sql } from "drizzle-orm";
 import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 

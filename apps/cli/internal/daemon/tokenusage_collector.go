@@ -27,17 +27,18 @@ const (
 var tokenUsageScannableAgentKinds = agentkind.WithActiveTokenScanners
 
 type tokenUsageCollector struct {
-	mu         sync.Mutex
-	manager    *workspace.Manager
-	runtime    *cliruntime.Runtime
-	repo       tokenusage.HourlyUsageRepository
-	timers     map[string]*time.Timer
-	inFlight   map[string]bool
-	needsRerun map[string]bool
-	pending    map[string][]tokenusage.HourlyUsageRow
-	syncTimer  *time.Timer
-	hourTimer  *time.Timer
-	closed     bool
+	mu                   sync.Mutex
+	manager              *workspace.Manager
+	runtime              *cliruntime.Runtime
+	repo                 tokenusage.HourlyUsageRepository
+	timers               map[string]*time.Timer
+	inFlight             map[string]bool
+	needsRerun           map[string]bool
+	recoverySinceByAgent map[string]int64
+	pending              map[string][]tokenusage.HourlyUsageRow
+	syncTimer            *time.Timer
+	hourTimer            *time.Timer
+	closed               bool
 }
 
 type tokenUsageCollectorDebugState struct {
@@ -55,13 +56,14 @@ func newTokenUsageCollector(manager *workspace.Manager, runtime *cliruntime.Runt
 		return nil, err
 	}
 	return &tokenUsageCollector{
-		manager:    manager,
-		runtime:    runtime,
-		repo:       repo,
-		timers:     make(map[string]*time.Timer),
-		inFlight:   make(map[string]bool),
-		needsRerun: make(map[string]bool),
-		pending:    make(map[string][]tokenusage.HourlyUsageRow),
+		manager:              manager,
+		runtime:              runtime,
+		repo:                 repo,
+		timers:               make(map[string]*time.Timer),
+		inFlight:             make(map[string]bool),
+		needsRerun:           make(map[string]bool),
+		recoverySinceByAgent: make(map[string]int64),
+		pending:              make(map[string][]tokenusage.HourlyUsageRow),
 	}, nil
 }
 
@@ -132,17 +134,13 @@ func (c *tokenUsageCollector) Trigger(agentKind string, source string) {
 }
 
 func (c *tokenUsageCollector) runScan(agentKind string, source string) {
-	c.mu.Lock()
-	if c.closed {
-		c.mu.Unlock()
+	scanSinceUnixMilli, shouldRun := c.beginScan(agentKind)
+	if !shouldRun {
 		return
 	}
-	c.inFlight[agentKind] = true
-	delete(c.timers, agentKind)
-	c.mu.Unlock()
 
 	startedAt := time.Now()
-	rows, err := c.scanAgent(agentKind)
+	rows, err := c.scanAgentSince(agentKind, scanSinceUnixMilli)
 	if err == nil {
 		rows = c.filterKnownTokenUsageRows(rows)
 	}
@@ -156,13 +154,7 @@ func (c *tokenUsageCollector) runScan(agentKind string, source string) {
 		c.syncPending("scan")
 	}
 
-	c.mu.Lock()
-	c.inFlight[agentKind] = false
-	shouldRerun := c.needsRerun[agentKind]
-	delete(c.needsRerun, agentKind)
-	closed := c.closed
-	c.mu.Unlock()
-
+	shouldRerun, closed := c.finishScan(agentKind, err == nil)
 	if shouldRerun && !closed {
 		c.Trigger(agentKind, "rerun")
 	}
@@ -195,10 +187,14 @@ func (c *tokenUsageCollector) filterKnownTokenUsageRows(rows []tokenusage.Hourly
 }
 
 func (c *tokenUsageCollector) scanAgent(agentKind string) ([]tokenusage.HourlyUsageRow, error) {
+	return c.scanAgentSince(agentKind, c.recentScanStartUnixMilli())
+}
+
+func (c *tokenUsageCollector) scanAgentSince(agentKind string, scanSinceUnixMilli int64) ([]tokenusage.HourlyUsageRow, error) {
 	scanInput := tokenusage.ScanInput{
 		RunID:              "daemon-" + agentKind,
 		IngestedAt:         time.Now().UnixMilli(),
-		ScanSinceUnixMilli: c.recentScanStartUnixMilli(),
+		ScanSinceUnixMilli: scanSinceUnixMilli,
 		Worktrees:          buildTokenUsageWorktreeRefs(c.manager.List()),
 	}
 	switch agentKind {
@@ -226,22 +222,6 @@ func (c *tokenUsageCollector) recentScanStartUnixMilli() int64 {
 		return 0
 	}
 	return time.UnixMilli(syncState.LastSuccessfulSyncAt).UTC().Add(-tokenUsageScanOverlap).UnixMilli()
-}
-
-func buildTokenUsageWorktreeRefs(workspaces []workspace.Workspace) []tokenusage.WorktreeRef {
-	refs := make([]tokenusage.WorktreeRef, 0, len(workspaces))
-	for _, ws := range workspaces {
-		projectID := ws.ProjectID
-		if strings.TrimSpace(projectID) == "" {
-			projectID = "unknown"
-		}
-		refs = append(refs, tokenusage.WorktreeRef{
-			ProjectID:     projectID,
-			WorkspaceID:   ws.ID,
-			WorkspacePath: ws.Path,
-		})
-	}
-	return refs
 }
 
 func normalizeTokenUsageAgentKind(agentKind string) string {

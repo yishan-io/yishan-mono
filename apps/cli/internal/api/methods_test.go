@@ -41,3 +41,28 @@ func TestCreateWorkspace_OmitsEmptyLocalPath(t *testing.T) {
 		t.Fatalf("CreateWorkspace: %v", err)
 	}
 }
+
+func TestWorkspaceMutations_IncludeSourceNodeIDWhenProvided(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		if body["sourceNodeId"] != "node-local" {
+			t.Fatalf("expected sourceNodeId=node-local, got %#v", body["sourceNodeId"])
+		}
+		_, _ = w.Write([]byte(`{"workspace":{"id":"ws-1"}}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "", "", "", "", nil)
+	if _, err := client.CreateWorkspace("org-1", "proj-1", CreateWorkspaceInput{Kind: "worktree", NodeID: "node-1", SourceNodeID: "node-local"}); err != nil {
+		t.Fatalf("CreateWorkspace: %v", err)
+	}
+	if _, err := client.UpdateWorkspace("org-1", "proj-1", UpdateWorkspaceInput{WorkspaceID: "ws-1", LocalPath: "/tmp/ws-1", SourceNodeID: "node-local"}); err != nil {
+		t.Fatalf("UpdateWorkspace: %v", err)
+	}
+	if _, err := client.CloseWorkspace("org-1", "proj-1", CloseWorkspaceInput{WorkspaceID: "ws-1", SourceNodeID: "node-local"}); err != nil {
+		t.Fatalf("CloseWorkspace: %v", err)
+	}
+}

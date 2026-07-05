@@ -44,7 +44,6 @@ func EnsureAgentHookSetup(cfg AgentHookSetupConfig) error {
 		codexHookInstaller{},
 		openCodeHookInstaller{},
 		cursorHookInstaller{},
-		piHookInstaller{},
 	}
 
 	var setupErr error
@@ -74,7 +73,6 @@ func RemoveAgentHookSetup(cfg AgentHookSetupConfig) error {
 		codexHookInstaller{},
 		openCodeHookInstaller{},
 		cursorHookInstaller{},
-		piHookInstaller{},
 	}
 
 	var removeErr error

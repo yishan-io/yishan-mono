@@ -52,6 +52,20 @@ func TestRestoreIndexedWorkspaces_RestoresExistingEntries(t *testing.T) {
 	if len(manager.List()) != 1 {
 		t.Fatalf("expected one restored workspace, got %d", len(manager.List()))
 	}
+
+	entries, err := indexStore.List()
+	if err != nil {
+		t.Fatalf("indexStore.List: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected one index entry after restore, got %d", len(entries))
+	}
+	if entries[0].State != workspace.WorkspaceStateActive {
+		t.Fatalf("expected restored index state %q, got %q", workspace.WorkspaceStateActive, entries[0].State)
+	}
+	if entries[0].LastSeen == "" {
+		t.Fatal("expected restored index entry to record lastSeen")
+	}
 }
 
 func TestRestoreIndexedWorkspaces_SkipsMissingPaths(t *testing.T) {
@@ -83,6 +97,14 @@ func TestRestoreIndexedWorkspaces_SkipsMissingPaths(t *testing.T) {
 	}
 	if _, err := manager.GetWorkspace("workspace-missing"); err == nil {
 		t.Fatal("expected missing workspace not to be restored")
+	}
+
+	entries, err := indexStore.List()
+	if err != nil {
+		t.Fatalf("indexStore.List: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("expected missing workspace entry to be pruned, got %d entries", len(entries))
 	}
 }
 
@@ -210,7 +232,7 @@ func TestUsesRemoteHostPolicyReturnsFalseForJWTAuthRuntime(t *testing.T) {
 func TestBuildMemorySummarizerConfigDisablesMemoryForRemoteHostPolicy(t *testing.T) {
 	runtime := cliruntime.New(&config.Config{
 		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
-		API: config.APIConfig{Token: "yst_service_token_value"},
+		API:        config.APIConfig{Token: "yst_service_token_value"},
 	})
 
 	cfg := buildMemorySummarizerConfig(RunConfig{
@@ -233,7 +255,7 @@ func TestBuildMemorySummarizerConfigDisablesMemoryForRemoteHostPolicy(t *testing
 func TestBuildMemorySummarizerConfigPreservesLocalDefaults(t *testing.T) {
 	runtime := cliruntime.New(&config.Config{
 		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),
-		API: config.APIConfig{Token: "jwt-token"},
+		API:        config.APIConfig{Token: "jwt-token"},
 	})
 
 	cfg := buildMemorySummarizerConfig(RunConfig{MemorySummarizer: true}, runtime)

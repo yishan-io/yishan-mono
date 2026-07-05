@@ -6,6 +6,7 @@ type WorkspaceSnapshotChangeInput = {
   change: "created" | "updated" | "deleted" | "closed";
   projectId?: string;
   workspaceId?: string;
+  sourceNodeId?: string;
 };
 
 /** Publishes best-effort org-scoped invalidation events to the relay. */

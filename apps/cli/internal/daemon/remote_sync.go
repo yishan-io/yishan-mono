@@ -39,6 +39,7 @@ func formatReauthRequiredMessage(operation string) string {
 type WorkspaceCreation struct {
 	ID             string
 	NodeID         string
+	SourceNodeID   string
 	OrganizationID string
 	ProjectID      string
 	Kind           string
@@ -49,6 +50,7 @@ type WorkspaceCreation struct {
 
 type WorkspaceClose struct {
 	WorkspaceID    string
+	SourceNodeID   string
 	OrganizationID string
 	ProjectID      string
 }
@@ -68,6 +70,7 @@ func registerWorkspace(ctx context.Context, runtime *cliruntime.Runtime, creatio
 		Kind:         creation.Kind,
 		Branch:       creation.Branch,
 		SourceBranch: creation.SourceBranch,
+		SourceNodeID: creation.SourceNodeID,
 	})
 	if err != nil {
 		if isReauthRequiredError(err) {
@@ -87,8 +90,9 @@ func updateWorkspace(_ context.Context, runtime *cliruntime.Runtime, creation Wo
 		return fmt.Errorf("organizationId and workspaceId are required")
 	}
 	_, err := runtime.APIClient().UpdateWorkspace(orgID, creation.ProjectID, api.UpdateWorkspaceInput{
-		WorkspaceID: creation.ID,
-		LocalPath:   localPath,
+		WorkspaceID:  creation.ID,
+		LocalPath:    localPath,
+		SourceNodeID: creation.SourceNodeID,
 	})
 	if err != nil {
 		if isReauthRequiredError(err) {
@@ -109,8 +113,9 @@ func closeRemoteWorkspace(_ context.Context, runtime *cliruntime.Runtime, closin
 	}
 
 	_, err := runtime.APIClient().CloseWorkspace(orgID, closing.ProjectID, api.CloseWorkspaceInput{
-		WorkspaceID: closing.WorkspaceID,
-		Source:      "daemon",
+		WorkspaceID:  closing.WorkspaceID,
+		SourceNodeID: closing.SourceNodeID,
+		Source:       "daemon",
 	})
 	if err != nil {
 		if isReauthRequiredError(err) {
