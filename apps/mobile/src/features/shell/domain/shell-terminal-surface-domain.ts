@@ -85,42 +85,54 @@ function isDarkColor(color: string) {
 
 function getTerminalScrollbarThumbColor(background: string, foreground: string) {
   const darkBackground = isDarkColor(background);
-  return withAlpha(
-    foreground,
-    darkBackground ? 0.34 : 0.22,
-    darkBackground ? "rgba(255, 255, 255, 0.34)" : "rgba(17, 17, 17, 0.22)",
-  );
+  const scrollbarAlpha = darkBackground
+    ? MOBILE_UI_TOKENS.terminal.palette.scrollbarAlpha.dark
+    : MOBILE_UI_TOKENS.terminal.palette.scrollbarAlpha.light;
+  const fallbackForeground = darkBackground
+    ? MOBILE_UI_TOKENS.terminal.palette.fallbackForeground.dark
+    : MOBILE_UI_TOKENS.terminal.palette.fallbackForeground.light;
+
+  return withAlpha(foreground, scrollbarAlpha, withAlpha(fallbackForeground, scrollbarAlpha, fallbackForeground));
 }
 
 function getTerminalTheme(background: string, foreground: string): ITheme {
   const darkBackground = isDarkColor(background);
+  const terminalPalette = darkBackground
+    ? MOBILE_UI_TOKENS.terminal.palette.dark
+    : MOBILE_UI_TOKENS.terminal.palette.light;
+  const selectionAlpha = darkBackground
+    ? MOBILE_UI_TOKENS.terminal.palette.selectionAlpha.dark
+    : MOBILE_UI_TOKENS.terminal.palette.selectionAlpha.light;
+  const selectionFallbackForeground = darkBackground
+    ? MOBILE_UI_TOKENS.terminal.palette.fallbackForeground.dark
+    : MOBILE_UI_TOKENS.terminal.palette.fallbackForeground.light;
 
   return {
     background,
-    black: darkBackground ? "#111827" : "#1f2937",
-    blue: MOBILE_UI_TOKENS.status.running,
-    brightBlack: darkBackground ? "#9ca3af" : "#6b7280",
-    brightBlue: "#3b82f6",
-    brightCyan: "#06b6d4",
-    brightGreen: MOBILE_UI_TOKENS.status.success,
-    brightMagenta: "#d946ef",
-    brightRed: MOBILE_UI_TOKENS.status.error,
+    black: terminalPalette.black,
+    blue: MOBILE_UI_TOKENS.terminal.palette.blue,
+    brightBlack: terminalPalette.brightBlack,
+    brightBlue: MOBILE_UI_TOKENS.terminal.palette.brightBlue,
+    brightCyan: MOBILE_UI_TOKENS.terminal.palette.brightCyan,
+    brightGreen: MOBILE_UI_TOKENS.terminal.palette.brightGreen,
+    brightMagenta: MOBILE_UI_TOKENS.terminal.palette.brightMagenta,
+    brightRed: MOBILE_UI_TOKENS.terminal.palette.brightRed,
     brightWhite: foreground,
-    brightYellow: MOBILE_UI_TOKENS.status.warning,
+    brightYellow: MOBILE_UI_TOKENS.terminal.palette.brightYellow,
     cursor: foreground,
     cursorAccent: background,
-    cyan: "#0891b2",
+    cyan: MOBILE_UI_TOKENS.terminal.palette.cyan,
     foreground,
-    green: "#059669",
-    magenta: "#c026d3",
-    red: "#dc2626",
+    green: MOBILE_UI_TOKENS.terminal.palette.green,
+    magenta: MOBILE_UI_TOKENS.terminal.palette.magenta,
+    red: MOBILE_UI_TOKENS.terminal.palette.red,
     selectionBackground: withAlpha(
       foreground,
-      darkBackground ? 0.24 : 0.18,
-      darkBackground ? "rgba(255, 255, 255, 0.24)" : "rgba(17, 17, 17, 0.18)",
+      selectionAlpha,
+      withAlpha(selectionFallbackForeground, selectionAlpha, selectionFallbackForeground),
     ),
-    white: darkBackground ? "#e5e7eb" : "#4b5563",
-    yellow: "#d97706",
+    white: terminalPalette.white,
+    yellow: MOBILE_UI_TOKENS.terminal.palette.yellow,
   };
 }
 

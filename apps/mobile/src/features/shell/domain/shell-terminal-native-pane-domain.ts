@@ -1,10 +1,6 @@
 import type { TextStyle, ViewStyle } from "react-native";
 
-const NATIVE_TERMINAL_FONT_SIZE = 12;
-const NATIVE_TERMINAL_LINE_HEIGHT = 16;
-const IOS_TERMINAL_FONT_FAMILY = "Menlo";
-const ANDROID_TERMINAL_FONT_FAMILY = "monospace";
-const FALLBACK_TERMINAL_FONT_FAMILY = "Menlo";
+import { MOBILE_UI_TOKENS } from "@/components/ui/ui-tokens";
 
 /**
  * Returns the edge-to-edge surface style for the native terminal output pane.
@@ -32,19 +28,19 @@ export function buildNativeTerminalScrollContentStyle(): ViewStyle {
 export function buildNativeTerminalTextStyle(platformOs: string): TextStyle {
   return {
     fontFamily: resolveNativeTerminalFontFamily(platformOs),
-    fontSize: NATIVE_TERMINAL_FONT_SIZE,
-    lineHeight: NATIVE_TERMINAL_LINE_HEIGHT,
+    fontSize: MOBILE_UI_TOKENS.terminal.nativeText.fontSize,
+    lineHeight: MOBILE_UI_TOKENS.terminal.nativeText.lineHeight,
   };
 }
 
 function resolveNativeTerminalFontFamily(platformOs: string): string {
   if (platformOs === "android") {
-    return ANDROID_TERMINAL_FONT_FAMILY;
+    return MOBILE_UI_TOKENS.terminal.nativeText.fontFamily.android;
   }
 
   if (platformOs === "ios") {
-    return IOS_TERMINAL_FONT_FAMILY;
+    return MOBILE_UI_TOKENS.terminal.nativeText.fontFamily.ios;
   }
 
-  return FALLBACK_TERMINAL_FONT_FAMILY;
+  return MOBILE_UI_TOKENS.terminal.nativeText.fontFamily.fallback;
 }

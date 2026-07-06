@@ -1,9 +1,6 @@
 import type { ITerminalOptions, ITheme } from "@xterm/xterm";
 
-const DEFAULT_TERMINAL_BACKGROUND = "#ffffff";
-const DEFAULT_TERMINAL_FOREGROUND = "#111111";
-const DEFAULT_SCROLLBAR_THUMB = "rgba(107, 114, 128, 0.55)";
-const HIDDEN_OVERVIEW_RULER_WIDTH = 0.1;
+import { MOBILE_UI_TOKENS } from "@/components/ui/ui-tokens";
 
 /**
  * Builds the xterm terminal options for the mobile shell emulator.
@@ -14,15 +11,15 @@ export function buildShellTerminalOptions(theme: ITheme): ITerminalOptions {
     convertEol: false,
     cursorBlink: true,
     cursorStyle: "bar",
-    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-    fontSize: 12,
-    lineHeight: 1.3,
+    fontFamily: MOBILE_UI_TOKENS.terminal.xterm.fontFamily,
+    fontSize: MOBILE_UI_TOKENS.terminal.xterm.fontSize,
+    lineHeight: MOBILE_UI_TOKENS.terminal.xterm.lineHeight,
     overviewRuler: {
       // xterm falls back with `width || 14`, so a tiny positive number avoids
       // the 14px gutter while still rounding to a hidden scrollbar internally.
-      width: HIDDEN_OVERVIEW_RULER_WIDTH,
+      width: MOBILE_UI_TOKENS.terminal.xterm.overviewRulerWidth,
     },
-    scrollback: 5000,
+    scrollback: MOBILE_UI_TOKENS.terminal.xterm.scrollback,
     theme,
   };
 }
@@ -32,8 +29,8 @@ export function buildShellTerminalOptions(theme: ITheme): ITerminalOptions {
  */
 export function buildShellTerminalRootStyle(terminalTheme: ITheme, scrollbarThumbColor?: string): React.CSSProperties {
   return {
-    background: terminalTheme.background ?? DEFAULT_TERMINAL_BACKGROUND,
-    color: terminalTheme.foreground ?? DEFAULT_TERMINAL_FOREGROUND,
+    background: terminalTheme.background ?? MOBILE_UI_TOKENS.terminal.defaultBackground,
+    color: terminalTheme.foreground ?? MOBILE_UI_TOKENS.terminal.defaultForeground,
     display: "flex",
     flexDirection: "column",
     flex: 1,
@@ -43,9 +40,9 @@ export function buildShellTerminalRootStyle(terminalTheme: ITheme, scrollbarThum
     overflow: "hidden",
     position: "relative",
     width: "100%",
-    ["--terminal-bg" as string]: terminalTheme.background ?? DEFAULT_TERMINAL_BACKGROUND,
-    ["--terminal-fg" as string]: terminalTheme.foreground ?? DEFAULT_TERMINAL_FOREGROUND,
-    ["--terminal-scrollbar-thumb" as string]: scrollbarThumbColor ?? DEFAULT_SCROLLBAR_THUMB,
+    ["--terminal-bg" as string]: terminalTheme.background ?? MOBILE_UI_TOKENS.terminal.defaultBackground,
+    ["--terminal-fg" as string]: terminalTheme.foreground ?? MOBILE_UI_TOKENS.terminal.defaultForeground,
+    ["--terminal-scrollbar-thumb" as string]: scrollbarThumbColor ?? MOBILE_UI_TOKENS.terminal.defaultScrollbarThumb,
   };
 }
 

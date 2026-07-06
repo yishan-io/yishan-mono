@@ -40,7 +40,7 @@ describe("shell-terminal-dom-emulator-domain", () => {
 
     expect(css).toContain(".xterm");
     expect(css).toContain(".xterm-viewport");
-    expect(css).toContain("pointer-events: none");
+    expect(css).toContain("background-color: var(--terminal-bg) !important");
     expect(css).toContain("-webkit-overflow-scrolling: touch");
     expect(css).toContain("scrollbar-width: none");
     expect(css).toContain("display: none");

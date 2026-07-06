@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("expo-crypto", () => ({
   default: {},
@@ -29,6 +29,8 @@ let GOOGLE_OAUTH_CALLBACK_PATH: string;
 let getGoogleOAuthClientId: typeof import("./google-oauth").getGoogleOAuthClientId;
 let isGoogleOAuthCallbackPath: typeof import("./google-oauth").isGoogleOAuthCallbackPath;
 let isGoogleOAuthRedirectUrl: typeof import("./google-oauth").isGoogleOAuthRedirectUrl;
+const originalGoogleClientIdIos = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS;
+const originalGoogleOauthClientIdIos = process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS;
 
 beforeAll(async () => {
   const module = await import("./google-oauth");
@@ -36,6 +38,25 @@ beforeAll(async () => {
   getGoogleOAuthClientId = module.getGoogleOAuthClientId;
   isGoogleOAuthCallbackPath = module.isGoogleOAuthCallbackPath;
   isGoogleOAuthRedirectUrl = module.isGoogleOAuthRedirectUrl;
+});
+
+beforeEach(() => {
+  Reflect.deleteProperty(process.env, "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS");
+  Reflect.deleteProperty(process.env, "EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS");
+});
+
+afterEach(() => {
+  if (originalGoogleClientIdIos === undefined) {
+    Reflect.deleteProperty(process.env, "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS");
+  } else {
+    process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS = originalGoogleClientIdIos;
+  }
+
+  if (originalGoogleOauthClientIdIos === undefined) {
+    Reflect.deleteProperty(process.env, "EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS");
+  } else {
+    process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS = originalGoogleOauthClientIdIos;
+  }
 });
 
 describe("google-oauth", () => {
@@ -57,8 +78,8 @@ describe("google-oauth", () => {
   });
 
   it("throws when the iOS client id env key is missing", () => {
-    process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS = undefined;
-    process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS = undefined;
+    Reflect.deleteProperty(process.env, "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS");
+    Reflect.deleteProperty(process.env, "EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID_IOS");
 
     expect(() => getGoogleOAuthClientId()).toThrow(
       "Missing required environment variable: EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS",
