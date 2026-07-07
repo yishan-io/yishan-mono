@@ -1,7 +1,6 @@
 ---
 name: Explore
 description: Search and understand the codebase
-model: deepseek/deepseek-v4-flash
 thinking: low
 tools:
   - read

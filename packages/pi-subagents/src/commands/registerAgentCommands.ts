@@ -138,7 +138,7 @@ export function registerAgentCommands(pi: ExtensionAPI, registry: AgentRegistry,
   });
 
   pi.registerCommand("agent-send", {
-    description: "Send completed sub-agent results to the main agent",
+    description: "Manually send completed sub-agent results to the main agent",
     getArgumentCompletions: (prefix) => getAgentIdCompletions(manager, prefix),
     handler: async (args, ctx) => {
       const requestedAgentIds = args

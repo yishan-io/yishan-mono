@@ -10,7 +10,7 @@ describe("buildDelegationPrompt", () => {
         prompt: "Inspect authentication",
         mode: "foreground",
       }),
-    ).toBe(`Use the Agent tool to delegate the task below to the named sub-agent. Call the Agent tool immediately without any preamble, explanation, or user-facing planning text. Wait for the sub-agent result, continue the work yourself, and then give the final response to the user.
+    ).toBe(`Use the Agent tool to delegate the task below to the named sub-agent. Call the Agent tool immediately without any preamble, explanation, or user-facing planning text. Once delegated, do not duplicate the same work yourself. Wait for the result or continue only with non-overlapping tasks. In the Agent prompt, specify whether the sub-agent should do research or make code changes, point it to the most relevant files or directories, and tell it what result to return. Wait for the sub-agent result, continue the work yourself, and then give the final response to the user.
 
 Sub-agent: Explore
 
@@ -25,7 +25,7 @@ Inspect authentication`);
         prompt: "Inspect authentication",
         mode: "foreground",
       }),
-    ).toBe(`Use the Agent tool to delegate the task below to the listed sub-agents. Call the Agent tool immediately without any preamble, explanation, or user-facing planning text. Run them in parallel when helpful, wait for their results, continue the work yourself, and then give the final response to the user.
+    ).toBe(`Use the Agent tool to delegate the task below to the listed sub-agents. Call the Agent tool immediately without any preamble, explanation, or user-facing planning text. If the workstreams are independent, run separate Agent calls in parallel. Once delegated, do not duplicate the same work yourself. Wait for the result or continue only with non-overlapping tasks. In the Agent prompt, specify whether the sub-agent should do research or make code changes, point it to the most relevant files or directories, and tell it what result to return. Wait for the sub-agent results, continue the work yourself, and then give the final response to the user.
 
 Sub-agents:
 - Explore

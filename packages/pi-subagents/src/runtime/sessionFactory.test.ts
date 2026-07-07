@@ -69,6 +69,28 @@ describe("createChildAgentSession", () => {
     });
   });
 
+  it("omits the model when no explicit model is configured", async () => {
+    await createChildAgentSession({
+      cwd: "/tmp/project",
+      agentDefinition: {
+        name: "Explore",
+        description: "Search the codebase",
+        systemPrompt: "Explore prompt",
+        thinking: "low",
+        tools: ["read", "grep"],
+        source: "builtin",
+      },
+    });
+
+    expect(createAgentSessionFromServicesMock).toHaveBeenCalledWith({
+      services: expect.objectContaining({ modelRegistry: expect.any(Object) }),
+      sessionManager: { kind: "session-manager" },
+      model: undefined,
+      thinkingLevel: "low",
+      tools: ["read", "grep"],
+    });
+  });
+
   it("throws when the configured model cannot be resolved", async () => {
     createAgentSessionServicesMock.mockResolvedValue({
       modelRegistry: {

@@ -22,6 +22,9 @@ function createToolHarness() {
           onUpdate?: unknown,
           ctx?: unknown,
         ) => Promise<unknown>;
+        description?: string;
+        promptSnippet?: string;
+        promptGuidelines?: string[];
         renderResult?: (result: unknown, options: { expanded: boolean; isPartial: boolean }, theme: unknown) => unknown;
       }
     | undefined;
@@ -35,6 +38,9 @@ function createToolHarness() {
         onUpdate?: unknown,
         ctx?: unknown,
       ) => Promise<unknown>;
+      description?: string;
+      promptSnippet?: string;
+      promptGuidelines?: string[];
       renderResult?: (result: unknown, options: { expanded: boolean; isPartial: boolean }, theme: unknown) => unknown;
     }) {
       registeredTool = tool;
@@ -53,6 +59,24 @@ function createToolHarness() {
 }
 
 describe("registerAgentTool", () => {
+  it("registers stronger delegation guidance for the model", () => {
+    const { pi, getRegisteredTool } = createToolHarness();
+    registerAgentTool(pi as never, { reload: vi.fn(), getByName: vi.fn() } as never, { run: vi.fn() } as never);
+
+    expect(getRegisteredTool()).toMatchObject({
+      description:
+        "Delegate independent research or implementation work to one named sub-agent using the shared agent manager.",
+      promptSnippet:
+        "Use Agent for focused sub-tasks, especially codebase exploration, specialist review, or isolated code changes.",
+      promptGuidelines: expect.arrayContaining([
+        expect.stringContaining("do not use it for a single file read"),
+        expect.stringContaining("state whether the sub-agent should do research or modify code"),
+        expect.stringContaining("do not duplicate the same exploration or edits yourself"),
+        expect.stringContaining("background=true only when the work can continue asynchronously"),
+      ]),
+    });
+  });
+
   it("runs the requested agent through the shared manager", async () => {
     const { pi, getRegisteredTool } = createToolHarness();
     const registry = {
