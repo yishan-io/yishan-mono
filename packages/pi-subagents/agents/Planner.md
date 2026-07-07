@@ -1,7 +1,6 @@
 ---
 name: Planner
 description: Break implementation work into concrete steps
-model: deepseek/deepseek-v4-pro
 thinking: high
 tools:
   - read

@@ -54,16 +54,19 @@ Override precedence:
 - Purpose: search and understand the codebase
 - Default tools: `read`, `grep`, `find`, `ls`
 - Default mode: read-only
+- Default model: unset (falls back to the user's normal Pi session/model resolution)
 
 ### Reviewer
 - Purpose: review code for defects and regressions
 - Default tools: `read`, `grep`, `find`, `ls`, `bash`
 - Default mode: read-only
+- Default model: unset (falls back to the user's normal Pi session/model resolution)
 
 ### Planner
 - Purpose: turn requirements into concrete implementation steps
 - Default tools: `read`, `grep`, `find`, `ls`
 - Default mode: read-only
+- Default model: unset (falls back to the user's normal Pi session/model resolution)
 
 ## Usage
 

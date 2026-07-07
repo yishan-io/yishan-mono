@@ -1,7 +1,6 @@
 ---
 name: Reviewer
 description: Review code for defects and regressions
-model: deepseek/deepseek-v4-pro
 thinking: medium
 tools:
   - read
