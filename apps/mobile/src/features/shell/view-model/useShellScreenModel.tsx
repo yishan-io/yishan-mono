@@ -146,8 +146,8 @@ export function useShellScreenModel({
 
   const focusPaneChat: ShellChatModel = {
     agentQuickActions,
-    draft: screenContext.currentDraft,
-    messages: screenContext.currentMessages,
+    draft: terminalMessages.getDraft(screenContext.selectedTerminal),
+    messages: terminalMessages.getMessages(screenContext.selectedTerminal),
     onCreateTerminal: createTerminalHandler,
     onDraftChange: (value) => terminalMessages.handleDraftChange(value, screenContext.selectedTerminal),
     onOpenChanges: openChangesHandler,
@@ -161,7 +161,7 @@ export function useShellScreenModel({
     selectedTerminalTitle: screenContext.selectedTerminal
       ? formatTerminalDisplayLabel(screenContext.selectedTerminal.label)
       : null,
-    terminalOutput: screenContext.currentTerminalOutput,
+    terminalOutput: terminalMessages.getOutput(screenContext.selectedTerminal),
     workspaceLocalPath: screenContext.selectedWorkspace?.localPath ?? null,
   };
 

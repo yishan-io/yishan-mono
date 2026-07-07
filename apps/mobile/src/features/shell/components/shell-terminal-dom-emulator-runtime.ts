@@ -328,6 +328,18 @@ export function attachTerminalTouchScrollFallback(
     return applyLineScrollFallback(deltaPixels);
   };
 
+  const startGesture = (nextY: number, source: GestureInputSource, pointerId: number | null) => {
+    viewport ??= host.querySelector<HTMLElement>(".xterm-viewport");
+    blockedMoveCount = 0;
+    lastY = nextY;
+    gestureScrollMode = "native_pending";
+    fallbackPendingPixels = 0;
+    pixelCarry = 0;
+    activePointerId = pointerId;
+    activeGestureSource = source;
+    lastViewportScrollTop = viewport?.scrollTop ?? 0;
+  };
+
   const resetGesture = () => {
     blockedMoveCount = 0;
     lastY = null;
@@ -430,41 +442,7 @@ export function attachTerminalTouchScrollFallback(
     return false;
   };
 
-  const handleTouchStart = (event: TouchEvent) => {
-    if (event.touches.length !== 1) {
-      resetGesture();
-      return;
-    }
-
-    const nextY = event.touches[0]?.clientY;
-    if (nextY == null) {
-      resetGesture();
-      return;
-    }
-
-    viewport ??= host.querySelector<HTMLElement>(".xterm-viewport");
-    blockedMoveCount = 0;
-    lastY = nextY;
-    gestureScrollMode = "native_pending";
-    fallbackPendingPixels = 0;
-    pixelCarry = 0;
-    activePointerId = null;
-    activeGestureSource = "touch";
-    lastViewportScrollTop = viewport?.scrollTop ?? 0;
-  };
-
-  const handleTouchMove = (event: TouchEvent) => {
-    if (activeGestureSource !== "touch" || event.touches.length !== 1 || lastY === null) {
-      return;
-    }
-
-    const nextY = event.touches[0]?.clientY;
-    if (nextY == null) {
-      return;
-    }
-
-    const deltaY = nextY - lastY;
-    lastY = nextY;
+  const handleGestureMove = (deltaY: number, preventDefault: () => void) => {
     gestureTravelPixels += Math.abs(deltaY);
 
     if (noteNativeScrollProgress()) {
@@ -473,7 +451,7 @@ export function attachTerminalTouchScrollFallback(
 
     if (viewport && isViewportBlockedAtEdge(viewport, -deltaY)) {
       releaseFallbackOwnership();
-      event.preventDefault();
+      preventDefault();
       return;
     }
 
@@ -494,10 +472,43 @@ export function attachTerminalTouchScrollFallback(
 
     if (!applyFallbackScroll(-deltaY)) {
       releaseFallbackOwnership();
-      event.preventDefault();
+      preventDefault();
       return;
     }
-    event.preventDefault();
+
+    preventDefault();
+  };
+
+  const handleTouchStart = (event: TouchEvent) => {
+    if (event.touches.length !== 1) {
+      resetGesture();
+      return;
+    }
+
+    const nextY = event.touches[0]?.clientY;
+    if (nextY == null) {
+      resetGesture();
+      return;
+    }
+
+    startGesture(nextY, "touch", null);
+  };
+
+  const handleTouchMove = (event: TouchEvent) => {
+    if (activeGestureSource !== "touch" || event.touches.length !== 1 || lastY === null) {
+      return;
+    }
+
+    const nextY = event.touches[0]?.clientY;
+    if (nextY == null) {
+      return;
+    }
+
+    const deltaY = nextY - lastY;
+    lastY = nextY;
+    handleGestureMove(deltaY, () => {
+      event.preventDefault();
+    });
   };
 
   const handlePointerDown = (event: PointerEvent) => {
@@ -509,15 +520,7 @@ export function attachTerminalTouchScrollFallback(
       return;
     }
 
-    viewport ??= host.querySelector<HTMLElement>(".xterm-viewport");
-    activePointerId = event.pointerId;
-    activeGestureSource = "pointer";
-    blockedMoveCount = 0;
-    lastY = event.clientY;
-    gestureScrollMode = "native_pending";
-    fallbackPendingPixels = 0;
-    pixelCarry = 0;
-    lastViewportScrollTop = viewport?.scrollTop ?? 0;
+    startGesture(event.clientY, "pointer", event.pointerId);
   };
 
   const handleMouseDown = (event: MouseEvent) => {
@@ -548,39 +551,9 @@ export function attachTerminalTouchScrollFallback(
 
     const deltaY = event.clientY - lastY;
     lastY = event.clientY;
-    gestureTravelPixels += Math.abs(deltaY);
-
-    if (noteNativeScrollProgress()) {
-      return;
-    }
-
-    if (viewport && isViewportBlockedAtEdge(viewport, -deltaY)) {
-      releaseFallbackOwnership();
+    handleGestureMove(deltaY, () => {
       event.preventDefault();
-      return;
-    }
-
-    if (gestureScrollMode === "native_active") {
-      return;
-    }
-
-    blockedMoveCount += 1;
-    fallbackPendingPixels += Math.abs(deltaY);
-    if (
-      gestureScrollMode !== "fallback_active" &&
-      (blockedMoveCount < 2 || fallbackPendingPixels < FALLBACK_ACTIVATION_PIXELS)
-    ) {
-      return;
-    }
-
-    gestureScrollMode = "fallback_active";
-
-    if (!applyFallbackScroll(-deltaY)) {
-      releaseFallbackOwnership();
-      event.preventDefault();
-      return;
-    }
-    event.preventDefault();
+    });
   };
 
   const attachTarget = (target: HTMLElement) => {

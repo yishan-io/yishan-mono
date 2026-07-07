@@ -24,7 +24,7 @@ export function useShellTerminalSurfaceModel({
   terminalOutput,
 }: UseShellTerminalSurfaceModelInput) {
   const theme = useTheme();
-  const usesTerminalEmulator = resolveTerminalRendererKind(Platform.OS, selectedTerminal) === "xterm";
+  const usesTerminalEmulator = resolveTerminalRendererKind(Platform.OS) === "xterm";
   const displayOutput = usesTerminalEmulator ? terminalOutput : sanitizeTerminalDisplayOutput(terminalOutput);
   const [blurRequestToken, setBlurRequestToken] = useState(0);
   const [resizeRequestToken, setResizeRequestToken] = useState(0);

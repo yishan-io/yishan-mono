@@ -14,7 +14,6 @@ import { useShellNavigationCommands } from "./useShellNavigationCommands";
 import { useShellPaneTabActions } from "./useShellPaneTabActions";
 import { useShellQuickActionCommands } from "./useShellQuickActionCommands";
 import { useShellRecoveryCommands } from "./useShellRecoveryCommands";
-import { useShellWorkspaceSessionAutoSync } from "./useShellWorkspaceSessionAutoSync";
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
@@ -138,11 +137,6 @@ export function useShellScreenCommands({
   const openChangesHandler = wrapOptionalActionWithBeforeEffect(onDismissKeyboard, rawOpenChangesHandler);
   const openPullRequestsHandler = wrapOptionalActionWithBeforeEffect(onDismissKeyboard, rawOpenPullRequestsHandler);
   const refreshSessionsHandler = wrapOptionalActionWithBeforeEffect(onDismissKeyboard, rawRefreshSessionsHandler);
-
-  useShellWorkspaceSessionAutoSync({
-    refreshSessionSync: terminalMessages.refreshSessionSync,
-    selectedWorkspaceContext: screenContext.selectedWorkspaceContext,
-  });
 
   const retryProjects = useCallback(() => {
     onDismissKeyboard();

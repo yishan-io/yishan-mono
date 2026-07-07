@@ -1,7 +1,7 @@
 import { useShellTerminalMessages } from "../hooks/useShellTerminalMessages";
 import type { ShellState } from "../state/useShellState";
 
-export function useShellTerminalMessagesModel(shell: ShellState) {
+export function useShellTerminalMessagesModel(shell: ShellState, workspaceLabel: string | null) {
   return useShellTerminalMessages({
     hasRestoredStoredState: shell.hasRestoredStoredState,
     removeTerminal: shell.removeTerminal,
@@ -11,6 +11,6 @@ export function useShellTerminalMessagesModel(shell: ShellState) {
     terminalsByWorkspaceId: shell.terminalsByWorkspaceId,
     upsertTerminal: shell.upsertTerminal,
     updateTerminal: shell.updateTerminal,
-    workspaceLabel: shell.selectedWorkspaceLabel,
+    workspaceLabel,
   });
 }

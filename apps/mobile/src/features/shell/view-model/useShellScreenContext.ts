@@ -5,9 +5,7 @@ import { useNodesQuery } from "@/features/nodes/queries/useNodesQuery";
 import { useOrganizationsQuery } from "@/features/organizations";
 import type { ProjectWithWorkspaces } from "@/features/projects/projects.types";
 import { useProjectsQuery } from "@/features/projects/queries/useProjectsQuery";
-import { useWorkspaceFilesQuery } from "@/features/workspaces/queries/useWorkspaceFilesQuery";
 import type { Workspace } from "@/features/workspaces/workspaces.types";
-import type { ShellTerminalMessages } from "../hooks/useShellTerminalMessages";
 import { findProjectName } from "../state/shell-selectors";
 import { getCurrentOrganizationId } from "../state/shell-selectors";
 import type { ShellState } from "../state/useShellState";
@@ -24,9 +22,7 @@ type Translate = (key: string, params?: Record<string, string | number>) => stri
 export function useShellScreenContext({
   shell,
   t,
-  terminalMessages,
 }: {
-  terminalMessages: ShellTerminalMessages;
   shell: ShellState;
   t: Translate;
 }) {
@@ -118,29 +114,10 @@ export function useShellScreenContext({
     return currentNodes.find((node) => node.id === nodeId) ?? null;
   }, [currentNodes, shell.selectedTerminal?.nodeId, selectedWorkspace?.nodeId]);
 
-  const workspaceFilesQuery = useWorkspaceFilesQuery(
-    shell.selectedWorkspaceContext?.organizationId ?? "",
-    shell.selectedWorkspaceContext?.projectId ?? "",
-    shell.selectedWorkspaceContext?.workspaceId ?? "",
-    {
-      enabled: !!shell.selectedWorkspaceContext,
-      nodeId: selectedWorkspace?.nodeId ?? shell.selectedTerminal?.nodeId ?? null,
-      recursive: false,
-    },
-  );
-
-  const workspaceFileCount = useMemo(() => {
-    const files = workspaceFilesQuery.data ?? [];
-    return files.length > 0 ? files.filter((item) => !item.isDir).length : null;
-  }, [workspaceFilesQuery.data]);
-
   const isShellLoading = organizationsQuery.isLoading || meQuery.isLoading;
   const isShellError = organizationsQuery.isError || meQuery.isError;
-  const selectedTerminal = shell.selectedTerminal;
 
   return {
-    currentDraft: terminalMessages.getDraft(selectedTerminal),
-    currentMessages: terminalMessages.getMessages(selectedTerminal),
     currentNode,
     currentNodeId,
     currentNodes,
@@ -149,7 +126,6 @@ export function useShellScreenContext({
     currentOrgNodesQuery,
     currentOrgProjectsQuery,
     currentProjects,
-    currentTerminalOutput: terminalMessages.getOutput(selectedTerminal),
     displayedRecentTerminals,
     displayedTerminalsByWorkspaceId,
     isShellError,
@@ -173,8 +149,6 @@ export function useShellScreenContext({
 
       return terminal.subtitle ?? null;
     },
-    workspaceFileCount,
-    workspaceFilesQuery,
     workspacesByProjectId,
   };
 }

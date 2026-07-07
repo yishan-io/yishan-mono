@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { Platform } from "react-native";
 
 import { useAuth } from "@/features/auth";
@@ -53,10 +53,7 @@ export function useShellTerminalMessages({
   const { session, status } = useAuth();
   const { t } = useAppLanguage();
   const accessToken = session?.accessToken ?? null;
-  const shouldUseTerminalEmulator = useCallback(
-    (terminal: TerminalItem | null) => resolveTerminalRendererKind(Platform.OS, terminal) === "xterm",
-    [],
-  );
+  const shouldUseTerminalEmulator = useCallback(() => resolveTerminalRendererKind(Platform.OS) === "xterm", []);
 
   const patchTerminal = useCallback(
     (
@@ -110,6 +107,24 @@ export function useShellTerminalMessages({
     workspace: selectedTerminalWorkspace,
     workspaceLabel,
   });
+
+  useEffect(() => {
+    if (!selectedTerminalWorkspace || !workspaceLabel) {
+      return;
+    }
+
+    const workspaceTerminals = terminalsByWorkspaceId[selectedTerminalWorkspace.id] ?? [];
+    for (const terminal of workspaceTerminals) {
+      if (terminal.subtitle === workspaceLabel) {
+        continue;
+      }
+
+      updateTerminal(selectedTerminalWorkspace.id, terminal.id, (current) => ({
+        ...current,
+        subtitle: workspaceLabel,
+      }));
+    }
+  }, [selectedTerminalWorkspace, terminalsByWorkspaceId, updateTerminal, workspaceLabel]);
 
   return {
     ...runtime,

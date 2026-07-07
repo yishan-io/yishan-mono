@@ -139,10 +139,7 @@ function getTerminalTheme(background: string, foreground: string): ITheme {
 /**
  * Resolves the renderer that the current platform can actually use for terminal output.
  */
-export function resolveTerminalRendererKind(
-  platformOs: string,
-  terminal?: Pick<TerminalItem, "agentKind"> | null,
-): TerminalRendererKind {
+export function resolveTerminalRendererKind(platformOs: string): TerminalRendererKind {
   if (platformOs === "web") {
     return "native";
   }

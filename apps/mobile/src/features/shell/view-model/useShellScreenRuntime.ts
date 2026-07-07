@@ -31,7 +31,11 @@ export function useShellScreenRuntime({
     setNavOpen: shell.setNavOpen,
   });
   const sheets = useShellSheets();
-  const terminalMessages = useShellTerminalMessagesModel(shell);
+  const screenContext = useShellScreenContext({
+    shell,
+    t,
+  });
+  const terminalMessages = useShellTerminalMessagesModel(shell, screenContext.selectedWorkspaceLabel);
 
   const mutations = useShellMutations({
     onProjectDeleted: ({ organizationId, projectId, workspaceIds, workspaceNodeIdsByWorkspaceId }) => {
@@ -60,11 +64,6 @@ export function useShellScreenRuntime({
         workspaceNodeId: workspace.nodeId,
       });
     },
-  });
-  const screenContext = useShellScreenContext({
-    shell,
-    t,
-    terminalMessages,
   });
   const screenModel = useShellScreenModel({
     closeDrawer: drawer.closeDrawer,
