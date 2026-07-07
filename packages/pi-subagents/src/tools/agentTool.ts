@@ -13,6 +13,18 @@ const agentToolSchema = Type.Object({
   background: Type.Optional(Type.Boolean({ description: "Run in background and return an agent id immediately" })),
 });
 
+const AGENT_TOOL_DESCRIPTION =
+  "Delegate independent research or implementation work to one named sub-agent using the shared agent manager.";
+const AGENT_TOOL_PROMPT_SNIPPET =
+  "Use Agent for focused sub-tasks, especially codebase exploration, specialist review, or isolated code changes.";
+const AGENT_TOOL_PROMPT_GUIDELINES = [
+  "Use Agent when a task is independent enough to hand off to one specialized sub-agent; do not use it for a single file read, quick grep, or another trivial local check.",
+  "When you decide to use Agent, call it directly without narrating the delegation plan to the user first.",
+  "In the prompt, state whether the sub-agent should do research or modify code, point it to the most relevant files or directories, and specify what result it should return.",
+  "Once you delegate work, do not duplicate the same exploration or edits yourself; wait for the result or continue only with non-overlapping tasks.",
+  "Use Agent with background=true only when the work can continue asynchronously while you do something else unrelated.",
+] as const;
+
 interface AgentToolDetails {
   agentId: string;
   status?: string;
@@ -27,13 +39,9 @@ export function registerAgentTool(pi: ExtensionAPI, registry: AgentRegistry, man
   pi.registerTool({
     name: "Agent",
     label: "Agent",
-    description: "Delegate work to one named sub-agent using the shared agent manager.",
-    promptSnippet: "Delegate focused work to a named sub-agent and optionally run it in the background.",
-    promptGuidelines: [
-      "Use Agent when a task is independent enough to hand off to one specialized sub-agent.",
-      "When you decide to use Agent, call it directly without narrating the delegation plan to the user first.",
-      "Use Agent with background=true when the work can continue asynchronously while you do something else.",
-    ],
+    description: AGENT_TOOL_DESCRIPTION,
+    promptSnippet: AGENT_TOOL_PROMPT_SNIPPET,
+    promptGuidelines: [...AGENT_TOOL_PROMPT_GUIDELINES],
     parameters: agentToolSchema,
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       registry.reload();

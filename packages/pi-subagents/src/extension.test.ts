@@ -231,7 +231,7 @@ describe("createPiSubagentsExtension", () => {
         {
           role: "user",
           content:
-            "Use the Agent tool to delegate the task below to the named sub-agent. Call the Agent tool immediately without any preamble, explanation, or user-facing planning text. Wait for the sub-agent result, continue the work yourself, and then give the final response to the user.\n\nSub-agent: Explore\n\nTask:\ninspect auth",
+            "Use the Agent tool to delegate the task below to the named sub-agent. Call the Agent tool immediately without any preamble, explanation, or user-facing planning text. Once delegated, do not duplicate the same work yourself. Wait for the result or continue only with non-overlapping tasks. In the Agent prompt, specify whether the sub-agent should do research or make code changes, point it to the most relevant files or directories, and tell it what result to return. Wait for the sub-agent result, continue the work yourself, and then give the final response to the user.\n\nSub-agent: Explore\n\nTask:\ninspect auth",
           timestamp: 1,
         },
       ],
@@ -287,10 +287,16 @@ describe("createPiSubagentsExtension", () => {
     if (!beforeAgentStartHandler) {
       throw new Error("Expected before_agent_start handler");
     }
-    const beforeAgentStartResult = await beforeAgentStartHandler({ systemPrompt: "Base prompt" });
+    const beforeAgentStartResult = (await beforeAgentStartHandler({ systemPrompt: "Base prompt" })) as {
+      systemPrompt: string;
+    };
     expect(beforeAgentStartResult).toEqual({
       systemPrompt: expect.stringContaining("You can delegate work to sub-agents using the Agent tool."),
     });
+    expect(beforeAgentStartResult.systemPrompt).toContain("Do not use Agent when:");
+    expect(beforeAgentStartResult.systemPrompt).toContain(
+      "Once you delegate work, do not duplicate the same exploration or edits yourself.",
+    );
 
     const sessionShutdownHandler = handlers.get("session_shutdown");
     if (!sessionShutdownHandler) {

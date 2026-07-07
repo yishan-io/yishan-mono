@@ -119,6 +119,8 @@ Agent({
 
 Foreground runs return the child agent response.
 Background runs return the new agent id immediately.
+Completed background results are not auto-injected back into the main agent; use `/agent-send <agent-id>` (or `/agent-send` for all completed runs) to hand them back manually.
+`/agent-steer` applies only to a currently running agent, and this MVP does not expose an OpenCode-style resumable `task_id` flow.
 
 ## Live progress in TUI
 
@@ -140,8 +142,9 @@ Each run writes a transcript to:
 - Autocomplete uses a flat merged list with clear `Agent · ...` labels; it does not yet render explicit grouped `Agents` / `Files` sections.
 - Child sessions intentionally disable extension loading to avoid recursive self-loading; they still use Pi SDK sessions, context files, and normal tool/session infrastructure.
 - Built-in agent definitions are loaded from this package manually because Pi packages do not auto-discover agent-definition directories.
-- The package currently exposes only the single-agent `Agent` tool; result/stop/steer remain slash-command driven.
+- The package currently exposes only the single-agent `Agent` tool; result/stop/steer remain slash-command driven, and background-result handoff remains manual via `/agent-send`.
 - The progress widget is intentionally lightweight for MVP; it does not yet stream per-agent transcript output or provide a dedicated selector/details pane.
+- Child runs are fresh Pi SDK sessions; this MVP does not expose an OpenCode-style resumable `task_id`/session-resume API.
 
 ## License
 
