@@ -132,13 +132,13 @@ describe("startAgentRun", () => {
 
     const handle = await startAgentRun({
       agentId: "agent-2",
-      agentName: "Reviewer",
-      prompt: "Review auth",
+      agentName: "General",
+      prompt: "Implement auth",
       cwd: "/tmp/project",
       agentDefinition: {
-        name: "Reviewer",
-        description: "Review code",
-        systemPrompt: "Reviewer prompt",
+        name: "General",
+        description: "Implement code",
+        systemPrompt: "General prompt",
         source: "builtin",
       },
     });
@@ -151,7 +151,7 @@ describe("startAgentRun", () => {
     expect(abortMock).toHaveBeenCalledTimes(1);
     expect(result).toMatchObject({
       agentId: "agent-2",
-      agentName: "Reviewer",
+      agentName: "General",
       status: "cancelled",
       error: "Agent run was cancelled",
     });
@@ -200,14 +200,14 @@ describe("startAgentRun", () => {
 
     const handle = await startAgentRun({
       agentId: "agent-4",
-      agentName: "Planner",
-      prompt: "Plan auth work",
+      agentName: "General",
+      prompt: "Implement auth work",
       cwd: "/tmp/project",
       maxTurns: 2,
       agentDefinition: {
-        name: "Planner",
-        description: "Plan code changes",
-        systemPrompt: "Planner prompt",
+        name: "General",
+        description: "Implement code changes",
+        systemPrompt: "General prompt",
         source: "builtin",
       },
     });
@@ -219,7 +219,7 @@ describe("startAgentRun", () => {
     expect(abortMock).toHaveBeenCalledTimes(1);
     expect(result).toMatchObject({
       agentId: "agent-4",
-      agentName: "Planner",
+      agentName: "General",
       status: "failed",
       error: "Agent run exceeded max turns (2)",
     });

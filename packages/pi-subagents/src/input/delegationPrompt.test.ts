@@ -21,7 +21,7 @@ Inspect authentication`);
   it("builds a multi-agent delegation prompt", () => {
     expect(
       buildDelegationPrompt({
-        agents: ["Explore", "Reviewer"],
+        agents: ["Explore", "General"],
         prompt: "Inspect authentication",
         mode: "foreground",
       }),
@@ -29,7 +29,7 @@ Inspect authentication`);
 
 Sub-agents:
 - Explore
-- Reviewer
+- General
 
 Task:
 Inspect authentication`);

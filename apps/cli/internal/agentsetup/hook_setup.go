@@ -3,14 +3,13 @@ package setup
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 
 	"github.com/rs/zerolog/log"
 
-	"yishan/apps/cli/internal/config"
 	hooksetup "yishan/apps/cli/internal/agentsetup/hooks"
+	"yishan/apps/cli/internal/config"
 )
 
 type AgentHookSetupConfig = hooksetup.AgentHookSetupConfig
@@ -55,8 +54,10 @@ func EnsureManagedAgentRuntime(disablePersona bool) {
 		log.Warn().Err(err).Msg("failed to install agent hook setup")
 	}
 
-	if err := ensurePiNotifyPackage(); err != nil {
-		log.Warn().Err(err).Msg("failed to install pi notify package")
+	if err := ensureManagedPiPackages(); err != nil {
+		log.Warn().Err(err).Msg("failed to install managed pi packages")
+	} else if err := ensureManagedPiAgents(); err != nil {
+		log.Warn().Err(err).Msg("failed to sync managed pi agents")
 	}
 }
 
@@ -72,7 +73,7 @@ func RemoveManagedAgentRuntime() error {
 	}); err != nil {
 		removeErr = err
 	}
-	if err := removePiNotifyPackage(); err != nil {
+	if err := removeManagedPiPackages(); err != nil {
 		if removeErr != nil {
 			removeErr = fmt.Errorf("%v; %w", removeErr, err)
 		} else {
@@ -80,20 +81,6 @@ func RemoveManagedAgentRuntime() error {
 		}
 	}
 	return removeErr
-}
-
-func ensurePiNotifyPackage() error {
-	cmd := exec.Command("pi", "install", "npm:@yishan-io/pi-notify")
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	return cmd.Run()
-}
-
-func removePiNotifyPackage() error {
-	cmd := exec.Command("pi", "uninstall", "@yishan-io/pi-notify")
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	return cmd.Run()
 }
 
 func resolveManagedHookRootDir() (string, error) {

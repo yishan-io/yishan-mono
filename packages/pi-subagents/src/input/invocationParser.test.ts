@@ -3,17 +3,17 @@ import { describe, expect, it } from "vitest";
 import { parseAgentInvocation } from "./invocationParser";
 
 describe("parseAgentInvocation", () => {
-  const knownAgentNames = ["Explore", "Reviewer", "Planner"];
+  const knownAgentNames = ["Explore", "General"];
 
   it("returns null when the prompt does not start with @agent", () => {
     expect(parseAgentInvocation("review @src/auth.ts", knownAgentNames)).toBeNull();
   });
 
   it("parses a single leading agent token on the same line as the task", () => {
-    expect(parseAgentInvocation("@agent:Reviewer review @src/auth.ts", knownAgentNames)).toEqual({
+    expect(parseAgentInvocation("@agent:General review @src/auth.ts", knownAgentNames)).toEqual({
       kind: "invocation",
       invocation: {
-        agents: ["Reviewer"],
+        agents: ["General"],
         prompt: "review @src/auth.ts",
         mode: "foreground",
       },
@@ -22,11 +22,11 @@ describe("parseAgentInvocation", () => {
 
   it("parses multiple leading agent tokens with a shared task", () => {
     expect(
-      parseAgentInvocation("@agent:Explore\n@agent:Reviewer\n\nInvestigate the authentication flow.", knownAgentNames),
+      parseAgentInvocation("@agent:Explore\n@agent:General\n\nInvestigate the authentication flow.", knownAgentNames),
     ).toEqual({
       kind: "invocation",
       invocation: {
-        agents: ["Explore", "Reviewer"],
+        agents: ["Explore", "General"],
         prompt: "Investigate the authentication flow.",
         mode: "foreground",
       },
@@ -34,10 +34,10 @@ describe("parseAgentInvocation", () => {
   });
 
   it("matches agent names case-insensitively", () => {
-    expect(parseAgentInvocation("@agent:planner draft the plan", knownAgentNames)).toEqual({
+    expect(parseAgentInvocation("@agent:general draft the plan", knownAgentNames)).toEqual({
       kind: "invocation",
       invocation: {
-        agents: ["Planner"],
+        agents: ["General"],
         prompt: "draft the plan",
         mode: "foreground",
       },

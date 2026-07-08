@@ -122,6 +122,9 @@ func TestResolveEnvDefaults(t *testing.T) {
 }
 
 func TestResolveSessionMetadataEnv(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
 	got := resolveSessionMetadataEnv([]string{"PATH=/usr/bin"}, StartRequest{
 		WorkspaceID: "workspace-1",
 		TabID:       "tab-1",
@@ -132,6 +135,8 @@ func TestResolveSessionMetadataEnv(t *testing.T) {
 		"YISHAN_WORKSPACE_ID=workspace-1",
 		"YISHAN_TAB_ID=tab-1",
 		"YISHAN_PANE_ID=pane-1",
+		"YISHAN_NOTIFY_SCRIPT_PATH=" + filepath.Join(homeDir, ".yishan", "notify.sh"),
+		"PI_CODING_AGENT_DIR=" + filepath.Join(homeDir, ".yishan", "pi", "agent"),
 	} {
 		if !strings.Contains(joined, expected) {
 			t.Fatalf("expected %s in env, got %v", expected, got)

@@ -289,27 +289,27 @@ func writeSkillFiles(skillDir string, files map[string][]byte) error {
 }
 
 func ensureAgentSkillSymlinks(skillDir string, name string) ([]string, error) {
-	linkDirs, err := agentSkillLinkDirs(name)
+	linkTargets, err := skillLinkTargets(name)
 	if err != nil {
 		return nil, err
 	}
-	symlinks := make([]string, 0, len(linkDirs))
-	for _, linkDir := range linkDirs {
-		if err := ensureSkillSymlink(linkDir, skillDir); err != nil {
-			return nil, fmt.Errorf("symlink %s: %w", linkDir, err)
+	symlinks := make([]string, 0, len(linkTargets))
+	for _, linkTarget := range linkTargets {
+		if err := ensureSkillSymlink(linkTarget.path, skillDir); err != nil {
+			return nil, fmt.Errorf("symlink %s: %w", linkTarget.path, err)
 		}
-		symlinks = append(symlinks, linkDir)
+		symlinks = append(symlinks, linkTarget.path)
 	}
 	return symlinks, nil
 }
 
 func removeSkillMaterialization(name string) error {
-	linkDirs, err := agentSkillLinkDirs(name)
+	linkTargets, err := skillLinkTargets(name)
 	if err != nil {
 		return err
 	}
-	for _, linkDir := range linkDirs {
-		if err := removeSymlink(linkDir); err != nil {
+	for _, linkTarget := range linkTargets {
+		if err := removeSymlink(linkTarget.path); err != nil {
 			return err
 		}
 	}
@@ -340,28 +340,37 @@ func removeSymlink(path string) error {
 	return nil
 }
 
-func agentSkillLinkDirs(name string) ([]string, error) {
+type skillLinkTarget struct {
+	agent string
+	path  string
+}
+
+func skillLinkTargets(name string) ([]skillLinkTarget, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("resolve home dir: %w", err)
 	}
-	return []string{
-		filepath.Join(homeDir, ".claude", "skills", name),
-		filepath.Join(homeDir, ".codex", "skills", name),
-		filepath.Join(homeDir, ".agents", "skills", name),
+	piSkillsDir, err := config.ManagedPiSkillsDir()
+	if err != nil {
+		return nil, fmt.Errorf("resolve managed pi skills dir: %w", err)
+	}
+	return []skillLinkTarget{
+		{agent: "claude", path: filepath.Join(homeDir, ".claude", "skills", name)},
+		{agent: "codex", path: filepath.Join(homeDir, ".codex", "skills", name)},
+		{agent: "shared", path: filepath.Join(homeDir, ".agents", "skills", name)},
+		{agent: "pi", path: filepath.Join(piSkillsDir, name)},
 	}, nil
 }
 
 func installedAgentsForSkill(name string) []string {
-	linkDirs, err := agentSkillLinkDirs(name)
+	linkTargets, err := skillLinkTargets(name)
 	if err != nil {
 		return []string{}
 	}
-	agents := []string{}
-	labels := []string{"claude", "codex", "shared"}
-	for idx, linkDir := range linkDirs {
-		if info, statErr := os.Lstat(linkDir); statErr == nil && info.Mode()&os.ModeSymlink != 0 {
-			agents = append(agents, labels[idx])
+	agents := make([]string, 0, len(linkTargets))
+	for _, linkTarget := range linkTargets {
+		if info, statErr := os.Lstat(linkTarget.path); statErr == nil && info.Mode()&os.ModeSymlink != 0 {
+			agents = append(agents, linkTarget.agent)
 		}
 	}
 	return agents
