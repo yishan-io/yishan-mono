@@ -6,16 +6,17 @@ import (
 	"runtime"
 	"strings"
 
+	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
 const managedRuntimeRootDirName = shellenv.ManagedRuntimeRootDirName
 const managedRuntimeOrigZdotdirEnvKey = shellenv.ManagedRuntimeOrigZdotdirEnvKey
 const workspaceIDEnvKey = "YISHAN_WORKSPACE_ID"
-const projectIDEnvKey  = "YISHAN_PROJECT_ID"
-const orgIDEnvKey      = "YISHAN_ORG_ID"
-const tabIDEnvKey      = "YISHAN_TAB_ID"
-const paneIDEnvKey     = "YISHAN_PANE_ID"
+const projectIDEnvKey = "YISHAN_PROJECT_ID"
+const orgIDEnvKey = "YISHAN_ORG_ID"
+const tabIDEnvKey = "YISHAN_TAB_ID"
+const paneIDEnvKey = "YISHAN_PANE_ID"
 const notifyScriptPathEnvKey = "YISHAN_NOTIFY_SCRIPT_PATH"
 
 func resolveManagedBashRcfilePath() string {
@@ -32,30 +33,36 @@ func resolveManagedRuntimeEnv(baseEnv []string, command string) []string {
 
 func resolveSessionMetadataEnv(baseEnv []string, req StartRequest) []string {
 	env := baseEnv
-	if strings.TrimSpace(req.WorkspaceID) != "" {
-		env = shellenv.UpsertEnv(env, workspaceIDEnvKey, strings.TrimSpace(req.WorkspaceID))
-	}
-	if strings.TrimSpace(req.ProjectID) != "" {
-		env = shellenv.UpsertEnv(env, projectIDEnvKey, strings.TrimSpace(req.ProjectID))
-	}
-	if strings.TrimSpace(req.OrgID) != "" {
-		env = shellenv.UpsertEnv(env, orgIDEnvKey, strings.TrimSpace(req.OrgID))
-	}
-	if strings.TrimSpace(req.TabID) != "" {
-		env = shellenv.UpsertEnv(env, tabIDEnvKey, strings.TrimSpace(req.TabID))
-	}
-	if strings.TrimSpace(req.PaneID) != "" {
-		env = shellenv.UpsertEnv(env, paneIDEnvKey, strings.TrimSpace(req.PaneID))
-	}
-	// Set the notify script path for pi-notify extension.
-	if homeDir, err := os.UserHomeDir(); err == nil {
-		notifyName := "notify.sh"
-		if runtime.GOOS == "windows" {
-			notifyName = "notify.ps1"
-		}
-		notifyPath := filepath.Join(homeDir, ".yishan", notifyName)
+	env = upsertSessionEnv(env, workspaceIDEnvKey, req.WorkspaceID)
+	env = upsertSessionEnv(env, projectIDEnvKey, req.ProjectID)
+	env = upsertSessionEnv(env, orgIDEnvKey, req.OrgID)
+	env = upsertSessionEnv(env, tabIDEnvKey, req.TabID)
+	env = upsertSessionEnv(env, paneIDEnvKey, req.PaneID)
+	if notifyPath, err := resolveNotifyScriptPath(); err == nil {
 		env = shellenv.UpsertEnv(env, notifyScriptPathEnvKey, notifyPath)
+	}
+	if piAgentDir, err := config.ManagedPiAgentDir(); err == nil {
+		env = shellenv.UpsertEnv(env, config.PiAgentDirEnvKey, piAgentDir)
 	}
 	return env
 }
 
+func upsertSessionEnv(env []string, key string, value string) []string {
+	trimmedValue := strings.TrimSpace(value)
+	if trimmedValue == "" {
+		return env
+	}
+	return shellenv.UpsertEnv(env, key, trimmedValue)
+}
+
+func resolveNotifyScriptPath() (string, error) {
+	yishanHome, err := config.HomeDir()
+	if err != nil {
+		return "", err
+	}
+	notifyName := "notify.sh"
+	if runtime.GOOS == "windows" {
+		notifyName = "notify.ps1"
+	}
+	return filepath.Join(yishanHome, notifyName), nil
+}

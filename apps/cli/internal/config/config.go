@@ -14,6 +14,7 @@ import (
 // All credential reads/writes use these constants to prevent key-string drift.
 const (
 	DirName                     = ".yishan"
+	PiAgentDirEnvKey            = "PI_CODING_AGENT_DIR"
 	KeyAPIBaseURL               = "api_base_url"
 	KeyAPIToken                 = "api_token"
 	KeyAPIRefreshToken          = "api_refresh_token"
@@ -35,6 +36,46 @@ func HomeDir() (string, error) {
 		return "", fmt.Errorf("resolve user home dir: %w", err)
 	}
 	return filepath.Join(home, DirName), nil
+}
+
+func ManagedPiRootDir() (string, error) {
+	yishanHome, err := HomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(yishanHome, "pi"), nil
+}
+
+func ManagedPiAgentDir() (string, error) {
+	piRootDir, err := ManagedPiRootDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(piRootDir, "agent"), nil
+}
+
+func ManagedPiAgentsDir() (string, error) {
+	agentDir, err := ManagedPiAgentDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(agentDir, "agents"), nil
+}
+
+func ManagedPiSkillsDir() (string, error) {
+	agentDir, err := ManagedPiAgentDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(agentDir, "skills"), nil
+}
+
+func ManagedPiSessionsDir() (string, error) {
+	agentDir, err := ManagedPiAgentDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(agentDir, "sessions"), nil
 }
 
 type APIConfig struct {

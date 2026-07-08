@@ -36,6 +36,14 @@ func TestAddSkill_OfficialSkillUsesCanonicalSource(t *testing.T) {
 		t.Fatalf("expected one official registry entry, got %#v", registry.Skills)
 	}
 
+	expectedPiSkillPath := filepath.Join(homeDir, ".yishan", "pi", "agent", "skills", StartSkillName)
+	if _, err := os.Lstat(expectedPiSkillPath); err != nil {
+		t.Fatalf("expected pi skill symlink: %v", err)
+	}
+	if !containsString(result.Symlinks, expectedPiSkillPath) {
+		t.Fatalf("expected install result symlinks to contain %s, got %v", expectedPiSkillPath, result.Symlinks)
+	}
+
 	commandsPath := filepath.Join(homeDir, ".yishan", "opencode-config-home", "commands", StartSkillName+".md")
 	if _, err := os.Stat(commandsPath); err != nil {
 		t.Fatalf("expected opencode command file: %v", err)
@@ -57,6 +65,9 @@ func TestAddSkill_OfficialSkillUsesCanonicalSource(t *testing.T) {
 	}
 	if !info.Installed || info.SourceKind != SkillSourceOfficial || info.Version == "" {
 		t.Fatalf("unexpected skill info: %#v", info)
+	}
+	if !containsString(info.InstalledForAgents, "pi") {
+		t.Fatalf("expected pi install target in %#v", info.InstalledForAgents)
 	}
 }
 
@@ -88,11 +99,21 @@ func TestRemoveSkill_RemovesRegistryAndSymlinks(t *testing.T) {
 		filepath.Join(homeDir, ".claude", "skills", StartSkillName),
 		filepath.Join(homeDir, ".codex", "skills", StartSkillName),
 		filepath.Join(homeDir, ".agents", "skills", StartSkillName),
+		filepath.Join(homeDir, ".yishan", "pi", "agent", "skills", StartSkillName),
 	} {
 		if _, err := os.Lstat(path); !os.IsNotExist(err) {
 			t.Fatalf("expected symlink removed at %s, err=%v", path, err)
 		}
 	}
+}
+
+func containsString(values []string, expected string) bool {
+	for _, value := range values {
+		if value == expected {
+			return true
+		}
+	}
+	return false
 }
 
 func TestEnsureMemorySkill_InstallsCanonicalSkillInstructions(t *testing.T) {

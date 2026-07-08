@@ -1,9 +1,7 @@
 package setup
 
 import (
-	"bytes"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -72,7 +70,7 @@ func GetInstalledState() (*InstalledState, error) {
 		return nil, err
 	}
 
-	if err := fillSkillState(state, yishanHome, homeDir); err != nil {
+	if err := fillSkillState(state, yishanHome); err != nil {
 		return nil, err
 	}
 	fillMCPState(state, homeDir)
@@ -83,7 +81,7 @@ func GetInstalledState() (*InstalledState, error) {
 	return state, nil
 }
 
-func fillSkillState(state *InstalledState, yishanHome string, homeDir string) error {
+func fillSkillState(state *InstalledState, yishanHome string) error {
 	infos, err := ListSkills()
 	if err != nil {
 		return err
@@ -99,8 +97,14 @@ func fillSkillState(state *InstalledState, yishanHome string, homeDir string) er
 		}
 		state.Skill.Installed = true
 		state.Skill.SkillPath = filepath.Join(yishanHome, "skills", info.Name, "SKILL.md")
-		for _, agent := range info.InstalledForAgents {
-			state.Skill.Symlinks = append(state.Skill.Symlinks, filepath.Join(homeDir, agentSkillDirName(agent), "skills", info.Name))
+		linkTargets, err := skillLinkTargets(info.Name)
+		if err != nil {
+			return err
+		}
+		for _, linkTarget := range linkTargets {
+			if hasInstalledAgent(info.InstalledForAgents, linkTarget.agent) {
+				state.Skill.Symlinks = append(state.Skill.Symlinks, linkTarget.path)
+			}
 		}
 		state.Skills = append(state.Skills, PerSkillState{
 			Name:               info.Name,
@@ -111,15 +115,13 @@ func fillSkillState(state *InstalledState, yishanHome string, homeDir string) er
 	return nil
 }
 
-func agentSkillDirName(agent string) string {
-	switch agent {
-	case "claude":
-		return ".claude"
-	case "codex":
-		return ".codex"
-	default:
-		return ".agents"
+func hasInstalledAgent(installedAgents []string, agent string) bool {
+	for _, installedAgent := range installedAgents {
+		if installedAgent == agent {
+			return true
+		}
 	}
+	return false
 }
 
 func fillMCPState(state *InstalledState, homeDir string) {
@@ -209,10 +211,5 @@ func fillShellState(state *InstalledState, yishanHome string) {
 }
 
 func isPiNotifyInstalled() bool {
-	cmd := exec.Command("pi", "package", "list")
-	out, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	return bytes.Contains(out, []byte("@yishan-io/pi-notify"))
+	return isManagedPiPackageInstalled(piNotifyPackageName)
 }

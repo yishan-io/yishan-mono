@@ -166,6 +166,46 @@ func TestScanPiFallsBackToLatestModelChange(t *testing.T) {
 	}
 }
 
+func TestResolvePiSessionRootPrefersManagedRoot(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	managedRoot := filepath.Join(homeDir, ".yishan", "pi", "agent", "sessions")
+	if err := os.MkdirAll(managedRoot, 0o755); err != nil {
+		t.Fatalf("mkdir managed root: %v", err)
+	}
+	legacyRoot := filepath.Join(homeDir, ".pi", "agent", "sessions")
+	if err := os.MkdirAll(legacyRoot, 0o755); err != nil {
+		t.Fatalf("mkdir legacy root: %v", err)
+	}
+
+	resolvedRoot, err := resolvePiSessionRoot("")
+	if err != nil {
+		t.Fatalf("resolve pi session root: %v", err)
+	}
+	if resolvedRoot != managedRoot {
+		t.Fatalf("expected managed root %q, got %q", managedRoot, resolvedRoot)
+	}
+}
+
+func TestResolvePiSessionRootFallsBackToLegacyRoot(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	legacyRoot := filepath.Join(homeDir, ".pi", "agent", "sessions")
+	if err := os.MkdirAll(legacyRoot, 0o755); err != nil {
+		t.Fatalf("mkdir legacy root: %v", err)
+	}
+
+	resolvedRoot, err := resolvePiSessionRoot("")
+	if err != nil {
+		t.Fatalf("resolve pi session root: %v", err)
+	}
+	if resolvedRoot != legacyRoot {
+		t.Fatalf("expected legacy root %q, got %q", legacyRoot, resolvedRoot)
+	}
+}
+
 func mapFromJSON(t *testing.T, rawLine []byte) map[string]any {
 	t.Helper()
 	var top map[string]any

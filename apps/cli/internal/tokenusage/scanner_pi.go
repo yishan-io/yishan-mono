@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/agentkind"
+	"yishan/apps/cli/internal/config"
 )
 
 const piAgentKind = agentkind.Pi
@@ -88,6 +89,24 @@ func resolvePiSessionRoot(sessionRoot string) (string, error) {
 	if strings.TrimSpace(sessionRoot) != "" {
 		return sessionRoot, nil
 	}
+	managedRoot, err := config.ManagedPiSessionsDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve managed pi session root: %w", err)
+	}
+	if _, err := os.Stat(managedRoot); err == nil || !os.IsNotExist(err) {
+		return managedRoot, nil
+	}
+	legacyRoot, err := resolveLegacyPiSessionRoot()
+	if err != nil {
+		return "", err
+	}
+	if _, err := os.Stat(legacyRoot); err == nil {
+		return legacyRoot, nil
+	}
+	return managedRoot, nil
+}
+
+func resolveLegacyPiSessionRoot() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("resolve user home dir: %w", err)

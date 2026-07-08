@@ -2,9 +2,12 @@ package setup
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"yishan/apps/cli/internal/config"
 )
 
 func TestEnsureManagedHookAssetsWritesNotifyScripts(t *testing.T) {
@@ -122,5 +125,48 @@ func TestManagedShellEnvPreservesCustomZdotdir(t *testing.T) {
 	expectedOrig := origZdotdirEnvKey + "=/Users/test/.config/zsh"
 	if !strings.Contains(joined, expectedOrig) {
 		t.Fatalf("expected %s, got %v", expectedOrig, got)
+	}
+}
+
+func TestEnsureManagedPiPackagesUsesManagedPiAgentDir(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	originalExecCommand := execCommand
+	defer func() {
+		execCommand = originalExecCommand
+	}()
+
+	type recordedCall struct {
+		name string
+		args []string
+		cmd  *exec.Cmd
+	}
+	calls := make([]recordedCall, 0, 2)
+	execCommand = func(name string, args ...string) *exec.Cmd {
+		cmd := exec.Command(os.Args[0], "-test.run=^$")
+		calls = append(calls, recordedCall{name: name, args: append([]string{}, args...), cmd: cmd})
+		return cmd
+	}
+
+	if err := ensureManagedPiPackages(); err != nil {
+		t.Fatalf("ensure managed pi packages: %v", err)
+	}
+	if len(calls) != 2 {
+		t.Fatalf("expected 2 pi package install calls, got %d", len(calls))
+	}
+
+	expectedAgentDir := filepath.Join(homeDir, ".yishan", "pi", "agent")
+	expectedArgs := [][]string{{"install", piNotifyInstallSource}, {"install", piSubagentsInstallSource}}
+	for index, call := range calls {
+		if call.name != "pi" {
+			t.Fatalf("expected pi command, got %q", call.name)
+		}
+		if strings.Join(call.args, "|") != strings.Join(expectedArgs[index], "|") {
+			t.Fatalf("expected args %v, got %v", expectedArgs[index], call.args)
+		}
+		if !strings.Contains(strings.Join(call.cmd.Env, "\n"), config.PiAgentDirEnvKey+"="+expectedAgentDir) {
+			t.Fatalf("expected managed pi env in %v", call.cmd.Env)
+		}
 	}
 }
