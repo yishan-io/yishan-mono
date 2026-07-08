@@ -19,6 +19,7 @@ export function bindAgentProgressUi(manager: AgentManager, ui: ExtensionUIContex
   let latestRecords: AgentRecord[] = [];
   let spinnerFrameIndex = 0;
   let spinnerInterval: ReturnType<typeof setInterval> | undefined;
+  let hadActiveAgents = false;
 
   const stopSpinner = () => {
     if (spinnerInterval) {
@@ -48,13 +49,22 @@ export function bindAgentProgressUi(manager: AgentManager, ui: ExtensionUIContex
   const unsubscribe = manager.subscribe((records) => {
     latestRecords = records;
     syncSpinner();
+
+    const hasActiveAgents = records.some((record) => ACTIVE_AGENT_STATUSES.has(record.status));
+    if (!hasActiveAgents) {
+      clearAgentProgress(ui, { restoreWorkingVisibility: hadActiveAgents });
+      hadActiveAgents = false;
+      return;
+    }
+
+    hadActiveAgents = true;
     renderAgentProgress(ui, latestRecords, spinnerFrameIndex);
   });
 
   return () => {
     stopSpinner();
     unsubscribe();
-    clearAgentProgress(ui);
+    clearAgentProgress(ui, { restoreWorkingVisibility: hadActiveAgents });
   };
 }
 
@@ -80,7 +90,7 @@ export function renderAgentProgress(ui: ExtensionUIContext, records: AgentRecord
   ui.setStatus(STATUS_KEY, ui.theme.fg("accent", `🤖 ${statusSummary}`));
   ui.setWidget(WIDGET_KEY, buildWidgetLines(ui, activeRecords, spinnerFrameIndex));
   ui.setWorkingMessage();
-  ui.setWorkingVisible(true);
+  ui.setWorkingVisible(false);
 }
 
 export function renderPendingDelegation(ui: ExtensionUIContext, agentNames: string[]): void {
@@ -97,14 +107,17 @@ export function renderPendingDelegation(ui: ExtensionUIContext, agentNames: stri
   ui.setStatus(STATUS_KEY, ui.theme.fg("warning", `🤖 ${PREPARING_MESSAGE}`));
   ui.setWidget(WIDGET_KEY, lines);
   ui.setWorkingMessage();
-  ui.setWorkingVisible(true);
+  ui.setWorkingVisible(false);
 }
 
-export function clearAgentProgress(ui: ExtensionUIContext): void {
+export function clearAgentProgress(ui: ExtensionUIContext, options: { restoreWorkingVisibility?: boolean } = {}): void {
   ui.setStatus(STATUS_KEY, undefined);
   ui.setWidget(WIDGET_KEY, undefined);
   ui.setWorkingMessage();
-  ui.setWorkingVisible(false);
+
+  if (options.restoreWorkingVisibility ?? true) {
+    ui.setWorkingVisible(true);
+  }
 }
 
 function buildWidgetLines(ui: ExtensionUIContext, records: AgentRecord[], spinnerFrameIndex: number): string[] {
