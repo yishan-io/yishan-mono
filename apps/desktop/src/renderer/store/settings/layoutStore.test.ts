@@ -9,6 +9,7 @@ describe("layoutStore", () => {
       leftWidth: DEFAULT_LEFT_WIDTH,
       rightWidth: DEFAULT_RIGHT_WIDTH,
       themePreference: "system",
+      markdownThemePreference: "inherit",
       markdownDefaultViewMode: "split",
       markdownPreviewFontSize: "medium",
       markdownPreviewWidth: "readable",
@@ -67,6 +68,31 @@ describe("layoutStore", () => {
     layoutStore.getState().setThemePreference("light");
 
     expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"themePreference":"light"');
+  });
+
+  it("hydrates persisted markdown theme preference", () => {
+    window.localStorage.setItem(
+      LAYOUT_STORE_STORAGE_KEY,
+      JSON.stringify({
+        state: {
+          leftWidth: DEFAULT_LEFT_WIDTH,
+          rightWidth: DEFAULT_RIGHT_WIDTH,
+          themePreference: "system",
+          markdownThemePreference: "dark",
+        },
+        version: 0,
+      }),
+    );
+
+    void layoutStore.persist.rehydrate();
+
+    expect(layoutStore.getState().markdownThemePreference).toBe("dark");
+  });
+
+  it("persists markdown theme preference", () => {
+    layoutStore.getState().setMarkdownThemePreference("light");
+
+    expect(window.localStorage.getItem(LAYOUT_STORE_STORAGE_KEY)).toContain('"markdownThemePreference":"light"');
   });
 
   it("hydrates persisted markdown default view mode", () => {

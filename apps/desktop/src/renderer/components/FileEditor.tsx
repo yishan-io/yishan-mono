@@ -7,6 +7,7 @@ import { useGitGutterDecorations } from "../hooks/useGitGutterDecorations";
 import type { MarkdownDefaultViewMode } from "../store/settings/layoutStore";
 import { FileViewerToolbar } from "./FileViewerToolbar";
 import { MarkdownPreview } from "./MarkdownPreview";
+import { MarkdownPreviewThemeProvider } from "./MarkdownPreviewThemeProvider";
 
 type MarkdownViewMode = "edit" | "split" | "preview";
 
@@ -411,38 +412,40 @@ export function FileEditor({
               outline: "none",
             }}
           >
-            <MarkdownPreview
-              content={content}
-              filePath={path}
-              worktreePath={worktreePath}
-              canEdit={!isDeleted}
-              onContentChange={handleMarkdownPreviewContentChange}
-              immediateUpdateToken={markdownPreviewImmediateUpdateToken}
-              findOpen={previewFindOpen}
-              findQuery={previewFindQuery}
-              findActiveIndex={previewFindActiveIndex}
-              onFindMatchCountChange={(count) => {
-                setPreviewFindMatchCount(count);
-                setPreviewFindActiveIndex((i) => Math.min(i, Math.max(0, count - 1)));
-              }}
-              onFindQueryChange={(q) => {
-                setPreviewFindQuery(q);
-                setPreviewFindActiveIndex(0);
-              }}
-              onFindNext={() =>
-                setPreviewFindActiveIndex((i) => (previewFindMatchCount > 0 ? (i + 1) % previewFindMatchCount : 0))
-              }
-              onFindPrev={() =>
-                setPreviewFindActiveIndex((i) =>
-                  previewFindMatchCount > 0 ? (i - 1 + previewFindMatchCount) % previewFindMatchCount : 0,
-                )
-              }
-              onFindClose={() => {
-                setPreviewFindOpen(false);
-                setPreviewFindQuery("");
-                setPreviewFindActiveIndex(0);
-              }}
-            />
+            <MarkdownPreviewThemeProvider>
+              <MarkdownPreview
+                content={content}
+                filePath={path}
+                worktreePath={worktreePath}
+                canEdit={!isDeleted}
+                onContentChange={handleMarkdownPreviewContentChange}
+                immediateUpdateToken={markdownPreviewImmediateUpdateToken}
+                findOpen={previewFindOpen}
+                findQuery={previewFindQuery}
+                findActiveIndex={previewFindActiveIndex}
+                onFindMatchCountChange={(count) => {
+                  setPreviewFindMatchCount(count);
+                  setPreviewFindActiveIndex((i) => Math.min(i, Math.max(0, count - 1)));
+                }}
+                onFindQueryChange={(q) => {
+                  setPreviewFindQuery(q);
+                  setPreviewFindActiveIndex(0);
+                }}
+                onFindNext={() =>
+                  setPreviewFindActiveIndex((i) => (previewFindMatchCount > 0 ? (i + 1) % previewFindMatchCount : 0))
+                }
+                onFindPrev={() =>
+                  setPreviewFindActiveIndex((i) =>
+                    previewFindMatchCount > 0 ? (i - 1 + previewFindMatchCount) % previewFindMatchCount : 0,
+                  )
+                }
+                onFindClose={() => {
+                  setPreviewFindOpen(false);
+                  setPreviewFindQuery("");
+                  setPreviewFindActiveIndex(0);
+                }}
+              />
+            </MarkdownPreviewThemeProvider>
           </Box>
         ) : null}
       </Box>

@@ -10,12 +10,15 @@ import {
   type MarkdownDefaultViewMode,
   type MarkdownPreviewFontSize,
   type MarkdownPreviewWidth,
+  type MarkdownThemePreference,
   layoutStore,
 } from "../../store/settings/layoutStore";
 
 /** Renders markdown editor default view mode preference controls. */
 export function MarkdownSettingsView() {
   const { t } = useTranslation();
+  const markdownThemePreference = layoutStore((state) => state.markdownThemePreference);
+  const setMarkdownThemePreference = layoutStore((state) => state.setMarkdownThemePreference);
   const markdownDefaultViewMode = layoutStore((state) => state.markdownDefaultViewMode);
   const setMarkdownDefaultViewMode = layoutStore((state) => state.setMarkdownDefaultViewMode);
   const markdownPreviewFontSize = layoutStore((state) => state.markdownPreviewFontSize);
@@ -32,6 +35,28 @@ export function MarkdownSettingsView() {
         description={t("settings.appearance.markdown.description")}
       />
       <SettingsCard>
+        <SettingsControlRow
+          title={t("settings.appearance.markdown.theme.label")}
+          description={t("settings.appearance.markdown.theme.description")}
+          control={
+            <SettingsCompactSelect
+              width={240}
+              value={markdownThemePreference}
+              onChange={(event) => {
+                setMarkdownThemePreference(event.target.value as MarkdownThemePreference);
+              }}
+              slotProps={{
+                input: {
+                  "aria-label": t("settings.appearance.markdown.theme.label"),
+                },
+              }}
+            >
+              <MenuItem value="inherit">{t("settings.appearance.markdown.theme.options.inherit")}</MenuItem>
+              <MenuItem value="light">{t("settings.appearance.markdown.theme.options.light")}</MenuItem>
+              <MenuItem value="dark">{t("settings.appearance.markdown.theme.options.dark")}</MenuItem>
+            </SettingsCompactSelect>
+          }
+        />
         <SettingsControlRow
           title={t("settings.appearance.markdown.defaultViewMode.label")}
           description={t("settings.appearance.markdown.defaultViewMode.description")}

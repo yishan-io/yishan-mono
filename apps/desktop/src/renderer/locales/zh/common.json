@@ -390,6 +390,15 @@
       "markdown": {
         "title": "Markdown",
         "description": "配置 Markdown 文件在编辑器中的默认打开方式。",
+        "theme": {
+          "label": "预览主题",
+          "description": "选择 Markdown 预览是继承应用主题，还是独立固定为浅色或深色。",
+          "options": {
+            "inherit": "继承应用主题",
+            "light": "浅色",
+            "dark": "深色"
+          }
+        },
         "defaultViewMode": {
           "label": "默认 Markdown 视图模式",
           "description": "选择 Markdown 文件默认打开方式。",
