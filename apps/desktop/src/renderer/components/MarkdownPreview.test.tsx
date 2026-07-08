@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
 
+import { ThemeProvider } from "@mui/material/styles";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { layoutStore } from "../store/settings/layoutStore";
+import { createAppTheme } from "../theme";
 import { MarkdownPreview } from "./MarkdownPreview";
+import { MarkdownPreviewThemeProvider } from "./MarkdownPreviewThemeProvider";
 
 const parseMock = vi.fn<(content: string) => Promise<string>>();
 
@@ -17,7 +20,7 @@ describe("MarkdownPreview outline", () => {
   const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
 
   beforeEach(() => {
-    layoutStore.setState({ isMarkdownOutlineVisible: true });
+    layoutStore.setState({ isMarkdownOutlineVisible: true, markdownThemePreference: "inherit" });
     parseMock.mockResolvedValue(`
       <h1>Intro</h1>
       <p>Start</p>
@@ -30,7 +33,7 @@ describe("MarkdownPreview outline", () => {
 
   afterEach(() => {
     cleanup();
-    layoutStore.setState({ isMarkdownOutlineVisible: false });
+    layoutStore.setState({ isMarkdownOutlineVisible: false, markdownThemePreference: "inherit" });
     HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
     parseMock.mockReset();
   });
@@ -94,5 +97,21 @@ describe("MarkdownPreview outline", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show outline" }));
 
     expect(await screen.findByRole("button", { name: "Intro" })).toBeTruthy();
+  });
+
+  it("uses a non-transparent preview background when forced to the opposite theme", async () => {
+    layoutStore.setState({ markdownThemePreference: "light" });
+
+    render(
+      <ThemeProvider theme={createAppTheme("dark")}>
+        <MarkdownPreviewThemeProvider>
+          <MarkdownPreview content="# placeholder" />
+        </MarkdownPreviewThemeProvider>
+      </ThemeProvider>,
+    );
+
+    await screen.findByRole("button", { name: "Intro" });
+
+    expect(getComputedStyle(screen.getByTestId("markdown-preview-root")).backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
   });
 });

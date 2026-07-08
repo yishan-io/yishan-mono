@@ -8,6 +8,7 @@ export const DEFAULT_LEFT_WIDTH = 320;
 export const DEFAULT_RIGHT_WIDTH = 400;
 
 export type LinkTarget = "built-in" | "external";
+export type MarkdownThemePreference = "inherit" | "light" | "dark";
 export type MarkdownDefaultViewMode = "edit" | "preview" | "split";
 export type MarkdownPreviewFontSize = "small" | "medium" | "large";
 export type MarkdownPreviewWidth = "readable" | "full";
@@ -17,6 +18,7 @@ type LayoutStoreState = {
   leftWidth: number;
   rightWidth: number;
   themePreference: AppThemePreference;
+  markdownThemePreference: MarkdownThemePreference;
   markdownDefaultViewMode: MarkdownDefaultViewMode;
   markdownPreviewFontSize: MarkdownPreviewFontSize;
   markdownPreviewWidth: MarkdownPreviewWidth;
@@ -33,6 +35,7 @@ type LayoutStoreState = {
   setLeftPaneWidth: (width: number) => void;
   setRightPaneWidth: (width: number) => void;
   setThemePreference: (preference: AppThemePreference) => void;
+  setMarkdownThemePreference: (preference: MarkdownThemePreference) => void;
   setMarkdownDefaultViewMode: (mode: MarkdownDefaultViewMode) => void;
   setMarkdownPreviewFontSize: (size: MarkdownPreviewFontSize) => void;
   setMarkdownPreviewWidth: (width: MarkdownPreviewWidth) => void;
@@ -52,6 +55,7 @@ export const layoutStore = create<LayoutStoreState>()(
       leftWidth: DEFAULT_LEFT_WIDTH,
       rightWidth: DEFAULT_RIGHT_WIDTH,
       themePreference: "system",
+      markdownThemePreference: "inherit" as MarkdownThemePreference,
       markdownDefaultViewMode: "split" as MarkdownDefaultViewMode,
       markdownPreviewFontSize: "medium" as MarkdownPreviewFontSize,
       markdownPreviewWidth: "readable" as MarkdownPreviewWidth,
@@ -71,6 +75,9 @@ export const layoutStore = create<LayoutStoreState>()(
       },
       setThemePreference: (themePreference) => {
         set({ themePreference });
+      },
+      setMarkdownThemePreference: (markdownThemePreference) => {
+        set({ markdownThemePreference });
       },
       setMarkdownDefaultViewMode: (markdownDefaultViewMode) => {
         set({ markdownDefaultViewMode });
@@ -118,6 +125,7 @@ export const layoutStore = create<LayoutStoreState>()(
         leftWidth: state.leftWidth,
         rightWidth: state.rightWidth,
         themePreference: state.themePreference,
+        markdownThemePreference: state.markdownThemePreference,
         markdownDefaultViewMode: state.markdownDefaultViewMode,
         markdownPreviewFontSize: state.markdownPreviewFontSize,
         markdownPreviewWidth: state.markdownPreviewWidth,

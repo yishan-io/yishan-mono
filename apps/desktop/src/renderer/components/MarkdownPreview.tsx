@@ -318,7 +318,10 @@ const MemoizedMarkdownRenderer = memo(function MemoizedMarkdownRenderer({
   }
 
   return (
-    <Box sx={{ flex: 1, minHeight: 0, position: "relative" }}>
+    <Box
+      data-testid="markdown-preview-root"
+      sx={{ flex: 1, minHeight: 0, position: "relative", bgcolor: "background.default" }}
+    >
       {findOpen && (
         <MarkdownFindBar
           query={findQuery}
