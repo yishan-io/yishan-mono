@@ -41,7 +41,7 @@ afterEach(() => {
 });
 
 describe("renderAgentProgress", () => {
-  it("shows footer status and widget lines for active agents", () => {
+  it("shows footer status and widget lines for active agents while hiding Pi's built-in loader", () => {
     const ui = createUiHarness();
 
     renderAgentProgress(ui as never, [
@@ -57,10 +57,10 @@ describe("renderAgentProgress", () => {
       "<muted>…</muted> Reviewer · queued · bg · agent-2",
     ]);
     expect(ui.setWorkingMessage).toHaveBeenCalledWith();
-    expect(ui.setWorkingVisible).toHaveBeenCalledWith(true);
+    expect(ui.setWorkingVisible).toHaveBeenCalledWith(false);
   });
 
-  it("clears footer status and widget when no active agents remain", () => {
+  it("restores Pi's built-in loader when direct rendering clears the widget", () => {
     const ui = createUiHarness();
 
     renderAgentProgress(ui as never, [createRecord({ status: "completed" })]);
@@ -68,7 +68,7 @@ describe("renderAgentProgress", () => {
     expect(ui.setStatus).toHaveBeenCalledWith("pi-subagents", undefined);
     expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-progress", undefined);
     expect(ui.setWorkingMessage).toHaveBeenCalledWith();
-    expect(ui.setWorkingVisible).toHaveBeenCalledWith(false);
+    expect(ui.setWorkingVisible).toHaveBeenCalledWith(true);
   });
 });
 
@@ -85,16 +85,40 @@ describe("renderPendingDelegation", () => {
       "<warning>…</warning> Reviewer · preparing",
     ]);
     expect(ui.setWorkingMessage).toHaveBeenCalledWith();
-    expect(ui.setWorkingVisible).toHaveBeenCalledWith(true);
+    expect(ui.setWorkingVisible).toHaveBeenCalledWith(false);
   });
 });
 
 describe("bindAgentProgressUi", () => {
-  it("subscribes to manager updates, animates running agents, and clears UI on dispose", async () => {
+  it("does not touch working visibility on initial empty subscription", () => {
     const ui = createUiHarness();
     const unsubscribe = vi.fn();
     const subscribe = vi.fn((listener: (records: AgentRecord[]) => void) => {
-      listener([createRecord()]);
+      listener([]);
+      return unsubscribe;
+    });
+
+    const dispose = bindAgentProgressUi({ subscribe } as never, ui as never);
+
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(ui.setStatus).toHaveBeenCalledWith("pi-subagents", undefined);
+    expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-progress", undefined);
+    expect(ui.setWorkingMessage).toHaveBeenCalledWith();
+    expect(ui.setWorkingVisible).not.toHaveBeenCalled();
+
+    dispose();
+
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(ui.setWorkingVisible).not.toHaveBeenCalled();
+  });
+
+  it("subscribes to manager updates, animates running agents, and restores Pi's loader after activity ends", async () => {
+    const ui = createUiHarness();
+    const unsubscribe = vi.fn();
+    let listener: ((records: AgentRecord[]) => void) | undefined;
+    const subscribe = vi.fn((nextListener: (records: AgentRecord[]) => void) => {
+      listener = nextListener;
+      nextListener([]);
       return unsubscribe;
     });
 
@@ -102,13 +126,16 @@ describe("bindAgentProgressUi", () => {
 
     const dispose = bindAgentProgressUi({ subscribe } as never, ui as never);
 
-    expect(subscribe).toHaveBeenCalledTimes(1);
+    expect(listener).toBeDefined();
+
+    listener?.([createRecord()]);
+
     expect(ui.setStatus).toHaveBeenCalledWith("pi-subagents", "<accent>🤖 1 running</accent>");
     expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-progress", [
       "<accent>Sub-agents</accent>",
       "<accent>⠋</accent> Explore · running · fg · agent-1",
     ]);
-    expect(ui.setWorkingVisible).toHaveBeenCalledWith(true);
+    expect(ui.setWorkingVisible).toHaveBeenLastCalledWith(false);
 
     await vi.advanceTimersByTimeAsync(80);
 
@@ -117,12 +144,36 @@ describe("bindAgentProgressUi", () => {
       "<accent>⠙</accent> Explore · running · fg · agent-1",
     ]);
 
-    dispose();
+    listener?.([createRecord({ status: "completed" })]);
 
-    expect(unsubscribe).toHaveBeenCalledTimes(1);
     expect(ui.setStatus).toHaveBeenLastCalledWith("pi-subagents", undefined);
     expect(ui.setWidget).toHaveBeenLastCalledWith("pi-subagents-progress", undefined);
     expect(ui.setWorkingMessage).toHaveBeenLastCalledWith();
-    expect(ui.setWorkingVisible).toHaveBeenLastCalledWith(false);
+    expect(ui.setWorkingVisible).toHaveBeenLastCalledWith(true);
+
+    dispose();
+
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(ui.setWorkingVisible).toHaveBeenLastCalledWith(true);
+  });
+
+  it("restores Pi's loader on dispose only after the extension hid it", () => {
+    const ui = createUiHarness();
+    const unsubscribe = vi.fn();
+    let listener: ((records: AgentRecord[]) => void) | undefined;
+    const subscribe = vi.fn((nextListener: (records: AgentRecord[]) => void) => {
+      listener = nextListener;
+      nextListener([]);
+      return unsubscribe;
+    });
+
+    const dispose = bindAgentProgressUi({ subscribe } as never, ui as never);
+
+    listener?.([createRecord()]);
+    dispose();
+
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(ui.setWorkingVisible).toHaveBeenNthCalledWith(1, false);
+    expect(ui.setWorkingVisible).toHaveBeenNthCalledWith(2, true);
   });
 });
