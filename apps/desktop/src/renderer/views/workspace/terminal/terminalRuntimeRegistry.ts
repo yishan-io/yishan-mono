@@ -52,6 +52,10 @@ export function setTerminalReattachHandler(handler: (tabId: string) => void): vo
 const runtimesByTabId = new Map<string, TerminalRuntimeEntry>();
 const runtimeLayer = createFixedRuntimeLayer("terminal-root-host");
 const pendingFocusTabIds = new Set<string>();
+const MIN_TERMINAL_RECOVERY_WIDTH_PX = 48;
+const MIN_TERMINAL_RECOVERY_HEIGHT_PX = 32;
+
+type TerminalHostRect = Pick<DOMRectReadOnly, "width" | "height">;
 
 // ─── Core Registry APIs ────────────────────────────────────────────────────────
 
@@ -179,14 +183,7 @@ export function attachTerminalRuntime(tabId: string, placeholder: HTMLElement): 
 
   // If this was a reattach from detached state, refresh the renderer and check for pending exit.
   if (wasDetached) {
-    const refresh = (entry.terminal as { refresh?: (start: number, end: number) => void }).refresh;
-    if (typeof refresh === "function") {
-      try {
-        refresh.call(entry.terminal, 0, Math.max(0, entry.terminal.rows - 1));
-      } catch (error) {
-        reportTerminalAsyncError("refresh terminal after reattach", error);
-      }
-    }
+    refreshTerminalRenderer(entry, "refresh terminal after reattach");
     onTerminalReattached?.(tabId);
   }
 
@@ -341,26 +338,31 @@ export function isTerminalRuntimeAttached(tabId: string): boolean {
 /**
  * Re-applies one attached runtime's layout/rendering state after the window
  * returns from long backgrounding or OS sleep.
+ *
+ * Returns true once the runtime had a sane host rect and completed one
+ * fit/resize/refresh pass. Returns false when wake recovery should retry.
  */
-export function recoverAttachedTerminalRuntime(tabId: string): void {
+export function recoverAttachedTerminalRuntime(tabId: string): boolean {
   const entry = runtimesByTabId.get(tabId);
   if (!entry || entry.state !== "attached") {
-    return;
+    return false;
   }
 
   runtimeLayer.refresh(tabId);
 
-  const didFit = safeFitTerminal(entry, true);
-  notifyTerminalResizeIfNeeded(entry, didFit);
-
-  const refresh = (entry.terminal as { refresh?: (start: number, end: number) => void }).refresh;
-  if (typeof refresh === "function") {
-    try {
-      refresh.call(entry.terminal, 0, Math.max(0, entry.terminal.rows - 1));
-    } catch (error) {
-      reportTerminalAsyncError("refresh terminal after background restore", error);
-    }
+  const hostRect = entry.hostElement.getBoundingClientRect();
+  if (!isTerminalRecoveryRectSane(hostRect)) {
+    return false;
   }
+
+  const didFit = safeFitTerminal(entry, true, hostRect);
+  if (!didFit) {
+    return false;
+  }
+
+  notifyTerminalResizeIfNeeded(entry, true);
+  refreshTerminalRenderer(entry, "refresh terminal after background restore");
+  return true;
 }
 
 // ─── Session Lifecycle Integration ─────────────────────────────────────────────
@@ -475,7 +477,11 @@ function disconnectFocusObserver(entry: TerminalRuntimeEntry): void {
   entry.focusObserver = null;
 }
 
-function safeFitTerminal(entry: TerminalRuntimeEntry, force = false): boolean {
+function isTerminalRecoveryRectSane(hostRect: TerminalHostRect): boolean {
+  return hostRect.width >= MIN_TERMINAL_RECOVERY_WIDTH_PX && hostRect.height >= MIN_TERMINAL_RECOVERY_HEIGHT_PX;
+}
+
+function safeFitTerminal(entry: TerminalRuntimeEntry, force = false, hostRect?: TerminalHostRect): boolean {
   if (entry.state !== "attached" && entry.state !== "attaching") {
     return false;
   }
@@ -484,7 +490,7 @@ function safeFitTerminal(entry: TerminalRuntimeEntry, force = false): boolean {
     return false;
   }
 
-  const rect = entry.hostElement.getBoundingClientRect();
+  const rect = hostRect ?? entry.hostElement.getBoundingClientRect();
   if (rect.width <= 1 || rect.height <= 1) {
     return false;
   }
@@ -496,6 +502,19 @@ function safeFitTerminal(entry: TerminalRuntimeEntry, force = false): boolean {
   } catch (error) {
     console.error("[TerminalRegistry] Failed to fit terminal", error);
     return false;
+  }
+}
+
+function refreshTerminalRenderer(entry: TerminalRuntimeEntry, action: string): void {
+  const refresh = (entry.terminal as { refresh?: (start: number, end: number) => void }).refresh;
+  if (typeof refresh !== "function") {
+    return;
+  }
+
+  try {
+    refresh.call(entry.terminal, 0, Math.max(0, entry.terminal.rows - 1));
+  } catch (error) {
+    reportTerminalAsyncError(action, error);
   }
 }
 

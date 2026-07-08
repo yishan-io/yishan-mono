@@ -66,6 +66,7 @@ const mocked = vi.hoisted(() => {
   const xtermWrite = vi.fn((_chunk: string | Uint8Array, callback?: () => void) => {
     callback?.();
   });
+  const fitTerminal = vi.fn();
   const closeTab = vi.fn((tabId: string) => {
     const state = stateRef.current as { closeTab?: (nextTabId: string) => void };
     state.closeTab?.(tabId);
@@ -82,7 +83,7 @@ const mocked = vi.hoisted(() => {
   const terminalTitleHandlers: Array<((title: string) => void) | undefined> = [];
   const loadTerminalAddons = vi.fn(() => ({
     fitAddon: {
-      fit() {},
+      fit: fitTerminal,
     },
     searchAddon,
   }));
@@ -100,6 +101,7 @@ const mocked = vi.hoisted(() => {
     xtermFocus,
     xtermClear,
     xtermWrite,
+    fitTerminal,
     closeTab,
     selectTab,
     renameTab,
@@ -253,6 +255,7 @@ afterEach(() => {
   cleanup();
   __resetTerminalRuntimeRegistryForTests();
   __resetTerminalSessionServiceForTests();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   mocked.setTerminalCustomKeyEventHandler(undefined);
   mocked.clearTerminalDataHandlers();
@@ -287,6 +290,20 @@ function stubAsyncTerminalBrowserApis(): FrameRequestCallback[] {
   });
   vi.stubGlobal("cancelAnimationFrame", vi.fn());
   return animationFrames;
+}
+
+function createDomRect(width: number, height: number): DOMRect {
+  return {
+    x: 0,
+    y: 0,
+    top: 0,
+    left: 0,
+    right: width,
+    bottom: height,
+    width,
+    height,
+    toJSON: () => ({}),
+  } as DOMRect;
 }
 
 /** Builds the minimal workspace-store state required by TerminalView. */
@@ -917,6 +934,124 @@ describe("TerminalView", () => {
     view.rerender(<TerminalView tabId="terminal-tab-1" focusRequestKey={1} />);
 
     expect(mocked.xtermFocus).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries wake recovery after focus until the terminal rect is sane", async () => {
+    const state = buildStoreState();
+    mocked.stateRef.current = state;
+    mocked.createTerminalSession.mockResolvedValueOnce({
+      sessionId: "session-wake-focus",
+      cols: 120,
+      rows: 30,
+    });
+    mocked.readTerminalOutput.mockResolvedValueOnce({
+      nextIndex: 0,
+      chunks: [],
+      exited: false,
+      exitCode: null,
+      signalCode: null,
+    });
+    mocked.resizeTerminal.mockResolvedValue({ ok: true });
+
+    const animationFrames = stubAsyncTerminalBrowserApis();
+
+    render(<TerminalView tabId="terminal-tab-1" />);
+    await waitFor(() => {
+      expect(mocked.subscribeTerminalOutput).toHaveBeenCalled();
+    });
+
+    const runtime = getTerminalRuntime("terminal-tab-1");
+    expect(runtime).not.toBeNull();
+    if (!runtime) {
+      return;
+    }
+
+    const stableHostRect = createDomRect(640, 360);
+    const hostRectSequence = [createDomRect(10, 200), createDomRect(10, 200), stableHostRect];
+    let hostRectIndex = 0;
+    vi.spyOn(runtime.hostElement, "getBoundingClientRect").mockImplementation(() => {
+      return hostRectSequence[Math.min(hostRectIndex++, hostRectSequence.length - 1)] ?? stableHostRect;
+    });
+
+    const scheduledTimeouts: Array<{ callback: () => void; delayMs: number } | null> = [];
+    vi.stubGlobal("setTimeout", (callback: () => void, delayMs?: number) => {
+      scheduledTimeouts.push({ callback, delayMs: Number(delayMs ?? 0) });
+      return scheduledTimeouts.length - 1;
+    });
+    vi.stubGlobal("clearTimeout", (timeoutId: number) => {
+      scheduledTimeouts[timeoutId] = null;
+    });
+
+    mocked.resizeTerminal.mockClear();
+    mocked.fitTerminal.mockClear();
+
+    window.dispatchEvent(new FocusEvent("focus"));
+    expect(mocked.resizeTerminal).not.toHaveBeenCalled();
+    expect(mocked.fitTerminal).not.toHaveBeenCalled();
+    expect(animationFrames).toHaveLength(1);
+    expect(scheduledTimeouts).toHaveLength(2);
+
+    const nextAnimationFrame = animationFrames.shift();
+    nextAnimationFrame?.(0);
+    expect(mocked.resizeTerminal).not.toHaveBeenCalled();
+    expect(mocked.fitTerminal).not.toHaveBeenCalled();
+
+    const firstRetryTimeout = scheduledTimeouts.find((scheduledTimeout) => scheduledTimeout?.delayMs === 100);
+    firstRetryTimeout?.callback();
+
+    expect(mocked.fitTerminal).toHaveBeenCalledTimes(1);
+    expect(mocked.resizeTerminal).toHaveBeenCalledTimes(1);
+    expect(mocked.resizeTerminal).toHaveBeenCalledWith({
+      sessionId: "session-wake-focus",
+      cols: 120,
+      rows: 30,
+    });
+
+    const delayedRetryTimeout = scheduledTimeouts.find((scheduledTimeout) => scheduledTimeout?.delayMs === 300);
+    expect(delayedRetryTimeout).toBeUndefined();
+  });
+
+  it("recovers the terminal immediately when the document becomes visible with a sane rect", async () => {
+    const state = buildStoreState();
+    mocked.stateRef.current = state;
+    mocked.createTerminalSession.mockResolvedValueOnce({
+      sessionId: "session-wake-visible",
+      cols: 120,
+      rows: 30,
+    });
+    mocked.readTerminalOutput.mockResolvedValueOnce({
+      nextIndex: 0,
+      chunks: [],
+      exited: false,
+      exitCode: null,
+      signalCode: null,
+    });
+    mocked.resizeTerminal.mockResolvedValue({ ok: true });
+
+    const animationFrames = stubAsyncTerminalBrowserApis();
+
+    render(<TerminalView tabId="terminal-tab-1" />);
+    await waitFor(() => {
+      expect(mocked.subscribeTerminalOutput).toHaveBeenCalled();
+    });
+
+    const runtime = getTerminalRuntime("terminal-tab-1");
+    expect(runtime).not.toBeNull();
+    if (!runtime) {
+      return;
+    }
+
+    vi.spyOn(runtime.hostElement, "getBoundingClientRect").mockReturnValue(createDomRect(640, 360));
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+
+    mocked.resizeTerminal.mockClear();
+    mocked.fitTerminal.mockClear();
+
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    expect(mocked.fitTerminal).toHaveBeenCalledTimes(1);
+    expect(mocked.resizeTerminal).toHaveBeenCalledTimes(1);
+    expect(animationFrames).toHaveLength(0);
   });
 
   it("releases macOS Cmd+W from terminal key handling for renderer tab close", async () => {

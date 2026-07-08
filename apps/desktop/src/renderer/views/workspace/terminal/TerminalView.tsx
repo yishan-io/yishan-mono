@@ -17,12 +17,12 @@ import {
   detachTerminalRuntime,
   ensureTerminalRuntime,
   getTerminalRuntime,
-  recoverAttachedTerminalRuntime,
   requestTerminalRuntimeFocus,
 } from "./terminalRuntimeRegistry";
 import { initTerminalSessionLifecycle } from "./terminalSessionService";
 import { useTerminalFileDrop } from "./useTerminalFileDrop";
 import { useTerminalSearchState } from "./useTerminalSearchState";
+import { useTerminalWakeRecovery } from "./useTerminalWakeRecovery";
 
 type TerminalViewProps = {
   tabId: string;
@@ -182,26 +182,7 @@ export const TerminalView = memo(function TerminalView({
     };
   }, [cmd, tabId]);
 
-  useEffect(() => {
-    const restoreInteractiveScrollState = () => {
-      recoverAttachedTerminalRuntime(tabId);
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState !== "visible") {
-        return;
-      }
-      restoreInteractiveScrollState();
-    };
-
-    window.addEventListener("focus", restoreInteractiveScrollState);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener("focus", restoreInteractiveScrollState);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [tabId]);
+  useTerminalWakeRecovery(tabId);
 
   // ─── Search ─────────────────────────────────────────────────────────────────
 
