@@ -57,6 +57,34 @@ func TestManagedHookAssetsCoverSupportedAgents(t *testing.T) {
 	}
 }
 
+func TestManagedHookAssetsPiLaunchUsesLaunchedEvent(t *testing.T) {
+	managedRootDir := t.TempDir()
+	if _, err := ensureManagedHookAssets(managedRootDir); err != nil {
+		t.Fatalf("ensure assets: %v", err)
+	}
+
+	piWrapperRaw, err := os.ReadFile(filepath.Join(managedRootDir, "bin", "pi"))
+	if err != nil {
+		t.Fatalf("read pi wrapper: %v", err)
+	}
+	piWrapper := string(piWrapperRaw)
+	if !strings.Contains(piWrapper, `notify_event "$AGENT_NAME" "Launched"`) {
+		t.Fatalf("expected pi wrapper to emit Launched on CLI launch")
+	}
+	if strings.Contains(piWrapper, `notify_event "$AGENT_NAME" "Start"`) {
+		t.Fatalf("expected pi wrapper not to emit Start on CLI launch")
+	}
+
+	geminiWrapperRaw, err := os.ReadFile(filepath.Join(managedRootDir, "bin", "gemini"))
+	if err != nil {
+		t.Fatalf("read gemini wrapper: %v", err)
+	}
+	geminiWrapper := string(geminiWrapperRaw)
+	if !strings.Contains(geminiWrapper, `notify_event "$AGENT_NAME" "Start"`) {
+		t.Fatalf("expected generic wrappers to keep emitting Start on CLI launch")
+	}
+}
+
 func TestEnsureManagedShellSetupWritesShellWrappers(t *testing.T) {
 	managedRootDir := t.TempDir()
 	if err := ensureManagedShellSetup(managedRootDir); err != nil {
