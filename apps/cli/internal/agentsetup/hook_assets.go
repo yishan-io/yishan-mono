@@ -26,6 +26,9 @@ var openCodeWrapperScript string
 //go:embed assets/bin/generic-agent
 var genericAgentWrapperScript string
 
+//go:embed assets/bin/pi
+var piWrapperScript string
+
 //go:embed assets/bin/open
 var openWrapperScript string
 
@@ -60,7 +63,7 @@ func ensureManagedHookAssets(managedRootDir string) (hookAssetPaths, error) {
 		{path: filepath.Join(managedRootDir, "bin", "codex"), content: codexWrapperScript, mode: 0o755},
 		{path: filepath.Join(managedRootDir, "bin", "opencode"), content: openCodeWrapperScript, mode: 0o755},
 		{path: filepath.Join(managedRootDir, "bin", "gemini"), content: genericAgentWrapperScript, mode: 0o755},
-		{path: filepath.Join(managedRootDir, "bin", "pi"), content: genericAgentWrapperScript, mode: 0o755},
+		{path: filepath.Join(managedRootDir, "bin", "pi"), content: piWrapperScript, mode: 0o755},
 		{path: filepath.Join(managedRootDir, "bin", "copilot"), content: genericAgentWrapperScript, mode: 0o755},
 		{path: filepath.Join(managedRootDir, "bin", "cursor"), content: genericAgentWrapperScript, mode: 0o755},
 		{path: filepath.Join(managedRootDir, "lib", "common.sh"), content: commonLibScript, mode: 0o755},
