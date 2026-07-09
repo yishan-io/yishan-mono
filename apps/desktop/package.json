@@ -144,6 +144,7 @@
     },
     "linux": {
       "icon": "src/assets/images/yishan-app-icon.png",
+      "executableName": "yishan",
       "target": [
         "AppImage",
         "deb",
