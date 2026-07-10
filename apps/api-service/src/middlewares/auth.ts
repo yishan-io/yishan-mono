@@ -7,6 +7,11 @@ import type { AppContext } from "@/hono";
 
 const SERVICE_TOKEN_PREFIX = "yst_";
 
+function allowsQueryAccessToken(c: AppContext): boolean {
+  const path = c.req.path;
+  return /\/workspaces\/[^/]+\/events\/ws$/.test(path) || /\/workspaces\/[^/]+\/terminal\/sessions\/[^/]+\/ws$/.test(path);
+}
+
 export function readBearerToken(c: AppContext): string | null {
   const authorization = c.req.header("Authorization");
   if (!authorization) {
@@ -25,6 +30,10 @@ export function readAccessToken(c: AppContext): string | null {
   const bearerToken = readBearerToken(c);
   if (bearerToken) {
     return bearerToken;
+  }
+
+  if (!allowsQueryAccessToken(c)) {
+    return null;
   }
 
   const queryToken = c.req.query("accessToken");

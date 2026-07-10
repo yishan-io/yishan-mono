@@ -67,6 +67,10 @@ func (h *JSONRPCHandler) handleWorkspaceOpen(params json.RawMessage) (any, error
 		return nil, err
 	}
 
+	if req.Ephemeral {
+		return openedWorkspace, nil
+	}
+
 	h.watchAndTrack(openedWorkspace.ID, openedWorkspace.Path)
 	if h.wsIndexStore != nil {
 		if upsertErr := h.wsIndexStore.Upsert(workspaceIndexEntry{

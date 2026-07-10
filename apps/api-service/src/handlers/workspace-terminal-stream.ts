@@ -43,6 +43,30 @@ type TerminalSubscribeResult = {
   subscribed: boolean;
 };
 
+/** Opens relay-backed workspace access for one terminal stream without persisting daemon workspace state. */
+export async function openTerminalRelaySession(input: {
+  relayAccess: {
+    workspace: {
+      id: string;
+      localPath: string;
+    };
+  };
+  relayClient: {
+    sendRequest: <T>(method: string, params: unknown) => Promise<T>;
+  };
+  sessionId: string;
+}): Promise<TerminalSubscribeResult> {
+  await input.relayClient.sendRequest("workspace.open", {
+    ephemeral: true,
+    id: input.relayAccess.workspace.id,
+    path: input.relayAccess.workspace.localPath,
+  });
+
+  return input.relayClient.sendRequest<TerminalSubscribeResult>("terminal.subscribe", {
+    sessionId: input.sessionId,
+  });
+}
+
 function parseClientMessage(payload: string): ClientMessage {
   const decoded = readRelayBridgeMessageRecord(payload, "Terminal");
   const type = decoded.type;
@@ -165,11 +189,9 @@ export const workspaceTerminalStreamHandler = upgradeWebSocket((c) => {
             state,
           });
 
-          await relayClient.sendRequest("workspace.open", {
-            id: relayAccess.workspace.id,
-            path: relayAccess.workspace.localPath,
-          });
-          const subscribeResult = await relayClient.sendRequest<TerminalSubscribeResult>("terminal.subscribe", {
+          const subscribeResult = await openTerminalRelaySession({
+            relayAccess,
+            relayClient,
             sessionId: params.sessionId,
           });
 

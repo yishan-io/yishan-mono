@@ -70,6 +70,7 @@ type OpenRequest struct {
 	Path            string `json:"path"`
 	OrgID           string `json:"orgId,omitempty"`
 	ProjectID       string `json:"projectId,omitempty"`
+	Ephemeral       bool   `json:"ephemeral,omitempty"`
 	PRAlreadyMerged bool   `json:"prAlreadyMerged,omitempty"`
 }
 

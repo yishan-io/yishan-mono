@@ -261,6 +261,60 @@ func TestHandleWorkspaceOpen_RegistersWorkspace(t *testing.T) {
 	}
 }
 
+func TestHandleWorkspaceOpen_DoesNotPersistEphemeralWorkspace(t *testing.T) {
+	root := t.TempDir()
+	statePath := filepath.Join(root, "daemon.state.json")
+	indexStore, err := newWorkspaceIndexStore(statePath)
+	if err != nil {
+		t.Fatalf("newWorkspaceIndexStore: %v", err)
+	}
+
+	manager := workspace.NewManager()
+	handler := NewJSONRPCHandler(
+		manager,
+		nil,
+		"node-1",
+		filepath.Join(root, "daemon.log"),
+		nil,
+		indexStore,
+		filepath.Join(root, "config.yml"),
+		NewAppContextStore(""),
+	)
+	defer handler.Shutdown()
+
+	params, err := json.Marshal(map[string]any{
+		"ephemeral": true,
+		"id":        "workspace-open-ephemeral",
+		"path":      root,
+		"projectId": "project-1",
+		"orgId":     "org-1",
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+
+	result, err := handler.dispatchWorkspace(context.Background(), nil, MethodWorkspaceOpen, params)
+	if err != nil {
+		t.Fatalf("%s returned unexpected error: %v", MethodWorkspaceOpen, err)
+	}
+
+	record, ok := result.(workspace.Workspace)
+	if !ok {
+		t.Fatalf("expected workspace result for %s, got %T", MethodWorkspaceOpen, result)
+	}
+	if record.ID != "workspace-open-ephemeral" {
+		t.Fatalf("expected workspace id to be registered for %s, got %q", MethodWorkspaceOpen, record.ID)
+	}
+
+	entries, err := handler.wsIndexStore.List()
+	if err != nil {
+		t.Fatalf("workspace index list: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("expected ephemeral workspace open to avoid index persistence, got %#v", entries)
+	}
+}
+
 // TestHandleWorkspaceOpenProject_Success verifies that a valid, previously
 // unknown workspace is opened, indexed, and returned in the opened list.
 func TestHandleWorkspaceOpenProject_Success(t *testing.T) {

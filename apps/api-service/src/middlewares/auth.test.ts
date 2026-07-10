@@ -23,12 +23,27 @@ describe("auth middleware helpers", () => {
 
   it("falls back to websocket query auth when the header is unavailable", async () => {
     const app = new Hono<AppEnv>();
+    app.get("/orgs/:orgId/projects/:projectId/workspaces/:workspaceId/events/ws", (c) =>
+      c.json({ accessToken: readAccessToken(c) }),
+    );
+
+    const response = await app.request(
+      "http://example.com/orgs/org-1/projects/project-1/workspaces/workspace-1/events/ws?accessToken=token-from-query",
+    );
+
+    await expect(response.json()).resolves.toEqual({
+      accessToken: "token-from-query",
+    });
+  });
+
+  it("does not accept query access tokens on non-websocket routes", async () => {
+    const app = new Hono<AppEnv>();
     app.get("/token", (c) => c.json({ accessToken: readAccessToken(c) }));
 
     const response = await app.request("http://example.com/token?accessToken=token-from-query");
 
     await expect(response.json()).resolves.toEqual({
-      accessToken: "token-from-query",
+      accessToken: null,
     });
   });
 });
