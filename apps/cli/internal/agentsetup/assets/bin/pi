@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# yishan wrapper for Pi CLI
+
+set -u
+
+readonly WRAPPER_BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=../lib/common.sh
+source "${WRAPPER_BIN_DIR}/../lib/common.sh"
+if [ -f "${WRAPPER_BIN_DIR}/../lib/hook_ingress.sh" ]; then
+  # shellcheck source=../lib/hook_ingress.sh
+  source "${WRAPPER_BIN_DIR}/../lib/hook_ingress.sh"
+else
+  notify_event() { :; }
+fi
+
+WRAPPER_NAME="$(basename "$0")"
+AGENT_NAME="$WRAPPER_NAME"
+
+MANAGED_BIN_DIR="$(resolve_managed_bin_dir)"
+REAL_BIN="$(resolve_real_binary "$WRAPPER_NAME" "$WRAPPER_BIN_DIR" "$MANAGED_BIN_DIR" || true)"
+if [ -z "$REAL_BIN" ]; then
+  echo "yishan wrapper: real ${WRAPPER_NAME} not found in PATH" >&2
+  exit 127
+fi
+
+agent_terminal_emitted=0
+emit_terminal_once() {
+  local event_name="${1:-Stop}"
+  if [ "${agent_terminal_emitted}" -eq 1 ]; then
+    return 0
+  fi
+  agent_terminal_emitted=1
+  notify_event "$AGENT_NAME" "$event_name"
+}
+
+handle_interrupt() {
+  local signal="$1"
+  emit_terminal_once "Failed"
+  trap - "$signal"
+  kill -s "$signal" "$$"
+}
+
+trap 'handle_interrupt INT' INT
+trap 'handle_interrupt TERM' TERM
+
+notify_event "$AGENT_NAME" "Launched"
+"$REAL_BIN" "$@"
+status=$?
+
+if [ "$status" -eq 0 ]; then
+  emit_terminal_once "Stop"
+else
+  emit_terminal_once "Failed"
+fi
+exit "$status"

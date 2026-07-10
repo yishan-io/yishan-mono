@@ -222,7 +222,6 @@ const ACCOUNT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   },
 ];
-
 const APPEARANCE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "appearance-theme",
@@ -235,6 +234,10 @@ const APPEARANCE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.appearance.theme.options.light",
       "settings.appearance.theme.options.dark",
       "settings.appearance.theme.options.system",
+      "settings.appearance.markdown.theme.label",
+      "settings.appearance.markdown.theme.options.inherit",
+      "settings.appearance.markdown.theme.options.light",
+      "settings.appearance.markdown.theme.options.dark",
       "settings.appearance.markdown.defaultViewMode.label",
       "settings.appearance.markdown.defaultViewMode.options.edit",
       "settings.appearance.markdown.defaultViewMode.options.preview",
@@ -252,7 +255,6 @@ const APPEARANCE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   },
 ];
-
 const LANGUAGE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "language-selection",
@@ -268,7 +270,6 @@ const LANGUAGE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   },
 ];
-
 const LINKS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "link-target",
@@ -284,7 +285,6 @@ const LINKS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   },
 ];
-
 const SKILLS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "skills-manager",
@@ -307,7 +307,6 @@ const SKILLS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   },
 ];
-
 const NODES_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "nodes-list",
@@ -329,7 +328,6 @@ const NODES_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   },
 ];
-
 const MEMBERS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "members-list",
@@ -348,7 +346,6 @@ const MEMBERS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   },
 ];
-
 const KEYBINDINGS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "keybindings-list",
@@ -359,7 +356,6 @@ const KEYBINDINGS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     keywordKeys: ["keybindings.subtitle", "keybindings.scope.global", "keybindings.scope.workspace"],
   },
 ];
-
 const INTEGRATION_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "integration-github",
@@ -377,7 +373,6 @@ const INTEGRATION_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   },
 ];
-
 const AGENT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "agent-settings",
@@ -409,7 +404,6 @@ const AGENT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   })),
 ];
-
 const GIT_WORKSPACE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "workspace-default-context",
@@ -466,7 +460,6 @@ const SERVICE_TOKEN_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   },
 ];
-
 const MEMORY_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "memory-summarizer",

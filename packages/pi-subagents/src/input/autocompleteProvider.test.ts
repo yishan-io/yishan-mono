@@ -12,9 +12,9 @@ const testAgents: AgentDefinition[] = [
     source: "builtin",
   },
   {
-    name: "Reviewer",
-    description: "Review code for defects",
-    systemPrompt: "Reviewer prompt",
+    name: "General",
+    description: "General-purpose implementation and investigation",
+    systemPrompt: "General prompt",
     source: "builtin",
   },
 ];
@@ -42,17 +42,17 @@ describe("createAgentAutocompleteProvider", () => {
   it("returns agent-only suggestions for @agent: queries", async () => {
     const provider = createAgentAutocompleteProvider(createBaseProvider(null), testAgents);
 
-    const suggestions = await provider.getSuggestions(["@agent:Rev"], 0, "@agent:Rev".length, {
+    const suggestions = await provider.getSuggestions(["@agent:Gen"], 0, "@agent:Gen".length, {
       signal: new AbortController().signal,
     });
 
     expect(suggestions).toEqual({
-      prefix: "@agent:Rev",
+      prefix: "@agent:Gen",
       items: [
         {
-          value: "@agent:Reviewer ",
-          label: "Reviewer",
-          description: "Agent · Review code for defects",
+          value: "@agent:General ",
+          label: "General",
+          description: "Agent · General-purpose implementation and investigation",
         },
       ],
     });
@@ -68,7 +68,7 @@ describe("createAgentAutocompleteProvider", () => {
       signal: new AbortController().signal,
     });
 
-    expect(suggestions?.items.map((item) => item.label)).toEqual(["Explore", "Reviewer", "src/index.ts"]);
+    expect(suggestions?.items.map((item) => item.label)).toEqual(["Explore", "General", "src/index.ts"]);
   });
 
   it("falls back to file suggestions when no agent suggestion matches", async () => {

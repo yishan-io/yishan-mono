@@ -221,14 +221,14 @@ Project prompt`,
     );
     writeAgentFile(
       builtinDir,
-      "Planner.md",
+      "General.md",
       `---
-name: Planner
-description: Builtin planner
-tools: read,find
+name: General
+description: Builtin generalist
+tools: read,find,ls
 ---
 
-Planner prompt`,
+General prompt`,
     );
 
     const result = loadAgentDefinitions({
@@ -250,8 +250,8 @@ Planner prompt`,
     );
     expect(result.agents).toContainEqual(
       expect.objectContaining({
-        name: "Planner",
-        description: "Builtin planner",
+        name: "General",
+        description: "Builtin generalist",
         source: "builtin",
       }),
     );

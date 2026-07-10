@@ -35,9 +35,8 @@ The package manifest exposes the extension from `./extensions`.
 ## Agent definition locations
 
 This package ships built-in agents inside the package:
+- `General`
 - `Explore`
-- `Reviewer`
-- `Planner`
 
 User and project overrides still use standard Pi locations:
 - User: `~/.pi/agent/agents/*.md`
@@ -50,20 +49,17 @@ Override precedence:
 
 ## Built-in agents
 
+### General
+- Purpose: general-purpose implementation and investigation
+- Default tools: unset (falls back to the user's normal Pi tool/session resolution)
+- Default mode: writable when needed
+- Default model: unset (falls back to the user's normal Pi session/model resolution)
+
 ### Explore
 - Purpose: search and understand the codebase
 - Default tools: `read`, `grep`, `find`, `ls`
 - Default mode: read-only
-
-### Reviewer
-- Purpose: review code for defects and regressions
-- Default tools: `read`, `grep`, `find`, `ls`, `bash`
-- Default mode: read-only
-
-### Planner
-- Purpose: turn requirements into concrete implementation steps
-- Default tools: `read`, `grep`, `find`, `ls`
-- Default mode: read-only
+- Default model: unset (falls back to the user's normal Pi session/model resolution)
 
 ## Usage
 
@@ -81,7 +77,7 @@ Multiple agents with one shared task:
 
 ```text
 @agent:Explore
-@agent:Reviewer
+@agent:General
 
 Investigate the current authentication implementation.
 ```
@@ -119,6 +115,8 @@ Agent({
 
 Foreground runs return the child agent response.
 Background runs return the new agent id immediately.
+Completed background results are not auto-injected back into the main agent; use `/agent-send <agent-id>` (or `/agent-send` for all completed runs) to hand them back manually.
+`/agent-steer` applies only to a currently running agent, and this MVP does not expose an OpenCode-style resumable `task_id` flow.
 
 ## Live progress in TUI
 
@@ -140,8 +138,9 @@ Each run writes a transcript to:
 - Autocomplete uses a flat merged list with clear `Agent · ...` labels; it does not yet render explicit grouped `Agents` / `Files` sections.
 - Child sessions intentionally disable extension loading to avoid recursive self-loading; they still use Pi SDK sessions, context files, and normal tool/session infrastructure.
 - Built-in agent definitions are loaded from this package manually because Pi packages do not auto-discover agent-definition directories.
-- The package currently exposes only the single-agent `Agent` tool; result/stop/steer remain slash-command driven.
+- The package currently exposes only the single-agent `Agent` tool; result/stop/steer remain slash-command driven, and background-result handoff remains manual via `/agent-send`.
 - The progress widget is intentionally lightweight for MVP; it does not yet stream per-agent transcript output or provide a dedicated selector/details pane.
+- Child runs are fresh Pi SDK sessions; this MVP does not expose an OpenCode-style resumable `task_id`/session-resume API.
 
 ## License
 

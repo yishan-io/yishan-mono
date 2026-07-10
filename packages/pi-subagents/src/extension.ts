@@ -13,16 +13,25 @@ import { bindAgentProgressUi, clearAgentProgress, renderPendingDelegation } from
 
 const DELEGATION_GUIDANCE = `You can delegate work to sub-agents using the Agent tool.
 
-Use sub-agents when:
+Use Agent when:
 
 - A task contains independent workstreams.
 - Codebase exploration would consume substantial context.
 - Independent research can run in parallel.
 - A specialist agent can perform a focused review.
 
-Do not delegate trivial tasks.
+Do not use Agent when:
 
-Prefer read-only agents for parallel work.
+- You already know the exact file to read.
+- A quick grep/search will answer the question.
+- The task is trivial or limited to one or two local file checks.
+
+If workstreams are independent, delegate them separately and prefer read-only agents for parallel work.
+Use background runs only when you can continue with non-overlapping work while the sub-agent runs.
+
+Once you delegate work, do not duplicate the same exploration or edits yourself. Wait for the result or continue only with non-overlapping tasks.
+
+When delegating, clearly state whether the sub-agent should do research or modify code, point it to the most relevant files or directories, and tell it what result to return.
 
 You remain responsible for validating sub-agent results and producing the final answer.`;
 

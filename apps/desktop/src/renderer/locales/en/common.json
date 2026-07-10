@@ -412,6 +412,15 @@
       "markdown": {
         "title": "Markdown",
         "description": "Configure how markdown files open in the editor.",
+        "theme": {
+          "label": "Preview theme",
+          "description": "Choose whether markdown preview inherits the app theme or stays light/dark independently.",
+          "options": {
+            "inherit": "Inherit app theme",
+            "light": "Light",
+            "dark": "Dark"
+          }
+        },
         "defaultViewMode": {
           "label": "Default markdown view mode",
           "description": "Choose how markdown files open by default.",

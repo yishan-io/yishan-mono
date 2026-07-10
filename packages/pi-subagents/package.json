@@ -1,6 +1,6 @@
 {
   "name": "@yishan-io/pi-subagents",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "keywords": ["pi-package"],
   "files": ["agents", "extensions", "src", "!src/**/*.test.ts", "LICENSE", "README.md"],

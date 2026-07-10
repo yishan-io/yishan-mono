@@ -58,7 +58,7 @@ describe("AgentSettingsView", () => {
     expect(screen.getByText("settings.agents.status.versionUnknown")).toBeTruthy();
     expect(screen.getAllByText("settings.agents.status.notDetected").length).toBeGreaterThan(0);
 
-    const codexSwitch = screen.getByRole("checkbox", {
+    const codexSwitch = screen.getByRole("switch", {
       name: "settings.agents.items.codex settings.agents.inUse",
     }) as HTMLInputElement;
     expect(codexSwitch.checked).toBe(true);

@@ -2,9 +2,12 @@ package setup
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"yishan/apps/cli/internal/config"
 )
 
 func TestEnsureManagedHookAssetsWritesNotifyScripts(t *testing.T) {
@@ -51,6 +54,34 @@ func TestManagedHookAssetsCoverSupportedAgents(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(managedRootDir, "bin", commandName)); err != nil {
 			t.Fatalf("expected wrapper for supported agent %s: %v", commandName, err)
 		}
+	}
+}
+
+func TestManagedHookAssetsPiLaunchUsesLaunchedEvent(t *testing.T) {
+	managedRootDir := t.TempDir()
+	if _, err := ensureManagedHookAssets(managedRootDir); err != nil {
+		t.Fatalf("ensure assets: %v", err)
+	}
+
+	piWrapperRaw, err := os.ReadFile(filepath.Join(managedRootDir, "bin", "pi"))
+	if err != nil {
+		t.Fatalf("read pi wrapper: %v", err)
+	}
+	piWrapper := string(piWrapperRaw)
+	if !strings.Contains(piWrapper, `notify_event "$AGENT_NAME" "Launched"`) {
+		t.Fatalf("expected pi wrapper to emit Launched on CLI launch")
+	}
+	if strings.Contains(piWrapper, `notify_event "$AGENT_NAME" "Start"`) {
+		t.Fatalf("expected pi wrapper not to emit Start on CLI launch")
+	}
+
+	geminiWrapperRaw, err := os.ReadFile(filepath.Join(managedRootDir, "bin", "gemini"))
+	if err != nil {
+		t.Fatalf("read gemini wrapper: %v", err)
+	}
+	geminiWrapper := string(geminiWrapperRaw)
+	if !strings.Contains(geminiWrapper, `notify_event "$AGENT_NAME" "Start"`) {
+		t.Fatalf("expected generic wrappers to keep emitting Start on CLI launch")
 	}
 }
 
@@ -122,5 +153,48 @@ func TestManagedShellEnvPreservesCustomZdotdir(t *testing.T) {
 	expectedOrig := origZdotdirEnvKey + "=/Users/test/.config/zsh"
 	if !strings.Contains(joined, expectedOrig) {
 		t.Fatalf("expected %s, got %v", expectedOrig, got)
+	}
+}
+
+func TestEnsureManagedPiPackagesUsesManagedPiAgentDir(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	originalExecCommand := execCommand
+	defer func() {
+		execCommand = originalExecCommand
+	}()
+
+	type recordedCall struct {
+		name string
+		args []string
+		cmd  *exec.Cmd
+	}
+	calls := make([]recordedCall, 0, 2)
+	execCommand = func(name string, args ...string) *exec.Cmd {
+		cmd := exec.Command(os.Args[0], "-test.run=^$")
+		calls = append(calls, recordedCall{name: name, args: append([]string{}, args...), cmd: cmd})
+		return cmd
+	}
+
+	if err := ensureManagedPiPackages(); err != nil {
+		t.Fatalf("ensure managed pi packages: %v", err)
+	}
+	if len(calls) != 2 {
+		t.Fatalf("expected 2 pi package install calls, got %d", len(calls))
+	}
+
+	expectedAgentDir := filepath.Join(homeDir, ".yishan", "pi", "agent")
+	expectedArgs := [][]string{{"install", piNotifyInstallSource}, {"install", piSubagentsInstallSource}}
+	for index, call := range calls {
+		if call.name != "pi" {
+			t.Fatalf("expected pi command, got %q", call.name)
+		}
+		if strings.Join(call.args, "|") != strings.Join(expectedArgs[index], "|") {
+			t.Fatalf("expected args %v, got %v", expectedArgs[index], call.args)
+		}
+		if !strings.Contains(strings.Join(call.cmd.Env, "\n"), config.PiAgentDirEnvKey+"="+expectedAgentDir) {
+			t.Fatalf("expected managed pi env in %v", call.cmd.Env)
+		}
 	}
 }
