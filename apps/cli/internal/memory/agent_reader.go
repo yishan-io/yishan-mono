@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"yishan/apps/cli/internal/agentkind"
 	_ "modernc.org/sqlite"
+	"yishan/apps/cli/internal/agentkind"
 )
 
 type agentDBReader struct{}
@@ -23,16 +23,18 @@ func newAgentDBReader() *agentDBReader {
 
 // ReadRecentSession reads the most recent session for the given agent that
 // matches workspacePath. Returns an error for agents whose session format is
-// not supported (only opencode and claude store readable conversation text).
+// not supported.
 func (r *agentDBReader) ReadRecentSession(agent string, workspacePath string) (*sessionMessages, error) {
 	switch strings.ToLower(agent) {
 	case agentkind.OpenCode:
 		return r.readOpenCodeSession(workspacePath)
 	case agentkind.Claude:
 		return r.readClaudeSession(workspacePath)
-	case agentkind.Codex, agentkind.Gemini, agentkind.Copilot, agentkind.Cursor, agentkind.Pi:
+	case agentkind.Pi:
+		return r.readPiSession(workspacePath)
+	case agentkind.Codex, agentkind.Gemini, agentkind.Copilot, agentkind.Cursor:
 		// These agents either store no local conversation text (gemini, copilot,
-		// cursor, pi) or store only token usage data without message content
+		// cursor) or store only token usage data without message content
 		// (codex .jsonl format). Summarization is not supported for them.
 		return nil, fmt.Errorf("agent %q does not store readable conversation text locally", agent)
 	default:
