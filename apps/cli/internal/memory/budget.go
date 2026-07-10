@@ -53,20 +53,28 @@ func trimToBudget(content string, limit int, contextRoot string) (string, []stri
 			trimmed = true
 		}
 		if !trimmed || len([]rune(buildMemoryMarkdown(sections))) > limit {
-			if len(sections.DurableDiscoveries) > 3 {
-				if p := overflowEntries(contextRoot, "durable-discoveries", sections.DurableDiscoveries[3:]); p != "" {
-					overflowPaths = append(overflowPaths, p)
-				}
-				sections.DurableDiscoveries = sections.DurableDiscoveries[:3]
+			var overflowPath string
+			sections.DurableDiscoveries, overflowPath = trimSectionKeepingLatestEntries(
+				sections.DurableDiscoveries,
+				3,
+				contextRoot,
+				"durable-discoveries",
+			)
+			if overflowPath != "" {
+				overflowPaths = append(overflowPaths, overflowPath)
 				trimmed = true
 			}
 		}
 		if !trimmed || len([]rune(buildMemoryMarkdown(sections))) > limit {
-			if len(sections.LockedDecisions) > 3 {
-				if p := overflowEntries(contextRoot, "locked-decisions", sections.LockedDecisions[3:]); p != "" {
-					overflowPaths = append(overflowPaths, p)
-				}
-				sections.LockedDecisions = sections.LockedDecisions[:3]
+			var overflowPath string
+			sections.LockedDecisions, overflowPath = trimSectionKeepingLatestEntries(
+				sections.LockedDecisions,
+				3,
+				contextRoot,
+				"locked-decisions",
+			)
+			if overflowPath != "" {
+				overflowPaths = append(overflowPaths, overflowPath)
 				trimmed = true
 			}
 		}
@@ -76,6 +84,16 @@ func trimToBudget(content string, limit int, contextRoot string) (string, []stri
 	}
 
 	return buildMemoryMarkdown(sections), overflowPaths
+}
+
+func trimSectionKeepingLatestEntries(entries []string, keepCount int, contextRoot string, category string) ([]string, string) {
+	if len(entries) <= keepCount {
+		return entries, ""
+	}
+
+	overflowEntriesToWrite := entries[:len(entries)-keepCount]
+	overflowPath := overflowEntries(contextRoot, category, overflowEntriesToWrite)
+	return entries[len(entries)-keepCount:], overflowPath
 }
 
 // overflowEntries writes overflow entries to <contextRoot>/archive/<category>-<date>.md
