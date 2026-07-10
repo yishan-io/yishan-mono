@@ -1,0 +1,1 @@
+export { createPiWorkspaceExtension } from "./extension";
