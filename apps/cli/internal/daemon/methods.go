@@ -4,6 +4,7 @@ const (
 	MethodDaemonPing = "daemon.ping"
 
 	MethodList                        = "list"
+	MethodWorkspaceOpen               = "workspace.open"
 	MethodWorkspaceCreate             = "workspace.create"
 	MethodWorkspaceClose              = "workspace.close"
 	MethodWorkspaceRefreshPullRequest = "workspace.refreshPullRequest"

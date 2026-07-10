@@ -48,6 +48,11 @@ function requireEnv(c: Context, key: string): string {
   return value;
 }
 
+function readOptionalEnv(c: Context, key: string): string | undefined {
+  const value = readEnv(c, key)?.trim();
+  return value ? value : undefined;
+}
+
 function buildServiceConfig(c: Context): ServiceConfig {
   const sessionTtlRaw = readEnv(c, "SESSION_TTL_DAYS") ?? "30";
   const sessionTtlDays = Number(sessionTtlRaw);
@@ -74,18 +79,18 @@ function buildServiceConfig(c: Context): ServiceConfig {
     });
   }
 
-  const cookieDomain = readEnv(c, "COOKIE_DOMAIN");
+  const cookieDomain = readOptionalEnv(c, "COOKIE_DOMAIN");
   const appBaseUrl = requireEnv(c, "APP_BASE_URL");
-  const landingBaseUrl = readEnv(c, "LANDING_BASE_URL") ?? "https://yishan.io";
-  const jwtIssuer = readEnv(c, "JWT_ISSUER") ?? appBaseUrl;
-  const jwtAudience = readEnv(c, "JWT_AUDIENCE") ?? DEFAULT_JWT_AUDIENCE;
+  const landingBaseUrl = readOptionalEnv(c, "LANDING_BASE_URL") ?? "https://yishan.io";
+  const jwtIssuer = readOptionalEnv(c, "JWT_ISSUER") ?? appBaseUrl;
+  const jwtAudience = readOptionalEnv(c, "JWT_AUDIENCE") ?? DEFAULT_JWT_AUDIENCE;
 
   return {
     databaseUrl: readHyperdriveConnectionString(c) ?? requireEnv(c, "DATABASE_URL"),
     appBaseUrl,
     landingBaseUrl,
-    relayUrl: readEnv(c, "RELAY_URL"),
-    relayApiToken: readEnv(c, "RELAY_API_TOKEN"),
+    relayUrl: readOptionalEnv(c, "RELAY_URL"),
+    relayApiToken: readOptionalEnv(c, "RELAY_API_TOKEN"),
     sessionSecret: requireEnv(c, "SESSION_SECRET"),
     sessionTtlDays,
     jwtAccessSecret: requireEnv(c, "JWT_ACCESS_SECRET"),
@@ -95,6 +100,8 @@ function buildServiceConfig(c: Context): ServiceConfig {
     jwtAudience,
     cookieDomain,
     googleClientId: requireEnv(c, "GOOGLE_CLIENT_ID"),
+    googleClientIdIos: readOptionalEnv(c, "GOOGLE_CLIENT_ID_IOS"),
+    googleClientIdAndroid: readOptionalEnv(c, "GOOGLE_CLIENT_ID_ANDROID"),
     googleClientSecret: requireEnv(c, "GOOGLE_CLIENT_SECRET"),
     githubClientId: requireEnv(c, "GITHUB_CLIENT_ID"),
     githubClientSecret: requireEnv(c, "GITHUB_CLIENT_SECRET"),

@@ -42,6 +42,7 @@ type UpdateWorkspaceInput struct {
 type CloseWorkspaceInput struct {
 	WorkspaceID  string
 	SourceNodeID string
+	Source       string
 }
 
 func (c *Client) Health() (HealthResponse, error) {
@@ -255,6 +256,9 @@ func (c *Client) UpsertWorkspacePullRequest(orgID string, projectID string, work
 func (c *Client) CloseWorkspace(orgID string, projectID string, input CloseWorkspaceInput) (CreateWorkspaceResponse, error) {
 	payload := map[string]string{
 		"workspaceId": input.WorkspaceID,
+	}
+	if input.Source != "" {
+		payload["source"] = input.Source
 	}
 	if input.SourceNodeID != "" {
 		payload["sourceNodeId"] = input.SourceNodeID

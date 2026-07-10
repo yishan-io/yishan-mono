@@ -269,6 +269,17 @@ export class WorkspaceCreateFailedError extends AppError {
   }
 }
 
+export class PrimaryWorkspaceProvisionNotSupportedError extends AppError {
+  constructor() {
+    super(
+      "Primary workspace provisioning is not supported here; create or register a local primary workspace instead",
+      StatusCodes.BAD_REQUEST,
+      "PRIMARY_WORKSPACE_PROVISION_NOT_SUPPORTED",
+    );
+    this.name = "PrimaryWorkspaceProvisionNotSupportedError";
+  }
+}
+
 export class PrimaryWorkspaceCloseNotAllowedError extends AppError {
   constructor(workspaceId: string) {
     super("Primary workspace cannot be closed", StatusCodes.BAD_REQUEST, "PRIMARY_WORKSPACE_CLOSE_NOT_ALLOWED", {
@@ -282,6 +293,30 @@ export class WorkspaceNotFoundError extends AppError {
   constructor(details: Record<string, unknown>) {
     super("Workspace not found", StatusCodes.NOT_FOUND, "WORKSPACE_NOT_FOUND", details);
     this.name = "WorkspaceNotFoundError";
+  }
+}
+
+export class RelayUnavailableError extends AppError {
+  constructor() {
+    super("Relay is not configured", StatusCodes.SERVICE_UNAVAILABLE, "RELAY_UNAVAILABLE");
+    this.name = "RelayUnavailableError";
+  }
+}
+
+export class RelayNodeOfflineError extends AppError {
+  constructor(nodeId: string) {
+    super("Selected node is offline", StatusCodes.SERVICE_UNAVAILABLE, "RELAY_NODE_OFFLINE", { nodeId });
+    this.name = "RelayNodeOfflineError";
+  }
+}
+
+export class RelayRequestFailedError extends AppError {
+  constructor(method: string, details?: Record<string, unknown>) {
+    super("Relay request failed", StatusCodes.BAD_GATEWAY, "RELAY_REQUEST_FAILED", {
+      method,
+      ...(details ?? {}),
+    });
+    this.name = "RelayRequestFailedError";
   }
 }
 

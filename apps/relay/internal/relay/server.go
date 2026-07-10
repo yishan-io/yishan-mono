@@ -42,6 +42,24 @@ type clientConn struct {
 	write  sync.Mutex
 }
 
+func extractClientRequestID(msgType int, payload []byte) any {
+	if msgType != websocket.TextMessage {
+		return nil
+	}
+
+	var req request
+	if err := json.Unmarshal(payload, &req); err != nil || len(req.ID) == 0 {
+		return nil
+	}
+
+	var id any
+	if err := json.Unmarshal(req.ID, &id); err != nil {
+		return nil
+	}
+
+	return id
+}
+
 // NewServer creates a new relay server and wires background housekeeping.
 func NewServer(sessions *SessionManager, authenticator *auth.Authenticator, queue *jobqueue.Manager, apiToken string) *Server {
 	s := &Server{
@@ -198,13 +216,13 @@ func (s *Server) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 // HandleClientWebSocket upgrades HTTP to WebSocket for relay clients and bridges
 // terminal/jsonrpc traffic to a specific node session.
 func (s *Server) HandleClientWebSocket(w http.ResponseWriter, r *http.Request) {
-	if !s.authorizeAPIRequest(w, r) {
-		return
-	}
-
 	nodeID := strings.TrimSpace(r.URL.Query().Get("nodeId"))
 	if nodeID == "" {
 		http.Error(w, "missing nodeId", http.StatusBadRequest)
+		return
+	}
+
+	if !s.authorizeClientWebSocketRequest(w, r, nodeID) {
 		return
 	}
 
@@ -229,9 +247,10 @@ func (s *Server) HandleClientWebSocket(w http.ResponseWriter, r *http.Request) {
 
 		node := s.sessions.Get(nodeID)
 		if node == nil || !node.isConnected() {
+			requestID := extractClientRequestID(msgType, payload)
 			_ = client.writeJSON(response{
 				JSONRPC: "2.0",
-				ID:      nil,
+				ID:      requestID,
 				Error: &rpcError{
 					Code:    CodeNodeOffline,
 					Message: "node is offline",
@@ -244,6 +263,37 @@ func (s *Server) HandleClientWebSocket(w http.ResponseWriter, r *http.Request) {
 			log.Error().Err(err).Str("nodeId", nodeID).Msg("failed to relay client payload to node")
 		}
 	}
+}
+
+func (s *Server) authorizeClientWebSocketRequest(w http.ResponseWriter, r *http.Request, nodeID string) bool {
+	token := auth.ExtractBearerToken(r)
+	if token == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return false
+	}
+
+	if token == s.apiToken {
+		return true
+	}
+
+	clientIdentity, err := s.authenticator.AuthenticateClient(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return false
+	}
+
+	if clientIdentity.NodeID != nodeID {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return false
+	}
+
+	node := s.sessions.Get(nodeID)
+	if node != nil && clientIdentity.UserID != node.Identity.UserID {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return false
+	}
+
+	return true
 }
 
 // readLoop reads messages from the node's WebSocket until disconnection.

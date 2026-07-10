@@ -13,7 +13,7 @@ import { ServiceTokenService } from "@/services/service-token-service";
 import { TokenUsageService } from "@/services/token-usage-service";
 import { UserService } from "@/services/user-service";
 import { VoiceTranscriptionService } from "@/services/voice-transcription-service";
-import { NoopWorkspaceProvisioner } from "@/services/workspace-provisioner";
+import { RelayWorkspaceProvisioner } from "@/services/workspace-provisioner";
 import { WorkspacePullRequestService } from "@/services/workspace-pull-request-service";
 import { WorkspaceService } from "@/services/workspace-service";
 import type { ServiceConfig } from "@/types";
@@ -41,7 +41,7 @@ export function createServices(deps: { db: AppDb; config: ServiceConfig }): AppS
   const user = new UserService(deps.db);
   const organizationInvite = new OrganizationInviteService(deps.db, emailService, deps.config.landingBaseUrl);
   const organization = new OrganizationService(deps.db, user, organizationInvite);
-  const workspaceProvisioner = new NoopWorkspaceProvisioner();
+  const workspaceProvisioner = new RelayWorkspaceProvisioner(deps.config);
   const relayEvent = new RelayEventService(deps.config);
 
   // Wire invite acceptance into user creation so that when a user registers,
@@ -58,7 +58,7 @@ export function createServices(deps: { db: AppDb; config: ServiceConfig }): AppS
     relayEvent,
     scheduledJob: new ScheduledJobService(deps.db, organization),
     jobEvaluator: new JobEvaluatorService(deps.db),
-    workspace: new WorkspaceService(deps.db, organization, workspaceProvisioner),
+    workspace: new WorkspaceService(deps.db, organization, workspaceProvisioner, deps.config),
     workspacePullRequest: new WorkspacePullRequestService(deps.db, organization),
     voiceTranscription: new VoiceTranscriptionService(deps.db, deps.config, organization),
     serviceToken: new ServiceTokenService(deps.db),

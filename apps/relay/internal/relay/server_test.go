@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla/websocket"
+
 	"yishan/apps/relay/internal/auth"
 	"yishan/apps/relay/internal/jobqueue"
 )
@@ -55,6 +58,26 @@ func authorizedRequest(t *testing.T, method, path string, body []byte) *http.Req
 	req.Header.Set("Authorization", "Bearer "+testAPIToken)
 	req.Header.Set("Content-Type", "application/json")
 	return req
+}
+
+func clientRelayToken(t *testing.T, secret, userID, nodeID string) string {
+	t.Helper()
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"type":            "relay",
+		"sub":             userID,
+		"nodeId":          nodeID,
+		"organizationIds": []string{"org-1"},
+		"exp":             time.Now().Add(time.Hour).Unix(),
+		"iat":             time.Now().Unix(),
+	})
+
+	signed, err := token.SignedString([]byte(secret))
+	if err != nil {
+		t.Fatalf("sign token: %v", err)
+	}
+
+	return signed
 }
 
 // ---------------------------------------------------------------------------
@@ -387,6 +410,74 @@ func TestHandleDispatch_InvalidJSON_Returns400(t *testing.T) {
 	srv.HandleDispatch(w, req)
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestAuthorizeClientWebSocketRequest_AllowsOfflineNodeForValidUserToken(t *testing.T) {
+	srv := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/client/ws?nodeId=node-offline", nil)
+	req.Header.Set("Authorization", "Bearer "+clientRelayToken(t, "test-secret", "user-123", "node-offline"))
+	w := httptest.NewRecorder()
+
+	if !srv.authorizeClientWebSocketRequest(w, req, "node-offline") {
+		t.Fatalf("expected offline node auth to succeed, got %d", w.Code)
+	}
+}
+
+func TestAuthorizeClientWebSocketRequest_RejectsUserMismatchForOnlineNode(t *testing.T) {
+	srv := newTestServer(t)
+	srv.sessions.sessions["node-1"] = &NodeSession{
+		Identity: auth.NodeIdentity{
+			NodeID: "node-1",
+			UserID: "owner-123",
+		},
+		State: StateConnected,
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/client/ws?nodeId=node-1", nil)
+	req.Header.Set("Authorization", "Bearer "+clientRelayToken(t, "test-secret", "other-user", "node-1"))
+	w := httptest.NewRecorder()
+
+	if srv.authorizeClientWebSocketRequest(w, req, "node-1") {
+		t.Fatal("expected auth to fail for mismatched online node owner")
+	}
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestAuthorizeClientWebSocketRequest_RejectsNodeClaimMismatch(t *testing.T) {
+	srv := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/client/ws?nodeId=node-1", nil)
+	req.Header.Set("Authorization", "Bearer "+clientRelayToken(t, "test-secret", "user-123", "node-2"))
+	w := httptest.NewRecorder()
+
+	if srv.authorizeClientWebSocketRequest(w, req, "node-1") {
+		t.Fatal("expected auth to fail for mismatched relay node claim")
+	}
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestExtractClientRequestID_ReturnsJSONRPCID(t *testing.T) {
+	payload := []byte(`{"jsonrpc":"2.0","id":"req-123","method":"terminal.listSessions","params":{"workspaceId":"ws-1"}}`)
+
+	id := extractClientRequestID(websocket.TextMessage, payload)
+	if id != "req-123" {
+		t.Fatalf("expected request id req-123, got %#v", id)
+	}
+}
+
+func TestExtractClientRequestID_IgnoresNonRequestPayloads(t *testing.T) {
+	if id := extractClientRequestID(websocket.BinaryMessage, []byte{0x01, 0x02}); id != nil {
+		t.Fatalf("expected nil id for binary payload, got %#v", id)
+	}
+
+	if id := extractClientRequestID(websocket.TextMessage, []byte(`{"jsonrpc":"2.0","method":"events.frontendStream"}`)); id != nil {
+		t.Fatalf("expected nil id for request without id, got %#v", id)
 	}
 }
 

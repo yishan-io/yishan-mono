@@ -49,6 +49,7 @@ type fileWriteParams struct {
 	WorkspaceID string `json:"workspaceId"`
 	Path        string `json:"path"`
 	Content     string `json:"content"`
+	Encoding    string `json:"encoding,omitempty"`
 	Mode        uint32 `json:"mode,omitempty"`
 }
 

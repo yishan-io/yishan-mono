@@ -21,6 +21,12 @@ type NodeIdentity struct {
 	DaemonVersion   string
 }
 
+// ClientIdentity represents one authenticated relay client connection.
+type ClientIdentity struct {
+	NodeID string
+	UserID string
+}
+
 // Config holds JWT validation parameters.
 type Config struct {
 	Secret   string
@@ -28,9 +34,10 @@ type Config struct {
 	Audience string
 }
 
-// nodeClaims extends RegisteredClaims with the custom nodeId claim.
-type nodeClaims struct {
+// relayClaims extends RegisteredClaims with relay-specific claims.
+type relayClaims struct {
 	jwt.RegisteredClaims
+	Type            string   `json:"type"`
 	NodeID          string   `json:"nodeId"`
 	OrganizationIDs []string `json:"organizationIds"`
 }
@@ -53,15 +60,61 @@ func (a *Authenticator) Authenticate(r *http.Request) (*NodeIdentity, error) {
 		return nil, fmt.Errorf("missing bearer token")
 	}
 
-	identity, err := a.validateToken(tokenString)
+	claims, err := a.validateToken(tokenString, "relay")
 	if err != nil {
 		return nil, err
 	}
-	identity.DaemonVersion = strings.TrimSpace(r.URL.Query().Get("version"))
-	return identity, nil
+	return &NodeIdentity{
+		UserID:          claims.Subject,
+		NodeID:          claims.NodeID,
+		OrganizationIDs: claims.OrganizationIDs,
+		DaemonVersion:   strings.TrimSpace(r.URL.Query().Get("version")),
+	}, nil
 }
 
-func (a *Authenticator) validateToken(tokenString string) (*NodeIdentity, error) {
+// AuthenticateClient validates one mobile/client access token for /client/ws.
+func (a *Authenticator) AuthenticateClient(r *http.Request) (*ClientIdentity, error) {
+	tokenString := ExtractBearerToken(r)
+	if tokenString == "" {
+		return nil, fmt.Errorf("missing bearer token")
+	}
+
+	claims, err := a.validateToken(tokenString, "relay")
+	if err != nil {
+		return nil, err
+	}
+
+	return &ClientIdentity{
+		NodeID: claims.NodeID,
+		UserID: claims.Subject,
+	}, nil
+}
+
+func (a *Authenticator) validateToken(tokenString string, expectedType string) (*relayClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &relayClaims{}, a.keyfunc, a.parserOptions()...)
+	if err != nil {
+		return nil, fmt.Errorf("token validation: %w", err)
+	}
+
+	claims, ok := token.Claims.(*relayClaims)
+	if !ok {
+		return nil, fmt.Errorf("unexpected claims type")
+	}
+
+	if claims.Type != expectedType {
+		return nil, fmt.Errorf("token has unexpected type")
+	}
+	if claims.Subject == "" {
+		return nil, fmt.Errorf("token missing sub claim")
+	}
+	if claims.NodeID == "" {
+		return nil, fmt.Errorf("token missing nodeId claim")
+	}
+
+	return claims, nil
+}
+
+func (a *Authenticator) parserOptions() []jwt.ParserOption {
 	options := []jwt.ParserOption{
 		jwt.WithValidMethods([]string{"HS256", "HS384", "HS512"}),
 		jwt.WithExpirationRequired(),
@@ -72,34 +125,14 @@ func (a *Authenticator) validateToken(tokenString string) (*NodeIdentity, error)
 	if a.config.Audience != "" {
 		options = append(options, jwt.WithAudience(a.config.Audience))
 	}
+	return options
+}
 
-	token, err := jwt.ParseWithClaims(tokenString, &nodeClaims{}, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
-		}
-		return []byte(a.config.Secret), nil
-	}, options...)
-	if err != nil {
-		return nil, fmt.Errorf("token validation: %w", err)
+func (a *Authenticator) keyfunc(token *jwt.Token) (any, error) {
+	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
 	}
-
-	claims, ok := token.Claims.(*nodeClaims)
-	if !ok {
-		return nil, fmt.Errorf("unexpected claims type")
-	}
-
-	if claims.Subject == "" {
-		return nil, fmt.Errorf("token missing sub claim")
-	}
-	if claims.NodeID == "" {
-		return nil, fmt.Errorf("token missing nodeId claim")
-	}
-
-	return &NodeIdentity{
-		UserID:          claims.Subject,
-		NodeID:          claims.NodeID,
-		OrganizationIDs: claims.OrganizationIDs,
-	}, nil
+	return []byte(a.config.Secret), nil
 }
 
 // ExtractBearerToken extracts a bearer token from the Authorization header or

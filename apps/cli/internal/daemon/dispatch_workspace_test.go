@@ -142,7 +142,6 @@ func TestHandleWorkspaceCreate_UsesAuthoritativeAPIWorkspaceID(t *testing.T) {
 		_, _ = w.Write([]byte(`{"workspace":{"id":"ws-api-1","organizationId":"org-1","projectId":"project-1","userId":"user-1","nodeId":"node-1","kind":"worktree","status":"provisioning","branch":"feature-test","sourceBranch":"main","localPath":"","createdAt":"2026-06-30T00:00:00.000Z","updatedAt":"2026-06-30T00:00:00.000Z"}}`))
 	}))
 	defer server.Close()
-
 	root := t.TempDir()
 	statePath := filepath.Join(root, "daemon.state.json")
 	indexStore, err := newWorkspaceIndexStore(statePath)
@@ -214,6 +213,105 @@ func TestHandleWorkspaceCreate_UsesAuthoritativeAPIWorkspaceID(t *testing.T) {
 	}
 	if payload.NodeID != "node-1" {
 		t.Fatalf("expected node-1, got %s", payload.NodeID)
+	}
+}
+
+func TestHandleWorkspaceOpen_RegistersWorkspace(t *testing.T) {
+	root := t.TempDir()
+	statePath := filepath.Join(root, "daemon.state.json")
+	indexStore, err := newWorkspaceIndexStore(statePath)
+	if err != nil {
+		t.Fatalf("newWorkspaceIndexStore: %v", err)
+	}
+
+	manager := workspace.NewManager()
+	handler := NewJSONRPCHandler(
+		manager,
+		nil,
+		"node-1",
+		filepath.Join(root, "daemon.log"),
+		nil,
+		indexStore,
+		filepath.Join(root, "config.yml"),
+		NewAppContextStore(""),
+	)
+	defer handler.Shutdown()
+
+	params, err := json.Marshal(map[string]any{
+		"id":        "workspace-open-1",
+		"path":      root,
+		"projectId": "project-1",
+		"orgId":     "org-1",
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+
+	result, err := handler.dispatchWorkspace(context.Background(), nil, MethodWorkspaceOpen, params)
+	if err != nil {
+		t.Fatalf("%s returned unexpected error: %v", MethodWorkspaceOpen, err)
+	}
+
+	record, ok := result.(workspace.Workspace)
+	if !ok {
+		t.Fatalf("expected workspace result for %s, got %T", MethodWorkspaceOpen, result)
+	}
+	if record.ID != "workspace-open-1" {
+		t.Fatalf("expected workspace id to be registered for %s, got %q", MethodWorkspaceOpen, record.ID)
+	}
+}
+
+func TestHandleWorkspaceOpen_DoesNotPersistEphemeralWorkspace(t *testing.T) {
+	root := t.TempDir()
+	statePath := filepath.Join(root, "daemon.state.json")
+	indexStore, err := newWorkspaceIndexStore(statePath)
+	if err != nil {
+		t.Fatalf("newWorkspaceIndexStore: %v", err)
+	}
+
+	manager := workspace.NewManager()
+	handler := NewJSONRPCHandler(
+		manager,
+		nil,
+		"node-1",
+		filepath.Join(root, "daemon.log"),
+		nil,
+		indexStore,
+		filepath.Join(root, "config.yml"),
+		NewAppContextStore(""),
+	)
+	defer handler.Shutdown()
+
+	params, err := json.Marshal(map[string]any{
+		"ephemeral": true,
+		"id":        "workspace-open-ephemeral",
+		"path":      root,
+		"projectId": "project-1",
+		"orgId":     "org-1",
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+
+	result, err := handler.dispatchWorkspace(context.Background(), nil, MethodWorkspaceOpen, params)
+	if err != nil {
+		t.Fatalf("%s returned unexpected error: %v", MethodWorkspaceOpen, err)
+	}
+
+	record, ok := result.(workspace.Workspace)
+	if !ok {
+		t.Fatalf("expected workspace result for %s, got %T", MethodWorkspaceOpen, result)
+	}
+	if record.ID != "workspace-open-ephemeral" {
+		t.Fatalf("expected workspace id to be registered for %s, got %q", MethodWorkspaceOpen, record.ID)
+	}
+
+	entries, err := handler.wsIndexStore.List()
+	if err != nil {
+		t.Fatalf("workspace index list: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("expected ephemeral workspace open to avoid index persistence, got %#v", entries)
 	}
 }
 

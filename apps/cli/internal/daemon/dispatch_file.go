@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 
 	"yishan/apps/cli/internal/workspace"
@@ -62,7 +63,18 @@ func (h *JSONRPCHandler) dispatchFile(ctx context.Context, method string, params
 		if err != nil {
 			return nil, err
 		}
-		return handle.FileWrite(req.Path, req.Content, req.Mode)
+		content := req.Content
+		if req.Encoding == "base64" {
+			decodedContent, err := base64.StdEncoding.DecodeString(req.Content)
+			if err != nil {
+				return nil, workspace.NewRPCError(rpcCodeInvalidParams, "invalid base64 file content")
+			}
+			content = string(decodedContent)
+		}
+		if req.Encoding != "" && req.Encoding != "plain" && req.Encoding != "base64" {
+			return nil, workspace.NewRPCError(rpcCodeInvalidParams, "unsupported file encoding")
+		}
+		return handle.FileWrite(req.Path, content, req.Mode)
 	case MethodFileDelete:
 		var req fileDeleteParams
 		if err := decodeParams(params, &req); err != nil {

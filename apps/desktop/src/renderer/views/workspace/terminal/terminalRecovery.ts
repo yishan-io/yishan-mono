@@ -153,22 +153,20 @@ export class TerminalRecoveryCoordinator {
    * Starts auto-persisting terminal-tab metadata and returns the unsubscribe handle.
    */
   startPersistingTerminalTabs(): () => void {
-    let previousSerializedPayload = JSON.stringify(
-      this.buildPersistedTerminalTabsPayload(this.tabStoreAccess.getState()),
-    );
+    let previousPayload = this.buildPersistedTerminalTabsPayload(this.tabStoreAccess.getState());
 
     return this.tabStoreAccess.subscribe((state) => {
-      const nextSerializedPayload = JSON.stringify(this.buildPersistedTerminalTabsPayload(state));
-      if (nextSerializedPayload === previousSerializedPayload) {
+      const nextPayload = this.buildPersistedTerminalTabsPayload(state);
+      if (persistedTerminalPayloadsEqual(previousPayload, nextPayload)) {
         return;
       }
 
-      previousSerializedPayload = nextSerializedPayload;
+      previousPayload = nextPayload;
       if (!this.storage) {
         return;
       }
 
-      this.storage.setItem(TERMINAL_RECOVERY_STORAGE_KEY, nextSerializedPayload);
+      this.storage.setItem(TERMINAL_RECOVERY_STORAGE_KEY, JSON.stringify(nextPayload));
     });
   }
 
@@ -209,7 +207,7 @@ export class TerminalRecoveryCoordinator {
     state: Pick<TabStoreState, "tabs" | "selectedTabId">,
   ): PersistedTerminalTabPayload {
     return {
-      selectedTabId: state.selectedTabId,
+      selectedTabId: resolveSelectedTerminalTabId(state),
       tabs: state.tabs
         .filter((tab): tab is TerminalTab => tab.kind === "terminal")
         .map((tab) => ({
@@ -263,4 +261,41 @@ function normalizePersistedTerminalTabEntry(value: unknown): PersistedTerminalTa
     launchCommand: normalizeOptionalText(entry.launchCommand),
     agentKind: normalizeOptionalText(entry.agentKind),
   };
+}
+
+function resolveSelectedTerminalTabId(state: Pick<TabStoreState, "tabs" | "selectedTabId">): string {
+  const selectedTab = state.tabs.find((tab) => tab.id === state.selectedTabId);
+  return selectedTab?.kind === "terminal" ? selectedTab.id : "";
+}
+
+function persistedTerminalPayloadsEqual(
+  left: PersistedTerminalTabPayload,
+  right: PersistedTerminalTabPayload,
+): boolean {
+  if (left.selectedTabId !== right.selectedTabId) {
+    return false;
+  }
+  if (left.tabs.length !== right.tabs.length) {
+    return false;
+  }
+
+  for (let index = 0; index < left.tabs.length; index += 1) {
+    const leftEntry = left.tabs[index];
+    const rightEntry = right.tabs[index];
+    if (!leftEntry || !rightEntry) {
+      return false;
+    }
+    if (
+      leftEntry.tabId !== rightEntry.tabId ||
+      leftEntry.workspaceId !== rightEntry.workspaceId ||
+      leftEntry.title !== rightEntry.title ||
+      leftEntry.pinned !== rightEntry.pinned ||
+      leftEntry.sessionId !== rightEntry.sessionId ||
+      leftEntry.launchCommand !== rightEntry.launchCommand
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }

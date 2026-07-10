@@ -38,6 +38,7 @@ func TestAuthenticate_ValidToken(t *testing.T) {
 	})
 
 	token := makeTestToken(secret, map[string]any{
+		"type":   "relay",
 		"sub":    "user-123",
 		"nodeId": "node-abc",
 		"iss":    "https://yishan.io",
@@ -70,6 +71,7 @@ func TestAuthenticate_ExpiredToken(t *testing.T) {
 	})
 
 	token := makeTestToken(secret, map[string]any{
+		"type":   "relay",
 		"sub":    "user-123",
 		"nodeId": "node-abc",
 		"iss":    "https://yishan.io",
@@ -98,6 +100,7 @@ func TestAuthenticate_WrongIssuer(t *testing.T) {
 	})
 
 	token := makeTestToken(secret, map[string]any{
+		"type":   "relay",
 		"sub":    "user-123",
 		"nodeId": "node-abc",
 		"iss":    "https://evil.com",
@@ -123,10 +126,11 @@ func TestAuthenticate_MissingNodeID(t *testing.T) {
 	})
 
 	token := makeTestToken(secret, map[string]any{
-		"sub": "user-123",
-		"iss": "https://yishan.io",
-		"aud": "api-service",
-		"exp": time.Now().Add(1 * time.Hour).Unix(),
+		"type": "relay",
+		"sub":  "user-123",
+		"iss":  "https://yishan.io",
+		"aud":  "api-service",
+		"exp":  time.Now().Add(1 * time.Hour).Unix(),
 	})
 
 	req, _ := http.NewRequest("GET", "/ws", nil)
@@ -158,6 +162,7 @@ func TestAuthenticate_QueryParamToken(t *testing.T) {
 	})
 
 	token := makeTestToken(secret, map[string]any{
+		"type":   "relay",
 		"sub":    "user-456",
 		"nodeId": "node-xyz",
 		"iss":    "https://yishan.io",
@@ -187,6 +192,7 @@ func TestAuthenticate_WrongSecret(t *testing.T) {
 	})
 
 	token := makeTestToken("wrong-secret", map[string]any{
+		"type":   "relay",
 		"sub":    "user-123",
 		"nodeId": "node-abc",
 		"iss":    "https://yishan.io",
@@ -200,5 +206,67 @@ func TestAuthenticate_WrongSecret(t *testing.T) {
 	_, err := a.Authenticate(req)
 	if err == nil {
 		t.Fatal("expected error for wrong secret")
+	}
+}
+
+func TestAuthenticateClient_ValidRelayToken(t *testing.T) {
+	secret := "test-secret-key"
+	a := NewAuthenticator(Config{
+		Secret:   secret,
+		Issuer:   "https://yishan.io",
+		Audience: "api-service",
+	})
+
+	token := makeTestToken(secret, map[string]any{
+		"type":            "relay",
+		"sub":             "user-123",
+		"nodeId":          "node-abc",
+		"organizationIds": []string{"org-1"},
+		"iss":             "https://yishan.io",
+		"aud":             "api-service",
+		"exp":             time.Now().Add(1 * time.Hour).Unix(),
+		"iat":             time.Now().Unix(),
+	})
+
+	req, _ := http.NewRequest("GET", "/client/ws?nodeId=node-abc", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	identity, err := a.AuthenticateClient(req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if identity.UserID != "user-123" {
+		t.Errorf("expected userId user-123, got %s", identity.UserID)
+	}
+	if identity.NodeID != "node-abc" {
+		t.Errorf("expected nodeId node-abc, got %s", identity.NodeID)
+	}
+}
+
+func TestAuthenticateClient_WrongTokenType(t *testing.T) {
+	secret := "test-secret-key"
+	a := NewAuthenticator(Config{
+		Secret:   secret,
+		Issuer:   "https://yishan.io",
+		Audience: "api-service",
+	})
+
+	token := makeTestToken(secret, map[string]any{
+		"type":  "access",
+		"sub":   "user-123",
+		"sid":   "session-1",
+		"scope": "api:read api:write",
+		"iss":   "https://yishan.io",
+		"aud":   "api-service",
+		"exp":   time.Now().Add(1 * time.Hour).Unix(),
+		"iat":   time.Now().Unix(),
+	})
+
+	req, _ := http.NewRequest("GET", "/client/ws?nodeId=node-abc", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	_, err := a.AuthenticateClient(req)
+	if err == nil {
+		t.Fatal("expected error for wrong token type")
 	}
 }

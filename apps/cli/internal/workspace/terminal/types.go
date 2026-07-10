@@ -51,12 +51,15 @@ type KillProcessResponse struct {
 }
 
 type ListSessionsRequest struct {
-	IncludeExited bool `json:"includeExited,omitempty"`
+	WorkspaceID   string `json:"workspaceId,omitempty"`
+	IncludeExited bool   `json:"includeExited,omitempty"`
 }
 
 type SessionSummary struct {
 	SessionID   string `json:"sessionId"`
 	WorkspaceID string `json:"workspaceId"`
+	TabID       string `json:"tabId,omitempty"`
+	PaneID      string `json:"paneId,omitempty"`
 	PID         int    `json:"pid"`
 	Status      string `json:"status"`
 	StartedAt   string `json:"startedAt,omitempty"`
@@ -95,7 +98,8 @@ type SubscribeRequest struct {
 }
 
 type SubscribeResponse struct {
-	Subscribed bool `json:"subscribed"`
+	Subscribed bool             `json:"subscribed"`
+	Snapshot   *SubscribeResult `json:"snapshot,omitempty"`
 }
 
 type UnsubscribeRequest struct {
@@ -118,8 +122,15 @@ type Event struct {
 }
 
 type Subscription struct {
-	ID     uint64
-	Events <-chan Event
+	ID       uint64
+	Events   <-chan Event
+	Snapshot SubscribeResult
+}
+
+type SubscribeResult struct {
+	Output   string `json:"output"`
+	ExitCode *int   `json:"exitCode,omitempty"`
+	Running  bool   `json:"running"`
 }
 
 type SessionLifecycleEvent struct {
