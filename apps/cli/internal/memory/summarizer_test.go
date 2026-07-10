@@ -304,31 +304,78 @@ func TestCheckBudget_ProjectLimit(t *testing.T) {
 	}
 }
 
-func TestOverflowEntries_WritesFile(t *testing.T) {
+func TestTrimSectionKeepingLatestEntries_KeepsMostRecentEntries(t *testing.T) {
 	ctxDir := t.TempDir()
-	entries := []string{"decision one", "decision two"}
+	entries := []string{"decision one", "decision two", "decision three", "decision four", "decision five"}
 
-	path := overflowEntries(ctxDir, "locked-decisions", entries)
+	trimmedEntries, overflowPath := trimSectionKeepingLatestEntries(entries, 3, ctxDir, "locked-decisions")
 
-	if path == "" {
-		t.Fatal("expected a non-empty path to be returned")
+	if overflowPath == "" {
+		t.Fatal("expected a non-empty overflow path")
 	}
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		t.Fatal("overflow file should exist on disk")
+	if len(trimmedEntries) != 3 {
+		t.Fatalf("expected 3 trimmed entries, got %d", len(trimmedEntries))
 	}
-	data, err := os.ReadFile(path)
+	if strings.Join(trimmedEntries, ",") != "decision three,decision four,decision five" {
+		t.Fatalf("expected latest entries to remain, got %v", trimmedEntries)
+	}
+
+	data, err := os.ReadFile(overflowPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	content := string(data)
 	if !strings.Contains(content, "decision one") || !strings.Contains(content, "decision two") {
-		t.Errorf("overflow file should contain entries: %q", content)
+		t.Errorf("overflow file should contain older entries: %q", content)
+	}
+	if strings.Contains(content, "decision four") || strings.Contains(content, "decision five") {
+		t.Errorf("overflow file should not contain retained latest entries: %q", content)
 	}
 	if !strings.Contains(content, "# Overflow: Locked Decisions") {
 		t.Error("overflow file should have normalized header")
 	}
-	if !strings.HasPrefix(filepath.Base(path), "locked-decisions-") {
-		t.Errorf("filename should start with locked-decisions-, got %q", filepath.Base(path))
+	if !strings.HasPrefix(filepath.Base(overflowPath), "locked-decisions-") {
+		t.Errorf("filename should start with locked-decisions-, got %q", filepath.Base(overflowPath))
+	}
+}
+
+func TestTrimToBudget_KeepsLatestEntriesInMemory(t *testing.T) {
+	ctxDir := t.TempDir()
+	content := `# Project Memory
+
+_Last updated: 2026-07-10_
+
+## Locked Decisions
+
+- decision one
+- decision two
+- decision three
+- decision four
+
+## Durable Discoveries
+
+- discovery one
+- discovery two
+- discovery three
+- discovery four
+
+## Open Questions
+
+- question one
+`
+
+	trimmedContent, overflowPaths := trimToBudget(content, 1, ctxDir)
+	if len(overflowPaths) == 0 {
+		t.Fatal("expected overflow paths when forcing trim")
+	}
+	if !strings.Contains(trimmedContent, "decision four") || strings.Contains(trimmedContent, "decision one") {
+		t.Fatalf("expected latest locked decisions to remain, got: %q", trimmedContent)
+	}
+	if !strings.Contains(trimmedContent, "discovery four") || strings.Contains(trimmedContent, "discovery one") {
+		t.Fatalf("expected latest durable discoveries to remain, got: %q", trimmedContent)
+	}
+	if strings.Contains(trimmedContent, "question one") {
+		t.Fatalf("expected open questions to be fully archived, got: %q", trimmedContent)
 	}
 }
 
