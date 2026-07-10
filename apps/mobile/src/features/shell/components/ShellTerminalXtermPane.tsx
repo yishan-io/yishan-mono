@@ -8,6 +8,7 @@ import { useAppLanguage } from "@/features/i18n/AppLanguageProvider";
 import { getTerminalAccessoryBottomInset } from "../domain/shell-terminal-active-pane-domain";
 import { useShellTerminalImageUpload } from "../hooks/useShellTerminalImageUpload";
 import type { TerminalItem, TerminalMessage } from "../state/shell.types";
+import { sanitizeTerminalDisplayOutput } from "../state/terminal-output";
 import ShellTerminalDomEmulator, { type ShellTerminalDomEmulatorHandle } from "./ShellTerminalDomEmulator";
 import { ShellTerminalKeyboardBridgeInput } from "./ShellTerminalKeyboardBridgeInput";
 import { ShellTerminalReaderPane } from "./ShellTerminalReaderPane";
@@ -115,9 +116,8 @@ export function ShellTerminalXtermPane({
   }, []);
 
   const syncReaderOutput = useCallback(() => {
-    const nextReaderOutput = terminalDomRef.current?.readPlainTextSnapshot() ?? "";
-    setReaderOutput(nextReaderOutput);
-  }, []);
+    setReaderOutput(sanitizeTerminalDisplayOutput(terminalOutput));
+  }, [terminalOutput]);
 
   const openReaderMode = () => {
     dismissTerminalKeyboard();
@@ -175,7 +175,7 @@ export function ShellTerminalXtermPane({
       <View style={{ flex: 1, minHeight: 0 }}>
         <View
           pointerEvents={readerModeEnabled ? "none" : "auto"}
-          style={readerModeEnabled ? styles.hiddenPane : undefined}
+          style={[styles.terminalPane, readerModeEnabled ? styles.hiddenPane : null]}
         >
           <ShellTerminalDomEmulator
             blurRequestToken={blurRequestToken}
@@ -236,6 +236,10 @@ export function ShellTerminalXtermPane({
 const styles = StyleSheet.create({
   hiddenPane: {
     opacity: 0,
+  },
+  terminalPane: {
+    flex: 1,
+    minHeight: 0,
   },
   readerOverlay: {
     ...StyleSheet.absoluteFillObject,

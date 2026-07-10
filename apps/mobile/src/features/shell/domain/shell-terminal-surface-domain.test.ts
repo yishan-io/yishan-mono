@@ -58,10 +58,11 @@ describe("shell-terminal-surface-domain", () => {
     expect(buildTerminalDomProps(false)).toBeUndefined();
     expect(buildTerminalDomProps(true)).toEqual({
       bounces: false,
+      containerStyle: { flex: 1, minHeight: 0, minWidth: 0 },
       hideKeyboardAccessoryView: true,
       keyboardDisplayRequiresUserAction: false,
       overScrollMode: "never",
-      style: { flex: 1, minHeight: 0 },
+      style: { flex: 1, minHeight: 0, minWidth: 0 },
     });
   });
 

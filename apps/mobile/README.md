@@ -76,6 +76,11 @@ Important implementation note:
 - `EXPO_PUBLIC_GOOGLE_OAUTH_IOS_SCHEME`
   - required native URL scheme for the iOS Google OAuth client
 
+For local development:
+
+- iOS Simulator on the same Mac should use `http://127.0.0.1:<port>` for both API and relay
+- a physical phone should use the current Mac LAN IP, for example `http://192.168.50.238:<port>`
+
 The iOS app derives its callback URI from the native scheme and the shared
 callback path `oauth/google/callback`. For example:
 

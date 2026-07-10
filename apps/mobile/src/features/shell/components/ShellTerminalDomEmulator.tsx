@@ -6,13 +6,12 @@ import { type Ref, forwardRef, useRef } from "react";
 import "@xterm/xterm/css/xterm.css";
 
 import { buildShellTerminalRootStyle, getShellTerminalViewportCss } from "../domain/shell-terminal-dom-emulator-domain";
-import { blurTerminal, readTerminalPlainTextSnapshot } from "./shell-terminal-dom-emulator-runtime";
+import { blurTerminal } from "./shell-terminal-dom-emulator-runtime";
 import { useShellTerminalDomLifecycle } from "./useShellTerminalDomLifecycle";
 
 export type ShellTerminalDomEmulatorHandle = {
   blurInputSession: () => void;
   pasteText: (text: string) => void;
-  readPlainTextSnapshot: () => string;
 };
 
 type ShellTerminalDomEmulatorProps = {
@@ -78,17 +77,16 @@ const ShellTerminalDomEmulator = forwardRef<ShellTerminalDomEmulatorHandle, Shel
       () => ({
         blurInputSession() {
           blurTerminal(terminalRef.current);
+          return true;
         },
         pasteText(...args: unknown[]) {
           const [text] = args;
           if (typeof text !== "string" || !text) {
-            return;
+            return true;
           }
 
           terminalRef.current?.paste(text);
-        },
-        readPlainTextSnapshot() {
-          return readTerminalPlainTextSnapshot(terminalRef.current);
+          return true;
         },
       }),
       [],

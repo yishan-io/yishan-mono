@@ -11,7 +11,7 @@ type TerminalKeyboardLayoutInput = {
 
 export type TerminalRendererKind = "native" | "xterm";
 
-const TERMINAL_DOM_STYLE = { flex: 1, minHeight: 0 };
+const TERMINAL_DOM_STYLE = { flex: 1, minHeight: 0, minWidth: 0 };
 
 function getHexChannel(channel: string) {
   return Number.parseInt(channel, 16);
@@ -168,6 +168,7 @@ export function buildTerminalDomProps(usesTerminalEmulator: boolean): DOMProps |
 
   return {
     bounces: false,
+    containerStyle: TERMINAL_DOM_STYLE,
     hideKeyboardAccessoryView: true,
     keyboardDisplayRequiresUserAction: false,
     overScrollMode: "never",

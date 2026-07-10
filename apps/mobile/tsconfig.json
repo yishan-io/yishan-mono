@@ -11,13 +11,13 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@yishan/design-tokens": [
+      "@yishan-io/design-tokens": [
         "../../packages/design-tokens/src/index.ts"
       ],
-      "@yishan/design-tokens/*": [
+      "@yishan-io/design-tokens/*": [
         "../../packages/design-tokens/src/*"
       ],
-      "@yishan/core": [
+      "@yishan-io/core": [
         "../../packages/core/src/index.ts"
       ],
       "@/*": [

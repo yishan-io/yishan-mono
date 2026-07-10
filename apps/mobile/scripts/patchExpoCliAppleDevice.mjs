@@ -17,6 +17,11 @@ const targetSuffix = path.join(
 );
 const buggySnippet = "debug(`startSession: ${pairRecord}`);";
 const patchedSnippet = "debug('startSession: %O', pairRecord);";
+const compatibleSnippets = [
+  "debug('startSession');",
+  'debug("startSession");',
+  "debug(`startSession`);",
+];
 
 async function listExpoCliLockdownClients() {
   let entries;
@@ -36,13 +41,18 @@ async function patchFile(filePath) {
   if (source.includes(patchedSnippet)) {
     return false;
   }
-  if (!source.includes(buggySnippet)) {
-    throw new Error(`Could not find Expo CLI patch target in ${filePath}`);
+  if (source.includes(buggySnippet)) {
+    const nextSource = source.replace(buggySnippet, patchedSnippet);
+    await writeFile(filePath, nextSource, "utf8");
+    return true;
   }
 
-  const nextSource = source.replace(buggySnippet, patchedSnippet);
-  await writeFile(filePath, nextSource, "utf8");
-  return true;
+  if (compatibleSnippets.some((snippet) => source.includes(snippet))) {
+    return false;
+  }
+
+  console.warn(`[patchExpoCliAppleDevice] Skipping unrecognized Expo CLI file: ${filePath}`);
+  return false;
 }
 
 const targetFiles = await listExpoCliLockdownClients();
