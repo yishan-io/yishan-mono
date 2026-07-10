@@ -11,8 +11,12 @@ func TestSyncManagedPiAgentFilesCopiesApprovedAgentsAndRemovesStaleOnes(t *testi
 	targetDir := t.TempDir()
 
 	for fileName, content := range map[string]string{
-		"General.md": "# General\n",
-		"Explore.md": "# Explore\n",
+		"general.md":        "# general\n",
+		"explore.md":        "# explore\n",
+		"builder.md":        "# builder\n",
+		"code-reviewer.md":  "# code-reviewer\n",
+		"plan-reviewer.md":  "# plan-reviewer\n",
+		"task-reviewer.md":  "# task-reviewer\n",
 	} {
 		if err := os.WriteFile(filepath.Join(sourceDir, fileName), []byte(content), 0o644); err != nil {
 			t.Fatalf("write source file %s: %v", fileName, err)
@@ -29,8 +33,12 @@ func TestSyncManagedPiAgentFilesCopiesApprovedAgentsAndRemovesStaleOnes(t *testi
 	}
 
 	for fileName, expectedContent := range map[string]string{
-		"General.md": "# General\n",
-		"Explore.md": "# Explore\n",
+		"general.md":        "# general\n",
+		"explore.md":        "# explore\n",
+		"builder.md":        "# builder\n",
+		"code-reviewer.md":  "# code-reviewer\n",
+		"plan-reviewer.md":  "# plan-reviewer\n",
+		"task-reviewer.md":  "# task-reviewer\n",
 	} {
 		content, err := os.ReadFile(filepath.Join(targetDir, fileName))
 		if err != nil {

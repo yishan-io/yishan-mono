@@ -51,7 +51,6 @@ var skillAddCmd = &cobra.Command{
 			"action":    "installed",
 			"source":    args[0],
 			"skillPath": result.SkillPath,
-			"symlinks":  result.Symlinks,
 		})
 	},
 }
@@ -81,7 +80,6 @@ var skillUpdateCmd = &cobra.Command{
 			"action":    "updated",
 			"name":      args[0],
 			"skillPath": result.SkillPath,
-			"symlinks":  result.Symlinks,
 		})
 	},
 }

@@ -45,11 +45,6 @@ func installAndRecordSkillDefinition(definition *skillDefinition) (*SkillInstall
 	}); err != nil {
 		return nil, err
 	}
-	if definition.Official && hasOpenCodeCommand(definition.Name) {
-		if err := EnsureOpenCodeCommand(definition.Name); err != nil {
-			return nil, err
-		}
-	}
 	return result, nil
 }
 
@@ -63,9 +58,6 @@ func RemoveSkill(name string) error {
 	}
 	if err := removeInstalledSkill(trimmed); err != nil {
 		return err
-	}
-	if hasOpenCodeCommand(trimmed) {
-		return RemoveOpenCodeCommand(trimmed)
 	}
 	return nil
 }
@@ -249,19 +241,15 @@ func deriveSkillName(source string) string {
 }
 
 func installSkillDefinition(definition *skillDefinition) (*SkillInstallResult, error) {
-	yishanHome, err := config.HomeDir()
+	piSkillsDir, err := config.ManagedPiSkillsDir()
 	if err != nil {
-		return nil, fmt.Errorf("resolve yishan home: %w", err)
+		return nil, fmt.Errorf("resolve managed pi skills dir: %w", err)
 	}
-	skillDir := filepath.Join(yishanHome, "skills", definition.Name)
+	skillDir := filepath.Join(piSkillsDir, definition.Name)
 	if err := writeSkillFiles(skillDir, definition.Files); err != nil {
 		return nil, err
 	}
-	symlinks, err := ensureAgentSkillSymlinks(skillDir, definition.Name)
-	if err != nil {
-		return nil, err
-	}
-	return &SkillInstallResult{SkillPath: filepath.Join(skillDir, "SKILL.md"), Symlinks: symlinks}, nil
+	return &SkillInstallResult{SkillPath: filepath.Join(skillDir, "SKILL.md")}, nil
 }
 
 func writeSkillFiles(skillDir string, files map[string][]byte) error {
@@ -288,95 +276,17 @@ func writeSkillFiles(skillDir string, files map[string][]byte) error {
 	return nil
 }
 
-func ensureAgentSkillSymlinks(skillDir string, name string) ([]string, error) {
-	linkTargets, err := skillLinkTargets(name)
-	if err != nil {
-		return nil, err
-	}
-	symlinks := make([]string, 0, len(linkTargets))
-	for _, linkTarget := range linkTargets {
-		if err := ensureSkillSymlink(linkTarget.path, skillDir); err != nil {
-			return nil, fmt.Errorf("symlink %s: %w", linkTarget.path, err)
-		}
-		symlinks = append(symlinks, linkTarget.path)
-	}
-	return symlinks, nil
-}
-
 func removeSkillMaterialization(name string) error {
-	linkTargets, err := skillLinkTargets(name)
+	piSkillsDir, err := config.ManagedPiSkillsDir()
 	if err != nil {
-		return err
+		return fmt.Errorf("resolve managed pi skills dir: %w", err)
 	}
-	for _, linkTarget := range linkTargets {
-		if err := removeSymlink(linkTarget.path); err != nil {
-			return err
-		}
-	}
-	yishanHome, err := config.HomeDir()
-	if err != nil {
-		return fmt.Errorf("resolve yishan home: %w", err)
-	}
-	if err := os.RemoveAll(filepath.Join(yishanHome, "skills", name)); err != nil {
+	if err := os.RemoveAll(filepath.Join(piSkillsDir, name)); err != nil {
 		return fmt.Errorf("remove skill dir: %w", err)
 	}
 	return nil
 }
 
-func removeSymlink(path string) error {
-	info, err := os.Lstat(path)
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if info.Mode()&os.ModeSymlink == 0 {
-		return fmt.Errorf("expected symlink at %s but found regular entry; refusing to remove", path)
-	}
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("remove symlink %s: %w", path, err)
-	}
-	return nil
-}
-
-type skillLinkTarget struct {
-	agent string
-	path  string
-}
-
-func skillLinkTargets(name string) ([]skillLinkTarget, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("resolve home dir: %w", err)
-	}
-	piSkillsDir, err := config.ManagedPiSkillsDir()
-	if err != nil {
-		return nil, fmt.Errorf("resolve managed pi skills dir: %w", err)
-	}
-	return []skillLinkTarget{
-		{agent: "claude", path: filepath.Join(homeDir, ".claude", "skills", name)},
-		{agent: "codex", path: filepath.Join(homeDir, ".codex", "skills", name)},
-		{agent: "shared", path: filepath.Join(homeDir, ".agents", "skills", name)},
-		{agent: "pi", path: filepath.Join(piSkillsDir, name)},
-	}, nil
-}
-
-func installedAgentsForSkill(name string) []string {
-	linkTargets, err := skillLinkTargets(name)
-	if err != nil {
-		return []string{}
-	}
-	agents := make([]string, 0, len(linkTargets))
-	for _, linkTarget := range linkTargets {
-		if info, statErr := os.Lstat(linkTarget.path); statErr == nil && info.Mode()&os.ModeSymlink != 0 {
-			agents = append(agents, linkTarget.agent)
-		}
-	}
-	return agents
-}
-
-func hasOpenCodeCommand(name string) bool {
-	_, ok := openCodeCommands[name]
-	return ok
+func installedAgentsForSkill(_name string) []string {
+	return []string{"pi"}
 }

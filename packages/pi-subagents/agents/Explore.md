@@ -1,5 +1,5 @@
 ---
-name: Explore
+name: explore
 description: Search and understand the codebase
 thinking: low
 tools:

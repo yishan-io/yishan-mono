@@ -33,7 +33,7 @@ describe("AgentSkillsCard", () => {
   it("renders skill metadata and installed actions", async () => {
     mocked.listSkills.mockResolvedValueOnce([
       {
-        name: "ys-start",
+        name: "starting-task",
         description: "Start tasks",
         version: "workspace",
         source: "official",
@@ -48,7 +48,7 @@ describe("AgentSkillsCard", () => {
 
     render(<AgentSkillsCard />);
 
-    expect(await screen.findByText("ys-start")).toBeTruthy();
+    expect(await screen.findByText("starting-task")).toBeTruthy();
     expect(screen.getByText(/Start tasks/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "settings.skills.actions.update" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "settings.skills.actions.uninstall" })).toBeTruthy();

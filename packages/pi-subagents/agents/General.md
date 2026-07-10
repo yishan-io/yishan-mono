@@ -1,5 +1,5 @@
 ---
-name: General
+name: general
 description: General-purpose sub-agent for focused implementation and investigation
 thinking: medium
 ---

@@ -20,7 +20,6 @@ type InstalledState struct {
 type SkillState struct {
 	Installed bool     `json:"installed"`
 	SkillPath string   `json:"skillPath,omitempty"`
-	Symlinks  []string `json:"symlinks,omitempty"`
 }
 
 // PerSkillState tracks the install status for one individual skill.
@@ -81,11 +80,12 @@ func GetInstalledState() (*InstalledState, error) {
 	return state, nil
 }
 
-func fillSkillState(state *InstalledState, yishanHome string) error {
+func fillSkillState(state *InstalledState, _ string) error {
 	infos, err := ListSkills()
 	if err != nil {
 		return err
 	}
+	piSkillsDir, piErr := config.ManagedPiSkillsDir()
 	for _, info := range infos {
 		if !info.Installed {
 			state.Skills = append(state.Skills, PerSkillState{
@@ -96,15 +96,8 @@ func fillSkillState(state *InstalledState, yishanHome string) error {
 			continue
 		}
 		state.Skill.Installed = true
-		state.Skill.SkillPath = filepath.Join(yishanHome, "skills", info.Name, "SKILL.md")
-		linkTargets, err := skillLinkTargets(info.Name)
-		if err != nil {
-			return err
-		}
-		for _, linkTarget := range linkTargets {
-			if hasInstalledAgent(info.InstalledForAgents, linkTarget.agent) {
-				state.Skill.Symlinks = append(state.Skill.Symlinks, linkTarget.path)
-			}
+		if piErr == nil {
+			state.Skill.SkillPath = filepath.Join(piSkillsDir, info.Name, "SKILL.md")
 		}
 		state.Skills = append(state.Skills, PerSkillState{
 			Name:               info.Name,
