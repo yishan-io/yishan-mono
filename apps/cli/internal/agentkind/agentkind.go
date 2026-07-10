@@ -23,4 +23,4 @@ var WithActiveTokenScanners = []string{OpenCode, Claude, Codex, Pi}
 
 // WithReadableSessionText lists agents whose local session storage contains
 // readable conversation text (usable for memory summarization).
-var WithReadableSessionText = []string{OpenCode, Claude}
+var WithReadableSessionText = []string{OpenCode, Claude, Pi}
