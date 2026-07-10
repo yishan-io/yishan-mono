@@ -1,0 +1,1 @@
+export { createPiMemoryExtension } from "./extension";
