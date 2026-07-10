@@ -44,14 +44,19 @@ type skillFrontMatter struct {
 
 func OfficialSkillNames() []string {
 	return []string{
-		workspaceSkillName,
-		memorySkillName,
-		startSkillName,
-		researchSkillName,
-		planSkillName,
-		buildSkillName,
-		verifySkillName,
-		doneSkillName,
+		brainstormSkillName,
+		contextMemorySkillName,
+		contextTaskSkillName,
+		dispatchingParallelAgentsSkillName,
+		executingPlansSkillName,
+		finishingTaskSkillName,
+		receivingCodeReviewSkillName,
+		requestingCodeReviewSkillName,
+		startingTaskSkillName,
+		subagentDrivenDevelopmentSkillName,
+		systematicDebuggingSkillName,
+		testDrivenDevelopmentSkillName,
+		writingPlansSkillName,
 	}
 }
 
@@ -133,11 +138,11 @@ func GetSkillDetail(name string) (*SkillDetail, error) {
 }
 
 func readInstalledSkillFiles(name string) (map[string][]byte, error) {
-	yishanHome, err := config.HomeDir()
+	piSkillsDir, err := config.ManagedPiSkillsDir()
 	if err != nil {
-		return nil, fmt.Errorf("resolve yishan home: %w", err)
+		return nil, fmt.Errorf("resolve managed pi skills dir: %w", err)
 	}
-	dir := filepath.Join(yishanHome, "skills", name)
+	dir := filepath.Join(piSkillsDir, name)
 	if _, statErr := os.Stat(filepath.Join(dir, "SKILL.md")); statErr != nil {
 		return nil, fmt.Errorf("skill %q is not installed: %w", name, statErr)
 	}
@@ -322,10 +327,10 @@ func isOfficialSkillName(name string) bool {
 }
 
 func installedSkillDirExists(name string) bool {
-	yishanHome, err := config.HomeDir()
+	piSkillsDir, err := config.ManagedPiSkillsDir()
 	if err != nil {
 		return false
 	}
-	_, err = os.Stat(filepath.Join(yishanHome, "skills", name, "SKILL.md"))
+	_, err = os.Stat(filepath.Join(piSkillsDir, name, "SKILL.md"))
 	return err == nil
 }

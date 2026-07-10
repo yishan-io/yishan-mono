@@ -35,8 +35,12 @@ The package manifest exposes the extension from `./extensions`.
 ## Agent definition locations
 
 This package ships built-in agents inside the package:
-- `General`
-- `Explore`
+- `general`
+- `explore`
+- `builder`
+- `code-reviewer`
+- `plan-reviewer`
+- `task-reviewer`
 
 User and project overrides still use standard Pi locations:
 - User: `~/.pi/agent/agents/*.md`
@@ -49,17 +53,41 @@ Override precedence:
 
 ## Built-in agents
 
-### General
+### general
 - Purpose: general-purpose implementation and investigation
 - Default tools: unset (falls back to the user's normal Pi tool/session resolution)
 - Default mode: writable when needed
 - Default model: unset (falls back to the user's normal Pi session/model resolution)
 
-### Explore
+### explore
 - Purpose: search and understand the codebase
 - Default tools: `read`, `grep`, `find`, `ls`
 - Default mode: read-only
 - Default model: unset (falls back to the user's normal Pi session/model resolution)
+
+### builder
+- Purpose: implement one scoped task from a plan or task brief
+- Default tools: `read`, `grep`, `glob`, `bash`, `apply_patch`
+- Default mode: writable when needed
+- Default model: unset
+
+### code-reviewer
+- Purpose: review code changes for bugs, regressions, and missing tests
+- Default tools: `read`, `grep`, `glob`, `bash`
+- Default mode: read-only
+- Default model: unset
+
+### plan-reviewer
+- Purpose: review implementation plans before execution
+- Default tools: `read`, `grep`, `glob`
+- Default mode: read-only
+- Default model: unset
+
+### task-reviewer
+- Purpose: review one task-sized implementation for requirements compliance
+- Default tools: `read`, `grep`, `glob`, `bash`
+- Default mode: read-only
+- Default model: unset
 
 ## Usage
 
@@ -70,14 +98,14 @@ Override precedence:
 Single agent:
 
 ```text
-@agent:Explore investigate how authentication works
+@agent:explore investigate how authentication works
 ```
 
 Multiple agents with one shared task:
 
 ```text
-@agent:Explore
-@agent:General
+@agent:explore
+@agent:general
 
 Investigate the current authentication implementation.
 ```
@@ -86,8 +114,8 @@ Investigate the current authentication implementation.
 
 ```text
 /agents
-/agent Explore inspect the auth flow
-/agent Explore --background inspect the auth flow
+/agent explore inspect the auth flow
+/agent explore --background inspect the auth flow
 /agent-result agent-abc123
 /agent-stop agent-abc123
 /agent-steer agent-abc123 focus on tests too
@@ -107,7 +135,7 @@ The package registers an `Agent` tool for the main agent:
 
 ```ts
 Agent({
-  agent: "Explore",
+  agent: "explore",
   prompt: "Investigate authentication",
   background: true,
 })

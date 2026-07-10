@@ -8,7 +8,7 @@ import (
 	"yishan/apps/cli/internal/config"
 )
 
-var managedPiAgentFileNames = []string{"General.md", "Explore.md"}
+var managedPiAgentFileNames = []string{"general.md", "explore.md", "builder.md", "code-reviewer.md", "plan-reviewer.md", "task-reviewer.md"}
 var staleManagedPiAgentFileNames = []string{"Planner.md", "Reviewer.md"}
 
 func ensureManagedPiAgents() error {

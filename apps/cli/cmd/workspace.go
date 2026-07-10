@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"yishan/apps/cli/internal/api"
@@ -276,26 +274,9 @@ func buildTaskRunConfig(agentKind, prompt, model string) *workspace.TaskRunConfi
 	if agentKind == "" || prompt == "" {
 		return nil
 	}
-	if agentKind == "opencode" && openCodeSkillsInstalled() {
-		prompt = "/ys-start " + prompt
-	}
 	return &workspace.TaskRunConfig{
 		AgentKind: agentKind,
 		Prompt:    prompt,
 		Model:     strings.TrimSpace(model),
 	}
-}
-
-func openCodeSkillsInstalled() bool {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return false
-	}
-	configHome := os.Getenv("XDG_CONFIG_HOME")
-	if configHome == "" {
-		configHome = filepath.Join(homeDir, ".config")
-	}
-	startSkillPath := filepath.Join(configHome, "opencode", "skills", "ys-start")
-	info, err := os.Stat(startSkillPath)
-	return err == nil && info.IsDir()
 }

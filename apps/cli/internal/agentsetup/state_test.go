@@ -48,11 +48,11 @@ func TestIsPiNotifyInstalledUsesManagedPiAgentDir(t *testing.T) {
 	}
 }
 
-func TestGetInstalledStateIncludesManagedPiSkillSymlink(t *testing.T) {
+func TestGetInstalledStateIncludesManagedPiSkillDir(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 
-	if _, err := AddSkill(StartSkillName); err != nil {
+	if _, err := AddSkill(StartingTaskSkillName); err != nil {
 		t.Fatalf("add skill: %v", err)
 	}
 	state, err := GetInstalledState()
@@ -60,9 +60,9 @@ func TestGetInstalledStateIncludesManagedPiSkillSymlink(t *testing.T) {
 		t.Fatalf("get installed state: %v", err)
 	}
 
-	expectedPiSkillPath := filepath.Join(homeDir, ".yishan", "pi", "agent", "skills", StartSkillName)
-	if !strings.Contains(strings.Join(state.Skill.Symlinks, "\n"), expectedPiSkillPath) {
-		t.Fatalf("expected managed pi skill symlink in %v", state.Skill.Symlinks)
+	expectedPiSkillPath := filepath.Join(homeDir, ".yishan", "pi", "agent", "skills", StartingTaskSkillName, "SKILL.md")
+	if !strings.Contains(state.Skill.SkillPath, expectedPiSkillPath) {
+		t.Fatalf("expected managed pi skill path to contain %s, got %s", expectedPiSkillPath, state.Skill.SkillPath)
 	}
 }
 
