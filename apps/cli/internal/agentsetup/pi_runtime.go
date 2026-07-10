@@ -14,12 +14,14 @@ const (
 	piNotifyInstallSource    = "npm:@yishan-io/pi-notify"
 	piSubagentsPackageName   = "@yishan-io/pi-subagents"
 	piSubagentsInstallSource = "npm:@yishan-io/pi-subagents"
+	piMemoryPackageName      = "@yishan-io/pi-memory"
+	piMemoryInstallSource    = "npm:@yishan-io/pi-memory"
 )
 
 var execCommand = exec.Command
 
 func ensureManagedPiPackages() error {
-	for _, pkg := range []string{piNotifyInstallSource, piSubagentsInstallSource} {
+	for _, pkg := range []string{piNotifyInstallSource, piSubagentsInstallSource, piMemoryInstallSource} {
 		if err := installPiPackage(pkg); err != nil {
 			return err
 		}
@@ -28,7 +30,7 @@ func ensureManagedPiPackages() error {
 }
 
 func removeManagedPiPackages() error {
-	for _, pkg := range []string{piNotifyPackageName, piSubagentsPackageName} {
+	for _, pkg := range []string{piNotifyPackageName, piSubagentsPackageName, piMemoryPackageName} {
 		if err := removePiPackage(pkg); err != nil {
 			return err
 		}

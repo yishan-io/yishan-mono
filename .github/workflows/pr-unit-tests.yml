@@ -29,6 +29,9 @@ jobs:
           - name: design-tokens
             working-directory: packages/design-tokens
             command: bun run test
+          - name: pi-memory
+            working-directory: packages/pi-memory
+            command: bun run test
     steps:
       - name: Checkout
         uses: actions/checkout@v5

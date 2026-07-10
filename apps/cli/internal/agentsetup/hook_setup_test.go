@@ -170,7 +170,7 @@ func TestEnsureManagedPiPackagesUsesManagedPiAgentDir(t *testing.T) {
 		args []string
 		cmd  *exec.Cmd
 	}
-	calls := make([]recordedCall, 0, 2)
+	calls := make([]recordedCall, 0, 3)
 	execCommand = func(name string, args ...string) *exec.Cmd {
 		cmd := exec.Command(os.Args[0], "-test.run=^$")
 		calls = append(calls, recordedCall{name: name, args: append([]string{}, args...), cmd: cmd})
@@ -180,12 +180,12 @@ func TestEnsureManagedPiPackagesUsesManagedPiAgentDir(t *testing.T) {
 	if err := ensureManagedPiPackages(); err != nil {
 		t.Fatalf("ensure managed pi packages: %v", err)
 	}
-	if len(calls) != 2 {
-		t.Fatalf("expected 2 pi package install calls, got %d", len(calls))
+	if len(calls) != 3 {
+		t.Fatalf("expected 3 pi package install calls, got %d", len(calls))
 	}
 
 	expectedAgentDir := filepath.Join(homeDir, ".yishan", "pi", "agent")
-	expectedArgs := [][]string{{"install", piNotifyInstallSource}, {"install", piSubagentsInstallSource}}
+	expectedArgs := [][]string{{"install", piNotifyInstallSource}, {"install", piSubagentsInstallSource}, {"install", piMemoryInstallSource}}
 	for index, call := range calls {
 		if call.name != "pi" {
 			t.Fatalf("expected pi command, got %q", call.name)
