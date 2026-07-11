@@ -9,9 +9,10 @@ import {
   Popper,
   Typography,
 } from "@mui/material";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { MutableRefObject } from "react";
 import type { AgentModel } from "../../store/agentChatTypes";
+import { SearchInput } from "../SearchInput";
 import { groupAgentModelsByProvider } from "./agentModelSelectorHelpers";
 
 type AgentModelSelectorMenuProps = {
@@ -20,6 +21,7 @@ type AgentModelSelectorMenuProps = {
   models: AgentModel[];
   currentModel: AgentModel | null;
   selectedProvider: string;
+  ignoreNextClickAwayRef: MutableRefObject<boolean>;
   onClose: () => void;
   onProviderChange: (provider: string) => void;
   onModelSelect: (model: AgentModel) => void;
@@ -28,9 +30,11 @@ type AgentModelSelectorMenuProps = {
 const PROVIDER_COLUMN_WIDTH_PX = 156;
 const MODEL_COLUMN_WIDTH_PX = 280;
 const MODEL_ROW_HEIGHT_PX = 32;
-const MAX_VISIBLE_MODEL_ROWS = 8;
 const MODEL_OVERSCAN_ROWS = 5;
-const DROPDOWN_HEIGHT_PX = MAX_VISIBLE_MODEL_ROWS * MODEL_ROW_HEIGHT_PX;
+const DROPDOWN_HEIGHT_PX = 320;
+const SEARCH_AREA_HEIGHT_PX = 40;
+const MODEL_LIST_HEIGHT_PX = DROPDOWN_HEIGHT_PX - SEARCH_AREA_HEIGHT_PX;
+const MAX_VISIBLE_MODEL_ROWS = 8;
 
 function buildModelButtonSx(isSelected: boolean) {
   return {
@@ -50,6 +54,16 @@ function buildModelButtonSx(isSelected: boolean) {
   } as const;
 }
 
+function getProviderIconLabel(provider: string): string {
+  const trimmedProvider = provider.trim();
+
+  if (!trimmedProvider) {
+    return "?";
+  }
+
+  return trimmedProvider[0]?.toUpperCase() ?? "?";
+}
+
 /** Two-column model picker with provider navigation and a virtualized model list. */
 export function AgentModelSelectorMenu({
   anchorEl,
@@ -57,6 +71,7 @@ export function AgentModelSelectorMenu({
   models,
   currentModel,
   selectedProvider,
+  ignoreNextClickAwayRef,
   onClose,
   onProviderChange,
   onModelSelect,
@@ -64,33 +79,57 @@ export function AgentModelSelectorMenu({
   const providerGroups = useMemo(() => groupAgentModelsByProvider(models), [models]);
   const activeProviderGroup =
     providerGroups.find((group) => group.provider === selectedProvider) ?? providerGroups[0] ?? null;
+  const activeProviderKey = activeProviderGroup?.provider ?? selectedProvider;
   const activeModels = activeProviderGroup?.models ?? [];
-  const modelListRef = useRef<HTMLDivElement | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredModels = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
 
-  const modelVirtualizer = useVirtualizer({
-    count: activeModels.length,
-    getScrollElement: () => modelListRef.current,
-    estimateSize: () => MODEL_ROW_HEIGHT_PX,
-    overscan: MODEL_OVERSCAN_ROWS,
-    initialRect: {
-      width: MODEL_COLUMN_WIDTH_PX,
-      height: DROPDOWN_HEIGHT_PX,
-    },
-  });
-
-  useEffect(() => {
-    if (modelListRef.current) {
-      modelListRef.current.scrollTop = 0;
+    if (!normalizedQuery) {
+      return activeModels;
     }
 
-    modelVirtualizer.scrollToOffset(0);
-    modelVirtualizer.measure();
-  }, [modelVirtualizer]);
+    return activeModels.filter((model) => model.name.toLowerCase().includes(normalizedQuery));
+  }, [activeModels, searchQuery]);
+  const modelListRef = useRef<HTMLDivElement | null>(null);
+  const previousProviderKeyRef = useRef(activeProviderKey);
+  const [scrollTop, setScrollTop] = useState(0);
+  const visibleItemCount = Math.ceil(MODEL_LIST_HEIGHT_PX / MODEL_ROW_HEIGHT_PX);
+  const virtualizedStartIndex = Math.max(0, Math.floor(scrollTop / MODEL_ROW_HEIGHT_PX) - MODEL_OVERSCAN_ROWS);
+  const virtualizedEndIndex = Math.min(
+    filteredModels.length,
+    virtualizedStartIndex + visibleItemCount + MODEL_OVERSCAN_ROWS * 2,
+  );
+  const virtualizedModels = filteredModels.slice(virtualizedStartIndex, virtualizedEndIndex);
+  const virtualizedTotalHeightPx = filteredModels.length * MODEL_ROW_HEIGHT_PX;
+
+  useEffect(() => {
+    const providerChanged = previousProviderKeyRef.current !== activeProviderKey;
+    previousProviderKeyRef.current = activeProviderKey;
+
+    if (!open) {
+      setSearchQuery("");
+      setScrollTop(0);
+      return;
+    }
+
+    if (providerChanged || modelListRef.current) {
+      if (modelListRef.current) {
+        modelListRef.current.scrollTop = 0;
+      }
+      setScrollTop(0);
+    }
+  }, [activeProviderKey, open]);
 
   return (
     <Popper open={open} anchorEl={anchorEl} placement="bottom-start" sx={{ zIndex: 1300, mt: 0.5 }}>
       <ClickAwayListener
         onClickAway={(event) => {
+          if (ignoreNextClickAwayRef.current) {
+            ignoreNextClickAwayRef.current = false;
+            return;
+          }
+
           const clickTarget = event.target;
           if (anchorEl && clickTarget instanceof Node && anchorEl.contains(clickTarget)) {
             return;
@@ -143,23 +182,67 @@ export function AgentModelSelectorMenu({
                       },
                     }}
                   >
+                    <Box
+                      component="span"
+                      aria-hidden="true"
+                      sx={{
+                        width: 18,
+                        height: 18,
+                        mr: 1,
+                        borderRadius: "50%",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        bgcolor:
+                          providerGroup.provider === activeProviderGroup?.provider ? "primary.main" : "action.hover",
+                        color:
+                          providerGroup.provider === activeProviderGroup?.provider
+                            ? "primary.contrastText"
+                            : "text.secondary",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {getProviderIconLabel(providerGroup.provider)}
+                    </Box>
                     <ListItemText primary={providerGroup.provider} />
                   </ListItemButton>
                 ))}
               </List>
             </Box>
             <Box sx={{ width: MODEL_COLUMN_WIDTH_PX, height: DROPDOWN_HEIGHT_PX, py: 0.5 }}>
+              <Box sx={{ height: SEARCH_AREA_HEIGHT_PX, px: 1, pb: 0.5 }}>
+                <SearchInput
+                  value={searchQuery}
+                  placeholder="Search models"
+                  ariaLabel="Search models"
+                  sizeVariant="small"
+                  onChange={(value) => {
+                    if (modelListRef.current) {
+                      modelListRef.current.scrollTop = 0;
+                    }
+                    setScrollTop(0);
+                    setSearchQuery(value);
+                  }}
+                />
+              </Box>
               {activeModels.length === 0 ? (
                 <Typography color="text.secondary" variant="caption" sx={{ display: "block", px: 1.5, py: 1 }}>
                   No models
                 </Typography>
-              ) : activeModels.length <= MAX_VISIBLE_MODEL_ROWS ? (
+              ) : filteredModels.length === 0 ? (
+                <Typography color="text.secondary" variant="caption" sx={{ display: "block", px: 1.5, py: 1 }}>
+                  No matching models
+                </Typography>
+              ) : filteredModels.length <= MAX_VISIBLE_MODEL_ROWS ? (
                 <Box
                   component="ul"
                   aria-label={`${activeProviderGroup?.provider ?? selectedProvider} models`}
-                  sx={{ m: 0, p: 0, listStyle: "none", height: DROPDOWN_HEIGHT_PX, overflowY: "auto" }}
+                  sx={{ m: 0, p: 0, listStyle: "none", height: MODEL_LIST_HEIGHT_PX, overflowY: "auto" }}
                 >
-                  {activeModels.map((model) => {
+                  {filteredModels.map((model) => {
                     const isSelected = model.id === currentModel?.id;
 
                     return (
@@ -187,26 +270,25 @@ export function AgentModelSelectorMenu({
               ) : (
                 <Box
                   ref={modelListRef}
-                  component="ul"
-                  aria-label={`${activeProviderGroup?.provider ?? selectedProvider} models`}
-                  sx={{
-                    m: 0,
-                    p: 0,
-                    listStyle: "none",
-                    height: DROPDOWN_HEIGHT_PX,
-                    overflowY: "auto",
-                    overflowX: "hidden",
+                  sx={{ height: MODEL_LIST_HEIGHT_PX, overflowY: "auto", overflowX: "hidden" }}
+                  onScroll={(event) => {
+                    setScrollTop(event.currentTarget.scrollTop);
                   }}
                 >
-                  <Box sx={{ height: `${modelVirtualizer.getTotalSize()}px`, position: "relative" }}>
-                    {modelVirtualizer.getVirtualItems().map((virtualItem) => {
-                      const model = activeModels[virtualItem.index];
-
-                      if (!model) {
-                        return null;
-                      }
-
+                  <Box
+                    component="ul"
+                    aria-label={`${activeProviderGroup?.provider ?? selectedProvider} models`}
+                    sx={{
+                      m: 0,
+                      p: 0,
+                      listStyle: "none",
+                      height: `${virtualizedTotalHeightPx}px`,
+                      position: "relative",
+                    }}
+                  >
+                    {virtualizedModels.map((model, index) => {
                       const isSelected = model.id === currentModel?.id;
+                      const virtualizedIndex = virtualizedStartIndex + index;
 
                       return (
                         <Box
@@ -217,7 +299,7 @@ export function AgentModelSelectorMenu({
                             top: 0,
                             left: 0,
                             right: 0,
-                            transform: `translateY(${virtualItem.start}px)`,
+                            transform: `translateY(${virtualizedIndex * MODEL_ROW_HEIGHT_PX}px)`,
                           }}
                         >
                           <Button

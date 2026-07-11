@@ -1,5 +1,5 @@
 import { Box, Button } from "@mui/material";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
 import type { AgentModel } from "../../store/agentChatTypes";
 import { AgentModelSelectorMenu } from "./AgentModelSelectorMenu";
@@ -46,6 +46,7 @@ export function AgentModelSelector({
   onThinkingLevelCycle,
 }: AgentModelSelectorProps) {
   const modelLabel = currentModel ? formatAgentModelLabel(currentModel) : "Select model";
+  const providerLabel = currentModel?.provider?.trim() ?? "";
   const providerGroups = useMemo(() => groupAgentModelsByProvider(models), [models]);
   const initialSelectedProvider = useMemo(
     () => getInitialSelectedProvider(models, currentModel),
@@ -53,18 +54,29 @@ export function AgentModelSelector({
   );
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedProvider, setSelectedProvider] = useState(initialSelectedProvider);
+  const ignoreNextClickAwayRef = useRef(false);
   const isMenuOpen = Boolean(menuAnchor);
 
   const handleMenuClose = useCallback(() => {
     setMenuAnchor(null);
   }, []);
 
+  const handleTriggerMouseDown = useCallback(() => {
+    ignoreNextClickAwayRef.current = true;
+  }, []);
+
   const handleTriggerClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       setSelectedProvider(initialSelectedProvider);
-      setMenuAnchor((currentAnchor) => (currentAnchor ? null : event.currentTarget));
+
+      if (isMenuOpen) {
+        setMenuAnchor(null);
+        return;
+      }
+
+      setMenuAnchor(event.currentTarget);
     },
-    [initialSelectedProvider],
+    [initialSelectedProvider, isMenuOpen],
   );
 
   const handleModelSelect = useCallback(
@@ -80,15 +92,32 @@ export function AgentModelSelector({
     ? selectedProvider
     : initialSelectedProvider;
 
+  useEffect(() => {
+    if (!isMenuOpen) {
+      ignoreNextClickAwayRef.current = false;
+      return;
+    }
+
+    const resetIgnoreFlagTimeout = window.setTimeout(() => {
+      ignoreNextClickAwayRef.current = false;
+    }, 0);
+
+    return () => {
+      window.clearTimeout(resetIgnoreFlagTimeout);
+    };
+  }, [isMenuOpen]);
+
   return (
     <Box sx={{ display: "flex", alignItems: "center", columnGap: 3, rowGap: 1, flexWrap: "wrap" }}>
       <Button
         variant="text"
         size="small"
         title={modelLabel}
+        aria-label={modelLabel}
         aria-haspopup="dialog"
         aria-expanded={isMenuOpen}
         endIcon={<LuChevronDown size={14} />}
+        onMouseDown={handleTriggerMouseDown}
         onClick={handleTriggerClick}
         sx={{
           maxWidth: MODEL_SELECTOR_MAX_WIDTH,
@@ -101,8 +130,31 @@ export function AgentModelSelector({
           color: "text.secondary",
         }}
       >
-        <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {modelLabel}
+        <Box
+          component="span"
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {providerLabel ? (
+            <>
+              <Box component="span" sx={{ color: "text.secondary" }}>
+                {providerLabel}
+              </Box>
+              <Box component="span" aria-hidden="true" sx={{ mx: 0.75, color: "text.disabled" }}>
+                /
+              </Box>
+              <Box component="span" sx={{ color: "text.primary" }}>
+                {currentModel?.name}
+              </Box>
+            </>
+          ) : (
+            modelLabel
+          )}
         </Box>
       </Button>
       <AgentModelSelectorMenu
@@ -112,6 +164,7 @@ export function AgentModelSelector({
         models={models}
         currentModel={currentModel}
         selectedProvider={activeSelectedProvider}
+        ignoreNextClickAwayRef={ignoreNextClickAwayRef}
         onClose={handleMenuClose}
         onProviderChange={setSelectedProvider}
         onModelSelect={handleModelSelect}
