@@ -1,4 +1,4 @@
-import { Box, Button, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo } from "react";
 import {
   abortAgent,
@@ -130,6 +130,15 @@ export function AgentChatView({ tabId, workspaceId, cwd, piSessionId }: AgentCha
     return (
       <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
         <Typography color="text.secondary">Starting agent session…</Typography>
+      </Box>
+    );
+  }
+
+  // Show a loading spinner while fetching the transcript for a resumed session.
+  if (piSessionId && session.messages.length === 0 && session.state !== "error") {
+    return (
+      <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+        <CircularProgress size={24} />
       </Box>
     );
   }

@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LuSquareTerminal } from "react-icons/lu";
+import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../shared/contracts/externalApps";
 import { AgentIcon } from "../../components/AgentIcon";
 import { SplitPaneContainer } from "../../components/SplitPaneContainer";
@@ -215,6 +215,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
         }
         return <LuSquareTerminal size={14} />;
       }
+      if (fullTab?.kind === "agent-chat") return <LuMessageCircle size={14} />;
       if (fullTab?.kind === "browser") return <FaviconIcon url={fullTab.data.faviconUrl} size={14} />;
       if (fullTab?.kind === "file" || fullTab?.kind === "diff" || fullTab?.kind === "image") {
         return (
@@ -329,7 +330,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
           cwd={workspace.worktreePath}
           anchorEl={historyMenuAnchor}
           onClose={() => setHistoryMenuAnchor(null)}
-          onSelectSession={(sessionId) => {
+          onSelectSession={(sessionId, title) => {
             // Check if this Pi session is already active in a tab.
             const existingTabId =
               findTabWithPiSession(sessionId) ??
@@ -340,10 +341,11 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
               cmd.selectTab(existingTabId);
               return;
             }
+            const tabTitle = title.length > 40 ? `${title.slice(0, 40)}…` : title;
             cmd.openTab({
               workspaceId,
               kind: "agent-chat",
-              title: "Agent Chat",
+              title: tabTitle,
               cwd: workspace.worktreePath,
               piSessionId: sessionId,
             });

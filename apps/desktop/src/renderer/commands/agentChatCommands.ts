@@ -32,11 +32,26 @@ export async function ensurePiSession(opts: {
   cwd: string;
   piSessionId?: string;
 }): Promise<string> {
+  // 1. Already tracked by the new tab-level registry.
   const existing = activePiSessions.get(opts.tabId);
   if (existing) {
     return existing.rpcSessionId;
   }
 
+  // 2. Session exists in the chat store (tab opened before this refactor,
+  //    or initSession called by the error path). Reuse it so we don't try
+  //    to start a duplicate Pi process.
+  const chatSession = agentChatStore.getState().sessionsByTabId[opts.tabId];
+  if (chatSession) {
+    activePiSessions.set(opts.tabId, {
+      rpcSessionId: chatSession.sessionId,
+      piSessionId: chatSession.sessionId,
+      unsubscribe: null,
+    });
+    return chatSession.sessionId;
+  }
+
+  // 3. Start a new Pi session.
   const sessionId = opts.piSessionId || generateId();
   const client = await getDaemonClient();
 
