@@ -10,44 +10,88 @@ import type {
   AgentStreamEvent,
 } from "../store/agentChatTypes";
 
-// ─── Daemon RPC calls ────────────────────────────────────────────────────────
+// ─── Tab-level Pi session lifecycle ──────────────────────────────────────────
+// Pi RPC sessions outlive React component mounts so that Strict Mode
+// double-mounts reuse the same Pi process instead of starting a second one.
 
-type PiStartResult = { sessionId: string };
+type PiSessionHandle = {
+  rpcSessionId: string;
+  piSessionId: string;
+  unsubscribe: (() => void) | null;
+};
 
-/** Starts a pi RPC session for a chat tab. */
-export async function startAgentSession(opts: {
+const activePiSessions = new Map<string, PiSessionHandle>();
+
+/**
+ * Ensures a Pi RPC session exists for a tab. Idempotent — subsequent calls
+ * for the same tabId return the existing session.
+ */
+export async function ensurePiSession(opts: {
   tabId: string;
   workspaceId: string;
   cwd: string;
-  sessionId?: string;
+  piSessionId?: string;
 }): Promise<string> {
-  const sessionId = opts.sessionId ?? generateId();
+  const existing = activePiSessions.get(opts.tabId);
+  if (existing) {
+    return existing.rpcSessionId;
+  }
+
+  const sessionId = opts.piSessionId || generateId();
   const client = await getDaemonClient();
 
-  const result = (await client.pi.start({
+  await client.pi.start({
     sessionId,
     tabId: opts.tabId,
     workspaceId: opts.workspaceId,
     cwd: opts.cwd,
-  })) as PiStartResult;
+    piSessionId: sessionId,
+  });
 
-  return result.sessionId;
+  activePiSessions.set(opts.tabId, { rpcSessionId: sessionId, piSessionId: sessionId, unsubscribe: null });
+  return sessionId;
 }
 
-/** Registers a started agent session in the renderer store. */
+/** Returns the tabId that currently owns the given Pi session, if any. */
+export function findTabWithPiSession(piSessionId: string): string | undefined {
+  // Check active session registry (post-refactor tabs).
+  for (const [tabId, session] of activePiSessions) {
+    if (session.piSessionId === piSessionId) return tabId;
+  }
+  // Fallback: check the chat store (covers tabs from before the refactor).
+  const sessions = agentChatStore.getState().sessionsByTabId;
+  for (const [tabId, session] of Object.entries(sessions)) {
+    if (session.sessionId === piSessionId) return tabId;
+  }
+  return undefined;
+}
+
+/** Updates the event unsubscribe handle for a Pi session. Cancels any previous subscription. */
+export function setPiSessionUnsubscribe(tabId: string, unsubscribe: () => void): void {
+  const session = activePiSessions.get(tabId);
+  if (session) {
+    session.unsubscribe?.();
+    session.unsubscribe = unsubscribe;
+  }
+}
+
+/** Stops the Pi RPC session for a tab. Called when the tab is closed. */
+export async function stopPiSession(tabId: string): Promise<void> {
+  const session = activePiSessions.get(tabId);
+  if (!session) return;
+
+  activePiSessions.delete(tabId);
+  session.unsubscribe?.();
+
+  const client = await getDaemonClient();
+  await client.pi.stop({ sessionId: session.rpcSessionId }).catch(() => {});
+
+  agentChatStore.getState().removeSession(tabId);
+}
+
+/** Initializes the chat store entry for a tab. */
 export function registerAgentSession(opts: { tabId: string; sessionId: string }): void {
   agentChatStore.getState().initSession(opts.tabId, opts.sessionId);
-}
-
-/** Stops a pi RPC session. */
-export async function stopAgentSession(opts: { tabId: string; sessionId: string }): Promise<void> {
-  const client = await getDaemonClient();
-  await client.pi.stop({ sessionId: opts.sessionId });
-
-  const currentSession = agentChatStore.getState().sessionsByTabId[opts.tabId];
-  if (currentSession?.sessionId === opts.sessionId) {
-    agentChatStore.getState().removeSession(opts.tabId);
-  }
 }
 
 /** Sends a prompt command to the pi session. */

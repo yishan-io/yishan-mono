@@ -2,6 +2,7 @@ import { Box, Button, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo } from "react";
 import {
   abortAgent,
+  ensurePiSession,
   fetchAgentMessages,
   fetchAgentModels,
   fetchAgentState,
@@ -10,8 +11,7 @@ import {
   sendAgentPrompt,
   setAgentModel,
   setAgentThinkingLevel,
-  startAgentSession,
-  stopAgentSession,
+  setPiSessionUnsubscribe,
 } from "../../commands/agentChatCommands";
 import { RichComposer } from "../../components/RichComposer";
 import { AgentMessageList } from "../../components/agent/AgentMessageList";
@@ -27,40 +27,30 @@ type AgentChatViewProps = {
   tabId: string;
   workspaceId: string;
   cwd: string;
+  piSessionId?: string;
 };
 
 /** Full agent chat tab: session bar, message list, composer, model selector. */
-export function AgentChatView({ tabId, workspaceId, cwd }: AgentChatViewProps) {
+export function AgentChatView({ tabId, workspaceId, cwd, piSessionId }: AgentChatViewProps) {
   const session = agentChatStore((s) => s.sessionsByTabId[tabId]);
 
-  // Start session on mount, stop on unmount.
+  // Start Pi session at tab level (survives Strict Mode remounts).
   useEffect(() => {
     let isDisposed = false;
-    let sessionId: string | undefined;
-    let unsubscribe: (() => void) | undefined;
 
     const initialize = async (): Promise<void> => {
       try {
-        const startedSessionId = await startAgentSession({ tabId, workspaceId, cwd });
-        if (isDisposed) {
-          await stopAgentSession({ tabId, sessionId: startedSessionId });
-          return;
-        }
+        const startedSessionId = await ensurePiSession({ tabId, workspaceId, cwd, piSessionId });
+        if (isDisposed) return;
 
-        sessionId = startedSessionId;
         registerAgentSession({ tabId, sessionId: startedSessionId });
 
         const client = await getDaemonClient();
-        if (isDisposed) {
-          await stopAgentSession({ tabId, sessionId: startedSessionId });
-          return;
-        }
+        if (isDisposed) return;
 
-        unsubscribe = client.events.frontendStream.subscribe(undefined, {
+        const sub = client.events.frontendStream.subscribe(undefined, {
           onData: (event: { topic: string; payload: unknown }) => {
-            if (event.topic !== "agent.pi.event") {
-              return;
-            }
+            if (event.topic !== "agent.pi.event") return;
             const payload = event.payload as {
               sessionId: string;
               tabId: string;
@@ -71,16 +61,19 @@ export function AgentChatView({ tabId, workspaceId, cwd }: AgentChatViewProps) {
               handleAgentPiEvent(payload);
             }
           },
-        }).unsubscribe;
+        });
+        setPiSessionUnsubscribe(tabId, sub.unsubscribe);
 
         // Restore session state and message history.
         await fetchAgentState({ tabId, sessionId: startedSessionId });
+        if (isDisposed) return;
+
         await fetchAgentMessages({ tabId, sessionId: startedSessionId });
+        if (isDisposed) return;
+
         await fetchAgentModels({ tabId, sessionId: startedSessionId });
       } catch (error) {
-        if (isDisposed) {
-          return;
-        }
+        if (isDisposed) return;
         const message = getErrorMessage(error);
         agentChatStore.getState().initSession(tabId, tabId);
         agentChatStore.getState().setSessionError(tabId, message);
@@ -91,13 +84,9 @@ export function AgentChatView({ tabId, workspaceId, cwd }: AgentChatViewProps) {
 
     return () => {
       isDisposed = true;
-      unsubscribe?.();
-      if (!sessionId) {
-        return;
-      }
-      stopAgentSession({ tabId, sessionId }).catch(() => {});
+      // Pi session outlives the component — stopped when tab closes.
     };
-  }, [tabId, workspaceId, cwd]);
+  }, [tabId, workspaceId, cwd, piSessionId]);
 
   const finalizedMessages = useMemo(() => session?.messages ?? [], [session?.messages]);
   const trailingMessage = session?.streamingMessage ?? null;

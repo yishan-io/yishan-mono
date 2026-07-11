@@ -126,6 +126,7 @@ export type WorkspaceTabDataByKind = {
   "agent-chat": {
     sessionId?: string;
     cwd: string;
+    piSessionId?: string;
   };
 };
 
@@ -221,6 +222,8 @@ export type OpenWorkspaceTabInput =
       title?: string;
       /** Working directory for the pi agent process. Defaults to workspace worktree path. */
       cwd?: string;
+      /** Pi session ID to resume an existing session. */
+      piSessionId?: string;
     };
 
 export type WorkspaceStoreState = {

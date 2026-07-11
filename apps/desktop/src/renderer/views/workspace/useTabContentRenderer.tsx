@@ -211,6 +211,7 @@ export function useTabContentRenderer({
               tabId={tab.id}
               workspaceId={tab.workspaceId}
               cwd={tab.data.cwd}
+              piSessionId={tab.data.piSessionId}
             />
           </Box>
         );

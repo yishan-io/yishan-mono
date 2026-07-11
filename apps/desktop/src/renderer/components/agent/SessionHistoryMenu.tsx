@@ -8,6 +8,7 @@ type SessionHistoryMenuProps = {
   cwd: string;
   anchorEl: HTMLElement | null;
   onClose: () => void;
+  onSelectSession?: (sessionId: string) => void;
 };
 
 /** Formats a timestamp as a relative label (e.g. "2h ago", "yesterday"). */
@@ -29,7 +30,7 @@ function relativeTime(timestamp: string): string {
 }
 
 /** Popover menu listing past session summaries for one workspace. */
-export function SessionHistoryMenu({ cwd, anchorEl, onClose }: SessionHistoryMenuProps) {
+export function SessionHistoryMenu({ cwd, anchorEl, onClose, onSelectSession }: SessionHistoryMenuProps) {
   const [sessions, setSessions] = useState<Rpc.PiSessionSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
@@ -88,7 +89,10 @@ export function SessionHistoryMenu({ cwd, anchorEl, onClose }: SessionHistoryMen
       {sessions.map((session) => (
         <MenuItem
           key={session.sessionId}
-          onClick={onClose}
+          onClick={() => {
+            onSelectSession?.(session.sessionId);
+            onClose();
+          }}
           dense
           sx={{ minWidth: 280 }}
         >

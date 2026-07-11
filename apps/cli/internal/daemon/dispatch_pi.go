@@ -31,10 +31,11 @@ func (h *JSONRPCHandler) dispatchPi(ctx context.Context, connState *wsConnState,
 }
 
 type piStartParams struct {
-	SessionID   string `json:"sessionId"`
-	TabID       string `json:"tabId"`
-	WorkspaceID string `json:"workspaceId"`
-	CWD         string `json:"cwd"`
+	SessionID    string `json:"sessionId"`
+	TabID        string `json:"tabId"`
+	WorkspaceID  string `json:"workspaceId"`
+	CWD          string `json:"cwd"`
+	PiSessionID  string `json:"piSessionId,omitempty"`
 }
 
 func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnState, params json.RawMessage) (any, error) {
@@ -49,12 +50,17 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "cwd is required")
 	}
 
+	args := []string{"--mode", "rpc", "--name", req.TabID}
+	if req.PiSessionID != "" {
+		args = append(args, "--session-id", req.PiSessionID)
+	}
+
 	opts := agentmanager.StartOptions{
 		SessionID:   req.SessionID,
 		TabID:       req.TabID,
 		WorkspaceID: req.WorkspaceID,
 		Binary:      "pi",
-		Args:        []string{"--mode", "rpc", "--name", req.TabID},
+		Args:        args,
 		CWD:         req.CWD,
 		OnEvent:     h.makePiEventCallback(req.SessionID),
 	}

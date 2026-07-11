@@ -62,5 +62,6 @@ func mustMarshalJSON(t *testing.T, value any) json.RawMessage {
 func testEncodeSessionCWD(cwd string) string {
 	cleanCWD := filepath.Clean(strings.TrimSpace(cwd))
 	normalized := filepath.ToSlash(cleanCWD)
+	normalized = strings.TrimPrefix(normalized, "/")
 	return "--" + strings.ReplaceAll(normalized, "/", "-") + "--"
 }

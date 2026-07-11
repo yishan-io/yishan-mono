@@ -92,6 +92,11 @@ export function closeTab(tabId: string): void {
         return;
       });
   }
+  if (tab.kind === "agent-chat") {
+    import("./agentChatCommands").then(({ stopPiSession }) => {
+      stopPiSession(tab.id).catch(() => {});
+    });
+  }
   if (tab.kind === "terminal") {
     recordExplicitlyClosedTerminalTabId(tab.id);
     clearTerminalAgentStatus(tab.id);
