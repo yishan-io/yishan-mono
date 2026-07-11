@@ -1,6 +1,7 @@
 import { Box, CircularProgress, Collapse, IconButton, Paper, Typography } from "@mui/material";
 import { useState } from "react";
-import { LuChevronDown, LuChevronUp } from "react-icons/lu";
+import { LuChevronDown, LuChevronUp, LuSparkles } from "react-icons/lu";
+import { parseSkillMessage } from "../../helpers/agentSkillTextHelpers";
 import type { AgentContentBlock, AgentMessage as AgentMessageType } from "../../store/agentChatTypes";
 import { AgentMarkdownContent } from "./AgentMarkdownContent";
 import { AgentToolCallCard } from "./AgentToolCallCard";
@@ -42,6 +43,8 @@ export function AgentMessage({
   const isAssistant = message.role === "assistant";
   const isToolResult = message.role === "toolResult";
   const blocks = Array.isArray(message.content) ? message.content : [];
+  const messageText = extractText(message.content);
+  const skillMessage = isUser ? parseSkillMessage(messageText) : null;
   let textBlockCount = 0;
   let thinkingBlockCount = 0;
 
@@ -55,11 +58,29 @@ export function AgentMessage({
         bgcolor: isUser ? "action.selected" : isToolResult ? "action.hover" : "transparent",
       }}
     >
-      {isUser && (
-        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-          {extractText(message.content)}
-        </Typography>
-      )}
+      {isUser &&
+        (skillMessage ? (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, color: "text.secondary" }}>
+              <LuSparkles size={14} />
+              <Typography variant="body2">
+                use skill:{" "}
+                <Box component="span" sx={{ fontWeight: 600 }}>
+                  {skillMessage.skillName}
+                </Box>
+              </Typography>
+            </Box>
+            {skillMessage.trailingContent ? (
+              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                {skillMessage.trailingContent}
+              </Typography>
+            ) : null}
+          </Box>
+        ) : (
+          <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+            {messageText}
+          </Typography>
+        ))}
 
       {isAssistant && blocks.length === 0 && (
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, minHeight: 24 }}>

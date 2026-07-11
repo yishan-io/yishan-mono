@@ -37,4 +37,37 @@ describe("AgentMessage", () => {
 
     expect(screen.getByText("Thought")).toBeTruthy();
   });
+
+  it("renders skill-injection user messages as a compact skill marker", () => {
+    render(
+      <AgentMessage
+        message={{
+          id: "user-skill-1",
+          role: "user",
+          content: '<skill name="ys-start" location="/tmp/SKILL.md">\nbody\n</skill>',
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/use skill:/)).toBeTruthy();
+    expect(screen.getByText("ys-start")).toBeTruthy();
+    expect(screen.queryByText(/location=|body/)).toBeNull();
+  });
+
+  it("shows trailing user text after a skill-injection message", () => {
+    render(
+      <AgentMessage
+        message={{
+          id: "user-skill-2",
+          role: "user",
+          content: '<skill name="brainstorm">\nskill body\n</skill>\n\nhow it works',
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/use skill:/)).toBeTruthy();
+    expect(screen.getByText("brainstorm")).toBeTruthy();
+    expect(screen.getByText("how it works")).toBeTruthy();
+    expect(screen.queryByText("skill body")).toBeNull();
+  });
 });

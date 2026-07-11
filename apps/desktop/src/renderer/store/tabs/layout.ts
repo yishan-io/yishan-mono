@@ -73,6 +73,9 @@ export function renameTabState(
       if (options?.userRenamed && tab.kind === "terminal") {
         return { ...tab, title, data: { ...tab.data, userRenamed: true } };
       }
+      if (options?.userRenamed && tab.kind === "agent-chat") {
+        return { ...tab, title, data: { ...tab.data, userRenamed: true } };
+      }
       return { ...tab, title };
     }),
   };

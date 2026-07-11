@@ -14,13 +14,17 @@ import {
   setAgentThinkingLevel,
   setPiSessionUnsubscribe,
 } from "../../commands/agentChatCommands";
+import { renameTab } from "../../commands/tabCommands";
 import { RichComposer } from "../../components/RichComposer";
 import { AgentMessageList } from "../../components/agent/AgentMessageList";
 import { AgentModelSelector } from "../../components/agent/AgentModelSelector";
+import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { getDaemonClient } from "../../rpc/rpcTransport";
 import { agentChatStore } from "../../store/agentChatStore";
 import type { AgentModel } from "../../store/agentChatTypes";
+import { tabStore } from "../../store/tabStore";
+import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
 
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
@@ -35,6 +39,11 @@ type AgentChatViewProps = {
 
 function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive = true }: AgentChatViewProps) {
   const session = agentChatStore((s) => s.sessionsByTabId[tabId]);
+  const agentChatTab = tabStore((state) =>
+    state.tabs.find((tab): tab is Extract<(typeof state.tabs)[number], { kind: "agent-chat" }> => {
+      return tab.id === tabId && tab.kind === "agent-chat";
+    }),
+  );
   const slashCommands = useAgentChatSlashCommands();
   const [draft, setDraft] = useState("");
 
@@ -98,10 +107,24 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive
   const handleSubmit = useCallback(
     async (value: string) => {
       const sid = session?.sessionId;
-      if (!sid || !value.trim()) return;
-      await sendAgentPrompt({ tabId, sessionId: sid, message: value.trim() });
+      const prompt = value.trim();
+      if (!sid || !prompt) return;
+
+      if (session.messages.length === 0 && !session.streamingMessage && !agentChatTab?.data.userRenamed) {
+        renameTab(tabId, formatAgentSessionTitle(prompt));
+      }
+
+      const nextMessage = await transformAgentChatPromptForSkills(prompt, slashCommands);
+      await sendAgentPrompt({ tabId, sessionId: sid, message: nextMessage });
     },
-    [session?.sessionId, tabId],
+    [
+      agentChatTab?.data.userRenamed,
+      session?.messages.length,
+      session?.sessionId,
+      session?.streamingMessage,
+      slashCommands,
+      tabId,
+    ],
   );
 
   const handleAbort = useCallback(async () => {

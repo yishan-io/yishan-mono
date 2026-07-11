@@ -1,6 +1,7 @@
 import { Box, Menu, MenuItem, Typography } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchSessionHistory } from "../../commands/agentChatCommands";
+import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import type * as Rpc from "../../rpc/daemonTypes";
 
@@ -86,33 +87,37 @@ export function SessionHistoryMenu({ cwd, anchorEl, onClose, onSelectSession }: 
         </MenuItem>
       )}
 
-      {sessions.map((session) => (
-        <MenuItem
-          key={session.sessionId}
-          onClick={() => {
-            onSelectSession?.(session.sessionId, session.previewText || "Agent Chat");
-            onClose();
-          }}
-          dense
-          sx={{ minWidth: 280 }}
-        >
-          <Box sx={{ display: "flex", flexDirection: "column", width: "100%", gap: 0.25 }}>
-            <Typography variant="body2" noWrap>
-              {session.previewText || "(empty)"}
-            </Typography>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography variant="caption" color="text.secondary">
-                {relativeTime(session.timestamp)}
+      {sessions.map((session) => {
+        const formattedTitle = formatAgentSessionTitle(session.previewText || "");
+
+        return (
+          <MenuItem
+            key={session.sessionId}
+            onClick={() => {
+              onSelectSession?.(session.sessionId, formattedTitle);
+              onClose();
+            }}
+            dense
+            sx={{ minWidth: 280 }}
+          >
+            <Box sx={{ display: "flex", flexDirection: "column", width: "100%", gap: 0.25 }}>
+              <Typography variant="body2" noWrap>
+                {formattedTitle || "(empty)"}
               </Typography>
-              {session.model && (
-                <Typography variant="caption" color="text.disabled">
-                  {session.model}
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {relativeTime(session.timestamp)}
                 </Typography>
-              )}
+                {session.model && (
+                  <Typography variant="caption" color="text.disabled">
+                    {session.model}
+                  </Typography>
+                )}
+              </Box>
             </Box>
-          </Box>
-        </MenuItem>
-      ))}
+          </MenuItem>
+        );
+      })}
     </Menu>
   );
 }

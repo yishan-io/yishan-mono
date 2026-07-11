@@ -661,15 +661,40 @@ describe("tabs-domain rename", () => {
     expect(renamedTab?.kind === "terminal" ? renamedTab.data.userRenamed : undefined).toBe(true);
   });
 
-  it("does not set userRenamed on non-terminal tabs", () => {
+  it("sets userRenamed on agent-chat tabs when option is provided", () => {
+    const state: WorkspaceTabStateSlice = {
+      ...createBaseState(),
+      tabs: [
+        ...createBaseState().tabs,
+        {
+          id: "agent-chat-1",
+          workspaceId: "workspace-1",
+          title: "Agent Chat",
+          pinned: false,
+          kind: "agent-chat",
+          data: {
+            cwd: "/tmp/workspace-1",
+          },
+        },
+      ],
+    };
+    const patch = renameTabState(state, "agent-chat-1", "Custom Chat", { userRenamed: true });
+
+    expect(patch).toBeTruthy();
+    const renamedTab = patch?.tabs?.find((tab) => tab.id === "agent-chat-1");
+    expect(renamedTab?.title).toBe("Custom Chat");
+    expect(renamedTab?.kind === "agent-chat" ? renamedTab.data.userRenamed : undefined).toBe(true);
+  });
+
+  it("does not set userRenamed on session tabs", () => {
     const state = createBaseState();
     const patch = renameTabState(state, "session-1", "New Title", { userRenamed: true });
 
     expect(patch).toBeTruthy();
     const renamedTab = patch?.tabs?.find((tab) => tab.id === "session-1");
     expect(renamedTab?.title).toBe("New Title");
-    if (!renamedTab || renamedTab.kind === "terminal") {
-      throw new Error("Expected renamed tab to be a non-terminal tab");
+    if (!renamedTab || renamedTab.kind === "terminal" || renamedTab.kind === "agent-chat") {
+      throw new Error("Expected renamed tab to be a session tab");
     }
     expect("userRenamed" in renamedTab.data).toBe(false);
   });

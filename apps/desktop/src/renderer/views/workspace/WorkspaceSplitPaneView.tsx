@@ -2,13 +2,14 @@ import { Box } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../shared/contracts/externalApps";
+import { findTabWithPiSession } from "../../commands/agentChatCommands";
 import { AgentIcon } from "../../components/AgentIcon";
 import { SplitPaneContainer } from "../../components/SplitPaneContainer";
-import { findTabWithPiSession } from "../../commands/agentChatCommands";
-import { SessionHistoryMenu } from "../../components/agent/SessionHistoryMenu";
 import { SplitPaneGroup } from "../../components/SplitPaneGroup";
+import { SessionHistoryMenu } from "../../components/agent/SessionHistoryMenu";
 import { getFileTreeIcon } from "../../components/fileTreeIcons";
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
+import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { useCommands } from "../../hooks/useCommands";
 import { type RefreshableOpenTab, useOpenTabAutoRefresh } from "../../hooks/useOpenTabAutoRefresh";
 import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
@@ -334,18 +335,15 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
             // Check if this Pi session is already active in a tab.
             const existingTabId =
               findTabWithPiSession(sessionId) ??
-              workspaceTabs.find(
-                (tab) => tab.kind === "agent-chat" && tab.data.piSessionId === sessionId,
-              )?.id;
+              workspaceTabs.find((tab) => tab.kind === "agent-chat" && tab.data.piSessionId === sessionId)?.id;
             if (existingTabId) {
               cmd.selectTab(existingTabId);
               return;
             }
-            const tabTitle = title.length > 40 ? `${title.slice(0, 40)}…` : title;
             cmd.openTab({
               workspaceId,
               kind: "agent-chat",
-              title: tabTitle,
+              title: formatAgentSessionTitle(title),
               cwd: workspace.worktreePath,
               piSessionId: sessionId,
             });

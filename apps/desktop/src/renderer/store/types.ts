@@ -127,6 +127,7 @@ export type WorkspaceTabDataByKind = {
     sessionId?: string;
     cwd: string;
     piSessionId?: string;
+    userRenamed?: boolean;
   };
 };
 
