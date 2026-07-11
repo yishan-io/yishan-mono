@@ -2,7 +2,7 @@ import { Box, IconButton } from "@mui/material";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuClock, LuColumns2, LuGlobe, LuPlus, LuSquareTerminal } from "react-icons/lu";
+import { LuClock, LuColumns2, LuGlobe, LuMessageCircle, LuPlus, LuSquareTerminal } from "react-icons/lu";
 import {
   AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
   type DesktopAgentKind,
@@ -24,13 +24,13 @@ type WorkspaceTab = {
   isTemporary?: boolean;
 };
 
-export type TabBarCreateOption = "browser" | "terminal" | DesktopAgentKind;
+export type TabBarCreateOption = "browser" | "terminal" | "agent-chat" | DesktopAgentKind;
 
 type AgentCreateOption = DesktopAgentKind;
 
 /** Returns true when one create-menu option targets an agent terminal preset. */
 function isAgentCreateOption(option: TabBarCreateOption): option is AgentCreateOption {
-  return option !== "terminal" && option !== "browser";
+  return option !== "terminal" && option !== "browser" && option !== "agent-chat";
 }
 
 type TabBarProps = {
@@ -204,6 +204,12 @@ export function TabBar({
       label: browserTitle,
       icon: <LuGlobe size={14} />,
       shortcutLabel: getShortcutDisplayLabelById("open-browser", platform),
+    },
+    {
+      option: "agent-chat",
+      label: createMenuLabel !== "tabs.createMenu.label" ? t("agentChat.title") : "Agent Chat",
+      icon: <LuMessageCircle size={14} />,
+      shortcutLabel: getShortcutDisplayLabelById("open-agent-chat", platform),
     },
     ...SUPPORTED_DESKTOP_AGENT_KINDS.map((agentKind) => {
       const label = createLabelByAgentKind[agentKind];

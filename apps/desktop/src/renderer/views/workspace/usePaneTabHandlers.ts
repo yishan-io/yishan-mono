@@ -80,6 +80,15 @@ export function usePaneTabHandlers({
         cmd.openTab({ workspaceId, kind: "browser", url: "" });
         return;
       }
+      if (option === "agent-chat") {
+        cmd.openTab({
+          workspaceId,
+          kind: "agent-chat",
+          title: t("agentChat.title"),
+          cwd: workspace?.worktreePath || undefined,
+        });
+        return;
+      }
       if (!enabledAgentKindSet.has(option)) return;
       const title = t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[option]);
       const launchCommand = resolveAgentLaunchCommand(option, customCommandByAgentKind);
