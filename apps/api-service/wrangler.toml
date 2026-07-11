@@ -48,6 +48,8 @@ max_batch_size = 20
 [vars]
 APP_BASE_URL         = "https://api.yishan.io"
 LANDING_BASE_URL     = "https://yishan.io"
+GOOGLE_CLIENT_ID_IOS = ""
+GOOGLE_CLIENT_ID_ANDROID = ""
 SESSION_TTL_DAYS     = "30"
 JWT_ACCESS_TTL_SECONDS = "900"
 REFRESH_TOKEN_TTL_DAYS = "30"

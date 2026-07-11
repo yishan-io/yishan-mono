@@ -48,6 +48,11 @@ function requireEnv(c: Context, key: string): string {
   return value;
 }
 
+function readOptionalNonEmptyEnv(c: Context, key: string): string | undefined {
+  const value = readEnv(c, key)?.trim();
+  return value ? value : undefined;
+}
+
 function buildServiceConfig(c: Context): ServiceConfig {
   const sessionTtlRaw = readEnv(c, "SESSION_TTL_DAYS") ?? "30";
   const sessionTtlDays = Number(sessionTtlRaw);
@@ -95,6 +100,8 @@ function buildServiceConfig(c: Context): ServiceConfig {
     jwtAudience,
     cookieDomain,
     googleClientId: requireEnv(c, "GOOGLE_CLIENT_ID"),
+    googleClientIdIos: readOptionalNonEmptyEnv(c, "GOOGLE_CLIENT_ID_IOS"),
+    googleClientIdAndroid: readOptionalNonEmptyEnv(c, "GOOGLE_CLIENT_ID_ANDROID"),
     googleClientSecret: requireEnv(c, "GOOGLE_CLIENT_SECRET"),
     githubClientId: requireEnv(c, "GITHUB_CLIENT_ID"),
     githubClientSecret: requireEnv(c, "GITHUB_CLIENT_SECRET"),
