@@ -20,6 +20,7 @@ import { getErrorMessage } from "../../helpers/errorHelpers";
 import { getDaemonClient } from "../../rpc/rpcTransport";
 import { agentChatStore } from "../../store/agentChatStore";
 import type { AgentModel } from "../../store/agentChatTypes";
+import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
 
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
 
@@ -33,6 +34,7 @@ type AgentChatViewProps = {
 /** Full agent chat tab: session bar, message list, composer, model selector. */
 export function AgentChatView({ tabId, workspaceId, cwd, piSessionId }: AgentChatViewProps) {
   const session = agentChatStore((s) => s.sessionsByTabId[tabId]);
+  const slashCommands = useAgentChatSlashCommands();
 
   // Start Pi session at tab level (survives Strict Mode remounts).
   useEffect(() => {
@@ -187,7 +189,12 @@ export function AgentChatView({ tabId, workspaceId, cwd, piSessionId }: AgentCha
           gap: 0.75,
         }}
       >
-        <RichComposer placeholder="Type a message…" onSubmit={handleSubmit} disabled={session.state === "starting"} />
+        <RichComposer
+          placeholder="Type a message…"
+          onSubmit={handleSubmit}
+          disabled={session.state === "starting"}
+          slashCommands={slashCommands}
+        />
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1, minHeight: 18 }}>
           {session.availableModels.length > 0 && (
             <AgentModelSelector
@@ -219,7 +226,6 @@ export function AgentChatView({ tabId, workspaceId, cwd, piSessionId }: AgentCha
           )}
         </Box>
       </Box>
-
     </Box>
   );
 }
