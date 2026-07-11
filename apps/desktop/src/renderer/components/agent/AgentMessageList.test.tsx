@@ -48,7 +48,7 @@ describe("AgentMessageList", () => {
       },
     ];
 
-    render(<AgentMessageList messages={messages} emptyPrompt="empty" />);
+    render(<AgentMessageList tabId="tab-1" isActive messages={messages} emptyPrompt="empty" />);
 
     expect(screen.getAllByTestId("agent-message-row")).toHaveLength(1);
     expect(screen.getByTestId("merged-count-assistant-1").textContent).toBe("1");

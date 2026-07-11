@@ -64,7 +64,8 @@ function WorkspaceAgentChatSurfaceComponent({
         top: effectiveRect.top,
         width: effectiveRect.width,
         height: effectiveRect.height,
-        display: shouldShow && !isDraggingSplit ? "flex" : "none",
+        display: "flex",
+        visibility: shouldShow && !isDraggingSplit ? "visible" : "hidden",
         flexDirection: "column" as const,
         pointerEvents: shouldShow && !isDraggingSplit ? "auto" : "none",
       }
@@ -75,6 +76,7 @@ function WorkspaceAgentChatSurfaceComponent({
         width: 0,
         height: 0,
         display: "none",
+        visibility: "hidden",
         flexDirection: "column" as const,
         pointerEvents: "none",
       };
@@ -93,6 +95,7 @@ function WorkspaceAgentChatSurfaceComponent({
         workspaceId={tab.workspaceId}
         cwd={tab.data.cwd}
         piSessionId={tab.data.piSessionId}
+        isActive={shouldShow && !isDraggingSplit}
       />
     </Box>
   );

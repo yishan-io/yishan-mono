@@ -1,14 +1,18 @@
 import { Box, Typography } from "@mui/material";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import type { AgentContentBlock, AgentMessage as AgentMessageType } from "../../store/agentChatTypes";
 import { AgentMessage, type AgentToolResultMap } from "./AgentMessage";
 
 const EMPTY_MIN_HEIGHT = 320;
-const ESTIMATED_MESSAGE_HEIGHT_PX = 160;
-const MESSAGE_LIST_OVERSCAN = 6;
+const BOTTOM_SCROLL_THRESHOLD_PX = 48;
+
+const savedScrollTopByTabId = new Map<string, number>();
+const savedMessageCountByTabId = new Map<string, number>();
+const wasPinnedToBottomByTabId = new Map<string, boolean>();
 
 type AgentMessageListProps = {
+  tabId: string;
+  isActive: boolean;
   messages: AgentMessageType[];
   trailingMessage?: AgentMessageType | null;
   emptyPrompt: string;
@@ -45,14 +49,21 @@ function shouldMergeToolResult(message: AgentMessageType, previous: DisplayMessa
   );
 }
 
+function isScrolledNearBottom(element: HTMLDivElement): boolean {
+  return element.scrollHeight - element.clientHeight - element.scrollTop <= BOTTOM_SCROLL_THRESHOLD_PX;
+}
+
 function AgentMessageListComponent({
+  tabId,
+  isActive,
   messages,
   trailingMessage = null,
   emptyPrompt,
   workspacePath,
 }: AgentMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [viewportHeight, setViewportHeight] = useState(0);
+  const wasActiveRef = useRef(isActive);
+  const previousMessageCountRef = useRef(messages.length + (trailingMessage ? 1 : 0));
   const displayMessages = useMemo(() => {
     const source = trailingMessage ? [...messages, trailingMessage] : messages;
     return source.reduce<DisplayMessage[]>((acc, message, index) => {
@@ -70,55 +81,91 @@ function AgentMessageListComponent({
     }, []);
   }, [messages, trailingMessage]);
 
-  const rowVirtualizer = useVirtualizer({
-    count: displayMessages.length,
-    getScrollElement: () => scrollRef.current,
-    getItemKey: (index) => displayMessages[index]?.message.id ?? index,
-    estimateSize: () => ESTIMATED_MESSAGE_HEIGHT_PX,
-    overscan: MESSAGE_LIST_OVERSCAN,
-    measureElement: (element) => element.getBoundingClientRect().height,
-  });
-
-  useLayoutEffect(() => {
+  const updateSavedScrollState = useCallback(() => {
     const element = scrollRef.current;
     if (!element) {
       return;
     }
 
-    const updateViewportHeight = () => {
-      setViewportHeight(element.clientHeight);
-    };
+    savedScrollTopByTabId.set(tabId, element.scrollTop);
+    savedMessageCountByTabId.set(tabId, displayMessages.length);
+    wasPinnedToBottomByTabId.set(tabId, isScrolledNearBottom(element));
+  }, [displayMessages.length, tabId]);
 
-    updateViewportHeight();
-
-    if (typeof ResizeObserver !== "function") {
-      return;
-    }
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateViewportHeight();
-    });
-    resizeObserver.observe(element);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
+  const scrollToLatestMessage = useCallback(() => {
     const element = scrollRef.current;
     if (!element || displayMessages.length === 0) {
       return;
     }
 
+    element.scrollTop = element.scrollHeight;
+  }, [displayMessages.length]);
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    const wasActive = wasActiveRef.current;
+    wasActiveRef.current = isActive;
+
+    if (wasActive && !isActive && element) {
+      savedScrollTopByTabId.set(tabId, element.scrollTop);
+      savedMessageCountByTabId.set(tabId, displayMessages.length);
+      wasPinnedToBottomByTabId.set(tabId, isScrolledNearBottom(element));
+      return;
+    }
+
+    if (!isActive || wasActive || !element) {
+      return;
+    }
+
     const frameId = window.requestAnimationFrame(() => {
-      rowVirtualizer.scrollToIndex(displayMessages.length - 1, { align: "end" });
+      if (displayMessages.length === 0) {
+        return;
+      }
+
+      const savedScrollTop = savedScrollTopByTabId.get(tabId);
+      const savedMessageCount = savedMessageCountByTabId.get(tabId);
+      const wasPinnedToBottom = wasPinnedToBottomByTabId.get(tabId) ?? true;
+
+      if (savedScrollTop !== undefined) {
+        if (wasPinnedToBottom && savedMessageCount !== undefined && savedMessageCount !== displayMessages.length) {
+          scrollToLatestMessage();
+          return;
+        }
+
+        element.scrollTop = savedScrollTop;
+        return;
+      }
+
+      if (wasPinnedToBottom) {
+        scrollToLatestMessage();
+      }
     });
 
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [displayMessages.length, rowVirtualizer]);
+  }, [displayMessages.length, isActive, scrollToLatestMessage, tabId]);
+
+  useEffect(() => {
+    const previousMessageCount = previousMessageCountRef.current;
+    previousMessageCountRef.current = displayMessages.length;
+
+    if (!isActive || displayMessages.length === 0 || displayMessages.length <= previousMessageCount) {
+      return;
+    }
+
+    if (!(wasPinnedToBottomByTabId.get(tabId) ?? true)) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      scrollToLatestMessage();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [displayMessages.length, isActive, scrollToLatestMessage, tabId]);
 
   if (displayMessages.length === 0) {
     return (
@@ -139,13 +186,10 @@ function AgentMessageListComponent({
     );
   }
 
-  const totalHeight = rowVirtualizer.getTotalSize();
-  const contentHeight = Math.max(totalHeight, viewportHeight);
-  const verticalOffset = Math.max(0, contentHeight - totalHeight);
-
   return (
     <Box
       ref={scrollRef}
+      onScroll={updateSavedScrollState}
       sx={{
         flex: 1,
         overflow: "auto",
@@ -153,37 +197,24 @@ function AgentMessageListComponent({
         py: 1,
       }}
     >
-      <Box sx={{ height: contentHeight, position: "relative" }}>
-        {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-          const displayMessage = displayMessages[virtualItem.index];
-          if (!displayMessage) {
-            return null;
-          }
-
-          const { message, mergedToolResults, isStreaming } = displayMessage;
-
-          return (
-            <Box
-              key={virtualItem.key}
-              ref={rowVirtualizer.measureElement}
-              data-index={virtualItem.index}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                transform: `translateY(${verticalOffset + virtualItem.start}px)`,
-              }}
-            >
-              <AgentMessage
-                message={message}
-                mergedToolResults={mergedToolResults}
-                workspacePath={workspacePath}
-                isStreaming={isStreaming}
-              />
-            </Box>
-          );
-        })}
+      <Box
+        sx={{
+          minHeight: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "flex-end",
+          gap: 1,
+        }}
+      >
+        {displayMessages.map(({ message, mergedToolResults, isStreaming }) => (
+          <AgentMessage
+            key={message.id}
+            message={message}
+            mergedToolResults={mergedToolResults}
+            workspacePath={workspacePath}
+            isStreaming={isStreaming}
+          />
+        ))}
       </Box>
     </Box>
   );
@@ -192,5 +223,5 @@ function AgentMessageListComponent({
 const MemoizedAgentMessageList = memo(AgentMessageListComponent);
 MemoizedAgentMessageList.displayName = "AgentMessageList";
 
-/** Renders the agent chat message list with virtualization for large transcripts. */
+/** Renders the agent chat message list with preserved scroll state across tab switches. */
 export const AgentMessageList = MemoizedAgentMessageList;

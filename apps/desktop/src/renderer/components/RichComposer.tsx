@@ -16,6 +16,7 @@ export type { RichComposerSlashCommand } from "./richComposerTypes";
 
 type RichComposerProps = {
   placeholder: string;
+  value?: string;
   onChange?: (value: string) => void;
   onSubmit?: (value: string) => void | Promise<void>;
   minHeight?: number;
@@ -26,6 +27,7 @@ type RichComposerProps = {
 /** Rich text-like contenteditable composer with token highlighting and slash command completion. */
 export function RichComposer({
   placeholder,
+  value,
   onChange,
   onSubmit,
   minHeight = 84,
@@ -178,7 +180,9 @@ export function RichComposer({
       }
 
       void onSubmit(nextValue);
-      editable.innerHTML = "";
+      if (value === undefined) {
+        editable.innerHTML = "";
+      }
       onChange?.("");
       setActiveSlashCommandRange(null);
     },
@@ -190,8 +194,28 @@ export function RichComposer({
       onChange,
       onSubmit,
       selectedSlashCommandIndex,
+      value,
     ],
   );
+
+  useEffect(() => {
+    const editable = composerRef.current;
+    if (!editable || value === undefined) {
+      return;
+    }
+
+    const normalizedCurrentValue = normalizeComposerText(editable.innerText);
+    const nextHtml = renderComposerHtml(value, slashCommands);
+    if (normalizedCurrentValue === value && editable.innerHTML === nextHtml) {
+      return;
+    }
+
+    const shouldRestoreCaret = document.activeElement === editable;
+    editable.innerHTML = nextHtml;
+    if (shouldRestoreCaret) {
+      setCaretOffset(editable, value.length);
+    }
+  }, [slashCommands, value]);
 
   useEffect(() => {
     if (disabled) {

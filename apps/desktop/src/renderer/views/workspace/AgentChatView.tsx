@@ -1,5 +1,6 @@
-import { Box, Button, CircularProgress, Typography } from "@mui/material";
-import { memo, useCallback, useEffect, useMemo } from "react";
+import { Box, Button, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { LuArrowUp } from "react-icons/lu";
 import {
   abortAgent,
   ensurePiSession,
@@ -29,11 +30,13 @@ type AgentChatViewProps = {
   workspaceId: string;
   cwd: string;
   piSessionId?: string;
+  isActive?: boolean;
 };
 
-function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId }: AgentChatViewProps) {
+function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive = true }: AgentChatViewProps) {
   const session = agentChatStore((s) => s.sessionsByTabId[tabId]);
   const slashCommands = useAgentChatSlashCommands();
+  const [draft, setDraft] = useState("");
 
   // Start Pi session at tab level (survives Strict Mode remounts).
   useEffect(() => {
@@ -107,6 +110,13 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId }: AgentC
     await abortAgent({ tabId, sessionId: sid });
   }, [session?.sessionId, tabId]);
 
+  const handleSubmitButtonClick = useCallback(async () => {
+    const nextDraft = draft.trim();
+    if (!nextDraft) return;
+    await handleSubmit(nextDraft);
+    setDraft("");
+  }, [draft, handleSubmit]);
+
   const handleModelChange = useCallback(
     async (model: AgentModel) => {
       const sid = session?.sessionId;
@@ -171,6 +181,8 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId }: AgentC
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       {/* Messages */}
       <AgentMessageList
+        tabId={tabId}
+        isActive={isActive}
         messages={finalizedMessages}
         trailingMessage={trailingMessage}
         emptyPrompt="Send a message to start the conversation."
@@ -190,6 +202,8 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId }: AgentC
       >
         <RichComposer
           placeholder="Type a message…"
+          value={draft}
+          onChange={setDraft}
           onSubmit={handleSubmit}
           disabled={session.state === "starting"}
           slashCommands={slashCommands}
@@ -204,24 +218,53 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId }: AgentC
               onThinkingLevelCycle={handleThinkingCycle}
             />
           )}
-          {session.state === "running" && (
-            <Button
-              variant="text"
-              size="small"
-              color="error"
-              onClick={handleAbort}
-              sx={{
-                minWidth: 0,
-                px: 0,
-                py: 0,
-                ml: session.availableModels.length > 0 ? 0 : 1,
-                fontSize: 12,
-                lineHeight: 1.5,
-                textTransform: "none",
-              }}
-            >
-              Stop
-            </Button>
+          <Box sx={{ flex: 1 }} />
+          {session.state === "running" ? (
+            <Tooltip title="Stop" placement="top">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={handleAbort}
+                  aria-label="Stop"
+                  sx={{
+                    p: 0.5,
+                    border: 1,
+                    borderColor: "divider",
+                    bgcolor: "background.paper",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: 0.5,
+                      bgcolor: "currentColor",
+                    }}
+                  />
+                </IconButton>
+              </span>
+            </Tooltip>
+          ) : (
+            <Tooltip title="Submit" placement="top">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    void handleSubmitButtonClick();
+                  }}
+                  disabled={session.state === "starting" || draft.trim().length === 0}
+                  aria-label="Submit"
+                  sx={{
+                    p: 0.5,
+                    border: 1,
+                    borderColor: "divider",
+                    bgcolor: "background.paper",
+                  }}
+                >
+                  <LuArrowUp size={16} />
+                </IconButton>
+              </span>
+            </Tooltip>
           )}
         </Box>
       </Box>
