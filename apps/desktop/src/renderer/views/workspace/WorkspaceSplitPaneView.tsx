@@ -4,6 +4,7 @@ import { LuSquareTerminal } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../shared/contracts/externalApps";
 import { AgentIcon } from "../../components/AgentIcon";
 import { SplitPaneContainer } from "../../components/SplitPaneContainer";
+import { SessionHistoryMenu } from "../../components/agent/SessionHistoryMenu";
 import { SplitPaneGroup } from "../../components/SplitPaneGroup";
 import { getFileTreeIcon } from "../../components/fileTreeIcons";
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
@@ -69,6 +70,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
 
   const [focusContentRequestKey, setFocusContentRequestKey] = useState(0);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+  const [historyMenuAnchor, setHistoryMenuAnchor] = useState<HTMLElement | null>(null);
   const didTrackSelectedTabRef = useRef(false);
   const didSyncPaneSelectionRef = useRef(false);
   const lastKnownRectByTabIdRef = useRef<Record<string, { left: number; top: number; width: number; height: number }>>(
@@ -275,6 +277,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
           onFocusPane={handleFocusPane}
           onTabDragStart={handleTabDragStart}
           onTabDragEnd={handleTabDragEnd}
+          onHistoryClick={(event) => setHistoryMenuAnchor(event.currentTarget)}
           getTabIcon={getTabIcon}
           enabledAgentKinds={enabledAgentKinds}
           disabled={!workspaceId}
@@ -320,6 +323,13 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
         handleFocusPane={handleFocusPane}
         renderTabContent={renderTabContent}
       />
+      {workspace?.worktreePath && (
+        <SessionHistoryMenu
+          cwd={workspace.worktreePath}
+          anchorEl={historyMenuAnchor}
+          onClose={() => setHistoryMenuAnchor(null)}
+        />
+      )}
     </Box>
   );
 }

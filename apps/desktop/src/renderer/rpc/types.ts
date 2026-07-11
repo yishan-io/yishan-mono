@@ -105,6 +105,7 @@ export type DaemonRpcClient = {
     start: (input: { sessionId: string; tabId: string; workspaceId: string; cwd: string }) => Promise<{ sessionId: string }>;
     stop: (input: { sessionId: string }) => Promise<{ ok: boolean }>;
     send: (input: { sessionId: string; command: unknown }) => Promise<unknown>;
+    listSessions: (input: Rpc.PiListSessionsInput) => Promise<Rpc.PiSessionSummary[]>;
   };
   agent: {
     listDetectionStatuses: (input?: unknown) => Promise<unknown>;

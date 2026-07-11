@@ -221,6 +221,7 @@ export function AgentChatView({ tabId, workspaceId, cwd }: AgentChatViewProps) {
           )}
         </Box>
       </Box>
+
     </Box>
   );
 }

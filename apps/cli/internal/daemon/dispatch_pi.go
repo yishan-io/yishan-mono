@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"yishan/apps/cli/internal/agentmanager"
 	"yishan/apps/cli/internal/workspace"
@@ -22,6 +23,8 @@ func (h *JSONRPCHandler) dispatchPi(ctx context.Context, connState *wsConnState,
 		return h.handlePiStop(params)
 	case MethodPiSend:
 		return h.handlePiSend(params)
+	case MethodPiListSessions:
+		return h.handlePiListSessions(ctx, params)
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown pi method: "+method)
 	}
@@ -130,6 +133,27 @@ func (h *JSONRPCHandler) handlePiSend(params json.RawMessage) (any, error) {
 	}
 
 	return map[string]bool{"ok": true}, nil
+}
+
+type piListSessionsParams struct {
+	CWD string `json:"cwd"`
+}
+
+func (h *JSONRPCHandler) handlePiListSessions(ctx context.Context, params json.RawMessage) (any, error) {
+	var req piListSessionsParams
+	if err := decodeParams(params, &req); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(req.CWD) == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "cwd is required")
+	}
+
+	summaries, err := agentmanager.ListSessionSummaries(ctx, req.CWD)
+	if err != nil {
+		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
+	}
+
+	return summaries, nil
 }
 
 // makePiEventCallback returns an OnEvent callback that forwards pi stdout events

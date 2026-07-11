@@ -48,9 +48,10 @@ const (
 
 	MethodAgentListDetectionStatuses = "agent.listDetectionStatuses"
 	MethodAgentListModels            = "agent.listModels"
-	MethodPiStart                     = "pi.start"
-	MethodPiStop                      = "pi.stop"
-	MethodPiSend                      = "pi.send"
+	MethodPiStart                    = "pi.start"
+	MethodPiStop                     = "pi.stop"
+	MethodPiSend                     = "pi.send"
+	MethodPiListSessions             = "pi.listSessions"
 	MethodIntegrationGitHubStatus    = "integration.githubStatus"
 	MethodCLIToolListStatuses        = "cliTools.listStatuses"
 

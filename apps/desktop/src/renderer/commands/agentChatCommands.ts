@@ -1,3 +1,4 @@
+import type * as Rpc from "../rpc/daemonTypes";
 import { generateId } from "../helpers/generateId";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { agentChatStore } from "../store/agentChatStore";
@@ -410,4 +411,12 @@ function handlePiResponse(tabId: string, event: Record<string, unknown>): void {
     default:
       break;
   }
+}
+
+// ─── Session history ─────────────────────────────────────────────────────────
+
+/** Fetches past session summaries for the current working directory. */
+export async function fetchSessionHistory(cwd: string): Promise<Rpc.PiSessionSummary[]> {
+  const client = await getDaemonClient();
+  return (await client.pi.listSessions({ cwd })) as Rpc.PiSessionSummary[];
 }

@@ -2,7 +2,7 @@ import { Box, IconButton } from "@mui/material";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuColumns2, LuGlobe, LuPlus, LuSquareTerminal } from "react-icons/lu";
+import { LuClock, LuColumns2, LuGlobe, LuPlus, LuSquareTerminal } from "react-icons/lu";
 import {
   AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND,
   type DesktopAgentKind,
@@ -57,6 +57,8 @@ type TabBarProps = {
   onSplitRight?: () => void;
   /** Called when the user clicks "Split Down". Only shown when provided. */
   onSplitDown?: () => void;
+  /** Called when the user clicks the session history button. */
+  onHistoryClick?: (event: React.MouseEvent<HTMLElement>) => void;
 };
 
 /**
@@ -84,6 +86,7 @@ export function TabBar({
   focused = true,
   onSplitRight,
   onSplitDown,
+  onHistoryClick,
 }: TabBarProps) {
   const { t } = useTranslation();
   const untitledLabel = t("tabs.untitled");
@@ -316,6 +319,17 @@ export function TabBar({
           <LuPlus size={16} />
         </IconButton>
       </Box>
+      {onHistoryClick && (
+        <IconButton
+          size="small"
+          aria-label="Session history"
+          onClick={onHistoryClick}
+          disabled={disabled}
+          sx={{ flexShrink: 0, alignSelf: "center", color: "text.secondary" }}
+        >
+          <LuClock size={16} />
+        </IconButton>
+      )}
       {(onSplitRight || onSplitDown) && (
         <IconButton
           size="small"

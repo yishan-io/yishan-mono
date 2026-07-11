@@ -654,6 +654,17 @@ export type MemoryConfig = {
   model: string;
 };
 
+export type PiListSessionsInput = {
+  cwd: string;
+};
+
+export type PiSessionSummary = {
+  sessionId: string;
+  timestamp: string;
+  model?: string;
+  previewText?: string;
+};
+
 export type ComputerUseFeatureConfig = {
   enabled: boolean;
   observe: boolean;
