@@ -1,8 +1,8 @@
 import { Box } from "@mui/material";
 import { useCallback } from "react";
 import { createPortal } from "react-dom";
-import type { PaneLeaf } from "../../store/split-pane";
 import type { WorkspaceTab } from "../../store/types";
+import { WorkspaceAgentChatSurface } from "./WorkspaceAgentChatSurface";
 import { getOrCreateRuntimeRoot } from "./runtime/runtimeRoot";
 import type { WorkspaceTabPlacement } from "./useWorkspaceTabPlacements";
 
@@ -97,13 +97,29 @@ export function WorkspaceTabSurfaceLayer({
     >
       {workspaceTabs.map((tab) => {
         const placement = tabPlacements.get(tab.id);
-        return renderTabSurface(
-          tab,
-          placement?.selected ?? false,
-          placement?.activePane ?? false,
-          placement?.rect ?? null,
-          placement?.paneId ?? "",
-        );
+        const isSelected = placement?.selected ?? false;
+        const isInActivePane = placement?.activePane ?? false;
+        const rect = placement?.rect ?? null;
+        const paneId = placement?.paneId ?? "";
+
+        if (tab.kind === "agent-chat") {
+          return (
+            <WorkspaceAgentChatSurface
+              key={tab.id}
+              tab={tab}
+              isWorkspaceActive={isActive}
+              isDraggingSplit={isDraggingSplit}
+              isSelected={isSelected}
+              isInActivePane={isInActivePane}
+              rect={rect}
+              paneId={paneId}
+              lastKnownRectByTabIdRef={lastKnownRectByTabIdRef}
+              handleFocusPane={handleFocusPane}
+            />
+          );
+        }
+
+        return renderTabSurface(tab, isSelected, isInActivePane, rect, paneId);
       })}
     </Box>,
     getOrCreateRuntimeRoot(),
