@@ -4,13 +4,19 @@ import { getSingularPatch, parseDiffFromFile } from "@pierre/diffs";
 import type { FileDiffMetadata } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import { useMemo, useState } from "react";
-import { LuChevronDown, LuChevronUp } from "react-icons/lu";
+import { LuBookOpen, LuChevronDown, LuChevronUp, LuFilePlus2, LuPencil, LuSquareTerminal } from "react-icons/lu";
 import { YISHAN_DIFF_THEME_DARK, YISHAN_DIFF_THEME_LIGHT, getDiffCssVariables } from "../../helpers/diffTheme";
 import type { AgentContentBlock, AgentMessage } from "../../store/agentChatTypes";
 
 type AgentToolCallCardProps = {
   toolCall: Extract<AgentContentBlock, { type: "toolCall" }>;
   result?: AgentMessage | null;
+};
+
+type ToolPathSummaryProps = {
+  icon: React.ReactNode;
+  path: string;
+  suffix?: React.ReactNode;
 };
 
 function extractResultText(message: AgentMessage | null | undefined): string {
@@ -26,15 +32,20 @@ function extractResultText(message: AgentMessage | null | undefined): string {
     .join("\n");
 }
 
-function countDiffStats(patch: string): string {
+type DiffStats = {
+  added: number;
+  removed: number;
+};
+
+function getDiffStats(patch: string): DiffStats | null {
   let added = 0;
   let removed = 0;
   for (const line of patch.split("\n")) {
     if (line.startsWith("+") && !line.startsWith("+++")) added++;
     else if (line.startsWith("-") && !line.startsWith("---")) removed++;
   }
-  if (added === 0 && removed === 0) return "";
-  return ` +${added} -${removed}`;
+  if (added === 0 && removed === 0) return null;
+  return { added, removed };
 }
 
 function parseToolDiff(patch: string): FileDiffMetadata | null {
@@ -57,6 +68,72 @@ function buildWriteToolNewFileDiff(filePath: string, content: string): FileDiffM
   }
 }
 
+function ToolPathSummary({ icon, path, suffix = null }: ToolPathSummaryProps) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.75, minWidth: 0, flex: 1 }}>
+      <Box
+        component="span"
+        aria-hidden
+        sx={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          opacity: 0.8,
+          mt: "1px",
+        }}
+      >
+        {icon}
+      </Box>
+      <Typography
+        variant="body2"
+        component="pre"
+        sx={{
+          fontFamily: "monospace",
+          fontSize: "0.75rem",
+          whiteSpace: "pre-wrap",
+          m: 0,
+          minWidth: 0,
+          flex: 1,
+          color: "text.primary",
+        }}
+      >
+        {path}
+      </Typography>
+      {suffix}
+    </Box>
+  );
+}
+
+function ToolDiffStats({ stats, highlight }: { stats: DiffStats; highlight: boolean }) {
+  return (
+    <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.75, flexShrink: 0 }}>
+      <Typography
+        variant="body2"
+        component="span"
+        sx={{
+          fontFamily: "monospace",
+          fontSize: "0.75rem",
+          color: highlight ? "success.main" : "text.primary",
+        }}
+      >
+        +{stats.added}
+      </Typography>
+      <Typography
+        variant="body2"
+        component="span"
+        sx={{
+          fontFamily: "monospace",
+          fontSize: "0.75rem",
+          color: highlight ? "error.main" : "text.primary",
+        }}
+      >
+        -{stats.removed}
+      </Typography>
+    </Box>
+  );
+}
+
 /** Renders a tool call block with expandable arguments or output. */
 export function AgentToolCallCard({ toolCall, result = null }: AgentToolCallCardProps) {
   const theme = useTheme();
@@ -77,7 +154,7 @@ export function AgentToolCallCard({ toolCall, result = null }: AgentToolCallCard
     (typeof details?.patch === "string" ? details.patch : "") ||
     (typeof details?.diff === "string" ? details.diff : "");
   const writeContent = typeof toolCall.arguments.content === "string" ? toolCall.arguments.content : null;
-  const diffStats = patchDiff ? countDiffStats(patchDiff) : "";
+  const diffStats = patchDiff ? getDiffStats(patchDiff) : null;
   const parsedPatchDiff = useMemo(() => parseToolDiff(patchDiff), [patchDiff]);
   const syntheticWriteDiff = useMemo(() => {
     if (!isWrite || patchDiff || !diffToolPath || writeContent === null) {
@@ -143,38 +220,13 @@ export function AgentToolCallCard({ toolCall, result = null }: AgentToolCallCard
               cursor: "pointer",
             }}
           >
-            <Typography
-              variant="body2"
-              component="pre"
-              sx={{
-                fontFamily: "monospace",
-                fontSize: "0.75rem",
-                whiteSpace: "pre-wrap",
-                m: 0,
-                flex: 1,
-                color: "primary.main",
-              }}
-            >
-              $ {command}
-            </Typography>
+            <ToolPathSummary icon={<LuSquareTerminal size={14} />} path={command} />
             <IconButton size="small" sx={{ width: 20, height: 20, flexShrink: 0 }}>
               {open ? <LuChevronUp size={14} /> : <LuChevronDown size={14} />}
             </IconButton>
           </Box>
         ) : isRead && readPath ? (
-          <Typography
-            variant="body2"
-            component="pre"
-            sx={{
-              fontFamily: "monospace",
-              fontSize: "0.75rem",
-              whiteSpace: "pre-wrap",
-              m: 0,
-              color: "primary.main",
-            }}
-          >
-            READ: {readPath}
-          </Typography>
+          <ToolPathSummary icon={<LuBookOpen size={14} />} path={readPath} />
         ) : isDiffTool && diffToolPath ? (
           <Box
             onClick={() => setOpen(!open)}
@@ -184,21 +236,11 @@ export function AgentToolCallCard({ toolCall, result = null }: AgentToolCallCard
               cursor: "pointer",
             }}
           >
-            <Typography
-              variant="body2"
-              component="pre"
-              sx={{
-                fontFamily: "monospace",
-                fontSize: "0.75rem",
-                whiteSpace: "pre-wrap",
-                m: 0,
-                flex: 1,
-                color: "primary.main",
-              }}
-            >
-              {isEdit ? "Edit" : "Write"}: {diffToolPath}
-              {diffStats}
-            </Typography>
+            <ToolPathSummary
+              icon={isEdit ? <LuPencil size={14} /> : <LuFilePlus2 size={14} />}
+              path={diffToolPath}
+              suffix={diffStats ? <ToolDiffStats stats={diffStats} highlight={isEdit} /> : null}
+            />
             <IconButton size="small" sx={{ width: 20, height: 20, flexShrink: 0 }}>
               {open ? <LuChevronUp size={14} /> : <LuChevronDown size={14} />}
             </IconButton>

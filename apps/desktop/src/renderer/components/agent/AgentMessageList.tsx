@@ -15,6 +15,7 @@ type AgentMessageListProps = {
 type DisplayMessage = {
   message: AgentMessageType;
   mergedToolResults: AgentToolResultMap;
+  isStreaming: boolean;
 };
 
 function hasToolCall(message: AgentMessageType, toolCallId: string | undefined): boolean {
@@ -51,13 +52,17 @@ export function AgentMessageList({
   const scrollRef = useRef<HTMLDivElement>(null);
   const displayMessages = useMemo(() => {
     const source = trailingMessage ? [...messages, trailingMessage] : messages;
-    return source.reduce<DisplayMessage[]>((acc, message) => {
+    return source.reduce<DisplayMessage[]>((acc, message, index) => {
       const previous = acc[acc.length - 1];
       if (previous && shouldMergeToolResult(message, previous)) {
         previous.mergedToolResults[message.toolCallId as string] = message;
         return acc;
       }
-      acc.push({ message, mergedToolResults: {} });
+      acc.push({
+        message,
+        mergedToolResults: {},
+        isStreaming: trailingMessage !== null && index === source.length - 1,
+      });
       return acc;
     }, []);
   }, [messages, trailingMessage]);
@@ -115,12 +120,13 @@ export function AgentMessageList({
           gap: 1,
         }}
       >
-        {displayMessages.map(({ message, mergedToolResults }) => (
+        {displayMessages.map(({ message, mergedToolResults, isStreaming }) => (
           <AgentMessage
             key={message.id}
             message={message}
             mergedToolResults={mergedToolResults}
             workspacePath={workspacePath}
+            isStreaming={isStreaming}
           />
         ))}
       </Box>

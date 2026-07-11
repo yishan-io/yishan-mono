@@ -79,6 +79,38 @@ function buildDiffResult(toolName: "edit" | "write") {
 }
 
 describe("AgentToolCallCard", () => {
+  it("shows a bash tool command with an icon instead of a text prefix", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-bash",
+      name: "bash",
+      arguments: {
+        command: "echo hi",
+      },
+    };
+
+    render(<AgentToolCallCard toolCall={toolCall} />);
+
+    expect(screen.getByText("echo hi")).toBeTruthy();
+    expect(screen.queryByText("$ echo hi")).toBeNull();
+  });
+
+  it("shows a read tool path with an icon instead of a text prefix", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-read",
+      name: "read",
+      arguments: {
+        path: "src/example.ts",
+      },
+    };
+
+    render(<AgentToolCallCard toolCall={toolCall} />);
+
+    expect(screen.getByText("src/example.ts")).toBeTruthy();
+    expect(screen.queryByText("READ: src/example.ts")).toBeNull();
+  });
+
   it("renders edit tool patches with the diff viewer", () => {
     const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
       type: "toolCall",
@@ -91,7 +123,12 @@ describe("AgentToolCallCard", () => {
 
     render(<AgentToolCallCard toolCall={toolCall} result={buildDiffResult("edit")} />);
 
-    fireEvent.click(screen.getByText("Edit: src/example.ts +1 -1"));
+    expect(screen.getByText("+1")).toBeTruthy();
+    expect(screen.getByText("-1")).toBeTruthy();
+
+    fireEvent.click(screen.getAllByText("src/example.ts")[0] as HTMLElement);
+
+    expect(screen.queryByText("Edit: src/example.ts +1 -1")).toBeNull();
 
     const diff = screen.getByTestId("edit-tool-file-diff");
 
@@ -111,7 +148,12 @@ describe("AgentToolCallCard", () => {
 
     render(<AgentToolCallCard toolCall={toolCall} result={buildDiffResult("write")} />);
 
-    fireEvent.click(screen.getByText("Write: src/example.ts +1 -1"));
+    expect(screen.getByText("+1")).toBeTruthy();
+    expect(screen.getByText("-1")).toBeTruthy();
+
+    fireEvent.click(screen.getAllByText("src/example.ts")[0] as HTMLElement);
+
+    expect(screen.queryByText("Write: src/example.ts +1 -1")).toBeNull();
 
     const diff = screen.getByTestId("edit-tool-file-diff");
 
@@ -141,7 +183,9 @@ describe("AgentToolCallCard", () => {
 
     render(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
-    fireEvent.click(screen.getByText("Write: src/example.ts"));
+    fireEvent.click(screen.getAllByText("src/example.ts")[0] as HTMLElement);
+
+    expect(screen.queryByText("Write: src/example.ts")).toBeNull();
 
     const diff = screen.getByTestId("edit-tool-file-diff");
 

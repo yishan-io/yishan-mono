@@ -20,6 +20,7 @@ type AgentMessageProps = {
   message: AgentMessageType;
   mergedToolResults?: AgentToolResultMap;
   workspacePath?: string;
+  isStreaming?: boolean;
 };
 
 function formatDuration(durationMs: number): string {
@@ -31,7 +32,12 @@ function formatDuration(durationMs: number): string {
 }
 
 /** Renders a single agent conversation message with support for text, thinking, and tool calls. */
-export function AgentMessage({ message, mergedToolResults = {}, workspacePath }: AgentMessageProps) {
+export function AgentMessage({
+  message,
+  mergedToolResults = {},
+  workspacePath,
+  isStreaming = false,
+}: AgentMessageProps) {
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
   const isToolResult = message.role === "toolResult";
@@ -78,7 +84,7 @@ export function AgentMessage({ message, mergedToolResults = {}, workspacePath }:
               }
               const key = `${message.id}-thinking-${thinkingBlockCount}`;
               thinkingBlockCount += 1;
-              return <ThinkingBlock key={key} thinking={block.thinking} />;
+              return <ThinkingBlock key={key} thinking={block.thinking} isStreaming={isStreaming} />;
             }
             case "toolCall":
               return <AgentToolCallCard key={block.id} toolCall={block} result={mergedToolResults[block.id] ?? null} />;
@@ -111,7 +117,7 @@ export function AgentMessage({ message, mergedToolResults = {}, workspacePath }:
   );
 }
 
-function ThinkingBlock({ thinking }: { thinking: string }) {
+function ThinkingBlock({ thinking, isStreaming }: { thinking: string; isStreaming: boolean }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -130,14 +136,17 @@ function ThinkingBlock({ thinking }: { thinking: string }) {
         }}
       >
         <Typography variant="caption" color="text.secondary">
-          thinking
+          {isStreaming ? "Thinking" : "Thought"}
         </Typography>
         <IconButton size="small" sx={{ ml: "auto", width: 20, height: 20 }}>
           {open ? <LuChevronUp size={14} /> : <LuChevronDown size={14} />}
         </IconButton>
       </Box>
       <Collapse in={open}>
-        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", px: 1, py: 0.5, color: "text.disabled", fontStyle: "italic" }}>
+        <Typography
+          variant="body2"
+          sx={{ whiteSpace: "pre-wrap", px: 1, py: 0.5, color: "text.disabled", fontStyle: "italic" }}
+        >
           {thinking}
         </Typography>
       </Collapse>
