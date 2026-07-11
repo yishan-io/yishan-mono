@@ -133,10 +133,11 @@ export class AgentManager {
       results.push({
         agentId: record.id,
         agentName: record.agentName,
+        sessionId: record.sessionId,
+        sessionPath: record.sessionPath,
         status: record.status,
         responseText: record.responseText,
         error: record.error,
-        transcriptPath: record.transcriptPath,
         usage: { ...record.usage },
       });
     }
@@ -180,6 +181,10 @@ export class AgentManager {
             agentName: task.agentName,
             prompt: task.prompt,
             cwd: task.cwd,
+            mode: task.mode,
+            parentSession: task.parentSession,
+            parentSessionWriter: task.parentSessionWriter,
+            childSessionDescriptor: task.childSessionDescriptor,
             tools: task.tools,
             model: task.model,
             thinking: task.thinking,
@@ -196,6 +201,16 @@ export class AgentManager {
           const result = await runningHandle.completion;
           this.applyResult(record, result);
           return result;
+        } catch (error) {
+          const failedResult: AgentResult = {
+            agentId,
+            agentName: task.agentName,
+            status: "failed",
+            error: getAgentRunErrorMessage(error),
+            usage: { ...emptyAgentUsageStats },
+          };
+          this.applyResult(record, failedResult);
+          return failedResult;
         } finally {
           this.runningAgentStates.delete(agentId);
           this.queuedCancels.delete(agentId);
@@ -227,9 +242,10 @@ export class AgentManager {
   private applyResult(record: AgentRecord, result: AgentResult): void {
     record.status = result.status;
     record.completedAt = this.now();
+    record.sessionId = result.sessionId;
+    record.sessionPath = result.sessionPath;
     record.responseText = result.responseText;
     record.error = result.error;
-    record.transcriptPath = result.transcriptPath;
     record.usage = { ...result.usage };
     this.emitChange();
   }
@@ -246,4 +262,12 @@ export class AgentManager {
     this.nextAgentSequence += 1;
     return `${AGENT_ID_PREFIX}-${this.now().toString(36)}-${sequence.toString(36)}`;
   }
+}
+
+function getAgentRunErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Agent run failed";
 }

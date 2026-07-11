@@ -1,6 +1,12 @@
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 
+import type {
+  ChildSessionDescriptor,
+  ParentSessionReference,
+  ParentSessionWriter,
+} from "../runtime/sessionRelationship";
+
 /** Supported sources for one resolved agent definition. */
 export type AgentDefinitionSource = "builtin" | "user" | "project";
 
@@ -43,6 +49,9 @@ export interface AgentTask {
   prompt: string;
   mode: AgentRunMode;
   cwd: string;
+  parentSession?: ParentSessionReference;
+  parentSessionWriter?: ParentSessionWriter;
+  childSessionDescriptor?: ChildSessionDescriptor;
   agentDefinition?: AgentDefinition;
   tools?: string[];
   model?: string;
@@ -56,10 +65,11 @@ export interface AgentTask {
 export interface AgentResult {
   agentId: string;
   agentName: string;
+  sessionId?: string;
+  sessionPath?: string;
   status: Extract<AgentStatus, "completed" | "failed" | "cancelled">;
   responseText?: string;
   error?: string;
-  transcriptPath?: string;
   usage: AgentUsageStats;
 }
 
@@ -74,9 +84,10 @@ export interface AgentRecord {
   startedAt?: number;
   completedAt?: number;
   session?: AgentSession;
+  sessionId?: string;
+  sessionPath?: string;
   responseText?: string;
   error?: string;
-  transcriptPath?: string;
   usage: AgentUsageStats;
 }
 

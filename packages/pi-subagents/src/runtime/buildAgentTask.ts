@@ -1,4 +1,5 @@
 import type { AgentDefinition, AgentTask } from "../agents/types";
+import { buildChildSessionDescriptor } from "./sessionRelationship";
 
 const DEFAULT_READ_ONLY_TOOL_NAMES = ["read", "grep", "find", "ls"];
 const WRITE_TOOL_NAMES = new Set(["write", "edit"]);
@@ -22,6 +23,7 @@ export function buildAgentTask(input: {
     prompt: input.prompt,
     cwd: input.cwd,
     mode: input.mode,
+    childSessionDescriptor: buildChildSessionDescriptor(input.agentName, input.prompt),
     tools,
     model: input.agentDefinition.model,
     thinking: input.agentDefinition.thinking,

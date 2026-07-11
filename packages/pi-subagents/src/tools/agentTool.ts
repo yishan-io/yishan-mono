@@ -6,6 +6,7 @@ import type { AgentRegistry } from "../agents/registry";
 import type { AgentTask } from "../agents/types";
 import type { AgentManager } from "../runtime/agentManager";
 import { buildAgentTask } from "../runtime/buildAgentTask";
+import { createParentSessionWriter, getParentSessionReference } from "../runtime/sessionRelationship";
 
 const agentToolSchema = Type.Object({
   agent: Type.String({ description: "Name of the agent definition to run" }),
@@ -27,8 +28,9 @@ const AGENT_TOOL_PROMPT_GUIDELINES = [
 
 interface AgentToolDetails {
   agentId: string;
+  sessionId?: string;
+  sessionPath?: string;
   status?: string;
-  transcriptPath?: string;
   mode: "background" | "foreground";
 }
 
@@ -57,6 +59,8 @@ export function registerAgentTool(pi: ExtensionAPI, registry: AgentRegistry, man
         cwd: ctx.cwd,
         mode: params.background ? "background" : "foreground",
       });
+      task.parentSession = getParentSessionReference(ctx.sessionManager, ctx.cwd);
+      task.parentSessionWriter = createParentSessionWriter(ctx.sessionManager);
 
       if (params.background) {
         const agentId = await manager.runInBackground(task);
@@ -72,8 +76,9 @@ export function registerAgentTool(pi: ExtensionAPI, registry: AgentRegistry, man
         content: [{ type: "text", text: payload }],
         details: {
           agentId: result.agentId,
+          sessionId: result.sessionId,
+          sessionPath: result.sessionPath,
           status: result.status,
-          transcriptPath: result.transcriptPath,
           mode: "foreground",
         } satisfies AgentToolDetails,
       };
@@ -109,8 +114,8 @@ export function registerAgentTool(pi: ExtensionAPI, registry: AgentRegistry, man
         return new Text(text, 0, 0);
       }
 
-      if (details.transcriptPath) {
-        text += `\n${theme.fg("dim", `transcript: ${details.transcriptPath}`)}`;
+      if (details.sessionPath) {
+        text += `\n${theme.fg("dim", `session: ${details.sessionPath}`)}`;
       }
       text += `\n\n${payload}`;
       return new Text(text, 0, 0);

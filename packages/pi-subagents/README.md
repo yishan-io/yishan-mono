@@ -12,7 +12,7 @@ Current MVP features:
 - `/agent`, `/agents`, `/agent-result`, `/agent-stop`, `/agent-steer`, `/agent-send`, `/agent-view`, `/agent-view-clear`
 - Main-agent `Agent` tool for delegation
 - User/project agent overrides
-- Background runs, stop/steer support, transcript capture
+- Background runs, stop/steer support, and persisted child sessions in the shared Pi session store
 - Live TUI footer status and progress widget for queued/running agents
 - Read-only-aware concurrency control
 
@@ -153,21 +153,26 @@ While agents are queued or running, the extension shows:
 - a widget above the editor listing active agent ids, names, and modes
 - an optional selected-agent detail panel below the editor via `/agent-view`
 
-## Transcripts
+## Child session persistence
 
-Each run writes a transcript to:
+Each sub-agent run now persists as a normal Pi session under the shared Pi session store (for example under `~/.yishan/pi/agent/sessions/...` in Yishan-managed environments).
 
-```text
-.pi/output/agents/<agent-id>.jsonl
-```
+The child session stores:
+
+- normal Pi session history
+- `parentSession` linkage back to the main session
+- child metadata such as agent id, title, and summary
+
+The parent session also records child-reference metadata so the relationship can be reconstructed later.
 
 ## Current MVP limitations
 
 - Autocomplete uses a flat merged list with clear `Agent · ...` labels; it does not yet render explicit grouped `Agents` / `Files` sections.
 - Child sessions intentionally disable extension loading to avoid recursive self-loading; they still use Pi SDK sessions, context files, and normal tool/session infrastructure.
+- Session-history list filtering/classification for parent vs child sessions is intentionally deferred to a separate follow-up task.
 - Built-in agent definitions are loaded from this package manually because Pi packages do not auto-discover agent-definition directories.
 - The package currently exposes only the single-agent `Agent` tool; result/stop/steer remain slash-command driven, and background-result handoff remains manual via `/agent-send`.
-- The progress widget is intentionally lightweight for MVP; it does not yet stream per-agent transcript output or provide a dedicated selector/details pane.
+- The progress widget is intentionally lightweight for MVP; it does not yet stream rich per-agent session history or provide a dedicated selector/details pane.
 - Child runs are fresh Pi SDK sessions; this MVP does not expose an OpenCode-style resumable `task_id`/session-resume API.
 
 ## License

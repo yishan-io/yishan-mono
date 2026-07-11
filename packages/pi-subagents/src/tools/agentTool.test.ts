@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { AgentDefinition } from "../agents/types";
+import type { AgentDefinition, AgentTask } from "../agents/types";
 import { registerAgentTool } from "./agentTool";
 
 const testAgentDefinition: AgentDefinition = {
@@ -77,29 +77,35 @@ describe("registerAgentTool", () => {
     });
   });
 
-  it("runs the requested agent through the shared manager", async () => {
+  it("runs the requested agent through the shared manager and forwards parent session metadata", async () => {
     const { pi, getRegisteredTool } = createToolHarness();
+    const appendCustomEntryMock = vi.fn();
     const registry = {
       reload: vi.fn(),
       getByName: vi.fn(() => testAgentDefinition),
     };
+    let capturedTask: AgentTask | undefined;
     const manager = {
-      run: vi.fn(async () => ({
-        agentId: "agent-1",
-        agentName: "Explore",
-        status: "completed",
-        responseText: "Done",
-        transcriptPath: "/tmp/project/.pi/output/agents/agent-1.jsonl",
-        usage: {
-          input: 0,
-          output: 0,
-          cacheRead: 0,
-          cacheWrite: 0,
-          cost: 0,
-          contextTokens: 0,
-          turns: 0,
-        },
-      })),
+      run: vi.fn(async (task: AgentTask) => {
+        capturedTask = task;
+        return {
+          agentId: "agent-1",
+          agentName: "Explore",
+          status: "completed",
+          responseText: "Done",
+          sessionId: "child-session-1",
+          sessionPath: "/tmp/shared-sessions/child-session-1.jsonl",
+          usage: {
+            input: 0,
+            output: 0,
+            cacheRead: 0,
+            cacheWrite: 0,
+            cost: 0,
+            contextTokens: 0,
+            turns: 0,
+          },
+        };
+      }),
     };
 
     registerAgentTool(pi as never, registry as never, manager as never);
@@ -108,29 +114,106 @@ describe("registerAgentTool", () => {
       { agent: "Explore", prompt: "Inspect auth" },
       undefined,
       undefined,
-      { cwd: "/tmp/project" },
+      {
+        cwd: "/tmp/project",
+        sessionManager: {
+          getSessionId: () => "parent-session-1",
+          getSessionFile: () => "/tmp/shared-sessions/parent-session-1.jsonl",
+          appendCustomEntry: appendCustomEntryMock,
+        },
+      },
     );
 
-    expect(manager.run).toHaveBeenCalledWith({
+    expect(manager.run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentName: "Explore",
+        agentDefinition: testAgentDefinition,
+        prompt: "Inspect auth",
+        cwd: "/tmp/project",
+        mode: "foreground",
+        tools: ["read", "grep"],
+        model: undefined,
+        thinking: undefined,
+        maxTurns: undefined,
+        timeoutMs: undefined,
+        readOnly: true,
+        parentSession: {
+          sessionId: "parent-session-1",
+          sessionPath: "/tmp/shared-sessions/parent-session-1.jsonl",
+          cwd: "/tmp/project",
+        },
+      }),
+    );
+
+    const runTask = capturedTask;
+    if (!runTask?.parentSessionWriter) {
+      throw new Error("Expected parentSessionWriter to be attached to the delegated task");
+    }
+    runTask.parentSessionWriter.recordChildSessionStarted({
+      version: 1,
+      event: "started",
+      agentId: "agent-1",
       agentName: "Explore",
-      agentDefinition: testAgentDefinition,
-      prompt: "Inspect auth",
-      cwd: "/tmp/project",
       mode: "foreground",
-      tools: ["read", "grep"],
-      model: undefined,
-      thinking: undefined,
-      maxTurns: undefined,
-      timeoutMs: undefined,
-      readOnly: true,
+      title: "Explore",
+      childSessionId: "child-session-1",
+      childSessionPath: "/tmp/shared-sessions/child-session-1.jsonl",
+      parentSessionId: "parent-session-1",
+      parentSessionPath: "/tmp/shared-sessions/parent-session-1.jsonl",
+      createdAt: "2026-07-11T00:00:00.000Z",
     });
+    runTask.parentSessionWriter.recordChildSessionCompleted({
+      version: 1,
+      event: "completed",
+      agentId: "agent-1",
+      agentName: "Explore",
+      mode: "foreground",
+      title: "Explore",
+      childSessionId: "child-session-1",
+      childSessionPath: "/tmp/shared-sessions/child-session-1.jsonl",
+      status: "completed",
+      completedAt: "2026-07-11T00:01:00.000Z",
+      usage: {
+        input: 1,
+        output: 2,
+        cacheRead: 3,
+        cacheWrite: 4,
+        cost: 5,
+        contextTokens: 6,
+        turns: 7,
+      },
+    });
+
+    expect(appendCustomEntryMock).toHaveBeenNthCalledWith(
+      1,
+      "pi-subagent-child",
+      expect.objectContaining({
+        version: 1,
+        event: "started",
+        agentId: "agent-1",
+        childSessionId: "child-session-1",
+        childSessionPath: "/tmp/shared-sessions/child-session-1.jsonl",
+      }),
+    );
+    expect(appendCustomEntryMock).toHaveBeenNthCalledWith(
+      2,
+      "pi-subagent-child",
+      expect.objectContaining({
+        version: 1,
+        event: "completed",
+        agentId: "agent-1",
+        childSessionId: "child-session-1",
+        status: "completed",
+      }),
+    );
     expect(result).toEqual({
       content: [{ type: "text", text: "Done" }],
       details: {
         agentId: "agent-1",
         mode: "foreground",
+        sessionId: "child-session-1",
+        sessionPath: "/tmp/shared-sessions/child-session-1.jsonl",
         status: "completed",
-        transcriptPath: "/tmp/project/.pi/output/agents/agent-1.jsonl",
       },
     });
   });
@@ -154,8 +237,9 @@ describe("registerAgentTool", () => {
         details: {
           agentId: "agent-1",
           mode: "foreground",
+          sessionId: "child-session-1",
+          sessionPath: "/tmp/shared-sessions/child-session-1.jsonl",
           status: "completed",
-          transcriptPath: "/tmp/project/.pi/output/agents/agent-1.jsonl",
         },
       },
       { expanded: false, isPartial: false },
@@ -167,8 +251,9 @@ describe("registerAgentTool", () => {
         details: {
           agentId: "agent-1",
           mode: "foreground",
+          sessionId: "child-session-1",
+          sessionPath: "/tmp/shared-sessions/child-session-1.jsonl",
           status: "completed",
-          transcriptPath: "/tmp/project/.pi/output/agents/agent-1.jsonl",
         },
       },
       { expanded: true, isPartial: false },
@@ -178,5 +263,6 @@ describe("registerAgentTool", () => {
     expect(collapsedComponent.render(120).join("\n")).toContain("completed · agent-1");
     expect(collapsedComponent.render(120).join("\n")).not.toContain("Full sub-agent output");
     expect(expandedComponent.render(120).join("\n")).toContain("Full sub-agent output");
+    expect(expandedComponent.render(120).join("\n")).toContain("session: /tmp/shared-sessions/child-session-1.jsonl");
   });
 });

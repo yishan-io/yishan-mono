@@ -7,11 +7,18 @@ import {
   createAgentSessionServices,
 } from "@earendil-works/pi-coding-agent";
 
-import type { AgentDefinition } from "../agents/types";
+import type { AgentDefinition, AgentRunMode } from "../agents/types";
+import type { ChildSessionDescriptor, ParentSessionReference } from "./sessionRelationship";
+import { recordChildSessionMetadata } from "./sessionRelationship";
 
 /** Input required to create one isolated child agent session. */
 export interface CreateChildAgentSessionOptions {
+  agentId: string;
+  agentName: string;
   cwd: string;
+  mode: AgentRunMode;
+  parentSession?: ParentSessionReference;
+  childSessionDescriptor?: ChildSessionDescriptor;
   agentDefinition: AgentDefinition;
   model?: string;
   thinking?: ThinkingLevel;
@@ -22,10 +29,12 @@ export interface CreateChildAgentSessionOptions {
 export interface CreateChildAgentSessionResult {
   session: AgentSession;
   services: AgentSessionServices;
+  sessionId: string;
+  sessionPath?: string;
 }
 
 /**
- * Creates one isolated in-memory child agent session using Pi SDK session APIs.
+ * Creates one isolated persisted child agent session using Pi SDK session APIs.
  */
 export async function createChildAgentSession(
   options: CreateChildAgentSessionOptions,
@@ -39,8 +48,26 @@ export async function createChildAgentSession(
       appendSystemPrompt: [options.agentDefinition.systemPrompt],
     },
   });
-  const sessionManager = SessionManager.inMemory(options.cwd);
+  const sessionManager = SessionManager.create(options.cwd, undefined, {
+    parentSession: options.parentSession?.sessionPath,
+  });
   const resolvedModel = resolveModelSpecifier(services, options.model ?? options.agentDefinition.model);
+  const sessionId = sessionManager.getSessionId();
+  const sessionPath = sessionManager.getSessionFile();
+
+  recordChildSessionMetadata(sessionManager, {
+    version: 1,
+    sessionKind: "subagent",
+    agentId: options.agentId,
+    agentName: options.agentName,
+    mode: options.mode,
+    title: options.childSessionDescriptor?.title ?? options.agentName,
+    summary: options.childSessionDescriptor?.summary,
+    parentSessionId: options.parentSession?.sessionId,
+    parentSessionPath: options.parentSession?.sessionPath,
+    childSessionId: sessionId,
+    childSessionPath: sessionPath,
+  });
 
   const createdSession = await createAgentSessionFromServices({
     services,
@@ -53,6 +80,8 @@ export async function createChildAgentSession(
   return {
     session: createdSession.session,
     services,
+    sessionId,
+    sessionPath,
   };
 }
 
