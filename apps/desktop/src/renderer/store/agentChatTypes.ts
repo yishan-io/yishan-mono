@@ -17,6 +17,7 @@ export type AgentMessage = {
   toolCallId?: string;
   toolName?: string;
   isError?: boolean;
+  details?: Record<string, unknown>;
   /** Usage info from assistant messages. */
   usage?: {
     input: number;

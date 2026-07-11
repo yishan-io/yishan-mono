@@ -32,12 +32,22 @@ function shouldMergeToolResult(message: AgentMessageType, previous: DisplayMessa
     return false;
   }
   return (
-    message.role === "toolResult" && (message.toolName === "bash" || message.toolName === "read") && hasToolCall(previous.message, message.toolCallId)
+    message.role === "toolResult" &&
+    (message.toolName === "bash" ||
+      message.toolName === "read" ||
+      message.toolName === "edit" ||
+      message.toolName === "write") &&
+    hasToolCall(previous.message, message.toolCallId)
   );
 }
 
 /** Renders the agent chat message list without virtualization to support dynamic row heights safely. */
-export function AgentMessageList({ messages, trailingMessage = null, emptyPrompt, workspacePath }: AgentMessageListProps) {
+export function AgentMessageList({
+  messages,
+  trailingMessage = null,
+  emptyPrompt,
+  workspacePath,
+}: AgentMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const displayMessages = useMemo(() => {
     const source = trailingMessage ? [...messages, trailingMessage] : messages;
@@ -106,7 +116,12 @@ export function AgentMessageList({ messages, trailingMessage = null, emptyPrompt
         }}
       >
         {displayMessages.map(({ message, mergedToolResults }) => (
-          <AgentMessage key={message.id} message={message} mergedToolResults={mergedToolResults} workspacePath={workspacePath} />
+          <AgentMessage
+            key={message.id}
+            message={message}
+            mergedToolResults={mergedToolResults}
+            workspacePath={workspacePath}
+          />
         ))}
       </Box>
     </Box>

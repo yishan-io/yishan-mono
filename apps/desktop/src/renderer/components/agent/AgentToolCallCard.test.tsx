@@ -1,0 +1,156 @@
+// @vitest-environment jsdom
+
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { AgentContentBlock, AgentMessage } from "../../store/agentChatTypes";
+import { AgentToolCallCard } from "./AgentToolCallCard";
+
+const { getSingularPatchMock, parseDiffFromFileMock } = vi.hoisted(() => ({
+  getSingularPatchMock: vi.fn(() => ({
+    name: "src/example.ts",
+    type: "modified",
+    hunks: [],
+    splitLineCount: 0,
+    unifiedLineCount: 0,
+    isPartial: true,
+    deletionLines: [],
+    additionLines: [],
+  })),
+  parseDiffFromFileMock: vi.fn(() => ({
+    name: "src/example.ts",
+    type: "added",
+    hunks: [],
+    splitLineCount: 0,
+    unifiedLineCount: 0,
+    isPartial: false,
+    deletionLines: [],
+    additionLines: ["new line"],
+  })),
+}));
+
+vi.mock("@pierre/diffs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pierre/diffs")>();
+  return {
+    ...actual,
+    getSingularPatch: getSingularPatchMock,
+    parseDiffFromFile: parseDiffFromFileMock,
+  };
+});
+
+vi.mock("@pierre/diffs/react", () => ({
+  FileDiff: ({
+    fileDiff,
+    options,
+  }: {
+    fileDiff: { name: string };
+    options?: { disableFileHeader?: boolean };
+  }) => (
+    <div data-testid="edit-tool-file-diff" data-disable-file-header={String(options?.disableFileHeader)}>
+      {fileDiff.name}
+    </div>
+  ),
+}));
+
+afterEach(() => {
+  cleanup();
+  getSingularPatchMock.mockClear();
+  parseDiffFromFileMock.mockClear();
+});
+
+function buildDiffResult(toolName: "edit" | "write") {
+  return {
+    id: `result-${toolName}`,
+    role: "toolResult",
+    toolCallId: `tool-${toolName}`,
+    toolName,
+    content: "updated file",
+    details: {
+      patch: [
+        "diff --git a/src/example.ts b/src/example.ts",
+        "index 1111111..2222222 100644",
+        "--- a/src/example.ts",
+        "+++ b/src/example.ts",
+        "@@ -1 +1 @@",
+        "-old line",
+        "+new line",
+      ].join("\n"),
+    },
+  } as AgentMessage & { details: { patch: string } };
+}
+
+describe("AgentToolCallCard", () => {
+  it("renders edit tool patches with the diff viewer", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-edit",
+      name: "edit",
+      arguments: {
+        path: "src/example.ts",
+      },
+    };
+
+    render(<AgentToolCallCard toolCall={toolCall} result={buildDiffResult("edit")} />);
+
+    fireEvent.click(screen.getByText("Edit: src/example.ts +1 -1"));
+
+    const diff = screen.getByTestId("edit-tool-file-diff");
+
+    expect(diff.textContent).toContain("src/example.ts");
+    expect(diff.getAttribute("data-disable-file-header")).toBe("true");
+  });
+
+  it("renders write tool patches with the diff viewer", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-write",
+      name: "write",
+      arguments: {
+        path: "src/example.ts",
+      },
+    };
+
+    render(<AgentToolCallCard toolCall={toolCall} result={buildDiffResult("write")} />);
+
+    fireEvent.click(screen.getByText("Write: src/example.ts +1 -1"));
+
+    const diff = screen.getByTestId("edit-tool-file-diff");
+
+    expect(diff.textContent).toContain("src/example.ts");
+    expect(diff.getAttribute("data-disable-file-header")).toBe("true");
+    expect(getSingularPatchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders a synthetic new-file diff for write tool results without patch metadata", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-write-new-file",
+      name: "write",
+      arguments: {
+        path: "src/example.ts",
+        content: "new line",
+      },
+    };
+
+    const result = {
+      id: "result-write-new-file",
+      role: "toolResult",
+      toolCallId: "tool-write-new-file",
+      toolName: "write",
+      content: "updated file",
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+    fireEvent.click(screen.getByText("Write: src/example.ts"));
+
+    const diff = screen.getByTestId("edit-tool-file-diff");
+
+    expect(diff.textContent).toContain("src/example.ts");
+    expect(diff.getAttribute("data-disable-file-header")).toBe("true");
+    expect(parseDiffFromFileMock).toHaveBeenCalledTimes(1);
+    expect(parseDiffFromFileMock).toHaveBeenCalledWith(
+      { name: "src/example.ts", contents: "" },
+      { name: "src/example.ts", contents: "new line" },
+    );
+  });
+});
