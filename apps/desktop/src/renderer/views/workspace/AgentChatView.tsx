@@ -1,5 +1,5 @@
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
-import { useCallback, useEffect, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo } from "react";
 import {
   abortAgent,
   ensurePiSession,
@@ -31,8 +31,7 @@ type AgentChatViewProps = {
   piSessionId?: string;
 };
 
-/** Full agent chat tab: session bar, message list, composer, model selector. */
-export function AgentChatView({ tabId, workspaceId, cwd, piSessionId }: AgentChatViewProps) {
+function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId }: AgentChatViewProps) {
   const session = agentChatStore((s) => s.sessionsByTabId[tabId]);
   const slashCommands = useAgentChatSlashCommands();
 
@@ -229,3 +228,9 @@ export function AgentChatView({ tabId, workspaceId, cwd, piSessionId }: AgentCha
     </Box>
   );
 }
+
+const MemoizedAgentChatView = memo(AgentChatViewComponent);
+MemoizedAgentChatView.displayName = "AgentChatView";
+
+/** Full agent chat tab: session bar, message list, composer, model selector. */
+export const AgentChatView = MemoizedAgentChatView;

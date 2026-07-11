@@ -1,44 +1,32 @@
-import { useEffect, useMemo, useState } from "react";
-import { listSkills } from "../../commands/skillCommands";
+import { useEffect, useState } from "react";
 import type { RichComposerSlashCommand } from "../../components/RichComposer";
-import type { SkillInfo } from "../../rpc/daemonTypes";
-import { buildSubagentSlashCommands } from "./agentChatSlashCommandCatalog";
+import { getCachedAgentChatSlashCommands, loadAgentChatSlashCommands } from "./agentChatSlashCommandCache";
 
 /** Loads slash command suggestions for agent chat skills and sub-agents. */
 export function useAgentChatSlashCommands(): RichComposerSlashCommand[] {
-  const [skills, setSkills] = useState<SkillInfo[]>([]);
+  const [slashCommands, setSlashCommands] = useState<RichComposerSlashCommand[]>(
+    () => getCachedAgentChatSlashCommands() ?? [],
+  );
 
   useEffect(() => {
     let isDisposed = false;
 
-    listSkills()
-      .then((nextSkills) => {
-        if (!isDisposed) {
-          setSkills(nextSkills);
-        }
-      })
-      .catch(() => {
-        if (!isDisposed) {
-          setSkills([]);
-        }
-      });
+    if (slashCommands.length > 0) {
+      return () => {
+        isDisposed = true;
+      };
+    }
+
+    loadAgentChatSlashCommands().then((nextSlashCommands) => {
+      if (!isDisposed) {
+        setSlashCommands(nextSlashCommands);
+      }
+    });
 
     return () => {
       isDisposed = true;
     };
-  }, []);
+  }, [slashCommands.length]);
 
-  return useMemo(() => {
-    const skillCommands: RichComposerSlashCommand[] = [...skills]
-      .sort((leftSkill, rightSkill) => leftSkill.name.localeCompare(rightSkill.name))
-      .map((skill) => ({
-        id: `skill:${skill.name}`,
-        category: "skill",
-        title: `/${skill.name}`,
-        description: skill.description,
-        searchText: skill.name,
-      }));
-
-    return [...skillCommands, ...buildSubagentSlashCommands()];
-  }, [skills]);
+  return slashCommands;
 }

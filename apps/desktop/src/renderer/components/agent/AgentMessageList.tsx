@@ -1,9 +1,12 @@
 import { Box, Typography } from "@mui/material";
-import { useEffect, useMemo, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AgentContentBlock, AgentMessage as AgentMessageType } from "../../store/agentChatTypes";
 import { AgentMessage, type AgentToolResultMap } from "./AgentMessage";
 
 const EMPTY_MIN_HEIGHT = 320;
+const ESTIMATED_MESSAGE_HEIGHT_PX = 160;
+const MESSAGE_LIST_OVERSCAN = 6;
 
 type AgentMessageListProps = {
   messages: AgentMessageType[];
@@ -42,14 +45,14 @@ function shouldMergeToolResult(message: AgentMessageType, previous: DisplayMessa
   );
 }
 
-/** Renders the agent chat message list without virtualization to support dynamic row heights safely. */
-export function AgentMessageList({
+function AgentMessageListComponent({
   messages,
   trailingMessage = null,
   emptyPrompt,
   workspacePath,
 }: AgentMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [viewportHeight, setViewportHeight] = useState(0);
   const displayMessages = useMemo(() => {
     const source = trailingMessage ? [...messages, trailingMessage] : messages;
     return source.reduce<DisplayMessage[]>((acc, message, index) => {
@@ -67,6 +70,41 @@ export function AgentMessageList({
     }, []);
   }, [messages, trailingMessage]);
 
+  const rowVirtualizer = useVirtualizer({
+    count: displayMessages.length,
+    getScrollElement: () => scrollRef.current,
+    getItemKey: (index) => displayMessages[index]?.message.id ?? index,
+    estimateSize: () => ESTIMATED_MESSAGE_HEIGHT_PX,
+    overscan: MESSAGE_LIST_OVERSCAN,
+    measureElement: (element) => element.getBoundingClientRect().height,
+  });
+
+  useLayoutEffect(() => {
+    const element = scrollRef.current;
+    if (!element) {
+      return;
+    }
+
+    const updateViewportHeight = () => {
+      setViewportHeight(element.clientHeight);
+    };
+
+    updateViewportHeight();
+
+    if (typeof ResizeObserver !== "function") {
+      return;
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateViewportHeight();
+    });
+    resizeObserver.observe(element);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   useEffect(() => {
     const element = scrollRef.current;
     if (!element || displayMessages.length === 0) {
@@ -74,13 +112,13 @@ export function AgentMessageList({
     }
 
     const frameId = window.requestAnimationFrame(() => {
-      element.scrollTop = element.scrollHeight;
+      rowVirtualizer.scrollToIndex(displayMessages.length - 1, { align: "end" });
     });
 
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [displayMessages]);
+  }, [displayMessages.length, rowVirtualizer]);
 
   if (displayMessages.length === 0) {
     return (
@@ -101,6 +139,10 @@ export function AgentMessageList({
     );
   }
 
+  const totalHeight = rowVirtualizer.getTotalSize();
+  const contentHeight = Math.max(totalHeight, viewportHeight);
+  const verticalOffset = Math.max(0, contentHeight - totalHeight);
+
   return (
     <Box
       ref={scrollRef}
@@ -111,25 +153,44 @@ export function AgentMessageList({
         py: 1,
       }}
     >
-      <Box
-        sx={{
-          minHeight: "100%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "flex-end",
-          gap: 1,
-        }}
-      >
-        {displayMessages.map(({ message, mergedToolResults, isStreaming }) => (
-          <AgentMessage
-            key={message.id}
-            message={message}
-            mergedToolResults={mergedToolResults}
-            workspacePath={workspacePath}
-            isStreaming={isStreaming}
-          />
-        ))}
+      <Box sx={{ height: contentHeight, position: "relative" }}>
+        {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+          const displayMessage = displayMessages[virtualItem.index];
+          if (!displayMessage) {
+            return null;
+          }
+
+          const { message, mergedToolResults, isStreaming } = displayMessage;
+
+          return (
+            <Box
+              key={virtualItem.key}
+              ref={rowVirtualizer.measureElement}
+              data-index={virtualItem.index}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${verticalOffset + virtualItem.start}px)`,
+              }}
+            >
+              <AgentMessage
+                message={message}
+                mergedToolResults={mergedToolResults}
+                workspacePath={workspacePath}
+                isStreaming={isStreaming}
+              />
+            </Box>
+          );
+        })}
       </Box>
     </Box>
   );
 }
+
+const MemoizedAgentMessageList = memo(AgentMessageListComponent);
+MemoizedAgentMessageList.displayName = "AgentMessageList";
+
+/** Renders the agent chat message list with virtualization for large transcripts. */
+export const AgentMessageList = MemoizedAgentMessageList;
