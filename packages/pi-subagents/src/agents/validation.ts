@@ -5,7 +5,17 @@ import type { AgentDefinition, AgentDefinitionDiagnostic, AgentDefinitionSource 
 const ALLOWED_THINKING_LEVELS: readonly ThinkingLevel[] = ["off", "minimal", "low", "medium", "high", "xhigh"];
 
 /** Built-in tool names recognized by the initial MVP loader validation. */
-export const DEFAULT_ALLOWED_TOOL_NAMES = ["read", "write", "edit", "bash", "grep", "find", "ls", "glob", "apply_patch"] as const;
+export const DEFAULT_ALLOWED_TOOL_NAMES = [
+  "read",
+  "write",
+  "edit",
+  "bash",
+  "grep",
+  "find",
+  "ls",
+  "glob",
+  "apply_patch",
+] as const;
 
 /** Raw frontmatter shape accepted before validation and normalization. */
 export interface AgentFrontmatter extends Record<string, unknown> {

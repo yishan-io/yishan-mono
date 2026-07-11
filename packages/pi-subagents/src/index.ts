@@ -52,4 +52,3 @@ export {
   type CreateChildAgentSessionOptions,
   type CreateChildAgentSessionResult,
 } from "./runtime/sessionFactory";
-export { writeAgentTranscript, type WriteAgentTranscriptOptions } from "./runtime/transcript";

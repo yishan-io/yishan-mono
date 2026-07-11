@@ -1,23 +1,30 @@
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createChildAgentSessionMock, writeAgentTranscriptMock } = vi.hoisted(() => ({
+const { createChildAgentSessionMock } = vi.hoisted(() => ({
   createChildAgentSessionMock: vi.fn(),
-  writeAgentTranscriptMock: vi.fn(),
 }));
 
 vi.mock("./sessionFactory", () => ({
   createChildAgentSession: createChildAgentSessionMock,
 }));
 
-vi.mock("./transcript", () => ({
-  writeAgentTranscript: writeAgentTranscriptMock,
-}));
-
 import { startAgentRun } from "./agentRunner";
 
-function createMockSession(options: { abortRejects?: boolean } = {}) {
+const tempDirs: string[] = [];
+
+function createTempDir(): string {
+  const tempDir = mkdtempSync(join(tmpdir(), "pi-subagents-runner-"));
+  tempDirs.push(tempDir);
+  return tempDir;
+}
+
+function createMockSession(options: { abortRejects?: boolean; sessionPath?: string } = {}) {
   let listener: ((event: { type: string }) => void) | undefined;
   let resolvePrompt: (() => void) | undefined;
+  const sessionPath = options.sessionPath ?? "/tmp/shared-sessions/child-session-1.jsonl";
   const abortMock = vi.fn(async () => {
     resolvePrompt?.();
     if (options.abortRejects) {
@@ -40,8 +47,17 @@ function createMockSession(options: { abortRejects?: boolean } = {}) {
       },
     ],
     sessionManager: {
-      getHeader: () => ({ type: "session", id: "session-1", timestamp: 1, cwd: "/tmp/project" }),
-      getEntries: () => [{ id: "entry-1", parentId: null, type: "session_info", timestamp: 2, name: "Test" }],
+      getSessionId: () => "child-session-1",
+      getSessionFile: () => sessionPath,
+      getHeader: () => ({
+        type: "session",
+        id: "child-session-1",
+        timestamp: "2026-07-11T00:00:00.000Z",
+        cwd: "/tmp/project",
+      }),
+      getEntries: () => [
+        { id: "entry-1", parentId: null, type: "session_info", timestamp: "2026-07-11T00:00:01.000Z", name: "Test" },
+      ],
     },
     subscribe(nextListener: (event: { type: string }) => void) {
       listener = nextListener;
@@ -62,24 +78,37 @@ function createMockSession(options: { abortRejects?: boolean } = {}) {
     },
   };
 
-  return { session, abortMock };
+  return { session, abortMock, sessionPath };
 }
 
 describe("startAgentRun", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    writeAgentTranscriptMock.mockResolvedValue("/tmp/project/.pi/output/agents/agent-1.jsonl");
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    while (tempDirs.length > 0) {
+      const tempDir = tempDirs.pop();
+      if (tempDir) {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    }
   });
 
-  it("completes a run and collects usage plus transcript metadata", async () => {
-    const { session } = createMockSession();
+  it("completes a run, persists the child session, and records parent-child metadata", async () => {
+    const tempDir = createTempDir();
+    const sessionPath = join(tempDir, "child-session-1.jsonl");
+    const { session } = createMockSession({ sessionPath });
+    const parentSessionWriter = {
+      recordChildSessionStarted: vi.fn(),
+      recordChildSessionCompleted: vi.fn(),
+    };
     createChildAgentSessionMock.mockResolvedValue({
       session,
       services: {},
+      sessionId: "child-session-1",
+      sessionPath,
     });
 
     const handle = await startAgentRun({
@@ -87,6 +116,13 @@ describe("startAgentRun", () => {
       agentName: "Explore",
       prompt: "Inspect auth",
       cwd: "/tmp/project",
+      mode: "foreground",
+      parentSession: {
+        sessionId: "parent-session-1",
+        sessionPath: "/tmp/shared-sessions/parent-session-1.jsonl",
+        cwd: "/tmp/project",
+      },
+      parentSessionWriter,
       agentDefinition: {
         name: "Explore",
         description: "Search the codebase",
@@ -98,18 +134,34 @@ describe("startAgentRun", () => {
     session.abort();
     const result = await handle.completion;
 
-    expect(writeAgentTranscriptMock).toHaveBeenCalledWith({
-      cwd: "/tmp/project",
-      agentId: "agent-1",
-      header: { type: "session", id: "session-1", timestamp: 1, cwd: "/tmp/project" },
-      entries: [{ id: "entry-1", parentId: null, type: "session_info", timestamp: 2, name: "Test" }],
-    });
+    expect(parentSessionWriter.recordChildSessionStarted).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentId: "agent-1",
+        agentName: "Explore",
+        mode: "foreground",
+        childSessionId: "child-session-1",
+        childSessionPath: sessionPath,
+        parentSessionId: "parent-session-1",
+        parentSessionPath: "/tmp/shared-sessions/parent-session-1.jsonl",
+      }),
+    );
+    expect(parentSessionWriter.recordChildSessionCompleted).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentId: "agent-1",
+        agentName: "Explore",
+        mode: "foreground",
+        childSessionId: "child-session-1",
+        childSessionPath: sessionPath,
+        status: "completed",
+      }),
+    );
     expect(result).toEqual({
       agentId: "agent-1",
       agentName: "Explore",
       status: "completed",
       responseText: "Final answer",
-      transcriptPath: "/tmp/project/.pi/output/agents/agent-1.jsonl",
+      sessionId: "child-session-1",
+      sessionPath,
       usage: {
         input: 10,
         output: 5,
@@ -120,14 +172,20 @@ describe("startAgentRun", () => {
         turns: 1,
       },
     });
+    expect(existsSync(sessionPath)).toBe(true);
+    expect(readFileSync(sessionPath, "utf8")).toBe(
+      `${JSON.stringify({ type: "session", id: "child-session-1", timestamp: "2026-07-11T00:00:00.000Z", cwd: "/tmp/project" })}\n${JSON.stringify({ id: "entry-1", parentId: null, type: "session_info", timestamp: "2026-07-11T00:00:01.000Z", name: "Test" })}\n`,
+    );
     expect(session.dispose).toHaveBeenCalledTimes(1);
   });
 
   it("supports steering and cancellation", async () => {
-    const { session, abortMock } = createMockSession();
+    const { session, abortMock, sessionPath } = createMockSession();
     createChildAgentSessionMock.mockResolvedValue({
       session,
       services: {},
+      sessionId: "child-session-1",
+      sessionPath,
     });
 
     const handle = await startAgentRun({
@@ -135,6 +193,7 @@ describe("startAgentRun", () => {
       agentName: "General",
       prompt: "Implement auth",
       cwd: "/tmp/project",
+      mode: "foreground",
       agentDefinition: {
         name: "General",
         description: "Implement code",
@@ -154,15 +213,19 @@ describe("startAgentRun", () => {
       agentName: "General",
       status: "cancelled",
       error: "Agent run was cancelled",
+      sessionId: "child-session-1",
+      sessionPath,
     });
   });
 
   it("fails timed out runs and swallows abort rejections", async () => {
     vi.useFakeTimers();
-    const { session, abortMock } = createMockSession({ abortRejects: true });
+    const { session, abortMock, sessionPath } = createMockSession({ abortRejects: true });
     createChildAgentSessionMock.mockResolvedValue({
       session,
       services: {},
+      sessionId: "child-session-1",
+      sessionPath,
     });
 
     const handle = await startAgentRun({
@@ -170,6 +233,7 @@ describe("startAgentRun", () => {
       agentName: "Explore",
       prompt: "Inspect auth",
       cwd: "/tmp/project",
+      mode: "foreground",
       timeoutMs: 50,
       agentDefinition: {
         name: "Explore",
@@ -188,14 +252,18 @@ describe("startAgentRun", () => {
       agentName: "Explore",
       status: "failed",
       error: "Agent run timed out",
+      sessionId: "child-session-1",
+      sessionPath,
     });
   });
 
   it("fails runs that exceed the configured max turns", async () => {
-    const { session, abortMock } = createMockSession();
+    const { session, abortMock, sessionPath } = createMockSession();
     createChildAgentSessionMock.mockResolvedValue({
       session,
       services: {},
+      sessionId: "child-session-1",
+      sessionPath,
     });
 
     const handle = await startAgentRun({
@@ -203,6 +271,7 @@ describe("startAgentRun", () => {
       agentName: "General",
       prompt: "Implement auth work",
       cwd: "/tmp/project",
+      mode: "foreground",
       maxTurns: 2,
       agentDefinition: {
         name: "General",
@@ -222,6 +291,8 @@ describe("startAgentRun", () => {
       agentName: "General",
       status: "failed",
       error: "Agent run exceeded max turns (2)",
+      sessionId: "child-session-1",
+      sessionPath,
     });
   });
 });

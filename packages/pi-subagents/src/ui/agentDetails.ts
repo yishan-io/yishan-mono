@@ -24,9 +24,9 @@ export function renderSelectedAgentDetails(ui: ExtensionUIContext, record: Agent
     lines.push(...activityLines.map((line) => ui.theme.fg("text", line)));
   }
 
-  if (record.transcriptPath) {
+  if (record.sessionPath) {
     lines.push("");
-    lines.push(ui.theme.fg("dim", `transcript: ${record.transcriptPath}`));
+    lines.push(ui.theme.fg("dim", `session: ${record.sessionPath}`));
   }
 
   lines.push("");

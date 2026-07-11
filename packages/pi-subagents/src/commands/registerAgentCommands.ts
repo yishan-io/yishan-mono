@@ -5,6 +5,7 @@ import type { AgentRegistry } from "../agents/registry";
 import type { AgentTask } from "../agents/types";
 import type { AgentManager } from "../runtime/agentManager";
 import { buildAgentTask } from "../runtime/buildAgentTask";
+import { createParentSessionWriter, getParentSessionReference } from "../runtime/sessionRelationship";
 
 const AGENT_SEND_PROMPT_HEADER = "The following sub-agents completed their tasks.";
 const AGENT_SEND_PROMPT_FOOTER = "Review the findings, resolve conflicts, and produce the final response.";
@@ -58,6 +59,8 @@ export function registerAgentCommands(pi: ExtensionAPI, registry: AgentRegistry,
         cwd: ctx.cwd,
         mode: parsedArguments.isBackground ? "background" : "foreground",
       });
+      task.parentSession = getParentSessionReference(ctx.sessionManager, ctx.cwd);
+      task.parentSessionWriter = createParentSessionWriter(ctx.sessionManager);
 
       if (parsedArguments.isBackground) {
         const agentId = await manager.runInBackground(task);
@@ -91,7 +94,7 @@ export function registerAgentCommands(pi: ExtensionAPI, registry: AgentRegistry,
         `status: ${record.status}`,
         record.responseText ? `response: ${record.responseText}` : undefined,
         record.error ? `error: ${record.error}` : undefined,
-        record.transcriptPath ? `transcript: ${record.transcriptPath}` : undefined,
+        record.sessionPath ? `session: ${record.sessionPath}` : undefined,
       ]
         .filter((line): line is string => Boolean(line))
         .join("\n");

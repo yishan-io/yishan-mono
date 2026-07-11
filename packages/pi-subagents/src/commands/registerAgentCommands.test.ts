@@ -47,22 +47,38 @@ describe("registerAgentCommands", () => {
 
     await command.handler("Explore --background inspect auth", {
       cwd: "/tmp/project",
+      sessionManager: {
+        getSessionId: () => "parent-session-1",
+        getSessionFile: () => "/tmp/shared-sessions/parent-session-1.jsonl",
+        appendCustomEntry: vi.fn(),
+      },
       ui: { notify },
     });
 
-    expect(manager.runInBackground).toHaveBeenCalledWith({
-      agentName: "Explore",
-      agentDefinition: testAgentDefinition,
-      prompt: "inspect auth",
-      cwd: "/tmp/project",
-      mode: "background",
-      tools: ["read", "grep"],
-      model: undefined,
-      thinking: undefined,
-      maxTurns: undefined,
-      timeoutMs: undefined,
-      readOnly: true,
-    });
+    expect(manager.runInBackground).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentName: "Explore",
+        agentDefinition: testAgentDefinition,
+        prompt: "inspect auth",
+        cwd: "/tmp/project",
+        mode: "background",
+        parentSession: {
+          sessionId: "parent-session-1",
+          sessionPath: "/tmp/shared-sessions/parent-session-1.jsonl",
+          cwd: "/tmp/project",
+        },
+        childSessionDescriptor: {
+          title: "Explore — inspect auth",
+          summary: "inspect auth",
+        },
+        tools: ["read", "grep"],
+        model: undefined,
+        thinking: undefined,
+        maxTurns: undefined,
+        timeoutMs: undefined,
+        readOnly: true,
+      }),
+    );
     expect(notify).toHaveBeenCalledWith("Started Explore as agent-1", "info");
   });
 

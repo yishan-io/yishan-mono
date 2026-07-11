@@ -64,7 +64,8 @@ describe("AgentManager", () => {
           agentName: "Explore",
           status: "completed",
           responseText: "Done",
-          transcriptPath: "/tmp/project/.pi/output/agents/agent-fixed.jsonl",
+          sessionId: "child-session-1",
+          sessionPath: "/tmp/shared-sessions/child-session-1.jsonl",
           usage: {
             input: 1,
             output: 2,
@@ -90,8 +91,9 @@ describe("AgentManager", () => {
     expect(record).toMatchObject({
       agentName: "Explore",
       status: "completed",
+      sessionId: "child-session-1",
+      sessionPath: "/tmp/shared-sessions/child-session-1.jsonl",
       responseText: "Done",
-      transcriptPath: "/tmp/project/.pi/output/agents/agent-fixed.jsonl",
       usage: {
         input: 1,
         output: 2,
@@ -102,6 +104,28 @@ describe("AgentManager", () => {
         turns: 1,
       },
     });
+  });
+
+  it("marks runs failed when createAgentRun rejects", async () => {
+    const createAgentRun = vi.fn(async () => {
+      throw new Error("persist failed");
+    });
+    const agentManager = new AgentManager({ createAgentRun });
+
+    const result = await agentManager.run(createTask());
+
+    expect(result).toMatchObject({
+      agentName: "Explore",
+      status: "failed",
+      error: "persist failed",
+    });
+    expect(agentManager.list()).toEqual([
+      expect.objectContaining({
+        agentName: "Explore",
+        status: "failed",
+        error: "persist failed",
+      }),
+    ]);
   });
 
   it("emits snapshot updates when agent status changes", async () => {
