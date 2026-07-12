@@ -1,6 +1,7 @@
 package setup
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,10 +9,34 @@ import (
 	"yishan/apps/cli/internal/config"
 )
 
+//go:embed assets/pi-agent/APPEND_SYSTEM.md
+var managedPiAppendSystemContent string
+
+//go:embed assets/pi-agent/keybindings.json
+var managedPiKeybindingsContent string
+
 var managedPiAgentFileNames = []string{"general.md", "explore.md", "builder.md", "code-reviewer.md", "plan-reviewer.md", "task-reviewer.md"}
 var staleManagedPiAgentFileNames = []string{"Planner.md", "Reviewer.md"}
+var managedPiRootFiles = []managedPiRootFile{
+	{name: "APPEND_SYSTEM.md", content: managedPiAppendSystemContent, mode: 0o644},
+	{name: "keybindings.json", content: managedPiKeybindingsContent, mode: 0o644},
+}
+
+type managedPiRootFile struct {
+	name    string
+	content string
+	mode    os.FileMode
+}
 
 func ensureManagedPiAgents() error {
+	targetRootDir, err := config.ManagedPiAgentDir()
+	if err != nil {
+		return fmt.Errorf("resolve managed pi agent dir: %w", err)
+	}
+	if err := syncManagedPiRootFiles(targetRootDir); err != nil {
+		return err
+	}
+
 	sourceDir, err := managedPiSubagentsAgentsDir()
 	if err != nil {
 		return err
@@ -21,6 +46,15 @@ func ensureManagedPiAgents() error {
 		return fmt.Errorf("resolve managed pi agents dir: %w", err)
 	}
 	return syncManagedPiAgentFiles(sourceDir, targetDir)
+}
+
+func syncManagedPiRootFiles(targetDir string) error {
+	for _, file := range managedPiRootFiles {
+		if err := writeTextFileIfChanged(filepath.Join(targetDir, file.name), file.content, file.mode); err != nil {
+			return fmt.Errorf("write managed pi root file %s: %w", file.name, err)
+		}
+	}
+	return nil
 }
 
 func syncManagedPiAgentFiles(sourceDir string, targetDir string) error {
