@@ -30,6 +30,13 @@ function buildAssistantThinkingMessage(): AgentMessageType {
   };
 }
 
+function formatExpectedMessageTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 describe("AgentMessage", () => {
   it("does not render a duplicate responding spinner for empty streaming assistant messages", () => {
     render(
@@ -110,5 +117,41 @@ describe("AgentMessage", () => {
     expect(screen.getByText("brainstorm")).toBeTruthy();
     expect(screen.getByText("how it works")).toBeTruthy();
     expect(screen.queryByText("skill body")).toBeNull();
+  });
+
+  it("shows a human-readable timestamp beside assistant duration metadata", () => {
+    const timestamp = Date.UTC(2026, 6, 12, 13, 5, 0);
+
+    render(
+      <AgentMessage
+        message={{
+          id: "assistant-metadata-1",
+          role: "assistant",
+          content: [{ type: "text", text: "done" }],
+          timestamp,
+          durationMs: 1500,
+        }}
+      />,
+    );
+
+    expect(screen.getByText(formatExpectedMessageTime(timestamp))).toBeTruthy();
+    expect(screen.getByText("time took: 1.5s")).toBeTruthy();
+  });
+
+  it("shows a human-readable timestamp for non-assistant messages", () => {
+    const timestamp = Date.UTC(2026, 6, 12, 13, 6, 0);
+
+    render(
+      <AgentMessage
+        message={{
+          id: "user-timestamp-1",
+          role: "user",
+          content: "hello",
+          timestamp,
+        }}
+      />,
+    );
+
+    expect(screen.getByText(formatExpectedMessageTime(timestamp))).toBeTruthy();
   });
 });

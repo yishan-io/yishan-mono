@@ -27,35 +27,38 @@ afterEach(() => {
 });
 
 describe("AgentMessageList", () => {
-  it("merges write tool results into the preceding assistant tool call", () => {
-    const messages: AgentMessageType[] = [
-      {
-        id: "assistant-1",
-        role: "assistant",
-        content: [
-          {
-            type: "toolCall",
-            id: "tool-write-1",
-            name: "write",
-            arguments: { path: "src/example.ts" },
-          },
-        ],
-      },
-      {
-        id: "tool-result-1",
-        role: "toolResult",
-        toolCallId: "tool-write-1",
-        toolName: "write",
-        content: "Successfully wrote 10 bytes",
-      },
-    ];
+  it.each(["write", "memory_search", "memory_store"] as const)(
+    "merges %s tool results into the preceding assistant tool call",
+    (toolName) => {
+      const messages: AgentMessageType[] = [
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: [
+            {
+              type: "toolCall",
+              id: "tool-1",
+              name: toolName,
+              arguments: { path: "src/example.ts" },
+            },
+          ],
+        },
+        {
+          id: "tool-result-1",
+          role: "toolResult",
+          toolCallId: "tool-1",
+          toolName,
+          content: "tool result",
+        },
+      ];
 
-    render(<AgentMessageList tabId="tab-1" isActive messages={messages} emptyPrompt="empty" />);
+      render(<AgentMessageList tabId="tab-1" isActive messages={messages} emptyPrompt="empty" />);
 
-    expect(screen.getAllByTestId("agent-message-row")).toHaveLength(1);
-    expect(screen.getByTestId("merged-count-assistant-1").textContent).toBe("1");
-    expect(screen.queryByText("tool-result-1")).toBeNull();
-  });
+      expect(screen.getAllByTestId("agent-message-row")).toHaveLength(1);
+      expect(screen.getByTestId("merged-count-assistant-1").textContent).toBe("1");
+      expect(screen.queryByText("tool-result-1")).toBeNull();
+    },
+  );
 
   it("shows a working indicator while the turn is still running without a trailing streaming message", () => {
     render(

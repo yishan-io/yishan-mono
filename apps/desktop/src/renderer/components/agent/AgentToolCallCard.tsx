@@ -4,7 +4,16 @@ import { getSingularPatch, parseDiffFromFile } from "@pierre/diffs";
 import type { FileDiffMetadata } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
 import { useMemo, useState } from "react";
-import { LuBookOpen, LuChevronDown, LuChevronUp, LuFilePlus2, LuPencil, LuSquareTerminal } from "react-icons/lu";
+import {
+  LuBookOpen,
+  LuChevronDown,
+  LuChevronUp,
+  LuDatabase,
+  LuFilePlus2,
+  LuPencil,
+  LuSearch,
+  LuSquareTerminal,
+} from "react-icons/lu";
 import { YISHAN_DIFF_THEME_DARK, YISHAN_DIFF_THEME_LIGHT, getDiffCssVariables } from "../../helpers/diffTheme";
 import type { AgentContentBlock, AgentMessage } from "../../store/agentChatTypes";
 
@@ -17,6 +26,7 @@ type ToolPathSummaryProps = {
   icon: React.ReactNode;
   path: string;
   suffix?: React.ReactNode;
+  inlineSuffix?: boolean;
 };
 
 function extractResultText(message: AgentMessage | null | undefined): string {
@@ -36,6 +46,21 @@ type DiffStats = {
   added: number;
   removed: number;
 };
+
+type ReadSummary = {
+  pathLabel: string;
+  lineRange: string | null;
+};
+
+function getPathBaseName(filePath: string): string {
+  const normalizedPath = filePath.trim().replace(/[\\/]+$/, "");
+  if (normalizedPath.length === 0) {
+    return filePath;
+  }
+
+  const pathSegments = normalizedPath.split(/[\\/]/);
+  return pathSegments[pathSegments.length - 1] ?? filePath;
+}
 
 function getDiffStats(patch: string): DiffStats | null {
   let added = 0;
@@ -60,6 +85,31 @@ function parseToolDiff(patch: string): FileDiffMetadata | null {
   }
 }
 
+function parsePositiveLineNumber(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+    return null;
+  }
+
+  return value;
+}
+
+function buildReadSummary(path: string, offset: unknown, limit: unknown): ReadSummary {
+  const startLine = parsePositiveLineNumber(offset) ?? 1;
+  const lineLimit = parsePositiveLineNumber(limit);
+
+  if (!lineLimit) {
+    return {
+      pathLabel: path,
+      lineRange: null,
+    };
+  }
+
+  return {
+    pathLabel: `${path}:`,
+    lineRange: `${startLine}-${startLine + lineLimit - 1}`,
+  };
+}
+
 function buildWriteToolNewFileDiff(filePath: string, content: string): FileDiffMetadata | null {
   try {
     return parseDiffFromFile({ name: filePath, contents: "" }, { name: filePath, contents: content });
@@ -68,7 +118,7 @@ function buildWriteToolNewFileDiff(filePath: string, content: string): FileDiffM
   }
 }
 
-function ToolPathSummary({ icon, path, suffix = null }: ToolPathSummaryProps) {
+function ToolPathSummary({ icon, path, suffix = null, inlineSuffix = false }: ToolPathSummaryProps) {
   return (
     <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.75, minWidth: 0, flex: 1 }}>
       <Box
@@ -99,8 +149,9 @@ function ToolPathSummary({ icon, path, suffix = null }: ToolPathSummaryProps) {
         }}
       >
         {path}
+        {inlineSuffix ? suffix : null}
       </Typography>
-      {suffix}
+      {inlineSuffix ? null : suffix}
     </Box>
   );
 }
@@ -134,6 +185,43 @@ function ToolDiffStats({ stats, highlight }: { stats: DiffStats; highlight: bool
   );
 }
 
+function ToolLineRange({ lineRange }: { lineRange: string }) {
+  return (
+    <Typography
+      variant="body2"
+      component="span"
+      data-testid="read-tool-line-range"
+      sx={{
+        fontFamily: "monospace",
+        fontSize: "0.75rem",
+        color: "info.main",
+        fontWeight: 700,
+        flexShrink: 0,
+      }}
+    >
+      {lineRange}
+    </Typography>
+  );
+}
+
+function ToolSummaryBadge({ label, color }: { label: string; color: string }) {
+  return (
+    <Typography
+      variant="body2"
+      component="span"
+      sx={{
+        fontFamily: "monospace",
+        fontSize: "0.75rem",
+        color,
+        fontWeight: 700,
+        flexShrink: 0,
+      }}
+    >
+      {label}
+    </Typography>
+  );
+}
+
 /** Renders a tool call block with expandable arguments or output. */
 export function AgentToolCallCard({ toolCall, result = null }: AgentToolCallCardProps) {
   const theme = useTheme();
@@ -142,6 +230,8 @@ export function AgentToolCallCard({ toolCall, result = null }: AgentToolCallCard
   const isRead = toolCall.name === "read";
   const isEdit = toolCall.name === "edit";
   const isWrite = toolCall.name === "write";
+  const isMemorySearch = toolCall.name === "memory_search";
+  const isMemoryStore = toolCall.name === "memory_store";
   const isDiffTool = isEdit || isWrite;
   const command = typeof toolCall.arguments.command === "string" ? toolCall.arguments.command : null;
   const readPath = typeof toolCall.arguments.path === "string" ? toolCall.arguments.path : null;
@@ -154,6 +244,22 @@ export function AgentToolCallCard({ toolCall, result = null }: AgentToolCallCard
     (typeof details?.patch === "string" ? details.patch : "") ||
     (typeof details?.diff === "string" ? details.diff : "");
   const writeContent = typeof toolCall.arguments.content === "string" ? toolCall.arguments.content : null;
+  const readSummary = readPath ? buildReadSummary(readPath, toolCall.arguments.offset, toolCall.arguments.limit) : null;
+  const memorySearchQuery = typeof toolCall.arguments.query === "string" ? toolCall.arguments.query : null;
+  const memorySearchCount = typeof details?.count === "number" ? details.count : null;
+  const memoryStoreSection =
+    typeof details?.section === "string"
+      ? details.section
+      : typeof toolCall.arguments.section === "string"
+        ? toolCall.arguments.section
+        : null;
+  const memoryStoreFilePath =
+    typeof details?.path === "string"
+      ? details.path
+      : resultText.startsWith("Stored memory entry in ")
+        ? resultText.slice("Stored memory entry in ".length).trim()
+        : null;
+  const memoryStoreFileLabel = memoryStoreFilePath ? getPathBaseName(memoryStoreFilePath) : "MEMORY.md";
   const diffStats = patchDiff ? getDiffStats(patchDiff) : null;
   const parsedPatchDiff = useMemo(() => parseToolDiff(patchDiff), [patchDiff]);
   const syntheticWriteDiff = useMemo(() => {
@@ -182,13 +288,13 @@ export function AgentToolCallCard({ toolCall, result = null }: AgentToolCallCard
     <Box
       sx={{
         mb: 0.5,
-        border: isBash || isRead || isDiffTool ? 0 : 1,
+        border: isBash || isRead || isDiffTool || isMemorySearch || isMemoryStore ? 0 : 1,
         borderColor: result?.isError ? "error.main" : "primary.main",
         borderRadius: 1,
         overflow: "hidden",
       }}
     >
-      {!isBash && !isRead && !isDiffTool && (
+      {!isBash && !isRead && !isDiffTool && !isMemorySearch && !isMemoryStore && (
         <Box
           onClick={() => setOpen(!open)}
           sx={{
@@ -226,7 +332,54 @@ export function AgentToolCallCard({ toolCall, result = null }: AgentToolCallCard
             </IconButton>
           </Box>
         ) : isRead && readPath ? (
-          <ToolPathSummary icon={<LuBookOpen size={14} />} path={readPath} />
+          <ToolPathSummary
+            icon={<LuBookOpen size={14} />}
+            path={readSummary?.pathLabel ?? readPath}
+            suffix={readSummary?.lineRange ? <ToolLineRange lineRange={readSummary.lineRange} /> : null}
+            inlineSuffix
+          />
+        ) : isMemorySearch && memorySearchQuery ? (
+          <Box
+            onClick={() => setOpen(!open)}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+            }}
+          >
+            <ToolPathSummary
+              icon={<LuSearch size={14} />}
+              path={memorySearchQuery}
+              suffix={
+                memorySearchCount !== null ? (
+                  <ToolSummaryBadge label={`${memorySearchCount} results`} color="info.main" />
+                ) : null
+              }
+            />
+            <IconButton size="small" sx={{ width: 20, height: 20, flexShrink: 0 }}>
+              {open ? <LuChevronUp size={14} /> : <LuChevronDown size={14} />}
+            </IconButton>
+          </Box>
+        ) : isMemoryStore ? (
+          <Box
+            onClick={() => setOpen(!open)}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+            }}
+          >
+            <ToolPathSummary
+              icon={<LuDatabase size={14} />}
+              path={memoryStoreFileLabel}
+              suffix={
+                memoryStoreSection ? <ToolSummaryBadge label={memoryStoreSection} color="secondary.main" /> : null
+              }
+            />
+            <IconButton size="small" sx={{ width: 20, height: 20, flexShrink: 0 }}>
+              {open ? <LuChevronUp size={14} /> : <LuChevronDown size={14} />}
+            </IconButton>
+          </Box>
         ) : isDiffTool && diffToolPath ? (
           <Box
             onClick={() => setOpen(!open)}

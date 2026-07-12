@@ -45,7 +45,9 @@ function shouldMergeToolResult(message: AgentMessageType, previous: DisplayMessa
     (message.toolName === "bash" ||
       message.toolName === "read" ||
       message.toolName === "edit" ||
-      message.toolName === "write") &&
+      message.toolName === "write" ||
+      message.toolName === "memory_search" ||
+      message.toolName === "memory_store") &&
     hasToolCall(previous.message, message.toolCallId)
   );
 }
