@@ -111,7 +111,7 @@ describe("AgentToolCallCard", () => {
     expect(screen.queryByText("READ: src/example.ts")).toBeNull();
   });
 
-  it("shows read tool line ranges and highlights only the range", () => {
+  it("shows read tool line ranges from offset and limit only", () => {
     const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
       type: "toolCall",
       id: "tool-read-range",
@@ -119,6 +119,7 @@ describe("AgentToolCallCard", () => {
       arguments: {
         path: "src/example.ts",
         offset: 10,
+        limit: 3,
       },
     };
 
@@ -127,7 +128,7 @@ describe("AgentToolCallCard", () => {
       role: "toolResult",
       toolCallId: "tool-read-range",
       toolName: "read",
-      content: "alpha\nbeta\ngamma",
+      content: "",
     } as AgentMessage;
 
     render(<AgentToolCallCard toolCall={toolCall} result={result} />);
@@ -138,6 +139,67 @@ describe("AgentToolCallCard", () => {
     expect(lineRange.textContent).toBe("10-12");
     expect(lineRange.parentElement?.textContent).toBe("src/example.ts:10-12");
     expect(screen.queryByText("3 lines")).toBeNull();
+  });
+
+  it("shows a compact memory search summary with result count", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-memory-search",
+      name: "memory_search",
+      arguments: {
+        query: "app flow mermaid",
+        scope: "project",
+        limit: 5,
+      },
+    };
+
+    const result = {
+      id: "result-memory-search",
+      role: "toolResult",
+      toolCallId: "tool-memory-search",
+      toolName: "memory_search",
+      content: "[]",
+      details: {
+        count: 0,
+      },
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+    expect(screen.getByText("app flow mermaid")).toBeTruthy();
+    expect(screen.getByText("0 results")).toBeTruthy();
+    expect(screen.queryByText("arguments")).toBeNull();
+  });
+
+  it("shows a compact memory store summary with section and file", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-memory-store",
+      name: "memory_store",
+      arguments: {
+        section: "durable_discoveries",
+        entry: "Important discovery",
+        date: "2026-07-12",
+      },
+    };
+
+    const result = {
+      id: "result-memory-store",
+      role: "toolResult",
+      toolCallId: "tool-memory-store",
+      toolName: "memory_store",
+      content: "Stored memory entry in /tmp/project/.my-context/MEMORY.md",
+      details: {
+        path: "/tmp/project/.my-context/MEMORY.md",
+        section: "durable_discoveries",
+      },
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+    expect(screen.getByText("MEMORY.md")).toBeTruthy();
+    expect(screen.getByText("durable_discoveries")).toBeTruthy();
+    expect(screen.queryByText("arguments")).toBeNull();
   });
 
   it("renders edit tool patches with the diff viewer", () => {
