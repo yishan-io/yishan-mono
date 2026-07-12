@@ -1,12 +1,15 @@
 import { Box } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LuSquareTerminal } from "react-icons/lu";
+import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../shared/contracts/externalApps";
+import { findTabWithPiSession } from "../../commands/agentChatCommands";
 import { AgentIcon } from "../../components/AgentIcon";
 import { SplitPaneContainer } from "../../components/SplitPaneContainer";
 import { SplitPaneGroup } from "../../components/SplitPaneGroup";
+import { SessionHistoryMenu } from "../../components/agent/SessionHistoryMenu";
 import { getFileTreeIcon } from "../../components/fileTreeIcons";
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
+import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { useCommands } from "../../hooks/useCommands";
 import { type RefreshableOpenTab, useOpenTabAutoRefresh } from "../../hooks/useOpenTabAutoRefresh";
 import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
@@ -69,6 +72,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
 
   const [focusContentRequestKey, setFocusContentRequestKey] = useState(0);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+  const [historyMenuAnchor, setHistoryMenuAnchor] = useState<HTMLElement | null>(null);
   const didTrackSelectedTabRef = useRef(false);
   const didSyncPaneSelectionRef = useRef(false);
   const lastKnownRectByTabIdRef = useRef<Record<string, { left: number; top: number; width: number; height: number }>>(
@@ -212,6 +216,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
         }
         return <LuSquareTerminal size={14} />;
       }
+      if (fullTab?.kind === "agent-chat") return <LuMessageCircle size={14} />;
       if (fullTab?.kind === "browser") return <FaviconIcon url={fullTab.data.faviconUrl} size={14} />;
       if (fullTab?.kind === "file" || fullTab?.kind === "diff" || fullTab?.kind === "image") {
         return (
@@ -275,6 +280,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
           onFocusPane={handleFocusPane}
           onTabDragStart={handleTabDragStart}
           onTabDragEnd={handleTabDragEnd}
+          onHistoryClick={(event) => setHistoryMenuAnchor(event.currentTarget)}
           getTabIcon={getTabIcon}
           enabledAgentKinds={enabledAgentKinds}
           disabled={!workspaceId}
@@ -320,6 +326,30 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
         handleFocusPane={handleFocusPane}
         renderTabContent={renderTabContent}
       />
+      {workspace?.worktreePath && (
+        <SessionHistoryMenu
+          cwd={workspace.worktreePath}
+          anchorEl={historyMenuAnchor}
+          onClose={() => setHistoryMenuAnchor(null)}
+          onSelectSession={(sessionId, title) => {
+            // Check if this Pi session is already active in a tab.
+            const existingTabId =
+              findTabWithPiSession(sessionId) ??
+              workspaceTabs.find((tab) => tab.kind === "agent-chat" && tab.data.piSessionId === sessionId)?.id;
+            if (existingTabId) {
+              cmd.selectTab(existingTabId);
+              return;
+            }
+            cmd.openTab({
+              workspaceId,
+              kind: "agent-chat",
+              title: formatAgentSessionTitle(title),
+              cwd: workspace.worktreePath,
+              piSessionId: sessionId,
+            });
+          }}
+        />
+      )}
     </Box>
   );
 }

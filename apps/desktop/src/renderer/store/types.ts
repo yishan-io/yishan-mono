@@ -123,6 +123,12 @@ export type WorkspaceTabDataByKind = {
     url: string;
     faviconUrl?: string;
   };
+  "agent-chat": {
+    sessionId?: string;
+    cwd: string;
+    piSessionId?: string;
+    userRenamed?: boolean;
+  };
 };
 
 export type WorkspaceTabBase = {
@@ -156,6 +162,10 @@ export type WorkspaceTab =
   | (WorkspaceTabBase & {
       kind: "browser";
       data: WorkspaceTabDataByKind["browser"];
+    })
+  | (WorkspaceTabBase & {
+      kind: "agent-chat";
+      data: WorkspaceTabDataByKind["agent-chat"];
     });
 
 export type OpenWorkspaceTabInput =
@@ -206,6 +216,15 @@ export type OpenWorkspaceTabInput =
       kind: "browser";
       url?: string;
       reuseExisting?: boolean;
+    }
+  | {
+      workspaceId?: string;
+      kind: "agent-chat";
+      title?: string;
+      /** Working directory for the pi agent process. Defaults to workspace worktree path. */
+      cwd?: string;
+      /** Pi session ID to resume an existing session. */
+      piSessionId?: string;
     };
 
 export type WorkspaceStoreState = {

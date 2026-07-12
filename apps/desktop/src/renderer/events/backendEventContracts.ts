@@ -17,6 +17,7 @@ const FRONTEND_MESSAGE_KEYS = [
   "openBrowserUrl",
   "terminalSessionChanged",
   "terminalAgentChanged",
+  "agentPiEvent",
 ] as const satisfies readonly RpcFrontendMessageKey[];
 
 const FRONTEND_MESSAGE_KEY_SET = new Set<string>(FRONTEND_MESSAGE_KEYS);
@@ -36,7 +37,8 @@ export type BackendEventName =
   | "workspace.state.changed"
   | "open.browser.url"
   | "terminal.session.changed"
-  | "terminal.agent.changed";
+  | "terminal.agent.changed"
+  | "agent.pi.event";
 
 export type NormalizedBackendEvent =
   | {
@@ -113,6 +115,11 @@ export type NormalizedBackendEvent =
       source: "terminalAgentChanged";
       name: "terminal.agent.changed";
       payload: RpcFrontendMessagePayload<"terminalAgentChanged">;
+    }
+  | {
+      source: "agentPiEvent";
+      name: "agent.pi.event";
+      payload: RpcFrontendMessagePayload<"agentPiEvent">;
     };
 
 /**
@@ -134,6 +141,7 @@ export const BACKEND_EVENT_NAME_BY_SOURCE = {
   openBrowserUrl: "open.browser.url",
   terminalSessionChanged: "terminal.session.changed",
   terminalAgentChanged: "terminal.agent.changed",
+  agentPiEvent: "agent.pi.event",
 } as const satisfies Record<RpcFrontendMessageKey, BackendEventName>;
 
 /**
@@ -468,6 +476,23 @@ export function normalizeBackendEvent(envelope: DesktopRpcEventEnvelope): Normal
       source: "terminalAgentChanged",
       name: BACKEND_EVENT_NAME_BY_SOURCE.terminalAgentChanged,
       payload: payload as RpcFrontendMessagePayload<"terminalAgentChanged">,
+    };
+  }
+
+  if (envelope.method === "agentPiEvent") {
+    if (
+      typeof payload.sessionId !== "string" ||
+      typeof payload.tabId !== "string" ||
+      typeof payload.workspaceId !== "string" ||
+      !isRecord(payload.event)
+    ) {
+      return null;
+    }
+
+    return {
+      source: "agentPiEvent",
+      name: BACKEND_EVENT_NAME_BY_SOURCE.agentPiEvent,
+      payload: payload as RpcFrontendMessagePayload<"agentPiEvent">,
     };
   }
 

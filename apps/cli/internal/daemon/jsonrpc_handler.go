@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
+	"yishan/apps/cli/internal/agentmanager"
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/memory"
@@ -41,12 +42,16 @@ type JSONRPCHandler struct {
 	computer       *computerService
 	modelList      *modellist.Service
 	memory         *memory.Service
+	agentMgr       *agentmanager.Manager
 	settingsPath   string
 	serverCtx      context.Context
 	fileCacheSubID uint64
 
 	agentUsageMu sync.Mutex
 	agentUsage   map[string]map[string]struct{}
+
+	piSessionsMu sync.Mutex
+	piSessions   map[string]*piSessionState
 
 	remoteStreamMu   sync.Mutex
 	remoteStreamSubs map[string]map[*wsConnState]struct{}
@@ -106,8 +111,10 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		tokenUsage:     collector,
 		computer:       newComputerService(computer.NewUnavailableRuntime("unknown")),
 		modelList:      modellist.NewService(),
+		agentMgr:       agentmanager.NewManager(),
 		settingsPath:   config.SettingsFilePath(filepath.Dir(configPath)),
 		agentUsage:     make(map[string]map[string]struct{}),
+		piSessions:     make(map[string]*piSessionState),
 		remoteStreamSubs: make(map[string]map[*wsConnState]struct{}),
 		fileCacheSubID: fileCacheSubID,
 	}
@@ -138,6 +145,9 @@ func (h *JSONRPCHandler) Shutdown() {
 	}
 	if h.memory != nil {
 		h.memory.Close()
+	}
+	if h.agentMgr != nil {
+		h.agentMgr.StopAll()
 	}
 	modellist.ShutdownShell()
 }

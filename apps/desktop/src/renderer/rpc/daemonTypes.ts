@@ -51,6 +51,7 @@ export type ApiNamespace =
   | "git"
   | "terminal"
   | "chat"
+  | "pi"
   | "agent"
   | "cliTools"
   | "integration"
@@ -651,6 +652,17 @@ export type MemoryConfig = {
   enabled: boolean;
   agentKind: string;
   model: string;
+};
+
+export type PiListSessionsInput = {
+  cwd: string;
+};
+
+export type PiSessionSummary = {
+  sessionId: string;
+  timestamp: string;
+  model?: string;
+  previewText?: string;
 };
 
 export type ComputerUseFeatureConfig = {

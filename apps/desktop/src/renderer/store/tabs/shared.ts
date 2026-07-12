@@ -33,6 +33,11 @@ export function findExistingTab(
     );
   }
 
+  // Agent chat tabs are always new — each gets its own session.
+  if (input.kind === "agent-chat") {
+    return undefined;
+  }
+
   if (input.reuseExisting === false) {
     return undefined;
   }

@@ -78,7 +78,7 @@ export function CreateTabMenu({
               ) : null}
             </Box>
           </MenuItem>
-          {item.option === "browser" && hasAgentCreateOptions ? <Divider sx={{ my: 0.5 }} /> : null}
+          {item.option === "agent-chat" && hasAgentCreateOptions ? <Divider sx={{ my: 0.5 }} /> : null}
         </Box>
       ))}
     </Menu>

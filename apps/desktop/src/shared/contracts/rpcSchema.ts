@@ -151,6 +151,12 @@ export type RpcSchema = {
         tabId: string;
         agent: string;
       };
+      agentPiEvent: {
+        sessionId: string;
+        tabId: string;
+        workspaceId: string;
+        event: Record<string, unknown>;
+      };
     };
   };
 };

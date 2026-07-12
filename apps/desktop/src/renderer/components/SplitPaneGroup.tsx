@@ -38,6 +38,8 @@ export type SplitPaneGroupProps = {
   /** Called when a tab drag ends. */
   onTabDragEnd?: () => void;
   getTabIcon?: (tab: TabDescriptor) => ReactNode;
+  /** Called when the user clicks the history button in the tab bar. */
+  onHistoryClick?: (event: React.MouseEvent<HTMLElement>) => void;
   enabledAgentKinds?: Array<import("../helpers/agentSettings").DesktopAgentKind>;
   disabled?: boolean;
   onContentPlaceholderChange?: (paneId: string, placeholder: HTMLDivElement | null) => void;
@@ -91,6 +93,7 @@ export function SplitPaneGroup({
   onTabDragStart,
   onTabDragEnd,
   getTabIcon,
+  onHistoryClick,
   enabledAgentKinds,
   disabled,
   onContentPlaceholderChange,
@@ -183,6 +186,7 @@ export function SplitPaneGroup({
             setDraggingTabId("");
             onTabDragEnd?.();
           }}
+          onHistoryClick={onHistoryClick}
         />
       </Box>
       <SplitDropZone paneId={pane.id} active={isDraggingSplit} onDrop={handleSplitDrop}>
