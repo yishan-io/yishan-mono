@@ -17,6 +17,7 @@ type ToolPathSummaryProps = {
   icon: React.ReactNode;
   path: string;
   suffix?: React.ReactNode;
+  inlineSuffix?: boolean;
 };
 
 function extractResultText(message: AgentMessage | null | undefined): string {
@@ -35,6 +36,11 @@ function extractResultText(message: AgentMessage | null | undefined): string {
 type DiffStats = {
   added: number;
   removed: number;
+};
+
+type ReadSummary = {
+  pathLabel: string;
+  lineRange: string | null;
 };
 
 function getDiffStats(patch: string): DiffStats | null {
@@ -60,6 +66,41 @@ function parseToolDiff(patch: string): FileDiffMetadata | null {
   }
 }
 
+function parsePositiveLineNumber(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+    return null;
+  }
+
+  return value;
+}
+
+function countTextLines(text: string): number {
+  if (text.length === 0) {
+    return 0;
+  }
+
+  return text.split("\n").length;
+}
+
+function buildReadSummary(path: string, offset: unknown, limit: unknown, resultText: string): ReadSummary {
+  const startLine = parsePositiveLineNumber(offset) ?? 1;
+  const requestedLineCount = parsePositiveLineNumber(limit);
+  const actualLineCount = countTextLines(resultText);
+  const lineCount = actualLineCount || requestedLineCount;
+
+  if (!lineCount) {
+    return {
+      pathLabel: path,
+      lineRange: null,
+    };
+  }
+
+  return {
+    pathLabel: `${path}:`,
+    lineRange: `${startLine}-${startLine + lineCount - 1}`,
+  };
+}
+
 function buildWriteToolNewFileDiff(filePath: string, content: string): FileDiffMetadata | null {
   try {
     return parseDiffFromFile({ name: filePath, contents: "" }, { name: filePath, contents: content });
@@ -68,7 +109,7 @@ function buildWriteToolNewFileDiff(filePath: string, content: string): FileDiffM
   }
 }
 
-function ToolPathSummary({ icon, path, suffix = null }: ToolPathSummaryProps) {
+function ToolPathSummary({ icon, path, suffix = null, inlineSuffix = false }: ToolPathSummaryProps) {
   return (
     <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.75, minWidth: 0, flex: 1 }}>
       <Box
@@ -99,8 +140,9 @@ function ToolPathSummary({ icon, path, suffix = null }: ToolPathSummaryProps) {
         }}
       >
         {path}
+        {inlineSuffix ? suffix : null}
       </Typography>
-      {suffix}
+      {inlineSuffix ? null : suffix}
     </Box>
   );
 }
@@ -134,6 +176,25 @@ function ToolDiffStats({ stats, highlight }: { stats: DiffStats; highlight: bool
   );
 }
 
+function ToolLineRange({ lineRange }: { lineRange: string }) {
+  return (
+    <Typography
+      variant="body2"
+      component="span"
+      data-testid="read-tool-line-range"
+      sx={{
+        fontFamily: "monospace",
+        fontSize: "0.75rem",
+        color: "info.main",
+        fontWeight: 700,
+        flexShrink: 0,
+      }}
+    >
+      {lineRange}
+    </Typography>
+  );
+}
+
 /** Renders a tool call block with expandable arguments or output. */
 export function AgentToolCallCard({ toolCall, result = null }: AgentToolCallCardProps) {
   const theme = useTheme();
@@ -154,6 +215,9 @@ export function AgentToolCallCard({ toolCall, result = null }: AgentToolCallCard
     (typeof details?.patch === "string" ? details.patch : "") ||
     (typeof details?.diff === "string" ? details.diff : "");
   const writeContent = typeof toolCall.arguments.content === "string" ? toolCall.arguments.content : null;
+  const readSummary = readPath
+    ? buildReadSummary(readPath, toolCall.arguments.offset, toolCall.arguments.limit, resultText)
+    : null;
   const diffStats = patchDiff ? getDiffStats(patchDiff) : null;
   const parsedPatchDiff = useMemo(() => parseToolDiff(patchDiff), [patchDiff]);
   const syntheticWriteDiff = useMemo(() => {
@@ -226,7 +290,12 @@ export function AgentToolCallCard({ toolCall, result = null }: AgentToolCallCard
             </IconButton>
           </Box>
         ) : isRead && readPath ? (
-          <ToolPathSummary icon={<LuBookOpen size={14} />} path={readPath} />
+          <ToolPathSummary
+            icon={<LuBookOpen size={14} />}
+            path={readSummary?.pathLabel ?? readPath}
+            suffix={readSummary?.lineRange ? <ToolLineRange lineRange={readSummary.lineRange} /> : null}
+            inlineSuffix
+          />
         ) : isDiffTool && diffToolPath ? (
           <Box
             onClick={() => setOpen(!open)}

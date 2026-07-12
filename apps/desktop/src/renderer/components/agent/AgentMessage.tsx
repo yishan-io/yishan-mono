@@ -32,6 +32,17 @@ function formatDuration(durationMs: number): string {
   return seconds >= 10 ? `${seconds.toFixed(0)}s` : `${seconds.toFixed(1)}s`;
 }
 
+function formatHumanMessageTime(timestamp: number): string | null {
+  if (!Number.isFinite(timestamp)) {
+    return null;
+  }
+
+  return new Date(timestamp).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 /** Renders a single agent conversation message with support for text, thinking, and tool calls. */
 export function AgentMessage({
   message,
@@ -47,6 +58,10 @@ export function AgentMessage({
   const skillMessage = isUser ? parseSkillMessage(messageText) : null;
   let textBlockCount = 0;
   let thinkingBlockCount = 0;
+  const humanTimestamp = typeof message.timestamp === "number" ? formatHumanMessageTime(message.timestamp) : null;
+  const durationLabel =
+    isAssistant && typeof message.durationMs === "number" ? `time took: ${formatDuration(message.durationMs)}` : null;
+  const showsMetadata = humanTimestamp !== null || durationLabel !== null;
 
   return (
     <Paper
@@ -127,9 +142,15 @@ export function AgentMessage({
         </Box>
       )}
 
-      {isAssistant && typeof message.durationMs === "number" && (
+      {showsMetadata && (
         <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, display: "block" }}>
-          time took: {formatDuration(message.durationMs)}
+          {humanTimestamp ? <Box component="span">{humanTimestamp}</Box> : null}
+          {humanTimestamp && durationLabel ? (
+            <Box component="span" sx={{ mx: 0.75 }}>
+              ·
+            </Box>
+          ) : null}
+          {durationLabel ? <Box component="span">{durationLabel}</Box> : null}
         </Typography>
       )}
     </Paper>

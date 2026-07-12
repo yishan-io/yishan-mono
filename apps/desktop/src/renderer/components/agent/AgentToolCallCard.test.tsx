@@ -111,6 +111,35 @@ describe("AgentToolCallCard", () => {
     expect(screen.queryByText("READ: src/example.ts")).toBeNull();
   });
 
+  it("shows read tool line ranges and highlights only the range", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-read-range",
+      name: "read",
+      arguments: {
+        path: "src/example.ts",
+        offset: 10,
+      },
+    };
+
+    const result = {
+      id: "result-read-range",
+      role: "toolResult",
+      toolCallId: "tool-read-range",
+      toolName: "read",
+      content: "alpha\nbeta\ngamma",
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+    const lineRange = screen.getByTestId("read-tool-line-range");
+
+    expect(screen.getByText("src/example.ts:")).toBeTruthy();
+    expect(lineRange.textContent).toBe("10-12");
+    expect(lineRange.parentElement?.textContent).toBe("src/example.ts:10-12");
+    expect(screen.queryByText("3 lines")).toBeNull();
+  });
+
   it("renders edit tool patches with the diff viewer", () => {
     const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
       type: "toolCall",
