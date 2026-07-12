@@ -3,9 +3,13 @@ package daemon
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"os"
 	"strings"
 
 	"yishan/apps/cli/internal/agentmanager"
+	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/runtime/shellenv"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -31,11 +35,11 @@ func (h *JSONRPCHandler) dispatchPi(ctx context.Context, connState *wsConnState,
 }
 
 type piStartParams struct {
-	SessionID    string `json:"sessionId"`
-	TabID        string `json:"tabId"`
-	WorkspaceID  string `json:"workspaceId"`
-	CWD          string `json:"cwd"`
-	PiSessionID  string `json:"piSessionId,omitempty"`
+	SessionID   string `json:"sessionId"`
+	TabID       string `json:"tabId"`
+	WorkspaceID string `json:"workspaceId"`
+	CWD         string `json:"cwd"`
+	PiSessionID string `json:"piSessionId,omitempty"`
 }
 
 func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnState, params json.RawMessage) (any, error) {
@@ -50,6 +54,11 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "cwd is required")
 	}
 
+	piEnv, err := buildManagedPiProcessEnv()
+	if err != nil {
+		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
+	}
+
 	args := []string{"--mode", "rpc", "--name", req.TabID}
 	if req.PiSessionID != "" {
 		args = append(args, "--session-id", req.PiSessionID)
@@ -62,6 +71,7 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 		Binary:      "pi",
 		Args:        args,
 		CWD:         req.CWD,
+		Env:         piEnv,
 		OnEvent:     h.makePiEventCallback(req.SessionID),
 	}
 
@@ -83,6 +93,16 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 	})
 
 	return map[string]any{"sessionId": req.SessionID}, nil
+}
+
+func buildManagedPiProcessEnv() ([]string, error) {
+	piAgentDir, err := config.ManagedPiAgentDir()
+	if err != nil {
+		return nil, fmt.Errorf("resolve managed pi agent dir: %w", err)
+	}
+
+	baseEnv := shellenv.ResolveEnvWithUserPath(os.Environ(), os.Getenv("SHELL"))
+	return shellenv.UpsertEnv(baseEnv, config.PiAgentDirEnvKey, piAgentDir), nil
 }
 
 type piStopParams struct {
