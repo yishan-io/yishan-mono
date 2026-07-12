@@ -32,17 +32,24 @@ func resolveManagedRuntimeEnv(baseEnv []string, command string) []string {
 }
 
 func resolveSessionMetadataEnv(baseEnv []string, req StartRequest) []string {
-	env := baseEnv
-	env = upsertSessionEnv(env, workspaceIDEnvKey, req.WorkspaceID)
+	env := ResolveObserverSessionEnv(baseEnv, req.WorkspaceID, req.TabID, req.PaneID)
 	env = upsertSessionEnv(env, projectIDEnvKey, req.ProjectID)
 	env = upsertSessionEnv(env, orgIDEnvKey, req.OrgID)
-	env = upsertSessionEnv(env, tabIDEnvKey, req.TabID)
-	env = upsertSessionEnv(env, paneIDEnvKey, req.PaneID)
-	if notifyPath, err := resolveNotifyScriptPath(); err == nil {
-		env = shellenv.UpsertEnv(env, notifyScriptPathEnvKey, notifyPath)
-	}
 	if piAgentDir, err := config.ManagedPiAgentDir(); err == nil {
 		env = shellenv.UpsertEnv(env, config.PiAgentDirEnvKey, piAgentDir)
+	}
+	return env
+}
+
+// ResolveObserverSessionEnv injects the hook/notification session metadata used
+// by Yishan-managed agent runtimes.
+func ResolveObserverSessionEnv(baseEnv []string, workspaceID string, tabID string, paneID string) []string {
+	env := baseEnv
+	env = upsertSessionEnv(env, workspaceIDEnvKey, workspaceID)
+	env = upsertSessionEnv(env, tabIDEnvKey, tabID)
+	env = upsertSessionEnv(env, paneIDEnvKey, paneID)
+	if notifyPath, err := resolveNotifyScriptPath(); err == nil {
+		env = shellenv.UpsertEnv(env, notifyScriptPathEnvKey, notifyPath)
 	}
 	return env
 }

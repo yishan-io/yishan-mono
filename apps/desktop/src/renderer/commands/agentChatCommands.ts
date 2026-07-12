@@ -39,6 +39,7 @@ export async function ensurePiSession(opts: {
   workspaceId: string;
   cwd: string;
   piSessionId?: string;
+  paneId?: string;
 }): Promise<string> {
   const existing = activePiSessions.get(opts.tabId);
   if (existing) {
@@ -61,6 +62,7 @@ export async function ensurePiSession(opts: {
   await client.pi.start({
     sessionId,
     tabId: opts.tabId,
+    paneId: resolveAgentChatPaneId(opts.tabId, opts.paneId),
     workspaceId: opts.workspaceId,
     cwd: opts.cwd,
     piSessionId: sessionId,
@@ -220,6 +222,15 @@ export async function fetchAgentMessages(opts: {
     sessionId: opts.sessionId,
     command: { type: "get_messages" },
   });
+}
+
+function resolveAgentChatPaneId(tabId: string, paneId: string | undefined): string {
+  const normalizedPaneId = paneId?.trim();
+  if (normalizedPaneId) {
+    return normalizedPaneId;
+  }
+
+  return `pane-${tabId}`;
 }
 
 // ─── Pi event handler ────────────────────────────────────────────────────────

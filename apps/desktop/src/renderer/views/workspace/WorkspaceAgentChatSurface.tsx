@@ -95,6 +95,7 @@ function WorkspaceAgentChatSurfaceComponent({
         workspaceId={tab.workspaceId}
         cwd={tab.data.cwd}
         piSessionId={tab.data.piSessionId}
+        paneId={paneId}
         isActive={shouldShow && !isDraggingSplit}
       />
     </Box>

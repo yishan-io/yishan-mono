@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentChatStore } from "../../store/agentChatStore";
 import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
@@ -142,6 +142,36 @@ afterEach(() => {
 });
 
 describe("AgentChatView", () => {
+  it("passes paneId through to ensurePiSession during initialization", async () => {
+    render(<AgentChatView tabId="tab-pane" workspaceId="workspace-1" cwd="/tmp/project" paneId="pane-1" isActive />);
+
+    await waitFor(() => {
+      expect(mocked.ensurePiSession).toHaveBeenCalledWith({
+        tabId: "tab-pane",
+        workspaceId: "workspace-1",
+        cwd: "/tmp/project",
+        piSessionId: undefined,
+        paneId: "pane-1",
+      });
+    });
+  });
+
+  it("does not reinitialize the session when paneId changes after startup", async () => {
+    const { rerender } = render(
+      <AgentChatView tabId="tab-pane-move" workspaceId="workspace-1" cwd="/tmp/project" paneId="pane-1" isActive />,
+    );
+
+    await waitFor(() => {
+      expect(mocked.ensurePiSession).toHaveBeenCalledTimes(1);
+    });
+
+    rerender(
+      <AgentChatView tabId="tab-pane-move" workspaceId="workspace-1" cwd="/tmp/project" paneId="pane-2" isActive />,
+    );
+
+    expect(mocked.ensurePiSession).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps the message-list working indicator visible while the session is running even with a trailing message", () => {
     seedSession({
       state: "running",
