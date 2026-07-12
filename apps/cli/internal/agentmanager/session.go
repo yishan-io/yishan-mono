@@ -96,5 +96,11 @@ func (s *Session) Close() error {
 	// Cancel the context to clean up any remaining resources.
 	s.cancel()
 
+	// Do not report the session as stopped until the stdout reader goroutine has
+	// finished its deferred cleanup and unregistered the session from the
+	// manager. Callers rely on Stop returning only after the session ID can be
+	// reused safely.
+	<-s.done
+
 	return nil
 }

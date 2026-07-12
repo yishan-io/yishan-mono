@@ -140,6 +140,75 @@ func TestStopAll(t *testing.T) {
 	defer s1b.Close()
 }
 
+func TestStopWaitsForStdoutCleanupBeforeReleasingSessionID(t *testing.T) {
+	m := NewManager()
+	ctx := context.Background()
+
+	callbackEntered := make(chan struct{})
+	unblockCallback := make(chan struct{})
+	var unblockOnce sync.Once
+	unblock := func() {
+		unblockOnce.Do(func() {
+			close(unblockCallback)
+		})
+	}
+
+	opts := StartOptions{
+		SessionID: "cleanup-test",
+		Binary:    "sh",
+		Args:      []string{"-c", "echo '{\"type\":\"ready\"}'"},
+		OnEvent: func(sessionID, tabID, workspaceID string, event []byte) {
+			close(callbackEntered)
+			<-unblockCallback
+		},
+	}
+
+	session, err := m.Start(ctx, opts)
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer func() {
+		unblock()
+		_ = session.Close()
+	}()
+
+	select {
+	case <-callbackEntered:
+		// Expected.
+	case <-time.After(5 * time.Second):
+		t.Fatal("stdout callback did not start")
+	}
+
+	stopDone := make(chan error, 1)
+	go func() {
+		stopDone <- m.Stop(opts.SessionID)
+	}()
+
+	select {
+	case err := <-stopDone:
+		t.Fatalf("Stop returned before stdout cleanup finished: %v", err)
+	case <-time.After(150 * time.Millisecond):
+		// Expected: Stop should still be waiting for readStdout cleanup.
+	}
+
+	unblock()
+
+	select {
+	case err := <-stopDone:
+		if err != nil {
+			t.Fatalf("Stop failed: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Stop did not return after stdout cleanup completed")
+	}
+
+	restarted, err := m.Start(ctx, StartOptions{SessionID: opts.SessionID, Binary: "sleep", Args: []string{"1"}})
+	if err != nil {
+		t.Fatalf("re-Start failed after Stop returned: %v", err)
+	}
+	defer restarted.Close()
+}
+
 func TestStdoutEventDelivery(t *testing.T) {
 	m := NewManager()
 	ctx := context.Background()
@@ -281,9 +350,9 @@ func TestManagerContextCancellation(t *testing.T) {
 
 func TestSplitEnvPair(t *testing.T) {
 	tests := []struct {
-		input    string
-		wantKey  string
-		wantVal  string
+		input   string
+		wantKey string
+		wantVal string
 	}{
 		{"KEY=value", "KEY", "value"},
 		{"KEY=val=ue", "KEY", "val=ue"},
