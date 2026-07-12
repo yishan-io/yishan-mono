@@ -47,6 +47,7 @@ describe("BACKEND_EVENT_NAME_BY_SOURCE", () => {
       openBrowserUrl: "open.browser.url",
       terminalSessionChanged: "terminal.session.changed",
       terminalAgentChanged: "terminal.agent.changed",
+      agentPiEvent: "agent.pi.event",
     });
   });
 });
@@ -146,6 +147,27 @@ describe("normalizeBackendEvent", () => {
       tabId: "tab-1",
       paneId: "pane-1",
     });
+  });
+
+  it("normalizes agent pi events", () => {
+    const normalized = assertNormalized(
+      normalizeBackendEvent(
+        createEnvelope({
+          method: "agentPiEvent",
+          payload: {
+            sessionId: "session-1",
+            tabId: "tab-1",
+            workspaceId: "workspace-1",
+            event: {
+              type: "agent_end",
+            },
+          },
+        }),
+      ),
+    );
+
+    expect(normalized.name).toBe("agent.pi.event");
+    expect(normalized.source).toBe("agentPiEvent");
   });
 
   it("returns null when notification observer status payload is invalid", () => {

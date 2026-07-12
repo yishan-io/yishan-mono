@@ -479,6 +479,23 @@ export function normalizeBackendEvent(envelope: DesktopRpcEventEnvelope): Normal
     };
   }
 
+  if (envelope.method === "agentPiEvent") {
+    if (
+      typeof payload.sessionId !== "string" ||
+      typeof payload.tabId !== "string" ||
+      typeof payload.workspaceId !== "string" ||
+      !isRecord(payload.event)
+    ) {
+      return null;
+    }
+
+    return {
+      source: "agentPiEvent",
+      name: BACKEND_EVENT_NAME_BY_SOURCE.agentPiEvent,
+      payload: payload as RpcFrontendMessagePayload<"agentPiEvent">,
+    };
+  }
+
   if (typeof payload.action !== "string") {
     return null;
   }
