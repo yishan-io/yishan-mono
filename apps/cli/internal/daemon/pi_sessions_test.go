@@ -89,78 +89,58 @@ func TestHandlePiStart_OverridesLegacyAgentDirEnv(t *testing.T) {
 	}
 }
 
-func TestHandlePiStart_InjectsNotificationSessionEnv(t *testing.T) {
+func TestBuildPiStartExtraEnv_InjectsNotificationSessionEnv(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 
-	markerPath := filepath.Join(homeDir, "pi-session-env.txt")
-	installFakePiEnvCaptureBinary(t, markerPath)
-
-	h := newTestHandler(t)
-	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
-	if err := os.MkdirAll(cwd, 0o755); err != nil {
-		t.Fatalf("mkdir cwd: %v", err)
-	}
-
-	connState := &wsConnState{}
-	_, err := h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-2",
-		"tabId":       "tab-2",
-		"workspaceId": "workspace-2",
-		"paneId":      "pane-2",
-		"cwd":         cwd,
-	}))
+	extraEnv, err := buildPiStartExtraEnv(piStartParams{
+		TabID:       "tab-2",
+		WorkspaceID: "workspace-2",
+		PaneID:      "pane-2",
+	})
 	if err != nil {
-		t.Fatalf("dispatchPi: %v", err)
+		t.Fatalf("buildPiStartExtraEnv: %v", err)
 	}
 
-	envByKey := parseCapturedEnv(waitForFileContent(t, markerPath))
-	assertPiStartObserverEnv(t, envByKey, "workspace-2", "tab-2", "pane-2", homeDir)
+	assertPiStartObserverEnv(t, extraEnv, "workspace-2", "tab-2", "pane-2", homeDir)
 }
 
-func TestHandlePiStart_FallsBackToPaneIDFromTabID(t *testing.T) {
+func TestBuildPiStartExtraEnv_FallsBackToPaneIDFromTabID(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 
-	markerPath := filepath.Join(homeDir, "pi-session-env-fallback.txt")
-	installFakePiEnvCaptureBinary(t, markerPath)
-
-	h := newTestHandler(t)
-	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
-	if err := os.MkdirAll(cwd, 0o755); err != nil {
-		t.Fatalf("mkdir cwd: %v", err)
-	}
-
-	connState := &wsConnState{}
-	_, err := h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
-		"sessionId":   "session-3",
-		"tabId":       "tab-3",
-		"workspaceId": "workspace-3",
-		"cwd":         cwd,
-	}))
+	extraEnv, err := buildPiStartExtraEnv(piStartParams{
+		TabID:       "tab-3",
+		WorkspaceID: "workspace-3",
+	})
 	if err != nil {
-		t.Fatalf("dispatchPi: %v", err)
+		t.Fatalf("buildPiStartExtraEnv: %v", err)
 	}
 
-	envByKey := parseCapturedEnv(waitForFileContent(t, markerPath))
-	assertPiStartObserverEnv(t, envByKey, "workspace-3", "tab-3", "pane-tab-3", homeDir)
+	assertPiStartObserverEnv(t, extraEnv, "workspace-3", "tab-3", "pane-tab-3", homeDir)
 }
 
-func assertPiStartObserverEnv(t *testing.T, envByKey map[string]string, workspaceID string, tabID string, paneID string, homeDir string) {
+func assertPiStartObserverEnv(t *testing.T, env []string, workspaceID string, tabID string, paneID string, homeDir string) {
 	t.Helper()
-	if envByKey["YISHAN_WORKSPACE_ID"] != workspaceID {
-		t.Fatalf("YISHAN_WORKSPACE_ID = %q, want %q", envByKey["YISHAN_WORKSPACE_ID"], workspaceID)
+	assertEnvValue(t, env, "YISHAN_WORKSPACE_ID", workspaceID)
+	assertEnvValue(t, env, "YISHAN_TAB_ID", tabID)
+	assertEnvValue(t, env, "YISHAN_PANE_ID", paneID)
+	assertEnvValue(t, env, "YISHAN_NOTIFY_SCRIPT_PATH", filepath.Join(homeDir, ".yishan", "notify.sh"))
+}
+
+func assertEnvValue(t *testing.T, env []string, key string, want string) {
+	t.Helper()
+	prefix := key + "="
+	for _, entry := range env {
+		if strings.HasPrefix(entry, prefix) {
+			got := strings.TrimPrefix(entry, prefix)
+			if got != want {
+				t.Fatalf("%s = %q, want %q", key, got, want)
+			}
+			return
+		}
 	}
-	if envByKey["YISHAN_TAB_ID"] != tabID {
-		t.Fatalf("YISHAN_TAB_ID = %q, want %q", envByKey["YISHAN_TAB_ID"], tabID)
-	}
-	if envByKey["YISHAN_PANE_ID"] != paneID {
-		t.Fatalf("YISHAN_PANE_ID = %q, want %q", envByKey["YISHAN_PANE_ID"], paneID)
-	}
-	wantNotifyPath := filepath.Join(homeDir, ".yishan", "notify.sh")
-	if envByKey["YISHAN_NOTIFY_SCRIPT_PATH"] != wantNotifyPath {
-		t.Fatalf("YISHAN_NOTIFY_SCRIPT_PATH = %q, want %q", envByKey["YISHAN_NOTIFY_SCRIPT_PATH"], wantNotifyPath)
-	}
+	t.Fatalf("%s missing from env", key)
 }
 
 func mustMarshalJSON(t *testing.T, value any) json.RawMessage {
@@ -188,36 +168,6 @@ func installFakePiBinary(t *testing.T, markerPath string) {
 		t.Fatalf("write fake pi binary: %v", err)
 	}
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-}
-
-func installFakePiEnvCaptureBinary(t *testing.T, markerPath string) {
-	t.Helper()
-	binDir := t.TempDir()
-	scriptPath := filepath.Join(binDir, "pi")
-	script := fmt.Sprintf(`#!/bin/sh
-cat <<EOF > %s
-YISHAN_WORKSPACE_ID=$YISHAN_WORKSPACE_ID
-YISHAN_TAB_ID=$YISHAN_TAB_ID
-YISHAN_PANE_ID=$YISHAN_PANE_ID
-YISHAN_NOTIFY_SCRIPT_PATH=$YISHAN_NOTIFY_SCRIPT_PATH
-EOF
-`, markerPath)
-	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
-		t.Fatalf("write fake pi env capture binary: %v", err)
-	}
-	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-}
-
-func parseCapturedEnv(raw string) map[string]string {
-	envByKey := make(map[string]string)
-	for _, line := range strings.Split(strings.TrimSpace(raw), "\n") {
-		key, value, found := strings.Cut(line, "=")
-		if !found {
-			continue
-		}
-		envByKey[key] = value
-	}
-	return envByKey
 }
 
 func waitForFileContent(t *testing.T, path string) string {
