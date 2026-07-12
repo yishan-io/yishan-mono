@@ -32,6 +32,7 @@ export type OpenExternalUrlResult =
 export type DispatchNotificationInput = {
   title: string;
   body?: string;
+  silent?: boolean;
 };
 
 export type PlayNotificationSoundInput = {

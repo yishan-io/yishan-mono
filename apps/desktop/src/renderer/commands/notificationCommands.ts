@@ -62,6 +62,7 @@ export async function previewNotification(input: {
   return await getDesktopHostBridge().dispatchNotification({
     title: previewTitle,
     body: "Notification preview",
+    silent: true,
   });
 }
 
@@ -71,7 +72,7 @@ export async function playNotificationSound(input: { soundId: NotificationSoundI
 }
 
 /** Dispatches one desktop notification effect payload through main-process IPC. */
-export async function dispatchNotification(input: { title: string; body?: string }) {
+export async function dispatchNotification(input: { title: string; body?: string; silent?: boolean }) {
   return await getDesktopHostBridge().dispatchNotification(input);
 }
 

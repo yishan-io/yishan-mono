@@ -169,17 +169,19 @@ describe("notificationCommands", () => {
     await previewNotification({ eventType: "run-finished" });
     await previewNotification({ eventType: "pending-question" });
     await playNotificationSound({ soundId: "chime", volume: 0.9 });
-    await dispatchNotification({ title: "Run completed", body: "Done" });
+    await dispatchNotification({ title: "Run completed", body: "Done", silent: true });
 
     expect(mocks.dispatchNotification).toHaveBeenCalledWith({
       title: "Run finished",
       body: "Notification preview",
+      silent: true,
     });
     expect(mocks.dispatchNotification).toHaveBeenCalledWith({
       title: "Input required",
       body: "Notification preview",
+      silent: true,
     });
-    expect(mocks.dispatchNotification).toHaveBeenCalledWith({ title: "Run completed", body: "Done" });
+    expect(mocks.dispatchNotification).toHaveBeenCalledWith({ title: "Run completed", body: "Done", silent: true });
     expect(mocks.playNotificationSoundBridge).toHaveBeenCalledWith({ soundId: "chime", volume: 0.9 });
   });
 });

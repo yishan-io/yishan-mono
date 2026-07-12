@@ -1013,6 +1013,7 @@ describe("createBackendEventStoreBindings", () => {
     expect(dispatchSystemNotification).toHaveBeenNthCalledWith(1, {
       title: "codex finished",
       body: undefined,
+      silent: true,
     });
     expect(playNotificationSound).toHaveBeenCalledTimes(2);
     expect(playNotificationSound).toHaveBeenNthCalledWith(1, {
@@ -1484,12 +1485,84 @@ describe("createBackendEventStoreBindings", () => {
     expect(dispatchSystemNotification).toHaveBeenCalledWith({
       title: "Run completed",
       body: undefined,
+      silent: true,
     });
     expect(playNotificationSound).toHaveBeenCalledTimes(1);
     expect(playNotificationSound).toHaveBeenCalledWith({
       soundId: "zip",
       volume: 0.4,
     });
+
+    stopBindings();
+  });
+
+  it("deduplicates duplicate notification ids before replaying preference-backed effects", async () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+    const getNotificationPreferences = vi.fn(async () => ({
+      schemaVersion: 1,
+      enabled: true,
+      osEnabled: true,
+      soundEnabled: true,
+      volume: 0.4,
+      focusOnClick: true,
+      enabledEventTypes: ["run-finished" as const],
+      eventSounds: {
+        "run-finished": "zip" as const,
+        "run-failed": "alert" as const,
+        "pending-question": "ping" as const,
+      },
+      enabledCategories: ["ai-task" as const],
+    }));
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+      getNotificationPreferences,
+    });
+
+    const stopBindings = startBindings();
+    const duplicatedPayload = {
+      id: "notification-duplicate",
+      title: "Run completed",
+      tone: "success" as const,
+      createdAt: "2026-04-03T10:00:00.000Z",
+      workspaceId: "workspace-1",
+      notificationEventType: "run-finished" as const,
+    };
+
+    inAppNotificationHarness.emit(duplicatedPayload);
+    inAppNotificationHarness.emit(duplicatedPayload);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(getNotificationPreferences).toHaveBeenCalledTimes(1);
+    expect(dispatchSystemNotification).toHaveBeenCalledTimes(1);
+    expect(dispatchSystemNotification).toHaveBeenCalledWith({
+      title: "Run completed",
+      body: undefined,
+      silent: true,
+    });
+    expect(playNotificationSound).toHaveBeenCalledTimes(1);
+    expect(playNotificationSound).toHaveBeenCalledWith({
+      soundId: "zip",
+      volume: 0.4,
+    });
+    expect(recordWorkspaceUnreadNotification).toHaveBeenCalledTimes(1);
+    expect(recordWorkspaceUnreadNotification).toHaveBeenCalledWith("workspace-1", "success");
 
     stopBindings();
   });
@@ -1678,6 +1751,7 @@ describe("createBackendEventStoreBindings", () => {
     expect(dispatchSystemNotification).toHaveBeenCalledWith({
       title: "Input Required",
       body: undefined,
+      silent: true,
     });
     expect(playNotificationSound).toHaveBeenCalledWith({
       soundId: "ping",
@@ -1743,6 +1817,7 @@ describe("createBackendEventStoreBindings", () => {
     expect(dispatchSystemNotification).toHaveBeenCalledWith({
       title: "Run Failed",
       body: "Workspace Orders / Payments has stopped with an error.",
+      silent: true,
     });
     stopBindings();
   });
@@ -1787,6 +1862,52 @@ describe("createBackendEventStoreBindings", () => {
       title: "Run Failed",
       body: "Workspace workspace-2 has stopped with an error.",
     });
+    stopBindings();
+  });
+
+  it("forwards explicit silent system notifications for legacy payloads", async () => {
+    const gitHarness = createGitChangedHarness();
+    const workspaceFilesHarness = createWorkspaceFilesChangedHarness();
+    const inAppNotificationHarness = createInAppNotificationHarness();
+    const incrementFileTreeRefreshVersion = vi.fn();
+    const incrementGitRefreshVersion = vi.fn();
+    const setWorkspaceAgentStatusByWorkspaceId = vi.fn();
+    const recordWorkspaceUnreadNotification = vi.fn();
+    const dispatchSystemNotification = vi.fn(async () => undefined);
+    const playNotificationSound = vi.fn(async () => undefined);
+
+    const startBindings = createBackendEventStoreBindings({
+      subscribeGitChanged: gitHarness.subscribeGitChanged,
+      subscribeWorkspaceFilesChanged: workspaceFilesHarness.subscribeWorkspaceFilesChanged,
+      subscribeInAppNotification: inAppNotificationHarness.subscribeInAppNotification,
+      incrementFileTreeRefreshVersion,
+      incrementGitRefreshVersion,
+      setWorkspaceAgentStatusByWorkspaceId,
+      recordWorkspaceUnreadNotification,
+      dispatchSystemNotification,
+      playNotificationSound,
+    });
+
+    const stopBindings = startBindings();
+    inAppNotificationHarness.emit({
+      id: "notification-legacy-silent",
+      title: "Run finished",
+      body: "Quiet banner",
+      tone: "success",
+      createdAt: "2026-04-03T10:00:00.000Z",
+      workspaceId: "workspace-1",
+      showSystemNotification: true,
+      silent: true,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(dispatchSystemNotification).toHaveBeenCalledWith({
+      title: "Run finished",
+      body: "Quiet banner",
+      silent: true,
+    });
+    expect(playNotificationSound).not.toHaveBeenCalled();
+
     stopBindings();
   });
 
