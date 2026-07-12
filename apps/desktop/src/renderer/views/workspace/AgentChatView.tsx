@@ -1,5 +1,5 @@
 import { Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { LuArrowUp } from "react-icons/lu";
 import {
   abortAgent,
@@ -37,6 +37,7 @@ type AgentChatViewProps = {
   workspaceId: string;
   cwd: string;
   piSessionId?: string;
+  paneId?: string;
   isActive?: boolean;
 };
 
@@ -217,7 +218,8 @@ function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
 const MemoizedAgentChatComposerPane = memo(AgentChatComposerPane);
 MemoizedAgentChatComposerPane.displayName = "AgentChatComposerPane";
 
-function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive = true }: AgentChatViewProps) {
+function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, paneId, isActive = true }: AgentChatViewProps) {
+  const startupPaneIdRef = useRef<string | undefined>(paneId);
   const hasSession = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]));
   const sessionState = agentChatStore(
     (state) => state.sessionsByTabId[tabId]?.state ?? (hasSession ? "idle" : "starting"),
@@ -228,9 +230,20 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive
   useEffect(() => {
     let isDisposed = false;
 
+    // Pane identity matters only when the Pi session is first started. Do not
+    // reinitialize the session when the tab later moves between split panes,
+    // or we risk resetting local chat state while the backend session still
+    // retains its original pane binding.
+
     const initialize = async (): Promise<void> => {
       try {
-        const startedSessionId = await ensurePiSession({ tabId, workspaceId, cwd, piSessionId });
+        const startedSessionId = await ensurePiSession({
+          tabId,
+          workspaceId,
+          cwd,
+          piSessionId,
+          paneId: startupPaneIdRef.current,
+        });
         if (isDisposed) return;
 
         registerAgentSession({ tabId, sessionId: startedSessionId });

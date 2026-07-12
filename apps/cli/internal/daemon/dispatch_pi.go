@@ -9,6 +9,7 @@ import (
 	"yishan/apps/cli/internal/agentmanager"
 	"yishan/apps/cli/internal/config"
 	"yishan/apps/cli/internal/workspace"
+	terminalruntime "yishan/apps/cli/internal/workspace/terminal"
 )
 
 // piSessionState tracks the desktop connection that owns a pi session.
@@ -35,6 +36,7 @@ func (h *JSONRPCHandler) dispatchPi(ctx context.Context, connState *wsConnState,
 type piStartParams struct {
 	SessionID   string `json:"sessionId"`
 	TabID       string `json:"tabId"`
+	PaneID      string `json:"paneId,omitempty"`
 	WorkspaceID string `json:"workspaceId"`
 	CWD         string `json:"cwd"`
 	PiSessionID string `json:"piSessionId,omitempty"`
@@ -52,14 +54,14 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "cwd is required")
 	}
 
-	piAgentDir, err := config.ManagedPiAgentDir()
-	if err != nil {
-		return nil, workspace.NewRPCError(rpcCodeServerError, fmt.Sprintf("resolve managed pi agent dir: %v", err))
-	}
-
 	args := []string{"--mode", "rpc", "--name", req.TabID}
 	if req.PiSessionID != "" {
 		args = append(args, "--session-id", req.PiSessionID)
+	}
+
+	extraEnv, err := buildPiStartExtraEnv(req)
+	if err != nil {
+		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
 	}
 
 	opts := agentmanager.StartOptions{
@@ -69,7 +71,7 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 		Binary:      "pi",
 		Args:        args,
 		CWD:         req.CWD,
-		ExtraEnv:    []string{config.PiAgentDirEnvKey + "=" + piAgentDir},
+		ExtraEnv:    extraEnv,
 		OnEvent:     h.makePiEventCallback(req.SessionID),
 	}
 
@@ -95,6 +97,32 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 
 type piStopParams struct {
 	SessionID string `json:"sessionId"`
+}
+
+func buildPiStartExtraEnv(req piStartParams) ([]string, error) {
+	piAgentDir, err := config.ManagedPiAgentDir()
+	if err != nil {
+		return nil, fmt.Errorf("resolve managed pi agent dir: %w", err)
+	}
+
+	env := terminalruntime.ResolveObserverSessionEnv(
+		nil,
+		req.WorkspaceID,
+		req.TabID,
+		resolvePiStartPaneID(req.TabID, req.PaneID),
+	)
+	return append(env, config.PiAgentDirEnvKey+"="+piAgentDir), nil
+}
+
+func resolvePiStartPaneID(tabID string, paneID string) string {
+	normalizedPaneID := strings.TrimSpace(paneID)
+	if normalizedPaneID != "" {
+		return normalizedPaneID
+	}
+	if strings.TrimSpace(tabID) == "" {
+		return ""
+	}
+	return "pane-" + tabID
 }
 
 func (h *JSONRPCHandler) handlePiStop(params json.RawMessage) (any, error) {

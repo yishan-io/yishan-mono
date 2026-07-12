@@ -89,6 +89,60 @@ func TestHandlePiStart_OverridesLegacyAgentDirEnv(t *testing.T) {
 	}
 }
 
+func TestBuildPiStartExtraEnv_InjectsNotificationSessionEnv(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	extraEnv, err := buildPiStartExtraEnv(piStartParams{
+		TabID:       "tab-2",
+		WorkspaceID: "workspace-2",
+		PaneID:      "pane-2",
+	})
+	if err != nil {
+		t.Fatalf("buildPiStartExtraEnv: %v", err)
+	}
+
+	assertPiStartObserverEnv(t, extraEnv, "workspace-2", "tab-2", "pane-2", homeDir)
+}
+
+func TestBuildPiStartExtraEnv_FallsBackToPaneIDFromTabID(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	extraEnv, err := buildPiStartExtraEnv(piStartParams{
+		TabID:       "tab-3",
+		WorkspaceID: "workspace-3",
+	})
+	if err != nil {
+		t.Fatalf("buildPiStartExtraEnv: %v", err)
+	}
+
+	assertPiStartObserverEnv(t, extraEnv, "workspace-3", "tab-3", "pane-tab-3", homeDir)
+}
+
+func assertPiStartObserverEnv(t *testing.T, env []string, workspaceID string, tabID string, paneID string, homeDir string) {
+	t.Helper()
+	assertEnvValue(t, env, "YISHAN_WORKSPACE_ID", workspaceID)
+	assertEnvValue(t, env, "YISHAN_TAB_ID", tabID)
+	assertEnvValue(t, env, "YISHAN_PANE_ID", paneID)
+	assertEnvValue(t, env, "YISHAN_NOTIFY_SCRIPT_PATH", filepath.Join(homeDir, ".yishan", "notify.sh"))
+}
+
+func assertEnvValue(t *testing.T, env []string, key string, want string) {
+	t.Helper()
+	prefix := key + "="
+	for _, entry := range env {
+		if strings.HasPrefix(entry, prefix) {
+			got := strings.TrimPrefix(entry, prefix)
+			if got != want {
+				t.Fatalf("%s = %q, want %q", key, got, want)
+			}
+			return
+		}
+	}
+	t.Fatalf("%s missing from env", key)
+}
+
 func mustMarshalJSON(t *testing.T, value any) json.RawMessage {
 	t.Helper()
 	data, err := json.Marshal(value)
