@@ -1,5 +1,5 @@
-import type * as Rpc from "../rpc/daemonTypes";
 import { generateId } from "../helpers/generateId";
+import type * as Rpc from "../rpc/daemonTypes";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { agentChatStore } from "../store/agentChatStore";
 import type {
@@ -9,6 +9,14 @@ import type {
   AgentQueueState,
   AgentStreamEvent,
 } from "../store/agentChatTypes";
+import {
+  disposeAgentChatStreamBuffer,
+  flushAgentChatStreamBuffer,
+  peekAgentChatStreamMessage,
+  queueAgentChatStreamMessage,
+  setAgentChatStreamTabVisible as setBufferedAgentChatStreamTabVisible,
+} from "./agentChatStreamBuffer";
+import { applyStreamDelta, cloneAgentMessage, cloneContentBlocks } from "./agentChatStreamMessageHelpers";
 
 // ─── Tab-level Pi session lifecycle ──────────────────────────────────────────
 // Pi RPC sessions outlive React component mounts so that Strict Mode
@@ -32,15 +40,11 @@ export async function ensurePiSession(opts: {
   cwd: string;
   piSessionId?: string;
 }): Promise<string> {
-  // 1. Already tracked by the new tab-level registry.
   const existing = activePiSessions.get(opts.tabId);
   if (existing) {
     return existing.rpcSessionId;
   }
 
-  // 2. Session exists in the chat store (tab opened before this refactor,
-  //    or initSession called by the error path). Reuse it so we don't try
-  //    to start a duplicate Pi process.
   const chatSession = agentChatStore.getState().sessionsByTabId[opts.tabId];
   if (chatSession) {
     activePiSessions.set(opts.tabId, {
@@ -51,7 +55,6 @@ export async function ensurePiSession(opts: {
     return chatSession.sessionId;
   }
 
-  // 3. Start a new Pi session.
   const sessionId = opts.piSessionId || generateId();
   const client = await getDaemonClient();
 
@@ -69,11 +72,10 @@ export async function ensurePiSession(opts: {
 
 /** Returns the tabId that currently owns the given Pi session, if any. */
 export function findTabWithPiSession(piSessionId: string): string | undefined {
-  // Check active session registry (post-refactor tabs).
   for (const [tabId, session] of activePiSessions) {
     if (session.piSessionId === piSessionId) return tabId;
   }
-  // Fallback: check the chat store (covers tabs from before the refactor).
+
   const sessions = agentChatStore.getState().sessionsByTabId;
   for (const [tabId, session] of Object.entries(sessions)) {
     if (session.sessionId === piSessionId) return tabId;
@@ -90,11 +92,18 @@ export function setPiSessionUnsubscribe(tabId: string, unsubscribe: () => void):
   }
 }
 
+/** Publishes one chat tab's visibility so hidden tabs can flush less aggressively. */
+export function setAgentChatStreamTabVisible(tabId: string, visible: boolean): void {
+  setBufferedAgentChatStreamTabVisible(tabId, visible);
+}
+
 /** Stops the Pi RPC session for a tab. Called when the tab is closed. */
 export async function stopPiSession(tabId: string): Promise<void> {
   const session = activePiSessions.get(tabId);
   if (!session) return;
 
+  flushAgentChatStreamBuffer(tabId);
+  disposeAgentChatStreamBuffer(tabId);
   activePiSessions.delete(tabId);
   session.unsubscribe?.();
 
@@ -140,6 +149,8 @@ export async function sendAgentPrompt(opts: {
 
 /** Aborts the current agent operation. */
 export async function abortAgent(opts: { tabId: string; sessionId: string }): Promise<void> {
+  flushAgentChatStreamBuffer(opts.tabId);
+
   const client = await getDaemonClient();
   await client.pi.send({
     sessionId: opts.sessionId,
@@ -185,7 +196,6 @@ export async function fetchAgentModels(opts: {
     sessionId: opts.sessionId,
     command: { type: "get_available_models" },
   });
-  // Response arrives asynchronously via agent.pi.event → handlePiResponse.
 }
 
 /** Fetches session state (model, thinkingLevel) from the pi session. */
@@ -198,7 +208,6 @@ export async function fetchAgentState(opts: {
     sessionId: opts.sessionId,
     command: { type: "get_state" },
   });
-  // Response arrives asynchronously via agent.pi.event → handlePiResponse.
 }
 
 /** Fetches all conversation messages from the pi session. */
@@ -211,7 +220,6 @@ export async function fetchAgentMessages(opts: {
     sessionId: opts.sessionId,
     command: { type: "get_messages" },
   });
-  // Response arrives asynchronously via agent.pi.event → handlePiResponse.
 }
 
 // ─── Pi event handler ────────────────────────────────────────────────────────
@@ -229,32 +237,31 @@ type PiEventPayload = {
  */
 export function handleAgentPiEvent(payload: PiEventPayload): void {
   const { sessionId, tabId, event } = payload;
-  const store = agentChatStore.getState();
-  const currentSession = store.sessionsByTabId[tabId];
+  const currentSession = agentChatStore.getState().sessionsByTabId[tabId];
 
   if (!currentSession) {
-    return; // Tab not yet initialized or already closed.
+    return;
   }
   if (currentSession.sessionId !== sessionId) {
-    return; // Ignore stale events from an older session for the same tab.
+    return;
   }
 
   switch (event.type) {
     case "agent_start":
-      store.setSessionState(tabId, "running");
+      agentChatStore.getState().setSessionState(tabId, "running");
       break;
 
     case "agent_end":
-      store.setSessionState(tabId, "idle");
+      flushAgentChatStreamBuffer(tabId);
+      agentChatStore.getState().setSessionState(tabId, "idle");
       break;
 
     case "message_start": {
       const msg = event.message as AgentMessage | undefined;
       if (msg && msg.role === "assistant") {
-        // Preserve content blocks pi sent (models may pre-fill thinking/text).
-        // Deltas will append to these blocks by contentIndex.
-        const content = Array.isArray(msg.content) ? (msg.content as AgentContentBlock[]) : [];
-        store.updateStreamingMessage(tabId, {
+        flushAgentChatStreamBuffer(tabId);
+        const content = Array.isArray(msg.content) ? cloneContentBlocks(msg.content as AgentContentBlock[]) : [];
+        agentChatStore.getState().updateStreamingMessage(tabId, {
           ...msg,
           id: msg.id ?? generateId(),
           content,
@@ -266,46 +273,47 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
 
     case "message_update": {
       const snapshot = event.message as AgentMessage | undefined;
-      const streaming = store.sessionsByTabId[tabId]?.streamingMessage;
-
       if (snapshot?.role === "assistant") {
-        store.updateStreamingMessage(tabId, {
+        const base = getLatestStreamingMessage(tabId);
+        queueStreamingMessageUpdate(tabId, {
           ...snapshot,
-          id: streaming?.id ?? snapshot.id ?? generateId(),
-          content: Array.isArray(snapshot.content) ? [...snapshot.content] : [],
-          startedAtMs: streaming?.startedAtMs,
-          durationMs: streaming?.durationMs,
+          id: base?.id ?? snapshot.id ?? generateId(),
+          content: Array.isArray(snapshot.content) ? cloneContentBlocks(snapshot.content) : [],
+          startedAtMs: base?.startedAtMs,
+          durationMs: base?.durationMs,
         });
         break;
       }
 
       const delta = event.assistantMessageEvent as AgentStreamEvent | undefined;
-      if (!delta || !streaming) break;
-      applyStreamDelta(streaming, delta);
-      // New content array so React detects the change.
-      store.updateStreamingMessage(tabId, {
-        ...streaming,
-        content: Array.isArray(streaming.content) ? [...streaming.content] : [],
-      });
+      const base = getLatestStreamingMessage(tabId);
+      if (!delta || !base) break;
+
+      const nextMessage = cloneAgentMessage(base);
+      applyStreamDelta(nextMessage, delta);
+      queueStreamingMessageUpdate(tabId, nextMessage);
       break;
     }
 
     case "message_end": {
       const msg = event.message as AgentMessage | undefined;
       if (!msg) break;
+
+      flushAgentChatStreamBuffer(tabId);
+
       if (msg.role === "assistant") {
-        const startedAtMs = store.sessionsByTabId[tabId]?.streamingMessage?.startedAtMs ?? Date.now();
-        store.updateStreamingMessage(tabId, {
+        const base = getLatestStreamingMessage(tabId);
+        const startedAtMs = base?.startedAtMs ?? Date.now();
+        agentChatStore.getState().updateStreamingMessage(tabId, {
           ...msg,
-          id: store.sessionsByTabId[tabId]?.streamingMessage?.id ?? msg.id ?? generateId(),
-          content: Array.isArray(msg.content) ? [...msg.content] : [],
+          id: base?.id ?? msg.id ?? generateId(),
+          content: Array.isArray(msg.content) ? cloneContentBlocks(msg.content) : [],
           startedAtMs,
           durationMs: Math.max(0, Date.now() - startedAtMs),
         });
-        store.finalizeStreamingMessage(tabId);
+        agentChatStore.getState().finalizeStreamingMessage(tabId);
       } else {
-        // User and toolResult messages arrive complete.
-        store.appendMessage(tabId, {
+        agentChatStore.getState().appendMessage(tabId, {
           ...msg,
           id: msg.id ?? generateId(),
         });
@@ -314,17 +322,13 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     }
 
     case "tool_execution_start":
-      // Handled inline by AgentToolCallCard via prop updates.
-      break;
-
     case "tool_execution_update":
     case "tool_execution_end":
-      // Tool results are part of message content; no separate store action needed.
       break;
 
     case "queue_update": {
       const queue = event as unknown as AgentQueueState;
-      store.setQueue(tabId, {
+      agentChatStore.getState().setQueue(tabId, {
         steering: queue.steering ?? [],
         followUp: queue.followUp ?? [],
       });
@@ -335,14 +339,11 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     case "turn_end":
     case "compaction_start":
     case "compaction_end":
-      // Lifecycle events; no store action needed.
       break;
 
-    case "response": {
-      // Command responses from pi (e.g., get_available_models result).
+    case "response":
       handlePiResponse(tabId, event);
       break;
-    }
 
     default:
       break;
@@ -351,78 +352,20 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
 
 // ─── Streaming helpers ───────────────────────────────────────────────────────
 
-function applyStreamDelta(message: AgentMessage, delta: AgentStreamEvent): void {
-  const content: AgentContentBlock[] = Array.isArray(message.content) ? [...message.content] : [];
+function queueStreamingMessageUpdate(tabId: string, message: AgentMessage): void {
+  queueAgentChatStreamMessage({
+    tabId,
+    message,
+    onFlush: (nextMessage) => {
+      agentChatStore.getState().updateStreamingMessage(tabId, nextMessage);
+    },
+  });
+}
 
-  // Ensure the content array has enough slots for contentIndex-based deltas.
-  const ensureIndex = (idx: number, block: AgentContentBlock): void => {
-    while (content.length <= idx) {
-      content.push({ type: "text", text: "" });
-    }
-    content[idx] = block;
-  };
-
-  switch (delta.type) {
-    case "text_start":
-      content.push({ type: "text", text: "" });
-      break;
-
-    case "text_delta": {
-      const block = content[delta.contentIndex];
-      if (block && block.type === "text") {
-        block.text += delta.delta;
-      } else {
-        // Block doesn't exist yet — some providers skip text_start.
-        ensureIndex(delta.contentIndex, { type: "text", text: delta.delta });
-      }
-      break;
-    }
-
-    case "thinking_start":
-      content.push({ type: "thinking", thinking: "" });
-      break;
-
-    case "thinking_delta": {
-      const block = content[delta.contentIndex];
-      if (block && block.type === "thinking") {
-        block.thinking += delta.delta;
-      } else {
-        ensureIndex(delta.contentIndex, { type: "thinking", thinking: delta.delta });
-      }
-      break;
-    }
-
-    case "toolcall_start":
-      content.push({
-        type: "toolCall",
-        id: delta.toolCallId,
-        name: delta.toolName,
-        arguments: {},
-      });
-      break;
-
-    case "toolcall_delta": {
-      const block = content[delta.contentIndex];
-      if (block && block.type === "toolCall") {
-        try {
-          block.arguments = { ...block.arguments, ...JSON.parse(delta.delta) };
-        } catch {
-          // Partial JSON; ignore.
-        }
-      }
-      break;
-    }
-
-    case "toolcall_end": {
-      const block = content[delta.contentIndex];
-      if (block && block.type === "toolCall" && delta.toolCall) {
-        block.arguments = delta.toolCall.arguments;
-      }
-      break;
-    }
-  }
-
-  message.content = content;
+function getLatestStreamingMessage(tabId: string): AgentMessage | null {
+  return (
+    peekAgentChatStreamMessage(tabId) ?? agentChatStore.getState().sessionsByTabId[tabId]?.streamingMessage ?? null
+  );
 }
 
 // ─── Response handler ─────────────────────────────────────────────────────────
@@ -436,30 +379,25 @@ function handlePiResponse(tabId: string, event: Record<string, unknown>): void {
   switch (command) {
     case "get_available_models": {
       const data = event.data as { models?: AgentModel[] } | undefined;
-      const models = data?.models ?? [];
-      agentChatStore.getState().setAvailableModels(tabId, models);
+      agentChatStore.getState().setAvailableModels(tabId, data?.models ?? []);
       break;
     }
     case "get_state": {
       const data = event.data as Record<string, unknown> | undefined;
       if (data?.model && typeof data.model === "object") {
-        const model = data.model as AgentModel;
-        agentChatStore.getState().setCurrentModel(tabId, model);
+        agentChatStore.getState().setCurrentModel(tabId, data.model as AgentModel);
       }
       if (typeof data?.thinkingLevel === "string") {
         agentChatStore.getState().setThinkingLevel(tabId, data.thinkingLevel);
       }
-      if (typeof data?.isStreaming === "boolean" && data.isStreaming) {
-        agentChatStore.getState().setSessionState(tabId, "running");
-      } else {
-        agentChatStore.getState().setSessionState(tabId, "idle");
-      }
+      agentChatStore
+        .getState()
+        .setSessionState(tabId, typeof data?.isStreaming === "boolean" && data.isStreaming ? "running" : "idle");
       break;
     }
     case "get_messages": {
       const data = event.data as { messages?: AgentMessage[] } | undefined;
-      const messages = data?.messages ?? [];
-      for (const msg of messages) {
+      for (const msg of data?.messages ?? []) {
         agentChatStore.getState().appendMessage(tabId, {
           ...msg,
           id: msg.id ?? generateId(),

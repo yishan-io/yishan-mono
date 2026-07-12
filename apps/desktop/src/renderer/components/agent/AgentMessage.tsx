@@ -88,7 +88,14 @@ export function AgentMessage({
             case "text": {
               const key = `${message.id}-text-${textBlockCount}`;
               textBlockCount += 1;
-              return <AgentMarkdownContent key={key} content={block.text} workspacePath={workspacePath} />;
+              return (
+                <AgentMarkdownContent
+                  key={key}
+                  content={block.text}
+                  workspacePath={workspacePath}
+                  renderMode={isStreaming ? "streaming" : "final"}
+                />
+              );
             }
             case "thinking": {
               if (block.thinking.trim().length === 0) {

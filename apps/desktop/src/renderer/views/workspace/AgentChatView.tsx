@@ -1,5 +1,5 @@
-import { Box, Button, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
+import { memo, useCallback, useEffect, useState } from "react";
 import { LuArrowUp } from "react-icons/lu";
 import {
   abortAgent,
@@ -10,6 +10,7 @@ import {
   handleAgentPiEvent,
   registerAgentSession,
   sendAgentPrompt,
+  setAgentChatStreamTabVisible,
   setAgentModel,
   setAgentThinkingLevel,
   setPiSessionUnsubscribe,
@@ -22,12 +23,14 @@ import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { getDaemonClient } from "../../rpc/rpcTransport";
 import { agentChatStore } from "../../store/agentChatStore";
-import type { AgentModel } from "../../store/agentChatTypes";
+import type { AgentMessage, AgentModel, AgentSessionState } from "../../store/agentChatTypes";
 import { tabStore } from "../../store/tabStore";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
 
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
+const EMPTY_MESSAGES: AgentMessage[] = [];
+const EMPTY_MODELS: AgentModel[] = [];
 
 type AgentChatViewProps = {
   tabId: string;
@@ -37,17 +40,191 @@ type AgentChatViewProps = {
   isActive?: boolean;
 };
 
-function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive = true }: AgentChatViewProps) {
-  const session = agentChatStore((s) => s.sessionsByTabId[tabId]);
+type AgentChatTranscriptPaneProps = {
+  tabId: string;
+  cwd: string;
+  isActive: boolean;
+};
+
+type AgentChatComposerPaneProps = {
+  tabId: string;
+};
+
+function AgentChatTranscriptPane({ tabId, cwd, isActive }: AgentChatTranscriptPaneProps) {
+  const messages = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages ?? EMPTY_MESSAGES);
+  const trailingMessage = agentChatStore((state) => state.sessionsByTabId[tabId]?.streamingMessage ?? null);
+  const sessionState = agentChatStore((state) => state.sessionsByTabId[tabId]?.state ?? "starting");
+
+  return (
+    <AgentMessageList
+      tabId={tabId}
+      isActive={isActive}
+      messages={messages}
+      trailingMessage={trailingMessage}
+      emptyPrompt="Send a message to start the conversation."
+      workspacePath={cwd}
+      isWorking={sessionState === "running"}
+    />
+  );
+}
+
+const MemoizedAgentChatTranscriptPane = memo(AgentChatTranscriptPane);
+MemoizedAgentChatTranscriptPane.displayName = "AgentChatTranscriptPane";
+
+function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
+  const slashCommands = useAgentChatSlashCommands();
   const agentChatTab = tabStore((state) =>
     state.tabs.find((tab): tab is Extract<(typeof state.tabs)[number], { kind: "agent-chat" }> => {
       return tab.id === tabId && tab.kind === "agent-chat";
     }),
   );
-  const slashCommands = useAgentChatSlashCommands();
+  const sessionId = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionId ?? null);
+  const sessionState = agentChatStore((state) => state.sessionsByTabId[tabId]?.state ?? "starting");
+  const availableModels = agentChatStore((state) => state.sessionsByTabId[tabId]?.availableModels ?? EMPTY_MODELS);
+  const currentModel = agentChatStore((state) => state.sessionsByTabId[tabId]?.currentModel ?? null);
+  const thinkingLevel = agentChatStore((state) => state.sessionsByTabId[tabId]?.thinkingLevel ?? "medium");
+  const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
+  const hasStreamingMessage = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]?.streamingMessage));
   const [draft, setDraft] = useState("");
 
-  // Start Pi session at tab level (survives Strict Mode remounts).
+  const handleSubmit = useCallback(
+    async (value: string) => {
+      const prompt = value.trim();
+      if (!sessionId || !prompt) return;
+
+      if (messageCount === 0 && !hasStreamingMessage && !agentChatTab?.data.userRenamed) {
+        renameTab(tabId, formatAgentSessionTitle(prompt));
+      }
+
+      const nextMessage = await transformAgentChatPromptForSkills(prompt, slashCommands);
+      await sendAgentPrompt({ tabId, sessionId, message: nextMessage });
+    },
+    [agentChatTab?.data.userRenamed, hasStreamingMessage, messageCount, sessionId, slashCommands, tabId],
+  );
+
+  const handleAbort = useCallback(async () => {
+    if (!sessionId) return;
+    await abortAgent({ tabId, sessionId });
+  }, [sessionId, tabId]);
+
+  const handleSubmitButtonClick = useCallback(async () => {
+    const nextDraft = draft.trim();
+    if (!nextDraft) return;
+    await handleSubmit(nextDraft);
+    setDraft("");
+  }, [draft, handleSubmit]);
+
+  const handleModelChange = useCallback(
+    async (model: AgentModel) => {
+      if (!sessionId) return;
+      const [provider, ...rest] = model.id.split("/");
+      const modelId = rest.length > 0 ? rest.join("/") : model.id;
+      agentChatStore.getState().setCurrentModel(tabId, model);
+      await setAgentModel({ tabId, sessionId, provider: provider || "", modelId });
+    },
+    [sessionId, tabId],
+  );
+
+  const handleThinkingCycle = useCallback(async () => {
+    if (!sessionId) return;
+    const currentIdx = THINKING_LEVELS.indexOf(thinkingLevel);
+    const nextLevel = THINKING_LEVELS[(currentIdx + 1) % THINKING_LEVELS.length] ?? THINKING_LEVELS[0] ?? "medium";
+    await setAgentThinkingLevel({ tabId, sessionId, level: nextLevel });
+  }, [sessionId, tabId, thinkingLevel]);
+
+  return (
+    <Box
+      sx={{
+        borderTop: 1,
+        borderColor: "divider",
+        p: 1,
+        display: "flex",
+        flexDirection: "column",
+        gap: 0.75,
+      }}
+    >
+      <RichComposer
+        placeholder="Type a message…"
+        value={draft}
+        onChange={setDraft}
+        onSubmit={handleSubmit}
+        disabled={sessionState === "starting"}
+        slashCommands={slashCommands}
+      />
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1, minHeight: 18 }}>
+        {availableModels.length > 0 && (
+          <AgentModelSelector
+            models={availableModels}
+            currentModel={currentModel}
+            thinkingLevel={thinkingLevel}
+            onModelChange={handleModelChange}
+            onThinkingLevelCycle={handleThinkingCycle}
+          />
+        )}
+        <Box sx={{ flex: 1 }} />
+        {sessionState === "running" ? (
+          <Tooltip title="Stop" placement="top">
+            <span>
+              <IconButton
+                size="small"
+                onClick={handleAbort}
+                aria-label="Stop"
+                sx={{
+                  p: 0.5,
+                  border: 1,
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: 0.5,
+                    bgcolor: "currentColor",
+                  }}
+                />
+              </IconButton>
+            </span>
+          </Tooltip>
+        ) : (
+          <Tooltip title="Submit" placement="top">
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => {
+                  void handleSubmitButtonClick();
+                }}
+                disabled={sessionState === "starting" || draft.trim().length === 0}
+                aria-label="Submit"
+                sx={{
+                  p: 0.5,
+                  border: 1,
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                }}
+              >
+                <LuArrowUp size={16} />
+              </IconButton>
+            </span>
+          </Tooltip>
+        )}
+      </Box>
+    </Box>
+  );
+}
+
+const MemoizedAgentChatComposerPane = memo(AgentChatComposerPane);
+MemoizedAgentChatComposerPane.displayName = "AgentChatComposerPane";
+
+function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive = true }: AgentChatViewProps) {
+  const hasSession = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]));
+  const sessionState = agentChatStore(
+    (state) => state.sessionsByTabId[tabId]?.state ?? (hasSession ? "idle" : "starting"),
+  );
+  const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
+  const error = agentChatStore((state) => state.sessionsByTabId[tabId]?.error ?? null);
+
   useEffect(() => {
     let isDisposed = false;
 
@@ -77,7 +254,6 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive
         });
         setPiSessionUnsubscribe(tabId, sub.unsubscribe);
 
-        // Restore session state and message history.
         await fetchAgentState({ tabId, sessionId: startedSessionId });
         if (isDisposed) return;
 
@@ -97,70 +273,14 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive
 
     return () => {
       isDisposed = true;
-      // Pi session outlives the component — stopped when tab closes.
     };
   }, [tabId, workspaceId, cwd, piSessionId]);
 
-  const finalizedMessages = useMemo(() => session?.messages ?? [], [session?.messages]);
-  const trailingMessage = session?.streamingMessage ?? null;
+  useEffect(() => {
+    setAgentChatStreamTabVisible(tabId, isActive);
+  }, [isActive, tabId]);
 
-  const handleSubmit = useCallback(
-    async (value: string) => {
-      const sid = session?.sessionId;
-      const prompt = value.trim();
-      if (!sid || !prompt) return;
-
-      if (session.messages.length === 0 && !session.streamingMessage && !agentChatTab?.data.userRenamed) {
-        renameTab(tabId, formatAgentSessionTitle(prompt));
-      }
-
-      const nextMessage = await transformAgentChatPromptForSkills(prompt, slashCommands);
-      await sendAgentPrompt({ tabId, sessionId: sid, message: nextMessage });
-    },
-    [
-      agentChatTab?.data.userRenamed,
-      session?.messages.length,
-      session?.sessionId,
-      session?.streamingMessage,
-      slashCommands,
-      tabId,
-    ],
-  );
-
-  const handleAbort = useCallback(async () => {
-    const sid = session?.sessionId;
-    if (!sid) return;
-    await abortAgent({ tabId, sessionId: sid });
-  }, [session?.sessionId, tabId]);
-
-  const handleSubmitButtonClick = useCallback(async () => {
-    const nextDraft = draft.trim();
-    if (!nextDraft) return;
-    await handleSubmit(nextDraft);
-    setDraft("");
-  }, [draft, handleSubmit]);
-
-  const handleModelChange = useCallback(
-    async (model: AgentModel) => {
-      const sid = session?.sessionId;
-      if (!sid) return;
-      const [provider, ...rest] = model.id.split("/");
-      const modelId = rest.length > 0 ? rest.join("/") : model.id;
-      agentChatStore.getState().setCurrentModel(tabId, model);
-      await setAgentModel({ tabId, sessionId: sid, provider: provider || "", modelId });
-    },
-    [session?.sessionId, tabId],
-  );
-
-  const handleThinkingCycle = useCallback(async () => {
-    const sid = session?.sessionId;
-    if (!sid) return;
-    const currentIdx = THINKING_LEVELS.indexOf(session.thinkingLevel);
-    const nextLevel = THINKING_LEVELS[(currentIdx + 1) % THINKING_LEVELS.length] ?? THINKING_LEVELS[0] ?? "medium";
-    await setAgentThinkingLevel({ tabId, sessionId: sid, level: nextLevel });
-  }, [session?.sessionId, session?.thinkingLevel, tabId]);
-
-  if (!session) {
+  if (!hasSession) {
     return (
       <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
         <Typography color="text.secondary">Starting agent session…</Typography>
@@ -168,8 +288,7 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive
     );
   }
 
-  // Show a loading spinner while fetching the transcript for a resumed session.
-  if (piSessionId && session.messages.length === 0 && session.state !== "error") {
+  if (piSessionId && messageCount === 0 && sessionState !== "error") {
     return (
       <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
         <CircularProgress size={24} />
@@ -177,7 +296,7 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive
     );
   }
 
-  if (session.state === "error") {
+  if (sessionState === "error") {
     return (
       <Box
         sx={{
@@ -194,7 +313,7 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive
           Failed to start agent session.
         </Typography>
         <Typography color="text.secondary" variant="caption" sx={{ maxWidth: 400, textAlign: "center" }}>
-          {session.error}
+          {error}
         </Typography>
       </Box>
     );
@@ -202,96 +321,8 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-      {/* Messages */}
-      <AgentMessageList
-        tabId={tabId}
-        isActive={isActive}
-        messages={finalizedMessages}
-        trailingMessage={trailingMessage}
-        emptyPrompt="Send a message to start the conversation."
-        workspacePath={cwd}
-        isWorking={session.state === "running"}
-      />
-
-      {/* Composer + controls */}
-      <Box
-        sx={{
-          borderTop: 1,
-          borderColor: "divider",
-          p: 1,
-          display: "flex",
-          flexDirection: "column",
-          gap: 0.75,
-        }}
-      >
-        <RichComposer
-          placeholder="Type a message…"
-          value={draft}
-          onChange={setDraft}
-          onSubmit={handleSubmit}
-          disabled={session.state === "starting"}
-          slashCommands={slashCommands}
-        />
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1, minHeight: 18 }}>
-          {session.availableModels.length > 0 && (
-            <AgentModelSelector
-              models={session.availableModels}
-              currentModel={session.currentModel}
-              thinkingLevel={session.thinkingLevel}
-              onModelChange={handleModelChange}
-              onThinkingLevelCycle={handleThinkingCycle}
-            />
-          )}
-          <Box sx={{ flex: 1 }} />
-          {session.state === "running" ? (
-            <Tooltip title="Stop" placement="top">
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={handleAbort}
-                  aria-label="Stop"
-                  sx={{
-                    p: 0.5,
-                    border: 1,
-                    borderColor: "divider",
-                    bgcolor: "background.paper",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: 0.5,
-                      bgcolor: "currentColor",
-                    }}
-                  />
-                </IconButton>
-              </span>
-            </Tooltip>
-          ) : (
-            <Tooltip title="Submit" placement="top">
-              <span>
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    void handleSubmitButtonClick();
-                  }}
-                  disabled={session.state === "starting" || draft.trim().length === 0}
-                  aria-label="Submit"
-                  sx={{
-                    p: 0.5,
-                    border: 1,
-                    borderColor: "divider",
-                    bgcolor: "background.paper",
-                  }}
-                >
-                  <LuArrowUp size={16} />
-                </IconButton>
-              </span>
-            </Tooltip>
-          )}
-        </Box>
-      </Box>
+      <MemoizedAgentChatTranscriptPane tabId={tabId} cwd={cwd} isActive={isActive} />
+      <MemoizedAgentChatComposerPane tabId={tabId} />
     </Box>
   );
 }
@@ -299,5 +330,5 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive
 const MemoizedAgentChatView = memo(AgentChatViewComponent);
 MemoizedAgentChatView.displayName = "AgentChatView";
 
-/** Full agent chat tab: session bar, message list, composer, model selector. */
+/** Full agent chat tab: transcript, composer, and model controls. */
 export const AgentChatView = MemoizedAgentChatView;
