@@ -21,8 +21,8 @@ import (
 func readStdout(session *Session, stdout io.ReadCloser, onEvent func(sessionID, tabID, workspaceID string, event []byte)) {
 	defer func() {
 		stdout.Close()
-		close(session.done)
 		session.manager.removeSession(session.id)
+		close(session.done)
 	}()
 
 	scanner := bufio.NewScanner(stdout)
