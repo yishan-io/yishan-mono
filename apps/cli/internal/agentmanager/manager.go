@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 
 	"yishan/apps/cli/internal/runtime/shellenv"
@@ -52,19 +53,20 @@ type StartOptions struct {
 	Args []string
 	// CWD is the working directory for the agent process.
 	CWD string
-	// Env is the environment for the agent process. If nil, os.Environ() is
-	// used after augmenting with login-shell PATH.
-	Env []string
+	// ExtraEnv contains additional KEY=VALUE pairs merged on top of the
+	// login-shell environment. The manager always resolves the full
+	// login-shell PATH first; ExtraEnv values override or extend it.
+	ExtraEnv []string
 	// OnEvent is called for each JSONL line read from the agent's stdout.
 	// It is called from a dedicated goroutine and must be safe for concurrent
 	// use with Send (which runs in a different goroutine).
 	OnEvent func(sessionID, tabID, workspaceID string, event []byte)
 }
 
-// Start spawns a new agent session. It resolves the binary against the login-shell
-// PATH, starts the subprocess, and begins reading stdout events on a background
-// goroutine. The session is automatically removed from the manager when the
-// process exits.
+// Start spawns a new agent session. It always resolves the full login-shell
+// environment first, then merges ExtraEnv on top. The binary is resolved
+// against the resulting PATH. A background goroutine reads stdout events until
+// the process exits.
 func (m *Manager) Start(ctx context.Context, opts StartOptions) (*Session, error) {
 	if opts.SessionID == "" {
 		return nil, fmt.Errorf("sessionID is required")
@@ -77,9 +79,16 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (*Session, error
 	}
 	m.mu.Unlock()
 
-	env := opts.Env
-	if env == nil {
-		env = shellenv.ResolveEnvWithUserPath(os.Environ(), os.Getenv("SHELL"))
+	// Always start from the full login-shell environment so the subprocess
+	// inherits the user's PATH and tool directories regardless of how the
+	// daemon was launched.
+	env := shellenv.ResolveEnvWithUserPath(os.Environ(), os.Getenv("SHELL"))
+	for _, kv := range opts.ExtraEnv {
+		if kv == "" {
+			continue
+		}
+		parts := splitEnvPair(kv)
+		env = shellenv.UpsertEnv(env, parts[0], parts[1])
 	}
 
 	binaryPath := shellenv.ResolveExecutablePathFromEnv(opts.Binary, env)
@@ -178,4 +187,13 @@ func (m *Manager) removeSession(sessionID string) {
 	m.mu.Lock()
 	delete(m.sessions, sessionID)
 	m.mu.Unlock()
+}
+
+// splitEnvPair splits a KEY=VALUE string into [key, value].
+// If there is no '=' the value is treated as empty.
+func splitEnvPair(kv string) [2]string {
+	if k, v, found := strings.Cut(kv, "="); found {
+		return [2]string{k, v}
+	}
+	return [2]string{kv, ""}
 }

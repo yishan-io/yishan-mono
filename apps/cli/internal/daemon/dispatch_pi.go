@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"yishan/apps/cli/internal/agentmanager"
 	"yishan/apps/cli/internal/config"
-	"yishan/apps/cli/internal/runtime/shellenv"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -54,9 +52,9 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "cwd is required")
 	}
 
-	piEnv, err := buildManagedPiProcessEnv()
+	piAgentDir, err := config.ManagedPiAgentDir()
 	if err != nil {
-		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
+		return nil, workspace.NewRPCError(rpcCodeServerError, fmt.Sprintf("resolve managed pi agent dir: %v", err))
 	}
 
 	args := []string{"--mode", "rpc", "--name", req.TabID}
@@ -71,7 +69,7 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 		Binary:      "pi",
 		Args:        args,
 		CWD:         req.CWD,
-		Env:         piEnv,
+		ExtraEnv:    []string{config.PiAgentDirEnvKey + "=" + piAgentDir},
 		OnEvent:     h.makePiEventCallback(req.SessionID),
 	}
 
@@ -93,16 +91,6 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 	})
 
 	return map[string]any{"sessionId": req.SessionID}, nil
-}
-
-func buildManagedPiProcessEnv() ([]string, error) {
-	piAgentDir, err := config.ManagedPiAgentDir()
-	if err != nil {
-		return nil, fmt.Errorf("resolve managed pi agent dir: %w", err)
-	}
-
-	baseEnv := shellenv.ResolveEnvWithUserPath(os.Environ(), os.Getenv("SHELL"))
-	return shellenv.UpsertEnv(baseEnv, config.PiAgentDirEnvKey, piAgentDir), nil
 }
 
 type piStopParams struct {

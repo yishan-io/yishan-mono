@@ -278,3 +278,23 @@ func TestManagerContextCancellation(t *testing.T) {
 		t.Fatal("session did not exit after context cancellation")
 	}
 }
+
+func TestSplitEnvPair(t *testing.T) {
+	tests := []struct {
+		input    string
+		wantKey  string
+		wantVal  string
+	}{
+		{"KEY=value", "KEY", "value"},
+		{"KEY=val=ue", "KEY", "val=ue"},
+		{"KEY=", "KEY", ""},
+		{"KEY", "KEY", ""},
+		{"", "", ""},
+	}
+	for _, tc := range tests {
+		got := splitEnvPair(tc.input)
+		if got[0] != tc.wantKey || got[1] != tc.wantVal {
+			t.Errorf("splitEnvPair(%q) = %v, want [%q, %q]", tc.input, got, tc.wantKey, tc.wantVal)
+		}
+	}
+}
