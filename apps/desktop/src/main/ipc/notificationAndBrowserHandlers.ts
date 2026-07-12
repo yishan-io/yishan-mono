@@ -23,6 +23,7 @@ export function registerNotificationAndBrowserIpcHandlers() {
     const notificationResult = await notificationAdapter.driver.show({
       title: input.title,
       body: input.body,
+      silent: input.silent,
     });
 
     return {

@@ -30,6 +30,7 @@ const API_NAMESPACES = new Set<ApiNamespace>([
 const desktopRpcEventListeners = new Set<DesktopRpcEventListener>();
 const daemonConnectionStatusListeners = new Set<(status: DaemonConnectionStatus) => void>();
 let backendEventsSubscription: { unsubscribe: () => void } | null = null;
+let backendEventsSubscriptionPromise: Promise<void> | null = null;
 let desktopBridgeEventsUnsubscribe: (() => void) | null = null;
 let daemonRpcClientPromise: Promise<DaemonRpcClient> | null = null;
 let daemonTransportClientPromise: Promise<DaemonClient> | null = null;
@@ -390,26 +391,52 @@ async function ensureBackendEventsSubscription(): Promise<void> {
     return;
   }
 
-  const client = await getDaemonClient();
-  backendEventsSubscription = client.events.frontendStream.subscribe(undefined, {
-    onData: (event: { topic: string; payload: unknown }) => {
-      emitDesktopRpcEvent({
-        method: event.topic,
-        payload: event.payload,
-      });
-    },
-    onError: (error: unknown) => {
-      backendEventsSubscription = null;
-      if (desktopRpcEventListeners.size > 0) {
-        void ensureBackendEventsSubscription();
-      }
+  if (backendEventsSubscriptionPromise) {
+    await backendEventsSubscriptionPromise;
+    return;
+  }
 
-      emitDesktopRpcEvent({
-        method: "apiRpc.events.error",
-        payload: { error },
-      });
-    },
+  backendEventsSubscriptionPromise = (async () => {
+    if (backendEventsSubscription || desktopRpcEventListeners.size === 0) {
+      return;
+    }
+
+    const client = await getDaemonClient();
+    if (backendEventsSubscription || desktopRpcEventListeners.size === 0) {
+      return;
+    }
+
+    const nextSubscription = client.events.frontendStream.subscribe(undefined, {
+      onData: (event: { topic: string; payload: unknown }) => {
+        emitDesktopRpcEvent({
+          method: event.topic,
+          payload: event.payload,
+        });
+      },
+      onError: (error: unknown) => {
+        backendEventsSubscription = null;
+        if (desktopRpcEventListeners.size > 0) {
+          void ensureBackendEventsSubscription();
+        }
+
+        emitDesktopRpcEvent({
+          method: "apiRpc.events.error",
+          payload: { error },
+        });
+      },
+    });
+
+    if (desktopRpcEventListeners.size === 0) {
+      nextSubscription.unsubscribe();
+      return;
+    }
+
+    backendEventsSubscription = nextSubscription;
+  })().finally(() => {
+    backendEventsSubscriptionPromise = null;
   });
+
+  await backendEventsSubscriptionPromise;
 }
 
 /** Registers one raw desktop RPC listener and returns one unsubscribe callback. */
@@ -423,6 +450,7 @@ export function subscribeDesktopRpcEvent(listener: DesktopRpcEventListener): () 
     if (desktopRpcEventListeners.size === 0) {
       backendEventsSubscription?.unsubscribe();
       backendEventsSubscription = null;
+      backendEventsSubscriptionPromise = null;
       desktopBridgeEventsUnsubscribe?.();
       desktopBridgeEventsUnsubscribe = null;
     }
@@ -433,6 +461,7 @@ if (typeof window !== "undefined") {
   window.addEventListener("beforeunload", () => {
     backendEventsSubscription?.unsubscribe();
     backendEventsSubscription = null;
+    backendEventsSubscriptionPromise = null;
     desktopBridgeEventsUnsubscribe?.();
     desktopBridgeEventsUnsubscribe = null;
   });

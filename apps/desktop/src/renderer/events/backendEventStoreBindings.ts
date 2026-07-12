@@ -30,6 +30,7 @@ import { subscribeInAppNotificationEvent } from "./backendEventSubscriptions";
 type NotificationEventPayload = RpcFrontendMessagePayload<"notificationEvent">;
 type ObserverStatusPayload = NonNullable<NotificationEventPayload["observerStatus"]>;
 type NotificationSoundPayload = NonNullable<NotificationEventPayload["soundToPlay"]>;
+type SystemNotificationInput = { title: string; body?: string; silent?: boolean };
 type WorkspaceCreateStartedPayload = RpcFrontendMessagePayload<"workspaceCreateStarted">;
 type WorkspaceCreateProgressPayload = RpcFrontendMessagePayload<"workspaceCreateProgress">;
 type WorkspaceCreateCompletedPayload = RpcFrontendMessagePayload<"workspaceCreateCompleted">;
@@ -93,7 +94,7 @@ type BackendEventStoreBindingsDependencies = {
   loadWorkspaceSnapshot?: () => Promise<void>;
   getSelectedOrganizationId?: () => string | undefined;
   openBrowserTab?: (payload: { url: string; workspaceId: string }) => void;
-  dispatchSystemNotification: (input: { title: string; body?: string }) => Promise<void>;
+  dispatchSystemNotification: (input: SystemNotificationInput) => Promise<void>;
   playNotificationSound: (input: NotificationSoundPayload) => Promise<void>;
   closeTerminalSession?: (sessionId: string) => Promise<void>;
   getNotificationPreferences?: () => Promise<NotificationPreferences>;
@@ -102,6 +103,7 @@ type BackendEventStoreBindingsDependencies = {
 };
 
 const GIT_REFRESH_COALESCE_MS = 2_000;
+const NOTIFICATION_EFFECT_DEDUPE_WINDOW_MS = 1_500;
 
 const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindingsDependencies = {
   subscribeDaemonConnectionStatus,
@@ -393,13 +395,34 @@ function rewriteWorkspaceIdentifier(
 function buildSystemNotificationCopy(
   payload: NotificationEventPayload,
   dependencies: BackendEventStoreBindingsDependencies,
-): { title: string; body?: string } {
+  silent?: boolean,
+): SystemNotificationInput {
   const workspaceId = payload.workspaceId?.trim();
   const workspaceLabel = resolveWorkspaceCopyLabel(payload, dependencies);
-  return {
-    title: rewriteWorkspaceIdentifier(payload.title, workspaceId, workspaceLabel) ?? payload.title,
-    body: rewriteWorkspaceIdentifier(payload.body, workspaceId, workspaceLabel),
-  };
+  const title = rewriteWorkspaceIdentifier(payload.title, workspaceId, workspaceLabel) ?? payload.title;
+  const body = rewriteWorkspaceIdentifier(payload.body, workspaceId, workspaceLabel);
+
+  if (silent === undefined) {
+    return { title, body };
+  }
+
+  return { title, body, silent };
+}
+
+function resolveSystemNotificationSilence(payload: NotificationEventPayload): boolean | undefined {
+  if (payload.silent === true) {
+    return true;
+  }
+
+  if (payload.notificationEventType) {
+    return true;
+  }
+
+  if (payload.soundToPlay) {
+    return true;
+  }
+
+  return undefined;
 }
 
 /**
@@ -534,7 +557,11 @@ async function dispatchPreferenceBackedNotification(
     return;
   }
 
-  const notificationCopy = buildSystemNotificationCopy(payload, dependencies);
+  const notificationCopy = buildSystemNotificationCopy(
+    payload,
+    dependencies,
+    resolveSystemNotificationSilence(payload),
+  );
 
   if (preferences.osEnabled) {
     await dependencies.dispatchSystemNotification(notificationCopy);
@@ -600,6 +627,7 @@ export function createBackendEventStoreBindings(
    */
   return function startBackendEventStoreBindings() {
     const gitRefreshTimersByWorktreePath = new Map<string, ReturnType<typeof setTimeout>>();
+    const recentNotificationEffectTimeoutsById = new Map<string, ReturnType<typeof setTimeout>>();
     let workspaceSnapshotRefreshTimer: ReturnType<typeof setTimeout> | undefined;
     let isWorkspaceSnapshotRefreshRunning = false;
     let shouldRunWorkspaceSnapshotRefreshAgain = false;
@@ -656,6 +684,23 @@ export function createBackendEventStoreBindings(
         dependencies.incrementGitRefreshVersion(normalizedPath);
       }, GIT_REFRESH_COALESCE_MS);
       gitRefreshTimersByWorktreePath.set(normalizedPath, timeoutId);
+    };
+
+    const hasRecentlyHandledNotificationId = (payload: NotificationEventPayload): boolean => {
+      const notificationId = payload.id.trim();
+      if (!notificationId) {
+        return false;
+      }
+
+      if (recentNotificationEffectTimeoutsById.has(notificationId)) {
+        return true;
+      }
+
+      const timeoutId = setTimeout(() => {
+        recentNotificationEffectTimeoutsById.delete(notificationId);
+      }, NOTIFICATION_EFFECT_DEDUPE_WINDOW_MS);
+      recentNotificationEffectTimeoutsById.set(notificationId, timeoutId);
+      return false;
     };
 
     const unsubscribeGitChanged = resolvedDependencies.subscribeGitChanged(
@@ -740,6 +785,10 @@ export function createBackendEventStoreBindings(
         }
       }
 
+      if (hasRecentlyHandledNotificationId(payload)) {
+        return;
+      }
+
       const suppressNotificationEffects = shouldSuppressNotificationEffects(payload, resolvedDependencies);
 
       if (payload.notificationEventType) {
@@ -747,7 +796,11 @@ export function createBackendEventStoreBindings(
           // Preference resolution and delivery failures should not block store state updates.
         });
       } else if (payload.showSystemNotification && !suppressNotificationEffects) {
-        const notificationCopy = buildSystemNotificationCopy(payload, resolvedDependencies);
+        const notificationCopy = buildSystemNotificationCopy(
+          payload,
+          resolvedDependencies,
+          resolveSystemNotificationSilence(payload),
+        );
         void resolvedDependencies.dispatchSystemNotification(notificationCopy).catch(() => {
           // Notification delivery failures should not block store state updates.
         });
@@ -893,6 +946,10 @@ export function createBackendEventStoreBindings(
         clearTimeout(timeoutId);
       }
       gitRefreshTimersByWorktreePath.clear();
+      for (const timeoutId of recentNotificationEffectTimeoutsById.values()) {
+        clearTimeout(timeoutId);
+      }
+      recentNotificationEffectTimeoutsById.clear();
       lifecycleBySessionKey.clear();
     };
   };
