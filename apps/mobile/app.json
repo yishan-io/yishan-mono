@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Yishan",
+    "slug": "yishan-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "yishan",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "icon": "./src/assets/yishan-app-icon.png",
+    "plugins": [],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "splash": {
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "icon": "./src/assets/yishan-app-icon.png",
+      "bundleIdentifier": "io.yishan.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/yishan-app-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "io.yishan.mobile"
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./src/assets/yishan-app-icon.png"
+    }
+  }
+}

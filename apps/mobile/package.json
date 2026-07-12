@@ -1,0 +1,56 @@
+{
+  "name": "@yishan/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "expo": {
+    "autolinking": {
+      "ios": {
+        "exclude": [
+          "react-native-reanimated",
+          "react-native-worklets"
+        ]
+      }
+    }
+  },
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo run:android",
+    "ios": "LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 expo run:ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check . --files-ignore-unknown=true --ignore=.expo",
+    "format": "biome check . --write --files-ignore-unknown=true --ignore=.expo",
+    "test:unit": "vitest run"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
+    "@tamagui/animations-react-native": "^1.140.4",
+    "@tamagui/lucide-icons": "^1.140.4",
+    "@tamagui/shorthands": "^1.140.4",
+    "@tamagui/themes": "^1.140.4",
+    "@tanstack/react-query": "^5.100.1",
+    "@yishan-io/design-tokens": "workspace:*",
+    "expo": "~55.0.23",
+    "expo-constants": "~55.0.16",
+    "expo-crypto": "^55.0.15",
+    "expo-linking": "~55.0.15",
+    "expo-router": "~55.0.14",
+    "expo-secure-store": "~55.0.14",
+    "expo-splash-screen": "~55.0.21",
+    "expo-status-bar": "~55.0.6",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.6",
+    "react-native-gesture-handler": "~2.30.0",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-svg": "^15.15.5",
+    "react-native-web": "~0.21.0",
+    "tamagui": "^1.140.4"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~5.9.2"
+  }
+}

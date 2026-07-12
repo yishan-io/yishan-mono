@@ -24,6 +24,8 @@ export type ServiceConfig = {
   jwtAudience: string;
   cookieDomain?: string;
   googleClientId: string;
+  googleClientIdAndroid?: string;
+  googleClientIdIos?: string;
   googleClientSecret: string;
   githubClientId: string;
   githubClientSecret: string;
