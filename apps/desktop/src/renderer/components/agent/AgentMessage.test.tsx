@@ -5,8 +5,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentMessage as AgentMessageType } from "../../store/agentChatTypes";
 import { AgentMessage } from "./AgentMessage";
 
+const mocked = vi.hoisted(() => ({
+  agentMarkdownContent: vi.fn(({ content }: { content: string }) => <div>{content}</div>),
+}));
+
 vi.mock("./AgentMarkdownContent", () => ({
-  AgentMarkdownContent: ({ content }: { content: string }) => <div>{content}</div>,
+  AgentMarkdownContent: mocked.agentMarkdownContent,
 }));
 
 vi.mock("./AgentToolCallCard", () => ({
@@ -15,6 +19,7 @@ vi.mock("./AgentToolCallCard", () => ({
 
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
 });
 
 function buildAssistantThinkingMessage(): AgentMessageType {
@@ -45,6 +50,27 @@ describe("AgentMessage", () => {
     render(<AgentMessage message={buildAssistantThinkingMessage()} isStreaming />);
 
     expect(screen.getByText("Thinking")).toBeTruthy();
+  });
+
+  it("renders streaming assistant text blocks in streaming render mode", () => {
+    render(
+      <AgentMessage
+        message={{
+          id: "assistant-text-1",
+          role: "assistant",
+          content: [{ type: "text", text: "still streaming" }],
+        }}
+        isStreaming
+      />,
+    );
+
+    expect(mocked.agentMarkdownContent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "still streaming",
+        renderMode: "streaming",
+      }),
+      undefined,
+    );
   });
 
   it("shows Thought after the assistant message is complete", () => {

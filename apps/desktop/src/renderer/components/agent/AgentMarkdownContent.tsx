@@ -10,6 +10,7 @@ import { useMarkdownStyles } from "../markdownStyles";
 type AgentMarkdownContentProps = {
   content: string;
   workspacePath?: string;
+  renderMode?: "final" | "streaming";
 };
 
 function openFileTab(href: string, workspacePath: string): void {
@@ -18,7 +19,8 @@ function openFileTab(href: string, workspacePath: string): void {
 }
 
 const FILE_PATH_RE = /^(?:\.{1,2}[\/\\]|[\/\\]|[a-zA-Z]:[\\/])|[\/\\]/;
-const FILE_EXT_RE = /\.(?:md|tsx?|jsx?|json|ya?ml|css|html|py|rs|go|java|rb|sh|bash|zsh|sql|graphql|vue|svelte|tf|dockerfile|env|cfg|ini|toml|lock|gitignore|editorconfig|csv|xml|svg)$/i;
+const FILE_EXT_RE =
+  /\.(?:md|tsx?|jsx?|json|ya?ml|css|html|py|rs|go|java|rb|sh|bash|zsh|sql|graphql|vue|svelte|tf|dockerfile|env|cfg|ini|toml|lock|gitignore|editorconfig|csv|xml|svg)$/i;
 
 function looksLikeFilePath(text: string): boolean {
   // Must contain a path separator or look like a dotfile.
@@ -32,13 +34,18 @@ function looksLikeFilePath(text: string): boolean {
 }
 
 /** Renders assistant response text as sanitized markdown HTML. */
-export function AgentMarkdownContent({ content, workspacePath }: AgentMarkdownContentProps) {
+export function AgentMarkdownContent({ content, workspacePath, renderMode = "final" }: AgentMarkdownContentProps) {
   const theme = useTheme();
   const styles = useMarkdownStyles(theme, 14);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [html, setHtml] = useState("");
 
   useEffect(() => {
+    if (renderMode === "streaming") {
+      setHtml("");
+      return;
+    }
+
     let isCancelled = false;
 
     const parse = async (): Promise<void> => {
@@ -60,7 +67,7 @@ export function AgentMarkdownContent({ content, workspacePath }: AgentMarkdownCo
     return () => {
       isCancelled = true;
     };
-  }, [content]);
+  }, [content, renderMode]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -87,7 +94,7 @@ export function AgentMarkdownContent({ content, workspacePath }: AgentMarkdownCo
     }
   }, [html, workspacePath]);
 
-  if (!html) {
+  if (renderMode === "streaming" || !html) {
     return (
       <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mb: 0.5 }}>
         {content}
