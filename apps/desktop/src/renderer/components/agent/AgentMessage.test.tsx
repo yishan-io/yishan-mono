@@ -26,6 +26,21 @@ function buildAssistantThinkingMessage(): AgentMessageType {
 }
 
 describe("AgentMessage", () => {
+  it("does not render a duplicate responding spinner for empty streaming assistant messages", () => {
+    render(
+      <AgentMessage
+        message={{
+          id: "assistant-empty",
+          role: "assistant",
+          content: [],
+        }}
+        isStreaming
+      />,
+    );
+
+    expect(screen.queryByText("responding…")).toBeNull();
+  });
+
   it("shows Thinking while the assistant message is still streaming", () => {
     render(<AgentMessage message={buildAssistantThinkingMessage()} isStreaming />);
 
