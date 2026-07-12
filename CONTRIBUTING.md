@@ -81,6 +81,7 @@ On daemon startup, managed runtime files are installed under `~/.yishan`:
 - `~/.yishan/notify.sh` and `~/.yishan/notify.ps1`: hook notification bridges.
 - `~/.yishan/shell`: zsh/bash startup wrappers that keep `~/.yishan/bin` first in `PATH` for managed sessions.
 - `~/.yishan/opencode-config-home`: managed OpenCode config home.
+- `~/.yishan/pi/agent`: managed Pi agent root files (`APPEND_SYSTEM.md`, `keybindings.json`), packages, sessions, skills, and sub-agent definitions.
 
 Supported agents:
 
