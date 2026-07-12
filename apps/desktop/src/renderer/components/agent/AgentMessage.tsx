@@ -1,4 +1,4 @@
-import { Box, CircularProgress, Collapse, IconButton, Paper, Typography } from "@mui/material";
+import { Box, Collapse, IconButton, Paper, Typography } from "@mui/material";
 import { useState } from "react";
 import { LuChevronDown, LuChevronUp, LuSparkles } from "react-icons/lu";
 import { parseSkillMessage } from "../../helpers/agentSkillTextHelpers";
@@ -81,15 +81,6 @@ export function AgentMessage({
             {messageText}
           </Typography>
         ))}
-
-      {isAssistant && blocks.length === 0 && (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, minHeight: 24 }}>
-          <CircularProgress size={14} thickness={5} />
-          <Typography variant="caption" color="text.secondary">
-            responding…
-          </Typography>
-        </Box>
-      )}
 
       {isAssistant &&
         blocks.map((block) => {

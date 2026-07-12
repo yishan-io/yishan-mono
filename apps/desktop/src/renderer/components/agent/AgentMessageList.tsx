@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material";
+import { Box, CircularProgress, Typography } from "@mui/material";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import type { AgentContentBlock, AgentMessage as AgentMessageType } from "../../store/agentChatTypes";
 import { AgentMessage, type AgentToolResultMap } from "./AgentMessage";
@@ -7,7 +7,7 @@ const EMPTY_MIN_HEIGHT = 320;
 const BOTTOM_SCROLL_THRESHOLD_PX = 48;
 
 const savedScrollTopByTabId = new Map<string, number>();
-const savedMessageCountByTabId = new Map<string, number>();
+const savedRenderedItemCountByTabId = new Map<string, number>();
 const wasPinnedToBottomByTabId = new Map<string, boolean>();
 
 type AgentMessageListProps = {
@@ -17,6 +17,7 @@ type AgentMessageListProps = {
   trailingMessage?: AgentMessageType | null;
   emptyPrompt: string;
   workspacePath?: string;
+  isWorking?: boolean;
 };
 
 type DisplayMessage = {
@@ -60,10 +61,10 @@ function AgentMessageListComponent({
   trailingMessage = null,
   emptyPrompt,
   workspacePath,
+  isWorking = false,
 }: AgentMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const wasActiveRef = useRef(isActive);
-  const previousMessageCountRef = useRef(messages.length + (trailingMessage ? 1 : 0));
   const displayMessages = useMemo(() => {
     const source = trailingMessage ? [...messages, trailingMessage] : messages;
     return source.reduce<DisplayMessage[]>((acc, message, index) => {
@@ -80,6 +81,8 @@ function AgentMessageListComponent({
       return acc;
     }, []);
   }, [messages, trailingMessage]);
+  const renderedItemCount = displayMessages.length + (isWorking ? 1 : 0);
+  const previousRenderedItemCountRef = useRef(renderedItemCount);
 
   const updateSavedScrollState = useCallback(() => {
     const element = scrollRef.current;
@@ -88,18 +91,18 @@ function AgentMessageListComponent({
     }
 
     savedScrollTopByTabId.set(tabId, element.scrollTop);
-    savedMessageCountByTabId.set(tabId, displayMessages.length);
+    savedRenderedItemCountByTabId.set(tabId, renderedItemCount);
     wasPinnedToBottomByTabId.set(tabId, isScrolledNearBottom(element));
-  }, [displayMessages.length, tabId]);
+  }, [renderedItemCount, tabId]);
 
   const scrollToLatestMessage = useCallback(() => {
     const element = scrollRef.current;
-    if (!element || displayMessages.length === 0) {
+    if (!element || renderedItemCount === 0) {
       return;
     }
 
     element.scrollTop = element.scrollHeight;
-  }, [displayMessages.length]);
+  }, [renderedItemCount]);
 
   useEffect(() => {
     const element = scrollRef.current;
@@ -108,7 +111,7 @@ function AgentMessageListComponent({
 
     if (wasActive && !isActive && element) {
       savedScrollTopByTabId.set(tabId, element.scrollTop);
-      savedMessageCountByTabId.set(tabId, displayMessages.length);
+      savedRenderedItemCountByTabId.set(tabId, renderedItemCount);
       wasPinnedToBottomByTabId.set(tabId, isScrolledNearBottom(element));
       return;
     }
@@ -118,16 +121,16 @@ function AgentMessageListComponent({
     }
 
     const frameId = window.requestAnimationFrame(() => {
-      if (displayMessages.length === 0) {
+      if (renderedItemCount === 0) {
         return;
       }
 
       const savedScrollTop = savedScrollTopByTabId.get(tabId);
-      const savedMessageCount = savedMessageCountByTabId.get(tabId);
+      const savedRenderedItemCount = savedRenderedItemCountByTabId.get(tabId);
       const wasPinnedToBottom = wasPinnedToBottomByTabId.get(tabId) ?? true;
 
       if (savedScrollTop !== undefined) {
-        if (wasPinnedToBottom && savedMessageCount !== undefined && savedMessageCount !== displayMessages.length) {
+        if (wasPinnedToBottom && savedRenderedItemCount !== undefined && savedRenderedItemCount !== renderedItemCount) {
           scrollToLatestMessage();
           return;
         }
@@ -144,13 +147,13 @@ function AgentMessageListComponent({
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [displayMessages.length, isActive, scrollToLatestMessage, tabId]);
+  }, [isActive, renderedItemCount, scrollToLatestMessage, tabId]);
 
   useEffect(() => {
-    const previousMessageCount = previousMessageCountRef.current;
-    previousMessageCountRef.current = displayMessages.length;
+    const previousRenderedItemCount = previousRenderedItemCountRef.current;
+    previousRenderedItemCountRef.current = renderedItemCount;
 
-    if (!isActive || displayMessages.length === 0 || displayMessages.length <= previousMessageCount) {
+    if (!isActive || renderedItemCount === 0 || renderedItemCount === previousRenderedItemCount) {
       return;
     }
 
@@ -165,7 +168,7 @@ function AgentMessageListComponent({
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [displayMessages.length, isActive, scrollToLatestMessage, tabId]);
+  }, [isActive, renderedItemCount, scrollToLatestMessage, tabId]);
 
   if (displayMessages.length === 0) {
     return (
@@ -215,6 +218,24 @@ function AgentMessageListComponent({
             isStreaming={isStreaming}
           />
         ))}
+        {isWorking && (
+          <Box
+            data-testid="agent-turn-working-indicator"
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              px: 1.5,
+              py: 1,
+              color: "text.secondary",
+            }}
+          >
+            <CircularProgress size={14} thickness={5} />
+            <Typography variant="caption" color="inherit">
+              working…
+            </Typography>
+          </Box>
+        )}
       </Box>
     </Box>
   );

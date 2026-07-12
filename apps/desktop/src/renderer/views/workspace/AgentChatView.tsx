@@ -210,6 +210,7 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, isActive
         trailingMessage={trailingMessage}
         emptyPrompt="Send a message to start the conversation."
         workspacePath={cwd}
+        isWorking={session.state === "running"}
       />
 
       {/* Composer + controls */}
