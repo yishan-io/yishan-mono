@@ -28,6 +28,8 @@ export type AgentMessage = {
   };
   /** Stop reason from assistant messages. */
   stopReason?: string;
+  /** Provider-supplied assistant error message when the turn stops with an error. */
+  errorMessage?: string;
   timestamp?: number;
   startedAtMs?: number;
   durationMs?: number;

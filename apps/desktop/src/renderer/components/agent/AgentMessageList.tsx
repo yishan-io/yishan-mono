@@ -56,6 +56,33 @@ function isScrolledNearBottom(element: HTMLDivElement): boolean {
   return element.scrollHeight - element.clientHeight - element.scrollTop <= BOTTOM_SCROLL_THRESHOLD_PX;
 }
 
+function hasRenderableAssistantContent(message: AgentMessageType): boolean {
+  if (message.role !== "assistant" || !Array.isArray(message.content)) {
+    return false;
+  }
+
+  return message.content.some((block) => {
+    switch (block.type) {
+      case "text":
+        return block.text.trim().length > 0;
+      case "thinking":
+        return block.thinking.trim().length > 0;
+      case "toolCall":
+        return true;
+    }
+  });
+}
+
+function shouldHideAssistantErrorMessage(message: AgentMessageType): boolean {
+  return (
+    message.role === "assistant" &&
+    message.stopReason === "error" &&
+    typeof message.errorMessage === "string" &&
+    message.errorMessage.trim().length > 0 &&
+    !hasRenderableAssistantContent(message)
+  );
+}
+
 function AgentMessageListComponent({
   tabId,
   isActive,
@@ -70,6 +97,10 @@ function AgentMessageListComponent({
   const displayMessages = useMemo(() => {
     const source = trailingMessage ? [...messages, trailingMessage] : messages;
     return source.reduce<DisplayMessage[]>((acc, message, index) => {
+      if (shouldHideAssistantErrorMessage(message)) {
+        return acc;
+      }
+
       const previous = acc[acc.length - 1];
       if (previous && shouldMergeToolResult(message, previous)) {
         previous.mergedToolResults[message.toolCallId as string] = message;

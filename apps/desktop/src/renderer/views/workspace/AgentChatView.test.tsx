@@ -12,12 +12,18 @@ const mocked = vi.hoisted(() => {
       tabs: Array<{ id: string; kind: "agent-chat"; data: { userRenamed: boolean } }>;
       richComposerRenderCount: number;
       agentModelSelectorRenderCount: number;
+      latestAgentModelSelectorProps: {
+        onModelChange: ((model: AgentModel) => void | Promise<void>) | null;
+      };
     };
   } = {
     current: {
       tabs: [{ id: "tab-1", kind: "agent-chat", data: { userRenamed: true } }],
       richComposerRenderCount: 0,
       agentModelSelectorRenderCount: 0,
+      latestAgentModelSelectorProps: {
+        onModelChange: null,
+      },
     },
   };
 
@@ -30,6 +36,8 @@ const mocked = vi.hoisted(() => {
     fetchAgentModels: vi.fn().mockResolvedValue(undefined),
     setPiSessionUnsubscribe: vi.fn(),
     setAgentChatStreamTabVisible: vi.fn(),
+    setAgentModel: vi.fn(),
+    setAgentThinkingLevel: vi.fn(),
     getDaemonClient: vi.fn().mockResolvedValue({
       events: {
         frontendStream: {
@@ -53,8 +61,8 @@ vi.mock("../../commands/agentChatCommands", () => ({
   registerAgentSession: mocked.registerAgentSession,
   sendAgentPrompt: vi.fn(),
   setAgentChatStreamTabVisible: mocked.setAgentChatStreamTabVisible,
-  setAgentModel: vi.fn(),
-  setAgentThinkingLevel: vi.fn(),
+  setAgentModel: mocked.setAgentModel,
+  setAgentThinkingLevel: mocked.setAgentThinkingLevel,
   setPiSessionUnsubscribe: mocked.setPiSessionUnsubscribe,
 }));
 
@@ -74,8 +82,9 @@ vi.mock("../../components/agent/AgentMessageList", () => ({
 }));
 
 vi.mock("../../components/agent/AgentModelSelector", () => ({
-  AgentModelSelector: () => {
+  AgentModelSelector: ({ onModelChange }: { onModelChange: (model: AgentModel) => void | Promise<void> }) => {
     mocked.stateRef.current.agentModelSelectorRenderCount += 1;
+    mocked.stateRef.current.latestAgentModelSelectorProps.onModelChange = onModelChange;
     return <div data-testid="agent-model-selector" />;
   },
 }));
@@ -106,6 +115,7 @@ function seedSession(input?: {
   currentModel?: AgentModel | null;
   thinkingLevel?: string;
   error?: string | null;
+  turnError?: string | null;
 }): void {
   const store = agentChatStore.getState();
   store.removeSession("tab-1");
@@ -131,6 +141,9 @@ function seedSession(input?: {
   if (input?.error) {
     store.setSessionError("tab-1", input.error);
   }
+  if (input?.turnError) {
+    store.setTurnError("tab-1", input.turnError);
+  }
 }
 
 afterEach(() => {
@@ -138,6 +151,7 @@ afterEach(() => {
   agentChatStore.getState().removeSession("tab-1");
   mocked.stateRef.current.richComposerRenderCount = 0;
   mocked.stateRef.current.agentModelSelectorRenderCount = 0;
+  mocked.stateRef.current.latestAgentModelSelectorProps.onModelChange = null;
   vi.clearAllMocks();
 });
 
@@ -206,6 +220,47 @@ describe("AgentChatView", () => {
     rerender(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
 
     expect(mocked.setAgentChatStreamTabVisible).toHaveBeenLastCalledWith("tab-1", true);
+  });
+
+  it("passes provider and full model id through unchanged when selecting a model", async () => {
+    const currentModel = {
+      id: "anthropic.claude-sonnet-4",
+      name: "Claude Sonnet 4",
+      provider: "anthropic",
+    };
+    const nextModel = {
+      id: "google/gemini-2.5-pro",
+      name: "Gemini 2.5 Pro",
+      provider: "openrouter",
+    };
+
+    seedSession({
+      availableModels: [currentModel, nextModel],
+      currentModel,
+    });
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    await act(async () => {
+      await mocked.stateRef.current.latestAgentModelSelectorProps.onModelChange?.(nextModel);
+    });
+
+    expect(mocked.setAgentModel).toHaveBeenCalledWith({
+      tabId: "tab-1",
+      sessionId: "session-1",
+      provider: "openrouter",
+      modelId: "google/gemini-2.5-pro",
+    });
+  });
+
+  it("shows the latest turn error in a dedicated alert area", () => {
+    seedSession({
+      turnError: "Codex error: The usage limit has been reached",
+    });
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    expect(screen.getByText("Codex error: The usage limit has been reached")).toBeTruthy();
   });
 
   it("does not rerender composer or model controls for transcript-only streaming updates", () => {

@@ -14,6 +14,7 @@ type AgentSessionData = {
   thinkingLevel: string;
   queue: AgentQueueState;
   error: string | null;
+  turnError: string | null;
 };
 
 type AgentChatStoreState = {
@@ -23,6 +24,8 @@ type AgentChatStoreState = {
   initSession: (tabId: string, sessionId: string) => void;
   setSessionState: (tabId: string, state: AgentSessionState) => void;
   setSessionError: (tabId: string, error: string) => void;
+  setTurnError: (tabId: string, error: string) => void;
+  clearTurnError: (tabId: string) => void;
   appendMessage: (tabId: string, message: AgentMessage) => void;
   updateStreamingMessage: (tabId: string, message: AgentMessage) => void;
   finalizeStreamingMessage: (tabId: string) => void;
@@ -45,6 +48,7 @@ function emptySession(sessionId: string): AgentSessionData {
     thinkingLevel: "medium",
     queue: { steering: [], followUp: [] },
     error: null,
+    turnError: null,
   };
 }
 
@@ -77,6 +81,24 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (session) {
           session.state = "error";
           session.error = error;
+        }
+      });
+    },
+
+    setTurnError: (tabId, error) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) {
+          session.turnError = error;
+        }
+      });
+    },
+
+    clearTurnError: (tabId) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) {
+          session.turnError = null;
         }
       });
     },
@@ -120,8 +142,9 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.availableModels = models;
-        if (!session.currentModel && models.length > 0) {
-          session.currentModel = models[0]!;
+        const firstModel = models[0];
+        if (!session.currentModel && firstModel) {
+          session.currentModel = firstModel;
         }
       });
     },

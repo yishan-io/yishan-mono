@@ -138,6 +138,8 @@ export async function sendAgentPrompt(opts: {
     },
   });
 
+  agentChatStore.getState().clearTurnError(opts.tabId);
+
   if (!agentChatStore.getState().sessionsByTabId[opts.tabId]?.streamingMessage) {
     agentChatStore.getState().updateStreamingMessage(opts.tabId, {
       id: generateId(),
@@ -270,12 +272,18 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     case "message_start": {
       const msg = event.message as AgentMessage | undefined;
       if (msg && msg.role === "assistant") {
+        const turnError = msg.errorMessage?.trim();
+        if (turnError) {
+          agentChatStore.getState().setTurnError(tabId, turnError);
+        } else {
+          agentChatStore.getState().clearTurnError(tabId);
+        }
+
         flushAgentChatStreamBuffer(tabId);
-        const content = Array.isArray(msg.content) ? cloneContentBlocks(msg.content as AgentContentBlock[]) : [];
+        const clonedMessage = cloneIncomingAgentMessage(msg);
         agentChatStore.getState().updateStreamingMessage(tabId, {
-          ...msg,
+          ...clonedMessage,
           id: msg.id ?? generateId(),
-          content,
           startedAtMs: Date.now(),
         });
       }
@@ -285,11 +293,16 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     case "message_update": {
       const snapshot = event.message as AgentMessage | undefined;
       if (snapshot?.role === "assistant") {
+        const turnError = snapshot.errorMessage?.trim();
+        if (turnError) {
+          agentChatStore.getState().setTurnError(tabId, turnError);
+        }
+
         const base = getLatestStreamingMessage(tabId);
+        const clonedSnapshot = cloneIncomingAgentMessage(snapshot);
         queueStreamingMessageUpdate(tabId, {
-          ...snapshot,
+          ...clonedSnapshot,
           id: base?.id ?? snapshot.id ?? generateId(),
-          content: Array.isArray(snapshot.content) ? cloneContentBlocks(snapshot.content) : [],
           startedAtMs: base?.startedAtMs,
           durationMs: base?.durationMs,
         });
@@ -313,19 +326,26 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       flushAgentChatStreamBuffer(tabId);
 
       if (msg.role === "assistant") {
+        const turnError = msg.errorMessage?.trim();
+        if (turnError) {
+          agentChatStore.getState().setTurnError(tabId, turnError);
+        } else {
+          agentChatStore.getState().clearTurnError(tabId);
+        }
+
         const base = getLatestStreamingMessage(tabId);
         const startedAtMs = base?.startedAtMs ?? Date.now();
+        const clonedMessage = cloneIncomingAgentMessage(msg);
         agentChatStore.getState().updateStreamingMessage(tabId, {
-          ...msg,
+          ...clonedMessage,
           id: base?.id ?? msg.id ?? generateId(),
-          content: Array.isArray(msg.content) ? cloneContentBlocks(msg.content) : [],
           startedAtMs,
           durationMs: Math.max(0, Date.now() - startedAtMs),
         });
         agentChatStore.getState().finalizeStreamingMessage(tabId);
       } else {
         agentChatStore.getState().appendMessage(tabId, {
-          ...msg,
+          ...cloneIncomingAgentMessage(msg),
           id: msg.id ?? generateId(),
         });
       }
@@ -353,7 +373,7 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       break;
 
     case "response":
-      handlePiResponse(tabId, event);
+      handlePiResponse(tabId, sessionId, event);
       break;
 
     default:
@@ -373,6 +393,13 @@ function queueStreamingMessageUpdate(tabId: string, message: AgentMessage): void
   });
 }
 
+function cloneIncomingAgentMessage(message: AgentMessage): AgentMessage {
+  return {
+    ...message,
+    content: Array.isArray(message.content) ? cloneContentBlocks(message.content) : message.content,
+  };
+}
+
 function getLatestStreamingMessage(tabId: string): AgentMessage | null {
   return (
     peekAgentChatStreamMessage(tabId) ?? agentChatStore.getState().sessionsByTabId[tabId]?.streamingMessage ?? null
@@ -381,19 +408,34 @@ function getLatestStreamingMessage(tabId: string): AgentMessage | null {
 
 // ─── Response handler ─────────────────────────────────────────────────────────
 
-function handlePiResponse(tabId: string, event: Record<string, unknown>): void {
+function handlePiResponse(tabId: string, sessionId: string, event: Record<string, unknown>): void {
   const command = event.command as string | undefined;
   const success = event.success as boolean | undefined;
 
-  if (!success || !command) return;
+  if (!command) return;
 
   switch (command) {
+    case "set_model": {
+      if (success) {
+        const data = event.data as AgentModel | undefined;
+        if (data && typeof data === "object") {
+          agentChatStore.getState().setCurrentModel(tabId, data);
+        }
+        break;
+      }
+
+      // fire-and-forget: resync the selector from Pi after a rejected model change
+      void fetchAgentState({ tabId, sessionId });
+      break;
+    }
     case "get_available_models": {
+      if (!success) break;
       const data = event.data as { models?: AgentModel[] } | undefined;
       agentChatStore.getState().setAvailableModels(tabId, data?.models ?? []);
       break;
     }
     case "get_state": {
+      if (!success) break;
       const data = event.data as Record<string, unknown> | undefined;
       if (data?.model && typeof data.model === "object") {
         agentChatStore.getState().setCurrentModel(tabId, data.model as AgentModel);
@@ -407,10 +449,11 @@ function handlePiResponse(tabId: string, event: Record<string, unknown>): void {
       break;
     }
     case "get_messages": {
+      if (!success) break;
       const data = event.data as { messages?: AgentMessage[] } | undefined;
       for (const msg of data?.messages ?? []) {
         agentChatStore.getState().appendMessage(tabId, {
-          ...msg,
+          ...cloneIncomingAgentMessage(msg),
           id: msg.id ?? generateId(),
         });
       }
