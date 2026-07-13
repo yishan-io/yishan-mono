@@ -14,7 +14,6 @@ describe("createPiNotifyExtension", () => {
 
     vi.resetModules();
     spawnMock.mockClear();
-    vi.useFakeTimers();
 
     spawnMock.mockReturnValue({
       on: vi.fn(),
@@ -28,7 +27,6 @@ describe("createPiNotifyExtension", () => {
       value: originalPlatform,
       configurable: true,
     });
-    vi.useRealTimers();
   });
 
   async function loadExtension() {
@@ -81,13 +79,13 @@ describe("createPiNotifyExtension", () => {
     createPiNotifyExtension(api);
 
     expect(on).toHaveBeenCalledTimes(4);
-    expect(on).toHaveBeenCalledWith("before_agent_start", expect.any(Function));
+    expect(on).toHaveBeenCalledWith("agent_start", expect.any(Function));
     expect(on).toHaveBeenCalledWith("tool_execution_end", expect.any(Function));
-    expect(on).toHaveBeenCalledWith("agent_end", expect.any(Function));
+    expect(on).toHaveBeenCalledWith("agent_settled", expect.any(Function));
     expect(on).toHaveBeenCalledWith("session_shutdown", expect.any(Function));
   });
 
-  it("fires Start on first before_agent_start", async () => {
+  it("fires Start on first agent_start", async () => {
     process.env.YISHAN_NOTIFY_SCRIPT_PATH = "/tmp/notify.sh";
     process.env.YISHAN_TAB_ID = "tab-1";
 
@@ -95,14 +93,14 @@ describe("createPiNotifyExtension", () => {
     const { on, api } = mockPi();
     createPiNotifyExtension(api);
 
-    const handler = getHandler(on.mock.calls, "before_agent_start");
+    const handler = getHandler(on.mock.calls, "agent_start");
     expect(handler).toBeDefined();
     handler?.(null, { hasUI: true });
 
     expect(spawnMock).toHaveBeenCalledWith("bash", expect.arrayContaining(["Start"]), expect.any(Object));
   });
 
-  it("debounces Stop: cancels pending Stop when new turn starts", async () => {
+  it("does not emit duplicate Start while already busy", async () => {
     process.env.YISHAN_NOTIFY_SCRIPT_PATH = "/tmp/notify.sh";
     process.env.YISHAN_TAB_ID = "tab-1";
 
@@ -110,32 +108,18 @@ describe("createPiNotifyExtension", () => {
     const { on, api } = mockPi();
     createPiNotifyExtension(api);
 
-    const startHandler = getHandler(on.mock.calls, "before_agent_start");
-    const stopHandler = getHandler(on.mock.calls, "agent_end");
+    const startHandler = getHandler(on.mock.calls, "agent_start");
     expect(startHandler).toBeDefined();
-    expect(stopHandler).toBeDefined();
 
-    // First turn: start → busy
     startHandler?.(null, { hasUI: true });
     expect(spawnMock).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining(["Start"]), expect.any(Object));
     spawnMock.mockClear();
 
-    // End turn: schedules debounced Stop (not fired yet)
-    stopHandler?.(null, { hasUI: true });
-    expect(spawnMock).not.toHaveBeenCalled();
-
-    // Next turn starts within debounce window: cancels pending Stop,
-    // fires new Start (daemon sees Start→Start without intervening Stop)
     startHandler?.(null, { hasUI: true });
-    expect(spawnMock).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining(["Start"]), expect.any(Object));
-    spawnMock.mockClear();
-
-    // Fast-forward past debounce (timer was cancelled, so no Stop fires)
-    vi.advanceTimersByTime(3000);
     expect(spawnMock).not.toHaveBeenCalled();
   });
 
-  it("fires Stop after debounce when no new turn starts", async () => {
+  it("fires Stop on agent_settled", async () => {
     process.env.YISHAN_NOTIFY_SCRIPT_PATH = "/tmp/notify.sh";
     process.env.YISHAN_TAB_ID = "tab-1";
 
@@ -143,25 +127,19 @@ describe("createPiNotifyExtension", () => {
     const { on, api } = mockPi();
     createPiNotifyExtension(api);
 
-    const startHandler = getHandler(on.mock.calls, "before_agent_start");
-    const stopHandler = getHandler(on.mock.calls, "agent_end");
+    const startHandler = getHandler(on.mock.calls, "agent_start");
+    const settledHandler = getHandler(on.mock.calls, "agent_settled");
     expect(startHandler).toBeDefined();
-    expect(stopHandler).toBeDefined();
+    expect(settledHandler).toBeDefined();
 
-    // Start → busy
     startHandler?.(null, { hasUI: true });
     spawnMock.mockClear();
 
-    // End turn: schedules debounced Stop
-    stopHandler?.(null, { hasUI: true });
-    expect(spawnMock).not.toHaveBeenCalled();
-
-    // Fast-forward past debounce: Stop fires
-    vi.advanceTimersByTime(3000);
+    settledHandler?.(null, { hasUI: true });
     expect(spawnMock).toHaveBeenCalledWith("bash", expect.arrayContaining(["Stop"]), expect.any(Object));
   });
 
-  it("session_shutdown fires immediate Stop, cancels pending debounce", async () => {
+  it("session_shutdown fires immediate Stop when still busy", async () => {
     process.env.YISHAN_NOTIFY_SCRIPT_PATH = "/tmp/notify.sh";
     process.env.YISHAN_TAB_ID = "tab-1";
 
@@ -169,29 +147,16 @@ describe("createPiNotifyExtension", () => {
     const { on, api } = mockPi();
     createPiNotifyExtension(api);
 
-    const startHandler = getHandler(on.mock.calls, "before_agent_start");
-    const stopHandler = getHandler(on.mock.calls, "agent_end");
+    const startHandler = getHandler(on.mock.calls, "agent_start");
     const shutdownHandler = getHandler(on.mock.calls, "session_shutdown");
     expect(startHandler).toBeDefined();
-    expect(stopHandler).toBeDefined();
     expect(shutdownHandler).toBeDefined();
 
-    // Start → busy
     startHandler?.(null, { hasUI: true });
     spawnMock.mockClear();
 
-    // End turn: schedules debounced Stop
-    stopHandler?.(null, { hasUI: true });
-    expect(spawnMock).not.toHaveBeenCalled();
-
-    // Session shutdown: immediate Stop, cancels timer
     shutdownHandler?.(null, { hasUI: true });
     expect(spawnMock).toHaveBeenCalledWith("bash", expect.arrayContaining(["Stop"]), expect.any(Object));
-
-    // Fast-forward — timer was cancelled, no duplicate
-    spawnMock.mockClear();
-    vi.advanceTimersByTime(3000);
-    expect(spawnMock).not.toHaveBeenCalled();
   });
 
   it("fires PostToolUse on tool_execution_end", async () => {
@@ -217,7 +182,7 @@ describe("createPiNotifyExtension", () => {
     const { on, api } = mockPi();
     createPiNotifyExtension(api);
 
-    const handler = getHandler(on.mock.calls, "before_agent_start");
+    const handler = getHandler(on.mock.calls, "agent_start");
     expect(handler).toBeDefined();
 
     handler?.(null, { hasUI: false });
