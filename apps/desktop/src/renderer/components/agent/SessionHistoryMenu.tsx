@@ -9,7 +9,7 @@ type SessionHistoryMenuProps = {
   cwd: string;
   anchorEl: HTMLElement | null;
   onClose: () => void;
-  onSelectSession?: (sessionId: string, title: string) => void;
+  onSelectSession?: (session: Rpc.PiSessionSummary, title: string) => void;
 };
 
 /** Formats a timestamp as a relative label (e.g. "2h ago", "yesterday"). */
@@ -94,7 +94,7 @@ export function SessionHistoryMenu({ cwd, anchorEl, onClose, onSelectSession }: 
           <MenuItem
             key={session.sessionId}
             onClick={() => {
-              onSelectSession?.(session.sessionId, formattedTitle);
+              onSelectSession?.(session, formattedTitle);
               onClose();
             }}
             dense

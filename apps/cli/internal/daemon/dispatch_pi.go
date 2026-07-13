@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,34 +13,51 @@ import (
 	terminalruntime "yishan/apps/cli/internal/workspace/terminal"
 )
 
-// piSessionState tracks the desktop connection that owns a pi session.
+// piSessionState tracks the desktop connection and recovery metadata for one live pi session.
 type piSessionState struct {
-	connState *wsConnState
-	session   *agentmanager.Session
+	connState   *wsConnState
+	session     *agentmanager.Session
+	tabID       string
+	workspaceID string
+	cwd         string
+}
+
+// piActiveSessionSummary describes one live pi session the desktop can recover.
+// Session identity rule: the daemon live session id is also the Pi resume/session id.
+type piActiveSessionSummary struct {
+	SessionID   string `json:"sessionId"`
+	TabID       string `json:"tabId"`
+	WorkspaceID string `json:"workspaceId"`
+	CWD         string `json:"cwd"`
 }
 
 func (h *JSONRPCHandler) dispatchPi(ctx context.Context, connState *wsConnState, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodPiStart:
 		return h.handlePiStart(ctx, connState, params)
+	case MethodPiAttach:
+		return h.handlePiAttach(connState, params)
 	case MethodPiStop:
 		return h.handlePiStop(params)
 	case MethodPiSend:
 		return h.handlePiSend(params)
 	case MethodPiListSessions:
 		return h.handlePiListSessions(ctx, params)
+	case MethodPiListActiveSessions:
+		return h.handlePiListActiveSessions()
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown pi method: "+method)
 	}
 }
 
 type piStartParams struct {
+	// Session identity rule: sessionId is used both for daemon attach and Pi resume.
 	SessionID   string `json:"sessionId"`
 	TabID       string `json:"tabId"`
 	PaneID      string `json:"paneId,omitempty"`
 	WorkspaceID string `json:"workspaceId"`
 	CWD         string `json:"cwd"`
-	PiSessionID string `json:"piSessionId,omitempty"`
+	Resume      bool   `json:"resume,omitempty"`
 }
 
 func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnState, params json.RawMessage) (any, error) {
@@ -55,8 +73,10 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 	}
 
 	args := []string{"--mode", "rpc", "--name", req.TabID}
-	if req.PiSessionID != "" {
-		args = append(args, "--session-id", req.PiSessionID)
+	if req.Resume {
+		args = append(args, "--session", req.SessionID)
+	} else {
+		args = append(args, "--session-id", req.SessionID)
 	}
 
 	extraEnv, err := buildPiStartExtraEnv(req)
@@ -77,22 +97,66 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 
 	session, err := h.agentMgr.Start(ctx, opts)
 	if err != nil {
+		if errors.Is(err, agentmanager.ErrSessionExists) {
+			return nil, workspace.NewRPCError(rpcCodeSessionExists, err.Error())
+		}
 		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
 	}
 
 	h.piSessionsMu.Lock()
-	h.piSessions[req.SessionID] = &piSessionState{connState: connState, session: session}
+	h.piSessions[req.SessionID] = &piSessionState{
+		connState:   connState,
+		session:     session,
+		tabID:       req.TabID,
+		workspaceID: req.WorkspaceID,
+		cwd:         req.CWD,
+	}
 	h.piSessionsMu.Unlock()
 
-	// When the desktop connection closes, stop the pi session.
-	connState.AddCloseHook(func() {
-		h.agentMgr.Stop(req.SessionID)
+	return map[string]any{"sessionId": req.SessionID}, nil
+}
+
+type piAttachParams struct {
+	SessionID   string `json:"sessionId"`
+	TabID       string `json:"tabId,omitempty"`
+	WorkspaceID string `json:"workspaceId,omitempty"`
+	CWD         string `json:"cwd,omitempty"`
+}
+
+func (h *JSONRPCHandler) handlePiAttach(connState *wsConnState, params json.RawMessage) (any, error) {
+	var req piAttachParams
+	if err := decodeParams(params, &req); err != nil {
+		return nil, err
+	}
+	if req.SessionID == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "sessionId is required")
+	}
+	if _, exists := h.agentMgr.Session(req.SessionID); !exists {
 		h.piSessionsMu.Lock()
 		delete(h.piSessions, req.SessionID)
 		h.piSessionsMu.Unlock()
-	})
+		return nil, workspace.NewRPCError(rpcCodeNotFound, "pi session not found: "+req.SessionID)
+	}
 
-	return map[string]any{"sessionId": req.SessionID}, nil
+	h.piSessionsMu.Lock()
+	state, exists := h.piSessions[req.SessionID]
+	if !exists {
+		h.piSessionsMu.Unlock()
+		return nil, workspace.NewRPCError(rpcCodeNotFound, "pi session not found: "+req.SessionID)
+	}
+	state.connState = connState
+	if strings.TrimSpace(req.TabID) != "" {
+		state.tabID = req.TabID
+	}
+	if strings.TrimSpace(req.WorkspaceID) != "" {
+		state.workspaceID = req.WorkspaceID
+	}
+	if strings.TrimSpace(req.CWD) != "" {
+		state.cwd = req.CWD
+	}
+	h.piSessionsMu.Unlock()
+
+	return map[string]bool{"ok": true}, nil
 }
 
 type piStopParams struct {
@@ -198,25 +262,68 @@ func (h *JSONRPCHandler) handlePiListSessions(ctx context.Context, params json.R
 	return summaries, nil
 }
 
+func (h *JSONRPCHandler) handlePiListActiveSessions() (any, error) {
+	activeSessions := h.agentMgr.Sessions()
+	if len(activeSessions) == 0 {
+		return []piActiveSessionSummary{}, nil
+	}
+
+	h.piSessionsMu.Lock()
+	metadataBySessionID := make(map[string]*piSessionState, len(h.piSessions))
+	for sessionID, state := range h.piSessions {
+		metadataBySessionID[sessionID] = state
+	}
+	h.piSessionsMu.Unlock()
+
+	summaries := make([]piActiveSessionSummary, 0, len(activeSessions))
+	for _, session := range activeSessions {
+		metadata, exists := metadataBySessionID[session.ID()]
+		if !exists {
+			continue
+		}
+
+		summaries = append(summaries, piActiveSessionSummary{
+			SessionID:   session.ID(),
+			TabID:       metadata.tabID,
+			WorkspaceID: metadata.workspaceID,
+			CWD:         metadata.cwd,
+		})
+	}
+
+	return summaries, nil
+}
+
 // makePiEventCallback returns an OnEvent callback that forwards pi stdout events
 // to the desktop WebSocket connection.
 func (h *JSONRPCHandler) makePiEventCallback(sessionID string) func(string, string, string, []byte) {
 	return func(_ string, tabID string, workspaceID string, event []byte) {
 		h.piSessionsMu.Lock()
 		state, exists := h.piSessions[sessionID]
+		var connState *wsConnState
+		resolvedTabID := tabID
+		resolvedWorkspaceID := workspaceID
+		if exists {
+			connState = state.connState
+			if strings.TrimSpace(state.tabID) != "" {
+				resolvedTabID = state.tabID
+			}
+			if strings.TrimSpace(state.workspaceID) != "" {
+				resolvedWorkspaceID = state.workspaceID
+			}
+		}
 		h.piSessionsMu.Unlock()
 
-		if !exists {
+		if !exists || connState == nil {
 			return
 		}
 
 		// Forward as a frontend event notification.
-		_ = state.connState.Notify(MethodFrontendEventsStream, map[string]any{
+		_ = connState.Notify(MethodFrontendEventsStream, map[string]any{
 			"topic": "agent.pi.event",
 			"payload": map[string]any{
 				"sessionId":   sessionID,
-				"tabId":       tabID,
-				"workspaceId": workspaceID,
+				"tabId":       resolvedTabID,
+				"workspaceId": resolvedWorkspaceID,
 				"event":       json.RawMessage(event),
 			},
 		})

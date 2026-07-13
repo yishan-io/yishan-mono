@@ -23,6 +23,7 @@ import { LeftPaneView } from "./workspace/LeftPane/LeftPaneView";
 import { MainPaneView } from "./workspace/MainPaneView";
 import { OnboardingView } from "./workspace/OnboardingView";
 import { WorkspaceLifecycleNoticeView } from "./workspace/WorkspaceLifecycleNoticeView";
+import { AgentChatRecoveryCoordinator } from "./workspace/agentChatRecovery";
 import { TerminalRecoveryCoordinator } from "./workspace/terminal/terminalRecovery";
 
 const LEFT_MIN_WIDTH = 240;
@@ -181,9 +182,10 @@ function useWorkspaceAppActions(input: { cmd: WorkspaceViewCommands; navigate: R
 function useWorkspaceBootstrap(input: {
   cmd: WorkspaceViewCommands;
   terminalRecoveryCoordinator: TerminalRecoveryCoordinator;
+  agentChatRecoveryCoordinator: AgentChatRecoveryCoordinator;
   selectedOrganizationId: string | undefined;
 }) {
-  const { cmd, terminalRecoveryCoordinator, selectedOrganizationId } = input;
+  const { cmd, terminalRecoveryCoordinator, agentChatRecoveryCoordinator, selectedOrganizationId } = input;
 
   useEffect(() => {
     if (!selectedOrganizationId?.trim()) {
@@ -191,7 +193,8 @@ function useWorkspaceBootstrap(input: {
     }
 
     let disposed = false;
-    let unsubscribePersist: (() => void) | undefined;
+    let unsubscribeTerminalPersist: (() => void) | undefined;
+    let unsubscribeAgentChatPersist: (() => void) | undefined;
 
     const loadWorkspaceData = async () => {
       await cmd.loadWorkspaceSnapshot();
@@ -199,15 +202,23 @@ function useWorkspaceBootstrap(input: {
         return;
       }
 
-      const restoredWorkspaceId = await terminalRecoveryCoordinator.restoreTerminalTabsFromDaemon({
+      const restoredTerminalWorkspaceId = await terminalRecoveryCoordinator.restoreTerminalTabsFromDaemon({
         listTerminalSessions: () => cmd.listTerminalSessions({ includeExited: false }),
       });
+      const restoredAgentChatResult = await agentChatRecoveryCoordinator.restoreAgentChatTabsFromDaemon({
+        listActivePiSessions: () => cmd.listActivePiSessions(),
+      });
+      const restoredWorkspaceId =
+        restoredAgentChatResult.selectedWorkspaceId ??
+        restoredTerminalWorkspaceId ??
+        restoredAgentChatResult.fallbackWorkspaceId;
       if (restoredWorkspaceId && restoredWorkspaceId !== workspaceStore.getState().selectedWorkspaceId) {
         cmd.setSelectedWorkspaceId(restoredWorkspaceId);
       }
 
       if (!disposed) {
-        unsubscribePersist = terminalRecoveryCoordinator.startPersistingTerminalTabs();
+        unsubscribeTerminalPersist = terminalRecoveryCoordinator.startPersistingTerminalTabs();
+        unsubscribeAgentChatPersist = agentChatRecoveryCoordinator.startPersistingAgentChatTabs();
       }
     };
 
@@ -215,9 +226,10 @@ function useWorkspaceBootstrap(input: {
 
     return () => {
       disposed = true;
-      unsubscribePersist?.();
+      unsubscribeTerminalPersist?.();
+      unsubscribeAgentChatPersist?.();
     };
-  }, [cmd, selectedOrganizationId, terminalRecoveryCoordinator]);
+  }, [cmd, selectedOrganizationId, terminalRecoveryCoordinator, agentChatRecoveryCoordinator]);
 }
 
 /** Observes one container element and reports its width whenever it changes. */
@@ -323,6 +335,7 @@ export function WorkspaceView() {
   const cmd = useCommands();
   useAllWorkspacesGitSync();
   const [terminalRecoveryCoordinator] = useState(() => new TerminalRecoveryCoordinator());
+  const [agentChatRecoveryCoordinator] = useState(() => new AgentChatRecoveryCoordinator());
   const { leftCollapsed, onToggleLeftPane } = paneVisibility;
 
   const handleCloseOverlayPanel = useCallback(() => {
@@ -330,7 +343,7 @@ export function WorkspaceView() {
   }, [closeOverlayPanel]);
 
   useWorkspaceAppActions({ cmd, navigate });
-  useWorkspaceBootstrap({ cmd, terminalRecoveryCoordinator, selectedOrganizationId });
+  useWorkspaceBootstrap({ cmd, terminalRecoveryCoordinator, agentChatRecoveryCoordinator, selectedOrganizationId });
   useElementWidthObserver({
     elementRef: layoutRef,
     onWidthChange: setContainerWidth,

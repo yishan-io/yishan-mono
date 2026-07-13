@@ -2,24 +2,40 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentChatStore } from "../store/agentChatStore";
-import { ensurePiSession, handleAgentPiEvent, sendAgentPrompt, stopPiSession } from "./agentChatCommands";
+import {
+  clearPiSessionHandle,
+  ensurePiSession,
+  handleAgentPiEvent,
+  registerAgentSession,
+  sendAgentPrompt,
+  setPiSessionUnsubscribe,
+  stopPiSession,
+} from "./agentChatCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 
 const mocks = vi.hoisted(() => ({
   start: vi.fn(),
+  attach: vi.fn(),
   stop: vi.fn(),
   send: vi.fn(),
   listSessions: vi.fn(),
+  listActiveSessions: vi.fn(),
+}));
+
+vi.mock("../helpers/generateId", () => ({
+  generateId: vi.fn(() => "generated-session-id"),
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     pi: {
       start: mocks.start,
+      attach: mocks.attach,
       stop: mocks.stop,
       send: mocks.send,
       listSessions: mocks.listSessions,
+      listActiveSessions: mocks.listActiveSessions,
     },
   })),
 }));
@@ -31,23 +47,22 @@ afterEach(() => {
 
 describe("agentChatCommands.ensurePiSession", () => {
   it("passes paneId through to pi.start", async () => {
-    mocks.start.mockResolvedValue({ sessionId: "pi-session-1" });
+    mocks.start.mockResolvedValue({ sessionId: "generated-session-id" });
 
     await ensurePiSession({
       tabId: "tab-pane-explicit",
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
-      piSessionId: "pi-session-1",
       paneId: "pane-1",
     });
 
     expect(mocks.start).toHaveBeenCalledWith({
-      sessionId: "pi-session-1",
+      sessionId: "generated-session-id",
       tabId: "tab-pane-explicit",
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
-      piSessionId: "pi-session-1",
       paneId: "pane-1",
+      resume: undefined,
     });
   });
 
@@ -58,16 +73,100 @@ describe("agentChatCommands.ensurePiSession", () => {
       tabId: "tab-pane-fallback",
       workspaceId: "workspace-2",
       cwd: "/tmp/project-2",
-      piSessionId: "pi-session-2",
     });
 
     expect(mocks.start).toHaveBeenCalledWith({
-      sessionId: "pi-session-2",
+      sessionId: "generated-session-id",
       tabId: "tab-pane-fallback",
       workspaceId: "workspace-2",
       cwd: "/tmp/project-2",
-      piSessionId: "pi-session-2",
       paneId: "pane-tab-pane-fallback",
+      resume: undefined,
+    });
+  });
+
+  it("reopens history sessions by starting with the existing session id", async () => {
+    mocks.start.mockResolvedValue({ sessionId: "history-session-1" });
+
+    await ensurePiSession({
+      tabId: "tab-history-resume",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "history-session-1",
+      paneId: "pane-history",
+    });
+
+    expect(mocks.start).toHaveBeenCalledWith({
+      sessionId: "history-session-1",
+      tabId: "tab-history-resume",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      paneId: "pane-history",
+      resume: undefined,
+    });
+    expect(mocks.attach).not.toHaveBeenCalled();
+  });
+
+  it("attaches only when start reports that the live daemon session already exists", async () => {
+    mocks.start.mockRejectedValue(Object.assign(new Error("agent session already exists"), { code: -32003 }));
+    mocks.attach.mockResolvedValue({ ok: true });
+
+    await ensurePiSession({
+      tabId: "tab-reattach",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "live-session-1",
+    });
+
+    expect(mocks.start).toHaveBeenCalledWith({
+      sessionId: "live-session-1",
+      tabId: "tab-reattach",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      paneId: "pane-tab-reattach",
+      resume: undefined,
+    });
+    expect(mocks.attach).toHaveBeenCalledWith({
+      sessionId: "live-session-1",
+      tabId: "tab-reattach",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+    });
+  });
+
+  it("does not attach when start fails for reasons other than an already-running live session", async () => {
+    mocks.start.mockRejectedValue(new Error("pi session not found"));
+
+    await expect(
+      ensurePiSession({
+        tabId: "tab-start-failure",
+        workspaceId: "workspace-1",
+        cwd: "/tmp/project",
+        sessionId: "missing-session-1",
+      }),
+    ).rejects.toThrow("pi session not found");
+
+    expect(mocks.attach).not.toHaveBeenCalled();
+  });
+
+  it("prefers explicit session ids over stale local chat-session state", async () => {
+    agentChatStore.getState().initSession("tab-explicit-live", "stale-session");
+    mocks.start.mockResolvedValue({ sessionId: "live-session-2" });
+
+    await ensurePiSession({
+      tabId: "tab-explicit-live",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "live-session-2",
+    });
+
+    expect(mocks.start).toHaveBeenCalledWith({
+      sessionId: "live-session-2",
+      tabId: "tab-explicit-live",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      paneId: "pane-tab-explicit-live",
+      resume: undefined,
     });
   });
 
@@ -92,6 +191,25 @@ describe("agentChatCommands.ensurePiSession", () => {
     expect(agentChatStore.getState().sessionsByTabId["tab-send"]?.turnError).toBeNull();
   });
 
+  it("unsubscribes and still stops the backend session after clearing a stale local handle", async () => {
+    const unsubscribe = vi.fn();
+    mocks.start.mockResolvedValue({ sessionId: "generated-session-id" });
+
+    await ensurePiSession({
+      tabId: "tab-clear-handle",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+    });
+    registerAgentSession({ tabId: "tab-clear-handle", sessionId: "generated-session-id" });
+    setPiSessionUnsubscribe("tab-clear-handle", unsubscribe);
+
+    clearPiSessionHandle("tab-clear-handle");
+    await stopPiSession("tab-clear-handle");
+
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(mocks.stop).toHaveBeenCalledWith({ sessionId: "generated-session-id" });
+  });
+
   it("stops a Pi session even when the tab closes while pi.start is still in flight", async () => {
     let resolveStart: ((value: { sessionId: string }) => void) | undefined;
     mocks.start.mockImplementation(
@@ -105,7 +223,6 @@ describe("agentChatCommands.ensurePiSession", () => {
       tabId: "tab-close-during-start",
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
-      piSessionId: "pi-session-close-during-start",
     });
 
     await Promise.resolve();
@@ -113,12 +230,12 @@ describe("agentChatCommands.ensurePiSession", () => {
     const stopPromise = stopPiSession("tab-close-during-start");
     expect(mocks.stop).not.toHaveBeenCalled();
 
-    resolveStart?.({ sessionId: "pi-session-close-during-start" });
+    resolveStart?.({ sessionId: "generated-session-id" });
 
     await ensurePromise;
     await stopPromise;
 
-    expect(mocks.stop).toHaveBeenCalledWith({ sessionId: "pi-session-close-during-start" });
+    expect(mocks.stop).toHaveBeenCalledWith({ sessionId: "generated-session-id" });
   });
 });
 

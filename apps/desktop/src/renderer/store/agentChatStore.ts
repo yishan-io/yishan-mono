@@ -27,6 +27,7 @@ type AgentChatStoreState = {
   setTurnError: (tabId: string, error: string) => void;
   clearTurnError: (tabId: string) => void;
   appendMessage: (tabId: string, message: AgentMessage) => void;
+  replaceMessages: (tabId: string, messages: AgentMessage[]) => void;
   updateStreamingMessage: (tabId: string, message: AgentMessage) => void;
   finalizeStreamingMessage: (tabId: string) => void;
   setAvailableModels: (tabId: string, models: AgentModel[]) => void;
@@ -113,6 +114,15 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (session.messages.length > MAX_MESSAGES_PER_TAB) {
           session.messages = session.messages.slice(-MAX_MESSAGES_PER_TAB);
         }
+      });
+    },
+
+    replaceMessages: (tabId, messages) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        session.messages = messages.slice(-MAX_MESSAGES_PER_TAB);
+        session.streamingMessage = null;
       });
     },
 

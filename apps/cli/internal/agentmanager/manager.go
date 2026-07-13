@@ -160,6 +160,27 @@ func (m *Manager) Stop(sessionID string) error {
 	return session.Close()
 }
 
+// Session returns one active session by id.
+func (m *Manager) Session(sessionID string) (*Session, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	session, exists := m.sessions[sessionID]
+	return session, exists
+}
+
+// Sessions returns a snapshot of all active sessions.
+func (m *Manager) Sessions() []*Session {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	sessions := make([]*Session, 0, len(m.sessions))
+	for _, session := range m.sessions {
+		sessions = append(sessions, session)
+	}
+	return sessions
+}
+
 // StopAll terminates all active sessions concurrently. Called during daemon
 // shutdown.
 func (m *Manager) StopAll() {

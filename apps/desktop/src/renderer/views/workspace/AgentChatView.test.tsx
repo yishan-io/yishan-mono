@@ -30,6 +30,8 @@ const mocked = vi.hoisted(() => {
   return {
     stateRef,
     ensurePiSession: vi.fn().mockResolvedValue("session-1"),
+    clearPiSessionHandle: vi.fn(),
+    reattachPiSession: vi.fn(),
     registerAgentSession: vi.fn(),
     fetchAgentState: vi.fn().mockResolvedValue(undefined),
     fetchAgentMessages: vi.fn().mockResolvedValue(undefined),
@@ -53,11 +55,13 @@ const mocked = vi.hoisted(() => {
 
 vi.mock("../../commands/agentChatCommands", () => ({
   abortAgent: vi.fn(),
+  clearPiSessionHandle: mocked.clearPiSessionHandle,
   ensurePiSession: mocked.ensurePiSession,
   fetchAgentMessages: mocked.fetchAgentMessages,
   fetchAgentModels: mocked.fetchAgentModels,
   fetchAgentState: mocked.fetchAgentState,
   handleAgentPiEvent: vi.fn(),
+  reattachPiSession: mocked.reattachPiSession,
   registerAgentSession: mocked.registerAgentSession,
   sendAgentPrompt: vi.fn(),
   setAgentChatStreamTabVisible: mocked.setAgentChatStreamTabVisible,
@@ -91,6 +95,7 @@ vi.mock("../../components/agent/AgentModelSelector", () => ({
 
 vi.mock("../../rpc/rpcTransport", () => ({
   getDaemonClient: mocked.getDaemonClient,
+  subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
 }));
 
 vi.mock("../../store/tabStore", () => ({
@@ -164,7 +169,7 @@ describe("AgentChatView", () => {
         tabId: "tab-pane",
         workspaceId: "workspace-1",
         cwd: "/tmp/project",
-        piSessionId: undefined,
+        sessionId: undefined,
         paneId: "pane-1",
       });
     });

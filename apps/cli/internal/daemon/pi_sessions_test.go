@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 
 	"yishan/apps/cli/internal/agentmanager"
 	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/workspace"
 )
 
 func TestHandlePiListSessions_ReturnsSummaries(t *testing.T) {
@@ -50,6 +52,153 @@ func TestHandlePiListSessions_RequiresCWD(t *testing.T) {
 	_, err := h.dispatchPi(context.Background(), nil, MethodPiListSessions, json.RawMessage(`{}`))
 	if err == nil {
 		t.Fatal("expected error for missing cwd")
+	}
+}
+
+func TestHandlePiListActiveSessions_ReturnsLiveSessions(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	installBlockingFakePiBinary(t)
+
+	h := newTestHandler(t)
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+	if err := os.MkdirAll(cwd, 0o755); err != nil {
+		t.Fatalf("mkdir cwd: %v", err)
+	}
+
+	connState := &wsConnState{}
+	_, err := h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+		"sessionId":   "session-1",
+		"tabId":       "tab-1",
+		"workspaceId": "workspace-1",
+		"cwd":         cwd,
+	}))
+	if err != nil {
+		t.Fatalf("dispatchPi start: %v", err)
+	}
+	defer func() {
+		_, _ = h.dispatchPi(context.Background(), connState, MethodPiStop, mustMarshalJSON(t, map[string]any{
+			"sessionId": "session-1",
+		}))
+	}()
+
+	result, err := h.dispatchPi(context.Background(), connState, MethodPiListActiveSessions, mustMarshalJSON(t, map[string]any{}))
+	if err != nil {
+		t.Fatalf("dispatchPi listActive: %v", err)
+	}
+
+	summaries, ok := result.([]piActiveSessionSummary)
+	if !ok {
+		t.Fatalf("unexpected result type %T", result)
+	}
+	if len(summaries) != 1 {
+		t.Fatalf("expected 1 active session, got %#v", summaries)
+	}
+	if summaries[0].SessionID != "session-1" || summaries[0].TabID != "tab-1" || summaries[0].CWD != cwd {
+		t.Fatalf("unexpected active session summary: %#v", summaries[0])
+	}
+}
+
+func TestHandlePiAttach_RebindsConnectionAndTabRoutingMetadata(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	installBlockingFakePiBinary(t)
+
+	h := newTestHandler(t)
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+	if err := os.MkdirAll(cwd, 0o755); err != nil {
+		t.Fatalf("mkdir cwd: %v", err)
+	}
+
+	originalConnState := &wsConnState{}
+	_, err := h.dispatchPi(context.Background(), originalConnState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+		"sessionId":   "session-attach",
+		"tabId":       "tab-attach",
+		"workspaceId": "workspace-1",
+		"cwd":         cwd,
+	}))
+	if err != nil {
+		t.Fatalf("dispatchPi start: %v", err)
+	}
+	defer func() {
+		_, _ = h.dispatchPi(context.Background(), originalConnState, MethodPiStop, mustMarshalJSON(t, map[string]any{
+			"sessionId": "session-attach",
+		}))
+	}()
+
+	reboundConnState := &wsConnState{}
+	_, err = h.dispatchPi(context.Background(), reboundConnState, MethodPiAttach, mustMarshalJSON(t, map[string]any{
+		"sessionId":   "session-attach",
+		"tabId":       "tab-reopened",
+		"workspaceId": "workspace-2",
+		"cwd":         filepath.Join(homeDir, "worktrees", "pi-project-reopened"),
+	}))
+	if err != nil {
+		t.Fatalf("dispatchPi attach: %v", err)
+	}
+
+	h.piSessionsMu.Lock()
+	defer h.piSessionsMu.Unlock()
+	state := h.piSessions["session-attach"]
+	if state == nil {
+		t.Fatal("expected pi session state to exist after attach")
+	}
+	if state.connState != reboundConnState {
+		t.Fatalf("expected attach to rebind connState")
+	}
+	if state.tabID != "tab-reopened" {
+		t.Fatalf("expected attach to rebind tabID, got %q", state.tabID)
+	}
+	if state.workspaceID != "workspace-2" {
+		t.Fatalf("expected attach to rebind workspaceID, got %q", state.workspaceID)
+	}
+	if state.cwd != filepath.Join(homeDir, "worktrees", "pi-project-reopened") {
+		t.Fatalf("expected attach to rebind cwd, got %q", state.cwd)
+	}
+}
+
+func TestHandlePiStart_ReturnsSessionExistsRPCCode(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	installBlockingFakePiBinary(t)
+
+	h := newTestHandler(t)
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+	if err := os.MkdirAll(cwd, 0o755); err != nil {
+		t.Fatalf("mkdir cwd: %v", err)
+	}
+
+	connState := &wsConnState{}
+	_, err := h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+		"sessionId":   "session-exists",
+		"tabId":       "tab-1",
+		"workspaceId": "workspace-1",
+		"cwd":         cwd,
+	}))
+	if err != nil {
+		t.Fatalf("first dispatchPi start: %v", err)
+	}
+	defer func() {
+		_, _ = h.dispatchPi(context.Background(), connState, MethodPiStop, mustMarshalJSON(t, map[string]any{
+			"sessionId": "session-exists",
+		}))
+	}()
+
+	_, err = h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+		"sessionId":   "session-exists",
+		"tabId":       "tab-2",
+		"workspaceId": "workspace-1",
+		"cwd":         cwd,
+	}))
+	if err == nil {
+		t.Fatal("expected duplicate session error")
+	}
+	var rpcErr *workspace.RPCError
+	if !errors.As(err, &rpcErr) {
+		t.Fatalf("expected rpc error, got %T", err)
+	}
+	if rpcErr.Code != rpcCodeSessionExists {
+		t.Fatalf("expected rpc code %d, got %d", rpcCodeSessionExists, rpcErr.Code)
 	}
 }
 
@@ -157,6 +306,17 @@ func testEncodeSessionCWD(cwd string) string {
 	normalized := filepath.ToSlash(cleanCWD)
 	normalized = strings.TrimPrefix(normalized, "/")
 	return "--" + strings.ReplaceAll(normalized, "/", "-") + "--"
+}
+
+func installBlockingFakePiBinary(t *testing.T) {
+	t.Helper()
+	binDir := t.TempDir()
+	scriptPath := filepath.Join(binDir, "pi")
+	script := "#!/bin/sh\nIFS= read -r _ || exit 0\nexit 0\n"
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake pi binary: %v", err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 
 func installFakePiBinary(t *testing.T, markerPath string) {
