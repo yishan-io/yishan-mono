@@ -9,6 +9,7 @@ import type {
   AgentQueueState,
   AgentStreamEvent,
 } from "../store/agentChatTypes";
+import { tabStore } from "../store/tabStore";
 import {
   disposeAgentChatStreamBuffer,
   flushAgentChatStreamBuffer,
@@ -26,6 +27,9 @@ type PiSessionHandle = {
   rpcSessionId: string;
   piSessionId: string;
   unsubscribe: (() => void) | null;
+  state: "starting" | "running" | "closing";
+  closeRequested: boolean;
+  startPromise: Promise<void> | null;
 };
 
 const activePiSessions = new Map<string, PiSessionHandle>();
@@ -52,35 +56,71 @@ export async function ensurePiSession(opts: {
       rpcSessionId: chatSession.sessionId,
       piSessionId: chatSession.sessionId,
       unsubscribe: null,
+      state: "running",
+      closeRequested: false,
+      startPromise: null,
     });
     return chatSession.sessionId;
   }
 
   const sessionId = opts.piSessionId || generateId();
   const client = await getDaemonClient();
-
-  await client.pi.start({
-    sessionId,
-    tabId: opts.tabId,
-    paneId: resolveAgentChatPaneId(opts.tabId, opts.paneId),
-    workspaceId: opts.workspaceId,
-    cwd: opts.cwd,
+  const handle: PiSessionHandle = {
+    rpcSessionId: sessionId,
     piSessionId: sessionId,
-  });
+    unsubscribe: null,
+    state: "starting",
+    closeRequested: false,
+    startPromise: null,
+  };
+  activePiSessions.set(opts.tabId, handle);
 
-  activePiSessions.set(opts.tabId, { rpcSessionId: sessionId, piSessionId: sessionId, unsubscribe: null });
+  const startPromise = client.pi
+    .start({
+      sessionId,
+      tabId: opts.tabId,
+      paneId: resolveAgentChatPaneId(opts.tabId, opts.paneId),
+      workspaceId: opts.workspaceId,
+      cwd: opts.cwd,
+      piSessionId: sessionId,
+    })
+    .then(async () => {
+      handle.startPromise = null;
+
+      if (handle.closeRequested) {
+        await closePiSessionHandle(opts.tabId, handle);
+        return;
+      }
+
+      handle.state = "running";
+    })
+    .catch((error) => {
+      if (activePiSessions.get(opts.tabId) === handle) {
+        activePiSessions.delete(opts.tabId);
+      }
+      throw error;
+    });
+
+  handle.startPromise = startPromise;
+  await startPromise;
   return sessionId;
 }
 
 /** Returns the tabId that currently owns the given Pi session, if any. */
 export function findTabWithPiSession(piSessionId: string): string | undefined {
+  const openTabIds = new Set(tabStore.getState().tabs.map((tab) => tab.id));
+
   for (const [tabId, session] of activePiSessions) {
-    if (session.piSessionId === piSessionId) return tabId;
+    if (session.piSessionId === piSessionId && openTabIds.has(tabId)) {
+      return tabId;
+    }
   }
 
   const sessions = agentChatStore.getState().sessionsByTabId;
   for (const [tabId, session] of Object.entries(sessions)) {
-    if (session.sessionId === piSessionId) return tabId;
+    if (session.sessionId === piSessionId && openTabIds.has(tabId)) {
+      return tabId;
+    }
   }
   return undefined;
 }
@@ -101,18 +141,29 @@ export function setAgentChatStreamTabVisible(tabId: string, visible: boolean): v
 
 /** Stops the Pi RPC session for a tab. Called when the tab is closed. */
 export async function stopPiSession(tabId: string): Promise<void> {
-  const session = activePiSessions.get(tabId);
-  if (!session) return;
-
   flushAgentChatStreamBuffer(tabId);
   disposeAgentChatStreamBuffer(tabId);
-  activePiSessions.delete(tabId);
+
+  const session = activePiSessions.get(tabId);
+  if (!session) {
+    agentChatStore.getState().removeSession(tabId);
+    return;
+  }
+
+  session.closeRequested = true;
   session.unsubscribe?.();
+  session.unsubscribe = null;
 
-  const client = await getDaemonClient();
-  await client.pi.stop({ sessionId: session.rpcSessionId }).catch(() => {});
+  if (session.startPromise) {
+    await session.startPromise.catch(() => {});
+  }
 
-  agentChatStore.getState().removeSession(tabId);
+  if (activePiSessions.get(tabId) !== session) {
+    agentChatStore.getState().removeSession(tabId);
+    return;
+  }
+
+  await closePiSessionHandle(tabId, session);
 }
 
 /** Initializes the chat store entry for a tab. */
@@ -137,6 +188,8 @@ export async function sendAgentPrompt(opts: {
       streamingBehavior: tabSession?.state === "running" ? "steer" : undefined,
     },
   });
+
+  agentChatStore.getState().clearTurnError(opts.tabId);
 
   if (!agentChatStore.getState().sessionsByTabId[opts.tabId]?.streamingMessage) {
     agentChatStore.getState().updateStreamingMessage(opts.tabId, {
@@ -233,6 +286,22 @@ function resolveAgentChatPaneId(tabId: string, paneId: string | undefined): stri
   return `pane-${tabId}`;
 }
 
+async function closePiSessionHandle(tabId: string, session: PiSessionHandle): Promise<void> {
+  if (session.state === "closing") {
+    return;
+  }
+
+  session.state = "closing";
+
+  const client = await getDaemonClient();
+  await Promise.resolve(client.pi.stop({ sessionId: session.rpcSessionId })).catch(() => {});
+
+  if (activePiSessions.get(tabId) === session) {
+    activePiSessions.delete(tabId);
+  }
+  agentChatStore.getState().removeSession(tabId);
+}
+
 // ─── Pi event handler ────────────────────────────────────────────────────────
 
 type PiEventPayload = {
@@ -270,12 +339,18 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     case "message_start": {
       const msg = event.message as AgentMessage | undefined;
       if (msg && msg.role === "assistant") {
+        const turnError = msg.errorMessage?.trim();
+        if (turnError) {
+          agentChatStore.getState().setTurnError(tabId, turnError);
+        } else {
+          agentChatStore.getState().clearTurnError(tabId);
+        }
+
         flushAgentChatStreamBuffer(tabId);
-        const content = Array.isArray(msg.content) ? cloneContentBlocks(msg.content as AgentContentBlock[]) : [];
+        const clonedMessage = cloneIncomingAgentMessage(msg);
         agentChatStore.getState().updateStreamingMessage(tabId, {
-          ...msg,
+          ...clonedMessage,
           id: msg.id ?? generateId(),
-          content,
           startedAtMs: Date.now(),
         });
       }
@@ -285,11 +360,16 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     case "message_update": {
       const snapshot = event.message as AgentMessage | undefined;
       if (snapshot?.role === "assistant") {
+        const turnError = snapshot.errorMessage?.trim();
+        if (turnError) {
+          agentChatStore.getState().setTurnError(tabId, turnError);
+        }
+
         const base = getLatestStreamingMessage(tabId);
+        const clonedSnapshot = cloneIncomingAgentMessage(snapshot);
         queueStreamingMessageUpdate(tabId, {
-          ...snapshot,
+          ...clonedSnapshot,
           id: base?.id ?? snapshot.id ?? generateId(),
-          content: Array.isArray(snapshot.content) ? cloneContentBlocks(snapshot.content) : [],
           startedAtMs: base?.startedAtMs,
           durationMs: base?.durationMs,
         });
@@ -313,19 +393,26 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       flushAgentChatStreamBuffer(tabId);
 
       if (msg.role === "assistant") {
+        const turnError = msg.errorMessage?.trim();
+        if (turnError) {
+          agentChatStore.getState().setTurnError(tabId, turnError);
+        } else {
+          agentChatStore.getState().clearTurnError(tabId);
+        }
+
         const base = getLatestStreamingMessage(tabId);
         const startedAtMs = base?.startedAtMs ?? Date.now();
+        const clonedMessage = cloneIncomingAgentMessage(msg);
         agentChatStore.getState().updateStreamingMessage(tabId, {
-          ...msg,
+          ...clonedMessage,
           id: base?.id ?? msg.id ?? generateId(),
-          content: Array.isArray(msg.content) ? cloneContentBlocks(msg.content) : [],
           startedAtMs,
           durationMs: Math.max(0, Date.now() - startedAtMs),
         });
         agentChatStore.getState().finalizeStreamingMessage(tabId);
       } else {
         agentChatStore.getState().appendMessage(tabId, {
-          ...msg,
+          ...cloneIncomingAgentMessage(msg),
           id: msg.id ?? generateId(),
         });
       }
@@ -353,7 +440,7 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       break;
 
     case "response":
-      handlePiResponse(tabId, event);
+      handlePiResponse(tabId, sessionId, event);
       break;
 
     default:
@@ -373,6 +460,13 @@ function queueStreamingMessageUpdate(tabId: string, message: AgentMessage): void
   });
 }
 
+function cloneIncomingAgentMessage(message: AgentMessage): AgentMessage {
+  return {
+    ...message,
+    content: Array.isArray(message.content) ? cloneContentBlocks(message.content) : message.content,
+  };
+}
+
 function getLatestStreamingMessage(tabId: string): AgentMessage | null {
   return (
     peekAgentChatStreamMessage(tabId) ?? agentChatStore.getState().sessionsByTabId[tabId]?.streamingMessage ?? null
@@ -381,19 +475,34 @@ function getLatestStreamingMessage(tabId: string): AgentMessage | null {
 
 // ─── Response handler ─────────────────────────────────────────────────────────
 
-function handlePiResponse(tabId: string, event: Record<string, unknown>): void {
+function handlePiResponse(tabId: string, sessionId: string, event: Record<string, unknown>): void {
   const command = event.command as string | undefined;
   const success = event.success as boolean | undefined;
 
-  if (!success || !command) return;
+  if (!command) return;
 
   switch (command) {
+    case "set_model": {
+      if (success) {
+        const data = event.data as AgentModel | undefined;
+        if (data && typeof data === "object") {
+          agentChatStore.getState().setCurrentModel(tabId, data);
+        }
+        break;
+      }
+
+      // fire-and-forget: resync the selector from Pi after a rejected model change
+      void fetchAgentState({ tabId, sessionId });
+      break;
+    }
     case "get_available_models": {
+      if (!success) break;
       const data = event.data as { models?: AgentModel[] } | undefined;
       agentChatStore.getState().setAvailableModels(tabId, data?.models ?? []);
       break;
     }
     case "get_state": {
+      if (!success) break;
       const data = event.data as Record<string, unknown> | undefined;
       if (data?.model && typeof data.model === "object") {
         agentChatStore.getState().setCurrentModel(tabId, data.model as AgentModel);
@@ -407,10 +516,11 @@ function handlePiResponse(tabId: string, event: Record<string, unknown>): void {
       break;
     }
     case "get_messages": {
+      if (!success) break;
       const data = event.data as { messages?: AgentMessage[] } | undefined;
       for (const msg of data?.messages ?? []) {
         agentChatStore.getState().appendMessage(tabId, {
-          ...msg,
+          ...cloneIncomingAgentMessage(msg),
           id: msg.id ?? generateId(),
         });
       }

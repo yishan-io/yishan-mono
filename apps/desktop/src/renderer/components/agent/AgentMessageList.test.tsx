@@ -60,6 +60,58 @@ describe("AgentMessageList", () => {
     },
   );
 
+  it("hides assistant error snapshots that have no renderable content", () => {
+    render(
+      <AgentMessageList
+        tabId="tab-error"
+        isActive
+        messages={[
+          {
+            id: "assistant-error",
+            role: "assistant",
+            content: [],
+            stopReason: "error",
+            errorMessage: "Codex error: The usage limit has been reached",
+          },
+        ]}
+        emptyPrompt="empty"
+      />,
+    );
+
+    expect(screen.queryByText("assistant-error")).toBeNull();
+    expect(screen.getByText("empty")).toBeTruthy();
+  });
+
+  it("hides hidden custom messages, including pi-memory-context", () => {
+    render(
+      <AgentMessageList
+        tabId="tab-hidden-custom"
+        isActive
+        messages={[
+          {
+            id: "custom-hidden-1",
+            role: "custom",
+            customType: "some-internal-message",
+            display: false,
+            content: "hidden",
+          },
+          {
+            id: "custom-hidden-memory",
+            role: "custom",
+            customType: "pi-memory-context",
+            display: false,
+            content: "memory",
+          },
+        ]}
+        emptyPrompt="empty"
+      />,
+    );
+
+    expect(screen.queryByText("custom-hidden-1")).toBeNull();
+    expect(screen.queryByText("custom-hidden-memory")).toBeNull();
+    expect(screen.getByText("empty")).toBeTruthy();
+  });
+
   it("shows a working indicator while the turn is still running without a trailing streaming message", () => {
     render(
       <AgentMessageList

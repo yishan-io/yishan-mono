@@ -1,4 +1,4 @@
-import { Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { LuArrowUp } from "react-icons/lu";
 import {
@@ -118,10 +118,7 @@ function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
   const handleModelChange = useCallback(
     async (model: AgentModel) => {
       if (!sessionId) return;
-      const [provider, ...rest] = model.id.split("/");
-      const modelId = rest.length > 0 ? rest.join("/") : model.id;
-      agentChatStore.getState().setCurrentModel(tabId, model);
-      await setAgentModel({ tabId, sessionId, provider: provider || "", modelId });
+      await setAgentModel({ tabId, sessionId, provider: model.provider ?? "", modelId: model.id });
     },
     [sessionId, tabId],
   );
@@ -226,6 +223,7 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, paneId, 
   );
   const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
   const error = agentChatStore((state) => state.sessionsByTabId[tabId]?.error ?? null);
+  const turnError = agentChatStore((state) => state.sessionsByTabId[tabId]?.turnError ?? null);
 
   useEffect(() => {
     let isDisposed = false;
@@ -335,6 +333,13 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, paneId, 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <MemoizedAgentChatTranscriptPane tabId={tabId} cwd={cwd} isActive={isActive} />
+      {turnError ? (
+        <Box sx={{ px: 2, pb: 1 }}>
+          <Alert severity="error" variant="outlined">
+            {turnError}
+          </Alert>
+        </Box>
+      ) : null}
       <MemoizedAgentChatComposerPane tabId={tabId} />
     </Box>
   );
