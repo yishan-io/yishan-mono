@@ -4,7 +4,7 @@ Pi extension that forwards lifecycle events to the Yishan daemon for usage track
 
 ## What it provides
 
-This package registers a Pi extension that listens to agent lifecycle events (`before_agent_start`, `tool_execution_end`, `agent_end`, `session_shutdown`) and forwards them to the Yishan notify script via `YISHAN_NOTIFY_SCRIPT_PATH`.
+This package registers a Pi extension that listens to agent lifecycle events (`agent_start`, `tool_execution_end`, `agent_settled`, `session_shutdown`) and forwards them to the Yishan notify script via `YISHAN_NOTIFY_SCRIPT_PATH`.
 
 The extension only activates in Yishan-managed terminals (detected via `YISHAN_TERMINAL_ID`, `YISHAN_TAB_ID`, or `YISHAN_PANE_ID`).
 
@@ -29,9 +29,9 @@ pi install npm:@yishan-io/pi-notify
 
 | Pi event | Notify event |
 |---|---|
-| `before_agent_start` | `Start` |
+| `agent_start` | `Start` |
 | `tool_execution_end` | `PostToolUse` |
-| `agent_end` | `Stop` |
+| `agent_settled` | `Stop` |
 | `session_shutdown` | `Stop` |
 
 ## License

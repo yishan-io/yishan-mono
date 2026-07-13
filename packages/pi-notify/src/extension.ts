@@ -40,24 +40,10 @@ export function createPiNotifyExtension(pi: ExtensionAPI): void {
 
   const skip = (ctx: { hasUI?: boolean }) => ctx?.hasUI === false;
 
-  // Debounce Stop to avoid rapid Stop→Start flapping across turn boundaries.
-  // When one turn ends and the next starts within the debounce window,
-  // we skip the intermediate Stop notification entirely.
-  const STOP_DEBOUNCE_MS = 2500;
   let currentState: "idle" | "busy" = "idle";
-  let stopTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const cancelStopTimer = () => {
-    if (stopTimer !== null) {
-      clearTimeout(stopTimer);
-      stopTimer = null;
-    }
-  };
-
-  pi.on("before_agent_start", (_event: unknown, ctx: { hasUI?: boolean }) => {
+  pi.on("agent_start", (_event: unknown, ctx: { hasUI?: boolean }) => {
     if (skip(ctx)) return;
-    // Cancel any pending Stop — a new turn started before the debounce fired.
-    cancelStopTimer();
     if (currentState === "idle") {
       currentState = "busy";
       fire("Start");
@@ -69,24 +55,17 @@ export function createPiNotifyExtension(pi: ExtensionAPI): void {
     fire("PostToolUse");
   });
 
-  pi.on("agent_end", (_event: unknown, ctx: { hasUI?: boolean }) => {
+  pi.on("agent_settled", (_event: unknown, ctx: { hasUI?: boolean }) => {
     if (skip(ctx)) return;
     if (currentState === "busy") {
       currentState = "idle";
-      // Debounce Stop: if a new turn starts within STOP_DEBOUNCE_MS,
-      // the timer is cancelled and no Stop notification is sent.
-      stopTimer = setTimeout(() => {
-        stopTimer = null;
-        fire("Stop");
-      }, STOP_DEBOUNCE_MS);
+      fire("Stop");
     }
   });
 
   pi.on("session_shutdown", (_event: unknown, ctx: { hasUI?: boolean }) => {
     if (skip(ctx)) return;
-    const hadPendingStop = stopTimer !== null;
-    cancelStopTimer();
-    if (currentState === "busy" || hadPendingStop) {
+    if (currentState === "busy") {
       currentState = "idle";
       fire("Stop");
     }
