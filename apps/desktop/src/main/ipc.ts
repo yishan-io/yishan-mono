@@ -2,6 +2,11 @@ import type { WorkspaceEntryAppId } from "../shared/contracts/externalApps";
 import type { ExternalClipboardReadOutcome } from "../shared/contracts/rpcRequestTypes";
 import type { NotificationSoundId } from "../shared/notifications/notificationPreferences";
 import type { NotificationDispatchResult, NotificationSoundPreviewResult } from "./notifications/types";
+import type {
+  AuthenticatePiProviderInput,
+  PiAuthPromptResponseInput,
+  PiRuntimeSnapshot,
+} from "./piRuntime/piRuntimeTypes";
 
 export type DesktopRpcEventEnvelope = {
   method: string;
@@ -174,6 +179,12 @@ export type DesktopHostBridge = {
   installUpdate: () => Promise<{ ok: true }>;
   getAuthStatus: () => Promise<AuthStatusResult>;
   login: () => Promise<AuthLoginResult>;
+  getPiRuntimeSnapshot: () => Promise<PiRuntimeSnapshot>;
+  refreshPiRuntime: () => Promise<PiRuntimeSnapshot>;
+  authenticatePiProvider: (input: AuthenticatePiProviderInput) => Promise<PiRuntimeSnapshot>;
+  cancelPiProviderAuthentication: (providerId: string) => Promise<{ ok: boolean }>;
+  respondPiAuthPrompt: (input: PiAuthPromptResponseInput) => Promise<{ ok: boolean }>;
+  removePiProviderCredential: (providerId: string) => Promise<PiRuntimeSnapshot>;
   getDaemonInfo: () => Promise<DaemonInfoResult>;
   restartDaemon: () => Promise<DaemonRestartResult>;
   readDaemonLog: () => Promise<DaemonLogResult>;
@@ -221,6 +232,12 @@ export const HOST_IPC_CHANNELS = {
   installUpdate: "desktop:host/install-update",
   getAuthStatus: "desktop:host/get-auth-status",
   login: "desktop:host/login",
+  getPiRuntimeSnapshot: "desktop:host/get-pi-runtime-snapshot",
+  refreshPiRuntime: "desktop:host/refresh-pi-runtime",
+  authenticatePiProvider: "desktop:host/authenticate-pi-provider",
+  cancelPiProviderAuthentication: "desktop:host/cancel-pi-provider-authentication",
+  respondPiAuthPrompt: "desktop:host/respond-pi-auth-prompt",
+  removePiProviderCredential: "desktop:host/remove-pi-provider-credential",
   getDaemonInfo: "desktop:host/get-daemon-info",
   restartDaemon: "desktop:host/restart-daemon",
   readDaemonLog: "desktop:host/read-daemon-log",

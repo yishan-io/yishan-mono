@@ -22,7 +22,7 @@ import { ThemePreferencePicker } from "../components/settings/ThemePreferencePic
 import { getRendererPlatform } from "../helpers/platform";
 import { useThemePreference } from "../hooks/useThemePreference";
 import { AccountSettingsView } from "./settings/AccountSettingsView";
-import { CLIToolsSettingsView } from "./settings/CLIToolsSettingsView";
+import { AgentSettingsView } from "./settings/AgentSettingsView";
 import { ComputerUseSettingsView } from "./settings/ComputerUseSettingsView";
 import { DaemonSettingsView } from "./settings/DaemonSettingsView";
 import { IntegrationSettingsView } from "./settings/IntegrationSettingsView";
@@ -110,6 +110,7 @@ export function SettingsView() {
   const selectedTabParam = searchParams.get("tab");
   const focusedItemParam = searchParams.get("focus");
   const focusedNotificationItemId = isNotificationSettingsFocusItemId(focusedItemParam) ? focusedItemParam : undefined;
+  const focusAgentProviders = selectedTabParam === "agents" && focusedItemParam === "agentProviders";
   const shouldReserveMacWindowControlsInset = getRendererPlatform() === "darwin";
 
   const selectedTab = useMemo<SettingsTab>(() => {
@@ -174,7 +175,7 @@ export function SettingsView() {
       account: <AccountSettingsView />,
       agents: (
         <SettingsErrorBoundary sectionLabel={t("settings.agents.title")}>
-          <CLIToolsSettingsView />
+          <AgentSettingsView focusAgentProviders={focusAgentProviders} />
         </SettingsErrorBoundary>
       ),
       computerUse: <ComputerUseSettingsView />,
@@ -209,7 +210,7 @@ export function SettingsView() {
       memory: <MemorySettingsView />,
       workspace: <WorkspaceSettingsView />,
     }),
-    [focusedNotificationItemId, setThemePreference, t, themePreference],
+    [focusAgentProviders, focusedNotificationItemId, setThemePreference, t, themePreference],
   );
 
   return (

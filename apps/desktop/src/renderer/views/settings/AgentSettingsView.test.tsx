@@ -1,120 +1,36 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AGENT_SETTINGS_STORE_STORAGE_KEY, agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import { AgentSettingsView } from "./AgentSettingsView";
 
-const mocked = {
-  listAgentDetectionStatuses: vi.fn(),
-};
-
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
+vi.mock("./CLIToolsSettingsView", () => ({
+  CLIToolsSettingsView: () => <div data-testid="cli-tools-settings-view" />,
 }));
 
-vi.mock("../../hooks/useCommands", () => ({
-  useCommands: () => ({
-    listAgentDetectionStatuses: mocked.listAgentDetectionStatuses,
-  }),
+vi.mock("./AgentProviderSettingsView", () => ({
+  AgentProviderSettingsView: ({ focusRequested }: { focusRequested?: boolean }) => (
+    <div data-testid="agent-provider-settings-view" data-focus-requested={focusRequested ? "true" : "false"} />
+  ),
 }));
 
 describe("AgentSettingsView", () => {
   afterEach(() => {
     cleanup();
-    vi.clearAllMocks();
-    window.localStorage.removeItem(AGENT_SETTINGS_STORE_STORAGE_KEY);
-    agentSettingsStore.setState({
-      inUseByAgentKind: {
-        opencode: true,
-        codex: true,
-        claude: true,
-        gemini: true,
-        pi: true,
-        copilot: true,
-        cursor: true,
-      },
-    });
   });
 
-  it("renders detected statuses and updates in-use toggle state", async () => {
-    mocked.listAgentDetectionStatuses.mockResolvedValueOnce([
-      { agentKind: "opencode", detected: true, version: "0.11.3" },
-      { agentKind: "codex", detected: false },
-      { agentKind: "claude", detected: true },
-      { agentKind: "gemini", detected: false },
-      { agentKind: "pi", detected: false },
-      { agentKind: "copilot", detected: false },
-      { agentKind: "cursor", detected: false },
-    ]);
-
+  it("renders CLI tools and provider settings as sibling views", () => {
     render(<AgentSettingsView />);
 
-    expect(await screen.findByText("settings.agents.items.opencode")).toBeTruthy();
-    expect(screen.getByText("settings.agents.status.versionPrefix")).toBeTruthy();
-    expect(screen.getByText("0.11.3")).toBeTruthy();
-    expect(screen.getByText("settings.agents.status.versionUnknown")).toBeTruthy();
-    expect(screen.getAllByText("settings.agents.status.notDetected").length).toBeGreaterThan(0);
+    const cliToolsView = screen.getByTestId("cli-tools-settings-view");
+    const providerView = screen.getByTestId("agent-provider-settings-view");
 
-    const codexSwitch = screen.getByRole("switch", {
-      name: "settings.agents.items.codex settings.agents.inUse",
-    }) as HTMLInputElement;
-    expect(codexSwitch.checked).toBe(true);
-
-    fireEvent.click(codexSwitch);
-
-    expect(agentSettingsStore.getState().inUseByAgentKind.codex).toBe(false);
+    expect(cliToolsView.parentElement).toBe(providerView.parentElement);
   });
 
-  it("shows load error when detection query fails", async () => {
-    mocked.listAgentDetectionStatuses.mockRejectedValueOnce(new Error("boom"));
+  it("forwards provider focus requests to the provider settings view", () => {
+    render(<AgentSettingsView focusAgentProviders />);
 
-    render(<AgentSettingsView />);
-
-    expect(await screen.findByText("settings.agents.loadError")).toBeTruthy();
-  });
-
-  it("keeps recheck clickable during initial load and only disables while recheck is running", async () => {
-    let resolveInitialLoad: (value: Array<{ agentKind: string; detected: boolean }>) => void = () => {};
-    mocked.listAgentDetectionStatuses
-      .mockImplementationOnce(
-        () =>
-          new Promise<Array<{ agentKind: string; detected: boolean }>>((resolve) => {
-            resolveInitialLoad = resolve;
-          }),
-      )
-      .mockResolvedValueOnce([
-        { agentKind: "opencode", detected: true },
-        { agentKind: "codex", detected: true },
-        { agentKind: "claude", detected: true },
-        { agentKind: "gemini", detected: false },
-        { agentKind: "pi", detected: false },
-        { agentKind: "copilot", detected: false },
-        { agentKind: "cursor", detected: false },
-      ]);
-
-    render(<AgentSettingsView />);
-
-    const recheckButton = screen.getByRole("button", { name: "settings.agents.actions.rescanAll" });
-    expect(recheckButton.hasAttribute("disabled")).toBe(false);
-
-    fireEvent.click(recheckButton);
-
-    expect(recheckButton.hasAttribute("disabled")).toBe(true);
-    await waitFor(() => {
-      expect(recheckButton.hasAttribute("disabled")).toBe(false);
-    });
-
-    resolveInitialLoad([
-      { agentKind: "opencode", detected: true },
-      { agentKind: "codex", detected: false },
-      { agentKind: "claude", detected: true },
-      { agentKind: "gemini", detected: false },
-      { agentKind: "pi", detected: false },
-      { agentKind: "copilot", detected: false },
-      { agentKind: "cursor", detected: false },
-    ]);
+    expect(screen.getByTestId("agent-provider-settings-view").getAttribute("data-focus-requested")).toBe("true");
   });
 });

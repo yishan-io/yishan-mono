@@ -346,6 +346,73 @@
         "cursor": "Cursor"
       }
     },
+    "agentProviders": {
+      "title": "Ai Chat Providers & Models",
+      "description": "Manage provider connections and choose the default model for AI Chat.",
+      "actions": {
+        "refresh": "Refresh"
+      },
+      "prompt": {
+        "submit": "Continue"
+      },
+      "providers": {
+        "empty": "No providers available.",
+        "groups": {
+          "oauth": "Account connection",
+          "apiKey": "API key",
+          "external": "External setup"
+        },
+        "switchDialog": {
+          "title": "Switch authentication method?",
+          "description": "This will replace the current authentication for {{provider}}.",
+          "confirm": "Switch"
+        },
+        "actions": {
+            "login": "Login",
+            "cancel": "Cancel",
+          "setApiKey": "Set API key",
+          "manage": "Manage",
+          "replace": "Replace API key",
+          "remove": "Remove saved key",
+          "logout": "Logout"
+        },
+        "status": {
+          "connectedOauth": "Connected via OAuth",
+          "connectedStored": "Connected via saved auth",
+          "connectedEnv": "Connected via environment",
+          "connectedExternal": "Configured externally",
+          "availableToSwitch": "Available to switch",
+          "externalSetupRequired": "External setup required",
+          "notConfigured": "Not configured"
+        },
+        "badges": {
+          "connectedOauth": "OAuth",
+          "connectedStored": "Saved auth",
+          "connectedEnv": "Environment",
+          "connectedExternal": "External",
+          "availableToSwitch": "Available",
+          "externalSetupRequired": "External setup",
+          "configuredUnavailable": "Configured · unavailable",
+          "notConfigured": "Not connected"
+        }
+      },
+      "models": {
+        "selectionTitle": "Default AI Chat provider and model",
+        "selectionDescription": "Choose the global provider and model used for future AI Chat sessions.",
+        "providerTitle": "Default AI Chat provider",
+        "providerDescription": "Only providers with configured authentication are available.",
+        "providerPlaceholder": "Select a provider",
+        "providerEmpty": "No configured providers",
+        "defaultTitle": "Default AI Chat model",
+        "defaultDescription": "Choose from models available for the selected provider.",
+        "availableTitle": "Available models",
+        "availableDescription": "Only models with configured authentication appear here.",
+        "availableCount": "{{count}} available",
+        "placeholder": "Select a model",
+        "empty": "No available models",
+        "unavailableWarning": "Your saved provider or model is no longer available. Choose a new default or refresh AI Chat Providers & Models."
+      }
+    },
     "cliTools": {
       "title": "CLI Tools",
       "description": "Manage local CLI tools used by agents and integrations.",
@@ -1143,7 +1210,10 @@
     }
   },
   "agentChat": {
-    "title": "Agent Chat"
+    "title": "Agent Chat",
+    "modelSelector": {
+      "addProvider": "Add provider"
+    }
   },
   "launch": {
     "title": "What's next?",

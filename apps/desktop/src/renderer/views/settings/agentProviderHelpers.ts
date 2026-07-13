@@ -1,0 +1,167 @@
+import type {
+  PiProviderAuthMethod,
+  PiProviderAuthMethodKind,
+  PiRuntimeModelRecord,
+  PiRuntimeProviderRecord,
+} from "../../../main/piRuntime/piRuntimeTypes";
+import type { ModelOption } from "../../components/ModelAutocomplete";
+
+export type AgentProviderStatusKind =
+  | "connectedOauth"
+  | "connectedStored"
+  | "connectedEnv"
+  | "connectedExternal"
+  | "availableToSwitch"
+  | "externalSetupRequired"
+  | "notConfigured";
+
+export type AgentProviderPrimaryAction =
+  | { kind: "authenticate"; method: PiProviderAuthMethodKind }
+  | { kind: "manageOauth" }
+  | { kind: "manageApiKey" };
+
+export type AgentProviderConfigEntry = {
+  provider: PiRuntimeProviderRecord;
+  method: PiProviderAuthMethod;
+};
+
+export type AgentProviderConfigGroups = Record<PiProviderAuthMethod["kind"], AgentProviderConfigEntry[]>;
+
+/** Groups provider configuration methods without maintaining a provider-name allowlist. */
+export function buildAgentProviderConfigGroups(
+  providers: readonly PiRuntimeProviderRecord[],
+): AgentProviderConfigGroups {
+  const groups: AgentProviderConfigGroups = { oauth: [], api_key: [], external: [] };
+  for (const provider of providers) {
+    const methods: readonly PiProviderAuthMethod[] =
+      provider.authMethods.length > 0 ? provider.authMethods : [{ kind: "external", label: provider.name }];
+    for (const method of methods) {
+      groups[method.kind].push({ provider, method });
+    }
+  }
+  for (const entries of Object.values(groups)) {
+    entries.sort((left, right) => {
+      const configuredDifference =
+        Number(isAgentProviderConfigEntryConfigured(right)) - Number(isAgentProviderConfigEntryConfigured(left));
+      return configuredDifference || left.method.label.localeCompare(right.method.label);
+    });
+  }
+  return groups;
+}
+
+/** Returns whether the provider's active credential source configures this specific method. */
+export function isAgentProviderConfigEntryConfigured(entry: AgentProviderConfigEntry): boolean {
+  switch (entry.provider.authSource) {
+    case "oauth":
+      return entry.method.kind === "oauth";
+    case "auth_file":
+      return entry.method.kind === "api_key";
+    case "env":
+    case "external":
+      return entry.method.kind !== "oauth";
+    default:
+      return false;
+  }
+}
+
+/** Maps one method entry to the status shown for that configuration option. */
+export function getAgentProviderConfigEntryStatusKind(entry: AgentProviderConfigEntry): AgentProviderStatusKind {
+  if (isAgentProviderConfigEntryConfigured(entry)) {
+    return getAgentProviderStatusKind(entry.provider);
+  }
+  if (entry.provider.hasAuth && (entry.provider.authSource === "oauth" || entry.provider.authSource === "auth_file")) {
+    return "availableToSwitch";
+  }
+  return entry.method.kind === "external" ? "externalSetupRequired" : "notConfigured";
+}
+
+/** Resolves the safe action for one method entry rather than for the provider as a whole. */
+export function getAgentProviderConfigEntryAction(
+  entry: AgentProviderConfigEntry,
+): AgentProviderPrimaryAction | undefined {
+  if (
+    entry.method.kind === "external" ||
+    entry.provider.authSource === "env" ||
+    entry.provider.authSource === "external"
+  ) {
+    return undefined;
+  }
+  if (isAgentProviderConfigEntryConfigured(entry)) {
+    return entry.method.kind === "oauth" ? { kind: "manageOauth" } : { kind: "manageApiKey" };
+  }
+  return { kind: "authenticate", method: entry.method.kind };
+}
+
+/** Maps one provider auth source into one UI status kind. */
+export function getAgentProviderStatusKind(provider: PiRuntimeProviderRecord): AgentProviderStatusKind {
+  switch (provider.authSource) {
+    case "oauth":
+      return "connectedOauth";
+    case "auth_file":
+      return "connectedStored";
+    case "env":
+      return "connectedEnv";
+    case "external":
+      return "connectedExternal";
+    default:
+      return provider.authMethods.some((method) => method.kind === "external")
+        ? "externalSetupRequired"
+        : "notConfigured";
+  }
+}
+
+/** Flags configured providers whose refreshed model registry has no usable model. */
+export function isAgentProviderConfiguredButUnavailable(provider: PiRuntimeProviderRecord): boolean {
+  return provider.hasAuth && !provider.available;
+}
+
+/** Builds one sorted autocomplete list from available Pi models only. */
+export function buildAvailablePiModelOptions(models: readonly PiRuntimeModelRecord[]): ModelOption[] {
+  return models
+    .filter((model) => model.available)
+    .map<ModelOption>((model) => ({
+      id: `${model.providerId}/${model.modelId}`,
+      name: `${model.providerName} · ${model.label}`,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+/** Builds one sorted provider list from providers that currently expose at least one available model. */
+export function buildAvailablePiProviderOptions(models: readonly PiRuntimeModelRecord[]): ModelOption[] {
+  const providersById = new Map<string, ModelOption>();
+  for (const model of models) {
+    if (model.available && !providersById.has(model.providerId)) {
+      providersById.set(model.providerId, { id: model.providerId, name: model.providerName });
+    }
+  }
+  return [...providersById.values()].sort((left, right) => left.name.localeCompare(right.name));
+}
+
+/** Builds one sorted model list for the selected provider from currently available models only. */
+export function buildAvailablePiModelOptionsForProvider(
+  models: readonly PiRuntimeModelRecord[],
+  providerId: string | undefined,
+): ModelOption[] {
+  if (!providerId) {
+    return [];
+  }
+  return models
+    .filter((model) => model.available && model.providerId === providerId)
+    .map<ModelOption>((model) => ({
+      id: `${model.providerId}/${model.modelId}`,
+      name: model.label,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+/** Returns true when one saved Pi model pattern still exists in the available model set. */
+export function isPiModelPatternAvailable(
+  models: readonly PiRuntimeModelRecord[],
+  pattern: string | undefined,
+): boolean {
+  if (!pattern) {
+    return false;
+  }
+
+  return models.some((model) => model.available && `${model.providerId}/${model.modelId}` === pattern);
+}

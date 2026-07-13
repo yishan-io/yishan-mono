@@ -1,0 +1,155 @@
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from "@mui/material";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { DesktopHostBridge, DesktopRpcEventBridge, DesktopRpcEventEnvelope } from "../../main/ipc";
+import type { PiAuthPromptRequestEvent, PiAuthPromptResponseInput } from "../../main/piRuntime/piRuntimeTypes";
+import { useDialogRegistration } from "../hooks/useDialogRegistration";
+import { getDesktopBridge } from "../rpc/rpcTransport";
+
+export type ProviderAuthDialogBridge = {
+  host: Pick<DesktopHostBridge, "respondPiAuthPrompt">;
+  events: DesktopRpcEventBridge;
+};
+
+type ProviderAuthDialogProps = {
+  bridge?: ProviderAuthDialogBridge;
+};
+
+/** Renders Pi-owned authentication prompts with the active desktop MUI theme. */
+export function ProviderAuthDialog({ bridge: providedBridge }: ProviderAuthDialogProps) {
+  const { t } = useTranslation();
+  const bridge = providedBridge ?? getDesktopBridge();
+  const [request, setRequest] = useState<PiAuthPromptRequestEvent>();
+  const [value, setValue] = useState("");
+  const [isResponding, setIsResponding] = useState(false);
+  useDialogRegistration(Boolean(request));
+
+  useEffect(() => {
+    return bridge?.events.subscribe((event) => {
+      const nextRequest = parsePromptRequestEvent(event);
+      if (!nextRequest) {
+        return;
+      }
+      setRequest(nextRequest);
+      setValue(nextRequest.prompt.type === "select" ? (nextRequest.prompt.options[0]?.id ?? "") : "");
+    });
+  }, [bridge]);
+
+  const canSubmit = useMemo(() => {
+    if (!request) {
+      return false;
+    }
+    return request.prompt.type === "select" || request.prompt.allowEmpty || value.trim().length > 0;
+  }, [request, value]);
+
+  if (!bridge || !request) {
+    return null;
+  }
+
+  const respond = async (response: PiAuthPromptResponseInput) => {
+    setIsResponding(true);
+    setRequest(undefined);
+    setValue("");
+    try {
+      await bridge.host.respondPiAuthPrompt(response);
+    } finally {
+      setIsResponding(false);
+    }
+  };
+  const cancel = () => {
+    void respond({ requestId: request.requestId, status: "cancelled" });
+  };
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!canSubmit) {
+      return;
+    }
+    void respond({ requestId: request.requestId, status: "submitted", value });
+  };
+
+  return (
+    <Dialog
+      open
+      onClose={isResponding ? undefined : cancel}
+      fullWidth
+      maxWidth="xs"
+      disableEscapeKeyDown={isResponding}
+    >
+      <Box component="form" onSubmit={submit}>
+        <DialogTitle>{request.prompt.message}</DialogTitle>
+        <DialogContent>
+          {request.prompt.type === "select" ? (
+            <TextField
+              select
+              fullWidth
+              autoFocus
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              slotProps={{ select: { inputProps: { "aria-label": request.prompt.message } } }}
+            >
+              {request.prompt.options.map((option) => (
+                <MenuItem key={option.id} value={option.id}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          ) : (
+            <TextField
+              fullWidth
+              autoFocus
+              type={request.prompt.type === "secret" ? "password" : "text"}
+              value={value}
+              placeholder={request.prompt.placeholder}
+              onChange={(event) => setValue(event.target.value)}
+              slotProps={{ htmlInput: { "aria-label": request.prompt.message } }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancel} disabled={isResponding}>
+            {t("common.actions.cancel")}
+          </Button>
+          <Button type="submit" variant="contained" disabled={!canSubmit || isResponding}>
+            {t("settings.agentProviders.prompt.submit")}
+          </Button>
+        </DialogActions>
+      </Box>
+    </Dialog>
+  );
+}
+
+function parsePromptRequestEvent(event: DesktopRpcEventEnvelope): PiAuthPromptRequestEvent | undefined {
+  if (event.method !== "piRuntime.authPrompt" || typeof event.payload !== "object" || event.payload === null) {
+    return undefined;
+  }
+  const requestId = Reflect.get(event.payload, "requestId");
+  const prompt = Reflect.get(event.payload, "prompt");
+  if (typeof requestId !== "string" || !isPromptRequest(prompt)) {
+    return undefined;
+  }
+  return { requestId, prompt };
+}
+
+function isPromptRequest(value: unknown): value is PiAuthPromptRequestEvent["prompt"] {
+  if (typeof value !== "object" || value === null || typeof Reflect.get(value, "message") !== "string") {
+    return false;
+  }
+  const type = Reflect.get(value, "type");
+  if (type === "text" || type === "secret") {
+    return true;
+  }
+  if (type !== "select") {
+    return false;
+  }
+  const options = Reflect.get(value, "options");
+  return (
+    Array.isArray(options) &&
+    options.every(
+      (option) =>
+        typeof option === "object" &&
+        option !== null &&
+        typeof Reflect.get(option, "id") === "string" &&
+        typeof Reflect.get(option, "label") === "string",
+    )
+  );
+}

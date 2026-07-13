@@ -19,9 +19,9 @@
     "build:app": "bun run cli:build && bun run build && node scripts/packageApp.mjs --publish never",
     "build:app:dir": "bun run cli:build && bun run build && node scripts/packageApp.mjs --dir --publish never",
     "electron:build": "bun run electron:build:main && bun run electron:build:preload",
-    "electron:build:main": "esbuild src/main/main.ts --bundle --platform=node --format=cjs --outfile=dist/electron/main.cjs --external:electron --external:electron-updater",
+    "electron:build:main": "esbuild src/main/main.ts --bundle --platform=node --format=cjs --outfile=dist/electron/main.cjs --external:electron --external:electron-updater --external:@earendil-works/pi-coding-agent --external:@earendil-works/pi-ai",
     "electron:build:preload": "esbuild src/main/preload.ts --bundle --platform=node --format=cjs --outfile=dist/electron/preload.js --external:electron",
-    "electron:watch:main": "esbuild src/main/main.ts --bundle --platform=node --format=cjs --outfile=dist/electron/main.cjs --external:electron --external:electron-updater --watch",
+    "electron:watch:main": "esbuild src/main/main.ts --bundle --platform=node --format=cjs --outfile=dist/electron/main.cjs --external:electron --external:electron-updater --external:@earendil-works/pi-coding-agent --external:@earendil-works/pi-ai --watch",
     "electron:watch:preload": "esbuild src/main/preload.ts --bundle --platform=node --format=cjs --outfile=dist/electron/preload.js --external:electron --watch",
     "electron:dev": "cross-env ELECTRON_CHANNEL=dev NODE_ENV=development ELECTRON_RENDERER_URL=http://127.0.0.1:5173 wait-on tcp:5173 file:dist/electron/main.cjs file:dist/electron/preload.js && cross-env ELECTRON_CHANNEL=dev NODE_ENV=development ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron dist/electron/main.cjs",
     "check": "tsc --noEmit -p tsconfig.json"
@@ -175,6 +175,8 @@
   },
   "license": "Elastic-2.0",
   "dependencies": {
+    "@earendil-works/pi-ai": "0.80.6",
+    "@earendil-works/pi-coding-agent": "0.80.6",
     "electron-updater": "^6.8.3"
   }
 }

@@ -29,7 +29,13 @@ vi.mock("./settings/NotificationSettingsView", () => ({
 }));
 
 vi.mock("./settings/AgentSettingsView", () => ({
-  AgentSettingsView: () => <div data-testid="agent-settings-panel" />,
+  AgentSettingsView: ({ focusAgentProviders }: { focusAgentProviders?: boolean }) => (
+    <div data-testid="agent-settings-panel" data-focus-agent-providers={focusAgentProviders ? "true" : "false"} />
+  ),
+}));
+
+vi.mock("./settings/CLIToolsSettingsView", () => ({
+  CLIToolsSettingsView: () => <div data-testid="cli-tools-settings-panel" />,
 }));
 
 vi.mock("./settings/TerminalSettingsView", () => ({
@@ -362,6 +368,7 @@ describe("SettingsView", () => {
     );
 
     expect(screen.getByTestId("agent-settings-panel")).toBeTruthy();
+    expect(screen.queryByTestId("cli-tools-settings-panel")).toBeNull();
   });
 
   it("renders skills panel when skills tab is selected", () => {
@@ -497,6 +504,40 @@ describe("SettingsView", () => {
     fireEvent.click(screen.getByRole("button", { name: /settings\.agents\.items\.codex/ }));
 
     expect(screen.getByTestId("agent-settings-panel")).toBeTruthy();
+  });
+
+  it("matches provider settings as a separate search item and opens agents tab", () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("settings.searchPlaceholder"), {
+      target: { value: "agentProviders" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /settings\.agentProviders\.title/ }));
+
+    expect(screen.getByTestId("agent-settings-panel")).toBeTruthy();
+  });
+
+  it("forwards the provider focus deep link to agent settings", () => {
+    render(
+      <AppThemePreferenceProvider>
+        <MemoryRouter initialEntries={["/settings?tab=agents&focus=agentProviders"]}>
+          <Routes>
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </MemoryRouter>
+      </AppThemePreferenceProvider>,
+    );
+
+    expect(screen.getByTestId("agent-settings-panel").getAttribute("data-focus-agent-providers")).toBe("true");
   });
 
   it("renders keybindings panel when keybindings tab is selected", () => {

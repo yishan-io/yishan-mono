@@ -1,154 +1,23 @@
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  IconButton,
-  InputAdornment,
-  Radio,
-  Stack,
-  Switch,
-  TextField,
-  Tooltip,
-} from "@mui/material";
-import { useCallback, useMemo, useState } from "react";
+import { Alert, Box, Button, CircularProgress, Radio, Stack, Switch, Tooltip } from "@mui/material";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { LuRefreshCw } from "react-icons/lu";
 import type { CLIToolStatus } from "../../commands/cliToolCommands";
 import { AgentIcon } from "../../components/AgentIcon";
 import { SettingsCard, SettingsRows, SettingsSectionHeader } from "../../components/settings";
 import {
-  AGENT_COMMAND_MAX_LENGTH,
   AGENT_SETTINGS_LABEL_KEY_BY_KIND,
-  DEFAULT_AGENT_COMMANDS,
   type DesktopAgentKind,
   SUPPORTED_DESKTOP_AGENT_KINDS,
   isDesktopAgentKind,
-  validateAgentCommand,
 } from "../../helpers/agentSettings";
 import { useCommands } from "../../hooks/useCommands";
 import { useRefreshableLoader } from "../../hooks/useRefreshableLoader";
 import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
+import { AgentCommandInput } from "./AgentCommandInput";
 
 const CLI_TOOLS_STATUS_TIMEOUT_MS = 15_000;
 const CLI_TOOLS_RECHECK_MIN_DURATION_MS = 500;
-
-type AgentCommandInputProps = {
-  agentKind: DesktopAgentKind;
-  currentCommand: string | undefined;
-  onSave: (agentKind: DesktopAgentKind, command: string) => void;
-  onReset: (agentKind: DesktopAgentKind) => void;
-};
-
-/**
- * Renders an inline editable command field for one agent row.
- * Supports save on Enter/blur and reset to the system default.
- */
-function AgentCommandInput({ agentKind, currentCommand, onSave, onReset }: AgentCommandInputProps) {
-  const { t } = useTranslation();
-  const defaultCommand = DEFAULT_AGENT_COMMANDS[agentKind];
-  const [draft, setDraft] = useState<string>(currentCommand ?? "");
-  const [errorKey, setErrorKey] = useState<string | null>(null);
-
-  const hasCustomCommand = currentCommand !== undefined;
-  const isDirty = draft !== (currentCommand ?? "");
-
-  const handleChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setDraft(event.target.value);
-      if (errorKey) {
-        setErrorKey(null);
-      }
-    },
-    [errorKey],
-  );
-
-  const handleCommit = useCallback(() => {
-    const trimmed = draft.trim();
-    if (trimmed === "") {
-      // Empty commit clears the override.
-      onReset(agentKind);
-      setDraft("");
-      setErrorKey(null);
-      return;
-    }
-    const validationErrorKey = validateAgentCommand(trimmed);
-    if (validationErrorKey) {
-      setErrorKey(validationErrorKey);
-      return;
-    }
-    onSave(agentKind, trimmed);
-    setErrorKey(null);
-  }, [agentKind, draft, onSave, onReset]);
-
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        handleCommit();
-      }
-    },
-    [handleCommit],
-  );
-
-  const handleReset = useCallback(() => {
-    onReset(agentKind);
-    setDraft("");
-    setErrorKey(null);
-  }, [agentKind, onReset]);
-
-  return (
-    <TextField
-      size="small"
-      value={draft}
-      onChange={handleChange}
-      onBlur={handleCommit}
-      onKeyDown={handleKeyDown}
-      placeholder={t("settings.agents.command.placeholder", { defaultCommand })}
-      error={errorKey !== null}
-      helperText={errorKey ? t(errorKey) : undefined}
-      inputProps={{
-        maxLength: AGENT_COMMAND_MAX_LENGTH,
-        "aria-label": `${t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind])} ${t("settings.agents.command.label")}`,
-        spellCheck: false,
-        autoComplete: "off",
-        autoCorrect: "off",
-        autoCapitalize: "off",
-        sx: { fontSize: "0.85rem", color: "text.secondary" },
-      }}
-      slotProps={{
-        input: {
-          endAdornment: hasCustomCommand ? (
-            <InputAdornment position="end">
-              <Tooltip title={t("settings.agents.command.resetAriaLabel")}>
-                <IconButton
-                  size="small"
-                  onClick={handleReset}
-                  aria-label={t("settings.agents.command.resetAriaLabel")}
-                  edge="end"
-                >
-                  ↺
-                </IconButton>
-              </Tooltip>
-            </InputAdornment>
-          ) : isDirty ? (
-            <InputAdornment position="end">
-              <IconButton
-                size="small"
-                onClick={handleCommit}
-                aria-label={t("settings.agents.command.label")}
-                edge="end"
-              >
-                ✓
-              </IconButton>
-            </InputAdornment>
-          ) : null,
-        },
-      }}
-      sx={{ minWidth: 0, width: "100%" }}
-    />
-  );
-}
 
 export function CLIToolsSettingsView() {
   const { t } = useTranslation();
@@ -189,10 +58,10 @@ export function CLIToolsSettingsView() {
   const isStatusPending = isLoading || isRefreshing;
 
   return (
-    <Box data-testid="agent-settings-panel">
+    <Box data-testid="cli-tools-settings-panel">
       <SettingsSectionHeader
-        title={t("settings.agents.title")}
-        description={t("settings.agents.description")}
+        title={t("settings.cliTools.title")}
+        description={t("settings.cliTools.description")}
         action={
           <Button
             size="small"
@@ -203,14 +72,14 @@ export function CLIToolsSettingsView() {
             disabled={isRefreshing}
             startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : <LuRefreshCw />}
           >
-            {t("settings.agents.actions.rescanAll")}
+            {t("settings.cliTools.actions.rescanAll")}
           </Button>
         }
       />
 
       <Stack spacing={2}>
         <SettingsCard>
-          {hasLoadError ? <Alert severity="error">{t("settings.agents.loadError")}</Alert> : null}
+          {hasLoadError ? <Alert severity="error">{t("settings.cliTools.loadError")}</Alert> : null}
           <SettingsRows>
             {SUPPORTED_DESKTOP_AGENT_KINDS.map((agentKind) => {
               const status = statusByToolID.get(agentKind);

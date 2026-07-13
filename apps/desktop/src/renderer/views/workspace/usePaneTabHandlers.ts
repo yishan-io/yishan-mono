@@ -35,6 +35,7 @@ export function usePaneTabHandlers({
 }: UsePaneTabHandlersOptions) {
   const { t } = useTranslation();
   const customCommandByAgentKind = agentSettingsStore((state) => state.customCommandByAgentKind);
+  const defaultPiModelPattern = agentSettingsStore((state) => state.defaultPiModelPattern);
   const terminalTabIds = useMemo(
     () => workspaceTabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id),
     [workspaceTabs],
@@ -91,7 +92,7 @@ export function usePaneTabHandlers({
       }
       if (!enabledAgentKindSet.has(option)) return;
       const title = t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[option]);
-      const launchCommand = resolveAgentLaunchCommand(option, customCommandByAgentKind);
+      const launchCommand = resolveAgentLaunchCommand(option, customCommandByAgentKind, defaultPiModelPattern);
       cmd.openTab({
         workspaceId,
         kind: "terminal",
@@ -101,7 +102,15 @@ export function usePaneTabHandlers({
         reuseExisting: false,
       });
     },
-    [cmd, workspaceId, enabledAgentKindSet, customCommandByAgentKind, t],
+    [
+      cmd,
+      workspaceId,
+      workspace?.worktreePath,
+      enabledAgentKindSet,
+      customCommandByAgentKind,
+      defaultPiModelPattern,
+      t,
+    ],
   );
 
   const handleRenameTab = useCallback(

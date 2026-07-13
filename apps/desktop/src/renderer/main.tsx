@@ -9,6 +9,7 @@ import { HashRouter, Route, Routes } from "react-router-dom";
 import { openLink } from "./commands/appCommands";
 import { AppUpdateSnackbar } from "./components/AppUpdateSnackbar";
 import { AuthSessionExpiredSnackbar } from "./components/AuthSessionExpiredSnackbar";
+import { ProviderAuthDialog } from "./components/ProviderAuthDialog";
 import { WorkspaceOverlay } from "./components/WorkspaceOverlay";
 import { startBackendEventPipeline, startBackendEventStoreBindings } from "./events";
 import { AppThemePreferenceProvider, useThemePreference } from "./hooks/useThemePreference";
@@ -86,6 +87,7 @@ function AppRoot() {
         </HashRouter>
         <AppUpdateSnackbar />
         <AuthSessionExpiredSnackbar />
+        <ProviderAuthDialog />
       </ThemeProvider>
     </QueryClientProvider>
   );

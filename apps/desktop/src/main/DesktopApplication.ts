@@ -14,6 +14,8 @@ import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "./daemon/daemonSetting
 import { DESKTOP_RPC_IPC_CHANNELS, type DesktopUpdateEventPayload, HOST_IPC_CHANNELS } from "./ipc";
 import { registerFileIpcHandlers } from "./ipc/fileHandlers";
 import { registerNotificationAndBrowserIpcHandlers } from "./ipc/notificationAndBrowserHandlers";
+import { registerPiRuntimeIpcHandlers } from "./ipc/piRuntimeHandlers";
+import { PiRuntimeService } from "./piRuntime/piRuntimeService";
 import { isDevMode } from "./runtime/environment";
 import { resolveLocalCalendarDate, shouldSuppressAutoUpdateEvent } from "./updates/autoUpdateDismissalState";
 import { checkForUpdatesManually, downloadUpdate, startAutoUpdates } from "./updates/autoUpdateService";
@@ -37,6 +39,7 @@ function isPathWithinOrEqual(rootPath: string, candidatePath: string): boolean {
 export class DesktopApplication {
   private mainWindow: BrowserWindow | null = null;
   private readonly daemonManager = new DaemonManager();
+  private readonly piRuntimeService = new PiRuntimeService();
   private hasProcessedBeforeQuit = false;
   private isQuitting = false;
   private pendingProtocolUrl: string | null = null;
@@ -330,6 +333,7 @@ export class DesktopApplication {
   private registerHostIpcHandlers() {
     registerFileIpcHandlers();
     registerNotificationAndBrowserIpcHandlers();
+    registerPiRuntimeIpcHandlers(this.piRuntimeService, () => this.mainWindow);
 
     ipcMain.handle(HOST_IPC_CHANNELS.openLocalFolderDialog, async (_event, input) => {
       const options: Electron.OpenDialogOptions = {

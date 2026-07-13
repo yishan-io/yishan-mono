@@ -1,6 +1,7 @@
 import { Box, Button } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
+import { useNavigate } from "react-router-dom";
 import type { AgentModel } from "../../store/agentChatTypes";
 import { AgentModelSelectorMenu } from "./AgentModelSelectorMenu";
 import {
@@ -45,6 +46,7 @@ export function AgentModelSelector({
   onModelChange,
   onThinkingLevelCycle,
 }: AgentModelSelectorProps) {
+  const navigate = useNavigate();
   const modelLabel = currentModel ? formatAgentModelLabel(currentModel) : "Select model";
   const providerLabel = currentModel?.provider?.trim() ?? "";
   const providerGroups = useMemo(() => groupAgentModelsByProvider(models), [models]);
@@ -87,6 +89,11 @@ export function AgentModelSelector({
     },
     [handleMenuClose, onModelChange],
   );
+
+  const handleAddProvider = useCallback(() => {
+    handleMenuClose();
+    navigate("/settings?tab=agents&focus=agentProviders");
+  }, [handleMenuClose, navigate]);
 
   const activeSelectedProvider = providerGroups.some((providerGroup) => providerGroup.provider === selectedProvider)
     ? selectedProvider
@@ -168,6 +175,7 @@ export function AgentModelSelector({
         onClose={handleMenuClose}
         onProviderChange={setSelectedProvider}
         onModelSelect={handleModelSelect}
+        onAddProvider={handleAddProvider}
       />
       <Button
         variant="text"

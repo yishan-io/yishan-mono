@@ -66,8 +66,9 @@ vi.mock("../../store/workspaceStore", () => ({
 }));
 
 vi.mock("../../store/settings/agentSettingsStore", () => ({
-  agentSettingsStore: (selector: (state: { customCommandByAgentKind: Record<string, unknown> }) => unknown) =>
-    selector({ customCommandByAgentKind: {} }),
+  agentSettingsStore: (
+    selector: (state: { customCommandByAgentKind: Record<string, unknown>; defaultPiModelPattern?: string }) => unknown,
+  ) => selector({ customCommandByAgentKind: {}, defaultPiModelPattern: "openai/gpt-5" }),
 }));
 
 describe("LaunchView", () => {
@@ -112,5 +113,18 @@ describe("LaunchView", () => {
 
     expect(screen.queryByText("You can follow setup progress here while the daemon finishes provisioning.")).toBeNull();
     expect(screen.getByRole("button", { name: "Open terminal" })).toBeTruthy();
+  });
+
+  it("launches Pi with the saved default model", () => {
+    render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={["pi"]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "tabs.createMenu.pi" }));
+
+    expect(mocks.openTab).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentKind: "pi",
+        launchCommand: "pi --model 'openai/gpt-5'",
+      }),
+    );
   });
 });

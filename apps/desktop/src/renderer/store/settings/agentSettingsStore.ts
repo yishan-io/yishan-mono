@@ -5,7 +5,10 @@ import {
   AGENT_COMMAND_MAX_LENGTH,
   type DesktopAgentKind,
   createDefaultAgentInUseByKind,
+  getPiProviderIdFromModelPattern,
   isDesktopAgentKind,
+  normalizePiModelPattern,
+  normalizePiProviderId,
 } from "../../helpers/agentSettings";
 
 export const AGENT_SETTINGS_STORE_STORAGE_KEY = "yishan-agent-settings-store";
@@ -15,6 +18,10 @@ type AgentSettingsStoreState = {
   defaultAgentKind?: DesktopAgentKind;
   /** User-defined custom launch command per agent. Absent key means "use system default". */
   customCommandByAgentKind: Partial<Record<DesktopAgentKind, string>>;
+  /** Yishan-owned global default Pi provider used to filter model selection. */
+  defaultPiProviderId?: string;
+  /** Yishan-owned default Pi model selection (`provider/model`) used for future Pi launches. */
+  defaultPiModelPattern?: string;
   setAgentInUse: (agentKind: DesktopAgentKind, inUse: boolean) => void;
   setDefaultAgentKind: (agentKind: DesktopAgentKind | undefined) => void;
   /**
@@ -25,12 +32,18 @@ type AgentSettingsStoreState = {
   setAgentCustomCommand: (agentKind: DesktopAgentKind, command: string) => void;
   /** Clears any custom command override for one agent kind, reverting to the system default. */
   resetAgentCustomCommand: (agentKind: DesktopAgentKind) => void;
+  /** Persists the global default Pi provider and clears an incompatible saved model. */
+  setDefaultPiProviderId: (providerId: string) => void;
+  /** Persists the default Pi model pattern used for future Pi launches. */
+  setDefaultPiModelPattern: (pattern: string) => void;
 };
 
 type AgentSettingsStorePersistedState = {
   inUseByAgentKind: Partial<Record<DesktopAgentKind, boolean>>;
   defaultAgentKind?: DesktopAgentKind;
   customCommandByAgentKind: Partial<Record<DesktopAgentKind, string>>;
+  defaultPiProviderId?: string;
+  defaultPiModelPattern?: string;
 };
 
 function normalizeDefaultAgentKind(
@@ -98,6 +111,8 @@ export const agentSettingsStore = create<AgentSettingsStoreState>()(
       inUseByAgentKind: createDefaultAgentInUseByKind(true),
       defaultAgentKind: undefined,
       customCommandByAgentKind: {},
+      defaultPiProviderId: undefined,
+      defaultPiModelPattern: undefined,
       setAgentInUse: (agentKind, inUse) => {
         set((state) => {
           const nextInUseByAgentKind = {
@@ -143,6 +158,23 @@ export const agentSettingsStore = create<AgentSettingsStoreState>()(
           return { customCommandByAgentKind: next };
         });
       },
+      setDefaultPiProviderId: (providerId) => {
+        const normalizedProviderId = normalizePiProviderId(providerId);
+        set((state) => ({
+          defaultPiProviderId: normalizedProviderId,
+          defaultPiModelPattern:
+            getPiProviderIdFromModelPattern(state.defaultPiModelPattern) === normalizedProviderId
+              ? state.defaultPiModelPattern
+              : undefined,
+        }));
+      },
+      setDefaultPiModelPattern: (pattern) => {
+        const normalizedPattern = normalizePiModelPattern(pattern);
+        set((state) => ({
+          defaultPiProviderId: getPiProviderIdFromModelPattern(normalizedPattern) ?? state.defaultPiProviderId,
+          defaultPiModelPattern: normalizedPattern,
+        }));
+      },
     })),
     {
       name: AGENT_SETTINGS_STORE_STORAGE_KEY,
@@ -151,6 +183,8 @@ export const agentSettingsStore = create<AgentSettingsStoreState>()(
         inUseByAgentKind: state.inUseByAgentKind,
         defaultAgentKind: state.defaultAgentKind,
         customCommandByAgentKind: state.customCommandByAgentKind,
+        defaultPiProviderId: state.defaultPiProviderId,
+        defaultPiModelPattern: state.defaultPiModelPattern,
       }),
       merge: (persistedState, currentState) => {
         const persisted =
@@ -159,12 +193,17 @@ export const agentSettingsStore = create<AgentSettingsStoreState>()(
             : undefined;
 
         const normalizedInUseByAgentKind = normalizeInUseByAgentKind(persisted?.inUseByAgentKind);
+        const normalizedModelPattern = normalizePiModelPattern(persisted?.defaultPiModelPattern);
 
         return {
           ...currentState,
           inUseByAgentKind: normalizedInUseByAgentKind,
           defaultAgentKind: normalizeDefaultAgentKind(persisted?.defaultAgentKind, normalizedInUseByAgentKind),
           customCommandByAgentKind: normalizeCustomCommandByAgentKind(persisted?.customCommandByAgentKind),
+          defaultPiProviderId:
+            normalizePiProviderId(persisted?.defaultPiProviderId) ??
+            getPiProviderIdFromModelPattern(normalizedModelPattern),
+          defaultPiModelPattern: normalizedModelPattern,
         };
       },
     },

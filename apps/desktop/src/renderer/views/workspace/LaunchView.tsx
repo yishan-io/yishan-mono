@@ -73,13 +73,13 @@ export type LaunchViewProps = {
 export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) {
   const { t } = useTranslation();
   const customCommandByAgentKind = agentSettingsStore((state) => state.customCommandByAgentKind);
-  const workspace = workspaceStore((state) => state.workspaces.find((item) => item.id === workspaceId));
+  const defaultPiModelPattern = agentSettingsStore((state) => state.defaultPiModelPattern);
   const workspaceCreateProgress = workspaceCreateProgressStore((state) => state.progressByWorkspaceId[workspaceId]);
   const { openTab, openWorkspaceFileSearch } = useCommands();
   const workspaces = workspaceStore((state) => state.workspaces);
   const platform = getRendererPlatform();
-  const isPreparingWorkspace = workspace?.status === "provisioning" && Boolean(workspaceCreateProgress);
   const selectedWorkspace = workspaces.find((w) => w.id === workspaceId);
+  const isPreparingWorkspace = selectedWorkspace?.status === "provisioning" && Boolean(workspaceCreateProgress);
 
   const launchActions = [
     {
@@ -280,7 +280,11 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
           >
             {enabledAgentKinds.map((agentKind) => {
               const label = t(AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND[agentKind]);
-              const launchCommand = resolveAgentLaunchCommand(agentKind, customCommandByAgentKind);
+              const launchCommand = resolveAgentLaunchCommand(
+                agentKind,
+                customCommandByAgentKind,
+                defaultPiModelPattern,
+              );
               return (
                 <Box
                   key={agentKind}
