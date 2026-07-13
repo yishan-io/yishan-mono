@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../helpers/errorHelpers";
 import { generateId } from "../helpers/generateId";
 import type * as Rpc from "../rpc/daemonTypes";
 import { getDaemonClient } from "../rpc/rpcTransport";
@@ -24,8 +25,7 @@ import { applyStreamDelta, cloneAgentMessage, cloneContentBlocks } from "./agent
 // double-mounts reuse the same Pi process instead of starting a second one.
 
 type PiSessionHandle = {
-  rpcSessionId: string;
-  piSessionId: string;
+  sessionId: string;
   unsubscribe: (() => void) | null;
   state: "starting" | "running" | "closing";
   closeRequested: boolean;
@@ -33,6 +33,7 @@ type PiSessionHandle = {
 };
 
 const activePiSessions = new Map<string, PiSessionHandle>();
+const PI_SESSION_EXISTS_RPC_CODE = -32003;
 
 /**
  * Ensures a Pi RPC session exists for a tab. Idempotent — subsequent calls
@@ -42,19 +43,19 @@ export async function ensurePiSession(opts: {
   tabId: string;
   workspaceId: string;
   cwd: string;
-  piSessionId?: string;
+  sessionId?: string;
   paneId?: string;
 }): Promise<string> {
   const existing = activePiSessions.get(opts.tabId);
   if (existing) {
-    return existing.rpcSessionId;
+    return existing.sessionId;
   }
 
+  const requestedSessionId = opts.sessionId?.trim();
   const chatSession = agentChatStore.getState().sessionsByTabId[opts.tabId];
-  if (chatSession) {
+  if (chatSession && !requestedSessionId) {
     activePiSessions.set(opts.tabId, {
-      rpcSessionId: chatSession.sessionId,
-      piSessionId: chatSession.sessionId,
+      sessionId: chatSession.sessionId,
       unsubscribe: null,
       state: "running",
       closeRequested: false,
@@ -63,11 +64,10 @@ export async function ensurePiSession(opts: {
     return chatSession.sessionId;
   }
 
-  const sessionId = opts.piSessionId || generateId();
+  const sessionId = requestedSessionId || generateId();
   const client = await getDaemonClient();
   const handle: PiSessionHandle = {
-    rpcSessionId: sessionId,
-    piSessionId: sessionId,
+    sessionId,
     unsubscribe: null,
     state: "starting",
     closeRequested: false,
@@ -75,17 +75,34 @@ export async function ensurePiSession(opts: {
   };
   activePiSessions.set(opts.tabId, handle);
 
-  const startPromise = client.pi
-    .start({
+  const startPiSession = async (): Promise<{ sessionId: string } | { ok: boolean }> => {
+    return await client.pi.start({
       sessionId,
       tabId: opts.tabId,
       paneId: resolveAgentChatPaneId(opts.tabId, opts.paneId),
       workspaceId: opts.workspaceId,
       cwd: opts.cwd,
-      piSessionId: sessionId,
+    });
+  };
+
+  const startPromise = startPiSession()
+    .catch(async (error) => {
+      if (!requestedSessionId || !isPiSessionAlreadyRunningError(error)) {
+        throw error;
+      }
+      return await client.pi.attach({
+        sessionId,
+        tabId: opts.tabId,
+        workspaceId: opts.workspaceId,
+        cwd: opts.cwd,
+      });
     })
     .then(async () => {
       handle.startPromise = null;
+      tabStore.getState().setAgentChatTabSession({
+        tabId: opts.tabId,
+        sessionId,
+      });
 
       if (handle.closeRequested) {
         await closePiSessionHandle(opts.tabId, handle);
@@ -106,19 +123,19 @@ export async function ensurePiSession(opts: {
   return sessionId;
 }
 
-/** Returns the tabId that currently owns the given Pi session, if any. */
-export function findTabWithPiSession(piSessionId: string): string | undefined {
+/** Returns the tabId that currently owns the given agent-chat session, if any. */
+export function findTabWithSession(sessionId: string): string | undefined {
   const openTabIds = new Set(tabStore.getState().tabs.map((tab) => tab.id));
 
   for (const [tabId, session] of activePiSessions) {
-    if (session.piSessionId === piSessionId && openTabIds.has(tabId)) {
+    if (session.sessionId === sessionId && openTabIds.has(tabId)) {
       return tabId;
     }
   }
 
   const sessions = agentChatStore.getState().sessionsByTabId;
   for (const [tabId, session] of Object.entries(sessions)) {
-    if (session.sessionId === piSessionId && openTabIds.has(tabId)) {
+    if (session.sessionId === sessionId && openTabIds.has(tabId)) {
       return tabId;
     }
   }
@@ -134,6 +151,30 @@ export function setPiSessionUnsubscribe(tabId: string, unsubscribe: () => void):
   }
 }
 
+/** Drops one local Pi-session handle so future startup can recreate or reattach it. */
+export function clearPiSessionHandle(tabId: string): void {
+  const session = activePiSessions.get(tabId);
+  session?.unsubscribe?.();
+  activePiSessions.delete(tabId);
+}
+
+/** Rebinds one live Pi session to the current daemon WebSocket connection. */
+export async function reattachPiSession(tabId: string): Promise<void> {
+  const session = activePiSessions.get(tabId);
+  if (!session || session.state === "closing") {
+    return;
+  }
+
+  const tab = tabStore.getState().tabs.find((candidate) => candidate.id === tabId && candidate.kind === "agent-chat");
+  const client = await getDaemonClient();
+  await client.pi.attach({
+    sessionId: session.sessionId,
+    tabId,
+    workspaceId: tab?.workspaceId,
+    cwd: tab?.kind === "agent-chat" ? tab.data.cwd : undefined,
+  });
+}
+
 /** Publishes one chat tab's visibility so hidden tabs can flush less aggressively. */
 export function setAgentChatStreamTabVisible(tabId: string, visible: boolean): void {
   setBufferedAgentChatStreamTabVisible(tabId, visible);
@@ -146,6 +187,16 @@ export async function stopPiSession(tabId: string): Promise<void> {
 
   const session = activePiSessions.get(tabId);
   if (!session) {
+    const fallbackTab = tabStore.getState().tabs.find((tab) => tab.id === tabId && tab.kind === "agent-chat");
+    const fallbackSessionId =
+      agentChatStore.getState().sessionsByTabId[tabId]?.sessionId ??
+      (fallbackTab?.kind === "agent-chat" ? fallbackTab.data.sessionId : undefined);
+
+    if (fallbackSessionId) {
+      const client = await getDaemonClient();
+      await Promise.resolve(client.pi.stop({ sessionId: fallbackSessionId })).catch(() => {});
+    }
+
     agentChatStore.getState().removeSession(tabId);
     return;
   }
@@ -277,6 +328,14 @@ export async function fetchAgentMessages(opts: {
   });
 }
 
+function isPiSessionAlreadyRunningError(error: unknown): boolean {
+  if (typeof error === "object" && error !== null && "code" in error && error.code === PI_SESSION_EXISTS_RPC_CODE) {
+    return true;
+  }
+
+  return getErrorMessage(error).includes("agent session already exists");
+}
+
 function resolveAgentChatPaneId(tabId: string, paneId: string | undefined): string {
   const normalizedPaneId = paneId?.trim();
   if (normalizedPaneId) {
@@ -294,7 +353,7 @@ async function closePiSessionHandle(tabId: string, session: PiSessionHandle): Pr
   session.state = "closing";
 
   const client = await getDaemonClient();
-  await Promise.resolve(client.pi.stop({ sessionId: session.rpcSessionId })).catch(() => {});
+  await Promise.resolve(client.pi.stop({ sessionId: session.sessionId })).catch(() => {});
 
   if (activePiSessions.get(tabId) === session) {
     activePiSessions.delete(tabId);
@@ -518,12 +577,13 @@ function handlePiResponse(tabId: string, sessionId: string, event: Record<string
     case "get_messages": {
       if (!success) break;
       const data = event.data as { messages?: AgentMessage[] } | undefined;
-      for (const msg of data?.messages ?? []) {
-        agentChatStore.getState().appendMessage(tabId, {
+      agentChatStore.getState().replaceMessages(
+        tabId,
+        (data?.messages ?? []).map((msg) => ({
           ...cloneIncomingAgentMessage(msg),
           id: msg.id ?? generateId(),
-        });
-      }
+        })),
+      );
       break;
     }
     default:
@@ -537,4 +597,10 @@ function handlePiResponse(tabId: string, sessionId: string, event: Record<string
 export async function fetchSessionHistory(cwd: string): Promise<Rpc.PiSessionSummary[]> {
   const client = await getDaemonClient();
   return (await client.pi.listSessions({ cwd })) as Rpc.PiSessionSummary[];
+}
+
+/** Fetches live Pi sessions currently held by the daemon. */
+export async function listActivePiSessions(): Promise<Rpc.PiActiveSessionSummary[]> {
+  const client = await getDaemonClient();
+  return (await client.pi.listActiveSessions({})) as Rpc.PiActiveSessionSummary[];
 }

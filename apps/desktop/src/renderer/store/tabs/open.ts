@@ -171,7 +171,7 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
   if (input.kind === "agent-chat") {
     return {
       cwd: input.cwd || "",
-      piSessionId: input.piSessionId || undefined,
+      sessionId: input.sessionId || undefined,
     } as WorkspaceTabDataByKind[T["kind"]];
   }
 

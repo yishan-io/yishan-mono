@@ -658,11 +658,22 @@ export type PiListSessionsInput = {
   cwd: string;
 };
 
+export type PiListActiveSessionsInput = Record<string, never>;
+
 export type PiSessionSummary = {
   sessionId: string;
   timestamp: string;
   model?: string;
   previewText?: string;
+  cwd?: string;
+};
+
+/** One live agent-chat session. Session identity is shared by daemon runtime and Pi resume. */
+export type PiActiveSessionSummary = {
+  sessionId: string;
+  tabId: string;
+  workspaceId: string;
+  cwd: string;
 };
 
 export type ComputerUseFeatureConfig = {

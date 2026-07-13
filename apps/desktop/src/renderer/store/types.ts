@@ -124,9 +124,9 @@ export type WorkspaceTabDataByKind = {
     faviconUrl?: string;
   };
   "agent-chat": {
+    /** Single source of truth for agent-chat identity: one live/runtime session id per tab. */
     sessionId?: string;
     cwd: string;
-    piSessionId?: string;
     userRenamed?: boolean;
   };
 };
@@ -223,8 +223,8 @@ export type OpenWorkspaceTabInput =
       title?: string;
       /** Working directory for the pi agent process. Defaults to workspace worktree path. */
       cwd?: string;
-      /** Pi session ID to resume an existing session. */
-      piSessionId?: string;
+      /** Single session id used for both live attach and persisted Pi resume. */
+      sessionId?: string;
     };
 
 export type WorkspaceStoreState = {

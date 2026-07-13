@@ -16,6 +16,7 @@ const (
 	rpcCodeMethodNotFound = -32601
 	rpcCodeInvalidParams  = -32602
 	rpcCodeServerError    = -32000
+	rpcCodeSessionExists  = -32003
 	rpcCodeNotFound       = -32004
 )
 

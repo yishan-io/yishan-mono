@@ -3,11 +3,13 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { LuArrowUp } from "react-icons/lu";
 import {
   abortAgent,
+  clearPiSessionHandle,
   ensurePiSession,
   fetchAgentMessages,
   fetchAgentModels,
   fetchAgentState,
   handleAgentPiEvent,
+  reattachPiSession,
   registerAgentSession,
   sendAgentPrompt,
   setAgentChatStreamTabVisible,
@@ -21,7 +23,7 @@ import { AgentMessageList } from "../../components/agent/AgentMessageList";
 import { AgentModelSelector } from "../../components/agent/AgentModelSelector";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import { getDaemonClient } from "../../rpc/rpcTransport";
+import { getDaemonClient, subscribeDaemonConnectionStatus } from "../../rpc/rpcTransport";
 import { agentChatStore } from "../../store/agentChatStore";
 import type { AgentMessage, AgentModel, AgentSessionState } from "../../store/agentChatTypes";
 import { tabStore } from "../../store/tabStore";
@@ -36,7 +38,7 @@ type AgentChatViewProps = {
   tabId: string;
   workspaceId: string;
   cwd: string;
-  piSessionId?: string;
+  sessionId?: string;
   paneId?: string;
   isActive?: boolean;
 };
@@ -215,8 +217,10 @@ function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
 const MemoizedAgentChatComposerPane = memo(AgentChatComposerPane);
 MemoizedAgentChatComposerPane.displayName = "AgentChatComposerPane";
 
-function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, paneId, isActive = true }: AgentChatViewProps) {
+function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, isActive = true }: AgentChatViewProps) {
   const startupPaneIdRef = useRef<string | undefined>(paneId);
+  const startupSessionIdRef = useRef<string | undefined>(sessionId);
+  const [isInitialHistoryLoadPending, setIsInitialHistoryLoadPending] = useState(Boolean(sessionId));
   const hasSession = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]));
   const sessionState = agentChatStore(
     (state) => state.sessionsByTabId[tabId]?.state ?? (hasSession ? "idle" : "starting"),
@@ -239,7 +243,7 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, paneId, 
           tabId,
           workspaceId,
           cwd,
-          piSessionId,
+          sessionId: startupSessionIdRef.current,
           paneId: startupPaneIdRef.current,
         });
         if (isDisposed) return;
@@ -272,8 +276,12 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, paneId, 
         if (isDisposed) return;
 
         await fetchAgentModels({ tabId, sessionId: startedSessionId });
+        if (!isDisposed) {
+          setIsInitialHistoryLoadPending(false);
+        }
       } catch (error) {
         if (isDisposed) return;
+        setIsInitialHistoryLoadPending(false);
         const message = getErrorMessage(error);
         agentChatStore.getState().initSession(tabId, tabId);
         agentChatStore.getState().setSessionError(tabId, message);
@@ -285,7 +293,50 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, paneId, 
     return () => {
       isDisposed = true;
     };
-  }, [tabId, workspaceId, cwd, piSessionId]);
+  }, [tabId, workspaceId, cwd]);
+
+  useEffect(() => {
+    let hasObservedConnectedState = false;
+    let shouldReattach = false;
+
+    return subscribeDaemonConnectionStatus((status) => {
+      if (status === "disconnected") {
+        shouldReattach = true;
+        return;
+      }
+
+      if (status !== "connected") {
+        return;
+      }
+
+      if (!hasObservedConnectedState) {
+        hasObservedConnectedState = true;
+        return;
+      }
+
+      if (!shouldReattach) {
+        return;
+      }
+
+      shouldReattach = false;
+      const liveSessionId = agentChatStore.getState().sessionsByTabId[tabId]?.sessionId;
+      if (!liveSessionId) {
+        return;
+      }
+
+      void (async () => {
+        try {
+          await reattachPiSession(tabId);
+          await fetchAgentState({ tabId, sessionId: liveSessionId });
+          await fetchAgentMessages({ tabId, sessionId: liveSessionId });
+          await fetchAgentModels({ tabId, sessionId: liveSessionId });
+        } catch {
+          clearPiSessionHandle(tabId);
+          agentChatStore.getState().setSessionError(tabId, "Agent session disconnected. Reopen the tab to recover.");
+        }
+      })();
+    });
+  }, [tabId]);
 
   useEffect(() => {
     setAgentChatStreamTabVisible(tabId, isActive);
@@ -299,7 +350,7 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, piSessionId, paneId, 
     );
   }
 
-  if (piSessionId && messageCount === 0 && sessionState !== "error") {
+  if (isInitialHistoryLoadPending && sessionState !== "error") {
     return (
       <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
         <CircularProgress size={24} />
