@@ -83,6 +83,18 @@ function shouldHideAssistantErrorMessage(message: AgentMessageType): boolean {
   );
 }
 
+function shouldHideMessage(message: AgentMessageType): boolean {
+  if (shouldHideAssistantErrorMessage(message)) {
+    return true;
+  }
+
+  if (message.role === "custom") {
+    return message.display === false;
+  }
+
+  return false;
+}
+
 function AgentMessageListComponent({
   tabId,
   isActive,
@@ -97,7 +109,7 @@ function AgentMessageListComponent({
   const displayMessages = useMemo(() => {
     const source = trailingMessage ? [...messages, trailingMessage] : messages;
     return source.reduce<DisplayMessage[]>((acc, message, index) => {
-      if (shouldHideAssistantErrorMessage(message)) {
+      if (shouldHideMessage(message)) {
         return acc;
       }
 

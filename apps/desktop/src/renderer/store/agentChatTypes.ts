@@ -10,9 +10,13 @@ export type AgentContentBlock =
 /** A single message in an agent conversation. */
 export type AgentMessage = {
   id: string;
-  role: "user" | "assistant" | "toolResult";
-  /** String for user messages, content blocks for assistant, text array for tool results. */
+  role: "user" | "assistant" | "toolResult" | "custom";
+  /** String for user/custom messages, content blocks for assistant, text array for tool results. */
   content: string | AgentContentBlock[];
+  /** Extension-defined message type for custom messages. */
+  customType?: string;
+  /** Whether Pi intends the custom message to appear in the default transcript. */
+  display?: boolean;
   /** Tool result metadata. */
   toolCallId?: string;
   toolName?: string;
