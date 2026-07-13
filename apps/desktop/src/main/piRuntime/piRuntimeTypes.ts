@@ -56,3 +56,25 @@ export type PiRuntimeSnapshot = {
   models: PiRuntimeModelRecord[];
   modelsLoadError?: string;
 };
+
+/** Stable error categories returned by Pi runtime mutation IPC handlers. */
+export type PiRuntimeErrorCode =
+  | "cancelled"
+  | "authentication_in_progress"
+  | "unsupported_provider"
+  | "unsupported_method"
+  | "invalid_credential"
+  | "credential_not_found"
+  | "storage_failure"
+  | "operation_failed";
+
+/** Serializable Pi runtime error exposed to the renderer. */
+export type PiRuntimeErrorPayload = {
+  code: PiRuntimeErrorCode;
+  message: string;
+};
+
+/** Result envelope for Pi runtime mutations crossing the Electron IPC boundary. */
+export type PiRuntimeSnapshotResult =
+  | { ok: true; snapshot: PiRuntimeSnapshot }
+  | { ok: false; error: PiRuntimeErrorPayload };

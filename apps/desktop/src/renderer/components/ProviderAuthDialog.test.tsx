@@ -12,9 +12,9 @@ vi.mock("react-i18next", () => ({
 
 function createBridge() {
   let listener: ((event: DesktopRpcEventEnvelope) => void) | undefined;
-  const respondPiAuthPrompt = vi.fn(async () => ({ ok: true as const }));
+  const respondPiAuthPrompt = vi.fn<ProviderAuthDialogBridge["respondPiAuthPrompt"]>(async () => ({ ok: true }));
   const bridge: ProviderAuthDialogBridge = {
-    host: { respondPiAuthPrompt },
+    respondPiAuthPrompt,
     events: {
       subscribe: (nextListener) => {
         listener = nextListener;
@@ -84,5 +84,25 @@ describe("ProviderAuthDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "common.actions.cancel" }));
 
     expect(respondPiAuthPrompt).toHaveBeenCalledWith({ requestId: "request-2", status: "cancelled" });
+  });
+
+  it("keeps the prompt value visible and shows a recoverable response error", async () => {
+    const { bridge, emit, respondPiAuthPrompt } = createBridge();
+    respondPiAuthPrompt.mockResolvedValueOnce({ ok: false, errorMessage: "Prompt expired. Please retry." });
+    render(<ProviderAuthDialog bridge={bridge} />);
+
+    emit({
+      method: "piRuntime.authPrompt",
+      payload: { requestId: "request-3", prompt: { type: "text", message: "Enter account ID" } },
+    });
+    const input = screen.getByRole("textbox", { name: "Enter account ID" });
+    fireEvent.change(input, { target: { value: "account-123" } });
+    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.prompt.submit" }));
+
+    expect(await screen.findByText("Prompt expired. Please retry.")).toBeTruthy();
+    const retainedInput = screen.getByRole("textbox", { name: "Enter account ID" });
+    expect(retainedInput).toBeInstanceOf(HTMLInputElement);
+    expect((retainedInput as HTMLInputElement).value).toBe("account-123");
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 });

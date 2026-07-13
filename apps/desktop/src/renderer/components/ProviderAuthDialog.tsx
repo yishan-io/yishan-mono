@@ -1,14 +1,28 @@
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  MenuItem,
+  TextField,
+} from "@mui/material";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { DesktopHostBridge, DesktopRpcEventBridge, DesktopRpcEventEnvelope } from "../../main/ipc";
+import type { DesktopRpcEventBridge, DesktopRpcEventEnvelope } from "../../main/ipc";
 import type { PiAuthPromptRequestEvent, PiAuthPromptResponseInput } from "../../main/piRuntime/piRuntimeTypes";
+import {
+  type PiAuthPromptCommandResult,
+  respondPiAuthPrompt as respondPiAuthPromptCommand,
+} from "../commands/piRuntimeCommands";
 import { useDialogRegistration } from "../hooks/useDialogRegistration";
 import { getDesktopBridge } from "../rpc/rpcTransport";
 
 export type ProviderAuthDialogBridge = {
-  host: Pick<DesktopHostBridge, "respondPiAuthPrompt">;
   events: DesktopRpcEventBridge;
+  respondPiAuthPrompt: (input: PiAuthPromptResponseInput) => Promise<PiAuthPromptCommandResult>;
 };
 
 type ProviderAuthDialogProps = {
@@ -18,22 +32,26 @@ type ProviderAuthDialogProps = {
 /** Renders Pi-owned authentication prompts with the active desktop MUI theme. */
 export function ProviderAuthDialog({ bridge: providedBridge }: ProviderAuthDialogProps) {
   const { t } = useTranslation();
-  const bridge = providedBridge ?? getDesktopBridge();
+  const desktopBridge = providedBridge ? undefined : getDesktopBridge();
+  const events = providedBridge?.events ?? desktopBridge?.events;
+  const respondPiAuthPrompt = providedBridge?.respondPiAuthPrompt ?? respondPiAuthPromptCommand;
   const [request, setRequest] = useState<PiAuthPromptRequestEvent>();
   const [value, setValue] = useState("");
   const [isResponding, setIsResponding] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>();
   useDialogRegistration(Boolean(request));
 
   useEffect(() => {
-    return bridge?.events.subscribe((event) => {
+    return events?.subscribe((event) => {
       const nextRequest = parsePromptRequestEvent(event);
       if (!nextRequest) {
         return;
       }
       setRequest(nextRequest);
+      setErrorMessage(undefined);
       setValue(nextRequest.prompt.type === "select" ? (nextRequest.prompt.options[0]?.id ?? "") : "");
     });
-  }, [bridge]);
+  }, [events]);
 
   const canSubmit = useMemo(() => {
     if (!request) {
@@ -42,16 +60,21 @@ export function ProviderAuthDialog({ bridge: providedBridge }: ProviderAuthDialo
     return request.prompt.type === "select" || request.prompt.allowEmpty || value.trim().length > 0;
   }, [request, value]);
 
-  if (!bridge || !request) {
+  if (!events || !request) {
     return null;
   }
 
   const respond = async (response: PiAuthPromptResponseInput) => {
     setIsResponding(true);
-    setRequest(undefined);
-    setValue("");
+    setErrorMessage(undefined);
     try {
-      await bridge.host.respondPiAuthPrompt(response);
+      const result = await respondPiAuthPrompt(response);
+      if (result.ok) {
+        setRequest(undefined);
+        setValue("");
+        return;
+      }
+      setErrorMessage(result.errorMessage);
     } finally {
       setIsResponding(false);
     }
@@ -78,6 +101,11 @@ export function ProviderAuthDialog({ bridge: providedBridge }: ProviderAuthDialo
       <Box component="form" onSubmit={submit}>
         <DialogTitle>{request.prompt.message}</DialogTitle>
         <DialogContent>
+          {errorMessage ? (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {errorMessage}
+            </Alert>
+          ) : null}
           {request.prompt.type === "select" ? (
             <TextField
               select

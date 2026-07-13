@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentChatStore } from "../store/agentChatStore";
+import { agentSettingsStore } from "../store/settings/agentSettingsStore";
 import {
   clearPiSessionHandle,
   ensurePiSession,
@@ -13,6 +14,7 @@ import {
 } from "./agentChatCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
+const initialAgentSettingsStoreState = agentSettingsStore.getState();
 
 const mocks = vi.hoisted(() => ({
   start: vi.fn(),
@@ -42,10 +44,50 @@ vi.mock("../rpc/rpcTransport", () => ({
 
 afterEach(() => {
   agentChatStore.setState(initialAgentChatStoreState, true);
+  agentSettingsStore.setState(initialAgentSettingsStoreState, true);
   vi.clearAllMocks();
 });
 
 describe("agentChatCommands.ensurePiSession", () => {
+  it("applies the global default model when starting a new AI Chat session", async () => {
+    agentSettingsStore.setState({
+      defaultPiProviderId: "openai-codex",
+      defaultPiModelPattern: "openai-codex/gpt-5.5",
+    });
+    mocks.start.mockResolvedValue({ sessionId: "generated-session-id" });
+
+    await ensurePiSession({
+      tabId: "tab-new-default-model",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+    });
+
+    expect(mocks.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "generated-session-id",
+        model: "openai-codex/gpt-5.5",
+      }),
+    );
+  });
+
+  it("does not override the model when reopening an existing AI Chat session", async () => {
+    agentSettingsStore.setState({
+      defaultPiProviderId: "openai-codex",
+      defaultPiModelPattern: "openai-codex/gpt-5.5",
+    });
+    mocks.start.mockResolvedValue({ sessionId: "history-session-model" });
+
+    await ensurePiSession({
+      tabId: "tab-history-model",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "history-session-model",
+    });
+
+    expect(mocks.start).toHaveBeenCalledOnce();
+    expect(mocks.start.mock.calls[0]?.[0]).not.toHaveProperty("model");
+  });
+
   it("passes paneId through to pi.start", async () => {
     mocks.start.mockResolvedValue({ sessionId: "generated-session-id" });
 

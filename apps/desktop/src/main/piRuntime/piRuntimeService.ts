@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import type { AuthLoginCallbacks, Provider } from "@earendil-works/pi-ai";
 import type { AuthCredential, AuthStatus, AuthStorage, ModelRegistry } from "@earendil-works/pi-coding-agent";
+import { PiRuntimeError } from "./piRuntimeErrors";
 import type {
   PiProviderAuthMethod,
   PiProviderAuthMethodKind,
@@ -49,7 +50,6 @@ export class PiRuntimeService {
   private readonly moduleLoader: PiRuntimeModuleLoader;
   private readonly providerCatalogLoader: PiProviderCatalogLoader;
   private runtimePromise: Promise<PiRuntimeDependencies> | undefined;
-  private authenticationInProgress = false;
 
   constructor(options: PiRuntimeServiceOptions = {}) {
     this.options = options;
@@ -76,54 +76,55 @@ export class PiRuntimeService {
     method: PiProviderAuthMethodKind,
     callbacks: AuthLoginCallbacks,
   ): Promise<PiRuntimeSnapshot> {
-    if (this.authenticationInProgress) {
-      throw new Error("Provider authentication is already in progress.");
+    const { authStorage, builtInProviders } = await this.getRuntime();
+    const provider = builtInProviders.find((entry) => entry.id === providerId);
+    if (!provider) {
+      throw new PiRuntimeError("unsupported_provider", `Provider authentication is not supported: ${providerId}`);
     }
 
-    this.authenticationInProgress = true;
-    try {
-      const { authStorage, builtInProviders } = await this.getRuntime();
-      const provider = builtInProviders.find((entry) => entry.id === providerId);
-      if (!provider) {
-        throw new Error(`Provider authentication is not supported: ${providerId}`);
+    if (method === "oauth") {
+      const oauthLogin = provider.auth.oauth?.login;
+      if (!oauthLogin) {
+        throw new PiRuntimeError("unsupported_method", `OAuth authentication is not supported: ${providerId}`);
       }
-
-      if (method === "oauth") {
-        const oauthLogin = provider.auth.oauth?.login;
-        if (!oauthLogin) {
-          throw new Error(`OAuth authentication is not supported: ${providerId}`);
-        }
-        authStorage.set(providerId, await oauthLogin(callbacks));
-      } else {
-        const apiKeyLogin = provider.auth.apiKey?.login;
-        if (!apiKeyLogin) {
-          throw new Error(`API-key authentication is not supported: ${providerId}`);
-        }
-        const credential = await apiKeyLogin(callbacks);
-        const key = credential.key?.trim();
-        if (!key) {
-          throw new Error("API key is required.");
-        }
-        authStorage.set(providerId, {
-          type: "api_key",
-          key,
-          ...(credential.env ? { env: credential.env } : {}),
-        });
+      storeCredential(authStorage, providerId, await oauthLogin(callbacks));
+    } else {
+      const apiKeyLogin = provider.auth.apiKey?.login;
+      if (!apiKeyLogin) {
+        throw new PiRuntimeError("unsupported_method", `API-key authentication is not supported: ${providerId}`);
       }
-
-      return await this.getSnapshot();
-    } finally {
-      this.authenticationInProgress = false;
+      const credential = await apiKeyLogin(callbacks);
+      const key = credential.key?.trim();
+      if (!key) {
+        throw new PiRuntimeError("invalid_credential", "API key is required.");
+      }
+      storeCredential(authStorage, providerId, {
+        type: "api_key",
+        key,
+        ...(credential.env ? { env: credential.env } : {}),
+      });
     }
+
+    return await this.getSnapshot();
   }
 
   /** Removes one app-owned auth.json credential, leaving external sources untouched. */
   async removeCredential(providerId: string): Promise<PiRuntimeSnapshot> {
     const { authStorage } = await this.getRuntime();
-    if (!authStorage.get(providerId)) {
-      throw new Error(`No stored credential exists for provider: ${providerId}`);
+    let credential: AuthCredential | undefined;
+    try {
+      credential = authStorage.get(providerId);
+    } catch {
+      throw new PiRuntimeError("storage_failure", "Could not read the stored provider credential.");
     }
-    authStorage.remove(providerId);
+    if (!credential) {
+      throw new PiRuntimeError("credential_not_found", `No stored credential exists for provider: ${providerId}`);
+    }
+    try {
+      authStorage.remove(providerId);
+    } catch {
+      throw new PiRuntimeError("storage_failure", "Could not remove the stored provider credential.");
+    }
     return await this.getSnapshot();
   }
 
@@ -142,6 +143,14 @@ export class PiRuntimeService {
     const modelRegistry =
       this.options.modelRegistry ?? runtimeModule.ModelRegistry.create(authStorage, join(agentDir, "models.json"));
     return { authStorage, modelRegistry, builtInProviders: providerCatalogModule.builtinProviders() };
+  }
+}
+
+function storeCredential(authStorage: AuthStorage, providerId: string, credential: AuthCredential): void {
+  try {
+    authStorage.set(providerId, credential);
+  } catch {
+    throw new PiRuntimeError("storage_failure", "Could not save the provider credential.");
   }
 }
 

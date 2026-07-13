@@ -1,10 +1,10 @@
 import type { AuthLoginCallbacks, AuthPrompt } from "@earendil-works/pi-ai";
-import { BrowserWindow, dialog, shell } from "electron";
+import { BrowserWindow, dialog } from "electron";
 import { getErrorMessage } from "../../shared/helpers/errorHelpers";
+import { openExternalUrl } from "../integrations/externalAppLauncher";
+import { PiRuntimeError } from "./piRuntimeErrors";
 import type { PiAuthPromptRequest } from "./piRuntimeTypes";
 
-const OPENAI_CODEX_PROVIDER_ID = "openai-codex";
-const OPENAI_CODEX_BROWSER_LOGIN_METHOD = "browser";
 const BROWSER_CALLBACK_TIMEOUT_MS = 5 * 60_000;
 
 export type PiAuthPromptRequester = (prompt: PiAuthPromptRequest) => Promise<string>;
@@ -13,20 +13,12 @@ export type PiAuthPromptRequester = (prompt: PiAuthPromptRequest) => Promise<str
 export function createPiRuntimeAuthCallbacks(
   window: BrowserWindow | null | undefined,
   requestPrompt: PiAuthPromptRequester,
-  providerId: string,
   authenticationSignal?: AbortSignal,
 ): AuthLoginCallbacks {
   return {
     prompt: async (prompt) => {
       if (prompt.type === "manual_code") {
         return await waitForBrowserCallback(prompt.signal, authenticationSignal);
-      }
-      if (providerId === OPENAI_CODEX_PROVIDER_ID && prompt.type === "select") {
-        const browserOption = prompt.options.find((option) => option.id === OPENAI_CODEX_BROWSER_LOGIN_METHOD);
-        if (!browserOption) {
-          throw new Error("OpenAI browser login is not available.");
-        }
-        return browserOption.id;
       }
       return await requestPrompt(toPromptRequest(prompt));
     },
@@ -122,10 +114,10 @@ async function notifyPiAuthEvent(
 ): Promise<void> {
   switch (event.type) {
     case "auth_url":
-      await shell.openExternal(event.url);
+      await openPiAuthenticationUrl(event.url);
       return;
     case "device_code":
-      await shell.openExternal(event.verificationUri);
+      await openPiAuthenticationUrl(event.verificationUri);
       await showPiAuthInstructions(
         window,
         buildDeviceCodeInstructions(event.userCode, event.verificationUri, event.expiresInSeconds),
@@ -133,6 +125,13 @@ async function notifyPiAuthEvent(
       return;
     case "progress":
       return;
+  }
+}
+
+async function openPiAuthenticationUrl(url: string): Promise<void> {
+  const result = await openExternalUrl(url, { allowedProtocols: ["https:"] });
+  if (!result.opened) {
+    throw new PiRuntimeError("operation_failed", "Could not open the provider authentication URL.");
   }
 }
 

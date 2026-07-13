@@ -10,6 +10,7 @@ import type {
   AgentQueueState,
   AgentStreamEvent,
 } from "../store/agentChatTypes";
+import { agentSettingsStore } from "../store/settings/agentSettingsStore";
 import { tabStore } from "../store/tabStore";
 import {
   disposeAgentChatStreamBuffer,
@@ -76,12 +77,14 @@ export async function ensurePiSession(opts: {
   activePiSessions.set(opts.tabId, handle);
 
   const startPiSession = async (): Promise<{ sessionId: string } | { ok: boolean }> => {
+    const defaultModel = requestedSessionId ? undefined : agentSettingsStore.getState().defaultPiModelPattern;
     return await client.pi.start({
       sessionId,
       tabId: opts.tabId,
       paneId: resolveAgentChatPaneId(opts.tabId, opts.paneId),
       workspaceId: opts.workspaceId,
       cwd: opts.cwd,
+      ...(defaultModel ? { model: defaultModel } : {}),
     });
   };
 

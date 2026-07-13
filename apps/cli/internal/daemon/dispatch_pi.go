@@ -58,6 +58,7 @@ type piStartParams struct {
 	WorkspaceID string `json:"workspaceId"`
 	CWD         string `json:"cwd"`
 	Resume      bool   `json:"resume,omitempty"`
+	Model       string `json:"model,omitempty"`
 }
 
 func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnState, params json.RawMessage) (any, error) {
@@ -72,13 +73,6 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "cwd is required")
 	}
 
-	args := []string{"--mode", "rpc", "--name", req.TabID}
-	if req.Resume {
-		args = append(args, "--session", req.SessionID)
-	} else {
-		args = append(args, "--session-id", req.SessionID)
-	}
-
 	extraEnv, err := buildPiStartExtraEnv(req)
 	if err != nil {
 		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
@@ -89,7 +83,7 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 		TabID:       req.TabID,
 		WorkspaceID: req.WorkspaceID,
 		Binary:      "pi",
-		Args:        args,
+		Args:        buildPiStartArgs(req),
 		CWD:         req.CWD,
 		ExtraEnv:    extraEnv,
 		OnEvent:     h.makePiEventCallback(req.SessionID),
@@ -114,6 +108,19 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 	h.piSessionsMu.Unlock()
 
 	return map[string]any{"sessionId": req.SessionID}, nil
+}
+
+func buildPiStartArgs(req piStartParams) []string {
+	args := []string{"--mode", "rpc", "--name", req.TabID}
+	if req.Resume {
+		return append(args, "--session", req.SessionID)
+	}
+
+	args = append(args, "--session-id", req.SessionID)
+	if model := strings.TrimSpace(req.Model); model != "" {
+		args = append(args, "--model", model)
+	}
+	return args
 }
 
 type piAttachParams struct {

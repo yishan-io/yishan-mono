@@ -7,12 +7,14 @@ import {
   authenticatePiProvider,
   cancelPiProviderAuthentication,
   removePiProviderCredential,
+  respondPiAuthPrompt,
 } from "./piRuntimeCommands";
 
 const mocks = vi.hoisted(() => ({
   authenticatePiProvider: vi.fn(),
   cancelPiProviderAuthentication: vi.fn(),
   removePiProviderCredential: vi.fn(),
+  respondPiAuthPrompt: vi.fn(),
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
@@ -20,6 +22,7 @@ vi.mock("../rpc/rpcTransport", () => ({
     authenticatePiProvider: mocks.authenticatePiProvider,
     cancelPiProviderAuthentication: mocks.cancelPiProviderAuthentication,
     removePiProviderCredential: mocks.removePiProviderCredential,
+    respondPiAuthPrompt: mocks.respondPiAuthPrompt,
   })),
 }));
 
@@ -40,7 +43,7 @@ describe("piRuntimeCommands", () => {
   });
 
   it("authenticates with the selected provider method and clears pending state", async () => {
-    mocks.authenticatePiProvider.mockResolvedValue(snapshot);
+    mocks.authenticatePiProvider.mockResolvedValue({ ok: true, snapshot });
 
     const result = await authenticatePiProvider({ providerId: "anthropic", method: "api_key" });
 
@@ -51,7 +54,7 @@ describe("piRuntimeCommands", () => {
   });
 
   it("removes stored credentials and refreshes the runtime snapshot", async () => {
-    mocks.removePiProviderCredential.mockResolvedValue(snapshot);
+    mocks.removePiProviderCredential.mockResolvedValue({ ok: true, snapshot });
 
     const result = await removePiProviderCredential("openai");
 
@@ -71,7 +74,10 @@ describe("piRuntimeCommands", () => {
   });
 
   it("returns cancelled authentication to idle without showing an error", async () => {
-    mocks.authenticatePiProvider.mockRejectedValue(new Error("Login cancelled."));
+    mocks.authenticatePiProvider.mockResolvedValue({
+      ok: false,
+      error: { code: "cancelled", message: "Localized cancellation text" },
+    });
 
     const result = await authenticatePiProvider({ providerId: "anthropic", method: "oauth" });
 
@@ -80,15 +86,16 @@ describe("piRuntimeCommands", () => {
     expect(piRuntimeStore.getState().pendingCredentialAction).toBeUndefined();
   });
 
-  it("does not show Electron-wrapped authentication cancellation as an error", async () => {
-    mocks.authenticatePiProvider.mockRejectedValue(
-      new Error("Error invoking remote method 'desktop:host/authenticate-pi-provider': Error: Login cancelled."),
-    );
+  it("shows non-cancellation result errors using their stable payload", async () => {
+    mocks.authenticatePiProvider.mockResolvedValue({
+      ok: false,
+      error: { code: "invalid_credential", message: "API key is required." },
+    });
 
     const result = await authenticatePiProvider({ providerId: "anthropic", method: "oauth" });
 
     expect(result).toBeNull();
-    expect(piRuntimeStore.getState().errorMessage).toBeUndefined();
+    expect(piRuntimeStore.getState().errorMessage).toBe("API key is required.");
     expect(piRuntimeStore.getState().pendingCredentialAction).toBeUndefined();
   });
 
@@ -106,6 +113,25 @@ describe("piRuntimeCommands", () => {
       kind: "authenticate",
       providerId: "anthropic",
       method: "oauth",
+    });
+  });
+
+  it("normalizes rejected prompt IPC without throwing", async () => {
+    mocks.respondPiAuthPrompt.mockRejectedValue(new Error("IPC unavailable"));
+
+    const result = await respondPiAuthPrompt({ requestId: "request-1", status: "cancelled" });
+
+    expect(result).toEqual({ ok: false, errorMessage: "IPC unavailable" });
+  });
+
+  it("returns a recoverable error when the prompt is no longer active", async () => {
+    mocks.respondPiAuthPrompt.mockResolvedValue({ ok: false });
+
+    const result = await respondPiAuthPrompt({ requestId: "request-1", status: "cancelled" });
+
+    expect(result).toEqual({
+      ok: false,
+      errorMessage: "Authentication prompt is no longer active. Please retry.",
     });
   });
 });

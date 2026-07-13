@@ -72,30 +72,6 @@ describe("PiRuntimeService", () => {
     expect(authStorage.get("openai")).toBeUndefined();
   });
 
-  it("rejects concurrent authentication flows", async () => {
-    const authStorage = AuthStorage.inMemory();
-    let resolvePrompt: ((value: string) => void) | undefined;
-    const pendingPrompt = new Promise<string>((resolve) => {
-      resolvePrompt = resolve;
-    });
-    const service = new PiRuntimeService({
-      agentDir: "/tmp/pi-runtime-test",
-      authStorage,
-      modelRegistry: ModelRegistry.inMemory(authStorage),
-    });
-    const callbacks = { prompt: vi.fn(async () => await pendingPrompt), notify: vi.fn() };
-
-    const firstAuthentication = service.authenticate("openai", "api_key", callbacks);
-    await vi.waitFor(() => expect(callbacks.prompt).toHaveBeenCalledOnce());
-
-    await expect(service.authenticate("google", "api_key", callbacks)).rejects.toThrow(
-      "Provider authentication is already in progress.",
-    );
-
-    resolvePrompt?.("sk-openai");
-    await firstAuthentication;
-  });
-
   it("uses the Pi AI OAuth login contract and persists its complete credential", async () => {
     const authStorage = AuthStorage.inMemory();
     const modelRegistry = ModelRegistry.inMemory(authStorage);

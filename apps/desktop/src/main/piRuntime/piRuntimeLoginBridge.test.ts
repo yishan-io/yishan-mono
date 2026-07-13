@@ -4,7 +4,7 @@ import { createPiRuntimeAuthCallbacks } from "./piRuntimeLoginBridge";
 const BROWSER_CALLBACK_TIMEOUT_MS = 5 * 60_000;
 
 const mocks = vi.hoisted(() => ({
-  openExternal: vi.fn(async () => undefined),
+  openExternalUrl: vi.fn(async () => ({ opened: true as const })),
   requestPrompt: vi.fn(async () => "submitted-value"),
   showInstructions: vi.fn(async () => undefined),
 }));
@@ -15,7 +15,10 @@ vi.mock("electron", () => ({
     getAllWindows: () => [],
   },
   dialog: { showMessageBox: mocks.showInstructions },
-  shell: { openExternal: mocks.openExternal },
+}));
+
+vi.mock("../integrations/externalAppLauncher", () => ({
+  openExternalUrl: mocks.openExternalUrl,
 }));
 
 describe("Pi runtime login callback adapter", () => {
@@ -28,25 +31,27 @@ describe("Pi runtime login callback adapter", () => {
     vi.useRealTimers();
   });
 
-  it("selects OpenAI browser login without exposing the headless device-code choice", async () => {
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt, "openai-codex");
+  it("asks the renderer to choose the OpenAI login method before starting OAuth", async () => {
+    mocks.requestPrompt.mockResolvedValue("device_code");
+    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
 
-    const selectedId = await callbacks.prompt({
+    const prompt = {
       type: "select",
       message: "Select OpenAI Codex login method:",
       options: [
         { id: "browser", label: "Browser login (default)" },
         { id: "device_code", label: "Device code login (headless)" },
       ],
-    });
+    } as const;
+    const selectedId = await callbacks.prompt(prompt);
 
-    expect(selectedId).toBe("browser");
-    expect(mocks.requestPrompt).not.toHaveBeenCalled();
+    expect(selectedId).toBe("device_code");
+    expect(mocks.requestPrompt).toHaveBeenCalledWith(prompt);
   });
 
   it("never sends a manual redirect-code prompt to the renderer", async () => {
     const controller = new AbortController();
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt, "anthropic");
+    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
 
     const callbackWait = callbacks.prompt({
       type: "manual_code",
@@ -61,7 +66,7 @@ describe("Pi runtime login callback adapter", () => {
 
   it("cancels a hidden browser callback wait when the authentication session is aborted", async () => {
     const controller = new AbortController();
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt, "anthropic", controller.signal);
+    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt, controller.signal);
 
     const callbackWait = callbacks.prompt({
       type: "manual_code",
@@ -75,7 +80,7 @@ describe("Pi runtime login callback adapter", () => {
 
   it("fails a browser callback wait instead of falling back to manual entry", async () => {
     vi.useFakeTimers();
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt, "anthropic");
+    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
 
     const callbackWait = callbacks.prompt({
       type: "manual_code",
@@ -90,7 +95,7 @@ describe("Pi runtime login callback adapter", () => {
 
   it("forwards Pi AI secret prompts without changing their type", async () => {
     mocks.requestPrompt.mockResolvedValue("cf-secret");
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt, "cloudflare-workers-ai");
+    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
 
     const value = await callbacks.prompt({ type: "secret", message: "Enter Cloudflare API key" });
 
@@ -102,7 +107,7 @@ describe("Pi runtime login callback adapter", () => {
   });
 
   it("opens device-code URLs for providers that only support that OAuth flow", async () => {
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt, "github-copilot");
+    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
 
     callbacks.notify({
       type: "device_code",
@@ -112,7 +117,9 @@ describe("Pi runtime login callback adapter", () => {
     });
 
     await vi.waitFor(() => {
-      expect(mocks.openExternal).toHaveBeenCalledWith("https://example.com/device");
+      expect(mocks.openExternalUrl).toHaveBeenCalledWith("https://example.com/device", {
+        allowedProtocols: ["https:"],
+      });
       expect(mocks.showInstructions).toHaveBeenCalledWith(
         expect.objectContaining({ message: expect.stringContaining("Enter code: ABCD-1234") }),
       );
@@ -120,7 +127,7 @@ describe("Pi runtime login callback adapter", () => {
   });
 
   it("opens browser OAuth without showing an instruction dialog", async () => {
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt, "anthropic");
+    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
 
     callbacks.notify({
       type: "auth_url",
@@ -129,7 +136,9 @@ describe("Pi runtime login callback adapter", () => {
     });
 
     await vi.waitFor(() => {
-      expect(mocks.openExternal).toHaveBeenCalledWith("https://example.com/oauth");
+      expect(mocks.openExternalUrl).toHaveBeenCalledWith("https://example.com/oauth", {
+        allowedProtocols: ["https:"],
+      });
       expect(mocks.showInstructions).not.toHaveBeenCalled();
     });
   });

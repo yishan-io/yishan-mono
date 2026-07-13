@@ -1,5 +1,6 @@
 import { generateId } from "../../shared/helpers/generateId";
 import { DESKTOP_RPC_IPC_CHANNELS } from "../ipc";
+import { PiRuntimeError, createPiRuntimeCancellationError } from "./piRuntimeErrors";
 import type { PiAuthPromptRequest, PiAuthPromptResponseInput } from "./piRuntimeTypes";
 
 export type PiAuthPromptTarget = {
@@ -25,15 +26,15 @@ export class PiRuntimePromptCoordinator {
 
   async request(target: PiAuthPromptTarget, prompt: PiAuthPromptRequest): Promise<string> {
     if (this.pendingPrompt) {
-      throw new Error("Provider authentication prompt is already open.");
+      throw new PiRuntimeError("authentication_in_progress", "Provider authentication prompt is already open.");
     }
     if (target.isDestroyed()) {
-      throw new Error("Login cancelled.");
+      throw createPiRuntimeCancellationError();
     }
 
     const requestId = generateId();
     return await new Promise<string>((resolve, reject) => {
-      const onDestroyed = () => this.rejectPending(new Error("Login cancelled."));
+      const onDestroyed = () => this.rejectPending(createPiRuntimeCancellationError());
       this.pendingPrompt = { requestId, prompt, target, resolve, reject, onDestroyed };
       target.once("destroyed", onDestroyed);
       try {
@@ -42,7 +43,7 @@ export class PiRuntimePromptCoordinator {
           payload: { requestId, prompt },
         });
       } catch {
-        this.rejectPending(new Error("Login cancelled."));
+        this.rejectPending(createPiRuntimeCancellationError());
       }
     });
   }
@@ -55,13 +56,13 @@ export class PiRuntimePromptCoordinator {
     }
 
     if (response.status === "cancelled") {
-      this.rejectPending(new Error("Login cancelled."));
+      this.rejectPending(createPiRuntimeCancellationError());
       return true;
     }
 
     const value = response.value.trim();
     if (pending.prompt.type !== "select" && !pending.prompt.allowEmpty && value.length === 0) {
-      this.rejectPending(new Error("Login cancelled."));
+      this.rejectPending(createPiRuntimeCancellationError());
       return true;
     }
 

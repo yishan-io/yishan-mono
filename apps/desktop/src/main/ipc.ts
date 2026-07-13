@@ -6,6 +6,7 @@ import type {
   AuthenticatePiProviderInput,
   PiAuthPromptResponseInput,
   PiRuntimeSnapshot,
+  PiRuntimeSnapshotResult,
 } from "./piRuntime/piRuntimeTypes";
 
 export type DesktopRpcEventEnvelope = {
@@ -181,10 +182,10 @@ export type DesktopHostBridge = {
   login: () => Promise<AuthLoginResult>;
   getPiRuntimeSnapshot: () => Promise<PiRuntimeSnapshot>;
   refreshPiRuntime: () => Promise<PiRuntimeSnapshot>;
-  authenticatePiProvider: (input: AuthenticatePiProviderInput) => Promise<PiRuntimeSnapshot>;
+  authenticatePiProvider: (input: AuthenticatePiProviderInput) => Promise<PiRuntimeSnapshotResult>;
   cancelPiProviderAuthentication: (providerId: string) => Promise<{ ok: boolean }>;
   respondPiAuthPrompt: (input: PiAuthPromptResponseInput) => Promise<{ ok: boolean }>;
-  removePiProviderCredential: (providerId: string) => Promise<PiRuntimeSnapshot>;
+  removePiProviderCredential: (providerId: string) => Promise<PiRuntimeSnapshotResult>;
   getDaemonInfo: () => Promise<DaemonInfoResult>;
   restartDaemon: () => Promise<DaemonRestartResult>;
   readDaemonLog: () => Promise<DaemonLogResult>;

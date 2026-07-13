@@ -21,6 +21,11 @@ export type LaunchPathInput =
 
 const ALLOWED_EXTERNAL_URL_PROTOCOLS = new Set<string>(["http:", "https:", "mailto:"]);
 
+/** Optional caller policy for restricting protocols accepted by external URL opening. */
+export type OpenExternalUrlOptions = {
+  allowedProtocols?: readonly string[];
+};
+
 /** Opens one file path in its containing folder or one directory path in the host file manager. */
 async function launchInFileManager(path: string, isDirectory: boolean): Promise<void> {
   if (!isDirectory) {
@@ -89,12 +94,15 @@ function parseExternalUrl(url: string): URL | null {
 }
 
 /** Returns true when one parsed URL protocol is allowed for desktop external opening. */
-function isAllowedExternalUrlProtocol(protocol: string): boolean {
-  return ALLOWED_EXTERNAL_URL_PROTOCOLS.has(protocol);
+function isAllowedExternalUrlProtocol(protocol: string, allowedProtocols: ReadonlySet<string>): boolean {
+  return allowedProtocols.has(protocol);
 }
 
 /** Opens one validated external URL through the Electron shell integration. */
-export async function openExternalUrl(url: string): Promise<OpenExternalUrlResult> {
+export async function openExternalUrl(
+  url: string,
+  options: OpenExternalUrlOptions = {},
+): Promise<OpenExternalUrlResult> {
   const trimmedUrl = url.trim();
   if (!trimmedUrl) {
     return { opened: false, reason: "invalid-url" };
@@ -105,7 +113,10 @@ export async function openExternalUrl(url: string): Promise<OpenExternalUrlResul
     return { opened: false, reason: "invalid-url" };
   }
 
-  if (!isAllowedExternalUrlProtocol(parsedUrl.protocol)) {
+  const allowedProtocols = options.allowedProtocols
+    ? new Set(options.allowedProtocols)
+    : ALLOWED_EXTERNAL_URL_PROTOCOLS;
+  if (!isAllowedExternalUrlProtocol(parsedUrl.protocol, allowedProtocols)) {
     return { opened: false, reason: "unsupported-protocol" };
   }
 

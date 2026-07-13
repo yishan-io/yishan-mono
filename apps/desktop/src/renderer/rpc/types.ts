@@ -109,6 +109,7 @@ export type DaemonRpcClient = {
       workspaceId: string;
       cwd: string;
       resume?: boolean;
+      model?: string;
     }) => Promise<{ sessionId: string }>;
     attach: (input: { sessionId: string; tabId?: string; workspaceId?: string; cwd?: string }) => Promise<{
       ok: boolean;

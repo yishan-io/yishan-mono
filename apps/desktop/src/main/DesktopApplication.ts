@@ -15,6 +15,7 @@ import { DESKTOP_RPC_IPC_CHANNELS, type DesktopUpdateEventPayload, HOST_IPC_CHAN
 import { registerFileIpcHandlers } from "./ipc/fileHandlers";
 import { registerNotificationAndBrowserIpcHandlers } from "./ipc/notificationAndBrowserHandlers";
 import { registerPiRuntimeIpcHandlers } from "./ipc/piRuntimeHandlers";
+import { configureManagedPiAgentDirEnvironment } from "./piRuntime/piRuntimeEnvironment";
 import { PiRuntimeService } from "./piRuntime/piRuntimeService";
 import { isDevMode } from "./runtime/environment";
 import { resolveLocalCalendarDate, shouldSuppressAutoUpdateEvent } from "./updates/autoUpdateDismissalState";
@@ -51,6 +52,7 @@ export class DesktopApplication {
    * Starts the desktop app and exits on startup failure.
    */
   static run() {
+    configureManagedPiAgentDirEnvironment();
     const desktopApplication = new DesktopApplication();
 
     const gotSingleInstanceLock = app.requestSingleInstanceLock();
