@@ -11,9 +11,9 @@ import { copyToClipboard } from "../../helpers/clipboard";
 import type { Commands } from "../../hooks/useCommands";
 import { layoutStore } from "../../store/settings/layoutStore";
 import type { WorkspaceTab } from "../../store/types";
+import { AgentChatView } from "./AgentChatView";
 import { BrowserView } from "./browser/BrowserView";
 import { TerminalView } from "./terminal/TerminalView";
-import { AgentChatView } from "./AgentChatView";
 
 type TabContentRendererProps = {
   workspace: { worktreePath?: string } | undefined;
@@ -211,7 +211,7 @@ export function useTabContentRenderer({
               tabId={tab.id}
               workspaceId={tab.workspaceId}
               cwd={tab.data.cwd}
-              piSessionId={tab.data.piSessionId}
+              sessionId={tab.data.sessionId}
             />
           </Box>
         );

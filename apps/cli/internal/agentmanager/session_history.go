@@ -22,6 +22,7 @@ type SessionSummary struct {
 	Timestamp   time.Time `json:"timestamp"`
 	Model       string    `json:"model,omitempty"`
 	PreviewText string    `json:"previewText,omitempty"`
+	CWD         string    `json:"cwd,omitempty"`
 }
 
 type sessionPreviewCollector struct {
@@ -183,6 +184,9 @@ func applySessionSummaryLine(summary *SessionSummary, top map[string]any, collec
 func applySessionSummarySessionLine(summary *SessionSummary, top map[string]any) {
 	if sessionID := getString(top, "id", "sessionId", "session_id"); sessionID != "" {
 		summary.SessionID = sessionID
+	}
+	if summary.CWD == "" {
+		summary.CWD = getString(top, "cwd")
 	}
 	setSessionSummaryTimestamp(summary, top["timestamp"])
 	if summary.Model == "" {

@@ -2,7 +2,7 @@ import { Box } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuMessageCircle, LuSquareTerminal } from "react-icons/lu";
 import { SYSTEM_FILE_MANAGER_APP_ID, findExternalAppPreset } from "../../../shared/contracts/externalApps";
-import { findTabWithPiSession } from "../../commands/agentChatCommands";
+import { findTabWithSession } from "../../commands/agentChatCommands";
 import { AgentIcon } from "../../components/AgentIcon";
 import { SplitPaneContainer } from "../../components/SplitPaneContainer";
 import { SplitPaneGroup } from "../../components/SplitPaneGroup";
@@ -331,11 +331,11 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
           cwd={workspace.worktreePath}
           anchorEl={historyMenuAnchor}
           onClose={() => setHistoryMenuAnchor(null)}
-          onSelectSession={(sessionId, title) => {
+          onSelectSession={(session, title) => {
             // Check if this Pi session is already active in a tab.
             const existingTabId =
-              findTabWithPiSession(sessionId) ??
-              workspaceTabs.find((tab) => tab.kind === "agent-chat" && tab.data.piSessionId === sessionId)?.id;
+              findTabWithSession(session.sessionId) ??
+              workspaceTabs.find((tab) => tab.kind === "agent-chat" && tab.data.sessionId === session.sessionId)?.id;
             if (existingTabId) {
               cmd.selectTab(existingTabId);
               return;
@@ -344,8 +344,8 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
               workspaceId,
               kind: "agent-chat",
               title: formatAgentSessionTitle(title),
-              cwd: workspace.worktreePath,
-              piSessionId: sessionId,
+              cwd: session.cwd?.trim() || workspace.worktreePath,
+              sessionId: session.sessionId,
             });
           }}
         />

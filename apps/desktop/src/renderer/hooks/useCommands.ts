@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { listActivePiSessions as listActivePiSessionsCommand } from "../commands/agentChatCommands";
 import {
   listAgentDetectionStatuses as listAgentDetectionStatusesCommand,
   listAgentModels as listAgentModelsCommand,
@@ -231,6 +232,7 @@ export type Commands = {
   setActiveWorkspace: typeof setActiveWorkspaceCommand;
   getTerminalResourceUsage: typeof getTerminalResourceUsageCommand;
   listTerminalSessions: typeof listTerminalSessionsCommand;
+  listActivePiSessions: typeof listActivePiSessionsCommand;
   subscribeTerminalOutput: typeof subscribeTerminalOutputCommand;
   subscribeTerminalSessions: typeof subscribeTerminalSessionsCommand;
   closeTerminalSession: typeof closeTerminalSessionCommand;
@@ -373,6 +375,7 @@ export function useCommands(): Commands {
       setActiveWorkspace: setActiveWorkspaceCommand,
       getTerminalResourceUsage: getTerminalResourceUsageCommand,
       listTerminalSessions: listTerminalSessionsCommand,
+      listActivePiSessions: listActivePiSessionsCommand,
       subscribeTerminalOutput: subscribeTerminalOutputCommand,
       subscribeTerminalSessions: subscribeTerminalSessionsCommand,
       closeTerminalSession: closeTerminalSessionCommand,

@@ -373,6 +373,16 @@ export class DaemonManager {
   }
 
   private async ensureStartedInternal(): Promise<void> {
+    if (isDevMode() && !this.preferCliStartPath) {
+      try {
+        await this.ensureDevDaemonStarted();
+        return;
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "daemon health check failed";
+        throw new Error(`Daemon did not become healthy after start: ${reason}`);
+      }
+    }
+
     try {
       await this.waitForHealthy({
         retryCount: DAEMON_PRECHECK_HEALTH_RETRY_COUNT,
@@ -388,29 +398,37 @@ export class DaemonManager {
       // Daemon not healthy — continue to active recovery path.
     }
 
-    if (isDevMode() && !this.preferCliStartPath) {
-      try {
-        await this.startDevForegroundDaemon();
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : "daemon health check failed";
-        throw new Error(`Daemon did not become healthy after start: ${reason}`);
-      }
-    } else {
-      const startResult = await this.run(buildDaemonStartArgs());
-      if (startResult.error) {
-        throw new Error(`Failed to start daemon: ${startResult.error}`);
-      }
+    const startResult = await this.run(buildDaemonStartArgs());
+    if (startResult.error) {
+      throw new Error(`Failed to start daemon: ${startResult.error}`);
+    }
 
-      if (startResult.exitCode !== 0) {
-        throw new Error(formatCliFailure("start", startResult));
-      }
+    if (startResult.exitCode !== 0) {
+      throw new Error(formatCliFailure("start", startResult));
+    }
+    try {
+      await this.waitForHealthy();
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "daemon health check failed";
+      throw new Error(`Daemon did not become healthy after start: ${reason}`);
+    }
+  }
+
+  private async ensureDevDaemonStarted(): Promise<void> {
+    if (this.devDaemonChild && !this.devDaemonChild.killed) {
       try {
-        await this.waitForHealthy();
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : "daemon health check failed";
-        throw new Error(`Daemon did not become healthy after start: ${reason}`);
+        await this.waitForHealthy({
+          retryCount: DAEMON_PRECHECK_HEALTH_RETRY_COUNT,
+          retryDelayMs: DAEMON_PRECHECK_HEALTH_RETRY_DELAY_MS,
+        });
+        return;
+      } catch {
+        // Existing child is not healthy; recycle it below.
       }
     }
+
+    await this.stop();
+    await this.startDevForegroundDaemon();
   }
 
   async stop(): Promise<void> {

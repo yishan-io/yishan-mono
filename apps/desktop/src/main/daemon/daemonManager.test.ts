@@ -59,7 +59,7 @@ describe("DaemonManager", () => {
     expect(logger.warn).toHaveBeenCalledOnce();
   });
 
-  it("restarts the daemon when daemon info cannot be loaded initially", async () => {
+  it("recovers daemon info without forcing restart when health checks succeed during recovery", async () => {
     process.env.YISHAN_DAEMON_HEALTH_URL = "http://127.0.0.1:65000/healthz";
 
     const run = vi.fn().mockResolvedValue({ exitCode: 0, stdout: "", stderr: "" });
@@ -81,7 +81,7 @@ describe("DaemonManager", () => {
       wsUrl: "ws://127.0.0.1:65000/ws",
     });
 
-    expect(run).toHaveBeenCalledWith(["daemon", "start", "--profile", "default"]);
+    expect(run).not.toHaveBeenCalled();
     expect(logger.warn).not.toHaveBeenCalled();
   });
 

@@ -51,6 +51,9 @@ func TestListSessionSummaries_SortsByTimestampAndParsesPreview(t *testing.T) {
 	if summaries[0].PreviewText != "newer preview" {
 		t.Fatalf("expected preview text from user message, got %q", summaries[0].PreviewText)
 	}
+	if summaries[0].CWD != cwd {
+		t.Fatalf("expected cwd %q, got %q", cwd, summaries[0].CWD)
+	}
 	if summaries[1].SessionID != "session-old" {
 		t.Fatalf("expected older session second, got %q", summaries[1].SessionID)
 	}
@@ -124,6 +127,37 @@ func TestListSessionSummaries_IgnoresSubAgentSessions(t *testing.T) {
 	}
 	if summaries[0].PreviewText != "main session preview" {
 		t.Fatalf("expected main session preview, got %q", summaries[0].PreviewText)
+	}
+}
+
+func TestListSessionSummaries_PrefersHeaderCWDOverDirectoryCWD(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	listingCWD := filepath.Join(homeDir, "worktrees", "legacy-project")
+	headerCWD := filepath.Join(homeDir, "worktrees", "original-project")
+	sessionDir := filepath.Join(homeDir, ".yishan", "pi", "agent", "sessions", encodeSessionCWD(listingCWD))
+	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
+		t.Fatalf("mkdir session dir: %v", err)
+	}
+
+	sessionBody := `{"type":"session","version":3,"id":"session-mismatch","timestamp":"2026-07-10T08:00:00.000Z","cwd":"` + headerCWD + `"}
+{"type":"message","id":"user-1","timestamp":"2026-07-10T08:00:02.000Z","message":{"role":"user","content":[{"type":"text","text":"mismatch preview"}]}}
+`
+	sessionPath := filepath.Join(sessionDir, "2026-07-10T08-00-00-000Z_session-mismatch.jsonl")
+	if err := os.WriteFile(sessionPath, []byte(sessionBody), 0o644); err != nil {
+		t.Fatalf("write mismatched session: %v", err)
+	}
+
+	summaries, err := ListSessionSummaries(context.Background(), listingCWD)
+	if err != nil {
+		t.Fatalf("ListSessionSummaries: %v", err)
+	}
+	if len(summaries) != 1 {
+		t.Fatalf("expected 1 summary, got %d", len(summaries))
+	}
+	if summaries[0].CWD != headerCWD {
+		t.Fatalf("expected header cwd %q, got %q", headerCWD, summaries[0].CWD)
 	}
 }
 
