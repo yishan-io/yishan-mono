@@ -9,6 +9,7 @@ import type {
   AgentQueueState,
   AgentStreamEvent,
 } from "../store/agentChatTypes";
+import { tabStore } from "../store/tabStore";
 import {
   disposeAgentChatStreamBuffer,
   flushAgentChatStreamBuffer,
@@ -26,6 +27,9 @@ type PiSessionHandle = {
   rpcSessionId: string;
   piSessionId: string;
   unsubscribe: (() => void) | null;
+  state: "starting" | "running" | "closing";
+  closeRequested: boolean;
+  startPromise: Promise<void> | null;
 };
 
 const activePiSessions = new Map<string, PiSessionHandle>();
@@ -52,35 +56,71 @@ export async function ensurePiSession(opts: {
       rpcSessionId: chatSession.sessionId,
       piSessionId: chatSession.sessionId,
       unsubscribe: null,
+      state: "running",
+      closeRequested: false,
+      startPromise: null,
     });
     return chatSession.sessionId;
   }
 
   const sessionId = opts.piSessionId || generateId();
   const client = await getDaemonClient();
-
-  await client.pi.start({
-    sessionId,
-    tabId: opts.tabId,
-    paneId: resolveAgentChatPaneId(opts.tabId, opts.paneId),
-    workspaceId: opts.workspaceId,
-    cwd: opts.cwd,
+  const handle: PiSessionHandle = {
+    rpcSessionId: sessionId,
     piSessionId: sessionId,
-  });
+    unsubscribe: null,
+    state: "starting",
+    closeRequested: false,
+    startPromise: null,
+  };
+  activePiSessions.set(opts.tabId, handle);
 
-  activePiSessions.set(opts.tabId, { rpcSessionId: sessionId, piSessionId: sessionId, unsubscribe: null });
+  const startPromise = client.pi
+    .start({
+      sessionId,
+      tabId: opts.tabId,
+      paneId: resolveAgentChatPaneId(opts.tabId, opts.paneId),
+      workspaceId: opts.workspaceId,
+      cwd: opts.cwd,
+      piSessionId: sessionId,
+    })
+    .then(async () => {
+      handle.startPromise = null;
+
+      if (handle.closeRequested) {
+        await closePiSessionHandle(opts.tabId, handle);
+        return;
+      }
+
+      handle.state = "running";
+    })
+    .catch((error) => {
+      if (activePiSessions.get(opts.tabId) === handle) {
+        activePiSessions.delete(opts.tabId);
+      }
+      throw error;
+    });
+
+  handle.startPromise = startPromise;
+  await startPromise;
   return sessionId;
 }
 
 /** Returns the tabId that currently owns the given Pi session, if any. */
 export function findTabWithPiSession(piSessionId: string): string | undefined {
+  const openTabIds = new Set(tabStore.getState().tabs.map((tab) => tab.id));
+
   for (const [tabId, session] of activePiSessions) {
-    if (session.piSessionId === piSessionId) return tabId;
+    if (session.piSessionId === piSessionId && openTabIds.has(tabId)) {
+      return tabId;
+    }
   }
 
   const sessions = agentChatStore.getState().sessionsByTabId;
   for (const [tabId, session] of Object.entries(sessions)) {
-    if (session.sessionId === piSessionId) return tabId;
+    if (session.sessionId === piSessionId && openTabIds.has(tabId)) {
+      return tabId;
+    }
   }
   return undefined;
 }
@@ -101,18 +141,29 @@ export function setAgentChatStreamTabVisible(tabId: string, visible: boolean): v
 
 /** Stops the Pi RPC session for a tab. Called when the tab is closed. */
 export async function stopPiSession(tabId: string): Promise<void> {
-  const session = activePiSessions.get(tabId);
-  if (!session) return;
-
   flushAgentChatStreamBuffer(tabId);
   disposeAgentChatStreamBuffer(tabId);
-  activePiSessions.delete(tabId);
+
+  const session = activePiSessions.get(tabId);
+  if (!session) {
+    agentChatStore.getState().removeSession(tabId);
+    return;
+  }
+
+  session.closeRequested = true;
   session.unsubscribe?.();
+  session.unsubscribe = null;
 
-  const client = await getDaemonClient();
-  await client.pi.stop({ sessionId: session.rpcSessionId }).catch(() => {});
+  if (session.startPromise) {
+    await session.startPromise.catch(() => {});
+  }
 
-  agentChatStore.getState().removeSession(tabId);
+  if (activePiSessions.get(tabId) !== session) {
+    agentChatStore.getState().removeSession(tabId);
+    return;
+  }
+
+  await closePiSessionHandle(tabId, session);
 }
 
 /** Initializes the chat store entry for a tab. */
@@ -233,6 +284,22 @@ function resolveAgentChatPaneId(tabId: string, paneId: string | undefined): stri
   }
 
   return `pane-${tabId}`;
+}
+
+async function closePiSessionHandle(tabId: string, session: PiSessionHandle): Promise<void> {
+  if (session.state === "closing") {
+    return;
+  }
+
+  session.state = "closing";
+
+  const client = await getDaemonClient();
+  await Promise.resolve(client.pi.stop({ sessionId: session.rpcSessionId })).catch(() => {});
+
+  if (activePiSessions.get(tabId) === session) {
+    activePiSessions.delete(tabId);
+  }
+  agentChatStore.getState().removeSession(tabId);
 }
 
 // ─── Pi event handler ────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentChatStore } from "../store/agentChatStore";
-import { ensurePiSession, handleAgentPiEvent, sendAgentPrompt } from "./agentChatCommands";
+import { ensurePiSession, handleAgentPiEvent, sendAgentPrompt, stopPiSession } from "./agentChatCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 
@@ -90,6 +90,35 @@ describe("agentChatCommands.ensurePiSession", () => {
       },
     });
     expect(agentChatStore.getState().sessionsByTabId["tab-send"]?.turnError).toBeNull();
+  });
+
+  it("stops a Pi session even when the tab closes while pi.start is still in flight", async () => {
+    let resolveStart: ((value: { sessionId: string }) => void) | undefined;
+    mocks.start.mockImplementation(
+      () =>
+        new Promise((resolve: (value: { sessionId: string }) => void) => {
+          resolveStart = resolve;
+        }),
+    );
+
+    const ensurePromise = ensurePiSession({
+      tabId: "tab-close-during-start",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      piSessionId: "pi-session-close-during-start",
+    });
+
+    await Promise.resolve();
+
+    const stopPromise = stopPiSession("tab-close-during-start");
+    expect(mocks.stop).not.toHaveBeenCalled();
+
+    resolveStart?.({ sessionId: "pi-session-close-during-start" });
+
+    await ensurePromise;
+    await stopPromise;
+
+    expect(mocks.stop).toHaveBeenCalledWith({ sessionId: "pi-session-close-during-start" });
   });
 });
 
