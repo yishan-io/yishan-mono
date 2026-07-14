@@ -9,17 +9,23 @@ import (
 )
 
 type InstalledState struct {
-	Skill  SkillState      `json:"skill"`
-	Skills []PerSkillState `json:"skills,omitempty"`
-	MCP    MCPState        `json:"mcp"`
-	Hooks  HookState       `json:"hooks"`
-	Assets AssetState      `json:"assets"`
-	Shell  ShellState      `json:"shell"`
+	Skill     SkillState      `json:"skill"`
+	Skills    []PerSkillState `json:"skills,omitempty"`
+	Extension ExtensionState  `json:"extension"`
+	MCP       MCPState        `json:"mcp"`
+	Hooks     HookState       `json:"hooks"`
+	Assets    AssetState      `json:"assets"`
+	Shell     ShellState      `json:"shell"`
 }
 
 type SkillState struct {
-	Installed bool     `json:"installed"`
-	SkillPath string   `json:"skillPath,omitempty"`
+	Installed bool   `json:"installed"`
+	SkillPath string `json:"skillPath,omitempty"`
+}
+
+type ExtensionState struct {
+	Installed  bool     `json:"installed"`
+	Extensions []string `json:"extensions,omitempty"`
 }
 
 // PerSkillState tracks the install status for one individual skill.
@@ -52,11 +58,12 @@ type ShellState struct {
 
 func GetInstalledState() (*InstalledState, error) {
 	state := &InstalledState{
-		Skill:  SkillState{},
-		MCP:    MCPState{},
-		Hooks:  HookState{},
-		Assets: AssetState{},
-		Shell:  ShellState{},
+		Skill:     SkillState{},
+		Extension: ExtensionState{},
+		MCP:       MCPState{},
+		Hooks:     HookState{},
+		Assets:    AssetState{},
+		Shell:     ShellState{},
 	}
 
 	yishanHome, err := config.HomeDir()
@@ -72,6 +79,7 @@ func GetInstalledState() (*InstalledState, error) {
 	if err := fillSkillState(state, yishanHome); err != nil {
 		return nil, err
 	}
+	fillExtensionState(state)
 	fillMCPState(state, homeDir)
 	fillHookState(state, homeDir)
 	fillAssetState(state, yishanHome)
@@ -115,6 +123,41 @@ func hasInstalledAgent(installedAgents []string, agent string) bool {
 		}
 	}
 	return false
+}
+
+func fillExtensionState(state *InstalledState) {
+	if !managedPiSetupFilesExist() {
+		return
+	}
+	for _, name := range DefaultPiExtensionNames() {
+		if !isManagedPiExtensionInstalled(name) {
+			return
+		}
+	}
+	state.Extension.Installed = true
+	state.Extension.Extensions = DefaultPiExtensionNames()
+}
+
+func managedPiSetupFilesExist() bool {
+	targetRootDir, err := config.ManagedPiAgentDir()
+	if err != nil {
+		return false
+	}
+	for _, file := range managedPiRootFiles {
+		if _, err := os.Stat(filepath.Join(targetRootDir, file.name)); err != nil {
+			return false
+		}
+	}
+	targetAgentsDir, err := config.ManagedPiAgentsDir()
+	if err != nil {
+		return false
+	}
+	for _, fileName := range managedPiAgentFileNames {
+		if _, err := os.Stat(filepath.Join(targetAgentsDir, fileName)); err != nil {
+			return false
+		}
+	}
+	return true
 }
 
 func fillMCPState(state *InstalledState, homeDir string) {
@@ -172,9 +215,6 @@ func fillHookState(state *InstalledState, homeDir string) {
 	if _, err := os.Stat(opencodePlugin); err == nil {
 		state.Hooks.Agents = append(state.Hooks.Agents, "opencode")
 	}
-	if isPiNotifyInstalled() {
-		state.Hooks.Agents = append(state.Hooks.Agents, "pi")
-	}
 
 	if len(state.Hooks.Agents) > 0 {
 		state.Hooks.Configured = true
@@ -201,8 +241,4 @@ func fillShellState(state *InstalledState, yishanHome string) {
 		state.Shell.Configured = true
 		state.Shell.ShellDir = zshDir
 	}
-}
-
-func isPiNotifyInstalled() bool {
-	return isManagedPiPackageInstalled(piNotifyPackageName)
 }
