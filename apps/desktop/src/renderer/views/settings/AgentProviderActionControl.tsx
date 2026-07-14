@@ -61,8 +61,7 @@ export function AgentProviderActionControl({
 
   if (action.kind === "authenticate") {
     const actionKey = action.method === "oauth" ? "login" : "setApiKey";
-    const requiresSwitchConfirmation =
-      provider.hasAuth && (provider.authSource === "oauth" || provider.authSource === "auth_file");
+    const requiresSwitchConfirmation = provider.hasAuth;
     return (
       <>
         <Button

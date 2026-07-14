@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { LuRefreshCw } from "react-icons/lu";
 import { ModelAutocomplete } from "../../components/ModelAutocomplete";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
-import { getPiProviderIdFromModelPattern } from "../../helpers/agentSettings";
+import { getPiProviderIdFromModelPattern, isPiModelPatternAvailable } from "../../helpers/agentSettings";
 import { useCommands } from "../../hooks/useCommands";
 import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import { piRuntimeStore } from "../../store/settings/piRuntimeStore";
@@ -16,7 +16,6 @@ import {
   getAgentProviderConfigEntryStatusKind,
   isAgentProviderConfigEntryConfigured,
   isAgentProviderConfiguredButUnavailable,
-  isPiModelPatternAvailable,
 } from "./agentProviderHelpers";
 
 const PROVIDER_SETTINGS_ANCHOR_ID = "agent-provider-settings";
@@ -101,6 +100,7 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
   const isLoading = loadState === "loading";
   const isRefreshing = loadState === "refreshing";
   const hasPendingCredentialAction = pendingCredentialAction !== undefined;
+  const hasRuntimeVersionMismatch = snapshot?.version?.status === "mismatch";
 
   return (
     <Box
@@ -135,6 +135,14 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
       <Stack spacing={2}>
         {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
         {snapshot?.modelsLoadError ? <Alert severity="warning">{snapshot.modelsLoadError}</Alert> : null}
+        {hasRuntimeVersionMismatch ? (
+          <Alert severity="error">
+            {t("settings.agentProviders.version.mismatch", {
+              sdkVersion: snapshot.version?.sdkVersion,
+              runtimeVersion: snapshot.version?.runtimeVersion,
+            })}
+          </Alert>
+        ) : null}
 
         {snapshot?.providers.length ? (
           <Box data-testid="provider-config-card">
@@ -180,7 +188,7 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
                           <AgentProviderActionControl
                             provider={provider}
                             method={method}
-                            disabled={hasPendingCredentialAction}
+                            disabled={hasPendingCredentialAction || hasRuntimeVersionMismatch}
                             pending={isPendingCredentialAction}
                             onAuthenticate={(input) => {
                               void authenticatePiProvider(input);
@@ -233,7 +241,7 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
                         }
                       }}
                       loading={isLoading || isRefreshing}
-                      disabled={providerOptions.length === 0}
+                      disabled={providerOptions.length === 0 || hasRuntimeVersionMismatch}
                       placeholder={t("settings.agentProviders.models.providerPlaceholder")}
                       noOptionsText={t("settings.agentProviders.models.providerEmpty")}
                       allowCustomValue={false}
@@ -253,7 +261,7 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
                         setDefaultPiModelPattern(pattern);
                       }}
                       loading={isLoading || isRefreshing}
-                      disabled={!activeSelectedProviderId || modelOptions.length === 0}
+                      disabled={!activeSelectedProviderId || modelOptions.length === 0 || hasRuntimeVersionMismatch}
                       placeholder={t("settings.agentProviders.models.placeholder")}
                       noOptionsText={t("settings.agentProviders.models.empty")}
                       allowCustomValue={false}

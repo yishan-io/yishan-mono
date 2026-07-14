@@ -57,7 +57,7 @@ export type SettingsSearchCatalogItem = {
   labelKey: string;
   sectionLabelKey: string;
   keywordKeys: string[];
-  focusItemId?: NotificationSettingsFocusItemId;
+  focusItemId?: NotificationSettingsFocusItemId | "agentProviders";
 };
 
 export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
@@ -396,6 +396,7 @@ const AGENT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     icon: BiBot,
     labelKey: "settings.agentProviders.title",
     sectionLabelKey: "settings.items.agents",
+    focusItemId: "agentProviders",
     keywordKeys: [
       "settings.agentProviders.description",
       "settings.agentProviders.providers.actions.login",

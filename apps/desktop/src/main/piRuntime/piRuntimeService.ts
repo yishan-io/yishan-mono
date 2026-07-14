@@ -1,7 +1,11 @@
-import { join } from "node:path";
+import { execFile } from "node:child_process";
+import { homedir } from "node:os";
+import { delimiter, join, resolve } from "node:path";
+import { promisify } from "node:util";
 import type { AuthLoginCallbacks, Provider } from "@earendil-works/pi-ai";
 import type { AuthCredential, AuthStatus, AuthStorage, ModelRegistry } from "@earendil-works/pi-coding-agent";
-import { PiRuntimeError } from "./piRuntimeErrors";
+import { getErrorMessage } from "../../shared/helpers/errorHelpers";
+import { PiRuntimeError, createPiRuntimeCancellationError } from "./piRuntimeErrors";
 import type {
   PiProviderAuthMethod,
   PiProviderAuthMethodKind,
@@ -9,7 +13,15 @@ import type {
   PiRuntimeProviderAuthSource,
   PiRuntimeProviderRecord,
   PiRuntimeSnapshot,
+  PiRuntimeVersionStatus,
 } from "./piRuntimeTypes";
+
+const execFileAsync = promisify(execFile);
+const PI_VERSION_PATTERN = /\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?/;
+const PI_VERSION_CHECK_TIMEOUT_MS = 5_000;
+const PI_VERSION_CACHE_DURATION_MS = 5_000;
+let installedPiVersionPromise: Promise<string | undefined> | undefined;
+let installedPiVersionCheckedAt = 0;
 
 type PiRuntimeServiceOptions = {
   agentDir?: string;
@@ -17,11 +29,12 @@ type PiRuntimeServiceOptions = {
   modelRegistry?: ModelRegistry;
   moduleLoader?: PiRuntimeModuleLoader;
   providerCatalogLoader?: PiProviderCatalogLoader;
+  runtimeVersionLoader?: PiRuntimeVersionLoader;
 };
 
 type PiRuntimeModule = Pick<
   typeof import("@earendil-works/pi-coding-agent"),
-  "AuthStorage" | "ModelRegistry" | "getAgentDir"
+  "AuthStorage" | "ModelRegistry" | "VERSION" | "getAgentDir"
 >;
 
 type PiRuntimeModuleLoader = () => Promise<PiRuntimeModule>;
@@ -30,10 +43,13 @@ type PiProviderCatalogModule = Pick<typeof import("@earendil-works/pi-ai/provide
 
 type PiProviderCatalogLoader = () => Promise<PiProviderCatalogModule>;
 
+type PiRuntimeVersionLoader = () => Promise<string | undefined>;
+
 type PiRuntimeDependencies = {
   authStorage: AuthStorage;
   modelRegistry: ModelRegistry;
   builtInProviders: Provider[];
+  sdkVersion: string;
 };
 
 async function loadPiRuntimeModule(): Promise<PiRuntimeModule> {
@@ -44,25 +60,82 @@ async function loadPiProviderCatalog(): Promise<PiProviderCatalogModule> {
   return await import("@earendil-works/pi-ai/providers/all");
 }
 
+async function loadInstalledPiVersion(): Promise<string | undefined> {
+  const now = Date.now();
+  if (!installedPiVersionPromise || now - installedPiVersionCheckedAt >= PI_VERSION_CACHE_DURATION_MS) {
+    installedPiVersionCheckedAt = now;
+    installedPiVersionPromise = runInstalledPiVersionCheck();
+  }
+  return await installedPiVersionPromise;
+}
+
+async function runInstalledPiVersionCheck(): Promise<string | undefined> {
+  try {
+    const { stdout, stderr } = await execFileAsync("pi", ["--version"], {
+      env: {
+        ...process.env,
+        PATH: buildPiRuntimeExecutablePath(process.env.PATH),
+      },
+      timeout: PI_VERSION_CHECK_TIMEOUT_MS,
+      windowsHide: true,
+    });
+    return `${stdout}${stderr}`.match(PI_VERSION_PATTERN)?.[0];
+  } catch (error) {
+    console.warn("Could not determine installed Pi version", getErrorMessage(error));
+    return undefined;
+  }
+}
+
+/** Removes Yishan's notification wrapper so version checks inspect the executable used behind it. */
+export function buildPiRuntimeExecutablePath(pathValue: string | undefined): string {
+  const managedBinDir = resolve(homedir(), ".yishan", "bin");
+  return (pathValue ?? "")
+    .split(delimiter)
+    .filter((entry) => entry && resolve(expandHomeDirectory(entry)) !== managedBinDir)
+    .join(delimiter);
+}
+
+function expandHomeDirectory(pathValue: string): string {
+  if (pathValue === "~") {
+    return homedir();
+  }
+  if (pathValue.startsWith(`~${process.platform === "win32" ? "\\" : "/"}`)) {
+    return join(homedir(), pathValue.slice(2));
+  }
+  return pathValue;
+}
+
 /** Builds one Pi runtime snapshot for desktop Agent connections UI. */
 export class PiRuntimeService {
   private readonly options: PiRuntimeServiceOptions;
   private readonly moduleLoader: PiRuntimeModuleLoader;
   private readonly providerCatalogLoader: PiProviderCatalogLoader;
+  private readonly runtimeVersionLoader: PiRuntimeVersionLoader;
   private runtimePromise: Promise<PiRuntimeDependencies> | undefined;
 
   constructor(options: PiRuntimeServiceOptions = {}) {
     this.options = options;
     this.moduleLoader = options.moduleLoader ?? loadPiRuntimeModule;
     this.providerCatalogLoader = options.providerCatalogLoader ?? loadPiProviderCatalog;
+    this.runtimeVersionLoader = options.runtimeVersionLoader ?? loadInstalledPiVersion;
   }
 
   /** Returns the current Pi provider/model inventory from disk-backed runtime state. */
   async getSnapshot(): Promise<PiRuntimeSnapshot> {
-    const { authStorage, modelRegistry, builtInProviders } = await this.getRuntime();
+    const [{ authStorage, modelRegistry, builtInProviders, sdkVersion }, runtimeVersion] = await Promise.all([
+      this.getRuntime(),
+      this.getRuntimeVersion(),
+    ]);
     authStorage.reload();
     modelRegistry.refresh();
-    return buildPiRuntimeSnapshot(authStorage, modelRegistry, builtInProviders);
+    return {
+      ...buildPiRuntimeSnapshot(authStorage, modelRegistry, builtInProviders),
+      version: {
+        sdkVersion,
+        ...(runtimeVersion ? { runtimeVersion } : {}),
+        status: getPiRuntimeVersionStatus(sdkVersion, runtimeVersion),
+      },
+    };
   }
 
   /** Runs one provider-owned authentication method and persists only its complete credential. */
@@ -82,8 +155,10 @@ export class PiRuntimeService {
       if (!oauthLogin) {
         throw new PiRuntimeError("unsupported_method", `OAuth authentication is not supported: ${providerId}`);
       }
-      storeCredential(authStorage, providerId, await oauthLogin(callbacks));
-    } else {
+      const credential = await oauthLogin(callbacks);
+      throwIfAuthenticationCancelled(callbacks.signal);
+      storeCredential(authStorage, providerId, credential);
+    } else if (method === "api_key") {
       const apiKeyLogin = provider.auth.apiKey?.login;
       if (!apiKeyLogin) {
         throw new PiRuntimeError("unsupported_method", `API-key authentication is not supported: ${providerId}`);
@@ -93,11 +168,14 @@ export class PiRuntimeService {
       if (!key) {
         throw new PiRuntimeError("invalid_credential", "API key is required.");
       }
+      throwIfAuthenticationCancelled(callbacks.signal);
       storeCredential(authStorage, providerId, {
         type: "api_key",
         key,
         ...(credential.env ? { env: credential.env } : {}),
       });
+    } else {
+      throw new PiRuntimeError("unsupported_method", `Provider authentication method is not supported: ${method}`);
     }
 
     return await this.getSnapshot();
@@ -128,6 +206,10 @@ export class PiRuntimeService {
     return await this.runtimePromise;
   }
 
+  private async getRuntimeVersion(): Promise<string | undefined> {
+    return await this.runtimeVersionLoader();
+  }
+
   private async createRuntime(): Promise<PiRuntimeDependencies> {
     const [runtimeModule, providerCatalogModule] = await Promise.all([
       this.moduleLoader(),
@@ -137,8 +219,30 @@ export class PiRuntimeService {
     const authStorage = this.options.authStorage ?? runtimeModule.AuthStorage.create(join(agentDir, "auth.json"));
     const modelRegistry =
       this.options.modelRegistry ?? runtimeModule.ModelRegistry.create(authStorage, join(agentDir, "models.json"));
-    return { authStorage, modelRegistry, builtInProviders: providerCatalogModule.builtinProviders() };
+    return {
+      authStorage,
+      modelRegistry,
+      builtInProviders: providerCatalogModule.builtinProviders(),
+      sdkVersion: runtimeModule.VERSION,
+    };
   }
+}
+
+function throwIfAuthenticationCancelled(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) {
+    throw createPiRuntimeCancellationError();
+  }
+}
+
+/** Compares the SDK inventory version with the Pi executable used for AI Chat. */
+export function getPiRuntimeVersionStatus(
+  sdkVersion: string,
+  runtimeVersion: string | undefined,
+): PiRuntimeVersionStatus {
+  if (!runtimeVersion) {
+    return "unknown";
+  }
+  return runtimeVersion === sdkVersion ? "compatible" : "mismatch";
 }
 
 function storeCredential(authStorage: AuthStorage, providerId: string, credential: AuthCredential): void {

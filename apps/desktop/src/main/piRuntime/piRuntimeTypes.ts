@@ -50,10 +50,19 @@ export type PiRuntimeModelRecord = {
   available: boolean;
 };
 
+export type PiRuntimeVersionStatus = "compatible" | "mismatch" | "unknown";
+
+export type PiRuntimeVersionRecord = {
+  sdkVersion: string;
+  runtimeVersion?: string;
+  status: PiRuntimeVersionStatus;
+};
+
 export type PiRuntimeSnapshot = {
   providers: PiRuntimeProviderRecord[];
   models: PiRuntimeModelRecord[];
   modelsLoadError?: string;
+  version?: PiRuntimeVersionRecord;
 };
 
 /** Stable error categories returned by Pi runtime mutation IPC handlers. */

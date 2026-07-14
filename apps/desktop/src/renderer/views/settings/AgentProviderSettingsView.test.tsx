@@ -280,6 +280,29 @@ describe("AgentProviderSettingsView", () => {
     expect(screen.getByText("settings.agentProviders.providers.badges.configuredUnavailable")).toBeTruthy();
   });
 
+  it("blocks provider mutations and default selection when the installed Pi version is incompatible", () => {
+    const snapshot = piRuntimeStore.getState().snapshot;
+    if (!snapshot) {
+      throw new Error("Expected provider snapshot");
+    }
+    piRuntimeStore.setState({
+      snapshot: {
+        ...snapshot,
+        version: { sdkVersion: "0.80.6", runtimeVersion: "0.80.2", status: "mismatch" },
+      },
+    });
+
+    render(<AgentProviderSettingsView />);
+
+    expect(screen.getByText("settings.agentProviders.version.mismatch")).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: "settings.agentProviders.providers.actions.login" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect((screen.getByTestId("pi-provider-select") as HTMLSelectElement).disabled).toBe(true);
+    expect((screen.getByTestId("pi-model-select") as HTMLSelectElement).disabled).toBe(true);
+  });
+
   it("keeps provider filtering local and persists only the selected AI Chat model", () => {
     render(<AgentProviderSettingsView />);
 

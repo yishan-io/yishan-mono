@@ -4,6 +4,7 @@ import type {
   PiRuntimeSnapshot,
   PiRuntimeSnapshotResult,
 } from "../../main/piRuntime/piRuntimeTypes";
+import { isPiModelPatternAvailable } from "../helpers/agentSettings";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { getDesktopHostBridge } from "../rpc/rpcTransport";
 import { agentSettingsStore } from "../store/settings/agentSettingsStore";
@@ -22,7 +23,7 @@ export async function getPiRuntimeSnapshot(
   piRuntimeStore.getState().setErrorMessage(undefined);
   try {
     const snapshot = await getDesktopHostBridge().getPiRuntimeSnapshot();
-    piRuntimeStore.getState().setSnapshot(snapshot);
+    applyPiRuntimeSnapshot(snapshot);
     return snapshot;
   } catch (error) {
     piRuntimeStore.getState().setErrorMessage(getErrorMessage(error));
@@ -93,8 +94,21 @@ function applyPiRuntimeSnapshotResult(
     }
     return null;
   }
-  piRuntimeStore.getState().setSnapshot(result.snapshot);
+  applyPiRuntimeSnapshot(result.snapshot);
   return result.snapshot;
+}
+
+function applyPiRuntimeSnapshot(snapshot: PiRuntimeSnapshot): void {
+  piRuntimeStore.getState().setSnapshot(snapshot);
+  const defaultModelPattern = agentSettingsStore.getState().defaultPiModelPattern;
+  if (
+    defaultModelPattern &&
+    !snapshot.modelsLoadError &&
+    snapshot.version?.status !== "mismatch" &&
+    !isPiModelPatternAvailable(snapshot.models, defaultModelPattern)
+  ) {
+    agentSettingsStore.getState().setDefaultPiModelPattern("");
+  }
 }
 
 /** Persists the model used when Desktop AI Chat starts a new Pi session. */

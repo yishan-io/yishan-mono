@@ -1,4 +1,5 @@
 import { AGENT_KINDS } from "@yishan-io/core";
+import type { PiRuntimeModelRecord } from "../../main/piRuntime/piRuntimeTypes";
 
 /**
  * The canonical agent kind list for this desktop app.
@@ -224,4 +225,15 @@ export function getPiProviderIdFromModelPattern(pattern: string | undefined): st
   const normalizedPattern = normalizePiModelPattern(pattern);
   const separatorIndex = normalizedPattern?.indexOf("/") ?? -1;
   return separatorIndex > 0 ? normalizedPattern?.slice(0, separatorIndex) : undefined;
+}
+
+/** Returns true when one saved Pi model pattern still identifies an available model. */
+export function isPiModelPatternAvailable(
+  models: readonly PiRuntimeModelRecord[],
+  pattern: string | undefined,
+): boolean {
+  if (!pattern) {
+    return false;
+  }
+  return models.some((model) => model.available && `${model.providerId}/${model.modelId}` === pattern);
 }

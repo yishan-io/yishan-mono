@@ -78,14 +78,13 @@ export function getAgentProviderConfigEntryStatusKind(
 export function getAgentProviderConfigEntryAction(
   entry: AgentProviderConfigEntry,
 ): AgentProviderPrimaryAction | undefined {
-  if (
-    entry.method.kind === "external" ||
-    entry.provider.authSource === "env" ||
-    entry.provider.authSource === "external"
-  ) {
+  if (entry.method.kind === "external") {
     return undefined;
   }
   if (isAgentProviderConfigEntryConfigured(entry)) {
+    if (entry.provider.authSource === "env" || entry.provider.authSource === "external") {
+      return undefined;
+    }
     return entry.method.kind === "oauth" ? { kind: "manageOauth" } : { kind: "manageApiKey" };
   }
   return { kind: "authenticate", method: entry.method.kind };
@@ -110,17 +109,6 @@ export function getAgentProviderStatusKind(provider: PiRuntimeProviderRecord): A
 /** Flags configured providers whose refreshed model registry has no usable model. */
 export function isAgentProviderConfiguredButUnavailable(provider: PiRuntimeProviderRecord): boolean {
   return provider.hasAuth && !provider.available;
-}
-
-/** Builds one sorted autocomplete list from available Pi models only. */
-export function buildAvailablePiModelOptions(models: readonly PiRuntimeModelRecord[]): ModelOption[] {
-  return models
-    .filter((model) => model.available)
-    .map<ModelOption>((model) => ({
-      id: `${model.providerId}/${model.modelId}`,
-      name: `${model.providerName} · ${model.label}`,
-    }))
-    .sort((left, right) => left.name.localeCompare(right.name));
 }
 
 /** Builds one sorted provider list from providers that currently expose at least one available model. */
@@ -149,16 +137,4 @@ export function buildAvailablePiModelOptionsForProvider(
       name: model.label,
     }))
     .sort((left, right) => left.name.localeCompare(right.name));
-}
-
-/** Returns true when one saved Pi model pattern still exists in the available model set. */
-export function isPiModelPatternAvailable(
-  models: readonly PiRuntimeModelRecord[],
-  pattern: string | undefined,
-): boolean {
-  if (!pattern) {
-    return false;
-  }
-
-  return models.some((model) => model.available && `${model.providerId}/${model.modelId}` === pattern);
 }

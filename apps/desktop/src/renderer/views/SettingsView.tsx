@@ -50,7 +50,7 @@ type SettingsSearchResult = {
   icon: typeof BiCog;
   label: string;
   sectionLabel: string;
-  focusItemId?: NotificationSettingsFocusItemId;
+  focusItemId?: NotificationSettingsFocusItemId | "agentProviders";
   rank: number;
 };
 
@@ -260,7 +260,7 @@ export function SettingsView() {
                     const Icon = result.icon;
                     const isSelected =
                       selectedTab === result.tab &&
-                      (result.focusItemId === undefined || focusedNotificationItemId === result.focusItemId);
+                      (result.focusItemId === undefined || focusedItemParam === result.focusItemId);
                     return (
                       <ListItemButton
                         key={result.id}

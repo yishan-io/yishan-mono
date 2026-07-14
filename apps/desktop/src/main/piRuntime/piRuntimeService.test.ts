@@ -1,8 +1,16 @@
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { AuthLoginCallbacks } from "@earendil-works/pi-ai";
 import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
-import { AuthStorage, ModelRegistry } from "@earendil-works/pi-coding-agent";
+import { AuthStorage, ModelRegistry, VERSION } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it, vi } from "vitest";
-import { PiRuntimeService, buildPiRuntimeSnapshot, inferPiRuntimeProviderAuthSource } from "./piRuntimeService";
+import {
+  PiRuntimeService,
+  buildPiRuntimeExecutablePath,
+  buildPiRuntimeSnapshot,
+  getPiRuntimeVersionStatus,
+  inferPiRuntimeProviderAuthSource,
+} from "./piRuntimeService";
 
 function findProvider(snapshot: ReturnType<typeof buildPiRuntimeSnapshot>, providerId: string) {
   const provider = snapshot.providers.find((entry) => entry.id === providerId);
@@ -18,6 +26,7 @@ describe("PiRuntimeService", () => {
     const moduleLoader = vi.fn(async () => ({
       AuthStorage,
       ModelRegistry,
+      VERSION: "0.80.6",
       getAgentDir: () => "/tmp/pi-runtime-test",
     }));
     const service = new PiRuntimeService({
@@ -105,6 +114,88 @@ describe("PiRuntimeService", () => {
     expect(authStorage.get("test-browser-oauth")).toEqual(credential);
   });
 
+  it("does not persist a provider credential after authentication is cancelled", async () => {
+    const authStorage = AuthStorage.inMemory();
+    const anthropicProvider = builtinProviders().find((provider) => provider.id === "anthropic");
+    if (!anthropicProvider?.auth.oauth) {
+      throw new Error("Expected the built-in Anthropic OAuth provider");
+    }
+    let resolveLogin:
+      | ((credential: { type: "oauth"; access: string; refresh: string; expires: number }) => void)
+      | undefined;
+    const oauthLogin = vi.fn(
+      async () =>
+        await new Promise<{ type: "oauth"; access: string; refresh: string; expires: number }>((resolve) => {
+          resolveLogin = resolve;
+        }),
+    );
+    const provider = {
+      ...anthropicProvider,
+      id: "cancelled-oauth",
+      auth: { ...anthropicProvider.auth, oauth: { ...anthropicProvider.auth.oauth, login: oauthLogin } },
+    };
+    const service = new PiRuntimeService({
+      authStorage,
+      modelRegistry: ModelRegistry.inMemory(authStorage),
+      providerCatalogLoader: async () => ({ builtinProviders: () => [provider] }),
+    });
+    const controller = new AbortController();
+    const authentication = service.authenticate("cancelled-oauth", "oauth", {
+      prompt: vi.fn(),
+      notify: vi.fn(),
+      signal: controller.signal,
+    });
+
+    await vi.waitFor(() => expect(oauthLogin).toHaveBeenCalledOnce());
+    controller.abort();
+    resolveLogin?.({ type: "oauth", access: "access", refresh: "refresh", expires: Date.now() + 60_000 });
+
+    await expect(authentication).rejects.toMatchObject({ code: "cancelled" });
+    expect(authStorage.get("cancelled-oauth")).toBeUndefined();
+  });
+
+  it("rejects unknown authentication methods instead of treating them as API keys", async () => {
+    const authStorage = AuthStorage.inMemory();
+    const prompt = vi.fn(async () => "secret");
+    const service = new PiRuntimeService({
+      authStorage,
+      modelRegistry: ModelRegistry.inMemory(authStorage),
+    });
+
+    await expect(
+      service.authenticate("openai", "unknown" as "api_key", { prompt, notify: vi.fn() }),
+    ).rejects.toMatchObject({ code: "unsupported_method" });
+    expect(prompt).not.toHaveBeenCalled();
+    expect(authStorage.get("openai")).toBeUndefined();
+  });
+
+  it("reports when the installed Pi runtime differs from the embedded SDK", async () => {
+    const authStorage = AuthStorage.inMemory();
+    const service = new PiRuntimeService({
+      authStorage,
+      modelRegistry: ModelRegistry.inMemory(authStorage),
+      runtimeVersionLoader: async () => "0.0.0-test",
+    });
+
+    const snapshot = await service.getSnapshot();
+
+    expect(snapshot.version).toEqual({ sdkVersion: VERSION, runtimeVersion: "0.0.0-test", status: "mismatch" });
+  });
+
+  it("rechecks the installed Pi version when the runtime snapshot is refreshed", async () => {
+    const authStorage = AuthStorage.inMemory();
+    const runtimeVersionLoader = vi.fn().mockResolvedValueOnce("0.80.2").mockResolvedValueOnce(VERSION);
+    const service = new PiRuntimeService({
+      authStorage,
+      modelRegistry: ModelRegistry.inMemory(authStorage),
+      runtimeVersionLoader,
+    });
+
+    expect((await service.getSnapshot()).version?.status).toBe("mismatch");
+    expect((await service.getSnapshot()).version?.status).toBe("compatible");
+    expect(runtimeVersionLoader).toHaveBeenCalledTimes(2);
+  });
+
   it("removes only stored credentials and re-resolves environment auth", async () => {
     const previousKey = process.env.OPENAI_API_KEY;
     process.env.OPENAI_API_KEY = "sk-environment";
@@ -127,6 +218,26 @@ describe("PiRuntimeService", () => {
         process.env.OPENAI_API_KEY = previousKey;
       }
     }
+  });
+});
+
+describe("getPiRuntimeVersionStatus", () => {
+  it.each([
+    ["0.80.6", "0.80.6", "compatible"],
+    ["0.80.6", "0.80.2", "mismatch"],
+    ["0.80.6", undefined, "unknown"],
+  ] as const)("maps SDK %s and runtime %s to %s", (sdkVersion, runtimeVersion, expectedStatus) => {
+    expect(getPiRuntimeVersionStatus(sdkVersion, runtimeVersion)).toBe(expectedStatus);
+  });
+});
+
+describe("buildPiRuntimeExecutablePath", () => {
+  it("removes every Yishan wrapper directory while preserving real executable directories", () => {
+    const separator = process.platform === "win32" ? ";" : ":";
+    const managedBinDir = join(homedir(), ".yishan", "bin");
+    const pathValue = [managedBinDir, "/opt/homebrew/bin", managedBinDir, "/usr/local/bin"].join(separator);
+
+    expect(buildPiRuntimeExecutablePath(pathValue)).toBe(["/opt/homebrew/bin", "/usr/local/bin"].join(separator));
   });
 });
 

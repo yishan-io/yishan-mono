@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PiRuntimeSnapshot } from "../../main/piRuntime/piRuntimeTypes";
+import { agentSettingsStore } from "../store/settings/agentSettingsStore";
 import { piRuntimeStore } from "../store/settings/piRuntimeStore";
 import {
   authenticatePiProvider,
@@ -43,6 +44,7 @@ describe("piRuntimeCommands", () => {
       errorMessage: undefined,
       pendingCredentialAction: undefined,
     } as Partial<ReturnType<typeof piRuntimeStore.getState>>);
+    agentSettingsStore.setState({ defaultPiModelPattern: undefined });
   });
 
   it("authenticates with the selected provider method and clears pending state", async () => {
@@ -81,6 +83,15 @@ describe("piRuntimeCommands", () => {
     expect(mocks.removePiProviderCredential).toHaveBeenCalledWith("openai");
     expect(result).toBe(snapshot);
     expect(piRuntimeStore.getState().pendingCredentialAction).toBeUndefined();
+  });
+
+  it("clears a saved default model when a refreshed snapshot no longer makes it available", async () => {
+    agentSettingsStore.setState({ defaultPiModelPattern: "openai/gpt-5" });
+    mocks.getPiRuntimeSnapshot.mockResolvedValue(snapshot);
+
+    await getPiRuntimeSnapshot();
+
+    expect(agentSettingsStore.getState().defaultPiModelPattern).toBeUndefined();
   });
 
   it("normalizes authentication errors and always clears pending state", async () => {

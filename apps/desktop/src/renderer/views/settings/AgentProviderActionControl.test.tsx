@@ -142,6 +142,25 @@ describe("AgentProviderActionControl", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("confirms before replacing ambient API-key authentication with OAuth", () => {
+    const provider = createProvider({
+      hasAuth: true,
+      available: true,
+      authSource: "env",
+      authMethods: [
+        { kind: "oauth", label: "Subscription" },
+        { kind: "api_key", label: "Provider API key" },
+      ],
+    });
+    const { onAuthenticate } = renderControl(provider, { kind: "oauth", label: "Subscription" });
+
+    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.providers.actions.login" }));
+
+    expect(onAuthenticate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.providers.switchDialog.confirm" }));
+    expect(onAuthenticate).toHaveBeenCalledWith({ providerId: "provider", method: "oauth" });
+  });
+
   it("disables its primary action while another credential operation is pending", () => {
     const method = { kind: "oauth", label: "Subscription" } as const;
     const provider = createProvider({ authMethods: [method] });

@@ -2,7 +2,6 @@ import type { AuthLoginCallbacks, AuthPrompt } from "@earendil-works/pi-ai";
 import { BrowserWindow, dialog } from "electron";
 import { getErrorMessage } from "../../shared/helpers/errorHelpers";
 import { openExternalUrl } from "../integrations/externalAppLauncher";
-import { PiRuntimeError } from "./piRuntimeErrors";
 import type { PiAuthPromptRequest } from "./piRuntimeTypes";
 
 export type PiAuthPromptRequester = (prompt: PiAuthPromptRequest, signal?: AbortSignal) => Promise<string>;
@@ -21,7 +20,10 @@ export function createPiRuntimeAuthCallbacks(
     },
     notify: (event) => {
       // fire-and-forget: Pi's notification callback is synchronous while Electron dialogs and external URLs are async.
-      void notifyPiAuthEvent(window, event).catch((error) => {
+      void notifyPiAuthEvent(window, event, authenticationSignal).catch((error) => {
+        if (authenticationSignal?.aborted) {
+          return;
+        }
         console.error("Failed to present provider authentication event", getErrorMessage(error));
       });
     },
@@ -53,7 +55,11 @@ function toPromptRequest(prompt: AuthPrompt): PiAuthPromptRequest {
 }
 
 /** Shows non-secret authentication instructions in a native Electron dialog. */
-async function showPiAuthInstructions(parentWindow: BrowserWindow | null | undefined, message: string): Promise<void> {
+async function showPiAuthInstructions(
+  parentWindow: BrowserWindow | null | undefined,
+  message: string,
+  signal?: AbortSignal,
+): Promise<void> {
   const window = resolveDialogWindow(parentWindow);
   const options = {
     type: "info" as const,
@@ -62,6 +68,7 @@ async function showPiAuthInstructions(parentWindow: BrowserWindow | null | undef
     title: "Agent connections",
     message,
     noLink: true,
+    ...(signal ? { signal } : {}),
   };
 
   if (window) {
@@ -76,16 +83,20 @@ async function showPiAuthInstructions(parentWindow: BrowserWindow | null | undef
 async function notifyPiAuthEvent(
   window: BrowserWindow | null | undefined,
   event: Parameters<AuthLoginCallbacks["notify"]>[0],
+  authenticationSignal?: AbortSignal,
 ): Promise<void> {
   switch (event.type) {
     case "auth_url":
-      await openPiAuthenticationUrl(event.url);
+      if (!(await openPiAuthenticationUrl(event.url))) {
+        await showPiAuthInstructions(window, buildBrowserLoginInstructions(event.url), authenticationSignal);
+      }
       return;
     case "device_code":
       await openPiAuthenticationUrl(event.verificationUri);
       await showPiAuthInstructions(
         window,
         buildDeviceCodeInstructions(event.userCode, event.verificationUri, event.expiresInSeconds),
+        authenticationSignal,
       );
       return;
     case "progress":
@@ -93,11 +104,13 @@ async function notifyPiAuthEvent(
   }
 }
 
-async function openPiAuthenticationUrl(url: string): Promise<void> {
+async function openPiAuthenticationUrl(url: string): Promise<boolean> {
   const result = await openExternalUrl(url, { allowedProtocols: ["https:"] });
-  if (!result.opened) {
-    throw new PiRuntimeError("operation_failed", "Could not open the provider authentication URL.");
-  }
+  return result.opened;
+}
+
+function buildBrowserLoginInstructions(url: string): string {
+  return ["Could not open your browser automatically.", `Open: ${url}`].join("\n");
 }
 
 function buildDeviceCodeInstructions(userCode: string, verificationUri: string, expiresInSeconds?: number): string {

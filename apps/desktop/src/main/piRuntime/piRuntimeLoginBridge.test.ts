@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPiRuntimeAuthCallbacks } from "./piRuntimeLoginBridge";
 
 const mocks = vi.hoisted(() => ({
-  openExternalUrl: vi.fn(async () => ({ opened: true as const })),
+  openExternalUrl: vi.fn(async (): Promise<{ opened: boolean; reason?: string }> => ({ opened: true })),
   requestPrompt: vi.fn(async () => "submitted-value"),
   showInstructions: vi.fn(async () => undefined),
 }));
@@ -112,6 +112,55 @@ describe("Pi runtime login callback adapter", () => {
         allowedProtocols: ["https:"],
       });
       expect(mocks.showInstructions).not.toHaveBeenCalled();
+    });
+  });
+
+  it("shows the browser OAuth URL when automatic opening fails", async () => {
+    mocks.openExternalUrl.mockResolvedValueOnce({ opened: false, reason: "open_failed" });
+    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
+
+    callbacks.notify({
+      type: "auth_url",
+      url: "https://example.com/oauth",
+      instructions: "Complete login in your browser.",
+    });
+
+    await vi.waitFor(() => {
+      expect(mocks.showInstructions).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringContaining("https://example.com/oauth") }),
+      );
+    });
+  });
+
+  it("still shows the device code when automatic URL opening fails", async () => {
+    mocks.openExternalUrl.mockResolvedValueOnce({ opened: false, reason: "open_failed" });
+    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
+
+    callbacks.notify({
+      type: "device_code",
+      userCode: "ABCD-1234",
+      verificationUri: "https://example.com/device",
+    });
+
+    await vi.waitFor(() => {
+      expect(mocks.showInstructions).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringContaining("Enter code: ABCD-1234") }),
+      );
+    });
+  });
+
+  it("binds instruction dialogs to the authentication cancellation signal", async () => {
+    const controller = new AbortController();
+    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt, controller.signal);
+
+    callbacks.notify({
+      type: "device_code",
+      userCode: "ABCD-1234",
+      verificationUri: "https://example.com/device",
+    });
+
+    await vi.waitFor(() => {
+      expect(mocks.showInstructions).toHaveBeenCalledWith(expect.objectContaining({ signal: controller.signal }));
     });
   });
 });

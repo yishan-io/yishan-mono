@@ -523,7 +523,7 @@ describe("SettingsView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /settings\.agentProviders\.title/ }));
 
-    expect(screen.getByTestId("agent-settings-panel")).toBeTruthy();
+    expect(screen.getByTestId("agent-settings-panel").getAttribute("data-focus-agent-providers")).toBe("true");
   });
 
   it("forwards the provider focus deep link to agent settings", () => {

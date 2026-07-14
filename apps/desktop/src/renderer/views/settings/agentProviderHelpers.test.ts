@@ -2,14 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { PiRuntimeModelRecord, PiRuntimeProviderRecord } from "../../../main/piRuntime/piRuntimeTypes";
 import {
   buildAgentProviderConfigEntries,
-  buildAvailablePiModelOptions,
   buildAvailablePiModelOptionsForProvider,
   buildAvailablePiProviderOptions,
   getAgentProviderConfigEntryAction,
   getAgentProviderConfigEntryStatusKind,
   getAgentProviderStatusKind,
   isAgentProviderConfiguredButUnavailable,
-  isPiModelPatternAvailable,
 } from "./agentProviderHelpers";
 
 function createProvider(
@@ -105,18 +103,25 @@ describe("agentProviderHelpers", () => {
     expect(getAgentProviderConfigEntryAction({ provider, method })).toBeUndefined();
   });
 
+  it("keeps the active ambient API key read-only while allowing a switch to OAuth", () => {
+    const provider = createProvider("anthropic", "Anthropic", true, "env", [
+      { kind: "oauth", label: "Anthropic subscription" },
+      { kind: "api_key", label: "Anthropic API key" },
+    ]);
+
+    expect(
+      getAgentProviderConfigEntryAction({ provider, method: { kind: "api_key", label: "Anthropic API key" } }),
+    ).toBeUndefined();
+    expect(
+      getAgentProviderConfigEntryAction({ provider, method: { kind: "oauth", label: "Anthropic subscription" } }),
+    ).toEqual({ kind: "authenticate", method: "oauth" });
+  });
+
   it("keeps stored credential status separate from runtime availability", () => {
     const provider = createProvider("azure", "Azure", true, "auth_file", [], false);
 
     expect(getAgentProviderStatusKind(provider)).toBe("connectedStored");
     expect(isAgentProviderConfiguredButUnavailable(provider)).toBe(true);
-  });
-
-  it("builds sorted model options from available models only", () => {
-    expect(buildAvailablePiModelOptions(MODELS)).toEqual([
-      { id: "anthropic/claude-4", name: "Anthropic · Claude 4" },
-      { id: "openai/gpt-5", name: "OpenAI · GPT-5" },
-    ]);
   });
 
   it("builds unique provider options from providers with available models", () => {
@@ -140,11 +145,5 @@ describe("agentProviderHelpers", () => {
   it("builds model options only for the selected available provider", () => {
     expect(buildAvailablePiModelOptionsForProvider(MODELS, "openai")).toEqual([{ id: "openai/gpt-5", name: "GPT-5" }]);
     expect(buildAvailablePiModelOptionsForProvider(MODELS, undefined)).toEqual([]);
-  });
-
-  it("accepts only saved patterns that still identify an available model", () => {
-    expect(isPiModelPatternAvailable(MODELS, "openai/gpt-5")).toBe(true);
-    expect(isPiModelPatternAvailable(MODELS, "zeta/disabled")).toBe(false);
-    expect(isPiModelPatternAvailable(MODELS, undefined)).toBe(false);
   });
 });

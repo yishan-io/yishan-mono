@@ -355,6 +355,9 @@
       "prompt": {
         "submit": "Continue"
       },
+      "version": {
+        "mismatch": "AI Chat is using runtime v{{runtimeVersion}}, but provider settings use v{{sdkVersion}}. Update AI Chat before changing providers or the default model."
+      },
       "providers": {
         "empty": "No providers available.",
         "switchDialog": {
