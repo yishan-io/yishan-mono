@@ -11,9 +11,7 @@ export type AgentProviderStatusKind =
   | "connectedStored"
   | "connectedEnv"
   | "connectedExternal"
-  | "availableToSwitch"
-  | "externalSetupRequired"
-  | "notConfigured";
+  | "externalSetupRequired";
 
 export type AgentProviderPrimaryAction =
   | { kind: "authenticate"; method: PiProviderAuthMethodKind }
@@ -25,28 +23,30 @@ export type AgentProviderConfigEntry = {
   method: PiProviderAuthMethod;
 };
 
-export type AgentProviderConfigGroups = Record<PiProviderAuthMethod["kind"], AgentProviderConfigEntry[]>;
+const PROVIDER_METHOD_ORDER: Record<PiProviderAuthMethod["kind"], number> = {
+  oauth: 0,
+  api_key: 1,
+  external: 2,
+};
 
-/** Groups provider configuration methods without maintaining a provider-name allowlist. */
-export function buildAgentProviderConfigGroups(
+/** Builds one flat provider configuration list ordered by Pi-derived method type. */
+export function buildAgentProviderConfigEntries(
   providers: readonly PiRuntimeProviderRecord[],
-): AgentProviderConfigGroups {
-  const groups: AgentProviderConfigGroups = { oauth: [], api_key: [], external: [] };
+): AgentProviderConfigEntry[] {
+  const entries: AgentProviderConfigEntry[] = [];
   for (const provider of providers) {
     const methods: readonly PiProviderAuthMethod[] =
       provider.authMethods.length > 0 ? provider.authMethods : [{ kind: "external", label: provider.name }];
     for (const method of methods) {
-      groups[method.kind].push({ provider, method });
+      entries.push({ provider, method });
     }
   }
-  for (const entries of Object.values(groups)) {
-    entries.sort((left, right) => {
-      const configuredDifference =
-        Number(isAgentProviderConfigEntryConfigured(right)) - Number(isAgentProviderConfigEntryConfigured(left));
-      return configuredDifference || left.method.label.localeCompare(right.method.label);
-    });
-  }
-  return groups;
+  return entries.sort((left, right) => {
+    const methodDifference = PROVIDER_METHOD_ORDER[left.method.kind] - PROVIDER_METHOD_ORDER[right.method.kind];
+    const configuredDifference =
+      Number(isAgentProviderConfigEntryConfigured(right)) - Number(isAgentProviderConfigEntryConfigured(left));
+    return methodDifference || configuredDifference || left.method.label.localeCompare(right.method.label);
+  });
 }
 
 /** Returns whether the provider's active credential source configures this specific method. */
@@ -65,14 +65,13 @@ export function isAgentProviderConfigEntryConfigured(entry: AgentProviderConfigE
 }
 
 /** Maps one method entry to the status shown for that configuration option. */
-export function getAgentProviderConfigEntryStatusKind(entry: AgentProviderConfigEntry): AgentProviderStatusKind {
+export function getAgentProviderConfigEntryStatusKind(
+  entry: AgentProviderConfigEntry,
+): AgentProviderStatusKind | undefined {
   if (isAgentProviderConfigEntryConfigured(entry)) {
     return getAgentProviderStatusKind(entry.provider);
   }
-  if (entry.provider.hasAuth && (entry.provider.authSource === "oauth" || entry.provider.authSource === "auth_file")) {
-    return "availableToSwitch";
-  }
-  return entry.method.kind === "external" ? "externalSetupRequired" : "notConfigured";
+  return entry.method.kind === "external" ? "externalSetupRequired" : undefined;
 }
 
 /** Resolves the safe action for one method entry rather than for the provider as a whole. */
@@ -93,7 +92,7 @@ export function getAgentProviderConfigEntryAction(
 }
 
 /** Maps one provider auth source into one UI status kind. */
-export function getAgentProviderStatusKind(provider: PiRuntimeProviderRecord): AgentProviderStatusKind {
+export function getAgentProviderStatusKind(provider: PiRuntimeProviderRecord): AgentProviderStatusKind | undefined {
   switch (provider.authSource) {
     case "oauth":
       return "connectedOauth";
@@ -104,9 +103,7 @@ export function getAgentProviderStatusKind(provider: PiRuntimeProviderRecord): A
     case "external":
       return "connectedExternal";
     default:
-      return provider.authMethods.some((method) => method.kind === "external")
-        ? "externalSetupRequired"
-        : "notConfigured";
+      return provider.authMethods.some((method) => method.kind === "external") ? "externalSetupRequired" : undefined;
   }
 }
 

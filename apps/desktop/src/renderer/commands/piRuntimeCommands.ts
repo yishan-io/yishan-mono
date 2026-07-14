@@ -15,27 +15,13 @@ const INACTIVE_AUTH_PROMPT_MESSAGE = "Authentication prompt is no longer active.
 export type PiAuthPromptCommandResult = { ok: true } | { ok: false; errorMessage: string };
 
 /** Loads the current Pi provider/model runtime snapshot into the renderer store. */
-export async function getPiRuntimeSnapshot(): Promise<PiRuntimeSnapshot | null> {
-  piRuntimeStore.getState().setLoadState("loading");
+export async function getPiRuntimeSnapshot(
+  loadState: "loading" | "refreshing" = "loading",
+): Promise<PiRuntimeSnapshot | null> {
+  piRuntimeStore.getState().setLoadState(loadState);
   piRuntimeStore.getState().setErrorMessage(undefined);
   try {
     const snapshot = await getDesktopHostBridge().getPiRuntimeSnapshot();
-    piRuntimeStore.getState().setSnapshot(snapshot);
-    return snapshot;
-  } catch (error) {
-    piRuntimeStore.getState().setErrorMessage(getErrorMessage(error));
-    return null;
-  } finally {
-    piRuntimeStore.getState().setLoadState("idle");
-  }
-}
-
-/** Refreshes the Pi provider/model runtime snapshot from disk-backed Pi config. */
-export async function refreshPiRuntime(): Promise<PiRuntimeSnapshot | null> {
-  piRuntimeStore.getState().setLoadState("refreshing");
-  piRuntimeStore.getState().setErrorMessage(undefined);
-  try {
-    const snapshot = await getDesktopHostBridge().refreshPiRuntime();
     piRuntimeStore.getState().setSnapshot(snapshot);
     return snapshot;
   } catch (error) {
@@ -111,12 +97,7 @@ function applyPiRuntimeSnapshotResult(
   return result.snapshot;
 }
 
-/** Persists the Yishan-owned default Pi model selection used for future Pi launches. */
+/** Persists the model used when Desktop AI Chat starts a new Pi session. */
 export function setDefaultPiModelPattern(pattern: string): void {
   agentSettingsStore.getState().setDefaultPiModelPattern(pattern);
-}
-
-/** Persists the Yishan-owned global default Pi provider used to filter model selection. */
-export function setDefaultPiProviderId(providerId: string): void {
-  agentSettingsStore.getState().setDefaultPiProviderId(providerId);
 }

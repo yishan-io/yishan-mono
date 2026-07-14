@@ -51,7 +51,6 @@ afterEach(() => {
 describe("agentChatCommands.ensurePiSession", () => {
   it("applies the global default model when starting a new AI Chat session", async () => {
     agentSettingsStore.setState({
-      defaultPiProviderId: "openai-codex",
       defaultPiModelPattern: "openai-codex/gpt-5.5",
     });
     mocks.start.mockResolvedValue({ sessionId: "generated-session-id" });
@@ -72,7 +71,6 @@ describe("agentChatCommands.ensurePiSession", () => {
 
   it("does not override the model when reopening an existing AI Chat session", async () => {
     agentSettingsStore.setState({
-      defaultPiProviderId: "openai-codex",
       defaultPiModelPattern: "openai-codex/gpt-5.5",
     });
     mocks.start.mockResolvedValue({ sessionId: "history-session-model" });

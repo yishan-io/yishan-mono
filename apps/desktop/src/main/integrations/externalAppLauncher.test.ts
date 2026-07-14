@@ -174,6 +174,15 @@ describe("launchPath", () => {
     expect(result).toEqual({ opened: false, reason: "unsupported-protocol" });
   });
 
+  it("never lets a caller expand the global external URL protocol allowlist", async () => {
+    resetMocks();
+
+    const result = await openExternalUrl("file:///tmp/private.txt", { allowedProtocols: ["file:"] });
+
+    expect(mocks.shellOpenExternal).not.toHaveBeenCalled();
+    expect(result).toEqual({ opened: false, reason: "unsupported-protocol" });
+  });
+
   it("returns one failed status when shell.openExternal throws", async () => {
     resetMocks();
     mocks.shellOpenExternal.mockRejectedValueOnce(new Error("boom"));

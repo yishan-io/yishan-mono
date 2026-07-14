@@ -43,6 +43,11 @@ export function ProviderAuthDialog({ bridge: providedBridge }: ProviderAuthDialo
 
   useEffect(() => {
     return events?.subscribe((event) => {
+      const closedRequestId = parsePromptClosedEvent(event);
+      if (closedRequestId) {
+        setRequest((currentRequest) => (currentRequest?.requestId === closedRequestId ? undefined : currentRequest));
+        return;
+      }
       const nextRequest = parsePromptRequestEvent(event);
       if (!nextRequest) {
         return;
@@ -57,7 +62,7 @@ export function ProviderAuthDialog({ bridge: providedBridge }: ProviderAuthDialo
     if (!request) {
       return false;
     }
-    return request.prompt.type === "select" || request.prompt.allowEmpty || value.trim().length > 0;
+    return request.prompt.type === "select" || value.trim().length > 0;
   }, [request, value]);
 
   if (!events || !request) {
@@ -156,6 +161,14 @@ function parsePromptRequestEvent(event: DesktopRpcEventEnvelope): PiAuthPromptRe
     return undefined;
   }
   return { requestId, prompt };
+}
+
+function parsePromptClosedEvent(event: DesktopRpcEventEnvelope): string | undefined {
+  if (event.method !== "piRuntime.authPromptClosed" || typeof event.payload !== "object" || event.payload === null) {
+    return undefined;
+  }
+  const requestId = Reflect.get(event.payload, "requestId");
+  return typeof requestId === "string" ? requestId : undefined;
 }
 
 function isPromptRequest(value: unknown): value is PiAuthPromptRequestEvent["prompt"] {

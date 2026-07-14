@@ -65,11 +65,6 @@ export class PiRuntimeService {
     return buildPiRuntimeSnapshot(authStorage, modelRegistry, builtInProviders);
   }
 
-  /** Refreshes the snapshot by reloading auth and model config from disk. */
-  async refreshSnapshot(): Promise<PiRuntimeSnapshot> {
-    return await this.getSnapshot();
-  }
-
   /** Runs one provider-owned authentication method and persists only its complete credential. */
   async authenticate(
     providerId: string,

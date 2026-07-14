@@ -5,9 +5,7 @@ import { openExternalUrl } from "../integrations/externalAppLauncher";
 import { PiRuntimeError } from "./piRuntimeErrors";
 import type { PiAuthPromptRequest } from "./piRuntimeTypes";
 
-const BROWSER_CALLBACK_TIMEOUT_MS = 5 * 60_000;
-
-export type PiAuthPromptRequester = (prompt: PiAuthPromptRequest) => Promise<string>;
+export type PiAuthPromptRequester = (prompt: PiAuthPromptRequest, signal?: AbortSignal) => Promise<string>;
 
 /** Adapts Pi AI authentication callbacks to browser-only OAuth and renderer-owned credential prompts. */
 export function createPiRuntimeAuthCallbacks(
@@ -17,10 +15,9 @@ export function createPiRuntimeAuthCallbacks(
 ): AuthLoginCallbacks {
   return {
     prompt: async (prompt) => {
-      if (prompt.type === "manual_code") {
-        return await waitForBrowserCallback(prompt.signal, authenticationSignal);
-      }
-      return await requestPrompt(toPromptRequest(prompt));
+      const signal = combineAbortSignals(prompt.signal, authenticationSignal);
+      const request = toPromptRequest(prompt);
+      return signal ? await requestPrompt(request, signal) : await requestPrompt(request);
     },
     notify: (event) => {
       // fire-and-forget: Pi's notification callback is synchronous while Electron dialogs and external URLs are async.
@@ -32,55 +29,23 @@ export function createPiRuntimeAuthCallbacks(
   };
 }
 
-function waitForBrowserCallback(...signals: Array<AbortSignal | undefined>): Promise<string> {
-  return new Promise<string>((_resolve, reject) => {
-    let settled = false;
-    const activeSignals = signals.filter((signal): signal is AbortSignal => Boolean(signal));
-    const finish = (error: Error) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(timeout);
-      for (const signal of activeSignals) {
-        signal.removeEventListener("abort", onAbort);
-      }
-      reject(error);
-    };
-    const onAbort = (event: Event) => {
-      const signal = event.currentTarget;
-      finish(signal instanceof AbortSignal ? getBrowserCallbackAbortError(signal) : new Error("Login cancelled."));
-    };
-    const timeout = setTimeout(
-      () => finish(new Error("Browser login timed out. Please retry.")),
-      BROWSER_CALLBACK_TIMEOUT_MS,
-    );
-
-    const abortedSignal = activeSignals.find((signal) => signal.aborted);
-    if (abortedSignal) {
-      finish(getBrowserCallbackAbortError(abortedSignal));
-      return;
-    }
-    for (const signal of activeSignals) {
-      signal.addEventListener("abort", onAbort, { once: true });
-    }
-  });
+function combineAbortSignals(...signals: Array<AbortSignal | undefined>): AbortSignal | undefined {
+  const activeSignals = signals.filter((signal): signal is AbortSignal => Boolean(signal));
+  if (activeSignals.length < 2) {
+    return activeSignals[0];
+  }
+  return AbortSignal.any(activeSignals);
 }
 
-function getBrowserCallbackAbortError(signal: AbortSignal): Error {
-  return signal.reason instanceof Error && signal.reason.name !== "AbortError"
-    ? signal.reason
-    : new Error("Browser callback wait cancelled.");
-}
-
-function toPromptRequest(prompt: Exclude<AuthPrompt, { type: "manual_code" }>): PiAuthPromptRequest {
+function toPromptRequest(prompt: AuthPrompt): PiAuthPromptRequest {
   switch (prompt.type) {
     case "select":
       return { type: "select", message: prompt.message, options: prompt.options };
     case "secret":
     case "text":
+    case "manual_code":
       return {
-        type: prompt.type,
+        type: prompt.type === "manual_code" ? "text" : prompt.type,
         message: prompt.message,
         ...(prompt.placeholder ? { placeholder: prompt.placeholder } : {}),
       };

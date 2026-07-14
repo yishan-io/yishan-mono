@@ -1,7 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPiRuntimeAuthCallbacks } from "./piRuntimeLoginBridge";
-
-const BROWSER_CALLBACK_TIMEOUT_MS = 5 * 60_000;
 
 const mocks = vi.hoisted(() => ({
   openExternalUrl: vi.fn(async () => ({ opened: true as const })),
@@ -27,10 +25,6 @@ describe("Pi runtime login callback adapter", () => {
     mocks.requestPrompt.mockResolvedValue("submitted-value");
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it("asks the renderer to choose the OpenAI login method before starting OAuth", async () => {
     mocks.requestPrompt.mockResolvedValue("device_code");
     const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
@@ -49,48 +43,26 @@ describe("Pi runtime login callback adapter", () => {
     expect(mocks.requestPrompt).toHaveBeenCalledWith(prompt);
   });
 
-  it("never sends a manual redirect-code prompt to the renderer", async () => {
+  it("forwards the manual redirect-code fallback to the renderer", async () => {
     const controller = new AbortController();
     const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
 
-    const callbackWait = callbacks.prompt({
+    const value = await callbacks.prompt({
       type: "manual_code",
       message: "Paste the authorization code or redirect URL",
+      placeholder: "http://localhost:1455/auth/callback",
       signal: controller.signal,
     });
-    controller.abort();
 
-    await expect(callbackWait).rejects.toThrow("Browser callback wait cancelled.");
-    expect(mocks.requestPrompt).not.toHaveBeenCalled();
-  });
-
-  it("cancels a hidden browser callback wait when the authentication session is aborted", async () => {
-    const controller = new AbortController();
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt, controller.signal);
-
-    const callbackWait = callbacks.prompt({
-      type: "manual_code",
-      message: "Paste the authorization code or redirect URL",
-    });
-    controller.abort(new Error("Login cancelled."));
-
-    await expect(callbackWait).rejects.toThrow("Login cancelled.");
-    expect(mocks.requestPrompt).not.toHaveBeenCalled();
-  });
-
-  it("fails a browser callback wait instead of falling back to manual entry", async () => {
-    vi.useFakeTimers();
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
-
-    const callbackWait = callbacks.prompt({
-      type: "manual_code",
-      message: "Paste the authorization code or redirect URL",
-    });
-    const rejection = expect(callbackWait).rejects.toThrow("Browser login timed out. Please retry.");
-    await vi.advanceTimersByTimeAsync(BROWSER_CALLBACK_TIMEOUT_MS);
-
-    await rejection;
-    expect(mocks.requestPrompt).not.toHaveBeenCalled();
+    expect(value).toBe("submitted-value");
+    expect(mocks.requestPrompt).toHaveBeenCalledWith(
+      {
+        type: "text",
+        message: "Paste the authorization code or redirect URL",
+        placeholder: "http://localhost:1455/auth/callback",
+      },
+      controller.signal,
+    );
   });
 
   it("forwards Pi AI secret prompts without changing their type", async () => {

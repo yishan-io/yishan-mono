@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PiRuntimeModelRecord, PiRuntimeProviderRecord } from "../../../main/piRuntime/piRuntimeTypes";
 import {
-  buildAgentProviderConfigGroups,
+  buildAgentProviderConfigEntries,
   buildAvailablePiModelOptions,
   buildAvailablePiModelOptionsForProvider,
   buildAvailablePiProviderOptions,
@@ -48,7 +48,7 @@ const MODELS: PiRuntimeModelRecord[] = [
 ];
 
 describe("agentProviderHelpers", () => {
-  it("groups each provider configuration method by its Pi-derived type", () => {
+  it("builds one flat provider list ordered by Pi-derived configuration type", () => {
     const anthropic = createProvider("anthropic", "Anthropic", true, "oauth", [
       { kind: "oauth", label: "Anthropic (Claude Pro/Max)" },
       { kind: "api_key", label: "Anthropic API key" },
@@ -57,11 +57,13 @@ describe("agentProviderHelpers", () => {
       { kind: "external", label: "AWS credentials" },
     ]);
 
-    const groups = buildAgentProviderConfigGroups([bedrock, anthropic]);
+    const entries = buildAgentProviderConfigEntries([bedrock, anthropic]);
 
-    expect(groups.oauth.map((entry) => entry.method.label)).toEqual(["Anthropic (Claude Pro/Max)"]);
-    expect(groups.api_key.map((entry) => entry.method.label)).toEqual(["Anthropic API key"]);
-    expect(groups.external.map((entry) => entry.provider.id)).toEqual(["amazon-bedrock"]);
+    expect(entries.map((entry) => entry.method.label)).toEqual([
+      "Anthropic (Claude Pro/Max)",
+      "Anthropic API key",
+      "AWS credentials",
+    ]);
   });
 
   it("derives connected state and actions for each configuration method independently", () => {
@@ -69,16 +71,16 @@ describe("agentProviderHelpers", () => {
       { kind: "oauth", label: "Anthropic (Claude Pro/Max)" },
       { kind: "api_key", label: "Anthropic API key" },
     ]);
-    const groups = buildAgentProviderConfigGroups([provider]);
-    const oauthEntry = groups.oauth[0];
-    const apiKeyEntry = groups.api_key[0];
+    const entries = buildAgentProviderConfigEntries([provider]);
+    const oauthEntry = entries[0];
+    const apiKeyEntry = entries[1];
     if (!oauthEntry || !apiKeyEntry) {
       throw new Error("Expected OAuth and API-key configuration entries");
     }
 
     expect(getAgentProviderConfigEntryStatusKind(oauthEntry)).toBe("connectedOauth");
     expect(getAgentProviderConfigEntryAction(oauthEntry)).toEqual({ kind: "manageOauth" });
-    expect(getAgentProviderConfigEntryStatusKind(apiKeyEntry)).toBe("availableToSwitch");
+    expect(getAgentProviderConfigEntryStatusKind(apiKeyEntry)).toBeUndefined();
     expect(getAgentProviderConfigEntryAction(apiKeyEntry)).toEqual({
       kind: "authenticate",
       method: "api_key",
@@ -90,7 +92,7 @@ describe("agentProviderHelpers", () => {
     ["auth_file", "connectedStored"],
     ["env", "connectedEnv"],
     ["external", "connectedExternal"],
-    ["none", "notConfigured"],
+    ["none", undefined],
   ] as const)("maps %s auth to %s status", (authSource, expectedStatus) => {
     expect(getAgentProviderStatusKind(createProvider("provider", "Provider", true, authSource))).toBe(expectedStatus);
   });

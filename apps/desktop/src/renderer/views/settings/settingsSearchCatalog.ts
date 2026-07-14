@@ -399,9 +399,9 @@ const AGENT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     keywordKeys: [
       "settings.agentProviders.description",
       "settings.agentProviders.providers.actions.login",
+      "settings.agentProviders.models.providerTitle",
       "settings.agentProviders.models.defaultTitle",
-      "settings.agentProviders.models.availableTitle",
-      "settings.agentProviders.models.availableDescription",
+      "settings.agentProviders.models.selectionDescription",
     ],
   },
   ...SUPPORTED_DESKTOP_AGENT_KINDS.map((agentKind) => ({

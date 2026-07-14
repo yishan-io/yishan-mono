@@ -15,7 +15,6 @@ const DEFAULT_IN_USE_STATE = {
     cursor: true,
   },
   defaultAgentKind: undefined,
-  defaultPiProviderId: undefined,
   defaultPiModelPattern: undefined,
 };
 
@@ -276,39 +275,6 @@ describe("defaultPiModelPattern", () => {
   });
 });
 
-describe("defaultPiProviderId", () => {
-  it("persists normalized global provider updates", () => {
-    agentSettingsStore.getState().setDefaultPiProviderId("  openai  ");
-
-    expect(agentSettingsStore.getState().defaultPiProviderId).toBe("openai");
-    expect(window.localStorage.getItem(AGENT_SETTINGS_STORE_STORAGE_KEY)).toContain('"defaultPiProviderId":"openai"');
-  });
-
-  it("clears an empty global provider selection", () => {
-    agentSettingsStore.getState().setDefaultPiProviderId("openai");
-    agentSettingsStore.getState().setDefaultPiProviderId("   ");
-
-    expect(agentSettingsStore.getState().defaultPiProviderId).toBeUndefined();
-  });
-
-  it("derives the global provider from a legacy model pattern", () => {
-    window.localStorage.setItem(
-      AGENT_SETTINGS_STORE_STORAGE_KEY,
-      JSON.stringify({
-        state: {
-          inUseByAgentKind: {},
-          defaultPiModelPattern: "anthropic/claude-4",
-        },
-        version: 0,
-      }),
-    );
-
-    void agentSettingsStore.persist.rehydrate();
-
-    expect(agentSettingsStore.getState().defaultPiProviderId).toBe("anthropic");
-  });
-});
-
 describe("resolveAgentLaunchCommand", () => {
   it("returns the custom command when one is set", () => {
     expect(resolveAgentLaunchCommand("claude", { claude: "claude-custom" })).toBe("claude-custom");
@@ -322,20 +288,6 @@ describe("resolveAgentLaunchCommand", () => {
     for (const [kind, defaultCmd] of Object.entries(DEFAULT_AGENT_COMMANDS)) {
       expect(resolveAgentLaunchCommand(kind as keyof typeof DEFAULT_AGENT_COMMANDS, {})).toBe(defaultCmd);
     }
-  });
-
-  it("adds the persisted default model to Pi launch commands", () => {
-    expect(resolveAgentLaunchCommand("pi", {}, "openai/gpt-5")).toBe("pi --model 'openai/gpt-5'");
-    expect(resolveAgentLaunchCommand("pi", { pi: "custom-pi" }, "openai/gpt-5")).toBe(
-      "custom-pi --model 'openai/gpt-5'",
-    );
-  });
-
-  it("shell-quotes the persisted Pi model and ignores it for other agents", () => {
-    expect(resolveAgentLaunchCommand("pi", {}, "provider/model'with-quote")).toBe(
-      "pi --model 'provider/model'\"'\"'with-quote'",
-    );
-    expect(resolveAgentLaunchCommand("claude", {}, "openai/gpt-5")).toBe(DEFAULT_AGENT_COMMANDS.claude);
   });
 });
 

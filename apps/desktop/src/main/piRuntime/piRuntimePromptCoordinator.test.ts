@@ -59,4 +59,24 @@ describe("PiRuntimePromptCoordinator", () => {
 
     await expect(resultPromise).rejects.toThrow("Login cancelled.");
   });
+
+  it("dismisses a pending renderer prompt when its provider signal is aborted", async () => {
+    const coordinator = new PiRuntimePromptCoordinator();
+    const { target } = createTarget();
+    const controller = new AbortController();
+
+    const resultPromise = coordinator.request(
+      target,
+      { type: "text", message: "Paste the redirect URL" },
+      controller.signal,
+    );
+    const envelope = getSentPromptEnvelope(target);
+    controller.abort();
+
+    await expect(resultPromise).rejects.toThrow("Login cancelled.");
+    expect(target.send).toHaveBeenLastCalledWith(DESKTOP_RPC_IPC_CHANNELS.event, {
+      method: "piRuntime.authPromptClosed",
+      payload: { requestId: envelope.payload.requestId },
+    });
+  });
 });

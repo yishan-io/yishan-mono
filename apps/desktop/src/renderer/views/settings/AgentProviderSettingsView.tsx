@@ -1,15 +1,16 @@
-import { Alert, Box, Button, Chip, CircularProgress, Divider, Stack } from "@mui/material";
+import { Alert, Box, Button, Chip, CircularProgress, Stack } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuRefreshCw } from "react-icons/lu";
 import { ModelAutocomplete } from "../../components/ModelAutocomplete";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
+import { getPiProviderIdFromModelPattern } from "../../helpers/agentSettings";
 import { useCommands } from "../../hooks/useCommands";
 import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import { piRuntimeStore } from "../../store/settings/piRuntimeStore";
 import { AgentProviderActionControl } from "./AgentProviderActionControl";
 import {
-  buildAgentProviderConfigGroups,
+  buildAgentProviderConfigEntries,
   buildAvailablePiModelOptionsForProvider,
   buildAvailablePiProviderOptions,
   getAgentProviderConfigEntryStatusKind,
@@ -18,7 +19,6 @@ import {
   isPiModelPatternAvailable,
 } from "./agentProviderHelpers";
 
-const PROVIDER_GROUP_KINDS = ["oauth", "api_key", "external"] as const;
 const PROVIDER_SETTINGS_ANCHOR_ID = "agent-provider-settings";
 const FOCUS_HIGHLIGHT_DURATION_MS = 1800;
 
@@ -32,19 +32,18 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
   const [isFocusHighlighted, setIsFocusHighlighted] = useState(false);
   const {
     getPiRuntimeSnapshot,
-    refreshPiRuntime,
     authenticatePiProvider,
     cancelPiProviderAuthentication,
     removePiProviderCredential,
     setDefaultPiModelPattern,
-    setDefaultPiProviderId,
   } = useCommands();
   const snapshot = piRuntimeStore((state) => state.snapshot);
   const loadState = piRuntimeStore((state) => state.loadState);
   const errorMessage = piRuntimeStore((state) => state.errorMessage);
   const pendingCredentialAction = piRuntimeStore((state) => state.pendingCredentialAction);
-  const defaultPiProviderId = agentSettingsStore((state) => state.defaultPiProviderId);
   const defaultPiModelPattern = agentSettingsStore((state) => state.defaultPiModelPattern);
+  const savedDefaultProviderId = getPiProviderIdFromModelPattern(defaultPiModelPattern);
+  const [selectedProviderId, setSelectedProviderId] = useState(savedDefaultProviderId ?? "");
 
   useEffect(() => {
     void getPiRuntimeSnapshot();
@@ -72,21 +71,32 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
     };
   }, [focusRequested]);
 
-  const providerGroups = useMemo(
-    () => buildAgentProviderConfigGroups(snapshot?.providers ?? []),
+  const providerEntries = useMemo(
+    () => buildAgentProviderConfigEntries(snapshot?.providers ?? []),
     [snapshot?.providers],
   );
   const providerOptions = useMemo(() => buildAvailablePiProviderOptions(snapshot?.models ?? []), [snapshot?.models]);
-  const hasAvailableDefaultPiProvider = providerOptions.some((provider) => provider.id === defaultPiProviderId);
-  const selectedProviderId = hasAvailableDefaultPiProvider ? (defaultPiProviderId ?? "") : "";
+  const hasAvailableDefaultPiProvider = providerOptions.some((provider) => provider.id === savedDefaultProviderId);
+  const hasAvailableSelectedProvider = providerOptions.some((provider) => provider.id === selectedProviderId);
+  const activeSelectedProviderId = hasAvailableSelectedProvider ? selectedProviderId : "";
   const modelOptions = useMemo(
-    () => buildAvailablePiModelOptionsForProvider(snapshot?.models ?? [], selectedProviderId || undefined),
-    [selectedProviderId, snapshot?.models],
+    () => buildAvailablePiModelOptionsForProvider(snapshot?.models ?? [], activeSelectedProviderId || undefined),
+    [activeSelectedProviderId, snapshot?.models],
   );
   const hasAvailableDefaultPiModel = useMemo(
     () => isPiModelPatternAvailable(snapshot?.models ?? [], defaultPiModelPattern),
     [defaultPiModelPattern, snapshot?.models],
   );
+
+  useEffect(() => {
+    if (savedDefaultProviderId && providerOptions.some((provider) => provider.id === savedDefaultProviderId)) {
+      setSelectedProviderId(savedDefaultProviderId);
+      return;
+    }
+    setSelectedProviderId((currentProviderId) =>
+      providerOptions.some((provider) => provider.id === currentProviderId) ? currentProviderId : "",
+    );
+  }, [providerOptions, savedDefaultProviderId]);
 
   const isLoading = loadState === "loading";
   const isRefreshing = loadState === "refreshing";
@@ -112,7 +122,7 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
             size="small"
             variant="text"
             onClick={() => {
-              void refreshPiRuntime();
+              void getPiRuntimeSnapshot("refreshing");
             }}
             disabled={isRefreshing}
             startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : <LuRefreshCw />}
@@ -129,78 +139,65 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
         {snapshot?.providers.length ? (
           <Box data-testid="provider-config-card">
             <SettingsCard>
-              <Stack divider={<Divider flexItem />}>
-                {PROVIDER_GROUP_KINDS.map((groupKind) => {
-                  const entries = providerGroups[groupKind];
-                  if (entries.length === 0) {
-                    return null;
-                  }
+              <SettingsRows>
+                {providerEntries.map((entry) => {
+                  const { provider, method } = entry;
+                  const statusKind = getAgentProviderConfigEntryStatusKind(entry);
+                  const isConfigured = isAgentProviderConfigEntryConfigured(entry);
+                  const isPendingCredentialAction =
+                    pendingCredentialAction?.kind === "authenticate" &&
+                    pendingCredentialAction.providerId === provider.id &&
+                    pendingCredentialAction.method === method.kind;
+                  const configuredButUnavailable = isConfigured && isAgentProviderConfiguredButUnavailable(provider);
+                  const showConfigurationStatus = statusKind !== undefined;
                   return (
-                    <Box key={groupKind} data-testid={`provider-config-section-${groupKind}`} sx={{ py: 1 }}>
-                      <SettingsRows>
-                        {entries.map((entry) => {
-                          const { provider, method } = entry;
-                          const statusKind = getAgentProviderConfigEntryStatusKind(entry);
-                          const isConfigured = isAgentProviderConfigEntryConfigured(entry);
-                          const isPendingCredentialAction =
-                            pendingCredentialAction?.kind === "authenticate" &&
-                            pendingCredentialAction.providerId === provider.id &&
-                            pendingCredentialAction.method === method.kind;
-                          const configuredButUnavailable =
-                            isConfigured && isAgentProviderConfiguredButUnavailable(provider);
-                          const showConfigurationStatus = isConfigured || method.kind === "external";
-                          return (
-                            <SettingsControlRow
-                              key={`${provider.id}:${method.kind}`}
-                              title={method.kind === "external" ? provider.name : method.label}
-                              description={
-                                showConfigurationStatus
-                                  ? t(`settings.agentProviders.providers.status.${statusKind}`)
-                                  : undefined
+                    <SettingsControlRow
+                      key={`${provider.id}:${method.kind}`}
+                      title={method.kind === "external" ? provider.name : method.label}
+                      description={
+                        showConfigurationStatus
+                          ? t(`settings.agentProviders.providers.status.${statusKind}`)
+                          : undefined
+                      }
+                      control={
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          {showConfigurationStatus ? (
+                            <Chip
+                              size="small"
+                              color={
+                                configuredButUnavailable
+                                  ? "warning"
+                                  : isConfigured && provider.available
+                                    ? "success"
+                                    : "default"
                               }
-                              control={
-                                <Stack direction="row" spacing={1} alignItems="center">
-                                  {showConfigurationStatus ? (
-                                    <Chip
-                                      size="small"
-                                      color={
-                                        configuredButUnavailable
-                                          ? "warning"
-                                          : isConfigured && provider.available
-                                            ? "success"
-                                            : "default"
-                                      }
-                                      variant={isConfigured ? "filled" : "outlined"}
-                                      label={t(
-                                        `settings.agentProviders.providers.badges.${configuredButUnavailable ? "configuredUnavailable" : statusKind}`,
-                                      )}
-                                    />
-                                  ) : null}
-                                  <AgentProviderActionControl
-                                    provider={provider}
-                                    method={method}
-                                    disabled={hasPendingCredentialAction}
-                                    pending={isPendingCredentialAction}
-                                    onAuthenticate={(input) => {
-                                      void authenticatePiProvider(input);
-                                    }}
-                                    onCancelAuthentication={(providerId) => {
-                                      void cancelPiProviderAuthentication(providerId);
-                                    }}
-                                    onRemoveCredential={(providerId) => {
-                                      void removePiProviderCredential(providerId);
-                                    }}
-                                  />
-                                </Stack>
-                              }
+                              variant={isConfigured ? "filled" : "outlined"}
+                              label={t(
+                                `settings.agentProviders.providers.badges.${configuredButUnavailable ? "configuredUnavailable" : statusKind}`,
+                              )}
                             />
-                          );
-                        })}
-                      </SettingsRows>
-                    </Box>
+                          ) : null}
+                          <AgentProviderActionControl
+                            provider={provider}
+                            method={method}
+                            disabled={hasPendingCredentialAction}
+                            pending={isPendingCredentialAction}
+                            onAuthenticate={(input) => {
+                              void authenticatePiProvider(input);
+                            }}
+                            onCancelAuthentication={(providerId) => {
+                              void cancelPiProviderAuthentication(providerId);
+                            }}
+                            onRemoveCredential={(providerId) => {
+                              void removePiProviderCredential(providerId);
+                            }}
+                          />
+                        </Stack>
+                      }
+                    />
                   );
                 })}
-              </Stack>
+              </SettingsRows>
             </SettingsCard>
           </Box>
         ) : (
@@ -225,9 +222,15 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
                   <Box sx={{ minWidth: 300, maxWidth: 360 }}>
                     <ModelAutocomplete
                       options={providerOptions}
-                      value={selectedProviderId}
+                      value={activeSelectedProviderId}
                       onChange={(providerId) => {
-                        setDefaultPiProviderId(providerId);
+                        setSelectedProviderId(providerId);
+                        if (
+                          defaultPiModelPattern &&
+                          getPiProviderIdFromModelPattern(defaultPiModelPattern) !== providerId
+                        ) {
+                          setDefaultPiModelPattern("");
+                        }
                       }}
                       loading={isLoading || isRefreshing}
                       disabled={providerOptions.length === 0}
@@ -250,7 +253,7 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
                         setDefaultPiModelPattern(pattern);
                       }}
                       loading={isLoading || isRefreshing}
-                      disabled={!selectedProviderId || modelOptions.length === 0}
+                      disabled={!activeSelectedProviderId || modelOptions.length === 0}
                       placeholder={t("settings.agentProviders.models.placeholder")}
                       noOptionsText={t("settings.agentProviders.models.empty")}
                       allowCustomValue={false}
@@ -262,7 +265,7 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
           </SettingsCard>
         </Box>
 
-        {(defaultPiProviderId && !hasAvailableDefaultPiProvider) ||
+        {(savedDefaultProviderId && !hasAvailableDefaultPiProvider) ||
         (defaultPiModelPattern && !hasAvailableDefaultPiModel) ? (
           <Alert severity="warning">{t("settings.agentProviders.models.unavailableWarning")}</Alert>
         ) : null}

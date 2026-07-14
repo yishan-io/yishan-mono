@@ -66,9 +66,8 @@ vi.mock("../../store/workspaceStore", () => ({
 }));
 
 vi.mock("../../store/settings/agentSettingsStore", () => ({
-  agentSettingsStore: (
-    selector: (state: { customCommandByAgentKind: Record<string, unknown>; defaultPiModelPattern?: string }) => unknown,
-  ) => selector({ customCommandByAgentKind: {}, defaultPiModelPattern: "openai/gpt-5" }),
+  agentSettingsStore: (selector: (state: { customCommandByAgentKind: Record<string, unknown> }) => unknown) =>
+    selector({ customCommandByAgentKind: {} }),
 }));
 
 describe("LaunchView", () => {
@@ -115,7 +114,7 @@ describe("LaunchView", () => {
     expect(screen.getByRole("button", { name: "Open terminal" })).toBeTruthy();
   });
 
-  it("launches Pi with the saved default model", () => {
+  it("does not apply the AI Chat default model to terminal Pi launches", () => {
     render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={["pi"]} />);
 
     fireEvent.click(screen.getByRole("button", { name: "tabs.createMenu.pi" }));
@@ -123,7 +122,7 @@ describe("LaunchView", () => {
     expect(mocks.openTab).toHaveBeenCalledWith(
       expect.objectContaining({
         agentKind: "pi",
-        launchCommand: "pi --model 'openai/gpt-5'",
+        launchCommand: "pi",
       }),
     );
   });

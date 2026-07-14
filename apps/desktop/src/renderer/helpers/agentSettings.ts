@@ -157,9 +157,6 @@ export const AGENT_COMMAND_MAX_LENGTH = 2048;
 /** Maximum character length persisted for the Yishan-owned default Pi model pattern. */
 export const PI_MODEL_PATTERN_MAX_LENGTH = 512;
 
-/** Maximum character length persisted for the Yishan-owned default Pi provider ID. */
-export const PI_PROVIDER_ID_MAX_LENGTH = 512;
-
 /** Returns true when one string is a supported desktop-agent kind. */
 export function isDesktopAgentKind(value: string): value is DesktopAgentKind {
   return SUPPORTED_DESKTOP_AGENT_KINDS.some((agentKind) => agentKind === value);
@@ -191,18 +188,8 @@ export function createDefaultCustomCommandByKind(): Partial<Record<DesktopAgentK
 export function resolveAgentLaunchCommand(
   agentKind: DesktopAgentKind,
   customCommands: Partial<Record<DesktopAgentKind, string>>,
-  defaultPiModelPattern?: string,
 ): string {
-  const baseCommand = customCommands[agentKind] ?? DEFAULT_AGENT_COMMANDS[agentKind];
-  if (agentKind !== "pi" || !defaultPiModelPattern) {
-    return baseCommand;
-  }
-
-  return `${baseCommand} --model ${quoteShellArgument(defaultPiModelPattern)}`;
-}
-
-function quoteShellArgument(value: string): string {
-  return `'${value.replaceAll("'", `'"'"'`)}'`;
+  return customCommands[agentKind] ?? DEFAULT_AGENT_COMMANDS[agentKind];
 }
 
 /**
@@ -232,21 +219,9 @@ export function normalizePiModelPattern(value: string | undefined): string | und
   return trimmed;
 }
 
-/** Normalizes the persisted default Pi provider ID, dropping empty, oversized, or malformed values. */
-export function normalizePiProviderId(value: string | undefined): string | undefined {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  if (trimmed.length === 0 || trimmed.length > PI_PROVIDER_ID_MAX_LENGTH || trimmed.includes("/")) {
-    return undefined;
-  }
-  return trimmed;
-}
-
 /** Extracts a provider ID from one normalized `provider/model` pattern. */
 export function getPiProviderIdFromModelPattern(pattern: string | undefined): string | undefined {
   const normalizedPattern = normalizePiModelPattern(pattern);
   const separatorIndex = normalizedPattern?.indexOf("/") ?? -1;
-  return separatorIndex > 0 ? normalizePiProviderId(normalizedPattern?.slice(0, separatorIndex)) : undefined;
+  return separatorIndex > 0 ? normalizedPattern?.slice(0, separatorIndex) : undefined;
 }

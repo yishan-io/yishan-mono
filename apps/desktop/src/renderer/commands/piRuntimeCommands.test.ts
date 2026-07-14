@@ -6,6 +6,7 @@ import { piRuntimeStore } from "../store/settings/piRuntimeStore";
 import {
   authenticatePiProvider,
   cancelPiProviderAuthentication,
+  getPiRuntimeSnapshot,
   removePiProviderCredential,
   respondPiAuthPrompt,
 } from "./piRuntimeCommands";
@@ -13,6 +14,7 @@ import {
 const mocks = vi.hoisted(() => ({
   authenticatePiProvider: vi.fn(),
   cancelPiProviderAuthentication: vi.fn(),
+  getPiRuntimeSnapshot: vi.fn(),
   removePiProviderCredential: vi.fn(),
   respondPiAuthPrompt: vi.fn(),
 }));
@@ -21,6 +23,7 @@ vi.mock("../rpc/rpcTransport", () => ({
   getDesktopHostBridge: vi.fn(() => ({
     authenticatePiProvider: mocks.authenticatePiProvider,
     cancelPiProviderAuthentication: mocks.cancelPiProviderAuthentication,
+    getPiRuntimeSnapshot: mocks.getPiRuntimeSnapshot,
     removePiProviderCredential: mocks.removePiProviderCredential,
     respondPiAuthPrompt: mocks.respondPiAuthPrompt,
   })),
@@ -51,6 +54,23 @@ describe("piRuntimeCommands", () => {
     expect(result).toBe(snapshot);
     expect(piRuntimeStore.getState().snapshot).toBe(snapshot);
     expect(piRuntimeStore.getState().pendingCredentialAction).toBeUndefined();
+  });
+
+  it("uses the single snapshot endpoint while exposing a refresh loading state", async () => {
+    let resolveSnapshot: ((value: PiRuntimeSnapshot) => void) | undefined;
+    mocks.getPiRuntimeSnapshot.mockReturnValue(
+      new Promise<PiRuntimeSnapshot>((resolve) => {
+        resolveSnapshot = resolve;
+      }),
+    );
+
+    const resultPromise = getPiRuntimeSnapshot("refreshing");
+
+    expect(piRuntimeStore.getState().loadState).toBe("refreshing");
+    expect(mocks.getPiRuntimeSnapshot).toHaveBeenCalledTimes(1);
+    resolveSnapshot?.(snapshot);
+    await expect(resultPromise).resolves.toBe(snapshot);
+    expect(piRuntimeStore.getState().loadState).toBe("idle");
   });
 
   it("removes stored credentials and refreshes the runtime snapshot", async () => {

@@ -113,10 +113,11 @@ export async function openExternalUrl(
     return { opened: false, reason: "invalid-url" };
   }
 
-  const allowedProtocols = options.allowedProtocols
-    ? new Set(options.allowedProtocols)
-    : ALLOWED_EXTERNAL_URL_PROTOCOLS;
-  if (!isAllowedExternalUrlProtocol(parsedUrl.protocol, allowedProtocols)) {
+  const callerAllowedProtocols = options.allowedProtocols ? new Set(options.allowedProtocols) : undefined;
+  if (
+    !isAllowedExternalUrlProtocol(parsedUrl.protocol, ALLOWED_EXTERNAL_URL_PROTOCOLS) ||
+    (callerAllowedProtocols && !isAllowedExternalUrlProtocol(parsedUrl.protocol, callerAllowedProtocols))
+  ) {
     return { opened: false, reason: "unsupported-protocol" };
   }
 

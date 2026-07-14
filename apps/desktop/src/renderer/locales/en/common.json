@@ -357,19 +357,14 @@
       },
       "providers": {
         "empty": "No providers available.",
-        "groups": {
-          "oauth": "Account connection",
-          "apiKey": "API key",
-          "external": "External setup"
-        },
         "switchDialog": {
           "title": "Switch authentication method?",
           "description": "This will replace the current authentication for {{provider}}.",
           "confirm": "Switch"
         },
         "actions": {
-            "login": "Login",
-            "cancel": "Cancel",
+          "login": "Login",
+          "cancel": "Cancel",
           "setApiKey": "Set API key",
           "manage": "Manage",
           "replace": "Replace API key",
@@ -381,19 +376,15 @@
           "connectedStored": "Connected via saved auth",
           "connectedEnv": "Connected via environment",
           "connectedExternal": "Configured externally",
-          "availableToSwitch": "Available to switch",
-          "externalSetupRequired": "External setup required",
-          "notConfigured": "Not configured"
+          "externalSetupRequired": "External setup required"
         },
         "badges": {
           "connectedOauth": "OAuth",
           "connectedStored": "Saved auth",
           "connectedEnv": "Environment",
           "connectedExternal": "External",
-          "availableToSwitch": "Available",
           "externalSetupRequired": "External setup",
-          "configuredUnavailable": "Configured · unavailable",
-          "notConfigured": "Not connected"
+          "configuredUnavailable": "Configured · unavailable"
         }
       },
       "models": {
@@ -405,9 +396,6 @@
         "providerEmpty": "No configured providers",
         "defaultTitle": "Default AI Chat model",
         "defaultDescription": "Choose from models available for the selected provider.",
-        "availableTitle": "Available models",
-        "availableDescription": "Only models with configured authentication appear here.",
-        "availableCount": "{{count}} available",
         "placeholder": "Select a model",
         "empty": "No available models",
         "unavailableWarning": "Your saved provider or model is no longer available. Choose a new default or refresh AI Chat Providers & Models."

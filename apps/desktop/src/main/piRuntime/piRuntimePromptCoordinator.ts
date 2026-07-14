@@ -18,25 +18,31 @@ type PendingPrompt = {
   resolve: (value: string) => void;
   reject: (error: Error) => void;
   onDestroyed: () => void;
+  signal?: AbortSignal;
+  onAborted?: () => void;
 };
 
 /** Coordinates one renderer-owned Pi auth prompt without exposing credentials outside the response IPC. */
 export class PiRuntimePromptCoordinator {
   private pendingPrompt: PendingPrompt | undefined;
 
-  async request(target: PiAuthPromptTarget, prompt: PiAuthPromptRequest): Promise<string> {
+  async request(target: PiAuthPromptTarget, prompt: PiAuthPromptRequest, signal?: AbortSignal): Promise<string> {
     if (this.pendingPrompt) {
       throw new PiRuntimeError("authentication_in_progress", "Provider authentication prompt is already open.");
     }
-    if (target.isDestroyed()) {
+    if (target.isDestroyed() || signal?.aborted) {
       throw createPiRuntimeCancellationError();
     }
 
     const requestId = generateId();
     return await new Promise<string>((resolve, reject) => {
       const onDestroyed = () => this.rejectPending(createPiRuntimeCancellationError());
-      this.pendingPrompt = { requestId, prompt, target, resolve, reject, onDestroyed };
+      const onAborted = signal ? () => this.rejectPending(createPiRuntimeCancellationError(), true) : undefined;
+      this.pendingPrompt = { requestId, prompt, target, resolve, reject, onDestroyed, signal, onAborted };
       target.once("destroyed", onDestroyed);
+      if (signal && onAborted) {
+        signal.addEventListener("abort", onAborted, { once: true });
+      }
       try {
         target.send(DESKTOP_RPC_IPC_CHANNELS.event, {
           method: "piRuntime.authPrompt",
@@ -61,7 +67,7 @@ export class PiRuntimePromptCoordinator {
     }
 
     const value = response.value.trim();
-    if (pending.prompt.type !== "select" && !pending.prompt.allowEmpty && value.length === 0) {
+    if (pending.prompt.type !== "select" && value.length === 0) {
       this.rejectPending(createPiRuntimeCancellationError());
       return true;
     }
@@ -71,10 +77,20 @@ export class PiRuntimePromptCoordinator {
     return true;
   }
 
-  private rejectPending(error: Error): void {
+  private rejectPending(error: Error, notifyRenderer = false): void {
     const pending = this.pendingPrompt;
     if (!pending) {
       return;
+    }
+    if (notifyRenderer && !pending.target.isDestroyed()) {
+      try {
+        pending.target.send(DESKTOP_RPC_IPC_CHANNELS.event, {
+          method: "piRuntime.authPromptClosed",
+          payload: { requestId: pending.requestId },
+        });
+      } catch (sendError) {
+        console.warn("Failed to close a renderer Pi authentication prompt", sendError);
+      }
     }
     this.clearPending();
     pending.reject(error);
@@ -86,6 +102,9 @@ export class PiRuntimePromptCoordinator {
       return;
     }
     pending.target.removeListener("destroyed", pending.onDestroyed);
+    if (pending.signal && pending.onAborted) {
+      pending.signal.removeEventListener("abort", pending.onAborted);
+    }
     this.pendingPrompt = undefined;
   }
 }

@@ -8,12 +8,10 @@ import { AgentProviderSettingsView } from "./AgentProviderSettingsView";
 
 const mocked = {
   getPiRuntimeSnapshot: vi.fn(),
-  refreshPiRuntime: vi.fn(),
   authenticatePiProvider: vi.fn(),
   cancelPiProviderAuthentication: vi.fn(),
   removePiProviderCredential: vi.fn(),
   setDefaultPiModelPattern: vi.fn(),
-  setDefaultPiProviderId: vi.fn(),
 };
 
 vi.mock("react-i18next", () => ({
@@ -60,14 +58,10 @@ vi.mock("../../components/ModelAutocomplete", () => ({
 describe("AgentProviderSettingsView", () => {
   beforeEach(() => {
     mocked.getPiRuntimeSnapshot.mockResolvedValue(null);
-    mocked.refreshPiRuntime.mockResolvedValue(null);
     mocked.authenticatePiProvider.mockResolvedValue(null);
     mocked.cancelPiProviderAuthentication.mockResolvedValue(true);
     mocked.removePiProviderCredential.mockResolvedValue(null);
     mocked.setDefaultPiModelPattern.mockImplementation(() => undefined);
-    mocked.setDefaultPiProviderId.mockImplementation((providerId: string) => {
-      agentSettingsStore.getState().setDefaultPiProviderId(providerId);
-    });
     agentSettingsStore.setState({
       inUseByAgentKind: {
         opencode: true,
@@ -80,7 +74,6 @@ describe("AgentProviderSettingsView", () => {
       },
       defaultAgentKind: undefined,
       customCommandByAgentKind: {},
-      defaultPiProviderId: undefined,
       defaultPiModelPattern: undefined,
     });
     piRuntimeStore.setState({
@@ -173,9 +166,9 @@ describe("AgentProviderSettingsView", () => {
 
     expect(screen.getByText("settings.agentProviders.title")).toBeTruthy();
     expect(screen.getByTestId("provider-config-card")).toBeTruthy();
-    expect(screen.getByTestId("provider-config-section-oauth")).toBeTruthy();
-    expect(screen.getByTestId("provider-config-section-api_key")).toBeTruthy();
-    expect(screen.getByTestId("provider-config-section-external")).toBeTruthy();
+    expect(screen.queryByTestId("provider-config-section-oauth")).toBeNull();
+    expect(screen.queryByTestId("provider-config-section-api_key")).toBeNull();
+    expect(screen.queryByTestId("provider-config-section-external")).toBeNull();
     expect(screen.getByText("OpenAI API key")).toBeTruthy();
     expect(screen.getByText("Anthropic (Claude Pro/Max)")).toBeTruthy();
     expect(screen.getByText("Anthropic API key")).toBeTruthy();
@@ -184,33 +177,25 @@ describe("AgentProviderSettingsView", () => {
     expect(screen.getByRole("button", { name: "settings.agentProviders.providers.actions.login" })).toBeTruthy();
     expect(screen.getByText("settings.agentProviders.models.selectionTitle")).toBeTruthy();
     expect(screen.getByText("settings.agentProviders.models.selectionDescription")).toBeTruthy();
-    expect(screen.queryByText("settings.agentProviders.models.availableCount")).toBeNull();
   });
 
   it("uses actions instead of repeated status text for unconfigured actionable methods", () => {
     render(<AgentProviderSettingsView />);
 
-    expect(screen.queryAllByText("settings.agentProviders.providers.status.notConfigured")).toHaveLength(0);
-    expect(screen.queryAllByText("settings.agentProviders.providers.badges.notConfigured")).toHaveLength(0);
-    expect(screen.queryAllByText("settings.agentProviders.providers.status.availableToSwitch")).toHaveLength(0);
-    expect(screen.queryAllByText("settings.agentProviders.providers.badges.availableToSwitch")).toHaveLength(0);
     expect(screen.getByText("settings.agentProviders.providers.badges.connectedOauth")).toBeTruthy();
     expect(screen.getByText("settings.agentProviders.providers.status.externalSetupRequired")).toBeTruthy();
+    expect(
+      screen.getAllByRole("button", { name: "settings.agentProviders.providers.actions.setApiKey" }),
+    ).not.toHaveLength(0);
   });
 
-  it("keeps provider configuration sections in one card without visible group titles", () => {
+  it("keeps every provider configuration row in one flat card", () => {
     render(<AgentProviderSettingsView />);
 
     expect(screen.getByTestId("provider-config-card")).toBeTruthy();
-    expect(screen.getByTestId("provider-config-section-oauth")).toBeTruthy();
-    expect(screen.getByTestId("provider-config-section-api_key")).toBeTruthy();
-    expect(screen.getByTestId("provider-config-section-external")).toBeTruthy();
-    expect(screen.queryByText("settings.agentProviders.providers.groups.oauth")).toBeNull();
-    expect(screen.queryByText("settings.agentProviders.providers.groups.apiKey")).toBeNull();
-    expect(screen.queryByText("settings.agentProviders.providers.groups.external")).toBeNull();
-    expect(screen.queryByTestId("provider-group-card-oauth")).toBeNull();
-    expect(screen.queryByTestId("provider-group-card-api_key")).toBeNull();
-    expect(screen.queryByTestId("provider-group-card-external")).toBeNull();
+    expect(screen.queryByTestId("provider-config-section-oauth")).toBeNull();
+    expect(screen.queryByTestId("provider-config-section-api_key")).toBeNull();
+    expect(screen.queryByTestId("provider-config-section-external")).toBeNull();
   });
 
   it("forwards provider login and refresh actions through commands", async () => {
@@ -222,7 +207,7 @@ describe("AgentProviderSettingsView", () => {
     await waitFor(() => {
       expect(mocked.authenticatePiProvider).toHaveBeenCalledWith({ providerId: "openai-codex", method: "oauth" });
     });
-    expect(mocked.refreshPiRuntime).toHaveBeenCalledTimes(1);
+    expect(mocked.getPiRuntimeSnapshot).toHaveBeenCalledWith("refreshing");
   });
 
   it("disables every login action while any provider login is pending", () => {
@@ -295,7 +280,7 @@ describe("AgentProviderSettingsView", () => {
     expect(screen.getByText("settings.agentProviders.providers.badges.configuredUnavailable")).toBeTruthy();
   });
 
-  it("persists the global provider before enabling its available model choices", () => {
+  it("keeps provider filtering local and persists only the selected AI Chat model", () => {
     render(<AgentProviderSettingsView />);
 
     const providerSelect = screen.getByTestId("pi-provider-select") as HTMLSelectElement;
@@ -305,7 +290,6 @@ describe("AgentProviderSettingsView", () => {
 
     fireEvent.change(providerSelect, { target: { value: "openai" } });
 
-    expect(mocked.setDefaultPiProviderId).toHaveBeenCalledWith("openai");
     expect((screen.getByTestId("pi-model-select") as HTMLSelectElement).disabled).toBe(false);
     expect(screen.getByRole("option", { name: "gpt-5" })).toBeTruthy();
 
@@ -316,7 +300,7 @@ describe("AgentProviderSettingsView", () => {
   });
 
   it("saves the selected default Pi model and warns when the saved model becomes unavailable", async () => {
-    agentSettingsStore.setState({ defaultPiProviderId: "openai", defaultPiModelPattern: "missing/provider-model" });
+    agentSettingsStore.setState({ defaultPiModelPattern: "openai/missing-model" });
 
     render(<AgentProviderSettingsView />);
 

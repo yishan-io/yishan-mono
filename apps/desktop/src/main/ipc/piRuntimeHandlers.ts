@@ -28,10 +28,6 @@ export function registerPiRuntimeIpcHandlers(
     return piRuntimeService.getSnapshot();
   });
 
-  ipcMain.handle(HOST_IPC_CHANNELS.refreshPiRuntime, async () => {
-    return piRuntimeService.refreshSnapshot();
-  });
-
   ipcMain.handle(HOST_IPC_CHANNELS.authenticatePiProvider, async (event, input: AuthenticatePiProviderInput) => {
     return await runPiRuntimeSnapshotOperation("Provider authentication failed", async () => {
       const window = BrowserWindow.fromWebContents(event.sender) ?? resolveMainWindow();
@@ -47,7 +43,7 @@ export function registerPiRuntimeIpcHandlers(
             input.method,
             createPiRuntimeAuthCallbacks(
               window,
-              (prompt) => promptCoordinator.request(window.webContents, prompt),
+              (prompt, promptSignal) => promptCoordinator.request(window.webContents, prompt, promptSignal),
               signal,
             ),
           );

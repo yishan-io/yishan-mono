@@ -335,19 +335,14 @@
       },
       "providers": {
         "empty": "暂无可用 provider。",
-        "groups": {
-          "oauth": "账号连接",
-          "apiKey": "API Key",
-          "external": "外部配置"
-        },
         "switchDialog": {
           "title": "切换认证方式？",
           "description": "这会替换 {{provider}} 当前使用的认证。",
           "confirm": "切换"
         },
         "actions": {
-            "login": "登录",
-            "cancel": "取消",
+          "login": "登录",
+          "cancel": "取消",
           "setApiKey": "设置 API Key",
           "manage": "管理",
           "replace": "替换 API Key",
@@ -359,19 +354,15 @@
           "connectedStored": "已通过本地保存认证连接",
           "connectedEnv": "已通过环境变量连接",
           "connectedExternal": "由外部配置",
-          "availableToSwitch": "可切换使用",
-          "externalSetupRequired": "需要在外部完成配置",
-          "notConfigured": "未配置"
+          "externalSetupRequired": "需要在外部完成配置"
         },
         "badges": {
           "connectedOauth": "OAuth",
           "connectedStored": "本地认证",
           "connectedEnv": "环境变量",
           "connectedExternal": "外部配置",
-          "availableToSwitch": "可切换",
           "externalSetupRequired": "外部配置",
-          "configuredUnavailable": "已配置 · 当前不可用",
-          "notConfigured": "未连接"
+          "configuredUnavailable": "已配置 · 当前不可用"
         }
       },
       "models": {
@@ -383,9 +374,6 @@
         "providerEmpty": "暂无已配置提供商",
         "defaultTitle": "默认 AI Chat 模型",
         "defaultDescription": "从所选提供商当前可用的模型中选择。",
-        "availableTitle": "可用模型",
-        "availableDescription": "这里只显示已配置认证的模型。",
-        "availableCount": "{{count}} 个可用",
         "placeholder": "选择模型",
         "empty": "暂无可用模型",
         "unavailableWarning": "你保存的提供商或模型当前不可用。请选择新的默认值，或刷新 AI Chat 提供商与模型。"

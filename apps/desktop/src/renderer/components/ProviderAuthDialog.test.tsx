@@ -105,4 +105,20 @@ describe("ProviderAuthDialog", () => {
     expect((retainedInput as HTMLInputElement).value).toBe("account-123");
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
+
+  it("closes a matching prompt when the provider completes through the browser callback", () => {
+    const { bridge, emit, respondPiAuthPrompt } = createBridge();
+    render(<ProviderAuthDialog bridge={bridge} />);
+
+    emit({
+      method: "piRuntime.authPrompt",
+      payload: { requestId: "request-browser", prompt: { type: "text", message: "Paste redirect URL" } },
+    });
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    emit({ method: "piRuntime.authPromptClosed", payload: { requestId: "request-browser" } });
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(respondPiAuthPrompt).not.toHaveBeenCalled();
+  });
 });

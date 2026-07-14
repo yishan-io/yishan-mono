@@ -7,7 +7,6 @@ export type PiAuthPromptRequest =
       type: "text" | "secret";
       message: string;
       placeholder?: string;
-      allowEmpty?: boolean;
     }
   | {
       type: "select";
