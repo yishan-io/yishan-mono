@@ -156,7 +156,7 @@ func TestManagedShellEnvPreservesCustomZdotdir(t *testing.T) {
 	}
 }
 
-func TestEnsureManagedPiPackagesUsesManagedPiAgentDir(t *testing.T) {
+func TestEnsureDefaultPiExtensionsUseManagedPiAgentDir(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 
@@ -170,22 +170,22 @@ func TestEnsureManagedPiPackagesUsesManagedPiAgentDir(t *testing.T) {
 		args []string
 		cmd  *exec.Cmd
 	}
-	calls := make([]recordedCall, 0, 3)
+	calls := make([]recordedCall, 0, 4)
 	execCommand = func(name string, args ...string) *exec.Cmd {
 		cmd := exec.Command(os.Args[0], "-test.run=^$")
 		calls = append(calls, recordedCall{name: name, args: append([]string{}, args...), cmd: cmd})
 		return cmd
 	}
 
-	if err := ensureManagedPiPackages(); err != nil {
-		t.Fatalf("ensure managed pi packages: %v", err)
+	if err := EnsureDefaultPiExtensions(); err != nil {
+		t.Fatalf("ensure default pi extensions: %v", err)
 	}
-	if len(calls) != 3 {
-		t.Fatalf("expected 3 pi package install calls, got %d", len(calls))
+	if len(calls) != 4 {
+		t.Fatalf("expected 4 pi extension install calls, got %d", len(calls))
 	}
 
 	expectedAgentDir := filepath.Join(homeDir, ".yishan", "pi", "agent")
-	expectedArgs := [][]string{{"install", piNotifyInstallSource}, {"install", piSubagentsInstallSource}, {"install", piMemoryInstallSource}}
+	expectedArgs := [][]string{{"install", piExtensionInstallSource(piNotifyExtensionName)}, {"install", piExtensionInstallSource(piSubagentsExtensionName)}, {"install", piExtensionInstallSource(piMemoryExtensionName)}, {"install", piExtensionInstallSource(piWorkspaceExtensionName)}}
 	for index, call := range calls {
 		if call.name != "pi" {
 			t.Fatalf("expected pi command, got %q", call.name)
@@ -196,5 +196,28 @@ func TestEnsureManagedPiPackagesUsesManagedPiAgentDir(t *testing.T) {
 		if !strings.Contains(strings.Join(call.cmd.Env, "\n"), config.PiAgentDirEnvKey+"="+expectedAgentDir) {
 			t.Fatalf("expected managed pi env in %v", call.cmd.Env)
 		}
+	}
+}
+
+func TestRemoveManagedAgentRuntimeDoesNotRemovePiExtensions(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	originalExecCommand := execCommand
+	defer func() {
+		execCommand = originalExecCommand
+	}()
+
+	wasCalled := false
+	execCommand = func(name string, args ...string) *exec.Cmd {
+		wasCalled = true
+		return exec.Command(os.Args[0], "-test.run=^$")
+	}
+
+	if err := RemoveManagedAgentRuntime(); err != nil {
+		t.Fatalf("remove managed agent runtime: %v", err)
+	}
+	if wasCalled {
+		t.Fatal("expected removing managed hooks not to remove pi extensions")
 	}
 }
