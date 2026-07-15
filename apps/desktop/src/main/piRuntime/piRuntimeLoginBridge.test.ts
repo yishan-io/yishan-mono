@@ -89,9 +89,7 @@ describe("Pi runtime login callback adapter", () => {
     });
 
     await vi.waitFor(() => {
-      expect(mocks.openExternalUrl).toHaveBeenCalledWith("https://example.com/device", {
-        allowedProtocols: ["https:"],
-      });
+      expect(mocks.openExternalUrl).toHaveBeenCalledWith("https://example.com/device");
       expect(mocks.showInstructions).toHaveBeenCalledWith(
         expect.objectContaining({ message: expect.stringContaining("Enter code: ABCD-1234") }),
       );
@@ -108,9 +106,7 @@ describe("Pi runtime login callback adapter", () => {
     });
 
     await vi.waitFor(() => {
-      expect(mocks.openExternalUrl).toHaveBeenCalledWith("https://example.com/oauth", {
-        allowedProtocols: ["https:"],
-      });
+      expect(mocks.openExternalUrl).toHaveBeenCalledWith("https://example.com/oauth");
       expect(mocks.showInstructions).not.toHaveBeenCalled();
     });
   });

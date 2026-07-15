@@ -106,7 +106,7 @@ async function notifyPiAuthEvent(
 }
 
 async function openPiAuthenticationUrl(url: string): Promise<boolean> {
-  const result = await openExternalUrl(url, { allowedProtocols: ["https:"] });
+  const result = await openExternalUrl(url);
   return result.opened;
 }
 
