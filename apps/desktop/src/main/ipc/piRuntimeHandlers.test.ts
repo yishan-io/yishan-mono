@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HOST_IPC_CHANNELS } from "../ipc";
-import type { PiRuntimeService } from "../piRuntime/piRuntimeService";
+import type { PiProviderConfigService } from "../piRuntime/piProviderConfigService";
 import { registerPiRuntimeIpcHandlers } from "./piRuntimeHandlers";
 
 const mocks = vi.hoisted(() => ({
@@ -17,13 +17,13 @@ vi.mock("electron", () => ({
   },
 }));
 
-function createService(overrides: Partial<PiRuntimeService> = {}): PiRuntimeService {
+function createService(overrides: Partial<PiProviderConfigService> = {}): PiProviderConfigService {
   return {
     getSnapshot: vi.fn(async () => ({ providers: [], models: [] })),
     authenticate: vi.fn(),
     removeCredential: vi.fn(),
     ...overrides,
-  } as unknown as PiRuntimeService;
+  } as unknown as PiProviderConfigService;
 }
 
 function getHandler(channel: string) {

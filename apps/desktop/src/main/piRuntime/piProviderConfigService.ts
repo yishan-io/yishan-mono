@@ -11,7 +11,7 @@ import type {
 } from "../../shared/contracts/piRuntime";
 import { PiRuntimeError, createPiRuntimeCancellationError } from "./piRuntimeErrors";
 
-type PiRuntimeServiceOptions = {
+type PiProviderConfigServiceOptions = {
   agentDir?: string;
   authStorage?: AuthStorage;
   modelRegistry?: ModelRegistry;
@@ -45,13 +45,13 @@ async function loadPiProviderCatalog(): Promise<PiProviderCatalogModule> {
 }
 
 /** Owns Desktop access to Pi authentication storage, provider capabilities, and model snapshots. */
-export class PiRuntimeService {
-  private readonly options: PiRuntimeServiceOptions;
+export class PiProviderConfigService {
+  private readonly options: PiProviderConfigServiceOptions;
   private readonly moduleLoader: PiRuntimeModuleLoader;
   private readonly providerCatalogLoader: PiProviderCatalogLoader;
   private runtimePromise: Promise<PiRuntimeDependencies> | undefined;
 
-  constructor(options: PiRuntimeServiceOptions = {}) {
+  constructor(options: PiProviderConfigServiceOptions = {}) {
     this.options = options;
     this.moduleLoader = options.moduleLoader ?? loadPiRuntimeModule;
     this.providerCatalogLoader = options.providerCatalogLoader ?? loadPiProviderCatalog;

@@ -6,6 +6,7 @@ import {
   parsePiProviderId,
 } from "../../shared/contracts/piRuntime";
 import { HOST_IPC_CHANNELS } from "../ipc";
+import type { PiProviderConfigService } from "../piRuntime/piProviderConfigService";
 import { PiRuntimeAuthenticationCoordinator } from "../piRuntime/piRuntimeAuthenticationCoordinator";
 import {
   PiRuntimeError,
@@ -14,11 +15,10 @@ import {
 } from "../piRuntime/piRuntimeErrors";
 import { createPiRuntimeAuthCallbacks } from "../piRuntime/piRuntimeLoginBridge";
 import { PiRuntimePromptCoordinator } from "../piRuntime/piRuntimePromptCoordinator";
-import type { PiRuntimeService } from "../piRuntime/piRuntimeService";
 
 /** Registers host IPC handlers for Pi provider/model runtime inspection and login. */
 export function registerPiRuntimeIpcHandlers(
-  piRuntimeService: PiRuntimeService,
+  piProviderConfigService: PiProviderConfigService,
   resolveMainWindow: () => BrowserWindow | null,
 ): void {
   const promptCoordinator = new PiRuntimePromptCoordinator();
@@ -26,7 +26,7 @@ export function registerPiRuntimeIpcHandlers(
 
   ipcMain.handle(HOST_IPC_CHANNELS.getPiRuntimeSnapshot, async () => {
     return await runPiRuntimeOperation("Loading provider runtime failed", async () => {
-      return await piRuntimeService.getSnapshot();
+      return await piProviderConfigService.getSnapshot();
     });
   });
 
@@ -43,7 +43,7 @@ export function registerPiRuntimeIpcHandlers(
       const senderId = event.sender.id;
       const signal = authenticationCoordinator.begin(event.sender, input.providerId);
       try {
-        await piRuntimeService.authenticate(
+        await piProviderConfigService.authenticate(
           input.providerId,
           input.method,
           createPiRuntimeAuthCallbacks(
@@ -57,7 +57,7 @@ export function registerPiRuntimeIpcHandlers(
       } finally {
         authenticationCoordinator.finish(senderId, input.providerId);
       }
-      return await refreshAfterCredentialMutation(piRuntimeService);
+      return await refreshAfterCredentialMutation(piProviderConfigService);
     });
   });
 
@@ -93,13 +93,13 @@ export function registerPiRuntimeIpcHandlers(
       if (!providerId) {
         throw createInvalidInputError();
       }
-      await piRuntimeService.removeCredential(providerId);
-      return await refreshAfterCredentialMutation(piRuntimeService);
+      await piProviderConfigService.removeCredential(providerId);
+      return await refreshAfterCredentialMutation(piProviderConfigService);
     });
   });
 }
 
-async function refreshAfterCredentialMutation(service: PiRuntimeService): Promise<PiRuntimeMutationOutcome> {
+async function refreshAfterCredentialMutation(service: PiProviderConfigService): Promise<PiRuntimeMutationOutcome> {
   try {
     return { snapshot: await service.getSnapshot() };
   } catch (error) {

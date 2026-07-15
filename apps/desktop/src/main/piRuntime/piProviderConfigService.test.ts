@@ -2,7 +2,11 @@ import type { AuthLoginCallbacks } from "@earendil-works/pi-ai";
 import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
 import { AuthStorage, ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it, vi } from "vitest";
-import { PiRuntimeService, buildPiRuntimeSnapshot, inferPiRuntimeProviderAuthSource } from "./piRuntimeService";
+import {
+  PiProviderConfigService,
+  buildPiRuntimeSnapshot,
+  inferPiRuntimeProviderAuthSource,
+} from "./piProviderConfigService";
 
 function findProvider(snapshot: ReturnType<typeof buildPiRuntimeSnapshot>, providerId: string) {
   const provider = snapshot.providers.find((entry) => entry.id === providerId);
@@ -13,7 +17,7 @@ function findProvider(snapshot: ReturnType<typeof buildPiRuntimeSnapshot>, provi
   return provider;
 }
 
-describe("PiRuntimeService", () => {
+describe("PiProviderConfigService", () => {
   it("loads the ESM runtime lazily when the first snapshot is requested", async () => {
     const moduleLoader = vi.fn(async () => ({
       AuthStorage,
@@ -21,7 +25,7 @@ describe("PiRuntimeService", () => {
       VERSION: "0.80.6",
       getAgentDir: () => "/tmp/pi-runtime-test",
     }));
-    const service = new PiRuntimeService({
+    const service = new PiProviderConfigService({
       agentDir: "/tmp/pi-runtime-test",
       moduleLoader,
     });
@@ -42,7 +46,7 @@ describe("PiRuntimeService", () => {
         ModelRegistry,
         getAgentDir: () => "/tmp/pi-runtime-test",
       });
-    const service = new PiRuntimeService({
+    const service = new PiProviderConfigService({
       agentDir: "/tmp/pi-runtime-test",
       moduleLoader,
     });
@@ -64,7 +68,7 @@ describe("PiRuntimeService", () => {
       .mockResolvedValueOnce("cf-key")
       .mockResolvedValueOnce("account-id")
       .mockResolvedValueOnce("gateway-id");
-    const service = new PiRuntimeService({
+    const service = new PiProviderConfigService({
       agentDir: "/tmp/pi-runtime-test",
       authStorage,
       modelRegistry,
@@ -88,7 +92,7 @@ describe("PiRuntimeService", () => {
     vi.spyOn(modelRegistry, "refresh").mockImplementation(() => {
       throw new Error("refresh unavailable");
     });
-    const service = new PiRuntimeService({ authStorage, modelRegistry });
+    const service = new PiProviderConfigService({ authStorage, modelRegistry });
 
     await expect(
       service.authenticate("openai", "api_key", {
@@ -102,7 +106,7 @@ describe("PiRuntimeService", () => {
 
   it("rejects empty API-key credentials without writing them", async () => {
     const authStorage = AuthStorage.inMemory();
-    const service = new PiRuntimeService({
+    const service = new PiProviderConfigService({
       agentDir: "/tmp/pi-runtime-test",
       authStorage,
       modelRegistry: ModelRegistry.inMemory(authStorage),
@@ -133,7 +137,7 @@ describe("PiRuntimeService", () => {
       id: "test-browser-oauth",
       auth: { ...anthropicProvider.auth, oauth: { ...anthropicProvider.auth.oauth, login: oauthLogin } },
     };
-    const service = new PiRuntimeService({
+    const service = new PiProviderConfigService({
       agentDir: "/tmp/pi-runtime-test",
       authStorage,
       modelRegistry,
@@ -167,7 +171,7 @@ describe("PiRuntimeService", () => {
       id: "cancelled-oauth",
       auth: { ...anthropicProvider.auth, oauth: { ...anthropicProvider.auth.oauth, login: oauthLogin } },
     };
-    const service = new PiRuntimeService({
+    const service = new PiProviderConfigService({
       authStorage,
       modelRegistry: ModelRegistry.inMemory(authStorage),
       providerCatalogLoader: async () => ({ builtinProviders: () => [provider] }),
@@ -190,7 +194,7 @@ describe("PiRuntimeService", () => {
   it("rejects unknown authentication methods instead of treating them as API keys", async () => {
     const authStorage = AuthStorage.inMemory();
     const prompt = vi.fn(async () => "secret");
-    const service = new PiRuntimeService({
+    const service = new PiProviderConfigService({
       authStorage,
       modelRegistry: ModelRegistry.inMemory(authStorage),
     });
@@ -204,7 +208,7 @@ describe("PiRuntimeService", () => {
 
   it("keeps provider snapshots independent from a Desktop-probed Pi executable version", async () => {
     const authStorage = AuthStorage.inMemory();
-    const service = new PiRuntimeService({
+    const service = new PiProviderConfigService({
       authStorage,
       modelRegistry: ModelRegistry.inMemory(authStorage),
     });
@@ -218,7 +222,7 @@ describe("PiRuntimeService", () => {
     const previousKey = process.env.OPENAI_API_KEY;
     process.env.OPENAI_API_KEY = "sk-environment";
     const authStorage = AuthStorage.inMemory({ openai: { type: "api_key", key: "sk-stored" } });
-    const service = new PiRuntimeService({
+    const service = new PiProviderConfigService({
       agentDir: "/tmp/pi-runtime-test",
       authStorage,
       modelRegistry: ModelRegistry.inMemory(authStorage),
@@ -245,7 +249,7 @@ describe("PiRuntimeService", () => {
     vi.spyOn(modelRegistry, "refresh").mockImplementation(() => {
       throw new Error("refresh unavailable");
     });
-    const service = new PiRuntimeService({ authStorage, modelRegistry });
+    const service = new PiProviderConfigService({ authStorage, modelRegistry });
 
     await expect(service.removeCredential("openai")).resolves.toBeUndefined();
 
