@@ -73,12 +73,13 @@ export type LaunchViewProps = {
 export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) {
   const { t } = useTranslation();
   const customCommandByAgentKind = agentSettingsStore((state) => state.customCommandByAgentKind);
+  const workspace = workspaceStore((state) => state.workspaces.find((item) => item.id === workspaceId));
   const workspaceCreateProgress = workspaceCreateProgressStore((state) => state.progressByWorkspaceId[workspaceId]);
   const { openTab, openWorkspaceFileSearch } = useCommands();
   const workspaces = workspaceStore((state) => state.workspaces);
   const platform = getRendererPlatform();
+  const isPreparingWorkspace = workspace?.status === "provisioning" && Boolean(workspaceCreateProgress);
   const selectedWorkspace = workspaces.find((w) => w.id === workspaceId);
-  const isPreparingWorkspace = selectedWorkspace?.status === "provisioning" && Boolean(workspaceCreateProgress);
 
   const launchActions = [
     {

@@ -333,9 +333,6 @@
       "prompt": {
         "submit": "继续"
       },
-      "version": {
-        "mismatch": "AI Chat 当前运行时版本为 v{{runtimeVersion}}，但提供商设置使用 v{{sdkVersion}}。请先更新 AI Chat，再修改提供商或默认模型。"
-      },
       "providers": {
         "empty": "暂无可用 provider。",
         "switchDialog": {

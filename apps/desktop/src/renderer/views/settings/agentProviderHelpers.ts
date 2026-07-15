@@ -3,9 +3,10 @@ import type {
   PiProviderAuthMethodKind,
   PiRuntimeModelRecord,
   PiRuntimeProviderRecord,
-} from "../../../main/piRuntime/piRuntimeTypes";
+} from "../../../shared/contracts/piRuntime";
 import type { ModelOption } from "../../components/ModelAutocomplete";
 
+/** Status labels rendered for one provider authentication configuration entry. */
 export type AgentProviderStatusKind =
   | "connectedOauth"
   | "connectedStored"
@@ -13,11 +14,13 @@ export type AgentProviderStatusKind =
   | "connectedExternal"
   | "externalSetupRequired";
 
+/** Safe user action available for one provider authentication entry. */
 export type AgentProviderPrimaryAction =
   | { kind: "authenticate"; method: PiProviderAuthMethodKind }
   | { kind: "manageOauth" }
   | { kind: "manageApiKey" };
 
+/** One provider capability rendered as a row in the configuration card. */
 export type AgentProviderConfigEntry = {
   provider: PiRuntimeProviderRecord;
   method: PiProviderAuthMethod;
@@ -90,8 +93,7 @@ export function getAgentProviderConfigEntryAction(
   return { kind: "authenticate", method: entry.method.kind };
 }
 
-/** Maps one provider auth source into one UI status kind. */
-export function getAgentProviderStatusKind(provider: PiRuntimeProviderRecord): AgentProviderStatusKind | undefined {
+function getAgentProviderStatusKind(provider: PiRuntimeProviderRecord): AgentProviderStatusKind | undefined {
   switch (provider.authSource) {
     case "oauth":
       return "connectedOauth";

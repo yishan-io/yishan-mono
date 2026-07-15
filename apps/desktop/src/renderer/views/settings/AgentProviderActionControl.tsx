@@ -6,7 +6,7 @@ import type {
   PiProviderAuthMethod,
   PiProviderAuthMethodKind,
   PiRuntimeProviderRecord,
-} from "../../../main/piRuntime/piRuntimeTypes";
+} from "../../../shared/contracts/piRuntime";
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 import { getAgentProviderConfigEntryAction } from "./agentProviderHelpers";
 
@@ -115,21 +115,17 @@ export function AgentProviderActionControl({
         {t("settings.agentProviders.providers.actions.manage")}
       </Button>
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
-        {action.kind === "manageApiKey" ? (
-          <MenuItem onClick={() => authenticate("api_key")}>
-            {t("settings.agentProviders.providers.actions.replace")}
-          </MenuItem>
-        ) : null}
-        {action.kind === "manageApiKey" ? (
-          <MenuItem
-            onClick={() => {
-              closeMenu();
-              onRemoveCredential(provider.id);
-            }}
-          >
-            {t("settings.agentProviders.providers.actions.remove")}
-          </MenuItem>
-        ) : null}
+        <MenuItem onClick={() => authenticate("api_key")}>
+          {t("settings.agentProviders.providers.actions.replace")}
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            closeMenu();
+            onRemoveCredential(provider.id);
+          }}
+        >
+          {t("settings.agentProviders.providers.actions.remove")}
+        </MenuItem>
       </Menu>
     </>
   );

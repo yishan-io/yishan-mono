@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { PiRuntimeModelRecord, PiRuntimeProviderRecord } from "../../../main/piRuntime/piRuntimeTypes";
+import type { PiRuntimeModelRecord, PiRuntimeProviderRecord } from "../../../shared/contracts/piRuntime";
 import {
   buildAgentProviderConfigEntries,
   buildAvailablePiModelOptionsForProvider,
   buildAvailablePiProviderOptions,
   getAgentProviderConfigEntryAction,
   getAgentProviderConfigEntryStatusKind,
-  getAgentProviderStatusKind,
   isAgentProviderConfiguredButUnavailable,
 } from "./agentProviderHelpers";
 
@@ -92,14 +91,16 @@ describe("agentProviderHelpers", () => {
     ["external", "connectedExternal"],
     ["none", undefined],
   ] as const)("maps %s auth to %s status", (authSource, expectedStatus) => {
-    expect(getAgentProviderStatusKind(createProvider("provider", "Provider", true, authSource))).toBe(expectedStatus);
+    const provider = createProvider("provider", "Provider", true, authSource);
+    const method = { kind: authSource === "oauth" ? ("oauth" as const) : ("api_key" as const), label: "Auth" };
+    expect(getAgentProviderConfigEntryStatusKind({ provider, method })).toBe(expectedStatus);
   });
 
   it("identifies unconfigured ambient providers without making them actionable", () => {
     const method = { kind: "external", label: "AWS credentials" } as const;
     const provider = createProvider("amazon-bedrock", "Amazon Bedrock", false, "none", [method]);
 
-    expect(getAgentProviderStatusKind(provider)).toBe("externalSetupRequired");
+    expect(getAgentProviderConfigEntryStatusKind({ provider, method })).toBe("externalSetupRequired");
     expect(getAgentProviderConfigEntryAction({ provider, method })).toBeUndefined();
   });
 
@@ -120,7 +121,9 @@ describe("agentProviderHelpers", () => {
   it("keeps stored credential status separate from runtime availability", () => {
     const provider = createProvider("azure", "Azure", true, "auth_file", [], false);
 
-    expect(getAgentProviderStatusKind(provider)).toBe("connectedStored");
+    expect(
+      getAgentProviderConfigEntryStatusKind({ provider, method: { kind: "api_key", label: "Azure API key" } }),
+    ).toBe("connectedStored");
     expect(isAgentProviderConfiguredButUnavailable(provider)).toBe(true);
   });
 

@@ -1,13 +1,15 @@
 import type { WorkspaceEntryAppId } from "../shared/contracts/externalApps";
-import type { ExternalClipboardReadOutcome } from "../shared/contracts/rpcRequestTypes";
-import type { NotificationSoundId } from "../shared/notifications/notificationPreferences";
-import type { NotificationDispatchResult, NotificationSoundPreviewResult } from "./notifications/types";
 import type {
   AuthenticatePiProviderInput,
   PiAuthPromptResponseInput,
+  PiRuntimeMutationResult,
+  PiRuntimeResult,
   PiRuntimeSnapshot,
   PiRuntimeSnapshotResult,
-} from "./piRuntime/piRuntimeTypes";
+} from "../shared/contracts/piRuntime";
+import type { ExternalClipboardReadOutcome } from "../shared/contracts/rpcRequestTypes";
+import type { NotificationSoundId } from "../shared/notifications/notificationPreferences";
+import type { NotificationDispatchResult, NotificationSoundPreviewResult } from "./notifications/types";
 
 export type DesktopRpcEventEnvelope = {
   method: string;
@@ -180,11 +182,11 @@ export type DesktopHostBridge = {
   installUpdate: () => Promise<{ ok: true }>;
   getAuthStatus: () => Promise<AuthStatusResult>;
   login: () => Promise<AuthLoginResult>;
-  getPiRuntimeSnapshot: () => Promise<PiRuntimeSnapshot>;
-  authenticatePiProvider: (input: AuthenticatePiProviderInput) => Promise<PiRuntimeSnapshotResult>;
-  cancelPiProviderAuthentication: (providerId: string) => Promise<{ ok: boolean }>;
-  respondPiAuthPrompt: (input: PiAuthPromptResponseInput) => Promise<{ ok: boolean }>;
-  removePiProviderCredential: (providerId: string) => Promise<PiRuntimeSnapshotResult>;
+  getPiRuntimeSnapshot: () => Promise<PiRuntimeSnapshotResult>;
+  authenticatePiProvider: (input: AuthenticatePiProviderInput) => Promise<PiRuntimeMutationResult>;
+  cancelPiProviderAuthentication: (providerId: string) => Promise<PiRuntimeResult<true>>;
+  respondPiAuthPrompt: (input: PiAuthPromptResponseInput) => Promise<PiRuntimeResult<true>>;
+  removePiProviderCredential: (providerId: string) => Promise<PiRuntimeMutationResult>;
   getDaemonInfo: () => Promise<DaemonInfoResult>;
   restartDaemon: () => Promise<DaemonRestartResult>;
   readDaemonLog: () => Promise<DaemonLogResult>;

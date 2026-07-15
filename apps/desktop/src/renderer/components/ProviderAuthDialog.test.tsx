@@ -121,4 +121,41 @@ describe("ProviderAuthDialog", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(respondPiAuthPrompt).not.toHaveBeenCalled();
   });
+
+  it("keeps a newer prompt visible when an older response settles", async () => {
+    const { bridge, emit, respondPiAuthPrompt } = createBridge();
+    let resolveFirstResponse: ((result: { ok: true }) => void) | undefined;
+    respondPiAuthPrompt.mockReturnValueOnce(
+      new Promise<{ ok: true }>((resolve) => {
+        resolveFirstResponse = resolve;
+      }),
+    );
+    render(<ProviderAuthDialog bridge={bridge} />);
+
+    emit({
+      method: "piRuntime.authPrompt",
+      payload: { requestId: "request-old", prompt: { type: "text", message: "Enter account ID" } },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Enter account ID" }), {
+      target: { value: "account-old" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.prompt.submit" }));
+
+    emit({
+      method: "piRuntime.authPrompt",
+      payload: { requestId: "request-new", prompt: { type: "secret", message: "Enter API key" } },
+    });
+    const newInput = screen.getByRole("dialog").querySelector('input[aria-label="Enter API key"]');
+    if (!(newInput instanceof HTMLInputElement)) {
+      throw new Error("Expected the newer provider auth input");
+    }
+    fireEvent.change(newInput, { target: { value: "secret-new" } });
+
+    await act(async () => {
+      resolveFirstResponse?.({ ok: true });
+    });
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(newInput.value).toBe("secret-new");
+  });
 });

@@ -1,16 +1,17 @@
 import type {
   AuthenticatePiProviderInput,
   PiAuthPromptResponseInput,
+  PiRuntimeMutationResult,
   PiRuntimeSnapshot,
-  PiRuntimeSnapshotResult,
-} from "../../main/piRuntime/piRuntimeTypes";
-import { isPiModelPatternAvailable } from "../helpers/agentSettings";
+} from "../../shared/contracts/piRuntime";
+import { type AiChatModelSelection, isAiChatModelSelectionAvailable } from "../helpers/aiChatSettings";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { getDesktopHostBridge } from "../rpc/rpcTransport";
-import { agentSettingsStore } from "../store/settings/agentSettingsStore";
+import { aiChatSettingsStore } from "../store/settings/aiChatSettingsStore";
 import { piRuntimeStore } from "../store/settings/piRuntimeStore";
 
-const INACTIVE_AUTH_PROMPT_MESSAGE = "Authentication prompt is no longer active. Please retry.";
+let nextSnapshotRequestId = 0;
+let nextCredentialRequestId = 0;
 
 /** Recoverable result returned when the renderer responds to an authentication prompt. */
 export type PiAuthPromptCommandResult = { ok: true } | { ok: false; errorMessage: string };
@@ -19,32 +20,38 @@ export type PiAuthPromptCommandResult = { ok: true } | { ok: false; errorMessage
 export async function getPiRuntimeSnapshot(
   loadState: "loading" | "refreshing" = "loading",
 ): Promise<PiRuntimeSnapshot | null> {
-  piRuntimeStore.getState().setLoadState(loadState);
-  piRuntimeStore.getState().setErrorMessage(undefined);
+  const requestId = ++nextSnapshotRequestId;
+  piRuntimeStore.getState().beginLoad(requestId, loadState);
   try {
-    const snapshot = await getDesktopHostBridge().getPiRuntimeSnapshot();
-    applyPiRuntimeSnapshot(snapshot);
-    return snapshot;
+    const result = await getDesktopHostBridge().getPiRuntimeSnapshot();
+    if (!result.ok) {
+      piRuntimeStore.getState().failLoad(requestId, result.error.message);
+      return null;
+    }
+    if (piRuntimeStore.getState().completeLoad(requestId, result.value)) {
+      clearUnavailableDefaultPiModel(result.value);
+    }
+    return result.value;
   } catch (error) {
-    piRuntimeStore.getState().setErrorMessage(getErrorMessage(error));
+    piRuntimeStore.getState().failLoad(requestId, getErrorMessage(error));
     return null;
-  } finally {
-    piRuntimeStore.getState().setLoadState("idle");
   }
 }
 
 /** Starts one desktop-bridged Pi provider authentication flow. */
 export async function authenticatePiProvider(input: AuthenticatePiProviderInput): Promise<PiRuntimeSnapshot | null> {
-  piRuntimeStore.getState().setPendingCredentialAction({ kind: "authenticate", ...input });
-  piRuntimeStore.getState().setErrorMessage(undefined);
+  const requestId = ++nextCredentialRequestId;
+  if (!piRuntimeStore.getState().beginCredentialOperation(requestId, { kind: "authenticate", ...input })) {
+    return null;
+  }
   try {
     const result = await getDesktopHostBridge().authenticatePiProvider(input);
-    return applyPiRuntimeSnapshotResult(result, true);
+    return applyPiRuntimeMutationResult(requestId, result, true);
   } catch (error) {
-    piRuntimeStore.getState().setErrorMessage(getErrorMessage(error));
+    piRuntimeStore.getState().setCredentialOperationError(requestId, getErrorMessage(error));
     return null;
   } finally {
-    piRuntimeStore.getState().setPendingCredentialAction(undefined);
+    piRuntimeStore.getState().finishCredentialOperation(requestId);
   }
 }
 
@@ -52,7 +59,7 @@ export async function authenticatePiProvider(input: AuthenticatePiProviderInput)
 export async function respondPiAuthPrompt(input: PiAuthPromptResponseInput): Promise<PiAuthPromptCommandResult> {
   try {
     const result = await getDesktopHostBridge().respondPiAuthPrompt(input);
-    return result.ok ? { ok: true } : { ok: false, errorMessage: INACTIVE_AUTH_PROMPT_MESSAGE };
+    return result.ok ? { ok: true } : { ok: false, errorMessage: result.error.message };
   } catch (error) {
     return { ok: false, errorMessage: getErrorMessage(error) };
   }
@@ -62,7 +69,11 @@ export async function respondPiAuthPrompt(input: PiAuthPromptResponseInput): Pro
 export async function cancelPiProviderAuthentication(providerId: string): Promise<boolean> {
   try {
     const result = await getDesktopHostBridge().cancelPiProviderAuthentication(providerId);
-    return result.ok;
+    if (!result.ok) {
+      piRuntimeStore.getState().setErrorMessage(result.error.message);
+      return false;
+    }
+    return result.value;
   } catch (error) {
     piRuntimeStore.getState().setErrorMessage(getErrorMessage(error));
     return false;
@@ -71,47 +82,55 @@ export async function cancelPiProviderAuthentication(providerId: string): Promis
 
 /** Removes one stored Pi credential and refreshes source/availability state. */
 export async function removePiProviderCredential(providerId: string): Promise<PiRuntimeSnapshot | null> {
-  piRuntimeStore.getState().setPendingCredentialAction({ kind: "remove", providerId });
-  piRuntimeStore.getState().setErrorMessage(undefined);
+  const requestId = ++nextCredentialRequestId;
+  if (!piRuntimeStore.getState().beginCredentialOperation(requestId, { kind: "remove", providerId })) {
+    return null;
+  }
   try {
     const result = await getDesktopHostBridge().removePiProviderCredential(providerId);
-    return applyPiRuntimeSnapshotResult(result, false);
+    return applyPiRuntimeMutationResult(requestId, result, false);
   } catch (error) {
-    piRuntimeStore.getState().setErrorMessage(getErrorMessage(error));
+    piRuntimeStore.getState().setCredentialOperationError(requestId, getErrorMessage(error));
     return null;
   } finally {
-    piRuntimeStore.getState().setPendingCredentialAction(undefined);
+    piRuntimeStore.getState().finishCredentialOperation(requestId);
   }
 }
 
-function applyPiRuntimeSnapshotResult(
-  result: PiRuntimeSnapshotResult,
+function applyPiRuntimeMutationResult(
+  requestId: number,
+  result: PiRuntimeMutationResult,
   suppressCancellation: boolean,
 ): PiRuntimeSnapshot | null {
   if (!result.ok) {
     if (!suppressCancellation || result.error.code !== "cancelled") {
-      piRuntimeStore.getState().setErrorMessage(result.error.message);
+      piRuntimeStore.getState().setCredentialOperationError(requestId, result.error.message);
     }
     return null;
   }
-  applyPiRuntimeSnapshot(result.snapshot);
-  return result.snapshot;
+  if (result.value.refreshError) {
+    piRuntimeStore.getState().setCredentialOperationError(requestId, result.value.refreshError.message);
+  }
+  if (!result.value.snapshot) {
+    return null;
+  }
+  applyPiRuntimeSnapshot(result.value.snapshot);
+  return result.value.snapshot;
 }
 
 function applyPiRuntimeSnapshot(snapshot: PiRuntimeSnapshot): void {
   piRuntimeStore.getState().setSnapshot(snapshot);
-  const defaultModelPattern = agentSettingsStore.getState().defaultPiModelPattern;
-  if (
-    defaultModelPattern &&
-    !snapshot.modelsLoadError &&
-    snapshot.version?.status !== "mismatch" &&
-    !isPiModelPatternAvailable(snapshot.models, defaultModelPattern)
-  ) {
-    agentSettingsStore.getState().setDefaultPiModelPattern("");
+  clearUnavailableDefaultPiModel(snapshot);
+}
+
+function clearUnavailableDefaultPiModel(snapshot: PiRuntimeSnapshot): void {
+  const defaultModel = aiChatSettingsStore.getState().defaultModel;
+  if (defaultModel && !snapshot.modelsLoadError && !isAiChatModelSelectionAvailable(snapshot.models, defaultModel)) {
+    aiChatSettingsStore.getState().setDefaultModel(undefined);
   }
 }
 
-/** Persists the model used when Desktop AI Chat starts a new Pi session. */
-export function setDefaultPiModelPattern(pattern: string): void {
-  agentSettingsStore.getState().setDefaultPiModelPattern(pattern);
+/** Persists the provider/model used when Desktop AI Chat starts a new session. */
+export function setDefaultAiChatModel(selection: AiChatModelSelection | undefined): void {
+  aiChatSettingsStore.getState().setDefaultModel(selection);
 }

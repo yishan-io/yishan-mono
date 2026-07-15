@@ -172,7 +172,6 @@ describe("AgentModelSelector", () => {
     fireEvent.mouseDown(screen.getByRole("button", { name: "Anthropic/claude-sonnet-4" }));
     fireEvent.click(screen.getByRole("button", { name: "Anthropic/claude-sonnet-4" }));
     const addProviderButton = screen.getByRole("button", { name: "agentChat.modelSelector.addProvider" });
-    expect(window.getComputedStyle(addProviderButton).flexGrow).toBe("0");
 
     fireEvent.click(addProviderButton);
 

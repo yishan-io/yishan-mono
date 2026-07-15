@@ -6,7 +6,6 @@ import {
   type DesktopAgentKind,
   createDefaultAgentInUseByKind,
   isDesktopAgentKind,
-  normalizePiModelPattern,
 } from "../../helpers/agentSettings";
 
 export const AGENT_SETTINGS_STORE_STORAGE_KEY = "yishan-agent-settings-store";
@@ -16,8 +15,6 @@ type AgentSettingsStoreState = {
   defaultAgentKind?: DesktopAgentKind;
   /** User-defined custom launch command per agent. Absent key means "use system default". */
   customCommandByAgentKind: Partial<Record<DesktopAgentKind, string>>;
-  /** Model selection (`provider/model`) used for new Desktop AI Chat sessions. */
-  defaultPiModelPattern?: string;
   setAgentInUse: (agentKind: DesktopAgentKind, inUse: boolean) => void;
   setDefaultAgentKind: (agentKind: DesktopAgentKind | undefined) => void;
   /**
@@ -28,15 +25,12 @@ type AgentSettingsStoreState = {
   setAgentCustomCommand: (agentKind: DesktopAgentKind, command: string) => void;
   /** Clears any custom command override for one agent kind, reverting to the system default. */
   resetAgentCustomCommand: (agentKind: DesktopAgentKind) => void;
-  /** Persists the model pattern used for new Desktop AI Chat sessions. */
-  setDefaultPiModelPattern: (pattern: string) => void;
 };
 
 type AgentSettingsStorePersistedState = {
   inUseByAgentKind: Partial<Record<DesktopAgentKind, boolean>>;
   defaultAgentKind?: DesktopAgentKind;
   customCommandByAgentKind: Partial<Record<DesktopAgentKind, string>>;
-  defaultPiModelPattern?: string;
 };
 
 function normalizeDefaultAgentKind(
@@ -104,7 +98,6 @@ export const agentSettingsStore = create<AgentSettingsStoreState>()(
       inUseByAgentKind: createDefaultAgentInUseByKind(true),
       defaultAgentKind: undefined,
       customCommandByAgentKind: {},
-      defaultPiModelPattern: undefined,
       setAgentInUse: (agentKind, inUse) => {
         set((state) => {
           const nextInUseByAgentKind = {
@@ -150,10 +143,6 @@ export const agentSettingsStore = create<AgentSettingsStoreState>()(
           return { customCommandByAgentKind: next };
         });
       },
-      setDefaultPiModelPattern: (pattern) => {
-        const normalizedPattern = normalizePiModelPattern(pattern);
-        set({ defaultPiModelPattern: normalizedPattern });
-      },
     })),
     {
       name: AGENT_SETTINGS_STORE_STORAGE_KEY,
@@ -162,7 +151,6 @@ export const agentSettingsStore = create<AgentSettingsStoreState>()(
         inUseByAgentKind: state.inUseByAgentKind,
         defaultAgentKind: state.defaultAgentKind,
         customCommandByAgentKind: state.customCommandByAgentKind,
-        defaultPiModelPattern: state.defaultPiModelPattern,
       }),
       merge: (persistedState, currentState) => {
         const persisted =
@@ -171,14 +159,11 @@ export const agentSettingsStore = create<AgentSettingsStoreState>()(
             : undefined;
 
         const normalizedInUseByAgentKind = normalizeInUseByAgentKind(persisted?.inUseByAgentKind);
-        const normalizedModelPattern = normalizePiModelPattern(persisted?.defaultPiModelPattern);
-
         return {
           ...currentState,
           inUseByAgentKind: normalizedInUseByAgentKind,
           defaultAgentKind: normalizeDefaultAgentKind(persisted?.defaultAgentKind, normalizedInUseByAgentKind),
           customCommandByAgentKind: normalizeCustomCommandByAgentKind(persisted?.customCommandByAgentKind),
-          defaultPiModelPattern: normalizedModelPattern,
         };
       },
     },

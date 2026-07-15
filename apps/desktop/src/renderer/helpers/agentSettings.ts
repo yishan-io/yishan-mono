@@ -1,5 +1,4 @@
 import { AGENT_KINDS } from "@yishan-io/core";
-import type { PiRuntimeModelRecord } from "../../main/piRuntime/piRuntimeTypes";
 
 /**
  * The canonical agent kind list for this desktop app.
@@ -155,9 +154,6 @@ export const DEFAULT_AGENT_COMMANDS: Record<DesktopAgentKind, string> = {
 /** Maximum character length enforced on a user-supplied agent command string. */
 export const AGENT_COMMAND_MAX_LENGTH = 2048;
 
-/** Maximum character length persisted for the Yishan-owned default Pi model pattern. */
-export const PI_MODEL_PATTERN_MAX_LENGTH = 512;
-
 /** Returns true when one string is a supported desktop-agent kind. */
 export function isDesktopAgentKind(value: string): value is DesktopAgentKind {
   return SUPPORTED_DESKTOP_AGENT_KINDS.some((agentKind) => agentKind === value);
@@ -206,34 +202,4 @@ export function validateAgentCommand(value: string): string | null {
     return "settings.agents.command.errorTooLong";
   }
   return null;
-}
-
-/** Normalizes the persisted default Pi model pattern, dropping empty or oversized values. */
-export function normalizePiModelPattern(value: string | undefined): string | undefined {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  if (trimmed.length === 0 || trimmed.length > PI_MODEL_PATTERN_MAX_LENGTH) {
-    return undefined;
-  }
-  return trimmed;
-}
-
-/** Extracts a provider ID from one normalized `provider/model` pattern. */
-export function getPiProviderIdFromModelPattern(pattern: string | undefined): string | undefined {
-  const normalizedPattern = normalizePiModelPattern(pattern);
-  const separatorIndex = normalizedPattern?.indexOf("/") ?? -1;
-  return separatorIndex > 0 ? normalizedPattern?.slice(0, separatorIndex) : undefined;
-}
-
-/** Returns true when one saved Pi model pattern still identifies an available model. */
-export function isPiModelPatternAvailable(
-  models: readonly PiRuntimeModelRecord[],
-  pattern: string | undefined,
-): boolean {
-  if (!pattern) {
-    return false;
-  }
-  return models.some((model) => model.available && `${model.providerId}/${model.modelId}` === pattern);
 }

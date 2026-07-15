@@ -9,10 +9,15 @@ import {
   MenuItem,
   TextField,
 } from "@mui/material";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DesktopRpcEventBridge, DesktopRpcEventEnvelope } from "../../main/ipc";
-import type { PiAuthPromptRequestEvent, PiAuthPromptResponseInput } from "../../main/piRuntime/piRuntimeTypes";
+import {
+  type PiAuthPromptRequestEvent,
+  type PiAuthPromptResponseInput,
+  parsePiAuthPromptClosedEventPayload,
+  parsePiAuthPromptRequestEventPayload,
+} from "../../shared/contracts/piRuntime";
 import {
   type PiAuthPromptCommandResult,
   respondPiAuthPrompt as respondPiAuthPromptCommand,
@@ -20,6 +25,7 @@ import {
 import { useDialogRegistration } from "../hooks/useDialogRegistration";
 import { getDesktopBridge } from "../rpc/rpcTransport";
 
+/** Desktop event and command boundary used by the provider authentication dialog. */
 export type ProviderAuthDialogBridge = {
   events: DesktopRpcEventBridge;
   respondPiAuthPrompt: (input: PiAuthPromptResponseInput) => Promise<PiAuthPromptCommandResult>;
@@ -36,15 +42,20 @@ export function ProviderAuthDialog({ bridge: providedBridge }: ProviderAuthDialo
   const events = providedBridge?.events ?? desktopBridge?.events;
   const respondPiAuthPrompt = providedBridge?.respondPiAuthPrompt ?? respondPiAuthPromptCommand;
   const [request, setRequest] = useState<PiAuthPromptRequestEvent>();
+  const activeRequestIdRef = useRef<string | undefined>(undefined);
   const [value, setValue] = useState("");
-  const [isResponding, setIsResponding] = useState(false);
+  const [respondingRequestId, setRespondingRequestId] = useState<string>();
   const [errorMessage, setErrorMessage] = useState<string>();
+  const isResponding = respondingRequestId === request?.requestId;
   useDialogRegistration(Boolean(request));
 
   useEffect(() => {
     return events?.subscribe((event) => {
       const closedRequestId = parsePromptClosedEvent(event);
       if (closedRequestId) {
+        if (activeRequestIdRef.current === closedRequestId) {
+          activeRequestIdRef.current = undefined;
+        }
         setRequest((currentRequest) => (currentRequest?.requestId === closedRequestId ? undefined : currentRequest));
         return;
       }
@@ -52,6 +63,7 @@ export function ProviderAuthDialog({ bridge: providedBridge }: ProviderAuthDialo
       if (!nextRequest) {
         return;
       }
+      activeRequestIdRef.current = nextRequest.requestId;
       setRequest(nextRequest);
       setErrorMessage(undefined);
       setValue(nextRequest.prompt.type === "select" ? (nextRequest.prompt.options[0]?.id ?? "") : "");
@@ -70,21 +82,28 @@ export function ProviderAuthDialog({ bridge: providedBridge }: ProviderAuthDialo
   }
 
   const respond = async (response: PiAuthPromptResponseInput) => {
-    setIsResponding(true);
+    setRespondingRequestId(response.requestId);
     setErrorMessage(undefined);
     try {
       const result = await respondPiAuthPrompt(response);
+      if (activeRequestIdRef.current !== response.requestId) {
+        return;
+      }
       if (result.ok) {
+        activeRequestIdRef.current = undefined;
         setRequest(undefined);
         setValue("");
         return;
       }
       setErrorMessage(result.errorMessage);
     } finally {
-      setIsResponding(false);
+      setRespondingRequestId((currentRequestId) =>
+        currentRequestId === response.requestId ? undefined : currentRequestId,
+      );
     }
   };
   const cancel = () => {
+    // fire-and-forget: dialog state remains responsive while the main process settles cancellation.
     void respond({ requestId: request.requestId, status: "cancelled" });
   };
   const submit = (event: FormEvent) => {
@@ -92,6 +111,7 @@ export function ProviderAuthDialog({ bridge: providedBridge }: ProviderAuthDialo
     if (!canSubmit) {
       return;
     }
+    // fire-and-forget: response errors are rendered by respond without blocking the input handler.
     void respond({ requestId: request.requestId, status: "submitted", value });
   };
 
@@ -152,45 +172,15 @@ export function ProviderAuthDialog({ bridge: providedBridge }: ProviderAuthDialo
 }
 
 function parsePromptRequestEvent(event: DesktopRpcEventEnvelope): PiAuthPromptRequestEvent | undefined {
-  if (event.method !== "piRuntime.authPrompt" || typeof event.payload !== "object" || event.payload === null) {
+  if (event.method !== "piRuntime.authPrompt") {
     return undefined;
   }
-  const requestId = Reflect.get(event.payload, "requestId");
-  const prompt = Reflect.get(event.payload, "prompt");
-  if (typeof requestId !== "string" || !isPromptRequest(prompt)) {
-    return undefined;
-  }
-  return { requestId, prompt };
+  return parsePiAuthPromptRequestEventPayload(event.payload);
 }
 
 function parsePromptClosedEvent(event: DesktopRpcEventEnvelope): string | undefined {
-  if (event.method !== "piRuntime.authPromptClosed" || typeof event.payload !== "object" || event.payload === null) {
+  if (event.method !== "piRuntime.authPromptClosed") {
     return undefined;
   }
-  const requestId = Reflect.get(event.payload, "requestId");
-  return typeof requestId === "string" ? requestId : undefined;
-}
-
-function isPromptRequest(value: unknown): value is PiAuthPromptRequestEvent["prompt"] {
-  if (typeof value !== "object" || value === null || typeof Reflect.get(value, "message") !== "string") {
-    return false;
-  }
-  const type = Reflect.get(value, "type");
-  if (type === "text" || type === "secret") {
-    return true;
-  }
-  if (type !== "select") {
-    return false;
-  }
-  const options = Reflect.get(value, "options");
-  return (
-    Array.isArray(options) &&
-    options.every(
-      (option) =>
-        typeof option === "object" &&
-        option !== null &&
-        typeof Reflect.get(option, "id") === "string" &&
-        typeof Reflect.get(option, "label") === "string",
-    )
-  );
+  return parsePiAuthPromptClosedEventPayload(event.payload);
 }

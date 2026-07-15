@@ -2,7 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
+import { aiChatSettingsStore } from "../../store/settings/aiChatSettingsStore";
 import { piRuntimeStore } from "../../store/settings/piRuntimeStore";
 import { AgentProviderSettingsView } from "./AgentProviderSettingsView";
 
@@ -11,7 +11,7 @@ const mocked = {
   authenticatePiProvider: vi.fn(),
   cancelPiProviderAuthentication: vi.fn(),
   removePiProviderCredential: vi.fn(),
-  setDefaultPiModelPattern: vi.fn(),
+  setDefaultAiChatModel: vi.fn(),
 };
 
 vi.mock("react-i18next", () => ({
@@ -61,21 +61,8 @@ describe("AgentProviderSettingsView", () => {
     mocked.authenticatePiProvider.mockResolvedValue(null);
     mocked.cancelPiProviderAuthentication.mockResolvedValue(true);
     mocked.removePiProviderCredential.mockResolvedValue(null);
-    mocked.setDefaultPiModelPattern.mockImplementation(() => undefined);
-    agentSettingsStore.setState({
-      inUseByAgentKind: {
-        opencode: true,
-        codex: true,
-        claude: true,
-        gemini: true,
-        pi: true,
-        copilot: true,
-        cursor: true,
-      },
-      defaultAgentKind: undefined,
-      customCommandByAgentKind: {},
-      defaultPiModelPattern: undefined,
-    });
+    mocked.setDefaultAiChatModel.mockImplementation(() => undefined);
+    aiChatSettingsStore.setState({ defaultModel: undefined, legacyMigrationCompleted: true });
     piRuntimeStore.setState({
       snapshot: {
         providers: [
@@ -166,9 +153,6 @@ describe("AgentProviderSettingsView", () => {
 
     expect(screen.getByText("settings.agentProviders.title")).toBeTruthy();
     expect(screen.getByTestId("provider-config-card")).toBeTruthy();
-    expect(screen.queryByTestId("provider-config-section-oauth")).toBeNull();
-    expect(screen.queryByTestId("provider-config-section-api_key")).toBeNull();
-    expect(screen.queryByTestId("provider-config-section-external")).toBeNull();
     expect(screen.getByText("OpenAI API key")).toBeTruthy();
     expect(screen.getByText("Anthropic (Claude Pro/Max)")).toBeTruthy();
     expect(screen.getByText("Anthropic API key")).toBeTruthy();
@@ -193,9 +177,6 @@ describe("AgentProviderSettingsView", () => {
     render(<AgentProviderSettingsView />);
 
     expect(screen.getByTestId("provider-config-card")).toBeTruthy();
-    expect(screen.queryByTestId("provider-config-section-oauth")).toBeNull();
-    expect(screen.queryByTestId("provider-config-section-api_key")).toBeNull();
-    expect(screen.queryByTestId("provider-config-section-external")).toBeNull();
   });
 
   it("forwards provider login and refresh actions through commands", async () => {
@@ -280,29 +261,6 @@ describe("AgentProviderSettingsView", () => {
     expect(screen.getByText("settings.agentProviders.providers.badges.configuredUnavailable")).toBeTruthy();
   });
 
-  it("blocks provider mutations and default selection when the installed Pi version is incompatible", () => {
-    const snapshot = piRuntimeStore.getState().snapshot;
-    if (!snapshot) {
-      throw new Error("Expected provider snapshot");
-    }
-    piRuntimeStore.setState({
-      snapshot: {
-        ...snapshot,
-        version: { sdkVersion: "0.80.6", runtimeVersion: "0.80.2", status: "mismatch" },
-      },
-    });
-
-    render(<AgentProviderSettingsView />);
-
-    expect(screen.getByText("settings.agentProviders.version.mismatch")).toBeTruthy();
-    expect(
-      (screen.getByRole("button", { name: "settings.agentProviders.providers.actions.login" }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
-    expect((screen.getByTestId("pi-provider-select") as HTMLSelectElement).disabled).toBe(true);
-    expect((screen.getByTestId("pi-model-select") as HTMLSelectElement).disabled).toBe(true);
-  });
-
   it("keeps provider filtering local and persists only the selected AI Chat model", () => {
     render(<AgentProviderSettingsView />);
 
@@ -319,11 +277,11 @@ describe("AgentProviderSettingsView", () => {
     fireEvent.change(screen.getByTestId("pi-model-select"), {
       target: { value: "openai/gpt-5" },
     });
-    expect(mocked.setDefaultPiModelPattern).toHaveBeenCalledWith("openai/gpt-5");
+    expect(mocked.setDefaultAiChatModel).toHaveBeenCalledWith({ providerId: "openai", modelId: "gpt-5" });
   });
 
   it("saves the selected default Pi model and warns when the saved model becomes unavailable", async () => {
-    agentSettingsStore.setState({ defaultPiModelPattern: "openai/missing-model" });
+    aiChatSettingsStore.setState({ defaultModel: { providerId: "openai", modelId: "missing-model" } });
 
     render(<AgentProviderSettingsView />);
 
@@ -333,6 +291,6 @@ describe("AgentProviderSettingsView", () => {
       target: { value: "openai/gpt-5" },
     });
 
-    expect(mocked.setDefaultPiModelPattern).toHaveBeenCalledWith("openai/gpt-5");
+    expect(mocked.setDefaultAiChatModel).toHaveBeenCalledWith({ providerId: "openai", modelId: "gpt-5" });
   });
 });

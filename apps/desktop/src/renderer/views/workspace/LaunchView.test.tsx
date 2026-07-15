@@ -113,17 +113,4 @@ describe("LaunchView", () => {
     expect(screen.queryByText("You can follow setup progress here while the daemon finishes provisioning.")).toBeNull();
     expect(screen.getByRole("button", { name: "Open terminal" })).toBeTruthy();
   });
-
-  it("does not apply the AI Chat default model to terminal Pi launches", () => {
-    render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={["pi"]} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "tabs.createMenu.pi" }));
-
-    expect(mocks.openTab).toHaveBeenCalledWith(
-      expect.objectContaining({
-        agentKind: "pi",
-        launchCommand: "pi",
-      }),
-    );
-  });
 });

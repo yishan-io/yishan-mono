@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentChatStore } from "../store/agentChatStore";
-import { agentSettingsStore } from "../store/settings/agentSettingsStore";
+import { aiChatSettingsStore } from "../store/settings/aiChatSettingsStore";
 import {
   clearPiSessionHandle,
   ensurePiSession,
@@ -14,7 +14,7 @@ import {
 } from "./agentChatCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
-const initialAgentSettingsStoreState = agentSettingsStore.getState();
+const initialAiChatSettingsStoreState = aiChatSettingsStore.getState();
 
 const mocks = vi.hoisted(() => ({
   start: vi.fn(),
@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   send: vi.fn(),
   listSessions: vi.fn(),
   listActiveSessions: vi.fn(),
+  getPiRuntimeSnapshot: vi.fn(),
 }));
 
 vi.mock("../helpers/generateId", () => ({
@@ -40,18 +41,36 @@ vi.mock("../rpc/rpcTransport", () => ({
       listActiveSessions: mocks.listActiveSessions,
     },
   })),
+  getDesktopHostBridge: vi.fn(() => ({
+    getPiRuntimeSnapshot: mocks.getPiRuntimeSnapshot,
+  })),
 }));
 
 afterEach(() => {
   agentChatStore.setState(initialAgentChatStoreState, true);
-  agentSettingsStore.setState(initialAgentSettingsStoreState, true);
+  aiChatSettingsStore.setState(initialAiChatSettingsStoreState, true);
   vi.clearAllMocks();
 });
 
 describe("agentChatCommands.ensurePiSession", () => {
   it("applies the global default model when starting a new AI Chat session", async () => {
-    agentSettingsStore.setState({
-      defaultPiModelPattern: "openai-codex/gpt-5.5",
+    aiChatSettingsStore.setState({
+      defaultModel: { providerId: "openai-codex", modelId: "gpt-5.5" },
+    });
+    mocks.getPiRuntimeSnapshot.mockResolvedValue({
+      ok: true,
+      value: {
+        providers: [],
+        models: [
+          {
+            providerId: "openai-codex",
+            providerName: "OpenAI Codex",
+            modelId: "gpt-5.5",
+            label: "GPT-5.5",
+            available: true,
+          },
+        ],
+      },
     });
     mocks.start.mockResolvedValue({ sessionId: "generated-session-id" });
 
@@ -70,8 +89,8 @@ describe("agentChatCommands.ensurePiSession", () => {
   });
 
   it("does not override the model when reopening an existing AI Chat session", async () => {
-    agentSettingsStore.setState({
-      defaultPiModelPattern: "openai-codex/gpt-5.5",
+    aiChatSettingsStore.setState({
+      defaultModel: { providerId: "openai-codex", modelId: "gpt-5.5" },
     });
     mocks.start.mockResolvedValue({ sessionId: "history-session-model" });
 
@@ -83,6 +102,53 @@ describe("agentChatCommands.ensurePiSession", () => {
     });
 
     expect(mocks.start).toHaveBeenCalledOnce();
+    expect(mocks.start.mock.calls[0]?.[0]).not.toHaveProperty("model");
+    expect(mocks.getPiRuntimeSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("does not pass or keep a default model that the fresh runtime snapshot marks unavailable", async () => {
+    aiChatSettingsStore.setState({
+      defaultModel: { providerId: "openai-codex", modelId: "missing-model" },
+    });
+    mocks.getPiRuntimeSnapshot.mockResolvedValue({ ok: true, value: { providers: [], models: [] } });
+    mocks.start.mockResolvedValue({ sessionId: "generated-session-id" });
+
+    await ensurePiSession({
+      tabId: "tab-invalid-default-model",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+    });
+
+    expect(mocks.start.mock.calls[0]?.[0]).not.toHaveProperty("model");
+    expect(aiChatSettingsStore.getState().defaultModel).toBeUndefined();
+  });
+
+  it("does not clear a newer default while validating an older selection", async () => {
+    let resolveSnapshot: ((value: { ok: true; value: { providers: []; models: [] } }) => void) | undefined;
+    aiChatSettingsStore.setState({
+      defaultModel: { providerId: "openai-codex", modelId: "old-model" },
+    });
+    mocks.getPiRuntimeSnapshot.mockReturnValue(
+      new Promise<{ ok: true; value: { providers: []; models: [] } }>((resolve) => {
+        resolveSnapshot = resolve;
+      }),
+    );
+    mocks.start.mockResolvedValue({ sessionId: "generated-session-id" });
+
+    const session = ensurePiSession({
+      tabId: "tab-default-model-race",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+    });
+    await vi.waitFor(() => expect(mocks.getPiRuntimeSnapshot).toHaveBeenCalledOnce());
+    aiChatSettingsStore.getState().setDefaultModel({ providerId: "anthropic", modelId: "new-model" });
+    resolveSnapshot?.({ ok: true, value: { providers: [], models: [] } });
+    await session;
+
+    expect(aiChatSettingsStore.getState().defaultModel).toEqual({
+      providerId: "anthropic",
+      modelId: "new-model",
+    });
     expect(mocks.start.mock.calls[0]?.[0]).not.toHaveProperty("model");
   });
 

@@ -1,7 +1,12 @@
+import {
+  type AiChatModelSelection,
+  formatAiChatModelSelection,
+  isAiChatModelSelectionAvailable,
+} from "../helpers/aiChatSettings";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { generateId } from "../helpers/generateId";
 import type * as Rpc from "../rpc/daemonTypes";
-import { getDaemonClient } from "../rpc/rpcTransport";
+import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
 import { agentChatStore } from "../store/agentChatStore";
 import type {
   AgentContentBlock,
@@ -10,7 +15,7 @@ import type {
   AgentQueueState,
   AgentStreamEvent,
 } from "../store/agentChatTypes";
-import { agentSettingsStore } from "../store/settings/agentSettingsStore";
+import { aiChatSettingsStore } from "../store/settings/aiChatSettingsStore";
 import { tabStore } from "../store/tabStore";
 import {
   disposeAgentChatStreamBuffer,
@@ -77,7 +82,8 @@ export async function ensurePiSession(opts: {
   activePiSessions.set(opts.tabId, handle);
 
   const startPiSession = async (): Promise<{ sessionId: string } | { ok: boolean }> => {
-    const defaultModel = requestedSessionId ? undefined : agentSettingsStore.getState().defaultPiModelPattern;
+    const defaultSelection = requestedSessionId ? undefined : aiChatSettingsStore.getState().defaultModel;
+    const defaultModel = defaultSelection ? await resolveAvailableDefaultAiChatModel(defaultSelection) : undefined;
     return await client.pi.start({
       sessionId,
       tabId: opts.tabId,
@@ -124,6 +130,29 @@ export async function ensurePiSession(opts: {
   handle.startPromise = startPromise;
   await startPromise;
   return sessionId;
+}
+
+async function resolveAvailableDefaultAiChatModel(selection: AiChatModelSelection): Promise<string | undefined> {
+  try {
+    const result = await getDesktopHostBridge().getPiRuntimeSnapshot();
+    if (!result.ok) {
+      return undefined;
+    }
+    if (!isAiChatModelSelectionAvailable(result.value.models, selection)) {
+      if (!result.value.modelsLoadError && isCurrentDefaultAiChatModel(selection)) {
+        aiChatSettingsStore.getState().setDefaultModel(undefined);
+      }
+      return undefined;
+    }
+    return formatAiChatModelSelection(selection);
+  } catch {
+    return undefined;
+  }
+}
+
+function isCurrentDefaultAiChatModel(selection: AiChatModelSelection): boolean {
+  const currentSelection = aiChatSettingsStore.getState().defaultModel;
+  return currentSelection?.providerId === selection.providerId && currentSelection.modelId === selection.modelId;
 }
 
 /** Returns the tabId that currently owns the given agent-chat session, if any. */

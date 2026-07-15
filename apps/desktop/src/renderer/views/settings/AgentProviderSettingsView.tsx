@@ -4,9 +4,13 @@ import { useTranslation } from "react-i18next";
 import { LuRefreshCw } from "react-icons/lu";
 import { ModelAutocomplete } from "../../components/ModelAutocomplete";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
-import { getPiProviderIdFromModelPattern, isPiModelPatternAvailable } from "../../helpers/agentSettings";
+import {
+  formatAiChatModelSelection,
+  isAiChatModelSelectionAvailable,
+  parseAiChatModelSelection,
+} from "../../helpers/aiChatSettings";
 import { useCommands } from "../../hooks/useCommands";
-import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
+import { aiChatSettingsStore } from "../../store/settings/aiChatSettingsStore";
 import { piRuntimeStore } from "../../store/settings/piRuntimeStore";
 import { AgentProviderActionControl } from "./AgentProviderActionControl";
 import {
@@ -34,17 +38,18 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
     authenticatePiProvider,
     cancelPiProviderAuthentication,
     removePiProviderCredential,
-    setDefaultPiModelPattern,
+    setDefaultAiChatModel,
   } = useCommands();
   const snapshot = piRuntimeStore((state) => state.snapshot);
   const loadState = piRuntimeStore((state) => state.loadState);
   const errorMessage = piRuntimeStore((state) => state.errorMessage);
   const pendingCredentialAction = piRuntimeStore((state) => state.pendingCredentialAction);
-  const defaultPiModelPattern = agentSettingsStore((state) => state.defaultPiModelPattern);
-  const savedDefaultProviderId = getPiProviderIdFromModelPattern(defaultPiModelPattern);
+  const defaultModel = aiChatSettingsStore((state) => state.defaultModel);
+  const savedDefaultProviderId = defaultModel?.providerId;
   const [selectedProviderId, setSelectedProviderId] = useState(savedDefaultProviderId ?? "");
 
   useEffect(() => {
+    // fire-and-forget: the command owns load and error state for this initial snapshot request.
     void getPiRuntimeSnapshot();
   }, [getPiRuntimeSnapshot]);
 
@@ -83,8 +88,8 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
     [activeSelectedProviderId, snapshot?.models],
   );
   const hasAvailableDefaultPiModel = useMemo(
-    () => isPiModelPatternAvailable(snapshot?.models ?? [], defaultPiModelPattern),
-    [defaultPiModelPattern, snapshot?.models],
+    () => isAiChatModelSelectionAvailable(snapshot?.models ?? [], defaultModel),
+    [defaultModel, snapshot?.models],
   );
 
   useEffect(() => {
@@ -100,7 +105,6 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
   const isLoading = loadState === "loading";
   const isRefreshing = loadState === "refreshing";
   const hasPendingCredentialAction = pendingCredentialAction !== undefined;
-  const hasRuntimeVersionMismatch = snapshot?.version?.status === "mismatch";
 
   return (
     <Box
@@ -122,6 +126,7 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
             size="small"
             variant="text"
             onClick={() => {
+              // fire-and-forget: the command exposes refresh progress and errors through piRuntimeStore.
               void getPiRuntimeSnapshot("refreshing");
             }}
             disabled={isRefreshing}
@@ -135,15 +140,6 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
       <Stack spacing={2}>
         {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
         {snapshot?.modelsLoadError ? <Alert severity="warning">{snapshot.modelsLoadError}</Alert> : null}
-        {hasRuntimeVersionMismatch ? (
-          <Alert severity="error">
-            {t("settings.agentProviders.version.mismatch", {
-              sdkVersion: snapshot.version?.sdkVersion,
-              runtimeVersion: snapshot.version?.runtimeVersion,
-            })}
-          </Alert>
-        ) : null}
-
         {snapshot?.providers.length ? (
           <Box data-testid="provider-config-card">
             <SettingsCard>
@@ -188,15 +184,18 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
                           <AgentProviderActionControl
                             provider={provider}
                             method={method}
-                            disabled={hasPendingCredentialAction || hasRuntimeVersionMismatch}
+                            disabled={hasPendingCredentialAction}
                             pending={isPendingCredentialAction}
                             onAuthenticate={(input) => {
+                              // fire-and-forget: the command owns the credential operation lifecycle.
                               void authenticatePiProvider(input);
                             }}
                             onCancelAuthentication={(providerId) => {
+                              // fire-and-forget: cancellation settlement remains visible through pending state.
                               void cancelPiProviderAuthentication(providerId);
                             }}
                             onRemoveCredential={(providerId) => {
+                              // fire-and-forget: the command owns mutation and refresh error reporting.
                               void removePiProviderCredential(providerId);
                             }}
                           />
@@ -233,15 +232,12 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
                       value={activeSelectedProviderId}
                       onChange={(providerId) => {
                         setSelectedProviderId(providerId);
-                        if (
-                          defaultPiModelPattern &&
-                          getPiProviderIdFromModelPattern(defaultPiModelPattern) !== providerId
-                        ) {
-                          setDefaultPiModelPattern("");
+                        if (defaultModel && defaultModel.providerId !== providerId) {
+                          setDefaultAiChatModel(undefined);
                         }
                       }}
                       loading={isLoading || isRefreshing}
-                      disabled={providerOptions.length === 0 || hasRuntimeVersionMismatch}
+                      disabled={providerOptions.length === 0}
                       placeholder={t("settings.agentProviders.models.providerPlaceholder")}
                       noOptionsText={t("settings.agentProviders.models.providerEmpty")}
                       allowCustomValue={false}
@@ -256,12 +252,16 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
                   <Box sx={{ minWidth: 300, maxWidth: 360 }}>
                     <ModelAutocomplete
                       options={modelOptions}
-                      value={hasAvailableDefaultPiModel ? (defaultPiModelPattern ?? "") : ""}
+                      value={
+                        defaultModel && hasAvailableDefaultPiModel
+                          ? (formatAiChatModelSelection(defaultModel) ?? "")
+                          : ""
+                      }
                       onChange={(pattern) => {
-                        setDefaultPiModelPattern(pattern);
+                        setDefaultAiChatModel(parseAiChatModelSelection(pattern));
                       }}
                       loading={isLoading || isRefreshing}
-                      disabled={!activeSelectedProviderId || modelOptions.length === 0 || hasRuntimeVersionMismatch}
+                      disabled={!activeSelectedProviderId || modelOptions.length === 0}
                       placeholder={t("settings.agentProviders.models.placeholder")}
                       noOptionsText={t("settings.agentProviders.models.empty")}
                       allowCustomValue={false}
@@ -273,8 +273,7 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
           </SettingsCard>
         </Box>
 
-        {(savedDefaultProviderId && !hasAvailableDefaultPiProvider) ||
-        (defaultPiModelPattern && !hasAvailableDefaultPiModel) ? (
+        {(savedDefaultProviderId && !hasAvailableDefaultPiProvider) || (defaultModel && !hasAvailableDefaultPiModel) ? (
           <Alert severity="warning">{t("settings.agentProviders.models.unavailableWarning")}</Alert>
         ) : null}
       </Stack>

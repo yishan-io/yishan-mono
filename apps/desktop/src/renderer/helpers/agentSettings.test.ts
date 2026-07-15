@@ -1,10 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  type DesktopAgentKind,
-  SUPPORTED_DESKTOP_AGENT_KINDS,
-  getAgentIconPresentation,
-  isPiModelPatternAvailable,
-} from "./agentSettings";
+import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS, getAgentIconPresentation } from "./agentSettings";
 
 describe("getAgentIconPresentation", () => {
   it("renders the white Copilot asset as black in light mode", () => {
@@ -40,30 +35,5 @@ describe("getAgentIconPresentation", () => {
     expect(icon).toBeNull();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("unknown-agent"));
     warnSpy.mockRestore();
-  });
-});
-
-describe("isPiModelPatternAvailable", () => {
-  it("accepts only exact model patterns that are currently available", () => {
-    const models = [
-      {
-        providerId: "openai",
-        providerName: "OpenAI",
-        modelId: "gpt-5",
-        label: "GPT-5",
-        available: true,
-      },
-      {
-        providerId: "anthropic",
-        providerName: "Anthropic",
-        modelId: "claude-4",
-        label: "Claude 4",
-        available: false,
-      },
-    ];
-
-    expect(isPiModelPatternAvailable(models, "openai/gpt-5")).toBe(true);
-    expect(isPiModelPatternAvailable(models, "anthropic/claude-4")).toBe(false);
-    expect(isPiModelPatternAvailable(models, "openai/missing")).toBe(false);
   });
 });

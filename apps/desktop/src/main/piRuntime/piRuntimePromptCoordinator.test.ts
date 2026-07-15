@@ -60,6 +60,36 @@ describe("PiRuntimePromptCoordinator", () => {
     await expect(resultPromise).rejects.toThrow("Login cancelled.");
   });
 
+  it("accepts only values offered by a select prompt", async () => {
+    const coordinator = new PiRuntimePromptCoordinator();
+    const { target } = createTarget();
+    const resultPromise = coordinator.request(target, {
+      type: "select",
+      message: "Choose a login method",
+      options: [
+        { id: "browser", label: "Browser" },
+        { id: "device_code", label: "Device code" },
+      ],
+    });
+    const envelope = getSentPromptEnvelope(target);
+
+    expect(
+      coordinator.respond(target.id, {
+        requestId: envelope.payload.requestId,
+        status: "submitted",
+        value: "untrusted-option",
+      }),
+    ).toBe(false);
+    expect(
+      coordinator.respond(target.id, {
+        requestId: envelope.payload.requestId,
+        status: "submitted",
+        value: "browser",
+      }),
+    ).toBe(true);
+    await expect(resultPromise).resolves.toBe("browser");
+  });
+
   it("dismisses a pending renderer prompt when its provider signal is aborted", async () => {
     const coordinator = new PiRuntimePromptCoordinator();
     const { target } = createTarget();

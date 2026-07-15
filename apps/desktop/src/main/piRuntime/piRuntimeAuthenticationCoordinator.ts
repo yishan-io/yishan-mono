@@ -53,6 +53,8 @@ export class PiRuntimeAuthenticationCoordinator {
     }
     active.target.removeListener("destroyed", active.onDestroyed);
     this.activeAuthentication = undefined;
+    // End any prompt or native dialog still observing this authentication after it settles.
+    active.controller.abort();
     return true;
   }
 }

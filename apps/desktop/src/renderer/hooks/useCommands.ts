@@ -69,7 +69,7 @@ import {
   cancelPiProviderAuthentication as cancelPiProviderAuthenticationCommand,
   getPiRuntimeSnapshot as getPiRuntimeSnapshotCommand,
   removePiProviderCredential as removePiProviderCredentialCommand,
-  setDefaultPiModelPattern as setDefaultPiModelPatternCommand,
+  setDefaultAiChatModel as setDefaultAiChatModelCommand,
 } from "../commands/piRuntimeCommands";
 import {
   createProject as createProjectCommand,
@@ -164,7 +164,7 @@ export type Commands = {
   authenticatePiProvider: typeof authenticatePiProviderCommand;
   cancelPiProviderAuthentication: typeof cancelPiProviderAuthenticationCommand;
   removePiProviderCredential: typeof removePiProviderCredentialCommand;
-  setDefaultPiModelPattern: typeof setDefaultPiModelPatternCommand;
+  setDefaultAiChatModel: typeof setDefaultAiChatModelCommand;
   checkGitHubConnectionStatus: typeof checkGitHubConnectionStatusCommand;
   setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
   setLastUsedExternalAppId: typeof setLastUsedExternalAppIdCommand;
@@ -304,7 +304,7 @@ export function useCommands(): Commands {
       authenticatePiProvider: authenticatePiProviderCommand,
       cancelPiProviderAuthentication: cancelPiProviderAuthenticationCommand,
       removePiProviderCredential: removePiProviderCredentialCommand,
-      setDefaultPiModelPattern: setDefaultPiModelPatternCommand,
+      setDefaultAiChatModel: setDefaultAiChatModelCommand,
       checkGitHubConnectionStatus: checkGitHubConnectionStatusCommand,
       setDisplayRepoIds: setDisplayRepoIdsCommand,
       setLastUsedExternalAppId: setLastUsedExternalAppIdCommand,

@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { PiProviderAuthMethod, PiRuntimeProviderRecord } from "../../../main/piRuntime/piRuntimeTypes";
+import type { PiProviderAuthMethod, PiRuntimeProviderRecord } from "../../../shared/contracts/piRuntime";
 import { AgentProviderActionControl } from "./AgentProviderActionControl";
 
 vi.mock("react-i18next", () => ({

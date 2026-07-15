@@ -1,8 +1,9 @@
+import type { PiAuthPromptRequest, PiAuthPromptResponseInput } from "../../shared/contracts/piRuntime";
 import { generateId } from "../../shared/helpers/generateId";
 import { DESKTOP_RPC_IPC_CHANNELS } from "../ipc";
 import { PiRuntimeError, createPiRuntimeCancellationError } from "./piRuntimeErrors";
-import type { PiAuthPromptRequest, PiAuthPromptResponseInput } from "./piRuntimeTypes";
 
+/** Renderer target capable of receiving and owning one Pi authentication prompt. */
 export type PiAuthPromptTarget = {
   id: number;
   isDestroyed: () => boolean;
@@ -67,6 +68,9 @@ export class PiRuntimePromptCoordinator {
     }
 
     const value = response.value.trim();
+    if (pending.prompt.type === "select" && !pending.prompt.options.some((option) => option.id === value)) {
+      return false;
+    }
     if (pending.prompt.type !== "select" && value.length === 0) {
       this.rejectPending(createPiRuntimeCancellationError());
       return true;
@@ -88,8 +92,8 @@ export class PiRuntimePromptCoordinator {
           method: "piRuntime.authPromptClosed",
           payload: { requestId: pending.requestId },
         });
-      } catch (sendError) {
-        console.warn("Failed to close a renderer Pi authentication prompt", sendError);
+      } catch {
+        console.warn("Failed to close a renderer Pi authentication prompt");
       }
     }
     this.clearPending();

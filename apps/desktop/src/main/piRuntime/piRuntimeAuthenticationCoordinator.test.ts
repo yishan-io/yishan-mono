@@ -39,9 +39,10 @@ describe("PiRuntimeAuthenticationCoordinator", () => {
     const coordinator = new PiRuntimeAuthenticationCoordinator();
     const first = createAuthenticationTarget(7);
     const second = createAuthenticationTarget(8);
-    coordinator.begin(first.target, "anthropic");
+    const signal = coordinator.begin(first.target, "anthropic");
 
     expect(coordinator.finish(7, "anthropic")).toBe(true);
+    expect(signal.aborted).toBe(true);
     expect(first.target.removeListener).toHaveBeenCalledOnce();
     expect(coordinator.cancel(7, "anthropic")).toBe(false);
     expect(() => coordinator.begin(second.target, "openai-codex")).not.toThrow();

@@ -1,16 +1,8 @@
-import { homedir } from "node:os";
-import { join } from "node:path";
 import type { AuthLoginCallbacks } from "@earendil-works/pi-ai";
 import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
-import { AuthStorage, ModelRegistry, VERSION } from "@earendil-works/pi-coding-agent";
+import { AuthStorage, ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it, vi } from "vitest";
-import {
-  PiRuntimeService,
-  buildPiRuntimeExecutablePath,
-  buildPiRuntimeSnapshot,
-  getPiRuntimeVersionStatus,
-  inferPiRuntimeProviderAuthSource,
-} from "./piRuntimeService";
+import { PiRuntimeService, buildPiRuntimeSnapshot, inferPiRuntimeProviderAuthSource } from "./piRuntimeService";
 
 function findProvider(snapshot: ReturnType<typeof buildPiRuntimeSnapshot>, providerId: string) {
   const provider = snapshot.providers.find((entry) => entry.id === providerId);
@@ -41,6 +33,29 @@ describe("PiRuntimeService", () => {
     expect(moduleLoader).toHaveBeenCalledOnce();
   });
 
+  it("retries runtime initialization after a transient loader failure", async () => {
+    const moduleLoader = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("temporary loader failure"))
+      .mockResolvedValue({
+        AuthStorage,
+        ModelRegistry,
+        getAgentDir: () => "/tmp/pi-runtime-test",
+      });
+    const service = new PiRuntimeService({
+      agentDir: "/tmp/pi-runtime-test",
+      moduleLoader,
+    });
+
+    await expect(service.getSnapshot()).rejects.toThrow("temporary loader failure");
+    await expect(service.getSnapshot()).resolves.toMatchObject({
+      providers: expect.any(Array),
+      models: expect.any(Array),
+    });
+
+    expect(moduleLoader).toHaveBeenCalledTimes(2);
+  });
+
   it("persists complete provider-scoped API-key credentials", async () => {
     const authStorage = AuthStorage.inMemory();
     const modelRegistry = ModelRegistry.inMemory(authStorage);
@@ -65,6 +80,24 @@ describe("PiRuntimeService", () => {
         CLOUDFLARE_GATEWAY_ID: "gateway-id",
       },
     });
+  });
+
+  it("does not turn a successful credential write into an authentication failure when snapshot refresh is unavailable", async () => {
+    const authStorage = AuthStorage.inMemory();
+    const modelRegistry = ModelRegistry.inMemory(authStorage);
+    vi.spyOn(modelRegistry, "refresh").mockImplementation(() => {
+      throw new Error("refresh unavailable");
+    });
+    const service = new PiRuntimeService({ authStorage, modelRegistry });
+
+    await expect(
+      service.authenticate("openai", "api_key", {
+        prompt: vi.fn(async () => "sk-openai"),
+        notify: vi.fn(),
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(authStorage.get("openai")).toMatchObject({ type: "api_key", key: "sk-openai" });
   });
 
   it("rejects empty API-key credentials without writing them", async () => {
@@ -169,31 +202,16 @@ describe("PiRuntimeService", () => {
     expect(authStorage.get("openai")).toBeUndefined();
   });
 
-  it("reports when the installed Pi runtime differs from the embedded SDK", async () => {
+  it("keeps provider snapshots independent from a Desktop-probed Pi executable version", async () => {
     const authStorage = AuthStorage.inMemory();
     const service = new PiRuntimeService({
       authStorage,
       modelRegistry: ModelRegistry.inMemory(authStorage),
-      runtimeVersionLoader: async () => "0.0.0-test",
     });
 
     const snapshot = await service.getSnapshot();
 
-    expect(snapshot.version).toEqual({ sdkVersion: VERSION, runtimeVersion: "0.0.0-test", status: "mismatch" });
-  });
-
-  it("rechecks the installed Pi version when the runtime snapshot is refreshed", async () => {
-    const authStorage = AuthStorage.inMemory();
-    const runtimeVersionLoader = vi.fn().mockResolvedValueOnce("0.80.2").mockResolvedValueOnce(VERSION);
-    const service = new PiRuntimeService({
-      authStorage,
-      modelRegistry: ModelRegistry.inMemory(authStorage),
-      runtimeVersionLoader,
-    });
-
-    expect((await service.getSnapshot()).version?.status).toBe("mismatch");
-    expect((await service.getSnapshot()).version?.status).toBe("compatible");
-    expect(runtimeVersionLoader).toHaveBeenCalledTimes(2);
+    expect(snapshot).not.toHaveProperty("version");
   });
 
   it("removes only stored credentials and re-resolves environment auth", async () => {
@@ -207,7 +225,8 @@ describe("PiRuntimeService", () => {
     });
 
     try {
-      const snapshot = await service.removeCredential("openai");
+      await service.removeCredential("openai");
+      const snapshot = await service.getSnapshot();
 
       expect(authStorage.get("openai")).toBeUndefined();
       expect(findProvider(snapshot, "openai").authSource).toBe("env");
@@ -219,25 +238,18 @@ describe("PiRuntimeService", () => {
       }
     }
   });
-});
 
-describe("getPiRuntimeVersionStatus", () => {
-  it.each([
-    ["0.80.6", "0.80.6", "compatible"],
-    ["0.80.6", "0.80.2", "mismatch"],
-    ["0.80.6", undefined, "unknown"],
-  ] as const)("maps SDK %s and runtime %s to %s", (sdkVersion, runtimeVersion, expectedStatus) => {
-    expect(getPiRuntimeVersionStatus(sdkVersion, runtimeVersion)).toBe(expectedStatus);
-  });
-});
+  it("does not turn a successful credential removal into a failure when snapshot refresh is unavailable", async () => {
+    const authStorage = AuthStorage.inMemory({ openai: { type: "api_key", key: "sk-stored" } });
+    const modelRegistry = ModelRegistry.inMemory(authStorage);
+    vi.spyOn(modelRegistry, "refresh").mockImplementation(() => {
+      throw new Error("refresh unavailable");
+    });
+    const service = new PiRuntimeService({ authStorage, modelRegistry });
 
-describe("buildPiRuntimeExecutablePath", () => {
-  it("removes every Yishan wrapper directory while preserving real executable directories", () => {
-    const separator = process.platform === "win32" ? ";" : ":";
-    const managedBinDir = join(homedir(), ".yishan", "bin");
-    const pathValue = [managedBinDir, "/opt/homebrew/bin", managedBinDir, "/usr/local/bin"].join(separator);
+    await expect(service.removeCredential("openai")).resolves.toBeUndefined();
 
-    expect(buildPiRuntimeExecutablePath(pathValue)).toBe(["/opt/homebrew/bin", "/usr/local/bin"].join(separator));
+    expect(authStorage.get("openai")).toBeUndefined();
   });
 });
 

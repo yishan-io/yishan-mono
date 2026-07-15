@@ -1,4 +1,4 @@
-import type { PiRuntimeErrorCode, PiRuntimeErrorPayload } from "./piRuntimeTypes";
+import type { PiRuntimeErrorCode, PiRuntimeErrorPayload } from "../../shared/contracts/piRuntime";
 
 const UNKNOWN_OPERATION_MESSAGE = "The provider operation failed. Please try again.";
 
