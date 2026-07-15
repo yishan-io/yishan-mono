@@ -1,10 +1,23 @@
 /** Status of an agent chat session. */
 export type AgentSessionState = "starting" | "running" | "idle" | "error";
 
+/** One summary line exposed by Pi reasoning metadata. */
+export type AgentThinkingSignatureSummary = {
+  type: string;
+  text: string;
+};
+
+/** Optional Pi reasoning metadata attached to a thinking block. */
+export type AgentThinkingSignature = {
+  id?: string;
+  type?: string;
+  summary?: AgentThinkingSignatureSummary[];
+};
+
 /** A content block within an assistant message. Mirrors pi RPC content types. */
 export type AgentContentBlock =
   | { type: "text"; text: string }
-  | { type: "thinking"; thinking: string }
+  | { type: "thinking"; thinking: string; thinkingSignature?: string | AgentThinkingSignature }
   | { type: "toolCall"; id: string; name: string; arguments: Record<string, unknown> };
 
 /** A single message in an agent conversation. */

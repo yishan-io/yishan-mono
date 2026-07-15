@@ -17,15 +17,18 @@ import {
   setAgentThinkingLevel,
   setPiSessionUnsubscribe,
 } from "../../commands/agentChatCommands";
+import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../commands/agentChatSubagentCommands";
 import { renameTab } from "../../commands/tabCommands";
 import { RichComposer } from "../../components/RichComposer";
+import { AgentChatSubagentRow } from "../../components/agent/AgentChatSubagentRow";
 import { AgentMessageList } from "../../components/agent/AgentMessageList";
 import { AgentModelSelector } from "../../components/agent/AgentModelSelector";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { getDaemonClient, subscribeDaemonConnectionStatus } from "../../rpc/rpcTransport";
 import { agentChatStore } from "../../store/agentChatStore";
-import type { AgentMessage, AgentModel, AgentSessionState } from "../../store/agentChatTypes";
+import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../store/agentChatSubagents";
+import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
 import { tabStore } from "../../store/tabStore";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
@@ -51,6 +54,9 @@ type AgentChatTranscriptPaneProps = {
 
 type AgentChatComposerPaneProps = {
   tabId: string;
+  workspaceId: string;
+  cwd: string;
+  paneId?: string;
 };
 
 function AgentChatTranscriptPane({ tabId, cwd, isActive }: AgentChatTranscriptPaneProps) {
@@ -74,7 +80,7 @@ function AgentChatTranscriptPane({ tabId, cwd, isActive }: AgentChatTranscriptPa
 const MemoizedAgentChatTranscriptPane = memo(AgentChatTranscriptPane);
 MemoizedAgentChatTranscriptPane.displayName = "AgentChatTranscriptPane";
 
-function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
+function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatComposerPaneProps) {
   const slashCommands = useAgentChatSlashCommands();
   const agentChatTab = tabStore((state) =>
     state.tabs.find((tab): tab is Extract<(typeof state.tabs)[number], { kind: "agent-chat" }> => {
@@ -88,6 +94,7 @@ function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
   const thinkingLevel = agentChatStore((state) => state.sessionsByTabId[tabId]?.thinkingLevel ?? "medium");
   const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
   const hasStreamingMessage = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]?.streamingMessage));
+  const runningSubagents = agentChatStore((state) => state.sessionsByTabId[tabId]?.runningSubagents ?? []);
   const [draft, setDraft] = useState("");
 
   const handleSubmit = useCallback(
@@ -132,6 +139,64 @@ function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
     await setAgentThinkingLevel({ tabId, sessionId, level: nextLevel });
   }, [sessionId, tabId, thinkingLevel]);
 
+  const handleOpenSubagent = useCallback(
+    async (subagent: RunningSubagentSummary) => {
+      let childSessionId = subagent.childSessionId;
+      let title = subagent.title;
+
+      if (!childSessionId && sessionId) {
+        await fetchAgentMessages({ tabId, sessionId });
+        const refreshedSubagent = findMatchingRunningSubagent(
+          agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [],
+          subagent,
+        );
+        childSessionId = refreshedSubagent?.childSessionId;
+        title = refreshedSubagent?.title ?? title;
+      }
+
+      if (!childSessionId) {
+        return;
+      }
+
+      await openSubagentSessionInRightSplitPane({
+        workspaceId,
+        cwd,
+        parentPaneId: paneId,
+        childSessionId,
+        title,
+      });
+    },
+    [workspaceId, cwd, paneId, sessionId, tabId],
+  );
+
+  const handleCancelSubagent = useCallback(
+    async (subagent: RunningSubagentSummary) => {
+      if (!sessionId) {
+        return;
+      }
+
+      let agentId = subagent.agentId;
+      if (!agentId) {
+        await fetchAgentMessages({ tabId, sessionId });
+        const refreshedSubagent = findMatchingRunningSubagent(
+          agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [],
+          subagent,
+        );
+        agentId = refreshedSubagent?.agentId;
+      }
+
+      if (!agentId) {
+        return;
+      }
+      await cancelSubagentRun({
+        tabId,
+        sessionId,
+        agentId,
+      });
+    },
+    [sessionId, tabId],
+  );
+
   return (
     <Box
       sx={{
@@ -143,6 +208,31 @@ function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
         gap: 0.75,
       }}
     >
+      {runningSubagents.length > 0 ? (
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 0.75,
+            px: 0.5,
+            py: 0.25,
+            borderRadius: 1,
+            bgcolor: "action.hover",
+          }}
+        >
+          <Typography variant="caption" color="text.secondary" sx={{ px: 0.5, fontWeight: 700 }}>
+            Running sub-agents
+          </Typography>
+          {runningSubagents.map((subagent) => (
+            <AgentChatSubagentRow
+              key={subagent.rowId}
+              subagent={subagent}
+              onOpen={handleOpenSubagent}
+              onCancel={handleCancelSubagent}
+            />
+          ))}
+        </Box>
+      ) : null}
       <RichComposer
         placeholder="Type a message…"
         value={draft}
@@ -391,7 +481,7 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
           </Alert>
         </Box>
       ) : null}
-      <MemoizedAgentChatComposerPane tabId={tabId} />
+      <MemoizedAgentChatComposerPane tabId={tabId} workspaceId={workspaceId} cwd={cwd} paneId={paneId} />
     </Box>
   );
 }

@@ -86,6 +86,29 @@ describe("AgentMessage", () => {
     expect(screen.getByText("Thought")).toBeTruthy();
   });
 
+  it("prefers thinking summary metadata when available", () => {
+    render(
+      <AgentMessage
+        message={{
+          id: "assistant-thinking-summary",
+          role: "assistant",
+          content: [
+            {
+              type: "thinking",
+              thinking: "**Inspecting uncommitted code changes**",
+              thinkingSignature: {
+                summary: [{ type: "summary_text", text: "Inspecting uncommitted code changes" }],
+              },
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Inspecting uncommitted code changes")).toBeTruthy();
+    expect(screen.queryByLabelText("Toggle thought details")).toBeNull();
+  });
+
   it("renders skill-injection user messages as a compact skill marker", () => {
     render(
       <AgentMessage

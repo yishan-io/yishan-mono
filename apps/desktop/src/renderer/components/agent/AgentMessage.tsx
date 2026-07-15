@@ -2,7 +2,11 @@ import { Box, Collapse, IconButton, Paper, Typography } from "@mui/material";
 import { useState } from "react";
 import { LuChevronDown, LuChevronUp, LuSparkles } from "react-icons/lu";
 import { parseSkillMessage } from "../../helpers/agentSkillTextHelpers";
-import type { AgentContentBlock, AgentMessage as AgentMessageType } from "../../store/agentChatTypes";
+import type {
+  AgentContentBlock,
+  AgentMessage as AgentMessageType,
+  AgentThinkingSignature,
+} from "../../store/agentChatTypes";
 import { AgentMarkdownContent } from "./AgentMarkdownContent";
 import { AgentToolCallCard } from "./AgentToolCallCard";
 
@@ -118,10 +122,24 @@ export function AgentMessage({
               }
               const key = `${message.id}-thinking-${thinkingBlockCount}`;
               thinkingBlockCount += 1;
-              return <ThinkingBlock key={key} thinking={block.thinking} isStreaming={isStreaming} />;
+              return (
+                <ThinkingBlock
+                  key={key}
+                  thinking={block.thinking}
+                  thinkingSignature={block.thinkingSignature}
+                  isStreaming={isStreaming}
+                />
+              );
             }
             case "toolCall":
-              return <AgentToolCallCard key={block.id} toolCall={block} result={mergedToolResults[block.id] ?? null} />;
+              return (
+                <AgentToolCallCard
+                  key={block.id}
+                  toolCall={block}
+                  result={mergedToolResults[block.id] ?? null}
+                  workspacePath={workspacePath}
+                />
+              );
             default:
               return null;
           }
@@ -157,39 +175,117 @@ export function AgentMessage({
   );
 }
 
-function ThinkingBlock({ thinking, isStreaming }: { thinking: string; isStreaming: boolean }) {
+function ThinkingBlock({
+  thinking,
+  thinkingSignature,
+  isStreaming,
+}: {
+  thinking: string;
+  thinkingSignature?: string | AgentThinkingSignature;
+  isStreaming: boolean;
+}) {
   const [open, setOpen] = useState(false);
+  const summaryText = getThinkingSummaryText(thinkingSignature);
+  const hasExpandableDetails = hasExpandableThinkingDetails(thinking, summaryText);
+  const visibleText = summaryText ?? null;
 
   return (
     <Box sx={{ mb: 0.5 }}>
       <Box
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (hasExpandableDetails) {
+            setOpen(!open);
+          }
+        }}
         sx={{
           display: "flex",
           alignItems: "center",
-          gap: 0.5,
-          cursor: "pointer",
+          gap: 0.75,
+          cursor: hasExpandableDetails ? "pointer" : "default",
           px: 1,
           py: 0.5,
           borderRadius: 1,
           bgcolor: "action.hover",
         }}
       >
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
           {isStreaming ? "Thinking" : "Thought"}
         </Typography>
-        <IconButton size="small" sx={{ ml: "auto", width: 20, height: 20 }}>
-          {open ? <LuChevronUp size={14} /> : <LuChevronDown size={14} />}
-        </IconButton>
+        {visibleText ? (
+          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 0, flex: 1 }}>
+            {visibleText}
+          </Typography>
+        ) : null}
+        {hasExpandableDetails ? (
+          <IconButton size="small" aria-label="Toggle thought details" sx={{ ml: "auto", width: 20, height: 20 }}>
+            {open ? <LuChevronUp size={14} /> : <LuChevronDown size={14} />}
+          </IconButton>
+        ) : null}
       </Box>
-      <Collapse in={open}>
-        <Typography
-          variant="body2"
-          sx={{ whiteSpace: "pre-wrap", px: 1, py: 0.5, color: "text.disabled", fontStyle: "italic" }}
-        >
-          {thinking}
-        </Typography>
-      </Collapse>
+      {hasExpandableDetails ? (
+        <Collapse in={open}>
+          <Typography
+            variant="body2"
+            sx={{ whiteSpace: "pre-wrap", px: 1, py: 0.5, color: "text.disabled", fontStyle: "italic" }}
+          >
+            {thinking}
+          </Typography>
+        </Collapse>
+      ) : null}
     </Box>
   );
+}
+
+function getThinkingSummaryText(thinkingSignature: string | AgentThinkingSignature | undefined): string | null {
+  const parsedSignature = parseThinkingSignature(thinkingSignature);
+  const summaryItems = parsedSignature?.summary;
+  if (!summaryItems || summaryItems.length === 0) {
+    return null;
+  }
+
+  const summaryText = summaryItems
+    .map((summaryItem) => summaryItem.text.trim())
+    .filter((text) => text.length > 0)
+    .join(" ")
+    .trim();
+  return summaryText.length > 0 ? summaryText : null;
+}
+
+function parseThinkingSignature(
+  thinkingSignature: string | AgentThinkingSignature | undefined,
+): AgentThinkingSignature | null {
+  if (!thinkingSignature) {
+    return null;
+  }
+
+  if (typeof thinkingSignature === "string") {
+    try {
+      const parsedSignature = JSON.parse(thinkingSignature) as AgentThinkingSignature;
+      return typeof parsedSignature === "object" && parsedSignature !== null ? parsedSignature : null;
+    } catch {
+      return null;
+    }
+  }
+
+  return thinkingSignature;
+}
+
+function hasExpandableThinkingDetails(thinking: string, summaryText: string | null): boolean {
+  const normalizedThinking = normalizeThinkingComparisonText(thinking);
+  if (!normalizedThinking) {
+    return false;
+  }
+
+  if (!summaryText) {
+    return true;
+  }
+
+  return normalizedThinking !== normalizeThinkingComparisonText(summaryText);
+}
+
+function normalizeThinkingComparisonText(value: string): string {
+  return value
+    .replace(/[*_`#>\-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }

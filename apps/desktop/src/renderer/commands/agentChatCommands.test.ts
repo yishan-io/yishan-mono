@@ -2,6 +2,8 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentChatStore } from "../store/agentChatStore";
+import { splitPaneStore } from "../store/splitPaneStore";
+import { tabStore } from "../store/tabStore";
 import {
   clearPiSessionHandle,
   ensurePiSession,
@@ -11,8 +13,11 @@ import {
   setPiSessionUnsubscribe,
   stopPiSession,
 } from "./agentChatCommands";
+import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "./agentChatSubagentCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
+const initialTabStoreState = tabStore.getState();
+const initialSplitPaneStoreState = splitPaneStore.getState();
 
 const mocks = vi.hoisted(() => ({
   start: vi.fn(),
@@ -42,6 +47,8 @@ vi.mock("../rpc/rpcTransport", () => ({
 
 afterEach(() => {
   agentChatStore.setState(initialAgentChatStoreState, true);
+  tabStore.setState(initialTabStoreState, true);
+  splitPaneStore.setState(initialSplitPaneStoreState, true);
   vi.clearAllMocks();
 });
 
@@ -239,7 +246,232 @@ describe("agentChatCommands.ensurePiSession", () => {
   });
 });
 
+describe("agentChatCommands.subagent helpers", () => {
+  it("opens a child session in a new right split pane beside the parent tab", async () => {
+    tabStore.setState(
+      {
+        ...tabStore.getState(),
+        tabs: [
+          {
+            id: "parent-tab",
+            workspaceId: "workspace-1",
+            title: "Parent Chat",
+            pinned: false,
+            kind: "agent-chat",
+            data: { cwd: "/tmp/project", sessionId: "parent-session" },
+          },
+        ],
+        selectedTabId: "parent-tab",
+        selectedTabIdByWorkspaceId: { "workspace-1": "parent-tab" },
+      },
+      true,
+    );
+    splitPaneStore.getState().registerTabInPane("workspace-1", "parent-tab", "root-pane");
+
+    await openSubagentSessionInRightSplitPane({
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      parentPaneId: "root-pane",
+      childSessionId: "child-session-1",
+      title: "Builder — implement row",
+    });
+
+    const childTab = tabStore
+      .getState()
+      .tabs.find((tab) => tab.kind === "agent-chat" && tab.data.sessionId === "child-session-1");
+    expect(childTab).toBeTruthy();
+    expect(tabStore.getState().selectedTabId).toBe(childTab?.id);
+
+    const panes = splitPaneStore.getState().getAllPanes("workspace-1");
+    expect(panes).toHaveLength(2);
+    expect(panes.some((pane) => pane.id === "root-pane" && pane.tabIds.includes("parent-tab"))).toBe(true);
+    expect(panes.some((pane) => childTab && pane.tabIds.includes(childTab.id))).toBe(true);
+  });
+
+  it("sends a direct /agent-stop prompt without optimistic streaming state updates", async () => {
+    agentChatStore.getState().initSession("parent-tab", "parent-session");
+
+    await cancelSubagentRun({
+      tabId: "parent-tab",
+      sessionId: "parent-session",
+      agentId: "agent-1",
+    });
+
+    expect(mocks.send).toHaveBeenCalledWith({
+      sessionId: "parent-session",
+      command: {
+        type: "prompt",
+        message: "/agent-stop agent-1",
+        streamingBehavior: undefined,
+      },
+    });
+    expect(agentChatStore.getState().sessionsByTabId["parent-tab"]?.streamingMessage).toBeNull();
+  });
+
+  it("uses steer behavior when cancelling while the parent session is running", async () => {
+    agentChatStore.getState().initSession("parent-tab-running", "parent-session-running");
+    agentChatStore.getState().setSessionState("parent-tab-running", "running");
+
+    await cancelSubagentRun({
+      tabId: "parent-tab-running",
+      sessionId: "parent-session-running",
+      agentId: "agent-running",
+    });
+
+    expect(mocks.send).toHaveBeenCalledWith({
+      sessionId: "parent-session-running",
+      command: {
+        type: "prompt",
+        message: "/agent-stop agent-running",
+        streamingBehavior: "steer",
+      },
+    });
+  });
+});
+
 describe("agentChatCommands.handleAgentPiEvent", () => {
+  it("derives running subagents from full transcript history keyed by child session id", () => {
+    agentChatStore.getState().initSession("tab-subagents-history", "session-subagents-history");
+
+    handleAgentPiEvent({
+      sessionId: "session-subagents-history",
+      tabId: "tab-subagents-history",
+      workspaceId: "workspace-1",
+      event: {
+        type: "response",
+        command: "get_messages",
+        success: true,
+        data: {
+          messages: [
+            {
+              id: "subagent-start-1",
+              role: "custom",
+              customType: "pi-subagent-child",
+              display: false,
+              content: "",
+              details: {
+                event: "started",
+                agentId: "agent-1",
+                agentName: "Explore",
+                title: "Explore — inspect auth state",
+                summary: "inspect auth state",
+                childSessionId: "child-session-1",
+              },
+            },
+            {
+              id: "subagent-complete-1",
+              role: "custom",
+              customType: "pi-subagent-child",
+              display: false,
+              content: "",
+              details: {
+                event: "completed",
+                agentId: "agent-1",
+                agentName: "Explore",
+                title: "Explore — inspect auth state",
+                summary: "inspect auth state",
+                childSessionId: "child-session-1",
+                status: "completed",
+              },
+            },
+            {
+              id: "subagent-start-2",
+              role: "custom",
+              customType: "pi-subagent-child",
+              display: false,
+              content: "",
+              details: {
+                event: "started",
+                agentId: "agent-2",
+                agentName: "Reviewer",
+                title: "Reviewer — inspect auth state",
+                summary: "inspect auth state",
+                childSessionId: "child-session-2",
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-subagents-history"]?.runningSubagents).toEqual([
+      {
+        rowId: "child-session-2",
+        agentId: "agent-2",
+        agentName: "Reviewer",
+        childSessionId: "child-session-2",
+        promptSummary: "inspect auth state",
+        title: "Reviewer — inspect auth state",
+      },
+    ]);
+  });
+
+  it("removes a running subagent row when a matching completed event arrives", () => {
+    agentChatStore.getState().initSession("tab-subagents-live", "session-subagents-live");
+
+    handleAgentPiEvent({
+      sessionId: "session-subagents-live",
+      tabId: "tab-subagents-live",
+      workspaceId: "workspace-1",
+      event: {
+        type: "message_end",
+        message: {
+          id: "subagent-start-live",
+          role: "custom",
+          customType: "pi-subagent-child",
+          display: false,
+          content: "",
+          details: {
+            event: "started",
+            agentId: "agent-live",
+            agentName: "Builder",
+            title: "Builder — implement UI row",
+            summary: "implement UI row",
+            childSessionId: "child-session-live",
+          },
+        },
+      },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-subagents-live"]?.runningSubagents).toEqual([
+      {
+        rowId: "child-session-live",
+        agentId: "agent-live",
+        agentName: "Builder",
+        childSessionId: "child-session-live",
+        promptSummary: "implement UI row",
+        title: "Builder — implement UI row",
+      },
+    ]);
+
+    handleAgentPiEvent({
+      sessionId: "session-subagents-live",
+      tabId: "tab-subagents-live",
+      workspaceId: "workspace-1",
+      event: {
+        type: "message_end",
+        message: {
+          id: "subagent-complete-live",
+          role: "custom",
+          customType: "pi-subagent-child",
+          display: false,
+          content: "",
+          details: {
+            event: "completed",
+            agentId: "agent-live",
+            agentName: "Builder",
+            title: "Builder — implement UI row",
+            summary: "implement UI row",
+            childSessionId: "child-session-live",
+            status: "completed",
+          },
+        },
+      },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-subagents-live"]?.runningSubagents).toEqual([]);
+  });
+
   it("stores assistant turn errors separately from transcript content", () => {
     agentChatStore.getState().initSession("tab-message-error", "session-message-error");
 

@@ -1,9 +1,17 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentContentBlock, AgentMessage } from "../../store/agentChatTypes";
 import { AgentToolCallCard } from "./AgentToolCallCard";
+
+const { openTabMock } = vi.hoisted(() => ({
+  openTabMock: vi.fn(),
+}));
+
+vi.mock("../../commands/tabCommands", () => ({
+  openTab: openTabMock,
+}));
 
 const { getSingularPatchMock, parseDiffFromFileMock } = vi.hoisted(() => ({
   getSingularPatchMock: vi.fn(() => ({
@@ -55,6 +63,7 @@ afterEach(() => {
   cleanup();
   getSingularPatchMock.mockClear();
   parseDiffFromFileMock.mockClear();
+  openTabMock.mockClear();
 });
 
 function buildDiffResult(toolName: "edit" | "write") {
@@ -251,6 +260,125 @@ describe("AgentToolCallCard", () => {
     expect(diff.textContent).toContain("src/example.ts");
     expect(diff.getAttribute("data-disable-file-header")).toBe("true");
     expect(getSingularPatchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders agent tool calls with prompt and response tabs instead of raw arguments", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-agent",
+      name: "Agent",
+      arguments: {
+        agent: "code-reviewer",
+        prompt:
+          "Review the code quality of the services directory in this TypeScript project. Focus on API, architecture, data, transport, execution, events, tests, docs, and TypeScript patterns.",
+      },
+    };
+
+    const result = {
+      id: "result-agent",
+      role: "toolResult",
+      toolCallId: "tool-agent",
+      toolName: "Agent",
+      content: "### Assessment\n\nReady to merge: with fixes",
+      details: {
+        status: "completed",
+        mode: "foreground",
+      },
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+    expect(screen.getByText("code-reviewer")).toBeTruthy();
+    expect(screen.getByText("completed")).toBeTruthy();
+    expect(screen.queryByText("arguments")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("agent-tool-summary"));
+
+    expect(screen.getByRole("tab", { name: "Prompt" }).getAttribute("aria-selected")).toBe("false");
+    expect(screen.getByRole("tab", { name: "Response" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByTestId("agent-tool-response")).toBeTruthy();
+    expect(screen.getByText(/Ready to merge: with fixes/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Prompt" }));
+
+    const promptSection = screen.getByTestId("agent-tool-prompt");
+    expect(within(promptSection).getByText(/Review the code quality of the services directory/)).toBeTruthy();
+  });
+
+  it("keeps child agent feedback folded under a response tab when the child session is available", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-agent-hidden-result",
+      name: "Agent",
+      arguments: {
+        agent: "code-reviewer",
+        prompt: "Review this change and return concise findings.",
+      },
+    };
+
+    const result = {
+      id: "result-agent-hidden-result",
+      role: "toolResult",
+      toolCallId: "tool-agent-hidden-result",
+      toolName: "Agent",
+      content: "### Issues\n\n- Important: something to fix",
+      details: {
+        status: "completed",
+        sessionId: "child-session-1",
+        sessionPath: "/tmp/child-session.jsonl",
+      },
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+    fireEvent.click(screen.getByTestId("agent-tool-summary"));
+
+    expect(screen.getByRole("tab", { name: "Response" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByText(/Important: something to fix/)).toBeTruthy();
+    expect(screen.queryByText("output")).toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Prompt" }));
+    expect(screen.getByTestId("agent-tool-prompt")).toBeTruthy();
+  });
+
+  it("renders compact grep matches and opens files from result rows", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-grep",
+      name: "grep",
+      arguments: {
+        pattern: "EnsureManagedAgentRuntime\\(",
+        path: "apps/cli/internal/daemon/process.go",
+        context: 2,
+        limit: 20,
+      },
+    };
+
+    const result = {
+      id: "result-grep",
+      role: "toolResult",
+      toolCallId: "tool-grep",
+      toolName: "grep",
+      content:
+        "process.go-334- \t\t_ = os.Unsetenv(agentsetup.RemoteHostPolicyEnvKey)\nprocess.go:336: \tagentsetup.EnsureManagedAgentRuntime(usesRemoteHostPolicy(dr.handler.runtime))\nprocess.go-337- \treturn nil",
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} workspacePath="/tmp/project" />);
+
+    expect(screen.getByText("EnsureManagedAgentRuntime\\(")).toBeTruthy();
+    expect(screen.getByText("process.go")).toBeTruthy();
+
+    fireEvent.click(screen.getByText("EnsureManagedAgentRuntime\\("));
+
+    const matchButton = screen.getByRole("button", {
+      name: /process.go:336: agentsetup.EnsureManagedAgentRuntime/,
+    });
+    fireEvent.click(matchButton);
+
+    expect(openTabMock).toHaveBeenCalledWith({
+      kind: "file",
+      path: "/tmp/project/apps/cli/internal/daemon/process.go",
+    });
   });
 
   it("renders a synthetic new-file diff for write tool results without patch metadata", () => {

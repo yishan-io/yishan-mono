@@ -46,6 +46,8 @@ function shouldMergeToolResult(message: AgentMessageType, previous: DisplayMessa
       message.toolName === "read" ||
       message.toolName === "edit" ||
       message.toolName === "write" ||
+      message.toolName === "grep" ||
+      message.toolName === "Agent" ||
       message.toolName === "memory_search" ||
       message.toolName === "memory_store") &&
     hasToolCall(previous.message, message.toolCallId)
