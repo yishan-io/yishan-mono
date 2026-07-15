@@ -26,7 +26,7 @@ const bridge: DesktopBridge = {
     installUpdate: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.installUpdate),
     getAuthStatus: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getAuthStatus),
     login: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.login),
-    getPiRuntimeSnapshot: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getPiRuntimeSnapshot),
+    getPiProviderConfigSnapshot: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getPiProviderConfigSnapshot),
     authenticatePiProvider: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.authenticatePiProvider, input),
     cancelPiProviderAuthentication: (providerId: string) =>
       ipcRenderer.invoke(HOST_IPC_CHANNELS.cancelPiProviderAuthentication, providerId),

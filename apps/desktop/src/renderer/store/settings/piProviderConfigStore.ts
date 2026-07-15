@@ -1,33 +1,33 @@
 import { create } from "zustand";
-import type { PiProviderAuthMethodKind, PiRuntimeSnapshot } from "../../../shared/contracts/piRuntime";
+import type { PiProviderAuthMethodKind, PiProviderConfigSnapshot } from "../../../shared/contracts/piProviderConfig";
 
 /** Renderer loading state for Pi provider/model snapshots. */
-export type PiRuntimeLoadState = "idle" | "loading" | "refreshing";
+export type PiProviderConfigLoadState = "idle" | "loading" | "refreshing";
 
 /** Credential mutation currently blocking another provider action. */
-export type PiRuntimePendingCredentialAction =
+export type PiProviderConfigPendingCredentialAction =
   | { kind: "authenticate"; providerId: string; method: PiProviderAuthMethodKind }
   | { kind: "remove"; providerId: string };
 
-type PiRuntimeStoreState = {
-  snapshot: PiRuntimeSnapshot | null;
-  loadState: PiRuntimeLoadState;
+type PiProviderConfigStoreState = {
+  snapshot: PiProviderConfigSnapshot | null;
+  loadState: PiProviderConfigLoadState;
   activeLoadRequestId?: number;
   errorMessage?: string;
-  pendingCredentialAction?: PiRuntimePendingCredentialAction;
+  pendingCredentialAction?: PiProviderConfigPendingCredentialAction;
   activeCredentialRequestId?: number;
-  setSnapshot: (snapshot: PiRuntimeSnapshot) => void;
-  beginLoad: (requestId: number, loadState: Exclude<PiRuntimeLoadState, "idle">) => void;
-  completeLoad: (requestId: number, snapshot: PiRuntimeSnapshot) => boolean;
+  setSnapshot: (snapshot: PiProviderConfigSnapshot) => void;
+  beginLoad: (requestId: number, loadState: Exclude<PiProviderConfigLoadState, "idle">) => void;
+  completeLoad: (requestId: number, snapshot: PiProviderConfigSnapshot) => boolean;
   failLoad: (requestId: number, errorMessage: string) => boolean;
   setErrorMessage: (errorMessage?: string) => void;
-  beginCredentialOperation: (requestId: number, action: PiRuntimePendingCredentialAction) => boolean;
+  beginCredentialOperation: (requestId: number, action: PiProviderConfigPendingCredentialAction) => boolean;
   setCredentialOperationError: (requestId: number, errorMessage?: string) => boolean;
   finishCredentialOperation: (requestId: number) => boolean;
 };
 
-/** Stores non-persisted Pi provider/model runtime state for the Agent connections UI. */
-export const piRuntimeStore = create<PiRuntimeStoreState>((set, get) => ({
+/** Stores non-persisted provider/model configuration state for the Desktop AI Chat settings UI. */
+export const piProviderConfigStore = create<PiProviderConfigStoreState>((set, get) => ({
   snapshot: null,
   loadState: "idle",
   activeLoadRequestId: undefined,

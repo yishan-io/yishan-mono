@@ -4,11 +4,11 @@ import { AuthStorage, ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it, vi } from "vitest";
 import {
   PiProviderConfigService,
-  buildPiRuntimeSnapshot,
-  inferPiRuntimeProviderAuthSource,
+  buildPiProviderConfigSnapshot,
+  inferPiProviderAuthSource,
 } from "./piProviderConfigService";
 
-function findProvider(snapshot: ReturnType<typeof buildPiRuntimeSnapshot>, providerId: string) {
+function findProvider(snapshot: ReturnType<typeof buildPiProviderConfigSnapshot>, providerId: string) {
   const provider = snapshot.providers.find((entry) => entry.id === providerId);
   expect(provider).toBeDefined();
   if (!provider) {
@@ -257,10 +257,10 @@ describe("PiProviderConfigService", () => {
   });
 });
 
-describe("inferPiRuntimeProviderAuthSource", () => {
+describe("inferPiProviderAuthSource", () => {
   it("prefers oauth credentials when present", () => {
     expect(
-      inferPiRuntimeProviderAuthSource(
+      inferPiProviderAuthSource(
         { type: "oauth", access: "a", refresh: "r", expires: Date.now() + 1_000 },
         { configured: true, source: "stored" },
       ),
@@ -268,23 +268,21 @@ describe("inferPiRuntimeProviderAuthSource", () => {
   });
 
   it("maps stored API keys to auth_file", () => {
-    expect(
-      inferPiRuntimeProviderAuthSource({ type: "api_key", key: "sk-test" }, { configured: true, source: "stored" }),
-    ).toBe("auth_file");
+    expect(inferPiProviderAuthSource({ type: "api_key", key: "sk-test" }, { configured: true, source: "stored" })).toBe(
+      "auth_file",
+    );
   });
 
   it("maps environment auth to env", () => {
-    expect(inferPiRuntimeProviderAuthSource(undefined, { configured: true, source: "environment" })).toBe("env");
+    expect(inferPiProviderAuthSource(undefined, { configured: true, source: "environment" })).toBe("env");
   });
 
   it("maps command/key-backed models.json auth to external", () => {
-    expect(inferPiRuntimeProviderAuthSource(undefined, { configured: true, source: "models_json_command" })).toBe(
-      "external",
-    );
+    expect(inferPiProviderAuthSource(undefined, { configured: true, source: "models_json_command" })).toBe("external");
   });
 });
 
-describe("buildPiRuntimeSnapshot", () => {
+describe("buildPiProviderConfigSnapshot", () => {
   it("builds provider inventory and marks available models from configured auth", () => {
     const authStorage = AuthStorage.inMemory({
       openai: { type: "api_key", key: "sk-openai" },
@@ -292,7 +290,7 @@ describe("buildPiRuntimeSnapshot", () => {
     });
     const modelRegistry = ModelRegistry.inMemory(authStorage);
 
-    const snapshot = buildPiRuntimeSnapshot(authStorage, modelRegistry, builtinProviders());
+    const snapshot = buildPiProviderConfigSnapshot(authStorage, modelRegistry, builtinProviders());
     const openAiProvider = snapshot.providers.find((provider) => provider.id === "openai");
     const anthropicProvider = snapshot.providers.find((provider) => provider.id === "anthropic");
     const openAiModel = snapshot.models.find((model) => model.providerId === "openai");
@@ -321,7 +319,7 @@ describe("buildPiRuntimeSnapshot", () => {
     const authStorage = AuthStorage.inMemory();
     const modelRegistry = ModelRegistry.inMemory(authStorage);
 
-    const snapshot = buildPiRuntimeSnapshot(authStorage, modelRegistry, builtinProviders());
+    const snapshot = buildPiProviderConfigSnapshot(authStorage, modelRegistry, builtinProviders());
     const codexProvider = snapshot.providers.find((provider) => provider.id === "openai-codex");
 
     expect(codexProvider).toMatchObject({
@@ -337,7 +335,7 @@ describe("buildPiRuntimeSnapshot", () => {
     const authStorage = AuthStorage.inMemory();
     const modelRegistry = ModelRegistry.inMemory(authStorage);
 
-    const snapshot = buildPiRuntimeSnapshot(authStorage, modelRegistry, builtinProviders());
+    const snapshot = buildPiProviderConfigSnapshot(authStorage, modelRegistry, builtinProviders());
 
     expect(findProvider(snapshot, "cloudflare-ai-gateway").authMethods).toEqual([
       { kind: "api_key", label: "Cloudflare API key" },

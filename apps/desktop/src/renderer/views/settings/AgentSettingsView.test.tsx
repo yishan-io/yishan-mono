@@ -8,9 +8,9 @@ vi.mock("./CLIToolsSettingsView", () => ({
   CLIToolsSettingsView: () => <div data-testid="cli-tools-settings-view" />,
 }));
 
-vi.mock("./AgentProviderSettingsView", () => ({
-  AgentProviderSettingsView: ({ focusRequested }: { focusRequested?: boolean }) => (
-    <div data-testid="agent-provider-settings-view" data-focus-requested={focusRequested ? "true" : "false"} />
+vi.mock("./AiChatProviderSettingsSection", () => ({
+  AiChatProviderSettingsSection: ({ focusRequested }: { focusRequested?: boolean }) => (
+    <div data-testid="ai-chat-provider-settings-section" data-focus-requested={focusRequested ? "true" : "false"} />
   ),
 }));
 
@@ -23,14 +23,14 @@ describe("AgentSettingsView", () => {
     render(<AgentSettingsView />);
 
     const cliToolsView = screen.getByTestId("cli-tools-settings-view");
-    const providerView = screen.getByTestId("agent-provider-settings-view");
+    const providerView = screen.getByTestId("ai-chat-provider-settings-section");
 
     expect(cliToolsView.parentElement).toBe(providerView.parentElement);
   });
 
   it("forwards provider focus requests to the provider settings view", () => {
-    render(<AgentSettingsView focusAgentProviders />);
+    render(<AgentSettingsView focusAiChatProviders />);
 
-    expect(screen.getByTestId("agent-provider-settings-view").getAttribute("data-focus-requested")).toBe("true");
+    expect(screen.getByTestId("ai-chat-provider-settings-section").getAttribute("data-focus-requested")).toBe("true");
   });
 });

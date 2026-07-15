@@ -2,14 +2,14 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { PiProviderAuthMethod, PiRuntimeProviderRecord } from "../../../shared/contracts/piRuntime";
-import { AgentProviderActionControl } from "./AgentProviderActionControl";
+import type { PiProviderAuthMethod, PiProviderRecord } from "../../../shared/contracts/piProviderConfig";
+import { AiChatProviderActionControl } from "./AiChatProviderActionControl";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-function createProvider(overrides: Partial<PiRuntimeProviderRecord>): PiRuntimeProviderRecord {
+function createProvider(overrides: Partial<PiProviderRecord>): PiProviderRecord {
   return {
     id: "provider",
     name: "Provider",
@@ -21,17 +21,12 @@ function createProvider(overrides: Partial<PiRuntimeProviderRecord>): PiRuntimeP
   };
 }
 
-function renderControl(
-  provider: PiRuntimeProviderRecord,
-  method: PiProviderAuthMethod,
-  disabled = false,
-  pending = false,
-) {
+function renderControl(provider: PiProviderRecord, method: PiProviderAuthMethod, disabled = false, pending = false) {
   const onAuthenticate = vi.fn();
   const onCancelAuthentication = vi.fn();
   const onRemoveCredential = vi.fn();
   render(
-    <AgentProviderActionControl
+    <AiChatProviderActionControl
       provider={provider}
       method={method}
       disabled={disabled}
@@ -44,7 +39,7 @@ function renderControl(
   return { onAuthenticate, onCancelAuthentication, onRemoveCredential };
 }
 
-describe("AgentProviderActionControl", () => {
+describe("AiChatProviderActionControl", () => {
   afterEach(cleanup);
 
   it("starts the only OAuth method directly", () => {
@@ -52,7 +47,7 @@ describe("AgentProviderActionControl", () => {
     const provider = createProvider({ authMethods: [method] });
     const { onAuthenticate } = renderControl(provider, method);
 
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.providers.actions.login" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.providers.actions.login" }));
 
     expect(onAuthenticate).toHaveBeenCalledWith({ providerId: "provider", method: "oauth" });
   });
@@ -62,7 +57,7 @@ describe("AgentProviderActionControl", () => {
     const provider = createProvider({ authMethods: [method] });
     const { onAuthenticate } = renderControl(provider, method);
 
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.providers.actions.setApiKey" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.providers.actions.setApiKey" }));
 
     expect(onAuthenticate).toHaveBeenCalledWith({ providerId: "provider", method: "api_key" });
   });
@@ -76,7 +71,7 @@ describe("AgentProviderActionControl", () => {
     });
     const { onAuthenticate } = renderControl(provider, { kind: "api_key", label: "Provider API key" });
 
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.providers.actions.setApiKey" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.providers.actions.setApiKey" }));
 
     expect(onAuthenticate).toHaveBeenCalledWith({ providerId: "provider", method: "api_key" });
   });
@@ -93,12 +88,12 @@ describe("AgentProviderActionControl", () => {
     });
     const { onAuthenticate } = renderControl(provider, { kind: "api_key", label: "Provider API key" });
 
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.providers.actions.setApiKey" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.providers.actions.setApiKey" }));
 
     expect(onAuthenticate).not.toHaveBeenCalled();
-    expect(screen.getByText("settings.agentProviders.providers.switchDialog.title")).toBeTruthy();
+    expect(screen.getByText("settings.aiChatProviders.providers.switchDialog.title")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.providers.switchDialog.confirm" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.providers.switchDialog.confirm" }));
     expect(onAuthenticate).toHaveBeenCalledWith({ providerId: "provider", method: "api_key" });
   });
 
@@ -112,8 +107,8 @@ describe("AgentProviderActionControl", () => {
     });
     const { onRemoveCredential } = renderControl(provider, method);
 
-    expect(screen.queryByRole("button", { name: "settings.agentProviders.providers.actions.manage" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.providers.actions.logout" }));
+    expect(screen.queryByRole("button", { name: "settings.aiChatProviders.providers.actions.manage" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.providers.actions.logout" }));
 
     expect(onRemoveCredential).toHaveBeenCalledWith("provider");
     expect(screen.queryByRole("menu")).toBeNull();
@@ -124,12 +119,12 @@ describe("AgentProviderActionControl", () => {
     const method = { kind: "api_key", label: "Provider API key" } as const;
     const { onAuthenticate, onRemoveCredential } = renderControl(provider, method);
 
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.providers.actions.manage" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "settings.agentProviders.providers.actions.replace" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.providers.actions.manage" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "settings.aiChatProviders.providers.actions.replace" }));
     expect(onAuthenticate).toHaveBeenCalledWith({ providerId: "provider", method: "api_key" });
 
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.providers.actions.manage" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "settings.agentProviders.providers.actions.remove" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.providers.actions.manage" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "settings.aiChatProviders.providers.actions.remove" }));
     expect(onRemoveCredential).toHaveBeenCalledWith("provider");
   });
 
@@ -154,10 +149,10 @@ describe("AgentProviderActionControl", () => {
     });
     const { onAuthenticate } = renderControl(provider, { kind: "oauth", label: "Subscription" });
 
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.providers.actions.login" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.providers.actions.login" }));
 
     expect(onAuthenticate).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.providers.switchDialog.confirm" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.providers.switchDialog.confirm" }));
     expect(onAuthenticate).toHaveBeenCalledWith({ providerId: "provider", method: "oauth" });
   });
 
@@ -175,7 +170,7 @@ describe("AgentProviderActionControl", () => {
     const { onCancelAuthentication } = renderControl(provider, method, true, true);
 
     const cancelButton = screen.getByRole("button", {
-      name: "settings.agentProviders.providers.actions.cancel",
+      name: "settings.aiChatProviders.providers.actions.cancel",
     }) as HTMLButtonElement;
     expect(cancelButton.disabled).toBe(false);
 

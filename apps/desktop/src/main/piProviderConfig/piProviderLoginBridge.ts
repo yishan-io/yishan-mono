@@ -1,6 +1,6 @@
 import type { AuthLoginCallbacks, AuthPrompt } from "@earendil-works/pi-ai";
 import { BrowserWindow, dialog } from "electron";
-import type { PiAuthPromptRequest } from "../../shared/contracts/piRuntime";
+import type { PiAuthPromptRequest } from "../../shared/contracts/piProviderConfig";
 import { getErrorMessage } from "../../shared/helpers/errorHelpers";
 import { openExternalUrl } from "../integrations/externalAppLauncher";
 
@@ -8,7 +8,7 @@ import { openExternalUrl } from "../integrations/externalAppLauncher";
 export type PiAuthPromptRequester = (prompt: PiAuthPromptRequest, signal?: AbortSignal) => Promise<string>;
 
 /** Adapts Pi AI authentication callbacks to browser-only OAuth and renderer-owned credential prompts. */
-export function createPiRuntimeAuthCallbacks(
+export function createPiProviderAuthCallbacks(
   window: BrowserWindow | null | undefined,
   requestPrompt: PiAuthPromptRequester,
   authenticationSignal?: AbortSignal,

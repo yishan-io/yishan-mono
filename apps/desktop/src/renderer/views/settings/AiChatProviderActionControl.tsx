@@ -5,13 +5,13 @@ import type {
   AuthenticatePiProviderInput,
   PiProviderAuthMethod,
   PiProviderAuthMethodKind,
-  PiRuntimeProviderRecord,
-} from "../../../shared/contracts/piRuntime";
+  PiProviderRecord,
+} from "../../../shared/contracts/piProviderConfig";
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
-import { getAgentProviderConfigEntryAction } from "./agentProviderHelpers";
+import { getAiChatProviderConfigEntryAction } from "./aiChatProviderHelpers";
 
-type AgentProviderActionControlProps = {
-  provider: PiRuntimeProviderRecord;
+type AiChatProviderActionControlProps = {
+  provider: PiProviderRecord;
   method: PiProviderAuthMethod;
   disabled: boolean;
   pending: boolean;
@@ -21,7 +21,7 @@ type AgentProviderActionControlProps = {
 };
 
 /** Renders source-safe provider actions without owning runtime I/O. */
-export function AgentProviderActionControl({
+export function AiChatProviderActionControl({
   provider,
   method,
   disabled,
@@ -29,11 +29,11 @@ export function AgentProviderActionControl({
   onAuthenticate,
   onCancelAuthentication,
   onRemoveCredential,
-}: AgentProviderActionControlProps) {
+}: AiChatProviderActionControlProps) {
   const { t } = useTranslation();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [isSwitchDialogOpen, setIsSwitchDialogOpen] = useState(false);
-  const action = getAgentProviderConfigEntryAction({ provider, method });
+  const action = getAiChatProviderConfigEntryAction({ provider, method });
 
   if (!action) {
     return null;
@@ -47,7 +47,7 @@ export function AgentProviderActionControl({
         onClick={() => onCancelAuthentication(provider.id)}
         startIcon={<CircularProgress size={14} />}
       >
-        {t("settings.agentProviders.providers.actions.cancel")}
+        {t("settings.aiChatProviders.providers.actions.cancel")}
       </Button>
     );
   }
@@ -77,13 +77,13 @@ export function AgentProviderActionControl({
           }}
           startIcon={pending ? <CircularProgress size={14} /> : undefined}
         >
-          {t(`settings.agentProviders.providers.actions.${actionKey}`)}
+          {t(`settings.aiChatProviders.providers.actions.${actionKey}`)}
         </Button>
         <ConfirmationDialog
           open={isSwitchDialogOpen}
-          title={t("settings.agentProviders.providers.switchDialog.title")}
-          description={t("settings.agentProviders.providers.switchDialog.description", { provider: provider.name })}
-          confirmLabel={t("settings.agentProviders.providers.switchDialog.confirm")}
+          title={t("settings.aiChatProviders.providers.switchDialog.title")}
+          description={t("settings.aiChatProviders.providers.switchDialog.description", { provider: provider.name })}
+          confirmLabel={t("settings.aiChatProviders.providers.switchDialog.confirm")}
           cancelLabel={t("common.actions.cancel")}
           onCancel={() => setIsSwitchDialogOpen(false)}
           onConfirm={() => {
@@ -98,7 +98,7 @@ export function AgentProviderActionControl({
   if (action.kind === "manageOauth") {
     return (
       <Button size="small" variant="outlined" disabled={disabled} onClick={() => onRemoveCredential(provider.id)}>
-        {t("settings.agentProviders.providers.actions.logout")}
+        {t("settings.aiChatProviders.providers.actions.logout")}
       </Button>
     );
   }
@@ -112,11 +112,11 @@ export function AgentProviderActionControl({
         onClick={openMenu}
         startIcon={pending ? <CircularProgress size={14} /> : undefined}
       >
-        {t("settings.agentProviders.providers.actions.manage")}
+        {t("settings.aiChatProviders.providers.actions.manage")}
       </Button>
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
         <MenuItem onClick={() => authenticate("api_key")}>
-          {t("settings.agentProviders.providers.actions.replace")}
+          {t("settings.aiChatProviders.providers.actions.replace")}
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -124,7 +124,7 @@ export function AgentProviderActionControl({
             onRemoveCredential(provider.id);
           }}
         >
-          {t("settings.agentProviders.providers.actions.remove")}
+          {t("settings.aiChatProviders.providers.actions.remove")}
         </MenuItem>
       </Menu>
     </>

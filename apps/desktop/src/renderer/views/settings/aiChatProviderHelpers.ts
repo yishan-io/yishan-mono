@@ -1,13 +1,13 @@
 import type {
   PiProviderAuthMethod,
   PiProviderAuthMethodKind,
-  PiRuntimeModelRecord,
-  PiRuntimeProviderRecord,
-} from "../../../shared/contracts/piRuntime";
+  PiProviderModelRecord,
+  PiProviderRecord,
+} from "../../../shared/contracts/piProviderConfig";
 import type { ModelOption } from "../../components/ModelAutocomplete";
 
 /** Status labels rendered for one provider authentication configuration entry. */
-export type AgentProviderStatusKind =
+export type AiChatProviderStatusKind =
   | "connectedOauth"
   | "connectedStored"
   | "connectedEnv"
@@ -15,14 +15,14 @@ export type AgentProviderStatusKind =
   | "externalSetupRequired";
 
 /** Safe user action available for one provider authentication entry. */
-export type AgentProviderPrimaryAction =
+export type AiChatProviderPrimaryAction =
   | { kind: "authenticate"; method: PiProviderAuthMethodKind }
   | { kind: "manageOauth" }
   | { kind: "manageApiKey" };
 
 /** One provider capability rendered as a row in the configuration card. */
-export type AgentProviderConfigEntry = {
-  provider: PiRuntimeProviderRecord;
+export type AiChatProviderConfigEntry = {
+  provider: PiProviderRecord;
   method: PiProviderAuthMethod;
 };
 
@@ -33,10 +33,8 @@ const PROVIDER_METHOD_ORDER: Record<PiProviderAuthMethod["kind"], number> = {
 };
 
 /** Builds one flat provider configuration list ordered by Pi-derived method type. */
-export function buildAgentProviderConfigEntries(
-  providers: readonly PiRuntimeProviderRecord[],
-): AgentProviderConfigEntry[] {
-  const entries: AgentProviderConfigEntry[] = [];
+export function buildAiChatProviderConfigEntries(providers: readonly PiProviderRecord[]): AiChatProviderConfigEntry[] {
+  const entries: AiChatProviderConfigEntry[] = [];
   for (const provider of providers) {
     const methods: readonly PiProviderAuthMethod[] =
       provider.authMethods.length > 0 ? provider.authMethods : [{ kind: "external", label: provider.name }];
@@ -47,13 +45,13 @@ export function buildAgentProviderConfigEntries(
   return entries.sort((left, right) => {
     const methodDifference = PROVIDER_METHOD_ORDER[left.method.kind] - PROVIDER_METHOD_ORDER[right.method.kind];
     const configuredDifference =
-      Number(isAgentProviderConfigEntryConfigured(right)) - Number(isAgentProviderConfigEntryConfigured(left));
+      Number(isAiChatProviderConfigEntryConfigured(right)) - Number(isAiChatProviderConfigEntryConfigured(left));
     return methodDifference || configuredDifference || left.method.label.localeCompare(right.method.label);
   });
 }
 
 /** Returns whether the provider's active credential source configures this specific method. */
-export function isAgentProviderConfigEntryConfigured(entry: AgentProviderConfigEntry): boolean {
+export function isAiChatProviderConfigEntryConfigured(entry: AiChatProviderConfigEntry): boolean {
   switch (entry.provider.authSource) {
     case "oauth":
       return entry.method.kind === "oauth";
@@ -68,23 +66,23 @@ export function isAgentProviderConfigEntryConfigured(entry: AgentProviderConfigE
 }
 
 /** Maps one method entry to the status shown for that configuration option. */
-export function getAgentProviderConfigEntryStatusKind(
-  entry: AgentProviderConfigEntry,
-): AgentProviderStatusKind | undefined {
-  if (isAgentProviderConfigEntryConfigured(entry)) {
-    return getAgentProviderStatusKind(entry.provider);
+export function getAiChatProviderConfigEntryStatusKind(
+  entry: AiChatProviderConfigEntry,
+): AiChatProviderStatusKind | undefined {
+  if (isAiChatProviderConfigEntryConfigured(entry)) {
+    return getAiChatProviderStatusKind(entry.provider);
   }
   return entry.method.kind === "external" ? "externalSetupRequired" : undefined;
 }
 
 /** Resolves the safe action for one method entry rather than for the provider as a whole. */
-export function getAgentProviderConfigEntryAction(
-  entry: AgentProviderConfigEntry,
-): AgentProviderPrimaryAction | undefined {
+export function getAiChatProviderConfigEntryAction(
+  entry: AiChatProviderConfigEntry,
+): AiChatProviderPrimaryAction | undefined {
   if (entry.method.kind === "external") {
     return undefined;
   }
-  if (isAgentProviderConfigEntryConfigured(entry)) {
+  if (isAiChatProviderConfigEntryConfigured(entry)) {
     if (entry.provider.authSource === "env" || entry.provider.authSource === "external") {
       return undefined;
     }
@@ -93,7 +91,7 @@ export function getAgentProviderConfigEntryAction(
   return { kind: "authenticate", method: entry.method.kind };
 }
 
-function getAgentProviderStatusKind(provider: PiRuntimeProviderRecord): AgentProviderStatusKind | undefined {
+function getAiChatProviderStatusKind(provider: PiProviderRecord): AiChatProviderStatusKind | undefined {
   switch (provider.authSource) {
     case "oauth":
       return "connectedOauth";
@@ -109,12 +107,12 @@ function getAgentProviderStatusKind(provider: PiRuntimeProviderRecord): AgentPro
 }
 
 /** Flags configured providers whose refreshed model registry has no usable model. */
-export function isAgentProviderConfiguredButUnavailable(provider: PiRuntimeProviderRecord): boolean {
+export function isAiChatProviderConfiguredButUnavailable(provider: PiProviderRecord): boolean {
   return provider.hasAuth && !provider.available;
 }
 
 /** Builds one sorted provider list from providers that currently expose at least one available model. */
-export function buildAvailablePiProviderOptions(models: readonly PiRuntimeModelRecord[]): ModelOption[] {
+export function buildAvailableAiChatProviderOptions(models: readonly PiProviderModelRecord[]): ModelOption[] {
   const providersById = new Map<string, ModelOption>();
   for (const model of models) {
     if (model.available && !providersById.has(model.providerId)) {
@@ -125,8 +123,8 @@ export function buildAvailablePiProviderOptions(models: readonly PiRuntimeModelR
 }
 
 /** Builds one sorted model list for the selected provider from currently available models only. */
-export function buildAvailablePiModelOptionsForProvider(
-  models: readonly PiRuntimeModelRecord[],
+export function buildAvailableAiChatModelOptionsForProvider(
+  models: readonly PiProviderModelRecord[],
   providerId: string | undefined,
 ): ModelOption[] {
   if (!providerId) {

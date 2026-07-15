@@ -1,4 +1,4 @@
-import type { PiRuntimeModelRecord } from "../../shared/contracts/piRuntime";
+import type { PiProviderModelRecord } from "../../shared/contracts/piProviderConfig";
 
 /** Maximum serialized length for one Desktop AI Chat provider/model selection. */
 export const AI_CHAT_MODEL_PATTERN_MAX_LENGTH = 512;
@@ -49,7 +49,7 @@ export function formatAiChatModelSelection(selection: AiChatModelSelection): str
 
 /** Returns true when the current runtime exposes the selected model as available. */
 export function isAiChatModelSelectionAvailable(
-  models: readonly PiRuntimeModelRecord[],
+  models: readonly PiProviderModelRecord[],
   selection: AiChatModelSelection | undefined,
 ): boolean {
   if (!selection) {

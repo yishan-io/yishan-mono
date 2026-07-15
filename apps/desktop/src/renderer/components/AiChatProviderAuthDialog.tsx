@@ -17,26 +17,26 @@ import {
   type PiAuthPromptResponseInput,
   parsePiAuthPromptClosedEventPayload,
   parsePiAuthPromptRequestEventPayload,
-} from "../../shared/contracts/piRuntime";
+} from "../../shared/contracts/piProviderConfig";
 import {
   type PiAuthPromptCommandResult,
   respondPiAuthPrompt as respondPiAuthPromptCommand,
-} from "../commands/piRuntimeCommands";
+} from "../commands/piProviderConfigCommands";
 import { useDialogRegistration } from "../hooks/useDialogRegistration";
 import { getDesktopBridge } from "../rpc/rpcTransport";
 
 /** Desktop event and command boundary used by the provider authentication dialog. */
-export type ProviderAuthDialogBridge = {
+export type AiChatProviderAuthDialogBridge = {
   events: DesktopRpcEventBridge;
   respondPiAuthPrompt: (input: PiAuthPromptResponseInput) => Promise<PiAuthPromptCommandResult>;
 };
 
-type ProviderAuthDialogProps = {
-  bridge?: ProviderAuthDialogBridge;
+type AiChatProviderAuthDialogProps = {
+  bridge?: AiChatProviderAuthDialogBridge;
 };
 
 /** Renders Pi-owned authentication prompts with the active desktop MUI theme. */
-export function ProviderAuthDialog({ bridge: providedBridge }: ProviderAuthDialogProps) {
+export function AiChatProviderAuthDialog({ bridge: providedBridge }: AiChatProviderAuthDialogProps) {
   const { t } = useTranslation();
   const desktopBridge = providedBridge ? undefined : getDesktopBridge();
   const events = providedBridge?.events ?? desktopBridge?.events;
@@ -163,7 +163,7 @@ export function ProviderAuthDialog({ bridge: providedBridge }: ProviderAuthDialo
             {t("common.actions.cancel")}
           </Button>
           <Button type="submit" variant="contained" disabled={!canSubmit || isResponding}>
-            {t("settings.agentProviders.prompt.submit")}
+            {t("settings.aiChatProviders.prompt.submit")}
           </Button>
         </DialogActions>
       </Box>

@@ -1,26 +1,26 @@
 import { describe, expect, it } from "vitest";
-import type { PiRuntimeModelRecord, PiRuntimeProviderRecord } from "../../../shared/contracts/piRuntime";
+import type { PiProviderModelRecord, PiProviderRecord } from "../../../shared/contracts/piProviderConfig";
 import {
-  buildAgentProviderConfigEntries,
-  buildAvailablePiModelOptionsForProvider,
-  buildAvailablePiProviderOptions,
-  getAgentProviderConfigEntryAction,
-  getAgentProviderConfigEntryStatusKind,
-  isAgentProviderConfiguredButUnavailable,
-} from "./agentProviderHelpers";
+  buildAiChatProviderConfigEntries,
+  buildAvailableAiChatModelOptionsForProvider,
+  buildAvailableAiChatProviderOptions,
+  getAiChatProviderConfigEntryAction,
+  getAiChatProviderConfigEntryStatusKind,
+  isAiChatProviderConfiguredButUnavailable,
+} from "./aiChatProviderHelpers";
 
 function createProvider(
   id: string,
   name: string,
   hasAuth: boolean,
-  authSource: PiRuntimeProviderRecord["authSource"],
-  authMethods: PiRuntimeProviderRecord["authMethods"] = [],
+  authSource: PiProviderRecord["authSource"],
+  authMethods: PiProviderRecord["authMethods"] = [],
   available = hasAuth,
-): PiRuntimeProviderRecord {
+): PiProviderRecord {
   return { id, name, hasAuth, available, authSource, authMethods };
 }
 
-const MODELS: PiRuntimeModelRecord[] = [
+const MODELS: PiProviderModelRecord[] = [
   {
     providerId: "zeta",
     providerName: "Zeta",
@@ -44,7 +44,7 @@ const MODELS: PiRuntimeModelRecord[] = [
   },
 ];
 
-describe("agentProviderHelpers", () => {
+describe("aiChatProviderHelpers", () => {
   it("builds one flat provider list ordered by Pi-derived configuration type", () => {
     const anthropic = createProvider("anthropic", "Anthropic", true, "oauth", [
       { kind: "oauth", label: "Anthropic (Claude Pro/Max)" },
@@ -54,7 +54,7 @@ describe("agentProviderHelpers", () => {
       { kind: "external", label: "AWS credentials" },
     ]);
 
-    const entries = buildAgentProviderConfigEntries([bedrock, anthropic]);
+    const entries = buildAiChatProviderConfigEntries([bedrock, anthropic]);
 
     expect(entries.map((entry) => entry.method.label)).toEqual([
       "Anthropic (Claude Pro/Max)",
@@ -68,17 +68,17 @@ describe("agentProviderHelpers", () => {
       { kind: "oauth", label: "Anthropic (Claude Pro/Max)" },
       { kind: "api_key", label: "Anthropic API key" },
     ]);
-    const entries = buildAgentProviderConfigEntries([provider]);
+    const entries = buildAiChatProviderConfigEntries([provider]);
     const oauthEntry = entries[0];
     const apiKeyEntry = entries[1];
     if (!oauthEntry || !apiKeyEntry) {
       throw new Error("Expected OAuth and API-key configuration entries");
     }
 
-    expect(getAgentProviderConfigEntryStatusKind(oauthEntry)).toBe("connectedOauth");
-    expect(getAgentProviderConfigEntryAction(oauthEntry)).toEqual({ kind: "manageOauth" });
-    expect(getAgentProviderConfigEntryStatusKind(apiKeyEntry)).toBeUndefined();
-    expect(getAgentProviderConfigEntryAction(apiKeyEntry)).toEqual({
+    expect(getAiChatProviderConfigEntryStatusKind(oauthEntry)).toBe("connectedOauth");
+    expect(getAiChatProviderConfigEntryAction(oauthEntry)).toEqual({ kind: "manageOauth" });
+    expect(getAiChatProviderConfigEntryStatusKind(apiKeyEntry)).toBeUndefined();
+    expect(getAiChatProviderConfigEntryAction(apiKeyEntry)).toEqual({
       kind: "authenticate",
       method: "api_key",
     });
@@ -93,15 +93,15 @@ describe("agentProviderHelpers", () => {
   ] as const)("maps %s auth to %s status", (authSource, expectedStatus) => {
     const provider = createProvider("provider", "Provider", true, authSource);
     const method = { kind: authSource === "oauth" ? ("oauth" as const) : ("api_key" as const), label: "Auth" };
-    expect(getAgentProviderConfigEntryStatusKind({ provider, method })).toBe(expectedStatus);
+    expect(getAiChatProviderConfigEntryStatusKind({ provider, method })).toBe(expectedStatus);
   });
 
   it("identifies unconfigured ambient providers without making them actionable", () => {
     const method = { kind: "external", label: "AWS credentials" } as const;
     const provider = createProvider("amazon-bedrock", "Amazon Bedrock", false, "none", [method]);
 
-    expect(getAgentProviderConfigEntryStatusKind({ provider, method })).toBe("externalSetupRequired");
-    expect(getAgentProviderConfigEntryAction({ provider, method })).toBeUndefined();
+    expect(getAiChatProviderConfigEntryStatusKind({ provider, method })).toBe("externalSetupRequired");
+    expect(getAiChatProviderConfigEntryAction({ provider, method })).toBeUndefined();
   });
 
   it("keeps the active ambient API key read-only while allowing a switch to OAuth", () => {
@@ -111,10 +111,10 @@ describe("agentProviderHelpers", () => {
     ]);
 
     expect(
-      getAgentProviderConfigEntryAction({ provider, method: { kind: "api_key", label: "Anthropic API key" } }),
+      getAiChatProviderConfigEntryAction({ provider, method: { kind: "api_key", label: "Anthropic API key" } }),
     ).toBeUndefined();
     expect(
-      getAgentProviderConfigEntryAction({ provider, method: { kind: "oauth", label: "Anthropic subscription" } }),
+      getAiChatProviderConfigEntryAction({ provider, method: { kind: "oauth", label: "Anthropic subscription" } }),
     ).toEqual({ kind: "authenticate", method: "oauth" });
   });
 
@@ -122,14 +122,14 @@ describe("agentProviderHelpers", () => {
     const provider = createProvider("azure", "Azure", true, "auth_file", [], false);
 
     expect(
-      getAgentProviderConfigEntryStatusKind({ provider, method: { kind: "api_key", label: "Azure API key" } }),
+      getAiChatProviderConfigEntryStatusKind({ provider, method: { kind: "api_key", label: "Azure API key" } }),
     ).toBe("connectedStored");
-    expect(isAgentProviderConfiguredButUnavailable(provider)).toBe(true);
+    expect(isAiChatProviderConfiguredButUnavailable(provider)).toBe(true);
   });
 
   it("builds unique provider options from providers with available models", () => {
     expect(
-      buildAvailablePiProviderOptions([
+      buildAvailableAiChatProviderOptions([
         ...MODELS,
         {
           providerId: "openai",
@@ -146,7 +146,9 @@ describe("agentProviderHelpers", () => {
   });
 
   it("builds model options only for the selected available provider", () => {
-    expect(buildAvailablePiModelOptionsForProvider(MODELS, "openai")).toEqual([{ id: "openai/gpt-5", name: "GPT-5" }]);
-    expect(buildAvailablePiModelOptionsForProvider(MODELS, undefined)).toEqual([]);
+    expect(buildAvailableAiChatModelOptionsForProvider(MODELS, "openai")).toEqual([
+      { id: "openai/gpt-5", name: "GPT-5" },
+    ]);
+    expect(buildAvailableAiChatModelOptionsForProvider(MODELS, undefined)).toEqual([]);
   });
 });

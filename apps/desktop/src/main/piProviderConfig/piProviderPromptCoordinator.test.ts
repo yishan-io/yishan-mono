@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { DESKTOP_RPC_IPC_CHANNELS } from "../ipc";
-import { PiRuntimePromptCoordinator } from "./piRuntimePromptCoordinator";
+import { PiProviderPromptCoordinator } from "./piProviderPromptCoordinator";
 
 function createTarget(id = 7) {
   const destroyedListeners = new Set<() => void>();
@@ -28,9 +28,9 @@ function getSentPromptEnvelope(target: ReturnType<typeof createTarget>["target"]
   return call[1];
 }
 
-describe("PiRuntimePromptCoordinator", () => {
+describe("PiProviderPromptCoordinator", () => {
   it("correlates a submitted renderer response with its pending prompt", async () => {
-    const coordinator = new PiRuntimePromptCoordinator();
+    const coordinator = new PiProviderPromptCoordinator();
     const { target } = createTarget();
 
     const resultPromise = coordinator.request(target, { type: "secret", message: "Enter API key" });
@@ -50,7 +50,7 @@ describe("PiRuntimePromptCoordinator", () => {
   });
 
   it("rejects a cancelled prompt without returning an empty credential", async () => {
-    const coordinator = new PiRuntimePromptCoordinator();
+    const coordinator = new PiProviderPromptCoordinator();
     const { target } = createTarget();
 
     const resultPromise = coordinator.request(target, { type: "text", message: "Enter domain" });
@@ -61,7 +61,7 @@ describe("PiRuntimePromptCoordinator", () => {
   });
 
   it("accepts only values offered by a select prompt", async () => {
-    const coordinator = new PiRuntimePromptCoordinator();
+    const coordinator = new PiProviderPromptCoordinator();
     const { target } = createTarget();
     const resultPromise = coordinator.request(target, {
       type: "select",
@@ -91,7 +91,7 @@ describe("PiRuntimePromptCoordinator", () => {
   });
 
   it("dismisses a pending renderer prompt when its provider signal is aborted", async () => {
-    const coordinator = new PiRuntimePromptCoordinator();
+    const coordinator = new PiProviderPromptCoordinator();
     const { target } = createTarget();
     const controller = new AbortController();
 

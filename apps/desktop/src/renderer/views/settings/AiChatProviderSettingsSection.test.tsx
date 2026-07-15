@@ -3,11 +3,11 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { aiChatSettingsStore } from "../../store/settings/aiChatSettingsStore";
-import { piRuntimeStore } from "../../store/settings/piRuntimeStore";
-import { AgentProviderSettingsView } from "./AgentProviderSettingsView";
+import { piProviderConfigStore } from "../../store/settings/piProviderConfigStore";
+import { AiChatProviderSettingsSection } from "./AiChatProviderSettingsSection";
 
 const mocked = {
-  getPiRuntimeSnapshot: vi.fn(),
+  getPiProviderConfigSnapshot: vi.fn(),
   authenticatePiProvider: vi.fn(),
   cancelPiProviderAuthentication: vi.fn(),
   removePiProviderCredential: vi.fn(),
@@ -55,15 +55,15 @@ vi.mock("../../components/ModelAutocomplete", () => ({
   ),
 }));
 
-describe("AgentProviderSettingsView", () => {
+describe("AiChatProviderSettingsSection", () => {
   beforeEach(() => {
-    mocked.getPiRuntimeSnapshot.mockResolvedValue(null);
+    mocked.getPiProviderConfigSnapshot.mockResolvedValue(null);
     mocked.authenticatePiProvider.mockResolvedValue(null);
     mocked.cancelPiProviderAuthentication.mockResolvedValue(true);
     mocked.removePiProviderCredential.mockResolvedValue(null);
     mocked.setDefaultAiChatModel.mockImplementation(() => undefined);
     aiChatSettingsStore.setState({ defaultModel: undefined, legacyMigrationCompleted: true });
-    piRuntimeStore.setState({
+    piProviderConfigStore.setState({
       snapshot: {
         providers: [
           {
@@ -130,9 +130,9 @@ describe("AgentProviderSettingsView", () => {
     const scrollIntoView = vi.fn();
     HTMLElement.prototype.scrollIntoView = scrollIntoView;
 
-    render(<AgentProviderSettingsView focusRequested />);
+    render(<AiChatProviderSettingsSection focusRequested />);
 
-    const panel = screen.getByTestId("agent-provider-settings-panel");
+    const panel = screen.getByTestId("ai-chat-provider-settings-section");
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "start", behavior: "smooth" });
     expect(panel.getAttribute("data-focus-highlighted")).toBe("true");
 
@@ -145,74 +145,74 @@ describe("AgentProviderSettingsView", () => {
   });
 
   it("loads snapshot on mount and renders provider status rows", async () => {
-    render(<AgentProviderSettingsView />);
+    render(<AiChatProviderSettingsSection />);
 
     await waitFor(() => {
-      expect(mocked.getPiRuntimeSnapshot).toHaveBeenCalledTimes(1);
+      expect(mocked.getPiProviderConfigSnapshot).toHaveBeenCalledTimes(1);
     });
 
-    expect(screen.getByText("settings.agentProviders.title")).toBeTruthy();
+    expect(screen.getByText("settings.aiChatProviders.title")).toBeTruthy();
     expect(screen.getByTestId("provider-config-card")).toBeTruthy();
     expect(screen.getByText("OpenAI API key")).toBeTruthy();
     expect(screen.getByText("Anthropic (Claude Pro/Max)")).toBeTruthy();
     expect(screen.getByText("Anthropic API key")).toBeTruthy();
     expect(screen.getByText("ChatGPT Plus/Pro")).toBeTruthy();
-    expect(screen.getByText("settings.agentProviders.providers.status.externalSetupRequired")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "settings.agentProviders.providers.actions.login" })).toBeTruthy();
-    expect(screen.getByText("settings.agentProviders.models.selectionTitle")).toBeTruthy();
-    expect(screen.getByText("settings.agentProviders.models.selectionDescription")).toBeTruthy();
+    expect(screen.getByText("settings.aiChatProviders.providers.status.externalSetupRequired")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "settings.aiChatProviders.providers.actions.login" })).toBeTruthy();
+    expect(screen.getByText("settings.aiChatProviders.models.selectionTitle")).toBeTruthy();
+    expect(screen.getByText("settings.aiChatProviders.models.selectionDescription")).toBeTruthy();
   });
 
   it("uses actions instead of repeated status text for unconfigured actionable methods", () => {
-    render(<AgentProviderSettingsView />);
+    render(<AiChatProviderSettingsSection />);
 
-    expect(screen.getByText("settings.agentProviders.providers.badges.connectedOauth")).toBeTruthy();
-    expect(screen.getByText("settings.agentProviders.providers.status.externalSetupRequired")).toBeTruthy();
+    expect(screen.getByText("settings.aiChatProviders.providers.badges.connectedOauth")).toBeTruthy();
+    expect(screen.getByText("settings.aiChatProviders.providers.status.externalSetupRequired")).toBeTruthy();
     expect(
-      screen.getAllByRole("button", { name: "settings.agentProviders.providers.actions.setApiKey" }),
+      screen.getAllByRole("button", { name: "settings.aiChatProviders.providers.actions.setApiKey" }),
     ).not.toHaveLength(0);
   });
 
   it("keeps every provider configuration row in one flat card", () => {
-    render(<AgentProviderSettingsView />);
+    render(<AiChatProviderSettingsSection />);
 
     expect(screen.getByTestId("provider-config-card")).toBeTruthy();
   });
 
   it("forwards provider login and refresh actions through commands", async () => {
-    render(<AgentProviderSettingsView />);
+    render(<AiChatProviderSettingsSection />);
 
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.providers.actions.login" }));
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.actions.refresh" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.providers.actions.login" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.actions.refresh" }));
 
     await waitFor(() => {
       expect(mocked.authenticatePiProvider).toHaveBeenCalledWith({ providerId: "openai-codex", method: "oauth" });
     });
-    expect(mocked.getPiRuntimeSnapshot).toHaveBeenCalledWith("refreshing");
+    expect(mocked.getPiProviderConfigSnapshot).toHaveBeenCalledWith("refreshing");
   });
 
   it("disables every login action while any provider login is pending", () => {
-    piRuntimeStore.setState({
+    piProviderConfigStore.setState({
       pendingCredentialAction: { kind: "authenticate", providerId: "another-provider", method: "oauth" },
     });
 
-    render(<AgentProviderSettingsView />);
+    render(<AiChatProviderSettingsSection />);
 
     expect(
       (
         screen.getByRole("button", {
-          name: "settings.agentProviders.providers.actions.login",
+          name: "settings.aiChatProviders.providers.actions.login",
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
   });
 
   it("shows Cancel only on the exact pending provider method", () => {
-    const snapshot = piRuntimeStore.getState().snapshot;
+    const snapshot = piProviderConfigStore.getState().snapshot;
     if (!snapshot) {
       throw new Error("Expected provider snapshot");
     }
-    piRuntimeStore.setState({
+    piProviderConfigStore.setState({
       snapshot: {
         ...snapshot,
         providers: snapshot.providers.map((provider) =>
@@ -224,16 +224,16 @@ describe("AgentProviderSettingsView", () => {
       pendingCredentialAction: { kind: "authenticate", providerId: "anthropic", method: "oauth" },
     });
 
-    render(<AgentProviderSettingsView />);
+    render(<AiChatProviderSettingsSection />);
 
     const cancelButton = screen.getByRole("button", {
-      name: "settings.agentProviders.providers.actions.cancel",
+      name: "settings.aiChatProviders.providers.actions.cancel",
     });
     expect(cancelButton).toBeTruthy();
     expect(
       (
         screen.getByRole("button", {
-          name: "settings.agentProviders.providers.actions.setApiKey",
+          name: "settings.aiChatProviders.providers.actions.setApiKey",
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
@@ -243,11 +243,11 @@ describe("AgentProviderSettingsView", () => {
   });
 
   it("shows configured credentials separately from unavailable runtime models", () => {
-    const snapshot = piRuntimeStore.getState().snapshot;
+    const snapshot = piProviderConfigStore.getState().snapshot;
     if (!snapshot) {
       throw new Error("Expected provider snapshot");
     }
-    piRuntimeStore.setState({
+    piProviderConfigStore.setState({
       snapshot: {
         ...snapshot,
         providers: snapshot.providers.map((provider) =>
@@ -256,13 +256,13 @@ describe("AgentProviderSettingsView", () => {
       },
     });
 
-    render(<AgentProviderSettingsView />);
+    render(<AiChatProviderSettingsSection />);
 
-    expect(screen.getByText("settings.agentProviders.providers.badges.configuredUnavailable")).toBeTruthy();
+    expect(screen.getByText("settings.aiChatProviders.providers.badges.configuredUnavailable")).toBeTruthy();
   });
 
   it("keeps provider filtering local and persists only the selected AI Chat model", () => {
-    render(<AgentProviderSettingsView />);
+    render(<AiChatProviderSettingsSection />);
 
     const providerSelect = screen.getByTestId("pi-provider-select") as HTMLSelectElement;
     const modelSelect = screen.getByTestId("pi-model-select") as HTMLSelectElement;
@@ -283,9 +283,9 @@ describe("AgentProviderSettingsView", () => {
   it("saves the selected default Pi model and warns when the saved model becomes unavailable", async () => {
     aiChatSettingsStore.setState({ defaultModel: { providerId: "openai", modelId: "missing-model" } });
 
-    render(<AgentProviderSettingsView />);
+    render(<AiChatProviderSettingsSection />);
 
-    expect(screen.getByText("settings.agentProviders.models.unavailableWarning")).toBeTruthy();
+    expect(screen.getByText("settings.aiChatProviders.models.unavailableWarning")).toBeTruthy();
 
     fireEvent.change(screen.getByTestId("pi-model-select"), {
       target: { value: "openai/gpt-5" },

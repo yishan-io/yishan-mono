@@ -67,10 +67,10 @@ import {
 import {
   authenticatePiProvider as authenticatePiProviderCommand,
   cancelPiProviderAuthentication as cancelPiProviderAuthenticationCommand,
-  getPiRuntimeSnapshot as getPiRuntimeSnapshotCommand,
+  getPiProviderConfigSnapshot as getPiProviderConfigSnapshotCommand,
   removePiProviderCredential as removePiProviderCredentialCommand,
   setDefaultAiChatModel as setDefaultAiChatModelCommand,
-} from "../commands/piRuntimeCommands";
+} from "../commands/piProviderConfigCommands";
 import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
@@ -160,7 +160,7 @@ export type Commands = {
   setOverviewTimeRange: typeof setOverviewTimeRangeCommand;
   setOverviewProjectId: typeof setOverviewProjectIdCommand;
   listCLIToolStatuses: typeof listCLIToolStatusesCommand;
-  getPiRuntimeSnapshot: typeof getPiRuntimeSnapshotCommand;
+  getPiProviderConfigSnapshot: typeof getPiProviderConfigSnapshotCommand;
   authenticatePiProvider: typeof authenticatePiProviderCommand;
   cancelPiProviderAuthentication: typeof cancelPiProviderAuthenticationCommand;
   removePiProviderCredential: typeof removePiProviderCredentialCommand;
@@ -300,7 +300,7 @@ export function useCommands(): Commands {
       setOverviewTimeRange: setOverviewTimeRangeCommand,
       setOverviewProjectId: setOverviewProjectIdCommand,
       listCLIToolStatuses: listCLIToolStatusesCommand,
-      getPiRuntimeSnapshot: getPiRuntimeSnapshotCommand,
+      getPiProviderConfigSnapshot: getPiProviderConfigSnapshotCommand,
       authenticatePiProvider: authenticatePiProviderCommand,
       cancelPiProviderAuthentication: cancelPiProviderAuthenticationCommand,
       removePiProviderCredential: removePiProviderCredentialCommand,

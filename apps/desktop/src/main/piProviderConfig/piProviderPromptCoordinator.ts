@@ -1,7 +1,7 @@
-import type { PiAuthPromptRequest, PiAuthPromptResponseInput } from "../../shared/contracts/piRuntime";
+import type { PiAuthPromptRequest, PiAuthPromptResponseInput } from "../../shared/contracts/piProviderConfig";
 import { generateId } from "../../shared/helpers/generateId";
 import { DESKTOP_RPC_IPC_CHANNELS } from "../ipc";
-import { PiRuntimeError, createPiRuntimeCancellationError } from "./piRuntimeErrors";
+import { PiProviderConfigError, createPiProviderConfigCancellationError } from "./piProviderConfigErrors";
 
 /** Renderer target capable of receiving and owning one Pi authentication prompt. */
 export type PiAuthPromptTarget = {
@@ -24,21 +24,21 @@ type PendingPrompt = {
 };
 
 /** Coordinates one renderer-owned Pi auth prompt without exposing credentials outside the response IPC. */
-export class PiRuntimePromptCoordinator {
+export class PiProviderPromptCoordinator {
   private pendingPrompt: PendingPrompt | undefined;
 
   async request(target: PiAuthPromptTarget, prompt: PiAuthPromptRequest, signal?: AbortSignal): Promise<string> {
     if (this.pendingPrompt) {
-      throw new PiRuntimeError("authentication_in_progress", "Provider authentication prompt is already open.");
+      throw new PiProviderConfigError("authentication_in_progress", "Provider authentication prompt is already open.");
     }
     if (target.isDestroyed() || signal?.aborted) {
-      throw createPiRuntimeCancellationError();
+      throw createPiProviderConfigCancellationError();
     }
 
     const requestId = generateId();
     return await new Promise<string>((resolve, reject) => {
-      const onDestroyed = () => this.rejectPending(createPiRuntimeCancellationError());
-      const onAborted = signal ? () => this.rejectPending(createPiRuntimeCancellationError(), true) : undefined;
+      const onDestroyed = () => this.rejectPending(createPiProviderConfigCancellationError());
+      const onAborted = signal ? () => this.rejectPending(createPiProviderConfigCancellationError(), true) : undefined;
       this.pendingPrompt = { requestId, prompt, target, resolve, reject, onDestroyed, signal, onAborted };
       target.once("destroyed", onDestroyed);
       if (signal && onAborted) {
@@ -50,7 +50,7 @@ export class PiRuntimePromptCoordinator {
           payload: { requestId, prompt },
         });
       } catch {
-        this.rejectPending(createPiRuntimeCancellationError());
+        this.rejectPending(createPiProviderConfigCancellationError());
       }
     });
   }
@@ -63,7 +63,7 @@ export class PiRuntimePromptCoordinator {
     }
 
     if (response.status === "cancelled") {
-      this.rejectPending(createPiRuntimeCancellationError());
+      this.rejectPending(createPiProviderConfigCancellationError());
       return true;
     }
 
@@ -72,7 +72,7 @@ export class PiRuntimePromptCoordinator {
       return false;
     }
     if (pending.prompt.type !== "select" && value.length === 0) {
-      this.rejectPending(createPiRuntimeCancellationError());
+      this.rejectPending(createPiProviderConfigCancellationError());
       return true;
     }
 

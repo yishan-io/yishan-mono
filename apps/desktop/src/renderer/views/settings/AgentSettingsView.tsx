@@ -1,17 +1,17 @@
 import { Stack } from "@mui/material";
-import { AgentProviderSettingsView } from "./AgentProviderSettingsView";
+import { AiChatProviderSettingsSection } from "./AiChatProviderSettingsSection";
 import { CLIToolsSettingsView } from "./CLIToolsSettingsView";
 
 type AgentSettingsViewProps = {
-  focusAgentProviders?: boolean;
+  focusAiChatProviders?: boolean;
 };
 
 /** Renders CLI tools and provider/model settings as sibling sections. */
-export function AgentSettingsView({ focusAgentProviders = false }: AgentSettingsViewProps) {
+export function AgentSettingsView({ focusAiChatProviders = false }: AgentSettingsViewProps) {
   return (
     <Stack spacing={2} data-testid="agent-settings-panel">
       <CLIToolsSettingsView />
-      <AgentProviderSettingsView focusRequested={focusAgentProviders} />
+      <AiChatProviderSettingsSection focusRequested={focusAiChatProviders} />
     </Stack>
   );
 }

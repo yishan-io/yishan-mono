@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HOST_IPC_CHANNELS } from "../ipc";
-import type { PiProviderConfigService } from "../piRuntime/piProviderConfigService";
-import { registerPiRuntimeIpcHandlers } from "./piRuntimeHandlers";
+import type { PiProviderConfigService } from "../piProviderConfig/piProviderConfigService";
+import { registerPiProviderConfigIpcHandlers } from "./piProviderConfigHandlers";
 
 const mocks = vi.hoisted(() => ({
   handlers: new Map<string, (event: unknown, input?: unknown) => Promise<unknown>>(),
@@ -34,7 +34,7 @@ function getHandler(channel: string) {
   return handler;
 }
 
-describe("registerPiRuntimeIpcHandlers", () => {
+describe("registerPiProviderConfigIpcHandlers", () => {
   beforeEach(() => {
     mocks.handlers.clear();
     vi.clearAllMocks();
@@ -47,7 +47,7 @@ describe("registerPiRuntimeIpcHandlers", () => {
     [HOST_IPC_CHANNELS.removePiProviderCredential, 42],
   ])("rejects malformed input for %s before calling the runtime service", async (channel, input) => {
     const service = createService();
-    registerPiRuntimeIpcHandlers(service, () => null);
+    registerPiProviderConfigIpcHandlers(service, () => null);
 
     const result = await getHandler(channel)({ sender: { id: 1 } }, input);
 
@@ -63,9 +63,9 @@ describe("registerPiRuntimeIpcHandlers", () => {
       }),
     });
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    registerPiRuntimeIpcHandlers(service, () => null);
+    registerPiProviderConfigIpcHandlers(service, () => null);
 
-    const result = await getHandler(HOST_IPC_CHANNELS.getPiRuntimeSnapshot)({ sender: { id: 1 } });
+    const result = await getHandler(HOST_IPC_CHANNELS.getPiProviderConfigSnapshot)({ sender: { id: 1 } });
 
     expect(result).toEqual({
       ok: false,
@@ -83,7 +83,7 @@ describe("registerPiRuntimeIpcHandlers", () => {
     });
     mocks.fromWebContents.mockReturnValue({ webContents: { send: vi.fn() } });
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    registerPiRuntimeIpcHandlers(service, () => null);
+    registerPiProviderConfigIpcHandlers(service, () => null);
 
     const result = await getHandler(HOST_IPC_CHANNELS.authenticatePiProvider)(
       { sender: { id: 1, once: vi.fn(), removeListener: vi.fn() } },
@@ -112,7 +112,7 @@ describe("registerPiRuntimeIpcHandlers", () => {
     );
     const service = createService({ authenticate: vi.fn(async () => undefined), getSnapshot });
     mocks.fromWebContents.mockReturnValue({ webContents: { send: vi.fn() } });
-    registerPiRuntimeIpcHandlers(service, () => null);
+    registerPiProviderConfigIpcHandlers(service, () => null);
     const sender = { id: 1, once: vi.fn(), removeListener: vi.fn() };
 
     const authentication = getHandler(HOST_IPC_CHANNELS.authenticatePiProvider)(
@@ -142,7 +142,7 @@ describe("registerPiRuntimeIpcHandlers", () => {
         throw new Error("provider secret sk-refresh");
       }),
     });
-    registerPiRuntimeIpcHandlers(service, () => null);
+    registerPiProviderConfigIpcHandlers(service, () => null);
 
     const result = await getHandler(HOST_IPC_CHANNELS.removePiProviderCredential)({ sender: { id: 1 } }, "openai");
 

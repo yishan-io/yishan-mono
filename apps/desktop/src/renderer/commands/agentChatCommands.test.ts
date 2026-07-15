@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => ({
   send: vi.fn(),
   listSessions: vi.fn(),
   listActiveSessions: vi.fn(),
-  getPiRuntimeSnapshot: vi.fn(),
+  getPiProviderConfigSnapshot: vi.fn(),
 }));
 
 vi.mock("../helpers/generateId", () => ({
@@ -42,7 +42,7 @@ vi.mock("../rpc/rpcTransport", () => ({
     },
   })),
   getDesktopHostBridge: vi.fn(() => ({
-    getPiRuntimeSnapshot: mocks.getPiRuntimeSnapshot,
+    getPiProviderConfigSnapshot: mocks.getPiProviderConfigSnapshot,
   })),
 }));
 
@@ -57,7 +57,7 @@ describe("agentChatCommands.ensurePiSession", () => {
     aiChatSettingsStore.setState({
       defaultModel: { providerId: "openai-codex", modelId: "gpt-5.5" },
     });
-    mocks.getPiRuntimeSnapshot.mockResolvedValue({
+    mocks.getPiProviderConfigSnapshot.mockResolvedValue({
       ok: true,
       value: {
         providers: [],
@@ -103,14 +103,14 @@ describe("agentChatCommands.ensurePiSession", () => {
 
     expect(mocks.start).toHaveBeenCalledOnce();
     expect(mocks.start.mock.calls[0]?.[0]).not.toHaveProperty("model");
-    expect(mocks.getPiRuntimeSnapshot).not.toHaveBeenCalled();
+    expect(mocks.getPiProviderConfigSnapshot).not.toHaveBeenCalled();
   });
 
   it("does not pass or keep a default model that the fresh runtime snapshot marks unavailable", async () => {
     aiChatSettingsStore.setState({
       defaultModel: { providerId: "openai-codex", modelId: "missing-model" },
     });
-    mocks.getPiRuntimeSnapshot.mockResolvedValue({ ok: true, value: { providers: [], models: [] } });
+    mocks.getPiProviderConfigSnapshot.mockResolvedValue({ ok: true, value: { providers: [], models: [] } });
     mocks.start.mockResolvedValue({ sessionId: "generated-session-id" });
 
     await ensurePiSession({
@@ -128,7 +128,7 @@ describe("agentChatCommands.ensurePiSession", () => {
     aiChatSettingsStore.setState({
       defaultModel: { providerId: "openai-codex", modelId: "old-model" },
     });
-    mocks.getPiRuntimeSnapshot.mockReturnValue(
+    mocks.getPiProviderConfigSnapshot.mockReturnValue(
       new Promise<{ ok: true; value: { providers: []; models: [] } }>((resolve) => {
         resolveSnapshot = resolve;
       }),
@@ -140,7 +140,7 @@ describe("agentChatCommands.ensurePiSession", () => {
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
     });
-    await vi.waitFor(() => expect(mocks.getPiRuntimeSnapshot).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(mocks.getPiProviderConfigSnapshot).toHaveBeenCalledOnce());
     aiChatSettingsStore.getState().setDefaultModel({ providerId: "anthropic", modelId: "new-model" });
     resolveSnapshot?.({ ok: true, value: { providers: [], models: [] } });
     await session;

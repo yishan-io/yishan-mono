@@ -14,13 +14,13 @@ function collectStrings(value: unknown): string[] {
 
 describe("agent provider copy", () => {
   it("uses the AI Chat product name", () => {
-    expect(en.settings.agentProviders.title).toBe("Ai Chat Providers & Models");
-    expect(zh.settings.agentProviders.title).toBe("AI Chat 提供商与模型");
+    expect(en.settings.aiChatProviders.title).toBe("Ai Chat Providers & Models");
+    expect(zh.settings.aiChatProviders.title).toBe("AI Chat 提供商与模型");
   });
 
   it.each([
-    ["English", en.settings.agentProviders],
-    ["Chinese", zh.settings.agentProviders],
+    ["English", en.settings.aiChatProviders],
+    ["Chinese", zh.settings.aiChatProviders],
   ])("does not expose Pi implementation terminology in %s", (_locale, copy) => {
     expect(collectStrings(copy).filter((value) => /\bPi\b/.test(value))).toEqual([]);
   });

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createPiRuntimeAuthCallbacks } from "./piRuntimeLoginBridge";
+import { createPiProviderAuthCallbacks } from "./piProviderLoginBridge";
 
 const mocks = vi.hoisted(() => ({
   openExternalUrl: vi.fn(async (): Promise<{ opened: boolean; reason?: string }> => ({ opened: true })),
@@ -19,7 +19,7 @@ vi.mock("../integrations/externalAppLauncher", () => ({
   openExternalUrl: mocks.openExternalUrl,
 }));
 
-describe("Pi runtime login callback adapter", () => {
+describe("Pi provider login callback adapter", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.requestPrompt.mockResolvedValue("submitted-value");
@@ -27,7 +27,7 @@ describe("Pi runtime login callback adapter", () => {
 
   it("asks the renderer to choose the OpenAI login method before starting OAuth", async () => {
     mocks.requestPrompt.mockResolvedValue("device_code");
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
+    const callbacks = createPiProviderAuthCallbacks(undefined, mocks.requestPrompt);
 
     const prompt = {
       type: "select",
@@ -45,7 +45,7 @@ describe("Pi runtime login callback adapter", () => {
 
   it("forwards the manual redirect-code fallback to the renderer", async () => {
     const controller = new AbortController();
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
+    const callbacks = createPiProviderAuthCallbacks(undefined, mocks.requestPrompt);
 
     const value = await callbacks.prompt({
       type: "manual_code",
@@ -67,7 +67,7 @@ describe("Pi runtime login callback adapter", () => {
 
   it("forwards Pi AI secret prompts without changing their type", async () => {
     mocks.requestPrompt.mockResolvedValue("cf-secret");
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
+    const callbacks = createPiProviderAuthCallbacks(undefined, mocks.requestPrompt);
 
     const value = await callbacks.prompt({ type: "secret", message: "Enter Cloudflare API key" });
 
@@ -79,7 +79,7 @@ describe("Pi runtime login callback adapter", () => {
   });
 
   it("opens device-code URLs for providers that only support that OAuth flow", async () => {
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
+    const callbacks = createPiProviderAuthCallbacks(undefined, mocks.requestPrompt);
 
     callbacks.notify({
       type: "device_code",
@@ -97,7 +97,7 @@ describe("Pi runtime login callback adapter", () => {
   });
 
   it("opens browser OAuth without showing an instruction dialog", async () => {
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
+    const callbacks = createPiProviderAuthCallbacks(undefined, mocks.requestPrompt);
 
     callbacks.notify({
       type: "auth_url",
@@ -113,7 +113,7 @@ describe("Pi runtime login callback adapter", () => {
 
   it("shows the browser OAuth URL when automatic opening fails", async () => {
     mocks.openExternalUrl.mockResolvedValueOnce({ opened: false, reason: "open_failed" });
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
+    const callbacks = createPiProviderAuthCallbacks(undefined, mocks.requestPrompt);
 
     callbacks.notify({
       type: "auth_url",
@@ -130,7 +130,7 @@ describe("Pi runtime login callback adapter", () => {
 
   it("still shows the device code when automatic URL opening fails", async () => {
     mocks.openExternalUrl.mockResolvedValueOnce({ opened: false, reason: "open_failed" });
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt);
+    const callbacks = createPiProviderAuthCallbacks(undefined, mocks.requestPrompt);
 
     callbacks.notify({
       type: "device_code",
@@ -147,7 +147,7 @@ describe("Pi runtime login callback adapter", () => {
 
   it("binds instruction dialogs to the authentication cancellation signal", async () => {
     const controller = new AbortController();
-    const callbacks = createPiRuntimeAuthCallbacks(undefined, mocks.requestPrompt, controller.signal);
+    const callbacks = createPiProviderAuthCallbacks(undefined, mocks.requestPrompt, controller.signal);
 
     callbacks.notify({
       type: "device_code",

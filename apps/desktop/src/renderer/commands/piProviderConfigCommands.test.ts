@@ -1,21 +1,21 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { PiRuntimeSnapshot } from "../../shared/contracts/piRuntime";
+import type { PiProviderConfigSnapshot } from "../../shared/contracts/piProviderConfig";
 import { aiChatSettingsStore } from "../store/settings/aiChatSettingsStore";
-import { piRuntimeStore } from "../store/settings/piRuntimeStore";
+import { piProviderConfigStore } from "../store/settings/piProviderConfigStore";
 import {
   authenticatePiProvider,
   cancelPiProviderAuthentication,
-  getPiRuntimeSnapshot,
+  getPiProviderConfigSnapshot,
   removePiProviderCredential,
   respondPiAuthPrompt,
-} from "./piRuntimeCommands";
+} from "./piProviderConfigCommands";
 
 const mocks = vi.hoisted(() => ({
   authenticatePiProvider: vi.fn(),
   cancelPiProviderAuthentication: vi.fn(),
-  getPiRuntimeSnapshot: vi.fn(),
+  getPiProviderConfigSnapshot: vi.fn(),
   removePiProviderCredential: vi.fn(),
   respondPiAuthPrompt: vi.fn(),
 }));
@@ -24,28 +24,28 @@ vi.mock("../rpc/rpcTransport", () => ({
   getDesktopHostBridge: vi.fn(() => ({
     authenticatePiProvider: mocks.authenticatePiProvider,
     cancelPiProviderAuthentication: mocks.cancelPiProviderAuthentication,
-    getPiRuntimeSnapshot: mocks.getPiRuntimeSnapshot,
+    getPiProviderConfigSnapshot: mocks.getPiProviderConfigSnapshot,
     removePiProviderCredential: mocks.removePiProviderCredential,
     respondPiAuthPrompt: mocks.respondPiAuthPrompt,
   })),
 }));
 
-const snapshot: PiRuntimeSnapshot = {
+const snapshot: PiProviderConfigSnapshot = {
   providers: [],
   models: [],
 };
 
-describe("piRuntimeCommands", () => {
+describe("piProviderConfigCommands", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    piRuntimeStore.setState({
+    piProviderConfigStore.setState({
       snapshot: null,
       loadState: "idle",
       activeLoadRequestId: undefined,
       errorMessage: undefined,
       pendingCredentialAction: undefined,
       activeCredentialRequestId: undefined,
-    } as Partial<ReturnType<typeof piRuntimeStore.getState>>);
+    } as Partial<ReturnType<typeof piProviderConfigStore.getState>>);
     aiChatSettingsStore.setState({ defaultModel: undefined, legacyMigrationCompleted: true });
   });
 
@@ -56,46 +56,46 @@ describe("piRuntimeCommands", () => {
 
     expect(mocks.authenticatePiProvider).toHaveBeenCalledWith({ providerId: "anthropic", method: "api_key" });
     expect(result).toBe(snapshot);
-    expect(piRuntimeStore.getState().snapshot).toBe(snapshot);
-    expect(piRuntimeStore.getState().pendingCredentialAction).toBeUndefined();
+    expect(piProviderConfigStore.getState().snapshot).toBe(snapshot);
+    expect(piProviderConfigStore.getState().pendingCredentialAction).toBeUndefined();
   });
 
   it("uses the single snapshot endpoint while exposing a refresh loading state", async () => {
-    let resolveSnapshot: ((value: { ok: true; value: PiRuntimeSnapshot }) => void) | undefined;
-    mocks.getPiRuntimeSnapshot.mockReturnValue(
-      new Promise<{ ok: true; value: PiRuntimeSnapshot }>((resolve) => {
+    let resolveSnapshot: ((value: { ok: true; value: PiProviderConfigSnapshot }) => void) | undefined;
+    mocks.getPiProviderConfigSnapshot.mockReturnValue(
+      new Promise<{ ok: true; value: PiProviderConfigSnapshot }>((resolve) => {
         resolveSnapshot = resolve;
       }),
     );
 
-    const resultPromise = getPiRuntimeSnapshot("refreshing");
+    const resultPromise = getPiProviderConfigSnapshot("refreshing");
 
-    expect(piRuntimeStore.getState().loadState).toBe("refreshing");
-    expect(mocks.getPiRuntimeSnapshot).toHaveBeenCalledTimes(1);
+    expect(piProviderConfigStore.getState().loadState).toBe("refreshing");
+    expect(mocks.getPiProviderConfigSnapshot).toHaveBeenCalledTimes(1);
     resolveSnapshot?.({ ok: true, value: snapshot });
     await expect(resultPromise).resolves.toBe(snapshot);
-    expect(piRuntimeStore.getState().loadState).toBe("idle");
+    expect(piProviderConfigStore.getState().loadState).toBe("idle");
   });
 
   it("does not let an older snapshot response overwrite a newer refresh", async () => {
-    const resolvers: Array<(value: { ok: true; value: PiRuntimeSnapshot }) => void> = [];
-    mocks.getPiRuntimeSnapshot.mockImplementation(
+    const resolvers: Array<(value: { ok: true; value: PiProviderConfigSnapshot }) => void> = [];
+    mocks.getPiProviderConfigSnapshot.mockImplementation(
       async () =>
-        await new Promise<{ ok: true; value: PiRuntimeSnapshot }>((resolve) => {
+        await new Promise<{ ok: true; value: PiProviderConfigSnapshot }>((resolve) => {
           resolvers.push(resolve);
         }),
     );
-    const olderSnapshot: PiRuntimeSnapshot = { providers: [], models: [], modelsLoadError: "older" };
-    const newerSnapshot: PiRuntimeSnapshot = { providers: [], models: [], modelsLoadError: "newer" };
+    const olderSnapshot: PiProviderConfigSnapshot = { providers: [], models: [], modelsLoadError: "older" };
+    const newerSnapshot: PiProviderConfigSnapshot = { providers: [], models: [], modelsLoadError: "newer" };
 
-    const olderRequest = getPiRuntimeSnapshot();
-    const newerRequest = getPiRuntimeSnapshot("refreshing");
+    const olderRequest = getPiProviderConfigSnapshot();
+    const newerRequest = getPiProviderConfigSnapshot("refreshing");
     resolvers[1]?.({ ok: true, value: newerSnapshot });
     await newerRequest;
     resolvers[0]?.({ ok: true, value: olderSnapshot });
     await olderRequest;
 
-    expect(piRuntimeStore.getState()).toMatchObject({
+    expect(piProviderConfigStore.getState()).toMatchObject({
       snapshot: newerSnapshot,
       loadState: "idle",
       activeLoadRequestId: undefined,
@@ -103,42 +103,42 @@ describe("piRuntimeCommands", () => {
   });
 
   it("does not let an older refresh overwrite a credential mutation snapshot", async () => {
-    let resolveRefresh: ((value: { ok: true; value: PiRuntimeSnapshot }) => void) | undefined;
-    const staleSnapshot: PiRuntimeSnapshot = { providers: [], models: [], modelsLoadError: "stale refresh" };
-    const mutationSnapshot: PiRuntimeSnapshot = { providers: [], models: [] };
-    mocks.getPiRuntimeSnapshot.mockReturnValue(
-      new Promise<{ ok: true; value: PiRuntimeSnapshot }>((resolve) => {
+    let resolveRefresh: ((value: { ok: true; value: PiProviderConfigSnapshot }) => void) | undefined;
+    const staleSnapshot: PiProviderConfigSnapshot = { providers: [], models: [], modelsLoadError: "stale refresh" };
+    const mutationSnapshot: PiProviderConfigSnapshot = { providers: [], models: [] };
+    mocks.getPiProviderConfigSnapshot.mockReturnValue(
+      new Promise<{ ok: true; value: PiProviderConfigSnapshot }>((resolve) => {
         resolveRefresh = resolve;
       }),
     );
     mocks.authenticatePiProvider.mockResolvedValue({ ok: true, value: { snapshot: mutationSnapshot } });
 
-    const refresh = getPiRuntimeSnapshot("refreshing");
+    const refresh = getPiProviderConfigSnapshot("refreshing");
     await authenticatePiProvider({ providerId: "anthropic", method: "api_key" });
     resolveRefresh?.({ ok: true, value: staleSnapshot });
     await refresh;
 
-    expect(piRuntimeStore.getState().snapshot).toBe(mutationSnapshot);
-    expect(piRuntimeStore.getState()).toMatchObject({
+    expect(piProviderConfigStore.getState().snapshot).toBe(mutationSnapshot);
+    expect(piProviderConfigStore.getState()).toMatchObject({
       loadState: "idle",
       activeLoadRequestId: undefined,
     });
   });
 
-  it("removes stored credentials and refreshes the runtime snapshot", async () => {
+  it("removes stored credentials and refreshes the provider configuration snapshot", async () => {
     mocks.removePiProviderCredential.mockResolvedValue({ ok: true, value: { snapshot } });
 
     const result = await removePiProviderCredential("openai");
 
     expect(mocks.removePiProviderCredential).toHaveBeenCalledWith("openai");
     expect(result).toBe(snapshot);
-    expect(piRuntimeStore.getState().pendingCredentialAction).toBeUndefined();
+    expect(piProviderConfigStore.getState().pendingCredentialAction).toBeUndefined();
   });
 
   it("does not start a second credential mutation while one is still pending", async () => {
-    let resolveRemoval: ((value: { ok: true; value: { snapshot: PiRuntimeSnapshot } }) => void) | undefined;
+    let resolveRemoval: ((value: { ok: true; value: { snapshot: PiProviderConfigSnapshot } }) => void) | undefined;
     mocks.removePiProviderCredential.mockReturnValue(
-      new Promise<{ ok: true; value: { snapshot: PiRuntimeSnapshot } }>((resolve) => {
+      new Promise<{ ok: true; value: { snapshot: PiProviderConfigSnapshot } }>((resolve) => {
         resolveRemoval = resolve;
       }),
     );
@@ -150,14 +150,14 @@ describe("piRuntimeCommands", () => {
     expect(mocks.removePiProviderCredential).toHaveBeenCalledTimes(1);
     resolveRemoval?.({ ok: true, value: { snapshot } });
     await firstRemoval;
-    expect(piRuntimeStore.getState().pendingCredentialAction).toBeUndefined();
+    expect(piProviderConfigStore.getState().pendingCredentialAction).toBeUndefined();
   });
 
   it("clears a saved default model when a refreshed snapshot no longer makes it available", async () => {
     aiChatSettingsStore.setState({ defaultModel: { providerId: "openai", modelId: "gpt-5" } });
-    mocks.getPiRuntimeSnapshot.mockResolvedValue({ ok: true, value: snapshot });
+    mocks.getPiProviderConfigSnapshot.mockResolvedValue({ ok: true, value: snapshot });
 
-    await getPiRuntimeSnapshot();
+    await getPiProviderConfigSnapshot();
 
     expect(aiChatSettingsStore.getState().defaultModel).toBeUndefined();
   });
@@ -168,8 +168,8 @@ describe("piRuntimeCommands", () => {
     const result = await authenticatePiProvider({ providerId: "openai-codex", method: "oauth" });
 
     expect(result).toBeNull();
-    expect(piRuntimeStore.getState().errorMessage).toBe("Login failed");
-    expect(piRuntimeStore.getState().pendingCredentialAction).toBeUndefined();
+    expect(piProviderConfigStore.getState().errorMessage).toBe("Login failed");
+    expect(piProviderConfigStore.getState().pendingCredentialAction).toBeUndefined();
   });
 
   it("returns cancelled authentication to idle without showing an error", async () => {
@@ -181,8 +181,8 @@ describe("piRuntimeCommands", () => {
     const result = await authenticatePiProvider({ providerId: "anthropic", method: "oauth" });
 
     expect(result).toBeNull();
-    expect(piRuntimeStore.getState().errorMessage).toBeUndefined();
-    expect(piRuntimeStore.getState().pendingCredentialAction).toBeUndefined();
+    expect(piProviderConfigStore.getState().errorMessage).toBeUndefined();
+    expect(piProviderConfigStore.getState().pendingCredentialAction).toBeUndefined();
   });
 
   it("shows non-cancellation result errors using their stable payload", async () => {
@@ -194,13 +194,13 @@ describe("piRuntimeCommands", () => {
     const result = await authenticatePiProvider({ providerId: "anthropic", method: "oauth" });
 
     expect(result).toBeNull();
-    expect(piRuntimeStore.getState().errorMessage).toBe("API key is required.");
-    expect(piRuntimeStore.getState().pendingCredentialAction).toBeUndefined();
+    expect(piProviderConfigStore.getState().errorMessage).toBe("API key is required.");
+    expect(piProviderConfigStore.getState().pendingCredentialAction).toBeUndefined();
   });
 
   it("requests cancellation without clearing pending state before authentication settles", async () => {
     mocks.cancelPiProviderAuthentication.mockResolvedValue({ ok: true, value: true });
-    piRuntimeStore.setState({
+    piProviderConfigStore.setState({
       pendingCredentialAction: { kind: "authenticate", providerId: "anthropic", method: "oauth" },
     });
 
@@ -208,7 +208,7 @@ describe("piRuntimeCommands", () => {
 
     expect(mocks.cancelPiProviderAuthentication).toHaveBeenCalledWith("anthropic");
     expect(result).toBe(true);
-    expect(piRuntimeStore.getState().pendingCredentialAction).toEqual({
+    expect(piProviderConfigStore.getState().pendingCredentialAction).toEqual({
       kind: "authenticate",
       providerId: "anthropic",
       method: "oauth",

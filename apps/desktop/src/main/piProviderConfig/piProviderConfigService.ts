@@ -4,12 +4,12 @@ import type { AuthCredential, AuthStatus, AuthStorage, ModelRegistry } from "@ea
 import type {
   PiProviderAuthMethod,
   PiProviderAuthMethodKind,
-  PiRuntimeModelRecord,
-  PiRuntimeProviderAuthSource,
-  PiRuntimeProviderRecord,
-  PiRuntimeSnapshot,
-} from "../../shared/contracts/piRuntime";
-import { PiRuntimeError, createPiRuntimeCancellationError } from "./piRuntimeErrors";
+  PiProviderAuthSource,
+  PiProviderConfigSnapshot,
+  PiProviderModelRecord,
+  PiProviderRecord,
+} from "../../shared/contracts/piProviderConfig";
+import { PiProviderConfigError, createPiProviderConfigCancellationError } from "./piProviderConfigErrors";
 
 type PiProviderConfigServiceOptions = {
   agentDir?: string;
@@ -58,11 +58,11 @@ export class PiProviderConfigService {
   }
 
   /** Returns the current Pi provider/model inventory from disk-backed runtime state. */
-  async getSnapshot(): Promise<PiRuntimeSnapshot> {
+  async getSnapshot(): Promise<PiProviderConfigSnapshot> {
     const { authStorage, modelRegistry, builtInProviders } = await this.getRuntime();
     authStorage.reload();
     modelRegistry.refresh();
-    return buildPiRuntimeSnapshot(authStorage, modelRegistry, builtInProviders);
+    return buildPiProviderConfigSnapshot(authStorage, modelRegistry, builtInProviders);
   }
 
   /** Runs one provider-owned authentication method and persists only its complete credential. */
@@ -74,13 +74,16 @@ export class PiProviderConfigService {
     const { authStorage, builtInProviders } = await this.getRuntime();
     const provider = builtInProviders.find((entry) => entry.id === providerId);
     if (!provider) {
-      throw new PiRuntimeError("unsupported_provider", `Provider authentication is not supported: ${providerId}`);
+      throw new PiProviderConfigError(
+        "unsupported_provider",
+        `Provider authentication is not supported: ${providerId}`,
+      );
     }
 
     if (method === "oauth") {
       const oauthLogin = provider.auth.oauth?.login;
       if (!oauthLogin) {
-        throw new PiRuntimeError("unsupported_method", `OAuth authentication is not supported: ${providerId}`);
+        throw new PiProviderConfigError("unsupported_method", `OAuth authentication is not supported: ${providerId}`);
       }
       const credential = await oauthLogin(callbacks);
       throwIfAuthenticationCancelled(callbacks.signal);
@@ -88,12 +91,12 @@ export class PiProviderConfigService {
     } else if (method === "api_key") {
       const apiKeyLogin = provider.auth.apiKey?.login;
       if (!apiKeyLogin) {
-        throw new PiRuntimeError("unsupported_method", `API-key authentication is not supported: ${providerId}`);
+        throw new PiProviderConfigError("unsupported_method", `API-key authentication is not supported: ${providerId}`);
       }
       const credential = await apiKeyLogin(callbacks);
       const key = credential.key?.trim();
       if (!key) {
-        throw new PiRuntimeError("invalid_credential", "API key is required.");
+        throw new PiProviderConfigError("invalid_credential", "API key is required.");
       }
       throwIfAuthenticationCancelled(callbacks.signal);
       storeCredential(authStorage, providerId, {
@@ -102,7 +105,10 @@ export class PiProviderConfigService {
         ...(credential.env ? { env: credential.env } : {}),
       });
     } else {
-      throw new PiRuntimeError("unsupported_method", `Provider authentication method is not supported: ${method}`);
+      throw new PiProviderConfigError(
+        "unsupported_method",
+        `Provider authentication method is not supported: ${method}`,
+      );
     }
   }
 
@@ -113,15 +119,18 @@ export class PiProviderConfigService {
     try {
       credential = authStorage.get(providerId);
     } catch {
-      throw new PiRuntimeError("storage_failure", "Could not read the stored provider credential.");
+      throw new PiProviderConfigError("storage_failure", "Could not read the stored provider credential.");
     }
     if (!credential) {
-      throw new PiRuntimeError("credential_not_found", `No stored credential exists for provider: ${providerId}`);
+      throw new PiProviderConfigError(
+        "credential_not_found",
+        `No stored credential exists for provider: ${providerId}`,
+      );
     }
     try {
       authStorage.remove(providerId);
     } catch {
-      throw new PiRuntimeError("storage_failure", "Could not remove the stored provider credential.");
+      throw new PiProviderConfigError("storage_failure", "Could not remove the stored provider credential.");
     }
   }
 
@@ -157,7 +166,7 @@ export class PiProviderConfigService {
 
 function throwIfAuthenticationCancelled(signal: AbortSignal | undefined): void {
   if (signal?.aborted) {
-    throw createPiRuntimeCancellationError();
+    throw createPiProviderConfigCancellationError();
   }
 }
 
@@ -165,24 +174,24 @@ function storeCredential(authStorage: AuthStorage, providerId: string, credentia
   try {
     authStorage.set(providerId, credential);
   } catch {
-    throw new PiRuntimeError("storage_failure", "Could not save the provider credential.");
+    throw new PiProviderConfigError("storage_failure", "Could not save the provider credential.");
   }
 }
 
 /** Builds one serializable provider/model snapshot from Pi runtime primitives. */
-export function buildPiRuntimeSnapshot(
+export function buildPiProviderConfigSnapshot(
   authStorage: AuthStorage,
   modelRegistry: ModelRegistry,
   builtInProviders: readonly Provider[],
-): PiRuntimeSnapshot {
+): PiProviderConfigSnapshot {
   const availableModels = modelRegistry.getAvailable();
   const availableProviderIds = new Set(availableModels.map((model) => model.provider));
-  const providers = buildPiRuntimeProviderRecords(authStorage, modelRegistry, builtInProviders, availableProviderIds);
+  const providers = buildPiProviderRecords(authStorage, modelRegistry, builtInProviders, availableProviderIds);
   const providerNameById = new Map(providers.map((provider) => [provider.id, provider.name]));
   const availableModelKeys = new Set(availableModels.map((model) => `${model.provider}:${model.id}`));
   const models = modelRegistry
     .getAll()
-    .map<PiRuntimeModelRecord>((model) => ({
+    .map<PiProviderModelRecord>((model) => ({
       providerId: model.provider,
       providerName: providerNameById.get(model.provider) ?? modelRegistry.getProviderDisplayName(model.provider),
       modelId: model.id,
@@ -204,12 +213,12 @@ export function buildPiRuntimeSnapshot(
   };
 }
 
-function buildPiRuntimeProviderRecords(
+function buildPiProviderRecords(
   authStorage: AuthStorage,
   modelRegistry: ModelRegistry,
   builtInProviders: readonly Provider[],
   availableProviderIds: ReadonlySet<string>,
-): PiRuntimeProviderRecord[] {
+): PiProviderRecord[] {
   const builtInProviderById = new Map(builtInProviders.map((provider) => [provider.id, provider]));
   const providerIds = new Set<string>([
     ...modelRegistry.getAll().map((model) => model.provider),
@@ -219,7 +228,7 @@ function buildPiRuntimeProviderRecords(
 
   return [...providerIds]
     .sort((left, right) => left.localeCompare(right))
-    .map<PiRuntimeProviderRecord>((providerId) => {
+    .map<PiProviderRecord>((providerId) => {
       const credential = authStorage.get(providerId);
       const authStatus = modelRegistry.getProviderAuthStatus(providerId);
       const hasAuth = authStatus.configured || authStorage.hasAuth(providerId);
@@ -229,7 +238,7 @@ function buildPiRuntimeProviderRecords(
         name: modelRegistry.getProviderDisplayName(providerId),
         hasAuth,
         available: availableProviderIds.has(providerId),
-        authSource: inferPiRuntimeProviderAuthSource(credential, authStatus),
+        authSource: inferPiProviderAuthSource(credential, authStatus),
         authMethods: builtInProvider ? buildPiProviderAuthMethods(builtInProvider) : [],
       };
     });
@@ -249,10 +258,10 @@ function buildPiProviderAuthMethods(provider: Provider): PiProviderAuthMethod[] 
 }
 
 /** Maps Pi auth/runtime config state to the smaller desktop-facing auth source enum. */
-export function inferPiRuntimeProviderAuthSource(
+export function inferPiProviderAuthSource(
   credential: AuthCredential | undefined,
   authStatus: AuthStatus,
-): PiRuntimeProviderAuthSource {
+): PiProviderAuthSource {
   if (credential?.type === "oauth") {
     return "oauth";
   }

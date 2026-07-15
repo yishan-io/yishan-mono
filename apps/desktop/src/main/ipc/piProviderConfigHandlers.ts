@@ -1,44 +1,44 @@
 import { BrowserWindow, ipcMain } from "electron";
-import type { PiRuntimeMutationOutcome, PiRuntimeResult } from "../../shared/contracts/piRuntime";
+import type { PiProviderConfigMutationOutcome, PiProviderConfigResult } from "../../shared/contracts/piProviderConfig";
 import {
   parseAuthenticatePiProviderInput,
   parsePiAuthPromptResponseInput,
   parsePiProviderId,
-} from "../../shared/contracts/piRuntime";
+} from "../../shared/contracts/piProviderConfig";
 import { HOST_IPC_CHANNELS } from "../ipc";
-import type { PiProviderConfigService } from "../piRuntime/piProviderConfigService";
-import { PiRuntimeAuthenticationCoordinator } from "../piRuntime/piRuntimeAuthenticationCoordinator";
+import { PiProviderAuthenticationCoordinator } from "../piProviderConfig/piProviderAuthenticationCoordinator";
 import {
-  PiRuntimeError,
-  normalizePiRuntimeAuthenticationError,
-  toPiRuntimeErrorPayload,
-} from "../piRuntime/piRuntimeErrors";
-import { createPiRuntimeAuthCallbacks } from "../piRuntime/piRuntimeLoginBridge";
-import { PiRuntimePromptCoordinator } from "../piRuntime/piRuntimePromptCoordinator";
+  PiProviderConfigError,
+  normalizePiProviderAuthenticationError,
+  toPiProviderConfigErrorPayload,
+} from "../piProviderConfig/piProviderConfigErrors";
+import type { PiProviderConfigService } from "../piProviderConfig/piProviderConfigService";
+import { createPiProviderAuthCallbacks } from "../piProviderConfig/piProviderLoginBridge";
+import { PiProviderPromptCoordinator } from "../piProviderConfig/piProviderPromptCoordinator";
 
 /** Registers host IPC handlers for Pi provider/model runtime inspection and login. */
-export function registerPiRuntimeIpcHandlers(
+export function registerPiProviderConfigIpcHandlers(
   piProviderConfigService: PiProviderConfigService,
   resolveMainWindow: () => BrowserWindow | null,
 ): void {
-  const promptCoordinator = new PiRuntimePromptCoordinator();
-  const authenticationCoordinator = new PiRuntimeAuthenticationCoordinator();
+  const promptCoordinator = new PiProviderPromptCoordinator();
+  const authenticationCoordinator = new PiProviderAuthenticationCoordinator();
 
-  ipcMain.handle(HOST_IPC_CHANNELS.getPiRuntimeSnapshot, async () => {
-    return await runPiRuntimeOperation("Loading provider runtime failed", async () => {
+  ipcMain.handle(HOST_IPC_CHANNELS.getPiProviderConfigSnapshot, async () => {
+    return await runPiProviderConfigOperation("Loading provider configuration failed", async () => {
       return await piProviderConfigService.getSnapshot();
     });
   });
 
   ipcMain.handle(HOST_IPC_CHANNELS.authenticatePiProvider, async (event, rawInput: unknown) => {
-    return await runPiRuntimeOperation("Provider authentication failed", async () => {
+    return await runPiProviderConfigOperation("Provider authentication failed", async () => {
       const input = parseAuthenticatePiProviderInput(rawInput);
       if (!input) {
         throw createInvalidInputError();
       }
       const window = BrowserWindow.fromWebContents(event.sender) ?? resolveMainWindow();
       if (!window) {
-        throw new PiRuntimeError("operation_failed", "Main window is not available for provider login.");
+        throw new PiProviderConfigError("operation_failed", "Main window is not available for provider login.");
       }
       const senderId = event.sender.id;
       const signal = authenticationCoordinator.begin(event.sender, input.providerId);
@@ -46,14 +46,14 @@ export function registerPiRuntimeIpcHandlers(
         await piProviderConfigService.authenticate(
           input.providerId,
           input.method,
-          createPiRuntimeAuthCallbacks(
+          createPiProviderAuthCallbacks(
             window,
             (prompt, promptSignal) => promptCoordinator.request(window.webContents, prompt, promptSignal),
             signal,
           ),
         );
       } catch (error) {
-        throw normalizePiRuntimeAuthenticationError(error, signal);
+        throw normalizePiProviderAuthenticationError(error, signal);
       } finally {
         authenticationCoordinator.finish(senderId, input.providerId);
       }
@@ -62,7 +62,7 @@ export function registerPiRuntimeIpcHandlers(
   });
 
   ipcMain.handle(HOST_IPC_CHANNELS.cancelPiProviderAuthentication, async (event, rawProviderId: unknown) => {
-    return await runPiRuntimeOperation("Cancelling provider authentication failed", async () => {
+    return await runPiProviderConfigOperation("Cancelling provider authentication failed", async () => {
       const providerId = parsePiProviderId(rawProviderId);
       if (!providerId) {
         throw createInvalidInputError();
@@ -75,20 +75,20 @@ export function registerPiRuntimeIpcHandlers(
   });
 
   ipcMain.handle(HOST_IPC_CHANNELS.respondPiAuthPrompt, async (event, rawInput: unknown) => {
-    return await runPiRuntimeOperation("Responding to provider authentication prompt failed", async () => {
+    return await runPiProviderConfigOperation("Responding to provider authentication prompt failed", async () => {
       const input = parsePiAuthPromptResponseInput(rawInput);
       if (!input) {
         throw createInvalidInputError();
       }
       if (!promptCoordinator.respond(event.sender.id, input)) {
-        throw new PiRuntimeError("operation_failed", "Authentication prompt is no longer active.");
+        throw new PiProviderConfigError("operation_failed", "Authentication prompt is no longer active.");
       }
       return true as const;
     });
   });
 
   ipcMain.handle(HOST_IPC_CHANNELS.removePiProviderCredential, async (_event, rawProviderId: unknown) => {
-    return await runPiRuntimeOperation("Removing provider credential failed", async () => {
+    return await runPiProviderConfigOperation("Removing provider credential failed", async () => {
       const providerId = parsePiProviderId(rawProviderId);
       if (!providerId) {
         throw createInvalidInputError();
@@ -99,13 +99,15 @@ export function registerPiRuntimeIpcHandlers(
   });
 }
 
-async function refreshAfterCredentialMutation(service: PiProviderConfigService): Promise<PiRuntimeMutationOutcome> {
+async function refreshAfterCredentialMutation(
+  service: PiProviderConfigService,
+): Promise<PiProviderConfigMutationOutcome> {
   try {
     return { snapshot: await service.getSnapshot() };
   } catch (error) {
-    const errorPayload = toPiRuntimeErrorPayload(error);
+    const errorPayload = toPiProviderConfigErrorPayload(error);
     console.error(
-      "Refreshing provider runtime after credential change failed",
+      "Refreshing provider configuration after credential change failed",
       errorPayload.code,
       errorPayload.message,
     );
@@ -118,16 +120,19 @@ async function refreshAfterCredentialMutation(service: PiProviderConfigService):
   }
 }
 
-async function runPiRuntimeOperation<T>(logMessage: string, operation: () => Promise<T>): Promise<PiRuntimeResult<T>> {
+async function runPiProviderConfigOperation<T>(
+  logMessage: string,
+  operation: () => Promise<T>,
+): Promise<PiProviderConfigResult<T>> {
   try {
     return { ok: true, value: await operation() };
   } catch (error) {
-    const errorPayload = toPiRuntimeErrorPayload(error);
+    const errorPayload = toPiProviderConfigErrorPayload(error);
     console.error(logMessage, errorPayload.code, errorPayload.message);
     return { ok: false, error: errorPayload };
   }
 }
 
-function createInvalidInputError(): PiRuntimeError {
-  return new PiRuntimeError("invalid_input", "The provider operation input is invalid.");
+function createInvalidInputError(): PiProviderConfigError {
+  return new PiProviderConfigError("invalid_input", "The provider operation input is invalid.");
 }

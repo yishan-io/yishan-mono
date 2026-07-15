@@ -5,9 +5,9 @@ import {
   parsePiAuthPromptRequestEventPayload,
   parsePiAuthPromptResponseInput,
   parsePiProviderId,
-} from "./piRuntime";
+} from "./piProviderConfig";
 
-describe("Pi runtime IPC contract parsers", () => {
+describe("Pi provider config IPC contract parsers", () => {
   it("parses valid provider operation inputs and trims identifiers", () => {
     expect(parseAuthenticatePiProviderInput({ providerId: " anthropic ", method: "oauth" })).toEqual({
       providerId: "anthropic",

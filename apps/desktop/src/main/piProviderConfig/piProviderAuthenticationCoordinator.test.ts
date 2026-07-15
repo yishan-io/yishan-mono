@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { PiRuntimeAuthenticationCoordinator } from "./piRuntimeAuthenticationCoordinator";
+import { PiProviderAuthenticationCoordinator } from "./piProviderAuthenticationCoordinator";
 
 function createAuthenticationTarget(id: number) {
   let destroyedListener: (() => void) | undefined;
@@ -20,9 +20,9 @@ function createAuthenticationTarget(id: number) {
   };
 }
 
-describe("PiRuntimeAuthenticationCoordinator", () => {
+describe("PiProviderAuthenticationCoordinator", () => {
   it("aborts only the authentication owned by the matching renderer and provider", () => {
-    const coordinator = new PiRuntimeAuthenticationCoordinator();
+    const coordinator = new PiProviderAuthenticationCoordinator();
     const { target } = createAuthenticationTarget(7);
     const signal = coordinator.begin(target, "anthropic");
 
@@ -36,7 +36,7 @@ describe("PiRuntimeAuthenticationCoordinator", () => {
   });
 
   it("releases a finished authentication so a new one can begin", () => {
-    const coordinator = new PiRuntimeAuthenticationCoordinator();
+    const coordinator = new PiProviderAuthenticationCoordinator();
     const first = createAuthenticationTarget(7);
     const second = createAuthenticationTarget(8);
     const signal = coordinator.begin(first.target, "anthropic");
@@ -49,7 +49,7 @@ describe("PiRuntimeAuthenticationCoordinator", () => {
   });
 
   it("aborts and releases authentication when its renderer is destroyed", () => {
-    const coordinator = new PiRuntimeAuthenticationCoordinator();
+    const coordinator = new PiProviderAuthenticationCoordinator();
     const first = createAuthenticationTarget(7);
     const replacement = createAuthenticationTarget(8);
     const signal = coordinator.begin(first.target, "anthropic");

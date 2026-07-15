@@ -346,7 +346,7 @@
         "cursor": "Cursor"
       }
     },
-    "agentProviders": {
+    "aiChatProviders": {
       "title": "Ai Chat Providers & Models",
       "description": "Manage provider connections and choose the default model for AI Chat.",
       "actions": {

@@ -134,7 +134,7 @@ export async function ensurePiSession(opts: {
 
 async function resolveAvailableDefaultAiChatModel(selection: AiChatModelSelection): Promise<string | undefined> {
   try {
-    const result = await getDesktopHostBridge().getPiRuntimeSnapshot();
+    const result = await getDesktopHostBridge().getPiProviderConfigSnapshot();
     if (!result.ok) {
       return undefined;
     }

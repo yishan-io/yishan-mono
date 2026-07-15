@@ -1,28 +1,30 @@
 import { describe, expect, it } from "vitest";
 import {
-  PiRuntimeError,
-  createPiRuntimeCancellationError,
-  normalizePiRuntimeAuthenticationError,
-  toPiRuntimeErrorPayload,
-} from "./piRuntimeErrors";
+  PiProviderConfigError,
+  createPiProviderConfigCancellationError,
+  normalizePiProviderAuthenticationError,
+  toPiProviderConfigErrorPayload,
+} from "./piProviderConfigErrors";
 
-describe("Pi runtime errors", () => {
+describe("Pi provider configuration errors", () => {
   it("serializes typed errors without changing their stable code", () => {
-    expect(toPiRuntimeErrorPayload(new PiRuntimeError("invalid_credential", "API key is required."))).toEqual({
+    expect(
+      toPiProviderConfigErrorPayload(new PiProviderConfigError("invalid_credential", "API key is required.")),
+    ).toEqual({
       code: "invalid_credential",
       message: "API key is required.",
     });
   });
 
   it("does not expose unknown main-process errors across IPC", () => {
-    expect(toPiRuntimeErrorPayload(new Error("secret filesystem path"))).toEqual({
+    expect(toPiProviderConfigErrorPayload(new Error("secret filesystem path"))).toEqual({
       code: "operation_failed",
       message: "The provider operation failed. Please try again.",
     });
   });
 
   it("creates a stable typed cancellation error", () => {
-    expect(toPiRuntimeErrorPayload(createPiRuntimeCancellationError())).toEqual({
+    expect(toPiProviderConfigErrorPayload(createPiProviderConfigCancellationError())).toEqual({
       code: "cancelled",
       message: "Login cancelled.",
     });
@@ -33,7 +35,7 @@ describe("Pi runtime errors", () => {
     controller.abort(new DOMException("Provider aborted", "AbortError"));
 
     expect(
-      toPiRuntimeErrorPayload(normalizePiRuntimeAuthenticationError(new Error("SDK abort"), controller.signal)),
+      toPiProviderConfigErrorPayload(normalizePiProviderAuthenticationError(new Error("SDK abort"), controller.signal)),
     ).toEqual({
       code: "cancelled",
       message: "Login cancelled.",

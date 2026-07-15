@@ -1,7 +1,7 @@
-import { PiRuntimeError, createPiRuntimeCancellationError } from "./piRuntimeErrors";
+import { PiProviderConfigError, createPiProviderConfigCancellationError } from "./piProviderConfigErrors";
 
 /** Minimal renderer target contract required to own an authentication lifecycle. */
-export type PiRuntimeAuthenticationTarget = {
+export type PiProviderAuthenticationTarget = {
   id: number;
   once: (event: "destroyed", listener: () => void) => void;
   removeListener: (event: "destroyed", listener: () => void) => void;
@@ -11,17 +11,17 @@ type ActiveAuthentication = {
   senderId: number;
   providerId: string;
   controller: AbortController;
-  target: PiRuntimeAuthenticationTarget;
+  target: PiProviderAuthenticationTarget;
   onDestroyed: () => void;
 };
 
 /** Owns the single active provider authentication and restricts cancellation to its initiating renderer. */
-export class PiRuntimeAuthenticationCoordinator {
+export class PiProviderAuthenticationCoordinator {
   private activeAuthentication: ActiveAuthentication | undefined;
 
-  begin(target: PiRuntimeAuthenticationTarget, providerId: string): AbortSignal {
+  begin(target: PiProviderAuthenticationTarget, providerId: string): AbortSignal {
     if (this.activeAuthentication) {
-      throw new PiRuntimeError("authentication_in_progress", "Provider authentication is already in progress.");
+      throw new PiProviderConfigError("authentication_in_progress", "Provider authentication is already in progress.");
     }
     const controller = new AbortController();
     const onDestroyed = () => {
@@ -30,7 +30,7 @@ export class PiRuntimeAuthenticationCoordinator {
         return;
       }
       this.activeAuthentication = undefined;
-      controller.abort(createPiRuntimeCancellationError());
+      controller.abort(createPiProviderConfigCancellationError());
     };
     this.activeAuthentication = { senderId: target.id, providerId, controller, target, onDestroyed };
     target.once("destroyed", onDestroyed);
@@ -42,7 +42,7 @@ export class PiRuntimeAuthenticationCoordinator {
     if (!active || active.senderId !== senderId || active.providerId !== providerId) {
       return false;
     }
-    active.controller.abort(createPiRuntimeCancellationError());
+    active.controller.abort(createPiProviderConfigCancellationError());
     return true;
   }
 

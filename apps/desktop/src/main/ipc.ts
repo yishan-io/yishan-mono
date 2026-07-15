@@ -2,11 +2,11 @@ import type { WorkspaceEntryAppId } from "../shared/contracts/externalApps";
 import type {
   AuthenticatePiProviderInput,
   PiAuthPromptResponseInput,
-  PiRuntimeMutationResult,
-  PiRuntimeResult,
-  PiRuntimeSnapshot,
-  PiRuntimeSnapshotResult,
-} from "../shared/contracts/piRuntime";
+  PiProviderConfigMutationResult,
+  PiProviderConfigResult,
+  PiProviderConfigSnapshot,
+  PiProviderConfigSnapshotResult,
+} from "../shared/contracts/piProviderConfig";
 import type { ExternalClipboardReadOutcome } from "../shared/contracts/rpcRequestTypes";
 import type { NotificationSoundId } from "../shared/notifications/notificationPreferences";
 import type { NotificationDispatchResult, NotificationSoundPreviewResult } from "./notifications/types";
@@ -182,11 +182,11 @@ export type DesktopHostBridge = {
   installUpdate: () => Promise<{ ok: true }>;
   getAuthStatus: () => Promise<AuthStatusResult>;
   login: () => Promise<AuthLoginResult>;
-  getPiRuntimeSnapshot: () => Promise<PiRuntimeSnapshotResult>;
-  authenticatePiProvider: (input: AuthenticatePiProviderInput) => Promise<PiRuntimeMutationResult>;
-  cancelPiProviderAuthentication: (providerId: string) => Promise<PiRuntimeResult<boolean>>;
-  respondPiAuthPrompt: (input: PiAuthPromptResponseInput) => Promise<PiRuntimeResult<true>>;
-  removePiProviderCredential: (providerId: string) => Promise<PiRuntimeMutationResult>;
+  getPiProviderConfigSnapshot: () => Promise<PiProviderConfigSnapshotResult>;
+  authenticatePiProvider: (input: AuthenticatePiProviderInput) => Promise<PiProviderConfigMutationResult>;
+  cancelPiProviderAuthentication: (providerId: string) => Promise<PiProviderConfigResult<boolean>>;
+  respondPiAuthPrompt: (input: PiAuthPromptResponseInput) => Promise<PiProviderConfigResult<true>>;
+  removePiProviderCredential: (providerId: string) => Promise<PiProviderConfigMutationResult>;
   getDaemonInfo: () => Promise<DaemonInfoResult>;
   restartDaemon: () => Promise<DaemonRestartResult>;
   readDaemonLog: () => Promise<DaemonLogResult>;
@@ -234,7 +234,7 @@ export const HOST_IPC_CHANNELS = {
   installUpdate: "desktop:host/install-update",
   getAuthStatus: "desktop:host/get-auth-status",
   login: "desktop:host/login",
-  getPiRuntimeSnapshot: "desktop:host/get-pi-runtime-snapshot",
+  getPiProviderConfigSnapshot: "desktop:host/get-pi-runtime-snapshot",
   authenticatePiProvider: "desktop:host/authenticate-pi-provider",
   cancelPiProviderAuthentication: "desktop:host/cancel-pi-provider-authentication",
   respondPiAuthPrompt: "desktop:host/respond-pi-auth-prompt",

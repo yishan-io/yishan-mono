@@ -11,47 +11,47 @@ import {
 } from "../../helpers/aiChatSettings";
 import { useCommands } from "../../hooks/useCommands";
 import { aiChatSettingsStore } from "../../store/settings/aiChatSettingsStore";
-import { piRuntimeStore } from "../../store/settings/piRuntimeStore";
-import { AgentProviderActionControl } from "./AgentProviderActionControl";
+import { piProviderConfigStore } from "../../store/settings/piProviderConfigStore";
+import { AiChatProviderActionControl } from "./AiChatProviderActionControl";
 import {
-  buildAgentProviderConfigEntries,
-  buildAvailablePiModelOptionsForProvider,
-  buildAvailablePiProviderOptions,
-  getAgentProviderConfigEntryStatusKind,
-  isAgentProviderConfigEntryConfigured,
-  isAgentProviderConfiguredButUnavailable,
-} from "./agentProviderHelpers";
+  buildAiChatProviderConfigEntries,
+  buildAvailableAiChatModelOptionsForProvider,
+  buildAvailableAiChatProviderOptions,
+  getAiChatProviderConfigEntryStatusKind,
+  isAiChatProviderConfigEntryConfigured,
+  isAiChatProviderConfiguredButUnavailable,
+} from "./aiChatProviderHelpers";
 
-const PROVIDER_SETTINGS_ANCHOR_ID = "agent-provider-settings";
+const PROVIDER_SETTINGS_ANCHOR_ID = "ai-chat-provider-settings";
 const FOCUS_HIGHLIGHT_DURATION_MS = 1800;
 
-type AgentProviderSettingsViewProps = {
+type AiChatProviderSettingsSectionProps = {
   focusRequested?: boolean;
 };
 
-/** Renders Pi provider/model runtime status and controls under the Agents settings tab. */
-export function AgentProviderSettingsView({ focusRequested = false }: AgentProviderSettingsViewProps) {
+/** Renders Desktop AI Chat provider/model configuration under the Agents settings tab. */
+export function AiChatProviderSettingsSection({ focusRequested = false }: AiChatProviderSettingsSectionProps) {
   const { t } = useTranslation();
   const [isFocusHighlighted, setIsFocusHighlighted] = useState(false);
   const {
-    getPiRuntimeSnapshot,
+    getPiProviderConfigSnapshot,
     authenticatePiProvider,
     cancelPiProviderAuthentication,
     removePiProviderCredential,
     setDefaultAiChatModel,
   } = useCommands();
-  const snapshot = piRuntimeStore((state) => state.snapshot);
-  const loadState = piRuntimeStore((state) => state.loadState);
-  const errorMessage = piRuntimeStore((state) => state.errorMessage);
-  const pendingCredentialAction = piRuntimeStore((state) => state.pendingCredentialAction);
+  const snapshot = piProviderConfigStore((state) => state.snapshot);
+  const loadState = piProviderConfigStore((state) => state.loadState);
+  const errorMessage = piProviderConfigStore((state) => state.errorMessage);
+  const pendingCredentialAction = piProviderConfigStore((state) => state.pendingCredentialAction);
   const defaultModel = aiChatSettingsStore((state) => state.defaultModel);
   const savedDefaultProviderId = defaultModel?.providerId;
   const [selectedProviderId, setSelectedProviderId] = useState(savedDefaultProviderId ?? "");
 
   useEffect(() => {
     // fire-and-forget: the command owns load and error state for this initial snapshot request.
-    void getPiRuntimeSnapshot();
-  }, [getPiRuntimeSnapshot]);
+    void getPiProviderConfigSnapshot();
+  }, [getPiProviderConfigSnapshot]);
 
   useEffect(() => {
     if (!focusRequested) {
@@ -76,18 +76,21 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
   }, [focusRequested]);
 
   const providerEntries = useMemo(
-    () => buildAgentProviderConfigEntries(snapshot?.providers ?? []),
+    () => buildAiChatProviderConfigEntries(snapshot?.providers ?? []),
     [snapshot?.providers],
   );
-  const providerOptions = useMemo(() => buildAvailablePiProviderOptions(snapshot?.models ?? []), [snapshot?.models]);
-  const hasAvailableDefaultPiProvider = providerOptions.some((provider) => provider.id === savedDefaultProviderId);
+  const providerOptions = useMemo(
+    () => buildAvailableAiChatProviderOptions(snapshot?.models ?? []),
+    [snapshot?.models],
+  );
+  const hasAvailableDefaultAiChatProvider = providerOptions.some((provider) => provider.id === savedDefaultProviderId);
   const hasAvailableSelectedProvider = providerOptions.some((provider) => provider.id === selectedProviderId);
   const activeSelectedProviderId = hasAvailableSelectedProvider ? selectedProviderId : "";
   const modelOptions = useMemo(
-    () => buildAvailablePiModelOptionsForProvider(snapshot?.models ?? [], activeSelectedProviderId || undefined),
+    () => buildAvailableAiChatModelOptionsForProvider(snapshot?.models ?? [], activeSelectedProviderId || undefined),
     [activeSelectedProviderId, snapshot?.models],
   );
-  const hasAvailableDefaultPiModel = useMemo(
+  const hasAvailableDefaultAiChatModel = useMemo(
     () => isAiChatModelSelectionAvailable(snapshot?.models ?? [], defaultModel),
     [defaultModel, snapshot?.models],
   );
@@ -109,7 +112,7 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
   return (
     <Box
       id={PROVIDER_SETTINGS_ANCHOR_ID}
-      data-testid="agent-provider-settings-panel"
+      data-testid="ai-chat-provider-settings-section"
       data-focus-highlighted={isFocusHighlighted ? "true" : "false"}
       sx={{
         scrollMarginTop: 3,
@@ -119,20 +122,20 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
       }}
     >
       <SettingsSectionHeader
-        title={t("settings.agentProviders.title")}
-        description={t("settings.agentProviders.description")}
+        title={t("settings.aiChatProviders.title")}
+        description={t("settings.aiChatProviders.description")}
         action={
           <Button
             size="small"
             variant="text"
             onClick={() => {
-              // fire-and-forget: the command exposes refresh progress and errors through piRuntimeStore.
-              void getPiRuntimeSnapshot("refreshing");
+              // fire-and-forget: the command exposes refresh progress and errors through piProviderConfigStore.
+              void getPiProviderConfigSnapshot("refreshing");
             }}
             disabled={isRefreshing}
             startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : <LuRefreshCw />}
           >
-            {t("settings.agentProviders.actions.refresh")}
+            {t("settings.aiChatProviders.actions.refresh")}
           </Button>
         }
       />
@@ -146,13 +149,13 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
               <SettingsRows>
                 {providerEntries.map((entry) => {
                   const { provider, method } = entry;
-                  const statusKind = getAgentProviderConfigEntryStatusKind(entry);
-                  const isConfigured = isAgentProviderConfigEntryConfigured(entry);
+                  const statusKind = getAiChatProviderConfigEntryStatusKind(entry);
+                  const isConfigured = isAiChatProviderConfigEntryConfigured(entry);
                   const isPendingCredentialAction =
                     pendingCredentialAction?.kind === "authenticate" &&
                     pendingCredentialAction.providerId === provider.id &&
                     pendingCredentialAction.method === method.kind;
-                  const configuredButUnavailable = isConfigured && isAgentProviderConfiguredButUnavailable(provider);
+                  const configuredButUnavailable = isConfigured && isAiChatProviderConfiguredButUnavailable(provider);
                   const showConfigurationStatus = statusKind !== undefined;
                   return (
                     <SettingsControlRow
@@ -160,7 +163,7 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
                       title={method.kind === "external" ? provider.name : method.label}
                       description={
                         showConfigurationStatus
-                          ? t(`settings.agentProviders.providers.status.${statusKind}`)
+                          ? t(`settings.aiChatProviders.providers.status.${statusKind}`)
                           : undefined
                       }
                       control={
@@ -177,11 +180,11 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
                               }
                               variant={isConfigured ? "filled" : "outlined"}
                               label={t(
-                                `settings.agentProviders.providers.badges.${configuredButUnavailable ? "configuredUnavailable" : statusKind}`,
+                                `settings.aiChatProviders.providers.badges.${configuredButUnavailable ? "configuredUnavailable" : statusKind}`,
                               )}
                             />
                           ) : null}
-                          <AgentProviderActionControl
+                          <AiChatProviderActionControl
                             provider={provider}
                             method={method}
                             disabled={hasPendingCredentialAction}
@@ -210,21 +213,21 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
         ) : (
           <SettingsCard>
             <Box sx={{ py: 1, typography: "body2", color: "text.secondary" }}>
-              {t("settings.agentProviders.providers.empty")}
+              {t("settings.aiChatProviders.providers.empty")}
             </Box>
           </SettingsCard>
         )}
 
         <Box>
           <SettingsSectionHeader
-            title={t("settings.agentProviders.models.selectionTitle")}
-            description={t("settings.agentProviders.models.selectionDescription")}
+            title={t("settings.aiChatProviders.models.selectionTitle")}
+            description={t("settings.aiChatProviders.models.selectionDescription")}
           />
           <SettingsCard>
             <SettingsRows>
               <SettingsControlRow
-                title={t("settings.agentProviders.models.providerTitle")}
-                description={t("settings.agentProviders.models.providerDescription")}
+                title={t("settings.aiChatProviders.models.providerTitle")}
+                description={t("settings.aiChatProviders.models.providerDescription")}
                 control={
                   <Box sx={{ minWidth: 300, maxWidth: 360 }}>
                     <ModelAutocomplete
@@ -238,22 +241,22 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
                       }}
                       loading={isLoading || isRefreshing}
                       disabled={providerOptions.length === 0}
-                      placeholder={t("settings.agentProviders.models.providerPlaceholder")}
-                      noOptionsText={t("settings.agentProviders.models.providerEmpty")}
+                      placeholder={t("settings.aiChatProviders.models.providerPlaceholder")}
+                      noOptionsText={t("settings.aiChatProviders.models.providerEmpty")}
                       allowCustomValue={false}
                     />
                   </Box>
                 }
               />
               <SettingsControlRow
-                title={t("settings.agentProviders.models.defaultTitle")}
-                description={t("settings.agentProviders.models.defaultDescription")}
+                title={t("settings.aiChatProviders.models.defaultTitle")}
+                description={t("settings.aiChatProviders.models.defaultDescription")}
                 control={
                   <Box sx={{ minWidth: 300, maxWidth: 360 }}>
                     <ModelAutocomplete
                       options={modelOptions}
                       value={
-                        defaultModel && hasAvailableDefaultPiModel
+                        defaultModel && hasAvailableDefaultAiChatModel
                           ? (formatAiChatModelSelection(defaultModel) ?? "")
                           : ""
                       }
@@ -262,8 +265,8 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
                       }}
                       loading={isLoading || isRefreshing}
                       disabled={!activeSelectedProviderId || modelOptions.length === 0}
-                      placeholder={t("settings.agentProviders.models.placeholder")}
-                      noOptionsText={t("settings.agentProviders.models.empty")}
+                      placeholder={t("settings.aiChatProviders.models.placeholder")}
+                      noOptionsText={t("settings.aiChatProviders.models.empty")}
                       allowCustomValue={false}
                     />
                   </Box>
@@ -273,8 +276,9 @@ export function AgentProviderSettingsView({ focusRequested = false }: AgentProvi
           </SettingsCard>
         </Box>
 
-        {(savedDefaultProviderId && !hasAvailableDefaultPiProvider) || (defaultModel && !hasAvailableDefaultPiModel) ? (
-          <Alert severity="warning">{t("settings.agentProviders.models.unavailableWarning")}</Alert>
+        {(savedDefaultProviderId && !hasAvailableDefaultAiChatProvider) ||
+        (defaultModel && !hasAvailableDefaultAiChatModel) ? (
+          <Alert severity="warning">{t("settings.aiChatProviders.models.unavailableWarning")}</Alert>
         ) : null}
       </Stack>
     </Box>

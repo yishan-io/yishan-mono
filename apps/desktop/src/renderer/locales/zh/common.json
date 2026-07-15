@@ -324,7 +324,7 @@
         "cursor": "Cursor"
       }
     },
-    "agentProviders": {
+    "aiChatProviders": {
       "title": "AI Chat 提供商与模型",
       "description": "管理 AI Chat 提供商连接并选择默认模型。",
       "actions": {

@@ -29,8 +29,8 @@ vi.mock("./settings/NotificationSettingsView", () => ({
 }));
 
 vi.mock("./settings/AgentSettingsView", () => ({
-  AgentSettingsView: ({ focusAgentProviders }: { focusAgentProviders?: boolean }) => (
-    <div data-testid="agent-settings-panel" data-focus-agent-providers={focusAgentProviders ? "true" : "false"} />
+  AgentSettingsView: ({ focusAiChatProviders }: { focusAiChatProviders?: boolean }) => (
+    <div data-testid="agent-settings-panel" data-focus-ai-chat-providers={focusAiChatProviders ? "true" : "false"} />
   ),
 }));
 
@@ -518,12 +518,12 @@ describe("SettingsView", () => {
     );
 
     fireEvent.change(screen.getByPlaceholderText("settings.searchPlaceholder"), {
-      target: { value: "agentProviders" },
+      target: { value: "aiChatProviders" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /settings\.agentProviders\.title/ }));
+    fireEvent.click(screen.getByRole("button", { name: /settings\.aiChatProviders\.title/ }));
 
-    expect(screen.getByTestId("agent-settings-panel").getAttribute("data-focus-agent-providers")).toBe("true");
+    expect(screen.getByTestId("agent-settings-panel").getAttribute("data-focus-ai-chat-providers")).toBe("true");
   });
 
   it("forwards the provider focus deep link to agent settings", () => {
@@ -537,7 +537,7 @@ describe("SettingsView", () => {
       </AppThemePreferenceProvider>,
     );
 
-    expect(screen.getByTestId("agent-settings-panel").getAttribute("data-focus-agent-providers")).toBe("true");
+    expect(screen.getByTestId("agent-settings-panel").getAttribute("data-focus-ai-chat-providers")).toBe("true");
   });
 
   it("renders keybindings panel when keybindings tab is selected", () => {

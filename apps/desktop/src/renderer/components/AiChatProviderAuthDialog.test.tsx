@@ -3,8 +3,8 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DesktopRpcEventEnvelope } from "../../main/ipc";
-import type { ProviderAuthDialogBridge } from "./ProviderAuthDialog";
-import { ProviderAuthDialog } from "./ProviderAuthDialog";
+import type { AiChatProviderAuthDialogBridge } from "./AiChatProviderAuthDialog";
+import { AiChatProviderAuthDialog } from "./AiChatProviderAuthDialog";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -12,8 +12,10 @@ vi.mock("react-i18next", () => ({
 
 function createBridge() {
   let listener: ((event: DesktopRpcEventEnvelope) => void) | undefined;
-  const respondPiAuthPrompt = vi.fn<ProviderAuthDialogBridge["respondPiAuthPrompt"]>(async () => ({ ok: true }));
-  const bridge: ProviderAuthDialogBridge = {
+  const respondPiAuthPrompt = vi.fn<AiChatProviderAuthDialogBridge["respondPiAuthPrompt"]>(async () => ({
+    ok: true,
+  }));
+  const bridge: AiChatProviderAuthDialogBridge = {
     respondPiAuthPrompt,
     events: {
       subscribe: (nextListener) => {
@@ -33,12 +35,12 @@ function createBridge() {
   };
 }
 
-describe("ProviderAuthDialog", () => {
+describe("AiChatProviderAuthDialog", () => {
   afterEach(cleanup);
 
   it("renders secret prompts with the desktop dialog and submits the local value", async () => {
     const { bridge, emit, respondPiAuthPrompt } = createBridge();
-    render(<ProviderAuthDialog bridge={bridge} />);
+    render(<AiChatProviderAuthDialog bridge={bridge} />);
 
     emit({
       method: "piRuntime.authPrompt",
@@ -51,7 +53,7 @@ describe("ProviderAuthDialog", () => {
     }
     expect(input.type).toBe("password");
     fireEvent.change(input, { target: { value: "ant-secret" } });
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.prompt.submit" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.prompt.submit" }));
 
     expect(respondPiAuthPrompt).toHaveBeenCalledWith({
       requestId: "request-1",
@@ -62,7 +64,7 @@ describe("ProviderAuthDialog", () => {
 
   it("preserves provider-owned select option ids and supports cancellation", () => {
     const { bridge, emit, respondPiAuthPrompt } = createBridge();
-    render(<ProviderAuthDialog bridge={bridge} />);
+    render(<AiChatProviderAuthDialog bridge={bridge} />);
 
     emit({
       method: "piRuntime.authPrompt",
@@ -89,7 +91,7 @@ describe("ProviderAuthDialog", () => {
   it("keeps the prompt value visible and shows a recoverable response error", async () => {
     const { bridge, emit, respondPiAuthPrompt } = createBridge();
     respondPiAuthPrompt.mockResolvedValueOnce({ ok: false, errorMessage: "Prompt expired. Please retry." });
-    render(<ProviderAuthDialog bridge={bridge} />);
+    render(<AiChatProviderAuthDialog bridge={bridge} />);
 
     emit({
       method: "piRuntime.authPrompt",
@@ -97,7 +99,7 @@ describe("ProviderAuthDialog", () => {
     });
     const input = screen.getByRole("textbox", { name: "Enter account ID" });
     fireEvent.change(input, { target: { value: "account-123" } });
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.prompt.submit" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.prompt.submit" }));
 
     expect(await screen.findByText("Prompt expired. Please retry.")).toBeTruthy();
     const retainedInput = screen.getByRole("textbox", { name: "Enter account ID" });
@@ -108,7 +110,7 @@ describe("ProviderAuthDialog", () => {
 
   it("closes a matching prompt when the provider completes through the browser callback", () => {
     const { bridge, emit, respondPiAuthPrompt } = createBridge();
-    render(<ProviderAuthDialog bridge={bridge} />);
+    render(<AiChatProviderAuthDialog bridge={bridge} />);
 
     emit({
       method: "piRuntime.authPrompt",
@@ -130,7 +132,7 @@ describe("ProviderAuthDialog", () => {
         resolveFirstResponse = resolve;
       }),
     );
-    render(<ProviderAuthDialog bridge={bridge} />);
+    render(<AiChatProviderAuthDialog bridge={bridge} />);
 
     emit({
       method: "piRuntime.authPrompt",
@@ -139,7 +141,7 @@ describe("ProviderAuthDialog", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Enter account ID" }), {
       target: { value: "account-old" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "settings.agentProviders.prompt.submit" }));
+    fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.prompt.submit" }));
 
     emit({
       method: "piRuntime.authPrompt",

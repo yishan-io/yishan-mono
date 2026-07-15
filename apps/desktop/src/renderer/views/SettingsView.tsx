@@ -110,7 +110,7 @@ export function SettingsView() {
   const selectedTabParam = searchParams.get("tab");
   const focusedItemParam = searchParams.get("focus");
   const focusedNotificationItemId = isNotificationSettingsFocusItemId(focusedItemParam) ? focusedItemParam : undefined;
-  const focusAgentProviders = selectedTabParam === "agents" && focusedItemParam === "agentProviders";
+  const focusAiChatProviders = selectedTabParam === "agents" && focusedItemParam === "agentProviders";
   const shouldReserveMacWindowControlsInset = getRendererPlatform() === "darwin";
 
   const selectedTab = useMemo<SettingsTab>(() => {
@@ -175,7 +175,7 @@ export function SettingsView() {
       account: <AccountSettingsView />,
       agents: (
         <SettingsErrorBoundary sectionLabel={t("settings.agents.title")}>
-          <AgentSettingsView focusAgentProviders={focusAgentProviders} />
+          <AgentSettingsView focusAiChatProviders={focusAiChatProviders} />
         </SettingsErrorBoundary>
       ),
       computerUse: <ComputerUseSettingsView />,
@@ -210,7 +210,7 @@ export function SettingsView() {
       memory: <MemorySettingsView />,
       workspace: <WorkspaceSettingsView />,
     }),
-    [focusAgentProviders, focusedNotificationItemId, setThemePreference, t, themePreference],
+    [focusAiChatProviders, focusedNotificationItemId, setThemePreference, t, themePreference],
   );
 
   return (

@@ -14,8 +14,8 @@ import { getDaemonQuitOnExit, setDaemonQuitOnExit } from "./daemon/daemonSetting
 import { DESKTOP_RPC_IPC_CHANNELS, type DesktopUpdateEventPayload, HOST_IPC_CHANNELS } from "./ipc";
 import { registerFileIpcHandlers } from "./ipc/fileHandlers";
 import { registerNotificationAndBrowserIpcHandlers } from "./ipc/notificationAndBrowserHandlers";
-import { registerPiRuntimeIpcHandlers } from "./ipc/piRuntimeHandlers";
-import { PiProviderConfigService } from "./piRuntime/piProviderConfigService";
+import { registerPiProviderConfigIpcHandlers } from "./ipc/piProviderConfigHandlers";
+import { PiProviderConfigService } from "./piProviderConfig/piProviderConfigService";
 import { configureManagedPiAgentDirEnvironment, isDevMode } from "./runtime/environment";
 import { resolveLocalCalendarDate, shouldSuppressAutoUpdateEvent } from "./updates/autoUpdateDismissalState";
 import { checkForUpdatesManually, downloadUpdate, startAutoUpdates } from "./updates/autoUpdateService";
@@ -334,7 +334,7 @@ export class DesktopApplication {
   private registerHostIpcHandlers() {
     registerFileIpcHandlers();
     registerNotificationAndBrowserIpcHandlers();
-    registerPiRuntimeIpcHandlers(this.piProviderConfigService, () => this.mainWindow);
+    registerPiProviderConfigIpcHandlers(this.piProviderConfigService, () => this.mainWindow);
 
     ipcMain.handle(HOST_IPC_CHANNELS.openLocalFolderDialog, async (_event, input) => {
       const options: Electron.OpenDialogOptions = {
