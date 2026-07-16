@@ -1,4 +1,4 @@
-package daemon
+package tokenusage
 
 import (
 	"context"
@@ -7,11 +7,12 @@ import (
 	"sync"
 	"time"
 
+	"slices"
+
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/agentkind"
 	"yishan/apps/cli/internal/api"
 	cliruntime "yishan/apps/cli/internal/runtime"
-	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -26,22 +27,22 @@ const (
 
 var tokenUsageScannableAgentKinds = agentkind.WithActiveTokenScanners
 
-type tokenUsageCollector struct {
+type Collector struct {
 	mu                   sync.Mutex
 	manager              *workspace.Manager
 	runtime              *cliruntime.Runtime
-	repo                 tokenusage.HourlyUsageRepository
+	repo                 HourlyUsageRepository
 	timers               map[string]*time.Timer
 	inFlight             map[string]bool
 	needsRerun           map[string]bool
 	recoverySinceByAgent map[string]int64
-	pending              map[string][]tokenusage.HourlyUsageRow
+	pending              map[string][]HourlyUsageRow
 	syncTimer            *time.Timer
 	hourTimer            *time.Timer
 	closed               bool
 }
 
-type tokenUsageCollectorDebugState struct {
+type CollectorDebugState struct {
 	Closed           bool              `json:"closed"`
 	ScheduledAgents  []string          `json:"scheduledAgents"`
 	InFlightAgents   []string          `json:"inFlightAgents"`
@@ -50,12 +51,12 @@ type tokenUsageCollectorDebugState struct {
 	PendingAgents    []string          `json:"pendingAgents"`
 }
 
-func newTokenUsageCollector(manager *workspace.Manager, runtime *cliruntime.Runtime, configPath string) (*tokenUsageCollector, error) {
-	repo, err := tokenusage.NewFileHourlyUsageRepository(configPath)
+func NewCollector(manager *workspace.Manager, runtime *cliruntime.Runtime, configPath string) (*Collector, error) {
+	repo, err := NewFileHourlyUsageRepository(configPath)
 	if err != nil {
 		return nil, err
 	}
-	return &tokenUsageCollector{
+	return &Collector{
 		manager:              manager,
 		runtime:              runtime,
 		repo:                 repo,
@@ -63,11 +64,11 @@ func newTokenUsageCollector(manager *workspace.Manager, runtime *cliruntime.Runt
 		inFlight:             make(map[string]bool),
 		needsRerun:           make(map[string]bool),
 		recoverySinceByAgent: make(map[string]int64),
-		pending:              make(map[string][]tokenusage.HourlyUsageRow),
+		pending:              make(map[string][]HourlyUsageRow),
 	}, nil
 }
 
-func (c *tokenUsageCollector) StartStartupScan() {
+func (c *Collector) StartStartupScan() {
 	c.startSyncLoop()
 	c.startHourRolloverLoop()
 	timer := time.AfterFunc(tokenUsageStartupDelay, func() {
@@ -85,7 +86,7 @@ func (c *tokenUsageCollector) StartStartupScan() {
 	c.mu.Unlock()
 }
 
-func (c *tokenUsageCollector) SyncNow(source string) {
+func (c *Collector) SyncNow(source string) {
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
@@ -108,7 +109,7 @@ func (c *tokenUsageCollector) SyncNow(source string) {
 	}
 }
 
-func (c *tokenUsageCollector) Trigger(agentKind string, source string) {
+func (c *Collector) Trigger(agentKind string, source string) {
 	normalizedAgentKind := normalizeTokenUsageAgentKind(agentKind)
 	if normalizedAgentKind == "" {
 		return
@@ -133,7 +134,7 @@ func (c *tokenUsageCollector) Trigger(agentKind string, source string) {
 	c.mu.Unlock()
 }
 
-func (c *tokenUsageCollector) runScan(agentKind string, source string) {
+func (c *Collector) runScan(agentKind string, source string) {
 	scanSinceUnixMilli, shouldRun := c.beginScan(agentKind)
 	if !shouldRun {
 		return
@@ -160,13 +161,13 @@ func (c *tokenUsageCollector) runScan(agentKind string, source string) {
 	}
 }
 
-func (c *tokenUsageCollector) filterKnownTokenUsageRows(rows []tokenusage.HourlyUsageRow) []tokenusage.HourlyUsageRow {
+func (c *Collector) filterKnownTokenUsageRows(rows []HourlyUsageRow) []HourlyUsageRow {
 	workspaceByID := make(map[string]workspace.Workspace)
 	for _, ws := range c.manager.List() {
 		workspaceByID[ws.ID] = ws
 	}
 
-	filtered := make([]tokenusage.HourlyUsageRow, 0, len(rows))
+	filtered := make([]HourlyUsageRow, 0, len(rows))
 	for _, row := range rows {
 		if strings.EqualFold(strings.TrimSpace(row.WorkspaceID), "unknown") {
 			continue
@@ -186,12 +187,12 @@ func (c *tokenUsageCollector) filterKnownTokenUsageRows(rows []tokenusage.Hourly
 	return filtered
 }
 
-func (c *tokenUsageCollector) scanAgent(agentKind string) ([]tokenusage.HourlyUsageRow, error) {
+func (c *Collector) scanAgent(agentKind string) ([]HourlyUsageRow, error) {
 	return c.scanAgentSince(agentKind, c.recentScanStartUnixMilli())
 }
 
-func (c *tokenUsageCollector) scanAgentSince(agentKind string, scanSinceUnixMilli int64) ([]tokenusage.HourlyUsageRow, error) {
-	scanInput := tokenusage.ScanInput{
+func (c *Collector) scanAgentSince(agentKind string, scanSinceUnixMilli int64) ([]HourlyUsageRow, error) {
+	scanInput := ScanInput{
 		RunID:              "daemon-" + agentKind,
 		IngestedAt:         time.Now().UnixMilli(),
 		ScanSinceUnixMilli: scanSinceUnixMilli,
@@ -199,21 +200,21 @@ func (c *tokenUsageCollector) scanAgentSince(agentKind string, scanSinceUnixMill
 	}
 	switch agentKind {
 	case agentkind.Codex:
-		return tokenusage.ScanCodexHourlyUsage(context.Background(), scanInput)
+		return ScanCodexHourlyUsage(context.Background(), scanInput)
 	case agentkind.Claude:
-		return tokenusage.ScanClaudeHourlyUsage(context.Background(), scanInput)
+		return ScanClaudeHourlyUsage(context.Background(), scanInput)
 	case agentkind.OpenCode:
-		return tokenusage.ScanOpenCodeHourlyUsage(context.Background(), scanInput)
+		return ScanOpenCodeHourlyUsage(context.Background(), scanInput)
 	case agentkind.Gemini:
-		return tokenusage.ScanGeminiHourlyUsage(context.Background(), scanInput)
+		return ScanGeminiHourlyUsage(context.Background(), scanInput)
 	case agentkind.Pi:
-		return tokenusage.ScanPiHourlyUsage(context.Background(), scanInput)
+		return ScanPiHourlyUsage(context.Background(), scanInput)
 	default:
-		return []tokenusage.HourlyUsageRow{}, nil
+		return []HourlyUsageRow{}, nil
 	}
 }
 
-func (c *tokenUsageCollector) recentScanStartUnixMilli() int64 {
+func (c *Collector) recentScanStartUnixMilli() int64 {
 	syncState, err := c.repo.GetHourlyUsageSyncState(context.Background())
 	if err != nil {
 		return 0
@@ -232,7 +233,11 @@ func normalizeTokenUsageAgentKind(agentKind string) string {
 	return ""
 }
 
-func (c *tokenUsageCollector) Close() {
+func isTokenTrackingAgentKind(kind string) bool {
+	return slices.Contains(agentkind.WithTokenTracking, kind)
+}
+
+func (c *Collector) Close() {
 	c.syncPending("shutdown")
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -254,7 +259,7 @@ func (c *tokenUsageCollector) Close() {
 	}
 }
 
-func (c *tokenUsageCollector) DebugState() tokenUsageCollectorDebugState {
+func (c *Collector) DebugState() CollectorDebugState {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -302,7 +307,7 @@ func (c *tokenUsageCollector) DebugState() tokenUsageCollectorDebugState {
 	}
 	sort.Strings(pendingAgents)
 
-	return tokenUsageCollectorDebugState{
+	return CollectorDebugState{
 		Closed:           c.closed,
 		ScheduledAgents:  scheduledAgents,
 		InFlightAgents:   inFlightAgents,
@@ -312,7 +317,7 @@ func (c *tokenUsageCollector) DebugState() tokenUsageCollectorDebugState {
 	}
 }
 
-func (c *tokenUsageCollector) startSyncLoop() {
+func (c *Collector) startSyncLoop() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.closed || c.syncTimer != nil {
@@ -321,7 +326,7 @@ func (c *tokenUsageCollector) startSyncLoop() {
 	c.syncTimer = time.AfterFunc(tokenUsageSyncInterval, c.onPeriodicSync)
 }
 
-func (c *tokenUsageCollector) onPeriodicSync() {
+func (c *Collector) onPeriodicSync() {
 	c.syncPending("periodic")
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -331,7 +336,7 @@ func (c *tokenUsageCollector) onPeriodicSync() {
 	c.syncTimer = time.AfterFunc(tokenUsageSyncInterval, c.onPeriodicSync)
 }
 
-func (c *tokenUsageCollector) startHourRolloverLoop() {
+func (c *Collector) startHourRolloverLoop() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.closed || c.hourTimer != nil {
@@ -340,7 +345,7 @@ func (c *tokenUsageCollector) startHourRolloverLoop() {
 	c.hourTimer = time.AfterFunc(durationUntilNextHourPlusLag(), c.onHourRolloverSync)
 }
 
-func (c *tokenUsageCollector) onHourRolloverSync() {
+func (c *Collector) onHourRolloverSync() {
 	c.syncPending("hour-rollover")
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -357,7 +362,7 @@ func durationUntilNextHourPlusLag() time.Duration {
 	return time.Until(target)
 }
 
-func (c *tokenUsageCollector) syncPending(source string) {
+func (c *Collector) syncPending(source string) {
 	if c.runtime == nil || !c.runtime.APIConfigured() {
 		return
 	}
@@ -419,13 +424,13 @@ func (c *tokenUsageCollector) syncPending(source string) {
 	}
 }
 
-func (c *tokenUsageCollector) snapshotDirtyRowsByOrg() (map[string][]tokenusage.HourlyUsageRow, error) {
+func (c *Collector) snapshotDirtyRowsByOrg() (map[string][]HourlyUsageRow, error) {
 	rows, err := c.repo.ListDirtyHourlyRows(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	rowsByOrg := make(map[string][]tokenusage.HourlyUsageRow)
+	rowsByOrg := make(map[string][]HourlyUsageRow)
 	for _, row := range rows {
 		if strings.TrimSpace(row.WorkspaceID) == "" {
 			continue
@@ -439,7 +444,7 @@ func (c *tokenUsageCollector) snapshotDirtyRowsByOrg() (map[string][]tokenusage.
 	return rowsByOrg, nil
 }
 
-func (c *tokenUsageCollector) resolveOrgIDForWorkspace(workspaceID string) string {
+func (c *Collector) resolveOrgIDForWorkspace(workspaceID string) string {
 	for _, ws := range c.manager.List() {
 		if ws.ID == workspaceID {
 			return strings.TrimSpace(ws.OrgID)
@@ -448,7 +453,7 @@ func (c *tokenUsageCollector) resolveOrgIDForWorkspace(workspaceID string) strin
 	return ""
 }
 
-func (c *tokenUsageCollector) syncRowsForOrg(orgID string, rows []tokenusage.HourlyUsageRow) error {
+func (c *Collector) syncRowsForOrg(orgID string, rows []HourlyUsageRow) error {
 	rowInputs := make([]api.TokenUsageHourlyRowInput, 0, len(rows))
 	for _, row := range rows {
 		rowInputs = append(rowInputs, api.TokenUsageHourlyRowInput{

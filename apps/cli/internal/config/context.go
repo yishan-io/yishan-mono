@@ -26,9 +26,12 @@ func ContextFilePath(profileDir string) string {
 
 // LoadContext reads default_org_id from context.yaml.
 // A missing file or missing key returns a zero-value ContextConfig, not an error.
-// If default_org_id is absent but the legacy current_org_id key exists (written
-// by a prior version), it is migrated in place automatically.
+// Migration from legacy current_org_id is handled by MigrateContext.
 func LoadContext(contextPath string) (ContextConfig, error) {
+	if err := MigrateContext(contextPath); err != nil {
+		return ContextConfig{}, err
+	}
+
 	v := viper.New()
 	v.SetConfigFile(contextPath)
 	v.SetConfigType("yaml")
@@ -40,26 +43,8 @@ func LoadContext(contextPath string) (ContextConfig, error) {
 		return ContextConfig{}, err
 	}
 
-	defaultOrgID := v.GetString(KeyDefaultOrgID)
-	if defaultOrgID == "" {
-		// Migration: prior version wrote current_org_id into context.yaml.
-		if legacy := v.GetString("current_org_id"); legacy != "" {
-			defaultOrgID = legacy
-			// Write the new key and remove the old one atomically via two steps:
-			// first write default_org_id, then delete current_org_id.
-			if writeErr := UpdateFile(contextPath, func(cfg *viper.Viper) {
-				cfg.Set(KeyDefaultOrgID, legacy)
-			}); writeErr == nil {
-				_ = DeleteKeys(contextPath, "current_org_id")
-			}
-		}
-	} else {
-		// Already migrated — clean up any leftover current_org_id key.
-		_ = DeleteKeys(contextPath, "current_org_id")
-	}
-
 	return ContextConfig{
-		DefaultOrgID: defaultOrgID,
+		DefaultOrgID: v.GetString(KeyDefaultOrgID),
 	}, nil
 }
 

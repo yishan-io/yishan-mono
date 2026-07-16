@@ -16,7 +16,10 @@ import (
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/modellist"
 	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
+	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
+	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
 
 const (
@@ -36,9 +39,9 @@ type JSONRPCHandler struct {
 	wsIndexStore   *workspaceIndexStore
 	context        *AppContextStore
 	events         *eventHub
-	watchers       *workspaceWatchers
-	prTracker      *workspacePRTracker
-	tokenUsage     *tokenUsageCollector
+	watchers       *workspacewatchers.Watchers
+	prTracker      *workspaceprtracker.Tracker
+	tokenUsage     tokenusage.Service
 	computer       *computerService
 	modelList      *modellist.Service
 	memory         *memory.Service
@@ -65,9 +68,11 @@ type JSONRPCHandler struct {
 
 func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, wsIndexStore *workspaceIndexStore, configPath string, context *AppContextStore) *JSONRPCHandler {
 	events := newEventHub()
-	prTracker := newWorkspacePRTracker(manager, runtime, events.Publish)
+	prTracker := workspaceprtracker.New(manager, runtime, func(event workspaceprtracker.PullRequestUpdatedEvent) {
+		publishWorkspacePullRequestUpdatedEvent(events, event)
+	})
 	fileCacheSubID, fileCacheEvents := events.Subscribe()
-	collector, err := newTokenUsageCollector(manager, runtime, configPath)
+	collector, err := tokenusage.NewCollector(manager, runtime, configPath)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to initialize token usage collector")
 	}
@@ -98,25 +103,25 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(_ *http.Request) bool { return true },
 		},
-		manager:        manager,
-		runtime:        runtime,
-		nodeID:         nodeID,
-		logFilePath:    logFilePath,
-		cleanupStore:   cleanupStore,
-		wsIndexStore:   wsIndexStore,
-		context:        context,
-		events:         events,
-		watchers:       newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
-		prTracker:      prTracker,
-		tokenUsage:     collector,
-		computer:       newComputerService(computer.NewUnavailableRuntime("unknown")),
-		modelList:      modellist.NewService(),
-		agentMgr:       agentmanager.NewManager(),
-		settingsPath:   config.SettingsFilePath(filepath.Dir(configPath)),
-		agentUsage:     make(map[string]map[string]struct{}),
-		piSessions:     make(map[string]*piSessionState),
+		manager:          manager,
+		runtime:          runtime,
+		nodeID:           nodeID,
+		logFilePath:      logFilePath,
+		cleanupStore:     cleanupStore,
+		wsIndexStore:     wsIndexStore,
+		context:          context,
+		events:           events,
+		watchers:         newWorkspaceWatchersForEventHub(events, prTracker.RefreshWorkspaceByPath),
+		prTracker:        prTracker,
+		tokenUsage:       collector,
+		computer:         newComputerService(computer.NewUnavailableRuntime("unknown")),
+		modelList:        modellist.NewService(),
+		agentMgr:         agentmanager.NewManager(),
+		settingsPath:     config.SettingsFilePath(filepath.Dir(configPath)),
+		agentUsage:       make(map[string]map[string]struct{}),
+		piSessions:       make(map[string]*piSessionState),
 		remoteStreamSubs: make(map[string]map[*wsConnState]struct{}),
-		fileCacheSubID: fileCacheSubID,
+		fileCacheSubID:   fileCacheSubID,
 	}
 	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)
 	return handler

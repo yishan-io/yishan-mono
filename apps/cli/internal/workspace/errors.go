@@ -3,15 +3,15 @@ package workspace
 import "yishan/apps/cli/internal/rpcerror"
 
 const (
-	rpcCodeInvalidParams   = -32602
-	rpcCodeNotFound        = -32004
-	rpcCodePathRestricted  = -32003
-	rpcCodeToolUnavailable = -32010
-	rpcCodeSessionInactive = -32005
+	rpcCodeInvalidParams   = rpcerror.CodeInvalidParams
+	rpcCodeNotFound        = rpcerror.CodeNotFound
+	rpcCodePathRestricted  = rpcerror.CodePathRestricted
+	rpcCodeToolUnavailable = rpcerror.CodeToolUnavailable
+	rpcCodeSessionInactive = rpcerror.CodeSessionInactive
 )
 
 type RPCError = rpcerror.Error
 
 func NewRPCError(code int, message string) error {
-	return rpcerror.New(code, message)
+	return rpcerror.NewRPCError(code, message)
 }

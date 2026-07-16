@@ -1,4 +1,4 @@
-package daemon
+package prtracker
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 
 func TestWorkspacePRTracker_BindsActivePullRequest(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	tracker := newWorkspacePRTracker(manager, nil, nil)
+	tracker := New(manager, nil, nil)
 	tracker.active[ws.ID] = ws
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
@@ -52,7 +52,7 @@ func TestWorkspacePRTracker_BindsActivePullRequest(t *testing.T) {
 
 func TestWorkspacePRTracker_StopsTrackingMergedPullRequest(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	tracker := newWorkspacePRTracker(manager, nil, nil)
+	tracker := New(manager, nil, nil)
 	tracker.active[ws.ID] = ws
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
@@ -89,7 +89,7 @@ func TestWorkspacePRTracker_ClearsMissingPullRequest(t *testing.T) {
 	if err := manager.SetWorkspacePullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
 		t.Fatalf("SetWorkspacePullRequest: %v", err)
 	}
-	tracker := newWorkspacePRTracker(manager, nil, nil)
+	tracker := New(manager, nil, nil)
 	tracker.active[ws.ID] = ws
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
@@ -118,7 +118,7 @@ func TestWorkspacePRTracker_DisablesTrackingForNonGitHubRepository(t *testing.T)
 	if err := manager.SetWorkspacePullRequest(ws.ID, &workspace.WorkspacePullRequest{Number: 1, Status: "open"}); err != nil {
 		t.Fatalf("SetWorkspacePullRequest: %v", err)
 	}
-	tracker := newWorkspacePRTracker(manager, nil, nil)
+	tracker := New(manager, nil, nil)
 	tracker.active[ws.ID] = ws
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
@@ -143,7 +143,7 @@ func TestWorkspacePRTracker_DisablesTrackingForNonGitHubRepository(t *testing.T)
 
 func TestWorkspacePRTracker_SkipsOverlappingRefreshes(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	tracker := newWorkspacePRTracker(manager, nil, nil)
+	tracker := New(manager, nil, nil)
 	tracker.active[ws.ID] = ws
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "feature/test", nil
@@ -191,7 +191,7 @@ func TestWorkspacePRTracker_ClearsPullRequestWhenHeadCannotBeResolved(t *testing
 		t.Fatalf("SetWorkspacePullRequest: %v", err)
 	}
 
-	tracker := newWorkspacePRTracker(manager, nil, nil)
+	tracker := New(manager, nil, nil)
 	tracker.active[ws.ID] = ws
 	tracker.branchResolver = func(context.Context, string) (string, error) {
 		return "", errors.New("fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree")
@@ -213,7 +213,7 @@ func TestWorkspacePRTracker_ClearsPullRequestWhenHeadCannotBeResolved(t *testing
 
 func TestWorkspacePRTracker_EnsureTrackedSkipsUnsupportedProvider(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	tracker := newWorkspacePRTracker(manager, nil, nil)
+	tracker := New(manager, nil, nil)
 	tracker.inspectResolver = func(context.Context, string) (workspace.GitInspectResult, error) {
 		return workspace.GitInspectResult{
 			IsGitRepository: true,
@@ -236,7 +236,7 @@ func TestWorkspacePRTracker_EnsureTrackedSkipsUnsupportedProvider(t *testing.T) 
 
 func TestWorkspacePRTracker_EnsureTrackedSkipsWorkspaceWithoutRemote(t *testing.T) {
 	manager, ws := openTrackedWorkspace(t)
-	tracker := newWorkspacePRTracker(manager, nil, nil)
+	tracker := New(manager, nil, nil)
 	tracker.inspectResolver = func(context.Context, string) (workspace.GitInspectResult, error) {
 		return workspace.GitInspectResult{
 			IsGitRepository: true,
@@ -252,6 +252,43 @@ func TestWorkspacePRTracker_EnsureTrackedSkipsWorkspaceWithoutRemote(t *testing.
 	tracker.mu.Unlock()
 	if tracked {
 		t.Fatalf("expected workspace %q to remain untracked without remote", ws.ID)
+	}
+}
+
+func TestWorkspacePRTracker_PublishesTypedUpdateOnMeaningfulChange(t *testing.T) {
+	manager, ws := openTrackedWorkspace(t)
+	published := make(chan PullRequestUpdatedEvent, 1)
+	tracker := New(manager, nil, func(event PullRequestUpdatedEvent) {
+		published <- event
+	})
+	tracker.active[ws.ID] = ws
+	tracker.branchResolver = func(context.Context, string) (string, error) {
+		return "feature/test", nil
+	}
+	tracker.detailResolver = func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error) {
+		return workspace.GitBranchPullRequestStatus{
+			Found:       true,
+			Number:      42,
+			Title:       "Add tracker",
+			URL:         "https://github.com/acme/repo/pull/42",
+			State:       "OPEN",
+			HeadRefName: "feature/test",
+			BaseRefName: "main",
+		}, nil
+	}
+
+	tracker.RefreshWorkspaceByPath(ws.Path)
+
+	select {
+	case event := <-published:
+		if event.WorkspaceID != ws.ID || event.WorkspaceWorktreePath != ws.Path {
+			t.Fatalf("unexpected published event: %+v", event)
+		}
+		if event.PullRequest == nil || event.PullRequest.Number != 42 {
+			t.Fatalf("unexpected pull request payload: %+v", event.PullRequest)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for typed pull request update")
 	}
 }
 

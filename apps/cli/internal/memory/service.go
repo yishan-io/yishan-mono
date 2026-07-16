@@ -29,15 +29,15 @@ type Service struct {
 // summarizeQueue ensures at most one summarization is in flight per context
 // root while coalescing additional requests into a single pending retry.
 type summarizeQueue struct {
-	mu        sync.Mutex
-	inFlight  bool
-	pending   *summarizeRequest // at most one pending; newer replaces older
+	mu       sync.Mutex
+	inFlight bool
+	pending  *summarizeRequest // at most one pending; newer replaces older
 }
 
 type summarizeRequest struct {
-	agent         string
-	worktreePath  string
-	projectID     string
+	agent        string
+	worktreePath string
+	projectID    string
 }
 
 func (q *summarizeQueue) submit(req summarizeRequest, run func(summarizeRequest)) {
@@ -207,23 +207,23 @@ func (s *Service) handleSummarizeResult(req summarizeRequest, result SummarizeRe
 		return
 	}
 	if len(result.WrittenPaths) == 0 {
-			log.Info().
-				Str("agent", req.agent).
-				Str("workspace", req.worktreePath).
-				Msg("session summarization produced no output")
-			return
-		}
-		log.Info().Str("agent", req.agent).Str("workspace", req.worktreePath).
-			Int("files", len(result.WrittenPaths)).Msg("session summarized")
+		log.Info().
+			Str("agent", req.agent).
+			Str("workspace", req.worktreePath).
+			Msg("session summarization produced no output")
+		return
+	}
+	log.Info().Str("agent", req.agent).Str("workspace", req.worktreePath).
+		Int("files", len(result.WrittenPaths)).Msg("session summarized")
 
-		// Index only the files that were actually written — MEMORY.md and
-		// any archive/ overflow files. Avoids a full context dir scan.
-		ctxRoot := resolveContextRoot(req.worktreePath)
-		for _, p := range result.WrittenPaths {
-			if idxErr := s.db.IndexFileOnDisk(p, ctxRoot, req.projectID); idxErr != nil {
-				log.Warn().Err(idxErr).Str("path", p).Msg("index written file after summarization failed")
-			}
+	// Index only the files that were actually written — MEMORY.md and
+	// any archive/ overflow files. Avoids a full context dir scan.
+	ctxRoot := resolveContextRoot(req.worktreePath)
+	for _, p := range result.WrittenPaths {
+		if idxErr := s.db.IndexFileOnDisk(p, ctxRoot, req.projectID); idxErr != nil {
+			log.Warn().Err(idxErr).Str("path", p).Msg("index written file after summarization failed")
 		}
+	}
 }
 
 func (s *Service) getOrCreateQueue(contextRoot string) *summarizeQueue {

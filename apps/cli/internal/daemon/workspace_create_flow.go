@@ -10,31 +10,6 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-const (
-	workspaceRelayChangeCreateRequest   = "workspace.create.request"
-	workspaceRelayChangeCreateProgress  = "workspace.create.progress"
-	workspaceRelayChangeCreateCompleted = "workspace.create.completed"
-	workspaceRelayChangeCreateFailed    = "workspace.create.failed"
-)
-
-type workspaceCreateParams struct {
-	ID             string                   `json:"id,omitempty"`
-	OrganizationID string                   `json:"organizationId,omitempty"`
-	NodeID         string                   `json:"nodeId,omitempty"`
-	ProjectID      string                   `json:"projectId,omitempty"`
-	RepoKey        string                   `json:"repoKey,omitempty"`
-	WorkspaceName  string                   `json:"workspaceName,omitempty"`
-	SourcePath     string                   `json:"sourcePath,omitempty"`
-	TargetBranch   string                   `json:"targetBranch,omitempty"`
-	SourceBranch   string                   `json:"sourceBranch,omitempty"`
-	ContextEnabled bool                     `json:"contextEnabled,omitempty"`
-	SetupHook      string                   `json:"setupHook,omitempty"`
-	TaskRun        *workspace.TaskRunConfig `json:"taskRun,omitempty"`
-	Kind           string                   `json:"kind,omitempty"`
-	Branch         string                   `json:"branch,omitempty"`
-	ReplyNodeID    string                   `json:"replyNodeId,omitempty"`
-}
-
 type preparedWorkspaceCreate struct {
 	workspaceID      string
 	organizationID   string
@@ -45,16 +20,6 @@ type preparedWorkspaceCreate struct {
 	localCreate      *workspace.CreateRequest
 	registration     *WorkspaceCreation
 	remoteRequest    *workspaceCreateParams
-}
-
-type workspaceCreateStartedEvent struct {
-	WorkspaceID    string `json:"workspaceId"`
-	OrganizationID string `json:"organizationId"`
-	ProjectID      string `json:"projectId"`
-	WorkspaceName  string `json:"workspaceName"`
-	SourceBranch   string `json:"sourceBranch"`
-	Branch         string `json:"branch"`
-	NodeID         string `json:"nodeId,omitempty"`
 }
 
 func (h *JSONRPCHandler) prepareWorkspaceCreate(ctx context.Context, req workspaceCreateParams) (preparedWorkspaceCreate, error) {
