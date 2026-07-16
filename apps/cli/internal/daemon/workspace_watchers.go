@@ -1,6 +1,9 @@
 package daemon
 
-import workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
+import (
+	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
+	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
+)
 
 type eventHubWorkspaceWatcherSink struct {
 	events *eventHub
@@ -44,4 +47,18 @@ func (s eventHubWorkspaceWatcherSink) PublishGitChanged(event workspacewatchers.
 
 func newWorkspaceWatchersForEventHub(events *eventHub, onGitChanged func(worktreePath string)) *workspacewatchers.Watchers {
 	return workspacewatchers.New(newEventHubWorkspaceWatcherSink(events), onGitChanged)
+}
+
+func publishWorkspacePullRequestUpdatedEvent(events *eventHub, event workspaceprtracker.PullRequestUpdatedEvent) {
+	if events == nil {
+		return
+	}
+	events.Publish(frontendEvent{
+		Topic: "workspacePullRequestUpdated",
+		Payload: map[string]any{
+			"workspaceId":           event.WorkspaceID,
+			"workspaceWorktreePath": event.WorkspaceWorktreePath,
+			"pullRequest":           event.PullRequest,
+		},
+	})
 }

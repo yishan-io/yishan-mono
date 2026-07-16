@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/workspace"
+	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
+	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
 
 func evalSymlinks(t *testing.T, path string) string {
@@ -41,6 +43,57 @@ func expectNoEvent(t *testing.T, events <-chan frontendEvent, wait time.Duration
 	case event := <-events:
 		t.Fatalf("expected no event, got topic %q", event.Topic)
 	case <-time.After(wait):
+	}
+}
+
+func TestEventHubWorkspaceWatcherSink_PublishesWorkspaceFilesChangedPayload(t *testing.T) {
+	hub := newEventHub()
+	sink := newEventHubWorkspaceWatcherSink(hub)
+	subscriptionID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subscriptionID)
+
+	sink.PublishWorkspaceFilesChanged(workspacewatchers.FilesChangedEvent{
+		WorkspaceID:          "ws-1",
+		WorktreePath:         "/tmp/ws-1",
+		ChangedRelativePaths: []string{"a.txt", "nested/b.txt"},
+	})
+
+	event := expectEventTopic(t, events, "workspaceFilesChanged")
+	payload, ok := event.Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map payload, got %T", event.Payload)
+	}
+	if payload["workspaceId"] != "ws-1" || payload["workspaceWorktreePath"] != "/tmp/ws-1" {
+		t.Fatalf("unexpected payload: %#v", payload)
+	}
+	paths, ok := payload["changedRelativePaths"].([]string)
+	if !ok || len(paths) != 2 {
+		t.Fatalf("unexpected changedRelativePaths: %#v", payload["changedRelativePaths"])
+	}
+}
+
+func TestPublishWorkspacePullRequestUpdatedEvent_PublishesPayload(t *testing.T) {
+	hub := newEventHub()
+	subscriptionID, events := hub.Subscribe()
+	defer hub.Unsubscribe(subscriptionID)
+
+	publishWorkspacePullRequestUpdatedEvent(hub, workspaceprtracker.PullRequestUpdatedEvent{
+		WorkspaceID:           "ws-1",
+		WorkspaceWorktreePath: "/tmp/ws-1",
+		PullRequest:           &workspace.WorkspacePullRequest{Number: 42, Status: "open"},
+	})
+
+	event := expectEventTopic(t, events, "workspacePullRequestUpdated")
+	payload, ok := event.Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map payload, got %T", event.Payload)
+	}
+	if payload["workspaceId"] != "ws-1" || payload["workspaceWorktreePath"] != "/tmp/ws-1" {
+		t.Fatalf("unexpected payload: %#v", payload)
+	}
+	pullRequest, ok := payload["pullRequest"].(*workspace.WorkspacePullRequest)
+	if !ok || pullRequest == nil || pullRequest.Number != 42 || pullRequest.Status != "open" {
+		t.Fatalf("unexpected pull request payload: %#v", payload["pullRequest"])
 	}
 }
 

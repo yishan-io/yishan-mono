@@ -41,7 +41,7 @@ type JSONRPCHandler struct {
 	events         *eventHub
 	watchers       *workspacewatchers.Watchers
 	prTracker      *workspaceprtracker.Tracker
-	tokenUsage     *tokenusage.Collector
+	tokenUsage     tokenusage.Service
 	computer       *computerService
 	modelList      *modellist.Service
 	memory         *memory.Service
@@ -69,14 +69,7 @@ type JSONRPCHandler struct {
 func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, wsIndexStore *workspaceIndexStore, configPath string, context *AppContextStore) *JSONRPCHandler {
 	events := newEventHub()
 	prTracker := workspaceprtracker.New(manager, runtime, func(event workspaceprtracker.PullRequestUpdatedEvent) {
-		events.Publish(frontendEvent{
-			Topic: "workspacePullRequestUpdated",
-			Payload: map[string]any{
-				"workspaceId":           event.WorkspaceID,
-				"workspaceWorktreePath": event.WorkspaceWorktreePath,
-				"pullRequest":           event.PullRequest,
-			},
-		})
+		publishWorkspacePullRequestUpdatedEvent(events, event)
 	})
 	fileCacheSubID, fileCacheEvents := events.Subscribe()
 	collector, err := tokenusage.NewCollector(manager, runtime, configPath)
