@@ -1,10 +1,10 @@
-package daemon
+package tokenusage
 
 import "time"
 
 const tokenUsageRecoveryBackfillWindow = 30 * 24 * time.Hour
 
-func (c *tokenUsageCollector) RequestRecentRecoveryScan(source string) {
+func (c *Collector) RequestRecentRecoveryScan(source string) {
 	recoverySinceUnixMilli := time.Now().UTC().Add(-tokenUsageRecoveryBackfillWindow).UnixMilli()
 	for _, agentKind := range tokenUsageScannableAgentKinds {
 		shouldRun := c.requestRecoveryScan(agentKind, recoverySinceUnixMilli)
@@ -14,7 +14,7 @@ func (c *tokenUsageCollector) RequestRecentRecoveryScan(source string) {
 	}
 }
 
-func (c *tokenUsageCollector) requestRecoveryScan(agentKind string, recoverySinceUnixMilli int64) bool {
+func (c *Collector) requestRecoveryScan(agentKind string, recoverySinceUnixMilli int64) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.closed {
@@ -32,7 +32,7 @@ func (c *tokenUsageCollector) requestRecoveryScan(agentKind string, recoverySinc
 	return true
 }
 
-func (c *tokenUsageCollector) beginScan(agentKind string) (int64, bool) {
+func (c *Collector) beginScan(agentKind string) (int64, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.closed {
@@ -43,7 +43,7 @@ func (c *tokenUsageCollector) beginScan(agentKind string) (int64, bool) {
 	return c.resolveScanStartUnixMilliLocked(agentKind), true
 }
 
-func (c *tokenUsageCollector) finishScan(agentKind string, didSucceed bool) (bool, bool) {
+func (c *Collector) finishScan(agentKind string, didSucceed bool) (bool, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.inFlight[agentKind] = false
@@ -55,13 +55,13 @@ func (c *tokenUsageCollector) finishScan(agentKind string, didSucceed bool) (boo
 	return shouldRerun, c.closed
 }
 
-func (c *tokenUsageCollector) resolveScanStartUnixMilli(agentKind string) int64 {
+func (c *Collector) resolveScanStartUnixMilli(agentKind string) int64 {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.resolveScanStartUnixMilliLocked(agentKind)
 }
 
-func (c *tokenUsageCollector) resolveScanStartUnixMilliLocked(agentKind string) int64 {
+func (c *Collector) resolveScanStartUnixMilliLocked(agentKind string) int64 {
 	scanSinceUnixMilli := c.recentScanStartUnixMilli()
 	recoverySinceUnixMilli := c.recoverySinceByAgent[agentKind]
 	if recoverySinceUnixMilli == 0 {
@@ -73,7 +73,7 @@ func (c *tokenUsageCollector) resolveScanStartUnixMilliLocked(agentKind string) 
 	return scanSinceUnixMilli
 }
 
-func (c *tokenUsageCollector) recordRecoverySinceLocked(agentKind string, recoverySinceUnixMilli int64) {
+func (c *Collector) recordRecoverySinceLocked(agentKind string, recoverySinceUnixMilli int64) {
 	existingRecoverySinceUnixMilli := c.recoverySinceByAgent[agentKind]
 	if existingRecoverySinceUnixMilli == 0 || recoverySinceUnixMilli < existingRecoverySinceUnixMilli {
 		c.recoverySinceByAgent[agentKind] = recoverySinceUnixMilli

@@ -14,7 +14,6 @@ import (
 
 	"yishan/apps/cli/internal/config"
 	cliruntime "yishan/apps/cli/internal/runtime"
-	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -43,19 +42,35 @@ func newTestHandler(t *testing.T) *JSONRPCHandler {
 	return h
 }
 
-func installTokenUsageRecoveryProbe(t *testing.T, h *JSONRPCHandler) (string, *tokenUsageCollector) {
-	t.Helper()
-	previousAgentKinds := tokenUsageScannableAgentKinds
-	tokenUsageScannableAgentKinds = []string{"recovery-probe"}
-	t.Cleanup(func() { tokenUsageScannableAgentKinds = previousAgentKinds })
+type tokenUsageRecoveryProbe struct {
+	recoverySinceByAgent map[string]int64
+	needsRerun           map[string]bool
+	inFlight             map[string]bool
+}
 
-	collector := &tokenUsageCollector{
-		repo:                 &stubHourlyUsageRepository{},
-		timers:               make(map[string]*time.Timer),
-		inFlight:             map[string]bool{"recovery-probe": true},
-		needsRerun:           make(map[string]bool),
+func (p *tokenUsageRecoveryProbe) StartStartupScan()   {}
+func (p *tokenUsageRecoveryProbe) SyncNow(_ string)    {}
+func (p *tokenUsageRecoveryProbe) Trigger(_, _ string) {}
+func (p *tokenUsageRecoveryProbe) Close()              {}
+func (p *tokenUsageRecoveryProbe) DebugState() tokenUsageCollectorDebugState {
+	return tokenUsageCollectorDebugState{}
+}
+func (p *tokenUsageRecoveryProbe) RequestRecentRecoveryScan(_ string) {
+	now := time.Now().UTC().UnixMilli()
+	for agentKind := range p.inFlight {
+		p.recoverySinceByAgent[agentKind] = now
+		if p.inFlight[agentKind] {
+			p.needsRerun[agentKind] = true
+		}
+	}
+}
+
+func installTokenUsageRecoveryProbe(t *testing.T, h *JSONRPCHandler) (string, *tokenUsageRecoveryProbe) {
+	t.Helper()
+	collector := &tokenUsageRecoveryProbe{
 		recoverySinceByAgent: make(map[string]int64),
-		pending:              make(map[string][]tokenusage.HourlyUsageRow),
+		needsRerun:           make(map[string]bool),
+		inFlight:             map[string]bool{"recovery-probe": true},
 	}
 	h.tokenUsage = collector
 	return "recovery-probe", collector
