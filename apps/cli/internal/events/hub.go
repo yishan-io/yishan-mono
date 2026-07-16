@@ -1,4 +1,4 @@
-package daemon
+package events
 
 import (
 	"sync"
@@ -7,24 +7,24 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type frontendEvent struct {
+type Event struct {
 	Topic   string
 	Payload any
 }
 
-type eventHub struct {
+type Hub struct {
 	mu          sync.Mutex
 	nextID      atomic.Uint64
-	subscribers map[uint64]chan frontendEvent
+	subscribers map[uint64]chan Event
 }
 
-func newEventHub() *eventHub {
-	return &eventHub{subscribers: make(map[uint64]chan frontendEvent)}
+func NewHub() *Hub {
+	return &Hub{subscribers: make(map[uint64]chan Event)}
 }
 
-func (h *eventHub) Subscribe() (uint64, <-chan frontendEvent) {
+func (h *Hub) Subscribe() (uint64, <-chan Event) {
 	id := h.nextID.Add(1)
-	events := make(chan frontendEvent, 128)
+	events := make(chan Event, 128)
 
 	h.mu.Lock()
 	h.subscribers[id] = events
@@ -33,7 +33,7 @@ func (h *eventHub) Subscribe() (uint64, <-chan frontendEvent) {
 	return id, events
 }
 
-func (h *eventHub) Unsubscribe(id uint64) {
+func (h *Hub) Unsubscribe(id uint64) {
 	h.mu.Lock()
 	events, ok := h.subscribers[id]
 	if ok {
@@ -46,7 +46,7 @@ func (h *eventHub) Unsubscribe(id uint64) {
 	}
 }
 
-func (h *eventHub) Publish(event frontendEvent) {
+func (h *Hub) Publish(event Event) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
