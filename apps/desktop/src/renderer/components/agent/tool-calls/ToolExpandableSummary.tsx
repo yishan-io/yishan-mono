@@ -1,6 +1,6 @@
 import { Box, IconButton } from "@mui/material";
 import type { ReactNode } from "react";
-import { LuChevronDown, LuChevronUp } from "react-icons/lu";
+import { LuChevronDown, LuChevronRight } from "react-icons/lu";
 
 /** Shared expandable summary row with the trailing chevron affordance. */
 export function ToolExpandableSummary({
@@ -27,7 +27,11 @@ export function ToolExpandableSummary({
     >
       {children}
       <IconButton size="small" sx={{ width: 20, height: 20, flexShrink: 0, ml: "auto" }}>
-        {open ? <LuChevronUp size={14} /> : <LuChevronDown size={14} />}
+        {open ? (
+          <LuChevronDown data-testid="tool-chevron-down" size={14} />
+        ) : (
+          <LuChevronRight data-testid="tool-chevron-right" size={14} />
+        )}
       </IconButton>
     </Box>
   );

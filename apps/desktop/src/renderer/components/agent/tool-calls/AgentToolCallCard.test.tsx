@@ -2,14 +2,14 @@
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentContentBlock, AgentMessage } from "../../store/agentChatTypes";
+import type { AgentContentBlock, AgentMessage } from "../../../store/agentChatTypes";
 import { AgentToolCallCard } from "./AgentToolCallCard";
 
 const { openTabMock } = vi.hoisted(() => ({
   openTabMock: vi.fn(),
 }));
 
-vi.mock("../../commands/tabCommands", () => ({
+vi.mock("../../../commands/tabCommands", () => ({
   openTab: openTabMock,
 }));
 
@@ -291,9 +291,12 @@ describe("AgentToolCallCard", () => {
     expect(screen.getByText("code-reviewer")).toBeTruthy();
     expect(screen.getByText("completed")).toBeTruthy();
     expect(screen.queryByText("arguments")).toBeNull();
+    expect(screen.getByTestId("tool-chevron-right")).toBeTruthy();
 
     fireEvent.click(screen.getByTestId("agent-tool-summary"));
 
+    expect(screen.queryByTestId("tool-chevron-right")).toBeNull();
+    expect(screen.getByTestId("tool-chevron-down")).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Prompt" }).getAttribute("aria-selected")).toBe("false");
     expect(screen.getByRole("tab", { name: "Response" }).getAttribute("aria-selected")).toBe("true");
     expect(screen.getByTestId("agent-tool-response")).toBeTruthy();
@@ -415,5 +418,25 @@ describe("AgentToolCallCard", () => {
       { name: "src/example.ts", contents: "" },
       { name: "src/example.ts", contents: "new line" },
     );
+  });
+
+  it("uses the same right-then-down chevron pattern for default tool cards", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-unknown",
+      name: "custom_tool",
+      arguments: {
+        foo: "bar",
+      },
+    };
+
+    render(<AgentToolCallCard toolCall={toolCall} result={null} />);
+
+    expect(screen.getByTestId("tool-chevron-right")).toBeTruthy();
+
+    fireEvent.click(screen.getByText("custom_tool"));
+
+    expect(screen.queryByTestId("tool-chevron-right")).toBeNull();
+    expect(screen.getByTestId("tool-chevron-down")).toBeTruthy();
   });
 });

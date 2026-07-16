@@ -1,6 +1,6 @@
 import { Box, IconButton, Paper, Tooltip, Typography } from "@mui/material";
 import { LuBot, LuX } from "react-icons/lu";
-import type { RunningSubagentSummary } from "../../store/agentChatSubagents";
+import type { RunningSubagentSummary } from "../../../store/agentChatSubagents";
 
 type AgentChatSubagentRowProps = {
   subagent: RunningSubagentSummary;

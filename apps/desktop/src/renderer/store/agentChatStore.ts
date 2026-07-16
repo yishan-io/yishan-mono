@@ -15,6 +15,9 @@ type AgentSessionData = {
   thinkingLevel: string;
   queue: AgentQueueState;
   runningSubagents: RunningSubagentSummary[];
+  hasLoadedMessages: boolean;
+  hasLoadedModels: boolean;
+  hasLoadedState: boolean;
   error: string | null;
   turnError: string | null;
 };
@@ -36,6 +39,7 @@ type AgentChatStoreState = {
   setCurrentModel: (tabId: string, model: AgentModel) => void;
   setThinkingLevel: (tabId: string, level: string) => void;
   setQueue: (tabId: string, queue: AgentQueueState) => void;
+  markStateLoaded: (tabId: string) => void;
   removeSession: (tabId: string) => void;
   removeSessions: (tabIds: string[]) => void;
 };
@@ -51,6 +55,9 @@ function emptySession(sessionId: string): AgentSessionData {
     thinkingLevel: "medium",
     queue: { steering: [], followUp: [] },
     runningSubagents: [],
+    hasLoadedMessages: false,
+    hasLoadedModels: false,
+    hasLoadedState: false,
     error: null,
     turnError: null,
   };
@@ -149,6 +156,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (!session) return;
         session.messages = messages.slice(-MAX_MESSAGES_PER_TAB);
         session.streamingMessage = null;
+        session.hasLoadedMessages = true;
         setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages));
       });
     },
@@ -181,6 +189,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.availableModels = models;
+        session.hasLoadedModels = true;
         const firstModel = models[0];
         if (!session.currentModel && firstModel) {
           session.currentModel = firstModel;
@@ -209,6 +218,14 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.queue = queue;
+      });
+    },
+
+    markStateLoaded: (tabId) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        session.hasLoadedState = true;
       });
     },
 

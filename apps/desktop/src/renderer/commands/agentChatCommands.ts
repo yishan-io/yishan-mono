@@ -572,6 +572,7 @@ function handlePiResponse(tabId: string, sessionId: string, event: Record<string
       agentChatStore
         .getState()
         .setSessionState(tabId, typeof data?.isStreaming === "boolean" && data.isStreaming ? "running" : "idle");
+      agentChatStore.getState().markStateLoaded(tabId);
       break;
     }
     case "get_messages": {

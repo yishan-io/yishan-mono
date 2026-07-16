@@ -1,12 +1,12 @@
-import { AgentToolCard } from "./toolCallCards/AgentToolCard";
-import { BashToolCard } from "./toolCallCards/BashToolCard";
-import { DefaultToolCard } from "./toolCallCards/DefaultToolCard";
-import { DiffToolCard } from "./toolCallCards/DiffToolCard";
-import { GrepToolCard } from "./toolCallCards/GrepToolCard";
-import { MemorySearchToolCard } from "./toolCallCards/MemorySearchToolCard";
-import { MemoryStoreToolCard } from "./toolCallCards/MemoryStoreToolCard";
-import { ReadToolCard } from "./toolCallCards/ReadToolCard";
-import type { AgentToolCallCardProps } from "./toolCallCards/helpers";
+import { AgentToolCard } from "./AgentToolCard";
+import { BashToolCard } from "./BashToolCard";
+import { DefaultToolCard } from "./DefaultToolCard";
+import { DiffToolCard } from "./DiffToolCard";
+import { GrepToolCard } from "./GrepToolCard";
+import { MemorySearchToolCard } from "./MemorySearchToolCard";
+import { MemoryStoreToolCard } from "./MemoryStoreToolCard";
+import { ReadToolCard } from "./ReadToolCard";
+import type { AgentToolCallCardProps } from "./helpers";
 
 /** Renders one agent tool call using a specialized card per tool type. */
 export function AgentToolCallCard(props: AgentToolCallCardProps) {

@@ -1,5 +1,5 @@
 import { Box, Chip, LinearProgress, Typography } from "@mui/material";
-import type { AgentQueueState, AgentSessionState } from "../../store/agentChatTypes";
+import type { AgentQueueState, AgentSessionState } from "../../../store/agentChatTypes";
 
 type AgentSessionBarProps = {
   state: AgentSessionState;

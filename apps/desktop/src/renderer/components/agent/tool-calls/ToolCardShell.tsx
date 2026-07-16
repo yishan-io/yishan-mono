@@ -1,6 +1,6 @@
 import { Box, Typography } from "@mui/material";
 import type { ReactNode } from "react";
-import { LuChevronDown, LuChevronUp } from "react-icons/lu";
+import { LuChevronDown, LuChevronRight } from "react-icons/lu";
 
 const TOOL_CARD_PANEL_SX = { px: 1.5, py: 1, bgcolor: "action.hover" };
 
@@ -64,7 +64,11 @@ export function ToolDefaultHeader({
         {toolName}
       </Typography>
       <Box component="span" sx={{ ml: "auto", display: "inline-flex", color: "inherit", width: 20, height: 20 }}>
-        {open ? <LuChevronUp size={14} /> : <LuChevronDown size={14} />}
+        {open ? (
+          <LuChevronDown data-testid="tool-chevron-down" size={14} />
+        ) : (
+          <LuChevronRight data-testid="tool-chevron-right" size={14} />
+        )}
       </Box>
     </Box>
   );

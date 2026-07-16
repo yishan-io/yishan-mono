@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessage as AgentMessageType } from "../../store/agentChatTypes";
+import type { AgentMessage as AgentMessageType } from "../../../store/agentChatTypes";
 import { AgentMessage } from "./AgentMessage";
 
 const mocked = vi.hoisted(() => ({
@@ -13,7 +13,7 @@ vi.mock("./AgentMarkdownContent", () => ({
   AgentMarkdownContent: mocked.agentMarkdownContent,
 }));
 
-vi.mock("./AgentToolCallCard", () => ({
+vi.mock("../tool-calls/AgentToolCallCard", () => ({
   AgentToolCallCard: () => <div />,
 }));
 

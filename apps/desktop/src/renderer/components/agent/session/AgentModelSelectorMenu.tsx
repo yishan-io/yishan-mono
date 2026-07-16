@@ -11,9 +11,9 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
-import type { AgentModel } from "../../store/agentChatTypes";
-import { SearchInput } from "../SearchInput";
-import { groupAgentModelsByProvider } from "./agentModelSelectorHelpers";
+import type { AgentModel } from "../../../store/agentChatTypes";
+import { SearchInput } from "../../SearchInput";
+import { groupAgentModelsByProvider } from "./helpers";
 
 type AgentModelSelectorMenuProps = {
   anchorEl: HTMLElement | null;

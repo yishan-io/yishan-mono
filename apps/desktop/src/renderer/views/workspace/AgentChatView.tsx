@@ -20,9 +20,9 @@ import {
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../commands/agentChatSubagentCommands";
 import { renameTab } from "../../commands/tabCommands";
 import { RichComposer } from "../../components/RichComposer";
-import { AgentChatSubagentRow } from "../../components/agent/AgentChatSubagentRow";
-import { AgentMessageList } from "../../components/agent/AgentMessageList";
-import { AgentModelSelector } from "../../components/agent/AgentModelSelector";
+import { AgentChatSubagentRow } from "../../components/agent/session/AgentChatSubagentRow";
+import { AgentModelSelector } from "../../components/agent/session/AgentModelSelector";
+import { AgentMessageList } from "../../components/agent/transcript/AgentMessageList";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { getDaemonClient, subscribeDaemonConnectionStatus } from "../../rpc/rpcTransport";
@@ -310,14 +310,18 @@ MemoizedAgentChatComposerPane.displayName = "AgentChatComposerPane";
 function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, isActive = true }: AgentChatViewProps) {
   const startupPaneIdRef = useRef<string | undefined>(paneId);
   const startupSessionIdRef = useRef<string | undefined>(sessionId);
-  const [isInitialHistoryLoadPending, setIsInitialHistoryLoadPending] = useState(Boolean(sessionId));
   const hasSession = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]));
   const sessionState = agentChatStore(
     (state) => state.sessionsByTabId[tabId]?.state ?? (hasSession ? "idle" : "starting"),
   );
   const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
+  const hasLoadedMessages = agentChatStore((state) => state.sessionsByTabId[tabId]?.hasLoadedMessages ?? false);
+  const hasLoadedModels = agentChatStore((state) => state.sessionsByTabId[tabId]?.hasLoadedModels ?? false);
+  const hasLoadedState = agentChatStore((state) => state.sessionsByTabId[tabId]?.hasLoadedState ?? false);
   const error = agentChatStore((state) => state.sessionsByTabId[tabId]?.error ?? null);
   const turnError = agentChatStore((state) => state.sessionsByTabId[tabId]?.turnError ?? null);
+  const isInitialHistoryLoadPending =
+    Boolean(startupSessionIdRef.current) && (!hasSession || !hasLoadedMessages || !hasLoadedModels || !hasLoadedState);
 
   useEffect(() => {
     let isDisposed = false;
@@ -366,12 +370,8 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
         if (isDisposed) return;
 
         await fetchAgentModels({ tabId, sessionId: startedSessionId });
-        if (!isDisposed) {
-          setIsInitialHistoryLoadPending(false);
-        }
       } catch (error) {
         if (isDisposed) return;
-        setIsInitialHistoryLoadPending(false);
         const message = getErrorMessage(error);
         agentChatStore.getState().initSession(tabId, tabId);
         agentChatStore.getState().setSessionError(tabId, message);
@@ -432,18 +432,18 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
     setAgentChatStreamTabVisible(tabId, isActive);
   }, [isActive, tabId]);
 
-  if (!hasSession) {
-    return (
-      <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-        <Typography color="text.secondary">Starting agent session…</Typography>
-      </Box>
-    );
-  }
-
   if (isInitialHistoryLoadPending && sessionState !== "error") {
     return (
       <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
         <CircularProgress size={24} />
+      </Box>
+    );
+  }
+
+  if (!hasSession) {
+    return (
+      <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+        <Typography color="text.secondary">Starting agent session…</Typography>
       </Box>
     );
   }

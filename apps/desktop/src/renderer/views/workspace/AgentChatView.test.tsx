@@ -88,11 +88,11 @@ vi.mock("../../components/RichComposer", () => ({
   },
 }));
 
-vi.mock("../../components/agent/AgentMessageList", () => ({
+vi.mock("../../components/agent/transcript/AgentMessageList", () => ({
   AgentMessageList: mocked.agentMessageList,
 }));
 
-vi.mock("../../components/agent/AgentModelSelector", () => ({
+vi.mock("../../components/agent/session/AgentModelSelector", () => ({
   AgentModelSelector: ({ onModelChange }: { onModelChange: (model: AgentModel) => void | Promise<void> }) => {
     mocked.stateRef.current.agentModelSelectorRenderCount += 1;
     mocked.stateRef.current.latestAgentModelSelectorProps.onModelChange = onModelChange;
@@ -194,6 +194,44 @@ afterEach(() => {
 });
 
 describe("AgentChatView", () => {
+  it("shows a spinner immediately when opening a history session before local session state exists", () => {
+    render(
+      <AgentChatView
+        tabId="tab-history-loading"
+        workspaceId="workspace-1"
+        cwd="/tmp/project"
+        sessionId="history-session-1"
+        isActive
+      />,
+    );
+
+    expect(screen.getByRole("progressbar")).toBeTruthy();
+    expect(screen.queryByText("Starting agent session…")).toBeNull();
+  });
+
+  it("keeps the history-session spinner visible until history responses arrive", async () => {
+    render(
+      <AgentChatView
+        tabId="tab-history-pending"
+        workspaceId="workspace-1"
+        cwd="/tmp/project"
+        sessionId="history-session-2"
+        isActive
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mocked.registerAgentSession).toHaveBeenCalledWith({
+        tabId: "tab-history-pending",
+        sessionId: "session-1",
+      });
+    });
+
+    expect(screen.getByRole("progressbar")).toBeTruthy();
+    expect(screen.queryByText("Starting agent session…")).toBeNull();
+    expect(screen.queryByTestId("agent-message-list")).toBeNull();
+  });
+
   it("passes paneId through to ensurePiSession during initialization", async () => {
     render(<AgentChatView tabId="tab-pane" workspaceId="workspace-1" cwd="/tmp/project" paneId="pane-1" isActive />);
 
