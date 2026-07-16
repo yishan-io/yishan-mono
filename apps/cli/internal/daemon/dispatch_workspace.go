@@ -118,58 +118,52 @@ func (h *JSONRPCHandler) executeWorkspaceCreate(ctx context.Context, prepared pr
 		}
 	}()
 
-	reportProgress := func(event workspace.CreateProgressEvent) {
-		h.events.Publish(frontendEvent{Topic: "workspaceCreateProgress", Payload: event})
-		h.relayWorkspaceCreateProgress(prepared, event)
-	}
-
-	reportFailed := func(message string) {
-		failedEvent := workspaceCreateFailedEvent{WorkspaceID: prepared.workspaceID, Message: message}
-		reportProgress(workspace.CreateProgressEvent{
-			WorkspaceID: prepared.workspaceID,
-			StepID:      "complete",
-			Label:       "Prepare workspace",
-			Status:      workspace.CreateProgressFailed,
-			Message:     message,
-			CreatedAt:   nowRFC3339Nano(),
-		})
-		h.events.Publish(frontendEvent{
-			Topic:   "workspaceCreateFailed",
-			Payload: failedEvent,
-		})
-		h.relayWorkspaceCreateFailed(prepared, failedEvent)
-	}
-
-	if prepared.remoteRequest != nil {
-		if err := h.dispatchRemoteWorkspaceCreate(*prepared.remoteRequest); err != nil {
+	createflow.ExecutePreparedPlan(ctx, createflow.PreparedPlan{
+		WorkspaceID:   prepared.workspaceID,
+		LocalCreate:   prepared.localCreate,
+		RemoteRequest: prepared.remoteRequest,
+	}, createflow.ExecutePreparedPlanDependencies{
+		Now:            nowRFC3339Nano,
+		DispatchRemote: h.dispatchRemoteWorkspaceCreate,
+		RollbackRegistration: func(ctx context.Context) {
 			h.rollbackWorkspaceCreateRegistration(ctx, prepared)
-			reportFailed(err.Error())
-		}
-		return
-	}
-	if prepared.localCreate != nil {
-		if err := h.executeWorktreeWorkspaceCreate(ctx, prepared, reportProgress); err != nil {
-			reportFailed(err.Error())
-		}
-	}
+		},
+		ExecuteLocalCreate: func(ctx context.Context, report workspace.CreateProgressReporter) error {
+			return h.executeWorktreeWorkspaceCreate(ctx, prepared, report)
+		},
+		PublishProgress: func(event workspace.CreateProgressEvent) {
+			h.events.Publish(frontendEvent{Topic: "workspaceCreateProgress", Payload: event})
+			h.relayWorkspaceCreateProgress(prepared, event)
+		},
+		PublishFailed: func(failed createflow.WorkspaceCreateFailedEvent) {
+			h.events.Publish(frontendEvent{Topic: "workspaceCreateFailed", Payload: failed})
+			h.relayWorkspaceCreateFailed(prepared, workspaceCreateFailedEvent(failed))
+		},
+	})
 }
 
 func (h *JSONRPCHandler) executeWorktreeWorkspaceCreate(ctx context.Context, prepared preparedWorkspaceCreate, reportProgress workspace.CreateProgressReporter) error {
-	created, err := h.manager.CreateWorkspaceWithProgress(ctx, *prepared.localCreate, reportProgress)
-	if err != nil {
-		h.rollbackWorkspaceCreateRegistration(ctx, prepared)
-		return err
-	}
-	h.watchAndTrack(created.ID, created.Path)
-	h.upsertWorkspaceIndex(created)
-	if err := h.updatePreparedWorkspace(ctx, prepared, created.Path); err != nil {
-		h.rollbackWorkspaceCreateFailure(ctx, prepared, created)
-		return err
-	}
-	warnings := buildWorkspaceHookWarnings(prepared.localCreate.SetupHook, created.SetupHookResult, h.logFilePath)
-	reportProgress(workspace.CreateProgressEvent{WorkspaceID: created.ID, StepID: "complete", Label: "Prepare workspace", Status: workspace.CreateProgressCompleted, CreatedAt: nowRFC3339Nano()})
-	h.publishWorkspaceCreateCompleted(prepared, created, warnings)
-	return nil
+	return createflow.ExecuteLocalCreate(ctx, prepared.workspaceID, *prepared.localCreate, createflow.ExecuteLocalCreateDependencies{
+		Now:                         nowRFC3339Nano,
+		CreateWorkspaceWithProgress: h.manager.CreateWorkspaceWithProgress,
+		RollbackRegistration: func(ctx context.Context) {
+			h.rollbackWorkspaceCreateRegistration(ctx, prepared)
+		},
+		FinalizeLocalCreate: func(ctx context.Context, created workspace.Workspace) error {
+			h.watchAndTrack(created.ID, created.Path)
+			h.upsertWorkspaceIndex(created)
+			if err := h.updatePreparedWorkspace(ctx, prepared, created.Path); err != nil {
+				h.rollbackWorkspaceCreateFailure(ctx, prepared, created)
+				return err
+			}
+			return nil
+		},
+		PublishProgress: reportProgress,
+		PublishCompleted: func(created workspace.Workspace) {
+			warnings := buildWorkspaceHookWarnings(prepared.localCreate.SetupHook, created.SetupHookResult, h.logFilePath)
+			h.publishWorkspaceCreateCompleted(prepared, created, warnings)
+		},
+	}, reportProgress)
 }
 
 func applyAuthoritativeWorkspaceID(prepared preparedWorkspaceCreate, workspaceID string) preparedWorkspaceCreate {
