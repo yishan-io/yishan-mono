@@ -80,3 +80,43 @@ func TestResolveScanStartUnixMilliKeepsNormalWindowWhenRecoveryIsLater(t *testin
 		t.Fatalf("expected normal scan start %d, got %d", normalScanStartUnixMilli, got)
 	}
 }
+
+func TestRequestRecoveryScanMarksInFlightAgentForRerun(t *testing.T) {
+	collector := &Collector{
+		timers:               make(map[string]*time.Timer),
+		inFlight:             map[string]bool{"recovery-probe": true},
+		needsRerun:           make(map[string]bool),
+		recoverySinceByAgent: make(map[string]int64),
+	}
+
+	shouldRun := collector.requestRecoveryScan("recovery-probe", 123)
+	if shouldRun {
+		t.Fatal("expected in-flight agent not to run immediately")
+	}
+	if collector.recoverySinceByAgent["recovery-probe"] != 123 {
+		t.Fatal("expected recovery scan request to record the recovery window")
+	}
+	if !collector.needsRerun["recovery-probe"] {
+		t.Fatal("expected in-flight agent to be marked for rerun")
+	}
+}
+
+func TestRequestRecoveryScanRecordsWindowWithoutRerunWhenIdle(t *testing.T) {
+	collector := &Collector{
+		timers:               make(map[string]*time.Timer),
+		inFlight:             map[string]bool{"recovery-probe": false},
+		needsRerun:           make(map[string]bool),
+		recoverySinceByAgent: make(map[string]int64),
+	}
+
+	shouldRun := collector.requestRecoveryScan("recovery-probe", 456)
+	if !shouldRun {
+		t.Fatal("expected idle agent to run immediately")
+	}
+	if collector.recoverySinceByAgent["recovery-probe"] != 456 {
+		t.Fatal("expected recovery scan request to record the recovery window")
+	}
+	if collector.needsRerun["recovery-probe"] {
+		t.Fatal("did not expect idle agent to be marked for rerun")
+	}
+}

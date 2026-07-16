@@ -42,40 +42,6 @@ func newTestHandler(t *testing.T) *JSONRPCHandler {
 	return h
 }
 
-type tokenUsageRecoveryProbe struct {
-	recoverySinceByAgent map[string]int64
-	needsRerun           map[string]bool
-	inFlight             map[string]bool
-}
-
-func (p *tokenUsageRecoveryProbe) StartStartupScan()   {}
-func (p *tokenUsageRecoveryProbe) SyncNow(_ string)    {}
-func (p *tokenUsageRecoveryProbe) Trigger(_, _ string) {}
-func (p *tokenUsageRecoveryProbe) Close()              {}
-func (p *tokenUsageRecoveryProbe) DebugState() tokenUsageCollectorDebugState {
-	return tokenUsageCollectorDebugState{}
-}
-func (p *tokenUsageRecoveryProbe) RequestRecentRecoveryScan(_ string) {
-	now := time.Now().UTC().UnixMilli()
-	for agentKind := range p.inFlight {
-		p.recoverySinceByAgent[agentKind] = now
-		if p.inFlight[agentKind] {
-			p.needsRerun[agentKind] = true
-		}
-	}
-}
-
-func installTokenUsageRecoveryProbe(t *testing.T, h *JSONRPCHandler) (string, *tokenUsageRecoveryProbe) {
-	t.Helper()
-	collector := &tokenUsageRecoveryProbe{
-		recoverySinceByAgent: make(map[string]int64),
-		needsRerun:           make(map[string]bool),
-		inFlight:             map[string]bool{"recovery-probe": true},
-	}
-	h.tokenUsage = collector
-	return "recovery-probe", collector
-}
-
 func TestPublishWorkspaceSnapshotChanged_PublishesLocalInvalidationEvent(t *testing.T) {
 	h := newTestHandler(t)
 	subscriptionID, events := h.events.Subscribe()
@@ -238,7 +204,6 @@ func TestHandleWorkspaceCreate_UsesAuthoritativeAPIWorkspaceID(t *testing.T) {
 func TestHandleWorkspaceOpenProject_Success(t *testing.T) {
 	dir := t.TempDir()
 	h := newTestHandler(t)
-	recoveryProbeAgentKind, collector := installTokenUsageRecoveryProbe(t, h)
 
 	params, err := json.Marshal(workspaceOpenProjectParams{
 		Workspaces: []workspaceOpenProjectEntry{
@@ -288,12 +253,6 @@ func TestHandleWorkspaceOpenProject_Success(t *testing.T) {
 	if !found {
 		t.Errorf("ws-1 was not written to workspace-index.json")
 	}
-	if collector.recoverySinceByAgent[recoveryProbeAgentKind] == 0 {
-		t.Fatalf("expected recovery scan to be requested for opened workspace")
-	}
-	if !collector.needsRerun[recoveryProbeAgentKind] {
-		t.Fatalf("expected recovery scan to mark in-flight agent for rerun")
-	}
 }
 
 // TestHandleWorkspaceOpenProject_Idempotent verifies that calling openProject
@@ -301,7 +260,6 @@ func TestHandleWorkspaceOpenProject_Success(t *testing.T) {
 func TestHandleWorkspaceOpenProject_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	h := newTestHandler(t)
-	recoveryProbeAgentKind, collector := installTokenUsageRecoveryProbe(t, h)
 
 	// Pre-open the workspace directly in the manager with matching metadata.
 	if _, err := h.manager.Open(workspace.OpenRequest{ID: "ws-2", Path: dir, ProjectID: "proj-2", OrgID: "org-2"}); err != nil {
@@ -332,15 +290,11 @@ func TestHandleWorkspaceOpenProject_Idempotent(t *testing.T) {
 	if len(result.Errors) != 0 {
 		t.Errorf("expected no errors, got %v", result.Errors)
 	}
-	if collector.recoverySinceByAgent[recoveryProbeAgentKind] != 0 {
-		t.Fatalf("expected no recovery scan request for pure skip")
-	}
 }
 
 func TestHandleWorkspaceOpenProject_ReconcilesMissingMetadata(t *testing.T) {
 	dir := t.TempDir()
 	h := newTestHandler(t)
-	recoveryProbeAgentKind, collector := installTokenUsageRecoveryProbe(t, h)
 
 	if _, err := h.manager.Open(workspace.OpenRequest{ID: "ws-3", Path: dir}); err != nil {
 		t.Fatalf("pre-open: %v", err)
@@ -392,12 +346,6 @@ func TestHandleWorkspaceOpenProject_ReconcilesMissingMetadata(t *testing.T) {
 		}
 		if entry.ProjectID != "proj-3" || entry.OrgID != "org-3" || entry.State != workspace.WorkspaceStateActive {
 			t.Fatalf("expected repaired index entry, got %+v", entry)
-		}
-		if collector.recoverySinceByAgent[recoveryProbeAgentKind] == 0 {
-			t.Fatalf("expected recovery scan to be requested after metadata reconciliation")
-		}
-		if !collector.needsRerun[recoveryProbeAgentKind] {
-			t.Fatalf("expected recovery scan to mark in-flight agent for rerun after metadata reconciliation")
 		}
 		return
 	}

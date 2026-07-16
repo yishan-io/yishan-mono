@@ -16,6 +16,7 @@ import (
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/modellist"
 	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
@@ -39,7 +40,7 @@ type JSONRPCHandler struct {
 	events         *eventHub
 	watchers       *workspacewatchers.Watchers
 	prTracker      *workspacePRTracker
-	tokenUsage     tokenUsageService
+	tokenUsage     *tokenusage.Collector
 	computer       *computerService
 	modelList      *modellist.Service
 	memory         *memory.Service
@@ -68,7 +69,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 	events := newEventHub()
 	prTracker := newWorkspacePRTracker(manager, runtime, events.Publish)
 	fileCacheSubID, fileCacheEvents := events.Subscribe()
-	collector, err := newTokenUsageCollector(manager, runtime, configPath)
+	collector, err := tokenusage.NewCollector(manager, runtime, configPath)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to initialize token usage collector")
 	}
