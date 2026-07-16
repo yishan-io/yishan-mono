@@ -10,13 +10,6 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-const (
-	workspaceRelayChangeCreateRequest   = "workspace.create.request"
-	workspaceRelayChangeCreateProgress  = "workspace.create.progress"
-	workspaceRelayChangeCreateCompleted = "workspace.create.completed"
-	workspaceRelayChangeCreateFailed    = "workspace.create.failed"
-)
-
 type preparedWorkspaceCreate struct {
 	workspaceID      string
 	organizationID   string
