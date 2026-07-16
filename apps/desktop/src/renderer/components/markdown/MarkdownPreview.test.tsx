@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
 import { ThemeProvider } from "@mui/material/styles";
+import { layoutStore } from "@renderer/store/settings/layoutStore";
+import { createAppTheme } from "@renderer/theme";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { layoutStore } from "../store/settings/layoutStore";
-import { createAppTheme } from "../theme";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { MarkdownPreviewThemeProvider } from "./MarkdownPreviewThemeProvider";
 

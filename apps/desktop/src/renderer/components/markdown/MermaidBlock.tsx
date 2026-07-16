@@ -1,7 +1,7 @@
 import { Box, IconButton, Tooltip, Typography, useTheme } from "@mui/material";
+import { DiagramZoomOverlay } from "@renderer/components/DiagramZoomOverlay";
 import { memo, useEffect, useRef, useState } from "react";
 import { LuMaximize2 } from "react-icons/lu";
-import { DiagramZoomOverlay } from "./DiagramZoomOverlay";
 import { mermaidIframeRenderer } from "./mermaidIframeRenderer";
 
 type MermaidBlockProps = {

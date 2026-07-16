@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
 import { ThemeProvider, useTheme } from "@mui/material/styles";
+import { layoutStore } from "@renderer/store/settings/layoutStore";
+import { createAppTheme } from "@renderer/theme";
 import { cleanup, render, screen } from "@testing-library/react";
 import { act } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { layoutStore } from "../store/settings/layoutStore";
-import { createAppTheme } from "../theme";
 import { MarkdownPreviewThemeProvider } from "./MarkdownPreviewThemeProvider";
 
 function ThemeModeProbe({ testId }: { testId: string }) {

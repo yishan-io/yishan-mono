@@ -6,8 +6,8 @@ import { YISHAN_THEME_DARK, YISHAN_THEME_LIGHT, ensureEditorThemes, monaco } fro
 import { useGitGutterDecorations } from "../hooks/useGitGutterDecorations";
 import type { MarkdownDefaultViewMode } from "../store/settings/layoutStore";
 import { FileViewerToolbar } from "./FileViewerToolbar";
-import { MarkdownPreview } from "./MarkdownPreview";
-import { MarkdownPreviewThemeProvider } from "./MarkdownPreviewThemeProvider";
+import { MarkdownPreview } from "./markdown/MarkdownPreview";
+import { MarkdownPreviewThemeProvider } from "./markdown/MarkdownPreviewThemeProvider";
 
 type MarkdownViewMode = "edit" | "split" | "preview";
 

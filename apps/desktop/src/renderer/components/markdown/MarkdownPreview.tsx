@@ -1,10 +1,10 @@
 import { Box, Typography, useTheme } from "@mui/material";
+import { openLink } from "@renderer/commands/appCommands";
+import { buildWorkspaceFileUrl } from "@renderer/commands/fileCommands";
+import { layoutStore } from "@renderer/store/settings/layoutStore";
+import { tabStore } from "@renderer/store/tabStore";
+import { enqueueWorkspaceErrorNotice } from "@renderer/store/workspaceLifecycleNoticeStore";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { openLink } from "../commands/appCommands";
-import { buildWorkspaceFileUrl } from "../commands/fileCommands";
-import { layoutStore } from "../store/settings/layoutStore";
-import { tabStore } from "../store/tabStore";
-import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
 import { MarkdownFindBar } from "./MarkdownFindBar";
 import { MarkdownOutline } from "./MarkdownOutline";
 import { MarkdownPreviewMetadataTable } from "./MarkdownPreviewMetadataTable";

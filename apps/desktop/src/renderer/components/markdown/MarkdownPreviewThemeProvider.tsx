@@ -1,8 +1,8 @@
 import { ThemeProvider, useTheme } from "@mui/material/styles";
+import { layoutStore } from "@renderer/store/settings/layoutStore";
+import { createAppTheme } from "@renderer/theme";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
-import { layoutStore } from "../store/settings/layoutStore";
-import { createAppTheme } from "../theme";
 
 type MarkdownPreviewThemeProviderProps = {
   children: ReactNode;
