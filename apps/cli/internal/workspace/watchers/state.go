@@ -1,4 +1,4 @@
-package daemon
+package watchers
 
 import (
 	"errors"
@@ -11,44 +11,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/workspace"
 )
-
-// resolveGitDir returns the actual git directory for a worktree path.
-// For standard repositories, .git is a directory and is returned directly.
-// For git worktrees, .git is a file containing "gitdir: <path>" pointing to
-// the real git directory (e.g., /repo/.git/worktrees/<name>).
-func resolveGitDir(worktreePath string) string {
-	gitEntry := filepath.Join(worktreePath, ".git")
-	info, err := os.Lstat(gitEntry)
-	if err != nil {
-		return gitEntry
-	}
-
-	if info.IsDir() {
-		return gitEntry
-	}
-
-	content, err := os.ReadFile(gitEntry)
-	if err != nil {
-		return gitEntry
-	}
-
-	line := strings.TrimSpace(string(content))
-	gitDirPath, ok := strings.CutPrefix(line, "gitdir: ")
-	if !ok {
-		return gitEntry
-	}
-
-	if !filepath.IsAbs(gitDirPath) {
-		gitDirPath = filepath.Join(worktreePath, gitDirPath)
-	}
-
-	resolved := filepath.Clean(gitDirPath)
-	if _, err := os.Stat(resolved); err != nil {
-		return gitEntry
-	}
-
-	return resolved
-}
 
 func nonRecursiveWatchPaths(entry *worktreeWatcher) []string {
 	paths := []string{entry.resolvedGitDir}

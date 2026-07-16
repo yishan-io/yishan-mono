@@ -17,6 +17,7 @@ import (
 	"yishan/apps/cli/internal/modellist"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
+	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
 
 const (
@@ -36,7 +37,7 @@ type JSONRPCHandler struct {
 	wsIndexStore   *workspaceIndexStore
 	context        *AppContextStore
 	events         *eventHub
-	watchers       *workspaceWatchers
+	watchers       *workspacewatchers.Watchers
 	prTracker      *workspacePRTracker
 	tokenUsage     *tokenUsageCollector
 	computer       *computerService
@@ -106,7 +107,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		wsIndexStore:     wsIndexStore,
 		context:          context,
 		events:           events,
-		watchers:         newWorkspaceWatchers(events, prTracker.RefreshWorkspaceByPath),
+		watchers:         newWorkspaceWatchersForEventHub(events, prTracker.RefreshWorkspaceByPath),
 		prTracker:        prTracker,
 		tokenUsage:       collector,
 		computer:         newComputerService(computer.NewUnavailableRuntime("unknown")),

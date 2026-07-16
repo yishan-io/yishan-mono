@@ -1,4 +1,4 @@
-package daemon
+package watchers
 
 import (
 	"context"
@@ -29,14 +29,13 @@ func (w *worktreeWatcher) scheduleFileEmit(relPath string) {
 			changedPaths = append(changedPaths, path)
 		}
 
-		w.events.Publish(frontendEvent{
-			Topic: "workspaceFilesChanged",
-			Payload: map[string]any{
-				"workspaceId":           w.workspaceID,
-				"workspaceWorktreePath": w.path,
-				"changedRelativePaths":  changedPaths,
-			},
-		})
+		if w.sink != nil {
+			w.sink.PublishWorkspaceFilesChanged(FilesChangedEvent{
+				WorkspaceID:          w.workspaceID,
+				WorktreePath:         w.path,
+				ChangedRelativePaths: changedPaths,
+			})
+		}
 	})
 }
 
@@ -76,21 +75,18 @@ func (w *worktreeWatcher) scheduleGitEmit(affectsBranch bool) {
 		w.pendingAffectsBranch = false
 		w.mu.Unlock()
 
-		payload := map[string]any{
-			"workspaceId":           w.workspaceID,
-			"workspaceWorktreePath": w.path,
-			"affectsBranch":         affects,
+		event := GitChangedEvent{
+			WorkspaceID:   w.workspaceID,
+			WorktreePath:  w.path,
+			AffectsBranch: affects,
 		}
 		if affects {
-			if branch := w.readCurrentBranch(); branch != "" {
-				payload["currentBranch"] = branch
-			}
+			event.CurrentBranch = w.readCurrentBranch()
 		}
 
-		w.events.Publish(frontendEvent{
-			Topic:   "gitChanged",
-			Payload: payload,
-		})
+		if w.sink != nil {
+			w.sink.PublishGitChanged(event)
+		}
 		if w.onGitChanged != nil {
 			go w.onGitChanged(w.path)
 		}
