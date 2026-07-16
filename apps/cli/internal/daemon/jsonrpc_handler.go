@@ -39,7 +39,7 @@ type JSONRPCHandler struct {
 	events         *eventHub
 	watchers       *workspacewatchers.Watchers
 	prTracker      *workspacePRTracker
-	tokenUsage     *tokenUsageCollector
+	tokenUsage     tokenUsageService
 	computer       *computerService
 	modelList      *modellist.Service
 	memory         *memory.Service

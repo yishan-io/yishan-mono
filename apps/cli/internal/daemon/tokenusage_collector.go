@@ -26,6 +26,15 @@ const (
 
 var tokenUsageScannableAgentKinds = agentkind.WithActiveTokenScanners
 
+type tokenUsageService interface {
+	StartStartupScan()
+	SyncNow(source string)
+	Trigger(agentKind string, source string)
+	RequestRecentRecoveryScan(source string)
+	DebugState() tokenUsageCollectorDebugState
+	Close()
+}
+
 type tokenUsageCollector struct {
 	mu                   sync.Mutex
 	manager              *workspace.Manager
