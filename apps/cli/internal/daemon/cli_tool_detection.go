@@ -1,7 +1,7 @@
 package daemon
 
 import (
-	clidetector "yishan/apps/cli/internal/daemon/cli_detector"
+	clidetector "yishan/apps/cli/internal/clidetector"
 )
 
 const (
