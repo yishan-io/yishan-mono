@@ -1,11 +1,11 @@
 import { Box, Typography, useTheme } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
-import { openLink } from "../../commands/appCommands";
-import { openTab } from "../../commands/tabCommands";
-import { getErrorMessage } from "../../helpers/errorHelpers";
-import { isAbsoluteUrl, resolveRelativePath } from "../markdownHelpers";
-import { markdownService } from "../markdownService";
-import { useMarkdownStyles } from "../markdownStyles";
+import { openLink } from "../../../commands/appCommands";
+import { openTab } from "../../../commands/tabCommands";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
+import { isAbsoluteUrl, resolveRelativePath } from "../../markdownHelpers";
+import { markdownService } from "../../markdownService";
+import { useMarkdownStyles } from "../../markdownStyles";
 
 type AgentMarkdownContentProps = {
   content: string;

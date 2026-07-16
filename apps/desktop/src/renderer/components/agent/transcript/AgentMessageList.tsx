@@ -1,7 +1,8 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
-import type { AgentContentBlock, AgentMessage as AgentMessageType } from "../../store/agentChatTypes";
-import { AgentMessage, type AgentToolResultMap } from "./AgentMessage";
+import type { AgentContentBlock, AgentMessage as AgentMessageType } from "../../../store/agentChatTypes";
+import { AgentMessage } from "./AgentMessage";
+import type { AgentToolResultMap } from "./helpers";
 
 const EMPTY_MIN_HEIGHT = 320;
 const BOTTOM_SCROLL_THRESHOLD_PX = 48;
@@ -46,6 +47,8 @@ function shouldMergeToolResult(message: AgentMessageType, previous: DisplayMessa
       message.toolName === "read" ||
       message.toolName === "edit" ||
       message.toolName === "write" ||
+      message.toolName === "grep" ||
+      message.toolName === "Agent" ||
       message.toolName === "memory_search" ||
       message.toolName === "memory_store") &&
     hasToolCall(previous.message, message.toolCallId)

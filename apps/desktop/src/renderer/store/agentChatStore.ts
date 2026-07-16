@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { type RunningSubagentSummary, deriveRunningSubagents } from "./agentChatSubagents";
 import type { AgentMessage, AgentModel, AgentQueueState, AgentSessionState } from "./agentChatTypes";
 
 const MAX_MESSAGES_PER_TAB = 500;
@@ -13,6 +14,10 @@ type AgentSessionData = {
   currentModel: AgentModel | null;
   thinkingLevel: string;
   queue: AgentQueueState;
+  runningSubagents: RunningSubagentSummary[];
+  hasLoadedMessages: boolean;
+  hasLoadedModels: boolean;
+  hasLoadedState: boolean;
   error: string | null;
   turnError: string | null;
 };
@@ -34,6 +39,7 @@ type AgentChatStoreState = {
   setCurrentModel: (tabId: string, model: AgentModel) => void;
   setThinkingLevel: (tabId: string, level: string) => void;
   setQueue: (tabId: string, queue: AgentQueueState) => void;
+  markStateLoaded: (tabId: string) => void;
   removeSession: (tabId: string) => void;
   removeSessions: (tabIds: string[]) => void;
 };
@@ -48,6 +54,10 @@ function emptySession(sessionId: string): AgentSessionData {
     currentModel: null,
     thinkingLevel: "medium",
     queue: { steering: [], followUp: [] },
+    runningSubagents: [],
+    hasLoadedMessages: false,
+    hasLoadedModels: false,
+    hasLoadedState: false,
     error: null,
     turnError: null,
   };
@@ -55,6 +65,28 @@ function emptySession(sessionId: string): AgentSessionData {
 
 function omitKeys<T>(record: Record<string, T>, removedIds: Set<string>): Record<string, T> {
   return Object.fromEntries(Object.entries(record).filter(([id]) => !removedIds.has(id)));
+}
+
+function setRunningSubagentsIfChanged(session: AgentSessionData, nextRunningSubagents: RunningSubagentSummary[]): void {
+  if (session.runningSubagents.length === nextRunningSubagents.length) {
+    const isUnchanged = session.runningSubagents.every((subagent, index) => {
+      const nextSubagent = nextRunningSubagents[index];
+      return (
+        nextSubagent &&
+        subagent.rowId === nextSubagent.rowId &&
+        subagent.agentId === nextSubagent.agentId &&
+        subagent.agentName === nextSubagent.agentName &&
+        subagent.childSessionId === nextSubagent.childSessionId &&
+        subagent.title === nextSubagent.title &&
+        subagent.promptSummary === nextSubagent.promptSummary
+      );
+    });
+    if (isUnchanged) {
+      return;
+    }
+  }
+
+  session.runningSubagents = nextRunningSubagents;
 }
 
 export const agentChatStore = create<AgentChatStoreState>()(
@@ -114,6 +146,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (session.messages.length > MAX_MESSAGES_PER_TAB) {
           session.messages = session.messages.slice(-MAX_MESSAGES_PER_TAB);
         }
+        setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages, session.streamingMessage));
       });
     },
 
@@ -123,6 +156,8 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (!session) return;
         session.messages = messages.slice(-MAX_MESSAGES_PER_TAB);
         session.streamingMessage = null;
+        session.hasLoadedMessages = true;
+        setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages));
       });
     },
 
@@ -131,6 +166,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.streamingMessage = message;
+        setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages, session.streamingMessage));
       });
     },
 
@@ -144,6 +180,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session.messages.push(msg);
         }
         session.streamingMessage = null;
+        setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages));
       });
     },
 
@@ -152,6 +189,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.availableModels = models;
+        session.hasLoadedModels = true;
         const firstModel = models[0];
         if (!session.currentModel && firstModel) {
           session.currentModel = firstModel;
@@ -180,6 +218,14 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.queue = queue;
+      });
+    },
+
+    markStateLoaded: (tabId) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        session.hasLoadedState = true;
       });
     },
 

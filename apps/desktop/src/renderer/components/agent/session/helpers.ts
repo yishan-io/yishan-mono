@@ -1,4 +1,4 @@
-import type { AgentModel } from "../../store/agentChatTypes";
+import type { AgentModel } from "../../../store/agentChatTypes";
 
 export const FALLBACK_MODEL_PROVIDER_NAME = "Other";
 

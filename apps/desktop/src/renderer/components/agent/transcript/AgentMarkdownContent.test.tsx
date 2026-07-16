@@ -8,7 +8,7 @@ const mocked = vi.hoisted(() => ({
   parse: vi.fn<(content: string) => Promise<string>>(),
 }));
 
-vi.mock("../markdownService", () => ({
+vi.mock("../../markdownService", () => ({
   markdownService: {
     parse: mocked.parse,
   },

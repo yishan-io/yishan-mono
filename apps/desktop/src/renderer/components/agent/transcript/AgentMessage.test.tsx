@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessage as AgentMessageType } from "../../store/agentChatTypes";
+import type { AgentMessage as AgentMessageType } from "../../../store/agentChatTypes";
 import { AgentMessage } from "./AgentMessage";
 
 const mocked = vi.hoisted(() => ({
@@ -13,7 +13,7 @@ vi.mock("./AgentMarkdownContent", () => ({
   AgentMarkdownContent: mocked.agentMarkdownContent,
 }));
 
-vi.mock("./AgentToolCallCard", () => ({
+vi.mock("../tool-calls/AgentToolCallCard", () => ({
   AgentToolCallCard: () => <div />,
 }));
 
@@ -84,6 +84,29 @@ describe("AgentMessage", () => {
     render(<AgentMessage message={buildAssistantThinkingMessage()} />);
 
     expect(screen.getByText("Thought")).toBeTruthy();
+  });
+
+  it("prefers thinking summary metadata when available", () => {
+    render(
+      <AgentMessage
+        message={{
+          id: "assistant-thinking-summary",
+          role: "assistant",
+          content: [
+            {
+              type: "thinking",
+              thinking: "**Inspecting uncommitted code changes**",
+              thinkingSignature: {
+                summary: [{ type: "summary_text", text: "Inspecting uncommitted code changes" }],
+              },
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Inspecting uncommitted code changes")).toBeTruthy();
+    expect(screen.queryByLabelText("Toggle thought details")).toBeNull();
   });
 
   it("renders skill-injection user messages as a compact skill marker", () => {

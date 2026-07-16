@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentMessage as AgentMessageType } from "../../store/agentChatTypes";
+import type { AgentMessage as AgentMessageType } from "../../../store/agentChatTypes";
 import { AgentMessageList } from "./AgentMessageList";
 
 vi.mock("./AgentMessage", () => ({
@@ -27,7 +27,7 @@ afterEach(() => {
 });
 
 describe("AgentMessageList", () => {
-  it.each(["write", "memory_search", "memory_store"] as const)(
+  it.each(["write", "memory_search", "memory_store", "grep", "Agent"] as const)(
     "merges %s tool results into the preceding assistant tool call",
     (toolName) => {
       const messages: AgentMessageType[] = [
@@ -39,7 +39,13 @@ describe("AgentMessageList", () => {
               type: "toolCall",
               id: "tool-1",
               name: toolName,
-              arguments: { path: "src/example.ts" },
+              arguments:
+                toolName === "Agent"
+                  ? {
+                      agent: "code-reviewer",
+                      prompt: "Review the code quality of the services directory.",
+                    }
+                  : { path: "src/example.ts" },
             },
           ],
         },

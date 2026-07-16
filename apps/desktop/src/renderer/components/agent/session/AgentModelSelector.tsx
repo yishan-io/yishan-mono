@@ -1,13 +1,9 @@
 import { Box, Button } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
-import type { AgentModel } from "../../store/agentChatTypes";
+import type { AgentModel } from "../../../store/agentChatTypes";
 import { AgentModelSelectorMenu } from "./AgentModelSelectorMenu";
-import {
-  formatAgentModelLabel,
-  getAgentModelProviderName,
-  groupAgentModelsByProvider,
-} from "./agentModelSelectorHelpers";
+import { formatAgentModelLabel, getAgentModelProviderName, groupAgentModelsByProvider } from "./helpers";
 
 type AgentModelSelectorProps = {
   models: AgentModel[];

@@ -6,7 +6,7 @@ import { findTabWithSession } from "../../commands/agentChatCommands";
 import { AgentIcon } from "../../components/AgentIcon";
 import { SplitPaneContainer } from "../../components/SplitPaneContainer";
 import { SplitPaneGroup } from "../../components/SplitPaneGroup";
-import { SessionHistoryMenu } from "../../components/agent/SessionHistoryMenu";
+import { SessionHistoryMenu } from "../../components/agent/session/SessionHistoryMenu";
 import { getFileTreeIcon } from "../../components/fileTreeIcons";
 import { type DesktopAgentKind, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";

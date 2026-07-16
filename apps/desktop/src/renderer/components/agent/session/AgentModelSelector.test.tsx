@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AgentModel } from "../../store/agentChatTypes";
+import type { AgentModel } from "../../../store/agentChatTypes";
 import { AgentModelSelector } from "./AgentModelSelector";
 
 function buildModels(): AgentModel[] {

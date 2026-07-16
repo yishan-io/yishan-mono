@@ -5,7 +5,19 @@ export function cloneContentBlock(block: AgentContentBlock): AgentContentBlock {
     case "text":
       return { type: "text", text: block.text };
     case "thinking":
-      return { type: "thinking", thinking: block.thinking };
+      return {
+        type: "thinking",
+        thinking: block.thinking,
+        thinkingSignature:
+          typeof block.thinkingSignature === "string"
+            ? block.thinkingSignature
+            : block.thinkingSignature
+              ? {
+                  ...block.thinkingSignature,
+                  summary: block.thinkingSignature.summary?.map((summaryItem) => ({ ...summaryItem })),
+                }
+              : undefined,
+      };
     case "toolCall":
       return {
         type: "toolCall",
@@ -75,17 +87,10 @@ export function applyStreamDelta(message: AgentMessage, delta: AgentStreamEvent)
       });
       break;
 
-    case "toolcall_delta": {
-      const block = content[delta.contentIndex];
-      if (block && block.type === "toolCall") {
-        try {
-          block.arguments = { ...block.arguments, ...JSON.parse(delta.delta) };
-        } catch {
-          return;
-        }
-      }
+    case "toolcall_delta":
+      // Pi streams tool-call arguments as incremental JSON fragments. Wait for
+      // toolcall_end, which carries the complete parsed arguments object.
       break;
-    }
 
     case "toolcall_end": {
       const block = content[delta.contentIndex];
