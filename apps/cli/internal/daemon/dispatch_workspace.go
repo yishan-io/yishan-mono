@@ -12,6 +12,7 @@ import (
 
 	agentcmd "yishan/apps/cli/internal/daemon/agentcmd"
 	"yishan/apps/cli/internal/workspace"
+	createflow "yishan/apps/cli/internal/workspace/createflow"
 	"yishan/apps/cli/internal/workspace/terminal"
 
 	"github.com/rs/zerolog/log"
@@ -248,59 +249,60 @@ func (h *JSONRPCHandler) rollbackWorkspaceCreateFailure(
 		}
 	}
 
-	closeReq := workspace.ClosePathRequest{
-		WorkspaceID:   created.ID,
-		Path:          created.Path,
-		Branch:        prepared.localCreate.TargetBranch,
-		RemoveBranch:  true,
-		ForceWorktree: true,
-		ForceBranch:   true,
-	}
+	closeReq := createflow.BuildCreateFailureClosePathRequest(created, prepared.localCreate.TargetBranch)
 	h.cleanupLocalWorkspaceCreateFailure(ctx, closeReq)
 }
 
 func (h *JSONRPCHandler) cleanupLocalWorkspaceCreateFailure(ctx context.Context, closeReq workspace.ClosePathRequest) {
-	if strings.TrimSpace(closeReq.Path) == "" {
-		return
-	}
-
-	h.watchers.Unwatch(closeReq.Path)
-	h.prTracker.StopTracking(closeReq.WorkspaceID)
-
-	if h.cleanupStore != nil {
-		if err := h.cleanupStore.Add(pendingWorkspaceCleanup{
-			WorkspaceID:   closeReq.WorkspaceID,
-			Path:          closeReq.Path,
-			Branch:        closeReq.Branch,
-			RemoveBranch:  closeReq.RemoveBranch,
-			ForceWorktree: closeReq.ForceWorktree,
-			ForceBranch:   closeReq.ForceBranch,
-			PostHook:      closeReq.PostHook,
-		}); err != nil {
-			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to register workspace create rollback cleanup")
-		}
-	}
-
-	if _, err := h.manager.CloseWorkspacePath(ctx, closeReq); err != nil {
-		if h.cleanupStore != nil {
-			if markErr := h.cleanupStore.MarkFailure(closeReq.WorkspaceID, err); markErr != nil {
-				log.Warn().Err(markErr).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to mark workspace create rollback cleanup failure")
+	createflow.CleanupLocalWorkspaceCreateFailure(ctx, createflow.CleanupDependencies{
+		Unwatch:      h.watchers.Unwatch,
+		StopTracking: h.prTracker.StopTracking,
+		RegisterCleanup: func(req workspace.ClosePathRequest) error {
+			if h.cleanupStore == nil {
+				return nil
 			}
-		}
-		log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Str("path", closeReq.Path).Msg("workspace create rollback cleanup failed")
-	} else if h.cleanupStore != nil {
-		if err := h.cleanupStore.Remove(closeReq.WorkspaceID); err != nil {
-			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to remove completed workspace create rollback cleanup")
-		}
-	}
-
-	h.manager.RemoveWorkspaceFromMemory(closeReq.WorkspaceID)
-	if h.wsIndexStore != nil {
-		if err := h.wsIndexStore.Remove(closeReq.WorkspaceID); err != nil {
-			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to remove rolled back workspace from index store")
-		}
-	}
-	h.clearAgentUsage(closeReq.WorkspaceID)
+			return h.cleanupStore.Add(pendingWorkspaceCleanup{
+				WorkspaceID:   req.WorkspaceID,
+				Path:          req.Path,
+				Branch:        req.Branch,
+				RemoveBranch:  req.RemoveBranch,
+				ForceWorktree: req.ForceWorktree,
+				ForceBranch:   req.ForceBranch,
+				PostHook:      req.PostHook,
+			})
+		},
+		CloseWorkspacePath: func(ctx context.Context, req workspace.ClosePathRequest) error {
+			_, err := h.manager.CloseWorkspacePath(ctx, req)
+			return err
+		},
+		MarkCleanupFailure: func(workspaceID string, cleanupErr error) error {
+			if h.cleanupStore == nil {
+				return nil
+			}
+			return h.cleanupStore.MarkFailure(workspaceID, cleanupErr)
+		},
+		RemoveRegisteredCleanup: func(workspaceID string) error {
+			if h.cleanupStore == nil {
+				return nil
+			}
+			return h.cleanupStore.Remove(workspaceID)
+		},
+		RemoveWorkspaceFromMemory: h.manager.RemoveWorkspaceFromMemory,
+		RemoveWorkspaceIndex: func(workspaceID string) error {
+			if h.wsIndexStore == nil {
+				return nil
+			}
+			return h.wsIndexStore.Remove(workspaceID)
+		},
+		ClearAgentUsage: h.clearAgentUsage,
+		Warn: func(workspaceID string, path string, message string, err error) {
+			entry := log.Warn().Err(err).Str("workspaceId", workspaceID)
+			if strings.TrimSpace(path) != "" {
+				entry = entry.Str("path", path)
+			}
+			entry.Msg(message)
+		},
+	}, closeReq)
 }
 
 func (h *JSONRPCHandler) publishWorkspaceSnapshotChanged(
