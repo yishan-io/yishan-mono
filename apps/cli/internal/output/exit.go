@@ -21,24 +21,3 @@ const (
 	ExitDaemonNotRun    = 6
 	ExitServerError     = 7
 )
-
-// CodeToExitCode maps the string error codes produced by ClassifyError to the
-// numeric exit codes above. Returns ExitError for any unrecognised code.
-func CodeToExitCode(code string) int {
-	switch code {
-	case "unauthenticated":
-		return ExitUnauthenticated
-	case "not_found":
-		return ExitNotFound
-	case "permission_denied":
-		return ExitForbidden
-	case "daemon_not_running":
-		return ExitDaemonNotRun
-	case "server_error":
-		return ExitServerError
-	case "validation_error":
-		return ExitUsageError
-	default:
-		return ExitError
-	}
-}

@@ -23,9 +23,9 @@ import (
 )
 
 const (
-	rpcCodeInvalidParams   = -32602
-	rpcCodeNotFound        = -32004
-	rpcCodeSessionInactive = -32005
+	rpcCodeInvalidParams   = rpcerror.CodeInvalidParams
+	rpcCodeNotFound        = rpcerror.CodeNotFound
+	rpcCodeSessionInactive = rpcerror.CodeSessionInactive
 )
 
 const maxSessionOutputBytes = 2 * 1024 * 1024

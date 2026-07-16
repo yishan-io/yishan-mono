@@ -6,6 +6,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/cmd"
 	"yishan/apps/cli/internal/output"
+	"yishan/apps/cli/internal/rpcerror"
 )
 
 func main() {
@@ -13,6 +14,6 @@ func main() {
 		log.Error().Err(err).Msg("command failed")
 		code := cmd.ClassifyError(err)
 		output.PrintError(err, code)
-		os.Exit(output.CodeToExitCode(code))
+		os.Exit(rpcerror.CodeToExitCode(code))
 	}
 }
