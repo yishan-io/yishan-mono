@@ -4,6 +4,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import { layoutStore } from "@renderer/store/settings/layoutStore";
 import { createAppTheme } from "@renderer/theme";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { MarkdownPreviewThemeProvider } from "./MarkdownPreviewThemeProvider";
@@ -36,6 +37,7 @@ describe("MarkdownPreview outline", () => {
     layoutStore.setState({ isMarkdownOutlineVisible: false, markdownThemePreference: "inherit" });
     HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
     parseMock.mockReset();
+    vi.useRealTimers();
   });
 
   it("stays hidden by default when outline visibility setting is off", async () => {
@@ -113,5 +115,39 @@ describe("MarkdownPreview outline", () => {
     await screen.findByRole("button", { name: "Intro" });
 
     expect(getComputedStyle(screen.getByTestId("markdown-preview-root")).backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+  });
+
+  it("debounces content updates unless immediateUpdateToken changes", async () => {
+    vi.useFakeTimers();
+    parseMock.mockImplementation(async (content) => `<h1>${content}</h1>`);
+
+    const { rerender } = render(<MarkdownPreview content="# one" />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(parseMock).toHaveBeenCalledWith("# one");
+
+    parseMock.mockClear();
+    rerender(<MarkdownPreview content="# two" />);
+
+    await act(async () => {
+      vi.advanceTimersByTime(399);
+    });
+    expect(parseMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+      await Promise.resolve();
+    });
+    expect(parseMock).toHaveBeenCalledWith("# two");
+
+    parseMock.mockClear();
+    rerender(<MarkdownPreview content="# three" immediateUpdateToken={1} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(parseMock).toHaveBeenCalledWith("# three");
   });
 });
