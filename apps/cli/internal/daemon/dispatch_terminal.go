@@ -6,6 +6,7 @@ import (
 
 	"yishan/apps/cli/internal/workspace"
 )
+
 func (h *JSONRPCHandler) dispatchTerminal(ctx context.Context, connState *wsConnState, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case MethodTerminalStart:
