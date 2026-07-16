@@ -1,6 +1,6 @@
 {
   "name": "@yishan-io/pi-notify",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "keywords": ["pi-package"],
   "files": ["extensions", "src", "!src/**/*.test.ts", "LICENSE", "README.md"],
