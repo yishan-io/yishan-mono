@@ -1,6 +1,6 @@
+import type { FileTreeGitChangeKind } from "@renderer/components/FileTree/types";
+import { isWorkspaceNotFoundError } from "@renderer/helpers/errorHelpers";
 import { useEffect, useRef, useState } from "react";
-import type { FileTreeGitChangeKind } from "../../../components/FileTree/types";
-import { isWorkspaceNotFoundError } from "../../../helpers/errorHelpers";
 
 function normalizeGitChangeKind(kind: string): FileTreeGitChangeKind {
   if (kind === "added" || kind === "modified" || kind === "deleted" || kind === "renamed") {
@@ -77,9 +77,7 @@ function areGitChangeMapsEqual(
   return true;
 }
 
-type ListGitChanges = (input: {
-  workspaceId: string;
-}) => Promise<{
+type ListGitChanges = (input: { workspaceId: string }) => Promise<{
   staged: Array<{ path: string; kind: string }>;
   unstaged: Array<{ path: string; kind: string }>;
   untracked: Array<{ path: string; kind: string }>;

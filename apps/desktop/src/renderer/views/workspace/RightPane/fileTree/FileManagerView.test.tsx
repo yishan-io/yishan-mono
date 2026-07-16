@@ -22,7 +22,9 @@ type ListFilesBatchInput = {
 
 const mocks = vi.hoisted(() => {
   const listFiles = vi.fn();
-  const lastLoadedFilesRef: { current: Array<{ path: string; isIgnored: boolean }> } = { current: [] };
+  const lastLoadedFilesRef: {
+    current: Array<{ path: string; isIgnored: boolean }>;
+  } = { current: [] };
   const listFilesBatch = vi.fn(async (input: ListFilesBatchInput) => {
     const results = await Promise.all(
       input.requests.map(async (request) => {
@@ -32,7 +34,10 @@ const mocks = vi.hoisted(() => {
           recursive: request.recursive,
         });
         if (!request.relativePath && request.recursive) {
-          lastLoadedFilesRef.current = response.files as Array<{ path: string; isIgnored: boolean }>;
+          lastLoadedFilesRef.current = response.files as Array<{
+            path: string;
+            isIgnored: boolean;
+          }>;
         }
         return {
           request,
@@ -84,7 +89,9 @@ const mocks = vi.hoisted(() => {
   const closeTab = vi.fn();
   const renameTabsForEntryRename = vi.fn();
   const setLastUsedExternalAppId = vi.fn();
-  const repoFileTreePropsRef: { current: Record<string, unknown> | null } = { current: null };
+  const repoFileTreePropsRef: { current: Record<string, unknown> | null } = {
+    current: null,
+  };
 
   const stateRef: {
     current: {
@@ -143,7 +150,7 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../../commands/fileCommands", () => ({
+vi.mock("@renderer/commands/fileCommands", () => ({
   listFiles: (input: unknown) => mocks.listFiles(input),
   listFilesBatch: (input: ListFilesBatchInput) => mocks.listFilesBatch(input),
   searchFiles: (input: { workspaceId: string; query: string }) => mocks.searchFiles(input),
@@ -160,7 +167,7 @@ vi.mock("../../../commands/fileCommands", () => ({
   writeClipboardText: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../../commands/gitCommands", () => ({
+vi.mock("@renderer/commands/gitCommands", () => ({
   readDiff: vi.fn(),
   readCommitDiff: vi.fn(),
   readBranchComparisonDiff: vi.fn(),
@@ -178,26 +185,26 @@ vi.mock("../../../commands/gitCommands", () => ({
   subscribeWorkspaceGitChanged: (listener: unknown) => mocks.subscribeWorkspaceGitChanged(listener),
 }));
 
-vi.mock("../../../store/workspaceStore", () => ({
+vi.mock("@renderer/store/workspaceStore", () => ({
   workspaceStore: mocks.workspaceStore,
 }));
 
-vi.mock("../../../store/tabStore", () => ({
+vi.mock("@renderer/store/tabStore", () => ({
   tabStore: mocks.workspaceStore,
 }));
 
-vi.mock("../../../helpers/platform", () => ({
+vi.mock("@renderer/helpers/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("../../../components/FileTree", () => ({
+vi.mock("@renderer/components/FileTree", () => ({
   FileTree: (props: Record<string, unknown> & { files: string[] }) => {
     mocks.repoFileTreePropsRef.current = props;
     return <div data-testid="repo-file-tree">{props.files.length}</div>;
   },
 }));
 
-vi.mock("../../../components/ConfirmationDialog", () => ({
+vi.mock("@renderer/components/ConfirmationDialog", () => ({
   ConfirmationDialog: ({
     open,
     title,
@@ -272,12 +279,19 @@ function getFileTreeProps() {
     ignoredPaths?: string[];
     gitChangesByPath?: Record<string, string>;
     expandedItems?: string[];
-    selectionRequest?: { path: string; requestId: number; focus?: boolean } | null;
+    selectionRequest?: {
+      path: string;
+      requestId: number;
+      focus?: boolean;
+    } | null;
     onExpandedItemsChange?: (items: string[]) => void;
     onEnsurePathLoaded?: (path: string) => Promise<void>;
     onSelectEntry?: (input: { path: string; isDirectory: boolean }) => void;
     onOpenEntry?: (input: { path: string; isDirectory: boolean }) => void;
-    onCreateEntry?: (input: { path: string; isDirectory: boolean }) => Promise<void>;
+    onCreateEntry?: (input: {
+      path: string;
+      isDirectory: boolean;
+    }) => Promise<void>;
     onRenameEntry?: (path: string, nextName: string) => Promise<void>;
     onCopyEntry?: (path: string) => Promise<void>;
     onCutEntry?: (path: string) => Promise<void>;
@@ -310,7 +324,11 @@ function createDeferred<T>() {
 describe("FileManagerView file search", () => {
   beforeEach(() => {
     mocks.subscribeWorkspaceGitChanged.mockImplementation(() => () => {});
-    mocks.listGitChanges.mockResolvedValue({ unstaged: [], staged: [], untracked: [] });
+    mocks.listGitChanges.mockResolvedValue({
+      unstaged: [],
+      staged: [],
+      untracked: [],
+    });
     mocks.readExternalClipboardSourcePaths.mockResolvedValue({
       kind: "empty",
       sourcePaths: [],
@@ -462,7 +480,9 @@ describe("FileManagerView file search", () => {
   });
 
   it("opens large files with unsupported size payload", async () => {
-    mocks.readFile.mockResolvedValue({ content: "a".repeat(2 * 1024 * 1024 + 1) });
+    mocks.readFile.mockResolvedValue({
+      content: "a".repeat(2 * 1024 * 1024 + 1),
+    });
     render(<FileManagerView />);
 
     await waitFor(() => {
@@ -590,7 +610,11 @@ describe("FileManagerView file search", () => {
 describe("FileManagerView file loading", () => {
   beforeEach(() => {
     mocks.subscribeWorkspaceGitChanged.mockImplementation(() => () => {});
-    mocks.listGitChanges.mockResolvedValue({ unstaged: [], staged: [], untracked: [] });
+    mocks.listGitChanges.mockResolvedValue({
+      unstaged: [],
+      staged: [],
+      untracked: [],
+    });
     mocks.readExternalClipboardSourcePaths.mockResolvedValue({
       kind: "empty",
       sourcePaths: [],
@@ -680,7 +704,9 @@ describe("FileManagerView file loading", () => {
         recursive?: boolean;
       }) => {
         if (input.recursive === false && input.relativePath === ".my-context") {
-          return { files: asEntries([".my-context/sub/", ".my-context/sub/moved.md"]) };
+          return {
+            files: asEntries([".my-context/sub/", ".my-context/sub/moved.md"]),
+          };
         }
 
         if (input.recursive) {
@@ -735,7 +761,9 @@ describe("FileManagerView file loading", () => {
         recursive?: boolean;
       }) => {
         if (input.recursive === false && input.relativePath === ".opencode") {
-          return { files: asEntries([".opencode/agents/", ".opencode/agents/main.md"]) };
+          return {
+            files: asEntries([".opencode/agents/", ".opencode/agents/main.md"]),
+          };
         }
 
         if (input.recursive) {
@@ -785,7 +813,9 @@ describe("FileManagerView file loading", () => {
         if (input.recursive) {
           recursiveCallCount += 1;
           if (recursiveCallCount === 1) {
-            return { files: asEntries([".my-context/", ".my-context/sub/", ".my-context/sub/old.md"]) };
+            return {
+              files: asEntries([".my-context/", ".my-context/sub/", ".my-context/sub/old.md"]),
+            };
           }
 
           return { files: asEntries([".my-context/", ".my-context/new.md"]) };
@@ -866,7 +896,9 @@ describe("FileManagerView file loading", () => {
         }
 
         if (input.recursive) {
-          return { files: asEntries([...directoryEntries, `src/${recursiveLeafName}`]) };
+          return {
+            files: asEntries([...directoryEntries, `src/${recursiveLeafName}`]),
+          };
         }
 
         return { files: asEntries([]) };
@@ -1093,7 +1125,11 @@ describe("FileManagerView file loading", () => {
 
 describe("FileManagerView external file tree refresh", () => {
   beforeEach(() => {
-    mocks.listGitChanges.mockResolvedValue({ unstaged: [], staged: [], untracked: [] });
+    mocks.listGitChanges.mockResolvedValue({
+      unstaged: [],
+      staged: [],
+      untracked: [],
+    });
     mocks.readExternalClipboardSourcePaths.mockResolvedValue({
       kind: "empty",
       sourcePaths: [],
@@ -1110,8 +1146,12 @@ describe("FileManagerView external file tree refresh", () => {
   });
 
   it("ignores stale file-list responses from a previously selected workspace", async () => {
-    const firstLoad = createDeferred<{ files: Array<{ path: string; isIgnored: boolean }> }>();
-    const secondLoad = createDeferred<{ files: Array<{ path: string; isIgnored: boolean }> }>();
+    const firstLoad = createDeferred<{
+      files: Array<{ path: string; isIgnored: boolean }>;
+    }>();
+    const secondLoad = createDeferred<{
+      files: Array<{ path: string; isIgnored: boolean }>;
+    }>();
     const originalSelectedWorkspaceId = mocks.stateRef.current.selectedWorkspaceId;
     const originalWorkspaces = mocks.stateRef.current.workspaces;
 
@@ -1128,14 +1168,20 @@ describe("FileManagerView external file tree refresh", () => {
       const { rerender } = render(<FileManagerView />);
 
       await waitFor(() => {
-        expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceId: "workspace-1", recursive: true });
+        expect(mocks.listFiles).toHaveBeenCalledWith({
+          workspaceId: "workspace-1",
+          recursive: true,
+        });
       });
 
       mocks.stateRef.current.selectedWorkspaceId = "workspace-2";
       rerender(<FileManagerView />);
 
       await waitFor(() => {
-        expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceId: "workspace-2", recursive: true });
+        expect(mocks.listFiles).toHaveBeenCalledWith({
+          workspaceId: "workspace-2",
+          recursive: true,
+        });
       });
 
       secondLoad.resolve({ files: asEntries(["src/b.ts"]) });
@@ -1174,7 +1220,10 @@ describe("FileManagerView external file tree refresh", () => {
       const { rerender } = render(<FileManagerView />);
 
       await waitFor(() => {
-        expect(mocks.listFiles).toHaveBeenCalledWith({ workspaceId: "workspace-1", recursive: true });
+        expect(mocks.listFiles).toHaveBeenCalledWith({
+          workspaceId: "workspace-1",
+          recursive: true,
+        });
       });
 
       getFileTreeProps().onExpandedItemsChange?.(["src"]);
@@ -1216,7 +1265,9 @@ describe("FileManagerView external file tree refresh", () => {
   });
 
   it("refreshes file tree when file tree refresh version increments", async () => {
-    const refreshedLoad = createDeferred<{ files: Array<{ path: string; isIgnored: boolean }> }>();
+    const refreshedLoad = createDeferred<{
+      files: Array<{ path: string; isIgnored: boolean }>;
+    }>();
     mocks.listFiles
       .mockResolvedValueOnce({ files: asEntries(["src/a.ts"]) })
       .mockImplementationOnce(() => refreshedLoad.promise);
@@ -1242,7 +1293,9 @@ describe("FileManagerView external file tree refresh", () => {
     mocks.listFiles
       .mockResolvedValueOnce({ files: asEntries(["src/a.ts"]) })
       .mockResolvedValueOnce({ files: asEntries(["src/a.ts", "src/b.ts"]) })
-      .mockResolvedValueOnce({ files: asEntries(["src/a.ts", "src/b.ts", "src/c.ts"]) });
+      .mockResolvedValueOnce({
+        files: asEntries(["src/a.ts", "src/b.ts", "src/c.ts"]),
+      });
 
     const { rerender } = render(<FileManagerView />);
 
@@ -1277,7 +1330,9 @@ describe("FileManagerView external file tree refresh", () => {
 
     const callCountBeforeRefresh = mocks.listFiles.mock.calls.length;
 
-    mocks.listFiles.mockResolvedValueOnce({ files: asEntries(["src/a.ts", "src/b.ts"]) });
+    mocks.listFiles.mockResolvedValueOnce({
+      files: asEntries(["src/a.ts", "src/b.ts"]),
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
 
@@ -1317,7 +1372,10 @@ describe("FileManagerView undo operations", () => {
       expect(mocks.listFiles).toHaveBeenCalled();
     });
 
-    await getFileTreeProps().onCreateEntry?.({ path: "src/new-file.ts", isDirectory: false });
+    await getFileTreeProps().onCreateEntry?.({
+      path: "src/new-file.ts",
+      isDirectory: false,
+    });
     await waitFor(() => {
       expect(getFileTreeProps()).toMatchObject({
         canUndoLastEntryOperation: true,
@@ -1488,7 +1546,10 @@ describe("FileManagerView undo operations", () => {
       expect(mocks.listFiles).toHaveBeenCalled();
     });
 
-    await getFileTreeProps().onCreateEntry?.({ path: "src/new-file.ts", isDirectory: false });
+    await getFileTreeProps().onCreateEntry?.({
+      path: "src/new-file.ts",
+      isDirectory: false,
+    });
     await waitFor(() => {
       expect(getFileTreeProps()).toMatchObject({
         canUndoLastEntryOperation: true,
@@ -1518,7 +1579,11 @@ describe("FileManagerView undo operations", () => {
 describe("FileManagerView external clipboard paste", () => {
   beforeEach(() => {
     mocks.subscribeWorkspaceGitChanged.mockImplementation(() => () => {});
-    mocks.listGitChanges.mockResolvedValue({ unstaged: [], staged: [], untracked: [] });
+    mocks.listGitChanges.mockResolvedValue({
+      unstaged: [],
+      staged: [],
+      untracked: [],
+    });
     mocks.readExternalClipboardSourcePaths.mockResolvedValue({
       kind: "empty",
       sourcePaths: [],
@@ -1716,15 +1781,23 @@ describe("FileManagerView external clipboard paste", () => {
     await getFileTreeProps().onCopyEntry?.("index.js");
 
     let resolvePendingSnapshot:
-      | ((value: { kind: "success"; sourcePaths: string[]; clipboardFormats: string[]; strategy: string }) => void)
+      | ((value: {
+          kind: "success";
+          sourcePaths: string[];
+          clipboardFormats: string[];
+          strategy: string;
+        }) => void)
       | undefined;
     mocks.readExternalClipboardSourcePaths.mockImplementationOnce(
       () =>
-        new Promise<{ kind: "success"; sourcePaths: string[]; clipboardFormats: string[]; strategy: string }>(
-          (resolve) => {
-            resolvePendingSnapshot = resolve;
-          },
-        ),
+        new Promise<{
+          kind: "success";
+          sourcePaths: string[];
+          clipboardFormats: string[];
+          strategy: string;
+        }>((resolve) => {
+          resolvePendingSnapshot = resolve;
+        }),
     );
 
     await getFileTreeProps().onCopyEntry?.("cover.png");
@@ -1793,14 +1866,18 @@ describe("FileManagerView external clipboard paste", () => {
     });
     mocks.listFiles.mockImplementation(async (params: { relativePath?: string; recursive?: boolean }) => {
       if (params.relativePath === "src") {
-        return { files: asEntries(hasPastedEntry ? ["src/a.ts", "src/a-1.ts"] : ["src/a.ts"]) };
+        return {
+          files: asEntries(hasPastedEntry ? ["src/a.ts", "src/a-1.ts"] : ["src/a.ts"]),
+        };
       }
 
       if (params.recursive === false) {
         return { files: asEntries(["src/"]) };
       }
 
-      return { files: asEntries(hasPastedEntry ? ["src/a.ts", "src/a-1.ts"] : ["src/a.ts"]) };
+      return {
+        files: asEntries(hasPastedEntry ? ["src/a.ts", "src/a-1.ts"] : ["src/a.ts"]),
+      };
     });
 
     render(<FileManagerView />);
@@ -1954,7 +2031,9 @@ describe("FileManagerView open in system file manager", () => {
       startCreateFile: () => {},
       startCreateFolder: () => {},
     });
-    const openInMenuItem = await screen.findByRole("menuitem", { name: "Open in..." });
+    const openInMenuItem = await screen.findByRole("menuitem", {
+      name: "Open in...",
+    });
     fireEvent.mouseEnter(openInMenuItem);
     fireEvent.click(await screen.findByRole("menuitem", { name: "Cursor" }));
 

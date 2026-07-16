@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { createOperationId, getFileOperationErrorMessage } from "./fileTreeHelpers";
+import { createOperationId, getFileOperationErrorMessage } from "../fileTreeHelpers";
 
 export type FileOperationState = {
   operationId: string;

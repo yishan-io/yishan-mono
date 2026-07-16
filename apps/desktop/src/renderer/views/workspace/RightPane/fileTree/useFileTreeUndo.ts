@@ -1,7 +1,7 @@
+import { createFile, deleteEntry, renameEntry } from "@renderer/commands/fileCommands";
+import type { WorkspaceTab } from "@renderer/store/types";
 import { useCallback, useRef } from "react";
-import { createFile, deleteEntry, renameEntry } from "../../../commands/fileCommands";
-import type { WorkspaceTab } from "../../../store/types";
-import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "./rightPaneDelete";
+import { isDeletedPathDirectory, resolveTabIdsToCloseAfterDelete } from "../rightPaneDelete";
 
 type FileTreeUndoAction =
   | { kind: "create-file"; path: string }

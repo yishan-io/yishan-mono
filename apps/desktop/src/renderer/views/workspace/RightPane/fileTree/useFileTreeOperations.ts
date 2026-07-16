@@ -1,16 +1,20 @@
+import { listFiles, listFilesBatch } from "@renderer/commands/fileCommands";
+import { getErrorMessage } from "@renderer/helpers/errorHelpers";
+import { useCommands } from "@renderer/hooks/useCommands";
+import { tabStore } from "@renderer/store/tabStore";
+import { workspaceStore } from "@renderer/store/workspaceStore";
+import { workspaceUiStore } from "@renderer/store/workspaceUiStore";
+import type { ExternalAppId } from "@shared/contracts/externalApps";
+import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
-import { listFiles, listFilesBatch } from "../../../commands/fileCommands";
-import { getErrorMessage } from "../../../helpers/errorHelpers";
-import { useCommands } from "../../../hooks/useCommands";
-import { tabStore } from "../../../store/tabStore";
-import { workspaceStore } from "../../../store/workspaceStore";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
-import type { FileTreeClipboardState } from "./clipboardSourceResolvers";
-import { getFileOperationErrorMessage, mapIgnoredWorkspaceEntryPaths, mapWorkspaceEntryPaths } from "./fileTreeHelpers";
+import type { FileTreeClipboardState } from "../clipboardSourceResolvers";
+import {
+  getFileOperationErrorMessage,
+  mapIgnoredWorkspaceEntryPaths,
+  mapWorkspaceEntryPaths,
+} from "../fileTreeHelpers";
+import { getParentRelativePath, normalizeRelativePath } from "../fileTreePathHelpers";
 import { mergeWorkspaceEntries } from "./fileTreeOperationHelpers";
-import { getParentRelativePath, normalizeRelativePath } from "./fileTreePathHelpers";
 import { type FileOperationState, useFileOperationState } from "./useFileOperationState";
 import { useFileTreeClipboard } from "./useFileTreeClipboard";
 import { useFileTreeCrud } from "./useFileTreeCrud";
@@ -41,7 +45,10 @@ export type UseFileTreeOperationsResult = {
   onCopyPath: (path: string) => Promise<void>;
   onCopyRelativePath: (path: string) => Promise<void>;
   onOpenInFileManager: (path: string) => Promise<void>;
-  onOpenInExternalApp: (input: { path?: string; appId: ExternalAppId }) => Promise<void>;
+  onOpenInExternalApp: (input: {
+    path?: string;
+    appId: ExternalAppId;
+  }) => Promise<void>;
   onCopyEntry: (path: string) => Promise<void>;
   onCutEntry: (path: string) => Promise<void>;
   onPasteEntries: (destinationPath: string) => Promise<void>;
@@ -369,7 +376,10 @@ export function useFileTreeOperations(): UseFileTreeOperationsResult {
           msgLower.includes("enoent") ||
           msgLower.includes("enotdir");
         if (!isBenignFsError) {
-          console.error("Failed to load workspace directory", { path: normalizedPath, error });
+          console.error("Failed to load workspace directory", {
+            path: normalizedPath,
+            error,
+          });
         }
       }
     },

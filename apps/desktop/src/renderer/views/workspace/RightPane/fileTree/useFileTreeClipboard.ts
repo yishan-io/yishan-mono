@@ -1,18 +1,18 @@
+import { copyFiles, renameEntry, writeFileBase64 } from "@renderer/commands/fileCommands";
+import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
 import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
-import { copyFiles, renameEntry, writeFileBase64 } from "../../../commands/fileCommands";
 import {
   DEFAULT_CLIPBOARD_SOURCE_RESOLVERS,
   type FileTreeClipboardState,
   resolveClipboardSource,
-} from "./clipboardSourceResolvers";
+} from "../clipboardSourceResolvers";
+import { mapWorkspaceEntryPaths, resolveExternalClipboardFilePayloads } from "../fileTreeHelpers";
+import { type FileTreeMoveUndoEntry, buildMoveUndoEntries, resolvePreferredImportedPath } from "../fileTreePathHelpers";
 import {
   captureNativeExternalClipboardSourcePathsSnapshot,
   resolveExternalClipboardSourcePaths,
 } from "./fileTreeClipboardResolvers";
-import { mapWorkspaceEntryPaths, resolveExternalClipboardFilePayloads } from "./fileTreeHelpers";
-import { type FileTreeMoveUndoEntry, buildMoveUndoEntries, resolvePreferredImportedPath } from "./fileTreePathHelpers";
 import type { FileTreeUndoAction } from "./useFileTreeUndo";
 
 type UseFileTreeClipboardInput = {
@@ -248,7 +248,10 @@ export function useFileTreeClipboard({
             ? `${selectedWorkspaceWorktreePath}/${destinationPath}`
             : selectedWorkspaceWorktreePath;
 
-          const result = await copyFiles({ sourcePaths: absoluteSourcePaths, destinationDirectory });
+          const result = await copyFiles({
+            sourcePaths: absoluteSourcePaths,
+            destinationDirectory,
+          });
           if (!result.ok) {
             throw new Error(result.error);
           }
@@ -327,7 +330,10 @@ export function useFileTreeClipboard({
           ? `${selectedWorkspaceWorktreePath}/${destinationPath}`
           : selectedWorkspaceWorktreePath;
 
-        console.info("[FileTree drop] Copying files:", { sourcePaths, destinationDirectory });
+        console.info("[FileTree drop] Copying files:", {
+          sourcePaths,
+          destinationDirectory,
+        });
 
         // Copy files using the Electron host bridge (Node.js fs)
         const result = await copyFiles({ sourcePaths, destinationDirectory });

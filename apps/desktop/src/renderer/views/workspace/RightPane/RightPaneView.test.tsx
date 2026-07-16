@@ -105,8 +105,8 @@ vi.mock("../../../mod/platform", () => ({
   getRendererPlatform: () => "darwin",
 }));
 
-vi.mock("./FileManagerView", async () => {
-  const actual = await vi.importActual<typeof import("./FileManagerView")>("./FileManagerView");
+vi.mock("./fileTree/FileManagerView", async () => {
+  const actual = await vi.importActual<typeof import("./fileTree/FileManagerView")>("./fileTree/FileManagerView");
 
   function TrackedFileManagerView(props: Parameters<typeof actual.FileManagerView>[0]) {
     useEffect(() => {
@@ -167,7 +167,13 @@ vi.mock("../../../store/workspaceStore", () => ({
           title: "a.ts",
           pinned: false,
           kind: "file",
-          data: { path: "a.ts", content: "", savedContent: "", isDirty: false, isTemporary: false },
+          data: {
+            path: "a.ts",
+            content: "",
+            savedContent: "",
+            isDirty: false,
+            isTemporary: false,
+          },
         },
       ],
       openTab: (...args: unknown[]) => openTab(...args),
@@ -224,7 +230,11 @@ vi.mock("react-i18next", () => ({
 describe("RightPaneView delete flow", () => {
   beforeEach(() => {
     listFiles.mockResolvedValue({ files: asEntries(["a.ts"]) });
-    listWorkspaceGitChanges.mockResolvedValue({ unstaged: [], staged: [], untracked: [] });
+    listWorkspaceGitChanges.mockResolvedValue({
+      unstaged: [],
+      staged: [],
+      untracked: [],
+    });
     deleteEntry.mockResolvedValue({ ok: true });
     readFile.mockResolvedValue({ content: "" });
     readExternalClipboardSourcePaths.mockResolvedValue({
@@ -258,7 +268,10 @@ describe("RightPaneView delete flow", () => {
   it("deletes selected file immediately from context menu", async () => {
     render(<RightPaneView />);
 
-    fireEvent.contextMenu(await screen.findByText("a.ts"), { clientX: 20, clientY: 20 });
+    fireEvent.contextMenu(await screen.findByText("a.ts"), {
+      clientX: 20,
+      clientY: 20,
+    });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
 
     // Confirmation dialog should appear; confirm the deletion.
@@ -282,7 +295,10 @@ describe("RightPaneView delete flow", () => {
   it("copies absolute file path from context menu", async () => {
     render(<RightPaneView />);
 
-    fireEvent.contextMenu(await screen.findByText("a.ts"), { clientX: 20, clientY: 20 });
+    fireEvent.contextMenu(await screen.findByText("a.ts"), {
+      clientX: 20,
+      clientY: 20,
+    });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Copy Path" }));
 
     await waitFor(() => {
@@ -293,7 +309,10 @@ describe("RightPaneView delete flow", () => {
   it("copies relative file path from context menu", async () => {
     render(<RightPaneView />);
 
-    fireEvent.contextMenu(await screen.findByText("a.ts"), { clientX: 20, clientY: 20 });
+    fireEvent.contextMenu(await screen.findByText("a.ts"), {
+      clientX: 20,
+      clientY: 20,
+    });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Copy Relative Path" }));
 
     await waitFor(() => {
@@ -304,7 +323,10 @@ describe("RightPaneView delete flow", () => {
   it("opens file in Finder from context menu", async () => {
     render(<RightPaneView />);
 
-    fireEvent.contextMenu(await screen.findByText("a.ts"), { clientX: 20, clientY: 20 });
+    fireEvent.contextMenu(await screen.findByText("a.ts"), {
+      clientX: 20,
+      clientY: 20,
+    });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Open in Finder" }));
 
     await waitFor(() => {
@@ -319,7 +341,10 @@ describe("RightPaneView delete flow", () => {
   it("opens file in one external app from context menu", async () => {
     render(<RightPaneView />);
 
-    fireEvent.contextMenu(await screen.findByText("a.ts"), { clientX: 20, clientY: 20 });
+    fireEvent.contextMenu(await screen.findByText("a.ts"), {
+      clientX: 20,
+      clientY: 20,
+    });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Open in..." }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Cursor" }));
 
@@ -335,10 +360,16 @@ describe("RightPaneView delete flow", () => {
   it("pastes copied entries into the tree", async () => {
     render(<RightPaneView />);
 
-    fireEvent.contextMenu(await screen.findByText("a.ts"), { clientX: 20, clientY: 20 });
+    fireEvent.contextMenu(await screen.findByText("a.ts"), {
+      clientX: 20,
+      clientY: 20,
+    });
     fireEvent.click(await screen.findByRole("menuitem", { name: /^Copy$/ }));
 
-    fireEvent.contextMenu(screen.getByTestId("repo-file-tree-area"), { clientX: 8, clientY: 8 });
+    fireEvent.contextMenu(screen.getByTestId("repo-file-tree-area"), {
+      clientX: 8,
+      clientY: 8,
+    });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Paste" }));
 
     await waitFor(() => {
@@ -365,7 +396,10 @@ describe("RightPaneView delete flow", () => {
 
     render(<RightPaneView />);
 
-    fireEvent.contextMenu(screen.getByTestId("repo-file-tree-area"), { clientX: 8, clientY: 8 });
+    fireEvent.contextMenu(screen.getByTestId("repo-file-tree-area"), {
+      clientX: 8,
+      clientY: 8,
+    });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Paste" }));
 
     await waitFor(() => {
@@ -387,7 +421,9 @@ describe("RightPaneView delete flow", () => {
       dropEffect: "",
     };
 
-    fireEvent.dragOver(screen.getByTestId("repo-file-tree-area"), { dataTransfer });
+    fireEvent.dragOver(screen.getByTestId("repo-file-tree-area"), {
+      dataTransfer,
+    });
     fireEvent.drop(screen.getByTestId("repo-file-tree-area"), { dataTransfer });
 
     await waitFor(() => {
@@ -408,10 +444,16 @@ describe("RightPaneView delete flow", () => {
     });
     render(<RightPaneView />);
 
-    fireEvent.contextMenu(await screen.findByText("a.ts"), { clientX: 20, clientY: 20 });
+    fireEvent.contextMenu(await screen.findByText("a.ts"), {
+      clientX: 20,
+      clientY: 20,
+    });
     fireEvent.click(await screen.findByRole("menuitem", { name: /^Copy$/ }));
 
-    fireEvent.contextMenu(screen.getByTestId("repo-file-tree-area"), { clientX: 8, clientY: 8 });
+    fireEvent.contextMenu(screen.getByTestId("repo-file-tree-area"), {
+      clientX: 8,
+      clientY: 8,
+    });
     fireEvent.click(await screen.findByRole("menuitem", { name: "Paste" }));
 
     expect(await screen.findByTestId("file-operation-error")).toBeTruthy();

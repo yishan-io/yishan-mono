@@ -1,20 +1,20 @@
 import { Alert, Box, LinearProgress, Typography } from "@mui/material";
+import { ConfirmationDialog } from "@renderer/components/ConfirmationDialog";
+import { ContextMenu } from "@renderer/components/ContextMenu";
+import { FileTree } from "@renderer/components/FileTree";
+import { FileTreeToolbar } from "@renderer/components/FileTree/FileTreeToolbar";
+import type { FileTreeContextMenuRequest } from "@renderer/components/FileTree/types";
+import { getRendererPlatform } from "@renderer/helpers/platform";
+import { useCommands } from "@renderer/hooks/useCommands";
+import { useContextMenuState } from "@renderer/hooks/useContextMenuState";
+import { useSuppressNativeContextMenuWhileOpen } from "@renderer/hooks/useSuppressNativeContextMenuWhileOpen";
+import { tabStore } from "@renderer/store/tabStore";
+import { workspaceStore } from "@renderer/store/workspaceStore";
+import { workspaceUiStore } from "@renderer/store/workspaceUiStore";
+import { findExternalAppPreset, isExternalAppPlatformSupported } from "@shared/contracts/externalApps";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { findExternalAppPreset, isExternalAppPlatformSupported } from "../../../../shared/contracts/externalApps";
-import { ConfirmationDialog } from "../../../components/ConfirmationDialog";
-import { ContextMenu } from "../../../components/ContextMenu";
-import { FileTree } from "../../../components/FileTree";
-import { FileTreeToolbar } from "../../../components/FileTree/FileTreeToolbar";
-import type { FileTreeContextMenuRequest } from "../../../components/FileTree/types";
-import { getRendererPlatform } from "../../../helpers/platform";
-import { useCommands } from "../../../hooks/useCommands";
-import { useContextMenuState } from "../../../hooks/useContextMenuState";
-import { useSuppressNativeContextMenuWhileOpen } from "../../../hooks/useSuppressNativeContextMenuWhileOpen";
-import { tabStore } from "../../../store/tabStore";
-import { workspaceStore } from "../../../store/workspaceStore";
-import { workspaceUiStore } from "../../../store/workspaceUiStore";
-import { useFileDeletionConfirmation } from "./useFileDeletionConfirmation";
+import { useFileDeletionConfirmation } from "../useFileDeletionConfirmation";
 import { useFileTreeContextMenuItems } from "./useFileTreeContextMenuItems";
 import { useFileTreeCreateEntryRequest } from "./useFileTreeCreateEntryRequest";
 import { useFileTreeGitChanges } from "./useFileTreeGitChanges";
@@ -227,9 +227,26 @@ export function FileManagerView(_props: FileManagerViewProps) {
     : "";
 
   return (
-    <Box sx={{ height: "100%", minHeight: 0, display: "flex", flexDirection: "column" }}>
+    <Box
+      sx={{
+        height: "100%",
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       {ops.fileOperationState?.status === "running" ? (
-        <Box sx={{ px: 1.5, pt: 1, pb: 0.25, display: "flex", flexDirection: "column", gap: 0.5, flexShrink: 0 }}>
+        <Box
+          sx={{
+            px: 1.5,
+            pt: 1,
+            pb: 0.25,
+            display: "flex",
+            flexDirection: "column",
+            gap: 0.5,
+            flexShrink: 0,
+          }}
+        >
           <Typography variant="caption" color="text.secondary" data-testid="file-operation-progress-label">
             {fileOperationProgressText}
           </Typography>
@@ -322,7 +339,9 @@ export function FileManagerView(_props: FileManagerViewProps) {
       <ConfirmationDialog
         open={Boolean(pendingFileDeletion)}
         title={t("files.actions.delete")}
-        description={t(pendingFileDeletionDescriptionKey, { path: pendingFileDeletion?.path ?? "" })}
+        description={t(pendingFileDeletionDescriptionKey, {
+          path: pendingFileDeletion?.path ?? "",
+        })}
         confirmLabel={
           isDeletingEntry ? t("common.actions.deleting", { defaultValue: "Deleting..." }) : t("files.actions.delete")
         }

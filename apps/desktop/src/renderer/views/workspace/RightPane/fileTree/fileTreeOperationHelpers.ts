@@ -1,5 +1,5 @@
-import type { WorkspaceFileEntry } from "../../../../shared/contracts/rpcRequestTypes";
-import { normalizeRelativePath } from "./fileTreePathHelpers";
+import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
+import { normalizeRelativePath } from "../fileTreePathHelpers";
 
 export function mergeWorkspaceEntries(
   current: WorkspaceFileEntry[],

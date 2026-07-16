@@ -1,7 +1,7 @@
-import type { ExternalClipboardReadOutcome } from "../../../../shared/contracts/rpcRequestTypes";
-import { extractPathsFromClipboardText } from "../../../../shared/fileClipboardPaths";
-import { readExternalClipboardSourcePaths as readExternalClipboardSourcePathsFromRpc } from "../../../commands/fileCommands";
-import { reportNativeExternalClipboardOutcome } from "./fileTreeHelpers";
+import { readExternalClipboardSourcePaths as readExternalClipboardSourcePathsFromRpc } from "@renderer/commands/fileCommands";
+import type { ExternalClipboardReadOutcome } from "@shared/contracts/rpcRequestTypes";
+import { extractPathsFromClipboardText } from "@shared/fileClipboardPaths";
+import { reportNativeExternalClipboardOutcome } from "../fileTreeHelpers";
 
 /**
  * Resolves external clipboard source paths by attempting multiple strategies:

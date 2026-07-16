@@ -1,9 +1,9 @@
+import { resolveDestinationDirectoryPath } from "@renderer/components/FileTree/treeUtils";
+import type { FileTreeContextMenuRequest } from "@renderer/components/FileTree/types";
+import type { ExternalAppId } from "@shared/contracts/externalApps";
 import type { TFunction } from "i18next";
 import { useMemo } from "react";
-import type { ExternalAppId } from "../../../../shared/contracts/externalApps";
-import { resolveDestinationDirectoryPath } from "../../../components/FileTree/treeUtils";
-import type { FileTreeContextMenuRequest } from "../../../components/FileTree/types";
-import { buildWorkspaceFileTreeContextMenuItems } from "./buildWorkspaceFileTreeContextMenuItems";
+import { buildWorkspaceFileTreeContextMenuItems } from "../buildWorkspaceFileTreeContextMenuItems";
 
 type ExternalAppPresetLike = {
   id: ExternalAppId;
@@ -27,7 +27,10 @@ type UseFileTreeContextMenuItemsInput = {
     onCopyPath?: (path: string) => Promise<void>;
     onCopyRelativePath?: (path: string) => Promise<void>;
     onOpenInFileManager?: (path: string) => Promise<void>;
-    onOpenInExternalApp?: (input: { path?: string; appId: ExternalAppId }) => Promise<void>;
+    onOpenInExternalApp?: (input: {
+      path?: string;
+      appId: ExternalAppId;
+    }) => Promise<void>;
     onCopyEntry?: (path: string) => Promise<void>;
     onCutEntry?: (path: string) => Promise<void>;
     onPasteEntries?: (destinationPath: string) => Promise<void>;
@@ -70,7 +73,9 @@ export function useFileTreeContextMenuItems({
             rendererPlatform === "win32" ? t("files.actions.openInExplorer") : t("files.actions.openInFinder"),
           openInExternalApp: t("files.actions.openInExternalApp"),
           openInLastUsedExternalApp: lastUsedWorkspaceExternalAppPreset
-            ? t("files.actions.openInExternalAppQuick", { app: lastUsedWorkspaceExternalAppPreset.label })
+            ? t("files.actions.openInExternalAppQuick", {
+                app: lastUsedWorkspaceExternalAppPreset.label,
+              })
             : "",
         },
         canCreateAtContext: !contextMenu?.targetPath || Boolean(contextMenu.targetIsDirectory),
@@ -169,7 +174,10 @@ export function useFileTreeContextMenuItems({
               return;
             }
             closeContextMenu();
-            await handlers.onOpenInExternalApp({ appId, path: contextMenu?.targetPath || undefined });
+            await handlers.onOpenInExternalApp({
+              appId,
+              path: contextMenu?.targetPath || undefined,
+            });
           },
         },
       }),
