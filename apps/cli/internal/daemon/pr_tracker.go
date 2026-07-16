@@ -18,6 +18,12 @@ const workspacePullRequestPollInterval = 5 * time.Minute
 
 const ghUnknownGitHubHostErrorFragment = "none of the git remotes configured for this repository point to a known github host"
 
+type workspacePullRequestUpdatedEvent struct {
+	WorkspaceID           string
+	WorkspaceWorktreePath string
+	PullRequest           *workspace.WorkspacePullRequest
+}
+
 type workspacePRTracker struct {
 	mu      sync.Mutex
 	manager *workspace.Manager
@@ -25,25 +31,25 @@ type workspacePRTracker struct {
 	// active maps workspaceID → Workspace for all workspaces currently being
 	// tracked. Storing the full Workspace avoids calling manager.List() on
 	// every poll tick and filtering by active map membership.
-	active          map[string]workspace.Workspace
-	inFlight        map[string]bool
-	started         bool
-	done            chan struct{}
-	publish         func(frontendEvent)
-	inspectResolver func(context.Context, string) (workspace.GitInspectResult, error)
-	branchResolver  func(context.Context, string) (string, error)
-	prResolver      func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error)
-	detailResolver  func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error)
+	active               map[string]workspace.Workspace
+	inFlight             map[string]bool
+	started              bool
+	done                 chan struct{}
+	onPullRequestUpdated func(workspacePullRequestUpdatedEvent)
+	inspectResolver      func(context.Context, string) (workspace.GitInspectResult, error)
+	branchResolver       func(context.Context, string) (string, error)
+	prResolver           func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error)
+	detailResolver       func(context.Context, string, string) (workspace.GitBranchPullRequestStatus, error)
 }
 
-func newWorkspacePRTracker(manager *workspace.Manager, runtime *cliruntime.Runtime, publish func(frontendEvent)) *workspacePRTracker {
+func newWorkspacePRTracker(manager *workspace.Manager, runtime *cliruntime.Runtime, onPullRequestUpdated func(workspacePullRequestUpdatedEvent)) *workspacePRTracker {
 	tracker := &workspacePRTracker{
-		manager:  manager,
-		runtime:  runtime,
-		active:   make(map[string]workspace.Workspace),
-		inFlight: make(map[string]bool),
-		done:     make(chan struct{}),
-		publish:  publish,
+		manager:              manager,
+		runtime:              runtime,
+		active:               make(map[string]workspace.Workspace),
+		inFlight:             make(map[string]bool),
+		done:                 make(chan struct{}),
+		onPullRequestUpdated: onPullRequestUpdated,
 	}
 	tracker.branchResolver = func(ctx context.Context, root string) (string, error) {
 		handle, err := manager.WorkspaceHandleByPath(root)
@@ -285,17 +291,12 @@ func (t *workspacePRTracker) setWorkspacePullRequest(ws workspace.Workspace, pr 
 	if err := t.manager.SetWorkspacePullRequest(ws.ID, pr); err != nil {
 		return
 	}
-	if prMeaningfullyChanged(previousPullRequest, pr) {
-		if t.publish != nil {
-			t.publish(frontendEvent{
-				Topic: "workspacePullRequestUpdated",
-				Payload: map[string]any{
-					"workspaceId":           ws.ID,
-					"workspaceWorktreePath": ws.Path,
-					"pullRequest":           pr,
-				},
-			})
-		}
+	if prMeaningfullyChanged(previousPullRequest, pr) && t.onPullRequestUpdated != nil {
+		t.onPullRequestUpdated(workspacePullRequestUpdatedEvent{
+			WorkspaceID:           ws.ID,
+			WorkspaceWorktreePath: ws.Path,
+			PullRequest:           pr,
+		})
 	}
 
 	t.mu.Lock()
