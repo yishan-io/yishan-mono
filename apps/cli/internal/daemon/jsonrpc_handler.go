@@ -18,6 +18,7 @@ import (
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
+	workspaceprtracker "yishan/apps/cli/internal/workspace/prtracker"
 	workspacewatchers "yishan/apps/cli/internal/workspace/watchers"
 )
 
@@ -39,7 +40,7 @@ type JSONRPCHandler struct {
 	context        *AppContextStore
 	events         *eventHub
 	watchers       *workspacewatchers.Watchers
-	prTracker      *workspacePRTracker
+	prTracker      *workspaceprtracker.Tracker
 	tokenUsage     *tokenusage.Collector
 	computer       *computerService
 	modelList      *modellist.Service
@@ -67,7 +68,7 @@ type JSONRPCHandler struct {
 
 func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, wsIndexStore *workspaceIndexStore, configPath string, context *AppContextStore) *JSONRPCHandler {
 	events := newEventHub()
-	prTracker := newWorkspacePRTracker(manager, runtime, func(event workspacePullRequestUpdatedEvent) {
+	prTracker := workspaceprtracker.New(manager, runtime, func(event workspaceprtracker.PullRequestUpdatedEvent) {
 		events.Publish(frontendEvent{
 			Topic: "workspacePullRequestUpdated",
 			Payload: map[string]any{

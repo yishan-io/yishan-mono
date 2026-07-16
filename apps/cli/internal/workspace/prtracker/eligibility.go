@@ -1,4 +1,4 @@
-package daemon
+package prtracker
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
-func (t *workspacePRTracker) shouldTrackWorkspacePullRequest(ws workspace.Workspace) bool {
+func (t *Tracker) shouldTrackWorkspacePullRequest(ws workspace.Workspace) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
