@@ -29,21 +29,13 @@ describe("AI Chat model selection", () => {
     expect(formatAiChatModelSelection({ providerId: "", modelId: "gpt-5" })).toBeUndefined();
   });
 
-  it("accepts only selections backed by an available runtime model", () => {
+  it("accepts only selections present in the available model projection", () => {
     const models = [
       {
         providerId: "openai",
         providerName: "OpenAI",
         modelId: "gpt-5",
         label: "GPT-5",
-        available: true,
-      },
-      {
-        providerId: "anthropic",
-        providerName: "Anthropic",
-        modelId: "claude-4",
-        label: "Claude 4",
-        available: false,
       },
     ];
 

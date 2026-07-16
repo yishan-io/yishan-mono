@@ -1,4 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import type {
+  PiProviderConfigErrorPayload,
+  PiProviderConfigMutationOutcome,
+  PiProviderConfigSnapshot,
+} from "./piProviderConfig";
 import {
   parseAuthenticatePiProviderInput,
   parsePiAuthPromptClosedEventPayload,
@@ -29,14 +34,14 @@ describe("Pi provider config IPC contract parsers", () => {
     expect(parsePiAuthPromptResponseInput({ requestId: "request-1", status: "ignored" })).toBeUndefined();
   });
 
-  it("parses complete prompt events and rejects incomplete optional fields", () => {
+  it("parses only the select option fields consumed by the renderer", () => {
     expect(
       parsePiAuthPromptRequestEventPayload({
         requestId: "request-select",
         prompt: {
           type: "select",
           message: "Choose",
-          options: [{ id: "browser", label: "Browser", description: "Use this Mac" }],
+          options: [{ id: "browser", label: "Browser", description: "Unused SDK metadata" }],
         },
       }),
     ).toEqual({
@@ -44,7 +49,7 @@ describe("Pi provider config IPC contract parsers", () => {
       prompt: {
         type: "select",
         message: "Choose",
-        options: [{ id: "browser", label: "Browser", description: "Use this Mac" }],
+        options: [{ id: "browser", label: "Browser" }],
       },
     });
     expect(
@@ -59,16 +64,16 @@ describe("Pi provider config IPC contract parsers", () => {
         prompt: { type: "text", message: "Enter", placeholder: 42 },
       }),
     ).toBeUndefined();
-    expect(
-      parsePiAuthPromptRequestEventPayload({
-        requestId: "request-description",
-        prompt: { type: "select", message: "Choose", options: [{ id: "a", label: "A", description: 42 }] },
-      }),
-    ).toBeUndefined();
   });
 
   it("parses only non-empty prompt closed request IDs", () => {
     expect(parsePiAuthPromptClosedEventPayload({ requestId: " request-1 " })).toBe("request-1");
     expect(parsePiAuthPromptClosedEventPayload({ requestId: " " })).toBeUndefined();
+  });
+
+  it("models credential mutation outcomes as exactly one result", () => {
+    expectTypeOf<PiProviderConfigMutationOutcome>().toEqualTypeOf<
+      { snapshot: PiProviderConfigSnapshot } | { refreshError: PiProviderConfigErrorPayload }
+    >();
   });
 });

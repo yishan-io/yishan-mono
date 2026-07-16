@@ -22,25 +22,16 @@ function createProvider(
 
 const MODELS: PiProviderModelRecord[] = [
   {
-    providerId: "zeta",
-    providerName: "Zeta",
-    modelId: "disabled",
-    label: "Disabled",
-    available: false,
-  },
-  {
     providerId: "openai",
     providerName: "OpenAI",
     modelId: "gpt-5",
     label: "GPT-5",
-    available: true,
   },
   {
     providerId: "anthropic",
     providerName: "Anthropic",
     modelId: "claude-4",
     label: "Claude 4",
-    available: true,
   },
 ];
 
@@ -136,7 +127,6 @@ describe("aiChatProviderHelpers", () => {
           providerName: "OpenAI",
           modelId: "gpt-4.1",
           label: "GPT-4.1",
-          available: true,
         },
       ]),
     ).toEqual([

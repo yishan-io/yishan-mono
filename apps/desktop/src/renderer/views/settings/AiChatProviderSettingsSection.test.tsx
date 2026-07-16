@@ -108,7 +108,6 @@ describe("AiChatProviderSettingsSection", () => {
             providerName: "OpenAI",
             modelId: "gpt-5",
             label: "gpt-5",
-            available: true,
           },
         ],
       },

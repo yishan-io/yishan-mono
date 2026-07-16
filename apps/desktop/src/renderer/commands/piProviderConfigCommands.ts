@@ -110,10 +110,8 @@ function applyPiProviderConfigMutationResult(
     }
     return null;
   }
-  if (result.value.refreshError) {
+  if ("refreshError" in result.value) {
     piProviderConfigStore.getState().setCredentialOperationError(requestId, result.value.refreshError.message);
-  }
-  if (!result.value.snapshot) {
     return null;
   }
   applyPiProviderConfigSnapshot(result.value.snapshot);

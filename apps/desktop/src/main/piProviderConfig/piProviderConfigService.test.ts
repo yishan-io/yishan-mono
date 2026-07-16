@@ -283,7 +283,7 @@ describe("inferPiProviderAuthSource", () => {
 });
 
 describe("buildPiProviderConfigSnapshot", () => {
-  it("builds provider inventory and marks available models from configured auth", () => {
+  it("builds provider inventory and exposes only currently available models", () => {
     const authStorage = AuthStorage.inMemory({
       openai: { type: "api_key", key: "sk-openai" },
       anthropic: { type: "oauth", access: "access", refresh: "refresh", expires: Date.now() + 60_000 },
@@ -293,7 +293,10 @@ describe("buildPiProviderConfigSnapshot", () => {
     const snapshot = buildPiProviderConfigSnapshot(authStorage, modelRegistry, builtinProviders());
     const openAiProvider = snapshot.providers.find((provider) => provider.id === "openai");
     const anthropicProvider = snapshot.providers.find((provider) => provider.id === "anthropic");
-    const openAiModel = snapshot.models.find((model) => model.providerId === "openai");
+    const availableModelKeys = modelRegistry
+      .getAvailable()
+      .map((model) => `${model.provider}:${model.id}`)
+      .sort();
 
     expect(openAiProvider).toMatchObject({
       id: "openai",
@@ -312,7 +315,8 @@ describe("buildPiProviderConfigSnapshot", () => {
         { kind: "api_key", label: "Anthropic API key" },
       ],
     });
-    expect(openAiModel?.available).toBe(true);
+    expect(snapshot.models.map((model) => `${model.providerId}:${model.modelId}`).sort()).toEqual(availableModelKeys);
+    expect(snapshot.models.every((model) => !("available" in model))).toBe(true);
   });
 
   it("includes oauth-only providers from the runtime inventory even before login", () => {

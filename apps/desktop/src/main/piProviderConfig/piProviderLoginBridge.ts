@@ -43,7 +43,11 @@ function combineAbortSignals(...signals: Array<AbortSignal | undefined>): AbortS
 function toPromptRequest(prompt: AuthPrompt): PiAuthPromptRequest {
   switch (prompt.type) {
     case "select":
-      return { type: "select", message: prompt.message, options: prompt.options };
+      return {
+        type: "select",
+        message: prompt.message,
+        options: prompt.options.map(({ id, label }) => ({ id, label })),
+      };
     case "secret":
     case "text":
     case "manual_code":

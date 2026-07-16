@@ -67,7 +67,6 @@ describe("agentChatCommands.ensurePiSession", () => {
             providerName: "OpenAI Codex",
             modelId: "gpt-5.5",
             label: "GPT-5.5",
-            available: true,
           },
         ],
       },

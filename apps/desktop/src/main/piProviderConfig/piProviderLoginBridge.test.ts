@@ -33,14 +33,21 @@ describe("Pi provider login callback adapter", () => {
       type: "select",
       message: "Select OpenAI Codex login method:",
       options: [
-        { id: "browser", label: "Browser login (default)" },
+        { id: "browser", label: "Browser login (default)", description: "Unused SDK metadata" },
         { id: "device_code", label: "Device code login (headless)" },
       ],
     } as const;
     const selectedId = await callbacks.prompt(prompt);
 
     expect(selectedId).toBe("device_code");
-    expect(mocks.requestPrompt).toHaveBeenCalledWith(prompt);
+    expect(mocks.requestPrompt).toHaveBeenCalledWith({
+      type: "select",
+      message: "Select OpenAI Codex login method:",
+      options: [
+        { id: "browser", label: "Browser login (default)" },
+        { id: "device_code", label: "Device code login (headless)" },
+      ],
+    });
   });
 
   it("forwards the manual redirect-code fallback to the renderer", async () => {

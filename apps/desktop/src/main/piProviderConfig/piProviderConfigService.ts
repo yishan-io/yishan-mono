@@ -188,15 +188,12 @@ export function buildPiProviderConfigSnapshot(
   const availableProviderIds = new Set(availableModels.map((model) => model.provider));
   const providers = buildPiProviderRecords(authStorage, modelRegistry, builtInProviders, availableProviderIds);
   const providerNameById = new Map(providers.map((provider) => [provider.id, provider.name]));
-  const availableModelKeys = new Set(availableModels.map((model) => `${model.provider}:${model.id}`));
-  const models = modelRegistry
-    .getAll()
+  const models = availableModels
     .map<PiProviderModelRecord>((model) => ({
       providerId: model.provider,
       providerName: providerNameById.get(model.provider) ?? modelRegistry.getProviderDisplayName(model.provider),
       modelId: model.id,
       label: model.name.trim() || model.id,
-      available: availableModelKeys.has(`${model.provider}:${model.id}`),
     }))
     .sort((left, right) =>
       left.providerId === right.providerId

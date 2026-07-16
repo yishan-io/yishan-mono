@@ -115,7 +115,7 @@ export function isAiChatProviderConfiguredButUnavailable(provider: PiProviderRec
 export function buildAvailableAiChatProviderOptions(models: readonly PiProviderModelRecord[]): ModelOption[] {
   const providersById = new Map<string, ModelOption>();
   for (const model of models) {
-    if (model.available && !providersById.has(model.providerId)) {
+    if (!providersById.has(model.providerId)) {
       providersById.set(model.providerId, { id: model.providerId, name: model.providerName });
     }
   }
@@ -131,7 +131,7 @@ export function buildAvailableAiChatModelOptionsForProvider(
     return [];
   }
   return models
-    .filter((model) => model.available && model.providerId === providerId)
+    .filter((model) => model.providerId === providerId)
     .map<ModelOption>((model) => ({
       id: `${model.providerId}/${model.modelId}`,
       name: model.label,

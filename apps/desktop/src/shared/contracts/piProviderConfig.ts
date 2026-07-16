@@ -14,7 +14,7 @@ export type PiAuthPromptRequest =
   | {
       type: "select";
       message: string;
-      options: ReadonlyArray<{ id: string; label: string; description?: string }>;
+      options: ReadonlyArray<{ id: string; label: string }>;
     };
 
 /** Event payload opening one provider authentication prompt. */
@@ -56,7 +56,6 @@ export type PiProviderModelRecord = {
   providerName: string;
   modelId: string;
   label: string;
-  available: boolean;
 };
 
 /** Current provider and model inventory returned by Electron main. */
@@ -86,10 +85,9 @@ export type PiProviderConfigErrorPayload = {
 };
 
 /** Snapshot refresh result following a successful credential mutation. */
-export type PiProviderConfigMutationOutcome = {
-  snapshot?: PiProviderConfigSnapshot;
-  refreshError?: PiProviderConfigErrorPayload;
-};
+export type PiProviderConfigMutationOutcome =
+  | { snapshot: PiProviderConfigSnapshot }
+  | { refreshError: PiProviderConfigErrorPayload };
 
 /** Shared result envelope for Pi provider configuration operations crossing the Electron IPC boundary. */
 export type PiProviderConfigResult<T> = { ok: true; value: T } | { ok: false; error: PiProviderConfigErrorPayload };
@@ -172,9 +170,9 @@ function parsePiAuthPromptRequest(value: unknown): PiAuthPromptRequest | undefin
   if (value.type !== "select" || !Array.isArray(value.options) || value.options.length === 0) {
     return undefined;
   }
-  const options: Array<{ id: string; label: string; description?: string }> = [];
+  const options: Array<{ id: string; label: string }> = [];
   for (const option of value.options) {
-    if (!isRecord(option) || !isOptionalString(option.description)) {
+    if (!isRecord(option)) {
       return undefined;
     }
     const id = parseNonEmptyString(option.id);
@@ -182,7 +180,7 @@ function parsePiAuthPromptRequest(value: unknown): PiAuthPromptRequest | undefin
     if (!id || !label) {
       return undefined;
     }
-    options.push({ id, label, ...(option.description === undefined ? {} : { description: option.description }) });
+    options.push({ id, label });
   }
   return { type: "select", message, options };
 }

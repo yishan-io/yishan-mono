@@ -55,9 +55,7 @@ export function isAiChatModelSelectionAvailable(
   if (!selection) {
     return false;
   }
-  return models.some(
-    (model) => model.available && model.providerId === selection.providerId && model.modelId === selection.modelId,
-  );
+  return models.some((model) => model.providerId === selection.providerId && model.modelId === selection.modelId);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
