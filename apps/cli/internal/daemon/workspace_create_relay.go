@@ -11,25 +11,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type relayWorkspaceCreateEnvelope struct {
-	OrganizationID string                         `json:"organizationId,omitempty"`
-	ProjectID      string                         `json:"projectId,omitempty"`
-	WorkspaceID    string                         `json:"workspaceId,omitempty"`
-	SourceNodeID   string                         `json:"sourceNodeId,omitempty"`
-	TargetNodeID   string                         `json:"targetNodeId,omitempty"`
-	Change         string                         `json:"change,omitempty"`
-	Started        *workspaceCreateStartedEvent   `json:"started,omitempty"`
-	Request        *workspaceCreateParams         `json:"request,omitempty"`
-	Progress       *workspace.CreateProgressEvent `json:"progress,omitempty"`
-	Completed      map[string]any                 `json:"completed,omitempty"`
-	Failed         *workspaceCreateFailedEvent    `json:"failed,omitempty"`
-}
-
-type workspaceCreateFailedEvent struct {
-	WorkspaceID string `json:"workspaceId"`
-	Message     string `json:"message"`
-}
-
 func (h *JSONRPCHandler) dispatchRemoteWorkspaceCreate(req workspaceCreateParams) error {
 	payload := relayWorkspaceCreateEnvelope{
 		OrganizationID: req.OrganizationID,
