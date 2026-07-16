@@ -24,7 +24,6 @@ import { useThemePreference } from "../hooks/useThemePreference";
 import { AccountSettingsView } from "./settings/AccountSettingsView";
 import { CLIToolsSettingsView } from "./settings/CLIToolsSettingsView";
 import { ComputerUseSettingsView } from "./settings/ComputerUseSettingsView";
-import { DaemonSettingsView } from "./settings/DaemonSettingsView";
 import { IntegrationSettingsView } from "./settings/IntegrationSettingsView";
 import { KeybindingsSettingsView } from "./settings/KeybindingsSettingsView";
 import { LanguageSettingsView } from "./settings/LanguageSettingsView";
@@ -38,6 +37,7 @@ import { ServiceTokenSettingsView } from "./settings/ServiceTokenSettingsView";
 import { SkillsSettingsView } from "./settings/SkillsSettingsView";
 import { TerminalSettingsView } from "./settings/TerminalSettingsView";
 import { WorkspaceSettingsView } from "./settings/WorkspaceSettingsView";
+import { DaemonSettingsView } from "./settings/daemon/DaemonSettingsView";
 import {
   type NotificationSettingsFocusItemId,
   isNotificationSettingsFocusItemId,

@@ -15,7 +15,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../rpc/rpcTransport", () => ({
+vi.mock("../../../rpc/rpcTransport", () => ({
   getDesktopHostBridge: () => ({
     getDaemonInfo: mocked.getDaemonInfo,
     getDaemonQuitOnExit: mocked.getDaemonQuitOnExit,

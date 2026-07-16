@@ -1,3 +1,4 @@
+import type { DaemonInfoResult } from "@main/ipc";
 import {
   Alert,
   Box,
@@ -14,22 +15,22 @@ import {
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPower, LuRefreshCw, LuX } from "react-icons/lu";
-import type { DaemonInfoResult } from "../../../main/ipc";
-import { closeTerminalSession } from "../../commands/terminalCommands";
-import { CenteredSpinner } from "../../components/CenteredSpinner";
-import { ConfirmationDialog } from "../../components/ConfirmationDialog";
-import { StatusIndicator } from "../../components/StatusIndicator";
+import { closeTerminalSession } from "../../../commands/terminalCommands";
+import { CenteredSpinner } from "../../../components/CenteredSpinner";
+import { ConfirmationDialog } from "../../../components/ConfirmationDialog";
+import { StatusIndicator } from "../../../components/StatusIndicator";
 import {
   SettingsCard,
   SettingsControlRow,
   SettingsRows,
   SettingsSectionHeader,
   SettingsToggleRow,
-} from "../../components/settings";
-import { MONOSPACE_SX } from "../../helpers/styles";
-import { useDialogRegistration } from "../../hooks/useDialogRegistration";
-import { getDesktopHostBridge, subscribeDesktopRpcEvent } from "../../rpc/rpcTransport";
-import { tabStore } from "../../store/tabStore";
+} from "../../../components/settings";
+import { getErrorMessage } from "../../../helpers/errorHelpers";
+import { MONOSPACE_SX } from "../../../helpers/styles";
+import { useDialogRegistration } from "../../../hooks/useDialogRegistration";
+import { getDesktopHostBridge, subscribeDesktopRpcEvent } from "../../../rpc/rpcTransport";
+import { tabStore } from "../../../store/tabStore";
 
 /** Renders one settings panel for inspecting the local daemon connection. */
 export function DaemonSettingsView() {
@@ -189,7 +190,7 @@ export function DaemonSettingsView() {
     } catch (error) {
       console.error("[DaemonSettingsView] Failed to restart daemon", error);
       if (isMountedRef.current) {
-        setRestartError(error instanceof Error ? error.message : t("settings.daemon.restart.failed"));
+        setRestartError(getErrorMessage(error) || t("settings.daemon.restart.failed"));
         setHasLoadError(true);
       }
     } finally {
@@ -235,7 +236,7 @@ export function DaemonSettingsView() {
       }
     } catch (error) {
       if (isMountedRef.current) {
-        setLogError(error instanceof Error ? error.message : "Failed to read daemon log");
+        setLogError(getErrorMessage(error) || "Failed to read daemon log");
       }
     } finally {
       if (isMountedRef.current) {
