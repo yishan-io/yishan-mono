@@ -32,16 +32,16 @@ import { MarkdownSettingsView } from "./settings/MarkdownSettingsView";
 import { MemberSettingsView } from "./settings/MemberSettingsView";
 import { MemorySettingsView } from "./settings/MemorySettingsView";
 import { NodesSettingsView } from "./settings/NodesSettingsView";
-import { NotificationSettingsView } from "./settings/NotificationSettingsView";
 import { ServiceTokenSettingsView } from "./settings/ServiceTokenSettingsView";
 import { SkillsSettingsView } from "./settings/SkillsSettingsView";
 import { TerminalSettingsView } from "./settings/TerminalSettingsView";
 import { WorkspaceSettingsView } from "./settings/WorkspaceSettingsView";
 import { DaemonSettingsView } from "./settings/daemon/DaemonSettingsView";
+import { NotificationSettingsView } from "./settings/notifications/NotificationSettingsView";
 import {
   type NotificationSettingsFocusItemId,
   isNotificationSettingsFocusItemId,
-} from "./settings/notificationSettingsCatalog";
+} from "./settings/notifications/notificationSettingsCatalog";
 import { SETTINGS_NAV_SECTIONS, SETTINGS_SEARCH_CATALOG, type SettingsTab } from "./settings/settingsSearchCatalog";
 
 type SettingsSearchResult = {

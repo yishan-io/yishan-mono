@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCommands } from "@renderer/hooks/useCommands";
 import {
   NOTIFICATION_PREFERENCES_LOAD_RETRY_ATTEMPTS,
   NOTIFICATION_PREFERENCES_LOAD_RETRY_BASE_DELAY_MS,
   NOTIFICATION_PREVIEW_STATUS_AUTO_HIDE_MS,
-} from "../../../../shared/notifications/notificationConstants";
+} from "@shared/notifications/notificationConstants";
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   type NotificationCategory,
@@ -13,8 +13,8 @@ import {
   SUPPORTED_NOTIFICATION_CATEGORIES,
   SUPPORTED_NOTIFICATION_EVENT_TYPES,
   SUPPORTED_NOTIFICATION_SOUND_IDS,
-} from "../../../../shared/notifications/notificationPreferences";
-import { useCommands } from "../../../hooks/useCommands";
+} from "@shared/notifications/notificationPreferences";
+import { useEffect, useRef, useState } from "react";
 
 type PendingSoundPreviewRequest = {
   eventType: NotificationEventType;

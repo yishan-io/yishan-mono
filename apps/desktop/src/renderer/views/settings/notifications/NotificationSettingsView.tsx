@@ -1,15 +1,5 @@
 import { Alert, Box, Button, CircularProgress, MenuItem, Stack, Typography } from "@mui/material";
-import { type ReactNode, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { BiCheckCircle, BiLoaderAlt, BiXCircle } from "react-icons/bi";
-import {
-  type NotificationCategory,
-  type NotificationEventType,
-  type NotificationSoundId,
-  SUPPORTED_NOTIFICATION_CATEGORIES,
-  SUPPORTED_NOTIFICATION_SOUND_IDS,
-} from "../../../shared/notifications/notificationPreferences";
-import { CenteredSpinner } from "../../components/CenteredSpinner";
+import { CenteredSpinner } from "@renderer/components/CenteredSpinner";
 import {
   SettingsCard,
   SettingsCheckboxRow,
@@ -19,13 +9,23 @@ import {
   SettingsSoundSelectRow,
   SettingsToggleRow,
   SettingsVolumeRow,
-} from "../../components/settings";
-import { useNotificationSettingsState } from "./hooks/useNotificationSettingsState";
+} from "@renderer/components/settings";
+import {
+  type NotificationCategory,
+  type NotificationEventType,
+  type NotificationSoundId,
+  SUPPORTED_NOTIFICATION_CATEGORIES,
+  SUPPORTED_NOTIFICATION_SOUND_IDS,
+} from "@shared/notifications/notificationPreferences";
+import { type ReactNode, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { BiCheckCircle, BiLoaderAlt, BiXCircle } from "react-icons/bi";
 import {
   type NotificationSettingsFocusItemId,
   getNotificationSettingsAnchorId,
   isNotificationSettingsFocusItemId,
 } from "./notificationSettingsCatalog";
+import { useNotificationSettingsState } from "./useNotificationSettingsState";
 
 const NOTIFICATION_EVENT_OPTIONS: Array<{ type: NotificationEventType; labelKey: string }> = [
   {

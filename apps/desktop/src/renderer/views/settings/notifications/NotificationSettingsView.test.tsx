@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
+import { NotificationSettingsView as NotificationSettingsPanel } from "@renderer/views/settings/notifications/NotificationSettingsView";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { NotificationSettingsView as NotificationSettingsPanel } from "./NotificationSettingsView";
 
 const mocked = vi.hoisted(() => ({
   getNotificationPreferencesMock: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../../commands/notificationCommands", () => ({
+vi.mock("@renderer/commands/notificationCommands", () => ({
   getNotificationPreferences: mocked.getNotificationPreferencesMock,
   updateNotificationPreferences: mocked.updateNotificationPreferencesMock,
   previewNotification: mocked.previewNotificationMock,
