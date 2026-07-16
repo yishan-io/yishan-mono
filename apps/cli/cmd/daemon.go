@@ -11,8 +11,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	daemonclient "yishan/apps/cli/internal/daemon/client"
 	"yishan/apps/cli/internal/daemon"
+	daemonclient "yishan/apps/cli/internal/daemon/client"
 	"yishan/apps/cli/internal/output"
 )
 
@@ -151,7 +151,7 @@ func stopDaemon(_ *cobra.Command, _ []string) error {
 	state, err := daemon.Stop(statePath, 10*time.Second)
 	if err != nil {
 		if errors.Is(err, daemon.ErrNotRunning) {
-			return daemon.ErrNotRunning
+			return nil
 		}
 		return err
 	}
