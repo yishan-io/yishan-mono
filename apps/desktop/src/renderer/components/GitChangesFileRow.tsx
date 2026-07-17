@@ -2,7 +2,11 @@ import { Box, ButtonBase, IconButton, Tooltip, Typography } from "@mui/material"
 import type { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent } from "react";
 import { LuCornerUpLeft, LuMinus, LuPlus } from "react-icons/lu";
 import { GitChangeTotals } from "./GitChangeTotals";
-import type { ProjectGitChangeItem, ProjectGitChangeKind, ProjectGitChangesSection } from "./ProjectGitChangesList";
+import type {
+  ProjectGitChangeItem,
+  ProjectGitChangeKind,
+  ProjectGitChangesSection,
+} from "./ProjectGitChangesList.types";
 
 type GitChangesFileRowProps = {
   file: ProjectGitChangeItem;
