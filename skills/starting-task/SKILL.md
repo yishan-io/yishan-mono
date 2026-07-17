@@ -60,6 +60,8 @@ When the work should be tracked:
 4. Write `task.md`
 5. Add the task entry to `state.json`
 
+Prefer `bun skills/context-task/createTask.ts --title "<title>" [--id <id>] [--ticket <ticket>] [--goal "<goal>"] [--acceptance "<criterion>"]... [--created YYYY-MM-DD]` instead of hand-editing task state.
+
 Use `context-task` for the exact file conventions.
 
 ## Input Quality
