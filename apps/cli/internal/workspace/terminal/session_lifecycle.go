@@ -33,6 +33,8 @@ func (m *Manager) Start(_ context.Context, cwd string, req StartRequest) (StartR
 		workspaceID: req.WorkspaceID,
 		tabID:       strings.TrimSpace(req.TabID),
 		paneID:      strings.TrimSpace(req.PaneID),
+		title:       strings.TrimSpace(req.Title),
+		agentKind:   strings.TrimSpace(req.AgentKind),
 		cmd:         cmd,
 		pty:         ptyFile,
 		startedAt:   time.Now().UTC(),
