@@ -9,8 +9,9 @@ export function createCliMemoryClient(): MemoryBackendClient {
   return {
     async search(input: MemorySearchInput): Promise<MemorySearchResult[]> {
       const args = ["memory", "search", "--output", "json"];
-      if (input.projectId) {
-        args.push("--project-id", input.projectId);
+      const projectId = resolveProjectId(input);
+      if (projectId) {
+        args.push("--project-id", projectId);
       }
       if (input.scope) {
         args.push("--scope", input.scope);
@@ -28,6 +29,18 @@ export function createCliMemoryClient(): MemoryBackendClient {
       return parseReconcileResult(stdout);
     },
   };
+}
+
+function resolveProjectId(input: MemorySearchInput): string | undefined {
+  if (input.projectId) {
+    return input.projectId;
+  }
+
+  if (input.scope === "global") {
+    return undefined;
+  }
+
+  return process.env.YISHAN_PROJECT_ID || undefined;
 }
 
 function runYishanCommand(args: string[]): Promise<string> {
