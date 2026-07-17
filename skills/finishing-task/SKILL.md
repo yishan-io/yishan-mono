@@ -109,10 +109,10 @@ When the task is truly complete:
 1. Read the current task folder and `state.json`
 2. Write `outcome.md`
 3. Check durable docs and memory for required updates
-4. Move the task folder from `.my-context/tasks/active/<id>-<slug>/` to `.my-context/tasks/completed/<id>-<slug>/`
-5. Update the matching `state.json` entry:
-   - set `status` to `"completed"`
-   - update `path` to the completed location
+4. Run `bun skills/context-task/updateTaskState.ts --id <id> --to completed [--date YYYY-MM-DD]` so the folder move and `state.json` update happen together, using the task completion date when known and falling back to `Created` when needed
+5. Confirm the matching `state.json` entry:
+   - has `status` set to `"completed"`
+   - has `path` updated to the nested completed location
 
 Treat the folder move and `state.json` update as one state transition.
 
