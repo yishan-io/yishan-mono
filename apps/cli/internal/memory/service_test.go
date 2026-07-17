@@ -3,7 +3,10 @@ package memory
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -14,10 +17,10 @@ import (
 
 func TestHandleSummarizeResult_UsesDistinctLogsForSkippedAndNoOutput(t *testing.T) {
 	service := &Service{}
-	req := summarizeRequest{agent: "opencode", worktreePath: "/tmp/workspace"}
+	req := summarizeRequest{agent: "pi", worktreePath: "/tmp/workspace"}
 
 	skippedLogs := captureMemoryLogs(t, func() {
-		service.handleSummarizeResult(req, SummarizeResult{Skipped: true})
+		service.handleSummarizeResult(req, SummarizeResult{Skipped: true, SourceAgent: "pi", SummarizerAgent: "opencode"})
 	})
 	if strings.Contains(skippedLogs, "session summarization produced no output") {
 		t.Fatal("skipped summarization should not log produced no output")
@@ -25,12 +28,47 @@ func TestHandleSummarizeResult_UsesDistinctLogsForSkippedAndNoOutput(t *testing.
 	if !strings.Contains(skippedLogs, "session summarization skipped") {
 		t.Fatal("expected skipped summarization log")
 	}
+	if !strings.Contains(skippedLogs, `"sourceAgent":"pi"`) || !strings.Contains(skippedLogs, `"summarizerAgent":"opencode"`) {
+		t.Fatalf("expected skipped log to include source and summarizer agents, got %q", skippedLogs)
+	}
 
 	noOutputLogs := captureMemoryLogs(t, func() {
-		service.handleSummarizeResult(req, SummarizeResult{})
+		service.handleSummarizeResult(req, SummarizeResult{SourceAgent: "pi", SummarizerAgent: "opencode"})
 	})
 	if !strings.Contains(noOutputLogs, "session summarization produced no output") {
 		t.Fatal("expected no-output log")
+	}
+	if !strings.Contains(noOutputLogs, `"sourceAgent":"pi"`) || !strings.Contains(noOutputLogs, `"summarizerAgent":"opencode"`) {
+		t.Fatalf("expected no-output log to include source and summarizer agents, got %q", noOutputLogs)
+	}
+}
+
+func TestHandleSummarizeResult_SuccessLogIncludesSourceAndSummarizerAgents(t *testing.T) {
+	worktreePath := t.TempDir()
+	contextRoot := filepath.Join(worktreePath, myContextDir)
+	memoryPath := filepath.Join(contextRoot, "MEMORY.md")
+	if err := os.MkdirAll(contextRoot, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(memoryPath, []byte("# Project Memory\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	service := &Service{db: openTestDB(t)}
+	req := summarizeRequest{agent: "pi", worktreePath: worktreePath, projectID: "proj-1"}
+	logs := captureMemoryLogs(t, func() {
+		service.handleSummarizeResult(req, SummarizeResult{
+			WrittenPaths:    []string{memoryPath},
+			SourceAgent:     "pi",
+			SummarizerAgent: "opencode",
+		})
+	})
+
+	if !strings.Contains(logs, "session summarized") {
+		t.Fatalf("expected success log, got %q", logs)
+	}
+	if !strings.Contains(logs, `"sourceAgent":"pi"`) || !strings.Contains(logs, `"summarizerAgent":"opencode"`) {
+		t.Fatalf("expected success log to include source and summarizer agents, got %q", logs)
 	}
 }
 
@@ -42,7 +80,7 @@ func TestSummarizeSession_BinaryNotFoundLogsDebugNotWarn(t *testing.T) {
 	})
 
 	svc := &Service{
-		summarizer: NewSummarizer(SummarizerConfig{Enabled: true}, runAgent),
+		summarizer: NewSummarizer(SummarizerConfig{Enabled: true, AgentKind: "opencode"}, runAgent),
 	}
 	// Inject a fake reader that returns a real session so runAgent is reached.
 	svc.summarizer.dbReader = fakeSessionReader2{
@@ -51,7 +89,7 @@ func TestSummarizeSession_BinaryNotFoundLogsDebugNotWarn(t *testing.T) {
 		},
 	}
 
-	req := summarizeRequest{agent: "opencode", worktreePath: t.TempDir()}
+	req := summarizeRequest{agent: "pi", worktreePath: t.TempDir()}
 
 	var debugLogs, warnLogs string
 	captureMemoryLogsLevel(t, zerolog.DebugLevel, func() {
@@ -63,6 +101,38 @@ func TestSummarizeSession_BinaryNotFoundLogsDebugNotWarn(t *testing.T) {
 	}
 	if !strings.Contains(debugLogs, "agent binary not installed") {
 		t.Errorf("expected debug log 'agent binary not installed', got debug=%q warn=%q", debugLogs, warnLogs)
+	}
+	if !strings.Contains(debugLogs, `"sourceAgent":"pi"`) || !strings.Contains(debugLogs, `"summarizerAgent":"opencode"`) {
+		t.Errorf("expected debug log to include source and summarizer agents, got %q", debugLogs)
+	}
+}
+
+func TestRunSummarize_FailureLogIncludesSourceAndSummarizerAgents(t *testing.T) {
+	runAgent := RunAgentFunc(func(_ context.Context, _, _, _, _ string) (string, error) {
+		return "", errors.New("stderr: authentication failed")
+	})
+
+	svc := &Service{
+		summarizer: NewSummarizer(SummarizerConfig{Enabled: true, AgentKind: "opencode"}, runAgent),
+	}
+	svc.summarizer.dbReader = fakeSessionReader2{
+		session: &sessionMessages{
+			Messages: []sessionMessage{{Role: "user", Content: "hello"}},
+		},
+	}
+
+	warnLogs := captureMemoryLogs(t, func() {
+		svc.runSummarize(summarizeRequest{agent: "pi", worktreePath: t.TempDir()})
+	})
+
+	if !strings.Contains(warnLogs, "session summarization failed") {
+		t.Fatalf("expected failure log, got %q", warnLogs)
+	}
+	if !strings.Contains(warnLogs, `"sourceAgent":"pi"`) {
+		t.Fatalf("expected source agent field, got %q", warnLogs)
+	}
+	if !strings.Contains(warnLogs, `"summarizerAgent":"opencode"`) {
+		t.Fatalf("expected summarizer agent field, got %q", warnLogs)
 	}
 }
 
