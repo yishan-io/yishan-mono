@@ -7,8 +7,11 @@ import type {
   DesktopCliInstallResult,
   DesktopCliInstallStatusResult,
 } from "../../main/ipc";
+import { resetAuthExpiredState } from "../api/restClient";
 import type { DesktopAgentKind } from "../helpers/agentSettings";
+import { rendererQueryClient } from "../queryClient";
 import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
+import { sessionStore } from "../store/sessionStore";
 import { type LinkTarget, layoutStore } from "../store/settings/layoutStore";
 import { tabStore } from "../store/tabStore";
 import { workspaceStore } from "../store/workspaceStore";
@@ -50,6 +53,21 @@ export async function getMainWindowFullscreenState() {
 /** Opens one URL through the Electron main-process host bridge. */
 export async function openExternalUrl(url: string) {
   return await getDesktopHostBridge().openExternalUrl({ url });
+}
+
+/** Clears renderer and daemon auth state for one desktop logout flow. */
+export async function logout(): Promise<void> {
+  try {
+    const daemonClient = await getDaemonClient();
+    await daemonClient.app.logout();
+  } catch (error) {
+    console.warn("Failed to clear daemon auth state during logout", error);
+  }
+
+  resetAuthExpiredState();
+  sessionStore.getState().setAuthState(false, true);
+  sessionStore.getState().clearSessionData();
+  rendererQueryClient.clear();
 }
 
 function isHttpUrl(url: string): boolean {
