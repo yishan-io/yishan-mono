@@ -132,6 +132,8 @@ describe("normalizeBackendEvent", () => {
             workspaceId: "workspace-1",
             tabId: "tab-1",
             paneId: "pane-1",
+            title: "Task: investigate bug",
+            agentKind: "opencode",
             pid: 1234,
             status: "running",
           },
@@ -146,7 +148,51 @@ describe("normalizeBackendEvent", () => {
       workspaceId: "workspace-1",
       tabId: "tab-1",
       paneId: "pane-1",
+      title: "Task: investigate bug",
+      agentKind: "opencode",
     });
+  });
+
+  it("returns null when terminal session metadata fields have invalid types", () => {
+    const normalized = normalizeBackendEvent(
+      createEnvelope({
+        method: "terminalSessionChanged",
+        payload: {
+          action: "created",
+          sessionId: "term-1",
+          workspaceId: "workspace-1",
+          tabId: "tab-1",
+          paneId: "pane-1",
+          title: 123,
+          agentKind: ["opencode"],
+          pid: 1234,
+          status: "running",
+        },
+      }),
+    );
+
+    expect(normalized).toBeNull();
+  });
+
+  it("returns null when terminal session pid or status have invalid types", () => {
+    const normalized = normalizeBackendEvent(
+      createEnvelope({
+        method: "terminalSessionChanged",
+        payload: {
+          action: "created",
+          sessionId: "term-1",
+          workspaceId: "workspace-1",
+          tabId: "tab-1",
+          paneId: "pane-1",
+          title: "Task: investigate bug",
+          agentKind: "opencode",
+          pid: "1234",
+          status: 5,
+        },
+      }),
+    );
+
+    expect(normalized).toBeNull();
   });
 
   it("normalizes agent pi events", () => {

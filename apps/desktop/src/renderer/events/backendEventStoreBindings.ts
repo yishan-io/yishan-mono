@@ -10,12 +10,7 @@ import {
 } from "../commands/notificationCommands";
 import { loadWorkspaceSnapshot } from "../commands/projectCommands";
 import { buildWorkspaceCreatePlaceholder } from "../commands/workspaceStoreHelpers";
-import { type DesktopAgentKind, isDesktopAgentKind } from "../helpers/agentSettings";
-import { getErrorMessage } from "../helpers/errorHelpers";
-import {
-  consumeExplicitlyClosedTerminalTabId,
-  recordExplicitlyClosedTerminalTabId,
-} from "../helpers/terminalCloseTombstones";
+import { isDesktopAgentKind } from "../helpers/agentSettings";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../rpc/rpcTransport";
 import { type WorkspaceAgentStatus, type WorkspaceUnreadTone, chatStore } from "../store/chatStore";
@@ -26,6 +21,7 @@ import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeSt
 import { workspaceStore } from "../store/workspaceStore";
 import { subscribeBackendEvent } from "./backendEventPipeline";
 import { subscribeInAppNotificationEvent } from "./backendEventSubscriptions";
+import { reconcileTerminalSessionChanged } from "./terminalSessionTabReconciler";
 
 type NotificationEventPayload = RpcFrontendMessagePayload<"notificationEvent">;
 type ObserverStatusPayload = NonNullable<NotificationEventPayload["observerStatus"]>;
@@ -67,13 +63,7 @@ type BackendEventStoreBindingsDependencies = {
   subscribeWorkspaceStateChanged?: (listener: (payload: WorkspaceStateChangedPayload) => void) => () => void;
   subscribeOpenBrowserUrl?: (listener: (payload: { url: string; workspaceId: string }) => void) => () => void;
   subscribeTerminalSessionChanged?: (
-    listener: (payload: {
-      action: "created" | "destroyed";
-      sessionId: string;
-      workspaceId: string;
-      tabId?: string;
-      paneId?: string;
-    }) => void,
+    listener: (payload: RpcFrontendMessagePayload<"terminalSessionChanged">) => void,
   ) => () => void;
   subscribeTerminalAgentChanged?: (listener: (payload: { tabId: string; agent: string }) => void) => () => void;
   listWorkspaceWorktreePaths?: () => string[];
@@ -294,21 +284,6 @@ const DEFAULT_BACKEND_EVENT_STORE_BINDINGS_DEPENDENCIES: BackendEventStoreBindin
       });
     }
     workspaceCreateProgressStore.getState().clearWorkspaceCreateProgress(payload.workspaceId);
-
-    if (payload.taskRunSessionId && payload.taskRunAgentKind) {
-      const title = payload.taskRunPrompt
-        ? `Task: ${payload.taskRunPrompt.slice(0, 40)}`
-        : `Task Run - ${payload.taskRunAgentKind}`;
-      tabStore.getState().openTab({
-        workspaceId: payload.workspaceId,
-        kind: "terminal",
-        title,
-        sessionId: payload.taskRunSessionId,
-        agentKind: payload.taskRunAgentKind as DesktopAgentKind,
-        tabId: payload.taskRunTabId,
-        paneId: payload.taskRunPaneId,
-      });
-    }
 
     return Boolean(existing);
   },
@@ -912,7 +887,10 @@ export function createBackendEventStoreBindings(
       }) ?? (() => {});
     const unsubscribeTerminalSessionChanged =
       resolvedDependencies.subscribeTerminalSessionChanged?.((payload) => {
-        handleTerminalSessionEvent(payload, resolvedDependencies);
+        reconcileTerminalSessionChanged(payload, {
+          closeTerminalSession: resolvedDependencies.closeTerminalSession,
+          clearTerminalAgentStatus,
+        });
       }) ?? (() => {});
     const unsubscribeTerminalAgentChanged =
       resolvedDependencies.subscribeTerminalAgentChanged?.((payload) => {
@@ -953,70 +931,6 @@ export function createBackendEventStoreBindings(
       lifecycleBySessionKey.clear();
     };
   };
-}
-
-function handleTerminalSessionEvent(
-  payload: {
-    action: "created" | "destroyed";
-    sessionId: string;
-    workspaceId: string;
-    tabId?: string;
-    paneId?: string;
-  },
-  dependencies: Pick<BackendEventStoreBindingsDependencies, "closeTerminalSession">,
-): void {
-  const tabState = tabStore.getState();
-
-  if (payload.action === "created") {
-    const existingTerminalTab = tabState.tabs.find(
-      (tab) => tab.kind === "terminal" && tab.data.sessionId === payload.sessionId,
-    );
-    if (existingTerminalTab) {
-      return;
-    }
-
-    const requestedTabId = payload.tabId?.trim();
-    if (requestedTabId) {
-      if (consumeExplicitlyClosedTerminalTabId(requestedTabId)) {
-        void dependencies.closeTerminalSession?.(payload.sessionId).catch((error) => {
-          console.warn(
-            "[backendEventStoreBindings] Failed to clean up orphan terminal session after local close",
-            payload.sessionId,
-            getErrorMessage(error),
-          );
-        });
-        return;
-      }
-
-      const requestedTerminalTab = tabState.tabs.find(
-        (tab) => tab.id === requestedTabId && tab.workspaceId === payload.workspaceId && tab.kind === "terminal",
-      );
-      if (requestedTerminalTab) {
-        tabState.setTerminalTabSessionId(requestedTabId, payload.sessionId);
-        return;
-      }
-    }
-
-    const workspaces = workspaceStore.getState().workspaces;
-    if (!workspaces.some((workspace) => workspace.id === payload.workspaceId)) {
-      return;
-    }
-
-    tabState.openTab({
-      workspaceId: payload.workspaceId,
-      kind: "terminal",
-      title: "Terminal",
-      sessionId: payload.sessionId,
-    });
-    return;
-  }
-
-  const matchingTab = tabState.tabs.find((tab) => tab.kind === "terminal" && tab.data.sessionId === payload.sessionId);
-  if (matchingTab) {
-    recordExplicitlyClosedTerminalTabId(matchingTab.id);
-    clearTerminalAgentStatus(matchingTab.id);
-    tabState.closeTab(matchingTab.id);
-  }
 }
 
 /**

@@ -13,32 +13,60 @@ import (
 
 func (h *JSONRPCHandler) publishWorkspaceCreateCompleted(prepared preparedWorkspaceCreate, created workspace.Workspace, warnings []any) {
 	completionPayload := map[string]any{"workspaceId": created.ID, "worktreePath": created.Path, "lifecycleScriptWarnings": warnings}
-	h.maybeStartTaskRun(context.Background(), prepared, created, completionPayload)
+	h.maybeStartTaskRun(context.Background(), prepared, created)
 	h.events.Publish(frontendEvent{Topic: "workspaceCreateCompleted", Payload: completionPayload})
 	h.relayWorkspaceCreateCompleted(prepared, completionPayload)
 }
 
-func (h *JSONRPCHandler) maybeStartTaskRun(ctx context.Context, prepared preparedWorkspaceCreate, created workspace.Workspace, completionPayload map[string]any) {
+func (h *JSONRPCHandler) maybeStartTaskRun(ctx context.Context, prepared preparedWorkspaceCreate, created workspace.Workspace) {
 	if prepared.localCreate == nil || prepared.localCreate.TaskRun == nil {
 		return
 	}
-	cmd, buildErr := agentcmd.BuildRunCommand(prepared.localCreate.TaskRun.AgentKind, prepared.localCreate.TaskRun.Prompt, prepared.localCreate.TaskRun.Model, true)
+	taskRun := prepared.localCreate.TaskRun
+	cmd, buildErr := agentcmd.BuildRunCommand(taskRun.AgentKind, taskRun.Prompt, taskRun.Model, true)
 	if buildErr != nil {
-		log.Warn().Err(buildErr).Str("workspaceId", created.ID).Str("agentKind", prepared.localCreate.TaskRun.AgentKind).Msg("task run: failed to build agent command")
+		log.Warn().Err(buildErr).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to build agent command")
 		return
 	}
-	resp, startErr := h.manager.Terminals().Start(ctx, created.Path, terminal.StartRequest{WorkspaceID: created.ID, TabID: "task-" + created.ID, PaneID: "pane-task-" + created.ID})
+	resp, startErr := h.manager.Terminals().Start(ctx, created.Path, terminal.StartRequest{
+		WorkspaceID: created.ID,
+		TabID:       "task-" + created.ID,
+		PaneID:      "pane-task-" + created.ID,
+		Title:       buildTaskRunTerminalTitle(taskRun.Prompt, taskRun.AgentKind),
+		AgentKind:   taskRun.AgentKind,
+	})
 	if startErr != nil {
-		log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("agentKind", prepared.localCreate.TaskRun.AgentKind).Msg("task run: failed to start terminal session")
+		log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to start terminal session")
 		return
 	}
 	h.manager.Terminals().Send(terminal.SendRequest{SessionID: resp.SessionID, Input: shellCommandLine(cmd.Binary, cmd.Args) + "\r"})
-	completionPayload["taskRunSessionId"] = resp.SessionID
-	completionPayload["taskRunAgentKind"] = prepared.localCreate.TaskRun.AgentKind
-	completionPayload["taskRunPrompt"] = prepared.localCreate.TaskRun.Prompt
-	completionPayload["taskRunTabId"] = "task-" + created.ID
-	completionPayload["taskRunPaneId"] = "pane-task-" + created.ID
-	log.Info().Str("workspaceId", created.ID).Str("sessionId", resp.SessionID).Str("agentKind", prepared.localCreate.TaskRun.AgentKind).Str("prompt", prepared.localCreate.TaskRun.Prompt).Msg("task run: terminal session started")
+	log.Info().Str("workspaceId", created.ID).Str("sessionId", resp.SessionID).Str("agentKind", taskRun.AgentKind).Str("prompt", taskRun.Prompt).Msg("task run: terminal session started")
+}
+
+func buildTaskRunTerminalTitle(prompt string, agentKind string) string {
+	trimmedPrompt := strings.TrimSpace(prompt)
+	if trimmedPrompt != "" {
+		truncatedPrompt := truncateRunes(trimmedPrompt, 40)
+		return "Task: " + truncatedPrompt
+	}
+
+	trimmedAgentKind := strings.TrimSpace(agentKind)
+	if trimmedAgentKind != "" {
+		return "Task Run - " + trimmedAgentKind
+	}
+
+	return "Task Run"
+}
+
+func truncateRunes(value string, limit int) string {
+	if limit <= 0 {
+		return ""
+	}
+	runes := []rune(value)
+	if len(runes) <= limit {
+		return value
+	}
+	return string(runes[:limit])
 }
 
 func buildWorkspaceHookWarnings(command string, result *workspace.HookResult, logFilePath string) []any {

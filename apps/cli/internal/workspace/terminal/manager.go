@@ -50,6 +50,8 @@ type session struct {
 	workspaceID          string
 	tabID                string
 	paneID               string
+	title                string
+	agentKind            string
 	cmd                  *exec.Cmd
 	pty                  *os.File
 	output               bytes.Buffer
@@ -109,6 +111,8 @@ func (m *Manager) buildSessionLifecycleEvent(s *session, action string, status s
 		WorkspaceID: s.workspaceID,
 		TabID:       s.tabID,
 		PaneID:      s.paneID,
+		Title:       s.title,
+		AgentKind:   s.agentKind,
 		PID:         s.cmd.Process.Pid,
 		Status:      status,
 		StartedAt:   s.startedAt.Format(time.RFC3339Nano),

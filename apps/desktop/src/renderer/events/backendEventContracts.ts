@@ -455,7 +455,14 @@ export function normalizeBackendEvent(envelope: DesktopRpcEventEnvelope): Normal
     if (
       (payload.action !== "created" && payload.action !== "destroyed") ||
       typeof payload.sessionId !== "string" ||
-      typeof payload.workspaceId !== "string"
+      typeof payload.workspaceId !== "string" ||
+      typeof payload.pid !== "number" ||
+      typeof payload.status !== "string" ||
+      !isOptionalString(payload.tabId) ||
+      !isOptionalString(payload.paneId) ||
+      !isOptionalString(payload.title) ||
+      !isOptionalString(payload.agentKind) ||
+      !isOptionalString(payload.startedAt)
     ) {
       return null;
     }
