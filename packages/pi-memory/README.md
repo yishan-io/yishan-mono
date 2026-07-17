@@ -10,6 +10,7 @@ Current MVP features:
 - injects `~/.yishan/memory/PERSONA.md` when allowed
 - injects `.my-context/MEMORY.md` and a shallow `.my-context/` listing into Pi context
 - registers `memory_search` backed by `yishan memory search --output json`
+- defaults project-scoped search to `YISHAN_PROJECT_ID` when available
 - registers `memory_read` for reading durable files under `.my-context/`
 - registers `memory_store` for writing durable entries into `.my-context/MEMORY.md`
 - registers `memory_reconcile` as a repair/admin path backed by `yishan memory reconcile`
@@ -53,7 +54,7 @@ yishan memory reconcile
 
 | Tool | Purpose |
 |---|---|
-| `memory_search` | Search durable memory through the indexed Yishan backend |
+| `memory_search` | Search durable memory through the indexed Yishan backend (defaults to current project when `YISHAN_PROJECT_ID` is set) |
 | `memory_read` | Read one durable memory file under `.my-context/` |
 | `memory_store` | Write one durable entry into `.my-context/MEMORY.md` |
 | `memory_reconcile` | Repair/rebuild the memory index |

@@ -8,8 +8,16 @@ import type { MemoryBackendClient } from "../backend/types";
 
 const memorySearchSchema = Type.Object({
   query: Type.String({ description: "1-3 keywords to search in durable memory" }),
-  projectId: Type.Optional(Type.String({ description: "Limit search to a specific project id" })),
-  scope: Type.Optional(Type.Union([Type.Literal("project"), Type.Literal("global")], { description: "Search scope" })),
+  projectId: Type.Optional(
+    Type.String({
+      description: "Limit search to a specific project id. Defaults to YISHAN_PROJECT_ID when available.",
+    }),
+  ),
+  scope: Type.Optional(
+    Type.Union([Type.Literal("project"), Type.Literal("global")], {
+      description: "Search scope. Defaults to the current project when project context is available.",
+    }),
+  ),
   limit: Type.Optional(Type.Number({ description: "Maximum number of results" })),
 });
 

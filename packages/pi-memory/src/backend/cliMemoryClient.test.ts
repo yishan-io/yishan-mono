@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { execFileMock } = vi.hoisted(() => ({
   execFileMock: vi.fn(),
@@ -8,6 +8,12 @@ vi.mock("node:child_process", () => ({ execFile: execFileMock }));
 import { createCliMemoryClient } from "./cliMemoryClient";
 
 describe("createCliMemoryClient", () => {
+  beforeEach(() => {
+    execFileMock.mockReset();
+    vi.unstubAllEnvs();
+    vi.stubEnv("YISHAN_PROJECT_ID", "");
+  });
+
   it("runs yishan memory search and parses json results", async () => {
     execFileMock.mockImplementation((_cmd, _args, _options, callback) => {
       callback(null, JSON.stringify([{ path: "/tmp/MEMORY.md", snippet: "hit", score: 0.1 }]), "");
@@ -25,7 +31,25 @@ describe("createCliMemoryClient", () => {
     expect(results).toEqual([{ path: "/tmp/MEMORY.md", snippet: "hit", score: 0.1 }]);
   });
 
-  it("includes scope when provided", async () => {
+  it("uses YISHAN_PROJECT_ID when project id is omitted", async () => {
+    vi.stubEnv("YISHAN_PROJECT_ID", "proj-env");
+    execFileMock.mockImplementation((_cmd, _args, _options, callback) => {
+      callback(null, "[]", "");
+    });
+
+    const client = createCliMemoryClient();
+    await client.search({ query: "auth" });
+
+    expect(execFileMock).toHaveBeenCalledWith(
+      "yishan",
+      ["memory", "search", "--output", "json", "--project-id", "proj-env", "auth"],
+      expect.any(Object),
+      expect.any(Function),
+    );
+  });
+
+  it("includes global scope without forcing project id from env", async () => {
+    vi.stubEnv("YISHAN_PROJECT_ID", "proj-env");
     execFileMock.mockImplementation((_cmd, _args, _options, callback) => {
       callback(null, "[]", "");
     });
