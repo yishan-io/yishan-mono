@@ -102,8 +102,7 @@
         "from": "dist/resources",
         "to": ".",
         "filter": [
-          "yishan",
-          "yishan.exe"
+          "yishan"
         ]
       }
     ],
@@ -135,12 +134,6 @@
         "NSMicrophoneUsageDescription": "Yishan uses the microphone to transcribe voice input into agent prompts."
       },
       "notarize": true
-    },
-    "win": {
-      "icon": "src/assets/images/yishan-app-icon.png",
-      "target": [
-        "nsis"
-      ]
     },
     "linux": {
       "icon": "src/assets/images/yishan-app-icon.png",
