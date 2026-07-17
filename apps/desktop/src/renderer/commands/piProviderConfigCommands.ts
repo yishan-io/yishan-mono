@@ -3,6 +3,7 @@ import type {
   PiAuthPromptResponseInput,
   PiProviderConfigMutationResult,
   PiProviderConfigSnapshot,
+  PiProviderConfigSnapshotResult,
 } from "../../shared/contracts/piProviderConfig";
 import { type AiChatModelSelection, isAiChatModelSelectionAvailable } from "../helpers/aiChatSettings";
 import { getErrorMessage } from "../helpers/errorHelpers";
@@ -17,13 +18,27 @@ let nextCredentialRequestId = 0;
 export type PiAuthPromptCommandResult = { ok: true } | { ok: false; errorMessage: string };
 
 /** Loads the current Pi provider/model configuration snapshot into the renderer store. */
-export async function getPiProviderConfigSnapshot(
-  loadState: "loading" | "refreshing" = "loading",
+export async function getPiProviderConfigSnapshot(): Promise<PiProviderConfigSnapshot | null> {
+  return await loadPiProviderConfigSnapshot("loading", async () => {
+    return await getDesktopHostBridge().getPiProviderConfigSnapshot();
+  });
+}
+
+/** Reloads Pi provider/model configuration from local runtime state into the renderer store. */
+export async function refreshPiProviderConfigSnapshot(): Promise<PiProviderConfigSnapshot | null> {
+  return await loadPiProviderConfigSnapshot("refreshing", async () => {
+    return await getDesktopHostBridge().refreshPiProviderConfigSnapshot();
+  });
+}
+
+async function loadPiProviderConfigSnapshot(
+  loadState: "loading" | "refreshing",
+  loadSnapshot: () => Promise<PiProviderConfigSnapshotResult>,
 ): Promise<PiProviderConfigSnapshot | null> {
   const requestId = ++nextSnapshotRequestId;
   piProviderConfigStore.getState().beginLoad(requestId, loadState);
   try {
-    const result = await getDesktopHostBridge().getPiProviderConfigSnapshot();
+    const result = await loadSnapshot();
     if (!result.ok) {
       piProviderConfigStore.getState().failLoad(requestId, result.error.message);
       return null;

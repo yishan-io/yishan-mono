@@ -20,6 +20,7 @@ vi.mock("electron", () => ({
 function createService(overrides: Partial<PiProviderConfigService> = {}): PiProviderConfigService {
   return {
     getSnapshot: vi.fn(async () => ({ providers: [], models: [] })),
+    refreshSnapshot: vi.fn(async () => ({ providers: [], models: [] })),
     authenticate: vi.fn(),
     removeCredential: vi.fn(),
     ...overrides,
@@ -74,10 +75,21 @@ describe("registerPiProviderConfigIpcHandlers", () => {
     expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("sk-sensitive");
   });
 
+  it("uses an explicit refresh endpoint to reload Pi provider configuration", async () => {
+    const service = createService();
+    registerPiProviderConfigIpcHandlers(service, () => null);
+
+    const result = await getHandler(HOST_IPC_CHANNELS.refreshPiProviderConfigSnapshot)({ sender: { id: 1 } });
+
+    expect(result).toEqual({ ok: true, value: { providers: [], models: [] } });
+    expect(service.refreshSnapshot).toHaveBeenCalledOnce();
+    expect(service.getSnapshot).not.toHaveBeenCalled();
+  });
+
   it("keeps authentication successful when the follow-up snapshot refresh fails", async () => {
     const service = createService({
       authenticate: vi.fn(async () => undefined),
-      getSnapshot: vi.fn(async () => {
+      refreshSnapshot: vi.fn(async () => {
         throw new Error("provider secret sk-refresh");
       }),
     });
@@ -104,13 +116,13 @@ describe("registerPiProviderConfigIpcHandlers", () => {
 
   it("ends authentication before refreshing the post-login snapshot", async () => {
     let resolveSnapshot: (() => void) | undefined;
-    const getSnapshot = vi.fn(
+    const refreshSnapshot = vi.fn(
       async () =>
         await new Promise<{ providers: []; models: [] }>((resolve) => {
           resolveSnapshot = () => resolve({ providers: [], models: [] });
         }),
     );
-    const service = createService({ authenticate: vi.fn(async () => undefined), getSnapshot });
+    const service = createService({ authenticate: vi.fn(async () => undefined), refreshSnapshot });
     mocks.fromWebContents.mockReturnValue({ webContents: { send: vi.fn() } });
     registerPiProviderConfigIpcHandlers(service, () => null);
     const sender = { id: 1, once: vi.fn(), removeListener: vi.fn() };
@@ -119,7 +131,7 @@ describe("registerPiProviderConfigIpcHandlers", () => {
       { sender },
       { providerId: "openai", method: "api_key" },
     );
-    await vi.waitFor(() => expect(getSnapshot).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(refreshSnapshot).toHaveBeenCalledOnce());
 
     const callbacks = vi.mocked(service.authenticate).mock.calls[0]?.[2];
     expect(callbacks?.signal?.aborted).toBe(true);
@@ -138,7 +150,7 @@ describe("registerPiProviderConfigIpcHandlers", () => {
   it("keeps credential removal successful when the follow-up snapshot refresh fails", async () => {
     const service = createService({
       removeCredential: vi.fn(async () => undefined),
-      getSnapshot: vi.fn(async () => {
+      refreshSnapshot: vi.fn(async () => {
         throw new Error("provider secret sk-refresh");
       }),
     });

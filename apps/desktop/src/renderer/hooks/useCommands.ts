@@ -68,6 +68,7 @@ import {
   authenticatePiProvider as authenticatePiProviderCommand,
   cancelPiProviderAuthentication as cancelPiProviderAuthenticationCommand,
   getPiProviderConfigSnapshot as getPiProviderConfigSnapshotCommand,
+  refreshPiProviderConfigSnapshot as refreshPiProviderConfigSnapshotCommand,
   removePiProviderCredential as removePiProviderCredentialCommand,
   setDefaultAiChatModel as setDefaultAiChatModelCommand,
 } from "../commands/piProviderConfigCommands";
@@ -161,6 +162,7 @@ export type Commands = {
   setOverviewProjectId: typeof setOverviewProjectIdCommand;
   listCLIToolStatuses: typeof listCLIToolStatusesCommand;
   getPiProviderConfigSnapshot: typeof getPiProviderConfigSnapshotCommand;
+  refreshPiProviderConfigSnapshot: typeof refreshPiProviderConfigSnapshotCommand;
   authenticatePiProvider: typeof authenticatePiProviderCommand;
   cancelPiProviderAuthentication: typeof cancelPiProviderAuthenticationCommand;
   removePiProviderCredential: typeof removePiProviderCredentialCommand;
@@ -301,6 +303,7 @@ export function useCommands(): Commands {
       setOverviewProjectId: setOverviewProjectIdCommand,
       listCLIToolStatuses: listCLIToolStatusesCommand,
       getPiProviderConfigSnapshot: getPiProviderConfigSnapshotCommand,
+      refreshPiProviderConfigSnapshot: refreshPiProviderConfigSnapshotCommand,
       authenticatePiProvider: authenticatePiProviderCommand,
       cancelPiProviderAuthentication: cancelPiProviderAuthenticationCommand,
       removePiProviderCredential: removePiProviderCredentialCommand,

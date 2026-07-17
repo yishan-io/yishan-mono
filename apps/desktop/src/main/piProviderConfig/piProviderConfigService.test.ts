@@ -37,6 +37,36 @@ describe("PiProviderConfigService", () => {
     expect(moduleLoader).toHaveBeenCalledOnce();
   });
 
+  it("returns the cached snapshot without reloading Pi configuration", async () => {
+    const authStorage = AuthStorage.inMemory({ openai: { type: "api_key", key: "sk-openai" } });
+    const modelRegistry = ModelRegistry.inMemory(authStorage);
+    const reload = vi.spyOn(authStorage, "reload");
+    const refresh = vi.spyOn(modelRegistry, "refresh");
+    const service = new PiProviderConfigService({ authStorage, modelRegistry });
+
+    const firstSnapshot = await service.getSnapshot();
+    const secondSnapshot = await service.getSnapshot();
+
+    expect(secondSnapshot).toBe(firstSnapshot);
+    expect(reload).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("reloads Pi configuration when an explicit refresh is requested", async () => {
+    const authStorage = AuthStorage.inMemory({ openai: { type: "api_key", key: "sk-openai" } });
+    const modelRegistry = ModelRegistry.inMemory(authStorage);
+    const reload = vi.spyOn(authStorage, "reload");
+    const refresh = vi.spyOn(modelRegistry, "refresh");
+    const service = new PiProviderConfigService({ authStorage, modelRegistry });
+
+    const initialSnapshot = await service.getSnapshot();
+    const refreshedSnapshot = await service.refreshSnapshot();
+
+    expect(refreshedSnapshot).not.toBe(initialSnapshot);
+    expect(reload).toHaveBeenCalledOnce();
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
   it("retries runtime initialization after a transient loader failure", async () => {
     const moduleLoader = vi
       .fn()

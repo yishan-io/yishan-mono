@@ -30,6 +30,12 @@ export function registerPiProviderConfigIpcHandlers(
     });
   });
 
+  ipcMain.handle(HOST_IPC_CHANNELS.refreshPiProviderConfigSnapshot, async () => {
+    return await runPiProviderConfigOperation("Refreshing provider configuration failed", async () => {
+      return await piProviderConfigService.refreshSnapshot();
+    });
+  });
+
   ipcMain.handle(HOST_IPC_CHANNELS.authenticatePiProvider, async (event, rawInput: unknown) => {
     return await runPiProviderConfigOperation("Provider authentication failed", async () => {
       const input = parseAuthenticatePiProviderInput(rawInput);
@@ -103,7 +109,7 @@ async function refreshAfterCredentialMutation(
   service: PiProviderConfigService,
 ): Promise<PiProviderConfigMutationOutcome> {
   try {
-    return { snapshot: await service.getSnapshot() };
+    return { snapshot: await service.refreshSnapshot() };
   } catch (error) {
     const errorPayload = toPiProviderConfigErrorPayload(error);
     console.error(

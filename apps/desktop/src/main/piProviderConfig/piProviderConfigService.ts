@@ -50,6 +50,7 @@ export class PiProviderConfigService {
   private readonly moduleLoader: PiRuntimeModuleLoader;
   private readonly providerCatalogLoader: PiProviderCatalogLoader;
   private runtimePromise: Promise<PiRuntimeDependencies> | undefined;
+  private snapshot: PiProviderConfigSnapshot | undefined;
 
   constructor(options: PiProviderConfigServiceOptions = {}) {
     this.options = options;
@@ -57,12 +58,25 @@ export class PiProviderConfigService {
     this.providerCatalogLoader = options.providerCatalogLoader ?? loadPiProviderCatalog;
   }
 
-  /** Returns the current Pi provider/model inventory from disk-backed runtime state. */
+  /** Returns the cached Pi provider/model inventory, loading it on first use. */
   async getSnapshot(): Promise<PiProviderConfigSnapshot> {
+    if (this.snapshot) {
+      return this.snapshot;
+    }
+    const { authStorage, modelRegistry, builtInProviders } = await this.getRuntime();
+    const snapshot = buildPiProviderConfigSnapshot(authStorage, modelRegistry, builtInProviders);
+    this.snapshot = snapshot;
+    return snapshot;
+  }
+
+  /** Reloads Pi provider/model configuration from local runtime state and replaces the cached snapshot. */
+  async refreshSnapshot(): Promise<PiProviderConfigSnapshot> {
     const { authStorage, modelRegistry, builtInProviders } = await this.getRuntime();
     authStorage.reload();
     modelRegistry.refresh();
-    return buildPiProviderConfigSnapshot(authStorage, modelRegistry, builtInProviders);
+    const snapshot = buildPiProviderConfigSnapshot(authStorage, modelRegistry, builtInProviders);
+    this.snapshot = snapshot;
+    return snapshot;
   }
 
   /** Runs one provider-owned authentication method and persists only its complete credential. */

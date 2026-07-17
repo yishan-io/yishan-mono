@@ -35,6 +35,7 @@ export function AiChatProviderSettingsSection({ focusRequested = false }: AiChat
   const [isFocusHighlighted, setIsFocusHighlighted] = useState(false);
   const {
     getPiProviderConfigSnapshot,
+    refreshPiProviderConfigSnapshot,
     authenticatePiProvider,
     cancelPiProviderAuthentication,
     removePiProviderCredential,
@@ -49,9 +50,12 @@ export function AiChatProviderSettingsSection({ focusRequested = false }: AiChat
   const [selectedProviderId, setSelectedProviderId] = useState(savedDefaultProviderId ?? "");
 
   useEffect(() => {
+    if (snapshot) {
+      return;
+    }
     // fire-and-forget: the command owns load and error state for this initial snapshot request.
     void getPiProviderConfigSnapshot();
-  }, [getPiProviderConfigSnapshot]);
+  }, [getPiProviderConfigSnapshot, snapshot]);
 
   useEffect(() => {
     if (!focusRequested) {
@@ -130,7 +134,7 @@ export function AiChatProviderSettingsSection({ focusRequested = false }: AiChat
             variant="text"
             onClick={() => {
               // fire-and-forget: the command exposes refresh progress and errors through piProviderConfigStore.
-              void getPiProviderConfigSnapshot("refreshing");
+              void refreshPiProviderConfigSnapshot();
             }}
             disabled={isRefreshing}
             startIcon={isRefreshing || isLoading ? <CircularProgress size={14} /> : <LuRefreshCw />}

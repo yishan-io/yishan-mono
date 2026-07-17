@@ -183,6 +183,7 @@ export type DesktopHostBridge = {
   getAuthStatus: () => Promise<AuthStatusResult>;
   login: () => Promise<AuthLoginResult>;
   getPiProviderConfigSnapshot: () => Promise<PiProviderConfigSnapshotResult>;
+  refreshPiProviderConfigSnapshot: () => Promise<PiProviderConfigSnapshotResult>;
   authenticatePiProvider: (input: AuthenticatePiProviderInput) => Promise<PiProviderConfigMutationResult>;
   cancelPiProviderAuthentication: (providerId: string) => Promise<PiProviderConfigResult<boolean>>;
   respondPiAuthPrompt: (input: PiAuthPromptResponseInput) => Promise<PiProviderConfigResult<true>>;
@@ -235,6 +236,7 @@ export const HOST_IPC_CHANNELS = {
   getAuthStatus: "desktop:host/get-auth-status",
   login: "desktop:host/login",
   getPiProviderConfigSnapshot: "desktop:host/get-pi-runtime-snapshot",
+  refreshPiProviderConfigSnapshot: "desktop:host/refresh-pi-provider-config-snapshot",
   authenticatePiProvider: "desktop:host/authenticate-pi-provider",
   cancelPiProviderAuthentication: "desktop:host/cancel-pi-provider-authentication",
   respondPiAuthPrompt: "desktop:host/respond-pi-auth-prompt",

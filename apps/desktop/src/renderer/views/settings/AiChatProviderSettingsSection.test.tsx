@@ -8,6 +8,7 @@ import { AiChatProviderSettingsSection } from "./AiChatProviderSettingsSection";
 
 const mocked = {
   getPiProviderConfigSnapshot: vi.fn(),
+  refreshPiProviderConfigSnapshot: vi.fn(),
   authenticatePiProvider: vi.fn(),
   cancelPiProviderAuthentication: vi.fn(),
   removePiProviderCredential: vi.fn(),
@@ -58,6 +59,7 @@ vi.mock("../../components/ModelAutocomplete", () => ({
 describe("AiChatProviderSettingsSection", () => {
   beforeEach(() => {
     mocked.getPiProviderConfigSnapshot.mockResolvedValue(null);
+    mocked.refreshPiProviderConfigSnapshot.mockResolvedValue(null);
     mocked.authenticatePiProvider.mockResolvedValue(null);
     mocked.cancelPiProviderAuthentication.mockResolvedValue(true);
     mocked.removePiProviderCredential.mockResolvedValue(null);
@@ -143,12 +145,10 @@ describe("AiChatProviderSettingsSection", () => {
     HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
   });
 
-  it("loads snapshot on mount and renders provider status rows", async () => {
+  it("reuses the cached snapshot on mount and renders provider status rows", () => {
     render(<AiChatProviderSettingsSection />);
 
-    await waitFor(() => {
-      expect(mocked.getPiProviderConfigSnapshot).toHaveBeenCalledTimes(1);
-    });
+    expect(mocked.getPiProviderConfigSnapshot).not.toHaveBeenCalled();
 
     expect(screen.getByText("settings.aiChatProviders.title")).toBeTruthy();
     expect(screen.getByTestId("provider-config-card")).toBeTruthy();
@@ -160,6 +160,16 @@ describe("AiChatProviderSettingsSection", () => {
     expect(screen.getByRole("button", { name: "settings.aiChatProviders.providers.actions.login" })).toBeTruthy();
     expect(screen.getByText("settings.aiChatProviders.models.selectionTitle")).toBeTruthy();
     expect(screen.getByText("settings.aiChatProviders.models.selectionDescription")).toBeTruthy();
+  });
+
+  it("loads the snapshot on mount when no cached snapshot exists", async () => {
+    piProviderConfigStore.setState({ snapshot: null });
+
+    render(<AiChatProviderSettingsSection />);
+
+    await waitFor(() => {
+      expect(mocked.getPiProviderConfigSnapshot).toHaveBeenCalledOnce();
+    });
   });
 
   it("uses actions instead of repeated status text for unconfigured actionable methods", () => {
@@ -187,7 +197,7 @@ describe("AiChatProviderSettingsSection", () => {
     await waitFor(() => {
       expect(mocked.authenticatePiProvider).toHaveBeenCalledWith({ providerId: "openai-codex", method: "oauth" });
     });
-    expect(mocked.getPiProviderConfigSnapshot).toHaveBeenCalledWith("refreshing");
+    expect(mocked.refreshPiProviderConfigSnapshot).toHaveBeenCalledOnce();
   });
 
   it("disables every login action while any provider login is pending", () => {

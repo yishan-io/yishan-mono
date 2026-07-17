@@ -8,6 +8,7 @@ import {
   authenticatePiProvider,
   cancelPiProviderAuthentication,
   getPiProviderConfigSnapshot,
+  refreshPiProviderConfigSnapshot,
   removePiProviderCredential,
   respondPiAuthPrompt,
 } from "./piProviderConfigCommands";
@@ -16,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   authenticatePiProvider: vi.fn(),
   cancelPiProviderAuthentication: vi.fn(),
   getPiProviderConfigSnapshot: vi.fn(),
+  refreshPiProviderConfigSnapshot: vi.fn(),
   removePiProviderCredential: vi.fn(),
   respondPiAuthPrompt: vi.fn(),
 }));
@@ -25,6 +27,7 @@ vi.mock("../rpc/rpcTransport", () => ({
     authenticatePiProvider: mocks.authenticatePiProvider,
     cancelPiProviderAuthentication: mocks.cancelPiProviderAuthentication,
     getPiProviderConfigSnapshot: mocks.getPiProviderConfigSnapshot,
+    refreshPiProviderConfigSnapshot: mocks.refreshPiProviderConfigSnapshot,
     removePiProviderCredential: mocks.removePiProviderCredential,
     respondPiAuthPrompt: mocks.respondPiAuthPrompt,
   })),
@@ -60,18 +63,19 @@ describe("piProviderConfigCommands", () => {
     expect(piProviderConfigStore.getState().pendingCredentialAction).toBeUndefined();
   });
 
-  it("uses the single snapshot endpoint while exposing a refresh loading state", async () => {
+  it("uses the explicit refresh endpoint while exposing a refresh loading state", async () => {
     let resolveSnapshot: ((value: { ok: true; value: PiProviderConfigSnapshot }) => void) | undefined;
-    mocks.getPiProviderConfigSnapshot.mockReturnValue(
+    mocks.refreshPiProviderConfigSnapshot.mockReturnValue(
       new Promise<{ ok: true; value: PiProviderConfigSnapshot }>((resolve) => {
         resolveSnapshot = resolve;
       }),
     );
 
-    const resultPromise = getPiProviderConfigSnapshot("refreshing");
+    const resultPromise = refreshPiProviderConfigSnapshot();
 
     expect(piProviderConfigStore.getState().loadState).toBe("refreshing");
-    expect(mocks.getPiProviderConfigSnapshot).toHaveBeenCalledTimes(1);
+    expect(mocks.refreshPiProviderConfigSnapshot).toHaveBeenCalledTimes(1);
+    expect(mocks.getPiProviderConfigSnapshot).not.toHaveBeenCalled();
     resolveSnapshot?.({ ok: true, value: snapshot });
     await expect(resultPromise).resolves.toBe(snapshot);
     expect(piProviderConfigStore.getState().loadState).toBe("idle");
@@ -79,17 +83,19 @@ describe("piProviderConfigCommands", () => {
 
   it("does not let an older snapshot response overwrite a newer refresh", async () => {
     const resolvers: Array<(value: { ok: true; value: PiProviderConfigSnapshot }) => void> = [];
-    mocks.getPiProviderConfigSnapshot.mockImplementation(
+    const loadSnapshot = vi.fn(
       async () =>
         await new Promise<{ ok: true; value: PiProviderConfigSnapshot }>((resolve) => {
           resolvers.push(resolve);
         }),
     );
+    mocks.getPiProviderConfigSnapshot.mockImplementation(loadSnapshot);
+    mocks.refreshPiProviderConfigSnapshot.mockImplementation(loadSnapshot);
     const olderSnapshot: PiProviderConfigSnapshot = { providers: [], models: [], modelsLoadError: "older" };
     const newerSnapshot: PiProviderConfigSnapshot = { providers: [], models: [], modelsLoadError: "newer" };
 
     const olderRequest = getPiProviderConfigSnapshot();
-    const newerRequest = getPiProviderConfigSnapshot("refreshing");
+    const newerRequest = refreshPiProviderConfigSnapshot();
     resolvers[1]?.({ ok: true, value: newerSnapshot });
     await newerRequest;
     resolvers[0]?.({ ok: true, value: olderSnapshot });
@@ -106,14 +112,14 @@ describe("piProviderConfigCommands", () => {
     let resolveRefresh: ((value: { ok: true; value: PiProviderConfigSnapshot }) => void) | undefined;
     const staleSnapshot: PiProviderConfigSnapshot = { providers: [], models: [], modelsLoadError: "stale refresh" };
     const mutationSnapshot: PiProviderConfigSnapshot = { providers: [], models: [] };
-    mocks.getPiProviderConfigSnapshot.mockReturnValue(
+    mocks.refreshPiProviderConfigSnapshot.mockReturnValue(
       new Promise<{ ok: true; value: PiProviderConfigSnapshot }>((resolve) => {
         resolveRefresh = resolve;
       }),
     );
     mocks.authenticatePiProvider.mockResolvedValue({ ok: true, value: { snapshot: mutationSnapshot } });
 
-    const refresh = getPiProviderConfigSnapshot("refreshing");
+    const refresh = refreshPiProviderConfigSnapshot();
     await authenticatePiProvider({ providerId: "anthropic", method: "api_key" });
     resolveRefresh?.({ ok: true, value: staleSnapshot });
     await refresh;
