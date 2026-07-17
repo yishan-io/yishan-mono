@@ -104,8 +104,30 @@ type sessionMessage struct {
 }
 
 type SummarizeResult struct {
-	WrittenPaths []string
-	Skipped      bool
+	WrittenPaths    []string
+	Skipped         bool
+	SourceAgent     string
+	SummarizerAgent string
+}
+
+type SummarizeSessionError struct {
+	SourceAgent     string
+	SummarizerAgent string
+	Err             error
+}
+
+func (e *SummarizeSessionError) Error() string {
+	if e == nil || e.Err == nil {
+		return ""
+	}
+	return e.Err.Error()
+}
+
+func (e *SummarizeSessionError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Err
 }
 
 // PersonaSection identifies a section heading in PERSONA.md.

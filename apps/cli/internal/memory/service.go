@@ -183,13 +183,23 @@ func (s *Service) SummarizeSession(agent string, worktreePath string, projectID 
 func (s *Service) runSummarize(req summarizeRequest) {
 	result, err := s.summarizer.SummarizeSession(req.agent, req.worktreePath)
 	if err != nil {
+		var summarizeErr *SummarizeSessionError
+		sourceAgent := ""
+		summarizerAgent := ""
+		if errors.As(err, &summarizeErr) {
+			sourceAgent = summarizeErr.SourceAgent
+			summarizerAgent = summarizeErr.SummarizerAgent
+		}
+		sourceAgent, summarizerAgent = normalizeSummarizeAgents(req.agent, sourceAgent, summarizerAgent)
 		if errors.Is(err, ErrAgentNotFound) {
 			log.Debug().Err(err).
-				Str("agent", req.agent).
+				Str("sourceAgent", sourceAgent).
+				Str("summarizerAgent", summarizerAgent).
 				Msg("skip session summarization: agent binary not installed")
 		} else {
 			log.Warn().Err(err).
-				Str("agent", req.agent).
+				Str("sourceAgent", sourceAgent).
+				Str("summarizerAgent", summarizerAgent).
 				Str("workspace", req.worktreePath).
 				Msg("session summarization failed")
 		}
@@ -199,22 +209,29 @@ func (s *Service) runSummarize(req summarizeRequest) {
 }
 
 func (s *Service) handleSummarizeResult(req summarizeRequest, result SummarizeResult) {
+	sourceAgent, summarizerAgent := normalizeSummarizeAgents(req.agent, result.SourceAgent, result.SummarizerAgent)
 	if result.Skipped {
 		log.Debug().
-			Str("agent", req.agent).
+			Str("sourceAgent", sourceAgent).
+			Str("summarizerAgent", summarizerAgent).
 			Str("workspace", req.worktreePath).
 			Msg("session summarization skipped")
 		return
 	}
 	if len(result.WrittenPaths) == 0 {
 		log.Info().
-			Str("agent", req.agent).
+			Str("sourceAgent", sourceAgent).
+			Str("summarizerAgent", summarizerAgent).
 			Str("workspace", req.worktreePath).
 			Msg("session summarization produced no output")
 		return
 	}
-	log.Info().Str("agent", req.agent).Str("workspace", req.worktreePath).
-		Int("files", len(result.WrittenPaths)).Msg("session summarized")
+	log.Info().
+		Str("sourceAgent", sourceAgent).
+		Str("summarizerAgent", summarizerAgent).
+		Str("workspace", req.worktreePath).
+		Int("files", len(result.WrittenPaths)).
+		Msg("session summarized")
 
 	// Index only the files that were actually written — MEMORY.md and
 	// any archive/ overflow files. Avoids a full context dir scan.
@@ -224,6 +241,16 @@ func (s *Service) handleSummarizeResult(req summarizeRequest, result SummarizeRe
 			log.Warn().Err(idxErr).Str("path", p).Msg("index written file after summarization failed")
 		}
 	}
+}
+
+func normalizeSummarizeAgents(defaultSourceAgent string, sourceAgent string, summarizerAgent string) (string, string) {
+	if sourceAgent == "" {
+		sourceAgent = defaultSourceAgent
+	}
+	if summarizerAgent == "" {
+		summarizerAgent = sourceAgent
+	}
+	return sourceAgent, summarizerAgent
 }
 
 func (s *Service) getOrCreateQueue(contextRoot string) *summarizeQueue {

@@ -40,21 +40,37 @@ func (s *Summarizer) UpdateConfig(cfg SummarizerConfig) {
 	s.model = cfg.Model
 }
 
+func (s *Summarizer) resolveSummarizeAgent(sessionAgent string) string {
+	if s.agentKind != "" {
+		return s.agentKind
+	}
+	return sessionAgent
+}
+
 // SummarizeSession runs the full summarize pipeline for the given workspace.
 // Skipped sessions are returned explicitly so callers can distinguish them
 // from real summarize runs that wrote no files.
 func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string) (SummarizeResult, error) {
+	summarizeAgent := s.resolveSummarizeAgent(sessionAgent)
+	result := SummarizeResult{
+		Skipped:         true,
+		SourceAgent:     sessionAgent,
+		SummarizerAgent: summarizeAgent,
+	}
 	if !s.Enabled() {
-		return SummarizeResult{Skipped: true}, nil
+		return result, nil
 	}
 
 	session, err := s.dbReader.ReadRecentSession(sessionAgent, workspacePath)
 	if err != nil {
-		log.Debug().Err(err).Str("agent", sessionAgent).Msg("skip memory summarization: cannot read session")
-		return SummarizeResult{Skipped: true}, nil
+		log.Debug().Err(err).
+			Str("sourceAgent", sessionAgent).
+			Str("summarizerAgent", summarizeAgent).
+			Msg("skip memory summarization: cannot read session")
+		return result, nil
 	}
 	if len(session.Messages) == 0 {
-		return SummarizeResult{Skipped: true}, nil
+		return result, nil
 	}
 
 	conversation := buildConversationText(session.Messages)
@@ -73,15 +89,11 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 		existingContent = string(data)
 	}
 
-	summarizeAgent := s.agentKind
-	if summarizeAgent == "" {
-		summarizeAgent = sessionAgent
-	}
-
 	prompt := fmt.Sprintf(summarizationPrompt, existingContent, conversation)
 
 	log.Info().
-		Str("agent", summarizeAgent).
+		Str("sourceAgent", sessionAgent).
+		Str("summarizerAgent", summarizeAgent).
 		Str("workspace", workspacePath).
 		Int("messages", len(session.Messages)).
 		Msg("starting memory summarization")
@@ -98,19 +110,33 @@ func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string)
 
 	output, err := s.runAgent(ctx, summarizeAgent, s.model, prompt, agentWorkDir)
 	if err != nil {
-		return SummarizeResult{}, fmt.Errorf("llm summarization via %s: %w", summarizeAgent, err)
+		return SummarizeResult{}, &SummarizeSessionError{
+			SourceAgent:     sessionAgent,
+			SummarizerAgent: summarizeAgent,
+			Err:             fmt.Errorf("llm summarization via %s: %w", summarizeAgent, err),
+		}
 	}
 
 	extracted, err := parseExtractedJSON(output)
 	if err != nil {
-		return SummarizeResult{}, fmt.Errorf("parse summarization output: %w", err)
+		return SummarizeResult{}, &SummarizeSessionError{
+			SourceAgent:     sessionAgent,
+			SummarizerAgent: summarizeAgent,
+			Err:             fmt.Errorf("parse summarization output: %w", err),
+		}
 	}
 
 	writtenPaths, err := mergeAndWrite(memoryPath, existingContent, extracted, contextRoot)
 	if err != nil {
-		return SummarizeResult{}, err
+		return SummarizeResult{}, &SummarizeSessionError{
+			SourceAgent:     sessionAgent,
+			SummarizerAgent: summarizeAgent,
+			Err:             err,
+		}
 	}
-	return SummarizeResult{WrittenPaths: writtenPaths}, nil
+	result.Skipped = false
+	result.WrittenPaths = writtenPaths
+	return result, nil
 }
 func buildConversationText(messages []sessionMessage) string {
 	var buf strings.Builder
