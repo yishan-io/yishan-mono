@@ -1,21 +1,17 @@
 import { Box } from "@mui/material";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { ClipboardEvent } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { isEditableTarget } from "../../shortcuts/editableTarget";
-import { FlatTreeRow } from "./FlatTreeRow";
+import { FileTreeRows } from "./FileTreeRows";
 import { ROW_HEIGHT } from "./FlatTreeRow";
 import { extractSourcePathsFromDataTransferAsync } from "./dataTransfer";
-import {
-  collectAncestorDirectoryPaths,
-  getEntryName,
-  joinChildPath,
-  resolveDestinationDirectoryPath,
-  resolveUniqueChildName,
-} from "./treeUtils";
-import type { EditingEntry, FileTreeGitChangeKind, FileTreeProps, VisibleRow } from "./types";
+import { collectAncestorDirectoryPaths, resolveDestinationDirectoryPath } from "./treeUtils";
+import type { FileTreeGitChangeKind, FileTreeProps, VisibleRow } from "./types";
 import { useFileTreeDragDrop } from "./useFileTreeDragDrop";
+import { useFileTreeEditing } from "./useFileTreeEditing";
 import { useFileTreeKeyboard } from "./useFileTreeKeyboard";
+import { useFileTreeSelection } from "./useFileTreeSelection";
 import { useVisibleFileTree } from "./useVisibleFileTree";
 
 const EMPTY_IGNORED_PATHS: string[] = [];
@@ -57,15 +53,26 @@ export function FileTree({
     }
     return set;
   }, [gitChangesByPathResolved]);
-
-  const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set());
-  const [editingEntry, setEditingEntry] = useState<EditingEntry | null>(null);
-  const [editingName, setEditingName] = useState("");
-  const [selectedEntryPath, setSelectedEntryPath] = useState("");
   const ignoredPathSet = useMemo(
     () => new Set(ignoredPaths.map((path) => path.replace(/\/+$/, "")).filter(Boolean)),
     [ignoredPaths],
   );
+
+  const {
+    editingEntry,
+    editingName,
+    setEditingName,
+    editingInputRef,
+    didApplyInitialSelectionRef,
+    startCreate,
+    startRename,
+    handleRenameInputKeyDown,
+    handleRenameInputBlur,
+  } = useFileTreeEditing({
+    files,
+    onCreateEntry,
+    onRenameEntry,
+  });
 
   const { visibleRows, directoryPaths, expandedItems, setExpandedItems } = useVisibleFileTree({
     files,
@@ -75,13 +82,48 @@ export function FileTree({
     onExpandedItemsChange,
   });
 
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const editingInputRef = useRef<HTMLInputElement | null>(null);
-  const ignoreRenameBlurUntilRef = useRef(0);
-  const didApplyInitialSelectionRef = useRef(false);
-  const lastAppliedSelectionRequestIdRef = useRef<number | null>(null);
+  const rowByPath = useMemo(() => {
+    const map = new Map<string, { row: VisibleRow; index: number }>();
+    for (let i = 0; i < visibleRows.length; i++) {
+      const row = visibleRows[i];
+      if (row) {
+        map.set(row.path, { row, index: i });
+      }
+    }
+    return map;
+  }, [visibleRows]);
+
+  const { selectedEntryPath, setSelectedEntryPath, scrollRef, selectFirstTreeEntryOnFocus } = useFileTreeSelection({
+    rowByPath,
+    selectionRequest,
+    visibleRows,
+    onEnsurePathLoaded,
+    onSelectEntry,
+    setExpandedItems,
+  });
+
   const lastAppliedCreateRequestIdRef = useRef<number | null>(null);
   const expandedPathSet = useMemo(() => new Set(expandedItems), [expandedItems]);
+  const virtualizer = useVirtualizer({
+    count: visibleRows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 20,
+  });
+
+  const handleStartCreate = useCallback(
+    (basePath: string, isDirectory: boolean) => {
+      if (basePath) {
+        setExpandedItems((currentItems) => [
+          ...new Set([...currentItems, ...collectAncestorDirectoryPaths(basePath), basePath]),
+        ]);
+      }
+
+      startCreate(basePath, isDirectory);
+    },
+    [setExpandedItems, startCreate],
+  );
+
   const {
     dropTargetPath,
     handleExternalDragOver,
@@ -90,72 +132,6 @@ export function FileTree({
     handleExternalDrop,
     clearDropTarget,
   } = useFileTreeDragDrop({ worktreePath, onDropExternalEntries, onMoveEntries });
-  const rowByPath = useMemo(() => {
-    const map = new Map<string, { row: VisibleRow; index: number }>();
-    for (let i = 0; i < visibleRows.length; i++) {
-      const row = visibleRows[i];
-      if (!row) {
-        continue;
-      }
-      map.set(row.path, { row, index: i });
-    }
-    return map;
-  }, [visibleRows]);
-
-  const virtualizer = useVirtualizer({
-    count: visibleRows.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
-    overscan: 20,
-  });
-
-  // ─── Selection request effect ──────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!selectionRequest) {
-      return;
-    }
-
-    if (selectionRequest.requestId === lastAppliedSelectionRequestIdRef.current) {
-      return;
-    }
-
-    const requestedPath = selectionRequest.path.trim().replace(/\/+$/, "");
-    if (!requestedPath) {
-      return;
-    }
-
-    const ancestorDirectoryPaths = collectAncestorDirectoryPaths(requestedPath);
-    if (ancestorDirectoryPaths.length > 0) {
-      setExpandedItems((currentItems) => [...new Set([...currentItems, ...ancestorDirectoryPaths])]);
-    }
-
-    // Only ask the daemon to load a directory. If the requested path is a
-    // known file row, load its parent directory instead. If the row is not
-    // yet visible (tree not fully loaded), use the parent so we never call
-    // file.list on a plain file path.
-    const requestedRow = rowByPath.get(requestedPath);
-    const pathToLoad = requestedRow
-      ? requestedRow.row.isDirectory
-        ? requestedPath
-        : requestedPath.split("/").slice(0, -1).join("/")
-      : requestedPath.split("/").slice(0, -1).join("/") || requestedPath;
-    if (pathToLoad) {
-      void onEnsurePathLoaded?.(pathToLoad);
-    }
-
-    if (!rowByPath.has(requestedPath)) {
-      return;
-    }
-
-    setSelectedEntryPath(requestedPath);
-    if (selectionRequest.focus) {
-      scrollRef.current?.focus();
-    }
-    lastAppliedSelectionRequestIdRef.current = selectionRequest.requestId;
-  }, [onEnsurePathLoaded, rowByPath, selectionRequest, setExpandedItems]);
-
-  // ─── Create entry request effect ──────────────────────────────────────────
 
   useEffect(() => {
     if (!createEntryRequest) {
@@ -166,11 +142,9 @@ export function FileTree({
       return;
     }
 
-    startCreate(createEntryRequest.basePath ?? "", createEntryRequest.kind === "folder");
+    handleStartCreate(createEntryRequest.basePath ?? "", createEntryRequest.kind === "folder");
     lastAppliedCreateRequestIdRef.current = createEntryRequest.requestId;
-  }, [createEntryRequest]);
-
-  // ─── Editing input auto-selection effect ──────────────────────────────────
+  }, [createEntryRequest, handleStartCreate]);
 
   useEffect(() => {
     if (!editingEntry?.path || !editingInputRef.current) {
@@ -188,129 +162,7 @@ export function FileTree({
     input.focus();
     input.setSelectionRange(0, selectionEnd);
     didApplyInitialSelectionRef.current = true;
-  }, [editingEntry, editingName]);
-
-  // ─── Rename handlers ──────────────────────────────────────────────────────
-
-  const cancelRename = useCallback(() => {
-    setEditingEntry(null);
-    setEditingName("");
-    didApplyInitialSelectionRef.current = false;
-  }, []);
-
-  const commitRename = useCallback(async () => {
-    if (!editingEntry) {
-      cancelRename();
-      return;
-    }
-
-    const nextName = editingName.trim();
-    if (!nextName || nextName.includes("/") || nextName.includes("\\")) {
-      cancelRename();
-      return;
-    }
-
-    if (editingEntry.mode === "create") {
-      const nextPath = joinChildPath(editingEntry.basePath, nextName);
-      try {
-        if (!onCreateEntry) {
-          return;
-        }
-
-        await onCreateEntry({ path: nextPath, isDirectory: editingEntry.isDirectory });
-      } finally {
-        cancelRename();
-      }
-      return;
-    }
-
-    if (!onRenameEntry) {
-      cancelRename();
-      return;
-    }
-
-    const currentName = getEntryName(editingEntry.path);
-    if (nextName === currentName) {
-      cancelRename();
-      return;
-    }
-
-    try {
-      await onRenameEntry(editingEntry.path, nextName);
-    } finally {
-      cancelRename();
-    }
-  }, [cancelRename, editingEntry, editingName, onCreateEntry, onRenameEntry]);
-
-  const startCreate = useCallback(
-    (basePath: string, isDirectory: boolean) => {
-      if (!onCreateEntry) {
-        return;
-      }
-
-      const draftName = resolveUniqueChildName(files, basePath, isDirectory ? "new-folder" : "new-file");
-      if (basePath) {
-        setExpandedItems((currentItems) => [
-          ...new Set([...currentItems, ...collectAncestorDirectoryPaths(basePath), basePath]),
-        ]);
-      }
-      ignoreRenameBlurUntilRef.current = Date.now() + 150;
-      didApplyInitialSelectionRef.current = false;
-      setEditingEntry({
-        mode: "create",
-        path: joinChildPath(basePath, draftName),
-        basePath,
-        isDirectory,
-      });
-      setEditingName("");
-    },
-    [files, onCreateEntry, setExpandedItems],
-  );
-
-  const startRename = useCallback(
-    (targetPath: string, basePath: string) => {
-      if (!targetPath || !onRenameEntry) {
-        return;
-      }
-
-      ignoreRenameBlurUntilRef.current = Date.now() + 150;
-      didApplyInitialSelectionRef.current = false;
-      setEditingEntry({
-        mode: "rename",
-        path: targetPath,
-        basePath,
-        isDirectory: false,
-      });
-      setEditingName(getEntryName(targetPath));
-    },
-    [onRenameEntry],
-  );
-
-  const handleRenameInputKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLElement>) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        void commitRename();
-        return;
-      }
-
-      if (event.key === "Escape") {
-        event.preventDefault();
-        cancelRename();
-      }
-    },
-    [cancelRename, commitRename],
-  );
-
-  const handleRenameInputBlur = useCallback(() => {
-    if (Date.now() < ignoreRenameBlurUntilRef.current) {
-      return;
-    }
-
-    cancelRename();
-  }, [cancelRename]);
-
-  // ─── External paste handler ────────────────────────────────────────────────
+  }, [didApplyInitialSelectionRef, editingEntry, editingInputRef, editingName]);
 
   const handleExternalPaste = useCallback(
     async (event: ClipboardEvent<HTMLElement>) => {
@@ -338,8 +190,6 @@ export function FileTree({
     [directoryPaths, editingEntry, onDropExternalEntries, selectedEntryPath],
   );
 
-  // ─── Keyboard navigation ─────────────────────────────────────────────────
-
   const { handleTreeKeyDown } = useFileTreeKeyboard({
     visibleRows,
     rowByPath,
@@ -362,26 +212,6 @@ export function FileTree({
     onUndoLastEntryOperation,
   });
 
-  const selectFirstTreeEntryOnFocus = useCallback(() => {
-    if (selectedEntryPath) {
-      return;
-    }
-
-    if (selectionRequest?.path?.trim()) {
-      return;
-    }
-
-    const firstRow = visibleRows[0];
-    if (!firstRow) {
-      return;
-    }
-
-    setSelectedEntryPath(firstRow.path);
-    onSelectEntry?.({ path: firstRow.path, isDirectory: firstRow.isDirectory });
-  }, [onSelectEntry, selectedEntryPath, selectionRequest?.path, visibleRows]);
-
-  // ─── Render ──────────────────────────────────────────────────────────────
-
   return (
     <Box
       ref={scrollRef}
@@ -402,18 +232,14 @@ export function FileTree({
       }}
       onContextMenu={(event) => {
         event.preventDefault();
-        if (!onItemContextMenu) {
-          return;
-        }
-
-        onItemContextMenu({
+        onItemContextMenu?.({
           mouseX: event.clientX,
           mouseY: event.clientY,
           basePath: "",
           targetPath: "",
           targetIsDirectory: false,
-          startCreateFile: () => startCreate("", false),
-          startCreateFolder: () => startCreate("", true),
+          startCreateFile: () => handleStartCreate("", false),
+          startCreateFolder: () => handleStartCreate("", true),
         });
       }}
       onKeyDown={(event) => {
@@ -435,129 +261,36 @@ export function FileTree({
       onFocus={selectFirstTreeEntryOnFocus}
       tabIndex={0}
     >
-      <div style={{ height: virtualizer.getTotalSize(), width: "100%", position: "relative" }}>
-        {virtualizer.getVirtualItems().map((virtualItem) => {
-          const row = visibleRows[virtualItem.index];
-          if (!row) {
-            return null;
-          }
-
-          const isExpanded = expandedPathSet.has(row.path);
-          const isSelected = selectedEntryPath === row.path;
-          const isIgnored = ignoredPathSet.has(row.path);
-          const gitChangeKind = gitChangesByPathResolved[row.path];
-          const isEditing = editingEntry?.path === row.path;
-          const hasDescendantGitChange = row.isDirectory && ancestorOfGitChangePaths.has(row.path);
-
-          return (
-            <div
-              key={virtualItem.key}
-              data-index={virtualItem.index}
-              ref={virtualizer.measureElement}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                transform: `translateY(${virtualItem.start}px)`,
-              }}
-            >
-              <FlatTreeRow
-                row={row}
-                isSelected={isSelected}
-                isEditing={isEditing}
-                editingName={editingName}
-                editingInputRef={editingInputRef}
-                gitChangeKind={gitChangeKind}
-                hasDescendantGitChange={hasDescendantGitChange}
-                isIgnored={isIgnored}
-                isExpanded={isExpanded}
-                isLoading={loadingPaths.has(row.path)}
-                isDraggable={Boolean(worktreePath)}
-                absolutePath={worktreePath ? `${worktreePath}/${row.path}` : row.path}
-                isDropTarget={dropTargetPath != null && row.isDirectory && row.path === dropTargetPath}
-                onSelect={() => {
-                  setSelectedEntryPath(row.path);
-                  onSelectEntry?.({ path: row.path, isDirectory: row.isDirectory });
-                }}
-                onToggle={() => {
-                  if (row.isDirectory) {
-                    const isCurrentlyExpanded = expandedPathSet.has(row.path);
-                    if (!isCurrentlyExpanded && onEnsurePathLoaded) {
-                      const result = onEnsurePathLoaded(row.path);
-                      if (result instanceof Promise) {
-                        setLoadingPaths((prev) => new Set([...prev, row.path]));
-                        result.finally(() => {
-                          setLoadingPaths((prev) => {
-                            const next = new Set(prev);
-                            next.delete(row.path);
-                            return next;
-                          });
-                        });
-                      }
-                    }
-                  }
-                  setExpandedItems((items) => {
-                    const isCurrentlyExpanded = items.includes(row.path);
-                    return isCurrentlyExpanded ? items.filter((item) => item !== row.path) : [...items, row.path];
-                  });
-                }}
-                onOpen={() => {
-                  if (row.isDirectory) {
-                    if (onEnsurePathLoaded) {
-                      const result = onEnsurePathLoaded(row.path);
-                      if (result instanceof Promise) {
-                        setLoadingPaths((prev) => new Set([...prev, row.path]));
-                        result.finally(() => {
-                          setLoadingPaths((prev) => {
-                            const next = new Set(prev);
-                            next.delete(row.path);
-                            return next;
-                          });
-                        });
-                      }
-                    }
-                    setExpandedItems((items) => [...new Set([...items, row.path])]);
-                  } else {
-                    onOpenEntry?.({ path: row.path, isDirectory: false });
-                  }
-                }}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  if (!onItemContextMenu) {
-                    return;
-                  }
-
-                  setSelectedEntryPath(row.path);
-                  const basePath = row.isDirectory ? row.path : row.path.split("/").slice(0, -1).join("/");
-                  onItemContextMenu({
-                    mouseX: event.clientX,
-                    mouseY: event.clientY,
-                    basePath,
-                    targetPath: row.path,
-                    targetIsDirectory: row.isDirectory,
-                    startCreateFile: () => startCreate(row.isDirectory ? row.path : basePath, false),
-                    startCreateFolder: () => startCreate(row.isDirectory ? row.path : basePath, true),
-                    startRename: onRenameEntry
-                      ? () => startRename(row.path, row.isDirectory ? row.path : basePath)
-                      : undefined,
-                  });
-                }}
-                onEditingNameChange={setEditingName}
-                onRenameKeyDown={handleRenameInputKeyDown}
-                onRenameBlur={handleRenameInputBlur}
-                onDragOver={handleExternalDragOver}
-                onDragEnter={handleRowDragEnter}
-                onDragLeave={handleRowDragLeave}
-                onDrop={(event, targetPath, targetIsDirectory) => {
-                  void handleExternalDrop(event, targetPath, targetIsDirectory);
-                }}
-              />
-            </div>
-          );
-        })}
-      </div>
+      <FileTreeRows
+        visibleRows={visibleRows}
+        virtualizer={virtualizer}
+        expandedPathSet={expandedPathSet}
+        selectedEntryPath={selectedEntryPath}
+        ignoredPathSet={ignoredPathSet}
+        gitChangesByPath={gitChangesByPathResolved}
+        ancestorOfGitChangePaths={ancestorOfGitChangePaths}
+        editingEntry={editingEntry}
+        editingName={editingName}
+        editingInputRef={editingInputRef}
+        worktreePath={worktreePath}
+        dropTargetPath={dropTargetPath}
+        setSelectedEntryPath={setSelectedEntryPath}
+        setExpandedItems={setExpandedItems}
+        onSelectEntry={onSelectEntry}
+        onOpenEntry={onOpenEntry}
+        onEnsurePathLoaded={onEnsurePathLoaded}
+        onItemContextMenu={onItemContextMenu}
+        onRenameEntry={onRenameEntry}
+        startCreate={handleStartCreate}
+        startRename={startRename}
+        setEditingName={setEditingName}
+        handleRenameInputKeyDown={handleRenameInputKeyDown}
+        handleRenameInputBlur={handleRenameInputBlur}
+        handleExternalDragOver={handleExternalDragOver}
+        handleRowDragEnter={handleRowDragEnter}
+        handleRowDragLeave={handleRowDragLeave}
+        handleExternalDrop={handleExternalDrop}
+      />
     </Box>
   );
 }

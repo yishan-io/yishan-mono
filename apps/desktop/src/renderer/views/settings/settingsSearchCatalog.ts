@@ -21,7 +21,7 @@ import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, SUPPORTED_DESKTOP_AGENT_KINDS } from 
 import {
   NOTIFICATION_SETTINGS_SEARCH_ITEMS,
   type NotificationSettingsFocusItemId,
-} from "./notificationSettingsCatalog";
+} from "./notifications/notificationSettingsCatalog";
 
 export type SettingsTab =
   | "account"

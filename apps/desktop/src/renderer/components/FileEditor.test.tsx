@@ -8,7 +8,7 @@ import { FileEditor } from "./FileEditor";
 
 // Capture props passed to MarkdownPreview so tests can inspect findOpen etc.
 const capturedMarkdownPreviewProps: { current: Record<string, unknown> } = { current: {} };
-vi.mock("./MarkdownPreview", () => ({
+vi.mock("./markdown/MarkdownPreview", () => ({
   MarkdownPreview: (props: Record<string, unknown>) => {
     capturedMarkdownPreviewProps.current = props;
     return null;
