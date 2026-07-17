@@ -1,0 +1,601 @@
+{
+  "settings": {
+    "title": "Settings",
+    "back": "Back",
+    "searchPlaceholder": "Search settings...",
+    "searchNoResults": "No matching settings.",
+    "sections": {
+      "profile": "Profile",
+      "organization": "Organization",
+      "system": "System"
+    },
+    "items": {
+      "account": "Account",
+      "agents": "Agents",
+      "appearance": "Appearance",
+      "computerUse": "Computer Use",
+      "daemon": "Daemon",
+      "integrations": "Integrations",
+      "keybindings": "Keyboard Shortcuts",
+      "links": "Links",
+      "members": "Members",
+      "memory": "Memory",
+      "nodes": "Nodes",
+      "notifications": "Notifications",
+      "serviceTokens": "Service Tokens",
+      "skills": "Skills",
+      "terminal": "Terminal",
+      "workspace": "Workspace"
+    },
+    "nodes": {
+      "title": "Nodes",
+      "description": "Review the organization nodes available to your team and whether they are currently connected.",
+      "loadError": "Failed to load organization nodes.",
+      "empty": "No nodes are available for this organization.",
+      "columns": {
+        "name": "Node Name",
+        "type": "Node Type",
+        "kind": "Kind",
+        "version": "Version",
+        "owner": "Owner",
+        "status": "Status"
+      },
+      "kinds": {
+        "managed": "Managed",
+        "external": "External"
+      },
+      "types": {
+        "private": "Private",
+        "shared": "Shared"
+      },
+      "status": {
+        "online": "Online",
+        "offline": "Offline"
+      },
+      "values": {
+        "unknownOwner": "Unknown",
+        "unknownVersion": "Unknown"
+      },
+      "actions": {
+        "makeShared": "Make shared",
+        "makePrivate": "Make private",
+        "unregister": "Unregister node"
+      },
+      "scopeChangeDialog": {
+        "title": "Change node scope",
+        "toSharedDescription": "Making \"{{name}}\" shared will allow all organization members to use this node. Are you sure?",
+        "toPrivateDescription": "Making \"{{name}}\" private will restrict access to the node owner only. Any workspaces currently using this node may lose access. Are you sure?",
+        "confirm": "Change scope"
+      },
+      "unregisterDialog": {
+        "title": "Unregister node",
+        "description": "Unregistering \"{{name}}\" will remove it from this organization. Any workspaces using this node may lose access. Are you sure?",
+        "confirm": "Unregister"
+      }
+    },
+    "serviceTokens": {
+      "title": "Service Tokens",
+      "description": "Create and manage service tokens for authenticating the CLI on remote hosts without a browser login.",
+      "create": "Create token",
+      "loadError": "Failed to load service tokens.",
+      "empty": "No service tokens have been created yet.",
+      "copied": "Copied!",
+      "createdWarning": "Store this token securely \u2014 it will not be shown again.",
+      "columns": {
+        "name": "Name",
+        "token": "Token",
+        "lastUsed": "Last Used",
+        "expires": "Expires",
+        "status": "Status"
+      },
+      "status": {
+        "active": "Active",
+        "revoked": "Revoked",
+        "expired": "Expired"
+      },
+      "actions": {
+        "revoke": "Revoke token",
+        "copy": "Copy token"
+      },
+      "createDialog": {
+        "title": "Create service token",
+        "description": "Service tokens allow the CLI to authenticate on remote hosts without an interactive browser login. Use them for headless servers, CI pipelines, or any non-interactive environment.",
+        "nameLabel": "Token name",
+        "namePlaceholder": "e.g. prod-server, ci-runner",
+        "expiresLabel": "Expires in (days)",
+        "expiresPlaceholder": "e.g. 90",
+        "expiresHelp": "Leave empty for a token that never expires.",
+        "cancel": "Cancel",
+        "create": "Create",
+        "creating": "Creating\u2026"
+      },
+      "revokeDialog": {
+        "title": "Revoke service token",
+        "description": "Are you sure you want to revoke \"{{name}}\"? Any CLI or service using this token will immediately lose access.",
+        "cancel": "Cancel",
+        "confirm": "Revoke"
+      }
+    },
+    "members": {
+      "title": "Organization members",
+      "description": "Review who belongs to the cur organization and what access role each person has.",
+      "loadError": "Failed to load organization members.",
+      "empty": "No members are available for this organization.",
+      "addMember": "Add member",
+      "memberAdded": "Member added successfully.",
+      "memberRemoved": "Member removed successfully.",
+      "inviteSent": "Invitation sent. They will be added when they register.",
+      "leaveOrganization": "Leave organization",
+      "removeAriaLabel": "Remove member",
+      "dangerZone": {
+        "title": "Danger zone",
+        "leaveTitle": "Leave this organization",
+        "leaveDescription": "You will lose access to all projects, workspaces, and resources in this organization."
+      },
+      "removeDialog": {
+        "title": "Remove member?",
+        "description": "{{email}} will be removed from the organization and will lose access immediately.",
+        "confirm": "Remove member"
+      },
+      "leaveDialog": {
+        "title": "Leave organization?",
+        "description": "You will lose access to this organization and all its resources. This cannot be undone.",
+        "confirm": "Leave organization"
+      },
+      "addDialog": {
+        "title": "Add organization member",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "colleague@example.com",
+        "roleLabel": "Role",
+        "roles": {
+          "member": "Member",
+          "admin": "Admin"
+        },
+        "submit": "Add member",
+        "adding": "Adding...",
+        "errorEmailEmpty": "Email address cannot be empty."
+      },
+      "pendingInvites": {
+        "title": "Pending invitations",
+        "description": "These email addresses have been invited but have not yet registered.",
+        "loadError": "Failed to load pending invitations.",
+        "cancelAriaLabel": "Cancel invitation",
+        "cancelDialog": {
+          "title": "Cancel invitation?",
+          "description": "The invitation to {{email}} will be revoked. They will no longer be able to join this organization using it.",
+          "confirm": "Cancel invitation"
+        },
+        "columns": {
+          "email": "Email",
+          "role": "Role",
+          "expires": "Expires"
+        }
+      },
+      "columns": {
+        "member": "Member",
+        "email": "Email",
+        "role": "Role",
+        "userId": "User ID"
+      }
+    },
+    "account": {
+      "title": "Account profile",
+      "description": "Review the profile attached to your signed-in Yishan account.",
+      "loading": "Loading profile information...",
+      "empty": "No signed-in user profile is available.",
+      "avatarAlt": "User avatar",
+      "profile": {
+        "title": "User profile"
+      },
+      "organization": {
+        "title": "Current Organization",
+        "description": "Review your active organization, plan, and membership role."
+      },
+      "fields": {
+        "name": "Name",
+        "email": "Email",
+        "userId": "User ID",
+        "organization": "Name",
+        "plan": "Plan",
+        "role": "Role"
+      },
+      "usage": {
+        "title": "Usage",
+        "description": "Track monthly quotas and current consumption for account features.",
+        "voiceInput": "Voice input",
+        "minutes": "{{count}} min",
+        "summary": "{{used}} of {{total}} used ({{percent}}%)",
+        "unavailable": "Usage data is not available.",
+        "loadError": "Could not load usage data."
+      },
+      "values": {
+        "notAvailable": "Not available"
+      }
+    },
+    "git": {
+      "workspace": {
+        "title": "Workspace branch naming",
+        "description": "Configure one global branch naming rule for workspace creation.",
+        "prefixModeLabel": "Branch prefix",
+        "prefix": {
+          "none": "No prefix",
+          "user": "Git author",
+          "custom": "Custom"
+        },
+        "customPrefixLabel": "Custom prefix",
+        "previewLabel": "Preview"
+      }
+    },
+    "workspace": {
+      "title": "Workspace",
+      "description": "Manage default preferences used for workspace and project setup.",
+      "loading": "Loading workspace settings...",
+      "defaultContext": {
+        "label": "Enable default context",
+        "description": "When enabled, new projects and workspaces create and link the .my-context folder by default.",
+        "status": {
+          "enabled": "Enabled",
+          "disabled": "Disabled"
+        }
+      },
+      "errors": {
+        "saveFailed": "Failed to save workspace setting: {{message}}"
+      }
+    },
+    "agents": {
+      "title": "Agents",
+      "description": "Manage which agents are available in tab creation and verify local CLI detection.",
+      "loadError": "Failed to load agent detection statuses.",
+      "inUse": "In use",
+      "default": {
+        "label": "Default agent",
+        "ariaLabel": "Set default agent"
+      },
+      "actions": {
+        "rescanAll": "Rescan All"
+      },
+      "status": {
+        "checking": "Checking...",
+        "detected": "Detected",
+        "versionPrefix": "Version:",
+        "versionUnknown": "Version: unknown",
+        "detectedVersion": "Detected version: {{version}}",
+        "detectedVersionUnknown": "Detected version: unknown",
+        "notDetected": "Not detected"
+      },
+      "command": {
+        "label": "Command",
+        "placeholder": "{{defaultCommand}}",
+        "resetAriaLabel": "Reset to default command",
+        "errorEmpty": "Command cannot be empty.",
+        "errorTooLong": "Command is too long (max 2048 characters)."
+      },
+      "items": {
+        "opencode": "OpenCode",
+        "codex": "Codex",
+        "claude": "Claude",
+        "gemini": "Gemini",
+        "pi": "Pi",
+        "copilot": "GitHub Copilot",
+        "cursor": "Cursor"
+      }
+    },
+    "cliTools": {
+      "title": "CLI Tools",
+      "description": "Manage local CLI tools used by agents and integrations.",
+      "loadError": "Failed to load CLI tool statuses.",
+      "actions": {
+        "rescanAll": "Rescan All"
+      }
+    },
+    "integrations": {
+      "title": "Integrations",
+      "description": "View the connection status of external services.",
+      "loadError": "Failed to load integration statuses.",
+      "actions": {
+        "recheckAll": "Recheck All"
+      },
+      "status": {
+        "checking": "Checking...",
+        "connected": "Connected"
+      },
+      "github": {
+        "label": "GitHub",
+        "description": "GitHub CLI (gh) connection status",
+        "connectedAs": "Connected as {{username}}",
+        "notInstalled": "CLI not installed",
+        "notLoggedIn": "Not logged in"
+      }
+    },
+    "skills": {
+      "title": "Agent Skills",
+      "description": "Browse official skills, install third-party skills from a source, and manage skill lifecycle from the desktop.",
+      "loadError": "Failed to load skill statuses.",
+      "installed": "Installed",
+      "notInstalled": "Not installed",
+      "official": "Official",
+      "thirdParty": "Third-party",
+      "sourceLabel": "Install from source",
+      "sourcePlaceholder": "Official name or URL",
+      "confirmRemoveTitle": "Remove skill?",
+      "confirmRemoveDescription": "Are you sure you want to remove \"{{name}}\"?",
+      "instruction": "Instruction",
+      "success": "Skill installed. Restart your agent to take effect.",
+      "actions": {
+        "add": "Add",
+        "adding": "Adding...",
+        "cancel": "Cancel",
+        "install": "Install",
+        "installing": "Installing...",
+        "update": "Update",
+        "updating": "Updating...",
+        "uninstall": "Uninstall",
+        "uninstalling": "Uninstalling..."
+      }
+    },
+    "appearance": {
+      "theme": {
+        "title": "Theme",
+        "description": "Choose how Yishan looks across the app.",
+        "options": {
+          "light": "Light",
+          "dark": "Dark",
+          "system": "System theme"
+        }
+      },
+      "markdown": {
+        "title": "Markdown",
+        "description": "Configure how markdown files open in the editor.",
+        "theme": {
+          "label": "Preview theme",
+          "description": "Choose whether markdown preview inherits the app theme or stays light/dark independently.",
+          "options": {
+            "inherit": "Inherit app theme",
+            "light": "Light",
+            "dark": "Dark"
+          }
+        },
+        "defaultViewMode": {
+          "label": "Default markdown view mode",
+          "description": "Choose how markdown files open by default.",
+          "options": {
+            "edit": "Edit",
+            "preview": "Preview",
+            "split": "Split"
+          }
+        },
+        "previewFontSize": {
+          "label": "Preview font size",
+          "description": "Control text size in markdown preview.",
+          "options": {
+            "small": "Small",
+            "medium": "Medium",
+            "large": "Large"
+          }
+        },
+        "previewWidth": {
+          "label": "Preview width",
+          "description": "Choose whether preview spans full width or uses a readable column.",
+          "options": {
+            "readable": "Readable column",
+            "full": "Full width"
+          }
+        },
+        "outlineVisible": {
+          "label": "Show markdown outline",
+          "description": "Display the document outline beside markdown files."
+        }
+      }
+    },
+    "language": {
+      "title": "Language",
+      "description": "Choose your preferred app language.",
+      "selectLabel": "Application language",
+      "errors": {
+        "saveFailed": "Failed to save language preference."
+      },
+      "options": {
+        "en": "English",
+        "zh": "Chinese"
+      }
+    },
+    "links": {
+      "title": "Link opening behavior",
+      "description": "Choose where HTTP links open inside the app.",
+      "targetLabel": "Open links in",
+      "options": {
+        "built-in": "Built-in browser",
+        "external": "System default browser"
+      }
+    },
+    "daemon": {
+      "title": "Daemon",
+      "description": "Inspect the local daemon used for workspaces, terminals, and background services.",
+      "loadError": "Failed to load daemon status.",
+      "actions": {
+        "refresh": "Refresh"
+      },
+      "status": {
+        "running": "Running",
+        "unavailable": "Unavailable"
+      },
+      "rows": {
+        "status": "Status",
+        "version": "Version",
+        "id": "Daemon ID",
+        "websocket": "WebSocket endpoint"
+      },
+      "values": {
+        "unknown": "Unknown"
+      },
+      "controls": {
+        "title": "Daemon Controls",
+        "description": "Manage daemon lifecycle and shutdown behavior."
+      },
+      "restart": {
+        "label": "Restart Daemon",
+        "description": "Stop and start the local daemon process.",
+        "action": "Restart",
+        "inProgress": "Restarting\u2026",
+        "success": "Daemon restarted successfully.",
+        "failed": "Failed to restart daemon.",
+        "terminalCloseFailed": "Failed to close terminal sessions. Please close them manually and try again.",
+        "confirmTitle": "Restart daemon?",
+        "confirmMessage": "All terminal sessions will be closed and their running processes terminated. This action cannot be undone."
+      },
+      "quitOnExit": {
+        "label": "Quit daemon before app exits",
+        "description": "When enabled, the daemon is stopped before the desktop app exits. When disabled, the daemon continues running in the background."
+      },
+      "log": {
+        "label": "Daemon Log",
+        "description": "View the raw daemon log entries for troubleshooting and diagnostics.",
+        "action": "Show Log",
+        "title": "Daemon Log"
+      },
+      "relay": {
+        "title": "Relay Connection",
+        "description": "Status of the outbound relay connection used for remote access.",
+        "rows": {
+          "status": "Connection",
+          "url": "Relay address",
+          "connectedAt": "Connected since",
+          "lastError": "Last error"
+        },
+        "status": {
+          "connected": "Connected",
+          "disconnected": "Disconnected",
+          "disabled": "Disabled"
+        }
+      },
+      "cli": {
+        "title": "Yishan CLI",
+        "description": "Install yishan in your terminal to use AI agent workflows directly from your shell, scripts, and remote SSH sessions.",
+        "rows": {
+          "status": "Status",
+          "detectedPath": "Detected command path",
+          "installPath": "Managed install path",
+          "mode": "Install mode"
+        },
+        "status": {
+          "installed": "Installed",
+          "notInstalled": "Not installed"
+        },
+        "mode": {
+          "managed": "Managed by desktop app",
+          "external": "External install"
+        },
+        "install": {
+          "action": "Install",
+          "inProgress": "Installing..."
+        },
+        "uninstall": {
+          "action": "Uninstall",
+          "inProgress": "Uninstalling..."
+        }
+      }
+    },
+    "computerUse": {
+      "title": "Computer Use",
+      "experimental": "Experimental",
+      "description": "Review the macOS permissions Computer Use depends on and what each permission unlocks for agents.",
+      "approvalNotice": "Mutating Computer Use actions still require approval when called by an agent.",
+      "status": {
+        "granted": "Granted",
+        "denied": "Permission required",
+        "unknown": "Unknown",
+        "notRequired": "Not required",
+        "notRequested": "Not requested",
+        "checkManually": "Check manually",
+        "entitled": "Entitled"
+      },
+      "permissions": {
+        "accessibility": "Accessibility",
+        "screenRecording": "Screen Recording",
+        "inputMonitoring": "Input Monitoring",
+        "automation": "Automation",
+        "camera": "Camera",
+        "fullDiskAccess": "Full Disk Access",
+        "localNetwork": "Local Network",
+        "usbDevices": "USB Devices",
+        "bluetooth": "Bluetooth",
+        "accessibilityDescription": "Required for UI inspection, UI actions, mouse control, and keyboard input.",
+        "screenRecordingDescription": "Required for display and window screenshot capture.",
+        "inputMonitoringDescription": "Used by some systems to gate global input delivery. Check manually if input tools are unreliable.",
+        "automationDescription": "Used for app-to-app automation paths when the runtime needs Apple Events in future workflows.",
+        "cameraDescription": "Webcam capture and camera-driven local test apps. Not currently used by the Computer Use runtime.",
+        "fullDiskAccessDescription": "Persistent access to protected folders from terminal sessions and future local automation workflows.",
+        "localNetworkDescription": "Discovery and access for development servers on your network. Reserved for future runtime support.",
+        "usbDevicesDescription": "Hardware debugging and device tools that talk to USB devices. Reserved for future runtime support.",
+        "bluetoothDescription": "Bluetooth device tools and local hardware experiments. Reserved for future runtime support.",
+        "openAccessibilityButton": "Open Accessibility",
+        "openScreenRecordingButton": "Open Screen Recording",
+        "openCameraButton": "Open Camera",
+        "openLocalNetworkButton": "Open Local Network",
+        "openSettingsButton": "Open Settings",
+        "triggerPromptButton": "Trigger Prompt"
+      }
+    },
+    "terminal": {
+      "voice": {
+        "title": "Voice input",
+        "description": "Show a floating microphone button on terminal tabs and transcribe speech into terminal input.",
+        "enable": {
+          "label": "Enable voice input",
+          "description": "When enabled, terminal tabs show a microphone button for recording up to 60 seconds of speech."
+        },
+        "autoEnter": {
+          "label": "Auto-submit after transcription",
+          "description": "Automatically press Enter after transcribed text is inserted into the terminal."
+        }
+      },
+      "title": "Terminal sessions",
+      "description": "Review all running terminals and stop sessions from one place.",
+      "loadError": "Failed to load terminal sessions.",
+      "empty": "No terminal sessions found.",
+      "noRunningSessions": "No running sessions right now.",
+      "columns": {
+        "session": "Session",
+        "workspace": "Workspace",
+        "repo": "Project",
+        "pid": "PID",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "unknownWorkspace": "Unknown workspace",
+      "unknownRepo": "Unknown project",
+      "status": {
+        "running": "Running",
+        "exited": "Exited"
+      },
+      "actions": {
+        "kill": "KILL",
+        "killing": "KILLING..."
+      }
+    },
+    "memory": {
+      "title": "Memory",
+      "description": "Configure project memory summarization and indexing for your workspaces.",
+      "summarizer": {
+        "title": "Session Summarizer",
+        "description": "When enabled, the daemon will automatically summarize each agent session using an external LLM and update your .my-context/MEMORY.md file.",
+        "enabled": {
+          "label": "Enable session summarization",
+          "description": "After each agent session, extract technical decisions, discoveries, and errors into the project memory file."
+        },
+        "agentKind": {
+          "label": "Summarizer agent",
+          "description": "The agent CLI used to run the summarization prompt."
+        },
+        "model": {
+          "label": "Model",
+          "description": "Optional model override. Leave empty to use the agent's default model.",
+          "placeholder": "e.g. gpt-4o-mini",
+          "defaultOption": "Use agent default",
+          "refresh": "Refresh model list"
+        }
+      }
+    },
+    "comingSoon": "This settings page is coming soon."
+  }
+}

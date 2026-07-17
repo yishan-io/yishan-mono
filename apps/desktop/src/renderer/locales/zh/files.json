@@ -1,0 +1,75 @@
+{
+  "files": {
+    "files": "\u6587\u4ef6",
+    "all": "\u5168\u90e8\u6587\u4ef6",
+    "changes": "\u53d8\u66f4",
+    "checks": "\u68c0\u67e5",
+    "actions": {
+      "createFile": "\u521b\u5efa\u6587\u4ef6",
+      "createFolder": "\u521b\u5efa\u6587\u4ef6\u5939",
+      "rename": "\u91cd\u547d\u540d",
+      "delete": "\u5220\u9664",
+      "copy": "\u590d\u5236",
+      "cut": "\u526a\u5207",
+      "paste": "\u7c98\u8d34",
+      "copyPath": "\u590d\u5236\u8def\u5f84",
+      "copyRelativePath": "\u590d\u5236\u76f8\u5bf9\u8def\u5f84",
+      "openInFinder": "\u5728 Finder \u4e2d\u6253\u5f00",
+      "openInExplorer": "\u5728\u8d44\u6e90\u7ba1\u7406\u5668\u4e2d\u6253\u5f00",
+      "openInExternalAppQuick": "\u5728 {{app}} \u4e2d\u6253\u5f00",
+      "openInExternalApp": "\u5728\u5176\u4ed6\u5e94\u7528\u4e2d\u6253\u5f00...",
+      "refresh": "\u5237\u65b0"
+    },
+    "createFile": {
+      "prompt": "\u65b0\u6587\u4ef6\u540d"
+    },
+    "createFolder": {
+      "prompt": "\u65b0\u6587\u4ef6\u5939\u540d"
+    },
+    "delete": {
+      "confirmFile": "\u5220\u9664\u6587\u4ef6 '{{path}}'\uff1f",
+      "confirmDirectory": "\u5220\u9664\u6587\u4ef6\u5939 '{{path}}' \u53ca\u5176\u6240\u6709\u5185\u5bb9\uff1f"
+    },
+    "search": {
+      "title": "\u641c\u7d22\u6587\u4ef6",
+      "inputPlaceholder": "\u641c\u7d22\u6587\u4ef6",
+      "placeholder": "\u6309\u6587\u4ef6\u540d\u6216\u8def\u5f84\u641c\u7d22",
+      "empty": "\u6ca1\u6709\u5339\u914d\u7684\u6587\u4ef6\u3002"
+    },
+    "git": {
+      "unstaged": "\u672a\u6682\u5b58",
+      "staged": "\u5df2\u6682\u5b58",
+      "untracked": "\u672a\u8ddf\u8e2a",
+      "commitPlaceholder": "\u8f93\u5165\u63d0\u4ea4\u4fe1\u606f",
+      "commitTracked": "\u63d0\u4ea4\u5df2\u8ddf\u8e2a",
+      "commit": "\u63d0\u4ea4",
+      "push": "\u63a8\u9001",
+      "publishBranch": "\u53d1\u5e03\u5206\u652f",
+      "commitOptions": "\u63d0\u4ea4\u9009\u9879",
+      "amend": "\u4fee\u8ba2",
+      "amendShortcut": "\u2318\u21a9",
+      "signoff": "\u7b7e\u540d",
+      "targetBranch": "\u76ee\u6807\u5206\u652f",
+      "changeScope": "\u66f4\u6539\u8303\u56f4",
+      "commitListTitle": "\u63d0\u4ea4\u5230 {{targetBranch}}",
+      "commitListCompare": "{{currentBranch}} -> {{targetBranch}}"
+    },
+    "operations": {
+      "failed": "\u6587\u4ef6\u64cd\u4f5c\u5931\u8d25\u3002",
+      "modes": {
+        "copy": "\u590d\u5236\u4e2d",
+        "move": "\u79fb\u52a8\u4e2d",
+        "import": "\u5bfc\u5165\u4e2d"
+      },
+      "progress": "{{mode}} {{processed}} / {{total}}",
+      "progressWithPath": "{{mode}} {{processed}} / {{total}} \u00b7 {{path}}"
+    },
+    "unsupported": {
+      "title": "\u4e0d\u652f\u6301\u7684\u6587\u4ef6\u7c7b\u578b",
+      "description": "\u5f53\u524d\u6682\u4e0d\u652f\u6301\u5728\u7f16\u8f91\u5668\u6807\u7b7e\u9875\u4e2d\u6253\u5f00\u8be5\u6587\u4ef6\u7c7b\u578b\u3002",
+      "descriptionLarge": "\u8be5\u6587\u4ef6\u8fc7\u5927\uff0c\u65e0\u6cd5\u5b89\u5168\u5730\u5728\u7f16\u8f91\u5668\u6807\u7b7e\u9875\u4e2d\u6253\u5f00\u3002",
+      "hint": "\u5efa\u8bae\u4f7f\u7528\u5916\u90e8\u5e94\u7528\u6253\u5f00\u3002",
+      "hintLarge": "\u5efa\u8bae\u4f7f\u7528\u5916\u90e8\u5e94\u7528\u6216\u547d\u4ee4\u884c\u5de5\u5177\u67e5\u770b\u5927\u6587\u4ef6\u3002"
+    }
+  }
+}

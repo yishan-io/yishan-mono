@@ -1,0 +1,27 @@
+{
+  "terminal": {
+    "title": "Terminal",
+    "resourceUsage": {
+      "summary": "CPU: {{cpu}} \u00b7 MEM: {{memory}}",
+      "leftPaneSummary": "MEM: {{memory}}",
+      "toggleLabel": "Show resource usage",
+      "empty": "No active subprocesses",
+      "columns": {
+        "repo": "Repo",
+        "process": "Process",
+        "pid": "PID",
+        "cpu": "CPU",
+        "memory": "Memory"
+      }
+    },
+    "ports": {
+      "summary": "{{count}} ports",
+      "toggleLabel": "Show detected ports",
+      "columns": {
+        "addressPort": "Address:Port",
+        "pid": "PID",
+        "processName": "Process"
+      }
+    }
+  }
+}

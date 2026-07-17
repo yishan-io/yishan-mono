@@ -1,0 +1,15 @@
+{
+  "onboarding": {
+    "firstOrganization": {
+      "title": "Create your first organization",
+      "description": "Organizations keep projects, workspaces, and shared nodes together. Create one to start using Yishan.",
+      "submit": "Create organization",
+      "creating": "Creating..."
+    },
+    "firstProject": {
+      "title": "Create your first project",
+      "description": "{{organizationName}} does not have any projects yet. Add a local folder or remote Git repository to start working.",
+      "submit": "Create first project"
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "keybindings": {
+    "title": "Keyboard shortcuts",
+    "subtitle": "All supported key bindings in the desktop workspace.",
+    "back": "Back to workspace",
+    "columns": {
+      "action": "Action",
+      "current": "Shortcut",
+      "override": "Override",
+      "mac": "macOS",
+      "windows": "Windows/Linux"
+    },
+    "remap": "Remap",
+    "reset": "Reset",
+    "resetAll": "Reset all",
+    "inputHint": "Press shortcut",
+    "invalidInput": "Invalid shortcut format",
+    "conflictWarning": "Some shortcuts conflict. The first match will run.",
+    "conflictWith": "Conflicts on {{keys}}",
+    "pendingConflict": "Conflicts with: {{action}}",
+    "captureConflict": "Conflicts with: {{actions}}",
+    "scope": {
+      "global": "Global",
+      "workspace": "Workspace"
+    },
+    "actions": {
+      "openKeybindings": "Open keyboard shortcuts",
+      "backToWorkspace": "Return to organization view from shortcuts",
+      "newTab": "Create a new chat tab",
+      "createWorkspace": "Create a new workspace",
+      "closeTab": "Close selected tab",
+      "closeWorkspace": "Close selected workspace",
+      "openTerminal": "Open terminal tab",
+      "openBrowser": "Open browser tab",
+      "activateRepoPane": "Activate repository pane",
+      "activateFilesPane": "Activate files pane",
+      "activateChangesPane": "Activate changes pane",
+      "activatePrPane": "Activate pull request pane",
+      "toggleLeftPane": "Toggle left sidebar",
+      "toggleRightPane": "Toggle right sidebar",
+      "openFileSearch": "Open file search",
+      "openSelectedFileInExternalApp": "Open selected workspace in latest external app",
+      "deleteSelectedFileTreeEntry": "Delete selected file tree entry",
+      "undoFileTreeOperation": "Undo last file tree operation",
+      "selectTabByIndex": "Switch to tab by index",
+      "toggleVoiceInput": "Start voice recording",
+      "selectPreviousWorkspace": "Select previous workspace",
+      "selectNextWorkspace": "Select next workspace"
+    }
+  }
+}

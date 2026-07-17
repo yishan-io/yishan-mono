@@ -1,0 +1,119 @@
+{
+  "scheduledJob": {
+    "title": "\u5b9a\u65f6\u4efb\u52a1",
+    "loadError": "\u52a0\u8f7d\u81ea\u52a8\u4efb\u52a1\u5931\u8d25\u3002",
+    "empty": "\u5f53\u524d\u7ec4\u7ec7\u5c1a\u672a\u914d\u7f6e\u81ea\u52a8\u4efb\u52a1\u3002",
+    "status": {
+      "active": "\u8fd0\u884c\u4e2d",
+      "paused": "\u5df2\u6682\u505c",
+      "disabled": "\u5df2\u7981\u7528"
+    },
+    "lastRun": {
+      "succeeded": "\u6700\u8fd1\u4e00\u6b21\u8fd0\u884c\u6210\u529f",
+      "failed": "\u6700\u8fd1\u4e00\u6b21\u8fd0\u884c\u5931\u8d25"
+    },
+    "columns": {
+      "name": "\u540d\u79f0",
+      "project": "\u9879\u76ee",
+      "schedule": "\u8ba1\u5212",
+      "agent": "\u667a\u80fd\u4f53",
+      "status": "\u72b6\u6001",
+      "lastRun": "\u6700\u8fd1\u8fd0\u884c",
+      "nextRun": "\u4e0b\u6b21\u8fd0\u884c"
+    },
+    "runs": {
+      "title": "\u8fd0\u884c\u5386\u53f2",
+      "refresh": "\u5237\u65b0",
+      "empty": "\u6682\u65e0\u8fd0\u884c\u8bb0\u5f55\u3002",
+      "resizeLabel": "\u8c03\u6574\u8fd0\u884c\u5386\u53f2\u9762\u677f\u5927\u5c0f",
+      "nextRun": "\u4e0b\u6b21\u8fd0\u884c",
+      "status": {
+        "pending": "\u7b49\u5f85\u4e2d",
+        "running": "\u8fd0\u884c\u4e2d",
+        "succeeded": "\u6210\u529f",
+        "failed": "\u5931\u8d25",
+        "skipped_offline": "\u5df2\u8df3\u8fc7"
+      }
+    },
+    "detail": {
+      "back": "\u8fd4\u56de\u81ea\u52a8\u4efb\u52a1",
+      "fields": {
+        "name": "\u540d\u79f0",
+        "status": "\u72b6\u6001",
+        "project": "\u9879\u76ee",
+        "node": "\u8282\u70b9",
+        "cronExpression": "\u8ba1\u5212",
+        "timezone": "\u65f6\u533a",
+        "nextRunAt": "\u4e0b\u6b21\u8fd0\u884c",
+        "agentKind": "\u667a\u80fd\u4f53",
+        "prompt": "\u63d0\u793a\u8bcd",
+        "model": "\u6a21\u578b",
+        "command": "\u547d\u4ee4",
+        "lastRunAt": "\u6700\u8fd1\u8fd0\u884c",
+        "lastError": "\u6700\u8fd1\u9519\u8bef",
+        "createdAt": "\u521b\u5efa\u65f6\u95f4",
+        "updatedAt": "\u66f4\u65b0\u65f6\u95f4"
+      }
+    },
+    "delete": {
+      "title": "\u5220\u9664\u81ea\u52a8\u4efb\u52a1\uff1f",
+      "description": "\"{{name}}\" \u5c06\u88ab\u7981\u7528\u5e76\u505c\u6b62\u8fd0\u884c\u3002\u6b64\u64cd\u4f5c\u4e0d\u53ef\u64a4\u9500\u3002",
+      "confirm": "\u5220\u9664"
+    },
+    "edit": {
+      "title": "\u7f16\u8f91\u81ea\u52a8\u4efb\u52a1",
+      "save": "\u4fdd\u5b58"
+    },
+    "actions": {
+      "pause": "\u6682\u505c",
+      "resume": "\u6062\u590d",
+      "retry": "\u91cd\u8bd5",
+      "new": "\u65b0\u5efa",
+      "edit": "\u7f16\u8f91",
+      "runNow": "\u7acb\u5373\u8fd0\u884c",
+      "delete": "\u5220\u9664",
+      "close": "\u5173\u95ed",
+      "openDetails": "\u67e5\u770b {{name}} \u8be6\u60c5"
+    },
+    "form": {
+      "title": "\u65b0\u5efa\u81ea\u52a8\u4efb\u52a1",
+      "name": "\u540d\u79f0",
+      "namePlaceholder": "\u6211\u7684\u6bcf\u65e5\u4efb\u52a1",
+      "runbook": "\u8fd0\u884c\u624b\u518c",
+      "runbookHint": "\u6bcf\u6b21\u8fd0\u884c\u65f6\u90fd\u4f1a\u63d0\u4f9b\u7ed9\u667a\u80fd\u4f53\u8bfb\u53d6",
+      "configuration": "\u914d\u7f6e",
+      "scheduleSection": "\u8c03\u5ea6",
+      "quickSchedule": "\u5feb\u901f\u8ba1\u5212",
+      "time": "\u65f6\u95f4",
+      "weekday": "\u661f\u671f",
+      "scheduleTypes": {
+        "daily": "\u6bcf\u5929",
+        "weekly": "\u6bcf\u5468",
+        "weekday": "\u5de5\u4f5c\u65e5",
+        "hourly": "\u6bcf\u5c0f\u65f6",
+        "custom": "\u81ea\u5b9a\u4e49"
+      },
+      "weekdays": {
+        "monday": "\u5468\u4e00",
+        "tuesday": "\u5468\u4e8c",
+        "wednesday": "\u5468\u4e09",
+        "thursday": "\u5468\u56db",
+        "friday": "\u5468\u4e94",
+        "saturday": "\u5468\u516d",
+        "sunday": "\u5468\u65e5"
+      },
+      "project": "\u9879\u76ee",
+      "node": "\u8282\u70b9",
+      "agentKind": "\u667a\u80fd\u4f53",
+      "cronExpression": "\u8ba1\u5212\uff08Cron\uff09",
+      "cronExpressionPlaceholder": "0 9 * * 1-5",
+      "timezone": "\u65f6\u533a",
+      "nextRunEstimate": "\u4e0b\u6b21\u8fd0\u884c\uff1a{{value}}",
+      "nextRunEstimateUnavailable": "\u4e0b\u6b21\u8fd0\u884c\uff1a\u65e0\u6cd5\u8ba1\u7b97",
+      "prompt": "\u63d0\u793a\u8bcd",
+      "promptPlaceholder": "\u63cf\u8ff0\u667a\u80fd\u4f53\u9700\u8981\u6267\u884c\u7684\u4efb\u52a1...",
+      "submit": "\u521b\u5efa",
+      "creating": "\u521b\u5efa\u4e2d..."
+    }
+  }
+}

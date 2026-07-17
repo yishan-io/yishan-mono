@@ -1,0 +1,20 @@
+{
+  "layout": {
+    "sidebarTitle": "\u4fa7\u8fb9\u680f",
+    "fileExplorerTitle": "\u6587\u4ef6\u6d4f\u89c8\u5668",
+    "toggleSidebar": "\u4fa7\u8fb9\u680f",
+    "toggleLeftSidebar": "\u5207\u6362\u5de6\u4fa7\u8fb9\u680f",
+    "toggleRightSidebar": "\u5207\u6362\u53f3\u4fa7\u8fb9\u680f",
+    "toggleWithShortcut": "{{label}}\uff08{{shortcut}}\uff09",
+    "resize": {
+      "left": "\u8c03\u6574\u5de6\u4fa7\u8fb9\u680f",
+      "right": "\u8c03\u6574\u53f3\u4fa7\u8fb9\u680f"
+    },
+    "shortcuts": "\u5feb\u6377\u952e\uff1aCtrl/Cmd+B \u5207\u6362\u5de6\u4fa7\u8fb9\u680f\uff0cCtrl/Cmd+L \u5207\u6362\u53f3\u4fa7\u8fb9\u680f\u3002",
+    "rightTabs": {
+      "details": "\u8be6\u60c5",
+      "integrations": "\u96c6\u6210"
+    },
+    "unavailable": "\u4e0d\u53ef\u7528"
+  }
+}

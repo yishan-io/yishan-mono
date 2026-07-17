@@ -1,0 +1,28 @@
+{
+  "tabs": {
+    "untitled": "Untitled",
+    "new": "New tab",
+    "createMenu": {
+      "label": "Create",
+      "chat": "Chat",
+      "browser": "Browser",
+      "opencode": "OpenCode",
+      "codex": "Codex",
+      "claude": "Claude",
+      "gemini": "Gemini",
+      "pi": "Pi",
+      "copilot": "GitHub Copilot",
+      "cursor": "Cursor"
+    },
+    "renameA11y": "Rename tab",
+    "actions": {
+      "keepOpen": "Keep Open",
+      "rename": "Rename",
+      "pin": "Pin Tab",
+      "unpin": "Unpin Tab",
+      "close": "Close",
+      "closeOthers": "Close Others",
+      "closeAll": "Close All"
+    }
+  }
+}

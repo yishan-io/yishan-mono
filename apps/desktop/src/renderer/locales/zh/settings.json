@@ -1,0 +1,564 @@
+{
+  "settings": {
+    "title": "\u8bbe\u7f6e",
+    "back": "\u8fd4\u56de",
+    "searchPlaceholder": "\u641c\u7d22\u8bbe\u7f6e...",
+    "searchNoResults": "\u6ca1\u6709\u5339\u914d\u7684\u8bbe\u7f6e\u9879\u3002",
+    "sections": {
+      "profile": "\u4e2a\u4eba\u8d44\u6599",
+      "organization": "\u7ec4\u7ec7",
+      "system": "\u7cfb\u7edf"
+    },
+    "items": {
+      "account": "\u8d26\u53f7",
+      "agents": "\u667a\u80fd\u4f53",
+      "appearance": "\u5916\u89c2",
+      "computerUse": "\u8ba1\u7b97\u673a\u4f7f\u7528",
+      "daemon": "\u5b88\u62a4\u8fdb\u7a0b",
+      "integrations": "\u96c6\u6210",
+      "keybindings": "\u952e\u76d8\u5feb\u6377\u952e",
+      "links": "\u94fe\u63a5",
+      "members": "\u6210\u5458",
+      "memory": "\u8bb0\u5fc6",
+      "nodes": "\u8282\u70b9",
+      "notifications": "\u901a\u77e5",
+      "serviceTokens": "\u670d\u52a1\u4ee4\u724c",
+      "skills": "\u6280\u80fd",
+      "terminal": "\u7ec8\u7aef",
+      "workspace": "\u5de5\u4f5c\u533a"
+    },
+    "nodes": {
+      "title": "\u8282\u70b9",
+      "description": "\u67e5\u770b\u56e2\u961f\u53ef\u7528\u7684\u7ec4\u7ec7\u8282\u70b9\u53ca\u5176\u5f53\u524d\u8fde\u63a5\u72b6\u6001\u3002",
+      "loadError": "\u52a0\u8f7d\u7ec4\u7ec7\u8282\u70b9\u5931\u8d25\u3002",
+      "empty": "\u6b64\u7ec4\u7ec7\u6682\u65e0\u53ef\u7528\u8282\u70b9\u3002",
+      "columns": {
+        "name": "\u8282\u70b9\u540d\u79f0",
+        "type": "\u8282\u70b9\u7c7b\u578b",
+        "kind": "\u6765\u6e90",
+        "version": "\u7248\u672c",
+        "owner": "\u6240\u6709\u8005",
+        "status": "\u72b6\u6001"
+      },
+      "kinds": {
+        "managed": "\u6258\u7ba1",
+        "external": "\u5916\u90e8"
+      },
+      "types": {
+        "private": "\u79c1\u6709",
+        "shared": "\u5171\u4eab"
+      },
+      "status": {
+        "online": "\u5728\u7ebf",
+        "offline": "\u79bb\u7ebf"
+      },
+      "values": {
+        "unknownOwner": "\u672a\u77e5",
+        "unknownVersion": "\u672a\u77e5"
+      },
+      "actions": {
+        "makeShared": "\u8bbe\u4e3a\u5171\u4eab",
+        "makePrivate": "\u8bbe\u4e3a\u79c1\u6709",
+        "unregister": "\u6ce8\u9500\u8282\u70b9"
+      },
+      "scopeChangeDialog": {
+        "title": "\u66f4\u6539\u8282\u70b9\u8303\u56f4",
+        "toSharedDescription": "\u5c06\u201c{{name}}\u201d\u8bbe\u4e3a\u5171\u4eab\u540e\uff0c\u7ec4\u7ec7\u5185\u6240\u6709\u6210\u5458\u90fd\u53ef\u4ee5\u4f7f\u7528\u8be5\u8282\u70b9\u3002\u786e\u5b9a\u5417\uff1f",
+        "toPrivateDescription": "\u5c06\u201c{{name}}\u201d\u8bbe\u4e3a\u79c1\u6709\u540e\uff0c\u53ea\u6709\u8282\u70b9\u6240\u6709\u8005\u53ef\u4ee5\u4f7f\u7528\u3002\u5f53\u524d\u4f7f\u7528\u8be5\u8282\u70b9\u7684\u5de5\u4f5c\u533a\u53ef\u80fd\u4f1a\u5931\u53bb\u8bbf\u95ee\u6743\u9650\u3002\u786e\u5b9a\u5417\uff1f",
+        "confirm": "\u66f4\u6539\u8303\u56f4"
+      },
+      "unregisterDialog": {
+        "title": "\u6ce8\u9500\u8282\u70b9",
+        "description": "\u6ce8\u9500\u201c{{name}}\u201d\u540e\uff0c\u5b83\u5c06\u4ece\u5f53\u524d\u7ec4\u7ec7\u79fb\u9664\u3002\u6b63\u5728\u4f7f\u7528\u8be5\u8282\u70b9\u7684\u5de5\u4f5c\u533a\u53ef\u80fd\u4f1a\u5931\u53bb\u8bbf\u95ee\u6743\u9650\u3002\u786e\u5b9a\u5417\uff1f",
+        "confirm": "\u6ce8\u9500"
+      }
+    },
+    "serviceTokens": {
+      "title": "\u670d\u52a1\u4ee4\u724c",
+      "description": "\u521b\u5efa\u548c\u7ba1\u7406\u670d\u52a1\u4ee4\u724c\uff0c\u7528\u4e8e\u5728\u8fdc\u7a0b\u4e3b\u673a\u4e0a\u65e0\u9700\u6d4f\u89c8\u5668\u767b\u5f55\u5373\u53ef\u8ba4\u8bc1 CLI\u3002",
+      "create": "\u521b\u5efa\u4ee4\u724c",
+      "loadError": "\u52a0\u8f7d\u670d\u52a1\u4ee4\u724c\u5931\u8d25\u3002",
+      "empty": "\u5c1a\u672a\u521b\u5efa\u4efb\u4f55\u670d\u52a1\u4ee4\u724c\u3002",
+      "copied": "\u5df2\u590d\u5236\uff01",
+      "createdWarning": "\u8bf7\u5b89\u5168\u4fdd\u5b58\u6b64\u4ee4\u724c\u2014\u2014\u5b83\u5c06\u4e0d\u4f1a\u518d\u6b21\u663e\u793a\u3002",
+      "columns": {
+        "name": "\u540d\u79f0",
+        "token": "\u4ee4\u724c",
+        "lastUsed": "\u6700\u540e\u4f7f\u7528",
+        "expires": "\u8fc7\u671f\u65f6\u95f4",
+        "status": "\u72b6\u6001"
+      },
+      "status": {
+        "active": "\u6709\u6548",
+        "revoked": "\u5df2\u64a4\u9500",
+        "expired": "\u5df2\u8fc7\u671f"
+      },
+      "actions": {
+        "revoke": "\u64a4\u9500\u4ee4\u724c",
+        "copy": "\u590d\u5236\u4ee4\u724c"
+      },
+      "createDialog": {
+        "title": "\u521b\u5efa\u670d\u52a1\u4ee4\u724c",
+        "description": "\u670d\u52a1\u4ee4\u724c\u5141\u8bb8 CLI \u5728\u8fdc\u7a0b\u4e3b\u673a\u4e0a\u65e0\u9700\u4ea4\u4e92\u5f0f\u6d4f\u89c8\u5668\u767b\u5f55\u5373\u53ef\u8ba4\u8bc1\u3002\u9002\u7528\u4e8e\u65e0\u754c\u9762\u670d\u52a1\u5668\u3001CI \u6d41\u6c34\u7ebf\u6216\u4efb\u4f55\u975e\u4ea4\u4e92\u5f0f\u73af\u5883\u3002",
+        "nameLabel": "\u4ee4\u724c\u540d\u79f0",
+        "namePlaceholder": "\u4f8b\u5982 prod-server\u3001ci-runner",
+        "expiresLabel": "\u8fc7\u671f\u5929\u6570",
+        "expiresPlaceholder": "\u4f8b\u5982 90",
+        "expiresHelp": "\u7559\u7a7a\u8868\u793a\u4ee4\u724c\u6c38\u4e0d\u8fc7\u671f\u3002",
+        "cancel": "\u53d6\u6d88",
+        "create": "\u521b\u5efa",
+        "creating": "\u521b\u5efa\u4e2d\u2026"
+      },
+      "revokeDialog": {
+        "title": "\u64a4\u9500\u670d\u52a1\u4ee4\u724c",
+        "description": "\u786e\u5b9a\u8981\u64a4\u9500\u300c{{name}}\u300d\u5417\uff1f\u4f7f\u7528\u6b64\u4ee4\u724c\u7684 CLI \u6216\u670d\u52a1\u5c06\u7acb\u5373\u5931\u53bb\u8bbf\u95ee\u6743\u9650\u3002",
+        "cancel": "\u53d6\u6d88",
+        "confirm": "\u64a4\u9500"
+      }
+    },
+    "members": {
+      "title": "\u7ec4\u7ec7\u6210\u5458",
+      "description": "\u67e5\u770b\u5f53\u524d\u7ec4\u7ec7\u7684\u6210\u5458\u5217\u8868\u4ee5\u53ca\u6bcf\u4e2a\u4eba\u7684\u6743\u9650\u89d2\u8272\u3002",
+      "loadError": "\u52a0\u8f7d\u7ec4\u7ec7\u6210\u5458\u5931\u8d25\u3002",
+      "empty": "\u5f53\u524d\u7ec4\u7ec7\u6ca1\u6709\u6210\u5458\u3002",
+      "addMember": "\u6dfb\u52a0\u6210\u5458",
+      "memberAdded": "\u6210\u5458\u6dfb\u52a0\u6210\u529f\u3002",
+      "inviteSent": "\u9080\u8bf7\u5df2\u53d1\u9001\uff0c\u5bf9\u65b9\u6ce8\u518c\u540e\u5c06\u81ea\u52a8\u52a0\u5165\u3002",
+      "addDialog": {
+        "title": "\u6dfb\u52a0\u7ec4\u7ec7\u6210\u5458",
+        "emailLabel": "\u90ae\u7bb1\u5730\u5740",
+        "emailPlaceholder": "colleague@example.com",
+        "roleLabel": "\u89d2\u8272",
+        "roles": {
+          "member": "\u6210\u5458",
+          "admin": "\u7ba1\u7406\u5458"
+        },
+        "submit": "\u6dfb\u52a0\u6210\u5458",
+        "adding": "\u6dfb\u52a0\u4e2d...",
+        "errorEmailEmpty": "\u90ae\u7bb1\u5730\u5740\u4e0d\u80fd\u4e3a\u7a7a\u3002"
+      },
+      "pendingInvites": {
+        "title": "\u5f85\u5904\u7406\u9080\u8bf7",
+        "description": "\u4ee5\u4e0b\u90ae\u7bb1\u5df2\u88ab\u9080\u8bf7\uff0c\u4f46\u5c1a\u672a\u6ce8\u518c\u3002",
+        "loadError": "\u52a0\u8f7d\u5f85\u5904\u7406\u9080\u8bf7\u5931\u8d25\u3002",
+        "cancelAriaLabel": "\u53d6\u6d88\u9080\u8bf7",
+        "cancelDialog": {
+          "title": "\u53d6\u6d88\u9080\u8bf7\uff1f",
+          "description": "\u53d1\u7ed9 {{email}} \u7684\u9080\u8bf7\u5c06\u88ab\u64a4\u9500\uff0c\u5bf9\u65b9\u5c06\u65e0\u6cd5\u518d\u901a\u8fc7\u8be5\u9080\u8bf7\u52a0\u5165\u7ec4\u7ec7\u3002",
+          "confirm": "\u53d6\u6d88\u9080\u8bf7"
+        },
+        "columns": {
+          "email": "\u90ae\u7bb1",
+          "role": "\u89d2\u8272",
+          "expires": "\u8fc7\u671f\u65f6\u95f4"
+        }
+      },
+      "columns": {
+        "member": "\u6210\u5458",
+        "email": "\u90ae\u7bb1",
+        "role": "\u89d2\u8272",
+        "userId": "\u7528\u6237 ID"
+      }
+    },
+    "account": {
+      "title": "\u8d26\u53f7\u8d44\u6599",
+      "description": "\u67e5\u770b\u4e0e\u5df2\u767b\u5f55\u7684 Yishan \u8d26\u53f7\u5173\u8054\u7684\u4e2a\u4eba\u8d44\u6599\u3002",
+      "loading": "\u6b63\u5728\u52a0\u8f7d\u4e2a\u4eba\u8d44\u6599\u4fe1\u606f...",
+      "empty": "\u6682\u65e0\u5df2\u767b\u5f55\u7684\u7528\u6237\u8d44\u6599\u3002",
+      "avatarAlt": "\u7528\u6237\u5934\u50cf",
+      "profile": {
+        "title": "\u7528\u6237\u8d44\u6599"
+      },
+      "organization": {
+        "title": "\u5f53\u524d\u7ec4\u7ec7",
+        "description": "\u67e5\u770b\u5f53\u524d\u7ec4\u7ec7\u3001\u5957\u9910\u548c\u6210\u5458\u89d2\u8272\u3002"
+      },
+      "fields": {
+        "name": "\u59d3\u540d",
+        "email": "\u90ae\u7bb1",
+        "userId": "\u7528\u6237 ID",
+        "organization": "\u540d\u79f0",
+        "plan": "\u5957\u9910",
+        "role": "\u89d2\u8272"
+      },
+      "usage": {
+        "title": "\u7528\u91cf",
+        "description": "\u8ddf\u8e2a\u8d26\u53f7\u529f\u80fd\u7684\u6bcf\u6708\u989d\u5ea6\u548c\u5f53\u524d\u7528\u91cf\u3002",
+        "voiceInput": "\u8bed\u97f3\u8f93\u5165",
+        "minutes": "{{count}} \u5206\u949f",
+        "summary": "\u5df2\u4f7f\u7528 {{used}} / {{total}}\uff08{{percent}}%\uff09",
+        "unavailable": "\u7528\u91cf\u6570\u636e\u4e0d\u53ef\u7528\u3002",
+        "loadError": "\u65e0\u6cd5\u52a0\u8f7d\u7528\u91cf\u6570\u636e\u3002"
+      },
+      "values": {
+        "notAvailable": "\u4e0d\u53ef\u7528"
+      }
+    },
+    "git": {
+      "workspace": {
+        "title": "\u5de5\u4f5c\u533a\u5206\u652f\u547d\u540d",
+        "description": "\u4e3a\u5de5\u4f5c\u533a\u521b\u5efa\u914d\u7f6e\u5168\u5c40\u5206\u652f\u547d\u540d\u89c4\u5219\u3002",
+        "prefixModeLabel": "\u5206\u652f\u524d\u7f00",
+        "prefix": {
+          "none": "\u65e0\u524d\u7f00",
+          "user": "Git \u4f5c\u8005",
+          "custom": "\u81ea\u5b9a\u4e49"
+        },
+        "customPrefixLabel": "\u81ea\u5b9a\u4e49\u524d\u7f00",
+        "previewLabel": "\u9884\u89c8"
+      }
+    },
+    "workspace": {
+      "title": "\u5de5\u4f5c\u533a",
+      "description": "\u7ba1\u7406\u5de5\u4f5c\u533a\u548c\u9879\u76ee\u521b\u5efa\u65f6\u4f7f\u7528\u7684\u9ed8\u8ba4\u504f\u597d\u8bbe\u7f6e\u3002",
+      "loading": "\u6b63\u5728\u52a0\u8f7d\u5de5\u4f5c\u533a\u8bbe\u7f6e...",
+      "defaultContext": {
+        "label": "\u542f\u7528\u9ed8\u8ba4\u4e0a\u4e0b\u6587",
+        "description": "\u542f\u7528\u540e\uff0c\u65b0\u5efa\u9879\u76ee\u548c\u5de5\u4f5c\u533a\u4f1a\u9ed8\u8ba4\u521b\u5efa\u5e76\u94fe\u63a5 .my-context \u6587\u4ef6\u5939\u3002",
+        "status": {
+          "enabled": "\u5df2\u542f\u7528",
+          "disabled": "\u5df2\u7981\u7528"
+        }
+      },
+      "errors": {
+        "saveFailed": "\u4fdd\u5b58\u5de5\u4f5c\u533a\u8bbe\u7f6e\u5931\u8d25\uff1a{{message}}"
+      }
+    },
+    "agents": {
+      "title": "\u667a\u80fd\u4f53",
+      "description": "\u7ba1\u7406\u54ea\u4e9b\u667a\u80fd\u4f53\u663e\u793a\u5728\u65b0\u5efa\u6807\u7b7e\u83dc\u5355\uff0c\u5e76\u68c0\u67e5\u672c\u5730 CLI \u68c0\u6d4b\u72b6\u6001\u3002",
+      "loadError": "\u52a0\u8f7d\u667a\u80fd\u4f53\u68c0\u6d4b\u72b6\u6001\u5931\u8d25\u3002",
+      "inUse": "\u4f7f\u7528\u4e2d",
+      "actions": {
+        "rescanAll": "\u5168\u90e8\u91cd\u65b0\u626b\u63cf"
+      },
+      "status": {
+        "checking": "\u68c0\u6d4b\u4e2d...",
+        "detected": "\u5df2\u68c0\u6d4b",
+        "versionPrefix": "\u7248\u672c\uff1a",
+        "versionUnknown": "\u7248\u672c\uff1a\u672a\u77e5",
+        "detectedVersion": "\u68c0\u6d4b\u5230\u7248\u672c\uff1a{{version}}",
+        "detectedVersionUnknown": "\u68c0\u6d4b\u5230\u7248\u672c\uff1a\u672a\u77e5",
+        "notDetected": "\u672a\u68c0\u6d4b\u5230"
+      },
+      "command": {
+        "label": "\u547d\u4ee4",
+        "placeholder": "{{defaultCommand}}",
+        "resetAriaLabel": "\u91cd\u7f6e\u4e3a\u9ed8\u8ba4\u547d\u4ee4",
+        "errorEmpty": "\u547d\u4ee4\u4e0d\u80fd\u4e3a\u7a7a\u3002",
+        "errorTooLong": "\u547d\u4ee4\u8fc7\u957f\uff08\u6700\u591a 2048 \u4e2a\u5b57\u7b26\uff09\u3002"
+      },
+      "items": {
+        "opencode": "OpenCode",
+        "codex": "Codex",
+        "claude": "Claude",
+        "gemini": "Gemini",
+        "pi": "Pi",
+        "copilot": "GitHub Copilot",
+        "cursor": "Cursor"
+      }
+    },
+    "cliTools": {
+      "title": "CLI \u5de5\u5177",
+      "description": "\u7ba1\u7406\u7528\u4e8e\u667a\u80fd\u4f53\u548c\u96c6\u6210\u7684\u672c\u5730 CLI \u5de5\u5177\u3002",
+      "loadError": "\u52a0\u8f7d CLI \u5de5\u5177\u72b6\u6001\u5931\u8d25\u3002",
+      "actions": {
+        "rescanAll": "\u5168\u90e8\u91cd\u65b0\u626b\u63cf"
+      }
+    },
+    "integrations": {
+      "title": "\u96c6\u6210",
+      "description": "\u67e5\u770b\u5916\u90e8\u670d\u52a1\u7684\u8fde\u63a5\u72b6\u6001\u3002",
+      "loadError": "\u52a0\u8f7d\u96c6\u6210\u72b6\u6001\u5931\u8d25\u3002",
+      "actions": {
+        "recheckAll": "\u5168\u90e8\u91cd\u65b0\u68c0\u67e5"
+      },
+      "status": {
+        "checking": "\u68c0\u6d4b\u4e2d...",
+        "connected": "\u5df2\u8fde\u63a5"
+      },
+      "github": {
+        "label": "GitHub",
+        "description": "GitHub CLI (gh) \u8fde\u63a5\u72b6\u6001",
+        "connectedAs": "\u5df2\u8fde\u63a5\u4e3a {{username}}",
+        "notInstalled": "CLI \u672a\u5b89\u88c5",
+        "notLoggedIn": "\u672a\u767b\u5f55"
+      }
+    },
+    "skills": {
+      "title": "Agent \u6280\u80fd",
+      "description": "\u6d4f\u89c8\u5b98\u65b9\u6280\u80fd\u3001\u4ece\u5916\u90e8\u6765\u6e90\u5b89\u88c5\u7b2c\u4e09\u65b9\u6280\u80fd\uff0c\u5e76\u5728\u684c\u9762\u7aef\u7ba1\u7406\u5b8c\u6574\u6280\u80fd\u751f\u547d\u5468\u671f\u3002",
+      "loadError": "\u52a0\u8f7d\u6280\u80fd\u72b6\u6001\u5931\u8d25\u3002",
+      "installed": "\u5df2\u5b89\u88c5",
+      "notInstalled": "\u672a\u5b89\u88c5",
+      "official": "\u5b98\u65b9",
+      "thirdParty": "\u7b2c\u4e09\u65b9",
+      "sourceLabel": "\u4ece\u6765\u6e90\u5b89\u88c5",
+      "sourcePlaceholder": "\u5b98\u65b9\u540d\u79f0\u6216 URL",
+      "confirmRemoveTitle": "\u79fb\u9664\u6280\u80fd\uff1f",
+      "confirmRemoveDescription": "\u786e\u8ba4\u8981\u79fb\u9664 \"{{name}}\" \u5417\uff1f",
+      "instruction": "\u4f7f\u7528\u8bf4\u660e",
+      "success": "\u6280\u80fd\u5df2\u5b89\u88c5\u3002\u91cd\u542f Agent \u540e\u751f\u6548\u3002",
+      "actions": {
+        "add": "\u6dfb\u52a0",
+        "adding": "\u6dfb\u52a0\u4e2d...",
+        "cancel": "\u53d6\u6d88",
+        "install": "\u5b89\u88c5",
+        "installing": "\u5b89\u88c5\u4e2d...",
+        "update": "\u66f4\u65b0",
+        "updating": "\u66f4\u65b0\u4e2d...",
+        "uninstall": "\u5378\u8f7d",
+        "uninstalling": "\u5378\u8f7d\u4e2d..."
+      }
+    },
+    "appearance": {
+      "theme": {
+        "title": "\u4e3b\u9898",
+        "description": "\u9009\u62e9\u79fb\u5c71\u7684\u754c\u9762\u5916\u89c2\u3002",
+        "options": {
+          "light": "\u6d45\u8272",
+          "dark": "\u6df1\u8272",
+          "system": "\u7cfb\u7edf\u4e3b\u9898"
+        }
+      },
+      "markdown": {
+        "title": "Markdown",
+        "description": "\u914d\u7f6e Markdown \u6587\u4ef6\u5728\u7f16\u8f91\u5668\u4e2d\u7684\u9ed8\u8ba4\u6253\u5f00\u65b9\u5f0f\u3002",
+        "theme": {
+          "label": "\u9884\u89c8\u4e3b\u9898",
+          "description": "\u9009\u62e9 Markdown \u9884\u89c8\u662f\u7ee7\u627f\u5e94\u7528\u4e3b\u9898\uff0c\u8fd8\u662f\u72ec\u7acb\u56fa\u5b9a\u4e3a\u6d45\u8272\u6216\u6df1\u8272\u3002",
+          "options": {
+            "inherit": "\u7ee7\u627f\u5e94\u7528\u4e3b\u9898",
+            "light": "\u6d45\u8272",
+            "dark": "\u6df1\u8272"
+          }
+        },
+        "defaultViewMode": {
+          "label": "\u9ed8\u8ba4 Markdown \u89c6\u56fe\u6a21\u5f0f",
+          "description": "\u9009\u62e9 Markdown \u6587\u4ef6\u9ed8\u8ba4\u6253\u5f00\u65b9\u5f0f\u3002",
+          "options": {
+            "edit": "\u7f16\u8f91",
+            "preview": "\u9884\u89c8",
+            "split": "\u5206\u680f"
+          }
+        },
+        "previewFontSize": {
+          "label": "\u9884\u89c8\u5b57\u4f53\u5927\u5c0f",
+          "description": "\u63a7\u5236 Markdown \u9884\u89c8\u4e2d\u7684\u6587\u672c\u5927\u5c0f\u3002",
+          "options": {
+            "small": "\u5c0f",
+            "medium": "\u4e2d",
+            "large": "\u5927"
+          }
+        },
+        "previewWidth": {
+          "label": "\u9884\u89c8\u5bbd\u5ea6",
+          "description": "\u9009\u62e9\u9884\u89c8\u4f7f\u7528\u5168\u5bbd\uff0c\u6216\u66f4\u6613\u8bfb\u7684\u5217\u5bbd\u3002",
+          "options": {
+            "readable": "\u6613\u8bfb\u5217\u5bbd",
+            "full": "\u5168\u5bbd"
+          }
+        },
+        "outlineVisible": {
+          "label": "\u663e\u793a Markdown \u5927\u7eb2",
+          "description": "\u5728 Markdown \u6587\u4ef6\u65c1\u663e\u793a\u6587\u6863\u5927\u7eb2\u3002"
+        }
+      }
+    },
+    "language": {
+      "title": "\u8bed\u8a00",
+      "description": "\u9009\u62e9\u4f60\u504f\u597d\u7684\u5e94\u7528\u8bed\u8a00\u3002",
+      "selectLabel": "\u5e94\u7528\u8bed\u8a00",
+      "errors": {
+        "saveFailed": "\u4fdd\u5b58\u8bed\u8a00\u504f\u597d\u5931\u8d25\u3002"
+      },
+      "options": {
+        "en": "English",
+        "zh": "\u4e2d\u6587"
+      }
+    },
+    "links": {
+      "title": "\u94fe\u63a5\u6253\u5f00\u65b9\u5f0f",
+      "description": "\u9009\u62e9\u5e94\u7528\u5185 HTTP \u94fe\u63a5\u7684\u6253\u5f00\u4f4d\u7f6e\u3002",
+      "targetLabel": "\u94fe\u63a5\u6253\u5f00\u65b9\u5f0f",
+      "options": {
+        "built-in": "\u5185\u7f6e\u6d4f\u89c8\u5668",
+        "external": "\u7cfb\u7edf\u9ed8\u8ba4\u6d4f\u89c8\u5668"
+      }
+    },
+    "daemon": {
+      "title": "\u5b88\u62a4\u8fdb\u7a0b",
+      "description": "\u67e5\u770b\u7528\u4e8e\u5de5\u4f5c\u533a\u3001\u7ec8\u7aef\u548c\u540e\u53f0\u670d\u52a1\u7684\u672c\u5730\u5b88\u62a4\u8fdb\u7a0b\u3002",
+      "loadError": "\u52a0\u8f7d\u5b88\u62a4\u8fdb\u7a0b\u72b6\u6001\u5931\u8d25\u3002",
+      "actions": {
+        "refresh": "\u5237\u65b0"
+      },
+      "status": {
+        "running": "\u8fd0\u884c\u4e2d",
+        "unavailable": "\u4e0d\u53ef\u7528"
+      },
+      "rows": {
+        "status": "\u72b6\u6001",
+        "version": "\u7248\u672c",
+        "id": "\u5b88\u62a4\u8fdb\u7a0b ID",
+        "websocket": "WebSocket \u7aef\u70b9"
+      },
+      "values": {
+        "unknown": "\u672a\u77e5"
+      },
+      "controls": {
+        "title": "\u5b88\u62a4\u8fdb\u7a0b\u63a7\u5236",
+        "description": "\u7ba1\u7406\u5b88\u62a4\u8fdb\u7a0b\u7684\u751f\u547d\u5468\u671f\u548c\u5173\u95ed\u884c\u4e3a\u3002"
+      },
+      "restart": {
+        "label": "\u91cd\u542f\u5b88\u62a4\u8fdb\u7a0b",
+        "description": "\u505c\u6b62\u5e76\u91cd\u65b0\u542f\u52a8\u672c\u5730\u5b88\u62a4\u8fdb\u7a0b\u3002",
+        "action": "\u91cd\u542f",
+        "inProgress": "\u91cd\u542f\u4e2d\u2026",
+        "success": "\u5b88\u62a4\u8fdb\u7a0b\u5df2\u6210\u529f\u91cd\u542f\u3002",
+        "failed": "\u91cd\u542f\u5b88\u62a4\u8fdb\u7a0b\u5931\u8d25\u3002",
+        "terminalCloseFailed": "\u5173\u95ed\u7ec8\u7aef\u4f1a\u8bdd\u5931\u8d25\uff0c\u8bf7\u624b\u52a8\u5173\u95ed\u540e\u91cd\u8bd5\u3002",
+        "confirmTitle": "\u786e\u8ba4\u91cd\u542f\u5b88\u62a4\u8fdb\u7a0b\uff1f",
+        "confirmMessage": "\u6240\u6709\u7ec8\u7aef\u4f1a\u8bdd\u5c06\u88ab\u5173\u95ed\uff0c\u6b63\u5728\u8fd0\u884c\u7684\u8fdb\u7a0b\u5c06\u88ab\u7ec8\u6b62\u3002\u6b64\u64cd\u4f5c\u65e0\u6cd5\u64a4\u9500\u3002"
+      },
+      "quitOnExit": {
+        "label": "\u9000\u51fa\u5e94\u7528\u524d\u5173\u95ed\u5b88\u62a4\u8fdb\u7a0b",
+        "description": "\u542f\u7528\u540e\uff0c\u684c\u9762\u5e94\u7528\u9000\u51fa\u524d\u4f1a\u505c\u6b62\u5b88\u62a4\u8fdb\u7a0b\u3002\u7981\u7528\u540e\uff0c\u5b88\u62a4\u8fdb\u7a0b\u5c06\u5728\u540e\u53f0\u7ee7\u7eed\u8fd0\u884c\u3002"
+      },
+      "log": {
+        "label": "\u5b88\u62a4\u8fdb\u7a0b\u65e5\u5fd7",
+        "description": "\u67e5\u770b\u5b88\u62a4\u8fdb\u7a0b\u539f\u59cb\u65e5\u5fd7\u6761\u76ee\u4ee5\u8fdb\u884c\u6545\u969c\u6392\u67e5\u548c\u8bca\u65ad\u3002",
+        "action": "\u67e5\u770b\u65e5\u5fd7",
+        "title": "\u5b88\u62a4\u8fdb\u7a0b\u65e5\u5fd7"
+      },
+      "cli": {
+        "title": "Yishan CLI",
+        "description": "\u5728\u7ec8\u7aef\u5b89\u88c5 yishan \u540e\uff0c\u4f60\u53ef\u4ee5\u5728\u672c\u5730 shell\u3001\u811a\u672c\u548c\u8fdc\u7a0b SSH \u4f1a\u8bdd\u4e2d\u76f4\u63a5\u4f7f\u7528 AI agent \u5de5\u4f5c\u6d41\u3002",
+        "rows": {
+          "status": "\u72b6\u6001",
+          "detectedPath": "\u68c0\u6d4b\u5230\u7684\u547d\u4ee4\u8def\u5f84",
+          "installPath": "\u6258\u7ba1\u5b89\u88c5\u8def\u5f84",
+          "mode": "\u5b89\u88c5\u6a21\u5f0f"
+        },
+        "status": {
+          "installed": "\u5df2\u5b89\u88c5",
+          "notInstalled": "\u672a\u5b89\u88c5"
+        },
+        "mode": {
+          "managed": "\u7531\u684c\u9762\u5e94\u7528\u6258\u7ba1",
+          "external": "\u5916\u90e8\u5b89\u88c5"
+        },
+        "install": {
+          "action": "\u5b89\u88c5",
+          "inProgress": "\u5b89\u88c5\u4e2d..."
+        },
+        "uninstall": {
+          "action": "\u5378\u8f7d",
+          "inProgress": "\u5378\u8f7d\u4e2d..."
+        }
+      }
+    },
+    "computerUse": {
+      "title": "\u8ba1\u7b97\u673a\u4f7f\u7528",
+      "experimental": "\u5b9e\u9a8c\u6027",
+      "description": "\u67e5\u770b\u8ba1\u7b97\u673a\u4f7f\u7528\u4f9d\u8d56\u7684 macOS \u6743\u9650\uff0c\u4ee5\u53ca\u6bcf\u9879\u6743\u9650\u4f1a\u4e3a\u667a\u80fd\u4f53\u89e3\u9501\u54ea\u4e9b\u80fd\u529b\u3002",
+      "approvalNotice": "\u7531\u667a\u80fd\u4f53\u8c03\u7528\u7684\u53d8\u66f4\u578b\u8ba1\u7b97\u673a\u4f7f\u7528\u64cd\u4f5c\u4ecd\u7136\u9700\u8981\u5ba1\u6279\u3002",
+      "status": {
+        "granted": "\u5df2\u6388\u6743",
+        "denied": "\u9700\u8981\u6743\u9650",
+        "unknown": "\u672a\u77e5",
+        "notRequired": "\u4e0d\u9700\u8981",
+        "notRequested": "\u672a\u8bf7\u6c42",
+        "checkManually": "\u624b\u52a8\u68c0\u67e5",
+        "entitled": "\u5df2\u5177\u5907\u6743\u9650"
+      },
+      "permissions": {
+        "accessibility": "\u8f85\u52a9\u529f\u80fd",
+        "screenRecording": "\u5c4f\u5e55\u5f55\u5236",
+        "inputMonitoring": "\u8f93\u5165\u76d1\u63a7",
+        "automation": "\u81ea\u52a8\u5316",
+        "camera": "\u76f8\u673a",
+        "fullDiskAccess": "\u5b8c\u5168\u78c1\u76d8\u8bbf\u95ee",
+        "localNetwork": "\u672c\u5730\u7f51\u7edc",
+        "usbDevices": "USB \u8bbe\u5907",
+        "bluetooth": "\u84dd\u7259",
+        "accessibilityDescription": "UI \u68c0\u67e5\u3001UI \u64cd\u4f5c\u3001\u9f20\u6807\u63a7\u5236\u548c\u952e\u76d8\u8f93\u5165\u90fd\u4f9d\u8d56\u6b64\u6743\u9650\u3002",
+        "screenRecordingDescription": "\u663e\u793a\u5668\u548c\u7a97\u53e3\u622a\u56fe\u6355\u83b7\u4f9d\u8d56\u6b64\u6743\u9650\u3002",
+        "inputMonitoringDescription": "\u67d0\u4e9b\u7cfb\u7edf\u4f1a\u7528\u5b83\u9650\u5236\u5168\u5c40\u8f93\u5165\u6295\u9012\u3002\u5982\u679c\u8f93\u5165\u5de5\u5177\u4e0d\u7a33\u5b9a\uff0c\u8bf7\u624b\u52a8\u68c0\u67e5\u3002",
+        "automationDescription": "\u672a\u6765\u5f53\u8fd0\u884c\u65f6\u9700\u8981 Apple Events \u63a7\u5236\u5176\u4ed6\u5e94\u7528\u65f6\u4f1a\u4f7f\u7528\u6b64\u6743\u9650\u3002",
+        "cameraDescription": "\u7f51\u7edc\u6444\u50cf\u5934\u6355\u83b7\u548c\u57fa\u4e8e\u76f8\u673a\u7684\u672c\u5730\u6d4b\u8bd5\u5e94\u7528\u3002\u5f53\u524d\u8ba1\u7b97\u673a\u4f7f\u7528\u8fd0\u884c\u65f6\u5c1a\u672a\u4f7f\u7528\u3002",
+        "fullDiskAccessDescription": "\u7528\u4e8e\u7ec8\u7aef\u4f1a\u8bdd\u8bbf\u95ee\u53d7\u4fdd\u62a4\u6587\u4ef6\u5939\uff0c\u4ee5\u53ca\u672a\u6765\u7684\u672c\u5730\u81ea\u52a8\u5316\u5de5\u4f5c\u6d41\u3002",
+        "localNetworkDescription": "\u7528\u4e8e\u8bbf\u95ee\u672c\u5730\u7f51\u7edc\u4e2d\u7684\u5f00\u53d1\u670d\u52a1\u5668\u3002\u4fdd\u7559\u7ed9\u672a\u6765\u8fd0\u884c\u65f6\u652f\u6301\u3002",
+        "usbDevicesDescription": "\u7528\u4e8e\u4e0e USB \u8bbe\u5907\u901a\u4fe1\u7684\u786c\u4ef6\u8c03\u8bd5\u548c\u8bbe\u5907\u5de5\u5177\u3002\u4fdd\u7559\u7ed9\u672a\u6765\u8fd0\u884c\u65f6\u652f\u6301\u3002",
+        "bluetoothDescription": "\u7528\u4e8e\u84dd\u7259\u8bbe\u5907\u5de5\u5177\u548c\u672c\u5730\u786c\u4ef6\u5b9e\u9a8c\u3002\u4fdd\u7559\u7ed9\u672a\u6765\u8fd0\u884c\u65f6\u652f\u6301\u3002",
+        "openAccessibilityButton": "\u6253\u5f00\u8f85\u52a9\u529f\u80fd",
+        "openScreenRecordingButton": "\u6253\u5f00\u5c4f\u5e55\u5f55\u5236",
+        "openCameraButton": "\u6253\u5f00\u76f8\u673a",
+        "openLocalNetworkButton": "\u6253\u5f00\u672c\u5730\u7f51\u7edc",
+        "openSettingsButton": "\u6253\u5f00\u8bbe\u7f6e",
+        "triggerPromptButton": "\u89e6\u53d1\u63d0\u793a"
+      }
+    },
+    "terminal": {
+      "voice": {
+        "title": "\u8bed\u97f3\u8f93\u5165",
+        "description": "\u5728\u7ec8\u7aef\u6807\u7b7e\u9875\u663e\u793a\u60ac\u6d6e\u9ea6\u514b\u98ce\u6309\u94ae\uff0c\u5e76\u5c06\u8bed\u97f3\u8f6c\u5199\u4e3a\u7ec8\u7aef\u8f93\u5165\u3002",
+        "enable": {
+          "label": "\u542f\u7528\u8bed\u97f3\u8f93\u5165",
+          "description": "\u542f\u7528\u540e\uff0c\u7ec8\u7aef\u6807\u7b7e\u9875\u4f1a\u663e\u793a\u9ea6\u514b\u98ce\u6309\u94ae\uff0c\u53ef\u5f55\u5236\u6700\u591a 60 \u79d2\u8bed\u97f3\u3002"
+        },
+        "autoEnter": {
+          "label": "\u8f6c\u5199\u540e\u81ea\u52a8\u63d0\u4ea4",
+          "description": "\u8f6c\u5199\u6587\u672c\u63d2\u5165\u7ec8\u7aef\u540e\u81ea\u52a8\u6309\u4e0b\u56de\u8f66\u952e\u3002"
+        }
+      },
+      "title": "\u7ec8\u7aef\u4f1a\u8bdd",
+      "description": "\u5728\u4e00\u4e2a\u4f4d\u7f6e\u67e5\u770b\u6240\u6709\u8fd0\u884c\u4e2d\u7684\u7ec8\u7aef\u5e76\u505c\u6b62\u4f1a\u8bdd\u3002",
+      "loadError": "\u52a0\u8f7d\u7ec8\u7aef\u4f1a\u8bdd\u5931\u8d25\u3002",
+      "empty": "\u672a\u627e\u5230\u7ec8\u7aef\u4f1a\u8bdd\u3002",
+      "noRunningSessions": "\u5f53\u524d\u6ca1\u6709\u8fd0\u884c\u4e2d\u7684\u4f1a\u8bdd\u3002",
+      "columns": {
+        "session": "\u4f1a\u8bdd",
+        "workspace": "\u5de5\u4f5c\u533a",
+        "repo": "\u9879\u76ee",
+        "pid": "PID",
+        "status": "\u72b6\u6001",
+        "actions": "\u64cd\u4f5c"
+      },
+      "unknownWorkspace": "\u672a\u77e5\u5de5\u4f5c\u533a",
+      "unknownRepo": "\u672a\u77e5\u9879\u76ee",
+      "status": {
+        "running": "\u8fd0\u884c\u4e2d",
+        "exited": "\u5df2\u9000\u51fa"
+      },
+      "actions": {
+        "kill": "\u7ed3\u675f",
+        "killing": "\u7ed3\u675f\u4e2d..."
+      }
+    },
+    "memory": {
+      "title": "\u8bb0\u5fc6",
+      "description": "\u914d\u7f6e\u5de5\u4f5c\u533a\u7684\u9879\u76ee\u8bb0\u5fc6\u603b\u7ed3\u548c\u7d22\u5f15\u529f\u80fd\u3002",
+      "summarizer": {
+        "title": "\u4f1a\u8bdd\u603b\u7ed3\u5668",
+        "description": "\u542f\u7528\u540e\uff0c\u5b88\u62a4\u8fdb\u7a0b\u4f1a\u5728\u6bcf\u4e2a\u667a\u80fd\u4f53\u4f1a\u8bdd\u7ed3\u675f\u540e\u81ea\u52a8\u4f7f\u7528\u5916\u90e8 LLM \u8fdb\u884c\u603b\u7ed3\uff0c\u5e76\u66f4\u65b0 .my-context/MEMORY.md \u6587\u4ef6\u3002",
+        "enabled": {
+          "label": "\u542f\u7528\u4f1a\u8bdd\u603b\u7ed3",
+          "description": "\u5728\u6bcf\u6b21\u667a\u80fd\u4f53\u4f1a\u8bdd\u7ed3\u675f\u540e\uff0c\u63d0\u53d6\u6280\u672f\u51b3\u7b56\u3001\u53d1\u73b0\u548c\u9519\u8bef\uff0c\u5199\u5165\u9879\u76ee\u8bb0\u5fc6\u6587\u4ef6\u3002"
+        },
+        "agentKind": {
+          "label": "\u603b\u7ed3\u5668\u667a\u80fd\u4f53",
+          "description": "\u7528\u4e8e\u6267\u884c\u603b\u7ed3\u63d0\u793a\u7684\u667a\u80fd\u4f53 CLI\u3002"
+        },
+        "model": {
+          "label": "\u6a21\u578b",
+          "description": "\u53ef\u9009\u6a21\u578b\u8986\u76d6\u3002\u7559\u7a7a\u4f7f\u7528\u667a\u80fd\u4f53\u7684\u9ed8\u8ba4\u6a21\u578b\u3002",
+          "placeholder": "\u4f8b\u5982 gpt-4o-mini",
+          "defaultOption": "\u4f7f\u7528\u667a\u80fd\u4f53\u9ed8\u8ba4",
+          "refresh": "\u5237\u65b0\u6a21\u578b\u5217\u8868"
+        }
+      }
+    },
+    "comingSoon": "\u8be5\u8bbe\u7f6e\u9879\u5373\u5c06\u4e0a\u7ebf\u3002"
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "org": {
+    "menu": {
+      "trigger": "Org",
+      "organizations": "Organizations",
+      "noOrganizations": "No organizations",
+      "newOrganization": "New organization",
+      "newOrganizationPrompt": "Organization name",
+      "newOrganizationFailed": "Failed to create organization.",
+      "settings": "Settings",
+      "documentation": "Documentation",
+      "shortcutMap": "Shortcut map",
+      "contactUs": "Contact us",
+      "search": {
+        "repo": "Search repositories",
+        "workspace": "Search workspaces"
+      },
+      "theme": {
+        "groupAria": "Theme preference",
+        "system": "System theme",
+        "light": "Light theme",
+        "dark": "Dark theme",
+        "systemAria": "Use system theme",
+        "lightAria": "Use light theme",
+        "darkAria": "Use dark theme"
+      }
+    },
+    "settings": {
+      "title": "Organization settings",
+      "notifications": {
+        "title": "Notifications",
+        "subtitle": "Manage notifications and in-app sound behavior.",
+        "enabled": "Enable notifications",
+        "osEnabled": "Enable OS notifications",
+        "general": {
+          "title": "General",
+          "hint": "Manage notification preview and focus behavior."
+        },
+        "sound": {
+          "title": "Sound",
+          "hint": "Configure sound playback and per-event sound choices."
+        },
+        "soundEnabled": "Play notification sound",
+        "soundSelection": "sound",
+        "sounds": {
+          "chime": "Ding-dong",
+          "ping": "Three-note",
+          "pop": "Piano",
+          "zip": "Zip",
+          "alert": "Bleep descending"
+        },
+        "volume": "Notification volume",
+        "focusOnClick": "Focus app when notification is clicked",
+        "runTypes": {
+          "title": "Run types",
+          "hint": "Choose which run categories can trigger completion notifications.",
+          "items": {
+            "ai-task": "AI tasks"
+          }
+        },
+        "events": {
+          "title": "Trigger events",
+          "hint": "Choose which events can trigger notifications.",
+          "runFinished": "Run finished",
+          "runFailed": "Run failed",
+          "pendingQuestion": "Pending question"
+        },
+        "errors": {
+          "loadFailed": "Failed to load notification settings.",
+          "saveFailed": "Failed to save notification settings.",
+          "previewFailed": "Failed to preview notification.",
+          "previewSoundFailed": "Failed to preview notification sound."
+        },
+        "preview": {
+          "button": "Play",
+          "soundButton": "Preview Sound",
+          "status": {
+            "inProgress": "Sending notification preview",
+            "success": "Notification preview sent",
+            "failed": "Notification preview failed"
+          }
+        },
+        "searchKeywords": {
+          "enabled": "notifications mute disable notification",
+          "osEnabled": "os notification system notification notification center banner",
+          "focusOnClick": "focus app click notification bring to front open app",
+          "soundEnabled": "sound mute sound play sound",
+          "volume": "volume notification volume sound level",
+          "soundRunFinished": "sound run finished sound success sound",
+          "soundRunFailed": "sound run failed sound failure sound",
+          "soundPendingQuestion": "sound pending question input approval confirmation attention",
+          "runTypeAiTask": "run type ai task ai",
+          "eventRunFinished": "trigger event event filter run finished",
+          "eventRunFailed": "trigger event event filter run failed",
+          "eventPendingQuestion": "trigger event pending question input approval confirmation attention"
+        },
+        "saved": "Notification settings saved."
+      }
+    },
+    "defaultWorkspaceName": "Default organization"
+  }
+}
