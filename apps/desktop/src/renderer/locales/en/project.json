@@ -1,0 +1,90 @@
+{
+  "project": {
+    "list": {
+      "title": "Projects",
+      "workspaces": "Workspaces",
+      "globalWorkspaces": "Global workspaces"
+    },
+    "form": {
+      "name": "Project name",
+      "key": "Project key",
+      "keyHelp": "Used in workspace folder paths. Allowed: a-z, 0-9, -",
+      "keyInvalid": "Use only lowercase letters, numbers, and '-'.",
+      "path": "Project path",
+      "newPath": "New project path",
+      "source": {
+        "label": "Source",
+        "local": "Local",
+        "remote": "Remote"
+      },
+      "gitUrl": "Git URL",
+      "chooseFolder": "Choose folder",
+      "create": "Create",
+      "notAGitRepo": "This folder is not a git repository. Please select a valid git repository."
+    },
+    "actions": {
+      "addRepository": "Add project",
+      "filter": "Filter",
+      "pin": "Pin projects",
+      "refresh": "Refresh projects",
+      "config": "Config",
+      "collapse": "Collapse project",
+      "expand": "Expand project",
+      "delete": "Delete project",
+      "register": "Register project"
+    },
+    "delete": {
+      "confirm": "Delete project '{{name}}' and all child workspaces?"
+    },
+    "filter": {
+      "placeholder": "Filter by project, path, workspace, or branch",
+      "empty": "No projects match the current filter.",
+      "searchPlaceholder": "Quick search projects",
+      "searchAriaLabel": "Quick search projects",
+      "sections": {
+        "hirarchy": "Hirarchy",
+        "projects": "Projects"
+      },
+      "hierarchy": {
+        "byProject": "By project",
+        "byNode": "By node"
+      },
+      "actions": {
+        "all": "Select all"
+      }
+    },
+    "pin": {
+      "searchPlaceholder": "Search projects",
+      "searchAriaLabel": "Search projects",
+      "sections": {
+        "hirarchy": "Hierarchy",
+        "projects": "Projects"
+      },
+      "hierarchy": {
+        "byProject": "By project",
+        "byNode": "By node"
+      },
+      "actions": {
+        "all": "All"
+      }
+    },
+    "registered": "Registered projects",
+    "selected": "Selected project",
+    "unknown": "Unknown project",
+    "missing": "Path unavailable",
+    "missingHint": "Project path is unavailable. Re-link to continue workspace actions.",
+    "relink": "Re-link",
+    "commands": {
+      "title": "Project commands",
+      "runAria": "Run project command",
+      "empty": "No commands yet",
+      "add": "+ Add command",
+      "dialogTitle": "Add project command",
+      "nameLabel": "Name",
+      "namePlaceholder": "Start Dev Server",
+      "commandLabel": "Command line",
+      "commandPlaceholder": "bun run dev",
+      "submit": "Add"
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "overview": {
+    "title": "\u6982\u89c8",
+    "toggleLeftSidebar": "\u5207\u6362\u5de6\u4fa7\u8fb9\u680f",
+    "retry": "\u91cd\u8bd5",
+    "loadError": "\u52a0\u8f7d\u6982\u89c8\u6570\u636e\u5931\u8d25",
+    "filters": {
+      "timeRange": "\u65f6\u95f4\u8303\u56f4",
+      "project": "\u9879\u76ee",
+      "allProjects": "\u5168\u90e8\u9879\u76ee",
+      "utcNote": "\u6240\u6709\u65f6\u95f4\u5747\u4e3a UTC"
+    },
+    "tokenUsage": {
+      "title": "\u4ee4\u724c\u7528\u91cf",
+      "loading": "\u6b63\u5728\u52a0\u8f7d\u56fe\u8868...",
+      "noData": "\u6682\u65e0\u4ee4\u724c\u7528\u91cf\u6570\u636e",
+      "cached": "\u5df2\u7f13\u5b58",
+      "uncached": "\u672a\u7f13\u5b58",
+      "total": "\u5408\u8ba1",
+      "turns": "\u8f6e\u6b21",
+      "toolCalls": "\u5de5\u5177\u8c03\u7528"
+    },
+    "agentUsage": {
+      "title": "\u667a\u80fd\u4f53\u7528\u91cf",
+      "loading": "\u52a0\u8f7d\u4e2d...",
+      "noData": "\u6682\u65e0\u6570\u636e",
+      "totalTokens": "\u603b\u4ee4\u724c\u6570",
+      "agents": "\u667a\u80fd\u4f53"
+    },
+    "modelBreakdown": {
+      "title": "\u6a21\u578b\u660e\u7ec6",
+      "loading": "\u52a0\u8f7d\u4e2d...",
+      "noData": "\u6682\u65e0\u6570\u636e",
+      "model": "\u6a21\u578b",
+      "agent": "\u667a\u80fd\u4f53",
+      "totalTokens": "\u603b\u4ee4\u724c\u6570",
+      "input": "\u8f93\u5165",
+      "output": "\u8f93\u51fa",
+      "percentage": "%"
+    },
+    "workspaceInsights": {
+      "title": "\u5de5\u4f5c\u533a\u6d1e\u5bdf",
+      "loading": "\u52a0\u8f7d\u4e2d...",
+      "noData": "\u6682\u65e0\u6570\u636e",
+      "closedTab": "\u5df2\u5173\u95ed\u7684\u5de5\u4f5c\u533a",
+      "primaryTab": "\u4e3b\u5de5\u4f5c\u533a",
+      "closed": "\u5df2\u5173\u95ed",
+      "avgLifetime": "\u5e73\u5747\u751f\u547d\u5468\u671f",
+      "notAvailable": "\u65e0",
+      "lastClosed": "\u6700\u8fd1\u5173\u95ed\u7684 10 \u4e2a\u5de5\u4f5c\u533a",
+      "noClosed": "\u6682\u65e0\u5df2\u5173\u95ed\u7684\u5de5\u4f5c\u533a",
+      "project": "\u9879\u76ee",
+      "branch": "\u5206\u652f",
+      "lifetime": "\u751f\u547d\u5468\u671f",
+      "tokens": "\u4ee4\u724c\u6570",
+      "primaryCount": "\u4e3b\u5de5\u4f5c\u533a\u6570\u91cf",
+      "tokenUsage": "\u4ee4\u724c\u4f7f\u7528\u91cf",
+      "topPrimary": "\u6838\u5fc3\u4e3b\u5de5\u4f5c\u533a",
+      "noPrimary": "\u6682\u65e0\u4e3b\u5de5\u4f5c\u533a"
+    }
+  }
+}

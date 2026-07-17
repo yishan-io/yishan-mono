@@ -1,0 +1,9 @@
+{
+  "routing": {
+    "notFound": {
+      "title": "Route not found",
+      "description": "This page is unavailable. Return to the workspace dashboard to continue.",
+      "backToWorkspace": "Back to workspace"
+    }
+  }
+}

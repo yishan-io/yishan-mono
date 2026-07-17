@@ -1,6 +1,10 @@
 import { type Menu as ElectronMenu, Menu, type MenuItemConstructorOptions, app } from "electron";
-import enCommon from "../../renderer/locales/en/common.json";
-import zhCommon from "../../renderer/locales/zh/common.json";
+import enKeybindings from "../../renderer/locales/en/keybindings.json";
+import enLayout from "../../renderer/locales/en/layout.json";
+import enNativeMenu from "../../renderer/locales/en/nativeMenu.json";
+import zhKeybindings from "../../renderer/locales/zh/keybindings.json";
+import zhLayout from "../../renderer/locales/zh/layout.json";
+import zhNativeMenu from "../../renderer/locales/zh/nativeMenu.json";
 import { getShortcutKeysById } from "../../renderer/shortcuts/keybindings";
 import { ACTIONS, type AppActionPayload } from "../../shared/contracts/actions";
 
@@ -24,9 +28,12 @@ type ConfigureApplicationMenuInput = {
 };
 
 /** Resolves one locale bundle used by native menu labels. */
-function resolveMenuLocaleBundle(locale: string): typeof enCommon | typeof zhCommon {
+function resolveMenuLocaleBundle(locale: string): typeof enKeybindings & typeof enLayout & typeof enNativeMenu {
   const normalizedLocale = locale.toLowerCase();
-  return normalizedLocale.startsWith("zh") ? zhCommon : enCommon;
+  const bundle = normalizedLocale.startsWith("zh")
+    ? { ...zhKeybindings, ...zhLayout, ...zhNativeMenu }
+    : { ...enKeybindings, ...enLayout, ...enNativeMenu };
+  return bundle as typeof enKeybindings & typeof enLayout & typeof enNativeMenu;
 }
 
 /** Converts one centralized hotkey string into one Electron accelerator. */

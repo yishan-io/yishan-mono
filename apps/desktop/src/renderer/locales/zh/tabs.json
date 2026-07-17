@@ -1,0 +1,28 @@
+{
+  "tabs": {
+    "untitled": "\u672a\u547d\u540d",
+    "new": "\u65b0\u5efa\u6807\u7b7e",
+    "createMenu": {
+      "label": "\u521b\u5efa",
+      "chat": "\u804a\u5929",
+      "browser": "\u6d4f\u89c8\u5668",
+      "opencode": "OpenCode",
+      "codex": "Codex",
+      "claude": "Claude",
+      "gemini": "Gemini",
+      "pi": "Pi",
+      "copilot": "GitHub Copilot",
+      "cursor": "Cursor"
+    },
+    "renameA11y": "\u91cd\u547d\u540d\u6807\u7b7e",
+    "actions": {
+      "keepOpen": "\u4fdd\u6301\u6253\u5f00",
+      "rename": "\u91cd\u547d\u540d",
+      "pin": "\u56fa\u5b9a\u6807\u7b7e",
+      "unpin": "\u53d6\u6d88\u56fa\u5b9a\u6807\u7b7e",
+      "close": "\u5173\u95ed",
+      "closeOthers": "\u5173\u95ed\u5176\u4ed6\u6807\u7b7e",
+      "closeAll": "\u5173\u95ed\u5168\u90e8\u6807\u7b7e"
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "repo": {
+    "list": {
+      "title": "Repositories",
+      "workspaces": "Projects",
+      "globalWorkspaces": "Global workspaces"
+    },
+    "form": {
+      "name": "Repository name",
+      "key": "Repository key",
+      "keyHelp": "Used in workspace folder paths. Allowed: a-z, 0-9, -",
+      "keyInvalid": "Use only lowercase letters, numbers, and '-'.",
+      "path": "Repository path",
+      "newPath": "New repository path",
+      "source": {
+        "label": "Source",
+        "local": "Local",
+        "remote": "Remote"
+      },
+      "gitUrl": "Git URL",
+      "chooseFolder": "Choose folder",
+      "create": "Create"
+    },
+    "actions": {
+      "addRepository": "Add repository",
+      "filter": "Filter",
+      "refresh": "Refresh projects",
+      "config": "Config",
+      "collapse": "Collapse repository",
+      "expand": "Expand repository",
+      "delete": "Delete repository",
+      "register": "Register repository"
+    },
+    "delete": {
+      "confirm": "Delete repository '{{name}}' and all child workspaces?"
+    },
+    "filter": {
+      "placeholder": "Filter by repository, path, workspace, or branch",
+      "empty": "No repositories match the current filter.",
+      "searchPlaceholder": "Quick search repositories",
+      "searchAriaLabel": "Quick search repositories",
+      "actions": {
+        "all": "Select all"
+      }
+    },
+    "registered": "Registered repositories",
+    "selected": "Selected repository",
+    "unknown": "Unknown repository",
+    "missing": "Path unavailable",
+    "missingHint": "Repository path is unavailable. Re-link to continue workspace actions.",
+    "relink": "Re-link"
+  }
+}

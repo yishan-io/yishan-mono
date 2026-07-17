@@ -1,0 +1,75 @@
+{
+  "files": {
+    "files": "Files",
+    "all": "All files",
+    "changes": "Changes",
+    "checks": "Checks",
+    "actions": {
+      "createFile": "Create File",
+      "createFolder": "Create Folder",
+      "rename": "Rename",
+      "delete": "Delete",
+      "copy": "Copy",
+      "cut": "Cut",
+      "paste": "Paste",
+      "copyPath": "Copy Path",
+      "copyRelativePath": "Copy Relative Path",
+      "openInFinder": "Open in Finder",
+      "openInExplorer": "Open in Explorer",
+      "openInExternalAppQuick": "Open in {{app}}",
+      "openInExternalApp": "Open in...",
+      "refresh": "Refresh"
+    },
+    "createFile": {
+      "prompt": "New file name"
+    },
+    "createFolder": {
+      "prompt": "New folder name"
+    },
+    "delete": {
+      "confirmFile": "Delete file '{{path}}'?",
+      "confirmDirectory": "Delete folder '{{path}}' and all contents?"
+    },
+    "search": {
+      "title": "Search files",
+      "inputPlaceholder": "Search files",
+      "placeholder": "Search files...",
+      "empty": "No matching files."
+    },
+    "git": {
+      "unstaged": "Unstaged",
+      "staged": "Staged",
+      "untracked": "Untracked",
+      "commitPlaceholder": "Enter commit message",
+      "commitTracked": "Commit Tracked",
+      "commit": "Commit",
+      "push": "Push",
+      "publishBranch": "Publish Branch",
+      "commitOptions": "Commit options",
+      "amend": "Amend",
+      "amendShortcut": "\u2318\u21a9",
+      "signoff": "Signoff",
+      "targetBranch": "Target branch",
+      "changeScope": "Change scope",
+      "commitListTitle": "Commits to {{targetBranch}}",
+      "commitListCompare": "{{currentBranch}} -> {{targetBranch}}"
+    },
+    "operations": {
+      "failed": "File operation failed.",
+      "modes": {
+        "copy": "Copying",
+        "move": "Moving",
+        "import": "Importing"
+      },
+      "progress": "{{mode}} {{processed}} / {{total}}",
+      "progressWithPath": "{{mode}} {{processed}} / {{total}} \u00b7 {{path}}"
+    },
+    "unsupported": {
+      "title": "Unsupported file type",
+      "description": "This file type is not supported for editor tabs yet.",
+      "descriptionLarge": "This file is too large to open safely in an editor tab.",
+      "hint": "Try opening it with an external app.",
+      "hintLarge": "Use an external app or CLI tools to inspect large files."
+    }
+  }
+}

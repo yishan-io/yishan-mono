@@ -1,0 +1,37 @@
+{
+  "app": {
+    "title": "Yishan",
+    "update": {
+      "checkingTitle": "Checking for updates",
+      "checkingDescription": "Looking for the latest Yishan version...",
+      "availableTitle": "An update is available",
+      "availableTitleWithVersion": "Update {{version}} is available",
+      "availableDescription": "Download the update when you're ready. Yishan will not restart until you confirm.",
+      "downloadAction": "Download update",
+      "downloadingTitle": "Downloading update",
+      "downloadingDescription": "Keep Yishan open while the update downloads.",
+      "downloadProgress": "{{percent}}% downloaded",
+      "downloadFailed": "Failed to download update",
+      "readyTitle": "Update ready to install",
+      "readyTitleWithVersion": "Update {{version}} is ready",
+      "readyDescription": "Restart Yishan when you're ready to apply the update. Terminal sessions will keep running.",
+      "restartAction": "Restart and update",
+      "upToDateTitle": "Yishan is up to date",
+      "upToDateDescription": "You're already running the latest version.",
+      "errorTitle": "Update check failed",
+      "closeAria": "Close update notification"
+    },
+    "bootstrap": {
+      "badge": "APP STARTUP",
+      "title": "Preparing your workspace",
+      "description": "Loading user info, organizations, projects, nodes, and workspaces...",
+      "phase": {
+        "auth": "Verifying your sign-in session",
+        "session": "Syncing user and organization context",
+        "workspace": "Restoring workspace state and resources",
+        "nodes": "Connecting available runtime nodes"
+      },
+      "retry": "Retry"
+    }
+  }
+}

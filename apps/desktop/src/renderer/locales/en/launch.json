@@ -1,0 +1,14 @@
+{
+  "launch": {
+    "title": "What's next?",
+    "hint": "Choose an action to get started.",
+    "agents": "Start with Agent",
+    "actions": {
+      "openTerminal": "Open terminal",
+      "openBrowser": "Open browser tab",
+      "openAgentChat": "Open agent chat",
+      "openChat": "Open chat",
+      "searchFiles": "Search files"
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "repo": {
+    "list": {
+      "title": "\u4ed3\u5e93",
+      "workspaces": "\u9879\u76ee",
+      "globalWorkspaces": "\u5168\u5c40\u5de5\u4f5c\u533a"
+    },
+    "form": {
+      "name": "\u4ed3\u5e93\u540d\u79f0",
+      "key": "\u4ed3\u5e93 Key",
+      "keyHelp": "\u7528\u4e8e\u5de5\u4f5c\u533a\u76ee\u5f55\u8def\u5f84\u3002\u5141\u8bb8\uff1aa-z\u30010-9\u3001-",
+      "keyInvalid": "\u4ec5\u5141\u8bb8\u5c0f\u5199\u5b57\u6bcd\u3001\u6570\u5b57\u548c '-'\u3002",
+      "path": "\u4ed3\u5e93\u8def\u5f84",
+      "newPath": "\u65b0\u7684\u4ed3\u5e93\u8def\u5f84",
+      "source": {
+        "label": "\u6765\u6e90",
+        "local": "\u672c\u5730",
+        "remote": "\u8fdc\u7a0b"
+      },
+      "gitUrl": "Git \u5730\u5740",
+      "chooseFolder": "\u9009\u62e9\u6587\u4ef6\u5939",
+      "create": "\u521b\u5efa"
+    },
+    "actions": {
+      "addRepository": "\u6dfb\u52a0\u4ed3\u5e93",
+      "filter": "\u7b5b\u9009",
+      "refresh": "\u5237\u65b0\u9879\u76ee",
+      "config": "\u914d\u7f6e",
+      "collapse": "\u6298\u53e0\u4ed3\u5e93",
+      "expand": "\u5c55\u5f00\u4ed3\u5e93",
+      "delete": "\u5220\u9664\u4ed3\u5e93",
+      "register": "\u6ce8\u518c\u4ed3\u5e93"
+    },
+    "delete": {
+      "confirm": "\u786e\u8ba4\u5220\u9664\u4ed3\u5e93 '{{name}}' \u53ca\u5176\u6240\u6709\u5b50\u5de5\u4f5c\u533a\uff1f"
+    },
+    "filter": {
+      "placeholder": "\u6309\u4ed3\u5e93\u3001\u8def\u5f84\u3001\u5de5\u4f5c\u533a\u6216\u5206\u652f\u7b5b\u9009",
+      "empty": "\u5f53\u524d\u7b5b\u9009\u6761\u4ef6\u4e0b\u6ca1\u6709\u5339\u914d\u7684\u4ed3\u5e93\u3002",
+      "searchPlaceholder": "\u5feb\u901f\u641c\u7d22\u4ed3\u5e93",
+      "searchAriaLabel": "\u5feb\u901f\u641c\u7d22\u4ed3\u5e93",
+      "actions": {
+        "all": "\u5168\u9009"
+      }
+    },
+    "registered": "\u5df2\u6ce8\u518c\u4ed3\u5e93",
+    "selected": "\u5f53\u524d\u4ed3\u5e93",
+    "unknown": "\u672a\u77e5\u4ed3\u5e93",
+    "missing": "\u8def\u5f84\u4e0d\u53ef\u7528",
+    "missingHint": "\u4ed3\u5e93\u8def\u5f84\u4e0d\u53ef\u7528\uff0c\u8bf7\u91cd\u65b0\u5173\u8054\u540e\u7ee7\u7eed\u5de5\u4f5c\u533a\u64cd\u4f5c\u3002",
+    "relink": "\u91cd\u65b0\u5173\u8054"
+  }
+}
