@@ -41,7 +41,16 @@ export type AgentMessage = {
     output: number;
     cacheRead?: number;
     cacheWrite?: number;
+    reasoning?: number;
     total?: number;
+    totalTokens?: number;
+    cost?: {
+      input?: number;
+      output?: number;
+      cacheRead?: number;
+      cacheWrite?: number;
+      total?: number;
+    };
   };
   /** Stop reason from assistant messages. */
   stopReason?: string;
