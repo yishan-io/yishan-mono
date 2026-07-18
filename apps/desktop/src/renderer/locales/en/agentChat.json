@@ -1,5 +1,16 @@
 {
   "agentChat": {
-    "title": "Agent Chat"
+    "title": "Agent Chat",
+    "usageSummary": {
+      "currentContext": "Current context",
+      "input": "Input",
+      "output": "Output",
+      "cacheRead": "Cache read",
+      "cacheWrite": "Cache write",
+      "cacheRate": "Cache rate",
+      "reasoning": "Reasoning",
+      "sessionTotalCumulative": "Session total (cumulative)",
+      "cost": "Cost"
+    }
   }
 }

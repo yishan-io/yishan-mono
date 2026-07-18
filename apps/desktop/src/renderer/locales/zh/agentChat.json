@@ -1,5 +1,16 @@
 {
   "agentChat": {
-    "title": "AI \u5bf9\u8bdd"
+    "title": "AI \u5bf9\u8bdd",
+    "usageSummary": {
+      "currentContext": "\u5f53\u524d\u4e0a\u4e0b\u6587",
+      "input": "\u8f93\u5165",
+      "output": "\u8f93\u51fa",
+      "cacheRead": "\u7f13\u5b58\u8bfb\u53d6",
+      "cacheWrite": "\u7f13\u5b58\u5199\u5165",
+      "cacheRate": "\u7f13\u5b58\u547d\u4e2d\u7387",
+      "reasoning": "\u63a8\u7406",
+      "sessionTotalCumulative": "\u4f1a\u8bdd\u603b\u8ba1\uff08\u7d2f\u8ba1\uff09",
+      "cost": "\u6210\u672c"
+    }
   }
 }

@@ -21,6 +21,7 @@ import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../co
 import { renameTab } from "../../commands/tabCommands";
 import { RichComposer } from "../../components/RichComposer";
 import { AgentChatSubagentRow } from "../../components/agent/session/AgentChatSubagentRow";
+import { AgentChatUsageSummaryLabel } from "../../components/agent/session/AgentChatUsageSummaryLabel";
 import { AgentModelSelector } from "../../components/agent/session/AgentModelSelector";
 import { AgentMessageList } from "../../components/agent/transcript/AgentMessageList";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
@@ -241,7 +242,7 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
         disabled={sessionState === "starting"}
         slashCommands={slashCommands}
       />
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1, minHeight: 18 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 4, px: 1, minHeight: 18 }}>
         {availableModels.length > 0 && (
           <AgentModelSelector
             models={availableModels}
@@ -251,6 +252,7 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
             onThinkingLevelCycle={handleThinkingCycle}
           />
         )}
+        <AgentChatUsageSummaryLabel tabId={tabId} />
         <Box sx={{ flex: 1 }} />
         {sessionState === "running" ? (
           <Tooltip title="Stop" placement="top">
