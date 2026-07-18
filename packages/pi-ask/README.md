@@ -69,7 +69,7 @@ pi install ./packages/pi-ask
 ## Mode behavior
 
 - `tui`: uses custom interactive UI
-- `rpc`: uses dialog-style `select` / `input` fallbacks
+- `rpc`: uses dialog-style `select` / `input` fallbacks; multi-select accepts comma-separated option numbers or exact titles and maps them back to canonical option titles
 - `json` / `print`: returns structured unavailable results instead of crashing
 
 ## Deferred from upstream `pi-ask-user`

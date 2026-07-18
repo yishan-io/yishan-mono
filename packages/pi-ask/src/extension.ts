@@ -62,6 +62,32 @@ function createResultContent(details: AskResultDetails): Array<{ type: "text"; t
   return [{ type: "text", text: `User answered: ${details.response.selections.join(", ")}` }];
 }
 
+function buildRpcPromptMessage(question: string, context: string | undefined, options: AskOption[]): string {
+  const lines = [question];
+  if (context) {
+    lines.push("", context);
+  }
+  if (options.length > 0) {
+    lines.push("", ...options.map((option, index) => `${index + 1}. ${option.title}`));
+  }
+  return lines.join("\n");
+}
+
+function parseRpcSelectionToken(token: string, options: AskOption[]): string | null {
+  const trimmedToken = token.trim();
+  if (trimmedToken.length === 0) {
+    return null;
+  }
+
+  const numericIndex = Number.parseInt(trimmedToken, 10);
+  if (Number.isInteger(numericIndex) && String(numericIndex) === trimmedToken) {
+    return options[numericIndex - 1]?.title ?? null;
+  }
+
+  const matchedOption = options.find((option) => option.title === trimmedToken);
+  return matchedOption?.title ?? null;
+}
+
 async function runRpcPrompt(
   ctx: ExtensionContext,
   params: AskToolParams,
@@ -69,7 +95,7 @@ async function runRpcPrompt(
 ): Promise<AskResponse | null> {
   if (params.allowMultiple) {
     const selected = await ctx.ui.input(
-      `${params.question}\n${options.map((option, index) => `${index + 1}. ${option.title}`).join("\n")}\nComma-separated selections`,
+      `${buildRpcPromptMessage(params.question, params.context, options)}\n\nComma-separated selections by number or exact title`,
     );
     if (!selected) {
       return null;
@@ -77,27 +103,26 @@ async function runRpcPrompt(
 
     const selections = selected
       .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
+      .map((token) => parseRpcSelectionToken(token, options))
+      .filter((selection): selection is string => selection !== null);
     return selections.length > 0 ? { kind: "selection", selections } : null;
   }
 
-  const selectOptions = [
-    ...options.map((option) => option.title),
-    ...(params.allowFreeform ? ["Type custom response"] : []),
-  ];
-  const selected = await ctx.ui.select(params.question, selectOptions);
+  const freeformSentinel = "__ask_user_freeform__";
+  const selectOptions = [...options.map((option) => option.title), ...(params.allowFreeform ? [freeformSentinel] : [])];
+  const selected = await ctx.ui.select(buildRpcPromptMessage(params.question, params.context, options), selectOptions);
   if (!selected) {
     return null;
   }
 
-  if (selected === "Type custom response") {
+  if (selected === freeformSentinel) {
     const freeform = await ctx.ui.input("Type your answer");
     const trimmed = freeform?.trim();
     return trimmed ? { kind: "freeform", text: trimmed } : null;
   }
 
-  return { kind: "selection", selections: [selected] };
+  const parsedSelection = parseRpcSelectionToken(selected, options);
+  return parsedSelection ? { kind: "selection", selections: [parsedSelection] } : null;
 }
 
 /**
@@ -111,6 +136,8 @@ export function createPiAskExtension(pi: ExtensionAPI): void {
     promptSnippet: "Use ask_user when the agent needs an explicit user decision before proceeding.",
     promptGuidelines: [
       "Use ask_user when the next step depends on a user decision and available context is sufficient to present a focused question.",
+      "When using ask_user, include concise context and a small set of concrete options whenever possible.",
+      "Do not use ask_user when the user has already given a clear decision or preference.",
     ],
     parameters: askUserSchema,
     executionMode: "sequential",

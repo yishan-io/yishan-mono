@@ -102,7 +102,7 @@ describe("createPiAskExtension", () => {
         mode: "rpc",
         hasUI: true,
         ui: {
-          select: async () => "Type custom response",
+          select: async () => "__ask_user_freeform__",
           input: async () => "custom answer",
         },
       },
@@ -132,5 +132,79 @@ describe("createPiAskExtension", () => {
     )) as { details: { response: unknown } };
 
     expect(result.details.response).toEqual({ kind: "selection", selections: ["A", "C"] });
+  });
+
+  it("maps numeric rpc multi-select input back to canonical option titles", async () => {
+    const tool = setupTool();
+    const result = (await tool.execute(
+      "tool-1",
+      {
+        question: "Which options?",
+        options: ["A", "B", "C"],
+        allowMultiple: true,
+      },
+      undefined,
+      undefined,
+      {
+        mode: "rpc",
+        hasUI: true,
+        ui: {
+          input: async () => "1, 3",
+        },
+      },
+    )) as { details: { response: unknown } };
+
+    expect(result.details.response).toEqual({ kind: "selection", selections: ["A", "C"] });
+  });
+
+  it("includes context in the rpc select prompt", async () => {
+    const tool = setupTool();
+    let promptTitle = "";
+
+    await tool.execute(
+      "tool-1",
+      {
+        question: "Which option?",
+        context: "Current deploy target is staging.",
+        options: ["A", "B"],
+      },
+      undefined,
+      undefined,
+      {
+        mode: "rpc",
+        hasUI: true,
+        ui: {
+          select: async (title: string) => {
+            promptTitle = title;
+            return "A";
+          },
+        },
+      },
+    );
+
+    expect(promptTitle).toContain("Current deploy target is staging.");
+  });
+
+  it("allows selecting an option literally named Type custom response", async () => {
+    const tool = setupTool();
+    const result = (await tool.execute(
+      "tool-1",
+      {
+        question: "Which option?",
+        options: ["Type custom response", "B"],
+        allowFreeform: true,
+      },
+      undefined,
+      undefined,
+      {
+        mode: "rpc",
+        hasUI: true,
+        ui: {
+          select: async () => "Type custom response",
+        },
+      },
+    )) as { details: { response: unknown } };
+
+    expect(result.details.response).toEqual({ kind: "selection", selections: ["Type custom response"] });
   });
 });
