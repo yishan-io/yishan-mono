@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { createPiAskExtension } from "./extension";
+import {
+  ASK_USER_ANSWERED_EVENT,
+  ASK_USER_CANCELLED_EVENT,
+  ASK_USER_STARTED_EVENT,
+  createPiAskExtension,
+} from "./index";
 
 type RegisteredTool = {
   name: string;
@@ -10,11 +15,15 @@ type RegisteredTool = {
   renderResult: (...args: unknown[]) => unknown;
 };
 
-function setupTool(): RegisteredTool {
+function setupTool(): { tool: RegisteredTool; emit: ReturnType<typeof vi.fn> } {
   const tools: RegisteredTool[] = [];
+  const emit = vi.fn();
   createPiAskExtension({
     registerTool(tool: RegisteredTool) {
       tools.push(tool);
+    },
+    events: {
+      emit,
     },
   } as never);
 
@@ -22,17 +31,17 @@ function setupTool(): RegisteredTool {
   if (!tool) {
     throw new Error("Expected ask_user tool");
   }
-  return tool;
+  return { tool, emit };
 }
 
 describe("createPiAskExtension", () => {
   it("registers ask_user as a sequential tool", () => {
-    const tool = setupTool();
+    const { tool } = setupTool();
     expect(tool.executionMode).toBe("sequential");
   });
 
   it("normalizes arguments before execution", () => {
-    const tool = setupTool();
+    const { tool } = setupTool();
     expect(
       tool.prepareArguments?.({
         question: "Which option?",
@@ -45,7 +54,7 @@ describe("createPiAskExtension", () => {
   });
 
   it("returns a structured unavailable result in non-interactive mode", async () => {
-    const tool = setupTool();
+    const { tool, emit } = setupTool();
     const result = (await tool.execute(
       "tool-1",
       {
@@ -62,10 +71,11 @@ describe("createPiAskExtension", () => {
 
     expect(result.details.unavailableReason).toBe("non_interactive_mode");
     expect(result.details.cancelled).toBe(true);
+    expect(emit).not.toHaveBeenCalled();
   });
 
   it("uses rpc select flow for single-select answers", async () => {
-    const tool = setupTool();
+    const { tool, emit } = setupTool();
     const result = (await tool.execute(
       "tool-1",
       {
@@ -85,10 +95,24 @@ describe("createPiAskExtension", () => {
 
     expect(result.details.response).toEqual({ kind: "selection", selections: ["B"] });
     expect(result.details.cancelled).toBe(false);
+    expect(emit).toHaveBeenNthCalledWith(1, ASK_USER_STARTED_EVENT, {
+      question: "Which option?",
+      context: undefined,
+      optionCount: 2,
+      allowMultiple: false,
+      allowFreeform: true,
+    });
+    expect(emit).toHaveBeenNthCalledWith(2, ASK_USER_ANSWERED_EVENT, {
+      question: "Which option?",
+      context: undefined,
+      optionCount: 2,
+      allowMultiple: false,
+      allowFreeform: true,
+    });
   });
 
   it("uses rpc input flow for freeform answers", async () => {
-    const tool = setupTool();
+    const { tool } = setupTool();
     const result = (await tool.execute(
       "tool-1",
       {
@@ -112,7 +136,7 @@ describe("createPiAskExtension", () => {
   });
 
   it("uses rpc input flow for multi-select answers", async () => {
-    const tool = setupTool();
+    const { tool } = setupTool();
     const result = (await tool.execute(
       "tool-1",
       {
@@ -135,7 +159,7 @@ describe("createPiAskExtension", () => {
   });
 
   it("maps numeric rpc multi-select input back to canonical option titles", async () => {
-    const tool = setupTool();
+    const { tool } = setupTool();
     const result = (await tool.execute(
       "tool-1",
       {
@@ -158,7 +182,7 @@ describe("createPiAskExtension", () => {
   });
 
   it("includes context in the rpc select prompt", async () => {
-    const tool = setupTool();
+    const { tool } = setupTool();
     let promptTitle = "";
 
     await tool.execute(
@@ -186,7 +210,7 @@ describe("createPiAskExtension", () => {
   });
 
   it("allows selecting an option literally named Type custom response", async () => {
-    const tool = setupTool();
+    const { tool } = setupTool();
     const result = (await tool.execute(
       "tool-1",
       {
@@ -206,5 +230,113 @@ describe("createPiAskExtension", () => {
     )) as { details: { response: unknown } };
 
     expect(result.details.response).toEqual({ kind: "selection", selections: ["Type custom response"] });
+  });
+
+  it("emits started and cancelled events for cancelled rpc ask_user flows", async () => {
+    const { tool, emit } = setupTool();
+
+    await tool.execute(
+      "tool-1",
+      {
+        question: "Which option?",
+        options: ["A", "B"],
+      },
+      undefined,
+      undefined,
+      {
+        mode: "rpc",
+        hasUI: true,
+        ui: {
+          select: async () => null,
+        },
+      },
+    );
+
+    expect(emit).toHaveBeenNthCalledWith(1, ASK_USER_STARTED_EVENT, {
+      question: "Which option?",
+      context: undefined,
+      optionCount: 2,
+      allowMultiple: false,
+      allowFreeform: true,
+    });
+    expect(emit).toHaveBeenNthCalledWith(2, ASK_USER_CANCELLED_EVENT, {
+      question: "Which option?",
+      context: undefined,
+      optionCount: 2,
+      allowMultiple: false,
+      allowFreeform: true,
+    });
+  });
+
+  it("emits started and answered events for tui ask_user flows", async () => {
+    const { tool, emit } = setupTool();
+
+    await tool.execute(
+      "tool-1",
+      {
+        question: "Which option?",
+        options: ["A", "B"],
+      },
+      undefined,
+      undefined,
+      {
+        mode: "tui",
+        hasUI: true,
+        ui: {
+          custom: async () => ({ kind: "selection", selections: ["A"] }),
+        },
+      },
+    );
+
+    expect(emit).toHaveBeenNthCalledWith(1, ASK_USER_STARTED_EVENT, {
+      question: "Which option?",
+      context: undefined,
+      optionCount: 2,
+      allowMultiple: false,
+      allowFreeform: true,
+    });
+    expect(emit).toHaveBeenNthCalledWith(2, ASK_USER_ANSWERED_EVENT, {
+      question: "Which option?",
+      context: undefined,
+      optionCount: 2,
+      allowMultiple: false,
+      allowFreeform: true,
+    });
+  });
+
+  it("emits started and cancelled events for cancelled tui ask_user flows", async () => {
+    const { tool, emit } = setupTool();
+
+    await tool.execute(
+      "tool-1",
+      {
+        question: "Which option?",
+        options: ["A", "B"],
+      },
+      undefined,
+      undefined,
+      {
+        mode: "tui",
+        hasUI: true,
+        ui: {
+          custom: async () => null,
+        },
+      },
+    );
+
+    expect(emit).toHaveBeenNthCalledWith(1, ASK_USER_STARTED_EVENT, {
+      question: "Which option?",
+      context: undefined,
+      optionCount: 2,
+      allowMultiple: false,
+      allowFreeform: true,
+    });
+    expect(emit).toHaveBeenNthCalledWith(2, ASK_USER_CANCELLED_EVENT, {
+      question: "Which option?",
+      context: undefined,
+      optionCount: 2,
+      allowMultiple: false,
+      allowFreeform: true,
+    });
   });
 });

@@ -3,7 +3,15 @@ import { Type } from "typebox";
 
 import { normalizeAskOptions, normalizeAskToolParams } from "./options";
 import { renderAskUserResult } from "./rendering";
-import type { AskModeUnavailableReason, AskOption, AskResponse, AskResultDetails, AskToolParams } from "./types";
+import { ASK_USER_ANSWERED_EVENT, ASK_USER_CANCELLED_EVENT, ASK_USER_STARTED_EVENT } from "./types";
+import type {
+  AskModeUnavailableReason,
+  AskOption,
+  AskResponse,
+  AskResultDetails,
+  AskToolParams,
+  AskUserLifecycleEventPayload,
+} from "./types";
 import { AskPrompt } from "./ui/AskPrompt";
 
 const askOptionObjectSchema = Type.Object({
@@ -125,6 +133,33 @@ async function runRpcPrompt(
   return parsedSelection ? { kind: "selection", selections: [parsedSelection] } : null;
 }
 
+function createAskUserLifecycleEventPayload(params: AskToolParams, options: AskOption[]): AskUserLifecycleEventPayload {
+  return {
+    question: params.question,
+    context: params.context,
+    optionCount: options.length,
+    allowMultiple: params.allowMultiple ?? false,
+    allowFreeform: params.allowFreeform ?? true,
+  };
+}
+
+function emitAskUserStarted(pi: ExtensionAPI, payload: AskUserLifecycleEventPayload): void {
+  pi.events.emit(ASK_USER_STARTED_EVENT, payload);
+}
+
+function emitAskUserFinished(
+  pi: ExtensionAPI,
+  payload: AskUserLifecycleEventPayload,
+  response: AskResponse | null,
+): void {
+  if (response === null) {
+    pi.events.emit(ASK_USER_CANCELLED_EVENT, payload);
+    return;
+  }
+
+  pi.events.emit(ASK_USER_ANSWERED_EVENT, payload);
+}
+
 /**
  * Registers the Pi ask_user extension.
  */
@@ -146,8 +181,10 @@ export function createPiAskExtension(pi: ExtensionAPI): void {
     },
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const normalizedOptions = normalizeAskOptions(params.options);
+      const lifecycleEventPayload = createAskUserLifecycleEventPayload(params, normalizedOptions);
 
       if (ctx.mode === "tui") {
+        emitAskUserStarted(pi, lifecycleEventPayload);
         const response = (await ctx.ui.custom(
           (tui, theme, keybindings, onDone) =>
             new AskPrompt({
@@ -162,6 +199,7 @@ export function createPiAskExtension(pi: ExtensionAPI): void {
               onDone,
             }),
         )) as AskResponse | null | undefined;
+        emitAskUserFinished(pi, lifecycleEventPayload, response ?? null);
         const details: AskResultDetails = {
           question: params.question,
           context: params.context,
@@ -176,7 +214,9 @@ export function createPiAskExtension(pi: ExtensionAPI): void {
       }
 
       if (ctx.mode === "rpc") {
+        emitAskUserStarted(pi, lifecycleEventPayload);
         const response = await runRpcPrompt(ctx, params, normalizedOptions);
+        emitAskUserFinished(pi, lifecycleEventPayload, response);
         const details: AskResultDetails = {
           question: params.question,
           context: params.context,
