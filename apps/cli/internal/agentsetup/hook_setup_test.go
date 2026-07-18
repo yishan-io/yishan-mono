@@ -170,7 +170,7 @@ func TestEnsureDefaultPiExtensionsUseManagedPiAgentDir(t *testing.T) {
 		args []string
 		cmd  *exec.Cmd
 	}
-	calls := make([]recordedCall, 0, 4)
+	calls := make([]recordedCall, 0, 5)
 	execCommand = func(name string, args ...string) *exec.Cmd {
 		cmd := exec.Command(os.Args[0], "-test.run=^$")
 		calls = append(calls, recordedCall{name: name, args: append([]string{}, args...), cmd: cmd})
@@ -180,12 +180,12 @@ func TestEnsureDefaultPiExtensionsUseManagedPiAgentDir(t *testing.T) {
 	if err := EnsureDefaultPiExtensions(); err != nil {
 		t.Fatalf("ensure default pi extensions: %v", err)
 	}
-	if len(calls) != 4 {
-		t.Fatalf("expected 4 pi extension install calls, got %d", len(calls))
+	if len(calls) != 5 {
+		t.Fatalf("expected 5 pi extension install calls, got %d", len(calls))
 	}
 
 	expectedAgentDir := filepath.Join(homeDir, ".yishan", "pi", "agent")
-	expectedArgs := [][]string{{"install", piExtensionInstallSource(piNotifyExtensionName)}, {"install", piExtensionInstallSource(piSubagentsExtensionName)}, {"install", piExtensionInstallSource(piMemoryExtensionName)}, {"install", piExtensionInstallSource(piWorkspaceExtensionName)}}
+	expectedArgs := [][]string{{"install", piExtensionInstallSource(piNotifyExtensionName)}, {"install", piExtensionInstallSource(piSubagentsExtensionName)}, {"install", piExtensionInstallSource(piMemoryExtensionName)}, {"install", piExtensionInstallSource(piWorkspaceExtensionName)}, {"install", piExtensionInstallSource(piAskExtensionName)}}
 	for index, call := range calls {
 		if call.name != "pi" {
 			t.Fatalf("expected pi command, got %q", call.name)

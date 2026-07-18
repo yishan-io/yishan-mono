@@ -55,6 +55,8 @@ jobs:
               - 'packages/pi-subagents/**'
             pi_workspace:
               - 'packages/pi-workspace/**'
+            pi_ask:
+              - 'packages/pi-ask/**'
             core:
               - 'packages/core/**'
             cli:
@@ -76,6 +78,7 @@ jobs:
           PI_NOTIFY_CHANGED: ${{ steps.changes.outputs.pi_notify }}
           PI_SUBAGENTS_CHANGED: ${{ steps.changes.outputs.pi_subagents }}
           PI_WORKSPACE_CHANGED: ${{ steps.changes.outputs.pi_workspace }}
+          PI_ASK_CHANGED: ${{ steps.changes.outputs.pi_ask }}
           CORE_CHANGED: ${{ steps.changes.outputs.core }}
           CLI_CHANGED: ${{ steps.changes.outputs.cli }}
           RELAY_CHANGED: ${{ steps.changes.outputs.relay }}
@@ -130,6 +133,10 @@ jobs:
 
           if (has('ALL_BUN_CHANGED') || has('PI_WORKSPACE_CHANGED')) {
             addTarget('pi-workspace', 'packages/pi-workspace', 'bun run test');
+          }
+
+          if (has('ALL_BUN_CHANGED') || has('PI_ASK_CHANGED')) {
+            addTarget('pi-ask', 'packages/pi-ask', 'bun run test');
           }
 
           const outputs = [
