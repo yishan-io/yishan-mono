@@ -37,7 +37,7 @@ pi install ./packages/pi-ask
 |---|---|---|---|
 | `question` | `string` | required | The question to ask the user |
 | `context` | `string?` | — | Optional context shown with the question |
-| `options` | `string[] \| {title, description?, label?, text?, value?, name?, option?}[]` | `[]` | Selectable options; alias keys are normalized at runtime |
+| `options` | `string[] \| {title, description?}[]` | `[]` | Selectable options |
 | `allowMultiple` | `boolean?` | `false` | Allow selecting multiple options |
 | `allowFreeform` | `boolean?` | `true` | Allow typing a custom answer |
 
@@ -59,7 +59,7 @@ pi install ./packages/pi-ask
   "context": "We need one target for the next deployment.",
   "options": [
     { "title": "staging" },
-    { "label": "production", "description": "Customer-facing" }
+    { "title": "production", "description": "Customer-facing" }
   ],
   "allowMultiple": false,
   "allowFreeform": true
@@ -69,7 +69,7 @@ pi install ./packages/pi-ask
 ## Mode behavior
 
 - `tui`: uses custom interactive UI
-- `rpc`: uses dialog-style `select` / `input` fallbacks; multi-select accepts comma-separated option numbers or exact titles and maps them back to canonical option titles
+- `rpc`: uses dialog-style `select` / `input` fallbacks; single-select sends the question/context as the dialog title and passes options structurally, while multi-select includes a numbered option list in the input prompt and accepts comma-separated option numbers or exact titles mapped back to canonical option titles
 - `json` / `print`: returns structured unavailable results instead of crashing
 
 ## Deferred from upstream `pi-ask-user`

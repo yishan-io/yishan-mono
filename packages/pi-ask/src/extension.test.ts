@@ -40,16 +40,16 @@ describe("createPiAskExtension", () => {
     expect(tool.executionMode).toBe("sequential");
   });
 
-  it("normalizes arguments before execution", () => {
+  it("normalizes canonical arguments before execution", () => {
     const { tool } = setupTool();
     expect(
       tool.prepareArguments?.({
         question: "Which option?",
-        options: [{ label: "A" }],
+        options: [{ title: "A", description: "First" }],
       }),
     ).toEqual({
       question: "Which option?",
-      options: [{ label: "A" }],
+      options: [{ title: "A", description: "First" }],
     });
   });
 
@@ -135,6 +135,29 @@ describe("createPiAskExtension", () => {
     expect(result.details.response).toEqual({ kind: "freeform", text: "custom answer" });
   });
 
+  it("accepts direct rpc select responses as freeform answers", async () => {
+    const { tool } = setupTool();
+    const result = (await tool.execute(
+      "tool-1",
+      {
+        question: "Which option?",
+        options: ["A"],
+        allowFreeform: true,
+      },
+      undefined,
+      undefined,
+      {
+        mode: "rpc",
+        hasUI: true,
+        ui: {
+          select: async () => "custom answer",
+        },
+      },
+    )) as { details: { response: unknown } };
+
+    expect(result.details.response).toEqual({ kind: "freeform", text: "custom answer" });
+  });
+
   it("uses rpc input flow for multi-select answers", async () => {
     const { tool } = setupTool();
     const result = (await tool.execute(
@@ -156,6 +179,30 @@ describe("createPiAskExtension", () => {
     )) as { details: { response: unknown } };
 
     expect(result.details.response).toEqual({ kind: "selection", selections: ["A", "C"] });
+  });
+
+  it("accepts rpc multi-select freeform answers when enabled", async () => {
+    const { tool } = setupTool();
+    const result = (await tool.execute(
+      "tool-1",
+      {
+        question: "Which options?",
+        options: ["A", "B", "C"],
+        allowMultiple: true,
+        allowFreeform: true,
+      },
+      undefined,
+      undefined,
+      {
+        mode: "rpc",
+        hasUI: true,
+        ui: {
+          input: async () => "Something else entirely",
+        },
+      },
+    )) as { details: { response: unknown } };
+
+    expect(result.details.response).toEqual({ kind: "freeform", text: "Something else entirely" });
   });
 
   it("maps numeric rpc multi-select input back to canonical option titles", async () => {
@@ -207,6 +254,131 @@ describe("createPiAskExtension", () => {
     );
 
     expect(promptTitle).toContain("Current deploy target is staging.");
+  });
+
+  it("does not inline options into the rpc select title when no descriptions are present", async () => {
+    const { tool } = setupTool();
+    let promptTitle = "";
+
+    await tool.execute(
+      "tool-1",
+      {
+        question: "Which snack?",
+        options: ["Chips", "Chocolate"],
+      },
+      undefined,
+      undefined,
+      {
+        mode: "rpc",
+        hasUI: true,
+        ui: {
+          select: async (title: string) => {
+            promptTitle = title;
+            return "Chips";
+          },
+        },
+      },
+    );
+
+    expect(promptTitle).toBe("Which snack?");
+  });
+
+  it("inlines option descriptions into the rpc select title when present", async () => {
+    const { tool } = setupTool();
+    let promptTitle = "";
+
+    await tool.execute(
+      "tool-1",
+      {
+        question: "Which snack?",
+        options: [
+          { title: "Chips", description: "Salty and crunchy" },
+          { title: "Chocolate", description: "Sweet" },
+        ],
+      },
+      undefined,
+      undefined,
+      {
+        mode: "rpc",
+        hasUI: true,
+        ui: {
+          select: async (title: string) => {
+            promptTitle = title;
+            return "Chips";
+          },
+        },
+      },
+    );
+
+    expect(promptTitle).toContain("1. Chips");
+    expect(promptTitle).toContain("   Salty and crunchy");
+    expect(promptTitle).toContain("2. Chocolate");
+    expect(promptTitle).toContain("   Sweet");
+  });
+
+  it("keeps numbered options in the rpc multi-select input prompt", async () => {
+    const { tool } = setupTool();
+    let promptTitle = "";
+
+    await tool.execute(
+      "tool-1",
+      {
+        question: "Which snacks?",
+        options: ["Chips", "Chocolate"],
+        allowMultiple: true,
+      },
+      undefined,
+      undefined,
+      {
+        mode: "rpc",
+        hasUI: true,
+        ui: {
+          input: async (title: string) => {
+            promptTitle = title;
+            return "1, 2";
+          },
+        },
+      },
+    );
+
+    expect(promptTitle).toContain("1. Chips");
+    expect(promptTitle).toContain("2. Chocolate");
+    expect(promptTitle).toContain("Type your own answer instead of selecting options");
+    expect(promptTitle).toContain("Comma-separated selections by number or exact title");
+  });
+
+  it("includes option descriptions in the rpc multi-select input prompt", async () => {
+    const { tool } = setupTool();
+    let promptTitle = "";
+
+    await tool.execute(
+      "tool-1",
+      {
+        question: "Which snacks?",
+        options: [
+          { title: "Chips", description: "Salty and crunchy" },
+          { title: "Chocolate", description: "Sweet" },
+        ],
+        allowMultiple: true,
+      },
+      undefined,
+      undefined,
+      {
+        mode: "rpc",
+        hasUI: true,
+        ui: {
+          input: async (title: string) => {
+            promptTitle = title;
+            return "1, 2";
+          },
+        },
+      },
+    );
+
+    expect(promptTitle).toContain("1. Chips");
+    expect(promptTitle).toContain("   Salty and crunchy");
+    expect(promptTitle).toContain("2. Chocolate");
+    expect(promptTitle).toContain("   Sweet");
   });
 
   it("allows selecting an option literally named Type custom response", async () => {

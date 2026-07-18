@@ -1,4 +1,5 @@
 import { AgentToolCard } from "./AgentToolCard";
+import { AskUserToolCard } from "./AskUserToolCard";
 import { BashToolCard } from "./BashToolCard";
 import { DefaultToolCard } from "./DefaultToolCard";
 import { DiffToolCard } from "./DiffToolCard";
@@ -26,6 +27,8 @@ export function AgentToolCallCard(props: AgentToolCallCardProps) {
       return <MemorySearchToolCard {...props} />;
     case "memory_store":
       return <MemoryStoreToolCard {...props} />;
+    case "ask_user":
+      return <AskUserToolCard {...props} />;
     default:
       return <DefaultToolCard {...props} />;
   }

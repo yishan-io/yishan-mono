@@ -9,6 +9,7 @@ import {
   ensurePiSession,
   handleAgentPiEvent,
   registerAgentSession,
+  respondToAgentExtensionUiRequest,
   sendAgentPrompt,
   setPiSessionUnsubscribe,
   stopPiSession,
@@ -499,6 +500,110 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
       errorMessage: "Codex error: The usage limit has been reached",
       content: [],
     });
+  });
+
+  it("stores pending extension UI requests from Pi events", () => {
+    agentChatStore.getState().initSession("tab-extension-ui", "session-extension-ui");
+
+    handleAgentPiEvent({
+      sessionId: "session-extension-ui",
+      tabId: "tab-extension-ui",
+      workspaceId: "workspace-1",
+      event: {
+        type: "extension_ui_request",
+        id: "request-1",
+        method: "select",
+        title: "Deploy to production?",
+        options: ["Yes", "No"],
+      },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-extension-ui"]?.pendingUiRequest).toEqual({
+      id: "request-1",
+      method: "select",
+      title: "Deploy to production?",
+      options: [
+        { value: "Yes", label: "Yes" },
+        { value: "No", label: "No" },
+      ],
+      message: undefined,
+      placeholder: undefined,
+      prefill: undefined,
+      allowFreeform: false,
+      selectionMode: "single",
+    });
+  });
+
+  it("clears pending auto responses when a turn ends", () => {
+    agentChatStore.getState().initSession("tab-extension-ui-auto", "session-extension-ui-auto");
+    agentChatStore.getState().setPendingUiAutoResponse("tab-extension-ui-auto", {
+      sourceRequestId: "request-1",
+      targetMethod: "input",
+      value: "custom answer",
+    });
+
+    handleAgentPiEvent({
+      sessionId: "session-extension-ui-auto",
+      tabId: "tab-extension-ui-auto",
+      workspaceId: "workspace-1",
+      event: {
+        type: "turn_end",
+      },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-extension-ui-auto"]?.pendingUiAutoResponse).toBeNull();
+  });
+
+  it("clears pending auto responses when an agent ends", () => {
+    agentChatStore.getState().initSession("tab-extension-ui-agent-end", "session-extension-ui-agent-end");
+    agentChatStore.getState().setPendingUiAutoResponse("tab-extension-ui-agent-end", {
+      sourceRequestId: "request-1",
+      targetMethod: "input",
+      value: "custom answer",
+    });
+
+    handleAgentPiEvent({
+      sessionId: "session-extension-ui-agent-end",
+      tabId: "tab-extension-ui-agent-end",
+      workspaceId: "workspace-1",
+      event: {
+        type: "agent_end",
+      },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-extension-ui-agent-end"]?.pendingUiAutoResponse).toBeNull();
+  });
+
+  it("sends extension UI cancellation responses and clears the pending request", async () => {
+    agentChatStore.getState().initSession("tab-extension-ui-cancel", "session-extension-ui-cancel");
+    agentChatStore.getState().setPendingUiRequest("tab-extension-ui-cancel", {
+      id: "request-cancel-1",
+      method: "select",
+      title: "Deploy to production?",
+      options: [
+        { value: "Yes", label: "Yes" },
+        { value: "No", label: "No" },
+      ],
+      selectionMode: "single",
+      allowFreeform: false,
+    });
+
+    await respondToAgentExtensionUiRequest({
+      tabId: "tab-extension-ui-cancel",
+      sessionId: "session-extension-ui-cancel",
+      requestId: "request-cancel-1",
+      cancelled: true,
+    });
+
+    expect(mocks.send).toHaveBeenCalledWith({
+      sessionId: "session-extension-ui-cancel",
+      command: {
+        type: "extension_ui_response",
+        id: "request-cancel-1",
+        cancelled: true,
+      },
+    });
+    expect(agentChatStore.getState().sessionsByTabId["tab-extension-ui-cancel"]?.pendingUiRequest).toBeNull();
   });
 
   it("updates the current model from a successful set_model response", () => {

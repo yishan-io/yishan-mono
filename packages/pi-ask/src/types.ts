@@ -6,17 +6,7 @@ export interface AskOption {
   description?: string;
 }
 
-export type AskOptionInput =
-  | string
-  | {
-      title?: unknown;
-      description?: unknown;
-      label?: unknown;
-      text?: unknown;
-      value?: unknown;
-      name?: unknown;
-      option?: unknown;
-    };
+export type AskOptionInput = string | AskOption;
 
 /**
  * Tool parameters accepted by ask_user after normalization.

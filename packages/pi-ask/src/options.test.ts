@@ -14,12 +14,9 @@ describe("normalizeAskOption", () => {
     });
   });
 
-  it("accepts alias keys for option titles", () => {
-    expect(normalizeAskOption({ label: "alpha" })).toEqual({ title: "alpha" });
-    expect(normalizeAskOption({ text: "beta" })).toEqual({ title: "beta" });
-    expect(normalizeAskOption({ value: "gamma" })).toEqual({ title: "gamma" });
-    expect(normalizeAskOption({ name: "delta" })).toEqual({ title: "delta" });
-    expect(normalizeAskOption({ option: "epsilon" })).toEqual({ title: "epsilon" });
+  it("rejects object options without a title", () => {
+    expect(normalizeAskOption({ label: "alpha" })).toBeNull();
+    expect(normalizeAskOption({ text: "beta" })).toBeNull();
   });
 
   it("rejects invalid options", () => {
@@ -30,20 +27,20 @@ describe("normalizeAskOption", () => {
 
 describe("normalizeAskOptions", () => {
   it("filters invalid options and preserves valid ones", () => {
-    expect(normalizeAskOptions(["A", " ", { label: "B" }, {}])).toEqual([{ title: "A" }, { title: "B" }]);
+    expect(normalizeAskOptions(["A", " ", { title: "B" }, {}])).toEqual([{ title: "A" }, { title: "B" }]);
   });
 });
 
 describe("normalizeAskToolParams", () => {
-  it("preserves alias-style option objects for later normalization", () => {
+  it("keeps canonical option objects", () => {
     expect(
       normalizeAskToolParams({
         question: "Which option?",
-        options: [{ label: "A" }, { text: "B" }],
+        options: [{ title: "A" }, { title: "B", description: "Second" }],
       }),
     ).toEqual({
       question: "Which option?",
-      options: [{ label: "A" }, { text: "B" }],
+      options: [{ title: "A" }, { title: "B", description: "Second" }],
     });
   });
 
@@ -55,7 +52,7 @@ describe("normalizeAskToolParams", () => {
       }),
     ).toEqual({
       question: "Which option?",
-      options: ["A", { label: "B" }],
+      options: ["A"],
     });
   });
 });

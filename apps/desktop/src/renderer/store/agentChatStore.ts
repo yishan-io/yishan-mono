@@ -1,7 +1,14 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { type RunningSubagentSummary, deriveRunningSubagents } from "./agentChatSubagents";
-import type { AgentMessage, AgentModel, AgentQueueState, AgentSessionState } from "./agentChatTypes";
+import type {
+  AgentMessage,
+  AgentModel,
+  AgentPendingUiAutoResponse,
+  AgentPendingUiRequest,
+  AgentQueueState,
+  AgentSessionState,
+} from "./agentChatTypes";
 
 const MAX_MESSAGES_PER_TAB = 500;
 
@@ -14,6 +21,8 @@ type AgentSessionData = {
   currentModel: AgentModel | null;
   thinkingLevel: string;
   queue: AgentQueueState;
+  pendingUiRequest: AgentPendingUiRequest | null;
+  pendingUiAutoResponse: AgentPendingUiAutoResponse | null;
   runningSubagents: RunningSubagentSummary[];
   hasLoadedMessages: boolean;
   hasLoadedModels: boolean;
@@ -39,6 +48,10 @@ type AgentChatStoreState = {
   setCurrentModel: (tabId: string, model: AgentModel) => void;
   setThinkingLevel: (tabId: string, level: string) => void;
   setQueue: (tabId: string, queue: AgentQueueState) => void;
+  setPendingUiRequest: (tabId: string, request: AgentPendingUiRequest) => void;
+  setPendingUiAutoResponse: (tabId: string, response: AgentPendingUiAutoResponse) => void;
+  clearPendingUiRequest: (tabId: string) => void;
+  clearPendingUiAutoResponse: (tabId: string) => void;
   markStateLoaded: (tabId: string) => void;
   removeSession: (tabId: string) => void;
   removeSessions: (tabIds: string[]) => void;
@@ -54,6 +67,8 @@ function emptySession(sessionId: string): AgentSessionData {
     currentModel: null,
     thinkingLevel: "medium",
     queue: { steering: [], followUp: [] },
+    pendingUiRequest: null,
+    pendingUiAutoResponse: null,
     runningSubagents: [],
     hasLoadedMessages: false,
     hasLoadedModels: false,
@@ -218,6 +233,38 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.queue = queue;
+      });
+    },
+
+    setPendingUiRequest: (tabId, request) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        session.pendingUiRequest = request;
+      });
+    },
+
+    setPendingUiAutoResponse: (tabId, response) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        session.pendingUiAutoResponse = response;
+      });
+    },
+
+    clearPendingUiRequest: (tabId) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        session.pendingUiRequest = null;
+      });
+    },
+
+    clearPendingUiAutoResponse: (tabId) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        session.pendingUiAutoResponse = null;
       });
     },
 

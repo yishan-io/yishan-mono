@@ -13,6 +13,24 @@ vi.mock("../../../commands/tabCommands", () => ({
   openTab: openTabMock,
 }));
 
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      if (key === "agentChat.askUser.card.unavailable") {
+        return `Unavailable: ${String(options?.reason ?? "")}`;
+      }
+      const translations: Record<string, string> = {
+        "agentChat.askUser.card.question": "question",
+        "agentChat.askUser.card.answer": "answer",
+        "agentChat.askUser.card.pending": "Pending",
+        "agentChat.askUser.card.cancelled": "Cancelled",
+        "agentChat.askUser.card.answered": "Answered",
+      };
+      return translations[key] ?? key;
+    },
+  }),
+}));
+
 const { getSingularPatchMock, parseDiffFromFileMock } = vi.hoisted(() => ({
   getSingularPatchMock: vi.fn(() => ({
     name: "src/example.ts",
@@ -208,6 +226,42 @@ describe("AgentToolCallCard", () => {
 
     expect(screen.getByText("MEMORY.md")).toBeTruthy();
     expect(screen.getByText("durable_discoveries")).toBeTruthy();
+    expect(screen.queryByText("arguments")).toBeNull();
+  });
+
+  it("shows a compact ask_user summary with question and selected answer", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-ask-user",
+      name: "ask_user",
+      arguments: {
+        question: "Deploy to production?",
+        options: ["Yes", "No"],
+      },
+    };
+
+    const result = {
+      id: "result-ask-user",
+      role: "toolResult",
+      toolCallId: "tool-ask-user",
+      toolName: "ask_user",
+      content: "User answered: Yes",
+      details: {
+        question: "Deploy to production?",
+        cancelled: false,
+        response: {
+          kind: "selection",
+          selections: ["Yes"],
+        },
+      },
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+    expect(screen.getByText("question")).toBeTruthy();
+    expect(screen.getByText("Deploy to production?")).toBeTruthy();
+    expect(screen.getByText("answer")).toBeTruthy();
+    expect(screen.getByText("Yes")).toBeTruthy();
     expect(screen.queryByText("arguments")).toBeNull();
   });
 
