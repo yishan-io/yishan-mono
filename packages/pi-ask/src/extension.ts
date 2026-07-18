@@ -80,9 +80,7 @@ function appendRpcOptionLines(lines: string[], options: AskOption[]): void {
   for (const [index, option] of options.entries()) {
     lines.push(`${index + 1}. ${option.title}`);
     if (option.description) {
-      lines.push(
-        ...option.description.split("\n").map((line) => `${RPC_OPTION_DESCRIPTION_INDENT}${line.trimEnd()}`),
-      );
+      lines.push(...option.description.split("\n").map((line) => `${RPC_OPTION_DESCRIPTION_INDENT}${line.trimEnd()}`));
     }
   }
 }
