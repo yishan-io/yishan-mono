@@ -14,6 +14,7 @@ const (
 	piSubagentsExtensionName = "@yishan-io/pi-subagents"
 	piMemoryExtensionName    = "@yishan-io/pi-memory"
 	piWorkspaceExtensionName = "@yishan-io/pi-workspace"
+	piAskExtensionName       = "@yishan-io/pi-ask"
 )
 
 var (
@@ -24,6 +25,7 @@ var (
 		piSubagentsExtensionName,
 		piMemoryExtensionName,
 		piWorkspaceExtensionName,
+		piAskExtensionName,
 	}
 )
 

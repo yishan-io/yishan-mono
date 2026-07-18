@@ -1,0 +1,132 @@
+name: Release Pi Ask
+
+on:
+  push:
+    tags:
+      - "pkg-pi-ask-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Expected package version (optional validation)"
+        required: false
+        default: ""
+        type: string
+      npm_tag:
+        description: "npm dist-tag"
+        required: false
+        default: latest
+        type: string
+      dry_run:
+        description: "Validate and pack without publishing"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: release-pi-ask-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      PACKAGE_DIR: packages/pi-ask
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --linker hoisted
+
+      - name: Resolve package metadata
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            tag="${GITHUB_REF_NAME}"
+            if [[ ! "${tag}" =~ ^pkg-pi-ask-v(.+)$ ]]; then
+              echo "::error::Unsupported tag format: ${tag}"
+              exit 1
+            fi
+            expected_version="${BASH_REMATCH[1]}"
+            npm_dist_tag="latest"
+            dry_run="false"
+          else
+            expected_version="${{ inputs.version }}"
+            npm_dist_tag="${{ inputs.npm_tag }}"
+            dry_run="${{ inputs.dry_run }}"
+          fi
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "${dry_run}" != "true" && "${GITHUB_REF_NAME}" != "main" ]]; then
+            echo "::error::Manual publishes must run from main. Use dry_run=true for branch validation."
+            exit 1
+          fi
+
+          package_name="$(node -e "const fs=require('fs');const pkg=JSON.parse(fs.readFileSync('${PACKAGE_DIR}/package.json','utf8'));process.stdout.write(pkg.name)")"
+          package_version="$(node -e "const fs=require('fs');const pkg=JSON.parse(fs.readFileSync('${PACKAGE_DIR}/package.json','utf8'));process.stdout.write(pkg.version)")"
+
+          if [[ -n "${expected_version}" && "${package_version}" != "${expected_version}" ]]; then
+            echo "::error::Version mismatch for ${package_name}: package.json has ${package_version}, expected ${expected_version}"
+            exit 1
+          fi
+
+          echo "package_name=${package_name}" >> "$GITHUB_OUTPUT"
+          echo "package_version=${package_version}" >> "$GITHUB_OUTPUT"
+          echo "npm_dist_tag=${npm_dist_tag}" >> "$GITHUB_OUTPUT"
+          echo "dry_run=${dry_run}" >> "$GITHUB_OUTPUT"
+
+      - name: Typecheck package
+        working-directory: ${{ env.PACKAGE_DIR }}
+        run: bun run typecheck
+
+      - name: Lint package
+        working-directory: ${{ env.PACKAGE_DIR }}
+        run: bun run lint
+
+      - name: Test package
+        working-directory: ${{ env.PACKAGE_DIR }}
+        run: bun run test
+
+      - name: Preview published tarball
+        working-directory: ${{ env.PACKAGE_DIR }}
+        run: npm pack --dry-run
+
+      - name: Publish package
+        if: steps.package.outputs.dry_run != 'true'
+        working-directory: ${{ env.PACKAGE_DIR }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: >-
+          npm publish
+          --access public
+          --provenance
+          --tag "${{ steps.package.outputs.npm_dist_tag }}"
+
+      - name: Write summary
+        shell: bash
+        run: |
+          {
+            echo "## Package release"
+            echo
+            echo "- Package: ${{ steps.package.outputs.package_name }}"
+            echo "- Version: ${{ steps.package.outputs.package_version }}"
+            echo "- Dist-tag: ${{ steps.package.outputs.npm_dist_tag }}"
+            echo "- Dry run: ${{ steps.package.outputs.dry_run }}"
+          } >> "$GITHUB_STEP_SUMMARY"

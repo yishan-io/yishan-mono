@@ -133,7 +133,7 @@ var setupExtensionCmd = &cobra.Command{
 	Use:   "extension",
 	Short: "Install or remove the default Pi extension set",
 	Long: `Install the default Yishan Pi extensions into the managed Pi home,
-so Pi sessions started from Yishan get the standard notify, sub-agent, memory, and workspace tools.`,
+so Pi sessions started from Yishan get the standard notify, sub-agent, memory, workspace, and ask-user tools.`,
 	Example: `  yishan setup extension
   yishan setup extension --remove`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
