@@ -144,7 +144,7 @@ func TestEnsureDefaultPiExtensionSetupInstallsExtensionsAndSyncsManagedPiAgents(
 	}
 	calls := make([]recordedCall, 0, 5)
 	execCommand = func(name string, args ...string) *exec.Cmd {
-		cmd := exec.Command(os.Args[0], "-test.run=^")
+		cmd := exec.Command("true")
 		calls = append(calls, recordedCall{name: name, args: append([]string{}, args...), cmd: cmd})
 		return cmd
 	}
@@ -214,7 +214,7 @@ func TestRemoveDefaultPiExtensionSetupRemovesExtensionsAndManagedPiFiles(t *test
 	}
 	calls := make([]recordedCall, 0, 5)
 	execCommand = func(name string, args ...string) *exec.Cmd {
-		cmd := exec.Command(os.Args[0], "-test.run=^")
+		cmd := exec.Command("true")
 		calls = append(calls, recordedCall{name: name, args: append([]string{}, args...), cmd: cmd})
 		return cmd
 	}
