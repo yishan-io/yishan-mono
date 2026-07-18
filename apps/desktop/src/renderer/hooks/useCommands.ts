@@ -91,6 +91,7 @@ import {
   createTab as createTabCommand,
   markFileTabSaved as markFileTabSavedCommand,
   openTab as openTabCommand,
+  openTabInOppositePane as openTabInOppositePaneCommand,
   promoteTemporaryTab as promoteTemporaryTabCommand,
   refreshDiffTabContent as refreshDiffTabContentCommand,
   refreshFileTabFromDisk as refreshFileTabFromDiskCommand,
@@ -259,6 +260,7 @@ export type Commands = {
   selectTab: typeof setSelectedTabCommand;
   createTab: (input?: { workspaceId?: string }) => Promise<void>;
   openTab: typeof openTabCommand;
+  openTabInOppositePane: typeof openTabInOppositePaneCommand;
   closeTab: (tabId: string) => void;
   closeOtherTabs: (tabId: string) => void;
   closeAllTabs: (tabId: string) => void;
@@ -380,6 +382,7 @@ export function useCommands(): Commands {
       closeWorkspace: closeWorkspaceCommand,
       createTab: createTabCommand,
       openTab: openTabCommand,
+      openTabInOppositePane: openTabInOppositePaneCommand,
       closeTab: closeTabCommand,
       closeOtherTabs: closeOtherTabsCommand,
       closeAllTabs: closeAllTabsCommand,

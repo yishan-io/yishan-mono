@@ -75,6 +75,43 @@ function getSibling(parent: PaneBranch, childId: string): SplitPaneNode | null {
   return null;
 }
 
+/**
+ * Finds the leaf id of the pane opposite to `paneId` at the root level.
+ *
+ * If root is a single leaf, returns null (no split exists).
+ * If root is a branch:
+ *   - If `paneId` is in the first subtree, returns a leaf from the second subtree.
+ *   - If `paneId` is in the second subtree, returns a leaf from the first subtree.
+ *
+ * This ensures the user never gets a nested sub-split — only the root-level toggle.
+ */
+export function findOppositePaneId(root: SplitPaneNode, paneId: string): string | null {
+  if (root.kind === "leaf") {
+    return null;
+  }
+
+  const isInFirst = isPaneInSubtree(root.first, paneId);
+  if (isInFirst) {
+    const leaf = root.second.kind === "leaf" ? root.second : collectLeaves(root.second)[0];
+    return leaf?.id ?? null;
+  }
+
+  const isInSecond = isPaneInSubtree(root.second, paneId);
+  if (isInSecond) {
+    const leaf = root.first.kind === "leaf" ? root.first : collectLeaves(root.first)[0];
+    return leaf?.id ?? null;
+  }
+
+  return null;
+}
+
+/** Returns true when `paneId` is reachable from the given subtree. */
+function isPaneInSubtree(node: SplitPaneNode, paneId: string): boolean {
+  if (node.id === paneId) return true;
+  if (node.kind === "leaf") return false;
+  return isPaneInSubtree(node.first, paneId) || isPaneInSubtree(node.second, paneId);
+}
+
 // ─── State Operations ──────────────────────────────────────────────────────────
 
 /**
@@ -439,5 +476,44 @@ export function reorderTabInPane(
   return {
     root: replaceNode(state.root, paneId, updatedLeaf),
     activePaneId: paneId,
+  };
+}
+
+/**
+ * Splits a single-pane layout (root is a leaf) into a two-pane layout.
+ * The original pane becomes the first (left/top) child, and a new empty
+ * leaf is created as the second (right/bottom) child.
+ * Returns the updated state with the active pane set to the new leaf.
+ *
+ * If the root is already a branch, returns null.
+ */
+export function splitRootPane(
+  state: SplitPaneStateSlice,
+  direction: SplitDirection,
+  newPaneId?: string,
+  newBranchId?: string,
+): SplitPaneStateSlice | null {
+  if (state.root.kind !== "leaf") {
+    return null;
+  }
+
+  const secondPaneId = newPaneId ?? createPaneId();
+  const branchId = newBranchId ?? createPaneId();
+
+  const originalLeaf = state.root;
+  const newLeaf = createLeaf(secondPaneId, []);
+
+  const branch: PaneBranch = {
+    kind: "branch",
+    id: branchId,
+    direction,
+    ratio: 0.5,
+    first: originalLeaf,
+    second: newLeaf,
+  };
+
+  return {
+    root: branch,
+    activePaneId: secondPaneId,
   };
 }

@@ -1,5 +1,6 @@
 import { openLink } from "@renderer/commands/appCommands";
 import { buildWorkspaceFileUrl } from "@renderer/commands/fileCommands";
+import { openTabInOppositePane } from "@renderer/commands/tabCommands";
 import { tabStore } from "@renderer/store/tabStore";
 import { enqueueWorkspaceErrorNotice } from "@renderer/store/workspaceLifecycleNoticeStore";
 import { getTaskListItemChecked, isAbsoluteUrl, resolveRelativePath, toggleTaskListItem } from "./markdownHelpers";
@@ -77,10 +78,21 @@ function resolveWorkspaceImageUrls(container: HTMLElement, worktreePath: string,
   return false;
 }
 
+function openWorkspaceFileInOppositePane(href: string, fileDir: string): void {
+  const cleanPath = href.replace(/[?#].*$/, "");
+  const resolvedPath = resolveRelativePath(fileDir, cleanPath);
+  if (resolvedPath) {
+    openTabInOppositePane({ kind: "file", path: resolvedPath });
+  }
+}
+
 function attachLinkHandlers(container: HTMLElement, worktreePath: string | undefined, fileDir: string): void {
   const links = Array.from(container.querySelectorAll("a[href]"));
   for (const link of links) {
     link.addEventListener("click", (event: Event) => {
+      // Detect cmd+click (macOS) or ctrl+click (Windows/Linux) for opposite-pane open
+      const isOppositeOpen = event instanceof MouseEvent && (event.metaKey || event.ctrlKey);
+
       event.preventDefault();
       const href = link.getAttribute("href");
       if (!href || href.startsWith("#")) {
@@ -88,7 +100,13 @@ function attachLinkHandlers(container: HTMLElement, worktreePath: string | undef
       }
 
       if (isAbsoluteUrl(href)) {
-        void openMarkdownLink(href);
+        if (isOppositeOpen) {
+          // Open external URL in a browser tab on the opposite pane
+          const workspaceId = undefined; // resolveActiveWorkspaceId is handled internally by openTabInOppositePane
+          openTabInOppositePane({ kind: "browser", url: href });
+        } else {
+          void openMarkdownLink(href);
+        }
         return;
       }
 
@@ -96,10 +114,14 @@ function attachLinkHandlers(container: HTMLElement, worktreePath: string | undef
         return;
       }
 
-      const cleanPath = href.replace(/[?#].*$/, "");
-      const resolvedPath = resolveRelativePath(fileDir, cleanPath);
-      if (resolvedPath) {
-        tabStore.getState().openTab({ kind: "file", path: resolvedPath });
+      if (isOppositeOpen) {
+        openWorkspaceFileInOppositePane(href, fileDir);
+      } else {
+        const cleanPath = href.replace(/[?#].*$/, "");
+        const resolvedPath = resolveRelativePath(fileDir, cleanPath);
+        if (resolvedPath) {
+          tabStore.getState().openTab({ kind: "file", path: resolvedPath });
+        }
       }
     });
   }
