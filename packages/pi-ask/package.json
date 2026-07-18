@@ -1,6 +1,6 @@
 {
   "name": "@yishan-io/pi-ask",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "keywords": ["pi-package"],
   "files": ["extensions", "src", "!src/**/*.test.ts", "LICENSE", "README.md"],
