@@ -1,6 +1,20 @@
 {
   "agentChat": {
     "title": "AI \u5bf9\u8bdd",
+    "askUser": {
+      "prompt": {
+        "customResponse": "\u8f93\u5165\u81ea\u5b9a\u4e49\u56de\u590d",
+        "decline": "\u62d2\u7edd"
+      },
+      "card": {
+        "question": "\u95ee\u9898",
+        "answer": "\u56de\u7b54",
+        "pending": "\u5f85\u5904\u7406",
+        "cancelled": "\u5df2\u53d6\u6d88",
+        "answered": "\u5df2\u56de\u7b54",
+        "unavailable": "\u4e0d\u53ef\u7528\uff1a{{reason}}"
+      }
+    },
     "usageSummary": {
       "currentContext": "\u5f53\u524d\u4e0a\u4e0b\u6587",
       "input": "\u8f93\u5165",

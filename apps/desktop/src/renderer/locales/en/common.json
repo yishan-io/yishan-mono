@@ -1,7 +1,10 @@
 {
   "common": {
     "actions": {
+      "back": "Back",
       "cancel": "Cancel",
+      "confirm": "Confirm",
+      "submit": "Submit",
       "save": "Save",
       "saving": "Saving...",
       "close": "Close"

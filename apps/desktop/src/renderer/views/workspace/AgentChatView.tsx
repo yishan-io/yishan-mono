@@ -11,6 +11,7 @@ import {
   handleAgentPiEvent,
   reattachPiSession,
   registerAgentSession,
+  respondToAgentExtensionUiRequest,
   sendAgentPrompt,
   setAgentChatStreamTabVisible,
   setAgentModel,
@@ -32,6 +33,7 @@ import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../
 import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
 import { tabStore } from "../../store/tabStore";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
+import { AgentPendingUiPrompt } from "./AgentPendingUiPrompt";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
 
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
@@ -322,6 +324,9 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
   const hasLoadedState = agentChatStore((state) => state.sessionsByTabId[tabId]?.hasLoadedState ?? false);
   const error = agentChatStore((state) => state.sessionsByTabId[tabId]?.error ?? null);
   const turnError = agentChatStore((state) => state.sessionsByTabId[tabId]?.turnError ?? null);
+  const pendingUiRequest = agentChatStore((state) => state.sessionsByTabId[tabId]?.pendingUiRequest ?? null);
+  const pendingUiAutoResponse = agentChatStore((state) => state.sessionsByTabId[tabId]?.pendingUiAutoResponse ?? null);
+  const liveSessionId = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionId ?? null);
   const isInitialHistoryLoadPending =
     Boolean(startupSessionIdRef.current) && (!hasSession || !hasLoadedMessages || !hasLoadedModels || !hasLoadedState);
 
@@ -434,6 +439,90 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
     setAgentChatStreamTabVisible(tabId, isActive);
   }, [isActive, tabId]);
 
+  const handlePendingUiCancel = useCallback(async () => {
+    if (!liveSessionId || !pendingUiRequest) {
+      return;
+    }
+
+    agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+
+    await respondToAgentExtensionUiRequest({
+      tabId,
+      sessionId: liveSessionId,
+      requestId: pendingUiRequest.id,
+      cancelled: true,
+    });
+  }, [liveSessionId, pendingUiRequest, tabId]);
+
+  const handlePendingUiConfirm = useCallback(
+    async (input: { value?: string; confirmed?: boolean }) => {
+      if (!liveSessionId || !pendingUiRequest) {
+        return;
+      }
+
+      await respondToAgentExtensionUiRequest({
+        tabId,
+        sessionId: liveSessionId,
+        requestId: pendingUiRequest.id,
+        value: input.value,
+        confirmed: input.confirmed,
+      });
+    },
+    [liveSessionId, pendingUiRequest, tabId],
+  );
+
+  const handlePendingUiSelectCustomResponse = useCallback(
+    async (value: string) => {
+      if (!liveSessionId || !pendingUiRequest || pendingUiRequest.method !== "select") {
+        return;
+      }
+
+      agentChatStore.getState().setPendingUiAutoResponse(tabId, {
+        sourceRequestId: pendingUiRequest.id,
+        targetMethod: "input",
+        value,
+      });
+
+      await respondToAgentExtensionUiRequest({
+        tabId,
+        sessionId: liveSessionId,
+        requestId: pendingUiRequest.id,
+        value: "__ask_user_freeform__",
+      });
+    },
+    [liveSessionId, pendingUiRequest, tabId],
+  );
+
+  useEffect(() => {
+    if (!liveSessionId || !pendingUiRequest || !pendingUiAutoResponse) {
+      return;
+    }
+
+    if (pendingUiRequest.id === pendingUiAutoResponse.sourceRequestId) {
+      return;
+    }
+
+    if (pendingUiRequest.method !== pendingUiAutoResponse.targetMethod) {
+      agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+      return;
+    }
+
+    void (async () => {
+      try {
+        await respondToAgentExtensionUiRequest({
+          tabId,
+          sessionId: liveSessionId,
+          requestId: pendingUiRequest.id,
+          value: pendingUiAutoResponse.value,
+        });
+        agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+      } catch (error) {
+        agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+      }
+    })();
+  }, [liveSessionId, pendingUiAutoResponse, pendingUiRequest, tabId]);
+
   if (isInitialHistoryLoadPending && sessionState !== "error") {
     return (
       <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
@@ -476,6 +565,14 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <MemoizedAgentChatTranscriptPane tabId={tabId} cwd={cwd} isActive={isActive} />
+      {pendingUiRequest ? (
+        <AgentPendingUiPrompt
+          request={pendingUiRequest}
+          onCancel={handlePendingUiCancel}
+          onConfirm={handlePendingUiConfirm}
+          onSelectCustomResponse={handlePendingUiSelectCustomResponse}
+        />
+      ) : null}
       {turnError ? (
         <Box sx={{ px: 2, pb: 1 }}>
           <Alert severity="error" variant="outlined">

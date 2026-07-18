@@ -3,12 +3,15 @@ import type { AskOption, AskOptionInput } from "./types";
 interface AskToolParamsLike {
   question: string;
   context?: string;
-  options?: Array<string | Record<string, string | undefined>>;
+  options?: AskOptionInput[];
   allowMultiple?: boolean;
   allowFreeform?: boolean;
 }
 
-const OPTION_TITLE_KEYS = ["title", "label", "text", "value", "name", "option"] as const;
+type LooseAskOptionRecord = {
+  title?: unknown;
+  description?: unknown;
+};
 
 function normalizeOptionalString(value: unknown): string | undefined {
   if (typeof value !== "string") {
@@ -22,29 +25,30 @@ function normalizeOptionalString(value: unknown): string | undefined {
 /**
  * Converts a loosely-shaped option input into the canonical option format.
  */
-export function normalizeAskOption(option: AskOptionInput): AskOption | null {
+export function normalizeAskOption(option: unknown): AskOption | null {
   if (typeof option === "string") {
     const title = normalizeOptionalString(option);
     return title ? { title } : null;
   }
 
-  for (const key of OPTION_TITLE_KEYS) {
-    const title = normalizeOptionalString(option[key]);
-    if (!title) {
-      continue;
-    }
-
-    const description = normalizeOptionalString(option.description);
-    return description ? { title, description } : { title };
+  if (!option || typeof option !== "object") {
+    return null;
   }
 
-  return null;
+  const optionRecord = option as LooseAskOptionRecord;
+  const title = normalizeOptionalString(optionRecord.title);
+  if (!title) {
+    return null;
+  }
+
+  const description = normalizeOptionalString(optionRecord.description);
+  return description ? { title, description } : { title };
 }
 
 /**
  * Normalizes an array of ask_user options, filtering out invalid entries.
  */
-export function normalizeAskOptions(options: AskOptionInput[] | undefined): AskOption[] {
+export function normalizeAskOptions(options: unknown[] | undefined): AskOption[] {
   if (!options) {
     return [];
   }
@@ -64,29 +68,24 @@ export function normalizeAskToolParams(args: unknown): AskToolParamsLike {
   const normalizedOptions = Array.isArray(record.options)
     ? record.options
         .filter(
-          (option): option is AskOptionInput =>
+          (option): option is string | LooseAskOptionRecord =>
             typeof option === "string" || (option !== null && typeof option === "object"),
         )
-        .map((option) => {
+        .reduce<AskOptionInput[]>((accumulator, option) => {
           if (typeof option === "string") {
-            return option;
-          }
-
-          const normalizedObject: Record<string, string | undefined> = {};
-          for (const key of OPTION_TITLE_KEYS) {
-            const value = normalizeOptionalString(option[key]);
-            if (value) {
-              normalizedObject[key] = value;
+            const normalizedString = normalizeOptionalString(option);
+            if (normalizedString) {
+              accumulator.push(normalizedString);
             }
+            return accumulator;
           }
 
-          const description = normalizeOptionalString(option.description);
-          if (description) {
-            normalizedObject.description = description;
+          const normalizedOption = normalizeAskOption(option);
+          if (normalizedOption) {
+            accumulator.push(normalizedOption);
           }
-
-          return normalizedObject;
-        })
+          return accumulator;
+        }, [])
     : undefined;
 
   const question = normalizeOptionalString(record.question) ?? "";

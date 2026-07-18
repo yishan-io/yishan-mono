@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentChatStore } from "../../store/agentChatStore";
 import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
@@ -35,6 +35,7 @@ const mocked = vi.hoisted(() => {
     clearPiSessionHandle: vi.fn(),
     reattachPiSession: vi.fn(),
     registerAgentSession: vi.fn(),
+    respondToAgentExtensionUiRequest: vi.fn(),
     fetchAgentState: vi.fn().mockResolvedValue(undefined),
     fetchAgentMessages: vi.fn().mockResolvedValue(undefined),
     fetchAgentModels: vi.fn().mockResolvedValue(undefined),
@@ -65,6 +66,7 @@ vi.mock("../../commands/agentChatCommands", () => ({
   handleAgentPiEvent: vi.fn(),
   reattachPiSession: mocked.reattachPiSession,
   registerAgentSession: mocked.registerAgentSession,
+  respondToAgentExtensionUiRequest: mocked.respondToAgentExtensionUiRequest,
   sendAgentPrompt: vi.fn(),
   setAgentChatStreamTabVisible: mocked.setAgentChatStreamTabVisible,
   setAgentModel: mocked.setAgentModel,
@@ -105,6 +107,12 @@ vi.mock("../../rpc/rpcTransport", () => ({
   subscribeDaemonConnectionStatus: vi.fn(() => vi.fn()),
 }));
 
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
 vi.mock("../../store/tabStore", () => ({
   tabStore: (
     selector: (state: { tabs: Array<{ id: string; kind: "agent-chat"; data: { userRenamed: boolean } }> }) => unknown,
@@ -128,6 +136,16 @@ function seedSession(input?: {
   thinkingLevel?: string;
   error?: string | null;
   turnError?: string | null;
+  pendingUiRequest?: {
+    id: string;
+    method: "select" | "confirm" | "input" | "editor";
+    title: string;
+    options?: Array<{ index?: number; value: string; label: string; description?: string }>;
+    placeholder?: string;
+    prefill?: string;
+    allowFreeform?: boolean;
+    selectionMode?: "single" | "multiple";
+  } | null;
 }): void {
   const store = agentChatStore.getState();
   store.removeSession("tab-1");
@@ -155,6 +173,9 @@ function seedSession(input?: {
   }
   if (input?.turnError) {
     store.setTurnError("tab-1", input.turnError);
+  }
+  if (input?.pendingUiRequest) {
+    store.setPendingUiRequest("tab-1", input.pendingUiRequest);
   }
 }
 
@@ -296,6 +317,194 @@ describe("AgentChatView", () => {
     rerender(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
 
     expect(mocked.setAgentChatStreamTabVisible).toHaveBeenLastCalledWith("tab-1", true);
+  });
+
+  it("shows pending select requests with visible option descriptions and supports cancelling", async () => {
+    seedSession({
+      pendingUiRequest: {
+        id: "request-select-1",
+        method: "select",
+        title: "Deploy to production?",
+        options: [
+          { value: "Yes", label: "Yes", description: "Release immediately" },
+          { value: "No", label: "No", description: "Keep the current environment" },
+        ],
+        selectionMode: "single",
+      },
+    });
+
+    const { fireEvent } = await import("@testing-library/react");
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    const pendingPrompt = screen.getByTestId("agent-pending-ui-prompt");
+
+    expect(within(pendingPrompt).getByText("Deploy to production?")).toBeTruthy();
+    expect(within(pendingPrompt).getByRole("button", { name: "Yes Release immediately" })).toBeTruthy();
+    expect(within(pendingPrompt).getByRole("button", { name: "No Keep the current environment" })).toBeTruthy();
+
+    fireEvent.click(within(pendingPrompt).getByRole("button", { name: "common.actions.cancel" }));
+
+    await waitFor(() => {
+      expect(mocked.respondToAgentExtensionUiRequest).toHaveBeenCalledWith({
+        tabId: "tab-1",
+        sessionId: "session-1",
+        requestId: "request-select-1",
+        cancelled: true,
+      });
+    });
+  });
+
+  it("supports custom responses in pending select requests and allows going back", async () => {
+    seedSession({
+      pendingUiRequest: {
+        id: "request-select-custom-1",
+        method: "select",
+        title: "What would you like me to do?",
+        options: [
+          { value: "Inspect code", label: "Inspect code" },
+          { value: "Edit code", label: "Edit code" },
+        ],
+        placeholder: "Type your answer",
+        allowFreeform: true,
+        selectionMode: "single",
+      },
+    });
+
+    const { fireEvent } = await import("@testing-library/react");
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    fireEvent.click(screen.getByRole("button", { name: "agentChat.askUser.prompt.customResponse" }));
+
+    expect(screen.getByRole("textbox")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "common.actions.back" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.back" }));
+
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.getByRole("button", { name: "Inspect code" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "agentChat.askUser.prompt.customResponse" }));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Custom request" } });
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.submit" }));
+
+    await waitFor(() => {
+      expect(mocked.respondToAgentExtensionUiRequest).toHaveBeenCalledWith({
+        tabId: "tab-1",
+        sessionId: "session-1",
+        requestId: "request-select-custom-1",
+        value: "__ask_user_freeform__",
+      });
+    });
+
+    act(() => {
+      agentChatStore.getState().setPendingUiRequest("tab-1", {
+        id: "request-select-custom-2",
+        method: "input",
+        title: "Type your answer",
+        placeholder: "Type your answer",
+      });
+    });
+
+    await waitFor(() => {
+      expect(mocked.respondToAgentExtensionUiRequest).toHaveBeenCalledWith({
+        tabId: "tab-1",
+        sessionId: "session-1",
+        requestId: "request-select-custom-2",
+        value: "Custom request",
+        confirmed: undefined,
+      });
+    });
+  });
+
+  it("renders ask_user multi-select input requests as a checklist with descriptions and confirm", async () => {
+    seedSession({
+      pendingUiRequest: {
+        id: "request-input-1",
+        method: "input",
+        title: "Which options?",
+        options: [
+          { index: 1, value: "A", label: "A", description: "First option" },
+          { index: 2, value: "B", label: "B", description: "Second option" },
+        ],
+        placeholder: "Type your answer",
+        allowFreeform: false,
+        selectionMode: "multiple",
+      },
+    });
+
+    const { fireEvent } = await import("@testing-library/react");
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    const pendingPrompt = screen.getByTestId("agent-pending-ui-prompt");
+
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(within(pendingPrompt).getByText("A")).toBeTruthy();
+    expect(within(pendingPrompt).getByText("First option")).toBeTruthy();
+    expect(within(pendingPrompt).getByText("B")).toBeTruthy();
+    expect(within(pendingPrompt).getByText("Second option")).toBeTruthy();
+    expect(within(pendingPrompt).getByRole("button", { name: "common.actions.confirm" }).hasAttribute("disabled")).toBe(true);
+
+    fireEvent.click(within(pendingPrompt).getByText("A"));
+    fireEvent.click(within(pendingPrompt).getByText("B"));
+    fireEvent.click(within(pendingPrompt).getByRole("button", { name: "common.actions.confirm" }));
+
+    await waitFor(() => {
+      expect(mocked.respondToAgentExtensionUiRequest).toHaveBeenCalledWith({
+        tabId: "tab-1",
+        sessionId: "session-1",
+        requestId: "request-input-1",
+        value: "1, 2",
+        confirmed: undefined,
+      });
+    });
+  });
+
+  it("supports custom responses in pending multi-select requests and allows going back", async () => {
+    seedSession({
+      pendingUiRequest: {
+        id: "request-input-custom-1",
+        method: "input",
+        title: "Which options?",
+        options: [
+          { index: 1, value: "A", label: "A" },
+          { index: 2, value: "B", label: "B" },
+        ],
+        placeholder: "Type your answer",
+        allowFreeform: true,
+        selectionMode: "multiple",
+      },
+    });
+
+    const { fireEvent } = await import("@testing-library/react");
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    fireEvent.click(screen.getByRole("button", { name: "agentChat.askUser.prompt.customResponse" }));
+
+    expect(screen.getByRole("textbox")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "common.actions.back" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.back" }));
+
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.getByRole("button", { name: "A" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "agentChat.askUser.prompt.customResponse" }));
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "Something else entirely" } });
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.submit" }));
+
+    await waitFor(() => {
+      expect(mocked.respondToAgentExtensionUiRequest).toHaveBeenCalledWith({
+        tabId: "tab-1",
+        sessionId: "session-1",
+        requestId: "request-input-custom-1",
+        value: "Something else entirely",
+        confirmed: undefined,
+      });
+    });
   });
 
   it("passes provider and full model id through unchanged when selecting a model", async () => {

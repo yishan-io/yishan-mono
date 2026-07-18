@@ -15,13 +15,8 @@ import type {
 import { AskPrompt } from "./ui/AskPrompt";
 
 const askOptionObjectSchema = Type.Object({
-  title: Type.Optional(Type.String()),
-  description: Type.Optional(Type.String()),
-  label: Type.Optional(Type.String()),
-  text: Type.Optional(Type.String()),
-  value: Type.Optional(Type.String()),
-  name: Type.Optional(Type.String()),
-  option: Type.Optional(Type.String()),
+  title: Type.String({ description: "Option label shown to the user" }),
+  description: Type.Optional(Type.String({ description: "Optional supporting detail shown below the label" })),
 });
 
 const askUserSchema = Type.Object({
@@ -29,7 +24,7 @@ const askUserSchema = Type.Object({
   context: Type.Optional(Type.String({ description: "Relevant context shown before the question" })),
   options: Type.Optional(
     Type.Array(Type.Union([Type.String(), askOptionObjectSchema]), {
-      description: "List of selectable options",
+      description: "List of selectable options as strings or { title, description? } objects",
     }),
   ),
   allowMultiple: Type.Optional(Type.Boolean({ description: "Allow choosing multiple options" })),
@@ -70,14 +65,54 @@ function createResultContent(details: AskResultDetails): Array<{ type: "text"; t
   return [{ type: "text", text: `User answered: ${details.response.selections.join(", ")}` }];
 }
 
-function buildRpcPromptMessage(question: string, context: string | undefined, options: AskOption[]): string {
+const RPC_OPTION_DESCRIPTION_INDENT = "   ";
+const RPC_MULTI_SELECT_FREEFORM_HINT = "Type your own answer instead of selecting options";
+
+function buildRpcDialogTitle(question: string, context: string | undefined): string {
   const lines = [question];
   if (context) {
     lines.push("", context);
   }
-  if (options.length > 0) {
-    lines.push("", ...options.map((option, index) => `${index + 1}. ${option.title}`));
+  return lines.join("\n");
+}
+
+function appendRpcOptionLines(lines: string[], options: AskOption[]): void {
+  for (const [index, option] of options.entries()) {
+    lines.push(`${index + 1}. ${option.title}`);
+    if (option.description) {
+      lines.push(
+        ...option.description.split("\n").map((line) => `${RPC_OPTION_DESCRIPTION_INDENT}${line.trimEnd()}`),
+      );
+    }
   }
+}
+
+function buildRpcSelectTitle(question: string, context: string | undefined, options: AskOption[]): string {
+  const title = buildRpcDialogTitle(question, context);
+  if (!options.some((option) => option.description)) {
+    return title;
+  }
+
+  const lines = [title, ""];
+  appendRpcOptionLines(lines, options);
+  return lines.join("\n");
+}
+
+function buildRpcMultiSelectPrompt(
+  question: string,
+  context: string | undefined,
+  options: AskOption[],
+  allowFreeform: boolean,
+): string {
+  const lines = [buildRpcDialogTitle(question, context)];
+  if (options.length > 0) {
+    lines.push("");
+    appendRpcOptionLines(lines, options);
+  }
+  if (allowFreeform) {
+    lines.push("", RPC_MULTI_SELECT_FREEFORM_HINT);
+  }
+  lines.push("", "Comma-separated selections by number or exact title");
   return lines.join("\n");
 }
 
@@ -103,22 +138,27 @@ async function runRpcPrompt(
 ): Promise<AskResponse | null> {
   if (params.allowMultiple) {
     const selected = await ctx.ui.input(
-      `${buildRpcPromptMessage(params.question, params.context, options)}\n\nComma-separated selections by number or exact title`,
+      buildRpcMultiSelectPrompt(params.question, params.context, options, params.allowFreeform ?? true),
     );
-    if (!selected) {
+    const trimmedSelected = selected?.trim();
+    if (!trimmedSelected) {
       return null;
     }
 
-    const selections = selected
+    const selections = trimmedSelected
       .split(",")
       .map((token) => parseRpcSelectionToken(token, options))
       .filter((selection): selection is string => selection !== null);
-    return selections.length > 0 ? { kind: "selection", selections } : null;
+    if (selections.length > 0) {
+      return { kind: "selection", selections };
+    }
+
+    return params.allowFreeform === false ? null : { kind: "freeform", text: trimmedSelected };
   }
 
   const freeformSentinel = "__ask_user_freeform__";
   const selectOptions = [...options.map((option) => option.title), ...(params.allowFreeform ? [freeformSentinel] : [])];
-  const selected = await ctx.ui.select(buildRpcPromptMessage(params.question, params.context, options), selectOptions);
+  const selected = await ctx.ui.select(buildRpcSelectTitle(params.question, params.context, options), selectOptions);
   if (!selected) {
     return null;
   }
@@ -130,7 +170,14 @@ async function runRpcPrompt(
   }
 
   const parsedSelection = parseRpcSelectionToken(selected, options);
-  return parsedSelection ? { kind: "selection", selections: [parsedSelection] } : null;
+  if (parsedSelection) {
+    return { kind: "selection", selections: [parsedSelection] };
+  }
+
+  const trimmedSelected = selected.trim();
+  return params.allowFreeform === false || trimmedSelected.length === 0
+    ? null
+    : { kind: "freeform", text: trimmedSelected };
 }
 
 function createAskUserLifecycleEventPayload(params: AskToolParams, options: AskOption[]): AskUserLifecycleEventPayload {

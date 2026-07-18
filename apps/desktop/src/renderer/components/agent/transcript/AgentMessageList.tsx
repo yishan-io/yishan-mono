@@ -50,7 +50,8 @@ function shouldMergeToolResult(message: AgentMessageType, previous: DisplayMessa
       message.toolName === "grep" ||
       message.toolName === "Agent" ||
       message.toolName === "memory_search" ||
-      message.toolName === "memory_store") &&
+      message.toolName === "memory_store" ||
+      message.toolName === "ask_user") &&
     hasToolCall(previous.message, message.toolCallId)
   );
 }
