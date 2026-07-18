@@ -1,5 +1,17 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
+const ASK_USER_STARTED_EVENT = "yishan:ask_user_started";
+const ASK_USER_ANSWERED_EVENT = "yishan:ask_user_answered";
+const ASK_USER_CANCELLED_EVENT = "yishan:ask_user_cancelled";
+
+interface AskUserLifecycleEventPayload {
+  question: string;
+  context?: string;
+  optionCount: number;
+  allowMultiple: boolean;
+  allowFreeform: boolean;
+}
+
 interface DaemonEventPayload {
   agent: string;
   rawEventType: string;
@@ -7,7 +19,7 @@ interface DaemonEventPayload {
   workspaceId: string;
   tabId: string;
   paneId: string;
-  payload: Record<string, never>;
+  payload: Record<string, unknown>;
 }
 
 /**
@@ -27,7 +39,7 @@ export function createPiNotifyExtension(pi: ExtensionAPI): void {
   );
   if (!isManagedTerminal) return;
 
-  const fire = (eventName: string) => {
+  const fire = (eventName: string, payload: Record<string, unknown> = {}) => {
     try {
       const body: DaemonEventPayload = {
         agent: "pi",
@@ -36,7 +48,7 @@ export function createPiNotifyExtension(pi: ExtensionAPI): void {
         workspaceId: process.env.YISHAN_WORKSPACE_ID ?? "",
         tabId: process.env.YISHAN_TAB_ID ?? "",
         paneId: process.env.YISHAN_PANE_ID ?? "",
-        payload: {},
+        payload,
       };
 
       // fire-and-forget: never block the agent on notification failure
@@ -81,5 +93,17 @@ export function createPiNotifyExtension(pi: ExtensionAPI): void {
       currentState = "idle";
       fire("Stop");
     }
+  });
+
+  pi.events.on(ASK_USER_STARTED_EVENT, (event) => {
+    fire("PermissionRequest", { ...(event as AskUserLifecycleEventPayload) });
+  });
+
+  pi.events.on(ASK_USER_ANSWERED_EVENT, (event) => {
+    fire("UserPromptSubmit", { ...(event as AskUserLifecycleEventPayload) });
+  });
+
+  pi.events.on(ASK_USER_CANCELLED_EVENT, (event) => {
+    fire("UserPromptSubmit", { ...(event as AskUserLifecycleEventPayload) });
   });
 }

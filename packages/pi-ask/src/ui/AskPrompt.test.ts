@@ -157,6 +157,56 @@ describe("AskPrompt", () => {
     expect(result).toEqual({ kind: "freeform", text: "x" });
   });
 
+  it("renders single-select descriptions on a second line", () => {
+    const prompt = new AskPrompt({
+      question: "Which option?",
+      options: [{ title: "A", description: "First option" }, { title: "B" }],
+      allowMultiple: false,
+      allowFreeform: false,
+      tui: {} as never,
+      theme: createTheme() as never,
+      keybindings: createKeybindings() as never,
+      onDone: () => {},
+    });
+
+    expect(prompt.render(80)).toEqual([
+      "ask_user",
+      "",
+      "Which option?",
+      "",
+      "→ A",
+      "  First option",
+      "  B",
+      "",
+      "Enter confirm • Esc cancel",
+    ]);
+  });
+
+  it("renders multi-select descriptions on a second line", () => {
+    const prompt = new AskPrompt({
+      question: "Which options?",
+      options: [{ title: "A", description: "First option" }, { title: "B" }],
+      allowMultiple: true,
+      allowFreeform: false,
+      tui: {} as never,
+      theme: createTheme() as never,
+      keybindings: createKeybindings() as never,
+      onDone: () => {},
+    });
+
+    expect(prompt.render(80)).toEqual([
+      "ask_user",
+      "",
+      "Which options?",
+      "",
+      "→ [ ] A",
+      "    First option",
+      "  [ ] B",
+      "",
+      "Space toggle • Enter confirm • Esc cancel",
+    ]);
+  });
+
   it("cancels on escape", () => {
     let result: unknown = "pending";
     const prompt = new AskPrompt({

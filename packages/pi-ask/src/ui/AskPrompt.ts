@@ -84,10 +84,13 @@ class SingleSelectList implements Component {
   }
 
   render(width: number): string[] {
-    const lines = this.options.map((option, index) => {
+    const lines = this.options.flatMap((option, index) => {
       const prefix = index === this.selectedIndex ? this.theme.fg("accent", "→") : " ";
-      const suffix = option.description ? ` — ${option.description}` : "";
-      return `${prefix} ${option.title}${suffix}`.slice(0, width);
+      const optionLines = [`${prefix} ${option.title}`.slice(0, width)];
+      if (option.description) {
+        optionLines.push(`  ${this.theme.fg("muted", option.description)}`.slice(0, width));
+      }
+      return optionLines;
     });
 
     if (this.allowFreeform) {
@@ -181,11 +184,14 @@ class MultiSelectList implements Component {
   }
 
   render(width: number): string[] {
-    const lines = this.options.map((option, index) => {
+    const lines = this.options.flatMap((option, index) => {
       const prefix = index === this.selectedIndex ? this.theme.fg("accent", "→") : " ";
       const checkbox = this.checked.has(index) ? "[x]" : "[ ]";
-      const suffix = option.description ? ` — ${option.description}` : "";
-      return `${prefix} ${checkbox} ${option.title}${suffix}`.slice(0, width);
+      const optionLines = [`${prefix} ${checkbox} ${option.title}`.slice(0, width)];
+      if (option.description) {
+        optionLines.push(`    ${this.theme.fg("muted", option.description)}`.slice(0, width));
+      }
+      return optionLines;
     });
 
     if (this.allowFreeform) {

@@ -49,6 +49,21 @@ export type AskResponse = AskSelectionResponse | AskFreeformResponse;
 
 export type AskModeUnavailableReason = "no_ui" | "non_interactive_mode" | "unsupported_ui_mode";
 
+export const ASK_USER_STARTED_EVENT = "yishan:ask_user_started";
+export const ASK_USER_ANSWERED_EVENT = "yishan:ask_user_answered";
+export const ASK_USER_CANCELLED_EVENT = "yishan:ask_user_cancelled";
+
+/**
+ * Semantic ask_user lifecycle event payload emitted on Pi's inter-extension event bus.
+ */
+export interface AskUserLifecycleEventPayload {
+  question: string;
+  context?: string;
+  optionCount: number;
+  allowMultiple: boolean;
+  allowFreeform: boolean;
+}
+
 /**
  * Structured result details persisted with ask_user tool results.
  */
