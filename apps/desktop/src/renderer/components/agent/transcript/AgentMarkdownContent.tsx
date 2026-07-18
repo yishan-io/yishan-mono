@@ -4,7 +4,7 @@ import { markdownService } from "@renderer/components/markdown/markdownService";
 import { useMarkdownStyles } from "@renderer/components/markdown/markdownStyles";
 import { useEffect, useRef, useState } from "react";
 import { openLink } from "../../../commands/appCommands";
-import { openTab } from "../../../commands/tabCommands";
+import { openTab, openTabInOppositePane } from "../../../commands/tabCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 
 type AgentMarkdownContentProps = {
@@ -16,6 +16,11 @@ type AgentMarkdownContentProps = {
 function openFileTab(href: string, workspacePath: string): void {
   const resolvedPath = resolveRelativePath(workspacePath, href.replace(/[?#].*$/, ""));
   openTab({ kind: "file", path: resolvedPath });
+}
+
+function openFileTabInOppositePane(href: string, workspacePath: string): void {
+  const resolvedPath = resolveRelativePath(workspacePath, href.replace(/[?#].*$/, ""));
+  openTabInOppositePane({ kind: "file", path: resolvedPath });
 }
 
 const FILE_PATH_RE = /^(?:\.{1,2}[\/\\]|[\/\\]|[a-zA-Z]:[\\/])|[\/\\]/;
@@ -88,7 +93,12 @@ export function AgentMarkdownContent({ content, workspacePath, renderMode = "fin
       span.textContent = text;
       span.addEventListener("click", (e) => {
         e.stopPropagation();
-        openFileTab(text, workspacePath);
+        // Detect cmd+click for opposite-pane open
+        if (e.metaKey || e.ctrlKey) {
+          openFileTabInOppositePane(text, workspacePath);
+        } else {
+          openFileTab(text, workspacePath);
+        }
       });
       code.replaceWith(span);
     }
@@ -118,11 +128,22 @@ export function AgentMarkdownContent({ content, workspacePath, renderMode = "fin
         }
         event.preventDefault();
 
-        // Open file paths in a tab, external URLs in browser.
+        // Detect cmd+click (macOS) or ctrl+click (Windows/Linux) for opposite-pane open
+        const isOppositeOpen = event.metaKey || event.ctrlKey;
+
         if (isAbsoluteUrl(href)) {
-          void openLink({ url: href });
+          if (isOppositeOpen) {
+            // Open external URL in a browser tab on the opposite pane
+            openTabInOppositePane({ kind: "browser", url: href });
+          } else {
+            void openLink({ url: href });
+          }
         } else if (workspacePath) {
-          void openFileTab(href, workspacePath);
+          if (isOppositeOpen) {
+            openFileTabInOppositePane(href, workspacePath);
+          } else {
+            openFileTab(href, workspacePath);
+          }
         }
       }}
     />
