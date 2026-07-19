@@ -96,34 +96,6 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
 
 const TERMINAL_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
-    id: "terminal-voice-input",
-    tab: "terminal",
-    icon: BiTerminal,
-    labelKey: "settings.terminal.voice.title",
-    sectionLabelKey: "settings.items.terminal",
-    keywordKeys: [
-      "settings.terminal.voice.description",
-      "settings.terminal.voice.enable.label",
-      "settings.terminal.voice.enable.description",
-    ],
-  },
-  {
-    id: "terminal-voice-auto-enter",
-    tab: "terminal",
-    icon: BiTerminal,
-    labelKey: "settings.terminal.voice.autoEnter.label",
-    sectionLabelKey: "settings.items.terminal",
-    keywordKeys: ["settings.terminal.voice.autoEnter.description", "settings.terminal.voice.title"],
-  },
-  {
-    id: "terminal-voice-shortcut",
-    tab: "keybindings",
-    icon: BiSolidKeyboard,
-    labelKey: "keybindings.actions.toggleVoiceInput",
-    sectionLabelKey: "settings.items.keybindings",
-    keywordKeys: ["settings.terminal.voice.title"],
-  },
-  {
     id: "terminal-sessions",
     tab: "terminal",
     icon: BiTerminal,

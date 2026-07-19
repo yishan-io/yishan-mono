@@ -231,8 +231,6 @@ vi.mock("./RightPane/RightPaneTabBar", () => ({
       </button>
     </div>
   ),
-  VOICE_RECORD_REQUEST_EVENT: "yishan:voice-record-request",
-  VOICE_RECORDING_VISIBILITY_EVENT: "yishan:voice-recording-visibility",
 }));
 
 vi.mock("../../store/splitPaneStore", () => {

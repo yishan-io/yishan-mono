@@ -20,6 +20,7 @@ import {
 } from "../../commands/agentChatCommands";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../commands/agentChatSubagentCommands";
 import { renameTab } from "../../commands/tabCommands";
+import { AgentChatVoiceButton } from "../../components/AgentChatVoiceButton";
 import { RichComposer } from "../../components/RichComposer";
 import { AgentChatSubagentRow } from "../../components/agent/session/AgentChatSubagentRow";
 import { AgentChatUsageSummaryLabel } from "../../components/agent/session/AgentChatUsageSummaryLabel";
@@ -32,8 +33,8 @@ import { agentChatStore } from "../../store/agentChatStore";
 import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../store/agentChatSubagents";
 import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
 import { tabStore } from "../../store/tabStore";
-import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
 import { AgentPendingUiPrompt } from "./AgentPendingUiPrompt";
+import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
 
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
@@ -126,6 +127,19 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
     await handleSubmit(nextDraft);
     setDraft("");
   }, [draft, handleSubmit]);
+
+  const handleVoiceText = useCallback((text: string) => {
+    const normalizedText = text.trim();
+    if (!normalizedText) {
+      return;
+    }
+
+    setDraft((currentDraft) => {
+      const separator =
+        currentDraft.length === 0 || currentDraft.endsWith(" ") || currentDraft.endsWith("\n") ? "" : " ";
+      return `${currentDraft}${separator}${normalizedText}`;
+    });
+  }, []);
 
   const handleModelChange = useCallback(
     async (model: AgentModel) => {
@@ -256,53 +270,78 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
         )}
         <AgentChatUsageSummaryLabel tabId={tabId} />
         <Box sx={{ flex: 1 }} />
-        {sessionState === "running" ? (
-          <Tooltip title="Stop" placement="top">
-            <span>
-              <IconButton
-                size="small"
-                onClick={handleAbort}
-                aria-label="Stop"
-                sx={{
-                  p: 0.5,
-                  border: 1,
-                  borderColor: "divider",
-                  bgcolor: "background.paper",
-                }}
-              >
-                <Box
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, overflow: "visible" }}>
+          <AgentChatVoiceButton
+            onText={handleVoiceText}
+            disabled={sessionState === "starting"}
+            disabledMessage="Voice input is not available while the agent session is starting."
+          />
+          {sessionState === "running" ? (
+            <Tooltip title="Stop" placement="top">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={handleAbort}
+                  aria-label="Stop"
                   sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: 0.5,
-                    bgcolor: "currentColor",
+                    width: 34,
+                    height: 34,
+                    p: 0,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : "grey.900"),
+                    color: (theme) => (theme.palette.mode === "dark" ? "text.secondary" : "text.primary"),
+                    borderRadius: 999,
+                    boxShadow: 1,
+                    transition: "background-color 120ms ease, border-color 120ms ease",
+                    "&:hover": {
+                      bgcolor: (theme) => (theme.palette.mode === "dark" ? "action.hover" : "grey.800"),
+                    },
                   }}
-                />
-              </IconButton>
-            </span>
-          </Tooltip>
-        ) : (
-          <Tooltip title="Submit" placement="top">
-            <span>
-              <IconButton
-                size="small"
-                onClick={() => {
-                  void handleSubmitButtonClick();
-                }}
-                disabled={sessionState === "starting" || draft.trim().length === 0}
-                aria-label="Submit"
-                sx={{
-                  p: 0.5,
-                  border: 1,
-                  borderColor: "divider",
-                  bgcolor: "background.paper",
-                }}
-              >
-                <LuArrowUp size={16} />
-              </IconButton>
-            </span>
-          </Tooltip>
-        )}
+                >
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: 0.5,
+                      bgcolor: "currentColor",
+                    }}
+                  />
+                </IconButton>
+              </span>
+            </Tooltip>
+          ) : (
+            <Tooltip title="Submit" placement="top">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    void handleSubmitButtonClick();
+                  }}
+                  disabled={sessionState === "starting" || draft.trim().length === 0}
+                  aria-label="Submit"
+                  sx={{
+                    width: 34,
+                    height: 34,
+                    p: 0,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : "grey.900"),
+                    color: (theme) => (theme.palette.mode === "dark" ? "text.secondary" : "text.primary"),
+                    borderRadius: 999,
+                    boxShadow: 1,
+                    transition: "background-color 120ms ease, border-color 120ms ease",
+                    "&:hover": {
+                      bgcolor: (theme) => (theme.palette.mode === "dark" ? "action.hover" : "grey.800"),
+                    },
+                  }}
+                >
+                  <LuArrowUp size={16} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+        </Box>
       </Box>
     </Box>
   );
