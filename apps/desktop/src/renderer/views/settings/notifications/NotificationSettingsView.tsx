@@ -11,10 +11,8 @@ import {
   SettingsVolumeRow,
 } from "@renderer/components/settings";
 import {
-  type NotificationCategory,
   type NotificationEventType,
   type NotificationSoundId,
-  SUPPORTED_NOTIFICATION_CATEGORIES,
   SUPPORTED_NOTIFICATION_SOUND_IDS,
 } from "@shared/notifications/notificationPreferences";
 import { type ReactNode, useEffect, useState } from "react";
@@ -48,12 +46,6 @@ const NOTIFICATION_SOUND_OPTIONS: Array<{ soundId: NotificationSoundId; labelKey
     labelKey: `org.settings.notifications.sounds.${soundId}`,
   }));
 
-const NOTIFICATION_RUN_TYPE_OPTIONS: Array<{ category: NotificationCategory; labelKey: string }> =
-  SUPPORTED_NOTIFICATION_CATEGORIES.map((category) => ({
-    category,
-    labelKey: `org.settings.notifications.runTypes.items.${category}`,
-  }));
-
 type NotificationPreviewIndicatorState = "inProgress" | "success" | "failed" | null;
 type NotificationSettingsViewProps = {
   focusItemId?: NotificationSettingsFocusItemId | null;
@@ -68,10 +60,6 @@ const EVENT_SOUND_FOCUS_IDS: Record<NotificationEventType, NotificationSettingsF
   "run-finished": "sound-run-finished",
   "run-failed": "sound-run-failed",
   "pending-question": "sound-pending-question",
-};
-
-const RUN_TYPE_FOCUS_IDS: Record<NotificationCategory, NotificationSettingsFocusItemId> = {
-  "ai-task": "run-type-ai-task",
 };
 
 const EVENT_FILTER_FOCUS_IDS: Record<NotificationEventType, NotificationSettingsFocusItemId> = {
@@ -151,7 +139,6 @@ export function NotificationSettingsView({ focusItemId }: NotificationSettingsVi
     handlePreviewEventSound,
     handleTogglePreference,
     handleToggleEventType,
-    handleToggleCategory,
     handleSelectEventSound,
     handleVolumeChange,
     handleVolumeChangeCommitted,
@@ -380,33 +367,6 @@ export function NotificationSettingsView({ focusItemId }: NotificationSettingsVi
                   ))}
                 </>
               ) : null}
-            </SettingsRows>
-          </SettingsCard>
-        </Box>
-      ) : null}
-
-      {!isLoading && draft && shouldShowAdvancedSettings ? (
-        <Box>
-          <SettingsSectionHeader
-            title={t("org.settings.notifications.runTypes.title")}
-            description={t("org.settings.notifications.runTypes.hint")}
-          />
-          <SettingsCard>
-            <SettingsRows>
-              {NOTIFICATION_RUN_TYPE_OPTIONS.map((option) => (
-                <FocusableSettingsRow
-                  key={option.category}
-                  itemId={RUN_TYPE_FOCUS_IDS[option.category]}
-                  focusedItemId={highlightedFocusItemId}
-                >
-                  <SettingsCheckboxRow
-                    title={t(option.labelKey)}
-                    checked={(draft.enabledCategories ?? []).includes(option.category)}
-                    disabled={isSaving}
-                    onChange={(nextChecked) => handleToggleCategory(option.category, nextChecked)}
-                  />
-                </FocusableSettingsRow>
-              ))}
             </SettingsRows>
           </SettingsCard>
         </Box>

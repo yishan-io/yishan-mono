@@ -51,13 +51,6 @@
         },
         "volume": "\u901a\u77e5\u97f3\u91cf",
         "focusOnClick": "\u70b9\u51fb\u901a\u77e5\u65f6\u805a\u7126\u5e94\u7528",
-        "runTypes": {
-          "title": "\u8fd0\u884c\u7c7b\u578b",
-          "hint": "\u9009\u62e9\u54ea\u4e9b\u8fd0\u884c\u7c7b\u522b\u4f1a\u89e6\u53d1\u5b8c\u6210\u901a\u77e5\u3002",
-          "items": {
-            "ai-task": "AI \u4efb\u52a1"
-          }
-        },
         "events": {
           "title": "\u89e6\u53d1\u4e8b\u4ef6",
           "hint": "\u9009\u62e9\u54ea\u4e9b\u4e8b\u4ef6\u4f1a\u89e6\u53d1\u901a\u77e5\u3002",
@@ -89,7 +82,6 @@
           "soundRunFinished": "\u5b8c\u6210\u58f0\u97f3 \u6210\u529f\u58f0\u97f3 run finished success sound",
           "soundRunFailed": "\u5931\u8d25\u58f0\u97f3 \u9519\u8bef\u58f0\u97f3 run failed failure sound",
           "soundPendingQuestion": "\u5f85\u5904\u7406\u95ee\u9898\u58f0\u97f3 \u8f93\u5165 \u5ba1\u6279 \u786e\u8ba4 pending question approval",
-          "runTypeAiTask": "\u8fd0\u884c\u7c7b\u578b ai\u4efb\u52a1 ai run type",
           "eventRunFinished": "\u89e6\u53d1\u4e8b\u4ef6 \u5b8c\u6210\u4e8b\u4ef6 run finished",
           "eventRunFailed": "\u89e6\u53d1\u4e8b\u4ef6 \u5931\u8d25\u4e8b\u4ef6 run failed",
           "eventPendingQuestion": "\u89e6\u53d1\u4e8b\u4ef6 \u5f85\u5904\u7406\u95ee\u9898 \u8f93\u5165 \u5ba1\u6279 \u786e\u8ba4 pending question"

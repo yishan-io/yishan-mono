@@ -1,5 +1,4 @@
 import type {
-  NotificationCategory,
   NotificationEventType,
   NotificationPreferences,
   NotificationSoundId,
@@ -54,24 +53,6 @@ export function useNotificationSettingsMutations({
     [draft, isSaving, persistPreferences],
   );
 
-  const handleToggleCategory = useCallback(
-    (category: NotificationCategory, checked: boolean) => {
-      if (!draft || isSaving) {
-        return;
-      }
-
-      const enabledCategories = checked
-        ? [...new Set([...draft.enabledCategories, category])]
-        : draft.enabledCategories.filter((value) => value !== category);
-
-      void persistPreferences({
-        ...draft,
-        enabledCategories,
-      });
-    },
-    [draft, isSaving, persistPreferences],
-  );
-
   const handleSelectEventSound = useCallback(
     (eventType: NotificationEventType, soundId: NotificationSoundId) => {
       if (!draft || isSaving) {
@@ -120,7 +101,6 @@ export function useNotificationSettingsMutations({
   return {
     handleTogglePreference,
     handleToggleEventType,
-    handleToggleCategory,
     handleSelectEventSound,
     handleVolumeChange,
     handleVolumeChangeCommitted,

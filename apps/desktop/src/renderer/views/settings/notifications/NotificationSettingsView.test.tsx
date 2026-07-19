@@ -45,7 +45,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -57,7 +56,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -102,26 +100,13 @@ describe("NotificationSettingsPanel", () => {
     expect(screen.queryByRole("button", { name: "common.actions.save" })).toBeNull();
   });
 
-  it("does not toggle controls when clicking row text labels", async () => {
+  it("does not show a run-type section when notifications only support AI tasks", async () => {
     mocked.getNotificationPreferencesMock.mockResolvedValue({
       enabled: true,
       soundEnabled: true,
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
-      eventSounds: {
-        "run-finished": "chime",
-        "run-failed": "alert",
-      },
-    });
-    mocked.updateNotificationPreferencesMock.mockResolvedValue({
-      enabled: true,
-      soundEnabled: true,
-      volume: 0.5,
-      focusOnClick: true,
-      enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -142,14 +127,8 @@ describe("NotificationSettingsPanel", () => {
       expect(mocked.getNotificationPreferencesMock).toHaveBeenCalled();
     });
 
-    const soundEnabledLabel = await screen.findByText("org.settings.notifications.soundEnabled");
-    const runTypeAiTaskLabel = await screen.findByText("org.settings.notifications.runTypes.items.ai-task");
-
-    fireEvent.click(soundEnabledLabel);
-    fireEvent.click(runTypeAiTaskLabel);
-
-    await Promise.resolve();
-    expect(mocked.updateNotificationPreferencesMock).not.toHaveBeenCalled();
+    expect(screen.queryByText("org.settings.notifications.runTypes.title")).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "org.settings.notifications.runTypes.items.ai-task" })).toBeNull();
   });
 
   it("hides sound configuration rows when play notification sound is turned off", async () => {
@@ -159,7 +138,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -171,7 +149,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -220,7 +197,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -232,7 +208,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -275,7 +250,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -287,7 +261,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -323,7 +296,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed", "pending-question"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -336,7 +308,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed", "pending-question"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -373,7 +344,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -385,7 +355,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -415,115 +384,6 @@ describe("NotificationSettingsPanel", () => {
     expect(screen.queryByText("org.settings.notifications.preview.blocked")).toBeNull();
   });
 
-  it("persists run-type checkbox edits immediately", async () => {
-    mocked.getNotificationPreferencesMock.mockResolvedValue({
-      enabled: true,
-      soundEnabled: true,
-      volume: 0.5,
-      focusOnClick: true,
-      enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
-      eventSounds: {
-        "run-finished": "chime",
-        "run-failed": "alert",
-      },
-    });
-    mocked.updateNotificationPreferencesMock.mockResolvedValue({
-      enabled: true,
-      soundEnabled: true,
-      volume: 0.5,
-      focusOnClick: true,
-      enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: [],
-      eventSounds: {
-        "run-finished": "chime",
-        "run-failed": "alert",
-      },
-    });
-    mocked.previewNotificationMock.mockResolvedValue({
-      sent: true,
-      eventType: "run-finished",
-    });
-    mocked.playNotificationSoundMock.mockResolvedValue({
-      played: true,
-      eventType: "run-finished",
-    });
-
-    render(<NotificationSettingsPanel />);
-
-    await waitFor(() => {
-      expect(mocked.getNotificationPreferencesMock).toHaveBeenCalled();
-    });
-
-    fireEvent.click(screen.getByRole("checkbox", { name: "org.settings.notifications.runTypes.items.ai-task" }));
-
-    await waitFor(() => {
-      expect(mocked.updateNotificationPreferencesMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          enabledCategories: [],
-        }),
-      );
-    });
-  });
-
-  it("falls back to default run-type membership when API response omits enabledCategories", async () => {
-    mocked.getNotificationPreferencesMock.mockResolvedValue({
-      enabled: true,
-      osEnabled: true,
-      soundEnabled: true,
-      volume: 0.5,
-      focusOnClick: true,
-      enabledEventTypes: ["run-finished", "run-failed"],
-      eventSounds: {
-        "run-finished": "chime",
-        "run-failed": "alert",
-      },
-    });
-    mocked.updateNotificationPreferencesMock.mockResolvedValue({
-      enabled: true,
-      osEnabled: true,
-      soundEnabled: true,
-      volume: 0.5,
-      focusOnClick: true,
-      enabledEventTypes: ["run-finished", "run-failed"],
-      eventSounds: {
-        "run-finished": "chime",
-        "run-failed": "alert",
-      },
-    });
-    mocked.previewNotificationMock.mockResolvedValue({
-      sent: true,
-      eventType: "run-finished",
-    });
-    mocked.playNotificationSoundMock.mockResolvedValue({
-      played: true,
-      eventType: "run-finished",
-    });
-
-    render(<NotificationSettingsPanel />);
-
-    await waitFor(() => {
-      expect(mocked.getNotificationPreferencesMock).toHaveBeenCalled();
-    });
-
-    const runTypeCheckbox = screen.getByRole("checkbox", { name: "org.settings.notifications.runTypes.items.ai-task" });
-    expect((runTypeCheckbox as HTMLInputElement).checked).toBe(true);
-
-    fireEvent.click(runTypeCheckbox);
-
-    await waitFor(() => {
-      expect(mocked.updateNotificationPreferencesMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          enabledCategories: [],
-        }),
-      );
-    });
-
-    await waitFor(() => {
-      expect((runTypeCheckbox as HTMLInputElement).checked).toBe(false);
-    });
-  });
-
   it("auto-hides notification preview status after a short delay", async () => {
     mocked.getNotificationPreferencesMock.mockResolvedValue({
       enabled: true,
@@ -531,7 +391,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -543,7 +402,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -588,7 +446,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -600,7 +457,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "ping",
         "run-failed": "alert",
@@ -643,7 +499,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -655,7 +510,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -705,7 +559,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",
@@ -717,7 +570,6 @@ describe("NotificationSettingsPanel", () => {
       volume: 0.5,
       focusOnClick: true,
       enabledEventTypes: ["run-finished", "run-failed"],
-      enabledCategories: ["ai-task"],
       eventSounds: {
         "run-finished": "chime",
         "run-failed": "alert",

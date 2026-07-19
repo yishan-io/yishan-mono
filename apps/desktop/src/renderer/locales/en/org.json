@@ -51,13 +51,6 @@
         },
         "volume": "Notification volume",
         "focusOnClick": "Focus app when notification is clicked",
-        "runTypes": {
-          "title": "Run types",
-          "hint": "Choose which run categories can trigger completion notifications.",
-          "items": {
-            "ai-task": "AI tasks"
-          }
-        },
         "events": {
           "title": "Trigger events",
           "hint": "Choose which events can trigger notifications.",
@@ -89,7 +82,6 @@
           "soundRunFinished": "sound run finished sound success sound",
           "soundRunFailed": "sound run failed sound failure sound",
           "soundPendingQuestion": "sound pending question input approval confirmation attention",
-          "runTypeAiTask": "run type ai task ai",
           "eventRunFinished": "trigger event event filter run finished",
           "eventRunFailed": "trigger event event filter run failed",
           "eventPendingQuestion": "trigger event pending question input approval confirmation attention"

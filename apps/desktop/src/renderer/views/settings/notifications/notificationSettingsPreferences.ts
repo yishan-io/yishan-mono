@@ -1,9 +1,7 @@
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
-  type NotificationCategory,
   type NotificationEventType,
   type NotificationPreferences,
-  SUPPORTED_NOTIFICATION_CATEGORIES,
   SUPPORTED_NOTIFICATION_EVENT_TYPES,
   SUPPORTED_NOTIFICATION_SOUND_IDS,
 } from "@shared/notifications/notificationPreferences";
@@ -42,11 +40,6 @@ export function normalizeNotificationPreferencesSnapshot(
     SUPPORTED_NOTIFICATION_EVENT_TYPES,
     fallback.enabledEventTypes,
   );
-  const enabledCategories = filterSupportedValues<NotificationCategory>(
-    safePreferences.enabledCategories,
-    SUPPORTED_NOTIFICATION_CATEGORIES,
-    fallback.enabledCategories,
-  );
 
   const supportedSoundIdSet = new Set(SUPPORTED_NOTIFICATION_SOUND_IDS);
   const eventSounds = SUPPORTED_NOTIFICATION_EVENT_TYPES.reduce<NotificationPreferences["eventSounds"]>(
@@ -66,7 +59,6 @@ export function normalizeNotificationPreferencesSnapshot(
     ...fallback,
     ...safePreferences,
     enabledEventTypes,
-    enabledCategories,
     eventSounds,
   };
 }
