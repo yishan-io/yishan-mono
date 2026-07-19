@@ -165,6 +165,70 @@ Prompt body`,
       { message: "Agent field `tools` contains unknown tools: deploy", path: filePath },
     ]);
   });
+
+  it("loads conflicting read_only frontmatter but emits a diagnostic", () => {
+    const tempDir = createTempDir();
+    const filePath = writeAgentFile(
+      tempDir,
+      "Reviewer.md",
+      `---
+name: Reviewer
+description: Review code
+tools:
+  - read
+  - bash
+read_only: true
+---
+
+Prompt body`,
+    );
+
+    const result = loadAgentDefinitionFile({ filePath, source: "builtin" });
+
+    expect(result.agent).toMatchObject({
+      name: "Reviewer",
+      tools: ["read", "bash"],
+      readOnly: true,
+    });
+    expect(result.diagnostics).toEqual([
+      {
+        message: "Agent field `read_only` conflicts with tool-derived workspace access: write",
+        path: filePath,
+      },
+    ]);
+  });
+
+  it("emits a diagnostic when read_only false conflicts with read-only tools", () => {
+    const tempDir = createTempDir();
+    const filePath = writeAgentFile(
+      tempDir,
+      "Searcher.md",
+      `---
+name: Searcher
+description: Search code
+tools:
+  - read
+  - grep
+read_only: false
+---
+
+Prompt body`,
+    );
+
+    const result = loadAgentDefinitionFile({ filePath, source: "builtin" });
+
+    expect(result.agent).toMatchObject({
+      name: "Searcher",
+      tools: ["read", "grep"],
+      readOnly: false,
+    });
+    expect(result.diagnostics).toEqual([
+      {
+        message: "Agent field `read_only` conflicts with tool-derived workspace access: read",
+        path: filePath,
+      },
+    ]);
+  });
 });
 
 describe("loadAgentDefinitionsFromDir", () => {

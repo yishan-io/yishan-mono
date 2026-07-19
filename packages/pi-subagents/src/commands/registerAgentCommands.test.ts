@@ -76,7 +76,7 @@ describe("registerAgentCommands", () => {
         thinking: undefined,
         maxTurns: undefined,
         timeoutMs: undefined,
-        readOnly: true,
+        workspaceAccess: "read",
       }),
     );
     expect(notify).toHaveBeenCalledWith("Started Explore as agent-1", "info");

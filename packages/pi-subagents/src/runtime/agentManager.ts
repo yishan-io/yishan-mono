@@ -4,7 +4,7 @@ import { type AgentRunHandle, type StartAgentRunOptions, startAgentRun } from ".
 import { ConcurrencyQueue, QueuedTaskCancelledError } from "./concurrencyQueue";
 import { formatResultCollectorOutput } from "./resultCollector";
 
-const DEFAULT_MAX_CONCURRENCY = 4;
+const DEFAULT_MAX_CONCURRENCY = 16;
 const AGENT_ID_PREFIX = "agent";
 
 /** Configurable dependencies for the shared agent manager. */
@@ -216,7 +216,7 @@ export class AgentManager {
           this.queuedCancels.delete(agentId);
         }
       },
-      { readOnly: task.readOnly ?? true },
+      { workspaceAccess: task.workspaceAccess },
     );
 
     this.queuedCancels.set(agentId, queuedTask.cancel);

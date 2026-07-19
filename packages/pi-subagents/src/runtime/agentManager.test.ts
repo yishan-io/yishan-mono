@@ -40,7 +40,7 @@ function createTask(overrides: Partial<AgentTask> = {}): AgentTask {
     prompt: "Inspect auth",
     mode: "foreground",
     cwd: "/tmp/project",
-    readOnly: true,
+    workspaceAccess: "read",
     agentDefinition: testAgentDefinition,
     ...overrides,
   };

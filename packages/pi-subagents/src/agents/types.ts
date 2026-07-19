@@ -16,6 +16,9 @@ export type AgentStatus = "queued" | "running" | "completed" | "failed" | "cance
 /** Execution mode for one agent run. */
 export type AgentRunMode = "foreground" | "background";
 
+/** Declared workspace access required for one agent run. */
+export type WorkspaceAccess = "read" | "write";
+
 /** Shared usage summary captured from one agent run. */
 export interface AgentUsageStats {
   input: number;
@@ -58,7 +61,7 @@ export interface AgentTask {
   thinking?: ThinkingLevel;
   maxTurns?: number;
   timeoutMs?: number;
-  readOnly?: boolean;
+  workspaceAccess: WorkspaceAccess;
 }
 
 /** Result returned when one managed agent run finishes. */
