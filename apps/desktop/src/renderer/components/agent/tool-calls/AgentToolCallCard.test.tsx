@@ -198,6 +198,55 @@ describe("AgentToolCallCard", () => {
     expect(screen.queryByText("arguments")).toBeNull();
   });
 
+  it("renders memory search results as a readable item list when expanded", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-memory-search-results",
+      name: "memory_search",
+      arguments: {
+        query: "pi-subagents runtime",
+        scope: "project",
+        limit: 2,
+      },
+    };
+
+    const result = {
+      id: "result-memory-search-results",
+      role: "toolResult",
+      toolCallId: "tool-memory-search-results",
+      toolName: "memory_search",
+      content: JSON.stringify(
+        [
+          {
+            path: "/tmp/project/.my-context/MEMORY.md",
+            snippet: "...<mark>pi-subagents</mark> <mark>runtime</mark> fixes...",
+            score: -6.573408187559598,
+          },
+          {
+            path: "/tmp/project/.my-context/archive/open-questions.md",
+            snippet: "...Should <mark>runtime</mark> changes land first?...",
+            score: -5.7031485978176315,
+          },
+        ],
+        null,
+        2,
+      ),
+      details: {
+        count: 2,
+      },
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+    fireEvent.click(screen.getByText("pi-subagents runtime"));
+
+    expect(screen.getByText("results")).toBeTruthy();
+    expect(screen.getByText("/tmp/project/.my-context/MEMORY.md")).toBeTruthy();
+    expect(screen.getByText("rank -6.573")).toBeTruthy();
+    expect(screen.getByText("...<mark>pi-subagents</mark> <mark>runtime</mark> fixes...")).toBeTruthy();
+    expect(screen.queryByText("[")).toBeNull();
+  });
+
   it("shows a compact memory store summary with section and file", () => {
     const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
       type: "toolCall",
