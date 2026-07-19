@@ -132,10 +132,6 @@ function normalizeNotificationPreferences(
       ...fallback.eventSounds,
       ...(candidate.eventSounds ?? {}),
     },
-    enabledCategories:
-      Array.isArray(candidate.enabledCategories) && candidate.enabledCategories.length > 0
-        ? [...new Set(candidate.enabledCategories)]
-        : [...fallback.enabledCategories],
   };
 }
 

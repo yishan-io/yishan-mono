@@ -1785,7 +1785,6 @@ describe("createBackendEventStoreBindings", () => {
         "run-failed": "alert" as const,
         "pending-question": "ping" as const,
       },
-      enabledCategories: ["ai-task" as const],
     }));
 
     const startBindings = createBackendEventStoreBindings({
@@ -1859,7 +1858,6 @@ describe("createBackendEventStoreBindings", () => {
         "run-failed": "alert" as const,
         "pending-question": "ping" as const,
       },
-      enabledCategories: ["ai-task" as const],
     }));
 
     const startBindings = createBackendEventStoreBindings({
@@ -1930,7 +1928,6 @@ describe("createBackendEventStoreBindings", () => {
         "run-failed": "alert" as const,
         "pending-question": "ping" as const,
       },
-      enabledCategories: ["ai-task" as const],
     }));
 
     const startBindings = createBackendEventStoreBindings({
@@ -1993,7 +1990,6 @@ describe("createBackendEventStoreBindings", () => {
         "run-failed": "alert" as const,
         "pending-question": "ping" as const,
       },
-      enabledCategories: ["ai-task" as const],
     }));
 
     const startBindings = createBackendEventStoreBindings({
@@ -2057,7 +2053,6 @@ describe("createBackendEventStoreBindings", () => {
         "run-failed": "alert" as const,
         "pending-question": "ping" as const,
       },
-      enabledCategories: ["ai-task" as const],
     }));
 
     const startBindings = createBackendEventStoreBindings({
@@ -2125,7 +2120,6 @@ describe("createBackendEventStoreBindings", () => {
         "run-failed": "alert" as const,
         "pending-question": "ping" as const,
       },
-      enabledCategories: ["ai-task" as const],
     }));
 
     const startBindings = createBackendEventStoreBindings({

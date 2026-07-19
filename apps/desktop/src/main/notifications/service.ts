@@ -7,7 +7,6 @@ export type {
   DesktopNotificationHostAdapter,
   NativeNotificationRequest,
   NativeNotificationResult,
-  NotificationCategory,
   NotificationClickEvent,
   NotificationDispatchResult,
   NotificationDriver,

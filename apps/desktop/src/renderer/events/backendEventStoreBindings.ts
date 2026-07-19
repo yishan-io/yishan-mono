@@ -456,11 +456,7 @@ function shouldDeliverPreferenceBackedNotification(
   preferences: NotificationPreferences,
   eventType: NotificationEventType,
 ): boolean {
-  return (
-    preferences.enabled &&
-    preferences.enabledCategories.includes("ai-task") &&
-    preferences.enabledEventTypes.includes(eventType)
-  );
+  return preferences.enabled && preferences.enabledEventTypes.includes(eventType);
 }
 
 function parseObserverSessionKey(sessionKey: string): { workspaceId: string; tabId: string; paneId: string } | null {

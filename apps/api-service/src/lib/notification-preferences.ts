@@ -7,8 +7,6 @@ export type NotificationEventType = (typeof SUPPORTED_NOTIFICATION_EVENT_TYPES)[
 export const SUPPORTED_NOTIFICATION_SOUND_IDS = ["chime", "ping", "pop", "zip", "alert"] as const;
 export type NotificationSoundId = (typeof SUPPORTED_NOTIFICATION_SOUND_IDS)[number];
 
-export const SUPPORTED_NOTIFICATION_CATEGORIES = ["ai-task"] as const;
-export type NotificationCategory = (typeof SUPPORTED_NOTIFICATION_CATEGORIES)[number];
 export const CURRENT_NOTIFICATION_PREFERENCES_SCHEMA_VERSION = 2;
 
 /** Canonical type derived from the validation schema — the two stay in sync automatically. */
@@ -33,7 +31,6 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
     "run-failed": "alert",
     "pending-question": "ping",
   },
-  enabledCategories: [...SUPPORTED_NOTIFICATION_CATEGORIES],
 };
 
 /** Normalizes one stored preferences payload into one full runtime-safe snapshot. */
@@ -49,13 +46,6 @@ export function normalizeNotificationPreferences(
         ...(Array.isArray(candidate.enabledEventTypes) ? candidate.enabledEventTypes : fallback.enabledEventTypes),
         ...fallback.enabledEventTypes,
       ].filter(isNotificationEventType),
-    ),
-  ];
-  const enabledCategories = [
-    ...new Set(
-      (Array.isArray(candidate.enabledCategories) ? candidate.enabledCategories : fallback.enabledCategories).filter(
-        isNotificationCategory,
-      ),
     ),
   ];
 
@@ -84,16 +74,11 @@ export function normalizeNotificationPreferences(
     focusOnClick: typeof candidate.focusOnClick === "boolean" ? candidate.focusOnClick : fallback.focusOnClick,
     enabledEventTypes: enabledEventTypes.length > 0 ? enabledEventTypes : [...fallback.enabledEventTypes],
     eventSounds,
-    enabledCategories: enabledCategories.length > 0 ? enabledCategories : [...fallback.enabledCategories],
   };
 }
 
 function isNotificationEventType(value: unknown): value is NotificationEventType {
   return typeof value === "string" && SUPPORTED_NOTIFICATION_EVENT_TYPES.includes(value as NotificationEventType);
-}
-
-function isNotificationCategory(value: unknown): value is NotificationCategory {
-  return typeof value === "string" && SUPPORTED_NOTIFICATION_CATEGORIES.includes(value as NotificationCategory);
 }
 
 function isNotificationSoundId(value: unknown): value is NotificationSoundId {
