@@ -34,6 +34,7 @@ export {
   type AgentStatus,
   type AgentTask,
   type AgentUsageStats,
+  type WorkspaceAccess,
 } from "./agents/types";
 export {
   DEFAULT_ALLOWED_TOOL_NAMES,

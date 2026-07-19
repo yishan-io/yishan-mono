@@ -16,7 +16,7 @@ function createDeferredPromise<T>() {
 }
 
 describe("ConcurrencyQueue", () => {
-  it("runs read-only tasks up to the configured concurrency", async () => {
+  it("runs read tasks up to the configured concurrency", async () => {
     const queue = new ConcurrencyQueue(2);
     const firstTask = createDeferredPromise<string>();
     const secondTask = createDeferredPromise<string>();
@@ -29,7 +29,7 @@ describe("ConcurrencyQueue", () => {
         executionOrder.push("first:end");
         return value;
       },
-      { readOnly: true },
+      { workspaceAccess: "read" },
     );
     const secondHandle = queue.enqueue(
       async () => {
@@ -38,7 +38,7 @@ describe("ConcurrencyQueue", () => {
         executionOrder.push("second:end");
         return value;
       },
-      { readOnly: true },
+      { workspaceAccess: "read" },
     );
 
     expect(executionOrder).toEqual(["first:start", "second:start"]);
@@ -64,7 +64,7 @@ describe("ConcurrencyQueue", () => {
         executionOrder.push("read:end");
         return value;
       },
-      { readOnly: true },
+      { workspaceAccess: "read" },
     );
     const writeHandle = queue.enqueue(
       async () => {
@@ -73,7 +73,7 @@ describe("ConcurrencyQueue", () => {
         executionOrder.push("write:end");
         return value;
       },
-      { readOnly: false },
+      { workspaceAccess: "write" },
     );
 
     expect(executionOrder).toEqual(["read:start"]);
@@ -91,12 +91,61 @@ describe("ConcurrencyQueue", () => {
     const queue = new ConcurrencyQueue(1);
     const runningTask = createDeferredPromise<string>();
 
-    queue.enqueue(async () => runningTask.promise, { readOnly: true });
-    const queuedHandle = queue.enqueue(async () => "later", { readOnly: true });
+    queue.enqueue(async () => runningTask.promise, { workspaceAccess: "read" });
+    const queuedHandle = queue.enqueue(async () => "later", { workspaceAccess: "read" });
 
     expect(queuedHandle.cancel()).toBe(true);
     await expect(queuedHandle.promise).rejects.toBeInstanceOf(QueuedTaskCancelledError);
 
     runningTask.resolve("done");
+  });
+
+  it("does not allow later readers to bypass a queued writer", async () => {
+    const queue = new ConcurrencyQueue(2);
+    const firstRead = createDeferredPromise<string>();
+    const writer = createDeferredPromise<string>();
+    const secondRead = createDeferredPromise<string>();
+    const executionOrder: string[] = [];
+
+    const firstHandle = queue.enqueue(
+      async () => {
+        executionOrder.push("read-1:start");
+        const value = await firstRead.promise;
+        executionOrder.push("read-1:end");
+        return value;
+      },
+      { workspaceAccess: "read" },
+    );
+    const writerHandle = queue.enqueue(
+      async () => {
+        executionOrder.push("write:start");
+        const value = await writer.promise;
+        executionOrder.push("write:end");
+        return value;
+      },
+      { workspaceAccess: "write" },
+    );
+    const secondHandle = queue.enqueue(
+      async () => {
+        executionOrder.push("read-2:start");
+        const value = await secondRead.promise;
+        executionOrder.push("read-2:end");
+        return value;
+      },
+      { workspaceAccess: "read" },
+    );
+
+    expect(executionOrder).toEqual(["read-1:start"]);
+
+    firstRead.resolve("one");
+    await expect(firstHandle.promise).resolves.toBe("one");
+    expect(executionOrder).toEqual(["read-1:start", "read-1:end", "write:start"]);
+
+    writer.resolve("two");
+    await expect(writerHandle.promise).resolves.toBe("two");
+    expect(executionOrder).toEqual(["read-1:start", "read-1:end", "write:start", "write:end", "read-2:start"]);
+
+    secondRead.resolve("three");
+    await expect(secondHandle.promise).resolves.toBe("three");
   });
 });

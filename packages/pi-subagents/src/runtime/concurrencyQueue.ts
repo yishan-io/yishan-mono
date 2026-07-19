@@ -1,6 +1,8 @@
+import type { WorkspaceAccess } from "../agents/types";
+
 /** Options for scheduling one queued agent run. */
 export interface QueueTaskOptions {
-  readOnly: boolean;
+  workspaceAccess: WorkspaceAccess;
 }
 
 /** Handle returned when scheduling one queued task. */
@@ -27,14 +29,18 @@ export class QueuedTaskCancelledError extends Error {
 }
 
 /**
- * Concurrency limiter that allows up to N read-only runs or exactly one write run.
+ * Concurrency limiter that allows up to N read runs or exactly one write run.
  */
 export class ConcurrencyQueue {
   private readonly pendingTasks: Array<QueueTask<unknown>> = [];
   private activeTaskCount = 0;
   private hasActiveWriteTask = false;
 
-  constructor(private readonly maxConcurrency: number) {}
+  constructor(private readonly maxConcurrency: number) {
+    if (!Number.isInteger(maxConcurrency) || maxConcurrency < 1) {
+      throw new Error("maxConcurrency must be at least 1");
+    }
+  }
 
   /** Schedules one task and returns a promise plus a queued-task cancel handle. */
   enqueue<T>(run: () => Promise<T>, options: QueueTaskOptions): QueuedTaskHandle<T> {
@@ -74,24 +80,29 @@ export class ConcurrencyQueue {
       this.pendingTasks.splice(taskIndex, 1);
     }
     task.reject(new QueuedTaskCancelledError());
+    this.drain();
     return true;
   }
 
   private drain(): void {
     while (this.pendingTasks.length > 0) {
-      const nextTaskIndex = this.pendingTasks.findIndex((task) => this.canStartTask(task));
-      if (nextTaskIndex < 0) {
+      const nextTask = this.pendingTasks[0];
+      if (!nextTask) {
         return;
       }
 
-      const [nextTask] = this.pendingTasks.splice(nextTaskIndex, 1);
-      if (!nextTask || nextTask.isCancelled) {
+      if (!this.canStartTask(nextTask)) {
+        return;
+      }
+
+      this.pendingTasks.shift();
+      if (nextTask.isCancelled) {
         continue;
       }
 
       nextTask.hasStarted = true;
       this.activeTaskCount += 1;
-      if (!nextTask.options.readOnly) {
+      if (nextTask.options.workspaceAccess === "write") {
         this.hasActiveWriteTask = true;
       }
 
@@ -100,7 +111,7 @@ export class ConcurrencyQueue {
   }
 
   private canStartTask(task: QueueTask<unknown>): boolean {
-    if (!task.options.readOnly) {
+    if (task.options.workspaceAccess === "write") {
       return this.activeTaskCount === 0;
     }
 
@@ -115,7 +126,7 @@ export class ConcurrencyQueue {
       task.reject(error);
     } finally {
       this.activeTaskCount -= 1;
-      if (!task.options.readOnly) {
+      if (task.options.workspaceAccess === "write") {
         this.hasActiveWriteTask = false;
       }
       this.drain();

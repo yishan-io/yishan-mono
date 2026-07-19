@@ -1,8 +1,8 @@
 import type { AgentDefinition, AgentTask } from "../agents/types";
+import { resolveWorkspaceAccessFromTools } from "../agents/workspaceAccess";
 import { buildChildSessionDescriptor } from "./sessionRelationship";
 
 const DEFAULT_READ_ONLY_TOOL_NAMES = ["read", "grep", "find", "ls"];
-const WRITE_TOOL_NAMES = new Set(["write", "edit"]);
 
 /**
  * Builds one executable manager task from a resolved agent definition.
@@ -15,7 +15,7 @@ export function buildAgentTask(input: {
   mode: AgentTask["mode"];
 }): AgentTask {
   const tools = resolveAgentTools(input.agentDefinition);
-  const readOnly = resolveAgentReadOnly(input.agentDefinition, tools);
+  const workspaceAccess = resolveWorkspaceAccess(input.agentDefinition, tools);
 
   return {
     agentName: input.agentName,
@@ -29,7 +29,7 @@ export function buildAgentTask(input: {
     thinking: input.agentDefinition.thinking,
     maxTurns: input.agentDefinition.maxTurns,
     timeoutMs: input.agentDefinition.timeoutMs,
-    readOnly,
+    workspaceAccess,
   };
 }
 
@@ -45,14 +45,17 @@ function resolveAgentTools(agentDefinition: AgentDefinition): string[] | undefin
   return [...DEFAULT_READ_ONLY_TOOL_NAMES];
 }
 
-function resolveAgentReadOnly(agentDefinition: AgentDefinition, tools: string[] | undefined): boolean {
-  if (agentDefinition.readOnly !== undefined) {
-    return agentDefinition.readOnly;
+function resolveWorkspaceAccess(
+  agentDefinition: AgentDefinition,
+  tools: string[] | undefined,
+): AgentTask["workspaceAccess"] {
+  if (tools && tools.length > 0) {
+    return resolveWorkspaceAccessFromTools(tools);
   }
 
-  if (!tools || tools.length === 0) {
-    return false;
+  if (agentDefinition.readOnly === false) {
+    return "write";
   }
 
-  return !tools.some((toolName) => WRITE_TOOL_NAMES.has(toolName));
+  return resolveWorkspaceAccessFromTools(tools);
 }
