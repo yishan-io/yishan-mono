@@ -26,8 +26,6 @@ type LayoutStoreState = {
   isLeftPaneManuallyHidden: boolean;
   // ── persisted link setting (from former linkSettingsStore) ─────────────────
   linkTarget: LinkTarget;
-  isVoiceInputEnabled: boolean;
-  voiceAutoEnter: boolean;
   // ── transient popup tracking (from former popupStore) ─────────────────────
   popupCount: number;
   isPopupOpen: boolean;
@@ -42,8 +40,6 @@ type LayoutStoreState = {
   setIsMarkdownOutlineVisible: (visible: boolean) => void;
   setIsLeftPaneManuallyHidden: (hidden: boolean) => void;
   setLinkTarget: (target: LinkTarget) => void;
-  setIsVoiceInputEnabled: (enabled: boolean) => void;
-  setVoiceAutoEnter: (enabled: boolean) => void;
   registerPopup: () => void;
   unregisterPopup: () => void;
 };
@@ -62,8 +58,6 @@ export const layoutStore = create<LayoutStoreState>()(
       isMarkdownOutlineVisible: false,
       isLeftPaneManuallyHidden: false,
       linkTarget: "built-in" as LinkTarget,
-      isVoiceInputEnabled: false,
-      voiceAutoEnter: true,
       popupCount: 0,
       isPopupOpen: false,
 
@@ -97,12 +91,6 @@ export const layoutStore = create<LayoutStoreState>()(
       setLinkTarget: (linkTarget) => {
         set({ linkTarget });
       },
-      setIsVoiceInputEnabled: (isVoiceInputEnabled) => {
-        set({ isVoiceInputEnabled });
-      },
-      setVoiceAutoEnter: (voiceAutoEnter) => {
-        set({ voiceAutoEnter });
-      },
       registerPopup: () => {
         set((state) => {
           const nextCount = state.popupCount + 1;
@@ -131,8 +119,6 @@ export const layoutStore = create<LayoutStoreState>()(
         markdownPreviewWidth: state.markdownPreviewWidth,
         isMarkdownOutlineVisible: state.isMarkdownOutlineVisible,
         linkTarget: state.linkTarget,
-        isVoiceInputEnabled: state.isVoiceInputEnabled,
-        voiceAutoEnter: state.voiceAutoEnter,
       }),
     },
   ),

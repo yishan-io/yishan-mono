@@ -1,20 +1,13 @@
 import { Badge, Box, IconButton, Tooltip } from "@mui/material";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuFolderTree, LuGitBranch, LuGitPullRequest, LuMic } from "react-icons/lu";
+import { LuFolderTree, LuGitBranch, LuGitPullRequest } from "react-icons/lu";
 import { PANE_HEADER_MIN_HEIGHT } from "../../../components/PaneHeader";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
-import { layoutStore } from "../../../store/settings/layoutStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { DEFAULT_RIGHT_PANE_TAB, type WorkspaceRightPaneTab } from "../../../store/workspaceUiStore";
 import { workspaceUiStore } from "../../../store/workspaceUiStore";
 import { DARK_SURFACE_COLORS } from "../../../theme";
-
-/** Custom event name dispatched when the voice mic button in the tab bar is clicked. */
-export const VOICE_RECORD_REQUEST_EVENT = "yishan:voice-record-request";
-/** Custom event name dispatched when floating voice UI visibility changes. */
-export const VOICE_RECORDING_VISIBILITY_EVENT = "yishan:voice-recording-visibility";
 
 export type RightPaneTabBarProps = {
   rightCollapsed: boolean;
@@ -35,8 +28,6 @@ export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPa
   );
   const setRightPaneTab = workspaceUiStore((state) => state.setRightPaneTab);
   const changesCount = workspaceStore((state) => state.gitChangesCountByWorkspaceId[selectedWorkspaceId] ?? 0);
-  const isVoiceInputEnabled = layoutStore((state) => state.isVoiceInputEnabled);
-  const [isVoiceRecordingVisible, setIsVoiceRecordingVisible] = useState(false);
 
   const handleTabClick = (tab: WorkspaceRightPaneTab) => {
     if (rightCollapsed) {
@@ -48,18 +39,6 @@ export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPa
       setRightPaneTab(selectedWorkspaceId, tab);
     }
   };
-
-  useEffect(() => {
-    const handleVisibilityChange = (event: Event) => {
-      const detail = (event as CustomEvent<{ visible?: boolean }>).detail;
-      setIsVoiceRecordingVisible(Boolean(detail?.visible));
-    };
-
-    window.addEventListener(VOICE_RECORDING_VISIBILITY_EVENT, handleVisibilityChange);
-    return () => {
-      window.removeEventListener(VOICE_RECORDING_VISIBILITY_EVENT, handleVisibilityChange);
-    };
-  }, []);
 
   const platform = getRendererPlatform();
 
@@ -167,34 +146,7 @@ export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPa
         );
       })}
 
-      {/* Spacer pushes voice button to bottom */}
       <Box sx={{ flex: 1 }} />
-
-      {/* Voice input mic button — visible when voice input is enabled */}
-      {isVoiceInputEnabled && !isVoiceRecordingVisible && (
-        <Tooltip title={t("settings.terminal.voice.title")} placement="left" arrow>
-          <IconButton
-            size="small"
-            aria-label={t("settings.terminal.voice.title")}
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent(VOICE_RECORD_REQUEST_EVENT));
-            }}
-            sx={{
-              width: 34,
-              height: 42,
-              borderRadius: 1,
-              color: "text.secondary",
-              mx: 0.5,
-              mb: 0.5,
-              "&:hover": {
-                bgcolor: "action.hover",
-              },
-            }}
-          >
-            <LuMic size={18} />
-          </IconButton>
-        </Tooltip>
-      )}
     </Box>
   );
 }

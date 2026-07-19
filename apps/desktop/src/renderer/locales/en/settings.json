@@ -537,18 +537,6 @@
       }
     },
     "terminal": {
-      "voice": {
-        "title": "Voice input",
-        "description": "Show a floating microphone button on terminal tabs and transcribe speech into terminal input.",
-        "enable": {
-          "label": "Enable voice input",
-          "description": "When enabled, terminal tabs show a microphone button for recording up to 60 seconds of speech."
-        },
-        "autoEnter": {
-          "label": "Auto-submit after transcription",
-          "description": "Automatically press Enter after transcribed text is inserted into the terminal."
-        }
-      },
       "title": "Terminal sessions",
       "description": "Review all running terminals and stop sessions from one place.",
       "loadError": "Failed to load terminal sessions.",

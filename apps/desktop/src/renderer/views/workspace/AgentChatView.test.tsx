@@ -283,6 +283,15 @@ describe("AgentChatView", () => {
     expect(mocked.ensurePiSession).toHaveBeenCalledTimes(1);
   });
 
+  it("renders voice input beside the agent chat submit control", () => {
+    seedSession();
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    expect(screen.getByRole("button", { name: "Click to record voice input" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeTruthy();
+  });
+
   it("keeps the message-list working indicator visible while the session is running even with a trailing message", () => {
     seedSession({
       state: "running",
@@ -445,7 +454,9 @@ describe("AgentChatView", () => {
     expect(within(pendingPrompt).getByText("First option")).toBeTruthy();
     expect(within(pendingPrompt).getByText("B")).toBeTruthy();
     expect(within(pendingPrompt).getByText("Second option")).toBeTruthy();
-    expect(within(pendingPrompt).getByRole("button", { name: "common.actions.confirm" }).hasAttribute("disabled")).toBe(true);
+    expect(within(pendingPrompt).getByRole("button", { name: "common.actions.confirm" }).hasAttribute("disabled")).toBe(
+      true,
+    );
 
     fireEvent.click(within(pendingPrompt).getByText("A"));
     fireEvent.click(within(pendingPrompt).getByText("B"));

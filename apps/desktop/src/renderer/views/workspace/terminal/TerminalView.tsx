@@ -2,15 +2,8 @@ import { Box } from "@mui/material";
 import type { SearchAddon } from "@xterm/addon-search";
 import type { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
-import { memo, useCallback, useEffect, useRef } from "react";
-import { writeTerminalInput } from "../../../commands/terminalCommands";
-import { FloatingVoiceButton, type FloatingVoiceButtonHandle } from "../../../components/FloatingVoiceButton";
+import { memo, useEffect, useRef } from "react";
 import { useCommands } from "../../../hooks/useCommands";
-import { useWorkspacePaneVisibilityContext } from "../../../hooks/useWorkspacePaneVisibility";
-import { getShortcutKeysById } from "../../../shortcuts/keybindings";
-import { keybindingSettingsStore } from "../../../store/settings/keybindingSettingsStore";
-import { layoutStore } from "../../../store/settings/layoutStore";
-import { VOICE_RECORD_REQUEST_EVENT } from "../RightPane/RightPaneTabBar";
 import { TerminalSearchPanel } from "./TerminalSearchPanel";
 import {
   attachTerminalRuntime,
@@ -27,7 +20,6 @@ import { useTerminalWakeRecovery } from "./useTerminalWakeRecovery";
 type TerminalViewProps = {
   tabId: string;
   focusRequestKey?: number;
-  showVoiceButton?: boolean;
 };
 
 /**
@@ -39,20 +31,11 @@ type TerminalViewProps = {
  * 3. Detaches on unmount (terminal stays alive in offscreen parking area).
  * 4. Manages UI-only concerns: search panel, drag/drop overlay, focus, keyboard shortcuts.
  */
-export const TerminalView = memo(function TerminalView({
-  tabId,
-  focusRequestKey = 0,
-  showVoiceButton = false,
-}: TerminalViewProps) {
+export const TerminalView = memo(function TerminalView({ tabId, focusRequestKey = 0 }: TerminalViewProps) {
   const cmd = useCommands();
-  const isVoiceInputEnabled = layoutStore((state) => state.isVoiceInputEnabled);
-  const voiceAutoEnter = layoutStore((state) => state.voiceAutoEnter);
-  const rightWidth = layoutStore((state) => state.rightWidth);
-  const { rightCollapsed } = useWorkspacePaneVisibilityContext();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const placeholderRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const voiceButtonRef = useRef<FloatingVoiceButtonHandle | null>(null);
 
   // Stable refs that point into the registry entry — these survive remount.
   const xtermRef = useRef<Terminal | null>(null);
@@ -66,73 +49,6 @@ export const TerminalView = memo(function TerminalView({
     searchAddonRef.current = entry.searchAddon;
     sessionIdRef.current = entry.sessionId;
   }
-
-  const handleVoiceText = useCallback(
-    async (text: string) => {
-      const sessionId = getTerminalRuntime(tabId)?.sessionId ?? sessionIdRef.current;
-      if (!sessionId) {
-        throw new Error("Terminal session is not ready yet.");
-      }
-
-      const dataToWrite = voiceAutoEnter ? `${text}\r` : text;
-      await writeTerminalInput({ sessionId, data: dataToWrite });
-    },
-    [tabId, voiceAutoEnter],
-  );
-
-  // ─── Voice shortcut ──────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!isVoiceInputEnabled || !showVoiceButton) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const overrides = keybindingSettingsStore.getState().overridesById;
-      const keys = getShortcutKeysById("toggle-voice-input", overrides) ?? "ctrl+shift+v,command+shift+v";
-      const combos = keys.split(",").map((c) => c.trim().toLowerCase());
-      const eventCombo = [
-        event.altKey && "alt",
-        event.ctrlKey && "ctrl",
-        event.metaKey && "command",
-        event.shiftKey && "shift",
-        event.key.toLowerCase(),
-      ]
-        .filter(Boolean)
-        .join("+");
-
-      if (!combos.includes(eventCombo)) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      voiceButtonRef.current?.startRecording();
-    };
-
-    window.addEventListener("keydown", handleKeyDown, true);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown, true);
-    };
-  }, [isVoiceInputEnabled, showVoiceButton]);
-
-  // ─── Voice tab-bar mic button listener ──────────────────────────────────────
-  // Listens regardless of showVoiceButton so the tab-bar mic icon always works
-  // as long as this terminal is mounted and voice input is enabled.
-  useEffect(() => {
-    if (!isVoiceInputEnabled) {
-      return;
-    }
-
-    const handleVoiceRecordRequest = () => {
-      voiceButtonRef.current?.startRecording();
-    };
-
-    window.addEventListener(VOICE_RECORD_REQUEST_EVENT, handleVoiceRecordRequest);
-    return () => {
-      window.removeEventListener(VOICE_RECORD_REQUEST_EVENT, handleVoiceRecordRequest);
-    };
-  }, [isVoiceInputEnabled]);
 
   // ─── Attach/Detach Lifecycle ────────────────────────────────────────────────
 
@@ -280,14 +196,6 @@ export const TerminalView = memo(function TerminalView({
           pointerEvents: "none",
         }}
       />
-      {isVoiceInputEnabled ? (
-        <FloatingVoiceButton
-          ref={voiceButtonRef}
-          onText={handleVoiceText}
-          rightOffset={rightCollapsed ? 0 : rightWidth}
-          hideIdleButton
-        />
-      ) : null}
     </Box>
   );
 });
