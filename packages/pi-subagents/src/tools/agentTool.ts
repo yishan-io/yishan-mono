@@ -45,7 +45,7 @@ export function registerAgentTool(pi: ExtensionAPI, registry: AgentRegistry, man
     promptSnippet: AGENT_TOOL_PROMPT_SNIPPET,
     promptGuidelines: [...AGENT_TOOL_PROMPT_GUIDELINES],
     parameters: agentToolSchema,
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       registry.reload();
       const agentDefinition = registry.getByName(params.agent);
       if (!agentDefinition) {
@@ -63,14 +63,14 @@ export function registerAgentTool(pi: ExtensionAPI, registry: AgentRegistry, man
       task.parentSessionWriter = createParentSessionWriter(ctx.sessionManager);
 
       if (params.background) {
-        const agentId = await manager.runInBackground(task);
+        const agentId = await manager.runInBackground(task, { signal });
         return {
           content: [{ type: "text", text: `Started ${agentDefinition.name} as ${agentId}` }],
           details: { agentId, mode: "background" } satisfies AgentToolDetails,
         };
       }
 
-      const result = await manager.run(task);
+      const result = await manager.run(task, { signal });
       const payload = result.responseText ?? result.error ?? "(no output)";
       return {
         content: [{ type: "text", text: payload }],

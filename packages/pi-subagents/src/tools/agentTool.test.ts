@@ -143,6 +143,7 @@ describe("registerAgentTool", () => {
           cwd: "/tmp/project",
         },
       }),
+      { signal: undefined },
     );
 
     const runTask = capturedTask;
@@ -216,6 +217,64 @@ describe("registerAgentTool", () => {
         status: "completed",
       },
     });
+  });
+
+  it("requests cancellation through the manager when the tool signal aborts", async () => {
+    const { pi, getRegisteredTool } = createToolHarness();
+    const registry = {
+      reload: vi.fn(),
+      getByName: vi.fn(() => testAgentDefinition),
+    };
+    const controller = new AbortController();
+    const manager = {
+      run: vi.fn(
+        async () =>
+          await new Promise((resolve) => {
+            controller.signal.addEventListener("abort", () => {
+              resolve({
+                agentId: "agent-2",
+                agentName: "Explore",
+                status: "cancelled",
+                error: "Agent run was cancelled",
+                usage: {
+                  input: 0,
+                  output: 0,
+                  cacheRead: 0,
+                  cacheWrite: 0,
+                  cost: 0,
+                  contextTokens: 0,
+                  turns: 0,
+                },
+              });
+            });
+          }),
+      ),
+    };
+
+    registerAgentTool(pi as never, registry as never, manager as never);
+    const execution = getRegisteredTool().execute(
+      "tool-2",
+      { agent: "Explore", prompt: "Inspect auth" },
+      controller.signal,
+      undefined,
+      {
+        cwd: "/tmp/project",
+        sessionManager: {
+          getSessionId: () => "parent-session-1",
+          getSessionFile: () => "/tmp/shared-sessions/parent-session-1.jsonl",
+          appendCustomEntry: vi.fn(),
+        },
+      },
+    );
+
+    controller.abort();
+
+    await expect(execution).resolves.toEqual(
+      expect.objectContaining({
+        details: expect.objectContaining({ status: "cancelled" }),
+      }),
+    );
+    expect(manager.run).toHaveBeenCalledWith(expect.any(Object), { signal: controller.signal });
   });
 
   it("renders compact collapsed output and full expanded output", () => {

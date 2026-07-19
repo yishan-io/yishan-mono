@@ -75,7 +75,7 @@ export function createPiSubagentsExtension(pi: ExtensionAPI): void {
       return;
     }
 
-    if (record.status !== "queued" && record.status !== "running") {
+    if (record.status !== "queued" && record.status !== "starting" && record.status !== "running") {
       stopDetailRefresh();
     }
 
@@ -89,7 +89,12 @@ export function createPiSubagentsExtension(pi: ExtensionAPI): void {
     }
 
     const selectedRecord = manager.get(selectedAgentId);
-    if (!selectedRecord || (selectedRecord.status !== "queued" && selectedRecord.status !== "running")) {
+    if (
+      !selectedRecord ||
+      (selectedRecord.status !== "queued" &&
+        selectedRecord.status !== "starting" &&
+        selectedRecord.status !== "running")
+    ) {
       return;
     }
 
@@ -251,7 +256,11 @@ export function createPiSubagentsExtension(pi: ExtensionAPI): void {
     }
 
     pendingDelegationAgentNames = undefined;
-    if (manager.list().every((record) => record.status !== "queued" && record.status !== "running")) {
+    if (
+      manager
+        .list()
+        .every((record) => record.status !== "queued" && record.status !== "starting" && record.status !== "running")
+    ) {
       clearAgentProgress(ctx.ui);
     }
   });
@@ -283,11 +292,6 @@ export function createPiSubagentsExtension(pi: ExtensionAPI): void {
     activeUi = undefined;
     disposeAgentProgressUi?.();
     disposeAgentProgressUi = undefined;
-
-    const activeRecords = manager
-      .list()
-      .filter((record) => record.status === "queued" || record.status === "running")
-      .map((record) => record.id);
-    await Promise.all(activeRecords.map((agentId) => manager.stop(agentId)));
+    await manager.shutdown();
   });
 }

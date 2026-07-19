@@ -64,6 +64,7 @@ const {
         return vi.fn();
       }),
       stop: vi.fn(async (_agentId: string) => {}),
+      shutdown: vi.fn(async () => []),
     },
     notifyMock: vi.fn(),
     registerAgentCommandsMock: vi.fn(),
@@ -134,6 +135,10 @@ vi.mock("./runtime/agentManager", () => ({
 
     stop(agentId: string) {
       return managerMock.stop(agentId);
+    }
+
+    shutdown() {
+      return managerMock.shutdown();
     }
   },
 }));
@@ -305,6 +310,6 @@ describe("createPiSubagentsExtension", () => {
     managerMock.list.mockReturnValue([{ id: "agent-1", agentName: "Explore", status: "running" }]);
     await sessionShutdownHandler({});
     expect(disposeAgentProgressUiMock).toHaveBeenCalledTimes(1);
-    expect(managerMock.stop).toHaveBeenCalledWith("agent-1");
+    expect(managerMock.shutdown).toHaveBeenCalledTimes(1);
   });
 });

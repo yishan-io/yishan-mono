@@ -11,7 +11,7 @@ import type {
 export type AgentDefinitionSource = "builtin" | "user" | "project";
 
 /** Lifecycle states for one managed sub-agent run. */
-export type AgentStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
+export type AgentStatus = "queued" | "starting" | "running" | "completed" | "failed" | "cancelled" | "interrupted";
 
 /** Execution mode for one agent run. */
 export type AgentRunMode = "foreground" | "background";

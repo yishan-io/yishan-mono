@@ -52,7 +52,7 @@ function formatStatusSymbol(ui: ExtensionUIContext, status: AgentRecord["status"
     return ui.theme.fg("error", "✗");
   }
 
-  if (status === "running") {
+  if (status === "starting" || status === "running") {
     return ui.theme.fg("accent", "⠿");
   }
 

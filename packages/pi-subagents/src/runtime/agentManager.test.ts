@@ -160,7 +160,13 @@ describe("AgentManager", () => {
 
     unsubscribe();
 
-    expect(snapshots).toEqual(["", "agent-2s-1:queued", "agent-2s-1:running", "agent-2s-1:completed"]);
+    expect(snapshots).toEqual([
+      "",
+      "agent-2s-1:queued",
+      "agent-2s-1:starting",
+      "agent-2s-1:running",
+      "agent-2s-1:completed",
+    ]);
   });
 
   it("can steer a running background agent", async () => {
@@ -263,5 +269,68 @@ describe("AgentManager", () => {
         error: "Agent run was cancelled",
       });
     });
+  });
+
+  it("cancels a running agent when the provided abort signal fires", async () => {
+    const completion = createDeferredPromise<{
+      agentId: string;
+      agentName: string;
+      status: "cancelled";
+      error: string;
+      usage: AgentUsageStats;
+    }>();
+    const cancel = vi.fn(async () => {
+      completion.resolve({
+        agentId: "agent-signal",
+        agentName: "Explore",
+        status: "cancelled",
+        error: "Agent run was cancelled",
+        usage: emptyUsage,
+      });
+    });
+    const createAgentRun = vi.fn(async () => createMockRunHandle(completion.promise, { cancel }));
+    const agentManager = new AgentManager({ createAgentRun });
+    const controller = new AbortController();
+
+    const agentId = await agentManager.runInBackground(createTask({ mode: "background" }), {
+      signal: controller.signal,
+    });
+    controller.abort();
+
+    await vi.waitFor(() => {
+      expect(cancel).toHaveBeenCalledTimes(1);
+      expect(agentManager.get(agentId)).toMatchObject({ status: "cancelled" });
+    });
+  });
+
+  it("shutdown rejects new work and cancels queued and running agents", async () => {
+    const firstCompletion = createDeferredPromise<{
+      agentId: string;
+      agentName: string;
+      status: "cancelled";
+      error: string;
+      usage: AgentUsageStats;
+    }>();
+    const cancel = vi.fn(async () => {
+      firstCompletion.resolve({
+        agentId: "agent-running",
+        agentName: "Explore",
+        status: "cancelled",
+        error: "Agent run was cancelled",
+        usage: emptyUsage,
+      });
+    });
+    const createAgentRun = vi.fn(async () => createMockRunHandle(firstCompletion.promise, { cancel }));
+    const agentManager = new AgentManager({ maxConcurrency: 1, createAgentRun });
+
+    const runningAgentId = await agentManager.runInBackground(createTask({ mode: "background" }));
+    const queuedAgentId = await agentManager.runInBackground(createTask({ mode: "background", prompt: "Queued task" }));
+
+    await agentManager.shutdown();
+
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(agentManager.get(queuedAgentId)).toMatchObject({ status: "cancelled" });
+    await expect(agentManager.run(createTask())).rejects.toThrow("Agent manager is shut down");
+    expect(agentManager.get(runningAgentId)).toMatchObject({ status: "cancelled" });
   });
 });

@@ -6,6 +6,7 @@ import { formatResultCollectorOutput } from "./resultCollector";
 
 const DEFAULT_MAX_CONCURRENCY = 16;
 const AGENT_ID_PREFIX = "agent";
+const MANAGER_SHUTDOWN_ERROR = "Agent manager is shut down";
 
 /** Configurable dependencies for the shared agent manager. */
 export interface AgentManagerOptions {
@@ -16,6 +17,11 @@ export interface AgentManagerOptions {
 
 /** Snapshot listener notified whenever tracked agent state changes. */
 export type AgentManagerListener = (records: AgentRecord[]) => void;
+
+/** Optional controls for one started agent run. */
+export interface AgentRunRequestOptions {
+  signal?: AbortSignal;
+}
 
 interface RunningAgentState {
   handle?: AgentRunHandle;
@@ -33,7 +39,9 @@ export class AgentManager {
   private readonly queuedCancels = new Map<string, () => boolean>();
   private readonly runningAgentStates = new Map<string, RunningAgentState>();
   private readonly listeners = new Set<AgentManagerListener>();
+  private readonly completionPromises = new Map<string, Promise<AgentResult>>();
   private nextAgentSequence = 1;
+  private isShuttingDown = false;
 
   constructor(options: AgentManagerOptions = {}) {
     this.createAgentRun = options.createAgentRun ?? startAgentRun;
@@ -42,14 +50,14 @@ export class AgentManager {
   }
 
   /** Starts one task and waits for the final result. */
-  async run(task: AgentTask): Promise<AgentResult> {
-    const { resultPromise } = await this.start(task);
+  async run(task: AgentTask, options: AgentRunRequestOptions = {}): Promise<AgentResult> {
+    const { resultPromise } = await this.start(task, options);
     return resultPromise;
   }
 
   /** Starts one task without waiting for completion and returns the agent id immediately. */
-  async runInBackground(task: AgentTask): Promise<string> {
-    const { agentId } = await this.start({ ...task, mode: "background" });
+  async runInBackground(task: AgentTask, options: AgentRunRequestOptions = {}): Promise<string> {
+    const { agentId } = await this.start({ ...task, mode: "background" }, options);
     return agentId;
   }
 
@@ -85,6 +93,18 @@ export class AgentManager {
     }
 
     await runningAgentState.handle.cancel();
+  }
+
+  /** Shuts down the manager by cancelling queued and active work, then waiting for completion. */
+  async shutdown(): Promise<void> {
+    this.isShuttingDown = true;
+
+    const activeAgentIds = this.list()
+      .filter((record) => record.status === "queued" || record.status === "starting" || record.status === "running")
+      .map((record) => record.id);
+
+    await Promise.allSettled(activeAgentIds.map((agentId) => this.stop(agentId)));
+    await Promise.allSettled(activeAgentIds.map((agentId) => this.completionPromises.get(agentId)).filter(Boolean));
   }
 
   /** Steers one running agent with a follow-up message. */
@@ -145,7 +165,14 @@ export class AgentManager {
     return formatResultCollectorOutput(results);
   }
 
-  private async start(task: AgentTask): Promise<{ agentId: string; resultPromise: Promise<AgentResult> }> {
+  private async start(
+    task: AgentTask,
+    options: AgentRunRequestOptions,
+  ): Promise<{ agentId: string; resultPromise: Promise<AgentResult> }> {
+    if (this.isShuttingDown) {
+      throw new Error(MANAGER_SHUTDOWN_ERROR);
+    }
+
     if (!task.agentDefinition) {
       throw new Error(`Agent definition is required for task: ${task.agentName}`);
     }
@@ -164,14 +191,20 @@ export class AgentManager {
     this.agentRecords.set(agentId, record);
     this.emitChange();
 
+    const abortSignal = options.signal;
+    const abortListener = () => {
+      void this.stop(agentId);
+    };
+    abortSignal?.addEventListener("abort", abortListener, { once: true });
+
     const queuedTask = this.queue.enqueue(
       async () => {
-        record.status = "running";
+        record.status = "starting";
         record.startedAt = this.now();
         this.emitChange();
 
         const runningAgentState: RunningAgentState = {
-          stopRequested: false,
+          stopRequested: abortSignal?.aborted ?? false,
         };
         this.runningAgentStates.set(agentId, runningAgentState);
 
@@ -194,6 +227,8 @@ export class AgentManager {
           });
           record.session = runningHandle.session;
           runningAgentState.handle = runningHandle;
+          record.status = "running";
+          this.emitChange();
           if (runningAgentState.stopRequested) {
             await runningHandle.cancel();
           }
@@ -214,6 +249,7 @@ export class AgentManager {
         } finally {
           this.runningAgentStates.delete(agentId);
           this.queuedCancels.delete(agentId);
+          abortSignal?.removeEventListener("abort", abortListener);
         }
       },
       { workspaceAccess: task.workspaceAccess },
@@ -235,6 +271,10 @@ export class AgentManager {
 
       throw error;
     });
+    this.completionPromises.set(
+      agentId,
+      resultPromise.finally(() => this.completionPromises.delete(agentId)),
+    );
 
     return { agentId, resultPromise };
   }

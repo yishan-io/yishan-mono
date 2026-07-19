@@ -72,6 +72,19 @@ describe("renderSelectedAgentDetails", () => {
       { placement: "belowEditor" },
     );
   });
+
+  it("renders starting agents as active", () => {
+    const ui = createUiHarness();
+    const record = createRecord({ status: "starting" });
+
+    renderSelectedAgentDetails(ui as never, record);
+
+    expect(ui.setWidget).toHaveBeenCalledWith(
+      "pi-subagents-selected-agent",
+      expect.arrayContaining(["⠿ Explore · starting · foreground · agent-1"]),
+      { placement: "belowEditor" },
+    );
+  });
 });
 
 describe("clearSelectedAgentDetails", () => {
