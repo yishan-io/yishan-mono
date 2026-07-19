@@ -9,7 +9,7 @@ This package adds a lightweight multi-agent layer on top of Pi using Pi's SDK se
 Current MVP features:
 - `@agent:<name>` direct invocation
 - Multiple leading `@agent:<name>` tokens with one shared task
-- `/agent`, `/agents`, `/agent-result`, `/agent-stop`, `/agent-steer`, `/agent-send`, `/agent-view`, `/agent-view-clear`
+- `/agent`, `/agents`, `/agent-result`, `/agent-stop`, `/agent-steer`, `/agent-send`, `/agent-view`
 - Main-agent `Agent` tool for delegation
 - User/project agent overrides
 - Background runs, stop/steer support, and persisted child sessions in the shared Pi session store
@@ -122,12 +122,10 @@ Investigate the current authentication implementation.
 /agent-send agent-abc123
 /agent-view
 /agent-view agent-abc123
-/agent-view-clear
 ```
 
 Keyboard shortcuts:
-- `Ctrl+J` opens the sub-agent detail selector
-- double `Esc` clears the selected sub-agent detail panel
+- `Ctrl+J` opens the live sub-agent viewer selector
 
 ### Main-agent tool
 
@@ -151,7 +149,7 @@ Completed background results are not auto-injected back into the main agent; use
 While agents are queued or running, the extension shows:
 - a footer status like `🤖 1 running · 2 queued`
 - a widget above the editor listing active agent ids, names, and modes
-- an optional selected-agent detail panel below the editor via `/agent-view`
+- a popup live sub-agent viewer via `/agent-view` or `Ctrl+J`
 
 ## Child session persistence
 

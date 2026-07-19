@@ -4,16 +4,14 @@ const {
   addAutocompleteProviderMock,
   bindAgentProgressUiMock,
   clearAgentProgressMock,
-  clearSelectedAgentDetailsMock,
   disposeAgentProgressUiMock,
   managerMock,
   notifyMock,
-  onTerminalInputMock,
+  openAgentOverlayMock,
   registerAgentCommandsMock,
   registerAgentToolMock,
   registryMock,
   renderPendingDelegationMock,
-  renderSelectedAgentDetailsMock,
 } = vi.hoisted(() => {
   const disposeAgentProgressUiMock = vi.fn();
 
@@ -21,9 +19,7 @@ const {
     addAutocompleteProviderMock: vi.fn(),
     bindAgentProgressUiMock: vi.fn(() => disposeAgentProgressUiMock),
     clearAgentProgressMock: vi.fn(),
-    clearSelectedAgentDetailsMock: vi.fn(),
     disposeAgentProgressUiMock,
-    onTerminalInputMock: vi.fn(() => vi.fn()),
     managerMock: {
       run: vi.fn(async (_task: unknown) => ({
         agentId: "agent-1",
@@ -67,10 +63,10 @@ const {
       shutdown: vi.fn(async () => []),
     },
     notifyMock: vi.fn(),
+    openAgentOverlayMock: vi.fn(async () => {}),
     registerAgentCommandsMock: vi.fn(),
     registerAgentToolMock: vi.fn(),
     renderPendingDelegationMock: vi.fn(),
-    renderSelectedAgentDetailsMock: vi.fn(),
     registryMock: {
       reload: vi.fn(),
       list: vi.fn(() => [
@@ -161,9 +157,8 @@ vi.mock("./ui/agentProgress", () => ({
   renderPendingDelegation: renderPendingDelegationMock,
 }));
 
-vi.mock("./ui/agentDetails", () => ({
-  clearSelectedAgentDetails: clearSelectedAgentDetailsMock,
-  renderSelectedAgentDetails: renderSelectedAgentDetailsMock,
+vi.mock("./ui/agentLiveOverlay", () => ({
+  openAgentLiveOverlay: openAgentOverlayMock,
 }));
 
 import { createPiSubagentsExtension } from "./extension";
@@ -194,13 +189,9 @@ describe("createPiSubagentsExtension", () => {
     if (!sessionStartHandler) {
       throw new Error("Expected session_start handler");
     }
-    await sessionStartHandler(
-      {},
-      { ui: { addAutocompleteProvider: addAutocompleteProviderMock, onTerminalInput: onTerminalInputMock } },
-    );
+    await sessionStartHandler({}, { ui: { addAutocompleteProvider: addAutocompleteProviderMock } });
     expect(addAutocompleteProviderMock).toHaveBeenCalledTimes(1);
     expect(bindAgentProgressUiMock).toHaveBeenCalledTimes(1);
-    expect(onTerminalInputMock).toHaveBeenCalledTimes(1);
 
     const inputHandler = handlers.get("input");
     if (!inputHandler) {
@@ -269,24 +260,33 @@ describe("createPiSubagentsExtension", () => {
       throw new Error("Expected agent-view command");
     }
     managerMock.list.mockReturnValue([{ id: "agent-1", agentName: "Explore", status: "running" }]);
-    await agentViewCommand.handler("agent-1", { ui: { notify: notifyMock } });
-    expect(renderSelectedAgentDetailsMock).toHaveBeenCalledTimes(1);
+    await agentViewCommand.handler("agent-1", { ui: { notify: notifyMock, custom: vi.fn() } });
+    expect(openAgentOverlayMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "agent-1",
+        agentName: "Explore",
+      }),
+      expect.objectContaining({
+        get: expect.any(Function),
+      }),
+      expect.objectContaining({
+        notify: notifyMock,
+        custom: expect.any(Function),
+      }),
+    );
 
-    const agentViewClearCommand = commands.get("agent-view-clear");
-    if (!agentViewClearCommand) {
-      throw new Error("Expected agent-view-clear command");
-    }
-    await agentViewClearCommand.handler("", { ui: { notify: notifyMock } });
-    expect(clearSelectedAgentDetailsMock).toHaveBeenCalledTimes(1);
+    expect(commands.has("agent-view-live")).toBe(false);
+    expect(commands.has("agent-view-clear")).toBe(false);
 
     const agentViewShortcut = shortcuts.get("ctrl+j");
     if (!agentViewShortcut) {
       throw new Error("Expected ctrl+j shortcut");
     }
+    const customMock = vi.fn();
     await agentViewShortcut.handler({
-      ui: { notify: notifyMock, select: vi.fn(async () => "agent-1 · Explore · running") },
+      ui: { notify: notifyMock, select: vi.fn(async () => "agent-1 · Explore · running"), custom: customMock },
     });
-    expect(renderSelectedAgentDetailsMock).toHaveBeenCalledTimes(2);
+    expect(openAgentOverlayMock).toHaveBeenCalledTimes(2);
 
     const beforeAgentStartHandler = handlers.get("before_agent_start");
     if (!beforeAgentStartHandler) {
