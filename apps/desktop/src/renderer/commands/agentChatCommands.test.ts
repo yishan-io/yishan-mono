@@ -620,6 +620,53 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
     });
   });
 
+  it("routes pushed child transcript snapshots into the matching detail tab", () => {
+    agentChatStore.getState().initSession("parent-tab", "parent-session");
+    tabStore.getState().openTab({
+      workspaceId: "workspace-1",
+      kind: "agent-chat",
+      title: "Builder",
+      cwd: "/tmp/project",
+      sessionId: "child-session-1",
+      sessionView: "subagent-detail",
+    });
+    const detailTab = tabStore.getState().tabs.find(
+      (tab) => tab.kind === "agent-chat" && tab.data.sessionId === "child-session-1",
+    );
+    if (!detailTab) {
+      throw new Error("Expected a subagent detail tab");
+    }
+    agentChatStore.getState().initSession(detailTab.id, "child-session-1");
+
+    handleAgentPiEvent({
+      sessionId: "parent-session",
+      tabId: "parent-tab",
+      workspaceId: "workspace-1",
+      event: {
+        type: "extension_ui_request",
+        method: "setWidget",
+        widgetKey: "pi-subagents-live-transcripts",
+        widgetLines: [
+          JSON.stringify({
+            version: 1,
+            agents: [
+              {
+                agentId: "agent-1",
+                childSessionId: "child-session-1",
+                status: "running",
+                messages: [{ id: "child-message-1", role: "assistant", content: [{ type: "text", text: "Working" }] }],
+              },
+            ],
+          }),
+        ],
+      },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId[detailTab.id]?.messages).toEqual([
+      { id: "child-message-1", role: "assistant", content: [{ type: "text", text: "Working" }] },
+    ]);
+  });
+
   it("stores pending extension UI requests from Pi events", () => {
     agentChatStore.getState().initSession("tab-extension-ui", "session-extension-ui");
 

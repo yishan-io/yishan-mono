@@ -5,6 +5,7 @@ import type { AgentManager } from "../runtime/agentManager";
 
 const STATUS_KEY = "pi-subagents";
 const WIDGET_KEY = "pi-subagents-progress";
+const LIVE_TRANSCRIPTS_WIDGET_KEY = "pi-subagents-live-transcripts";
 const MAX_VISIBLE_ACTIVE_AGENTS = 5;
 const ACTIVE_AGENT_STATUSES = new Set(["queued", "starting", "running"]);
 const RUNNING_AGENT_STATUSES = new Set(["starting", "running"]);
@@ -53,12 +54,14 @@ export function bindAgentProgressUi(manager: AgentManager, ui: ExtensionUIContex
     const hasActiveAgents = records.some((record) => ACTIVE_AGENT_STATUSES.has(record.status));
     if (!hasActiveAgents) {
       clearAgentProgress(ui, { restoreWorkingVisibility: hadActiveAgents });
+      renderAgentLiveTranscripts(ui, []);
       hadActiveAgents = false;
       return;
     }
 
     hadActiveAgents = true;
     renderAgentProgress(ui, latestRecords, spinnerFrameIndex);
+    renderAgentLiveTranscripts(ui, latestRecords);
   });
 
   return () => {
@@ -120,6 +123,22 @@ export function clearAgentProgress(ui: ExtensionUIContext, options: { restoreWor
   if (options.restoreWorkingVisibility ?? true) {
     ui.setWorkingVisible(true);
   }
+}
+
+export function renderAgentLiveTranscripts(ui: ExtensionUIContext, records: AgentRecord[]): void {
+  const agents = records
+    .filter((record) => ACTIVE_AGENT_STATUSES.has(record.status) && record.sessionId && record.session)
+    .map((record) => ({
+      agentId: record.id,
+      childSessionId: record.sessionId as string,
+      status: record.status,
+      messages: record.session?.messages ?? [],
+    }));
+
+  ui.setWidget(
+    LIVE_TRANSCRIPTS_WIDGET_KEY,
+    agents.length > 0 ? [JSON.stringify({ version: 1, agents })] : undefined,
+  );
 }
 
 function buildWidgetLines(ui: ExtensionUIContext, records: AgentRecord[], spinnerFrameIndex: number): string[] {

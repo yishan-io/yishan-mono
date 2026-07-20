@@ -780,6 +780,44 @@ describe("AgentChatView", () => {
     expect(mocked.openSubagentSessionInRightSplitPane).toHaveBeenCalledTimes(1);
   });
 
+  it("uses pushed parent-session data without starting a second Pi session for a running subagent", async () => {
+    mocked.stateRef.current.tabs = [
+      {
+        id: "tab-1",
+        kind: "agent-chat",
+        data: {
+          userRenamed: true,
+          sessionView: "subagent-detail",
+          subagentAgentId: "agent-1",
+          subagentParentSessionId: "parent-session-1",
+        },
+      },
+    ];
+    mocked.findTabWithSession.mockReturnValue("parent-tab");
+    agentChatStore.getState().initSession("parent-tab", "parent-session-1");
+    agentChatStore.getState().setSubagentLiveTranscripts("parent-tab", {
+      "session-1": [{ id: "child-message-1", role: "assistant", content: [{ type: "text", text: "Working" }] }],
+    });
+
+    render(
+      <AgentChatView
+        tabId="tab-1"
+        workspaceId="workspace-1"
+        cwd="/tmp/project"
+        sessionId="session-1"
+        sessionView="subagent-detail"
+        isActive
+      />,
+    );
+
+    await waitFor(() => {
+      expect(agentChatStore.getState().sessionsByTabId["tab-1"]?.messages).toEqual([
+        { id: "child-message-1", role: "assistant", content: [{ type: "text", text: "Working" }] },
+      ]);
+    });
+    expect(mocked.ensurePiSession).not.toHaveBeenCalled();
+  });
+
   it("renders subagent detail as read-only and cancels through the parent session", async () => {
     mocked.stateRef.current.tabs = [
       {

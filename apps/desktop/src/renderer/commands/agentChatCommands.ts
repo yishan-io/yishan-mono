@@ -559,6 +559,11 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       if (subagentProgressTargets) {
         agentChatStore.getState().setSubagentProgressTargets(tabId, subagentProgressTargets);
       }
+
+      const subagentLiveTranscripts = parseSubagentLiveTranscripts(event);
+      if (subagentLiveTranscripts) {
+        applySubagentLiveTranscripts(tabId, subagentLiveTranscripts);
+      }
       break;
     }
 
@@ -618,6 +623,68 @@ function parseSubagentProgressTargetLine(
   }
 
   return { agentName, status, agentId, childSessionId: childSessionId || undefined };
+}
+
+type SubagentLiveTranscript = {
+  childSessionId: string;
+  messages: AgentMessage[];
+};
+
+function parseSubagentLiveTranscripts(event: Record<string, unknown>): SubagentLiveTranscript[] | null {
+  if (event.method !== "setWidget" || event.widgetKey !== "pi-subagents-live-transcripts") {
+    return null;
+  }
+
+  const widgetLines = event.widgetLines;
+  if (widgetLines === undefined) {
+    return [];
+  }
+  if (!Array.isArray(widgetLines) || widgetLines.length !== 1 || typeof widgetLines[0] !== "string") {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(widgetLines[0]) as { version?: unknown; agents?: unknown };
+    if (payload.version !== 1 || !Array.isArray(payload.agents)) {
+      return null;
+    }
+
+    return payload.agents.flatMap((agent): SubagentLiveTranscript[] => {
+      if (!agent || typeof agent !== "object") {
+        return [];
+      }
+      const { childSessionId, messages } = agent as { childSessionId?: unknown; messages?: unknown };
+      if (typeof childSessionId !== "string" || childSessionId.trim().length === 0 || !Array.isArray(messages)) {
+        return [];
+      }
+
+      return [{ childSessionId, messages: messages as AgentMessage[] }];
+    });
+  } catch {
+    return null;
+  }
+}
+
+function applySubagentLiveTranscripts(parentTabId: string, transcripts: SubagentLiveTranscript[]): void {
+  agentChatStore.getState().setSubagentLiveTranscripts(
+    parentTabId,
+    Object.fromEntries(transcripts.map((transcript) => [transcript.childSessionId, transcript.messages])),
+  );
+
+  for (const transcript of transcripts) {
+    const detailTab = tabStore.getState().tabs.find((tab) => {
+      return (
+        tab.kind === "agent-chat" &&
+        tab.data.sessionView === "subagent-detail" &&
+        tab.data.sessionId?.trim() === transcript.childSessionId
+      );
+    });
+    if (!detailTab) {
+      continue;
+    }
+
+    agentChatStore.getState().replaceMessages(detailTab.id, transcript.messages);
+  }
 }
 
 function queueStreamingMessageUpdate(tabId: string, message: AgentMessage): void {

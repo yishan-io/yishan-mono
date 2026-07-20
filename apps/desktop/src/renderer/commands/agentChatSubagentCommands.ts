@@ -18,6 +18,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
   childSessionId: string;
   title: string;
 }): Promise<void> {
+  console.debug("[agentChatSubagentCommands] open requested", opts);
   const existingTabId =
     findTabWithSession(opts.childSessionId) ??
     tabStore.getState().tabs.find((tab) => {
@@ -28,6 +29,10 @@ export async function openSubagentSessionInRightSplitPane(opts: {
       );
     })?.id;
   if (existingTabId) {
+    console.debug("[agentChatSubagentCommands] opening existing subagent tab", {
+      existingTabId,
+      childSessionId: opts.childSessionId,
+    });
     tabStore.getState().setAgentChatTabSubagentControl({
       tabId: existingTabId,
       agentId: opts.agentId,
@@ -43,6 +48,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
 
   const normalizedParentPaneId = opts.parentPaneId?.trim();
   if (!normalizedParentPaneId) {
+    console.debug("[agentChatSubagentCommands] opening without parent pane", opts);
     tabStore.getState().openTab({
       workspaceId: opts.workspaceId,
       kind: "agent-chat",
@@ -58,6 +64,10 @@ export async function openSubagentSessionInRightSplitPane(opts: {
 
   const parentPane = splitPaneStore.getState().getPane(opts.workspaceId, normalizedParentPaneId);
   if (!parentPane) {
+    console.debug("[agentChatSubagentCommands] opening without resolved parent pane", {
+      ...opts,
+      normalizedParentPaneId,
+    });
     tabStore.getState().openTab({
       workspaceId: opts.workspaceId,
       kind: "agent-chat",
@@ -71,6 +81,11 @@ export async function openSubagentSessionInRightSplitPane(opts: {
     return;
   }
 
+  console.debug("[agentChatSubagentCommands] opening in split pane", {
+    ...opts,
+    normalizedParentPaneId,
+    parentPane,
+  });
   const previousTabIds = new Set(tabStore.getState().tabs.map((tab) => tab.id));
   splitPaneStore.getState().setActivePane(opts.workspaceId, normalizedParentPaneId);
   tabStore.getState().openTab(
@@ -96,9 +111,17 @@ export async function openSubagentSessionInRightSplitPane(opts: {
     );
   });
   if (!createdTab) {
+    console.debug("[agentChatSubagentCommands] open failed: tab was not created", {
+      ...opts,
+      tabIds: tabStore.getState().tabs.map((tab) => tab.id),
+    });
     return;
   }
 
+  console.debug("[agentChatSubagentCommands] created subagent tab; splitting pane", {
+    createdTabId: createdTab.id,
+    normalizedParentPaneId,
+  });
   splitPaneStore.getState().registerTabInPane(opts.workspaceId, createdTab.id, normalizedParentPaneId);
   splitPaneStore.getState().splitPane(opts.workspaceId, {
     tabId: createdTab.id,
@@ -107,23 +130,37 @@ export async function openSubagentSessionInRightSplitPane(opts: {
     placement: SUBAGENT_SPLIT_PLACEMENT,
   });
   tabStore.getState().selectTab(createdTab.id);
+  console.debug("[agentChatSubagentCommands] subagent tab opened", {
+    createdTabId: createdTab.id,
+    childSessionId: opts.childSessionId,
+  });
 }
 
 function revealSubagentTabInRightSplitPane(opts: { workspaceId: string; parentPaneId?: string; tabId: string }): void {
   const normalizedParentPaneId = opts.parentPaneId?.trim();
+  console.debug("[agentChatSubagentCommands] revealing existing subagent tab", {
+    ...opts,
+    normalizedParentPaneId,
+  });
   if (!normalizedParentPaneId) {
+    console.debug("[agentChatSubagentCommands] reveal selecting without parent pane", opts);
     selectAgentChatTabInPane(opts.workspaceId, opts.tabId);
     return;
   }
 
   const parentPane = splitPaneStore.getState().getPane(opts.workspaceId, normalizedParentPaneId);
   if (!parentPane) {
+    console.debug("[agentChatSubagentCommands] reveal selecting without resolved parent pane", opts);
     selectAgentChatTabInPane(opts.workspaceId, opts.tabId);
     return;
   }
 
   const existingPane = splitPaneStore.getState().getPaneForTab(opts.workspaceId, opts.tabId);
   if (existingPane && existingPane.id !== normalizedParentPaneId) {
+    console.debug("[agentChatSubagentCommands] reveal selecting tab in existing pane", {
+      ...opts,
+      existingPaneId: existingPane.id,
+    });
     splitPaneStore.getState().selectTab(opts.workspaceId, existingPane.id, opts.tabId);
     tabStore.getState().selectTab(opts.tabId);
     return;
@@ -133,6 +170,11 @@ function revealSubagentTabInRightSplitPane(opts: { workspaceId: string; parentPa
     splitPaneStore.getState().registerTabInPane(opts.workspaceId, opts.tabId, normalizedParentPaneId);
   }
 
+  console.debug("[agentChatSubagentCommands] reveal splitting pane", {
+    ...opts,
+    normalizedParentPaneId,
+    existingPaneId: existingPane?.id,
+  });
   splitPaneStore.getState().splitPane(opts.workspaceId, {
     tabId: opts.tabId,
     targetPaneId: normalizedParentPaneId,

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentRecord } from "../agents/types";
-import { bindAgentProgressUi, renderAgentProgress, renderPendingDelegation } from "./agentProgress";
+import { bindAgentProgressUi, renderAgentLiveTranscripts, renderAgentProgress, renderPendingDelegation } from "./agentProgress";
 
 function createRecord(overrides: Partial<AgentRecord> = {}): AgentRecord {
   return {
@@ -85,6 +85,41 @@ describe("renderAgentProgress", () => {
   });
 });
 
+describe("renderAgentLiveTranscripts", () => {
+  it("publishes active child-session snapshots through a dedicated widget channel", () => {
+    const ui = createUiHarness();
+    const messages = [{ role: "assistant", content: [{ type: "text", text: "Working" }] }];
+
+    renderAgentLiveTranscripts(ui as never, [
+      createRecord({
+        session: { messages } as never,
+      }),
+    ]);
+
+    expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-live-transcripts", [
+      JSON.stringify({
+        version: 1,
+        agents: [
+          {
+            agentId: "agent-1",
+            childSessionId: "child-session-1",
+            status: "running",
+            messages,
+          },
+        ],
+      }),
+    ]);
+  });
+
+  it("clears the live transcript widget when no active child sessions remain", () => {
+    const ui = createUiHarness();
+
+    renderAgentLiveTranscripts(ui as never, [createRecord({ status: "completed" })]);
+
+    expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-live-transcripts", undefined);
+  });
+});
+
 describe("renderPendingDelegation", () => {
   it("shows immediate preparing state before the Agent tool starts", () => {
     const ui = createUiHarness();
@@ -160,7 +195,7 @@ describe("bindAgentProgressUi", () => {
     listener?.([createRecord({ status: "completed" })]);
 
     expect(ui.setStatus).toHaveBeenLastCalledWith("pi-subagents", undefined);
-    expect(ui.setWidget).toHaveBeenLastCalledWith("pi-subagents-progress", undefined);
+    expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-progress", undefined);
     expect(ui.setWorkingMessage).toHaveBeenLastCalledWith();
     expect(ui.setWorkingVisible).toHaveBeenLastCalledWith(true);
 

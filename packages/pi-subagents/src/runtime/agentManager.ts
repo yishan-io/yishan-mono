@@ -232,6 +232,7 @@ export class AgentManager {
           stopRequested: abortSignal?.aborted ?? false,
         };
         this.runningAgentStates.set(agentId, runningAgentState);
+        let unsubscribeSessionChanges: (() => void) | undefined;
 
         try {
           const runningHandle = await this.createAgentRun({
@@ -254,6 +255,7 @@ export class AgentManager {
           record.sessionId = runningHandle.sessionId;
           record.sessionPath = runningHandle.sessionPath ?? record.sessionPath;
           runningAgentState.handle = runningHandle;
+          unsubscribeSessionChanges = runningHandle.session.subscribe(() => this.emitChange());
           record.status = "running";
           this.emitChange();
           if (runningAgentState.stopRequested) {
@@ -274,6 +276,7 @@ export class AgentManager {
           this.applyResult(record, failedResult);
           return failedResult;
         } finally {
+          unsubscribeSessionChanges?.();
           this.runningAgentStates.delete(agentId);
           this.queuedCancels.delete(agentId);
           abortSignal?.removeEventListener("abort", abortListener);

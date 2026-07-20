@@ -32,6 +32,7 @@ type AgentSessionData = {
   pendingUiAutoResponse: AgentPendingUiAutoResponse | null;
   runningSubagents: RunningSubagentSummary[];
   subagentProgressTargets: AgentSubagentProgressTarget[];
+  subagentLiveTranscripts: Record<string, AgentMessage[]>;
   hasLoadedMessages: boolean;
   hasLoadedModels: boolean;
   hasLoadedState: boolean;
@@ -59,6 +60,7 @@ type AgentChatStoreState = {
   setPendingUiRequest: (tabId: string, request: AgentPendingUiRequest) => void;
   setPendingUiAutoResponse: (tabId: string, response: AgentPendingUiAutoResponse) => void;
   setSubagentProgressTargets: (tabId: string, targets: AgentSubagentProgressTarget[]) => void;
+  setSubagentLiveTranscripts: (tabId: string, transcripts: Record<string, AgentMessage[]>) => void;
   clearPendingUiRequest: (tabId: string) => void;
   clearPendingUiAutoResponse: (tabId: string) => void;
   markStateLoaded: (tabId: string) => void;
@@ -80,6 +82,7 @@ function emptySession(sessionId: string): AgentSessionData {
     pendingUiAutoResponse: null,
     runningSubagents: [],
     subagentProgressTargets: [],
+    subagentLiveTranscripts: {},
     hasLoadedMessages: false,
     hasLoadedModels: false,
     hasLoadedState: false,
@@ -267,6 +270,14 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.subagentProgressTargets = targets;
+      });
+    },
+
+    setSubagentLiveTranscripts: (tabId, transcripts) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        session.subagentLiveTranscripts = transcripts;
       });
     },
 

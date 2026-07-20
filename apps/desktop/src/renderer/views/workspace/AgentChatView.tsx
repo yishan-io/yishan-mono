@@ -169,17 +169,29 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
 
   const handleOpenSubagent = useCallback(
     async (subagent: RunningSubagentSummary) => {
+      console.debug("[AgentChatView] subagent open requested", {
+        tabId,
+        sessionId,
+        paneId,
+        subagent,
+        subagentProgressTargets,
+      });
+
       let childSessionId = subagent.childSessionId;
       let title = subagent.title;
 
       if (!childSessionId && sessionId) {
         await fetchAgentMessages({ tabId, sessionId });
-        const refreshedSubagent = findMatchingRunningSubagent(
-          agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [],
-          subagent,
-        );
+        const refreshedRunningSubagents = agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [];
+        const refreshedSubagent = findMatchingRunningSubagent(refreshedRunningSubagents, subagent);
         childSessionId = refreshedSubagent?.childSessionId;
         title = refreshedSubagent?.title ?? title;
+        console.debug("[AgentChatView] subagent open transcript refresh resolved", {
+          tabId,
+          refreshedRunningSubagents,
+          refreshedSubagent,
+          childSessionId,
+        });
       }
 
       if (!childSessionId) {
@@ -187,12 +199,31 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
         if (matchingProgressTargets.length === 1) {
           childSessionId = matchingProgressTargets[0]?.childSessionId;
         }
+        console.debug("[AgentChatView] subagent open progress target resolved", {
+          tabId,
+          matchingProgressTargets,
+          childSessionId,
+        });
       }
 
       if (!childSessionId) {
+        console.debug("[AgentChatView] subagent open skipped: unresolved child session", {
+          tabId,
+          subagent,
+          subagentProgressTargets,
+        });
         return;
       }
 
+      console.debug("[AgentChatView] subagent open dispatching", {
+        tabId,
+        workspaceId,
+        paneId,
+        sessionId,
+        agentId: subagent.agentId,
+        childSessionId,
+        title,
+      });
       await openSubagentSessionInRightSplitPane({
         workspaceId,
         cwd,
@@ -502,6 +533,26 @@ function AgentChatViewComponent({
     // retains its original pane binding.
 
     const initialize = async (): Promise<void> => {
+      if (isReadOnlySubagentDetail) {
+        const childSessionId = startupSessionIdRef.current ?? tabId;
+        const parentSessionId = agentChatTab?.data.subagentParentSessionId;
+        const parentTabId = parentSessionId ? findTabWithSession(parentSessionId) : undefined;
+        const parentSession = parentTabId ? agentChatStore.getState().sessionsByTabId[parentTabId] : undefined;
+        const initialMessages = parentSession?.subagentLiveTranscripts[childSessionId] ?? [];
+        const isParentTrackingChild = Boolean(
+          parentSession?.subagentLiveTranscripts[childSessionId] ||
+            parentSession?.subagentProgressTargets.some((target) => target.childSessionId === childSessionId),
+        );
+
+        if (isParentTrackingChild) {
+          agentChatStore.getState().initSession(tabId, childSessionId);
+          agentChatStore.getState().replaceMessages(tabId, initialMessages);
+          agentChatStore.getState().setAvailableModels(tabId, []);
+          agentChatStore.getState().markStateLoaded(tabId);
+          return;
+        }
+      }
+
       try {
         const startedSessionId = await ensurePiSession({
           tabId,
@@ -554,7 +605,7 @@ function AgentChatViewComponent({
     return () => {
       isDisposed = true;
     };
-  }, [tabId, workspaceId, cwd, sessionView]);
+  }, [agentChatTab, tabId, workspaceId, cwd, sessionView]);
 
   useEffect(() => {
     let hasObservedConnectedState = false;
