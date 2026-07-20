@@ -3,6 +3,7 @@ package setup
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -11,6 +12,9 @@ import (
 
 	"yishan/apps/cli/internal/config"
 )
+
+var canonicalSkillsRootResolver = defaultCanonicalSkillsRootResolver
+var remoteOfficialSkillFilesLoader = defaultRemoteOfficialSkillFilesLoader
 
 type SkillSourceKind string
 
@@ -99,6 +103,9 @@ func GetSkillInfo(name string) (*SkillInfo, error) {
 	if trimmed == "" {
 		return nil, fmt.Errorf("skill name is required")
 	}
+	if isOfficialSkillName(trimmed) {
+		return getLocalOfficialSkillInfo(trimmed)
+	}
 	infos, err := ListSkills()
 	if err != nil {
 		return nil, err
@@ -123,7 +130,7 @@ func GetSkillDetail(name string) (*SkillDetail, error) {
 	}
 	var fileMap map[string][]byte
 	if info.Official {
-		fileMap, _, err = loadOfficialSkillFiles(trimmed)
+		fileMap, _, err = loadLocalOfficialSkillFiles(trimmed)
 	} else {
 		fileMap, err = readInstalledSkillFiles(trimmed)
 	}
@@ -151,31 +158,29 @@ func readInstalledSkillFiles(name string) (map[string][]byte, error) {
 
 func buildOfficialSkillInfo(name string, record InstalledSkillRecord) SkillInfo {
 	description := record.Description
-	files, version, err := loadOfficialSkillFiles(name)
+	version := record.Version
+	files, localVersion, err := loadLocalOfficialSkillFiles(name)
 	if err == nil {
 		frontMatter := parseSkillFrontMatter(files["SKILL.md"])
 		if frontMatter.Description != "" {
 			description = frontMatter.Description
 		}
+		if version == "" {
+			version = localVersion
+		}
 	}
-	info := SkillInfo{
+	installed := record.Name == name || installedSkillDirExists(name)
+	return SkillInfo{
 		Name:               name,
 		Description:        description,
 		Version:            version,
 		Source:             string(SkillSourceOfficial),
 		SourceKind:         SkillSourceOfficial,
-		Installed:          record.Name == name || installedSkillDirExists(name),
+		Installed:          installed,
 		InstalledForAgents: installedAgentsForSkill(name),
 		Official:           true,
-		CanUpdate:          true,
+		CanUpdate:          installed || err == nil,
 	}
-	if err != nil {
-		info.CanUpdate = installedSkillDirExists(name)
-	}
-	if record.Version != "" {
-		info.Version = record.Version
-	}
-	return info
 }
 
 func buildInstalledSkillInfo(record InstalledSkillRecord) SkillInfo {
@@ -193,27 +198,79 @@ func buildInstalledSkillInfo(record InstalledSkillRecord) SkillInfo {
 }
 
 func loadOfficialSkillFiles(name string) (map[string][]byte, string, error) {
+	files, version, err := loadLocalOfficialSkillFiles(name)
+	if err == nil {
+		return files, version, nil
+	}
+	return nil, "", err
+}
+
+func loadLocalOfficialSkillFiles(name string) (map[string][]byte, string, error) {
 	dir, err := resolveCanonicalSkillDir(name)
-	if err != nil {
-		return readInstalledSkillFilesFallback(name)
+	if err == nil {
+		files, readErr := readSkillDir(dir)
+		if readErr == nil {
+			return files, "workspace", nil
+		}
 	}
-	files, err := readSkillDir(dir)
-	if err != nil {
-		return readInstalledSkillFilesFallback(name)
+	return readInstalledSkillFilesFallback(name)
+}
+
+func loadAuthoritativeOfficialSkillFiles(name string) (map[string][]byte, string, error) {
+	dir, err := resolveCanonicalSkillDir(name)
+	if err == nil {
+		files, readErr := readSkillDir(dir)
+		if readErr == nil {
+			return files, "workspace", nil
+		}
+		err = readErr
 	}
-	return files, "workspace", nil
+	files, version, remoteErr := remoteOfficialSkillFilesLoader(name)
+	if remoteErr == nil {
+		return files, version, nil
+	}
+	return nil, "", fmt.Errorf("official skill %q source unavailable: workspace=%v remote=%v", name, err, remoteErr)
 }
 
 func readInstalledSkillFilesFallback(name string) (map[string][]byte, string, error) {
 	files, err := readInstalledSkillFiles(name)
 	if err != nil {
-		return nil, "", fmt.Errorf("unknown official skill %q: %w", name, err)
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, "", fmt.Errorf("official skill %q not found locally", name)
+		}
+		return nil, "", err
 	}
-	return files, "workspace", nil
+	return files, "installed", nil
+}
+
+func getLocalOfficialSkillInfo(name string) (*SkillInfo, error) {
+	registry, err := loadSkillRegistry()
+	if err != nil {
+		return nil, err
+	}
+	var record InstalledSkillRecord
+	for _, installedRecord := range registry.Skills {
+		if installedRecord.Name == name {
+			record = installedRecord
+			break
+		}
+	}
+	if _, _, err := loadLocalOfficialSkillFiles(name); err != nil {
+		if isOfficialSkillNotFoundLocallyError(err) {
+			return nil, fmt.Errorf("unknown skill %q", name)
+		}
+		return nil, err
+	}
+	info := buildOfficialSkillInfo(name, record)
+	return &info, nil
+}
+
+func isOfficialSkillNotFoundLocallyError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "not found locally")
 }
 
 func resolveCanonicalSkillDir(name string) (string, error) {
-	root, err := resolveCanonicalSkillsRoot()
+	root, err := canonicalSkillsRootResolver()
 	if err != nil {
 		return "", err
 	}
@@ -224,7 +281,7 @@ func resolveCanonicalSkillDir(name string) (string, error) {
 	return dir, nil
 }
 
-func resolveCanonicalSkillsRoot() (string, error) {
+func defaultCanonicalSkillsRootResolver() (string, error) {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
 		return "", errors.New("resolve source location")
