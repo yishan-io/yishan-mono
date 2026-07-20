@@ -398,18 +398,20 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
                     height: 34,
                     p: 0,
                     border: "1px solid",
-                    borderColor: (theme) =>
-                      theme.palette.mode === "dark" ? "divider" : theme.palette.primary.main,
-                    bgcolor: (theme) =>
-                      theme.palette.mode === "dark" ? "background.paper" : theme.palette.primary.main,
-                    color: (theme) =>
-                      theme.palette.mode === "dark" ? "text.secondary" : theme.palette.primary.contrastText,
+                    borderColor: "primary.main",
+                    bgcolor: "primary.main",
+                    color: "primary.contrastText",
                     borderRadius: 999,
                     boxShadow: 1,
                     transition: "background-color 120ms ease, border-color 120ms ease",
                     "&:hover": {
-                      bgcolor: (theme) =>
-                        theme.palette.mode === "dark" ? "action.hover" : theme.palette.primary.dark,
+                      bgcolor: "primary.dark",
+                    },
+                    "&.Mui-disabled": {
+                      borderColor: "action.disabledBackground",
+                      bgcolor: "action.disabledBackground",
+                      color: "action.disabled",
+                      boxShadow: 0,
                     },
                   }}
                 >
