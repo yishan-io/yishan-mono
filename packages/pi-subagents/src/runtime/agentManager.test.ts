@@ -49,6 +49,8 @@ function createTask(overrides: Partial<AgentTask> = {}): AgentTask {
 function createMockRunHandle(resultPromise: Promise<unknown>, overrides: Partial<AgentRunHandle> = {}): AgentRunHandle {
   return {
     session: { kind: "session" } as unknown as AgentRunHandle["session"],
+    sessionId: "child-session-1",
+    sessionPath: "/tmp/shared-sessions/child-session-1.jsonl",
     completion: resultPromise as AgentRunHandle["completion"],
     cancel: overrides.cancel ?? (async () => {}),
     steer: overrides.steer ?? (async () => {}),

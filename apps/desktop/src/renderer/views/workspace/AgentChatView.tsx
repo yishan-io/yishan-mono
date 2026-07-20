@@ -183,6 +183,13 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
       }
 
       if (!childSessionId) {
+        const matchingProgressTargets = subagentProgressTargets.filter((target) => target.agentName === subagent.agentName);
+        if (matchingProgressTargets.length === 1) {
+          childSessionId = matchingProgressTargets[0]?.childSessionId;
+        }
+      }
+
+      if (!childSessionId) {
         return;
       }
 
@@ -196,7 +203,7 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
         title,
       });
     },
-    [workspaceId, cwd, paneId, sessionId, tabId],
+    [workspaceId, cwd, paneId, sessionId, tabId, subagentProgressTargets],
   );
 
   const handleCancelSubagent = useCallback(
@@ -319,14 +326,18 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
                     height: 34,
                     p: 0,
                     border: "1px solid",
-                    borderColor: "divider",
-                    bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : "grey.900"),
-                    color: (theme) => (theme.palette.mode === "dark" ? "text.secondary" : "text.primary"),
+                    borderColor: (theme) =>
+                      theme.palette.mode === "dark" ? "divider" : theme.palette.error.main,
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "dark" ? "background.paper" : theme.palette.error.main,
+                    color: (theme) =>
+                      theme.palette.mode === "dark" ? "text.secondary" : theme.palette.error.contrastText,
                     borderRadius: 999,
                     boxShadow: 1,
                     transition: "background-color 120ms ease, border-color 120ms ease",
                     "&:hover": {
-                      bgcolor: (theme) => (theme.palette.mode === "dark" ? "action.hover" : "grey.800"),
+                      bgcolor: (theme) =>
+                        theme.palette.mode === "dark" ? "action.hover" : theme.palette.error.dark,
                     },
                   }}
                 >
@@ -420,9 +431,12 @@ function AgentChatReadOnlyFooter({ canCancel, onCancel }: AgentChatReadOnlyFoote
                 height: 34,
                 p: 0,
                 border: "1px solid",
-                borderColor: "divider",
-                bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : "grey.900"),
-                color: (theme) => (theme.palette.mode === "dark" ? "text.secondary" : "text.primary"),
+                borderColor: (theme) =>
+                  theme.palette.mode === "dark" ? "divider" : theme.palette.error.main,
+                bgcolor: (theme) =>
+                  theme.palette.mode === "dark" ? "background.paper" : theme.palette.error.main,
+                color: (theme) =>
+                  theme.palette.mode === "dark" ? "text.secondary" : theme.palette.error.contrastText,
                 borderRadius: 999,
                 boxShadow: 1,
               }}

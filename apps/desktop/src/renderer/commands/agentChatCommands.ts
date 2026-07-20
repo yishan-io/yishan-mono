@@ -584,7 +584,7 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
 
 function parseSubagentProgressTargets(
   event: Record<string, unknown>,
-): Array<{ agentName: string; agentId: string; status: string }> | null {
+): Array<{ agentName: string; agentId: string; status: string; childSessionId?: string }> | null {
   if (event.method !== "setWidget" || event.widgetKey !== "pi-subagents-progress") {
     return null;
   }
@@ -599,25 +599,25 @@ function parseSubagentProgressTargets(
 
   const targets = widgetLines
     .map((line) => parseSubagentProgressTargetLine(typeof line === "string" ? line : ""))
-    .filter((target): target is { agentName: string; agentId: string; status: string } => target !== null);
+    .filter((target): target is { agentName: string; agentId: string; status: string; childSessionId?: string } => target !== null);
   return targets;
 }
 
 function parseSubagentProgressTargetLine(
   line: string,
-): { agentName: string; agentId: string; status: string } | null {
+): { agentName: string; agentId: string; status: string; childSessionId?: string } | null {
   const normalizedLine = line.replace(/<[^>]+>/g, "").trim();
-  const match = normalizedLine.match(/^\S+\s+(.+?)\s+·\s+(queued|starting|running)\s+·\s+(?:fg|bg)\s+·\s+(agent-\S+)$/);
+  const match = normalizedLine.match(/^\S+\s+(.+?)\s+·\s+(queued|starting|running)\s+·\s+(?:fg|bg)\s+·\s+(agent-\S+)(?:\s+·\s+(\S+))?$/);
   if (!match) {
     return null;
   }
 
-  const [, agentName, status, agentId] = match;
+  const [, agentName, status, agentId, childSessionId] = match;
   if (!agentName || !status || !agentId) {
     return null;
   }
 
-  return { agentName, status, agentId };
+  return { agentName, status, agentId, childSessionId: childSessionId || undefined };
 }
 
 function queueStreamingMessageUpdate(tabId: string, message: AgentMessage): void {

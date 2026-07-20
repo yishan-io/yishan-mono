@@ -11,6 +11,7 @@ function createRecord(overrides: Partial<AgentRecord> = {}): AgentRecord {
     status: "running",
     mode: "foreground",
     createdAt: 1,
+    sessionId: "child-session-1",
     usage: {
       input: 0,
       output: 0,
@@ -46,14 +47,14 @@ describe("renderAgentProgress", () => {
 
     renderAgentProgress(ui as never, [
       createRecord({ id: "agent-1", status: "running", mode: "foreground" }),
-      createRecord({ id: "agent-2", status: "queued", mode: "background", agentName: "Reviewer" }),
+      createRecord({ id: "agent-2", status: "queued", mode: "background", agentName: "Reviewer", sessionId: undefined }),
       createRecord({ id: "agent-3", status: "completed" }),
     ]);
 
     expect(ui.setStatus).toHaveBeenCalledWith("pi-subagents", "<accent>🤖 1 running · 1 queued</accent>");
     expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-progress", [
       "<accent>Sub-agents</accent>",
-      "<accent>⠋</accent> Explore · running · fg · agent-1",
+      "<accent>⠋</accent> Explore · running · fg · agent-1 · child-session-1",
       "<muted>…</muted> Reviewer · queued · bg · agent-2",
     ]);
     expect(ui.setWorkingMessage).toHaveBeenCalledWith();
@@ -68,7 +69,7 @@ describe("renderAgentProgress", () => {
     expect(ui.setStatus).toHaveBeenCalledWith("pi-subagents", "<accent>🤖 1 starting</accent>");
     expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-progress", [
       "<accent>Sub-agents</accent>",
-      "<accent>⠋</accent> Explore · starting · fg · agent-1",
+      "<accent>⠋</accent> Explore · starting · fg · agent-1 · child-session-1",
     ]);
   });
 
@@ -145,7 +146,7 @@ describe("bindAgentProgressUi", () => {
     expect(ui.setStatus).toHaveBeenCalledWith("pi-subagents", "<accent>🤖 1 running</accent>");
     expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-progress", [
       "<accent>Sub-agents</accent>",
-      "<accent>⠋</accent> Explore · running · fg · agent-1",
+      "<accent>⠋</accent> Explore · running · fg · agent-1 · child-session-1",
     ]);
     expect(ui.setWorkingVisible).toHaveBeenLastCalledWith(false);
 
@@ -153,7 +154,7 @@ describe("bindAgentProgressUi", () => {
 
     expect(ui.setWidget).toHaveBeenLastCalledWith("pi-subagents-progress", [
       "<accent>Sub-agents</accent>",
-      "<accent>⠙</accent> Explore · running · fg · agent-1",
+      "<accent>⠙</accent> Explore · running · fg · agent-1 · child-session-1",
     ]);
 
     listener?.([createRecord({ status: "completed" })]);

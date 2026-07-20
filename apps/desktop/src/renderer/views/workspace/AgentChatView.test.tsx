@@ -640,7 +640,7 @@ describe("AgentChatView", () => {
     expect(screen.getByTestId("subagent-row-preparing-icon-tool-agent-stream")).toBeTruthy();
   });
 
-  it("refreshes transcript state to open a pending running subagent once child metadata arrives", async () => {
+  it("opens a pending running subagent once progress widget provides childSessionId", async () => {
     seedSession({
       state: "running",
       streamingMessage: {
@@ -659,21 +659,14 @@ describe("AgentChatView", () => {
         ],
       },
     });
-
-    mocked.fetchAgentMessages.mockImplementationOnce(async ({ tabId }: { tabId: string }) => {
-      agentChatStore.getState().appendMessage(
-        tabId,
-        createSubagentLifecycleMessage({
-          id: "subagent-start-stream",
-          event: "started",
-          agentId: "agent-1",
-          agentName: "code-reviewer",
-          title: "code-reviewer — Review the code quality of the services directory and return concise fi...",
-          summary: "Review the code quality of the services directory and return concise fi...",
-          childSessionId: "child-session-stream",
-        }),
-      );
-    });
+    agentChatStore.getState().setSubagentProgressTargets("tab-1", [
+      {
+        agentName: "code-reviewer",
+        agentId: "agent-1",
+        status: "running",
+        childSessionId: "child-session-stream",
+      },
+    ]);
 
     const { fireEvent } = await import("@testing-library/react");
 
@@ -682,7 +675,6 @@ describe("AgentChatView", () => {
     fireEvent.click(screen.getByTestId("subagent-row-button-tool-agent-stream"));
 
     await waitFor(() => {
-      expect(mocked.fetchAgentMessages).toHaveBeenCalledWith({ tabId: "tab-1", sessionId: "session-1" });
       expect(mocked.openSubagentSessionInRightSplitPane).toHaveBeenCalledWith({
         workspaceId: "workspace-1",
         cwd: "/tmp/project",
@@ -690,7 +682,7 @@ describe("AgentChatView", () => {
         parentSessionId: "session-1",
         agentId: undefined,
         childSessionId: "child-session-stream",
-        title: "code-reviewer — Review the code quality of the services directory and return concise fi...",
+        title: "code-reviewer — Review the code quality of the services directory and return concise findings.",
       });
     });
   });

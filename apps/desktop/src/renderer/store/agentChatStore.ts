@@ -16,6 +16,7 @@ type AgentSubagentProgressTarget = {
   agentName: string;
   agentId: string;
   status: string;
+  childSessionId?: string;
 };
 
 type AgentSessionData = {

@@ -144,5 +144,6 @@ function formatAgentLine(ui: ExtensionUIContext, record: AgentRecord, spinnerFra
     ? ui.theme.fg("accent", spinnerFrame)
     : ui.theme.fg("muted", "…");
   const modeLabel = record.mode === "background" ? "bg" : "fg";
-  return `${statusSymbol} ${record.agentName} · ${record.status} · ${modeLabel} · ${record.id}`;
+  const sessionSuffix = record.sessionId ? ` · ${record.sessionId}` : "";
+  return `${statusSymbol} ${record.agentName} · ${record.status} · ${modeLabel} · ${record.id}${sessionSuffix}`;
 }

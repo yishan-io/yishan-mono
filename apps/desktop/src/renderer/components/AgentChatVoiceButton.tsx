@@ -70,10 +70,17 @@ export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage
                     ? "success.main"
                     : theme.palette.mode === "dark"
                       ? "background.paper"
-                      : "grey.900"
+                      : theme.palette.primary.main
                   : "transparent",
               border: isBusy ? "1px solid" : "1px solid transparent",
-              borderColor: isBusy ? "divider" : "transparent",
+              borderColor: (theme) =>
+                isBusy
+                  ? recordingState === "recording"
+                    ? "success.main"
+                    : theme.palette.mode === "dark"
+                      ? "divider"
+                      : theme.palette.primary.main
+                  : "transparent",
               boxShadow: isBusy ? 1 : 0,
               borderRadius: 999,
               transition: "width 160ms ease, background-color 120ms ease, border-color 120ms ease",
@@ -84,7 +91,7 @@ export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage
                       ? "success.dark"
                       : theme.palette.mode === "dark"
                         ? "action.hover"
-                        : "grey.800"
+                        : theme.palette.primary.dark
                     : theme.palette.action.hover,
               },
               "& .voice-spin-icon": {
@@ -136,13 +143,17 @@ export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage
                   width: 26,
                   height: 26,
                   borderRadius: "50%",
-                  color: "common.white",
-                  bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : "grey.900"),
+                  color: (theme) =>
+                    theme.palette.mode === "dark" ? "common.white" : theme.palette.error.contrastText,
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark" ? "background.paper" : theme.palette.error.main,
                   border: "1px solid",
-                  borderColor: "divider",
+                  borderColor: (theme) =>
+                    theme.palette.mode === "dark" ? "divider" : theme.palette.error.main,
                   boxShadow: 1,
                   "&:hover": {
-                    bgcolor: (theme) => (theme.palette.mode === "dark" ? "action.hover" : "grey.800"),
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "dark" ? "action.hover" : theme.palette.error.dark,
                   },
                 }}
               >

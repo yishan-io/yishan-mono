@@ -251,6 +251,8 @@ export class AgentManager {
             agentDefinition,
           });
           record.session = runningHandle.session;
+          record.sessionId = runningHandle.sessionId;
+          record.sessionPath = runningHandle.sessionPath ?? record.sessionPath;
           runningAgentState.handle = runningHandle;
           record.status = "running";
           this.emitChange();
