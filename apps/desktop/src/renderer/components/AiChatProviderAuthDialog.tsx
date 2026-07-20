@@ -13,6 +13,7 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DesktopRpcEventBridge, DesktopRpcEventEnvelope } from "../../main/ipc";
 import {
+  PI_PROVIDER_CONFIG_EVENT_METHODS,
   type PiAuthPromptRequestEvent,
   type PiAuthPromptResponseInput,
   parsePiAuthPromptClosedEventPayload,
@@ -172,14 +173,14 @@ export function AiChatProviderAuthDialog({ bridge: providedBridge }: AiChatProvi
 }
 
 function parsePromptRequestEvent(event: DesktopRpcEventEnvelope): PiAuthPromptRequestEvent | undefined {
-  if (event.method !== "piRuntime.authPrompt") {
+  if (event.method !== PI_PROVIDER_CONFIG_EVENT_METHODS.authPrompt) {
     return undefined;
   }
   return parsePiAuthPromptRequestEventPayload(event.payload);
 }
 
 function parsePromptClosedEvent(event: DesktopRpcEventEnvelope): string | undefined {
-  if (event.method !== "piRuntime.authPromptClosed") {
+  if (event.method !== PI_PROVIDER_CONFIG_EVENT_METHODS.authPromptClosed) {
     return undefined;
   }
   return parsePiAuthPromptClosedEventPayload(event.payload);

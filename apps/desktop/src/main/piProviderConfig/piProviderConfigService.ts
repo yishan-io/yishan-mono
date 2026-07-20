@@ -15,28 +15,28 @@ type PiProviderConfigServiceOptions = {
   agentDir?: string;
   authStorage?: AuthStorage;
   modelRegistry?: ModelRegistry;
-  moduleLoader?: PiRuntimeModuleLoader;
+  sdkModuleLoader?: PiSdkModuleLoader;
   providerCatalogLoader?: PiProviderCatalogLoader;
 };
 
-type PiRuntimeModule = Pick<
+type PiSdkModule = Pick<
   typeof import("@earendil-works/pi-coding-agent"),
   "AuthStorage" | "ModelRegistry" | "getAgentDir"
 >;
 
-type PiRuntimeModuleLoader = () => Promise<PiRuntimeModule>;
+type PiSdkModuleLoader = () => Promise<PiSdkModule>;
 
 type PiProviderCatalogModule = Pick<typeof import("@earendil-works/pi-ai/providers/all"), "builtinProviders">;
 
 type PiProviderCatalogLoader = () => Promise<PiProviderCatalogModule>;
 
-type PiRuntimeDependencies = {
+type PiProviderConfigDependencies = {
   authStorage: AuthStorage;
   modelRegistry: ModelRegistry;
   builtInProviders: Provider[];
 };
 
-async function loadPiRuntimeModule(): Promise<PiRuntimeModule> {
+async function loadPiSdkModule(): Promise<PiSdkModule> {
   return await import("@earendil-works/pi-coding-agent");
 }
 
@@ -47,14 +47,14 @@ async function loadPiProviderCatalog(): Promise<PiProviderCatalogModule> {
 /** Owns Desktop access to Pi authentication storage, provider capabilities, and model snapshots. */
 export class PiProviderConfigService {
   private readonly options: PiProviderConfigServiceOptions;
-  private readonly moduleLoader: PiRuntimeModuleLoader;
+  private readonly sdkModuleLoader: PiSdkModuleLoader;
   private readonly providerCatalogLoader: PiProviderCatalogLoader;
-  private runtimePromise: Promise<PiRuntimeDependencies> | undefined;
+  private dependenciesPromise: Promise<PiProviderConfigDependencies> | undefined;
   private snapshot: PiProviderConfigSnapshot | undefined;
 
   constructor(options: PiProviderConfigServiceOptions = {}) {
     this.options = options;
-    this.moduleLoader = options.moduleLoader ?? loadPiRuntimeModule;
+    this.sdkModuleLoader = options.sdkModuleLoader ?? loadPiSdkModule;
     this.providerCatalogLoader = options.providerCatalogLoader ?? loadPiProviderCatalog;
   }
 
@@ -63,7 +63,7 @@ export class PiProviderConfigService {
     if (this.snapshot) {
       return this.snapshot;
     }
-    const { authStorage, modelRegistry, builtInProviders } = await this.getRuntime();
+    const { authStorage, modelRegistry, builtInProviders } = await this.getDependencies();
     const snapshot = buildPiProviderConfigSnapshot(authStorage, modelRegistry, builtInProviders);
     this.snapshot = snapshot;
     return snapshot;
@@ -71,7 +71,7 @@ export class PiProviderConfigService {
 
   /** Reloads Pi provider/model configuration from local runtime state and replaces the cached snapshot. */
   async refreshSnapshot(): Promise<PiProviderConfigSnapshot> {
-    const { authStorage, modelRegistry, builtInProviders } = await this.getRuntime();
+    const { authStorage, modelRegistry, builtInProviders } = await this.getDependencies();
     authStorage.reload();
     modelRegistry.refresh();
     const snapshot = buildPiProviderConfigSnapshot(authStorage, modelRegistry, builtInProviders);
@@ -85,7 +85,7 @@ export class PiProviderConfigService {
     method: PiProviderAuthMethodKind,
     callbacks: AuthLoginCallbacks,
   ): Promise<void> {
-    const { authStorage, builtInProviders } = await this.getRuntime();
+    const { authStorage, builtInProviders } = await this.getDependencies();
     const provider = builtInProviders.find((entry) => entry.id === providerId);
     if (!provider) {
       throw new PiProviderConfigError(
@@ -128,7 +128,7 @@ export class PiProviderConfigService {
 
   /** Removes one app-owned auth.json credential, leaving external sources untouched. */
   async removeCredential(providerId: string): Promise<void> {
-    const { authStorage } = await this.getRuntime();
+    const { authStorage } = await this.getDependencies();
     let credential: AuthCredential | undefined;
     try {
       credential = authStorage.get(providerId);
@@ -148,28 +148,28 @@ export class PiProviderConfigService {
     }
   }
 
-  private async getRuntime(): Promise<PiRuntimeDependencies> {
-    const runtimePromise = this.runtimePromise ?? this.createRuntime();
-    this.runtimePromise = runtimePromise;
+  private async getDependencies(): Promise<PiProviderConfigDependencies> {
+    const dependenciesPromise = this.dependenciesPromise ?? this.createDependencies();
+    this.dependenciesPromise = dependenciesPromise;
     try {
-      return await runtimePromise;
+      return await dependenciesPromise;
     } catch (error) {
-      if (this.runtimePromise === runtimePromise) {
-        this.runtimePromise = undefined;
+      if (this.dependenciesPromise === dependenciesPromise) {
+        this.dependenciesPromise = undefined;
       }
       throw error;
     }
   }
 
-  private async createRuntime(): Promise<PiRuntimeDependencies> {
-    const [runtimeModule, providerCatalogModule] = await Promise.all([
-      this.moduleLoader(),
+  private async createDependencies(): Promise<PiProviderConfigDependencies> {
+    const [sdkModule, providerCatalogModule] = await Promise.all([
+      this.sdkModuleLoader(),
       this.providerCatalogLoader(),
     ]);
-    const agentDir = this.options.agentDir ?? runtimeModule.getAgentDir();
-    const authStorage = this.options.authStorage ?? runtimeModule.AuthStorage.create(join(agentDir, "auth.json"));
+    const agentDir = this.options.agentDir ?? sdkModule.getAgentDir();
+    const authStorage = this.options.authStorage ?? sdkModule.AuthStorage.create(join(agentDir, "auth.json"));
     const modelRegistry =
-      this.options.modelRegistry ?? runtimeModule.ModelRegistry.create(authStorage, join(agentDir, "models.json"));
+      this.options.modelRegistry ?? sdkModule.ModelRegistry.create(authStorage, join(agentDir, "models.json"));
     return {
       authStorage,
       modelRegistry,

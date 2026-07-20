@@ -64,7 +64,7 @@ describe("AiChatProviderSettingsSection", () => {
     mocked.cancelPiProviderAuthentication.mockResolvedValue(true);
     mocked.removePiProviderCredential.mockResolvedValue(null);
     mocked.setDefaultAiChatModel.mockImplementation(() => undefined);
-    aiChatSettingsStore.setState({ defaultModel: undefined, legacyMigrationCompleted: true });
+    aiChatSettingsStore.setState({ defaultModel: undefined });
     piProviderConfigStore.setState({
       snapshot: {
         providers: [

@@ -235,7 +235,7 @@ export const HOST_IPC_CHANNELS = {
   installUpdate: "desktop:host/install-update",
   getAuthStatus: "desktop:host/get-auth-status",
   login: "desktop:host/login",
-  getPiProviderConfigSnapshot: "desktop:host/get-pi-runtime-snapshot",
+  getPiProviderConfigSnapshot: "desktop:host/get-pi-provider-config-snapshot",
   refreshPiProviderConfigSnapshot: "desktop:host/refresh-pi-provider-config-snapshot",
   authenticatePiProvider: "desktop:host/authenticate-pi-provider",
   cancelPiProviderAuthentication: "desktop:host/cancel-pi-provider-authentication",

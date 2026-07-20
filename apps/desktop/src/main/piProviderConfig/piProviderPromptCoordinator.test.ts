@@ -38,7 +38,7 @@ describe("PiProviderPromptCoordinator", () => {
 
     expect(target.send).toHaveBeenCalledWith(
       DESKTOP_RPC_IPC_CHANNELS.event,
-      expect.objectContaining({ method: "piRuntime.authPrompt" }),
+      expect.objectContaining({ method: "piProviderConfig.authPrompt" }),
     );
     expect(
       coordinator.respond(target.id + 1, { requestId: envelope.payload.requestId, status: "submitted", value: "bad" }),
@@ -105,7 +105,7 @@ describe("PiProviderPromptCoordinator", () => {
 
     await expect(resultPromise).rejects.toThrow("Login cancelled.");
     expect(target.send).toHaveBeenLastCalledWith(DESKTOP_RPC_IPC_CHANNELS.event, {
-      method: "piRuntime.authPromptClosed",
+      method: "piProviderConfig.authPromptClosed",
       payload: { requestId: envelope.payload.requestId },
     });
   });

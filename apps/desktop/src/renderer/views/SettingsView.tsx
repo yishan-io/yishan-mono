@@ -20,6 +20,7 @@ import { SearchInput } from "../components/SearchInput";
 import { SettingsErrorBoundary, SettingsPageLayout, SettingsSectionHeader } from "../components/settings";
 import { ThemePreferencePicker } from "../components/settings/ThemePreferencePicker";
 import { getRendererPlatform } from "../helpers/platform";
+import { AI_CHAT_PROVIDERS_SETTINGS_FOCUS_ID } from "../helpers/settingsNavigation";
 import { useThemePreference } from "../hooks/useThemePreference";
 import { AccountSettingsView } from "./settings/AccountSettingsView";
 import { AgentSettingsView } from "./settings/AgentSettingsView";
@@ -50,7 +51,7 @@ type SettingsSearchResult = {
   icon: typeof BiCog;
   label: string;
   sectionLabel: string;
-  focusItemId?: NotificationSettingsFocusItemId | "agentProviders";
+  focusItemId?: NotificationSettingsFocusItemId | typeof AI_CHAT_PROVIDERS_SETTINGS_FOCUS_ID;
   rank: number;
 };
 
@@ -110,7 +111,8 @@ export function SettingsView() {
   const selectedTabParam = searchParams.get("tab");
   const focusedItemParam = searchParams.get("focus");
   const focusedNotificationItemId = isNotificationSettingsFocusItemId(focusedItemParam) ? focusedItemParam : undefined;
-  const focusAiChatProviders = selectedTabParam === "agents" && focusedItemParam === "agentProviders";
+  const focusAiChatProviders =
+    selectedTabParam === "agents" && focusedItemParam === AI_CHAT_PROVIDERS_SETTINGS_FOCUS_ID;
   const shouldReserveMacWindowControlsInset = getRendererPlatform() === "darwin";
 
   const selectedTab = useMemo<SettingsTab>(() => {

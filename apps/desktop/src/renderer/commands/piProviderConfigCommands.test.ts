@@ -49,7 +49,7 @@ describe("piProviderConfigCommands", () => {
       pendingCredentialAction: undefined,
       activeCredentialRequestId: undefined,
     } as Partial<ReturnType<typeof piProviderConfigStore.getState>>);
-    aiChatSettingsStore.setState({ defaultModel: undefined, legacyMigrationCompleted: true });
+    aiChatSettingsStore.setState({ defaultModel: undefined });
   });
 
   it("authenticates with the selected provider method and clears pending state", async () => {

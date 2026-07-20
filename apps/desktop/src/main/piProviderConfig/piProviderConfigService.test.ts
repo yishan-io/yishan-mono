@@ -19,7 +19,7 @@ function findProvider(snapshot: ReturnType<typeof buildPiProviderConfigSnapshot>
 
 describe("PiProviderConfigService", () => {
   it("loads the ESM runtime lazily when the first snapshot is requested", async () => {
-    const moduleLoader = vi.fn(async () => ({
+    const sdkModuleLoader = vi.fn(async () => ({
       AuthStorage,
       ModelRegistry,
       VERSION: "0.80.6",
@@ -27,14 +27,14 @@ describe("PiProviderConfigService", () => {
     }));
     const service = new PiProviderConfigService({
       agentDir: "/tmp/pi-runtime-test",
-      moduleLoader,
+      sdkModuleLoader,
     });
 
-    expect(moduleLoader).not.toHaveBeenCalled();
+    expect(sdkModuleLoader).not.toHaveBeenCalled();
 
     await service.getSnapshot();
 
-    expect(moduleLoader).toHaveBeenCalledOnce();
+    expect(sdkModuleLoader).toHaveBeenCalledOnce();
   });
 
   it("returns the cached snapshot without reloading Pi configuration", async () => {
@@ -68,7 +68,7 @@ describe("PiProviderConfigService", () => {
   });
 
   it("retries runtime initialization after a transient loader failure", async () => {
-    const moduleLoader = vi
+    const sdkModuleLoader = vi
       .fn()
       .mockRejectedValueOnce(new Error("temporary loader failure"))
       .mockResolvedValue({
@@ -78,7 +78,7 @@ describe("PiProviderConfigService", () => {
       });
     const service = new PiProviderConfigService({
       agentDir: "/tmp/pi-runtime-test",
-      moduleLoader,
+      sdkModuleLoader,
     });
 
     await expect(service.getSnapshot()).rejects.toThrow("temporary loader failure");
@@ -87,7 +87,7 @@ describe("PiProviderConfigService", () => {
       models: expect.any(Array),
     });
 
-    expect(moduleLoader).toHaveBeenCalledTimes(2);
+    expect(sdkModuleLoader).toHaveBeenCalledTimes(2);
   });
 
   it("persists complete provider-scoped API-key credentials", async () => {

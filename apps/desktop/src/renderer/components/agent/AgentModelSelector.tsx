@@ -2,6 +2,7 @@ import { Box, Button } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
+import { AI_CHAT_PROVIDERS_SETTINGS_PATH } from "../../helpers/settingsNavigation";
 import type { AgentModel } from "../../store/agentChatTypes";
 import { AgentModelSelectorMenu } from "./AgentModelSelectorMenu";
 import {
@@ -92,7 +93,7 @@ export function AgentModelSelector({
 
   const handleAddProvider = useCallback(() => {
     handleMenuClose();
-    navigate("/settings?tab=agents&focus=agentProviders");
+    navigate(AI_CHAT_PROVIDERS_SETTINGS_PATH);
   }, [handleMenuClose, navigate]);
 
   const activeSelectedProvider = providerGroups.some((providerGroup) => providerGroup.provider === selectedProvider)

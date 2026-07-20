@@ -159,6 +159,7 @@ export const agentSettingsStore = create<AgentSettingsStoreState>()(
             : undefined;
 
         const normalizedInUseByAgentKind = normalizeInUseByAgentKind(persisted?.inUseByAgentKind);
+
         return {
           ...currentState,
           inUseByAgentKind: normalizedInUseByAgentKind,

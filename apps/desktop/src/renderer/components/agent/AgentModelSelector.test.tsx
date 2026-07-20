@@ -175,7 +175,7 @@ describe("AgentModelSelector", () => {
 
     fireEvent.click(addProviderButton);
 
-    expect(mocked.navigate).toHaveBeenCalledWith("/settings?tab=agents&focus=agentProviders");
+    expect(mocked.navigate).toHaveBeenCalledWith("/settings?tab=agents&focus=aiChatProviders");
     expect(screen.queryByRole("searchbox", { name: "Search models" })).toBeNull();
   });
 });

@@ -41,6 +41,10 @@ describe("registerPiProviderConfigIpcHandlers", () => {
     vi.clearAllMocks();
   });
 
+  it("uses the provider-config snapshot IPC channel name", () => {
+    expect(HOST_IPC_CHANNELS.getPiProviderConfigSnapshot).toBe("desktop:host/get-pi-provider-config-snapshot");
+  });
+
   it.each([
     [HOST_IPC_CHANNELS.authenticatePiProvider, { providerId: "", method: "oauth" }],
     [HOST_IPC_CHANNELS.cancelPiProviderAuthentication, ""],

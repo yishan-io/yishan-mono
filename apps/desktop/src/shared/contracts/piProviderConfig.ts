@@ -4,6 +4,12 @@ export type PiProviderAuthSource = "none" | "oauth" | "auth_file" | "env" | "ext
 /** Interactive authentication methods that Desktop can start. */
 export type PiProviderAuthMethodKind = "oauth" | "api_key";
 
+/** Desktop RPC event methods emitted while a Pi provider authentication prompt is active. */
+export const PI_PROVIDER_CONFIG_EVENT_METHODS = {
+  authPrompt: "piProviderConfig.authPrompt",
+  authPromptClosed: "piProviderConfig.authPromptClosed",
+} as const;
+
 /** Renderer prompt requested by one provider-owned authentication flow. */
 export type PiAuthPromptRequest =
   | {

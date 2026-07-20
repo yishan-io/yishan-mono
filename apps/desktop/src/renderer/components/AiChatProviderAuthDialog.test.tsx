@@ -43,7 +43,7 @@ describe("AiChatProviderAuthDialog", () => {
     render(<AiChatProviderAuthDialog bridge={bridge} />);
 
     emit({
-      method: "piRuntime.authPrompt",
+      method: "piProviderConfig.authPrompt",
       payload: { requestId: "request-1", prompt: { type: "secret", message: "Enter Ant Ling API key" } },
     });
 
@@ -67,7 +67,7 @@ describe("AiChatProviderAuthDialog", () => {
     render(<AiChatProviderAuthDialog bridge={bridge} />);
 
     emit({
-      method: "piRuntime.authPrompt",
+      method: "piProviderConfig.authPrompt",
       payload: {
         requestId: "request-2",
         prompt: {
@@ -94,7 +94,7 @@ describe("AiChatProviderAuthDialog", () => {
     render(<AiChatProviderAuthDialog bridge={bridge} />);
 
     emit({
-      method: "piRuntime.authPrompt",
+      method: "piProviderConfig.authPrompt",
       payload: { requestId: "request-3", prompt: { type: "text", message: "Enter account ID" } },
     });
     const input = screen.getByRole("textbox", { name: "Enter account ID" });
@@ -113,12 +113,12 @@ describe("AiChatProviderAuthDialog", () => {
     render(<AiChatProviderAuthDialog bridge={bridge} />);
 
     emit({
-      method: "piRuntime.authPrompt",
+      method: "piProviderConfig.authPrompt",
       payload: { requestId: "request-browser", prompt: { type: "text", message: "Paste redirect URL" } },
     });
     expect(screen.getByRole("dialog")).toBeTruthy();
 
-    emit({ method: "piRuntime.authPromptClosed", payload: { requestId: "request-browser" } });
+    emit({ method: "piProviderConfig.authPromptClosed", payload: { requestId: "request-browser" } });
 
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(respondPiAuthPrompt).not.toHaveBeenCalled();
@@ -135,7 +135,7 @@ describe("AiChatProviderAuthDialog", () => {
     render(<AiChatProviderAuthDialog bridge={bridge} />);
 
     emit({
-      method: "piRuntime.authPrompt",
+      method: "piProviderConfig.authPrompt",
       payload: { requestId: "request-old", prompt: { type: "text", message: "Enter account ID" } },
     });
     fireEvent.change(screen.getByRole("textbox", { name: "Enter account ID" }), {
@@ -144,7 +144,7 @@ describe("AiChatProviderAuthDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.prompt.submit" }));
 
     emit({
-      method: "piRuntime.authPrompt",
+      method: "piProviderConfig.authPrompt",
       payload: { requestId: "request-new", prompt: { type: "secret", message: "Enter API key" } },
     });
     const newInput = screen.getByRole("dialog").querySelector('input[aria-label="Enter API key"]');

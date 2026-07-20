@@ -1,4 +1,8 @@
-import type { PiAuthPromptRequest, PiAuthPromptResponseInput } from "../../shared/contracts/piProviderConfig";
+import {
+  PI_PROVIDER_CONFIG_EVENT_METHODS,
+  type PiAuthPromptRequest,
+  type PiAuthPromptResponseInput,
+} from "../../shared/contracts/piProviderConfig";
 import { generateId } from "../../shared/helpers/generateId";
 import { DESKTOP_RPC_IPC_CHANNELS } from "../ipc";
 import { PiProviderConfigError, createPiProviderConfigCancellationError } from "./piProviderConfigErrors";
@@ -46,7 +50,7 @@ export class PiProviderPromptCoordinator {
       }
       try {
         target.send(DESKTOP_RPC_IPC_CHANNELS.event, {
-          method: "piRuntime.authPrompt",
+          method: PI_PROVIDER_CONFIG_EVENT_METHODS.authPrompt,
           payload: { requestId, prompt },
         });
       } catch {
@@ -89,7 +93,7 @@ export class PiProviderPromptCoordinator {
     if (notifyRenderer && !pending.target.isDestroyed()) {
       try {
         pending.target.send(DESKTOP_RPC_IPC_CHANNELS.event, {
-          method: "piRuntime.authPromptClosed",
+          method: PI_PROVIDER_CONFIG_EVENT_METHODS.authPromptClosed,
           payload: { requestId: pending.requestId },
         });
       } catch {

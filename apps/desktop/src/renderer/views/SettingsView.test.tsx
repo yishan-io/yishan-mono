@@ -529,7 +529,7 @@ describe("SettingsView", () => {
   it("forwards the provider focus deep link to agent settings", () => {
     render(
       <AppThemePreferenceProvider>
-        <MemoryRouter initialEntries={["/settings?tab=agents&focus=agentProviders"]}>
+        <MemoryRouter initialEntries={["/settings?tab=agents&focus=aiChatProviders"]}>
           <Routes>
             <Route path="/settings" element={<SettingsView />} />
           </Routes>
