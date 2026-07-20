@@ -81,6 +81,9 @@ export type WorkspaceGitChangeTotals = {
   deletions: number;
 };
 
+/** Visual mode for one agent-chat tab/session attachment. */
+export type AgentChatSessionView = "full" | "subagent-detail";
+
 export type WorkspaceTabDataByKind = {
   session: {
     sessionId?: string;
@@ -128,6 +131,9 @@ export type WorkspaceTabDataByKind = {
     sessionId?: string;
     cwd: string;
     userRenamed?: boolean;
+    sessionView?: AgentChatSessionView;
+    subagentAgentId?: string;
+    subagentParentSessionId?: string;
   };
 };
 
@@ -225,6 +231,9 @@ export type OpenWorkspaceTabInput =
       cwd?: string;
       /** Single session id used for both live attach and persisted Pi resume. */
       sessionId?: string;
+      sessionView?: AgentChatSessionView;
+      subagentAgentId?: string;
+      subagentParentSessionId?: string;
     };
 
 export type WorkspaceStoreState = {

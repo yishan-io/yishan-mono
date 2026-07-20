@@ -13,6 +13,7 @@ import type {
   AgentStreamEvent,
 } from "../store/agentChatTypes";
 import { tabStore } from "../store/tabStore";
+import type { AgentChatSessionView } from "../store/types";
 import {
   disposeAgentChatStreamBuffer,
   flushAgentChatStreamBuffer,
@@ -31,6 +32,7 @@ type PiSessionHandle = {
   unsubscribe: (() => void) | null;
   state: "starting" | "running" | "closing";
   closeRequested: boolean;
+  ownsSessionOnClose: boolean;
   startPromise: Promise<void> | null;
 };
 
@@ -46,6 +48,7 @@ export async function ensurePiSession(opts: {
   workspaceId: string;
   cwd: string;
   sessionId?: string;
+  sessionView?: AgentChatSessionView;
   paneId?: string;
 }): Promise<string> {
   const existing = activePiSessions.get(opts.tabId);
@@ -61,6 +64,7 @@ export async function ensurePiSession(opts: {
       unsubscribe: null,
       state: "running",
       closeRequested: false,
+      ownsSessionOnClose: true,
       startPromise: null,
     });
     return chatSession.sessionId;
@@ -73,6 +77,7 @@ export async function ensurePiSession(opts: {
     unsubscribe: null,
     state: "starting",
     closeRequested: false,
+    ownsSessionOnClose: opts.sessionView !== "subagent-detail",
     startPromise: null,
   };
   activePiSessions.set(opts.tabId, handle);
@@ -107,7 +112,11 @@ export async function ensurePiSession(opts: {
       });
 
       if (handle.closeRequested) {
-        await closePiSessionHandle(opts.tabId, handle);
+        if (handle.ownsSessionOnClose) {
+          await closePiSessionHandle(opts.tabId, handle);
+        } else {
+          releasePiSessionHandle(opts.tabId, handle);
+        }
         return;
       }
 
@@ -190,11 +199,13 @@ export async function stopPiSession(tabId: string): Promise<void> {
   const session = activePiSessions.get(tabId);
   if (!session) {
     const fallbackTab = tabStore.getState().tabs.find((tab) => tab.id === tabId && tab.kind === "agent-chat");
+    const isReadOnlySubagentDetail =
+      fallbackTab?.kind === "agent-chat" && fallbackTab.data.sessionView === "subagent-detail";
     const fallbackSessionId =
       agentChatStore.getState().sessionsByTabId[tabId]?.sessionId ??
       (fallbackTab?.kind === "agent-chat" ? fallbackTab.data.sessionId : undefined);
 
-    if (fallbackSessionId) {
+    if (fallbackSessionId && !isReadOnlySubagentDetail) {
       const client = await getDaemonClient();
       await Promise.resolve(client.pi.stop({ sessionId: fallbackSessionId })).catch(() => {});
     }
@@ -213,6 +224,11 @@ export async function stopPiSession(tabId: string): Promise<void> {
 
   if (activePiSessions.get(tabId) !== session) {
     agentChatStore.getState().removeSession(tabId);
+    return;
+  }
+
+  if (!session.ownsSessionOnClose) {
+    releasePiSessionHandle(tabId, session);
     return;
   }
 
@@ -377,6 +393,13 @@ function resolveAgentChatPaneId(tabId: string, paneId: string | undefined): stri
   return `pane-${tabId}`;
 }
 
+function releasePiSessionHandle(tabId: string, session: PiSessionHandle): void {
+  if (activePiSessions.get(tabId) === session) {
+    activePiSessions.delete(tabId);
+  }
+  agentChatStore.getState().removeSession(tabId);
+}
+
 async function closePiSessionHandle(tabId: string, session: PiSessionHandle): Promise<void> {
   if (session.state === "closing") {
     return;
@@ -531,6 +554,11 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       if (request) {
         agentChatStore.getState().setPendingUiRequest(tabId, request);
       }
+
+      const subagentProgressTargets = parseSubagentProgressTargets(event);
+      if (subagentProgressTargets) {
+        agentChatStore.getState().setSubagentProgressTargets(tabId, subagentProgressTargets);
+      }
       break;
     }
 
@@ -553,6 +581,44 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
 }
 
 // ─── Streaming helpers ───────────────────────────────────────────────────────
+
+function parseSubagentProgressTargets(
+  event: Record<string, unknown>,
+): Array<{ agentName: string; agentId: string; status: string }> | null {
+  if (event.method !== "setWidget" || event.widgetKey !== "pi-subagents-progress") {
+    return null;
+  }
+
+  const widgetLines = event.widgetLines;
+  if (widgetLines === undefined) {
+    return [];
+  }
+  if (!Array.isArray(widgetLines)) {
+    return null;
+  }
+
+  const targets = widgetLines
+    .map((line) => parseSubagentProgressTargetLine(typeof line === "string" ? line : ""))
+    .filter((target): target is { agentName: string; agentId: string; status: string } => target !== null);
+  return targets;
+}
+
+function parseSubagentProgressTargetLine(
+  line: string,
+): { agentName: string; agentId: string; status: string } | null {
+  const normalizedLine = line.replace(/<[^>]+>/g, "").trim();
+  const match = normalizedLine.match(/^\S+\s+(.+?)\s+·\s+(queued|starting|running)\s+·\s+(?:fg|bg)\s+·\s+(agent-\S+)$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, agentName, status, agentId] = match;
+  if (!agentName || !status || !agentId) {
+    return null;
+  }
+
+  return { agentName, status, agentId };
+}
 
 function queueStreamingMessageUpdate(tabId: string, message: AgentMessage): void {
   queueAgentChatStreamMessage({

@@ -125,6 +125,7 @@ describe("AgentChatRecoveryCoordinator", () => {
             cwd: "/tmp/workspace-1",
             sessionId: "live-session-2",
             userRenamed: true,
+            sessionView: "subagent-detail",
           },
         },
       ],
@@ -160,6 +161,7 @@ describe("AgentChatRecoveryCoordinator", () => {
       title: "Recovered chat renamed",
       pinned: true,
       userRenamed: true,
+      sessionView: "subagent-detail",
     });
 
     unsubscribe();
@@ -180,6 +182,7 @@ describe("AgentChatRecoveryCoordinator", () => {
             cwd: "/tmp/workspace-1",
             sessionId: "live-session-1",
             userRenamed: true,
+            sessionView: "subagent-detail",
           },
         ],
       }),
@@ -219,6 +222,7 @@ describe("AgentChatRecoveryCoordinator", () => {
           cwd: "/tmp/workspace-1",
           sessionId: "live-session-1",
           userRenamed: true,
+          sessionView: "subagent-detail",
         },
       },
     ]);

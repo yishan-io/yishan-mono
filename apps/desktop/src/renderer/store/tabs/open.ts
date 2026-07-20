@@ -172,6 +172,9 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
     return {
       cwd: input.cwd || "",
       sessionId: input.sessionId || undefined,
+      sessionView: input.sessionView ?? "full",
+      subagentAgentId: input.subagentAgentId || undefined,
+      subagentParentSessionId: input.subagentParentSessionId || undefined,
     } as WorkspaceTabDataByKind[T["kind"]];
   }
 

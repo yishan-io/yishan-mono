@@ -1,5 +1,5 @@
 import { Alert, Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuArrowUp } from "react-icons/lu";
 import {
   abortAgent,
@@ -8,6 +8,7 @@ import {
   fetchAgentMessages,
   fetchAgentModels,
   fetchAgentState,
+  findTabWithSession,
   handleAgentPiEvent,
   reattachPiSession,
   registerAgentSession,
@@ -19,6 +20,7 @@ import {
   setPiSessionUnsubscribe,
 } from "../../commands/agentChatCommands";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../commands/agentChatSubagentCommands";
+import { getDaemonClient } from "../../rpc/rpcTransport";
 import { renameTab } from "../../commands/tabCommands";
 import { AgentChatVoiceButton } from "../../components/AgentChatVoiceButton";
 import { RichComposer } from "../../components/RichComposer";
@@ -28,11 +30,16 @@ import { AgentModelSelector } from "../../components/agent/session/AgentModelSel
 import { AgentMessageList } from "../../components/agent/transcript/AgentMessageList";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import { getDaemonClient, subscribeDaemonConnectionStatus } from "../../rpc/rpcTransport";
+import { subscribeDaemonConnectionStatus } from "../../rpc/rpcTransport";
 import { agentChatStore } from "../../store/agentChatStore";
-import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../store/agentChatSubagents";
+import {
+  type RunningSubagentSummary,
+  deriveChildSessionSubagentMetadata,
+  findMatchingRunningSubagent,
+} from "../../store/agentChatSubagents";
 import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
 import { tabStore } from "../../store/tabStore";
+import type { AgentChatSessionView } from "../../store/types";
 import { AgentPendingUiPrompt } from "./AgentPendingUiPrompt";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
@@ -46,6 +53,7 @@ type AgentChatViewProps = {
   workspaceId: string;
   cwd: string;
   sessionId?: string;
+  sessionView?: AgentChatSessionView;
   paneId?: string;
   isActive?: boolean;
 };
@@ -99,6 +107,9 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
   const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
   const hasStreamingMessage = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]?.streamingMessage));
   const runningSubagents = agentChatStore((state) => state.sessionsByTabId[tabId]?.runningSubagents ?? []);
+  const subagentProgressTargets = agentChatStore(
+    (state) => state.sessionsByTabId[tabId]?.subagentProgressTargets ?? [],
+  );
   const [draft, setDraft] = useState("");
 
   const handleSubmit = useCallback(
@@ -179,6 +190,8 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
         workspaceId,
         cwd,
         parentPaneId: paneId,
+        parentSessionId: sessionId ?? undefined,
+        agentId: subagent.agentId,
         childSessionId,
         title,
       });
@@ -193,25 +206,35 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
       }
 
       let agentId = subagent.agentId;
-      if (!agentId) {
+      let childSessionId = subagent.childSessionId;
+      if (!agentId && !childSessionId) {
         await fetchAgentMessages({ tabId, sessionId });
-        const refreshedSubagent = findMatchingRunningSubagent(
-          agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [],
-          subagent,
-        );
+        const refreshedRunningSubagents = agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [];
+        const refreshedSubagent = findMatchingRunningSubagent(refreshedRunningSubagents, subagent);
         agentId = refreshedSubagent?.agentId;
+        childSessionId = refreshedSubagent?.childSessionId;
       }
 
-      if (!agentId) {
+      if (!agentId && !childSessionId) {
+        const matchingProgressTargets = subagentProgressTargets.filter((target) => target.agentName === subagent.agentName);
+        if (matchingProgressTargets.length === 1) {
+          agentId = matchingProgressTargets[0]?.agentId;
+        }
+      }
+
+      if (!agentId && !childSessionId) {
         return;
       }
+
       await cancelSubagentRun({
         tabId,
         sessionId,
         agentId,
+        agentName: subagent.agentName,
+        childSessionId,
       });
     },
-    [sessionId, tabId],
+    [sessionId, subagentProgressTargets, tabId],
   );
 
   return (
@@ -240,14 +263,22 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
           <Typography variant="caption" color="text.secondary" sx={{ px: 0.5, fontWeight: 700 }}>
             Running sub-agents
           </Typography>
-          {runningSubagents.map((subagent) => (
-            <AgentChatSubagentRow
-              key={subagent.rowId}
-              subagent={subagent}
-              onOpen={handleOpenSubagent}
-              onCancel={handleCancelSubagent}
-            />
-          ))}
+          {runningSubagents.map((subagent) => {
+            const matchingProgressTargets = subagentProgressTargets.filter((target) => target.agentName === subagent.agentName);
+            const canCancel = Boolean(
+              subagent.agentId || subagent.childSessionId || matchingProgressTargets.length === 1,
+            );
+
+            return (
+              <AgentChatSubagentRow
+                key={subagent.rowId}
+                subagent={subagent}
+                canCancel={canCancel}
+                onOpen={handleOpenSubagent}
+                onCancel={handleCancelSubagent}
+              />
+            );
+          })}
         </Box>
       ) : null}
       <RichComposer
@@ -350,9 +381,74 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
 const MemoizedAgentChatComposerPane = memo(AgentChatComposerPane);
 MemoizedAgentChatComposerPane.displayName = "AgentChatComposerPane";
 
-function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, isActive = true }: AgentChatViewProps) {
+type AgentChatReadOnlyFooterProps = {
+  canCancel: boolean;
+  onCancel: () => void | Promise<void>;
+};
+
+function AgentChatReadOnlyFooter({ canCancel, onCancel }: AgentChatReadOnlyFooterProps) {
+  return (
+    <Box
+      sx={{
+        borderTop: 1,
+        borderColor: "divider",
+        px: 2,
+        py: 1,
+        display: "flex",
+        alignItems: "center",
+        gap: 1.5,
+      }}
+    >
+      <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+        Sub-agent detail is read-only.
+      </Typography>
+      {canCancel ? (
+        <Tooltip title="Cancel sub-agent" placement="top">
+          <span>
+            <IconButton
+              size="small"
+              aria-label="Cancel sub-agent"
+              onClick={() => {
+                void onCancel();
+              }}
+              sx={{
+                width: 34,
+                height: 34,
+                p: 0,
+                border: "1px solid",
+                borderColor: "divider",
+                bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : "grey.900"),
+                color: (theme) => (theme.palette.mode === "dark" ? "text.secondary" : "text.primary"),
+                borderRadius: 999,
+                boxShadow: 1,
+              }}
+            >
+              <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: "currentColor" }} />
+            </IconButton>
+          </span>
+        </Tooltip>
+      ) : null}
+    </Box>
+  );
+}
+
+function AgentChatViewComponent({
+  tabId,
+  workspaceId,
+  cwd,
+  sessionId,
+  sessionView = "full",
+  paneId,
+  isActive = true,
+}: AgentChatViewProps) {
   const startupPaneIdRef = useRef<string | undefined>(paneId);
   const startupSessionIdRef = useRef<string | undefined>(sessionId);
+  const isReadOnlySubagentDetail = sessionView === "subagent-detail";
+  const agentChatTab = tabStore((state) =>
+    state.tabs.find((tab): tab is Extract<(typeof state.tabs)[number], { kind: "agent-chat" }> => {
+      return tab.id === tabId && tab.kind === "agent-chat";
+    }),
+  );
   const hasSession = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]));
   const sessionState = agentChatStore(
     (state) => state.sessionsByTabId[tabId]?.state ?? (hasSession ? "idle" : "starting"),
@@ -366,6 +462,16 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
   const pendingUiRequest = agentChatStore((state) => state.sessionsByTabId[tabId]?.pendingUiRequest ?? null);
   const pendingUiAutoResponse = agentChatStore((state) => state.sessionsByTabId[tabId]?.pendingUiAutoResponse ?? null);
   const liveSessionId = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionId ?? null);
+  const sessionMessages = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages ?? EMPTY_MESSAGES);
+  const childSessionSubagentMetadata = useMemo(() => {
+    return deriveChildSessionSubagentMetadata(sessionMessages);
+  }, [sessionMessages]);
+  const subagentControl = agentChatTab?.data.sessionView === "subagent-detail"
+    ? {
+        agentId: agentChatTab.data.subagentAgentId,
+        parentSessionId: agentChatTab.data.subagentParentSessionId,
+      }
+    : null;
   const isInitialHistoryLoadPending =
     Boolean(startupSessionIdRef.current) && (!hasSession || !hasLoadedMessages || !hasLoadedModels || !hasLoadedState);
 
@@ -384,6 +490,7 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
           workspaceId,
           cwd,
           sessionId: startupSessionIdRef.current,
+          sessionView,
           paneId: startupPaneIdRef.current,
         });
         if (isDisposed) return;
@@ -429,7 +536,7 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
     return () => {
       isDisposed = true;
     };
-  }, [tabId, workspaceId, cwd]);
+  }, [tabId, workspaceId, cwd, sessionView]);
 
   useEffect(() => {
     let hasObservedConnectedState = false;
@@ -477,6 +584,41 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
   useEffect(() => {
     setAgentChatStreamTabVisible(tabId, isActive);
   }, [isActive, tabId]);
+
+  const handleReadOnlyCancel = useCallback(async () => {
+    const agentId = subagentControl?.agentId ?? childSessionSubagentMetadata?.agentId;
+    const parentSessionId = subagentControl?.parentSessionId ?? childSessionSubagentMetadata?.parentSessionId;
+    const childSessionId = liveSessionId ?? childSessionSubagentMetadata?.childSessionId;
+    if ((!agentId && !childSessionId) || !parentSessionId) {
+      return;
+    }
+
+    const parentTabId = findTabWithSession(parentSessionId);
+    if (parentTabId) {
+      await cancelSubagentRun({
+        tabId: parentTabId,
+        sessionId: parentSessionId,
+        agentId,
+        agentName: childSessionSubagentMetadata?.agentName,
+        childSessionId,
+      });
+      return;
+    }
+
+    const stopTarget = childSessionId?.trim() || agentId;
+    if (!stopTarget) {
+      return;
+    }
+
+    const client = await getDaemonClient();
+    await client.pi.send({
+      sessionId: parentSessionId,
+      command: {
+        type: "prompt",
+        message: `/agent-stop ${stopTarget}`,
+      },
+    });
+  }, [childSessionSubagentMetadata, sessionState, subagentControl]);
 
   const handlePendingUiCancel = useCallback(async () => {
     if (!liveSessionId || !pendingUiRequest) {
@@ -562,6 +704,12 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
     })();
   }, [liveSessionId, pendingUiAutoResponse, pendingUiRequest, tabId]);
 
+  const canCancelReadOnlySubagent = Boolean(
+    isReadOnlySubagentDetail &&
+      (subagentControl?.agentId ?? childSessionSubagentMetadata?.agentId) &&
+      (subagentControl?.parentSessionId ?? childSessionSubagentMetadata?.parentSessionId),
+  );
+
   if (isInitialHistoryLoadPending && sessionState !== "error") {
     return (
       <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
@@ -604,7 +752,7 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <MemoizedAgentChatTranscriptPane tabId={tabId} cwd={cwd} isActive={isActive} />
-      {pendingUiRequest ? (
+      {!isReadOnlySubagentDetail && pendingUiRequest ? (
         <AgentPendingUiPrompt
           request={pendingUiRequest}
           onCancel={handlePendingUiCancel}
@@ -619,7 +767,11 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
           </Alert>
         </Box>
       ) : null}
-      <MemoizedAgentChatComposerPane tabId={tabId} workspaceId={workspaceId} cwd={cwd} paneId={paneId} />
+      {isReadOnlySubagentDetail ? (
+        <AgentChatReadOnlyFooter canCancel={canCancelReadOnlySubagent} onCancel={handleReadOnlyCancel} />
+      ) : (
+        <MemoizedAgentChatComposerPane tabId={tabId} workspaceId={workspaceId} cwd={cwd} paneId={paneId} />
+      )}
     </Box>
   );
 }

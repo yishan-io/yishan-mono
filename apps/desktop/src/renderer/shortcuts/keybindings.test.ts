@@ -37,6 +37,7 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       closeAllTerminalTabs: vi.fn(),
       setTerminalTabSessionId: vi.fn(),
       setAgentChatTabSession: vi.fn(),
+      setAgentChatTabSubagentControl: vi.fn(),
       setTerminalTabAgentKind: vi.fn(),
       setBrowserTabFaviconUrl: vi.fn(),
       setBrowserTabUrl: vi.fn(),

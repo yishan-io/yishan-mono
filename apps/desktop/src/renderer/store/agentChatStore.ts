@@ -12,6 +12,12 @@ import type {
 
 const MAX_MESSAGES_PER_TAB = 500;
 
+type AgentSubagentProgressTarget = {
+  agentName: string;
+  agentId: string;
+  status: string;
+};
+
 type AgentSessionData = {
   sessionId: string;
   state: AgentSessionState;
@@ -24,6 +30,7 @@ type AgentSessionData = {
   pendingUiRequest: AgentPendingUiRequest | null;
   pendingUiAutoResponse: AgentPendingUiAutoResponse | null;
   runningSubagents: RunningSubagentSummary[];
+  subagentProgressTargets: AgentSubagentProgressTarget[];
   hasLoadedMessages: boolean;
   hasLoadedModels: boolean;
   hasLoadedState: boolean;
@@ -50,6 +57,7 @@ type AgentChatStoreState = {
   setQueue: (tabId: string, queue: AgentQueueState) => void;
   setPendingUiRequest: (tabId: string, request: AgentPendingUiRequest) => void;
   setPendingUiAutoResponse: (tabId: string, response: AgentPendingUiAutoResponse) => void;
+  setSubagentProgressTargets: (tabId: string, targets: AgentSubagentProgressTarget[]) => void;
   clearPendingUiRequest: (tabId: string) => void;
   clearPendingUiAutoResponse: (tabId: string) => void;
   markStateLoaded: (tabId: string) => void;
@@ -70,6 +78,7 @@ function emptySession(sessionId: string): AgentSessionData {
     pendingUiRequest: null,
     pendingUiAutoResponse: null,
     runningSubagents: [],
+    subagentProgressTargets: [],
     hasLoadedMessages: false,
     hasLoadedModels: false,
     hasLoadedState: false,
@@ -249,6 +258,14 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.pendingUiAutoResponse = response;
+      });
+    },
+
+    setSubagentProgressTargets: (tabId, targets) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        session.subagentProgressTargets = targets;
       });
     },
 

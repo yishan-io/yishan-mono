@@ -66,8 +66,13 @@ export class AgentManager {
     return Promise.all(tasks.map((task) => this.run(task)));
   }
 
-  /** Stops one queued or running agent. */
-  async stop(agentId: string): Promise<void> {
+  /** Stops one queued or running agent by agent id or child session id. Returns true when a matching run was found. */
+  async stop(agentIdOrSessionId: string): Promise<boolean> {
+    const agentId = this.resolveAgentId(agentIdOrSessionId);
+    if (!agentId) {
+      return false;
+    }
+
     const queuedCancel = this.queuedCancels.get(agentId);
     if (queuedCancel?.()) {
       const record = this.agentRecords.get(agentId);
@@ -79,20 +84,21 @@ export class AgentManager {
         this.emitChange();
       }
       this.queuedCancels.delete(agentId);
-      return;
+      return true;
     }
 
     const runningAgentState = this.runningAgentStates.get(agentId);
     if (!runningAgentState) {
-      return;
+      return false;
     }
 
     if (!runningAgentState.handle) {
       runningAgentState.stopRequested = true;
-      return;
+      return true;
     }
 
     await runningAgentState.handle.cancel();
+    return true;
   }
 
   /** Shuts down the manager by cancelling queued and active work, then waiting for completion. */
@@ -163,6 +169,25 @@ export class AgentManager {
     }
 
     return formatResultCollectorOutput(results);
+  }
+
+  private resolveAgentId(agentIdOrSessionId: string): string | undefined {
+    if (this.agentRecords.has(agentIdOrSessionId)) {
+      return agentIdOrSessionId;
+    }
+
+    for (const record of this.agentRecords.values()) {
+      if (record.sessionId === agentIdOrSessionId) {
+        return record.id;
+      }
+
+      const liveSessionId = record.session?.sessionManager?.getSessionId?.();
+      if (liveSessionId === agentIdOrSessionId) {
+        return record.id;
+      }
+    }
+
+    return undefined;
   }
 
   private async start(

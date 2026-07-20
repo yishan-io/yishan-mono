@@ -9,7 +9,16 @@ import { AgentChatView } from "./AgentChatView";
 const mocked = vi.hoisted(() => {
   const stateRef: {
     current: {
-      tabs: Array<{ id: string; kind: "agent-chat"; data: { userRenamed: boolean } }>;
+      tabs: Array<{
+        id: string;
+        kind: "agent-chat";
+        data: {
+          userRenamed: boolean;
+          sessionView?: "full" | "subagent-detail";
+          subagentAgentId?: string;
+          subagentParentSessionId?: string;
+        };
+      }>;
       richComposerRenderCount: number;
       agentModelSelectorRenderCount: number;
       latestAgentModelSelectorProps: {
@@ -29,9 +38,11 @@ const mocked = vi.hoisted(() => {
 
   return {
     stateRef,
+    abortAgent: vi.fn(),
     ensurePiSession: vi.fn().mockResolvedValue("session-1"),
     openSubagentSessionInRightSplitPane: vi.fn(),
     cancelSubagentRun: vi.fn(),
+    findTabWithSession: vi.fn(),
     clearPiSessionHandle: vi.fn(),
     reattachPiSession: vi.fn(),
     registerAgentSession: vi.fn(),
@@ -57,12 +68,13 @@ const mocked = vi.hoisted(() => {
 });
 
 vi.mock("../../commands/agentChatCommands", () => ({
-  abortAgent: vi.fn(),
+  abortAgent: mocked.abortAgent,
   clearPiSessionHandle: mocked.clearPiSessionHandle,
   ensurePiSession: mocked.ensurePiSession,
   fetchAgentMessages: mocked.fetchAgentMessages,
   fetchAgentModels: mocked.fetchAgentModels,
   fetchAgentState: mocked.fetchAgentState,
+  findTabWithSession: mocked.findTabWithSession,
   handleAgentPiEvent: vi.fn(),
   reattachPiSession: mocked.reattachPiSession,
   registerAgentSession: mocked.registerAgentSession,
@@ -115,7 +127,18 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../../store/tabStore", () => ({
   tabStore: (
-    selector: (state: { tabs: Array<{ id: string; kind: "agent-chat"; data: { userRenamed: boolean } }> }) => unknown,
+    selector: (state: {
+      tabs: Array<{
+        id: string;
+        kind: "agent-chat";
+        data: {
+          userRenamed: boolean;
+          sessionView?: "full" | "subagent-detail";
+          subagentAgentId?: string;
+          subagentParentSessionId?: string;
+        };
+      }>;
+    }) => unknown,
   ) => selector({ tabs: mocked.stateRef.current.tabs }),
 }));
 
@@ -205,12 +228,38 @@ function createSubagentLifecycleMessage(input: {
   };
 }
 
+function createChildSessionMetadataMessage(input: {
+  id: string;
+  agentId: string;
+  agentName: string;
+  childSessionId: string;
+  parentSessionId?: string;
+}): AgentMessage {
+  return {
+    id: input.id,
+    role: "custom",
+    customType: "pi-subagent-parent",
+    display: false,
+    content: "",
+    details: {
+      version: 1,
+      sessionKind: "subagent",
+      agentId: input.agentId,
+      agentName: input.agentName,
+      childSessionId: input.childSessionId,
+      parentSessionId: input.parentSessionId,
+    },
+  };
+}
+
 afterEach(() => {
   cleanup();
   agentChatStore.getState().removeSession("tab-1");
+  mocked.stateRef.current.tabs = [{ id: "tab-1", kind: "agent-chat", data: { userRenamed: true } }];
   mocked.stateRef.current.richComposerRenderCount = 0;
   mocked.stateRef.current.agentModelSelectorRenderCount = 0;
   mocked.stateRef.current.latestAgentModelSelectorProps.onModelChange = null;
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 
@@ -262,6 +311,7 @@ describe("AgentChatView", () => {
         workspaceId: "workspace-1",
         cwd: "/tmp/project",
         sessionId: undefined,
+        sessionView: "full",
         paneId: "pane-1",
       });
     });
@@ -586,7 +636,8 @@ describe("AgentChatView", () => {
     expect(screen.getByTestId("subagent-row-summary-tool-agent-stream").textContent).toContain(
       "Review the code quality of the services directory",
     );
-    expect(screen.getByLabelText("Cancel sub-agent code-reviewer")).toBeTruthy();
+    expect(screen.getByLabelText("Cancel sub-agent code-reviewer").hasAttribute("disabled")).toBe(true);
+    expect(screen.getByTestId("subagent-row-preparing-icon-tool-agent-stream")).toBeTruthy();
   });
 
   it("refreshes transcript state to open a pending running subagent once child metadata arrives", async () => {
@@ -636,13 +687,15 @@ describe("AgentChatView", () => {
         workspaceId: "workspace-1",
         cwd: "/tmp/project",
         parentPaneId: "pane-parent",
+        parentSessionId: "session-1",
+        agentId: undefined,
         childSessionId: "child-session-stream",
         title: "code-reviewer — Review the code quality of the services directory and return concise fi...",
       });
     });
   });
 
-  it("refreshes transcript state to cancel a pending running subagent once runtime metadata arrives", async () => {
+  it("enables pending subagent cancel once progress metadata provides a stop target", async () => {
     seedSession({
       state: "running",
       streamingMessage: {
@@ -661,39 +714,30 @@ describe("AgentChatView", () => {
         ],
       },
     });
+    agentChatStore.getState().setSubagentProgressTargets("tab-1", [
+      {
+        agentName: "code-reviewer",
+        agentId: "agent-cancel-1",
+        status: "running",
+      },
+    ]);
 
     const { fireEvent } = await import("@testing-library/react");
 
     render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" paneId="pane-parent" isActive />);
 
-    await waitFor(() => {
-      expect(mocked.fetchAgentMessages).toHaveBeenCalled();
-    });
+    const cancelButton = screen.getByLabelText("Cancel sub-agent code-reviewer");
+    expect(cancelButton.hasAttribute("disabled")).toBe(false);
 
-    mocked.fetchAgentMessages.mockClear();
-    mocked.fetchAgentMessages.mockImplementationOnce(async ({ tabId }: { tabId: string }) => {
-      agentChatStore.getState().appendMessage(
-        tabId,
-        createSubagentLifecycleMessage({
-          id: "subagent-start-stream-cancel",
-          event: "started",
-          agentId: "agent-cancel-1",
-          agentName: "code-reviewer",
-          title: "code-reviewer — Review the code quality of the services directory and return concise fi...",
-          summary: "Review the code quality of the services directory and return concise fi...",
-          childSessionId: "child-session-cancel",
-        }),
-      );
-    });
-
-    fireEvent.click(screen.getByLabelText("Cancel sub-agent code-reviewer"));
+    fireEvent.click(cancelButton);
 
     await waitFor(() => {
-      expect(mocked.fetchAgentMessages).toHaveBeenCalledWith({ tabId: "tab-1", sessionId: "session-1" });
       expect(mocked.cancelSubagentRun).toHaveBeenCalledWith({
         tabId: "tab-1",
         sessionId: "session-1",
         agentId: "agent-cancel-1",
+        agentName: "code-reviewer",
+        childSessionId: undefined,
       });
     });
   });
@@ -727,6 +771,8 @@ describe("AgentChatView", () => {
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
       parentPaneId: "pane-parent",
+      parentSessionId: "session-1",
+      agentId: "agent-1",
       childSessionId: "child-session-1",
       title: "Builder — implement the chat row UI",
     });
@@ -736,8 +782,124 @@ describe("AgentChatView", () => {
       tabId: "tab-1",
       sessionId: "session-1",
       agentId: "agent-1",
+      agentName: "Builder",
+      childSessionId: "child-session-1",
     });
     expect(mocked.openSubagentSessionInRightSplitPane).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders subagent detail as read-only and cancels through the parent session", async () => {
+    mocked.stateRef.current.tabs = [
+      {
+        id: "tab-1",
+        kind: "agent-chat",
+        data: {
+          userRenamed: true,
+          sessionView: "subagent-detail",
+          subagentAgentId: "agent-1",
+          subagentParentSessionId: "parent-session-1",
+        },
+      },
+    ];
+    mocked.findTabWithSession.mockReturnValue("parent-tab");
+    seedSession({
+      state: "running",
+      messages: [
+        createChildSessionMetadataMessage({
+          id: "child-session-meta-1",
+          agentId: "agent-1",
+          agentName: "Builder",
+          childSessionId: "session-1",
+          parentSessionId: "parent-session-1",
+        }),
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: [{ type: "text", text: "child transcript" }],
+        },
+      ],
+    });
+
+    const { fireEvent } = await import("@testing-library/react");
+
+    render(
+      <AgentChatView
+        tabId="tab-1"
+        workspaceId="workspace-1"
+        cwd="/tmp/project"
+        sessionView="subagent-detail"
+        isActive
+      />,
+    );
+
+    expect(screen.queryByTestId("rich-composer")).toBeNull();
+    expect(screen.queryByTestId("agent-model-selector")).toBeNull();
+    expect(screen.getByText("Sub-agent detail is read-only.")).toBeTruthy();
+
+    fireEvent.click(screen.getAllByLabelText("Cancel sub-agent").at(-1) as HTMLElement);
+
+    await waitFor(() => {
+      expect(mocked.cancelSubagentRun).toHaveBeenCalledWith({
+        tabId: "parent-tab",
+        sessionId: "parent-session-1",
+        agentId: "agent-1",
+        agentName: "Builder",
+        childSessionId: "session-1",
+      });
+    });
+    expect(mocked.abortAgent).not.toHaveBeenCalled();
+  });
+
+  it("keeps subagent detail cancel available even when the child tab is not locally marked running", async () => {
+    mocked.stateRef.current.tabs = [
+      {
+        id: "tab-1",
+        kind: "agent-chat",
+        data: {
+          userRenamed: true,
+          sessionView: "subagent-detail",
+          subagentAgentId: "agent-1",
+          subagentParentSessionId: "parent-session-1",
+        },
+      },
+    ];
+    mocked.findTabWithSession.mockReturnValue("parent-tab");
+    seedSession({
+      state: "idle",
+      messages: [
+        createChildSessionMetadataMessage({
+          id: "child-session-meta-idle-1",
+          agentId: "agent-1",
+          agentName: "Builder",
+          childSessionId: "session-1",
+          parentSessionId: "parent-session-1",
+        }),
+      ],
+    });
+
+    const { fireEvent } = await import("@testing-library/react");
+
+    render(
+      <AgentChatView
+        tabId="tab-1"
+        workspaceId="workspace-1"
+        cwd="/tmp/project"
+        sessionView="subagent-detail"
+        isActive
+      />,
+    );
+
+    fireEvent.click(screen.getAllByLabelText("Cancel sub-agent").at(-1) as HTMLElement);
+
+    await waitFor(() => {
+      expect(mocked.cancelSubagentRun).toHaveBeenCalledWith({
+        tabId: "parent-tab",
+        sessionId: "parent-session-1",
+        agentId: "agent-1",
+        agentName: "Builder",
+        childSessionId: "session-1",
+      });
+    });
   });
 
   it("does not rerender composer or model controls for transcript-only streaming updates", () => {
