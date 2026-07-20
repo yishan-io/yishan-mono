@@ -12,6 +12,8 @@ import (
 	"yishan/apps/cli/internal/config"
 )
 
+const officialSkillsRepoURL = "https://github.com/yishan-io/yishan-mono/tree/main/skills"
+
 type skillDefinition struct {
 	Name        string
 	Description string
@@ -192,9 +194,21 @@ func readSkillDirDefinition(dir string, source string) (*skillDefinition, error)
 	return definitionFromFiles(source, SkillSourceURL, files)
 }
 
+func defaultRemoteOfficialSkillFilesLoader(name string) (map[string][]byte, string, error) {
+	definition, err := tryGitHubInstall(officialSkillGitHubSource(name))
+	if err != nil {
+		return nil, "", err
+	}
+	return definition.Files, definition.Source, nil
+}
+
+func officialSkillGitHubSource(name string) string {
+	return officialSkillsRepoURL + "/" + name
+}
+
 func officialSkillDefinition(name string) (*skillDefinition, error) {
 	trimmed := strings.TrimSpace(name)
-	files, version, err := loadOfficialSkillFiles(trimmed)
+	files, version, err := loadAuthoritativeOfficialSkillFiles(trimmed)
 	if err != nil {
 		return nil, err
 	}
