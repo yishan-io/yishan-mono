@@ -356,14 +356,18 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
                     height: 34,
                     p: 0,
                     border: "1px solid",
-                    borderColor: "divider",
-                    bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : "grey.900"),
-                    color: (theme) => (theme.palette.mode === "dark" ? "text.secondary" : "text.primary"),
+                    borderColor: (theme) =>
+                      theme.palette.mode === "dark" ? "divider" : theme.palette.primary.main,
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "dark" ? "background.paper" : theme.palette.primary.main,
+                    color: (theme) =>
+                      theme.palette.mode === "dark" ? "text.secondary" : theme.palette.primary.contrastText,
                     borderRadius: 999,
                     boxShadow: 1,
                     transition: "background-color 120ms ease, border-color 120ms ease",
                     "&:hover": {
-                      bgcolor: (theme) => (theme.palette.mode === "dark" ? "action.hover" : "grey.800"),
+                      bgcolor: (theme) =>
+                        theme.palette.mode === "dark" ? "action.hover" : theme.palette.primary.dark,
                     },
                   }}
                 >

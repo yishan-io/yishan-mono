@@ -164,13 +164,17 @@ export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage
                   width: 26,
                   height: 26,
                   borderRadius: "50%",
-                  color: "common.white",
-                  bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : "grey.900"),
+                  color: (theme) =>
+                    theme.palette.mode === "dark" ? "common.white" : theme.palette.primary.contrastText,
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark" ? "background.paper" : theme.palette.primary.main,
                   border: "1px solid",
-                  borderColor: "divider",
+                  borderColor: (theme) =>
+                    theme.palette.mode === "dark" ? "divider" : theme.palette.primary.main,
                   boxShadow: 1,
                   "&:hover": {
-                    bgcolor: (theme) => (theme.palette.mode === "dark" ? "action.hover" : "grey.800"),
+                    bgcolor: (theme) =>
+                      theme.palette.mode === "dark" ? "action.hover" : theme.palette.primary.dark,
                   },
                 }}
               >
