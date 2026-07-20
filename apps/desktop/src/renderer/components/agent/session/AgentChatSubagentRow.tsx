@@ -4,13 +4,14 @@ import type { RunningSubagentSummary } from "../../../store/agentChatSubagents";
 
 type AgentChatSubagentRowProps = {
   subagent: RunningSubagentSummary;
-  canCancel: boolean;
+  isRunning?: boolean;
+  canCancel?: boolean;
   onOpen: (subagent: RunningSubagentSummary) => void | Promise<void>;
-  onCancel: (subagent: RunningSubagentSummary) => void | Promise<void>;
+  onCancel?: (subagent: RunningSubagentSummary) => void | Promise<void>;
 };
 
 /** Renders one compact running sub-agent row above the parent agent-chat composer. */
-export function AgentChatSubagentRow({ subagent, canCancel, onOpen, onCancel }: AgentChatSubagentRowProps) {
+export function AgentChatSubagentRow({ subagent, isRunning = false, canCancel = false, onOpen, onCancel }: AgentChatSubagentRowProps) {
   const rowId = subagent.childSessionId ?? subagent.rowId;
 
   return (
@@ -50,6 +51,24 @@ export function AgentChatSubagentRow({ subagent, canCancel, onOpen, onCancel }: 
           color: "inherit",
         }}
       >
+        {isRunning ? <Tooltip title="Sub-agent running" placement="top">
+          <Box
+            component="span"
+            data-testid={`subagent-row-running-icon-${rowId}`}
+            aria-label="Sub-agent running"
+            sx={{
+              display: "inline-flex",
+              color: "primary.main",
+              animation: "subagent-row-spin 1s linear infinite",
+              "@keyframes subagent-row-spin": {
+                from: { transform: "rotate(0deg)" },
+                to: { transform: "rotate(360deg)" },
+              },
+            }}
+          >
+            <LuLoaderCircle size={14} aria-hidden />
+          </Box>
+        </Tooltip> : null}
         <LuBot size={16} aria-hidden />
         <Typography variant="body2" sx={{ fontWeight: 600, flexShrink: 0 }}>
           {subagent.agentName}
@@ -64,7 +83,7 @@ export function AgentChatSubagentRow({ subagent, canCancel, onOpen, onCancel }: 
           {subagent.promptSummary}
         </Typography>
       </Box>
-      <Tooltip title={canCancel ? "Cancel sub-agent" : "Preparing sub-agent controls…"} placement="top">
+      {onCancel ? <Tooltip title={canCancel ? "Cancel sub-agent" : "Preparing sub-agent controls…"} placement="top">
         <span>
           <IconButton
             size="small"
@@ -72,7 +91,7 @@ export function AgentChatSubagentRow({ subagent, canCancel, onOpen, onCancel }: 
             disabled={!canCancel}
             onClick={(event) => {
               event.stopPropagation();
-              void onCancel(subagent);
+              void onCancel?.(subagent);
             }}
             sx={{
               p: 0.5,
@@ -94,7 +113,7 @@ export function AgentChatSubagentRow({ subagent, canCancel, onOpen, onCancel }: 
             )}
           </IconButton>
         </span>
-      </Tooltip>
+      </Tooltip> : null}
     </Paper>
   );
 }

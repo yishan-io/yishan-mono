@@ -114,6 +114,30 @@ export function deriveChildSessionSubagentMetadata(messages: AgentMessage[]): Ch
   return null;
 }
 
+/** Derives completed sub-agent rows that remain available for opening their persisted transcript. */
+export function deriveFinishedSubagents(messages: AgentMessage[]): RunningSubagentSummary[] {
+  const finishedByChildSessionId = new Map<string, RunningSubagentSummary>();
+
+  for (const message of messages) {
+    const lifecycle = parseSubagentLifecycleMessage(message);
+    if (!lifecycle || lifecycle.event !== "completed") {
+      continue;
+    }
+
+    const promptSummary = lifecycle.summary ?? derivePromptSummary(lifecycle.title, lifecycle.agentName);
+    finishedByChildSessionId.set(lifecycle.childSessionId, {
+      rowId: lifecycle.childSessionId,
+      agentId: lifecycle.agentId,
+      agentName: lifecycle.agentName,
+      childSessionId: lifecycle.childSessionId,
+      title: lifecycle.title ?? buildFallbackTitle(lifecycle.agentName, lifecycle.summary),
+      promptSummary,
+    });
+  }
+
+  return [...finishedByChildSessionId.values()];
+}
+
 export function deriveRunningSubagents(
   messages: AgentMessage[],
   trailingMessage?: AgentMessage | null,

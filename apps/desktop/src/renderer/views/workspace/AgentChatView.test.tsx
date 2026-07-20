@@ -757,6 +757,7 @@ describe("AgentChatView", () => {
     expect(screen.getByText("Builder")).toBeTruthy();
     const summary = screen.getByTestId("subagent-row-summary-child-session-1");
     expect(summary.className).toContain("MuiTypography-noWrap");
+    expect(screen.getByTestId("subagent-row-running-icon-child-session-1")).toBeTruthy();
 
     fireEvent.click(screen.getByTestId("subagent-row-button-child-session-1"));
     expect(mocked.openSubagentSessionInRightSplitPane).toHaveBeenCalledWith({
@@ -818,7 +819,7 @@ describe("AgentChatView", () => {
     expect(mocked.ensurePiSession).not.toHaveBeenCalled();
   });
 
-  it("renders subagent detail as read-only and cancels through the parent session", async () => {
+  it("renders subagent detail as read-only without interactive cancellation", async () => {
     mocked.stateRef.current.tabs = [
       {
         id: "tab-1",
@@ -850,8 +851,6 @@ describe("AgentChatView", () => {
       ],
     });
 
-    const { fireEvent } = await import("@testing-library/react");
-
     render(
       <AgentChatView
         tabId="tab-1"
@@ -864,23 +863,10 @@ describe("AgentChatView", () => {
 
     expect(screen.queryByTestId("rich-composer")).toBeNull();
     expect(screen.queryByTestId("agent-model-selector")).toBeNull();
-    expect(screen.getByText("Sub-agent detail is read-only.")).toBeTruthy();
-
-    fireEvent.click(screen.getAllByLabelText("Cancel sub-agent").at(-1) as HTMLElement);
-
-    await waitFor(() => {
-      expect(mocked.cancelSubagentRun).toHaveBeenCalledWith({
-        tabId: "parent-tab",
-        sessionId: "parent-session-1",
-        agentId: "agent-1",
-        agentName: "Builder",
-        childSessionId: "session-1",
-      });
-    });
-    expect(mocked.abortAgent).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("Cancel sub-agent")).toBeNull();
   });
 
-  it("keeps subagent detail cancel available even when the child tab is not locally marked running", async () => {
+  it("does not show subagent detail cancellation when the child tab is not locally marked running", async () => {
     mocked.stateRef.current.tabs = [
       {
         id: "tab-1",
@@ -907,8 +893,6 @@ describe("AgentChatView", () => {
       ],
     });
 
-    const { fireEvent } = await import("@testing-library/react");
-
     render(
       <AgentChatView
         tabId="tab-1"
@@ -919,17 +903,7 @@ describe("AgentChatView", () => {
       />,
     );
 
-    fireEvent.click(screen.getAllByLabelText("Cancel sub-agent").at(-1) as HTMLElement);
-
-    await waitFor(() => {
-      expect(mocked.cancelSubagentRun).toHaveBeenCalledWith({
-        tabId: "parent-tab",
-        sessionId: "parent-session-1",
-        agentId: "agent-1",
-        agentName: "Builder",
-        childSessionId: "session-1",
-      });
-    });
+    expect(screen.queryByLabelText("Cancel sub-agent")).toBeNull();
   });
 
   it("does not rerender composer or model controls for transcript-only streaming updates", () => {

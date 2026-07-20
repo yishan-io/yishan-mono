@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { type RunningSubagentSummary, deriveRunningSubagents } from "./agentChatSubagents";
+import { type RunningSubagentSummary, deriveFinishedSubagents, deriveRunningSubagents } from "./agentChatSubagents";
 import type {
   AgentMessage,
   AgentModel,
@@ -31,6 +31,7 @@ type AgentSessionData = {
   pendingUiRequest: AgentPendingUiRequest | null;
   pendingUiAutoResponse: AgentPendingUiAutoResponse | null;
   runningSubagents: RunningSubagentSummary[];
+  finishedSubagents: RunningSubagentSummary[];
   subagentProgressTargets: AgentSubagentProgressTarget[];
   subagentLiveTranscripts: Record<string, AgentMessage[]>;
   hasLoadedMessages: boolean;
@@ -81,6 +82,7 @@ function emptySession(sessionId: string): AgentSessionData {
     pendingUiRequest: null,
     pendingUiAutoResponse: null,
     runningSubagents: [],
+    finishedSubagents: [],
     subagentProgressTargets: [],
     subagentLiveTranscripts: {},
     hasLoadedMessages: false,
@@ -115,6 +117,29 @@ function setRunningSubagentsIfChanged(session: AgentSessionData, nextRunningSuba
   }
 
   session.runningSubagents = nextRunningSubagents;
+}
+
+function setFinishedSubagents(session: AgentSessionData): void {
+  const nextFinishedSubagents = deriveFinishedSubagents(session.messages);
+  if (session.finishedSubagents.length === nextFinishedSubagents.length) {
+    const isUnchanged = session.finishedSubagents.every((subagent, index) => {
+      const nextSubagent = nextFinishedSubagents[index];
+      return (
+        nextSubagent &&
+        subagent.rowId === nextSubagent.rowId &&
+        subagent.agentId === nextSubagent.agentId &&
+        subagent.agentName === nextSubagent.agentName &&
+        subagent.childSessionId === nextSubagent.childSessionId &&
+        subagent.title === nextSubagent.title &&
+        subagent.promptSummary === nextSubagent.promptSummary
+      );
+    });
+    if (isUnchanged) {
+      return;
+    }
+  }
+
+  session.finishedSubagents = nextFinishedSubagents;
 }
 
 export const agentChatStore = create<AgentChatStoreState>()(
@@ -175,6 +200,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session.messages = session.messages.slice(-MAX_MESSAGES_PER_TAB);
         }
         setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages, session.streamingMessage));
+        setFinishedSubagents(session);
       });
     },
 
@@ -186,6 +212,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         session.streamingMessage = null;
         session.hasLoadedMessages = true;
         setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages));
+        setFinishedSubagents(session);
       });
     },
 
@@ -195,6 +222,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (!session) return;
         session.streamingMessage = message;
         setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages, session.streamingMessage));
+        setFinishedSubagents(session);
       });
     },
 
@@ -209,6 +237,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         }
         session.streamingMessage = null;
         setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages));
+        setFinishedSubagents(session);
       });
     },
 

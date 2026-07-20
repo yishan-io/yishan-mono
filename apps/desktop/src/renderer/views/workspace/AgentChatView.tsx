@@ -60,8 +60,11 @@ type AgentChatViewProps = {
 
 type AgentChatTranscriptPaneProps = {
   tabId: string;
+  workspaceId: string;
   cwd: string;
+  paneId?: string;
   isActive: boolean;
+  isReadOnlySubagentDetail: boolean;
 };
 
 type AgentChatComposerPaneProps = {
@@ -71,26 +74,99 @@ type AgentChatComposerPaneProps = {
   paneId?: string;
 };
 
-function AgentChatTranscriptPane({ tabId, cwd, isActive }: AgentChatTranscriptPaneProps) {
+function AgentChatTranscriptPane({
+  tabId,
+  workspaceId,
+  cwd,
+  paneId,
+  isActive,
+  isReadOnlySubagentDetail,
+}: AgentChatTranscriptPaneProps) {
   const messages = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages ?? EMPTY_MESSAGES);
   const trailingMessage = agentChatStore((state) => state.sessionsByTabId[tabId]?.streamingMessage ?? null);
   const sessionState = agentChatStore((state) => state.sessionsByTabId[tabId]?.state ?? "starting");
+  const sessionId = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionId);
+  const currentModel = agentChatStore((state) => state.sessionsByTabId[tabId]?.currentModel ?? null);
+  const latestUsage = useMemo(() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const usage = messages[index]?.usage;
+      if (usage) return usage;
+    }
+    return null;
+  }, [messages]);
+  const handleOpenCompletedSubagent = useCallback(
+    async (target: { agentId?: string; childSessionId: string; title: string }) => {
+      await openSubagentSessionInRightSplitPane({
+        workspaceId,
+        cwd,
+        parentPaneId: paneId,
+        parentSessionId: sessionId,
+        ...target,
+      });
+    },
+    [cwd, paneId, sessionId, workspaceId],
+  );
 
   return (
-    <AgentMessageList
-      tabId={tabId}
-      isActive={isActive}
-      messages={messages}
-      trailingMessage={trailingMessage}
-      emptyPrompt="Send a message to start the conversation."
-      workspacePath={cwd}
-      isWorking={sessionState === "running"}
-    />
+    <>
+      <AgentMessageList
+        tabId={tabId}
+        isActive={isActive}
+        messages={messages}
+        trailingMessage={trailingMessage}
+        emptyPrompt="Send a message to start the conversation."
+        workspacePath={cwd}
+        isWorking={sessionState === "running"}
+        onOpenCompletedSubagent={handleOpenCompletedSubagent}
+      />
+      {isReadOnlySubagentDetail ? <AgentChatSubagentDetailFooter model={currentModel} usage={latestUsage} /> : null}
+    </>
   );
 }
 
 const MemoizedAgentChatTranscriptPane = memo(AgentChatTranscriptPane);
 MemoizedAgentChatTranscriptPane.displayName = "AgentChatTranscriptPane";
+
+type AgentChatSubagentDetailFooterProps = {
+  model: AgentModel | null;
+  usage: AgentMessage["usage"] | null;
+};
+
+function formatCompactTokenCount(value: number): string {
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  }
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  }
+  return value.toLocaleString();
+}
+
+function AgentChatSubagentDetailFooter({ model, usage }: AgentChatSubagentDetailFooterProps) {
+  const contextUsed = usage?.totalTokens ?? usage?.total;
+  const contextLabel =
+    typeof contextUsed === "number"
+      ? `${formatCompactTokenCount(contextUsed)}${model?.contextWindow ? ` / ${formatCompactTokenCount(model.contextWindow)}` : ""} tokens`
+      : "Context unavailable";
+  const modelLabel = model ? `${model.provider ? `${model.provider} / ` : ""}${model.name}` : "Model unavailable";
+
+  return (
+    <Box
+      sx={{
+        borderTop: 1,
+        borderColor: "divider",
+        px: 2,
+        py: 0.75,
+        display: "flex",
+        gap: 2,
+        color: "text.secondary",
+      }}
+    >
+      <Typography variant="caption">Model: {modelLabel}</Typography>
+      <Typography variant="caption">Context: {contextLabel}</Typography>
+    </Box>
+  );
+}
 
 function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatComposerPaneProps) {
   const slashCommands = useAgentChatSlashCommands();
@@ -311,6 +387,7 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
               <AgentChatSubagentRow
                 key={subagent.rowId}
                 subagent={subagent}
+                isRunning
                 canCancel={canCancel}
                 onOpen={handleOpenSubagent}
                 onCancel={handleCancelSubagent}
@@ -429,60 +506,6 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
 const MemoizedAgentChatComposerPane = memo(AgentChatComposerPane);
 MemoizedAgentChatComposerPane.displayName = "AgentChatComposerPane";
 
-type AgentChatReadOnlyFooterProps = {
-  canCancel: boolean;
-  onCancel: () => void | Promise<void>;
-};
-
-function AgentChatReadOnlyFooter({ canCancel, onCancel }: AgentChatReadOnlyFooterProps) {
-  return (
-    <Box
-      sx={{
-        borderTop: 1,
-        borderColor: "divider",
-        px: 2,
-        py: 1,
-        display: "flex",
-        alignItems: "center",
-        gap: 1.5,
-      }}
-    >
-      <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
-        Sub-agent detail is read-only.
-      </Typography>
-      {canCancel ? (
-        <Tooltip title="Cancel sub-agent" placement="top">
-          <span>
-            <IconButton
-              size="small"
-              aria-label="Cancel sub-agent"
-              onClick={() => {
-                void onCancel();
-              }}
-              sx={{
-                width: 34,
-                height: 34,
-                p: 0,
-                border: "1px solid",
-                borderColor: (theme) =>
-                  theme.palette.mode === "dark" ? "divider" : theme.palette.error.main,
-                bgcolor: (theme) =>
-                  theme.palette.mode === "dark" ? "background.paper" : theme.palette.error.main,
-                color: (theme) =>
-                  theme.palette.mode === "dark" ? "text.secondary" : theme.palette.error.contrastText,
-                borderRadius: 999,
-                boxShadow: 1,
-              }}
-            >
-              <Box sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: "currentColor" }} />
-            </IconButton>
-          </span>
-        </Tooltip>
-      ) : null}
-    </Box>
-  );
-}
-
 function AgentChatViewComponent({
   tabId,
   workspaceId,
@@ -541,7 +564,10 @@ function AgentChatViewComponent({
         const parentTabId = parentSessionId ? findTabWithSession(parentSessionId) : undefined;
         const parentSession = parentTabId ? agentChatStore.getState().sessionsByTabId[parentTabId] : undefined;
         const initialMessages = parentSession?.subagentLiveTranscripts[childSessionId] ?? [];
-        const isParentTrackingChild = Boolean(
+        const isChildFinished = parentSession?.finishedSubagents.some(
+          (subagent) => subagent.childSessionId === childSessionId,
+        );
+        const isParentTrackingChild = !isChildFinished && Boolean(
           parentSession?.subagentLiveTranscripts[childSessionId] ||
             parentSession?.subagentProgressTargets.some((target) => target.childSessionId === childSessionId),
         );
@@ -775,12 +801,6 @@ function AgentChatViewComponent({
     })();
   }, [liveSessionId, pendingUiAutoResponse, pendingUiRequest, tabId]);
 
-  const canCancelReadOnlySubagent = Boolean(
-    isReadOnlySubagentDetail &&
-      (subagentControl?.agentId ?? childSessionSubagentMetadata?.agentId) &&
-      (subagentControl?.parentSessionId ?? childSessionSubagentMetadata?.parentSessionId),
-  );
-
   if (isInitialHistoryLoadPending && sessionState !== "error") {
     return (
       <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
@@ -822,7 +842,14 @@ function AgentChatViewComponent({
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-      <MemoizedAgentChatTranscriptPane tabId={tabId} cwd={cwd} isActive={isActive} />
+      <MemoizedAgentChatTranscriptPane
+        tabId={tabId}
+        workspaceId={workspaceId}
+        cwd={cwd}
+        paneId={paneId}
+        isActive={isActive}
+        isReadOnlySubagentDetail={isReadOnlySubagentDetail}
+      />
       {!isReadOnlySubagentDetail && pendingUiRequest ? (
         <AgentPendingUiPrompt
           request={pendingUiRequest}
@@ -838,11 +865,9 @@ function AgentChatViewComponent({
           </Alert>
         </Box>
       ) : null}
-      {isReadOnlySubagentDetail ? (
-        <AgentChatReadOnlyFooter canCancel={canCancelReadOnlySubagent} onCancel={handleReadOnlyCancel} />
-      ) : (
+      {!isReadOnlySubagentDetail ? (
         <MemoizedAgentChatComposerPane tabId={tabId} workspaceId={workspaceId} cwd={cwd} paneId={paneId} />
-      )}
+      ) : null}
     </Box>
   );
 }

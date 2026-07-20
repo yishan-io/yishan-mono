@@ -2,6 +2,7 @@ import { Box, CircularProgress, Typography } from "@mui/material";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import type { AgentContentBlock, AgentMessage as AgentMessageType } from "../../../store/agentChatTypes";
 import { AgentMessage } from "./AgentMessage";
+import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
 import type { AgentToolResultMap } from "./helpers";
 
 const EMPTY_MIN_HEIGHT = 320;
@@ -19,6 +20,7 @@ type AgentMessageListProps = {
   emptyPrompt: string;
   workspacePath?: string;
   isWorking?: boolean;
+  onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
 type DisplayMessage = {
@@ -107,6 +109,7 @@ function AgentMessageListComponent({
   emptyPrompt,
   workspacePath,
   isWorking = false,
+  onOpenCompletedSubagent,
 }: AgentMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const wasActiveRef = useRef(isActive);
@@ -265,6 +268,7 @@ function AgentMessageListComponent({
             mergedToolResults={mergedToolResults}
             workspacePath={workspacePath}
             isStreaming={isStreaming}
+            onOpenCompletedSubagent={onOpenCompletedSubagent}
           />
         ))}
         {isWorking && (

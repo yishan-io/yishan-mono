@@ -1,13 +1,13 @@
-import { Box, Collapse, Tab, Tabs, Typography } from "@mui/material";
+import { Box, Collapse, IconButton, Tab, Tabs, Tooltip, Typography } from "@mui/material";
 import { useState } from "react";
-import { LuBot } from "react-icons/lu";
+import { LuBot, LuPanelRightOpen } from "react-icons/lu";
 import { ToolSummaryBadge } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { type AgentToolCallCardProps, extractResultText, getAgentStatusBadgeColor } from "./helpers";
 
 /** Renders the specialized Agent delegation tool-call card. */
-export function AgentToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
+export function AgentToolCard({ toolCall, result = null, onOpenCompletedSubagent }: AgentToolCallCardProps) {
   const resultText = extractResultText(result);
   const [open, setOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<"prompt" | "response">(resultText ? "response" : "prompt");
@@ -22,6 +22,9 @@ export function AgentToolCard({ toolCall, result = null }: AgentToolCallCardProp
           ? "foreground"
           : null;
   const agentStatus = typeof result?.details?.status === "string" ? result.details.status : null;
+  const childSessionId = typeof result?.details?.sessionId === "string" ? result.details.sessionId : null;
+  const agentId = typeof result?.details?.agentId === "string" ? result.details.agentId : undefined;
+  const canOpenCompletedSubagent = agentStatus === "completed" && Boolean(childSessionId) && Boolean(onOpenCompletedSubagent);
 
   if (!agentName || !agentPrompt) {
     return null;
@@ -47,6 +50,25 @@ export function AgentToolCard({ toolCall, result = null }: AgentToolCallCardProp
           </Typography>
           {agentMode ? <ToolSummaryBadge label={agentMode} color="secondary.main" /> : null}
           {agentStatus ? <ToolSummaryBadge label={agentStatus} color={getAgentStatusBadgeColor(agentStatus)} /> : null}
+          {canOpenCompletedSubagent && childSessionId ? (
+            <Tooltip title="Open sub-agent detail" placement="top">
+              <IconButton
+                size="small"
+                aria-label={`Open sub-agent ${agentName}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void onOpenCompletedSubagent?.({
+                    agentId,
+                    childSessionId,
+                    title: `${agentName} — ${agentPrompt}`,
+                  });
+                }}
+                sx={{ p: 0.5 }}
+              >
+                <LuPanelRightOpen size={14} />
+              </IconButton>
+            </Tooltip>
+          ) : null}
         </ToolExpandableSummary>
       </ToolSummaryPanel>
       <Collapse in={open}>
