@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentMessage as AgentMessageType } from "../../../store/agentChatTypes";
 import { AgentMessageList } from "./AgentMessageList";
@@ -136,6 +136,39 @@ describe("AgentMessageList", () => {
     );
 
     expect(screen.getByText("working…")).toBeTruthy();
+  });
+
+  it("keeps a manually scrolled transcript position when messages arrive", () => {
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+    const initialMessages: AgentMessageType[] = [
+      { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "First" }] },
+    ];
+    const { container, rerender } = render(
+      <AgentMessageList tabId="tab-manual-scroll" isActive messages={initialMessages} emptyPrompt="empty" />,
+    );
+    const scrollContainer = container.firstElementChild as HTMLDivElement;
+    Object.defineProperties(scrollContainer, {
+      clientHeight: { value: 80, configurable: true },
+      scrollHeight: { value: 160, configurable: true },
+      scrollTop: { value: 0, writable: true, configurable: true },
+    });
+    fireEvent.scroll(scrollContainer);
+
+    rerender(
+      <AgentMessageList
+        tabId="tab-manual-scroll"
+        isActive
+        messages={[...initialMessages, { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Second" }] }]}
+        emptyPrompt="empty"
+      />,
+    );
+
+    expect(scrollContainer.scrollTop).toBe(0);
   });
 
   it("scrolls to keep the working indicator visible when it appears on a pinned list", () => {

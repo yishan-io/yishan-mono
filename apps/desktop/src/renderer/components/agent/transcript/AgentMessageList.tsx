@@ -114,6 +114,7 @@ function AgentMessageListComponent({
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
   const wasActiveRef = useRef(false);
+  const hasRenderedTranscriptRef = useRef(false);
   const displayMessages = useMemo(() => {
     const source = trailingMessage ? [...messages, trailingMessage] : messages;
     return source.reduce<DisplayMessage[]>((acc, message, index) => {
@@ -188,6 +189,12 @@ function AgentMessageListComponent({
       return;
     }
 
+    const isInitialTranscriptRender = !hasRenderedTranscriptRef.current;
+    hasRenderedTranscriptRef.current = true;
+    if (!isInitialTranscriptRender && !(wasPinnedToBottomByTabId.get(tabId) ?? true)) {
+      return;
+    }
+
     const frameId = window.requestAnimationFrame(() => {
       scrollToLatestMessage();
     });
@@ -195,7 +202,7 @@ function AgentMessageListComponent({
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [displayMessages.length, scrollToLatestMessage]);
+  }, [displayMessages.length, scrollToLatestMessage, tabId]);
 
   useEffect(() => {
     const previousRenderedItemCount = previousRenderedItemCountRef.current;
