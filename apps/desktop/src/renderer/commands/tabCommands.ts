@@ -11,6 +11,7 @@ import { tabStore } from "../store/tabStore";
 import type { OpenWorkspaceTabInput } from "../store/types";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../store/workspaceStore";
+import { stopPiSession } from "./agentChatCommands";
 
 type TabStoreFacade = typeof tabStore & {
   getState?: () => TabStoreState;
@@ -31,20 +32,15 @@ function readTabStoreState(): TabStoreState {
   );
 }
 
-/**
- * Closes terminal sessions for terminal tabs in the provided tab list.
- */
-/** Stops full agent-chat sessions for tabs that are being closed in bulk. */
+/** Releases agent-chat sessions for tabs that are being closed in bulk. */
 function stopAgentChatSessionsForTabs(tabs: AgentChatTab[]): void {
   for (const tab of tabs) {
-    if (tab.data.sessionView === "subagent-detail") {
-      continue;
-    }
-
     // fire-and-forget: tab closure must not wait for daemon session cleanup.
-    void import("./agentChatCommands").then(({ stopPiSession }) => stopPiSession(tab.id).catch(() => {}));
+    void stopPiSession(tab.id).catch(() => {});
   }
 }
+
+/** Closes terminal sessions for terminal tabs in the provided tab list. */
 
 function closeTerminalSessionsForTabs(tabs: TerminalTab[]): void {
   for (const tab of tabs) {
@@ -107,9 +103,8 @@ export function closeTab(tabId: string): void {
       });
   }
   if (tab.kind === "agent-chat") {
-    import("./agentChatCommands").then(({ stopPiSession }) => {
-      stopPiSession(tab.id).catch(() => {});
-    });
+    // fire-and-forget: tab closure must not wait for daemon session cleanup.
+    void stopPiSession(tab.id).catch(() => {});
   }
   if (tab.kind === "terminal") {
     recordExplicitlyClosedTerminalTabId(tab.id);

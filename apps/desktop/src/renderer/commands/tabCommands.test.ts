@@ -222,7 +222,7 @@ describe("tabCommands", () => {
     expect(removeTabData).toHaveBeenCalledWith(["tab-2"]);
   });
 
-  it("stops full agent-chat sessions but leaves subagent details running when closing other tabs", async () => {
+  it("releases all agent-chat tabs while leaving child-session ownership to detail tabs", async () => {
     const closeOtherTabsState = vi.fn();
     tabStore.setState({
       tabs: [
@@ -260,10 +260,10 @@ describe("tabCommands", () => {
     });
 
     closeOtherTabs("tab-keep");
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-agent");
-    expect(rpcMocks.stopPiSession).not.toHaveBeenCalledWith("tab-subagent-detail");
+    await vi.waitFor(() => {
+      expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-agent");
+      expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-subagent-detail");
+    });
   });
 
   it("closes terminal sessions for removed sibling tabs", async () => {
