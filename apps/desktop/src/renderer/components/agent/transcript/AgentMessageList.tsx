@@ -112,7 +112,8 @@ function AgentMessageListComponent({
   onOpenCompletedSubagent,
 }: AgentMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const wasActiveRef = useRef(isActive);
+  const bottomSentinelRef = useRef<HTMLDivElement>(null);
+  const wasActiveRef = useRef(false);
   const displayMessages = useMemo(() => {
     const source = trailingMessage ? [...messages, trailingMessage] : messages;
     return source.reduce<DisplayMessage[]>((acc, message, index) => {
@@ -153,6 +154,7 @@ function AgentMessageListComponent({
       return;
     }
 
+    bottomSentinelRef.current?.scrollIntoView?.({ block: "end" });
     element.scrollTop = element.scrollHeight;
   }, [renderedItemCount]);
 
@@ -173,33 +175,27 @@ function AgentMessageListComponent({
     }
 
     const frameId = window.requestAnimationFrame(() => {
-      if (renderedItemCount === 0) {
-        return;
-      }
-
-      const savedScrollTop = savedScrollTopByTabId.get(tabId);
-      const savedRenderedItemCount = savedRenderedItemCountByTabId.get(tabId);
-      const wasPinnedToBottom = wasPinnedToBottomByTabId.get(tabId) ?? true;
-
-      if (savedScrollTop !== undefined) {
-        if (wasPinnedToBottom && savedRenderedItemCount !== undefined && savedRenderedItemCount !== renderedItemCount) {
-          scrollToLatestMessage();
-          return;
-        }
-
-        element.scrollTop = savedScrollTop;
-        return;
-      }
-
-      if (wasPinnedToBottom) {
-        scrollToLatestMessage();
-      }
+      scrollToLatestMessage();
     });
 
     return () => {
       window.cancelAnimationFrame(frameId);
     };
   }, [isActive, renderedItemCount, scrollToLatestMessage, tabId]);
+
+  useEffect(() => {
+    if (displayMessages.length === 0) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      scrollToLatestMessage();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [displayMessages.length, scrollToLatestMessage]);
 
   useEffect(() => {
     const previousRenderedItemCount = previousRenderedItemCountRef.current;
@@ -244,9 +240,11 @@ function AgentMessageListComponent({
   return (
     <Box
       ref={scrollRef}
+      data-testid="agent-message-scroll-container"
       onScroll={updateSavedScrollState}
       sx={{
         flex: 1,
+        minHeight: 0,
         overflow: "auto",
         px: 2,
         py: 1,
@@ -289,6 +287,7 @@ function AgentMessageListComponent({
             </Typography>
           </Box>
         )}
+        <Box ref={bottomSentinelRef} aria-hidden sx={{ height: 1, flexShrink: 0 }} />
       </Box>
     </Box>
   );

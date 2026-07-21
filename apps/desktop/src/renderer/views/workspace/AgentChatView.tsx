@@ -841,7 +841,7 @@ function AgentChatViewComponent({
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, overflow: "hidden" }}>
       <MemoizedAgentChatTranscriptPane
         tabId={tabId}
         workspaceId={workspaceId}
