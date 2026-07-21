@@ -63,6 +63,10 @@ export function RichComposer({
 
   const handleComposerInput = useCallback(
     (event: SyntheticEvent<HTMLDivElement>) => {
+      if (disabled) {
+        return;
+      }
+
       const editable = event.currentTarget;
       const caretOffset = getCaretOffset(editable);
       const nextValue = normalizeComposerText(editable.innerText);
@@ -77,7 +81,7 @@ export function RichComposer({
 
       syncSlashCommandMenu(editable, nextValue, caretOffset);
     },
-    [onChange, slashCommands, syncSlashCommandMenu],
+    [disabled, onChange, slashCommands, syncSlashCommandMenu],
   );
 
   const handleComposerSelectionChange = useCallback(
@@ -257,7 +261,7 @@ export function RichComposer({
         <Box
           ref={composerRef}
           component="div"
-          contentEditable
+          contentEditable={!disabled}
           suppressContentEditableWarning
           role="textbox"
           aria-multiline

@@ -63,7 +63,7 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
   useEffect(() => {
     const handleFocusRequest = (event: Event) => {
       const request = event as CustomEvent<{ tabId: string }>;
-      if (request.detail.tabId !== tabId) {
+      if (request.detail.tabId !== tabId || sessionState === "starting") {
         return;
       }
 
@@ -74,7 +74,7 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
     return () => {
       window.removeEventListener(AGENT_CHAT_COMPOSER_FOCUS_EVENT, handleFocusRequest);
     };
-  }, [tabId]);
+  }, [sessionState, tabId]);
 
   const handleSubmit = useCallback(
     async (value: string) => {

@@ -47,6 +47,18 @@ describe("RichComposer", () => {
     expect(screen.getByText(/L to focus/)).toBeTruthy();
   });
 
+  it("does not accept input while disabled", () => {
+    const onChange = vi.fn();
+    render(<RichComposer placeholder="Type a message…" disabled onChange={onChange} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    textbox.innerText = "draft";
+    fireEvent.input(textbox);
+
+    expect(textbox.getAttribute("contenteditable")).toBe("false");
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("shows slash commands after typing slash", () => {
     render(<RichComposer placeholder="Type a message…" slashCommands={SLASH_COMMANDS} />);
 
