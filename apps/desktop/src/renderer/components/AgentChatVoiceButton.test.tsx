@@ -21,6 +21,23 @@ const mocked = vi.hoisted(() => {
   };
 });
 
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        "agentChat.voice.start": "Click to record voice input",
+        "agentChat.voice.recording": "Recording voice input",
+        "agentChat.voice.ready": "Voice input ready",
+        "agentChat.voice.transcribing": "Transcribing voice",
+        "agentChat.voice.transcribingProgress": "Transcribing...",
+        "agentChat.voice.cancel": "Cancel voice input",
+        "agentChat.voice.submit": "Submit voice input",
+      };
+      return translations[key] ?? key;
+    },
+  }),
+}));
+
 vi.mock("./useVoiceRecording", () => ({
   useVoiceRecording: () => ({
     recordingState: mocked.state.recordingState,

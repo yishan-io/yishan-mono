@@ -121,7 +121,13 @@ vi.mock("../../rpc/rpcTransport", () => ({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        "agentChat.voice.start": "Click to record voice input",
+        "agentChat.composer.submit": "Submit",
+      };
+      return translations[key] ?? key;
+    },
   }),
 }));
 

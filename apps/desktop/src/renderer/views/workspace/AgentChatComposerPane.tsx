@@ -204,15 +204,15 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
           <AgentChatVoiceButton
             onText={handleVoiceText}
             disabled={sessionState === "starting"}
-            disabledMessage="Voice input is not available while the agent session is starting."
+            disabledMessage={t("agentChat.voice.unavailableStarting")}
           />
           {sessionState === "running" ? (
-            <Tooltip title="Stop" placement="top">
+            <Tooltip title={t("agentChat.composer.stop")} placement="top">
               <span>
                 <IconButton
                   size="small"
                   onClick={handleAbort}
-                  aria-label="Stop"
+                  aria-label={t("agentChat.composer.stop")}
                   sx={{
                     width: 34,
                     height: 34,
@@ -242,7 +242,7 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
               </span>
             </Tooltip>
           ) : (
-            <Tooltip title="Submit" placement="top">
+            <Tooltip title={t("agentChat.composer.submit")} placement="top">
               <span>
                 <IconButton
                   size="small"
@@ -250,7 +250,7 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
                     void handleSubmitButtonClick();
                   }}
                   disabled={sessionState === "starting" || draft.trim().length === 0}
-                  aria-label="Submit"
+                  aria-label={t("agentChat.composer.submit")}
                   sx={{
                     width: 34,
                     height: 34,

@@ -2,7 +2,19 @@
   "agentChat": {
     "title": "Agent Chat",
     "composer": {
-      "focusShortcut": "{{shortcut}} to focus"
+      "focusShortcut": "{{shortcut}} to focus",
+      "stop": "Stop",
+      "submit": "Submit"
+    },
+    "voice": {
+      "start": "Click to record voice input",
+      "recording": "Recording voice input",
+      "ready": "Voice input ready",
+      "transcribing": "Transcribing voice",
+      "transcribingProgress": "Transcribing...",
+      "cancel": "Cancel voice input",
+      "submit": "Submit voice input",
+      "unavailableStarting": "Voice input is not available while the agent session is starting."
     },
     "askUser": {
       "prompt": {

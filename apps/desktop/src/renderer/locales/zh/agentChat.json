@@ -2,7 +2,19 @@
   "agentChat": {
     "title": "AI \u5bf9\u8bdd",
     "composer": {
-      "focusShortcut": "\u6309 {{shortcut}} \u805a\u7126"
+      "focusShortcut": "\u6309 {{shortcut}} \u805a\u7126",
+      "stop": "\u505c\u6b62",
+      "submit": "\u63d0\u4ea4"
+    },
+    "voice": {
+      "start": "\u70b9\u51fb\u5f00\u59cb\u8bed\u97f3\u8f93\u5165",
+      "recording": "\u6b63\u5728\u5f55\u97f3",
+      "ready": "\u8bed\u97f3\u8f93\u5165\u5df2\u5c31\u7eea",
+      "transcribing": "\u6b63\u5728\u8f6c\u5f55\u8bed\u97f3",
+      "transcribingProgress": "\u6b63\u5728\u8f6c\u5f55...",
+      "cancel": "\u53d6\u6d88\u8bed\u97f3\u8f93\u5165",
+      "submit": "\u63d0\u4ea4\u8bed\u97f3\u8f93\u5165",
+      "unavailableStarting": "Agent \u4f1a\u8bdd\u542f\u52a8\u65f6\u65e0\u6cd5\u4f7f\u7528\u8bed\u97f3\u8f93\u5165\u3002"
     },
     "askUser": {
       "prompt": {
