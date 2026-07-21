@@ -134,14 +134,14 @@ func (r *Runtime) PersistAuthTokens(update api.TokenUpdate) error {
 }
 
 func shouldRejectStaleTokenUpdate(cfg *config.Config, incoming api.TokenUpdate) bool {
-	currentRefreshExpiry, currentRefreshOK := parseExpiry(cfg.API.RefreshTokenExpiresAt)
-	incomingRefreshExpiry, incomingRefreshOK := parseExpiry(incoming.RefreshTokenExpiresAt)
+	currentRefreshExpiry, currentRefreshOK := api.ParseExpiry(cfg.API.RefreshTokenExpiresAt)
+	incomingRefreshExpiry, incomingRefreshOK := api.ParseExpiry(incoming.RefreshTokenExpiresAt)
 	if currentRefreshOK && incomingRefreshOK && incomingRefreshExpiry.Before(currentRefreshExpiry) {
 		return true
 	}
 
-	currentAccessExpiry, currentAccessOK := parseExpiry(cfg.API.AccessTokenExpiresAt)
-	incomingAccessExpiry, incomingAccessOK := parseExpiry(incoming.AccessTokenExpiresAt)
+	currentAccessExpiry, currentAccessOK := api.ParseExpiry(cfg.API.AccessTokenExpiresAt)
+	incomingAccessExpiry, incomingAccessOK := api.ParseExpiry(incoming.AccessTokenExpiresAt)
 	if currentAccessOK && incomingAccessOK && incomingAccessExpiry.Before(currentAccessExpiry) {
 		return true
 	}
@@ -167,7 +167,7 @@ func (r *Runtime) EnsureFreshAccessToken() (accessToken string, accessTokenExpir
 		return "", "", fmt.Errorf("not authenticated")
 	}
 
-	expiry, ok := parseExpiry(cfg.API.AccessTokenExpiresAt)
+	expiry, ok := api.ParseExpiry(cfg.API.AccessTokenExpiresAt)
 	if ok && time.Now().Before(expiry.Add(-accessTokenEarlyRefreshWindow)) {
 		return cfg.API.Token, cfg.API.AccessTokenExpiresAt, nil
 	}
@@ -246,17 +246,4 @@ func (r *Runtime) ReloadAuthConfig() error {
 	r.appCfg.API.BaseURL = v.GetString(config.KeyAPIBaseURL)
 
 	return nil
-}
-
-func parseExpiry(raw string) (time.Time, bool) {
-	if raw == "" {
-		return time.Time{}, false
-	}
-	if t, err := time.Parse(time.RFC3339Nano, raw); err == nil {
-		return t, true
-	}
-	if t, err := time.Parse(time.RFC3339, raw); err == nil {
-		return t, true
-	}
-	return time.Time{}, false
 }

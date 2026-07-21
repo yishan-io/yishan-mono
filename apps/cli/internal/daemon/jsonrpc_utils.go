@@ -6,26 +6,25 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/computer"
-	"yishan/apps/cli/internal/workspace"
+	"yishan/apps/cli/internal/rpcerror"
 )
 
-// JSON-RPC 2.0 reserved error codes.
 const (
-	rpcCodeParseError     = -32700
-	rpcCodeInvalidRequest = -32600
-	rpcCodeMethodNotFound = -32601
-	rpcCodeInvalidParams  = -32602
-	rpcCodeServerError    = -32000
-	rpcCodeSessionExists  = -32003
-	rpcCodeNotFound       = -32004
+	rpcCodeParseError     = rpcerror.CodeParseError
+	rpcCodeInvalidRequest = rpcerror.CodeInvalidRequest
+	rpcCodeMethodNotFound = rpcerror.CodeMethodNotFound
+	rpcCodeInvalidParams  = rpcerror.CodeInvalidParams
+	rpcCodeServerError    = rpcerror.CodeServerError
+	rpcCodeSessionExists  = rpcerror.CodeSessionExists
+	rpcCodeNotFound       = rpcerror.CodeNotFound
 )
 
 func decodeParams(raw json.RawMessage, out any) error {
 	if len(raw) == 0 {
-		return workspace.NewRPCError(rpcCodeInvalidParams, "missing params")
+		return rpcerror.NewRPCError(rpcCodeInvalidParams, "missing params")
 	}
 	if err := json.Unmarshal(raw, out); err != nil {
-		return workspace.NewRPCError(rpcCodeInvalidParams, "invalid params")
+		return rpcerror.NewRPCError(rpcCodeInvalidParams, "invalid params")
 	}
 	return nil
 }
@@ -42,7 +41,7 @@ func asJSONID(raw json.RawMessage) any {
 }
 
 func mapRPCError(err error) *rpcError {
-	var e *workspace.RPCError
+	var e *rpcerror.Error
 	if errors.As(err, &e) {
 		return &rpcError{Code: e.Code, Message: e.Message}
 	}

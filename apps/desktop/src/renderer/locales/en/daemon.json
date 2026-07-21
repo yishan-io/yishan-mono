@@ -1,0 +1,10 @@
+{
+  "daemon": {
+    "connection": {
+      "reconnecting": "Reconnecting to daemon..."
+    },
+    "version": {
+      "outdatedMessage": "Daemon is running {{daemonVersion}} but {{appVersion}} is available. Run \"yishan self-update\" in your terminal, then restart the daemon from Settings."
+    }
+  }
+}

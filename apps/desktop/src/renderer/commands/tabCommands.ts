@@ -4,6 +4,7 @@ import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } fr
 import { recordExplicitlyClosedTerminalTabId } from "../helpers/terminalCloseTombstones";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { chatStore } from "../store/chatStore";
+import { findOppositePaneId, splitRootPane } from "../store/split-pane";
 import { splitPaneStore } from "../store/splitPaneStore";
 import type { TabStoreState } from "../store/tabStore";
 import { tabStore } from "../store/tabStore";
@@ -181,6 +182,62 @@ export function setSelectedTab(tabId: string) {
 export function openTab(input: OpenWorkspaceTabInput) {
   const workspaceId = input.workspaceId ?? workspaceStore.getState().selectedWorkspaceId;
   const activePane = splitPaneStore.getState().getActivePane(workspaceId);
+  readTabStoreState().openTab(input, { activePaneTabIds: activePane?.tabIds });
+}
+
+/**
+ * Opens a tab in the opposite pane (cmd+click behavior):
+ * - If no split exists, creates a horizontal split and opens the tab in the new pane.
+ * - If a split exists, opens the tab in the pane opposite to the current active one.
+ *
+ * The split pane layout is updated first, then the tab is opened.
+ * The auto-registration in `WorkspaceSplitPaneView` picks up the correct target pane
+ * because it reads the current `activePaneId` after the split is already in place.
+ */
+export function openTabInOppositePane(input: OpenWorkspaceTabInput): void {
+  const workspaceId = input.workspaceId ?? workspaceStore.getState().selectedWorkspaceId;
+  if (!workspaceId) {
+    return;
+  }
+
+  // Step 1: Ensure the split exists and determine the target pane
+  const layout = splitPaneStore.getState().layoutByWorkspaceId[workspaceId];
+
+  if (layout) {
+    const oppositeId = findOppositePaneId(layout.root, layout.activePaneId);
+    if (oppositeId) {
+      // Split exists — set active pane to the opposite one so the auto-registration
+      // hooks in WorkspaceSplitPaneView pick the right pane
+      splitPaneStore.getState().setActivePane(workspaceId, oppositeId);
+    } else if (layout.root.kind === "leaf") {
+      // No split yet — create one with the new pane as second (right/bottom)
+      const next = splitRootPane(layout, "horizontal");
+      if (!next) {
+        // Fallback to normal open
+        openTab(input);
+        return;
+      }
+      splitPaneStore.setState({
+        layoutByWorkspaceId: {
+          ...splitPaneStore.getState().layoutByWorkspaceId,
+          [workspaceId]: next,
+        },
+      });
+    } else {
+      // Fallback to normal open
+      openTab(input);
+      return;
+    }
+  } else {
+    // Fallback to normal open
+    openTab(input);
+    return;
+  }
+
+  const activePane = splitPaneStore.getState().getActivePane(workspaceId);
+
+  // Step 2: Open the tab — WorkspaceSplitPaneView's auto-registration effect will
+  // place it in the current active pane (which is now the target opposite pane)
   readTabStoreState().openTab(input, { activePaneTabIds: activePane?.tabIds });
 }
 

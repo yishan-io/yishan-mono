@@ -1,0 +1,94 @@
+{
+  "org": {
+    "menu": {
+      "trigger": "\u7ec4\u7ec7",
+      "organizations": "\u7ec4\u7ec7\u5217\u8868",
+      "noOrganizations": "\u6682\u65e0\u7ec4\u7ec7",
+      "newOrganization": "\u65b0\u5efa\u7ec4\u7ec7",
+      "newOrganizationPrompt": "\u7ec4\u7ec7\u540d\u79f0",
+      "newOrganizationFailed": "\u521b\u5efa\u7ec4\u7ec7\u5931\u8d25\u3002",
+      "settings": "\u8bbe\u7f6e",
+      "documentation": "\u6587\u6863",
+      "shortcutMap": "\u5feb\u6377\u952e\u6620\u5c04",
+      "contactUs": "\u8054\u7cfb\u6211\u4eec",
+      "search": {
+        "repo": "\u641c\u7d22\u4ed3\u5e93",
+        "workspace": "\u641c\u7d22\u5de5\u4f5c\u533a"
+      },
+      "theme": {
+        "groupAria": "\u4e3b\u9898\u504f\u597d",
+        "system": "\u7cfb\u7edf\u4e3b\u9898",
+        "light": "\u6d45\u8272\u4e3b\u9898",
+        "dark": "\u6df1\u8272\u4e3b\u9898",
+        "systemAria": "\u4f7f\u7528\u7cfb\u7edf\u4e3b\u9898",
+        "lightAria": "\u4f7f\u7528\u6d45\u8272\u4e3b\u9898",
+        "darkAria": "\u4f7f\u7528\u6df1\u8272\u4e3b\u9898"
+      }
+    },
+    "settings": {
+      "title": "\u7ec4\u7ec7\u8bbe\u7f6e",
+      "notifications": {
+        "title": "\u901a\u77e5",
+        "subtitle": "\u7ba1\u7406\u901a\u77e5\u4e0e\u5e94\u7528\u5185\u58f0\u97f3\u884c\u4e3a\u3002",
+        "enabled": "\u542f\u7528\u901a\u77e5",
+        "osEnabled": "\u542f\u7528\u7cfb\u7edf\u901a\u77e5",
+        "general": {
+          "title": "\u901a\u7528",
+          "hint": "\u7ba1\u7406\u901a\u77e5\u9884\u89c8\u4e0e\u70b9\u51fb\u805a\u7126\u884c\u4e3a\u3002"
+        },
+        "sound": {
+          "title": "\u58f0\u97f3",
+          "hint": "\u914d\u7f6e\u58f0\u97f3\u64ad\u653e\u4e0e\u6309\u4e8b\u4ef6\u7684\u58f0\u97f3\u9009\u62e9\u3002"
+        },
+        "soundEnabled": "\u64ad\u653e\u901a\u77e5\u58f0\u97f3",
+        "soundSelection": "\u58f0\u97f3",
+        "sounds": {
+          "chime": "\u53ee\u549a",
+          "ping": "\u4e09\u97f3",
+          "pop": "\u94a2\u7434",
+          "zip": "Zip",
+          "alert": "\u4e0b\u964d\u63d0\u793a\u97f3"
+        },
+        "volume": "\u901a\u77e5\u97f3\u91cf",
+        "focusOnClick": "\u70b9\u51fb\u901a\u77e5\u65f6\u805a\u7126\u5e94\u7528",
+        "events": {
+          "title": "\u89e6\u53d1\u4e8b\u4ef6",
+          "hint": "\u9009\u62e9\u54ea\u4e9b\u4e8b\u4ef6\u4f1a\u89e6\u53d1\u901a\u77e5\u3002",
+          "runFinished": "\u8fd0\u884c\u5b8c\u6210",
+          "runFailed": "\u8fd0\u884c\u5931\u8d25",
+          "pendingQuestion": "\u5f85\u5904\u7406\u95ee\u9898"
+        },
+        "errors": {
+          "loadFailed": "\u52a0\u8f7d\u901a\u77e5\u8bbe\u7f6e\u5931\u8d25\u3002",
+          "saveFailed": "\u4fdd\u5b58\u901a\u77e5\u8bbe\u7f6e\u5931\u8d25\u3002",
+          "previewFailed": "\u901a\u77e5\u9884\u89c8\u5931\u8d25\u3002",
+          "previewSoundFailed": "\u58f0\u97f3\u9884\u89c8\u5931\u8d25\u3002"
+        },
+        "preview": {
+          "button": "\u64ad\u653e",
+          "soundButton": "\u9884\u89c8\u58f0\u97f3",
+          "status": {
+            "inProgress": "\u6b63\u5728\u53d1\u9001\u901a\u77e5\u793a\u4f8b",
+            "success": "\u901a\u77e5\u793a\u4f8b\u5df2\u53d1\u9001",
+            "failed": "\u901a\u77e5\u793a\u4f8b\u53d1\u9001\u5931\u8d25"
+          }
+        },
+        "searchKeywords": {
+          "enabled": "\u901a\u77e5 \u5173\u95ed\u901a\u77e5 \u9759\u97f3 notifications mute",
+          "osEnabled": "\u7cfb\u7edf\u901a\u77e5 os \u901a\u77e5\u4e2d\u5fc3 \u6a2a\u5e45 notification center banner",
+          "focusOnClick": "\u70b9\u51fb\u901a\u77e5 \u805a\u7126\u5e94\u7528 \u524d\u53f0 \u6253\u5f00\u5e94\u7528 focus app click notification",
+          "soundEnabled": "\u58f0\u97f3 \u64ad\u653e\u58f0\u97f3 \u9759\u97f3 sound mute",
+          "volume": "\u97f3\u91cf \u901a\u77e5\u97f3\u91cf \u58f0\u97f3\u5927\u5c0f volume",
+          "soundRunFinished": "\u5b8c\u6210\u58f0\u97f3 \u6210\u529f\u58f0\u97f3 run finished success sound",
+          "soundRunFailed": "\u5931\u8d25\u58f0\u97f3 \u9519\u8bef\u58f0\u97f3 run failed failure sound",
+          "soundPendingQuestion": "\u5f85\u5904\u7406\u95ee\u9898\u58f0\u97f3 \u8f93\u5165 \u5ba1\u6279 \u786e\u8ba4 pending question approval",
+          "eventRunFinished": "\u89e6\u53d1\u4e8b\u4ef6 \u5b8c\u6210\u4e8b\u4ef6 run finished",
+          "eventRunFailed": "\u89e6\u53d1\u4e8b\u4ef6 \u5931\u8d25\u4e8b\u4ef6 run failed",
+          "eventPendingQuestion": "\u89e6\u53d1\u4e8b\u4ef6 \u5f85\u5904\u7406\u95ee\u9898 \u8f93\u5165 \u5ba1\u6279 \u786e\u8ba4 pending question"
+        },
+        "saved": "\u901a\u77e5\u8bbe\u7f6e\u5df2\u4fdd\u5b58\u3002"
+      }
+    },
+    "defaultWorkspaceName": "\u9ed8\u8ba4\u7ec4\u7ec7"
+  }
+}

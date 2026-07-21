@@ -164,4 +164,3 @@ func resolveHookEnv(baseEnv []string, workspaceID, workspacePath, hookName strin
 	)
 	return env
 }
-

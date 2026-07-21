@@ -10,6 +10,8 @@ import {
   ensureAgentGlobalConfigExternalDirectoryPermission as ensureAgentGlobalConfigExternalDirectoryPermissionCommand,
   getDefaultWorktreeLocation as getDefaultWorktreeLocationCommand,
   loadBrowserHistory as loadBrowserHistoryCommand,
+  logout as logoutCommand,
+  openExternalUrl as openExternalUrlCommand,
   openLocalFolderDialog as openLocalFolderDialogCommand,
   toggleMainWindowMaximized as toggleMainWindowMaximizedCommand,
 } from "../commands/appCommands";
@@ -59,6 +61,7 @@ import {
   previewNotification as previewNotificationCommand,
   updateNotificationPreferences as updateNotificationPreferencesCommand,
 } from "../commands/notificationCommands";
+import { switchOrganization as switchOrganizationCommand } from "../commands/orgCommands";
 import {
   loadAllOverviewData as loadAllOverviewDataCommand,
   setOverviewProjectId as setOverviewProjectIdCommand,
@@ -96,6 +99,7 @@ import {
   createTab as createTabCommand,
   markFileTabSaved as markFileTabSavedCommand,
   openTab as openTabCommand,
+  openTabInOppositePane as openTabInOppositePaneCommand,
   promoteTemporaryTab as promoteTemporaryTabCommand,
   refreshDiffTabContent as refreshDiffTabContentCommand,
   refreshFileTabFromDisk as refreshFileTabFromDiskCommand,
@@ -183,6 +187,9 @@ export type Commands = {
   renameWorkspace: typeof renameWorkspaceCommand;
   reorderWorkspace: typeof reorderWorkspaceCommand;
   renameWorkspaceBranch: typeof renameWorkspaceBranchCommand;
+  logout: typeof logoutCommand;
+  openExternalUrl: typeof openExternalUrlCommand;
+  switchOrganization: typeof switchOrganizationCommand;
   openLocalFolderDialog: typeof openLocalFolderDialogCommand;
   getDefaultWorktreeLocation: typeof getDefaultWorktreeLocationCommand;
   checkAgentGlobalConfigExternalDirectoryPermission: typeof checkAgentGlobalConfigExternalDirectoryPermissionCommand;
@@ -267,6 +274,7 @@ export type Commands = {
   selectTab: typeof setSelectedTabCommand;
   createTab: (input?: { workspaceId?: string }) => Promise<void>;
   openTab: typeof openTabCommand;
+  openTabInOppositePane: typeof openTabInOppositePaneCommand;
   closeTab: (tabId: string) => void;
   closeOtherTabs: (tabId: string) => void;
   closeAllTabs: (tabId: string) => void;
@@ -325,6 +333,9 @@ export function useCommands(): Commands {
       renameWorkspace: renameWorkspaceCommand,
       reorderWorkspace: reorderWorkspaceCommand,
       renameWorkspaceBranch: renameWorkspaceBranchCommand,
+      logout: logoutCommand,
+      openExternalUrl: openExternalUrlCommand,
+      switchOrganization: switchOrganizationCommand,
       openLocalFolderDialog: openLocalFolderDialogCommand,
       getDefaultWorktreeLocation: getDefaultWorktreeLocationCommand,
       checkAgentGlobalConfigExternalDirectoryPermission: checkAgentGlobalConfigExternalDirectoryPermissionCommand,
@@ -391,6 +402,7 @@ export function useCommands(): Commands {
       closeWorkspace: closeWorkspaceCommand,
       createTab: createTabCommand,
       openTab: openTabCommand,
+      openTabInOppositePane: openTabInOppositePaneCommand,
       closeTab: closeTabCommand,
       closeOtherTabs: closeOtherTabsCommand,
       closeAllTabs: closeAllTabsCommand,

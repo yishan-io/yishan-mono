@@ -35,7 +35,7 @@ func TestSummarizeSession_BuildsConversationAndWritesMemory(t *testing.T) {
 	memoryPath := filepath.Join(contextRoot, "MEMORY.md")
 	var prompt string
 
-	summarizer := NewSummarizer(SummarizerConfig{Enabled: true}, func(_ context.Context, agentKind string, model string, gotPrompt string, workDir string) (string, error) {
+	summarizer := NewSummarizer(SummarizerConfig{Enabled: true, AgentKind: "opencode"}, func(_ context.Context, agentKind string, model string, gotPrompt string, workDir string) (string, error) {
 		prompt = gotPrompt
 		if agentKind != "opencode" {
 			t.Fatalf("unexpected agent kind: %q", agentKind)
@@ -45,12 +45,18 @@ func TestSummarizeSession_BuildsConversationAndWritesMemory(t *testing.T) {
 	})
 	summarizer.dbReader = fakeSessionReader{session: &sessionMessages{Messages: []sessionMessage{{Role: "user", Content: "hello", Timestamp: time.UnixMilli(1000)}, {Role: "assistant", Content: "world", Timestamp: time.UnixMilli(2000)}}}}
 
-	result, err := summarizer.SummarizeSession("opencode", workspacePath)
+	result, err := summarizer.SummarizeSession("pi", workspacePath)
 	if err != nil {
 		t.Fatalf("SummarizeSession: %v", err)
 	}
 	if result.Skipped {
 		t.Fatal("expected summarize run, got skipped")
+	}
+	if result.SourceAgent != "pi" {
+		t.Fatalf("expected source agent pi, got %q", result.SourceAgent)
+	}
+	if result.SummarizerAgent != "opencode" {
+		t.Fatalf("expected summarizer agent opencode, got %q", result.SummarizerAgent)
 	}
 	if len(result.WrittenPaths) == 0 || result.WrittenPaths[0] != memoryPath {
 		t.Fatalf("unexpected written paths: %v", result.WrittenPaths)

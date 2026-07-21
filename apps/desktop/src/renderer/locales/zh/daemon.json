@@ -1,0 +1,10 @@
+{
+  "daemon": {
+    "connection": {
+      "reconnecting": "\u6b63\u5728\u91cd\u65b0\u8fde\u63a5\u5b88\u62a4\u8fdb\u7a0b..."
+    },
+    "version": {
+      "outdatedMessage": "\u5b88\u62a4\u8fdb\u7a0b\u6b63\u5728\u8fd0\u884c {{daemonVersion}}\uff0c\u4f46 {{appVersion}} \u5df2\u53ef\u7528\u3002\u8bf7\u5728\u7ec8\u7aef\u4e2d\u8fd0\u884c \"yishan self-update\"\uff0c\u7136\u540e\u5728\u8bbe\u7f6e\u4e2d\u91cd\u542f\u5b88\u62a4\u8fdb\u7a0b\u3002"
+    }
+  }
+}

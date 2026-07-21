@@ -1,0 +1,75 @@
+{
+  "workspace": {
+    "panelTitle": "\u7ec4\u7ec7",
+    "dashboardTitle": "\u5de5\u4f5c\u533a\u770b\u677f",
+    "notifications": {
+      "title": "\u901a\u77e5",
+      "empty": "\u6682\u65e0\u901a\u77e5\u3002",
+      "unreadIndicator": "\u672a\u8bfb\u901a\u77e5",
+      "runningIndicator": "\u4efb\u52a1\u8fdb\u884c\u4e2d",
+      "waitingInputIndicator": "\u7b49\u5f85\u4f60\u7684\u8f93\u5165",
+      "doneIndicator": "\u4efb\u52a1\u5df2\u5b8c\u6210",
+      "failedIndicator": "\u4efb\u52a1\u5931\u8d25"
+    },
+    "actions": {
+      "create": "\u521b\u5efa\u5de5\u4f5c\u533a",
+      "add": "\u6dfb\u52a0\u5de5\u4f5c\u533a",
+      "rename": "\u91cd\u547d\u540d",
+      "openInFinder": "\u5728 Finder \u4e2d\u6253\u5f00\u5de5\u4f5c\u533a",
+      "openInExplorer": "\u5728\u8d44\u6e90\u7ba1\u7406\u5668\u4e2d\u6253\u5f00\u5de5\u4f5c\u533a",
+      "openInExternalAppQuick": "\u5728 {{app}} \u4e2d\u6253\u5f00\u5de5\u4f5c\u533a",
+      "openInExternalApp": "\u5728\u5176\u4ed6\u5e94\u7528\u4e2d\u6253\u5f00\u5de5\u4f5c\u533a...",
+      "delete": "\u5173\u95ed\u5de5\u4f5c\u533a",
+      "close": "\u5173\u95ed"
+    },
+    "title": "\u5de5\u4f5c\u533a\u6807\u9898",
+    "column": "\u5de5\u4f5c\u533a",
+    "emptySelection": "\u672a\u9009\u62e9\u5de5\u4f5c\u533a\u3002",
+    "create": {
+      "title": "\u65b0\u5efa\u5de5\u4f5c\u533a",
+      "nameLabel": "\u5de5\u4f5c\u533a\u540d\u79f0",
+      "branchLabel": "\u5206\u652f\u540d\u79f0",
+      "namePlaceholder": "\u5de5\u4f5c\u533a\u540d\u79f0",
+      "branchNameLabel": "\u5206\u652f\u540d\uff08\u53ef\u9009\uff09"
+    },
+    "rename": {
+      "title": "\u91cd\u547d\u540d\u5de5\u4f5c\u533a",
+      "branchNameLabel": "\u5206\u652f\u540d\u79f0"
+    },
+    "delete": {
+      "confirm": "\u786e\u8ba4\u5173\u95ed\u5de5\u4f5c\u533a '{{name}}'\uff1f",
+      "removeBranch": "\u540c\u65f6\u5220\u9664\u5de5\u4f5c\u533a\u5206\u652f"
+    },
+    "info": {
+      "branch": "\u5206\u652f",
+      "sourceBranch": "\u6765\u6e90",
+      "path": "\u8def\u5f84",
+      "unavailable": "\u4e0d\u53ef\u7528"
+    },
+    "pr": {
+      "tab": "PR",
+      "empty": "\u5f53\u524d\u5de5\u4f5c\u533a\u672a\u5173\u8054\u62c9\u53d6\u8bf7\u6c42\u3002",
+      "approved": "\u5df2\u6279\u51c6",
+      "refresh": "\u5237\u65b0",
+      "refreshing": "\u6b63\u5728\u5237\u65b0...",
+      "open": "\u6253\u5f00",
+      "viewDetails": "\u67e5\u770b\u8be6\u60c5",
+      "checks": "\u68c0\u67e5",
+      "noChecks": "\u6682\u65e0\u68c0\u67e5\u4fe1\u606f\u3002",
+      "deployments": "\u90e8\u7f72",
+      "noDeployments": "\u6682\u65e0\u90e8\u7f72\u4fe1\u606f\u3002",
+      "history": "\u5386\u53f2\u8bb0\u5f55",
+      "merge": "\u5408\u5e76",
+      "squash": "\u538b\u7f29\u5408\u5e76",
+      "rebase": "\u53d8\u57fa\u5408\u5e76",
+      "mergeCommit": "\u521b\u5efa\u5408\u5e76\u63d0\u4ea4",
+      "squashMerge": "\u538b\u7f29\u5e76\u5408\u5e76",
+      "rebaseMerge": "\u53d8\u57fa\u5e76\u5408\u5e76",
+      "deleteBranch": "\u5408\u5e76\u540e\u5220\u9664\u8fdc\u7a0b\u5206\u652f",
+      "close": "\u5173\u95ed",
+      "closeConfirm": "\u5173\u95ed\u800c\u4e0d\u5408\u5e76\u5c06\u4e22\u5f03\u6b64 PR \u4e2d\u7684\u66f4\u6539\u3002",
+      "merging": "\u6b63\u5728\u5408\u5e76\u2026",
+      "closing": "\u6b63\u5728\u5173\u95ed\u2026"
+    }
+  }
+}

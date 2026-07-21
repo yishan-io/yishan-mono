@@ -6,8 +6,8 @@ import type { AgentManager } from "../runtime/agentManager";
 const STATUS_KEY = "pi-subagents";
 const WIDGET_KEY = "pi-subagents-progress";
 const MAX_VISIBLE_ACTIVE_AGENTS = 5;
-const ACTIVE_AGENT_STATUSES = new Set(["queued", "running"]);
-const RUNNING_AGENT_STATUSES = new Set(["running"]);
+const ACTIVE_AGENT_STATUSES = new Set(["queued", "starting", "running"]);
+const RUNNING_AGENT_STATUSES = new Set(["starting", "running"]);
 const PREPARING_MESSAGE = "preparing delegation";
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const SPINNER_INTERVAL_MS = 80;
@@ -79,9 +79,11 @@ export function renderAgentProgress(ui: ExtensionUIContext, records: AgentRecord
   }
 
   const runningCount = activeRecords.filter((record) => record.status === "running").length;
+  const startingCount = activeRecords.filter((record) => record.status === "starting").length;
   const queuedCount = activeRecords.filter((record) => record.status === "queued").length;
   const statusParts = [
     runningCount > 0 ? `${runningCount} running` : undefined,
+    startingCount > 0 ? `${startingCount} starting` : undefined,
     queuedCount > 0 ? `${queuedCount} queued` : undefined,
   ].filter((value): value is string => Boolean(value));
 
@@ -138,7 +140,9 @@ function buildWidgetLines(ui: ExtensionUIContext, records: AgentRecord[], spinne
 
 function formatAgentLine(ui: ExtensionUIContext, record: AgentRecord, spinnerFrameIndex: number): string {
   const spinnerFrame = SPINNER_FRAMES[spinnerFrameIndex] ?? "⠋";
-  const statusSymbol = record.status === "running" ? ui.theme.fg("accent", spinnerFrame) : ui.theme.fg("muted", "…");
+  const statusSymbol = RUNNING_AGENT_STATUSES.has(record.status)
+    ? ui.theme.fg("accent", spinnerFrame)
+    : ui.theme.fg("muted", "…");
   const modeLabel = record.mode === "background" ? "bg" : "fg";
   return `${statusSymbol} ${record.agentName} · ${record.status} · ${modeLabel} · ${record.id}`;
 }

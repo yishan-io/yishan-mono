@@ -60,6 +60,18 @@ describe("renderAgentProgress", () => {
     expect(ui.setWorkingVisible).toHaveBeenCalledWith(false);
   });
 
+  it("treats starting agents as active and animating", () => {
+    const ui = createUiHarness();
+
+    renderAgentProgress(ui as never, [createRecord({ status: "starting" })]);
+
+    expect(ui.setStatus).toHaveBeenCalledWith("pi-subagents", "<accent>🤖 1 starting</accent>");
+    expect(ui.setWidget).toHaveBeenCalledWith("pi-subagents-progress", [
+      "<accent>Sub-agents</accent>",
+      "<accent>⠋</accent> Explore · starting · fg · agent-1",
+    ]);
+  });
+
   it("restores Pi's built-in loader when direct rendering clears the widget", () => {
     const ui = createUiHarness();
 

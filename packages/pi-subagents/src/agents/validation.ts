@@ -1,6 +1,7 @@
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 
 import type { AgentDefinition, AgentDefinitionDiagnostic, AgentDefinitionSource } from "./types";
+import { WRITE_CAPABLE_TOOL_NAMES } from "./workspaceAccess";
 
 const ALLOWED_THINKING_LEVELS: readonly ThinkingLevel[] = ["off", "minimal", "low", "medium", "high", "xhigh"];
 
@@ -76,6 +77,20 @@ export function validateAgentDefinition(options: ValidateAgentDefinitionOptions)
 
   if (!name || !description || systemPrompt.length === 0 || diagnostics.length > 0) {
     return { diagnostics };
+  }
+
+  if (tools && readOnly !== undefined) {
+    const toolDerivedWorkspaceAccess = tools.some((toolName) => WRITE_CAPABLE_TOOL_NAMES.has(toolName))
+      ? "write"
+      : "read";
+    const frontmatterWorkspaceAccess = readOnly ? "read" : "write";
+
+    if (toolDerivedWorkspaceAccess !== frontmatterWorkspaceAccess) {
+      diagnostics.push({
+        message: `Agent field \`read_only\` conflicts with tool-derived workspace access: ${toolDerivedWorkspaceAccess}`,
+        path,
+      });
+    }
   }
 
   return {

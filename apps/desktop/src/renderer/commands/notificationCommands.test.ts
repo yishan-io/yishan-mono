@@ -34,7 +34,6 @@ const mocks = vi.hoisted(() => ({
           "run-failed": "alert",
           "pending-question": "ping",
         },
-        enabledCategories: ["ai-task"],
       },
     } as SessionUser,
     organizations: [{ id: "org-1", name: "Org" }],
@@ -105,7 +104,6 @@ describe("notificationCommands", () => {
           "run-failed": "alert",
           "pending-question": "ping",
         },
-        enabledCategories: ["ai-task"],
       }),
     );
 
@@ -128,7 +126,6 @@ describe("notificationCommands", () => {
           "run-failed": "alert",
           "pending-question": "ping",
         },
-        enabledCategories: ["ai-task"],
       },
     };
   });
@@ -148,7 +145,6 @@ describe("notificationCommands", () => {
           "run-failed": "alert",
           "pending-question": "ping",
         },
-        enabledCategories: ["ai-task"],
       },
     });
 

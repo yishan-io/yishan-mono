@@ -35,6 +35,7 @@ export function usePaneTabHandlers({
 }: UsePaneTabHandlersOptions) {
   const { t } = useTranslation();
   const customCommandByAgentKind = agentSettingsStore((state) => state.customCommandByAgentKind);
+  const workspaceWorktreePath = workspace?.worktreePath;
   const terminalTabIds = useMemo(
     () => workspaceTabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id),
     [workspaceTabs],
@@ -85,7 +86,7 @@ export function usePaneTabHandlers({
           workspaceId,
           kind: "agent-chat",
           title: t("agentChat.title"),
-          cwd: workspace?.worktreePath || undefined,
+          cwd: workspaceWorktreePath || undefined,
         });
         return;
       }
@@ -101,7 +102,7 @@ export function usePaneTabHandlers({
         reuseExisting: false,
       });
     },
-    [cmd, workspaceId, workspace?.worktreePath, enabledAgentKindSet, customCommandByAgentKind, t],
+    [cmd, workspaceId, enabledAgentKindSet, customCommandByAgentKind, t, workspaceWorktreePath],
   );
 
   const handleRenameTab = useCallback(
@@ -114,7 +115,6 @@ export function usePaneTabHandlers({
         return;
       }
 
-      const workspaceWorktreePath = workspace?.worktreePath;
       if (!workspaceWorktreePath) return;
 
       const pathSegments = tab.data.path.split("/").filter(Boolean);
@@ -129,7 +129,7 @@ export function usePaneTabHandlers({
         console.error("Failed to rename workspace file from tab", error);
       }
     },
-    [cmd, workspaceTabs, workspace, workspaceId],
+    [cmd, workspaceTabs, workspaceId, workspaceWorktreePath],
   );
 
   const handleReorderTab = useCallback(

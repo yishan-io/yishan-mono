@@ -2,7 +2,7 @@
 name: task-reviewer
 description: Review one task-sized implementation for requirement compliance and code quality before the workflow moves on.
 thinking: high
-read_only: true
+read_only: false
 tools:
   - read
   - grep

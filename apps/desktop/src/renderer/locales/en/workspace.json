@@ -1,0 +1,75 @@
+{
+  "workspace": {
+    "panelTitle": "Organization",
+    "dashboardTitle": "Workspace Dashboard",
+    "notifications": {
+      "title": "Notifications",
+      "empty": "No recent notifications.",
+      "unreadIndicator": "Unread notification",
+      "runningIndicator": "Task running",
+      "waitingInputIndicator": "Waiting for your input",
+      "doneIndicator": "Task completed",
+      "failedIndicator": "Task failed"
+    },
+    "actions": {
+      "create": "Create workspace",
+      "add": "Add workspace",
+      "rename": "Rename",
+      "openInFinder": "Open Workspace in Finder",
+      "openInExplorer": "Open Workspace in Explorer",
+      "openInExternalAppQuick": "Open Workspace in {{app}}",
+      "openInExternalApp": "Open Workspace in...",
+      "delete": "Close workspace",
+      "close": "Close"
+    },
+    "title": "Workspace title",
+    "column": "Workspace",
+    "emptySelection": "No workspace selected.",
+    "create": {
+      "title": "New workspace",
+      "nameLabel": "Workspace name",
+      "branchLabel": "Branch name",
+      "namePlaceholder": "Workspace name",
+      "branchNameLabel": "Branch name (optional)"
+    },
+    "rename": {
+      "title": "Rename workspace",
+      "branchNameLabel": "Branch name"
+    },
+    "delete": {
+      "confirm": "Close workspace '{{name}}'?",
+      "removeBranch": "Also remove workspace branch"
+    },
+    "info": {
+      "branch": "Branch",
+      "sourceBranch": "Source",
+      "path": "Path",
+      "unavailable": "Unavailable"
+    },
+    "pr": {
+      "tab": "PR",
+      "empty": "No pull request is associated with this workspace.",
+      "approved": "Approved",
+      "refresh": "Refresh",
+      "refreshing": "Refreshing...",
+      "open": "Open",
+      "viewDetails": "View details",
+      "checks": "Checks",
+      "noChecks": "No checks available.",
+      "deployments": "Deployments",
+      "noDeployments": "No deployments available.",
+      "history": "History",
+      "merge": "Merge",
+      "squash": "Squash merge",
+      "rebase": "Rebase merge",
+      "mergeCommit": "Create a merge commit",
+      "squashMerge": "Squash and merge",
+      "rebaseMerge": "Rebase and merge",
+      "deleteBranch": "Delete remote branch after merge",
+      "close": "Close",
+      "closeConfirm": "Closing without merging will discard changes in this PR.",
+      "merging": "Merging\u2026",
+      "closing": "Closing\u2026"
+    }
+  }
+}

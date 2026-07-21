@@ -7,34 +7,156 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: pr-unit-tests-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
+  detect-changes:
+    name: Detect affected test targets
+    runs-on: ubuntu-latest
+    outputs:
+      bun_matrix: ${{ steps.build-matrix.outputs.bun_matrix }}
+      run_bun: ${{ steps.build-matrix.outputs.run_bun }}
+      run_cli: ${{ steps.build-matrix.outputs.run_cli }}
+      run_relay: ${{ steps.build-matrix.outputs.run_relay }}
+    steps:
+      - name: Detect changed paths
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            all_bun:
+              - 'package.json'
+              - 'bun.lock'
+              - '.bunfig.toml'
+              - 'tsconfig.json'
+              - 'tsconfig.*.json'
+              - 'biome.json'
+              - '.github/workflows/pr-unit-tests.yml'
+            root_bun:
+              - 'install.sh'
+              - 'install.test.ts'
+              - 'scripts/materialIconTheme.ts'
+              - 'scripts/materialIconTheme.test.ts'
+            api_service:
+              - 'apps/api-service/**'
+            desktop:
+              - 'apps/desktop/**'
+            design_tokens:
+              - 'packages/design-tokens/**'
+            pi_memory:
+              - 'packages/pi-memory/**'
+            pi_notify:
+              - 'packages/pi-notify/**'
+            pi_subagents:
+              - 'packages/pi-subagents/**'
+            pi_workspace:
+              - 'packages/pi-workspace/**'
+            pi_ask:
+              - 'packages/pi-ask/**'
+            core:
+              - 'packages/core/**'
+            cli:
+              - 'apps/cli/**'
+              - '.github/workflows/pr-unit-tests.yml'
+            relay:
+              - 'apps/relay/**'
+              - '.github/workflows/pr-unit-tests.yml'
+
+      - name: Build test matrix
+        id: build-matrix
+        env:
+          ALL_BUN_CHANGED: ${{ steps.changes.outputs.all_bun }}
+          ROOT_BUN_CHANGED: ${{ steps.changes.outputs.root_bun }}
+          API_SERVICE_CHANGED: ${{ steps.changes.outputs.api_service }}
+          DESKTOP_CHANGED: ${{ steps.changes.outputs.desktop }}
+          DESIGN_TOKENS_CHANGED: ${{ steps.changes.outputs.design_tokens }}
+          PI_MEMORY_CHANGED: ${{ steps.changes.outputs.pi_memory }}
+          PI_NOTIFY_CHANGED: ${{ steps.changes.outputs.pi_notify }}
+          PI_SUBAGENTS_CHANGED: ${{ steps.changes.outputs.pi_subagents }}
+          PI_WORKSPACE_CHANGED: ${{ steps.changes.outputs.pi_workspace }}
+          PI_ASK_CHANGED: ${{ steps.changes.outputs.pi_ask }}
+          CORE_CHANGED: ${{ steps.changes.outputs.core }}
+          CLI_CHANGED: ${{ steps.changes.outputs.cli }}
+          RELAY_CHANGED: ${{ steps.changes.outputs.relay }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const has = (name) => process.env[name] === 'true';
+          const bunTargets = [];
+
+          const addTarget = (name, workingDirectory, command) => {
+            bunTargets.push({
+              name,
+              working_directory: workingDirectory,
+              command,
+            });
+          };
+
+          if (has('ALL_BUN_CHANGED') || has('ROOT_BUN_CHANGED')) {
+            addTarget('repo-root', '.', 'bunx vitest run install.test.ts scripts/materialIconTheme.test.ts');
+          }
+
+          if (has('ALL_BUN_CHANGED') || has('API_SERVICE_CHANGED') || has('CORE_CHANGED')) {
+            addTarget('api-service', 'apps/api-service', 'bun run test');
+          }
+
+          if (
+            has('ALL_BUN_CHANGED') ||
+            has('DESKTOP_CHANGED') ||
+            has('CORE_CHANGED') ||
+            has('DESIGN_TOKENS_CHANGED') ||
+            has('PI_SUBAGENTS_CHANGED')
+          ) {
+            addTarget('desktop', 'apps/desktop', 'bunx vitest run');
+          }
+
+          if (has('ALL_BUN_CHANGED') || has('DESIGN_TOKENS_CHANGED')) {
+            addTarget('design-tokens', 'packages/design-tokens', 'bun run test');
+          }
+
+          if (has('ALL_BUN_CHANGED') || has('PI_MEMORY_CHANGED')) {
+            addTarget('pi-memory', 'packages/pi-memory', 'bun run test');
+          }
+
+          if (has('ALL_BUN_CHANGED') || has('PI_NOTIFY_CHANGED')) {
+            addTarget('pi-notify', 'packages/pi-notify', 'bun run test');
+          }
+
+          if (has('ALL_BUN_CHANGED') || has('PI_SUBAGENTS_CHANGED')) {
+            addTarget('pi-subagents', 'packages/pi-subagents', 'bun run test');
+          }
+
+          if (has('ALL_BUN_CHANGED') || has('PI_WORKSPACE_CHANGED')) {
+            addTarget('pi-workspace', 'packages/pi-workspace', 'bun run test');
+          }
+
+          if (has('ALL_BUN_CHANGED') || has('PI_ASK_CHANGED')) {
+            addTarget('pi-ask', 'packages/pi-ask', 'bun run test');
+          }
+
+          const outputs = [
+            `bun_matrix=${JSON.stringify({ include: bunTargets })}`,
+            `run_bun=${bunTargets.length > 0}`,
+            `run_cli=${has('CLI_CHANGED')}`,
+            `run_relay=${has('RELAY_CHANGED')}`,
+          ];
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `${outputs.join('\n')}\n`);
+          NODE
+
   bun-unit-tests:
     name: Bun unit tests
     runs-on: ubuntu-latest
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.run_bun == 'true' }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: api-service
-            working-directory: apps/api-service
-            command: bun run test
-          - name: desktop
-            working-directory: apps/desktop
-            command: bunx vitest run
-          - name: design-tokens
-            working-directory: packages/design-tokens
-            command: bun run test
-          - name: pi-memory
-            working-directory: packages/pi-memory
-            command: bun run test
-          - name: pi-workspace
-            working-directory: packages/pi-workspace
-            command: bun run test
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.bun_matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -48,24 +170,40 @@ jobs:
         run: bun install --frozen-lockfile --linker hoisted
 
       - name: Run ${{ matrix.name }} unit tests
-        working-directory: ${{ matrix.working-directory }}
+        working-directory: ${{ matrix.working_directory }}
         run: ${{ matrix.command }}
 
   go-unit-tests:
     name: Go unit tests
     runs-on: ubuntu-latest
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.run_cli == 'true' || needs.detect-changes.outputs.run_relay == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Setup Go
+      - name: Setup Go for CLI tests
+        if: ${{ needs.detect-changes.outputs.run_cli == 'true' }}
         uses: actions/setup-go@v5
         with:
           go-version-file: apps/cli/go.mod
           cache-dependency-path: apps/cli/go.sum
 
       - name: Run CLI unit tests
+        if: ${{ needs.detect-changes.outputs.run_cli == 'true' }}
         working-directory: apps/cli
         env:
-          CGO_ENABLED: "0"
+          CGO_ENABLED: '0'
+        run: go test ./...
+
+      - name: Setup Go for relay tests
+        if: ${{ needs.detect-changes.outputs.run_relay == 'true' }}
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/relay/go.mod
+          cache-dependency-path: apps/relay/go.sum
+
+      - name: Run relay unit tests
+        if: ${{ needs.detect-changes.outputs.run_relay == 'true' }}
+        working-directory: apps/relay
         run: go test ./...

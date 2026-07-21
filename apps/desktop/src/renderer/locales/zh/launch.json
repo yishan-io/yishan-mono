@@ -1,0 +1,14 @@
+{
+  "launch": {
+    "title": "\u63a5\u4e0b\u6765\u505a\u4ec0\u4e48\uff1f",
+    "hint": "\u9009\u62e9\u4e00\u4e2a\u64cd\u4f5c\u4ee5\u5f00\u59cb\u3002",
+    "agents": "\u4f7f\u7528\u667a\u80fd\u4f53\u542f\u52a8",
+    "actions": {
+      "openTerminal": "\u6253\u5f00\u7ec8\u7aef",
+      "openBrowser": "\u6253\u5f00\u6d4f\u89c8\u5668\u6807\u7b7e",
+      "openAgentChat": "\u6253\u5f00 AI \u5bf9\u8bdd",
+      "openChat": "\u6253\u5f00\u804a\u5929",
+      "searchFiles": "\u641c\u7d22\u6587\u4ef6"
+    }
+  }
+}

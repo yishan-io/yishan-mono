@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	WorkspaceStateActive      = "active"
-	WorkspaceStateDegraded    = "degraded"
-	WorkspaceStateClosing     = "closing"
-	WorkspaceStateOrphaned    = "orphaned"
-	WorkspaceStateStaleIndex  = "stale_index"
+	WorkspaceStateActive     = "active"
+	WorkspaceStateDegraded   = "degraded"
+	WorkspaceStateClosing    = "closing"
+	WorkspaceStateOrphaned   = "orphaned"
+	WorkspaceStateStaleIndex = "stale_index"
 
 	WorkspaceHealthPathMissing = "path-missing"
 	WorkspaceHealthNotWorktree = "not-worktree"

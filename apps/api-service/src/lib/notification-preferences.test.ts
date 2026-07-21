@@ -17,7 +17,6 @@ describe("normalizeNotificationPreferences", () => {
         "run-finished": "chime",
         "run-failed": "alert",
       },
-      enabledCategories: ["ai-task"],
     });
 
     expect(preferences.enabledEventTypes).toContain("pending-question");

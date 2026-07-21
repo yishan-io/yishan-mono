@@ -12,6 +12,8 @@ import type {
   AgentContentBlock,
   AgentMessage,
   AgentModel,
+  AgentPendingUiOption,
+  AgentPendingUiRequest,
   AgentQueueState,
   AgentStreamEvent,
 } from "../store/agentChatTypes";
@@ -324,6 +326,36 @@ export async function setAgentThinkingLevel(opts: {
   agentChatStore.getState().setThinkingLevel(opts.tabId, opts.level);
 }
 
+/** Sends one response to a pending RPC extension UI request. */
+export async function respondToAgentExtensionUiRequest(opts: {
+  tabId: string;
+  sessionId: string;
+  requestId: string;
+  value?: string;
+  confirmed?: boolean;
+  cancelled?: boolean;
+}): Promise<void> {
+  const client = await getDaemonClient();
+  const command: Record<string, unknown> = {
+    type: "extension_ui_response",
+    id: opts.requestId,
+  };
+
+  if (opts.cancelled === true) {
+    command.cancelled = true;
+  } else if (typeof opts.confirmed === "boolean") {
+    command.confirmed = opts.confirmed;
+  } else {
+    command.value = opts.value ?? "";
+  }
+
+  await client.pi.send({
+    sessionId: opts.sessionId,
+    command,
+  });
+  agentChatStore.getState().clearPendingUiRequest(opts.tabId);
+}
+
 /** Fetches available models from the pi session. Result arrives via agent.pi.event. */
 export async function fetchAgentModels(opts: {
   tabId: string;
@@ -424,6 +456,8 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
 
     case "agent_end":
       flushAgentChatStreamBuffer(tabId);
+      agentChatStore.getState().clearPendingUiRequest(tabId);
+      agentChatStore.getState().clearPendingUiAutoResponse(tabId);
       agentChatStore.getState().setSessionState(tabId, "idle");
       break;
 
@@ -524,10 +558,21 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       break;
     }
 
+    case "extension_ui_request": {
+      const request = parsePendingUiRequest(event);
+      if (request) {
+        agentChatStore.getState().setPendingUiRequest(tabId, request);
+      }
+      break;
+    }
+
     case "turn_start":
-    case "turn_end":
     case "compaction_start":
+      break;
+
+    case "turn_end":
     case "compaction_end":
+      agentChatStore.getState().clearPendingUiAutoResponse(tabId);
       break;
 
     case "response":
@@ -564,6 +609,173 @@ function getLatestStreamingMessage(tabId: string): AgentMessage | null {
   );
 }
 
+const ASK_USER_FREEFORM_SENTINEL = "__ask_user_freeform__";
+const MULTI_SELECT_INSTRUCTION = "Comma-separated selections by number or exact title";
+const MULTI_SELECT_FREEFORM_HINT = "Type your own answer instead of selecting options";
+const RPC_OPTION_DESCRIPTION_INDENT = "   ";
+
+function parsePendingUiRequest(event: Record<string, unknown>): AgentPendingUiRequest | null {
+  const id = typeof event.id === "string" ? event.id : null;
+  const method = typeof event.method === "string" ? event.method : null;
+  const rawTitle = typeof event.title === "string" ? event.title : null;
+
+  if (!id || !rawTitle) {
+    return null;
+  }
+
+  if (method !== "select" && method !== "confirm" && method !== "input" && method !== "editor") {
+    return null;
+  }
+
+  const optionStrings = Array.isArray(event.options)
+    ? event.options.filter((option): option is string => typeof option === "string")
+    : undefined;
+
+  if (method === "select") {
+    const allowFreeform = optionStrings?.includes(ASK_USER_FREEFORM_SENTINEL) ?? false;
+    const normalizedOptions = (optionStrings ?? [])
+      .filter((option) => option !== ASK_USER_FREEFORM_SENTINEL)
+      .map((option) => ({ value: option, label: option }));
+    const parsedSelectPrompt = parseSelectPromptMetadata(rawTitle, normalizedOptions);
+
+    return {
+      id,
+      method,
+      title: parsedSelectPrompt?.question ?? rawTitle,
+      message: typeof event.message === "string" ? event.message : undefined,
+      options: parsedSelectPrompt?.options ?? normalizedOptions,
+      placeholder: typeof event.placeholder === "string" ? event.placeholder : undefined,
+      prefill: typeof event.prefill === "string" ? event.prefill : undefined,
+      allowFreeform,
+      selectionMode: "single",
+    };
+  }
+
+  if (method === "input") {
+    const parsedMultiSelectPrompt = parseMultiSelectPromptMetadata(rawTitle);
+    if (parsedMultiSelectPrompt) {
+      return {
+        id,
+        method,
+        title: parsedMultiSelectPrompt.question,
+        message: typeof event.message === "string" ? event.message : undefined,
+        options: parsedMultiSelectPrompt.options,
+        placeholder: typeof event.placeholder === "string" ? event.placeholder : undefined,
+        prefill: typeof event.prefill === "string" ? event.prefill : undefined,
+        allowFreeform: parsedMultiSelectPrompt.allowFreeform,
+        selectionMode: "multiple",
+      };
+    }
+  }
+
+  return {
+    id,
+    method,
+    title: rawTitle,
+    message: typeof event.message === "string" ? event.message : undefined,
+    options: optionStrings?.map((option) => ({ value: option, label: option })),
+    placeholder: typeof event.placeholder === "string" ? event.placeholder : undefined,
+    prefill: typeof event.prefill === "string" ? event.prefill : undefined,
+  };
+}
+
+function parseSelectPromptMetadata(
+  title: string,
+  options: AgentPendingUiOption[],
+): { question: string; options: AgentPendingUiOption[] } | null {
+  if (options.length === 0) {
+    return null;
+  }
+
+  const lines = title.split("\n");
+  const firstOptionIndex = lines.findIndex((line) => line.trim() === `1. ${options[0]?.value}`);
+  if (firstOptionIndex <= -1) {
+    return null;
+  }
+
+  const parsedOptions = parsePromptOptions(lines.slice(firstOptionIndex));
+  if (parsedOptions.length === 0 || !options.every((option, index) => parsedOptions[index]?.label === option.value)) {
+    return null;
+  }
+
+  return {
+    question: lines.slice(0, firstOptionIndex).join("\n").trim() || title,
+    options: parsedOptions.map((option, index) => ({
+      value: options[index]?.value ?? option.label,
+      label: option.label,
+      description: option.description,
+    })),
+  };
+}
+
+function parseMultiSelectPromptMetadata(
+  title: string,
+): { question: string; options: AgentPendingUiOption[]; allowFreeform: boolean } | null {
+  if (!title.includes(MULTI_SELECT_INSTRUCTION)) {
+    return null;
+  }
+
+  const lines = title.split("\n");
+  const options = parsePromptOptions(lines);
+  if (options.length === 0) {
+    return null;
+  }
+
+  const instructionIndex = lines.findIndex((line) => line.trim() === MULTI_SELECT_INSTRUCTION);
+  const allowFreeform = lines.some((line) => line.trim() === MULTI_SELECT_FREEFORM_HINT);
+  const question = (instructionIndex <= -1 ? lines : lines.slice(0, instructionIndex))
+    .filter(
+      (line) =>
+        !/^\d+\.\s+.+$/.test(line.trim()) &&
+        !line.startsWith(RPC_OPTION_DESCRIPTION_INDENT) &&
+        line.trim() !== MULTI_SELECT_FREEFORM_HINT,
+    )
+    .join("\n")
+    .trim();
+
+  return {
+    question: question || title,
+    options: options.map((option) => ({
+      index: option.index,
+      value: option.label,
+      label: option.label,
+      description: option.description,
+    })),
+    allowFreeform,
+  };
+}
+
+function parsePromptOptions(lines: string[]): Array<{ index: number; label: string; description?: string }> {
+  const parsedOptions: Array<{ index: number; label: string; description?: string }> = [];
+  let activeOption: { index: number; label: string; description?: string } | null = null;
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    const optionMatch = /^(?<index>\d+)\.\s+(?<label>.+)$/.exec(trimmedLine);
+    if (optionMatch?.groups?.index && optionMatch.groups.label) {
+      const index = Number.parseInt(optionMatch.groups.index, 10);
+      if (!Number.isInteger(index) || index < 1) {
+        continue;
+      }
+
+      activeOption = { index, label: optionMatch.groups.label };
+      parsedOptions.push(activeOption);
+      continue;
+    }
+
+    if (!activeOption || !line.startsWith(RPC_OPTION_DESCRIPTION_INDENT)) {
+      continue;
+    }
+
+    const descriptionLine = line.trim();
+    activeOption.description = activeOption.description
+      ? `${activeOption.description}\n${descriptionLine}`
+      : descriptionLine;
+  }
+
+  return parsedOptions;
+}
+
 // ─── Response handler ─────────────────────────────────────────────────────────
 
 function handlePiResponse(tabId: string, sessionId: string, event: Record<string, unknown>): void {
@@ -589,7 +801,15 @@ function handlePiResponse(tabId: string, sessionId: string, event: Record<string
     case "get_available_models": {
       if (!success) break;
       const data = event.data as { models?: AgentModel[] } | undefined;
-      agentChatStore.getState().setAvailableModels(tabId, data?.models ?? []);
+      const models = data?.models ?? [];
+      console.debug("[agentChatCommands] get_available_models response", {
+        tabId,
+        sessionId,
+        modelCount: models.length,
+        providers: Array.from(new Set(models.map((model) => model.provider ?? ""))).sort(),
+        models,
+      });
+      agentChatStore.getState().setAvailableModels(tabId, models);
       break;
     }
     case "get_state": {
@@ -604,6 +824,7 @@ function handlePiResponse(tabId: string, sessionId: string, event: Record<string
       agentChatStore
         .getState()
         .setSessionState(tabId, typeof data?.isStreaming === "boolean" && data.isStreaming ? "running" : "idle");
+      agentChatStore.getState().markStateLoaded(tabId);
       break;
     }
     case "get_messages": {

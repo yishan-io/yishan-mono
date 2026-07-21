@@ -74,11 +74,6 @@ export type RpcSchema = {
         workspaceId: string;
         worktreePath: string;
         lifecycleScriptWarnings?: unknown[];
-        taskRunSessionId?: string;
-        taskRunAgentKind?: string;
-        taskRunPrompt?: string;
-        taskRunTabId?: string;
-        taskRunPaneId?: string;
       };
       workspaceCreateFailed: {
         workspaceId: string;
@@ -143,6 +138,8 @@ export type RpcSchema = {
         workspaceId: string;
         tabId?: string;
         paneId?: string;
+        title?: string;
+        agentKind?: string;
         pid: number;
         status: string;
         startedAt?: string;

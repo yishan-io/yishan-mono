@@ -464,6 +464,8 @@ func TestSessionLifecycleEventsOnStartAndStop(t *testing.T) {
 		WorkspaceID: "ws-1",
 		TabID:       "tab-1",
 		PaneID:      "pane-1",
+		Title:       "Task: investigate bug",
+		AgentKind:   "opencode",
 	})
 	if err != nil {
 		t.Fatalf("start terminal: %v", err)
@@ -491,6 +493,12 @@ func TestSessionLifecycleEventsOnStartAndStop(t *testing.T) {
 	if created.Status != "running" {
 		t.Fatalf("expected status running, got %q", created.Status)
 	}
+	if created.Title != "Task: investigate bug" {
+		t.Fatalf("expected title %q, got %q", "Task: investigate bug", created.Title)
+	}
+	if created.AgentKind != "opencode" {
+		t.Fatalf("expected agent kind %q, got %q", "opencode", created.AgentKind)
+	}
 
 	_, err = m.Stop(StopRequest{SessionID: start.SessionID})
 	if err != nil {
@@ -512,6 +520,12 @@ func TestSessionLifecycleEventsOnStartAndStop(t *testing.T) {
 	}
 	if destroyed.PaneID != "pane-1" {
 		t.Fatalf("expected destroyed paneId pane-1, got %q", destroyed.PaneID)
+	}
+	if destroyed.Title != "Task: investigate bug" {
+		t.Fatalf("expected destroyed title %q, got %q", "Task: investigate bug", destroyed.Title)
+	}
+	if destroyed.AgentKind != "opencode" {
+		t.Fatalf("expected destroyed agent kind %q, got %q", "opencode", destroyed.AgentKind)
 	}
 }
 

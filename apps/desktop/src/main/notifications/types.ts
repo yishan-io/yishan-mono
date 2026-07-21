@@ -1,5 +1,4 @@
 import type {
-  NotificationCategory,
   NotificationEventType,
   NotificationPreferences,
   NotificationSoundId,
@@ -80,4 +79,4 @@ export type DesktopNotificationHostAdapter = {
   onNotificationClickAction?: NotificationServiceOptions["onNotificationClickAction"];
 };
 
-export type { NotificationCategory, NotificationEventType, NotificationPreferences, NotificationSoundId };
+export type { NotificationEventType, NotificationPreferences, NotificationSoundId };

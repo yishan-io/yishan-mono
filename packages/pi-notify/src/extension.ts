@@ -1,38 +1,62 @@
-import { spawn } from "node:child_process";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
+const ASK_USER_STARTED_EVENT = "yishan:ask_user_started";
+const ASK_USER_ANSWERED_EVENT = "yishan:ask_user_answered";
+const ASK_USER_CANCELLED_EVENT = "yishan:ask_user_cancelled";
+
+interface AskUserLifecycleEventPayload {
+  question: string;
+  context?: string;
+  optionCount: number;
+  allowMultiple: boolean;
+  allowFreeform: boolean;
+}
+
+interface DaemonEventPayload {
+  agent: string;
+  rawEventType: string;
+  ts: number;
+  workspaceId: string;
+  tabId: string;
+  paneId: string;
+  payload: Record<string, unknown>;
+}
+
 /**
- * Installs Pi lifecycle hooks that forward events to the Yishan daemon
- * via the notify script specified in YISHAN_NOTIFY_SCRIPT_PATH.
+ * Installs Pi lifecycle hooks that forward events to the Yishan daemon via
+ * direct HTTP POST to the daemon's hook ingress endpoint
+ * (YISHAN_HOOK_INGRESS_URL).
  *
  * Only activates in Yishan-managed terminals (detected via
  * YISHAN_TERMINAL_ID, YISHAN_TAB_ID, or YISHAN_PANE_ID).
  */
 export function createPiNotifyExtension(pi: ExtensionAPI): void {
-  const notifyPath = process.env.YISHAN_NOTIFY_SCRIPT_PATH;
-  if (!notifyPath) return;
-
-  const isWindows = process.platform === "win32";
-  const command = isWindows ? "powershell.exe" : "bash";
-  const argPrefix: string[] = isWindows
-    ? ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", notifyPath, "--agent", "pi", "--event"]
-    : [notifyPath, "--agent", "pi", "--event"];
+  const daemonUrl = process.env.YISHAN_HOOK_INGRESS_URL;
+  if (!daemonUrl) return;
 
   const isManagedTerminal = Boolean(
     process.env.YISHAN_TERMINAL_ID || process.env.YISHAN_TAB_ID || process.env.YISHAN_PANE_ID,
   );
   if (!isManagedTerminal) return;
 
-  const fire = (eventName: string) => {
+  const fire = (eventName: string, payload: Record<string, unknown> = {}) => {
     try {
-      const args = [...argPrefix, eventName];
-      const child = spawn(command, args, {
-        stdio: ["ignore", "ignore", "ignore"],
-        detached: true,
-        env: process.env,
-      });
-      child.on("error", () => {});
-      child.unref();
+      const body: DaemonEventPayload = {
+        agent: "pi",
+        rawEventType: eventName,
+        ts: Date.now(),
+        workspaceId: process.env.YISHAN_WORKSPACE_ID ?? "",
+        tabId: process.env.YISHAN_TAB_ID ?? "",
+        paneId: process.env.YISHAN_PANE_ID ?? "",
+        payload,
+      };
+
+      // fire-and-forget: never block the agent on notification failure
+      fetch(daemonUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }).catch(() => {});
     } catch {
       // fire-and-forget: never block the agent on notification failure
     }
@@ -69,5 +93,17 @@ export function createPiNotifyExtension(pi: ExtensionAPI): void {
       currentState = "idle";
       fire("Stop");
     }
+  });
+
+  pi.events.on(ASK_USER_STARTED_EVENT, (event) => {
+    fire("PermissionRequest", { ...(event as AskUserLifecycleEventPayload) });
+  });
+
+  pi.events.on(ASK_USER_ANSWERED_EVENT, (event) => {
+    fire("UserPromptSubmit", { ...(event as AskUserLifecycleEventPayload) });
+  });
+
+  pi.events.on(ASK_USER_CANCELLED_EVENT, (event) => {
+    fire("UserPromptSubmit", { ...(event as AskUserLifecycleEventPayload) });
   });
 }

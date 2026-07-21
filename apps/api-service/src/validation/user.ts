@@ -3,7 +3,6 @@ import { z } from "zod";
 
 const notificationEventTypeSchema = z.enum(["run-finished", "run-failed", "pending-question"]);
 const notificationSoundIdSchema = z.enum(["chime", "ping", "pop", "zip", "alert"]);
-const notificationCategorySchema = z.enum(["ai-task"]);
 
 const notificationEventSoundsSchema = z.object({
   "run-finished": notificationSoundIdSchema,
@@ -20,7 +19,6 @@ export const notificationPreferencesSchema = z.object({
   focusOnClick: z.boolean(),
   enabledEventTypes: z.array(notificationEventTypeSchema),
   eventSounds: notificationEventSoundsSchema,
-  enabledCategories: z.array(notificationCategorySchema),
 });
 
 export const updateNotificationPreferencesBodySchema = z
@@ -33,7 +31,6 @@ export const updateNotificationPreferencesBodySchema = z
     focusOnClick: z.boolean().optional(),
     enabledEventTypes: z.array(notificationEventTypeSchema).optional(),
     eventSounds: notificationEventSoundsSchema.partial().optional(),
-    enabledCategories: z.array(notificationCategorySchema).optional(),
   })
   .refine((value) => Object.values(value).some((item) => item !== undefined), {
     message: "At least one field must be provided",

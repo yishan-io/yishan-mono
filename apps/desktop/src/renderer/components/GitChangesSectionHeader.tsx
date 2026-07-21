@@ -1,6 +1,6 @@
 import { Box, ButtonBase, Tooltip, Typography } from "@mui/material";
 import { LuChevronDown, LuChevronRight, LuCornerUpLeft, LuMinus, LuPlus } from "react-icons/lu";
-import type { ProjectGitChangesSection } from "./ProjectGitChangesList";
+import type { ProjectGitChangesSection } from "./ProjectGitChangesList.types";
 
 type GitChangesSectionHeaderProps = {
   section: ProjectGitChangesSection;

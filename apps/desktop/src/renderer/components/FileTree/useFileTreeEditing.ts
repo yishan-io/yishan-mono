@@ -1,39 +1,17 @@
 import { useCallback, useRef, useState } from "react";
-import { collectAncestorDirectoryPaths, getEntryName, joinChildPath, resolveUniqueChildName } from "./treeUtils";
+import { getEntryName, joinChildPath, resolveUniqueChildName } from "./treeUtils";
 import type { EditingEntry } from "./types";
 
-type UseFileTreeEditingInput = {
-  files: string[];
-  onCreateEntry?: (entry: { path: string; isDirectory: boolean }) => void | Promise<void>;
-  onRenameEntry?: (path: string, nextName: string) => void | Promise<void>;
-  setExpandedItems: (updater: (currentItems: string[]) => string[]) => void;
-};
-
-export type UseFileTreeEditingResult = {
-  editingEntry: EditingEntry | null;
-  editingName: string;
-  setEditingName: (name: string) => void;
-  editingInputRef: React.RefObject<HTMLInputElement | null>;
-  ignoreRenameBlurUntilRef: React.MutableRefObject<number>;
-  didApplyInitialSelectionRef: React.MutableRefObject<boolean>;
-  cancelRename: () => void;
-  commitRename: () => Promise<void>;
-  startCreate: (basePath: string, isDirectory: boolean) => void;
-  startRename: (targetPath: string, basePath: string) => void;
-  handleRenameInputKeyDown: (event: React.KeyboardEvent<HTMLElement>) => void;
-  handleRenameInputBlur: () => void;
-};
-
-/**
- * Manages inline rename/create editing state for the file tree.
- * Handles input focus, name validation, commit/cancel lifecycle.
- */
+/** Manages inline rename/create editing state for the file tree. */
 export function useFileTreeEditing({
   files,
   onCreateEntry,
   onRenameEntry,
-  setExpandedItems,
-}: UseFileTreeEditingInput): UseFileTreeEditingResult {
+}: {
+  files: string[];
+  onCreateEntry?: (entry: { path: string; isDirectory: boolean }) => void | Promise<void>;
+  onRenameEntry?: (path: string, nextName: string) => void | Promise<void>;
+}) {
   const [editingEntry, setEditingEntry] = useState<EditingEntry | null>(null);
   const [editingName, setEditingName] = useState("");
   const editingInputRef = useRef<HTMLInputElement | null>(null);
@@ -61,11 +39,9 @@ export function useFileTreeEditing({
     if (editingEntry.mode === "create") {
       const nextPath = joinChildPath(editingEntry.basePath, nextName);
       try {
-        if (!onCreateEntry) {
-          return;
+        if (onCreateEntry) {
+          await onCreateEntry({ path: nextPath, isDirectory: editingEntry.isDirectory });
         }
-
-        await onCreateEntry({ path: nextPath, isDirectory: editingEntry.isDirectory });
       } finally {
         cancelRename();
       }
@@ -77,8 +53,7 @@ export function useFileTreeEditing({
       return;
     }
 
-    const currentName = getEntryName(editingEntry.path);
-    if (nextName === currentName) {
+    if (nextName === getEntryName(editingEntry.path)) {
       cancelRename();
       return;
     }
@@ -97,11 +72,6 @@ export function useFileTreeEditing({
       }
 
       const draftName = resolveUniqueChildName(files, basePath, isDirectory ? "new-folder" : "new-file");
-      if (basePath) {
-        setExpandedItems((currentItems) => [
-          ...new Set([...currentItems, ...collectAncestorDirectoryPaths(basePath), basePath]),
-        ]);
-      }
       ignoreRenameBlurUntilRef.current = Date.now() + 150;
       didApplyInitialSelectionRef.current = false;
       setEditingEntry({
@@ -112,7 +82,7 @@ export function useFileTreeEditing({
       });
       setEditingName("");
     },
-    [files, onCreateEntry, setExpandedItems],
+    [files, onCreateEntry],
   );
 
   const startRename = useCallback(
@@ -151,11 +121,9 @@ export function useFileTreeEditing({
   );
 
   const handleRenameInputBlur = useCallback(() => {
-    if (Date.now() < ignoreRenameBlurUntilRef.current) {
-      return;
+    if (Date.now() >= ignoreRenameBlurUntilRef.current) {
+      cancelRename();
     }
-
-    cancelRename();
   }, [cancelRename]);
 
   return {

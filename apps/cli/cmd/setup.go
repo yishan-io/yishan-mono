@@ -14,13 +14,14 @@ import (
 var setupCmd = &cobra.Command{
 	Use:   "setup",
 	Short: "Manage yishan integration with AI agents",
-	Long: `Install yishan integrations such as agent hooks, MCP configs, and skills
-that teach AI coding agents how to use the yishan CLI.
+	Long: `Install yishan integrations such as agent hooks, MCP configs, default Pi extensions,
+and skills that teach AI coding agents how to use the yishan CLI.
 
-Without a subcommand, runs all setup tasks (hook, mcp, skill).`,
+Without a subcommand, runs all setup tasks (hook, mcp, extension, skill).`,
 	Example: `  yishan setup
   yishan setup hook
   yishan setup mcp
+  yishan setup extension
   yishan setup skill
   yishan setup state`,
 	RunE: runSetupAll,
@@ -30,7 +31,7 @@ var setupHookCmd = &cobra.Command{
 	Use:   "hook",
 	Short: "Install agent lifecycle hooks (notifications, prompts)",
 	Long: `Install managed hook integrations for Claude, Gemini, OpenCode,
-Codex, Cursor, and Pi agents. These hooks send lifecycle events
+Codex, and Cursor agents. These hooks send lifecycle events
 (Start, Stop, UserPromptSubmit, etc.) to the yishan daemon.`,
 	Example: `  yishan setup hook
   yishan setup hook --remove`,
@@ -95,7 +96,7 @@ var setupSkillCmd = &cobra.Command{
 	Short: "Install or remove yishan workflow skills and sub-agent prompts",
 	Long: `Install the current Pi workflow skills and project sub-agent prompts so AI agents
 can use the tracked-task workflow, planning/review skills, and managed Pi sub-agents.
-Creates skill symlinks plus managed Pi agent files from the project-owned sources.`,
+Creates skill symlinks from the project-owned sources.`,
 	Example: `  yishan setup skill
   yishan setup skill --remove`,
 	RunE: func(cmd *cobra.Command, _ []string) error {
@@ -128,10 +129,43 @@ Creates skill symlinks plus managed Pi agent files from the project-owned source
 	},
 }
 
+var setupExtensionCmd = &cobra.Command{
+	Use:   "extension",
+	Short: "Install or remove the default Pi extension set",
+	Long: `Install the default Yishan Pi extensions into the managed Pi home,
+so Pi sessions started from Yishan get the standard notify, sub-agent, memory, workspace, and ask-user tools.`,
+	Example: `  yishan setup extension
+  yishan setup extension --remove`,
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		remove, err := cmd.Flags().GetBool("remove")
+		if err != nil {
+			return err
+		}
+		if remove {
+			if err := setup.RemoveDefaultPiExtensionSetup(); err != nil {
+				return err
+			}
+			return output.PrintAny(map[string]any{
+				"action":     "removed",
+				"extensions": setup.DefaultPiExtensionNames(),
+				"message":    "default Pi extensions removed",
+			})
+		}
+		if err := setup.EnsureDefaultPiExtensionSetup(); err != nil {
+			return err
+		}
+		return output.PrintAny(map[string]any{
+			"action":     "installed",
+			"extensions": setup.DefaultPiExtensionNames(),
+			"message":    "default Pi extensions installed",
+		})
+	},
+}
+
 var setupStateCmd = &cobra.Command{
 	Use:   "state",
 	Short: "Show installed yishan integrations",
-	Long:  `List all installed yishan integrations: skills, MCP configs, hooks, assets, and shell wrappers.`,
+	Long:  `List all installed yishan integrations: skills, MCP configs, Pi extensions, hooks, assets, and shell wrappers.`,
 	Example: `  yishan setup state
   yishan setup state --output json`,
 	RunE: func(_ *cobra.Command, _ []string) error {
@@ -153,7 +187,10 @@ func runSetupAll(_ *cobra.Command, _ []string) error {
 		log.Warn().Err(err).Msg("setup: MCP config failed")
 		allErrors = append(allErrors, "mcp: "+err.Error())
 	}
-
+	if err := setup.EnsureDefaultPiExtensionSetup(); err != nil {
+		log.Warn().Err(err).Msg("setup: default pi extension setup failed")
+		allErrors = append(allErrors, "extension: "+err.Error())
+	}
 	for _, skillName := range setup.OfficialSkillNames() {
 		if _, err := setup.AddSkill(skillName); err != nil {
 			log.Warn().Err(err).Str("skill", skillName).Msg("setup: skill install failed")
@@ -176,12 +213,17 @@ func runSetupAll(_ *cobra.Command, _ []string) error {
 
 	return output.PrintAny(map[string]any{
 		"action":  "installed",
-		"message": "all setup tasks completed (hooks, mcp, skill)",
+		"message": "all setup tasks completed (hooks, mcp, extensions, skill)",
 	})
 }
 
 func renderSetupState(state *setup.InstalledState) output.RenderData {
 	rows := []map[string]any{
+		{
+			"resource":  "extension",
+			"installed": state.Extension.Installed,
+			"details":   formatExtensionDetails(state.Extension),
+		},
 		{
 			"resource":  "hooks",
 			"installed": state.Hooks.Configured,
@@ -204,6 +246,13 @@ func renderSetupState(state *setup.InstalledState) output.RenderData {
 		Columns: []string{"resource", "installed", "details"},
 		Rows:    rows,
 	}
+}
+
+func formatExtensionDetails(e setup.ExtensionState) string {
+	if !e.Installed {
+		return ""
+	}
+	return strings.Join(e.Extensions, ", ")
 }
 
 func formatSkillDetails(s setup.SkillState) string {
@@ -231,10 +280,12 @@ func init() {
 	rootCmd.AddCommand(setupCmd)
 	setupCmd.AddCommand(setupHookCmd)
 	setupCmd.AddCommand(setupMCPCmd)
+	setupCmd.AddCommand(setupExtensionCmd)
 	setupCmd.AddCommand(setupSkillCmd)
 	setupCmd.AddCommand(setupStateCmd)
 
 	setupHookCmd.Flags().Bool("remove", false, "remove managed hook entries from all agents")
 	setupMCPCmd.Flags().Bool("remove", false, "remove the MCP config from all agents")
+	setupExtensionCmd.Flags().Bool("remove", false, "remove the default Pi extensions")
 	setupSkillCmd.Flags().Bool("remove", false, "remove the skill symlinks and clean up")
 }

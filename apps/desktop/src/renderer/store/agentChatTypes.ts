@@ -1,10 +1,49 @@
 /** Status of an agent chat session. */
 export type AgentSessionState = "starting" | "running" | "idle" | "error";
 
+export type AgentPendingUiOption = {
+  index?: number;
+  value: string;
+  label: string;
+  description?: string;
+};
+
+/** One pending RPC extension UI request that requires a desktop response. */
+export type AgentPendingUiRequest = {
+  id: string;
+  method: "select" | "confirm" | "input" | "editor";
+  title: string;
+  message?: string;
+  options?: AgentPendingUiOption[];
+  placeholder?: string;
+  prefill?: string;
+  allowFreeform?: boolean;
+  selectionMode?: "single" | "multiple";
+};
+
+export type AgentPendingUiAutoResponse = {
+  sourceRequestId: string;
+  targetMethod: "input" | "editor";
+  value: string;
+};
+
+/** One summary line exposed by Pi reasoning metadata. */
+export type AgentThinkingSignatureSummary = {
+  type: string;
+  text: string;
+};
+
+/** Optional Pi reasoning metadata attached to a thinking block. */
+export type AgentThinkingSignature = {
+  id?: string;
+  type?: string;
+  summary?: AgentThinkingSignatureSummary[];
+};
+
 /** A content block within an assistant message. Mirrors pi RPC content types. */
 export type AgentContentBlock =
   | { type: "text"; text: string }
-  | { type: "thinking"; thinking: string }
+  | { type: "thinking"; thinking: string; thinkingSignature?: string | AgentThinkingSignature }
   | { type: "toolCall"; id: string; name: string; arguments: Record<string, unknown> };
 
 /** A single message in an agent conversation. */
@@ -28,7 +67,16 @@ export type AgentMessage = {
     output: number;
     cacheRead?: number;
     cacheWrite?: number;
+    reasoning?: number;
     total?: number;
+    totalTokens?: number;
+    cost?: {
+      input?: number;
+      output?: number;
+      cacheRead?: number;
+      cacheWrite?: number;
+      total?: number;
+    };
   };
   /** Stop reason from assistant messages. */
   stopReason?: string;

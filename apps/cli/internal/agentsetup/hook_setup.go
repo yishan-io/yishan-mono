@@ -54,11 +54,6 @@ func EnsureManagedAgentRuntime(disablePersona bool) {
 		log.Warn().Err(err).Msg("failed to install agent hook setup")
 	}
 
-	if err := ensureManagedPiPackages(); err != nil {
-		log.Warn().Err(err).Msg("failed to install managed pi packages")
-	} else if err := ensureManagedPiAgents(); err != nil {
-		log.Warn().Err(err).Msg("failed to sync managed pi agents")
-	}
 }
 
 // RemoveManagedAgentRuntime removes managed hook entries from all agent configs.
@@ -72,13 +67,6 @@ func RemoveManagedAgentRuntime() error {
 		HomeDir: homeDir,
 	}); err != nil {
 		removeErr = err
-	}
-	if err := removeManagedPiPackages(); err != nil {
-		if removeErr != nil {
-			removeErr = fmt.Errorf("%v; %w", removeErr, err)
-		} else {
-			removeErr = err
-		}
 	}
 	return removeErr
 }

@@ -43,11 +43,6 @@ type workspaceCreateAccepted struct {
 type workspaceCreateCompletedEvent struct {
 	WorkspaceID             string `json:"workspaceId"`
 	WorktreePath            string `json:"worktreePath"`
-	TaskRunSessionID        string `json:"taskRunSessionId,omitempty"`
-	TaskRunAgentKind        string `json:"taskRunAgentKind,omitempty"`
-	TaskRunPrompt           string `json:"taskRunPrompt,omitempty"`
-	TaskRunTabID            string `json:"taskRunTabId,omitempty"`
-	TaskRunPaneID           string `json:"taskRunPaneId,omitempty"`
 	LifecycleScriptWarnings []any  `json:"lifecycleScriptWarnings,omitempty"`
 }
 

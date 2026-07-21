@@ -11,7 +11,6 @@ import (
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
-
 func ensureNodeUsableForWorkspace(runtime *cliruntime.Runtime, organizationID string, nodeID string) error {
 	nodesResponse, err := runtime.APIClient().ListNodes(organizationID)
 	if err != nil {
@@ -24,7 +23,6 @@ func ensureNodeUsableForWorkspace(runtime *cliruntime.Runtime, organizationID st
 	}
 	return fmt.Errorf("node %s was not found in this organization", nodeID)
 }
-
 
 func ensureSharedRepoClone(ctx context.Context, repoKey string, repoURL string) (string, error) {
 	normalizedKey := strings.TrimSpace(repoKey)

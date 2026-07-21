@@ -14,13 +14,13 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import { MarkdownPreview } from "@renderer/components/markdown/MarkdownPreview";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuBadgeCheck, LuCheck, LuTrash2 } from "react-icons/lu";
 import { PiFlowArrowBold, PiXBold } from "react-icons/pi";
 import { addSkill, getSkillDetail, listSkills, removeSkill, updateSkill } from "../../commands/skillCommands";
 import { CenteredSpinner } from "../../components/CenteredSpinner";
-import { MarkdownPreview } from "../../components/MarkdownPreview";
 import { SettingsCard, SettingsSectionHeader } from "../../components/settings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import type { SkillDetail, SkillInfo } from "../../rpc/daemonTypes";

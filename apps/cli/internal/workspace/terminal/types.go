@@ -9,6 +9,8 @@ type StartRequest struct {
 	Env         []string `json:"env,omitempty"`
 	TabID       string   `json:"tabId,omitempty"`
 	PaneID      string   `json:"paneId,omitempty"`
+	Title       string   `json:"title,omitempty"`
+	AgentKind   string   `json:"agentKind,omitempty"`
 }
 
 type StartResponse struct {
@@ -128,6 +130,8 @@ type SessionLifecycleEvent struct {
 	WorkspaceID string `json:"workspaceId"`
 	TabID       string `json:"tabId,omitempty"`
 	PaneID      string `json:"paneId,omitempty"`
+	Title       string `json:"title,omitempty"`
+	AgentKind   string `json:"agentKind,omitempty"`
 	PID         int    `json:"pid"`
 	Status      string `json:"status"`
 	StartedAt   string `json:"startedAt,omitempty"`

@@ -68,7 +68,7 @@ type GitPullRequestDeployment struct {
 type GitCommitFile struct {
 	Path    string `json:"path"`
 	OldPath string `json:"oldPath,omitempty"` // populated for renames/copies
-	Status  string `json:"status"`             // A, M, D, R, C, T, U, X
+	Status  string `json:"status"`            // A, M, D, R, C, T, U, X
 }
 
 type GitCommit struct {

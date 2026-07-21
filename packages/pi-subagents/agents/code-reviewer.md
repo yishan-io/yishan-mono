@@ -2,7 +2,7 @@
 name: code-reviewer
 description: Review code changes against requirements and identify bugs, regressions, risky assumptions, and missing tests before merge or handoff.
 thinking: high
-read_only: true
+read_only: false
 tools:
   - read
   - grep

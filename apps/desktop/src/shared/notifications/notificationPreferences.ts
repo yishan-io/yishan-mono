@@ -3,8 +3,6 @@ export type NotificationEventType = (typeof SUPPORTED_NOTIFICATION_EVENT_TYPES)[
 export const SUPPORTED_NOTIFICATION_SOUND_IDS = ["chime", "ping", "pop", "zip", "alert"] as const;
 export type NotificationSoundId = (typeof SUPPORTED_NOTIFICATION_SOUND_IDS)[number];
 export type NotificationEventSoundMap = Record<NotificationEventType, NotificationSoundId>;
-export const SUPPORTED_NOTIFICATION_CATEGORIES = ["ai-task"] as const;
-export type NotificationCategory = (typeof SUPPORTED_NOTIFICATION_CATEGORIES)[number];
 export const CURRENT_NOTIFICATION_PREFERENCES_SCHEMA_VERSION = 2;
 
 export type NotificationPreferences = {
@@ -16,11 +14,9 @@ export type NotificationPreferences = {
   focusOnClick: boolean;
   enabledEventTypes: NotificationEventType[];
   eventSounds: NotificationEventSoundMap;
-  enabledCategories: NotificationCategory[];
 };
 
 const DEFAULT_ENABLED_NOTIFICATION_EVENTS = [...SUPPORTED_NOTIFICATION_EVENT_TYPES];
-const DEFAULT_ENABLED_NOTIFICATION_CATEGORIES = [...SUPPORTED_NOTIFICATION_CATEGORIES];
 const DEFAULT_EVENT_SOUNDS: NotificationEventSoundMap = {
   "run-finished": "chime",
   "run-failed": "alert",
@@ -37,5 +33,4 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   focusOnClick: true,
   enabledEventTypes: DEFAULT_ENABLED_NOTIFICATION_EVENTS,
   eventSounds: { ...DEFAULT_EVENT_SOUNDS },
-  enabledCategories: DEFAULT_ENABLED_NOTIFICATION_CATEGORIES,
 };

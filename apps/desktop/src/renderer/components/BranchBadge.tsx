@@ -3,12 +3,14 @@ import { LuGitBranch } from "react-icons/lu";
 
 type BranchBadgeProps = {
   name: string;
+  testId?: string;
 };
 
 /** Renders a bordered rounded badge showing a branch name with a git-branch icon. */
-export function BranchBadge({ name }: BranchBadgeProps) {
+export function BranchBadge({ name, testId }: BranchBadgeProps) {
   return (
     <Box
+      data-testid={testId}
       title={name}
       sx={{
         color: "text.secondary",

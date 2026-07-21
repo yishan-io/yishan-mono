@@ -1,0 +1,20 @@
+{
+  "layout": {
+    "sidebarTitle": "Sidebar",
+    "fileExplorerTitle": "File explorer",
+    "toggleSidebar": "Sidebar",
+    "toggleLeftSidebar": "Toggle left sidebar",
+    "toggleRightSidebar": "Toggle right sidebar",
+    "toggleWithShortcut": "{{label}} ({{shortcut}})",
+    "resize": {
+      "left": "Resize left sidebar",
+      "right": "Resize right sidebar"
+    },
+    "shortcuts": "Shortcuts: Ctrl/Cmd+B toggles left sidebar, Ctrl/Cmd+L toggles right sidebar.",
+    "rightTabs": {
+      "details": "Details",
+      "integrations": "Integrations"
+    },
+    "unavailable": "Unavailable"
+  }
+}

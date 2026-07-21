@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import en from "../../locales/en/common.json";
-import zh from "../../locales/zh/common.json";
+import en from "../../locales/en/settings.json";
+import zh from "../../locales/zh/settings.json";
 
 function collectStrings(value: unknown): string[] {
   if (typeof value === "string") {

@@ -56,11 +56,13 @@ Do not use this skill for durable cross-task knowledge. Use `context-memory` for
         notes.md
         plan.md
     completed/
-      <id>-<slug>/
-        task.md
-        notes.md
-        plan.md
-        outcome.md
+      YYYY/
+        MM/
+          <id>-<slug>/
+            task.md
+            notes.md
+            plan.md
+            outcome.md
 ```
 
 Some tasks may not have every file yet. Create the missing file only when the workflow needs it.
@@ -92,6 +94,7 @@ Rules:
 - Never remove entries; update `status` and `path` instead
 - Keep `path` relative to the project root
 - Treat task folders and `state.json` as a matched pair; do not update one without the other
+- Prefer `bun skills/context-task/updateTaskState.ts --id <id> --to active|completed [--date YYYY-MM-DD]` for task state transitions instead of hand-editing `state.json`
 
 ## Task IDs And Folder Names
 
@@ -229,6 +232,8 @@ When the user wants work tracked in `.my-context/tasks/`:
 4. Write `task.md`
 5. Add the entry to `state.json`
 
+Prefer `bun skills/context-task/createTask.ts --title "<title>" [--id <id>] [--ticket <ticket>] [--goal "<goal>"] [--acceptance "<criterion>"]... [--created YYYY-MM-DD]` for task creation instead of hand-editing `state.json`.
+
 Ask follow-up questions only when the request is too ambiguous to create a safe default.
 
 ### Research And Planning
@@ -259,9 +264,9 @@ During implementation:
 When the task is complete:
 
 1. Write `outcome.md`
-2. Move the task folder from `active/` to `completed/`
-3. Update the `state.json` entry to `status: "completed"`
-4. Update the `path` in `state.json`
+2. Use `bun skills/context-task/updateTaskState.ts --id <id> --to completed [--date YYYY-MM-DD]` so the folder move and `state.json` update happen together
+3. Confirm the `state.json` entry is `status: "completed"`
+4. Confirm the `path` in `state.json` is the nested completed location
 
 Do not mark a task complete in `state.json` before the folder move and outcome write are real.
 

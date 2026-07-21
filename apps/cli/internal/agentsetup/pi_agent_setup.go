@@ -28,6 +28,28 @@ type managedPiRootFile struct {
 	mode    os.FileMode
 }
 
+func EnsureDefaultPiExtensionSetup() error {
+	if err := EnsureDefaultPiExtensions(); err != nil {
+		return err
+	}
+	return ensureManagedPiAgents()
+}
+
+func RemoveDefaultPiExtensionSetup() error {
+	var removeErr error
+	if err := RemoveDefaultPiExtensions(); err != nil {
+		removeErr = err
+	}
+	if err := removeManagedPiSetupFiles(); err != nil {
+		if removeErr != nil {
+			removeErr = fmt.Errorf("%v; %w", removeErr, err)
+		} else {
+			removeErr = err
+		}
+	}
+	return removeErr
+}
+
 func ensureManagedPiAgents() error {
 	targetRootDir, err := config.ManagedPiAgentDir()
 	if err != nil {
@@ -57,6 +79,30 @@ func syncManagedPiRootFiles(targetDir string) error {
 	return nil
 }
 
+func removeManagedPiSetupFiles() error {
+	targetRootDir, err := config.ManagedPiAgentDir()
+	if err != nil {
+		return fmt.Errorf("resolve managed pi agent dir: %w", err)
+	}
+	if err := removeManagedPiRootFiles(targetRootDir); err != nil {
+		return err
+	}
+	targetDir, err := config.ManagedPiAgentsDir()
+	if err != nil {
+		return fmt.Errorf("resolve managed pi agents dir: %w", err)
+	}
+	return removeManagedPiAgentFiles(targetDir)
+}
+
+func removeManagedPiRootFiles(targetDir string) error {
+	for _, file := range managedPiRootFiles {
+		if err := os.Remove(filepath.Join(targetDir, file.name)); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("remove managed pi root file %s: %w", file.name, err)
+		}
+	}
+	return nil
+}
+
 func syncManagedPiAgentFiles(sourceDir string, targetDir string) error {
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		return fmt.Errorf("create managed pi agents dir: %w", err)
@@ -66,6 +112,19 @@ func syncManagedPiAgentFiles(sourceDir string, targetDir string) error {
 			return err
 		}
 	}
+	return removeStaleManagedPiAgentFiles(targetDir)
+}
+
+func removeManagedPiAgentFiles(targetDir string) error {
+	for _, fileName := range managedPiAgentFileNames {
+		if err := os.Remove(filepath.Join(targetDir, fileName)); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("remove managed pi agent %s: %w", fileName, err)
+		}
+	}
+	return removeStaleManagedPiAgentFiles(targetDir)
+}
+
+func removeStaleManagedPiAgentFiles(targetDir string) error {
 	for _, fileName := range staleManagedPiAgentFileNames {
 		if err := os.Remove(filepath.Join(targetDir, fileName)); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("remove stale managed pi agent %s: %w", fileName, err)

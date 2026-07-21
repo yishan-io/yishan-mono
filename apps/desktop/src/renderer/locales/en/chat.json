@@ -1,0 +1,10 @@
+{
+  "chat": {
+    "newPrompt": "New chat in {{agent}}. Add chat summaries:",
+    "defaultSummary": "Discuss 123123",
+    "composerPlaceholder": "Ask to make changes, @mention files, run /commands",
+    "modelQuality": {
+      "medium": "Medium"
+    }
+  }
+}

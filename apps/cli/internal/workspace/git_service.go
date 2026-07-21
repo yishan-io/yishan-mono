@@ -12,8 +12,9 @@ import (
 // Methods are grouped into focused files:
 //   - git_changes.go  — ListChanges, TrackChanges, UnstageChanges, RevertChanges, CommitChanges
 //   - git_branch.go   — BranchStatus, ListBranches, CurrentBranch, AuthorName, MainWorktreePath,
-//     PushBranch, PublishBranch, RenameBranch, RemoveBranch, FetchRef,
 //     ListCommitsToTarget, BranchDiffSummary, ReadCommitDiff, ReadBranchComparisonDiff
+//   - git_push.go     — PushBranch, PublishBranch, RenameBranch, RemoveBranch, FetchRefShallow,
+//     FetchRef, resolveRemote
 //   - git_pr.go       — BranchPullRequest, BranchPullRequestWithDetails, branchPullRequest,
 //     getPullRequestChecks, getPullRequestDeployments, getDeploymentStatus
 //   - git_worktree.go — CreateWorktree, RemoveWorktree

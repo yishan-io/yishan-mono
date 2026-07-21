@@ -11,22 +11,29 @@ import {
   handleAgentPiEvent,
   reattachPiSession,
   registerAgentSession,
+  respondToAgentExtensionUiRequest,
   sendAgentPrompt,
   setAgentChatStreamTabVisible,
   setAgentModel,
   setAgentThinkingLevel,
   setPiSessionUnsubscribe,
 } from "../../commands/agentChatCommands";
+import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../commands/agentChatSubagentCommands";
 import { renameTab } from "../../commands/tabCommands";
+import { AgentChatVoiceButton } from "../../components/AgentChatVoiceButton";
 import { RichComposer } from "../../components/RichComposer";
-import { AgentMessageList } from "../../components/agent/AgentMessageList";
-import { AgentModelSelector } from "../../components/agent/AgentModelSelector";
+import { AgentChatSubagentRow } from "../../components/agent/session/AgentChatSubagentRow";
+import { AgentChatUsageSummaryLabel } from "../../components/agent/session/AgentChatUsageSummaryLabel";
+import { AgentModelSelector } from "../../components/agent/session/AgentModelSelector";
+import { AgentMessageList } from "../../components/agent/transcript/AgentMessageList";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { getDaemonClient, subscribeDaemonConnectionStatus } from "../../rpc/rpcTransport";
 import { agentChatStore } from "../../store/agentChatStore";
-import type { AgentMessage, AgentModel, AgentSessionState } from "../../store/agentChatTypes";
+import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../store/agentChatSubagents";
+import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
 import { tabStore } from "../../store/tabStore";
+import { AgentPendingUiPrompt } from "./AgentPendingUiPrompt";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
 
@@ -51,6 +58,9 @@ type AgentChatTranscriptPaneProps = {
 
 type AgentChatComposerPaneProps = {
   tabId: string;
+  workspaceId: string;
+  cwd: string;
+  paneId?: string;
 };
 
 function AgentChatTranscriptPane({ tabId, cwd, isActive }: AgentChatTranscriptPaneProps) {
@@ -74,7 +84,7 @@ function AgentChatTranscriptPane({ tabId, cwd, isActive }: AgentChatTranscriptPa
 const MemoizedAgentChatTranscriptPane = memo(AgentChatTranscriptPane);
 MemoizedAgentChatTranscriptPane.displayName = "AgentChatTranscriptPane";
 
-function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
+function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatComposerPaneProps) {
   const slashCommands = useAgentChatSlashCommands();
   const agentChatTab = tabStore((state) =>
     state.tabs.find((tab): tab is Extract<(typeof state.tabs)[number], { kind: "agent-chat" }> => {
@@ -88,6 +98,7 @@ function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
   const thinkingLevel = agentChatStore((state) => state.sessionsByTabId[tabId]?.thinkingLevel ?? "medium");
   const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
   const hasStreamingMessage = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]?.streamingMessage));
+  const runningSubagents = agentChatStore((state) => state.sessionsByTabId[tabId]?.runningSubagents ?? []);
   const [draft, setDraft] = useState("");
 
   const handleSubmit = useCallback(
@@ -117,6 +128,19 @@ function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
     setDraft("");
   }, [draft, handleSubmit]);
 
+  const handleVoiceText = useCallback((text: string) => {
+    const normalizedText = text.trim();
+    if (!normalizedText) {
+      return;
+    }
+
+    setDraft((currentDraft) => {
+      const separator =
+        currentDraft.length === 0 || currentDraft.endsWith(" ") || currentDraft.endsWith("\n") ? "" : " ";
+      return `${currentDraft}${separator}${normalizedText}`;
+    });
+  }, []);
+
   const handleModelChange = useCallback(
     async (model: AgentModel) => {
       if (!sessionId) return;
@@ -132,6 +156,64 @@ function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
     await setAgentThinkingLevel({ tabId, sessionId, level: nextLevel });
   }, [sessionId, tabId, thinkingLevel]);
 
+  const handleOpenSubagent = useCallback(
+    async (subagent: RunningSubagentSummary) => {
+      let childSessionId = subagent.childSessionId;
+      let title = subagent.title;
+
+      if (!childSessionId && sessionId) {
+        await fetchAgentMessages({ tabId, sessionId });
+        const refreshedSubagent = findMatchingRunningSubagent(
+          agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [],
+          subagent,
+        );
+        childSessionId = refreshedSubagent?.childSessionId;
+        title = refreshedSubagent?.title ?? title;
+      }
+
+      if (!childSessionId) {
+        return;
+      }
+
+      await openSubagentSessionInRightSplitPane({
+        workspaceId,
+        cwd,
+        parentPaneId: paneId,
+        childSessionId,
+        title,
+      });
+    },
+    [workspaceId, cwd, paneId, sessionId, tabId],
+  );
+
+  const handleCancelSubagent = useCallback(
+    async (subagent: RunningSubagentSummary) => {
+      if (!sessionId) {
+        return;
+      }
+
+      let agentId = subagent.agentId;
+      if (!agentId) {
+        await fetchAgentMessages({ tabId, sessionId });
+        const refreshedSubagent = findMatchingRunningSubagent(
+          agentChatStore.getState().sessionsByTabId[tabId]?.runningSubagents ?? [],
+          subagent,
+        );
+        agentId = refreshedSubagent?.agentId;
+      }
+
+      if (!agentId) {
+        return;
+      }
+      await cancelSubagentRun({
+        tabId,
+        sessionId,
+        agentId,
+      });
+    },
+    [sessionId, tabId],
+  );
+
   return (
     <Box
       sx={{
@@ -143,6 +225,31 @@ function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
         gap: 0.75,
       }}
     >
+      {runningSubagents.length > 0 ? (
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 0.75,
+            px: 0.5,
+            py: 0.25,
+            borderRadius: 1,
+            bgcolor: "action.hover",
+          }}
+        >
+          <Typography variant="caption" color="text.secondary" sx={{ px: 0.5, fontWeight: 700 }}>
+            Running sub-agents
+          </Typography>
+          {runningSubagents.map((subagent) => (
+            <AgentChatSubagentRow
+              key={subagent.rowId}
+              subagent={subagent}
+              onOpen={handleOpenSubagent}
+              onCancel={handleCancelSubagent}
+            />
+          ))}
+        </Box>
+      ) : null}
       <RichComposer
         placeholder="Type a message…"
         value={draft}
@@ -151,7 +258,7 @@ function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
         disabled={sessionState === "starting"}
         slashCommands={slashCommands}
       />
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1, minHeight: 18 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 4, px: 1, minHeight: 18 }}>
         {availableModels.length > 0 && (
           <AgentModelSelector
             models={availableModels}
@@ -161,54 +268,80 @@ function AgentChatComposerPane({ tabId }: AgentChatComposerPaneProps) {
             onThinkingLevelCycle={handleThinkingCycle}
           />
         )}
+        <AgentChatUsageSummaryLabel tabId={tabId} />
         <Box sx={{ flex: 1 }} />
-        {sessionState === "running" ? (
-          <Tooltip title="Stop" placement="top">
-            <span>
-              <IconButton
-                size="small"
-                onClick={handleAbort}
-                aria-label="Stop"
-                sx={{
-                  p: 0.5,
-                  border: 1,
-                  borderColor: "divider",
-                  bgcolor: "background.paper",
-                }}
-              >
-                <Box
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, overflow: "visible" }}>
+          <AgentChatVoiceButton
+            onText={handleVoiceText}
+            disabled={sessionState === "starting"}
+            disabledMessage="Voice input is not available while the agent session is starting."
+          />
+          {sessionState === "running" ? (
+            <Tooltip title="Stop" placement="top">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={handleAbort}
+                  aria-label="Stop"
                   sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: 0.5,
-                    bgcolor: "currentColor",
+                    width: 34,
+                    height: 34,
+                    p: 0,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : "grey.900"),
+                    color: (theme) => (theme.palette.mode === "dark" ? "text.secondary" : "text.primary"),
+                    borderRadius: 999,
+                    boxShadow: 1,
+                    transition: "background-color 120ms ease, border-color 120ms ease",
+                    "&:hover": {
+                      bgcolor: (theme) => (theme.palette.mode === "dark" ? "action.hover" : "grey.800"),
+                    },
                   }}
-                />
-              </IconButton>
-            </span>
-          </Tooltip>
-        ) : (
-          <Tooltip title="Submit" placement="top">
-            <span>
-              <IconButton
-                size="small"
-                onClick={() => {
-                  void handleSubmitButtonClick();
-                }}
-                disabled={sessionState === "starting" || draft.trim().length === 0}
-                aria-label="Submit"
-                sx={{
-                  p: 0.5,
-                  border: 1,
-                  borderColor: "divider",
-                  bgcolor: "background.paper",
-                }}
-              >
-                <LuArrowUp size={16} />
-              </IconButton>
-            </span>
-          </Tooltip>
-        )}
+                >
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: 0.5,
+                      bgcolor: "currentColor",
+                    }}
+                  />
+                </IconButton>
+              </span>
+            </Tooltip>
+          ) : (
+            <Tooltip title="Submit" placement="top">
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    void handleSubmitButtonClick();
+                  }}
+                  disabled={sessionState === "starting" || draft.trim().length === 0}
+                  aria-label="Submit"
+                  sx={{
+                    width: 34,
+                    height: 34,
+                    p: 0,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : "grey.900"),
+                    color: (theme) => (theme.palette.mode === "dark" ? "text.secondary" : "text.primary"),
+                    borderRadius: 999,
+                    boxShadow: 1,
+                    transition: "background-color 120ms ease, border-color 120ms ease",
+                    "&:hover": {
+                      bgcolor: (theme) => (theme.palette.mode === "dark" ? "action.hover" : "grey.800"),
+                    },
+                  }}
+                >
+                  <LuArrowUp size={16} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+        </Box>
       </Box>
     </Box>
   );
@@ -220,14 +353,21 @@ MemoizedAgentChatComposerPane.displayName = "AgentChatComposerPane";
 function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, isActive = true }: AgentChatViewProps) {
   const startupPaneIdRef = useRef<string | undefined>(paneId);
   const startupSessionIdRef = useRef<string | undefined>(sessionId);
-  const [isInitialHistoryLoadPending, setIsInitialHistoryLoadPending] = useState(Boolean(sessionId));
   const hasSession = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]));
   const sessionState = agentChatStore(
     (state) => state.sessionsByTabId[tabId]?.state ?? (hasSession ? "idle" : "starting"),
   );
   const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
+  const hasLoadedMessages = agentChatStore((state) => state.sessionsByTabId[tabId]?.hasLoadedMessages ?? false);
+  const hasLoadedModels = agentChatStore((state) => state.sessionsByTabId[tabId]?.hasLoadedModels ?? false);
+  const hasLoadedState = agentChatStore((state) => state.sessionsByTabId[tabId]?.hasLoadedState ?? false);
   const error = agentChatStore((state) => state.sessionsByTabId[tabId]?.error ?? null);
   const turnError = agentChatStore((state) => state.sessionsByTabId[tabId]?.turnError ?? null);
+  const pendingUiRequest = agentChatStore((state) => state.sessionsByTabId[tabId]?.pendingUiRequest ?? null);
+  const pendingUiAutoResponse = agentChatStore((state) => state.sessionsByTabId[tabId]?.pendingUiAutoResponse ?? null);
+  const liveSessionId = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionId ?? null);
+  const isInitialHistoryLoadPending =
+    Boolean(startupSessionIdRef.current) && (!hasSession || !hasLoadedMessages || !hasLoadedModels || !hasLoadedState);
 
   useEffect(() => {
     let isDisposed = false;
@@ -276,12 +416,8 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
         if (isDisposed) return;
 
         await fetchAgentModels({ tabId, sessionId: startedSessionId });
-        if (!isDisposed) {
-          setIsInitialHistoryLoadPending(false);
-        }
       } catch (error) {
         if (isDisposed) return;
-        setIsInitialHistoryLoadPending(false);
         const message = getErrorMessage(error);
         agentChatStore.getState().initSession(tabId, tabId);
         agentChatStore.getState().setSessionError(tabId, message);
@@ -342,18 +478,102 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
     setAgentChatStreamTabVisible(tabId, isActive);
   }, [isActive, tabId]);
 
-  if (!hasSession) {
-    return (
-      <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-        <Typography color="text.secondary">Starting agent session…</Typography>
-      </Box>
-    );
-  }
+  const handlePendingUiCancel = useCallback(async () => {
+    if (!liveSessionId || !pendingUiRequest) {
+      return;
+    }
+
+    agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+
+    await respondToAgentExtensionUiRequest({
+      tabId,
+      sessionId: liveSessionId,
+      requestId: pendingUiRequest.id,
+      cancelled: true,
+    });
+  }, [liveSessionId, pendingUiRequest, tabId]);
+
+  const handlePendingUiConfirm = useCallback(
+    async (input: { value?: string; confirmed?: boolean }) => {
+      if (!liveSessionId || !pendingUiRequest) {
+        return;
+      }
+
+      await respondToAgentExtensionUiRequest({
+        tabId,
+        sessionId: liveSessionId,
+        requestId: pendingUiRequest.id,
+        value: input.value,
+        confirmed: input.confirmed,
+      });
+    },
+    [liveSessionId, pendingUiRequest, tabId],
+  );
+
+  const handlePendingUiSelectCustomResponse = useCallback(
+    async (value: string) => {
+      if (!liveSessionId || !pendingUiRequest || pendingUiRequest.method !== "select") {
+        return;
+      }
+
+      agentChatStore.getState().setPendingUiAutoResponse(tabId, {
+        sourceRequestId: pendingUiRequest.id,
+        targetMethod: "input",
+        value,
+      });
+
+      await respondToAgentExtensionUiRequest({
+        tabId,
+        sessionId: liveSessionId,
+        requestId: pendingUiRequest.id,
+        value: "__ask_user_freeform__",
+      });
+    },
+    [liveSessionId, pendingUiRequest, tabId],
+  );
+
+  useEffect(() => {
+    if (!liveSessionId || !pendingUiRequest || !pendingUiAutoResponse) {
+      return;
+    }
+
+    if (pendingUiRequest.id === pendingUiAutoResponse.sourceRequestId) {
+      return;
+    }
+
+    if (pendingUiRequest.method !== pendingUiAutoResponse.targetMethod) {
+      agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+      return;
+    }
+
+    void (async () => {
+      try {
+        await respondToAgentExtensionUiRequest({
+          tabId,
+          sessionId: liveSessionId,
+          requestId: pendingUiRequest.id,
+          value: pendingUiAutoResponse.value,
+        });
+        agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+      } catch (error) {
+        agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+      }
+    })();
+  }, [liveSessionId, pendingUiAutoResponse, pendingUiRequest, tabId]);
 
   if (isInitialHistoryLoadPending && sessionState !== "error") {
     return (
       <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
         <CircularProgress size={24} />
+      </Box>
+    );
+  }
+
+  if (!hasSession) {
+    return (
+      <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+        <Typography color="text.secondary">Starting agent session…</Typography>
       </Box>
     );
   }
@@ -384,6 +604,14 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <MemoizedAgentChatTranscriptPane tabId={tabId} cwd={cwd} isActive={isActive} />
+      {pendingUiRequest ? (
+        <AgentPendingUiPrompt
+          request={pendingUiRequest}
+          onCancel={handlePendingUiCancel}
+          onConfirm={handlePendingUiConfirm}
+          onSelectCustomResponse={handlePendingUiSelectCustomResponse}
+        />
+      ) : null}
       {turnError ? (
         <Box sx={{ px: 2, pb: 1 }}>
           <Alert severity="error" variant="outlined">
@@ -391,7 +619,7 @@ function AgentChatViewComponent({ tabId, workspaceId, cwd, sessionId, paneId, is
           </Alert>
         </Box>
       ) : null}
-      <MemoizedAgentChatComposerPane tabId={tabId} />
+      <MemoizedAgentChatComposerPane tabId={tabId} workspaceId={workspaceId} cwd={cwd} paneId={paneId} />
     </Box>
   );
 }

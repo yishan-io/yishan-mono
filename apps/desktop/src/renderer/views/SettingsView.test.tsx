@@ -22,7 +22,7 @@ vi.mock("../helpers/platform", () => ({
   getRendererPlatform: () => "linux",
 }));
 
-vi.mock("./settings/NotificationSettingsView", () => ({
+vi.mock("./settings/notifications/NotificationSettingsView", () => ({
   NotificationSettingsView: ({ focusItemId }: { focusItemId?: string | null }) => (
     <div data-testid="notification-settings-panel" data-focus-item-id={focusItemId ?? ""} />
   ),
@@ -42,7 +42,7 @@ vi.mock("./settings/TerminalSettingsView", () => ({
   TerminalSettingsView: () => <div data-testid="terminal-settings-panel" />,
 }));
 
-vi.mock("./settings/DaemonSettingsView", () => ({
+vi.mock("./settings/daemon/DaemonSettingsView", () => ({
   DaemonSettingsView: () => <div data-testid="daemon-settings-panel" />,
 }));
 

@@ -1,46 +1,7 @@
-import {
-  Autocomplete,
-  type AutocompleteRenderInputParams,
-  Box,
-  LinearProgress,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Autocomplete, type AutocompleteRenderInputParams, Box, LinearProgress, TextField } from "@mui/material";
 import { memo, useCallback, useMemo, useState } from "react";
-import { LuArrowRight, LuGitBranch } from "react-icons/lu";
-
-/** Renders one bordered pill displaying a git branch name with an icon. */
-function BranchBadge({ name, testId }: { name: string; testId: string }) {
-  return (
-    <Box
-      data-testid={testId}
-      title={name}
-      sx={{
-        color: "text.secondary",
-        flex: "1 1 0",
-        minWidth: 0,
-        display: "flex",
-        alignItems: "center",
-        gap: 0.5,
-        px: 0.625,
-        py: 0.375,
-        border: 1,
-        borderColor: "divider",
-        borderRadius: 0.75,
-        boxSizing: "border-box",
-      }}
-    >
-      <LuGitBranch size={12} color="currentColor" />
-      <Typography
-        variant="caption"
-        component="span"
-        sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-      >
-        {name}
-      </Typography>
-    </Box>
-  );
-}
+import { LuArrowRight } from "react-icons/lu";
+import { BranchBadge } from "./BranchBadge";
 
 export type ProjectCommitComparisonFile = {
   path: string;

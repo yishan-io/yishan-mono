@@ -10,8 +10,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	agentcmd "yishan/apps/cli/internal/daemon/agentcmd"
 	"yishan/apps/cli/internal/api"
+	agentcmd "yishan/apps/cli/internal/daemon/agentcmd"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
 
@@ -125,8 +125,8 @@ func processRelayJob(runtime *cliruntime.Runtime, connState *wsConnState, nodeID
 // ---------------------------------------------------------------------------
 
 type jobAckNotification struct {
-	JSONRPC string      `json:"jsonrpc"`
-	Method  string      `json:"method"`
+	JSONRPC string       `json:"jsonrpc"`
+	Method  string       `json:"method"`
 	Params  jobAckParams `json:"params"`
 }
 

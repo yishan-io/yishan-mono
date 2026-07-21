@@ -1,0 +1,33 @@
+{
+  "agentChat": {
+    "title": "Agent Chat",
+    "askUser": {
+      "prompt": {
+        "customResponse": "Type custom response",
+        "decline": "Decline"
+      },
+      "card": {
+        "question": "Question",
+        "answer": "Answer",
+        "pending": "Pending",
+        "cancelled": "Cancelled",
+        "answered": "Answered",
+        "unavailable": "Unavailable: {{reason}}"
+      }
+    },
+    "usageSummary": {
+      "currentContext": "Current context",
+      "input": "Input",
+      "output": "Output",
+      "cacheRead": "Cache read",
+      "cacheWrite": "Cache write",
+      "cacheRate": "Cache rate",
+      "reasoning": "Reasoning",
+      "sessionTotalCumulative": "Session total (cumulative)",
+      "cost": "Cost"
+    },
+    "modelSelector": {
+      "addProvider": "Add provider"
+    }
+  }
+}

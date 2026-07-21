@@ -44,12 +44,12 @@ func (e *TokenRefreshError) Unwrap() error {
 }
 
 type Client struct {
-	http           *resty.Client
-	accessToken    string
-	refreshToken   string
+	http                  *resty.Client
+	accessToken           string
+	refreshToken          string
 	accessTokenExpiresAt  string
 	refreshTokenExpiresAt string
-	onTokenRefresh func(TokenUpdate) error
+	onTokenRefresh        func(TokenUpdate) error
 }
 
 func NewClient(
@@ -62,12 +62,12 @@ func NewClient(
 ) *Client {
 	trimmedBaseURL := strings.TrimRight(baseURL, "/")
 	return &Client{
-		http:           resty.New().SetBaseURL(trimmedBaseURL).SetTimeout(15 * time.Second),
-		accessToken:    strings.TrimSpace(token),
-		refreshToken:   strings.TrimSpace(refreshToken),
+		http:                  resty.New().SetBaseURL(trimmedBaseURL).SetTimeout(15 * time.Second),
+		accessToken:           strings.TrimSpace(token),
+		refreshToken:          strings.TrimSpace(refreshToken),
 		accessTokenExpiresAt:  strings.TrimSpace(accessTokenExpiresAt),
 		refreshTokenExpiresAt: strings.TrimSpace(refreshTokenExpiresAt),
-		onTokenRefresh: onTokenRefresh,
+		onTokenRefresh:        onTokenRefresh,
 	}
 }
 
@@ -114,20 +114,6 @@ func (c *Client) DoRaw(method string, path string, body any) ([]byte, error) {
 	return responseBody, err
 }
 
-func parseExpiryTimestamp(value string) (time.Time, bool) {
-	trimmed := strings.TrimSpace(value)
-	if trimmed == "" {
-		return time.Time{}, false
-	}
-	if parsed, err := time.Parse(time.RFC3339Nano, trimmed); err == nil {
-		return parsed, true
-	}
-	if parsed, err := time.Parse(time.RFC3339, trimmed); err == nil {
-		return parsed, true
-	}
-	return time.Time{}, false
-}
-
 func (c *Client) shouldProactivelyRefresh(path string) bool {
 	if isRefreshRequest(path) || c.refreshToken == "" {
 		return false
@@ -136,7 +122,7 @@ func (c *Client) shouldProactivelyRefresh(path string) bool {
 		log.Warn().Str("refreshTokenExpiresAt", c.refreshTokenExpiresAt).Dur("guardWindow", refreshTokenExpiryGuardWindow).Msg("skip proactive refresh because refresh token is expired or near expiry")
 		return false
 	}
-	accessExpiry, ok := parseExpiryTimestamp(c.accessTokenExpiresAt)
+	accessExpiry, ok := ParseExpiry(c.accessTokenExpiresAt)
 	if !ok {
 		return false
 	}
@@ -144,7 +130,7 @@ func (c *Client) shouldProactivelyRefresh(path string) bool {
 }
 
 func (c *Client) isRefreshTokenExpiredOrNearExpiry() bool {
-	refreshExpiry, ok := parseExpiryTimestamp(c.refreshTokenExpiresAt)
+	refreshExpiry, ok := ParseExpiry(c.refreshTokenExpiresAt)
 	if !ok {
 		return false
 	}
