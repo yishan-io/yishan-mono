@@ -7,8 +7,9 @@ import { LaunchView } from "./LaunchView";
 const mocks = vi.hoisted(() => ({
   openTab: vi.fn(),
   openWorkspaceFileSearch: vi.fn(),
-  workspaces: [] as Array<{ id: string; status?: "active" | "closed" | "provisioning" }>,
+  workspaces: [] as Array<{ id: string; status?: "active" | "closed" | "provisioning"; worktreePath?: string }>,
   progressByWorkspaceId: {} as Record<string, unknown>,
+  fetchSessionHistory: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -20,12 +21,19 @@ vi.mock("react-i18next", () => ({
         "launch.actions.openTerminal": "Open terminal",
         "launch.actions.openBrowser": "Open browser tab",
         "launch.actions.searchFiles": "Search files",
+        "launch.recent.title": "Recent agent sessions",
+        "launch.recent.defaultTitle": "Agent Chat",
+        "launch.recent.now": "now",
         "terminal.title": "Terminal",
       };
 
       return translations[key] ?? key;
     },
   }),
+}));
+
+vi.mock("../../commands/agentChatCommands", () => ({
+  fetchSessionHistory: mocks.fetchSessionHistory,
 }));
 
 vi.mock("../../hooks/useCommands", () => ({
@@ -76,6 +84,26 @@ describe("LaunchView", () => {
     vi.clearAllMocks();
     mocks.workspaces = [];
     mocks.progressByWorkspaceId = {};
+  });
+
+  it("opens a recent agent session", async () => {
+    mocks.workspaces = [{ id: "workspace-1", status: "active", worktreePath: "/tmp/project" }];
+    mocks.fetchSessionHistory.mockResolvedValueOnce([
+      { sessionId: "history-1", timestamp: new Date().toISOString(), previewText: "Review the implementation" },
+    ]);
+
+    render(<LaunchView workspaceId="workspace-1" enabledAgentKinds={[]} />);
+
+    expect(await screen.findByText("Recent agent sessions")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Review the implementation/ }));
+
+    expect(mocks.openTab).toHaveBeenCalledWith({
+      workspaceId: "workspace-1",
+      kind: "agent-chat",
+      title: "Review the implementation",
+      cwd: "/tmp/project",
+      sessionId: "history-1",
+    });
   });
 
   it("shows shortcut labels for launch actions", () => {

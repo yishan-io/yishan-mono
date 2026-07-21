@@ -11,12 +11,14 @@ import { tabStore } from "../store/tabStore";
 import type { OpenWorkspaceTabInput } from "../store/types";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../store/workspaceStore";
+import { stopPiSession } from "./agentChatCommands";
 
 type TabStoreFacade = typeof tabStore & {
   getState?: () => TabStoreState;
 };
 
 type TerminalTab = Extract<TabStoreState["tabs"][number], { kind: "terminal" }>;
+type AgentChatTab = Extract<TabStoreState["tabs"][number], { kind: "agent-chat" }>;
 
 /** Reads tab store state for both real Zustand stores and selector-only test doubles. */
 function readTabStoreState(): TabStoreState {
@@ -30,9 +32,16 @@ function readTabStoreState(): TabStoreState {
   );
 }
 
-/**
- * Closes terminal sessions for terminal tabs in the provided tab list.
- */
+/** Releases agent-chat sessions for tabs that are being closed in bulk. */
+function stopAgentChatSessionsForTabs(tabs: AgentChatTab[]): void {
+  for (const tab of tabs) {
+    // fire-and-forget: tab closure must not wait for daemon session cleanup.
+    void stopPiSession(tab.id).catch(() => {});
+  }
+}
+
+/** Closes terminal sessions for terminal tabs in the provided tab list. */
+
 function closeTerminalSessionsForTabs(tabs: TerminalTab[]): void {
   for (const tab of tabs) {
     const sessionId = tab.data.sessionId?.trim();
@@ -94,9 +103,8 @@ export function closeTab(tabId: string): void {
       });
   }
   if (tab.kind === "agent-chat") {
-    import("./agentChatCommands").then(({ stopPiSession }) => {
-      stopPiSession(tab.id).catch(() => {});
-    });
+    // fire-and-forget: tab closure must not wait for daemon session cleanup.
+    void stopPiSession(tab.id).catch(() => {});
   }
   if (tab.kind === "terminal") {
     recordExplicitlyClosedTerminalTabId(tab.id);
@@ -119,6 +127,7 @@ export function closeOtherTabs(tabId: string): void {
     (tab) => tab.workspaceId === target.workspaceId && tab.id !== tabId && !tab.pinned,
   );
   const removedTerminalTabs = removedTabs.filter((tab): tab is TerminalTab => tab.kind === "terminal");
+  const removedAgentChatTabs = removedTabs.filter((tab): tab is AgentChatTab => tab.kind === "agent-chat");
   const removedTabIds = removedTabs.map((tab) => tab.id);
 
   for (const sessionId of collectSessionIdsToCloseOtherTabs(snapshot.tabs, tabId)) {
@@ -135,6 +144,7 @@ export function closeOtherTabs(tabId: string): void {
     clearTerminalAgentStatus(removedTerminalTab.id);
   }
   closeTerminalSessionsForTabs(removedTerminalTabs);
+  stopAgentChatSessionsForTabs(removedAgentChatTabs);
   snapshot.closeOtherTabs(tabId);
   if (removedTabIds.length > 0) {
     chatStore.getState().removeTabData(removedTabIds);
@@ -151,6 +161,7 @@ export function closeAllTabs(tabId: string): void {
 
   const removedTabs = snapshot.tabs.filter((tab) => tab.workspaceId === target.workspaceId && !tab.pinned);
   const removedTerminalTabs = removedTabs.filter((tab): tab is TerminalTab => tab.kind === "terminal");
+  const removedAgentChatTabs = removedTabs.filter((tab): tab is AgentChatTab => tab.kind === "agent-chat");
   const removedTabIds = removedTabs.map((tab) => tab.id);
 
   for (const sessionId of collectSessionIdsToCloseAllTabs(snapshot.tabs, tabId)) {
@@ -167,6 +178,7 @@ export function closeAllTabs(tabId: string): void {
     clearTerminalAgentStatus(removedTerminalTab.id);
   }
   closeTerminalSessionsForTabs(removedTerminalTabs);
+  stopAgentChatSessionsForTabs(removedAgentChatTabs);
   snapshot.closeAllTabs(tabId);
   if (removedTabIds.length > 0) {
     chatStore.getState().removeTabData(removedTabIds);

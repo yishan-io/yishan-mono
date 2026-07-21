@@ -50,6 +50,8 @@ export type TabStoreState = {
   setTerminalTabSessionId: (tabId: string, sessionId: string) => void;
   /** Persists the single agent-chat session identity on one tab. */
   setAgentChatTabSession: (input: { tabId: string; sessionId: string }) => void;
+  /** Persists subagent-control metadata on one agent-chat tab. */
+  setAgentChatTabSubagentControl: (input: { tabId: string; agentId?: string; parentSessionId?: string }) => void;
   /** Updates the detected agent kind on one terminal tab. Pass undefined to clear. */
   setTerminalTabAgentKind: (tabId: string, agentKind: DesktopAgentKind | undefined) => void;
   setBrowserTabFaviconUrl: (tabId: string, faviconUrl: string | undefined) => void;
@@ -244,6 +246,27 @@ export const tabStore = create<TabStoreState>()(
                   data: {
                     ...tab.data,
                     sessionId: normalizedSessionId,
+                  },
+                }
+              : tab,
+          ),
+        }));
+      },
+      setAgentChatTabSubagentControl: ({ tabId, agentId, parentSessionId }) => {
+        const normalizedTabId = tabId.trim();
+        if (!normalizedTabId) {
+          return;
+        }
+
+        set((state) => ({
+          tabs: state.tabs.map((tab: WorkspaceTab) =>
+            tab.id === normalizedTabId && tab.kind === "agent-chat"
+              ? {
+                  ...tab,
+                  data: {
+                    ...tab.data,
+                    subagentAgentId: agentId?.trim() || undefined,
+                    subagentParentSessionId: parentSessionId?.trim() || undefined,
                   },
                 }
               : tab,

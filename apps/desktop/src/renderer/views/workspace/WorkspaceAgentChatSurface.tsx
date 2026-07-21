@@ -95,6 +95,7 @@ function WorkspaceAgentChatSurfaceComponent({
         workspaceId={tab.workspaceId}
         cwd={tab.data.cwd}
         sessionId={tab.data.sessionId}
+        sessionView={tab.data.sessionView}
         paneId={paneId}
         isActive={shouldShow && !isDraggingSplit}
       />
@@ -108,6 +109,7 @@ function areEqual(previousProps: WorkspaceAgentChatSurfaceProps, nextProps: Work
     previousProps.tab.workspaceId === nextProps.tab.workspaceId &&
     previousProps.tab.data.cwd === nextProps.tab.data.cwd &&
     previousProps.tab.data.sessionId === nextProps.tab.data.sessionId &&
+    previousProps.tab.data.sessionView === nextProps.tab.data.sessionView &&
     previousProps.isWorkspaceActive === nextProps.isWorkspaceActive &&
     previousProps.isDraggingSplit === nextProps.isDraggingSplit &&
     previousProps.isSelected === nextProps.isSelected &&

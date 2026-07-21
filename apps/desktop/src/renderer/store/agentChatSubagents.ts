@@ -23,6 +23,17 @@ export type RunningSubagentSummary = {
   promptSummary: string;
 };
 
+/** Child-session metadata persisted on the subagent session itself. */
+export type ChildSessionSubagentMetadata = {
+  agentId: string;
+  agentName: string;
+  childSessionId: string;
+  parentSessionId?: string;
+  parentSessionPath?: string;
+  title?: string;
+  summary?: string;
+};
+
 /** Finds one running sub-agent using stable row id first, then fuzzy agent+summary matching. */
 export function findMatchingRunningSubagent(
   runningSubagents: RunningSubagentSummary[],
@@ -36,6 +47,7 @@ export function findMatchingRunningSubagent(
   });
 }
 
+const SUBAGENT_PARENT_CUSTOM_TYPE = "pi-subagent-parent";
 const SUBAGENT_CUSTOM_TYPE = "pi-subagent-child";
 const TITLE_SEPARATOR = " — ";
 
@@ -70,6 +82,62 @@ export function parseSubagentLifecycleMessage(message: AgentMessage): AgentSubag
 }
 
 /** Derives the currently running sub-agent rows from transcript history and the active streaming message. */
+export function deriveChildSessionSubagentMetadata(messages: AgentMessage[]): ChildSessionSubagentMetadata | null {
+  for (const message of messages) {
+    if (message.role !== "custom" || message.customType !== SUBAGENT_PARENT_CUSTOM_TYPE) {
+      continue;
+    }
+
+    const payload = parseLifecyclePayload(message.details) ?? parseLifecyclePayload(message.content);
+    if (!payload) {
+      continue;
+    }
+
+    const agentId = normalizeRequiredText(payload.agentId);
+    const agentName = normalizeRequiredText(payload.agentName);
+    const childSessionId = normalizeRequiredText(payload.childSessionId);
+    if (!agentId || !agentName || !childSessionId) {
+      continue;
+    }
+
+    return {
+      agentId,
+      agentName,
+      childSessionId,
+      parentSessionId: normalizeOptionalText(payload.parentSessionId),
+      parentSessionPath: normalizeOptionalText(payload.parentSessionPath),
+      title: normalizeOptionalText(payload.title),
+      summary: normalizeOptionalText(payload.summary),
+    };
+  }
+
+  return null;
+}
+
+/** Derives completed sub-agent rows that remain available for opening their persisted transcript. */
+export function deriveFinishedSubagents(messages: AgentMessage[]): RunningSubagentSummary[] {
+  const finishedByChildSessionId = new Map<string, RunningSubagentSummary>();
+
+  for (const message of messages) {
+    const lifecycle = parseSubagentLifecycleMessage(message);
+    if (!lifecycle || lifecycle.event !== "completed") {
+      continue;
+    }
+
+    const promptSummary = lifecycle.summary ?? derivePromptSummary(lifecycle.title, lifecycle.agentName);
+    finishedByChildSessionId.set(lifecycle.childSessionId, {
+      rowId: lifecycle.childSessionId,
+      agentId: lifecycle.agentId,
+      agentName: lifecycle.agentName,
+      childSessionId: lifecycle.childSessionId,
+      title: lifecycle.title ?? buildFallbackTitle(lifecycle.agentName, lifecycle.summary),
+      promptSummary,
+    });
+  }
+
+  return [...finishedByChildSessionId.values()];
+}
+
 export function deriveRunningSubagents(
   messages: AgentMessage[],
   trailingMessage?: AgentMessage | null,

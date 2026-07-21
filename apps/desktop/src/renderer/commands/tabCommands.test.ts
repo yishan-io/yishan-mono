@@ -26,6 +26,11 @@ const rpcMocks = vi.hoisted(() => ({
   closeAgentSession: vi.fn(),
   closeSession: vi.fn(),
   enqueueWorkspaceErrorNotice: vi.fn(),
+  stopPiSession: vi.fn(async () => {}),
+}));
+
+vi.mock("./agentChatCommands", () => ({
+  stopPiSession: rpcMocks.stopPiSession,
 }));
 
 vi.mock("../store/workspaceLifecycleNoticeStore", () => ({
@@ -215,6 +220,50 @@ describe("tabCommands", () => {
     expect(rpcMocks.closeAgentSession).not.toHaveBeenCalledWith({ sessionId: "session-pinned" });
     expect(closeOtherTabsState).toHaveBeenCalledWith("tab-1");
     expect(removeTabData).toHaveBeenCalledWith(["tab-2"]);
+  });
+
+  it("releases all agent-chat tabs while leaving child-session ownership to detail tabs", async () => {
+    const closeOtherTabsState = vi.fn();
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-keep",
+          workspaceId: "workspace-1",
+          title: "Keep",
+          pinned: false,
+          kind: "session",
+          data: { sessionId: "session-keep" },
+        },
+        {
+          id: "tab-agent",
+          workspaceId: "workspace-1",
+          title: "Agent",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionId: "agent-session", userRenamed: false, sessionView: "full" },
+        },
+        {
+          id: "tab-subagent-detail",
+          workspaceId: "workspace-1",
+          title: "Sub-agent",
+          pinned: false,
+          kind: "agent-chat",
+          data: {
+            cwd: "/tmp/project",
+            sessionId: "child-session",
+            userRenamed: false,
+            sessionView: "subagent-detail",
+          },
+        },
+      ],
+      closeOtherTabs: closeOtherTabsState,
+    });
+
+    closeOtherTabs("tab-keep");
+    await vi.waitFor(() => {
+      expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-agent");
+      expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-subagent-detail");
+    });
   });
 
   it("closes terminal sessions for removed sibling tabs", async () => {

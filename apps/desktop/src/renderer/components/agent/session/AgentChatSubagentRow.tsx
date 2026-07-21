@@ -1,15 +1,23 @@
 import { Box, IconButton, Paper, Tooltip, Typography } from "@mui/material";
-import { LuBot, LuX } from "react-icons/lu";
+import { LuBot, LuLoaderCircle, LuX } from "react-icons/lu";
 import type { RunningSubagentSummary } from "../../../store/agentChatSubagents";
 
 type AgentChatSubagentRowProps = {
   subagent: RunningSubagentSummary;
+  isRunning?: boolean;
+  canCancel?: boolean;
   onOpen: (subagent: RunningSubagentSummary) => void | Promise<void>;
-  onCancel: (subagent: RunningSubagentSummary) => void | Promise<void>;
+  onCancel?: (subagent: RunningSubagentSummary) => void | Promise<void>;
 };
 
 /** Renders one compact running sub-agent row above the parent agent-chat composer. */
-export function AgentChatSubagentRow({ subagent, onOpen, onCancel }: AgentChatSubagentRowProps) {
+export function AgentChatSubagentRow({
+  subagent,
+  isRunning = false,
+  canCancel = false,
+  onOpen,
+  onCancel,
+}: AgentChatSubagentRowProps) {
   const rowId = subagent.childSessionId ?? subagent.rowId;
 
   return (
@@ -49,6 +57,26 @@ export function AgentChatSubagentRow({ subagent, onOpen, onCancel }: AgentChatSu
           color: "inherit",
         }}
       >
+        {isRunning ? (
+          <Tooltip title="Sub-agent running" placement="top">
+            <Box
+              component="span"
+              data-testid={`subagent-row-running-icon-${rowId}`}
+              aria-label="Sub-agent running"
+              sx={{
+                display: "inline-flex",
+                color: "primary.main",
+                animation: "subagent-row-spin 1s linear infinite",
+                "@keyframes subagent-row-spin": {
+                  from: { transform: "rotate(0deg)" },
+                  to: { transform: "rotate(360deg)" },
+                },
+              }}
+            >
+              <LuLoaderCircle size={14} aria-hidden />
+            </Box>
+          </Tooltip>
+        ) : null}
         <LuBot size={16} aria-hidden />
         <Typography variant="body2" sx={{ fontWeight: 600, flexShrink: 0 }}>
           {subagent.agentName}
@@ -63,27 +91,46 @@ export function AgentChatSubagentRow({ subagent, onOpen, onCancel }: AgentChatSu
           {subagent.promptSummary}
         </Typography>
       </Box>
-      <Tooltip title="Cancel sub-agent" placement="top">
-        <span>
-          <IconButton
-            size="small"
-            aria-label={`Cancel sub-agent ${subagent.agentName}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              void onCancel(subagent);
-            }}
-            sx={{
-              p: 0.5,
-              border: 1,
-              borderColor: "divider",
-              bgcolor: "background.paper",
-              flexShrink: 0,
-            }}
-          >
-            <LuX size={14} />
-          </IconButton>
-        </span>
-      </Tooltip>
+      {onCancel ? (
+        <Tooltip title={canCancel ? "Cancel sub-agent" : "Preparing sub-agent controls…"} placement="top">
+          <span>
+            <IconButton
+              size="small"
+              aria-label={`Cancel sub-agent ${subagent.agentName}`}
+              disabled={!canCancel}
+              onClick={(event) => {
+                event.stopPropagation();
+                void onCancel?.(subagent);
+              }}
+              sx={{
+                p: 0.5,
+                border: 1,
+                borderColor: "divider",
+                bgcolor: "background.paper",
+                flexShrink: 0,
+              }}
+            >
+              {canCancel ? (
+                <LuX size={14} />
+              ) : (
+                <Box
+                  data-testid={`subagent-row-preparing-icon-${rowId}`}
+                  sx={{
+                    display: "inline-flex",
+                    animation: "subagent-row-spin 1s linear infinite",
+                    "@keyframes subagent-row-spin": {
+                      from: { transform: "rotate(0deg)" },
+                      to: { transform: "rotate(360deg)" },
+                    },
+                  }}
+                >
+                  <LuLoaderCircle size={14} />
+                </Box>
+              )}
+            </IconButton>
+          </span>
+        </Tooltip>
+      ) : null}
     </Paper>
   );
 }

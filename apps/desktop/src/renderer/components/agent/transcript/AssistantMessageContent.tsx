@@ -1,5 +1,6 @@
 import type { AgentMessage } from "../../../store/agentChatTypes";
 import { AgentToolCallCard } from "../tool-calls/AgentToolCallCard";
+import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
 import { AgentMarkdownContent } from "./AgentMarkdownContent";
 import { ThinkingBlock } from "./ThinkingBlock";
 import type { AgentToolResultMap } from "./helpers";
@@ -9,6 +10,7 @@ type AssistantMessageContentProps = {
   mergedToolResults: AgentToolResultMap;
   workspacePath?: string;
   isStreaming: boolean;
+  onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
 /** Renders assistant message blocks including markdown, thinking, and tool calls. */
@@ -17,6 +19,7 @@ export function AssistantMessageContent({
   mergedToolResults,
   workspacePath,
   isStreaming,
+  onOpenCompletedSubagent,
 }: AssistantMessageContentProps) {
   const blocks = Array.isArray(message.content) ? message.content : [];
   let textBlockCount = 0;
@@ -60,6 +63,7 @@ export function AssistantMessageContent({
                 toolCall={block}
                 result={mergedToolResults[block.id] ?? null}
                 workspacePath={workspacePath}
+                onOpenCompletedSubagent={onOpenCompletedSubagent}
               />
             );
           default:

@@ -5,10 +5,17 @@ import { openTab } from "../../../commands/tabCommands";
 import type { AgentContentBlock, AgentMessage } from "../../../store/agentChatTypes";
 
 /** Shared props for one rendered agent tool-call card. */
+export type CompletedSubagentOpenTarget = {
+  agentId?: string;
+  childSessionId: string;
+  title: string;
+};
+
 export type AgentToolCallCardProps = {
   toolCall: Extract<AgentContentBlock, { type: "toolCall" }>;
   result?: AgentMessage | null;
   workspacePath?: string;
+  onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
 /** Simple line-change counts derived from a unified diff patch. */

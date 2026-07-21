@@ -19,6 +19,8 @@ export interface StartAgentRunOptions extends CreateChildAgentSessionOptions {
 /** Live handle for one running child-agent session. */
 export interface AgentRunHandle {
   session: CreateChildAgentSessionResult["session"];
+  sessionId: string;
+  sessionPath?: string;
   completion: Promise<AgentResult>;
   cancel(): Promise<void>;
   steer(message: string): Promise<void>;
@@ -84,6 +86,8 @@ export async function startAgentRun(options: StartAgentRunOptions): Promise<Agen
 
   return {
     session: childSession.session,
+    sessionId: childSession.sessionId,
+    sessionPath: childSession.sessionPath,
     completion,
     async cancel() {
       runState.didCancel = true;

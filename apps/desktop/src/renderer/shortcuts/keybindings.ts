@@ -23,6 +23,7 @@ type ShortcutTarget =
   | { command: "tabs.create" }
   | { command: "tabs.closeSelected" }
   | { command: "tabs.openTerminal" }
+  | { command: "tabs.openAgentChat" }
   | { command: "tabs.openBrowser" }
   | { command: "tabs.selectByIndex" }
   | { command: "workspace.activatePane"; payload: { pane: "repo" | "files" | "changes" | "pr" } }
@@ -136,6 +137,18 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
       title: context.terminalTabTitle,
       reuseExisting: false,
     });
+    event.preventDefault();
+    return true;
+  }
+
+  if (target.command === "tabs.openAgentChat") {
+    const workspaceId = context.workspaceStoreState.selectedWorkspaceId;
+    const workspace = context.workspaceStoreState.workspaces.find((item) => item.id === workspaceId);
+    if (!workspaceId || !workspace?.worktreePath) {
+      return false;
+    }
+
+    context.commands.openTab({ workspaceId, kind: "agent-chat", cwd: workspace.worktreePath });
     event.preventDefault();
     return true;
   }
@@ -358,6 +371,14 @@ const SHORTCUT_REGISTRY: readonly ShortcutRegistryItem[] = [
     scope: "workspace",
     keys: "ctrl+t,command+t",
     target: { command: "tabs.openTerminal" },
+    shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
+  },
+  {
+    id: "open-agent-chat",
+    descriptionKey: "keybindings.actions.openAgentChat",
+    scope: "workspace",
+    keys: "ctrl+shift+a,command+shift+a",
+    target: { command: "tabs.openAgentChat" },
     shouldRun: (context) => Boolean(context.workspaceStoreState.selectedWorkspaceId),
   },
   {

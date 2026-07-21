@@ -31,6 +31,7 @@
       "closeTab": "Close selected tab",
       "closeWorkspace": "Close selected workspace",
       "openTerminal": "Open terminal tab",
+      "openAgentChat": "Open agent chat tab",
       "openBrowser": "Open browser tab",
       "activateRepoPane": "Activate repository pane",
       "activateFilesPane": "Activate files pane",

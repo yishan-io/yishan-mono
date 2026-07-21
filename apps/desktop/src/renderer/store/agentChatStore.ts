@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { type RunningSubagentSummary, deriveRunningSubagents } from "./agentChatSubagents";
+import { type RunningSubagentSummary, deriveFinishedSubagents, deriveRunningSubagents } from "./agentChatSubagents";
 import type {
   AgentMessage,
   AgentModel,
@@ -11,6 +11,13 @@ import type {
 } from "./agentChatTypes";
 
 const MAX_MESSAGES_PER_TAB = 500;
+
+type AgentSubagentProgressTarget = {
+  agentName: string;
+  agentId: string;
+  status: string;
+  childSessionId?: string;
+};
 
 type AgentSessionData = {
   sessionId: string;
@@ -24,6 +31,9 @@ type AgentSessionData = {
   pendingUiRequest: AgentPendingUiRequest | null;
   pendingUiAutoResponse: AgentPendingUiAutoResponse | null;
   runningSubagents: RunningSubagentSummary[];
+  finishedSubagents: RunningSubagentSummary[];
+  subagentProgressTargets: AgentSubagentProgressTarget[];
+  subagentLiveTranscripts: Record<string, AgentMessage[]>;
   hasLoadedMessages: boolean;
   hasLoadedModels: boolean;
   hasLoadedState: boolean;
@@ -50,6 +60,8 @@ type AgentChatStoreState = {
   setQueue: (tabId: string, queue: AgentQueueState) => void;
   setPendingUiRequest: (tabId: string, request: AgentPendingUiRequest) => void;
   setPendingUiAutoResponse: (tabId: string, response: AgentPendingUiAutoResponse) => void;
+  setSubagentProgressTargets: (tabId: string, targets: AgentSubagentProgressTarget[]) => void;
+  setSubagentLiveTranscripts: (tabId: string, transcripts: Record<string, AgentMessage[]>) => void;
   clearPendingUiRequest: (tabId: string) => void;
   clearPendingUiAutoResponse: (tabId: string) => void;
   markStateLoaded: (tabId: string) => void;
@@ -70,6 +82,9 @@ function emptySession(sessionId: string): AgentSessionData {
     pendingUiRequest: null,
     pendingUiAutoResponse: null,
     runningSubagents: [],
+    finishedSubagents: [],
+    subagentProgressTargets: [],
+    subagentLiveTranscripts: {},
     hasLoadedMessages: false,
     hasLoadedModels: false,
     hasLoadedState: false,
@@ -102,6 +117,29 @@ function setRunningSubagentsIfChanged(session: AgentSessionData, nextRunningSuba
   }
 
   session.runningSubagents = nextRunningSubagents;
+}
+
+function setFinishedSubagents(session: AgentSessionData): void {
+  const nextFinishedSubagents = deriveFinishedSubagents(session.messages);
+  if (session.finishedSubagents.length === nextFinishedSubagents.length) {
+    const isUnchanged = session.finishedSubagents.every((subagent, index) => {
+      const nextSubagent = nextFinishedSubagents[index];
+      return (
+        nextSubagent &&
+        subagent.rowId === nextSubagent.rowId &&
+        subagent.agentId === nextSubagent.agentId &&
+        subagent.agentName === nextSubagent.agentName &&
+        subagent.childSessionId === nextSubagent.childSessionId &&
+        subagent.title === nextSubagent.title &&
+        subagent.promptSummary === nextSubagent.promptSummary
+      );
+    });
+    if (isUnchanged) {
+      return;
+    }
+  }
+
+  session.finishedSubagents = nextFinishedSubagents;
 }
 
 export const agentChatStore = create<AgentChatStoreState>()(
@@ -162,6 +200,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
           session.messages = session.messages.slice(-MAX_MESSAGES_PER_TAB);
         }
         setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages, session.streamingMessage));
+        setFinishedSubagents(session);
       });
     },
 
@@ -173,6 +212,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         session.streamingMessage = null;
         session.hasLoadedMessages = true;
         setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages));
+        setFinishedSubagents(session);
       });
     },
 
@@ -182,6 +222,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         if (!session) return;
         session.streamingMessage = message;
         setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages, session.streamingMessage));
+        setFinishedSubagents(session);
       });
     },
 
@@ -196,6 +237,7 @@ export const agentChatStore = create<AgentChatStoreState>()(
         }
         session.streamingMessage = null;
         setRunningSubagentsIfChanged(session, deriveRunningSubagents(session.messages));
+        setFinishedSubagents(session);
       });
     },
 
@@ -249,6 +291,22 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.pendingUiAutoResponse = response;
+      });
+    },
+
+    setSubagentProgressTargets: (tabId, targets) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        session.subagentProgressTargets = targets;
+      });
+    },
+
+    setSubagentLiveTranscripts: (tabId, transcripts) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (!session) return;
+        session.subagentLiveTranscripts = transcripts;
       });
     },
 

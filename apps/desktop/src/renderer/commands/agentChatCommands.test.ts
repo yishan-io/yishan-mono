@@ -245,6 +245,35 @@ describe("agentChatCommands.ensurePiSession", () => {
 
     expect(mocks.stop).toHaveBeenCalledWith({ sessionId: "generated-session-id" });
   });
+
+  it("closes subagent-detail tabs without stopping the child session", async () => {
+    tabStore.setState(
+      {
+        ...tabStore.getState(),
+        tabs: [
+          {
+            id: "subagent-tab",
+            workspaceId: "workspace-1",
+            title: "Builder detail",
+            pinned: false,
+            kind: "agent-chat",
+            data: {
+              cwd: "/tmp/project",
+              sessionId: "child-session-1",
+              sessionView: "subagent-detail",
+            },
+          },
+        ],
+      },
+      true,
+    );
+    agentChatStore.getState().initSession("subagent-tab", "child-session-1");
+
+    await stopPiSession("subagent-tab");
+
+    expect(mocks.stop).not.toHaveBeenCalled();
+    expect(agentChatStore.getState().sessionsByTabId["subagent-tab"]).toBeUndefined();
+  });
 });
 
 describe("agentChatCommands.subagent helpers", () => {
@@ -273,6 +302,8 @@ describe("agentChatCommands.subagent helpers", () => {
       workspaceId: "workspace-1",
       cwd: "/tmp/project",
       parentPaneId: "root-pane",
+      parentSessionId: "parent-session",
+      agentId: "agent-1",
       childSessionId: "child-session-1",
       title: "Builder — implement row",
     });
@@ -281,12 +312,69 @@ describe("agentChatCommands.subagent helpers", () => {
       .getState()
       .tabs.find((tab) => tab.kind === "agent-chat" && tab.data.sessionId === "child-session-1");
     expect(childTab).toBeTruthy();
+    expect(childTab?.kind === "agent-chat" ? childTab.data.sessionView : undefined).toBe("subagent-detail");
+    expect(childTab?.kind === "agent-chat" ? childTab.data.subagentAgentId : undefined).toBe("agent-1");
+    expect(childTab?.kind === "agent-chat" ? childTab.data.subagentParentSessionId : undefined).toBe("parent-session");
     expect(tabStore.getState().selectedTabId).toBe(childTab?.id);
 
     const panes = splitPaneStore.getState().getAllPanes("workspace-1");
     expect(panes).toHaveLength(2);
     expect(panes.some((pane) => pane.id === "root-pane" && pane.tabIds.includes("parent-tab"))).toBe(true);
     expect(panes.some((pane) => childTab && pane.tabIds.includes(childTab.id))).toBe(true);
+  });
+
+  it("reveals an existing child session by splitting it into the right pane when the tab is not in any pane", async () => {
+    tabStore.setState(
+      {
+        ...tabStore.getState(),
+        tabs: [
+          {
+            id: "parent-tab",
+            workspaceId: "workspace-1",
+            title: "Parent Chat",
+            pinned: false,
+            kind: "agent-chat",
+            data: { cwd: "/tmp/project", sessionId: "parent-session" },
+          },
+          {
+            id: "child-tab",
+            workspaceId: "workspace-1",
+            title: "Builder — implement row",
+            pinned: false,
+            kind: "agent-chat",
+            data: {
+              cwd: "/tmp/project",
+              sessionId: "child-session-1",
+              sessionView: "subagent-detail",
+              subagentAgentId: "stale-agent",
+            },
+          },
+        ],
+        selectedTabId: "parent-tab",
+        selectedTabIdByWorkspaceId: { "workspace-1": "parent-tab" },
+      },
+      true,
+    );
+    splitPaneStore.getState().registerTabInPane("workspace-1", "parent-tab", "root-pane");
+
+    await openSubagentSessionInRightSplitPane({
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      parentPaneId: "root-pane",
+      parentSessionId: "parent-session",
+      agentId: "agent-1",
+      childSessionId: "child-session-1",
+      title: "Builder — implement row",
+    });
+
+    expect(tabStore.getState().selectedTabId).toBe("child-tab");
+    const childTab = tabStore.getState().tabs.find((tab) => tab.id === "child-tab" && tab.kind === "agent-chat");
+    expect(childTab?.kind === "agent-chat" ? childTab.data.subagentAgentId : undefined).toBe("agent-1");
+    expect(childTab?.kind === "agent-chat" ? childTab.data.subagentParentSessionId : undefined).toBe("parent-session");
+    const panes = splitPaneStore.getState().getAllPanes("workspace-1");
+    expect(panes).toHaveLength(2);
+    expect(panes.some((pane) => pane.id === "root-pane" && pane.tabIds.includes("parent-tab"))).toBe(true);
+    expect(panes.some((pane) => pane.tabIds.includes("child-tab") && pane.selectedTabId === "child-tab")).toBe(true);
   });
 
   it("sends a direct /agent-stop prompt without optimistic streaming state updates", async () => {
@@ -298,6 +386,7 @@ describe("agentChatCommands.subagent helpers", () => {
       agentId: "agent-1",
     });
 
+    expect(mocks.send).toHaveBeenCalledTimes(1);
     expect(mocks.send).toHaveBeenCalledWith({
       sessionId: "parent-session",
       command: {
@@ -317,14 +406,44 @@ describe("agentChatCommands.subagent helpers", () => {
       tabId: "parent-tab-running",
       sessionId: "parent-session-running",
       agentId: "agent-running",
+      agentName: "Builder",
     });
 
-    expect(mocks.send).toHaveBeenCalledWith({
+    expect(mocks.send).toHaveBeenNthCalledWith(1, {
       sessionId: "parent-session-running",
       command: {
         type: "prompt",
         message: "/agent-stop agent-running",
         streamingBehavior: "steer",
+      },
+    });
+    expect(mocks.send).toHaveBeenNthCalledWith(2, {
+      sessionId: "parent-session-running",
+      command: {
+        type: "prompt",
+        message:
+          "The user cancelled sub-agent Builder. Do not retry that sub-agent. Continue without it and explain any missing work if needed.",
+        streamingBehavior: "steer",
+      },
+    });
+  });
+
+  it("prefers child session ids as the stop target when available", async () => {
+    agentChatStore.getState().initSession("parent-tab-child", "parent-session-child");
+
+    await cancelSubagentRun({
+      tabId: "parent-tab-child",
+      sessionId: "parent-session-child",
+      agentId: "agent-1",
+      childSessionId: "child-session-1",
+    });
+
+    expect(mocks.send).toHaveBeenCalledWith({
+      sessionId: "parent-session-child",
+      command: {
+        type: "prompt",
+        message: "/agent-stop child-session-1",
+        streamingBehavior: undefined,
       },
     });
   });
@@ -500,6 +619,53 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
       errorMessage: "Codex error: The usage limit has been reached",
       content: [],
     });
+  });
+
+  it("routes pushed child transcript snapshots into the matching detail tab", () => {
+    agentChatStore.getState().initSession("parent-tab", "parent-session");
+    tabStore.getState().openTab({
+      workspaceId: "workspace-1",
+      kind: "agent-chat",
+      title: "Builder",
+      cwd: "/tmp/project",
+      sessionId: "child-session-1",
+      sessionView: "subagent-detail",
+    });
+    const detailTab = tabStore
+      .getState()
+      .tabs.find((tab) => tab.kind === "agent-chat" && tab.data.sessionId === "child-session-1");
+    if (!detailTab) {
+      throw new Error("Expected a subagent detail tab");
+    }
+    agentChatStore.getState().initSession(detailTab.id, "child-session-1");
+
+    handleAgentPiEvent({
+      sessionId: "parent-session",
+      tabId: "parent-tab",
+      workspaceId: "workspace-1",
+      event: {
+        type: "extension_ui_request",
+        method: "setWidget",
+        widgetKey: "pi-subagents-live-transcripts",
+        widgetLines: [
+          JSON.stringify({
+            version: 1,
+            agents: [
+              {
+                agentId: "agent-1",
+                childSessionId: "child-session-1",
+                status: "running",
+                messages: [{ id: "child-message-1", role: "assistant", content: [{ type: "text", text: "Working" }] }],
+              },
+            ],
+          }),
+        ],
+      },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId[detailTab.id]?.messages).toEqual([
+      { id: "child-message-1", role: "assistant", content: [{ type: "text", text: "Working" }] },
+    ]);
   });
 
   it("stores pending extension UI requests from Pi events", () => {

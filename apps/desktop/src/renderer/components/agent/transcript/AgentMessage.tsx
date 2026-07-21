@@ -1,5 +1,6 @@
 import { Box, Paper, Typography } from "@mui/material";
 import type { AgentMessage as AgentMessageType } from "../../../store/agentChatTypes";
+import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
 import { AssistantMessageContent } from "./AssistantMessageContent";
 import { ToolResultMessageContent } from "./ToolResultMessageContent";
 import { UserMessageContent } from "./UserMessageContent";
@@ -10,6 +11,7 @@ type AgentMessageProps = {
   mergedToolResults?: AgentToolResultMap;
   workspacePath?: string;
   isStreaming?: boolean;
+  onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
 /** Renders a single agent conversation message and routes by message role. */
@@ -18,6 +20,7 @@ export function AgentMessage({
   mergedToolResults = {},
   workspacePath,
   isStreaming = false,
+  onOpenCompletedSubagent,
 }: AgentMessageProps) {
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
@@ -45,6 +48,7 @@ export function AgentMessage({
           mergedToolResults={mergedToolResults}
           workspacePath={workspacePath}
           isStreaming={isStreaming}
+          onOpenCompletedSubagent={onOpenCompletedSubagent}
         />
       ) : null}
       {isToolResult ? <ToolResultMessageContent message={message} /> : null}

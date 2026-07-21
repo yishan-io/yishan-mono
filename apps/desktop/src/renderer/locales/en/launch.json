@@ -3,6 +3,16 @@
     "title": "What's next?",
     "hint": "Choose an action to get started.",
     "agents": "Start with Agent",
+    "recent": {
+      "title": "Recent agent sessions",
+      "empty": "No sessions found",
+      "loadError": "Could not load recent sessions",
+      "defaultTitle": "Agent Chat",
+      "now": "now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    },
     "actions": {
       "openTerminal": "Open terminal",
       "openBrowser": "Open browser tab",

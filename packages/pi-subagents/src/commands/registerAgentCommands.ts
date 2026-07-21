@@ -112,7 +112,11 @@ export function registerAgentCommands(pi: ExtensionAPI, registry: AgentRegistry,
         return;
       }
 
-      await manager.stop(agentId);
+      const stopped = await manager.stop(agentId);
+      if (!stopped) {
+        ctx.ui.notify(`Unknown running agent or child session: ${agentId}`, "error");
+        return;
+      }
       ctx.ui.notify(`Stop requested for ${agentId}`, "info");
     },
   });

@@ -27,6 +27,7 @@ import {
   workspaceCreateProgressStore,
 } from "../../store/workspaceCreateProgressStore";
 import { workspaceStore } from "../../store/workspaceStore";
+import { RecentAgentSessions } from "./RecentAgentSessions";
 
 function CreateProgressStepIcon({ step }: { step: WorkspaceCreateProgressStep }) {
   if (step.status === "completed") {
@@ -83,16 +84,16 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
 
   const launchActions = [
     {
-      id: "terminal",
-      label: t("launch.actions.openTerminal"),
-      shortcutLabel: getShortcutDisplayLabelById("open-terminal", platform),
-      icon: <LuSquareTerminal size={16} />,
+      id: "agent-chat",
+      label: t("launch.actions.openAgentChat"),
+      shortcutLabel: getShortcutDisplayLabelById("open-agent-chat", platform),
+      icon: <LuSparkles size={16} />,
       onClick: () =>
         openTab({
           workspaceId,
-          kind: "terminal",
-          title: t("terminal.title"),
-          reuseExisting: false,
+          kind: "agent-chat",
+          title: t("agentChat.title"),
+          cwd: selectedWorkspace?.worktreePath || undefined,
         }),
     },
     {
@@ -108,16 +109,16 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
         }),
     },
     {
-      id: "agent-chat",
-      label: t("launch.actions.openAgentChat"),
-      shortcutLabel: getShortcutDisplayLabelById("open-agent-chat", platform),
-      icon: <LuSparkles size={16} />,
+      id: "terminal",
+      label: t("launch.actions.openTerminal"),
+      shortcutLabel: getShortcutDisplayLabelById("open-terminal", platform),
+      icon: <LuSquareTerminal size={16} />,
       onClick: () =>
         openTab({
           workspaceId,
-          kind: "agent-chat",
-          title: t("agentChat.title"),
-          cwd: selectedWorkspace?.worktreePath || undefined,
+          kind: "terminal",
+          title: t("terminal.title"),
+          reuseExisting: false,
         }),
     },
     {
@@ -209,132 +210,161 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
         gap: 2,
       }}
     >
-      <Typography variant="h6">{t("launch.title")}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {t("launch.hint")}
-      </Typography>
-
-      {/* Quick-action list */}
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2, width: 260 }}>
-        {launchActions.map((action) => (
-          <Box
-            key={action.id}
-            component="button"
-            type="button"
-            onClick={action.onClick}
-            disabled={!workspaceId}
-            sx={{
-              minHeight: 40,
-              border: 1,
-              borderColor: "divider",
-              borderRadius: 1,
-              px: 1.25,
-              bgcolor: "background.paper",
-              color: "text.primary",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 1,
-              cursor: workspaceId ? "pointer" : "not-allowed",
-              textAlign: "left",
-              typography: "body2",
-              transition: "background-color 0.15s, border-color 0.15s",
-              "&:hover:not(:disabled)": {
-                bgcolor: "action.hover",
-                borderColor: "action.selected",
-              },
-            }}
-          >
-            <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
-              {action.icon}
-              <Box component="span">{action.label}</Box>
-            </Box>
-            {action.shortcutLabel ? (
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                component="span"
-                aria-hidden="true"
-                sx={{ fontSize: 13, lineHeight: 1 }}
-              >
-                {action.shortcutLabel}
-              </Typography>
-            ) : null}
-          </Box>
-        ))}
-      </Box>
-
-      {/* Agent grid */}
-      {enabledAgentKinds.length > 0 && (
-        <Box sx={{ width: "min(360px, 100%)", mt: 2 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ display: "block", mb: 2, textAlign: "center" }}>
-            {t("launch.agents")}
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          alignItems: { xs: "flex-start", md: "stretch" },
+          justifyContent: "center",
+          gap: 4,
+          width: "min(900px, 100%)",
+        }}
+      >
+        <Box sx={{ display: "flex", flex: 1, flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
+          <Typography variant="h6">{t("launch.title")}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
+            {t("launch.hint")}
           </Typography>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${Math.min(enabledAgentKinds.length, 4)}, 80px)`,
-              justifyContent: "center",
-              gap: 2,
-            }}
-          >
-            {enabledAgentKinds.map((agentKind) => {
-              const label = t(AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND[agentKind]);
-              const launchCommand = resolveAgentLaunchCommand(agentKind, customCommandByAgentKind);
-              return (
-                <Box
-                  key={agentKind}
-                  component="button"
-                  type="button"
-                  disabled={!workspaceId}
-                  onClick={() =>
-                    openTab({
-                      workspaceId,
-                      kind: "terminal",
-                      title: t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind]),
-                      launchCommand,
-                      agentKind,
-                      reuseExisting: false,
-                    })
-                  }
-                  sx={{
-                    border: 1,
-                    borderColor: "divider",
-                    borderRadius: 1,
-                    bgcolor: "background.paper",
-                    color: "text.secondary",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 1.5,
-                    py: 1.25,
-                    px: 0.5,
-                    cursor: workspaceId ? "pointer" : "not-allowed",
-                    minWidth: 0,
-                    transition: "background-color 0.15s, border-color 0.15s",
-                    "&:hover:not(:disabled)": {
-                      bgcolor: "action.hover",
-                      borderColor: "action.selected",
-                    },
-                  }}
-                  aria-label={label}
-                >
-                  <AgentIcon agentKind={agentKind} context="launchGrid" decorative />
+
+          {/* Quick-action list */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, width: "100%" }}>
+            {launchActions.map((action) => (
+              <Box
+                key={action.id}
+                component="button"
+                type="button"
+                onClick={action.onClick}
+                disabled={!workspaceId}
+                sx={{
+                  width: "100%",
+                  minHeight: 40,
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  px: 1.25,
+                  bgcolor: "background.paper",
+                  color: "text.primary",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 1,
+                  cursor: workspaceId ? "pointer" : "not-allowed",
+                  textAlign: "left",
+                  typography: "body2",
+                  transition: "background-color 0.15s, border-color 0.15s",
+                  "&:hover:not(:disabled)": {
+                    bgcolor: "action.hover",
+                    borderColor: "action.selected",
+                  },
+                }}
+              >
+                <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
+                  {action.icon}
+                  <Box component="span">{action.label}</Box>
+                </Box>
+                {action.shortcutLabel ? (
                   <Typography
                     variant="caption"
+                    color="text.secondary"
                     component="span"
-                    noWrap
-                    sx={{ fontSize: "0.7rem", lineHeight: 1, maxWidth: "100%" }}
+                    aria-hidden="true"
+                    sx={{ fontSize: 13, lineHeight: 1 }}
                   >
-                    {label}
+                    {action.shortcutLabel}
                   </Typography>
-                </Box>
-              );
-            })}
+                ) : null}
+              </Box>
+            ))}
           </Box>
+
+          {/* Agent grid */}
+          {enabledAgentKinds.length > 0 && (
+            <Box sx={{ width: "min(360px, 100%)", mt: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ display: "block", mb: 2, textAlign: "center" }}>
+                {t("launch.agents")}
+              </Typography>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${Math.min(enabledAgentKinds.length, 4)}, 80px)`,
+                  justifyContent: "center",
+                  gap: 2,
+                }}
+              >
+                {enabledAgentKinds.map((agentKind) => {
+                  const label = t(AGENT_TAB_CREATE_MENU_LABEL_KEY_BY_KIND[agentKind]);
+                  const launchCommand = resolveAgentLaunchCommand(agentKind, customCommandByAgentKind);
+                  return (
+                    <Box
+                      key={agentKind}
+                      component="button"
+                      type="button"
+                      disabled={!workspaceId}
+                      onClick={() =>
+                        openTab({
+                          workspaceId,
+                          kind: "terminal",
+                          title: t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind]),
+                          launchCommand,
+                          agentKind,
+                          reuseExisting: false,
+                        })
+                      }
+                      sx={{
+                        border: 1,
+                        borderColor: "divider",
+                        borderRadius: 1,
+                        bgcolor: "background.paper",
+                        color: "text.secondary",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 1.5,
+                        py: 1.25,
+                        px: 0.5,
+                        cursor: workspaceId ? "pointer" : "not-allowed",
+                        minWidth: 0,
+                        transition: "background-color 0.15s, border-color 0.15s",
+                        "&:hover:not(:disabled)": {
+                          bgcolor: "action.hover",
+                          borderColor: "action.selected",
+                        },
+                      }}
+                      aria-label={label}
+                    >
+                      <AgentIcon agentKind={agentKind} context="launchGrid" decorative />
+                      <Typography
+                        variant="caption"
+                        component="span"
+                        noWrap
+                        sx={{ fontSize: "0.7rem", lineHeight: 1, maxWidth: "100%" }}
+                      >
+                        {label}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Box>
+          )}
         </Box>
-      )}
+        <Box
+          sx={{
+            display: "flex",
+            flex: 1,
+            minWidth: 0,
+            "--launch-section-divider": (theme) =>
+              theme.palette.mode === "dark" ? theme.palette.grey[800] : theme.palette.grey[300],
+            borderLeft: { md: "1px solid var(--launch-section-divider)" },
+            borderTop: { xs: "1px solid var(--launch-section-divider)", md: 0 },
+            pl: { md: 4 },
+            pt: { xs: 3, md: 0 },
+          }}
+        >
+          <RecentAgentSessions workspaceId={workspaceId} cwd={selectedWorkspace?.worktreePath} />
+        </Box>
+      </Box>
     </Box>
   );
 }

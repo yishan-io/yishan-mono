@@ -37,6 +37,7 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       closeAllTerminalTabs: vi.fn(),
       setTerminalTabSessionId: vi.fn(),
       setAgentChatTabSession: vi.fn(),
+      setAgentChatTabSubagentControl: vi.fn(),
       setTerminalTabAgentKind: vi.fn(),
       setBrowserTabFaviconUrl: vi.fn(),
       setBrowserTabUrl: vi.fn(),
@@ -183,13 +184,16 @@ describe("SUPPORTED_KEY_BINDINGS", () => {
     expect(leftPaneBinding?.windowsKeys).toEqual(["CTRL", "B"]);
   });
 
-  it("documents chat and terminal tabs as mod+y and mod+t", () => {
+  it("documents chat, agent-chat, and terminal tabs", () => {
     const chatBinding = SUPPORTED_KEY_BINDINGS.find((binding) => binding.id === "new-tab");
+    const agentChatBinding = SUPPORTED_KEY_BINDINGS.find((binding) => binding.id === "open-agent-chat");
     const terminalBinding = SUPPORTED_KEY_BINDINGS.find((binding) => binding.id === "open-terminal");
     const browserBinding = SUPPORTED_KEY_BINDINGS.find((binding) => binding.id === "open-browser");
 
     expect(chatBinding?.macKeys).toEqual(["⌘", "Y"]);
     expect(chatBinding?.windowsKeys).toEqual(["CTRL", "Y"]);
+    expect(agentChatBinding?.macKeys).toEqual(["⌘", "⇧", "A"]);
+    expect(agentChatBinding?.windowsKeys).toEqual(["CTRL", "⇧", "A"]);
     expect(terminalBinding?.macKeys).toEqual(["⌘", "T"]);
     expect(terminalBinding?.windowsKeys).toEqual(["CTRL", "T"]);
     expect(browserBinding?.macKeys).toEqual(["⌘", "⇧", "B"]);

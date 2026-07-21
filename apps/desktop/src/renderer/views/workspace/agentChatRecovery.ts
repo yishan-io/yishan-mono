@@ -1,6 +1,7 @@
 import type { PiActiveSessionSummary } from "../../rpc/daemonTypes";
 import { tabStore } from "../../store/tabStore";
 import type { TabStoreState } from "../../store/tabStore";
+import type { AgentChatSessionView } from "../../store/types";
 import { workspaceStore } from "../../store/workspaceStore";
 
 type AgentChatTab = Extract<TabStoreState["tabs"][number], { kind: "agent-chat" }>;
@@ -13,6 +14,7 @@ type PersistedAgentChatTabEntry = {
   cwd: string;
   sessionId: string;
   userRenamed: boolean;
+  sessionView: AgentChatSessionView;
 };
 
 type PersistedAgentChatTabPayload = {
@@ -103,6 +105,7 @@ export class AgentChatRecoveryCoordinator {
           cwd: session.cwd,
           sessionId: session.sessionId,
           userRenamed: persistedEntry?.userRenamed ?? false,
+          sessionView: persistedEntry?.sessionView ?? "full",
         },
       };
 
@@ -219,6 +222,7 @@ export class AgentChatRecoveryCoordinator {
         cwd: tab.data.cwd,
         sessionId,
         userRenamed: Boolean(tab.data.userRenamed),
+        sessionView: tab.data.sessionView ?? "full",
       });
     }
 
@@ -253,6 +257,7 @@ function normalizePersistedAgentChatTabEntry(value: unknown): PersistedAgentChat
   const title = normalizeOptionalText(entry.title);
   const cwd = normalizeOptionalText(entry.cwd);
   const sessionId = normalizeOptionalText(entry.sessionId);
+  const sessionView = entry.sessionView === "subagent-detail" ? "subagent-detail" : "full";
   if (!tabId || !workspaceId || !title || !cwd || !sessionId) {
     return undefined;
   }
@@ -265,5 +270,6 @@ function normalizePersistedAgentChatTabEntry(value: unknown): PersistedAgentChat
     cwd,
     sessionId,
     userRenamed: Boolean(entry.userRenamed),
+    sessionView,
   };
 }
