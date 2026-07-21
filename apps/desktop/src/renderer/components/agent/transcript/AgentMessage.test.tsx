@@ -38,6 +38,15 @@ function formatExpectedMessageTime(timestamp: number): string {
 }
 
 describe("AgentMessage", () => {
+  it("renders a standalone tool result with omitted content", () => {
+    render(
+      <AgentMessage
+        message={{ id: "tool-result-missing-content", role: "toolResult" } as unknown as AgentMessageType}
+      />,
+    );
+
+    expect(screen.getByText("tool")).toBeTruthy();
+  });
   it("does not render a duplicate responding spinner for empty streaming assistant messages", () => {
     render(
       <AgentMessage

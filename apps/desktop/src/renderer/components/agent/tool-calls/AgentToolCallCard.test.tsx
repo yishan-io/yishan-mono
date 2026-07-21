@@ -106,6 +106,23 @@ function buildDiffResult(toolName: "edit" | "write") {
 }
 
 describe("AgentToolCallCard", () => {
+  it("renders a merged result with omitted content", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-missing-result-content",
+      name: "bash",
+      arguments: { command: "echo hi" },
+    };
+
+    render(
+      <AgentToolCallCard
+        toolCall={toolCall}
+        result={{ id: "result-missing-content", role: "toolResult" } as unknown as AgentMessage}
+      />,
+    );
+
+    expect(screen.getByText("echo hi")).toBeTruthy();
+  });
   it("shows a bash tool command with an icon instead of a text prefix", () => {
     const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
       type: "toolCall",

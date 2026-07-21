@@ -11,6 +11,7 @@ import type {
   AgentPendingUiRequest,
   AgentQueueState,
   AgentStreamEvent,
+  AgentThinkingSignature,
 } from "../store/agentChatTypes";
 import { tabStore } from "../store/tabStore";
 import type { AgentChatSessionView } from "../store/types";
@@ -453,8 +454,8 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
       break;
 
     case "message_start": {
-      const msg = event.message as AgentMessage | undefined;
-      if (msg && msg.role === "assistant") {
+      const msg = normalizeIncomingAgentMessage(event.message);
+      if (msg?.role === "assistant") {
         const turnError = msg.errorMessage?.trim();
         if (turnError) {
           agentChatStore.getState().setTurnError(tabId, turnError);
@@ -474,7 +475,7 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     }
 
     case "message_update": {
-      const snapshot = event.message as AgentMessage | undefined;
+      const snapshot = normalizeIncomingAgentMessage(event.message);
       if (snapshot?.role === "assistant") {
         const turnError = snapshot.errorMessage?.trim();
         if (turnError) {
@@ -492,7 +493,7 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
         break;
       }
 
-      const delta = event.assistantMessageEvent as AgentStreamEvent | undefined;
+      const delta = parseAgentStreamEvent(event.assistantMessageEvent);
       const base = getLatestStreamingMessage(tabId);
       if (!delta || !base) break;
 
@@ -503,7 +504,7 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     }
 
     case "message_end": {
-      const msg = event.message as AgentMessage | undefined;
+      const msg = normalizeIncomingAgentMessage(event.message);
       if (!msg) break;
 
       flushAgentChatStreamBuffer(tabId);
@@ -663,7 +664,11 @@ function parseSubagentLiveTranscripts(event: Record<string, unknown>): SubagentL
         return [];
       }
 
-      return [{ childSessionId, messages: messages as AgentMessage[] }];
+      const normalizedMessages = messages.flatMap((message) => {
+        const normalizedMessage = normalizeIncomingAgentMessage(message);
+        return normalizedMessage ? [normalizedMessage] : [];
+      });
+      return [{ childSessionId, messages: normalizedMessages }];
     });
   } catch {
     return null;
@@ -702,6 +707,223 @@ function queueStreamingMessageUpdate(tabId: string, message: AgentMessage): void
       agentChatStore.getState().updateStreamingMessage(tabId, nextMessage);
     },
   });
+}
+
+function normalizeIncomingAgentMessage(rawMessage: unknown): AgentMessage | null {
+  if (!isRecord(rawMessage) || !isAgentMessageRole(rawMessage.role)) {
+    return null;
+  }
+
+  const content = normalizeMessageContent(rawMessage.content);
+  const message: AgentMessage = {
+    id: typeof rawMessage.id === "string" ? rawMessage.id : generateId(),
+    role: rawMessage.role,
+    content,
+  };
+
+  if (typeof rawMessage.customType === "string") message.customType = rawMessage.customType;
+  if (typeof rawMessage.display === "boolean") message.display = rawMessage.display;
+  if (typeof rawMessage.toolCallId === "string") message.toolCallId = rawMessage.toolCallId;
+  if (typeof rawMessage.toolName === "string") message.toolName = rawMessage.toolName;
+  if (typeof rawMessage.isError === "boolean") message.isError = rawMessage.isError;
+  const details = normalizeMessageDetails(rawMessage.details);
+  if (details) message.details = details;
+  const usage = normalizeMessageUsage(rawMessage.usage);
+  if (usage) message.usage = usage;
+  if (typeof rawMessage.stopReason === "string") message.stopReason = rawMessage.stopReason;
+  if (typeof rawMessage.errorMessage === "string") message.errorMessage = rawMessage.errorMessage;
+  if (typeof rawMessage.timestamp === "number") message.timestamp = rawMessage.timestamp;
+  if (typeof rawMessage.startedAtMs === "number") message.startedAtMs = rawMessage.startedAtMs;
+  if (typeof rawMessage.durationMs === "number") message.durationMs = rawMessage.durationMs;
+
+  return message;
+}
+
+function normalizeMessageDetails(details: unknown): Record<string, unknown> | undefined {
+  if (isRecord(details)) {
+    return details;
+  }
+  if (typeof details !== "string") {
+    return undefined;
+  }
+
+  try {
+    const parsedDetails: unknown = JSON.parse(details);
+    return isRecord(parsedDetails) ? parsedDetails : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeMessageContent(content: unknown): string | AgentContentBlock[] {
+  if (typeof content === "string") {
+    return content;
+  }
+  if (!Array.isArray(content)) {
+    return "";
+  }
+
+  return content.flatMap((block) => {
+    const normalizedBlock = normalizeContentBlock(block);
+    return normalizedBlock ? [normalizedBlock] : [];
+  });
+}
+
+function normalizeContentBlock(rawBlock: unknown): AgentContentBlock | null {
+  if (!isRecord(rawBlock) || typeof rawBlock.type !== "string") {
+    return null;
+  }
+
+  if (rawBlock.type === "text" && typeof rawBlock.text === "string") {
+    return { type: "text", text: rawBlock.text };
+  }
+  if (rawBlock.type === "thinking" && typeof rawBlock.thinking === "string") {
+    const thinkingSignature = normalizeThinkingSignature(rawBlock.thinkingSignature);
+    return { type: "thinking", thinking: rawBlock.thinking, thinkingSignature };
+  }
+  if (
+    rawBlock.type === "toolCall" &&
+    typeof rawBlock.id === "string" &&
+    typeof rawBlock.name === "string" &&
+    isRecord(rawBlock.arguments)
+  ) {
+    return { type: "toolCall", id: rawBlock.id, name: rawBlock.name, arguments: { ...rawBlock.arguments } };
+  }
+
+  return null;
+}
+
+function normalizeThinkingSignature(signature: unknown): string | AgentThinkingSignature | undefined {
+  if (typeof signature === "string") {
+    return signature;
+  }
+  if (!isRecord(signature)) {
+    return undefined;
+  }
+
+  const normalizedSignature: AgentThinkingSignature = {};
+  if (typeof signature.id === "string") normalizedSignature.id = signature.id;
+  if (typeof signature.type === "string") normalizedSignature.type = signature.type;
+  if (Array.isArray(signature.summary)) {
+    normalizedSignature.summary = signature.summary.flatMap((summaryItem) => {
+      if (!isRecord(summaryItem) || typeof summaryItem.type !== "string" || typeof summaryItem.text !== "string") {
+        return [];
+      }
+      return [{ type: summaryItem.type, text: summaryItem.text }];
+    });
+  }
+  return normalizedSignature;
+}
+
+function normalizeMessageUsage(usage: unknown): AgentMessage["usage"] | undefined {
+  if (!isRecord(usage) || typeof usage.input !== "number" || typeof usage.output !== "number") {
+    return undefined;
+  }
+
+  const normalizedUsage: NonNullable<AgentMessage["usage"]> = { input: usage.input, output: usage.output };
+  if (typeof usage.cacheRead === "number") normalizedUsage.cacheRead = usage.cacheRead;
+  if (typeof usage.cacheWrite === "number") normalizedUsage.cacheWrite = usage.cacheWrite;
+  if (typeof usage.reasoning === "number") normalizedUsage.reasoning = usage.reasoning;
+  if (typeof usage.total === "number") normalizedUsage.total = usage.total;
+  if (typeof usage.totalTokens === "number") normalizedUsage.totalTokens = usage.totalTokens;
+  if (isRecord(usage.cost)) {
+    const cost: NonNullable<NonNullable<AgentMessage["usage"]>["cost"]> = {};
+    if (typeof usage.cost.input === "number") cost.input = usage.cost.input;
+    if (typeof usage.cost.output === "number") cost.output = usage.cost.output;
+    if (typeof usage.cost.cacheRead === "number") cost.cacheRead = usage.cost.cacheRead;
+    if (typeof usage.cost.cacheWrite === "number") cost.cacheWrite = usage.cost.cacheWrite;
+    if (typeof usage.cost.total === "number") cost.total = usage.cost.total;
+    normalizedUsage.cost = cost;
+  }
+  return normalizedUsage;
+}
+
+function isAgentMessageRole(role: unknown): role is AgentMessage["role"] {
+  return role === "user" || role === "assistant" || role === "toolResult" || role === "custom";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+const MAX_STREAM_CONTENT_INDEX = 10_000;
+
+function parseAgentStreamEvent(rawEvent: unknown): AgentStreamEvent | null {
+  if (!isRecord(rawEvent) || typeof rawEvent.type !== "string") {
+    return null;
+  }
+
+  switch (rawEvent.type) {
+    case "start":
+      return { type: "start" };
+    case "done":
+    case "error":
+      return typeof rawEvent.reason === "string" ? { type: rawEvent.type, reason: rawEvent.reason } : null;
+    case "text_start":
+    case "thinking_start":
+      return isValidStreamContentIndex(rawEvent.contentIndex)
+        ? { type: rawEvent.type, contentIndex: rawEvent.contentIndex }
+        : null;
+    case "text_delta":
+    case "thinking_delta":
+      return isValidStreamContentIndex(rawEvent.contentIndex) && typeof rawEvent.delta === "string"
+        ? { type: rawEvent.type, contentIndex: rawEvent.contentIndex, delta: rawEvent.delta }
+        : null;
+    case "text_end":
+    case "thinking_end":
+      return isValidStreamContentIndex(rawEvent.contentIndex) && typeof rawEvent.content === "string"
+        ? { type: rawEvent.type, contentIndex: rawEvent.contentIndex, content: rawEvent.content }
+        : null;
+    case "toolcall_start":
+      return isValidStreamContentIndex(rawEvent.contentIndex) &&
+        typeof rawEvent.toolCallId === "string" &&
+        typeof rawEvent.toolName === "string"
+        ? {
+            type: "toolcall_start",
+            contentIndex: rawEvent.contentIndex,
+            toolCallId: rawEvent.toolCallId,
+            toolName: rawEvent.toolName,
+          }
+        : null;
+    case "toolcall_delta":
+      return isValidStreamContentIndex(rawEvent.contentIndex) &&
+        typeof rawEvent.toolCallId === "string" &&
+        typeof rawEvent.delta === "string"
+        ? {
+            type: "toolcall_delta",
+            contentIndex: rawEvent.contentIndex,
+            toolCallId: rawEvent.toolCallId,
+            delta: rawEvent.delta,
+          }
+        : null;
+    case "toolcall_end":
+      if (
+        !isValidStreamContentIndex(rawEvent.contentIndex) ||
+        typeof rawEvent.toolCallId !== "string" ||
+        !isRecord(rawEvent.toolCall) ||
+        typeof rawEvent.toolCall.id !== "string" ||
+        typeof rawEvent.toolCall.name !== "string" ||
+        !isRecord(rawEvent.toolCall.arguments)
+      ) {
+        return null;
+      }
+      return {
+        type: "toolcall_end",
+        contentIndex: rawEvent.contentIndex,
+        toolCallId: rawEvent.toolCallId,
+        toolCall: {
+          id: rawEvent.toolCall.id,
+          name: rawEvent.toolCall.name,
+          arguments: rawEvent.toolCall.arguments,
+        },
+      };
+    default:
+      return null;
+  }
+}
+
+function isValidStreamContentIndex(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= MAX_STREAM_CONTENT_INDEX;
 }
 
 function cloneIncomingAgentMessage(message: AgentMessage): AgentMessage {
@@ -937,13 +1159,13 @@ function handlePiResponse(tabId: string, sessionId: string, event: Record<string
     }
     case "get_messages": {
       if (!success) break;
-      const data = event.data as { messages?: AgentMessage[] } | undefined;
+      const messages = isRecord(event.data) && Array.isArray(event.data.messages) ? event.data.messages : [];
       agentChatStore.getState().replaceMessages(
         tabId,
-        (data?.messages ?? []).map((msg) => ({
-          ...cloneIncomingAgentMessage(msg),
-          id: msg.id ?? generateId(),
-        })),
+        messages.flatMap((rawMessage) => {
+          const message = normalizeIncomingAgentMessage(rawMessage);
+          return message ? [cloneIncomingAgentMessage(message)] : [];
+        }),
       );
       break;
     }

@@ -450,6 +450,169 @@ describe("agentChatCommands.subagent helpers", () => {
 });
 
 describe("agentChatCommands.handleAgentPiEvent", () => {
+  it("ignores malformed toolcall_end deltas without corrupting the streaming message", () => {
+    agentChatStore.getState().initSession("tab-malformed-toolcall-delta", "session-malformed-toolcall-delta");
+    agentChatStore.getState().updateStreamingMessage("tab-malformed-toolcall-delta", {
+      id: "assistant-message",
+      role: "assistant",
+      content: [{ type: "toolCall", id: "tool-1", name: "read", arguments: { path: "safe.ts" } }],
+      startedAtMs: 1,
+    });
+
+    expect(() => {
+      handleAgentPiEvent({
+        sessionId: "session-malformed-toolcall-delta",
+        tabId: "tab-malformed-toolcall-delta",
+        workspaceId: "workspace-1",
+        event: {
+          type: "message_update",
+          assistantMessageEvent: {
+            type: "toolcall_end",
+            contentIndex: 0,
+            toolCallId: "tool-1",
+            toolCall: { id: "tool-1", name: "read", arguments: null },
+          },
+        },
+      });
+    }).not.toThrow();
+
+    handleAgentPiEvent({
+      sessionId: "session-malformed-toolcall-delta",
+      tabId: "tab-malformed-toolcall-delta",
+      workspaceId: "workspace-1",
+      event: { type: "agent_end" },
+    });
+
+    expect(
+      agentChatStore.getState().sessionsByTabId["tab-malformed-toolcall-delta"]?.streamingMessage?.content,
+    ).toEqual([{ type: "toolCall", id: "tool-1", name: "read", arguments: { path: "safe.ts" } }]);
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 1_000_000])(
+    "ignores unsafe stream content indexes (%s)",
+    (contentIndex) => {
+      agentChatStore.getState().initSession("tab-invalid-stream-index", "session-invalid-stream-index");
+      agentChatStore.getState().updateStreamingMessage("tab-invalid-stream-index", {
+        id: "assistant-message",
+        role: "assistant",
+        content: [{ type: "text", text: "safe" }],
+        startedAtMs: 1,
+      });
+
+      expect(() => {
+        handleAgentPiEvent({
+          sessionId: "session-invalid-stream-index",
+          tabId: "tab-invalid-stream-index",
+          workspaceId: "workspace-1",
+          event: {
+            type: "message_update",
+            assistantMessageEvent: { type: "text_delta", contentIndex, delta: "unsafe" },
+          },
+        });
+      }).not.toThrow();
+
+      handleAgentPiEvent({
+        sessionId: "session-invalid-stream-index",
+        tabId: "tab-invalid-stream-index",
+        workspaceId: "workspace-1",
+        event: { type: "agent_end" },
+      });
+
+      expect(agentChatStore.getState().sessionsByTabId["tab-invalid-stream-index"]?.streamingMessage?.content).toEqual([
+        { type: "text", text: "safe" },
+      ]);
+    },
+  );
+  it("derives a subagent lifecycle from JSON-string details when history content is omitted", () => {
+    agentChatStore.getState().initSession("tab-string-details-history", "session-string-details-history");
+
+    handleAgentPiEvent({
+      sessionId: "session-string-details-history",
+      tabId: "tab-string-details-history",
+      workspaceId: "workspace-1",
+      event: {
+        type: "response",
+        command: "get_messages",
+        success: true,
+        data: {
+          messages: [
+            {
+              id: "subagent-start-string-details",
+              role: "custom",
+              customType: "pi-subagent-child",
+              display: false,
+              details: JSON.stringify({
+                event: "started",
+                agentId: "agent-string-details",
+                agentName: "Builder",
+                childSessionId: "child-session-string-details",
+                summary: "implement normalization",
+              }),
+            },
+          ],
+        },
+      },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-string-details-history"]?.runningSubagents).toEqual([
+      {
+        rowId: "child-session-string-details",
+        agentId: "agent-string-details",
+        agentName: "Builder",
+        childSessionId: "child-session-string-details",
+        title: "Builder — implement normalization",
+        promptSummary: "implement normalization",
+      },
+    ]);
+  });
+  it("normalizes malformed history messages before storing them", () => {
+    agentChatStore.getState().initSession("tab-malformed-history", "session-malformed-history");
+
+    handleAgentPiEvent({
+      sessionId: "session-malformed-history",
+      tabId: "tab-malformed-history",
+      workspaceId: "workspace-1",
+      event: {
+        type: "response",
+        command: "get_messages",
+        success: true,
+        data: {
+          messages: [
+            { id: "valid", role: "assistant", content: [{ type: "text", text: "kept" }] },
+            { id: "missing", role: "toolResult" },
+            { id: "null", role: "user", content: null },
+            { id: "object", role: "custom", content: { text: "invalid" } },
+            {
+              id: "mixed-blocks",
+              role: "assistant",
+              content: [
+                { type: "text", text: "valid block" },
+                { type: "text", text: 42 },
+                { type: "toolCall", id: "call-1", name: "read", arguments: { path: "file.ts" } },
+                { type: "toolCall", id: "call-2", name: "read", arguments: [] },
+              ],
+            },
+            null,
+          ],
+        },
+      },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-malformed-history"]?.messages).toEqual([
+      { id: "valid", role: "assistant", content: [{ type: "text", text: "kept" }] },
+      { id: "missing", role: "toolResult", content: "" },
+      { id: "null", role: "user", content: "" },
+      { id: "object", role: "custom", content: "" },
+      {
+        id: "mixed-blocks",
+        role: "assistant",
+        content: [
+          { type: "text", text: "valid block" },
+          { type: "toolCall", id: "call-1", name: "read", arguments: { path: "file.ts" } },
+        ],
+      },
+    ]);
+  });
   it("derives running subagents from full transcript history keyed by child session id", () => {
     agentChatStore.getState().initSession("tab-subagents-history", "session-subagents-history");
 
@@ -523,6 +686,100 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
         promptSummary: "inspect auth state",
         title: "Reviewer — inspect auth state",
       },
+    ]);
+  });
+
+  it("normalizes malformed message_end content and serialized lifecycle details", () => {
+    agentChatStore.getState().initSession("tab-malformed-message-end", "session-malformed-message-end");
+    const lifecycleDetails = JSON.stringify({
+      event: "started",
+      agentId: "agent-message-end",
+      agentName: "Builder",
+      childSessionId: "child-session-message-end",
+      summary: "handle ingress",
+    });
+
+    expect(() => {
+      handleAgentPiEvent({
+        sessionId: "session-malformed-message-end",
+        tabId: "tab-malformed-message-end",
+        workspaceId: "workspace-1",
+        event: {
+          type: "message_end",
+          message: {
+            id: "subagent-malformed-message-end",
+            role: "custom",
+            customType: "pi-subagent-child",
+            details: lifecycleDetails,
+            content: { malformed: true },
+          },
+        },
+      });
+    }).not.toThrow();
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-malformed-message-end"]?.messages).toEqual([
+      {
+        id: "subagent-malformed-message-end",
+        role: "custom",
+        customType: "pi-subagent-child",
+        details: {
+          event: "started",
+          agentId: "agent-message-end",
+          agentName: "Builder",
+          childSessionId: "child-session-message-end",
+          summary: "handle ingress",
+        },
+        content: "",
+      },
+    ]);
+    expect(agentChatStore.getState().sessionsByTabId["tab-malformed-message-end"]?.runningSubagents).toEqual([
+      {
+        rowId: "child-session-message-end",
+        agentId: "agent-message-end",
+        agentName: "Builder",
+        childSessionId: "child-session-message-end",
+        title: "Builder — handle ingress",
+        promptSummary: "handle ingress",
+      },
+    ]);
+  });
+
+  it("omits serialized message details that do not parse to records", () => {
+    agentChatStore.getState().initSession("tab-invalid-details", "session-invalid-details");
+
+    handleAgentPiEvent({
+      sessionId: "session-invalid-details",
+      tabId: "tab-invalid-details",
+      workspaceId: "workspace-1",
+      event: {
+        type: "message_end",
+        message: {
+          id: "invalid-details-message",
+          role: "custom",
+          content: "",
+          details: "not JSON",
+        },
+      },
+    });
+
+    handleAgentPiEvent({
+      sessionId: "session-invalid-details",
+      tabId: "tab-invalid-details",
+      workspaceId: "workspace-1",
+      event: {
+        type: "message_end",
+        message: {
+          id: "array-details-message",
+          role: "custom",
+          content: "",
+          details: JSON.stringify(["not", "a record"]),
+        },
+      },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-invalid-details"]?.messages).toEqual([
+      { id: "invalid-details-message", role: "custom", content: "" },
+      { id: "array-details-message", role: "custom", content: "" },
     ]);
   });
 
@@ -618,6 +875,44 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
       stopReason: "error",
       errorMessage: "Codex error: The usage limit has been reached",
       content: [],
+    });
+  });
+
+  it("normalizes malformed and omitted live transcript content without crashing", () => {
+    agentChatStore.getState().initSession("parent-tab-malformed-live", "parent-session-malformed-live");
+
+    expect(() => {
+      handleAgentPiEvent({
+        sessionId: "parent-session-malformed-live",
+        tabId: "parent-tab-malformed-live",
+        workspaceId: "workspace-1",
+        event: {
+          type: "extension_ui_request",
+          method: "setWidget",
+          widgetKey: "pi-subagents-live-transcripts",
+          widgetLines: [
+            JSON.stringify({
+              version: 1,
+              agents: [
+                {
+                  childSessionId: "child-session-malformed-live",
+                  messages: [
+                    { id: "malformed-content", role: "custom", content: { malformed: true } },
+                    { id: "omitted-content", role: "assistant" },
+                  ],
+                },
+              ],
+            }),
+          ],
+        },
+      });
+    }).not.toThrow();
+
+    expect(agentChatStore.getState().sessionsByTabId["parent-tab-malformed-live"]?.subagentLiveTranscripts).toEqual({
+      "child-session-malformed-live": [
+        { id: "malformed-content", role: "custom", content: "" },
+        { id: "omitted-content", role: "assistant", content: "" },
+      ],
     });
   });
 
