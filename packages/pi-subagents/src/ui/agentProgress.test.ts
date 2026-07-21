@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentRecord } from "../agents/types";
-import { bindAgentProgressUi, renderAgentLiveTranscripts, renderAgentProgress, renderPendingDelegation } from "./agentProgress";
+import {
+  bindAgentProgressUi,
+  renderAgentLiveTranscripts,
+  renderAgentProgress,
+  renderPendingDelegation,
+} from "./agentProgress";
 
 function createRecord(overrides: Partial<AgentRecord> = {}): AgentRecord {
   return {
@@ -47,7 +52,13 @@ describe("renderAgentProgress", () => {
 
     renderAgentProgress(ui as never, [
       createRecord({ id: "agent-1", status: "running", mode: "foreground" }),
-      createRecord({ id: "agent-2", status: "queued", mode: "background", agentName: "Reviewer", sessionId: undefined }),
+      createRecord({
+        id: "agent-2",
+        status: "queued",
+        mode: "background",
+        agentName: "Reviewer",
+        sessionId: undefined,
+      }),
       createRecord({ id: "agent-3", status: "completed" }),
     ]);
 

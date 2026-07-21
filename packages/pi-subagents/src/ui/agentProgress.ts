@@ -135,10 +135,7 @@ export function renderAgentLiveTranscripts(ui: ExtensionUIContext, records: Agen
       messages: record.session?.messages ?? [],
     }));
 
-  ui.setWidget(
-    LIVE_TRANSCRIPTS_WIDGET_KEY,
-    agents.length > 0 ? [JSON.stringify({ version: 1, agents })] : undefined,
-  );
+  ui.setWidget(LIVE_TRANSCRIPTS_WIDGET_KEY, agents.length > 0 ? [JSON.stringify({ version: 1, agents })] : undefined);
 }
 
 function buildWidgetLines(ui: ExtensionUIContext, records: AgentRecord[], spinnerFrameIndex: number): string[] {
