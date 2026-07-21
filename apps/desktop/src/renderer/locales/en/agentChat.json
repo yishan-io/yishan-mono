@@ -1,6 +1,9 @@
 {
   "agentChat": {
     "title": "Agent Chat",
+    "composer": {
+      "focusShortcut": "{{shortcut}} to focus"
+    },
     "askUser": {
       "prompt": {
         "customResponse": "Type custom response",
@@ -17,6 +20,7 @@
     },
     "usageSummary": {
       "currentContext": "Current context",
+      "contextCompact": "CTX",
       "input": "Input",
       "output": "Output",
       "cacheRead": "Cache read",

@@ -12,6 +12,7 @@ vi.mock("react-i18next", () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
         "agentChat.usageSummary.currentContext": "Current context",
+        "agentChat.usageSummary.contextCompact": "CTX",
         "agentChat.usageSummary.input": "Input",
         "agentChat.usageSummary.output": "Output",
         "agentChat.usageSummary.cacheRead": "Cache read",
@@ -84,7 +85,7 @@ describe("AgentChatUsageSummaryLabel", () => {
 
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
 
-    fireEvent.mouseOver(screen.getByLabelText("ctx: 2.2K/128K (2%), $0.25"));
+    fireEvent.mouseOver(screen.getByLabelText("CTX: 2.2K/128K (2%), $0.25"));
 
     const tooltip = await screen.findByRole("tooltip");
     expect(tooltip.textContent).toContain("Current context");
@@ -130,7 +131,7 @@ describe("AgentChatUsageSummaryLabel", () => {
 
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
 
-    expect(screen.getByLabelText("ctx: 2.2K/128K (2%), $0.25")).toBeTruthy();
+    expect(screen.getByLabelText("CTX: 2.2K/128K (2%), $0.25")).toBeTruthy();
   });
 
   it("renders nothing when the current model has no context window", () => {
@@ -138,6 +139,6 @@ describe("AgentChatUsageSummaryLabel", () => {
 
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
 
-    expect(screen.queryByText(/ctx:/i)).toBeNull();
+    expect(screen.queryByText(/CTX:/)).toBeNull();
   });
 });

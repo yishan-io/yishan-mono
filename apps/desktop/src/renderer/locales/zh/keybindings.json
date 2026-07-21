@@ -33,6 +33,7 @@
       "openTerminal": "\u6253\u5f00\u7ec8\u7aef\u6807\u7b7e",
       "openAgentChat": "\u6253\u5f00 Agent \u804a\u5929\u6807\u7b7e",
       "openBrowser": "\u6253\u5f00\u6d4f\u89c8\u5668\u6807\u7b7e",
+      "focusAgentChatComposer": "\u805a\u7126 Agent \u804a\u5929\u8f93\u5165\u6846",
       "activateRepoPane": "\u6fc0\u6d3b\u4ed3\u5e93\u9762\u677f",
       "activateFilesPane": "\u6fc0\u6d3b\u6587\u4ef6\u9762\u677f",
       "activateChangesPane": "\u6fc0\u6d3b\u53d8\u66f4\u9762\u677f",

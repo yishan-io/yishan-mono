@@ -53,6 +53,10 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
   const contextSummaryLabel =
     costSeparatorIndex >= 0 ? usageSummary.label.slice(0, costSeparatorIndex) : usageSummary.label;
   const costSummaryLabel = costSeparatorIndex >= 0 ? usageSummary.label.slice(costSeparatorIndex + 2) : null;
+  const contextCompactLabel = t("agentChat.usageSummary.contextCompact");
+  const compactUsageLabel = `${contextCompactLabel}: ${contextSummaryLabel.slice(4)}${
+    costSummaryLabel ? `, ${costSummaryLabel}` : ""
+  }`;
 
   const tooltipContent = (
     <Box sx={{ display: "grid", gridTemplateColumns: "auto auto", columnGap: 2, rowGap: 0.5 }}>
@@ -121,7 +125,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
     <Tooltip title={tooltipContent} arrow placement="top">
       <Box
         component="span"
-        aria-label={usageSummary.label}
+        aria-label={compactUsageLabel}
         sx={{
           fontSize: USAGE_SUMMARY_FONT_SIZE_PX,
           lineHeight: 1.5,
@@ -130,7 +134,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
         }}
       >
         <Box component="span" sx={{ color: "text.disabled" }}>
-          ctx:
+          {contextCompactLabel}:
         </Box>
         <Box component="span" sx={{ color: getUsageSummaryColor(usageSummary.contextPercent, theme.palette.mode) }}>
           {` ${contextSummaryLabel.slice(4)}`}

@@ -1,6 +1,9 @@
 {
   "agentChat": {
     "title": "AI \u5bf9\u8bdd",
+    "composer": {
+      "focusShortcut": "\u6309 {{shortcut}} \u805a\u7126"
+    },
     "askUser": {
       "prompt": {
         "customResponse": "\u8f93\u5165\u81ea\u5b9a\u4e49\u56de\u590d",
@@ -17,6 +20,7 @@
     },
     "usageSummary": {
       "currentContext": "\u5f53\u524d\u4e0a\u4e0b\u6587",
+      "contextCompact": "\u4e0a\u4e0b\u6587",
       "input": "\u8f93\u5165",
       "output": "\u8f93\u51fa",
       "cacheRead": "\u7f13\u5b58\u8bfb\u53d6",

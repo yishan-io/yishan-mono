@@ -189,6 +189,9 @@ describe("SUPPORTED_KEY_BINDINGS", () => {
     const agentChatBinding = SUPPORTED_KEY_BINDINGS.find((binding) => binding.id === "open-agent-chat");
     const terminalBinding = SUPPORTED_KEY_BINDINGS.find((binding) => binding.id === "open-terminal");
     const browserBinding = SUPPORTED_KEY_BINDINGS.find((binding) => binding.id === "open-browser");
+    const focusAgentChatComposerBinding = SUPPORTED_KEY_BINDINGS.find(
+      (binding) => binding.id === "focus-agent-chat-composer",
+    );
 
     expect(chatBinding?.macKeys).toEqual(["⌘", "Y"]);
     expect(chatBinding?.windowsKeys).toEqual(["CTRL", "Y"]);
@@ -198,6 +201,8 @@ describe("SUPPORTED_KEY_BINDINGS", () => {
     expect(terminalBinding?.windowsKeys).toEqual(["CTRL", "T"]);
     expect(browserBinding?.macKeys).toEqual(["⌘", "⇧", "B"]);
     expect(browserBinding?.windowsKeys).toEqual(["CTRL", "⇧", "B"]);
+    expect(focusAgentChatComposerBinding?.macKeys).toEqual(["⌘", "L"]);
+    expect(focusAgentChatComposerBinding?.windowsKeys).toEqual(["CTRL", "L"]);
   });
 
   it("documents close-selected-workspace as mod+shift+w", () => {
@@ -290,6 +295,39 @@ describe("getShortcutDefinitions", () => {
       url: "",
       reuseExisting: false,
     });
+  });
+
+  it("requests focus for the active agent chat composer", () => {
+    const runtimeDefinitions = getShortcutDefinitions();
+    const focusAgentChatComposer = runtimeDefinitions.find(
+      (definition) => definition.id === "focus-agent-chat-composer",
+    );
+    expect(focusAgentChatComposer).toBeTruthy();
+
+    const handler = vi.fn();
+    window.addEventListener("agent-chat-composer-focus", handler);
+    const context = createShortcutContext({
+      tabStoreState: {
+        ...createShortcutContext().tabStoreState,
+        tabs: [
+          {
+            id: "tab-agent-chat",
+            workspaceId: "workspace-1",
+            title: "Agent Chat",
+            pinned: false,
+            kind: "agent-chat",
+            data: { userRenamed: true },
+          },
+        ],
+        selectedTabId: "tab-agent-chat",
+      } as TabStoreState,
+    });
+
+    focusAgentChatComposer?.run(context, new KeyboardEvent("keydown", { key: "l", metaKey: true }));
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect((handler.mock.calls[0]?.[0] as CustomEvent<{ tabId: string }>).detail).toEqual({ tabId: "tab-agent-chat" });
+    window.removeEventListener("agent-chat-composer-focus", handler);
   });
 
   it("reloads the active browser tab from Cmd+R shortcut", async () => {

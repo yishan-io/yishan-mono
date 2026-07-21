@@ -34,6 +34,19 @@ afterEach(() => {
 });
 
 describe("RichComposer", () => {
+  it("shows the focus shortcut hint only while the composer is unfocused", () => {
+    render(<RichComposer placeholder="Type a message…" focusShortcutHint="⌘ + L to focus" />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    expect(screen.getByText(/L to focus/)).toBeTruthy();
+
+    fireEvent.focus(textbox);
+    expect(screen.queryByText(/L to focus/)).toBeNull();
+
+    fireEvent.blur(textbox);
+    expect(screen.getByText(/L to focus/)).toBeTruthy();
+  });
+
   it("shows slash commands after typing slash", () => {
     render(<RichComposer placeholder="Type a message…" slashCommands={SLASH_COMMANDS} />);
 

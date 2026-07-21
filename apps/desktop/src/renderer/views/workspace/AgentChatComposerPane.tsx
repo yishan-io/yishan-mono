@@ -1,5 +1,6 @@
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { LuArrowUp } from "react-icons/lu";
 import { abortAgent, sendAgentPrompt, setAgentModel, setAgentThinkingLevel } from "../../commands/agentChatCommands";
 import { renameTab } from "../../commands/tabCommands";
@@ -8,9 +9,12 @@ import { RichComposer } from "../../components/RichComposer";
 import { AgentChatSubagentRow } from "../../components/agent/session/AgentChatSubagentRow";
 import { AgentChatUsageSummaryLabel } from "../../components/agent/session/AgentChatUsageSummaryLabel";
 import { AgentModelSelector } from "../../components/agent/session/AgentModelSelector";
+import { AGENT_CHAT_COMPOSER_FOCUS_EVENT } from "../../events/agentChatComposerFocus";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
+import { getSupportedKeyBindings } from "../../shortcuts/keybindings";
 import { agentChatStore } from "../../store/agentChatStore";
 import type { AgentModel } from "../../store/agentChatTypes";
+import { keybindingSettingsStore } from "../../store/settings/keybindingSettingsStore";
 import { tabStore } from "../../store/tabStore";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
 import { useAgentChatSlashCommands } from "./useAgentChatSlashCommands";
@@ -27,6 +31,7 @@ type AgentChatComposerPaneProps = {
 };
 
 function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: AgentChatComposerPaneProps) {
+  const { t } = useTranslation();
   const slashCommands = useAgentChatSlashCommands();
   const agentChatTab = tabStore((state) =>
     state.tabs.find((tab): tab is Extract<(typeof state.tabs)[number], { kind: "agent-chat" }> => {
@@ -40,9 +45,36 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
   const availableModels = agentChatStore((state) => state.sessionsByTabId[tabId]?.availableModels ?? EMPTY_MODELS);
   const currentModel = agentChatStore((state) => state.sessionsByTabId[tabId]?.currentModel ?? null);
   const thinkingLevel = agentChatStore((state) => state.sessionsByTabId[tabId]?.thinkingLevel ?? "medium");
+  const shortcutOverrides = keybindingSettingsStore((state) => state.overridesById);
+  const focusShortcutHint = useMemo(() => {
+    const focusShortcutBinding = getSupportedKeyBindings(shortcutOverrides).find(
+      (binding) => binding.id === "focus-agent-chat-composer",
+    );
+    const shortcutKeys =
+      window.desktop?.platform === "darwin" ? focusShortcutBinding?.macKeys : focusShortcutBinding?.windowsKeys;
+    const shortcutLabel = shortcutKeys?.join(" + ");
+    return shortcutLabel ? t("agentChat.composer.focusShortcut", { shortcut: shortcutLabel }) : undefined;
+  }, [shortcutOverrides, t]);
   const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
   const hasStreamingMessage = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]?.streamingMessage));
   const [draft, setDraft] = useState("");
+  const composerContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleFocusRequest = (event: Event) => {
+      const request = event as CustomEvent<{ tabId: string }>;
+      if (request.detail.tabId !== tabId) {
+        return;
+      }
+
+      composerContainerRef.current?.querySelector<HTMLElement>('[role="textbox"]')?.focus();
+    };
+
+    window.addEventListener(AGENT_CHAT_COMPOSER_FOCUS_EVENT, handleFocusRequest);
+    return () => {
+      window.removeEventListener(AGENT_CHAT_COMPOSER_FOCUS_EVENT, handleFocusRequest);
+    };
+  }, [tabId]);
 
   const handleSubmit = useCallback(
     async (value: string) => {
@@ -101,6 +133,7 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
 
   return (
     <Box
+      ref={composerContainerRef}
       sx={{
         borderTop: 1,
         borderColor: "divider",
@@ -153,6 +186,7 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
         onSubmit={handleSubmit}
         disabled={sessionState === "starting"}
         slashCommands={slashCommands}
+        focusShortcutHint={focusShortcutHint}
       />
       <Box sx={{ display: "flex", alignItems: "center", gap: 4, px: 1, minHeight: 18 }}>
         {availableModels.length > 0 && (
