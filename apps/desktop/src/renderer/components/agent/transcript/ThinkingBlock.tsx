@@ -36,7 +36,18 @@ export function ThinkingBlock({ thinking, thinkingSignature, isStreaming }: Thin
           {isStreaming ? "Thinking" : "Thought"}
         </Typography>
         {visibleText ? (
-          <Typography variant="body2" sx={{ minWidth: 0, color: "text.disabled", fontStyle: "italic" }}>
+          <Typography
+            variant="body2"
+            noWrap
+            sx={{
+              minWidth: 0,
+              flex: 1,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              color: "text.disabled",
+              fontStyle: "italic",
+            }}
+          >
             {visibleText}
           </Typography>
         ) : null}

@@ -1,6 +1,6 @@
 import { Box, Typography } from "@mui/material";
-import { LuSparkles } from "react-icons/lu";
 import { parseSkillMessage } from "../../../helpers/agentSkillTextHelpers";
+import { SkillUsageMarker } from "../SkillUsageMarker";
 
 type UserMessageContentProps = {
   messageText: string;
@@ -20,15 +20,7 @@ export function UserMessageContent({ messageText }: UserMessageContentProps) {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, color: "text.secondary" }}>
-        <LuSparkles size={14} />
-        <Typography variant="body2">
-          use skill:{" "}
-          <Box component="span" sx={{ fontWeight: 600 }}>
-            {skillMessage.skillName}
-          </Box>
-        </Typography>
-      </Box>
+      <SkillUsageMarker skillName={skillMessage.skillName} />
       {skillMessage.trailingContent ? (
         <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
           {skillMessage.trailingContent}

@@ -155,6 +155,23 @@ describe("AgentToolCallCard", () => {
     expect(screen.queryByText("READ: src/example.ts")).toBeNull();
   });
 
+  it("shows a skill marker when reading a SKILL.md file", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-read-skill",
+      name: "read",
+      arguments: {
+        path: "/Users/example/.yishan/pi/agent/skills/brainstorm/SKILL.md",
+      },
+    };
+
+    render(<AgentToolCallCard toolCall={toolCall} />);
+
+    expect(screen.getByText(/use skill:/)).toBeTruthy();
+    expect(screen.getByText("brainstorm")).toBeTruthy();
+    expect(screen.getByText("/Users/example/.yishan/pi/agent/skills/brainstorm/SKILL.md")).toBeTruthy();
+  });
+
   it("shows read tool line ranges from offset and limit only", () => {
     const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
       type: "toolCall",
