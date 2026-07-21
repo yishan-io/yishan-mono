@@ -13,14 +13,6 @@ export function AgentToolCard({ toolCall, result = null, onOpenCompletedSubagent
   const [selectedTab, setSelectedTab] = useState<"prompt" | "response">(resultText ? "response" : "prompt");
   const agentName = typeof toolCall.arguments.agent === "string" ? toolCall.arguments.agent : null;
   const agentPrompt = typeof toolCall.arguments.prompt === "string" ? toolCall.arguments.prompt : null;
-  const agentMode =
-    typeof result?.details?.mode === "string"
-      ? result.details.mode
-      : toolCall.arguments.background === true
-        ? "background"
-        : toolCall.arguments.background === false
-          ? "foreground"
-          : null;
   const agentStatus = typeof result?.details?.status === "string" ? result.details.status : null;
   const childSessionId = typeof result?.details?.sessionId === "string" ? result.details.sessionId : null;
   const agentId = typeof result?.details?.agentId === "string" ? result.details.agentId : undefined;
@@ -38,7 +30,7 @@ export function AgentToolCard({ toolCall, result = null, onOpenCompletedSubagent
           <Box component="span" aria-hidden sx={{ display: "inline-flex", alignItems: "center", opacity: 0.8 }}>
             <LuBot size={14} />
           </Box>
-          <Typography variant="body2" sx={{ fontWeight: 600, flexShrink: 0 }}>
+          <Typography variant="body2" sx={{ color: "warning.main", fontWeight: 600, flexShrink: 0 }}>
             {agentName}
           </Typography>
           <Typography
@@ -49,7 +41,6 @@ export function AgentToolCard({ toolCall, result = null, onOpenCompletedSubagent
           >
             {agentPrompt}
           </Typography>
-          {agentMode ? <ToolSummaryBadge label={agentMode} color="secondary.main" /> : null}
           {agentStatus ? <ToolSummaryBadge label={agentStatus} color={getAgentStatusBadgeColor(agentStatus)} /> : null}
           {canOpenCompletedSubagent && childSessionId ? (
             <Tooltip title="Open sub-agent detail" placement="top">

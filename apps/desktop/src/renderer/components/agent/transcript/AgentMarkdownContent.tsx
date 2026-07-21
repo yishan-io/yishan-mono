@@ -13,13 +13,23 @@ type AgentMarkdownContentProps = {
   renderMode?: "final" | "streaming";
 };
 
+const FILE_LINE_RANGE_SUFFIX_RE = /:\d+(?:-\d+)?$/;
+
+function getFilePath(href: string): string {
+  return href.replace(/[?#].*$/, "").replace(FILE_LINE_RANGE_SUFFIX_RE, "");
+}
+
+function getFileLineRangeSuffix(href: string): string {
+  return href.match(FILE_LINE_RANGE_SUFFIX_RE)?.[0] ?? "";
+}
+
 function openFileTab(href: string, workspacePath: string): void {
-  const resolvedPath = resolveRelativePath(workspacePath, href.replace(/[?#].*$/, ""));
+  const resolvedPath = resolveRelativePath(workspacePath, getFilePath(href));
   openTab({ kind: "file", path: resolvedPath });
 }
 
 function openFileTabInOppositePane(href: string, workspacePath: string): void {
-  const resolvedPath = resolveRelativePath(workspacePath, href.replace(/[?#].*$/, ""));
+  const resolvedPath = resolveRelativePath(workspacePath, getFilePath(href));
   openTabInOppositePane({ kind: "file", path: resolvedPath });
 }
 
@@ -86,21 +96,30 @@ export function AgentMarkdownContent({ content, workspacePath, renderMode = "fin
     const codeElements = Array.from(container.querySelectorAll("code"));
     for (const code of codeElements) {
       const text = code.textContent?.trim() ?? "";
-      if (!looksLikeFilePath(text)) continue;
+      const filePath = getFilePath(text);
+      const lineRangeSuffix = getFileLineRangeSuffix(text);
+      if (!looksLikeFilePath(filePath)) continue;
       const span = document.createElement("span");
       span.className = "file-link";
-      span.style.cssText = "cursor:pointer;text-decoration:underline;text-underline-offset:2px;";
-      span.textContent = text;
+      span.style.cursor = "pointer";
+      span.textContent = filePath;
       span.addEventListener("click", (e) => {
         e.stopPropagation();
         // Detect cmd+click for opposite-pane open
         if (e.metaKey || e.ctrlKey) {
-          openFileTabInOppositePane(text, workspacePath);
+          openFileTabInOppositePane(filePath, workspacePath);
         } else {
-          openFileTab(text, workspacePath);
+          openFileTab(filePath, workspacePath);
         }
       });
-      code.replaceWith(span);
+      if (lineRangeSuffix) {
+        const lineRange = document.createElement("span");
+        lineRange.className = "file-line-range";
+        lineRange.textContent = lineRangeSuffix;
+        code.replaceWith(span, lineRange);
+      } else {
+        code.replaceWith(span);
+      }
     }
   }, [html, workspacePath]);
 
@@ -115,7 +134,22 @@ export function AgentMarkdownContent({ content, workspacePath, renderMode = "fin
   return (
     <Box
       ref={containerRef}
-      sx={{ ...styles.container, fontSize: 14, mb: 0.5 }}
+      sx={{
+        ...styles.container,
+        fontSize: 14,
+        mb: 0.5,
+        "& .file-link": {
+          color: "primary.main",
+          textDecoration: "none",
+          textUnderlineOffset: "2px",
+          "&:hover": {
+            textDecoration: "underline",
+          },
+        },
+        "& .file-line-range": {
+          color: "text.disabled",
+        },
+      }}
       onClick={(event) => {
         const target = event.target;
         if (!(target instanceof HTMLElement)) {

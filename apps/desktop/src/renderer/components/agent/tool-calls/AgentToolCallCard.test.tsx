@@ -410,6 +410,7 @@ describe("AgentToolCallCard", () => {
 
     expect(screen.getByText("code-reviewer")).toBeTruthy();
     expect(screen.getByText("completed")).toBeTruthy();
+    expect(screen.queryByText("foreground")).toBeNull();
     expect(screen.queryByText("arguments")).toBeNull();
     expect(screen.getByTestId("tool-chevron-right")).toBeTruthy();
 

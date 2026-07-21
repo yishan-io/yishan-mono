@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
 import type { AgentModel } from "../../../store/agentChatTypes";
 import { AgentModelSelectorMenu } from "./AgentModelSelectorMenu";
+import { ThinkingLevelControl } from "./ThinkingLevelControl";
 import { formatAgentModelLabel, getAgentModelProviderName, groupAgentModelsByProvider } from "./helpers";
 
 type AgentModelSelectorProps = {
@@ -11,15 +12,6 @@ type AgentModelSelectorProps = {
   thinkingLevel: string;
   onModelChange: (model: AgentModel) => void;
   onThinkingLevelCycle: () => void;
-};
-
-const THINKING_LABELS: Record<string, string> = {
-  off: "Off",
-  minimal: "Min",
-  low: "Low",
-  medium: "Med",
-  high: "High",
-  xhigh: "XHi",
 };
 
 const MODEL_SELECTOR_FONT_SIZE_PX = 12;
@@ -165,23 +157,7 @@ export function AgentModelSelector({
         onProviderChange={setSelectedProvider}
         onModelSelect={handleModelSelect}
       />
-      <Button
-        variant="text"
-        size="small"
-        onClick={onThinkingLevelCycle}
-        title={`Thinking: ${thinkingLevel}`}
-        sx={{
-          minWidth: 0,
-          px: 0,
-          py: 0,
-          fontSize: 12,
-          lineHeight: 1.5,
-          textTransform: "none",
-          color: thinkingLevel === "off" ? "text.disabled" : "text.secondary",
-        }}
-      >
-        Thinking: {THINKING_LABELS[thinkingLevel] ?? thinkingLevel}
-      </Button>
+      <ThinkingLevelControl thinkingLevel={thinkingLevel} onCycle={onThinkingLevelCycle} />
     </Box>
   );
 }

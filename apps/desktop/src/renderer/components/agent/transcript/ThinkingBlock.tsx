@@ -14,7 +14,7 @@ export function ThinkingBlock({ thinking, thinkingSignature, isStreaming }: Thin
   const [open, setOpen] = useState(false);
   const summaryText = getThinkingSummaryText(thinkingSignature);
   const hasExpandableDetails = hasExpandableThinkingDetails(thinking, summaryText);
-  const visibleText = summaryText ?? null;
+  const visibleText = summaryText ? formatThinkingSummaryText(summaryText) : null;
 
   return (
     <Box sx={{ mb: 0.5 }}>
@@ -36,7 +36,7 @@ export function ThinkingBlock({ thinking, thinkingSignature, isStreaming }: Thin
           {isStreaming ? "Thinking" : "Thought"}
         </Typography>
         {visibleText ? (
-          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 0 }}>
+          <Typography variant="body2" sx={{ minWidth: 0, color: "text.disabled", fontStyle: "italic" }}>
             {visibleText}
           </Typography>
         ) : null}
@@ -78,7 +78,7 @@ function getThinkingSummaryText(thinkingSignature: string | AgentThinkingSignatu
   const summaryText = summaryItems
     .map((summaryItem) => summaryItem.text.trim())
     .filter((text) => text.length > 0)
-    .join(" ")
+    .join(", ")
     .trim();
   return summaryText.length > 0 ? summaryText : null;
 }
@@ -102,6 +102,10 @@ function parseThinkingSignature(
   return thinkingSignature;
 }
 
+function formatThinkingSummaryText(summaryText: string): string {
+  return summaryText.replaceAll("**", "");
+}
+
 function hasExpandableThinkingDetails(thinking: string, summaryText: string | null): boolean {
   const normalizedThinking = normalizeThinkingComparisonText(thinking);
   if (!normalizedThinking) {
@@ -117,7 +121,7 @@ function hasExpandableThinkingDetails(thinking: string, summaryText: string | nu
 
 function normalizeThinkingComparisonText(value: string): string {
   return value
-    .replace(/[*_`#>\-]/g, " ")
+    .replace(/[,*_`#>\-]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }

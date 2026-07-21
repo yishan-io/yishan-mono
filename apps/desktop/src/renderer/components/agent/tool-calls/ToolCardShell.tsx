@@ -1,8 +1,16 @@
 import { Box, Typography } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
+import { COLOR_PRIMITIVES } from "@yishan-io/design-tokens";
 import type { ReactNode } from "react";
 import { LuChevronDown, LuChevronRight } from "react-icons/lu";
 
-const TOOL_CARD_PANEL_SX = { px: 1.5, py: 1, bgcolor: "action.hover" };
+const TOOL_CARD_DARK_BACKGROUND = COLOR_PRIMITIVES.neutral.gray950;
+
+const TOOL_CARD_PANEL_SX = {
+  px: 1.5,
+  py: 1,
+  bgcolor: (theme: Theme) => (theme.palette.mode === "dark" ? TOOL_CARD_DARK_BACKGROUND : "action.hover"),
+};
 
 /** Shared shell around one tool-call card. */
 export function ToolCardShell({
