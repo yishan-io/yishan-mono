@@ -199,6 +199,7 @@ function AgentChatViewComponent({
         paneId={paneId}
         isActive={isActive}
         isReadOnlySubagentDetail={isReadOnlySubagentDetail}
+        parentSessionId={subagentParentSessionId}
       />
       {!isReadOnlySubagentDetail && pendingUiRequest ? (
         <AgentPendingUiPrompt

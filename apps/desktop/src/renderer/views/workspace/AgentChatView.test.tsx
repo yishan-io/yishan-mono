@@ -832,6 +832,44 @@ describe("AgentChatView", () => {
     expect(mocked.ensurePiSession).not.toHaveBeenCalled();
   });
 
+  it("uses the parent model in a subagent footer when the child model is unavailable", () => {
+    const parentModel: AgentModel = {
+      id: "anthropic/claude-opus-4",
+      name: "Claude Opus 4",
+      provider: "Anthropic",
+    };
+    mocked.stateRef.current.tabs = [
+      {
+        id: "tab-1",
+        kind: "agent-chat",
+        data: {
+          userRenamed: true,
+          sessionView: "subagent-detail",
+          subagentAgentId: "agent-1",
+          subagentParentSessionId: "parent-session-1",
+        },
+      },
+    ];
+    const store = agentChatStore.getState();
+    store.initSession("tab-1", "session-1");
+    store.initSession("parent-tab", "parent-session-1");
+    store.setCurrentModel("parent-tab", parentModel);
+
+    render(
+      <AgentChatView
+        tabId="tab-1"
+        workspaceId="workspace-1"
+        cwd="/tmp/project"
+        sessionView="subagent-detail"
+        isActive
+      />,
+    );
+
+    expect(screen.getByText("Model: Anthropic / Claude Opus 4")).toBeTruthy();
+
+    store.removeSession("parent-tab");
+  });
+
   it("renders subagent detail as read-only without interactive cancellation", async () => {
     mocked.stateRef.current.tabs = [
       {
