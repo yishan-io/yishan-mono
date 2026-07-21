@@ -136,6 +136,7 @@ export const SEMANTIC_COLOR_TOKENS = {
     },
     primary: COLOR_PRIMITIVES.brand.amber600,
     secondary: "#eceff3",
+    skill: "#7e22ce",
   },
   dark: {
     text: {
@@ -162,6 +163,7 @@ export const SEMANTIC_COLOR_TOKENS = {
     },
     primary: "#9ddb72",
     secondary: "#3f5750",
+    skill: "#c084fc",
   },
 } as const;
 

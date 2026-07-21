@@ -14,6 +14,7 @@ type AgentChatTranscriptPaneProps = {
   paneId?: string;
   isActive: boolean;
   isReadOnlySubagentDetail: boolean;
+  parentSessionId?: string;
 };
 
 type AgentChatSubagentDetailFooterProps = {
@@ -52,12 +53,24 @@ function AgentChatTranscriptPane({
   paneId,
   isActive,
   isReadOnlySubagentDetail,
+  parentSessionId,
 }: AgentChatTranscriptPaneProps) {
   const messages = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages ?? EMPTY_MESSAGES);
   const trailingMessage = agentChatStore((state) => state.sessionsByTabId[tabId]?.streamingMessage ?? null);
   const sessionState = agentChatStore((state) => state.sessionsByTabId[tabId]?.state ?? "starting");
   const sessionId = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionId);
   const currentModel = agentChatStore((state) => state.sessionsByTabId[tabId]?.currentModel ?? null);
+  const parentModel = agentChatStore((state) => {
+    if (!parentSessionId) {
+      return null;
+    }
+
+    return (
+      Object.values(state.sessionsByTabId).find((session) => session.sessionId === parentSessionId)?.currentModel ??
+      null
+    );
+  });
+  const footerModel = currentModel ?? parentModel;
   const latestUsage = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const usage = messages[index]?.usage;
@@ -90,7 +103,7 @@ function AgentChatTranscriptPane({
         isWorking={sessionState === "running"}
         onOpenCompletedSubagent={handleOpenCompletedSubagent}
       />
-      {isReadOnlySubagentDetail ? <AgentChatSubagentDetailFooter model={currentModel} usage={latestUsage} /> : null}
+      {isReadOnlySubagentDetail ? <AgentChatSubagentDetailFooter model={footerModel} usage={latestUsage} /> : null}
     </>
   );
 }

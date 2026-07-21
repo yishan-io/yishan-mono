@@ -1,4 +1,4 @@
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import type { ClipboardEvent, KeyboardEvent, SyntheticEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RichComposerSlashCommandMenu } from "./RichComposerSlashCommandMenu";
@@ -22,6 +22,7 @@ type RichComposerProps = {
   minHeight?: number;
   disabled?: boolean;
   slashCommands?: RichComposerSlashCommand[];
+  focusShortcutHint?: string;
 };
 
 /** Rich text-like contenteditable composer with token highlighting and slash command completion. */
@@ -33,10 +34,12 @@ export function RichComposer({
   minHeight = 84,
   disabled = false,
   slashCommands = [],
+  focusShortcutHint,
 }: RichComposerProps) {
   const composerRef = useRef<HTMLDivElement | null>(null);
   const [activeSlashCommandRange, setActiveSlashCommandRange] = useState<SlashCommandRange | null>(null);
   const [selectedSlashCommandIndex, setSelectedSlashCommandIndex] = useState(0);
+  const [isComposerFocused, setIsComposerFocused] = useState(false);
 
   const filteredSlashCommands = useMemo(() => {
     if (!activeSlashCommandRange) {
@@ -60,6 +63,10 @@ export function RichComposer({
 
   const handleComposerInput = useCallback(
     (event: SyntheticEvent<HTMLDivElement>) => {
+      if (disabled) {
+        return;
+      }
+
       const editable = event.currentTarget;
       const caretOffset = getCaretOffset(editable);
       const nextValue = normalizeComposerText(editable.innerText);
@@ -74,7 +81,7 @@ export function RichComposer({
 
       syncSlashCommandMenu(editable, nextValue, caretOffset);
     },
-    [onChange, slashCommands, syncSlashCommandMenu],
+    [disabled, onChange, slashCommands, syncSlashCommandMenu],
   );
 
   const handleComposerSelectionChange = useCallback(
@@ -235,55 +242,74 @@ export function RichComposer({
 
   return (
     <>
-      <Box
-        ref={composerRef}
-        component="div"
-        contentEditable
-        suppressContentEditableWarning
-        role="textbox"
-        aria-multiline
-        aria-label={placeholder}
-        aria-disabled={disabled}
-        data-placeholder={placeholder}
-        onInput={handleComposerInput}
-        onPaste={handleComposerPaste}
-        onKeyDown={handleComposerKeyDown}
-        onClick={handleComposerSelectionChange}
-        onKeyUp={handleComposerSelectionChange}
-        sx={{
-          p: 1.5,
-          minHeight,
-          outline: "none",
-          typography: "body2",
-          color: "text.primary",
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-word",
-          overflowY: "auto",
-          opacity: disabled ? 0.6 : 1,
-          cursor: disabled ? "not-allowed" : "text",
-          pointerEvents: disabled ? "none" : "auto",
-          "&:empty:before": {
-            content: "attr(data-placeholder)",
-            color: "text.disabled",
-          },
-          "& .composer-link": {
-            color: "primary.main",
-            textDecoration: "underline",
-          },
-          "& .composer-slash": {
-            fontWeight: 600,
-          },
-          "& .composer-slash-skill": {
-            color: "warning.main",
-          },
-          "& .composer-slash-agent": {
-            color: "#8b5cf6",
-          },
-          "& .composer-mention": {
-            color: "success.main",
-          },
-        }}
-      />
+      <Box sx={{ position: "relative" }}>
+        {!disabled && !isComposerFocused && focusShortcutHint ? (
+          <Typography
+            variant="caption"
+            sx={{
+              position: "absolute",
+              top: 6,
+              right: 8,
+              zIndex: 1,
+              color: "text.disabled",
+              pointerEvents: "none",
+            }}
+          >
+            {focusShortcutHint}
+          </Typography>
+        ) : null}
+        <Box
+          ref={composerRef}
+          component="div"
+          contentEditable={!disabled}
+          suppressContentEditableWarning
+          role="textbox"
+          aria-multiline
+          aria-label={placeholder}
+          aria-disabled={disabled}
+          data-placeholder={placeholder}
+          onFocus={() => setIsComposerFocused(true)}
+          onBlur={() => setIsComposerFocused(false)}
+          onInput={handleComposerInput}
+          onPaste={handleComposerPaste}
+          onKeyDown={handleComposerKeyDown}
+          onClick={handleComposerSelectionChange}
+          onKeyUp={handleComposerSelectionChange}
+          sx={{
+            p: 1.5,
+            minHeight,
+            outline: "none",
+            typography: "body2",
+            color: "text.primary",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            overflowY: "auto",
+            opacity: disabled ? 0.6 : 1,
+            cursor: disabled ? "not-allowed" : "text",
+            pointerEvents: disabled ? "none" : "auto",
+            "&:empty:before": {
+              content: "attr(data-placeholder)",
+              color: "text.disabled",
+            },
+            "& .composer-link": {
+              color: "primary.main",
+              textDecoration: "underline",
+            },
+            "& .composer-slash": {
+              fontWeight: 600,
+            },
+            "& .composer-slash-skill": {
+              color: "warning.main",
+            },
+            "& .composer-slash-agent": {
+              color: "#8b5cf6",
+            },
+            "& .composer-mention": {
+              color: "success.main",
+            },
+          }}
+        />
+      </Box>
       <RichComposerSlashCommandMenu
         anchorEl={composerRef.current}
         open={activeSlashCommandRange !== null}

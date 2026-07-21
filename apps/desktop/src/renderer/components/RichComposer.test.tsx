@@ -34,6 +34,31 @@ afterEach(() => {
 });
 
 describe("RichComposer", () => {
+  it("shows the focus shortcut hint only while the composer is unfocused", () => {
+    render(<RichComposer placeholder="Type a message…" focusShortcutHint="⌘ + L to focus" />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    expect(screen.getByText(/L to focus/)).toBeTruthy();
+
+    fireEvent.focus(textbox);
+    expect(screen.queryByText(/L to focus/)).toBeNull();
+
+    fireEvent.blur(textbox);
+    expect(screen.getByText(/L to focus/)).toBeTruthy();
+  });
+
+  it("does not accept input while disabled", () => {
+    const onChange = vi.fn();
+    render(<RichComposer placeholder="Type a message…" disabled onChange={onChange} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    textbox.innerText = "draft";
+    fireEvent.input(textbox);
+
+    expect(textbox.getAttribute("contenteditable")).toBe("false");
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("shows slash commands after typing slash", () => {
     render(<RichComposer placeholder="Type a message…" slashCommands={SLASH_COMMANDS} />);
 

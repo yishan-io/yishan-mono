@@ -1,5 +1,6 @@
 import { Box, IconButton, Tooltip } from "@mui/material";
 import { useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { LuArrowUp, LuLoaderCircle, LuMic, LuX } from "react-icons/lu";
 import { useVoiceRecording } from "./useVoiceRecording";
 
@@ -10,6 +11,7 @@ type AgentChatVoiceButtonProps = {
 };
 
 export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage }: AgentChatVoiceButtonProps) {
+  const { t } = useTranslation();
   const {
     recordingState,
     errorMessage,
@@ -24,12 +26,12 @@ export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage
   const isBusy = recordingState !== "idle";
   const label =
     recordingState === "recording"
-      ? "Recording voice input"
+      ? t("agentChat.voice.recording")
       : recordingState === "ready"
-        ? "Voice input ready"
+        ? t("agentChat.voice.ready")
         : recordingState === "transcribing"
-          ? "Transcribing voice"
-          : "Click to record voice input";
+          ? t("agentChat.voice.transcribing")
+          : t("agentChat.voice.start");
   const title = recordingState === "idle" ? (disabled ? (disabledMessage ?? label) : label) : (errorMessage ?? label);
 
   const handleClick = useCallback(() => {
@@ -119,7 +121,7 @@ export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage
                   textAlign: "left",
                 }}
               >
-                Transcribing...
+                {t("agentChat.voice.transcribingProgress")}
               </Box>
             ) : isBusy ? (
               <Waveform
@@ -130,9 +132,9 @@ export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage
             ) : null}
           </IconButton>
           {recordingState === "recording" || recordingState === "ready" ? (
-            <Tooltip title="Cancel voice input" placement="top">
+            <Tooltip title={t("agentChat.voice.cancel")} placement="top">
               <IconButton
-                aria-label="Cancel voice input"
+                aria-label={t("agentChat.voice.cancel")}
                 size="small"
                 onClick={cancelRecording}
                 sx={{
@@ -158,9 +160,9 @@ export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage
             </Tooltip>
           ) : null}
           {recordingState === "recording" || recordingState === "ready" ? (
-            <Tooltip title="Submit voice input" placement="top">
+            <Tooltip title={t("agentChat.voice.submit")} placement="top">
               <IconButton
-                aria-label="Submit voice input"
+                aria-label={t("agentChat.voice.submit")}
                 size="small"
                 onClick={handleSubmit}
                 sx={{

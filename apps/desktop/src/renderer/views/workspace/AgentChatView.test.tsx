@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentChatStore } from "../../store/agentChatStore";
 import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
@@ -20,6 +20,7 @@ const mocked = vi.hoisted(() => {
         };
       }>;
       richComposerRenderCount: number;
+      shouldExposeComposerAsTextbox: boolean;
       agentModelSelectorRenderCount: number;
       latestAgentModelSelectorProps: {
         onModelChange: ((model: AgentModel) => void | Promise<void>) | null;
@@ -29,6 +30,7 @@ const mocked = vi.hoisted(() => {
     current: {
       tabs: [{ id: "tab-1", kind: "agent-chat", data: { userRenamed: true } }],
       richComposerRenderCount: 0,
+      shouldExposeComposerAsTextbox: false,
       agentModelSelectorRenderCount: 0,
       latestAgentModelSelectorProps: {
         onModelChange: null,
@@ -98,7 +100,13 @@ vi.mock("../../commands/tabCommands", () => ({
 vi.mock("../../components/RichComposer", () => ({
   RichComposer: () => {
     mocked.stateRef.current.richComposerRenderCount += 1;
-    return <div data-testid="rich-composer" />;
+    return (
+      <div
+        data-testid="rich-composer"
+        role={mocked.stateRef.current.shouldExposeComposerAsTextbox ? "textbox" : undefined}
+        tabIndex={mocked.stateRef.current.shouldExposeComposerAsTextbox ? 0 : undefined}
+      />
+    );
   },
 }));
 
@@ -121,7 +129,13 @@ vi.mock("../../rpc/rpcTransport", () => ({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        "agentChat.voice.start": "Click to record voice input",
+        "agentChat.composer.submit": "Submit",
+      };
+      return translations[key] ?? key;
+    },
   }),
 }));
 
@@ -257,6 +271,7 @@ afterEach(() => {
   agentChatStore.getState().removeSession("tab-1");
   mocked.stateRef.current.tabs = [{ id: "tab-1", kind: "agent-chat", data: { userRenamed: true } }];
   mocked.stateRef.current.richComposerRenderCount = 0;
+  mocked.stateRef.current.shouldExposeComposerAsTextbox = false;
   mocked.stateRef.current.agentModelSelectorRenderCount = 0;
   mocked.stateRef.current.latestAgentModelSelectorProps.onModelChange = null;
   vi.useRealTimers();
@@ -344,6 +359,25 @@ describe("AgentChatView", () => {
     rerender(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive={false} />);
 
     expect(mocked.ensurePiSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not focus the composer through the shortcut while the session is starting", () => {
+    seedSession({ state: "starting" });
+    mocked.stateRef.current.shouldExposeComposerAsTextbox = true;
+    const focusTarget = document.createElement("button");
+    document.body.append(focusTarget);
+    focusTarget.focus();
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+    fireEvent(
+      window,
+      new CustomEvent("agent-chat-composer-focus", {
+        detail: { tabId: "tab-1" },
+      }),
+    );
+
+    expect(document.activeElement).toBe(focusTarget);
+    focusTarget.remove();
   });
 
   it("renders voice input beside the agent chat submit control", () => {
@@ -830,6 +864,44 @@ describe("AgentChatView", () => {
       ]);
     });
     expect(mocked.ensurePiSession).not.toHaveBeenCalled();
+  });
+
+  it("uses the parent model in a subagent footer when the child model is unavailable", () => {
+    const parentModel: AgentModel = {
+      id: "anthropic/claude-opus-4",
+      name: "Claude Opus 4",
+      provider: "Anthropic",
+    };
+    mocked.stateRef.current.tabs = [
+      {
+        id: "tab-1",
+        kind: "agent-chat",
+        data: {
+          userRenamed: true,
+          sessionView: "subagent-detail",
+          subagentAgentId: "agent-1",
+          subagentParentSessionId: "parent-session-1",
+        },
+      },
+    ];
+    const store = agentChatStore.getState();
+    store.initSession("tab-1", "session-1");
+    store.initSession("parent-tab", "parent-session-1");
+    store.setCurrentModel("parent-tab", parentModel);
+
+    render(
+      <AgentChatView
+        tabId="tab-1"
+        workspaceId="workspace-1"
+        cwd="/tmp/project"
+        sessionView="subagent-detail"
+        isActive
+      />,
+    );
+
+    expect(screen.getByText("Model: Anthropic / Claude Opus 4")).toBeTruthy();
+
+    store.removeSession("parent-tab");
   });
 
   it("renders subagent detail as read-only without interactive cancellation", async () => {
