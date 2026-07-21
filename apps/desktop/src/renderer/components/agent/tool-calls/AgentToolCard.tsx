@@ -24,7 +24,8 @@ export function AgentToolCard({ toolCall, result = null, onOpenCompletedSubagent
   const agentStatus = typeof result?.details?.status === "string" ? result.details.status : null;
   const childSessionId = typeof result?.details?.sessionId === "string" ? result.details.sessionId : null;
   const agentId = typeof result?.details?.agentId === "string" ? result.details.agentId : undefined;
-  const canOpenCompletedSubagent = agentStatus === "completed" && Boolean(childSessionId) && Boolean(onOpenCompletedSubagent);
+  const canOpenCompletedSubagent =
+    agentStatus === "completed" && Boolean(childSessionId) && Boolean(onOpenCompletedSubagent);
 
   if (!agentName || !agentPrompt) {
     return null;

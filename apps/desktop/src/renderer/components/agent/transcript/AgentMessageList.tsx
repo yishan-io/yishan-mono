@@ -1,8 +1,8 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import type { AgentContentBlock, AgentMessage as AgentMessageType } from "../../../store/agentChatTypes";
-import { AgentMessage } from "./AgentMessage";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
+import { AgentMessage } from "./AgentMessage";
 import type { AgentToolResultMap } from "./helpers";
 
 const EMPTY_MIN_HEIGHT = 320;

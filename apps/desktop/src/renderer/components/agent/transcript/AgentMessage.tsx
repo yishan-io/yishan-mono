@@ -1,7 +1,7 @@
 import { Box, Paper, Typography } from "@mui/material";
 import type { AgentMessage as AgentMessageType } from "../../../store/agentChatTypes";
-import { AssistantMessageContent } from "./AssistantMessageContent";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
+import { AssistantMessageContent } from "./AssistantMessageContent";
 import { ToolResultMessageContent } from "./ToolResultMessageContent";
 import { UserMessageContent } from "./UserMessageContent";
 import { type AgentToolResultMap, extractMessageText } from "./helpers";

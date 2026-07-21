@@ -604,7 +604,10 @@ function parseSubagentProgressTargets(
 
   const targets = widgetLines
     .map((line) => parseSubagentProgressTargetLine(typeof line === "string" ? line : ""))
-    .filter((target): target is { agentName: string; agentId: string; status: string; childSessionId?: string } => target !== null);
+    .filter(
+      (target): target is { agentName: string; agentId: string; status: string; childSessionId?: string } =>
+        target !== null,
+    );
   return targets;
 }
 
@@ -612,7 +615,9 @@ function parseSubagentProgressTargetLine(
   line: string,
 ): { agentName: string; agentId: string; status: string; childSessionId?: string } | null {
   const normalizedLine = line.replace(/<[^>]+>/g, "").trim();
-  const match = normalizedLine.match(/^\S+\s+(.+?)\s+·\s+(queued|starting|running)\s+·\s+(?:fg|bg)\s+·\s+(agent-\S+)(?:\s+·\s+(\S+))?$/);
+  const match = normalizedLine.match(
+    /^\S+\s+(.+?)\s+·\s+(queued|starting|running)\s+·\s+(?:fg|bg)\s+·\s+(agent-\S+)(?:\s+·\s+(\S+))?$/,
+  );
   if (!match) {
     return null;
   }
@@ -666,10 +671,12 @@ function parseSubagentLiveTranscripts(event: Record<string, unknown>): SubagentL
 }
 
 function applySubagentLiveTranscripts(parentTabId: string, transcripts: SubagentLiveTranscript[]): void {
-  agentChatStore.getState().setSubagentLiveTranscripts(
-    parentTabId,
-    Object.fromEntries(transcripts.map((transcript) => [transcript.childSessionId, transcript.messages])),
-  );
+  agentChatStore
+    .getState()
+    .setSubagentLiveTranscripts(
+      parentTabId,
+      Object.fromEntries(transcripts.map((transcript) => [transcript.childSessionId, transcript.messages])),
+    );
 
   for (const transcript of transcripts) {
     const detailTab = tabStore.getState().tabs.find((tab) => {

@@ -163,7 +163,10 @@ describe("AgentMessageList", () => {
       <AgentMessageList
         tabId="tab-manual-scroll"
         isActive
-        messages={[...initialMessages, { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Second" }] }]}
+        messages={[
+          ...initialMessages,
+          { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Second" }] },
+        ]}
         emptyPrompt="empty"
       />,
     );

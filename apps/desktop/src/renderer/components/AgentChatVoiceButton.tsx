@@ -143,17 +143,13 @@ export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage
                   width: 26,
                   height: 26,
                   borderRadius: "50%",
-                  color: (theme) =>
-                    theme.palette.mode === "dark" ? "common.white" : theme.palette.error.contrastText,
-                  bgcolor: (theme) =>
-                    theme.palette.mode === "dark" ? "background.paper" : theme.palette.error.main,
+                  color: (theme) => (theme.palette.mode === "dark" ? "common.white" : theme.palette.error.contrastText),
+                  bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : theme.palette.error.main),
                   border: "1px solid",
-                  borderColor: (theme) =>
-                    theme.palette.mode === "dark" ? "divider" : theme.palette.error.main,
+                  borderColor: (theme) => (theme.palette.mode === "dark" ? "divider" : theme.palette.error.main),
                   boxShadow: 1,
                   "&:hover": {
-                    bgcolor: (theme) =>
-                      theme.palette.mode === "dark" ? "action.hover" : theme.palette.error.dark,
+                    bgcolor: (theme) => (theme.palette.mode === "dark" ? "action.hover" : theme.palette.error.dark),
                   },
                 }}
               >
@@ -177,15 +173,12 @@ export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage
                   borderRadius: "50%",
                   color: (theme) =>
                     theme.palette.mode === "dark" ? "common.white" : theme.palette.primary.contrastText,
-                  bgcolor: (theme) =>
-                    theme.palette.mode === "dark" ? "background.paper" : theme.palette.primary.main,
+                  bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : theme.palette.primary.main),
                   border: "1px solid",
-                  borderColor: (theme) =>
-                    theme.palette.mode === "dark" ? "divider" : theme.palette.primary.main,
+                  borderColor: (theme) => (theme.palette.mode === "dark" ? "divider" : theme.palette.primary.main),
                   boxShadow: 1,
                   "&:hover": {
-                    bgcolor: (theme) =>
-                      theme.palette.mode === "dark" ? "action.hover" : theme.palette.primary.dark,
+                    bgcolor: (theme) => (theme.palette.mode === "dark" ? "action.hover" : theme.palette.primary.dark),
                   },
                 }}
               >

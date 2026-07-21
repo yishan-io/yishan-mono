@@ -421,7 +421,8 @@ describe("agentChatCommands.subagent helpers", () => {
       sessionId: "parent-session-running",
       command: {
         type: "prompt",
-        message: "The user cancelled sub-agent Builder. Do not retry that sub-agent. Continue without it and explain any missing work if needed.",
+        message:
+          "The user cancelled sub-agent Builder. Do not retry that sub-agent. Continue without it and explain any missing work if needed.",
         streamingBehavior: "steer",
       },
     });
@@ -630,9 +631,9 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
       sessionId: "child-session-1",
       sessionView: "subagent-detail",
     });
-    const detailTab = tabStore.getState().tabs.find(
-      (tab) => tab.kind === "agent-chat" && tab.data.sessionId === "child-session-1",
-    );
+    const detailTab = tabStore
+      .getState()
+      .tabs.find((tab) => tab.kind === "agent-chat" && tab.data.sessionId === "child-session-1");
     if (!detailTab) {
       throw new Error("Expected a subagent detail tab");
     }

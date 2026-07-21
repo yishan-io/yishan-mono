@@ -20,7 +20,6 @@ import {
   setPiSessionUnsubscribe,
 } from "../../commands/agentChatCommands";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "../../commands/agentChatSubagentCommands";
-import { getDaemonClient } from "../../rpc/rpcTransport";
 import { renameTab } from "../../commands/tabCommands";
 import { AgentChatVoiceButton } from "../../components/AgentChatVoiceButton";
 import { RichComposer } from "../../components/RichComposer";
@@ -30,13 +29,10 @@ import { AgentModelSelector } from "../../components/agent/session/AgentModelSel
 import { AgentMessageList } from "../../components/agent/transcript/AgentMessageList";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
+import { getDaemonClient } from "../../rpc/rpcTransport";
 import { subscribeDaemonConnectionStatus } from "../../rpc/rpcTransport";
 import { agentChatStore } from "../../store/agentChatStore";
-import {
-  type RunningSubagentSummary,
-  deriveChildSessionSubagentMetadata,
-  findMatchingRunningSubagent,
-} from "../../store/agentChatSubagents";
+import { type RunningSubagentSummary, findMatchingRunningSubagent } from "../../store/agentChatSubagents";
 import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
 import { tabStore } from "../../store/tabStore";
 import type { AgentChatSessionView } from "../../store/types";
@@ -271,7 +267,9 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
       }
 
       if (!childSessionId) {
-        const matchingProgressTargets = subagentProgressTargets.filter((target) => target.agentName === subagent.agentName);
+        const matchingProgressTargets = subagentProgressTargets.filter(
+          (target) => target.agentName === subagent.agentName,
+        );
         if (matchingProgressTargets.length === 1) {
           childSessionId = matchingProgressTargets[0]?.childSessionId;
         }
@@ -330,7 +328,9 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
       }
 
       if (!agentId && !childSessionId) {
-        const matchingProgressTargets = subagentProgressTargets.filter((target) => target.agentName === subagent.agentName);
+        const matchingProgressTargets = subagentProgressTargets.filter(
+          (target) => target.agentName === subagent.agentName,
+        );
         if (matchingProgressTargets.length === 1) {
           agentId = matchingProgressTargets[0]?.agentId;
         }
@@ -378,7 +378,9 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
             Running sub-agents
           </Typography>
           {runningSubagents.map((subagent) => {
-            const matchingProgressTargets = subagentProgressTargets.filter((target) => target.agentName === subagent.agentName);
+            const matchingProgressTargets = subagentProgressTargets.filter(
+              (target) => target.agentName === subagent.agentName,
+            );
             const canCancel = Boolean(
               subagent.agentId || subagent.childSessionId || matchingProgressTargets.length === 1,
             );
@@ -434,18 +436,15 @@ function AgentChatComposerPane({ tabId, workspaceId, cwd, paneId }: AgentChatCom
                     height: 34,
                     p: 0,
                     border: "1px solid",
-                    borderColor: (theme) =>
-                      theme.palette.mode === "dark" ? "divider" : theme.palette.error.main,
-                    bgcolor: (theme) =>
-                      theme.palette.mode === "dark" ? "background.paper" : theme.palette.error.main,
+                    borderColor: (theme) => (theme.palette.mode === "dark" ? "divider" : theme.palette.error.main),
+                    bgcolor: (theme) => (theme.palette.mode === "dark" ? "background.paper" : theme.palette.error.main),
                     color: (theme) =>
                       theme.palette.mode === "dark" ? "text.secondary" : theme.palette.error.contrastText,
                     borderRadius: 999,
                     boxShadow: 1,
                     transition: "background-color 120ms ease, border-color 120ms ease",
                     "&:hover": {
-                      bgcolor: (theme) =>
-                        theme.palette.mode === "dark" ? "action.hover" : theme.palette.error.dark,
+                      bgcolor: (theme) => (theme.palette.mode === "dark" ? "action.hover" : theme.palette.error.dark),
                     },
                   }}
                 >
@@ -536,17 +535,8 @@ function AgentChatViewComponent({
   const pendingUiRequest = agentChatStore((state) => state.sessionsByTabId[tabId]?.pendingUiRequest ?? null);
   const pendingUiAutoResponse = agentChatStore((state) => state.sessionsByTabId[tabId]?.pendingUiAutoResponse ?? null);
   const liveSessionId = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionId ?? null);
-  const sessionMessages = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages ?? EMPTY_MESSAGES);
-  const childSessionSubagentMetadata = useMemo(() => {
-    return deriveChildSessionSubagentMetadata(sessionMessages);
-  }, [sessionMessages]);
-  const subagentControl = agentChatTab?.data.sessionView === "subagent-detail"
-    ? {
-        agentId: agentChatTab.data.subagentAgentId,
-        parentSessionId: agentChatTab.data.subagentParentSessionId,
-      }
-    : null;
-  const subagentParentSessionId = subagentControl?.parentSessionId;
+  const subagentParentSessionId =
+    agentChatTab?.data.sessionView === "subagent-detail" ? agentChatTab.data.subagentParentSessionId : undefined;
   const isInitialHistoryLoadPending =
     Boolean(startupSessionIdRef.current) && (!hasSession || !hasLoadedMessages || !hasLoadedModels || !hasLoadedState);
 
@@ -568,10 +558,12 @@ function AgentChatViewComponent({
         const isChildFinished = parentSession?.finishedSubagents.some(
           (subagent) => subagent.childSessionId === childSessionId,
         );
-        const isParentTrackingChild = !isChildFinished && Boolean(
-          parentSession?.subagentLiveTranscripts[childSessionId] ||
-            parentSession?.subagentProgressTargets.some((target) => target.childSessionId === childSessionId),
-        );
+        const isParentTrackingChild =
+          !isChildFinished &&
+          Boolean(
+            parentSession?.subagentLiveTranscripts[childSessionId] ||
+              parentSession?.subagentProgressTargets.some((target) => target.childSessionId === childSessionId),
+          );
 
         if (isParentTrackingChild) {
           agentChatStore.getState().initSession(tabId, childSessionId);
@@ -634,7 +626,7 @@ function AgentChatViewComponent({
     return () => {
       isDisposed = true;
     };
-  }, [cwd, sessionView, subagentParentSessionId, tabId, workspaceId]);
+  }, [cwd, isReadOnlySubagentDetail, sessionView, subagentParentSessionId, tabId, workspaceId]);
 
   useEffect(() => {
     let hasObservedConnectedState = false;
@@ -682,41 +674,6 @@ function AgentChatViewComponent({
   useEffect(() => {
     setAgentChatStreamTabVisible(tabId, isActive);
   }, [isActive, tabId]);
-
-  const handleReadOnlyCancel = useCallback(async () => {
-    const agentId = subagentControl?.agentId ?? childSessionSubagentMetadata?.agentId;
-    const parentSessionId = subagentControl?.parentSessionId ?? childSessionSubagentMetadata?.parentSessionId;
-    const childSessionId = liveSessionId ?? childSessionSubagentMetadata?.childSessionId;
-    if ((!agentId && !childSessionId) || !parentSessionId) {
-      return;
-    }
-
-    const parentTabId = findTabWithSession(parentSessionId);
-    if (parentTabId) {
-      await cancelSubagentRun({
-        tabId: parentTabId,
-        sessionId: parentSessionId,
-        agentId,
-        agentName: childSessionSubagentMetadata?.agentName,
-        childSessionId,
-      });
-      return;
-    }
-
-    const stopTarget = childSessionId?.trim() || agentId;
-    if (!stopTarget) {
-      return;
-    }
-
-    const client = await getDaemonClient();
-    await client.pi.send({
-      sessionId: parentSessionId,
-      command: {
-        type: "prompt",
-        message: `/agent-stop ${stopTarget}`,
-      },
-    });
-  }, [childSessionSubagentMetadata, sessionState, subagentControl]);
 
   const handlePendingUiCancel = useCallback(async () => {
     if (!liveSessionId || !pendingUiRequest) {

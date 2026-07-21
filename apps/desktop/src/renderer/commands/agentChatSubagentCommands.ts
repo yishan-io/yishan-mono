@@ -213,7 +213,8 @@ export async function cancelSubagentRun(opts: {
     return;
   }
 
-  const cancelledAgentLabel = opts.agentName?.trim() || opts.childSessionId?.trim() || opts.agentId?.trim() || stopTarget;
+  const cancelledAgentLabel =
+    opts.agentName?.trim() || opts.childSessionId?.trim() || opts.agentId?.trim() || stopTarget;
   await client.pi.send({
     sessionId: opts.sessionId,
     command: {
