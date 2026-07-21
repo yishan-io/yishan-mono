@@ -84,16 +84,16 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
 
   const launchActions = [
     {
-      id: "terminal",
-      label: t("launch.actions.openTerminal"),
-      shortcutLabel: getShortcutDisplayLabelById("open-terminal", platform),
-      icon: <LuSquareTerminal size={16} />,
+      id: "agent-chat",
+      label: t("launch.actions.openAgentChat"),
+      shortcutLabel: getShortcutDisplayLabelById("open-agent-chat", platform),
+      icon: <LuSparkles size={16} />,
       onClick: () =>
         openTab({
           workspaceId,
-          kind: "terminal",
-          title: t("terminal.title"),
-          reuseExisting: false,
+          kind: "agent-chat",
+          title: t("agentChat.title"),
+          cwd: selectedWorkspace?.worktreePath || undefined,
         }),
     },
     {
@@ -109,16 +109,16 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
         }),
     },
     {
-      id: "agent-chat",
-      label: t("launch.actions.openAgentChat"),
-      shortcutLabel: getShortcutDisplayLabelById("open-agent-chat", platform),
-      icon: <LuSparkles size={16} />,
+      id: "terminal",
+      label: t("launch.actions.openTerminal"),
+      shortcutLabel: getShortcutDisplayLabelById("open-terminal", platform),
+      icon: <LuSquareTerminal size={16} />,
       onClick: () =>
         openTab({
           workspaceId,
-          kind: "agent-chat",
-          title: t("agentChat.title"),
-          cwd: selectedWorkspace?.worktreePath || undefined,
+          kind: "terminal",
+          title: t("terminal.title"),
+          reuseExisting: false,
         }),
     },
     {
@@ -227,7 +227,7 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
           </Typography>
 
           {/* Quick-action list */}
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, width: "100%" }}>
             {launchActions.map((action) => (
               <Box
                 key={action.id}
@@ -236,6 +236,7 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
                 onClick={action.onClick}
                 disabled={!workspaceId}
                 sx={{
+                  width: "100%",
                   minHeight: 40,
                   border: 1,
                   borderColor: "divider",
