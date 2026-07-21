@@ -353,10 +353,10 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
             display: "flex",
             flex: 1,
             minWidth: 0,
-            borderLeft: { md: "1px solid" },
-            borderLeftColor: { md: "grey.300" },
-            borderTop: { xs: "1px solid", md: 0 },
-            borderTopColor: { xs: "grey.300" },
+            "--launch-section-divider": (theme) =>
+              theme.palette.mode === "dark" ? theme.palette.grey[800] : theme.palette.grey[300],
+            borderLeft: { md: "1px solid var(--launch-section-divider)" },
+            borderTop: { xs: "1px solid var(--launch-section-divider)", md: 0 },
             pl: { md: 4 },
             pt: { xs: 3, md: 0 },
           }}
