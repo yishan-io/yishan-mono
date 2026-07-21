@@ -49,13 +49,30 @@ export function extractResultText(message: AgentMessage | null | undefined): str
   if (!message) {
     return "";
   }
-  if (typeof message.content === "string") {
-    return message.content;
+  const { content } = message;
+  if (typeof content === "string") {
+    return content;
   }
-  return message.content
-    .filter((block): block is Extract<AgentContentBlock, { type: "text" }> => block.type === "text")
+  if (!Array.isArray(content)) {
+    return "";
+  }
+
+  return content
+    .filter(isTextContentBlock)
     .map((block) => block.text)
     .join("\n");
+}
+
+function isTextContentBlock(block: unknown): block is Extract<AgentContentBlock, { type: "text" }> {
+  return (
+    typeof block === "object" &&
+    block !== null &&
+    !Array.isArray(block) &&
+    "type" in block &&
+    "text" in block &&
+    block.type === "text" &&
+    typeof block.text === "string"
+  );
 }
 
 /** Returns the final path segment for compact labels. */
