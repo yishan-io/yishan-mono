@@ -143,11 +143,12 @@ function executeShortcutTarget(context: ShortContext, event: KeyboardEvent, targ
 
   if (target.command === "tabs.openAgentChat") {
     const workspaceId = context.workspaceStoreState.selectedWorkspaceId;
-    if (!workspaceId) {
+    const workspace = context.workspaceStoreState.workspaces.find((item) => item.id === workspaceId);
+    if (!workspaceId || !workspace?.worktreePath) {
       return false;
     }
 
-    context.commands.openTab({ workspaceId, kind: "agent-chat" });
+    context.commands.openTab({ workspaceId, kind: "agent-chat", cwd: workspace.worktreePath });
     event.preventDefault();
     return true;
   }

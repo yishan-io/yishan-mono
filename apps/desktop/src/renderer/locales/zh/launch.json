@@ -3,6 +3,16 @@
     "title": "\u63a5\u4e0b\u6765\u505a\u4ec0\u4e48\uff1f",
     "hint": "\u9009\u62e9\u4e00\u4e2a\u64cd\u4f5c\u4ee5\u5f00\u59cb\u3002",
     "agents": "\u4f7f\u7528\u667a\u80fd\u4f53\u542f\u52a8",
+    "recent": {
+      "title": "\u6700\u8fd1\u667a\u80fd\u4f53\u4f1a\u8bdd",
+      "empty": "\u672a\u627e\u5230\u4f1a\u8bdd",
+      "loadError": "\u65e0\u6cd5\u52a0\u8f7d\u6700\u8fd1\u4f1a\u8bdd",
+      "defaultTitle": "AI \u5bf9\u8bdd",
+      "now": "\u521a\u521a",
+      "minutesAgo": "{{count}} \u5206\u949f\u524d",
+      "hoursAgo": "{{count}} \u5c0f\u65f6\u524d",
+      "daysAgo": "{{count}} \u5929\u524d"
+    },
     "actions": {
       "openTerminal": "\u6253\u5f00\u7ec8\u7aef",
       "openBrowser": "\u6253\u5f00\u6d4f\u89c8\u5668\u6807\u7b7e",
