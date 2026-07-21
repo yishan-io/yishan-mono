@@ -31,6 +31,7 @@
       "closeTab": "\u5173\u95ed\u5f53\u524d\u6807\u7b7e",
       "closeWorkspace": "\u5173\u95ed\u5f53\u524d\u5de5\u4f5c\u533a",
       "openTerminal": "\u6253\u5f00\u7ec8\u7aef\u6807\u7b7e",
+      "openAgentChat": "\u6253\u5f00 Agent \u804a\u5929\u6807\u7b7e",
       "openBrowser": "\u6253\u5f00\u6d4f\u89c8\u5668\u6807\u7b7e",
       "activateRepoPane": "\u6fc0\u6d3b\u4ed3\u5e93\u9762\u677f",
       "activateFilesPane": "\u6fc0\u6d3b\u6587\u4ef6\u9762\u677f",
