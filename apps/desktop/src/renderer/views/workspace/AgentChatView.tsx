@@ -546,6 +546,7 @@ function AgentChatViewComponent({
         parentSessionId: agentChatTab.data.subagentParentSessionId,
       }
     : null;
+  const subagentParentSessionId = subagentControl?.parentSessionId;
   const isInitialHistoryLoadPending =
     Boolean(startupSessionIdRef.current) && (!hasSession || !hasLoadedMessages || !hasLoadedModels || !hasLoadedState);
 
@@ -560,7 +561,7 @@ function AgentChatViewComponent({
     const initialize = async (): Promise<void> => {
       if (isReadOnlySubagentDetail) {
         const childSessionId = startupSessionIdRef.current ?? tabId;
-        const parentSessionId = agentChatTab?.data.subagentParentSessionId;
+        const parentSessionId = subagentParentSessionId;
         const parentTabId = parentSessionId ? findTabWithSession(parentSessionId) : undefined;
         const parentSession = parentTabId ? agentChatStore.getState().sessionsByTabId[parentTabId] : undefined;
         const initialMessages = parentSession?.subagentLiveTranscripts[childSessionId] ?? [];
@@ -633,7 +634,7 @@ function AgentChatViewComponent({
     return () => {
       isDisposed = true;
     };
-  }, [agentChatTab, tabId, workspaceId, cwd, sessionView]);
+  }, [cwd, sessionView, subagentParentSessionId, tabId, workspaceId]);
 
   useEffect(() => {
     let hasObservedConnectedState = false;

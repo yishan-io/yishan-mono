@@ -333,6 +333,19 @@ describe("AgentChatView", () => {
     expect(mocked.ensurePiSession).toHaveBeenCalledTimes(1);
   });
 
+  it("does not reinitialize when unrelated agent-tab metadata changes", async () => {
+    const { rerender } = render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    await waitFor(() => {
+      expect(mocked.ensurePiSession).toHaveBeenCalledTimes(1);
+    });
+
+    mocked.stateRef.current.tabs = [{ id: "tab-1", kind: "agent-chat", data: { userRenamed: false } }];
+    rerender(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive={false} />);
+
+    expect(mocked.ensurePiSession).toHaveBeenCalledTimes(1);
+  });
+
   it("renders voice input beside the agent chat submit control", () => {
     seedSession();
 
