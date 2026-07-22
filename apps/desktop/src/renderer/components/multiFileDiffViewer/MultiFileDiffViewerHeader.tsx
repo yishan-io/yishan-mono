@@ -73,12 +73,26 @@ export function MultiFileDiffViewerHeader({
       )}
 
       {additions > 0 && (
-        <Typography component="span" sx={{ fontSize: 11, color: "var(--diffs-addition-base, #0dbe4e)", flexShrink: 0 }}>
+        <Typography
+          component="span"
+          sx={{
+            fontSize: 11,
+            color: "var(--diffs-addition-base, var(--yishan-color-git-pierre-fallback-added))",
+            flexShrink: 0,
+          }}
+        >
           +{additions}
         </Typography>
       )}
       {deletions > 0 && (
-        <Typography component="span" sx={{ fontSize: 11, color: "var(--diffs-deletion-base, #ff2e3f)", flexShrink: 0 }}>
+        <Typography
+          component="span"
+          sx={{
+            fontSize: 11,
+            color: "var(--diffs-deletion-base, var(--yishan-color-git-pierre-fallback-deleted))",
+            flexShrink: 0,
+          }}
+        >
           -{deletions}
         </Typography>
       )}

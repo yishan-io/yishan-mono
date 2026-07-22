@@ -71,7 +71,7 @@ html[data-app-theme-mode="dark"] .MuiTreeItem-content[aria-selected="true"]:hove
   width: 3px !important;
   margin-left: 3px;
   border-radius: 1.5px;
-  background-color: #2ea043;
+  background-color: var(--yishan-color-git-diff-added);
   cursor: pointer;
 }
 
@@ -79,7 +79,7 @@ html[data-app-theme-mode="dark"] .MuiTreeItem-content[aria-selected="true"]:hove
   width: 3px !important;
   margin-left: 3px;
   border-radius: 1.5px;
-  background-color: #1a7fd4;
+  background-color: var(--yishan-color-git-diff-modified);
   cursor: pointer;
 }
 
@@ -91,7 +91,7 @@ html[data-app-theme-mode="dark"] .MuiTreeItem-content[aria-selected="true"]:hove
   background-color: transparent;
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
-  border-left: 5px solid #f85149;
+  border-left: 5px solid var(--yishan-color-git-diff-deleted);
   box-sizing: border-box;
   cursor: pointer;
   position: relative;
@@ -100,15 +100,15 @@ html[data-app-theme-mode="dark"] .MuiTreeItem-content[aria-selected="true"]:hove
 
 /* Dark theme adjustments (slightly brighter) */
 html[data-app-theme-mode="dark"] .git-gutter-added {
-  background-color: #3fb950;
+  background-color: var(--yishan-color-git-diff-added);
 }
 
 html[data-app-theme-mode="dark"] .git-gutter-modified {
-  background-color: #58a6ff;
+  background-color: var(--yishan-color-git-diff-modified);
 }
 
 html[data-app-theme-mode="dark"] .git-gutter-deleted {
-  border-left-color: #f85149;
+  border-left-color: var(--yishan-color-git-diff-deleted);
   border-top-color: transparent;
   border-bottom-color: transparent;
 }
@@ -173,8 +173,8 @@ html[data-app-theme-mode="dark"] .git-gutter-deleted {
 }
 
 .git-inline-diff-line-old {
-  color: #82071e;
-  background-color: #ffebe9;
+  color: var(--yishan-color-git-inline-deleted-foreground);
+  background-color: var(--yishan-color-git-inline-deleted-background);
   padding: 0 4px;
   white-space: pre;
   border-radius: 2px;
@@ -182,8 +182,8 @@ html[data-app-theme-mode="dark"] .git-gutter-deleted {
 }
 
 .git-inline-diff-line-new {
-  color: #116329;
-  background-color: #dafbe1;
+  color: var(--yishan-color-git-inline-added-foreground);
+  background-color: var(--yishan-color-git-inline-added-background);
   padding: 0 4px;
   white-space: pre;
   border-radius: 2px;
@@ -211,11 +211,11 @@ html[data-app-theme-mode="dark"] .git-inline-diff-hint {
 }
 
 html[data-app-theme-mode="dark"] .git-inline-diff-line-old {
-  color: #ffa198;
-  background-color: rgba(248, 81, 73, 0.15);
+  color: var(--yishan-color-git-inline-deleted-foreground);
+  background-color: var(--yishan-color-git-inline-deleted-background);
 }
 
 html[data-app-theme-mode="dark"] .git-inline-diff-line-new {
-  color: #7ee787;
-  background-color: rgba(63, 185, 80, 0.15);
+  color: var(--yishan-color-git-inline-added-foreground);
+  background-color: var(--yishan-color-git-inline-added-background);
 }

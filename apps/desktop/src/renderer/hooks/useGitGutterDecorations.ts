@@ -1,3 +1,4 @@
+import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import { useEffect, useRef, useState } from "react";
 import { readDiff } from "../commands/gitCommands";
 import {
@@ -17,12 +18,12 @@ const GIT_GUTTER_DIFF_DEBOUNCE_MS = 150;
 const MAX_LIVE_GUTTER_DIFF_LINES = 5000;
 
 // Overview ruler colors — match the CSS gutter colors in style.css (light and dark variants).
-const RULER_ADDED_LIGHT = "#2ea043";
-const RULER_MODIFIED_LIGHT = "#1a7fd4";
-const RULER_DELETED_LIGHT = "#f85149";
-const RULER_ADDED_DARK = "#3fb950";
-const RULER_MODIFIED_DARK = "#58a6ff";
-const RULER_DELETED_DARK = "#f85149";
+const RULER_ADDED_LIGHT = SEMANTIC_COLOR_TOKENS.light.gitDiff.added;
+const RULER_MODIFIED_LIGHT = SEMANTIC_COLOR_TOKENS.light.gitDiff.modified;
+const RULER_DELETED_LIGHT = SEMANTIC_COLOR_TOKENS.light.gitDiff.deleted;
+const RULER_ADDED_DARK = SEMANTIC_COLOR_TOKENS.dark.gitDiff.added;
+const RULER_MODIFIED_DARK = SEMANTIC_COLOR_TOKENS.dark.gitDiff.modified;
+const RULER_DELETED_DARK = SEMANTIC_COLOR_TOKENS.dark.gitDiff.deleted;
 
 export type UseGitGutterDecorationsInput = {
   /** Monaco editor instance to decorate. */

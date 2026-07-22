@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { YISHAN_THEME_DARK } from "../helpers/monacoSetup";
 import { useGitGutterDecorations } from "./useGitGutterDecorations";
 
 // Mock the readDiff command
@@ -140,31 +142,64 @@ describe("useGitGutterDecorations", () => {
     }
   });
 
-  it("uses dark theme ruler colors when monacoTheme is yishan-dark", async () => {
-    mockReadDiff.mockResolvedValue({ oldContent: "line1\nline2", newContent: "" });
+  it.each([
+    [undefined, "added", "unchanged\nlast", "unchanged\nadded\nlast", SEMANTIC_COLOR_TOKENS.light.gitDiff.added],
+    [
+      undefined,
+      "modified",
+      "unchanged\nbefore\nlast",
+      "unchanged\nafter\nlast",
+      SEMANTIC_COLOR_TOKENS.light.gitDiff.modified,
+    ],
+    [undefined, "deleted", "unchanged\nremoved\nlast", "unchanged\nlast", SEMANTIC_COLOR_TOKENS.light.gitDiff.deleted],
+    [YISHAN_THEME_DARK, "added", "unchanged\nlast", "unchanged\nadded\nlast", SEMANTIC_COLOR_TOKENS.dark.gitDiff.added],
+    [
+      YISHAN_THEME_DARK,
+      "modified",
+      "unchanged\nbefore\nlast",
+      "unchanged\nafter\nlast",
+      SEMANTIC_COLOR_TOKENS.dark.gitDiff.modified,
+    ],
+    [
+      YISHAN_THEME_DARK,
+      "deleted",
+      "unchanged\nremoved\nlast",
+      "unchanged\nlast",
+      SEMANTIC_COLOR_TOKENS.dark.gitDiff.deleted,
+    ],
+  ])(
+    "generates the %s overview ruler color for %s changes",
+    async (monacoTheme, kind, oldContent, currentContent, expectedColor) => {
+      mockReadDiff.mockResolvedValue({ oldContent, newContent: "" });
 
-    renderHook(() =>
-      useGitGutterDecorations({
-        editor: mockEditor as unknown as Parameters<typeof useGitGutterDecorations>[0]["editor"],
-        workspaceId: "workspace-1",
-        path: "src/a.ts",
-        worktreePath: "/workspace",
-        currentContent: "line1\nline2\nnew line",
-        monacoTheme: "yishan-dark",
-      }),
-    );
+      renderHook(() =>
+        useGitGutterDecorations({
+          editor: mockEditor as unknown as Parameters<typeof useGitGutterDecorations>[0]["editor"],
+          workspaceId: "workspace-1",
+          path: "src/a.ts",
+          worktreePath: "/workspace",
+          currentContent,
+          monacoTheme,
+        }),
+      );
 
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 50));
-    });
+      await waitFor(() => {
+        expect(mockEditor.createDecorationsCollection).toHaveBeenCalled();
+      });
 
-    expect(mockEditor.createDecorationsCollection).toHaveBeenCalled();
-    const firstCallArgs = mockEditor.createDecorationsCollection.mock.calls[0] as unknown[];
-    const decorations = firstCallArgs[0] as Array<{ options: { overviewRulerColor: string } }>;
-    // At least one decoration should use a dark-theme color
-    const rulerColors = decorations.map((d) => d.options.overviewRulerColor);
-    expect(rulerColors.some((c) => c === "#3fb950" || c === "#58a6ff" || c === "#f85149")).toBe(true);
-  });
+      const decorations = mockEditor.createDecorationsCollection.mock.calls[0]?.[0] as Array<{
+        options: { linesDecorationsClassName: string; overviewRulerColor: string };
+      }>;
+      const changeDecorations = decorations.filter(
+        (decoration) => decoration.options.linesDecorationsClassName === `git-gutter-${kind}`,
+      );
+
+      expect(changeDecorations).not.toHaveLength(0);
+      expect(changeDecorations.every((decoration) => decoration.options.overviewRulerColor === expectedColor)).toBe(
+        true,
+      );
+    },
+  );
 
   it("clears decorations when readDiff fails", async () => {
     mockReadDiff.mockRejectedValue(new Error("not a git repo"));
