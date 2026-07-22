@@ -22,7 +22,7 @@ import { ThemePreferencePicker } from "../components/settings/ThemePreferencePic
 import { getRendererPlatform } from "../helpers/platform";
 import { useThemePreference } from "../hooks/useThemePreference";
 import { AccountSettingsView } from "./settings/AccountSettingsView";
-import { CLIToolsSettingsView } from "./settings/CLIToolsSettingsView";
+import { AgentSettingsView } from "./settings/AgentSettingsView";
 import { ComputerUseSettingsView } from "./settings/ComputerUseSettingsView";
 import { IntegrationSettingsView } from "./settings/IntegrationSettingsView";
 import { KeybindingsSettingsView } from "./settings/KeybindingsSettingsView";
@@ -174,7 +174,7 @@ export function SettingsView() {
       account: <AccountSettingsView />,
       agents: (
         <SettingsErrorBoundary sectionLabel={t("settings.agents.title")}>
-          <CLIToolsSettingsView />
+          <AgentSettingsView />
         </SettingsErrorBoundary>
       ),
       computerUse: <ComputerUseSettingsView />,

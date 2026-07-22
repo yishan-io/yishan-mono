@@ -41,6 +41,9 @@
       "reasoning": "Reasoning",
       "sessionTotalCumulative": "Session total (cumulative)",
       "cost": "Cost"
+    },
+    "modelSelector": {
+      "addProvider": "Add provider"
     }
   }
 }

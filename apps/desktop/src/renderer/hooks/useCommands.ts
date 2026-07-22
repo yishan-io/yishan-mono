@@ -68,6 +68,14 @@ import {
   setOverviewTimeRange as setOverviewTimeRangeCommand,
 } from "../commands/overviewCommands";
 import {
+  authenticatePiProvider as authenticatePiProviderCommand,
+  cancelPiProviderAuthentication as cancelPiProviderAuthenticationCommand,
+  getPiProviderConfigSnapshot as getPiProviderConfigSnapshotCommand,
+  refreshPiProviderConfigSnapshot as refreshPiProviderConfigSnapshotCommand,
+  removePiProviderCredential as removePiProviderCredentialCommand,
+  setDefaultAiChatModel as setDefaultAiChatModelCommand,
+} from "../commands/piProviderConfigCommands";
+import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
   inspectLocalProjectSource as inspectLocalProjectSourceCommand,
@@ -157,6 +165,12 @@ export type Commands = {
   setOverviewTimeRange: typeof setOverviewTimeRangeCommand;
   setOverviewProjectId: typeof setOverviewProjectIdCommand;
   listCLIToolStatuses: typeof listCLIToolStatusesCommand;
+  getPiProviderConfigSnapshot: typeof getPiProviderConfigSnapshotCommand;
+  refreshPiProviderConfigSnapshot: typeof refreshPiProviderConfigSnapshotCommand;
+  authenticatePiProvider: typeof authenticatePiProviderCommand;
+  cancelPiProviderAuthentication: typeof cancelPiProviderAuthenticationCommand;
+  removePiProviderCredential: typeof removePiProviderCredentialCommand;
+  setDefaultAiChatModel: typeof setDefaultAiChatModelCommand;
   checkGitHubConnectionStatus: typeof checkGitHubConnectionStatusCommand;
   setDisplayRepoIds: typeof setDisplayRepoIdsCommand;
   setLastUsedExternalAppId: typeof setLastUsedExternalAppIdCommand;
@@ -296,6 +310,12 @@ export function useCommands(): Commands {
       setOverviewTimeRange: setOverviewTimeRangeCommand,
       setOverviewProjectId: setOverviewProjectIdCommand,
       listCLIToolStatuses: listCLIToolStatusesCommand,
+      getPiProviderConfigSnapshot: getPiProviderConfigSnapshotCommand,
+      refreshPiProviderConfigSnapshot: refreshPiProviderConfigSnapshotCommand,
+      authenticatePiProvider: authenticatePiProviderCommand,
+      cancelPiProviderAuthentication: cancelPiProviderAuthenticationCommand,
+      removePiProviderCredential: removePiProviderCredentialCommand,
+      setDefaultAiChatModel: setDefaultAiChatModelCommand,
       checkGitHubConnectionStatus: checkGitHubConnectionStatusCommand,
       setDisplayRepoIds: setDisplayRepoIdsCommand,
       setLastUsedExternalAppId: setLastUsedExternalAppIdCommand,

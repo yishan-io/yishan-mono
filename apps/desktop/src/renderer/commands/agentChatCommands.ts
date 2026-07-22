@@ -1,7 +1,12 @@
+import {
+  type AiChatModelSelection,
+  formatAiChatModelSelection,
+  isAiChatModelSelectionAvailable,
+} from "../helpers/aiChatSettings";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { generateId } from "../helpers/generateId";
 import type * as Rpc from "../rpc/daemonTypes";
-import { getDaemonClient } from "../rpc/rpcTransport";
+import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
 import { agentChatStore } from "../store/agentChatStore";
 import type {
   AgentContentBlock,
@@ -13,6 +18,7 @@ import type {
   AgentStreamEvent,
   AgentThinkingSignature,
 } from "../store/agentChatTypes";
+import { aiChatSettingsStore } from "../store/settings/aiChatSettingsStore";
 import { tabStore } from "../store/tabStore";
 import type { AgentChatSessionView } from "../store/types";
 import {
@@ -84,12 +90,15 @@ export async function ensurePiSession(opts: {
   activePiSessions.set(opts.tabId, handle);
 
   const startPiSession = async (): Promise<{ sessionId: string } | { ok: boolean }> => {
+    const defaultSelection = requestedSessionId ? undefined : aiChatSettingsStore.getState().defaultModel;
+    const defaultModel = defaultSelection ? await resolveAvailableDefaultAiChatModel(defaultSelection) : undefined;
     return await client.pi.start({
       sessionId,
       tabId: opts.tabId,
       paneId: resolveAgentChatPaneId(opts.tabId, opts.paneId),
       workspaceId: opts.workspaceId,
       cwd: opts.cwd,
+      ...(defaultModel ? { model: defaultModel } : {}),
     });
   };
 
@@ -133,6 +142,21 @@ export async function ensurePiSession(opts: {
   handle.startPromise = startPromise;
   await startPromise;
   return sessionId;
+}
+
+async function resolveAvailableDefaultAiChatModel(selection: AiChatModelSelection): Promise<string | undefined> {
+  try {
+    const result = await getDesktopHostBridge().getPiProviderConfigSnapshot();
+    if (!result.ok) {
+      return undefined;
+    }
+    if (!isAiChatModelSelectionAvailable(result.value.models, selection)) {
+      return undefined;
+    }
+    return formatAiChatModelSelection(selection);
+  } catch {
+    return undefined;
+  }
 }
 
 /** Returns the tabId that currently owns the given agent-chat session, if any. */

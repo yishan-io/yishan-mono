@@ -5,6 +5,24 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentModel } from "../../../store/agentChatTypes";
 import { AgentModelSelector } from "./AgentModelSelector";
 
+const mocked = vi.hoisted(() => ({
+  navigate: vi.fn(),
+}));
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+vi.mock("react-router-dom", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router-dom")>();
+  return {
+    ...actual,
+    useNavigate: () => mocked.navigate,
+  };
+});
+
 function buildModels(): AgentModel[] {
   return [
     { id: "anthropic/claude-sonnet-4", provider: "Anthropic", name: "claude-sonnet-4" },
@@ -15,6 +33,7 @@ function buildModels(): AgentModel[] {
 
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
 });
 
 describe("AgentModelSelector", () => {
@@ -134,5 +153,29 @@ describe("AgentModelSelector", () => {
 
     expect(screen.getByRole("button", { name: "model-0" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "model-39" })).toBeNull();
+  });
+
+  it("closes the dropdown and opens focused provider settings from the provider footer", () => {
+    const models = buildModels();
+    const currentModel = models[0] ?? null;
+
+    render(
+      <AgentModelSelector
+        models={models}
+        currentModel={currentModel}
+        thinkingLevel="off"
+        onModelChange={vi.fn()}
+        onThinkingLevelCycle={vi.fn()}
+      />,
+    );
+
+    fireEvent.mouseDown(screen.getByRole("button", { name: "Anthropic/claude-sonnet-4" }));
+    fireEvent.click(screen.getByRole("button", { name: "Anthropic/claude-sonnet-4" }));
+    const addProviderButton = screen.getByRole("button", { name: "agentChat.modelSelector.addProvider" });
+
+    fireEvent.click(addProviderButton);
+
+    expect(mocked.navigate).toHaveBeenCalledWith("/settings?tab=agents#ai-chat-provider-settings");
+    expect(screen.queryByRole("searchbox", { name: "Search models" })).toBeNull();
   });
 });

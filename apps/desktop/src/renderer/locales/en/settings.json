@@ -584,6 +584,61 @@
         }
       }
     },
-    "comingSoon": "This settings page is coming soon."
+    "comingSoon": "This settings page is coming soon.",
+    "aiChatProviders": {
+      "title": "Ai Chat Providers & Models",
+      "description": "Manage provider connections and choose the default model for AI Chat.",
+      "actions": {
+        "refresh": "Refresh"
+      },
+      "prompt": {
+        "submit": "Continue"
+      },
+      "providers": {
+        "empty": "No providers available.",
+        "switchDialog": {
+          "title": "Switch authentication method?",
+          "description": "This will replace the current authentication for {{provider}}.",
+          "confirm": "Switch"
+        },
+        "actions": {
+          "login": "Login",
+          "cancel": "Cancel",
+          "setApiKey": "Set API key",
+          "manage": "Manage",
+          "replace": "Replace API key",
+          "remove": "Remove saved key",
+          "logout": "Logout"
+        },
+        "status": {
+          "connectedOauth": "Connected via OAuth",
+          "connectedStored": "Connected via saved auth",
+          "connectedEnv": "Connected via environment",
+          "connectedExternal": "Configured externally",
+          "externalSetupRequired": "External setup required"
+        },
+        "badges": {
+          "connectedOauth": "OAuth",
+          "connectedStored": "Saved auth",
+          "connectedEnv": "Environment",
+          "connectedExternal": "External",
+          "externalSetupRequired": "External setup",
+          "configuredUnavailable": "Configured · unavailable"
+        }
+      },
+      "models": {
+        "selectionTitle": "Default AI Chat provider and model",
+        "selectionDescription": "Choose the global provider and model used for future AI Chat sessions.",
+        "providerTitle": "Default AI Chat provider",
+        "providerDescription": "Only providers with configured authentication are available.",
+        "providerPlaceholder": "Select a provider",
+        "providerEmpty": "No configured providers",
+        "defaultTitle": "Default AI Chat model",
+        "defaultDescription": "Choose from models available for the selected provider.",
+        "placeholder": "Select a model",
+        "empty": "No available models",
+        "unavailableWarning": "Your saved provider or model is no longer available. Choose a new default or refresh AI Chat Providers & Models."
+      }
+    }
   }
 }

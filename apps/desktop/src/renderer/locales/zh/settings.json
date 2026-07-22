@@ -547,6 +547,61 @@
         }
       }
     },
-    "comingSoon": "\u8be5\u8bbe\u7f6e\u9879\u5373\u5c06\u4e0a\u7ebf\u3002"
+    "comingSoon": "\u8be5\u8bbe\u7f6e\u9879\u5373\u5c06\u4e0a\u7ebf\u3002",
+    "aiChatProviders": {
+      "title": "AI Chat \u63d0\u4f9b\u5546\u4e0e\u6a21\u578b",
+      "description": "\u7ba1\u7406 AI Chat \u63d0\u4f9b\u5546\u8fde\u63a5\u5e76\u9009\u62e9\u9ed8\u8ba4\u6a21\u578b\u3002",
+      "actions": {
+        "refresh": "\u5237\u65b0"
+      },
+      "prompt": {
+        "submit": "\u7ee7\u7eed"
+      },
+      "providers": {
+        "empty": "\u6682\u65e0\u53ef\u7528 provider\u3002",
+        "switchDialog": {
+          "title": "\u5207\u6362\u8ba4\u8bc1\u65b9\u5f0f\uff1f",
+          "description": "\u8fd9\u4f1a\u66ff\u6362 {{provider}} \u5f53\u524d\u4f7f\u7528\u7684\u8ba4\u8bc1\u3002",
+          "confirm": "\u5207\u6362"
+        },
+        "actions": {
+          "login": "\u767b\u5f55",
+          "cancel": "\u53d6\u6d88",
+          "setApiKey": "\u8bbe\u7f6e API Key",
+          "manage": "\u7ba1\u7406",
+          "replace": "\u66ff\u6362 API Key",
+          "remove": "\u79fb\u9664\u5df2\u4fdd\u5b58\u5bc6\u94a5",
+          "logout": "\u9000\u51fa\u767b\u5f55"
+        },
+        "status": {
+          "connectedOauth": "\u5df2\u901a\u8fc7 OAuth \u8fde\u63a5",
+          "connectedStored": "\u5df2\u901a\u8fc7\u672c\u5730\u4fdd\u5b58\u8ba4\u8bc1\u8fde\u63a5",
+          "connectedEnv": "\u5df2\u901a\u8fc7\u73af\u5883\u53d8\u91cf\u8fde\u63a5",
+          "connectedExternal": "\u7531\u5916\u90e8\u914d\u7f6e",
+          "externalSetupRequired": "\u9700\u8981\u5728\u5916\u90e8\u5b8c\u6210\u914d\u7f6e"
+        },
+        "badges": {
+          "connectedOauth": "OAuth",
+          "connectedStored": "\u672c\u5730\u8ba4\u8bc1",
+          "connectedEnv": "\u73af\u5883\u53d8\u91cf",
+          "connectedExternal": "\u5916\u90e8\u914d\u7f6e",
+          "externalSetupRequired": "\u5916\u90e8\u914d\u7f6e",
+          "configuredUnavailable": "\u5df2\u914d\u7f6e \u00b7 \u5f53\u524d\u4e0d\u53ef\u7528"
+        }
+      },
+      "models": {
+        "selectionTitle": "\u9ed8\u8ba4 AI Chat \u63d0\u4f9b\u5546\u548c\u6a21\u578b",
+        "selectionDescription": "\u9009\u62e9\u672a\u6765 AI Chat \u4f1a\u8bdd\u5168\u5c40\u4f7f\u7528\u7684\u63d0\u4f9b\u5546\u548c\u6a21\u578b\u3002",
+        "providerTitle": "\u9ed8\u8ba4 AI Chat \u63d0\u4f9b\u5546",
+        "providerDescription": "\u8fd9\u91cc\u53ea\u663e\u793a\u5df2\u914d\u7f6e\u8ba4\u8bc1\u7684\u63d0\u4f9b\u5546\u3002",
+        "providerPlaceholder": "\u9009\u62e9\u63d0\u4f9b\u5546",
+        "providerEmpty": "\u6682\u65e0\u5df2\u914d\u7f6e\u63d0\u4f9b\u5546",
+        "defaultTitle": "\u9ed8\u8ba4 AI Chat \u6a21\u578b",
+        "defaultDescription": "\u4ece\u6240\u9009\u63d0\u4f9b\u5546\u5f53\u524d\u53ef\u7528\u7684\u6a21\u578b\u4e2d\u9009\u62e9\u3002",
+        "placeholder": "\u9009\u62e9\u6a21\u578b",
+        "empty": "\u6682\u65e0\u53ef\u7528\u6a21\u578b",
+        "unavailableWarning": "\u4f60\u4fdd\u5b58\u7684\u63d0\u4f9b\u5546\u6216\u6a21\u578b\u5f53\u524d\u4e0d\u53ef\u7528\u3002\u8bf7\u9009\u62e9\u65b0\u7684\u9ed8\u8ba4\u503c\uff0c\u6216\u5237\u65b0 AI Chat \u63d0\u4f9b\u5546\u4e0e\u6a21\u578b\u3002"
+      }
+    }
   }
 }

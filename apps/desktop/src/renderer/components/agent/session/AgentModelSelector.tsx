@@ -1,6 +1,8 @@
 import { Box, Button } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
+import { useNavigate } from "react-router-dom";
+import { AI_CHAT_PROVIDERS_SETTINGS_PATH } from "../../../helpers/settingsNavigation";
 import type { AgentModel } from "../../../store/agentChatTypes";
 import { AgentModelSelectorMenu } from "./AgentModelSelectorMenu";
 import { ThinkingLevelControl } from "./ThinkingLevelControl";
@@ -33,6 +35,7 @@ export function AgentModelSelector({
   onModelChange,
   onThinkingLevelCycle,
 }: AgentModelSelectorProps) {
+  const navigate = useNavigate();
   const modelLabel = currentModel ? formatAgentModelLabel(currentModel) : "Select model";
   const providerLabel = currentModel?.provider?.trim() ?? "";
   const providerGroups = useMemo(() => groupAgentModelsByProvider(models), [models]);
@@ -75,6 +78,11 @@ export function AgentModelSelector({
     },
     [handleMenuClose, onModelChange],
   );
+
+  const handleAddProvider = useCallback(() => {
+    handleMenuClose();
+    navigate(AI_CHAT_PROVIDERS_SETTINGS_PATH);
+  }, [handleMenuClose, navigate]);
 
   const activeSelectedProvider = providerGroups.some((providerGroup) => providerGroup.provider === selectedProvider)
     ? selectedProvider
@@ -156,6 +164,7 @@ export function AgentModelSelector({
         onClose={handleMenuClose}
         onProviderChange={setSelectedProvider}
         onModelSelect={handleModelSelect}
+        onAddProvider={handleAddProvider}
       />
       <ThinkingLevelControl thinkingLevel={thinkingLevel} onCycle={onThinkingLevelCycle} />
     </Box>

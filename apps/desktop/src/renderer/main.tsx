@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
 import { HashRouter, Route, Routes } from "react-router-dom";
 import { openLink } from "./commands/appCommands";
+import { AiChatProviderAuthDialog } from "./components/AiChatProviderAuthDialog";
 import { AppUpdateSnackbar } from "./components/AppUpdateSnackbar";
 import { AuthSessionExpiredSnackbar } from "./components/AuthSessionExpiredSnackbar";
 import { WorkspaceOverlay } from "./components/WorkspaceOverlay";
@@ -86,6 +87,7 @@ function AppRoot() {
         </HashRouter>
         <AppUpdateSnackbar />
         <AuthSessionExpiredSnackbar />
+        <AiChatProviderAuthDialog />
       </ThemeProvider>
     </QueryClientProvider>
   );

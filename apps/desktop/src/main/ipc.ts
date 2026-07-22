@@ -1,4 +1,11 @@
 import type { WorkspaceEntryAppId } from "../shared/contracts/externalApps";
+import type {
+  AuthenticatePiProviderInput,
+  PiAuthPromptResponseInput,
+  PiProviderConfigResult,
+  PiProviderConfigSnapshot,
+  PiProviderConfigSnapshotResult,
+} from "../shared/contracts/piProviderConfig";
 import type { ExternalClipboardReadOutcome } from "../shared/contracts/rpcRequestTypes";
 import type { NotificationSoundId } from "../shared/notifications/notificationPreferences";
 import type { NotificationDispatchResult, NotificationSoundPreviewResult } from "./notifications/types";
@@ -174,6 +181,12 @@ export type DesktopHostBridge = {
   installUpdate: () => Promise<{ ok: true }>;
   getAuthStatus: () => Promise<AuthStatusResult>;
   login: () => Promise<AuthLoginResult>;
+  getPiProviderConfigSnapshot: () => Promise<PiProviderConfigSnapshotResult>;
+  refreshPiProviderConfigSnapshot: () => Promise<PiProviderConfigSnapshotResult>;
+  authenticatePiProvider: (input: AuthenticatePiProviderInput) => Promise<PiProviderConfigResult<true>>;
+  cancelPiProviderAuthentication: (providerId: string) => Promise<PiProviderConfigResult<boolean>>;
+  respondPiAuthPrompt: (input: PiAuthPromptResponseInput) => Promise<PiProviderConfigResult<true>>;
+  removePiProviderCredential: (providerId: string) => Promise<PiProviderConfigResult<true>>;
   getDaemonInfo: () => Promise<DaemonInfoResult>;
   restartDaemon: () => Promise<DaemonRestartResult>;
   readDaemonLog: () => Promise<DaemonLogResult>;
@@ -221,6 +234,12 @@ export const HOST_IPC_CHANNELS = {
   installUpdate: "desktop:host/install-update",
   getAuthStatus: "desktop:host/get-auth-status",
   login: "desktop:host/login",
+  getPiProviderConfigSnapshot: "desktop:host/get-pi-provider-config-snapshot",
+  refreshPiProviderConfigSnapshot: "desktop:host/refresh-pi-provider-config-snapshot",
+  authenticatePiProvider: "desktop:host/authenticate-pi-provider",
+  cancelPiProviderAuthentication: "desktop:host/cancel-pi-provider-authentication",
+  respondPiAuthPrompt: "desktop:host/respond-pi-auth-prompt",
+  removePiProviderCredential: "desktop:host/remove-pi-provider-credential",
   getDaemonInfo: "desktop:host/get-daemon-info",
   restartDaemon: "desktop:host/restart-daemon",
   readDaemonLog: "desktop:host/read-daemon-log",

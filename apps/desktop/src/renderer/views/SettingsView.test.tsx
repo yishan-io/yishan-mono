@@ -32,6 +32,10 @@ vi.mock("./settings/AgentSettingsView", () => ({
   AgentSettingsView: () => <div data-testid="agent-settings-panel" />,
 }));
 
+vi.mock("./settings/CLIToolsSettingsView", () => ({
+  CLIToolsSettingsView: () => <div data-testid="cli-tools-settings-panel" />,
+}));
+
 vi.mock("./settings/TerminalSettingsView", () => ({
   TerminalSettingsView: () => <div data-testid="terminal-settings-panel" />,
 }));
@@ -362,6 +366,7 @@ describe("SettingsView", () => {
     );
 
     expect(screen.getByTestId("agent-settings-panel")).toBeTruthy();
+    expect(screen.queryByTestId("cli-tools-settings-panel")).toBeNull();
   });
 
   it("renders skills panel when skills tab is selected", () => {

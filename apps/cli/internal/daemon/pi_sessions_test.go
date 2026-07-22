@@ -202,6 +202,43 @@ func TestHandlePiStart_ReturnsSessionExistsRPCCode(t *testing.T) {
 	}
 }
 
+func TestBuildPiStartArgs_AppliesDefaultModelOnlyToNewSessions(t *testing.T) {
+	tests := []struct {
+		name string
+		req  piStartParams
+		want []string
+	}{
+		{
+			name: "new session with default model",
+			req: piStartParams{
+				SessionID: "session-new",
+				TabID:     "tab-new",
+				Model:     "openai-codex/gpt-5.5",
+			},
+			want: []string{"--mode", "rpc", "--name", "tab-new", "--session-id", "session-new", "--model", "openai-codex/gpt-5.5"},
+		},
+		{
+			name: "resumed session ignores default model",
+			req: piStartParams{
+				SessionID: "session-resume",
+				TabID:     "tab-resume",
+				Model:     "openai-codex/gpt-5.5",
+				Resume:    true,
+			},
+			want: []string{"--mode", "rpc", "--name", "tab-resume", "--session", "session-resume"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildPiStartArgs(tt.req)
+			if strings.Join(got, "\x00") != strings.Join(tt.want, "\x00") {
+				t.Fatalf("buildPiStartArgs() = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestHandlePiStart_OverridesLegacyAgentDirEnv(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)

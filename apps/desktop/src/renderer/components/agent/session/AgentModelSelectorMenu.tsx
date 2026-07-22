@@ -11,6 +11,8 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
+import { useTranslation } from "react-i18next";
+import { LuPlus } from "react-icons/lu";
 import type { AgentModel } from "../../../store/agentChatTypes";
 import { SearchInput } from "../../SearchInput";
 import { groupAgentModelsByProvider } from "./helpers";
@@ -25,6 +27,7 @@ type AgentModelSelectorMenuProps = {
   onClose: () => void;
   onProviderChange: (provider: string) => void;
   onModelSelect: (model: AgentModel) => void;
+  onAddProvider: () => void;
 };
 
 const PROVIDER_COLUMN_WIDTH_PX = 156;
@@ -75,7 +78,9 @@ export function AgentModelSelectorMenu({
   onClose,
   onProviderChange,
   onModelSelect,
+  onAddProvider,
 }: AgentModelSelectorMenuProps) {
+  const { t } = useTranslation();
   const providerGroups = useMemo(() => groupAgentModelsByProvider(models), [models]);
   const activeProviderGroup =
     providerGroups.find((group) => group.provider === selectedProvider) ?? providerGroups[0] ?? null;
@@ -156,61 +161,83 @@ export function AgentModelSelectorMenu({
               sx={{
                 width: PROVIDER_COLUMN_WIDTH_PX,
                 height: DROPDOWN_HEIGHT_PX,
-                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
                 borderRight: 1,
                 borderColor: "divider",
-                py: 0.5,
               }}
             >
-              <List dense disablePadding aria-label="Model providers">
-                {providerGroups.map((providerGroup) => (
-                  <ListItemButton
-                    key={providerGroup.provider}
-                    selected={providerGroup.provider === activeProviderGroup?.provider}
-                    onClick={() => {
-                      onProviderChange(providerGroup.provider);
-                    }}
-                    sx={{
-                      minHeight: MODEL_ROW_HEIGHT_PX,
-                      px: 1.5,
-                      py: 0.25,
-                      "& .MuiListItemText-primary": {
-                        fontSize: 12,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      },
-                    }}
-                  >
-                    <Box
-                      component="span"
-                      aria-hidden="true"
+              <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto", py: 0.5 }}>
+                <List dense disablePadding aria-label="Model providers">
+                  {providerGroups.map((providerGroup) => (
+                    <ListItemButton
+                      key={providerGroup.provider}
+                      selected={providerGroup.provider === activeProviderGroup?.provider}
+                      onClick={() => {
+                        onProviderChange(providerGroup.provider);
+                      }}
                       sx={{
-                        width: 18,
-                        height: 18,
-                        mr: 1,
-                        borderRadius: "50%",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        bgcolor:
-                          providerGroup.provider === activeProviderGroup?.provider ? "primary.main" : "action.hover",
-                        color:
-                          providerGroup.provider === activeProviderGroup?.provider
-                            ? "primary.contrastText"
-                            : "text.secondary",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        lineHeight: 1,
+                        minHeight: MODEL_ROW_HEIGHT_PX,
+                        px: 1.5,
+                        py: 0.25,
+                        "& .MuiListItemText-primary": {
+                          fontSize: 12,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        },
                       }}
                     >
-                      {getProviderIconLabel(providerGroup.provider)}
-                    </Box>
-                    <ListItemText primary={providerGroup.provider} />
-                  </ListItemButton>
-                ))}
-              </List>
+                      <Box
+                        component="span"
+                        aria-hidden="true"
+                        sx={{
+                          width: 18,
+                          height: 18,
+                          mr: 1,
+                          borderRadius: "50%",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          bgcolor:
+                            providerGroup.provider === activeProviderGroup?.provider ? "primary.main" : "action.hover",
+                          color:
+                            providerGroup.provider === activeProviderGroup?.provider
+                              ? "primary.contrastText"
+                              : "text.secondary",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          lineHeight: 1,
+                        }}
+                      >
+                        {getProviderIconLabel(providerGroup.provider)}
+                      </Box>
+                      <ListItemText primary={providerGroup.provider} />
+                    </ListItemButton>
+                  ))}
+                </List>
+              </Box>
+              <ListItemButton
+                onClick={onAddProvider}
+                sx={{
+                  minHeight: MODEL_ROW_HEIGHT_PX,
+                  flexGrow: 0,
+                  flexShrink: 0,
+                  px: 1.5,
+                  py: 0.5,
+                  borderTop: 1,
+                  borderColor: "divider",
+                  color: "primary.main",
+                  "& .MuiListItemText-primary": {
+                    fontSize: 12,
+                    whiteSpace: "nowrap",
+                  },
+                }}
+              >
+                <LuPlus size={16} aria-hidden="true" />
+                <ListItemText primary={t("agentChat.modelSelector.addProvider")} sx={{ ml: 1 }} />
+              </ListItemButton>
             </Box>
             <Box sx={{ width: MODEL_COLUMN_WIDTH_PX, height: DROPDOWN_HEIGHT_PX, py: 0.5 }}>
               <Box sx={{ height: SEARCH_AREA_HEIGHT_PX, px: 1, pb: 0.5 }}>

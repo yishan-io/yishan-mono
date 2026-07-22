@@ -15,6 +15,7 @@ interface ModelAutocompleteProps {
   disabled?: boolean;
   placeholder?: string;
   noOptionsText?: string;
+  allowCustomValue?: boolean;
   size?: "small" | "medium";
   startAdornment?: ReactNode;
   sx?: Record<string, unknown>;
@@ -28,6 +29,7 @@ export function ModelAutocomplete({
   disabled = false,
   placeholder,
   noOptionsText,
+  allowCustomValue = true,
   size = "small",
   startAdornment,
   sx,
@@ -35,7 +37,7 @@ export function ModelAutocomplete({
   return (
     <Autocomplete
       size={size}
-      freeSolo
+      freeSolo={allowCustomValue}
       forcePopupIcon
       ListboxComponent={VirtualizedListbox}
       options={options}
