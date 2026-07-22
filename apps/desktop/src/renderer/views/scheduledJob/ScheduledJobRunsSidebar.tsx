@@ -1,10 +1,11 @@
 import { Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { LuCircleCheck, LuCircleX, LuClock, LuRefreshCw } from "react-icons/lu";
+import { LuRefreshCw } from "react-icons/lu";
 import { api } from "../../api";
 import type { ScheduledJobRecord, ScheduledJobRunRecord } from "../../api/scheduledJobApi";
 import { getErrorMessage } from "../../helpers/errorHelpers";
+import { ScheduledJobRunStatusIcon } from "./ScheduledJobRunStatusIcon";
 
 type ScheduledJobRunsSidebarProps = {
   orgId: string;
@@ -41,31 +42,9 @@ function formatShortTime(isoDate: string | null): string {
   return new Date(isoDate).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 
-type RunStatusConfig = { dotColor: string; icon: React.ReactNode | null };
-
-/** Returns colour and icon for one run status. */
-function useRunStatusConfig(status: ScheduledJobRunRecord["status"]): RunStatusConfig {
-  switch (status) {
-    case "succeeded":
-      return { dotColor: "success.main", icon: <LuCircleCheck size={13} /> };
-    case "failed":
-      return { dotColor: "error.main", icon: <LuCircleX size={13} /> };
-    case "running":
-      return { dotColor: "warning.main", icon: <LuRefreshCw size={13} /> };
-    case "pending":
-      return { dotColor: "text.disabled", icon: <LuClock size={13} /> };
-    case "skipped_offline":
-      return { dotColor: "text.disabled", icon: <LuClock size={13} /> };
-    default:
-      return { dotColor: "text.disabled", icon: null };
-  }
-}
-
 /** Renders one run entry in the runs sidebar. */
 function RunSidebarItem({ run }: { run: ScheduledJobRunRecord }) {
   const { t } = useTranslation();
-  const config = useRunStatusConfig(run.status);
-
   return (
     <Box
       sx={{
@@ -77,9 +56,7 @@ function RunSidebarItem({ run }: { run: ScheduledJobRunRecord }) {
       }}
     >
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.25 }}>
-        <Box component="span" sx={{ display: "inline-flex", color: config.dotColor, flexShrink: 0 }}>
-          {config.icon}
-        </Box>
+        <ScheduledJobRunStatusIcon status={run.status} size={13} />
         <Typography variant="body2" sx={{ fontWeight: 500 }}>
           {t(`scheduledJob.runs.status.${run.status}`)}
         </Typography>
