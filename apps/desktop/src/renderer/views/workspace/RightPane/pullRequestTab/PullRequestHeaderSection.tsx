@@ -150,13 +150,13 @@ export default function PullRequestHeaderSection({
               anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
               transformOrigin={{ vertical: "top", horizontal: "left" }}
             >
-              <MenuItem selected={mergeMethod === "merge"} onClick={() => handleSelectMergeMethod("merge")} dense>
+              <MenuItem selected={mergeMethod === "merge"} onClick={() => handleSelectMergeMethod("merge")}>
                 {t("workspace.pr.mergeCommit")}
               </MenuItem>
-              <MenuItem selected={mergeMethod === "squash"} onClick={() => handleSelectMergeMethod("squash")} dense>
+              <MenuItem selected={mergeMethod === "squash"} onClick={() => handleSelectMergeMethod("squash")}>
                 {t("workspace.pr.squashMerge")}
               </MenuItem>
-              <MenuItem selected={mergeMethod === "rebase"} onClick={() => handleSelectMergeMethod("rebase")} dense>
+              <MenuItem selected={mergeMethod === "rebase"} onClick={() => handleSelectMergeMethod("rebase")}>
                 {t("workspace.pr.rebaseMerge")}
               </MenuItem>
             </Menu>
