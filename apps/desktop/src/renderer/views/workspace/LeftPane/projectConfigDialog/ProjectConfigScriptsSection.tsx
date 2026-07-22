@@ -16,7 +16,6 @@ export function ProjectConfigScriptsSection({ draft, isSaving, setDraft }: Proje
           Setup script
         </Typography>
         <TextField
-          size="small"
           multiline
           minRows={3}
           value={draft.setupScript}
@@ -36,7 +35,6 @@ export function ProjectConfigScriptsSection({ draft, isSaving, setDraft }: Proje
           Post script
         </Typography>
         <TextField
-          size="small"
           multiline
           minRows={3}
           value={draft.postScript}

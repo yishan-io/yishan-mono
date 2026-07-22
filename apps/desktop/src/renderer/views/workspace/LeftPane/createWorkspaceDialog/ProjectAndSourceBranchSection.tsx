@@ -61,7 +61,6 @@ export function ProjectAndSourceBranchSection({
         </Typography>
         <TextField
           select
-          size="small"
           fullWidth
           value={selectedProjectId}
           onChange={(event) => onProjectChange(event.target.value)}
@@ -150,7 +149,6 @@ export function ProjectAndSourceBranchSection({
           Source branch
         </Typography>
         <TextField
-          size="small"
           fullWidth
           value={sourceBranchSelectValue}
           onClick={(event) => {

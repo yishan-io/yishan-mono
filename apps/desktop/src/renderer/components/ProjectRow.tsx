@@ -85,11 +85,11 @@ export function ProjectRow({
             }}
           >
             <Tooltip title={addWorkspaceTooltipLabel}>
-              <IconButton size="small" aria-label={addWorkspaceAriaLabel} onClick={onAddWorkspace}>
+              <IconButton aria-label={addWorkspaceAriaLabel} onClick={onAddWorkspace}>
                 <LuPlus size={15} />
               </IconButton>
             </Tooltip>
-            <IconButton size="small" aria-label={foldToggleAriaLabel} onClick={onToggleFold}>
+            <IconButton aria-label={foldToggleAriaLabel} onClick={onToggleFold}>
               {isFolded ? <LuChevronRight size={18} /> : <LuChevronDown size={18} />}
             </IconButton>
           </Box>

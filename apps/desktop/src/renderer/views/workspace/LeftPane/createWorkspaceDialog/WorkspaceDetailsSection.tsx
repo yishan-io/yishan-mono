@@ -27,7 +27,6 @@ export function WorkspaceDetailsSection({
           {t("workspace.create.nameLabel")}
         </Typography>
         <TextField
-          size="small"
           value={name}
           onChange={(event) => onNameChange(event.target.value)}
           placeholder={t("workspace.create.namePlaceholder")}
@@ -39,7 +38,6 @@ export function WorkspaceDetailsSection({
           {t("workspace.create.branchLabel")}
         </Typography>
         <TextField
-          size="small"
           fullWidth
           placeholder={branchInputPlaceholder}
           value={targetBranch}

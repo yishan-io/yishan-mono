@@ -92,7 +92,6 @@ export default function PullRequestHeaderSection({
           <Tooltip title={actions.isRefreshing ? t("workspace.pr.refreshing") : t("workspace.pr.refresh")}>
             <span>
               <IconButton
-                size="small"
                 aria-label={t("workspace.pr.refresh")}
                 onClick={() => void actions.handleRefresh()}
                 disabled={actions.isRefreshing || !worktreePath}

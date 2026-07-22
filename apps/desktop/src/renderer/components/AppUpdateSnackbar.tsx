@@ -148,12 +148,7 @@ export function AppUpdateSnackbar() {
                 {description}
               </Typography>
             </Box>
-            <IconButton
-              aria-label={t("app.update.closeAria")}
-              size="small"
-              onClick={handleClose}
-              sx={{ mt: -0.5, mr: -0.5 }}
-            >
+            <IconButton aria-label={t("app.update.closeAria")} onClick={handleClose} sx={{ mt: -0.5, mr: -0.5 }}>
               ×
             </IconButton>
           </Box>

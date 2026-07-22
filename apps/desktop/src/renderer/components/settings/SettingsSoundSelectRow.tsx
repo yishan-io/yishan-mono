@@ -95,7 +95,6 @@ export function SettingsSoundSelectRow({
                       {option.label}
                     </Typography>
                     <IconButton
-                      size="small"
                       disabled={disabled}
                       aria-busy={isPreviewingThisOption ? "true" : "false"}
                       aria-label={previewButtonAriaLabel(option)}

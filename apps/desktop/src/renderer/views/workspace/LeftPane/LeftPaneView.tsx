@@ -168,7 +168,6 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
         <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center" }}>
           <Tooltip title={t("project.actions.refresh")}>
             <IconButton
-              size="small"
               aria-label={t("project.actions.refresh")}
               onClick={handleRefreshProjects}
               disabled={isRefreshing}

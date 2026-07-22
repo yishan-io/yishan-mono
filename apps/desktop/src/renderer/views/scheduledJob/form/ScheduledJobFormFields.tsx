@@ -102,6 +102,7 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
     <Box sx={formGridSx}>
       <Stack spacing={1.25}>
         <TextField
+          size="medium"
           autoFocus
           fullWidth
           disabled={isBusy}
@@ -116,6 +117,7 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
           {t("scheduledJob.form.runbookHint")}
         </Typography>
         <TextField
+          size="medium"
           fullWidth
           multiline
           minRows={18}
@@ -135,7 +137,6 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
             </Typography>
             <TextField
               select
-              size="small"
               fullWidth
               disabled={isBusy || !isProjectEditable || projects.length === 0}
               value={draft.projectId}
@@ -180,7 +181,6 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
               ) : (
                 <TextField
                   select
-                  size="small"
                   fullWidth
                   disabled={isBusy || isNodesLoading || nodes.length === 0}
                   value={selectedNodeId}
@@ -210,7 +210,6 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
             </Typography>
             <TextField
               select
-              size="small"
               fullWidth
               disabled={isBusy}
               value={draft.agentKind}
@@ -235,7 +234,6 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
           </Typography>
           <TextField
             select
-            size="small"
             fullWidth
             disabled={isBusy}
             value={scheduleType}
@@ -251,7 +249,6 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
           {scheduleType === "weekly" ? (
             <TextField
               select
-              size="small"
               fullWidth
               disabled={isBusy}
               value={weeklyDay}
@@ -267,7 +264,6 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
 
           {scheduleType !== "custom" ? (
             <TextField
-              size="small"
               fullWidth
               disabled={isBusy}
               type="text"
@@ -289,7 +285,6 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
 
           {scheduleType === "custom" ? (
             <TextField
-              size="small"
               fullWidth
               disabled={isBusy}
               value={draft.cronExpression}

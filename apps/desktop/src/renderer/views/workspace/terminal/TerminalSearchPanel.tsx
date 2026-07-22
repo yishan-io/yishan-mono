@@ -98,7 +98,6 @@ export function TerminalSearchPanel({
         />
         <IconButton
           aria-label="Previous terminal match"
-          size="small"
           disabled={isSearchDisabled}
           onClick={onSearchPrevious}
           sx={{
@@ -113,7 +112,6 @@ export function TerminalSearchPanel({
         </IconButton>
         <IconButton
           aria-label="Next terminal match"
-          size="small"
           disabled={isSearchDisabled}
           onClick={onSearchNext}
           sx={{
@@ -126,12 +124,7 @@ export function TerminalSearchPanel({
         >
           Next
         </IconButton>
-        <IconButton
-          aria-label="Close terminal search"
-          size="small"
-          onClick={onClose}
-          sx={{ color: "#e7ebf0", fontSize: 11 }}
-        >
+        <IconButton aria-label="Close terminal search" onClick={onClose} sx={{ color: "#e7ebf0", fontSize: 11 }}>
           Close
         </IconButton>
       </Stack>

@@ -26,7 +26,7 @@ export function ToolExpandableSummary({
       }}
     >
       {children}
-      <IconButton size="small" sx={{ width: 20, height: 20, flexShrink: 0, ml: "auto" }}>
+      <IconButton sx={{ width: 20, height: 20, flexShrink: 0, ml: "auto" }}>
         {open ? (
           <LuChevronDown data-testid="tool-chevron-down" size={14} />
         ) : (

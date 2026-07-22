@@ -95,7 +95,6 @@ export function AgentChatSubagentRow({
         <Tooltip title={canCancel ? "Cancel sub-agent" : "Preparing sub-agent controls…"} placement="top">
           <span>
             <IconButton
-              size="small"
               aria-label={`Cancel sub-agent ${subagent.agentName}`}
               disabled={!canCancel}
               onClick={(event) => {

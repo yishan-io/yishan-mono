@@ -51,6 +51,20 @@ describe("ChangesCommitActionsView", () => {
     expect(commitButton.hasAttribute("disabled")).toBe(true);
   });
 
+  it("keeps the multiline commit editor at the explicit medium size", () => {
+    render(
+      <ChangesCommitActionsView
+        commitMessageDraft=""
+        primaryGitAction="commit"
+        onCommitMessageDraftChange={() => {}}
+        onRunPrimaryGitAction={() => {}}
+        onCommitWithOptions={() => {}}
+      />,
+    );
+
+    expect(screen.getByLabelText("Enter commit message").classList).not.toContain("MuiInputBase-inputSizeSmall");
+  });
+
   it("runs primary action when enabled and exposes commit options", () => {
     const onCommitMessageDraftChange = vi.fn();
     const onRunPrimaryGitAction = vi.fn();

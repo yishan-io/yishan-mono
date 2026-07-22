@@ -120,7 +120,6 @@ export function OnboardOrgView() {
               <TextField
                 autoFocus
                 fullWidth
-                size="small"
                 placeholder={t("org.menu.newOrganizationPrompt")}
                 slotProps={{ htmlInput: { "aria-label": t("org.menu.newOrganizationPrompt") } }}
                 value={organizationName}

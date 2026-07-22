@@ -145,28 +145,28 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
         }}
       >
         <Tooltip title={changesOnly ? "Show entire file" : "Show changes only"}>
-          <IconButton size="small" onClick={handleToggleChangesOnly}>
+          <IconButton onClick={handleToggleChangesOnly}>
             {changesOnly ? <LuFileText size={14} /> : <LuDiff size={14} />}
           </IconButton>
         </Tooltip>
         <Tooltip title={sideBySide ? "Switch to inline view" : "Switch to side-by-side view"}>
-          <IconButton size="small" onClick={() => setSideBySide((prev) => !prev)} sx={{ ml: 0.5 }}>
+          <IconButton onClick={() => setSideBySide((prev) => !prev)} sx={{ ml: 0.5 }}>
             {sideBySide ? <LuStretchVertical size={14} /> : <LuStretchHorizontal size={14} />}
           </IconButton>
         </Tooltip>
         <Tooltip title={wrapLines ? "Disable line wrapping" : "Enable line wrapping"}>
-          <IconButton size="small" onClick={() => setWrapLines((prev) => !prev)} sx={{ ml: 0.5 }}>
+          <IconButton onClick={() => setWrapLines((prev) => !prev)} sx={{ ml: 0.5 }}>
             <LuWrapText size={14} />
           </IconButton>
         </Tooltip>
         <Tooltip title="Find in diff (Ctrl+F)">
-          <IconButton size="small" onClick={() => setSearchActive((prev) => !prev)} sx={{ ml: 0.5 }}>
+          <IconButton onClick={() => setSearchActive((prev) => !prev)} sx={{ ml: 0.5 }}>
             <LuSearch size={14} />
           </IconButton>
         </Tooltip>
         {onOpenFile && (
           <Tooltip title="Open file">
-            <IconButton size="small" onClick={() => onOpenFile(filePath)} sx={{ ml: 0.5 }}>
+            <IconButton onClick={() => onOpenFile(filePath)} sx={{ ml: 0.5 }}>
               <LuExternalLink size={14} />
             </IconButton>
           </Tooltip>

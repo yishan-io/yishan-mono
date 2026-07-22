@@ -136,7 +136,6 @@ export function WorkspaceTreeRowView({
     >
       {row.hasChildren ? (
         <IconButton
-          size="small"
           aria-label={
             row.kind === "project"
               ? isExpanded
@@ -290,7 +289,6 @@ export function WorkspaceTreeRowView({
                 <>
                   <Tooltip title="Repair workspace">
                     <IconButton
-                      size="small"
                       aria-label="Repair workspace"
                       onClick={(event) => {
                         event.stopPropagation();
@@ -303,7 +301,6 @@ export function WorkspaceTreeRowView({
                   </Tooltip>
                   <Tooltip title="Forget workspace">
                     <IconButton
-                      size="small"
                       aria-label="Forget workspace"
                       onClick={(event) => {
                         event.stopPropagation();
@@ -318,7 +315,6 @@ export function WorkspaceTreeRowView({
               ) : (
                 <Tooltip title={deleteWorkspaceLabel ?? "Close workspace"}>
                   <IconButton
-                    size="small"
                     aria-label={deleteWorkspaceLabel ?? "Close workspace"}
                     onClick={(event) => {
                       event.stopPropagation();
@@ -339,7 +335,6 @@ export function WorkspaceTreeRowView({
           <Tooltip title={createWorkspaceTooltipLabel ?? "workspace.actions.add"}>
             <IconButton
               className="project-actions"
-              size="small"
               aria-label="workspace.actions.add"
               onClick={(event) => {
                 event.stopPropagation();
@@ -352,7 +347,6 @@ export function WorkspaceTreeRowView({
           </Tooltip>
           <IconButton
             className="project-actions"
-            size="small"
             aria-label="Project actions"
             onClick={(event) => {
               event.stopPropagation();

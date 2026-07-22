@@ -207,7 +207,6 @@ export function DiagramZoomOverlay({ svgContent, onClose }: DiagramZoomOverlayPr
             <span>
               <IconButton
                 aria-label="Zoom out"
-                size="small"
                 onClick={handleZoomOut}
                 disabled={scale <= ZOOM_MIN}
                 sx={{ p: 0.375, color: "text.secondary" }}
@@ -229,7 +228,6 @@ export function DiagramZoomOverlay({ svgContent, onClose }: DiagramZoomOverlayPr
             <span>
               <IconButton
                 aria-label="Zoom in"
-                size="small"
                 onClick={handleZoomIn}
                 disabled={scale >= ZOOM_MAX}
                 sx={{ p: 0.375, color: "text.secondary" }}
@@ -243,7 +241,6 @@ export function DiagramZoomOverlay({ svgContent, onClose }: DiagramZoomOverlayPr
             <span>
               <IconButton
                 aria-label="Reset zoom"
-                size="small"
                 onClick={handleReset}
                 disabled={scale === 1 && translate.x === 0 && translate.y === 0}
                 sx={{ p: 0.375, color: "text.secondary" }}
@@ -256,7 +253,7 @@ export function DiagramZoomOverlay({ svgContent, onClose }: DiagramZoomOverlayPr
           <Box sx={{ width: "1px", height: 14, bgcolor: "divider", mx: 0.5 }} />
 
           <Tooltip title="Close">
-            <IconButton size="small" onClick={onClose} sx={{ p: 0.375, color: "text.secondary" }}>
+            <IconButton onClick={onClose} sx={{ p: 0.375, color: "text.secondary" }}>
               <LuX size={14} />
             </IconButton>
           </Tooltip>

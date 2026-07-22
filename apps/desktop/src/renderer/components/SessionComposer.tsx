@@ -14,6 +14,7 @@ export function SessionComposer({ value, onChange, onSend }: SessionComposerProp
   return (
     <Box sx={{ display: "flex", gap: 1 }}>
       <TextField
+        size="medium"
         fullWidth
         multiline
         minRows={2}

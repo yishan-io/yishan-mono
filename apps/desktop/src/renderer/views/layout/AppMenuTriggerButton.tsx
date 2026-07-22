@@ -26,7 +26,6 @@ export function AppMenuTriggerButton({
   if (iconOnly) {
     return (
       <IconButton
-        size="small"
         aria-label={triggerLabel}
         onClick={(event) => {
           onToggle(event.currentTarget);

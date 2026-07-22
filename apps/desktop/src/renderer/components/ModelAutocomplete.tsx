@@ -61,6 +61,7 @@ export function ModelAutocomplete({
       renderInput={(params) => (
         <TextField
           {...params}
+          size={size}
           placeholder={placeholder}
           InputProps={{
             ...params.InputProps,

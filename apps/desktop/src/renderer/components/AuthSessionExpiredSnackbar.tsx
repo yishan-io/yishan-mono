@@ -72,7 +72,6 @@ export function AuthSessionExpiredSnackbar() {
             </Box>
             <IconButton
               aria-label={t("auth.sessionExpired.dismissAria")}
-              size="small"
               onClick={handleDismiss}
               sx={{ mt: -0.5, mr: -0.5 }}
             >

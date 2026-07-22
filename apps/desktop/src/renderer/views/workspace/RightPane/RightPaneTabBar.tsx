@@ -126,7 +126,6 @@ export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPa
               }}
             >
               <IconButton
-                size="small"
                 aria-label={tab.label}
                 onClick={() => handleTabClick(tab.value)}
                 sx={{

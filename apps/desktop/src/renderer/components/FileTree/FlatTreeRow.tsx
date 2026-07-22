@@ -105,7 +105,6 @@ export function FlatTreeRow({
           inputRef={editingInputRef}
           value={editingName}
           variant="standard"
-          size="small"
           autoComplete="off"
           spellCheck={false}
           slotProps={{

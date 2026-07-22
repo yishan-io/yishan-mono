@@ -177,7 +177,6 @@ export function TableDropdownMenu({
                 }
                 return (
                   <IconButton
-                    size="small"
                     aria-label={rowAction.ariaLabel}
                     disabled={rowAction.disabled === true}
                     sx={{

@@ -48,11 +48,7 @@ export function ProjectFilterPopoverView() {
   return (
     <>
       <Tooltip title={t("project.actions.pin")}>
-        <IconButton
-          size="small"
-          aria-label={t("project.actions.pin")}
-          onClick={(event) => setRepoFilterAnchor(event.currentTarget)}
-        >
+        <IconButton aria-label={t("project.actions.pin")} onClick={(event) => setRepoFilterAnchor(event.currentTarget)}>
           <LuEye size={15} />
         </IconButton>
       </Tooltip>
@@ -121,7 +117,6 @@ export function ProjectFilterPopoverView() {
           </Stack>
           <TextField
             value={repoQuickSearch}
-            size="small"
             fullWidth
             autoFocus
             placeholder={t("project.pin.searchPlaceholder")}

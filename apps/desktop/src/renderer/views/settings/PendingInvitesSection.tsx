@@ -149,7 +149,6 @@ export function PendingInvitesSection({ organizationId, reloadKey }: PendingInvi
                       <Tooltip title={t("settings.members.pendingInvites.cancelAriaLabel")}>
                         <span>
                           <IconButton
-                            size="small"
                             disabled={isCancelling && pendingCancelId === invite.id}
                             onClick={() => handleCancelRequest(invite.id)}
                             aria-label={t("settings.members.pendingInvites.cancelAriaLabel")}

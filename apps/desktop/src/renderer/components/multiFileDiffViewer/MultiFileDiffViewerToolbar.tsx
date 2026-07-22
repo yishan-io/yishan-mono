@@ -74,13 +74,7 @@ export function MultiFileDiffViewerToolbar({
 
       <Tooltip title={allExpanded ? "All files expanded" : "Fold all files"}>
         <Box component="span">
-          <IconButton
-            size="small"
-            aria-label="Fold all files"
-            onClick={onFoldAll}
-            disabled={allCollapsed}
-            sx={{ ml: 0.25 }}
-          >
+          <IconButton aria-label="Fold all files" onClick={onFoldAll} disabled={allCollapsed} sx={{ ml: 0.25 }}>
             <LuChevronsDownUp size={14} />
           </IconButton>
         </Box>
@@ -88,38 +82,32 @@ export function MultiFileDiffViewerToolbar({
 
       <Tooltip title={allCollapsed ? "All files collapsed" : "Unfold all files"}>
         <Box component="span">
-          <IconButton
-            size="small"
-            aria-label="Unfold all files"
-            onClick={onUnfoldAll}
-            disabled={allExpanded}
-            sx={{ ml: 0.25 }}
-          >
+          <IconButton aria-label="Unfold all files" onClick={onUnfoldAll} disabled={allExpanded} sx={{ ml: 0.25 }}>
             <LuChevronsUpDown size={14} />
           </IconButton>
         </Box>
       </Tooltip>
 
       <Tooltip title={changesOnly ? "Show entire files" : "Show changes only"}>
-        <IconButton size="small" aria-label="Toggle changes-only view" onClick={onToggleChangesOnly} sx={{ ml: 0.25 }}>
+        <IconButton aria-label="Toggle changes-only view" onClick={onToggleChangesOnly} sx={{ ml: 0.25 }}>
           {changesOnly ? <LuFileText size={14} /> : <LuDiff size={14} />}
         </IconButton>
       </Tooltip>
 
       <Tooltip title={sideBySide ? "Switch to inline view" : "Switch to side-by-side view"}>
-        <IconButton size="small" aria-label="Toggle side-by-side view" onClick={onToggleSideBySide} sx={{ ml: 0.25 }}>
+        <IconButton aria-label="Toggle side-by-side view" onClick={onToggleSideBySide} sx={{ ml: 0.25 }}>
           {sideBySide ? <LuStretchVertical size={14} /> : <LuStretchHorizontal size={14} />}
         </IconButton>
       </Tooltip>
 
       <Tooltip title={wrapLines ? "Disable line wrapping" : "Enable line wrapping"}>
-        <IconButton size="small" aria-label="Toggle line wrapping" onClick={onToggleWrapLines} sx={{ ml: 0.25 }}>
+        <IconButton aria-label="Toggle line wrapping" onClick={onToggleWrapLines} sx={{ ml: 0.25 }}>
           <LuWrapText size={14} />
         </IconButton>
       </Tooltip>
 
       <Tooltip title="Find in diff (Ctrl+F)">
-        <IconButton size="small" aria-label="Toggle diff search" onClick={onToggleSearch} sx={{ ml: 0.25 }}>
+        <IconButton aria-label="Toggle diff search" onClick={onToggleSearch} sx={{ ml: 0.25 }}>
           <LuSearch size={14} />
         </IconButton>
       </Tooltip>

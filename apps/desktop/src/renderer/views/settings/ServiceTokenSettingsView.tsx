@@ -166,7 +166,7 @@ export function ServiceTokenSettingsView() {
                         </TableCell>
                         <TableCell>
                           <Tooltip title={t("settings.serviceTokens.actions.revoke")}>
-                            <IconButton size="small" onClick={() => setRevokeTarget(token)}>
+                            <IconButton onClick={() => setRevokeTarget(token)}>
                               <BiTrash size={16} />
                             </IconButton>
                           </Tooltip>
@@ -188,7 +188,7 @@ export function ServiceTokenSettingsView() {
           sx={{ mt: 2 }}
           action={
             <Tooltip title={copied ? t("settings.serviceTokens.copied") : t("settings.serviceTokens.actions.copy")}>
-              <IconButton size="small" onClick={() => handleCopyToken(createdToken)}>
+              <IconButton onClick={() => handleCopyToken(createdToken)}>
                 <BiCopy size={16} />
               </IconButton>
             </Tooltip>
@@ -295,7 +295,6 @@ function CreateServiceTokenDialog(props: {
               placeholder={t("settings.serviceTokens.createDialog.namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              size="small"
               fullWidth
             />
           </Box>
@@ -308,7 +307,6 @@ function CreateServiceTokenDialog(props: {
               value={expiresInDays}
               onChange={(e) => setExpiresInDays(e.target.value)}
               type="number"
-              size="small"
               fullWidth
               helperText={t("settings.serviceTokens.createDialog.expiresHelp")}
             />

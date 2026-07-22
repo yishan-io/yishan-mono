@@ -126,7 +126,6 @@ export function ScheduledJobRunsSidebar({ orgId, job }: ScheduledJobRunsSidebarP
         </Typography>
         <Tooltip title={t("scheduledJob.runs.refresh")}>
           <IconButton
-            size="small"
             onClick={() => runsQuery.refetch()}
             disabled={runsQuery.isFetching}
             aria-label={t("scheduledJob.runs.refresh")}

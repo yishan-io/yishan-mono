@@ -43,7 +43,6 @@ export function MenuSearchField({ placeholder, value, onChange }: MenuSearchFiel
     <MenuItem disableGutters sx={{ px: 1, py: 0.5, cursor: "default" }}>
       <TextField
         autoFocus
-        size="small"
         fullWidth
         placeholder={placeholder}
         value={value}

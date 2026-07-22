@@ -302,7 +302,6 @@ export function NodesSettingsView() {
                             }
                           >
                             <IconButton
-                              size="small"
                               onClick={() => handleScopeChangeRequest(node)}
                               aria-label={
                                 node.scope === "private"
@@ -317,7 +316,6 @@ export function NodesSettingsView() {
                         {canUnregister(node) ? (
                           <Tooltip title={t("settings.nodes.actions.unregister")}>
                             <IconButton
-                              size="small"
                               color="error"
                               onClick={() => handleUnregisterRequest(node)}
                               aria-label={t("settings.nodes.actions.unregister")}

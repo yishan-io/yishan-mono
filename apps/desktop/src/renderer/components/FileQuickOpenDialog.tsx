@@ -141,7 +141,6 @@ export function FileQuickOpenDialog({
       <DialogContent sx={{ px: 1, py: 0.5 }}>
         <TextField
           autoFocus
-          size="small"
           inputRef={searchInputRef}
           fullWidth
           value={query}

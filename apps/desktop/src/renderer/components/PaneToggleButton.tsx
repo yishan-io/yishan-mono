@@ -22,7 +22,6 @@ export function PaneToggleButton({ tooltipLabel, ariaLabel, icon, onClick }: Pan
       <span>
         <IconButton
           className="electron-webkit-app-region-no-drag"
-          size="small"
           aria-label={ariaLabel}
           onClick={onClick}
           disabled={!onClick}

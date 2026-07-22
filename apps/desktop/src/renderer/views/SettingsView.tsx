@@ -227,7 +227,6 @@ export function SettingsView() {
               <Tooltip title={t("settings.back")}>
                 <IconButton
                   className="electron-webkit-app-region-no-drag"
-                  size="small"
                   onClick={() => navigate("/")}
                   data-testid="settings-back-button"
                   aria-label={t("settings.back")}

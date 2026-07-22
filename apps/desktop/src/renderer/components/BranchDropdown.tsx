@@ -259,7 +259,6 @@ export function BranchDropdown({
       <Box sx={{ px: 1, py: 0.5 }}>
         <TextField
           inputRef={searchInputRef}
-          size="small"
           fullWidth
           placeholder="Filter branches\u2026"
           value={searchQuery}

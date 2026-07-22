@@ -60,7 +60,7 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
             />
           ) : null}
           <Box className="electron-webkit-app-region-no-drag" sx={{ display: "inline-flex" }}>
-            <IconButton size="small" onClick={onBack} aria-label={t("scheduledJob.detail.back")}>
+            <IconButton onClick={onBack} aria-label={t("scheduledJob.detail.back")}>
               <LuArrowLeft size={16} />
             </IconButton>
           </Box>
@@ -110,7 +110,6 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
           </Tooltip>
           <Tooltip title={t("scheduledJob.actions.delete")}>
             <IconButton
-              size="small"
               onClick={() => setIsDeleteOpen(true)}
               aria-label={t("scheduledJob.actions.delete")}
               sx={{

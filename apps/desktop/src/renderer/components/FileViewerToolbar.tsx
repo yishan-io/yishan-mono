@@ -74,7 +74,6 @@ export function FileViewerToolbar({
         <Tooltip title="Copy file path">
           <span>
             <IconButton
-              size="small"
               aria-label="Copy file path"
               onClick={() => {
                 void onCopyPath?.(path);
@@ -89,7 +88,6 @@ export function FileViewerToolbar({
         <Tooltip title={openExternalAppLabel}>
           <span>
             <IconButton
-              size="small"
               aria-label={openExternalAppLabel}
               onClick={() => {
                 void onOpenExternalApp?.(path);

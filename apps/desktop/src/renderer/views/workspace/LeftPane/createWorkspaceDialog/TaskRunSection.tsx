@@ -71,7 +71,6 @@ export function TaskRunSection({
       <Stack spacing={1.5}>
         <TextField
           select
-          size="small"
           fullWidth
           value={taskAgentKind}
           onChange={(event) => onTaskAgentKindChange(event.target.value as DesktopAgentKind | "")}
@@ -111,7 +110,6 @@ export function TaskRunSection({
           ))}
         </TextField>
         <TextField
-          size="small"
           fullWidth
           value={taskPrompt}
           onChange={(event) => onTaskPromptChange(event.target.value)}

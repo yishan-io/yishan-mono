@@ -171,14 +171,14 @@ export function ScheduledJobListItemView({ job, onOpenDetails }: ScheduledJobLis
           <>
             {canPause ? (
               <Tooltip title={t("scheduledJob.actions.pause")}>
-                <IconButton size="small" onClick={handlePause} aria-label={t("scheduledJob.actions.pause")}>
+                <IconButton onClick={handlePause} aria-label={t("scheduledJob.actions.pause")}>
                   <LuPause size={14} />
                 </IconButton>
               </Tooltip>
             ) : null}
             {canResume ? (
               <Tooltip title={t("scheduledJob.actions.resume")}>
-                <IconButton size="small" onClick={handleResume} aria-label={t("scheduledJob.actions.resume")}>
+                <IconButton onClick={handleResume} aria-label={t("scheduledJob.actions.resume")}>
                   <LuPlay size={14} />
                 </IconButton>
               </Tooltip>

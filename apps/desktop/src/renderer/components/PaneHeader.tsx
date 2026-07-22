@@ -7,10 +7,12 @@ import type { ReactNode } from "react";
  * @example
  * ```tsx
  * <PaneHeader>
- *   <IconButton size="small">...</IconButton>
+ *   <IconButton>...</IconButton>
  *   <Typography variant="body2">Title</Typography>
  * </PaneHeader>
  * ```
+ *
+ * The renderer theme supplies the compact `small` default for MUI `IconButton` controls.
  */
 export const PANE_HEADER_MIN_HEIGHT = 42;
 

@@ -85,7 +85,6 @@ export function MultiFileDiffViewerHeader({
 
       {onOpenFile && (
         <IconButton
-          size="small"
           title="Open file"
           onClick={(event) => {
             event.preventDefault();

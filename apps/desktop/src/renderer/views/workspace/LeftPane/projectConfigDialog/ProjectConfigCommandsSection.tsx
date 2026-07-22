@@ -19,7 +19,6 @@ export function ProjectConfigCommandsSection({ draft, isSaving, setDraft }: Proj
         {draft.commands.map((item, index) => (
           <Stack key={item.id} direction="row" spacing={1} alignItems="center">
             <TextField
-              size="small"
               value={item.name}
               disabled={isSaving}
               onChange={(event) =>
@@ -34,7 +33,6 @@ export function ProjectConfigCommandsSection({ draft, isSaving, setDraft }: Proj
               sx={{ width: 180 }}
             />
             <TextField
-              size="small"
               value={item.command}
               disabled={isSaving}
               onChange={(event) =>
@@ -49,7 +47,6 @@ export function ProjectConfigCommandsSection({ draft, isSaving, setDraft }: Proj
               fullWidth
             />
             <IconButton
-              size="small"
               aria-label="Remove command"
               disabled={isSaving}
               onClick={() =>

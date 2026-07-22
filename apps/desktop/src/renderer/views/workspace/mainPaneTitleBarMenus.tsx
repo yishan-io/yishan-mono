@@ -261,7 +261,6 @@ export function AddProjectCommandDialog({
       <DialogContent>
         <TextField
           autoFocus
-          size="small"
           fullWidth
           label={t("project.commands.nameLabel")}
           value={commandNameValue}
@@ -271,7 +270,6 @@ export function AddProjectCommandDialog({
           sx={{ mt: 0.5 }}
         />
         <TextField
-          size="small"
           fullWidth
           label={t("project.commands.commandLabel")}
           value={commandLineValue}

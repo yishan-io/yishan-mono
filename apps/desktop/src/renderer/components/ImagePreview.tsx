@@ -71,7 +71,6 @@ export function ImagePreview({
             <Tooltip title="Zoom out">
               <span>
                 <IconButton
-                  size="small"
                   onClick={handleZoomOut}
                   disabled={!isFitToView && zoom <= ZOOM_MIN}
                   sx={{ p: 0.375, color: "text.secondary" }}
@@ -90,7 +89,6 @@ export function ImagePreview({
             <Tooltip title="Zoom in">
               <span>
                 <IconButton
-                  size="small"
                   onClick={handleZoomIn}
                   disabled={zoom >= ZOOM_MAX}
                   sx={{ p: 0.375, color: "text.secondary" }}
@@ -101,12 +99,7 @@ export function ImagePreview({
             </Tooltip>
             <Tooltip title="Fit to view">
               <span>
-                <IconButton
-                  size="small"
-                  onClick={handleZoomFit}
-                  disabled={isFitToView}
-                  sx={{ p: 0.375, color: "text.secondary" }}
-                >
+                <IconButton onClick={handleZoomFit} disabled={isFitToView} sx={{ p: 0.375, color: "text.secondary" }}>
                   <LuMaximize2 size={14} />
                 </IconButton>
               </span>

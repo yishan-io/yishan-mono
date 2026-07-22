@@ -59,7 +59,6 @@ function MarkdownViewModeToggle({ mode, currentMode, icon, tooltip, onSelect }: 
     <Tooltip title={tooltip}>
       <span>
         <IconButton
-          size="small"
           aria-label={tooltip}
           aria-pressed={isActive}
           onClick={() => onSelect(mode)}

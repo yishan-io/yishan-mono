@@ -246,7 +246,6 @@ export function WorkspaceRow({
               >
                 <Tooltip title={deleteWorkspaceLabel}>
                   <IconButton
-                    size="small"
                     aria-label={deleteWorkspaceLabel}
                     onClick={(event) => {
                       event.stopPropagation();

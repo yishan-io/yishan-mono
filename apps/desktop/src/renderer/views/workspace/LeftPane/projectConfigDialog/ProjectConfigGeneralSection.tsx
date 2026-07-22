@@ -47,7 +47,6 @@ export function ProjectConfigGeneralSection({
           Repo name
         </Typography>
         <TextField
-          size="small"
           disabled={isSaving}
           value={draft.name}
           onChange={(event) =>
@@ -109,7 +108,6 @@ export function ProjectConfigGeneralSection({
           <Tooltip title="Open in Finder">
             <span>
               <IconButton
-                size="small"
                 aria-label="Open local path in Finder"
                 disabled={!trimmedRepoLocalPath}
                 onClick={() => void onOpenRepoLocalPath()}
@@ -126,7 +124,7 @@ export function ProjectConfigGeneralSection({
             Context
           </Typography>
           <Tooltip title="Context stores repo-specific notes and guidance (briefs, decisions, references) outside the git repo so agents can reuse it across workspaces. This switch controls whether Yishan maintains the .my-context link in this project's workspaces.">
-            <IconButton size="small" aria-label="What is context?" sx={{ p: 0.25 }}>
+            <IconButton aria-label="What is context?" sx={{ p: 0.25 }}>
               <LuCircleHelp size={14} />
             </IconButton>
           </Tooltip>
@@ -156,7 +154,6 @@ export function ProjectConfigGeneralSection({
           Worktree location
         </Typography>
         <TextField
-          size="small"
           value={draft.worktreePath}
           disabled={isSaving}
           fullWidth
@@ -167,6 +164,7 @@ export function ProjectConfigGeneralSection({
                 <InputAdornment position="end">
                   <Tooltip title="Choose folder">
                     <IconButton
+                      size="medium"
                       edge="end"
                       aria-label="Choose worktree folder"
                       disabled={isSaving}
@@ -187,6 +185,7 @@ export function ProjectConfigGeneralSection({
             Project icon
           </Typography>
           <IconButton
+            size="medium"
             aria-label="Choose project icon"
             onClick={(event) => setIconAnchorEl(event.currentTarget)}
             disabled={isSaving}
@@ -211,7 +210,6 @@ export function ProjectConfigGeneralSection({
               return (
                 <Tooltip key={color} title={color}>
                   <IconButton
-                    size="small"
                     aria-label={`Select ${color}`}
                     disabled={isSaving}
                     onClick={() =>

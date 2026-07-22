@@ -74,18 +74,17 @@ export function UrlBar({
 }: UrlBarProps) {
   return (
     <Box component="form" onSubmit={onSubmit} sx={{ display: "flex", gap: 1 }}>
-      <IconButton aria-label="Go back" disabled={!canGoBack} onClick={onGoBack}>
+      <IconButton size="medium" aria-label="Go back" disabled={!canGoBack} onClick={onGoBack}>
         <LuArrowLeft size={14} />
       </IconButton>
-      <IconButton aria-label="Go forward" disabled={!canGoForward} onClick={onGoForward}>
+      <IconButton size="medium" aria-label="Go forward" disabled={!canGoForward} onClick={onGoForward}>
         <LuArrowRight size={14} />
       </IconButton>
-      <IconButton aria-label="Reload page" onClick={onReload}>
+      <IconButton size="medium" aria-label="Reload page" onClick={onReload}>
         <LuRefreshCcw size={14} />
       </IconButton>
       <TextField
         ref={textFieldRef}
-        size="small"
         value={displayUrl}
         onChange={(event) => {
           onUrlChange(event.target.value);
@@ -216,6 +215,7 @@ export function UrlBar({
       </Popper>
       <Tooltip title="Select element on page">
         <IconButton
+          size="medium"
           aria-label="Select element on page"
           onClick={onToggleInspect}
           color={inspecting ? "primary" : "default"}
@@ -230,6 +230,7 @@ export function UrlBar({
       </Tooltip>
       <Tooltip title="Open in system default browser">
         <IconButton
+          size="medium"
           aria-label="Open in system default browser"
           disabled={!resolvedUrl}
           onClick={() => {
@@ -239,7 +240,7 @@ export function UrlBar({
           <RxExternalLink size={14} />
         </IconButton>
       </Tooltip>
-      <IconButton aria-label="Browser tools" onClick={onToolsClick}>
+      <IconButton size="medium" aria-label="Browser tools" onClick={onToolsClick}>
         {children}
       </IconButton>
     </Box>

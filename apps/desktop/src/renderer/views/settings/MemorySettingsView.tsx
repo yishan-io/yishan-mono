@@ -208,7 +208,6 @@ export function MemorySettingsView() {
                       sx={{ minWidth: 280 }}
                     />
                     <IconButton
-                      size="small"
                       onClick={handleRefreshModels}
                       disabled={loading || isRefreshingModels || !config.agentKind}
                       aria-label={t("settings.memory.summarizer.model.refresh")}

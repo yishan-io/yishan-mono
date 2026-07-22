@@ -170,17 +170,13 @@ export function GitChangesFileRow({
         >
           {showRevertAction ? (
             <Tooltip title={`${restoreVerb} file`} placement="top">
-              <IconButton size="small" aria-label={`${restoreVerb} ${file.path}`} onClick={() => onRevertFile?.(file)}>
+              <IconButton aria-label={`${restoreVerb} ${file.path}`} onClick={() => onRevertFile?.(file)}>
                 <LuCornerUpLeft size={12} />
               </IconButton>
             </Tooltip>
           ) : null}
           <Tooltip title={`${trackVerb} file`} placement="top">
-            <IconButton
-              size="small"
-              aria-label={`${trackVerb} ${file.path}`}
-              onClick={() => onTrackFile?.(file, section.id)}
-            >
+            <IconButton aria-label={`${trackVerb} ${file.path}`} onClick={() => onTrackFile?.(file, section.id)}>
               <TrackIcon size={12} />
             </IconButton>
           </Tooltip>
