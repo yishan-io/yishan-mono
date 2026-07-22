@@ -58,7 +58,7 @@ function LastRunStatusIcon({ status }: { status: ScheduledJobRecord["lastRunStat
 
   if (status === "succeeded") {
     return (
-      <Tooltip title={t("scheduledJob.lastRun.succeeded")} arrow>
+      <Tooltip title={t("scheduledJob.lastRun.succeeded")}>
         <Box component="span" sx={{ display: "inline-flex", color: "success.main" }}>
           <LuCircleCheck size={14} />
         </Box>
@@ -68,7 +68,7 @@ function LastRunStatusIcon({ status }: { status: ScheduledJobRecord["lastRunStat
 
   if (status === "failed") {
     return (
-      <Tooltip title={t("scheduledJob.lastRun.failed")} arrow>
+      <Tooltip title={t("scheduledJob.lastRun.failed")}>
         <Box component="span" sx={{ display: "inline-flex", color: "error.main" }}>
           <LuCircleX size={14} />
         </Box>
@@ -213,14 +213,14 @@ export function ScheduledJobListItemView({ job, onOpenDetails }: ScheduledJobLis
         ) : (
           <>
             {canPause ? (
-              <Tooltip title={t("scheduledJob.actions.pause")} arrow>
+              <Tooltip title={t("scheduledJob.actions.pause")}>
                 <IconButton size="small" onClick={handlePause} aria-label={t("scheduledJob.actions.pause")}>
                   <LuPause size={14} />
                 </IconButton>
               </Tooltip>
             ) : null}
             {canResume ? (
-              <Tooltip title={t("scheduledJob.actions.resume")} arrow>
+              <Tooltip title={t("scheduledJob.actions.resume")}>
                 <IconButton size="small" onClick={handleResume} aria-label={t("scheduledJob.actions.resume")}>
                   <LuPlay size={14} />
                 </IconButton>

@@ -122,7 +122,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
   );
 
   return (
-    <Tooltip title={tooltipContent} arrow placement="top">
+    <Tooltip title={tooltipContent} placement="top">
       <Box
         component="span"
         aria-label={compactUsageLabel}

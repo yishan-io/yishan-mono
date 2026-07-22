@@ -89,7 +89,7 @@ export default function PullRequestHeaderSection({
           {liveStatus === "approved" ? (
             <Chip size="small" color="success" variant="outlined" label={t("workspace.pr.approved")} />
           ) : null}
-          <Tooltip title={actions.isRefreshing ? t("workspace.pr.refreshing") : t("workspace.pr.refresh")} arrow>
+          <Tooltip title={actions.isRefreshing ? t("workspace.pr.refreshing") : t("workspace.pr.refresh")}>
             <span>
               <IconButton
                 size="small"
@@ -132,7 +132,7 @@ export default function PullRequestHeaderSection({
               <Button
                 onClick={() => void actions.handleMerge()}
                 disabled={!mergeEnabled || actions.isMerging}
-                sx={{ textTransform: "none", fontSize: 13, px: 1.5, py: 0.25, lineHeight: 1.5 }}
+                sx={{ fontSize: 13, px: 1.5, py: 0.25, lineHeight: 1.5 }}
               >
                 {actions.isMerging ? t("workspace.pr.merging") : t(`workspace.pr.${mergeMethod}`)}
               </Button>
@@ -165,7 +165,7 @@ export default function PullRequestHeaderSection({
               size="small"
               onClick={() => void actions.handleClose()}
               disabled={actions.isClosing}
-              sx={{ textTransform: "none", fontSize: 13, px: 1.5, py: 0.25, lineHeight: 1.5, minWidth: 0 }}
+              sx={{ fontSize: 13, px: 1.5, py: 0.25, lineHeight: 1.5, minWidth: 0 }}
             >
               {actions.isClosing ? t("workspace.pr.closing") : t("workspace.pr.close")}
             </Button>

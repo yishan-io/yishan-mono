@@ -101,7 +101,7 @@ export function RichComposerSlashCommandMenu({
                           justifyContent: "flex-start",
                           px: 1,
                           py: 0.75,
-                          textTransform: "none",
+
                           color: isSelected ? "primary.main" : "text.primary",
                           bgcolor: isSelected ? "action.selected" : "transparent",
                           "&:hover": {

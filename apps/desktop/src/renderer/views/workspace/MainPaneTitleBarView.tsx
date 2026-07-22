@@ -203,7 +203,6 @@ export function MainPaneTitleBarView() {
               setRepoSearchValue("");
             }}
             sx={{
-              textTransform: "none",
               color: "text.secondary",
               borderColor: "transparent",
               bgcolor: "transparent",
@@ -234,7 +233,6 @@ export function MainPaneTitleBarView() {
               setWorkspaceSearchValue("");
             }}
             sx={{
-              textTransform: "none",
               color: "text.secondary",
               borderColor: "transparent",
               bgcolor: "transparent",
@@ -251,7 +249,7 @@ export function MainPaneTitleBarView() {
           </Button>
         </Box>
         <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-          <Tooltip title={t("project.commands.title")} arrow>
+          <Tooltip title={t("project.commands.title")}>
             <span>
               <Button
                 size="small"

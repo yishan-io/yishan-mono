@@ -114,7 +114,7 @@ export function AgentModelSelector({
           py: 0,
           fontSize: MODEL_SELECTOR_FONT_SIZE_PX,
           lineHeight: 1.5,
-          textTransform: "none",
+
           color: "text.secondary",
         }}
       >

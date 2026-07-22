@@ -46,6 +46,19 @@ describe("platform adapters", () => {
     });
   });
 
+  it("provides shared ButtonBase and Tooltip defaults", () => {
+    const muiOptions = createMuiThemeOptions("dark");
+
+    expect(muiOptions.components.MuiButtonBase.defaultProps).toMatchObject({
+      disableRipple: true,
+      disableTouchRipple: true,
+    });
+    expect(muiOptions.components.MuiButton.styleOverrides.root).toMatchObject({
+      textTransform: "none",
+    });
+    expect(muiOptions.components.MuiTooltip.defaultProps.arrow).toBe(true);
+  });
+
   it("builds a React Native token payload", () => {
     const nativeTheme = createReactNativeThemeTokens("light");
 

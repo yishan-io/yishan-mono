@@ -73,7 +73,7 @@ export function AppMenuTriggerButton({
         minWidth: fullWidth ? "100%" : 0,
         px: 1,
         typography: "caption",
-        textTransform: "none",
+
         color: "text.secondary",
         borderColor: "divider",
         "&:hover": {

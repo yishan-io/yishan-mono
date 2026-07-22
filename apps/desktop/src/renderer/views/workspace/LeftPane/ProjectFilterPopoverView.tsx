@@ -47,7 +47,7 @@ export function ProjectFilterPopoverView() {
 
   return (
     <>
-      <Tooltip title={t("project.actions.pin")} arrow>
+      <Tooltip title={t("project.actions.pin")}>
         <IconButton
           size="small"
           aria-label={t("project.actions.pin")}
@@ -98,14 +98,14 @@ export function ProjectFilterPopoverView() {
           <ButtonGroup size="small" fullWidth sx={{ mb: 1 }}>
             <Button
               variant={workspaceListHierarchyMode === "by_project" ? "contained" : "outlined"}
-              sx={{ fontSize: 11, textTransform: "none" }}
+              sx={{ fontSize: 11 }}
               onClick={() => setWorkspaceListHierarchyMode("by_project")}
             >
               {t("project.pin.hierarchy.byProject")}
             </Button>
             <Button
               variant={workspaceListHierarchyMode === "by_node" ? "contained" : "outlined"}
-              sx={{ fontSize: 11, textTransform: "none" }}
+              sx={{ fontSize: 11 }}
               onClick={() => setWorkspaceListHierarchyMode("by_node")}
             >
               {t("project.pin.hierarchy.byNode")}

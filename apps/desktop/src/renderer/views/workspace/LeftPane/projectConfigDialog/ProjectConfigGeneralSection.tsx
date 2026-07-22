@@ -106,7 +106,7 @@ export function ProjectConfigGeneralSection({
           <Typography variant="body2" sx={{ color: repoLocalPath ? "text.primary" : "text.disabled" }}>
             {repoLocalPath || "-"}
           </Typography>
-          <Tooltip title="Open in Finder" arrow>
+          <Tooltip title="Open in Finder">
             <span>
               <IconButton
                 size="small"
@@ -125,10 +125,7 @@ export function ProjectConfigGeneralSection({
           <Typography variant="body2" color="text.secondary">
             Context
           </Typography>
-          <Tooltip
-            title="Context stores repo-specific notes and guidance (briefs, decisions, references) outside the git repo so agents can reuse it across workspaces. This switch controls whether Yishan maintains the .my-context link in this project's workspaces."
-            arrow
-          >
+          <Tooltip title="Context stores repo-specific notes and guidance (briefs, decisions, references) outside the git repo so agents can reuse it across workspaces. This switch controls whether Yishan maintains the .my-context link in this project's workspaces.">
             <IconButton size="small" aria-label="What is context?" sx={{ p: 0.25 }}>
               <LuCircleHelp size={14} />
             </IconButton>
@@ -168,7 +165,7 @@ export function ProjectConfigGeneralSection({
               readOnly: true,
               endAdornment: (
                 <InputAdornment position="end">
-                  <Tooltip title="Choose folder" arrow>
+                  <Tooltip title="Choose folder">
                     <IconButton
                       edge="end"
                       aria-label="Choose worktree folder"
@@ -212,7 +209,7 @@ export function ProjectConfigGeneralSection({
             {PROJECT_CONFIG_ICON_BG_COLOR_PRESETS.map((color) => {
               const selected = draft.color.toLowerCase() === color.toLowerCase();
               return (
-                <Tooltip key={color} title={color} arrow>
+                <Tooltip key={color} title={color}>
                   <IconButton
                     size="small"
                     aria-label={`Select ${color}`}

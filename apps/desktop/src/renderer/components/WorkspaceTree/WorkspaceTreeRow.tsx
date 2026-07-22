@@ -294,7 +294,7 @@ export function WorkspaceTreeRowView({
             >
               {row.lifecycleState && row.lifecycleState !== "active" ? (
                 <>
-                  <Tooltip title="Repair workspace" arrow>
+                  <Tooltip title="Repair workspace">
                     <IconButton
                       size="small"
                       aria-label="Repair workspace"
@@ -307,7 +307,7 @@ export function WorkspaceTreeRowView({
                       <LuWrench size={13} />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Forget workspace" arrow>
+                  <Tooltip title="Forget workspace">
                     <IconButton
                       size="small"
                       aria-label="Forget workspace"
@@ -322,7 +322,7 @@ export function WorkspaceTreeRowView({
                   </Tooltip>
                 </>
               ) : (
-                <Tooltip title={deleteWorkspaceLabel ?? "Close workspace"} arrow>
+                <Tooltip title={deleteWorkspaceLabel ?? "Close workspace"}>
                   <IconButton
                     size="small"
                     aria-label={deleteWorkspaceLabel ?? "Close workspace"}
@@ -342,7 +342,7 @@ export function WorkspaceTreeRowView({
       ) : null}
       {row.kind === "project" ? (
         <>
-          <Tooltip title={createWorkspaceTooltipLabel ?? "workspace.actions.add"} arrow>
+          <Tooltip title={createWorkspaceTooltipLabel ?? "workspace.actions.add"}>
             <IconButton
               className="project-actions"
               size="small"

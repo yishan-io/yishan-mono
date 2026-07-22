@@ -244,7 +244,7 @@ export function WorkspaceRow({
                   flexShrink: 0,
                 }}
               >
-                <Tooltip title={deleteWorkspaceLabel} arrow>
+                <Tooltip title={deleteWorkspaceLabel}>
                   <IconButton
                     size="small"
                     aria-label={deleteWorkspaceLabel}

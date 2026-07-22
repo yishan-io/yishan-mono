@@ -40,7 +40,7 @@ type MenuSearchFieldProps = {
 /** Renders a compact search TextField used inside a Menu header row. */
 export function MenuSearchField({ placeholder, value, onChange }: MenuSearchFieldProps) {
   return (
-    <MenuItem disableRipple disableTouchRipple disableGutters sx={{ px: 1, py: 0.5, cursor: "default" }}>
+    <MenuItem disableGutters sx={{ px: 1, py: 0.5, cursor: "default" }}>
       <TextField
         autoFocus
         size="small"

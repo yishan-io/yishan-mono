@@ -102,7 +102,7 @@ export function RightPaneTabBar({ rightCollapsed, onToggleRightPane, showRightPa
         const shortcutLabel = getShortcutDisplayLabelById(tab.shortcutId, platform);
         const tooltipText = shortcutLabel ? `${tab.label} (${shortcutLabel})` : tab.label;
         return (
-          <Tooltip key={tab.value} title={tooltipText} placement="left" arrow>
+          <Tooltip key={tab.value} title={tooltipText} placement="left">
             <Box
               sx={{
                 display: "flex",

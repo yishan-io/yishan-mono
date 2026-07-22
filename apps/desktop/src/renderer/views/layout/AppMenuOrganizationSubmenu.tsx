@@ -53,7 +53,7 @@ export function AppMenuOrganizationSubmenu({
                   fullWidth
                   sx={{
                     justifyContent: "space-between",
-                    textTransform: "none",
+
                     color: isSelected ? "primary.main" : "text.secondary",
                     bgcolor: isSelected ? "action.selected" : "transparent",
                     boxShadow: isSelected ? (theme) => `inset 0 0 0 1px ${theme.palette.action.active}` : undefined,
@@ -84,7 +84,7 @@ export function AppMenuOrganizationSubmenu({
             startIcon={<LuPlus size={14} />}
             sx={{
               justifyContent: "flex-start",
-              textTransform: "none",
+
               color: "text.secondary",
               "&:hover": {
                 bgcolor: "action.hover",

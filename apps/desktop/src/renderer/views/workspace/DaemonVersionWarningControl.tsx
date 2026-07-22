@@ -23,7 +23,7 @@ export function DaemonVersionWarningControl() {
   });
 
   return (
-    <Tooltip arrow placement="bottom" title={tooltipTitle}>
+    <Tooltip placement="bottom" title={tooltipTitle}>
       <IconButton
         size="small"
         color="warning"

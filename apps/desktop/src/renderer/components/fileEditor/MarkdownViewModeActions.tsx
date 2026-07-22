@@ -56,7 +56,7 @@ function MarkdownViewModeToggle({ mode, currentMode, icon, tooltip, onSelect }: 
   const isActive = mode === currentMode;
 
   return (
-    <Tooltip title={tooltip} arrow>
+    <Tooltip title={tooltip}>
       <span>
         <IconButton
           size="small"

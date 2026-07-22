@@ -71,7 +71,7 @@ export function FileViewerToolbar({
       {statusContent}
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, ml: 0.75, flexShrink: 0 }}>
         {actions}
-        <Tooltip title="Copy file path" arrow>
+        <Tooltip title="Copy file path">
           <span>
             <IconButton
               size="small"
@@ -86,7 +86,7 @@ export function FileViewerToolbar({
             </IconButton>
           </span>
         </Tooltip>
-        <Tooltip title={openExternalAppLabel} arrow>
+        <Tooltip title={openExternalAppLabel}>
           <span>
             <IconButton
               size="small"

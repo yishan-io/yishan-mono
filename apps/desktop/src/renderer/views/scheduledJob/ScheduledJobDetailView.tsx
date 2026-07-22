@@ -70,7 +70,7 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
         </Box>
         <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           {primaryAction ? (
-            <Tooltip title={t(`scheduledJob.actions.${primaryAction}`)} arrow>
+            <Tooltip title={t(`scheduledJob.actions.${primaryAction}`)}>
               <Box className="electron-webkit-app-region-no-drag" sx={{ display: "inline-flex" }}>
                 <Button
                   size="small"
@@ -78,37 +78,37 @@ export function ScheduledJobDetailView({ job, onBack }: ScheduledJobDetailViewPr
                   startIcon={primaryAction === "pause" ? <LuPause size={13} /> : <LuPlay size={13} />}
                   onClick={primaryAction === "pause" ? handlePause : handleResume}
                   disabled={isPending}
-                  sx={{ textTransform: "none", color: "text.secondary", minWidth: 92 }}
+                  sx={{ color: "text.secondary", minWidth: 92 }}
                 >
                   {t(`scheduledJob.actions.${primaryAction}`)}
                 </Button>
               </Box>
             </Tooltip>
           ) : null}
-          <Tooltip title={t("scheduledJob.actions.runNow")} arrow>
+          <Tooltip title={t("scheduledJob.actions.runNow")}>
             <Button
               size="small"
               variant="text"
               startIcon={<LuZap size={13} />}
               onClick={() => void handleRunNow()}
               disabled={isPending}
-              sx={{ textTransform: "none", color: "text.secondary", px: 1.5 }}
+              sx={{ color: "text.secondary", px: 1.5 }}
             >
               {t("scheduledJob.actions.runNow")}
             </Button>
           </Tooltip>
-          <Tooltip title={t("scheduledJob.actions.edit")} arrow>
+          <Tooltip title={t("scheduledJob.actions.edit")}>
             <Button
               size="small"
               variant="text"
               startIcon={<LuPencil size={13} />}
               onClick={() => setIsEditOpen(true)}
-              sx={{ textTransform: "none", color: "text.secondary" }}
+              sx={{ color: "text.secondary" }}
             >
               {t("scheduledJob.actions.edit")}
             </Button>
           </Tooltip>
-          <Tooltip title={t("scheduledJob.actions.delete")} arrow>
+          <Tooltip title={t("scheduledJob.actions.delete")}>
             <IconButton
               size="small"
               onClick={() => setIsDeleteOpen(true)}

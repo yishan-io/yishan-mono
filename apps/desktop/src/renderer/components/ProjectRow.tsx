@@ -84,7 +84,7 @@ export function ProjectRow({
               pointerEvents: isSelected ? "auto" : undefined,
             }}
           >
-            <Tooltip title={addWorkspaceTooltipLabel} arrow>
+            <Tooltip title={addWorkspaceTooltipLabel}>
               <IconButton size="small" aria-label={addWorkspaceAriaLabel} onClick={onAddWorkspace}>
                 <LuPlus size={15} />
               </IconButton>

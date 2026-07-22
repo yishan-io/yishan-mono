@@ -147,7 +147,7 @@ export function ScheduledJobRunsSidebar({ orgId, job }: ScheduledJobRunsSidebarP
         <Typography variant="body2" sx={{ fontWeight: 600 }}>
           {t("scheduledJob.runs.title")}
         </Typography>
-        <Tooltip title={t("scheduledJob.runs.refresh")} arrow>
+        <Tooltip title={t("scheduledJob.runs.refresh")}>
           <IconButton
             size="small"
             onClick={() => runsQuery.refetch()}

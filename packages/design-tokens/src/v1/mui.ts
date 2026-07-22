@@ -82,6 +82,11 @@ export function createMuiThemeOptions(mode: DesignTokenThemeMode) {
           disableTouchRipple: true,
         },
       },
+      MuiTooltip: {
+        defaultProps: {
+          arrow: true,
+        },
+      },
       MuiIconButton: {
         styleOverrides: {
           root: {

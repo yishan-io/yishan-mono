@@ -202,7 +202,7 @@ export function BranchDropdown({
         sx={{ pl: row.indent, pr: 1, maxWidth: "100%", overflow: "hidden", minHeight: ROW_HEIGHT }}
         disabled={!row.value}
       >
-        <Tooltip title={row.label} placement="top" arrow enterDelay={500} enterTouchDelay={500}>
+        <Tooltip title={row.label} placement="top" enterDelay={500} enterTouchDelay={500}>
           <Box
             component="span"
             sx={{

@@ -152,7 +152,6 @@ export function TabBarItem({
     >
       <ButtonBase
         className="tab-content"
-        disableRipple
         onClick={() => onSelectTab(tab.id)}
         onDoubleClick={() => {
           if (tab.isTemporary) {

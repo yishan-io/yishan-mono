@@ -64,7 +64,6 @@ export function GitChangesSectionHeader({
     >
       <Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
         <ButtonBase
-          disableRipple
           onClick={onToggle}
           aria-label={isCollapsed ? `Expand ${section.label}` : `Collapse ${section.label}`}
           sx={{
@@ -100,9 +99,8 @@ export function GitChangesSectionHeader({
           }}
         >
           {showRevertAction ? (
-            <Tooltip title={`${restoreActionVerb} all`} arrow placement="top">
+            <Tooltip title={`${restoreActionVerb} all`} placement="top">
               <ButtonBase
-                disableRipple
                 aria-label={`${restoreActionVerb} ${section.label}`}
                 sx={{ width: 18, height: 18, borderRadius: 0.5 }}
                 onClick={() => onRevertSection?.(section)}
@@ -111,9 +109,8 @@ export function GitChangesSectionHeader({
               </ButtonBase>
             </Tooltip>
           ) : null}
-          <Tooltip title={`${trackActionMeta.verb} all`} arrow placement="top">
+          <Tooltip title={`${trackActionMeta.verb} all`} placement="top">
             <ButtonBase
-              disableRipple
               aria-label={`${trackActionMeta.verb} ${section.label}`}
               sx={{ width: 18, height: 18, borderRadius: 0.5 }}
               onClick={() => onTrackSection?.(section)}

@@ -74,7 +74,7 @@ export function ProjectConfigCommandsSection({ draft, isSaving, setDraft }: Proj
               commands: [...previous.commands, createProjectConfigCommandDraft("", "")],
             }))
           }
-          sx={{ alignSelf: "flex-start", textTransform: "none" }}
+          sx={{ alignSelf: "flex-start" }}
         >
           Add command
         </Button>

@@ -22,7 +22,7 @@ export function WorkspaceDialogSubmitButton({
       variant="contained"
       onClick={onClick}
       disabled={disabled}
-      sx={{ borderRadius: 2.5, textTransform: "none", py: 1, position: "relative", gap: 1 }}
+      sx={{ borderRadius: 2.5, py: 1, position: "relative", gap: 1 }}
     >
       {isCreatingWorkspace ? <CircularProgress size={16} color="inherit" /> : null}
       <Typography component="span" sx={{ mx: "auto", fontWeight: 500 }}>

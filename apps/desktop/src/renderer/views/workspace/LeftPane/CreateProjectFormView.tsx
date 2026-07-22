@@ -229,7 +229,7 @@ export function CreateProjectFormView({
                   input: {
                     endAdornment: (
                       <InputAdornment position="end">
-                        <Tooltip title={t("project.form.chooseFolder")} arrow>
+                        <Tooltip title={t("project.form.chooseFolder")}>
                           <IconButton
                             edge="end"
                             aria-label={t("project.form.chooseFolder")}

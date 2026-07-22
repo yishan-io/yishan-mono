@@ -18,7 +18,7 @@ export type PaneToggleButtonProps = {
  */
 export function PaneToggleButton({ tooltipLabel, ariaLabel, icon, onClick }: PaneToggleButtonProps) {
   return (
-    <Tooltip title={tooltipLabel} arrow>
+    <Tooltip title={tooltipLabel}>
       <span>
         <IconButton
           className="electron-webkit-app-region-no-drag"

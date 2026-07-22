@@ -214,7 +214,7 @@ export function UrlBar({
           </MenuList>
         </Paper>
       </Popper>
-      <Tooltip title="Select element on page" arrow>
+      <Tooltip title="Select element on page">
         <IconButton
           aria-label="Select element on page"
           onClick={onToggleInspect}
@@ -228,7 +228,7 @@ export function UrlBar({
           <LuMousePointer2 size={14} />
         </IconButton>
       </Tooltip>
-      <Tooltip title="Open in system default browser" arrow>
+      <Tooltip title="Open in system default browser">
         <IconButton
           aria-label="Open in system default browser"
           disabled={!resolvedUrl}

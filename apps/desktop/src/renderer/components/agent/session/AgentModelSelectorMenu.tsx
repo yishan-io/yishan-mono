@@ -45,7 +45,7 @@ function buildModelButtonSx(isSelected: boolean) {
     borderRadius: 0,
     fontSize: 12,
     lineHeight: 1.5,
-    textTransform: "none",
+
     color: isSelected ? "primary.main" : "text.secondary",
     bgcolor: isSelected ? "action.selected" : "transparent",
     "&:hover": {
