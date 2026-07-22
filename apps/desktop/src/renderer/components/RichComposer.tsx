@@ -37,6 +37,7 @@ export function RichComposer({
   focusShortcutHint,
 }: RichComposerProps) {
   const composerRef = useRef<HTMLDivElement | null>(null);
+  const shouldMoveCaretToEndAfterFileDropRef = useRef(false);
   const [activeSlashCommandRange, setActiveSlashCommandRange] = useState<SlashCommandRange | null>(null);
   const [selectedSlashCommandIndex, setSelectedSlashCommandIndex] = useState(0);
   const [isComposerFocused, setIsComposerFocused] = useState(false);
@@ -68,6 +69,9 @@ export function RichComposer({
       }
 
       const editable = event.currentTarget;
+      if ((event.nativeEvent as InputEvent).inputType === "insertFromDrop") {
+        shouldMoveCaretToEndAfterFileDropRef.current = true;
+      }
       const caretOffset = getCaretOffset(editable);
       const nextValue = normalizeComposerText(editable.innerText);
       const nextHtml = renderComposerHtml(nextValue, slashCommands);
@@ -213,15 +217,23 @@ export function RichComposer({
 
     const normalizedCurrentValue = normalizeComposerText(editable.innerText);
     const nextHtml = renderComposerHtml(value, slashCommands);
+    const shouldMoveCaretToEndAfterFileDrop = shouldMoveCaretToEndAfterFileDropRef.current;
     if (normalizedCurrentValue === value && editable.innerHTML === nextHtml) {
+      if (shouldMoveCaretToEndAfterFileDrop) {
+        editable.focus();
+        setCaretOffset(editable, value.length);
+        shouldMoveCaretToEndAfterFileDropRef.current = false;
+      }
       return;
     }
 
     const shouldRestoreCaret = document.activeElement === editable;
     editable.innerHTML = nextHtml;
-    if (shouldRestoreCaret) {
+    if (shouldRestoreCaret || shouldMoveCaretToEndAfterFileDrop) {
+      editable.focus();
       setCaretOffset(editable, value.length);
     }
+    shouldMoveCaretToEndAfterFileDropRef.current = false;
   }, [slashCommands, value]);
 
   useEffect(() => {

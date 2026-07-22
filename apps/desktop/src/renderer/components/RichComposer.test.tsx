@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RichComposer, type RichComposerSlashCommand } from "./RichComposer";
+import { getCaretOffset, renderComposerHtml, setCaretOffset } from "./richComposerHelpers";
 
 const SLASH_COMMANDS: RichComposerSlashCommand[] = [
   {
@@ -26,6 +28,15 @@ beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
     configurable: true,
     value: scrollIntoViewMock,
+  });
+  Object.defineProperty(HTMLElement.prototype, "innerText", {
+    configurable: true,
+    get() {
+      return this.textContent ?? "";
+    },
+    set(value: string) {
+      this.textContent = value;
+    },
   });
 });
 
@@ -57,6 +68,28 @@ describe("RichComposer", () => {
 
     expect(textbox.getAttribute("contenteditable")).toBe("false");
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("moves the cursor to the end after dropping a file path", () => {
+    const droppedPath = "/tmp/report.md";
+
+    function ControlledComposer() {
+      const [value, setValue] = useState<string | undefined>();
+      return <RichComposer placeholder="Type a message…" value={value} onChange={setValue} />;
+    }
+
+    render(<ControlledComposer />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    const composerText = `Before ${droppedPath}`;
+    textbox.innerHTML = renderComposerHtml(composerText);
+    Object.defineProperty(textbox, "innerText", { configurable: true, value: composerText, writable: true });
+    textbox.focus();
+    setCaretOffset(textbox, 0);
+    fireEvent.input(textbox, { inputType: "insertFromDrop" });
+
+    expect(document.activeElement).toBe(textbox);
+    expect(getCaretOffset(textbox)).toBe(composerText.length);
   });
 
   it("shows slash commands after typing slash", () => {
