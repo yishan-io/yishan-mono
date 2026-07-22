@@ -130,7 +130,6 @@ function SkillCard({ skill, isBusy, onInstall, onUpdate, onRemove, onClick }: Sk
         </Box>
         {skill.installed ? (
           <IconButton
-            size="small"
             disabled={isBusy}
             onClick={(event) => {
               event.stopPropagation();
@@ -186,7 +185,7 @@ function SkillDetailDialog({ skill, onClose }: SkillDetailDialogProps) {
           <PiFlowArrowBold size={16} />
           <Box component="span">{skill.name}</Box>
         </Box>
-        <IconButton size="small" onClick={onClose} aria-label={t("settings.back")}>
+        <IconButton onClick={onClose} aria-label={t("settings.back")}>
           <PiXBold size={16} />
         </IconButton>
       </DialogTitle>
@@ -339,7 +338,6 @@ export function AgentSkillsCard() {
             <Box sx={{ display: "flex", gap: 1, mb: 2, flexDirection: { xs: "column", sm: "row" } }}>
               <TextField
                 fullWidth
-                size="small"
                 placeholder={t("settings.skills.sourcePlaceholder")}
                 value={sourceInput}
                 onChange={(event) => {

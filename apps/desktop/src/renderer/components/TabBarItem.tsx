@@ -152,7 +152,6 @@ export function TabBarItem({
     >
       <ButtonBase
         className="tab-content"
-        disableRipple
         onClick={() => onSelectTab(tab.id)}
         onDoubleClick={() => {
           if (tab.isTemporary) {
@@ -184,7 +183,6 @@ export function TabBarItem({
       {pinned ? (
         <IconButton
           className="tab-pin"
-          size="small"
           aria-label={unpinTabActionLabel}
           onClick={(event) => {
             event.stopPropagation();
@@ -203,7 +201,6 @@ export function TabBarItem({
       ) : (
         <IconButton
           className="tab-close"
-          size="small"
           aria-label={closeTabActionLabel}
           onClick={(event) => {
             event.stopPropagation();

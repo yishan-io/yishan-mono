@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, type TypographyProps } from "@mui/material";
 
 export type StatusIndicatorColor = "success" | "error" | "warning" | "info" | "disabled";
 
@@ -9,6 +9,10 @@ export type StatusIndicatorProps = {
   color: StatusIndicatorColor;
   /** Override the dot size in pixels. Defaults to 8. */
   dotSize?: number;
+  /** Override the space between the dot and label using theme spacing. Defaults to 0.75. */
+  gap?: number;
+  /** Override the label color. Defaults to secondary for disabled and primary for other statuses. */
+  labelColor?: TypographyProps["color"];
 };
 
 const STATUS_COLOR_MAP: Record<StatusIndicatorColor, string> = {
@@ -33,9 +37,15 @@ const STATUS_COLOR_MAP: Record<StatusIndicatorColor, string> = {
  * />
  * ```
  */
-export function StatusIndicator({ label, color, dotSize = 8 }: StatusIndicatorProps) {
+export function StatusIndicator({
+  label,
+  color,
+  dotSize = 8,
+  gap = 0.75,
+  labelColor = color === "disabled" ? "text.secondary" : "text.primary",
+}: StatusIndicatorProps) {
   return (
-    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>
+    <Box sx={{ display: "inline-flex", alignItems: "center", gap }}>
       <Box
         component="span"
         sx={{
@@ -46,7 +56,7 @@ export function StatusIndicator({ label, color, dotSize = 8 }: StatusIndicatorPr
           flexShrink: 0,
         }}
       />
-      <Typography variant="body2" color={color === "disabled" ? "text.secondary" : "text.primary"}>
+      <Typography variant="body2" color={labelColor}>
         {label}
       </Typography>
     </Box>

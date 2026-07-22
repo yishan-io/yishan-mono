@@ -94,7 +94,6 @@ export function GitChangesFileRow({
       }}
     >
       <ButtonBase
-        disableRipple
         onClick={(event) => onFileClick(event, file, section)}
         sx={{
           minHeight: 30,
@@ -170,18 +169,14 @@ export function GitChangesFileRow({
           }}
         >
           {showRevertAction ? (
-            <Tooltip title={`${restoreVerb} file`} arrow placement="top">
-              <IconButton size="small" aria-label={`${restoreVerb} ${file.path}`} onClick={() => onRevertFile?.(file)}>
+            <Tooltip title={`${restoreVerb} file`} placement="top">
+              <IconButton aria-label={`${restoreVerb} ${file.path}`} onClick={() => onRevertFile?.(file)}>
                 <LuCornerUpLeft size={12} />
               </IconButton>
             </Tooltip>
           ) : null}
-          <Tooltip title={`${trackVerb} file`} arrow placement="top">
-            <IconButton
-              size="small"
-              aria-label={`${trackVerb} ${file.path}`}
-              onClick={() => onTrackFile?.(file, section.id)}
-            >
+          <Tooltip title={`${trackVerb} file`} placement="top">
+            <IconButton aria-label={`${trackVerb} ${file.path}`} onClick={() => onTrackFile?.(file, section.id)}>
               <TrackIcon size={12} />
             </IconButton>
           </Tooltip>

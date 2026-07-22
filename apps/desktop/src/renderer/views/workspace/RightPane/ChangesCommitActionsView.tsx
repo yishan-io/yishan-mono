@@ -46,6 +46,7 @@ export function ChangesCommitActionsView({
   return (
     <Box data-testid="changes-commit-actions-view" sx={{ minWidth: 0 }}>
       <TextField
+        size="medium"
         multiline
         minRows={3}
         maxRows={8}

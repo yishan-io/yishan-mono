@@ -285,7 +285,6 @@ export function MemberSettingsView() {
                         <TableCell align="right" sx={{ pr: 0.5 }}>
                           {canRemoveMember ? (
                             <IconButton
-                              size="small"
                               onClick={() => handleRemoveRequest(member)}
                               aria-label={t("settings.members.removeAriaLabel")}
                             >

@@ -26,7 +26,6 @@ export function AppMenuTriggerButton({
   if (iconOnly) {
     return (
       <IconButton
-        size="small"
         aria-label={triggerLabel}
         onClick={(event) => {
           onToggle(event.currentTarget);
@@ -73,7 +72,7 @@ export function AppMenuTriggerButton({
         minWidth: fullWidth ? "100%" : 0,
         px: 1,
         typography: "caption",
-        textTransform: "none",
+
         color: "text.secondary",
         borderColor: "divider",
         "&:hover": {

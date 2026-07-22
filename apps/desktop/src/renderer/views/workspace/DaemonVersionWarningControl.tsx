@@ -23,13 +23,8 @@ export function DaemonVersionWarningControl() {
   });
 
   return (
-    <Tooltip arrow placement="bottom" title={tooltipTitle}>
-      <IconButton
-        size="small"
-        color="warning"
-        aria-label={tooltipTitle}
-        onClick={() => navigate("/settings?tab=daemon")}
-      >
+    <Tooltip placement="bottom" title={tooltipTitle}>
+      <IconButton color="warning" aria-label={tooltipTitle} onClick={() => navigate("/settings?tab=daemon")}>
         <LuTriangleAlert size={14} />
       </IconButton>
     </Tooltip>

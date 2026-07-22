@@ -175,7 +175,6 @@ export function AgentPendingUiPrompt({ request, onCancel, onConfirm, onSelectCus
           isSelectingCustomResponse ? (
             <Stack spacing={1}>
               <TextField
-                size="small"
                 fullWidth
                 multiline
                 minRows={3}
@@ -257,7 +256,6 @@ export function AgentPendingUiPrompt({ request, onCancel, onConfirm, onSelectCus
           isSelectingCustomResponse ? (
             <Stack spacing={1}>
               <TextField
-                size="small"
                 fullWidth
                 multiline
                 minRows={3}
@@ -339,7 +337,6 @@ export function AgentPendingUiPrompt({ request, onCancel, onConfirm, onSelectCus
         {(request.method === "input" || request.method === "editor") && !parsedMultiSelectPrompt ? (
           <Stack spacing={1}>
             <TextField
-              size="small"
               fullWidth
               multiline={request.method === "editor"}
               minRows={request.method === "editor" ? 6 : 3}

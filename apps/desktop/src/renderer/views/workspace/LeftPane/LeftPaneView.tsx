@@ -102,7 +102,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
         aria-pressed={isOverviewPanelOpen}
         sx={{
           justifyContent: "flex-start",
-          textTransform: "none",
+
           color: isOverviewPanelOpen ? "primary.main" : "text.secondary",
           bgcolor: isOverviewPanelOpen ? "action.selected" : "transparent",
           borderRadius: 0,
@@ -126,7 +126,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
         aria-pressed={isScheduledJobPanelOpen}
         sx={{
           justifyContent: "flex-start",
-          textTransform: "none",
+
           color: isScheduledJobPanelOpen ? "primary.main" : "text.secondary",
           bgcolor: isScheduledJobPanelOpen ? "action.selected" : "transparent",
           borderRadius: 0,
@@ -166,9 +166,8 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
           {t("project.list.workspaces")}
         </Typography>
         <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center" }}>
-          <Tooltip title={t("project.actions.refresh")} arrow>
+          <Tooltip title={t("project.actions.refresh")}>
             <IconButton
-              size="small"
               aria-label={t("project.actions.refresh")}
               onClick={handleRefreshProjects}
               disabled={isRefreshing}
@@ -214,7 +213,7 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
           aria-label={t("project.actions.addRepository")}
           sx={{
             flex: 1,
-            textTransform: "none",
+
             color: "text.secondary",
             bgcolor: "transparent",
             borderRadius: 0,

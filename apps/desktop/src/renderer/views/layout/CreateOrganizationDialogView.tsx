@@ -68,7 +68,6 @@ export function CreateOrganizationDialogView({ open, onClose }: CreateOrganizati
           <TextField
             autoFocus
             fullWidth
-            size="small"
             placeholder={t("org.menu.newOrganizationPrompt")}
             inputProps={{ "aria-label": t("org.menu.newOrganizationPrompt") }}
             value={organizationName}

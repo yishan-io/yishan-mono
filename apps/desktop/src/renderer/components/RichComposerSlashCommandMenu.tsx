@@ -1,5 +1,6 @@
-import { Box, Button, ClickAwayListener, Paper, Popper, Typography } from "@mui/material";
+import { Box, Button, ClickAwayListener, Popper, Typography } from "@mui/material";
 import { useEffect, useRef } from "react";
+import { FloatingSurface } from "./FloatingSurface";
 import type { RichComposerSlashCommand } from "./richComposerTypes";
 
 const SLASH_COMMAND_MENU_WIDTH_PX = 620;
@@ -49,17 +50,7 @@ export function RichComposerSlashCommandMenu({
           onClose();
         }}
       >
-        <Paper
-          elevation={3}
-          sx={{
-            p: 0.5,
-            maxHeight: SLASH_COMMAND_MENU_MAX_HEIGHT_PX,
-            overflowY: "auto",
-            bgcolor: "background.default",
-            border: (theme) => `1px solid ${theme.palette.divider}`,
-            backgroundImage: "none",
-          }}
-        >
+        <FloatingSurface sx={{ p: 0.5, maxHeight: SLASH_COMMAND_MENU_MAX_HEIGHT_PX, overflowY: "auto" }}>
           {commands.length === 0 ? (
             <Typography color="text.secondary" variant="caption" sx={{ display: "block", px: 1, py: 0.75 }}>
               No matching commands
@@ -101,7 +92,7 @@ export function RichComposerSlashCommandMenu({
                           justifyContent: "flex-start",
                           px: 1,
                           py: 0.75,
-                          textTransform: "none",
+
                           color: isSelected ? "primary.main" : "text.primary",
                           bgcolor: isSelected ? "action.selected" : "transparent",
                           "&:hover": {
@@ -129,7 +120,7 @@ export function RichComposerSlashCommandMenu({
               );
             })
           )}
-        </Paper>
+        </FloatingSurface>
       </ClickAwayListener>
     </Popper>
   );

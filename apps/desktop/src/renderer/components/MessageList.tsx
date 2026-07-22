@@ -20,7 +20,6 @@ export function MessageList({ messages, emptyState, minHeight = 320 }: MessageLi
           {emptyState.prompt}
         </Typography>
         <ButtonBase
-          disableRipple
           sx={{
             mt: 1,
             px: 1.25,

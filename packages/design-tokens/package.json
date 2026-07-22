@@ -8,7 +8,9 @@
     "./v1/mui": "./src/v1/mui.ts",
     "./v1/react-native": "./src/v1/reactNative.ts",
     "./mui": "./src/v1/mui.ts",
-    "./react-native": "./src/v1/reactNative.ts"
+    "./react-native": "./src/v1/reactNative.ts",
+    "./v1/css": "./src/v1/css.ts",
+    "./css": "./src/v1/css.ts"
   },
   "types": "./src/index.ts",
   "scripts": {

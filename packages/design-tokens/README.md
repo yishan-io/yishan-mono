@@ -37,3 +37,17 @@ const nativeTheme = createReactNativeThemeTokens("light");
 ```
 
 The React Native adapter intentionally returns plain objects so app layers can plug tokens into any RN theming system (`StyleSheet`, custom context, or third-party libraries).
+
+### CSS custom properties
+
+```ts
+import { createCssThemeVariables } from "@yishan-io/design-tokens/v1/css";
+
+const variables = createCssThemeVariables("dark");
+
+for (const [property, value] of Object.entries(variables)) {
+  document.documentElement.style.setProperty(property, value);
+}
+```
+
+`createCssThemeVariables` is pure; applications own DOM updates. The latest alias is also available at `@yishan-io/design-tokens/css`.

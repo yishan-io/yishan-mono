@@ -7,6 +7,7 @@ import { LuEllipsis } from "react-icons/lu";
 import { LuPlus } from "react-icons/lu";
 import { LuArchive } from "react-icons/lu";
 import { LuTrash2, LuWrench } from "react-icons/lu";
+import { resolveWorkspaceNotificationColor } from "../../helpers/workspaceNotification";
 import { CliSpinner } from "../CliSpinner";
 import { GitChangeTotals } from "../GitChangeTotals";
 import { renderProjectIcon } from "../projectIcons";
@@ -65,14 +66,7 @@ export function WorkspaceTreeRowView({
   const isFolderLike = row.kind !== "workspace";
   const workspaceId = row.kind === "workspace" ? row.id.replace(/^workspace:/, "") : "";
   const isBroken = row.lifecycleState && row.lifecycleState !== "active";
-  const workspaceIconColor =
-    row.notificationTone === "waiting_input"
-      ? "warning.main"
-      : row.notificationTone === "done"
-        ? "success.main"
-        : row.notificationTone === "failed"
-          ? "error.main"
-          : "text.secondary";
+  const workspaceIconColor = resolveWorkspaceNotificationColor(row.notificationTone ?? "none");
 
   return (
     <Box
@@ -142,7 +136,6 @@ export function WorkspaceTreeRowView({
     >
       {row.hasChildren ? (
         <IconButton
-          size="small"
           aria-label={
             row.kind === "project"
               ? isExpanded
@@ -294,9 +287,8 @@ export function WorkspaceTreeRowView({
             >
               {row.lifecycleState && row.lifecycleState !== "active" ? (
                 <>
-                  <Tooltip title="Repair workspace" arrow>
+                  <Tooltip title="Repair workspace">
                     <IconButton
-                      size="small"
                       aria-label="Repair workspace"
                       onClick={(event) => {
                         event.stopPropagation();
@@ -307,9 +299,8 @@ export function WorkspaceTreeRowView({
                       <LuWrench size={13} />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Forget workspace" arrow>
+                  <Tooltip title="Forget workspace">
                     <IconButton
-                      size="small"
                       aria-label="Forget workspace"
                       onClick={(event) => {
                         event.stopPropagation();
@@ -322,9 +313,8 @@ export function WorkspaceTreeRowView({
                   </Tooltip>
                 </>
               ) : (
-                <Tooltip title={deleteWorkspaceLabel ?? "Close workspace"} arrow>
+                <Tooltip title={deleteWorkspaceLabel ?? "Close workspace"}>
                   <IconButton
-                    size="small"
                     aria-label={deleteWorkspaceLabel ?? "Close workspace"}
                     onClick={(event) => {
                       event.stopPropagation();
@@ -342,10 +332,9 @@ export function WorkspaceTreeRowView({
       ) : null}
       {row.kind === "project" ? (
         <>
-          <Tooltip title={createWorkspaceTooltipLabel ?? "workspace.actions.add"} arrow>
+          <Tooltip title={createWorkspaceTooltipLabel ?? "workspace.actions.add"}>
             <IconButton
               className="project-actions"
-              size="small"
               aria-label="workspace.actions.add"
               onClick={(event) => {
                 event.stopPropagation();
@@ -358,7 +347,6 @@ export function WorkspaceTreeRowView({
           </Tooltip>
           <IconButton
             className="project-actions"
-            size="small"
             aria-label="Project actions"
             onClick={(event) => {
               event.stopPropagation();

@@ -1,14 +1,16 @@
 import { Box, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { LuCircleCheck, LuCircleX, LuPause, LuPlay } from "react-icons/lu";
-import type { ScheduledJobRecord, ScheduledJobStatus } from "../../api/scheduledJobApi";
+import { LuPause, LuPlay } from "react-icons/lu";
+import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
 import { AgentIcon } from "../../components/AgentIcon";
 import { renderProjectIcon } from "../../components/projectIcons";
 import { isDesktopAgentKind } from "../../helpers/agentSettings";
 import { useCommands } from "../../hooks/useCommands";
 import { scheduledJobStore } from "../../store/scheduledJobStore";
 import { workspaceStore } from "../../store/workspaceStore";
+import { ScheduledJobRunStatusIcon } from "./ScheduledJobRunStatusIcon";
+import { ScheduledJobStatusIndicator } from "./ScheduledJobStatusIndicator";
 
 type ScheduledJobListItemViewProps = {
   job: ScheduledJobRecord;
@@ -26,57 +28,6 @@ function formatOptionalDate(isoDate: string | null): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-type ChipConfig = { dotColor: string; label: string };
-
-/** Renders a status dot + label for one scheduled job. */
-function ScheduledJobStatusChip({ status }: { status: ScheduledJobRecord["status"] }) {
-  const { t } = useTranslation();
-
-  const chipStyles: Record<ScheduledJobStatus, ChipConfig> = {
-    active: { dotColor: "success.main", label: t("scheduledJob.status.active") },
-    paused: { dotColor: "text.disabled", label: t("scheduledJob.status.paused") },
-    disabled: { dotColor: "text.disabled", label: t("scheduledJob.status.disabled") },
-  };
-
-  const chip = chipStyles[status] ?? chipStyles.disabled;
-
-  return (
-    <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
-      <Box component="span" sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: chip.dotColor, flexShrink: 0 }} />
-      <Typography variant="body2" color="text.secondary" component="span">
-        {chip.label}
-      </Typography>
-    </Box>
-  );
-}
-
-/** Renders an icon representing the last run status. */
-function LastRunStatusIcon({ status }: { status: ScheduledJobRecord["lastRunStatus"] }) {
-  const { t } = useTranslation();
-
-  if (status === "succeeded") {
-    return (
-      <Tooltip title={t("scheduledJob.lastRun.succeeded")} arrow>
-        <Box component="span" sx={{ display: "inline-flex", color: "success.main" }}>
-          <LuCircleCheck size={14} />
-        </Box>
-      </Tooltip>
-    );
-  }
-
-  if (status === "failed") {
-    return (
-      <Tooltip title={t("scheduledJob.lastRun.failed")} arrow>
-        <Box component="span" sx={{ display: "inline-flex", color: "error.main" }}>
-          <LuCircleX size={14} />
-        </Box>
-      </Tooltip>
-    );
-  }
-
-  return null;
 }
 
 const tdSx = {
@@ -184,13 +135,19 @@ export function ScheduledJobListItemView({ job, onOpenDetails }: ScheduledJobLis
 
       {/* Status */}
       <Box component="td" sx={tdSx}>
-        <ScheduledJobStatusChip status={job.status} />
+        <ScheduledJobStatusIndicator status={job.status} variant="compact" />
       </Box>
 
       {/* Last run */}
       <Box component="td" sx={tdSx}>
         <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
-          <LastRunStatusIcon status={job.lastRunStatus} />
+          {job.lastRunStatus ? (
+            <Tooltip title={t(`scheduledJob.lastRun.${job.lastRunStatus}`)}>
+              <Box component="span">
+                <ScheduledJobRunStatusIcon status={job.lastRunStatus} size={14} />
+              </Box>
+            </Tooltip>
+          ) : null}
           <Typography variant="body2" color="text.secondary">
             {formatOptionalDate(job.lastRunAt)}
           </Typography>
@@ -213,15 +170,15 @@ export function ScheduledJobListItemView({ job, onOpenDetails }: ScheduledJobLis
         ) : (
           <>
             {canPause ? (
-              <Tooltip title={t("scheduledJob.actions.pause")} arrow>
-                <IconButton size="small" onClick={handlePause} aria-label={t("scheduledJob.actions.pause")}>
+              <Tooltip title={t("scheduledJob.actions.pause")}>
+                <IconButton onClick={handlePause} aria-label={t("scheduledJob.actions.pause")}>
                   <LuPause size={14} />
                 </IconButton>
               </Tooltip>
             ) : null}
             {canResume ? (
-              <Tooltip title={t("scheduledJob.actions.resume")} arrow>
-                <IconButton size="small" onClick={handleResume} aria-label={t("scheduledJob.actions.resume")}>
+              <Tooltip title={t("scheduledJob.actions.resume")}>
+                <IconButton onClick={handleResume} aria-label={t("scheduledJob.actions.resume")}>
                   <LuPlay size={14} />
                 </IconButton>
               </Tooltip>

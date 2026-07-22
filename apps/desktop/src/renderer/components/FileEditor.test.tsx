@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
 
-import { ThemeProvider } from "@mui/material/styles";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createAppTheme } from "../theme";
+import { renderWithAppTheme } from "../testUtils/renderWithAppTheme";
 import { FileEditor } from "./FileEditor";
 
 // Capture props passed to MarkdownPreview so tests can inspect findOpen etc.
@@ -140,11 +139,7 @@ afterEach(() => {
 
 describe("FileEditor", () => {
   it("creates a Monaco editor on mount", () => {
-    render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="src/a.ts" content="initial" />
-      </ThemeProvider>,
-    );
+    renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
 
     expect(mockEditorState.createCount).toBe(1);
   });
@@ -152,11 +147,7 @@ describe("FileEditor", () => {
   it("triggers save callback on Cmd+S binding", () => {
     const onSave = vi.fn();
 
-    render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="src/a.ts" content="initial" onSave={onSave} />
-      </ThemeProvider>,
-    );
+    renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" onSave={onSave} />);
 
     // Simulate the user editing the document after mount.
     mockEditorState.editorValue = "saved text";
@@ -171,11 +162,7 @@ describe("FileEditor", () => {
   it("emits changed content through onContentChange", () => {
     const onContentChange = vi.fn();
 
-    render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="src/a.ts" content="initial" onContentChange={onContentChange} />
-      </ThemeProvider>,
-    );
+    renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" onContentChange={onContentChange} />);
 
     // Simulate the user editing the document after mount.
     mockEditorState.editorValue = "next text";
@@ -187,51 +174,31 @@ describe("FileEditor", () => {
   });
 
   it("creates model with the correct language for supported files", () => {
-    render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="src/a.ts" content="initial" />
-      </ThemeProvider>,
-    );
+    renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
 
     expect(mockEditorState.lastModelLanguage).toBe("typescript");
   });
 
   it("creates model without language for unsupported files", () => {
-    render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="data/file.unknown" content="initial" />
-      </ThemeProvider>,
-    );
+    renderWithAppTheme(<FileEditor path="data/file.unknown" content="initial" />);
 
     expect(mockEditorState.lastModelLanguage).toBeUndefined();
   });
 
   it("creates model with file:// URI matching the path", () => {
-    render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="/Users/dev/project/main.ts" content="initial" />
-      </ThemeProvider>,
-    );
+    renderWithAppTheme(<FileEditor path="/Users/dev/project/main.ts" content="initial" />);
 
     expect(mockEditorState.lastModelUri).toEqual({ scheme: "file", path: "/Users/dev/project/main.ts" });
   });
 
   it("uses dark theme when MUI theme is dark", () => {
-    render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="src/a.ts" content="initial" />
-      </ThemeProvider>,
-    );
+    renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
 
     expect((mockEditorState.createOptions as { theme?: string })?.theme).toBe("yishan-dark");
   });
 
   it("uses light theme when MUI theme is light", () => {
-    render(
-      <ThemeProvider theme={createAppTheme("light")}>
-        <FileEditor path="src/a.ts" content="initial" />
-      </ThemeProvider>,
-    );
+    renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />, { mode: "light" });
 
     expect((mockEditorState.createOptions as { theme?: string })?.theme).toBe("yishan-light");
   });
@@ -243,58 +210,34 @@ describe("FileEditor", () => {
     });
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
-    const { rerender } = render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="src/a.ts" content="initial" focusRequestKey={0} />
-      </ThemeProvider>,
-    );
+    const { rerender } = renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" focusRequestKey={0} />);
 
     expect(mockEditorState.editorFocus).not.toHaveBeenCalled();
 
-    rerender(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="src/a.ts" content="initial" focusRequestKey={1} />
-      </ThemeProvider>,
-    );
+    rerender(<FileEditor path="src/a.ts" content="initial" focusRequestKey={1} />);
 
     expect(mockEditorState.editorFocus).toHaveBeenCalledTimes(1);
   });
 
   it("recreates editor when path changes", () => {
-    const { rerender } = render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="src/a.ts" content="initial" />
-      </ThemeProvider>,
-    );
+    const { rerender } = renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
 
     expect(mockEditorState.createCount).toBe(1);
 
-    rerender(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="src/b.py" content="print('hi')" />
-      </ThemeProvider>,
-    );
+    rerender(<FileEditor path="src/b.py" content="print('hi')" />);
 
     expect(mockEditorState.createCount).toBe(2);
     expect(mockEditorState.disposeCount).toBe(1);
   });
 
   it("displays the file path in the header", () => {
-    const { getByText } = render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="src/components/App.tsx" content="initial" />
-      </ThemeProvider>,
-    );
+    const { getByText } = renderWithAppTheme(<FileEditor path="src/components/App.tsx" content="initial" />);
 
     expect(getByText("src/components/App.tsx")).toBeTruthy();
   });
 
   it("displays the file icon before the path in the header", () => {
-    const { container } = render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="src/components/App.tsx" content="initial" />
-      </ThemeProvider>,
-    );
+    const { container } = renderWithAppTheme(<FileEditor path="src/components/App.tsx" content="initial" />);
 
     const icon = container.querySelector('img[src="/icons/App.tsx.svg"]');
     expect(icon).toBeTruthy();
@@ -303,15 +246,13 @@ describe("FileEditor", () => {
   it("runs file path header actions", () => {
     const onCopyPath = vi.fn();
     const onOpenExternalApp = vi.fn();
-    const { getByRole } = render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor
-          path="src/components/App.tsx"
-          content="initial"
-          onCopyPath={onCopyPath}
-          onOpenExternalApp={onOpenExternalApp}
-        />
-      </ThemeProvider>,
+    const { getByRole } = renderWithAppTheme(
+      <FileEditor
+        path="src/components/App.tsx"
+        content="initial"
+        onCopyPath={onCopyPath}
+        onOpenExternalApp={onOpenExternalApp}
+      />,
     );
 
     fireEvent.click(getByRole("button", { name: "Copy file path" }));
@@ -322,31 +263,21 @@ describe("FileEditor", () => {
   });
 
   it("defaults markdown files to split mode", () => {
-    render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="README.md" content="# Hello" />
-      </ThemeProvider>,
-    );
+    renderWithAppTheme(<FileEditor path="README.md" content="# Hello" />);
 
     expect(screen.getByRole("button", { name: "Split view" }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("respects configured markdown default mode", () => {
-    render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />
-      </ThemeProvider>,
-    );
+    renderWithAppTheme(<FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />);
 
     expect(screen.getByRole("button", { name: "Preview" }).getAttribute("aria-pressed")).toBe("true");
   });
 
   describe("preview find bar (Cmd+F)", () => {
     it("opens the find bar when Cmd+F is pressed in preview-only mode", () => {
-      const { getByTestId } = render(
-        <ThemeProvider theme={createAppTheme("dark")}>
-          <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />
-        </ThemeProvider>,
+      const { getByTestId } = renderWithAppTheme(
+        <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />,
       );
 
       // findOpen should start false
@@ -361,10 +292,8 @@ describe("FileEditor", () => {
     });
 
     it("does not open find bar on Cmd+F in split mode — triggers Monaco find instead", () => {
-      const { getByTestId } = render(
-        <ThemeProvider theme={createAppTheme("dark")}>
-          <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="split" />
-        </ThemeProvider>,
+      const { getByTestId } = renderWithAppTheme(
+        <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="split" />,
       );
 
       const previewPane = getByTestId("markdown-preview-pane");
@@ -380,10 +309,8 @@ describe("FileEditor", () => {
     });
 
     it("closes the find bar on Escape when it is open", () => {
-      const { getByTestId } = render(
-        <ThemeProvider theme={createAppTheme("dark")}>
-          <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />
-        </ThemeProvider>,
+      const { getByTestId } = renderWithAppTheme(
+        <FileEditor path="README.md" content="# Hello" defaultMarkdownViewMode="preview" />,
       );
 
       const previewPane = getByTestId("markdown-preview-pane");

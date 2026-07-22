@@ -8,6 +8,10 @@ import { PaneToggleButton } from "../../components/PaneToggleButton";
 import { renderProjectIcon } from "../../components/projectIcons";
 import { getRendererPlatform } from "../../helpers/platform";
 import { filterVisibleProjects } from "../../helpers/projectHelpers";
+import {
+  resolveWorkspaceNotificationColor,
+  resolveWorkspaceNotificationTone,
+} from "../../helpers/workspaceNotification";
 import { useCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
@@ -80,25 +84,13 @@ export function MainPaneTitleBarView() {
     trimmedNewCommandNameValue.length === 0 ||
     trimmedNewCommandLineValue.length === 0 ||
     isSavingCommand;
-  const resolveWorkspaceIconColor = (
-    workspaceId: string,
-  ): "warning.main" | "error.main" | "success.main" | "text.secondary" => {
-    const runtimeStatus = workspaceAgentStatusByWorkspaceId[workspaceId] ?? "idle";
-    const unreadTone = workspaceUnreadToneByWorkspaceId[workspaceId];
-    if (runtimeStatus === "waiting_input") {
-      return "warning.main";
-    }
-
-    if (unreadTone === "error") {
-      return "error.main";
-    }
-
-    if (unreadTone === "success") {
-      return "success.main";
-    }
-
-    return "text.secondary";
-  };
+  const resolveWorkspaceIconColor = (workspaceId: string) =>
+    resolveWorkspaceNotificationColor(
+      resolveWorkspaceNotificationTone({
+        runtimeStatus: workspaceAgentStatusByWorkspaceId[workspaceId] ?? "idle",
+        unreadTone: workspaceUnreadToneByWorkspaceId[workspaceId],
+      }),
+    );
   useEffect(() => {
     let isDisposed = false;
     /** Syncs one fullscreen snapshot from the host window state. */
@@ -203,7 +195,6 @@ export function MainPaneTitleBarView() {
               setRepoSearchValue("");
             }}
             sx={{
-              textTransform: "none",
               color: "text.secondary",
               borderColor: "transparent",
               bgcolor: "transparent",
@@ -234,7 +225,6 @@ export function MainPaneTitleBarView() {
               setWorkspaceSearchValue("");
             }}
             sx={{
-              textTransform: "none",
               color: "text.secondary",
               borderColor: "transparent",
               bgcolor: "transparent",
@@ -251,7 +241,7 @@ export function MainPaneTitleBarView() {
           </Button>
         </Box>
         <Box className="electron-webkit-app-region-no-drag" sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-          <Tooltip title={t("project.commands.title")} arrow>
+          <Tooltip title={t("project.commands.title")}>
             <span>
               <Button
                 size="small"

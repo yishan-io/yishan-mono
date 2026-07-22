@@ -224,10 +224,9 @@ export function SettingsView() {
             >
               {shouldReserveMacWindowControlsInset ? <Box sx={{ width: 72, flexShrink: 0 }} /> : null}
               <Box sx={{ flex: 1 }} />
-              <Tooltip title={t("settings.back")} arrow>
+              <Tooltip title={t("settings.back")}>
                 <IconButton
                   className="electron-webkit-app-region-no-drag"
-                  size="small"
                   onClick={() => navigate("/")}
                   data-testid="settings-back-button"
                   aria-label={t("settings.back")}

@@ -99,7 +99,6 @@ function AgentCommandInput({ agentKind, currentCommand, onSave, onReset }: Agent
 
   return (
     <TextField
-      size="small"
       value={draft}
       onChange={handleChange}
       onBlur={handleCommit}
@@ -121,24 +120,14 @@ function AgentCommandInput({ agentKind, currentCommand, onSave, onReset }: Agent
           endAdornment: hasCustomCommand ? (
             <InputAdornment position="end">
               <Tooltip title={t("settings.agents.command.resetAriaLabel")}>
-                <IconButton
-                  size="small"
-                  onClick={handleReset}
-                  aria-label={t("settings.agents.command.resetAriaLabel")}
-                  edge="end"
-                >
+                <IconButton onClick={handleReset} aria-label={t("settings.agents.command.resetAriaLabel")} edge="end">
                   ↺
                 </IconButton>
               </Tooltip>
             </InputAdornment>
           ) : isDirty ? (
             <InputAdornment position="end">
-              <IconButton
-                size="small"
-                onClick={handleCommit}
-                aria-label={t("settings.agents.command.label")}
-                edge="end"
-              >
+              <IconButton onClick={handleCommit} aria-label={t("settings.agents.command.label")} edge="end">
                 ✓
               </IconButton>
             </InputAdornment>

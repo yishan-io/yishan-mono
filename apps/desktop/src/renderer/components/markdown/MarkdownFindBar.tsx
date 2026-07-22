@@ -113,7 +113,6 @@ export function MarkdownFindBar({
       <Box sx={{ width: "1px", height: 16, bgcolor: borderColor, flexShrink: 0, mx: 0.25 }} />
 
       <IconButton
-        size="small"
         onClick={onPrev}
         aria-label="Previous match"
         title="Previous match (Shift+Enter)"
@@ -122,7 +121,6 @@ export function MarkdownFindBar({
         <LuChevronUp size={14} />
       </IconButton>
       <IconButton
-        size="small"
         onClick={onNext}
         aria-label="Next match"
         title="Next match (Enter)"
@@ -131,7 +129,6 @@ export function MarkdownFindBar({
         <LuChevronDown size={14} />
       </IconButton>
       <IconButton
-        size="small"
         onClick={onClose}
         aria-label="Close find bar"
         title="Close (Escape)"

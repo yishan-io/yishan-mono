@@ -112,7 +112,7 @@ export function ScheduledJobView({ onClose: _onClose }: ScheduledJobViewProps = 
               variant="text"
               startIcon={<LuPlus size={13} />}
               onClick={() => setIsCreateDialogOpen(true)}
-              sx={{ textTransform: "none", color: "text.secondary" }}
+              sx={{ color: "text.secondary" }}
               aria-label={t("scheduledJob.actions.new")}
             >
               {t("scheduledJob.actions.new")}

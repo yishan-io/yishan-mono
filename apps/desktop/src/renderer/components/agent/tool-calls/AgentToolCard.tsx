@@ -45,7 +45,6 @@ export function AgentToolCard({ toolCall, result = null, onOpenCompletedSubagent
           {canOpenCompletedSubagent && childSessionId ? (
             <Tooltip title="Open sub-agent detail" placement="top">
               <IconButton
-                size="small"
                 aria-label={`Open sub-agent ${agentName}`}
                 onClick={(event) => {
                   event.stopPropagation();

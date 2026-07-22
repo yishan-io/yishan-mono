@@ -1,5 +1,6 @@
 import { useMediaQuery } from "@mui/material";
-import { type ReactNode, createContext, useContext, useEffect, useMemo } from "react";
+import { createCssThemeVariables } from "@yishan-io/design-tokens/v1/css";
+import { type ReactNode, createContext, useContext, useLayoutEffect, useMemo } from "react";
 import { layoutStore } from "../store/settings/layoutStore";
 import type { AppThemeMode, AppThemePreference } from "../theme";
 import { resolveAppThemeMode } from "../theme";
@@ -19,13 +20,19 @@ export function AppThemePreferenceProvider({ children }: { children: ReactNode }
   const systemPrefersDark = useMediaQuery("(prefers-color-scheme: dark)");
   const themeMode = resolveAppThemeMode(themePreference, systemPrefersDark);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof document === "undefined") {
       return;
     }
 
-    document.documentElement.style.colorScheme = themeMode;
-    document.documentElement.setAttribute("data-app-theme-mode", themeMode);
+    const rootElement = document.documentElement;
+    const cssThemeVariables = createCssThemeVariables(themeMode);
+
+    rootElement.style.colorScheme = themeMode;
+    rootElement.setAttribute("data-app-theme-mode", themeMode);
+    for (const [property, value] of Object.entries(cssThemeVariables)) {
+      rootElement.style.setProperty(property, value);
+    }
   }, [themeMode]);
 
   const value = useMemo<AppThemePreferenceContextValue>(

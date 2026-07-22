@@ -1,6 +1,7 @@
 import { registerCustomTheme } from "@pierre/diffs";
 import pierreDark from "@pierre/theme/pierre-dark";
 import pierreLight from "@pierre/theme/pierre-light";
+import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import { DARK_SURFACE_COLORS } from "../theme";
 
 export const EDITOR_COLORS = {
@@ -12,9 +13,9 @@ export const EDITOR_COLORS = {
     lineNumber: "#7a8190",
     gutter: "#f5f6f8",
     cursor: "#2a2a31",
-    addition: "#2ea043",
-    deletion: "#f85149",
-    modified: "#1a7fd4",
+    addition: SEMANTIC_COLOR_TOKENS.light.gitDiff.added,
+    deletion: SEMANTIC_COLOR_TOKENS.light.gitDiff.deleted,
+    modified: SEMANTIC_COLOR_TOKENS.light.gitDiff.modified,
     comment: "#7a8190",
     keyword: "#8a3ffc",
     string: "#2d7a00",
@@ -34,9 +35,9 @@ export const EDITOR_COLORS = {
     lineNumber: "#8e97ab",
     gutter: DARK_SURFACE_COLORS.gutter,
     cursor: "#d7deef",
-    addition: "#3fb950",
-    deletion: "#f85149",
-    modified: "#58a6ff",
+    addition: SEMANTIC_COLOR_TOKENS.dark.gitDiff.added,
+    deletion: SEMANTIC_COLOR_TOKENS.dark.gitDiff.deleted,
+    modified: SEMANTIC_COLOR_TOKENS.dark.gitDiff.modified,
     comment: "#7f8796",
     keyword: "#c49fff",
     string: "#a7d56d",

@@ -892,6 +892,22 @@ describe("MainPaneView", () => {
     expect(setSelectedWorkspaceId).toHaveBeenCalledWith("workspace-2");
   });
 
+  it("keeps a running workspace notification-tinted in the workspace selector", () => {
+    mocked.stateRef.current = {
+      ...buildStoreState(false),
+      workspaceAgentStatusByWorkspaceId: { "workspace-1": "running" },
+      workspaceUnreadToneByWorkspaceId: { "workspace-1": "success" },
+    };
+
+    render(<MainPaneView />);
+
+    fireEvent.click(screen.getByRole("button", { name: "workspace.column" }));
+    const workspaceMenuItem = screen.getByRole("menuitem", { name: "Workspace 1" });
+    const workspaceIcon = workspaceMenuItem.querySelector("span");
+    expect(workspaceIcon).toBeTruthy();
+    expect(getComputedStyle(workspaceIcon as HTMLElement).color).toBe("rgb(46, 125, 50)");
+  });
+
   it("filters repo and workspace dropdown items with search", () => {
     mocked.stateRef.current = {
       ...buildStoreState(false),

@@ -37,7 +37,6 @@ export function ProjectConfigIconPickerPopover({
           return (
             <IconButton
               key={option.id}
-              size="small"
               aria-label="Choose icon"
               onClick={() => {
                 setDraft((previous) => ({

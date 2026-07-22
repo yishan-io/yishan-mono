@@ -47,12 +47,8 @@ export function ProjectFilterPopoverView() {
 
   return (
     <>
-      <Tooltip title={t("project.actions.pin")} arrow>
-        <IconButton
-          size="small"
-          aria-label={t("project.actions.pin")}
-          onClick={(event) => setRepoFilterAnchor(event.currentTarget)}
-        >
+      <Tooltip title={t("project.actions.pin")}>
+        <IconButton aria-label={t("project.actions.pin")} onClick={(event) => setRepoFilterAnchor(event.currentTarget)}>
           <LuEye size={15} />
         </IconButton>
       </Tooltip>
@@ -98,14 +94,14 @@ export function ProjectFilterPopoverView() {
           <ButtonGroup size="small" fullWidth sx={{ mb: 1 }}>
             <Button
               variant={workspaceListHierarchyMode === "by_project" ? "contained" : "outlined"}
-              sx={{ fontSize: 11, textTransform: "none" }}
+              sx={{ fontSize: 11 }}
               onClick={() => setWorkspaceListHierarchyMode("by_project")}
             >
               {t("project.pin.hierarchy.byProject")}
             </Button>
             <Button
               variant={workspaceListHierarchyMode === "by_node" ? "contained" : "outlined"}
-              sx={{ fontSize: 11, textTransform: "none" }}
+              sx={{ fontSize: 11 }}
               onClick={() => setWorkspaceListHierarchyMode("by_node")}
             >
               {t("project.pin.hierarchy.byNode")}
@@ -121,7 +117,6 @@ export function ProjectFilterPopoverView() {
           </Stack>
           <TextField
             value={repoQuickSearch}
-            size="small"
             fullWidth
             autoFocus
             placeholder={t("project.pin.searchPlaceholder")}

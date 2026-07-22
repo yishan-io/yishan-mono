@@ -25,7 +25,6 @@ export const themeButtonSx: SxProps<Theme> = {
 /** Shared button styling for vertically stacked app menu items. */
 export const menuItemButtonSx: SxProps<Theme> = {
   justifyContent: "flex-start",
-  textTransform: "none",
   color: "text.secondary",
   "&:hover": {
     bgcolor: "action.hover",

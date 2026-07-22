@@ -87,7 +87,7 @@ export function DiffSearchPanel({
 
       <Tooltip title="Previous match (Shift+Enter)">
         <Box component="span">
-          <IconButton size="small" onClick={onPrevious} disabled={!hasMatch}>
+          <IconButton onClick={onPrevious} disabled={!hasMatch}>
             <LuArrowUp size={13} />
           </IconButton>
         </Box>
@@ -95,14 +95,14 @@ export function DiffSearchPanel({
 
       <Tooltip title="Next match (Enter)">
         <Box component="span">
-          <IconButton size="small" onClick={onNext} disabled={!hasMatch}>
+          <IconButton onClick={onNext} disabled={!hasMatch}>
             <LuArrowDown size={13} />
           </IconButton>
         </Box>
       </Tooltip>
 
       <Tooltip title="Close (Escape)">
-        <IconButton size="small" onClick={onClose}>
+        <IconButton onClick={onClose}>
           <LuX size={13} />
         </IconButton>
       </Tooltip>

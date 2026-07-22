@@ -14,6 +14,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { LuPlay } from "react-icons/lu";
 import { renderProjectIcon } from "../../components/projectIcons";
+import type { WorkspaceNotificationColor } from "../../helpers/workspaceNotification";
 import type { WorkspaceItem, WorkspaceProjectRecord } from "../../store/types";
 import { MenuSearchField, renderWorkspaceKindIcon } from "./mainPaneTitleBarHelpers";
 
@@ -87,7 +88,7 @@ type WorkspaceSelectorMenuProps = {
   selectedWorkspaceId: string;
   setSelectedWorkspaceId: (workspaceId: string) => void;
   setWorkspaceMenuAnchorEl: (value: HTMLElement | null) => void;
-  resolveWorkspaceIconColor: (workspaceId: string) => "warning.main" | "error.main" | "success.main" | "text.secondary";
+  resolveWorkspaceIconColor: (workspaceId: string) => WorkspaceNotificationColor;
   primaryWorkspaceId: string | undefined;
   t: (key: string) => string;
 };
@@ -260,7 +261,6 @@ export function AddProjectCommandDialog({
       <DialogContent>
         <TextField
           autoFocus
-          size="small"
           fullWidth
           label={t("project.commands.nameLabel")}
           value={commandNameValue}
@@ -270,7 +270,6 @@ export function AddProjectCommandDialog({
           sx={{ mt: 0.5 }}
         />
         <TextField
-          size="small"
           fullWidth
           label={t("project.commands.commandLabel")}
           value={commandLineValue}

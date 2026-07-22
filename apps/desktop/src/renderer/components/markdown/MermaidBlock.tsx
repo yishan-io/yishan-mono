@@ -144,7 +144,6 @@ const MermaidBlock = memo(function MermaidBlock({ code }: MermaidBlockProps) {
         <span>
           <IconButton
             className="diagram-expand-btn"
-            size="small"
             onClick={() => setOverlayOpen(true)}
             disabled={!svgContent}
             sx={{

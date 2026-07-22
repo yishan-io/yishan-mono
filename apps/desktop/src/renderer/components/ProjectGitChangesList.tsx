@@ -182,7 +182,6 @@ export function ProjectGitChangesList({
                           <Box sx={{ display: "flex", alignItems: "center", minWidth: 0, flex: 1 }}>
                             {canFoldFolder ? (
                               <ButtonBase
-                                disableRipple
                                 onClick={() => toggleFolder(section.id, group.folder)}
                                 aria-label={
                                   isFolderCollapsed

@@ -56,7 +56,6 @@ export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage
         >
           <IconButton
             aria-label={label}
-            size="small"
             onClick={handleClick}
             disabled={isBusy}
             sx={{
@@ -135,7 +134,6 @@ export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage
             <Tooltip title={t("agentChat.voice.cancel")} placement="top">
               <IconButton
                 aria-label={t("agentChat.voice.cancel")}
-                size="small"
                 onClick={cancelRecording}
                 sx={{
                   position: "absolute",
@@ -163,7 +161,6 @@ export function AgentChatVoiceButton({ onText, disabled = false, disabledMessage
             <Tooltip title={t("agentChat.voice.submit")} placement="top">
               <IconButton
                 aria-label={t("agentChat.voice.submit")}
-                size="small"
                 onClick={handleSubmit}
                 sx={{
                   position: "absolute",

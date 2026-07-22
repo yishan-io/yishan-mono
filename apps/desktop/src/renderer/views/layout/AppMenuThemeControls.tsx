@@ -55,7 +55,7 @@ export function AppMenuThemeControls({ themePreference, onChange, translate }: A
         const ThemeIcon = themeOption.icon;
 
         return (
-          <Tooltip key={themeOption.preference} title={translate(themeOption.title)} arrow>
+          <Tooltip key={themeOption.preference} title={translate(themeOption.title)}>
             <Button
               aria-label={translate(themeOption.ariaLabel)}
               variant={themePreference === themeOption.preference ? "contained" : "outlined"}

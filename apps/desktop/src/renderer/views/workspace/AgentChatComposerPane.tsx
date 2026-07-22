@@ -210,7 +210,6 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
             <Tooltip title={t("agentChat.composer.stop")} placement="top">
               <span>
                 <IconButton
-                  size="small"
                   onClick={handleAbort}
                   aria-label={t("agentChat.composer.stop")}
                   sx={{
@@ -245,7 +244,6 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
             <Tooltip title={t("agentChat.composer.submit")} placement="top">
               <span>
                 <IconButton
-                  size="small"
                   onClick={() => {
                     void handleSubmitButtonClick();
                   }}

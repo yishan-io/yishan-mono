@@ -40,26 +40,21 @@ export function FileTreeToolbar({
     >
       <Tooltip title={createFileActionLabel}>
         <span>
-          <IconButton size="small" aria-label={createFileActionLabel} onClick={onCreateFile} disabled={!canCreateFile}>
+          <IconButton aria-label={createFileActionLabel} onClick={onCreateFile} disabled={!canCreateFile}>
             <LuFilePlus2 size={16} />
           </IconButton>
         </span>
       </Tooltip>
       <Tooltip title={createFolderActionLabel}>
         <span>
-          <IconButton
-            size="small"
-            aria-label={createFolderActionLabel}
-            onClick={onCreateFolder}
-            disabled={!canCreateFolder}
-          >
+          <IconButton aria-label={createFolderActionLabel} onClick={onCreateFolder} disabled={!canCreateFolder}>
             <LuFolderPlus size={18} />
           </IconButton>
         </span>
       </Tooltip>
       <Tooltip title={refreshActionLabel}>
         <span>
-          <IconButton size="small" aria-label={refreshActionLabel} onClick={onRefresh} disabled={!canRefresh}>
+          <IconButton aria-label={refreshActionLabel} onClick={onRefresh} disabled={!canRefresh}>
             <LuRefreshCw size={16} />
           </IconButton>
         </span>

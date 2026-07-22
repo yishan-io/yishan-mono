@@ -7,6 +7,7 @@ import { AgentIcon } from "../../components/AgentIcon";
 import { renderProjectIcon } from "../../components/projectIcons";
 import { isDesktopAgentKind } from "../../helpers/agentSettings";
 import { workspaceStore } from "../../store/workspaceStore";
+import { ScheduledJobStatusIndicator } from "./ScheduledJobStatusIndicator";
 import { describeCronExpression } from "./scheduledJobDetailHelpers";
 
 type ScheduledJobDetailFieldsProps = {
@@ -54,7 +55,6 @@ export function ScheduledJobDetailFields({ job, orgId }: ScheduledJobDetailField
     enabled: Boolean(orgId),
   });
 
-  const statusDotColor = job.status === "active" ? "success.main" : "text.disabled";
   const nodeName = nodeQuery.data?.find((node) => node.id === job.nodeId)?.name ?? job.nodeId;
 
   return (
@@ -65,10 +65,7 @@ export function ScheduledJobDetailFields({ job, orgId }: ScheduledJobDetailField
         </FieldRow>
 
         <FieldRow label={t("scheduledJob.detail.fields.status")}>
-          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>
-            <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: statusDotColor, flexShrink: 0 }} />
-            <Typography variant="body2">{t(`scheduledJob.status.${job.status}`)}</Typography>
-          </Box>
+          <ScheduledJobStatusIndicator status={job.status} />
         </FieldRow>
 
         <FieldRow label={t("scheduledJob.detail.fields.project")}>

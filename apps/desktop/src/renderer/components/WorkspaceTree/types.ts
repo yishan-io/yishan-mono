@@ -1,4 +1,6 @@
 import type React from "react";
+import type { WorkspaceNotificationTone } from "../../helpers/workspaceNotification";
+import type { WorkspaceAgentStatus } from "../../store/chatStore";
 
 export type WorkspaceTreeProject = {
   id: string;
@@ -23,8 +25,8 @@ export type WorkspaceTreeWorkspace = {
   kind?: "managed" | "local";
   additions?: number;
   deletions?: number;
-  runtimeStatus?: "running" | "waiting_input" | "idle";
-  notificationTone?: "none" | "waiting_input" | "done" | "failed";
+  runtimeStatus?: WorkspaceAgentStatus;
+  notificationTone?: WorkspaceNotificationTone;
   isCreating?: boolean;
   lifecycleState?: string;
 };
@@ -44,8 +46,8 @@ export type WorkspaceTreeRow = {
   workspaceKind?: "managed" | "local";
   additions?: number;
   deletions?: number;
-  runtimeStatus?: "running" | "waiting_input" | "idle";
-  notificationTone?: "none" | "waiting_input" | "done" | "failed";
+  runtimeStatus?: WorkspaceAgentStatus;
+  notificationTone?: WorkspaceNotificationTone;
   isCreating?: boolean;
   lifecycleState?: string;
 };

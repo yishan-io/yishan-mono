@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderWithAppTheme } from "../testUtils/renderWithAppTheme";
 import { FileQuickOpenDialog } from "./FileQuickOpenDialog";
 
 vi.mock("./fileTreeIcons", () => ({
@@ -18,7 +19,7 @@ afterEach(() => {
 
 describe("FileQuickOpenDialog", () => {
   it("uses a compact search input", async () => {
-    render(
+    renderWithAppTheme(
       <FileQuickOpenDialog
         open
         query=""

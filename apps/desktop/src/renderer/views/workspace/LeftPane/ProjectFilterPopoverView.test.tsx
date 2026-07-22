@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
 
-import { ThemeProvider } from "@mui/material/styles";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createAppTheme } from "../../../theme";
+import { renderWithAppTheme } from "../../../testUtils/renderWithAppTheme";
 import { ProjectFilterPopoverView } from "./ProjectFilterPopoverView";
 
 const mocked = vi.hoisted(() => {
@@ -64,11 +63,7 @@ afterEach(() => {
 
 describe("ProjectFilterPopoverView", () => {
   it("disables paper background image so arrow color matches in dark theme", () => {
-    render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <ProjectFilterPopoverView />
-      </ThemeProvider>,
-    );
+    renderWithAppTheme(<ProjectFilterPopoverView />);
 
     fireEvent.click(screen.getByRole("button", { name: "Pin projects" }));
 

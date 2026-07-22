@@ -202,7 +202,6 @@ export function CreateProjectFormView({
         </Typography>
         <TextField
           autoFocus={autoFocus}
-          size="small"
           error={!!pathError}
           helperText={pathError}
           value={repoDraft.source === "local" ? repoDraft.path : repoDraft.gitUrl}
@@ -229,8 +228,9 @@ export function CreateProjectFormView({
                   input: {
                     endAdornment: (
                       <InputAdornment position="end">
-                        <Tooltip title={t("project.form.chooseFolder")} arrow>
+                        <Tooltip title={t("project.form.chooseFolder")}>
                           <IconButton
+                            size="medium"
                             edge="end"
                             aria-label={t("project.form.chooseFolder")}
                             disabled={isCreating}
@@ -252,7 +252,6 @@ export function CreateProjectFormView({
           {t("project.form.name")}
         </Typography>
         <TextField
-          size="small"
           disabled={isCreating}
           value={repoDraft.name}
           onChange={(event) =>

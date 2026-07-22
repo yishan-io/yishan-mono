@@ -27,7 +27,6 @@ export function NodeSelectorSection({
       </Typography>
       <TextField
         select
-        size="small"
         fullWidth
         value={selectedNodeId}
         onChange={(event) => onNodeChange(event.target.value)}

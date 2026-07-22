@@ -61,7 +61,7 @@ export function DaemonLogDialog(props: DaemonLogDialogProps) {
     <Dialog open={state.isOpen} onClose={state.close} fullWidth maxWidth="lg">
       <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         {t("settings.daemon.log.title")}
-        <IconButton size="small" onClick={state.close}>
+        <IconButton onClick={state.close}>
           <LuX />
         </IconButton>
       </DialogTitle>

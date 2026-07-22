@@ -94,7 +94,7 @@ export function RecentAgentSessions({ workspaceId, cwd }: RecentAgentSessionsPro
                 variant="text"
                 color="inherit"
                 onClick={() => openTab({ workspaceId, kind: "agent-chat", title, cwd, sessionId: session.sessionId })}
-                sx={{ justifyContent: "space-between", textTransform: "none", textAlign: "left" }}
+                sx={{ justifyContent: "space-between", textAlign: "left" }}
               >
                 <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {title}

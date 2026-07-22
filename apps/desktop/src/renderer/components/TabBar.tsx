@@ -316,7 +316,6 @@ export function TabBar({
           {unpinnedTabs.map(renderTabItem)}
         </Box>
         <IconButton
-          size="small"
           aria-label={newTabLabel}
           onClick={(event) => setCreateMenuAnchor(event.currentTarget)}
           disabled={disabled}
@@ -327,7 +326,6 @@ export function TabBar({
       </Box>
       {onHistoryClick && (
         <IconButton
-          size="small"
           aria-label="Session history"
           onClick={onHistoryClick}
           disabled={disabled}
@@ -338,7 +336,6 @@ export function TabBar({
       )}
       {(onSplitRight || onSplitDown) && (
         <IconButton
-          size="small"
           aria-label="Split pane"
           onClick={(event) => setSplitMenuAnchor(event.currentTarget)}
           disabled={disabled || !selectedTabId}

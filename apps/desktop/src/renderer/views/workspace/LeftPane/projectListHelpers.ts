@@ -1,27 +1,4 @@
 /**
- * Resolves the notification tone badge for one workspace row based on runtime
- * status and unread tone state.
- */
-export function resolveWorkspaceNotificationTone(input: {
-  runtimeStatus: "running" | "waiting_input" | "idle";
-  unreadTone?: "success" | "error";
-}): "none" | "waiting_input" | "done" | "failed" {
-  if (input.runtimeStatus === "waiting_input") {
-    return "waiting_input";
-  }
-
-  if (input.unreadTone === "error") {
-    return "failed";
-  }
-
-  if (input.unreadTone === "success") {
-    return "done";
-  }
-
-  return "none";
-}
-
-/**
  * Reorders an array of IDs by moving `draggedId` to just before or after `targetId`.
  */
 export function reorderIds(input: {

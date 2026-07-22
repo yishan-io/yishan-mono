@@ -87,7 +87,6 @@ export function AddOrgMemberDialog({ isOpen, onClose, onSuccess }: AddOrgMemberD
               onChange={(event) => setEmail(event.target.value)}
               disabled={isSubmitting}
               autoFocus
-              size="small"
               fullWidth
               type="email"
               placeholder={t("settings.members.addDialog.emailPlaceholder")}

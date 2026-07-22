@@ -24,6 +24,28 @@ export function resolveAppThemeMode(preference: AppThemePreference, systemPrefer
   return systemPrefersDark ? "dark" : "light";
 }
 
+/**
+ * Creates the renderer theme, including compact defaults for MUI `IconButton` and `TextField` controls.
+ * Runtime controls inherit these defaults unless their component contract explicitly overrides the size.
+ */
 export function createAppTheme(mode: AppThemeMode) {
-  return createTheme(createMuiThemeOptions(mode));
+  const tokenThemeOptions = createMuiThemeOptions(mode);
+
+  return createTheme({
+    ...tokenThemeOptions,
+    components: {
+      ...tokenThemeOptions.components,
+      MuiIconButton: {
+        ...tokenThemeOptions.components.MuiIconButton,
+        defaultProps: {
+          size: "small",
+        },
+      },
+      MuiTextField: {
+        defaultProps: {
+          size: "small",
+        },
+      },
+    },
+  });
 }

@@ -91,7 +91,6 @@ export function TableDropdownMenu({
         }}
         endIcon={<LuChevronDown size={14} />}
         sx={{
-          textTransform: "none",
           color: "text.secondary",
           borderColor: "divider",
           minWidth: 0,
@@ -159,7 +158,6 @@ export function TableDropdownMenu({
           rows.map((row) => (
             <MenuItem
               key={row.id}
-              disableRipple
               sx={{
                 ...gridSx,
                 minHeight: 32,
@@ -179,7 +177,6 @@ export function TableDropdownMenu({
                 }
                 return (
                   <IconButton
-                    size="small"
                     aria-label={rowAction.ariaLabel}
                     disabled={rowAction.disabled === true}
                     sx={{
