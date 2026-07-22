@@ -13,7 +13,6 @@ function createProvider(overrides: Partial<PiProviderRecord>): PiProviderRecord 
   return {
     id: "provider",
     name: "Provider",
-    hasAuth: false,
     available: false,
     authSource: "none",
     authMethods: [],
@@ -78,7 +77,6 @@ describe("AiChatProviderActionControl", () => {
 
   it("confirms before replacing another active authentication method", () => {
     const provider = createProvider({
-      hasAuth: true,
       available: true,
       authSource: "oauth",
       authMethods: [
@@ -100,7 +98,6 @@ describe("AiChatProviderActionControl", () => {
   it("logs out an OAuth provider directly without opening a manage menu", () => {
     const method = { kind: "oauth", label: "Subscription" } as const;
     const provider = createProvider({
-      hasAuth: true,
       available: true,
       authSource: "oauth",
       authMethods: [method],
@@ -115,7 +112,7 @@ describe("AiChatProviderActionControl", () => {
   });
 
   it("manages stored API keys with replace and remove actions", () => {
-    const provider = createProvider({ hasAuth: true, available: true, authSource: "auth_file" });
+    const provider = createProvider({ available: true, authSource: "auth_file" });
     const method = { kind: "api_key", label: "Provider API key" } as const;
     const { onAuthenticate, onRemoveCredential } = renderControl(provider, method);
 
@@ -129,7 +126,7 @@ describe("AiChatProviderActionControl", () => {
   });
 
   it("renders no action for externally managed providers", () => {
-    renderControl(createProvider({ hasAuth: true, available: true, authSource: "env" }), {
+    renderControl(createProvider({ available: true, authSource: "env" }), {
       kind: "api_key",
       label: "Provider API key",
     });
@@ -139,7 +136,6 @@ describe("AiChatProviderActionControl", () => {
 
   it("confirms before replacing ambient API-key authentication with OAuth", () => {
     const provider = createProvider({
-      hasAuth: true,
       available: true,
       authSource: "env",
       authMethods: [

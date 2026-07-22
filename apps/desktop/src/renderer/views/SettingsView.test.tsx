@@ -29,9 +29,7 @@ vi.mock("./settings/notifications/NotificationSettingsView", () => ({
 }));
 
 vi.mock("./settings/AgentSettingsView", () => ({
-  AgentSettingsView: ({ focusAiChatProviders }: { focusAiChatProviders?: boolean }) => (
-    <div data-testid="agent-settings-panel" data-focus-ai-chat-providers={focusAiChatProviders ? "true" : "false"} />
-  ),
+  AgentSettingsView: () => <div data-testid="agent-settings-panel" />,
 }));
 
 vi.mock("./settings/CLIToolsSettingsView", () => ({
@@ -504,40 +502,6 @@ describe("SettingsView", () => {
     fireEvent.click(screen.getByRole("button", { name: /settings\.agents\.items\.codex/ }));
 
     expect(screen.getByTestId("agent-settings-panel")).toBeTruthy();
-  });
-
-  it("matches provider settings as a separate search item and opens agents tab", () => {
-    render(
-      <AppThemePreferenceProvider>
-        <MemoryRouter initialEntries={["/settings?tab=notifications"]}>
-          <Routes>
-            <Route path="/settings" element={<SettingsView />} />
-          </Routes>
-        </MemoryRouter>
-      </AppThemePreferenceProvider>,
-    );
-
-    fireEvent.change(screen.getByPlaceholderText("settings.searchPlaceholder"), {
-      target: { value: "aiChatProviders" },
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: /settings\.aiChatProviders\.title/ }));
-
-    expect(screen.getByTestId("agent-settings-panel").getAttribute("data-focus-ai-chat-providers")).toBe("true");
-  });
-
-  it("forwards the provider focus deep link to agent settings", () => {
-    render(
-      <AppThemePreferenceProvider>
-        <MemoryRouter initialEntries={["/settings?tab=agents&focus=aiChatProviders"]}>
-          <Routes>
-            <Route path="/settings" element={<SettingsView />} />
-          </Routes>
-        </MemoryRouter>
-      </AppThemePreferenceProvider>,
-    );
-
-    expect(screen.getByTestId("agent-settings-panel").getAttribute("data-focus-ai-chat-providers")).toBe("true");
   });
 
   it("renders keybindings panel when keybindings tab is selected", () => {

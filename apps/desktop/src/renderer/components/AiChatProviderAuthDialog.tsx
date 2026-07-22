@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { DesktopRpcEventBridge, DesktopRpcEventEnvelope } from "../../main/ipc";
+import type { DesktopRpcEventEnvelope } from "../../main/ipc";
 import {
   PI_PROVIDER_CONFIG_EVENT_METHODS,
   type PiAuthPromptRequestEvent,
@@ -19,29 +19,14 @@ import {
   parsePiAuthPromptClosedEventPayload,
   parsePiAuthPromptRequestEventPayload,
 } from "../../shared/contracts/piProviderConfig";
-import {
-  type PiAuthPromptCommandResult,
-  respondPiAuthPrompt as respondPiAuthPromptCommand,
-} from "../commands/piProviderConfigCommands";
+import { respondPiAuthPrompt } from "../commands/piProviderConfigCommands";
 import { useDialogRegistration } from "../hooks/useDialogRegistration";
 import { getDesktopBridge } from "../rpc/rpcTransport";
 
-/** Desktop event and command boundary used by the provider authentication dialog. */
-export type AiChatProviderAuthDialogBridge = {
-  events: DesktopRpcEventBridge;
-  respondPiAuthPrompt: (input: PiAuthPromptResponseInput) => Promise<PiAuthPromptCommandResult>;
-};
-
-type AiChatProviderAuthDialogProps = {
-  bridge?: AiChatProviderAuthDialogBridge;
-};
-
 /** Renders Pi-owned authentication prompts with the active desktop MUI theme. */
-export function AiChatProviderAuthDialog({ bridge: providedBridge }: AiChatProviderAuthDialogProps) {
+export function AiChatProviderAuthDialog() {
   const { t } = useTranslation();
-  const desktopBridge = providedBridge ? undefined : getDesktopBridge();
-  const events = providedBridge?.events ?? desktopBridge?.events;
-  const respondPiAuthPrompt = providedBridge?.respondPiAuthPrompt ?? respondPiAuthPromptCommand;
+  const events = getDesktopBridge()?.events;
   const [request, setRequest] = useState<PiAuthPromptRequestEvent>();
   const activeRequestIdRef = useRef<string | undefined>(undefined);
   const [value, setValue] = useState("");

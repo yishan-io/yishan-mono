@@ -61,7 +61,7 @@ export function AiChatProviderActionControl({
 
   if (action.kind === "authenticate") {
     const actionKey = action.method === "oauth" ? "login" : "setApiKey";
-    const requiresSwitchConfirmation = provider.hasAuth;
+    const requiresSwitchConfirmation = provider.authSource !== "none";
     return (
       <>
         <Button

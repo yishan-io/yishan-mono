@@ -18,7 +18,6 @@ import {
 } from "react-icons/bi";
 import { LuHammer } from "react-icons/lu";
 import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
-import { AI_CHAT_PROVIDERS_SETTINGS_FOCUS_ID } from "../../helpers/settingsNavigation";
 import {
   NOTIFICATION_SETTINGS_SEARCH_ITEMS,
   type NotificationSettingsFocusItemId,
@@ -58,7 +57,7 @@ export type SettingsSearchCatalogItem = {
   labelKey: string;
   sectionLabelKey: string;
   keywordKeys: string[];
-  focusItemId?: NotificationSettingsFocusItemId | typeof AI_CHAT_PROVIDERS_SETTINGS_FOCUS_ID;
+  focusItemId?: NotificationSettingsFocusItemId;
 };
 
 export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
@@ -361,21 +360,6 @@ const AGENT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.agents.status.checking",
       "settings.agents.default.label",
       "settings.agents.inUse",
-    ],
-  },
-  {
-    id: "ai-chat-providers",
-    tab: "agents",
-    icon: BiBot,
-    labelKey: "settings.aiChatProviders.title",
-    sectionLabelKey: "settings.items.agents",
-    focusItemId: AI_CHAT_PROVIDERS_SETTINGS_FOCUS_ID,
-    keywordKeys: [
-      "settings.aiChatProviders.description",
-      "settings.aiChatProviders.providers.actions.login",
-      "settings.aiChatProviders.models.providerTitle",
-      "settings.aiChatProviders.models.defaultTitle",
-      "settings.aiChatProviders.models.selectionDescription",
     ],
   },
   ...SUPPORTED_DESKTOP_AGENT_KINDS.map((agentKind) => ({

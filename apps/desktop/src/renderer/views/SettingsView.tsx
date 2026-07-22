@@ -20,7 +20,6 @@ import { SearchInput } from "../components/SearchInput";
 import { SettingsErrorBoundary, SettingsPageLayout, SettingsSectionHeader } from "../components/settings";
 import { ThemePreferencePicker } from "../components/settings/ThemePreferencePicker";
 import { getRendererPlatform } from "../helpers/platform";
-import { AI_CHAT_PROVIDERS_SETTINGS_FOCUS_ID } from "../helpers/settingsNavigation";
 import { useThemePreference } from "../hooks/useThemePreference";
 import { AccountSettingsView } from "./settings/AccountSettingsView";
 import { AgentSettingsView } from "./settings/AgentSettingsView";
@@ -51,7 +50,7 @@ type SettingsSearchResult = {
   icon: typeof BiCog;
   label: string;
   sectionLabel: string;
-  focusItemId?: NotificationSettingsFocusItemId | typeof AI_CHAT_PROVIDERS_SETTINGS_FOCUS_ID;
+  focusItemId?: NotificationSettingsFocusItemId;
   rank: number;
 };
 
@@ -111,8 +110,6 @@ export function SettingsView() {
   const selectedTabParam = searchParams.get("tab");
   const focusedItemParam = searchParams.get("focus");
   const focusedNotificationItemId = isNotificationSettingsFocusItemId(focusedItemParam) ? focusedItemParam : undefined;
-  const focusAiChatProviders =
-    selectedTabParam === "agents" && focusedItemParam === AI_CHAT_PROVIDERS_SETTINGS_FOCUS_ID;
   const shouldReserveMacWindowControlsInset = getRendererPlatform() === "darwin";
 
   const selectedTab = useMemo<SettingsTab>(() => {
@@ -177,7 +174,7 @@ export function SettingsView() {
       account: <AccountSettingsView />,
       agents: (
         <SettingsErrorBoundary sectionLabel={t("settings.agents.title")}>
-          <AgentSettingsView focusAiChatProviders={focusAiChatProviders} />
+          <AgentSettingsView />
         </SettingsErrorBoundary>
       ),
       computerUse: <ComputerUseSettingsView />,
@@ -212,7 +209,7 @@ export function SettingsView() {
       memory: <MemorySettingsView />,
       workspace: <WorkspaceSettingsView />,
     }),
-    [focusAiChatProviders, focusedNotificationItemId, setThemePreference, t, themePreference],
+    [focusedNotificationItemId, setThemePreference, t, themePreference],
   );
 
   return (
@@ -262,7 +259,7 @@ export function SettingsView() {
                     const Icon = result.icon;
                     const isSelected =
                       selectedTab === result.tab &&
-                      (result.focusItemId === undefined || focusedItemParam === result.focusItemId);
+                      (result.focusItemId === undefined || focusedNotificationItemId === result.focusItemId);
                     return (
                       <ListItemButton
                         key={result.id}

@@ -2,13 +2,11 @@ import { Alert, Box, Button, Chip, CircularProgress, Stack } from "@mui/material
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuRefreshCw } from "react-icons/lu";
+import { useLocation } from "react-router-dom";
 import { ModelAutocomplete } from "../../components/ModelAutocomplete";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
-import {
-  formatAiChatModelSelection,
-  isAiChatModelSelectionAvailable,
-  parseAiChatModelSelection,
-} from "../../helpers/aiChatSettings";
+import { isAiChatModelSelectionAvailable } from "../../helpers/aiChatSettings";
+import { AI_CHAT_PROVIDERS_SETTINGS_ANCHOR_ID } from "../../helpers/settingsNavigation";
 import { useCommands } from "../../hooks/useCommands";
 import { aiChatSettingsStore } from "../../store/settings/aiChatSettingsStore";
 import { piProviderConfigStore } from "../../store/settings/piProviderConfigStore";
@@ -22,17 +20,10 @@ import {
   isAiChatProviderConfiguredButUnavailable,
 } from "./aiChatProviderHelpers";
 
-const PROVIDER_SETTINGS_ANCHOR_ID = "ai-chat-provider-settings";
-const FOCUS_HIGHLIGHT_DURATION_MS = 1800;
-
-type AiChatProviderSettingsSectionProps = {
-  focusRequested?: boolean;
-};
-
 /** Renders Desktop AI Chat provider/model configuration under the Agents settings tab. */
-export function AiChatProviderSettingsSection({ focusRequested = false }: AiChatProviderSettingsSectionProps) {
+export function AiChatProviderSettingsSection() {
   const { t } = useTranslation();
-  const [isFocusHighlighted, setIsFocusHighlighted] = useState(false);
+  const location = useLocation();
   const {
     getPiProviderConfigSnapshot,
     refreshPiProviderConfigSnapshot,
@@ -58,26 +49,12 @@ export function AiChatProviderSettingsSection({ focusRequested = false }: AiChat
   }, [getPiProviderConfigSnapshot, snapshot]);
 
   useEffect(() => {
-    if (!focusRequested) {
+    if (location.hash !== `#${AI_CHAT_PROVIDERS_SETTINGS_ANCHOR_ID}`) {
       return;
     }
 
-    const targetElement = document.getElementById(PROVIDER_SETTINGS_ANCHOR_ID);
-    if (!targetElement) {
-      return;
-    }
-
-    targetElement.scrollIntoView({ block: "start", behavior: "smooth" });
-    setIsFocusHighlighted(true);
-
-    const timeoutId = window.setTimeout(() => {
-      setIsFocusHighlighted(false);
-    }, FOCUS_HIGHLIGHT_DURATION_MS);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [focusRequested]);
+    document.getElementById(AI_CHAT_PROVIDERS_SETTINGS_ANCHOR_ID)?.scrollIntoView({ block: "start" });
+  }, [location.hash]);
 
   const providerEntries = useMemo(
     () => buildAiChatProviderConfigEntries(snapshot?.providers ?? []),
@@ -115,15 +92,9 @@ export function AiChatProviderSettingsSection({ focusRequested = false }: AiChat
 
   return (
     <Box
-      id={PROVIDER_SETTINGS_ANCHOR_ID}
+      id={AI_CHAT_PROVIDERS_SETTINGS_ANCHOR_ID}
       data-testid="ai-chat-provider-settings-section"
-      data-focus-highlighted={isFocusHighlighted ? "true" : "false"}
-      sx={{
-        scrollMarginTop: 3,
-        borderRadius: 1,
-        backgroundColor: isFocusHighlighted ? "action.hover" : "transparent",
-        transition: "background-color 220ms ease",
-      }}
+      sx={{ scrollMarginTop: 3 }}
     >
       <SettingsSectionHeader
         title={t("settings.aiChatProviders.title")}
@@ -259,13 +230,13 @@ export function AiChatProviderSettingsSection({ focusRequested = false }: AiChat
                   <Box sx={{ minWidth: 300, maxWidth: 360 }}>
                     <ModelAutocomplete
                       options={modelOptions}
-                      value={
-                        defaultModel && hasAvailableDefaultAiChatModel
-                          ? (formatAiChatModelSelection(defaultModel) ?? "")
-                          : ""
-                      }
-                      onChange={(pattern) => {
-                        setDefaultAiChatModel(parseAiChatModelSelection(pattern));
+                      value={defaultModel && hasAvailableDefaultAiChatModel ? defaultModel.modelId : ""}
+                      onChange={(modelId) => {
+                        setDefaultAiChatModel(
+                          activeSelectedProviderId && modelId
+                            ? { providerId: activeSelectedProviderId, modelId }
+                            : undefined,
+                        );
                       }}
                       loading={isLoading || isRefreshing}
                       disabled={!activeSelectedProviderId || modelOptions.length === 0}

@@ -108,7 +108,7 @@ function getAiChatProviderStatusKind(provider: PiProviderRecord): AiChatProvider
 
 /** Flags configured providers whose refreshed model registry has no usable model. */
 export function isAiChatProviderConfiguredButUnavailable(provider: PiProviderRecord): boolean {
-  return provider.hasAuth && !provider.available;
+  return provider.authSource !== "none" && !provider.available;
 }
 
 /** Builds one sorted provider list from providers that currently expose at least one available model. */
@@ -133,7 +133,7 @@ export function buildAvailableAiChatModelOptionsForProvider(
   return models
     .filter((model) => model.providerId === providerId)
     .map<ModelOption>((model) => ({
-      id: `${model.providerId}/${model.modelId}`,
+      id: model.modelId,
       name: model.label,
     }))
     .sort((left, right) => left.name.localeCompare(right.name));

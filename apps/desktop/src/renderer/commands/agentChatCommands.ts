@@ -141,20 +141,12 @@ async function resolveAvailableDefaultAiChatModel(selection: AiChatModelSelectio
       return undefined;
     }
     if (!isAiChatModelSelectionAvailable(result.value.models, selection)) {
-      if (!result.value.modelsLoadError && isCurrentDefaultAiChatModel(selection)) {
-        aiChatSettingsStore.getState().setDefaultModel(undefined);
-      }
       return undefined;
     }
     return formatAiChatModelSelection(selection);
   } catch {
     return undefined;
   }
-}
-
-function isCurrentDefaultAiChatModel(selection: AiChatModelSelection): boolean {
-  const currentSelection = aiChatSettingsStore.getState().defaultModel;
-  return currentSelection?.providerId === selection.providerId && currentSelection.modelId === selection.modelId;
 }
 
 /** Returns the tabId that currently owns the given agent-chat session, if any. */

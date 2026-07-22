@@ -1,9 +1,4 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
-import type {
-  PiProviderConfigErrorPayload,
-  PiProviderConfigMutationOutcome,
-  PiProviderConfigSnapshot,
-} from "./piProviderConfig";
+import { describe, expect, it } from "vitest";
 import {
   parseAuthenticatePiProviderInput,
   parsePiAuthPromptClosedEventPayload,
@@ -69,11 +64,5 @@ describe("Pi provider config IPC contract parsers", () => {
   it("parses only non-empty prompt closed request IDs", () => {
     expect(parsePiAuthPromptClosedEventPayload({ requestId: " request-1 " })).toBe("request-1");
     expect(parsePiAuthPromptClosedEventPayload({ requestId: " " })).toBeUndefined();
-  });
-
-  it("models credential mutation outcomes as exactly one result", () => {
-    expectTypeOf<PiProviderConfigMutationOutcome>().toEqualTypeOf<
-      { snapshot: PiProviderConfigSnapshot } | { refreshError: PiProviderConfigErrorPayload }
-    >();
   });
 });

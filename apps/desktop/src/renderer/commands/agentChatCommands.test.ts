@@ -113,7 +113,7 @@ describe("agentChatCommands.ensurePiSession", () => {
     expect(mocks.getPiProviderConfigSnapshot).not.toHaveBeenCalled();
   });
 
-  it("does not pass or keep a default model that the fresh runtime snapshot marks unavailable", async () => {
+  it("does not pass an unavailable default model but preserves the saved preference", async () => {
     aiChatSettingsStore.setState({
       defaultModel: { providerId: "openai-codex", modelId: "missing-model" },
     });
@@ -127,7 +127,10 @@ describe("agentChatCommands.ensurePiSession", () => {
     });
 
     expect(mocks.start.mock.calls[0]?.[0]).not.toHaveProperty("model");
-    expect(aiChatSettingsStore.getState().defaultModel).toBeUndefined();
+    expect(aiChatSettingsStore.getState().defaultModel).toEqual({
+      providerId: "openai-codex",
+      modelId: "missing-model",
+    });
   });
 
   it("does not clear a newer default while validating an older selection", async () => {

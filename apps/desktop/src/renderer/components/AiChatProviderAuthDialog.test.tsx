@@ -1,46 +1,52 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DesktopRpcEventEnvelope } from "../../main/ipc";
-import type { AiChatProviderAuthDialogBridge } from "./AiChatProviderAuthDialog";
 import { AiChatProviderAuthDialog } from "./AiChatProviderAuthDialog";
+
+const mocks = vi.hoisted(() => ({
+  listener: undefined as ((event: DesktopRpcEventEnvelope) => void) | undefined,
+  respondPiAuthPrompt: vi.fn(),
+}));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-function createBridge() {
-  let listener: ((event: DesktopRpcEventEnvelope) => void) | undefined;
-  const respondPiAuthPrompt = vi.fn<AiChatProviderAuthDialogBridge["respondPiAuthPrompt"]>(async () => ({
-    ok: true,
-  }));
-  const bridge: AiChatProviderAuthDialogBridge = {
-    respondPiAuthPrompt,
+vi.mock("../commands/piProviderConfigCommands", () => ({
+  respondPiAuthPrompt: mocks.respondPiAuthPrompt,
+}));
+
+vi.mock("../rpc/rpcTransport", () => ({
+  getDesktopBridge: () => ({
     events: {
-      subscribe: (nextListener) => {
-        listener = nextListener;
+      subscribe: (nextListener: (event: DesktopRpcEventEnvelope) => void) => {
+        mocks.listener = nextListener;
         return () => {
-          listener = undefined;
+          if (mocks.listener === nextListener) {
+            mocks.listener = undefined;
+          }
         };
       },
     },
-  };
-  return {
-    bridge,
-    respondPiAuthPrompt,
-    emit: (event: DesktopRpcEventEnvelope) => {
-      act(() => listener?.(event));
-    },
-  };
+  }),
+}));
+
+function emit(event: DesktopRpcEventEnvelope) {
+  act(() => mocks.listener?.(event));
 }
 
 describe("AiChatProviderAuthDialog", () => {
   afterEach(cleanup);
+  beforeEach(() => {
+    mocks.listener = undefined;
+    mocks.respondPiAuthPrompt.mockReset();
+    mocks.respondPiAuthPrompt.mockResolvedValue({ ok: true });
+  });
 
   it("renders secret prompts with the desktop dialog and submits the local value", async () => {
-    const { bridge, emit, respondPiAuthPrompt } = createBridge();
-    render(<AiChatProviderAuthDialog bridge={bridge} />);
+    render(<AiChatProviderAuthDialog />);
 
     emit({
       method: "piProviderConfig.authPrompt",
@@ -55,7 +61,7 @@ describe("AiChatProviderAuthDialog", () => {
     fireEvent.change(input, { target: { value: "ant-secret" } });
     fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.prompt.submit" }));
 
-    expect(respondPiAuthPrompt).toHaveBeenCalledWith({
+    expect(mocks.respondPiAuthPrompt).toHaveBeenCalledWith({
       requestId: "request-1",
       status: "submitted",
       value: "ant-secret",
@@ -63,8 +69,7 @@ describe("AiChatProviderAuthDialog", () => {
   });
 
   it("preserves provider-owned select option ids and supports cancellation", () => {
-    const { bridge, emit, respondPiAuthPrompt } = createBridge();
-    render(<AiChatProviderAuthDialog bridge={bridge} />);
+    render(<AiChatProviderAuthDialog />);
 
     emit({
       method: "piProviderConfig.authPrompt",
@@ -85,13 +90,12 @@ describe("AiChatProviderAuthDialog", () => {
     fireEvent.click(screen.getByRole("option", { name: "Device code" }));
     fireEvent.click(screen.getByRole("button", { name: "common.actions.cancel" }));
 
-    expect(respondPiAuthPrompt).toHaveBeenCalledWith({ requestId: "request-2", status: "cancelled" });
+    expect(mocks.respondPiAuthPrompt).toHaveBeenCalledWith({ requestId: "request-2", status: "cancelled" });
   });
 
   it("keeps the prompt value visible and shows a recoverable response error", async () => {
-    const { bridge, emit, respondPiAuthPrompt } = createBridge();
-    respondPiAuthPrompt.mockResolvedValueOnce({ ok: false, errorMessage: "Prompt expired. Please retry." });
-    render(<AiChatProviderAuthDialog bridge={bridge} />);
+    mocks.respondPiAuthPrompt.mockResolvedValueOnce({ ok: false, errorMessage: "Prompt expired. Please retry." });
+    render(<AiChatProviderAuthDialog />);
 
     emit({
       method: "piProviderConfig.authPrompt",
@@ -109,8 +113,7 @@ describe("AiChatProviderAuthDialog", () => {
   });
 
   it("closes a matching prompt when the provider completes through the browser callback", () => {
-    const { bridge, emit, respondPiAuthPrompt } = createBridge();
-    render(<AiChatProviderAuthDialog bridge={bridge} />);
+    render(<AiChatProviderAuthDialog />);
 
     emit({
       method: "piProviderConfig.authPrompt",
@@ -121,18 +124,17 @@ describe("AiChatProviderAuthDialog", () => {
     emit({ method: "piProviderConfig.authPromptClosed", payload: { requestId: "request-browser" } });
 
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(respondPiAuthPrompt).not.toHaveBeenCalled();
+    expect(mocks.respondPiAuthPrompt).not.toHaveBeenCalled();
   });
 
   it("keeps a newer prompt visible when an older response settles", async () => {
-    const { bridge, emit, respondPiAuthPrompt } = createBridge();
     let resolveFirstResponse: ((result: { ok: true }) => void) | undefined;
-    respondPiAuthPrompt.mockReturnValueOnce(
+    mocks.respondPiAuthPrompt.mockReturnValueOnce(
       new Promise<{ ok: true }>((resolve) => {
         resolveFirstResponse = resolve;
       }),
     );
-    render(<AiChatProviderAuthDialog bridge={bridge} />);
+    render(<AiChatProviderAuthDialog />);
 
     emit({
       method: "piProviderConfig.authPrompt",

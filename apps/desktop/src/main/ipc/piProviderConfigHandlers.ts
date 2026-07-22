@@ -1,5 +1,5 @@
 import { BrowserWindow, ipcMain } from "electron";
-import type { PiProviderConfigMutationOutcome, PiProviderConfigResult } from "../../shared/contracts/piProviderConfig";
+import type { PiProviderConfigResult } from "../../shared/contracts/piProviderConfig";
 import {
   parseAuthenticatePiProviderInput,
   parsePiAuthPromptResponseInput,
@@ -63,7 +63,7 @@ export function registerPiProviderConfigIpcHandlers(
       } finally {
         authenticationCoordinator.finish(senderId, input.providerId);
       }
-      return await refreshAfterCredentialMutation(piProviderConfigService);
+      return true as const;
     });
   });
 
@@ -100,30 +100,9 @@ export function registerPiProviderConfigIpcHandlers(
         throw createInvalidInputError();
       }
       await piProviderConfigService.removeCredential(providerId);
-      return await refreshAfterCredentialMutation(piProviderConfigService);
+      return true as const;
     });
   });
-}
-
-async function refreshAfterCredentialMutation(
-  service: PiProviderConfigService,
-): Promise<PiProviderConfigMutationOutcome> {
-  try {
-    return { snapshot: await service.refreshSnapshot() };
-  } catch (error) {
-    const errorPayload = toPiProviderConfigErrorPayload(error);
-    console.error(
-      "Refreshing provider configuration after credential change failed",
-      errorPayload.code,
-      errorPayload.message,
-    );
-    return {
-      refreshError: {
-        code: "snapshot_refresh_failed",
-        message: "Credential updated, but provider and model status could not be refreshed. Refresh to try again.",
-      },
-    };
-  }
 }
 
 async function runPiProviderConfigOperation<T>(

@@ -12,12 +12,11 @@ import {
 function createProvider(
   id: string,
   name: string,
-  hasAuth: boolean,
   authSource: PiProviderRecord["authSource"],
   authMethods: PiProviderRecord["authMethods"] = [],
-  available = hasAuth,
+  available = authSource !== "none",
 ): PiProviderRecord {
-  return { id, name, hasAuth, available, authSource, authMethods };
+  return { id, name, available, authSource, authMethods };
 }
 
 const MODELS: PiProviderModelRecord[] = [
@@ -37,11 +36,11 @@ const MODELS: PiProviderModelRecord[] = [
 
 describe("aiChatProviderHelpers", () => {
   it("builds one flat provider list ordered by Pi-derived configuration type", () => {
-    const anthropic = createProvider("anthropic", "Anthropic", true, "oauth", [
+    const anthropic = createProvider("anthropic", "Anthropic", "oauth", [
       { kind: "oauth", label: "Anthropic (Claude Pro/Max)" },
       { kind: "api_key", label: "Anthropic API key" },
     ]);
-    const bedrock = createProvider("amazon-bedrock", "Amazon Bedrock", false, "none", [
+    const bedrock = createProvider("amazon-bedrock", "Amazon Bedrock", "none", [
       { kind: "external", label: "AWS credentials" },
     ]);
 
@@ -55,7 +54,7 @@ describe("aiChatProviderHelpers", () => {
   });
 
   it("derives connected state and actions for each configuration method independently", () => {
-    const provider = createProvider("anthropic", "Anthropic", true, "oauth", [
+    const provider = createProvider("anthropic", "Anthropic", "oauth", [
       { kind: "oauth", label: "Anthropic (Claude Pro/Max)" },
       { kind: "api_key", label: "Anthropic API key" },
     ]);
@@ -82,21 +81,21 @@ describe("aiChatProviderHelpers", () => {
     ["external", "connectedExternal"],
     ["none", undefined],
   ] as const)("maps %s auth to %s status", (authSource, expectedStatus) => {
-    const provider = createProvider("provider", "Provider", true, authSource);
+    const provider = createProvider("provider", "Provider", authSource);
     const method = { kind: authSource === "oauth" ? ("oauth" as const) : ("api_key" as const), label: "Auth" };
     expect(getAiChatProviderConfigEntryStatusKind({ provider, method })).toBe(expectedStatus);
   });
 
   it("identifies unconfigured ambient providers without making them actionable", () => {
     const method = { kind: "external", label: "AWS credentials" } as const;
-    const provider = createProvider("amazon-bedrock", "Amazon Bedrock", false, "none", [method]);
+    const provider = createProvider("amazon-bedrock", "Amazon Bedrock", "none", [method]);
 
     expect(getAiChatProviderConfigEntryStatusKind({ provider, method })).toBe("externalSetupRequired");
     expect(getAiChatProviderConfigEntryAction({ provider, method })).toBeUndefined();
   });
 
   it("keeps the active ambient API key read-only while allowing a switch to OAuth", () => {
-    const provider = createProvider("anthropic", "Anthropic", true, "env", [
+    const provider = createProvider("anthropic", "Anthropic", "env", [
       { kind: "oauth", label: "Anthropic subscription" },
       { kind: "api_key", label: "Anthropic API key" },
     ]);
@@ -110,7 +109,7 @@ describe("aiChatProviderHelpers", () => {
   });
 
   it("keeps stored credential status separate from runtime availability", () => {
-    const provider = createProvider("azure", "Azure", true, "auth_file", [], false);
+    const provider = createProvider("azure", "Azure", "auth_file", [], false);
 
     expect(
       getAiChatProviderConfigEntryStatusKind({ provider, method: { kind: "api_key", label: "Azure API key" } }),
@@ -136,9 +135,7 @@ describe("aiChatProviderHelpers", () => {
   });
 
   it("builds model options only for the selected available provider", () => {
-    expect(buildAvailableAiChatModelOptionsForProvider(MODELS, "openai")).toEqual([
-      { id: "openai/gpt-5", name: "GPT-5" },
-    ]);
+    expect(buildAvailableAiChatModelOptionsForProvider(MODELS, "openai")).toEqual([{ id: "gpt-5", name: "GPT-5" }]);
     expect(buildAvailableAiChatModelOptionsForProvider(MODELS, undefined)).toEqual([]);
   });
 });

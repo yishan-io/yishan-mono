@@ -41,10 +41,6 @@ describe("registerPiProviderConfigIpcHandlers", () => {
     vi.clearAllMocks();
   });
 
-  it("uses the provider-config snapshot IPC channel name", () => {
-    expect(HOST_IPC_CHANNELS.getPiProviderConfigSnapshot).toBe("desktop:host/get-pi-provider-config-snapshot");
-  });
-
   it.each([
     [HOST_IPC_CHANNELS.authenticatePiProvider, { providerId: "", method: "oauth" }],
     [HOST_IPC_CHANNELS.cancelPiProviderAuthentication, ""],
@@ -90,15 +86,11 @@ describe("registerPiProviderConfigIpcHandlers", () => {
     expect(service.getSnapshot).not.toHaveBeenCalled();
   });
 
-  it("keeps authentication successful when the follow-up snapshot refresh fails", async () => {
+  it("returns authentication success without coupling it to snapshot refresh", async () => {
     const service = createService({
       authenticate: vi.fn(async () => undefined),
-      refreshSnapshot: vi.fn(async () => {
-        throw new Error("provider secret sk-refresh");
-      }),
     });
     mocks.fromWebContents.mockReturnValue({ webContents: { send: vi.fn() } });
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     registerPiProviderConfigIpcHandlers(service, () => null);
 
     const result = await getHandler(HOST_IPC_CHANNELS.authenticatePiProvider)(
@@ -106,36 +98,20 @@ describe("registerPiProviderConfigIpcHandlers", () => {
       { providerId: "openai", method: "api_key" },
     );
 
-    expect(result).toEqual({
-      ok: true,
-      value: {
-        refreshError: {
-          code: "snapshot_refresh_failed",
-          message: "Credential updated, but provider and model status could not be refreshed. Refresh to try again.",
-        },
-      },
-    });
-    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("sk-refresh");
+    expect(result).toEqual({ ok: true, value: true });
+    expect(service.refreshSnapshot).not.toHaveBeenCalled();
   });
 
-  it("ends authentication before refreshing the post-login snapshot", async () => {
-    let resolveSnapshot: (() => void) | undefined;
-    const refreshSnapshot = vi.fn(
-      async () =>
-        await new Promise<{ providers: []; models: [] }>((resolve) => {
-          resolveSnapshot = () => resolve({ providers: [], models: [] });
-        }),
-    );
-    const service = createService({ authenticate: vi.fn(async () => undefined), refreshSnapshot });
+  it("ends authentication before returning success", async () => {
+    const service = createService({ authenticate: vi.fn(async () => undefined) });
     mocks.fromWebContents.mockReturnValue({ webContents: { send: vi.fn() } });
     registerPiProviderConfigIpcHandlers(service, () => null);
     const sender = { id: 1, once: vi.fn(), removeListener: vi.fn() };
 
-    const authentication = getHandler(HOST_IPC_CHANNELS.authenticatePiProvider)(
+    const result = await getHandler(HOST_IPC_CHANNELS.authenticatePiProvider)(
       { sender },
       { providerId: "openai", method: "api_key" },
     );
-    await vi.waitFor(() => expect(refreshSnapshot).toHaveBeenCalledOnce());
 
     const callbacks = vi.mocked(service.authenticate).mock.calls[0]?.[2];
     expect(callbacks?.signal?.aborted).toBe(true);
@@ -143,33 +119,16 @@ describe("registerPiProviderConfigIpcHandlers", () => {
       ok: true,
       value: false,
     });
-
-    resolveSnapshot?.();
-    await expect(authentication).resolves.toEqual({
-      ok: true,
-      value: { snapshot: { providers: [], models: [] } },
-    });
+    expect(result).toEqual({ ok: true, value: true });
   });
 
-  it("keeps credential removal successful when the follow-up snapshot refresh fails", async () => {
-    const service = createService({
-      removeCredential: vi.fn(async () => undefined),
-      refreshSnapshot: vi.fn(async () => {
-        throw new Error("provider secret sk-refresh");
-      }),
-    });
+  it("returns credential removal success without coupling it to snapshot refresh", async () => {
+    const service = createService({ removeCredential: vi.fn(async () => undefined) });
     registerPiProviderConfigIpcHandlers(service, () => null);
 
     const result = await getHandler(HOST_IPC_CHANNELS.removePiProviderCredential)({ sender: { id: 1 } }, "openai");
 
-    expect(result).toEqual({
-      ok: true,
-      value: {
-        refreshError: {
-          code: "snapshot_refresh_failed",
-          message: "Credential updated, but provider and model status could not be refreshed. Refresh to try again.",
-        },
-      },
-    });
+    expect(result).toEqual({ ok: true, value: true });
+    expect(service.refreshSnapshot).not.toHaveBeenCalled();
   });
 });

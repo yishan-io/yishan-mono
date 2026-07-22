@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { aiChatSettingsStore } from "../../store/settings/aiChatSettingsStore";
 import { piProviderConfigStore } from "../../store/settings/piProviderConfigStore";
@@ -56,6 +57,14 @@ vi.mock("../../components/ModelAutocomplete", () => ({
   ),
 }));
 
+function renderSection(path = "/settings?tab=agents") {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <AiChatProviderSettingsSection />
+    </MemoryRouter>,
+  );
+}
+
 describe("AiChatProviderSettingsSection", () => {
   beforeEach(() => {
     mocked.getPiProviderConfigSnapshot.mockResolvedValue(null);
@@ -71,7 +80,6 @@ describe("AiChatProviderSettingsSection", () => {
           {
             id: "openai",
             name: "OpenAI",
-            hasAuth: true,
             available: true,
             authSource: "auth_file",
             authMethods: [{ kind: "api_key", label: "OpenAI API key" }],
@@ -79,7 +87,6 @@ describe("AiChatProviderSettingsSection", () => {
           {
             id: "openai-codex",
             name: "ChatGPT Plus/Pro (Codex Subscription)",
-            hasAuth: false,
             available: false,
             authSource: "none",
             authMethods: [{ kind: "oauth", label: "ChatGPT Plus/Pro" }],
@@ -87,7 +94,6 @@ describe("AiChatProviderSettingsSection", () => {
           {
             id: "amazon-bedrock",
             name: "Amazon Bedrock",
-            hasAuth: false,
             available: false,
             authSource: "none",
             authMethods: [{ kind: "external", label: "AWS credentials" }],
@@ -95,7 +101,6 @@ describe("AiChatProviderSettingsSection", () => {
           {
             id: "anthropic",
             name: "Anthropic",
-            hasAuth: true,
             available: true,
             authSource: "oauth",
             authMethods: [
@@ -121,32 +126,21 @@ describe("AiChatProviderSettingsSection", () => {
 
   afterEach(() => {
     cleanup();
-    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
-  it("scrolls to and temporarily highlights the provider settings section when focused", () => {
-    vi.useFakeTimers();
+  it("scrolls to the provider settings section when its anchor is targeted", () => {
     const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
     const scrollIntoView = vi.fn();
     HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    renderSection("/settings?tab=agents#ai-chat-provider-settings");
 
-    render(<AiChatProviderSettingsSection focusRequested />);
-
-    const panel = screen.getByTestId("ai-chat-provider-settings-section");
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: "start", behavior: "smooth" });
-    expect(panel.getAttribute("data-focus-highlighted")).toBe("true");
-
-    act(() => {
-      vi.advanceTimersByTime(1800);
-    });
-
-    expect(panel.getAttribute("data-focus-highlighted")).toBe("false");
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
     HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
   });
 
   it("reuses the cached snapshot on mount and renders provider status rows", () => {
-    render(<AiChatProviderSettingsSection />);
+    renderSection();
 
     expect(mocked.getPiProviderConfigSnapshot).not.toHaveBeenCalled();
 
@@ -165,7 +159,7 @@ describe("AiChatProviderSettingsSection", () => {
   it("loads the snapshot on mount when no cached snapshot exists", async () => {
     piProviderConfigStore.setState({ snapshot: null });
 
-    render(<AiChatProviderSettingsSection />);
+    renderSection();
 
     await waitFor(() => {
       expect(mocked.getPiProviderConfigSnapshot).toHaveBeenCalledOnce();
@@ -173,7 +167,7 @@ describe("AiChatProviderSettingsSection", () => {
   });
 
   it("uses actions instead of repeated status text for unconfigured actionable methods", () => {
-    render(<AiChatProviderSettingsSection />);
+    renderSection();
 
     expect(screen.getByText("settings.aiChatProviders.providers.badges.connectedOauth")).toBeTruthy();
     expect(screen.getByText("settings.aiChatProviders.providers.status.externalSetupRequired")).toBeTruthy();
@@ -183,13 +177,13 @@ describe("AiChatProviderSettingsSection", () => {
   });
 
   it("keeps every provider configuration row in one flat card", () => {
-    render(<AiChatProviderSettingsSection />);
+    renderSection();
 
     expect(screen.getByTestId("provider-config-card")).toBeTruthy();
   });
 
   it("forwards provider login and refresh actions through commands", async () => {
-    render(<AiChatProviderSettingsSection />);
+    renderSection();
 
     fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.providers.actions.login" }));
     fireEvent.click(screen.getByRole("button", { name: "settings.aiChatProviders.actions.refresh" }));
@@ -205,7 +199,7 @@ describe("AiChatProviderSettingsSection", () => {
       pendingCredentialAction: { kind: "authenticate", providerId: "another-provider", method: "oauth" },
     });
 
-    render(<AiChatProviderSettingsSection />);
+    renderSection();
 
     expect(
       (
@@ -225,15 +219,13 @@ describe("AiChatProviderSettingsSection", () => {
       snapshot: {
         ...snapshot,
         providers: snapshot.providers.map((provider) =>
-          provider.id === "anthropic"
-            ? { ...provider, hasAuth: false, available: false, authSource: "none" as const }
-            : provider,
+          provider.id === "anthropic" ? { ...provider, available: false, authSource: "none" as const } : provider,
         ),
       },
       pendingCredentialAction: { kind: "authenticate", providerId: "anthropic", method: "oauth" },
     });
 
-    render(<AiChatProviderSettingsSection />);
+    renderSection();
 
     const cancelButton = screen.getByRole("button", {
       name: "settings.aiChatProviders.providers.actions.cancel",
@@ -265,13 +257,13 @@ describe("AiChatProviderSettingsSection", () => {
       },
     });
 
-    render(<AiChatProviderSettingsSection />);
+    renderSection();
 
     expect(screen.getByText("settings.aiChatProviders.providers.badges.configuredUnavailable")).toBeTruthy();
   });
 
   it("keeps provider filtering local and persists only the selected AI Chat model", () => {
-    render(<AiChatProviderSettingsSection />);
+    renderSection();
 
     const providerSelect = screen.getByTestId("pi-provider-select") as HTMLSelectElement;
     const modelSelect = screen.getByTestId("pi-model-select") as HTMLSelectElement;
@@ -284,7 +276,7 @@ describe("AiChatProviderSettingsSection", () => {
     expect(screen.getByRole("option", { name: "gpt-5" })).toBeTruthy();
 
     fireEvent.change(screen.getByTestId("pi-model-select"), {
-      target: { value: "openai/gpt-5" },
+      target: { value: "gpt-5" },
     });
     expect(mocked.setDefaultAiChatModel).toHaveBeenCalledWith({ providerId: "openai", modelId: "gpt-5" });
   });
@@ -292,12 +284,12 @@ describe("AiChatProviderSettingsSection", () => {
   it("saves the selected default Pi model and warns when the saved model becomes unavailable", async () => {
     aiChatSettingsStore.setState({ defaultModel: { providerId: "openai", modelId: "missing-model" } });
 
-    render(<AiChatProviderSettingsSection />);
+    renderSection();
 
     expect(screen.getByText("settings.aiChatProviders.models.unavailableWarning")).toBeTruthy();
 
     fireEvent.change(screen.getByTestId("pi-model-select"), {
-      target: { value: "openai/gpt-5" },
+      target: { value: "gpt-5" },
     });
 
     expect(mocked.setDefaultAiChatModel).toHaveBeenCalledWith({ providerId: "openai", modelId: "gpt-5" });

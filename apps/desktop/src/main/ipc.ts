@@ -2,7 +2,6 @@ import type { WorkspaceEntryAppId } from "../shared/contracts/externalApps";
 import type {
   AuthenticatePiProviderInput,
   PiAuthPromptResponseInput,
-  PiProviderConfigMutationResult,
   PiProviderConfigResult,
   PiProviderConfigSnapshot,
   PiProviderConfigSnapshotResult,
@@ -184,10 +183,10 @@ export type DesktopHostBridge = {
   login: () => Promise<AuthLoginResult>;
   getPiProviderConfigSnapshot: () => Promise<PiProviderConfigSnapshotResult>;
   refreshPiProviderConfigSnapshot: () => Promise<PiProviderConfigSnapshotResult>;
-  authenticatePiProvider: (input: AuthenticatePiProviderInput) => Promise<PiProviderConfigMutationResult>;
+  authenticatePiProvider: (input: AuthenticatePiProviderInput) => Promise<PiProviderConfigResult<true>>;
   cancelPiProviderAuthentication: (providerId: string) => Promise<PiProviderConfigResult<boolean>>;
   respondPiAuthPrompt: (input: PiAuthPromptResponseInput) => Promise<PiProviderConfigResult<true>>;
-  removePiProviderCredential: (providerId: string) => Promise<PiProviderConfigMutationResult>;
+  removePiProviderCredential: (providerId: string) => Promise<PiProviderConfigResult<true>>;
   getDaemonInfo: () => Promise<DaemonInfoResult>;
   restartDaemon: () => Promise<DaemonRestartResult>;
   readDaemonLog: () => Promise<DaemonLogResult>;

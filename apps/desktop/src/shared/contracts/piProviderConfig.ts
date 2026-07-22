@@ -50,7 +50,6 @@ export type PiProviderAuthMethod =
 export type PiProviderRecord = {
   id: string;
   name: string;
-  hasAuth: boolean;
   available: boolean;
   authSource: PiProviderAuthSource;
   authMethods: PiProviderAuthMethod[];
@@ -81,7 +80,6 @@ export type PiProviderConfigErrorCode =
   | "credential_not_found"
   | "storage_failure"
   | "invalid_input"
-  | "snapshot_refresh_failed"
   | "operation_failed";
 
 /** Serializable Pi provider configuration error exposed to the renderer. */
@@ -90,19 +88,11 @@ export type PiProviderConfigErrorPayload = {
   message: string;
 };
 
-/** Snapshot refresh result following a successful credential mutation. */
-export type PiProviderConfigMutationOutcome =
-  | { snapshot: PiProviderConfigSnapshot }
-  | { refreshError: PiProviderConfigErrorPayload };
-
 /** Shared result envelope for Pi provider configuration operations crossing the Electron IPC boundary. */
 export type PiProviderConfigResult<T> = { ok: true; value: T } | { ok: false; error: PiProviderConfigErrorPayload };
 
 /** Provider snapshot operation result returned by Electron main. */
 export type PiProviderConfigSnapshotResult = PiProviderConfigResult<PiProviderConfigSnapshot>;
-
-/** Credential mutation result returned by Electron main. */
-export type PiProviderConfigMutationResult = PiProviderConfigResult<PiProviderConfigMutationOutcome>;
 
 /** Parses one untrusted provider authentication request. */
 export function parseAuthenticatePiProviderInput(value: unknown): AuthenticatePiProviderInput | undefined {

@@ -129,7 +129,7 @@
     },
     "packages/pi-ask": {
       "name": "@yishan-io/pi-ask",
-      "version": "0.1.2",
+      "version": "0.1.0",
       "devDependencies": {
         "@earendil-works/pi-coding-agent": "^0.80.6",
         "@earendil-works/pi-tui": "^0.80.6",
@@ -157,7 +157,7 @@
     },
     "packages/pi-notify": {
       "name": "@yishan-io/pi-notify",
-      "version": "0.3.1",
+      "version": "0.3.0",
       "devDependencies": {
         "@earendil-works/pi-coding-agent": "^0.80.6",
         "@types/node": "^24.12.4",
@@ -168,7 +168,7 @@
     },
     "packages/pi-subagents": {
       "name": "@yishan-io/pi-subagents",
-      "version": "0.1.3",
+      "version": "0.1.2",
       "devDependencies": {
         "@earendil-works/pi-agent-core": "^0.80.3",
         "@earendil-works/pi-ai": "^0.80.3",
