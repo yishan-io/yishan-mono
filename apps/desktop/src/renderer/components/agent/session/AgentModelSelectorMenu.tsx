@@ -1,17 +1,8 @@
-import {
-  Box,
-  Button,
-  ClickAwayListener,
-  List,
-  ListItemButton,
-  ListItemText,
-  Paper,
-  Popper,
-  Typography,
-} from "@mui/material";
+import { Box, Button, ClickAwayListener, List, ListItemButton, ListItemText, Popper, Typography } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import type { AgentModel } from "../../../store/agentChatTypes";
+import { FloatingSurface } from "../../FloatingSurface";
 import { SearchInput } from "../../SearchInput";
 import { groupAgentModelsByProvider } from "./helpers";
 
@@ -137,19 +128,13 @@ export function AgentModelSelectorMenu({
           onClose();
         }}
       >
-        <Paper
-          elevation={3}
+        <FloatingSurface
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               onClose();
             }
           }}
-          sx={{
-            overflow: "hidden",
-            bgcolor: "background.default",
-            border: (theme) => `1px solid ${theme.palette.divider}`,
-            backgroundImage: "none",
-          }}
+          sx={{ overflow: "hidden" }}
         >
           <Box sx={{ display: "flex", height: DROPDOWN_HEIGHT_PX, maxWidth: "calc(100vw - 32px)" }}>
             <Box
@@ -326,7 +311,7 @@ export function AgentModelSelectorMenu({
               )}
             </Box>
           </Box>
-        </Paper>
+        </FloatingSurface>
       </ClickAwayListener>
     </Popper>
   );

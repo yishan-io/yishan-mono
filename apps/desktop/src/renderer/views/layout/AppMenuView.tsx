@@ -1,5 +1,6 @@
-import { ClickAwayListener, Divider, Paper, Popper, Stack } from "@mui/material";
+import { ClickAwayListener, Divider, Popper, Stack } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import { FloatingSurface } from "../../components/FloatingSurface";
 import { getRendererPlatform } from "../../helpers/platform";
 import { useThemePreference } from "../../hooks/useThemePreference";
 import { getShortcutDisplayLabelById } from "../../shortcuts/shortcutDisplay";
@@ -69,17 +70,7 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: AppMenuView
       />
       <Popper open={isMenuOpen} anchorEl={menuAnchor} placement="bottom-end" sx={{ zIndex: 1300, mt: 0.5 }}>
         <ClickAwayListener onClickAway={closeMenus}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 1,
-              minWidth: 168,
-              maxWidth: 220,
-              bgcolor: "background.default",
-              border: (theme) => `1px solid ${theme.palette.divider}`,
-              backgroundImage: "none",
-            }}
-          >
+          <FloatingSurface sx={{ p: 1, minWidth: 168, maxWidth: 220 }}>
             <Stack spacing={1}>
               <AppMenuThemeControls themePreference={themePreference} onChange={setThemePreference} translate={t} />
               <Divider />
@@ -102,7 +93,7 @@ export function AppMenuView({ fullWidth = false, iconOnly = false }: AppMenuView
                 }}
               />
             </Stack>
-          </Paper>
+          </FloatingSurface>
         </ClickAwayListener>
       </Popper>
       <AppMenuOrganizationSubmenu

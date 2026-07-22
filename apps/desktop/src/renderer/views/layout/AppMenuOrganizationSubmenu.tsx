@@ -1,5 +1,6 @@
-import { Button, Divider, Paper, Popper, Stack, Typography } from "@mui/material";
+import { Button, Divider, Popper, Stack, Typography } from "@mui/material";
 import { LuCheck, LuPlus } from "react-icons/lu";
+import { FloatingSurface } from "../../components/FloatingSurface";
 import type { SessionOrganization } from "../../store/sessionStore";
 
 export interface AppMenuOrganizationSubmenuProps {
@@ -26,17 +27,7 @@ export function AppMenuOrganizationSubmenu({
 }: AppMenuOrganizationSubmenuProps) {
   return (
     <Popper open={isOpen} anchorEl={anchorElement} placement="right-start" disablePortal sx={{ zIndex: 1301, ml: 0.5 }}>
-      <Paper
-        elevation={3}
-        sx={{
-          p: 0.75,
-          minWidth: 220,
-          bgcolor: "background.default",
-          border: (theme) => `1px solid ${theme.palette.divider}`,
-          backgroundImage: "none",
-        }}
-        onMouseLeave={onClose}
-      >
+      <FloatingSurface sx={{ p: 0.75, minWidth: 220 }} onMouseLeave={onClose}>
         <Stack spacing={0.25}>
           {organizations.length === 0 ? (
             <Typography variant="caption" color="text.secondary" sx={{ px: 1, py: 0.75 }}>
@@ -95,7 +86,7 @@ export function AppMenuOrganizationSubmenu({
             {translate("org.menu.newOrganization")}
           </Button>
         </Stack>
-      </Paper>
+      </FloatingSurface>
     </Popper>
   );
 }
