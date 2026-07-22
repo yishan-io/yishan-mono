@@ -702,6 +702,21 @@ describe("ProjectListView", () => {
     expect(screen.getByTestId("workspace-status-waiting-input-badge-workspace-1")).toBeTruthy();
   });
 
+  it.each(["error", "success"] as const)(
+    "keeps the waiting-input badge when the workspace also has an unread %s notification",
+    (unreadTone) => {
+      renderRepoList();
+      mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "waiting_input" };
+      mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": unreadTone };
+      cleanup();
+      renderProjectListView();
+
+      expect(screen.getByTestId("workspace-status-waiting-input-badge-workspace-1")).toBeTruthy();
+      expect(screen.queryByTestId("workspace-status-done-badge-workspace-1")).toBeNull();
+      expect(screen.queryByTestId("workspace-status-failed-badge-workspace-1")).toBeNull();
+    },
+  );
+
   it("renders no indicator when workspace has no active runtime status and no unread notifications", () => {
     renderRepoList();
     cleanup();
@@ -729,6 +744,36 @@ describe("ProjectListView", () => {
     cleanup();
     renderProjectListView();
     expect(screen.getByTestId("workspace-creating-spinner-workspace-1")).toBeTruthy();
+  });
+
+  it("keeps the create spinner ahead of runtime and unread notifications", () => {
+    renderRepoList();
+    const existingWorkspace = mocked.stateRef.current.workspaces[0];
+    if (!existingWorkspace) {
+      throw new Error("Expected seeded workspace");
+    }
+
+    mocked.stateRef.current.workspaces = [{ ...existingWorkspace, status: "provisioning", worktreePath: "" }];
+    mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "running" };
+    mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "error" };
+    cleanup();
+    renderProjectListView();
+
+    expect(screen.getByTestId("workspace-creating-spinner-workspace-1")).toBeTruthy();
+    expect(screen.queryByTestId("workspace-status-running-spinner-workspace-1")).toBeNull();
+    expect(screen.queryByTestId("workspace-status-failed-badge-workspace-1")).toBeNull();
+  });
+
+  it("keeps the running spinner ahead of unread notification badges", () => {
+    renderRepoList([], undefined, "workspace-2");
+    mocked.stateRef.current.workspaceAgentStatusByWorkspaceId = { "workspace-1": "running" };
+    mocked.stateRef.current.workspaceUnreadToneByWorkspaceId = { "workspace-1": "success" };
+    cleanup();
+    renderProjectListView();
+
+    expect(screen.getByTestId("workspace-status-running-spinner-workspace-1")).toBeTruthy();
+    expect(screen.queryByTestId("workspace-status-done-badge-workspace-1")).toBeNull();
+    expect(screen.queryByTestId("workspace-status-failed-badge-workspace-1")).toBeNull();
   });
 
   it("does not render a create spinner for active workspaces with stale progress entries", () => {

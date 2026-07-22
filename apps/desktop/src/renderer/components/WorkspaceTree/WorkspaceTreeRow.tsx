@@ -7,6 +7,7 @@ import { LuEllipsis } from "react-icons/lu";
 import { LuPlus } from "react-icons/lu";
 import { LuArchive } from "react-icons/lu";
 import { LuTrash2, LuWrench } from "react-icons/lu";
+import { resolveWorkspaceNotificationColor } from "../../helpers/workspaceNotification";
 import { CliSpinner } from "../CliSpinner";
 import { GitChangeTotals } from "../GitChangeTotals";
 import { renderProjectIcon } from "../projectIcons";
@@ -65,14 +66,7 @@ export function WorkspaceTreeRowView({
   const isFolderLike = row.kind !== "workspace";
   const workspaceId = row.kind === "workspace" ? row.id.replace(/^workspace:/, "") : "";
   const isBroken = row.lifecycleState && row.lifecycleState !== "active";
-  const workspaceIconColor =
-    row.notificationTone === "waiting_input"
-      ? "warning.main"
-      : row.notificationTone === "done"
-        ? "success.main"
-        : row.notificationTone === "failed"
-          ? "error.main"
-          : "text.secondary";
+  const workspaceIconColor = resolveWorkspaceNotificationColor(row.notificationTone ?? "none");
 
   return (
     <Box

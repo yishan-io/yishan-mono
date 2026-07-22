@@ -5,10 +5,11 @@ import type { WorkspaceTreeWorkspace } from "../../../components/WorkspaceTree";
 import type { WorkspaceTreeNode, WorkspaceTreeProject } from "../../../components/WorkspaceTree/types";
 import { filterVisibleProjects } from "../../../helpers/projectHelpers";
 import { resolveWorkspaceListDisplayName } from "../../../helpers/workspaceDisplayNames";
+import { resolveWorkspaceNotificationTone } from "../../../helpers/workspaceNotification";
 import { chatStore } from "../../../store/chatStore";
 import { sessionStore } from "../../../store/sessionStore";
 import { workspaceStore } from "../../../store/workspaceStore";
-import { reconcileOrder, resolveWorkspaceNotificationTone } from "./projectListHelpers";
+import { reconcileOrder } from "./projectListHelpers";
 
 type TreeProject = WorkspaceTreeProject;
 type TreeNode = WorkspaceTreeNode;
