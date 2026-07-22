@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
 
-import { ThemeProvider } from "@mui/material";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createAppTheme } from "../theme";
+import { renderWithAppTheme } from "../testUtils/renderWithAppTheme";
 import { FileQuickOpenDialog } from "./FileQuickOpenDialog";
 
 vi.mock("./fileTreeIcons", () => ({
@@ -17,10 +16,6 @@ vi.mock("react-icons/bi", () => ({
 afterEach(() => {
   cleanup();
 });
-
-function renderWithAppTheme(component: React.ReactNode) {
-  return render(<ThemeProvider theme={createAppTheme("dark")}>{component}</ThemeProvider>);
-}
 
 describe("FileQuickOpenDialog", () => {
   it("uses a compact search input", async () => {

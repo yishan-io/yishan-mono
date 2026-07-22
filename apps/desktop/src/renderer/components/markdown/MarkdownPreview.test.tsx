@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
 
-import { ThemeProvider } from "@mui/material/styles";
 import { layoutStore } from "@renderer/store/settings/layoutStore";
-import { createAppTheme } from "@renderer/theme";
+import { renderWithAppTheme } from "@renderer/testUtils/renderWithAppTheme";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -104,12 +103,10 @@ describe("MarkdownPreview outline", () => {
   it("uses a non-transparent preview background when forced to the opposite theme", async () => {
     layoutStore.setState({ markdownThemePreference: "light" });
 
-    render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <MarkdownPreviewThemeProvider>
-          <MarkdownPreview content="# placeholder" />
-        </MarkdownPreviewThemeProvider>
-      </ThemeProvider>,
+    renderWithAppTheme(
+      <MarkdownPreviewThemeProvider>
+        <MarkdownPreview content="# placeholder" />
+      </MarkdownPreviewThemeProvider>,
     );
 
     await screen.findByRole("button", { name: "Intro" });

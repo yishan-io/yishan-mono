@@ -1,20 +1,15 @@
 // @vitest-environment jsdom
 
-import { ThemeProvider } from "@mui/material/styles";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createAppTheme } from "../theme";
+import { renderWithAppTheme } from "../testUtils/renderWithAppTheme";
 import { DiagramZoomOverlay } from "./DiagramZoomOverlay";
 
 const SAMPLE_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="40"/></svg>';
 
 function renderOverlay(props?: Partial<React.ComponentProps<typeof DiagramZoomOverlay>>) {
-  return render(
-    <ThemeProvider theme={createAppTheme("dark")}>
-      <DiagramZoomOverlay svgContent={SAMPLE_SVG} onClose={vi.fn()} {...props} />
-    </ThemeProvider>,
-  );
+  return renderWithAppTheme(<DiagramZoomOverlay svgContent={SAMPLE_SVG} onClose={vi.fn()} {...props} />);
 }
 
 afterEach(() => {

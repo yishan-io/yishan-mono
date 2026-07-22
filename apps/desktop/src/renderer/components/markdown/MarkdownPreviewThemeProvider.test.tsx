@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { ThemeProvider, useTheme } from "@mui/material/styles";
+import { useTheme } from "@mui/material/styles";
 import { layoutStore } from "@renderer/store/settings/layoutStore";
-import { createAppTheme } from "@renderer/theme";
-import { cleanup, render, screen } from "@testing-library/react";
+import { renderWithAppTheme } from "@renderer/testUtils/renderWithAppTheme";
+import { cleanup, screen } from "@testing-library/react";
 import { act } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { MarkdownPreviewThemeProvider } from "./MarkdownPreviewThemeProvider";
@@ -21,25 +21,23 @@ describe("MarkdownPreviewThemeProvider", () => {
   });
 
   it("inherits the outer app theme by default", () => {
-    render(
-      <ThemeProvider theme={createAppTheme("dark")}>
-        <MarkdownPreviewThemeProvider>
-          <ThemeModeProbe testId="preview-theme-mode" />
-        </MarkdownPreviewThemeProvider>
-      </ThemeProvider>,
+    renderWithAppTheme(
+      <MarkdownPreviewThemeProvider>
+        <ThemeModeProbe testId="preview-theme-mode" />
+      </MarkdownPreviewThemeProvider>,
     );
 
     expect(screen.getByTestId("preview-theme-mode").textContent).toBe("dark");
   });
 
   it("updates only the preview subtree when the markdown theme preference changes", () => {
-    render(
-      <ThemeProvider theme={createAppTheme("dark")}>
+    renderWithAppTheme(
+      <>
         <ThemeModeProbe testId="app-theme-mode" />
         <MarkdownPreviewThemeProvider>
           <ThemeModeProbe testId="preview-theme-mode" />
         </MarkdownPreviewThemeProvider>
-      </ThemeProvider>,
+      </>,
     );
 
     expect(screen.getByTestId("app-theme-mode").textContent).toBe("dark");

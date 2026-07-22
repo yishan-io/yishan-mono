@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { ThemeProvider } from "@mui/material/styles";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderWithAppTheme } from "../../../testUtils/renderWithAppTheme";
 import { createAppTheme } from "../../../theme";
 import { ThinkingLevelControl } from "./ThinkingLevelControl";
 
@@ -27,10 +27,6 @@ const THINKING_LEVEL_LABELS: Record<string, string> = {
 };
 const appTheme = createAppTheme("dark");
 
-function renderWithTheme(component: React.ReactNode) {
-  return render(<ThemeProvider theme={appTheme}>{component}</ThemeProvider>);
-}
-
 function getComputedBackgroundColor(color: string): string {
   const colorReference = document.createElement("div");
   colorReference.style.backgroundColor = color;
@@ -49,7 +45,7 @@ describe("ThinkingLevelControl", () => {
   it.each(Object.entries(THINKING_LEVEL_ACTIVE_BAR_COUNTS))(
     "shows the expected active bars for %s",
     (thinkingLevel, activeBarCount) => {
-      renderWithTheme(<ThinkingLevelControl thinkingLevel={thinkingLevel} onCycle={vi.fn()} />);
+      renderWithAppTheme(<ThinkingLevelControl thinkingLevel={thinkingLevel} onCycle={vi.fn()} />);
 
       const thinkingLevelLabel = THINKING_LEVEL_LABELS[thinkingLevel] ?? "Off";
       expect(screen.getByRole("button", { name: `Thinking level: ${thinkingLevelLabel}` })).toBeTruthy();
@@ -64,7 +60,7 @@ describe("ThinkingLevelControl", () => {
   );
 
   it("provides a 24px minimum pointer target", () => {
-    renderWithTheme(<ThinkingLevelControl thinkingLevel="medium" onCycle={vi.fn()} />);
+    renderWithAppTheme(<ThinkingLevelControl thinkingLevel="medium" onCycle={vi.fn()} />);
 
     const button = screen.getByRole("button", { name: "Thinking level: Medium" });
     const buttonStyles = getComputedStyle(button);
@@ -74,7 +70,7 @@ describe("ThinkingLevelControl", () => {
   });
 
   it("uses ascending heights and theme colors for active and inactive bars", () => {
-    renderWithTheme(<ThinkingLevelControl thinkingLevel="medium" onCycle={vi.fn()} />);
+    renderWithAppTheme(<ThinkingLevelControl thinkingLevel="medium" onCycle={vi.fn()} />);
 
     const activeColor = getComputedBackgroundColor(appTheme.palette.text.secondary);
     const inactiveColor = getComputedBackgroundColor(appTheme.palette.action.disabledBackground);
@@ -95,7 +91,7 @@ describe("ThinkingLevelControl", () => {
   });
 
   it("falls back to off for an unknown level", () => {
-    renderWithTheme(<ThinkingLevelControl thinkingLevel="unexpected" onCycle={vi.fn()} />);
+    renderWithAppTheme(<ThinkingLevelControl thinkingLevel="unexpected" onCycle={vi.fn()} />);
 
     expect(screen.getByRole("button", { name: "Thinking level: Off" })).toBeTruthy();
     expect(screen.getAllByTestId(/thinking-level-bar-/)).toHaveLength(BAR_COUNT);
@@ -104,7 +100,7 @@ describe("ThinkingLevelControl", () => {
 
   it("cycles when clicked with a mouse", () => {
     const onCycle = vi.fn();
-    renderWithTheme(<ThinkingLevelControl thinkingLevel="medium" onCycle={onCycle} />);
+    renderWithAppTheme(<ThinkingLevelControl thinkingLevel="medium" onCycle={onCycle} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Thinking level: Medium" }), { detail: 1 });
 
@@ -114,7 +110,7 @@ describe("ThinkingLevelControl", () => {
   it("cycles through native button keyboard activation", async () => {
     const onCycle = vi.fn();
     const user = userEvent.setup();
-    renderWithTheme(<ThinkingLevelControl thinkingLevel="medium" onCycle={onCycle} />);
+    renderWithAppTheme(<ThinkingLevelControl thinkingLevel="medium" onCycle={onCycle} />);
     const button = screen.getByRole("button", { name: "Thinking level: Medium" });
 
     button.focus();
