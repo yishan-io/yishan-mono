@@ -246,6 +246,28 @@ function parsePositiveLineNumber(value: unknown): number | null {
   return value;
 }
 
+/** Parses the workspace count from a workspace_list tool result. */
+export function parseWorkspaceListCount(resultText: string): number | null {
+  if (!resultText.trim()) {
+    return null;
+  }
+
+  if (resultText.trim().startsWith("No workspaces")) {
+    return 0;
+  }
+
+  try {
+    const parsed = JSON.parse(resultText);
+    if (Array.isArray(parsed)) {
+      return parsed.length;
+    }
+  } catch {
+    // not parseable JSON
+  }
+
+  return null;
+}
+
 function resolveGrepFilePath(rawFilePath: string, grepPath: string | null): string | null {
   if (rawFilePath.length === 0) {
     return null;
