@@ -69,12 +69,12 @@ export function MessageList({ messages, emptyState, minHeight = 320 }: MessageLi
               <Typography variant="caption" color="text.secondary">
                 thinking
               </Typography>
-              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}>
                 {message.thinking}
               </Typography>
             </Box>
           ) : null}
-          <Typography sx={{ whiteSpace: "pre-wrap" }}>{message.content}</Typography>
+          <Typography sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}>{message.content}</Typography>
         </Paper>
       ))}
     </Box>

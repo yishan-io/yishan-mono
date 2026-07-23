@@ -2,7 +2,7 @@ import { Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
-import { type AgentToolCallCardProps } from "./helpers";
+import type { AgentToolCallCardProps } from "./helpers";
 
 type AskUserOption = {
   title?: unknown;
@@ -60,7 +60,10 @@ export function AskUserToolCard({ toolCall, result = null }: AgentToolCallCardPr
   );
 }
 
-function buildAnswerSummary(details: AskUserDetails | null, t: (key: string, options?: Record<string, unknown>) => string): string {
+function buildAnswerSummary(
+  details: AskUserDetails | null,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
   if (!details) {
     return t("agentChat.askUser.card.pending");
   }

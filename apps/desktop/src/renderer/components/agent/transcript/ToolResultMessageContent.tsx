@@ -16,7 +16,12 @@ export function ToolResultMessageContent({ message }: ToolResultMessageContentPr
       </Typography>
       <Typography
         variant="body2"
-        sx={{ whiteSpace: "pre-wrap", mt: 0.5, color: message.isError ? "error.main" : undefined }}
+        sx={{
+          whiteSpace: "pre-wrap",
+          overflowWrap: "break-word",
+          mt: 0.5,
+          color: message.isError ? "error.main" : undefined,
+        }}
       >
         {extractMessageText(message.content)}
       </Typography>
