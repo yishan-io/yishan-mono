@@ -157,6 +157,59 @@ func TestHandlePiAttach_RebindsConnectionAndTabRoutingMetadata(t *testing.T) {
 	}
 }
 
+func TestHandlePiStart_ConnectionContextCancellationKeepsSessionAlive(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	installBlockingFakePiBinary(t)
+
+	h := newTestHandler(t)
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+	if err := os.MkdirAll(cwd, 0o755); err != nil {
+		t.Fatalf("mkdir cwd: %v", err)
+	}
+
+	connectionCtx, cancelConnection := context.WithCancel(context.Background())
+	connState := &wsConnState{}
+	_, err := h.dispatchPi(connectionCtx, connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+		"sessionId":   "session-survives-disconnect",
+		"tabId":       "tab-1",
+		"workspaceId": "workspace-1",
+		"cwd":         cwd,
+	}))
+	if err != nil {
+		t.Fatalf("dispatchPi start: %v", err)
+	}
+	cancelConnection()
+	time.Sleep(100 * time.Millisecond)
+
+	session, exists := h.agentMgr.Session("session-survives-disconnect")
+	if !exists {
+		t.Fatal("expected pi session to remain active after its WebSocket context was cancelled")
+	}
+
+	reconnectedConnState := &wsConnState{}
+	_, err = h.dispatchPi(context.Background(), reconnectedConnState, MethodPiAttach, mustMarshalJSON(t, map[string]any{
+		"sessionId": "session-survives-disconnect",
+		"tabId":     "tab-reconnected",
+	}))
+	if err != nil {
+		t.Fatalf("dispatchPi attach after reconnect: %v", err)
+	}
+
+	h.Shutdown()
+	if _, exists := h.agentMgr.Session(session.ID()); exists {
+		t.Fatal("pi session remained active after daemon shutdown")
+	}
+	if _, err := h.dispatchPi(context.Background(), connState, MethodPiStart, mustMarshalJSON(t, map[string]any{
+		"sessionId":   "session-after-shutdown",
+		"tabId":       "tab-2",
+		"workspaceId": "workspace-1",
+		"cwd":         cwd,
+	})); err == nil {
+		t.Fatal("expected pi start to be rejected after daemon shutdown")
+	}
+}
+
 func TestHandlePiStart_ReturnsSessionExistsRPCCode(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
