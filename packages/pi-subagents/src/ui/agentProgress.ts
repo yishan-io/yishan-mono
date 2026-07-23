@@ -20,7 +20,11 @@ const SPINNER_INTERVAL_MS = 80;
  *   tabs) is only emitted in "rpc" mode; in "tui" mode the raw JSON payload must
  *   not appear as visible widget text in the terminal.
  */
-export function bindAgentProgressUi(manager: AgentManager, ui: ExtensionUIContext, mode: ExtensionContext["mode"]): () => void {
+export function bindAgentProgressUi(
+  manager: AgentManager,
+  ui: ExtensionUIContext,
+  mode: ExtensionContext["mode"],
+): () => void {
   let latestRecords: AgentRecord[] = [];
   let spinnerFrameIndex = 0;
   let spinnerInterval: ReturnType<typeof setInterval> | undefined;
