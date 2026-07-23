@@ -6,13 +6,10 @@ import {
   fetchAgentModels,
   fetchAgentState,
   findTabWithSession,
-  handleAgentPiEvent,
   reattachPiSession,
-  registerAgentSession,
-  setPiSessionUnsubscribe,
 } from "../../commands/agentChatCommands";
 import { getErrorMessage } from "../../helpers/errorHelpers";
-import { getDaemonClient, subscribeDaemonConnectionStatus } from "../../rpc/rpcTransport";
+import { subscribeDaemonConnectionStatus } from "../../rpc/rpcTransport";
 import { agentChatStore } from "../../store/agentChatStore";
 import type { AgentChatSessionView } from "../../store/types";
 
@@ -78,19 +75,6 @@ export function useAgentChatSessionLifecycle({
           paneId: startupPaneIdRef.current,
         });
         if (isDisposed) return;
-
-        registerAgentSession({ tabId, sessionId: startedSessionId });
-        const client = await getDaemonClient();
-        if (isDisposed) return;
-
-        const sub = client.events.frontendStream.subscribe(undefined, {
-          onData: (event: { topic: string; payload: unknown }) => {
-            if (event.topic !== "agent.pi.event") return;
-            const payload = event.payload as Parameters<typeof handleAgentPiEvent>[0];
-            if (payload.tabId === tabId) handleAgentPiEvent(payload);
-          },
-        });
-        setPiSessionUnsubscribe(tabId, sub.unsubscribe);
 
         await fetchAgentState({ tabId, sessionId: startedSessionId });
         if (isDisposed) return;
