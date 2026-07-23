@@ -17,15 +17,9 @@ It defines how to finish the task record so `.my-context/tasks/` remains trustwo
 
 ## When To Use This Skill
 
-Use this skill when:
+Use this skill only when the user explicitly asks to close, finish, or complete a tracked task.
 
-- a tracked task has completed implementation and verification
-- the user says the task is done, complete, or ready to close
-- `outcome.md` should be written
-- the task folder should move from `active/` to `completed/`
-- task takeaways may need to be promoted into `context-memory`
-
-Do not use this skill when the task still has open implementation or verification work.
+Do not invoke this skill automatically at the end of an implementation session.
 
 ## Relationship To Other Skills
 
@@ -48,6 +42,10 @@ Before finishing a task, confirm as much of this as applies:
 - durable docs and durable memory have been checked for required updates
 
 Do not mark a task complete just because coding started or because the user paused.
+
+**Finishing the task record does not mean creating a PR or closing an external ticket.** Those are separate human actions. Never do them automatically.
+
+**`finishing-task` itself must never run automatically.** Only invoke this skill when the user explicitly asks to close or finish the task.
 
 ## Done Standard
 
@@ -167,7 +165,10 @@ Prefer one correct durable document over several overlapping notes.
 
 Do not:
 
+- invoke this skill without explicit user instruction
 - close a task before verification is real
+- create or raise a PR without explicit user instruction
+- close an external ticket (GitHub issue, Jira, Linear, etc.) without explicit user instruction
 - move the folder without updating `state.json`
 - update `state.json` to completed while the task still lives under `active/`
 - dump the entire task history into `context-memory`
