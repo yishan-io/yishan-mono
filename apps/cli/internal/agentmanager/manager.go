@@ -30,12 +30,14 @@ var ErrSessionExists = errors.New("agent session already exists")
 type Manager struct {
 	mu       sync.Mutex
 	sessions map[string]*Session
+	starting map[string]struct{}
 }
 
 // NewManager creates a new Manager with no active sessions.
 func NewManager() *Manager {
 	return &Manager{
 		sessions: make(map[string]*Session),
+		starting: make(map[string]struct{}),
 	}
 }
 
@@ -77,7 +79,18 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (*Session, error
 		m.mu.Unlock()
 		return nil, ErrSessionExists
 	}
+	if _, exists := m.starting[opts.SessionID]; exists {
+		m.mu.Unlock()
+		return nil, ErrSessionExists
+	}
+	m.starting[opts.SessionID] = struct{}{}
 	m.mu.Unlock()
+	startReserved := true
+	defer func() {
+		if startReserved {
+			m.releaseStart(opts.SessionID)
+		}
+	}()
 
 	// Always start from the full login-shell environment so the subprocess
 	// inherits the user's PATH and tool directories regardless of how the
@@ -138,6 +151,8 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (*Session, error
 
 	m.mu.Lock()
 	m.sessions[opts.SessionID] = session
+	delete(m.starting, opts.SessionID)
+	startReserved = false
 	m.mu.Unlock()
 
 	// Read stdout JSONL on a background goroutine. When the goroutine exits
@@ -145,6 +160,13 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (*Session, error
 	go readStdout(session, stdout, opts.OnEvent)
 
 	return session, nil
+}
+
+// releaseStart removes an in-progress session reservation after a failed start.
+func (m *Manager) releaseStart(sessionID string) {
+	m.mu.Lock()
+	delete(m.starting, sessionID)
+	m.mu.Unlock()
 }
 
 // Stop terminates an agent session by sending abort to stdin and killing the

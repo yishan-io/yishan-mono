@@ -30,25 +30,28 @@ const (
 )
 
 type JSONRPCHandler struct {
-	upgrader       websocket.Upgrader
-	manager        *workspace.Manager
-	runtime        *cliruntime.Runtime
-	nodeID         string
-	logFilePath    string
-	cleanupStore   *workspaceCleanupStore
-	wsIndexStore   *workspaceIndexStore
-	context        *AppContextStore
-	events         *eventHub
-	watchers       *workspacewatchers.Watchers
-	prTracker      *workspaceprtracker.Tracker
-	tokenUsage     tokenusage.Service
-	computer       *computerService
-	modelList      *modellist.Service
-	memory         *memory.Service
-	agentMgr       *agentmanager.Manager
-	settingsPath   string
-	serverCtx      context.Context
-	fileCacheSubID uint64
+	upgrader             websocket.Upgrader
+	manager              *workspace.Manager
+	runtime              *cliruntime.Runtime
+	nodeID               string
+	logFilePath          string
+	cleanupStore         *workspaceCleanupStore
+	wsIndexStore         *workspaceIndexStore
+	context              *AppContextStore
+	events               *eventHub
+	watchers             *workspacewatchers.Watchers
+	prTracker            *workspaceprtracker.Tracker
+	tokenUsage           tokenusage.Service
+	computer             *computerService
+	modelList            *modellist.Service
+	memory               *memory.Service
+	agentMgr             *agentmanager.Manager
+	agentLifecycleCtx    context.Context
+	cancelAgentLifecycle context.CancelFunc
+	agentLifecycleMu     sync.Mutex
+	settingsPath         string
+	serverCtx            context.Context
+	fileCacheSubID       uint64
 
 	agentUsageMu sync.Mutex
 	agentUsage   map[string]map[string]struct{}
@@ -66,7 +69,7 @@ type JSONRPCHandler struct {
 	relayConn   *wsConnState
 }
 
-func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, wsIndexStore *workspaceIndexStore, configPath string, context *AppContextStore) *JSONRPCHandler {
+func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, wsIndexStore *workspaceIndexStore, configPath string, appContext *AppContextStore) *JSONRPCHandler {
 	events := newEventHub()
 	prTracker := workspaceprtracker.New(manager, runtime, func(event workspaceprtracker.PullRequestUpdatedEvent) {
 		publishWorkspacePullRequestUpdatedEvent(events, event)
@@ -101,29 +104,32 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 			},
 		})
 	})
+	agentLifecycleCtx, cancelAgentLifecycle := context.WithCancel(context.Background())
 	handler := &JSONRPCHandler{
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(_ *http.Request) bool { return true },
 		},
-		manager:          manager,
-		runtime:          runtime,
-		nodeID:           nodeID,
-		logFilePath:      logFilePath,
-		cleanupStore:     cleanupStore,
-		wsIndexStore:     wsIndexStore,
-		context:          context,
-		events:           events,
-		watchers:         newWorkspaceWatchersForEventHub(events, prTracker.RefreshWorkspaceByPath),
-		prTracker:        prTracker,
-		tokenUsage:       collector,
-		computer:         newComputerService(computer.NewUnavailableRuntime("unknown")),
-		modelList:        modellist.NewService(),
-		agentMgr:         agentmanager.NewManager(),
-		settingsPath:     config.SettingsFilePath(filepath.Dir(configPath)),
-		agentUsage:       make(map[string]map[string]struct{}),
-		piSessions:       make(map[string]*piSessionState),
-		remoteStreamSubs: make(map[string]map[*wsConnState]struct{}),
-		fileCacheSubID:   fileCacheSubID,
+		manager:              manager,
+		runtime:              runtime,
+		nodeID:               nodeID,
+		logFilePath:          logFilePath,
+		cleanupStore:         cleanupStore,
+		wsIndexStore:         wsIndexStore,
+		context:              appContext,
+		events:               events,
+		watchers:             newWorkspaceWatchersForEventHub(events, prTracker.RefreshWorkspaceByPath),
+		prTracker:            prTracker,
+		tokenUsage:           collector,
+		computer:             newComputerService(computer.NewUnavailableRuntime("unknown")),
+		modelList:            modellist.NewService(),
+		agentMgr:             agentmanager.NewManager(),
+		agentLifecycleCtx:    agentLifecycleCtx,
+		cancelAgentLifecycle: cancelAgentLifecycle,
+		settingsPath:         config.SettingsFilePath(filepath.Dir(configPath)),
+		agentUsage:           make(map[string]map[string]struct{}),
+		piSessions:           make(map[string]*piSessionState),
+		remoteStreamSubs:     make(map[string]map[*wsConnState]struct{}),
+		fileCacheSubID:       fileCacheSubID,
 	}
 	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)
 	return handler
@@ -153,9 +159,12 @@ func (h *JSONRPCHandler) Shutdown() {
 	if h.memory != nil {
 		h.memory.Close()
 	}
+	h.agentLifecycleMu.Lock()
+	h.cancelAgentLifecycle()
 	if h.agentMgr != nil {
 		h.agentMgr.StopAll()
 	}
+	h.agentLifecycleMu.Unlock()
 	modellist.ShutdownShell()
 }
 

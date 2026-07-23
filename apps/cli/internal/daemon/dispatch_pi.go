@@ -95,7 +95,14 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 		OnEvent:     h.makePiEventCallback(req.SessionID),
 	}
 
-	session, err := h.agentMgr.Start(ctx, opts)
+	// Pi sessions are owned by the daemon, not the desktop WebSocket. A laptop
+	// sleep can close the WebSocket temporarily; Shutdown stops all sessions.
+	h.agentLifecycleMu.Lock()
+	defer h.agentLifecycleMu.Unlock()
+	if err := h.agentLifecycleCtx.Err(); err != nil {
+		return nil, workspace.NewRPCError(rpcCodeServerError, "daemon is shutting down")
+	}
+	session, err := h.agentMgr.Start(h.agentLifecycleCtx, opts)
 	if err != nil {
 		if errors.Is(err, agentmanager.ErrSessionExists) {
 			return nil, workspace.NewRPCError(rpcCodeSessionExists, err.Error())
