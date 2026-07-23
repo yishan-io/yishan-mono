@@ -15,6 +15,7 @@ import {
   stopPiSession,
 } from "./agentChatCommands";
 import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "./agentChatSubagentCommands";
+import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "./agentChatEventRouter";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -33,6 +34,11 @@ vi.mock("../helpers/generateId", () => ({
   generateId: vi.fn(() => "generated-session-id"),
 }));
 
+vi.mock("./agentChatEventRouter", () => ({
+  ensureAgentChatEventRouterReady: vi.fn(() => Promise.resolve()),
+  registerAgentChatEventRouter: vi.fn(() => () => {}),
+}));
+
 vi.mock("../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     pi: {
@@ -44,6 +50,7 @@ vi.mock("../rpc/rpcTransport", () => ({
       listActiveSessions: mocks.listActiveSessions,
     },
   })),
+  subscribeDesktopRpcEvent: vi.fn(() => () => {}),
 }));
 
 afterEach(() => {
@@ -64,6 +71,13 @@ describe("agentChatCommands.ensurePiSession", () => {
       paneId: "pane-1",
     });
 
+    expect(registerAgentChatEventRouter).toHaveBeenCalledWith({
+      tabId: "tab-pane-explicit",
+      sessionId: "generated-session-id",
+      onEvent: expect.any(Function),
+    });
+    expect(ensureAgentChatEventRouterReady).toHaveBeenCalled();
+
     expect(mocks.start).toHaveBeenCalledWith({
       sessionId: "generated-session-id",
       tabId: "tab-pane-explicit",
@@ -82,6 +96,13 @@ describe("agentChatCommands.ensurePiSession", () => {
       workspaceId: "workspace-2",
       cwd: "/tmp/project-2",
     });
+
+    expect(registerAgentChatEventRouter).toHaveBeenCalledWith({
+      tabId: "tab-pane-fallback",
+      sessionId: "generated-session-id",
+      onEvent: expect.any(Function),
+    });
+    expect(ensureAgentChatEventRouterReady).toHaveBeenCalled();
 
     expect(mocks.start).toHaveBeenCalledWith({
       sessionId: "generated-session-id",
@@ -103,6 +124,13 @@ describe("agentChatCommands.ensurePiSession", () => {
       sessionId: "history-session-1",
       paneId: "pane-history",
     });
+    expect(registerAgentChatEventRouter).toHaveBeenCalledWith({
+      tabId: "tab-history-resume",
+      sessionId: "history-session-1",
+      onEvent: expect.any(Function),
+    });
+    expect(ensureAgentChatEventRouterReady).toHaveBeenCalled();
+
 
     expect(mocks.start).toHaveBeenCalledWith({
       sessionId: "history-session-1",
@@ -125,6 +153,13 @@ describe("agentChatCommands.ensurePiSession", () => {
       cwd: "/tmp/project",
       sessionId: "live-session-1",
     });
+
+    expect(registerAgentChatEventRouter).toHaveBeenCalledWith({
+      tabId: "tab-reattach",
+      sessionId: "live-session-1",
+      onEvent: expect.any(Function),
+    });
+    expect(ensureAgentChatEventRouterReady).toHaveBeenCalled();
 
     expect(mocks.start).toHaveBeenCalledWith({
       sessionId: "live-session-1",
@@ -155,6 +190,13 @@ describe("agentChatCommands.ensurePiSession", () => {
     ).rejects.toThrow("pi session not found");
 
     expect(mocks.attach).not.toHaveBeenCalled();
+    expect(registerAgentChatEventRouter).toHaveBeenCalledWith({
+      tabId: "tab-start-failure",
+      sessionId: "missing-session-1",
+      onEvent: expect.any(Function),
+    });
+    expect(ensureAgentChatEventRouterReady).toHaveBeenCalled();
+
   });
 
   it("prefers explicit session ids over stale local chat-session state", async () => {
@@ -167,6 +209,13 @@ describe("agentChatCommands.ensurePiSession", () => {
       cwd: "/tmp/project",
       sessionId: "live-session-2",
     });
+
+    expect(registerAgentChatEventRouter).toHaveBeenCalledWith({
+      tabId: "tab-explicit-live",
+      sessionId: "live-session-2",
+      onEvent: expect.any(Function),
+    });
+    expect(ensureAgentChatEventRouterReady).toHaveBeenCalled();
 
     expect(mocks.start).toHaveBeenCalledWith({
       sessionId: "live-session-2",
@@ -238,12 +287,63 @@ describe("agentChatCommands.ensurePiSession", () => {
     const stopPromise = stopPiSession("tab-close-during-start");
     expect(mocks.stop).not.toHaveBeenCalled();
 
+    await vi.waitFor(() => {
+      expect(mocks.start).toHaveBeenCalled();
+    });
     resolveStart?.({ sessionId: "generated-session-id" });
 
     await ensurePromise;
     await stopPromise;
 
     expect(mocks.stop).toHaveBeenCalledWith({ sessionId: "generated-session-id" });
+  });
+
+  it("concurrent ensurePiSession calls await in-flight startup and return the same session ID", async () => {
+    let resolveStart: ((value: { sessionId: string }) => void) | undefined;
+    mocks.start.mockImplementation(
+      () =>
+        new Promise((resolve: (value: { sessionId: string }) => void) => {
+          resolveStart = resolve;
+        }),
+    );
+
+    // First call starts Pi but hasn't resolved yet.
+    const firstPromise = ensurePiSession({
+      tabId: "tab-concurrent",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+    });
+
+    // Yield to let the first call register its handle before the second starts.
+    await Promise.resolve();
+
+    // Second call (simulates Strict Mode remount) finds the in-flight handle.
+    const secondPromise = ensurePiSession({
+      tabId: "tab-concurrent",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+    });
+
+    // Pi hasn't started yet — second call must be waiting, not resolved.
+    let secondResolved = false;
+    void secondPromise.then(() => {
+      secondResolved = true;
+    });
+    await Promise.resolve();
+    expect(secondResolved).toBe(false);
+
+    // Resolve Pi startup.
+    await vi.waitFor(() => {
+      expect(mocks.start).toHaveBeenCalled();
+    });
+    resolveStart?.({ sessionId: "generated-session-id" });
+
+    const [id1, id2] = await Promise.all([firstPromise, secondPromise]);
+
+    expect(id1).toBe("generated-session-id");
+    expect(id2).toBe("generated-session-id");
+    // Pi must have been started only once.
+    expect(mocks.start).toHaveBeenCalledTimes(1);
   });
 
   it("closes subagent-detail tabs without stopping the child session", async () => {

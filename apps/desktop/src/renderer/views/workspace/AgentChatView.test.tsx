@@ -47,12 +47,10 @@ const mocked = vi.hoisted(() => {
     findTabWithSession: vi.fn(),
     clearPiSessionHandle: vi.fn(),
     reattachPiSession: vi.fn(),
-    registerAgentSession: vi.fn(),
     respondToAgentExtensionUiRequest: vi.fn(),
     fetchAgentState: vi.fn().mockResolvedValue(undefined),
     fetchAgentMessages: vi.fn().mockResolvedValue(undefined),
     fetchAgentModels: vi.fn().mockResolvedValue(undefined),
-    setPiSessionUnsubscribe: vi.fn(),
     setAgentChatStreamTabVisible: vi.fn(),
     setAgentModel: vi.fn(),
     setAgentThinkingLevel: vi.fn(),
@@ -79,13 +77,11 @@ vi.mock("../../commands/agentChatCommands", () => ({
   findTabWithSession: mocked.findTabWithSession,
   handleAgentPiEvent: vi.fn(),
   reattachPiSession: mocked.reattachPiSession,
-  registerAgentSession: mocked.registerAgentSession,
   respondToAgentExtensionUiRequest: mocked.respondToAgentExtensionUiRequest,
   sendAgentPrompt: vi.fn(),
   setAgentChatStreamTabVisible: mocked.setAgentChatStreamTabVisible,
   setAgentModel: mocked.setAgentModel,
   setAgentThinkingLevel: mocked.setAgentThinkingLevel,
-  setPiSessionUnsubscribe: mocked.setPiSessionUnsubscribe,
 }));
 
 vi.mock("../../commands/agentChatSubagentCommands", () => ({
@@ -306,10 +302,7 @@ describe("AgentChatView", () => {
     );
 
     await waitFor(() => {
-      expect(mocked.registerAgentSession).toHaveBeenCalledWith({
-        tabId: "tab-history-pending",
-        sessionId: "session-1",
-      });
+      expect(mocked.ensurePiSession).toHaveBeenCalled();
     });
 
     expect(screen.getByRole("progressbar")).toBeTruthy();
