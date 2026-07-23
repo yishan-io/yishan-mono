@@ -149,24 +149,33 @@ function resolveNextDisplayProjectIds(input: {
 
 function resolveHydratedSelection(input: {
   workspaces: WorkspaceItem[];
-  nextBaseState: Pick<WorkspaceStoreState, "selectedProjectId" | "selectedWorkspaceId">;
   previousSelectedProjectId: string;
   previousSelectedWorkspaceId: string;
   mappedProjects: WorkspaceProjectRecord[];
+  displayProjectIds: string[];
 }): { selectedProjectId: string; selectedWorkspaceId: string } {
-  const nextProjectIdSet = new Set(input.mappedProjects.map((project) => project.id));
+  const displayedProjectIdSet = new Set(input.displayProjectIds);
+  const fallbackSelectedWorkspace = input.workspaces.find((workspace) =>
+    displayedProjectIdSet.has(resolveWorkspaceProjectId(workspace)),
+  );
+  const fallbackSelectedProjectId =
+    (fallbackSelectedWorkspace ? resolveWorkspaceProjectId(fallbackSelectedWorkspace) : undefined) ??
+    input.mappedProjects.find((project) => displayedProjectIdSet.has(project.id))?.id ??
+    "";
   const preservedSelectedWorkspace = input.workspaces.find(
-    (workspace) => workspace.id === input.previousSelectedWorkspaceId,
+    (workspace) =>
+      workspace.id === input.previousSelectedWorkspaceId &&
+      displayedProjectIdSet.has(resolveWorkspaceProjectId(workspace)),
   );
   const selectedProjectId = preservedSelectedWorkspace
     ? resolveWorkspaceProjectId(preservedSelectedWorkspace)
-    : nextProjectIdSet.has(input.previousSelectedProjectId)
+    : displayedProjectIdSet.has(input.previousSelectedProjectId)
       ? input.previousSelectedProjectId
-      : input.nextBaseState.selectedProjectId;
-  const selectedWorkspaceId = preservedSelectedWorkspace
-    ? preservedSelectedWorkspace.id
-    : (input.workspaces.find((workspace) => resolveWorkspaceProjectId(workspace) === selectedProjectId)?.id ??
-      input.nextBaseState.selectedWorkspaceId);
+      : fallbackSelectedProjectId;
+  const selectedWorkspaceId =
+    preservedSelectedWorkspace?.id ??
+    input.workspaces.find((workspace) => resolveWorkspaceProjectId(workspace) === selectedProjectId)?.id ??
+    "";
 
   return {
     selectedProjectId,
@@ -346,10 +355,10 @@ export function applyHydratedStateFromApiData(
   const nextWorkspaces = [...nextBaseState.workspaces, ...preservedWorkspaces];
   const nextSelection = resolveHydratedSelection({
     workspaces: nextWorkspaces,
-    nextBaseState,
     previousSelectedProjectId,
     previousSelectedWorkspaceId,
     mappedProjects,
+    displayProjectIds: nextDisplayProjectIds,
   });
 
   state.projects = nextBaseState.projects;

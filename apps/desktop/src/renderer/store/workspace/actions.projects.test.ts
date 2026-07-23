@@ -310,14 +310,16 @@ describe("createWorkspaceRepoActions", () => {
     expect(harness.getState().organizationPreferencesById?.["org-1"]?.displayProjectIds).toEqual(["repo-1", "repo-3"]);
   });
 
-  it("does not re-show projects the user hid on initial hydration", () => {
+  it("selects a displayed workspace when the first hydrated project is filtered out", () => {
     const harness = createHarness({
       projects: [],
       workspaces: [],
+      selectedProjectId: "",
+      selectedWorkspaceId: "",
       displayProjectIds: [],
       organizationPreferencesById: {
         "org-1": {
-          displayProjectIds: ["repo-1"],
+          displayProjectIds: ["repo-2", "repo-3"],
         },
       },
     });
@@ -359,11 +361,61 @@ describe("createWorkspaceRepoActions", () => {
           updatedAt: "2026-01-01T00:00:00Z",
           createdByUserId: "user-1",
         },
+        {
+          id: "repo-3",
+          name: "Repo 3",
+          sourceType: "git-local",
+          repoProvider: null,
+          repoUrl: null,
+          repoKey: "repo-3",
+          icon: "folder",
+          color: "#1E66F5",
+          setupScript: "",
+          postScript: "",
+          contextEnabled: true,
+          organizationId: "org-1",
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          createdByUserId: "user-1",
+        },
       ],
-      [],
+      [
+        {
+          id: "workspace-1",
+          organizationId: "org-1",
+          projectId: "repo-1",
+          userId: "user-1",
+          nodeId: "node-1",
+          kind: "primary",
+          status: "active",
+          branch: "main",
+          sourceBranch: "main",
+          localPath: "/tmp/repo-1",
+          latestPullRequest: null,
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+        },
+        {
+          id: "workspace-3",
+          organizationId: "org-1",
+          projectId: "repo-3",
+          userId: "user-1",
+          nodeId: "node-1",
+          kind: "primary",
+          status: "active",
+          branch: "main",
+          sourceBranch: "main",
+          localPath: "/tmp/repo-3",
+          latestPullRequest: null,
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+        },
+      ],
     );
 
-    expect(harness.getState().displayProjectIds).toEqual(["repo-1"]);
+    expect(harness.getState().displayProjectIds).toEqual(["repo-2", "repo-3"]);
+    expect(harness.getState().selectedProjectId).toBe("repo-3");
+    expect(harness.getState().selectedWorkspaceId).toBe("workspace-3");
   });
 
   it("discovers new projects on first load after restart when knownProjectIds is persisted", () => {
