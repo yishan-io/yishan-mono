@@ -7,6 +7,10 @@ import { GrepToolCard } from "./GrepToolCard";
 import { MemorySearchToolCard } from "./MemorySearchToolCard";
 import { MemoryStoreToolCard } from "./MemoryStoreToolCard";
 import { ReadToolCard } from "./ReadToolCard";
+import { WorkspaceCloseToolCard } from "./WorkspaceCloseToolCard";
+import { WorkspaceCreateToolCard } from "./WorkspaceCreateToolCard";
+import { WorkspaceFindToolCard } from "./WorkspaceFindToolCard";
+import { WorkspaceListToolCard } from "./WorkspaceListToolCard";
 import type { AgentToolCallCardProps } from "./helpers";
 
 /** Renders one agent tool call using a specialized card per tool type. */
@@ -29,6 +33,14 @@ export function AgentToolCallCard(props: AgentToolCallCardProps) {
       return <MemoryStoreToolCard {...props} />;
     case "ask_user":
       return <AskUserToolCard {...props} />;
+    case "workspace_list":
+      return <WorkspaceListToolCard {...props} />;
+    case "workspace_find":
+      return <WorkspaceFindToolCard {...props} />;
+    case "workspace_create":
+      return <WorkspaceCreateToolCard {...props} />;
+    case "workspace_close":
+      return <WorkspaceCloseToolCard {...props} />;
     default:
       return <DefaultToolCard {...props} />;
   }
