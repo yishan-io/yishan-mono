@@ -72,7 +72,7 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "cwd is required")
 	}
 
-	args := []string{"--mode", "rpc", "--name", req.TabID}
+	args := []string{"--mode", "rpc", "--name", req.TabID, "--approve"}
 	if req.Resume {
 		args = append(args, "--session", req.SessionID)
 	} else {
