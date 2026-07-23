@@ -1,18 +1,15 @@
 import { Box, Typography } from "@mui/material";
 import type { ClipboardEvent, KeyboardEvent, SyntheticEvent } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { FileTreeDragEntry } from "./FileTree/dataTransfer";
 import { RichComposerSlashCommandMenu } from "./RichComposerSlashCommandMenu";
-import {
-  findSlashCommandRange,
-  getCaretOffset,
-  matchesSlashCommand,
-  normalizeComposerText,
-  renderComposerHtml,
-  setCaretOffset,
-} from "./richComposerHelpers";
-import type { RichComposerSlashCommand, SlashCommandRange } from "./richComposerTypes";
+import { getCaretOffset, normalizeComposerText, renderComposerHtml, setCaretOffset } from "./richComposerHelpers";
+import type { RichComposerSlashCommand } from "./richComposerTypes";
+import { useComposerFileDrop } from "./useComposerFileDrop";
+import { useComposerSlashCommandMenu } from "./useComposerSlashCommandMenu";
 
 export type { RichComposerSlashCommand } from "./richComposerTypes";
+export type { FileTreeDragEntry as DroppedFileEntry } from "./FileTree/dataTransfer";
 
 type RichComposerProps = {
   placeholder: string;
@@ -23,6 +20,10 @@ type RichComposerProps = {
   disabled?: boolean;
   slashCommands?: RichComposerSlashCommand[];
   focusShortcutHint?: string;
+  /** Allow Enter to submit even when the composer text is empty (e.g. when attachments are present). */
+  allowEmptySubmit?: boolean;
+  onFilesDrop?: (entries: FileTreeDragEntry[]) => void;
+  onPasteBlock?: (text: string) => void;
 };
 
 /** Rich text-like contenteditable composer with token highlighting and slash command completion. */
@@ -35,32 +36,27 @@ export function RichComposer({
   disabled = false,
   slashCommands = [],
   focusShortcutHint,
+  allowEmptySubmit = false,
+  onFilesDrop,
+  onPasteBlock,
 }: RichComposerProps) {
   const composerRef = useRef<HTMLDivElement | null>(null);
   const shouldMoveCaretToEndAfterFileDropRef = useRef(false);
-  const [activeSlashCommandRange, setActiveSlashCommandRange] = useState<SlashCommandRange | null>(null);
-  const [selectedSlashCommandIndex, setSelectedSlashCommandIndex] = useState(0);
   const [isComposerFocused, setIsComposerFocused] = useState(false);
 
-  const filteredSlashCommands = useMemo(() => {
-    if (!activeSlashCommandRange) {
-      return [];
-    }
+  const { isDragOver, handleDragEnter, handleDragLeave, handleDragOver, handleDrop } = useComposerFileDrop({
+    onFilesDrop,
+  });
 
-    return slashCommands.filter((command) => matchesSlashCommand(command, activeSlashCommandRange.query));
-  }, [activeSlashCommandRange, slashCommands]);
-
-  const syncSlashCommandMenu = useCallback(
-    (editable: HTMLDivElement, value: string, caretOffset: number) => {
-      if (disabled || slashCommands.length === 0) {
-        setActiveSlashCommandRange(null);
-        return;
-      }
-
-      setActiveSlashCommandRange(findSlashCommandRange(value, caretOffset));
-    },
-    [disabled, slashCommands],
-  );
+  const {
+    activeSlashCommandRange,
+    setActiveSlashCommandRange,
+    selectedSlashCommandIndex,
+    setSelectedSlashCommandIndex,
+    filteredSlashCommands,
+    syncSlashCommandMenu,
+    insertSlashCommand,
+  } = useComposerSlashCommandMenu({ disabled, slashCommands, composerRef, onChange });
 
   const handleComposerInput = useCallback(
     (event: SyntheticEvent<HTMLDivElement>) => {
@@ -97,27 +93,6 @@ export function RichComposer({
     [syncSlashCommandMenu],
   );
 
-  const insertSlashCommand = useCallback(
-    (command: RichComposerSlashCommand) => {
-      const editable = composerRef.current;
-      const activeRange = activeSlashCommandRange;
-      if (!editable || !activeRange) {
-        return;
-      }
-
-      const currentValue = normalizeComposerText(editable.innerText);
-      const insertedText = `${command.insertText ?? command.title} `;
-      const nextValue = currentValue.slice(0, activeRange.start) + insertedText + currentValue.slice(activeRange.end);
-
-      editable.innerHTML = renderComposerHtml(nextValue, slashCommands);
-      setCaretOffset(editable, activeRange.start + insertedText.length);
-      editable.focus();
-      onChange?.(nextValue);
-      setActiveSlashCommandRange(null);
-    },
-    [activeSlashCommandRange, onChange, slashCommands],
-  );
-
   const handleComposerPaste = useCallback(
     (event: ClipboardEvent<HTMLDivElement>) => {
       if (disabled) {
@@ -125,9 +100,13 @@ export function RichComposer({
       }
       event.preventDefault();
       const plainText = event.clipboardData.getData("text/plain");
+      if (onPasteBlock && plainText.includes("\n") && plainText.split("\n").filter((l) => l.trim()).length >= 2) {
+        onPasteBlock(plainText);
+        return;
+      }
       document.execCommand("insertText", false, plainText);
     },
-    [disabled],
+    [disabled, onPasteBlock],
   );
 
   const handleComposerKeyDown = useCallback(
@@ -186,7 +165,7 @@ export function RichComposer({
       event.preventDefault();
       const editable = event.currentTarget;
       const nextValue = normalizeComposerText(editable.innerText).trim();
-      if (!nextValue) {
+      if (!nextValue && !allowEmptySubmit) {
         return;
       }
 
@@ -199,12 +178,15 @@ export function RichComposer({
     },
     [
       activeSlashCommandRange,
+      allowEmptySubmit,
       disabled,
       filteredSlashCommands,
       insertSlashCommand,
       onChange,
       onSubmit,
       selectedSlashCommandIndex,
+      setActiveSlashCommandRange,
+      setSelectedSlashCommandIndex,
       value,
     ],
   );
@@ -235,22 +217,6 @@ export function RichComposer({
     }
     shouldMoveCaretToEndAfterFileDropRef.current = false;
   }, [slashCommands, value]);
-
-  useEffect(() => {
-    if (disabled) {
-      setActiveSlashCommandRange(null);
-      setSelectedSlashCommandIndex(0);
-    }
-  }, [disabled]);
-
-  useEffect(() => {
-    if (!activeSlashCommandRange || filteredSlashCommands.length === 0) {
-      setSelectedSlashCommandIndex(0);
-      return;
-    }
-
-    setSelectedSlashCommandIndex((currentIndex) => Math.min(currentIndex, filteredSlashCommands.length - 1));
-  }, [activeSlashCommandRange, filteredSlashCommands]);
 
   return (
     <>
@@ -287,10 +253,17 @@ export function RichComposer({
           onKeyDown={handleComposerKeyDown}
           onClick={handleComposerSelectionChange}
           onKeyUp={handleComposerSelectionChange}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
           sx={{
             p: 1.5,
             minHeight,
-            outline: "none",
+            outline: isDragOver ? "2px solid" : "none",
+            outlineColor: isDragOver ? "primary.main" : undefined,
+            outlineOffset: isDragOver ? -2 : undefined,
+            borderRadius: 1,
             typography: "body2",
             color: "text.primary",
             whiteSpace: "pre-wrap",

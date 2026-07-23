@@ -3,16 +3,24 @@ import { extractPathsFromClipboardText } from "../../../shared/fileClipboardPath
 
 /**
  * Custom MIME type used to identify drags originating from the internal file tree.
- * The payload is a JSON-encoded array of absolute file paths.
+ * The payload is a JSON-encoded array of {@link FileTreeDragEntry} objects.
  */
 export const FILETREE_DRAG_MIME = "application/x-filetree-paths";
+
+/** One entry from an internal file-tree drag payload. */
+export type FileTreeDragEntry = { path: string; isDirectory: boolean };
 
 /** Returns true when drag metadata indicates an internal file-tree drag (identified by {@link FILETREE_DRAG_MIME}). */
 export function hasInternalFileTreeDragIntent(event: DragEvent<HTMLElement>): boolean {
   return Boolean(event.dataTransfer?.types.includes(FILETREE_DRAG_MIME));
 }
 
-function parseInternalFileTreeDragPaths(dataTransfer: DataTransfer): string[] {
+/**
+ * Parses the FILETREE_DRAG_MIME payload into typed entries.
+ * Accepts both the legacy string[] format and the current { path, isDirectory }[] format
+ * so that in-flight drags from an older payload are handled gracefully.
+ */
+function parseInternalFileTreeDragEntries(dataTransfer: DataTransfer): FileTreeDragEntry[] {
   const raw = dataTransfer.getData(FILETREE_DRAG_MIME);
   if (!raw) {
     return [];
@@ -24,10 +32,26 @@ function parseInternalFileTreeDragPaths(dataTransfer: DataTransfer): string[] {
       return [];
     }
 
-    return parsed.filter((item): item is string => typeof item === "string" && item.length > 0);
+    return parsed
+      .map((item): FileTreeDragEntry | null => {
+        if (typeof item === "string" && item.length > 0) {
+          return { path: item, isDirectory: false };
+        }
+        if (item && typeof item === "object") {
+          const entry = item as Record<string, unknown>;
+          const path = typeof entry.path === "string" ? entry.path : "";
+          return path.length > 0 ? { path, isDirectory: Boolean(entry.isDirectory) } : null;
+        }
+        return null;
+      })
+      .filter((e): e is FileTreeDragEntry => e !== null);
   } catch {
     return [];
   }
+}
+
+function parseInternalFileTreeDragPaths(dataTransfer: DataTransfer): string[] {
+  return parseInternalFileTreeDragEntries(dataTransfer).map((e) => e.path);
 }
 
 /** Resolves internal file-tree drag paths to their canonical filesystem paths. */
@@ -54,6 +78,40 @@ export async function resolveInternalFileTreeDragPaths(dataTransfer: DataTransfe
   );
 
   return [...new Set(resolvedPaths.filter(Boolean))];
+}
+
+/**
+ * Resolves internal file-tree drag entries to their canonical paths,
+ * preserving the {@link FileTreeDragEntry.isDirectory} flag from the payload.
+ */
+export async function resolveInternalFileTreeDragEntries(dataTransfer: DataTransfer): Promise<FileTreeDragEntry[]> {
+  const sourceEntries = parseInternalFileTreeDragEntries(dataTransfer);
+  if (sourceEntries.length === 0) {
+    return [];
+  }
+
+  const resolveRealPath = window.__YISHAN__?.host.resolveRealPath;
+  if (!resolveRealPath) {
+    return sourceEntries;
+  }
+
+  const resolved = await Promise.all(
+    sourceEntries.map(async (entry) => {
+      try {
+        const result = await resolveRealPath(entry.path);
+        return { path: result.path.trim() || entry.path, isDirectory: entry.isDirectory };
+      } catch {
+        return entry;
+      }
+    }),
+  );
+
+  const seen = new Set<string>();
+  return resolved.filter((e) => {
+    if (seen.has(e.path)) return false;
+    seen.add(e.path);
+    return true;
+  });
 }
 
 /**

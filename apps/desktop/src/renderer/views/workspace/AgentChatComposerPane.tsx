@@ -5,12 +5,14 @@ import { LuArrowUp } from "react-icons/lu";
 import { abortAgent, sendAgentPrompt, setAgentModel, setAgentThinkingLevel } from "../../commands/agentChatCommands";
 import { renameTab } from "../../commands/tabCommands";
 import { AgentChatVoiceButton } from "../../components/AgentChatVoiceButton";
-import { RichComposer } from "../../components/RichComposer";
+import { type ComposerAttachment, ComposerAttachmentBlock } from "../../components/ComposerAttachmentBlock";
+import { type DroppedFileEntry, RichComposer } from "../../components/RichComposer";
 import { AgentChatSubagentRow } from "../../components/agent/session/AgentChatSubagentRow";
 import { AgentChatUsageSummaryLabel } from "../../components/agent/session/AgentChatUsageSummaryLabel";
 import { AgentModelSelector } from "../../components/agent/session/AgentModelSelector";
 import { AGENT_CHAT_COMPOSER_FOCUS_EVENT } from "../../events/agentChatComposerFocus";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
+import { generateId } from "../../helpers/generateId";
 import { getSupportedKeyBindings } from "../../shortcuts/keybindings";
 import { agentChatStore } from "../../store/agentChatStore";
 import type { AgentModel } from "../../store/agentChatTypes";
@@ -58,6 +60,7 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
   const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
   const hasStreamingMessage = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]?.streamingMessage));
   const [draft, setDraft] = useState("");
+  const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const composerContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -79,17 +82,54 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
   const handleSubmit = useCallback(
     async (value: string) => {
       const prompt = value.trim();
-      if (!sessionId || !prompt) return;
+      if (!sessionId || (!prompt && attachments.length === 0)) return;
 
-      if (messageCount === 0 && !hasStreamingMessage && !agentChatTab?.data.userRenamed) {
+      if (prompt && messageCount === 0 && !hasStreamingMessage && !agentChatTab?.data.userRenamed) {
         renameTab(tabId, formatAgentSessionTitle(prompt));
       }
 
       const nextMessage = await transformAgentChatPromptForSkills(prompt, slashCommands);
-      await sendAgentPrompt({ tabId, sessionId, message: nextMessage });
+
+      const fileParts = attachments.filter((a) => a.kind === "file").map((a) => a.path);
+      const pasteParts = attachments.filter((a) => a.kind === "paste").map((a) => a.content);
+      const parts: string[] = [];
+      if (fileParts.length > 0) parts.push(`Files:\n${fileParts.join("\n")}`);
+      if (pasteParts.length > 0) parts.push(`Pasted content:\n${pasteParts.join("\n\n---\n\n")}`);
+      const finalMessage =
+        parts.length > 0 ? (nextMessage ? `${nextMessage}\n\n${parts.join("\n\n")}` : parts.join("\n\n")) : nextMessage;
+
+      await sendAgentPrompt({ tabId, sessionId, message: finalMessage });
+      setAttachments([]);
     },
-    [agentChatTab?.data.userRenamed, hasStreamingMessage, messageCount, sessionId, slashCommands, tabId],
+    [agentChatTab?.data.userRenamed, attachments, hasStreamingMessage, messageCount, sessionId, slashCommands, tabId],
   );
+
+  const handleFilesDrop = useCallback((entries: DroppedFileEntry[]) => {
+    setAttachments((prev) => {
+      const existingPaths = new Set(
+        prev.filter((a): a is Extract<ComposerAttachment, { kind: "file" }> => a.kind === "file").map((a) => a.path),
+      );
+      const newEntries = entries
+        .filter((e) => !existingPaths.has(e.path))
+        .map((e) => ({
+          kind: "file" as const,
+          id: generateId(),
+          path: e.path,
+          name: e.path.split(/[\\/]/).pop() ?? e.path,
+          isDirectory: e.isDirectory,
+        }));
+      return [...prev, ...newEntries];
+    });
+  }, []);
+
+  const handlePasteBlock = useCallback((text: string) => {
+    const lineCount = text.split("\n").filter((l) => l.trim()).length;
+    setAttachments((prev) => [...prev, { kind: "paste" as const, id: generateId(), content: text, lineCount }]);
+  }, []);
+
+  const handleRemoveAttachment = useCallback((id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  }, []);
 
   const handleAbort = useCallback(async () => {
     if (!sessionId) return;
@@ -98,10 +138,10 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
 
   const handleSubmitButtonClick = useCallback(async () => {
     const nextDraft = draft.trim();
-    if (!nextDraft) return;
+    if (!nextDraft && attachments.length === 0) return;
     await handleSubmit(nextDraft);
     setDraft("");
-  }, [draft, handleSubmit]);
+  }, [attachments.length, draft, handleSubmit]);
 
   const handleVoiceText = useCallback((text: string) => {
     const normalizedText = text.trim();
@@ -187,7 +227,17 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
         disabled={sessionState === "starting"}
         slashCommands={slashCommands}
         focusShortcutHint={focusShortcutHint}
+        allowEmptySubmit={attachments.length > 0}
+        onFilesDrop={handleFilesDrop}
+        onPasteBlock={handlePasteBlock}
       />
+      {attachments.length > 0 && (
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, px: 0.5 }}>
+          {attachments.map((a) => (
+            <ComposerAttachmentBlock key={a.id} attachment={a} onRemove={handleRemoveAttachment} />
+          ))}
+        </Box>
+      )}
       <Box sx={{ display: "flex", alignItems: "center", gap: 4, px: 1, minHeight: 18 }}>
         {availableModels.length > 0 && (
           <AgentModelSelector
@@ -247,7 +297,7 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
                   onClick={() => {
                     void handleSubmitButtonClick();
                   }}
-                  disabled={sessionState === "starting" || draft.trim().length === 0}
+                  disabled={sessionState === "starting" || (draft.trim().length === 0 && attachments.length === 0)}
                   aria-label={t("agentChat.composer.submit")}
                   sx={{
                     width: 34,
