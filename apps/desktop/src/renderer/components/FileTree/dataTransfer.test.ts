@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { FILETREE_DRAG_MIME, resolveInternalFileTreeDragPaths } from "./dataTransfer";
+import {
+  FILETREE_DRAG_MIME,
+  resolveInternalFileTreeDragEntries,
+  resolveInternalFileTreeDragPaths,
+} from "./dataTransfer";
 
 function createDataTransfer(payload: string): DataTransfer {
   return {
@@ -38,5 +42,25 @@ describe("resolveInternalFileTreeDragPaths", () => {
     await expect(
       resolveInternalFileTreeDragPaths(createDataTransfer(JSON.stringify(["/repo/.my-context/marketing"]))),
     ).resolves.toEqual(["/repo/.my-context/marketing"]);
+  });
+});
+
+describe("resolveInternalFileTreeDragEntries", () => {
+  it("preserves isDirectory from the new { path, isDirectory } payload format", async () => {
+    vi.stubGlobal("window", { __YISHAN__: undefined });
+
+    const payload = JSON.stringify([{ path: "/repo/src", isDirectory: true }]);
+    await expect(resolveInternalFileTreeDragEntries(createDataTransfer(payload))).resolves.toEqual([
+      { path: "/repo/src", isDirectory: true },
+    ]);
+  });
+
+  it("falls back gracefully for legacy string[] payload format", async () => {
+    vi.stubGlobal("window", { __YISHAN__: undefined });
+
+    const payload = JSON.stringify(["/repo/src/index.ts"]);
+    await expect(resolveInternalFileTreeDragEntries(createDataTransfer(payload))).resolves.toEqual([
+      { path: "/repo/src/index.ts", isDirectory: false },
+    ]);
   });
 });

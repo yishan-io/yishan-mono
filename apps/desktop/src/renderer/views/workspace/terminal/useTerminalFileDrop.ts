@@ -49,7 +49,15 @@ function extractFileTreeDragPaths(dataTransfer: DataTransfer): string[] {
       return [];
     }
 
-    return parsed.filter((item): item is string => typeof item === "string" && item.length > 0);
+    // Accept both legacy string[] and current { path, isDirectory }[] payload formats.
+    return parsed.flatMap((item) => {
+      if (typeof item === "string" && item.length > 0) return [item];
+      if (item && typeof item === "object") {
+        const path = (item as Record<string, unknown>).path;
+        return typeof path === "string" && path.length > 0 ? [path] : [];
+      }
+      return [];
+    });
   } catch {
     return [];
   }

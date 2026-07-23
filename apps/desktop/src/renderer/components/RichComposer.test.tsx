@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, createEvent, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { FILETREE_DRAG_MIME } from "./FileTree/dataTransfer";
 import { RichComposer, type RichComposerSlashCommand } from "./RichComposer";
 import { getCaretOffset, renderComposerHtml, setCaretOffset } from "./richComposerHelpers";
 
@@ -206,5 +207,66 @@ describe("RichComposer", () => {
     fireEvent.click(screen.getByRole("button", { name: "/claude" }));
 
     expect(textbox.querySelector(".composer-slash-agent")?.textContent).toBe("/claude");
+  });
+
+  it("calls onFilesDrop and suppresses native insertion when a file-tree file is dropped", async () => {
+    const onFilesDrop = vi.fn();
+    render(<RichComposer placeholder="Type a message…" onFilesDrop={onFilesDrop} />);
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+
+    const dt = {
+      types: [FILETREE_DRAG_MIME],
+      files: [] as unknown as FileList,
+      items: [] as unknown as DataTransferItemList,
+      getData: (type: string) =>
+        type === FILETREE_DRAG_MIME ? JSON.stringify([{ path: "/workspace/src/foo.ts", isDirectory: false }]) : "",
+      setData: () => {},
+      clearData: () => {},
+      dropEffect: "none" as DataTransfer["dropEffect"],
+      effectAllowed: "all" as DataTransfer["effectAllowed"],
+    } as unknown as DataTransfer;
+
+    // dragenter to activate drag-over state
+    const enterEvent = createEvent.dragEnter(textbox);
+    Object.defineProperty(enterEvent, "dataTransfer", { value: dt });
+    fireEvent(textbox, enterEvent);
+
+    // drop with the filetree payload
+    const dropEvent = createEvent.drop(textbox);
+    Object.defineProperty(dropEvent, "dataTransfer", { value: dt });
+    await act(async () => {
+      fireEvent(textbox, dropEvent);
+    });
+
+    expect(onFilesDrop).toHaveBeenCalledWith([{ path: "/workspace/src/foo.ts", isDirectory: false }]);
+    // native insertion would have set textContent — it must not
+    expect(textbox.textContent).toBe("");
+  });
+
+  it("calls onPasteBlock for multi-line paste and does not insert text inline", () => {
+    const onPasteBlock = vi.fn();
+    render(<RichComposer placeholder="Type a message…" onPasteBlock={onPasteBlock} />);
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+
+    const multiLineText = "line one\nline two\nline three";
+    fireEvent.paste(textbox, {
+      clipboardData: { getData: () => multiLineText },
+    });
+
+    expect(onPasteBlock).toHaveBeenCalledWith(multiLineText);
+    expect(textbox.textContent).toBe("");
+  });
+
+  it("inserts single-line paste inline and does not call onPasteBlock", () => {
+    const onPasteBlock = vi.fn();
+    Object.defineProperty(document, "execCommand", { configurable: true, value: vi.fn() });
+    render(<RichComposer placeholder="Type a message…" onPasteBlock={onPasteBlock} />);
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+
+    fireEvent.paste(textbox, {
+      clipboardData: { getData: () => "just one line" },
+    });
+
+    expect(onPasteBlock).not.toHaveBeenCalled();
   });
 });

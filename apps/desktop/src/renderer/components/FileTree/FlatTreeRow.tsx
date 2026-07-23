@@ -151,7 +151,10 @@ export function FlatTreeRow({
         isDraggable
           ? (event: DragEvent<HTMLElement>) => {
               event.dataTransfer.effectAllowed = "copyMove";
-              event.dataTransfer.setData(FILETREE_DRAG_MIME, JSON.stringify([absolutePath]));
+              event.dataTransfer.setData(
+                FILETREE_DRAG_MIME,
+                JSON.stringify([{ path: absolutePath, isDirectory: row.isDirectory }]),
+              );
               event.dataTransfer.setData("text/plain", absolutePath);
             }
           : undefined
