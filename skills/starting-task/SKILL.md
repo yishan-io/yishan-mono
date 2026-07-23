@@ -92,13 +92,20 @@ Do not wait for perfect wording before creating the task.
 
 ## After Initialization
 
-Once the tracked task exists:
+Once the tracked task exists, run through the natural phases in sequence:
 
-1. use `context-task` as the persistent task layer
-2. use `context-memory` if prior project history matters
-3. research into `notes.md` when needed
-4. plan with `writing-plans` into `plan.md`
-5. execute with `executing-plans` or `subagent-driven-development`
+1. Research — use `context-task`, `context-memory`; capture findings in `notes.md`
+2. Plan — use `writing-plans` to write `plan.md`
+3. Execute — use `executing-plans` or `subagent-driven-development`
+
+For simple, well-scoped work the agent can run phases 1–3 end-to-end in one session.
+
+For larger or riskier work, pause at natural checkpoints and confirm with the user before proceeding.
+
+**Regardless of task size, never do these automatically:**
+- Do not create or raise a PR without explicit user instruction
+- Do not close an external ticket (GitHub issue, Jira, Linear, etc.) without explicit user instruction
+- Do not run `finishing-task` or move a task to completed without explicit user instruction
 
 ## Red Flags
 
@@ -108,6 +115,9 @@ Do not:
 - ask the user for fields you can infer safely
 - start planning or implementing tracked work without first creating the task record when durable tracking is clearly useful
 - invent a second task lifecycle separate from `context-task`
+- create or raise a PR without explicit user instruction
+- close an external ticket without explicit user instruction
+- run `finishing-task` or move a task to completed without explicit user instruction
 
 ## Bottom Line
 
