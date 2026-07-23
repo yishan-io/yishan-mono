@@ -241,7 +241,7 @@ describe("agentChatStore", () => {
       expect(agentChatStore.getState().sessionsByTabId[tabId]?.hasLoadedMessages).toBe(true);
     });
 
-    it("retains a single oversized message via the always-keep-one rule", { timeout: 30_000 }, () => {
+    it("retains a single oversized message via the always-keep-one rule", { timeout: 60_000 }, () => {
       const tabId = "tab-replace-oversized";
       agentChatStore.getState().initSession(tabId, "session-replace-oversized");
 

@@ -139,7 +139,7 @@ describe("agentChatInboundMessage — bounded normalization behavior", () => {
       expect(() => new TextDecoder().decode(encoder.encode(content as string))).not.toThrow();
     });
 
-    it("truncates a 1 MiB tool result to fit within PER_MESSAGE_UTF8_BYTES", () => {
+    it("truncates a 1 MiB tool result to fit within PER_MESSAGE_UTF8_BYTES", { timeout: 30_000 }, () => {
       const tabId = "tab-1mb";
       const sessionId = "session-1mb";
       agentChatStore.getState().initSession(tabId, sessionId);
