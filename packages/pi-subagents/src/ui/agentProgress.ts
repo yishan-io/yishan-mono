@@ -1,4 +1,4 @@
-import type { ExtensionUIContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionContext, ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 
 import type { AgentRecord } from "../agents/types";
 import type { AgentManager } from "../runtime/agentManager";
@@ -15,8 +15,12 @@ const SPINNER_INTERVAL_MS = 80;
 
 /**
  * Subscribes the current session UI to live agent-progress updates.
+ *
+ * @param mode - Current Pi run mode. Live transcript data (for GUI subagent-detail
+ *   tabs) is only emitted in "rpc" mode; in "tui" mode the raw JSON payload must
+ *   not appear as visible widget text in the terminal.
  */
-export function bindAgentProgressUi(manager: AgentManager, ui: ExtensionUIContext): () => void {
+export function bindAgentProgressUi(manager: AgentManager, ui: ExtensionUIContext, mode: ExtensionContext["mode"]): () => void {
   let latestRecords: AgentRecord[] = [];
   let spinnerFrameIndex = 0;
   let spinnerInterval: ReturnType<typeof setInterval> | undefined;
@@ -54,14 +58,21 @@ export function bindAgentProgressUi(manager: AgentManager, ui: ExtensionUIContex
     const hasActiveAgents = records.some((record) => ACTIVE_AGENT_STATUSES.has(record.status));
     if (!hasActiveAgents) {
       clearAgentProgress(ui, { restoreWorkingVisibility: hadActiveAgents });
-      renderAgentLiveTranscripts(ui, []);
+      if (mode === "rpc") {
+        renderAgentLiveTranscripts(ui, []);
+      }
       hadActiveAgents = false;
       return;
     }
 
     hadActiveAgents = true;
     renderAgentProgress(ui, latestRecords, spinnerFrameIndex);
-    renderAgentLiveTranscripts(ui, latestRecords);
+    // Only emit the structured JSON payload in RPC mode where a GUI consumer
+    // is present to parse it.  In TUI mode the raw JSON would render as
+    // visible widget text in the terminal, which is not useful.
+    if (mode === "rpc") {
+      renderAgentLiveTranscripts(ui, latestRecords);
+    }
   });
 
   return () => {

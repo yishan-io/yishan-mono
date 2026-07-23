@@ -121,7 +121,7 @@ export function createPiSubagentsExtension(pi: ExtensionAPI): void {
     registry.reload();
     ctx.ui.addAutocompleteProvider((current) => createAgentAutocompleteProvider(current, registry.list()));
     disposeAgentProgressUi?.();
-    disposeAgentProgressUi = bindAgentProgressUi(manager, ctx.ui);
+    disposeAgentProgressUi = bindAgentProgressUi(manager, ctx.ui, ctx.mode);
   });
 
   pi.on("input", async (event, ctx) => {

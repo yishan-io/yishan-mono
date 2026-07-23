@@ -157,7 +157,7 @@ describe("bindAgentProgressUi", () => {
       return unsubscribe;
     });
 
-    const dispose = bindAgentProgressUi({ subscribe } as never, ui as never);
+    const dispose = bindAgentProgressUi({ subscribe } as never, ui as never, "tui");
 
     expect(subscribe).toHaveBeenCalledTimes(1);
     expect(ui.setStatus).toHaveBeenCalledWith("pi-subagents", undefined);
@@ -183,7 +183,7 @@ describe("bindAgentProgressUi", () => {
 
     vi.useFakeTimers();
 
-    const dispose = bindAgentProgressUi({ subscribe } as never, ui as never);
+    const dispose = bindAgentProgressUi({ subscribe } as never, ui as never, "tui");
 
     expect(listener).toBeDefined();
 
@@ -226,7 +226,7 @@ describe("bindAgentProgressUi", () => {
       return unsubscribe;
     });
 
-    const dispose = bindAgentProgressUi({ subscribe } as never, ui as never);
+    const dispose = bindAgentProgressUi({ subscribe } as never, ui as never, "tui");
 
     listener?.([createRecord()]);
     dispose();
@@ -234,5 +234,43 @@ describe("bindAgentProgressUi", () => {
     expect(unsubscribe).toHaveBeenCalledTimes(1);
     expect(ui.setWorkingVisible).toHaveBeenNthCalledWith(1, false);
     expect(ui.setWorkingVisible).toHaveBeenNthCalledWith(2, true);
+  });
+
+  it("does not emit pi-subagents-live-transcripts widget in tui mode", () => {
+    const ui = createUiHarness();
+    let listener: ((records: AgentRecord[]) => void) | undefined;
+    const subscribe = vi.fn((nextListener: (records: AgentRecord[]) => void) => {
+      listener = nextListener;
+      nextListener([]);
+      return vi.fn();
+    });
+
+    const dispose = bindAgentProgressUi({ subscribe } as never, ui as never, "tui");
+    listener?.([createRecord()]);
+    dispose();
+
+    const liveTranscriptCalls = (ui.setWidget as ReturnType<typeof vi.fn>).mock.calls.filter(
+      (args) => args[0] === "pi-subagents-live-transcripts" && args[1] !== undefined,
+    );
+    expect(liveTranscriptCalls).toHaveLength(0);
+  });
+
+  it("emits pi-subagents-live-transcripts widget in rpc mode", () => {
+    const ui = createUiHarness();
+    let listener: ((records: AgentRecord[]) => void) | undefined;
+    const subscribe = vi.fn((nextListener: (records: AgentRecord[]) => void) => {
+      listener = nextListener;
+      nextListener([]);
+      return vi.fn();
+    });
+
+    const dispose = bindAgentProgressUi({ subscribe } as never, ui as never, "rpc");
+    listener?.([createRecord({ session: { messages: [] } as never })]);
+    dispose();
+
+    const liveTranscriptCalls = (ui.setWidget as ReturnType<typeof vi.fn>).mock.calls.filter(
+      (args) => args[0] === "pi-subagents-live-transcripts" && args[1] !== undefined,
+    );
+    expect(liveTranscriptCalls).toHaveLength(1);
   });
 });
