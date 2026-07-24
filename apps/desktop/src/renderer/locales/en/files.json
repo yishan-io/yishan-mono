@@ -18,7 +18,8 @@
       "openInExplorer": "Open in Explorer",
       "openInExternalAppQuick": "Open in {{app}}",
       "openInExternalApp": "Open in...",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "deleteMultiple": "Delete ({{count}} items)"
     },
     "createFile": {
       "prompt": "New file name"
@@ -28,7 +29,10 @@
     },
     "delete": {
       "confirmFile": "Delete file '{{path}}'?",
-      "confirmDirectory": "Delete folder '{{path}}' and all contents?"
+      "confirmDirectory": "Delete folder '{{path}}' and all contents?",
+      "confirmMultiple": "Delete {{count}} items? This cannot be undone.",
+      "errorAllFailed": "Failed to delete the selected items.",
+      "errorPartialFailed": "Deleted {{succeeded}} of {{total}} items. {{failed}} failed."
     },
     "search": {
       "title": "Search files",
@@ -47,7 +51,7 @@
       "publishBranch": "Publish Branch",
       "commitOptions": "Commit options",
       "amend": "Amend",
-      "amendShortcut": "\u2318\u21a9",
+      "amendShortcut": "⌘↩",
       "signoff": "Signoff",
       "targetBranch": "Target branch",
       "changeScope": "Change scope",
@@ -62,7 +66,7 @@
         "import": "Importing"
       },
       "progress": "{{mode}} {{processed}} / {{total}}",
-      "progressWithPath": "{{mode}} {{processed}} / {{total}} \u00b7 {{path}}"
+      "progressWithPath": "{{mode}} {{processed}} / {{total}} · {{path}}"
     },
     "unsupported": {
       "title": "Unsupported file type",

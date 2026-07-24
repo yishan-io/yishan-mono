@@ -24,6 +24,7 @@ type UseFileTreeContextMenuItemsInput = {
     onCreateFolder?: (path: string) => Promise<void>;
     onRenameEntry?: (fromPath: string, toPath: string) => Promise<void>;
     onDeleteEntry?: (path: string) => Promise<void>;
+    onDeleteMultipleEntries?: (paths: string[]) => void | Promise<void>;
     onCopyPath?: (path: string) => Promise<void>;
     onCopyRelativePath?: (path: string) => Promise<void>;
     onOpenInFileManager?: (path: string) => Promise<void>;
@@ -56,6 +57,9 @@ export function useFileTreeContextMenuItems({
     showOpenInExternalAppMenuItem && lastUsedWorkspaceExternalAppPreset,
   );
 
+  const isMultiSelect = (contextMenu?.selectedPaths?.length ?? 0) > 1;
+  const multiSelectCount = contextMenu?.selectedPaths?.length ?? 0;
+
   const items = useMemo(
     () =>
       buildWorkspaceFileTreeContextMenuItems({
@@ -64,6 +68,7 @@ export function useFileTreeContextMenuItems({
           createFolder: t("files.actions.createFolder"),
           rename: t("files.actions.rename"),
           delete: t("files.actions.delete"),
+          deleteMultiple: t("files.actions.deleteMultiple", { count: multiSelectCount }),
           copy: t("files.actions.copy"),
           cut: t("files.actions.cut"),
           paste: t("files.actions.paste"),
@@ -78,11 +83,12 @@ export function useFileTreeContextMenuItems({
               })
             : "",
         },
+        isMultiSelect,
         canCreateAtContext: !contextMenu?.targetPath || Boolean(contextMenu.targetIsDirectory),
         canCreateFile: Boolean(handlers.onCreateFile),
         canCreateFolder: Boolean(handlers.onCreateFolder),
         canRenameEntry: Boolean(handlers.onRenameEntry),
-        canDeleteEntry: Boolean(handlers.onDeleteEntry),
+        canDeleteEntry: Boolean(handlers.onDeleteEntry) || Boolean(handlers.onDeleteMultipleEntries),
         canCopyEntry: Boolean(handlers.onCopyEntry),
         canCutEntry: Boolean(handlers.onCutEntry),
         canPasteEntries: Boolean(canPasteEntries),
@@ -113,6 +119,11 @@ export function useFileTreeContextMenuItems({
             closeContextMenu();
           },
           delete: async () => {
+            if (isMultiSelect && contextMenu?.selectedPaths && handlers.onDeleteMultipleEntries) {
+              closeContextMenu();
+              await handlers.onDeleteMultipleEntries(contextMenu.selectedPaths);
+              return;
+            }
             if (!handlers.onDeleteEntry || !contextMenu?.targetPath) {
               closeContextMenu();
               return;
@@ -187,7 +198,9 @@ export function useFileTreeContextMenuItems({
       contextMenu,
       contextPasteDestination,
       handlers,
+      isMultiSelect,
       lastUsedWorkspaceExternalAppPreset,
+      multiSelectCount,
       rendererPlatform,
       showOpenInExternalAppMenuItem,
       showOpenInLastUsedExternalAppMenuItem,

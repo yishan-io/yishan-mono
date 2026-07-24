@@ -1,15 +1,13 @@
 import { Box } from "@mui/material";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { ClipboardEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { isEditableTarget } from "../../shortcuts/editableTarget";
 import { FileTreeRows } from "./FileTreeRows";
 import { ROW_HEIGHT } from "./FlatTreeRow";
-import { extractSourcePathsFromDataTransferAsync } from "./dataTransfer";
-import { collectAncestorDirectoryPaths, resolveDestinationDirectoryPath } from "./treeUtils";
+import { collectAncestorDirectoryPaths } from "./treeUtils";
 import type { FileTreeGitChangeKind, FileTreeProps, VisibleRow } from "./types";
 import { useFileTreeDragDrop } from "./useFileTreeDragDrop";
 import { useFileTreeEditing } from "./useFileTreeEditing";
+import { useFileTreeExternalPaste } from "./useFileTreeExternalPaste";
 import { useFileTreeKeyboard } from "./useFileTreeKeyboard";
 import { useFileTreeSelection } from "./useFileTreeSelection";
 import { useVisibleFileTree } from "./useVisibleFileTree";
@@ -41,6 +39,7 @@ export function FileTree({
   onDropExternalEntries,
   onMoveEntries,
   onItemContextMenu,
+  onSelectionChange,
 }: FileTreeProps) {
   const gitChangesByPathResolved = gitChangesByPath ?? EMPTY_GIT_CHANGES_BY_PATH;
   const ancestorOfGitChangePaths = useMemo(() => {
@@ -93,14 +92,17 @@ export function FileTree({
     return map;
   }, [visibleRows]);
 
-  const { selectedEntryPath, setSelectedEntryPath, scrollRef, selectFirstTreeEntryOnFocus } = useFileTreeSelection({
-    rowByPath,
-    selectionRequest,
-    visibleRows,
-    onEnsurePathLoaded,
-    onSelectEntry,
-    setExpandedItems,
-  });
+  const { selectedPaths, focusedPath, handleRowClick, clearToSingle, scrollRef, selectFirstTreeEntryOnFocus } =
+    useFileTreeSelection({
+      rowByPath,
+      selectionRequest,
+      visibleRows,
+      onEnsurePathLoaded,
+      onSelectEntry,
+      onSelectionChange,
+      directoryPaths,
+      setExpandedItems,
+    });
 
   const lastAppliedCreateRequestIdRef = useRef<number | null>(null);
   const expandedPathSet = useMemo(() => new Set(expandedItems), [expandedItems]);
@@ -126,12 +128,20 @@ export function FileTree({
 
   const {
     dropTargetPath,
+    handleRowDragStart,
     handleExternalDragOver,
     handleRowDragEnter,
     handleRowDragLeave,
     handleExternalDrop,
     clearDropTarget,
-  } = useFileTreeDragDrop({ worktreePath, onDropExternalEntries, onMoveEntries });
+  } = useFileTreeDragDrop({ worktreePath, onDropExternalEntries, onMoveEntries, selectedPaths, rowByPath });
+
+  const { handleExternalPaste } = useFileTreeExternalPaste({
+    focusedPath,
+    directoryPaths,
+    editingEntry,
+    onDropExternalEntries,
+  });
 
   useEffect(() => {
     if (!createEntryRequest) {
@@ -164,36 +174,11 @@ export function FileTree({
     didApplyInitialSelectionRef.current = true;
   }, [didApplyInitialSelectionRef, editingEntry, editingInputRef, editingName]);
 
-  const handleExternalPaste = useCallback(
-    async (event: ClipboardEvent<HTMLElement>) => {
-      if (!onDropExternalEntries || editingEntry || isEditableTarget(event.target)) {
-        return;
-      }
-
-      const clipboardData = event.clipboardData;
-      if (!clipboardData) {
-        return;
-      }
-
-      const sourcePaths = await extractSourcePathsFromDataTransferAsync(clipboardData);
-      if (sourcePaths.length === 0) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      await onDropExternalEntries(
-        sourcePaths,
-        resolveDestinationDirectoryPath(selectedEntryPath, directoryPaths.has(selectedEntryPath)),
-      );
-    },
-    [directoryPaths, editingEntry, onDropExternalEntries, selectedEntryPath],
-  );
-
   const { handleTreeKeyDown } = useFileTreeKeyboard({
     visibleRows,
     rowByPath,
-    selectedEntryPath,
+    selectedEntryPath: focusedPath,
+    selectedPaths,
     editingEntry,
     expandedItems,
     expandedPathSet,
@@ -201,9 +186,8 @@ export function FileTree({
     canPasteEntries,
     canUndoLastEntryOperation,
     virtualizer,
-    setSelectedEntryPath,
+    setSelectedEntryPath: clearToSingle,
     setExpandedItems,
-    onSelectEntry,
     onOpenEntry,
     onCopyEntry,
     onCutEntry,
@@ -265,7 +249,8 @@ export function FileTree({
         visibleRows={visibleRows}
         virtualizer={virtualizer}
         expandedPathSet={expandedPathSet}
-        selectedEntryPath={selectedEntryPath}
+        selectedPaths={selectedPaths}
+        focusedPath={focusedPath}
         ignoredPathSet={ignoredPathSet}
         gitChangesByPath={gitChangesByPathResolved}
         ancestorOfGitChangePaths={ancestorOfGitChangePaths}
@@ -274,9 +259,9 @@ export function FileTree({
         editingInputRef={editingInputRef}
         worktreePath={worktreePath}
         dropTargetPath={dropTargetPath}
-        setSelectedEntryPath={setSelectedEntryPath}
         setExpandedItems={setExpandedItems}
-        onSelectEntry={onSelectEntry}
+        handleRowClick={handleRowClick}
+        handleRowDragStart={handleRowDragStart}
         onOpenEntry={onOpenEntry}
         onEnsurePathLoaded={onEnsurePathLoaded}
         onItemContextMenu={onItemContextMenu}

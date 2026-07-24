@@ -7,6 +7,7 @@ export type FileTreeContextMenuRequest = {
   startCreateFile: () => void;
   startCreateFolder: () => void;
   startRename?: () => void;
+  selectedPaths?: string[];
 };
 
 export type FileTreeGitChangeKind = "added" | "modified" | "deleted" | "renamed";
@@ -21,7 +22,8 @@ export type FileTreeProps = {
   worktreePath?: string;
   selectionRequest?: { path: string; requestId: number; focus?: boolean } | null;
   createEntryRequest?: { kind: "file" | "folder"; basePath?: string; requestId: number } | null;
-  onSelectEntry?: (input: { path: string; isDirectory: boolean }) => void;
+  onSelectEntry?: (input: { path: string; isDirectory: boolean; isMultiSelectOperation?: boolean }) => void;
+  onSelectionChange?: (paths: string[]) => void;
   onOpenEntry?: (input: { path: string; isDirectory: boolean }) => void;
   onExpandedItemsChange?: (items: string[]) => void;
   onEnsurePathLoaded?: (path: string) => void | Promise<void>;

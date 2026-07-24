@@ -10,12 +10,16 @@ type UseFileTreeSelectionInput = {
   visibleRows: VisibleRow[];
   onEnsurePathLoaded?: FileTreeProps["onEnsurePathLoaded"];
   onSelectEntry?: FileTreeProps["onSelectEntry"];
+  onSelectionChange?: (paths: string[]) => void;
+  directoryPaths: Set<string>;
   setExpandedItems: (updater: (currentItems: string[]) => string[]) => void;
 };
 
 type UseFileTreeSelectionResult = {
-  selectedEntryPath: string;
-  setSelectedEntryPath: (path: string) => void;
+  selectedPaths: Set<string>;
+  focusedPath: string;
+  handleRowClick: (path: string, row: VisibleRow, modifiers: { meta: boolean }) => void;
+  clearToSingle: (path: string) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
   selectFirstTreeEntryOnFocus: () => void;
 };
@@ -27,9 +31,12 @@ export function useFileTreeSelection({
   visibleRows,
   onEnsurePathLoaded,
   onSelectEntry,
+  onSelectionChange,
+  directoryPaths,
   setExpandedItems,
 }: UseFileTreeSelectionInput): UseFileTreeSelectionResult {
-  const [selectedEntryPath, setSelectedEntryPath] = useState("");
+  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+  const [focusedPath, setFocusedPath] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const lastAppliedSelectionRequestIdRef = useRef<number | null>(null);
   const requestedSelectionPath = selectionRequest?.path?.trim();
@@ -67,15 +74,49 @@ export function useFileTreeSelection({
       return;
     }
 
-    setSelectedEntryPath(normalizedSelectionPath);
+    setSelectedPaths(new Set([normalizedSelectionPath]));
+    setFocusedPath(normalizedSelectionPath);
     if (selectionRequest.focus) {
       scrollRef.current?.focus();
     }
     lastAppliedSelectionRequestIdRef.current = selectionRequest.requestId;
   }, [normalizedSelectionPath, onEnsurePathLoaded, rowByPath, selectionRequest, setExpandedItems]);
 
+  const handleRowClick = useCallback(
+    (path: string, row: VisibleRow, modifiers: { meta: boolean }) => {
+      if (!modifiers.meta) {
+        setSelectedPaths(new Set([path]));
+        setFocusedPath(path);
+        onSelectEntry?.({ path, isDirectory: row.isDirectory });
+        onSelectionChange?.([path]);
+      } else {
+        const nextSet = new Set(selectedPaths);
+        if (nextSet.has(path)) {
+          nextSet.delete(path);
+        } else {
+          nextSet.add(path);
+        }
+        setSelectedPaths(nextSet);
+        setFocusedPath(path);
+        onSelectEntry?.({ path, isDirectory: row.isDirectory, isMultiSelectOperation: true });
+        onSelectionChange?.([...nextSet]);
+      }
+    },
+    [onSelectEntry, onSelectionChange, selectedPaths],
+  );
+
+  const clearToSingle = useCallback(
+    (path: string) => {
+      setSelectedPaths(new Set([path]));
+      setFocusedPath(path);
+      onSelectEntry?.({ path, isDirectory: directoryPaths.has(path) });
+      onSelectionChange?.([path]);
+    },
+    [directoryPaths, onSelectEntry, onSelectionChange],
+  );
+
   const selectFirstTreeEntryOnFocus = useCallback(() => {
-    if (selectedEntryPath || normalizedSelectionPath) {
+    if (focusedPath || normalizedSelectionPath) {
       return;
     }
 
@@ -84,13 +125,14 @@ export function useFileTreeSelection({
       return;
     }
 
-    setSelectedEntryPath(firstRow.path);
-    onSelectEntry?.({ path: firstRow.path, isDirectory: firstRow.isDirectory });
-  }, [normalizedSelectionPath, onSelectEntry, selectedEntryPath, visibleRows]);
+    handleRowClick(firstRow.path, firstRow, { meta: false });
+  }, [focusedPath, handleRowClick, normalizedSelectionPath, visibleRows]);
 
   return {
-    selectedEntryPath,
-    setSelectedEntryPath,
+    selectedPaths,
+    focusedPath,
+    handleRowClick,
+    clearToSingle,
     scrollRef,
     selectFirstTreeEntryOnFocus,
   };

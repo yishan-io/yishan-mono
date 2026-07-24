@@ -11,6 +11,7 @@ type UseFileTreeKeyboardOptions = {
   visibleRows: VisibleRow[];
   rowByPath: RowByPath;
   selectedEntryPath: string;
+  selectedPaths: Set<string>;
   editingEntry: EditingEntry | null;
   expandedItems: string[];
   expandedPathSet: Set<string>;
@@ -20,7 +21,6 @@ type UseFileTreeKeyboardOptions = {
   virtualizer: Pick<Virtualizer<HTMLDivElement, Element>, "scrollToIndex">;
   setSelectedEntryPath: (path: string) => void;
   setExpandedItems: (updater: (items: string[]) => string[]) => void;
-  onSelectEntry?: FileTreeProps["onSelectEntry"];
   onOpenEntry?: FileTreeProps["onOpenEntry"];
   onCopyEntry?: FileTreeProps["onCopyEntry"];
   onCutEntry?: FileTreeProps["onCutEntry"];
@@ -37,6 +37,7 @@ export function useFileTreeKeyboard({
   visibleRows,
   rowByPath,
   selectedEntryPath,
+  selectedPaths,
   editingEntry,
   expandedPathSet,
   directoryPaths,
@@ -45,7 +46,6 @@ export function useFileTreeKeyboard({
   virtualizer,
   setSelectedEntryPath,
   setExpandedItems,
-  onSelectEntry,
   onOpenEntry,
   onCopyEntry,
   onCutEntry,
@@ -65,7 +65,6 @@ export function useFileTreeKeyboard({
         const firstRow = visibleRows[0];
         if (firstRow) {
           setSelectedEntryPath(firstRow.path);
-          onSelectEntry?.({ path: firstRow.path, isDirectory: firstRow.isDirectory });
           virtualizer.scrollToIndex(0, { align: "auto" });
         }
         return;
@@ -74,7 +73,6 @@ export function useFileTreeKeyboard({
       const nextRow = visibleRows[current.index + 1];
       if (nextRow) {
         setSelectedEntryPath(nextRow.path);
-        onSelectEntry?.({ path: nextRow.path, isDirectory: nextRow.isDirectory });
         virtualizer.scrollToIndex(current.index + 1, { align: "auto" });
       }
       return;
@@ -90,7 +88,6 @@ export function useFileTreeKeyboard({
       const prevRow = visibleRows[current.index - 1];
       if (prevRow) {
         setSelectedEntryPath(prevRow.path);
-        onSelectEntry?.({ path: prevRow.path, isDirectory: prevRow.isDirectory });
         virtualizer.scrollToIndex(current.index - 1, { align: "auto" });
       }
       return;
@@ -106,7 +103,6 @@ export function useFileTreeKeyboard({
           const firstChild = visibleRows[current.index + 1];
           if (firstChild?.path.startsWith(`${selectedEntryPath}/`)) {
             setSelectedEntryPath(firstChild.path);
-            onSelectEntry?.({ path: firstChild.path, isDirectory: firstChild.isDirectory });
           }
         }
       }
@@ -123,9 +119,17 @@ export function useFileTreeKeyboard({
         if (pathParts.length > 1) {
           const parentPath = pathParts.slice(0, -1).join("/");
           setSelectedEntryPath(parentPath);
-          onSelectEntry?.({ path: parentPath, isDirectory: true });
         }
       }
+      return;
+    }
+
+    // Only collapse multi-selection when more than one item is selected.
+    // Escape on a single selection is a no-op to avoid the side effect of
+    // clearToSingle firing onSelectEntry (which opens a file tab).
+    if (event.key === "Escape" && selectedEntryPath && selectedPaths.size > 1) {
+      event.preventDefault();
+      setSelectedEntryPath(selectedEntryPath); // calls clearToSingle(focusedPath)
       return;
     }
 
@@ -155,7 +159,8 @@ export function useFileTreeKeyboard({
         onCutEntry,
         onPasteEntries,
         onDeleteEntry,
-        onUndoLastEntryOperation,
+        // Note: keyboard Delete operates on focusedPath only, not the full
+        // multi-selection. Bulk keyboard delete is intentionally out of scope.
         resolveSelectedPasteDestination: () =>
           resolveDestinationDirectoryPath(selectedEntryPath, directoryPaths.has(selectedEntryPath)),
       },
