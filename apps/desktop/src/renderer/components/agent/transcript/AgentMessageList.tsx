@@ -1,8 +1,13 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
-import type { AgentContentBlock, AgentMessage as AgentMessageType } from "../../../store/agentChatTypes";
+import type {
+  AgentContentBlock,
+  AgentMessage as AgentMessageType,
+  AgentQueueState,
+} from "../../../store/agentChatTypes";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
 import { AgentMessage } from "./AgentMessage";
+import { QueuedMessageList } from "./QueuedMessageList";
 import type { AgentToolResultMap } from "./helpers";
 
 const EMPTY_MIN_HEIGHT = 320;
@@ -20,6 +25,7 @@ type AgentMessageListProps = {
   emptyPrompt: string;
   workspacePath?: string;
   isWorking?: boolean;
+  queuedMessages?: AgentQueueState;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
 
@@ -109,6 +115,7 @@ function AgentMessageListComponent({
   emptyPrompt,
   workspacePath,
   isWorking = false,
+  queuedMessages,
   onOpenCompletedSubagent,
 }: AgentMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -135,7 +142,8 @@ function AgentMessageListComponent({
       return acc;
     }, []);
   }, [messages, trailingMessage]);
-  const renderedItemCount = displayMessages.length + (isWorking ? 1 : 0);
+  const queuedCount = (queuedMessages?.steering.length ?? 0) + (queuedMessages?.followUp.length ?? 0);
+  const renderedItemCount = displayMessages.length + (isWorking ? 1 : 0) + queuedCount;
   const previousRenderedItemCountRef = useRef(renderedItemCount);
 
   const updateSavedScrollState = useCallback(() => {
@@ -225,7 +233,7 @@ function AgentMessageListComponent({
     };
   }, [isActive, renderedItemCount, scrollToLatestMessage, tabId]);
 
-  if (displayMessages.length === 0) {
+  if (displayMessages.length === 0 && queuedCount === 0) {
     return (
       <Box
         sx={{
@@ -296,6 +304,7 @@ function AgentMessageListComponent({
             </Typography>
           </Box>
         )}
+        {queuedMessages && <QueuedMessageList steering={queuedMessages.steering} followUp={queuedMessages.followUp} />}
         <Box ref={bottomSentinelRef} aria-hidden sx={{ height: 1, flexShrink: 0 }} />
       </Box>
     </Box>

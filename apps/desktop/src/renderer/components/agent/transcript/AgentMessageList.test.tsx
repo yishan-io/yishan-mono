@@ -20,6 +20,11 @@ vi.mock("./AgentMessage", () => ({
   ),
 }));
 
+vi.mock("./QueuedMessageList", () => ({
+  QueuedMessageList: ({ steering, followUp }: { steering: string[]; followUp: string[] }) =>
+    steering.length + followUp.length > 0 ? <div data-testid="queued-message-list" /> : null,
+}));
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -205,5 +210,66 @@ describe("AgentMessageList", () => {
     rerender(<AgentMessageList tabId="tab-scroll" isActive messages={messages} emptyPrompt="empty" isWorking />);
 
     expect(scrollContainer.scrollTop).toBe(160);
+  });
+
+  it("renders queued messages below the message list when queuedMessages is provided", () => {
+    const messages: AgentMessageType[] = [
+      { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Hello" }] },
+    ];
+
+    render(
+      <AgentMessageList
+        tabId="tab-q"
+        isActive
+        messages={messages}
+        emptyPrompt="empty"
+        queuedMessages={{ steering: ["steer me"], followUp: ["follow up"] }}
+      />,
+    );
+
+    expect(screen.getByTestId("queued-message-list")).toBeTruthy();
+  });
+
+  it("renders no queued section when queuedMessages is empty", () => {
+    const messages: AgentMessageType[] = [
+      { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Hello" }] },
+    ];
+
+    render(
+      <AgentMessageList
+        tabId="tab-q-empty"
+        isActive
+        messages={messages}
+        emptyPrompt="empty"
+        queuedMessages={{ steering: [], followUp: [] }}
+      />,
+    );
+
+    expect(screen.queryByTestId("queued-message-list")).toBeNull();
+  });
+
+  it("renders no queued section when queuedMessages is undefined", () => {
+    const messages: AgentMessageType[] = [
+      { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Hello" }] },
+    ];
+
+    render(<AgentMessageList tabId="tab-q-undef" isActive messages={messages} emptyPrompt="empty" />);
+
+    expect(screen.queryByTestId("queued-message-list")).toBeNull();
+  });
+
+  it("renders queued messages even when the message list is otherwise empty", () => {
+    render(
+      <AgentMessageList
+        tabId="tab-q-only"
+        isActive
+        messages={[]}
+        emptyPrompt="empty prompt text"
+        queuedMessages={{ steering: ["pending message"], followUp: [] }}
+      />,
+    );
+
+    expect(screen.getByTestId("queued-message-list")).toBeTruthy();
+    expect(screen.queryByText("empty prompt text")).toBeNull();
   });
 });
