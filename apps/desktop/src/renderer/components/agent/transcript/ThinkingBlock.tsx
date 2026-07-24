@@ -69,7 +69,14 @@ export function ThinkingBlock({ thinking, thinkingSignature, isStreaming }: Thin
         <Collapse in={open}>
           <Typography
             variant="body2"
-            sx={{ whiteSpace: "pre-wrap", px: 1, py: 0.5, color: "text.disabled", fontStyle: "italic" }}
+            sx={{
+              whiteSpace: "pre-wrap",
+              overflowWrap: "break-word",
+              px: 1,
+              py: 0.5,
+              color: "text.disabled",
+              fontStyle: "italic",
+            }}
           >
             {thinking}
           </Typography>

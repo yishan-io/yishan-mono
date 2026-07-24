@@ -45,6 +45,7 @@ export function useMarkdownStyles(theme: Theme, baseFontSize = 15) {
         fontSize: baseFontSize,
         lineHeight: 1.7,
         color: theme.palette.text.primary,
+        overflowWrap: "break-word" as const,
         "& > *:first-of-type": { mt: 0 },
         "& > *:last-child": { mb: 0 },
 

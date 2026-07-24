@@ -230,7 +230,8 @@ function AgentMessageListComponent({
       <Box
         sx={{
           flex: 1,
-          overflow: "auto",
+          overflowY: "auto",
+          overflowX: "hidden",
           px: 2,
           py: 1,
           display: "flex",
@@ -252,7 +253,8 @@ function AgentMessageListComponent({
       sx={{
         flex: 1,
         minHeight: 0,
-        overflow: "auto",
+        overflowY: "auto",
+        overflowX: "hidden",
         px: 2,
         py: 1,
       }}

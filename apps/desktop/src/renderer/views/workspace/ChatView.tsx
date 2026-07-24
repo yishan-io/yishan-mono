@@ -261,7 +261,7 @@ export function ChatView({ tabId, workspaceId, summary, sessionId, agentKind }: 
 
   return (
     <>
-      <Box sx={{ flex: 1, p: 3, overflowY: "auto" }} data-session-id={resolvedSessionId}>
+      <Box sx={{ flex: 1, p: 3, overflowY: "auto", overflowX: "hidden" }} data-session-id={resolvedSessionId}>
         <MessageList
           messages={messages}
           minHeight={0}

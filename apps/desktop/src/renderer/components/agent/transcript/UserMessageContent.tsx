@@ -12,7 +12,7 @@ export function UserMessageContent({ messageText }: UserMessageContentProps) {
 
   if (!skillMessage) {
     return (
-      <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+      <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}>
         {messageText}
       </Typography>
     );
@@ -22,7 +22,7 @@ export function UserMessageContent({ messageText }: UserMessageContentProps) {
     <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
       <SkillUsageMarker skillName={skillMessage.skillName} />
       {skillMessage.trailingContent ? (
-        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}>
           {skillMessage.trailingContent}
         </Typography>
       ) : null}

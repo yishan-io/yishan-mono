@@ -125,7 +125,7 @@ export function AgentMarkdownContent({ content, workspacePath, renderMode = "fin
 
   if (renderMode === "streaming" || !html) {
     return (
-      <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mb: 0.5 }}>
+      <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word", mb: 0.5 }}>
         {content}
       </Typography>
     );
