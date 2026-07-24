@@ -19,7 +19,12 @@ export default function PullRequestEmptyState({
 
   return (
     <Box sx={{ flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", px: 3 }}>
-      <Stack spacing={1.5} alignItems="center">
+      <Stack
+        spacing={1.5}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <Typography variant="body2" sx={{ color: "#999", textAlign: "center" }}>
           {t("workspace.pr.empty")}
         </Typography>

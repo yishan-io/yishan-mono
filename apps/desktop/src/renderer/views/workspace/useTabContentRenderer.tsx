@@ -163,7 +163,12 @@ export function useTabContentRenderer({
                 gap: 1.5,
               }}
             >
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 Chat is currently disabled.
               </Typography>
             </Box>

@@ -77,7 +77,6 @@ export function ScheduledJobListItemView({ job, onOpenDetails }: ScheduledJobLis
           {job.name}
         </Typography>
       </Box>
-
       {/* Project */}
       <Box component="td" sx={tdSx}>
         {project ? (
@@ -100,44 +99,65 @@ export function ScheduledJobListItemView({ job, onOpenDetails }: ScheduledJobLis
             >
               {renderProjectIcon(project.icon ?? undefined, 10)}
             </Box>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {project.name}
             </Typography>
           </Box>
         ) : (
-          <Typography variant="body2" color="text.disabled">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.disabled",
+            }}
+          >
             —
           </Typography>
         )}
       </Box>
-
       {/* Schedule */}
       <Box component="td" sx={tdSx}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {job.cronExpression}
         </Typography>
-        <Typography variant="caption" color="text.disabled">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.disabled",
+          }}
+        >
           {job.timezone}
         </Typography>
       </Box>
-
       {/* Agent */}
       <Box component="td" sx={tdSx}>
         <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
           {isDesktopAgentKind(job.agentKind) ? (
             <AgentIcon agentKind={job.agentKind} context="settingsRow" decorative />
           ) : null}
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {job.agentKind}
           </Typography>
         </Box>
       </Box>
-
       {/* Status */}
       <Box component="td" sx={tdSx}>
         <ScheduledJobStatusIndicator status={job.status} variant="compact" />
       </Box>
-
       {/* Last run */}
       <Box component="td" sx={tdSx}>
         <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
@@ -148,19 +168,27 @@ export function ScheduledJobListItemView({ job, onOpenDetails }: ScheduledJobLis
               </Box>
             </Tooltip>
           ) : null}
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {formatOptionalDate(job.lastRunAt)}
           </Typography>
         </Box>
       </Box>
-
       {/* Next run */}
       <Box component="td" sx={tdSx}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {job.status === "active" ? formatOptionalDate(job.nextRunAt) : "—"}
         </Typography>
       </Box>
-
       {/* Actions — stop click propagation so row click doesn't fire */}
       <Box component="td" sx={{ ...tdSx, px: 0.5 }} onClick={(e) => e.stopPropagation()}>
         {isPending ? (

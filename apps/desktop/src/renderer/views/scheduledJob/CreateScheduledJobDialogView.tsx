@@ -22,8 +22,15 @@ export function CreateScheduledJobDialogView({ open, onClose }: CreateScheduledJ
     onClose();
   };
 
+  const handleDialogClose = (_event: React.SyntheticEvent, reason: "backdropClick" | "escapeKeyDown") => {
+    if (reason === "escapeKeyDown" && isCreating) {
+      return;
+    }
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="lg" disableEscapeKeyDown={isCreating}>
+    <Dialog open={open} onClose={handleDialogClose} fullWidth maxWidth="lg">
       <DialogTitle>{t("scheduledJob.form.title")}</DialogTitle>
       <DialogContent sx={{ pb: 2.5, pt: 1.5 }}>
         <CreateScheduledJobFormView onCreated={onClose} onCancel={handleClose} onBusyChange={setIsCreating} />

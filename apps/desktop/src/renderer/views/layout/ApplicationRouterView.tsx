@@ -31,9 +31,21 @@ export function NotFoundRouteView() {
         px: 2,
       }}
     >
-      <Stack spacing={1.5} alignItems="center" sx={{ textAlign: "center", maxWidth: 420 }}>
+      <Stack
+        spacing={1.5}
+        sx={{
+          alignItems: "center",
+          textAlign: "center",
+          maxWidth: 420,
+        }}
+      >
         <Typography variant="h6">{t("routing.notFound.title")}</Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("routing.notFound.description")}
         </Typography>
         <Button

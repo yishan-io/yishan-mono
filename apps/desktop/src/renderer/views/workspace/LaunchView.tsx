@@ -145,7 +145,12 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
         }}
       >
         <Typography variant="h6">Preparing workspace</Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           You can follow setup progress here while the daemon finishes provisioning.
         </Typography>
         <Box
@@ -185,7 +190,12 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="body2">{step.label}</Typography>
                 {step.message ? (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                    }}
+                  >
                     {step.message}
                   </Typography>
                 ) : null}
@@ -222,7 +232,14 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
       >
         <Box sx={{ display: "flex", flex: 1, flexDirection: "column", alignItems: "flex-start", minWidth: 0 }}>
           <Typography variant="h6">{t("launch.title")}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 3 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mt: 1,
+              mb: 3,
+            }}
+          >
             {t("launch.hint")}
           </Typography>
 
@@ -265,10 +282,13 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
                 {action.shortcutLabel ? (
                   <Typography
                     variant="caption"
-                    color="text.secondary"
                     component="span"
                     aria-hidden="true"
-                    sx={{ fontSize: 13, lineHeight: 1 }}
+                    sx={{
+                      color: "text.secondary",
+                      fontSize: 13,
+                      lineHeight: 1,
+                    }}
                   >
                     {action.shortcutLabel}
                   </Typography>
@@ -280,7 +300,15 @@ export function LaunchView({ workspaceId, enabledAgentKinds }: LaunchViewProps) 
           {/* Agent grid */}
           {enabledAgentKinds.length > 0 && (
             <Box sx={{ width: "min(360px, 100%)", mt: 2 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ display: "block", mb: 2, textAlign: "center" }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  display: "block",
+                  mb: 2,
+                  textAlign: "center",
+                }}
+              >
                 {t("launch.agents")}
               </Typography>
               <Box

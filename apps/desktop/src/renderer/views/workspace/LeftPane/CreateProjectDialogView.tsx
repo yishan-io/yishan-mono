@@ -21,8 +21,15 @@ export function CreateProjectDialogView({ open, onClose }: CreateProjectDialogVi
     onClose();
   };
 
+  const handleDialogClose = (_event: React.SyntheticEvent, reason: "backdropClick" | "escapeKeyDown") => {
+    if (reason === "escapeKeyDown" && isCreating) {
+      return;
+    }
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm" disableEscapeKeyDown={isCreating}>
+    <Dialog open={open} onClose={handleDialogClose} fullWidth maxWidth="sm">
       <DialogTitle>{t("project.actions.addRepository")}</DialogTitle>
       <DialogContent sx={{ pb: 2.5 }}>
         <CreateProjectFormView onCreated={onClose} onCancel={handleClose} onBusyChange={setIsCreating} />

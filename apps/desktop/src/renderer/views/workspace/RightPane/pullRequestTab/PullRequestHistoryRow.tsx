@@ -17,7 +17,13 @@ export default function PullRequestHistoryRow({ pr }: PullRequestHistoryRowProps
 
   return (
     <Stack spacing={0.5}>
-      <Stack direction="row" spacing={1} alignItems="center">
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <PullRequestIcon state={pr.state} isDraft={isDraft} size={15} />
         <Typography variant="body2" noWrap sx={{ flex: 1, minWidth: 0 }}>
           #{pr.prId}

@@ -30,14 +30,23 @@ export function ConfirmationDialog({
   return (
     <Dialog
       open={open}
-      onClose={isSubmitting ? undefined : onCancel}
+      onClose={(_event, reason) => {
+        if (isSubmitting) {
+          return;
+        }
+        onCancel();
+      }}
       fullWidth
       maxWidth="xs"
-      disableEscapeKeyDown={isSubmitting}
     >
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {description}
         </Typography>
       </DialogContent>

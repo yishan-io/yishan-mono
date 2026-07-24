@@ -31,7 +31,14 @@ export function ToolOutputSection({
   return (
     <Collapse in={open}>
       <Box sx={{ px: 1.5, py: 1, bgcolor: "background.paper", borderTop: 1, borderColor: "divider" }}>
-        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            display: "block",
+            mb: 0.5,
+          }}
+        >
           {label}
           {isError ? " (error)" : ""}
         </Typography>

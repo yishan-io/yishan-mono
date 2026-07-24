@@ -52,7 +52,12 @@ export function WorkspaceSettingsView() {
               description={t("settings.workspace.defaultContext.description")}
               control={
                 <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexShrink: 0 }}>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                    }}
+                  >
                     {hasHydrated ? defaultContextStatus : t("settings.workspace.loading")}
                   </Typography>
                   <Switch

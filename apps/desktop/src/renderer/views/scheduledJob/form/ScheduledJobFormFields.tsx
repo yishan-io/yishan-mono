@@ -110,10 +110,23 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
           onChange={(event) => setDraft((previousDraft) => ({ ...previousDraft, name: event.target.value }))}
           placeholder={t("scheduledJob.form.namePlaceholder")}
         />
-        <Typography variant="caption" color="text.secondary" sx={runbookLabelSx}>
+        <Typography
+          variant="caption"
+          sx={[
+            {
+              color: "text.secondary",
+            },
+            ...(Array.isArray(runbookLabelSx) ? runbookLabelSx : [runbookLabelSx]),
+          ]}
+        >
           {t("scheduledJob.form.runbook")}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("scheduledJob.form.runbookHint")}
         </Typography>
         <TextField
@@ -128,11 +141,18 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
           placeholder={t("scheduledJob.form.promptPlaceholder")}
         />
       </Stack>
-
       <Box sx={sideColumnSx}>
         <Stack spacing={1.5}>
           <Box>
-            <Typography variant="body2" color="text.secondary" sx={sectionLabelSx}>
+            <Typography
+              variant="body2"
+              sx={[
+                {
+                  color: "text.secondary",
+                },
+                ...(Array.isArray(sectionLabelSx) ? sectionLabelSx : [sectionLabelSx]),
+              ]}
+            >
               {t("scheduledJob.form.project")}
             </Typography>
             <TextField
@@ -171,7 +191,15 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
             </Typography>
           ) : (
             <Box>
-              <Typography variant="body2" color="text.secondary" sx={sectionLabelSx}>
+              <Typography
+                variant="body2"
+                sx={[
+                  {
+                    color: "text.secondary",
+                  },
+                  ...(Array.isArray(sectionLabelSx) ? sectionLabelSx : [sectionLabelSx]),
+                ]}
+              >
                 {t("scheduledJob.form.node")}
               </Typography>
               {nodesError ? (
@@ -205,7 +233,15 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
           )}
 
           <Box>
-            <Typography variant="body2" color="text.secondary" sx={sectionLabelSx}>
+            <Typography
+              variant="body2"
+              sx={[
+                {
+                  color: "text.secondary",
+                },
+                ...(Array.isArray(sectionLabelSx) ? sectionLabelSx : [sectionLabelSx]),
+              ]}
+            >
               {t("scheduledJob.form.agentKind")}
             </Typography>
             <TextField
@@ -229,7 +265,15 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
           </Box>
 
           <Divider />
-          <Typography variant="body2" color="text.secondary" sx={scheduleSectionTitleSx}>
+          <Typography
+            variant="body2"
+            sx={[
+              {
+                color: "text.secondary",
+              },
+              ...(Array.isArray(scheduleSectionTitleSx) ? scheduleSectionTitleSx : [scheduleSectionTitleSx]),
+            ]}
+          >
             {t("scheduledJob.form.scheduleSection")}
           </Typography>
           <TextField
@@ -295,7 +339,15 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
             />
           ) : null}
           {scheduleType === "custom" ? (
-            <Typography variant="caption" color="text.secondary" sx={customCronDescriptionSx}>
+            <Typography
+              variant="caption"
+              sx={[
+                {
+                  color: "text.secondary",
+                },
+                ...(Array.isArray(customCronDescriptionSx) ? customCronDescriptionSx : [customCronDescriptionSx]),
+              ]}
+            >
               {cronDescription}
             </Typography>
           ) : null}
@@ -307,27 +359,43 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
             disabled={isBusy}
             size="small"
             autoHighlight
-            ListboxComponent={VirtualizedListbox}
             renderInput={(params) => (
               <TextField
                 {...params}
                 size="small"
                 placeholder="UTC"
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <>
-                      <InputAdornment position="start">
-                        <LuGlobe size={16} style={timezoneInputStyle} />
-                      </InputAdornment>
-                      {params.InputProps.startAdornment}
-                    </>
-                  ),
+                slotProps={{
+                  ...params.slotProps,
+
+                  input: {
+                    ...params.slotProps.input,
+                    startAdornment: (
+                      <>
+                        <InputAdornment position="start">
+                          <LuGlobe size={16} style={timezoneInputStyle} />
+                        </InputAdornment>
+                        {params.slotProps.input.startAdornment}
+                      </>
+                    ),
+                  },
                 }}
               />
             )}
+            slotProps={{
+              listbox: {
+                component: VirtualizedListbox,
+              },
+            }}
           />
-          <Typography variant="caption" color="text.secondary" sx={nextRunEstimateSx}>
+          <Typography
+            variant="caption"
+            sx={[
+              {
+                color: "text.secondary",
+              },
+              ...(Array.isArray(nextRunEstimateSx) ? nextRunEstimateSx : [nextRunEstimateSx]),
+            ]}
+          >
             {nextRunEstimate
               ? t("scheduledJob.form.nextRunEstimate", {
                   value: nextRunEstimate.toLocaleString(undefined, {

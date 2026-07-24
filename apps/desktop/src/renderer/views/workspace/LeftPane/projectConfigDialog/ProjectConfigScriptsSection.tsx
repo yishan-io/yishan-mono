@@ -12,7 +12,13 @@ export function ProjectConfigScriptsSection({ draft, isSaving, setDraft }: Proje
   return (
     <Stack spacing={2}>
       <Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 1,
+          }}
+        >
           Setup script
         </Typography>
         <TextField
@@ -31,7 +37,13 @@ export function ProjectConfigScriptsSection({ draft, isSaving, setDraft }: Proje
         />
       </Box>
       <Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 1,
+          }}
+        >
           Post script
         </Typography>
         <TextField

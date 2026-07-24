@@ -10,7 +10,13 @@ type ToolResultMessageContentProps = {
 export function ToolResultMessageContent({ message }: ToolResultMessageContentProps) {
   return (
     <Box>
-      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "text.secondary",
+          fontWeight: 600,
+        }}
+      >
         {message.toolName ?? "tool"}
         {message.isError ? " (error)" : ""}
       </Typography>

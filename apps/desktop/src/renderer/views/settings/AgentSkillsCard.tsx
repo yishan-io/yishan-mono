@@ -78,11 +78,14 @@ function SkillCard({ skill, isBusy, onInstall, onUpdate, onRemove, onClick }: Sk
           />
         </Box>
       </Box>
-
-      <Typography variant="body2" color="text.secondary">
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+        }}
+      >
         {skill.description}
       </Typography>
-
       {skill.installedForAgents.length > 0 ? (
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
           {skill.installedForAgents.map((agent) => (
@@ -96,7 +99,6 @@ function SkillCard({ skill, isBusy, onInstall, onUpdate, onRemove, onClick }: Sk
           ))}
         </Box>
       ) : null}
-
       <Box
         sx={{ mt: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}
         onClick={(event) => event.stopPropagation()}
@@ -193,13 +195,24 @@ function SkillDetailDialog({ skill, onClose }: SkillDetailDialogProps) {
         {loadError ? <Alert severity="error">{loadError}</Alert> : null}
         {detail ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {skill.description}
             </Typography>
 
             {detail.source ? (
               <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                    display: "block",
+                  }}
+                >
                   {t("settings.skills.sourceLabel")}
                 </Typography>
                 <Typography variant="body2">{detail.source}</Typography>
@@ -208,7 +221,14 @@ function SkillDetailDialog({ skill, onClose }: SkillDetailDialogProps) {
 
             {readme ? (
               <Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                    display: "block",
+                    mb: 1,
+                  }}
+                >
                   {t("settings.skills.instruction")}
                 </Typography>
                 <Box
@@ -357,7 +377,13 @@ export function AgentSkillsCard() {
             </Box>
 
             {skills.length === 0 && !loadError ? (
-              <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  py: 1,
+                }}
+              >
                 {t("settings.skills.loadError")}
               </Typography>
             ) : (
@@ -392,7 +418,6 @@ export function AgentSkillsCard() {
           </>
         )}
       </SettingsCard>
-
       {selectedSkill ? (
         <SkillDetailDialog
           skill={selectedSkill}
@@ -401,7 +426,6 @@ export function AgentSkillsCard() {
           }}
         />
       ) : null}
-
       {confirmSkillName ? (
         <Dialog open onClose={() => setConfirmSkillName(null)} maxWidth="xs" fullWidth>
           <DialogTitle>{t("settings.skills.confirmRemoveTitle")}</DialogTitle>
@@ -429,7 +453,6 @@ export function AgentSkillsCard() {
           </DialogActions>
         </Dialog>
       ) : null}
-
       <Snackbar
         open={successMessage !== null}
         autoHideDuration={4000}

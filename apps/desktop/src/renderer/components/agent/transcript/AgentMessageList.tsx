@@ -248,7 +248,13 @@ function AgentMessageListComponent({
           minHeight: EMPTY_MIN_HEIGHT,
         }}
       >
-        <Typography color="text.secondary">{emptyPrompt}</Typography>
+        <Typography
+          sx={{
+            color: "text.secondary",
+          }}
+        >
+          {emptyPrompt}
+        </Typography>
       </Box>
     );
   }
@@ -299,7 +305,12 @@ function AgentMessageListComponent({
             }}
           >
             <CircularProgress size={14} thickness={5} />
-            <Typography variant="caption" color="inherit">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "inherit",
+              }}
+            >
               working…
             </Typography>
           </Box>

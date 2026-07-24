@@ -64,7 +64,12 @@ export function MemorySearchToolCard({ toolCall, result = null }: AgentToolCallC
                 >
                   {match.path}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   rank {match.score.toFixed(3)}
                 </Typography>
                 <Typography

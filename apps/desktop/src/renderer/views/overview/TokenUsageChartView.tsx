@@ -86,7 +86,12 @@ export function TokenUsageChartView() {
   if (loadState === "loading" || loadState === "idle") {
     return (
       <Box sx={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("overview.tokenUsage.loading")}
         </Typography>
       </Box>
@@ -98,11 +103,15 @@ export function TokenUsageChartView() {
       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
         {t("overview.tokenUsage.title")}
       </Typography>
-
       <Box sx={{ height: 240, width: "100%" }}>
         {chartData.length === 0 ? (
           <Box sx={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("overview.tokenUsage.noData")}
             </Typography>
           </Box>
@@ -155,10 +164,14 @@ export function TokenUsageChartView() {
           />
         )}
       </Box>
-
       <Box sx={{ display: "flex", gap: 3, mt: 1.5, flexWrap: "wrap" }}>
         <Box>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("overview.tokenUsage.total")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
@@ -166,7 +179,12 @@ export function TokenUsageChartView() {
           </Typography>
         </Box>
         <Box>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("overview.tokenUsage.cached")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace", color: "#4CAF50" }}>
@@ -174,7 +192,12 @@ export function TokenUsageChartView() {
           </Typography>
         </Box>
         <Box>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("overview.tokenUsage.uncached")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace", color: "#FF9800" }}>
@@ -182,7 +205,12 @@ export function TokenUsageChartView() {
           </Typography>
         </Box>
         <Box>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("overview.tokenUsage.turns")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
@@ -190,7 +218,12 @@ export function TokenUsageChartView() {
           </Typography>
         </Box>
         <Box>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("overview.tokenUsage.toolCalls")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>

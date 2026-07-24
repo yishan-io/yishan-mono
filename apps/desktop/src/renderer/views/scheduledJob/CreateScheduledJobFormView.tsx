@@ -119,13 +119,19 @@ export function CreateScheduledJobFormView({ onCreated, onCancel, onBusyChange }
         showNodeLabelWhenError={false}
         customCronDescriptionSx={createCustomCronDescriptionSx}
       />
-
       {createMutation.isError ? (
         <Typography variant="caption" color="error">
           {getErrorMessage(createMutation.error)}
         </Typography>
       ) : null}
-      <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ pt: 0.5 }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          justifyContent: "flex-end",
+          pt: 0.5,
+        }}
+      >
         {onCancel ? (
           <Button onClick={onCancel} disabled={isCreating}>
             {t("common.actions.cancel")}

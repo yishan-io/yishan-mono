@@ -60,62 +60,161 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
 
   const tooltipContent = (
     <Box sx={{ display: "grid", gridTemplateColumns: "auto auto", columnGap: 2, rowGap: 0.5 }}>
-      <Typography variant="caption" color="inherit">
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+        }}
+      >
         {t("agentChat.usageSummary.currentContext")}
       </Typography>
-      <Typography variant="caption" color="inherit" sx={{ textAlign: "right" }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+          textAlign: "right",
+        }}
+      >
         {`${formatDetailedTokenCount(usageSummary.contextTokens)} / ${formatDetailedTokenCount(usageSummary.contextWindow)} (${usageSummary.contextPercent}%)`}
       </Typography>
-      <Typography variant="caption" color="inherit">
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+        }}
+      >
         {t("agentChat.usageSummary.input")}
       </Typography>
-      <Typography variant="caption" color="inherit" sx={{ textAlign: "right" }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+          textAlign: "right",
+        }}
+      >
         {formatDetailedTokenCount(usageSummary.inputTokens)}
       </Typography>
-      <Typography variant="caption" color="inherit">
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+        }}
+      >
         {t("agentChat.usageSummary.output")}
       </Typography>
-      <Typography variant="caption" color="inherit" sx={{ textAlign: "right" }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+          textAlign: "right",
+        }}
+      >
         {formatDetailedTokenCount(usageSummary.outputTokens)}
       </Typography>
-      <Typography variant="caption" color="inherit">
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+        }}
+      >
         {t("agentChat.usageSummary.cacheRead")}
       </Typography>
-      <Typography variant="caption" color="inherit" sx={{ textAlign: "right" }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+          textAlign: "right",
+        }}
+      >
         {formatDetailedTokenCount(usageSummary.cacheReadTokens)}
       </Typography>
-      <Typography variant="caption" color="inherit">
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+        }}
+      >
         {t("agentChat.usageSummary.cacheWrite")}
       </Typography>
-      <Typography variant="caption" color="inherit" sx={{ textAlign: "right" }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+          textAlign: "right",
+        }}
+      >
         {formatDetailedTokenCount(usageSummary.cacheWriteTokens)}
       </Typography>
-      <Typography variant="caption" color="inherit">
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+        }}
+      >
         {t("agentChat.usageSummary.cacheRate")}
       </Typography>
-      <Typography variant="caption" color="inherit" sx={{ textAlign: "right" }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+          textAlign: "right",
+        }}
+      >
         {`${usageSummary.cacheRatePercent}%`}
       </Typography>
       {usageSummary.reasoningTokens > 0 ? (
         <>
-          <Typography variant="caption" color="inherit">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "inherit",
+            }}
+          >
             {t("agentChat.usageSummary.reasoning")}
           </Typography>
-          <Typography variant="caption" color="inherit" sx={{ textAlign: "right" }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "inherit",
+              textAlign: "right",
+            }}
+          >
             {formatDetailedTokenCount(usageSummary.reasoningTokens)}
           </Typography>
         </>
       ) : null}
-      <Typography variant="caption" color="inherit">
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+        }}
+      >
         {t("agentChat.usageSummary.sessionTotalCumulative")}
       </Typography>
-      <Typography variant="caption" color="inherit" sx={{ textAlign: "right" }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+          textAlign: "right",
+        }}
+      >
         {formatDetailedTokenCount(usageSummary.totalSessionTokens)}
       </Typography>
-      <Typography variant="caption" color="inherit">
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+        }}
+      >
         {t("agentChat.usageSummary.cost")}
       </Typography>
-      <Typography variant="caption" color="inherit" sx={{ textAlign: "right" }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "inherit",
+          textAlign: "right",
+        }}
+      >
         {usdFormatter.format(usageSummary.totalCostUsd)}
       </Typography>
     </Box>

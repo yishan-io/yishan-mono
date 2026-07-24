@@ -47,7 +47,12 @@ export function AgentKindChartView() {
         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
           {t("overview.agentUsage.title")}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("overview.agentUsage.loading")}
         </Typography>
       </Box>
@@ -59,9 +64,13 @@ export function AgentKindChartView() {
       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
         {t("overview.agentUsage.title")}
       </Typography>
-
       {pieData.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("overview.agentUsage.noData")}
         </Typography>
       ) : (
@@ -84,11 +93,15 @@ export function AgentKindChartView() {
           />
         </Box>
       )}
-
       {totalTokens > 0 ? (
         <Box sx={{ display: "flex", gap: 3, mt: 1.5, flexWrap: "wrap" }}>
           <Box>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("overview.agentUsage.totalTokens")}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
@@ -96,7 +109,12 @@ export function AgentKindChartView() {
             </Typography>
           </Box>
           <Box>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("overview.agentUsage.agents")}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>

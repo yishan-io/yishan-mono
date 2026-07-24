@@ -15,11 +15,33 @@ const LARGE_SYMBOL_KEYS = new Set(["⌘", "⇧", "⌃", "⌥", "↵"]);
  */
 export function HotkeyDisplay({ keys }: { keys: readonly string[] }) {
   return (
-    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap alignItems="center">
+    <Stack
+      direction="row"
+      spacing={0.5}
+      useFlexGap
+      sx={{
+        flexWrap: "wrap",
+        alignItems: "center",
+      }}
+    >
       {keys.map((key, index) => (
-        <Stack key={key} direction="row" spacing={0.5} alignItems="center">
+        <Stack
+          key={key}
+          direction="row"
+          spacing={0.5}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           {index > 0 ? (
-            <Typography variant="body2" color="text.secondary" aria-hidden="true" sx={{ fontSize: 14 }}>
+            <Typography
+              variant="body2"
+              aria-hidden="true"
+              sx={{
+                color: "text.secondary",
+                fontSize: 14,
+              }}
+            >
               +
             </Typography>
           ) : null}
@@ -83,10 +105,20 @@ export function KeybindingRow({ binding }: KeybindingRowProps) {
       }}
     >
       <Box>
-        <Typography variant="body2" color="text.primary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.primary",
+          }}
+        >
           {t(binding.descriptionKey)}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {binding.scope === "global" ? t("keybindings.scope.global") : t("keybindings.scope.workspace")}
         </Typography>
       </Box>
@@ -136,10 +168,20 @@ export function KeybindingTable({ bindings, actionColumnLabel, keyColumnLabel }:
           bgcolor: "background.paper",
         }}
       >
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {actionColumnLabel}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {keyColumnLabel}
         </Typography>
       </Box>

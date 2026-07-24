@@ -34,7 +34,14 @@ export default function PullRequestChecksSection({ checks }: PullRequestChecksSe
     <Stack spacing={1}>
       <Typography variant="subtitle2">{t("workspace.pr.checks")}</Typography>
       {checks.map((check) => (
-        <Stack key={`${check.workflow ?? ""}:${check.name}`} direction="row" spacing={1} alignItems="center">
+        <Stack
+          key={`${check.workflow ?? ""}:${check.name}`}
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <Box sx={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
             <CheckStateIcon state={check.state} />
           </Box>
@@ -64,7 +71,13 @@ export default function PullRequestChecksSection({ checks }: PullRequestChecksSe
               </Typography>
             )}
             {check.description ? (
-              <Typography variant="caption" color="text.secondary" noWrap>
+              <Typography
+                variant="caption"
+                noWrap
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {check.description}
               </Typography>
             ) : null}

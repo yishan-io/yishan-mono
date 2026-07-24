@@ -42,7 +42,12 @@ export function ModelBreakdownView() {
         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
           {t("overview.modelBreakdown.title")}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("overview.modelBreakdown.loading")}
         </Typography>
       </Box>
@@ -54,9 +59,13 @@ export function ModelBreakdownView() {
       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
         {t("overview.modelBreakdown.title")}
       </Typography>
-
       {models.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("overview.modelBreakdown.noData")}
         </Typography>
       ) : (

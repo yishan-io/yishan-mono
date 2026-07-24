@@ -37,7 +37,12 @@ export class SettingsErrorBoundary extends Component<SettingsErrorBoundaryProps,
           <Alert severity="error" sx={{ mb: 1 }}>
             <Stack spacing={0.5}>
               <Typography variant="body2">Something went wrong while rendering {this.props.sectionLabel}.</Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {this.state.error.message}
               </Typography>
             </Stack>

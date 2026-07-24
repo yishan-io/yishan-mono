@@ -69,7 +69,6 @@ export function CreateOrganizationDialogView({ open, onClose }: CreateOrganizati
             autoFocus
             fullWidth
             placeholder={t("org.menu.newOrganizationPrompt")}
-            inputProps={{ "aria-label": t("org.menu.newOrganizationPrompt") }}
             value={organizationName}
             onChange={(event) => {
               setOrganizationName(event.currentTarget.value);
@@ -81,6 +80,9 @@ export function CreateOrganizationDialogView({ open, onClose }: CreateOrganizati
               }
             }}
             disabled={isCreating}
+            slotProps={{
+              htmlInput: { "aria-label": t("org.menu.newOrganizationPrompt") },
+            }}
           />
           {errorMessage ? (
             <Typography variant="caption" color="error">

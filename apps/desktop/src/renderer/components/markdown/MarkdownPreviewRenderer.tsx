@@ -82,7 +82,12 @@ export const MarkdownPreviewRenderer = memo(function MarkdownPreviewRenderer({
           height: "100%",
         }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           No content to preview
         </Typography>
       </Box>

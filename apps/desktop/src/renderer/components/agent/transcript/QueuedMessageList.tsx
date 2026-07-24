@@ -37,7 +37,12 @@ export function QueuedMessageList({ steering, followUp }: QueuedMessageListProps
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
             <LuClock size={12} />
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               Queued
             </Typography>
           </Box>

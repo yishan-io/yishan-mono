@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { agentChatStore } from "../store/agentChatStore";
 import type { AgentMessage } from "../store/agentChatTypes";
 import { handleAgentPiEvent } from "./agentChatCommands";
-import { flushAgentChatStreamBuffer, setAgentChatStreamTabVisible } from "./agentChatStreamBuffer";
 import { MAX_DETAILS_ITEMS, MAX_DETAILS_STRING_UTF8_BYTES, PER_MESSAGE_UTF8_BYTES } from "./agentChatInboundMessage";
+import { flushAgentChatStreamBuffer, setAgentChatStreamTabVisible } from "./agentChatStreamBuffer";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 
@@ -431,6 +431,4 @@ describe("agentChatInboundMessage — bounded normalization behavior", () => {
       expect(content[0].text.length).toBe(largeText.length);
     });
   });
-
 });
-

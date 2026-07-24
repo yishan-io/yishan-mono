@@ -57,7 +57,12 @@ export function WorkspaceInsightsView() {
         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
           {t("overview.workspaceInsights.title")}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("overview.workspaceInsights.loading")}
         </Typography>
       </Box>
@@ -70,7 +75,12 @@ export function WorkspaceInsightsView() {
         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
           {t("overview.workspaceInsights.title")}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("overview.workspaceInsights.noData")}
         </Typography>
       </Box>
@@ -130,7 +140,12 @@ function ClosedTabContent({
         >
           <LuArchive size={18} style={{ opacity: 0.6 }} />
           <Box>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("overview.workspaceInsights.closed")}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
@@ -154,7 +169,12 @@ function ClosedTabContent({
         >
           <LuClock size={18} style={{ opacity: 0.6 }} />
           <Box>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("overview.workspaceInsights.avgLifetime")}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
@@ -165,16 +185,25 @@ function ClosedTabContent({
           </Box>
         </Box>
       </Box>
-
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 1 }}>
         <LuHistory size={14} style={{ opacity: 0.6 }} />
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            fontWeight: 600,
+          }}
+        >
           {t("overview.workspaceInsights.lastClosed")}
         </Typography>
       </Box>
-
       {insights.lastClosedWorkspaces.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("overview.workspaceInsights.noClosed")}
         </Typography>
       ) : (
@@ -257,7 +286,12 @@ function PrimaryTabContent({
         >
           <LuArchive size={18} style={{ opacity: 0.6 }} />
           <Box>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("overview.workspaceInsights.primaryCount")}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
@@ -281,7 +315,12 @@ function PrimaryTabContent({
         >
           <LuClock size={18} style={{ opacity: 0.6 }} />
           <Box>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("overview.workspaceInsights.tokenUsage")}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
@@ -290,16 +329,25 @@ function PrimaryTabContent({
           </Box>
         </Box>
       </Box>
-
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 1 }}>
         <LuHistory size={14} style={{ opacity: 0.6 }} />
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            fontWeight: 600,
+          }}
+        >
           {t("overview.workspaceInsights.topPrimary")}
         </Typography>
       </Box>
-
       {insights.topPrimaryWorkspaces.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("overview.workspaceInsights.noPrimary")}
         </Typography>
       ) : (

@@ -38,7 +38,6 @@ export function UnsupportedFileView({
         onOpenExternalApp={onOpenExternalApp}
         openExternalAppLabel={openExternalAppLabel}
       />
-
       <Box
         sx={{
           flex: 1,
@@ -54,11 +53,21 @@ export function UnsupportedFileView({
       >
         <PiCubeThin size={88} color="currentColor" style={{ opacity: 0.32 }} />
         <Typography variant="h6">{title}</Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {description}
         </Typography>
         {hint ? (
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {hint}
           </Typography>
         ) : null}

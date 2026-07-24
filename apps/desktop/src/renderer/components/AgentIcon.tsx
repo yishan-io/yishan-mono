@@ -36,8 +36,6 @@ export function AgentIcon({ agentKind, context, label, decorative = false }: Age
         src={icon.src}
         alt={decorative ? "" : (label ?? "")}
         aria-hidden={decorative ? true : undefined}
-        width={icon.width}
-        height={icon.height}
         sx={{
           width: icon.width,
           height: icon.height,

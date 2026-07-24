@@ -14,7 +14,12 @@ describe("StatusIndicator", () => {
     render(
       <>
         <StatusIndicator label="Disabled" color="disabled" />
-        <Typography data-testid="secondary-label" color="text.secondary" />
+        <Typography
+          data-testid="secondary-label"
+          sx={{
+            color: "text.secondary",
+          }}
+        />
       </>,
     );
 
@@ -27,7 +32,12 @@ describe("StatusIndicator", () => {
     render(
       <>
         <StatusIndicator label="Paused" color="disabled" dotSize={7} gap={0.5} labelColor="text.secondary" />
-        <Typography data-testid="secondary-label" color="text.secondary" />
+        <Typography
+          data-testid="secondary-label"
+          sx={{
+            color: "text.secondary",
+          }}
+        />
       </>,
     );
 

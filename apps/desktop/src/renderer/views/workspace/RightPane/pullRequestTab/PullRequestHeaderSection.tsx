@@ -80,7 +80,13 @@ export default function PullRequestHeaderSection({
   return (
     <>
       <Stack spacing={0.75}>
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <PullRequestIcon state={hasLivePr ? (liveStatus ?? "open") : "open"} size={18} />
           <Typography variant="subtitle1" noWrap sx={{ flex: 1, minWidth: 0 }}>
             #{prNumber}
@@ -123,10 +129,15 @@ export default function PullRequestHeaderSection({
           </Link>
         ) : null}
       </Stack>
-
       {prOpen ? (
         <Stack spacing={0.75}>
-          <Stack direction="row" spacing={0.75} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={0.75}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <ButtonGroup variant="contained" size="small" sx={{ fontSize: 13 }}>
               <Button
                 onClick={() => void actions.handleMerge()}
@@ -184,7 +195,6 @@ export default function PullRequestHeaderSection({
           />
         </Stack>
       ) : null}
-
       {actionError ? (
         <Alert severity="error" variant="outlined" onClose={() => actions.setActionError(null)} sx={{ fontSize: 12 }}>
           {actionError}

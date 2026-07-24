@@ -14,8 +14,8 @@ import {
   setPiSessionUnsubscribe,
   stopPiSession,
 } from "./agentChatCommands";
-import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "./agentChatSubagentCommands";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "./agentChatEventRouter";
+import { cancelSubagentRun, openSubagentSessionInRightSplitPane } from "./agentChatSubagentCommands";
 
 const initialAgentChatStoreState = agentChatStore.getState();
 const initialTabStoreState = tabStore.getState();
@@ -131,7 +131,6 @@ describe("agentChatCommands.ensurePiSession", () => {
     });
     expect(ensureAgentChatEventRouterReady).toHaveBeenCalled();
 
-
     expect(mocks.start).toHaveBeenCalledWith({
       sessionId: "history-session-1",
       tabId: "tab-history-resume",
@@ -196,7 +195,6 @@ describe("agentChatCommands.ensurePiSession", () => {
       onEvent: expect.any(Function),
     });
     expect(ensureAgentChatEventRouterReady).toHaveBeenCalled();
-
   });
 
   it("prefers explicit session ids over stale local chat-session state", async () => {

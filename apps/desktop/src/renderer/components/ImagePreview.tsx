@@ -81,8 +81,12 @@ export function ImagePreview({
             </Tooltip>
             <Typography
               variant="caption"
-              color="text.secondary"
-              sx={{ minWidth: 36, textAlign: "center", userSelect: "none" }}
+              sx={{
+                color: "text.secondary",
+                minWidth: 36,
+                textAlign: "center",
+                userSelect: "none",
+              }}
             >
               {zoomPercent}
             </Typography>
@@ -108,7 +112,6 @@ export function ImagePreview({
           </>
         }
       />
-
       {/* Image canvas */}
       <Box
         sx={{

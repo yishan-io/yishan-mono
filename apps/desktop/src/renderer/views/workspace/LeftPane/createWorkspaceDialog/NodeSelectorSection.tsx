@@ -22,7 +22,14 @@ export function NodeSelectorSection({
 }: NodeSelectorSectionProps) {
   return (
     <Box>
-      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "text.secondary",
+          display: "block",
+          mb: 0.5,
+        }}
+      >
         Run on node
       </Typography>
       <TextField
@@ -38,7 +45,13 @@ export function NodeSelectorSection({
               const selectedValue = typeof value === "string" ? value : "";
               const selectedNode = nodes.find((node) => node.id === selectedValue);
               return (
-                <Stack direction="row" alignItems="center" gap={1}>
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
                   <Box component="span" sx={{ display: "inline-flex", color: "text.secondary" }}>
                     {selectedNode?.scope === "shared" ? <LuCloud size={14} /> : <LuServer size={14} />}
                   </Box>
@@ -62,7 +75,13 @@ export function NodeSelectorSection({
       >
         {nodes.map((node) => (
           <MenuItem key={node.id} value={node.id} disabled={!node.canUse || !node.isOnline}>
-            <Stack direction="row" alignItems="center" gap={1}>
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: 1,
+              }}
+            >
               <Box component="span" sx={{ display: "inline-flex", color: "text.secondary" }}>
                 {node.scope === "shared" ? <LuCloud size={14} /> : <LuServer size={14} />}
               </Box>

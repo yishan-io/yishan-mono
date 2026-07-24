@@ -14,15 +14,17 @@ vi.mock("@mui/material", async () => {
         id: "model-autocomplete",
         disabled: false,
         fullWidth: false,
-        InputLabelProps: {},
-        InputProps: {
-          ref: () => {},
-          className: "",
-          startAdornment: null,
-          endAdornment: null,
-          onMouseDown: () => {},
+        slotProps: {
+          inputLabel: {},
+          input: {
+            ref: () => {},
+            className: "",
+            startAdornment: null,
+            endAdornment: null,
+            onMouseDown: () => {},
+          },
+          htmlInput: { ref: () => {} },
         },
-        inputProps: { ref: () => {} },
         size: "small",
       }),
   };

@@ -152,7 +152,13 @@ export function CreateProjectFormView({
       }}
     >
       <Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 1,
+          }}
+        >
           {t("project.form.source.label")}
         </Typography>
         <ButtonGroup size="small" fullWidth>
@@ -197,7 +203,13 @@ export function CreateProjectFormView({
         </ButtonGroup>
       </Box>
       <Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 1,
+          }}
+        >
           {repoDraft.source === "local" ? t("project.form.path") : t("project.form.gitUrl")}
         </Typography>
         <TextField
@@ -248,7 +260,13 @@ export function CreateProjectFormView({
         />
       </Box>
       <Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 1,
+          }}
+        >
           {t("project.form.name")}
         </Typography>
         <TextField
@@ -264,7 +282,13 @@ export function CreateProjectFormView({
           fullWidth
         />
       </Box>
-      <Stack direction="row" spacing={1} justifyContent="flex-end">
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          justifyContent: "flex-end",
+        }}
+      >
         {onCancel ? (
           <Button onClick={onCancel} disabled={isCreating}>
             {t("common.actions.cancel")}

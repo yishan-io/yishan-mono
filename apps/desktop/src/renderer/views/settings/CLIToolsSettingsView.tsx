@@ -106,15 +106,6 @@ function AgentCommandInput({ agentKind, currentCommand, onSave, onReset }: Agent
       placeholder={t("settings.agents.command.placeholder", { defaultCommand })}
       error={errorKey !== null}
       helperText={errorKey ? t(errorKey) : undefined}
-      inputProps={{
-        maxLength: AGENT_COMMAND_MAX_LENGTH,
-        "aria-label": `${t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind])} ${t("settings.agents.command.label")}`,
-        spellCheck: false,
-        autoComplete: "off",
-        autoCorrect: "off",
-        autoCapitalize: "off",
-        sx: { fontSize: "0.85rem", color: "text.secondary" },
-      }}
       slotProps={{
         input: {
           endAdornment: hasCustomCommand ? (
@@ -132,6 +123,16 @@ function AgentCommandInput({ agentKind, currentCommand, onSave, onReset }: Agent
               </IconButton>
             </InputAdornment>
           ) : null,
+        },
+
+        htmlInput: {
+          maxLength: AGENT_COMMAND_MAX_LENGTH,
+          "aria-label": `${t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind])} ${t("settings.agents.command.label")}`,
+          spellCheck: false,
+          autoComplete: "off",
+          autoCorrect: "off",
+          autoCapitalize: "off",
+          sx: { fontSize: "0.85rem", color: "text.secondary" },
         },
       }}
       sx={{ minWidth: 0, width: "100%" }}
@@ -223,7 +224,7 @@ export function CLIToolsSettingsView() {
                         {t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind as DesktopAgentKind])}
                       </Box>
                     </Box>
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    <Stack sx={{ display: "flex", flexDirection: "row", gap: 1, alignItems: "center" }}>
                       <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>
                         <Box
                           sx={{

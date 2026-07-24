@@ -85,13 +85,6 @@ export function ProjectAndSourceBranchSection({
                     },
                   },
                 },
-                PaperProps: {
-                  sx: {
-                    width: "250px !important",
-                    minWidth: "250px !important",
-                    maxWidth: "250px !important",
-                  },
-                },
               },
               renderValue: (value) => {
                 const selectedValue = typeof value === "string" ? value : "";
@@ -99,7 +92,7 @@ export function ProjectAndSourceBranchSection({
                 const projectColor = selectedProject?.color ?? theme.palette.primary.main;
 
                 return (
-                  <Stack direction="row" alignItems="center" gap={1}>
+                  <Stack sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 1 }}>
                     <Avatar
                       variant="rounded"
                       sx={{
@@ -125,7 +118,7 @@ export function ProjectAndSourceBranchSection({
 
             return (
               <MenuItem key={project.id} value={project.id}>
-                <Stack direction="row" alignItems="center" gap={1}>
+                <Stack sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 1 }}>
                   <Avatar
                     variant="rounded"
                     sx={{
@@ -158,25 +151,27 @@ export function ProjectAndSourceBranchSection({
             onSourceBranchMenuOpen(event.currentTarget);
           }}
           sx={compactSelectSx}
-          InputProps={{
-            readOnly: true,
-            startAdornment: (
-              <InputAdornment position="start" sx={{ mr: 0.75 }}>
-                {isSelectedSourceBranchWorktree ? (
-                  <LuFolderGit2 size={14} color="currentColor" />
-                ) : (
-                  <LuGitBranch size={14} color="currentColor" />
-                )}
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <InputAdornment position="end" sx={{ ml: 0.5, color: "text.secondary" }}>
-                {isLoadingSourceBranches ? <CircularProgress size={14} /> : <LuChevronDown size={16} />}
-              </InputAdornment>
-            ),
-          }}
           placeholder="Source branch"
           disabled={isRenameMode || !selectedProjectId || sourceBranchOptions.length === 0}
+          slotProps={{
+            input: {
+              readOnly: true,
+              startAdornment: (
+                <InputAdornment position="start" sx={{ mr: 0.75 }}>
+                  {isSelectedSourceBranchWorktree ? (
+                    <LuFolderGit2 size={14} color="currentColor" />
+                  ) : (
+                    <LuGitBranch size={14} color="currentColor" />
+                  )}
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end" sx={{ ml: 0.5, color: "text.secondary" }}>
+                  {isLoadingSourceBranches ? <CircularProgress size={14} /> : <LuChevronDown size={16} />}
+                </InputAdornment>
+              ),
+            },
+          }}
         />
         <Popover
           open={isSourceBranchMenuOpen}

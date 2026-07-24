@@ -43,21 +43,47 @@ export function WorkspaceInfoPopperView({
 
   // Prefer live daemon PR; fall back to latest snapshot from api-service.
   const prSection = pullRequest ? (
-    <Stack direction="row" spacing={0.5} alignItems="center">
+    <Stack
+      direction="row"
+      spacing={0.5}
+      sx={{
+        alignItems: "center",
+      }}
+    >
       <PullRequestIcon state={livePrStatus(pullRequest)} size={14} />
-      <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }} noWrap>
+      <Typography
+        variant="caption"
+        noWrap
+        sx={{
+          color: "text.secondary",
+          lineHeight: 1.2,
+        }}
+      >
         #{pullRequest.number}
         {pullRequest.title ? ` ${pullRequest.title}` : ""}
       </Typography>
     </Stack>
   ) : latestPullRequest ? (
-    <Stack direction="row" spacing={0.5} alignItems="center">
+    <Stack
+      direction="row"
+      spacing={0.5}
+      sx={{
+        alignItems: "center",
+      }}
+    >
       <PullRequestIcon
         state={latestPullRequest.state}
         isDraft={(latestPullRequest.metadata as Record<string, unknown> | null)?.isDraft as boolean | undefined}
         size={14}
       />
-      <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }} noWrap>
+      <Typography
+        variant="caption"
+        noWrap
+        sx={{
+          color: "text.secondary",
+          lineHeight: 1.2,
+        }}
+      >
         #{latestPullRequest.prId}
         {latestPullRequest.title ? ` ${latestPullRequest.title}` : ""}
       </Typography>
@@ -103,9 +129,21 @@ export function WorkspaceInfoPopperView({
           >
             {workspace?.name}
           </Typography>
-          <Stack direction="row" spacing={0.5} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <LuGitBranch size={14} />
-            <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                lineHeight: 1.2,
+              }}
+            >
               <Box component="span" sx={{ textTransform: "uppercase", letterSpacing: 0.4, color: "info.main" }}>
                 {t("workspace.info.branch")}:
               </Box>{" "}
@@ -113,9 +151,21 @@ export function WorkspaceInfoPopperView({
             </Typography>
           </Stack>
           {showSourceBranch ? (
-            <Stack direction="row" spacing={0.5} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={0.5}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <LuGitBranch size={14} />
-              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                  lineHeight: 1.2,
+                }}
+              >
                 <Box component="span" sx={{ textTransform: "uppercase", letterSpacing: 0.4, color: "info.main" }}>
                   {t("workspace.info.sourceBranch")}:
                 </Box>{" "}

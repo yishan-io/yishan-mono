@@ -17,17 +17,17 @@ import {
   truncateUtf8Bytes,
 } from "./agentChatInboundMessage";
 import {
-  applySubagentLiveTranscripts,
-  parseSubagentLiveTranscripts,
-  parseSubagentProgressTargets,
-} from "./agentChatSubagentEvents";
-import {
   flushAgentChatStreamBuffer,
   peekAgentChatStreamMessage,
   queueAgentChatStreamMessage,
   setAgentChatStreamTabVisible as setBufferedAgentChatStreamTabVisible,
 } from "./agentChatStreamBuffer";
 import { applyStreamDelta, cloneAgentMessage, cloneContentBlocks } from "./agentChatStreamMessageHelpers";
+import {
+  applySubagentLiveTranscripts,
+  parseSubagentLiveTranscripts,
+  parseSubagentProgressTargets,
+} from "./agentChatSubagentEvents";
 import { parsePendingUiRequest } from "./agentChatUiRequestParser";
 
 // Re-export so callers that import parsePendingUiRequest from here still work.

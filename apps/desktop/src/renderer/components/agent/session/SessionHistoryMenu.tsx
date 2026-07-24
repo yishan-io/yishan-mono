@@ -70,23 +70,38 @@ export function SessionHistoryMenu({ cwd, anchorEl, onClose, onSelectSession }: 
     >
       {error && (
         <MenuItem disabled>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             Failed to load history
           </Typography>
         </MenuItem>
       )}
-
       {!error && sessions.length === 0 && (
         <MenuItem disabled sx={{ flexDirection: "column", alignItems: "flex-start" }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             No past sessions
           </Typography>
-          <Typography variant="caption" color="text.disabled" sx={{ wordBreak: "break-all", maxWidth: 320 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.disabled",
+              wordBreak: "break-all",
+              maxWidth: 320,
+            }}
+          >
             cwd: {cwd}
           </Typography>
         </MenuItem>
       )}
-
       {sessions.map((session) => {
         const formattedTitle = formatAgentSessionTitle(session.previewText || "");
 
@@ -105,11 +120,21 @@ export function SessionHistoryMenu({ cwd, anchorEl, onClose, onSelectSession }: 
                 {formattedTitle || "(empty)"}
               </Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {relativeTime(session.timestamp)}
                 </Typography>
                 {session.model && (
-                  <Typography variant="caption" color="text.disabled">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.disabled",
+                    }}
+                  >
                     {session.model}
                   </Typography>
                 )}

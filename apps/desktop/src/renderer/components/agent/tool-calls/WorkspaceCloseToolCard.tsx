@@ -10,8 +10,7 @@ import { type AgentToolCallCardProps, extractResultText } from "./helpers";
 export function WorkspaceCloseToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
   const [open, setOpen] = useState(false);
   const resultText = extractResultText(result);
-  const workspaceId =
-    typeof toolCall.arguments.workspaceId === "string" ? toolCall.arguments.workspaceId : "workspace";
+  const workspaceId = typeof toolCall.arguments.workspaceId === "string" ? toolCall.arguments.workspaceId : "workspace";
 
   return (
     <ToolCardShell isError={result?.isError === true}>

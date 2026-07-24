@@ -200,7 +200,7 @@ export const ProjectCommitComparison = memo(function ProjectCommitComparison({
         placeholder={comparisonScopeAriaLabel}
         slotProps={{
           htmlInput: {
-            ...params.inputProps,
+            ...params.slotProps.htmlInput,
             "aria-label": comparisonScopeAriaLabel,
           },
         }}

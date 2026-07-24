@@ -109,7 +109,6 @@ export function ServiceTokenSettingsView() {
           </Button>
         }
       />
-
       <SettingsCard>
         {isLoading ? (
           <CenteredSpinner />
@@ -139,7 +138,13 @@ export function ServiceTokenSettingsView() {
                 {activeTokens.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6}>
-                      <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "text.secondary",
+                          py: 1,
+                        }}
+                      >
                         {t("settings.serviceTokens.empty")}
                       </Typography>
                     </TableCell>
@@ -180,7 +185,6 @@ export function ServiceTokenSettingsView() {
           </>
         )}
       </SettingsCard>
-
       {/* Created token display */}
       {createdToken ? (
         <Alert
@@ -203,7 +207,6 @@ export function ServiceTokenSettingsView() {
           </Typography>
         </Alert>
       ) : null}
-
       <CreateServiceTokenDialog
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
@@ -213,11 +216,15 @@ export function ServiceTokenSettingsView() {
           void loadTokens();
         }}
       />
-
       <Dialog open={revokeTarget !== null} onClose={() => setRevokeTarget(null)} maxWidth="xs" fullWidth>
         <DialogTitle>{t("settings.serviceTokens.revokeDialog.title")}</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("settings.serviceTokens.revokeDialog.description", { name: revokeTarget?.name ?? "" })}
           </Typography>
         </DialogContent>
@@ -283,7 +290,12 @@ function CreateServiceTokenDialog(props: {
       <DialogTitle>{t("settings.serviceTokens.createDialog.title")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("settings.serviceTokens.createDialog.description")}
           </Typography>
           <Box>

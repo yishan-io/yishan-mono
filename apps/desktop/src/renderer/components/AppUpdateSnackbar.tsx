@@ -144,7 +144,12 @@ export function AppUpdateSnackbar() {
               <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                 {title}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {description}
               </Typography>
             </Box>
@@ -160,7 +165,14 @@ export function AppUpdateSnackbar() {
                 sx={{ height: 8, borderRadius: 999 }}
               />
               {update.percent !== undefined ? (
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                    mt: 0.5,
+                    display: "block",
+                  }}
+                >
                   {t("app.update.downloadProgress", { percent: Math.round(progressValue) })}
                 </Typography>
               ) : null}

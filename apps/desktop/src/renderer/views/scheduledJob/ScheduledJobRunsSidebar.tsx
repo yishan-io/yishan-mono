@@ -61,11 +61,23 @@ function RunSidebarItem({ run }: { run: ScheduledJobRunRecord }) {
           {t(`scheduledJob.runs.status.${run.status}`)}
         </Typography>
       </Box>
-      <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "text.secondary",
+          display: "block",
+        }}
+      >
         {formatShortDate(run.scheduledFor)} {formatShortTime(run.scheduledFor)}
       </Typography>
       {run.finishedAt && run.startedAt ? (
-        <Typography variant="caption" color="text.disabled" sx={{ display: "block" }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.disabled",
+            display: "block",
+          }}
+        >
           {Math.round((new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime()) / 1000)}s
         </Typography>
       ) : null}
@@ -134,7 +146,6 @@ export function ScheduledJobRunsSidebar({ orgId, job }: ScheduledJobRunsSidebarP
           </IconButton>
         </Tooltip>
       </Box>
-
       <Box sx={{ flex: 1, overflow: "auto" }}>
         <Box
           sx={{
@@ -145,7 +156,14 @@ export function ScheduledJobRunsSidebar({ orgId, job }: ScheduledJobRunsSidebarP
             bgcolor: "background.paper",
           }}
         >
-          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.25 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              display: "block",
+              mb: 0.25,
+            }}
+          >
             {t("scheduledJob.runs.nextRun")}
           </Typography>
           <Typography variant="body2">{job.status === "active" ? formatOptionalDate(job.nextRunAt) : "—"}</Typography>
@@ -162,7 +180,12 @@ export function ScheduledJobRunsSidebar({ orgId, job }: ScheduledJobRunsSidebarP
           </Box>
         ) : runsQuery.data?.length === 0 ? (
           <Box sx={{ p: 1.5 }}>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("scheduledJob.runs.empty")}
             </Typography>
           </Box>

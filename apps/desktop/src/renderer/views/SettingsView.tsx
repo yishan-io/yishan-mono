@@ -285,7 +285,12 @@ export function SettingsView() {
                               : renderSidebarLabel(result.label)
                           }
                           secondary={
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: "text.secondary",
+                              }}
+                            >
                               {result.sectionLabel}
                             </Typography>
                           }
@@ -295,7 +300,13 @@ export function SettingsView() {
                   })}
                 </List>
                 {searchResults.length === 0 ? (
-                  <Typography variant="caption" color="text.secondary" sx={{ px: 1.25 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      px: 1.25,
+                    }}
+                  >
                     {t("settings.searchNoResults")}
                   </Typography>
                 ) : null}
@@ -306,8 +317,12 @@ export function SettingsView() {
                   <Box key={section.titleKey}>
                     <Typography
                       variant="caption"
-                      color="text.secondary"
-                      sx={{ px: 1, textTransform: "uppercase", letterSpacing: "0.08em" }}
+                      sx={{
+                        color: "text.secondary",
+                        px: 1,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                      }}
                     >
                       {t(section.titleKey)}
                     </Typography>

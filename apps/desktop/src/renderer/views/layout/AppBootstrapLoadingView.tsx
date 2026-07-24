@@ -83,7 +83,13 @@ export function AppBootstrapLoadingView(props: AppBootstrapLoadingViewProps) {
                 }}
               />
             </Box>
-            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 2.4 }}>
+            <Typography
+              variant="overline"
+              sx={{
+                color: "text.secondary",
+                letterSpacing: 2.4,
+              }}
+            >
               {t("app.bootstrap.badge")}
             </Typography>
             <Typography variant="body2" sx={{ mb: 0.5, color: "text.secondary" }}>

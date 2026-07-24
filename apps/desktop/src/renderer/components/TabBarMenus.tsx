@@ -68,10 +68,13 @@ export function CreateTabMenu({
               {item.shortcutLabel ? (
                 <Typography
                   variant="caption"
-                  color="text.secondary"
                   component="span"
                   aria-hidden="true"
-                  sx={{ fontSize: 13, lineHeight: 1 }}
+                  sx={{
+                    color: "text.secondary",
+                    fontSize: 13,
+                    lineHeight: 1,
+                  }}
                 >
                   {item.shortcutLabel}
                 </Typography>

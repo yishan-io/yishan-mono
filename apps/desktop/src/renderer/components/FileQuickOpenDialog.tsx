@@ -181,7 +181,15 @@ export function FileQuickOpenDialog({
           }}
         />
         {!hasQuery ? null : !hasResults ? (
-          <Typography sx={{ mt: 1, px: 1, py: 1.5 }} variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mt: 1,
+              px: 1,
+              py: 1.5,
+            }}
+          >
             {emptyText}
           </Typography>
         ) : (

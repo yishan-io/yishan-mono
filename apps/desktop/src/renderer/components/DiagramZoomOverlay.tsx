@@ -166,16 +166,18 @@ export function DiagramZoomOverlay({ svgContent, onClose }: DiagramZoomOverlayPr
       open
       onClose={onClose}
       maxWidth={false}
-      PaperProps={{
-        sx: {
-          width: "80vw",
-          height: "80vh",
-          maxWidth: "none",
-          maxHeight: "none",
-          display: "flex",
-          flexDirection: "column",
-          bgcolor: "background.default",
-          overflow: "hidden",
+      slotProps={{
+        paper: {
+          sx: {
+            width: "80vw",
+            height: "80vh",
+            maxWidth: "none",
+            maxHeight: "none",
+            display: "flex",
+            flexDirection: "column",
+            bgcolor: "background.default",
+            overflow: "hidden",
+          },
         },
       }}
     >
@@ -199,7 +201,13 @@ export function DiagramZoomOverlay({ svgContent, onClose }: DiagramZoomOverlayPr
             flexShrink: 0,
           }}
         >
-          <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              flex: 1,
+            }}
+          >
             Diagram
           </Typography>
 
@@ -218,8 +226,12 @@ export function DiagramZoomOverlay({ svgContent, onClose }: DiagramZoomOverlayPr
 
           <Typography
             variant="caption"
-            color="text.secondary"
-            sx={{ minWidth: 40, textAlign: "center", userSelect: "none" }}
+            sx={{
+              color: "text.secondary",
+              minWidth: 40,
+              textAlign: "center",
+              userSelect: "none",
+            }}
           >
             {zoomPercent}
           </Typography>
