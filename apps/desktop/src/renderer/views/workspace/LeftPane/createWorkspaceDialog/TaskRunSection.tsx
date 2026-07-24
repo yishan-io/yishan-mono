@@ -62,9 +62,21 @@ export function TaskRunSection({
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" gap={0.75} sx={{ mb: 0.5 }}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          gap: 0.75,
+          mb: 0.5,
+        }}
+      >
         <LuSparkles size={14} />
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           Task run (optional)
         </Typography>
       </Stack>
@@ -83,13 +95,24 @@ export function TaskRunSection({
                 const selectedKind = value as DesktopAgentKind | "";
                 if (!selectedKind) {
                   return (
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "text.secondary",
+                      }}
+                    >
                       Agent
                     </Typography>
                   );
                 }
                 return (
-                  <Stack direction="row" alignItems="center" gap={1}>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
                     <AgentIcon agentKind={selectedKind} context="settingsRow" decorative />
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
                       {t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[selectedKind])}
@@ -102,7 +125,13 @@ export function TaskRunSection({
         >
           {SUPPORTED_DESKTOP_AGENT_KINDS.filter((kind) => inUseByAgentKind[kind]).map((kind) => (
             <MenuItem key={kind} value={kind}>
-              <Stack direction="row" alignItems="center" gap={1}>
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
                 <AgentIcon agentKind={kind} context="settingsRow" decorative />
                 <Typography variant="body2">{t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[kind])}</Typography>
               </Stack>

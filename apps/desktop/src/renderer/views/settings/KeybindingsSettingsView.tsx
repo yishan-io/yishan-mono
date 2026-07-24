@@ -242,15 +242,17 @@ export function KeybindingsSettingsView() {
   return (
     <Stack spacing={2.5}>
       <SettingsSectionHeader title={t("keybindings.title")} description={t("keybindings.subtitle")} />
-
       {conflicts.length > 0 ? <Alert severity="warning">{t("keybindings.conflictWarning")}</Alert> : null}
-
-      <Stack direction="row" justifyContent="flex-end">
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "flex-end",
+        }}
+      >
         <Button size="small" variant="outlined" onClick={resetAllOverrides}>
           {t("keybindings.resetAll")}
         </Button>
       </Stack>
-
       <Box
         sx={{ border: 1, borderColor: "divider", borderRadius: 1.5, overflow: "hidden", bgcolor: "background.default" }}
       >
@@ -266,13 +268,28 @@ export function KeybindingsSettingsView() {
             bgcolor: "background.paper",
           }}
         >
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("keybindings.columns.action")}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("keybindings.columns.current")}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("keybindings.columns.override")}
           </Typography>
         </Box>
@@ -316,20 +333,41 @@ export function KeybindingsSettingsView() {
               }}
             >
               <Box>
-                <Typography variant="body2" color="text.primary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.primary",
+                  }}
+                >
                   {t(binding.descriptionKey)}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {binding.scope === "global" ? t("keybindings.scope.global") : t("keybindings.scope.workspace")}
                 </Typography>
                 {hasCommittedConflict ? (
-                  <Typography variant="caption" color="warning.main" sx={{ display: "block" }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "warning.main",
+                      display: "block",
+                    }}
+                  >
                     {t("keybindings.conflictWith", { keys: conflictByShortcutId.get(binding.id) })}
                   </Typography>
                 ) : null}
               </Box>
-
-              <Stack direction="row" spacing={0.5} alignItems="center">
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <HotkeyDisplay keys={displayKeys} />
                 {hasPendingConflict ? (
                   <Tooltip title={pendingConflictTooltip} placement="top">
@@ -337,9 +375,14 @@ export function KeybindingsSettingsView() {
                   </Tooltip>
                 ) : null}
               </Stack>
-
               {isEditing ? (
-                <Stack direction="row" spacing={1} alignItems="center">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "center",
+                  }}
+                >
                   <Box
                     component="button"
                     type="button"
@@ -367,7 +410,13 @@ export function KeybindingsSettingsView() {
                     }}
                   >
                     {capturedKeys ? (
-                      <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Stack
+                        direction="row"
+                        spacing={0.5}
+                        sx={{
+                          alignItems: "center",
+                        }}
+                      >
                         <HotkeyDisplay keys={capturedKeys} />
                         {isCapturedConflict ? (
                           <Tooltip title={captureConflictTooltip} placement="top">
@@ -376,7 +425,12 @@ export function KeybindingsSettingsView() {
                         ) : null}
                       </Stack>
                     ) : (
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "text.secondary",
+                        }}
+                      >
                         {t("keybindings.inputHint")}
                       </Typography>
                     )}

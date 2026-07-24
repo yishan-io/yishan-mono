@@ -65,7 +65,15 @@ export function FileViewerToolbar({
       {fileIcon ? (
         <Box component="img" src={fileIcon} alt="" sx={{ width: 14, height: 14, mr: 0.75, flexShrink: 0 }} />
       ) : null}
-      <Typography variant="caption" color="text.secondary" noWrap sx={{ minWidth: 0, flex: 1 }}>
+      <Typography
+        variant="caption"
+        noWrap
+        sx={{
+          color: "text.secondary",
+          minWidth: 0,
+          flex: 1,
+        }}
+      >
         {path}
       </Typography>
       {statusContent}

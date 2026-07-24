@@ -261,7 +261,13 @@ export function NodesSettingsView() {
                 {nodes.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7}>
-                      <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "text.secondary",
+                          py: 1,
+                        }}
+                      >
                         {t("settings.nodes.empty")}
                       </Typography>
                     </TableCell>
@@ -333,7 +339,6 @@ export function NodesSettingsView() {
           </>
         )}
       </SettingsCard>
-
       <ConfirmationDialog
         open={scopeChangeTarget !== null}
         title={t("settings.nodes.scopeChangeDialog.title")}

@@ -101,13 +101,19 @@ const MermaidBlock = memo(function MermaidBlock({ code }: MermaidBlockProps) {
           bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(211, 47, 47, 0.08)" : "rgba(211, 47, 47, 0.04)"),
         }}
       >
-        <Typography variant="caption" color="error.main" sx={{ fontWeight: 500 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "error.main",
+            fontWeight: 500,
+          }}
+        >
           Mermaid diagram error
         </Typography>
         <Typography
           variant="body2"
-          color="text.secondary"
           sx={{
+            color: "text.secondary",
             mt: 0.5,
             fontFamily: '"JetBrains Mono", "SF Mono", Menlo, monospace',
             fontSize: "0.75em",

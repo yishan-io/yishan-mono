@@ -68,7 +68,14 @@ export function AppMenuMainMenuSection({
           <Typography component="span" variant="body2">
             {translate("org.menu.settings")}
           </Typography>
-          <Typography variant="caption" color="text.secondary" component="span" aria-hidden="true">
+          <Typography
+            variant="caption"
+            component="span"
+            aria-hidden="true"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {settingsShortcutLabel}
           </Typography>
         </Box>
@@ -95,7 +102,14 @@ export function AppMenuMainMenuSection({
             {translate("org.menu.shortcutMap")}
           </Typography>
           {keybindingsShortcutLabel ? (
-            <Typography variant="caption" color="text.secondary" component="span" aria-hidden="true">
+            <Typography
+              variant="caption"
+              component="span"
+              aria-hidden="true"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {keybindingsShortcutLabel}
             </Typography>
           ) : null}

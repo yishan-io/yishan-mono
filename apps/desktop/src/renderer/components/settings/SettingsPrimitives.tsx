@@ -27,7 +27,14 @@ function SettingsRowLabel({ title, description }: SettingsRowLabelProps) {
         {title}
       </Typography>
       {description ? (
-        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+        <Typography
+          variant="caption"
+          noWrap
+          sx={{
+            color: "text.secondary",
+            display: "block",
+          }}
+        >
           {description}
         </Typography>
       ) : null}
@@ -124,7 +131,12 @@ export function SettingsSectionHeader({ title, description, action }: SettingsSe
         {action ? <Box className="electron-webkit-app-region-no-drag">{action}</Box> : null}
       </Box>
       {description ? (
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {description}
         </Typography>
       ) : null}

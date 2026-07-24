@@ -162,7 +162,13 @@ function AgentChatViewComponent({
   if (!hasSession) {
     return (
       <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-        <Typography color="text.secondary">Starting agent session…</Typography>
+        <Typography
+          sx={{
+            color: "text.secondary",
+          }}
+        >
+          Starting agent session…
+        </Typography>
       </Box>
     );
   }
@@ -180,10 +186,22 @@ function AgentChatViewComponent({
           gap: 1,
         }}
       >
-        <Typography color="error.main" variant="body2">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "error.main",
+          }}
+        >
           Failed to start agent session.
         </Typography>
-        <Typography color="text.secondary" variant="caption" sx={{ maxWidth: 400, textAlign: "center" }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            maxWidth: 400,
+            textAlign: "center",
+          }}
+        >
           {error}
         </Typography>
       </Box>

@@ -12,12 +12,24 @@ type ProjectConfigCommandsSectionProps = {
 export function ProjectConfigCommandsSection({ draft, isSaving, setDraft }: ProjectConfigCommandsSectionProps) {
   return (
     <Stack spacing={2}>
-      <Typography variant="body2" color="text.secondary">
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+        }}
+      >
         Project commands
       </Typography>
       <Stack spacing={1}>
         {draft.commands.map((item, index) => (
-          <Stack key={item.id} direction="row" spacing={1} alignItems="center">
+          <Stack
+            key={item.id}
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <TextField
               value={item.name}
               disabled={isSaving}

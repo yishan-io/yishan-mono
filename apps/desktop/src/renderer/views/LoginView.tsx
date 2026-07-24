@@ -42,10 +42,20 @@ export function LoginView() {
         <Stack spacing={2.5} sx={{ textAlign: "center" }}>
           <Box component="img" src={logo} alt="" sx={{ width: 256, height: 256, alignSelf: "center" }} />
           <Stack spacing={1}>
-            <Typography variant="h4" fontWeight={700}>
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+              }}
+            >
               {t("auth.login.title")}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("auth.login.description")}
             </Typography>
           </Stack>

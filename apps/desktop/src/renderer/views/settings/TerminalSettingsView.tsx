@@ -235,7 +235,13 @@ export function TerminalSettingsView() {
                 {sessions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5}>
-                      <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "text.secondary",
+                          py: 1,
+                        }}
+                      >
                         {t("settings.terminal.empty")}
                       </Typography>
                     </TableCell>

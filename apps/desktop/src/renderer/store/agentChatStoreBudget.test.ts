@@ -33,41 +33,37 @@ function makeMessage(id: string, contentSize?: number): AgentMessage {
 // ─── Gap A: aggregate budget enforcement on appendMessage and finalizeStreamingMessage ─
 
 describe("aggregate byte budget enforcement", () => {
-  it(
-    "appendMessage evicts oldest messages when aggregate exceeds 8 MiB",
-    { timeout: 60_000 },
-    () => {
-      const tabId = "tab-append-aggregate";
-      agentChatStore.getState().initSession(tabId, "session-append-aggregate");
+  it("appendMessage evicts oldest messages when aggregate exceeds 8 MiB", { timeout: 60_000 }, () => {
+    const tabId = "tab-append-aggregate";
+    agentChatStore.getState().initSession(tabId, "session-append-aggregate");
 
-      const MSG_BYTE_SIZE = 200 * 1024; // 200 KiB per message
-      // 50 × 200 KiB = 10 MiB — exceeds 8 MiB aggregate budget
-      const TOTAL = 50;
+    const MSG_BYTE_SIZE = 200 * 1024; // 200 KiB per message
+    // 50 × 200 KiB = 10 MiB — exceeds 8 MiB aggregate budget
+    const TOTAL = 50;
 
-      for (let i = 1; i <= TOTAL; i++) {
-        agentChatStore.getState().appendMessage(tabId, makeMessage(`agg-${i}`, MSG_BYTE_SIZE));
+    for (let i = 1; i <= TOTAL; i++) {
+      agentChatStore.getState().appendMessage(tabId, makeMessage(`agg-${i}`, MSG_BYTE_SIZE));
+    }
+
+    const stored = agentChatStore.getState().sessionsByTabId[tabId]?.messages ?? [];
+
+    // Byte budget should trim messages; total bytes must be ≤ 8 MiB.
+    const encoder = new TextEncoder();
+    let totalBytes = 0;
+    for (const msg of stored) {
+      if (Array.isArray(msg.content) && msg.content[0]?.type === "text") {
+        totalBytes += encoder.encode(msg.content[0].text).byteLength;
       }
+    }
+    expect(totalBytes).toBeLessThanOrEqual(MAX_PER_TAB_AGGREGATE_UTF8_BYTES);
 
-      const stored = agentChatStore.getState().sessionsByTabId[tabId]?.messages ?? [];
+    // Oldest messages should be evicted; newest retained.
+    const lastId = stored[stored.length - 1]?.id;
+    expect(lastId).toBe(`agg-${TOTAL}`);
 
-      // Byte budget should trim messages; total bytes must be ≤ 8 MiB.
-      const encoder = new TextEncoder();
-      let totalBytes = 0;
-      for (const msg of stored) {
-        if (Array.isArray(msg.content) && msg.content[0]?.type === "text") {
-          totalBytes += encoder.encode(msg.content[0].text).byteLength;
-        }
-      }
-      expect(totalBytes).toBeLessThanOrEqual(MAX_PER_TAB_AGGREGATE_UTF8_BYTES);
-
-      // Oldest messages should be evicted; newest retained.
-      const lastId = stored[stored.length - 1]?.id;
-      expect(lastId).toBe(`agg-${TOTAL}`);
-
-      // At least some messages were dropped.
-      expect(stored.length).toBeLessThan(TOTAL);
-    },
-  );
+    // At least some messages were dropped.
+    expect(stored.length).toBeLessThan(TOTAL);
+  });
 
   it(
     "finalizeStreamingMessage evicts oldest when streaming message pushes aggregate over 8 MiB",

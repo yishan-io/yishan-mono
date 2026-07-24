@@ -199,8 +199,9 @@ export const ProjectCommitComparison = memo(function ProjectCommitComparison({
         {...params}
         placeholder={comparisonScopeAriaLabel}
         slotProps={{
+          ...params.slotProps,
           htmlInput: {
-            ...params.inputProps,
+            ...params.slotProps.htmlInput,
             "aria-label": comparisonScopeAriaLabel,
           },
         }}

@@ -29,7 +29,12 @@ type SelectOption = {
 };
 
 /** Renders one pending extension UI request inline in the agent chat tab. */
-export function AgentPendingUiPrompt({ request, onCancel, onConfirm, onSelectCustomResponse }: AgentPendingUiPromptProps) {
+export function AgentPendingUiPrompt({
+  request,
+  onCancel,
+  onConfirm,
+  onSelectCustomResponse,
+}: AgentPendingUiPromptProps) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(request.prefill ?? "");
   const [isSelectingCustomResponse, setIsSelectingCustomResponse] = useState(false);
@@ -58,7 +63,9 @@ export function AgentPendingUiPrompt({ request, onCancel, onConfirm, onSelectCus
 
     return {
       question: request.title,
-      options: selectOptions.filter((option): option is SelectOption & { index: number } => typeof option.index === "number"),
+      options: selectOptions.filter(
+        (option): option is SelectOption & { index: number } => typeof option.index === "number",
+      ),
       allowFreeform: request.allowFreeform === true,
     };
   }, [request.allowFreeform, request.method, request.selectionMode, request.title, selectOptions]);
@@ -139,7 +146,13 @@ export function AgentPendingUiPrompt({ request, onCancel, onConfirm, onSelectCus
         bgcolor: "background.paper",
       }}
     >
-      <Stack direction="row" spacing={1.25} alignItems="flex-start">
+      <Stack
+        direction="row"
+        spacing={1.25}
+        sx={{
+          alignItems: "flex-start",
+        }}
+      >
         <Box
           sx={{
             width: 18,
@@ -165,195 +178,206 @@ export function AgentPendingUiPrompt({ request, onCancel, onConfirm, onSelectCus
               {displayTitle}
             </Typography>
             {request.message ? (
-              <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "pre-wrap", mt: 0.5 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  whiteSpace: "pre-wrap",
+                  mt: 0.5,
+                }}
+              >
                 {request.message}
               </Typography>
             ) : null}
           </Box>
 
-        {request.method === "select" ? (
-          isSelectingCustomResponse ? (
-            <Stack spacing={1}>
-              <TextField
-                fullWidth
-                multiline
-                minRows={3}
-                placeholder={request.placeholder}
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-              />
-              <Stack direction="row" spacing={1}>
-                <Button size="small" variant="contained" onClick={() => void handleSubmit()}>
-                  {t("common.actions.submit")}
-                </Button>
-                <Button size="small" variant="text" color="inherit" onClick={handleBackToOptions}>
-                  {t("common.actions.back")}
-                </Button>
-                <Button size="small" variant="text" color="inherit" onClick={() => void onCancel()}>
-                  {t("common.actions.cancel")}
-                </Button>
+          {request.method === "select" ? (
+            isSelectingCustomResponse ? (
+              <Stack spacing={1}>
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  placeholder={request.placeholder}
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                />
+                <Stack direction="row" spacing={1}>
+                  <Button size="small" variant="contained" onClick={() => void handleSubmit()}>
+                    {t("common.actions.submit")}
+                  </Button>
+                  <Button size="small" variant="text" color="inherit" onClick={handleBackToOptions}>
+                    {t("common.actions.back")}
+                  </Button>
+                  <Button size="small" variant="text" color="inherit" onClick={() => void onCancel()}>
+                    {t("common.actions.cancel")}
+                  </Button>
+                </Stack>
               </Stack>
-            </Stack>
-          ) : (
-            <Stack spacing={1}>
-              <List
-                disablePadding
-                sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden", width: "100%" }}
-              >
-                {renderedSelectOptions?.map((option) => (
-                  <ListItemButton
-                    key={option.value}
-                    onClick={() => void handleSelectOption(option.value)}
-                    divider
-                    sx={{ width: "100%", alignItems: "flex-start", px: 1.5 }}
-                  >
-                    <ListItemText
-                      primary={option.label}
-                      secondary={option.description?.trim() ? option.description : undefined}
-                      primaryTypographyProps={{ variant: "body2" }}
-                      secondaryTypographyProps={{ variant: "caption", color: "text.secondary" }}
-                      sx={{ my: 0 }}
-                    />
-                  </ListItemButton>
-                ))}
-                {request.allowFreeform ? (
-                  <ListItemButton
-                    onClick={handleBeginCustomResponse}
-                    sx={{ width: "100%", alignItems: "flex-start", px: 1.5 }}
-                  >
-                    <ListItemText
-                      primary={t("agentChat.askUser.prompt.customResponse")}
-                      primaryTypographyProps={{ variant: "body2" }}
-                      sx={{ my: 0 }}
-                    />
-                  </ListItemButton>
-                ) : null}
-              </List>
-              <Box>
-                <Button size="small" variant="text" color="inherit" onClick={() => void onCancel()}>
-                  {t("common.actions.cancel")}
-                </Button>
-              </Box>
-            </Stack>
-          )
-        ) : null}
-
-        {request.method === "confirm" ? (
-          <Stack direction="row" spacing={1}>
-            <Button size="small" variant="contained" onClick={() => void onConfirm({ confirmed: true })}>
-              {t("common.actions.confirm")}
-            </Button>
-            <Button size="small" variant="outlined" onClick={() => void onConfirm({ confirmed: false })}>
-              {t("agentChat.askUser.prompt.decline")}
-            </Button>
-            <Button size="small" variant="text" color="inherit" onClick={() => void onCancel()}>
-              {t("common.actions.cancel")}
-            </Button>
-          </Stack>
-        ) : null}
-
-        {parsedMultiSelectPrompt ? (
-          isSelectingCustomResponse ? (
-            <Stack spacing={1}>
-              <TextField
-                fullWidth
-                multiline
-                minRows={3}
-                placeholder={request.placeholder}
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-              />
-              <Stack direction="row" spacing={1}>
-                <Button size="small" variant="contained" onClick={() => void handleSubmit()}>
-                  {t("common.actions.submit")}
-                </Button>
-                <Button size="small" variant="text" color="inherit" onClick={handleBackToOptions}>
-                  {t("common.actions.back")}
-                </Button>
-                <Button size="small" variant="text" color="inherit" onClick={() => void onCancel()}>
-                  {t("common.actions.cancel")}
-                </Button>
-              </Stack>
-            </Stack>
-          ) : (
-            <Stack spacing={1}>
-              <List
-                disablePadding
-                sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden", width: "100%" }}
-              >
-                {parsedMultiSelectPrompt.options.map((option) => {
-                  const isSelected = selectedMultiSelectIndices.includes(option.index);
-
-                  return (
+            ) : (
+              <Stack spacing={1}>
+                <List
+                  disablePadding
+                  sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden", width: "100%" }}
+                >
+                  {renderedSelectOptions?.map((option) => (
                     <ListItemButton
-                      key={option.index}
-                      onClick={() => handleToggleMultiSelectIndex(option.index)}
+                      key={option.value}
+                      onClick={() => void handleSelectOption(option.value)}
                       divider
                       sx={{ width: "100%", alignItems: "flex-start", px: 1.5 }}
                     >
-                      <ListItemIcon sx={{ minWidth: 36 }}>
-                        <Checkbox edge="start" checked={isSelected} tabIndex={-1} disableRipple />
-                      </ListItemIcon>
                       <ListItemText
                         primary={option.label}
                         secondary={option.description?.trim() ? option.description : undefined}
-                        primaryTypographyProps={{ variant: "body2" }}
-                        secondaryTypographyProps={{ variant: "caption", color: "text.secondary" }}
+                        slotProps={{
+                          primary: { variant: "body2" },
+                          secondary: { variant: "caption", color: "text.secondary" },
+                        }}
                         sx={{ my: 0 }}
                       />
                     </ListItemButton>
-                  );
-                })}
-                {parsedMultiSelectPrompt.allowFreeform ? (
-                  <ListItemButton
-                    onClick={handleBeginCustomResponse}
-                    sx={{ width: "100%", alignItems: "flex-start", px: 1.5 }}
-                  >
-                    <ListItemText
-                      primary={t("agentChat.askUser.prompt.customResponse")}
-                      primaryTypographyProps={{ variant: "body2" }}
-                      sx={{ my: 0 }}
-                    />
-                  </ListItemButton>
-                ) : null}
-              </List>
-              <Stack direction="row" spacing={1}>
-                <Button
-                  size="small"
-                  variant="contained"
-                  disabled={selectedMultiSelectIndices.length === 0}
-                  onClick={() => void handleConfirmMultiSelect()}
-                >
-                  {t("common.actions.confirm")}
-                </Button>
-                <Button size="small" variant="text" color="inherit" onClick={() => void onCancel()}>
-                  {t("common.actions.cancel")}
-                </Button>
+                  ))}
+                  {request.allowFreeform ? (
+                    <ListItemButton
+                      onClick={handleBeginCustomResponse}
+                      sx={{ width: "100%", alignItems: "flex-start", px: 1.5 }}
+                    >
+                      <ListItemText
+                        primary={t("agentChat.askUser.prompt.customResponse")}
+                        slotProps={{ primary: { variant: "body2" } }}
+                        sx={{ my: 0 }}
+                      />
+                    </ListItemButton>
+                  ) : null}
+                </List>
+                <Box>
+                  <Button size="small" variant="text" color="inherit" onClick={() => void onCancel()}>
+                    {t("common.actions.cancel")}
+                  </Button>
+                </Box>
               </Stack>
-            </Stack>
-          )
-        ) : null}
+            )
+          ) : null}
 
-        {(request.method === "input" || request.method === "editor") && !parsedMultiSelectPrompt ? (
-          <Stack spacing={1}>
-            <TextField
-              fullWidth
-              multiline={request.method === "editor"}
-              minRows={request.method === "editor" ? 6 : 3}
-              placeholder={request.placeholder}
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-            />
+          {request.method === "confirm" ? (
             <Stack direction="row" spacing={1}>
-              <Button size="small" variant="contained" onClick={() => void handleSubmit()}>
-                {t("common.actions.submit")}
+              <Button size="small" variant="contained" onClick={() => void onConfirm({ confirmed: true })}>
+                {t("common.actions.confirm")}
+              </Button>
+              <Button size="small" variant="outlined" onClick={() => void onConfirm({ confirmed: false })}>
+                {t("agentChat.askUser.prompt.decline")}
               </Button>
               <Button size="small" variant="text" color="inherit" onClick={() => void onCancel()}>
                 {t("common.actions.cancel")}
               </Button>
             </Stack>
-          </Stack>
-        ) : null}
+          ) : null}
+
+          {parsedMultiSelectPrompt ? (
+            isSelectingCustomResponse ? (
+              <Stack spacing={1}>
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  placeholder={request.placeholder}
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                />
+                <Stack direction="row" spacing={1}>
+                  <Button size="small" variant="contained" onClick={() => void handleSubmit()}>
+                    {t("common.actions.submit")}
+                  </Button>
+                  <Button size="small" variant="text" color="inherit" onClick={handleBackToOptions}>
+                    {t("common.actions.back")}
+                  </Button>
+                  <Button size="small" variant="text" color="inherit" onClick={() => void onCancel()}>
+                    {t("common.actions.cancel")}
+                  </Button>
+                </Stack>
+              </Stack>
+            ) : (
+              <Stack spacing={1}>
+                <List
+                  disablePadding
+                  sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden", width: "100%" }}
+                >
+                  {parsedMultiSelectPrompt.options.map((option) => {
+                    const isSelected = selectedMultiSelectIndices.includes(option.index);
+
+                    return (
+                      <ListItemButton
+                        key={option.index}
+                        onClick={() => handleToggleMultiSelectIndex(option.index)}
+                        divider
+                        sx={{ width: "100%", alignItems: "flex-start", px: 1.5 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 36 }}>
+                          <Checkbox edge="start" checked={isSelected} tabIndex={-1} disableRipple />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={option.label}
+                          secondary={option.description?.trim() ? option.description : undefined}
+                          slotProps={{
+                            primary: { variant: "body2" },
+                            secondary: { variant: "caption", color: "text.secondary" },
+                          }}
+                          sx={{ my: 0 }}
+                        />
+                      </ListItemButton>
+                    );
+                  })}
+                  {parsedMultiSelectPrompt.allowFreeform ? (
+                    <ListItemButton
+                      onClick={handleBeginCustomResponse}
+                      sx={{ width: "100%", alignItems: "flex-start", px: 1.5 }}
+                    >
+                      <ListItemText
+                        primary={t("agentChat.askUser.prompt.customResponse")}
+                        slotProps={{ primary: { variant: "body2" } }}
+                        sx={{ my: 0 }}
+                      />
+                    </ListItemButton>
+                  ) : null}
+                </List>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    disabled={selectedMultiSelectIndices.length === 0}
+                    onClick={() => void handleConfirmMultiSelect()}
+                  >
+                    {t("common.actions.confirm")}
+                  </Button>
+                  <Button size="small" variant="text" color="inherit" onClick={() => void onCancel()}>
+                    {t("common.actions.cancel")}
+                  </Button>
+                </Stack>
+              </Stack>
+            )
+          ) : null}
+
+          {(request.method === "input" || request.method === "editor") && !parsedMultiSelectPrompt ? (
+            <Stack spacing={1}>
+              <TextField
+                fullWidth
+                multiline={request.method === "editor"}
+                minRows={request.method === "editor" ? 6 : 3}
+                placeholder={request.placeholder}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+              />
+              <Stack direction="row" spacing={1}>
+                <Button size="small" variant="contained" onClick={() => void handleSubmit()}>
+                  {t("common.actions.submit")}
+                </Button>
+                <Button size="small" variant="text" color="inherit" onClick={() => void onCancel()}>
+                  {t("common.actions.cancel")}
+                </Button>
+              </Stack>
+            </Stack>
+          ) : null}
         </Stack>
       </Stack>
     </Box>

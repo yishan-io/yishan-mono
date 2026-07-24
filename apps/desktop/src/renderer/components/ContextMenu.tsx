@@ -230,11 +230,13 @@ export function ContextMenu({
           anchorOrigin={submenuAnchorOrigin}
           transformOrigin={submenuTransformOrigin}
           marginThreshold={0}
-          PaperProps={{
-            sx: {
-              pointerEvents: "auto",
-              ...(submenuDirection === "left" ? { mr: 0.25 } : { ml: 0.25 }),
-              ...submenuPaperSx,
+          slotProps={{
+            paper: {
+              sx: {
+                pointerEvents: "auto",
+                ...(submenuDirection === "left" ? { mr: 0.25 } : { ml: 0.25 }),
+                ...submenuPaperSx,
+              },
             },
           }}
         >

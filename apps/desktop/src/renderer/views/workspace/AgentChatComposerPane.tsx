@@ -195,7 +195,14 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
             bgcolor: "action.hover",
           }}
         >
-          <Typography variant="caption" color="text.secondary" sx={{ px: 0.5, fontWeight: 700 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              px: 0.5,
+              fontWeight: 700,
+            }}
+          >
             Running sub-agents
           </Typography>
           {runningSubagents.map((subagent) => {

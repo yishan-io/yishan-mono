@@ -88,7 +88,14 @@ export function ProjectFilterPopoverView() {
         }}
       >
         <Box sx={{ width: 240, p: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              display: "block",
+              mb: 0.5,
+            }}
+          >
             {t("project.pin.sections.hirarchy")}
           </Typography>
           <ButtonGroup size="small" fullWidth sx={{ mb: 1 }}>
@@ -107,8 +114,20 @@ export function ProjectFilterPopoverView() {
               {t("project.pin.hierarchy.byNode")}
             </Button>
           </ButtonGroup>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-            <Typography variant="caption" color="text.secondary">
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 1,
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("project.pin.sections.projects")}
             </Typography>
             <Button size="small" sx={{ minWidth: 0, px: 0.75, py: 0.25, fontSize: 11 }} onClick={handleSelectAll}>

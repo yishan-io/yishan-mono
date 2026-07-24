@@ -138,7 +138,14 @@ export function AgentSettingsView() {
                   </Box>
                 }
                 control={
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ pl: 1 }}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: "center",
+                      pl: 1,
+                    }}
+                  >
                     <Chip size="small" label={statusLabel} color={statusColor} variant={statusVariant} />
                     <Switch
                       checked={inUseByAgentKind[agentKind]}

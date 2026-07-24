@@ -35,9 +35,14 @@ export function AgentToolCard({ toolCall, result = null, onOpenCompletedSubagent
           </Typography>
           <Typography
             variant="body2"
-            color="text.secondary"
             noWrap
-            sx={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}
+            sx={{
+              color: "text.secondary",
+              minWidth: 0,
+              flex: 1,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
           >
             {agentPrompt}
           </Typography>
@@ -95,7 +100,14 @@ export function AgentToolCard({ toolCall, result = null, onOpenCompletedSubagent
           </Tabs>
           {selectedTab === "prompt" || !resultText ? (
             <Box data-testid="agent-tool-prompt" sx={{ px: 1.5, py: 1 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                  display: "block",
+                  mb: 0.5,
+                }}
+              >
                 prompt
               </Typography>
               <Typography
@@ -114,7 +126,14 @@ export function AgentToolCard({ toolCall, result = null, onOpenCompletedSubagent
           ) : null}
           {resultText && selectedTab === "response" ? (
             <Box data-testid="agent-tool-response" sx={{ px: 1.5, py: 1 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                  display: "block",
+                  mb: 0.5,
+                }}
+              >
                 response{result?.isError ? " (error)" : ""}
               </Typography>
               <Typography

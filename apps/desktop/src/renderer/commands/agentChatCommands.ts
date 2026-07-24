@@ -14,10 +14,7 @@ import {
   setAgentModel,
   setAgentThinkingLevel,
 } from "./agentChatPiEventHelpers";
-import {
-  disposeAgentChatStreamBuffer,
-  flushAgentChatStreamBuffer,
-} from "./agentChatStreamBuffer";
+import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agentChatStreamBuffer";
 
 // Re-export moved public APIs so existing callers need no import changes.
 export {

@@ -203,9 +203,7 @@ export function NotificationSettingsView({ focusItemId }: NotificationSettingsVi
         title={t("org.settings.notifications.title")}
         description={t("org.settings.notifications.subtitle")}
       />
-
       {isLoading ? <CenteredSpinner /> : null}
-
       {!isLoading && draft ? (
         <SettingsCard>
           <FocusableSettingsRow itemId="enabled" focusedItemId={highlightedFocusItemId}>
@@ -218,14 +216,19 @@ export function NotificationSettingsView({ focusItemId }: NotificationSettingsVi
           </FocusableSettingsRow>
         </SettingsCard>
       ) : null}
-
       {!isLoading && draft && shouldShowAdvancedSettings ? (
         <Box>
           <SettingsSectionHeader
             title={t("org.settings.notifications.general.title")}
             description={t("org.settings.notifications.general.hint")}
             action={
-              <Stack direction="row" alignItems="center" spacing={0.75}>
+              <Stack
+                direction="row"
+                spacing={0.75}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <SettingsCompactSelect
                   width={180}
                   value={previewEventType}
@@ -308,7 +311,6 @@ export function NotificationSettingsView({ focusItemId }: NotificationSettingsVi
           </SettingsCard>
         </Box>
       ) : null}
-
       {!isLoading && draft && shouldShowAdvancedSettings ? (
         <Box>
           <SettingsSectionHeader
@@ -371,7 +373,6 @@ export function NotificationSettingsView({ focusItemId }: NotificationSettingsVi
           </SettingsCard>
         </Box>
       ) : null}
-
       {!isLoading && draft && shouldShowAdvancedSettings ? (
         <Box>
           <SettingsSectionHeader
@@ -398,7 +399,6 @@ export function NotificationSettingsView({ focusItemId }: NotificationSettingsVi
           </SettingsCard>
         </Box>
       ) : null}
-
       {errorKey ? (
         <Alert severity="error">
           {t(

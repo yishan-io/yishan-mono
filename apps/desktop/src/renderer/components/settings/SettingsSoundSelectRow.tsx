@@ -60,11 +60,13 @@ export function SettingsSoundSelectRow({
             value={value}
             disabled={disabled}
             MenuProps={{
-              PaperProps: {
-                sx: {
-                  width: SETTINGS_SOUND_SELECT_LAYOUT.width,
-                  maxHeight: SETTINGS_SOUND_SELECT_LAYOUT.menuMaxHeight,
-                  overflowY: "auto",
+              slotProps: {
+                paper: {
+                  sx: {
+                    width: SETTINGS_SOUND_SELECT_LAYOUT.width,
+                    maxHeight: SETTINGS_SOUND_SELECT_LAYOUT.menuMaxHeight,
+                    overflowY: "auto",
+                  },
                 },
               },
             }}

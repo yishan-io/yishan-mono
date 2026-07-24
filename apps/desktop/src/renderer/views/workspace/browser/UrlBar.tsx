@@ -95,22 +95,24 @@ export function UrlBar({
         onBlur={onBlur}
         placeholder="Search or enter URL"
         fullWidth
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start" sx={{ mr: 0.5, ml: -0.25 }}>
-              {isHttps ? (
-                <LuLock size={12} color="#4caf50" />
-              ) : isHttp ? (
-                <LuLockOpen size={12} color="#ff9800" />
-              ) : null}
-            </InputAdornment>
-          ),
-        }}
         sx={{
           "& .MuiInputBase-input": {
             py: 0.75,
             fontSize: 13,
             color: urlFocused ? "text.primary" : "text.secondary",
+          },
+        }}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start" sx={{ mr: 0.5, ml: -0.25 }}>
+                {isHttps ? (
+                  <LuLock size={12} color="#4caf50" />
+                ) : isHttp ? (
+                  <LuLockOpen size={12} color="#ff9800" />
+                ) : null}
+              </InputAdornment>
+            ),
           },
         }}
       />
@@ -191,18 +193,14 @@ export function UrlBar({
                         primary={entry.title}
                         secondary={entry.url}
                         sx={{ minWidth: 0 }}
-                        primaryTypographyProps={{
-                          fontSize: 13,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                        secondaryTypographyProps={{
-                          fontSize: 11,
-                          color: "text.disabled",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
+                        slotProps={{
+                          primary: {
+                            sx: { fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+                          },
+                          secondary: {
+                            sx: { fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+                            color: "text.disabled",
+                          },
                         }}
                       />
                     </MenuItem>

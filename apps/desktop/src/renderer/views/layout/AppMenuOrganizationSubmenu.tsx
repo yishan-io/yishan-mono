@@ -30,7 +30,14 @@ export function AppMenuOrganizationSubmenu({
       <FloatingSurface sx={{ p: 0.75, minWidth: 220 }} onMouseLeave={onClose}>
         <Stack spacing={0.25}>
           {organizations.length === 0 ? (
-            <Typography variant="caption" color="text.secondary" sx={{ px: 1, py: 0.75 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                px: 1,
+                py: 0.75,
+              }}
+            >
               {translate("org.menu.noOrganizations")}
             </Typography>
           ) : (

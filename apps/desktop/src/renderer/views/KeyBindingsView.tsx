@@ -24,10 +24,21 @@ export function KeyBindingsView() {
       }}
     >
       <Stack spacing={2.5} sx={{ maxWidth: 920, mx: "auto" }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Box>
             <Typography variant="h6">{t("keybindings.title")}</Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {t("keybindings.subtitle")}
             </Typography>
           </Box>

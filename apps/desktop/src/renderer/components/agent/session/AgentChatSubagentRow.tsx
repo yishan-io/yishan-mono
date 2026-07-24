@@ -83,10 +83,13 @@ export function AgentChatSubagentRow({
         </Typography>
         <Typography
           variant="body2"
-          color="text.secondary"
           noWrap
           data-testid={`subagent-row-summary-${rowId}`}
-          sx={{ minWidth: 0, flex: 1 }}
+          sx={{
+            color: "text.secondary",
+            minWidth: 0,
+            flex: 1,
+          }}
         >
           {subagent.promptSummary}
         </Typography>

@@ -97,7 +97,13 @@ export function AccountSettingsView() {
       <Box>
         <SettingsSectionHeader title={t("settings.account.title")} description={t("settings.account.description")} />
         <SettingsCard>
-          <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              py: 1.5,
+            }}
+          >
             {t("settings.account.loading")}
           </Typography>
         </SettingsCard>
@@ -110,7 +116,13 @@ export function AccountSettingsView() {
       <Box>
         <SettingsSectionHeader title={t("settings.account.title")} description={t("settings.account.description")} />
         <SettingsCard>
-          <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              py: 1.5,
+            }}
+          >
             {t("settings.account.empty")}
           </Typography>
         </SettingsCard>
@@ -140,7 +152,13 @@ export function AccountSettingsView() {
                   <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.25 }} noWrap>
                     {displayName}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" noWrap>
+                  <Typography
+                    variant="body2"
+                    noWrap
+                    sx={{
+                      color: "text.secondary",
+                    }}
+                  >
                     {currentUser.email || missingValue}
                   </Typography>
                 </Box>
@@ -200,8 +218,12 @@ export function AccountSettingsView() {
                   <Box sx={{ width: 360, maxWidth: "56vw" }}>
                     <Typography
                       variant="caption"
-                      color="text.secondary"
-                      sx={{ display: "block", mb: 0.75, textAlign: "right" }}
+                      sx={{
+                        color: "text.secondary",
+                        display: "block",
+                        mb: 0.75,
+                        textAlign: "right",
+                      }}
                     >
                       {voiceUsage
                         ? t("settings.account.usage.summary", {

@@ -92,7 +92,13 @@ export function OnboardOrgView() {
           }}
         >
           <Stack spacing={3}>
-            <Stack spacing={1.25} alignItems="center" textAlign="center">
+            <Stack
+              spacing={1.25}
+              sx={{
+                alignItems: "center",
+                textAlign: "center",
+              }}
+            >
               <Box
                 sx={{
                   width: 48,
@@ -111,7 +117,13 @@ export function OnboardOrgView() {
                 <Typography variant="h5" sx={{ fontWeight: 650 }}>
                   {t("onboarding.firstOrganization.title")}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary",
+                    mt: 0.75,
+                  }}
+                >
                   {t("onboarding.firstOrganization.description")}
                 </Typography>
               </Box>

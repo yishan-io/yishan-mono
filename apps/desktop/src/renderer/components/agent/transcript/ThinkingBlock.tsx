@@ -32,7 +32,13 @@ export function ThinkingBlock({ thinking, thinkingSignature, isStreaming }: Thin
           py: 0.25,
         }}
       >
-        <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            flexShrink: 0,
+          }}
+        >
           {isStreaming ? "Thinking" : "Thought"}
         </Typography>
         {visibleText ? (

@@ -52,9 +52,15 @@ export function AgentMessage({
         />
       ) : null}
       {isToolResult ? <ToolResultMessageContent message={message} /> : null}
-
       {showsMetadata ? (
-        <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, display: "block" }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.disabled",
+            mt: 0.5,
+            display: "block",
+          }}
+        >
           {humanTimestamp ? <Box component="span">{humanTimestamp}</Box> : null}
           {humanTimestamp && durationLabel ? (
             <Box component="span" sx={{ mx: 0.75 }}>

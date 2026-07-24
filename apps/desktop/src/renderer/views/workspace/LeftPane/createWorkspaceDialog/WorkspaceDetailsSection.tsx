@@ -41,14 +41,16 @@ export function WorkspaceDetailsSection({
           fullWidth
           placeholder={branchInputPlaceholder}
           value={targetBranch}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start" sx={{ mr: 0.75 }}>
-                <LuGitBranch size={14} color="currentColor" />
-              </InputAdornment>
-            ),
-          }}
           onChange={(event) => onTargetBranchChange(event.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start" sx={{ mr: 0.75 }}>
+                  <LuGitBranch size={14} color="currentColor" />
+                </InputAdornment>
+              ),
+            },
+          }}
         />
       </Box>
     </Stack>

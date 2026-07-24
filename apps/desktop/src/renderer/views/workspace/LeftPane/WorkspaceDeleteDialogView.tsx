@@ -38,7 +38,12 @@ export function WorkspaceDeleteDialogView({
     <Dialog open={open} onClose={onCancel} fullWidth maxWidth="xs">
       <DialogTitle>{t("workspace.actions.delete")}</DialogTitle>
       <DialogContent>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {t("workspace.delete.confirm", {
             name: workspaceName,
           })}

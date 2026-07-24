@@ -36,7 +36,13 @@ export function FileOperationStatus({ operationState, operationError, progressTe
             flexShrink: 0,
           }}
         >
-          <Typography variant="caption" color="text.secondary" data-testid="file-operation-progress-label">
+          <Typography
+            variant="caption"
+            data-testid="file-operation-progress-label"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {progressText}
           </Typography>
           <LinearProgress

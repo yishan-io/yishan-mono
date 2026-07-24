@@ -1,5 +1,5 @@
-import type { PiEventPayload } from "./agentChatPiEventHelpers";
 import { subscribeDesktopRpcEvent } from "../rpc/rpcTransport";
+import type { PiEventPayload } from "./agentChatPiEventHelpers";
 
 type RouterEntry = {
   sessionId: string;

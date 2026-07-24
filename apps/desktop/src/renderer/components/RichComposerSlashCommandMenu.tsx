@@ -52,7 +52,15 @@ export function RichComposerSlashCommandMenu({
       >
         <FloatingSurface sx={{ p: 0.5, maxHeight: SLASH_COMMAND_MENU_MAX_HEIGHT_PX, overflowY: "auto" }}>
           {commands.length === 0 ? (
-            <Typography color="text.secondary" variant="caption" sx={{ display: "block", px: 1, py: 0.75 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: "block",
+                px: 1,
+                py: 0.75,
+              }}
+            >
               No matching commands
             </Typography>
           ) : (
@@ -66,8 +74,14 @@ export function RichComposerSlashCommandMenu({
                 <Box key={category} sx={{ py: 0.25 }}>
                   <Typography
                     variant="caption"
-                    color="text.secondary"
-                    sx={{ px: 1, py: 0.5, display: "block", textTransform: "uppercase", letterSpacing: 0.5 }}
+                    sx={{
+                      color: "text.secondary",
+                      px: 1,
+                      py: 0.5,
+                      display: "block",
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                    }}
                   >
                     {category === "skill" ? "Skills" : "Agents"}
                   </Typography>
@@ -106,9 +120,13 @@ export function RichComposerSlashCommandMenu({
                           </Typography>
                           <Typography
                             variant="caption"
-                            color="text.disabled"
                             noWrap
-                            sx={{ minWidth: 0, flex: 1, textAlign: "left" }}
+                            sx={{
+                              color: "text.disabled",
+                              minWidth: 0,
+                              flex: 1,
+                              textAlign: "left",
+                            }}
                           >
                             {command.description ?? ""}
                           </Typography>

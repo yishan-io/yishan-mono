@@ -36,7 +36,10 @@ vi.mock("../api", () => ({
 
 const rpcMocks = vi.hoisted(() => ({
   gitInspect: vi.fn(
-    async () => ({ isGitRepository: true }) as { isGitRepository: boolean; remoteUrl?: string; currentBranch?: string },
+    async () =>
+      ({
+        isGitRepository: true,
+      }) as { isGitRepository: boolean; remoteUrl?: string; currentBranch?: string },
   ),
   workspaceList: vi.fn(async () => []),
   workspaceOpenProject: vi.fn(async () => ({ opened: [], skipped: [], errors: [] })),

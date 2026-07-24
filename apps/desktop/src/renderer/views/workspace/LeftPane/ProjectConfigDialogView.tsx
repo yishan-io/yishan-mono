@@ -53,10 +53,14 @@ export function ProjectConfigDialogView({ open, repoId, onClose }: ProjectConfig
   return (
     <Dialog
       open={open}
-      onClose={isSaving ? undefined : onClose}
+      onClose={(_event, reason) => {
+        if (isSaving) {
+          return;
+        }
+        onClose();
+      }}
       fullWidth
       maxWidth="md"
-      disableEscapeKeyDown={isSaving}
     >
       <DialogTitle>{t("project.actions.config")}</DialogTitle>
       <DialogContent sx={{ p: 0 }}>

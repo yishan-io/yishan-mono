@@ -143,8 +143,8 @@ export function TableDropdownMenu({
             <Typography
               key={`column-${index}-${column.label}`}
               variant="caption"
-              color="text.secondary"
               sx={{
+                color: "text.secondary",
                 textAlign: column.align === "right" ? "right" : "left",
                 fontSize: 11,
                 lineHeight: 1.2,
@@ -222,7 +222,14 @@ export function TableDropdownMenu({
           ))
         ) : emptyLabel ? (
           <MenuItem disabled sx={{ minHeight: 32, py: 0.5, px: 1.5 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12, lineHeight: 1.2 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                fontSize: 12,
+                lineHeight: 1.2,
+              }}
+            >
               {emptyLabel}
             </Typography>
           </MenuItem>

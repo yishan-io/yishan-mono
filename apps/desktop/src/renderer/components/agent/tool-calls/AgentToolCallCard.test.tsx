@@ -577,5 +577,4 @@ describe("AgentToolCallCard", () => {
     expect(screen.queryByTestId("tool-chevron-right")).toBeNull();
     expect(screen.getByTestId("tool-chevron-down")).toBeTruthy();
   });
-
 });

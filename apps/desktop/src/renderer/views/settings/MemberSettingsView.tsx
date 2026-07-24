@@ -241,7 +241,13 @@ export function MemberSettingsView() {
                 {members.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5}>
-                      <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "text.secondary",
+                          py: 1,
+                        }}
+                      >
                         {t("settings.members.empty")}
                       </Typography>
                     </TableCell>
@@ -256,7 +262,14 @@ export function MemberSettingsView() {
                     return (
                       <TableRow key={member.userId}>
                         <TableCell>
-                          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+                          <Stack
+                            direction="row"
+                            spacing={1.25}
+                            sx={{
+                              alignItems: "center",
+                              minWidth: 0,
+                            }}
+                          >
                             <Avatar
                               src={member.avatarUrl ?? undefined}
                               alt={avatarAlt}
@@ -278,7 +291,13 @@ export function MemberSettingsView() {
                           <Typography variant="body2">{member.role}</Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" color="text.secondary" noWrap>
+                          <Typography
+                            variant="body2"
+                            noWrap
+                            sx={{
+                              color: "text.secondary",
+                            }}
+                          >
                             {member.userId}
                           </Typography>
                         </TableCell>
@@ -307,12 +326,23 @@ export function MemberSettingsView() {
           {t("settings.members.dangerZone.title")}
         </Typography>
         <Paper variant="outlined" sx={{ borderColor: "error.main", borderRadius: 2, px: 2.5, py: 1.5 }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
             <Box>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                 {t("settings.members.dangerZone.leaveTitle")}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("settings.members.dangerZone.leaveDescription")}
               </Typography>
             </Box>

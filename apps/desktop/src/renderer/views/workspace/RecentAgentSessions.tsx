@@ -75,12 +75,22 @@ export function RecentAgentSessions({ workspaceId, cwd }: RecentAgentSessionsPro
       </Box>
       {isLoading ? <CircularProgress size={18} /> : null}
       {error ? (
-        <Typography variant="caption" color="error.main">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "error.main",
+          }}
+        >
           {t("launch.recent.loadError")}: {error}
         </Typography>
       ) : null}
       {!isLoading && !error && sessions.length === 0 ? (
-        <Typography variant="caption" color="text.disabled">
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.disabled",
+          }}
+        >
           {t("launch.recent.empty")}
         </Typography>
       ) : null}
@@ -99,7 +109,15 @@ export function RecentAgentSessions({ workspaceId, cwd }: RecentAgentSessionsPro
                 <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {title}
                 </Box>
-                <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1, flexShrink: 0 }}>
+                <Typography
+                  component="span"
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                    ml: 1,
+                    flexShrink: 0,
+                  }}
+                >
                   {formatRelativeTime(session.timestamp, t)}
                 </Typography>
               </Button>

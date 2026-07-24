@@ -92,14 +92,15 @@ export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduled
     !draft.nodeId ||
     !draft.cronExpression.trim() ||
     !draft.prompt.trim();
-  const handleClose = () => {
-    if (!isSaving) {
-      onClose();
+  const handleClose = (_event: React.SyntheticEvent<unknown>, reason?: string) => {
+    if (isSaving) {
+      return;
     }
+    onClose();
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="lg" disableEscapeKeyDown={isSaving}>
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="lg">
       <DialogTitle>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
           <Typography variant="h6">{t("scheduledJob.edit.title")}</Typography>
@@ -142,7 +143,13 @@ export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduled
               {getErrorMessage(updateMutation.error)}
             </Typography>
           ) : null}
-          <Stack direction="row" spacing={1} justifyContent="flex-end">
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              justifyContent: "flex-end",
+            }}
+          >
             <Button onClick={handleClose} disabled={isSaving}>
               {t("common.actions.cancel")}
             </Button>

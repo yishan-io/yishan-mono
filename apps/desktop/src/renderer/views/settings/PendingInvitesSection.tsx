@@ -141,7 +141,12 @@ export function PendingInvitesSection({ organizationId, reloadKey }: PendingInvi
                       <Typography variant="body2">{invite.role}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "text.secondary",
+                        }}
+                      >
                         {new Date(invite.expiresAt).toLocaleDateString()}
                       </Typography>
                     </TableCell>

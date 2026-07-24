@@ -35,7 +35,15 @@ function formatOptionalDate(isoDate: string | null): string {
 function FieldRow({ label, children }: FieldRowProps) {
   return (
     <Box sx={{ display: "flex", gap: 2, py: 1, alignItems: "flex-start" }}>
-      <Typography variant="body2" color="text.secondary" sx={{ minWidth: 120, flexShrink: 0, pt: 0.1 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          minWidth: 120,
+          flexShrink: 0,
+          pt: 0.1,
+        }}
+      >
         {label}
       </Typography>
       <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
@@ -91,7 +99,12 @@ export function ScheduledJobDetailFields({ job, orgId }: ScheduledJobDetailField
               <Typography variant="body2">{project.name}</Typography>
             </Box>
           ) : (
-            <Typography variant="body2" color="text.disabled">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.disabled",
+              }}
+            >
               —
             </Typography>
           )}
@@ -106,7 +119,12 @@ export function ScheduledJobDetailFields({ job, orgId }: ScheduledJobDetailField
             <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
               {job.cronExpression}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               {describeCronExpression(job.cronExpression)}
             </Typography>
           </Box>
@@ -140,19 +158,36 @@ export function ScheduledJobDetailFields({ job, orgId }: ScheduledJobDetailField
         ) : null}
 
         <FieldRow label={t("scheduledJob.detail.fields.createdAt")}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {formatOptionalDate(job.createdAt)}
           </Typography>
         </FieldRow>
 
         <FieldRow label={t("scheduledJob.detail.fields.updatedAt")}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {formatOptionalDate(job.updatedAt)}
           </Typography>
         </FieldRow>
 
         <FieldRow label={t("scheduledJob.detail.fields.prompt")}>
-          <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+            }}
+          >
             {job.prompt}
           </Typography>
         </FieldRow>

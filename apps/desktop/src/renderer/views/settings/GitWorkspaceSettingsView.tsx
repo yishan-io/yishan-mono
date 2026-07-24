@@ -54,9 +54,11 @@ export function GitWorkspaceSettingsView() {
                   width={GIT_WORKSPACE_PREFIX_SELECT_WIDTH}
                   value={prefixMode}
                   onChange={(event) => setPrefixMode(event.target.value as GitBranchPrefixMode)}
-                  SelectProps={{
-                    inputProps: {
-                      "aria-label": t("settings.git.workspace.prefixModeLabel"),
+                  slotProps={{
+                    select: {
+                      inputProps: {
+                        "aria-label": t("settings.git.workspace.prefixModeLabel"),
+                      },
                     },
                   }}
                 >
@@ -69,8 +71,10 @@ export function GitWorkspaceSettingsView() {
                     width={GIT_WORKSPACE_CUSTOM_PREFIX_WIDTH}
                     value={customPrefix}
                     onChange={(event) => setCustomPrefix(event.target.value)}
-                    inputProps={{
-                      "aria-label": t("settings.git.workspace.customPrefixLabel"),
+                    slotProps={{
+                      htmlInput: {
+                        "aria-label": t("settings.git.workspace.customPrefixLabel"),
+                      },
                     }}
                   />
                 ) : null}

@@ -21,14 +21,27 @@ export default function PullRequestDeploymentsSection({ deployments }: PullReque
       <Stack spacing={1}>
         <Typography variant="subtitle2">{t("workspace.pr.deployments")}</Typography>
         {deployments.map((deployment) => (
-          <Stack key={deployment.id} direction="row" spacing={1} alignItems="center">
+          <Stack
+            key={deployment.id}
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <Chip size="small" label={deployment.state || t("workspace.info.unavailable")} variant="outlined" />
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Typography variant="body2" noWrap>
                 {deployment.environment || t("workspace.info.unavailable")}
               </Typography>
               {deployment.description ? (
-                <Typography variant="caption" color="text.secondary" noWrap>
+                <Typography
+                  variant="caption"
+                  noWrap
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {deployment.description}
                 </Typography>
               ) : null}

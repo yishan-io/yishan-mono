@@ -16,7 +16,12 @@ export function MessageList({ messages, emptyState, minHeight = 320 }: MessageLi
   if (messages.length === 0 && emptyState) {
     return (
       <Box sx={{ minHeight }}>
-        <Typography variant="body1" color="text.secondary">
+        <Typography
+          variant="body1"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           {emptyState.prompt}
         </Typography>
         <ButtonBase
@@ -50,7 +55,12 @@ export function MessageList({ messages, emptyState, minHeight = 320 }: MessageLi
           }}
           variant="outlined"
         >
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {message.role}
           </Typography>
           {message.thinking && message.thinking.trim().length > 0 ? (
@@ -66,7 +76,12 @@ export function MessageList({ messages, emptyState, minHeight = 320 }: MessageLi
                 bgcolor: "action.hover",
               }}
             >
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 thinking
               </Typography>
               <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}>

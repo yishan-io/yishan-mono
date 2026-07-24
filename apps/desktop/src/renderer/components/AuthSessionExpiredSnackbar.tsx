@@ -66,7 +66,12 @@ export function AuthSessionExpiredSnackbar() {
               <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                 {t("auth.sessionExpired.title")}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {t("auth.sessionExpired.description")}
               </Typography>
             </Box>

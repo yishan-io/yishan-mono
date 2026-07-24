@@ -162,14 +162,19 @@ export function FileEditor({
         openExternalAppLabel={openExternalAppLabel}
         statusContent={
           isDeleted ? (
-            <Typography variant="caption" color="error.main" sx={{ mr: 1 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "error.main",
+                mr: 1,
+              }}
+            >
               File deleted
             </Typography>
           ) : null
         }
         actions={isMarkdown ? <MarkdownViewModeActions currentMode={viewMode} onSelect={setViewMode} /> : undefined}
       />
-
       <Box ref={splitContainerRef} sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>
         <Box
           ref={editorHostRef}

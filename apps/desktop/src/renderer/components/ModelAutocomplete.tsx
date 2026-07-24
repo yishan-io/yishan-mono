@@ -37,7 +37,6 @@ export function ModelAutocomplete({
       size={size}
       freeSolo
       forcePopupIcon
-      ListboxComponent={VirtualizedListbox}
       options={options}
       getOptionLabel={(option) => (typeof option === "string" ? option : option.name || option.id)}
       value={value || null}
@@ -63,13 +62,17 @@ export function ModelAutocomplete({
           {...params}
           size={size}
           placeholder={placeholder}
-          InputProps={{
-            ...params.InputProps,
-            startAdornment: startAdornment ? (
-              <Box sx={{ ml: 1, display: "flex", alignItems: "center" }}>{startAdornment}</Box>
-            ) : (
-              params.InputProps.startAdornment
-            ),
+          slotProps={{
+            ...params.slotProps,
+
+            input: {
+              ...params.slotProps.input,
+              startAdornment: startAdornment ? (
+                <Box sx={{ ml: 1, display: "flex", alignItems: "center" }}>{startAdornment}</Box>
+              ) : (
+                params.slotProps.input.startAdornment
+              ),
+            },
           }}
         />
       )}
@@ -82,6 +85,11 @@ export function ModelAutocomplete({
             </Typography>
           </li>
         );
+      }}
+      slotProps={{
+        listbox: {
+          component: VirtualizedListbox,
+        },
       }}
     />
   );

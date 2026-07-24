@@ -192,15 +192,25 @@ export function WorkspaceRow({
           },
         }}
       >
-        <Stack direction="row" gap={1} sx={{ width: "100%" }}>
+        <Stack
+          direction="row"
+          sx={{
+            gap: 1,
+            width: "100%",
+          }}
+        >
           {renderWorkspaceIcon()}
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography
               data-testid={`workspace-name-${workspace.id}`}
-              fontSize={14}
-              color="text.primary"
               noWrap
-              sx={{ display: "block", overflow: "hidden", textOverflow: "ellipsis" }}
+              sx={{
+                fontSize: 14,
+                color: "text.primary",
+                display: "block",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
             >
               {workspace.name}
             </Typography>

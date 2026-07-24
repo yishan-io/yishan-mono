@@ -85,7 +85,13 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
           className="electron-webkit-app-region-no-drag"
           sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", minWidth: 0, pr: 0.5 }}
         />
-        <Stack direction="row" alignItems="center" spacing={0.25}>
+        <Stack
+          direction="row"
+          spacing={0.25}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <PaneToggleButton
             tooltipLabel={toggleLeftTooltipLabel}
             ariaLabel={t("layout.toggleLeftSidebar")}
@@ -192,7 +198,12 @@ export function LeftPaneView({ onCreateRepository, onToggleLeftPane }: LeftPaneV
         </Box>
       ) : filteredRepos.length === 0 ? (
         <Box sx={{ px: 2, pb: 1.5 }}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             {t("project.filter.empty")}
           </Typography>
         </Box>

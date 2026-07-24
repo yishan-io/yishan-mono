@@ -1,4 +1,4 @@
-import { Box, InputAdornment, ListSubheader, MenuItem, Tab, Tabs, TextField, Tooltip, Typography } from "@mui/material";
+import { Box, InputAdornment, ListSubheader, Tab, Tabs, TextField, Tooltip, Typography } from "@mui/material";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuFolderGit2, LuGitBranch, LuSearch } from "react-icons/lu";
@@ -192,15 +192,28 @@ export function BranchDropdown({
 
   const renderOption = useCallback(
     (row: FlatRow & { type: "option" }) => (
-      <MenuItem
-        selected={selectedValueSet.has(row.value)}
+      <Box
+        component="li"
+        role="menuitem"
+        aria-selected={selectedValueSet.has(row.value)}
         onClick={() => {
           if (row.value) {
             onSelect(row.value);
           }
         }}
-        sx={{ pl: row.indent, pr: 1, maxWidth: "100%", overflow: "hidden", minHeight: ROW_HEIGHT }}
-        disabled={!row.value}
+        sx={{
+          pl: row.indent,
+          pr: 1,
+          maxWidth: "100%",
+          overflow: "hidden",
+          minHeight: `${ROW_HEIGHT}px`,
+          display: "flex",
+          alignItems: "center",
+          cursor: row.value ? "pointer" : "default",
+          opacity: row.value ? 1 : 0.5,
+          bgcolor: selectedValueSet.has(row.value) ? "action.selected" : "transparent",
+          "&:hover": row.value ? { bgcolor: "action.hover" } : {},
+        }}
       >
         <Tooltip title={row.label} placement="top" enterDelay={500} enterTouchDelay={500}>
           <Box
@@ -233,7 +246,7 @@ export function BranchDropdown({
             </Typography>
           </Box>
         </Tooltip>
-      </MenuItem>
+      </Box>
     ),
     [onSelect, selectedValueSet],
   );

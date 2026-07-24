@@ -214,11 +214,27 @@ export function AgentModelSelectorMenu({
                 />
               </Box>
               {activeModels.length === 0 ? (
-                <Typography color="text.secondary" variant="caption" sx={{ display: "block", px: 1.5, py: 1 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                    display: "block",
+                    px: 1.5,
+                    py: 1,
+                  }}
+                >
                   No models
                 </Typography>
               ) : filteredModels.length === 0 ? (
-                <Typography color="text.secondary" variant="caption" sx={{ display: "block", px: 1.5, py: 1 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                    display: "block",
+                    px: 1.5,
+                    py: 1,
+                  }}
+                >
                   No matching models
                 </Typography>
               ) : filteredModels.length <= MAX_VISIBLE_MODEL_ROWS ? (

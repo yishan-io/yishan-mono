@@ -43,7 +43,13 @@ export function ProjectConfigGeneralSection({
   return (
     <Stack spacing={2}>
       <Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 1,
+          }}
+        >
           Repo name
         </Typography>
         <TextField
@@ -60,15 +66,27 @@ export function ProjectConfigGeneralSection({
         />
       </Box>
       <Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 1,
+          }}
+        >
           Git URL
         </Typography>
         <Stack
           direction="row"
           spacing={0.5}
-          alignItems="center"
-          justifyContent="space-between"
-          sx={{ minHeight: 40, px: 1.5, border: 1, borderColor: "divider", borderRadius: 1 }}
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+            minHeight: 40,
+            px: 1.5,
+            border: 1,
+            borderColor: "divider",
+            borderRadius: 1,
+          }}
         >
           <Typography variant="body2" sx={{ color: repoGitUrl ? "text.primary" : "text.disabled" }}>
             {repoGitUrl || "-"}
@@ -76,15 +94,27 @@ export function ProjectConfigGeneralSection({
         </Stack>
       </Box>
       <Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 1,
+          }}
+        >
           Repo key
         </Typography>
         <Stack
           direction="row"
           spacing={0.5}
-          alignItems="center"
-          justifyContent="space-between"
-          sx={{ minHeight: 40, px: 1.5, border: 1, borderColor: "divider", borderRadius: 1 }}
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+            minHeight: 40,
+            px: 1.5,
+            border: 1,
+            borderColor: "divider",
+            borderRadius: 1,
+          }}
         >
           <Typography variant="body2" sx={{ color: repoKey ? "text.primary" : "text.disabled" }}>
             {repoKey || "-"}
@@ -92,15 +122,27 @@ export function ProjectConfigGeneralSection({
         </Stack>
       </Box>
       <Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 1,
+          }}
+        >
           Local path
         </Typography>
         <Stack
           direction="row"
           spacing={0.5}
-          alignItems="center"
-          justifyContent="space-between"
-          sx={{ minHeight: 40, px: 1.5, border: 1, borderColor: "divider", borderRadius: 1 }}
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+            minHeight: 40,
+            px: 1.5,
+            border: 1,
+            borderColor: "divider",
+            borderRadius: 1,
+          }}
         >
           <Typography variant="body2" sx={{ color: repoLocalPath ? "text.primary" : "text.disabled" }}>
             {repoLocalPath || "-"}
@@ -119,8 +161,20 @@ export function ProjectConfigGeneralSection({
         </Stack>
       </Box>
       <Box>
-        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 1 }}>
-          <Typography variant="body2" color="text.secondary">
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{
+            alignItems: "center",
+            mb: 1,
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             Context
           </Typography>
           <Tooltip title="Context stores repo-specific notes and guidance (briefs, decisions, references) outside the git repo so agents can reuse it across workspaces. This switch controls whether Yishan maintains the .my-context link in this project's workspaces.">
@@ -145,12 +199,25 @@ export function ProjectConfigGeneralSection({
           }
           label={draft.contextEnabled ? "Enabled" : "Disabled"}
         />
-        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            display: "block",
+            mt: 0.5,
+          }}
+        >
           Toggling applies to all current workspaces and future ones.
         </Typography>
       </Box>
       <Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 1,
+          }}
+        >
           Worktree location
         </Typography>
         <TextField
@@ -181,7 +248,13 @@ export function ProjectConfigGeneralSection({
       </Box>
       <Stack direction="row" spacing={2}>
         <Box sx={{ flex: 1 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mb: 1,
+            }}
+          >
             Project icon
           </Typography>
           <IconButton
@@ -201,7 +274,13 @@ export function ProjectConfigGeneralSection({
           </IconButton>
         </Box>
         <Box sx={{ width: 220 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mb: 1,
+            }}
+          >
             Icon bg color
           </Typography>
           <Stack direction="row" spacing={1} sx={{ pt: 0.75 }}>

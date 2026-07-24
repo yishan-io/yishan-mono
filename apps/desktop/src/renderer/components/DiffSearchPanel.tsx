@@ -78,13 +78,18 @@ export function DiffSearchPanel({
           inputProps={{ "aria-label": "Find in diff" }}
         />
       </Box>
-
       {matchLabel && (
-        <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0, fontSize: 11 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            flexShrink: 0,
+            fontSize: 11,
+          }}
+        >
           {matchLabel}
         </Typography>
       )}
-
       <Tooltip title="Previous match (Shift+Enter)">
         <Box component="span">
           <IconButton onClick={onPrevious} disabled={!hasMatch}>
@@ -92,7 +97,6 @@ export function DiffSearchPanel({
           </IconButton>
         </Box>
       </Tooltip>
-
       <Tooltip title="Next match (Enter)">
         <Box component="span">
           <IconButton onClick={onNext} disabled={!hasMatch}>
@@ -100,7 +104,6 @@ export function DiffSearchPanel({
           </IconButton>
         </Box>
       </Tooltip>
-
       <Tooltip title="Close (Escape)">
         <IconButton onClick={onClose}>
           <LuX size={13} />
