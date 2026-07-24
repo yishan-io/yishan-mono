@@ -3,9 +3,10 @@ import { memo, useCallback, useMemo } from "react";
 import { openSubagentSessionInRightSplitPane } from "../../commands/agentChatSubagentCommands";
 import { AgentMessageList } from "../../components/agent/transcript/AgentMessageList";
 import { agentChatStore } from "../../store/agentChatStore";
-import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
+import type { AgentMessage, AgentModel, AgentQueueState } from "../../store/agentChatTypes";
 
 const EMPTY_MESSAGES: AgentMessage[] = [];
+const EMPTY_QUEUE: AgentQueueState = { steering: [], followUp: [] };
 
 type AgentChatTranscriptPaneProps = {
   tabId: string;
@@ -70,6 +71,7 @@ function AgentChatTranscriptPane({
       null
     );
   });
+  const queue = agentChatStore((state) => state.sessionsByTabId[tabId]?.queue ?? EMPTY_QUEUE);
   const footerModel = currentModel ?? parentModel;
   const latestUsage = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -101,6 +103,7 @@ function AgentChatTranscriptPane({
         emptyPrompt="Send a message to start the conversation."
         workspacePath={cwd}
         isWorking={sessionState === "running"}
+        queuedMessages={isReadOnlySubagentDetail ? undefined : queue}
         onOpenCompletedSubagent={handleOpenCompletedSubagent}
       />
       {isReadOnlySubagentDetail ? <AgentChatSubagentDetailFooter model={footerModel} usage={latestUsage} /> : null}
