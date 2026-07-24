@@ -37,7 +37,9 @@ Keep only information that will still matter when the current diff, current task
 
 Before making a structural change, reopening a prior decision, or writing a memory update, search existing memory first.
 
-Primary search command:
+If the `memory_search` tool is available (Pi with `pi-memory` extension), use it directly — it defaults to the current project when `YISHAN_PROJECT_ID` is set.
+
+Fallback CLI command (when running outside Pi):
 
 ```bash
 yishan memory search --output json --project-id $YISHAN_PROJECT_ID "<1-3 keywords>"
