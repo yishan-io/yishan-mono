@@ -92,10 +92,13 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (*Session, error
 		}
 	}()
 
-	// Always start from the full login-shell environment so the subprocess
-	// inherits the user's PATH and tool directories regardless of how the
-	// daemon was launched.
-	env := shellenv.ResolveEnvWithUserPath(os.Environ(), os.Getenv("SHELL"))
+	// Resolve the subprocess environment. Start with the full login-shell
+	// environment merged with the daemon's own env (daemon wins on conflicts)
+	// so that provider credentials exported in shell profiles (e.g. AWS_* for
+	// Amazon Bedrock) are available even when the daemon was launched from a
+	// GUI context with a minimal environment. Then enrich PATH.
+	base := shellenv.MergeLoginShellEnv(os.Environ())
+	env := shellenv.ResolveEnvWithUserPath(base, os.Getenv("SHELL"))
 	for _, kv := range opts.ExtraEnv {
 		if kv == "" {
 			continue

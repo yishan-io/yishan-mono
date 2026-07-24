@@ -120,3 +120,38 @@ func resolveOrigZdotdir(env []string, managedZshDir string, homeDir string) stri
 	}
 	return zdotdir
 }
+
+// mergeEnvs returns a new env slice starting from base with override entries
+// upserted on top. Values in override take precedence over base on conflict.
+// Entries in override that contain no '=' are silently skipped.
+func mergeEnvs(base, override []string) []string {
+	merged := make([]string, len(base))
+	copy(merged, base)
+	for _, kv := range override {
+		k, v, found := strings.Cut(kv, "=")
+		if !found {
+			continue
+		}
+		merged = UpsertEnv(merged, k, v)
+	}
+	return merged
+}
+
+// MergeLoginShellEnv merges the login shell's full environment with daemonEnv,
+// returning a combined slice where daemonEnv values take precedence. This
+// ensures provider credentials exported in shell profiles (e.g. AWS_* for
+// Amazon Bedrock) are available to subprocesses even when the daemon was
+// launched from a GUI context with a minimal environment.
+// On error or when the login shell env is empty, daemonEnv is returned as a
+// fresh copy so the caller can safely mutate the result.
+func MergeLoginShellEnv(daemonEnv []string) []string {
+	sh, err := GetLoginShell()
+	if err != nil {
+		return append([]string(nil), daemonEnv...)
+	}
+	shellEnv := sh.FullEnv()
+	if len(shellEnv) == 0 {
+		return append([]string(nil), daemonEnv...)
+	}
+	return mergeEnvs(shellEnv, daemonEnv)
+}

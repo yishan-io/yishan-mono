@@ -19,11 +19,13 @@ type LoginShell struct {
 	cmd   *exec.Cmd
 	stdin io.WriteCloser
 
-	mu      sync.Mutex
-	buf     []byte
-	bufCond *sync.Cond
-	closed  bool
-	path    string
+	mu          sync.Mutex
+	buf         []byte
+	bufCond     *sync.Cond
+	closed      bool
+	path        string
+	fullEnv     []string
+	fullEnvOnce sync.Once
 }
 
 func startLoginShell(shellPath string) (*LoginShell, error) {
@@ -85,6 +87,32 @@ func (s *LoginShell) readLoop(stdout io.ReadCloser) {
 
 func (s *LoginShell) Path() string {
 	return s.path
+}
+
+// FullEnv runs env -0 in the login shell and returns the parsed KEY=VALUE
+// slice. Null-separated output avoids phantom-entry injection from env vars
+// whose values contain newlines. The result is cached after the first call.
+// Returns nil when the login shell is unavailable or returns empty output.
+func (s *LoginShell) FullEnv() []string {
+	s.fullEnvOnce.Do(func() {
+		output, err := s.Exec("env -0")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "shellenv: FullEnv: exec env -0: %v\n", err)
+			return
+		}
+		if strings.TrimSpace(output) == "" {
+			fmt.Fprintf(os.Stderr, "shellenv: FullEnv: env -0 returned empty output\n")
+			return
+		}
+		var result []string
+		for _, entry := range strings.Split(output, "\x00") {
+			if strings.Contains(entry, "=") {
+				result = append(result, entry)
+			}
+		}
+		s.fullEnv = result
+	})
+	return s.fullEnv
 }
 
 func (s *LoginShell) Exec(command string) (string, error) {
