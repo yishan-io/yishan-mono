@@ -260,6 +260,153 @@ describe("FileTree", () => {
     expect(screen.queryByText("format.ts")).toBeNull();
   });
 
+  // ── Multi-select ──────────────────────────────────────────────────────────
+
+  it("plain click selects only the clicked item", () => {
+    const onSelectEntry = vi.fn();
+    render(<FileTree files={["src/a.ts", "src/b.ts"]} expandedItems={["src"]} onSelectEntry={onSelectEntry} />);
+
+    fireEvent.click(screen.getByTestId("tree-row-src/a.ts"));
+    expect(onSelectEntry).toHaveBeenLastCalledWith({ path: "src/a.ts", isDirectory: false });
+  });
+
+  it("cmd+click adds a second file to the selection", () => {
+    const onSelectEntry = vi.fn();
+    const onSelectionChange = vi.fn();
+    render(
+      <FileTree
+        files={["src/a.ts", "src/b.ts"]}
+        expandedItems={["src"]}
+        onSelectEntry={onSelectEntry}
+        onSelectionChange={onSelectionChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("tree-row-src/a.ts"));
+    fireEvent.click(screen.getByTestId("tree-row-src/b.ts"), { metaKey: true });
+
+    const lastChange = onSelectionChange.mock.calls.at(-1)?.[0] as string[];
+    expect(lastChange).toHaveLength(2);
+    expect(lastChange).toContain("src/a.ts");
+    expect(lastChange).toContain("src/b.ts");
+  });
+
+  it("cmd+click on an already-selected file removes it from the selection", () => {
+    const onSelectionChange = vi.fn();
+    render(<FileTree files={["src/a.ts", "src/b.ts"]} expandedItems={["src"]} onSelectionChange={onSelectionChange} />);
+
+    fireEvent.click(screen.getByTestId("tree-row-src/a.ts"));
+    fireEvent.click(screen.getByTestId("tree-row-src/b.ts"), { metaKey: true });
+    fireEvent.click(screen.getByTestId("tree-row-src/a.ts"), { metaKey: true }); // deselect a
+
+    const lastChange = onSelectionChange.mock.calls.at(-1)?.[0] as string[];
+    expect(lastChange).toEqual(["src/b.ts"]);
+  });
+
+  it("plain click after multi-select collapses selection to one item", () => {
+    const onSelectionChange = vi.fn();
+    render(
+      <FileTree
+        files={["src/a.ts", "src/b.ts", "src/c.ts"]}
+        expandedItems={["src"]}
+        onSelectionChange={onSelectionChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("tree-row-src/a.ts"));
+    fireEvent.click(screen.getByTestId("tree-row-src/b.ts"), { metaKey: true });
+    // plain click — should clear back to single
+    fireEvent.click(screen.getByTestId("tree-row-src/c.ts"));
+
+    const lastChange = onSelectionChange.mock.calls.at(-1)?.[0] as string[];
+    expect(lastChange).toEqual(["src/c.ts"]);
+  });
+
+  it("right-click on an unselected item selects it and fires onSelectEntry", () => {
+    const onSelectEntry = vi.fn();
+    const onItemContextMenu = vi.fn();
+    render(
+      <FileTree
+        files={["src/a.ts", "src/b.ts"]}
+        expandedItems={["src"]}
+        onSelectEntry={onSelectEntry}
+        onRenameEntry={vi.fn()}
+        onItemContextMenu={onItemContextMenu}
+      />,
+    );
+
+    // Start with a selected, then right-click b (unselected)
+    fireEvent.click(screen.getByTestId("tree-row-src/a.ts"));
+    fireEvent.contextMenu(screen.getByTestId("tree-row-src/b.ts"));
+
+    expect(onSelectEntry).toHaveBeenLastCalledWith({ path: "src/b.ts", isDirectory: false });
+    const menuRequest = onItemContextMenu.mock.calls.at(-1)?.[0];
+    expect(menuRequest?.targetPath).toBe("src/b.ts");
+    // Single-item context menu — no selectedPaths field
+    expect(menuRequest?.selectedPaths).toBeUndefined();
+  });
+
+  it("right-click on a multi-selected item includes selectedPaths in the context menu request", () => {
+    const onItemContextMenu = vi.fn();
+    render(
+      <FileTree
+        files={["src/a.ts", "src/b.ts"]}
+        expandedItems={["src"]}
+        onRenameEntry={vi.fn()}
+        onItemContextMenu={onItemContextMenu}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("tree-row-src/a.ts"));
+    fireEvent.click(screen.getByTestId("tree-row-src/b.ts"), { metaKey: true });
+    // Right-click one of the selected items
+    fireEvent.contextMenu(screen.getByTestId("tree-row-src/a.ts"));
+
+    const menuRequest = onItemContextMenu.mock.calls.at(-1)?.[0];
+    expect(menuRequest?.selectedPaths).toHaveLength(2);
+    expect(menuRequest?.selectedPaths).toContain("src/a.ts");
+    expect(menuRequest?.selectedPaths).toContain("src/b.ts");
+    // Multi-select: no startRename
+    expect(menuRequest?.startRename).toBeUndefined();
+  });
+
+  it("drag start on a multi-selected row encodes all selected paths in FILETREE_DRAG_MIME", async () => {
+    const onSelectionChange = vi.fn();
+
+    render(
+      <FileTree
+        files={["src/a.ts", "src/b.ts"]}
+        expandedItems={["src"]}
+        worktreePath="/workspace"
+        onSelectionChange={onSelectionChange}
+      />,
+    );
+
+    // Build multi-selection
+    fireEvent.click(screen.getByTestId("tree-row-src/a.ts"));
+    fireEvent.click(screen.getByTestId("tree-row-src/b.ts"), { metaKey: true });
+
+    // Wait for the multi-selection state to be committed
+    await waitFor(() => {
+      const lastArgs = onSelectionChange.mock.lastCall?.[0] as string[];
+      expect(lastArgs).toHaveLength(2);
+    });
+
+    // Drag one of the selected rows — payload should include both selected paths
+    const setDataMock = vi.fn();
+    fireEvent.dragStart(screen.getByTestId("tree-row-src/a.ts"), {
+      dataTransfer: { effectAllowed: "", setData: setDataMock },
+    });
+
+    const filetreeCall = setDataMock.mock.calls.find((args: unknown[]) => args[0] === "application/x-filetree-paths");
+    expect(filetreeCall).toBeTruthy();
+    const entries = JSON.parse(filetreeCall?.[1] as string) as { path: string; isDirectory: boolean }[];
+    const paths = entries.map((e) => e.path);
+    expect(paths).toHaveLength(2);
+    expect(paths).toContain("/workspace/src/a.ts");
+    expect(paths).toContain("/workspace/src/b.ts");
+  });
+
   it("resets default expansion when rerendered with a different repo tree", () => {
     const rendered = render(<FileTree files={["src/a.ts"]} />);
 

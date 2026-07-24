@@ -1,21 +1,27 @@
 import { useCallback, useState } from "react";
 import type { DragEvent } from "react";
 import {
+  FILETREE_DRAG_MIME,
   extractInternalDragRelativePaths,
   extractSourcePathsFromDataTransferAsync,
   hasExternalFileDragIntent,
   hasInternalFileTreeDragIntent,
 } from "./dataTransfer";
+import type { FileTreeDragEntry } from "./dataTransfer";
 import { resolveDestinationDirectoryPath } from "./treeUtils";
+import type { VisibleRow } from "./types";
 
 type UseFileTreeDragDropInput = {
   worktreePath?: string;
   onDropExternalEntries?: (sourcePaths: string[], destinationPath: string) => void | Promise<void>;
   onMoveEntries?: (sourceRelativePaths: string[], destinationPath: string) => void | Promise<void>;
+  selectedPaths?: Set<string>;
+  rowByPath?: Map<string, { row: VisibleRow; index: number }>;
 };
 
 export type UseFileTreeDragDropResult = {
   dropTargetPath: string | null;
+  handleRowDragStart: (event: DragEvent<HTMLElement>, row: VisibleRow, absolutePath: string) => void;
   handleExternalDragOver: (event: DragEvent<HTMLElement>) => void;
   handleRowDragEnter: (event: DragEvent<HTMLElement>, targetPath: string, targetIsDirectory: boolean) => void;
   handleRowDragLeave: (event: DragEvent<HTMLElement>) => void;
@@ -31,8 +37,33 @@ export function useFileTreeDragDrop({
   worktreePath,
   onDropExternalEntries,
   onMoveEntries,
+  selectedPaths,
+  rowByPath,
 }: UseFileTreeDragDropInput): UseFileTreeDragDropResult {
   const [dropTargetPath, setDropTargetPath] = useState<string | null>(null);
+
+  const handleRowDragStart = useCallback(
+    (event: DragEvent<HTMLElement>, row: VisibleRow, absolutePath: string) => {
+      event.dataTransfer.effectAllowed = "copyMove";
+      const isRowInMultiSelect = Boolean(selectedPaths?.has(row.path)) && (selectedPaths?.size ?? 0) > 1;
+
+      if (isRowInMultiSelect && selectedPaths && worktreePath && rowByPath) {
+        const entries: FileTreeDragEntry[] = [...selectedPaths].map((p) => {
+          const meta = rowByPath.get(p);
+          return { path: `${worktreePath}/${p}`, isDirectory: meta?.row.isDirectory ?? false };
+        });
+        event.dataTransfer.setData(FILETREE_DRAG_MIME, JSON.stringify(entries));
+        event.dataTransfer.setData("text/plain", entries.map((e) => e.path).join("\n"));
+      } else {
+        event.dataTransfer.setData(
+          FILETREE_DRAG_MIME,
+          JSON.stringify([{ path: absolutePath, isDirectory: row.isDirectory }]),
+        );
+        event.dataTransfer.setData("text/plain", absolutePath);
+      }
+    },
+    [rowByPath, selectedPaths, worktreePath],
+  );
 
   const handleExternalDragOver = useCallback(
     (event: DragEvent<HTMLElement>) => {
@@ -121,6 +152,7 @@ export function useFileTreeDragDrop({
 
   return {
     dropTargetPath,
+    handleRowDragStart,
     handleExternalDragOver,
     handleRowDragEnter,
     handleRowDragLeave,

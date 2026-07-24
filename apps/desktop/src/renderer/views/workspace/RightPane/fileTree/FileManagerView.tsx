@@ -1,5 +1,4 @@
-import { Alert, Box, LinearProgress, Typography } from "@mui/material";
-import { ConfirmationDialog } from "@renderer/components/ConfirmationDialog";
+import { Alert, Box } from "@mui/material";
 import { ContextMenu } from "@renderer/components/ContextMenu";
 import { FileTree } from "@renderer/components/FileTree";
 import { FileTreeToolbar } from "@renderer/components/FileTree/FileTreeToolbar";
@@ -15,24 +14,14 @@ import { findExternalAppPreset, isExternalAppPlatformSupported } from "@shared/c
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useFileDeletionConfirmation } from "../useFileDeletionConfirmation";
+import { FileDeletionFeedback } from "./FileDeletionFeedback";
+import { FileOperationStatus } from "./FileOperationStatus";
 import { useFileTreeContextMenuItems } from "./useFileTreeContextMenuItems";
 import { useFileTreeCreateEntryRequest } from "./useFileTreeCreateEntryRequest";
 import { useFileTreeGitChanges } from "./useFileTreeGitChanges";
 import { useFileTreeOperations } from "./useFileTreeOperations";
-
+import { useFileTreeSignalHandlers } from "./useFileTreeSignalHandlers";
 type FileManagerViewProps = Record<string, never>;
-
-/** Computes one bounded progress percentage value for file operations. */
-function getFileOperationProgressValue(operation: {
-  processed: number;
-  total: number;
-}): number {
-  if (operation.total <= 0) {
-    return 0;
-  }
-
-  return Math.min(100, Math.round((operation.processed / operation.total) * 100));
-}
 
 /** Renders file tree + quick-open and delegates file operations to useFileTreeOperations. */
 export function FileManagerView(_props: FileManagerViewProps) {
@@ -72,8 +61,11 @@ export function FileManagerView(_props: FileManagerViewProps) {
     pendingFileDeletionDescriptionKey,
     isDeletingEntry,
     handleRequestFileDeletion,
+    handleRequestMultiFileDeletion,
     handleCancelFileDeletion,
     handleConfirmFileDeletion,
+    deletionError,
+    clearDeletionError,
   } = useFileDeletionConfirmation({
     repoFiles: ops.repoFiles,
     deleteEntry: ops.onDeleteEntry,
@@ -88,8 +80,6 @@ export function FileManagerView(_props: FileManagerViewProps) {
   const setSelectedEntryPath = workspaceUiStore((state) => state.setSelectedEntryPath);
   const expandedItemsByWorkspaceId = workspaceUiStore((state) => state.expandedFileTreeItemsByWorkspaceId);
   const setExpandedFileTreeItems = workspaceUiStore((state) => state.setExpandedFileTreeItems);
-  const [lastHandledDeleteSelectionRequestId, setLastHandledDeleteSelectionRequestId] = useState(0);
-  const [lastHandledUndoRequestId, setLastHandledUndoRequestId] = useState(0);
   const selectedTabId = tabStore((state) => state.selectedTabId);
   const tabs = tabStore((state) => state.tabs);
   const lastRevealedTabIdRef = useRef("");
@@ -147,31 +137,14 @@ export function FileManagerView(_props: FileManagerViewProps) {
     ops.revealFileInTree(selectedTab.data.path);
   }, [ops, selectedTabId, selectedWorkspaceId, tabs]);
 
-  useEffect(() => {
-    if (deleteSelectionRequestId <= lastHandledDeleteSelectionRequestId) {
-      return;
-    }
-
-    setLastHandledDeleteSelectionRequestId(deleteSelectionRequestId);
-    if (!selectedEntryPath) {
-      return;
-    }
-
-    handleRequestFileDeletion(selectedEntryPath);
-  }, [deleteSelectionRequestId, handleRequestFileDeletion, lastHandledDeleteSelectionRequestId, selectedEntryPath]);
-
-  useEffect(() => {
-    if (undoRequestId <= lastHandledUndoRequestId) {
-      return;
-    }
-
-    setLastHandledUndoRequestId(undoRequestId);
-    if (!ops.canUndoLastEntryOperation) {
-      return;
-    }
-
-    void ops.onUndoLastEntryOperation();
-  }, [lastHandledUndoRequestId, ops, undoRequestId]);
+  useFileTreeSignalHandlers({
+    selectedEntryPath,
+    deleteSelectionRequestId,
+    undoRequestId,
+    canUndoLastEntryOperation: ops.canUndoLastEntryOperation,
+    handleRequestFileDeletion,
+    onUndoLastEntryOperation: ops.onUndoLastEntryOperation,
+  });
 
   const requestFileDeletion = useCallback(
     async (path: string) => {
@@ -201,6 +174,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
       onCreateFolder: ops.onCreateFolder,
       onRenameEntry: ops.onRenameEntry,
       onDeleteEntry: requestFileDeletion,
+      onDeleteMultipleEntries: handleRequestMultiFileDeletion,
       onCopyPath: ops.onCopyPath,
       onCopyRelativePath: ops.onCopyRelativePath,
       onOpenInFileManager: ops.onOpenInFileManager,
@@ -235,35 +209,11 @@ export function FileManagerView(_props: FileManagerViewProps) {
         flexDirection: "column",
       }}
     >
-      {ops.fileOperationState?.status === "running" ? (
-        <Box
-          sx={{
-            px: 1.5,
-            pt: 1,
-            pb: 0.25,
-            display: "flex",
-            flexDirection: "column",
-            gap: 0.5,
-            flexShrink: 0,
-          }}
-        >
-          <Typography variant="caption" color="text.secondary" data-testid="file-operation-progress-label">
-            {fileOperationProgressText}
-          </Typography>
-          <LinearProgress
-            variant="determinate"
-            value={getFileOperationProgressValue(ops.fileOperationState)}
-            data-testid="file-operation-progress-bar"
-          />
-        </Box>
-      ) : null}
-      {ops.fileOperationError ? (
-        <Box sx={{ px: 1.5, pt: 1, flexShrink: 0 }}>
-          <Alert severity="error" data-testid="file-operation-error">
-            {ops.fileOperationError}
-          </Alert>
-        </Box>
-      ) : null}
+      <FileOperationStatus
+        operationState={ops.fileOperationState}
+        operationError={ops.fileOperationError}
+        progressText={fileOperationProgressText}
+      />
       <FileTreeToolbar
         createFileActionLabel={t("files.actions.createFile")}
         createFolderActionLabel={t("files.actions.createFolder")}
@@ -291,9 +241,9 @@ export function FileManagerView(_props: FileManagerViewProps) {
         createEntryRequest={createEntryRequest}
         onExpandedItemsChange={handleExpandedItemsChange}
         onEnsurePathLoaded={ops.ensurePathLoaded}
-        onSelectEntry={({ path, isDirectory }) => {
+        onSelectEntry={({ path, isDirectory, isMultiSelectOperation }) => {
           setSelectedEntryPath(path);
-          if (isDirectory) {
+          if (isDirectory || isMultiSelectOperation) {
             return;
           }
 
@@ -336,20 +286,14 @@ export function FileManagerView(_props: FileManagerViewProps) {
         submenuDirection="left"
         items={contextMenuItems}
       />
-      <ConfirmationDialog
-        open={Boolean(pendingFileDeletion)}
-        title={t("files.actions.delete")}
-        description={t(pendingFileDeletionDescriptionKey, {
-          path: pendingFileDeletion?.path ?? "",
-        })}
-        confirmLabel={
-          isDeletingEntry ? t("common.actions.deleting", { defaultValue: "Deleting..." }) : t("files.actions.delete")
-        }
-        cancelLabel={t("common.actions.cancel")}
-        confirmColor="error"
-        isSubmitting={isDeletingEntry}
-        onCancel={handleCancelFileDeletion}
+      <FileDeletionFeedback
+        pendingFileDeletion={pendingFileDeletion}
+        pendingFileDeletionDescriptionKey={pendingFileDeletionDescriptionKey}
+        isDeletingEntry={isDeletingEntry}
+        deletionError={deletionError}
         onConfirm={confirmFileDeletion}
+        onCancel={handleCancelFileDeletion}
+        onDismissError={clearDeletionError}
       />
     </Box>
   );

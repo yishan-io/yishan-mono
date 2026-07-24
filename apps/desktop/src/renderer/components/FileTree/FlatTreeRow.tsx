@@ -2,7 +2,6 @@ import { Box, CircularProgress, TextField } from "@mui/material";
 import type { DragEvent, KeyboardEvent, MouseEvent } from "react";
 import { MdOutlineKeyboardArrowRight } from "react-icons/md";
 import { getFileTreeIcon } from "../fileTreeIcons";
-import { FILETREE_DRAG_MIME } from "./dataTransfer";
 import type { FileTreeGitChangeKind, VisibleRow } from "./types";
 
 const ROW_HEIGHT = 28;
@@ -25,6 +24,7 @@ function getGitChangeIndicatorMeta(kind: FileTreeGitChangeKind): { textColor: st
 export type FlatTreeRowProps = {
   row: VisibleRow;
   isSelected: boolean;
+  isMultiSelected: boolean;
   isEditing: boolean;
   editingName: string;
   editingInputRef: React.RefObject<HTMLInputElement | null>;
@@ -36,17 +36,16 @@ export type FlatTreeRowProps = {
   isLoading: boolean;
   /** When true, the row is draggable and will emit file path data on drag start. */
   isDraggable: boolean;
-  /** Absolute file path used as the drag payload. */
-  absolutePath: string;
   /** True when this row is the active drop target during a drag operation. */
   isDropTarget: boolean;
-  onSelect: () => void;
+  onSelect: (modifiers: { meta: boolean }) => void;
   onToggle: () => void;
   onOpen: () => void;
   onContextMenu: (event: MouseEvent<HTMLElement>) => void;
   onEditingNameChange: (value: string) => void;
   onRenameKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
   onRenameBlur: () => void;
+  onDragStart: ((event: DragEvent<HTMLElement>) => void) | undefined;
   onDragOver: (event: DragEvent<HTMLElement>) => void;
   onDrop: (event: DragEvent<HTMLElement>, targetPath: string, targetIsDirectory: boolean) => void;
   onDragEnter: (event: DragEvent<HTMLElement>, targetPath: string, targetIsDirectory: boolean) => void;
@@ -57,6 +56,7 @@ export type FlatTreeRowProps = {
 export function FlatTreeRow({
   row,
   isSelected,
+  isMultiSelected,
   isEditing,
   editingName,
   editingInputRef,
@@ -65,7 +65,6 @@ export function FlatTreeRow({
   isExpanded,
   isLoading,
   isDraggable,
-  absolutePath,
   isDropTarget,
   onSelect,
   onToggle,
@@ -74,6 +73,7 @@ export function FlatTreeRow({
   onEditingNameChange,
   onRenameKeyDown,
   onRenameBlur,
+  onDragStart,
   onDragOver,
   onDrop,
   onDragEnter,
@@ -147,22 +147,12 @@ export function FlatTreeRow({
       data-path={row.path}
       data-testid={`tree-row-${row.path}`}
       draggable={isDraggable}
-      onDragStart={
-        isDraggable
-          ? (event: DragEvent<HTMLElement>) => {
-              event.dataTransfer.effectAllowed = "copyMove";
-              event.dataTransfer.setData(
-                FILETREE_DRAG_MIME,
-                JSON.stringify([{ path: absolutePath, isDirectory: row.isDirectory }]),
-              );
-              event.dataTransfer.setData("text/plain", absolutePath);
-            }
-          : undefined
-      }
+      onDragStart={onDragStart}
       onClick={(event) => {
         event.stopPropagation();
-        onSelect();
-        if (row.isDirectory) {
+        const modifiers = { meta: event.metaKey || event.ctrlKey };
+        onSelect(modifiers);
+        if (row.isDirectory && !modifiers.meta) {
           onToggle();
         }
       }}
@@ -186,12 +176,12 @@ export function FlatTreeRow({
         cursor: "pointer",
         userSelect: "none",
         WebkitUserSelect: "none",
-        bgcolor: isDropTarget ? "action.focus" : isSelected ? "action.selected" : "transparent",
+        bgcolor: isDropTarget ? "action.focus" : isSelected || isMultiSelected ? "action.selected" : "transparent",
         outline: isDropTarget ? "1.5px dashed" : "none",
         outlineColor: isDropTarget ? "primary.main" : undefined,
         outlineOffset: isDropTarget ? "-1.5px" : undefined,
         "&:hover": {
-          bgcolor: isDropTarget ? "action.focus" : isSelected ? "action.selected" : "action.hover",
+          bgcolor: isDropTarget ? "action.focus" : isSelected || isMultiSelected ? "action.selected" : "action.hover",
         },
       }}
     >

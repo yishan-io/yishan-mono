@@ -7,7 +7,8 @@ type FileTreeRowsProps = {
   visibleRows: VisibleRow[];
   virtualizer: Pick<Virtualizer<HTMLDivElement, Element>, "getTotalSize" | "getVirtualItems" | "measureElement">;
   expandedPathSet: Set<string>;
-  selectedEntryPath: string;
+  selectedPaths: Set<string>;
+  focusedPath: string;
   ignoredPathSet: Set<string>;
   gitChangesByPath: NonNullable<FileTreeProps["gitChangesByPath"]>;
   ancestorOfGitChangePaths: Set<string>;
@@ -16,9 +17,9 @@ type FileTreeRowsProps = {
   editingInputRef: React.RefObject<HTMLInputElement | null>;
   worktreePath?: string;
   dropTargetPath: string | null;
-  setSelectedEntryPath: (path: string) => void;
   setExpandedItems: (updater: (items: string[]) => string[]) => void;
-  onSelectEntry?: FileTreeProps["onSelectEntry"];
+  handleRowClick: (path: string, row: VisibleRow, modifiers: { meta: boolean }) => void;
+  handleRowDragStart: (event: React.DragEvent<HTMLElement>, row: VisibleRow, absolutePath: string) => void;
   onOpenEntry?: FileTreeProps["onOpenEntry"];
   onEnsurePathLoaded?: FileTreeProps["onEnsurePathLoaded"];
   onItemContextMenu?: FileTreeProps["onItemContextMenu"];
@@ -43,7 +44,8 @@ export function FileTreeRows({
   visibleRows,
   virtualizer,
   expandedPathSet,
-  selectedEntryPath,
+  selectedPaths,
+  focusedPath,
   ignoredPathSet,
   gitChangesByPath,
   ancestorOfGitChangePaths,
@@ -52,9 +54,9 @@ export function FileTreeRows({
   editingInputRef,
   worktreePath,
   dropTargetPath,
-  setSelectedEntryPath,
   setExpandedItems,
-  onSelectEntry,
+  handleRowClick,
+  handleRowDragStart,
   onOpenEntry,
   onEnsurePathLoaded,
   onItemContextMenu,
@@ -103,12 +105,14 @@ export function FileTreeRows({
         }
 
         const isExpanded = expandedPathSet.has(row.path);
-        const isSelected = selectedEntryPath === row.path;
+        const isSelected = focusedPath === row.path;
+        const isMultiSelected = selectedPaths.has(row.path);
         const isIgnored = ignoredPathSet.has(row.path);
         const gitChangeKind = gitChangesByPath[row.path];
         const isEditing = editingEntry?.path === row.path;
         const hasDescendantGitChange = row.isDirectory && ancestorOfGitChangePaths.has(row.path);
         const basePath = row.isDirectory ? row.path : row.path.split("/").slice(0, -1).join("/");
+        const absolutePath = worktreePath ? `${worktreePath}/${row.path}` : row.path;
 
         return (
           <div
@@ -126,6 +130,7 @@ export function FileTreeRows({
             <FlatTreeRow
               row={row}
               isSelected={isSelected}
+              isMultiSelected={isMultiSelected}
               isEditing={isEditing}
               editingName={editingName}
               editingInputRef={editingInputRef}
@@ -135,12 +140,9 @@ export function FileTreeRows({
               isExpanded={isExpanded}
               isLoading={loadingPaths.has(row.path)}
               isDraggable={Boolean(worktreePath)}
-              absolutePath={worktreePath ? `${worktreePath}/${row.path}` : row.path}
               isDropTarget={dropTargetPath != null && row.isDirectory && row.path === dropTargetPath}
-              onSelect={() => {
-                setSelectedEntryPath(row.path);
-                onSelectEntry?.({ path: row.path, isDirectory: row.isDirectory });
-              }}
+              onSelect={(modifiers) => handleRowClick(row.path, row, modifiers)}
+              onDragStart={(event) => handleRowDragStart(event, row, absolutePath)}
               onToggle={() => {
                 if (row.isDirectory && !isExpanded) {
                   ensurePathLoaded(row.path);
@@ -161,17 +163,33 @@ export function FileTreeRows({
               onContextMenu={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                setSelectedEntryPath(row.path);
-                onItemContextMenu?.({
-                  mouseX: event.clientX,
-                  mouseY: event.clientY,
-                  basePath,
-                  targetPath: row.path,
-                  targetIsDirectory: row.isDirectory,
-                  startCreateFile: () => startCreate(basePath, false),
-                  startCreateFolder: () => startCreate(basePath, true),
-                  startRename: onRenameEntry ? () => startRename(row.path, basePath) : undefined,
-                });
+
+                if (selectedPaths.size > 1 && selectedPaths.has(row.path)) {
+                  // Multi-select context menu — keep existing selection unchanged
+                  onItemContextMenu?.({
+                    mouseX: event.clientX,
+                    mouseY: event.clientY,
+                    basePath,
+                    targetPath: row.path,
+                    targetIsDirectory: row.isDirectory,
+                    selectedPaths: [...selectedPaths],
+                    startCreateFile: () => startCreate(basePath, false),
+                    startCreateFolder: () => startCreate(basePath, true),
+                  });
+                } else {
+                  // Single-item context menu — update focused path first
+                  handleRowClick(row.path, row, { meta: false });
+                  onItemContextMenu?.({
+                    mouseX: event.clientX,
+                    mouseY: event.clientY,
+                    basePath,
+                    targetPath: row.path,
+                    targetIsDirectory: row.isDirectory,
+                    startCreateFile: () => startCreate(basePath, false),
+                    startCreateFolder: () => startCreate(basePath, true),
+                    startRename: onRenameEntry ? () => startRename(row.path, basePath) : undefined,
+                  });
+                }
               }}
               onEditingNameChange={setEditingName}
               onRenameKeyDown={handleRenameInputKeyDown}

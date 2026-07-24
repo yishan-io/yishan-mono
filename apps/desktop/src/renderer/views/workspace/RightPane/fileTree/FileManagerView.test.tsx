@@ -261,6 +261,7 @@ vi.mock("react-i18next", () => ({
         "files.unsupported.description": "This file type is not supported for editor tabs yet.",
         "files.delete.confirmFile": `Delete file '${params?.path ?? ""}'?`,
         "files.delete.confirmDirectory": `Delete folder '${params?.path ?? ""}' and all contents?`,
+        "files.delete.confirmMultiple": `Delete ${(params as { count?: number })?.count ?? 0} items? This cannot be undone.`,
         "common.actions.deleting": "Deleting...",
       };
 

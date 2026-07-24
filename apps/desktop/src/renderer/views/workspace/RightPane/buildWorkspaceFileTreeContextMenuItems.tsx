@@ -15,6 +15,7 @@ type BuildWorkspaceFileTreeContextMenuItemsInput = {
     createFolder: string;
     rename: string;
     delete: string;
+    deleteMultiple: string;
     copy: string;
     cut: string;
     paste: string;
@@ -24,6 +25,7 @@ type BuildWorkspaceFileTreeContextMenuItemsInput = {
     openInExternalApp: string;
     openInLastUsedExternalApp: string;
   };
+  isMultiSelect?: boolean;
   canCreateAtContext: boolean;
   canCreateFile: boolean;
   canCreateFolder: boolean;
@@ -58,6 +60,7 @@ type BuildWorkspaceFileTreeContextMenuItemsInput = {
 /** Builds context menu entries for the file tree, including external app submenus. */
 export function buildWorkspaceFileTreeContextMenuItems({
   labels,
+  isMultiSelect,
   canCreateAtContext,
   canCreateFile,
   canCreateFolder,
@@ -77,6 +80,22 @@ export function buildWorkspaceFileTreeContextMenuItems({
   lastUsedWorkspaceExternalAppPreset,
   handlers,
 }: BuildWorkspaceFileTreeContextMenuItemsInput): ContextMenuEntry[] {
+  if (isMultiSelect) {
+    const items: ContextMenuEntry[] = [];
+    if (canDeleteEntry) {
+      items.push({
+        id: "delete",
+        label: labels.deleteMultiple,
+        onSelect: () => {
+          void handlers.delete();
+        },
+      });
+    }
+    // Copy Path is intentionally excluded from multi-select: the handler would
+    // only copy the right-clicked path, not the full selection.
+    return items;
+  }
+
   const baseContextMenuItems = buildBaseContextMenuItems(
     {
       labels: {
