@@ -39,12 +39,16 @@ describe("ModelAutocomplete", () => {
   it("renders a small input by default", () => {
     render(<ModelAutocomplete options={[]} value="" onChange={() => {}} />);
 
-    expect(screen.getByRole("textbox").classList).toContain("MuiInputBase-inputSizeSmall");
+    const input = screen.getByRole("textbox");
+    const root = input.closest(".MuiInputBase-root");
+    expect(root?.classList).toContain("MuiInputBase-sizeSmall");
   });
 
   it("renders a medium input when explicitly requested", () => {
     render(<ModelAutocomplete options={[]} value="" onChange={() => {}} size="medium" />);
 
-    expect(screen.getByRole("textbox").classList).not.toContain("MuiInputBase-inputSizeSmall");
+    const input = screen.getByRole("textbox");
+    const root = input.closest(".MuiInputBase-root");
+    expect(root?.classList).not.toContain("MuiInputBase-sizeSmall");
   });
 });

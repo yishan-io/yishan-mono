@@ -56,7 +56,7 @@ export function StatusIndicator({
           flexShrink: 0,
         }}
       />
-      <Typography variant="body2" color={labelColor}>
+      <Typography variant="body2" sx={{ color: labelColor }}>
         {label}
       </Typography>
     </Box>

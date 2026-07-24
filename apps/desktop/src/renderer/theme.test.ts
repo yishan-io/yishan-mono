@@ -46,12 +46,14 @@ describe("createAppTheme", () => {
       ),
     );
 
-    const [compactTextField, mediumTextField] = screen.getAllByRole("textbox");
+    const [compactTextFieldInput, mediumTextFieldInput] = screen.getAllByRole("textbox");
+    const compactTextFieldRoot = compactTextFieldInput?.closest(".MuiInputBase-root");
+    const mediumTextFieldRoot = mediumTextFieldInput?.closest(".MuiInputBase-root");
 
     expect(screen.getByRole("button", { name: "compact icon" }).classList).toContain("MuiIconButton-sizeSmall");
     expect(screen.getByRole("button", { name: "medium icon" }).classList).not.toContain("MuiIconButton-sizeSmall");
-    expect(compactTextField?.classList).toContain("MuiInputBase-inputSizeSmall");
-    expect(mediumTextField?.classList).not.toContain("MuiInputBase-inputSizeSmall");
+    expect(compactTextFieldRoot?.classList).toContain("MuiInputBase-sizeSmall");
+    expect(mediumTextFieldRoot?.classList).not.toContain("MuiInputBase-sizeSmall");
   });
 
   it("retains the token-owned IconButton root style override", () => {
