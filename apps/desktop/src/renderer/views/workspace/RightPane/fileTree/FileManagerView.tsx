@@ -43,9 +43,15 @@ export function FileManagerView(_props: FileManagerViewProps) {
 
     return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
   });
+  const [fileManagerLastUsed, setFileManagerLastUsed] = useState(false);
+
   const lastUsedWorkspaceExternalAppPreset = lastUsedExternalAppId
     ? findExternalAppPreset(lastUsedExternalAppId)
     : null;
+
+  const toolbarAppPreset = fileManagerLastUsed
+    ? { id: "system-file-manager", label: "Finder", iconSrc: "app-icons/finder.png" }
+    : lastUsedWorkspaceExternalAppPreset;
 
   const { createEntryRequest, requestCreateFile, requestCreateFolder } = useFileTreeCreateEntryRequest();
   const {
@@ -229,6 +235,20 @@ export function FileManagerView(_props: FileManagerViewProps) {
         }}
         onRefresh={() => {
           void ops.onRefresh?.();
+        }}
+        canOpenInExternalApp={canOpenInExternalApp}
+        lastUsedWorkspaceExternalAppPreset={toolbarAppPreset}
+        openInAppLabel={t("files.actions.openInExternalApp")}
+        openInFileManagerLabel={
+          rendererPlatform === "win32" ? t("files.actions.openInExplorer") : t("files.actions.openInFinder")
+        }
+        onOpenInExternalApp={(appId) => {
+          setFileManagerLastUsed(false);
+          void ops.onOpenInExternalApp({ appId });
+        }}
+        onOpenInFileManager={() => {
+          setFileManagerLastUsed(true);
+          void ops.onOpenInFileManager(selectedEntryPath || "");
         }}
       />
       <FileTree
