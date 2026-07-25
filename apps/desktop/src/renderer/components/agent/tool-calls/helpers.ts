@@ -116,20 +116,36 @@ export function parseToolDiff(patch: string): FileDiffMetadata | null {
   }
 }
 
+/** Returns the workspace-relative form of rawPath when it is an absolute path under workspacePath. */
+export function getToolDisplayPath(rawPath: string, workspacePath?: string): string {
+  if (!workspacePath) return rawPath;
+  if (!rawPath.startsWith("/")) return rawPath;
+
+  // Strip trailing slashes for comparison. Handle both rawPath and workspacePath forms.
+  const rawPathClean = rawPath.endsWith("/") ? rawPath.slice(0, -1) : rawPath;
+  const workspaceClean = workspacePath.endsWith("/") ? workspacePath.slice(0, -1) : workspacePath;
+
+  if (rawPathClean === workspaceClean) return ".";
+  if (rawPathClean.startsWith(`${workspaceClean}/`)) return rawPathClean.slice(workspaceClean.length + 1);
+
+  return rawPath;
+}
+
 /** Builds a compact read summary from read-tool arguments. */
-export function buildReadSummary(path: string, offset: unknown, limit: unknown): ReadSummary {
+export function buildReadSummary(path: string, offset: unknown, limit: unknown, workspacePath?: string): ReadSummary {
   const startLine = parsePositiveLineNumber(offset) ?? 1;
   const lineLimit = parsePositiveLineNumber(limit);
+  const displayPath = getToolDisplayPath(path, workspacePath);
 
   if (!lineLimit) {
     return {
-      pathLabel: path,
+      pathLabel: displayPath,
       lineRange: null,
     };
   }
 
   return {
-    pathLabel: `${path}:`,
+    pathLabel: `${displayPath}:`,
     lineRange: `${startLine}-${startLine + lineLimit - 1}`,
   };
 }
