@@ -45,6 +45,7 @@ type ContextMenuProps = {
   anchorEl?: HTMLElement | null;
   marginThreshold?: number;
   submenuDirection?: "left" | "right";
+  paperSx?: SxProps<Theme>;
   submenuPaperSx?: SxProps<Theme>;
 };
 
@@ -82,6 +83,7 @@ export function ContextMenu({
   anchorEl,
   marginThreshold,
   submenuDirection = "right",
+  paperSx,
   submenuPaperSx,
 }: ContextMenuProps) {
   const [openSubmenus, setOpenSubmenus] = useState<OpenSubmenu[]>([]);
@@ -215,6 +217,7 @@ export function ContextMenu({
         anchorEl={anchorEl ?? null}
         anchorPosition={anchorEl ? undefined : anchorPosition}
         marginThreshold={marginThreshold}
+        slotProps={{ paper: { sx: paperSx } }}
       >
         {renderMenuItems(items, 0)}
       </Menu>
