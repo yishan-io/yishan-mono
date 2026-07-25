@@ -52,6 +52,9 @@ export function TokenUsageChartView() {
   const series = overviewStore((state) => state.tokenUsageSeries);
   const loadState = overviewStore((state) => state.tokenUsageLoadState);
   const timeRange = overviewStore((state) => state.timeRange);
+  const grandTotal = overviewStore((state) => state.grandTotal);
+  const cachedTotal = overviewStore((state) => state.cachedTotal);
+  const uncachedTotal = overviewStore((state) => state.uncachedTotal);
   const turnTotal = overviewStore((state) => state.turnTotal);
   const toolCallTotal = overviewStore((state) => state.toolCallTotal);
 
@@ -77,11 +80,8 @@ export function TokenUsageChartView() {
     });
   }, [series, timeRange]);
 
-  const chartCachedTotal = chartData.reduce((acc, d) => acc + d.cachedTokens, 0);
-  const chartUncachedTotal = chartData.reduce((acc, d) => acc + d.uncachedTokens, 0);
-  const chartTotalTokens = chartCachedTotal + chartUncachedTotal;
-  const statUnit = resolveUnit(chartTotalTokens);
-  const cachedPercentage = chartTotalTokens > 0 ? ((chartCachedTotal / chartTotalTokens) * 100).toFixed(1) : "0";
+  const statUnit = resolveUnit(grandTotal);
+  const cachedPercentage = grandTotal > 0 ? ((cachedTotal / grandTotal) * 100).toFixed(1) : "0";
 
   if (loadState === "loading" || loadState === "idle") {
     return (
@@ -175,7 +175,7 @@ export function TokenUsageChartView() {
             {t("overview.tokenUsage.total")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
-            {formatTokensInUnit(chartTotalTokens, statUnit)}
+            {formatTokensInUnit(grandTotal, statUnit)}
           </Typography>
         </Box>
         <Box>
@@ -188,7 +188,7 @@ export function TokenUsageChartView() {
             {t("overview.tokenUsage.cached")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace", color: "#4CAF50" }}>
-            {formatTokensInUnit(chartCachedTotal, statUnit)} ({cachedPercentage}%)
+            {formatTokensInUnit(cachedTotal, statUnit)} ({cachedPercentage}%)
           </Typography>
         </Box>
         <Box>
@@ -201,7 +201,7 @@ export function TokenUsageChartView() {
             {t("overview.tokenUsage.uncached")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace", color: "#FF9800" }}>
-            {formatTokensInUnit(chartUncachedTotal, statUnit)}
+            {formatTokensInUnit(uncachedTotal, statUnit)}
           </Typography>
         </Box>
         <Box>
