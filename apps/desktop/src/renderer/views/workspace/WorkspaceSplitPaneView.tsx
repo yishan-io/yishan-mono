@@ -160,8 +160,6 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
     commands: cmd,
   });
 
-
-
   // ─── Pane tab handlers ──────────────────────────────────────────────────────
 
   const {
@@ -200,7 +198,13 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
       }
       if (fullTab?.kind === "agent-chat") return <LuMessageCircle size={14} />;
       if (fullTab?.kind === "browser") return <FaviconIcon url={fullTab.data.faviconUrl} size={14} />;
-      if (fullTab?.kind === "file" || fullTab?.kind === "diff" || fullTab?.kind === "image") {
+      if (
+        fullTab?.kind === "file" ||
+        fullTab?.kind === "diff" ||
+        fullTab?.kind === "image" ||
+        fullTab?.kind === "video" ||
+        fullTab?.kind === "audio"
+      ) {
         return (
           <Box
             component="img"

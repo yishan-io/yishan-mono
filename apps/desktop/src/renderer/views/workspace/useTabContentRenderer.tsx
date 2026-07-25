@@ -1,12 +1,14 @@
 import { Box, Typography } from "@mui/material";
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { AudioPreview } from "../../components/AudioPreview";
 import { FileDiffViewer } from "../../components/FileDiffViewer";
 import { FileEditor } from "../../components/FileEditor";
 import { ImagePreview } from "../../components/ImagePreview";
 import { MultiFileDiffViewer } from "../../components/MultiFileDiffViewer";
 import { TabPanel } from "../../components/TabPanel";
 import { UnsupportedFileView } from "../../components/UnsupportedFileView";
+import { VideoPreview } from "../../components/VideoPreview";
 import { copyToClipboard } from "../../helpers/clipboard";
 import type { Commands } from "../../hooks/useCommands";
 import { layoutStore } from "../../store/settings/layoutStore";
@@ -140,6 +142,34 @@ export function useTabContentRenderer({
         return (
           <TabPanel key={tab.id} active={isSelected}>
             <ImagePreview
+              path={tab.data.path}
+              dataUrl={tab.data.dataUrl}
+              onCopyPath={copyToClipboard}
+              onOpenExternalApp={onOpenExternalApp}
+              openExternalAppLabel={externalAppLabel}
+            />
+          </TabPanel>
+        );
+      }
+
+      if (tab.kind === "video") {
+        return (
+          <TabPanel key={tab.id} active={isSelected}>
+            <VideoPreview
+              path={tab.data.path}
+              dataUrl={tab.data.dataUrl}
+              onCopyPath={copyToClipboard}
+              onOpenExternalApp={onOpenExternalApp}
+              openExternalAppLabel={externalAppLabel}
+            />
+          </TabPanel>
+        );
+      }
+
+      if (tab.kind === "audio") {
+        return (
+          <TabPanel key={tab.id} active={isSelected}>
+            <AudioPreview
               path={tab.data.path}
               dataUrl={tab.data.dataUrl}
               onCopyPath={copyToClipboard}

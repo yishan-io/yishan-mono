@@ -162,6 +162,22 @@ export function buildTabDataByInput<T extends OpenWorkspaceTabInput>(input: T): 
     } as WorkspaceTabDataByKind[T["kind"]];
   }
 
+  if (input.kind === "video") {
+    return {
+      path: input.path,
+      dataUrl: input.dataUrl,
+      isTemporary: Boolean(input.temporary),
+    } as WorkspaceTabDataByKind[T["kind"]];
+  }
+
+  if (input.kind === "audio") {
+    return {
+      path: input.path,
+      dataUrl: input.dataUrl,
+      isTemporary: Boolean(input.temporary),
+    } as WorkspaceTabDataByKind[T["kind"]];
+  }
+
   if (input.kind === "browser") {
     return {
       url: input.url?.trim() || "",
@@ -192,6 +208,8 @@ function isTemporaryTab(tab: WorkspaceTab): boolean {
   return (
     (tab.kind === "file" && tab.data.isTemporary) ||
     (tab.kind === "image" && tab.data.isTemporary) ||
+    (tab.kind === "video" && tab.data.isTemporary) ||
+    (tab.kind === "audio" && tab.data.isTemporary) ||
     (tab.kind === "diff" && tab.data.isTemporary)
   );
 }
@@ -260,6 +278,28 @@ function createTabFromOpenInput(input: OpenWorkspaceTabInput, workspaceId: strin
       title: getFileName(input.path),
       pinned: false,
       kind: "image",
+      data: buildTabDataByInput(input),
+    };
+  }
+
+  if (input.kind === "video") {
+    return {
+      id: tabId,
+      workspaceId,
+      title: getFileName(input.path),
+      pinned: false,
+      kind: "video",
+      data: buildTabDataByInput(input),
+    };
+  }
+
+  if (input.kind === "audio") {
+    return {
+      id: tabId,
+      workspaceId,
+      title: getFileName(input.path),
+      pinned: false,
+      kind: "audio",
       data: buildTabDataByInput(input),
     };
   }
@@ -422,6 +462,44 @@ export function openTabState(
       };
     }
 
+    if (input.kind === "video" && existingTab.kind === "video") {
+      const isOpeningTemporary = Boolean(input.temporary) && existingTab.data.isTemporary;
+      return {
+        tabs: state.tabs.map((tab) =>
+          tab.id === existingTab.id && tab.kind === "video"
+            ? {
+                ...tab,
+                data: {
+                  ...tab.data,
+                  dataUrl: input.dataUrl,
+                  isTemporary: isOpeningTemporary,
+                },
+              }
+            : tab,
+        ),
+        ...selectWorkspaceTab(state, targetWorkspaceId, existingTab.id),
+      };
+    }
+
+    if (input.kind === "audio" && existingTab.kind === "audio") {
+      const isOpeningTemporary = Boolean(input.temporary) && existingTab.data.isTemporary;
+      return {
+        tabs: state.tabs.map((tab) =>
+          tab.id === existingTab.id && tab.kind === "audio"
+            ? {
+                ...tab,
+                data: {
+                  ...tab.data,
+                  dataUrl: input.dataUrl,
+                  isTemporary: isOpeningTemporary,
+                },
+              }
+            : tab,
+        ),
+        ...selectWorkspaceTab(state, targetWorkspaceId, existingTab.id),
+      };
+    }
+
     if (input.kind === "browser" && existingTab.kind === "browser") {
       const nextUrl = input.url?.trim();
       if (!nextUrl || nextUrl === existingTab.data.url) {
@@ -447,7 +525,14 @@ export function openTabState(
     return selectWorkspaceTab(state, targetWorkspaceId, existingTab.id);
   }
 
-  if ((input.kind === "file" || input.kind === "image" || input.kind === "diff") && input.temporary) {
+  if (
+    (input.kind === "file" ||
+      input.kind === "image" ||
+      input.kind === "video" ||
+      input.kind === "audio" ||
+      input.kind === "diff") &&
+    input.temporary
+  ) {
     const existing = findTemporaryTab(state.tabs, targetWorkspaceId, options?.activePaneTabIds);
     if (existing) {
       const replacement = createTabFromOpenInput(input, targetWorkspaceId, existing.id);

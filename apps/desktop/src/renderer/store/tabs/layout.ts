@@ -19,6 +19,12 @@ function clearTemporaryOnPin(tab: WorkspaceTab): WorkspaceTab {
   if (tab.kind === "image" && tab.data.isTemporary) {
     return { ...tab, pinned: true, data: { ...tab.data, isTemporary: false } };
   }
+  if (tab.kind === "video" && tab.data.isTemporary) {
+    return { ...tab, pinned: true, data: { ...tab.data, isTemporary: false } };
+  }
+  if (tab.kind === "audio" && tab.data.isTemporary) {
+    return { ...tab, pinned: true, data: { ...tab.data, isTemporary: false } };
+  }
   if (tab.kind === "diff" && tab.data.isTemporary) {
     return { ...tab, pinned: true, data: { ...tab.data, isTemporary: false } };
   }
@@ -32,12 +38,21 @@ export function promoteTemporaryTabState(
 ): Partial<WorkspaceTabStateSlice> | null {
   const tab = state.tabs.find((t) => t.id === tabId);
   if (!tab) return null;
-  if ((tab.kind === "file" || tab.kind === "image" || tab.kind === "diff") && tab.data.isTemporary) {
+  if (
+    (tab.kind === "file" ||
+      tab.kind === "image" ||
+      tab.kind === "video" ||
+      tab.kind === "audio" ||
+      tab.kind === "diff") &&
+    tab.data.isTemporary
+  ) {
     return {
       tabs: state.tabs.map((t): WorkspaceTab => {
         if (t.id !== tabId) return t;
         if (t.kind === "file") return { ...t, data: { ...t.data, isTemporary: false } };
         if (t.kind === "image") return { ...t, data: { ...t.data, isTemporary: false } };
+        if (t.kind === "video") return { ...t, data: { ...t.data, isTemporary: false } };
+        if (t.kind === "audio") return { ...t, data: { ...t.data, isTemporary: false } };
         if (t.kind === "diff") return { ...t, data: { ...t.data, isTemporary: false } };
         return t;
       }),
@@ -97,7 +112,13 @@ export function renameTabsForEntryRenameState(
     if (tab.workspaceId !== workspaceId) {
       return tab;
     }
-    if (tab.kind !== "file" && tab.kind !== "diff" && tab.kind !== "image") {
+    if (
+      tab.kind !== "file" &&
+      tab.kind !== "diff" &&
+      tab.kind !== "image" &&
+      tab.kind !== "video" &&
+      tab.kind !== "audio"
+    ) {
       return tab;
     }
 
@@ -120,6 +141,28 @@ export function renameTabsForEntryRenameState(
     }
 
     if (tab.kind === "image") {
+      return {
+        ...tab,
+        title: nextTitle,
+        data: {
+          ...tab.data,
+          path: remappedPath,
+        },
+      };
+    }
+
+    if (tab.kind === "video") {
+      return {
+        ...tab,
+        title: nextTitle,
+        data: {
+          ...tab.data,
+          path: remappedPath,
+        },
+      };
+    }
+
+    if (tab.kind === "audio") {
       return {
         ...tab,
         title: nextTitle,
