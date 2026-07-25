@@ -8,6 +8,7 @@ import { AGENT_SETTINGS_LABEL_KEY_BY_KIND, resolveAgentLaunchCommand } from "../
 import type { Commands } from "../../hooks/useCommands";
 import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import { splitPaneStore } from "../../store/splitPaneStore";
+import { tabStore } from "../../store/tabStore";
 import type { WorkspaceTab } from "../../store/types";
 import { forceFitTerminalRuntimes } from "./terminal/terminalRuntimeRegistry";
 
@@ -40,9 +41,16 @@ export function usePaneTabHandlers({
     () => workspaceTabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id),
     [workspaceTabs],
   );
+  const selectedTabId = tabStore((state) => state.selectedTabId);
 
   useEffect(() => {
-    if (terminalTabIds.length === 0) {
+    if (terminalTabIds.length === 0 || selectedTabId == null) {
+      return;
+    }
+
+    // Only trigger when the selected tab is a terminal tab.
+    const selectedTab = workspaceTabs.find((tab) => tab.id === selectedTabId);
+    if (!selectedTab || selectedTab.kind !== "terminal") {
       return;
     }
 
@@ -53,7 +61,7 @@ export function usePaneTabHandlers({
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [terminalTabIds]);
+  }, [terminalTabIds, selectedTabId, workspaceTabs]);
 
   const handleSelectTab = useCallback(
     (paneId: string, tabId: string) => {

@@ -985,6 +985,10 @@ describe("TerminalView", () => {
     mocked.resizeTerminal.mockClear();
     mocked.fitTerminal.mockClear();
 
+    // Clear pending animation frames from initial mount (e.g., attach safety-fit)
+    // before testing wake recovery frame counts.
+    animationFrames.length = 0;
+
     window.dispatchEvent(new FocusEvent("focus"));
     expect(mocked.resizeTerminal).not.toHaveBeenCalled();
     expect(mocked.fitTerminal).not.toHaveBeenCalled();
@@ -1046,6 +1050,10 @@ describe("TerminalView", () => {
 
     mocked.resizeTerminal.mockClear();
     mocked.fitTerminal.mockClear();
+
+    // Clear pending animation frames from initial mount (e.g., attach safety-fit)
+    // before testing visibility recovery frame counts.
+    animationFrames.length = 0;
 
     document.dispatchEvent(new Event("visibilitychange"));
 
