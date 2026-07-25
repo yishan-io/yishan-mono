@@ -7,6 +7,7 @@ import { GrepToolCard } from "./GrepToolCard";
 import { MemorySearchToolCard } from "./MemorySearchToolCard";
 import { MemoryStoreToolCard } from "./MemoryStoreToolCard";
 import { ReadToolCard } from "./ReadToolCard";
+import { WebFetchToolCard } from "./WebFetchToolCard";
 import { WorkspaceCloseToolCard } from "./WorkspaceCloseToolCard";
 import { WorkspaceCreateToolCard } from "./WorkspaceCreateToolCard";
 import { WorkspaceFindToolCard } from "./WorkspaceFindToolCard";
@@ -41,6 +42,8 @@ export function AgentToolCallCard(props: AgentToolCallCardProps) {
       return <WorkspaceCreateToolCard {...props} />;
     case "workspace_close":
       return <WorkspaceCloseToolCard {...props} />;
+    case "web_fetch":
+      return <WebFetchToolCard {...props} />;
     default:
       return <DefaultToolCard {...props} />;
   }

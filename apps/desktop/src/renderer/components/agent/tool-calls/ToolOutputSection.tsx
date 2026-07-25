@@ -24,7 +24,7 @@ export function ToolOutputSection({
   label?: string;
   children?: ReactNode;
 }) {
-  if (!resultText) {
+  if (!resultText && !children) {
     return null;
   }
 
