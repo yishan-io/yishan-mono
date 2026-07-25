@@ -598,7 +598,7 @@ describe("MainPaneView", () => {
     expect(document.querySelector('[data-tab-id="terminal-tab-2"]')).toBeTruthy();
   });
 
-  it("requests content focus when selected tab changes outside the tab bar", () => {
+  it("does not auto-focus content when selected tab changes programmatically", () => {
     mocked.stateRef.current = {
       workspaces: [
         {
@@ -667,7 +667,9 @@ describe("MainPaneView", () => {
     };
     view.rerender(<MainPaneView />);
 
-    expect(document.querySelector('[data-tab-id="terminal-tab-2"]')?.getAttribute("data-focus-request-key")).toBe("1");
+    // Auto-focus on programmatic tab change was removed — the editor only
+    // gets focus when the user explicitly clicks into it.
+    expect(document.querySelector('[data-tab-id="terminal-tab-2"]')?.getAttribute("data-focus-request-key")).toBe("0");
   });
 
   it("shows launch view when selected workspace has no tabs", () => {
