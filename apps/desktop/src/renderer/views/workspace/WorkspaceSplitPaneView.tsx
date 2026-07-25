@@ -73,7 +73,6 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
   const [focusContentRequestKey, setFocusContentRequestKey] = useState(0);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const [historyMenuAnchor, setHistoryMenuAnchor] = useState<HTMLElement | null>(null);
-  const didTrackSelectedTabRef = useRef(false);
   const didSyncPaneSelectionRef = useRef(false);
   const lastKnownRectByTabIdRef = useRef<Record<string, { left: number; top: number; width: number; height: number }>>(
     {},
@@ -161,25 +160,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
     commands: cmd,
   });
 
-  // Focus content when the selected tab changes
-  useEffect(() => {
-    if (!didTrackSelectedTabRef.current) {
-      didTrackSelectedTabRef.current = true;
-      return;
-    }
-    if (!selectedTabId || !isActive) return;
-    setFocusContentRequestKey((k) => k + 1);
-  }, [selectedTabId, isActive]);
 
-  // Focus the active tab content when this workspace becomes active (e.g. workspace switch)
-  const wasActiveRef = useRef(isActive);
-  useEffect(() => {
-    const wasActive = wasActiveRef.current;
-    wasActiveRef.current = isActive;
-    if (isActive && !wasActive && selectedTabId) {
-      setFocusContentRequestKey((k) => k + 1);
-    }
-  }, [isActive, selectedTabId]);
 
   // ─── Pane tab handlers ──────────────────────────────────────────────────────
 

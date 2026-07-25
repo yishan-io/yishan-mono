@@ -74,6 +74,16 @@ export function useMonacoFileEditor({
     editorRef.current = editor;
     setEditorInstance(editor);
 
+    // Monaco auto-focuses its textarea on create. Blur it so focus stays
+    // where the user was (e.g. file tree). Focus is managed explicitly
+    // by the focusRequestKey effect when the user actually wants it.
+    if (typeof editor.getDomNode === "function") {
+      const monacoTextarea = editor.getDomNode()?.querySelector("textarea");
+      if (monacoTextarea instanceof HTMLTextAreaElement) {
+        monacoTextarea.blur();
+      }
+    }
+
     return () => {
       editor.dispose();
       model.dispose();
