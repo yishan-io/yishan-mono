@@ -16,13 +16,13 @@ function getSkillName(readPath: string): string | null {
 }
 
 /** Renders the specialized read tool-call card. */
-export function ReadToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
+export function ReadToolCard({ toolCall, result = null, workspacePath }: AgentToolCallCardProps) {
   const readPath = typeof toolCall.arguments.path === "string" ? toolCall.arguments.path : null;
   if (!readPath) {
     return null;
   }
 
-  const readSummary = buildReadSummary(readPath, toolCall.arguments.offset, toolCall.arguments.limit);
+  const readSummary = buildReadSummary(readPath, toolCall.arguments.offset, toolCall.arguments.limit, workspacePath);
   const skillName = getSkillName(readPath);
   const pathSummary = (
     <ToolPathSummary

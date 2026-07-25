@@ -8,15 +8,22 @@ import { ToolDiffStats } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
 import { ToolPathSummary } from "./ToolPathSummary";
-import { type AgentToolCallCardProps, buildWriteToolNewFileDiff, getDiffStats, parseToolDiff } from "./helpers";
+import {
+  type AgentToolCallCardProps,
+  buildWriteToolNewFileDiff,
+  getDiffStats,
+  getToolDisplayPath,
+  parseToolDiff,
+} from "./helpers";
 
 /** Renders the specialized edit/write tool-call card. */
-export function DiffToolCard({ toolCall, result = null }: AgentToolCallCardProps) {
+export function DiffToolCard({ toolCall, result = null, workspacePath }: AgentToolCallCardProps) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   const isEdit = toolCall.name === "edit";
   const isWrite = toolCall.name === "write";
-  const diffToolPath = typeof toolCall.arguments.path === "string" ? toolCall.arguments.path : null;
+  const rawPath = typeof toolCall.arguments.path === "string" ? toolCall.arguments.path : null;
+  const diffToolPath = rawPath ? getToolDisplayPath(rawPath, workspacePath) : null;
   const patchDiff =
     (typeof result?.details?.patch === "string" ? result.details.patch : "") ||
     (typeof result?.details?.diff === "string" ? result.details.diff : "");
