@@ -59,6 +59,7 @@ function shouldMergeToolResult(message: AgentMessageType, previous: DisplayMessa
       "write",
       "grep",
       "Agent",
+      "memory_read",
       "memory_search",
       "memory_store",
       "ask_user",

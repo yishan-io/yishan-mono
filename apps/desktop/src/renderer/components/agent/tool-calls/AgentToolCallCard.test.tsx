@@ -312,6 +312,44 @@ describe("AgentToolCallCard", () => {
     expect(screen.queryByText("arguments")).toBeNull();
   });
 
+  it("shows a compact memory read summary that expands to show file contents", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-memory-read",
+      name: "memory_read",
+      arguments: {
+        projectRoot: "/tmp/project",
+        path: "MEMORY.md",
+      },
+    };
+
+    const result = {
+      id: "result-memory-read",
+      role: "toolResult",
+      toolCallId: "tool-memory-read",
+      toolName: "memory_read",
+      content: "## Locked Decisions\n\n- entry 1",
+      details: {
+        path: "/tmp/project/.my-context/MEMORY.md",
+      },
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+    // Summary shows file path
+    expect(screen.getByText("MEMORY.md")).toBeTruthy();
+    expect(screen.queryByText("arguments")).toBeNull();
+
+    // Content is collapsed
+    expect(screen.queryByText("## Locked Decisions")).toBeNull();
+
+    // Expand
+    fireEvent.click(screen.getByText("MEMORY.md"));
+
+    expect(screen.getByText("contents")).toBeTruthy();
+    expect(screen.getByText(/- entry 1/)).toBeTruthy();
+  });
+
   it("shows a compact ask_user summary with question and selected answer", () => {
     const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
       type: "toolCall",

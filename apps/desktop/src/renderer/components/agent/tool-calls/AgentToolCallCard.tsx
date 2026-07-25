@@ -4,6 +4,7 @@ import { BashToolCard } from "./BashToolCard";
 import { DefaultToolCard } from "./DefaultToolCard";
 import { DiffToolCard } from "./DiffToolCard";
 import { GrepToolCard } from "./GrepToolCard";
+import { MemoryReadToolCard } from "./MemoryReadToolCard";
 import { MemorySearchToolCard } from "./MemorySearchToolCard";
 import { MemoryStoreToolCard } from "./MemoryStoreToolCard";
 import { ReadToolCard } from "./ReadToolCard";
@@ -28,6 +29,8 @@ export function AgentToolCallCard(props: AgentToolCallCardProps) {
       return <GrepToolCard {...props} />;
     case "Agent":
       return <AgentToolCard {...props} />;
+    case "memory_read":
+      return <MemoryReadToolCard {...props} />;
     case "memory_search":
       return <MemorySearchToolCard {...props} />;
     case "memory_store":
