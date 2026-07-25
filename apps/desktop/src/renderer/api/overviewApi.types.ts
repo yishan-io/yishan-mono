@@ -14,6 +14,7 @@ export type OverviewTokenUsageResponse = {
   cachedTotal: number;
   cachedWriteTotal: number;
   uncachedTotal: number;
+  grandTotal: number;
   turnTotal: number;
   toolCallTotal: number;
 };

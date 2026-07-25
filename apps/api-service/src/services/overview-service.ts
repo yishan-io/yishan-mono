@@ -113,6 +113,7 @@ export class OverviewService {
     cachedTotal: number;
     cachedWriteTotal: number;
     uncachedTotal: number;
+    grandTotal: number;
     turnTotal: number;
     toolCallTotal: number;
   }> {
@@ -162,7 +163,7 @@ export class OverviewService {
     const turnTotal = series.reduce((acc, item) => acc + item.turnCount, 0);
     const toolCallTotal = series.reduce((acc, item) => acc + item.toolCallCount, 0);
 
-    return { series, cachedTotal, cachedWriteTotal, uncachedTotal, turnTotal, toolCallTotal };
+    return { series, cachedTotal, cachedWriteTotal, uncachedTotal, grandTotal, turnTotal, toolCallTotal };
   }
 
   async getModelBreakdown(input: OverviewModelBreakdownInput): Promise<{

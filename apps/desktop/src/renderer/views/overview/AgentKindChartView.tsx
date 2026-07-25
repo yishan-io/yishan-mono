@@ -23,10 +23,7 @@ export function AgentKindChartView() {
   const { t } = useTranslation();
   const agentKinds = overviewStore((state) => state.agentKindBreakdown);
   const loadState = overviewStore((state) => state.agentKindBreakdownLoadState);
-  const cachedTotal = overviewStore((state) => state.cachedTotal);
-  const uncachedTotal = overviewStore((state) => state.uncachedTotal);
-
-  const totalTokens = cachedTotal + uncachedTotal;
+  const grandTotal = overviewStore((state) => state.grandTotal);
 
   const pieData = useMemo(
     () =>
@@ -93,7 +90,7 @@ export function AgentKindChartView() {
           />
         </Box>
       )}
-      {totalTokens > 0 ? (
+      {grandTotal > 0 ? (
         <Box sx={{ display: "flex", gap: 3, mt: 1.5, flexWrap: "wrap" }}>
           <Box>
             <Typography
@@ -105,7 +102,7 @@ export function AgentKindChartView() {
               {t("overview.agentUsage.totalTokens")}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
-              {formatTokens(totalTokens)}
+              {formatTokens(grandTotal)}
             </Typography>
           </Box>
           <Box>
