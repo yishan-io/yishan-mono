@@ -1,6 +1,7 @@
 import { api } from "../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../api";
 import { RestApiError } from "../api/restClient";
+import { pickRandomProjectColor, pickRandomProjectIcon } from "../components/projectIcons";
 import { readPersistedWorkspacePreferencesByOrg } from "../helpers/projectHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { sessionStore } from "../store/sessionStore";
@@ -205,6 +206,8 @@ export async function createProject(input: {
   }
 
   let project: ProjectWithWorkspacesRecord | undefined;
+  const randomIcon = pickRandomProjectIcon();
+  const randomColor = pickRandomProjectColor();
 
   try {
     project = await api.project.create(selectedOrganizationId, {
@@ -247,8 +250,8 @@ export async function createProject(input: {
       gitUrl: project.repoUrl ?? inferredRemoteUrl,
       repoUrl: project.repoUrl ?? inferredRemoteUrl,
       contextEnabled: project.contextEnabled,
-      icon: project.icon,
-      color: project.color,
+      icon: randomIcon,
+      color: randomColor,
       setupScript: project.setupScript,
       postScript: project.postScript,
       defaultBranch: resolvedProjectDefaultBranch,
@@ -291,6 +294,18 @@ export async function createProject(input: {
   }
 
   tabStore.getState().resolveTabForWorkspace(workspaceStore.getState().selectedWorkspaceId);
+
+  // Persist the randomly chosen icon and color to the backend so they survive
+  // snapshot reloads. Non-blocking — fire-and-forget.
+  api.project
+    .update(selectedOrganizationId, project.id, {
+      name: project.name || normalizedName,
+      icon: randomIcon,
+      color: randomColor,
+    })
+    .catch((error) => {
+      console.error("Failed to persist random project icon/color", error);
+    });
 
   // Ensure the context folder and symlinks are created for the new project's
   // known worktree paths. Without this, the `.my-context` directory is never

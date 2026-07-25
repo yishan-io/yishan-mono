@@ -1,16 +1,9 @@
 import type { TFunction } from "i18next";
+import { PROJECT_COLOR_PRESETS } from "@renderer/components/projectIcons";
 
 export type ProjectConfigSectionId = "general" | "scripts" | "commands";
 
-export const PROJECT_CONFIG_ICON_BG_COLOR_PRESETS = [
-  "#1E66F5",
-  "#0F766E",
-  "#CA8A04",
-  "#DC2626",
-  "#7C3AED",
-  "#DB2777",
-  "#0891B2",
-];
+export const PROJECT_CONFIG_ICON_BG_COLOR_PRESETS = PROJECT_COLOR_PRESETS;
 
 export function getProjectConfigSectionItems(t: TFunction) {
   return [
