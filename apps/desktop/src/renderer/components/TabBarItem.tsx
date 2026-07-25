@@ -82,6 +82,7 @@ export function TabBarItem({
   itemRef,
 }: TabBarItemProps) {
   const pinned = tab.pinned;
+  const icon = getTabIcon?.(tab);
 
   const containerSx = {
     display: "flex",
@@ -175,12 +176,12 @@ export function TabBarItem({
           gap: 0.5,
         }}
       >
-        {getTabIcon?.(tab)}
+        {icon ? <Box sx={{ flexShrink: 0, display: "inline-flex" }}>{icon}</Box> : null}
         <TabDirtyDot tabId={tab.id} isDirty={tab.isDirty} />
         <Box
           component="span"
           style={{ fontStyle: tab.isTemporary ? "italic" : "normal" }}
-          sx={{ overflow: "hidden", textOverflow: "ellipsis" }}
+          sx={{ overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}
         >
           {tab.title || untitledLabel}
         </Box>
