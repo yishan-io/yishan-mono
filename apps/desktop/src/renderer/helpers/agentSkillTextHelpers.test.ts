@@ -40,4 +40,28 @@ describe("formatAgentSessionTitle", () => {
   it("falls back to the default label when no readable title remains", () => {
     expect(formatAgentSessionTitle("   ")).toBe("Agent Chat");
   });
+
+  it("prefers sessionName over previewText when set", () => {
+    expect(formatAgentSessionTitle("preview text", "Fallback", "User Name")).toBe("User Name");
+  });
+
+  it("ignores UUID sessionName and falls back to previewText", () => {
+    expect(
+      formatAgentSessionTitle("preview text", "Fallback", "550e8400-e29b-41d4-a716-446655440000"),
+    ).toBe("preview text");
+  });
+
+  it("ignores empty/whitespace sessionName and falls back to previewText", () => {
+    expect(formatAgentSessionTitle("preview text", "Fallback", "  ")).toBe("preview text");
+  });
+
+  it("truncates long sessionName", () => {
+    expect(
+      formatAgentSessionTitle("preview", "Fallback", "A very long session name that exceeds forty characters"),
+    ).toBe("A very long session name that exceeds fo…");
+  });
+
+  it("trims sessionName whitespace", () => {
+    expect(formatAgentSessionTitle("preview", "Fallback", "  My Chat  ")).toBe("My Chat");
+  });
 });

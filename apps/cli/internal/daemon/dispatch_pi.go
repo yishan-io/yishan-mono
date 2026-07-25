@@ -45,6 +45,8 @@ func (h *JSONRPCHandler) dispatchPi(ctx context.Context, connState *wsConnState,
 		return h.handlePiListSessions(ctx, params)
 	case MethodPiListActiveSessions:
 		return h.handlePiListActiveSessions()
+	case MethodPiRename:
+		return h.handlePiRename(params)
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown pi method: "+method)
 	}
@@ -267,6 +269,46 @@ func (h *JSONRPCHandler) handlePiListSessions(ctx context.Context, params json.R
 	}
 
 	return summaries, nil
+}
+
+type piRenameParams struct {
+	SessionID string `json:"sessionId"`
+	Title     string `json:"title"`
+}
+
+func (h *JSONRPCHandler) handlePiRename(params json.RawMessage) (any, error) {
+	var req piRenameParams
+	if err := decodeParams(params, &req); err != nil {
+		return nil, err
+	}
+	if req.SessionID == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "sessionId is required")
+	}
+	if req.Title == "" {
+		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "title is required")
+	}
+
+	h.piSessionsMu.Lock()
+	state, exists := h.piSessions[req.SessionID]
+	h.piSessionsMu.Unlock()
+
+	if !exists {
+		return nil, workspace.NewRPCError(rpcCodeNotFound, "pi session not found: "+req.SessionID)
+	}
+
+	renameCmd, err := json.Marshal(map[string]string{
+		"type": "set_session_name",
+		"name": req.Title,
+	})
+	if err != nil {
+		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
+	}
+
+	if err := state.session.Send(renameCmd); err != nil {
+		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
+	}
+
+	return map[string]bool{"ok": true}, nil
 }
 
 func (h *JSONRPCHandler) handlePiListActiveSessions() (any, error) {

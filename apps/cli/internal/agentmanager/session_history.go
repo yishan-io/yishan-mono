@@ -22,6 +22,7 @@ type SessionSummary struct {
 	Timestamp   time.Time `json:"timestamp"`
 	Model       string    `json:"model,omitempty"`
 	PreviewText string    `json:"previewText,omitempty"`
+	SessionName string    `json:"sessionName,omitempty"`
 	CWD         string    `json:"cwd,omitempty"`
 }
 
@@ -174,6 +175,8 @@ func applySessionSummaryLine(summary *SessionSummary, top map[string]any, collec
 	switch strings.TrimSpace(getString(top, "type")) {
 	case "session":
 		applySessionSummarySessionLine(summary, top)
+	case "session_info":
+		applySessionSummaryInfoLine(summary, top)
 	case "model_change":
 		applySessionSummaryModelChangeLine(summary, top)
 	case "message":
@@ -191,6 +194,14 @@ func applySessionSummarySessionLine(summary *SessionSummary, top map[string]any)
 	setSessionSummaryTimestamp(summary, top["timestamp"])
 	if summary.Model == "" {
 		summary.Model = getString(top, "model", "modelId")
+	}
+}
+
+// applySessionSummaryInfoLine reads a session_info entry (pi's native session name storage).
+// The latest session_info entry wins (scan order is append order, so later entries override).
+func applySessionSummaryInfoLine(summary *SessionSummary, top map[string]any) {
+	if name := strings.TrimSpace(getString(top, "name")); name != "" {
+		summary.SessionName = name
 	}
 }
 

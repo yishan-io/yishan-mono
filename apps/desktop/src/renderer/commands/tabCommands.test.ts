@@ -27,6 +27,7 @@ const rpcMocks = vi.hoisted(() => ({
   closeSession: vi.fn(),
   enqueueWorkspaceErrorNotice: vi.fn(),
   stopPiSession: vi.fn(async () => {}),
+  piRename: vi.fn(async () => ({ ok: true })),
 }));
 
 vi.mock("./agentChatCommands", () => ({
@@ -49,6 +50,9 @@ vi.mock("../rpc/rpcTransport", () => ({
     },
     terminal: {
       closeSession: rpcMocks.closeSession,
+    },
+    pi: {
+      rename: rpcMocks.piRename,
     },
   })),
 }));
@@ -530,5 +534,65 @@ describe("tabCommands", () => {
     expect(renameTabState).toHaveBeenCalledWith("tab-1", "Renamed", undefined);
     expect(updateFileTabContentState).toHaveBeenCalledWith("tab-1", "next");
     expect(markFileTabSavedState).toHaveBeenCalledWith("tab-1");
+  });
+
+  it("forwards agent-chat rename to pi.rename RPC", async () => {
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-chat",
+          workspaceId: "ws-1",
+          title: "Old Chat",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp", sessionId: "sess-123" },
+        },
+      ],
+    });
+
+    renameTab("tab-chat", "New Chat Name");
+
+    // pi.rename is fire-and-forget; wait for the promise.
+    await vi.waitFor(() => {
+      expect(rpcMocks.piRename).toHaveBeenCalledWith({ sessionId: "sess-123", title: "New Chat Name" });
+    });
+  });
+
+  it("skips pi.rename for agent-chat tabs without a sessionId", () => {
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-chat",
+          workspaceId: "ws-1",
+          title: "No Session",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp" },
+        },
+      ],
+    });
+
+    renameTab("tab-chat", "New Name");
+
+    expect(rpcMocks.piRename).not.toHaveBeenCalled();
+  });
+
+  it("skips pi.rename for non-agent-chat tabs", () => {
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-term",
+          workspaceId: "ws-1",
+          title: "Terminal",
+          pinned: false,
+          kind: "terminal",
+          data: { title: "Terminal", sessionId: "sess-456" },
+        },
+      ],
+    });
+
+    renameTab("tab-term", "New Terminal");
+
+    expect(rpcMocks.piRename).not.toHaveBeenCalled();
   });
 });

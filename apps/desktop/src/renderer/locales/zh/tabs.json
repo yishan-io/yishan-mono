@@ -15,6 +15,12 @@
       "cursor": "Cursor"
     },
     "renameA11y": "\u91cd\u547d\u540d\u6807\u7b7e",
+    "renameDialog": {
+      "title": "\u91cd\u547d\u540d\u6807\u7b7e",
+      "label": "\u6807\u7b7e\u540d\u79f0",
+      "cancel": "\u53d6\u6d88",
+      "save": "\u4fdd\u5b58"
+    },
     "actions": {
       "keepOpen": "\u4fdd\u6301\u6253\u5f00",
       "rename": "\u91cd\u547d\u540d",

@@ -47,6 +47,78 @@ func TestHandlePiListSessions_ReturnsSummaries(t *testing.T) {
 	}
 }
 
+func TestHandlePiListSessions_ReadsSessionInfoName(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	h := newTestHandler(t)
+	cwd := filepath.Join(homeDir, "worktrees", "pi-project")
+	sessionDir := filepath.Join(homeDir, ".yishan", "pi", "agent", "sessions", testEncodeSessionCWD(cwd))
+	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
+		t.Fatalf("mkdir session dir: %v", err)
+	}
+
+	t.Run("latest session_info entry wins", func(t *testing.T) {
+		path := filepath.Join(sessionDir, "2026-07-10T10-00-00-000Z_session-name.jsonl")
+		content := `{"type":"session","version":3,"id":"session-name","timestamp":"2026-07-10T10:00:00.000Z","cwd":"` + cwd + `"}
+{"type":"message","id":"user-1","timestamp":"2026-07-10T10:00:02.000Z","message":{"role":"user","content":[{"type":"text","text":"hello"}]}}
+{"type":"session_info","name":"first name"}
+{"type":"session_info","name":"second name"}
+`
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatalf("write session: %v", err)
+		}
+
+		result, err := h.dispatchPi(context.Background(), nil, MethodPiListSessions, mustMarshalJSON(t, map[string]any{"cwd": cwd}))
+		if err != nil {
+			t.Fatalf("dispatchPi: %v", err)
+		}
+		summaries := result.([]agentmanager.SessionSummary)
+		if summaries[0].SessionName != "second name" {
+			t.Fatalf("expected SessionName 'second name', got %q", summaries[0].SessionName)
+		}
+	})
+
+	t.Run("empty name does not overwrite prior name", func(t *testing.T) {
+		path := filepath.Join(sessionDir, "2026-07-10T10-01-00-000Z_session-empty.jsonl")
+		content := `{"type":"session","version":3,"id":"session-empty","timestamp":"2026-07-10T10:01:00.000Z","cwd":"` + cwd + `"}
+{"type":"session_info","name":"real name"}
+{"type":"session_info","name":""}
+`
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatalf("write session: %v", err)
+		}
+
+		result, err := h.dispatchPi(context.Background(), nil, MethodPiListSessions, mustMarshalJSON(t, map[string]any{"cwd": cwd}))
+		if err != nil {
+			t.Fatalf("dispatchPi: %v", err)
+		}
+		summaries := result.([]agentmanager.SessionSummary)
+		if summaries[0].SessionName != "real name" {
+			t.Fatalf("expected SessionName 'real name', got %q", summaries[0].SessionName)
+		}
+	})
+
+	t.Run("no session_info lines means empty session name", func(t *testing.T) {
+		path := filepath.Join(sessionDir, "2026-07-10T10-02-00-000Z_session-none.jsonl")
+		content := `{"type":"session","version":3,"id":"session-none","timestamp":"2026-07-10T10:02:00.000Z","cwd":"` + cwd + `"}
+{"type":"message","id":"user-1","timestamp":"2026-07-10T10:00:02.000Z","message":{"role":"user","content":[{"type":"text","text":"hello"}]}}
+`
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatalf("write session: %v", err)
+		}
+
+		result, err := h.dispatchPi(context.Background(), nil, MethodPiListSessions, mustMarshalJSON(t, map[string]any{"cwd": cwd}))
+		if err != nil {
+			t.Fatalf("dispatchPi: %v", err)
+		}
+		summaries := result.([]agentmanager.SessionSummary)
+		if summaries[0].SessionName != "" {
+			t.Fatalf("expected empty SessionName, got %q", summaries[0].SessionName)
+		}
+	})
+}
+
 func TestHandlePiListSessions_RequiresCWD(t *testing.T) {
 	h := newTestHandler(t)
 	_, err := h.dispatchPi(context.Background(), nil, MethodPiListSessions, json.RawMessage(`{}`))

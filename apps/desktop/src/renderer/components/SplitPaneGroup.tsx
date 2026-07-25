@@ -37,6 +37,8 @@ export type SplitPaneGroupProps = {
   onTabDragStart?: (tabId: string) => void;
   /** Called when a tab drag ends. */
   onTabDragEnd?: () => void;
+  /** Called when the user renames a tab (inline edit committed). */
+  onRenameTab?: (tabId: string, title: string) => void;
   getTabIcon?: (tab: TabDescriptor) => ReactNode;
   /** Called when the user clicks the history button in the tab bar. */
   onHistoryClick?: (event: React.MouseEvent<HTMLElement>) => void;
@@ -92,6 +94,7 @@ export function SplitPaneGroup({
   onFocusPane,
   onTabDragStart,
   onTabDragEnd,
+  onRenameTab,
   getTabIcon,
   onHistoryClick,
   enabledAgentKinds,
@@ -176,6 +179,7 @@ export function SplitPaneGroup({
           enabledAgentKinds={enabledAgentKinds}
           disabled={disabled}
           focused={isActive}
+          onRenameTab={onRenameTab}
           onSplitRight={onSplitRight ? () => onSplitRight(pane.id) : undefined}
           onSplitDown={onSplitDown ? () => onSplitDown(pane.id) : undefined}
           onTabDragStart={(tabId) => {

@@ -208,6 +208,7 @@ export function usePaneTabHandlers({
     handleSelectTab,
     handleCloseTab,
     handleCreateTab,
+    handleRenameTab,
     handleReorderTab,
     handleSplitDrop,
     handleFocusPane,

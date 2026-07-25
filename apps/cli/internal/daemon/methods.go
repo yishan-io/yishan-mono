@@ -54,6 +54,7 @@ const (
 	MethodPiSend                     = "pi.send"
 	MethodPiListSessions             = "pi.listSessions"
 	MethodPiListActiveSessions       = "pi.listActiveSessions"
+	MethodPiRename                   = "pi.rename"
 	MethodIntegrationGitHubStatus    = "integration.githubStatus"
 	MethodCLIToolListStatuses        = "cliTools.listStatuses"
 

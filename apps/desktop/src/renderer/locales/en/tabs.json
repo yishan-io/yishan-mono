@@ -15,6 +15,12 @@
       "cursor": "Cursor"
     },
     "renameA11y": "Rename tab",
+    "renameDialog": {
+      "title": "Rename Tab",
+      "label": "Tab name",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
     "actions": {
       "keepOpen": "Keep Open",
       "rename": "Rename",
