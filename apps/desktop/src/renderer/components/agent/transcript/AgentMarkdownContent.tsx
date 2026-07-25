@@ -5,6 +5,7 @@ import { useMarkdownStyles } from "@renderer/components/markdown/markdownStyles"
 import { useEffect, useRef, useState } from "react";
 import { openLink } from "../../../commands/appCommands";
 import { openTab, openTabInOppositePane } from "../../../commands/tabCommands";
+import { selectFolderInFileTree } from "../../../commands/workspaceCommands";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 
 type AgentMarkdownContentProps = {
@@ -46,6 +47,29 @@ function looksLikeFilePath(text: string): boolean {
   if (FILE_EXT_RE.test(text)) return true;
   if (/^[.\/\\]/.test(text) || /^[a-zA-Z]:[\\/]/.test(text)) return true;
   return false;
+}
+
+function looksLikeFolderPath(text: string): boolean {
+  // Must contain a path separator or start with a dot (e.g. .my-context/).
+  if (!text.includes("/") && !text.includes("\\") && !text.startsWith(".")) return false;
+  // Must not contain whitespace.
+  if (/\s/.test(text)) return false;
+  // Exclude URLs.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(text)) return false;
+  // Ends with / or \ → explicit directory marker.
+  if (/[/\\]$/.test(text)) return true;
+  // Has no known file extension → likely a folder.
+  if (!FILE_EXT_RE.test(text)) return true;
+  return false;
+}
+
+function openFolderInFileTree(href: string, workspacePath: string): void {
+  const resolvedPath = resolveRelativePath(workspacePath, getFilePath(href));
+  // Strip workspacePath prefix to get workspace-relative path expected by the file tree.
+  const relativePath = resolvedPath.startsWith(`${workspacePath}/`)
+    ? resolvedPath.slice(workspacePath.length + 1)
+    : resolvedPath;
+  selectFolderInFileTree(relativePath);
 }
 
 /** Renders assistant response text as sanitized markdown HTML. */
@@ -91,22 +115,25 @@ export function AgentMarkdownContent({ content, workspacePath, renderMode = "fin
     }
     container.innerHTML = html;
 
-    // Make file-path-like <code> elements clickable.
+    // Make file-path-like and folder-path-like <code> elements clickable.
     if (!workspacePath) return;
     const codeElements = Array.from(container.querySelectorAll("code"));
     for (const code of codeElements) {
       const text = code.textContent?.trim() ?? "";
       const filePath = getFilePath(text);
       const lineRangeSuffix = getFileLineRangeSuffix(text);
-      if (!looksLikeFilePath(filePath)) continue;
+      const isFolder = looksLikeFolderPath(filePath);
+      const isFile = looksLikeFilePath(filePath);
+      if (!isFolder && !isFile) continue;
       const span = document.createElement("span");
       span.className = "file-link";
       span.style.cursor = "pointer";
       span.textContent = filePath;
       span.addEventListener("click", (e) => {
         e.stopPropagation();
-        // Detect cmd+click for opposite-pane open
-        if (e.metaKey || e.ctrlKey) {
+        if (isFolder) {
+          openFolderInFileTree(filePath, workspacePath);
+        } else if (e.metaKey || e.ctrlKey) {
           openFileTabInOppositePane(filePath, workspacePath);
         } else {
           openFileTab(filePath, workspacePath);
@@ -173,7 +200,9 @@ export function AgentMarkdownContent({ content, workspacePath, renderMode = "fin
             void openLink({ url: href });
           }
         } else if (workspacePath) {
-          if (isOppositeOpen) {
+          if (looksLikeFolderPath(href)) {
+            openFolderInFileTree(href, workspacePath);
+          } else if (isOppositeOpen) {
             openFileTabInOppositePane(href, workspacePath);
           } else {
             openFileTab(href, workspacePath);
