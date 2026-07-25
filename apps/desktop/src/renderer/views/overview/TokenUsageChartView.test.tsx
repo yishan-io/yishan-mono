@@ -45,6 +45,8 @@ describe("TokenUsageChartView", () => {
       timeRange: "7d",
       tokenUsageSeries: [],
       grandTotal: 0,
+      cachedTotal: 0,
+      uncachedTotal: 0,
       turnTotal: 0,
       toolCallTotal: 0,
     });
@@ -62,22 +64,21 @@ describe("TokenUsageChartView", () => {
     expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(2);
   });
 
-  it("total equals sum of visible bar data — all buckets within range", () => {
+  it("stat boxes show server-provided cachedTotal and uncachedTotal alongside grandTotal", () => {
     // Two buckets both within the 7-day UTC window
     overviewStore.setState({
       tokenUsageSeries: [makeBucket(utcDateIso(1), 500, 200), makeBucket(utcDateIso(3), 300, 100)],
       grandTotal: 800,
+      cachedTotal: 300,
+      uncachedTotal: 500,
       turnTotal: 7,
       toolCallTotal: 11,
     });
 
     render(<TokenUsageChartView />);
 
-    // chartCachedTotal = 200+100 = 300 (K unit)
-    // chartUncachedTotal = 300+200 = 500 (K unit)
-    // chartTotalTokens = 800 (K unit) → "0.80K"
-    // statUnit = "K" because total=800 >= 1000? No, 800 < 1000 → "raw"
-    // total=800 → "800", cached=300 → "300", uncached=500 → "500"
+    // statUnit = "raw" because total=800 < 1000
+    // total=800, cached=300, uncached=500 — all from server, arithmetically consistent
     expect(screen.getByText("800")).toBeTruthy();
     expect(screen.getByText(/300.*37\.5%/)).toBeTruthy();
     expect(screen.getByText("500")).toBeTruthy();
@@ -86,11 +87,11 @@ describe("TokenUsageChartView", () => {
   });
 
   it("stat numbers use a consistent unit derived from the total", () => {
-    // Total will be 1,500,000 → statUnit = "M"
-    // cached=1,000,000, uncached=500,000
     overviewStore.setState({
       tokenUsageSeries: [makeBucket(utcDateIso(1), 1_500_000, 1_000_000)],
       grandTotal: 1_500_000,
+      cachedTotal: 1_000_000,
+      uncachedTotal: 500_000,
     });
 
     render(<TokenUsageChartView />);
@@ -101,10 +102,12 @@ describe("TokenUsageChartView", () => {
     expect(screen.getByText("0.50M")).toBeTruthy();
   });
 
-  it("stat numbers use B when the visible total is in the billions", () => {
+  it("stat numbers use B when the total is in the billions", () => {
     overviewStore.setState({
       tokenUsageSeries: [makeBucket(utcDateIso(1), 3_750_000_000, 2_500_000_000)],
       grandTotal: 3_750_000_000,
+      cachedTotal: 2_500_000_000,
+      uncachedTotal: 1_250_000_000,
     });
 
     render(<TokenUsageChartView />);
@@ -114,38 +117,43 @@ describe("TokenUsageChartView", () => {
     expect(screen.getByText("1.25B")).toBeTruthy();
   });
 
-  it("total reflects only visible bars when a bucket falls outside the date range", () => {
-    // Bucket from 10 days ago UTC — outside the 7d window, will be dropped from chartData
+  it("stat boxes use server totals, keeping cached+uncached=grandTotal even with dropped bar data", () => {
+    // Bucket from 10 days ago UTC — outside the 7d bar window, dropped from chartData
     const droppedBucket = makeBucket(utcDateIso(10), 1000, 400);
     // Bucket from yesterday UTC — inside the 7d window
     const visibleBucket = makeBucket(utcDateIso(1), 600, 200);
 
     overviewStore.setState({
       tokenUsageSeries: [droppedBucket, visibleBucket],
-      // grandTotal from API = sum of both buckets (1600)
+      // Server-provided totals include both buckets
       grandTotal: 1600,
+      cachedTotal: 600,
+      uncachedTotal: 1000,
     });
 
     render(<TokenUsageChartView />);
 
-    // Only the visible bucket contributes to the chart
-    // chartCachedTotal = 200, chartUncachedTotal = 400, chartTotalTokens = 600
-    expect(screen.getByText("600")).toBeTruthy();
-    // Should NOT show 1600 (what cachedTotal+uncachedTotal from the API would give)
-    expect(screen.queryByText("1600")).toBeNull();
+    // All three stat boxes use server values: 1600 → 1.60K, 600 → 0.60K, 1000 → 1.00K
+    // cached+uncached = 0.60K + 1.00K = 1.60K = grandTotal ✓
+    expect(screen.getByText("1.60K")).toBeTruthy();
+    expect(screen.getByText(/0\.60K.*37\.5%/)).toBeTruthy();
+    expect(screen.getByText("1.00K")).toBeTruthy();
+    // Should NOT show 0.20K / 0.40K (the old chart-derived values)
+    expect(screen.queryByText("0.20K")).toBeNull();
+    expect(screen.queryByText("0.40K")).toBeNull();
   });
 
-  it("cached percentage is computed from chart totals, not API totals", () => {
+  it("cached percentage is computed from server totals", () => {
     overviewStore.setState({
       tokenUsageSeries: [makeBucket(utcDateIso(2), 400, 100)],
       grandTotal: 400,
+      cachedTotal: 100,
+      uncachedTotal: 300,
     });
 
     render(<TokenUsageChartView />);
 
-    // chartCachedTotal=100, chartTotalTokens=400 → 25.0%
+    // cachedTotal=100, grandTotal=400 → 100/400 = 25.0%
     expect(screen.getByText(/100.*25\.0%/)).toBeTruthy();
-    // Should NOT show the API-based percentage (30%)
-    expect(screen.queryByText(/300.*30\.0%/)).toBeNull();
   });
 });
