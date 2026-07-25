@@ -66,6 +66,10 @@ function shouldMergeToolResult(message: AgentMessageType, previous: DisplayMessa
       "memory_store",
       "ask_user",
       "web_fetch",
+      "workspace_list",
+      "workspace_find",
+      "workspace_create",
+      "workspace_close",
     ].includes(message.toolName) &&
     hasToolCall(previous.message, message.toolCallId)
   );

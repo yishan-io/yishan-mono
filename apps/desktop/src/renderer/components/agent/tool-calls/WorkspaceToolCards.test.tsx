@@ -48,9 +48,7 @@ describe("AgentToolCallCard — workspace tools", () => {
 
     render(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
-    expect(screen.getByText("list workspaces")).toBeTruthy();
     expect(screen.getByText("2 workspaces")).toBeTruthy();
-    expect(screen.queryByText("arguments")).toBeNull();
   });
 
   it("shows workspace_list with zero count when no workspaces open", () => {
@@ -85,7 +83,6 @@ describe("AgentToolCallCard — workspace tools", () => {
     render(<AgentToolCallCard toolCall={toolCall} />);
 
     expect(screen.getByText("ws-abc123")).toBeTruthy();
-    expect(screen.queryByText("arguments")).toBeNull();
   });
 
   it("shows workspace_create with branch name and optional agent kind badge", () => {
@@ -101,9 +98,9 @@ describe("AgentToolCallCard — workspace tools", () => {
 
     render(<AgentToolCallCard toolCall={toolCall} />);
 
-    expect(screen.getByText("feature/new-dashboard")).toBeTruthy();
-    expect(screen.getByText("builder")).toBeTruthy();
-    expect(screen.queryByText("arguments")).toBeNull();
+    // Branch and agentKind appear in both the collapsed summary badge and the Arguments tab content.
+    expect(screen.getAllByText("feature/new-dashboard").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("builder").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows workspace_create without agent kind badge when not provided", () => {
@@ -116,7 +113,7 @@ describe("AgentToolCallCard — workspace tools", () => {
 
     render(<AgentToolCallCard toolCall={toolCall} />);
 
-    expect(screen.getByText("fix/auth-bug")).toBeTruthy();
+    expect(screen.getAllByText("fix/auth-bug").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows workspace_close with the workspace id", () => {

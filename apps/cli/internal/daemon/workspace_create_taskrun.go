@@ -13,20 +13,23 @@ import (
 
 func (h *JSONRPCHandler) publishWorkspaceCreateCompleted(prepared preparedWorkspaceCreate, created workspace.Workspace, warnings []any) {
 	completionPayload := map[string]any{"workspaceId": created.ID, "worktreePath": created.Path, "lifecycleScriptWarnings": warnings}
-	h.maybeStartTaskRun(context.Background(), prepared, created)
+	taskRunStatus := h.maybeStartTaskRun(context.Background(), prepared, created)
+	if taskRunStatus != "" {
+		completionPayload["taskRunStatus"] = taskRunStatus
+	}
 	h.events.Publish(frontendEvent{Topic: "workspaceCreateCompleted", Payload: completionPayload})
 	h.relayWorkspaceCreateCompleted(prepared, completionPayload)
 }
 
-func (h *JSONRPCHandler) maybeStartTaskRun(ctx context.Context, prepared preparedWorkspaceCreate, created workspace.Workspace) {
+func (h *JSONRPCHandler) maybeStartTaskRun(ctx context.Context, prepared preparedWorkspaceCreate, created workspace.Workspace) string {
 	if prepared.localCreate == nil || prepared.localCreate.TaskRun == nil {
-		return
+		return ""
 	}
 	taskRun := prepared.localCreate.TaskRun
 	cmd, buildErr := agentcmd.BuildRunCommand(taskRun.AgentKind, taskRun.Prompt, taskRun.Model, true)
 	if buildErr != nil {
 		log.Warn().Err(buildErr).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to build agent command")
-		return
+		return "failed"
 	}
 	resp, startErr := h.manager.Terminals().Start(ctx, created.Path, terminal.StartRequest{
 		WorkspaceID: created.ID,
@@ -37,10 +40,15 @@ func (h *JSONRPCHandler) maybeStartTaskRun(ctx context.Context, prepared prepare
 	})
 	if startErr != nil {
 		log.Warn().Err(startErr).Str("workspaceId", created.ID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to start terminal session")
-		return
+		return "failed"
 	}
-	h.manager.Terminals().Send(terminal.SendRequest{SessionID: resp.SessionID, Input: shellCommandLine(cmd.Binary, cmd.Args) + "\r"})
+	_, sendErr := h.manager.Terminals().Send(terminal.SendRequest{SessionID: resp.SessionID, Input: shellCommandLine(cmd.Binary, cmd.Args) + "\r"})
+	if sendErr != nil {
+		log.Warn().Err(sendErr).Str("workspaceId", created.ID).Str("sessionId", resp.SessionID).Str("agentKind", taskRun.AgentKind).Msg("task run: failed to send agent command")
+		return "failed"
+	}
 	log.Info().Str("workspaceId", created.ID).Str("sessionId", resp.SessionID).Str("agentKind", taskRun.AgentKind).Str("prompt", taskRun.Prompt).Msg("task run: terminal session started")
+	return "started"
 }
 
 func buildTaskRunTerminalTitle(prompt string, agentKind string) string {

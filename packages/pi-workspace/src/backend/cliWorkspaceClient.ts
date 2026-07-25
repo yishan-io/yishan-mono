@@ -21,16 +21,17 @@ import type {
 export function createCliWorkspaceClient(): WorkspaceBackendClient {
   return {
     async list(input: WorkspaceListInput): Promise<WorkspaceListResult> {
-      const projectId = resolveRequiredProjectId(input.projectId);
+      const projectId = input.projectId ?? process.env.YISHAN_PROJECT_ID;
       const args = [
         "workspace",
         "list",
         "--output",
         "json",
         ...buildScopedArgs(input.orgId),
-        "--project-id",
-        projectId,
       ];
+      if (projectId) {
+        args.push("--project-id", projectId);
+      }
       const stdout = await runYishanCommand(args);
       return parseWorkspaceListResult(stdout);
     },

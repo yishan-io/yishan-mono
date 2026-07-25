@@ -197,3 +197,58 @@ func mustMarshalFrontendEvent(t *testing.T, topic string, payload any) json.RawM
 	}
 	return encodedEvent
 }
+
+func TestBuildTaskRunConfig(t *testing.T) {
+	t.Run("returns nil when prompt is empty", func(t *testing.T) {
+		if got := buildTaskRunConfig("opencode", "", ""); got != nil {
+			t.Fatalf("buildTaskRunConfig(opencode, '', '') = %+v, want nil", got)
+		}
+	})
+
+	t.Run("returns nil when both are empty", func(t *testing.T) {
+		if got := buildTaskRunConfig("", "", ""); got != nil {
+			t.Fatalf("buildTaskRunConfig('', '', '') = %+v, want nil", got)
+		}
+	})
+
+	t.Run("returns config with prompt only (no agentKind)", func(t *testing.T) {
+		got := buildTaskRunConfig("", "do something", "")
+		if got == nil {
+			t.Fatal("buildTaskRunConfig('', 'do something', '') returned nil, want non-nil")
+		}
+		if got.Prompt != "do something" {
+			t.Fatalf("Prompt = %q, want %q", got.Prompt, "do something")
+		}
+		if got.AgentKind != "" {
+			t.Fatalf("AgentKind = %q, want empty", got.AgentKind)
+		}
+	})
+
+	t.Run("returns config with both agentKind and prompt", func(t *testing.T) {
+		got := buildTaskRunConfig("opencode", "investigate bug", "gpt-5")
+		if got == nil {
+			t.Fatal("buildTaskRunConfig returned nil, want non-nil")
+		}
+		if got.AgentKind != "opencode" {
+			t.Fatalf("AgentKind = %q, want %q", got.AgentKind, "opencode")
+		}
+		if got.Prompt != "investigate bug" {
+			t.Fatalf("Prompt = %q, want %q", got.Prompt, "investigate bug")
+		}
+		if got.Model != "gpt-5" {
+			t.Fatalf("Model = %q, want %q", got.Model, "gpt-5")
+		}
+	})
+
+	t.Run("returns config with agentKind only (empty prompt)", func(t *testing.T) {
+		if got := buildTaskRunConfig("opencode", "", ""); got != nil {
+			t.Fatalf("buildTaskRunConfig(opencode, '', '') = %+v, want nil", got)
+		}
+	})
+
+	t.Run("returns config with whitespace-only prompt", func(t *testing.T) {
+		if got := buildTaskRunConfig("opencode", "   ", ""); got != nil {
+			t.Fatalf("buildTaskRunConfig(opencode, '   ', '') = %+v, want nil", got)
+		}
+	})
+}

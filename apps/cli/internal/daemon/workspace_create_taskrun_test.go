@@ -89,6 +89,9 @@ func TestPublishWorkspaceCreateCompleted_TaskRunUsesTerminalLifecycleMetadata(t 
 	if completionPayload["worktreePath"] != root {
 		t.Fatalf("completion worktreePath = %#v, want %q", completionPayload["worktreePath"], root)
 	}
+	if completionPayload["taskRunStatus"] != "started" {
+		t.Fatalf("completion taskRunStatus = %#v, want %q", completionPayload["taskRunStatus"], "started")
+	}
 	if _, ok := completionPayload["taskRunSessionId"]; ok {
 		t.Fatalf("completion payload unexpectedly included taskRunSessionId: %+v", completionPayload)
 	}
