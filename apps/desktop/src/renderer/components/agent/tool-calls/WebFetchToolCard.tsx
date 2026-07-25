@@ -1,9 +1,9 @@
-import { Box, Collapse, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { useMemo, useState } from "react";
 import { TbWorldSearch } from "react-icons/tb";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
-import { ToolPathSummary } from "./ToolPathSummary";
+import { ToolOutputSection } from "./ToolOutputSection";
 import { type AgentToolCallCardProps, extractResultText } from "./helpers";
 import { AgentMarkdownContent } from "../transcript/AgentMarkdownContent";
 
@@ -31,28 +31,52 @@ export function WebFetchToolCard({ toolCall, result = null, workspacePath }: Age
     <ToolCardShell isError={result?.isError === true}>
       <ToolSummaryPanel>
         <ToolExpandableSummary onToggle={() => setOpen(!open)} open={open}>
-          <ToolPathSummary icon={<TbWorldSearch size={14} />} path={`Web Fetch: ${summaryLabel}`} />
-        </ToolExpandableSummary>
-      </ToolSummaryPanel>
-      <Collapse in={open}>
-        {resultText ? (
-          <Box sx={{ m: 1, p: 1.5, border: 1, borderColor: "divider", borderRadius: 1 }}>
-            <Typography
-              variant="caption"
+          <Box sx={{ display: "flex", alignItems: "flex-start", gap: 0.75, minWidth: 0, flex: 1 }}>
+            <Box
+              component="span"
+              aria-hidden
               sx={{
-                color: "text.secondary",
-                display: "block",
-                mb: 0.5,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                opacity: 0.8,
+                mt: "1px",
               }}
             >
-              fetched content{result?.isError ? " (error)" : ""}
-            </Typography>
-            <Box sx={{ maxHeight: 320, overflowY: "auto" }}>
-              <AgentMarkdownContent content={resultText} workspacePath={workspacePath} />
+              <TbWorldSearch size={18} />
             </Box>
+            <Typography variant="body2" sx={{ fontWeight: 600, flexShrink: 0 }}>
+              Web Fetch:
+            </Typography>
+            <Typography
+              variant="body2"
+              component="pre"
+              sx={{
+                fontFamily: "monospace",
+                fontSize: "0.75rem",
+                whiteSpace: "pre-wrap",
+                m: 0,
+                minWidth: 0,
+                flex: 1,
+                color: "text.primary",
+              }}
+            >
+              {summaryLabel}
+            </Typography>
           </Box>
-        ) : null}
-      </Collapse>
+        </ToolExpandableSummary>
+      </ToolSummaryPanel>
+      <ToolOutputSection
+        open={open}
+        resultText={resultText}
+        isError={result?.isError === true}
+        label="fetched content"
+      >
+        <Box sx={{ maxHeight: 320, overflowY: "auto" }}>
+          <AgentMarkdownContent content={resultText} workspacePath={workspacePath} />
+        </Box>
+      </ToolOutputSection>
     </ToolCardShell>
   );
 }

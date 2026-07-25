@@ -37,8 +37,10 @@ export function AgentMessage({
       sx={{
         p: 1.5,
         width: "100%",
-        borderRadius: 0,
         bgcolor: isUser ? "action.selected" : isToolResult ? "action.hover" : "transparent",
+        borderLeft: isUser ? 3 : 0,
+        borderColor: isUser ? "info.main" : undefined,
+        borderRadius: isUser ? 1 : 0,
       }}
     >
       {isUser ? <UserMessageContent messageText={messageText} /> : null}
