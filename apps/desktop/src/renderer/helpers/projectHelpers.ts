@@ -1,4 +1,5 @@
 import type { ProjectRecord, WorkspaceRecord } from "../api/types";
+import { pickRandomProjectColor, pickRandomProjectIcon } from "../components/projectIcons";
 import { getFileName } from "../store/tabs";
 import type {
   WorkspaceItem,
@@ -435,8 +436,8 @@ export function applyCreatedRepoState(
     worktreePath: input.backendProject.worktreePath ?? (input.source === "local" ? repoPath : ""),
     contextEnabled: input.backendProject.contextEnabled ?? true,
     defaultBranch: input.backendProject.defaultBranch ?? "",
-    icon: input.backendProject.icon ?? "folder",
-    color: input.backendProject.color ?? "#1E66F5",
+    icon: input.backendProject.icon || pickRandomProjectIcon(),
+    color: input.backendProject.color || pickRandomProjectColor(),
     setupScript: input.backendProject.setupScript ?? "",
     postScript: input.backendProject.postScript ?? "",
     commands: input.backendProject.commands ?? [],

@@ -107,6 +107,29 @@ export function renderProjectIcon(iconId: string | undefined, size: number): Rea
   return <LuFolder size={size} />;
 }
 
+/** Curated palette of background colors for project avatars. */
+export const PROJECT_COLOR_PRESETS = [
+  "#1E66F5",
+  "#0F766E",
+  "#CA8A04",
+  "#DC2626",
+  "#7C3AED",
+  "#DB2777",
+  "#0891B2",
+];
+
+/** Picks a random icon id from the available project icon options. */
+export function pickRandomProjectIcon(): string {
+  const index = Math.floor(Math.random() * PROJECT_ICON_OPTIONS.length);
+  return PROJECT_ICON_OPTIONS[index]!.id;
+}
+
+/** Picks a random color from the curated project color palette. */
+export function pickRandomProjectColor(): string {
+  const index = Math.floor(Math.random() * PROJECT_COLOR_PRESETS.length);
+  return PROJECT_COLOR_PRESETS[index]!;
+}
+
 export const REPO_ICON_OPTIONS = PROJECT_ICON_OPTIONS;
 export const DEFAULT_REPO_ICON_ID = DEFAULT_PROJECT_ICON_ID;
 export const findRepoIconOption = findProjectIconOption;

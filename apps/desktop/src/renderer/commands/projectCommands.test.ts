@@ -423,6 +423,16 @@ describe("projectCommands", () => {
       repoKey: "repo-1",
       workspaces: [],
     });
+    apiMocks.updateProject.mockResolvedValueOnce({
+      id: "project-1",
+      name: "Repo 1",
+      icon: "folder",
+      color: "#1E66F5",
+      contextEnabled: true,
+      setupScript: "",
+      postScript: "",
+      commands: [],
+    });
 
     await createProject({
       name: "Repo 1",
@@ -497,6 +507,16 @@ describe("projectCommands", () => {
         },
       ],
     });
+    apiMocks.updateProject.mockResolvedValueOnce({
+      id: "project-1",
+      name: "Repo 1",
+      icon: "folder",
+      color: "#1E66F5",
+      contextEnabled: true,
+      setupScript: "",
+      postScript: "",
+      commands: [],
+    });
 
     await createProject({
       name: "Repo 1",
@@ -543,6 +563,16 @@ describe("projectCommands", () => {
       contextEnabled: false,
       workspaces: [],
     });
+    apiMocks.updateProject.mockResolvedValueOnce({
+      id: "project-1",
+      name: "Remote Repo",
+      icon: "folder",
+      color: "#1E66F5",
+      contextEnabled: false,
+      setupScript: "",
+      postScript: "",
+      commands: [],
+    });
 
     await createProject({
       name: "Remote Repo",
@@ -580,6 +610,16 @@ describe("projectCommands", () => {
           updatedAt: "2026-01-01T00:00:00.000Z",
         },
       ],
+    });
+    apiMocks.updateProject.mockResolvedValueOnce({
+      id: "project-remote-1",
+      name: "Remote Repo",
+      icon: "folder",
+      color: "#1E66F5",
+      contextEnabled: true,
+      setupScript: "",
+      postScript: "",
+      commands: [],
     });
 
     await createProject({
