@@ -77,6 +77,7 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
   const { workspaceId } = input;
   const tabsRef = useRef(input.tabs);
   const commandsRef = useRef(input.commands);
+  const seenTabIdsRef = useRef(new Set<string>());
   tabsRef.current = input.tabs;
   commandsRef.current = input.commands;
 
@@ -92,13 +93,21 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
     let queued = false;
     let pendingChangedRelativePaths: string[] | undefined;
     let shouldRefreshAllDiffTabs = false;
+    let pendingRestrictToTabIds: Set<string> | undefined;
     const stopBackendEventPipeline = startBackendEventPipeline();
 
-    const runRefresh = async (changedRelativePaths?: string[], refreshAllDiffTabs = false) => {
+    const runRefresh = async (
+      changedRelativePaths?: string[],
+      refreshAllDiffTabs = false,
+      restrictToTabIds?: Set<string>,
+    ) => {
       if (disposed || inFlight) {
         queued = true;
         if (refreshAllDiffTabs) {
           shouldRefreshAllDiffTabs = true;
+        }
+        if (restrictToTabIds) {
+          pendingRestrictToTabIds = restrictToTabIds;
         }
         if (!pendingChangedRelativePaths || !changedRelativePaths) {
           pendingChangedRelativePaths = undefined;
@@ -115,6 +124,10 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
       try {
         await Promise.all(
           tabs.map(async (tab) => {
+            if (restrictToTabIds && !restrictToTabIds.has(tab.id)) {
+              return;
+            }
+
             const tabChanged = didPathChange(tab.path, changedRelativePaths);
             if (!tabChanged && !(tab.kind === "diff" && refreshAllDiffTabs)) {
               return;
@@ -188,16 +201,25 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
           queued = false;
           const nextChangedRelativePaths = pendingChangedRelativePaths;
           const nextRefreshAllDiffTabs = shouldRefreshAllDiffTabs;
+          const nextRestrictToTabIds = pendingRestrictToTabIds;
           pendingChangedRelativePaths = undefined;
           shouldRefreshAllDiffTabs = false;
-          void runRefresh(nextChangedRelativePaths, nextRefreshAllDiffTabs);
+          pendingRestrictToTabIds = undefined;
+          void runRefresh(nextChangedRelativePaths, nextRefreshAllDiffTabs, nextRestrictToTabIds);
         }
       }
     };
 
-    const scheduleRefresh = (changedRelativePaths?: string[], refreshAllDiffTabs = false) => {
+    const scheduleRefresh = (
+      changedRelativePaths?: string[],
+      refreshAllDiffTabs = false,
+      restrictToTabIds?: Set<string>,
+    ) => {
       if (refreshAllDiffTabs) {
         shouldRefreshAllDiffTabs = true;
+      }
+      if (restrictToTabIds) {
+        pendingRestrictToTabIds = restrictToTabIds;
       }
       if (!pendingChangedRelativePaths || !changedRelativePaths) {
         pendingChangedRelativePaths = changedRelativePaths;
@@ -207,9 +229,11 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
 
       const nextChangedRelativePaths = pendingChangedRelativePaths;
       const nextRefreshAllDiffTabs = shouldRefreshAllDiffTabs;
+      const nextRestrictToTabIds = pendingRestrictToTabIds;
       pendingChangedRelativePaths = undefined;
       shouldRefreshAllDiffTabs = false;
-      void runRefresh(nextChangedRelativePaths, nextRefreshAllDiffTabs);
+      pendingRestrictToTabIds = undefined;
+      void runRefresh(nextChangedRelativePaths, nextRefreshAllDiffTabs, nextRestrictToTabIds);
     };
 
     const unsubscribeWorkspaceFilesChanged = subscribeBackendEvent("workspace.files.changed", (event) => {
@@ -227,6 +251,19 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
 
       scheduleRefresh(undefined, true);
     });
+
+    // Eagerly refresh newly-opened tabs that start with placeholder content
+    // (e.g. file tabs opened from chat or diff views without pre-loaded content).
+    // Skip the very first render — only refresh tabs that appear after initial mount.
+    const currentTabIds = new Set(input.tabs.map((tab) => tab.id));
+    const isInitialMount = seenTabIdsRef.current.size === 0;
+    const newTabIds = isInitialMount
+      ? new Set<string>()
+      : new Set(input.tabs.filter((tab) => !seenTabIdsRef.current.has(tab.id)).map((tab) => tab.id));
+    seenTabIdsRef.current = currentTabIds;
+    if (newTabIds.size > 0) {
+      scheduleRefresh(undefined, true, newTabIds);
+    }
 
     let daemonReconnectSeen = false;
     const unsubscribeDaemonConnectionStatus = subscribeDaemonStatus((status) => {
