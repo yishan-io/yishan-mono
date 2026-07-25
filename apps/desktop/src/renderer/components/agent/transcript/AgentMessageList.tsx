@@ -51,15 +51,19 @@ function shouldMergeToolResult(message: AgentMessageType, previous: DisplayMessa
   }
   return (
     message.role === "toolResult" &&
-    (message.toolName === "bash" ||
-      message.toolName === "read" ||
-      message.toolName === "edit" ||
-      message.toolName === "write" ||
-      message.toolName === "grep" ||
-      message.toolName === "Agent" ||
-      message.toolName === "memory_search" ||
-      message.toolName === "memory_store" ||
-      message.toolName === "ask_user") &&
+    typeof message.toolName === "string" &&
+    [
+      "bash",
+      "read",
+      "edit",
+      "write",
+      "grep",
+      "Agent",
+      "memory_search",
+      "memory_store",
+      "ask_user",
+      "web_fetch",
+    ].includes(message.toolName) &&
     hasToolCall(previous.message, message.toolCallId)
   );
 }
