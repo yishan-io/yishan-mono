@@ -32,7 +32,7 @@ afterEach(() => {
 });
 
 describe("AgentMessageList", () => {
-  it.each(["write", "memory_search", "memory_store", "grep", "Agent"] as const)(
+  it.each(["bash", "read", "edit", "write", "grep", "Agent", "memory_read", "memory_search", "memory_store", "ask_user", "web_fetch"] as const)(
     "merges %s tool results into the preceding assistant tool call",
     (toolName) => {
       const messages: AgentMessageType[] = [
