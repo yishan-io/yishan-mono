@@ -665,6 +665,7 @@ export type PiSessionSummary = {
   timestamp: string;
   model?: string;
   previewText?: string;
+  sessionName?: string;
   cwd?: string;
 };
 

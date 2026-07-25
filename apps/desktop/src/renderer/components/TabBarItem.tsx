@@ -47,6 +47,8 @@ type TabBarItemProps = {
   onCloseTab: (tabId: string) => void;
   onTogglePinTab?: (tabId: string) => void;
   onPromoteTemporaryTab?: (tabId: string) => void;
+  /** Called when the user double-clicks a non-temporary tab to rename it. */
+  onBeginRename?: (tab: WorkspaceTab) => void;
   onContextMenu: (event: React.MouseEvent<HTMLDivElement>, tab: WorkspaceTab) => void;
   onDragStart: (event: React.DragEvent<HTMLDivElement>, tab: WorkspaceTab, paneId: string) => void;
   onDragOver: (event: React.DragEvent<HTMLDivElement>, tab: WorkspaceTab) => void;
@@ -71,6 +73,7 @@ export function TabBarItem({
   onCloseTab,
   onTogglePinTab,
   onPromoteTemporaryTab,
+  onBeginRename,
   onContextMenu,
   onDragStart,
   onDragOver,
@@ -156,6 +159,8 @@ export function TabBarItem({
         onDoubleClick={() => {
           if (tab.isTemporary) {
             onPromoteTemporaryTab?.(tab.id);
+          } else {
+            onBeginRename?.(tab);
           }
         }}
         sx={{

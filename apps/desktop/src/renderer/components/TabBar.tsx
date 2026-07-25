@@ -13,6 +13,7 @@ import { getShortcutDisplayLabelById } from "../shortcuts/shortcutDisplay";
 import { AgentIcon } from "./AgentIcon";
 import { TabBarItem } from "./TabBarItem";
 import { CreateTabMenu, SplitPaneMenu, TabContextMenu } from "./TabBarMenus";
+import { TabRenameDialog } from "./TabRenameDialog";
 import { useTabDragDrop } from "./useTabDragDrop";
 
 type WorkspaceTab = {
@@ -51,6 +52,8 @@ type TabBarProps = {
   onTabDragStart?: (tabId: string) => void;
   /** Called when a tab drag ends. */
   onTabDragEnd?: () => void;
+  /** Called when the user renames a tab (inline edit committed). */
+  onRenameTab?: (tabId: string, title: string) => void;
   /** When false, the active tab left border shows grey instead of primary color. */
   focused?: boolean;
   /** Called when the user clicks "Split Right". Only shown when provided. */
@@ -83,6 +86,7 @@ export function TabBar({
   disabled,
   onTabDragStart,
   onTabDragEnd,
+  onRenameTab,
   focused = true,
   onSplitRight,
   onSplitDown,
@@ -138,6 +142,35 @@ export function TabBar({
     handleTabsContainerDragOver,
     handleTabsContainerDrop,
   } = useTabDragDrop({ tabs, canDragTabs, onReorderTab, onTabDragStart, onTabDragEnd });
+
+  // ─── Tab rename dialog ────────────────────────────────────────────────────
+
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameDialogTab, setRenameDialogTab] = useState<WorkspaceTab | null>(null);
+
+  const handleBeginRename = (tab: WorkspaceTab) => {
+    // Only agent-chat tabs support rename for now.
+    if (tab.kind !== "agent-chat") {
+      return;
+    }
+    if (tab.id !== selectedTabId) {
+      onSelectTab(tab.id);
+    }
+    setRenameDialogTab(tab);
+    setRenameDialogOpen(true);
+  };
+
+  const handleRenameDialogClose = () => {
+    setRenameDialogOpen(false);
+    setRenameDialogTab(null);
+  };
+
+  const handleRenameDialogSave = (title: string) => {
+    if (renameDialogTab && onRenameTab) {
+      onRenameTab(renameDialogTab.id, title);
+    }
+    handleRenameDialogClose();
+  };
 
   // ─── Auto-scroll newly created selected tab into view ─────────────────────
 
@@ -266,6 +299,7 @@ export function TabBar({
       onCloseTab={onCloseTab}
       onTogglePinTab={onTogglePinTab}
       onPromoteTemporaryTab={onPromoteTemporaryTab}
+      onBeginRename={onRenameTab ? handleBeginRename : undefined}
       onContextMenu={handleContextMenu}
       onDragStart={handleTabDragStart}
       onDragOver={handleTabDragOver}
@@ -380,6 +414,14 @@ export function TabBar({
         onCloseTab={onCloseTab}
         onCloseOtherTabs={onCloseOtherTabs}
         onCloseAllTabs={onCloseAllTabs}
+      />
+
+      <TabRenameDialog
+        open={renameDialogOpen}
+        currentTitle={renameDialogTab?.title ?? ""}
+        untitledLabel={untitledLabel}
+        onSave={handleRenameDialogSave}
+        onClose={handleRenameDialogClose}
       />
     </Box>
   );

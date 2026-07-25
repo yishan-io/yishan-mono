@@ -187,6 +187,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
     handleSelectTab,
     handleCloseTab,
     handleCreateTab,
+    handleRenameTab,
     handleReorderTab,
     handleSplitDrop,
     handleFocusPane,
@@ -279,6 +280,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
           onFocusPane={handleFocusPane}
           onTabDragStart={handleTabDragStart}
           onTabDragEnd={handleTabDragEnd}
+          onRenameTab={handleRenameTab}
           onHistoryClick={(event) => setHistoryMenuAnchor(event.currentTarget)}
           getTabIcon={getTabIcon}
           enabledAgentKinds={enabledAgentKinds}
@@ -295,6 +297,7 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
       handleSelectTab,
       handleCloseTab,
       cmd,
+      handleRenameTab,
       handleReorderTab,
       handleCreateTab,
       handleSplitDrop,

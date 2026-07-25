@@ -103,7 +103,7 @@ export function SessionHistoryMenu({ cwd, anchorEl, onClose, onSelectSession }: 
         </MenuItem>
       )}
       {sessions.map((session) => {
-        const formattedTitle = formatAgentSessionTitle(session.previewText || "");
+        const formattedTitle = formatAgentSessionTitle(session.previewText || "", "Agent Chat", session.sessionName);
 
         return (
           <MenuItem

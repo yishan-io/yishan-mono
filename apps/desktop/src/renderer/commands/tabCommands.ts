@@ -268,9 +268,20 @@ export function reorderTab(draggedTabId: string, targetTabId: string, position: 
   readTabStoreState().reorderTab(draggedTabId, targetTabId, position);
 }
 
-/** Renames one tab title. */
+/** Renames one tab title. For agent-chat tabs, also forwards the rename to the pi session. */
 export function renameTab(tabId: string, title: string, options?: { userRenamed?: boolean }) {
   readTabStoreState().renameTab(tabId, title, options);
+
+  // Forward the rename to the pi session via daemon RPC.
+  const tab = readTabStoreState().tabs.find((t) => t.id === tabId);
+  const sessionId = tab?.kind === "agent-chat" ? tab.data.sessionId?.trim() : undefined;
+  if (sessionId) {
+    void getDaemonClient()
+      .then((client) => client.pi.rename({ sessionId, title }))
+      .catch((error) => {
+        console.error("Failed to rename pi session", error);
+      });
+  }
 }
 
 /** Stores one browser tab favicon URL. */

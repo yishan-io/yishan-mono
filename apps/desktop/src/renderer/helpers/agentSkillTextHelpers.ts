@@ -3,6 +3,7 @@ const SELF_CLOSING_SKILL_MESSAGE_REGEX = /^\s*<skill\b([^>]*)\/>\s*([\s\S]*)$/i;
 const SKILL_NAME_ATTRIBUTE_REGEX = /\bname="([^"]+)"/i;
 const LEADING_SLASH_COMMAND_REGEX = /^\/([a-z][\w-]*)(?:\s+([\s\S]*))?$/;
 const MAX_AGENT_SESSION_TITLE_LENGTH = 40;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type ParsedSkillMessage = {
   skillName: string;
@@ -65,8 +66,24 @@ export function normalizeAgentSessionTitle(messageText: string): string {
   return normalizeSessionText(normalizedMessageText);
 }
 
-/** Formats one agent-chat tab title from raw session text. */
-export function formatAgentSessionTitle(messageText: string, fallbackTitle = "Agent Chat"): string {
+/** Returns true when the string looks like an auto-generated UUID (not a user-set name). */
+function isUuidName(name: string): boolean {
+  return UUID_REGEX.test(name.trim());
+}
+
+/** Formats one agent-chat tab title from raw session text. When sessionName is provided, non-empty, and not a UUID, it is used directly (user-renamed session). UUID names and empty names fall back to messageText. */
+export function formatAgentSessionTitle(
+  messageText: string,
+  fallbackTitle = "Agent Chat",
+  sessionName?: string,
+): string {
+  const trimmedName = sessionName?.trim();
+  if (trimmedName && !isUuidName(trimmedName)) {
+    if (trimmedName.length <= MAX_AGENT_SESSION_TITLE_LENGTH) {
+      return trimmedName;
+    }
+    return `${trimmedName.slice(0, MAX_AGENT_SESSION_TITLE_LENGTH)}…`;
+  }
   const normalizedTitle = normalizeAgentSessionTitle(messageText) || fallbackTitle;
   if (normalizedTitle.length <= MAX_AGENT_SESSION_TITLE_LENGTH) {
     return normalizedTitle;
