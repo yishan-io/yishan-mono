@@ -1,5 +1,7 @@
-import { Box, CircularProgress, Typography } from "@mui/material";
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { Box, CircularProgress, IconButton, Typography } from "@mui/material";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { LuChevronDown } from "react-icons/lu";
 import type {
   AgentContentBlock,
   AgentMessage as AgentMessageType,
@@ -150,6 +152,8 @@ function AgentMessageListComponent({
   const queuedCount = (queuedMessages?.steering.length ?? 0) + (queuedMessages?.followUp.length ?? 0);
   const renderedItemCount = displayMessages.length + (isWorking ? 1 : 0) + queuedCount;
   const previousRenderedItemCountRef = useRef(renderedItemCount);
+  const { t } = useTranslation();
+  const [isScrollToBottomVisible, setIsScrollToBottomVisible] = useState(false);
 
   const updateSavedScrollState = useCallback(() => {
     const element = scrollRef.current;
@@ -160,7 +164,11 @@ function AgentMessageListComponent({
     savedScrollTopByTabId.set(tabId, element.scrollTop);
     savedRenderedItemCountByTabId.set(tabId, renderedItemCount);
     wasPinnedToBottomByTabId.set(tabId, isScrolledNearBottom(element));
-  }, [renderedItemCount, tabId]);
+
+    if (displayMessages.length > 0) {
+      setIsScrollToBottomVisible(!isScrolledNearBottom(element));
+    }
+  }, [displayMessages.length, renderedItemCount, tabId]);
 
   const scrollToLatestMessage = useCallback(() => {
     const element = scrollRef.current;
@@ -171,6 +179,11 @@ function AgentMessageListComponent({
     bottomSentinelRef.current?.scrollIntoView?.({ block: "end" });
     element.scrollTop = element.scrollHeight;
   }, [renderedItemCount]);
+
+  const handleScrollToBottomClick = useCallback(() => {
+    scrollToLatestMessage();
+    setIsScrollToBottomVisible(false);
+  }, [scrollToLatestMessage]);
 
   useEffect(() => {
     const element = scrollRef.current;
@@ -190,6 +203,7 @@ function AgentMessageListComponent({
 
     const frameId = window.requestAnimationFrame(() => {
       scrollToLatestMessage();
+      setIsScrollToBottomVisible(false);
     });
 
     return () => {
@@ -199,6 +213,7 @@ function AgentMessageListComponent({
 
   useEffect(() => {
     if (displayMessages.length === 0) {
+      setIsScrollToBottomVisible(false);
       return;
     }
 
@@ -266,63 +281,92 @@ function AgentMessageListComponent({
 
   return (
     <Box
-      ref={scrollRef}
-      data-testid="agent-message-scroll-container"
-      onScroll={updateSavedScrollState}
       sx={{
         flex: 1,
         minHeight: 0,
-        overflowY: "auto",
-        overflowX: "hidden",
-        px: 2,
-        py: 1,
+        position: "relative",
       }}
     >
       <Box
+        ref={scrollRef}
+        data-testid="agent-message-scroll-container"
+        onScroll={updateSavedScrollState}
         sx={{
-          minHeight: "100%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "flex-end",
-          gap: 1,
+          height: "100%",
+          overflowY: "auto",
+          overflowX: "hidden",
+          px: 2,
+          py: 1,
         }}
       >
-        {displayMessages.map(({ message, mergedToolResults, isStreaming }) => (
-          <AgentMessage
-            key={message.id}
-            message={message}
-            mergedToolResults={mergedToolResults}
-            workspacePath={workspacePath}
-            isStreaming={isStreaming}
-            onOpenCompletedSubagent={onOpenCompletedSubagent}
-          />
-        ))}
-        {isWorking && (
-          <Box
-            data-testid="agent-turn-working-indicator"
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              px: 1.5,
-              py: 1,
-              color: "text.secondary",
-            }}
-          >
-            <CircularProgress size={14} thickness={5} />
-            <Typography
-              variant="caption"
+        <Box
+          sx={{
+            minHeight: "100%",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+            gap: 1,
+          }}
+        >
+          {displayMessages.map(({ message, mergedToolResults, isStreaming }) => (
+            <AgentMessage
+              key={message.id}
+              message={message}
+              mergedToolResults={mergedToolResults}
+              workspacePath={workspacePath}
+              isStreaming={isStreaming}
+              onOpenCompletedSubagent={onOpenCompletedSubagent}
+            />
+          ))}
+          {isWorking && (
+            <Box
+              data-testid="agent-turn-working-indicator"
               sx={{
-                color: "inherit",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: 1.5,
+                py: 1,
+                color: "text.secondary",
               }}
             >
-              working…
-            </Typography>
-          </Box>
-        )}
-        {queuedMessages && <QueuedMessageList steering={queuedMessages.steering} followUp={queuedMessages.followUp} />}
-        <Box ref={bottomSentinelRef} aria-hidden sx={{ height: 1, flexShrink: 0 }} />
+              <CircularProgress size={14} thickness={5} />
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "inherit",
+                }}
+              >
+                working…
+              </Typography>
+            </Box>
+          )}
+          {queuedMessages && (
+            <QueuedMessageList steering={queuedMessages.steering} followUp={queuedMessages.followUp} />
+          )}
+          <Box ref={bottomSentinelRef} aria-hidden sx={{ height: 1, flexShrink: 0 }} />
+        </Box>
       </Box>
+      {isScrollToBottomVisible && displayMessages.length > 0 && (
+        <IconButton
+          data-testid="scroll-to-bottom-button"
+          aria-label={t("agentChat.scrollToBottom")}
+          onClick={handleScrollToBottomClick}
+          sx={{
+            position: "absolute",
+            bottom: 12,
+            right: 12,
+            zIndex: 1,
+            backgroundColor: "background.paper",
+            boxShadow: 2,
+            "&:hover": {
+              backgroundColor: "action.hover",
+            },
+          }}
+        >
+          <LuChevronDown size={20} />
+        </IconButton>
+      )}
     </Box>
   );
 }

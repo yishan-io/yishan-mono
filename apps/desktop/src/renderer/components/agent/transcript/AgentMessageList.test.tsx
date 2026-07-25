@@ -32,44 +32,53 @@ afterEach(() => {
 });
 
 describe("AgentMessageList", () => {
-  it.each(["bash", "read", "edit", "write", "grep", "Agent", "memory_read", "memory_search", "memory_store", "ask_user", "web_fetch"] as const)(
-    "merges %s tool results into the preceding assistant tool call",
-    (toolName) => {
-      const messages: AgentMessageType[] = [
-        {
-          id: "assistant-1",
-          role: "assistant",
-          content: [
-            {
-              type: "toolCall",
-              id: "tool-1",
-              name: toolName,
-              arguments:
-                toolName === "Agent"
-                  ? {
-                      agent: "code-reviewer",
-                      prompt: "Review the code quality of the services directory.",
-                    }
-                  : { path: "src/example.ts" },
-            },
-          ],
-        },
-        {
-          id: "tool-result-1",
-          role: "toolResult",
-          toolCallId: "tool-1",
-          toolName,
-          content: "tool result",
-        },
-      ];
+  it.each([
+    "bash",
+    "read",
+    "edit",
+    "write",
+    "grep",
+    "Agent",
+    "memory_read",
+    "memory_search",
+    "memory_store",
+    "ask_user",
+    "web_fetch",
+  ] as const)("merges %s tool results into the preceding assistant tool call", (toolName) => {
+    const messages: AgentMessageType[] = [
+      {
+        id: "assistant-1",
+        role: "assistant",
+        content: [
+          {
+            type: "toolCall",
+            id: "tool-1",
+            name: toolName,
+            arguments:
+              toolName === "Agent"
+                ? {
+                    agent: "code-reviewer",
+                    prompt: "Review the code quality of the services directory.",
+                  }
+                : { path: "src/example.ts" },
+          },
+        ],
+      },
+      {
+        id: "tool-result-1",
+        role: "toolResult",
+        toolCallId: "tool-1",
+        toolName,
+        content: "tool result",
+      },
+    ];
 
-      render(<AgentMessageList tabId="tab-1" isActive messages={messages} emptyPrompt="empty" />);
+    render(<AgentMessageList tabId="tab-1" isActive messages={messages} emptyPrompt="empty" />);
 
-      expect(screen.getAllByTestId("agent-message-row")).toHaveLength(1);
-      expect(screen.getByTestId("merged-count-assistant-1").textContent).toBe("1");
-      expect(screen.queryByText("tool-result-1")).toBeNull();
-    },
-  );
+    expect(screen.getAllByTestId("agent-message-row")).toHaveLength(1);
+    expect(screen.getByTestId("merged-count-assistant-1").textContent).toBe("1");
+    expect(screen.queryByText("tool-result-1")).toBeNull();
+  });
 
   it("hides assistant error snapshots that have no renderable content", () => {
     render(
@@ -156,7 +165,7 @@ describe("AgentMessageList", () => {
     const { container, rerender } = render(
       <AgentMessageList tabId="tab-manual-scroll" isActive messages={initialMessages} emptyPrompt="empty" />,
     );
-    const scrollContainer = container.firstElementChild as HTMLDivElement;
+    const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
     Object.defineProperties(scrollContainer, {
       clientHeight: { value: 80, configurable: true },
       scrollHeight: { value: 160, configurable: true },
@@ -198,7 +207,7 @@ describe("AgentMessageList", () => {
       <AgentMessageList tabId="tab-scroll" isActive messages={messages} emptyPrompt="empty" />,
     );
 
-    const scrollContainer = container.firstElementChild as HTMLDivElement;
+    const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
     Object.defineProperties(scrollContainer, {
       clientHeight: { value: 80, configurable: true },
       scrollHeight: { value: 120, configurable: true },
@@ -271,5 +280,120 @@ describe("AgentMessageList", () => {
 
     expect(screen.getByTestId("queued-message-list")).toBeTruthy();
     expect(screen.queryByText("empty prompt text")).toBeNull();
+  });
+
+  describe("scroll-to-bottom button", () => {
+    it("is hidden when the scroll position is at or near the bottom", () => {
+      vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      });
+      vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+      const messages: AgentMessageType[] = [
+        { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Hello" }] },
+      ];
+
+      render(<AgentMessageList tabId="tab-scroll-btn-hidden" isActive messages={messages} emptyPrompt="empty" />);
+
+      const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
+      Object.defineProperties(scrollContainer, {
+        clientHeight: { value: 400, configurable: true },
+        scrollHeight: { value: 420, configurable: true },
+        scrollTop: { value: 20, writable: true, configurable: true },
+      });
+      fireEvent.scroll(scrollContainer);
+
+      expect(screen.queryByTestId("scroll-to-bottom-button")).toBeNull();
+    });
+
+    it("appears when scrolled up away from the bottom", () => {
+      vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      });
+      vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+      const messages: AgentMessageType[] = [
+        { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Line 1" }] },
+        { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Line 2" }] },
+        { id: "assistant-3", role: "assistant", content: [{ type: "text", text: "Line 3" }] },
+      ];
+
+      render(<AgentMessageList tabId="tab-scroll-btn-visible" isActive messages={messages} emptyPrompt="empty" />);
+
+      const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
+      Object.defineProperties(scrollContainer, {
+        clientHeight: { value: 80, configurable: true },
+        scrollHeight: { value: 400, configurable: true },
+        scrollTop: { value: 50, writable: true, configurable: true },
+      });
+      fireEvent.scroll(scrollContainer);
+
+      expect(screen.getByTestId("scroll-to-bottom-button")).toBeTruthy();
+    });
+
+    it("scrolls to bottom when clicked", () => {
+      vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      });
+      vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+      const messages: AgentMessageType[] = [
+        { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Line 1" }] },
+        { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Line 2" }] },
+      ];
+
+      render(<AgentMessageList tabId="tab-scroll-btn-click" isActive messages={messages} emptyPrompt="empty" />);
+
+      const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
+      Object.defineProperties(scrollContainer, {
+        clientHeight: { value: 80, configurable: true },
+        scrollHeight: { value: 400, configurable: true },
+        scrollTop: { value: 50, writable: true, configurable: true },
+      });
+      fireEvent.scroll(scrollContainer);
+
+      const button = screen.getByTestId("scroll-to-bottom-button");
+      fireEvent.click(button);
+
+      expect(scrollContainer.scrollTop).toBe(400);
+      expect(screen.queryByTestId("scroll-to-bottom-button")).toBeNull();
+    });
+
+    it("hides when scrolled back to bottom manually", () => {
+      vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      });
+      vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+      const messages: AgentMessageType[] = [
+        { id: "assistant-1", role: "assistant", content: [{ type: "text", text: "Line 1" }] },
+        { id: "assistant-2", role: "assistant", content: [{ type: "text", text: "Line 2" }] },
+      ];
+
+      render(<AgentMessageList tabId="tab-scroll-manual-back" isActive messages={messages} emptyPrompt="empty" />);
+
+      const scrollContainer = screen.getByTestId("agent-message-scroll-container") as HTMLDivElement;
+      Object.defineProperties(scrollContainer, {
+        clientHeight: { value: 80, configurable: true },
+        scrollHeight: { value: 400, configurable: true },
+        scrollTop: { value: 50, writable: true, configurable: true },
+      });
+      fireEvent.scroll(scrollContainer);
+      expect(screen.getByTestId("scroll-to-bottom-button")).toBeTruthy();
+
+      Object.defineProperty(scrollContainer, "scrollTop", { value: 380, writable: true, configurable: true });
+      fireEvent.scroll(scrollContainer);
+      expect(screen.queryByTestId("scroll-to-bottom-button")).toBeNull();
+    });
+
+    it("is not rendered when there are no messages", () => {
+      render(<AgentMessageList tabId="tab-scroll-btn-empty" isActive messages={[]} emptyPrompt="empty" />);
+
+      expect(screen.queryByTestId("scroll-to-bottom-button")).toBeNull();
+    });
   });
 });
