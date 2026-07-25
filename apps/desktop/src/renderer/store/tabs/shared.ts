@@ -24,6 +24,18 @@ export function findExistingTab(
     );
   }
 
+  if (input.kind === "video") {
+    return tabs.find(
+      (tab) => tab.workspaceId === targetWorkspaceId && tab.kind === "video" && tab.data.path === input.path,
+    );
+  }
+
+  if (input.kind === "audio") {
+    return tabs.find(
+      (tab) => tab.workspaceId === targetWorkspaceId && tab.kind === "audio" && tab.data.path === input.path,
+    );
+  }
+
   if (input.kind === "browser") {
     if (input.reuseExisting === false) {
       return undefined;

@@ -154,6 +154,24 @@ export function isImageFile(path: string): boolean {
   return IMAGE_EXTENSIONS.has(ext);
 }
 
+/** Set of file extensions recognized as playable video formats. */
+const VIDEO_EXTENSIONS = new Set(["mp4", "mov", "mkv", "webm", "avi", "wmv", "flv", "m4v"]);
+
+/** Returns true when the given file path refers to a playable video format. */
+export function isVideoFile(path: string): boolean {
+  const ext = getFileExtension(path);
+  return VIDEO_EXTENSIONS.has(ext);
+}
+
+/** Set of file extensions recognized as playable audio formats. */
+const AUDIO_EXTENSIONS = new Set(["mp3", "wav", "flac", "aac", "ogg", "wma", "m4a", "opus"]);
+
+/** Returns true when the given file path refers to a playable audio format. */
+export function isAudioFile(path: string): boolean {
+  const ext = getFileExtension(path);
+  return AUDIO_EXTENSIONS.has(ext);
+}
+
 /**
  * Set of file extensions that should open in an unsupported file view.
  *
@@ -207,17 +225,7 @@ const UNSUPPORTED_FILE_TAB_EXTENSIONS = new Set([
   "ear",
   "wasm",
 
-  // Media (non-image)
-  "mp3",
-  "wav",
-  "flac",
-  "aac",
-  "ogg",
-  "mp4",
-  "mov",
-  "mkv",
-  "webm",
-  "avi",
+  // Media (non-image, non-playable)
 ]);
 
 /** Returns true when the given file path should open in the unsupported file view. */

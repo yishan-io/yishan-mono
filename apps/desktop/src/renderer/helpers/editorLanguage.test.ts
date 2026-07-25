@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { getFileExtension, getLanguageId, getSupportedExtensions, isLanguageSupported } from "./editorLanguage";
+import {
+  getFileExtension,
+  getLanguageId,
+  getSupportedExtensions,
+  isAudioFile,
+  isLanguageSupported,
+  isUnsupportedFileTab,
+  isVideoFile,
+} from "./editorLanguage";
 
 describe("editorLanguage", () => {
   describe("getFileExtension", () => {
@@ -100,6 +108,78 @@ describe("editorLanguage", () => {
       expect(extensions).toContain("cpp");
       expect(extensions).toContain("php");
       expect(extensions).toContain("xml");
+    });
+  });
+
+  describe("isVideoFile", () => {
+    it("returns true for common video extensions", () => {
+      expect(isVideoFile("video.mp4")).toBe(true);
+      expect(isVideoFile("clip.mov")).toBe(true);
+      expect(isVideoFile("movie.mkv")).toBe(true);
+      expect(isVideoFile("stream.webm")).toBe(true);
+      expect(isVideoFile("recording.avi")).toBe(true);
+    });
+
+    it("returns true for Windows-style video paths", () => {
+      expect(isVideoFile("C:\\Users\\videos\\demo.mp4")).toBe(true);
+    });
+
+    it("returns false for non-video files", () => {
+      expect(isVideoFile("image.png")).toBe(false);
+      expect(isVideoFile("song.mp3")).toBe(false);
+      expect(isVideoFile("readme.md")).toBe(false);
+    });
+
+    it("returns false for files without extension", () => {
+      expect(isVideoFile("video")).toBe(false);
+    });
+
+    it("is case-insensitive", () => {
+      expect(isVideoFile("VIDEO.MP4")).toBe(true);
+    });
+  });
+
+  describe("isAudioFile", () => {
+    it("returns true for common audio extensions", () => {
+      expect(isAudioFile("song.mp3")).toBe(true);
+      expect(isAudioFile("audio.wav")).toBe(true);
+      expect(isAudioFile("track.flac")).toBe(true);
+      expect(isAudioFile("podcast.aac")).toBe(true);
+      expect(isAudioFile("sound.ogg")).toBe(true);
+    });
+
+    it("returns true for Windows-style audio paths", () => {
+      expect(isAudioFile("C:\\Users\\music\\song.mp3")).toBe(true);
+    });
+
+    it("returns false for non-audio files", () => {
+      expect(isAudioFile("video.mp4")).toBe(false);
+      expect(isAudioFile("image.png")).toBe(false);
+      expect(isAudioFile("readme.md")).toBe(false);
+    });
+
+    it("returns false for files without extension", () => {
+      expect(isAudioFile("music")).toBe(false);
+    });
+
+    it("is case-insensitive", () => {
+      expect(isAudioFile("SONG.MP3")).toBe(true);
+    });
+  });
+
+  describe("media extensions are not unsupported", () => {
+    it("video extensions are not treated as unsupported", () => {
+      expect(isUnsupportedFileTab("video.mp4")).toBe(false);
+      expect(isUnsupportedFileTab("clip.mov")).toBe(false);
+      expect(isUnsupportedFileTab("movie.mkv")).toBe(false);
+      expect(isUnsupportedFileTab("stream.webm")).toBe(false);
+    });
+
+    it("audio extensions are not treated as unsupported", () => {
+      expect(isUnsupportedFileTab("song.mp3")).toBe(false);
+      expect(isUnsupportedFileTab("audio.wav")).toBe(false);
+      expect(isUnsupportedFileTab("track.flac")).toBe(false);
+      expect(isUnsupportedFileTab("sound.ogg")).toBe(false);
     });
   });
 

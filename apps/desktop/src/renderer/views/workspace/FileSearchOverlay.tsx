@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { buildWorkspaceFileUrl, readFile } from "../../commands/fileCommands";
 import { FileQuickOpenDialog } from "../../components/FileQuickOpenDialog";
-import { isImageFile, isUnsupportedFileTab } from "../../helpers/editorLanguage";
+import { isAudioFile, isImageFile, isUnsupportedFileTab, isVideoFile } from "../../helpers/editorLanguage";
 import { tabStore } from "../../store/tabStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { workspaceUiStore } from "../../store/workspaceUiStore";
@@ -64,6 +64,36 @@ export function FileSearchOverlay() {
           tabStore.getState().openTab({
             workspaceId: selectedWorkspaceId,
             kind: "image",
+            path,
+            dataUrl: buildWorkspaceFileUrl({
+              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              relativePath: path,
+            }),
+            temporary: true,
+          });
+          setSelectedEntryPath(path);
+          return;
+        }
+
+        if (isVideoFile(path)) {
+          tabStore.getState().openTab({
+            workspaceId: selectedWorkspaceId,
+            kind: "video",
+            path,
+            dataUrl: buildWorkspaceFileUrl({
+              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              relativePath: path,
+            }),
+            temporary: true,
+          });
+          setSelectedEntryPath(path);
+          return;
+        }
+
+        if (isAudioFile(path)) {
+          tabStore.getState().openTab({
+            workspaceId: selectedWorkspaceId,
+            kind: "audio",
             path,
             dataUrl: buildWorkspaceFileUrl({
               workspaceWorktreePath: selectedWorkspaceWorktreePath,

@@ -8,7 +8,7 @@ import {
   renameEntry,
   writeClipboardText,
 } from "@renderer/commands/fileCommands";
-import { isImageFile, isUnsupportedFileTab } from "@renderer/helpers/editorLanguage";
+import { isAudioFile, isImageFile, isUnsupportedFileTab, isVideoFile } from "@renderer/helpers/editorLanguage";
 import type { OpenWorkspaceTabInput, WorkspaceTab } from "@renderer/store/types";
 import { type ExternalAppId, SYSTEM_FILE_MANAGER_APP_ID } from "@shared/contracts/externalApps";
 import type { WorkspaceFileEntry } from "@shared/contracts/rpcRequestTypes";
@@ -78,6 +78,36 @@ export function useFileTreeCrud({
           openTab({
             workspaceId: selectedWorkspaceId,
             kind: "image",
+            path,
+            dataUrl: buildWorkspaceFileUrl({
+              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              relativePath: path,
+            }),
+            temporary: Boolean(options?.temporary),
+          });
+          requestFileTreeSelection(path, false);
+          return;
+        }
+
+        if (isVideoFile(path)) {
+          openTab({
+            workspaceId: selectedWorkspaceId,
+            kind: "video",
+            path,
+            dataUrl: buildWorkspaceFileUrl({
+              workspaceWorktreePath: selectedWorkspaceWorktreePath,
+              relativePath: path,
+            }),
+            temporary: Boolean(options?.temporary),
+          });
+          requestFileTreeSelection(path, false);
+          return;
+        }
+
+        if (isAudioFile(path)) {
+          openTab({
+            workspaceId: selectedWorkspaceId,
+            kind: "audio",
             path,
             dataUrl: buildWorkspaceFileUrl({
               workspaceWorktreePath: selectedWorkspaceWorktreePath,

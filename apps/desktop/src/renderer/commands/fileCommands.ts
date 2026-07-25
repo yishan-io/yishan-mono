@@ -2,7 +2,7 @@ import type { WorkspaceEntryAppId } from "../../shared/contracts/externalApps";
 import type { ExternalClipboardReadOutcome } from "../../shared/contracts/rpcRequestTypes";
 import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
 
-const WORKSPACE_FILE_PROTOCOL_URL = "yishan-file://workspace-image";
+const WORKSPACE_FILE_PROTOCOL_URL = "yishan-file://workspace-file";
 
 /** Lists workspace files under one optional directory path, recursively by default. */
 export async function listFiles(params: {

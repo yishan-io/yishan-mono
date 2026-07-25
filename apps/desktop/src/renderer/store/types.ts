@@ -111,6 +111,8 @@ export type WorkspaceTabDataByKind = {
     isIgnored?: boolean;
   };
   image: { path: string; dataUrl: string; isTemporary: boolean };
+  video: { path: string; dataUrl: string; isTemporary: boolean };
+  audio: { path: string; dataUrl: string; isTemporary: boolean };
   terminal: {
     title: string;
     /** Stable terminal pane identity used by observer correlation. */
@@ -162,6 +164,14 @@ export type WorkspaceTab =
       data: WorkspaceTabDataByKind["image"];
     })
   | (WorkspaceTabBase & {
+      kind: "video";
+      data: WorkspaceTabDataByKind["video"];
+    })
+  | (WorkspaceTabBase & {
+      kind: "audio";
+      data: WorkspaceTabDataByKind["audio"];
+    })
+  | (WorkspaceTabBase & {
       kind: "terminal";
       data: WorkspaceTabDataByKind["terminal"];
     })
@@ -202,6 +212,20 @@ export type OpenWorkspaceTabInput =
   | {
       workspaceId?: string;
       kind: "image";
+      path: string;
+      dataUrl: string;
+      temporary?: boolean;
+    }
+  | {
+      workspaceId?: string;
+      kind: "video";
+      path: string;
+      dataUrl: string;
+      temporary?: boolean;
+    }
+  | {
+      workspaceId?: string;
+      kind: "audio";
       path: string;
       dataUrl: string;
       temporary?: boolean;
