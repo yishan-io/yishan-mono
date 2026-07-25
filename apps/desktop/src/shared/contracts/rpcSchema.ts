@@ -74,6 +74,7 @@ export type RpcSchema = {
         workspaceId: string;
         worktreePath: string;
         lifecycleScriptWarnings?: unknown[];
+        taskRunStatus?: "started" | "failed";
       };
       workspaceCreateFailed: {
         workspaceId: string;

@@ -44,6 +44,10 @@ describe("AgentMessageList", () => {
     "memory_store",
     "ask_user",
     "web_fetch",
+    "workspace_list",
+    "workspace_find",
+    "workspace_create",
+    "workspace_close",
   ] as const)("merges %s tool results into the preceding assistant tool call", (toolName) => {
     const messages: AgentMessageType[] = [
       {

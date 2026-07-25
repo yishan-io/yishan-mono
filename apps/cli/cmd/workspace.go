@@ -271,7 +271,7 @@ func extractAPIErrorMessage(body []byte) string {
 func buildTaskRunConfig(agentKind, prompt, model string) *workspace.TaskRunConfig {
 	agentKind = strings.TrimSpace(agentKind)
 	prompt = strings.TrimSpace(prompt)
-	if agentKind == "" || prompt == "" {
+	if prompt == "" {
 		return nil
 	}
 	return &workspace.TaskRunConfig{
