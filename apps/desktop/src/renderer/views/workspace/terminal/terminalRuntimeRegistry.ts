@@ -181,6 +181,17 @@ export function attachTerminalRuntime(tabId: string, placeholder: HTMLElement): 
   // Notify resize handler so PTY gets the new dimensions after fit.
   notifyTerminalResizeIfNeeded(entry, didFitOnAttach);
 
+  // Schedule a safety-net fit after attach.  On the next animation frame the
+  // host should have settled to its final dimensions, so we re-attempt the fit
+  // in case the initial synchronous fit was skipped or produced wrong
+  // dimensions (e.g.  transient intermediate host rect).  The non-forced call
+  // respects MIN_FIT_INTERVAL_MS, so when the initial fit already succeeded
+  // this becomes a cheap no-op.
+  //
+  // Without this safety-net, the terminal can remain at the default 80×24 if
+  // the ResizeObserver chain fails to fire for any reason.
+  scheduleAttachSafetyFit(entry, version);
+
   // If this was a reattach from detached state, refresh the renderer and check for pending exit.
   if (wasDetached) {
     refreshTerminalRenderer(entry, "refresh terminal after reattach");
@@ -404,6 +415,51 @@ export function updateTerminalReadIndex(tabId: string, nextIndex: number): void 
 }
 
 // ─── Internal Helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Schedules a delayed safety-net fit after terminal attach.
+ *
+ * Retries on the next animation frame to catch cases where the initial
+ * synchronous fit in attachTerminalRuntime was skipped (host rect still
+ * zero/transient) or produced wrong dimensions (transient intermediate rect).
+ * If the host rect is still not ready after one frame, falls back to a
+ * 100ms setTimeout retry.
+ *
+ * Uses a non-forced fit so that MIN_FIT_INTERVAL_MS throttles redundant
+ * work when a subsequent synchronous fit (e.g. from a second attach call)
+ * already succeeded before this callback fires.
+ */
+function scheduleAttachSafetyFit(entry: TerminalRuntimeEntry, version: number): void {
+  const runSafetyFit = () => {
+    const current = runtimesByTabId.get(entry.tabId);
+    if (!current || current.version !== version) {
+      return;
+    }
+
+    if (current.state !== "attached") {
+      return;
+    }
+
+    const hostRect = current.hostElement.getBoundingClientRect();
+    if (hostRect.width <= 1 || hostRect.height <= 1) {
+      return false;
+    }
+
+    const didFit = safeFitTerminal(current);
+    notifyTerminalResizeIfNeeded(current, didFit);
+    return true;
+  };
+
+  requestAnimationFrame(() => {
+    if (!runSafetyFit()) {
+      // Host rect still not ready after one frame — retry once more after
+      // a short delay in case layout needs multiple frames to settle.
+      setTimeout(() => {
+        runSafetyFit();
+      }, 100);
+    }
+  });
+}
 
 function parkTerminalHost(entry: TerminalRuntimeEntry): void {
   entry.hostElement.style.visibility = "hidden";
