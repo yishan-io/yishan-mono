@@ -275,6 +275,14 @@ export function openWorkspaceFileSearch() {
   workspaceUiStore.getState().requestFileSearch();
 }
 
+/** Requests selecting a folder path in the file tree and ensures the files tab is visible. */
+export function selectFolderInFileTree(path: string) {
+  const workspaceId = readWorkspaceStoreState().selectedWorkspaceId;
+  workspaceUiStore.getState().setIsRightPaneHidden(workspaceId, false);
+  workspaceUiStore.getState().setRightPaneTab(workspaceId, "files");
+  workspaceUiStore.getState().requestSelectFolderInFileTree(path);
+}
+
 /** Requests deletion of the currently selected file-tree entry. */
 export function deleteSelectedFileTreeEntry() {
   workspaceUiStore.getState().requestDeleteSelection();

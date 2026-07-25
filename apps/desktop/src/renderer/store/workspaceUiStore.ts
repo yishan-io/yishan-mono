@@ -22,6 +22,9 @@ type WorkspaceUiStoreState = {
   /** Whether the right pane is manually hidden per workspace. Falls back to `true` (hidden). */
   isRightPaneHiddenByWorkspaceId: Record<string, boolean>;
   fileSearchRequestKey: number;
+  /** Path and monotonic request id for selecting a folder in the file tree from another view. */
+  selectFolderInFileTreePath: string;
+  selectFolderInFileTreeRequestId: number;
   /** Which overlay panel is currently visible in the main pane, or `null` for none. */
   overlayPanel: OverlayPanel | null;
 
@@ -32,6 +35,8 @@ type WorkspaceUiStoreState = {
   setRightPaneTab: (workspaceId: string, tab: WorkspaceRightPaneTab) => void;
   setIsRightPaneHidden: (workspaceId: string, hidden: boolean) => void;
   requestFileSearch: () => void;
+  /** Dispatches a folder selection signal consumed by FileManagerView. */
+  requestSelectFolderInFileTree: (path: string) => void;
   /** Opens the given overlay panel (closing any other). */
   setOverlayPanel: (panel: OverlayPanel | null) => void;
   /** Closes any open overlay panel. */
@@ -48,6 +53,8 @@ export const workspaceUiStore = create<WorkspaceUiStoreState>()(
     rightPaneTabByWorkspaceId: {},
     isRightPaneHiddenByWorkspaceId: {},
     fileSearchRequestKey: 0,
+    selectFolderInFileTreePath: "",
+    selectFolderInFileTreeRequestId: 0,
     overlayPanel: null,
 
     setSelectedEntryPath: (selectedEntryPath) => {
@@ -81,6 +88,12 @@ export const workspaceUiStore = create<WorkspaceUiStoreState>()(
     requestFileSearch: () => {
       set((state) => {
         state.fileSearchRequestKey += 1;
+      });
+    },
+    requestSelectFolderInFileTree: (path) => {
+      set((state) => {
+        state.selectFolderInFileTreePath = path;
+        state.selectFolderInFileTreeRequestId += 1;
       });
     },
     setOverlayPanel: (panel) => {

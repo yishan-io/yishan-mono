@@ -83,12 +83,15 @@ export function FileManagerView(_props: FileManagerViewProps) {
     : "";
   const deleteSelectionRequestId = workspaceUiStore((state) => state.deleteSelectionRequestId);
   const undoRequestId = workspaceUiStore((state) => state.undoRequestId);
+  const selectFolderInFileTreePath = workspaceUiStore((state) => state.selectFolderInFileTreePath);
+  const selectFolderInFileTreeRequestId = workspaceUiStore((state) => state.selectFolderInFileTreeRequestId);
   const setSelectedEntryPath = workspaceUiStore((state) => state.setSelectedEntryPath);
   const expandedItemsByWorkspaceId = workspaceUiStore((state) => state.expandedFileTreeItemsByWorkspaceId);
   const setExpandedFileTreeItems = workspaceUiStore((state) => state.setExpandedFileTreeItems);
   const selectedTabId = tabStore((state) => state.selectedTabId);
   const tabs = tabStore((state) => state.tabs);
   const lastRevealedTabIdRef = useRef("");
+  const lastAppliedFolderSelectionRequestIdRef = useRef(0);
 
   const expandedItems = selectedWorkspaceId ? (expandedItemsByWorkspaceId[selectedWorkspaceId] ?? []) : [];
 
@@ -142,6 +145,18 @@ export function FileManagerView(_props: FileManagerViewProps) {
     lastRevealedTabIdRef.current = selectedTab.id;
     ops.revealFileInTree(selectedTab.data.path);
   }, [ops, selectedTabId, selectedWorkspaceId, tabs]);
+
+  useEffect(() => {
+    if (
+      !selectFolderInFileTreePath ||
+      selectFolderInFileTreeRequestId === lastAppliedFolderSelectionRequestIdRef.current
+    ) {
+      return;
+    }
+
+    lastAppliedFolderSelectionRequestIdRef.current = selectFolderInFileTreeRequestId;
+    ops.revealFileInTree(selectFolderInFileTreePath);
+  }, [ops, selectFolderInFileTreePath, selectFolderInFileTreeRequestId]);
 
   useFileTreeSignalHandlers({
     selectedEntryPath,

@@ -77,6 +77,7 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
   const { workspaceId } = input;
   const tabsRef = useRef(input.tabs);
   const commandsRef = useRef(input.commands);
+  const seenTabIdsRef = useRef(new Set<string>());
   tabsRef.current = input.tabs;
   commandsRef.current = input.commands;
 
@@ -92,13 +93,21 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
     let queued = false;
     let pendingChangedRelativePaths: string[] | undefined;
     let shouldRefreshAllDiffTabs = false;
+    let pendingRestrictToTabIds: Set<string> | undefined;
     const stopBackendEventPipeline = startBackendEventPipeline();
 
-    const runRefresh = async (changedRelativePaths?: string[], refreshAllDiffTabs = false) => {
+    const runRefresh = async (
+      changedRelativePaths?: string[],
+      refreshAllDiffTabs = false,
+      restrictToTabIds?: Set<string>,
+    ) => {
       if (disposed || inFlight) {
         queued = true;
         if (refreshAllDiffTabs) {
           shouldRefreshAllDiffTabs = true;
+        }
+        if (restrictToTabIds) {
+          pendingRestrictToTabIds = restrictToTabIds;
         }
         if (!pendingChangedRelativePaths || !changedRelativePaths) {
           pendingChangedRelativePaths = undefined;
@@ -115,6 +124,10 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
       try {
         await Promise.all(
           tabs.map(async (tab) => {
+            if (restrictToTabIds && !restrictToTabIds.has(tab.id)) {
+              return;
+            }
+
             const tabChanged = didPathChange(tab.path, changedRelativePaths);
             if (!tabChanged && !(tab.kind === "diff" && refreshAllDiffTabs)) {
               return;
@@ -188,16 +201,25 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
           queued = false;
           const nextChangedRelativePaths = pendingChangedRelativePaths;
           const nextRefreshAllDiffTabs = shouldRefreshAllDiffTabs;
+          const nextRestrictToTabIds = pendingRestrictToTabIds;
           pendingChangedRelativePaths = undefined;
           shouldRefreshAllDiffTabs = false;
-          void runRefresh(nextChangedRelativePaths, nextRefreshAllDiffTabs);
+          pendingRestrictToTabIds = undefined;
+          void runRefresh(nextChangedRelativePaths, nextRefreshAllDiffTabs, nextRestrictToTabIds);
         }
       }
     };
 
-    const scheduleRefresh = (changedRelativePaths?: string[], refreshAllDiffTabs = false) => {
+    const scheduleRefresh = (
+      changedRelativePaths?: string[],
+      refreshAllDiffTabs = false,
+      restrictToTabIds?: Set<string>,
+    ) => {
       if (refreshAllDiffTabs) {
         shouldRefreshAllDiffTabs = true;
+      }
+      if (restrictToTabIds) {
+        pendingRestrictToTabIds = restrictToTabIds;
       }
       if (!pendingChangedRelativePaths || !changedRelativePaths) {
         pendingChangedRelativePaths = changedRelativePaths;
@@ -207,9 +229,11 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
 
       const nextChangedRelativePaths = pendingChangedRelativePaths;
       const nextRefreshAllDiffTabs = shouldRefreshAllDiffTabs;
+      const nextRestrictToTabIds = pendingRestrictToTabIds;
       pendingChangedRelativePaths = undefined;
       shouldRefreshAllDiffTabs = false;
-      void runRefresh(nextChangedRelativePaths, nextRefreshAllDiffTabs);
+      pendingRestrictToTabIds = undefined;
+      void runRefresh(nextChangedRelativePaths, nextRefreshAllDiffTabs, nextRestrictToTabIds);
     };
 
     const unsubscribeWorkspaceFilesChanged = subscribeBackendEvent("workspace.files.changed", (event) => {
@@ -254,4 +278,81 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
       unsubscribeDaemonConnectionStatus();
     };
   }, [input.subscribeDaemonConnectionStatus, workspaceId]);
+
+  // Separate effect for eager refresh of newly-opened tabs — must run whenever
+  // tabs change, unlike the main effect which is scoped to workspaceId changes.
+  useEffect(() => {
+    if (!workspaceId) {
+      return;
+    }
+
+    const currentTabIds = new Set(input.tabs.map((tab) => tab.id));
+    const isInitialMount = seenTabIdsRef.current.size === 0;
+
+    if (isInitialMount) {
+      seenTabIdsRef.current = currentTabIds;
+      return;
+    }
+
+    const previousTabIds = seenTabIdsRef.current;
+    seenTabIdsRef.current = currentTabIds;
+
+    const newTabs = input.tabs.filter((tab) => !previousTabIds.has(tab.id));
+    if (newTabs.length === 0) {
+      return;
+    }
+
+    const commands = commandsRef.current;
+
+    void (async () => {
+      await Promise.all(
+        newTabs.map(async (tab) => {
+          if (tab.kind === "file" && !tab.isDirty && !tab.isUnsupported) {
+            try {
+              const response = await commands.readFile({
+                workspaceId,
+                relativePath: tab.path,
+              });
+              commands.refreshFileTabFromDisk({
+                tabId: tab.id,
+                content: response.content,
+                deleted: false,
+              });
+            } catch {
+              // Eager refresh is best-effort; failures are handled by event-driven refresh.
+            }
+          }
+
+          if (tab.kind === "diff") {
+            try {
+              const response =
+                tab.source?.kind === "commit"
+                  ? await commands.readCommitDiff({
+                      workspaceId,
+                      commitHash: tab.source.commitHash,
+                      relativePath: tab.path,
+                    })
+                  : tab.source?.kind === "branch"
+                    ? await commands.readBranchComparisonDiff({
+                        workspaceId,
+                        targetBranch: tab.source.targetBranch,
+                        relativePath: tab.path,
+                      })
+                    : await commands.readDiff({
+                        workspaceId,
+                        relativePath: tab.path,
+                      });
+              commands.refreshDiffTabContent({
+                tabId: tab.id,
+                oldContent: response.oldContent,
+                newContent: response.newContent,
+              });
+            } catch {
+              // Eager refresh is best-effort.
+            }
+          }
+        }),
+      );
+    })();
+  });
 }

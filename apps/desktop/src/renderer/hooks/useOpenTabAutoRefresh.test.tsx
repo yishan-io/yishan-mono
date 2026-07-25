@@ -315,4 +315,102 @@ describe("useOpenTabAutoRefresh", () => {
       expect(daemonHarness.unsubscribe).toHaveBeenCalledOnce();
     });
   });
+
+  describe("eager refresh for newly-opened tabs", () => {
+    it("refreshes tabs added after initial mount", async () => {
+      const commands = createCommands();
+      const initialTabs: RefreshableOpenTab[] = [{ id: "file-1", kind: "file", path: "src/a.ts", isDirty: false }];
+
+      const { rerender } = renderHook(
+        ({ tabs }) =>
+          useOpenTabAutoRefresh({
+            workspaceId: "workspace-1",
+            tabs,
+            commands,
+          }),
+        { initialProps: { tabs: initialTabs } },
+      );
+
+      // Initial mount should NOT trigger eager refresh.
+      await flushRefreshWork();
+      expect(commands.readFile).not.toHaveBeenCalled();
+
+      // Add a new tab.
+      const updatedTabs: RefreshableOpenTab[] = [
+        ...initialTabs,
+        { id: "file-2", kind: "file", path: "src/b.ts", isDirty: false },
+      ];
+      rerender({ tabs: updatedTabs });
+      await flushRefreshWork();
+
+      // Only the new tab should be refreshed.
+      expect(commands.readFile).toHaveBeenCalledTimes(1);
+      expect(commands.readFile).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/b.ts" });
+      expect(commands.refreshFileTabFromDisk).toHaveBeenCalledWith({
+        tabId: "file-2",
+        content: "content:src/b.ts",
+        deleted: false,
+      });
+    });
+
+    it("refreshes new diff tabs added after initial mount", async () => {
+      const commands = createCommands();
+      const initialTabs: RefreshableOpenTab[] = [{ id: "file-1", kind: "file", path: "src/a.ts", isDirty: false }];
+
+      const { rerender } = renderHook(
+        ({ tabs }) =>
+          useOpenTabAutoRefresh({
+            workspaceId: "workspace-1",
+            tabs,
+            commands,
+          }),
+        { initialProps: { tabs: initialTabs } },
+      );
+
+      await flushRefreshWork();
+      expect(commands.readFile).not.toHaveBeenCalled();
+
+      // Add a new diff tab.
+      const updatedTabs: RefreshableOpenTab[] = [
+        ...initialTabs,
+        { id: "diff-1", kind: "diff", path: "src/changed.ts" },
+      ];
+      rerender({ tabs: updatedTabs });
+      await flushRefreshWork();
+
+      expect(commands.readDiff).toHaveBeenCalledWith({ workspaceId: "workspace-1", relativePath: "src/changed.ts" });
+      expect(commands.refreshDiffTabContent).toHaveBeenCalledWith({
+        tabId: "diff-1",
+        oldContent: "old:src/changed.ts",
+        newContent: "new:src/changed.ts",
+      });
+    });
+
+    it("skips dirty file tabs when eager refreshing", async () => {
+      const commands = createCommands();
+      const initialTabs: RefreshableOpenTab[] = [{ id: "file-1", kind: "file", path: "src/a.ts", isDirty: false }];
+
+      const { rerender } = renderHook(
+        ({ tabs }) =>
+          useOpenTabAutoRefresh({
+            workspaceId: "workspace-1",
+            tabs,
+            commands,
+          }),
+        { initialProps: { tabs: initialTabs } },
+      );
+
+      await flushRefreshWork();
+
+      // Add a dirty new tab — should not be refreshed.
+      const updatedTabs: RefreshableOpenTab[] = [
+        ...initialTabs,
+        { id: "file-2", kind: "file", path: "src/b.ts", isDirty: true },
+      ];
+      rerender({ tabs: updatedTabs });
+      await flushRefreshWork();
+
+      expect(commands.readFile).not.toHaveBeenCalled();
+    });
+  });
 });
