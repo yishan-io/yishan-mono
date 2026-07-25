@@ -16,9 +16,7 @@ type OverviewStoreState = {
   granularity: "hour" | "day";
 
   tokenUsageSeries: TokenUsageSeriesItem[];
-  cachedTotal: number;
-  cachedWriteTotal: number;
-  uncachedTotal: number;
+  grandTotal: number;
   turnTotal: number;
   toolCallTotal: number;
   tokenUsageLoadState: LoadState;
@@ -42,9 +40,7 @@ type OverviewStoreState = {
 
   setTokenUsageData: (
     series: TokenUsageSeriesItem[],
-    cachedTotal: number,
-    cachedWriteTotal: number,
-    uncachedTotal: number,
+    grandTotal: number,
     turnTotal: number,
     toolCallTotal: number,
   ) => void;
@@ -67,9 +63,7 @@ export const overviewStore = create<OverviewStoreState>()(
     granularity: "day",
 
     tokenUsageSeries: [],
-    cachedTotal: 0,
-    cachedWriteTotal: 0,
-    uncachedTotal: 0,
+    grandTotal: 0,
     turnTotal: 0,
     toolCallTotal: 0,
     tokenUsageLoadState: "idle",
@@ -96,8 +90,8 @@ export const overviewStore = create<OverviewStoreState>()(
     setGranularity: (granularity) => {
       set({ granularity });
     },
-    setTokenUsageData: (tokenUsageSeries, cachedTotal, cachedWriteTotal, uncachedTotal, turnTotal, toolCallTotal) => {
-      set({ tokenUsageSeries, cachedTotal, cachedWriteTotal, uncachedTotal, turnTotal, toolCallTotal });
+    setTokenUsageData: (tokenUsageSeries, grandTotal, turnTotal, toolCallTotal) => {
+      set({ tokenUsageSeries, grandTotal, turnTotal, toolCallTotal });
     },
     setTokenUsageLoadState: (tokenUsageLoadState, tokenUsageLoadError = null) => {
       set({ tokenUsageLoadState, tokenUsageLoadError });

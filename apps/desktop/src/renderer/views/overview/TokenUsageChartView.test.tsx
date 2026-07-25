@@ -44,9 +44,7 @@ describe("TokenUsageChartView", () => {
       tokenUsageLoadState: "loaded",
       timeRange: "7d",
       tokenUsageSeries: [],
-      cachedTotal: 0,
-      cachedWriteTotal: 0,
-      uncachedTotal: 0,
+      grandTotal: 0,
       turnTotal: 0,
       toolCallTotal: 0,
     });
@@ -68,8 +66,7 @@ describe("TokenUsageChartView", () => {
     // Two buckets both within the 7-day UTC window
     overviewStore.setState({
       tokenUsageSeries: [makeBucket(utcDateIso(1), 500, 200), makeBucket(utcDateIso(3), 300, 100)],
-      cachedTotal: 300, // API aggregate — intentionally same as chart sum here
-      uncachedTotal: 500,
+      grandTotal: 800,
       turnTotal: 7,
       toolCallTotal: 11,
     });
@@ -93,8 +90,7 @@ describe("TokenUsageChartView", () => {
     // cached=1,000,000, uncached=500,000
     overviewStore.setState({
       tokenUsageSeries: [makeBucket(utcDateIso(1), 1_500_000, 1_000_000)],
-      cachedTotal: 1_000_000,
-      uncachedTotal: 500_000,
+      grandTotal: 1_500_000,
     });
 
     render(<TokenUsageChartView />);
@@ -108,8 +104,7 @@ describe("TokenUsageChartView", () => {
   it("stat numbers use B when the visible total is in the billions", () => {
     overviewStore.setState({
       tokenUsageSeries: [makeBucket(utcDateIso(1), 3_750_000_000, 2_500_000_000)],
-      cachedTotal: 2_500_000_000,
-      uncachedTotal: 1_250_000_000,
+      grandTotal: 3_750_000_000,
     });
 
     render(<TokenUsageChartView />);
@@ -127,9 +122,8 @@ describe("TokenUsageChartView", () => {
 
     overviewStore.setState({
       tokenUsageSeries: [droppedBucket, visibleBucket],
-      // API aggregate includes both buckets (simulates the timezone-drop bug)
-      cachedTotal: 600,
-      uncachedTotal: 1000,
+      // grandTotal from API = sum of both buckets (1600)
+      grandTotal: 1600,
     });
 
     render(<TokenUsageChartView />);
@@ -144,9 +138,7 @@ describe("TokenUsageChartView", () => {
   it("cached percentage is computed from chart totals, not API totals", () => {
     overviewStore.setState({
       tokenUsageSeries: [makeBucket(utcDateIso(2), 400, 100)],
-      // API returns different totals (simulates mismatch)
-      cachedTotal: 300,
-      uncachedTotal: 700,
+      grandTotal: 400,
     });
 
     render(<TokenUsageChartView />);
