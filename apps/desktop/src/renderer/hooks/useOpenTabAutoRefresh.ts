@@ -252,19 +252,6 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
       scheduleRefresh(undefined, true);
     });
 
-    // Eagerly refresh newly-opened tabs that start with placeholder content
-    // (e.g. file tabs opened from chat or diff views without pre-loaded content).
-    // Skip the very first render — only refresh tabs that appear after initial mount.
-    const currentTabIds = new Set(input.tabs.map((tab) => tab.id));
-    const isInitialMount = seenTabIdsRef.current.size === 0;
-    const newTabIds = isInitialMount
-      ? new Set<string>()
-      : new Set(input.tabs.filter((tab) => !seenTabIdsRef.current.has(tab.id)).map((tab) => tab.id));
-    seenTabIdsRef.current = currentTabIds;
-    if (newTabIds.size > 0) {
-      scheduleRefresh(undefined, true, newTabIds);
-    }
-
     let daemonReconnectSeen = false;
     const unsubscribeDaemonConnectionStatus = subscribeDaemonStatus((status) => {
       if (status === "disconnected") {
@@ -291,4 +278,81 @@ export function useOpenTabAutoRefresh(input: UseOpenTabAutoRefreshInput) {
       unsubscribeDaemonConnectionStatus();
     };
   }, [input.subscribeDaemonConnectionStatus, workspaceId]);
+
+  // Separate effect for eager refresh of newly-opened tabs — must run whenever
+  // tabs change, unlike the main effect which is scoped to workspaceId changes.
+  useEffect(() => {
+    if (!workspaceId) {
+      return;
+    }
+
+    const currentTabIds = new Set(input.tabs.map((tab) => tab.id));
+    const isInitialMount = seenTabIdsRef.current.size === 0;
+
+    if (isInitialMount) {
+      seenTabIdsRef.current = currentTabIds;
+      return;
+    }
+
+    const previousTabIds = seenTabIdsRef.current;
+    seenTabIdsRef.current = currentTabIds;
+
+    const newTabs = input.tabs.filter((tab) => !previousTabIds.has(tab.id));
+    if (newTabs.length === 0) {
+      return;
+    }
+
+    const commands = commandsRef.current;
+
+    void (async () => {
+      await Promise.all(
+        newTabs.map(async (tab) => {
+          if (tab.kind === "file" && !tab.isDirty && !tab.isUnsupported) {
+            try {
+              const response = await commands.readFile({
+                workspaceId,
+                relativePath: tab.path,
+              });
+              commands.refreshFileTabFromDisk({
+                tabId: tab.id,
+                content: response.content,
+                deleted: false,
+              });
+            } catch {
+              // Eager refresh is best-effort; failures are handled by event-driven refresh.
+            }
+          }
+
+          if (tab.kind === "diff") {
+            try {
+              const response =
+                tab.source?.kind === "commit"
+                  ? await commands.readCommitDiff({
+                      workspaceId,
+                      commitHash: tab.source.commitHash,
+                      relativePath: tab.path,
+                    })
+                  : tab.source?.kind === "branch"
+                    ? await commands.readBranchComparisonDiff({
+                        workspaceId,
+                        targetBranch: tab.source.targetBranch,
+                        relativePath: tab.path,
+                      })
+                    : await commands.readDiff({
+                        workspaceId,
+                        relativePath: tab.path,
+                      });
+              commands.refreshDiffTabContent({
+                tabId: tab.id,
+                oldContent: response.oldContent,
+                newContent: response.newContent,
+              });
+            } catch {
+              // Eager refresh is best-effort.
+            }
+          }
+        }),
+      );
+    })();
+  });
 }

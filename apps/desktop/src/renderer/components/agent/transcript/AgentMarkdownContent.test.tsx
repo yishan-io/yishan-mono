@@ -176,6 +176,24 @@ describe("AgentMarkdownContent", () => {
     expect(mocked.selectFolderInFileTree).not.toHaveBeenCalled();
   });
 
+  it("treats extensionless dotfiles like .eslintrc as files, not folders", async () => {
+    mocked.parse.mockResolvedValueOnce("<p><code>.eslintrc</code></p>");
+
+    const { container } = render(
+      <AgentMarkdownContent content="`.eslintrc`" workspacePath="/project" />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector(".file-link")).not.toBeNull();
+    });
+
+    const fileLink = container.querySelector(".file-link") as HTMLElement;
+    fireEvent.click(fileLink);
+
+    expect(mocked.openTab).toHaveBeenCalledWith({ kind: "file", path: "/project/.eslintrc" });
+    expect(mocked.selectFolderInFileTree).not.toHaveBeenCalled();
+  });
+
   it("resolves ../ in folder paths before selecting in tree", async () => {
     mocked.parse.mockResolvedValueOnce("<p><code>../sibling-dir/</code></p>");
 

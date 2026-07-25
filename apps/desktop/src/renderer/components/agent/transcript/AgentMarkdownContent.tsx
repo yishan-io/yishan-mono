@@ -34,7 +34,6 @@ function openFileTabInOppositePane(href: string, workspacePath: string): void {
   openTabInOppositePane({ kind: "file", path: resolvedPath });
 }
 
-const FILE_PATH_RE = /^(?:\.{1,2}[\/\\]|[\/\\]|[a-zA-Z]:[\\/])|[\/\\]/;
 const FILE_EXT_RE =
   /\.(?:md|tsx?|jsx?|json|ya?ml|css|html|py|rs|go|java|rb|sh|bash|zsh|sql|graphql|vue|svelte|tf|dockerfile|env|cfg|ini|toml|lock|gitignore|editorconfig|csv|xml|svg)$/i;
 
@@ -43,6 +42,8 @@ function looksLikeFilePath(text: string): boolean {
   if (!text.includes("/") && !text.includes("\\") && !text.startsWith(".")) return false;
   // Must not contain whitespace or obvious non-path tokens.
   if (/\s/.test(text)) return false;
+  // Explicit directory marker → not a file.
+  if (/[/\\]$/.test(text)) return false;
   // Must look like a file: ends with a known extension, or starts like a path.
   if (FILE_EXT_RE.test(text)) return true;
   if (/^[.\/\\]/.test(text) || /^[a-zA-Z]:[\\/]/.test(text)) return true;
@@ -131,12 +132,15 @@ export function AgentMarkdownContent({ content, workspacePath, renderMode = "fin
       span.textContent = filePath;
       span.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (isFolder) {
+        // Check isFile first: dotfiles like .eslintrc match both, treat as files.
+        if (isFile) {
+          if (e.metaKey || e.ctrlKey) {
+            openFileTabInOppositePane(filePath, workspacePath);
+          } else {
+            openFileTab(filePath, workspacePath);
+          }
+        } else if (isFolder) {
           openFolderInFileTree(filePath, workspacePath);
-        } else if (e.metaKey || e.ctrlKey) {
-          openFileTabInOppositePane(filePath, workspacePath);
-        } else {
-          openFileTab(filePath, workspacePath);
         }
       });
       if (lineRangeSuffix) {
@@ -200,12 +204,15 @@ export function AgentMarkdownContent({ content, workspacePath, renderMode = "fin
             void openLink({ url: href });
           }
         } else if (workspacePath) {
-          if (looksLikeFolderPath(href)) {
+          // Check isFile first: dotfiles like .eslintrc match both, treat as files.
+          if (looksLikeFilePath(href)) {
+            if (isOppositeOpen) {
+              openFileTabInOppositePane(href, workspacePath);
+            } else {
+              openFileTab(href, workspacePath);
+            }
+          } else if (looksLikeFolderPath(href)) {
             openFolderInFileTree(href, workspacePath);
-          } else if (isOppositeOpen) {
-            openFileTabInOppositePane(href, workspacePath);
-          } else {
-            openFileTab(href, workspacePath);
           }
         }
       }}
