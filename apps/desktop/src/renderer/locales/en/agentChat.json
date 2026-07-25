@@ -30,6 +30,7 @@
         "unavailable": "Unavailable: {{reason}}"
       }
     },
+    "scrollToBottom": "Scroll to bottom",
     "usageSummary": {
       "currentContext": "Current context",
       "contextCompact": "CTX",

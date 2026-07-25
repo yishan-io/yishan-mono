@@ -30,6 +30,7 @@
         "unavailable": "\u4e0d\u53ef\u7528\uff1a{{reason}}"
       }
     },
+    "scrollToBottom": "滚动到底部",
     "usageSummary": {
       "currentContext": "\u5f53\u524d\u4e0a\u4e0b\u6587",
       "contextCompact": "\u4e0a\u4e0b\u6587",
