@@ -1,0 +1,11 @@
+{
+  "name": "@yishan-io/pi-dev-flow",
+  "version": "0.1.0",
+  "type": "module",
+  "keywords": ["pi-package"],
+  "files": ["skills", "LICENSE", "README.md"],
+  "pi": { "skills": ["./skills"] },
+  "repository": { "type": "git", "url": "https://github.com/yishan-io/yishan-mono", "directory": "packages/pi-dev-flow" },
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
+  "license": "MIT"
+}

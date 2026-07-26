@@ -49,6 +49,10 @@ jobs:
               - 'packages/design-tokens/**'
             pi_memory:
               - 'packages/pi-memory/**'
+            pi_task:
+              - 'packages/pi-task/**'
+            pi_dev_flow:
+              - 'packages/pi-dev-flow/**'
             pi_notify:
               - 'packages/pi-notify/**'
             pi_subagents:
@@ -75,6 +79,8 @@ jobs:
           DESKTOP_CHANGED: ${{ steps.changes.outputs.desktop }}
           DESIGN_TOKENS_CHANGED: ${{ steps.changes.outputs.design_tokens }}
           PI_MEMORY_CHANGED: ${{ steps.changes.outputs.pi_memory }}
+          PI_TASK_CHANGED: ${{ steps.changes.outputs.pi_task }}
+          PI_DEV_FLOW_CHANGED: ${{ steps.changes.outputs.pi_dev_flow }}
           PI_NOTIFY_CHANGED: ${{ steps.changes.outputs.pi_notify }}
           PI_SUBAGENTS_CHANGED: ${{ steps.changes.outputs.pi_subagents }}
           PI_WORKSPACE_CHANGED: ${{ steps.changes.outputs.pi_workspace }}
@@ -121,6 +127,14 @@ jobs:
 
           if (has('ALL_BUN_CHANGED') || has('PI_MEMORY_CHANGED')) {
             addTarget('pi-memory', 'packages/pi-memory', 'bun run test');
+          }
+
+          if (has('ALL_BUN_CHANGED') || has('PI_TASK_CHANGED')) {
+            addTarget('pi-task', 'packages/pi-task', 'bun run test');
+          }
+
+          if (has('ALL_BUN_CHANGED') || has('PI_DEV_FLOW_CHANGED')) {
+            addTarget('pi-dev-flow', 'packages/pi-dev-flow', 'npm pack --dry-run');
           }
 
           if (has('ALL_BUN_CHANGED') || has('PI_NOTIFY_CHANGED')) {

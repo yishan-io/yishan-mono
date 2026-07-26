@@ -1,17 +1,17 @@
 {
-  "name": "@yishan-io/pi-memory",
-  "version": "0.1.1",
+  "name": "@yishan-io/pi-task",
+  "version": "0.1.0",
   "type": "module",
   "keywords": [
     "pi-package"
   ],
   "files": [
     "extensions",
+    "skills",
     "src",
     "!src/**/*.test.ts",
     "LICENSE",
-    "README.md",
-    "skills"
+    "README.md"
   ],
   "exports": {
     ".": "./src/index.ts",
@@ -25,10 +25,12 @@
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-ai": "*",
     "typebox": "*"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^0.80.3",
+    "@earendil-works/pi-ai": "^0.80.3",
     "@types/node": "^24.12.4",
     "typebox": "1.1.38"
   },
@@ -43,7 +45,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/yishan-io/yishan-mono",
-    "directory": "packages/pi-memory"
+    "directory": "packages/pi-task"
   },
   "publishConfig": {
     "access": "public",

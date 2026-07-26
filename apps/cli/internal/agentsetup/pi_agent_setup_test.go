@@ -152,12 +152,12 @@ func TestEnsureDefaultPiExtensionSetupInstallsExtensionsAndSyncsManagedPiAgents(
 	if err := EnsureDefaultPiExtensionSetup(); err != nil {
 		t.Fatalf("ensure default pi extension setup: %v", err)
 	}
-	if len(calls) != 5 {
-		t.Fatalf("expected 5 pi extension install calls, got %d", len(calls))
+	if len(calls) != 7 {
+		t.Fatalf("expected 7 pi extension install calls, got %d", len(calls))
 	}
 
 	expectedAgentDir := filepath.Join(homeDir, ".yishan", "pi", "agent")
-	expectedArgs := [][]string{{"install", piExtensionInstallSource(piNotifyExtensionName)}, {"install", piExtensionInstallSource(piSubagentsExtensionName)}, {"install", piExtensionInstallSource(piMemoryExtensionName)}, {"install", piExtensionInstallSource(piWorkspaceExtensionName)}, {"install", piExtensionInstallSource(piAskExtensionName)}}
+	expectedArgs := [][]string{{"install", piExtensionInstallSource(piNotifyExtensionName)}, {"install", piExtensionInstallSource(piSubagentsExtensionName)}, {"install", piExtensionInstallSource(piMemoryExtensionName)}, {"install", piExtensionInstallSource(piTaskExtensionName)}, {"install", piExtensionInstallSource(piDevFlowExtensionName)}, {"install", piExtensionInstallSource(piWorkspaceExtensionName)}, {"install", piExtensionInstallSource(piAskExtensionName)}}
 	for index, call := range calls {
 		if call.name != "pi" {
 			t.Fatalf("expected pi command, got %q", call.name)
@@ -222,11 +222,11 @@ func TestRemoveDefaultPiExtensionSetupRemovesExtensionsAndManagedPiFiles(t *test
 	if err := RemoveDefaultPiExtensionSetup(); err != nil {
 		t.Fatalf("remove default pi extension setup: %v", err)
 	}
-	if len(calls) != 5 {
-		t.Fatalf("expected 5 pi extension uninstall calls, got %d", len(calls))
+	if len(calls) != 7 {
+		t.Fatalf("expected 7 pi extension uninstall calls, got %d", len(calls))
 	}
 
-	expectedArgs := [][]string{{"uninstall", piNotifyExtensionName}, {"uninstall", piSubagentsExtensionName}, {"uninstall", piMemoryExtensionName}, {"uninstall", piWorkspaceExtensionName}, {"uninstall", piAskExtensionName}}
+	expectedArgs := [][]string{{"uninstall", piNotifyExtensionName}, {"uninstall", piSubagentsExtensionName}, {"uninstall", piMemoryExtensionName}, {"uninstall", piTaskExtensionName}, {"uninstall", piDevFlowExtensionName}, {"uninstall", piWorkspaceExtensionName}, {"uninstall", piAskExtensionName}}
 	for index, call := range calls {
 		if call.name != "pi" {
 			t.Fatalf("expected pi command, got %q", call.name)

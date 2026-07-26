@@ -9,34 +9,8 @@ import (
 )
 
 const (
-	brainstormSkillName                 = "brainstorm"
-	contextMemorySkillName              = "context-memory"
-	contextTaskSkillName                = "context-task"
-	dispatchingParallelAgentsSkillName  = "dispatching-parallel-agents"
-	executingPlansSkillName             = "executing-plans"
-	finishingTaskSkillName              = "finishing-task"
-	receivingCodeReviewSkillName        = "receiving-code-review"
-	requestingCodeReviewSkillName       = "requesting-code-review"
-	startingTaskSkillName               = "starting-task"
-	subagentDrivenDevelopmentSkillName  = "subagent-driven-development"
-	systematicDebuggingSkillName        = "systematic-debugging"
-	testDrivenDevelopmentSkillName      = "test-driven-development"
-	writingPlansSkillName               = "writing-plans"
 
-	// Exported for use by other packages and tests.
-	BrainstormSkillName                = brainstormSkillName
-	ContextMemorySkillName             = contextMemorySkillName
-	ContextTaskSkillName               = contextTaskSkillName
-	DispatchingParallelAgentsSkillName = dispatchingParallelAgentsSkillName
-	ExecutingPlansSkillName            = executingPlansSkillName
-	FinishingTaskSkillName             = finishingTaskSkillName
-	ReceivingCodeReviewSkillName       = receivingCodeReviewSkillName
-	RequestingCodeReviewSkillName      = requestingCodeReviewSkillName
-	StartingTaskSkillName              = startingTaskSkillName
-	SubagentDrivenDevelopmentSkillName = subagentDrivenDevelopmentSkillName
-	SystematicDebuggingSkillName       = systematicDebuggingSkillName
-	TestDrivenDevelopmentSkillName     = testDrivenDevelopmentSkillName
-	WritingPlansSkillName              = writingPlansSkillName
+// Exported for use by other packages and tests.
 )
 
 type SkillInstallResult struct {
