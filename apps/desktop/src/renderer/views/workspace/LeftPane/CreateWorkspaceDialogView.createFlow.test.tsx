@@ -85,19 +85,15 @@ describe("CreateWorkspaceDialogView create flow", () => {
     });
   });
 
-  it("includes optional task-run payload when agent and prompt are provided", async () => {
+  it("uses Pi for optional task runs", async () => {
     renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
     await waitFor(() => {
       expect(getMockedCommands().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
     });
+    expect(getMockedCommands().listAgentModels).toHaveBeenCalledWith("pi");
+    expect(screen.queryByText("Agent")).toBeNull();
 
-    const agentSelect = screen.getByText("Agent").closest('[role="combobox"]');
-    if (!(agentSelect instanceof HTMLElement)) {
-      throw new Error("Agent select not found");
-    }
-    fireEvent.mouseDown(agentSelect);
-    fireEvent.click(await screen.findByRole("option", { name: "settings.agents.items.codex" }));
     fireEvent.change(screen.getByPlaceholderText("Task description / prompt"), {
       target: { value: "Investigate flaky tests" },
     });
@@ -114,7 +110,7 @@ describe("CreateWorkspaceDialogView create flow", () => {
         sourceBranch: "main",
         targetBranch: "task-run-workspace",
         taskRun: {
-          agentKind: "codex",
+          agentKind: "pi",
           prompt: "Investigate flaky tests",
           model: undefined,
         },

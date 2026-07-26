@@ -2,15 +2,87 @@ package daemon
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"yishan/apps/cli/internal/config"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 )
+
+func TestPrepareWorkspaceCreate_ValidatesAndDefaultsTaskRunAgentKind(t *testing.T) {
+	testCases := []struct {
+		name          string
+		agentKind     string
+		wantAgentKind string
+		wantErr       string
+	}{
+		{name: "defaults omitted kind to pi", wantAgentKind: "pi"},
+		{name: "trims Pi kind", agentKind: " pi ", wantAgentKind: "pi"},
+		{name: "rejects Pi subagent definition", agentKind: "builder", wantErr: "unsupported task-run agent kind \"builder\""},
+		{name: "rejects other agent CLI", agentKind: "opencode", wantErr: "unsupported task-run agent kind \"opencode\""},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			handler := newWorkspaceCreateFlowTestHandler(t, "http://unused")
+			plan, err := handler.prepareWorkspaceCreate(context.Background(), workspaceCreateParams{
+				OrganizationID: "org-1",
+				ProjectID:      "proj-1",
+				SourcePath:     "/tmp/primary-repo",
+				RepoKey:        "acme/repo",
+				TargetBranch:   "feature/test",
+				SourceBranch:   "main",
+				TaskRun:        &workspace.TaskRunConfig{AgentKind: testCase.agentKind},
+			})
+			if testCase.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
+					t.Fatalf("err = %v, want error containing %q", err, testCase.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("prepareWorkspaceCreate: %v", err)
+			}
+			if plan.localCreate == nil || plan.localCreate.TaskRun == nil {
+				t.Fatal("local task run = nil, want config")
+			}
+			if plan.localCreate.TaskRun.AgentKind != testCase.wantAgentKind {
+				t.Fatalf("AgentKind = %q, want %q", plan.localCreate.TaskRun.AgentKind, testCase.wantAgentKind)
+			}
+		})
+	}
+}
+
+func TestHandleWorkspaceCreate_RejectsInvalidTaskRunBeforePublishingStart(t *testing.T) {
+	handler := newWorkspaceCreateFlowTestHandler(t, "http://unused")
+	subscriptionID, events := handler.events.Subscribe()
+	defer handler.events.Unsubscribe(subscriptionID)
+
+	params, err := json.Marshal(workspaceCreateParams{
+		OrganizationID: "org-1",
+		ProjectID:      "proj-1",
+		SourcePath:     "/tmp/primary-repo",
+		RepoKey:        "acme/repo",
+		TargetBranch:   "feature/test",
+		SourceBranch:   "main",
+		TaskRun:        &workspace.TaskRunConfig{AgentKind: "builder"},
+	})
+	if err != nil {
+		t.Fatalf("marshal params: %v", err)
+	}
+
+	_, err = handler.handleWorkspaceCreate(context.Background(), params)
+	if err == nil || !strings.Contains(err.Error(), "unsupported task-run agent kind") {
+		t.Fatalf("err = %v, want unsupported task-run agent kind", err)
+	}
+	expectNoEvent(t, events, 100*time.Millisecond)
+}
 
 func TestPrepareWorkspaceCreate_RejectsPrimaryWorkspaceCreate(t *testing.T) {
 	handler := newWorkspaceCreateFlowTestHandler(t, "http://unused")

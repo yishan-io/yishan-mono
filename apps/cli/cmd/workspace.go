@@ -196,7 +196,6 @@ func init() {
 	workspaceCreateCmd.Flags().String("source-branch", "", "source branch for worktree")
 	workspaceCreateCmd.Flags().String("target-node", "", "target node ID (defaults to local daemon node)")
 	workspaceCreateCmd.Flags().String("name", "", "workspace name for worktree path")
-	workspaceCreateCmd.Flags().String("task-run-agent-kind", "", "agent kind for init task run (e.g. opencode)")
 	workspaceCreateCmd.Flags().String("task-run-prompt", "", "initial prompt for task run agent")
 	workspaceCreateCmd.Flags().String("task-run-model", "", "model override for task run agent")
 	cobra.CheckErr(workspaceCreateCmd.MarkFlagRequired("project-id"))
@@ -268,15 +267,13 @@ func extractAPIErrorMessage(body []byte) string {
 	return ""
 }
 
-func buildTaskRunConfig(agentKind, prompt, model string) *workspace.TaskRunConfig {
-	agentKind = strings.TrimSpace(agentKind)
+func buildTaskRunConfig(prompt, model string) *workspace.TaskRunConfig {
 	prompt = strings.TrimSpace(prompt)
 	if prompt == "" {
 		return nil
 	}
 	return &workspace.TaskRunConfig{
-		AgentKind: agentKind,
-		Prompt:    prompt,
-		Model:     strings.TrimSpace(model),
+		Prompt: prompt,
+		Model:  strings.TrimSpace(model),
 	}
 }

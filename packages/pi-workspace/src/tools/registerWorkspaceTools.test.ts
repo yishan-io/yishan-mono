@@ -29,6 +29,36 @@ describe("registerWorkspaceTools", () => {
     ]);
   });
 
+  it("does not expose taskRunAgentKind because new-workspace task runs always use Pi", () => {
+    const tools: Array<{
+      name: string;
+      execute: (...args: unknown[]) => Promise<unknown>;
+      parameters: { properties: Record<string, unknown> };
+    }> = [];
+    const pi = {
+      registerTool(tool: (typeof tools)[number]) {
+        tools.push(tool);
+      },
+    };
+
+    registerWorkspaceTools(
+      pi as never,
+      {
+        list: vi.fn(),
+        find: vi.fn(),
+        create: vi.fn(),
+        close: vi.fn(),
+      } as never,
+    );
+
+    const tool = tools.find((entry) => entry.name === "workspace_create");
+    if (!tool) {
+      throw new Error("Expected workspace_create tool");
+    }
+
+    expect(tool.parameters.properties).not.toHaveProperty("taskRunAgentKind");
+  });
+
   it("routes workspace_create through the backend client", async () => {
     const tools: Array<{ name: string; execute: (...args: unknown[]) => Promise<unknown> }> = [];
     const create = vi.fn(async () => ({ workspaceId: "ws-1", localPath: "/tmp/ws-1", stdout: "Created: ws-1" }));

@@ -90,7 +90,6 @@ describe("createCliWorkspaceClient", () => {
       branch: "feature/branch",
       sourceBranch: "main",
       name: "feature-branch",
-      taskRunAgentKind: "pi",
       taskRunPrompt: "Read task.md",
       taskRunModel: "sonnet",
     });
@@ -108,8 +107,6 @@ describe("createCliWorkspaceClient", () => {
         "main",
         "--name",
         "feature-branch",
-        "--task-run-agent-kind",
-        "pi",
         "--task-run-prompt",
         "Read task.md",
         "--task-run-model",

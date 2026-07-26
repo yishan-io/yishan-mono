@@ -10,7 +10,6 @@ import { useCommands } from "../../../hooks/useCommands";
 import { useDialogRegistration } from "../../../hooks/useDialogRegistration";
 import { buildWorkspaceNavigationPath } from "../../../navigation/workspaceNavigation";
 import { sessionStore } from "../../../store/sessionStore";
-import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { NodeSelectorSection } from "./createWorkspaceDialog/NodeSelectorSection";
@@ -46,8 +45,6 @@ export function CreateWorkspaceDialogView({
   const { createWorkspace, renameWorkspace, renameWorkspaceBranch, listGitBranches, listAgentModels } = useCommands();
   const prefixMode = workspaceSettingsStore((state) => state.prefixMode);
   const customPrefix = workspaceSettingsStore((state) => state.customPrefix);
-  const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
-  const defaultAgentKind = agentSettingsStore((state) => state.defaultAgentKind);
 
   useDialogRegistration(open);
 
@@ -80,8 +77,6 @@ export function CreateWorkspaceDialogView({
     resetDraftInputs,
     selectedWorkspace,
     defaultBranchPrefix,
-    taskAgentKind,
-    setTaskAgentKind,
     taskPrompt,
     setTaskPrompt,
     taskModel,
@@ -95,7 +90,6 @@ export function CreateWorkspaceDialogView({
     daemonId,
     projects: selectableProjects,
     workspaces,
-    defaultTaskAgentKind: defaultAgentKind && inUseByAgentKind[defaultAgentKind] ? defaultAgentKind : undefined,
     prefixMode,
     customPrefix,
     listGitBranches,
@@ -150,14 +144,13 @@ export function CreateWorkspaceDialogView({
         sourceBranch: sourceBranch.trim() || undefined,
         targetBranch: normalizedTargetBranch,
         nodeId: selectedNodeId || undefined,
-        taskRun:
-          taskAgentKind && taskPrompt.trim()
-            ? {
-                agentKind: taskAgentKind,
-                prompt: taskPrompt.trim(),
-                model: taskModel.trim() || undefined,
-              }
-            : undefined,
+        taskRun: taskPrompt.trim()
+          ? {
+              agentKind: "pi",
+              prompt: taskPrompt.trim(),
+              model: taskModel.trim() || undefined,
+            }
+          : undefined,
       });
       resetDraftInputs();
       onClose();
@@ -272,14 +265,11 @@ export function CreateWorkspaceDialogView({
           ) : null}
           {!isRenameMode ? (
             <TaskRunSection
-              taskAgentKind={taskAgentKind}
-              onTaskAgentKindChange={setTaskAgentKind}
               taskPrompt={taskPrompt}
               onTaskPromptChange={setTaskPrompt}
               taskModel={taskModel}
               onTaskModelChange={setTaskModel}
               isCreatingWorkspace={isCreatingWorkspace}
-              inUseByAgentKind={inUseByAgentKind}
               listAgentModels={listAgentModels}
             />
           ) : null}

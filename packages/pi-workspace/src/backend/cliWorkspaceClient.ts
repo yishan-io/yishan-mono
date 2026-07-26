@@ -22,13 +22,7 @@ export function createCliWorkspaceClient(): WorkspaceBackendClient {
   return {
     async list(input: WorkspaceListInput): Promise<WorkspaceListResult> {
       const projectId = input.projectId ?? process.env.YISHAN_PROJECT_ID;
-      const args = [
-        "workspace",
-        "list",
-        "--output",
-        "json",
-        ...buildScopedArgs(input.orgId),
-      ];
+      const args = ["workspace", "list", "--output", "json", ...buildScopedArgs(input.orgId)];
       if (projectId) {
         args.push("--project-id", projectId);
       }
@@ -71,9 +65,6 @@ export function createCliWorkspaceClient(): WorkspaceBackendClient {
       }
       if (input.targetNode) {
         args.push("--target-node", input.targetNode);
-      }
-      if (input.taskRunAgentKind) {
-        args.push("--task-run-agent-kind", input.taskRunAgentKind);
       }
       if (input.taskRunPrompt) {
         args.push("--task-run-prompt", input.taskRunPrompt);

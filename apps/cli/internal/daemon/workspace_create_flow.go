@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"yishan/apps/cli/internal/agentkind"
 	"yishan/apps/cli/internal/api"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
@@ -29,6 +30,9 @@ func (h *JSONRPCHandler) prepareWorkspaceCreate(ctx context.Context, req workspa
 	}
 	if normalized.WorkspaceName == "" {
 		normalized.WorkspaceName = fallbackWorkspaceName(normalized)
+	}
+	if err := validateWorkspaceTaskRun(normalized.TaskRun); err != nil {
+		return preparedWorkspaceCreate{}, err
 	}
 	if normalized.Kind == workspace.KindPrimary {
 		return preparedWorkspaceCreate{}, fmt.Errorf("workspace create only supports worktree workspaces; create a new project to create a primary workspace")
@@ -56,10 +60,25 @@ func normalizeWorkspaceCreateParams(req workspaceCreateParams) workspaceCreatePa
 	req.Kind = strings.TrimSpace(req.Kind)
 	req.Branch = strings.TrimSpace(req.Branch)
 	req.ReplyNodeID = strings.TrimSpace(req.ReplyNodeID)
+	if req.TaskRun != nil {
+		req.TaskRun.AgentKind = strings.TrimSpace(req.TaskRun.AgentKind)
+		req.TaskRun.Prompt = strings.TrimSpace(req.TaskRun.Prompt)
+		req.TaskRun.Model = strings.TrimSpace(req.TaskRun.Model)
+		if req.TaskRun.AgentKind == "" {
+			req.TaskRun.AgentKind = agentkind.Pi
+		}
+	}
 	if req.Kind == "" {
 		req.Kind = workspace.KindWorktree
 	}
 	return req
+}
+
+func validateWorkspaceTaskRun(taskRun *workspace.TaskRunConfig) error {
+	if taskRun == nil || taskRun.AgentKind == agentkind.Pi {
+		return nil
+	}
+	return fmt.Errorf("unsupported task-run agent kind %q; only %q is supported", taskRun.AgentKind, agentkind.Pi)
 }
 
 func fallbackWorkspaceName(req workspaceCreateParams) string {

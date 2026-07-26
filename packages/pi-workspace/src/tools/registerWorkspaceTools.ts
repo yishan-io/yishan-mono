@@ -25,7 +25,6 @@ const workspaceCreateSchema = Type.Object({
   ),
   name: Type.Optional(Type.String({ description: "Workspace name used for the local worktree path." })),
   targetNode: Type.Optional(Type.String({ description: "Optional target node id for workspace creation." })),
-  taskRunAgentKind: Type.Optional(Type.String({ description: "Optional agent kind to launch in the new workspace." })),
   taskRunPrompt: Type.Optional(Type.String({ description: "Optional short prompt for the launched agent." })),
   taskRunModel: Type.Optional(Type.String({ description: "Optional model override for the launched agent." })),
 });
@@ -88,6 +87,7 @@ export function registerWorkspaceTools(pi: ExtensionAPI, client: WorkspaceBacken
     promptGuidelines: [
       "Use workspace_create when the user wants a fresh worktree workspace for isolated feature work.",
       "After workspace_create, do not inspect or modify the new workspace from the current session unless the user explicitly asks to move there.",
+      "New-workspace task runs use the Pi CLI automatically; do not pass a Pi subagent definition such as `builder`.",
       "When launching an agent task run, pass a short stable prompt that points at an existing task file instead of embedding the full task description.",
     ],
     parameters: workspaceCreateSchema,
@@ -99,7 +99,6 @@ export function registerWorkspaceTools(pi: ExtensionAPI, client: WorkspaceBacken
         sourceBranch: params.sourceBranch,
         name: params.name,
         targetNode: params.targetNode,
-        taskRunAgentKind: params.taskRunAgentKind,
         taskRunPrompt: params.taskRunPrompt,
         taskRunModel: params.taskRunModel,
       });
