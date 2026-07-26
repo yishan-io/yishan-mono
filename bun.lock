@@ -141,6 +141,10 @@
         "typebox": "*",
       },
     },
+    "packages/pi-dev-flow": {
+      "name": "@yishan-io/pi-dev-flow",
+      "version": "0.1.0",
+    },
     "packages/pi-memory": {
       "name": "@yishan-io/pi-memory",
       "version": "0.1.1",
@@ -965,6 +969,8 @@
     "@yishan-io/landing": ["@yishan-io/landing@workspace:apps/landing"],
 
     "@yishan-io/pi-ask": ["@yishan-io/pi-ask@workspace:packages/pi-ask"],
+
+    "@yishan-io/pi-dev-flow": ["@yishan-io/pi-dev-flow@workspace:packages/pi-dev-flow"],
 
     "@yishan-io/pi-memory": ["@yishan-io/pi-memory@workspace:packages/pi-memory"],
 

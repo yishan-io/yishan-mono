@@ -46,18 +46,7 @@ type skillFrontMatter struct {
 	Description string
 }
 
-func OfficialSkillNames() []string {
-	return []string{
-		brainstormSkillName,
-		dispatchingParallelAgentsSkillName,
-		receivingCodeReviewSkillName,
-		requestingCodeReviewSkillName,
-		subagentDrivenDevelopmentSkillName,
-		systematicDebuggingSkillName,
-		testDrivenDevelopmentSkillName,
-		writingPlansSkillName,
-	}
-}
+func OfficialSkillNames() []string { return nil }
 
 func ListSkills() ([]SkillInfo, error) {
 	registry, err := loadSkillRegistry()

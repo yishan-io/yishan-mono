@@ -93,39 +93,9 @@ and use it to manage workspaces.`,
 
 var setupSkillCmd = &cobra.Command{
 	Use:   "skill",
-	Short: "Install or remove yishan workflow skills and sub-agent prompts",
-	Long: `Install the current Pi workflow skills and project sub-agent prompts so AI agents
-can use the tracked-task workflow, planning/review skills, and managed Pi sub-agents.
-Creates skill symlinks from the project-owned sources.`,
-	Example: `  yishan setup skill
-  yishan setup skill --remove`,
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		remove, err := cmd.Flags().GetBool("remove")
-		if err != nil {
-			return err
-		}
-		if remove {
-			if err := setup.RemoveOfficialSkills(); err != nil {
-				return err
-			}
-			return output.PrintAny(map[string]any{
-				"action":  "removed",
-				"message": "All yishan workflow skills removed",
-			})
-		}
-		results, err := setup.EnsureOfficialSkills()
-		if err != nil {
-			return err
-		}
-		skillPaths := make([]string, 0, len(results))
-		for _, result := range results {
-			skillPaths = append(skillPaths, result.SkillPath)
-		}
-		return output.PrintAny(map[string]any{
-			"action":  "installed",
-			"skills":  skillPaths,
-			"message": "All yishan workflow skills installed for supported agents",
-		})
+	Short: "Skills are installed through Pi packages or user-provided sources",
+	RunE: func(_ *cobra.Command, _ []string) error {
+		return output.PrintAny(map[string]any{"message": "Yishan workflow skills are provided by managed Pi packages. Use yishan skill for third-party skills."})
 	},
 }
 

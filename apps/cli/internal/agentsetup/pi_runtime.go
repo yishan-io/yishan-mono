@@ -13,6 +13,8 @@ const (
 	piNotifyExtensionName    = "@yishan-io/pi-notify"
 	piSubagentsExtensionName = "@yishan-io/pi-subagents"
 	piMemoryExtensionName    = "@yishan-io/pi-memory"
+	piTaskExtensionName      = "@yishan-io/pi-task"
+	piDevFlowExtensionName   = "@yishan-io/pi-dev-flow"
 	piWorkspaceExtensionName = "@yishan-io/pi-workspace"
 	piAskExtensionName       = "@yishan-io/pi-ask"
 )
@@ -24,6 +26,8 @@ var (
 		piNotifyExtensionName,
 		piSubagentsExtensionName,
 		piMemoryExtensionName,
+		piTaskExtensionName,
+		piDevFlowExtensionName,
 		piWorkspaceExtensionName,
 		piAskExtensionName,
 	}
