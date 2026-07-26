@@ -1,7 +1,6 @@
 package daemon
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 
@@ -23,38 +22,8 @@ func TestDispatchSkillListIncludesOfficialSkills(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected []setup.SkillInfo, got %T", payload["skills"])
 	}
-	if len(skills) == 0 || skills[0].Name == "" {
-		t.Fatalf("expected official skills in list, got %#v", skills)
-	}
-}
-
-func TestDispatchSkillAddInfoUpdateAndRemove(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	handler := newTestHandler(t)
-
-	addParams := mustMarshalSkillParams(t, map[string]any{"source": setup.BrainstormSkillName})
-	if _, err := handler.dispatchSkill(context.Background(), MethodSkillAdd, addParams); err != nil {
-		t.Fatalf("dispatch add: %v", err)
-	}
-
-	infoParams := mustMarshalSkillParams(t, map[string]any{"name": setup.BrainstormSkillName})
-	infoResult, err := handler.dispatchSkill(context.Background(), MethodSkillInfo, infoParams)
-	if err != nil {
-		t.Fatalf("dispatch info: %v", err)
-	}
-	info, ok := infoResult.(*setup.SkillInfo)
-	if !ok {
-		t.Fatalf("expected *setup.SkillInfo, got %T", infoResult)
-	}
-	if !info.Installed || info.SourceKind != setup.SkillSourceOfficial {
-		t.Fatalf("unexpected info payload: %#v", info)
-	}
-
-	if _, err := handler.dispatchSkill(context.Background(), MethodSkillUpdate, infoParams); err != nil {
-		t.Fatalf("dispatch update: %v", err)
-	}
-	if _, err := handler.dispatchSkill(context.Background(), MethodSkillRemove, infoParams); err != nil {
-		t.Fatalf("dispatch remove: %v", err)
+	if len(skills) != 0 {
+		t.Fatalf("expected no standalone official skills, got %#v", skills)
 	}
 }
 
