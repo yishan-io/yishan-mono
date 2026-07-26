@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../../api";
 import type { BranchDropdownGroups } from "../../../components/BranchDropdown";
-import type { DesktopAgentKind } from "../../../helpers/agentSettings";
 import { getErrorMessage } from "../../../helpers/errorHelpers";
 import {
   resolveSourceBranchState,
@@ -24,7 +23,6 @@ type UseCreateWorkspaceDialogStateInput = {
   daemonId: string | undefined;
   projects: WorkspaceProjectRecord[];
   workspaces: WorkspaceItem[];
-  defaultTaskAgentKind?: DesktopAgentKind;
   prefixMode: GitBranchPrefixMode;
   customPrefix: string;
   listGitBranches: (input: { workspaceId?: string; workspaceWorktreePath?: string }) => Promise<{
@@ -61,8 +59,6 @@ export type UseCreateWorkspaceDialogStateResult = {
   selectedWorkspace: WorkspaceItem | undefined;
   selectedProjectBranchListPath: string;
   defaultBranchPrefix: string;
-  taskAgentKind: DesktopAgentKind | "";
-  setTaskAgentKind: React.Dispatch<React.SetStateAction<DesktopAgentKind | "">>;
   taskPrompt: string;
   setTaskPrompt: React.Dispatch<React.SetStateAction<string>>;
   taskModel: string;
@@ -79,7 +75,6 @@ export function useCreateWorkspaceDialogState({
   daemonId,
   projects,
   workspaces,
-  defaultTaskAgentKind,
   prefixMode,
   customPrefix,
   listGitBranches,
@@ -104,7 +99,6 @@ export function useCreateWorkspaceDialogState({
   const [selectedNodeId, setSelectedNodeId] = useState("");
   const [nodes, setNodes] = useState<NodeOption[]>([]);
   const [nodesError, setNodesError] = useState("");
-  const [taskAgentKind, setTaskAgentKind] = useState<DesktopAgentKind | "">(defaultTaskAgentKind ?? "");
   const [taskPrompt, setTaskPrompt] = useState("");
   const [taskModel, setTaskModel] = useState("");
 
@@ -134,7 +128,6 @@ export function useCreateWorkspaceDialogState({
     setName("");
     setTargetBranch("");
     hasEditedTargetBranchRef.current = false;
-    setTaskAgentKind(defaultTaskAgentKind ?? "");
     setTaskPrompt("");
     setTaskModel("");
   };
@@ -149,7 +142,6 @@ export function useCreateWorkspaceDialogState({
     }
     hasSyncedRepoIdForOpenRef.current = true;
     hasEditedTargetBranchRef.current = false;
-    setTaskAgentKind(defaultTaskAgentKind ?? "");
     setTaskPrompt("");
     setTaskModel("");
     setSelectedProjectId((currentProjectId) => {
@@ -161,7 +153,7 @@ export function useCreateWorkspaceDialogState({
       }
       return projects[0]?.id ?? "";
     });
-  }, [defaultTaskAgentKind, open, projectId, projects]);
+  }, [open, projectId, projects]);
 
   useEffect(() => {
     if (!open || isRenameMode || !organizationId) {
@@ -343,8 +335,6 @@ export function useCreateWorkspaceDialogState({
     selectedWorkspace,
     selectedProjectBranchListPath,
     defaultBranchPrefix,
-    taskAgentKind,
-    setTaskAgentKind,
     taskPrompt,
     setTaskPrompt,
     taskModel,

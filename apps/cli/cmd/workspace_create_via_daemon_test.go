@@ -27,7 +27,6 @@ func TestBuildWorkspaceCreateRPCRequest(t *testing.T) {
 	cmd.Flags().Set("source-branch", "main")
 	cmd.Flags().Set("name", "feature-test")
 	cmd.Flags().Set("target-node", "node-2")
-	cmd.Flags().Set("task-run-agent-kind", "claude")
 	cmd.Flags().Set("task-run-prompt", "fix bug")
 	cmd.Flags().Set("task-run-model", "sonnet")
 
@@ -60,8 +59,8 @@ func TestBuildWorkspaceCreateRPCRequest(t *testing.T) {
 	if request.TaskRun == nil {
 		t.Fatal("TaskRun = nil, want config")
 	}
-	if request.TaskRun.AgentKind != "claude" || request.TaskRun.Prompt != "fix bug" || request.TaskRun.Model != "sonnet" {
-		t.Fatalf("TaskRun = %#v, want claude/fix bug/sonnet", request.TaskRun)
+	if request.TaskRun.AgentKind != "" || request.TaskRun.Prompt != "fix bug" || request.TaskRun.Model != "sonnet" {
+		t.Fatalf("TaskRun = %#v, want empty/fix bug/sonnet so the daemon defaults to pi", request.TaskRun)
 	}
 }
 
@@ -178,7 +177,6 @@ func newWorkspaceCreateTestCommand() *cobra.Command {
 	cmd.Flags().String("source-branch", "", "")
 	cmd.Flags().String("target-node", "", "")
 	cmd.Flags().String("name", "", "")
-	cmd.Flags().String("task-run-agent-kind", "", "")
 	cmd.Flags().String("task-run-prompt", "", "")
 	cmd.Flags().String("task-run-model", "", "")
 	return cmd
@@ -200,55 +198,27 @@ func mustMarshalFrontendEvent(t *testing.T, topic string, payload any) json.RawM
 
 func TestBuildTaskRunConfig(t *testing.T) {
 	t.Run("returns nil when prompt is empty", func(t *testing.T) {
-		if got := buildTaskRunConfig("opencode", "", ""); got != nil {
-			t.Fatalf("buildTaskRunConfig(opencode, '', '') = %+v, want nil", got)
+		if got := buildTaskRunConfig("", ""); got != nil {
+			t.Fatalf("buildTaskRunConfig('', '') = %+v, want nil", got)
 		}
 	})
 
-	t.Run("returns nil when both are empty", func(t *testing.T) {
-		if got := buildTaskRunConfig("", "", ""); got != nil {
-			t.Fatalf("buildTaskRunConfig('', '', '') = %+v, want nil", got)
-		}
-	})
-
-	t.Run("returns config with prompt only (no agentKind)", func(t *testing.T) {
-		got := buildTaskRunConfig("", "do something", "")
-		if got == nil {
-			t.Fatal("buildTaskRunConfig('', 'do something', '') returned nil, want non-nil")
-		}
-		if got.Prompt != "do something" {
-			t.Fatalf("Prompt = %q, want %q", got.Prompt, "do something")
-		}
-		if got.AgentKind != "" {
-			t.Fatalf("AgentKind = %q, want empty", got.AgentKind)
-		}
-	})
-
-	t.Run("returns config with both agentKind and prompt", func(t *testing.T) {
-		got := buildTaskRunConfig("opencode", "investigate bug", "gpt-5")
+	t.Run("returns config with prompt and model", func(t *testing.T) {
+		got := buildTaskRunConfig("investigate bug", "gpt-5")
 		if got == nil {
 			t.Fatal("buildTaskRunConfig returned nil, want non-nil")
 		}
-		if got.AgentKind != "opencode" {
-			t.Fatalf("AgentKind = %q, want %q", got.AgentKind, "opencode")
+		if got.AgentKind != "" {
+			t.Fatalf("AgentKind = %q, want empty so the daemon defaults to pi", got.AgentKind)
 		}
-		if got.Prompt != "investigate bug" {
-			t.Fatalf("Prompt = %q, want %q", got.Prompt, "investigate bug")
-		}
-		if got.Model != "gpt-5" {
-			t.Fatalf("Model = %q, want %q", got.Model, "gpt-5")
+		if got.Prompt != "investigate bug" || got.Model != "gpt-5" {
+			t.Fatalf("TaskRun = %#v, want investigate bug/gpt-5", got)
 		}
 	})
 
-	t.Run("returns config with agentKind only (empty prompt)", func(t *testing.T) {
-		if got := buildTaskRunConfig("opencode", "", ""); got != nil {
-			t.Fatalf("buildTaskRunConfig(opencode, '', '') = %+v, want nil", got)
-		}
-	})
-
-	t.Run("returns config with whitespace-only prompt", func(t *testing.T) {
-		if got := buildTaskRunConfig("opencode", "   ", ""); got != nil {
-			t.Fatalf("buildTaskRunConfig(opencode, '   ', '') = %+v, want nil", got)
+	t.Run("returns nil when prompt is whitespace only", func(t *testing.T) {
+		if got := buildTaskRunConfig("   ", ""); got != nil {
+			t.Fatalf("buildTaskRunConfig('   ', '') = %+v, want nil", got)
 		}
 	})
 }

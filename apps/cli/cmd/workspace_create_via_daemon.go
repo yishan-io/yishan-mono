@@ -151,10 +151,6 @@ func buildWorkspaceCreateRPCRequest(cmd *cobra.Command) (workspaceCreateRPCReque
 	if err != nil {
 		return workspaceCreateRPCRequest{}, err
 	}
-	taskRunAgentKind, err := cmd.Flags().GetString("task-run-agent-kind")
-	if err != nil {
-		return workspaceCreateRPCRequest{}, err
-	}
 	taskRunPrompt, err := cmd.Flags().GetString("task-run-prompt")
 	if err != nil {
 		return workspaceCreateRPCRequest{}, err
@@ -185,7 +181,7 @@ func buildWorkspaceCreateRPCRequest(cmd *cobra.Command) (workspaceCreateRPCReque
 		Branch:         strings.TrimSpace(branch),
 		SourceBranch:   strings.TrimSpace(sourceBranch),
 		WorkspaceName:  strings.TrimSpace(name),
-		TaskRun:        buildTaskRunConfig(taskRunAgentKind, taskRunPrompt, taskRunModel),
+		TaskRun:        buildTaskRunConfig(taskRunPrompt, taskRunModel),
 	}, nil
 }
 

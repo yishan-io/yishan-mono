@@ -58,7 +58,6 @@ export interface WorkspaceCreateInput {
   sourceBranch?: string;
   name?: string;
   targetNode?: string;
-  taskRunAgentKind?: string;
   taskRunPrompt?: string;
   taskRunModel?: string;
 }

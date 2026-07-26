@@ -4,7 +4,6 @@ import "./CreateWorkspaceDialogView.testSetup";
 
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { agentSettingsStore } from "../../../store/settings/agentSettingsStore";
 import { workspaceSettingsStore } from "../../../store/settings/workspaceSettingsStore";
 import { workspaceStore } from "../../../store/workspaceStore";
 import { CreateWorkspaceDialogView } from "./CreateWorkspaceDialogView";
@@ -17,47 +16,13 @@ import {
 describe("CreateWorkspaceDialogView branch behavior", () => {
   setupCreateWorkspaceDialogViewTests();
 
-  it("preselects the default agent for task runs when the dialog opens", async () => {
-    agentSettingsStore.setState({
-      ...agentSettingsStore.getState(),
-      defaultAgentKind: "codex",
-    });
-
+  it("loads Pi models regardless of the configured default agent", async () => {
     renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
 
     await waitFor(() => {
-      expect(getMockedCommands().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
+      expect(getMockedCommands().listAgentModels).toHaveBeenCalledWith("pi");
     });
-
-    expect(screen.getAllByRole("combobox")[2]?.textContent).toContain("settings.agents.items.codex");
-    await waitFor(() => {
-      expect(getMockedCommands().listAgentModels).toHaveBeenCalledWith("codex");
-    });
-  });
-
-  it("resets the task-run agent back to the default when the dialog reopens", async () => {
-    agentSettingsStore.setState({
-      ...agentSettingsStore.getState(),
-      defaultAgentKind: "codex",
-    });
-
-    const { rerender } = renderDialog(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
-
-    await waitFor(() => {
-      expect(getMockedCommands().listGitBranches).toHaveBeenCalledWith({ workspaceWorktreePath: "/tmp/repo-1" });
-    });
-
-    const agentSelect = screen.getAllByRole("combobox")[2];
-    if (!agentSelect) {
-      throw new Error("Agent select not found");
-    }
-    fireEvent.mouseDown(agentSelect);
-    fireEvent.click(await screen.findByRole("option", { name: "settings.agents.items.opencode" }));
-
-    rerender(<CreateWorkspaceDialogView open={false} projectId="repo-1" onClose={() => {}} />);
-    rerender(<CreateWorkspaceDialogView open projectId="repo-1" onClose={() => {}} />);
-
-    expect(screen.getAllByRole("combobox")[2]?.textContent).toContain("settings.agents.items.codex");
+    expect(screen.queryByText("Agent")).toBeNull();
   });
 
   it("autocompletes prefix-only branch from workspace name", async () => {

@@ -122,6 +122,7 @@ describe("CreateWorkspaceDialogView node payload", () => {
       true,
     );
     createWorkspace.mockResolvedValue(undefined);
+    listAgentModels.mockResolvedValue({ models: [] });
   });
 
   afterEach(() => {

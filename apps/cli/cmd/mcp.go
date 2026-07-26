@@ -53,7 +53,6 @@ type workspaceCreateArgs struct {
 	NodeID        string `json:"nodeId,omitempty" jsonschema:"Node ID to create the workspace on (defaults to local daemon node)"`
 	WorkspaceName string `json:"workspaceName,omitempty" jsonschema:"Name for the workspace directory (defaults to branch name)"`
 	SetupHook     string `json:"setupHook,omitempty" jsonschema:"Shell command to run after workspace is created (e.g. npm install)"`
-	TaskRunKind   string `json:"taskRunAgentKind,omitempty" jsonschema:"Agent kind for init task run (e.g. opencode, claude)"`
 	TaskRunPrompt string `json:"taskRunPrompt,omitempty" jsonschema:"Initial prompt for the task run agent"`
 	TaskRunModel  string `json:"taskRunModel,omitempty" jsonschema:"Model override for the task run agent"`
 }
@@ -296,14 +295,7 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 			}
 
 			var result map[string]any
-			taskRunArgs := map[string]any{}
-			if args.TaskRunKind != "" && args.TaskRunPrompt != "" {
-				taskRunArgs["agentKind"] = args.TaskRunKind
-				taskRunArgs["prompt"] = args.TaskRunPrompt
-				if args.TaskRunModel != "" {
-					taskRunArgs["model"] = args.TaskRunModel
-				}
-			}
+			taskRunArgs := buildMCPWorkspaceTaskRunArgs(args)
 			callArgs := map[string]any{
 				"repoKey":        args.RepoKey,
 				"sourcePath":     args.SourcePath,
@@ -368,6 +360,18 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 	registerComputerTools(server, daemonClient)
 
 	return server.Run(context.Background(), &mcp.StdioTransport{})
+}
+
+func buildMCPWorkspaceTaskRunArgs(args workspaceCreateArgs) map[string]any {
+	if args.TaskRunPrompt == "" {
+		return nil
+	}
+
+	taskRun := map[string]any{"prompt": args.TaskRunPrompt}
+	if args.TaskRunModel != "" {
+		taskRun["model"] = args.TaskRunModel
+	}
+	return taskRun
 }
 
 func textResult(text string) *mcp.CallToolResult {
