@@ -10,7 +10,6 @@ import (
 
 const (
 	brainstormSkillName                = "brainstorm"
-	contextMemorySkillName             = "context-memory"
 	dispatchingParallelAgentsSkillName = "dispatching-parallel-agents"
 	receivingCodeReviewSkillName       = "receiving-code-review"
 	requestingCodeReviewSkillName      = "requesting-code-review"
@@ -21,7 +20,6 @@ const (
 
 	// Exported for use by other packages and tests.
 	BrainstormSkillName                = brainstormSkillName
-	ContextMemorySkillName             = contextMemorySkillName
 	DispatchingParallelAgentsSkillName = dispatchingParallelAgentsSkillName
 	ReceivingCodeReviewSkillName       = receivingCodeReviewSkillName
 	RequestingCodeReviewSkillName      = requestingCodeReviewSkillName

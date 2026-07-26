@@ -91,28 +91,3 @@ func containsString(values []string, expected string) bool {
 	}
 	return false
 }
-
-func TestEnsureContextMemorySkill_InstallsCanonicalSkillInstructions(t *testing.T) {
-	homeDir := t.TempDir()
-	t.Setenv("HOME", homeDir)
-
-	result, err := AddSkill(ContextMemorySkillName)
-	if err != nil {
-		t.Fatalf("ensure context memory skill: %v", err)
-	}
-
-	content, err := os.ReadFile(result.SkillPath)
-	if err != nil {
-		t.Fatalf("read installed skill: %v", err)
-	}
-	text := string(content)
-	if !strings.Contains(text, "context-memory") {
-		t.Fatal("expected canonical memory skill frontmatter")
-	}
-	if !strings.Contains(text, "MEMORY.md") {
-		t.Fatal("expected canonical memory skill to mention MEMORY.md")
-	}
-	if !strings.Contains(text, ".my-context/") {
-		t.Fatal("expected canonical memory skill to reference .my-context/")
-	}
-}

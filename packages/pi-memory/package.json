@@ -2,8 +2,17 @@
   "name": "@yishan-io/pi-memory",
   "version": "0.1.1",
   "type": "module",
-  "keywords": ["pi-package"],
-  "files": ["extensions", "src", "!src/**/*.test.ts", "LICENSE", "README.md"],
+  "keywords": [
+    "pi-package"
+  ],
+  "files": [
+    "extensions",
+    "src",
+    "!src/**/*.test.ts",
+    "LICENSE",
+    "README.md",
+    "skills"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./extension": "./extensions/index.ts"
@@ -26,6 +35,9 @@
   "pi": {
     "extensions": [
       "./extensions"
+    ],
+    "skills": [
+      "./skills"
     ]
   },
   "repository": {

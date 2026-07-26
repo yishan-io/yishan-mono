@@ -49,7 +49,6 @@ type skillFrontMatter struct {
 func OfficialSkillNames() []string {
 	return []string{
 		brainstormSkillName,
-		contextMemorySkillName,
 		dispatchingParallelAgentsSkillName,
 		receivingCodeReviewSkillName,
 		requestingCodeReviewSkillName,
