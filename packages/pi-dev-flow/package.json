@@ -2,6 +2,11 @@
   "name": "@yishan-io/pi-dev-flow",
   "version": "0.1.0",
   "type": "module",
+  "scripts": {
+    "typecheck": "echo 'No TypeScript sources to typecheck'",
+    "lint": "echo 'No lintable sources'",
+    "test": "echo 'No automated tests'"
+  },
   "keywords": ["pi-package"],
   "files": ["skills", "LICENSE", "README.md"],
   "pi": { "skills": ["./skills"] },
