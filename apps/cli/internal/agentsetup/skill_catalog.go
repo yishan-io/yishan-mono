@@ -50,13 +50,9 @@ func OfficialSkillNames() []string {
 	return []string{
 		brainstormSkillName,
 		contextMemorySkillName,
-		contextTaskSkillName,
 		dispatchingParallelAgentsSkillName,
-		executingPlansSkillName,
-		finishingTaskSkillName,
 		receivingCodeReviewSkillName,
 		requestingCodeReviewSkillName,
-		startingTaskSkillName,
 		subagentDrivenDevelopmentSkillName,
 		systematicDebuggingSkillName,
 		testDrivenDevelopmentSkillName,

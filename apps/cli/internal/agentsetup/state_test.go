@@ -15,7 +15,7 @@ func TestGetInstalledStateIncludesManagedPiSkillDir(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 
-	if _, err := AddSkill(StartingTaskSkillName); err != nil {
+	if _, err := AddSkill(BrainstormSkillName); err != nil {
 		t.Fatalf("add skill: %v", err)
 	}
 	state, err := GetInstalledState()
@@ -23,7 +23,7 @@ func TestGetInstalledStateIncludesManagedPiSkillDir(t *testing.T) {
 		t.Fatalf("get installed state: %v", err)
 	}
 
-	expectedPiSkillPath := filepath.Join(homeDir, ".yishan", "pi", "agent", "skills", StartingTaskSkillName, "SKILL.md")
+	expectedPiSkillPath := filepath.Join(homeDir, ".yishan", "pi", "agent", "skills", BrainstormSkillName, "SKILL.md")
 	if !strings.Contains(state.Skill.SkillPath, expectedPiSkillPath) {
 		t.Fatalf("expected managed pi skill path to contain %s, got %s", expectedPiSkillPath, state.Skill.SkillPath)
 	}

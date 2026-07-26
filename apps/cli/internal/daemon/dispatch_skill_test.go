@@ -32,12 +32,12 @@ func TestDispatchSkillAddInfoUpdateAndRemove(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	handler := newTestHandler(t)
 
-	addParams := mustMarshalSkillParams(t, map[string]any{"source": setup.StartingTaskSkillName})
+	addParams := mustMarshalSkillParams(t, map[string]any{"source": setup.BrainstormSkillName})
 	if _, err := handler.dispatchSkill(context.Background(), MethodSkillAdd, addParams); err != nil {
 		t.Fatalf("dispatch add: %v", err)
 	}
 
-	infoParams := mustMarshalSkillParams(t, map[string]any{"name": setup.StartingTaskSkillName})
+	infoParams := mustMarshalSkillParams(t, map[string]any{"name": setup.BrainstormSkillName})
 	infoResult, err := handler.dispatchSkill(context.Background(), MethodSkillInfo, infoParams)
 	if err != nil {
 		t.Fatalf("dispatch info: %v", err)

@@ -11,12 +11,12 @@ func TestAddSkill_OfficialSkillUsesCanonicalSource(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 
-	result, err := AddSkill(StartingTaskSkillName)
+	result, err := AddSkill(BrainstormSkillName)
 	if err != nil {
 		t.Fatalf("add official skill: %v", err)
 	}
 
-	if !strings.HasSuffix(result.SkillPath, filepath.Join(".yishan", "pi", "agent", "skills", StartingTaskSkillName, "SKILL.md")) {
+	if !strings.HasSuffix(result.SkillPath, filepath.Join(".yishan", "pi", "agent", "skills", BrainstormSkillName, "SKILL.md")) {
 		t.Fatalf("unexpected skill path: %s", result.SkillPath)
 	}
 
@@ -24,15 +24,12 @@ func TestAddSkill_OfficialSkillUsesCanonicalSource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read installed skill: %v", err)
 	}
-	if !strings.Contains(string(content), "name: starting-task") {
+	if !strings.Contains(string(content), "name: brainstorm") {
 		t.Fatalf("expected installed official skill content, got %q", string(content))
 	}
 	// Verify the skill body has meaningful instructional content, not just frontmatter.
-	if !strings.Contains(string(content), ".my-context/tasks/") {
-		t.Fatalf("expected skill body to reference .my-context/tasks/, got %q", string(content))
-	}
-	if !strings.Contains(string(content), "tracked task") {
-		t.Fatalf("expected skill body to mention tracked task, got %q", string(content))
+	if !strings.Contains(string(content), "turn a rough idea into a concrete direction") {
+		t.Fatalf("expected skill body to describe brainstorming, got %q", string(content))
 	}
 
 	registry, err := loadSkillRegistry()
@@ -43,12 +40,12 @@ func TestAddSkill_OfficialSkillUsesCanonicalSource(t *testing.T) {
 		t.Fatalf("expected one official registry entry, got %#v", registry.Skills)
 	}
 
-	expectedPiSkillPath := filepath.Join(homeDir, ".yishan", "pi", "agent", "skills", StartingTaskSkillName)
+	expectedPiSkillPath := filepath.Join(homeDir, ".yishan", "pi", "agent", "skills", BrainstormSkillName)
 	if _, err := os.Lstat(expectedPiSkillPath); err != nil {
 		t.Fatalf("expected pi skill dir: %v", err)
 	}
 
-	info, err := GetSkillInfo(StartingTaskSkillName)
+	info, err := GetSkillInfo(BrainstormSkillName)
 	if err != nil {
 		t.Fatalf("get skill info: %v", err)
 	}
@@ -64,15 +61,15 @@ func TestRemoveSkill_RemovesDirAndRegistry(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)
 
-	if _, err := AddSkill(StartingTaskSkillName); err != nil {
+	if _, err := AddSkill(BrainstormSkillName); err != nil {
 		t.Fatalf("add skill: %v", err)
 	}
 
-	if err := RemoveSkill(StartingTaskSkillName); err != nil {
+	if err := RemoveSkill(BrainstormSkillName); err != nil {
 		t.Fatalf("remove skill: %v", err)
 	}
 
-	piSkillsDir := filepath.Join(homeDir, ".yishan", "pi", "agent", "skills", StartingTaskSkillName)
+	piSkillsDir := filepath.Join(homeDir, ".yishan", "pi", "agent", "skills", BrainstormSkillName)
 	if _, err := os.Stat(piSkillsDir); !os.IsNotExist(err) {
 		t.Fatalf("expected installed skill dir removed, got err=%v", err)
 	}
