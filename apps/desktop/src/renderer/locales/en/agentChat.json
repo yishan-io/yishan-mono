@@ -4,7 +4,8 @@
     "composer": {
       "focusShortcut": "{{shortcut}} to focus",
       "stop": "Stop",
-      "submit": "Submit"
+      "submit": "Submit",
+      "compact": "Compact context"
     },
     "voice": {
       "start": "Click to record voice input",
@@ -31,6 +32,12 @@
       }
     },
     "scrollToBottom": "Scroll to bottom",
+    "compaction": {
+      "generic": "Compacting context…",
+      "manual": "Compacting context…",
+      "threshold": "Auto-compacting context…",
+      "overflow": "Context limit reached; compacting…"
+    },
     "usageSummary": {
       "currentContext": "Current context",
       "contextCompact": "CTX",

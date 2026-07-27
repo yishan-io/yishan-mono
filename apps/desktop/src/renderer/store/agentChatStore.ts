@@ -9,12 +9,14 @@ import {
 } from "../helpers/agentChatBudget";
 import { type RunningSubagentSummary, deriveFinishedSubagents, deriveRunningSubagents } from "./agentChatSubagents";
 import type {
+  AgentCompactionReason,
   AgentMessage,
   AgentModel,
   AgentPendingUiAutoResponse,
   AgentPendingUiRequest,
   AgentQueueState,
   AgentSessionState,
+  AgentSessionStats,
 } from "./agentChatTypes";
 
 const MAX_MESSAGES_PER_TAB = 500;
@@ -29,11 +31,13 @@ type AgentSubagentProgressTarget = {
 type AgentSessionData = {
   sessionId: string;
   state: AgentSessionState;
+  compactionReason: AgentCompactionReason;
   messages: AgentMessage[];
   streamingMessage: AgentMessage | null;
   availableModels: AgentModel[];
   currentModel: AgentModel | null;
   thinkingLevel: string;
+  sessionStats: AgentSessionStats | null;
   queue: AgentQueueState;
   pendingUiRequest: AgentPendingUiRequest | null;
   pendingUiAutoResponse: AgentPendingUiAutoResponse | null;
@@ -54,6 +58,7 @@ type AgentChatStoreState = {
   // Actions
   initSession: (tabId: string, sessionId: string) => void;
   setSessionState: (tabId: string, state: AgentSessionState) => void;
+  setCompactionReason: (tabId: string, reason: AgentCompactionReason) => void;
   setSessionError: (tabId: string, error: string) => void;
   setTurnError: (tabId: string, error: string) => void;
   clearTurnError: (tabId: string) => void;
@@ -64,6 +69,7 @@ type AgentChatStoreState = {
   setAvailableModels: (tabId: string, models: AgentModel[]) => void;
   setCurrentModel: (tabId: string, model: AgentModel) => void;
   setThinkingLevel: (tabId: string, level: string) => void;
+  setSessionStats: (tabId: string, stats: AgentSessionStats) => void;
   setQueue: (tabId: string, queue: AgentQueueState) => void;
   setPendingUiRequest: (tabId: string, request: AgentPendingUiRequest) => void;
   setPendingUiAutoResponse: (tabId: string, response: AgentPendingUiAutoResponse) => void;
@@ -155,11 +161,13 @@ function emptySession(sessionId: string): AgentSessionData {
   return {
     sessionId,
     state: "idle",
+    compactionReason: null,
     messages: [],
     streamingMessage: null,
     availableModels: [],
     currentModel: null,
     thinkingLevel: "medium",
+    sessionStats: null,
     queue: { steering: [], followUp: [] },
     pendingUiRequest: null,
     pendingUiAutoResponse: null,
@@ -239,6 +247,15 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (session) {
           session.state = sessionState;
+        }
+      });
+    },
+
+    setCompactionReason: (tabId, reason) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) {
+          session.compactionReason = reason;
         }
       });
     },
@@ -348,6 +365,15 @@ export const agentChatStore = create<AgentChatStoreState>()(
         const session = state.sessionsByTabId[tabId];
         if (!session) return;
         session.thinkingLevel = level;
+      });
+    },
+
+    setSessionStats: (tabId, stats) => {
+      set((state) => {
+        const session = state.sessionsByTabId[tabId];
+        if (session) {
+          session.sessionStats = stats;
+        }
       });
     },
 

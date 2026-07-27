@@ -4,7 +4,8 @@
     "composer": {
       "focusShortcut": "\u6309 {{shortcut}} \u805a\u7126",
       "stop": "\u505c\u6b62",
-      "submit": "\u63d0\u4ea4"
+      "submit": "\u63d0\u4ea4",
+      "compact": "\u538b\u7f29\u4e0a\u4e0b\u6587"
     },
     "voice": {
       "start": "\u70b9\u51fb\u5f00\u59cb\u8bed\u97f3\u8f93\u5165",
@@ -31,6 +32,12 @@
       }
     },
     "scrollToBottom": "滚动到底部",
+    "compaction": {
+      "generic": "正在压缩上下文…",
+      "manual": "正在压缩上下文…",
+      "threshold": "正在自动压缩上下文…",
+      "overflow": "已达到上下文限制，正在压缩…"
+    },
     "usageSummary": {
       "currentContext": "\u5f53\u524d\u4e0a\u4e0b\u6587",
       "contextCompact": "\u4e0a\u4e0b\u6587",

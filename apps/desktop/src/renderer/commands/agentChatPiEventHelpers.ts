@@ -6,6 +6,7 @@ import type {
   AgentModel,
   AgentPendingUiRequest,
   AgentQueueState,
+  AgentSessionStats,
   AgentStreamEvent,
 } from "../store/agentChatTypes";
 import {
@@ -187,10 +188,29 @@ export function handlePiResponse(tabId: string, sessionId: string, event: Record
       if (typeof data?.thinkingLevel === "string") {
         agentChatStore.getState().setThinkingLevel(tabId, data.thinkingLevel);
       }
-      agentChatStore
-        .getState()
-        .setSessionState(tabId, typeof data?.isStreaming === "boolean" && data.isStreaming ? "running" : "idle");
+      const currentState = agentChatStore.getState().sessionsByTabId[tabId]?.state;
+      if (data?.isCompacting === true) {
+        agentChatStore.getState().setSessionState(tabId, "compacting");
+      } else if (data?.isStreaming === true) {
+        agentChatStore.getState().setCompactionReason(tabId, null);
+        agentChatStore.getState().setSessionState(tabId, "running");
+      } else if (currentState !== "running" && currentState !== "compacting") {
+        agentChatStore.getState().setSessionState(tabId, "idle");
+      }
       agentChatStore.getState().markStateLoaded(tabId);
+      break;
+    }
+    case "get_session_stats": {
+      if (!success) break;
+      const requestSequence = statsRequestSequenceBySessionId.get(sessionId);
+      if (requestSequence === undefined) break;
+      const responseID = typeof event.id === "string" ? event.id : undefined;
+      const expectedID = `agent-chat-stats-${requestSequence}`;
+      if (responseID !== expectedID) break;
+      const stats = normalizeSessionStats(event.data);
+      if (stats) {
+        agentChatStore.getState().setSessionStats(tabId, stats);
+      }
       break;
     }
     case "get_messages": {
@@ -214,6 +234,48 @@ export function handlePiResponse(tabId: string, sessionId: string, event: Record
 async function resyncAgentState(tabId: string, sessionId: string): Promise<void> {
   const client = await getDaemonClient();
   await client.pi.send({ sessionId, command: { type: "get_state" } });
+}
+
+const statsRequestSequenceBySessionId = new Map<string, number>();
+
+export async function refreshAgentSessionStats(sessionId: string): Promise<void> {
+  const requestSequence = (statsRequestSequenceBySessionId.get(sessionId) ?? 0) + 1;
+  statsRequestSequenceBySessionId.set(sessionId, requestSequence);
+  const client = await getDaemonClient();
+  await client.pi.send({
+    sessionId,
+    command: { type: "get_session_stats", id: `agent-chat-stats-${requestSequence}` },
+  });
+}
+
+function normalizeSessionStats(value: unknown): AgentSessionStats | null {
+  if (!isRecord(value) || !isRecord(value.tokens) || typeof value.cost !== "number") return null;
+  const { tokens } = value;
+  const { input, output, cacheRead, cacheWrite, total } = tokens;
+  if (
+    typeof input !== "number" ||
+    typeof output !== "number" ||
+    typeof cacheRead !== "number" ||
+    typeof cacheWrite !== "number" ||
+    typeof total !== "number"
+  ) {
+    return null;
+  }
+  const rawContextUsage = isRecord(value.contextUsage) ? value.contextUsage : undefined;
+  const contextTokens = rawContextUsage?.tokens;
+  const contextWindow = rawContextUsage?.contextWindow;
+  const contextPercent = rawContextUsage?.percent;
+  const contextUsage =
+    (typeof contextTokens === "number" || contextTokens === null) &&
+    typeof contextWindow === "number" &&
+    (typeof contextPercent === "number" || contextPercent === null)
+      ? { tokens: contextTokens, contextWindow, percent: contextPercent }
+      : undefined;
+  return {
+    tokens: { input, output, cacheRead, cacheWrite, total },
+    cost: value.cost,
+    contextUsage,
+  };
 }
 
 // ─── Pi session send commands ─────────────────────────────────────────────────
@@ -258,6 +320,10 @@ export async function setAgentThinkingLevel(opts: {
 
 // ─── Pi event handler ─────────────────────────────────────────────────────────
 
+function parseCompactionReason(value: unknown): "manual" | "threshold" | "overflow" | null {
+  return value === "manual" || value === "threshold" || value === "overflow" ? value : null;
+}
+
 export type PiEventPayload = {
   sessionId: string;
   tabId: string;
@@ -282,14 +348,24 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
 
   switch (event.type) {
     case "agent_start":
+      agentChatStore.getState().setCompactionReason(tabId, null);
       agentChatStore.getState().setSessionState(tabId, "running");
       break;
 
     case "agent_end":
       flushAgentChatStreamBuffer(tabId);
+      break;
+
+    case "agent_settled":
+      flushAgentChatStreamBuffer(tabId);
       agentChatStore.getState().clearPendingUiRequest(tabId);
       agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+      agentChatStore.getState().setCompactionReason(tabId, null);
       agentChatStore.getState().setSessionState(tabId, "idle");
+      // fire-and-forget: stats refresh cannot affect chat lifecycle after settlement.
+      void refreshAgentSessionStats(sessionId).catch((error) => {
+        console.warn("Failed to refresh agent session stats after settlement", error);
+      });
       break;
 
     case "message_start": {
@@ -409,13 +485,34 @@ export function handleAgentPiEvent(payload: PiEventPayload): void {
     }
 
     case "turn_start":
+      break;
+
     case "compaction_start":
+      agentChatStore.getState().setCompactionReason(tabId, parseCompactionReason(event.reason));
+      agentChatStore.getState().setSessionState(tabId, "compacting");
       break;
 
     case "turn_end":
-    case "compaction_end":
       agentChatStore.getState().clearPendingUiAutoResponse(tabId);
       break;
+
+    case "compaction_end": {
+      agentChatStore.getState().clearPendingUiAutoResponse(tabId);
+      const errorMessage = typeof event.errorMessage === "string" ? event.errorMessage.trim() : "";
+      if (errorMessage) {
+        agentChatStore.getState().setTurnError(tabId, errorMessage);
+      }
+      const isManualCompletion = event.reason === "manual" && event.willRetry !== true;
+      if (isManualCompletion || (event.reason === "manual" && (event.aborted === true || errorMessage))) {
+        agentChatStore.getState().setCompactionReason(tabId, null);
+        agentChatStore.getState().setSessionState(tabId, "idle");
+      }
+      // fire-and-forget: Pi reports post-compaction context as unknown until the next assistant usage update.
+      void refreshAgentSessionStats(sessionId).catch((error) => {
+        console.warn("Failed to refresh agent session stats after compaction", error);
+      });
+      break;
+    }
 
     case "response":
       handlePiResponse(tabId, sessionId, event);

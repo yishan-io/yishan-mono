@@ -1,8 +1,14 @@
 import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuArrowUp } from "react-icons/lu";
-import { abortAgent, sendAgentPrompt, setAgentModel, setAgentThinkingLevel } from "../../commands/agentChatCommands";
+import { LuArrowUp, LuShrink } from "react-icons/lu";
+import {
+  abortAgent,
+  compactAgent,
+  sendAgentPrompt,
+  setAgentModel,
+  setAgentThinkingLevel,
+} from "../../commands/agentChatCommands";
 import { renameTab } from "../../commands/tabCommands";
 import { AgentChatVoiceButton } from "../../components/AgentChatVoiceButton";
 import { type ComposerAttachment, ComposerAttachmentBlock } from "../../components/ComposerAttachmentBlock";
@@ -12,10 +18,11 @@ import { AgentChatUsageSummaryLabel } from "../../components/agent/session/Agent
 import { AgentModelSelector } from "../../components/agent/session/AgentModelSelector";
 import { AGENT_CHAT_COMPOSER_FOCUS_EVENT } from "../../events/agentChatComposerFocus";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
+import { getErrorMessage } from "../../helpers/errorHelpers";
 import { generateId } from "../../helpers/generateId";
 import { getSupportedKeyBindings } from "../../shortcuts/keybindings";
 import { agentChatStore } from "../../store/agentChatStore";
-import type { AgentModel } from "../../store/agentChatTypes";
+import { type AgentModel, isAgentSessionBusy } from "../../store/agentChatTypes";
 import { keybindingSettingsStore } from "../../store/settings/keybindingSettingsStore";
 import { tabStore } from "../../store/tabStore";
 import { transformAgentChatPromptForSkills } from "./agentChatSkillPromptTransform";
@@ -44,6 +51,7 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
   const { runningSubagents, subagentProgressTargets, handleOpenSubagent, handleCancelSubagent } =
     useAgentChatSubagentActions({ tabId, workspaceId, cwd, paneId, sessionId });
   const sessionState = agentChatStore((state) => state.sessionsByTabId[tabId]?.state ?? "starting");
+  const compactionReason = agentChatStore((state) => state.sessionsByTabId[tabId]?.compactionReason ?? null);
   const availableModels = agentChatStore((state) => state.sessionsByTabId[tabId]?.availableModels ?? EMPTY_MODELS);
   const currentModel = agentChatStore((state) => state.sessionsByTabId[tabId]?.currentModel ?? null);
   const thinkingLevel = agentChatStore((state) => state.sessionsByTabId[tabId]?.thinkingLevel ?? "medium");
@@ -59,9 +67,21 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
   }, [shortcutOverrides, t]);
   const messageCount = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages.length ?? 0);
   const hasStreamingMessage = agentChatStore((state) => Boolean(state.sessionsByTabId[tabId]?.streamingMessage));
+  const contextPercent = agentChatStore(
+    (state) => state.sessionsByTabId[tabId]?.sessionStats?.contextUsage?.percent ?? 0,
+  );
+  const isSessionBusy = isAgentSessionBusy(sessionState);
+  const canManuallyCompact = contextPercent >= 50;
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
+  const [isManualCompactPending, setIsManualCompactPending] = useState(false);
   const composerContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (sessionState !== "idle") {
+      setIsManualCompactPending(false);
+    }
+  }, [sessionState]);
 
   useEffect(() => {
     const handleFocusRequest = (event: Event) => {
@@ -135,6 +155,18 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
     if (!sessionId) return;
     await abortAgent({ tabId, sessionId });
   }, [sessionId, tabId]);
+
+  const handleCompact = useCallback(async () => {
+    if (!sessionId || isManualCompactPending) return;
+
+    setIsManualCompactPending(true);
+    try {
+      await compactAgent({ sessionId });
+    } catch (error) {
+      agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+      setIsManualCompactPending(false);
+    }
+  }, [isManualCompactPending, sessionId, tabId]);
 
   const handleSubmitButtonClick = useCallback(async () => {
     const nextDraft = draft.trim();
@@ -231,7 +263,11 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
         value={draft}
         onChange={setDraft}
         onSubmit={handleSubmit}
-        disabled={sessionState === "starting"}
+        disabled={
+          sessionState === "starting" ||
+          isManualCompactPending ||
+          (sessionState === "compacting" && compactionReason === "manual")
+        }
         slashCommands={slashCommands}
         focusShortcutHint={focusShortcutHint}
         allowEmptySubmit={attachments.length > 0}
@@ -256,6 +292,20 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
           />
         )}
         <AgentChatUsageSummaryLabel tabId={tabId} />
+        <Tooltip title={t("agentChat.composer.compact")} placement="top">
+          <span>
+            <IconButton
+              aria-label={t("agentChat.composer.compact")}
+              onClick={() => {
+                void handleCompact();
+              }}
+              disabled={sessionState !== "idle" || !canManuallyCompact || isManualCompactPending}
+              size="small"
+            >
+              <LuShrink size={15} />
+            </IconButton>
+          </span>
+        </Tooltip>
         <Box sx={{ flex: 1 }} />
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, overflow: "visible" }}>
           <AgentChatVoiceButton
@@ -263,7 +313,7 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
             disabled={sessionState === "starting"}
             disabledMessage={t("agentChat.voice.unavailableStarting")}
           />
-          {sessionState === "running" ? (
+          {isSessionBusy ? (
             <Tooltip title={t("agentChat.composer.stop")} placement="top">
               <span>
                 <IconButton
@@ -304,7 +354,11 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
                   onClick={() => {
                     void handleSubmitButtonClick();
                   }}
-                  disabled={sessionState === "starting" || (draft.trim().length === 0 && attachments.length === 0)}
+                  disabled={
+                    sessionState === "starting" ||
+                    isManualCompactPending ||
+                    (draft.trim().length === 0 && attachments.length === 0)
+                  }
                   aria-label={t("agentChat.composer.submit")}
                   sx={{
                     width: 34,

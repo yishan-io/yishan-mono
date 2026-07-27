@@ -27,6 +27,7 @@ type AgentMessageListProps = {
   emptyPrompt: string;
   workspacePath?: string;
   isWorking?: boolean;
+  workingLabel?: string;
   queuedMessages?: AgentQueueState;
   onOpenCompletedSubagent?: (target: CompletedSubagentOpenTarget) => void | Promise<void>;
 };
@@ -126,6 +127,7 @@ function AgentMessageListComponent({
   emptyPrompt,
   workspacePath,
   isWorking = false,
+  workingLabel,
   queuedMessages,
   onOpenCompletedSubagent,
 }: AgentMessageListProps) {
@@ -341,7 +343,7 @@ function AgentMessageListComponent({
                   color: "inherit",
                 }}
               >
-                working…
+                {workingLabel ?? "working…"}
               </Typography>
             </Box>
           )}

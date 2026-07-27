@@ -6,8 +6,10 @@ import { splitPaneStore } from "../store/splitPaneStore";
 import { tabStore } from "../store/tabStore";
 import {
   clearPiSessionHandle,
+  compactAgent,
   ensurePiSession,
   handleAgentPiEvent,
+  refreshAgentSessionStats,
   registerAgentSession,
   respondToAgentExtensionUiRequest,
   sendAgentPrompt,
@@ -544,6 +546,20 @@ describe("agentChatCommands.subagent helpers", () => {
         streamingBehavior: undefined,
       },
     });
+  });
+});
+
+describe("agentChatCommands.manual compaction", () => {
+  it("sends Pi's compact command without changing local session state", async () => {
+    agentChatStore.getState().initSession("tab-manual-compact", "session-manual-compact");
+
+    await compactAgent({ sessionId: "session-manual-compact" });
+
+    expect(mocks.send).toHaveBeenCalledWith({
+      sessionId: "session-manual-compact",
+      command: { type: "compact" },
+    });
+    expect(agentChatStore.getState().sessionsByTabId["tab-manual-compact"]?.state).toBe("idle");
   });
 });
 
@@ -1113,7 +1129,7 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
     expect(agentChatStore.getState().sessionsByTabId["tab-extension-ui-auto"]?.pendingUiAutoResponse).toBeNull();
   });
 
-  it("clears pending auto responses when an agent ends", () => {
+  it("clears pending auto responses when an agent settles", () => {
     agentChatStore.getState().initSession("tab-extension-ui-agent-end", "session-extension-ui-agent-end");
     agentChatStore.getState().setPendingUiAutoResponse("tab-extension-ui-agent-end", {
       sourceRequestId: "request-1",
@@ -1126,7 +1142,7 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
       tabId: "tab-extension-ui-agent-end",
       workspaceId: "workspace-1",
       event: {
-        type: "agent_end",
+        type: "agent_settled",
       },
     });
 
@@ -1163,6 +1179,117 @@ describe("agentChatCommands.handleAgentPiEvent", () => {
       },
     });
     expect(agentChatStore.getState().sessionsByTabId["tab-extension-ui-cancel"]?.pendingUiRequest).toBeNull();
+  });
+
+  it("leaves compacting state when manual compaction fails", () => {
+    agentChatStore.getState().initSession("tab-manual-compact-failure", "session-manual-compact-failure");
+
+    handleAgentPiEvent({
+      sessionId: "session-manual-compact-failure",
+      tabId: "tab-manual-compact-failure",
+      workspaceId: "workspace-1",
+      event: { type: "compaction_start", reason: "manual" },
+    });
+    handleAgentPiEvent({
+      sessionId: "session-manual-compact-failure",
+      tabId: "tab-manual-compact-failure",
+      workspaceId: "workspace-1",
+      event: { type: "compaction_end", reason: "manual", aborted: false, errorMessage: "Nothing to compact" },
+    });
+
+    const session = agentChatStore.getState().sessionsByTabId["tab-manual-compact-failure"];
+    expect(session?.state).toBe("idle");
+    expect(session?.turnError).toBe("Nothing to compact");
+  });
+
+  it("returns to idle after successful manual compaction", () => {
+    agentChatStore.getState().initSession("tab-manual-compact-success", "session-manual-compact-success");
+
+    handleAgentPiEvent({
+      sessionId: "session-manual-compact-success",
+      tabId: "tab-manual-compact-success",
+      workspaceId: "workspace-1",
+      event: { type: "compaction_start", reason: "manual" },
+    });
+    handleAgentPiEvent({
+      sessionId: "session-manual-compact-success",
+      tabId: "tab-manual-compact-success",
+      workspaceId: "workspace-1",
+      event: { type: "compaction_end", reason: "manual", aborted: false, willRetry: false, result: {} },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-manual-compact-success"]?.state).toBe("idle");
+  });
+
+  it("keeps an auto-compacting session busy until agent_settled", () => {
+    agentChatStore.getState().initSession("tab-compacting", "session-compacting");
+
+    handleAgentPiEvent({
+      sessionId: "session-compacting",
+      tabId: "tab-compacting",
+      workspaceId: "workspace-1",
+      event: { type: "agent_start" },
+    });
+    handleAgentPiEvent({
+      sessionId: "session-compacting",
+      tabId: "tab-compacting",
+      workspaceId: "workspace-1",
+      event: { type: "compaction_start", reason: "overflow" },
+    });
+    handleAgentPiEvent({
+      sessionId: "session-compacting",
+      tabId: "tab-compacting",
+      workspaceId: "workspace-1",
+      event: { type: "agent_end", willRetry: true },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-compacting"]?.state).toBe("compacting");
+
+    handleAgentPiEvent({
+      sessionId: "session-compacting",
+      tabId: "tab-compacting",
+      workspaceId: "workspace-1",
+      event: { type: "agent_settled" },
+    });
+
+    expect(agentChatStore.getState().sessionsByTabId["tab-compacting"]?.state).toBe("idle");
+  });
+
+  it("accepts only correlated session-stat responses", async () => {
+    agentChatStore.getState().initSession("tab-session-stats", "session-session-stats");
+    const statsData = {
+      tokens: { input: 10, output: 20, cacheRead: 30, cacheWrite: 40, total: 100 },
+      cost: 1.5,
+      contextUsage: { tokens: null, contextWindow: 200_000, percent: null },
+    };
+
+    handleAgentPiEvent({
+      sessionId: "session-session-stats",
+      tabId: "tab-session-stats",
+      workspaceId: "workspace-1",
+      event: { type: "response", command: "get_session_stats", success: true, data: statsData },
+    });
+    expect(agentChatStore.getState().sessionsByTabId["tab-session-stats"]?.sessionStats).toBeNull();
+
+    await refreshAgentSessionStats("session-session-stats");
+    expect(mocks.send).toHaveBeenCalledWith({
+      sessionId: "session-session-stats",
+      command: { type: "get_session_stats", id: "agent-chat-stats-1" },
+    });
+
+    handleAgentPiEvent({
+      sessionId: "session-session-stats",
+      tabId: "tab-session-stats",
+      workspaceId: "workspace-1",
+      event: {
+        type: "response",
+        id: "agent-chat-stats-1",
+        command: "get_session_stats",
+        success: true,
+        data: statsData,
+      },
+    });
+    expect(agentChatStore.getState().sessionsByTabId["tab-session-stats"]?.sessionStats).toEqual(statsData);
   });
 
   it("updates the current model from a successful set_model response", () => {

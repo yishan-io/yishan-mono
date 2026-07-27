@@ -3,12 +3,13 @@ import { generateId } from "../helpers/generateId";
 import type * as Rpc from "../rpc/daemonTypes";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { agentChatStore } from "../store/agentChatStore";
-import type { AgentModel } from "../store/agentChatTypes";
+import { type AgentModel, isAgentSessionBusy } from "../store/agentChatTypes";
 import { tabStore } from "../store/tabStore";
 import type { AgentChatSessionView } from "../store/types";
 import { ensureAgentChatEventRouterReady, registerAgentChatEventRouter } from "./agentChatEventRouter";
 import {
   handleAgentPiEvent,
+  refreshAgentSessionStats,
   registerAgentSession,
   setAgentChatStreamTabVisible,
   setAgentModel,
@@ -19,6 +20,7 @@ import { disposeAgentChatStreamBuffer, flushAgentChatStreamBuffer } from "./agen
 // Re-export moved public APIs so existing callers need no import changes.
 export {
   handleAgentPiEvent,
+  refreshAgentSessionStats,
   registerAgentSession,
   setAgentChatStreamTabVisible,
   setAgentModel,
@@ -221,6 +223,9 @@ export async function reattachPiSession(tabId: string): Promise<void> {
     workspaceId: tab?.workspaceId,
     cwd: tab?.kind === "agent-chat" ? tab.data.cwd : undefined,
   });
+  // Events can be missed while disconnected. Let the immediately following
+  // get_state response establish the current idle/running/compacting phase.
+  agentChatStore.getState().setSessionState(tabId, "starting");
 }
 
 /** Stops the Pi RPC session for a tab. Called when the tab is closed. */
@@ -276,16 +281,20 @@ export async function sendAgentPrompt(opts: {
   const client = await getDaemonClient();
   const tabSession = agentChatStore.getState().sessionsByTabId[opts.tabId];
 
+  const isBusy = isAgentSessionBusy(tabSession?.state);
   await client.pi.send({
     sessionId: opts.sessionId,
     command: {
       type: "prompt",
       message: opts.message,
-      streamingBehavior: tabSession?.state === "running" ? "steer" : undefined,
+      streamingBehavior: isBusy ? "steer" : undefined,
     },
   });
 
   agentChatStore.getState().clearTurnError(opts.tabId);
+  if (isBusy) {
+    return;
+  }
 
   if (!agentChatStore.getState().sessionsByTabId[opts.tabId]?.streamingMessage) {
     agentChatStore.getState().updateStreamingMessage(opts.tabId, {
@@ -306,6 +315,15 @@ export async function abortAgent(opts: { tabId: string; sessionId: string }): Pr
   await client.pi.send({
     sessionId: opts.sessionId,
     command: { type: "abort" },
+  });
+}
+
+/** Manually compacts the current Pi session context. */
+export async function compactAgent(opts: { sessionId: string }): Promise<void> {
+  const client = await getDaemonClient();
+  await client.pi.send({
+    sessionId: opts.sessionId,
+    command: { type: "compact" },
   });
 }
 
