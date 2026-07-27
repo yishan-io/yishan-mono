@@ -7,10 +7,12 @@ import { YISHAN_DIFF_THEME_DARK, YISHAN_DIFF_THEME_LIGHT, getDiffCssVariables } 
 import { ToolDiffStats } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
+import { ToolOutputSection } from "./ToolOutputSection";
 import { ToolPathSummary } from "./ToolPathSummary";
 import {
   type AgentToolCallCardProps,
   buildWriteToolNewFileDiff,
+  extractResultText,
   getDiffStats,
   getToolDisplayPath,
   parseToolDiff,
@@ -28,15 +30,16 @@ export function DiffToolCard({ toolCall, result = null, workspacePath }: AgentTo
     (typeof result?.details?.patch === "string" ? result.details.patch : "") ||
     (typeof result?.details?.diff === "string" ? result.details.diff : "");
   const writeContent = typeof toolCall.arguments.content === "string" ? toolCall.arguments.content : null;
+  const resultText = extractResultText(result);
   const diffStats = patchDiff ? getDiffStats(patchDiff) : null;
   const parsedPatchDiff = useMemo(() => parseToolDiff(patchDiff), [patchDiff]);
   const syntheticWriteDiff = useMemo(() => {
-    if (!isWrite || patchDiff || !diffToolPath || writeContent === null) {
+    if (!isWrite || result?.isError === true || patchDiff || !diffToolPath || writeContent === null) {
       return null;
     }
 
     return buildWriteToolNewFileDiff(diffToolPath, writeContent);
-  }, [diffToolPath, isWrite, patchDiff, writeContent]);
+  }, [diffToolPath, isWrite, patchDiff, result?.isError, writeContent]);
   const renderedDiff = parsedPatchDiff ?? syntheticWriteDiff;
   const rawPatchDiffLines = useMemo(() => {
     const lineCounts = new Map<string, number>();
@@ -122,6 +125,7 @@ export function DiffToolCard({ toolCall, result = null, workspacePath }: AgentTo
           </Box>
         </Collapse>
       ) : null}
+      <ToolOutputSection open={open} resultText={resultText} isError={result?.isError === true} label="response" />
     </ToolCardShell>
   );
 }

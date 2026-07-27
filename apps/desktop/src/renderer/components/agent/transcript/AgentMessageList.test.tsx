@@ -84,6 +84,66 @@ describe("AgentMessageList", () => {
     expect(screen.queryByText("tool-result-1")).toBeNull();
   });
 
+  it("associates delayed parallel results by toolCallId across intervening messages", () => {
+    const messages: AgentMessageType[] = [
+      {
+        id: "assistant-tools",
+        role: "assistant",
+        content: [
+          { type: "toolCall", id: "read-call", name: "read", arguments: { path: "src/read.ts" } },
+          { type: "toolCall", id: "bash-call", name: "bash", arguments: { command: "echo hi" } },
+          { type: "toolCall", id: "custom-call", name: "custom_tool", arguments: { mode: "full" } },
+        ],
+      },
+      { id: "intervening", role: "assistant", content: [{ type: "text", text: "Waiting for results" }] },
+      {
+        id: "bash-result",
+        role: "toolResult",
+        toolCallId: "bash-call",
+        toolName: "bash",
+        content: "bash output",
+      },
+      {
+        id: "read-result",
+        role: "toolResult",
+        toolCallId: "read-call",
+        toolName: "read",
+        content: "read output",
+      },
+      {
+        id: "custom-result",
+        role: "toolResult",
+        toolCallId: "custom-call",
+        toolName: "custom_tool",
+        content: "custom output",
+      },
+      {
+        id: "duplicate-bash-result",
+        role: "toolResult",
+        toolCallId: "bash-call",
+        toolName: "bash",
+        content: "duplicate bash output",
+      },
+      {
+        id: "unmatched-result",
+        role: "toolResult",
+        toolCallId: "missing-call",
+        toolName: "read",
+        content: "keep me visible",
+      },
+    ];
+
+    render(<AgentMessageList tabId="tab-delayed" isActive messages={messages} emptyPrompt="empty" />);
+
+    expect(screen.getByTestId("merged-count-assistant-tools").textContent).toBe("3");
+    expect(screen.getAllByTestId("agent-message-row")).toHaveLength(4);
+    expect(screen.queryByText("bash-result")).toBeNull();
+    expect(screen.queryByText("read-result")).toBeNull();
+    expect(screen.queryByText("custom-result")).toBeNull();
+    expect(screen.getByText("duplicate-bash-result")).toBeTruthy();
+    expect(screen.getByText("unmatched-result")).toBeTruthy();
+  });
+
   it("hides assistant error snapshots that have no renderable content", () => {
     render(
       <AgentMessageList

@@ -26,7 +26,11 @@ export function ToolExpandableSummary({
       }}
     >
       {children}
-      <IconButton sx={{ width: 20, height: 20, flexShrink: 0, ml: "auto" }}>
+      <IconButton
+        aria-expanded={open}
+        aria-label={open ? "Collapse tool details" : "Expand tool details"}
+        sx={{ width: 20, height: 20, flexShrink: 0, ml: "auto" }}
+      >
         {open ? (
           <LuChevronDown data-testid="tool-chevron-down" size={14} />
         ) : (

@@ -2,11 +2,7 @@ import { Box, CircularProgress, IconButton, Typography } from "@mui/material";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
-import type {
-  AgentContentBlock,
-  AgentMessage as AgentMessageType,
-  AgentQueueState,
-} from "../../../store/agentChatTypes";
+import type { AgentMessage as AgentMessageType, AgentQueueState } from "../../../store/agentChatTypes";
 import type { CompletedSubagentOpenTarget } from "../tool-calls/helpers";
 import { AgentMessage } from "./AgentMessage";
 import { QueuedMessageList } from "./QueuedMessageList";
@@ -38,42 +34,60 @@ type DisplayMessage = {
   isStreaming: boolean;
 };
 
-function hasToolCall(message: AgentMessageType, toolCallId: string | undefined): boolean {
-  if (!toolCallId || message.role !== "assistant" || !Array.isArray(message.content)) {
-    return false;
-  }
-  return message.content.some(
-    (block): block is Extract<AgentContentBlock, { type: "toolCall" }> =>
-      block.type === "toolCall" && block.id === toolCallId,
-  );
-}
+type ToolCallOwner = {
+  messageId: string;
+};
 
-function shouldMergeToolResult(message: AgentMessageType, previous: DisplayMessage | undefined): boolean {
-  if (!previous) {
-    return false;
+function buildDisplayMessages(source: AgentMessageType[]): DisplayMessage[] {
+  const toolCallOwners = new Map<string, ToolCallOwner>();
+  const resultsByAssistantMessageId = new Map<string, AgentToolResultMap>();
+  const mergedResultIds = new Set<string>();
+
+  for (const message of source) {
+    if (message.role !== "assistant" || !Array.isArray(message.content)) {
+      continue;
+    }
+
+    for (const block of message.content) {
+      if (block.type === "toolCall" && !toolCallOwners.has(block.id)) {
+        toolCallOwners.set(block.id, { messageId: message.id });
+      }
+    }
   }
-  return (
-    message.role === "toolResult" &&
-    typeof message.toolName === "string" &&
-    [
-      "bash",
-      "read",
-      "edit",
-      "write",
-      "grep",
-      "Agent",
-      "memory_read",
-      "memory_search",
-      "memory_store",
-      "ask_user",
-      "web_fetch",
-      "workspace_list",
-      "workspace_find",
-      "workspace_create",
-      "workspace_close",
-    ].includes(message.toolName) &&
-    hasToolCall(previous.message, message.toolCallId)
-  );
+
+  for (const message of source) {
+    if (message.role !== "toolResult" || !message.toolCallId) {
+      continue;
+    }
+
+    const toolCallOwner = toolCallOwners.get(message.toolCallId);
+    if (!toolCallOwner || mergedResultIds.has(message.id)) {
+      continue;
+    }
+
+    const mergedResults = resultsByAssistantMessageId.get(toolCallOwner.messageId) ?? {};
+    if (mergedResults[message.toolCallId]) {
+      continue;
+    }
+
+    mergedResults[message.toolCallId] = message;
+    resultsByAssistantMessageId.set(toolCallOwner.messageId, mergedResults);
+    mergedResultIds.add(message.id);
+  }
+
+  return source.flatMap((message) => {
+    if (shouldHideMessage(message) || mergedResultIds.has(message.id)) {
+      return [];
+    }
+
+    return [
+      {
+        message,
+        mergedToolResults: resultsByAssistantMessageId.get(message.id) ?? {},
+        isStreaming: false,
+      },
+    ];
+  });
 }
 
 function isScrolledNearBottom(element: HTMLDivElement): boolean {
@@ -137,23 +151,14 @@ function AgentMessageListComponent({
   const hasRenderedTranscriptRef = useRef(false);
   const displayMessages = useMemo(() => {
     const source = trailingMessage ? [...messages, trailingMessage] : messages;
-    return source.reduce<DisplayMessage[]>((acc, message, index) => {
-      if (shouldHideMessage(message)) {
-        return acc;
+    const display = buildDisplayMessages(source);
+    if (trailingMessage) {
+      const trailingDisplayMessage = display.find((displayMessage) => displayMessage.message.id === trailingMessage.id);
+      if (trailingDisplayMessage) {
+        trailingDisplayMessage.isStreaming = true;
       }
-
-      const previous = acc[acc.length - 1];
-      if (previous && shouldMergeToolResult(message, previous)) {
-        previous.mergedToolResults[message.toolCallId as string] = message;
-        return acc;
-      }
-      acc.push({
-        message,
-        mergedToolResults: {},
-        isStreaming: trailingMessage !== null && index === source.length - 1,
-      });
-      return acc;
-    }, []);
+    }
+    return display;
   }, [messages, trailingMessage]);
   const queuedCount = (queuedMessages?.steering.length ?? 0) + (queuedMessages?.followUp.length ?? 0);
   const renderedItemCount = displayMessages.length + (isWorking ? 1 : 0) + queuedCount;

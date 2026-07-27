@@ -202,6 +202,28 @@ describe("AgentToolCallCard", () => {
     expect(screen.queryByText("3 lines")).toBeNull();
   });
 
+  it("reveals merged read output when expanded", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-read-output",
+      name: "read",
+      arguments: { path: "src/example.ts" },
+    };
+    const result = {
+      id: "result-read-output",
+      role: "toolResult",
+      toolCallId: "tool-read-output",
+      toolName: "read",
+      content: "export const visible = true;",
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+    fireEvent.click(screen.getByText("src/example.ts"));
+    expect(screen.getByText("contents")).toBeTruthy();
+    expect(screen.getByText("export const visible = true;")).toBeTruthy();
+  });
+
   it("shows a compact memory search summary with result count", () => {
     const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
       type: "toolCall",
@@ -558,6 +580,28 @@ describe("AgentToolCallCard", () => {
       kind: "file",
       path: "/tmp/project/apps/cli/internal/daemon/process.go",
     });
+  });
+
+  it("reveals the actual write error when synthetic diff input is present", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-write-error",
+      name: "write",
+      arguments: { path: "src/example.ts", content: "new file contents" },
+    };
+    const result = {
+      id: "result-write-error",
+      role: "toolResult",
+      toolCallId: "tool-write-error",
+      toolName: "write",
+      isError: true,
+      content: "Permission denied: src/example.ts",
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+    fireEvent.click(screen.getAllByText("src/example.ts")[0] as HTMLElement);
+    expect(screen.getByText("Permission denied: src/example.ts")).toBeTruthy();
   });
 
   it("renders a synthetic new-file diff for write tool results without patch metadata", () => {
