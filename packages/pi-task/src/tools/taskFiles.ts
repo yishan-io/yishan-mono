@@ -1,4 +1,4 @@
-import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
 
 import { withFileMutationQueue } from "@earendil-works/pi-coding-agent";
@@ -71,9 +71,8 @@ export async function writeTaskDocument(
   content: string,
 ): Promise<void> {
   await withFileMutationQueue(getTaskStatePath(projectRoot), async () => {
-    const filePath = await getTaskDocumentPath(projectRoot, id, document);
+    const filePath = await ensureTaskDocumentPath(projectRoot, id, document);
     await withFileMutationQueue(filePath, async () => {
-      await mkdir(resolve(filePath, ".."), { recursive: true });
       await writeFile(filePath, content, "utf8");
     });
   });
@@ -85,9 +84,8 @@ export async function appendTaskNote(projectRoot: string, id: string, content: s
   const entryDate = date ?? getTodayDate();
   assertDate(entryDate);
   await withFileMutationQueue(getTaskStatePath(projectRoot), async () => {
-    const filePath = await getTaskDocumentPath(projectRoot, id, "notes");
+    const filePath = await ensureTaskDocumentPath(projectRoot, id, "notes");
     await withFileMutationQueue(filePath, async () => {
-      await mkdir(resolve(filePath, ".."), { recursive: true });
       const currentContent = await readOptionalFile(filePath);
       const prefix = currentContent.length === 0 ? "" : currentContent.endsWith("\n") ? "\n" : "\n\n";
       await appendFile(filePath, `${prefix}## ${entryDate}\n\n${note}\n`, "utf8");
@@ -130,12 +128,45 @@ export async function finishTask(
     const destinationDirectory = resolveProjectPath(projectRoot, nextPath);
     await mkdir(resolve(destinationDirectory, ".."), { recursive: true });
     await rename(sourceDirectory, destinationDirectory);
+
     const nextTask = { ...task, status: "completed" as const, path: nextPath };
     state.tasks[taskIndex] = nextTask;
     await writeTaskState(projectRoot, state);
     return nextTask;
   });
 }
+
+/**
+ * Resolves a task document path and ensures its parent directory exists.
+ * Re-reads task state after creating the directory to detect moves by a
+ * concurrent finishTask (e.g., from a sub-agent session), corrects the
+ * path, and removes the stale empty directory when possible.
+ */
+async function ensureTaskDocumentPath(
+  projectRoot: string,
+  id: string,
+  document: TaskDocument,
+): Promise<string> {
+  const filePath = await getTaskDocumentPath(projectRoot, id, document);
+  await mkdir(resolve(filePath, ".."), { recursive: true });
+  // Re-read state to detect if finishTask moved the task concurrently
+  const currentPath = await getTaskDocumentPath(projectRoot, id, document);
+  if (currentPath !== filePath) {
+    // Task was moved — clean up the stale empty directory mkdir just created.
+    // Use force (suppresses ENOENT) without recursive: only removes empty dirs.
+    // If the dir is non-empty a concurrent write beat us; leave it in place.
+    try {
+      await rm(resolve(filePath, ".."), { force: true });
+    } catch {
+      // Directory not empty or permission error — skip cleanup
+    }
+  }
+  return currentPath;
+}
+
+// ---------------------------------------------------------------------------
+// Validation helpers
+// ---------------------------------------------------------------------------
 
 /** Validates a task ID accepted by the simple task-file operations. */
 export function assertTaskId(id: string): void {
@@ -181,6 +212,10 @@ function isTaskState(value: unknown): value is TaskState {
   return typeof value === "object" && value !== null && "tasks" in value && Array.isArray(value.tasks);
 }
 
+// ---------------------------------------------------------------------------
+// Markdown builders
+// ---------------------------------------------------------------------------
+
 function buildTaskMarkdown(task: TaskRecord, input: StartTaskInput): string {
   const goal = input.goal?.trim() || `Complete the work described by "${task.title}".`;
   const criteria = input.acceptanceCriteria?.filter((criterion) => criterion.trim().length > 0) ?? [];
@@ -214,6 +249,10 @@ function updateTaskStatus(content: string): string {
     : `${content.trimEnd()}\n\n**Status:** completed\n`;
 }
 
+// ---------------------------------------------------------------------------
+// ID and slug generation
+// ---------------------------------------------------------------------------
+
 function createTaskId(tasks: TaskRecord[]): string {
   let id = "";
   do id = `${randomLetters(3)}${randomDigits(2)}`;
@@ -239,6 +278,10 @@ function createTaskSlug(title: string): string {
   return slug;
 }
 
+// ---------------------------------------------------------------------------
+// Path utilities
+// ---------------------------------------------------------------------------
+
 function resolveProjectPath(projectRoot: string, value: string): string {
   const root = resolve(projectRoot);
   const target = resolve(root, value);
@@ -256,6 +299,10 @@ function resolveProjectPath(projectRoot: string, value: string): string {
 function normalizePath(value: string): string {
   return value.replaceAll("\\", "/");
 }
+
+// ---------------------------------------------------------------------------
+// Small utilities
+// ---------------------------------------------------------------------------
 
 function requireText(value: string, name: string): string {
   const text = value.trim();
@@ -275,7 +322,11 @@ async function readOptionalFile(filePath: string): Promise<string> {
   try {
     return await readFile(filePath, "utf8");
   } catch (error: unknown) {
-    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") return "";
+    if (isEnoent(error)) return "";
     throw error;
   }
+}
+
+function isEnoent(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "ENOENT";
 }
