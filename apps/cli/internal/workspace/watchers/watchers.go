@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	watcherDebounce   = 200 * time.Millisecond
-	watcherStartupLag = 300 * time.Millisecond
-	gitInfoExcludeRel = ".git/info/exclude"
+	watcherDebounce         = 200 * time.Millisecond
+	watcherStartupLag       = 300 * time.Millisecond
+	gitInfoExcludeRel       = ".git/info/exclude"
+	maxChangedPathsPerEvent = 250
 )
 
 type FilesChangedEvent struct {
@@ -38,23 +39,24 @@ type Sink interface {
 }
 
 type worktreeWatcher struct {
-	mu                   sync.Mutex
-	workspaceID          string
-	path                 string
-	contextDir           string
-	resolvedGitDir       string
-	sink                 Sink
-	fileTimer            *time.Timer
-	gitTimer             *time.Timer
-	pendingAffectsBranch bool
-	readyAt              time.Time
-	changedPaths         []string
-	done                 chan struct{}
-	onGitChanged         func(worktreePath string)
-	ignoredPaths         map[string]bool
-	gitIgnoreUsable      *bool
-	gitRunner            gitexec.Runner
-	backend              *fswatch.Watcher
+	mu                      sync.Mutex
+	workspaceID             string
+	path                    string
+	contextDir              string
+	resolvedGitDir          string
+	sink                    Sink
+	fileTimer               *time.Timer
+	gitTimer                *time.Timer
+	pendingAffectsBranch    bool
+	readyAt                 time.Time
+	changedPaths            []string
+	hasChangedPathsOverflow bool
+	done                    chan struct{}
+	onGitChanged            func(worktreePath string)
+	ignoredPaths            map[string]bool
+	gitIgnoreUsable         *bool
+	gitRunner               gitexec.Runner
+	backend                 *fswatch.Watcher
 }
 
 type contextWatchRegistration struct {

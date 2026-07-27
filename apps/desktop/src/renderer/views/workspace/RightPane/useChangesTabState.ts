@@ -60,10 +60,16 @@ export function useChangesTabState() {
     }
     return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
   });
+  const selectedWorkspaceRequestKey = `${selectedWorkspaceId}:${selectedWorkspaceWorktreePath ?? ""}:${selectedWorkspaceSourceBranch}`;
+  const selectedWorkspaceRequestKeyRef = useRef(selectedWorkspaceRequestKey);
+  selectedWorkspaceRequestKeyRef.current = selectedWorkspaceRequestKey;
   const { listGitChanges, listGitCommitsToTarget } = useCommands();
 
   const loadCommitComparison = useCallback(
-    async (targetBranch: string, showProgress = false) => {
+    async (targetBranch: string, showProgress = false, canApply: () => boolean = () => true) => {
+      if (!canApply()) {
+        return;
+      }
       if (!selectedWorkspaceWorktreePath || !targetBranch) {
         setRepoCommitComparison(createEmptyRepoCommitComparison());
         if (showProgress) {
@@ -81,7 +87,7 @@ export function useChangesTabState() {
           workspaceId: selectedWorkspaceId,
           targetBranch,
         });
-        if (commitComparisonRequestIdRef.current === requestId) {
+        if (commitComparisonRequestIdRef.current === requestId && canApply()) {
           // Normalize wire response: old daemons send string[] for allChangedFiles
           // and changedFiles; new daemons send GitCommitFile[].
           const normalized: ProjectCommitComparisonData = {
@@ -95,12 +101,12 @@ export function useChangesTabState() {
           setRepoCommitComparison(normalized);
         }
       } catch (error) {
-        if (commitComparisonRequestIdRef.current === requestId) {
+        if (commitComparisonRequestIdRef.current === requestId && canApply()) {
           setRepoCommitComparison(createEmptyRepoCommitComparison());
           console.error("Failed to load workspace commit comparison", error);
         }
       } finally {
-        if (showProgress && commitComparisonRequestIdRef.current === requestId) {
+        if (showProgress && commitComparisonRequestIdRef.current === requestId && canApply()) {
           setIsCommitComparisonLoading(false);
         }
       }
@@ -114,6 +120,9 @@ export function useChangesTabState() {
     const shouldShowLoadingForRequest =
       Boolean(selectedWorkspaceWorktreePath) &&
       pendingWorkspaceSwitchLoadPathRef.current === selectedWorkspaceWorktreePath;
+    const isCurrentRequest = () =>
+      repoChangesLoadRequestIdRef.current === requestId &&
+      selectedWorkspaceRequestKeyRef.current === selectedWorkspaceRequestKey;
 
     if (!selectedWorkspaceWorktreePath) {
       setRepoChangesBySection(createEmptyRepoChangesBySection());
@@ -127,6 +136,9 @@ export function useChangesTabState() {
 
     try {
       const response = await listGitChanges({ workspaceId: selectedWorkspaceId });
+      if (!isCurrentRequest()) {
+        return;
+      }
       const dedupedResponse: RepoChangesBySection = {
         unstaged: dedupeRepoChangeFiles(
           response.unstaged.map((file) => ({ ...file, kind: normalizeProjectGitChangeKind(file.kind) })),
@@ -139,7 +151,7 @@ export function useChangesTabState() {
         ),
       };
       setRepoChangesBySection(reconcileRenameLikePairs(dedupedResponse));
-      if (shouldShowLoadingForRequest && repoChangesLoadRequestIdRef.current === requestId) {
+      if (shouldShowLoadingForRequest && isCurrentRequest()) {
         pendingWorkspaceSwitchLoadPathRef.current = null;
         setIsRepoChangesLoading(false);
       }
@@ -147,10 +159,17 @@ export function useChangesTabState() {
         setRepoCommitComparison(createEmptyRepoCommitComparison());
         return;
       }
-      await loadCommitComparison(selectedWorkspaceSourceBranch);
+      await loadCommitComparison(selectedWorkspaceSourceBranch, false, isCurrentRequest);
     } catch (error) {
+      if (!isCurrentRequest()) {
+        return;
+      }
       setRepoChangesBySection(createEmptyRepoChangesBySection());
       setRepoCommitComparison(createEmptyRepoCommitComparison());
+      if (shouldShowLoadingForRequest && isCurrentRequest()) {
+        pendingWorkspaceSwitchLoadPathRef.current = null;
+        setIsRepoChangesLoading(false);
+      }
       if (!isWorkspaceNotFoundError(error)) {
         console.error("Failed to load workspace git changes", error);
       }
@@ -159,6 +178,7 @@ export function useChangesTabState() {
     listGitChanges,
     loadCommitComparison,
     selectedWorkspaceId,
+    selectedWorkspaceRequestKey,
     selectedWorkspaceSourceBranch,
     selectedWorkspaceWorktreePath,
   ]);

@@ -179,7 +179,11 @@ func (h *JSONRPCHandler) consumeFileCacheInvalidationEvents(events <-chan fronte
 		}
 		worktreePath, _ := payload["workspaceWorktreePath"].(string)
 		changedPaths, _ := payload["changedRelativePaths"].([]string)
-		if worktreePath == "" || len(changedPaths) == 0 {
+		if worktreePath == "" {
+			continue
+		}
+		if len(changedPaths) == 0 {
+			h.manager.InvalidateWorkspaceFileCacheByPath(worktreePath, []string{""})
 			continue
 		}
 		h.manager.InvalidateWorkspaceFileCacheByPath(worktreePath, changedPaths)

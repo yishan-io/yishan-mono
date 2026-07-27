@@ -146,4 +146,24 @@ func TestJSONRPCHandler_InvalidatesFileCacheOnWorkspaceFilesChanged(t *testing.T
 	if len(entries) != 2 {
 		t.Fatalf("expected refreshed entries after invalidation event, got %+v", entries)
 	}
+
+	if err := os.WriteFile(filepath.Join(root, "c.txt"), []byte("c"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	handler.events.Publish(frontendEvent{
+		Topic: "workspaceFilesChanged",
+		Payload: map[string]any{
+			"workspaceWorktreePath": root,
+			"changedRelativePaths":  []string{},
+		},
+	})
+	time.Sleep(100 * time.Millisecond)
+
+	entries, err = handle.FileList("", false)
+	if err != nil {
+		t.Fatalf("list after full invalidation event: %v", err)
+	}
+	if len(entries) != 3 {
+		t.Fatalf("expected refreshed entries after full invalidation event, got %+v", entries)
+	}
 }

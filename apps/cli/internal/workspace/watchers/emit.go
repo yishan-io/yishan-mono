@@ -10,7 +10,11 @@ func (w *worktreeWatcher) scheduleFileEmit(relPath string) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	w.changedPaths = append(w.changedPaths, relPath)
+	if len(w.changedPaths) < maxChangedPathsPerEvent {
+		w.changedPaths = append(w.changedPaths, relPath)
+	} else {
+		w.hasChangedPathsOverflow = true
+	}
 
 	if w.fileTimer != nil {
 		w.fileTimer.Stop()
@@ -19,14 +23,15 @@ func (w *worktreeWatcher) scheduleFileEmit(relPath string) {
 	w.fileTimer = time.AfterFunc(watcherDebounce, func() {
 		w.mu.Lock()
 		paths := w.changedPaths
+		hasOverflow := w.hasChangedPathsOverflow
 		w.changedPaths = nil
+		w.hasChangedPathsOverflow = false
 		w.fileTimer = nil
 		w.mu.Unlock()
 
-		deduped := dedupePaths(paths)
-		changedPaths := make([]string, 0, len(deduped))
-		for path := range deduped {
-			changedPaths = append(changedPaths, path)
+		changedPaths := boundChangedPaths(paths)
+		if hasOverflow {
+			changedPaths = []string{}
 		}
 
 		if w.sink != nil {
@@ -37,6 +42,22 @@ func (w *worktreeWatcher) scheduleFileEmit(relPath string) {
 			})
 		}
 	})
+}
+
+// boundChangedPaths returns an empty path list when a file burst exceeds the
+// event payload budget. The renderer treats an empty list as a full refresh,
+// preserving correctness without sending an unbounded WebSocket message.
+func boundChangedPaths(paths []string) []string {
+	deduped := dedupePaths(paths)
+	if len(deduped) > maxChangedPathsPerEvent {
+		return []string{}
+	}
+
+	changedPaths := make([]string, 0, len(deduped))
+	for path := range deduped {
+		changedPaths = append(changedPaths, path)
+	}
+	return changedPaths
 }
 
 func dedupePaths(paths []string) map[string]bool {
@@ -109,5 +130,6 @@ func (w *worktreeWatcher) close() {
 		w.gitTimer = nil
 	}
 	w.changedPaths = nil
+	w.hasChangedPathsOverflow = false
 	w.mu.Unlock()
 }
