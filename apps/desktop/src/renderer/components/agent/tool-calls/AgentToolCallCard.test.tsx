@@ -659,4 +659,248 @@ describe("AgentToolCallCard", () => {
     expect(screen.queryByTestId("tool-chevron-right")).toBeNull();
     expect(screen.getByTestId("tool-chevron-down")).toBeTruthy();
   });
+
+  describe("TaskToolCard", () => {
+    it("renders task_start with title and start badge", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-start",
+        name: "task_start",
+        arguments: { title: "Add dark mode support" },
+      };
+
+      render(<AgentToolCallCard toolCall={toolCall} />);
+
+      // "Add dark mode support" appears in both summary label and collapsed arguments
+      expect(screen.getAllByText("Add dark mode support").length).toBeGreaterThanOrEqual(1);
+      // "start" appears in both the badge and the collapsed arguments heading
+      expect(screen.getAllByText("start").length).toBeGreaterThanOrEqual(1);
+      expect(screen.queryByText("arguments")).toBeNull();
+    });
+
+    it("renders task_start with optional fields in expanded view", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-start-full",
+        name: "task_start",
+        arguments: {
+          title: "Add dark mode",
+          id: "dark-mode",
+          ticket: "GH-42",
+          goal: "Implement system-wide dark mode toggle",
+          created: "2026-07-27",
+          acceptanceCriteria: ["All pages support dark mode", "Toggle persists across sessions"],
+        },
+      };
+
+      render(<AgentToolCallCard toolCall={toolCall} />);
+
+      fireEvent.click(screen.getByTestId("task-tool-summary"));
+
+      const argsSection = screen.getByTestId("task-tool-arguments");
+      expect(within(argsSection).getByText("start")).toBeTruthy();
+      expect(within(argsSection).getByText("title")).toBeTruthy();
+      expect(within(argsSection).getByText("Add dark mode")).toBeTruthy();
+      expect(within(argsSection).getByText("dark-mode")).toBeTruthy();
+      expect(within(argsSection).getByText("GH-42")).toBeTruthy();
+      expect(
+        within(argsSection).getByText("All pages support dark mode, Toggle persists across sessions"),
+      ).toBeTruthy();
+    });
+
+    it("renders task_list with status badge when status is provided", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-list",
+        name: "task_list",
+        arguments: { status: "active" },
+      };
+
+      render(<AgentToolCallCard toolCall={toolCall} />);
+
+      expect(screen.getByText("List tasks")).toBeTruthy();
+      // "active" appears in both the badge and the collapsed arguments value
+      expect(screen.getAllByText("active").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("renders task_list without badge when no status filter", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-list-no-status",
+        name: "task_list",
+        arguments: {},
+      };
+
+      render(<AgentToolCallCard toolCall={toolCall} />);
+
+      expect(screen.getByText("List tasks")).toBeTruthy();
+      expect(screen.queryByText("active")).toBeNull();
+      expect(screen.queryByText("completed")).toBeNull();
+    });
+
+    it("renders task_read with id and document badge", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-read",
+        name: "task_read",
+        arguments: { id: "dark-mode", document: "plan" },
+      };
+
+      render(<AgentToolCallCard toolCall={toolCall} />);
+
+      // "dark-mode" appears in both summary label and collapsed arguments value
+      expect(screen.getAllByText("dark-mode").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("plan").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("renders task_write with id and document badge", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-write",
+        name: "task_write",
+        arguments: { id: "dark-mode", document: "plan", content: "# Plan\n\n1. Add toggle" },
+      };
+
+      render(<AgentToolCallCard toolCall={toolCall} />);
+
+      expect(screen.getAllByText("dark-mode").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("plan").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("renders task_append_note with id and note badge", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-append-note",
+        name: "task_append_note",
+        arguments: { id: "dark-mode", content: "Progress update" },
+      };
+
+      render(<AgentToolCallCard toolCall={toolCall} />);
+
+      expect(screen.getAllByText("dark-mode").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("note")).toBeTruthy();
+    });
+
+    it("renders task_finish with id and finish badge", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-finish",
+        name: "task_finish",
+        arguments: { id: "dark-mode", outcome: "All done" },
+      };
+
+      render(<AgentToolCallCard toolCall={toolCall} />);
+
+      expect(screen.getAllByText("dark-mode").length).toBeGreaterThanOrEqual(1);
+      // "finish" appears in both the badge and the collapsed arguments heading
+      expect(screen.getAllByText("finish").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("expands to show arguments grid and result output", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-read-expand",
+        name: "task_read",
+        arguments: { id: "dark-mode", document: "task" },
+      };
+
+      const result = {
+        id: "result-task-read",
+        role: "toolResult",
+        toolCallId: "tool-task-read-expand",
+        toolName: "task_read",
+        content: "# Add dark mode support\n\n## Goal\nImplement toggle",
+      } as AgentMessage;
+
+      render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+      // Collapsed: summary visible ("task" appears in badge and collapsed args)
+      expect(screen.getAllByText("dark-mode").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("task").length).toBeGreaterThanOrEqual(1);
+
+      // Expand
+      fireEvent.click(screen.getByTestId("task-tool-summary"));
+
+      const argsSection = screen.getByTestId("task-tool-arguments");
+      expect(within(argsSection).getByText("read")).toBeTruthy();
+      expect(within(argsSection).getByText("id")).toBeTruthy();
+      expect(within(argsSection).getByText("dark-mode")).toBeTruthy();
+      expect(within(argsSection).getByText("document")).toBeTruthy();
+
+      // Result text visible
+      expect(screen.getByText(/# Add dark mode support/)).toBeTruthy();
+    });
+
+    it("truncates long content fields in arguments grid", () => {
+      const longContent = "a".repeat(250);
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-write-long",
+        name: "task_write",
+        arguments: { id: "dark-mode", document: "plan", content: longContent },
+      };
+
+      render(<AgentToolCallCard toolCall={toolCall} />);
+
+      fireEvent.click(screen.getByTestId("task-tool-summary"));
+
+      const argsSection = screen.getByTestId("task-tool-arguments");
+      const truncated = `${longContent.slice(0, 200)}…`;
+      expect(within(argsSection).getByText(truncated)).toBeTruthy();
+      expect(within(argsSection).queryByText(longContent)).toBeNull();
+    });
+
+    it("omits empty acceptanceCriteria from arguments grid", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-start-empty-ac",
+        name: "task_start",
+        arguments: { title: "No criteria", acceptanceCriteria: [] },
+      };
+
+      render(<AgentToolCallCard toolCall={toolCall} />);
+
+      fireEvent.click(screen.getByTestId("task-tool-summary"));
+
+      const argsSection = screen.getByTestId("task-tool-arguments");
+      expect(within(argsSection).queryByText("acceptanceCriteria")).toBeNull();
+    });
+
+    it("hides expand chevron when there is nothing to expand", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-list-empty",
+        name: "task_list",
+        arguments: {},
+      };
+
+      render(<AgentToolCallCard toolCall={toolCall} />);
+
+      expect(screen.getByText("List tasks")).toBeTruthy();
+      expect(screen.queryByTestId("task-tool-summary")).toBeNull();
+    });
+
+    it("shows error styling for task tool errors", () => {
+      const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+        type: "toolCall",
+        id: "tool-task-error",
+        name: "task_read",
+        arguments: { id: "nonexistent" },
+      };
+
+      const result = {
+        id: "result-task-error",
+        role: "toolResult",
+        toolCallId: "tool-task-error",
+        toolName: "task_read",
+        isError: true,
+        content: "Task not found: nonexistent",
+      } as AgentMessage;
+
+      render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+      fireEvent.click(screen.getByTestId("task-tool-summary"));
+      expect(screen.getByText(/Task not found/)).toBeTruthy();
+    });
+  });
 });

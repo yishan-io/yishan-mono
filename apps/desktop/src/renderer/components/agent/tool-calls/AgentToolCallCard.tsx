@@ -8,6 +8,7 @@ import { MemoryReadToolCard } from "./MemoryReadToolCard";
 import { MemorySearchToolCard } from "./MemorySearchToolCard";
 import { MemoryStoreToolCard } from "./MemoryStoreToolCard";
 import { ReadToolCard } from "./ReadToolCard";
+import { TaskToolCard } from "./TaskToolCard";
 import { WebFetchToolCard } from "./WebFetchToolCard";
 import { WorkspaceCloseToolCard } from "./WorkspaceCloseToolCard";
 import { WorkspaceCreateToolCard } from "./WorkspaceCreateToolCard";
@@ -45,6 +46,13 @@ export function AgentToolCallCard(props: AgentToolCallCardProps) {
       return <WorkspaceCreateToolCard {...props} />;
     case "workspace_close":
       return <WorkspaceCloseToolCard {...props} />;
+    case "task_start":
+    case "task_list":
+    case "task_read":
+    case "task_write":
+    case "task_append_note":
+    case "task_finish":
+      return <TaskToolCard {...props} />;
     case "web_fetch":
       return <WebFetchToolCard {...props} />;
     default:
