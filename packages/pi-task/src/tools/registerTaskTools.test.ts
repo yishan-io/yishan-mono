@@ -138,6 +138,52 @@ describe("registerTaskTools", () => {
     });
   });
 
+  it("writes to the completed path and leaves no stale active directory after finish", async () => {
+    const tools = collectTools();
+
+    await execute(requireTool(tools, "task_start"), {
+      id: "stale01",
+      title: "Stale directory test",
+      created: "2026-07-26",
+    });
+    await execute(requireTool(tools, "task_finish"), {
+      id: "stale01",
+      outcome: "Task finished.",
+      completed: "2026-07-26",
+    });
+
+    // Write plan to the now-completed task — must go to completed/, not active/
+    await execute(requireTool(tools, "task_write"), {
+      id: "stale01",
+      document: "plan",
+      content: "# Post-finish plan\n",
+    });
+
+    // Verify plan was written to the completed path
+    const completedPlan = await readFile(
+      join(
+        projectRoot,
+        ".my-context",
+        "tasks",
+        "completed",
+        "2026",
+        "07",
+        "stale01-stale-directory-test",
+        "plan.md",
+      ),
+      "utf8",
+    );
+    expect(completedPlan).toContain("Post-finish plan");
+
+    // Verify no stale active directory was left behind
+    await expect(
+      readFile(
+        join(projectRoot, ".my-context", "tasks", "active", "stale01-stale-directory-test", "plan.md"),
+        "utf8",
+      ),
+    ).rejects.toThrow();
+  });
+
   it("rejects unsafe task IDs before they can create a task directory", async () => {
     const tools = collectTools();
 
