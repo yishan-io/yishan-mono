@@ -161,26 +161,14 @@ describe("registerTaskTools", () => {
 
     // Verify plan was written to the completed path
     const completedPlan = await readFile(
-      join(
-        projectRoot,
-        ".my-context",
-        "tasks",
-        "completed",
-        "2026",
-        "07",
-        "stale01-stale-directory-test",
-        "plan.md",
-      ),
+      join(projectRoot, ".my-context", "tasks", "completed", "2026", "07", "stale01-stale-directory-test", "plan.md"),
       "utf8",
     );
     expect(completedPlan).toContain("Post-finish plan");
 
     // Verify no stale active directory was left behind
     await expect(
-      readFile(
-        join(projectRoot, ".my-context", "tasks", "active", "stale01-stale-directory-test", "plan.md"),
-        "utf8",
-      ),
+      readFile(join(projectRoot, ".my-context", "tasks", "active", "stale01-stale-directory-test", "plan.md"), "utf8"),
     ).rejects.toThrow();
   });
 

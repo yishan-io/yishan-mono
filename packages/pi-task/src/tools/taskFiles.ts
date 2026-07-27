@@ -142,11 +142,7 @@ export async function finishTask(
  * concurrent finishTask (e.g., from a sub-agent session), corrects the
  * path, and removes the stale empty directory when possible.
  */
-async function ensureTaskDocumentPath(
-  projectRoot: string,
-  id: string,
-  document: TaskDocument,
-): Promise<string> {
+async function ensureTaskDocumentPath(projectRoot: string, id: string, document: TaskDocument): Promise<string> {
   const filePath = await getTaskDocumentPath(projectRoot, id, document);
   await mkdir(resolve(filePath, ".."), { recursive: true });
   // Re-read state to detect if finishTask moved the task concurrently
@@ -328,5 +324,7 @@ async function readOptionalFile(filePath: string): Promise<string> {
 }
 
 function isEnoent(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "ENOENT";
+  return (
+    typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "ENOENT"
+  );
 }
