@@ -34,8 +34,9 @@ func (s *FileService) List(root string, path string, recursive bool) ([]FileEntr
 		return withContextLinkEntries(root, path, entries)
 	}
 
-	if entries, ok := s.cachedDirectoryEntries(root, path); ok {
-		return entries, nil
+	cachedEntries, isCached, cacheGeneration := s.cachedDirectoryEntries(root, path)
+	if isCached {
+		return cachedEntries, nil
 	}
 
 	entries, err := os.ReadDir(dir)
@@ -68,7 +69,7 @@ func (s *FileService) List(root string, path string, recursive bool) ([]FileEntr
 	}
 
 	out = markIgnoredEntries(root, path, out)
-	s.storeCachedDirectoryEntries(root, path, out)
+	s.storeCachedDirectoryEntries(root, path, out, cacheGeneration)
 	return out, nil
 }
 

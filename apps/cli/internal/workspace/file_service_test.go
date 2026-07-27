@@ -853,6 +853,24 @@ func TestFileServiceListUsesCachedDirectoryEntriesUntilInvalidated(t *testing.T)
 	}
 }
 
+func TestFileService_DoesNotStoreDirectoryEntriesAfterInvalidation(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+
+	_, isCached, generation := svc.cachedDirectoryEntries(root, "")
+	if isCached {
+		t.Fatal("expected an empty cache")
+	}
+
+	svc.InvalidateWorkspacePaths(root, []string{""})
+	svc.storeCachedDirectoryEntries(root, "", []FileEntry{{Path: "stale.txt"}}, generation)
+
+	_, isCached, _ = svc.cachedDirectoryEntries(root, "")
+	if isCached {
+		t.Fatal("stale directory entries were stored after invalidation")
+	}
+}
+
 func TestFileServiceWriteInvalidatesParentDirectoryCache(t *testing.T) {
 	root := t.TempDir()
 	svc := NewFileService()

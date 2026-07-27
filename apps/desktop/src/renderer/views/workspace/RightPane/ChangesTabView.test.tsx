@@ -4,6 +4,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChangesTabView } from "./ChangesTabView";
 
+type GitChangesResponse = {
+  unstaged: Array<{ path: string; kind: string; additions: number; deletions: number }>;
+  staged: Array<{ path: string; kind: string; additions: number; deletions: number }>;
+  untracked: Array<{ path: string; kind: string; additions: number; deletions: number }>;
+};
+
 const mocks = vi.hoisted(() => ({
   listGitChanges: vi.fn(),
   readBranchComparisonDiff: vi.fn(),
@@ -17,6 +23,16 @@ const mocks = vi.hoisted(() => ({
     (_listener: (payload: { workspaceId: string; workspaceWorktreePath: string }) => void) => () => {},
   ),
   openTab: vi.fn(),
+  workspaceState: {
+    selectedWorkspaceId: "workspace-1",
+    workspaces: [
+      {
+        id: "workspace-1",
+        worktreePath: "/tmp/repo",
+        sourceBranch: "main",
+      },
+    ],
+  },
 }));
 
 vi.mock("../../../commands/gitCommands", () => ({
@@ -35,17 +51,7 @@ vi.mock("../../../commands/gitCommands", () => ({
 
 vi.mock("../../../store/workspaceStore", () => ({
   workspaceStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      selectedWorkspaceId: "workspace-1",
-      workspaces: [
-        {
-          id: "workspace-1",
-          worktreePath: "/tmp/repo",
-          sourceBranch: "main",
-        },
-      ],
-      openTab: mocks.openTab,
-    }),
+    selector({ ...mocks.workspaceState, openTab: mocks.openTab }),
 }));
 
 vi.mock("../../../hooks/useCommands", () => ({
@@ -79,6 +85,16 @@ vi.mock("react-i18next", () => ({
 
 describe("ChangesTabView", () => {
   beforeEach(() => {
+    mocks.workspaceState = {
+      selectedWorkspaceId: "workspace-1",
+      workspaces: [
+        {
+          id: "workspace-1",
+          worktreePath: "/tmp/repo",
+          sourceBranch: "main",
+        },
+      ],
+    };
     mocks.listGitChanges.mockResolvedValue({ unstaged: [], staged: [], untracked: [] });
     mocks.listGitCommitsToTarget.mockResolvedValue({
       currentBranch: "feature/work",
@@ -121,6 +137,77 @@ describe("ChangesTabView", () => {
     await waitFor(() => {
       expect(screen.queryByTestId("changes-tab-loading-progress")).toBeNull();
     });
+  });
+
+  it("hides workspace switch progress when git changes cannot load during a Git mutation", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.listGitChanges.mockRejectedValueOnce(new Error("index.lock exists"));
+
+    render(<ChangesTabView />);
+
+    expect(await screen.findByTestId("changes-tab-loading-progress")).toBeTruthy();
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("changes-tab-loading-progress")).toBeNull();
+    });
+    expect(consoleErrorSpy).toHaveBeenCalledWith("Failed to load workspace git changes", expect.any(Error));
+  });
+
+  it("does not apply a stale workspace response after switching workspaces", async () => {
+    let resolveFirstRequest: ((response: GitChangesResponse) => void) | undefined;
+    let resolveSecondRequest: ((response: GitChangesResponse) => void) | undefined;
+    mocks.listGitChanges
+      .mockImplementationOnce(
+        () =>
+          new Promise<GitChangesResponse>((resolve) => {
+            resolveFirstRequest = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<GitChangesResponse>((resolve) => {
+            resolveSecondRequest = resolve;
+          }),
+      );
+
+    const rendered = render(<ChangesTabView />);
+    await waitFor(() => {
+      expect(mocks.listGitChanges).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
+    });
+
+    mocks.workspaceState = {
+      selectedWorkspaceId: "workspace-2",
+      workspaces: [
+        {
+          id: "workspace-2",
+          worktreePath: "/tmp/repo-2",
+          sourceBranch: "main",
+        },
+      ],
+    };
+    rendered.rerender(<ChangesTabView />);
+    await waitFor(() => {
+      expect(mocks.listGitChanges).toHaveBeenCalledWith({ workspaceId: "workspace-2" });
+    });
+
+    resolveSecondRequest?.({
+      unstaged: [{ path: "fresh.ts", kind: "modified", additions: 1, deletions: 0 }],
+      staged: [],
+      untracked: [],
+    });
+    expect(await screen.findByTestId("changes-file-unstaged-fresh.ts")).toBeTruthy();
+
+    resolveFirstRequest?.({
+      unstaged: [{ path: "stale.ts", kind: "modified", additions: 1, deletions: 0 }],
+      staged: [],
+      untracked: [],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("changes-file-unstaged-stale.ts")).toBeNull();
+    });
+    expect(screen.getByTestId("changes-file-unstaged-fresh.ts")).toBeTruthy();
   });
 
   it("hides workspace switch progress after git changes load even if commits are still loading", async () => {
