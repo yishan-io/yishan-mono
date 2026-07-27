@@ -40,6 +40,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
   const currentModel = agentChatStore((state) => state.sessionsByTabId[tabId]?.currentModel ?? null);
   const messages = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages ?? EMPTY_MESSAGES);
   const streamingMessage = agentChatStore((state) => state.sessionsByTabId[tabId]?.streamingMessage ?? null);
+  const sessionStats = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionStats ?? null);
   const usageSummary = useMemo(() => {
     const messagesForUsage = streamingMessage ? [...messages, streamingMessage] : messages;
     return buildAgentChatUsageSummary(messagesForUsage, currentModel);
@@ -49,14 +50,18 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
     return null;
   }
 
-  const costSeparatorIndex = usageSummary.label.lastIndexOf(", ");
+  const contextUsage = sessionStats?.contextUsage;
+  const contextTokens = contextUsage?.tokens ?? usageSummary.contextTokens;
+  const contextWindow = contextUsage?.contextWindow ?? usageSummary.contextWindow;
+  const contextPercent = contextUsage?.percent ?? usageSummary.contextPercent;
   const contextSummaryLabel =
-    costSeparatorIndex >= 0 ? usageSummary.label.slice(0, costSeparatorIndex) : usageSummary.label;
-  const costSummaryLabel = costSeparatorIndex >= 0 ? usageSummary.label.slice(costSeparatorIndex + 2) : null;
+    contextUsage?.tokens === null
+      ? `ctx: ?/${formatDetailedTokenCount(contextWindow)} (?)`
+      : `ctx: ${formatDetailedTokenCount(contextTokens)}/${formatDetailedTokenCount(contextWindow)} (${contextPercent}%)`;
+  const totalSessionTokens = sessionStats?.tokens.total ?? usageSummary.totalSessionTokens;
+  const totalCostUsd = sessionStats?.cost ?? usageSummary.totalCostUsd;
   const contextCompactLabel = t("agentChat.usageSummary.contextCompact");
-  const compactUsageLabel = `${contextCompactLabel}: ${contextSummaryLabel.slice(4)}${
-    costSummaryLabel ? `, ${costSummaryLabel}` : ""
-  }`;
+  const compactUsageLabel = `${contextCompactLabel}: ${contextSummaryLabel.slice(4)}, ${usdFormatter.format(totalCostUsd)}`;
 
   const tooltipContent = (
     <Box sx={{ display: "grid", gridTemplateColumns: "auto auto", columnGap: 2, rowGap: 0.5 }}>
@@ -75,7 +80,9 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
           textAlign: "right",
         }}
       >
-        {`${formatDetailedTokenCount(usageSummary.contextTokens)} / ${formatDetailedTokenCount(usageSummary.contextWindow)} (${usageSummary.contextPercent}%)`}
+        {contextUsage?.tokens === null
+          ? `? / ${formatDetailedTokenCount(contextWindow)} (?)`
+          : `${formatDetailedTokenCount(contextTokens)} / ${formatDetailedTokenCount(contextWindow)} (${contextPercent}%)`}
       </Typography>
       <Typography
         variant="caption"
@@ -92,7 +99,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
           textAlign: "right",
         }}
       >
-        {formatDetailedTokenCount(usageSummary.inputTokens)}
+        {formatDetailedTokenCount(sessionStats?.tokens.input ?? usageSummary.inputTokens)}
       </Typography>
       <Typography
         variant="caption"
@@ -109,7 +116,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
           textAlign: "right",
         }}
       >
-        {formatDetailedTokenCount(usageSummary.outputTokens)}
+        {formatDetailedTokenCount(sessionStats?.tokens.output ?? usageSummary.outputTokens)}
       </Typography>
       <Typography
         variant="caption"
@@ -126,7 +133,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
           textAlign: "right",
         }}
       >
-        {formatDetailedTokenCount(usageSummary.cacheReadTokens)}
+        {formatDetailedTokenCount(sessionStats?.tokens.cacheRead ?? usageSummary.cacheReadTokens)}
       </Typography>
       <Typography
         variant="caption"
@@ -143,7 +150,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
           textAlign: "right",
         }}
       >
-        {formatDetailedTokenCount(usageSummary.cacheWriteTokens)}
+        {formatDetailedTokenCount(sessionStats?.tokens.cacheWrite ?? usageSummary.cacheWriteTokens)}
       </Typography>
       <Typography
         variant="caption"
@@ -198,7 +205,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
           textAlign: "right",
         }}
       >
-        {formatDetailedTokenCount(usageSummary.totalSessionTokens)}
+        {formatDetailedTokenCount(totalSessionTokens)}
       </Typography>
       <Typography
         variant="caption"
@@ -215,7 +222,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
           textAlign: "right",
         }}
       >
-        {usdFormatter.format(usageSummary.totalCostUsd)}
+        {usdFormatter.format(totalCostUsd)}
       </Typography>
     </Box>
   );
@@ -235,14 +242,12 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
         <Box component="span" sx={{ color: "text.disabled" }}>
           {contextCompactLabel}:
         </Box>
-        <Box component="span" sx={{ color: getUsageSummaryColor(usageSummary.contextPercent, theme.palette.mode) }}>
+        <Box component="span" sx={{ color: getUsageSummaryColor(contextPercent ?? 0, theme.palette.mode) }}>
           {` ${contextSummaryLabel.slice(4)}`}
         </Box>
-        {costSummaryLabel ? (
-          <Box component="span" sx={{ color: "text.disabled" }}>
-            {`, ${costSummaryLabel}`}
-          </Box>
-        ) : null}
+        <Box component="span" sx={{ color: "text.disabled" }}>
+          {`, ${usdFormatter.format(totalCostUsd)}`}
+        </Box>
       </Box>
     </Tooltip>
   );

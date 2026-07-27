@@ -7,6 +7,7 @@ import {
   fetchAgentState,
   findTabWithSession,
   reattachPiSession,
+  refreshAgentSessionStats,
 } from "../../commands/agentChatCommands";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { subscribeDaemonConnectionStatus } from "../../rpc/rpcTransport";
@@ -81,6 +82,8 @@ export function useAgentChatSessionLifecycle({
         await fetchAgentMessages({ tabId, sessionId: startedSessionId });
         if (isDisposed) return;
         await fetchAgentModels({ tabId, sessionId: startedSessionId });
+        if (isDisposed) return;
+        await refreshAgentSessionStats(startedSessionId);
       } catch (error) {
         if (isDisposed) return;
         agentChatStore.getState().initSession(tabId, tabId);
@@ -116,6 +119,7 @@ export function useAgentChatSessionLifecycle({
               await fetchAgentState({ tabId, sessionId: liveSessionId });
               await fetchAgentMessages({ tabId, sessionId: liveSessionId });
               await fetchAgentModels({ tabId, sessionId: liveSessionId });
+              await refreshAgentSessionStats(liveSessionId);
             } catch {
               clearPiSessionHandle(tabId);
               agentChatStore

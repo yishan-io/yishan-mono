@@ -1,5 +1,13 @@
 /** Status of an agent chat session. */
-export type AgentSessionState = "starting" | "running" | "idle" | "error";
+export type AgentSessionState = "starting" | "running" | "compacting" | "idle" | "error";
+
+/** Bounded Pi compaction causes exposed to the chat UI. */
+export type AgentCompactionReason = "manual" | "threshold" | "overflow" | null;
+
+/** Returns whether Pi is still processing or compacting a chat session. */
+export function isAgentSessionBusy(state: AgentSessionState | undefined): boolean {
+  return state === "running" || state === "compacting";
+}
 
 export type AgentPendingUiOption = {
   index?: number;
@@ -117,6 +125,13 @@ export type AgentStreamEvent =
   | { type: "error"; reason: string };
 
 /** Queue state for steering and follow-up messages. */
+/** Authoritative cumulative usage and current context data from Pi get_session_stats. */
+export type AgentSessionStats = {
+  tokens: { input: number; output: number; cacheRead: number; cacheWrite: number; total: number };
+  cost: number;
+  contextUsage?: { tokens: number | null; contextWindow: number; percent: number | null };
+};
+
 export type AgentQueueState = {
   steering: string[];
   followUp: string[];

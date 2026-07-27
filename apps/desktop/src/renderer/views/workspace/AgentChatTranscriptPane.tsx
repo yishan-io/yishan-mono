@@ -1,5 +1,6 @@
 import { Box, Typography } from "@mui/material";
 import { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { openSubagentSessionInRightSplitPane } from "../../commands/agentChatSubagentCommands";
 import { AgentMessageList } from "../../components/agent/transcript/AgentMessageList";
 import { agentChatStore } from "../../store/agentChatStore";
@@ -56,9 +57,11 @@ function AgentChatTranscriptPane({
   isReadOnlySubagentDetail,
   parentSessionId,
 }: AgentChatTranscriptPaneProps) {
+  const { t } = useTranslation();
   const messages = agentChatStore((state) => state.sessionsByTabId[tabId]?.messages ?? EMPTY_MESSAGES);
   const trailingMessage = agentChatStore((state) => state.sessionsByTabId[tabId]?.streamingMessage ?? null);
   const sessionState = agentChatStore((state) => state.sessionsByTabId[tabId]?.state ?? "starting");
+  const compactionReason = agentChatStore((state) => state.sessionsByTabId[tabId]?.compactionReason ?? null);
   const sessionId = agentChatStore((state) => state.sessionsByTabId[tabId]?.sessionId);
   const currentModel = agentChatStore((state) => state.sessionsByTabId[tabId]?.currentModel ?? null);
   const parentModel = agentChatStore((state) => {
@@ -93,6 +96,9 @@ function AgentChatTranscriptPane({
     [cwd, paneId, sessionId, workspaceId],
   );
 
+  const isWorking = sessionState === "running" || sessionState === "compacting";
+  const workingLabel = sessionState === "compacting" ? t(`agentChat.compaction.${compactionReason ?? "generic"}`) : undefined;
+
   return (
     <>
       <AgentMessageList
@@ -102,7 +108,8 @@ function AgentChatTranscriptPane({
         trailingMessage={trailingMessage}
         emptyPrompt="Send a message to start the conversation."
         workspacePath={cwd}
-        isWorking={sessionState === "running"}
+        isWorking={isWorking}
+        workingLabel={workingLabel}
         queuedMessages={isReadOnlySubagentDetail ? undefined : queue}
         onOpenCompletedSubagent={handleOpenCompletedSubagent}
       />

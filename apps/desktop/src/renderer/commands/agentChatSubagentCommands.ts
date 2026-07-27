@@ -1,5 +1,6 @@
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { agentChatStore } from "../store/agentChatStore";
+import { isAgentSessionBusy } from "../store/agentChatTypes";
 import { splitPaneStore } from "../store/splitPaneStore";
 import { tabStore } from "../store/tabStore";
 import { findTabWithSession } from "./agentChatCommands";
@@ -199,7 +200,7 @@ export async function cancelSubagentRun(opts: {
 
   const client = await getDaemonClient();
   const sessionState = agentChatStore.getState().sessionsByTabId[opts.tabId]?.state;
-  const streamingBehavior = sessionState === "running" ? "steer" : undefined;
+  const streamingBehavior = isAgentSessionBusy(sessionState) ? "steer" : undefined;
   await client.pi.send({
     sessionId: opts.sessionId,
     command: {
