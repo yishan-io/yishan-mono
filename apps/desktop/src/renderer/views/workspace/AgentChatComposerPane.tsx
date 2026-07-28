@@ -16,7 +16,11 @@ import { type DroppedFileEntry, RichComposer } from "../../components/RichCompos
 import { AgentChatSubagentRow } from "../../components/agent/session/AgentChatSubagentRow";
 import { AgentChatUsageSummaryLabel } from "../../components/agent/session/AgentChatUsageSummaryLabel";
 import { AgentModelSelector } from "../../components/agent/session/AgentModelSelector";
-import { AGENT_CHAT_COMPOSER_FOCUS_EVENT } from "../../events/agentChatComposerFocus";
+import {
+  AGENT_CHAT_COMPOSER_FOCUS_EVENT,
+  consumeAgentChatComposerFocus,
+  getAgentChatComposerFocusRequest,
+} from "../../events/agentChatComposerFocus";
 import { formatAgentSessionTitle } from "../../helpers/agentSkillTextHelpers";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { generateId } from "../../helpers/generateId";
@@ -37,9 +41,18 @@ type AgentChatComposerPaneProps = {
   workspaceId: string;
   cwd: string;
   paneId?: string;
+  isActive: boolean;
+  isReadyForAutoFocus: boolean;
 };
 
-function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: AgentChatComposerPaneProps) {
+function AgentChatComposerPaneComponent({
+  tabId,
+  workspaceId,
+  cwd,
+  paneId,
+  isActive,
+  isReadyForAutoFocus,
+}: AgentChatComposerPaneProps) {
   const { t } = useTranslation();
   const slashCommands = useAgentChatSlashCommands();
   const agentChatTab = tabStore((state) =>
@@ -83,21 +96,43 @@ function AgentChatComposerPaneComponent({ tabId, workspaceId, cwd, paneId }: Age
     }
   }, [sessionState]);
 
+  const focusComposer = useCallback(() => {
+    composerContainerRef.current?.querySelector<HTMLElement>('[role="textbox"]')?.focus();
+  }, []);
+
   useEffect(() => {
     const handleFocusRequest = (event: Event) => {
       const request = event as CustomEvent<{ tabId: string }>;
-      if (request.detail.tabId !== tabId || sessionState === "starting") {
+      if (request.detail.tabId !== tabId || sessionState === "starting" || !isActive) {
         return;
       }
 
-      composerContainerRef.current?.querySelector<HTMLElement>('[role="textbox"]')?.focus();
+      const requestKind = getAgentChatComposerFocusRequest(tabId);
+      if (requestKind === "auto" && !isReadyForAutoFocus) {
+        return;
+      }
+
+      focusComposer();
+      if (requestKind) {
+        consumeAgentChatComposerFocus(tabId);
+      }
     };
 
     window.addEventListener(AGENT_CHAT_COMPOSER_FOCUS_EVENT, handleFocusRequest);
     return () => {
       window.removeEventListener(AGENT_CHAT_COMPOSER_FOCUS_EVENT, handleFocusRequest);
     };
-  }, [sessionState, tabId]);
+  }, [focusComposer, isActive, isReadyForAutoFocus, sessionState, tabId]);
+
+  useEffect(() => {
+    const requestKind = getAgentChatComposerFocusRequest(tabId);
+    if (!requestKind || sessionState === "starting" || !isActive || (requestKind === "auto" && !isReadyForAutoFocus)) {
+      return;
+    }
+
+    focusComposer();
+    consumeAgentChatComposerFocus(tabId);
+  }, [focusComposer, isActive, isReadyForAutoFocus, sessionState, tabId]);
 
   const handleSubmit = useCallback(
     async (value: string) => {

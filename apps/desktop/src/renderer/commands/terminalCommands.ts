@@ -9,12 +9,23 @@ import type {
 import type { TerminalDetectedPort } from "../rpc/daemonTypes";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import type { DaemonRpcClient } from "../rpc/types";
+import { terminalFocusStore } from "../store/terminalFocusStore";
 
 export type { TerminalDetectedPort } from "../rpc/daemonTypes";
 
 type TerminalCreateSessionParams = TerminalCreateSessionInput;
 
 export type TerminalOutputEvent = TerminalStreamEvent;
+
+/** Consumes one pending auto-focus request for a mounted terminal tab. */
+export function consumeTerminalTabFocus(tabId: string): boolean {
+  return terminalFocusStore.getState().consumeFocus(tabId);
+}
+
+/** Removes pending auto-focus requests for terminal tabs that are no longer open. */
+export function retainOpenTerminalTabFocus(openTabIds: ReadonlySet<string>): void {
+  terminalFocusStore.getState().retainOpenTabs(openTabIds);
+}
 
 /**
  * Cached daemon client reference for the terminal input hot path.

@@ -228,6 +228,19 @@ export function requestTerminalRuntimeFocus(tabId: string): void {
   armPendingTerminalFocus(entry);
 }
 
+/** Clears a pending focus request when its terminal tab closes before focus can be applied. */
+export function clearTerminalRuntimeFocus(tabId: string): void {
+  pendingFocusTabIds.delete(tabId);
+
+  const entry = runtimesByTabId.get(tabId);
+  if (!entry) {
+    return;
+  }
+
+  entry.pendingFocus = false;
+  disconnectFocusObserver(entry);
+}
+
 /**
  * Detaches a terminal runtime from its visible placeholder.
  * The terminal stays alive in the offscreen parking area.

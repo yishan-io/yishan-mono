@@ -89,6 +89,7 @@ vi.mock("../../hooks/useCommands", () => ({
     return {
       listDetectedPorts: state.listDetectedPorts,
       getTerminalResourceUsage: state.getTerminalResourceUsage ?? mocked.getTerminalResourceUsage,
+      retainOpenTerminalTabFocus: state.retainOpenTerminalTabFocus ?? vi.fn(),
       setSelectedRepoId: state.setSelectedRepoId,
       setSelectedWorkspaceId: state.setSelectedWorkspaceId,
       selectTab: state.selectTab,

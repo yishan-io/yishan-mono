@@ -7,6 +7,7 @@ import {
 } from "../helpers/terminalCloseTombstones";
 import { chatStore } from "../store/chatStore";
 import { tabStore } from "../store/tabStore";
+import { terminalFocusStore } from "../store/terminalFocusStore";
 import {
   closeAllTabs,
   closeOtherTabs,
@@ -28,6 +29,11 @@ const rpcMocks = vi.hoisted(() => ({
   enqueueWorkspaceErrorNotice: vi.fn(),
   stopPiSession: vi.fn(async () => {}),
   piRename: vi.fn(async () => ({ ok: true })),
+  requestTerminalRuntimeFocus: vi.fn(),
+  clearTerminalRuntimeFocus: vi.fn(),
+  requestAgentChatComposerFocus: vi.fn(),
+  requestNewAgentChatComposerFocus: vi.fn(),
+  clearAgentChatComposerFocus: vi.fn(),
 }));
 
 vi.mock("./agentChatCommands", () => ({
@@ -40,6 +46,16 @@ vi.mock("../store/workspaceLifecycleNoticeStore", () => ({
 
 vi.mock("../events/backendEventStoreBindings", () => ({
   clearTerminalAgentStatus: vi.fn(),
+}));
+
+vi.mock("../events/agentChatComposerFocus", () => ({
+  clearAgentChatComposerFocus: rpcMocks.clearAgentChatComposerFocus,
+  requestNewAgentChatComposerFocus: rpcMocks.requestNewAgentChatComposerFocus,
+}));
+
+vi.mock("../views/workspace/terminal/terminalRuntimeRegistry", () => ({
+  clearTerminalRuntimeFocus: rpcMocks.clearTerminalRuntimeFocus,
+  requestTerminalRuntimeFocus: rpcMocks.requestTerminalRuntimeFocus,
 }));
 
 vi.mock("../rpc/rpcTransport", () => ({
@@ -175,6 +191,28 @@ describe("tabCommands", () => {
     expect(removeTabData).toHaveBeenCalledWith(["tab-terminal-pending"]);
   });
 
+  it("clears deferred composer focus when an agent-chat tab closes", async () => {
+    const closeTabState = vi.fn();
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-agent-chat",
+          workspaceId: "workspace-1",
+          title: "Agent Chat",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project" },
+        },
+      ],
+      closeTab: closeTabState,
+    });
+
+    closeTab("tab-agent-chat");
+
+    expect(rpcMocks.clearAgentChatComposerFocus).toHaveBeenCalledWith("tab-agent-chat");
+    expect(closeTabState).toHaveBeenCalledWith("tab-agent-chat");
+  });
+
   it("closes other tabs and backend sessions for same workspace", async () => {
     const closeOtherTabsState = vi.fn();
     const removeTabData = vi.fn();
@@ -268,6 +306,8 @@ describe("tabCommands", () => {
       expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-agent");
       expect(rpcMocks.stopPiSession).toHaveBeenCalledWith("tab-subagent-detail");
     });
+    expect(rpcMocks.clearAgentChatComposerFocus).toHaveBeenCalledWith("tab-agent");
+    expect(rpcMocks.clearAgentChatComposerFocus).toHaveBeenCalledWith("tab-subagent-detail");
   });
 
   it("closes terminal sessions for removed sibling tabs", async () => {
@@ -495,6 +535,61 @@ describe("tabCommands", () => {
 
     expect(consumeExplicitlyClosedTerminalTabId("tab-terminal-1")).toBe(true);
     expect(consumeExplicitlyClosedTerminalTabId("tab-terminal-2")).toBe(true);
+  });
+
+  it("requests terminal focus on the next frame only for a newly created terminal tab", () => {
+    let focusFrame: FrameRequestCallback | undefined;
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      focusFrame = callback;
+      return 1;
+    });
+    tabStore.setState({
+      tabs: [],
+      selectedTabId: "",
+      selectedTabIdByWorkspaceId: {},
+    });
+
+    openTab({ workspaceId: "workspace-1", kind: "terminal", title: "Terminal", reuseExisting: false });
+
+    const createdTabId = tabStore.getState().selectedTabId;
+    expect(createdTabId).not.toBe("");
+    expect(terminalFocusStore.getState().pendingTabIds.has(createdTabId)).toBe(false);
+    focusFrame?.(0);
+    expect(terminalFocusStore.getState().pendingTabIds.has(createdTabId)).toBe(true);
+
+    terminalFocusStore.getState().consumeFocus(createdTabId);
+    openTab({ workspaceId: "workspace-1", kind: "terminal", title: "Terminal" });
+
+    expect(rpcMocks.requestTerminalRuntimeFocus).not.toHaveBeenCalled();
+  });
+
+  it("requests composer focus only for a newly created full agent-chat tab", () => {
+    let focusFrame: FrameRequestCallback | undefined;
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      focusFrame = callback;
+      return 1;
+    });
+    tabStore.setState({
+      tabs: [],
+      selectedTabId: "",
+      selectedTabIdByWorkspaceId: {},
+    });
+
+    openTab({ workspaceId: "workspace-1", kind: "agent-chat", cwd: "/tmp/project" });
+
+    expect(rpcMocks.requestNewAgentChatComposerFocus).not.toHaveBeenCalled();
+    focusFrame?.(0);
+    expect(rpcMocks.requestNewAgentChatComposerFocus).toHaveBeenCalledWith(tabStore.getState().selectedTabId);
+
+    rpcMocks.requestNewAgentChatComposerFocus.mockClear();
+    openTab({
+      workspaceId: "workspace-1",
+      kind: "agent-chat",
+      cwd: "/tmp/project",
+      sessionView: "subagent-detail",
+    });
+
+    expect(rpcMocks.requestNewAgentChatComposerFocus).not.toHaveBeenCalled();
   });
 
   it("delegates tab state updates to tab store", () => {

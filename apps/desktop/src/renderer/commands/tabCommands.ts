@@ -1,3 +1,4 @@
+import { clearAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../events/agentChatComposerFocus";
 import { clearTerminalAgentStatus } from "../events/backendEventStoreBindings";
 import { getErrorMessage } from "../helpers/errorHelpers";
 import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } from "../helpers/tabHelpers";
@@ -8,6 +9,7 @@ import { findOppositePaneId, splitRootPane } from "../store/split-pane";
 import { splitPaneStore } from "../store/splitPaneStore";
 import type { TabStoreState } from "../store/tabStore";
 import { tabStore } from "../store/tabStore";
+import { terminalFocusStore } from "../store/terminalFocusStore";
 import type { OpenWorkspaceTabInput } from "../store/types";
 import { enqueueWorkspaceErrorNotice } from "../store/workspaceLifecycleNoticeStore";
 import { workspaceStore } from "../store/workspaceStore";
@@ -35,6 +37,7 @@ function readTabStoreState(): TabStoreState {
 /** Releases agent-chat sessions for tabs that are being closed in bulk. */
 function stopAgentChatSessionsForTabs(tabs: AgentChatTab[]): void {
   for (const tab of tabs) {
+    clearAgentChatComposerFocus(tab.id);
     // fire-and-forget: tab closure must not wait for daemon session cleanup.
     void stopPiSession(tab.id).catch(() => {});
   }
@@ -103,6 +106,7 @@ export function closeTab(tabId: string): void {
       });
   }
   if (tab.kind === "agent-chat") {
+    clearAgentChatComposerFocus(tab.id);
     // fire-and-forget: tab closure must not wait for daemon session cleanup.
     void stopPiSession(tab.id).catch(() => {});
   }
@@ -190,11 +194,42 @@ export function setSelectedTab(tabId: string) {
   readTabStoreState().selectTab(tabId);
 }
 
+/** Requests focus on the next frame for an eligible tab created by the current open-tab operation. */
+function requestFocusForNewTab(previousTabIds: Set<string>): void {
+  const snapshot = readTabStoreState();
+  const selectedTab = snapshot.tabs.find((tab) => tab.id === snapshot.selectedTabId);
+  if (!selectedTab || previousTabIds.has(selectedTab.id)) {
+    return;
+  }
+
+  const requestFocus =
+    selectedTab.kind === "terminal"
+      ? () => terminalFocusStore.getState().requestFocus(selectedTab.id)
+      : selectedTab.kind === "agent-chat" && selectedTab.data.sessionView !== "subagent-detail"
+        ? () => requestNewAgentChatComposerFocus(selectedTab.id)
+        : undefined;
+  if (!requestFocus) {
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    const createdTabStillExists = readTabStoreState().tabs.some((tab) => tab.id === selectedTab.id);
+    if (!createdTabStillExists) {
+      return;
+    }
+
+    requestFocus();
+  });
+}
+
 /** Opens one tab from one normalized tab input payload. */
 export function openTab(input: OpenWorkspaceTabInput) {
+  const snapshot = readTabStoreState();
+  const previousTabIds = new Set(snapshot.tabs.map((tab) => tab.id));
   const workspaceId = input.workspaceId ?? workspaceStore.getState().selectedWorkspaceId;
   const activePane = splitPaneStore.getState().getActivePane(workspaceId);
-  readTabStoreState().openTab(input, { activePaneTabIds: activePane?.tabIds });
+  snapshot.openTab(input, { activePaneTabIds: activePane?.tabIds });
+  requestFocusForNewTab(previousTabIds);
 }
 
 /**
@@ -247,10 +282,12 @@ export function openTabInOppositePane(input: OpenWorkspaceTabInput): void {
   }
 
   const activePane = splitPaneStore.getState().getActivePane(workspaceId);
+  const previousTabIds = new Set(readTabStoreState().tabs.map((tab) => tab.id));
 
   // Step 2: Open the tab — WorkspaceSplitPaneView's auto-registration effect will
   // place it in the current active pane (which is now the target opposite pane)
   readTabStoreState().openTab(input, { activePaneTabIds: activePane?.tabIds });
+  requestFocusForNewTab(previousTabIds);
 }
 
 /** Toggles pinned state for one tab id. */
