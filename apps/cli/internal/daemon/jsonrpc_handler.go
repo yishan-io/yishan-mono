@@ -3,6 +3,7 @@ package daemon
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"path/filepath"
@@ -33,6 +34,7 @@ type JSONRPCHandler struct {
 	upgrader             websocket.Upgrader
 	manager              *workspace.Manager
 	runtime              *cliruntime.Runtime
+	localDatabase        *sql.DB
 	nodeID               string
 	logFilePath          string
 	cleanupStore         *workspaceCleanupStore
@@ -133,6 +135,11 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 	}
 	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)
 	return handler
+}
+
+// SetLocalDatabase makes daemon-owned SQLite storage available to RPC handlers.
+func (h *JSONRPCHandler) SetLocalDatabase(database *sql.DB) {
+	h.localDatabase = database
 }
 
 func (h *JSONRPCHandler) SetComputerService(svc *computerService) {

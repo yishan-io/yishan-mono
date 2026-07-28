@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -15,6 +16,7 @@ import (
 	"yishan/apps/cli/internal/buildinfo"
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/config"
+	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/nodeid"
 	cliruntime "yishan/apps/cli/internal/runtime"
@@ -33,11 +35,13 @@ func bootstrapDaemon(cfg RunConfig, statePath string, runtime *cliruntime.Runtim
 
 	daemonID, err := resolveDaemonID(statePath)
 	if err != nil {
+		_ = listener.Close() // listener is not owned by a daemon runtime yet
 		return nil, err
 	}
 
-	handler, relayStatus, err := buildHandler(cfg, statePath, runtime, daemonID)
+	handler, relayStatus, database, err := buildHandler(cfg, statePath, runtime, daemonID)
 	if err != nil {
+		_ = listener.Close() // listener is not owned by a daemon runtime yet
 		return nil, err
 	}
 
@@ -46,14 +50,15 @@ func bootstrapDaemon(cfg RunConfig, statePath string, runtime *cliruntime.Runtim
 	handler.startWorkspaceCleanupRetry(cleanupCtx)
 
 	return &daemonRuntime{
-		listener:    listener,
-		actualAddr:  actualAddr,
-		actualPort:  actualPort,
-		daemonID:    daemonID,
-		handler:     handler,
-		relayStatus: relayStatus,
-		server:      server,
-		statePath:   statePath,
+		listener:      listener,
+		actualAddr:    actualAddr,
+		actualPort:    actualPort,
+		daemonID:      daemonID,
+		handler:       handler,
+		relayStatus:   relayStatus,
+		server:        server,
+		statePath:     statePath,
+		localDatabase: database,
 
 		cleanupCtxCancel: cancelCleanup,
 	}, nil
@@ -93,36 +98,58 @@ func resolveDaemonID(statePath string) (string, error) {
 	return daemonID, nil
 }
 
-func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, daemonID string) (*JSONRPCHandler, *RelayStatus, error) {
+func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, daemonID string) (*JSONRPCHandler, *RelayStatus, *sql.DB, error) {
+	database, err := initLocalDatabase(statePath)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	workspaceManager := workspace.NewManager()
 	cleanupStore, err := newWorkspaceCleanupStore(statePath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("create workspace cleanup store: %w", err)
+		_ = database.Close() // cleanup after failed daemon bootstrap
+		return nil, nil, nil, fmt.Errorf("create workspace cleanup store: %w", err)
 	}
 	settingsFilePath := config.SettingsFilePath(filepath.Dir(statePath))
 	contextStore := NewAppContextStore(settingsFilePath)
 	wsIndexStore, err := newWorkspaceIndexStore(statePath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("create workspace index store: %w", err)
+		_ = database.Close() // cleanup after failed daemon bootstrap
+		return nil, nil, nil, fmt.Errorf("create workspace index store: %w", err)
 	}
 	handler := NewJSONRPCHandler(workspaceManager, runtime, daemonID, cfg.LogFilePath, cleanupStore, wsIndexStore, statePath, contextStore)
+	handler.SetLocalDatabase(database)
 	handler.SetComputerService(newDefaultComputerService())
 	if err := initComputerConfig(handler); err != nil {
-		return nil, nil, err
+		_ = database.Close() // cleanup after failed daemon bootstrap
+		return nil, nil, nil, err
 	}
 
 	if err := initMemoryService(handler, statePath, cfg, runtime); err != nil {
-		return nil, nil, err
+		_ = database.Close() // cleanup after failed daemon bootstrap
+		return nil, nil, nil, err
 	}
 	if err := restoreIndexedWorkspaces(handler); err != nil {
-		return nil, nil, fmt.Errorf("restore indexed workspaces: %w", err)
+		_ = database.Close() // cleanup after failed daemon bootstrap
+		return nil, nil, nil, fmt.Errorf("restore indexed workspaces: %w", err)
 	}
 	if handler.tokenUsage != nil {
 		handler.tokenUsage.StartStartupScan()
 	}
 
 	relayStatus := NewRelayStatus(cfg.RelayEnabled, cfg.RelayURL)
-	return handler, relayStatus, nil
+	return handler, relayStatus, database, nil
+}
+
+func initLocalDatabase(statePath string) (*sql.DB, error) {
+	database, err := localdb.Open(filepath.Dir(statePath))
+	if err != nil {
+		return nil, fmt.Errorf("open local database: %w", err)
+	}
+	if err := localdb.Migrate(database); err != nil {
+		_ = database.Close() // cleanup after failed migration
+		return nil, fmt.Errorf("migrate local database: %w", err)
+	}
+	return database, nil
 }
 
 func initComputerConfig(handler *JSONRPCHandler) error {

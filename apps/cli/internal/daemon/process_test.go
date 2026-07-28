@@ -11,6 +11,26 @@ import (
 	"yishan/apps/cli/internal/workspace"
 )
 
+func TestInitLocalDatabase_CreatesMigratedProfileDatabase(t *testing.T) {
+	profileDir := t.TempDir()
+	database, err := initLocalDatabase(filepath.Join(profileDir, "daemon.state.json"))
+	if err != nil {
+		t.Fatalf("initialize local database: %v", err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+
+	var projectsTableName string
+	if err := database.QueryRow(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'projects'`).Scan(&projectsTableName); err != nil {
+		t.Fatalf("find projects table: %v", err)
+	}
+	if projectsTableName != "projects" {
+		t.Fatalf("expected projects table, got %q", projectsTableName)
+	}
+	if _, err := os.Stat(filepath.Join(profileDir, "yishan.db")); err != nil {
+		t.Fatalf("expected profile database: %v", err)
+	}
+}
+
 func TestRestoreIndexedWorkspaces_RestoresExistingEntries(t *testing.T) {
 	root := t.TempDir()
 	statePath := filepath.Join(root, "daemon.state.json")
