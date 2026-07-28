@@ -130,6 +130,9 @@ export function useMarkdownStyles(theme: Theme, baseFontSize = 15) {
           listStyle: "none",
           ml: -2.5,
         },
+        "& li > ul > li:has(> input[type='checkbox']), & li > ol > li:has(> input[type='checkbox'])": {
+          ml: 0,
+        },
         "& input[type='checkbox']": {
           mr: 0.75,
           verticalAlign: "middle",

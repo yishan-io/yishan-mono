@@ -45,6 +45,7 @@ describe("postProcessMarkdownPreview", () => {
 
   it("extracts mermaid placeholders and keeps link and task-list handlers working after image rewrite", () => {
     const container = document.createElement("div");
+    document.body.append(container);
     const onContentChange = vi.fn();
 
     const result = postProcessMarkdownPreview({
@@ -76,8 +77,10 @@ describe("postProcessMarkdownPreview", () => {
     link.dispatchEvent(linkClickEvent);
     expect(openTabMock).toHaveBeenCalledWith({ kind: "file", path: "docs/reference/guide.md" });
 
-    fireEvent.click(container.querySelector("input") as HTMLInputElement);
+    const checkbox = container.querySelector("input") as HTMLInputElement;
+    fireEvent.click(checkbox);
     expect(onContentChange).toHaveBeenCalledWith("- [ ] Task");
+    expect(document.activeElement).toBe(checkbox);
   });
 
   it("preserves the original early-return behavior when image processing hits an absolute URL", () => {

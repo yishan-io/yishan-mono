@@ -12,6 +12,19 @@ export type CreateMonacoFileEditorProps = {
   onSave: (content: string) => void;
 };
 
+/** Replaces editor content without resetting the user's selection or viewport. */
+export function replaceEditorContentPreservingViewState(editor: monaco.editor.IStandaloneCodeEditor, content: string) {
+  const selections = editor.getSelections();
+  const scrollPosition = { scrollTop: editor.getScrollTop(), scrollLeft: editor.getScrollLeft() };
+
+  editor.setValue(content);
+
+  if (selections) {
+    editor.setSelections(selections);
+  }
+  editor.setScrollPosition(scrollPosition);
+}
+
 /** Creates the Monaco editor instance and backing model for a file. */
 export function createMonacoFileEditor({
   host,
