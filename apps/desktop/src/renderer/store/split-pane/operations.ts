@@ -43,7 +43,7 @@ export function collectLeaves(node: SplitPaneNode): PaneLeaf[] {
 }
 
 /** Deep-replaces a node by id in the tree. Returns a new tree (immutable). */
-function replaceNode(root: SplitPaneNode, targetId: string, replacement: SplitPaneNode): SplitPaneNode {
+export function replaceNode(root: SplitPaneNode, targetId: string, replacement: SplitPaneNode): SplitPaneNode {
   if (root.id === targetId) {
     return replacement;
   }
@@ -476,44 +476,5 @@ export function reorderTabInPane(
   return {
     root: replaceNode(state.root, paneId, updatedLeaf),
     activePaneId: paneId,
-  };
-}
-
-/**
- * Splits a single-pane layout (root is a leaf) into a two-pane layout.
- * The original pane becomes the first (left/top) child, and a new empty
- * leaf is created as the second (right/bottom) child.
- * Returns the updated state with the active pane set to the new leaf.
- *
- * If the root is already a branch, returns null.
- */
-export function splitRootPane(
-  state: SplitPaneStateSlice,
-  direction: SplitDirection,
-  newPaneId?: string,
-  newBranchId?: string,
-): SplitPaneStateSlice | null {
-  if (state.root.kind !== "leaf") {
-    return null;
-  }
-
-  const secondPaneId = newPaneId ?? createPaneId();
-  const branchId = newBranchId ?? createPaneId();
-
-  const originalLeaf = state.root;
-  const newLeaf = createLeaf(secondPaneId, []);
-
-  const branch: PaneBranch = {
-    kind: "branch",
-    id: branchId,
-    direction,
-    ratio: 0.5,
-    first: originalLeaf,
-    second: newLeaf,
-  };
-
-  return {
-    root: branch,
-    activePaneId: secondPaneId,
   };
 }

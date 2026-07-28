@@ -13,6 +13,7 @@ export {
   setSplitRatio,
   findOppositePaneId,
   splitPaneWithTab,
-  splitRootPane,
 } from "./operations";
+export { createAdjacentPaneWithTab } from "./createAdjacentPaneWithTab";
+export { splitRootPane } from "./splitRootPane";
 export type { PaneBranch, PaneLeaf, SplitDirection, SplitPaneNode, SplitPaneStateSlice } from "./types";

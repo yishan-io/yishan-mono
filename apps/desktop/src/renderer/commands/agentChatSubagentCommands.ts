@@ -1,6 +1,7 @@
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { agentChatStore } from "../store/agentChatStore";
 import { isAgentSessionBusy } from "../store/agentChatTypes";
+import { findOppositePaneId } from "../store/split-pane";
 import { splitPaneStore } from "../store/splitPaneStore";
 import { tabStore } from "../store/tabStore";
 import { findTabWithSession } from "./agentChatCommands";
@@ -123,13 +124,7 @@ export async function openSubagentSessionInRightSplitPane(opts: {
     createdTabId: createdTab.id,
     normalizedParentPaneId,
   });
-  splitPaneStore.getState().registerTabInPane(opts.workspaceId, createdTab.id, normalizedParentPaneId);
-  splitPaneStore.getState().splitPane(opts.workspaceId, {
-    tabId: createdTab.id,
-    targetPaneId: normalizedParentPaneId,
-    direction: SUBAGENT_SPLIT_DIRECTION,
-    placement: SUBAGENT_SPLIT_PLACEMENT,
-  });
+  placeUnplacedSubagentTabInOppositePane(opts.workspaceId, normalizedParentPaneId, createdTab.id);
   tabStore.getState().selectTab(createdTab.id);
   console.debug("[agentChatSubagentCommands] subagent tab opened", {
     createdTabId: createdTab.id,
@@ -167,21 +162,21 @@ function revealSubagentTabInRightSplitPane(opts: { workspaceId: string; parentPa
     return;
   }
 
-  if (!existingPane) {
-    splitPaneStore.getState().registerTabInPane(opts.workspaceId, opts.tabId, normalizedParentPaneId);
-  }
-
   console.debug("[agentChatSubagentCommands] reveal splitting pane", {
     ...opts,
     normalizedParentPaneId,
     existingPaneId: existingPane?.id,
   });
-  splitPaneStore.getState().splitPane(opts.workspaceId, {
-    tabId: opts.tabId,
-    targetPaneId: normalizedParentPaneId,
-    direction: SUBAGENT_SPLIT_DIRECTION,
-    placement: SUBAGENT_SPLIT_PLACEMENT,
-  });
+  if (existingPane) {
+    splitPaneStore.getState().splitPane(opts.workspaceId, {
+      tabId: opts.tabId,
+      targetPaneId: normalizedParentPaneId,
+      direction: SUBAGENT_SPLIT_DIRECTION,
+      placement: SUBAGENT_SPLIT_PLACEMENT,
+    });
+  } else {
+    placeUnplacedSubagentTabInOppositePane(opts.workspaceId, normalizedParentPaneId, opts.tabId);
+  }
   tabStore.getState().selectTab(opts.tabId);
 }
 
@@ -223,6 +218,23 @@ export async function cancelSubagentRun(opts: {
       message: `${SUBAGENT_CANCEL_STEER_MESSAGE_PREFIX} ${cancelledAgentLabel}. Do not retry that sub-agent. Continue without it and explain any missing work if needed.`,
       streamingBehavior: "steer",
     },
+  });
+}
+
+/** Places an unplaced subagent tab in the opposite pane, creating one only when absent. */
+function placeUnplacedSubagentTabInOppositePane(workspaceId: string, parentPaneId: string, tabId: string): void {
+  const layout = splitPaneStore.getState().getLayout(workspaceId);
+  const oppositePaneId = findOppositePaneId(layout.root, parentPaneId);
+  if (oppositePaneId) {
+    splitPaneStore.getState().registerTabInPane(workspaceId, tabId, oppositePaneId);
+    return;
+  }
+
+  splitPaneStore.getState().createAdjacentPaneWithTab(workspaceId, {
+    tabId,
+    targetPaneId: parentPaneId,
+    direction: SUBAGENT_SPLIT_DIRECTION,
+    placement: SUBAGENT_SPLIT_PLACEMENT,
   });
 }
 
