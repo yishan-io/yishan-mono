@@ -106,6 +106,7 @@ import {
 } from "../commands/tabCommands";
 import {
   closeTerminalSession as closeTerminalSessionCommand,
+  consumeTerminalTabFocus as consumeTerminalTabFocusCommand,
   createTerminalSession as createTerminalSessionCommand,
   getTerminalResourceUsage as getTerminalResourceUsageCommand,
   killTerminalProcess as killTerminalProcessCommand,
@@ -113,6 +114,7 @@ import {
   listTerminalSessions as listTerminalSessionsCommand,
   readTerminalOutput as readTerminalOutputCommand,
   resizeTerminal as resizeTerminalCommand,
+  retainOpenTerminalTabFocus as retainOpenTerminalTabFocusCommand,
   setActiveWorkspace as setActiveWorkspaceCommand,
   subscribeTerminalOutput as subscribeTerminalOutputCommand,
   subscribeTerminalSessions as subscribeTerminalSessionsCommand,
@@ -227,6 +229,8 @@ export type Commands = {
   subscribeTerminalOutput: typeof subscribeTerminalOutputCommand;
   subscribeTerminalSessions: typeof subscribeTerminalSessionsCommand;
   closeTerminalSession: typeof closeTerminalSessionCommand;
+  consumeTerminalTabFocus: typeof consumeTerminalTabFocusCommand;
+  retainOpenTerminalTabFocus: typeof retainOpenTerminalTabFocusCommand;
   killTerminalProcess: typeof killTerminalProcessCommand;
   getNotificationPreferences: typeof getNotificationPreferencesCommand;
   updateNotificationPreferences: typeof updateNotificationPreferencesCommand;
@@ -367,6 +371,8 @@ export function useCommands(): Commands {
       subscribeTerminalOutput: subscribeTerminalOutputCommand,
       subscribeTerminalSessions: subscribeTerminalSessionsCommand,
       closeTerminalSession: closeTerminalSessionCommand,
+      consumeTerminalTabFocus: consumeTerminalTabFocusCommand,
+      retainOpenTerminalTabFocus: retainOpenTerminalTabFocusCommand,
       killTerminalProcess: killTerminalProcessCommand,
       getNotificationPreferences: getNotificationPreferencesCommand,
       updateNotificationPreferences: updateNotificationPreferencesCommand,

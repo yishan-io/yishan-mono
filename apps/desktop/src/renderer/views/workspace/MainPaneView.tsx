@@ -3,7 +3,9 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ColumnSeparator } from "../../components/ColumnSeparator";
 import { TabPanel } from "../../components/TabPanel";
+import { retainOpenAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
 import { SUPPORTED_DESKTOP_AGENT_KINDS } from "../../helpers/agentSettings";
+import { useCommands } from "../../hooks/useCommands";
 import { useWorkspacePaneVisibilityContext } from "../../hooks/useWorkspacePaneVisibility";
 import { agentSettingsStore } from "../../store/settings/agentSettingsStore";
 import { DEFAULT_RIGHT_WIDTH, layoutStore } from "../../store/settings/layoutStore";
@@ -29,6 +31,7 @@ function clamp(value: number, min: number, max: number): number {
 /** Renders the primary workspace pane with split-pane tabbed content, per-tab views, and pane visibility controls. */
 export function MainPaneView() {
   const { t } = useTranslation();
+  const cmd = useCommands();
   const selectedWorkspaceId = workspaceStore((state) => state.selectedWorkspaceId);
   const tabs = tabStore((state) => state.tabs);
   const inUseByAgentKind = agentSettingsStore((state) => state.inUseByAgentKind);
@@ -62,8 +65,11 @@ export function MainPaneView() {
     removeWebviewsForClosedTabs(browserTabIds);
 
     const terminalTabIds = new Set(tabs.filter((tab) => tab.kind === "terminal").map((tab) => tab.id));
+    const agentChatTabIds = new Set(tabs.filter((tab) => tab.kind === "agent-chat").map((tab) => tab.id));
+    cmd.retainOpenTerminalTabFocus(terminalTabIds);
+    retainOpenAgentChatComposerFocus(agentChatTabIds);
     disposeTerminalRuntimesForClosedTabs(terminalTabIds);
-  }, [tabs]);
+  }, [cmd, tabs]);
 
   const workspaceIdsWithTabs = useMemo(() => {
     const ids = new Set<string>();

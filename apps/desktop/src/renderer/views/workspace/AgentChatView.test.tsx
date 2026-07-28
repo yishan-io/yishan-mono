@@ -2,6 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { requestAgentChatComposerFocus, requestNewAgentChatComposerFocus } from "../../events/agentChatComposerFocus";
 import { agentChatStore } from "../../store/agentChatStore";
 import type { AgentMessage, AgentModel } from "../../store/agentChatTypes";
 import { AgentChatView } from "./AgentChatView";
@@ -372,6 +373,69 @@ describe("AgentChatView", () => {
     );
 
     expect(document.activeElement).toBe(focusTarget);
+    focusTarget.remove();
+  });
+
+  it("focuses a deferred composer request after the session finishes starting", () => {
+    seedSession({ state: "starting" });
+    mocked.stateRef.current.shouldExposeComposerAsTextbox = true;
+    const focusTarget = document.createElement("button");
+    document.body.append(focusTarget);
+    focusTarget.focus();
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+    requestAgentChatComposerFocus("tab-1");
+
+    expect(document.activeElement).toBe(focusTarget);
+
+    act(() => {
+      agentChatStore.getState().setSessionState("tab-1", "idle");
+    });
+
+    expect(document.activeElement).toBe(screen.getByRole("textbox"));
+    focusTarget.remove();
+  });
+
+  it("waits to focus a new-chat composer until its initial session data has loaded", () => {
+    seedSession();
+    mocked.stateRef.current.shouldExposeComposerAsTextbox = true;
+    const focusTarget = document.createElement("button");
+    document.body.append(focusTarget);
+    focusTarget.focus();
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+    requestNewAgentChatComposerFocus("tab-1");
+
+    expect(document.activeElement).toBe(focusTarget);
+
+    act(() => {
+      agentChatStore.getState().replaceMessages("tab-1", []);
+      agentChatStore.getState().markStateLoaded("tab-1");
+    });
+
+    expect(document.activeElement).toBe(screen.getByRole("textbox"));
+    focusTarget.remove();
+  });
+
+  it("waits to focus a deferred composer request until its tab becomes active", () => {
+    seedSession({ state: "starting" });
+    mocked.stateRef.current.shouldExposeComposerAsTextbox = true;
+    const focusTarget = document.createElement("button");
+    document.body.append(focusTarget);
+    focusTarget.focus();
+
+    const view = render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive={false} />);
+    requestAgentChatComposerFocus("tab-1");
+
+    act(() => {
+      agentChatStore.getState().setSessionState("tab-1", "idle");
+    });
+
+    expect(document.activeElement).toBe(focusTarget);
+
+    view.rerender(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    expect(document.activeElement).toBe(screen.getByRole("textbox"));
     focusTarget.remove();
   });
 

@@ -52,6 +52,7 @@ function AgentChatViewComponent({
     agentChatTab?.data.sessionView === "subagent-detail" ? agentChatTab.data.subagentParentSessionId : undefined;
   const isInitialHistoryLoadPending =
     Boolean(sessionId) && (!hasSession || !hasLoadedMessages || !hasLoadedModels || !hasLoadedState);
+  const isReadyForAutoFocus = hasLoadedMessages && hasLoadedModels && hasLoadedState;
 
   useAgentChatSessionLifecycle({
     tabId,
@@ -235,7 +236,14 @@ function AgentChatViewComponent({
         </Box>
       ) : null}
       {!isReadOnlySubagentDetail ? (
-        <AgentChatComposerPane tabId={tabId} workspaceId={workspaceId} cwd={cwd} paneId={paneId} />
+        <AgentChatComposerPane
+          tabId={tabId}
+          workspaceId={workspaceId}
+          cwd={cwd}
+          paneId={paneId}
+          isActive={isActive}
+          isReadyForAutoFocus={isReadyForAutoFocus}
+        />
       ) : null}
     </Box>
   );
