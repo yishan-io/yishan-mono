@@ -36,7 +36,7 @@ export function buildAgentChatUsageSummary(
   }
 
   const contextTokens = estimateAgentChatContextTokens(messages);
-  const contextPercent = Math.round((contextTokens / contextWindow) * 100);
+  const contextPercent = roundContextPercent((contextTokens / contextWindow) * 100);
   const usageTotals = sumAgentChatUsageTotals(messages);
   const totalCostUsd = sumAgentChatCostUsd(messages);
 
@@ -144,6 +144,11 @@ function sumAgentChatUsageTotals(
       totalSessionTokens: 0,
     },
   );
+}
+
+/** Rounds a context percentage to at most one decimal place. */
+export function roundContextPercent(percent: number): number {
+  return Math.round(percent * 10) / 10;
 }
 
 function calculateCacheRatePercent(inputTokens: number, cacheReadTokens: number): number {

@@ -48,8 +48,14 @@ describe("buildAgentChatUsageSummaryLabel", () => {
   it("uses compact k/m units for large context values", () => {
     const messages: AgentMessage[] = [buildAssistantMessage({ totalTokens: 2_206, costTotal: 0.25 })];
 
-    expect(buildAgentChatUsageSummaryLabel(messages, buildModel(128_000))).toBe("ctx: 2.2K/128K (2%), $0.25");
-    expect(buildAgentChatUsageSummaryLabel(messages, buildModel(1_500_000))).toBe("ctx: 2.2K/1.5M (0%), $0.25");
+    expect(buildAgentChatUsageSummaryLabel(messages, buildModel(128_000))).toBe("ctx: 2.2K/128K (1.7%), $0.25");
+    expect(buildAgentChatUsageSummaryLabel(messages, buildModel(1_500_000))).toBe("ctx: 2.2K/1.5M (0.1%), $0.25");
+  });
+
+  it("keeps context percentages to at most one decimal place", () => {
+    const messages: AgentMessage[] = [buildAssistantMessage({ totalTokens: 1, costTotal: 0.25 })];
+
+    expect(buildAgentChatUsageSummaryLabel(messages, buildModel(64))).toBe("ctx: 1/64 (1.6%), $0.25");
   });
 
   it("adds an estimated token tail after the latest assistant usage snapshot", () => {

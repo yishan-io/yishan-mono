@@ -5,7 +5,11 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { agentChatStore } from "../../../store/agentChatStore";
 import type { AgentMessage } from "../../../store/agentChatTypes";
-import { buildAgentChatUsageSummary, formatDetailedTokenCount } from "../../../views/workspace/agentChatUsageSummary";
+import {
+  buildAgentChatUsageSummary,
+  formatDetailedTokenCount,
+  roundContextPercent,
+} from "../../../views/workspace/agentChatUsageSummary";
 
 const EMPTY_MESSAGES: AgentMessage[] = [];
 const USAGE_SUMMARY_FONT_SIZE_PX = 12;
@@ -53,7 +57,7 @@ export function AgentChatUsageSummaryLabel({ tabId }: AgentChatUsageSummaryLabel
   const contextUsage = sessionStats?.contextUsage;
   const contextTokens = contextUsage?.tokens ?? usageSummary.contextTokens;
   const contextWindow = contextUsage?.contextWindow ?? usageSummary.contextWindow;
-  const contextPercent = contextUsage?.percent ?? usageSummary.contextPercent;
+  const contextPercent = roundContextPercent(contextUsage?.percent ?? usageSummary.contextPercent);
   const contextSummaryLabel =
     contextUsage?.tokens === null
       ? `ctx: ?/${formatDetailedTokenCount(contextWindow)} (?)`
