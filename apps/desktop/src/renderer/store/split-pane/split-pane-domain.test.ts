@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addTabToPane,
   collectLeaves,
+  createAdjacentPaneWithTab,
   createLeaf,
   findLeaf,
   findLeafByTabId,
@@ -102,6 +103,55 @@ describe("collectLeaves", () => {
     const leaves = collectLeaves(state.root);
     expect(leaves).toHaveLength(2);
     expect(leaves.map((l) => l.id)).toEqual(["pane-left", "pane-right"]);
+  });
+});
+
+// ─── createAdjacentPaneWithTab ─────────────────────────────────────────────────
+
+describe("createAdjacentPaneWithTab", () => {
+  it("creates a right pane for an unplaced tab without changing the parent selection", () => {
+    const state = createSinglePaneState(["parent-tab", "sibling-tab"]);
+    const next = createAdjacentPaneWithTab(state, {
+      tabId: "child-tab",
+      targetPaneId: "pane-root",
+      direction: "horizontal",
+      placement: "second",
+      newPaneId: "pane-child",
+      newBranchId: "branch-child",
+    });
+
+    const ensuredNext = expectNextState(next);
+    expect(ensuredNext.activePaneId).toBe("pane-child");
+
+    const parentPane = findLeaf(ensuredNext.root, "pane-root");
+    expect(parentPane).toMatchObject({
+      tabIds: ["parent-tab", "sibling-tab"],
+      selectedTabId: "parent-tab",
+    });
+
+    const childPane = findLeaf(ensuredNext.root, "pane-child");
+    expect(childPane).toMatchObject({ tabIds: ["child-tab"], selectedTabId: "child-tab" });
+  });
+
+  it("returns null when the target is missing or the tab is already placed", () => {
+    const state = createSinglePaneState();
+
+    expect(
+      createAdjacentPaneWithTab(state, {
+        tabId: "child-tab",
+        targetPaneId: "missing-pane",
+        direction: "horizontal",
+        placement: "second",
+      }),
+    ).toBeNull();
+    expect(
+      createAdjacentPaneWithTab(state, {
+        tabId: "tab-1",
+        targetPaneId: "pane-root",
+        direction: "horizontal",
+        placement: "second",
+      }),
+    ).toBeNull();
   });
 });
 

@@ -7,6 +7,7 @@ import {
   type SplitPaneStateSlice,
   addTabToPane,
   collectLeaves,
+  createAdjacentPaneWithTab,
   createLeaf,
   createPaneId,
   findLeaf,
@@ -42,6 +43,15 @@ export type SplitPaneStoreState = {
   selectTab: (workspaceId: string, paneId: string, tabId: string) => void;
   registerTabInPane: (workspaceId: string, tabId: string, paneId?: string) => void;
   unregisterTabFromPane: (workspaceId: string, tabId: string) => void;
+  createAdjacentPaneWithTab: (
+    workspaceId: string,
+    input: {
+      tabId: string;
+      targetPaneId: string;
+      direction: SplitDirection;
+      placement: "first" | "second";
+    },
+  ) => void;
   splitPane: (
     workspaceId: string,
     input: {
@@ -139,6 +149,21 @@ export const splitPaneStore = create<SplitPaneStoreState>()(
       set((state) => {
         const layout = ensureLayout(state.layoutByWorkspaceId, workspaceId);
         const next = removeTabFromPane(layout, tabId);
+        if (next) {
+          layout.root = next.root;
+          layout.activePaneId = next.activePaneId;
+        }
+      });
+    },
+
+    createAdjacentPaneWithTab: (workspaceId, input) => {
+      set((state) => {
+        const layout = ensureLayout(state.layoutByWorkspaceId, workspaceId);
+        const next = createAdjacentPaneWithTab(layout, {
+          ...input,
+          newPaneId: createPaneId(),
+          newBranchId: createPaneId(),
+        });
         if (next) {
           layout.root = next.root;
           layout.activePaneId = next.activePaneId;

@@ -85,6 +85,7 @@ function createShortcutContext(input: Partial<ShortContext> = {}): ShortContext 
       selectTab: vi.fn(),
       registerTabInPane: vi.fn(),
       unregisterTabFromPane: vi.fn(),
+      createAdjacentPaneWithTab: vi.fn(),
       splitPane: vi.fn(),
       moveTab: vi.fn(),
       reorderTab: vi.fn(),

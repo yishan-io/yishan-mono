@@ -390,6 +390,14 @@ describe("agentChatCommands.subagent helpers", () => {
             kind: "agent-chat",
             data: { cwd: "/tmp/project", sessionId: "parent-session" },
           },
+          {
+            id: "sibling-tab",
+            workspaceId: "workspace-1",
+            title: "Sibling Chat",
+            pinned: false,
+            kind: "agent-chat",
+            data: { cwd: "/tmp/project", sessionId: "sibling-session" },
+          },
         ],
         selectedTabId: "parent-tab",
         selectedTabIdByWorkspaceId: { "workspace-1": "parent-tab" },
@@ -397,6 +405,8 @@ describe("agentChatCommands.subagent helpers", () => {
       true,
     );
     splitPaneStore.getState().registerTabInPane("workspace-1", "parent-tab", "root-pane");
+    splitPaneStore.getState().registerTabInPane("workspace-1", "sibling-tab", "root-pane");
+    splitPaneStore.getState().selectTab("workspace-1", "root-pane", "parent-tab");
 
     await openSubagentSessionInRightSplitPane({
       workspaceId: "workspace-1",
@@ -418,9 +428,76 @@ describe("agentChatCommands.subagent helpers", () => {
     expect(tabStore.getState().selectedTabId).toBe(childTab?.id);
 
     const panes = splitPaneStore.getState().getAllPanes("workspace-1");
+    const parentPane = panes.find((pane) => pane.id === "root-pane");
+    const childPane = panes.find((pane) => childTab && pane.tabIds.includes(childTab.id));
     expect(panes).toHaveLength(2);
-    expect(panes.some((pane) => pane.id === "root-pane" && pane.tabIds.includes("parent-tab"))).toBe(true);
-    expect(panes.some((pane) => childTab && pane.tabIds.includes(childTab.id))).toBe(true);
+    expect(parentPane).toMatchObject({ tabIds: ["parent-tab", "sibling-tab"], selectedTabId: "parent-tab" });
+    expect(childPane).toMatchObject({ selectedTabId: childTab?.id });
+    expect(splitPaneStore.getState().getActivePane("workspace-1")?.id).toBe(childPane?.id);
+  });
+
+  it("reuses an existing opposite pane for a new child session", async () => {
+    tabStore.setState(
+      {
+        ...tabStore.getState(),
+        tabs: [
+          {
+            id: "parent-tab",
+            workspaceId: "workspace-1",
+            title: "Parent Chat",
+            pinned: false,
+            kind: "agent-chat",
+            data: { cwd: "/tmp/project", sessionId: "parent-session" },
+          },
+          {
+            id: "opposite-tab",
+            workspaceId: "workspace-1",
+            title: "Opposite Chat",
+            pinned: false,
+            kind: "agent-chat",
+            data: { cwd: "/tmp/project", sessionId: "opposite-session" },
+          },
+        ],
+        selectedTabId: "parent-tab",
+        selectedTabIdByWorkspaceId: { "workspace-1": "parent-tab" },
+      },
+      true,
+    );
+    splitPaneStore.setState({
+      layoutByWorkspaceId: {
+        "workspace-1": {
+          root: {
+            kind: "branch",
+            id: "branch-root",
+            direction: "horizontal",
+            ratio: 0.5,
+            first: { kind: "leaf", id: "root-pane", tabIds: ["parent-tab"], selectedTabId: "parent-tab" },
+            second: { kind: "leaf", id: "opposite-pane", tabIds: ["opposite-tab"], selectedTabId: "opposite-tab" },
+          },
+          activePaneId: "root-pane",
+        },
+      },
+    });
+
+    await openSubagentSessionInRightSplitPane({
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      parentPaneId: "root-pane",
+      parentSessionId: "parent-session",
+      childSessionId: "child-session-1",
+      title: "Builder — implement row",
+    });
+
+    const childTab = tabStore
+      .getState()
+      .tabs.find((tab) => tab.kind === "agent-chat" && tab.data.sessionId === "child-session-1");
+    const panes = splitPaneStore.getState().getAllPanes("workspace-1");
+    const parentPane = panes.find((pane) => pane.id === "root-pane");
+    const oppositePane = panes.find((pane) => pane.id !== "root-pane");
+    expect(panes).toHaveLength(2);
+    expect(parentPane).toMatchObject({ tabIds: ["parent-tab"], selectedTabId: "parent-tab" });
+    expect(oppositePane).toMatchObject({ tabIds: ["opposite-tab", childTab?.id], selectedTabId: childTab?.id });
+    expect(splitPaneStore.getState().getActivePane("workspace-1")?.id).toBe(oppositePane?.id);
   });
 
   it("reveals an existing child session by splitting it into the right pane when the tab is not in any pane", async () => {
@@ -435,6 +512,14 @@ describe("agentChatCommands.subagent helpers", () => {
             pinned: false,
             kind: "agent-chat",
             data: { cwd: "/tmp/project", sessionId: "parent-session" },
+          },
+          {
+            id: "sibling-tab",
+            workspaceId: "workspace-1",
+            title: "Sibling Chat",
+            pinned: false,
+            kind: "agent-chat",
+            data: { cwd: "/tmp/project", sessionId: "sibling-session" },
           },
           {
             id: "child-tab",
@@ -456,6 +541,8 @@ describe("agentChatCommands.subagent helpers", () => {
       true,
     );
     splitPaneStore.getState().registerTabInPane("workspace-1", "parent-tab", "root-pane");
+    splitPaneStore.getState().registerTabInPane("workspace-1", "sibling-tab", "root-pane");
+    splitPaneStore.getState().selectTab("workspace-1", "root-pane", "parent-tab");
 
     await openSubagentSessionInRightSplitPane({
       workspaceId: "workspace-1",
@@ -472,9 +559,59 @@ describe("agentChatCommands.subagent helpers", () => {
     expect(childTab?.kind === "agent-chat" ? childTab.data.subagentAgentId : undefined).toBe("agent-1");
     expect(childTab?.kind === "agent-chat" ? childTab.data.subagentParentSessionId : undefined).toBe("parent-session");
     const panes = splitPaneStore.getState().getAllPanes("workspace-1");
+    const parentPane = panes.find((pane) => pane.id === "root-pane");
+    const childPane = panes.find((pane) => pane.tabIds.includes("child-tab"));
     expect(panes).toHaveLength(2);
-    expect(panes.some((pane) => pane.id === "root-pane" && pane.tabIds.includes("parent-tab"))).toBe(true);
-    expect(panes.some((pane) => pane.tabIds.includes("child-tab") && pane.selectedTabId === "child-tab")).toBe(true);
+    expect(parentPane).toMatchObject({ tabIds: ["parent-tab", "sibling-tab"], selectedTabId: "parent-tab" });
+    expect(childPane).toMatchObject({ selectedTabId: "child-tab" });
+    expect(splitPaneStore.getState().getActivePane("workspace-1")?.id).toBe(childPane?.id);
+  });
+
+  it("moves an existing child from the parent pane into a right split", async () => {
+    tabStore.setState(
+      {
+        ...tabStore.getState(),
+        tabs: [
+          {
+            id: "parent-tab",
+            workspaceId: "workspace-1",
+            title: "Parent Chat",
+            pinned: false,
+            kind: "agent-chat",
+            data: { cwd: "/tmp/project", sessionId: "parent-session" },
+          },
+          {
+            id: "child-tab",
+            workspaceId: "workspace-1",
+            title: "Builder — implement row",
+            pinned: false,
+            kind: "agent-chat",
+            data: { cwd: "/tmp/project", sessionId: "child-session-1", sessionView: "subagent-detail" },
+          },
+        ],
+        selectedTabId: "parent-tab",
+        selectedTabIdByWorkspaceId: { "workspace-1": "parent-tab" },
+      },
+      true,
+    );
+    splitPaneStore.getState().registerTabInPane("workspace-1", "parent-tab", "root-pane");
+    splitPaneStore.getState().registerTabInPane("workspace-1", "child-tab", "root-pane");
+    splitPaneStore.getState().selectTab("workspace-1", "root-pane", "parent-tab");
+
+    await openSubagentSessionInRightSplitPane({
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      parentPaneId: "root-pane",
+      childSessionId: "child-session-1",
+      title: "Builder — implement row",
+    });
+
+    const panes = splitPaneStore.getState().getAllPanes("workspace-1");
+    const parentPane = panes.find((pane) => pane.id === "root-pane");
+    const childPane = panes.find((pane) => pane.tabIds.includes("child-tab"));
+    expect(parentPane).toMatchObject({ tabIds: ["parent-tab"], selectedTabId: "parent-tab" });
+    expect(childPane).toMatchObject({ selectedTabId: "child-tab" });
+    expect(splitPaneStore.getState().getActivePane("workspace-1")?.id).toBe(childPane?.id);
   });
 
   it("sends a direct /agent-stop prompt without optimistic streaming state updates", async () => {
