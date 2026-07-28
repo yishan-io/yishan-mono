@@ -85,11 +85,11 @@ describe("AgentChatUsageSummaryLabel", () => {
 
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
 
-    fireEvent.mouseOver(screen.getByLabelText("CTX: 2.2K/128K (2%), $0.25"));
+    fireEvent.mouseOver(screen.getByLabelText("CTX: 2.2K/128K (1.7%), $0.25"));
 
     const tooltip = await screen.findByRole("tooltip");
     expect(tooltip.textContent).toContain("Current context");
-    expect(tooltip.textContent).toContain("2.2K / 128K (2%)");
+    expect(tooltip.textContent).toContain("2.2K / 128K (1.7%)");
     expect(tooltip.textContent).toContain("Input");
     expect(tooltip.textContent).toContain("2.2K");
     expect(tooltip.textContent).toContain("Output");
@@ -131,7 +131,7 @@ describe("AgentChatUsageSummaryLabel", () => {
 
     render(<AgentChatUsageSummaryLabel tabId="tab-1" />);
 
-    expect(screen.getByLabelText("CTX: 2.2K/128K (2%), $0.25")).toBeTruthy();
+    expect(screen.getByLabelText("CTX: 2.2K/128K (1.7%), $0.25")).toBeTruthy();
   });
 
   it("renders nothing when the current model has no context window", () => {
