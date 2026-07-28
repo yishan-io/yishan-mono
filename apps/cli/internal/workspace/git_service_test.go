@@ -249,6 +249,44 @@ func TestGitServiceBranchPullRequest(t *testing.T) {
 	}
 }
 
+func TestGitServiceBranchPullRequest_TreatsNoChecksReportedAsEmpty(t *testing.T) {
+	root := t.TempDir()
+	initGitRepo(t, root)
+	svc := NewGitService()
+
+	ghBinDir := t.TempDir()
+	ghBinPath := filepath.Join(ghBinDir, "gh")
+	ghScript := "#!/bin/sh\n" +
+		"if [ \"$1\" = \"pr\" ] && [ \"$2\" = \"list\" ]; then\n" +
+		"  printf '[{\"number\":123,\"title\":\"Test PR\",\"url\":\"https://github.com/acme/repo/pull/123\",\"state\":\"OPEN\",\"headRefName\":\"feature/alpha\",\"baseRefName\":\"main\",\"headRefOid\":\"abc123\"}]'\n" +
+		"  exit 0\n" +
+		"fi\n" +
+		"if [ \"$1\" = \"api\" ] && [ \"$2\" = \"repos/{owner}/{repo}/commits/abc123/check-runs\" ]; then\n" +
+		"  printf '{\"check_runs\":[]}'\n" +
+		"  exit 0\n" +
+		"fi\n" +
+		"if [ \"$1\" = \"pr\" ] && [ \"$2\" = \"checks\" ]; then\n" +
+		"  printf \"no checks reported on the 'main' branch\" >&2\n" +
+		"  exit 1\n" +
+		"fi\n" +
+		"exit 1\n"
+	if err := os.WriteFile(ghBinPath, []byte(ghScript), 0o755); err != nil {
+		t.Fatalf("write fake gh: %v", err)
+	}
+	t.Setenv("PATH", ghBinDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	status, err := svc.BranchPullRequest(context.Background(), root, "feature/alpha")
+	if err != nil {
+		t.Fatalf("BranchPullRequest: %v", err)
+	}
+	if !status.Found {
+		t.Fatal("expected pull request to be found")
+	}
+	if len(status.Checks) != 0 {
+		t.Fatalf("expected no checks, got %+v", status.Checks)
+	}
+}
+
 func TestGitServiceMergePullRequestRunsOutsideWorktreeWhenDeletingBranch(t *testing.T) {
 	root := t.TempDir()
 	initGitRepo(t, root)

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -33,6 +34,7 @@ func (e *APIError) Error() string {
 type TokenRefreshError struct {
 	RequestError error
 	RefreshError error
+	Permanent    bool
 }
 
 func (e *TokenRefreshError) Error() string {
@@ -44,12 +46,19 @@ func (e *TokenRefreshError) Unwrap() error {
 }
 
 type Client struct {
-	http                  *resty.Client
-	accessToken           string
-	refreshToken          string
-	accessTokenExpiresAt  string
-	refreshTokenExpiresAt string
-	onTokenRefresh        func(TokenUpdate) error
+	http                      *resty.Client
+	accessToken               string
+	refreshToken              string
+	accessTokenExpiresAt      string
+	refreshTokenExpiresAt     string
+	onTokenRefresh            func(TokenUpdate) error
+	onPermanentRefreshFailure func() error
+}
+
+// SetOnPermanentRefreshFailure configures cleanup for permanently invalid
+// credentials. Call it before issuing requests with the client.
+func (c *Client) SetOnPermanentRefreshFailure(callback func() error) {
+	c.onPermanentRefreshFailure = callback
 }
 
 func NewClient(
@@ -73,6 +82,7 @@ func NewClient(
 
 const accessTokenEarlyRefreshWindow = 30 * time.Second
 const refreshTokenExpiryGuardWindow = 30 * time.Second
+const invalidRefreshTokenMessage = "invalid refresh token"
 const serviceTokenPrefix = "yst_"
 
 func isServiceToken(token string) bool {
@@ -93,6 +103,11 @@ func (c *Client) DoRaw(method string, path string, body any) ([]byte, error) {
 		log.Debug().Str("path", path).Dur("window", accessTokenEarlyRefreshWindow).Msg("proactively refreshing API access token")
 		if err := c.refreshAccessToken(); err != nil {
 			log.Warn().Err(err).Str("path", path).Msg("proactive API access token refresh failed")
+			if isRefreshTokenPermanentlyInvalid(err) {
+				if clearErr := c.notifyPermanentRefreshFailure(); clearErr != nil {
+					log.Warn().Err(clearErr).Str("path", path).Msg("clear auth after permanent refresh failure failed")
+				}
+			}
 		}
 	}
 
@@ -100,18 +115,43 @@ func (c *Client) DoRaw(method string, path string, body any) ([]byte, error) {
 	if apiErr, ok := err.(*APIError); ok && apiErr.StatusCode == http.StatusUnauthorized {
 		if c.refreshToken != "" && !isRefreshRequest(path) {
 			if c.isRefreshTokenExpiredOrNearExpiry() {
-				err := fmt.Errorf("refresh token is expired or near expiry")
-				return nil, &TokenRefreshError{RequestError: err, RefreshError: err}
+				refreshErr := fmt.Errorf("refresh token is expired or near expiry")
+				return nil, c.newTokenRefreshError(err, refreshErr, true)
 			}
 			refreshErr := c.refreshAccessToken()
 			if refreshErr == nil {
 				return c.doRaw(method, path, body)
 			}
-			return nil, &TokenRefreshError{RequestError: err, RefreshError: refreshErr}
+			return nil, c.newTokenRefreshError(err, refreshErr, isRefreshTokenPermanentlyInvalid(refreshErr))
 		}
 	}
 
 	return responseBody, err
+}
+
+func (c *Client) newTokenRefreshError(requestErr error, refreshErr error, permanent bool) *TokenRefreshError {
+	if permanent {
+		if clearErr := c.notifyPermanentRefreshFailure(); clearErr != nil {
+			refreshErr = errors.Join(refreshErr, fmt.Errorf("clear invalid auth state: %w", clearErr))
+		}
+	}
+	return &TokenRefreshError{RequestError: requestErr, RefreshError: refreshErr, Permanent: permanent}
+}
+
+func (c *Client) notifyPermanentRefreshFailure() error {
+	var err error
+	if c.onPermanentRefreshFailure != nil {
+		err = c.onPermanentRefreshFailure()
+	}
+	c.clearCredentials()
+	return err
+}
+
+func (c *Client) clearCredentials() {
+	c.accessToken = ""
+	c.refreshToken = ""
+	c.accessTokenExpiresAt = ""
+	c.refreshTokenExpiresAt = ""
 }
 
 func (c *Client) shouldProactivelyRefresh(path string) bool {
@@ -184,6 +224,24 @@ func (c *Client) doRaw(method string, path string, body any) ([]byte, error) {
 	return responseBody, nil
 }
 
+// isRefreshTokenPermanentlyInvalid checks whether an error from
+// refreshAccessToken indicates the refresh token was explicitly rejected
+// by the API rather than a transient failure.
+func isRefreshTokenPermanentlyInvalid(err error) bool {
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusUnauthorized {
+		return false
+	}
+
+	var response struct {
+		Error string `json:"error"`
+	}
+	if json.Unmarshal(apiErr.Body, &response) != nil {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(response.Error), invalidRefreshTokenMessage)
+}
+
 func (c *Client) refreshAccessToken() error {
 	responseBody, err := c.doRaw(http.MethodPost, "/auth/refresh", map[string]string{
 		"refreshToken": c.refreshToken,
@@ -200,15 +258,15 @@ func (c *Client) refreshAccessToken() error {
 		return fmt.Errorf("invalid refresh token response")
 	}
 
-	c.accessToken = strings.TrimSpace(update.AccessToken)
-	c.refreshToken = strings.TrimSpace(update.RefreshToken)
-	c.accessTokenExpiresAt = strings.TrimSpace(update.AccessTokenExpiresAt)
-	c.refreshTokenExpiresAt = strings.TrimSpace(update.RefreshTokenExpiresAt)
 	if c.onTokenRefresh != nil {
 		if err := c.onTokenRefresh(update); err != nil {
 			return err
 		}
 	}
+	c.accessToken = strings.TrimSpace(update.AccessToken)
+	c.refreshToken = strings.TrimSpace(update.RefreshToken)
+	c.accessTokenExpiresAt = strings.TrimSpace(update.AccessTokenExpiresAt)
+	c.refreshTokenExpiresAt = strings.TrimSpace(update.RefreshTokenExpiresAt)
 
 	return nil
 }
