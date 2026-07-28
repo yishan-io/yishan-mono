@@ -143,6 +143,7 @@ function attachTaskListHandlers(
     checkbox.addEventListener("click", (event: Event) => {
       event.preventDefault();
       event.stopPropagation();
+      checkbox.focus();
       const currentChecked = getTaskListItemChecked(content, index);
       if (currentChecked === null) {
         return;

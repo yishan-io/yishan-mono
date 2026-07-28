@@ -41,6 +41,7 @@ export function FileEditor({
   onOpenExternalApp,
   openExternalAppLabel = "Open in external app",
 }: FileEditorProps) {
+  const fileEditorRootRef = useRef<HTMLDivElement | null>(null);
   const splitContainerRef = useRef<HTMLDivElement | null>(null);
   const [editorPaneRatio, setEditorPaneRatio] = useState(0.5);
   const {
@@ -50,6 +51,7 @@ export function FileEditor({
     currentContent,
     markdownPreviewImmediateUpdateToken,
     isMarkdown,
+    handleSaveCurrentContent,
     handleMarkdownPreviewContentChange,
   } = useMonacoFileEditor({
     path,
@@ -79,6 +81,16 @@ export function FileEditor({
   const showEditor = viewMode === "edit" || viewMode === "split";
   const showPreview = viewMode === "preview" || viewMode === "split";
 
+  const handleMarkdownPreviewChangeAndSave = useCallback(
+    (nextContent: string) => {
+      handleMarkdownPreviewContentChange(nextContent);
+      if (!isDeleted) {
+        handleSaveCurrentContent();
+      }
+    },
+    [handleMarkdownPreviewContentChange, handleSaveCurrentContent, isDeleted],
+  );
+
   useEffect(() => {
     void editorPaneRatio;
 
@@ -94,6 +106,31 @@ export function FileEditor({
       window.cancelAnimationFrame(frame);
     };
   }, [editorPaneRatio, editorRef, showEditor]);
+
+  useEffect(() => {
+    const rootElement = fileEditorRootRef.current;
+    if (!rootElement || !isMarkdown) {
+      return;
+    }
+
+    const handleNativeKeyDown = (event: KeyboardEvent) => {
+      const isCmdS = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s";
+      const editorNode = editorRef.current?.getDomNode?.();
+      const isMonacoEvent = event.target instanceof Node && editorNode?.contains(event.target);
+      if (!isCmdS || isDeleted || isMonacoEvent) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      handleSaveCurrentContent();
+    };
+
+    rootElement.addEventListener("keydown", handleNativeKeyDown, true);
+    return () => {
+      rootElement.removeEventListener("keydown", handleNativeKeyDown, true);
+    };
+  }, [editorRef, handleSaveCurrentContent, isDeleted, isMarkdown]);
 
   const handlePreviewKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -154,7 +191,7 @@ export function FileEditor({
   });
 
   return (
-    <Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+    <Box ref={fileEditorRootRef} sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
       <FileViewerToolbar
         path={path}
         onCopyPath={onCopyPath}
@@ -226,7 +263,7 @@ export function FileEditor({
             findQuery={previewFindQuery}
             findActiveIndex={previewFindActiveIndex}
             onKeyDown={handlePreviewKeyDown}
-            onContentChange={handleMarkdownPreviewContentChange}
+            onContentChange={handleMarkdownPreviewChangeAndSave}
             onFindMatchCountChange={handlePreviewFindMatchCountChange}
             onFindQueryChange={handlePreviewFindQueryChange}
             onFindNext={handlePreviewFindNext}

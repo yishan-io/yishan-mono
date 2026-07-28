@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { useEffect, useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithAppTheme } from "../testUtils/renderWithAppTheme";
 import { FileEditor } from "./FileEditor";
@@ -9,8 +10,26 @@ import { FileEditor } from "./FileEditor";
 const capturedMarkdownPreviewProps: { current: Record<string, unknown> } = { current: {} };
 vi.mock("./markdown/MarkdownPreview", () => ({
   MarkdownPreview: (props: Record<string, unknown>) => {
+    const checkboxContainerRef = useRef<HTMLDivElement | null>(null);
     capturedMarkdownPreviewProps.current = props;
-    return null;
+
+    useEffect(() => {
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.dataset.testid = "markdown-preview-checkbox";
+      checkbox.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        (props.onContentChange as ((content: string) => void) | undefined)?.("- [x] Done");
+      });
+      checkboxContainerRef.current?.append(checkbox);
+
+      return () => {
+        checkbox.remove();
+      };
+    }, [props.onContentChange]);
+
+    return <div ref={checkboxContainerRef} />;
   },
 }));
 
@@ -25,6 +44,14 @@ const mockEditorState: {
   createOptions: unknown;
   lastModelLanguage: string | undefined;
   lastModelUri: unknown;
+  editorSelections: Array<{
+    startLineNumber: number;
+    startColumn: number;
+    endLineNumber: number;
+    endColumn: number;
+  }> | null;
+  editorScrollPosition: { scrollTop: number; scrollLeft: number };
+  editorDomNode: HTMLElement | null;
 } = {
   editorValue: "",
   editorFocus: vi.fn(),
@@ -36,6 +63,9 @@ const mockEditorState: {
   createOptions: null,
   lastModelLanguage: undefined,
   lastModelUri: null,
+  editorSelections: null,
+  editorScrollPosition: { scrollTop: 0, scrollLeft: 0 },
+  editorDomNode: null,
 };
 
 vi.mock("../helpers/monacoSetup", () => ({
@@ -53,12 +83,26 @@ vi.mock("../helpers/monacoSetup", () => ({
       create: (container: HTMLElement, options: Record<string, unknown>) => {
         mockEditorState.createCount += 1;
         mockEditorState.createOptions = options;
+        mockEditorState.editorDomNode = container;
 
         return {
           getValue: () => mockEditorState.editorValue,
           setValue: (value: string) => {
             mockEditorState.editorValue = value;
+            mockEditorState.editorSelections = [{ startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 }];
+            mockEditorState.editorScrollPosition = { scrollTop: 0, scrollLeft: 0 };
+            mockEditorState.contentChangeListener?.();
           },
+          getSelections: () => mockEditorState.editorSelections,
+          setSelections: (selections: NonNullable<typeof mockEditorState.editorSelections>) => {
+            mockEditorState.editorSelections = selections;
+          },
+          getScrollTop: () => mockEditorState.editorScrollPosition.scrollTop,
+          getScrollLeft: () => mockEditorState.editorScrollPosition.scrollLeft,
+          setScrollPosition: (position: typeof mockEditorState.editorScrollPosition) => {
+            mockEditorState.editorScrollPosition = position;
+          },
+          getDomNode: () => mockEditorState.editorDomNode,
           focus: () => mockEditorState.editorFocus(),
           layout: vi.fn(),
           getAction: (id: string) => (id === "actions.find" ? mockEditorState.editorFindAction : null),
@@ -133,6 +177,9 @@ afterEach(() => {
   mockEditorState.createOptions = null;
   mockEditorState.lastModelLanguage = undefined;
   mockEditorState.lastModelUri = null;
+  mockEditorState.editorSelections = null;
+  mockEditorState.editorScrollPosition = { scrollTop: 0, scrollLeft: 0 };
+  mockEditorState.editorDomNode = null;
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
@@ -157,6 +204,113 @@ describe("FileEditor", () => {
     saveCommand?.handler();
 
     expect(onSave).toHaveBeenCalledWith("saved text");
+  });
+
+  it("defers Monaco Cmd+S events to Monaco's single save command", () => {
+    const onSave = vi.fn();
+
+    renderWithAppTheme(<FileEditor path="README.md" content="initial" onSave={onSave} />);
+    mockEditorState.editorValue = "saved text";
+    const monacoDomNode = mockEditorState.editorDomNode;
+    const saveCommand = mockEditorState.addCommandCalls.find((command) => command.keybinding === (2048 | 49));
+
+    expect(monacoDomNode).toBeTruthy();
+    fireEvent.keyDown(monacoDomNode as HTMLElement, { key: "s", metaKey: true });
+    expect(onSave).not.toHaveBeenCalled();
+
+    saveCommand?.handler();
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith("saved text");
+  });
+
+  it("does not save deleted Markdown content on Cmd+S", () => {
+    const onSave = vi.fn();
+    const { getByTestId } = renderWithAppTheme(
+      <FileEditor path="README.md" content="- [x] Done" defaultMarkdownViewMode="preview" isDeleted onSave={onSave} />,
+    );
+
+    fireEvent.keyDown(getByTestId("markdown-preview-pane"), { key: "s", metaKey: true });
+
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("saves preview-edited Markdown content on Cmd+S", () => {
+    const onSave = vi.fn();
+    const updatedContent = "- [x] Done";
+
+    const { getByTestId } = renderWithAppTheme(
+      <FileEditor path="README.md" content="- [ ] Done" defaultMarkdownViewMode="preview" onSave={onSave} />,
+    );
+
+    act(() => {
+      (capturedMarkdownPreviewProps.current.onContentChange as (content: string) => void)(updatedContent);
+    });
+    onSave.mockClear();
+    fireEvent.keyDown(getByTestId("markdown-preview-pane"), { key: "s", metaKey: true });
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith(updatedContent);
+  });
+
+  it("auto-saves Markdown content after a preview checkbox click", () => {
+    const onSave = vi.fn();
+    const { getByTestId } = renderWithAppTheme(
+      <FileEditor path="README.md" content="- [ ] Done" defaultMarkdownViewMode="preview" onSave={onSave} />,
+    );
+
+    fireEvent.click(getByTestId("markdown-preview-checkbox"));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith("- [x] Done");
+  });
+
+  it("saves immediately when Cmd+S follows a preview checkbox click", () => {
+    const onSave = vi.fn();
+    const { getByTestId } = renderWithAppTheme(
+      <FileEditor path="README.md" content="- [ ] Done" defaultMarkdownViewMode="preview" onSave={onSave} />,
+    );
+
+    const checkbox = getByTestId("markdown-preview-checkbox");
+    fireEvent.click(checkbox);
+    onSave.mockClear();
+    fireEvent.keyDown(checkbox, { key: "s", metaKey: true });
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith("- [x] Done");
+  });
+
+  it("saves preview-edited Markdown content after switching to source without focusing Monaco", () => {
+    const onSave = vi.fn();
+    const updatedContent = "- [x] Done";
+
+    const { getByRole } = renderWithAppTheme(
+      <FileEditor path="README.md" content="- [ ] Done" defaultMarkdownViewMode="preview" onSave={onSave} />,
+    );
+
+    act(() => {
+      (capturedMarkdownPreviewProps.current.onContentChange as (content: string) => void)(updatedContent);
+    });
+    onSave.mockClear();
+    const sourceEditorButton = getByRole("button", { name: "Source editor" });
+    fireEvent.click(sourceEditorButton);
+    fireEvent.keyDown(sourceEditorButton, { key: "s", metaKey: true });
+
+    expect(mockEditorState.editorFocus).not.toHaveBeenCalled();
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledWith(updatedContent);
+  });
+
+  it("preserves Monaco selection and scroll position when content is synchronized", () => {
+    const { rerender } = renderWithAppTheme(<FileEditor path="README.md" content="first" />);
+    const selection = { startLineNumber: 1, startColumn: 3, endLineNumber: 1, endColumn: 3 };
+    const scrollPosition = { scrollTop: 96, scrollLeft: 12 };
+    mockEditorState.editorSelections = [selection];
+    mockEditorState.editorScrollPosition = scrollPosition;
+
+    rerender(<FileEditor path="README.md" content="updated" />);
+
+    expect(mockEditorState.editorSelections).toEqual([selection]);
+    expect(mockEditorState.editorScrollPosition).toEqual(scrollPosition);
   });
 
   it("emits changed content through onContentChange", () => {

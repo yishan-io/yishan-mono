@@ -2,7 +2,7 @@ import { useTheme } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isMarkdownFile } from "../../helpers/editorLanguage";
 import { YISHAN_THEME_DARK, YISHAN_THEME_LIGHT, monaco } from "../../helpers/monacoSetup";
-import { createMonacoFileEditor } from "./createMonacoFileEditor";
+import { createMonacoFileEditor, replaceEditorContentPreservingViewState } from "./createMonacoFileEditor";
 
 /** Props for creating and syncing the Monaco editor used by FileEditor. */
 export type UseMonacoFileEditorProps = {
@@ -42,15 +42,17 @@ export function useMonacoFileEditor({
     contentRef.current = content;
     setCurrentContent(content);
   }, [content]);
-
   useEffect(() => {
     onContentChangeRef.current = onContentChange;
   }, [onContentChange]);
-
   useEffect(() => {
     onSaveRef.current = onSave;
   }, [onSave]);
-
+  const handleSaveCurrentContent = useCallback(() => {
+    const currentEditorContent = editorRef.current?.getValue() ?? contentRef.current;
+    // fire-and-forget: keyboard handlers cannot await the caller-owned save operation.
+    void onSaveRef.current?.(currentEditorContent);
+  }, []);
   useEffect(() => {
     if (!editorHostRef.current) {
       return;
@@ -63,12 +65,11 @@ export function useMonacoFileEditor({
       isDeleted,
       theme: monacoTheme,
       onContentChange: (nextContent) => {
+        contentRef.current = nextContent;
         setCurrentContent(nextContent);
         onContentChangeRef.current?.(nextContent);
       },
-      onSave: (nextContent) => {
-        void onSaveRef.current?.(nextContent);
-      },
+      onSave: handleSaveCurrentContent,
     });
 
     editorRef.current = editor;
@@ -90,7 +91,7 @@ export function useMonacoFileEditor({
       editorRef.current = null;
       setEditorInstance(null);
     };
-  }, [isDeleted, monacoTheme, path]);
+  }, [handleSaveCurrentContent, isDeleted, monacoTheme, path]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -98,9 +99,8 @@ export function useMonacoFileEditor({
       return;
     }
 
-    editor.setValue(content);
+    replaceEditorContentPreservingViewState(editor, content);
   }, [content]);
-
   useEffect(() => {
     monaco.editor.setTheme(monacoTheme);
   }, [monacoTheme]);
@@ -125,10 +125,11 @@ export function useMonacoFileEditor({
 
   const handleMarkdownPreviewContentChange = useCallback((nextContent: string) => {
     const editor = editorRef.current;
+    contentRef.current = nextContent;
     setMarkdownPreviewImmediateUpdateToken((token) => token + 1);
 
     if (editor && editor.getValue() !== nextContent) {
-      editor.setValue(nextContent);
+      replaceEditorContentPreservingViewState(editor, nextContent);
       return;
     }
 
@@ -143,6 +144,7 @@ export function useMonacoFileEditor({
     currentContent,
     markdownPreviewImmediateUpdateToken,
     isMarkdown,
+    handleSaveCurrentContent,
     handleMarkdownPreviewContentChange,
   };
 }
