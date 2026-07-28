@@ -136,7 +136,7 @@ export class AuthService {
     const now = new Date();
 
     const rows = await this.db
-      .select({ id: refreshTokens.id, userId: refreshTokens.userId })
+      .select({ id: refreshTokens.id, userId: refreshTokens.userId, expiresAt: refreshTokens.expiresAt })
       .from(refreshTokens)
       .where(
         and(
@@ -152,19 +152,14 @@ export class AuthService {
       return null;
     }
 
-    const replacement = await this._createRefreshTokenRecord(row.userId, this.config.refreshTokenTtlDays);
-
-    await this.db
-      .update(refreshTokens)
-      .set({ revokedAt: now, replacedByTokenId: replacement.id })
-      .where(eq(refreshTokens.id, row.id));
-
+    // Refresh tokens remain valid until their original expiry so a daemon can
+    // renew short-lived access tokens without replacing its long-term credential.
     const nowSeconds = Math.floor(Date.now() / 1000);
     const accessExp = nowSeconds + this.config.jwtAccessTtlSeconds;
     const accessToken = await signAccessToken(
       {
         sub: row.userId,
-        sid: replacement.id,
+        sid: row.id,
         scope: DEFAULT_TOKEN_SCOPE,
         iss: this.config.jwtIssuer,
         aud: this.config.jwtAudience,
@@ -178,8 +173,8 @@ export class AuthService {
       accessToken,
       accessTokenExpiresIn: this.config.jwtAccessTtlSeconds,
       accessTokenExpiresAt: new Date(accessExp * 1000).toISOString(),
-      refreshToken: replacement.token,
-      refreshTokenExpiresAt: replacement.expiresAt.toISOString(),
+      refreshToken,
+      refreshTokenExpiresAt: row.expiresAt.toISOString(),
     };
   }
 

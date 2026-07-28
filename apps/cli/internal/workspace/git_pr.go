@@ -188,6 +188,11 @@ func (s *GitService) getPullRequestChecks(ctx context.Context, root string, prNu
 		"--required=false",
 		"--json", "name,workflow,state,description,link",
 	); err != nil {
+		// "no checks reported" is not a real error — the PR simply has
+		// no CI checks configured. Treat it as an empty result.
+		if strings.Contains(strings.ToLower(err.Error()), "no checks reported") {
+			return []GitPullRequestCheck{}, nil
+		}
 		return nil, err
 	}
 

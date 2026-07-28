@@ -8,7 +8,7 @@ import (
 )
 
 func NewRuntimeClient(appCfg *config.Config) *Client {
-	return NewClient(
+	client := NewClient(
 		appCfg.API.BaseURL,
 		appCfg.API.Token,
 		appCfg.API.RefreshToken,
@@ -32,4 +32,27 @@ func NewRuntimeClient(appCfg *config.Config) *Client {
 			return nil
 		},
 	)
+	client.SetOnPermanentRefreshFailure(func() error {
+		return clearRuntimeAuthState(appCfg)
+	})
+	return client
+}
+
+func clearRuntimeAuthState(appCfg *config.Config) error {
+	if appCfg.ConfigPath != "" {
+		if err := config.UpdateFile(appCfg.ConfigPath, func(cfg *viper.Viper) {
+			cfg.Set(config.KeyAPIToken, "")
+			cfg.Set(config.KeyAPIRefreshToken, "")
+			cfg.Set(config.KeyAPIAccessTokenExpiresAt, "")
+			cfg.Set(config.KeyAPIRefreshTokenExpiresAt, "")
+		}); err != nil {
+			return fmt.Errorf("clear persisted auth state: %w", err)
+		}
+	}
+
+	appCfg.API.Token = ""
+	appCfg.API.RefreshToken = ""
+	appCfg.API.AccessTokenExpiresAt = ""
+	appCfg.API.RefreshTokenExpiresAt = ""
+	return nil
 }

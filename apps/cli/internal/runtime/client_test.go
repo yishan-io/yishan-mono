@@ -408,6 +408,59 @@ func TestCheckAuthStatusReturnsFalseWhenTokenInvalid(t *testing.T) {
 	}
 }
 
+func TestCheckAuthStatus_ClearsPersistedCredentialsWhenRefreshTokenInvalid(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/me":
+			http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
+		case "/auth/refresh":
+			http.Error(w, `{"error":"invalid refresh token"}`, http.StatusUnauthorized)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	configPath := filepath.Join(t.TempDir(), "credential.yaml")
+	cfg := &config.Config{
+		ConfigPath: configPath,
+		API: config.APIConfig{
+			BaseURL:               server.URL,
+			Token:                 "expired-access",
+			RefreshToken:          "invalid-refresh",
+			AccessTokenExpiresAt:  time.Now().Add(5 * time.Minute).Format(time.RFC3339Nano),
+			RefreshTokenExpiresAt: time.Now().Add(24 * time.Hour).Format(time.RFC3339Nano),
+		},
+	}
+	Configure(cfg)
+	t.Cleanup(func() { Configure(nil) })
+
+	if err := PersistAuthTokens(api.TokenUpdate{
+		AccessToken:           cfg.API.Token,
+		RefreshToken:          cfg.API.RefreshToken,
+		AccessTokenExpiresAt:  cfg.API.AccessTokenExpiresAt,
+		RefreshTokenExpiresAt: cfg.API.RefreshTokenExpiresAt,
+	}); err != nil {
+		t.Fatalf("seed credential file: %v", err)
+	}
+
+	authenticated, _, err := CheckAuthStatus()
+	if err != nil {
+		t.Fatalf("check auth status: %v", err)
+	}
+	if authenticated {
+		t.Fatal("expected invalid refresh token to make session unauthenticated")
+	}
+	if cfg.API.Token != "" || cfg.API.RefreshToken != "" {
+		t.Fatalf("expected in-memory credentials to clear, got %+v", cfg.API)
+	}
+
+	stored := loadConfigForTest(t, configPath)
+	if stored.GetString("api_token") != "" || stored.GetString("api_refresh_token") != "" {
+		t.Fatal("expected invalid credentials to be cleared from the credential file")
+	}
+}
+
 func TestUsesServiceTokenAuthReturnsTrueForServiceToken(t *testing.T) {
 	cfg := &config.Config{
 		ConfigPath: filepath.Join(t.TempDir(), "credential.yaml"),

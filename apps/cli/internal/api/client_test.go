@@ -5,9 +5,13 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"yishan/apps/cli/internal/config"
 )
 
 func TestDoRawRefreshFailureReturnsRefreshError(t *testing.T) {
@@ -38,6 +42,148 @@ func TestDoRawRefreshFailureReturnsRefreshError(t *testing.T) {
 	}
 	if refreshErr.RequestError == nil || refreshErr.RefreshError == nil {
 		t.Fatalf("expected original and refresh errors to be preserved: %+v", refreshErr)
+	}
+	if !refreshErr.Permanent {
+		t.Fatal("expected invalid refresh token failure to be permanent")
+	}
+}
+
+func TestDoRawRefreshFailureIsPermanentRegardlessOfErrorCasing(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/nodes/register":
+			http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
+		case "/auth/refresh":
+			http.Error(w, `{"error":"invalid refresh token"}`, http.StatusUnauthorized)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	client := NewClient(server.URL, "expired-access", "stale-refresh", "", "", nil)
+	_, err := client.DoRaw(http.MethodPost, "/nodes/register", map[string]string{"nodeId": "node-1"})
+	if err == nil {
+		t.Fatal("expected refresh failure error")
+	}
+
+	var refreshErr *TokenRefreshError
+	if !errors.As(err, &refreshErr) {
+		t.Fatalf("expected TokenRefreshError, got %T: %v", err, err)
+	}
+	if !refreshErr.Permanent {
+		t.Fatal("expected lowercase invalid refresh token failure to be permanent")
+	}
+}
+
+func TestDoRawRefreshFailureIsTransientForServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/nodes/register":
+			http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
+		case "/auth/refresh":
+			http.Error(w, `{"error":"Service unavailable"}`, http.StatusServiceUnavailable)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	client := NewClient(server.URL, "expired-access", "valid-refresh", "", "", nil)
+	_, err := client.DoRaw(http.MethodPost, "/nodes/register", map[string]string{"nodeId": "node-1"})
+	if err == nil {
+		t.Fatal("expected refresh failure error")
+	}
+
+	var refreshErr *TokenRefreshError
+	if !errors.As(err, &refreshErr) {
+		t.Fatalf("expected TokenRefreshError, got %T: %v", err, err)
+	}
+	if refreshErr.Permanent {
+		t.Fatal("expected server-side refresh failure to be transient")
+	}
+}
+
+func TestDoRawClearsAuthAfterProactivePermanentRefreshFailure(t *testing.T) {
+	cleared := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/nodes/register":
+			if r.Header.Get("Authorization") != "Bearer still-valid-access" {
+				http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
+				return
+			}
+			_, _ = w.Write([]byte(`{"ok":true}`))
+		case "/auth/refresh":
+			http.Error(w, `{"error":"invalid refresh token"}`, http.StatusUnauthorized)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	client := NewClient(
+		server.URL,
+		"still-valid-access",
+		"invalid-refresh",
+		time.Now().Add(10*time.Second).UTC().Format(time.RFC3339),
+		time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+		nil,
+	)
+	client.SetOnPermanentRefreshFailure(func() error {
+		cleared = true
+		return nil
+	})
+
+	if _, err := client.DoRaw(http.MethodPost, "/nodes/register", map[string]string{"nodeId": "node-1"}); err == nil {
+		t.Fatal("expected request to fail after permanent refresh failure clears client credentials")
+	}
+	if !cleared {
+		t.Fatal("expected proactive permanent refresh failure to clear auth state")
+	}
+	if _, err := client.DoRaw(http.MethodPost, "/nodes/register", map[string]string{"nodeId": "node-1"}); err == nil {
+		t.Fatal("expected cleared client not to reuse its previous access token")
+	}
+}
+
+func TestNewRuntimeClient_ClearsPersistedCredentialsAfterPermanentRefreshFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/nodes/register":
+			http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
+		case "/auth/refresh":
+			http.Error(w, `{"error":"invalid refresh token"}`, http.StatusUnauthorized)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	configPath := filepath.Join(t.TempDir(), "credential.yaml")
+	if err := os.WriteFile(configPath, []byte("api_token: expired-access\napi_refresh_token: invalid-refresh\n"), 0o600); err != nil {
+		t.Fatalf("seed credential file: %v", err)
+	}
+	cfg := &config.Config{
+		ConfigPath: configPath,
+		API: config.APIConfig{
+			BaseURL:      server.URL,
+			Token:        "expired-access",
+			RefreshToken: "invalid-refresh",
+		},
+	}
+
+	if _, err := NewRuntimeClient(cfg).DoRaw(http.MethodPost, "/nodes/register", map[string]string{"nodeId": "node-1"}); err == nil {
+		t.Fatal("expected permanent refresh failure")
+	}
+	if cfg.API.Token != "" || cfg.API.RefreshToken != "" {
+		t.Fatalf("expected in-memory credentials to clear, got %+v", cfg.API)
+	}
+	stored, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read cleared credential file: %v", err)
+	}
+	if strings.Contains(string(stored), "expired-access") || strings.Contains(string(stored), "invalid-refresh") {
+		t.Fatalf("expected persisted credentials to clear, got %q", stored)
 	}
 }
 

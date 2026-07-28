@@ -8,6 +8,8 @@ import (
 
 	"yishan/apps/cli/internal/api"
 	"yishan/apps/cli/internal/workspace"
+
+	"github.com/rs/zerolog/log"
 )
 
 func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnState, method string, params json.RawMessage) (any, error) {
@@ -65,6 +67,7 @@ func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnSt
 	case MethodAppCheckAuthStatus:
 		authenticated, expiresAt, err := h.runtime.CheckAuthStatus()
 		if err != nil {
+			log.Warn().Err(err).Msg("failed to check authentication status")
 			return map[string]any{"authenticated": false}, nil
 		}
 		result := map[string]any{"authenticated": authenticated}
@@ -73,7 +76,9 @@ func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnSt
 		}
 		return result, nil
 	case MethodAppLogout:
-		h.runtime.ClearAuthState()
+		if err := h.runtime.ClearAuthState(); err != nil {
+			return nil, err
+		}
 		return map[string]bool{"ok": true}, nil
 	case MethodAppReloadAuthConfig:
 		if err := h.runtime.ReloadAuthConfig(); err != nil {
