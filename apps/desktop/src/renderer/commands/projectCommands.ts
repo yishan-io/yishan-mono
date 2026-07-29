@@ -90,10 +90,10 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
     }
 
     const daemonClient = await getDaemonClient();
-    const projectsWithWorkspaces: ProjectWithWorkspacesRecord[] = await daemonClient.project.listByOrg(
+    const projectsWithWorkspaces = (await daemonClient.project.listByOrg(
       selectedOrganization.id,
       { withWorkspaces: true },
-    );
+    )) as ProjectWithWorkspacesRecord[];
     const projects: ProjectRecord[] = projectsWithWorkspaces.map(({ workspaces: _, ...project }) => project);
     const workspaces = projectsWithWorkspaces.flatMap((project) => project.workspaces ?? []);
 
@@ -195,12 +195,12 @@ export async function createProject(input: {
 
   try {
     const daemonClient = await getDaemonClient();
-    project = await daemonClient.project.create(selectedOrganizationId, {
+    project = (await daemonClient.project.create(selectedOrganizationId, {
       name: normalizedName,
       sourceTypeHint: inferredSourceTypeHint,
       repoUrl: inferredRemoteUrl,
       contextEnabled: workspaceSettingsStore.getState().isDefaultContextEnabled,
-    });
+    })) as ProjectWithWorkspacesRecord;
   } catch (error) {
     console.error("Failed to create backend project", error);
     throw error instanceof Error ? error : new Error("Failed to create backend project");
@@ -339,7 +339,7 @@ export async function updateProjectConfig(
   if (selectedOrganizationId) {
     try {
       const daemonClient = await getDaemonClient();
-      const updatedProject = await daemonClient.project.update(selectedOrganizationId, projectId, {
+      const updatedProject = (await daemonClient.project.update(selectedOrganizationId, projectId, {
         name: config.name,
         icon: config.icon,
         color: config.color,
@@ -347,7 +347,7 @@ export async function updateProjectConfig(
         postScript: config.postScript,
         commands: config.commands,
         contextEnabled: config.contextEnabled,
-      });
+      })) as ProjectRecord;
 
       const persistedConfig = {
         ...config,

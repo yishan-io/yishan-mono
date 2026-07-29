@@ -1,9 +1,34 @@
-import type { ProjectRecord, ProjectWithWorkspacesRecord, WorkspaceRecord } from "../api";
-import { asRecord, readOptionalBoolean, readOptionalString, readOptionalStringArray } from "./helpers";
+import type { ProjectCommandRecord, ProjectRecord, ProjectWithWorkspacesRecord, WorkspaceRecord } from "../api";
+import { asRecord, readOptionalBoolean, readOptionalString } from "./helpers";
 
 type InvokeFn = (method: string, params?: unknown, timeoutMs?: number) => Promise<unknown>;
 
 type DaemonWorkspacePayload = Record<string, unknown>;
+
+function toSourceType(value: string | undefined): "git" | "git-local" | "unknown" {
+  if (value === "git" || value === "git-local") return value;
+  return "unknown";
+}
+
+function toWorkspaceKind(value: string | undefined): "primary" | "worktree" {
+  return value === "primary" ? "primary" : "worktree";
+}
+
+function toWorkspaceStatus(value: string | undefined): "active" | "closed" | "provisioning" {
+  if (value === "closed" || value === "provisioning") return value;
+  return "active";
+}
+
+function toProjectCommands(value: unknown): ProjectCommandRecord[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.map((item: unknown) => {
+    const record = asRecord(item);
+    return {
+      name: String(record?.name ?? ""),
+      command: String(record?.command ?? ""),
+    };
+  });
+}
 
 export class DaemonProjectClient {
   private readonly invoke: InvokeFn;
@@ -41,7 +66,7 @@ export class DaemonProjectClient {
     return {
       id: readOptionalString(record?.id) ?? "",
       name: readOptionalString(record?.name) ?? "",
-      sourceType: readOptionalString(record?.sourceType) ?? "unknown",
+      sourceType: toSourceType(readOptionalString(record?.sourceType)),
       repoProvider: readOptionalString(record?.repoProvider) ?? null,
       repoUrl: readOptionalString(record?.repoUrl) ?? null,
       repoKey: readOptionalString(record?.repoKey) ?? null,
@@ -50,9 +75,9 @@ export class DaemonProjectClient {
       color: readOptionalString(record?.color) ?? "#1E66F5",
       setupScript: readOptionalString(record?.setupScript) ?? "",
       postScript: readOptionalString(record?.postScript) ?? "",
-      commands: readOptionalStringArray(record?.commands) ?? [],
+      commands: toProjectCommands(record?.commands),
       organizationId: readOptionalString(record?.organizationId) ?? orgId,
-      createdByUserId: readOptionalString(record?.createdByUserId) ?? null,
+      createdByUserId: readOptionalString(record?.createdByUserId) ?? "",
       createdAt: readOptionalString(record?.createdAt) ?? "",
       updatedAt: readOptionalString(record?.updatedAt) ?? "",
       workspaces: [],
@@ -60,7 +85,7 @@ export class DaemonProjectClient {
   }
 
   async update(
-    orgId: string,
+    _orgId: string,
     projectId: string,
     config: {
       name?: string;
@@ -85,7 +110,7 @@ export class DaemonProjectClient {
     return this.parseProject(result);
   }
 
-  async delete(orgId: string, projectId: string): Promise<void> {
+  async delete(_orgId: string, projectId: string): Promise<void> {
     await this.invoke("project.delete", { id: projectId });
   }
 
@@ -105,7 +130,7 @@ export class DaemonProjectClient {
     return {
       id: readOptionalString(record?.id) ?? "",
       name: readOptionalString(record?.name) ?? "",
-      sourceType: readOptionalString(record?.sourceType) ?? "unknown",
+      sourceType: toSourceType(readOptionalString(record?.sourceType)),
       repoProvider: readOptionalString(record?.repoProvider) ?? null,
       repoUrl: readOptionalString(record?.repoUrl) ?? null,
       repoKey: readOptionalString(record?.repoKey) ?? null,
@@ -114,9 +139,9 @@ export class DaemonProjectClient {
       color: readOptionalString(record?.color) ?? "#1E66F5",
       setupScript: readOptionalString(record?.setupScript) ?? "",
       postScript: readOptionalString(record?.postScript) ?? "",
-      commands: readOptionalStringArray(record?.commands) ?? [],
+      commands: toProjectCommands(record?.commands),
       organizationId: readOptionalString(record?.organizationId) ?? "",
-      createdByUserId: readOptionalString(record?.createdByUserId) ?? null,
+      createdByUserId: readOptionalString(record?.createdByUserId) ?? "",
       createdAt: readOptionalString(record?.createdAt) ?? "",
       updatedAt: readOptionalString(record?.updatedAt) ?? "",
     };
@@ -129,11 +154,13 @@ export class DaemonProjectClient {
       organizationId: readOptionalString(record?.organizationId) ?? "",
       projectId: readOptionalString(record?.projectId) ?? "",
       nodeId: readOptionalString(record?.nodeId) ?? "",
-      kind: readOptionalString(record?.kind) ?? "worktree",
-      status: readOptionalString(record?.status) ?? "active",
+      kind: toWorkspaceKind(readOptionalString(record?.kind)),
+      status: toWorkspaceStatus(readOptionalString(record?.status)),
       branch: readOptionalString(record?.branch) ?? null,
       sourceBranch: readOptionalString(record?.sourceBranch) ?? null,
       localPath: readOptionalString(record?.localPath) ?? "",
+      userId: "",
+      latestPullRequest: null,
       createdAt: readOptionalString(record?.createdAt) ?? "",
       updatedAt: readOptionalString(record?.updatedAt) ?? "",
     };
