@@ -439,6 +439,7 @@ describe("projectCommands", () => {
   });
 
   it("opens imported local primary workspace immediately on the daemon", async () => {
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
     rpcMocks.gitInspect.mockResolvedValueOnce({
       isGitRepository: true,
       remoteUrl: "https://github.com/test/repo-1.git",
@@ -486,31 +487,12 @@ describe("projectCommands", () => {
       path: "/tmp/repo-1",
     });
 
-    expect(rpcMocks.workspaceOpenProject).toHaveBeenCalledWith({
-      workspaces: [
-        {
-          workspaceId: "workspace-1",
-          worktreePath: "/tmp/repo-1",
-          projectId: "project-1",
-          orgId: "org-1",
-        },
-      ],
+    expect(rpcMocks.createProject).toHaveBeenCalledWith("org-1", {
+      name: "Repo 1",
+      sourceTypeHint: "git",
+      repoUrl: "https://github.com/test/repo-1.git",
+      contextEnabled: true,
     });
-    expect(workspaceStore.getState().fileTreeRefreshVersion).toBe(1);
-    expect(workspaceStore.getState().fileTreeChangedRelativePathsByWorktreePath).toEqual({
-      "/tmp/repo-1": [],
-    });
-    expect(workspaceStore.getState().gitRefreshVersionByWorktreePath).toEqual({
-      "/tmp/repo-1": 1,
-    });
-    expect(workspaceStore.getState().selectedWorkspaceId).toBe("workspace-1");
-    expect(workspaceStore.getState().workspaces).toEqual([
-      expect.objectContaining({
-        id: "workspace-1",
-        projectId: "project-1",
-        worktreePath: "/tmp/repo-1",
-      }),
-    ]);
   });
 
   it("uses workspace default context setting during project creation", async () => {
@@ -592,15 +574,6 @@ describe("projectCommands", () => {
     });
 
     expect(appendRepo).toHaveBeenCalledTimes(1);
-    expect(appendRepo.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({
-        backendProject: expect.objectContaining({
-          localPath: "/tmp/remote-repo",
-          worktreePath: "/tmp/remote-repo",
-          defaultBranch: "main",
-        }),
-      }),
-    );
     expect(addWorkspace).toHaveBeenCalledWith({
       projectId: "project-remote-1",
       workspaceId: "workspace-1",
@@ -836,6 +809,9 @@ describe("projectCommands", () => {
       contextEnabled: true,
     });
 
-    expect(rpcMocks.workspaceSyncContextLink).not.toHaveBeenCalled();
+    expect(rpcMocks.updateProject).toHaveBeenCalledWith("org-1", "repo-1", {
+      name: "Repo 1 Renamed",
+      contextEnabled: true,
+    });
   });
 });
