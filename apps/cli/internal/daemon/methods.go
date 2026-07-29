@@ -43,8 +43,13 @@ const (
 	MethodComputerGetConfig              = "computer.getConfig"
 	MethodComputerUpdateConfig           = "computer.updateConfig"
 
-	MethodProjectList = "project.list"
-	MethodNodeList    = "node.list"
+	MethodProjectList             = "project.list"
+	MethodProjectGet              = "project.get"
+	MethodProjectCreate           = "project.create"
+	MethodProjectUpdate           = "project.update"
+	MethodProjectDelete           = "project.delete"
+	MethodProjectListWithWkspaces = "project.listWithWorkspaces"
+	MethodNodeList                = "node.list"
 
 	MethodAgentListDetectionStatuses = "agent.listDetectionStatuses"
 	MethodAgentListModels            = "agent.listModels"

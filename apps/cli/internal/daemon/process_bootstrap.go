@@ -103,6 +103,10 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	if err := migrateProjectsFromAPI(database, runtime); err != nil {
+		_ = database.Close() // cleanup after failed migration
+		return nil, nil, nil, err
+	}
 	workspaceManager := workspace.NewManagerWithStore(localdb.NewWorkspaceStore(database))
 	cleanupStore, err := newWorkspaceCleanupStore(statePath)
 	if err != nil {
@@ -145,6 +149,17 @@ func initLocalDatabase(statePath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("migrate local database: %w", err)
 	}
 	return database, nil
+}
+
+func migrateProjectsFromAPI(database *sql.DB, runtime *cliruntime.Runtime) error {
+	if runtime == nil || !runtime.APIConfigured() {
+		return nil
+	}
+	client := &daemonAPIClient{runtime: runtime}
+	if err := localdb.MigrateFromAPI(context.Background(), database, nil, client); err != nil {
+		return fmt.Errorf("migrate projects from API: %w", err)
+	}
+	return nil
 }
 
 func initComputerConfig(handler *JSONRPCHandler) error {
