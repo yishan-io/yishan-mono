@@ -2,12 +2,10 @@ package prtracker
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
 
-	"yishan/apps/cli/internal/api"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 
@@ -400,83 +398,10 @@ func normalizeWorkspacePullRequestStatus(pr workspace.GitBranchPullRequestStatus
 	return strings.ToLower(state)
 }
 
-// persistPullRequest writes a PR snapshot to the api-service.
-// Called in a goroutine; failures are logged and do not affect local state.
-func (t *Tracker) persistPullRequest(workspaceID string, pr *workspace.WorkspacePullRequest) {
-	if t.runtime == nil || !t.runtime.APIConfigured() {
-		return
+// persistPullRequest writes a PR snapshot to local SQLite.
+// Called in a goroutine; failures are logged and do not affect live state.
+func (t *Tracker) persistPullRequest(workspaceID string, pullRequest *workspace.WorkspacePullRequest) {
+	if err := t.manager.PersistWorkspacePullRequest(context.Background(), workspaceID, pullRequest); err != nil {
+		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("pr persist: failed to upsert locally")
 	}
-
-	ws, err := t.manager.GetWorkspace(workspaceID)
-	if err != nil {
-		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("pr persist: workspace not found")
-		return
-	}
-	if ws.OrgID == "" || ws.ProjectID == "" {
-		log.Debug().Str("workspaceId", workspaceID).Msg("pr persist: skipped — orgId or projectId not set on workspace")
-		return
-	}
-
-	// Map daemon status to api-service state.
-	state := pr.Status
-	if state == "draft" || state == "review" {
-		state = "open"
-	}
-	if state != "open" && state != "closed" && state != "merged" {
-		state = "open"
-	}
-
-	resolvedAt := ""
-	if state == "merged" || state == "closed" {
-		resolvedAt = nowRFC3339Nano()
-	}
-
-	metadata := map[string]any{
-		"isDraft":        pr.IsDraft,
-		"reviewDecision": pr.ReviewDecision,
-	}
-	if len(pr.Checks) > 0 {
-		checks := make([]map[string]any, 0, len(pr.Checks))
-		for _, c := range pr.Checks {
-			checks = append(checks, map[string]any{
-				"name":        c.Name,
-				"workflow":    c.Workflow,
-				"state":       c.State,
-				"description": c.Description,
-				"url":         c.URL,
-			})
-		}
-		metadata["checks"] = checks
-	}
-	if len(pr.Deployments) > 0 {
-		deployments := make([]map[string]any, 0, len(pr.Deployments))
-		for _, d := range pr.Deployments {
-			deployments = append(deployments, map[string]any{
-				"id":             d.ID,
-				"environment":    d.Environment,
-				"state":          d.State,
-				"description":    d.Description,
-				"environmentUrl": d.EnvironmentURL,
-			})
-		}
-		metadata["deployments"] = deployments
-	}
-
-	input := api.UpsertWorkspacePullRequestInput{
-		PrID:       fmt.Sprintf("%d", pr.Number),
-		Title:      pr.Title,
-		URL:        pr.URL,
-		Branch:     pr.Branch,
-		BaseBranch: pr.BaseBranch,
-		State:      state,
-		Metadata:   metadata,
-		DetectedAt: pr.UpdatedAt,
-		ResolvedAt: resolvedAt,
-	}
-
-	if _, err := t.runtime.APIClient().UpsertWorkspacePullRequest(ws.OrgID, ws.ProjectID, workspaceID, input); err != nil {
-		log.Warn().Err(err).Str("workspaceId", workspaceID).Str("prId", input.PrID).Str("state", state).Msg("pr persist: failed to upsert to api-service")
-		return
-	}
-	log.Debug().Str("workspaceId", workspaceID).Str("prId", input.PrID).Str("state", state).Msg("pr persist: upserted to api-service")
 }

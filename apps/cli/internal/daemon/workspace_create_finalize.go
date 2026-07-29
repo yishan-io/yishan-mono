@@ -54,6 +54,19 @@ func (h *JSONRPCHandler) finalizePersistedWorkspace(ctx context.Context, prepare
 	})
 }
 
+func (h *JSONRPCHandler) updatePersistedWorkspaceState(ctx context.Context, workspaceID string, state string, health string) error {
+	if h.localDatabase == nil || strings.TrimSpace(workspaceID) == "" {
+		return nil
+	}
+	err := localdb.NewWorkspaceStore(h.localDatabase).Update(ctx, workspaceID, localdb.WorkspaceUpdate{
+		State: &state, Health: &health,
+	})
+	if err != nil && !errors.Is(err, localdb.ErrWorkspaceNotFound) {
+		return err
+	}
+	return nil
+}
+
 func (h *JSONRPCHandler) closePersistedWorkspace(ctx context.Context, workspaceID string) error {
 	if h.localDatabase == nil || strings.TrimSpace(workspaceID) == "" {
 		return nil

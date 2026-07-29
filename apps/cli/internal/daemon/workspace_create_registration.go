@@ -14,7 +14,6 @@ func (h *JSONRPCHandler) registerPreparedWorkspace(ctx context.Context, prepared
 	if err := h.persistPreparedWorkspace(ctx, prepared); err != nil {
 		return preparedWorkspaceCreate{}, err
 	}
-	h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, prepared.workspaceID, "created")
 	return prepared, nil
 }
 

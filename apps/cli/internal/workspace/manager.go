@@ -2,10 +2,12 @@ package workspace
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace/terminal"
@@ -376,6 +378,56 @@ func (m *Manager) SetWorkspacePullRequest(workspaceID string, pr *WorkspacePullR
 	ws.PullRequest = pr
 	m.workspaces[workspaceID] = ws
 	return nil
+}
+
+// PersistWorkspacePullRequest stores a tracker snapshot in local SQLite.
+func (m *Manager) PersistWorkspacePullRequest(ctx context.Context, workspaceID string, pullRequest *WorkspacePullRequest) error {
+	if m.store == nil || pullRequest == nil {
+		return nil
+	}
+	workspace, err := m.GetWorkspace(workspaceID)
+	if err != nil {
+		return err
+	}
+	metadata, err := json.Marshal(pullRequest)
+	if err != nil {
+		return fmt.Errorf("marshal workspace pull request: %w", err)
+	}
+	return m.store.UpsertPR(ctx, &localdb.WorkspacePullRequest{
+		WorkspaceID: workspaceID, OrganizationID: workspace.OrgID, PRID: fmt.Sprintf("%d", pullRequest.Number),
+		Title: optionalString(pullRequest.Title), URL: optionalString(pullRequest.URL), Branch: optionalString(pullRequest.Branch),
+		BaseBranch: optionalString(pullRequest.BaseBranch), State: persistedPullRequestState(pullRequest),
+		Metadata: optionalString(string(metadata)), DetectedAt: persistedPullRequestDetectedAt(pullRequest), ResolvedAt: persistedPullRequestResolvedAt(pullRequest),
+	})
+}
+
+func optionalString(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
+}
+
+func persistedPullRequestState(pullRequest *WorkspacePullRequest) string {
+	if pullRequest.Status == "review" || pullRequest.Status == "draft" {
+		return "open"
+	}
+	return pullRequest.Status
+}
+
+func persistedPullRequestDetectedAt(pullRequest *WorkspacePullRequest) string {
+	if pullRequest.UpdatedAt != "" {
+		return pullRequest.UpdatedAt
+	}
+	return time.Now().UTC().Format(time.RFC3339Nano)
+}
+
+func persistedPullRequestResolvedAt(pullRequest *WorkspacePullRequest) *string {
+	if pullRequest.Status != "merged" && pullRequest.Status != "closed" {
+		return nil
+	}
+	resolvedAt := time.Now().UTC().Format(time.RFC3339Nano)
+	return &resolvedAt
 }
 
 func (m *Manager) SetWorkspaceState(workspaceID string, state string, health string) error {

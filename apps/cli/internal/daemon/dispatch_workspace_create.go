@@ -26,6 +26,7 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 	if err != nil {
 		return nil, err
 	}
+	h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, prepared.workspaceID, "created")
 	h.events.Publish(frontendEvent{Topic: "workspaceCreateStarted", Payload: prepared.startedEvent})
 
 	go h.executeWorkspaceCreate(context.Background(), prepared)
