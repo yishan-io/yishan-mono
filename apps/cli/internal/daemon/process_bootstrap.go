@@ -103,7 +103,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	workspaceManager := workspace.NewManager()
+	workspaceManager := workspace.NewManagerWithStore(localdb.NewWorkspaceStore(database))
 	cleanupStore, err := newWorkspaceCleanupStore(statePath)
 	if err != nil {
 		_ = database.Close() // cleanup after failed daemon bootstrap
@@ -128,9 +128,9 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 		_ = database.Close() // cleanup after failed daemon bootstrap
 		return nil, nil, nil, err
 	}
-	if err := restoreIndexedWorkspaces(handler); err != nil {
+	if err := workspaceManager.HydrateFromDB(context.Background()); err != nil {
 		_ = database.Close() // cleanup after failed daemon bootstrap
-		return nil, nil, nil, fmt.Errorf("restore indexed workspaces: %w", err)
+		return nil, nil, nil, fmt.Errorf("restore persisted workspaces: %w", err)
 	}
 	if handler.tokenUsage != nil {
 		handler.tokenUsage.StartStartupScan()

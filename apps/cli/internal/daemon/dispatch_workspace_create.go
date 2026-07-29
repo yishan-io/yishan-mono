@@ -22,7 +22,7 @@ func (h *JSONRPCHandler) handleWorkspaceCreate(ctx context.Context, params json.
 	if err != nil {
 		return nil, err
 	}
-	prepared, err = h.registerPreparedWorkspace(ctx, prepared, "")
+	prepared, err = h.registerPreparedWorkspace(ctx, prepared)
 	if err != nil {
 		return nil, err
 	}
@@ -73,11 +73,11 @@ func (h *JSONRPCHandler) executeWorktreeWorkspaceCreate(ctx context.Context, pre
 		},
 		FinalizeLocalCreate: func(ctx context.Context, created workspace.Workspace) error {
 			h.watchAndTrack(created.ID, created.Path)
-			h.upsertWorkspaceIndex(created)
-			if err := h.updatePreparedWorkspace(ctx, prepared, created.Path); err != nil {
+			if err := h.finalizePersistedWorkspace(ctx, prepared, created); err != nil {
 				h.rollbackWorkspaceCreateFailure(ctx, prepared, created)
 				return err
 			}
+			h.publishWorkspaceSnapshotChanged(prepared.organizationID, prepared.projectID, created.ID, "updated")
 			return nil
 		},
 		PublishProgress: reportProgress,

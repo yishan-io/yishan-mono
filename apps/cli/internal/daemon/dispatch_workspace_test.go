@@ -13,10 +13,56 @@ import (
 	"time"
 
 	"yishan/apps/cli/internal/config"
+	localdb "yishan/apps/cli/internal/db"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
 )
+
+func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
+	handler := newTestHandler(t)
+	database, err := localdb.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+	if err := localdb.Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	projectStore := localdb.NewProjectStore(database)
+	project := localdb.Project{ID: "project-1", Name: "Project", OrganizationID: "org-1", ContextEnabled: true}
+	if err := projectStore.Create(context.Background(), &project); err != nil {
+		t.Fatalf("create project: %v", err)
+	}
+	handler.SetLocalDatabase(database)
+
+	prepared := preparedWorkspaceCreate{registration: &WorkspaceCreation{
+		ID: "workspace-1", NodeID: "node-1", OrganizationID: "org-1", ProjectID: project.ID,
+		Kind: workspace.KindWorktree, Branch: "feature/local-db", SourceBranch: "main",
+	}}
+	created := workspace.Workspace{ID: "workspace-1", OrgID: "org-1", ProjectID: project.ID, Path: t.TempDir(), State: workspace.WorkspaceStateActive}
+
+	if err := handler.persistPreparedWorkspace(context.Background(), prepared); err != nil {
+		t.Fatalf("persist prepared workspace: %v", err)
+	}
+	provisioningWorkspace, err := localdb.NewWorkspaceStore(database).Get(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("get provisioning workspace: %v", err)
+	}
+	if provisioningWorkspace.Status != "provisioning" || provisioningWorkspace.LocalPath != "" {
+		t.Fatalf("unexpected provisioning workspace: %#v", provisioningWorkspace)
+	}
+	if err := handler.finalizePersistedWorkspace(context.Background(), prepared, created); err != nil {
+		t.Fatalf("finalize persisted workspace: %v", err)
+	}
+	storedWorkspace, err := localdb.NewWorkspaceStore(database).Get(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("get persisted workspace: %v", err)
+	}
+	if storedWorkspace.Status != "active" || storedWorkspace.LocalPath != created.Path || storedWorkspace.Branch == nil || *storedWorkspace.Branch != "feature/local-db" {
+		t.Fatalf("unexpected persisted workspace: %#v", storedWorkspace)
+	}
+}
 
 // newTestHandler creates a JSONRPCHandler wired to a temp-dir workspace index
 // for use in dispatch handler unit tests.
@@ -170,8 +216,9 @@ func TestHandleWorkspaceCreate_UsesAuthoritativeAPIWorkspaceID(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected map result, got %T", result)
 	}
-	if got := resultMap["id"]; got != "ws-api-1" {
-		t.Fatalf("result id = %v, want %q", got, "ws-api-1")
+	workspaceID, ok := resultMap["id"].(string)
+	if !ok || workspaceID == "" {
+		t.Fatalf("expected a locally generated workspace id, got %v", resultMap["id"])
 	}
 
 	snapshotEvent := <-events
@@ -186,8 +233,8 @@ func TestHandleWorkspaceCreate_UsesAuthoritativeAPIWorkspaceID(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected workspaceCreateStarted payload, got %T", startedEvent.Payload)
 	}
-	if payload.WorkspaceID != "ws-api-1" {
-		t.Fatalf("expected workspace id %q, got %s", "ws-api-1", payload.WorkspaceID)
+	if payload.WorkspaceID != workspaceID {
+		t.Fatalf("expected workspace id %q, got %s", workspaceID, payload.WorkspaceID)
 	}
 	if payload.OrganizationID != "org-1" || payload.ProjectID != "project-1" {
 		t.Fatalf("unexpected payload org/project: %+v", payload)
@@ -460,92 +507,6 @@ func TestHandleWorkspaceCloseProject(t *testing.T) {
 	}
 }
 
-// TestUpdatePreparedWorkspace_SnapshotFiredOnSuccess verifies that
-// updatePreparedWorkspace fires workspaceSnapshotChanged when the API PATCH
-// succeeds (runtime == nil short-circuits the HTTP call, returning no error).
-func TestUpdatePreparedWorkspace_SnapshotFiredOnSuccess(t *testing.T) {
-	h := newTestHandler(t)
-	subID, events := h.events.Subscribe()
-	defer h.events.Unsubscribe(subID)
-
-	prepared := preparedWorkspaceCreate{
-		workspaceID:    "ws-snap-1",
-		organizationID: "org-1",
-		projectID:      "proj-1",
-		registration: &WorkspaceCreation{
-			ID:             "ws-snap-1",
-			OrganizationID: "org-1",
-			ProjectID:      "proj-1",
-		},
-	}
-
-	// runtime == nil → updateWorkspace returns nil (no HTTP call) → snapshot fires.
-	err := h.updatePreparedWorkspace(context.Background(), prepared, "/some/path")
-	if err != nil {
-		t.Fatalf("expected nil error with nil runtime, got %v", err)
-	}
-
-	select {
-	case event := <-events:
-		if event.Topic != "workspaceSnapshotChanged" {
-			t.Fatalf("expected workspaceSnapshotChanged, got %q", event.Topic)
-		}
-	case <-time.After(time.Second):
-		t.Fatal("timed out waiting for workspaceSnapshotChanged event")
-	}
-}
-
-// TestUpdatePreparedWorkspace_SnapshotNotFiredOnAPIError verifies that
-// updatePreparedWorkspace does NOT fire workspaceSnapshotChanged when the
-// API PATCH fails — the outer executeWorktreeWorkspaceCreate is responsible
-// for firing the fallback snapshot in that case.
-func TestUpdatePreparedWorkspace_SnapshotNotFiredOnAPIError(t *testing.T) {
-	// Wire a runtime with an unreachable API URL so the PATCH will fail.
-	rt := cliruntime.New(&config.Config{
-		API: config.APIConfig{
-			BaseURL: "http://127.0.0.1:1", // port 1 is always refused
-			Token:   "test-token",
-		},
-	})
-
-	root := t.TempDir()
-	statePath := filepath.Join(root, "daemon.state.json")
-	indexStore, err := newWorkspaceIndexStore(statePath)
-	if err != nil {
-		t.Fatalf("newWorkspaceIndexStore: %v", err)
-	}
-	h := NewJSONRPCHandler(workspace.NewManager(), rt, "node-1", "", nil, indexStore, "", NewAppContextStore(""))
-	t.Cleanup(func() { h.Shutdown() })
-
-	subID, events := h.events.Subscribe()
-	defer h.events.Unsubscribe(subID)
-
-	prepared := preparedWorkspaceCreate{
-		workspaceID:    "ws-snap-2",
-		organizationID: "org-1",
-		projectID:      "proj-1",
-		registration: &WorkspaceCreation{
-			ID:             "ws-snap-2",
-			OrganizationID: "org-1",
-			ProjectID:      "proj-1",
-		},
-	}
-
-	err = h.updatePreparedWorkspace(context.Background(), prepared, "/some/path")
-	if err == nil {
-		t.Fatal("expected non-nil error when API PATCH fails")
-	}
-
-	// The snapshot must NOT arrive from updatePreparedWorkspace itself —
-	// the outer executeWorktreeWorkspaceCreate fires it via the fallback guard.
-	select {
-	case event := <-events:
-		t.Fatalf("unexpected event from updatePreparedWorkspace on error: topic=%q", event.Topic)
-	case <-time.After(100 * time.Millisecond):
-		// correct: no event fired from within updatePreparedWorkspace
-	}
-}
-
 func TestExecuteWorktreeWorkspaceCreate_LocalProvisionFailureRollsBackRegisteredWorkspace(t *testing.T) {
 	var closedWorkspaceID string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -597,20 +558,20 @@ func TestExecuteWorktreeWorkspaceCreate_LocalProvisionFailureRollsBackRegistered
 			Branch:         "feature-fail",
 			SourceBranch:   "main",
 		},
-	}, "")
+	})
 	if err != nil {
 		t.Fatalf("registerPreparedWorkspace: %v", err)
 	}
-	if prepared.workspaceID != "ws-api-rollback" {
-		t.Fatalf("prepared.workspaceID = %q, want %q", prepared.workspaceID, "ws-api-rollback")
+	if prepared.workspaceID != "ws-local-1" {
+		t.Fatalf("prepared.workspaceID = %q, want %q", prepared.workspaceID, "ws-local-1")
 	}
 
 	err = h.executeWorktreeWorkspaceCreate(context.Background(), prepared, nil)
 	if err == nil {
 		t.Fatal("expected local provisioning failure")
 	}
-	if closedWorkspaceID != "ws-api-rollback" {
-		t.Fatalf("closed workspace id = %q, want %q", closedWorkspaceID, "ws-api-rollback")
+	if closedWorkspaceID != "" {
+		t.Fatalf("expected no remote close request, got %q", closedWorkspaceID)
 	}
 }
 
@@ -664,14 +625,14 @@ func TestExecuteWorktreeWorkspaceCreate_RemoteSyncFailureRollsBackLocalWorkspace
 	}
 
 	err = h.executeWorktreeWorkspaceCreate(context.Background(), prepared, nil)
-	if err == nil {
-		t.Fatal("expected remote sync failure")
+	if err != nil {
+		t.Fatalf("expected local creation without remote sync, got %v", err)
 	}
-	if _, getErr := h.manager.GetWorkspace("ws-sync-fail"); getErr == nil {
-		t.Fatal("workspace still present in manager after rollback")
+	if _, getErr := h.manager.GetWorkspace("ws-sync-fail"); getErr != nil {
+		t.Fatalf("expected workspace to remain in manager: %v", getErr)
 	}
-	if _, statErr := os.Stat(worktreePath); !os.IsNotExist(statErr) {
-		t.Fatalf("worktree path still exists after rollback: stat err=%v", statErr)
+	if _, statErr := os.Stat(worktreePath); statErr != nil {
+		t.Fatalf("expected worktree path after local creation: %v", statErr)
 	}
 	entries, listErr := indexStore.List()
 	if listErr != nil {

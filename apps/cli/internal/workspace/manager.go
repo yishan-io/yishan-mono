@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace/terminal"
 )
 
@@ -54,15 +55,55 @@ type Manager struct {
 	files      *FileService
 	gits       *GitService
 	terminals  *terminal.Manager
+	store      *localdb.WorkspaceStore
 }
 
 func NewManager() *Manager {
+	return NewManagerWithStore(nil)
+}
+
+// NewManagerWithStore creates a manager with optional durable workspace storage.
+func NewManagerWithStore(store *localdb.WorkspaceStore) *Manager {
 	return &Manager{
 		workspaces: make(map[string]Workspace),
 		files:      NewFileService(),
 		gits:       NewGitService(),
 		terminals:  terminal.NewManager(),
+		store:      store,
 	}
+}
+
+// HydrateFromDB restores locally active workspaces from durable storage.
+func (m *Manager) HydrateFromDB(ctx context.Context) error {
+	if m.store == nil {
+		return nil
+	}
+	workspaces, err := m.store.List(ctx)
+	if err != nil {
+		return fmt.Errorf("list persisted workspaces: %w", err)
+	}
+	for _, storedWorkspace := range workspaces {
+		if !isLiveWorkspaceStatus(storedWorkspace.Status) {
+			continue
+		}
+		if err := m.hydrateWorkspace(storedWorkspace); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *Manager) hydrateWorkspace(storedWorkspace localdb.Workspace) error {
+	_, err := m.Open(OpenRequest{ID: storedWorkspace.ID, Path: storedWorkspace.LocalPath,
+		OrgID: storedWorkspace.OrganizationID, ProjectID: storedWorkspace.ProjectID})
+	if err != nil {
+		return fmt.Errorf("restore workspace %q: %w", storedWorkspace.ID, err)
+	}
+	return nil
+}
+
+func isLiveWorkspaceStatus(status string) bool {
+	return status == "active" || status == "provisioning"
 }
 
 type OpenRequest struct {
