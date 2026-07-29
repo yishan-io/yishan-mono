@@ -17,7 +17,6 @@ func TestPublishWorkspaceCreateCompleted_TaskRunUsesTerminalLifecycleMetadata(t 
 		"node-1",
 		filepath.Join(root, "daemon.log"),
 		nil,
-		nil,
 		filepath.Join(root, "config.yml"),
 		NewAppContextStore(""),
 	)

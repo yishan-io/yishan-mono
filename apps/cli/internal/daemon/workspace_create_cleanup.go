@@ -45,12 +45,6 @@ func (h *JSONRPCHandler) cleanupLocalWorkspaceCreateFailure(ctx context.Context,
 			return h.cleanupStore.Remove(workspaceID)
 		},
 		RemoveWorkspaceFromMemory: h.manager.RemoveWorkspaceFromMemory,
-		RemoveWorkspaceIndex: func(workspaceID string) error {
-			if h.wsIndexStore == nil {
-				return nil
-			}
-			return h.wsIndexStore.Remove(workspaceID)
-		},
 		ClearAgentUsage: h.clearAgentUsage,
 		Warn: func(workspaceID string, path string, message string, err error) {
 			entry := log.Warn().Err(err).Str("workspaceId", workspaceID)

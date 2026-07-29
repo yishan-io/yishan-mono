@@ -13,7 +13,7 @@ import (
 )
 
 func TestServeAgentHookPublishesStartNotificationEvent(t *testing.T) {
-	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, nil, "", NewAppContextStore(""))
+	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
 
@@ -49,7 +49,7 @@ func TestServeAgentHookPublishesStartNotificationEvent(t *testing.T) {
 }
 
 func TestServeAgentHookPublishesFailedNotificationEvent(t *testing.T) {
-	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, nil, "", NewAppContextStore(""))
+	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
 
@@ -78,7 +78,7 @@ func TestServeAgentHookPublishesFailedNotificationEvent(t *testing.T) {
 }
 
 func TestServeAgentHookSilencesPerToolFailureEvents(t *testing.T) {
-	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, nil, "", NewAppContextStore(""))
+	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
 
@@ -103,7 +103,7 @@ func TestServeAgentHookSilencesPerToolFailureEvents(t *testing.T) {
 }
 
 func TestServeAgentHookPublishesPendingQuestionNotificationEvent(t *testing.T) {
-	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, nil, "", NewAppContextStore(""))
+	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
 
@@ -131,7 +131,7 @@ func TestServeAgentHookPublishesPendingQuestionNotificationEvent(t *testing.T) {
 func TestServeAgentHookNormalizesSupportedAgentNames(t *testing.T) {
 	for _, agent := range agentkind.All {
 		t.Run(agent, func(t *testing.T) {
-			handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, nil, "", NewAppContextStore(""))
+			handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 			subscriptionID, events := handler.events.Subscribe()
 			defer handler.events.Unsubscribe(subscriptionID)
 
@@ -159,7 +159,7 @@ func TestServeAgentHookNormalizesSupportedAgentNames(t *testing.T) {
 }
 
 func TestServeAgentHookNormalizesCursorAgentAlias(t *testing.T) {
-	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, nil, "", NewAppContextStore(""))
+	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
 
@@ -185,7 +185,7 @@ func TestServeAgentHookNormalizesCursorAgentAlias(t *testing.T) {
 }
 
 func TestServeAgentHookRejectsInvalidPayload(t *testing.T) {
-	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, nil, "", NewAppContextStore(""))
+	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 	response := postHookPayload(t, handler, map[string]any{"event": "Start"})
 
 	if response.Code != http.StatusBadRequest {
@@ -233,7 +233,7 @@ func drainHookEvents(t *testing.T, events <-chan frontendEvent) []frontendEvent 
 }
 
 func TestServeAgentHookPublishesTerminalAgentChangedOnStart(t *testing.T) {
-	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, nil, "", NewAppContextStore(""))
+	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
 
@@ -273,7 +273,7 @@ func TestServeAgentHookPublishesTerminalAgentChangedOnStart(t *testing.T) {
 }
 
 func TestServeAgentHookPublishesTerminalAgentChangedOnStop(t *testing.T) {
-	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, nil, "", NewAppContextStore(""))
+	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
 
@@ -309,7 +309,7 @@ func TestServeAgentHookPublishesTerminalAgentChangedOnStop(t *testing.T) {
 }
 
 func TestServeAgentHookNoTerminalAgentChangedWhenTabIdMissing(t *testing.T) {
-	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, nil, "", NewAppContextStore(""))
+	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
 
@@ -334,7 +334,7 @@ func TestServeAgentHookNoTerminalAgentChangedWhenTabIdMissing(t *testing.T) {
 }
 
 func TestServeAgentHookLaunchedPublishesTerminalAgentChangedButNoNotification(t *testing.T) {
-	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, nil, "", NewAppContextStore(""))
+	handler := NewJSONRPCHandler(workspace.NewManager(), nil, "node-1", "", nil, "", NewAppContextStore(""))
 	subscriptionID, events := handler.events.Subscribe()
 	defer handler.events.Unsubscribe(subscriptionID)
 

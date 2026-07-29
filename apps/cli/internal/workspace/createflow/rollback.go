@@ -15,7 +15,6 @@ type CleanupDependencies struct {
 	MarkCleanupFailure        func(workspaceID string, cleanupErr error) error
 	RemoveRegisteredCleanup   func(workspaceID string) error
 	RemoveWorkspaceFromMemory func(workspaceID string)
-	RemoveWorkspaceIndex      func(workspaceID string) error
 	ClearAgentUsage           func(workspaceID string)
 	Warn                      func(workspaceID string, path string, message string, err error)
 }
@@ -68,11 +67,6 @@ func CleanupLocalWorkspaceCreateFailure(ctx context.Context, deps CleanupDepende
 
 	if deps.RemoveWorkspaceFromMemory != nil {
 		deps.RemoveWorkspaceFromMemory(closeReq.WorkspaceID)
-	}
-	if deps.RemoveWorkspaceIndex != nil {
-		if err := deps.RemoveWorkspaceIndex(closeReq.WorkspaceID); err != nil && deps.Warn != nil {
-			deps.Warn(closeReq.WorkspaceID, closeReq.Path, "failed to remove rolled back workspace from index store", err)
-		}
 	}
 	if deps.ClearAgentUsage != nil {
 		deps.ClearAgentUsage(closeReq.WorkspaceID)

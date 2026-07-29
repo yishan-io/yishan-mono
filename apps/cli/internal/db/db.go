@@ -36,6 +36,16 @@ func Open(profileDir string) (*sql.DB, error) {
 	return database, nil
 }
 
+// OpenReadOnly opens the profile-local daemon database in read-only mode.
+func OpenReadOnly(profileDir string) (*sql.DB, error) {
+	database, err := sql.Open("sqlite", "file:"+filepath.Join(profileDir, databaseFileName)+"?mode=ro")
+	if err != nil {
+		return nil, fmt.Errorf("open local database read-only: %w", err)
+	}
+	database.SetMaxOpenConns(1)
+	return database, nil
+}
+
 func configure(database *sql.DB) error {
 	database.SetMaxOpenConns(1)
 	for _, pragma := range []string{"PRAGMA journal_mode=WAL", "PRAGMA foreign_keys=ON", "PRAGMA busy_timeout=5000"} {

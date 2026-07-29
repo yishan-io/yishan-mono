@@ -111,12 +111,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 	}
 	settingsFilePath := config.SettingsFilePath(filepath.Dir(statePath))
 	contextStore := NewAppContextStore(settingsFilePath)
-	wsIndexStore, err := newWorkspaceIndexStore(statePath)
-	if err != nil {
-		_ = database.Close() // cleanup after failed daemon bootstrap
-		return nil, nil, nil, fmt.Errorf("create workspace index store: %w", err)
-	}
-	handler := NewJSONRPCHandler(workspaceManager, runtime, daemonID, cfg.LogFilePath, cleanupStore, wsIndexStore, statePath, contextStore)
+	handler := NewJSONRPCHandler(workspaceManager, runtime, daemonID, cfg.LogFilePath, cleanupStore, statePath, contextStore)
 	handler.SetLocalDatabase(database)
 	handler.SetComputerService(newDefaultComputerService())
 	if err := initComputerConfig(handler); err != nil {

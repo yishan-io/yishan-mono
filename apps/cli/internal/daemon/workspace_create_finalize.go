@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -85,13 +84,4 @@ func optionalWorkspaceString(value string) *string {
 		return nil
 	}
 	return &trimmedValue
-}
-
-func (h *JSONRPCHandler) upsertWorkspaceIndex(created workspace.Workspace) {
-	if h.wsIndexStore == nil || created.Path == "" {
-		return
-	}
-	if err := h.wsIndexStore.Upsert(workspaceIndexEntry{WorkspaceID: created.ID, WorktreePath: created.Path, ProjectID: created.ProjectID, OrgID: created.OrgID, State: created.State}); err != nil {
-		log.Warn().Err(err).Str("workspaceId", created.ID).Msg("workspace index store upsert failed on create")
-	}
 }

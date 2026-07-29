@@ -64,16 +64,10 @@ func TestPersistPreparedWorkspace_FinalizesSQLiteRecord(t *testing.T) {
 	}
 }
 
-// newTestHandler creates a JSONRPCHandler wired to a temp-dir workspace index
-// for use in dispatch handler unit tests.
+// newTestHandler creates a JSONRPCHandler for dispatch handler unit tests.
 func newTestHandler(t *testing.T) *JSONRPCHandler {
 	t.Helper()
 	root := t.TempDir()
-	statePath := filepath.Join(root, "daemon.state.json")
-	indexStore, err := newWorkspaceIndexStore(statePath)
-	if err != nil {
-		t.Fatalf("newWorkspaceIndexStore: %v", err)
-	}
 	manager := workspace.NewManager()
 	h := NewJSONRPCHandler(
 		manager,
@@ -81,7 +75,6 @@ func newTestHandler(t *testing.T) *JSONRPCHandler {
 		"node-1",
 		filepath.Join(root, "daemon.log"),
 		nil,
-		indexStore,
 		filepath.Join(root, "config.yml"),
 		NewAppContextStore(""),
 	)
@@ -115,12 +108,6 @@ func TestPublishWorkspaceSnapshotChanged_PublishesLocalInvalidationEvent(t *test
 
 func TestHandleWorkspaceCreate_ReturnsPendingWhenAPIRegistrationIsSkipped(t *testing.T) {
 	root := t.TempDir()
-	statePath := filepath.Join(root, "daemon.state.json")
-	indexStore, err := newWorkspaceIndexStore(statePath)
-	if err != nil {
-		t.Fatalf("newWorkspaceIndexStore: %v", err)
-	}
-
 	manager := workspace.NewManager()
 	handler := NewJSONRPCHandler(
 		manager,
@@ -128,7 +115,6 @@ func TestHandleWorkspaceCreate_ReturnsPendingWhenAPIRegistrationIsSkipped(t *tes
 		"node-1",
 		filepath.Join(root, "daemon.log"),
 		nil,
-		indexStore,
 		filepath.Join(root, "config.yml"),
 		NewAppContextStore(""),
 	)
@@ -173,11 +159,6 @@ func TestHandleWorkspaceCreate_UsesAuthoritativeAPIWorkspaceID(t *testing.T) {
 	defer server.Close()
 
 	root := t.TempDir()
-	statePath := filepath.Join(root, "daemon.state.json")
-	indexStore, err := newWorkspaceIndexStore(statePath)
-	if err != nil {
-		t.Fatalf("newWorkspaceIndexStore: %v", err)
-	}
 	manager := workspace.NewManager()
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
 	handler := NewJSONRPCHandler(
@@ -186,7 +167,6 @@ func TestHandleWorkspaceCreate_UsesAuthoritativeAPIWorkspaceID(t *testing.T) {
 		"node-1",
 		filepath.Join(root, "daemon.log"),
 		nil,
-		indexStore,
 		filepath.Join(root, "config.yml"),
 		NewAppContextStore(""),
 	)
@@ -502,7 +482,7 @@ func TestExecuteWorktreeWorkspaceCreate_LocalProvisionFailureRollsBackRegistered
 	defer server.Close()
 
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: server.URL, Token: "test-token"}})
-	h := NewJSONRPCHandler(workspace.NewManager(), runtime, "node-1", filepath.Join(t.TempDir(), "daemon.log"), nil, nil, filepath.Join(t.TempDir(), "config.yml"), NewAppContextStore(""))
+	h := NewJSONRPCHandler(workspace.NewManager(), runtime, "node-1", filepath.Join(t.TempDir(), "daemon.log"), nil, filepath.Join(t.TempDir(), "config.yml"), NewAppContextStore(""))
 	defer h.Shutdown()
 
 	sourcePath := t.TempDir()
@@ -555,12 +535,7 @@ func TestExecuteWorktreeWorkspaceCreate_RemoteSyncFailureRollsBackLocalWorkspace
 	})
 
 	root := t.TempDir()
-	statePath := filepath.Join(root, "daemon.state.json")
-	indexStore, err := newWorkspaceIndexStore(statePath)
-	if err != nil {
-		t.Fatalf("newWorkspaceIndexStore: %v", err)
-	}
-	h := NewJSONRPCHandler(workspace.NewManager(), rt, "node-1", filepath.Join(root, "daemon.log"), nil, indexStore, "", NewAppContextStore(""))
+	h := NewJSONRPCHandler(workspace.NewManager(), rt, "node-1", filepath.Join(root, "daemon.log"), nil, "", NewAppContextStore(""))
 	t.Cleanup(func() { h.Shutdown() })
 
 	srcDir := filepath.Join(root, "src-repo")
@@ -604,15 +579,6 @@ func TestExecuteWorktreeWorkspaceCreate_RemoteSyncFailureRollsBackLocalWorkspace
 	}
 	if _, statErr := os.Stat(worktreePath); statErr != nil {
 		t.Fatalf("expected worktree path after local creation: %v", statErr)
-	}
-	entries, listErr := indexStore.List()
-	if listErr != nil {
-		t.Fatalf("index List: %v", listErr)
-	}
-	for _, entry := range entries {
-		if entry.WorkspaceID == "ws-sync-fail" {
-			t.Fatal("workspace still present in index store after rollback")
-		}
 	}
 }
 

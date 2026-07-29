@@ -230,7 +230,7 @@ func TestPrepareDirectWorkspaceCreate_SkipsRegistrationWhenOrgMissing(t *testing
 func newWorkspaceCreateFlowTestHandler(t *testing.T, baseURL string) *JSONRPCHandler {
 	t.Helper()
 	runtime := cliruntime.New(&config.Config{API: config.APIConfig{BaseURL: baseURL, Token: "test-token"}})
-	handler := NewJSONRPCHandler(workspace.NewManager(), runtime, "node-local", filepath.Join(t.TempDir(), "daemon.log"), nil, nil, filepath.Join(t.TempDir(), "config.yml"), NewAppContextStore(""))
+	handler := NewJSONRPCHandler(workspace.NewManager(), runtime, "node-local", filepath.Join(t.TempDir(), "daemon.log"), nil, filepath.Join(t.TempDir(), "config.yml"), NewAppContextStore(""))
 	t.Cleanup(func() { handler.Shutdown() })
 	return handler
 }
