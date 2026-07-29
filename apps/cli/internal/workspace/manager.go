@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace/terminal"
 )
@@ -92,7 +93,7 @@ func (m *Manager) HydrateFromDB(ctx context.Context) error {
 			return err
 		}
 		if err := m.hydrateWorkspacePullRequest(ctx, storedWorkspace.ID); err != nil {
-			return err
+			log.Warn().Err(err).Str("workspaceId", storedWorkspace.ID).Msg("skipping PR hydration for workspace")
 		}
 	}
 	return nil

@@ -104,8 +104,7 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 		return nil, nil, nil, err
 	}
 	if err := migrateProjectsFromAPI(database, runtime); err != nil {
-		_ = database.Close() // cleanup after failed migration
-		return nil, nil, nil, err
+		log.Warn().Err(err).Msg("API migration skipped — will retry on next restart")
 	}
 	workspaceManager := workspace.NewManagerWithStore(localdb.NewWorkspaceStore(database))
 	cleanupStore, err := newWorkspaceCleanupStore(statePath)

@@ -85,7 +85,7 @@ func MigrateFromAPI(ctx context.Context, database *sql.DB, organizations []strin
 			}
 			for _, workspace := range workspaces {
 				localWorkspace := apiWorkspaceToLocal(workspace)
-				_ = workspaceStore.Create(ctx, &localWorkspace) // best-effort
+				_ = workspaceStore.Create(ctx, &localWorkspace) // best-effort per-item import
 			}
 		}
 	}

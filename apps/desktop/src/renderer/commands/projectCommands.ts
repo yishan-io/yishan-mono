@@ -1,6 +1,5 @@
 import { api } from "../api";
 import type { ProjectRecord, ProjectWithWorkspacesRecord } from "../api";
-import { RestApiError } from "../api/restClient";
 import { pickRandomProjectColor, pickRandomProjectIcon } from "../components/projectIcons";
 import { readPersistedWorkspacePreferencesByOrg } from "../helpers/projectHelpers";
 import { getDaemonClient } from "../rpc/rpcTransport";
@@ -303,10 +302,8 @@ export async function deleteProject(projectId: string): Promise<void> {
       const daemonClient = await getDaemonClient();
       await daemonClient.project.delete(selectedOrganizationId, projectId);
     } catch (error) {
-      if (!(error instanceof RestApiError && error.status === 404)) {
-        console.error("Failed to delete local project and workspaces", error);
-        throw error instanceof Error ? error : new Error("Failed to delete local project and workspaces");
-      }
+      console.error("Failed to delete local project and workspaces", error);
+      throw error instanceof Error ? error : new Error("Failed to delete local project and workspaces");
     }
   }
 
