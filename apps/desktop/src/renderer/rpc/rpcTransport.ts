@@ -26,6 +26,7 @@ const API_NAMESPACES = new Set<ApiNamespace>([
   "skill",
   "memory",
   "pi",
+  "project",
 ]);
 const desktopRpcEventListeners = new Set<DesktopRpcEventListener>();
 const daemonConnectionStatusListeners = new Set<(status: DaemonConnectionStatus) => void>();

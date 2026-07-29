@@ -136,5 +136,22 @@ func (h *JSONRPCHandler) handleProjectListWithWorkspaces(ctx context.Context, pa
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
 	}
-	return h.projectStore().ListByOrg(ctx, req.OrganizationID)
+	projects, err := h.projectStore().ListByOrg(ctx, req.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	workspaceStore := localdb.NewWorkspaceStore(h.localDatabase)
+	type projectWithWorkspaces struct {
+		localdb.Project
+		Workspaces []localdb.Workspace `json:"workspaces"`
+	}
+	results := make([]projectWithWorkspaces, 0, len(projects))
+	for _, project := range projects {
+		workspaces, err := workspaceStore.ListByProject(ctx, project.ID)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, projectWithWorkspaces{Project: project, Workspaces: workspaces})
+	}
+	return results, nil
 }

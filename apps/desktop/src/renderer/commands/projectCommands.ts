@@ -89,9 +89,11 @@ export async function loadWorkspaceSnapshot(): Promise<void> {
       return;
     }
 
-    const projectsWithWorkspaces: ProjectWithWorkspacesRecord[] = await api.project.listByOrg(selectedOrganization.id, {
-      withWorkspaces: true,
-    });
+    const daemonClient = await getDaemonClient();
+    const projectsWithWorkspaces: ProjectWithWorkspacesRecord[] = await daemonClient.project.listByOrg(
+      selectedOrganization.id,
+      { withWorkspaces: true },
+    );
     const projects: ProjectRecord[] = projectsWithWorkspaces.map(({ workspaces: _, ...project }) => project);
     const workspaces = projectsWithWorkspaces.flatMap((project) => project.workspaces ?? []);
 
@@ -161,25 +163,7 @@ export async function createProject(input: {
   let inferredNodeId: string | undefined;
 
   if (isLocalSource) {
-    const daemonId = sessionStore.getState().daemonId?.trim();
-
-    try {
-      const nodes = await api.node.listByOrg(selectedOrganizationId);
-      if (daemonId) {
-        const daemonNode = nodes.find((node) => node.id === daemonId && node.scope === "private" && node.canUse);
-        inferredNodeId = daemonNode?.id;
-      }
-
-      if (!inferredNodeId) {
-        const preferredPrivateNode = nodes.find((node) => node.scope === "private" && node.canUse);
-        inferredNodeId = preferredPrivateNode?.id;
-      }
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        console.debug("[projectCommands] listOrganizationNodes failed", { error });
-      }
-    }
-
+    inferredNodeId = sessionStore.getState().daemonId?.trim();
     const localRepositoryMetadata = await inspectLocalRepository(normalizedPath);
 
     if (!localRepositoryMetadata.isGitRepository) {
@@ -210,12 +194,11 @@ export async function createProject(input: {
   const randomColor = pickRandomProjectColor();
 
   try {
-    project = await api.project.create(selectedOrganizationId, {
+    const daemonClient = await getDaemonClient();
+    project = await daemonClient.project.create(selectedOrganizationId, {
       name: normalizedName,
       sourceTypeHint: inferredSourceTypeHint,
       repoUrl: inferredRemoteUrl,
-      nodeId: inferredNodeId,
-      localPath: isLocalSource ? normalizedPath || undefined : undefined,
       contextEnabled: workspaceSettingsStore.getState().isDefaultContextEnabled,
     });
   } catch (error) {
@@ -295,18 +278,6 @@ export async function createProject(input: {
 
   tabStore.getState().resolveTabForWorkspace(workspaceStore.getState().selectedWorkspaceId);
 
-  // Persist the randomly chosen icon and color to the backend so they survive
-  // snapshot reloads. Non-blocking — fire-and-forget.
-  api.project
-    .update(selectedOrganizationId, project.id, {
-      name: project.name || normalizedName,
-      icon: randomIcon,
-      color: randomColor,
-    })
-    .catch((error) => {
-      console.error("Failed to persist random project icon/color", error);
-    });
-
   // Ensure the context folder and symlinks are created for the new project's
   // known worktree paths. Without this, the `.my-context` directory is never
   // initialised for the primary workspace that already exists on disk.
@@ -329,11 +300,12 @@ export async function deleteProject(projectId: string): Promise<void> {
   const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
   if (selectedOrganizationId) {
     try {
-      await api.project.delete(selectedOrganizationId, projectId);
+      const daemonClient = await getDaemonClient();
+      await daemonClient.project.delete(selectedOrganizationId, projectId);
     } catch (error) {
       if (!(error instanceof RestApiError && error.status === 404)) {
-        console.error("Failed to delete backend project and workspaces", error);
-        throw error instanceof Error ? error : new Error("Failed to delete backend project and workspaces");
+        console.error("Failed to delete local project and workspaces", error);
+        throw error instanceof Error ? error : new Error("Failed to delete local project and workspaces");
       }
     }
   }
@@ -366,7 +338,8 @@ export async function updateProjectConfig(
   const selectedOrganizationId = sessionStore.getState().selectedOrganizationId?.trim();
   if (selectedOrganizationId) {
     try {
-      const updatedProject = await api.project.update(selectedOrganizationId, projectId, {
+      const daemonClient = await getDaemonClient();
+      const updatedProject = await daemonClient.project.update(selectedOrganizationId, projectId, {
         name: config.name,
         icon: config.icon,
         color: config.color,
