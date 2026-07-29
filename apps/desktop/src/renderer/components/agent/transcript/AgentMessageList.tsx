@@ -1,4 +1,5 @@
 import { Box, CircularProgress, IconButton, Typography } from "@mui/material";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuChevronDown } from "react-icons/lu";
@@ -10,6 +11,8 @@ import type { AgentToolResultMap } from "./helpers";
 
 const EMPTY_MIN_HEIGHT = 320;
 const BOTTOM_SCROLL_THRESHOLD_PX = 48;
+const MESSAGE_ESTIMATED_HEIGHT_PX = 180;
+const MESSAGE_VIRTUALIZER_OVERSCAN = 5;
 
 const savedScrollTopByTabId = new Map<string, number>();
 const savedRenderedItemCountByTabId = new Map<string, number>();
@@ -149,6 +152,7 @@ function AgentMessageListComponent({
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
   const wasActiveRef = useRef(false);
   const hasRenderedTranscriptRef = useRef(false);
+  const displayMessageIdsRef = useRef<string[]>([]);
   const displayMessages = useMemo(() => {
     const source = trailingMessage ? [...messages, trailingMessage] : messages;
     const display = buildDisplayMessages(source);
@@ -160,9 +164,20 @@ function AgentMessageListComponent({
     }
     return display;
   }, [messages, trailingMessage]);
+  displayMessageIdsRef.current = displayMessages.map((displayMessage) => displayMessage.message.id);
+  const getVirtualMessageKey = useCallback((index: number) => displayMessageIdsRef.current[index] ?? index, []);
   const queuedCount = (queuedMessages?.steering.length ?? 0) + (queuedMessages?.followUp.length ?? 0);
   const renderedItemCount = displayMessages.length + (isWorking ? 1 : 0) + queuedCount;
   const previousRenderedItemCountRef = useRef(renderedItemCount);
+  const virtualizer = useVirtualizer({
+    count: displayMessages.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => MESSAGE_ESTIMATED_HEIGHT_PX,
+    overscan: MESSAGE_VIRTUALIZER_OVERSCAN,
+    getItemKey: getVirtualMessageKey,
+  });
+  const virtualMessages = virtualizer.getVirtualItems();
+  const virtualMessageTotalSize = virtualizer.getTotalSize();
   const { t } = useTranslation();
   const [isScrollToBottomVisible, setIsScrollToBottomVisible] = useState(false);
 
@@ -264,6 +279,20 @@ function AgentMessageListComponent({
     };
   }, [isActive, renderedItemCount, scrollToLatestMessage, tabId]);
 
+  useEffect(() => {
+    if (!isActive || virtualMessageTotalSize === 0 || !(wasPinnedToBottomByTabId.get(tabId) ?? true)) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      scrollToLatestMessage();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [isActive, scrollToLatestMessage, tabId, virtualMessageTotalSize]);
+
   if (displayMessages.length === 0 && queuedCount === 0) {
     return (
       <Box
@@ -319,16 +348,38 @@ function AgentMessageListComponent({
             gap: 1,
           }}
         >
-          {displayMessages.map(({ message, mergedToolResults, isStreaming }) => (
-            <AgentMessage
-              key={message.id}
-              message={message}
-              mergedToolResults={mergedToolResults}
-              workspacePath={workspacePath}
-              isStreaming={isStreaming}
-              onOpenCompletedSubagent={onOpenCompletedSubagent}
-            />
-          ))}
+          <Box sx={{ height: virtualMessageTotalSize, position: "relative", width: "100%" }}>
+            {virtualMessages.map((virtualMessage) => {
+              const displayMessage = displayMessages[virtualMessage.index];
+              if (!displayMessage) {
+                return null;
+              }
+
+              const { message, mergedToolResults, isStreaming } = displayMessage;
+              return (
+                <Box
+                  key={virtualMessage.key}
+                  data-index={virtualMessage.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    transform: `translateY(${virtualMessage.start}px)`,
+                    width: "100%",
+                  }}
+                >
+                  <AgentMessage
+                    message={message}
+                    mergedToolResults={mergedToolResults}
+                    workspacePath={workspacePath}
+                    isStreaming={isStreaming}
+                    onOpenCompletedSubagent={onOpenCompletedSubagent}
+                  />
+                </Box>
+              );
+            })}
+          </Box>
           {isWorking && (
             <Box
               data-testid="agent-turn-working-indicator"
