@@ -48,6 +48,11 @@ func (store *WorkspaceStore) List(ctx context.Context) ([]Workspace, error) {
 	return store.list(ctx, `SELECT `+workspaceColumns+` FROM workspaces ORDER BY created_at, id`)
 }
 
+// ListLiveByProject returns local workspaces for projectID with live statuses.
+func (store *WorkspaceStore) ListLiveByProject(ctx context.Context, projectID string) ([]Workspace, error) {
+	return store.list(ctx, `SELECT `+workspaceColumns+` FROM workspaces WHERE project_id = ? AND status IN ('active', 'provisioning') ORDER BY created_at, id`, projectID)
+}
+
 // ListByProject returns local workspaces for projectID.
 func (store *WorkspaceStore) ListByProject(ctx context.Context, projectID string) ([]Workspace, error) {
 	return store.list(ctx, `SELECT `+workspaceColumns+` FROM workspaces WHERE project_id = ? ORDER BY created_at, id`, projectID)

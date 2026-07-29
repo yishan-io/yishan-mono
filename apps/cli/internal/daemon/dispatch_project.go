@@ -147,7 +147,7 @@ func (h *JSONRPCHandler) handleProjectListWithWorkspaces(ctx context.Context, pa
 	}
 	results := make([]projectWithWorkspaces, 0, len(projects))
 	for _, project := range projects {
-		workspaces, err := workspaceStore.ListByProject(ctx, project.ID)
+		workspaces, err := workspaceStore.ListLiveByProject(ctx, project.ID)
 		if err != nil {
 			return nil, err
 		}
