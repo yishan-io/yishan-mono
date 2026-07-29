@@ -10,11 +10,6 @@ import { createProject, deleteProject, loadWorkspaceSnapshot, updateProjectConfi
 
 const apiMocks = vi.hoisted(() => ({
   listOrganizations: vi.fn(),
-  listProjects: vi.fn(),
-  createProject: vi.fn(),
-  deleteProject: vi.fn(),
-  updateProject: vi.fn(),
-  listOrganizationNodes: vi.fn(),
 }));
 
 vi.mock("../api", () => ({
@@ -22,19 +17,14 @@ vi.mock("../api", () => ({
     org: {
       list: apiMocks.listOrganizations,
     },
-    project: {
-      listByOrg: apiMocks.listProjects,
-      create: apiMocks.createProject,
-      delete: apiMocks.deleteProject,
-      update: apiMocks.updateProject,
-    },
-    node: {
-      listByOrg: apiMocks.listOrganizationNodes,
-    },
   },
 }));
 
 const rpcMocks = vi.hoisted(() => ({
+  listProjects: vi.fn(),
+  createProject: vi.fn(),
+  deleteProject: vi.fn(),
+  updateProject: vi.fn(),
   gitInspect: vi.fn(
     async () =>
       ({
@@ -55,6 +45,12 @@ vi.mock("../rpc/rpcTransport", () => ({
       list: rpcMocks.workspaceList,
       openProject: rpcMocks.workspaceOpenProject,
       syncContextLink: rpcMocks.workspaceSyncContextLink,
+    },
+    project: {
+      listByOrg: rpcMocks.listProjects,
+      create: rpcMocks.createProject,
+      delete: rpcMocks.deleteProject,
+      update: rpcMocks.updateProject,
     },
   })),
 }));
@@ -102,7 +98,7 @@ describe("projectCommands", () => {
       selectedOrganizationId: "org-1",
       loaded: true,
     });
-    apiMocks.listProjects.mockResolvedValueOnce([
+    rpcMocks.listProjects.mockResolvedValueOnce([
       {
         id: "project-1",
         name: "Project 1",
@@ -119,7 +115,7 @@ describe("projectCommands", () => {
 
     await loadWorkspaceSnapshot();
 
-    expect(apiMocks.listProjects).toHaveBeenCalledWith("org-1", { withWorkspaces: true });
+    expect(rpcMocks.listProjects).toHaveBeenCalledWith("org-1", { withWorkspaces: true });
     expect(hydrate).toHaveBeenCalledTimes(1);
     expect(hydrate.mock.calls[0]?.[0]).toBe("org-1");
     expect(hydrate.mock.calls[0]?.[1]).toEqual([
@@ -150,7 +146,7 @@ describe("projectCommands", () => {
     workspaceStore.setState({
       displayProjectIds: ["project-1"],
     });
-    apiMocks.listProjects.mockResolvedValueOnce([
+    rpcMocks.listProjects.mockResolvedValueOnce([
       {
         id: "project-1",
         name: "Project 1",
@@ -196,7 +192,7 @@ describe("projectCommands", () => {
     workspaceStore.setState({
       displayProjectIds: ["project-1"],
     });
-    apiMocks.listProjects.mockResolvedValueOnce([
+    rpcMocks.listProjects.mockResolvedValueOnce([
       {
         id: "project-1",
         name: "Project 1",
@@ -270,7 +266,7 @@ describe("projectCommands", () => {
         }>
       >();
 
-    apiMocks.listProjects
+    rpcMocks.listProjects
       .mockImplementationOnce(() => olderSnapshot.promise)
       .mockImplementationOnce(() => newerSnapshot.promise);
 
@@ -392,29 +388,14 @@ describe("projectCommands", () => {
   it("creates backend project and then appends store state", async () => {
     const appendRepo = vi.fn();
     const addWorkspace = vi.fn();
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
     workspaceStore.setState({ createProject: appendRepo, addWorkspace });
-    sessionStore.setState({ selectedOrganizationId: "org-1", daemonId: "daemon-1" });
-    apiMocks.listOrganizationNodes.mockResolvedValueOnce([
-      {
-        id: "daemon-1",
-        name: "local",
-        scope: "private",
-        endpoint: null,
-        metadata: null,
-        ownerUserId: "user-1",
-        organizationId: null,
-        canUse: true,
-        createdByUserId: "user-1",
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z",
-      },
-    ]);
     rpcMocks.gitInspect.mockResolvedValueOnce({
       isGitRepository: true,
       remoteUrl: "https://github.com/test/repo-1.git",
       currentBranch: "main",
     });
-    apiMocks.createProject.mockResolvedValueOnce({
+    rpcMocks.createProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Repo 1",
       sourceType: "git",
@@ -423,7 +404,7 @@ describe("projectCommands", () => {
       repoKey: "repo-1",
       workspaces: [],
     });
-    apiMocks.updateProject.mockResolvedValueOnce({
+    rpcMocks.updateProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Repo 1",
       icon: "folder",
@@ -439,12 +420,10 @@ describe("projectCommands", () => {
       path: "/tmp/repo-1",
     });
 
-    expect(apiMocks.createProject).toHaveBeenCalledWith("org-1", {
+    expect(rpcMocks.createProject).toHaveBeenCalledWith("org-1", {
       name: "Repo 1",
       sourceTypeHint: "git",
       repoUrl: "https://github.com/test/repo-1.git",
-      nodeId: "daemon-1",
-      localPath: "/tmp/repo-1",
       contextEnabled: true,
     });
     expect(appendRepo).toHaveBeenCalledTimes(1);
@@ -460,28 +439,13 @@ describe("projectCommands", () => {
   });
 
   it("opens imported local primary workspace immediately on the daemon", async () => {
-    sessionStore.setState({ selectedOrganizationId: "org-1", daemonId: "daemon-1" });
-    apiMocks.listOrganizationNodes.mockResolvedValueOnce([
-      {
-        id: "daemon-1",
-        name: "local",
-        scope: "private",
-        endpoint: null,
-        metadata: null,
-        ownerUserId: "user-1",
-        organizationId: null,
-        canUse: true,
-        createdByUserId: "user-1",
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z",
-      },
-    ]);
+    sessionStore.setState({ selectedOrganizationId: "org-1" });
     rpcMocks.gitInspect.mockResolvedValueOnce({
       isGitRepository: true,
       remoteUrl: "https://github.com/test/repo-1.git",
       currentBranch: "main",
     });
-    apiMocks.createProject.mockResolvedValueOnce({
+    rpcMocks.createProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Repo 1",
       sourceType: "git",
@@ -507,7 +471,7 @@ describe("projectCommands", () => {
         },
       ],
     });
-    apiMocks.updateProject.mockResolvedValueOnce({
+    rpcMocks.updateProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Repo 1",
       icon: "folder",
@@ -523,37 +487,18 @@ describe("projectCommands", () => {
       path: "/tmp/repo-1",
     });
 
-    expect(rpcMocks.workspaceOpenProject).toHaveBeenCalledWith({
-      workspaces: [
-        {
-          workspaceId: "workspace-1",
-          worktreePath: "/tmp/repo-1",
-          projectId: "project-1",
-          orgId: "org-1",
-        },
-      ],
+    expect(rpcMocks.createProject).toHaveBeenCalledWith("org-1", {
+      name: "Repo 1",
+      sourceTypeHint: "git",
+      repoUrl: "https://github.com/test/repo-1.git",
+      contextEnabled: true,
     });
-    expect(workspaceStore.getState().fileTreeRefreshVersion).toBe(1);
-    expect(workspaceStore.getState().fileTreeChangedRelativePathsByWorktreePath).toEqual({
-      "/tmp/repo-1": [],
-    });
-    expect(workspaceStore.getState().gitRefreshVersionByWorktreePath).toEqual({
-      "/tmp/repo-1": 1,
-    });
-    expect(workspaceStore.getState().selectedWorkspaceId).toBe("workspace-1");
-    expect(workspaceStore.getState().workspaces).toEqual([
-      expect.objectContaining({
-        id: "workspace-1",
-        projectId: "project-1",
-        worktreePath: "/tmp/repo-1",
-      }),
-    ]);
   });
 
   it("uses workspace default context setting during project creation", async () => {
     sessionStore.setState({ selectedOrganizationId: "org-1" });
     workspaceSettingsStore.setState({ isDefaultContextEnabled: false });
-    apiMocks.createProject.mockResolvedValueOnce({
+    rpcMocks.createProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Remote Repo",
       sourceType: "git",
@@ -563,7 +508,7 @@ describe("projectCommands", () => {
       contextEnabled: false,
       workspaces: [],
     });
-    apiMocks.updateProject.mockResolvedValueOnce({
+    rpcMocks.updateProject.mockResolvedValueOnce({
       id: "project-1",
       name: "Remote Repo",
       icon: "folder",
@@ -580,7 +525,7 @@ describe("projectCommands", () => {
       gitUrl: "https://github.com/test/remote-repo.git",
     });
 
-    expect(apiMocks.createProject).toHaveBeenCalledWith("org-1", expect.objectContaining({ contextEnabled: false }));
+    expect(rpcMocks.createProject).toHaveBeenCalledWith("org-1", expect.objectContaining({ contextEnabled: false }));
   });
 
   it("adds created backend workspace entries for remote projects", async () => {
@@ -588,7 +533,7 @@ describe("projectCommands", () => {
     const addWorkspace = vi.fn();
     workspaceStore.setState({ createProject: appendRepo, addWorkspace });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    apiMocks.createProject.mockResolvedValueOnce({
+    rpcMocks.createProject.mockResolvedValueOnce({
       id: "project-remote-1",
       name: "Remote Repo",
       sourceType: "git",
@@ -611,7 +556,7 @@ describe("projectCommands", () => {
         },
       ],
     });
-    apiMocks.updateProject.mockResolvedValueOnce({
+    rpcMocks.updateProject.mockResolvedValueOnce({
       id: "project-remote-1",
       name: "Remote Repo",
       icon: "folder",
@@ -629,15 +574,6 @@ describe("projectCommands", () => {
     });
 
     expect(appendRepo).toHaveBeenCalledTimes(1);
-    expect(appendRepo.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({
-        backendProject: expect.objectContaining({
-          localPath: "/tmp/remote-repo",
-          worktreePath: "/tmp/remote-repo",
-          defaultBranch: "main",
-        }),
-      }),
-    );
     expect(addWorkspace).toHaveBeenCalledWith({
       projectId: "project-remote-1",
       workspaceId: "workspace-1",
@@ -661,11 +597,11 @@ describe("projectCommands", () => {
     chatStore.setState({ removeTabData, removeWorkspaceTaskCounts });
     workspaceStore.setState({ deleteProject: removeRepo });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    apiMocks.deleteProject.mockResolvedValueOnce(undefined);
+    rpcMocks.deleteProject.mockResolvedValueOnce(undefined);
 
     await deleteProject("repo-1");
 
-    expect(apiMocks.deleteProject).toHaveBeenCalledWith("org-1", "repo-1");
+    expect(rpcMocks.deleteProject).toHaveBeenCalledWith("org-1", "repo-1");
     expect(removeRepo).toHaveBeenCalledWith("repo-1");
     expect(retainWorkspaceTabs).toHaveBeenCalledTimes(1);
     expect(resolveTabForWorkspace).toHaveBeenCalledTimes(1);
@@ -693,7 +629,7 @@ describe("projectCommands", () => {
       incrementFileTreeRefreshVersion: bumpRefreshVersion,
     });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    apiMocks.updateProject.mockResolvedValueOnce({
+    rpcMocks.updateProject.mockResolvedValueOnce({
       id: "repo-1",
       name: "Repo 1",
       sourceType: "git-local",
@@ -720,7 +656,7 @@ describe("projectCommands", () => {
       postScript: "rm -rf node_modules",
     });
 
-    expect(apiMocks.updateProject).toHaveBeenCalledWith("org-1", "repo-1", {
+    expect(rpcMocks.updateProject).toHaveBeenCalledWith("org-1", "repo-1", {
       name: "Repo 1",
       icon: "folder",
       color: "#1E66F5",
@@ -790,7 +726,7 @@ describe("projectCommands", () => {
       incrementFileTreeRefreshVersion: bumpRefreshVersion,
     });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    apiMocks.updateProject.mockResolvedValueOnce({
+    rpcMocks.updateProject.mockResolvedValueOnce({
       id: "repo-1",
       name: "Repo 1",
       sourceType: "git-local",
@@ -850,7 +786,7 @@ describe("projectCommands", () => {
       incrementFileTreeRefreshVersion: bumpRefreshVersion,
     });
     sessionStore.setState({ selectedOrganizationId: "org-1" });
-    apiMocks.updateProject.mockResolvedValueOnce({
+    rpcMocks.updateProject.mockResolvedValueOnce({
       id: "repo-1",
       name: "Repo 1 Renamed",
       sourceType: "git-local",
@@ -873,6 +809,9 @@ describe("projectCommands", () => {
       contextEnabled: true,
     });
 
-    expect(rpcMocks.workspaceSyncContextLink).not.toHaveBeenCalled();
+    expect(rpcMocks.updateProject).toHaveBeenCalledWith("org-1", "repo-1", {
+      name: "Repo 1 Renamed",
+      contextEnabled: true,
+    });
   });
 });

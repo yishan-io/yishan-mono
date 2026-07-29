@@ -1,10 +1,63 @@
 package workspace
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
+
+	localdb "yishan/apps/cli/internal/db"
 )
+
+func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
+	database, err := localdb.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+	if err := localdb.Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	projectStore := localdb.NewProjectStore(database)
+	project := localdb.Project{ID: "project-1", Name: "Project", OrganizationID: "org-1", ContextEnabled: true}
+	if err := projectStore.Create(context.Background(), &project); err != nil {
+		t.Fatalf("create project: %v", err)
+	}
+	workspacePath := t.TempDir()
+	workspaceStore := localdb.NewWorkspaceStore(database)
+	if err := workspaceStore.Create(context.Background(), &localdb.Workspace{
+		ID: "workspace-1", OrganizationID: "org-1", ProjectID: project.ID, NodeID: "node-1",
+		Kind: "worktree", Status: "active", LocalPath: workspacePath, State: "active",
+	}); err != nil {
+		t.Fatalf("create workspace: %v", err)
+	}
+	metadata := `{"number":42,"status":"open","checks":[]}`
+	if err := workspaceStore.UpsertPR(context.Background(), &localdb.WorkspacePullRequest{
+		WorkspaceID: "workspace-1", OrganizationID: "org-1", PRID: "42", State: "open",
+		Metadata: &metadata, DetectedAt: "2026-07-29T00:00:00Z",
+	}); err != nil {
+		t.Fatalf("create pull request: %v", err)
+	}
+
+	manager := NewManagerWithStore(workspaceStore)
+	if err := manager.HydrateFromDB(context.Background()); err != nil {
+		t.Fatalf("hydrate manager: %v", err)
+	}
+	workspace, err := manager.GetWorkspace("workspace-1")
+	if err != nil {
+		t.Fatalf("get hydrated workspace: %v", err)
+	}
+	canonicalWorkspacePath, err := filepath.EvalSymlinks(workspacePath)
+	if err != nil {
+		t.Fatalf("canonicalize workspace path: %v", err)
+	}
+	if workspace.Path != canonicalWorkspacePath || workspace.ProjectID != project.ID {
+		t.Fatalf("unexpected hydrated workspace: %#v", workspace)
+	}
+	if workspace.PullRequest == nil || workspace.PullRequest.Number != 42 {
+		t.Fatalf("expected hydrated pull request, got %#v", workspace.PullRequest)
+	}
+}
 
 func TestManagerOpen_CanonicalizesSymlinkedWorkspacePath(t *testing.T) {
 	realWorkspacePath, err := filepath.EvalSymlinks(t.TempDir())

@@ -58,7 +58,8 @@ export type ApiNamespace =
   | "notification"
   | "events"
   | "skill"
-  | "memory";
+  | "memory"
+  | "project";
 
 export type ProcedureSubscriptionOptions = {
   namespace: ApiNamespace;

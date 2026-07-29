@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net"
@@ -38,14 +39,15 @@ type RunConfig struct {
 // (phases 1–4). It owns the TCP listener and must be cleaned up via
 // closeListener() when the daemon exits.
 type daemonRuntime struct {
-	listener    net.Listener
-	actualAddr  string
-	daemonID    string
-	handler     *JSONRPCHandler
-	relayStatus *RelayStatus
-	server      *http.Server
-	statePath   string
-	actualPort  int
+	listener      net.Listener
+	actualAddr    string
+	daemonID      string
+	handler       *JSONRPCHandler
+	relayStatus   *RelayStatus
+	server        *http.Server
+	statePath     string
+	actualPort    int
+	localDatabase *sql.DB
 
 	cleanupCtxCancel context.CancelFunc
 }
@@ -94,6 +96,7 @@ func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
 		return err
 	}
 	defer dr.closeListener()
+	defer dr.closeLocalDatabase()
 	defer dr.cleanupCtxCancel()
 	defer func() {
 		if err := RemoveState(statePath); err != nil {
@@ -113,6 +116,15 @@ func Run(cfg RunConfig, statePath string, runtime *cliruntime.Runtime) error {
 	}
 
 	return sc.waitForShutdown()
+}
+
+func (dr *daemonRuntime) closeLocalDatabase() {
+	if dr.localDatabase == nil {
+		return
+	}
+	if err := dr.localDatabase.Close(); err != nil {
+		log.Warn().Err(err).Msg("failed to close local database")
+	}
 }
 
 func (dr *daemonRuntime) closeListener() {

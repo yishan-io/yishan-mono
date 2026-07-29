@@ -2,11 +2,15 @@ package workspace
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
+	"github.com/rs/zerolog/log"
+	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace/terminal"
 )
 
@@ -54,15 +58,92 @@ type Manager struct {
 	files      *FileService
 	gits       *GitService
 	terminals  *terminal.Manager
+	store      *localdb.WorkspaceStore
 }
 
 func NewManager() *Manager {
+	return NewManagerWithStore(nil)
+}
+
+// NewManagerWithStore creates a manager with optional durable workspace storage.
+func NewManagerWithStore(store *localdb.WorkspaceStore) *Manager {
 	return &Manager{
 		workspaces: make(map[string]Workspace),
 		files:      NewFileService(),
 		gits:       NewGitService(),
 		terminals:  terminal.NewManager(),
+		store:      store,
 	}
+}
+
+// HydrateFromDB restores locally active workspaces from durable storage.
+func (m *Manager) HydrateFromDB(ctx context.Context) error {
+	if m.store == nil {
+		return nil
+	}
+	workspaces, err := m.store.List(ctx)
+	if err != nil {
+		return fmt.Errorf("list persisted workspaces: %w", err)
+	}
+	for _, storedWorkspace := range workspaces {
+		if !isLiveWorkspaceStatus(storedWorkspace.Status) {
+			continue
+		}
+		if err := m.hydrateWorkspace(storedWorkspace); err != nil {
+			return err
+		}
+		if err := m.hydrateWorkspacePullRequest(ctx, storedWorkspace.ID); err != nil {
+			log.Warn().Err(err).Str("workspaceId", storedWorkspace.ID).Msg("skipping PR hydration for workspace")
+		}
+	}
+	return nil
+}
+
+func (m *Manager) hydrateWorkspace(storedWorkspace localdb.Workspace) error {
+	_, err := m.Open(OpenRequest{ID: storedWorkspace.ID, Path: storedWorkspace.LocalPath,
+		OrgID: storedWorkspace.OrganizationID, ProjectID: storedWorkspace.ProjectID})
+	if err != nil {
+		return fmt.Errorf("restore workspace %q: %w", storedWorkspace.ID, err)
+	}
+	return nil
+}
+
+func (m *Manager) hydrateWorkspacePullRequest(ctx context.Context, workspaceID string) error {
+	pullRequests, err := m.store.ListPRsByWorkspace(ctx, workspaceID)
+	if err != nil {
+		return fmt.Errorf("list persisted pull requests: %w", err)
+	}
+	for _, persistedPullRequest := range pullRequests {
+		if persistedPullRequest.ResolvedAt != nil {
+			continue
+		}
+		pullRequest, err := parsePersistedPullRequest(persistedPullRequest)
+		if err != nil {
+			return err
+		}
+		return m.SetWorkspacePullRequest(workspaceID, pullRequest)
+	}
+	return nil
+}
+
+func parsePersistedPullRequest(persistedPullRequest localdb.WorkspacePullRequest) (*WorkspacePullRequest, error) {
+	pullRequest := &WorkspacePullRequest{}
+	if persistedPullRequest.Metadata != nil {
+		if err := json.Unmarshal([]byte(*persistedPullRequest.Metadata), pullRequest); err != nil {
+			return nil, fmt.Errorf("parse persisted pull request metadata: %w", err)
+		}
+	}
+	if pullRequest.Title == "" && persistedPullRequest.Title != nil {
+		pullRequest.Title = *persistedPullRequest.Title
+	}
+	if pullRequest.URL == "" && persistedPullRequest.URL != nil {
+		pullRequest.URL = *persistedPullRequest.URL
+	}
+	return pullRequest, nil
+}
+
+func isLiveWorkspaceStatus(status string) bool {
+	return status == "active" || status == "provisioning"
 }
 
 type OpenRequest struct {
@@ -334,6 +415,67 @@ func (m *Manager) SetWorkspacePullRequest(workspaceID string, pr *WorkspacePullR
 
 	ws.PullRequest = pr
 	m.workspaces[workspaceID] = ws
+	return nil
+}
+
+// PersistWorkspacePullRequest stores a tracker snapshot in local SQLite.
+func (m *Manager) PersistWorkspacePullRequest(ctx context.Context, workspaceID string, pullRequest *WorkspacePullRequest) error {
+	if m.store == nil || pullRequest == nil {
+		return nil
+	}
+	workspace, err := m.GetWorkspace(workspaceID)
+	if err != nil {
+		return err
+	}
+	metadata, err := json.Marshal(pullRequest)
+	if err != nil {
+		return fmt.Errorf("marshal workspace pull request: %w", err)
+	}
+	return m.store.UpsertPR(ctx, &localdb.WorkspacePullRequest{
+		WorkspaceID: workspaceID, OrganizationID: workspace.OrgID, PRID: fmt.Sprintf("%d", pullRequest.Number),
+		Title: optionalString(pullRequest.Title), URL: optionalString(pullRequest.URL), Branch: optionalString(pullRequest.Branch),
+		BaseBranch: optionalString(pullRequest.BaseBranch), State: persistedPullRequestState(pullRequest),
+		Metadata: optionalString(string(metadata)), DetectedAt: persistedPullRequestDetectedAt(pullRequest), ResolvedAt: persistedPullRequestResolvedAt(pullRequest),
+	})
+}
+
+func optionalString(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
+}
+
+func persistedPullRequestState(pullRequest *WorkspacePullRequest) string {
+	if pullRequest.Status == "review" || pullRequest.Status == "draft" {
+		return "open"
+	}
+	return pullRequest.Status
+}
+
+func persistedPullRequestDetectedAt(pullRequest *WorkspacePullRequest) string {
+	if pullRequest.UpdatedAt != "" {
+		return pullRequest.UpdatedAt
+	}
+	return time.Now().UTC().Format(time.RFC3339Nano)
+}
+
+func persistedPullRequestResolvedAt(pullRequest *WorkspacePullRequest) *string {
+	if pullRequest.Status != "merged" && pullRequest.Status != "closed" {
+		return nil
+	}
+	resolvedAt := time.Now().UTC().Format(time.RFC3339Nano)
+	return &resolvedAt
+}
+
+// ResolvePersistedWorkspacePullRequest marks a previously observed PR as resolved.
+func (m *Manager) ResolvePersistedWorkspacePullRequest(ctx context.Context, workspaceID string, pullRequestNumber int) error {
+	if m.store == nil || pullRequestNumber == 0 {
+		return nil
+	}
+	if err := m.store.ResolvePR(ctx, workspaceID, fmt.Sprintf("%d", pullRequestNumber)); err != nil {
+		return fmt.Errorf("resolve persisted workspace pull request: %w", err)
+	}
 	return nil
 }
 

@@ -1,6 +1,7 @@
 import { generateId } from "../helpers/generateId";
 import { DaemonFileClient } from "./daemonFileClient";
 import { DaemonGitClient } from "./daemonGitClient";
+import { DaemonProjectClient } from "./daemonProjectClient";
 import { DaemonTerminalClient } from "./daemonTerminalClient";
 import type * as Rpc from "./daemonTypes";
 import { DaemonWorkspaceClient } from "./daemonWorkspaceClient";
@@ -59,6 +60,7 @@ export class DaemonClient {
   private readonly _fileClient: DaemonFileClient;
   private readonly _gitClient: DaemonGitClient;
   private readonly _terminalClient: DaemonTerminalClient;
+  private readonly _projectClient: DaemonProjectClient;
 
   constructor(options: {
     openSocket: () => Promise<WebSocket>;
@@ -80,7 +82,35 @@ export class DaemonClient {
       getSocketReadyState: () => this.socket?.readyState ?? null,
       subscriptionsById: this.subscriptionsById as DaemonTerminalClient["subscriptionsById"],
     });
+    this._projectClient = new DaemonProjectClient(invoke);
   }
+
+  readonly project = {
+    listByOrg: (orgId: string, opts?: { withWorkspaces?: boolean }) =>
+      this._projectClient.listByOrg(orgId, opts),
+    create: (orgId: string, input: {
+      name: string;
+      sourceTypeHint?: string;
+      repoUrl?: string;
+      nodeId?: string;
+      localPath?: string;
+      contextEnabled?: boolean;
+    }) => this._projectClient.create(orgId, input),
+    update: (
+      orgId: string,
+      projectId: string,
+      config: {
+        name?: string;
+        icon?: string;
+        color?: string;
+        setupScript?: string;
+        postScript?: string;
+        commands?: Array<{ name: string; command: string }>;
+        contextEnabled?: boolean;
+      },
+    ) => this._projectClient.update(orgId, projectId, config),
+    delete: (orgId: string, projectId: string) => this._projectClient.delete(orgId, projectId),
+  };
 
   readonly workspace = {
     list: () => this._workspaceClient.list(),

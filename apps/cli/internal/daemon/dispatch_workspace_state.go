@@ -5,14 +5,13 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"time"
 
 	"yishan/apps/cli/internal/workspace"
 
 	"github.com/rs/zerolog/log"
 )
 
-func (h *JSONRPCHandler) handleWorkspaceHealth(_ context.Context, params json.RawMessage) (any, error) {
+func (h *JSONRPCHandler) handleWorkspaceHealth(ctx context.Context, params json.RawMessage) (any, error) {
 	var req workspaceHealthParams
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
@@ -54,19 +53,8 @@ func (h *JSONRPCHandler) handleWorkspaceHealth(_ context.Context, params json.Ra
 		h.prTracker.StopTracking(req.WorkspaceID)
 	}
 
-	if h.wsIndexStore != nil {
-		if err := h.wsIndexStore.Upsert(workspaceIndexEntry{
-			WorkspaceID:  ws.ID,
-			WorktreePath: ws.Path,
-			ProjectID:    ws.ProjectID,
-			OrgID:        ws.OrgID,
-			State:        state,
-			Health:       health,
-			LastSeen:     time.Now().UTC().Format(time.RFC3339),
-			Error:        healthErr,
-		}); err != nil {
-			log.Warn().Err(err).Str("workspaceId", req.WorkspaceID).Msg("workspace index store upsert failed during health check")
-		}
+	if err := h.updatePersistedWorkspaceState(ctx, req.WorkspaceID, state, health); err != nil {
+		return nil, err
 	}
 
 	h.emitWorkspaceStateChanged(req.WorkspaceID, state, health, false)
@@ -127,19 +115,8 @@ func (h *JSONRPCHandler) handleWorkspaceRepair(ctx context.Context, params json.
 		return nil, err
 	}
 
-	if h.wsIndexStore != nil {
-		if err := h.wsIndexStore.Upsert(workspaceIndexEntry{
-			WorkspaceID:  ws.ID,
-			WorktreePath: ws.Path,
-			ProjectID:    ws.ProjectID,
-			OrgID:        ws.OrgID,
-			State:        state,
-			Health:       health,
-			LastSeen:     time.Now().UTC().Format(time.RFC3339),
-			Error:        repairErr,
-		}); err != nil {
-			log.Warn().Err(err).Str("workspaceId", req.WorkspaceID).Msg("workspace index store upsert failed during repair")
-		}
+	if err := h.updatePersistedWorkspaceState(ctx, req.WorkspaceID, state, health); err != nil {
+		return nil, err
 	}
 
 	h.emitWorkspaceStateChanged(req.WorkspaceID, state, health, false)
@@ -152,7 +129,7 @@ func (h *JSONRPCHandler) handleWorkspaceRepair(ctx context.Context, params json.
 	}, nil
 }
 
-func (h *JSONRPCHandler) handleWorkspaceForget(_ context.Context, params json.RawMessage) (any, error) {
+func (h *JSONRPCHandler) handleWorkspaceForget(ctx context.Context, params json.RawMessage) (any, error) {
 	var req workspaceForgetParams
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
@@ -165,10 +142,8 @@ func (h *JSONRPCHandler) handleWorkspaceForget(_ context.Context, params json.Ra
 		h.manager.RemoveWorkspaceFromMemory(req.WorkspaceID)
 	}
 
-	if h.wsIndexStore != nil {
-		if err := h.wsIndexStore.Remove(req.WorkspaceID); err != nil {
-			log.Warn().Err(err).Str("workspaceId", req.WorkspaceID).Msg("failed to remove workspace from index store during forget")
-		}
+	if err := h.closePersistedWorkspace(ctx, req.WorkspaceID); err != nil {
+		return nil, err
 	}
 
 	if wsErr == nil {

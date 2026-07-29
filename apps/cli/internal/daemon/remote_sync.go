@@ -1,7 +1,6 @@
 package daemon
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -46,83 +45,6 @@ type WorkspaceCreation struct {
 	Branch         string
 	SourceBranch   string
 	LocalPath      string
-}
-
-type WorkspaceClose struct {
-	WorkspaceID    string
-	SourceNodeID   string
-	OrganizationID string
-	ProjectID      string
-}
-
-func registerWorkspace(ctx context.Context, runtime *cliruntime.Runtime, creation WorkspaceCreation) (api.Workspace, error) {
-	if runtime == nil || !runtime.APIConfigured() {
-		return api.Workspace{}, nil
-	}
-	orgID := strings.TrimSpace(creation.OrganizationID)
-	if orgID == "" {
-		return api.Workspace{}, fmt.Errorf("organizationId is required")
-	}
-
-	response, err := runtime.APIClient().CreateWorkspace(orgID, creation.ProjectID, api.CreateWorkspaceInput{
-		NodeID:       creation.NodeID,
-		LocalPath:    creation.LocalPath,
-		Kind:         creation.Kind,
-		Branch:       creation.Branch,
-		SourceBranch: creation.SourceBranch,
-		SourceNodeID: creation.SourceNodeID,
-	})
-	if err != nil {
-		if isReauthRequiredError(err) {
-			return api.Workspace{}, fmt.Errorf("%s: %w", formatReauthRequiredMessage("remote workspace creation"), err)
-		}
-		return api.Workspace{}, fmt.Errorf("create API workspace for project %q: %w", creation.ProjectID, err)
-	}
-	return response.Workspace, nil
-}
-
-func updateWorkspace(_ context.Context, runtime *cliruntime.Runtime, creation WorkspaceCreation, localPath string) error {
-	if runtime == nil || !runtime.APIConfigured() {
-		return nil
-	}
-	orgID := strings.TrimSpace(creation.OrganizationID)
-	if orgID == "" || strings.TrimSpace(creation.ID) == "" {
-		return fmt.Errorf("organizationId and workspaceId are required")
-	}
-	_, err := runtime.APIClient().UpdateWorkspace(orgID, creation.ProjectID, api.UpdateWorkspaceInput{
-		WorkspaceID:  creation.ID,
-		LocalPath:    localPath,
-		SourceNodeID: creation.SourceNodeID,
-	})
-	if err != nil {
-		if isReauthRequiredError(err) {
-			return fmt.Errorf("%s: %w", formatReauthRequiredMessage("remote workspace path update"), err)
-		}
-		return fmt.Errorf("update API workspace %q with local path: %w", creation.ID, err)
-	}
-	return nil
-}
-
-func closeRemoteWorkspace(_ context.Context, runtime *cliruntime.Runtime, closing WorkspaceClose) error {
-	if runtime == nil || !runtime.APIConfigured() {
-		return nil
-	}
-	orgID := strings.TrimSpace(closing.OrganizationID)
-	if orgID == "" {
-		return fmt.Errorf("organizationId is required")
-	}
-
-	_, err := runtime.APIClient().CloseWorkspace(orgID, closing.ProjectID, api.CloseWorkspaceInput{
-		WorkspaceID:  closing.WorkspaceID,
-		SourceNodeID: closing.SourceNodeID,
-	})
-	if err != nil {
-		if isReauthRequiredError(err) {
-			return fmt.Errorf("%s: %w", formatReauthRequiredMessage("remote workspace close"), err)
-		}
-		return fmt.Errorf("close API workspace for project %q: %w", closing.ProjectID, err)
-	}
-	return nil
 }
 
 func registerRemoteNode(runtime *cliruntime.Runtime, registration NodeRegistration) error {

@@ -3,6 +3,7 @@ package daemon
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"path/filepath"
@@ -33,10 +34,10 @@ type JSONRPCHandler struct {
 	upgrader             websocket.Upgrader
 	manager              *workspace.Manager
 	runtime              *cliruntime.Runtime
+	localDatabase        *sql.DB
 	nodeID               string
 	logFilePath          string
 	cleanupStore         *workspaceCleanupStore
-	wsIndexStore         *workspaceIndexStore
 	context              *AppContextStore
 	events               *eventHub
 	watchers             *workspacewatchers.Watchers
@@ -69,7 +70,7 @@ type JSONRPCHandler struct {
 	relayConn   *wsConnState
 }
 
-func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, wsIndexStore *workspaceIndexStore, configPath string, appContext *AppContextStore) *JSONRPCHandler {
+func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, nodeID string, logFilePath string, cleanupStore *workspaceCleanupStore, configPath string, appContext *AppContextStore) *JSONRPCHandler {
 	events := newEventHub()
 	prTracker := workspaceprtracker.New(manager, runtime, func(event workspaceprtracker.PullRequestUpdatedEvent) {
 		publishWorkspacePullRequestUpdatedEvent(events, event)
@@ -114,7 +115,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		nodeID:               nodeID,
 		logFilePath:          logFilePath,
 		cleanupStore:         cleanupStore,
-		wsIndexStore:         wsIndexStore,
+
 		context:              appContext,
 		events:               events,
 		watchers:             newWorkspaceWatchersForEventHub(events, prTracker.RefreshWorkspaceByPath),
@@ -133,6 +134,11 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 	}
 	go handler.consumeFileCacheInvalidationEvents(fileCacheEvents)
 	return handler
+}
+
+// SetLocalDatabase makes daemon-owned SQLite storage available to RPC handlers.
+func (h *JSONRPCHandler) SetLocalDatabase(database *sql.DB) {
+	h.localDatabase = database
 }
 
 func (h *JSONRPCHandler) SetComputerService(svc *computerService) {

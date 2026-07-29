@@ -97,15 +97,6 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 	if h.tokenUsage != nil {
 		h.tokenUsage.SyncNow("close")
 	}
-	if err := closeRemoteWorkspace(ctx, h.runtime, WorkspaceClose{
-		WorkspaceID:    req.WorkspaceID,
-		SourceNodeID:   h.nodeID,
-		OrganizationID: req.OrganizationID,
-		ProjectID:      req.ProjectID,
-	}); err != nil {
-		return nil, err
-	}
-
 	closeReq := workspace.CloseRequest{
 		WorkspaceID:   req.WorkspaceID,
 		Branch:        req.Branch,
@@ -146,10 +137,8 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to remove workspace cleanup entry after close")
 		}
 	}
-	if h.wsIndexStore != nil {
-		if err := h.wsIndexStore.Remove(closeReq.WorkspaceID); err != nil {
-			log.Warn().Err(err).Str("workspaceId", closeReq.WorkspaceID).Msg("failed to remove workspace index entry after close")
-		}
+	if err := h.closePersistedWorkspace(ctx, closeReq.WorkspaceID); err != nil {
+		return nil, err
 	}
 	h.clearAgentUsage(req.WorkspaceID)
 

@@ -9,7 +9,6 @@ import { loadWorkspaceSnapshot } from "./projectCommands";
 
 const apiMocks = vi.hoisted(() => ({
   listOrganizations: vi.fn(),
-  listProjects: vi.fn(),
 }));
 
 vi.mock("../api", () => ({
@@ -17,10 +16,19 @@ vi.mock("../api", () => ({
     org: {
       list: apiMocks.listOrganizations,
     },
-    project: {
-      listByOrg: apiMocks.listProjects,
-    },
   },
+}));
+
+const rpcMocks = vi.hoisted(() => ({
+  listProjects: vi.fn(),
+}));
+
+vi.mock("../rpc/rpcTransport", () => ({
+  getDaemonClient: vi.fn(async () => ({
+    project: {
+      listByOrg: rpcMocks.listProjects,
+    },
+  })),
 }));
 
 const initialWorkspaceStoreState = workspaceStore.getState();
@@ -45,7 +53,7 @@ describe("loadWorkspaceSnapshot progress reconciliation", () => {
       loaded: true,
     });
     workspaceCreateProgressStore.getState().startWorkspaceCreateProgress("workspace-1");
-    apiMocks.listProjects.mockResolvedValueOnce([
+    rpcMocks.listProjects.mockResolvedValueOnce([
       {
         id: "project-1",
         name: "Project 1",
@@ -89,7 +97,7 @@ describe("loadWorkspaceSnapshot progress reconciliation", () => {
     });
     workspaceCreateProgressStore.getState().startWorkspaceCreateProgress("workspace-provisioning");
     workspaceCreateProgressStore.getState().startWorkspaceCreateProgress("workspace-pathless");
-    apiMocks.listProjects.mockResolvedValueOnce([
+    rpcMocks.listProjects.mockResolvedValueOnce([
       {
         id: "project-1",
         name: "Project 1",

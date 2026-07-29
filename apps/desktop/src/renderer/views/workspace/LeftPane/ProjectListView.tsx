@@ -357,7 +357,7 @@ export function ProjectListView() {
 
   return (
     <>
-      <Box data-testid="repo-workspace-list" sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+      <Box data-testid="repo-workspace-list" sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
         <WorkspaceTree
           projects={treeProjects}
           nodes={treeNodes}

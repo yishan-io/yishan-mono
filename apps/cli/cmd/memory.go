@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 
 	"yishan/apps/cli/internal/config"
-	daemonpkg "yishan/apps/cli/internal/daemon"
+	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/output"
 )
@@ -77,10 +77,7 @@ var memorySearchCmd = &cobra.Command{
 // openAndReconcileMemoryDB opens the profile-scoped memory DB, reconciles it
 // from the profile's workspace index, then returns the handle for querying.
 //
-// The workspace index (~/.yishan/profiles/<profile>/workspace-index.json) is
-// written by the daemon on every workspace open/close. Reading it here means
-// we always index exactly the workspaces that were opened under this profile —
-// no running daemon required.
+// The workspace data is stored in the profile's SQLite database.
 func openAndReconcileMemoryDB() (*memory.DB, error) {
 	dbPath, err := resolveMemoryDBPath()
 	if err != nil {
@@ -137,39 +134,25 @@ func openMemoryForSearch() (*memory.DB, error) {
 	return db, nil
 }
 
-// readProfileWorkspaceRefs reads workspace-index.json for the current profile
-// and returns the workspace refs recorded there by the daemon.
+// readProfileWorkspaceRefs reads local workspaces for the current profile from SQLite.
 func readProfileWorkspaceRefs() ([]memory.WorkspaceRef, error) {
-	statePath, err := daemonpkg.ResolveStateFilePath(appConfig.ConfigPath)
+	profileDir := filepath.Dir(appConfig.ConfigPath)
+	database, err := localdb.OpenReadOnly(profileDir)
 	if err != nil {
 		return nil, err
 	}
-	indexPath := daemonpkg.WorkspaceIndexPath(statePath)
-
-	raw, err := os.ReadFile(indexPath)
+	defer database.Close()
+	workspaceStore := localdb.NewWorkspaceStore(database)
+	dbWorkspaces, err := workspaceStore.List(context.Background())
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil // no workspaces opened yet for this profile
-		}
 		return nil, err
 	}
-
-	var file struct {
-		Entries []struct {
-			WorktreePath string `json:"worktreePath"`
-			ProjectID    string `json:"projectId"`
-		} `json:"entries"`
-	}
-	if err := json.Unmarshal(raw, &file); err != nil {
-		return nil, err
-	}
-
-	refs := make([]memory.WorkspaceRef, 0, len(file.Entries))
-	for _, e := range file.Entries {
-		if e.WorktreePath != "" {
+	refs := make([]memory.WorkspaceRef, 0, len(dbWorkspaces))
+	for _, ws := range dbWorkspaces {
+		if ws.LocalPath != "" {
 			refs = append(refs, memory.WorkspaceRef{
-				WorktreePath: e.WorktreePath,
-				ProjectID:    e.ProjectID,
+				WorktreePath: ws.LocalPath,
+				ProjectID:    ws.ProjectID,
 			})
 		}
 	}

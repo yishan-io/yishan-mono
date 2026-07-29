@@ -45,9 +45,9 @@ export async function openWorkspaceEntries(entries: WorkspaceOpenProjectEntry[])
 
 /**
  * Opens (warms up) all workspaces belonging to the given project IDs on the
- * daemon side. Each workspace is written to workspace-index.json so daemon
- * restarts restore it automatically. Already-open workspaces are skipped
- * (idempotent on the daemon).
+ * daemon side. Workspaces are persisted in the local SQLite database so
+ * daemon restarts restore them via DB hydration. Already-open workspaces
+ * are skipped (idempotent on the daemon).
  */
 export async function warmupWorkspacesForProjects(projectIds: string[]): Promise<void> {
   if (projectIds.length === 0) {
