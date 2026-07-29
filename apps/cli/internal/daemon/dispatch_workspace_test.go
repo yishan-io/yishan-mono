@@ -321,21 +321,6 @@ func TestHandleWorkspaceOpenProject_Success(t *testing.T) {
 		t.Errorf("workspace ws-1 should be in manager after openProject: %v", err)
 	}
 
-	// Workspace must be persisted to the index store.
-	entries, err := h.wsIndexStore.List()
-	if err != nil {
-		t.Fatalf("index List: %v", err)
-	}
-	found := false
-	for _, e := range entries {
-		if e.WorkspaceID == "ws-1" {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("ws-1 was not written to workspace-index.json")
-	}
 	if collector.recoverySinceByAgent[recoveryProbeAgentKind] == 0 {
 		t.Fatalf("expected recovery scan to be requested for opened workspace")
 	}
@@ -430,26 +415,12 @@ func TestHandleWorkspaceOpenProject_ReconcilesMissingMetadata(t *testing.T) {
 		t.Fatalf("expected repaired org id %q, got %q", "org-3", repairedWorkspace.OrgID)
 	}
 
-	entries, err := h.wsIndexStore.List()
-	if err != nil {
-		t.Fatalf("index List: %v", err)
+	if collector.recoverySinceByAgent[recoveryProbeAgentKind] == 0 {
+		t.Fatalf("expected recovery scan to be requested after metadata reconciliation")
 	}
-	for _, entry := range entries {
-		if entry.WorkspaceID != "ws-3" {
-			continue
-		}
-		if entry.ProjectID != "proj-3" || entry.OrgID != "org-3" || entry.State != workspace.WorkspaceStateActive {
-			t.Fatalf("expected repaired index entry, got %+v", entry)
-		}
-		if collector.recoverySinceByAgent[recoveryProbeAgentKind] == 0 {
-			t.Fatalf("expected recovery scan to be requested after metadata reconciliation")
-		}
-		if !collector.needsRerun[recoveryProbeAgentKind] {
-			t.Fatalf("expected recovery scan to mark in-flight agent for rerun after metadata reconciliation")
-		}
-		return
+	if !collector.needsRerun[recoveryProbeAgentKind] {
+		t.Fatalf("expected recovery scan to mark in-flight agent for rerun after metadata reconciliation")
 	}
-	t.Fatal("expected repaired workspace to be written to workspace-index.json")
 }
 
 // TestHandleWorkspaceOpenProject_MissingFields verifies that entries with

@@ -97,15 +97,6 @@ func (h *JSONRPCHandler) handleWorkspaceClose(ctx context.Context, params json.R
 	if h.tokenUsage != nil {
 		h.tokenUsage.SyncNow("close")
 	}
-	if err := closeRemoteWorkspace(ctx, h.runtime, WorkspaceClose{
-		WorkspaceID:    req.WorkspaceID,
-		SourceNodeID:   h.nodeID,
-		OrganizationID: req.OrganizationID,
-		ProjectID:      req.ProjectID,
-	}); err != nil {
-		return nil, err
-	}
-
 	closeReq := workspace.CloseRequest{
 		WorkspaceID:   req.WorkspaceID,
 		Branch:        req.Branch,

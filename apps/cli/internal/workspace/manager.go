@@ -91,6 +91,9 @@ func (m *Manager) HydrateFromDB(ctx context.Context) error {
 		if err := m.hydrateWorkspace(storedWorkspace); err != nil {
 			return err
 		}
+		if err := m.hydrateWorkspacePullRequest(ctx, storedWorkspace.ID); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -102,6 +105,40 @@ func (m *Manager) hydrateWorkspace(storedWorkspace localdb.Workspace) error {
 		return fmt.Errorf("restore workspace %q: %w", storedWorkspace.ID, err)
 	}
 	return nil
+}
+
+func (m *Manager) hydrateWorkspacePullRequest(ctx context.Context, workspaceID string) error {
+	pullRequests, err := m.store.ListPRsByWorkspace(ctx, workspaceID)
+	if err != nil {
+		return fmt.Errorf("list persisted pull requests: %w", err)
+	}
+	for _, persistedPullRequest := range pullRequests {
+		if persistedPullRequest.ResolvedAt != nil {
+			continue
+		}
+		pullRequest, err := parsePersistedPullRequest(persistedPullRequest)
+		if err != nil {
+			return err
+		}
+		return m.SetWorkspacePullRequest(workspaceID, pullRequest)
+	}
+	return nil
+}
+
+func parsePersistedPullRequest(persistedPullRequest localdb.WorkspacePullRequest) (*WorkspacePullRequest, error) {
+	pullRequest := &WorkspacePullRequest{}
+	if persistedPullRequest.Metadata != nil {
+		if err := json.Unmarshal([]byte(*persistedPullRequest.Metadata), pullRequest); err != nil {
+			return nil, fmt.Errorf("parse persisted pull request metadata: %w", err)
+		}
+	}
+	if pullRequest.Title == "" && persistedPullRequest.Title != nil {
+		pullRequest.Title = *persistedPullRequest.Title
+	}
+	if pullRequest.URL == "" && persistedPullRequest.URL != nil {
+		pullRequest.URL = *persistedPullRequest.URL
+	}
+	return pullRequest, nil
 }
 
 func isLiveWorkspaceStatus(status string) bool {
@@ -428,6 +465,17 @@ func persistedPullRequestResolvedAt(pullRequest *WorkspacePullRequest) *string {
 	}
 	resolvedAt := time.Now().UTC().Format(time.RFC3339Nano)
 	return &resolvedAt
+}
+
+// ResolvePersistedWorkspacePullRequest marks a previously observed PR as resolved.
+func (m *Manager) ResolvePersistedWorkspacePullRequest(ctx context.Context, workspaceID string, pullRequestNumber int) error {
+	if m.store == nil || pullRequestNumber == 0 {
+		return nil
+	}
+	if err := m.store.ResolvePR(ctx, workspaceID, fmt.Sprintf("%d", pullRequestNumber)); err != nil {
+		return fmt.Errorf("resolve persisted workspace pull request: %w", err)
+	}
+	return nil
 }
 
 func (m *Manager) SetWorkspaceState(workspaceID string, state string, health string) error {

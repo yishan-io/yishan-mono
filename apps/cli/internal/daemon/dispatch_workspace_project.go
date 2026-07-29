@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"yishan/apps/cli/internal/workspace"
 
@@ -35,22 +34,6 @@ func shouldSkipWorkspaceOpenProject(existing workspace.Workspace, entry workspac
 		strings.TrimSpace(existing.OrgID) == strings.TrimSpace(entry.OrgID)
 }
 
-func (h *JSONRPCHandler) upsertActiveWorkspaceIndexEntry(ws workspace.Workspace) {
-	if h.wsIndexStore == nil {
-		return
-	}
-	if err := h.wsIndexStore.Upsert(workspaceIndexEntry{
-		WorkspaceID:  ws.ID,
-		WorktreePath: ws.Path,
-		ProjectID:    ws.ProjectID,
-		OrgID:        ws.OrgID,
-		State:        workspace.WorkspaceStateActive,
-		LastSeen:     time.Now().UTC().Format(time.RFC3339),
-	}); err != nil {
-		log.Warn().Err(err).Str("workspaceId", ws.ID).Msg("workspace.openProject: index upsert failed")
-	}
-}
-
 func (h *JSONRPCHandler) openProjectWorkspace(entry workspaceOpenProjectEntry) (string, bool, error) {
 	workspaceID := strings.TrimSpace(entry.WorkspaceID)
 	workspacePath := strings.TrimSpace(entry.WorktreePath)
@@ -71,7 +54,6 @@ func (h *JSONRPCHandler) openProjectWorkspace(entry workspaceOpenProjectEntry) (
 	if err != nil {
 		return workspaceID, false, err
 	}
-	h.upsertActiveWorkspaceIndexEntry(openedWorkspace)
 	h.watchAndTrack(openedWorkspace.ID, openedWorkspace.Path)
 	return openedWorkspace.ID, true, nil
 }

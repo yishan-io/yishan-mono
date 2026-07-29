@@ -308,10 +308,12 @@ func (t *Tracker) setWorkspacePullRequest(ws workspace.Workspace, pr *workspace.
 		delete(t.active, ws.ID)
 	}
 
-	// Persist to api-service only when meaningful PR fields changed (excluding
-	// UpdatedAt which is set on every refresh and would always differ).
+	// Persist only meaningful PR changes; UpdatedAt differs on every refresh.
 	if pr != nil && prMeaningfullyChanged(previousPullRequest, pr) {
 		go t.persistPullRequest(ws.ID, pr)
+	}
+	if pr == nil && previousPullRequest != nil {
+		go t.resolvePullRequest(ws.ID, previousPullRequest.Number)
 	}
 }
 
@@ -403,5 +405,11 @@ func normalizeWorkspacePullRequestStatus(pr workspace.GitBranchPullRequestStatus
 func (t *Tracker) persistPullRequest(workspaceID string, pullRequest *workspace.WorkspacePullRequest) {
 	if err := t.manager.PersistWorkspacePullRequest(context.Background(), workspaceID, pullRequest); err != nil {
 		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("pr persist: failed to upsert locally")
+	}
+}
+
+func (t *Tracker) resolvePullRequest(workspaceID string, pullRequestNumber int) {
+	if err := t.manager.ResolvePersistedWorkspacePullRequest(context.Background(), workspaceID, pullRequestNumber); err != nil {
+		log.Warn().Err(err).Str("workspaceId", workspaceID).Msg("pr persist: failed to resolve locally")
 	}
 }

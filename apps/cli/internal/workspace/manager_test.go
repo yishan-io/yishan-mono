@@ -31,6 +31,13 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("create workspace: %v", err)
 	}
+	metadata := `{"number":42,"status":"open","checks":[]}`
+	if err := workspaceStore.UpsertPR(context.Background(), &localdb.WorkspacePullRequest{
+		WorkspaceID: "workspace-1", OrganizationID: "org-1", PRID: "42", State: "open",
+		Metadata: &metadata, DetectedAt: "2026-07-29T00:00:00Z",
+	}); err != nil {
+		t.Fatalf("create pull request: %v", err)
+	}
 
 	manager := NewManagerWithStore(workspaceStore)
 	if err := manager.HydrateFromDB(context.Background()); err != nil {
@@ -46,6 +53,9 @@ func TestManagerHydrateFromDB_RestoresActiveWorkspace(t *testing.T) {
 	}
 	if workspace.Path != canonicalWorkspacePath || workspace.ProjectID != project.ID {
 		t.Fatalf("unexpected hydrated workspace: %#v", workspace)
+	}
+	if workspace.PullRequest == nil || workspace.PullRequest.Number != 42 {
+		t.Fatalf("expected hydrated pull request, got %#v", workspace.PullRequest)
 	}
 }
 

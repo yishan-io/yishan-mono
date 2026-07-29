@@ -61,7 +61,6 @@ func restoreIndexedWorkspaces(handler *JSONRPCHandler) error {
 			continue
 		}
 
-		handler.upsertActiveWorkspaceIndexEntry(ws)
 		handler.watchAndTrack(ws.ID, ws.Path)
 		log.Info().Str("workspaceId", ws.ID).Str("path", ws.Path).Msg("restored indexed workspace")
 	}

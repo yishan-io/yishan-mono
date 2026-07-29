@@ -73,19 +73,6 @@ func TestRestoreIndexedWorkspaces_RestoresExistingEntries(t *testing.T) {
 		t.Fatalf("expected one restored workspace, got %d", len(manager.List()))
 	}
 
-	entries, err := indexStore.List()
-	if err != nil {
-		t.Fatalf("indexStore.List: %v", err)
-	}
-	if len(entries) != 1 {
-		t.Fatalf("expected one index entry after restore, got %d", len(entries))
-	}
-	if entries[0].State != workspace.WorkspaceStateActive {
-		t.Fatalf("expected restored index state %q, got %q", workspace.WorkspaceStateActive, entries[0].State)
-	}
-	if entries[0].LastSeen == "" {
-		t.Fatal("expected restored index entry to record lastSeen")
-	}
 }
 
 func TestRestoreIndexedWorkspaces_SkipsMissingPaths(t *testing.T) {
