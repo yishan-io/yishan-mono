@@ -5,6 +5,22 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentMessage as AgentMessageType } from "../../../store/agentChatTypes";
 import { AgentMessageList } from "./AgentMessageList";
 
+const virtualizerMocks = vi.hoisted(() => ({
+  measureElement: vi.fn(),
+  useVirtualizer: vi.fn(({ count }: { count: number }) => {
+    const indices = count >= 10 ? [0, count - 1] : Array.from({ length: count }, (_, index) => index);
+    return {
+      getVirtualItems: () => indices.map((index) => ({ index, key: index, start: index * 180 })),
+      getTotalSize: () => count * 180,
+      measureElement: virtualizerMocks.measureElement,
+    };
+  }),
+}));
+
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: virtualizerMocks.useVirtualizer,
+}));
+
 vi.mock("./AgentMessage", () => ({
   AgentMessage: ({
     message,
@@ -32,6 +48,26 @@ afterEach(() => {
 });
 
 describe("AgentMessageList", () => {
+  it("renders only virtual rows and registers each row for dynamic-height measurement", () => {
+    const messages = Array.from(
+      { length: 10 },
+      (_, index): AgentMessageType => ({
+        id: `assistant-${index}`,
+        role: "assistant",
+        content: [{ type: "text", text: `Message ${index}` }],
+      }),
+    );
+
+    render(<AgentMessageList tabId="tab-virtual" isActive messages={messages} emptyPrompt="empty" />);
+
+    expect(screen.getAllByTestId("agent-message-row")).toHaveLength(2);
+    expect(screen.getByText("assistant-0")).toBeTruthy();
+    expect(screen.getByText("assistant-9")).toBeTruthy();
+    expect(screen.queryByText("assistant-1")).toBeNull();
+    expect(screen.getByText("assistant-0").closest("[data-index]")?.getAttribute("data-index")).toBe("0");
+    expect(screen.getByText("assistant-9").closest("[data-index]")?.getAttribute("data-index")).toBe("9");
+  });
+
   it.each([
     "bash",
     "read",
