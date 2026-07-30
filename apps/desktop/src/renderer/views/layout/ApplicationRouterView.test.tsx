@@ -29,6 +29,14 @@ vi.mock("../../commands/appCommands", () => ({
   getDesktopAppVersion: vi.fn(async () => "0.0.0"),
 }));
 
+vi.mock("../../rpc/rpcTransport", () => ({
+  getDaemonClient: vi.fn(async () => ({
+    tokenUsage: {
+      migrationStatus: vi.fn(async () => ({ projectsMigrated: true, usageMigrated: true })),
+    },
+  })),
+}));
+
 vi.mock("../../api/sessionApi", () => ({
   getSessionBootstrapData: vi.fn(async () => ({
     currentUser: {
