@@ -370,6 +370,7 @@ export async function getDaemonClient(): Promise<DaemonRpcClient> {
         memory: proxyClient.memory,
         pi: proxyClient.pi,
         project: transportClient.project,
+        overview: transportClient.overview,
         context: {
           getState: () => transportClient.context.getState(),
           setCurrentOrg: (orgId: string) => transportClient.context.setCurrentOrg(orgId),
