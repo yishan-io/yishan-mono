@@ -2,6 +2,7 @@ import type { AppDb } from "@/db/client";
 import { AuthService } from "@/services/auth-service";
 import { JobEvaluatorService } from "@/services/job-evaluator-service";
 import { NodeService } from "@/services/node-service";
+import { OrganizationExportService } from "@/services/organization-export-service";
 import { OrganizationInviteService } from "@/services/organization-invite-service";
 import { OrganizationService } from "@/services/organization-service";
 import { OverviewService } from "@/services/overview-service";
@@ -23,6 +24,7 @@ export type AppServices = {
   auth: AuthService;
   organization: OrganizationService;
   organizationInvite: OrganizationInviteService;
+  organizationExport: OrganizationExportService;
   node: NodeService;
   project: ProjectService;
   relayEvent: RelayEventService;
@@ -53,6 +55,7 @@ export function createServices(deps: { db: AppDb; config: ServiceConfig }): AppS
     auth: new AuthService(deps.db, deps.config, user),
     organization,
     organizationInvite,
+    organizationExport: new OrganizationExportService(deps.db, organization),
     node: new NodeService(deps.db, organization, deps.config),
     project: new ProjectService(deps.db, organization),
     relayEvent,
