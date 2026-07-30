@@ -14,6 +14,7 @@ import (
 	"yishan/apps/cli/internal/agentmanager"
 	"yishan/apps/cli/internal/computer"
 	"yishan/apps/cli/internal/config"
+	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/modellist"
 	cliruntime "yishan/apps/cli/internal/runtime"
@@ -76,10 +77,6 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		publishWorkspacePullRequestUpdatedEvent(events, event)
 	})
 	fileCacheSubID, fileCacheEvents := events.Subscribe()
-	collector, err := tokenusage.NewCollector(manager, runtime, configPath)
-	if err != nil {
-		log.Warn().Err(err).Msg("failed to initialize token usage collector")
-	}
 	manager.Terminals().SetPortsChangedListener(func(ports []workspace.TerminalDetectedPort) {
 		events.Publish(frontendEvent{
 			Topic: "terminalDetectedPortsChanged",
@@ -110,17 +107,17 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(_ *http.Request) bool { return true },
 		},
-		manager:              manager,
-		runtime:              runtime,
-		nodeID:               nodeID,
-		logFilePath:          logFilePath,
-		cleanupStore:         cleanupStore,
+		manager:      manager,
+		runtime:      runtime,
+		nodeID:       nodeID,
+		logFilePath:  logFilePath,
+		cleanupStore: cleanupStore,
 
 		context:              appContext,
 		events:               events,
 		watchers:             newWorkspaceWatchersForEventHub(events, prTracker.RefreshWorkspaceByPath),
 		prTracker:            prTracker,
-		tokenUsage:           collector,
+		tokenUsage:           nil,
 		computer:             newComputerService(computer.NewUnavailableRuntime("unknown")),
 		modelList:            modellist.NewService(),
 		agentMgr:             agentmanager.NewManager(),
@@ -139,6 +136,11 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 // SetLocalDatabase makes daemon-owned SQLite storage available to RPC handlers.
 func (h *JSONRPCHandler) SetLocalDatabase(database *sql.DB) {
 	h.localDatabase = database
+	h.tokenUsage = tokenusage.NewCollectorWithRepository(
+		h.manager,
+		h.runtime,
+		localdb.NewHourlyUsageStore(database),
+	)
 }
 
 func (h *JSONRPCHandler) SetComputerService(svc *computerService) {

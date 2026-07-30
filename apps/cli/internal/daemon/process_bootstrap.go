@@ -20,6 +20,7 @@ import (
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/nodeid"
 	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -105,6 +106,10 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 	}
 	if err := migrateProjectsFromAPI(database, runtime); err != nil {
 		log.Warn().Err(err).Msg("API migration skipped — will retry on next restart")
+	}
+	if err := tokenusage.MigrateLegacyJSON(context.Background(), database, statePath); err != nil {
+		_ = database.Close() // avoid starting scans when legacy usage history could not be recovered
+		return nil, nil, nil, fmt.Errorf("migrate legacy token usage JSON: %w", err)
 	}
 	workspaceManager := workspace.NewManagerWithStore(localdb.NewWorkspaceStore(database))
 	cleanupStore, err := newWorkspaceCleanupStore(statePath)
