@@ -11,6 +11,7 @@ const migrationAPICompletedKey = "migration_api_completed"
 type APIClient interface {
 	ListProjects(ctx context.Context, orgID string) ([]APIProject, error)
 	ListWorkspaces(ctx context.Context, orgID, projectID string) ([]APIWorkspace, error)
+	ListHourlyUsage(ctx context.Context, orgID string, limit int) ([]APIHourlyUsageRow, error)
 	IsConfigured() bool
 }
 
@@ -49,6 +50,31 @@ type APIWorkspace struct {
 	UpdatedAt      string  `json:"updatedAt"`
 }
 
+// APIHourlyUsageRow is the remote hourly usage row needed for local import.
+type APIHourlyUsageRow struct {
+	ProjectID             string `json:"projectId"`
+	WorkspaceID           string `json:"workspaceId"`
+	WorkspacePath         string `json:"workspacePath"`
+	OrganizationID        string `json:"organizationId"`
+	AgentKind             string `json:"agentKind"`
+	Model                 string `json:"model"`
+	ModelNormalized       string `json:"modelNormalized"`
+	BucketStartHourUTC    string `json:"bucketStartHourUtc"`
+	InputTokens           int64  `json:"inputTokens"`
+	OutputTokens          int64  `json:"outputTokens"`
+	CachedInputTokens     int64  `json:"cachedInputTokens"`
+	CachedWriteTokens     int64  `json:"cachedWriteTokens"`
+	ReasoningTokens       int64  `json:"reasoningTokens"`
+	TotalTokens           int64  `json:"totalTokens"`
+	EventCount            int64  `json:"eventCount"`
+	SessionCount          int64  `json:"sessionCount"`
+	TurnCount             int64  `json:"turnCount"`
+	ToolCallCount         int64  `json:"toolCallCount"`
+	AttributionConfidence string `json:"attributionConfidence"`
+	IngestedAt            string `json:"ingestedAt"`
+	RunID                 string `json:"runId"`
+}
+
 // MigrateFromAPI imports projects and workspaces from the remote API into the
 // local database. It reads orgs from the API client and stores them locally.
 // Already-stored projects and workspaces are skipped (idempotent).
@@ -56,7 +82,7 @@ func MigrateFromAPI(ctx context.Context, database *sql.DB, organizations []strin
 	if !client.IsConfigured() {
 		return nil
 	}
-	alreadyMigrated, err := metadataKeyExists(database, migrationAPICompletedKey)
+	alreadyMigrated, err := MetadataKeyExists(ctx, database, migrationAPICompletedKey)
 	if err != nil {
 		return err
 	}
@@ -69,11 +95,13 @@ func MigrateFromAPI(ctx context.Context, database *sql.DB, organizations []strin
 	projectStore := NewProjectStore(database)
 	workspaceStore := NewWorkspaceStore(database)
 
+	anySucceeded := false
 	for _, orgID := range organizations {
 		projects, err := client.ListProjects(ctx, orgID)
 		if err != nil {
 			continue // best-effort: skip failing organizations
 		}
+		anySucceeded = true
 		for _, project := range projects {
 			localProject := apiProjectToLocal(project)
 			if err := projectStore.Create(ctx, &localProject); err != nil {
@@ -89,7 +117,11 @@ func MigrateFromAPI(ctx context.Context, database *sql.DB, organizations []strin
 			}
 		}
 	}
-	return setMetadataKey(database, migrationAPICompletedKey, "true")
+
+	if !anySucceeded {
+		return nil // marker not set; will retry on next restart
+	}
+	return setMetadataKey(ctx, database, migrationAPICompletedKey, "true")
 }
 
 func apiProjectToLocal(project APIProject) Project {
@@ -134,16 +166,16 @@ func apiWorkspaceToLocal(workspace APIWorkspace) Workspace {
 	}
 }
 
-func metadataKeyExists(database *sql.DB, key string) (bool, error) {
+func MetadataKeyExists(ctx context.Context, database *sql.DB, key string) (bool, error) {
 	var foundValue string
-	err := database.QueryRow(`SELECT value FROM _metadata WHERE key = ?`, key).Scan(&foundValue)
+	err := database.QueryRowContext(ctx, `SELECT value FROM _metadata WHERE key = ?`, key).Scan(&foundValue)
 	if err == sql.ErrNoRows {
 		return false, nil
 	}
 	return err == nil, err
 }
 
-func setMetadataKey(database *sql.DB, key, value string) error {
-	_, err := database.Exec(`INSERT INTO _metadata (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, key, value)
+func setMetadataKey(ctx context.Context, database *sql.DB, key, value string) error {
+	_, err := database.ExecContext(ctx, `INSERT INTO _metadata (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, key, value)
 	return err
 }

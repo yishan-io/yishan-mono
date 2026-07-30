@@ -127,6 +127,10 @@ export class DaemonClient {
       this._overviewClient.getWorkspaceInsights(input),
   };
 
+  readonly tokenUsage = {
+    migrationStatus: () => this.invoke("tokenUsage.migrationStatus"),
+  };
+
   readonly workspace = {
     list: () => this._workspaceClient.list(),
     refreshPullRequest: (input: Rpc.WorkspaceRefreshPullRequestInput) =>

@@ -111,6 +111,8 @@ func (h *JSONRPCHandler) dispatchSystem(ctx context.Context, connState *wsConnSt
 			"enabled": true,
 			"state":   h.tokenUsage.DebugState(),
 		}, nil
+	case MethodTokenUsageMigrationStatus:
+		return h.handleTokenUsageMigrationStatus(ctx, params)
 	case MethodProjectList:
 		var req struct {
 			OrgID string `json:"orgId"`

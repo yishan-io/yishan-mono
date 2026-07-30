@@ -24,6 +24,22 @@ func NewHourlyUsageStore(database *sql.DB) *HourlyUsageStore {
 	return &HourlyUsageStore{database: database}
 }
 
+// UpsertHourlyUsageRows writes rows directly without merge logic, preserving the
+// caller's Dirty flag. Use for imports where merge semantics are handled upstream.
+func (s *HourlyUsageStore) UpsertHourlyUsageRows(ctx context.Context, rows []HourlyUsageRow) error {
+	tx, err := s.database.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin usage row upsert: %w", err)
+	}
+	defer tx.Rollback()
+	for _, row := range rows {
+		if err := upsertHourlyUsageRow(ctx, tx, row); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 // ReplaceAgentHourlyRows merges scanned rows and retains dirty rows until they are acknowledged.
 func (s *HourlyUsageStore) ReplaceAgentHourlyRows(ctx context.Context, agentKind string, rows []HourlyUsageRow) error {
 	tx, err := s.database.BeginTx(ctx, nil)

@@ -81,6 +81,7 @@ const (
 	MethodOverviewModelBreakdown      = "overview.modelBreakdown"
 	MethodOverviewAgentKindBreakdown  = "overview.agentKindBreakdown"
 	MethodOverviewWorkspaceInsights   = "overview.workspaceInsights"
+	MethodTokenUsageMigrationStatus   = "tokenUsage.migrationStatus"
 
 	MethodFileRead   = "file.read"
 	MethodFileList   = "file.list"

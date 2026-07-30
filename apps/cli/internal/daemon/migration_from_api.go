@@ -3,6 +3,7 @@ package daemon
 import (
 	"context"
 
+	"yishan/apps/cli/internal/api"
 	localdb "yishan/apps/cli/internal/db"
 	cliruntime "yishan/apps/cli/internal/runtime"
 )
@@ -60,6 +61,41 @@ func (client *daemonAPIClient) ListWorkspaces(ctx context.Context, orgID, projec
 		})
 	}
 	return workspaces, nil
+}
+
+func (client *daemonAPIClient) ListHourlyUsage(ctx context.Context, orgID string, limit int) ([]localdb.APIHourlyUsageRow, error) {
+	input := api.ListTokenUsageHourlyInput{Limit: limit}
+	rows, err := client.runtime.APIClient().ListTokenUsageHourly(orgID, input)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]localdb.APIHourlyUsageRow, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, localdb.APIHourlyUsageRow{
+			ProjectID:             row.ProjectID,
+			WorkspaceID:           row.WorkspaceID,
+			WorkspacePath:         row.WorkspacePath,
+			OrganizationID:        row.OrganizationID,
+			AgentKind:             row.AgentKind,
+			Model:                 row.Model,
+			ModelNormalized:       row.ModelNormalized,
+			BucketStartHourUTC:    row.BucketStartHourUTC,
+			InputTokens:           row.InputTokens,
+			OutputTokens:          row.OutputTokens,
+			CachedInputTokens:     row.CachedInputTokens,
+			CachedWriteTokens:     row.CachedWriteTokens,
+			ReasoningTokens:       row.ReasoningTokens,
+			TotalTokens:           row.TotalTokens,
+			EventCount:            row.EventCount,
+			SessionCount:          row.SessionCount,
+			TurnCount:             row.TurnCount,
+			ToolCallCount:         row.ToolCallCount,
+			AttributionConfidence: row.AttributionConfidence,
+			IngestedAt:            row.IngestedAt,
+			RunID:                 row.RunID,
+		})
+	}
+	return result, nil
 }
 
 func strPtr(value string) *string {

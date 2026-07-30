@@ -216,4 +216,7 @@ export type DaemonRpcClient = {
     getAgentKindBreakdown: (input: { range: string; projectId?: string }) => Promise<unknown>;
     getWorkspaceInsights: (input: { range: string; projectId?: string }) => Promise<unknown>;
   };
+  tokenUsage: {
+    migrationStatus: () => Promise<unknown>;
+  };
 };

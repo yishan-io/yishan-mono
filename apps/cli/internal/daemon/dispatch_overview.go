@@ -109,3 +109,13 @@ func (h *JSONRPCHandler) handleOverviewWorkspaceInsights(ctx context.Context, pa
 	}
 	return h.overviewStore().GetWorkspaceInsights(ctx, rangeDays, req.ProjectID)
 }
+
+// handleTokenUsageMigrationStatus reports whether the API-to-local migrations are complete.
+func (h *JSONRPCHandler) handleTokenUsageMigrationStatus(ctx context.Context, _ json.RawMessage) (any, error) {
+	projectsDone, _ := localdb.MetadataKeyExists(ctx, h.localDatabase, "migration_api_completed")
+	usageDone, _ := localdb.MetadataKeyExists(ctx, h.localDatabase, "migration_usage_api_completed")
+	return map[string]any{
+		"projectsMigrated": projectsDone,
+		"usageMigrated":    usageDone,
+	}, nil
+}
