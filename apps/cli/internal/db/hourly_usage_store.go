@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/rs/zerolog/log"
+
 	"sort"
 	"strconv"
 	"time"
@@ -91,8 +94,12 @@ func (s *HourlyUsageStore) MarkHourlyRowsSynced(ctx context.Context, rows []Hour
 		if updateErr != nil {
 			return fmt.Errorf("mark usage row synced: %w", updateErr)
 		}
-		if _, rowsErr := result.RowsAffected(); rowsErr != nil {
+		affected, rowsErr := result.RowsAffected()
+		if rowsErr != nil {
 			return fmt.Errorf("read usage sync acknowledgement result: %w", rowsErr)
+		}
+		if affected == 0 {
+			log.Warn().Str("workspaceId", row.WorkspaceID).Msg("markHourlyRowsSynced matched 0 rows (concurrent update?)")
 		}
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO _metadata (key, value) VALUES (?, ?)

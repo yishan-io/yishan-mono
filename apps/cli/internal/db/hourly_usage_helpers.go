@@ -4,7 +4,7 @@ import "fmt"
 
 // HourlyUsageRowKey returns the natural composite key for an hourly usage row.
 func HourlyUsageRowKey(row HourlyUsageRow) string {
-	return row.ProjectID + "|" + row.WorkspaceID + "|" + row.AgentKind + "|" + row.ModelNormalized + "|" + fmt.Sprintf("%d", row.BucketStartHourUTC)
+	return row.ProjectID + "\x00" + row.WorkspaceID + "\x00" + row.AgentKind + "\x00" + row.ModelNormalized + "\x00" + fmt.Sprintf("%d", row.BucketStartHourUTC)
 }
 
 // MergeHourlyUsageRow merges a scanned row into an existing row, preserving higher

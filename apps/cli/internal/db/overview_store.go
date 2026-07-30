@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"sort"
+	"strings"
 	"time"
 )
 
@@ -66,13 +68,13 @@ func (s *OverviewStore) GetTokenUsageSeries(
 		result.Series = append(result.Series, item)
 		result.GrandTotal += item.TotalTokens
 		result.CachedTotal += item.CachedInputTokens
+		result.CachedWriteTotal += item.CachedWriteTokens
 		result.TurnTotal += item.TurnCount
 		result.ToolCallTotal += item.ToolCallCount
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate token usage series: %w", err)
 	}
-	result.CachedWriteTotal = result.CachedTotal // not tracked separately in local schema
 	result.UncachedTotal = result.GrandTotal - result.CachedTotal
 	if result.UncachedTotal < 0 {
 		result.UncachedTotal = 0
@@ -237,11 +239,26 @@ func (s *OverviewStore) GetWorkspaceInsights(
 		closedRowsData = append(closedRowsData, cr)
 	}
 	if err := closedRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate closed workspaces: %w", err)
 	}
+	closedRows.Close() // release cursor before follow-up queries
+
+	// Batch project names and token totals.
+	projectIDs := make([]string, len(closedRowsData))
+	wsIDs := make([]string, len(closedRowsData))
+	for i, cr := range closedRowsData {
+		projectIDs[i] = cr.projectID
+		wsIDs[i] = cr.id
+	}
+	projectNames := s.projectNames(ctx, projectIDs)
+	workspaceTokens := s.workspaceTokenTotals(ctx, wsIDs)
 
 	for _, cr := range closedRowsData {
-		projectName := s.projectName(ctx, cr.projectID)
-		totalTokens := s.workspaceTokenTotal(ctx, cr.id)
+		projectName := projectNames[cr.projectID]
+		if projectName == "" {
+			projectName = cr.projectID
+		}
+		totalTokens := workspaceTokens[cr.id]
 
 		createdAt, _ := time.Parse("2006-01-02 15:04:05", cr.createdAt)
 		closedAt, _ := time.Parse("2006-01-02 15:04:05", cr.closedAt)
@@ -292,7 +309,7 @@ func (s *OverviewStore) GetWorkspaceInsights(
 		if err := primaryRows.Scan(&pg.id, &pg.projectID, &pg.branch, &pg.createdAt, &pg.localPath); err != nil {
 			return nil, fmt.Errorf("scan primary workspace: %w", err)
 		}
-		key := pg.projectID + "|" + pg.localPath
+		key := pg.projectID + "\x00" + pg.localPath
 		if _, exists := groups[key]; !exists {
 			groups[key] = pg
 			groupKeys = append(groupKeys, key)
@@ -317,24 +334,33 @@ func (s *OverviewStore) GetWorkspaceInsights(
 	}
 
 	// Sort: tokens desc, then representative id asc for tie-break.
-	for i := 0; i < len(primaryTokens); i++ {
-		for j := i + 1; j < len(primaryTokens); j++ {
-			if primaryTokens[j].tokens > primaryTokens[i].tokens ||
-				(primaryTokens[j].tokens == primaryTokens[i].tokens && primaryTokens[j].pg.id < primaryTokens[i].pg.id) {
-				primaryTokens[i], primaryTokens[j] = primaryTokens[j], primaryTokens[i]
-			}
+	sort.Slice(primaryTokens, func(i, j int) bool {
+		if primaryTokens[i].tokens != primaryTokens[j].tokens {
+			return primaryTokens[i].tokens > primaryTokens[j].tokens
 		}
+		return primaryTokens[i].pg.id < primaryTokens[j].pg.id
+	})
+	// Batch project names and token totals for primary workspaces.
+	primaryProjectIDs := make([]string, 0, len(primaryTokens))
+	for _, pt := range primaryTokens {
+		primaryProjectIDs = append(primaryProjectIDs, pt.pg.projectID)
 	}
+	primaryProjectNames := s.projectNames(ctx, primaryProjectIDs)
+
 	limit := 10
 	if len(primaryTokens) < limit {
 		limit = len(primaryTokens)
 	}
 	for i := 0; i < limit; i++ {
 		pt := primaryTokens[i]
+		projectName := primaryProjectNames[pt.pg.projectID]
+		if projectName == "" {
+			projectName = pt.pg.projectID
+		}
 		result.TopPrimaryWorkspaces = append(result.TopPrimaryWorkspaces, OverviewPrimaryWorkspaceItem{
 			ID:          pt.pg.id,
 			ProjectID:   pt.pg.projectID,
-			ProjectName: s.projectName(ctx, pt.pg.projectID),
+			ProjectName: projectName,
 			Branch:      pt.pg.branch,
 			CreatedAt:   pt.pg.createdAt,
 			TotalTokens: pt.tokens,
@@ -344,18 +370,46 @@ func (s *OverviewStore) GetWorkspaceInsights(
 	return result, nil
 }
 
-func (s *OverviewStore) projectName(ctx context.Context, projectID string) string {
-	var name string
-	if err := s.database.QueryRowContext(ctx, `SELECT name FROM projects WHERE id = ?`, projectID).Scan(&name); err != nil {
-		return projectID
+func (s *OverviewStore) projectNames(ctx context.Context, ids []string) map[string]string {
+	if len(ids) == 0 {
+		return nil
 	}
-	return name
+	names := make(map[string]string, len(ids))
+	query, args := buildInQuery(`SELECT id, name FROM projects WHERE id IN`, ids)
+	rows, err := s.database.QueryContext(ctx, query, args...)
+	if err != nil {
+		return names
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, name string
+		if err := rows.Scan(&id, &name); err == nil {
+			names[id] = name
+		}
+	}
+	return names
 }
 
-func (s *OverviewStore) workspaceTokenTotal(ctx context.Context, workspaceID string) int64 {
-	var total int64
-	_ = s.database.QueryRowContext(ctx, `SELECT COALESCE(SUM(total_tokens), 0) FROM token_usage_hourly WHERE workspace_id = ?`, workspaceID).Scan(&total)
-	return total
+func (s *OverviewStore) workspaceTokenTotals(ctx context.Context, ids []string) map[string]int64 {
+	if len(ids) == 0 {
+		return nil
+	}
+	totals := make(map[string]int64, len(ids))
+	query, args := buildInQuery(`SELECT workspace_id, COALESCE(SUM(total_tokens), 0) FROM token_usage_hourly WHERE workspace_id IN`, ids)
+	query += " GROUP BY workspace_id"
+	rows, err := s.database.QueryContext(ctx, query, args...)
+	if err != nil {
+		return totals
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var wsID string
+		var total int64
+		if err := rows.Scan(&wsID, &total); err == nil {
+			totals[wsID] = total
+		}
+	}
+	return totals
 }
 
 func (s *OverviewStore) workspacePathTokenTotal(ctx context.Context, groupKey string, cutoffMillis int64) int64 {
@@ -368,11 +422,26 @@ func (s *OverviewStore) workspacePathTokenTotal(ctx context.Context, groupKey st
 	return total
 }
 
+func buildInQuery(prefix string, ids []string) (string, []any) {
+	placeholders := make([]string, len(ids))
+	for i := range placeholders {
+		placeholders[i] = "?"
+	}
+	return prefix + " (" + strings.Join(placeholders, ", ") + ")", idsToAny(ids)
+}
+
+func idsToAny(ids []string) []any {
+	out := make([]any, len(ids))
+	for i, id := range ids {
+		out[i] = id
+	}
+	return out
+}
+
 func splitGroupKey(key string) [2]string {
-	for i := 0; i < len(key); i++ {
-		if key[i] == '|' {
-			return [2]string{key[:i], key[i+1:]}
-		}
+	parts := strings.SplitN(key, "\x00", 2)
+	if len(parts) == 2 {
+		return [2]string{parts[0], parts[1]}
 	}
 	return [2]string{key, ""}
 }
