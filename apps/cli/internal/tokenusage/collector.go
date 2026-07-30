@@ -56,6 +56,15 @@ func NewCollector(manager *workspace.Manager, runtime *cliruntime.Runtime, confi
 	if err != nil {
 		return nil, err
 	}
+	return NewCollectorWithRepository(manager, runtime, repo), nil
+}
+
+// NewCollectorWithRepository creates a collector with the supplied durable usage repository.
+func NewCollectorWithRepository(
+	manager *workspace.Manager,
+	runtime *cliruntime.Runtime,
+	repo HourlyUsageRepository,
+) *Collector {
 	return &Collector{
 		manager:              manager,
 		runtime:              runtime,
@@ -65,7 +74,7 @@ func NewCollector(manager *workspace.Manager, runtime *cliruntime.Runtime, confi
 		needsRerun:           make(map[string]bool),
 		recoverySinceByAgent: make(map[string]int64),
 		pending:              make(map[string][]HourlyUsageRow),
-	}, nil
+	}
 }
 
 func (c *Collector) StartStartupScan() {
@@ -181,6 +190,7 @@ func (c *Collector) filterKnownTokenUsageRows(rows []HourlyUsageRow) []HourlyUsa
 			if strings.TrimSpace(row.WorkspacePath) == "" {
 				row.WorkspacePath = ws.Path
 			}
+			row.OrganizationID = ws.OrgID
 		}
 		filtered = append(filtered, row)
 	}
@@ -388,7 +398,7 @@ func (c *Collector) syncPending(source string) {
 		return
 	}
 	for orgID, rows := range pendingByOrg {
-		if strings.TrimSpace(orgID) == "" || strings.EqualFold(orgID, "unknown") {
+		if orgID == "" || strings.EqualFold(orgID, "unknown") {
 			continue
 		}
 		if len(rows) == 0 {
@@ -435,8 +445,12 @@ func (c *Collector) snapshotDirtyRowsByOrg() (map[string][]HourlyUsageRow, error
 		if strings.TrimSpace(row.WorkspaceID) == "" {
 			continue
 		}
-		orgID := c.resolveOrgIDForWorkspace(row.WorkspaceID)
+		orgID := row.OrganizationID
 		if orgID == "" {
+			orgID = c.resolveOrgIDForWorkspace(row.WorkspaceID)
+		}
+		if orgID == "" {
+			log.Warn().Str("workspaceId", row.WorkspaceID).Msg("token usage row has no organization attribution; leaving it dirty")
 			continue
 		}
 		rowsByOrg[orgID] = append(rowsByOrg[orgID], row)
@@ -447,7 +461,7 @@ func (c *Collector) snapshotDirtyRowsByOrg() (map[string][]HourlyUsageRow, error
 func (c *Collector) resolveOrgIDForWorkspace(workspaceID string) string {
 	for _, ws := range c.manager.List() {
 		if ws.ID == workspaceID {
-			return strings.TrimSpace(ws.OrgID)
+			return ws.OrgID
 		}
 	}
 	return ""

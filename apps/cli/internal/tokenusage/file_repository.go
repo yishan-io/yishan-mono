@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	localdb "yishan/apps/cli/internal/db"
+
 	"yishan/apps/cli/internal/config"
 )
 
@@ -65,7 +67,7 @@ func (r *fileHourlyUsageRepository) ReplaceAgentHourlyRows(
 	mergedRows := mergeAgentHourlyRows(state.Rows, agentKind, rows)
 
 	sort.Slice(mergedRows, func(i, j int) bool {
-		return compareHourlyUsageRows(mergedRows[i], mergedRows[j]) < 0
+		return localdb.CompareHourlyUsageRows(mergedRows[i], mergedRows[j]) < 0
 	})
 
 	state.Rows = filterRowsWithoutAgent(state.Rows, agentKind)
@@ -83,16 +85,16 @@ func mergeAgentHourlyRows(existingRows []HourlyUsageRow, agentKind string, scann
 		if row.AgentKind != agentKind {
 			continue
 		}
-		existingByKey[hourlyUsageRowKey(row)] = row
+		existingByKey[localdb.HourlyUsageRowKey(row)] = row
 	}
 
 	mergedRows := make([]HourlyUsageRow, 0, maxInt(len(existingByKey), len(scannedRows)))
 	seenKeys := make(map[string]struct{}, len(scannedRows))
 	for _, row := range scannedRows {
-		key := hourlyUsageRowKey(row)
+		key := localdb.HourlyUsageRowKey(row)
 		seenKeys[key] = struct{}{}
 		existing, hasExisting := existingByKey[key]
-		mergedRows = append(mergedRows, mergeHourlyUsageRow(existing, hasExisting, row))
+		mergedRows = append(mergedRows, localdb.MergeHourlyUsageRow(existing, hasExisting, row))
 	}
 
 	for key, row := range existingByKey {
@@ -103,23 +105,6 @@ func mergeAgentHourlyRows(existingRows []HourlyUsageRow, agentKind string, scann
 	}
 
 	return mergedRows
-}
-
-func mergeHourlyUsageRow(existingRow HourlyUsageRow, hasExisting bool, scannedRow HourlyUsageRow) HourlyUsageRow {
-	if !hasExisting {
-		scannedRow.Dirty = true
-		return scannedRow
-	}
-	if existingRow.TotalTokens > scannedRow.TotalTokens {
-		return existingRow
-	}
-	if hourlyRowsMatchForSync(existingRow, scannedRow) {
-		return existingRow
-	}
-
-	scannedRow.Dirty = true
-	scannedRow.LastSyncedAt = existingRow.LastSyncedAt
-	return scannedRow
 }
 
 func (r *fileHourlyUsageRepository) ListDirtyHourlyRows(ctx context.Context) ([]HourlyUsageRow, error) {
@@ -146,7 +131,7 @@ func (r *fileHourlyUsageRepository) ListDirtyHourlyRows(ctx context.Context) ([]
 	}
 
 	sort.Slice(dirtyRows, func(i, j int) bool {
-		return compareHourlyUsageRows(dirtyRows[i], dirtyRows[j]) < 0
+		return localdb.CompareHourlyUsageRows(dirtyRows[i], dirtyRows[j]) < 0
 	})
 	return dirtyRows, nil
 }
@@ -172,18 +157,18 @@ func (r *fileHourlyUsageRepository) MarkHourlyRowsSynced(ctx context.Context, ro
 
 	syncedByKey := make(map[string]HourlyUsageRow, len(rows))
 	for _, row := range rows {
-		syncedByKey[hourlyUsageRowKey(row)] = row
+		syncedByKey[localdb.HourlyUsageRowKey(row)] = row
 	}
 
 	for i := range state.Rows {
-		syncedRow, ok := syncedByKey[hourlyUsageRowKey(state.Rows[i])]
+		syncedRow, ok := syncedByKey[localdb.HourlyUsageRowKey(state.Rows[i])]
 		if !ok {
 			continue
 		}
 		if state.Rows[i].UpdatedAt != syncedRow.UpdatedAt {
 			continue
 		}
-		if !hourlyRowsMatchForSync(state.Rows[i], syncedRow) {
+		if !localdb.HourlyRowsMatchForSync(state.Rows[i], syncedRow) {
 			continue
 		}
 		state.Rows[i].Dirty = false
@@ -235,49 +220,6 @@ func filterRowsWithoutAgent(rows []HourlyUsageRow, agentKind string) []HourlyUsa
 	return filtered
 }
 
-func hourlyUsageRowKey(row HourlyUsageRow) string {
-	return row.ProjectID + "|" + row.WorkspaceID + "|" + row.AgentKind + "|" + row.ModelNormalized + "|" + fmt.Sprintf("%d", row.BucketStartHourUTC)
-}
-
-func hourlyRowsMatchForSync(left HourlyUsageRow, right HourlyUsageRow) bool {
-	return left.ProjectID == right.ProjectID &&
-		left.WorkspaceID == right.WorkspaceID &&
-		left.WorkspacePath == right.WorkspacePath &&
-		left.AgentKind == right.AgentKind &&
-		left.Model == right.Model &&
-		left.ModelNormalized == right.ModelNormalized &&
-		left.BucketStartHourUTC == right.BucketStartHourUTC &&
-		left.InputTokens == right.InputTokens &&
-		left.OutputTokens == right.OutputTokens &&
-		left.CachedInputTokens == right.CachedInputTokens &&
-		left.CachedWriteTokens == right.CachedWriteTokens &&
-		left.ReasoningTokens == right.ReasoningTokens &&
-		left.TotalTokens == right.TotalTokens &&
-		left.EventCount == right.EventCount &&
-		left.SessionCount == right.SessionCount &&
-		left.TurnCount == right.TurnCount &&
-		left.ToolCallCount == right.ToolCallCount &&
-		left.AttributionConfidence == right.AttributionConfidence
-}
-
-func compareHourlyUsageRows(left HourlyUsageRow, right HourlyUsageRow) int {
-	if left.BucketStartHourUTC != right.BucketStartHourUTC {
-		if left.BucketStartHourUTC < right.BucketStartHourUTC {
-			return -1
-		}
-		return 1
-	}
-	leftKey := hourlyUsageRowKey(left)
-	rightKey := hourlyUsageRowKey(right)
-	if leftKey < rightKey {
-		return -1
-	}
-	if leftKey > rightKey {
-		return 1
-	}
-	return 0
-}
-
 func maxInt(left int, right int) int {
 	if left > right {
 		return left
@@ -286,7 +228,7 @@ func maxInt(left int, right int) int {
 }
 
 func pruneExpiredHourlyUsageRows(file *hourlyUsageFile, now time.Time) {
-	retentionCutoff := now.Add(-HourlyUsageLocalRetentionWindow).UnixMilli()
+	retentionCutoff := now.Add(-localdb.HourlyUsageRetentionWindow).UnixMilli()
 	keptRows := file.Rows[:0]
 	for _, row := range file.Rows {
 		if !row.Dirty && row.BucketStartHourUTC < retentionCutoff {

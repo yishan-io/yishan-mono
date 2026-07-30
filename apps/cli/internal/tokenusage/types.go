@@ -1,10 +1,15 @@
 package tokenusage
 
-import "time"
+import localdb "yishan/apps/cli/internal/db"
 
-const HourlyUsageLocalRetentionWindow = 15 * 24 * time.Hour
+// Re-exported from db so scanner and collector code references are unchanged.
+type HourlyUsageRow = localdb.HourlyUsageRow
+type HourlyUsageSyncState = localdb.HourlyUsageSyncState
+type AttributionConfidence = localdb.AttributionConfidence
+type ScannerSourceKind = localdb.ScannerSourceKind
 
-type AttributionConfidence string
+// HourlyUsageLocalRetentionWindow aliases the db-owned retention window.
+const HourlyUsageLocalRetentionWindow = localdb.HourlyUsageRetentionWindow
 
 const (
 	AttributionExact           AttributionConfidence = "exact"
@@ -12,41 +17,11 @@ const (
 	AttributionFallbackUnknown AttributionConfidence = "fallback_unknown"
 )
 
-type ScannerSourceKind string
-
 const (
 	SourceKindJSONL  ScannerSourceKind = "jsonl"
 	SourceKindSQLite ScannerSourceKind = "sqlite"
 	SourceKindAPI    ScannerSourceKind = "api"
 )
-
-type HourlyUsageRow struct {
-	ProjectID             string
-	WorkspaceID           string
-	WorkspacePath         string
-	AgentKind             string
-	Model                 string
-	ModelNormalized       string
-	BucketStartHourUTC    int64
-	InputTokens           int64
-	OutputTokens          int64
-	CachedInputTokens     int64
-	CachedWriteTokens     int64
-	ReasoningTokens       int64
-	TotalTokens           int64
-	EventCount            int64
-	SessionCount          int64
-	TurnCount             int64
-	ToolCallCount         int64
-	AttributionConfidence AttributionConfidence
-	ScannerSourceKind     ScannerSourceKind
-	ScannerSourceID       string
-	IngestedAt            int64
-	RunID                 string
-	UpdatedAt             int64
-	Dirty                 bool
-	LastSyncedAt          int64
-}
 
 type WorktreeRef struct {
 	ProjectID     string

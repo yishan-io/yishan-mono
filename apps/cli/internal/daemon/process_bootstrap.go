@@ -20,6 +20,7 @@ import (
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/nodeid"
 	cliruntime "yishan/apps/cli/internal/runtime"
+	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
 )
 
@@ -106,6 +107,13 @@ func buildHandler(cfg RunConfig, statePath string, runtime *cliruntime.Runtime, 
 	if err := migrateProjectsFromAPI(database, runtime); err != nil {
 		log.Warn().Err(err).Msg("API migration skipped — will retry on next restart")
 	}
+	if err := migrateUsageFromAPI(database, runtime); err != nil {
+		log.Warn().Err(err).Msg("usage API migration skipped — will retry on next restart")
+	}
+	if err := tokenusage.MigrateLegacyJSON(context.Background(), database, statePath); err != nil {
+		_ = database.Close() // avoid starting scans when legacy usage history could not be recovered
+		return nil, nil, nil, fmt.Errorf("migrate legacy token usage JSON: %w", err)
+	}
 	workspaceManager := workspace.NewManagerWithStore(localdb.NewWorkspaceStore(database))
 	cleanupStore, err := newWorkspaceCleanupStore(statePath)
 	if err != nil {
@@ -154,11 +162,42 @@ func migrateProjectsFromAPI(database *sql.DB, runtime *cliruntime.Runtime) error
 	if runtime == nil || !runtime.APIConfigured() {
 		return nil
 	}
+	orgs, err := listOrganizationIDs(runtime)
+	if err != nil {
+		return fmt.Errorf("list organizations for project migration: %w", err)
+	}
 	client := &daemonAPIClient{runtime: runtime}
-	if err := localdb.MigrateFromAPI(context.Background(), database, nil, client); err != nil {
+	if err := localdb.MigrateFromAPI(context.Background(), database, orgs, client); err != nil {
 		return fmt.Errorf("migrate projects from API: %w", err)
 	}
 	return nil
+}
+
+func migrateUsageFromAPI(database *sql.DB, runtime *cliruntime.Runtime) error {
+	if runtime == nil || !runtime.APIConfigured() {
+		return nil
+	}
+	orgs, err := listOrganizationIDs(runtime)
+	if err != nil {
+		return fmt.Errorf("list organizations for usage migration: %w", err)
+	}
+	client := &daemonAPIClient{runtime: runtime}
+	if err := localdb.MigrateUsageFromAPI(context.Background(), database, orgs, client); err != nil {
+		return fmt.Errorf("migrate usage from API: %w", err)
+	}
+	return nil
+}
+
+func listOrganizationIDs(runtime *cliruntime.Runtime) ([]string, error) {
+	resp, err := runtime.APIClient().ListOrganizations()
+	if err != nil {
+		return nil, err
+	}
+	orgs := make([]string, 0, len(resp.Organizations))
+	for _, org := range resp.Organizations {
+		orgs = append(orgs, org.ID)
+	}
+	return orgs, nil
 }
 
 func initComputerConfig(handler *JSONRPCHandler) error {

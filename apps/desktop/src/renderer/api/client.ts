@@ -9,7 +9,6 @@ import {
   listOrganizations,
   removeOrganizationMember,
 } from "./orgApi";
-import { loadOverviewModelBreakdown, loadOverviewTokenUsage, loadOverviewWorkspaceInsights } from "./overviewApi";
 import { createProject, deleteProject, listProjects, updateProject } from "./projectApi";
 import {
   createScheduledJob,
@@ -74,11 +73,6 @@ export const api = {
     list: listServiceTokens,
     create: createServiceToken,
     revoke: revokeServiceToken,
-  },
-  overview: {
-    loadTokenUsage: loadOverviewTokenUsage,
-    loadModelBreakdown: loadOverviewModelBreakdown,
-    loadWorkspaceInsights: loadOverviewWorkspaceInsights,
   },
 };
 

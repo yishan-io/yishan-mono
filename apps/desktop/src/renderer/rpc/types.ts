@@ -184,23 +184,39 @@ export type DaemonRpcClient = {
   };
   project: {
     listByOrg: (orgId: string, opts?: { withWorkspaces?: boolean }) => Promise<unknown>;
-    create: (orgId: string, input: {
-      name: string;
-      sourceTypeHint?: string;
-      repoUrl?: string;
-      nodeId?: string;
-      localPath?: string;
-      contextEnabled?: boolean;
-    }) => Promise<unknown>;
-    update: (orgId: string, projectId: string, config: {
-      name?: string;
-      icon?: string;
-      color?: string;
-      setupScript?: string;
-      postScript?: string;
-      commands?: Array<{ name: string; command: string }>;
-      contextEnabled?: boolean;
-    }) => Promise<unknown>;
+    create: (
+      orgId: string,
+      input: {
+        name: string;
+        sourceTypeHint?: string;
+        repoUrl?: string;
+        nodeId?: string;
+        localPath?: string;
+        contextEnabled?: boolean;
+      },
+    ) => Promise<unknown>;
+    update: (
+      orgId: string,
+      projectId: string,
+      config: {
+        name?: string;
+        icon?: string;
+        color?: string;
+        setupScript?: string;
+        postScript?: string;
+        commands?: Array<{ name: string; command: string }>;
+        contextEnabled?: boolean;
+      },
+    ) => Promise<unknown>;
     delete: (orgId: string, projectId: string) => Promise<void>;
+  };
+  overview: {
+    getTokenUsage: (input: { range: string; projectId?: string; granularity: string }) => Promise<unknown>;
+    getModelBreakdown: (input: { range: string; projectId?: string }) => Promise<unknown>;
+    getAgentKindBreakdown: (input: { range: string; projectId?: string }) => Promise<unknown>;
+    getWorkspaceInsights: (input: { range: string; projectId?: string }) => Promise<unknown>;
+  };
+  tokenUsage: {
+    migrationStatus: () => Promise<unknown>;
   };
 };

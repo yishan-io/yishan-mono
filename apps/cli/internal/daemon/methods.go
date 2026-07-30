@@ -77,6 +77,12 @@ const (
 	MethodAppReloadAuthConfig  = "app.reloadAuthConfig"
 	MethodTokenUsageDebugState = "tokenUsage.debugState"
 
+	MethodOverviewTokenUsage          = "overview.tokenUsage"
+	MethodOverviewModelBreakdown      = "overview.modelBreakdown"
+	MethodOverviewAgentKindBreakdown  = "overview.agentKindBreakdown"
+	MethodOverviewWorkspaceInsights   = "overview.workspaceInsights"
+	MethodTokenUsageMigrationStatus   = "tokenUsage.migrationStatus"
+
 	MethodFileRead   = "file.read"
 	MethodFileList   = "file.list"
 	MethodFileSearch = "file.search"
