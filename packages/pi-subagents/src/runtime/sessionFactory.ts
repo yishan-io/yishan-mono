@@ -85,16 +85,37 @@ export async function createChildAgentSession(
   };
 }
 
+const UNSUPPORTED_MODEL_API_ERROR =
+  "Unsupported AgentSessionServices model API: expected services.modelRuntime.getModel/getModels or services.modelRegistry.find/getAll";
+
+type SessionModel = NonNullable<Parameters<typeof createAgentSessionFromServices>[0]["model"]>;
+
+type CurrentModelRuntimeShape = {
+  getModel: (provider: string, modelId: string) => SessionModel | undefined;
+  getModels: () => readonly SessionModel[];
+};
+
+type LegacyModelRegistryShape = {
+  find: (provider: string, modelId: string) => SessionModel | undefined;
+  getAll: () => readonly SessionModel[];
+};
+
+type CompatibleModelAccessor = {
+  getModel: (provider: string, modelId: string) => SessionModel | undefined;
+  getModels: () => readonly SessionModel[];
+};
+
 function resolveModelSpecifier(services: AgentSessionServices, modelSpecifier?: string) {
   if (!modelSpecifier) {
     return undefined;
   }
 
+  const modelAccessor = resolveCompatibleModelAccessor(services);
   const providerSplitIndex = modelSpecifier.indexOf("/");
   if (providerSplitIndex >= 0) {
     const provider = modelSpecifier.slice(0, providerSplitIndex);
     const modelId = modelSpecifier.slice(providerSplitIndex + 1);
-    const resolvedModel = services.modelRegistry.find(provider, modelId);
+    const resolvedModel = modelAccessor.getModel(provider, modelId);
     if (!resolvedModel) {
       throw new Error(`Unknown model: ${modelSpecifier}`);
     }
@@ -102,9 +123,7 @@ function resolveModelSpecifier(services: AgentSessionServices, modelSpecifier?: 
     return resolvedModel;
   }
 
-  const matchingModels = services.modelRegistry
-    .getAll()
-    .filter((candidateModel) => candidateModel.id === modelSpecifier);
+  const matchingModels = modelAccessor.getModels().filter((candidateModel) => candidateModel.id === modelSpecifier);
   if (matchingModels.length === 0) {
     throw new Error(`Unknown model: ${modelSpecifier}`);
   }
@@ -114,4 +133,45 @@ function resolveModelSpecifier(services: AgentSessionServices, modelSpecifier?: 
   }
 
   return matchingModels[0];
+}
+
+function resolveCompatibleModelAccessor(services: AgentSessionServices): CompatibleModelAccessor {
+  const compatibilityServices = services as AgentSessionServices & {
+    modelRuntime?: unknown;
+    modelRegistry?: unknown;
+  };
+
+  if (isCurrentModelRuntimeShape(compatibilityServices.modelRuntime)) {
+    const modelRuntime = compatibilityServices.modelRuntime;
+    return {
+      getModel: (provider, modelId) => modelRuntime.getModel(provider, modelId),
+      getModels: () => modelRuntime.getModels(),
+    };
+  }
+
+  if (isLegacyModelRegistryShape(compatibilityServices.modelRegistry)) {
+    const modelRegistry = compatibilityServices.modelRegistry;
+    return {
+      getModel: (provider, modelId) => modelRegistry.find(provider, modelId),
+      getModels: () => modelRegistry.getAll(),
+    };
+  }
+
+  throw new Error(UNSUPPORTED_MODEL_API_ERROR);
+}
+
+function isCurrentModelRuntimeShape(value: unknown): value is CurrentModelRuntimeShape {
+  return hasFunction(value, "getModel") && hasFunction(value, "getModels");
+}
+
+function isLegacyModelRegistryShape(value: unknown): value is LegacyModelRegistryShape {
+  return hasFunction(value, "find") && hasFunction(value, "getAll");
+}
+
+function hasFunction(value: unknown, propertyName: string): boolean {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  return typeof (value as Record<string, unknown>)[propertyName] === "function";
 }

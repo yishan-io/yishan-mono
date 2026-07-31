@@ -171,7 +171,7 @@
     },
     "packages/pi-subagents": {
       "name": "@yishan-io/pi-subagents",
-      "version": "0.1.6",
+      "version": "0.1.7",
       "devDependencies": {
         "@earendil-works/pi-agent-core": "^0.80.3",
         "@earendil-works/pi-ai": "^0.80.3",
