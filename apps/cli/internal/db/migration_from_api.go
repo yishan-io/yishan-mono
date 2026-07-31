@@ -9,9 +9,9 @@ const migrationAPICompletedKey = "migration_api_completed"
 
 // APIClient abstracts the remote datastore for first-launch project import.
 type APIClient interface {
-	ListProjects(ctx context.Context, orgID string) ([]APIProject, error)
-	ListWorkspaces(ctx context.Context, orgID, projectID string) ([]APIWorkspace, error)
-	ListHourlyUsage(ctx context.Context, orgID string, limit int) ([]APIHourlyUsageRow, error)
+	ExportProjects(ctx context.Context, orgID string) ([]APIProject, error)
+	ExportWorkspaces(ctx context.Context, orgID string) ([]APIWorkspace, error)
+	ExportHourlyUsage(ctx context.Context, orgID string) ([]APIHourlyUsageRow, error)
 	IsConfigured() bool
 }
 
@@ -97,25 +97,25 @@ func MigrateFromAPI(ctx context.Context, database *sql.DB, organizations []strin
 
 	anySucceeded := false
 	for _, orgID := range organizations {
-		projects, err := client.ListProjects(ctx, orgID)
+		projects, err := client.ExportProjects(ctx, orgID)
 		if err != nil {
 			continue // best-effort: skip failing organizations
 		}
-		anySucceeded = true
 		for _, project := range projects {
 			localProject := apiProjectToLocal(project)
 			if err := projectStore.Create(ctx, &localProject); err != nil {
 				continue // best-effort: skip individual project failures
 			}
-			workspaces, err := client.ListWorkspaces(ctx, orgID, project.ID)
-			if err != nil {
-				continue
-			}
-			for _, workspace := range workspaces {
-				localWorkspace := apiWorkspaceToLocal(workspace)
-				_ = workspaceStore.Create(ctx, &localWorkspace) // best-effort per-item import
-			}
 		}
+		workspaces, err := client.ExportWorkspaces(ctx, orgID)
+		if err != nil {
+			continue
+		}
+		for _, workspace := range workspaces {
+			localWorkspace := apiWorkspaceToLocal(workspace)
+			_ = workspaceStore.Create(ctx, &localWorkspace) // best-effort per-item import
+		}
+		anySucceeded = true
 	}
 
 	if !anySucceeded {

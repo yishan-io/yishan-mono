@@ -17,55 +17,61 @@ func (client *daemonAPIClient) IsConfigured() bool {
 	return client.runtime != nil && client.runtime.APIConfigured()
 }
 
-func (client *daemonAPIClient) ListProjects(ctx context.Context, orgID string) ([]localdb.APIProject, error) {
-	response, err := client.runtime.APIClient().ListProjects(orgID)
+func (client *daemonAPIClient) ExportProjects(ctx context.Context, orgID string) ([]localdb.APIProject, error) {
+	projects, err := client.runtime.APIClient().ExportProjects(orgID)
 	if err != nil {
 		return nil, err
 	}
-	projects := make([]localdb.APIProject, 0, len(response.Projects))
-	for _, project := range response.Projects {
-		projects = append(projects, localdb.APIProject{
+	result := make([]localdb.APIProject, 0, len(projects))
+	for _, project := range projects {
+		result = append(result, localdb.APIProject{
 			ID:             project.ID,
 			Name:           project.Name,
 			SourceType:     project.SourceType,
-			RepoProvider:   strPtr(project.RepoProvider),
-			RepoURL:        strPtr(project.RepoURL),
-			RepoKey:        strPtr(project.RepoKey),
+			RepoProvider:   project.RepoProvider,
+			RepoURL:        project.RepoURL,
+			RepoKey:        project.RepoKey,
+			Icon:           project.Icon,
+			Color:          project.Color,
+			SetupScript:    project.SetupScript,
+			PostScript:     project.PostScript,
+			Commands:       toLocalProjectCommands(project.Commands),
+			ContextEnabled: project.ContextEnabled,
 			OrganizationID: project.OrganizationID,
+			CreatedBy:      project.CreatedByUserID,
 			CreatedAt:      project.CreatedAt,
 			UpdatedAt:      project.UpdatedAt,
 		})
 	}
-	return projects, nil
+	return result, nil
 }
 
-func (client *daemonAPIClient) ListWorkspaces(ctx context.Context, orgID, projectID string) ([]localdb.APIWorkspace, error) {
-	response, err := client.runtime.APIClient().ListWorkspaces(orgID, projectID)
+func (client *daemonAPIClient) ExportWorkspaces(ctx context.Context, orgID string) ([]localdb.APIWorkspace, error) {
+	workspaces, err := client.runtime.APIClient().ExportWorkspaces(orgID)
 	if err != nil {
 		return nil, err
 	}
-	workspaces := make([]localdb.APIWorkspace, 0, len(response.Workspaces))
-	for _, workspace := range response.Workspaces {
-		workspaces = append(workspaces, localdb.APIWorkspace{
+	result := make([]localdb.APIWorkspace, 0, len(workspaces))
+	for _, workspace := range workspaces {
+		result = append(result, localdb.APIWorkspace{
 			ID:             workspace.ID,
 			OrganizationID: workspace.OrganizationID,
 			ProjectID:      workspace.ProjectID,
 			NodeID:         workspace.NodeID,
 			Kind:           workspace.Kind,
 			Status:         workspace.Status,
-			Branch:         strPtr(workspace.Branch),
-			SourceBranch:   strPtr(workspace.SourceBranch),
+			Branch:         workspace.Branch,
+			SourceBranch:   workspace.SourceBranch,
 			LocalPath:      workspace.LocalPath,
 			CreatedAt:      workspace.CreatedAt,
 			UpdatedAt:      workspace.UpdatedAt,
 		})
 	}
-	return workspaces, nil
+	return result, nil
 }
 
-func (client *daemonAPIClient) ListHourlyUsage(ctx context.Context, orgID string, limit int) ([]localdb.APIHourlyUsageRow, error) {
-	input := api.ListTokenUsageHourlyInput{Limit: limit}
-	rows, err := client.runtime.APIClient().ListTokenUsageHourly(orgID, input)
+func (client *daemonAPIClient) ExportHourlyUsage(ctx context.Context, orgID string) ([]localdb.APIHourlyUsageRow, error) {
+	rows, err := client.runtime.APIClient().ExportTokenUsageHourly(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -98,9 +104,13 @@ func (client *daemonAPIClient) ListHourlyUsage(ctx context.Context, orgID string
 	return result, nil
 }
 
-func strPtr(value string) *string {
-	if value == "" {
-		return nil
+func toLocalProjectCommands(commands []api.ProjectCommand) []localdb.ProjectCommand {
+	result := make([]localdb.ProjectCommand, 0, len(commands))
+	for _, command := range commands {
+		result = append(result, localdb.ProjectCommand{
+			Name:    command.Name,
+			Command: command.Command,
+		})
 	}
-	return &value
+	return result
 }

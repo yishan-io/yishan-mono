@@ -48,10 +48,7 @@ func MigrateUsageFromAPI(ctx context.Context, database *sql.DB, organizations []
 }
 
 func migrateOrgUsage(ctx context.Context, store *HourlyUsageStore, client APIClient, orgID string) error {
-	// Pull all rows in one large page. For a one-time migration this is simpler
-	// and avoids cursor-pagination edge cases with duplicate bucket boundaries.
-	const pageSize = 10000
-	apiRows, err := client.ListHourlyUsage(ctx, orgID, pageSize)
+	apiRows, err := client.ExportHourlyUsage(ctx, orgID)
 	if err != nil {
 		return err
 	}
