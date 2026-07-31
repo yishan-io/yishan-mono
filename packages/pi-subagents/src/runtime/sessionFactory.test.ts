@@ -22,6 +22,30 @@ vi.mock("@earendil-works/pi-coding-agent", () => ({
 
 import { createChildAgentSession } from "./sessionFactory";
 
+function createModel(provider: string, id: string, source?: string) {
+  return {
+    provider,
+    id,
+    ...(source ? { source } : {}),
+  };
+}
+
+function createModelRuntime(models: ReturnType<typeof createModel>[]) {
+  return {
+    getModel: (provider: string, modelId: string) =>
+      models.find((candidateModel) => candidateModel.provider === provider && candidateModel.id === modelId),
+    getModels: () => models,
+  };
+}
+
+function createLegacyModelRegistry(models: ReturnType<typeof createModel>[]) {
+  return {
+    find: (provider: string, modelId: string) =>
+      models.find((candidateModel) => candidateModel.provider === provider && candidateModel.id === modelId),
+    getAll: () => models,
+  };
+}
+
 describe("createChildAgentSession", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -33,9 +57,7 @@ describe("createChildAgentSession", () => {
       appendCustomEntry: sessionManagerAppendCustomEntryMock,
     });
     createAgentSessionServicesMock.mockResolvedValue({
-      modelRegistry: {
-        getAll: () => [{ id: "claude-haiku-4-5" }],
-      },
+      modelRuntime: createModelRuntime([createModel("anthropic", "claude-haiku-4-5")]),
     });
     createAgentSessionFromServicesMock.mockResolvedValue({
       session: { kind: "session" },
@@ -43,6 +65,11 @@ describe("createChildAgentSession", () => {
   });
 
   it("creates a persisted child session in the shared session store with parent metadata", async () => {
+    const resolvedModel = createModel("anthropic", "claude-haiku-4-5");
+    createAgentSessionServicesMock.mockResolvedValue({
+      modelRuntime: createModelRuntime([resolvedModel]),
+    });
+
     const result = await createChildAgentSession({
       cwd: "/tmp/project",
       agentId: "agent-1",
@@ -52,7 +79,7 @@ describe("createChildAgentSession", () => {
         name: "Explore",
         description: "Search the codebase",
         systemPrompt: "Explore prompt",
-        model: "claude-haiku-4-5",
+        model: "anthropic/claude-haiku-4-5",
         thinking: "low",
         tools: ["read", "grep"],
         source: "builtin",
@@ -90,15 +117,15 @@ describe("createChildAgentSession", () => {
       }),
     );
     expect(createAgentSessionFromServicesMock).toHaveBeenCalledWith({
-      services: expect.objectContaining({ modelRegistry: expect.any(Object) }),
+      services: expect.objectContaining({ modelRuntime: expect.any(Object) }),
       sessionManager: expect.objectContaining({ kind: "session-manager" }),
-      model: { id: "claude-haiku-4-5" },
+      model: resolvedModel,
       thinkingLevel: "low",
       tools: ["read", "grep"],
     });
     expect(result).toEqual({
       session: { kind: "session" },
-      services: expect.objectContaining({ modelRegistry: expect.any(Object) }),
+      services: expect.objectContaining({ modelRuntime: expect.any(Object) }),
       sessionId: "child-session-1",
       sessionPath: "/tmp/shared-sessions/child-session-1.jsonl",
     });
@@ -121,7 +148,7 @@ describe("createChildAgentSession", () => {
     });
 
     expect(createAgentSessionFromServicesMock).toHaveBeenCalledWith({
-      services: expect.objectContaining({ modelRegistry: expect.any(Object) }),
+      services: expect.any(Object),
       sessionManager: expect.objectContaining({ kind: "session-manager" }),
       model: undefined,
       thinkingLevel: "low",
@@ -129,11 +156,92 @@ describe("createChildAgentSession", () => {
     });
   });
 
+  it("resolves unqualified model ids via modelRuntime.getModels", async () => {
+    const resolvedModel = createModel("anthropic", "claude-haiku-4-5");
+    createAgentSessionServicesMock.mockResolvedValue({
+      modelRuntime: createModelRuntime([resolvedModel]),
+    });
+
+    await createChildAgentSession({
+      cwd: "/tmp/project",
+      agentId: "agent-1",
+      agentName: "Explore",
+      mode: "foreground",
+      agentDefinition: {
+        name: "Explore",
+        description: "Search the codebase",
+        systemPrompt: "Explore prompt",
+        model: "claude-haiku-4-5",
+        source: "builtin",
+      },
+    });
+
+    expect(createAgentSessionFromServicesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: resolvedModel,
+      }),
+    );
+  });
+
+  it("falls back to legacy modelRegistry for provider-qualified model resolution", async () => {
+    const resolvedModel = createModel("anthropic", "claude-haiku-4-5");
+    createAgentSessionServicesMock.mockResolvedValue({
+      modelRegistry: createLegacyModelRegistry([resolvedModel]),
+    });
+
+    await createChildAgentSession({
+      cwd: "/tmp/project",
+      agentId: "agent-1",
+      agentName: "Explore",
+      mode: "foreground",
+      agentDefinition: {
+        name: "Explore",
+        description: "Search the codebase",
+        systemPrompt: "Explore prompt",
+        model: "anthropic/claude-haiku-4-5",
+        source: "builtin",
+      },
+    });
+
+    expect(createAgentSessionFromServicesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: resolvedModel,
+      }),
+    );
+  });
+
+  it("prefers modelRuntime when both model APIs are present", async () => {
+    const runtimeModel = createModel("anthropic", "claude-haiku-4-5", "runtime");
+    const legacyModel = createModel("anthropic", "claude-haiku-4-5", "legacy");
+    createAgentSessionServicesMock.mockResolvedValue({
+      modelRuntime: createModelRuntime([runtimeModel]),
+      modelRegistry: createLegacyModelRegistry([legacyModel]),
+    });
+
+    await createChildAgentSession({
+      cwd: "/tmp/project",
+      agentId: "agent-1",
+      agentName: "Explore",
+      mode: "foreground",
+      agentDefinition: {
+        name: "Explore",
+        description: "Search the codebase",
+        systemPrompt: "Explore prompt",
+        model: "anthropic/claude-haiku-4-5",
+        source: "builtin",
+      },
+    });
+
+    expect(createAgentSessionFromServicesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: runtimeModel,
+      }),
+    );
+  });
+
   it("throws when the configured model cannot be resolved", async () => {
     createAgentSessionServicesMock.mockResolvedValue({
-      modelRegistry: {
-        getAll: () => [],
-      },
+      modelRuntime: createModelRuntime([]),
     });
 
     await expect(
@@ -155,9 +263,10 @@ describe("createChildAgentSession", () => {
 
   it("throws when an unqualified model id matches multiple providers", async () => {
     createAgentSessionServicesMock.mockResolvedValue({
-      modelRegistry: {
-        getAll: () => [{ id: "claude-sonnet" }, { id: "claude-sonnet" }],
-      },
+      modelRuntime: createModelRuntime([
+        createModel("anthropic", "claude-sonnet"),
+        createModel("openai", "claude-sonnet"),
+      ]),
     });
 
     await expect(
@@ -175,5 +284,27 @@ describe("createChildAgentSession", () => {
         },
       }),
     ).rejects.toThrow("Ambiguous model without provider prefix: claude-sonnet");
+  });
+
+  it("throws an actionable error when no compatible model API is available", async () => {
+    createAgentSessionServicesMock.mockResolvedValue({});
+
+    await expect(
+      createChildAgentSession({
+        cwd: "/tmp/project",
+        agentId: "agent-1",
+        agentName: "Explore",
+        mode: "foreground",
+        agentDefinition: {
+          name: "Explore",
+          description: "Search the codebase",
+          systemPrompt: "Explore prompt",
+          model: "anthropic/claude-haiku-4-5",
+          source: "builtin",
+        },
+      }),
+    ).rejects.toThrow(
+      "Unsupported AgentSessionServices model API: expected services.modelRuntime.getModel/getModels or services.modelRegistry.find/getAll",
+    );
   });
 });
