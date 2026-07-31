@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ExternalAppId } from "../../shared/contracts/externalApps";
-import { launchPath, openExternalUrl } from "./externalAppLauncher";
+import { launchPath, listDetectedExternalAppIds, openExternalUrl } from "./externalAppLauncher";
 
 const mocks = vi.hoisted(() => ({
   runCommandForExitCode: vi.fn(),
@@ -80,6 +80,52 @@ describe("launchPath", () => {
         isDirectory: true,
       }),
     ).rejects.toThrow("failed");
+  });
+
+  it("detects installed macOS external apps without opening them", async () => {
+    resetMocks();
+    setPlatform("darwin");
+    mocks.runCommandForExitCode.mockImplementation(async (command: string[]) => {
+      if (command[0] !== "open" || command[1] !== "-Ra") {
+        return 1;
+      }
+
+      return command[2] === "Cursor" || command[2] === "WebStorm" ? 0 : 1;
+    });
+
+    await expect(listDetectedExternalAppIds()).resolves.toEqual(["cursor", "jetbrains-webstorm"]);
+    expect(mocks.runCommandForExitCode).toHaveBeenCalledWith(["open", "-Ra", "Cursor"]);
+    expect(mocks.runCommandForExitCode).toHaveBeenCalledWith(["open", "-Ra", "WebStorm"]);
+  });
+
+  it("skips ambiguous Linux detections for apps that share one launcher command", async () => {
+    resetMocks();
+    setPlatform("linux");
+    mocks.runCommandForExitCode.mockImplementation(async (command: string[]) => {
+      if (command[0] !== "which") {
+        return 1;
+      }
+
+      return command[1] === "idea" ? 0 : 1;
+    });
+
+    await expect(listDetectedExternalAppIds()).resolves.toEqual([]);
+    expect(mocks.runCommandForExitCode).not.toHaveBeenCalledWith(["which", "idea"]);
+  });
+
+  it("does not detect macOS-only apps on Linux", async () => {
+    resetMocks();
+    setPlatform("linux");
+    mocks.runCommandForExitCode.mockImplementation(async (command: string[]) => {
+      if (command[0] !== "which") {
+        return 1;
+      }
+
+      return command[1] === "xed" ? 0 : 1;
+    });
+
+    await expect(listDetectedExternalAppIds()).resolves.toEqual([]);
+    expect(mocks.runCommandForExitCode).not.toHaveBeenCalledWith(["which", "xed"]);
   });
 
   it("launches a macOS external app with open -a", async () => {

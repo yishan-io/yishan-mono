@@ -1,6 +1,6 @@
 import { resolveDestinationDirectoryPath } from "@renderer/components/FileTree/treeUtils";
 import type { FileTreeContextMenuRequest } from "@renderer/components/FileTree/types";
-import type { ExternalAppId } from "@shared/contracts/externalApps";
+import type { ExternalAppId, ExternalAppMenuEntry } from "@shared/contracts/externalApps";
 import type { TFunction } from "i18next";
 import { useMemo } from "react";
 import { buildWorkspaceFileTreeContextMenuItems } from "../buildWorkspaceFileTreeContextMenuItems";
@@ -18,6 +18,7 @@ type UseFileTreeContextMenuItemsInput = {
   closeContextMenu: () => void;
   canOpenInExternalApp: boolean;
   lastUsedWorkspaceExternalAppPreset: ExternalAppPresetLike | null;
+  externalAppMenuEntries: readonly ExternalAppMenuEntry[];
   canPasteEntries: boolean;
   handlers: {
     onCreateFile?: (path: string) => Promise<void>;
@@ -45,6 +46,7 @@ export function useFileTreeContextMenuItems({
   closeContextMenu,
   canOpenInExternalApp,
   lastUsedWorkspaceExternalAppPreset,
+  externalAppMenuEntries,
   canPasteEntries,
   handlers,
 }: UseFileTreeContextMenuItemsInput) {
@@ -52,7 +54,9 @@ export function useFileTreeContextMenuItems({
     contextMenu?.targetPath ?? "",
     Boolean(contextMenu?.targetIsDirectory),
   );
-  const showOpenInExternalAppMenuItem = Boolean(canOpenInExternalApp && contextMenu?.targetPath);
+  const showOpenInExternalAppMenuItem = Boolean(
+    canOpenInExternalApp && contextMenu?.targetPath && externalAppMenuEntries.length > 0,
+  );
   const showOpenInLastUsedExternalAppMenuItem = Boolean(
     showOpenInExternalAppMenuItem && lastUsedWorkspaceExternalAppPreset,
   );
@@ -97,6 +101,7 @@ export function useFileTreeContextMenuItems({
         canOpenInFileManager: Boolean(handlers.onOpenInFileManager),
         showOpenInExternalAppMenuItem,
         showOpenInLastUsedExternalAppMenuItem,
+        externalAppMenuEntries,
         contextBasePath: contextMenu?.basePath ?? "",
         contextTargetPath: contextMenu?.targetPath ?? "",
         contextPasteDestination,
@@ -197,6 +202,7 @@ export function useFileTreeContextMenuItems({
       closeContextMenu,
       contextMenu,
       contextPasteDestination,
+      externalAppMenuEntries,
       handlers,
       isMultiSelect,
       lastUsedWorkspaceExternalAppPreset,

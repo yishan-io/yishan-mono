@@ -3,9 +3,8 @@ import type { TFunction } from "i18next";
 import type { Dispatch, SetStateAction } from "react";
 import { LuSettings, LuTrash2 } from "react-icons/lu";
 import {
-  EXTERNAL_APP_MENU_ENTRIES,
   type ExternalAppId,
-  JETBRAINS_EXTERNAL_APP_IDS,
+  type ExternalAppMenuEntry,
   findExternalAppPreset,
 } from "../../../../shared/contracts/externalApps";
 import type { WorkspacePullRequestSummary } from "../../../api/types";
@@ -48,6 +47,7 @@ type ProjectListMenusProps = {
   workspaces: WorkspaceItem[];
   displayWorkspaceIdByProjectId: Record<string, string>;
   canOpenWorkspaceInExternalApp: boolean;
+  externalAppMenuEntries: readonly ExternalAppMenuEntry[];
   lastUsedWorkspaceExternalAppPreset: { id: ExternalAppId; label: string; iconSrc: string } | null;
   openWorkspaceInLastUsedExternalAppActionLabel: string;
   openWorkspaceInFileManagerActionLabel: string;
@@ -102,6 +102,7 @@ export function ProjectListMenus({
   workspaces,
   displayWorkspaceIdByProjectId,
   canOpenWorkspaceInExternalApp,
+  externalAppMenuEntries,
   lastUsedWorkspaceExternalAppPreset,
   openWorkspaceInLastUsedExternalAppActionLabel,
   openWorkspaceInFileManagerActionLabel,
@@ -175,7 +176,7 @@ export function ProjectListMenus({
     },
   ];
 
-  const workspaceExternalAppItems: ContextMenuEntry[] = EXTERNAL_APP_MENU_ENTRIES.reduce<ContextMenuEntry[]>(
+  const workspaceExternalAppItems: ContextMenuEntry[] = externalAppMenuEntries.reduce<ContextMenuEntry[]>(
     (items, entry) => {
       if (entry.kind === "app") {
         const appPreset = findExternalAppPreset(entry.appId);
@@ -194,25 +195,22 @@ export function ProjectListMenus({
         return items;
       }
 
-      const jetBrainsItems: ContextMenuEntry[] = JETBRAINS_EXTERNAL_APP_IDS.reduce<ContextMenuEntry[]>(
-        (childItems, appId) => {
-          const appPreset = findExternalAppPreset(appId);
-          if (!appPreset) {
-            return childItems;
-          }
-
-          childItems.push({
-            id: appPreset.id,
-            label: appPreset.label,
-            icon: <Box component="img" src={appPreset.iconSrc} alt="" sx={{ width: 16, height: 16 }} />,
-            onSelect: () => {
-              void handleOpenWorkspaceInExternalApp(appPreset.id);
-            },
-          });
+      const jetBrainsItems: ContextMenuEntry[] = entry.appIds.reduce<ContextMenuEntry[]>((childItems, appId) => {
+        const appPreset = findExternalAppPreset(appId);
+        if (!appPreset) {
           return childItems;
-        },
-        [],
-      );
+        }
+
+        childItems.push({
+          id: appPreset.id,
+          label: appPreset.label,
+          icon: <Box component="img" src={appPreset.iconSrc} alt="" sx={{ width: 16, height: 16 }} />,
+          onSelect: () => {
+            void handleOpenWorkspaceInExternalApp(appPreset.id);
+          },
+        });
+        return childItems;
+      }, []);
 
       items.push({
         id: `group-${entry.id}`,
@@ -237,6 +235,8 @@ export function ProjectListMenus({
         displayWorkspaceIdByProjectId[workspaceContextTarget.repoId] === workspaceContextTarget.id),
   );
 
+  const hasWorkspaceExternalAppItems = workspaceExternalAppItems.length > 0;
+
   const workspaceContextMenuItems: ContextMenuEntry[] = [
     {
       id: "workspace-open-in-file-manager",
@@ -245,7 +245,7 @@ export function ProjectListMenus({
         void handleOpenWorkspaceInFileManager();
       },
     },
-    ...(canOpenWorkspaceInExternalApp && lastUsedWorkspaceExternalAppPreset
+    ...(canOpenWorkspaceInExternalApp && hasWorkspaceExternalAppItems && lastUsedWorkspaceExternalAppPreset
       ? [
           {
             id: "workspace-open-last-used-external-app",
@@ -264,7 +264,7 @@ export function ProjectListMenus({
           },
         ]
       : []),
-    ...(canOpenWorkspaceInExternalApp
+    ...(canOpenWorkspaceInExternalApp && hasWorkspaceExternalAppItems
       ? [
           {
             id: "workspace-open-external-app-submenu",

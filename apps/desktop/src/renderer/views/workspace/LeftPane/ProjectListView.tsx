@@ -3,12 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuSettings, LuTrash2 } from "react-icons/lu";
 import {
-  EXTERNAL_APP_MENU_ENTRIES,
   type ExternalAppId,
-  JETBRAINS_EXTERNAL_APP_IDS,
   SYSTEM_FILE_MANAGER_APP_ID,
   findExternalAppPreset,
+  getExternalAppMenuEntries,
   isExternalAppPlatformSupported,
+  isExternalAppPresetReliablyDetectableOnPlatform,
+  isExternalAppPresetSupportedOnPlatform,
 } from "../../../../shared/contracts/externalApps";
 import {
   OPEN_CREATE_WORKSPACE_DIALOG_EVENT,
@@ -22,6 +23,7 @@ import type { WorkspaceTreeRow } from "../../../components/WorkspaceTree/types";
 import { getRendererPlatform } from "../../../helpers/platform";
 import { useCommands } from "../../../hooks/useCommands";
 import { useContextMenuState } from "../../../hooks/useContextMenuState";
+import { useDetectedExternalAppIds } from "../../../hooks/useDetectedExternalAppIds";
 import { useSuppressNativeContextMenuWhileOpen } from "../../../hooks/useSuppressNativeContextMenuWhileOpen";
 import { getShortcutDisplayLabelById } from "../../../shortcuts/shortcutDisplay";
 import { chatStore } from "../../../store/chatStore";
@@ -148,6 +150,7 @@ export function ProjectListView() {
   const [isAppFocused, setIsAppFocused] = useState(() => document.hasFocus());
   const rendererPlatform = getRendererPlatform();
   const canOpenWorkspaceInExternalApp = isExternalAppPlatformSupported(rendererPlatform);
+  const detectedExternalAppIds = useDetectedExternalAppIds();
   const openWorkspaceInFileManagerActionLabel =
     rendererPlatform === "win32" ? t("workspace.actions.openInExplorer") : t("workspace.actions.openInFinder");
   const createWorkspaceShortcutLabel = getShortcutDisplayLabelById("create-workspace", rendererPlatform);
@@ -160,8 +163,35 @@ export function ProjectListView() {
   const lastUsedWorkspaceExternalAppPreset = lastUsedExternalAppId
     ? findExternalAppPreset(lastUsedExternalAppId)
     : null;
-  const openWorkspaceInLastUsedExternalAppActionLabel = lastUsedWorkspaceExternalAppPreset
-    ? t("workspace.actions.openInExternalAppQuick", { app: lastUsedWorkspaceExternalAppPreset.label })
+  const externalAppMenuEntries = useMemo(
+    () =>
+      detectedExternalAppIds === undefined ? [] : getExternalAppMenuEntries(rendererPlatform, detectedExternalAppIds),
+    [detectedExternalAppIds, rendererPlatform],
+  );
+  const filteredLastUsedWorkspaceExternalAppPreset = useMemo(() => {
+    if (!lastUsedWorkspaceExternalAppPreset) {
+      return null;
+    }
+
+    if (!isExternalAppPresetSupportedOnPlatform(lastUsedWorkspaceExternalAppPreset.id, rendererPlatform)) {
+      return null;
+    }
+
+    if (detectedExternalAppIds === undefined) {
+      return null;
+    }
+
+    if (detectedExternalAppIds === null) {
+      return lastUsedWorkspaceExternalAppPreset;
+    }
+
+    return detectedExternalAppIds.includes(lastUsedWorkspaceExternalAppPreset.id) ||
+      !isExternalAppPresetReliablyDetectableOnPlatform(lastUsedWorkspaceExternalAppPreset.id, rendererPlatform)
+      ? lastUsedWorkspaceExternalAppPreset
+      : null;
+  }, [detectedExternalAppIds, lastUsedWorkspaceExternalAppPreset, rendererPlatform]);
+  const openWorkspaceInLastUsedExternalAppActionLabel = filteredLastUsedWorkspaceExternalAppPreset
+    ? t("workspace.actions.openInExternalAppQuick", { app: filteredLastUsedWorkspaceExternalAppPreset.label })
     : "";
 
   useEffect(() => {
@@ -390,7 +420,8 @@ export function ProjectListView() {
         workspaces={workspaces}
         displayWorkspaceIdByProjectId={displayWorkspaceIdByProjectId}
         canOpenWorkspaceInExternalApp={canOpenWorkspaceInExternalApp}
-        lastUsedWorkspaceExternalAppPreset={lastUsedWorkspaceExternalAppPreset}
+        externalAppMenuEntries={externalAppMenuEntries}
+        lastUsedWorkspaceExternalAppPreset={filteredLastUsedWorkspaceExternalAppPreset}
         openWorkspaceInLastUsedExternalAppActionLabel={openWorkspaceInLastUsedExternalAppActionLabel}
         openWorkspaceInFileManagerActionLabel={openWorkspaceInFileManagerActionLabel}
         closeAllContextMenus={closeAllContextMenus}

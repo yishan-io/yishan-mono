@@ -10,7 +10,7 @@ import {
 import { basename, join, resolve } from "node:path";
 import { clipboard, ipcMain } from "electron";
 import { getErrorMessage } from "../../shared/helpers/errorHelpers";
-import { launchPath, openExternalUrl } from "../integrations/externalAppLauncher";
+import { launchPath, listDetectedExternalAppIds, openExternalUrl } from "../integrations/externalAppLauncher";
 import { readExternalClipboardSourcePathsFromSystem } from "../integrations/externalClipboardPipeline";
 import { HOST_IPC_CHANNELS } from "../ipc";
 
@@ -43,6 +43,10 @@ export function registerFileIpcHandlers() {
     }
 
     return { ok: true };
+  });
+
+  ipcMain.handle(HOST_IPC_CHANNELS.listDetectedExternalAppIds, async () => {
+    return await listDetectedExternalAppIds();
   });
 
   ipcMain.handle(HOST_IPC_CHANNELS.openExternalUrl, async (_event, input) => {

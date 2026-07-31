@@ -3,7 +3,10 @@ import {
   EXTERNAL_APP_MENU_ENTRIES,
   JETBRAINS_EXTERNAL_APP_IDS,
   findExternalAppPreset,
+  getExternalAppDetectionKeys,
+  getExternalAppMenuEntries,
   isExternalAppPlatformSupported,
+  isExternalAppPresetSupportedOnPlatform,
   normalizeExternalAppPlatform,
 } from "./externalApps";
 
@@ -34,6 +37,48 @@ describe("workspace external app menu entries", () => {
     expect(jetBrainsGroupEntry?.kind).toBe("group");
     expect(jetBrainsGroupEntry?.id).toBe("jetbrains");
     expect(jetBrainsGroupEntry?.appIds).toEqual(JETBRAINS_EXTERNAL_APP_IDS);
+  });
+});
+
+describe("isExternalAppPresetSupportedOnPlatform", () => {
+  it("does not expose Xcode on Linux", () => {
+    expect(isExternalAppPresetSupportedOnPlatform("xcode", "linux")).toBe(false);
+    expect(isExternalAppPresetSupportedOnPlatform("xcode", "darwin")).toBe(true);
+  });
+});
+
+describe("getExternalAppDetectionKeys", () => {
+  it("treats shared Linux launcher commands as inconclusive", () => {
+    expect(getExternalAppDetectionKeys("jetbrains-intellij-idea", "linux")).toEqual([]);
+    expect(getExternalAppDetectionKeys("jetbrains-pycharm", "linux")).toEqual([]);
+    expect(getExternalAppDetectionKeys("jetbrains-webstorm", "linux")).toEqual(["webstorm"]);
+  });
+});
+
+describe("getExternalAppMenuEntries", () => {
+  it("flattens detected JetBrains apps into top-level entries when filtering by allowed app ids", () => {
+    expect(getExternalAppMenuEntries("darwin", ["cursor", "jetbrains-webstorm"])).toEqual([
+      { kind: "app", appId: "cursor" },
+      { kind: "app", appId: "jetbrains-webstorm" },
+    ]);
+  });
+
+  it("keeps Linux inconclusive apps visible alongside detected apps", () => {
+    expect(getExternalAppMenuEntries("linux", ["cursor"])).toEqual([
+      { kind: "app", appId: "cursor" },
+      { kind: "app", appId: "jetbrains-intellij-idea" },
+      { kind: "app", appId: "jetbrains-intellij-idea-ce" },
+      { kind: "app", appId: "jetbrains-pycharm" },
+      { kind: "app", appId: "jetbrains-pycharm-ce" },
+    ]);
+  });
+
+  it("returns no reliable macOS app entries when detection succeeds with no matches", () => {
+    expect(getExternalAppMenuEntries("darwin", [])).toEqual([]);
+  });
+
+  it("falls back to the platform-scoped full menu when detection is unavailable", () => {
+    expect(getExternalAppMenuEntries("darwin", null)).toEqual(EXTERNAL_APP_MENU_ENTRIES);
   });
 });
 

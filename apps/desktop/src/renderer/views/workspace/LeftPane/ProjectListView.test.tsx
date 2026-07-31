@@ -16,6 +16,7 @@ const mocked = vi.hoisted(() => {
   const setSelectedWorkspaceId = vi.fn();
   const setLastUsedExternalAppId = vi.fn();
   const openEntryInExternalApp = vi.fn();
+  const listDetectedExternalAppIds = vi.fn();
   let rendererPlatform = "darwin";
 
   const stateRef: {
@@ -123,6 +124,7 @@ const mocked = vi.hoisted(() => {
     setSelectedWorkspaceId,
     setLastUsedExternalAppId,
     openEntryInExternalApp,
+    listDetectedExternalAppIds,
     markWorkspaceNotificationsRead,
     setWorkspaceCurrentBranch: vi.fn((workspaceId: string, branch: string) => {
       stateRef.current.currentBranchByWorkspaceId = {
@@ -200,12 +202,14 @@ vi.mock("../../../hooks/useCommands", () => ({
     closeWorkspace: mocked.closeWorkspace,
     deleteProject: mocked.deleteProject,
     openEntryInExternalApp: mocked.openEntryInExternalApp,
+    listDetectedExternalAppIds: mocked.listDetectedExternalAppIds,
     setLastUsedExternalAppId: mocked.setLastUsedExternalAppId,
   }),
 }));
 
 vi.mock("../../../commands/fileCommands", () => ({
   openEntryInExternalApp: (...args: unknown[]) => mocked.openEntryInExternalApp(...args),
+  listDetectedExternalAppIds: (...args: unknown[]) => mocked.listDetectedExternalAppIds(...args),
 }));
 
 vi.mock("../../../commands/gitCommands", () => ({
@@ -232,16 +236,35 @@ function renderProjectListView() {
   );
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return { promise, resolve, reject };
+}
+
 function renderRepoList(
   foldedRepoIds: string[] = [],
   lastUsedExternalAppId?: string,
   selectedWorkspaceId = "workspace-1",
+  detectedExternalAppIds: string[] | Error | Promise<string[]> = new Error("unavailable"),
 ) {
   mocked.renameWorkspace.mockResolvedValue(undefined);
   mocked.renameWorkspaceBranch.mockResolvedValue(undefined);
   mocked.closeWorkspace.mockResolvedValue(undefined);
   mocked.deleteProject.mockResolvedValue(undefined);
   mocked.openEntryInExternalApp.mockResolvedValue({ ok: true });
+  if (detectedExternalAppIds instanceof Error) {
+    mocked.listDetectedExternalAppIds.mockRejectedValue(detectedExternalAppIds);
+  } else if (detectedExternalAppIds instanceof Promise) {
+    mocked.listDetectedExternalAppIds.mockReturnValue(detectedExternalAppIds);
+  } else {
+    mocked.listDetectedExternalAppIds.mockResolvedValue(detectedExternalAppIds);
+  }
   mocked.stateRef.current = {
     projects: [
       {
@@ -535,8 +558,71 @@ describe("ProjectListView", () => {
     expect(screen.getByTestId("rename-workspace-dialog")).toBeTruthy();
   });
 
-  it("opens workspace root in one external app from hover-expanded workspace context submenu", () => {
-    renderRepoList();
+  it("shows detected external apps directly in workspace context submenu when host detection succeeds", async () => {
+    renderRepoList([], undefined, "workspace-1", ["cursor", "jetbrains-webstorm"]);
+
+    await waitFor(() => {
+      expect(mocked.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
+
+    fireEvent.contextMenu(screen.getByTestId("workspace-row-workspace-1"));
+    const openWorkspaceInMenuItem = screen.getByRole("menuitem", { name: "workspace.actions.openInExternalApp" });
+    fireEvent.mouseEnter(openWorkspaceInMenuItem);
+
+    expect(await screen.findByRole("menuitem", { name: "Cursor" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "WebStorm" })).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByRole("menuitem", { name: "JetBrains" })).toBeNull();
+      expect(screen.queryByRole("menuitem", { name: "Zed" })).toBeNull();
+    });
+  });
+
+  it("hides the workspace external-app submenu while app detection is still loading", async () => {
+    const deferredDetectedAppIds = createDeferred<string[]>();
+    renderRepoList([], undefined, "workspace-1", deferredDetectedAppIds.promise);
+
+    await waitFor(() => {
+      expect(mocked.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
+
+    fireEvent.contextMenu(screen.getByTestId("workspace-row-workspace-1"));
+    expect(screen.queryByRole("menuitem", { name: "workspace.actions.openInExternalApp" })).toBeNull();
+  });
+
+  it("hides the workspace external-app submenu when detection succeeds with no matches", async () => {
+    renderRepoList([], undefined, "workspace-1", []);
+
+    await waitFor(() => {
+      expect(mocked.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
+
+    fireEvent.contextMenu(screen.getByTestId("workspace-row-workspace-1"));
+    await waitFor(() => {
+      expect(screen.queryByRole("menuitem", { name: "workspace.actions.openInExternalApp" })).toBeNull();
+    });
+  });
+
+  it("falls back to the full workspace context submenu when detection fails", async () => {
+    renderRepoList([], undefined, "workspace-1", new Error("boom"));
+
+    await waitFor(() => {
+      expect(mocked.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
+
+    fireEvent.contextMenu(screen.getByTestId("workspace-row-workspace-1"));
+    const openWorkspaceInMenuItem = screen.getByRole("menuitem", { name: "workspace.actions.openInExternalApp" });
+    fireEvent.mouseEnter(openWorkspaceInMenuItem);
+
+    expect(await screen.findByRole("menuitem", { name: "Cursor" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "JetBrains" })).toBeTruthy();
+  });
+
+  it("opens workspace root in one external app from hover-expanded workspace context submenu", async () => {
+    renderRepoList([], undefined, "workspace-1", ["cursor"]);
+
+    await waitFor(() => {
+      expect(mocked.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
 
     fireEvent.contextMenu(screen.getByTestId("workspace-row-workspace-1"));
     const openWorkspaceInMenuItem = screen.getByRole("menuitem", { name: "workspace.actions.openInExternalApp" });
@@ -562,8 +648,12 @@ describe("ProjectListView", () => {
     });
   });
 
-  it("does not show one quick external-app action when no app was used previously", () => {
-    renderRepoList();
+  it("does not show one quick external-app action when no app was used previously", async () => {
+    renderRepoList([], undefined, "workspace-1", ["cursor"]);
+
+    await waitFor(() => {
+      expect(mocked.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
 
     fireEvent.contextMenu(screen.getByTestId("workspace-row-workspace-1"));
 
@@ -571,8 +661,12 @@ describe("ProjectListView", () => {
     expect(screen.getByRole("menuitem", { name: "workspace.actions.openInExternalApp" })).toBeTruthy();
   });
 
-  it("shows one first-level quick open action for the last used external app", () => {
-    renderRepoList([], "cursor");
+  it("shows one first-level quick open action for the last used external app", async () => {
+    renderRepoList([], "cursor", "workspace-1", ["cursor"]);
+
+    await waitFor(() => {
+      expect(mocked.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
 
     fireEvent.contextMenu(screen.getByTestId("workspace-row-workspace-1"));
     const quickOpenMenuItem = screen.getByRole("menuitem", { name: "workspace.actions.openInExternalAppQuick:Cursor" });
@@ -580,7 +674,7 @@ describe("ProjectListView", () => {
     expect(quickOpenMenuItemIcon?.getAttribute("src")).toBe("app-icons/cursor.svg");
     fireEvent.click(quickOpenMenuItem);
 
-    return waitFor(() => {
+    await waitFor(() => {
       expect(mocked.openEntryInExternalApp).toHaveBeenCalledWith({
         workspaceWorktreePath: "/tmp/worktrees/workspace-1",
         appId: "cursor",
@@ -589,15 +683,16 @@ describe("ProjectListView", () => {
     });
   });
 
-  it("opens workspace root in one JetBrains IDE from third-level submenu", () => {
-    renderRepoList();
+  it("opens workspace root in one JetBrains IDE from third-level submenu", async () => {
+    renderRepoList([], undefined, "workspace-1", ["jetbrains-webstorm"]);
+
+    await waitFor(() => {
+      expect(mocked.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
 
     fireEvent.contextMenu(screen.getByTestId("workspace-row-workspace-1"));
     const openWorkspaceInMenuItem = screen.getByRole("menuitem", { name: "workspace.actions.openInExternalApp" });
     fireEvent.mouseEnter(openWorkspaceInMenuItem);
-    const jetBrainsMenuItem = screen.getByRole("menuitem", { name: "JetBrains" });
-    fireEvent.mouseEnter(jetBrainsMenuItem);
-    expect(jetBrainsMenuItem.className).toContain("Mui-selected");
     fireEvent.click(screen.getByRole("menuitem", { name: "WebStorm" }));
 
     expect(mocked.openEntryInExternalApp).toHaveBeenCalledWith({
@@ -607,7 +702,11 @@ describe("ProjectListView", () => {
   });
 
   it("resets workspace submenu state when reopening workspace context menu", async () => {
-    renderRepoList();
+    renderRepoList([], undefined, "workspace-1", ["cursor"]);
+
+    await waitFor(() => {
+      expect(mocked.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
 
     fireEvent.contextMenu(screen.getByTestId("workspace-row-workspace-1"));
     const openWorkspaceInMenuItem = screen.getByRole("menuitem", { name: "workspace.actions.openInExternalApp" });

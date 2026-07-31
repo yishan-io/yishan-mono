@@ -31,6 +31,7 @@ import {
   createFile as createFileCommand,
   createFolder as createFolderCommand,
   deleteEntry as deleteEntryCommand,
+  listDetectedExternalAppIds as listDetectedExternalAppIdsCommand,
   listFiles as listFilesCommand,
   openEntryInExternalApp as openEntryInExternalAppCommand,
   readExternalClipboardSourcePaths as readExternalClipboardSourcePathsCommand,
@@ -202,6 +203,7 @@ export type Commands = {
   renameEntry: typeof renameEntryCommand;
   deleteEntry: typeof deleteEntryCommand;
   openEntryInExternalApp: typeof openEntryInExternalAppCommand;
+  listDetectedExternalAppIds: typeof listDetectedExternalAppIdsCommand;
   readExternalClipboardSourcePaths: typeof readExternalClipboardSourcePathsCommand;
   readDiff: typeof readDiffCommand;
   readCommitDiff: typeof readCommitDiffCommand;
@@ -344,6 +346,7 @@ export function useCommands(): Commands {
       renameEntry: renameEntryCommand,
       deleteEntry: deleteEntryCommand,
       openEntryInExternalApp: openEntryInExternalAppCommand,
+      listDetectedExternalAppIds: listDetectedExternalAppIdsCommand,
       readExternalClipboardSourcePaths: readExternalClipboardSourcePathsCommand,
       readDiff: readDiffCommand,
       readCommitDiff: readCommitDiffCommand,

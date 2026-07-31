@@ -1,4 +1,4 @@
-import type { WorkspaceEntryAppId } from "../shared/contracts/externalApps";
+import type { ExternalAppId, WorkspaceEntryAppId } from "../shared/contracts/externalApps";
 import type { ExternalClipboardReadOutcome } from "../shared/contracts/rpcRequestTypes";
 import type { NotificationSoundId } from "../shared/notifications/notificationPreferences";
 import type { NotificationDispatchResult, NotificationSoundPreviewResult } from "./notifications/types";
@@ -157,6 +157,7 @@ export type DesktopHostBridge = {
   toggleMainWindowMaximized: () => Promise<{ ok: true }>;
   getMainWindowFullscreenState: () => Promise<MainWindowFullscreenState>;
   openEntryInExternalApp: (input: OpenEntryInExternalAppInput) => Promise<{ ok: true }>;
+  listDetectedExternalAppIds: () => Promise<ExternalAppId[]>;
   openExternalUrl: (input: OpenExternalUrlInput) => Promise<OpenExternalUrlResult>;
   readExternalClipboardSourcePaths: () => Promise<ExternalClipboardReadOutcome>;
   resolveRealPath: (path: string) => Promise<ResolveRealPathResult>;
@@ -204,6 +205,7 @@ export const HOST_IPC_CHANNELS = {
   toggleMainWindowMaximized: "desktop:host/toggle-main-window-maximized",
   getMainWindowFullscreenState: "desktop:host/get-main-window-fullscreen-state",
   openEntryInExternalApp: "desktop:host/open-entry-in-external-app",
+  listDetectedExternalAppIds: "desktop:host/list-detected-external-app-ids",
   openExternalUrl: "desktop:host/open-external-url",
   readExternalClipboardSourcePaths: "desktop:host/read-external-clipboard-source-paths",
   resolveRealPath: "desktop:host/resolve-real-path",

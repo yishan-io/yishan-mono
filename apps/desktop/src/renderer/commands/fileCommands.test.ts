@@ -5,6 +5,7 @@ import {
   createFile,
   createFolder,
   deleteEntry,
+  listDetectedExternalAppIds,
   listFiles,
   listFilesBatch,
   openEntryInExternalApp,
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   createFile: vi.fn(),
   createFolder: vi.fn(),
   deleteEntry: vi.fn(),
+  listDetectedExternalAppIds: vi.fn(),
   listFiles: vi.fn(),
   listFilesBatch: vi.fn(),
   openEntryInExternalApp: vi.fn(),
@@ -44,6 +46,7 @@ vi.mock("../rpc/rpcTransport", () => ({
   })),
   getDesktopHostBridge: vi.fn(() => ({
     openEntryInExternalApp: mocks.openEntryInExternalApp,
+    listDetectedExternalAppIds: mocks.listDetectedExternalAppIds,
     readExternalClipboardSourcePaths: mocks.readExternalClipboardSourcePaths,
   })),
 }));
@@ -67,6 +70,7 @@ describe("fileCommands", () => {
       relativePath: "src",
     });
     await openEntryInExternalApp({ workspaceWorktreePath: "/tmp/repo", appId: "cursor" });
+    await listDetectedExternalAppIds();
     await readExternalClipboardSourcePaths();
 
     expect(mocks.listFiles).toHaveBeenCalledWith({
@@ -105,6 +109,7 @@ describe("fileCommands", () => {
       workspaceWorktreePath: "/tmp/repo",
       appId: "cursor",
     });
+    expect(mocks.listDetectedExternalAppIds).toHaveBeenCalledTimes(1);
     expect(mocks.readExternalClipboardSourcePaths).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,4 +1,4 @@
-import type { WorkspaceEntryAppId } from "../../shared/contracts/externalApps";
+import type { ExternalAppId, WorkspaceEntryAppId } from "../../shared/contracts/externalApps";
 import type { ExternalClipboardReadOutcome } from "../../shared/contracts/rpcRequestTypes";
 import { getDaemonClient, getDesktopHostBridge } from "../rpc/rpcTransport";
 
@@ -123,6 +123,11 @@ export async function openEntryInExternalApp(params: {
     appId: params.appId,
     relativePath: params.relativePath,
   });
+}
+
+/** Lists detected external-app ids available on the current host OS. */
+export async function listDetectedExternalAppIds(): Promise<ExternalAppId[]> {
+  return await getDesktopHostBridge().listDetectedExternalAppIds();
 }
 
 /** Reads absolute source paths from native clipboard APIs. */

@@ -6,11 +6,18 @@ import type { FileTreeContextMenuRequest } from "@renderer/components/FileTree/t
 import { getRendererPlatform } from "@renderer/helpers/platform";
 import { useCommands } from "@renderer/hooks/useCommands";
 import { useContextMenuState } from "@renderer/hooks/useContextMenuState";
+import { useDetectedExternalAppIds } from "@renderer/hooks/useDetectedExternalAppIds";
 import { useSuppressNativeContextMenuWhileOpen } from "@renderer/hooks/useSuppressNativeContextMenuWhileOpen";
 import { tabStore } from "@renderer/store/tabStore";
 import { workspaceStore } from "@renderer/store/workspaceStore";
 import { workspaceUiStore } from "@renderer/store/workspaceUiStore";
-import { findExternalAppPreset, isExternalAppPlatformSupported } from "@shared/contracts/externalApps";
+import {
+  findExternalAppPreset,
+  getExternalAppMenuEntries,
+  isExternalAppPlatformSupported,
+  isExternalAppPresetReliablyDetectableOnPlatform,
+  isExternalAppPresetSupportedOnPlatform,
+} from "@shared/contracts/externalApps";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useFileDeletionConfirmation } from "../useFileDeletionConfirmation";
@@ -44,14 +51,41 @@ export function FileManagerView(_props: FileManagerViewProps) {
     return state.gitRefreshVersionByWorktreePath?.[selectedWorkspaceWorktreePath] ?? 0;
   });
   const [fileManagerLastUsed, setFileManagerLastUsed] = useState(false);
+  const detectedExternalAppIds = useDetectedExternalAppIds();
 
   const lastUsedWorkspaceExternalAppPreset = lastUsedExternalAppId
     ? findExternalAppPreset(lastUsedExternalAppId)
     : null;
+  const externalAppMenuEntries = useMemo(
+    () =>
+      detectedExternalAppIds === undefined ? [] : getExternalAppMenuEntries(rendererPlatform, detectedExternalAppIds),
+    [detectedExternalAppIds, rendererPlatform],
+  );
+  const filteredLastUsedWorkspaceExternalAppPreset = useMemo(() => {
+    if (!lastUsedWorkspaceExternalAppPreset) {
+      return null;
+    }
 
+    if (!isExternalAppPresetSupportedOnPlatform(lastUsedWorkspaceExternalAppPreset.id, rendererPlatform)) {
+      return null;
+    }
+
+    if (detectedExternalAppIds === undefined) {
+      return null;
+    }
+
+    if (detectedExternalAppIds === null) {
+      return lastUsedWorkspaceExternalAppPreset;
+    }
+
+    return detectedExternalAppIds.includes(lastUsedWorkspaceExternalAppPreset.id) ||
+      !isExternalAppPresetReliablyDetectableOnPlatform(lastUsedWorkspaceExternalAppPreset.id, rendererPlatform)
+      ? lastUsedWorkspaceExternalAppPreset
+      : null;
+  }, [detectedExternalAppIds, lastUsedWorkspaceExternalAppPreset, rendererPlatform]);
   const toolbarAppPreset = fileManagerLastUsed
     ? { id: "system-file-manager", label: "Finder", iconSrc: "app-icons/finder.png" }
-    : lastUsedWorkspaceExternalAppPreset;
+    : filteredLastUsedWorkspaceExternalAppPreset;
 
   const { createEntryRequest, requestCreateFile, requestCreateFolder } = useFileTreeCreateEntryRequest();
   const {
@@ -188,7 +222,8 @@ export function FileManagerView(_props: FileManagerViewProps) {
     contextMenu,
     closeContextMenu,
     canOpenInExternalApp,
-    lastUsedWorkspaceExternalAppPreset,
+    lastUsedWorkspaceExternalAppPreset: filteredLastUsedWorkspaceExternalAppPreset,
+    externalAppMenuEntries,
     canPasteEntries: ops.canPasteEntries,
     handlers: {
       onCreateFile: ops.onCreateFile,
@@ -254,6 +289,7 @@ export function FileManagerView(_props: FileManagerViewProps) {
         canOpenInExternalApp={canOpenInExternalApp}
         lastUsedWorkspaceExternalAppPreset={toolbarAppPreset}
         openInAppLabel={t("files.actions.openInExternalApp")}
+        externalAppMenuEntries={externalAppMenuEntries}
         openInFileManagerLabel={
           rendererPlatform === "win32" ? t("files.actions.openInExplorer") : t("files.actions.openInFinder")
         }

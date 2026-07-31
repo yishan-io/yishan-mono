@@ -99,7 +99,7 @@ export const EXTERNAL_APP_PRESETS: readonly ExternalAppPreset[] = [
     label: "Xcode",
     iconSrc: resolveAppIconPath("xcode.svg"),
     darwinAppNames: ["Xcode"],
-    linuxCommands: ["xed"],
+    linuxCommands: [],
   },
   {
     id: "vscode",
@@ -234,6 +234,17 @@ export const EXTERNAL_APP_MENU_ENTRIES: readonly ExternalAppMenuEntry[] = [
   },
 ];
 
+const LINUX_EXTERNAL_APP_PRESET_COUNT_BY_COMMAND = EXTERNAL_APP_PRESETS.reduce<Map<string, number>>(
+  (countByCommand, preset) => {
+    for (const commandName of preset.linuxCommands) {
+      countByCommand.set(commandName, (countByCommand.get(commandName) ?? 0) + 1);
+    }
+
+    return countByCommand;
+  },
+  new Map<string, number>(),
+);
+
 /** Normalizes one browser or Node platform value to one stable platform id used by open-in-app logic. */
 export function normalizeExternalAppPlatform(platform: string): ExternalAppPlatform {
   const normalizedPlatform = platform.trim().toLowerCase();
@@ -266,4 +277,90 @@ export function isExternalAppPlatformSupported(platform: string): boolean {
 /** Returns one external-app preset by id, or null when the id is unsupported. */
 export function findExternalAppPreset(appId: string): ExternalAppPreset | null {
   return EXTERNAL_APP_PRESETS.find((preset) => preset.id === appId) ?? null;
+}
+
+/** Returns true when one external app preset supports launch on one platform. */
+export function isExternalAppPresetSupportedOnPlatform(appId: string, platform: string): boolean {
+  const appPreset = findExternalAppPreset(appId);
+  if (!appPreset) {
+    return false;
+  }
+
+  const normalizedPlatform = normalizeExternalAppPlatform(platform);
+  if (normalizedPlatform === "darwin") {
+    return appPreset.darwinAppNames.length > 0;
+  }
+
+  if (normalizedPlatform === "linux") {
+    return appPreset.linuxCommands.length > 0;
+  }
+
+  return false;
+}
+
+/** Returns reliable platform-specific detection keys for one external app preset. */
+export function getExternalAppDetectionKeys(appId: string, platform: string): string[] {
+  const appPreset = findExternalAppPreset(appId);
+  if (!appPreset) {
+    return [];
+  }
+
+  const normalizedPlatform = normalizeExternalAppPlatform(platform);
+  if (normalizedPlatform === "darwin") {
+    return [...appPreset.darwinAppNames];
+  }
+
+  if (normalizedPlatform === "linux") {
+    return appPreset.linuxCommands.filter(
+      (commandName) => (LINUX_EXTERNAL_APP_PRESET_COUNT_BY_COMMAND.get(commandName) ?? 0) === 1,
+    );
+  }
+
+  return [];
+}
+
+/** Returns true when one external app preset can be detected reliably on one platform. */
+export function isExternalAppPresetReliablyDetectableOnPlatform(appId: string, platform: string): boolean {
+  return getExternalAppDetectionKeys(appId, platform).length > 0;
+}
+
+/** Returns external-app menu entries scoped to one platform and optional detected app ids. */
+export function getExternalAppMenuEntries(
+  platform: string,
+  allowedAppIds?: readonly ExternalAppId[] | null,
+): ExternalAppMenuEntry[] {
+  const platformScopedMenuEntries = EXTERNAL_APP_MENU_ENTRIES.flatMap<ExternalAppMenuEntry>((entry) => {
+    if (entry.kind === "app") {
+      return isExternalAppPresetSupportedOnPlatform(entry.appId, platform) ? [entry] : [];
+    }
+
+    const supportedAppIds = entry.appIds.filter((appId) => isExternalAppPresetSupportedOnPlatform(appId, platform));
+    if (supportedAppIds.length === 0) {
+      return [];
+    }
+
+    return [{ ...entry, appIds: supportedAppIds }];
+  });
+
+  if (allowedAppIds == null) {
+    return platformScopedMenuEntries;
+  }
+
+  const visibleAppIdSet = new Set(allowedAppIds);
+  for (const appPreset of EXTERNAL_APP_PRESETS) {
+    if (
+      isExternalAppPresetSupportedOnPlatform(appPreset.id, platform) &&
+      !isExternalAppPresetReliablyDetectableOnPlatform(appPreset.id, platform)
+    ) {
+      visibleAppIdSet.add(appPreset.id);
+    }
+  }
+
+  return platformScopedMenuEntries.flatMap<ExternalAppMenuEntry>((entry) => {
+    if (entry.kind === "app") {
+      return visibleAppIdSet.has(entry.appId) ? [entry] : [];
+    }
+
+    return entry.appIds.filter((appId) => visibleAppIdSet.has(appId)).map((appId) => ({ kind: "app" as const, appId }));
+  });
 }
