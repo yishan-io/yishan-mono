@@ -14,6 +14,9 @@ const createFolder = vi.fn();
 const renameEntry = vi.fn();
 const deleteEntry = vi.fn();
 const openEntryInExternalApp = vi.fn();
+const listDetectedExternalAppIds = vi.fn(async () => {
+  throw new Error("unavailable");
+});
 const readExternalClipboardSourcePaths = vi.fn();
 const copyFiles = vi.fn();
 const writeFileBase64 = vi.fn();
@@ -77,6 +80,7 @@ vi.mock("../../../commands/fileCommands", () => ({
   renameEntry: (...args: unknown[]) => renameEntry(...args),
   deleteEntry: (...args: unknown[]) => deleteEntry(...args),
   openEntryInExternalApp: (...args: unknown[]) => openEntryInExternalApp(...args),
+  listDetectedExternalAppIds: () => listDetectedExternalAppIds(),
   readExternalClipboardSourcePaths: (...args: unknown[]) => readExternalClipboardSourcePaths(...args),
   copyFiles: (...args: unknown[]) => copyFiles(...args),
   writeFileBase64: (...args: unknown[]) => writeFileBase64(...args),

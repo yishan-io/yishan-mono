@@ -9,6 +9,7 @@ const bridge: DesktopBridge = {
     toggleMainWindowMaximized: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.toggleMainWindowMaximized),
     getMainWindowFullscreenState: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.getMainWindowFullscreenState),
     openEntryInExternalApp: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.openEntryInExternalApp, input),
+    listDetectedExternalAppIds: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.listDetectedExternalAppIds),
     openExternalUrl: (input) => ipcRenderer.invoke(HOST_IPC_CHANNELS.openExternalUrl, input),
     readExternalClipboardSourcePaths: () => ipcRenderer.invoke(HOST_IPC_CHANNELS.readExternalClipboardSourcePaths),
     resolveRealPath: (path: string) => ipcRenderer.invoke(HOST_IPC_CHANNELS.resolveRealPath, path),

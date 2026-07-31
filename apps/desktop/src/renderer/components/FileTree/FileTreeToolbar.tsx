@@ -4,6 +4,7 @@ import { LuChevronDown, LuFilePlus2, LuFolderPlus, LuRefreshCw } from "react-ico
 import {
   EXTERNAL_APP_MENU_ENTRIES,
   type ExternalAppId,
+  type ExternalAppMenuEntry,
   findExternalAppPreset,
 } from "../../../shared/contracts/externalApps";
 import { ContextMenu } from "../ContextMenu";
@@ -25,6 +26,8 @@ type FileTreeToolbarProps = {
   lastUsedWorkspaceExternalAppPreset?: { id: string; label: string; iconSrc: string } | null;
   /** Tooltip for the open-in-app selector button. */
   openInAppLabel?: string;
+  /** Available external-app menu entries after host detection/filtering. */
+  externalAppMenuEntries?: readonly ExternalAppMenuEntry[];
   /** Label for the "Show in Finder/Explorer" dropdown item. */
   openInFileManagerLabel?: string;
   onOpenInExternalApp?: (appId: ExternalAppId) => void;
@@ -45,6 +48,7 @@ export function FileTreeToolbar({
   canOpenInExternalApp = false,
   lastUsedWorkspaceExternalAppPreset,
   openInAppLabel,
+  externalAppMenuEntries = EXTERNAL_APP_MENU_ENTRIES,
   openInFileManagerLabel,
   onOpenInExternalApp,
   onOpenInFileManager,
@@ -65,6 +69,7 @@ export function FileTreeToolbar({
   );
 
   const dropdownMenuItems = buildOpenInAppMenuItems(handleSelectApp, {
+    externalAppMenuEntries,
     openInFileManagerLabel,
     onOpenInFileManager,
   });
@@ -78,12 +83,7 @@ export function FileTreeToolbar({
       sx={{ width: 20, height: 20, flexShrink: 0 }}
     />
   ) : (
-    <Box
-      component="img"
-      src="app-icons/finder.png"
-      alt="Finder"
-      sx={{ width: 20, height: 20, flexShrink: 0 }}
-    />
+    <Box component="img" src="app-icons/finder.png" alt="Finder" sx={{ width: 20, height: 20, flexShrink: 0 }} />
   );
 
   const handleDirectOpen = useCallback(() => {
@@ -197,6 +197,7 @@ export function FileTreeToolbar({
 function buildOpenInAppMenuItems(
   onSelect: (appId: ExternalAppId) => void,
   opts?: {
+    externalAppMenuEntries?: readonly ExternalAppMenuEntry[];
     openInFileManagerLabel?: string;
     onOpenInFileManager?: () => void;
   },
@@ -215,7 +216,7 @@ function buildOpenInAppMenuItems(
     });
   }
 
-  for (const entry of EXTERNAL_APP_MENU_ENTRIES) {
+  for (const entry of opts?.externalAppMenuEntries ?? EXTERNAL_APP_MENU_ENTRIES) {
     if (entry.kind === "app") {
       const preset = findExternalAppPreset(entry.appId);
       if (!preset) {

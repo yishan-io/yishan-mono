@@ -80,6 +80,7 @@ const mocks = vi.hoisted(() => {
   const renameEntry = vi.fn();
   const deleteEntry = vi.fn();
   const openEntryInExternalApp = vi.fn();
+  const listDetectedExternalAppIds = vi.fn();
   const readExternalClipboardSourcePaths = vi.fn();
   const copyFiles = vi.fn();
   const writeFileBase64 = vi.fn();
@@ -135,6 +136,7 @@ const mocks = vi.hoisted(() => {
     renameEntry,
     deleteEntry,
     openEntryInExternalApp,
+    listDetectedExternalAppIds,
     readExternalClipboardSourcePaths,
     copyFiles,
     writeFileBase64,
@@ -161,6 +163,7 @@ vi.mock("@renderer/commands/fileCommands", () => ({
   renameEntry: (input: unknown) => mocks.renameEntry(input),
   deleteEntry: (input: unknown) => mocks.deleteEntry(input),
   openEntryInExternalApp: (input: unknown) => mocks.openEntryInExternalApp(input),
+  listDetectedExternalAppIds: () => mocks.listDetectedExternalAppIds(),
   readExternalClipboardSourcePaths: () => mocks.readExternalClipboardSourcePaths(),
   copyFiles: (input: unknown) => mocks.copyFiles(input),
   writeFileBase64: (input: unknown) => mocks.writeFileBase64(input),
@@ -1973,6 +1976,7 @@ describe("FileManagerView external clipboard paste", () => {
 describe("FileManagerView open in system file manager", () => {
   beforeEach(() => {
     mocks.subscribeWorkspaceGitChanged.mockImplementation(() => () => {});
+    mocks.listDetectedExternalAppIds.mockRejectedValue(new Error("unavailable"));
     mocks.readExternalClipboardSourcePaths.mockResolvedValue({
       kind: "empty",
       sourcePaths: [],
@@ -2012,6 +2016,127 @@ describe("FileManagerView open in system file manager", () => {
         workspaceWorktreePath: "/tmp/repo",
         appId: "system-file-manager",
         relativePath: "src/a.ts",
+      });
+    });
+  });
+
+  it("shows detected external apps directly in file context menu when host detection succeeds", async () => {
+    mocks.listDetectedExternalAppIds.mockResolvedValue(["cursor", "jetbrains-webstorm"]);
+    render(<FileManagerView />);
+
+    await waitFor(() => {
+      expect(mocks.listFiles).toHaveBeenCalled();
+      expect(mocks.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
+
+    getFileTreeProps().onItemContextMenu?.({
+      mouseX: 30,
+      mouseY: 20,
+      basePath: "src",
+      targetPath: "src/a.ts",
+      targetIsDirectory: false,
+      startCreateFile: () => {},
+      startCreateFolder: () => {},
+    });
+    const openInMenuItem = await screen.findByRole("menuitem", {
+      name: "Open in...",
+    });
+    fireEvent.mouseEnter(openInMenuItem);
+
+    expect(await screen.findByRole("menuitem", { name: "Cursor" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "WebStorm" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "JetBrains" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Zed" })).toBeNull();
+  });
+
+  it("hides the file external-app submenu while app detection is still loading", async () => {
+    const deferredDetectedAppIds = createDeferred<string[]>();
+    mocks.listDetectedExternalAppIds.mockReturnValue(deferredDetectedAppIds.promise);
+    render(<FileManagerView />);
+
+    await waitFor(() => {
+      expect(mocks.listFiles).toHaveBeenCalled();
+      expect(mocks.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
+
+    getFileTreeProps().onItemContextMenu?.({
+      mouseX: 30,
+      mouseY: 20,
+      basePath: "src",
+      targetPath: "src/a.ts",
+      targetIsDirectory: false,
+      startCreateFile: () => {},
+      startCreateFolder: () => {},
+    });
+
+    expect(screen.queryByRole("menuitem", { name: "Open in..." })).toBeNull();
+  });
+
+  it("hides the file external-app submenu when detection succeeds with no matches", async () => {
+    mocks.listDetectedExternalAppIds.mockResolvedValue([]);
+    render(<FileManagerView />);
+
+    await waitFor(() => {
+      expect(mocks.listFiles).toHaveBeenCalled();
+      expect(mocks.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
+
+    getFileTreeProps().onItemContextMenu?.({
+      mouseX: 30,
+      mouseY: 20,
+      basePath: "src",
+      targetPath: "src/a.ts",
+      targetIsDirectory: false,
+      startCreateFile: () => {},
+      startCreateFolder: () => {},
+    });
+
+    expect(screen.queryByRole("menuitem", { name: "Open in..." })).toBeNull();
+  });
+
+  it("falls back to the full file context menu when detection fails", async () => {
+    mocks.listDetectedExternalAppIds.mockRejectedValue(new Error("boom"));
+    render(<FileManagerView />);
+
+    await waitFor(() => {
+      expect(mocks.listFiles).toHaveBeenCalled();
+      expect(mocks.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
+
+    getFileTreeProps().onItemContextMenu?.({
+      mouseX: 30,
+      mouseY: 20,
+      basePath: "src",
+      targetPath: "src/a.ts",
+      targetIsDirectory: false,
+      startCreateFile: () => {},
+      startCreateFolder: () => {},
+    });
+    const openInMenuItem = await screen.findByRole("menuitem", {
+      name: "Open in...",
+    });
+    fireEvent.mouseEnter(openInMenuItem);
+
+    expect(await screen.findByRole("menuitem", { name: "Cursor" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "JetBrains" })).toBeTruthy();
+  });
+
+  it("keeps the toolbar primary action on the file manager when no external app was used yet", async () => {
+    mocks.listDetectedExternalAppIds.mockResolvedValue(["cursor"]);
+    render(<FileManagerView />);
+
+    await waitFor(() => {
+      expect(mocks.listFiles).toHaveBeenCalled();
+      expect(mocks.listDetectedExternalAppIds).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Open in Finder" }));
+
+    await waitFor(() => {
+      expect(mocks.openEntryInExternalApp).toHaveBeenCalledWith({
+        workspaceWorktreePath: "/tmp/repo",
+        appId: "system-file-manager",
+        relativePath: "",
       });
     });
   });

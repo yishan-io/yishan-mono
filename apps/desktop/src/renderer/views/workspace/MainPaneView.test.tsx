@@ -122,6 +122,7 @@ vi.mock("../../commands/appCommands", () => ({
 }));
 
 vi.mock("../../commands/fileCommands", () => ({
+  listDetectedExternalAppIds: vi.fn(async () => []),
   writeFile: vi.fn(),
 }));
 

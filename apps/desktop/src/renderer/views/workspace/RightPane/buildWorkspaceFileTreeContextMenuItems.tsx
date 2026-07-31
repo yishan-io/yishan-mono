@@ -1,9 +1,8 @@
 import { Box } from "@mui/material";
 import {
-  EXTERNAL_APP_MENU_ENTRIES,
   type ExternalAppId,
+  type ExternalAppMenuEntry,
   type ExternalAppPreset,
-  JETBRAINS_EXTERNAL_APP_IDS,
   findExternalAppPreset,
 } from "../../../../shared/contracts/externalApps";
 import type { ContextMenuEntry } from "../../../components/ContextMenu";
@@ -39,6 +38,7 @@ type BuildWorkspaceFileTreeContextMenuItemsInput = {
   canOpenInFileManager: boolean;
   showOpenInExternalAppMenuItem: boolean;
   showOpenInLastUsedExternalAppMenuItem: boolean;
+  externalAppMenuEntries: readonly ExternalAppMenuEntry[];
   contextBasePath: string;
   contextTargetPath: string;
   contextPasteDestination: string;
@@ -74,6 +74,7 @@ export function buildWorkspaceFileTreeContextMenuItems({
   canOpenInFileManager,
   showOpenInExternalAppMenuItem,
   showOpenInLastUsedExternalAppMenuItem,
+  externalAppMenuEntries,
   contextBasePath,
   contextTargetPath,
   contextPasteDestination,
@@ -144,7 +145,7 @@ export function buildWorkspaceFileTreeContextMenuItems({
     [],
   );
 
-  const externalAppSubmenuItems: ContextMenuEntry[] = EXTERNAL_APP_MENU_ENTRIES.reduce<ContextMenuEntry[]>(
+  const externalAppSubmenuItems: ContextMenuEntry[] = externalAppMenuEntries.reduce<ContextMenuEntry[]>(
     (items, entry) => {
       if (entry.kind === "app") {
         const appPreset = findExternalAppPreset(entry.appId);
@@ -163,26 +164,23 @@ export function buildWorkspaceFileTreeContextMenuItems({
         return items;
       }
 
-      const jetBrainsItems: ContextMenuEntry[] = JETBRAINS_EXTERNAL_APP_IDS.reduce<ContextMenuEntry[]>(
-        (childItems, appId) => {
-          const appPreset = findExternalAppPreset(appId);
-          if (!appPreset) {
-            return childItems;
-          }
-
-          childItems.push({
-            id: appPreset.id,
-            label: appPreset.label,
-            icon: <Box component="img" src={appPreset.iconSrc} alt="" sx={{ width: 16, height: 16 }} />,
-            onSelect: () => {
-              void handlers.openInExternalApp(appPreset.id);
-            },
-          });
-
+      const jetBrainsItems: ContextMenuEntry[] = entry.appIds.reduce<ContextMenuEntry[]>((childItems, appId) => {
+        const appPreset = findExternalAppPreset(appId);
+        if (!appPreset) {
           return childItems;
-        },
-        [],
-      );
+        }
+
+        childItems.push({
+          id: appPreset.id,
+          label: appPreset.label,
+          icon: <Box component="img" src={appPreset.iconSrc} alt="" sx={{ width: 16, height: 16 }} />,
+          onSelect: () => {
+            void handlers.openInExternalApp(appPreset.id);
+          },
+        });
+
+        return childItems;
+      }, []);
 
       items.push({
         id: `group-${entry.id}`,
