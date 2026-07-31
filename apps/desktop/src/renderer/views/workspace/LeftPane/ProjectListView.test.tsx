@@ -903,6 +903,68 @@ describe("ProjectListView", () => {
     vi.useRealTimers();
   });
 
+  it("revalidates a stale cached branch when hovering a primary workspace", async () => {
+    vi.useFakeTimers();
+    vi.mocked(inspectGitRepository).mockResolvedValueOnce({ isGitRepository: true, currentBranch: "feature/new" });
+    mocked.stateRef.current = {
+      ...mocked.stateRef.current,
+      projects: [
+        {
+          id: "repo-1",
+          name: "Repo 1",
+          path: "/tmp/worktrees/workspace-1",
+          missing: false,
+          worktreePath: "/tmp/worktrees/workspace-1",
+          icon: "folder",
+          color: "#111111",
+        },
+      ],
+      workspaces: [
+        {
+          id: "workspace-1",
+          repoId: "repo-1",
+          name: "Workspace 1",
+          title: "Workspace 1",
+          sourceBranch: "main",
+          branch: "main",
+          summaryId: "summary-1",
+          worktreePath: "/tmp/worktrees/workspace-1",
+        },
+      ],
+      selectedProjectId: "repo-1",
+      selectedWorkspaceId: "workspace-1",
+      displayProjectIds: ["repo-1"],
+      pullRequestByWorkspaceId: {},
+      latestPullRequestByWorkspaceId: {},
+      currentBranchByWorkspaceId: { "workspace-1": "feature/old" },
+      setWorkspaceCurrentBranch: mocked.setWorkspaceCurrentBranch,
+      gitChangeTotalsByWorkspaceId: {},
+    };
+
+    const view = renderProjectListView();
+
+    fireEvent.mouseEnter(screen.getByTestId("workspace-row-workspace-1"));
+
+    const initialInfoPopper = screen.getByTestId("workspace-info-popper");
+    expect(initialInfoPopper.textContent).toContain("workspace.info.branch: feature/old");
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ProjectListView />
+      </QueryClientProvider>,
+    );
+
+    const infoPopper = screen.getByTestId("workspace-info-popper");
+    expect(vi.mocked(inspectGitRepository)).toHaveBeenCalledWith({ workspaceId: "workspace-1" });
+    expect(infoPopper.textContent).toContain("workspace.info.branch: feature/new");
+    expect(infoPopper.textContent).not.toContain("workspace.info.sourceBranch:");
+    vi.useRealTimers();
+  });
+
   it("does not show source branch for primary workspace", async () => {
     vi.useFakeTimers();
     vi.mocked(inspectGitRepository).mockResolvedValueOnce({

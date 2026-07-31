@@ -64,14 +64,11 @@ export function useWorkspaceInfoHover({
     };
   }, [clearWorkspaceInfoCloseTimer]);
 
-  // Show cached branch immediately; fetch+cache on miss.
+  // Show cached branch immediately, then revalidate from git whenever the
+  // workspace popover opens so terminal-driven branch switches cannot leave the
+  // cache stale forever.
   useEffect(() => {
     if (!hoveredWorkspaceId) {
-      return;
-    }
-
-    const cachedBranch = workspaceStore.getState().currentBranchByWorkspaceId[hoveredWorkspaceId] ?? "";
-    if (cachedBranch) {
       return;
     }
 
@@ -80,8 +77,6 @@ export function useWorkspaceInfoHover({
       return;
     }
 
-    workspaceStore.getState().setWorkspaceCurrentBranch(hoveredWorkspaceId, "");
-
     let cancelled = false;
     inspectGitRepository({ workspaceId: hoveredWorkspaceId })
       .then((result) => {
@@ -89,10 +84,7 @@ export function useWorkspaceInfoHover({
           return;
         }
 
-        const branch = result.currentBranch ?? "";
-        if (branch) {
-          workspaceStore.getState().setWorkspaceCurrentBranch(hoveredWorkspaceId, branch);
-        }
+        workspaceStore.getState().setWorkspaceCurrentBranch(hoveredWorkspaceId, result.currentBranch ?? "");
       })
       .catch(() => {});
 
