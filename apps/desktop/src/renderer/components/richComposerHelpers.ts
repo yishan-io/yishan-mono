@@ -1,6 +1,7 @@
-import type { RichComposerSlashCommand, SlashCommandRange } from "./richComposerTypes";
+import type { ComposerTokenRange, RichComposerSlashCommand } from "./richComposerTypes";
 
 const TOKEN_REGEX = /(https?:\/\/[^\s]+|\/[a-zA-Z][\w-]*|@[\w./-]+)/g;
+const MENTION_TOKEN_REGEX = /^@[\w./-]*$/;
 
 export function escapeHtml(value: string): string {
   return value
@@ -91,7 +92,7 @@ export function setCaretOffset(root: HTMLElement, offset: number): void {
   selection.addRange(range);
 }
 
-export function findSlashCommandRange(value: string, caretOffset: number): SlashCommandRange | null {
+export function findSlashCommandRange(value: string, caretOffset: number): ComposerTokenRange | null {
   if (caretOffset <= 0 || caretOffset > value.length) {
     return null;
   }
@@ -112,6 +113,32 @@ export function findSlashCommandRange(value: string, caretOffset: number): Slash
   return {
     start: tokenStart,
     end: caretOffset,
+    query: token.slice(1).toLowerCase(),
+  };
+}
+
+/**
+ * Resolves the @ file mention token under the caret, or null when the caret is not inside one.
+ * The range end extends past the caret to cover the full token so insertion removes it entirely.
+ */
+export function findMentionRange(value: string, caretOffset: number): ComposerTokenRange | null {
+  if (caretOffset <= 0 || caretOffset > value.length) {
+    return null;
+  }
+
+  const beforeCaret = value.slice(0, caretOffset);
+  const tokenStart =
+    Math.max(beforeCaret.lastIndexOf(" "), beforeCaret.lastIndexOf("\n"), beforeCaret.lastIndexOf("\t")) + 1;
+  const token = beforeCaret.slice(tokenStart);
+
+  if (!MENTION_TOKEN_REGEX.test(token)) {
+    return null;
+  }
+
+  const tokenTail = value.slice(caretOffset).match(/^[\w./-]*/)?.[0] ?? "";
+  return {
+    start: tokenStart,
+    end: caretOffset + tokenTail.length,
     query: token.slice(1).toLowerCase(),
   };
 }

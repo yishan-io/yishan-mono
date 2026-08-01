@@ -1,6 +1,6 @@
-import { Box, Button, ClickAwayListener, Popper, Typography } from "@mui/material";
-import { useEffect, useRef } from "react";
-import { FloatingSurface } from "./FloatingSurface";
+import { Box, Button, Typography } from "@mui/material";
+import { useRef } from "react";
+import { ComposerSuggestionMenuShell } from "./ComposerSuggestionMenuShell";
 import type { RichComposerSlashCommand } from "./richComposerTypes";
 
 const SLASH_COMMAND_MENU_WIDTH_PX = 620;
@@ -26,120 +26,103 @@ export function RichComposerSlashCommandMenu({
 }: RichComposerSlashCommandMenuProps) {
   const selectedCommandRef = useRef<HTMLButtonElement | null>(null);
 
-  useEffect(() => {
-    if (!open || !selectedCommandId) {
-      return;
-    }
-
-    selectedCommandRef.current?.scrollIntoView({ block: "nearest" });
-  }, [open, selectedCommandId]);
-
   return (
-    <Popper
-      open={open}
+    <ComposerSuggestionMenuShell
       anchorEl={anchorEl}
-      placement="bottom-start"
-      sx={{ zIndex: 1300, width: `${SLASH_COMMAND_MENU_WIDTH_PX}px`, maxWidth: "calc(100vw - 32px)", mt: 0.5 }}
+      open={open}
+      widthPx={SLASH_COMMAND_MENU_WIDTH_PX}
+      maxHeightPx={SLASH_COMMAND_MENU_MAX_HEIGHT_PX}
+      selectedItemRef={selectedCommandRef}
+      selectedItemKey={selectedCommandId}
+      onClose={onClose}
     >
-      <ClickAwayListener
-        onClickAway={(event) => {
-          const clickTarget = event.target;
-          if (anchorEl && clickTarget instanceof Node && anchorEl.contains(clickTarget)) {
-            return;
+      {commands.length === 0 ? (
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            display: "block",
+            px: 1,
+            py: 0.75,
+          }}
+        >
+          No matching commands
+        </Typography>
+      ) : (
+        (["skill", "agent"] as const).map((category) => {
+          const categoryCommands = commands.filter((command) => command.category === category);
+          if (categoryCommands.length === 0) {
+            return null;
           }
-          onClose();
-        }}
-      >
-        <FloatingSurface sx={{ p: 0.5, maxHeight: SLASH_COMMAND_MENU_MAX_HEIGHT_PX, overflowY: "auto" }}>
-          {commands.length === 0 ? (
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                display: "block",
-                px: 1,
-                py: 0.75,
-              }}
-            >
-              No matching commands
-            </Typography>
-          ) : (
-            (["skill", "agent"] as const).map((category) => {
-              const categoryCommands = commands.filter((command) => command.category === category);
-              if (categoryCommands.length === 0) {
-                return null;
-              }
 
-              return (
-                <Box key={category} sx={{ py: 0.25 }}>
-                  <Typography
-                    variant="caption"
+          return (
+            <Box key={category} sx={{ py: 0.25 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                  px: 1,
+                  py: 0.5,
+                  display: "block",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                }}
+              >
+                {category === "skill" ? "Skills" : "Agents"}
+              </Typography>
+              {categoryCommands.map((command) => {
+                const isSelected = command.id === selectedCommandId;
+
+                return (
+                  <Button
+                    key={command.id}
+                    ref={isSelected ? selectedCommandRef : undefined}
+                    fullWidth
+                    size="small"
+                    aria-label={command.title}
+                    aria-selected={isSelected}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                    }}
+                    onClick={() => {
+                      onSelect(command);
+                    }}
                     sx={{
-                      color: "text.secondary",
+                      justifyContent: "flex-start",
                       px: 1,
-                      py: 0.5,
-                      display: "block",
-                      textTransform: "uppercase",
-                      letterSpacing: 0.5,
+                      py: 0.75,
+
+                      color: isSelected ? "primary.main" : "text.primary",
+                      bgcolor: isSelected ? "action.selected" : "transparent",
+                      "&:hover": {
+                        bgcolor: "action.hover",
+                      },
                     }}
                   >
-                    {category === "skill" ? "Skills" : "Agents"}
-                  </Typography>
-                  {categoryCommands.map((command) => {
-                    const isSelected = command.id === selectedCommandId;
-
-                    return (
-                      <Button
-                        key={command.id}
-                        ref={isSelected ? selectedCommandRef : undefined}
-                        fullWidth
-                        size="small"
-                        aria-label={command.title}
-                        aria-selected={isSelected}
-                        onMouseDown={(event) => {
-                          event.preventDefault();
-                        }}
-                        onClick={() => {
-                          onSelect(command);
-                        }}
+                    <Box sx={{ width: "100%", minWidth: 0, display: "flex", alignItems: "center", gap: 1.5 }}>
+                      <Typography variant="body2" sx={{ flex: "0 1 auto", minWidth: 0 }}>
+                        {command.title}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        noWrap
                         sx={{
-                          justifyContent: "flex-start",
-                          px: 1,
-                          py: 0.75,
-
-                          color: isSelected ? "primary.main" : "text.primary",
-                          bgcolor: isSelected ? "action.selected" : "transparent",
-                          "&:hover": {
-                            bgcolor: "action.hover",
-                          },
+                          color: "text.disabled",
+                          minWidth: 0,
+                          flex: 1,
+                          textAlign: "left",
                         }}
                       >
-                        <Box sx={{ width: "100%", minWidth: 0, display: "flex", alignItems: "center", gap: 1.5 }}>
-                          <Typography variant="body2" sx={{ flex: "0 1 auto", minWidth: 0 }}>
-                            {command.title}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            noWrap
-                            sx={{
-                              color: "text.disabled",
-                              minWidth: 0,
-                              flex: 1,
-                              textAlign: "left",
-                            }}
-                          >
-                            {command.description ?? ""}
-                          </Typography>
-                        </Box>
-                      </Button>
-                    );
-                  })}
-                </Box>
-              );
-            })
-          )}
-        </FloatingSurface>
-      </ClickAwayListener>
-    </Popper>
+                        {command.description ?? ""}
+                      </Typography>
+                    </Box>
+                  </Button>
+                );
+              })}
+            </Box>
+          );
+        })
+      )}
+    </ComposerSuggestionMenuShell>
   );
 }

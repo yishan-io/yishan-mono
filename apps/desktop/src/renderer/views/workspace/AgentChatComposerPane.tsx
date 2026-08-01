@@ -9,6 +9,7 @@ import {
   setAgentModel,
   setAgentThinkingLevel,
 } from "../../commands/agentChatCommands";
+import { searchFiles } from "../../commands/fileCommands";
 import { renameTab } from "../../commands/tabCommands";
 import { AgentChatVoiceButton } from "../../components/AgentChatVoiceButton";
 import { type ComposerAttachment, ComposerAttachmentBlock } from "../../components/ComposerAttachmentBlock";
@@ -35,6 +36,7 @@ import { useAgentChatSubagentActions } from "./useAgentChatSubagentActions";
 
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
 const EMPTY_MODELS: AgentModel[] = [];
+const MAX_FILE_MENTION_RESULTS = 50;
 
 type AgentChatComposerPaneProps = {
   tabId: string;
@@ -159,23 +161,37 @@ function AgentChatComposerPaneComponent({
     [agentChatTab?.data.userRenamed, attachments, hasStreamingMessage, messageCount, sessionId, slashCommands, tabId],
   );
 
-  const handleFilesDrop = useCallback((entries: DroppedFileEntry[]) => {
+  const handleAddFile = useCallback((path: string, isDirectory = false) => {
     setAttachments((prev) => {
-      const existingPaths = new Set(
-        prev.filter((a): a is Extract<ComposerAttachment, { kind: "file" }> => a.kind === "file").map((a) => a.path),
-      );
-      const newEntries = entries
-        .filter((e) => !existingPaths.has(e.path))
-        .map((e) => ({
+      if (prev.some((attachment) => attachment.kind === "file" && attachment.path === path)) {
+        return prev;
+      }
+      return [
+        ...prev,
+        {
           kind: "file" as const,
           id: generateId(),
-          path: e.path,
-          name: e.path.split(/[\\/]/).pop() ?? e.path,
-          isDirectory: e.isDirectory,
-        }));
-      return [...prev, ...newEntries];
+          path,
+          name: path.split(/[\\/]/).pop() ?? path,
+          isDirectory,
+        },
+      ];
     });
   }, []);
+
+  const handleFilesDrop = useCallback(
+    (entries: DroppedFileEntry[]) => {
+      for (const entry of entries) {
+        handleAddFile(entry.path, entry.isDirectory);
+      }
+    },
+    [handleAddFile],
+  );
+
+  const handleMentionFileSearch = useCallback(
+    (query: string) => searchFiles({ workspaceId, query, limit: MAX_FILE_MENTION_RESULTS, includeDirectories: true }),
+    [workspaceId],
+  );
 
   const handlePasteBlock = useCallback((text: string) => {
     const lineCount = text.split("\n").filter((l) => l.trim()).length;
@@ -308,6 +324,8 @@ function AgentChatComposerPaneComponent({
         allowEmptySubmit={attachments.length > 0}
         onFilesDrop={handleFilesDrop}
         onPasteBlock={handlePasteBlock}
+        fileMentionSearch={handleMentionFileSearch}
+        onMentionFile={handleAddFile}
       />
       {attachments.length > 0 && (
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, px: 0.5 }}>

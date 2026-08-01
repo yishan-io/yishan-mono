@@ -8,7 +8,7 @@ import {
   renderComposerHtml,
   setCaretOffset,
 } from "./richComposerHelpers";
-import type { RichComposerSlashCommand, SlashCommandRange } from "./richComposerTypes";
+import type { ComposerTokenRange, RichComposerSlashCommand } from "./richComposerTypes";
 
 type UseComposerSlashCommandMenuOptions = {
   disabled: boolean;
@@ -18,8 +18,8 @@ type UseComposerSlashCommandMenuOptions = {
 };
 
 type UseComposerSlashCommandMenuResult = {
-  activeSlashCommandRange: SlashCommandRange | null;
-  setActiveSlashCommandRange: (range: SlashCommandRange | null) => void;
+  activeSlashCommandRange: ComposerTokenRange | null;
+  setActiveSlashCommandRange: (range: ComposerTokenRange | null) => void;
   selectedSlashCommandIndex: number;
   setSelectedSlashCommandIndex: (updater: number | ((prev: number) => number)) => void;
   filteredSlashCommands: RichComposerSlashCommand[];
@@ -34,7 +34,7 @@ export function useComposerSlashCommandMenu({
   composerRef,
   onChange,
 }: UseComposerSlashCommandMenuOptions): UseComposerSlashCommandMenuResult {
-  const [activeSlashCommandRange, setActiveSlashCommandRange] = useState<SlashCommandRange | null>(null);
+  const [activeSlashCommandRange, setActiveSlashCommandRange] = useState<ComposerTokenRange | null>(null);
   const [selectedSlashCommandIndex, setSelectedSlashCommandIndex] = useState(0);
 
   const filteredSlashCommands = useMemo(() => {

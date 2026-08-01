@@ -80,7 +80,8 @@ export class DaemonFileClient {
     }
 
     const limit = typeof record?.limit === "number" && Number.isFinite(record.limit) ? record.limit : 100;
-    const results = await this.invoke("file.search", { workspaceId, query, limit });
+    const includeDirectories = readOptionalBoolean(record?.includeDirectories) ?? false;
+    const results = await this.invoke("file.search", { workspaceId, query, limit, includeDirectories });
     return Array.isArray(results) ? (results as Rpc.FileSearchResult[]) : [];
   }
 

@@ -21,8 +21,8 @@ func (h WorkspaceHandle) FileList(path string, recursive bool) ([]FileEntry, err
 	return h.files.List(h.workspace.Path, path, recursive)
 }
 
-func (h WorkspaceHandle) FileSearch(query string, limit int) ([]FileSearchResult, error) {
-	return h.files.Search(h.workspace.Path, query, limit)
+func (h WorkspaceHandle) FileSearch(query string, limit int, includeDirectories bool) ([]FileSearchResult, error) {
+	return h.files.Search(h.workspace.Path, query, limit, includeDirectories)
 }
 
 func (h WorkspaceHandle) FileStat(path string) (FileEntry, error) {
