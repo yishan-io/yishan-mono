@@ -3,12 +3,16 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
-	MigrationProjectsAPIExportV1CompletedKey = "migration_projects_api_export_v1_completed"
-	legacyMigrationAPICompletedKey           = "migration_api_completed"
-	legacyMigrationUsageAPICompletedKey      = "migration_usage_api_completed"
+	MigrationProjectsAPIExportV1CompletedKey     = "migration_projects_api_export_v1_completed"
+	MigrationProjectConfigBackfillV1CompletedKey = "migration_project_config_backfill_v1_completed"
+	legacyMigrationAPICompletedKey               = "migration_api_completed"
+	legacyMigrationUsageAPICompletedKey          = "migration_usage_api_completed"
 )
 
 // APIClient abstracts the remote datastore for first-launch project import.
@@ -81,16 +85,21 @@ type APIHourlyUsageRow struct {
 
 // MigrateFromAPI imports projects and workspaces from the remote API into the
 // local database. It reads orgs from the API client and stores them locally.
-// Already-stored projects and workspaces are skipped (idempotent).
+// Existing projects are backfilled from export data where legacy imports missed
+// scripts, post hooks, or command config; existing workspaces remain create-only.
 func MigrateFromAPI(ctx context.Context, database *sql.DB, organizations []string, client APIClient) error {
 	if !client.IsConfigured() {
 		return nil
 	}
-	alreadyMigrated, err := MetadataKeyExists(ctx, database, MigrationProjectsAPIExportV1CompletedKey)
+	workspaceMigrationCompleted, err := MetadataKeyExists(ctx, database, MigrationProjectsAPIExportV1CompletedKey)
 	if err != nil {
 		return err
 	}
-	if alreadyMigrated {
+	projectConfigBackfillCompleted, err := MetadataKeyExists(ctx, database, MigrationProjectConfigBackfillV1CompletedKey)
+	if err != nil {
+		return err
+	}
+	if workspaceMigrationCompleted && projectConfigBackfillCompleted {
 		return nil
 	}
 	if len(organizations) == 0 {
@@ -99,33 +108,62 @@ func MigrateFromAPI(ctx context.Context, database *sql.DB, organizations []strin
 	projectStore := NewProjectStore(database)
 	workspaceStore := NewWorkspaceStore(database)
 
-	anySucceeded := false
+	projectBackfillSucceeded := true
+	workspaceMigrationSucceeded := true
 	for _, orgID := range organizations {
-		projects, err := client.ExportProjects(ctx, orgID)
-		if err != nil {
-			continue // best-effort: skip failing organizations
-		}
-		for _, project := range projects {
-			localProject := apiProjectToLocal(project)
-			if err := projectStore.Create(ctx, &localProject); err != nil {
-				continue // best-effort: skip individual project failures
+		if !projectConfigBackfillCompleted {
+			projects, exportErr := client.ExportProjects(ctx, orgID)
+			if exportErr != nil {
+				projectBackfillSucceeded = false
+				log.Warn().Err(exportErr).Str("orgId", orgID).Msg("project export backfill failed for org")
+			} else {
+				for _, project := range projects {
+					localProject := apiProjectToLocal(project)
+					if err := projectStore.CreateOrBackfillImportedProject(ctx, &localProject); err != nil {
+						projectBackfillSucceeded = false
+						log.Warn().Err(err).Str("orgId", orgID).Str("projectId", project.ID).Msg("project export backfill failed for project")
+					}
+				}
 			}
 		}
-		workspaces, err := client.ExportWorkspaces(ctx, orgID)
-		if err != nil {
+		if workspaceMigrationCompleted {
+			continue
+		}
+		workspaces, exportErr := client.ExportWorkspaces(ctx, orgID)
+		if exportErr != nil {
+			workspaceMigrationSucceeded = false
+			log.Warn().Err(exportErr).Str("orgId", orgID).Msg("workspace export migration failed for org")
 			continue
 		}
 		for _, workspace := range workspaces {
+			_, getErr := workspaceStore.Get(ctx, workspace.ID)
+			if getErr == nil {
+				continue
+			}
+			if getErr != nil && !errors.Is(getErr, ErrWorkspaceNotFound) {
+				workspaceMigrationSucceeded = false
+				log.Warn().Err(getErr).Str("orgId", orgID).Str("workspaceId", workspace.ID).Msg("workspace export migration lookup failed for workspace")
+				continue
+			}
 			localWorkspace := apiWorkspaceToLocal(workspace)
-			_ = workspaceStore.Create(ctx, &localWorkspace) // best-effort per-item import
+			if err := workspaceStore.Create(ctx, &localWorkspace); err != nil {
+				workspaceMigrationSucceeded = false
+				log.Warn().Err(err).Str("orgId", orgID).Str("workspaceId", workspace.ID).Msg("workspace export migration failed for workspace")
+			}
 		}
-		anySucceeded = true
 	}
 
-	if !anySucceeded {
-		return nil // marker not set; will retry on next restart
+	if !workspaceMigrationCompleted && workspaceMigrationSucceeded {
+		if err := setMetadataKey(ctx, database, MigrationProjectsAPIExportV1CompletedKey, "true"); err != nil {
+			return err
+		}
 	}
-	return setMetadataKey(ctx, database, MigrationProjectsAPIExportV1CompletedKey, "true")
+	if !projectConfigBackfillCompleted && projectBackfillSucceeded {
+		if err := setMetadataKey(ctx, database, MigrationProjectConfigBackfillV1CompletedKey, "true"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func apiProjectToLocal(project APIProject) Project {

@@ -48,6 +48,20 @@ func (store *ProjectStore) Create(ctx context.Context, project *Project) error {
 	return nil
 }
 
+// CreateOrBackfillImportedProject writes one remotely-exported project into local storage,
+// backfilling only the legacy-missing script and command fields when the project
+// already exists locally.
+func (store *ProjectStore) CreateOrBackfillImportedProject(ctx context.Context, project *Project) error {
+	existingProject, err := store.Get(ctx, project.ID)
+	if errors.Is(err, ErrProjectNotFound) {
+		return store.Create(ctx, project)
+	}
+	if err != nil {
+		return fmt.Errorf("get imported project %q: %w", project.ID, err)
+	}
+	return store.Update(ctx, project.ID, buildImportedProjectConfigBackfillUpdate(existingProject, *project))
+}
+
 // ListByOrg returns projects in name order for organizationID.
 func (store *ProjectStore) ListByOrg(ctx context.Context, organizationID string) ([]Project, error) {
 	rows, err := store.database.QueryContext(ctx, `SELECT `+projectColumns+`
@@ -129,6 +143,23 @@ func scanProject(scanner interface{ Scan(...any) error }) (Project, error) {
 	}
 	project.ContextEnabled = contextEnabled != 0
 	return project, nil
+}
+
+func buildImportedProjectConfigBackfillUpdate(existingProject Project, importedProject Project) ProjectUpdate {
+	update := ProjectUpdate{}
+	if existingProject.SetupScript == "" && importedProject.SetupScript != "" {
+		setupScript := importedProject.SetupScript
+		update.SetupScript = &setupScript
+	}
+	if existingProject.PostScript == "" && importedProject.PostScript != "" {
+		postScript := importedProject.PostScript
+		update.PostScript = &postScript
+	}
+	if len(existingProject.Commands) == 0 && len(importedProject.Commands) > 0 {
+		commands := importedProject.Commands
+		update.Commands = &commands
+	}
+	return update
 }
 
 func buildProjectUpdate(update ProjectUpdate) (string, []any, error) {
