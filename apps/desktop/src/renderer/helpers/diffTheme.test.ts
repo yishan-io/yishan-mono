@@ -2,7 +2,14 @@ import { readFileSync } from "node:fs";
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import { describe, expect, it } from "vitest";
 import { resolveCodeTheme } from "./codeThemes";
-import { EDITOR_COLORS, getDiffCssVariables, getDiffCssVariablesForPalette, pickTokenForeground } from "./diffTheme";
+import {
+  EDITOR_COLORS,
+  buildOverriddenRules,
+  getDiffCssVariables,
+  getDiffCssVariablesForPalette,
+  pickTokenForeground,
+  resolveTokenFontStyle,
+} from "./diffTheme";
 
 describe("diff theme git status colors", () => {
   it("derives light colors from SEMANTIC_COLOR_TOKENS", () => {
@@ -67,22 +74,22 @@ describe("pickTokenForeground", () => {
   const gitDiff = SEMANTIC_COLOR_TOKENS.dark.gitDiff;
 
   const cases: [string, string[], string][] = [
-    ["entity.name.function", ["entity.name.function"], palette.function],
+    ["entity.name.function", ["entity.name.function"], palette.variable],
     ["keyword.operator.arithmetic.js", ["keyword.operator.arithmetic.js"], palette.operator],
     ["constant.numeric", ["constant.numeric"], palette.number],
     ["entity.other.attribute-name", ["entity.other.attribute-name"], palette.attribute],
-    ["storage.type.ts", ["storage.type.ts"], palette.type],
+    ["storage.type.ts", ["storage.type.ts"], palette.keyword],
     ["identifier", ["identifier"], palette.foreground],
     ["markup.deleted.diff", ["markup.deleted.diff"], gitDiff.deleted],
     ["punctuation.definition.string.begin", ["punctuation.definition.string.begin"], palette.string],
     ["comment.block", ["comment.block"], palette.comment],
-    ["support.function.console", ["support.function.console"], palette.function],
-    ["variable.other.constant", ["variable.other.constant"], palette.constant],
+    ["support.function.console", ["support.function.console"], palette.variable],
+    ["variable.other.constant", ["variable.other.constant"], palette.variable],
     ["markup.heading.markdown", ["markup.heading.markdown"], palette.keyword],
     ["entity.name.section.markdown", ["entity.name.section.markdown"], palette.keyword],
     ["markup.inserted.diff", ["markup.inserted.diff"], gitDiff.added],
     ["markup.changed.diff", ["markup.changed.diff"], gitDiff.modified],
-    ["punctuation.definition.bold.markdown", ["punctuation.definition.bold.markdown"], palette.delimiter],
+    ["punctuation.definition.bold.markdown", ["punctuation.definition.bold.markdown"], palette.foreground],
     ["keyword.operator.assignment.ts", ["keyword.operator.assignment.ts"], palette.operator],
     ["storage", ["storage"], palette.keyword],
     ["variable.parameter.function.js", ["variable.parameter.function.js"], palette.variable],
@@ -90,9 +97,70 @@ describe("pickTokenForeground", () => {
     ["markup.underline.link.markdown", ["markup.underline.link.markdown"], palette.string],
     ["storage.modifier.ts", ["storage.modifier.ts"], palette.keyword],
     ["source.java", ["source.java"], palette.foreground],
+    // yaml keys converge on Monaco's Monarch "type" token
+    ["entity.name.tag.yaml", ["entity.name.tag.yaml"], palette.type],
+    // booleans / null / undefined converge on Monaco's Monarch keywords
+    ["constant.language.boolean.yaml", ["constant.language.boolean.yaml"], palette.keyword],
+    ["constant.language.null.js", ["constant.language.null.js"], palette.keyword],
+    ["constant.language.undefined.ts", ["constant.language.undefined.ts"], palette.keyword],
+    ["constant.numeric.integer.yaml", ["constant.numeric.integer.yaml"], palette.number],
+    ["constant.language.merge.yaml", ["constant.language.merge.yaml"], palette.keyword],
   ];
 
   it.each(cases)("%s → expected color", (_label, scopes, expected) => {
     expect(pickTokenForeground(scopes, palette, gitDiff)).toBe(expected);
+  });
+});
+
+describe("resolveTokenFontStyle", () => {
+  it.each([
+    ["markup.bold", undefined, "bold"],
+    ["markup.bold.markdown", undefined, "bold"],
+    ["punctuation.definition.bold.markdown", undefined, "bold"],
+    ["markup.italic.markdown", undefined, "italic"],
+    ["punctuation.definition.italic.markdown", undefined, "italic"],
+    ["markup.bold", "italic", "bold italic"],
+    ["comment.block", "italic", "italic"],
+    ["source.java", undefined, undefined],
+  ] as const)("%s + %s → %s", (scope, original, expected) => {
+    expect(resolveTokenFontStyle([scope], original)).toBe(expected);
+  });
+});
+
+describe("buildOverriddenRules", () => {
+  const palette = resolveCodeTheme("yishan", "dark");
+  const gitDiff = SEMANTIC_COLOR_TOKENS.dark.gitDiff;
+
+  it("splits multi-scope rules so each token family gets its own palette color", () => {
+    const rules = buildOverriddenRules(
+      [{ scope: ["constant.numeric", "constant.language.boolean"], settings: { foreground: "#1ca1c7" } }],
+      palette,
+      gitDiff,
+    );
+
+    expect(rules).toHaveLength(15); // 2 split + 12 appended extra rules
+    expect(rules[0]).toMatchObject({ scope: "constant.numeric", settings: { foreground: palette.number } });
+    expect(rules[1]).toMatchObject({ scope: "constant.language.boolean", settings: { foreground: palette.keyword } });
+    // appended extra rules cover token scopes pierre's base theme never scopes
+    const yamlKeyRule = rules.find((r) => r.scope === "entity.name.tag.yaml");
+    expect(yamlKeyRule?.settings?.foreground).toBe(palette.type);
+    const arrowRule = rules.find((r) => r.scope === "storage.type.function.arrow");
+    expect(arrowRule?.settings?.foreground).toBe(palette.delimiter);
+  });
+
+  it("pins the global (no-scope) rule to the palette foreground", () => {
+    const rules = buildOverriddenRules([{ settings: { foreground: "#000000" } }], palette, gitDiff);
+
+    expect(rules[0]?.settings?.foreground).toBe(palette.foreground);
+  });
+
+  it("keeps markdown bold fontStyle on the markup.bold rule", () => {
+    const rules = buildOverriddenRules(
+      [{ scope: "markup.bold", settings: { foreground: "#ffd452" } }],
+      palette,
+      gitDiff,
+    );
+
+    expect(rules[0]?.settings?.fontStyle).toBe("bold");
   });
 });

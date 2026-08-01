@@ -2,6 +2,7 @@ import * as monaco from "monaco-editor";
 import "monaco-editor/esm/vs/basic-languages/javascript/javascript.contribution";
 import "monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution";
 import { CODE_THEME_FAMILIES, getMonacoThemeName } from "./codeThemes";
+import { buildMonacoThemeRules } from "./monacoThemeRules";
 
 // Configure Monaco to use locally bundled workers instead of loading from CDN.
 // The `new Worker(new URL(..., import.meta.url))` pattern is a web standard that
@@ -209,23 +210,7 @@ export function ensureEditorThemes() {
       monaco.editor.defineTheme(themeName, {
         base: mode === "dark" ? "vs-dark" : "vs",
         inherit: true,
-        rules: [
-          { token: "comment", foreground: palette.comment.slice(1), fontStyle: "italic" },
-          { token: "keyword", foreground: palette.keyword.slice(1) },
-          { token: "string", foreground: palette.string.slice(1) },
-          { token: "number", foreground: palette.number.slice(1) },
-          { token: "type", foreground: palette.type.slice(1) },
-          { token: "function", foreground: palette.function.slice(1) },
-          { token: "variable", foreground: palette.variable.slice(1) },
-          { token: "constant", foreground: palette.constant.slice(1) },
-          { token: "operator", foreground: palette.operator.slice(1) },
-          { token: "delimiter", foreground: palette.delimiter.slice(1) },
-          { token: "tag", foreground: palette.tag.slice(1) },
-          { token: "attribute.name", foreground: palette.attribute.slice(1) },
-          { token: "attribute.value", foreground: palette.string.slice(1) },
-          { token: "regexp", foreground: palette.string.slice(1) },
-          { token: "", foreground: palette.foreground.slice(1) },
-        ],
+        rules: buildMonacoThemeRules(palette),
         colors: {
           "editor.background": palette.background,
           "editor.foreground": palette.foreground,

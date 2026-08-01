@@ -101,6 +101,21 @@ export function pickTokenForeground(
   // 6. constant.numeric / number / numeric (before constant)
   if (matchScope(scopes, "constant.numeric") || matchScope(scopes, "number") || matchScope(scopes, "numeric"))
     return palette.number;
+  // 6b. constant.language (booleans/null/undefined) → keyword, matching Monaco's Monarch keywords
+  if (matchScope(scopes, "constant.language")) return palette.keyword;
+  // 6c. css hex colors are strings in Monaco's Monarch css grammar
+  if (matchScope(scopes, "constant.other.color")) return palette.string;
+  // 6d. property names (css) are attribute-colored in Monaco
+  if (matchScope(scopes, "property-name")) return palette.attribute;
+  // 6e. css property values (flex, colors) are strings in Monaco's Monarch css grammar
+  if (matchScope(scopes, "support.constant")) return palette.string;
+  // 6f. declaration keywords: const/let/function/def/int/String/void are keyword in Monaco
+  if (matchScope(scopes, "storage.type.function.arrow")) return palette.delimiter;
+  if (matchScope(scopes, "storage.type")) return palette.keyword;
+  if (matchScope(scopes, "support.type")) return palette.keyword;
+  if (matchScope(scopes, "support.class")) return palette.keyword;
+  // 6g. const-bindings render in Monaco's default (identifier → foreground)
+  if (matchScope(scopes, "variable.other.constant")) return palette.variable;
   // 7. constant
   if (matchScope(scopes, "constant")) return palette.constant;
   // 8. keyword
@@ -109,22 +124,29 @@ export function pickTokenForeground(
   if (matchScope(scopes, "storage.modifier")) return palette.keyword;
   // 9b. parameters are variables (variable.parameter.*, function.parameter.*) — BEFORE function
   if (matchScope(scopes, "parameter")) return palette.variable;
-  // 10. function
-  if (matchScope(scopes, "function")) return palette.function;
+  // 9c. shell builtins are type-colored in Monaco's Monarch shell grammar
+  if (matchScope(scopes, "support.function.builtin")) return palette.type;
+  // 9d. inherited-class names (JS `extends B`) are type-colored in Monaco
+  if (matchScope(scopes, "entity.other.inherited-class")) return palette.type;
+  // 10. function names and builtins render in Monaco's default (Monarch emits identifier)
+  if (matchScope(scopes, "function")) return palette.variable;
   // 11. heading (markup.heading + entity.name.section — the real ATX heading-text scope)
   if (matchScope(scopes, "heading") || matchScope(scopes, "entity.name.section")) return palette.keyword;
-  // 12. type / class
+  // 12. type / class (entity.name.type/class, storage.type handled above)
   if (matchScope(scopes, "type") || matchScope(scopes, "class")) return palette.type;
+  // 12b. yaml keys → type, matching Monaco's Monarch yaml grammar (keys tokenize as "type")
+  if (matchScope(scopes, "entity.name.tag.yaml")) return palette.type;
   // 13. tag
   if (matchScope(scopes, "tag")) return palette.tag;
   // 14. attribute / attribute-name
   if (matchScope(scopes, "attribute") || matchScope(scopes, "attribute-name")) return palette.attribute;
-  // 15a. variable.other.constant (before plain variable)
-  if (matchScope(scopes, "variable.other.constant")) return palette.constant;
-  // 15b. variable
+  // 15. variables render in Monaco's default (identifier → foreground)
   if (matchScope(scopes, "variable")) return palette.variable;
   // 16. markup.inline.raw / markup.underline.link
   if (matchScope(scopes, "markup.inline.raw") || matchScope(scopes, "markup.underline.link")) return palette.string;
+  // 16b. markdown emphasis markers render in Monaco's default (bold/italic come from fontStyle)
+  if (matchScope(scopes, "punctuation.definition.bold") || matchScope(scopes, "punctuation.definition.italic"))
+    return palette.foreground;
   // 17. punctuation → delimiter
   if (matchScope(scopes, "punctuation")) return palette.delimiter;
   // 18. operator
@@ -140,20 +162,87 @@ type ThemeRule = {
   settings?: { foreground?: string; background?: string; fontStyle?: string };
 };
 
-function overrideFgColors(
+/**
+ * Resolves the fontStyle for a theme rule from its scope(s) and the original
+ * pierre base fontStyle. Markdown emphasis is enforced so `**bold**`/`*italic*`
+ * render with weight/style even though the pierre base themes omit bold.
+ */
+export function resolveTokenFontStyle(
+  scopes: string | string[] | undefined,
+  originalFontStyle: string | undefined,
+): string | undefined {
+  const bold = matchScope(scopes, "markup.bold") || matchScope(scopes, "punctuation.definition.bold");
+  const italic = matchScope(scopes, "markup.italic") || matchScope(scopes, "punctuation.definition.italic");
+  const parts = new Set<string>();
+  for (const part of (originalFontStyle ?? "").split(" ")) {
+    if (part) parts.add(part);
+  }
+  if (bold) parts.add("bold");
+  if (italic) parts.add("italic");
+  if (parts.size === 0) return undefined;
+  // Canonical CSS order: bold before italic, then any original extras.
+  const rank: Record<string, number> = { bold: 0, italic: 1 };
+  return [...parts].sort((a, b) => (rank[a] ?? 2) - (rank[b] ?? 2)).join(" ");
+}
+
+/**
+ * Rebuilds pierre base tokenColors so every rule maps to the palette.
+ * Multi-scope rules (e.g. ["constant.numeric", "constant.language.boolean"]) are
+ * split into one rule per scope so each token family gets its own palette color
+ * instead of the first scope's color winning for all of them.
+ */
+export function buildOverriddenRules(
   settings: ThemeRule[],
   palette: CodeThemePalette,
   gitDiff: { added: string; deleted: string; modified: string },
-) {
-  return settings.map((rule) => {
-    const fg = pickTokenForeground(rule.scope, palette, gitDiff);
-    return {
+): ThemeRule[] {
+  const overridden = settings.flatMap((rule) => {
+    const scopes = Array.isArray(rule.scope) ? rule.scope : [rule.scope];
+    if (scopes.length === 1 && scopes[0] === undefined) {
+      // Global default rule: pin to the palette foreground.
+      return [
+        {
+          ...rule,
+          settings: { ...rule.settings, foreground: palette.foreground, background: rule.settings?.background },
+        },
+      ];
+    }
+    return scopes.map((scope) => ({
       ...rule,
-      settings: rule.settings
-        ? { ...rule.settings, foreground: fg, background: rule.settings.background }
-        : { foreground: fg },
-    };
+      scope,
+      settings: {
+        ...rule.settings,
+        foreground: pickTokenForeground(scope, palette, gitDiff),
+        background: rule.settings?.background,
+        fontStyle: resolveTokenFontStyle(scope, rule.settings?.fontStyle),
+      },
+    }));
   });
+
+  // Appended scopes win TextMate's longest-prefix resolution, so these cover
+  // token families that pierre's language-agnostic base theme never scopes
+  // (the token's language suffix only exists at token level, not rule level).
+  const extraRules: ThemeRule[] = [
+    // yaml keys → type, matching Monaco's Monarch yaml grammar (keys tokenize as "type")
+    { scope: "entity.name.tag.yaml", settings: { foreground: palette.type } },
+    { scope: "meta.flow-pair.key.yaml", settings: { foreground: palette.type } },
+    { scope: "punctuation.definition.block.sequence.item.yaml", settings: { foreground: palette.variable } },
+    // css: Monarch colors values/units/selectors as strings/tags, TextMate splits them
+    { scope: "constant.numeric.css", settings: { foreground: palette.string } },
+    { scope: "keyword.other.unit.css", settings: { foreground: palette.string } },
+    { scope: "constant.other.color.rgb-value.hex.css", settings: { foreground: palette.string } },
+    { scope: "punctuation.definition.constant.css", settings: { foreground: palette.string } },
+    { scope: "keyword.other.unit", settings: { foreground: palette.string } },
+    { scope: "punctuation.separator.key-value.css", settings: { foreground: palette.attribute } },
+    { scope: "entity.other.attribute-name.class.css", settings: { foreground: palette.tag } },
+    { scope: "punctuation.definition.entity.css", settings: { foreground: palette.tag } },
+    // TS `=>` is delimiter-colored in Monaco's Monarch grammar
+    { scope: "storage.type.function.arrow", settings: { foreground: palette.delimiter } },
+    // yaml mapping colons render in Monaco's default (Monarch emits the "operators" token)
+    { scope: "punctuation.separator.key-value.mapping.yaml", settings: { foreground: palette.foreground } },
+  ];
+
+  return [...overridden, ...extraRules];
 }
 
 function buildTheme(name: string, mode: "light" | "dark", raw: unknown, p: CodeThemePalette): Record<string, unknown> {
@@ -173,7 +262,7 @@ function buildTheme(name: string, mode: "light" | "dark", raw: unknown, p: CodeT
       "gitDecoration.modifiedResourceForeground": gitDiff.modified,
     },
     settings: baseSettings
-      ? overrideFgColors(baseSettings, p, {
+      ? buildOverriddenRules(baseSettings, p, {
           added: gitDiff.added,
           deleted: gitDiff.deleted,
           modified: gitDiff.modified,
