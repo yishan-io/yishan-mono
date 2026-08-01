@@ -23,6 +23,21 @@ func MergeHourlyUsageRow(existingRow HourlyUsageRow, hasExisting bool, scannedRo
 }
 
 // HourlyRowsMatchForSync returns true when two rows carry the same observable token state.
+// MergeImportedHourlyUsageRow merges one remote-imported row into existing local state.
+func MergeImportedHourlyUsageRow(existingRow HourlyUsageRow, hasExisting bool, importedRow HourlyUsageRow) HourlyUsageRow {
+	if !hasExisting {
+		return importedRow
+	}
+	if existingRow.Dirty {
+		return existingRow
+	}
+	if existingRow.TotalTokens > importedRow.TotalTokens || HourlyRowsMatchForSync(existingRow, importedRow) {
+		return existingRow
+	}
+	importedRow.LastSyncedAt = existingRow.LastSyncedAt
+	return importedRow
+}
+
 func HourlyRowsMatchForSync(left, right HourlyUsageRow) bool {
 	return left.ProjectID == right.ProjectID &&
 		left.WorkspaceID == right.WorkspaceID &&

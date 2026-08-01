@@ -95,7 +95,7 @@ func TestMigrateFromAPI_ImportsExportedProjectsAndWorkspaces(t *testing.T) {
 	if len(workspaces) != 1 || workspaces[0].ProjectID != "project-1" {
 		t.Fatalf("expected imported workspace, got %#v", workspaces)
 	}
-	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, migrationAPICompletedKey)
+	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, MigrationProjectsAPIExportV1CompletedKey)
 	if err != nil {
 		t.Fatalf("read migration marker: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestMigrateFromAPI_DoesNotSetMarkerWhenWorkspaceExportFails(t *testing.T) {
 		t.Fatalf("MigrateFromAPI: %v", err)
 	}
 
-	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, migrationAPICompletedKey)
+	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, MigrationProjectsAPIExportV1CompletedKey)
 	if err != nil {
 		t.Fatalf("read migration marker: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestMigrateFromAPI_DoesNotSetMarkerWhenWorkspaceExportFails(t *testing.T) {
 	}
 }
 
-func TestMigrateUsageFromAPI_ImportsExportedUsageRows(t *testing.T) {
+func TestMigrateFromAPI_IgnoresLegacyCompletionMarker(t *testing.T) {
 	database, err := Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
@@ -150,52 +150,112 @@ func TestMigrateUsageFromAPI_ImportsExportedUsageRows(t *testing.T) {
 	if err := Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
+	if err := setMetadataKey(context.Background(), database, legacyMigrationAPICompletedKey, "true"); err != nil {
+		t.Fatalf("set legacy migration marker: %v", err)
+	}
 
 	client := &exportAPIClientStub{
 		configured: true,
-		usage: map[string][]APIHourlyUsageRow{
-			"org-1": {{
-				ProjectID:             "project-1",
-				WorkspaceID:           "workspace-1",
-				WorkspacePath:         "/tmp/core",
-				OrganizationID:        "org-1",
-				AgentKind:             "opencode",
-				Model:                 "gpt-5",
-				ModelNormalized:       "gpt-5",
-				BucketStartHourUTC:    "2026-07-31T10:00:00.000Z",
-				InputTokens:           10,
-				OutputTokens:          5,
-				CachedInputTokens:     2,
-				CachedWriteTokens:     1,
-				ReasoningTokens:       3,
-				TotalTokens:           21,
-				EventCount:            4,
-				SessionCount:          2,
-				TurnCount:             6,
-				ToolCallCount:         7,
-				AttributionConfidence: "exact",
-				IngestedAt:            "2026-07-31T10:30:00.000Z",
-				RunID:                 "run-1",
-			}},
+		projects: map[string][]APIProject{
+			"org-1": {{ID: "project-1", Name: "Core", OrganizationID: "org-1"}},
+		},
+		workspaces: map[string][]APIWorkspace{
+			"org-1": {{ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", Status: "closed", LocalPath: "/tmp/core"}},
 		},
 	}
 
-	if err := MigrateUsageFromAPI(context.Background(), database, []string{"org-1"}, client); err != nil {
-		t.Fatalf("MigrateUsageFromAPI: %v", err)
+	if err := MigrateFromAPI(context.Background(), database, []string{"org-1"}, client); err != nil {
+		t.Fatalf("MigrateFromAPI: %v", err)
 	}
 
-	state, err := NewHourlyUsageStore(database).GetHourlyUsageSyncState(context.Background())
+	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, MigrationProjectsAPIExportV1CompletedKey)
 	if err != nil {
-		t.Fatalf("get usage sync state: %v", err)
-	}
-	if state.TotalRows != 1 || state.DirtyRows != 0 {
-		t.Fatalf("expected one clean imported row, got %#v", state)
-	}
-	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, migrationUsageAPICompletedKey)
-	if err != nil {
-		t.Fatalf("read usage migration marker: %v", err)
+		t.Fatalf("read migration marker: %v", err)
 	}
 	if !alreadyMigrated {
-		t.Fatal("expected usage migration marker")
+		t.Fatal("expected export-based project migration marker")
+	}
+	workspaces, err := NewWorkspaceStore(database).ListByOrg(context.Background(), "org-1")
+	if err != nil {
+		t.Fatalf("list workspaces: %v", err)
+	}
+	if len(workspaces) != 1 || workspaces[0].Status != "closed" {
+		t.Fatalf("expected legacy marker to be ignored and closed workspace imported, got %#v", workspaces)
+	}
+}
+
+func TestProjectMigrationStatusComplete_AcceptsLegacyMarker(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, legacyMigrationAPICompletedKey, "true"); err != nil {
+		t.Fatalf("set legacy migration marker: %v", err)
+	}
+
+	complete, err := ProjectMigrationStatusComplete(context.Background(), database)
+	if err != nil {
+		t.Fatalf("ProjectMigrationStatusComplete: %v", err)
+	}
+	if !complete {
+		t.Fatal("expected legacy project migration marker to satisfy status")
+	}
+}
+
+func TestUsageMigrationStatusComplete_AcceptsLegacyMarker(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, legacyMigrationUsageAPICompletedKey, "true"); err != nil {
+		t.Fatalf("set legacy usage migration marker: %v", err)
+	}
+
+	complete, err := UsageMigrationStatusComplete(context.Background(), database)
+	if err != nil {
+		t.Fatalf("UsageMigrationStatusComplete: %v", err)
+	}
+	if !complete {
+		t.Fatal("expected legacy usage migration marker to satisfy status")
+	}
+}
+
+func TestExportV1MigrationComplete_DoesNotTreatLegacyMarkersAsRerunComplete(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, legacyMigrationAPICompletedKey, "true"); err != nil {
+		t.Fatalf("set legacy project migration marker: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, legacyMigrationUsageAPICompletedKey, "true"); err != nil {
+		t.Fatalf("set legacy usage migration marker: %v", err)
+	}
+
+	projectsComplete, err := ProjectExportV1MigrationComplete(context.Background(), database)
+	if err != nil {
+		t.Fatalf("ProjectExportV1MigrationComplete: %v", err)
+	}
+	if projectsComplete {
+		t.Fatal("did not expect legacy project marker to satisfy export-v1 rerun status")
+	}
+	usageComplete, err := UsageExportV1MigrationComplete(context.Background(), database)
+	if err != nil {
+		t.Fatalf("UsageExportV1MigrationComplete: %v", err)
+	}
+	if usageComplete {
+		t.Fatal("did not expect legacy usage marker to satisfy export-v1 rerun status")
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const migrationUsageAPICompletedKey = "migration_usage_api_completed"
+const MigrationUsageAPIExportV1CompletedKey = "migration_usage_api_export_v1_completed"
 
 // MigrateUsageFromAPI pulls historical hourly usage from the remote API and imports it
 // into the local token_usage_hourly table. It is idempotent — once the marker is set,
@@ -17,7 +17,7 @@ func MigrateUsageFromAPI(ctx context.Context, database *sql.DB, organizations []
 	if !client.IsConfigured() {
 		return nil
 	}
-	alreadyMigrated, err := MetadataKeyExists(ctx, database, migrationUsageAPICompletedKey)
+	alreadyMigrated, err := MetadataKeyExists(ctx, database, MigrationUsageAPIExportV1CompletedKey)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func MigrateUsageFromAPI(ctx context.Context, database *sql.DB, organizations []
 		return nil
 	}
 
-	return setMetadataKey(ctx, database, migrationUsageAPICompletedKey, "true")
+	return setMetadataKey(ctx, database, MigrationUsageAPIExportV1CompletedKey, "true")
 }
 
 func migrateOrgUsage(ctx context.Context, store *HourlyUsageStore, client APIClient, orgID string) error {
@@ -83,7 +83,7 @@ func migrateOrgUsage(ctx context.Context, store *HourlyUsageStore, client APICli
 		})
 	}
 
-	if err := store.UpsertHourlyUsageRows(ctx, localRows); err != nil {
+	if err := store.ImportRemoteHourlyUsageRows(ctx, localRows); err != nil {
 		return err
 	}
 
