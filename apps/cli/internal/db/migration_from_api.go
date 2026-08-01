@@ -5,7 +5,11 @@ import (
 	"database/sql"
 )
 
-const migrationAPICompletedKey = "migration_api_completed"
+const (
+	MigrationProjectsAPIExportV1CompletedKey = "migration_projects_api_export_v1_completed"
+	legacyMigrationAPICompletedKey           = "migration_api_completed"
+	legacyMigrationUsageAPICompletedKey      = "migration_usage_api_completed"
+)
 
 // APIClient abstracts the remote datastore for first-launch project import.
 type APIClient interface {
@@ -82,7 +86,7 @@ func MigrateFromAPI(ctx context.Context, database *sql.DB, organizations []strin
 	if !client.IsConfigured() {
 		return nil
 	}
-	alreadyMigrated, err := MetadataKeyExists(ctx, database, migrationAPICompletedKey)
+	alreadyMigrated, err := MetadataKeyExists(ctx, database, MigrationProjectsAPIExportV1CompletedKey)
 	if err != nil {
 		return err
 	}
@@ -121,7 +125,7 @@ func MigrateFromAPI(ctx context.Context, database *sql.DB, organizations []strin
 	if !anySucceeded {
 		return nil // marker not set; will retry on next restart
 	}
-	return setMetadataKey(ctx, database, migrationAPICompletedKey, "true")
+	return setMetadataKey(ctx, database, MigrationProjectsAPIExportV1CompletedKey, "true")
 }
 
 func apiProjectToLocal(project APIProject) Project {
@@ -173,6 +177,35 @@ func MetadataKeyExists(ctx context.Context, database *sql.DB, key string) (bool,
 		return false, nil
 	}
 	return err == nil, err
+}
+
+func ProjectMigrationStatusComplete(ctx context.Context, database *sql.DB) (bool, error) {
+	return metadataKeyExistsAny(ctx, database, MigrationProjectsAPIExportV1CompletedKey, legacyMigrationAPICompletedKey)
+}
+
+func UsageMigrationStatusComplete(ctx context.Context, database *sql.DB) (bool, error) {
+	return metadataKeyExistsAny(ctx, database, MigrationUsageAPIExportV1CompletedKey, legacyMigrationUsageAPICompletedKey)
+}
+
+func ProjectExportV1MigrationComplete(ctx context.Context, database *sql.DB) (bool, error) {
+	return MetadataKeyExists(ctx, database, MigrationProjectsAPIExportV1CompletedKey)
+}
+
+func UsageExportV1MigrationComplete(ctx context.Context, database *sql.DB) (bool, error) {
+	return MetadataKeyExists(ctx, database, MigrationUsageAPIExportV1CompletedKey)
+}
+
+func metadataKeyExistsAny(ctx context.Context, database *sql.DB, keys ...string) (bool, error) {
+	for _, key := range keys {
+		exists, err := MetadataKeyExists(ctx, database, key)
+		if err != nil {
+			return false, err
+		}
+		if exists {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func setMetadataKey(ctx context.Context, database *sql.DB, key, value string) error {

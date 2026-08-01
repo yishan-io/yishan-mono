@@ -40,6 +40,26 @@ func (s *HourlyUsageStore) UpsertHourlyUsageRows(ctx context.Context, rows []Hou
 	return tx.Commit()
 }
 
+// ImportRemoteHourlyUsageRows writes remote API/export rows while preserving unsynced local state.
+func (s *HourlyUsageStore) ImportRemoteHourlyUsageRows(ctx context.Context, rows []HourlyUsageRow) error {
+	tx, err := s.database.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin remote usage import: %w", err)
+	}
+	defer tx.Rollback()
+	for _, row := range rows {
+		existingRow, hasExisting, queryErr := lookupHourlyUsageRow(ctx, tx, row)
+		if queryErr != nil {
+			return queryErr
+		}
+		mergedRow := MergeImportedHourlyUsageRow(existingRow, hasExisting, row)
+		if err := upsertHourlyUsageRow(ctx, tx, mergedRow); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 // ReplaceAgentHourlyRows merges scanned rows and retains dirty rows until they are acknowledged.
 func (s *HourlyUsageStore) ReplaceAgentHourlyRows(ctx context.Context, agentKind string, rows []HourlyUsageRow) error {
 	tx, err := s.database.BeginTx(ctx, nil)

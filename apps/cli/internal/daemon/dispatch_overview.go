@@ -110,12 +110,17 @@ func (h *JSONRPCHandler) handleOverviewWorkspaceInsights(ctx context.Context, pa
 	return h.overviewStore().GetWorkspaceInsights(ctx, rangeDays, req.ProjectID)
 }
 
-// handleTokenUsageMigrationStatus reports whether the API-to-local migrations are complete.
+// handleTokenUsageMigrationStatus reports both readiness compatibility and
+// export-v1 rerun completion state for API-to-local migrations.
 func (h *JSONRPCHandler) handleTokenUsageMigrationStatus(ctx context.Context, _ json.RawMessage) (any, error) {
-	projectsDone, _ := localdb.MetadataKeyExists(ctx, h.localDatabase, "migration_api_completed")
-	usageDone, _ := localdb.MetadataKeyExists(ctx, h.localDatabase, "migration_usage_api_completed")
+	projectsDone, _ := localdb.ProjectMigrationStatusComplete(ctx, h.localDatabase)
+	usageDone, _ := localdb.UsageMigrationStatusComplete(ctx, h.localDatabase)
+	projectsExportV1Done, _ := localdb.ProjectExportV1MigrationComplete(ctx, h.localDatabase)
+	usageExportV1Done, _ := localdb.UsageExportV1MigrationComplete(ctx, h.localDatabase)
 	return map[string]any{
-		"projectsMigrated": projectsDone,
-		"usageMigrated":    usageDone,
+		"projectsMigrated":         projectsDone,
+		"usageMigrated":            usageDone,
+		"projectsExportV1Migrated": projectsExportV1Done,
+		"usageExportV1Migrated":    usageExportV1Done,
 	}, nil
 }

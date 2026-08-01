@@ -18,13 +18,21 @@ export function MigrationView({ onComplete }: MigrationViewProps) {
       try {
         const client = await getDaemonClient();
         const raw = await client.tokenUsage.migrationStatus();
-        const status = raw as { projectsMigrated?: boolean; usageMigrated?: boolean };
+        const status = raw as {
+          projectsMigrated?: boolean;
+          usageMigrated?: boolean;
+          projectsExportV1Migrated?: boolean;
+          usageExportV1Migrated?: boolean;
+        };
         if (disposed) return;
 
-        setProjectsDone(status.projectsMigrated ?? false);
-        setUsageDone(status.usageMigrated ?? false);
+        const projectsReady = Boolean(status.projectsExportV1Migrated || status.projectsMigrated);
+        const usageReady = Boolean(status.usageExportV1Migrated || status.usageMigrated);
 
-        if (status.projectsMigrated && status.usageMigrated) {
+        setProjectsDone(projectsReady);
+        setUsageDone(usageReady);
+
+        if (projectsReady && usageReady) {
           onComplete();
           return;
         }
