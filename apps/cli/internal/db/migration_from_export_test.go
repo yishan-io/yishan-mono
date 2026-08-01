@@ -14,9 +14,13 @@ type exportAPIClientStub struct {
 	projectErrors   map[string]error
 	workspaceErrors map[string]error
 	usageErrors     map[string]error
+	projectCalls    int
+	workspaceCalls  int
+	usageCalls      int
 }
 
 func (client *exportAPIClientStub) ExportProjects(ctx context.Context, orgID string) ([]APIProject, error) {
+	client.projectCalls += 1
 	if err := client.projectErrors[orgID]; err != nil {
 		return nil, err
 	}
@@ -24,6 +28,7 @@ func (client *exportAPIClientStub) ExportProjects(ctx context.Context, orgID str
 }
 
 func (client *exportAPIClientStub) ExportWorkspaces(ctx context.Context, orgID string) ([]APIWorkspace, error) {
+	client.workspaceCalls += 1
 	if err := client.workspaceErrors[orgID]; err != nil {
 		return nil, err
 	}
@@ -31,6 +36,7 @@ func (client *exportAPIClientStub) ExportWorkspaces(ctx context.Context, orgID s
 }
 
 func (client *exportAPIClientStub) ExportHourlyUsage(ctx context.Context, orgID string) ([]APIHourlyUsageRow, error) {
+	client.usageCalls += 1
 	if err := client.usageErrors[orgID]; err != nil {
 		return nil, err
 	}
@@ -184,7 +190,7 @@ func TestMigrateFromAPI_IgnoresLegacyCompletionMarker(t *testing.T) {
 	}
 }
 
-func TestProjectMigrationStatusComplete_AcceptsLegacyMarker(t *testing.T) {
+func TestMigrateFromAPI_BackfillsExistingProjectConfigFromExport(t *testing.T) {
 	database, err := Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
@@ -192,21 +198,74 @@ func TestProjectMigrationStatusComplete_AcceptsLegacyMarker(t *testing.T) {
 	defer database.Close()
 	if err := Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
+	}
+
+	projectStore := NewProjectStore(database)
+	legacyProject := &Project{
+		ID:             "project-1",
+		Name:           "Core",
+		SourceType:     "git",
+		OrganizationID: "org-1",
+		SetupScript:    "",
+		PostScript:     "",
+		Commands:       []ProjectCommand{},
+		ContextEnabled: true,
+	}
+	if err := projectStore.Create(context.Background(), legacyProject); err != nil {
+		t.Fatalf("create legacy project: %v", err)
 	}
 	if err := setMetadataKey(context.Background(), database, legacyMigrationAPICompletedKey, "true"); err != nil {
 		t.Fatalf("set legacy migration marker: %v", err)
 	}
-
-	complete, err := ProjectMigrationStatusComplete(context.Background(), database)
-	if err != nil {
-		t.Fatalf("ProjectMigrationStatusComplete: %v", err)
+	if err := setMetadataKey(context.Background(), database, MigrationProjectsAPIExportV1CompletedKey, "true"); err != nil {
+		t.Fatalf("set export-v1 migration marker: %v", err)
 	}
-	if !complete {
-		t.Fatal("expected legacy project migration marker to satisfy status")
+
+	client := &exportAPIClientStub{
+		configured: true,
+		projects: map[string][]APIProject{
+			"org-1": {{
+				ID:             "project-1",
+				Name:           "Core",
+				SourceType:     "git",
+				Icon:           "rocket",
+				Color:          "#123456",
+				SetupScript:    "bun install",
+				PostScript:     "echo done",
+				Commands:       []ProjectCommand{{Name: "dev", Command: "bun run dev"}},
+				ContextEnabled: true,
+				OrganizationID: "org-1",
+			}},
+		},
+	}
+
+	if err := MigrateFromAPI(context.Background(), database, []string{"org-1"}, client); err != nil {
+		t.Fatalf("MigrateFromAPI: %v", err)
+	}
+
+	project, err := projectStore.Get(context.Background(), "project-1")
+	if err != nil {
+		t.Fatalf("get project: %v", err)
+	}
+	if project.SetupScript != "bun install" || project.PostScript != "echo done" {
+		t.Fatalf("expected migrated project scripts to be backfilled, got %#v", project)
+	}
+	if len(project.Commands) != 1 || project.Commands[0].Command != "bun run dev" {
+		t.Fatalf("expected migrated project commands to be backfilled, got %#v", project.Commands)
+	}
+	if project.Icon != "folder" || project.Color != "#1E66F5" {
+		t.Fatalf("expected icon/color defaults to be preserved during script-command backfill, got %#v", project)
+	}
+	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, MigrationProjectConfigBackfillV1CompletedKey)
+	if err != nil {
+		t.Fatalf("read backfill marker: %v", err)
+	}
+	if !alreadyMigrated {
+		t.Fatal("expected project config backfill marker")
 	}
 }
 
-func TestUsageMigrationStatusComplete_AcceptsLegacyMarker(t *testing.T) {
+func TestMigrateFromAPI_PreservesLocalProjectConfigWhenExportIsEmpty(t *testing.T) {
 	database, err := Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
@@ -215,47 +274,186 @@ func TestUsageMigrationStatusComplete_AcceptsLegacyMarker(t *testing.T) {
 	if err := Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	if err := setMetadataKey(context.Background(), database, legacyMigrationUsageAPICompletedKey, "true"); err != nil {
-		t.Fatalf("set legacy usage migration marker: %v", err)
-	}
 
-	complete, err := UsageMigrationStatusComplete(context.Background(), database)
-	if err != nil {
-		t.Fatalf("UsageMigrationStatusComplete: %v", err)
+	projectStore := NewProjectStore(database)
+	localProject := &Project{
+		ID:             "project-1",
+		Name:           "Core",
+		SourceType:     "git",
+		OrganizationID: "org-1",
+		SetupScript:    "bun install",
+		PostScript:     "echo done",
+		Commands:       []ProjectCommand{{Name: "dev", Command: "bun run dev"}},
+		ContextEnabled: true,
 	}
-	if !complete {
-		t.Fatal("expected legacy usage migration marker to satisfy status")
-	}
-}
-
-func TestExportV1MigrationComplete_DoesNotTreatLegacyMarkersAsRerunComplete(t *testing.T) {
-	database, err := Open(t.TempDir())
-	if err != nil {
-		t.Fatalf("open database: %v", err)
-	}
-	defer database.Close()
-	if err := Migrate(database); err != nil {
-		t.Fatalf("migrate database: %v", err)
+	if err := projectStore.Create(context.Background(), localProject); err != nil {
+		t.Fatalf("create local project: %v", err)
 	}
 	if err := setMetadataKey(context.Background(), database, legacyMigrationAPICompletedKey, "true"); err != nil {
-		t.Fatalf("set legacy project migration marker: %v", err)
+		t.Fatalf("set legacy migration marker: %v", err)
 	}
-	if err := setMetadataKey(context.Background(), database, legacyMigrationUsageAPICompletedKey, "true"); err != nil {
-		t.Fatalf("set legacy usage migration marker: %v", err)
+	if err := setMetadataKey(context.Background(), database, MigrationProjectsAPIExportV1CompletedKey, "true"); err != nil {
+		t.Fatalf("set export-v1 migration marker: %v", err)
 	}
 
-	projectsComplete, err := ProjectExportV1MigrationComplete(context.Background(), database)
+	client := &exportAPIClientStub{
+		configured: true,
+		projects: map[string][]APIProject{
+			"org-1": {{
+				ID:             "project-1",
+				Name:           "Core",
+				SourceType:     "git",
+				SetupScript:    "",
+				PostScript:     "",
+				Commands:       []ProjectCommand{},
+				ContextEnabled: true,
+				OrganizationID: "org-1",
+			}},
+		},
+	}
+
+	if err := MigrateFromAPI(context.Background(), database, []string{"org-1"}, client); err != nil {
+		t.Fatalf("MigrateFromAPI: %v", err)
+	}
+
+	project, err := projectStore.Get(context.Background(), "project-1")
 	if err != nil {
-		t.Fatalf("ProjectExportV1MigrationComplete: %v", err)
+		t.Fatalf("get project: %v", err)
 	}
-	if projectsComplete {
-		t.Fatal("did not expect legacy project marker to satisfy export-v1 rerun status")
+	if project.SetupScript != localProject.SetupScript || project.PostScript != localProject.PostScript {
+		t.Fatalf("expected local project scripts to be preserved, got %#v", project)
 	}
-	usageComplete, err := UsageExportV1MigrationComplete(context.Background(), database)
+	if len(project.Commands) != 1 || project.Commands[0].Command != localProject.Commands[0].Command {
+		t.Fatalf("expected local project commands to be preserved, got %#v", project.Commands)
+	}
+	if project.Icon != "folder" || project.Color != "#1E66F5" {
+		t.Fatalf("expected local icon/color defaults to be preserved, got %#v", project)
+	}
+	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, MigrationProjectConfigBackfillV1CompletedKey)
 	if err != nil {
-		t.Fatalf("UsageExportV1MigrationComplete: %v", err)
+		t.Fatalf("read backfill marker: %v", err)
 	}
-	if usageComplete {
-		t.Fatal("did not expect legacy usage marker to satisfy export-v1 rerun status")
+	if !alreadyMigrated {
+		t.Fatal("expected project config backfill marker")
+	}
+}
+
+func TestMigrateFromAPI_DoesNotSetProjectBackfillMarkerWhenAnyOrgExportFails(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, MigrationProjectsAPIExportV1CompletedKey, "true"); err != nil {
+		t.Fatalf("set export-v1 migration marker: %v", err)
+	}
+
+	projectStore := NewProjectStore(database)
+	legacyProject := &Project{ID: "project-1", Name: "Core", SourceType: "git", OrganizationID: "org-1", ContextEnabled: true}
+	if err := projectStore.Create(context.Background(), legacyProject); err != nil {
+		t.Fatalf("create legacy project: %v", err)
+	}
+
+	client := &exportAPIClientStub{
+		configured: true,
+		projects: map[string][]APIProject{
+			"org-1": {{
+				ID:             "project-1",
+				Name:           "Core",
+				SourceType:     "git",
+				SetupScript:    "bun install",
+				Commands:       []ProjectCommand{{Name: "dev", Command: "bun run dev"}},
+				ContextEnabled: true,
+				OrganizationID: "org-1",
+			}},
+		},
+		projectErrors: map[string]error{
+			"org-2": errors.New("project export failed"),
+		},
+	}
+
+	if err := MigrateFromAPI(context.Background(), database, []string{"org-1", "org-2"}, client); err != nil {
+		t.Fatalf("MigrateFromAPI: %v", err)
+	}
+
+	project, err := projectStore.Get(context.Background(), "project-1")
+	if err != nil {
+		t.Fatalf("get project: %v", err)
+	}
+	if project.SetupScript != "bun install" || len(project.Commands) != 1 {
+		t.Fatalf("expected successful org to be backfilled before retry, got %#v", project)
+	}
+	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, MigrationProjectConfigBackfillV1CompletedKey)
+	if err != nil {
+		t.Fatalf("read backfill marker: %v", err)
+	}
+	if alreadyMigrated {
+		t.Fatal("did not expect project config backfill marker after partial org failure")
+	}
+}
+
+func TestMigrateFromAPI_SkipsProjectBackfillWhenBackfillMarkerExists(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, MigrationProjectsAPIExportV1CompletedKey, "true"); err != nil {
+		t.Fatalf("set export-v1 migration marker: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, MigrationProjectConfigBackfillV1CompletedKey, "true"); err != nil {
+		t.Fatalf("set backfill marker: %v", err)
+	}
+
+	client := &exportAPIClientStub{configured: true}
+	if err := MigrateFromAPI(context.Background(), database, []string{"org-1"}, client); err != nil {
+		t.Fatalf("MigrateFromAPI: %v", err)
+	}
+	if client.projectCalls != 0 || client.workspaceCalls != 0 {
+		t.Fatalf("expected migration to return early when both markers exist, got projectCalls=%d workspaceCalls=%d", client.projectCalls, client.workspaceCalls)
+	}
+}
+
+func TestMigrateFromAPI_ContinuesWorkspaceMigrationWhenOnlyBackfillMarkerExists(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, MigrationProjectConfigBackfillV1CompletedKey, "true"); err != nil {
+		t.Fatalf("set backfill marker: %v", err)
+	}
+	projectStore := NewProjectStore(database)
+	if err := projectStore.Create(context.Background(), &Project{ID: "project-1", Name: "Core", SourceType: "git", OrganizationID: "org-1", ContextEnabled: true}); err != nil {
+		t.Fatalf("create project: %v", err)
+	}
+
+	client := &exportAPIClientStub{
+		configured: true,
+		workspaces: map[string][]APIWorkspace{
+			"org-1": {{ID: "workspace-1", OrganizationID: "org-1", ProjectID: "project-1", Status: "closed", LocalPath: "/tmp/core"}},
+		},
+	}
+	if err := MigrateFromAPI(context.Background(), database, []string{"org-1"}, client); err != nil {
+		t.Fatalf("MigrateFromAPI: %v", err)
+	}
+	if client.projectCalls != 0 || client.workspaceCalls != 1 {
+		t.Fatalf("expected only workspace migration when backfill marker exists, got projectCalls=%d workspaceCalls=%d", client.projectCalls, client.workspaceCalls)
+	}
+	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, MigrationProjectsAPIExportV1CompletedKey)
+	if err != nil {
+		t.Fatalf("read migration marker: %v", err)
+	}
+	if !alreadyMigrated {
+		t.Fatal("expected workspace migration marker")
 	}
 }
