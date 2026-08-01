@@ -159,7 +159,7 @@ export function useMarkdownStyles(
           px: 0.75,
           py: 0.25,
           borderRadius: 0.75,
-          bgcolor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
+          bgcolor: codeMode === "dark" ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
         },
 
         // Code blocks

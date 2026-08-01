@@ -28,8 +28,8 @@ describe("useCodeTheme", () => {
     mockUseMediaQuery.mockReturnValue(false);
   });
 
-  it("resolves the yishan-light palette when themePreference is dark but system is light", () => {
-    // Default system is light (useMediaQuery returns false)
+  it("resolves the yishan-light palette with the default system preference when the system prefers light", () => {
+    // Default themePreference is "system" (useMediaQuery returns false = light)
     const { result } = renderHook(() => useCodeTheme(), {
       wrapper: AppThemePreferenceProvider,
     });

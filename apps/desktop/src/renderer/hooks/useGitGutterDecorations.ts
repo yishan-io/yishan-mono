@@ -192,9 +192,10 @@ export function useGitGutterDecorations({
       const domNode = createInlineDiffDom(hunkInfo.oldLines, hunkInfo.newLines, change.kind);
       viewZoneDomRef.current = domNode;
 
-      // Compute height: header (~30px) + each line (fontSize * 1.5, matching
-      // style.css line-height: 1.5) + padding (20px).
-      const LINE_HEIGHT_PX = Math.round(editorFontSize * 1.5);
+      // Compute height: header (~30px) + each line (fontSize * 1.5 for
+      // style.css line-height: 1.5, plus 2px for the 1px top/bottom margin on
+      // each diff line) + padding (20px).
+      const LINE_HEIGHT_PX = Math.round(editorFontSize * 1.5) + 2;
       const HEADER_HEIGHT_PX = 30;
       const PADDING_PX = 20;
       let totalLines = hunkInfo.oldLines.length;

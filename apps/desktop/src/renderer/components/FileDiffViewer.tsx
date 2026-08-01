@@ -76,6 +76,9 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
     const container = scrollContainerRef.current;
     if (!container) return;
 
+    // Scroll is approximate: assumes non-wrapped lines. Under word wrap the
+    // per-line y-offset is larger, so the view lands short of the match;
+    // Pierre's selection highlight still marks it visibly.
     const scrollTop = Math.max(0, (match.visualLineNumber - 1) * diffLineHeight - container.clientHeight / 2);
     container.scrollTop = scrollTop;
   }, [searchMatches, currentMatchIndex, diffLineHeight]);

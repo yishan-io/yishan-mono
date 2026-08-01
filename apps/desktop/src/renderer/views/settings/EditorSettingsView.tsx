@@ -1,4 +1,5 @@
 import { MenuItem, Stack, Switch } from "@mui/material";
+import { TYPOGRAPHY_TOKENS } from "@yishan-io/design-tokens";
 import { useTranslation } from "react-i18next";
 import {
   SettingsCard,
@@ -9,7 +10,10 @@ import {
 import { CODE_THEME_FAMILIES, type CodeThemeFamilyId } from "../../helpers/codeThemes";
 import { editorSettingsStore } from "../../store/settings/editorSettingsStore";
 
-const FONT_SIZE_OPTIONS = [11, 12, 13, 14, 15, 16, 17, 18] as const;
+const FONT_SIZE_OPTIONS: number[] = Array.from(
+  { length: TYPOGRAPHY_TOKENS.editorFontSizeMaxPx - TYPOGRAPHY_TOKENS.editorFontSizeMinPx + 1 },
+  (_, i) => TYPOGRAPHY_TOKENS.editorFontSizeMinPx + i,
+);
 
 /** Renders editor code display preference controls. */
 export function EditorSettingsView() {
