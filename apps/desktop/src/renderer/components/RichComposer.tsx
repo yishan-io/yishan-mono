@@ -1,11 +1,14 @@
 import { Box, Typography } from "@mui/material";
-import type { ClipboardEvent, KeyboardEvent, SyntheticEvent } from "react";
+import type { ClipboardEvent, SyntheticEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FileTreeDragEntry } from "./FileTree/dataTransfer";
+import { RichComposerFileMentionMenu } from "./RichComposerFileMentionMenu";
 import { RichComposerSlashCommandMenu } from "./RichComposerSlashCommandMenu";
 import { getCaretOffset, normalizeComposerText, renderComposerHtml, setCaretOffset } from "./richComposerHelpers";
-import type { RichComposerSlashCommand } from "./richComposerTypes";
+import type { FileMentionResult, RichComposerSlashCommand } from "./richComposerTypes";
 import { useComposerFileDrop } from "./useComposerFileDrop";
+import { useComposerFileMentionMenu } from "./useComposerFileMentionMenu";
+import { useComposerKeyDown } from "./useComposerKeyDown";
 import { useComposerSlashCommandMenu } from "./useComposerSlashCommandMenu";
 
 export type { RichComposerSlashCommand } from "./richComposerTypes";
@@ -24,6 +27,10 @@ type RichComposerProps = {
   allowEmptySubmit?: boolean;
   onFilesDrop?: (entries: FileTreeDragEntry[]) => void;
   onPasteBlock?: (text: string) => void;
+  /** Async file search backing the @ mention menu. When omitted, the mention menu is disabled. */
+  fileMentionSearch?: (query: string) => Promise<FileMentionResult[]>;
+  /** Called with the selected file path when a mention is inserted. */
+  onMentionFile?: (path: string, isDirectory: boolean) => void;
 };
 
 /** Rich text-like contenteditable composer with token highlighting and slash command completion. */
@@ -39,6 +46,8 @@ export function RichComposer({
   allowEmptySubmit = false,
   onFilesDrop,
   onPasteBlock,
+  fileMentionSearch,
+  onMentionFile,
 }: RichComposerProps) {
   const composerRef = useRef<HTMLDivElement | null>(null);
   const shouldMoveCaretToEndAfterFileDropRef = useRef(false);
@@ -57,6 +66,34 @@ export function RichComposer({
     syncSlashCommandMenu,
     insertSlashCommand,
   } = useComposerSlashCommandMenu({ disabled, slashCommands, composerRef, onChange });
+
+  const {
+    activeMentionRange,
+    setActiveMentionRange,
+    selectedMentionIndex,
+    setSelectedMentionIndex,
+    mentionResults,
+    isSearching,
+    hasSearchError,
+    syncMentionMenu,
+    insertMentionFile,
+    handleMentionComposerKeyDown,
+  } = useComposerFileMentionMenu({ disabled, composerRef, onChange, slashCommands, fileMentionSearch, onMentionFile });
+
+  const handleComposerKeyDown = useComposerKeyDown({
+    disabled,
+    value,
+    onChange,
+    onSubmit,
+    allowEmptySubmit,
+    activeSlashCommandRange,
+    setActiveSlashCommandRange,
+    selectedSlashCommandIndex,
+    setSelectedSlashCommandIndex,
+    filteredSlashCommands,
+    insertSlashCommand,
+    handleMentionComposerKeyDown,
+  });
 
   const handleComposerInput = useCallback(
     (event: SyntheticEvent<HTMLDivElement>) => {
@@ -80,17 +117,24 @@ export function RichComposer({
       }
 
       syncSlashCommandMenu(editable, nextValue, caretOffset);
+      syncMentionMenu(editable, nextValue, caretOffset);
     },
-    [disabled, onChange, slashCommands, syncSlashCommandMenu],
+    [disabled, onChange, slashCommands, syncMentionMenu, syncSlashCommandMenu],
   );
 
   const handleComposerSelectionChange = useCallback(
     (event: SyntheticEvent<HTMLDivElement>) => {
+      // Escape never changes a selection; without this guard the keyup after an Escape
+      // keydown reopens the just-dismissed suggestion menu (caret is still in the token).
+      if ((event.nativeEvent as KeyboardEventInit).key === "Escape") {
+        return;
+      }
       const editable = event.currentTarget;
       const nextValue = normalizeComposerText(editable.innerText);
       syncSlashCommandMenu(editable, nextValue, getCaretOffset(editable));
+      syncMentionMenu(editable, nextValue, getCaretOffset(editable));
     },
-    [syncSlashCommandMenu],
+    [syncMentionMenu, syncSlashCommandMenu],
   );
 
   const handleComposerPaste = useCallback(
@@ -107,88 +151,6 @@ export function RichComposer({
       document.execCommand("insertText", false, plainText);
     },
     [disabled, onPasteBlock],
-  );
-
-  const handleComposerKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLDivElement>) => {
-      if (disabled) {
-        return;
-      }
-
-      if (activeSlashCommandRange) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          setActiveSlashCommandRange(null);
-          return;
-        }
-
-        if (event.key === "ArrowDown") {
-          event.preventDefault();
-          setSelectedSlashCommandIndex((currentIndex) => {
-            if (filteredSlashCommands.length === 0) {
-              return 0;
-            }
-            return (currentIndex + 1) % filteredSlashCommands.length;
-          });
-          return;
-        }
-
-        if (event.key === "ArrowUp") {
-          event.preventDefault();
-          setSelectedSlashCommandIndex((currentIndex) => {
-            if (filteredSlashCommands.length === 0) {
-              return 0;
-            }
-            return (currentIndex - 1 + filteredSlashCommands.length) % filteredSlashCommands.length;
-          });
-          return;
-        }
-
-        if ((event.key === "Enter" || event.key === "Tab") && !event.shiftKey && !event.nativeEvent.isComposing) {
-          const selectedSlashCommand = filteredSlashCommands[selectedSlashCommandIndex];
-          if (selectedSlashCommand) {
-            event.preventDefault();
-            insertSlashCommand(selectedSlashCommand);
-            return;
-          }
-        }
-      }
-
-      if (!onSubmit) {
-        return;
-      }
-
-      if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) {
-        return;
-      }
-
-      event.preventDefault();
-      const editable = event.currentTarget;
-      const nextValue = normalizeComposerText(editable.innerText).trim();
-      if (!nextValue && !allowEmptySubmit) {
-        return;
-      }
-
-      void onSubmit(nextValue);
-      if (value === undefined) {
-        editable.innerHTML = "";
-      }
-      onChange?.("");
-      setActiveSlashCommandRange(null);
-    },
-    [
-      activeSlashCommandRange,
-      allowEmptySubmit,
-      disabled,
-      filteredSlashCommands,
-      insertSlashCommand,
-      onChange,
-      onSubmit,
-      selectedSlashCommandIndex,
-      setActiveSlashCommandRange,
-      setSelectedSlashCommandIndex,
-      value,
-    ],
   );
 
   useEffect(() => {
@@ -304,6 +266,18 @@ export function RichComposer({
           setActiveSlashCommandRange(null);
         }}
         onSelect={insertSlashCommand}
+      />
+      <RichComposerFileMentionMenu
+        anchorEl={composerRef.current}
+        open={activeMentionRange !== null}
+        results={mentionResults}
+        isSearching={isSearching}
+        hasSearchError={hasSearchError}
+        selectedResultIndex={selectedMentionIndex}
+        onClose={() => {
+          setActiveMentionRange(null);
+        }}
+        onSelect={insertMentionFile}
       />
     </>
   );

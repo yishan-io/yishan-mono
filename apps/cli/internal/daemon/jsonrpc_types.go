@@ -35,9 +35,10 @@ type fileListParams struct {
 }
 
 type fileSearchParams struct {
-	WorkspaceID string `json:"workspaceId"`
-	Query       string `json:"query"`
-	Limit       int    `json:"limit,omitempty"`
+	WorkspaceID        string `json:"workspaceId"`
+	Query              string `json:"query"`
+	Limit              int    `json:"limit,omitempty"`
+	IncludeDirectories bool   `json:"includeDirectories,omitempty"`
 }
 
 type fileReadParams struct {

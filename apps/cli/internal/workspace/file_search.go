@@ -17,6 +17,7 @@ type FileSearchResult struct {
 	Path                   string `json:"path"`
 	Score                  int    `json:"score"`
 	HighlightedPathIndexes []int  `json:"highlightedPathIndexes"`
+	IsDirectory            bool   `json:"isDirectory"`
 }
 
 type subsequenceMatch struct {
@@ -24,7 +25,7 @@ type subsequenceMatch struct {
 	score   int
 }
 
-func (s *FileService) Search(root string, rawQuery string, limit int) ([]FileSearchResult, error) {
+func (s *FileService) Search(root string, rawQuery string, limit int, includeDirectories bool) ([]FileSearchResult, error) {
 	if limit <= 0 {
 		limit = defaultFileSearchLimit
 	}
@@ -35,20 +36,7 @@ func (s *FileService) Search(root string, rawQuery string, limit int) ([]FileSea
 	}
 
 	query := strings.TrimSpace(strings.ToLower(rawQuery))
-	results := make([]FileSearchResult, 0)
-	for _, entry := range entries {
-		if entry.IsDir {
-			continue
-		}
-		if entry.IsIgnored && !isContextEntry(entry.Path) {
-			continue
-		}
-		result, ok := resolveFilePathMatch(entry.Path, query)
-		if !ok {
-			continue
-		}
-		results = append(results, result)
-	}
+	results := collectSearchMatches(entries, query, includeDirectories)
 
 	sort.Slice(results, func(left, right int) bool {
 		if results[left].Score != results[right].Score {
@@ -64,6 +52,25 @@ func (s *FileService) Search(root string, rawQuery string, limit int) ([]FileSea
 		results = results[:limit]
 	}
 	return results, nil
+}
+
+func collectSearchMatches(entries []FileEntry, query string, includeDirectories bool) []FileSearchResult {
+	results := make([]FileSearchResult, 0)
+	for _, entry := range entries {
+		if entry.IsDir && !includeDirectories {
+			continue
+		}
+		if entry.IsIgnored && !isContextEntry(entry.Path) {
+			continue
+		}
+		result, ok := resolveFilePathMatch(entry.Path, query)
+		if !ok {
+			continue
+		}
+		result.IsDirectory = entry.IsDir
+		results = append(results, result)
+	}
+	return results
 }
 
 func resolveFilePathMatch(path string, query string) (FileSearchResult, bool) {

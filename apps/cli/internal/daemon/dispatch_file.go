@@ -42,7 +42,7 @@ func (h *JSONRPCHandler) dispatchFile(ctx context.Context, method string, params
 		if err != nil {
 			return nil, err
 		}
-		return handle.FileSearch(req.Query, req.Limit)
+		return handle.FileSearch(req.Query, req.Limit, req.IncludeDirectories)
 	case MethodFileStat:
 		var req fileReadParams
 		if err := decodeParams(params, &req); err != nil {

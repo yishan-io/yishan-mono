@@ -262,6 +262,7 @@ export type FileSearchInput = {
   workspaceId: string;
   query: string;
   limit?: number;
+  includeDirectories?: boolean;
 };
 
 export type FileReadInput = {
@@ -429,6 +430,7 @@ export type FileSearchResult = {
   path: string;
   score: number;
   highlightedPathIndexes: number[];
+  isDirectory?: boolean;
 };
 
 export type FileListBatchResponse = {

@@ -3,6 +3,7 @@ package workspace
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -23,7 +24,7 @@ func TestFileServiceSearch_IncludesContextFiles(t *testing.T) {
 	}
 	seedSearchFiles(t, root, "src/main.go")
 
-	results, err := svc.Search(root, "memory", 10)
+	results, err := svc.Search(root, "memory", 10, false)
 	if err != nil {
 		t.Fatalf("search: %v", err)
 	}
@@ -41,7 +42,7 @@ func TestFileServiceSearch_PrefersFilenameMatchesOverPathOnlyMatches(t *testing.
 		"docs/search-notes.md",
 	)
 
-	results, err := svc.Search(root, "sear", 10)
+	results, err := svc.Search(root, "sear", 10, false)
 	if err != nil {
 		t.Fatalf("search: %v", err)
 	}
@@ -59,7 +60,7 @@ func TestFileServiceSearch_SupportsFuzzySubsequenceMatching(t *testing.T) {
 	svc := NewFileService()
 	seedSearchFiles(t, root, "src/components/FileManagerView.tsx", "src/views/TerminalView.tsx")
 
-	results, err := svc.Search(root, "fmv", 10)
+	results, err := svc.Search(root, "fmv", 10, false)
 	if err != nil {
 		t.Fatalf("search: %v", err)
 	}
@@ -76,7 +77,7 @@ func TestFileServiceSearch_MatchesPathSegmentsWhenFilenameDoesNotMatch(t *testin
 	svc := NewFileService()
 	seedSearchFiles(t, root, "apps/desktop/src/renderer/views/workspace/RightPane/RightPaneView.tsx")
 
-	results, err := svc.Search(root, "rendr", 10)
+	results, err := svc.Search(root, "rendr", 10, false)
 	if err != nil {
 		t.Fatalf("search: %v", err)
 	}
@@ -97,7 +98,7 @@ func TestFileServiceSearch_IgnoresIgnoredFiles(t *testing.T) {
 	}
 	seedSearchFiles(t, root, "visible/readme.md", "ignored/secret.md")
 
-	results, err := svc.Search(root, "md", 10)
+	results, err := svc.Search(root, "md", 10, false)
 	if err != nil {
 		t.Fatalf("search: %v", err)
 	}
@@ -116,7 +117,7 @@ func TestFileServiceSearch_DoesNotReturnDirectories(t *testing.T) {
 		t.Fatalf("write file: %v", err)
 	}
 
-	results, err := svc.Search(root, "cmd", 10)
+	results, err := svc.Search(root, "cmd", 10, false)
 	if err != nil {
 		t.Fatalf("search: %v", err)
 	}
@@ -133,7 +134,7 @@ func TestFileServiceSearch_EmptyQueryOrdersByPathLengthThenAlphabetically(t *tes
 	svc := NewFileService()
 	seedSearchFiles(t, root, "z.ts", "src/a.ts", "a.ts")
 
-	results, err := svc.Search(root, "  ", 10)
+	results, err := svc.Search(root, "  ", 10, false)
 	if err != nil {
 		t.Fatalf("search: %v", err)
 	}
@@ -154,7 +155,7 @@ func TestFileServiceSearch_SpaceSeparatedQueryMatchesFullPath(t *testing.T) {
 		"src/views/TerminalView.tsx",
 	)
 
-	results, err := svc.Search(root, "renderer rightpane", 10)
+	results, err := svc.Search(root, "renderer rightpane", 10, false)
 	if err != nil {
 		t.Fatalf("search: %v", err)
 	}
@@ -174,12 +175,82 @@ func TestFileServiceSearch_RespectsLimit(t *testing.T) {
 	svc := NewFileService()
 	seedSearchFiles(t, root, "a.ts", "b.ts", "c.ts")
 
-	results, err := svc.Search(root, "ts", 2)
+	results, err := svc.Search(root, "ts", 2, false)
 	if err != nil {
 		t.Fatalf("search: %v", err)
 	}
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %+v", results)
+	}
+}
+
+func TestFileServiceSearch_ExcludesDirectoriesByDefault(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+	seedSearchFiles(t, root, "src/main.go", "src/features/search/index.ts")
+
+	results, err := svc.Search(root, "src", 10, false)
+	if err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	for _, result := range results {
+		if result.IsDirectory {
+			t.Fatalf("expected no directories in results, got %+v", result)
+		}
+	}
+	if len(results) != 2 {
+		t.Fatalf("expected 2 file results, got %d", len(results))
+	}
+}
+
+func TestFileServiceSearch_IncludesDirectoriesWhenRequested(t *testing.T) {
+	root := t.TempDir()
+	svc := NewFileService()
+	seedSearchFiles(t, root, "src/main.go", "src/features/search/index.ts", "docs/guide.md")
+
+	results, err := svc.Search(root, "src", 10, true)
+	if err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	paths := make([]string, 0, len(results))
+	for _, result := range results {
+		paths = append(paths, result.Path)
+	}
+	expected := []string{"src", "src/main.go", "src/features/search/index.ts"}
+	for _, path := range expected {
+		found := false
+		for _, resultPath := range paths {
+			if resultPath == path {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("expected %v to appear in results, got %v", path, paths)
+		}
+	}
+	if results[0].Path != "src" || !results[0].IsDirectory {
+		t.Fatalf("expected the exact directory match to rank first and be flagged, got %+v", results[0])
+	}
+}
+
+func TestFileServiceSearch_ExcludesIgnoredDirectoriesWhenIncludingDirectories(t *testing.T) {
+	root := t.TempDir()
+	initGitRepo(t, root)
+	svc := NewFileService()
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte("node_modules\n"), 0o644); err != nil {
+		t.Fatalf("write gitignore: %v", err)
+	}
+	seedSearchFiles(t, root, "src/main.go", "node_modules/pkg/index.js")
+
+	results, err := svc.Search(root, "node", 10, true)
+	if err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	for _, result := range results {
+		if strings.HasPrefix(result.Path, "node_modules") {
+			t.Fatalf("expected ignored node_modules entries to be excluded, got %+v", result)
+		}
 	}
 }
 
