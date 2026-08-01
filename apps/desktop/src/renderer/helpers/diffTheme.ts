@@ -73,24 +73,66 @@ function matchScope(scopes: string | string[] | undefined, pattern: string): boo
   const list = Array.isArray(scopes) ? scopes : [scopes];
   return list.some((s) => {
     const atoms = s.split(" ");
-    return atoms.some((atom) => atom === pattern || atom.startsWith(`${pattern}.`));
+    return atoms.some((atom) => {
+      if (atom === pattern || atom.startsWith(`${pattern}.`)) return true;
+      // Match any dot-separated segment (e.g. "entity.name.function" matches "function")
+      return atom.split(".").some((seg) => seg === pattern);
+    });
   });
 }
 
-function pickFg(scopes: string | string[] | undefined, p: CodeThemePalette): string | undefined {
-  const isMarkdown = matchScope(scopes, "markdown");
-  if (matchScope(scopes, "comment")) return p.comment;
-  if (matchScope(scopes, "string")) return p.string;
-  if (matchScope(scopes, "keyword")) return p.keyword;
-  if (matchScope(scopes, "number") || matchScope(scopes, "numeric")) return p.number;
-  if (matchScope(scopes, "constant")) return p.constant;
-  if (matchScope(scopes, "function")) return p.function;
-  if (matchScope(scopes, "heading")) return p.keyword;
-  if (matchScope(scopes, "type") || matchScope(scopes, "class")) return p.type;
-  if (matchScope(scopes, "tag")) return p.tag;
-  if (matchScope(scopes, "attribute")) return p.attribute;
-  if (!isMarkdown && (matchScope(scopes, "operator") || matchScope(scopes, "punctuation"))) return p.operator;
-  return undefined;
+export function pickTokenForeground(
+  scopes: string | string[] | undefined,
+  palette: CodeThemePalette,
+  gitDiff: { added: string; deleted: string; modified: string },
+): string {
+  // 1. comment
+  if (matchScope(scopes, "comment")) return palette.comment;
+  // 2. git diff markers
+  if (matchScope(scopes, "markup.deleted.diff")) return gitDiff.deleted;
+  if (matchScope(scopes, "markup.inserted.diff")) return gitDiff.added;
+  if (matchScope(scopes, "markup.changed.diff")) return gitDiff.modified;
+  // 3. punctuation.definition.string (before plain string)
+  if (matchScope(scopes, "punctuation.definition.string")) return palette.string;
+  // 4. string
+  if (matchScope(scopes, "string")) return palette.string;
+  // 5. keyword.operator (before keyword)
+  if (matchScope(scopes, "keyword.operator")) return palette.operator;
+  // 6. constant.numeric / number / numeric (before constant)
+  if (matchScope(scopes, "constant.numeric") || matchScope(scopes, "number") || matchScope(scopes, "numeric"))
+    return palette.number;
+  // 7. constant
+  if (matchScope(scopes, "constant")) return palette.constant;
+  // 8. keyword
+  if (matchScope(scopes, "keyword")) return palette.keyword;
+  // 9. storage.modifier
+  if (matchScope(scopes, "storage.modifier")) return palette.keyword;
+  // 9b. parameters are variables (variable.parameter.*, function.parameter.*) — BEFORE function
+  if (matchScope(scopes, "parameter")) return palette.variable;
+  // 10. function
+  if (matchScope(scopes, "function")) return palette.function;
+  // 11. heading (markup.heading + entity.name.section — the real ATX heading-text scope)
+  if (matchScope(scopes, "heading") || matchScope(scopes, "entity.name.section")) return palette.keyword;
+  // 12. type / class
+  if (matchScope(scopes, "type") || matchScope(scopes, "class")) return palette.type;
+  // 13. tag
+  if (matchScope(scopes, "tag")) return palette.tag;
+  // 14. attribute / attribute-name
+  if (matchScope(scopes, "attribute") || matchScope(scopes, "attribute-name")) return palette.attribute;
+  // 15a. variable.other.constant (before plain variable)
+  if (matchScope(scopes, "variable.other.constant")) return palette.constant;
+  // 15b. variable
+  if (matchScope(scopes, "variable")) return palette.variable;
+  // 16. markup.inline.raw / markup.underline.link
+  if (matchScope(scopes, "markup.inline.raw") || matchScope(scopes, "markup.underline.link")) return palette.string;
+  // 17. punctuation → delimiter
+  if (matchScope(scopes, "punctuation")) return palette.delimiter;
+  // 18. operator
+  if (matchScope(scopes, "operator")) return palette.operator;
+  // 19. storage
+  if (matchScope(scopes, "storage")) return palette.keyword;
+  // 20. default
+  return palette.foreground;
 }
 
 type ThemeRule = {
@@ -98,9 +140,13 @@ type ThemeRule = {
   settings?: { foreground?: string; background?: string; fontStyle?: string };
 };
 
-function overrideFgColors(settings: ThemeRule[], p: CodeThemePalette) {
+function overrideFgColors(
+  settings: ThemeRule[],
+  palette: CodeThemePalette,
+  gitDiff: { added: string; deleted: string; modified: string },
+) {
   return settings.map((rule) => {
-    const fg = pickFg(rule.scope, p) ?? rule.settings?.foreground;
+    const fg = pickTokenForeground(rule.scope, palette, gitDiff);
     return {
       ...rule,
       settings: rule.settings
@@ -110,15 +156,10 @@ function overrideFgColors(settings: ThemeRule[], p: CodeThemePalette) {
   });
 }
 
-function buildTheme(
-  name: string,
-  mode: "light" | "dark",
-  raw: unknown,
-  p: CodeThemePalette,
-  gitDiffTokens: { added: string; deleted: string; modified: string },
-): Record<string, unknown> {
+function buildTheme(name: string, mode: "light" | "dark", raw: unknown, p: CodeThemePalette): Record<string, unknown> {
   const base = raw as Record<string, unknown>;
   const baseSettings = (base.settings || base.tokenColors) as ThemeRule[];
+  const gitDiff = SEMANTIC_COLOR_TOKENS[mode].gitDiff;
   const theme: Record<string, unknown> = {
     ...base,
     name,
@@ -127,11 +168,17 @@ function buildTheme(
       ...(base.colors as Record<string, string>),
       "editor.foreground": p.foreground,
       "editor.background": p.background,
-      "gitDecoration.addedResourceForeground": gitDiffTokens.added,
-      "gitDecoration.deletedResourceForeground": gitDiffTokens.deleted,
-      "gitDecoration.modifiedResourceForeground": gitDiffTokens.modified,
+      "gitDecoration.addedResourceForeground": gitDiff.added,
+      "gitDecoration.deletedResourceForeground": gitDiff.deleted,
+      "gitDecoration.modifiedResourceForeground": gitDiff.modified,
     },
-    settings: baseSettings ? overrideFgColors(baseSettings, p) : [],
+    settings: baseSettings
+      ? overrideFgColors(baseSettings, p, {
+          added: gitDiff.added,
+          deleted: gitDiff.deleted,
+          modified: gitDiff.modified,
+        })
+      : [],
   };
   theme.tokenColors = undefined;
   return theme;
@@ -144,17 +191,10 @@ function buildTheme(
 for (const family of CODE_THEME_FAMILIES) {
   for (const mode of ["light", "dark"] as const) {
     const palette = family.palettes[mode];
-    const gitDiffTokens = SEMANTIC_COLOR_TOKENS[mode].gitDiff;
     const pierreBase = mode === "dark" ? pierreDark : pierreLight;
 
     registerCustomTheme(getMonacoThemeName(family.id, mode), () =>
-      Promise.resolve(
-        buildTheme(getMonacoThemeName(family.id, mode), mode, pierreBase, palette, {
-          added: gitDiffTokens.added,
-          deleted: gitDiffTokens.deleted,
-          modified: gitDiffTokens.modified,
-        }),
-      ),
+      Promise.resolve(buildTheme(getMonacoThemeName(family.id, mode), mode, pierreBase, palette)),
     );
   }
 }

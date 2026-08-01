@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-
 const typescriptDefaults = {
   setCompilerOptions: vi.fn(),
   setDiagnosticsOptions: vi.fn(),
@@ -72,5 +71,24 @@ describe("monacoSetup", () => {
       expect.objectContaining({ pathname: expect.stringContaining("ts.worker") }),
       { type: "module" },
     );
+  });
+
+  it("registers themes with default catch-all and regexp rules", async () => {
+    const monaco = await import("monaco-editor");
+    const { ensureEditorThemes } = await import("./monacoSetup");
+    ensureEditorThemes();
+
+    const defineThemeMock = monaco.editor.defineTheme as ReturnType<typeof vi.fn>;
+    const yishanDarkCall = defineThemeMock.mock.calls.find((call: unknown[]) => call[0] === "yishan-dark");
+    expect(yishanDarkCall).toBeDefined();
+    const rules = (yishanDarkCall?.[1] as { rules: unknown[] }).rules;
+    const defaultRule = (rules as Array<{ token: string; foreground?: string }>).find((r) => r.token === "");
+    const regexpRule = (rules as Array<{ token: string; foreground?: string }>).find((r) => r.token === "regexp");
+    // Dark yishan palette: foreground #d4dbe8, string #a7d56d (hex without "#" in Monaco rules).
+    expect(defaultRule?.foreground).toBe("d4dbe8");
+    expect(regexpRule?.foreground).toBe("a7d56d");
+    const themeDefinition = yishanDarkCall?.[1] as { base: string; inherit: boolean };
+    expect(themeDefinition.base).toBe("vs-dark");
+    expect(themeDefinition.inherit).toBe(true);
   });
 });

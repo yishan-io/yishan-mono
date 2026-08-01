@@ -223,6 +223,8 @@ export function ensureEditorThemes() {
           { token: "tag", foreground: palette.tag.slice(1) },
           { token: "attribute.name", foreground: palette.attribute.slice(1) },
           { token: "attribute.value", foreground: palette.string.slice(1) },
+          { token: "regexp", foreground: palette.string.slice(1) },
+          { token: "", foreground: palette.foreground.slice(1) },
         ],
         colors: {
           "editor.background": palette.background,

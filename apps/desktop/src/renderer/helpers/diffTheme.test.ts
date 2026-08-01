@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
+import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import { describe, expect, it } from "vitest";
 import { resolveCodeTheme } from "./codeThemes";
-import { EDITOR_COLORS, getDiffCssVariables, getDiffCssVariablesForPalette } from "./diffTheme";
+import { EDITOR_COLORS, getDiffCssVariables, getDiffCssVariablesForPalette, pickTokenForeground } from "./diffTheme";
 
 describe("diff theme git status colors", () => {
   it("derives light colors from SEMANTIC_COLOR_TOKENS", () => {
@@ -58,5 +59,40 @@ describe("diff theme git status colors", () => {
     expect(vars["--diffs-bg-separator-override"]).toBe(palette.gutter);
     expect(vars["--diffs-fg-number-override"]).toBe(palette.lineNumber);
     expect(vars["--diffs-bg-selection-override"]).toBe(palette.selection);
+  });
+});
+
+describe("pickTokenForeground", () => {
+  const palette = resolveCodeTheme("yishan", "dark");
+  const gitDiff = SEMANTIC_COLOR_TOKENS.dark.gitDiff;
+
+  const cases: [string, string[], string][] = [
+    ["entity.name.function", ["entity.name.function"], palette.function],
+    ["keyword.operator.arithmetic.js", ["keyword.operator.arithmetic.js"], palette.operator],
+    ["constant.numeric", ["constant.numeric"], palette.number],
+    ["entity.other.attribute-name", ["entity.other.attribute-name"], palette.attribute],
+    ["storage.type.ts", ["storage.type.ts"], palette.type],
+    ["identifier", ["identifier"], palette.foreground],
+    ["markup.deleted.diff", ["markup.deleted.diff"], gitDiff.deleted],
+    ["punctuation.definition.string.begin", ["punctuation.definition.string.begin"], palette.string],
+    ["comment.block", ["comment.block"], palette.comment],
+    ["support.function.console", ["support.function.console"], palette.function],
+    ["variable.other.constant", ["variable.other.constant"], palette.constant],
+    ["markup.heading.markdown", ["markup.heading.markdown"], palette.keyword],
+    ["entity.name.section.markdown", ["entity.name.section.markdown"], palette.keyword],
+    ["markup.inserted.diff", ["markup.inserted.diff"], gitDiff.added],
+    ["markup.changed.diff", ["markup.changed.diff"], gitDiff.modified],
+    ["punctuation.definition.bold.markdown", ["punctuation.definition.bold.markdown"], palette.delimiter],
+    ["keyword.operator.assignment.ts", ["keyword.operator.assignment.ts"], palette.operator],
+    ["storage", ["storage"], palette.keyword],
+    ["variable.parameter.function.js", ["variable.parameter.function.js"], palette.variable],
+    ["markup.inline.raw.markdown", ["markup.inline.raw.markdown"], palette.string],
+    ["markup.underline.link.markdown", ["markup.underline.link.markdown"], palette.string],
+    ["storage.modifier.ts", ["storage.modifier.ts"], palette.keyword],
+    ["source.java", ["source.java"], palette.foreground],
+  ];
+
+  it.each(cases)("%s → expected color", (_label, scopes, expected) => {
+    expect(pickTokenForeground(scopes, palette, gitDiff)).toBe(expected);
   });
 });
