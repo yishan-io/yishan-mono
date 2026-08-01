@@ -2,61 +2,71 @@ import { registerCustomTheme } from "@pierre/diffs";
 import pierreDark from "@pierre/theme/pierre-dark";
 import pierreLight from "@pierre/theme/pierre-light";
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
-import { DARK_SURFACE_COLORS } from "../theme";
+import { CODE_THEME_FAMILIES, type CodeThemePalette, getMonacoThemeName, resolveCodeTheme } from "./codeThemes";
+
+// ---------------------------------------------------------------------------
+// EDITOR_COLORS — derived from SEMANTIC_COLOR_TOKENS (same values as before)
+// ---------------------------------------------------------------------------
 
 export const EDITOR_COLORS = {
   light: {
-    background: "#ffffff",
-    foreground: "#1f2430",
-    lineHighlight: "#f1f3f7",
-    selection: "#ced7ec",
-    lineNumber: "#7a8190",
-    gutter: "#f5f6f8",
-    cursor: "#2a2a31",
+    background: SEMANTIC_COLOR_TOKENS.light.background.editor,
+    foreground: SEMANTIC_COLOR_TOKENS.light.editor.foreground,
+    lineHighlight: SEMANTIC_COLOR_TOKENS.light.editor.lineHighlight,
+    selection: SEMANTIC_COLOR_TOKENS.light.editor.selection,
+    lineNumber: SEMANTIC_COLOR_TOKENS.light.editor.lineNumber,
+    gutter: SEMANTIC_COLOR_TOKENS.light.editor.gutter,
+    cursor: SEMANTIC_COLOR_TOKENS.light.editor.cursor,
     addition: SEMANTIC_COLOR_TOKENS.light.gitDiff.added,
     deletion: SEMANTIC_COLOR_TOKENS.light.gitDiff.deleted,
     modified: SEMANTIC_COLOR_TOKENS.light.gitDiff.modified,
-    comment: "#7a8190",
-    keyword: "#8a3ffc",
-    string: "#2d7a00",
-    number: "#bd5500",
-    constant: "#9a6100",
-    function: "#0060b8",
-    type: "#006b99",
-    tag: "#b04900",
-    attributeName: "#0b6ea8",
-    operator: "#3f4758",
+    comment: SEMANTIC_COLOR_TOKENS.light.syntax.comment,
+    keyword: SEMANTIC_COLOR_TOKENS.light.syntax.keyword,
+    string: SEMANTIC_COLOR_TOKENS.light.syntax.string,
+    number: SEMANTIC_COLOR_TOKENS.light.syntax.number,
+    constant: SEMANTIC_COLOR_TOKENS.light.syntax.constant,
+    function: SEMANTIC_COLOR_TOKENS.light.syntax.function,
+    type: SEMANTIC_COLOR_TOKENS.light.syntax.type,
+    tag: SEMANTIC_COLOR_TOKENS.light.syntax.tag,
+    attributeName: SEMANTIC_COLOR_TOKENS.light.syntax.attribute,
+    operator: SEMANTIC_COLOR_TOKENS.light.syntax.operator,
   },
   dark: {
-    background: DARK_SURFACE_COLORS.mainPane,
-    foreground: "#d4dbe8",
-    lineHighlight: DARK_SURFACE_COLORS.activeLine,
-    selection: "#dde2e91f",
-    lineNumber: "#8e97ab",
-    gutter: DARK_SURFACE_COLORS.gutter,
-    cursor: "#d7deef",
+    background: SEMANTIC_COLOR_TOKENS.dark.background.editor,
+    foreground: SEMANTIC_COLOR_TOKENS.dark.editor.foreground,
+    lineHighlight: SEMANTIC_COLOR_TOKENS.dark.editor.lineHighlight,
+    selection: SEMANTIC_COLOR_TOKENS.dark.editor.selection,
+    lineNumber: SEMANTIC_COLOR_TOKENS.dark.editor.lineNumber,
+    gutter: SEMANTIC_COLOR_TOKENS.dark.editor.gutter,
+    cursor: SEMANTIC_COLOR_TOKENS.dark.editor.cursor,
     addition: SEMANTIC_COLOR_TOKENS.dark.gitDiff.added,
     deletion: SEMANTIC_COLOR_TOKENS.dark.gitDiff.deleted,
     modified: SEMANTIC_COLOR_TOKENS.dark.gitDiff.modified,
-    comment: "#7f8796",
-    keyword: "#c49fff",
-    string: "#a7d56d",
-    number: "#ffa86f",
-    constant: "#ffd57a",
-    function: "#79c4ff",
-    type: "#8ad9ff",
-    tag: "#ffb86b",
-    attributeName: "#86d0ff",
-    operator: "#c0c8d8",
+    comment: SEMANTIC_COLOR_TOKENS.dark.syntax.comment,
+    keyword: SEMANTIC_COLOR_TOKENS.dark.syntax.keyword,
+    string: SEMANTIC_COLOR_TOKENS.dark.syntax.string,
+    number: SEMANTIC_COLOR_TOKENS.dark.syntax.number,
+    constant: SEMANTIC_COLOR_TOKENS.dark.syntax.constant,
+    function: SEMANTIC_COLOR_TOKENS.dark.syntax.function,
+    type: SEMANTIC_COLOR_TOKENS.dark.syntax.type,
+    tag: SEMANTIC_COLOR_TOKENS.dark.syntax.tag,
+    attributeName: SEMANTIC_COLOR_TOKENS.dark.syntax.attribute,
+    operator: SEMANTIC_COLOR_TOKENS.dark.syntax.operator,
   },
 } as const;
 
 export type EditorColorMode = keyof typeof EDITOR_COLORS;
 
-export const YISHAN_DIFF_THEME_LIGHT = "yishan-diff-light";
-export const YISHAN_DIFF_THEME_DARK = "yishan-diff-dark";
+// ---------------------------------------------------------------------------
+// Aliases kept for existing consumers (Tasks 5–6 migrate them)
+// ---------------------------------------------------------------------------
 
-type EC = (typeof EDITOR_COLORS)[EditorColorMode];
+export const YISHAN_DIFF_THEME_LIGHT = "yishan-light";
+export const YISHAN_DIFF_THEME_DARK = "yishan-dark";
+
+// ---------------------------------------------------------------------------
+// Pierre theme builder — maps palette colors to TextMate scopes
+// ---------------------------------------------------------------------------
 
 function matchScope(scopes: string | string[] | undefined, pattern: string): boolean {
   if (!scopes) return false;
@@ -67,19 +77,19 @@ function matchScope(scopes: string | string[] | undefined, pattern: string): boo
   });
 }
 
-function pickFg(scopes: string | string[] | undefined, c: EC): string | undefined {
+function pickFg(scopes: string | string[] | undefined, p: CodeThemePalette): string | undefined {
   const isMarkdown = matchScope(scopes, "markdown");
-  if (matchScope(scopes, "comment")) return c.comment;
-  if (matchScope(scopes, "string")) return c.string;
-  if (matchScope(scopes, "keyword")) return c.keyword;
-  if (matchScope(scopes, "number") || matchScope(scopes, "numeric")) return c.number;
-  if (matchScope(scopes, "constant")) return c.constant;
-  if (matchScope(scopes, "function")) return c.function;
-  if (matchScope(scopes, "heading")) return c.keyword;
-  if (matchScope(scopes, "type") || matchScope(scopes, "class")) return c.type;
-  if (matchScope(scopes, "tag")) return c.tag;
-  if (matchScope(scopes, "attribute")) return c.attributeName;
-  if (!isMarkdown && (matchScope(scopes, "operator") || matchScope(scopes, "punctuation"))) return c.operator;
+  if (matchScope(scopes, "comment")) return p.comment;
+  if (matchScope(scopes, "string")) return p.string;
+  if (matchScope(scopes, "keyword")) return p.keyword;
+  if (matchScope(scopes, "number") || matchScope(scopes, "numeric")) return p.number;
+  if (matchScope(scopes, "constant")) return p.constant;
+  if (matchScope(scopes, "function")) return p.function;
+  if (matchScope(scopes, "heading")) return p.keyword;
+  if (matchScope(scopes, "type") || matchScope(scopes, "class")) return p.type;
+  if (matchScope(scopes, "tag")) return p.tag;
+  if (matchScope(scopes, "attribute")) return p.attribute;
+  if (!isMarkdown && (matchScope(scopes, "operator") || matchScope(scopes, "punctuation"))) return p.operator;
   return undefined;
 }
 
@@ -88,9 +98,9 @@ type ThemeRule = {
   settings?: { foreground?: string; background?: string; fontStyle?: string };
 };
 
-function overrideFgColors(settings: ThemeRule[], c: EC) {
+function overrideFgColors(settings: ThemeRule[], p: CodeThemePalette) {
   return settings.map((rule) => {
-    const fg = pickFg(rule.scope, c) ?? rule.settings?.foreground;
+    const fg = pickFg(rule.scope, p) ?? rule.settings?.foreground;
     return {
       ...rule,
       settings: rule.settings
@@ -100,7 +110,13 @@ function overrideFgColors(settings: ThemeRule[], c: EC) {
   });
 }
 
-function buildTheme(name: string, mode: "light" | "dark", raw: unknown, c: EC): Record<string, unknown> {
+function buildTheme(
+  name: string,
+  mode: "light" | "dark",
+  raw: unknown,
+  p: CodeThemePalette,
+  gitDiffTokens: { added: string; deleted: string; modified: string },
+): Record<string, unknown> {
   const base = raw as Record<string, unknown>;
   const baseSettings = (base.settings || base.tokenColors) as ThemeRule[];
   const theme: Record<string, unknown> = {
@@ -109,42 +125,68 @@ function buildTheme(name: string, mode: "light" | "dark", raw: unknown, c: EC): 
     type: mode,
     colors: {
       ...(base.colors as Record<string, string>),
-      "editor.foreground": c.foreground,
-      "editor.background": c.background,
-      "gitDecoration.addedResourceForeground": c.addition,
-      "gitDecoration.deletedResourceForeground": c.deletion,
-      "gitDecoration.modifiedResourceForeground": c.modified,
+      "editor.foreground": p.foreground,
+      "editor.background": p.background,
+      "gitDecoration.addedResourceForeground": gitDiffTokens.added,
+      "gitDecoration.deletedResourceForeground": gitDiffTokens.deleted,
+      "gitDecoration.modifiedResourceForeground": gitDiffTokens.modified,
     },
-    settings: baseSettings ? overrideFgColors(baseSettings, c) : [],
+    settings: baseSettings ? overrideFgColors(baseSettings, p) : [],
   };
   theme.tokenColors = undefined;
   return theme;
 }
 
-registerCustomTheme(YISHAN_DIFF_THEME_DARK, () =>
-  Promise.resolve(buildTheme(YISHAN_DIFF_THEME_DARK, "dark", pierreDark, EDITOR_COLORS.dark)),
-);
+// ---------------------------------------------------------------------------
+// Register all family × mode Pierre diff themes
+// ---------------------------------------------------------------------------
 
-registerCustomTheme(YISHAN_DIFF_THEME_LIGHT, () =>
-  Promise.resolve(buildTheme(YISHAN_DIFF_THEME_LIGHT, "light", pierreLight, EDITOR_COLORS.light)),
-);
+for (const family of CODE_THEME_FAMILIES) {
+  for (const mode of ["light", "dark"] as const) {
+    const palette = family.palettes[mode];
+    const gitDiffTokens = SEMANTIC_COLOR_TOKENS[mode].gitDiff;
+    const pierreBase = mode === "dark" ? pierreDark : pierreLight;
+
+    registerCustomTheme(getMonacoThemeName(family.id, mode), () =>
+      Promise.resolve(
+        buildTheme(getMonacoThemeName(family.id, mode), mode, pierreBase, palette, {
+          added: gitDiffTokens.added,
+          deleted: gitDiffTokens.deleted,
+          modified: gitDiffTokens.modified,
+        }),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CSS variable helpers for diff viewers
+// ---------------------------------------------------------------------------
 
 export function getDiffCssVariables(mode: EditorColorMode): Record<string, string> {
-  const c = EDITOR_COLORS[mode];
+  const palette = resolveCodeTheme("yishan", mode);
+  return getDiffCssVariablesForPalette(palette, mode);
+}
+
+export function getDiffCssVariablesForPalette(
+  palette: CodeThemePalette,
+  mode: "light" | "dark",
+): Record<string, string> {
+  const gitDiff = SEMANTIC_COLOR_TOKENS[mode].gitDiff;
   return {
-    "--diffs-bg": c.background,
-    "--diffs-fg": c.foreground,
-    "--diffs-bg-context-override": c.lineHighlight,
-    "--diffs-bg-context-gutter-override": c.gutter,
-    "--diffs-bg-separator-override": c.gutter,
-    "--diffs-fg-number-override": c.lineNumber,
-    "--diffs-bg-selection-override": c.selection,
-    "--diffs-addition-color-override": c.addition,
-    "--diffs-deletion-color-override": c.deletion,
-    "--diffs-modified-color-override": c.modified,
-    "--diffs-bg-addition-override": `${c.addition}22`,
-    "--diffs-bg-addition-emphasis-override": `${c.addition}33`,
-    "--diffs-bg-deletion-override": `${c.deletion}22`,
-    "--diffs-bg-deletion-emphasis-override": `${c.deletion}33`,
+    "--diffs-bg": palette.background,
+    "--diffs-fg": palette.foreground,
+    "--diffs-bg-context-override": palette.lineHighlight,
+    "--diffs-bg-context-gutter-override": palette.gutter,
+    "--diffs-bg-separator-override": palette.gutter,
+    "--diffs-fg-number-override": palette.lineNumber,
+    "--diffs-bg-selection-override": palette.selection,
+    "--diffs-addition-color-override": gitDiff.added,
+    "--diffs-deletion-color-override": gitDiff.deleted,
+    "--diffs-modified-color-override": gitDiff.modified,
+    "--diffs-bg-addition-override": `${gitDiff.added}22`,
+    "--diffs-bg-addition-emphasis-override": `${gitDiff.added}33`,
+    "--diffs-bg-deletion-override": `${gitDiff.deleted}22`,
+    "--diffs-bg-deletion-emphasis-override": `${gitDiff.deleted}33`,
   };
 }

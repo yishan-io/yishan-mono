@@ -7,7 +7,7 @@ import {
   computeGitLineChanges,
   getHunkForLine,
 } from "../helpers/gitGutterDiff";
-import { YISHAN_THEME_DARK, monaco } from "../helpers/monacoSetup";
+import { monaco } from "../helpers/monacoSetup";
 
 // CSS class names injected for gutter decorations.
 // These are defined in style.css and matched by Monaco's margin decoration class mechanism.
@@ -38,8 +38,10 @@ export type UseGitGutterDecorationsInput = {
   currentContent: string;
   /** When true, the file is git-ignored — skip decorations entirely. */
   isIgnored?: boolean;
-  /** Active Monaco theme name — used to select light/dark overview ruler colors. */
-  monacoTheme?: string;
+  /** When true, the editor is using a dark theme (selects dark overview ruler colors). */
+  isDark?: boolean;
+  /** Current editor font size in px (scales inline diff viewzone height). */
+  editorFontSize?: number;
 };
 
 /**
@@ -59,7 +61,8 @@ export function useGitGutterDecorations({
   worktreePath,
   currentContent,
   isIgnored = false,
-  monacoTheme,
+  isDark = false,
+  editorFontSize = 13,
 }: UseGitGutterDecorationsInput): void {
   const decorationsRef = useRef<monaco.editor.IEditorDecorationsCollection | null>(null);
   const [headContent, setHeadContent] = useState<string | null>(null);
@@ -104,7 +107,6 @@ export function useGitGutterDecorations({
   }, [isIgnored, path, workspaceId, worktreePath]);
 
   const shouldThrottleLiveDiff = currentContent.split("\n").length > MAX_LIVE_GUTTER_DIFF_LINES;
-  const isDark = monacoTheme === YISHAN_THEME_DARK;
 
   // Compute and apply decorations whenever content or HEAD changes.
   useEffect(() => {
@@ -190,8 +192,9 @@ export function useGitGutterDecorations({
       const domNode = createInlineDiffDom(hunkInfo.oldLines, hunkInfo.newLines, change.kind);
       viewZoneDomRef.current = domNode;
 
-      // Compute height: header (~30px) + each line (~18px) + padding (20px)
-      const LINE_HEIGHT_PX = 18;
+      // Compute height: header (~30px) + each line (fontSize * 1.5, matching
+      // style.css line-height: 1.5) + padding (20px).
+      const LINE_HEIGHT_PX = Math.round(editorFontSize * 1.5);
       const HEADER_HEIGHT_PX = 30;
       const PADDING_PX = 20;
       let totalLines = hunkInfo.oldLines.length;
@@ -223,7 +226,7 @@ export function useGitGutterDecorations({
       mouseDisposable.dispose();
       keyDisposable.dispose();
     };
-  }, [editor, headContent, currentContent]);
+  }, [editor, headContent, currentContent, editorFontSize]);
 
   // Clean up viewzone and decorations on unmount or when head/path changes.
   useEffect(() => {

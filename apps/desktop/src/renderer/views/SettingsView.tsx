@@ -24,6 +24,7 @@ import { useThemePreference } from "../hooks/useThemePreference";
 import { AccountSettingsView } from "./settings/AccountSettingsView";
 import { CLIToolsSettingsView } from "./settings/CLIToolsSettingsView";
 import { ComputerUseSettingsView } from "./settings/ComputerUseSettingsView";
+import { EditorSettingsView } from "./settings/EditorSettingsView";
 import { IntegrationSettingsView } from "./settings/IntegrationSettingsView";
 import { KeybindingsSettingsView } from "./settings/KeybindingsSettingsView";
 import { LanguageSettingsView } from "./settings/LanguageSettingsView";
@@ -190,6 +191,7 @@ export function SettingsView() {
             systemLabel={t("settings.appearance.theme.options.system")}
           />
           <LanguageSettingsView />
+          <EditorSettingsView />
           <MarkdownSettingsView />
         </Stack>
       ),

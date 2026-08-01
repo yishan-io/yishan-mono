@@ -2,7 +2,7 @@
 
 import { layoutStore } from "@renderer/store/settings/layoutStore";
 import { renderWithAppTheme } from "@renderer/testUtils/renderWithAppTheme";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MarkdownPreview } from "./MarkdownPreview";
@@ -42,7 +42,7 @@ describe("MarkdownPreview outline", () => {
   it("stays hidden by default when outline visibility setting is off", async () => {
     layoutStore.setState({ isMarkdownOutlineVisible: false });
 
-    render(<MarkdownPreview content="# placeholder" />);
+    renderWithAppTheme(<MarkdownPreview content="# placeholder" />);
 
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "Intro" })).toBeNull();
@@ -52,7 +52,7 @@ describe("MarkdownPreview outline", () => {
   });
 
   it("renders an outline from nested headings", async () => {
-    render(<MarkdownPreview content="# placeholder" />);
+    renderWithAppTheme(<MarkdownPreview content="# placeholder" />);
 
     expect(await screen.findByRole("button", { name: "Intro" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Setup" })).toBeTruthy();
@@ -61,7 +61,7 @@ describe("MarkdownPreview outline", () => {
   });
 
   it("scrolls the matching heading into view when an outline item is clicked", async () => {
-    render(<MarkdownPreview content="# placeholder" />);
+    renderWithAppTheme(<MarkdownPreview content="# placeholder" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Usage" }));
 
@@ -71,7 +71,7 @@ describe("MarkdownPreview outline", () => {
   });
 
   it("collapses and re-expands nested headings", async () => {
-    render(<MarkdownPreview content="# placeholder" />);
+    renderWithAppTheme(<MarkdownPreview content="# placeholder" />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Collapse Setup" }));
 
@@ -85,7 +85,7 @@ describe("MarkdownPreview outline", () => {
   });
 
   it("hides and shows the outline panel", async () => {
-    render(<MarkdownPreview content="# placeholder" />);
+    renderWithAppTheme(<MarkdownPreview content="# placeholder" />);
 
     expect(await screen.findByRole("button", { name: "Hide outline" })).toBeTruthy();
 
@@ -118,7 +118,7 @@ describe("MarkdownPreview outline", () => {
     vi.useFakeTimers();
     parseMock.mockImplementation(async (content) => `<h1>${content}</h1>`);
 
-    const { rerender } = render(<MarkdownPreview content="# one" />);
+    const { rerender } = renderWithAppTheme(<MarkdownPreview content="# one" />);
 
     await act(async () => {
       await Promise.resolve();

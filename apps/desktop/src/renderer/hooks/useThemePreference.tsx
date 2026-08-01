@@ -1,6 +1,8 @@
 import { useMediaQuery } from "@mui/material";
+import { TYPOGRAPHY_TOKENS } from "@yishan-io/design-tokens";
 import { createCssThemeVariables } from "@yishan-io/design-tokens/v1/css";
 import { type ReactNode, createContext, useContext, useLayoutEffect, useMemo } from "react";
+import { editorSettingsStore } from "../store/settings/editorSettingsStore";
 import { layoutStore } from "../store/settings/layoutStore";
 import type { AppThemeMode, AppThemePreference } from "../theme";
 import { resolveAppThemeMode } from "../theme";
@@ -33,7 +35,17 @@ export function AppThemePreferenceProvider({ children }: { children: ReactNode }
     for (const [property, value] of Object.entries(cssThemeVariables)) {
       rootElement.style.setProperty(property, value);
     }
+
+    rootElement.style.setProperty("--yishan-font-mono", TYPOGRAPHY_TOKENS.monoFontFamily);
   }, [themeMode]);
+
+  const editorFontSize = editorSettingsStore((s) => s.editorFontSize);
+  useLayoutEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+    document.documentElement.style.setProperty("--yishan-color-editor-font-size-px", `${editorFontSize}px`);
+  }, [editorFontSize]);
 
   const value = useMemo<AppThemePreferenceContextValue>(
     () => ({

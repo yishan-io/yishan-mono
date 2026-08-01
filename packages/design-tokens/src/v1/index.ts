@@ -15,6 +15,10 @@ export const TYPOGRAPHY_TOKENS = {
   baseFontSizePx: 14,
   body2FontSizeRem: 0.875,
   fontFamily: '"Manrope", "SF Pro Text", "Segoe UI", sans-serif',
+  monoFontFamily: '"JetBrains Mono", "SF Mono", Menlo, monospace',
+  editorFontSizePx: 13,
+  editorFontSizeMinPx: 11,
+  editorFontSizeMaxPx: 18,
 } as const;
 
 /**
@@ -129,6 +133,28 @@ export const SEMANTIC_COLOR_TOKENS = {
       default: "#d8dde4",
       editor: "#dfe3e8",
     },
+    editor: {
+      foreground: "#1f2430",
+      lineHighlight: "#f1f3f7",
+      selection: "#ced7ec",
+      lineNumber: "#7a8190",
+      gutter: "#f5f6f8",
+      cursor: "#2a2a31",
+    },
+    syntax: {
+      comment: "#7a8190",
+      keyword: "#8a3ffc",
+      string: "#2d7a00",
+      number: "#bd5500",
+      constant: "#9a6100",
+      function: "#0060b8",
+      type: "#006b99",
+      tag: "#b04900",
+      attribute: "#0b6ea8",
+      operator: "#3f4758",
+      delimiter: "#3f4758",
+      variable: "#1f2430",
+    },
     action: {
       active: COLOR_PRIMITIVES.neutral.ink600,
       hover: "#f3f4f6",
@@ -165,6 +191,28 @@ export const SEMANTIC_COLOR_TOKENS = {
     border: {
       default: "#414754",
       editor: "#4a5160",
+    },
+    editor: {
+      foreground: "#d4dbe8",
+      lineHighlight: "#363c46",
+      selection: "#dde2e91f",
+      lineNumber: "#8e97ab",
+      gutter: "#2e333c",
+      cursor: "#d7deef",
+    },
+    syntax: {
+      comment: "#7f8796",
+      keyword: "#c49fff",
+      string: "#a7d56d",
+      number: "#ffa86f",
+      constant: "#ffd57a",
+      function: "#79c4ff",
+      type: "#8ad9ff",
+      tag: "#ffb86b",
+      attribute: "#86d0ff",
+      operator: "#c0c8d8",
+      delimiter: "#c0c8d8",
+      variable: "#d4dbe8",
     },
     action: {
       active: COLOR_PRIMITIVES.neutral.gray300,

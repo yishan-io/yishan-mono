@@ -1,43 +1,45 @@
 import type { Theme } from "@mui/material/styles";
+import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import { useMemo } from "react";
+import { type CodeThemePalette, MONO_FONT_FAMILY } from "../../helpers/codeThemes";
 
-/** highlight.js token colors inspired by GitHub's light/dark themes, applied via sx. */
-export function getCodeHighlightStyles(mode: "light" | "dark") {
-  if (mode === "dark") {
-    return {
-      "& .hljs-keyword, & .hljs-selector-tag, & .hljs-literal, & .hljs-section, & .hljs-link": { color: "#ff7b72" },
-      "& .hljs-string, & .hljs-attr": { color: "#a5d6ff" },
-      "& .hljs-title, & .hljs-name, & .hljs-type": { color: "#d2a8ff" },
-      "& .hljs-number, & .hljs-symbol, & .hljs-bullet": { color: "#79c0ff" },
-      "& .hljs-comment, & .hljs-quote, & .hljs-meta": { color: "#8b949e" },
-      "& .hljs-deletion": { color: "#ffa198", bgcolor: "rgba(255, 129, 130, 0.1)" },
-      "& .hljs-addition": { color: "#7ee787", bgcolor: "rgba(63, 185, 80, 0.1)" },
-      "& .hljs-built_in": { color: "#ffa657" },
-      "& .hljs-variable, & .hljs-template-variable": { color: "#ffa657" },
-      "& .hljs-params": { color: "#c9d1d9" },
-      "& .hljs-regexp": { color: "#7ee787" },
-      "& .hljs-subst": { color: "#c9d1d9" },
-    };
-  }
+/** highlight.js token colors mapped from the resolved code theme palette, with diff markers locked to semantic tokens. */
+export function getCodeHighlightStyles(palette: CodeThemePalette, mode: "light" | "dark") {
+  const gitDiff = SEMANTIC_COLOR_TOKENS[mode].gitDiff;
 
   return {
-    "& .hljs-keyword, & .hljs-selector-tag, & .hljs-literal, & .hljs-section, & .hljs-link": { color: "#cf222e" },
-    "& .hljs-string, & .hljs-attr": { color: "#0a3069" },
-    "& .hljs-title, & .hljs-name, & .hljs-type": { color: "#8250df" },
-    "& .hljs-number, & .hljs-symbol, & .hljs-bullet": { color: "#0550ae" },
-    "& .hljs-comment, & .hljs-quote, & .hljs-meta": { color: "#6e7781" },
-    "& .hljs-deletion": { color: "#82071e", bgcolor: "rgba(255, 129, 130, 0.1)" },
-    "& .hljs-addition": { color: "#116329", bgcolor: "rgba(63, 185, 80, 0.1)" },
-    "& .hljs-built_in": { color: "#953800" },
-    "& .hljs-variable, & .hljs-template-variable": { color: "#953800" },
-    "& .hljs-params": { color: "#24292f" },
-    "& .hljs-regexp": { color: "#116329" },
-    "& .hljs-subst": { color: "#24292f" },
+    "& .hljs-keyword, & .hljs-selector-tag, & .hljs-literal, & .hljs-section, & .hljs-link": {
+      color: palette.keyword,
+    },
+    "& .hljs-string, & .hljs-attr": { color: palette.string },
+    "& .hljs-title, & .hljs-name, & .hljs-type": { color: palette.type },
+    "& .hljs-number, & .hljs-symbol, & .hljs-bullet": { color: palette.number },
+    "& .hljs-comment, & .hljs-quote, & .hljs-meta": { color: palette.comment },
+    "& .hljs-deletion": {
+      color: gitDiff.deleted,
+      bgcolor: gitDiff.inline.deleted.background,
+    },
+    "& .hljs-addition": {
+      color: gitDiff.added,
+      bgcolor: gitDiff.inline.added.background,
+    },
+    "& .hljs-built_in, & .hljs-variable, & .hljs-template-variable": {
+      color: palette.variable,
+    },
+    "& .hljs-params": { color: palette.variable },
+    "& .hljs-regexp": { color: palette.string },
+    "& .hljs-subst": { color: palette.foreground },
   };
 }
 
-/** Returns MUI-aware styles for the Markdown preview container. */
-export function useMarkdownStyles(theme: Theme, baseFontSize = 15) {
+/** Returns MUI-aware styles for the Markdown preview container, including code theme palette integration. */
+export function useMarkdownStyles(
+  theme: Theme,
+  baseFontSize: number,
+  codePalette: CodeThemePalette,
+  codeFontSize: number,
+  codeMode: "light" | "dark",
+) {
   return useMemo(
     () => ({
       container: {
@@ -152,7 +154,7 @@ export function useMarkdownStyles(theme: Theme, baseFontSize = 15) {
 
         // Inline code
         "& :not(pre) > code": {
-          fontFamily: '"JetBrains Mono", "SF Mono", Menlo, monospace',
+          fontFamily: MONO_FONT_FAMILY,
           fontSize: "0.875em",
           px: 0.75,
           py: 0.25,
@@ -162,16 +164,16 @@ export function useMarkdownStyles(theme: Theme, baseFontSize = 15) {
 
         // Code blocks
         "& pre": {
-          fontFamily: '"JetBrains Mono", "SF Mono", Menlo, monospace',
-          fontSize: "0.8125em",
+          fontFamily: MONO_FONT_FAMILY,
+          fontSize: codeFontSize,
           lineHeight: 1.6,
           mt: 0,
           mb: 1.5,
           p: 2,
           borderRadius: 1,
           overflow: "auto",
-          bgcolor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.04)",
-          border: `1px solid ${theme.palette.divider}`,
+          bgcolor: codePalette.background,
+          border: `1px solid ${codePalette.lineHighlight}`,
           "& code": {
             fontFamily: "inherit",
             fontSize: "inherit",
@@ -180,7 +182,7 @@ export function useMarkdownStyles(theme: Theme, baseFontSize = 15) {
             bgcolor: "transparent",
           },
           // Syntax highlighting token colors
-          ...getCodeHighlightStyles(theme.palette.mode),
+          ...getCodeHighlightStyles(codePalette, codeMode),
         },
 
         // Horizontal rules
@@ -236,6 +238,6 @@ export function useMarkdownStyles(theme: Theme, baseFontSize = 15) {
         },
       },
     }),
-    [baseFontSize, theme],
+    [baseFontSize, codeFontSize, codePalette, theme, codeMode],
   );
 }

@@ -3,8 +3,17 @@
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { useEffect, useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { editorSettingsStore } from "../store/settings/editorSettingsStore";
+import { layoutStore } from "../store/settings/layoutStore";
 import { renderWithAppTheme } from "../testUtils/renderWithAppTheme";
 import { FileEditor } from "./FileEditor";
+
+// Stub useMediaQuery so AppThemePreferenceProvider resolves themeMode
+// deterministically. Default: no dark preference → system resolves to "light".
+vi.mock("@mui/material", async () => {
+  const actual = await vi.importActual("@mui/material");
+  return { ...actual, useMediaQuery: vi.fn(() => false) };
+});
 
 // Capture props passed to MarkdownPreview so tests can inspect findOpen etc.
 const capturedMarkdownPreviewProps: { current: Record<string, unknown> } = { current: {} };
@@ -52,6 +61,8 @@ const mockEditorState: {
   }> | null;
   editorScrollPosition: { scrollTop: number; scrollLeft: number };
   editorDomNode: HTMLElement | null;
+  updateOptionsCalls: Array<Record<string, unknown>>;
+  setThemeCalls: string[];
 } = {
   editorValue: "",
   editorFocus: vi.fn(),
@@ -66,6 +77,8 @@ const mockEditorState: {
   editorSelections: null,
   editorScrollPosition: { scrollTop: 0, scrollLeft: 0 },
   editorDomNode: null,
+  updateOptionsCalls: [] as Array<Record<string, unknown>>,
+  setThemeCalls: [] as string[],
 };
 
 vi.mock("../helpers/monacoSetup", () => ({
@@ -120,7 +133,9 @@ vi.mock("../helpers/monacoSetup", () => ({
           dispose: () => {
             mockEditorState.disposeCount += 1;
           },
-          updateOptions: vi.fn(),
+          updateOptions: (options: Record<string, unknown>) => {
+            mockEditorState.updateOptionsCalls.push(options);
+          },
         };
       },
       createModel: (value: string, language?: string, uri?: unknown) => {
@@ -137,7 +152,9 @@ vi.mock("../helpers/monacoSetup", () => ({
       getModel: () => null,
       setModelLanguage: vi.fn(),
       defineTheme: vi.fn(),
-      setTheme: vi.fn(),
+      setTheme: (name: string) => {
+        mockEditorState.setThemeCalls.push(name);
+      },
     },
   },
 }));
@@ -180,8 +197,12 @@ afterEach(() => {
   mockEditorState.editorSelections = null;
   mockEditorState.editorScrollPosition = { scrollTop: 0, scrollLeft: 0 };
   mockEditorState.editorDomNode = null;
+  mockEditorState.updateOptionsCalls = [];
+  mockEditorState.setThemeCalls = [];
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+  // Reset layout store to defaults between tests
+  layoutStore.setState({ themePreference: "system" });
 });
 
 describe("FileEditor", () => {
@@ -345,16 +366,39 @@ describe("FileEditor", () => {
     expect(mockEditorState.lastModelUri).toEqual({ scheme: "file", path: "/Users/dev/project/main.ts" });
   });
 
-  it("uses dark theme when MUI theme is dark", () => {
+  it("uses dark theme when app theme mode is dark", () => {
+    layoutStore.setState({ themePreference: "dark" });
+
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
 
     expect((mockEditorState.createOptions as { theme?: string })?.theme).toBe("yishan-dark");
   });
 
-  it("uses light theme when MUI theme is light", () => {
+  it("uses light theme when app theme mode is light", () => {
+    // layoutStore default is "system" + useMediaQuery → false = "light"
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />, { mode: "light" });
 
     expect((mockEditorState.createOptions as { theme?: string })?.theme).toBe("yishan-light");
+  });
+
+  it("updates theme/font/wrap without recreating the editor", () => {
+    layoutStore.setState({ themePreference: "light" });
+    renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" />);
+    const createCountAfterMount = mockEditorState.createCount;
+    expect(createCountAfterMount).toBeGreaterThan(0);
+
+    act(() => {
+      editorSettingsStore.setState({ editorFontSize: 15, wordWrap: false });
+      layoutStore.setState({ themePreference: "dark" });
+    });
+
+    expect(mockEditorState.createCount).toBe(createCountAfterMount);
+    expect(mockEditorState.updateOptionsCalls.at(-1)).toMatchObject({ fontSize: 15, wordWrap: "off" });
+    expect(mockEditorState.setThemeCalls).toContain("yishan-dark");
+
+    // Restore stores so later tests see defaults.
+    layoutStore.setState({ themePreference: "system" });
+    editorSettingsStore.setState({ editorFontSize: 13, wordWrap: true });
   });
 
   it("focuses the editor when requested", () => {

@@ -3,7 +3,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { SEMANTIC_COLOR_TOKENS } from "@yishan-io/design-tokens";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { YISHAN_THEME_DARK } from "../helpers/monacoSetup";
 import { useGitGutterDecorations } from "./useGitGutterDecorations";
 
 // Mock the readDiff command
@@ -15,6 +14,8 @@ vi.mock("../commands/gitCommands", () => ({
 // Mock monaco-editor setup module
 vi.mock("../helpers/monacoSetup", () => ({
   YISHAN_THEME_DARK: "yishan-dark",
+  YISHAN_THEME_LIGHT: "yishan-light",
+  ensureEditorThemes: vi.fn(),
   monaco: {
     KeyCode: { Escape: 9 },
     editor: {
@@ -143,33 +144,27 @@ describe("useGitGutterDecorations", () => {
   });
 
   it.each([
-    [undefined, "added", "unchanged\nlast", "unchanged\nadded\nlast", SEMANTIC_COLOR_TOKENS.light.gitDiff.added],
+    [false, "added", "unchanged\nlast", "unchanged\nadded\nlast", SEMANTIC_COLOR_TOKENS.light.gitDiff.added],
     [
-      undefined,
+      false,
       "modified",
       "unchanged\nbefore\nlast",
       "unchanged\nafter\nlast",
       SEMANTIC_COLOR_TOKENS.light.gitDiff.modified,
     ],
-    [undefined, "deleted", "unchanged\nremoved\nlast", "unchanged\nlast", SEMANTIC_COLOR_TOKENS.light.gitDiff.deleted],
-    [YISHAN_THEME_DARK, "added", "unchanged\nlast", "unchanged\nadded\nlast", SEMANTIC_COLOR_TOKENS.dark.gitDiff.added],
+    [false, "deleted", "unchanged\nremoved\nlast", "unchanged\nlast", SEMANTIC_COLOR_TOKENS.light.gitDiff.deleted],
+    [true, "added", "unchanged\nlast", "unchanged\nadded\nlast", SEMANTIC_COLOR_TOKENS.dark.gitDiff.added],
     [
-      YISHAN_THEME_DARK,
+      true,
       "modified",
       "unchanged\nbefore\nlast",
       "unchanged\nafter\nlast",
       SEMANTIC_COLOR_TOKENS.dark.gitDiff.modified,
     ],
-    [
-      YISHAN_THEME_DARK,
-      "deleted",
-      "unchanged\nremoved\nlast",
-      "unchanged\nlast",
-      SEMANTIC_COLOR_TOKENS.dark.gitDiff.deleted,
-    ],
+    [true, "deleted", "unchanged\nremoved\nlast", "unchanged\nlast", SEMANTIC_COLOR_TOKENS.dark.gitDiff.deleted],
   ])(
-    "generates the %s overview ruler color for %s changes",
-    async (monacoTheme, kind, oldContent, currentContent, expectedColor) => {
+    "generates the %s overview ruler color for %s changes (isDark=%s)",
+    async (isDark, kind, oldContent, currentContent, expectedColor) => {
       mockReadDiff.mockResolvedValue({ oldContent, newContent: "" });
 
       renderHook(() =>
@@ -179,7 +174,7 @@ describe("useGitGutterDecorations", () => {
           path: "src/a.ts",
           worktreePath: "/workspace",
           currentContent,
-          monacoTheme,
+          isDark,
         }),
       );
 

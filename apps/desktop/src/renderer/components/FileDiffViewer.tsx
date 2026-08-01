@@ -1,5 +1,4 @@
 import { Box, IconButton, Tooltip } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
 import { parseDiffFromFile } from "@pierre/diffs";
 import type { SelectedLineRange } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
@@ -14,8 +13,11 @@ import {
   LuWrapText,
 } from "react-icons/lu";
 import { isBinaryPath } from "../helpers/binaryExtensions";
+import { MONO_FONT_FAMILY } from "../helpers/codeThemes";
 import { findDiffMatches } from "../helpers/diffSearch";
-import { YISHAN_DIFF_THEME_DARK, YISHAN_DIFF_THEME_LIGHT, getDiffCssVariables } from "../helpers/diffTheme";
+import { getDiffCssVariablesForPalette } from "../helpers/diffTheme";
+import { useCodeTheme } from "../hooks/useCodeTheme";
+import { editorSettingsStore } from "../store/settings/editorSettingsStore";
 import { DiffSearchPanel } from "./DiffSearchPanel";
 
 type FileDiffViewerProps = {
@@ -25,14 +27,15 @@ type FileDiffViewerProps = {
   onOpenFile?: (filePath: string) => void;
 };
 
-const DIFF_LINE_HEIGHT = 20;
-
 export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }: FileDiffViewerProps) {
-  const theme = useTheme();
+  const { palette, themeName, mode } = useCodeTheme();
+  const editorFontSize = editorSettingsStore((s) => s.editorFontSize);
+  const wordWrap = editorSettingsStore((s) => s.wordWrap);
+  const diffLineHeight = Math.round(editorFontSize * 1.5);
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [sideBySide, setSideBySide] = useState(false);
   const [changesOnly, setChangesOnly] = useState(true);
-  const [wrapLines, setWrapLines] = useState(false);
 
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,8 +50,7 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
     [filePath, oldContent, newContent],
   );
 
-  const diffTheme = theme.palette.mode === "dark" ? YISHAN_DIFF_THEME_DARK : YISHAN_DIFF_THEME_LIGHT;
-  const diffCssVars = useMemo(() => getDiffCssVariables(theme.palette.mode), [theme.palette.mode]);
+  const diffCssVars = useMemo(() => getDiffCssVariablesForPalette(palette, mode), [palette, mode]);
 
   const searchFiles = useMemo(() => [{ oldContent, newContent, fileId: filePath }], [oldContent, newContent, filePath]);
 
@@ -74,9 +76,9 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const scrollTop = Math.max(0, (match.visualLineNumber - 1) * DIFF_LINE_HEIGHT - container.clientHeight / 2);
+    const scrollTop = Math.max(0, (match.visualLineNumber - 1) * diffLineHeight - container.clientHeight / 2);
     container.scrollTop = scrollTop;
-  }, [searchMatches, currentMatchIndex]);
+  }, [searchMatches, currentMatchIndex, diffLineHeight]);
 
   useEffect(() => {
     const handleKeyboard = (event: KeyboardEvent) => {
@@ -154,8 +156,8 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
             {sideBySide ? <LuStretchVertical size={14} /> : <LuStretchHorizontal size={14} />}
           </IconButton>
         </Tooltip>
-        <Tooltip title={wrapLines ? "Disable line wrapping" : "Enable line wrapping"}>
-          <IconButton onClick={() => setWrapLines((prev) => !prev)} sx={{ ml: 0.5 }}>
+        <Tooltip title={wordWrap ? "Disable line wrapping" : "Enable line wrapping"}>
+          <IconButton onClick={() => editorSettingsStore.getState().setWordWrap(!wordWrap)} sx={{ ml: 0.5 }}>
             <LuWrapText size={14} />
           </IconButton>
         </Tooltip>
@@ -193,17 +195,17 @@ export function FileDiffViewer({ filePath, oldContent, newContent, onOpenFile }:
           style={
             {
               minHeight: "100%",
-              "--diffs-font-family": '"JetBrains Mono", "SF Mono", Menlo, monospace',
-              "--diffs-font-size": "13px",
-              "--diffs-line-height": `${DIFF_LINE_HEIGHT}px`,
+              "--diffs-font-family": MONO_FONT_FAMILY,
+              "--diffs-font-size": `${editorFontSize}px`,
+              "--diffs-line-height": `${diffLineHeight}px`,
               ...diffCssVars,
             } as React.CSSProperties
           }
           options={{
-            theme: diffTheme,
+            theme: themeName,
             diffStyle: sideBySide ? "split" : "unified",
             expandUnchanged: !changesOnly,
-            overflow: wrapLines ? "wrap" : "scroll",
+            overflow: wordWrap ? "wrap" : "scroll",
             disableFileHeader: false,
           }}
         />

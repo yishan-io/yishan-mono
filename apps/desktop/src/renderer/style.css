@@ -116,12 +116,15 @@ html[data-app-theme-mode="dark"] .git-gutter-deleted {
 /* ─── Git inline diff viewzone ─────────────────────────────────────────────── */
 
 .git-inline-diff-zone {
-  background-color: #f6f8fa;
-  border: 1px solid #d0d7de;
+  /* was #f6f8fa → background-app #f7f8fa (delta negligible) */
+  background-color: var(--yishan-color-background-app);
+  /* was #d0d7de → border-default #d8dde4 (delta negligible) */
+  border: 1px solid var(--yishan-color-border-default);
   border-radius: 4px;
   margin: 2px 8px;
-  font-family: "JetBrains Mono", "SF Mono", Menlo, monospace;
-  font-size: 12px;
+  font-family: var(--yishan-font-mono);
+  /* was 12px → editor-font-size-px default 13px (delta noticeable) */
+  font-size: var(--yishan-color-editor-font-size-px, 13px);
   line-height: 1.5;
   position: relative;
   z-index: 1;
@@ -136,15 +139,18 @@ html[data-app-theme-mode="dark"] .git-gutter-deleted {
   align-items: center;
   justify-content: space-between;
   padding: 4px 8px;
-  background-color: #eaeef2;
-  border-bottom: 1px solid #d0d7de;
+  /* was #eaeef2 → background-surface #ffffff (delta noticeable: much lighter) */
+  background-color: var(--yishan-color-background-surface);
+  /* was #d0d7de → border-default #d8dde4 (delta negligible) */
+  border-bottom: 1px solid var(--yishan-color-border-default);
   flex-shrink: 0;
 }
 
 .git-inline-diff-label {
   font-size: 11px;
   font-weight: 500;
-  color: #57606a;
+  /* was #57606a → text-secondary #566761 (delta negligible) */
+  color: var(--yishan-color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -155,13 +161,16 @@ html[data-app-theme-mode="dark"] .git-gutter-deleted {
 
 .git-inline-diff-hint {
   font-size: 10px;
-  color: #8b949e;
+  /* was #8b949e → text-secondary #566761 (delta noticeable: less blue) */
+  color: var(--yishan-color-text-secondary);
   font-weight: 400;
 }
 
 .git-inline-diff-close:hover {
-  background-color: #d0d7de;
-  color: #24292f;
+  /* was #d0d7de → border-default #d8dde4 (delta negligible) */
+  background-color: var(--yishan-color-border-default);
+  /* was #24292f → text-secondary #566761 (delta noticeable: lighter, greener) */
+  color: var(--yishan-color-text-secondary);
 }
 
 .git-inline-diff-content {
@@ -192,22 +201,28 @@ html[data-app-theme-mode="dark"] .git-gutter-deleted {
 
 /* Dark theme */
 html[data-app-theme-mode="dark"] .git-inline-diff-zone {
-  background-color: #1c2128;
-  border-color: #373e47;
+  /* was #1c2128 → background-editor #292e36 (delta noticeable: lighter) */
+  background-color: var(--yishan-color-background-editor);
+  /* was #373e47 → border-default #414754 (delta negligible) */
+  border-color: var(--yishan-color-border-default);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 html[data-app-theme-mode="dark"] .git-inline-diff-header {
-  background-color: #272d36;
-  border-bottom-color: #373e47;
+  /* was #272d36 → background-surface #31363f (delta noticeable: lighter) */
+  background-color: var(--yishan-color-background-surface);
+  /* was #373e47 → border-default #414754 (delta negligible) */
+  border-bottom-color: var(--yishan-color-border-default);
 }
 
 html[data-app-theme-mode="dark"] .git-inline-diff-label {
-  color: #8b949e;
+  /* was #8b949e → text-secondary #cfd5dd (delta noticeable: much lighter, less blue) */
+  color: var(--yishan-color-text-secondary);
 }
 
 html[data-app-theme-mode="dark"] .git-inline-diff-hint {
-  color: #6e7681;
+  /* was #6e7681 → text-secondary #cfd5dd (delta noticeable: much lighter) */
+  color: var(--yishan-color-text-secondary);
 }
 
 html[data-app-theme-mode="dark"] .git-inline-diff-line-old {

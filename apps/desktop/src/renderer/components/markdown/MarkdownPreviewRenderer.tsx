@@ -1,4 +1,6 @@
 import { Box, Typography, useTheme } from "@mui/material";
+import { useCodeTheme } from "@renderer/hooks/useCodeTheme";
+import { editorSettingsStore } from "@renderer/store/settings/editorSettingsStore";
 import { layoutStore } from "@renderer/store/settings/layoutStore";
 import { memo, useMemo, useRef } from "react";
 import { MarkdownFindBar } from "./MarkdownFindBar";
@@ -40,7 +42,9 @@ export const MarkdownPreviewRenderer = memo(function MarkdownPreviewRenderer({
   const isMarkdownOutlineVisible = layoutStore((state) => state.isMarkdownOutlineVisible);
   const setIsMarkdownOutlineVisible = layoutStore((state) => state.setIsMarkdownOutlineVisible);
   const baseFontSize = MARKDOWN_PREVIEW_BASE_FONT_SIZE_BY_MODE[markdownPreviewFontSize];
-  const styles = useMarkdownStyles(theme, baseFontSize);
+  const { palette: codePalette, mode: codeMode } = useCodeTheme();
+  const editorFontSize = editorSettingsStore((state) => state.editorFontSize);
+  const styles = useMarkdownStyles(theme, baseFontSize, codePalette, editorFontSize, codeMode);
   const {
     metadata,
     body,
