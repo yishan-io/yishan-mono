@@ -74,7 +74,12 @@ export function usePaneTabHandlers({
   const handleCloseTab = useCallback(
     (tabId: string) => {
       splitPaneStore.getState().unregisterTabFromPane(workspaceId, tabId);
-      cmd.closeTab(tabId);
+      // After unregistering, the surviving/active pane holds the tab the user was
+      // viewing. Prefer it over the workspace-wide neighbor so closing a tab in
+      // one pane never yanks the other pane's selection (e.g. sub-agent detail
+      // tabs closed on the right must leave the left pane's selected tab alone).
+      const activePane = splitPaneStore.getState().getActivePane(workspaceId);
+      cmd.closeTab(tabId, activePane?.selectedTabId ? { preferredSelectedTabId: activePane.selectedTabId } : undefined);
     },
     [workspaceId, cmd],
   );

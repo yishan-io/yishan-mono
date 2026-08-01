@@ -6,6 +6,8 @@ import {
   consumeExplicitlyClosedTerminalTabId,
 } from "../helpers/terminalCloseTombstones";
 import { chatStore } from "../store/chatStore";
+import { createLeaf } from "../store/split-pane";
+import { splitPaneStore } from "../store/splitPaneStore";
 import { tabStore } from "../store/tabStore";
 import { terminalFocusStore } from "../store/terminalFocusStore";
 import {
@@ -75,10 +77,12 @@ vi.mock("../rpc/rpcTransport", () => ({
 
 const initialTabStoreState = tabStore.getState();
 const initialChatStoreState = chatStore.getState();
+const initialSplitPaneStoreState = splitPaneStore.getState();
 
 afterEach(() => {
   tabStore.setState(initialTabStoreState, true);
   chatStore.setState(initialChatStoreState, true);
+  splitPaneStore.setState(initialSplitPaneStoreState, true);
   vi.clearAllMocks();
   __resetExplicitlyClosedTerminalTabIdsForTests();
 });
@@ -689,5 +693,196 @@ describe("tabCommands", () => {
     renameTab("tab-term", "New Terminal");
 
     expect(rpcMocks.piRename).not.toHaveBeenCalled();
+  });
+
+  it("keeps the remaining pane's selected tab when closing a selected subagent tab in a split layout", () => {
+    splitPaneStore.setState({
+      layoutByWorkspaceId: {
+        "workspace-1": {
+          root: {
+            kind: "branch",
+            id: "branch-root",
+            direction: "horizontal",
+            ratio: 0.5,
+            first: createLeaf("pane-left", ["tab-a", "tab-b", "tab-c"], "tab-a"),
+            second: createLeaf("pane-right", ["tab-d"], "tab-d"),
+          },
+          activePaneId: "pane-right",
+        },
+      },
+    });
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-a",
+          workspaceId: "workspace-1",
+          title: "A",
+          pinned: false,
+          kind: "session",
+          data: {},
+        },
+        {
+          id: "tab-b",
+          workspaceId: "workspace-1",
+          title: "B",
+          pinned: false,
+          kind: "session",
+          data: {},
+        },
+        {
+          id: "tab-c",
+          workspaceId: "workspace-1",
+          title: "C",
+          pinned: false,
+          kind: "session",
+          data: {},
+        },
+        {
+          id: "tab-d",
+          workspaceId: "workspace-1",
+          title: "Sub-agent",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionView: "subagent-detail" },
+        },
+      ],
+      selectedTabId: "tab-d",
+      selectedTabIdByWorkspaceId: { "workspace-1": "tab-d" },
+    });
+
+    // Keyboard/menu-style close: the tab is still in the split layout because the
+    // pane unregister happens later via the WorkspaceSplitPane effect.
+    closeTab("tab-d");
+
+    expect(tabStore.getState().selectedTabId).toBe("tab-a");
+    expect(tabStore.getState().tabs.some((tab) => tab.id === "tab-d")).toBe(false);
+  });
+
+  it("keeps the remaining pane's selected tab when closing via the pane tab bar close button", () => {
+    splitPaneStore.setState({
+      layoutByWorkspaceId: {
+        "workspace-1": {
+          root: {
+            kind: "branch",
+            id: "branch-root",
+            direction: "horizontal",
+            ratio: 0.5,
+            first: createLeaf("pane-left", ["tab-a", "tab-b", "tab-c"], "tab-a"),
+            second: createLeaf("pane-right", ["tab-d"], "tab-d"),
+          },
+          activePaneId: "pane-right",
+        },
+      },
+    });
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-a",
+          workspaceId: "workspace-1",
+          title: "A",
+          pinned: false,
+          kind: "session",
+          data: {},
+        },
+        {
+          id: "tab-b",
+          workspaceId: "workspace-1",
+          title: "B",
+          pinned: false,
+          kind: "session",
+          data: {},
+        },
+        {
+          id: "tab-c",
+          workspaceId: "workspace-1",
+          title: "C",
+          pinned: false,
+          kind: "session",
+          data: {},
+        },
+        {
+          id: "tab-d",
+          workspaceId: "workspace-1",
+          title: "Sub-agent",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionView: "subagent-detail" },
+        },
+      ],
+      selectedTabId: "tab-d",
+      selectedTabIdByWorkspaceId: { "workspace-1": "tab-d" },
+    });
+
+    // Pane tab bar close: handleCloseTab unregisters from the pane first, then
+    // closes with the remaining active pane's selected tab as the preference.
+    splitPaneStore.getState().unregisterTabFromPane("workspace-1", "tab-d");
+    const activePane = splitPaneStore.getState().getActivePane("workspace-1");
+    closeTab("tab-d", { preferredSelectedTabId: activePane?.selectedTabId });
+
+    expect(tabStore.getState().selectedTabId).toBe("tab-a");
+  });
+
+  it("keeps the selection within the closed tab's own pane when that pane survives", () => {
+    // Left pane [tab-a, tab-b, tab-c] with tab-c selected; right pane holds the
+    // subagent tab. Closing the selected tab-c must select tab-b (pane neighbor),
+    // NOT jump to tab-d in the other pane (workspace-wide neighbor would pick tab-d).
+    splitPaneStore.setState({
+      layoutByWorkspaceId: {
+        "workspace-1": {
+          root: {
+            kind: "branch",
+            id: "branch-root",
+            direction: "horizontal",
+            ratio: 0.5,
+            first: createLeaf("pane-left", ["tab-a", "tab-b", "tab-c"], "tab-c"),
+            second: createLeaf("pane-right", ["tab-d"], "tab-d"),
+          },
+          activePaneId: "pane-left",
+        },
+      },
+    });
+    tabStore.setState({
+      tabs: [
+        {
+          id: "tab-a",
+          workspaceId: "workspace-1",
+          title: "A",
+          pinned: false,
+          kind: "session",
+          data: {},
+        },
+        {
+          id: "tab-b",
+          workspaceId: "workspace-1",
+          title: "B",
+          pinned: false,
+          kind: "session",
+          data: {},
+        },
+        {
+          id: "tab-c",
+          workspaceId: "workspace-1",
+          title: "C",
+          pinned: false,
+          kind: "session",
+          data: {},
+        },
+        {
+          id: "tab-d",
+          workspaceId: "workspace-1",
+          title: "Sub-agent",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionView: "subagent-detail" },
+        },
+      ],
+      selectedTabId: "tab-c",
+      selectedTabIdByWorkspaceId: { "workspace-1": "tab-c" },
+    });
+
+    closeTab("tab-c");
+
+    expect(tabStore.getState().selectedTabId).toBe("tab-b");
+    expect(tabStore.getState().tabs.some((tab) => tab.id === "tab-c")).toBe(false);
   });
 });

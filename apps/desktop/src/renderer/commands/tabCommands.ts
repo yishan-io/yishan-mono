@@ -5,9 +5,9 @@ import { collectSessionIdsToCloseAllTabs, collectSessionIdsToCloseOtherTabs } fr
 import { recordExplicitlyClosedTerminalTabId } from "../helpers/terminalCloseTombstones";
 import { getDaemonClient } from "../rpc/rpcTransport";
 import { chatStore } from "../store/chatStore";
-import { findOppositePaneId, splitRootPane } from "../store/split-pane";
+import { collectLeaves, findOppositePaneId, removeTabFromPane, splitRootPane } from "../store/split-pane";
 import { splitPaneStore } from "../store/splitPaneStore";
-import type { TabStoreState } from "../store/tabStore";
+import type { CloseTabOptions, TabStoreState } from "../store/tabStore";
 import { tabStore } from "../store/tabStore";
 import { terminalFocusStore } from "../store/terminalFocusStore";
 import type { OpenWorkspaceTabInput } from "../store/types";
@@ -87,8 +87,30 @@ export async function createTab(input?: { workspaceId?: string }): Promise<void>
   }
 }
 
+/**
+ * Derives the tab that should remain selected after closing `tabId`, based on the
+ * split-pane layout: the tab the surviving/active pane will select.
+ *
+ * Uses the pure `removeTabFromPane` so the command mirrors exactly what the pane
+ * layer computes when it unregisters the tab (pane-local neighbor, or the
+ * remaining pane's selection after a collapse). Returns undefined when there is
+ * no layout or the tab is not placed in one yet (falls back to the neighbor rule).
+ */
+function resolvePreferredSelectionAfterClose(workspaceId: string, tabId: string): string | undefined {
+  const layout = splitPaneStore.getState().layoutByWorkspaceId[workspaceId];
+  if (!layout) {
+    return undefined;
+  }
+  const nextLayout = removeTabFromPane(layout, tabId);
+  if (!nextLayout) {
+    return undefined;
+  }
+  const nextActivePane = collectLeaves(nextLayout.root).find((pane) => pane.id === nextLayout.activePaneId);
+  return nextActivePane?.selectedTabId || undefined;
+}
+
 /** Closes one tab and requests backend session closure when needed. */
-export function closeTab(tabId: string): void {
+export function closeTab(tabId: string, options?: CloseTabOptions): void {
   const snapshot = readTabStoreState();
   const tab = snapshot.tabs.find((candidate) => candidate.id === tabId);
   if (!tab) {
@@ -115,7 +137,17 @@ export function closeTab(tabId: string): void {
     clearTerminalAgentStatus(tab.id);
     closeTerminalSessionsForTabs([tab]);
   }
-  snapshot.closeTab(tabId);
+  // Pane-aware preference: the ✕-button path passes the surviving pane's selected
+  // tab explicitly (the tab is already unregistered by then); keyboard/menu paths
+  // get it derived from the layout here. Without a preference, `closeTabState`
+  // falls back to its workspace-wide neighbor rule.
+  const preferredSelectedTabId =
+    options?.preferredSelectedTabId ?? resolvePreferredSelectionAfterClose(tab.workspaceId, tabId);
+  if (preferredSelectedTabId) {
+    snapshot.closeTab(tabId, { preferredSelectedTabId });
+  } else {
+    snapshot.closeTab(tabId);
+  }
   chatStore.getState().removeTabData([tabId]);
 }
 

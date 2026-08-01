@@ -25,6 +25,11 @@ import {
 import type { OpenWorkspaceTabInput, WorkspaceTab } from "./types";
 import { workspaceStore } from "./workspaceStore";
 
+export type CloseTabOptions = {
+  /** Tab to select when the closed tab was the selected one (e.g. the remaining pane's selection). */
+  preferredSelectedTabId?: string;
+};
+
 export type TabStoreState = {
   tabs: WorkspaceTab[];
   selectedTabId: string;
@@ -41,7 +46,7 @@ export type TabStoreState = {
   resolveSessionTab: (tabId: string, sessionId: string) => void;
   failSessionTabInit: (tabId: string) => void;
   openTab: (input: OpenWorkspaceTabInput, options?: { activePaneTabIds?: string[] }) => void;
-  closeTab: (tabId: string) => void;
+  closeTab: (tabId: string, options?: CloseTabOptions) => void;
   closeOtherTabs: (tabId: string) => void;
   closeAllTabs: (tabId: string) => void;
   /** Closes every terminal tab across all workspaces (used before daemon restart). */
@@ -197,8 +202,8 @@ export const tabStore = create<TabStoreState>()(
         const nextTabId = input.kind === "terminal" ? (input.tabId ?? createClientTabId()) : createClientTabId();
         set((state) => openTabState(state, input, nextTabId, { ...options, selectedWorkspaceId }) ?? state);
       },
-      closeTab: (tabId) => {
-        set((state) => closeTabState(state, tabId) ?? state);
+      closeTab: (tabId, options) => {
+        set((state) => closeTabState(state, tabId, options) ?? state);
       },
       closeOtherTabs: (tabId) => {
         set((state) => closeOtherTabsState(state, tabId) ?? state);
