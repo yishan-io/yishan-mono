@@ -370,6 +370,93 @@ describe("tabs-domain close", () => {
     expect(patch?.selectedTabIdByWorkspaceId?.["workspace-1"]).toBe("session-1");
   });
 
+  it("prefers preferredSelectedTabId when closing the selected tab", () => {
+    const state: WorkspaceTabStateSlice = {
+      ...createBaseState(),
+      selectedTabId: "file-2",
+      tabs: [
+        ...createBaseState().tabs,
+        {
+          id: "file-2",
+          workspaceId: "workspace-1",
+          title: "b.ts",
+          pinned: false,
+          kind: "file",
+          data: {
+            path: "src/b.ts",
+            content: "b1",
+            savedContent: "b1",
+            isDirty: false,
+            isTemporary: false,
+          },
+        },
+      ],
+    };
+
+    const patch = closeTabState(state, "file-2", { preferredSelectedTabId: "session-1" });
+
+    expect(patch?.selectedTabId).toBe("session-1");
+    expect(patch?.selectedTabIdByWorkspaceId?.["workspace-1"]).toBe("session-1");
+  });
+
+  it("falls back to the neighbor rule when preferredSelectedTabId no longer exists", () => {
+    const state: WorkspaceTabStateSlice = {
+      ...createBaseState(),
+      selectedTabId: "file-2",
+      tabs: [
+        ...createBaseState().tabs,
+        {
+          id: "file-2",
+          workspaceId: "workspace-1",
+          title: "b.ts",
+          pinned: false,
+          kind: "file",
+          data: {
+            path: "src/b.ts",
+            content: "b1",
+            savedContent: "b1",
+            isDirty: false,
+            isTemporary: false,
+          },
+        },
+      ],
+    };
+
+    const patch = closeTabState(state, "file-2", { preferredSelectedTabId: "ghost-tab" });
+
+    expect(patch?.selectedTabId).toBe("file-1");
+    expect(patch?.selectedTabIdByWorkspaceId?.["workspace-1"]).toBe("file-1");
+  });
+
+  it("ignores preferredSelectedTabId when the closed tab was not selected", () => {
+    const state: WorkspaceTabStateSlice = {
+      ...createBaseState(),
+      selectedTabId: "session-1",
+      tabs: [
+        ...createBaseState().tabs,
+        {
+          id: "file-2",
+          workspaceId: "workspace-1",
+          title: "b.ts",
+          pinned: false,
+          kind: "file",
+          data: {
+            path: "src/b.ts",
+            content: "b1",
+            savedContent: "b1",
+            isDirty: false,
+            isTemporary: false,
+          },
+        },
+      ],
+    };
+
+    const patch = closeTabState(state, "file-1", { preferredSelectedTabId: "file-2" });
+
+    expect(patch?.selectedTabId).toBe("session-1");
+    expect(patch?.selectedTabIdByWorkspaceId?.["workspace-1"]).toBe("session-1");
+  });
+
   it("keeps target and pinned tabs while removing siblings in closeOtherTabsState", () => {
     const state = createBaseState();
     const expanded: WorkspaceTabStateSlice = {

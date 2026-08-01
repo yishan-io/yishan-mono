@@ -267,7 +267,7 @@ export type Commands = {
   createTab: (input?: { workspaceId?: string }) => Promise<void>;
   openTab: typeof openTabCommand;
   openTabInOppositePane: typeof openTabInOppositePaneCommand;
-  closeTab: (tabId: string) => void;
+  closeTab: typeof closeTabCommand;
   closeOtherTabs: (tabId: string) => void;
   closeAllTabs: (tabId: string) => void;
   toggleTabPinned: typeof toggleTabPinnedCommand;

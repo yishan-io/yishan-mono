@@ -1,7 +1,11 @@
 import type { WorkspaceTabStateSlice } from "./types";
 
 /** Closes one tab and updates selected-tab pointers and per-tab metadata maps. */
-export function closeTabState(state: WorkspaceTabStateSlice, tabId: string): Partial<WorkspaceTabStateSlice> | null {
+export function closeTabState(
+  state: WorkspaceTabStateSlice,
+  tabId: string,
+  options?: { preferredSelectedTabId?: string },
+): Partial<WorkspaceTabStateSlice> | null {
   const currentTab = state.tabs.find((tab) => tab.id === tabId);
   if (!currentTab) {
     return null;
@@ -10,9 +14,16 @@ export function closeTabState(state: WorkspaceTabStateSlice, tabId: string): Par
   const workspaceTabs = state.tabs.filter((tab) => tab.workspaceId === currentTab.workspaceId);
   const remainingWorkspaceTabs = workspaceTabs.filter((tab) => tab.id !== tabId);
   const closedIndex = workspaceTabs.findIndex((tab) => tab.id === tabId);
+  // Prefer the caller-provided tab (e.g. the remaining pane's selected tab)
+  // over the workspace-wide neighbor when the closed tab was selected.
+  const preferredSelectedTabId = options?.preferredSelectedTabId ?? "";
+  const preferredStillExists =
+    preferredSelectedTabId !== "" && remainingWorkspaceTabs.some((tab) => tab.id === preferredSelectedTabId);
   const nextSelectedTabId =
     state.selectedTabId === tabId
-      ? (remainingWorkspaceTabs[closedIndex]?.id ?? remainingWorkspaceTabs[closedIndex - 1]?.id ?? "")
+      ? preferredStillExists
+        ? preferredSelectedTabId
+        : (remainingWorkspaceTabs[closedIndex]?.id ?? remainingWorkspaceTabs[closedIndex - 1]?.id ?? "")
       : state.selectedTabId;
 
   return {
