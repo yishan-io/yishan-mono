@@ -12,7 +12,6 @@ export type CreateMonacoFileEditorProps = {
   fontSize: number;
   wordWrap: "on" | "off";
   onContentChange: (content: string) => void;
-  onSave: (content: string) => void;
 };
 
 /** Replaces editor content without resetting the user's selection or viewport. */
@@ -38,7 +37,6 @@ export function createMonacoFileEditor({
   fontSize,
   wordWrap,
   onContentChange,
-  onSave,
 }: CreateMonacoFileEditorProps) {
   ensureEditorThemes();
   const language = getLanguageId(path) ?? undefined;
@@ -66,10 +64,6 @@ export function createMonacoFileEditor({
     tabSize: 2,
     insertSpaces: true,
     readOnly: isDeleted,
-  });
-
-  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-    onSave(editor.getValue());
   });
 
   editor.onDidChangeModelContent(() => {

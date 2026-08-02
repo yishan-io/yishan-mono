@@ -78,7 +78,7 @@ export function useMonacoFileEditor({
     void onSaveRef.current?.(currentEditorContent);
   }, []);
 
-  // ── Create / destroy editor when path, isDeleted, or handleSaveCurrentContent changes ──
+  // ── Create / destroy editor when path or isDeleted changes ──
   useEffect(() => {
     if (!editorHostRef.current) {
       return;
@@ -97,7 +97,6 @@ export function useMonacoFileEditor({
         setCurrentContent(nextContent);
         onContentChangeRef.current?.(nextContent);
       },
-      onSave: handleSaveCurrentContent,
     });
 
     editorRef.current = editor;
@@ -119,7 +118,7 @@ export function useMonacoFileEditor({
       editorRef.current = null;
       setEditorInstance(null);
     };
-  }, [handleSaveCurrentContent, isDeleted, path]);
+  }, [isDeleted, path]);
 
   // ── Sync external content changes into the editor ──
   useEffect(() => {
