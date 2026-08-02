@@ -8,7 +8,7 @@ import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../helpers/piP
 import { useCommands } from "../../hooks/useCommands";
 import { useRefreshableLoader } from "../../hooks/useRefreshableLoader";
 import { ProviderCredentialDialog } from "./ProviderCredentialDialog";
-import { ProviderMark } from "./ProviderMark";
+import { ProviderMark } from "../../components/ProviderMark";
 import { RemoveProviderDialog } from "./RemoveProviderDialog";
 
 type ProviderCredentialDialogTarget = {

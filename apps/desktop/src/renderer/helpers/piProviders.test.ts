@@ -129,6 +129,8 @@ describe("PI_PROVIDER_CATALOG", () => {
       (entry) => entry.id,
     );
     expect(monochromeAssetIds).toEqual(["ant-ling", "openai", "groq", "xai", "radius", "openai-codex"]);
+    // The codex mark does not fill its viewBox; it needs a visual scale-up.
+    expect(getPiProviderCatalogEntry("openai-codex")?.iconScale).toBe(1.5);
     // Fallback icons stay neutral (no brand color, no asset).
     expect(getPiProviderCatalogEntry("not-a-real-provider")?.brandColor).toBeUndefined();
     expect(getPiProviderCatalogEntry("not-a-real-provider")?.assetIcon).toBeUndefined();

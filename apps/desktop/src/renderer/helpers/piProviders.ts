@@ -40,6 +40,8 @@ export type PiProviderCatalogEntry = {
   hasSubscription?: boolean;
   /** Provider-scoped env var names pi reads from the stored credential. */
   envVars?: string[];
+  /** Visual scale for assets with padding around the mark (e.g. codex.svg). */
+  iconScale?: number;
 };
 
 const FALLBACK_PROVIDER_ICON: IconType = LuCloud;
@@ -364,6 +366,7 @@ export const PI_PROVIDER_CATALOG: PiProviderCatalogEntry[] = [
     assetIcon: "app-icons/preset-icons/codex.svg",
     monochrome: true,
     hasSubscription: true,
+    iconScale: 1.5,
   },
   {
     id: "github-copilot",
