@@ -96,8 +96,9 @@ export function pickTokenForeground(
   if (matchScope(scopes, "punctuation.definition.string")) return palette.string;
   // 4. string
   if (matchScope(scopes, "string")) return palette.string;
-  // 5. keyword.operator (before keyword)
-  if (matchScope(scopes, "keyword.operator")) return palette.operator;
+  // 5. keyword.operator → delimiter (Monaco's Monarch maps ALL operators to
+  //    the "delimiter" token, e.g. = + ?? := in js/ts/go)
+  if (matchScope(scopes, "keyword.operator")) return palette.delimiter;
   // 6. constant.numeric / number / numeric (before constant)
   if (matchScope(scopes, "constant.numeric") || matchScope(scopes, "number") || matchScope(scopes, "numeric"))
     return palette.number;
@@ -115,21 +116,21 @@ export function pickTokenForeground(
   if (matchScope(scopes, "support.type")) return palette.keyword;
   if (matchScope(scopes, "support.class")) return palette.keyword;
   // 6g. const-bindings render in Monaco's default (identifier → foreground)
-  if (matchScope(scopes, "variable.other.constant")) return palette.variable;
+  if (matchScope(scopes, "variable.other.constant")) return palette.foreground;
   // 7. constant
   if (matchScope(scopes, "constant")) return palette.constant;
   // 8. keyword
   if (matchScope(scopes, "keyword")) return palette.keyword;
   // 9. storage.modifier
   if (matchScope(scopes, "storage.modifier")) return palette.keyword;
-  // 9b. parameters are variables (variable.parameter.*, function.parameter.*) — BEFORE function
-  if (matchScope(scopes, "parameter")) return palette.variable;
+  // 9b. parameters render in Monaco's default (Monarch emits identifier)
+  if (matchScope(scopes, "parameter")) return palette.foreground;
   // 9c. shell builtins are type-colored in Monaco's Monarch shell grammar
   if (matchScope(scopes, "support.function.builtin")) return palette.type;
   // 9d. inherited-class names (JS `extends B`) are type-colored in Monaco
   if (matchScope(scopes, "entity.other.inherited-class")) return palette.type;
   // 10. function names and builtins render in Monaco's default (Monarch emits identifier)
-  if (matchScope(scopes, "function")) return palette.variable;
+  if (matchScope(scopes, "function")) return palette.foreground;
   // 11. heading (markup.heading + entity.name.section — the real ATX heading-text scope)
   if (matchScope(scopes, "heading") || matchScope(scopes, "entity.name.section")) return palette.keyword;
   // 12. type / class (entity.name.type/class, storage.type handled above)
@@ -140,8 +141,8 @@ export function pickTokenForeground(
   if (matchScope(scopes, "tag")) return palette.tag;
   // 14. attribute / attribute-name
   if (matchScope(scopes, "attribute") || matchScope(scopes, "attribute-name")) return palette.attribute;
-  // 15. variables render in Monaco's default (identifier → foreground)
-  if (matchScope(scopes, "variable")) return palette.variable;
+  // 15. variables render in Monaco's default (Monarch emits identifier → foreground)
+  if (matchScope(scopes, "variable")) return palette.foreground;
   // 16. markup.inline.raw / markup.underline.link
   if (matchScope(scopes, "markup.inline.raw") || matchScope(scopes, "markup.underline.link")) return palette.string;
   // 16b. markdown emphasis markers render in Monaco's default (bold/italic come from fontStyle)

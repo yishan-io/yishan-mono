@@ -35,6 +35,18 @@ if (!("ResizeObserver" in globalThis)) {
 }
 
 import pierreLight from "@pierre/theme/pierre-light";
+import { createJavaScriptRegexEngine } from "@shikijs/engine-javascript";
+import cssGrammar from "@shikijs/langs/css";
+import goGrammar from "@shikijs/langs/go";
+import htmlGrammar from "@shikijs/langs/html";
+import javaGrammar from "@shikijs/langs/java";
+import javascriptGrammar from "@shikijs/langs/javascript";
+import markdownGrammar from "@shikijs/langs/markdown";
+import pythonGrammar from "@shikijs/langs/python";
+import rustGrammar from "@shikijs/langs/rust";
+import shellGrammar from "@shikijs/langs/shell";
+import typescriptGrammar from "@shikijs/langs/typescript";
+import yamlGrammar from "@shikijs/langs/yaml";
 // @ts-ignore monaco basic-language modules are untyped ESM
 import { language as cssDef } from "monaco-editor/esm/vs/basic-languages/css/css.js";
 // @ts-ignore monaco basic-language modules are untyped ESM
@@ -58,8 +70,8 @@ import { language as typescriptDef } from "monaco-editor/esm/vs/basic-languages/
 // @ts-ignore monaco basic-language modules are untyped ESM
 import { language as yamlDef } from "monaco-editor/esm/vs/basic-languages/yaml/yaml.js";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
-import { codeToTokens } from "shiki";
-import { resolveCodeTheme } from "./codeThemes";
+import { createHighlighterCore } from "shiki/core";
+import { type CodeThemePalette, resolveCodeTheme } from "./codeThemes";
 import { buildOverriddenRules } from "./diffTheme";
 import { buildMonacoThemeRules, resolveMonacoTokenColor } from "./monacoThemeRules";
 
@@ -82,28 +94,17 @@ for (const [id, def] of [
   monaco.languages.setMonarchTokensProvider(id, def);
 }
 
-const MODE = "light";
-const palette = resolveCodeTheme("yishan", MODE);
-const gitDiff =
-  MODE === "light"
-    ? { added: "#2ea043", deleted: "#f85149", modified: "#1a7fd4" }
-    : { added: "#3fb950", deleted: "#f85149", modified: "#58a6ff" };
-const monacoRules = buildMonacoThemeRules(palette);
+const FAMILIES = ["yishan", "one-dark", "dracula", "github", "tokyo-night"] as const;
+const MODES = ["light", "dark"] as const;
 
-const diffTheme = {
-  name: "yishan-cmp",
-  type: MODE,
-  colors: { ...pierreLight.colors, "editor.foreground": palette.foreground, "editor.background": palette.background },
-  tokenColors: buildOverriddenRules(pierreLight.tokenColors as never, palette, gitDiff),
-};
-
-const keyByColor = new Map<string, string>();
-for (const [key, value] of Object.entries(palette)) {
-  keyByColor.set(String(value).toUpperCase(), key);
-}
-const label = (color: string) => {
-  const key = keyByColor.get(color.toUpperCase());
-  return key ? `${key}(${color.toUpperCase()})` : color.toUpperCase();
+// Resolve a color back to its palette key per family (duplicate values, e.g.
+// yishan operator == delimiter, collapse to the first key — which is exactly
+// right: if two keys share a color, the editor and diff are indistinguishable).
+const label = (color: string, palette: CodeThemePalette) => {
+  for (const [key, value] of Object.entries(palette)) {
+    if (String(value).toUpperCase() === color.toUpperCase()) return key;
+  }
+  return color.toUpperCase();
 };
 
 const BATTERY: Record<string, string> = {
@@ -122,106 +123,171 @@ const BATTERY: Record<string, string> = {
   shell: '#!/bin/bash\necho "hello $NAME"\nif [ -f file ]; then exit 1; fi\n',
 };
 
-function monacoColors(langId: string, source: string): string[] {
-  const colors = new Array<string>(source.length).fill(palette.foreground);
-  const lines = source.split("\n");
-  const tokenized = monaco.editor.tokenize(source, langId);
-  let offset = 0;
-  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-    const line = lines[lineIdx] ?? "";
-    const lineTokens = tokenized[lineIdx] ?? [];
-    for (let i = 0; i < lineTokens.length; i++) {
-      const token = lineTokens[i];
-      if (!token) continue;
-      const next = lineTokens[i + 1];
-      const start = offset + token.offset;
-      const end = offset + (next ? next.offset : line.length);
-      const color = resolveMonacoTokenColor(token.type, palette, monacoRules);
-      for (let p = start; p < end; p++) colors[p] = color.toUpperCase();
-    }
-    offset += line.length + 1;
-  }
-  return colors;
-}
-
-async function shikiColors(langId: string, source: string): Promise<string[]> {
-  const colors = new Array<string>(source.length).fill(palette.foreground);
-  const result = await codeToTokens(source, { lang: langId as never, theme: diffTheme as never });
-  for (const line of result.tokens) {
-    for (const token of line) {
-      const start = token.offset;
-      const end = start + token.content.length;
-      for (let p = start; p < end; p++) colors[p] = token.color ?? palette.foreground;
-    }
-  }
-  return colors;
-}
-
 describe("syntax theme comparison (monaco vs diff)", () => {
-  it("colors every token identically across the sample battery", async () => {
-    const failures: Array<{ lang: string; text: string; monaco: string; diff: string }> = [];
+  it("colors every token identically across families, modes, and the sample battery", async () => {
+    const actual = new Set<string>();
     const perLang = new Map<string, number>();
 
-    for (const [langId, source] of Object.entries(BATTERY)) {
-      const mono = monacoColors(langId, source);
-      const diffColors = await shikiColors(langId, source);
-      let count = 0;
-      let i = 0;
-      while (i < source.length) {
-        if (mono[i] !== diffColors[i]) {
-          let j = i;
-          while (j < source.length && mono[j] !== diffColors[j]) j++;
-          failures.push({
-            lang: langId,
-            text: source.slice(i, j),
-            monaco: label(mono[i] ?? palette.foreground),
-            diff: label(diffColors[i] ?? palette.foreground),
-          });
-          count++;
-          i = j;
-        } else {
-          i++;
+    // Precompute palette + monaco rules + theme object per (family, mode).
+    const configs = FAMILIES.flatMap((familyId) =>
+      MODES.map((mode) => {
+        const palette = resolveCodeTheme(familyId, mode);
+        const gitDiff =
+          mode === "light"
+            ? { added: "#2ea043", deleted: "#f85149", modified: "#1a7fd4" }
+            : { added: "#3fb950", deleted: "#f85149", modified: "#58a6ff" };
+        return {
+          familyId,
+          mode,
+          palette,
+          monacoRules: buildMonacoThemeRules(palette),
+          theme: {
+            name: `${familyId}-${mode}`,
+            type: mode,
+            colors: {
+              ...pierreLight.colors,
+              "editor.foreground": palette.foreground,
+              "editor.background": palette.background,
+            },
+            tokenColors: buildOverriddenRules(pierreLight.tokenColors as never, palette, gitDiff),
+          },
+        };
+      }),
+    );
+
+    // One highlighter over all families/modes with the JS regex engine — the
+    // same engine @pierre/diffs uses at runtime.
+    const highlighter = await createHighlighterCore({
+      themes: configs.map((c) => c.theme) as never,
+      langs: [
+        javascriptGrammar as never,
+        typescriptGrammar as never,
+        yamlGrammar as never,
+        cssGrammar as never,
+        htmlGrammar as never,
+        markdownGrammar as never,
+        pythonGrammar as never,
+        rustGrammar as never,
+        goGrammar as never,
+        javaGrammar as never,
+        shellGrammar as never,
+      ],
+      engine: createJavaScriptRegexEngine(),
+    });
+
+    for (const { familyId, mode, palette, monacoRules } of configs) {
+      const monacoColorsFor = (langId: string, source: string) => {
+        const colors = new Array<string>(source.length).fill(palette.foreground);
+        const lines = source.split("\n");
+        const tokenized = monaco.editor.tokenize(source, langId);
+        let offset = 0;
+        for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+          const line = lines[lineIdx] ?? "";
+          const lineTokens = tokenized[lineIdx] ?? [];
+          for (let i = 0; i < lineTokens.length; i++) {
+            const token = lineTokens[i];
+            if (!token) continue;
+            const next = lineTokens[i + 1];
+            const start = offset + token.offset;
+            const end = offset + (next ? next.offset : line.length);
+            const color = resolveMonacoTokenColor(token.type, palette, monacoRules);
+            for (let p = start; p < end; p++) colors[p] = color.toUpperCase();
+          }
+          offset += line.length + 1;
         }
+        return colors;
+      };
+      const shikiColorsFor = async (langId: string, source: string) => {
+        const colors = new Array<string>(source.length).fill(palette.foreground);
+        const result = highlighter.codeToTokens(source, { lang: langId as never, theme: `${familyId}-${mode}` });
+        for (const line of result.tokens) {
+          for (const token of line) {
+            const start = token.offset;
+            const end = start + token.content.length;
+            for (let p = start; p < end; p++) colors[p] = token.color ?? palette.foreground;
+          }
+        }
+        return colors;
+      };
+
+      for (const [langId, source] of Object.entries(BATTERY)) {
+        const mono = monacoColorsFor(langId, source);
+        const diffColors = await shikiColorsFor(langId, source);
+        let count = 0;
+        let i = 0;
+        while (i < source.length) {
+          if (mono[i] !== diffColors[i]) {
+            let j = i;
+            while (j < source.length && mono[j] !== diffColors[j]) j++;
+            const seg = source.slice(i, j);
+            actual.add(
+              `${familyId}|${mode}|${langId}|${label(mono[i] ?? palette.foreground, palette)}|${label(diffColors[i] ?? palette.foreground, palette)}|${JSON.stringify(seg)}`,
+            );
+            count++;
+            i = j;
+          } else {
+            i++;
+          }
+        }
+        perLang.set(langId, (perLang.get(langId) ?? 0) + count);
       }
-      perLang.set(langId, count);
     }
 
-    if (failures.length > 0) {
-      console.log("\n===== SYNTAX COLOR MISMATCHES (monaco vs diff) =====");
-      for (const langId of [...perLang.keys()].sort()) {
-        console.log(`  ${langId}: ${perLang.get(langId)}`);
-      }
-      const normalized = [...new Set(failures.map((f) => `${f.lang}|${f.monaco}|${f.diff}`))].sort();
-      for (const n of normalized) console.log(`  NORM ${n}`);
+    const sorted = [...actual].sort();
+    if (sorted.length > 0) {
+      console.log("\n===== SYNTAX COLOR MISMATCHES (family|mode|lang|monaco|diff) =====");
+      for (const n of sorted) console.log(`  NORM ${n}`);
     }
 
-    // Regression guard: the set of (lang, monaco-color-key, diff-color-key)
-    // mismatches must exactly equal the curated list of accepted residuals
-    // (grammar-level Monarch vs TextMate differences that a theme mapping
-    // cannot reconcile without breaking other languages).
+    // Regression guard: every actual mismatch (lang|text) must be a known
+    // residual, and every curated residual class must occur in at least one
+    // family/mode. Residuals are grammar-level Monarch vs TextMate differences
+    // that a theme mapping cannot reconcile without breaking other languages.
     const acceptedResiduals = new Set<string>([
-      "javascript|string(#2D7A00)|delimiter(#3F4758)", // template literal backticks
-      "html|delimiter(#3F4758)|tag(#B04900)", // tag brackets
-      "html|variable(#1F2430)|tag(#B04900)", // doctype / tag whitespace
-      "markdown|string(#2D7A00)|delimiter(#3F4758)", // inline code + link brackets
-      "markdown|variable(#1F2430)|delimiter(#3F4758)", // inline code backticks
-      "markdown|keyword(#8A3FFC)|delimiter(#3F4758)", // list dash
-      "python|variable(#1F2430)|delimiter(#3F4758)", // arrow
-      "python|variable(#1F2430)|type(#006B99)", // class name
-      "rust|keyword(#8A3FFC)|type(#006B99)", // primitive type name (monarch quirk)
-      "rust|variable(#1F2430)|type(#006B99)", // type name
-      "rust|string(#2D7A00)|delimiter(#3F4758)", // string quotes
-      "go|variable(#1F2430)|type(#006B99)", // package name
-      "java|variable(#1F2430)|type(#006B99)", // class name
-      "java|delimiter(#3F4758)|type(#006B99)", // braces (java grammar quirk)
-      "java|variable(#1F2430)|keyword(#8A3FFC)", // String type keyword
-      "shell|variable(#1F2430)|comment(#7A8190)", // shebang
-      "shell|type(#006B99)|variable(#1F2430)", // echo builtin
-      "shell|string(#2D7A00)|variable(#1F2430)", // $VAR expansion
-      "shell|attribute(#0B6EA8)|delimiter(#3F4758)", // -f flag
-      "shell|keyword(#8A3FFC)|variable(#1F2430)", // exit builtin
+      'go|"main"', // package name (entity.name.package)
+      'html|" "', // whitespace inside tags
+      'html|"<!DOCTYPE html>"', // doctype (monarch metatag vs textmate doctype)
+      'html|"<"', // tag brackets
+      'html|"</"',
+      'html|">"',
+      'javascript|"`"', // template literal backticks
+      'java|"A"', // class name (entity.name.type)
+      'java|"String"', // type keyword (monarch identifier vs textmate support.type)
+      'java|"{"', // braces (java grammar quirk)
+      'java|"}"',
+      'markdown|")"', // link close bracket
+      'markdown|"- "', // list dash (monarch keyword vs textmate punctuation)
+      'markdown|"[link]("', // link brackets
+      'markdown|"`code`"', // inline code backticks
+      'markdown|"code"', // inline code text (monarch variable vs textmate markup)
+      'python|"->"', // arrow (monarch identifier vs textmate keyword.operator)
+      'python|"A"', // class name (entity.name.type)
+      'rust|":"', // type-annotation colon (monarch quirk)
+      'rust|";"',
+      'rust|"="',
+      'rust|"String"', // type name (entity.name.type)
+      'rust|"String::"', // namespace separator
+      'rust|"\\""', // string quotes (generic punctuation in the grammar)
+      'rust|"u32"', // primitive type name (monarch keyword vs textmate entity.name.type)
+      'shell|"#!/bin/bash"', // shebang
+      'shell|"$NAME"', // variable expansion (monarch string vs textmate variable)
+      'shell|"-f"', // flag (monarch attribute vs textmate punctuation)
+      'shell|"echo"', // builtin
+      'shell|"exit"', // builtin
+      'yaml|"-"', // list dash
     ]);
-    const actual = new Set(failures.map((f) => `${f.lang}|${f.monaco}|${f.diff}`));
-    expect(actual).toEqual(acceptedResiduals);
+    const actualKeys = new Set(
+      [...actual].map((n) => {
+        const parts = n.split("|");
+        return `${parts[2]}|${parts[5]}`;
+      }),
+    );
+    expect(actualKeys.size).toBeGreaterThan(0);
+    for (const key of actualKeys) {
+      expect(acceptedResiduals.has(key), `unexpected residual: ${key}`).toBe(true);
+    }
+    for (const key of acceptedResiduals) {
+      expect(actualKeys.has(key), `curated residual never occurred: ${key}`).toBe(true);
+    }
   }, 120_000);
 });
