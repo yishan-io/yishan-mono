@@ -48,6 +48,7 @@ type JSONRPCHandler struct {
 	modelList            *modellist.Service
 	memory               *memory.Service
 	agentMgr             *agentmanager.Manager
+	piAuth               *piAuthStore
 	agentLifecycleCtx    context.Context
 	cancelAgentLifecycle context.CancelFunc
 	agentLifecycleMu     sync.Mutex
@@ -121,6 +122,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		computer:             newComputerService(computer.NewUnavailableRuntime("unknown")),
 		modelList:            modellist.NewService(),
 		agentMgr:             agentmanager.NewManager(),
+		piAuth:               mustNewManagedPiAuthStore(),
 		agentLifecycleCtx:    agentLifecycleCtx,
 		cancelAgentLifecycle: cancelAgentLifecycle,
 		settingsPath:         config.SettingsFilePath(filepath.Dir(configPath)),

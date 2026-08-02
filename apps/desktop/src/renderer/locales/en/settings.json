@@ -25,7 +25,8 @@
       "serviceTokens": "Service Tokens",
       "skills": "Skills",
       "terminal": "Terminal",
-      "workspace": "Workspace"
+      "workspace": "Workspace",
+      "providers": "Providers"
     },
     "nodes": {
       "title": "Nodes",
@@ -600,6 +601,58 @@
         }
       }
     },
-    "comingSoon": "This settings page is coming soon."
+    "comingSoon": "This settings page is coming soon.",
+    "providers": {
+      "title": "Agent Providers",
+      "description": "Providers registered in the Pi agent, with credentials stored in ~/.yishan/pi/agent/auth.json.",
+      "loadError": "Failed to load providers.",
+      "empty": "No providers registered yet.",
+      "appliesToNewSessions": "Changes take effect for new Pi sessions.",
+      "keywords": {
+        "provider": "provider",
+        "apiKey": "API key",
+        "model": "model"
+      },
+      "actions": {
+        "add": "Add Provider",
+        "edit": "Edit",
+        "remove": "Remove",
+        "cancel": "Cancel",
+        "save": "Save"
+      },
+      "credentialType": {
+        "apiKey": "API key",
+        "oauth": "OAuth",
+        "unknown": "Unknown"
+      },
+      "dialog": {
+        "addTitle": "Add Provider",
+        "editTitle": "Edit Provider",
+        "providerLabel": "Provider",
+        "keyLabel": "API Key",
+        "keyPlaceholder": "Paste your API key",
+        "keyRequired": "API key is required.",
+        "editKeyHelper": "Enter a new API key to replace the existing one.",
+        "oauthOnlyHint": "This provider is subscription-only. Sign in with your account.",
+        "envVarHint": "Equivalent environment variable: {{envVar}}",
+        "saving": "Saving...",
+        "removing": "Removing...",
+        "subscriptionHint": "Supports subscription sign-in via Pi /login, or use an API key below.",
+        "signInWithSubscription": "Sign in with subscription",
+        "openingSignIn": "Opening Pi sign-in...",
+        "loginTabTitle": "Pi login \u2014 {{provider}}",
+        "signInWithAccount": "Sign in with account",
+        "subscriptionTag": "Subscription"
+      },
+      "removeDialog": {
+        "title": "Remove Provider",
+        "description": "Remove the credential for {{provider}}? The provider will no longer be available in Pi.",
+        "confirm": "Remove"
+      },
+      "errors": {
+        "noWorkspace": "Open a workspace first to sign in.",
+        "loginLaunchFailed": "Failed to open Pi sign-in: {{message}}"
+      }
+    }
   }
 }

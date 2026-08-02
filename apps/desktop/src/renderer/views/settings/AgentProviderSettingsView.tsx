@@ -1,0 +1,159 @@
+import { Alert, Box, Button, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { LuPencil, LuPlus, LuTrash2 } from "react-icons/lu";
+import type { PiProviderStatus } from "../../commands/piProviderCommands";
+import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
+import { getPiProviderDisplayName } from "../../helpers/piProviders";
+import { useCommands } from "../../hooks/useCommands";
+import { useRefreshableLoader } from "../../hooks/useRefreshableLoader";
+import { ProviderCredentialDialog } from "./ProviderCredentialDialog";
+import { ProviderMark } from "./ProviderMark";
+import { RemoveProviderDialog } from "./RemoveProviderDialog";
+
+type ProviderCredentialDialogTarget = {
+  mode: "add" | "edit";
+  provider?: string;
+};
+
+const PROVIDER_LIST_TIMEOUT_MS = 10_000;
+
+function ProviderRow({
+  entry,
+  onEdit,
+  onRemove,
+}: {
+  entry: PiProviderStatus;
+  onEdit: () => void;
+  onRemove: () => void;
+}) {
+  const { t } = useTranslation();
+  const canEdit = entry.type === "api_key";
+  const typeLabel =
+    entry.type === "api_key"
+      ? t("settings.providers.credentialType.apiKey")
+      : entry.type === "oauth"
+        ? t("settings.providers.credentialType.oauth")
+        : entry.type || t("settings.providers.credentialType.unknown");
+
+  return (
+    <SettingsControlRow
+      title={
+        <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
+          <ProviderMark providerId={entry.provider} size={18} />
+          <Box component="span">{getPiProviderDisplayName(entry.provider)}</Box>
+        </Box>
+      }
+      control={
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
+          <Chip size="small" variant="outlined" label={typeLabel} />
+          {canEdit ? (
+            <Tooltip title={t("settings.providers.actions.edit")}>
+              <IconButton
+                size="small"
+                onClick={onEdit}
+                aria-label={`${t("settings.providers.actions.edit")} ${getPiProviderDisplayName(entry.provider)}`}
+              >
+                <LuPencil size={14} />
+              </IconButton>
+            </Tooltip>
+          ) : null}
+          <Tooltip title={t("settings.providers.actions.remove")}>
+            <IconButton
+              size="small"
+              onClick={onRemove}
+              aria-label={`${t("settings.providers.actions.remove")} ${getPiProviderDisplayName(entry.provider)}`}
+            >
+              <LuTrash2 size={14} />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+      }
+    />
+  );
+}
+
+/** Renders providers registered in the yishan pi agent with add/edit/remove. */
+export function AgentProviderSettingsView() {
+  const { t } = useTranslation();
+  const { listPiProviders } = useCommands();
+  const [credentialTarget, setCredentialTarget] = useState<ProviderCredentialDialogTarget | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<PiProviderStatus | null>(null);
+
+  const fetchProviders = useCallback(() => listPiProviders(), [listPiProviders]);
+  const {
+    data: providers,
+    isLoading,
+    hasLoadError,
+    refresh,
+  } = useRefreshableLoader({
+    fetch: fetchProviders,
+    timeoutMs: PROVIDER_LIST_TIMEOUT_MS,
+  });
+
+  const handleSaved = () => {
+    setCredentialTarget(null);
+    refresh();
+  };
+
+  const handleRemoved = () => {
+    setRemoveTarget(null);
+    refresh();
+  };
+
+  return (
+    <Box>
+      <SettingsSectionHeader
+        title={t("settings.providers.title")}
+        description={t("settings.providers.description")}
+        action={
+          <Button
+            size="small"
+            variant="text"
+            startIcon={<LuPlus />}
+            onClick={() => setCredentialTarget({ mode: "add" })}
+            disabled={isLoading}
+          >
+            {t("settings.providers.actions.add")}
+          </Button>
+        }
+      />
+      <SettingsCard>
+        {hasLoadError ? (
+          <Alert severity="error">{t("settings.providers.loadError")}</Alert>
+        ) : providers && providers.length === 0 ? (
+          <Typography variant="body2" sx={{ color: "text.secondary", py: 1 }}>
+            {t("settings.providers.empty")}
+          </Typography>
+        ) : (
+          <SettingsRows>
+            {(providers ?? []).map((entry) => (
+              <ProviderRow
+                key={entry.provider}
+                entry={entry}
+                onEdit={() => setCredentialTarget({ mode: "edit", provider: entry.provider })}
+                onRemove={() => setRemoveTarget(entry)}
+              />
+            ))}
+          </SettingsRows>
+        )}
+        <Typography variant="body2" sx={{ color: "text.secondary", mt: 1 }}>
+          {t("settings.providers.appliesToNewSessions")}
+        </Typography>
+      </SettingsCard>
+      <ProviderCredentialDialog
+        open={credentialTarget !== null}
+        mode={credentialTarget?.mode ?? "add"}
+        initialProviderId={credentialTarget?.provider}
+        onClose={() => setCredentialTarget(null)}
+        onSaved={handleSaved}
+      />
+      <RemoveProviderDialog
+        open={removeTarget !== null}
+        provider={removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        onRemoved={handleRemoved}
+      />
+    </Box>
+  );
+}

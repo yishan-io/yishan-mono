@@ -22,6 +22,7 @@ import { ThemePreferencePicker } from "../components/settings/ThemePreferencePic
 import { getRendererPlatform } from "../helpers/platform";
 import { useThemePreference } from "../hooks/useThemePreference";
 import { AccountSettingsView } from "./settings/AccountSettingsView";
+import { AgentProviderSettingsView } from "./settings/AgentProviderSettingsView";
 import { CLIToolsSettingsView } from "./settings/CLIToolsSettingsView";
 import { ComputerUseSettingsView } from "./settings/ComputerUseSettingsView";
 import { EditorSettingsView } from "./settings/EditorSettingsView";
@@ -128,6 +129,7 @@ export function SettingsView() {
       selectedTabParam === "memory" ||
       selectedTabParam === "nodes" ||
       selectedTabParam === "notifications" ||
+      selectedTabParam === "providers" ||
       selectedTabParam === "serviceTokens" ||
       selectedTabParam === "skills" ||
       selectedTabParam === "terminal" ||
@@ -204,6 +206,11 @@ export function SettingsView() {
       links: <LinkSettingsView />,
       members: <MemberSettingsView />,
       nodes: <NodesSettingsView />,
+      providers: (
+        <SettingsErrorBoundary sectionLabel={t("settings.providers.title")}>
+          <AgentProviderSettingsView />
+        </SettingsErrorBoundary>
+      ),
       serviceTokens: <ServiceTokenSettingsView />,
       skills: <SkillsSettingsView />,
       terminal: <TerminalSettingsView />,

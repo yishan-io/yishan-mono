@@ -60,6 +60,9 @@ const (
 	MethodPiListSessions             = "pi.listSessions"
 	MethodPiListActiveSessions       = "pi.listActiveSessions"
 	MethodPiRename                   = "pi.rename"
+	MethodPiListProviders            = "pi.listProviders"
+	MethodPiSaveProvider             = "pi.saveProvider"
+	MethodPiRemoveProvider           = "pi.removeProvider"
 	MethodIntegrationGitHubStatus    = "integration.githubStatus"
 	MethodCLIToolListStatuses        = "cliTools.listStatuses"
 

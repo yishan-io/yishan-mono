@@ -36,6 +36,7 @@ export type SettingsTab =
   | "memory"
   | "nodes"
   | "notifications"
+  | "providers"
   | "serviceTokens"
   | "skills"
   | "terminal"
@@ -89,6 +90,7 @@ export const SETTINGS_NAV_SECTIONS: SettingsNavSection[] = [
       { tab: "terminal", labelKey: "settings.items.terminal", icon: BiTerminal },
       { tab: "daemon", labelKey: "settings.items.daemon", icon: BiChip },
       { tab: "agents", labelKey: "settings.items.agents", icon: BiBot },
+      { tab: "providers", labelKey: "settings.items.providers", icon: BiWorld },
       { tab: "memory", labelKey: "settings.items.memory", icon: BiChip },
     ],
   },
@@ -382,6 +384,22 @@ const AGENT_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
     ],
   })),
 ];
+const PROVIDERS_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
+  {
+    id: "providers-list",
+    tab: "providers",
+    icon: BiWorld,
+    labelKey: "settings.providers.title",
+    sectionLabelKey: "settings.items.providers",
+    keywordKeys: [
+      "settings.providers.description",
+      "settings.providers.keywords.provider",
+      "settings.providers.keywords.apiKey",
+      "settings.providers.keywords.model",
+    ],
+  },
+];
+
 const GIT_WORKSPACE_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
   {
     id: "workspace-default-context",
@@ -459,6 +477,7 @@ export const SETTINGS_SEARCH_CATALOG: SettingsSearchCatalogItem[] = [
   ...SETTINGS_TAB_SEARCH_ITEMS,
   ...ACCOUNT_SEARCH_ITEMS,
   ...AGENT_SEARCH_ITEMS,
+  ...PROVIDERS_SEARCH_ITEMS,
   ...APPEARANCE_SEARCH_ITEMS,
   ...INTEGRATION_SEARCH_ITEMS,
   ...LANGUAGE_SEARCH_ITEMS,

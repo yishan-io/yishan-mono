@@ -69,6 +69,12 @@ import {
   setOverviewTimeRange as setOverviewTimeRangeCommand,
 } from "../commands/overviewCommands";
 import {
+  listPiProviders as listPiProvidersCommand,
+  openPiProviderLogin as openPiProviderLoginCommand,
+  removePiProvider as removePiProviderCommand,
+  savePiProvider as savePiProviderCommand,
+} from "../commands/piProviderCommands";
+import {
   createProject as createProjectCommand,
   deleteProject as deleteProjectCommand,
   inspectLocalProjectSource as inspectLocalProjectSourceCommand,
@@ -149,6 +155,10 @@ export type Commands = {
   setSelectedWorkspaceId: (workspaceId: string) => void;
   listAgentDetectionStatuses: typeof listAgentDetectionStatusesCommand;
   listAgentModels: typeof listAgentModelsCommand;
+  listPiProviders: typeof listPiProvidersCommand;
+  savePiProvider: typeof savePiProviderCommand;
+  removePiProvider: typeof removePiProviderCommand;
+  openPiProviderLogin: typeof openPiProviderLoginCommand;
   loadScheduledJobs: typeof loadScheduledJobsCommand;
   createScheduledJob: typeof createScheduledJobCommand;
   updateScheduledJob: typeof updateScheduledJobCommand;
@@ -291,6 +301,10 @@ export function useCommands(): Commands {
       setSelectedWorkspaceId: setSelectedWorkspace,
       listAgentDetectionStatuses: listAgentDetectionStatusesCommand,
       listAgentModels: listAgentModelsCommand,
+      listPiProviders: listPiProvidersCommand,
+      savePiProvider: savePiProviderCommand,
+      removePiProvider: removePiProviderCommand,
+      openPiProviderLogin: openPiProviderLoginCommand,
       loadScheduledJobs: loadScheduledJobsCommand,
       createScheduledJob: createScheduledJobCommand,
       updateScheduledJob: updateScheduledJobCommand,
