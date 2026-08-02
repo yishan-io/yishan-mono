@@ -3,9 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../../api";
 import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
-import { AgentIcon } from "../../components/AgentIcon";
 import { renderProjectIcon } from "../../components/projectIcons";
-import { isDesktopAgentKind } from "../../helpers/agentSettings";
 import { workspaceStore } from "../../store/workspaceStore";
 import { ScheduledJobStatusIndicator } from "./ScheduledJobStatusIndicator";
 import { describeCronExpression } from "./scheduledJobDetailHelpers";
@@ -132,15 +130,6 @@ export function ScheduledJobDetailFields({ job, orgId }: ScheduledJobDetailField
 
         <FieldRow label={t("scheduledJob.detail.fields.timezone")}>
           <Typography variant="body2">{job.timezone}</Typography>
-        </FieldRow>
-
-        <FieldRow label={t("scheduledJob.detail.fields.agentKind")}>
-          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>
-            {isDesktopAgentKind(job.agentKind) ? (
-              <AgentIcon agentKind={job.agentKind} context="settingsRow" decorative />
-            ) : null}
-            <Typography variant="body2">{job.agentKind}</Typography>
-          </Box>
         </FieldRow>
 
         {job.model ? (

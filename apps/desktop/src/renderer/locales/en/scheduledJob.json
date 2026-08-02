@@ -16,7 +16,6 @@
       "name": "Name",
       "project": "Project",
       "schedule": "Schedule",
-      "agent": "Agent",
       "status": "Status",
       "lastRun": "Last run",
       "nextRun": "Next run"
@@ -45,7 +44,6 @@
         "cronExpression": "Schedule",
         "timezone": "Timezone",
         "nextRunAt": "Next run",
-        "agentKind": "Agent",
         "prompt": "Prompt",
         "model": "Model",
         "command": "Command",
@@ -104,7 +102,6 @@
       },
       "project": "Project",
       "node": "Node",
-      "agentKind": "Agent",
       "cronExpression": "Schedule (cron)",
       "cronExpressionPlaceholder": "0 9 * * 1-5",
       "timezone": "Timezone",

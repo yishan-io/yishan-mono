@@ -100,7 +100,7 @@ describe("ScheduledJobService.createScheduledJob", () => {
 
   it("inserts a job and returns a view when all guards pass", async () => {
     // Rows: [project check, node check]
-    const { db, mockInsert, mockInsertReturning, mockLimit } = createMockDb();
+    const { db, mockInsert, mockInsertReturning, mockInsertValues, mockLimit } = createMockDb();
     // project exists + node exists (assertNodeOwnedByActor uses shared helper)
     mockLimit
       .mockResolvedValueOnce([{ id: "proj-1" }]) // assertProjectBelongsToOrganization
@@ -119,8 +119,39 @@ describe("ScheduledJobService.createScheduledJob", () => {
     });
 
     expect(mockInsert).toHaveBeenCalledWith(scheduledJobs);
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentKind: "pi",
+      }),
+    );
     expect(result.id).toBe("job-1");
     expect(result.name).toBe("Nightly sync");
+  });
+
+  it("respects an explicitly provided agentKind instead of defaulting to pi", async () => {
+    const { db, mockLimit, mockInsertValues } = createMockDb();
+    mockLimit
+      .mockResolvedValueOnce([{ id: "proj-1" }]) // assertProjectBelongsToOrganization
+      .mockResolvedValueOnce([{ id: "node-1", scope: "private", ownerUserId: "user-1" }]); // assertNodeOwnedByActor
+
+    const service = new ScheduledJobService(db, makeOrgService("member"));
+
+    await service.createScheduledJob({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      actorUserId: "user-1",
+      name: "Nightly sync",
+      nodeId: "node-1",
+      prompt: "Do work",
+      cronExpression: "0 2 * * *",
+      agentKind: "opencode",
+    });
+
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentKind: "opencode",
+      }),
+    );
   });
 
   it("throws for an invalid cron expression", async () => {

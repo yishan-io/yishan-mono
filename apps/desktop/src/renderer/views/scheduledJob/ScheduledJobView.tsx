@@ -174,9 +174,6 @@ export function ScheduledJobView({ onClose: _onClose }: ScheduledJobViewProps = 
                     {t("scheduledJob.columns.schedule")}
                   </Box>
                   <Box component="th" sx={thSx}>
-                    {t("scheduledJob.columns.agent")}
-                  </Box>
-                  <Box component="th" sx={thSx}>
                     {t("scheduledJob.columns.status")}
                   </Box>
                   <Box component="th" sx={thSx}>

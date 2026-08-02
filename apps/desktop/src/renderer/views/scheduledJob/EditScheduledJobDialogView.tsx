@@ -3,7 +3,6 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
-import { isDesktopAgentKind } from "../../helpers/agentSettings";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import { useCommands } from "../../hooks/useCommands";
 import { useDialogRegistration } from "../../hooks/useDialogRegistration";
@@ -11,7 +10,7 @@ import { sessionStore } from "../../store/sessionStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { ScheduledJobFormFields } from "./form/ScheduledJobFormFields";
 import { useScheduledJobFormState } from "./form/useScheduledJobFormState";
-import { inferScheduleFromCron } from "./scheduledJobFormHelpers";
+import { SCHEDULED_JOB_AGENT_KIND, inferScheduleFromCron } from "./scheduledJobFormHelpers";
 
 type EditScheduledJobDialogViewProps = {
   job: ScheduledJobRecord;
@@ -36,7 +35,6 @@ export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduled
         name: job.name,
         projectId: job.projectId,
         nodeId: job.nodeId,
-        agentKind: isDesktopAgentKind(job.agentKind) ? job.agentKind : "opencode",
         cronExpression: job.cronExpression,
         timezone: job.timezone,
         prompt: job.prompt,
@@ -75,7 +73,8 @@ export function EditScheduledJobDialogView({ job, open, onClose }: EditScheduled
       await updateScheduledJob(job.id, {
         name: draft.name.trim(),
         nodeId: draft.nodeId,
-        agentKind: draft.agentKind,
+        // Only Pi is supported — editing a legacy job rewrites its agent kind to pi deliberately.
+        agentKind: SCHEDULED_JOB_AGENT_KIND,
         cronExpression: draft.cronExpression.trim(),
         timezone: draft.timezone.trim() || "UTC",
         prompt: draft.prompt.trim(),

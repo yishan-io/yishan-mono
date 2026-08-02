@@ -257,7 +257,7 @@ export class ScheduledJobService {
         projectId: input.projectId,
         nodeId: input.nodeId.trim(),
         name: input.name.trim(),
-        agentKind: input.agentKind ?? "opencode",
+        agentKind: input.agentKind ?? "pi",
         prompt: input.prompt.trim(),
         model: input.model?.trim() ?? null,
         command: input.command?.trim() ?? null,

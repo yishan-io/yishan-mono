@@ -1,14 +1,16 @@
-import type { DesktopAgentKind } from "../../helpers/agentSettings";
+import type { AgentKind } from "@yishan-io/core";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
+/** Only Pi is supported for scheduled jobs — the agent list is intentionally removed. */
+export const SCHEDULED_JOB_AGENT_KIND: AgentKind = "pi";
+
 export type ScheduledJobFormDraft = {
   name: string;
   projectId: string;
   nodeId: string;
-  agentKind: DesktopAgentKind;
   cronExpression: string;
   prompt: string;
   timezone: string;
@@ -46,7 +48,6 @@ export const DEFAULT_FORM_DRAFT: ScheduledJobFormDraft = {
   name: "",
   projectId: "",
   nodeId: "",
-  agentKind: "opencode",
   cronExpression: "0 9 * * 1-5",
   prompt: "",
   timezone: "UTC",

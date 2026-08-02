@@ -16,7 +16,6 @@
       "name": "\u540d\u79f0",
       "project": "\u9879\u76ee",
       "schedule": "\u8ba1\u5212",
-      "agent": "\u667a\u80fd\u4f53",
       "status": "\u72b6\u6001",
       "lastRun": "\u6700\u8fd1\u8fd0\u884c",
       "nextRun": "\u4e0b\u6b21\u8fd0\u884c"
@@ -45,7 +44,6 @@
         "cronExpression": "\u8ba1\u5212",
         "timezone": "\u65f6\u533a",
         "nextRunAt": "\u4e0b\u6b21\u8fd0\u884c",
-        "agentKind": "\u667a\u80fd\u4f53",
         "prompt": "\u63d0\u793a\u8bcd",
         "model": "\u6a21\u578b",
         "command": "\u547d\u4ee4",
@@ -104,7 +102,6 @@
       },
       "project": "\u9879\u76ee",
       "node": "\u8282\u70b9",
-      "agentKind": "\u667a\u80fd\u4f53",
       "cronExpression": "\u8ba1\u5212\uff08Cron\uff09",
       "cronExpressionPlaceholder": "0 9 * * 1-5",
       "timezone": "\u65f6\u533a",

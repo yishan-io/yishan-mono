@@ -3,9 +3,7 @@ import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPause, LuPlay } from "react-icons/lu";
 import type { ScheduledJobRecord } from "../../api/scheduledJobApi";
-import { AgentIcon } from "../../components/AgentIcon";
 import { renderProjectIcon } from "../../components/projectIcons";
-import { isDesktopAgentKind } from "../../helpers/agentSettings";
 import { useCommands } from "../../hooks/useCommands";
 import { scheduledJobStore } from "../../store/scheduledJobStore";
 import { workspaceStore } from "../../store/workspaceStore";
@@ -137,22 +135,6 @@ export function ScheduledJobListItemView({ job, onOpenDetails }: ScheduledJobLis
         >
           {job.timezone}
         </Typography>
-      </Box>
-      {/* Agent */}
-      <Box component="td" sx={tdSx}>
-        <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
-          {isDesktopAgentKind(job.agentKind) ? (
-            <AgentIcon agentKind={job.agentKind} context="settingsRow" decorative />
-          ) : null}
-          <Typography
-            variant="body2"
-            sx={{
-              color: "text.secondary",
-            }}
-          >
-            {job.agentKind}
-          </Typography>
-        </Box>
       </Box>
       {/* Status */}
       <Box component="td" sx={tdSx}>

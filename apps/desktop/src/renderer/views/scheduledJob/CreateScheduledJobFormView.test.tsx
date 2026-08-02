@@ -109,7 +109,7 @@ describe("CreateScheduledJobFormView", () => {
         name: "Morning summary",
         projectId: "project-2",
         nodeId: "node-daemon",
-        agentKind: "opencode",
+        agentKind: "pi",
         cronExpression: "0 9 * * 1-5",
         prompt: "Summarize project status",
         timezone: "UTC",
