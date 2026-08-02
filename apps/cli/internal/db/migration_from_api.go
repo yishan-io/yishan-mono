@@ -86,7 +86,8 @@ type APIHourlyUsageRow struct {
 // MigrateFromAPI imports projects and workspaces from the remote API into the
 // local database. It reads orgs from the API client and stores them locally.
 // Existing projects are backfilled from export data where legacy imports missed
-// scripts, post hooks, or command config; existing workspaces remain create-only.
+// scripts, post hooks, command config, or the context-enabled setting; existing
+// workspaces remain create-only.
 func MigrateFromAPI(ctx context.Context, database *sql.DB, organizations []string, client APIClient) error {
 	if !client.IsConfigured() {
 		return nil

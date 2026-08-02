@@ -209,7 +209,7 @@ func TestMigrateFromAPI_BackfillsExistingProjectConfigFromExport(t *testing.T) {
 		SetupScript:    "",
 		PostScript:     "",
 		Commands:       []ProjectCommand{},
-		ContextEnabled: true,
+		ContextEnabled: false,
 	}
 	if err := projectStore.Create(context.Background(), legacyProject); err != nil {
 		t.Fatalf("create legacy project: %v", err)
@@ -256,12 +256,123 @@ func TestMigrateFromAPI_BackfillsExistingProjectConfigFromExport(t *testing.T) {
 	if project.Icon != "folder" || project.Color != "#1E66F5" {
 		t.Fatalf("expected icon/color defaults to be preserved during script-command backfill, got %#v", project)
 	}
+	if !project.ContextEnabled {
+		t.Fatalf("expected migrated project context to be restored from export, got %#v", project)
+	}
 	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, MigrationProjectConfigBackfillV1CompletedKey)
 	if err != nil {
 		t.Fatalf("read backfill marker: %v", err)
 	}
 	if !alreadyMigrated {
 		t.Fatal("expected project config backfill marker")
+	}
+}
+
+func TestMigrateFromAPI_DoesNotDisableLocallyEnabledContext(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+
+	projectStore := NewProjectStore(database)
+	localProject := &Project{
+		ID:             "project-1",
+		Name:           "Core",
+		SourceType:     "git",
+		OrganizationID: "org-1",
+		SetupScript:    "bun install",
+		PostScript:     "echo done",
+		Commands:       []ProjectCommand{{Name: "dev", Command: "bun run dev"}},
+		ContextEnabled: true,
+	}
+	if err := projectStore.Create(context.Background(), localProject); err != nil {
+		t.Fatalf("create local project: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, legacyMigrationAPICompletedKey, "true"); err != nil {
+		t.Fatalf("set legacy migration marker: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, MigrationProjectsAPIExportV1CompletedKey, "true"); err != nil {
+		t.Fatalf("set export-v1 migration marker: %v", err)
+	}
+
+	client := &exportAPIClientStub{
+		configured: true,
+		projects: map[string][]APIProject{
+			"org-1": {{
+				ID:             "project-1",
+				Name:           "Core",
+				SourceType:     "git",
+				SetupScript:    "",
+				PostScript:     "",
+				Commands:       []ProjectCommand{},
+				ContextEnabled: false,
+				OrganizationID: "org-1",
+			}},
+		},
+	}
+
+	if err := MigrateFromAPI(context.Background(), database, []string{"org-1"}, client); err != nil {
+		t.Fatalf("MigrateFromAPI: %v", err)
+	}
+
+	project, err := projectStore.Get(context.Background(), "project-1")
+	if err != nil {
+		t.Fatalf("get project: %v", err)
+	}
+	if !project.ContextEnabled {
+		t.Fatalf("expected locally enabled context to be preserved when export disables it, got %#v", project)
+	}
+}
+
+func TestMigrateFromAPI_KeepsContextDisabledWhenExportDisables(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+
+	projectStore := NewProjectStore(database)
+	localProject := &Project{ID: "project-1", Name: "Core", SourceType: "git", OrganizationID: "org-1", ContextEnabled: false}
+	if err := projectStore.Create(context.Background(), localProject); err != nil {
+		t.Fatalf("create local project: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, legacyMigrationAPICompletedKey, "true"); err != nil {
+		t.Fatalf("set legacy migration marker: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, MigrationProjectsAPIExportV1CompletedKey, "true"); err != nil {
+		t.Fatalf("set export-v1 migration marker: %v", err)
+	}
+
+	client := &exportAPIClientStub{
+		configured: true,
+		projects: map[string][]APIProject{
+			"org-1": {{
+				ID:             "project-1",
+				Name:           "Core",
+				SourceType:     "git",
+				ContextEnabled: false,
+				OrganizationID: "org-1",
+			}},
+		},
+	}
+
+	if err := MigrateFromAPI(context.Background(), database, []string{"org-1"}, client); err != nil {
+		t.Fatalf("MigrateFromAPI: %v", err)
+	}
+
+	project, err := projectStore.Get(context.Background(), "project-1")
+	if err != nil {
+		t.Fatalf("get project: %v", err)
+	}
+	if project.ContextEnabled {
+		t.Fatalf("expected context to stay disabled when export disables it, got %#v", project)
 	}
 }
 
