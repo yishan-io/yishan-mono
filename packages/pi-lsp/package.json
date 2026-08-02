@@ -18,7 +18,6 @@
     "extensions",
     "src",
     "!src/**/*.test.ts",
-    "test/fixtures",
     "LICENSE",
     "README.md"
   ],
