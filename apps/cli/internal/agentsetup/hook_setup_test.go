@@ -180,12 +180,12 @@ func TestEnsureDefaultPiExtensionsUseManagedPiAgentDir(t *testing.T) {
 	if err := EnsureDefaultPiExtensions(); err != nil {
 		t.Fatalf("ensure default pi extensions: %v", err)
 	}
-	if len(calls) != 7 {
-		t.Fatalf("expected 7 pi extension install calls, got %d", len(calls))
+	if len(calls) != 8 {
+		t.Fatalf("expected 8 pi extension install calls, got %d", len(calls))
 	}
 
 	expectedAgentDir := filepath.Join(homeDir, ".yishan", "pi", "agent")
-	expectedArgs := [][]string{{"install", piExtensionInstallSource(piNotifyExtensionName)}, {"install", piExtensionInstallSource(piSubagentsExtensionName)}, {"install", piExtensionInstallSource(piMemoryExtensionName)}, {"install", piExtensionInstallSource(piTaskExtensionName)}, {"install", piExtensionInstallSource(piDevFlowExtensionName)}, {"install", piExtensionInstallSource(piWorkspaceExtensionName)}, {"install", piExtensionInstallSource(piAskExtensionName)}}
+	expectedArgs := [][]string{{"install", piExtensionInstallSource(piNotifyExtensionName)}, {"install", piExtensionInstallSource(piSubagentsExtensionName)}, {"install", piExtensionInstallSource(piMemoryExtensionName)}, {"install", piExtensionInstallSource(piTaskExtensionName)}, {"install", piExtensionInstallSource(piDevFlowExtensionName)}, {"install", piExtensionInstallSource(piWorkspaceExtensionName)}, {"install", piExtensionInstallSource(piAskExtensionName)}, {"install", piExtensionInstallSource(piLspExtensionName)}}
 	for index, call := range calls {
 		if call.name != "pi" {
 			t.Fatalf("expected pi command, got %q", call.name)

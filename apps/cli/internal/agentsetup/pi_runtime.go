@@ -17,6 +17,7 @@ const (
 	piDevFlowExtensionName   = "@yishan-io/pi-dev-flow"
 	piWorkspaceExtensionName = "@yishan-io/pi-workspace"
 	piAskExtensionName       = "@yishan-io/pi-ask"
+	piLspExtensionName       = "@yishan-io/pi-lsp"
 )
 
 var (
@@ -30,6 +31,7 @@ var (
 		piDevFlowExtensionName,
 		piWorkspaceExtensionName,
 		piAskExtensionName,
+		piLspExtensionName,
 	}
 )
 

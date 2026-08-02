@@ -4,6 +4,7 @@ import { BashToolCard } from "./BashToolCard";
 import { DefaultToolCard } from "./DefaultToolCard";
 import { DiffToolCard } from "./DiffToolCard";
 import { GrepToolCard } from "./GrepToolCard";
+import { LspToolCard } from "./LspToolCard";
 import { MemoryReadToolCard } from "./MemoryReadToolCard";
 import { MemorySearchToolCard } from "./MemorySearchToolCard";
 import { MemoryStoreToolCard } from "./MemoryStoreToolCard";
@@ -38,6 +39,9 @@ export function AgentToolCallCard(props: AgentToolCallCardProps) {
       return <MemoryStoreToolCard {...props} />;
     case "ask_user":
       return <AskUserToolCard {...props} />;
+    case "lsp_diagnostics":
+    case "lsp_fix":
+      return <LspToolCard {...props} />;
     case "workspace_list":
       return <WorkspaceListToolCard {...props} />;
     case "workspace_find":

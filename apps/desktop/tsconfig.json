@@ -4,7 +4,8 @@
     "paths": {
       "@main/*": ["./src/main/*"],
       "@renderer/*": ["./src/renderer/*"],
-      "@shared/*": ["./src/shared/*"]
+      "@shared/*": ["./src/shared/*"],
+      "@pi-lsp/*": ["../../packages/pi-lsp/src/*"]
     },
     "types": ["vite/client", "node"]
   },
