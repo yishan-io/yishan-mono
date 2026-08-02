@@ -111,4 +111,105 @@ describe("AgentToolCallCard — LSP tools", () => {
 
     expect(screen.getByText("diagnostics (error)")).toBeTruthy();
   });
+
+  it("shows a generic fix label while the fix result is pending", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-lsp-fix-pending",
+      name: "lsp_fix",
+      arguments: { path: "src/a.ts" },
+    };
+
+    render(<AgentToolCallCard toolCall={toolCall} />);
+
+    expect(screen.getByText("fix")).toBeTruthy();
+    expect(screen.queryByText(/fix ·/)).toBeNull();
+  });
+
+  it("shows lsp_fix error state", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-lsp-fix-error",
+      name: "lsp_fix",
+      arguments: { path: "src/a.ts" },
+    };
+
+    const result = {
+      id: "result-lsp-fix-error",
+      role: "toolResult",
+      toolCallId: "tool-lsp-fix-error",
+      toolName: "lsp_fix",
+      content: "No fix route supports src/a.ts.",
+      isError: true,
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+    expect(screen.getByText("fix result (error)")).toBeTruthy();
+  });
+
+  it("shows a multi-server diagnostics label", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-lsp-diag-multi",
+      name: "lsp_diagnostics",
+      arguments: {},
+    };
+
+    const result = {
+      id: "result-lsp-diag-multi",
+      role: "toolResult",
+      toolCallId: "tool-lsp-diag-multi",
+      toolName: "lsp_diagnostics",
+      content: [
+        "biome diagnostics",
+        "",
+        "biome LSP diagnostics: 2 diagnostic(s) across 1 file(s).",
+        "",
+        "---",
+        "",
+        "gopls diagnostics",
+        "",
+        "gopls LSP diagnostics: 1 diagnostic(s) across 1 file(s).",
+      ].join("\n"),
+    } as AgentMessage;
+
+    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+
+    expect(screen.getByText("2 servers diagnostics")).toBeTruthy();
+    expect(screen.getByText("3 diagnostics across 2 files")).toBeTruthy();
+  });
+
+  it("shows computed and unchanged fix outcomes", () => {
+    const toolCall: Extract<AgentContentBlock, { type: "toolCall" }> = {
+      type: "toolCall",
+      id: "tool-lsp-fix-computed",
+      name: "lsp_fix",
+      arguments: { path: "main.go" },
+    };
+
+    const computed = {
+      id: "result-lsp-fix-computed",
+      role: "toolResult",
+      toolCallId: "tool-lsp-fix-computed",
+      toolName: "lsp_fix",
+      content: "gopls LSP fix computed changes for main.go.",
+    } as AgentMessage;
+    const { unmount } = render(<AgentToolCallCard toolCall={toolCall} result={computed} />);
+    expect(screen.getByText("gopls fix · main.go")).toBeTruthy();
+    expect(screen.getByText("computed")).toBeTruthy();
+    unmount();
+    cleanup();
+
+    const unchanged = {
+      id: "result-lsp-fix-unchanged",
+      role: "toolResult",
+      toolCallId: "tool-lsp-fix-unchanged",
+      toolName: "lsp_fix",
+      content: "biome LSP fix left unchanged src/app.test.ts.",
+    } as AgentMessage;
+    render(<AgentToolCallCard toolCall={toolCall} result={unchanged} />);
+    expect(screen.getByText("biome fix · src/app.test.ts")).toBeTruthy();
+    expect(screen.getByText("unchanged")).toBeTruthy();
+  });
 });

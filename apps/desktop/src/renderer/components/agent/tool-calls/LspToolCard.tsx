@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { LuBug, LuHammer } from "react-icons/lu";
 import { ToolSummaryBadge } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
@@ -24,7 +24,10 @@ export function LspToolCard({ toolCall, result = null }: AgentToolCallCardProps)
   const isError = result?.isError === true;
   const isDiagnostics = toolCall.name === "lsp_diagnostics";
 
-  const summary = isDiagnostics ? buildDiagnosticsSummary(resultText) : buildFixSummary(resultText);
+  const summary = useMemo(
+    () => (isDiagnostics ? buildDiagnosticsSummary(resultText) : buildFixSummary(resultText)),
+    [isDiagnostics, resultText],
+  );
 
   return (
     <ToolCardShell isError={isError}>

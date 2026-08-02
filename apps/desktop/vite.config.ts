@@ -16,6 +16,7 @@ export default defineConfig({
     alias: {
       "@renderer": path.resolve(appRoot, "src/renderer"),
       "@shared": path.resolve(appRoot, "src/shared"),
+      "@pi-lsp": path.resolve(appRoot, "../../packages/pi-lsp/src"),
     },
   },
   server: {

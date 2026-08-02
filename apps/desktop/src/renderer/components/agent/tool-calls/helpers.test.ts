@@ -1,3 +1,4 @@
+import type { ResolvedServer } from "@pi-lsp/types";
 import { describe, expect, it } from "vitest";
 import {
   buildReadSummary,
@@ -198,5 +199,57 @@ describe("getLspFixStatusColor", () => {
     expect(getLspFixStatusColor("updated")).toBe("success.main");
     expect(getLspFixStatusColor("computed")).toBe("info.main");
     expect(getLspFixStatusColor("unchanged")).toBe("text.secondary");
+  });
+});
+
+describe("LSP parsers against the real extension formatters", () => {
+  it("parses formatDiagnostics output", async () => {
+    const { formatDiagnostics } = await import("@pi-lsp/tools/result");
+    const server: ResolvedServer = {
+      name: "biome",
+      isDefault: false,
+      command: { command: "biome", args: ["lsp-proxy"] },
+      missingCommandHint: "install biome",
+      extensions: [".ts"],
+      skipDirectories: new Set<string>(),
+      isSupportedFile: () => false,
+      languageIdFor: () => "typescript",
+    };
+    const text = formatDiagnostics(server, [
+      {
+        path: "src/a.ts",
+        uri: "file:///root/src/a.ts",
+        diagnostics: [
+          {
+            range: { start: { line: 0, character: 0 }, end: { line: 0, character: 1 } },
+            severity: 1,
+            message: "first",
+          },
+          {
+            range: { start: { line: 1, character: 0 }, end: { line: 1, character: 1 } },
+            severity: 2,
+            message: "second",
+          },
+        ],
+      },
+      { path: "src/b.ts", uri: "file:///root/src/b.ts", diagnostics: [] },
+    ]);
+
+    expect(parseLspDiagnosticsSummary(text)).toEqual({
+      servers: ["biome"],
+      totalDiagnostics: 2,
+      totalFiles: 2,
+    });
+  });
+
+  it("parses formatEditSummary output", async () => {
+    const { formatEditSummary } = await import("@pi-lsp/tools/result");
+    const text = formatEditSummary("biome", "/root", "/root/src/a.ts", true, false, "const a = 1;");
+
+    expect(parseLspFixSummary(text)).toEqual({
+      server: "biome",
+      status: "computed",
+      path: "src/a.ts",
+    });
   });
 });

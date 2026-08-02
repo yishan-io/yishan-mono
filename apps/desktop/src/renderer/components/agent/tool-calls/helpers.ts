@@ -303,7 +303,10 @@ export function parseLspDiagnosticsSummary(resultText: string): LspDiagnosticsSu
   let found = false;
 
   for (const line of resultText.split("\n")) {
-    const match = /^(?<server>\S+) LSP diagnostics: (?<diagnostics>\d+) diagnostic\(s\) across (?<files>\d+) file\(s\)\.$/.exec(line.trim());
+    const match =
+      /^(?<server>.+?) LSP diagnostics: (?<diagnostics>\d+) diagnostic\(s\) across (?<files>\d+) file\(s\)\.$/.exec(
+        line.trim(),
+      );
     if (!match?.groups) {
       continue;
     }
@@ -340,7 +343,7 @@ export function parseLspFixSummary(resultText: string): LspFixSummary | null {
     return null;
   }
 
-  const match = /^(\S+) LSP fix (updated|computed changes for|left unchanged) (.+)\.$/.exec(firstLine.trim());
+  const match = /^(.+?) LSP fix (updated|computed changes for|left unchanged) (.+)\.$/.exec(firstLine.trim());
   const server = match?.[1];
   const action = match?.[2];
   const path = match?.[3];
