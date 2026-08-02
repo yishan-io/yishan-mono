@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { renderWithAppTheme } from "@renderer/testUtils/renderWithAppTheme";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentContentBlock, AgentMessage } from "../../../store/agentChatTypes";
 import { AgentToolCallCard } from "./AgentToolCallCard";
@@ -114,7 +115,7 @@ describe("AgentToolCallCard", () => {
       arguments: { command: "echo hi" },
     };
 
-    render(
+    renderWithAppTheme(
       <AgentToolCallCard
         toolCall={toolCall}
         result={{ id: "result-missing-content", role: "toolResult" } as unknown as AgentMessage}
@@ -133,7 +134,7 @@ describe("AgentToolCallCard", () => {
       },
     };
 
-    render(<AgentToolCallCard toolCall={toolCall} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
     expect(screen.getByText("echo hi")).toBeTruthy();
     expect(screen.queryByText("$ echo hi")).toBeNull();
@@ -149,7 +150,7 @@ describe("AgentToolCallCard", () => {
       },
     };
 
-    render(<AgentToolCallCard toolCall={toolCall} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
     expect(screen.getByText("src/example.ts")).toBeTruthy();
     expect(screen.queryByText("READ: src/example.ts")).toBeNull();
@@ -165,7 +166,7 @@ describe("AgentToolCallCard", () => {
       },
     };
 
-    render(<AgentToolCallCard toolCall={toolCall} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
     expect(screen.getByText(/use skill:/)).toBeTruthy();
     expect(screen.getByText("brainstorm")).toBeTruthy();
@@ -192,7 +193,7 @@ describe("AgentToolCallCard", () => {
       content: "",
     } as AgentMessage;
 
-    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
     const lineRange = screen.getByTestId("read-tool-line-range");
 
@@ -217,7 +218,7 @@ describe("AgentToolCallCard", () => {
       content: "export const visible = true;",
     } as AgentMessage;
 
-    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
     fireEvent.click(screen.getByText("src/example.ts"));
     expect(screen.getByText("contents")).toBeTruthy();
@@ -247,7 +248,7 @@ describe("AgentToolCallCard", () => {
       },
     } as AgentMessage;
 
-    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
     expect(screen.getByText("app flow mermaid")).toBeTruthy();
     expect(screen.getByText("0 results")).toBeTruthy();
@@ -292,7 +293,7 @@ describe("AgentToolCallCard", () => {
       },
     } as AgentMessage;
 
-    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
     fireEvent.click(screen.getByText("pi-subagents runtime"));
 
@@ -327,7 +328,7 @@ describe("AgentToolCallCard", () => {
       },
     } as AgentMessage;
 
-    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
     expect(screen.getByText("MEMORY.md")).toBeTruthy();
     expect(screen.getByText("durable_discoveries")).toBeTruthy();
@@ -356,7 +357,7 @@ describe("AgentToolCallCard", () => {
       },
     } as AgentMessage;
 
-    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
     // Summary shows file path
     expect(screen.getByText("MEMORY.md")).toBeTruthy();
@@ -399,7 +400,7 @@ describe("AgentToolCallCard", () => {
       },
     } as AgentMessage;
 
-    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
     expect(screen.getByText("question")).toBeTruthy();
     expect(screen.getByText("Deploy to production?")).toBeTruthy();
@@ -418,7 +419,7 @@ describe("AgentToolCallCard", () => {
       },
     };
 
-    render(<AgentToolCallCard toolCall={toolCall} result={buildDiffResult("edit")} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={buildDiffResult("edit")} />);
 
     expect(screen.getByText("+1")).toBeTruthy();
     expect(screen.getByText("-1")).toBeTruthy();
@@ -443,7 +444,7 @@ describe("AgentToolCallCard", () => {
       },
     };
 
-    render(<AgentToolCallCard toolCall={toolCall} result={buildDiffResult("write")} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={buildDiffResult("write")} />);
 
     expect(screen.getByText("+1")).toBeTruthy();
     expect(screen.getByText("-1")).toBeTruthy();
@@ -483,7 +484,7 @@ describe("AgentToolCallCard", () => {
       },
     } as AgentMessage;
 
-    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
     expect(screen.getByText("code-reviewer")).toBeTruthy();
     expect(screen.getByText("completed")).toBeTruthy();
@@ -530,7 +531,7 @@ describe("AgentToolCallCard", () => {
       },
     } as AgentMessage;
 
-    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
     fireEvent.click(screen.getByTestId("agent-tool-summary"));
 
@@ -564,7 +565,7 @@ describe("AgentToolCallCard", () => {
         "process.go-334- \t\t_ = os.Unsetenv(agentsetup.RemoteHostPolicyEnvKey)\nprocess.go:336: \tagentsetup.EnsureManagedAgentRuntime(usesRemoteHostPolicy(dr.handler.runtime))\nprocess.go-337- \treturn nil",
     } as AgentMessage;
 
-    render(<AgentToolCallCard toolCall={toolCall} result={result} workspacePath="/tmp/project" />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} workspacePath="/tmp/project" />);
 
     expect(screen.getByText("EnsureManagedAgentRuntime\\(")).toBeTruthy();
     expect(screen.getByText("process.go")).toBeTruthy();
@@ -598,7 +599,7 @@ describe("AgentToolCallCard", () => {
       content: "Permission denied: src/example.ts",
     } as AgentMessage;
 
-    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
     fireEvent.click(screen.getAllByText("src/example.ts")[0] as HTMLElement);
     expect(screen.getByText("Permission denied: src/example.ts")).toBeTruthy();
@@ -623,7 +624,7 @@ describe("AgentToolCallCard", () => {
       content: "updated file",
     } as AgentMessage;
 
-    render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
     fireEvent.click(screen.getAllByText("src/example.ts")[0] as HTMLElement);
 
@@ -650,7 +651,7 @@ describe("AgentToolCallCard", () => {
       },
     };
 
-    render(<AgentToolCallCard toolCall={toolCall} result={null} />);
+    renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={null} />);
 
     expect(screen.getByTestId("tool-chevron-right")).toBeTruthy();
 
@@ -669,7 +670,7 @@ describe("AgentToolCallCard", () => {
         arguments: { title: "Add dark mode support" },
       };
 
-      render(<AgentToolCallCard toolCall={toolCall} />);
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
       // "Add dark mode support" appears in both summary label and collapsed arguments
       expect(screen.getAllByText("Add dark mode support").length).toBeGreaterThanOrEqual(1);
@@ -693,7 +694,7 @@ describe("AgentToolCallCard", () => {
         },
       };
 
-      render(<AgentToolCallCard toolCall={toolCall} />);
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
       fireEvent.click(screen.getByTestId("task-tool-summary"));
 
@@ -716,7 +717,7 @@ describe("AgentToolCallCard", () => {
         arguments: { status: "active" },
       };
 
-      render(<AgentToolCallCard toolCall={toolCall} />);
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
       expect(screen.getByText("List tasks")).toBeTruthy();
       // "active" appears in both the badge and the collapsed arguments value
@@ -731,7 +732,7 @@ describe("AgentToolCallCard", () => {
         arguments: {},
       };
 
-      render(<AgentToolCallCard toolCall={toolCall} />);
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
       expect(screen.getByText("List tasks")).toBeTruthy();
       expect(screen.queryByText("active")).toBeNull();
@@ -746,7 +747,7 @@ describe("AgentToolCallCard", () => {
         arguments: { id: "dark-mode", document: "plan" },
       };
 
-      render(<AgentToolCallCard toolCall={toolCall} />);
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
       // "dark-mode" appears in both summary label and collapsed arguments value
       expect(screen.getAllByText("dark-mode").length).toBeGreaterThanOrEqual(1);
@@ -761,7 +762,7 @@ describe("AgentToolCallCard", () => {
         arguments: { id: "dark-mode", document: "plan", content: "# Plan\n\n1. Add toggle" },
       };
 
-      render(<AgentToolCallCard toolCall={toolCall} />);
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
       expect(screen.getAllByText("dark-mode").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("plan").length).toBeGreaterThanOrEqual(1);
@@ -775,7 +776,7 @@ describe("AgentToolCallCard", () => {
         arguments: { id: "dark-mode", content: "Progress update" },
       };
 
-      render(<AgentToolCallCard toolCall={toolCall} />);
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
       expect(screen.getAllByText("dark-mode").length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText("note")).toBeTruthy();
@@ -789,7 +790,7 @@ describe("AgentToolCallCard", () => {
         arguments: { id: "dark-mode", outcome: "All done" },
       };
 
-      render(<AgentToolCallCard toolCall={toolCall} />);
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
       expect(screen.getAllByText("dark-mode").length).toBeGreaterThanOrEqual(1);
       // "finish" appears in both the badge and the collapsed arguments heading
@@ -812,7 +813,7 @@ describe("AgentToolCallCard", () => {
         content: "# Add dark mode support\n\n## Goal\nImplement toggle",
       } as AgentMessage;
 
-      render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
       // Collapsed: summary visible ("task" appears in badge and collapsed args)
       expect(screen.getAllByText("dark-mode").length).toBeGreaterThanOrEqual(1);
@@ -840,7 +841,7 @@ describe("AgentToolCallCard", () => {
         arguments: { id: "dark-mode", document: "plan", content: longContent },
       };
 
-      render(<AgentToolCallCard toolCall={toolCall} />);
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
       fireEvent.click(screen.getByTestId("task-tool-summary"));
 
@@ -858,7 +859,7 @@ describe("AgentToolCallCard", () => {
         arguments: { title: "No criteria", acceptanceCriteria: [] },
       };
 
-      render(<AgentToolCallCard toolCall={toolCall} />);
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
       fireEvent.click(screen.getByTestId("task-tool-summary"));
 
@@ -874,7 +875,7 @@ describe("AgentToolCallCard", () => {
         arguments: {},
       };
 
-      render(<AgentToolCallCard toolCall={toolCall} />);
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} />);
 
       expect(screen.getByText("List tasks")).toBeTruthy();
       expect(screen.queryByTestId("task-tool-summary")).toBeNull();
@@ -897,7 +898,7 @@ describe("AgentToolCallCard", () => {
         content: "Task not found: nonexistent",
       } as AgentMessage;
 
-      render(<AgentToolCallCard toolCall={toolCall} result={result} />);
+      renderWithAppTheme(<AgentToolCallCard toolCall={toolCall} result={result} />);
 
       fireEvent.click(screen.getByTestId("task-tool-summary"));
       expect(screen.getByText(/Task not found/)).toBeTruthy();

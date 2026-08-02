@@ -1,7 +1,8 @@
-import { useTheme } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isMarkdownFile } from "../../helpers/editorLanguage";
-import { YISHAN_THEME_DARK, YISHAN_THEME_LIGHT, monaco } from "../../helpers/monacoSetup";
+import { monaco } from "../../helpers/monacoSetup";
+import { useCodeTheme } from "../../hooks/useCodeTheme";
+import { editorSettingsStore } from "../../store/settings/editorSettingsStore";
 import { createMonacoFileEditor, replaceEditorContentPreservingViewState } from "./createMonacoFileEditor";
 
 /** Props for creating and syncing the Monaco editor used by FileEditor. */
@@ -14,6 +15,21 @@ export type UseMonacoFileEditorProps = {
   onSave?: (content: string) => void | Promise<void>;
 };
 
+/** Return type for the hook — includes mode/isDark for the FileEditor component. */
+export type UseMonacoFileEditorReturn = {
+  editorHostRef: React.RefObject<HTMLDivElement | null>;
+  editorRef: React.RefObject<monaco.editor.IStandaloneCodeEditor | null>;
+  editorInstance: monaco.editor.IStandaloneCodeEditor | null;
+  currentContent: string;
+  markdownPreviewImmediateUpdateToken: number;
+  isMarkdown: boolean;
+  handleSaveCurrentContent: () => void;
+  handleMarkdownPreviewContentChange: (nextContent: string) => void;
+  mode: "light" | "dark";
+  isDark: boolean;
+  editorFontSize: number;
+};
+
 /** Creates and synchronizes the Monaco editor instance for FileEditor. */
 export function useMonacoFileEditor({
   path,
@@ -22,8 +38,11 @@ export function useMonacoFileEditor({
   focusRequestKey,
   onContentChange,
   onSave,
-}: UseMonacoFileEditorProps) {
-  const theme = useTheme();
+}: UseMonacoFileEditorProps): UseMonacoFileEditorReturn {
+  const { themeName, mode } = useCodeTheme();
+  const editorFontSize = editorSettingsStore((s) => s.editorFontSize);
+  const wordWrapEnabled = editorSettingsStore((s) => s.wordWrap);
+
   const editorHostRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const [editorInstance, setEditorInstance] = useState<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -33,10 +52,15 @@ export function useMonacoFileEditor({
   const onContentChangeRef = useRef(onContentChange);
   const onSaveRef = useRef(onSave);
   const isMarkdown = useMemo(() => isMarkdownFile(path), [path]);
-  const monacoTheme = useMemo(
-    () => (theme.palette.mode === "dark" ? YISHAN_THEME_DARK : YISHAN_THEME_LIGHT),
-    [theme.palette.mode],
-  );
+
+  // Store create-time values in refs so the create effect doesn't
+  // depend on them (avoiding editor recreation on settings changes).
+  const themeNameRef = useRef(themeName);
+  themeNameRef.current = themeName;
+  const fontSizeRef = useRef(editorFontSize);
+  fontSizeRef.current = editorFontSize;
+  const wordWrapRef = useRef(wordWrapEnabled);
+  wordWrapRef.current = wordWrapEnabled;
 
   useEffect(() => {
     contentRef.current = content;
@@ -53,6 +77,8 @@ export function useMonacoFileEditor({
     // fire-and-forget: keyboard handlers cannot await the caller-owned save operation.
     void onSaveRef.current?.(currentEditorContent);
   }, []);
+
+  // ── Create / destroy editor when path, isDeleted, or handleSaveCurrentContent changes ──
   useEffect(() => {
     if (!editorHostRef.current) {
       return;
@@ -63,7 +89,9 @@ export function useMonacoFileEditor({
       path,
       content: contentRef.current,
       isDeleted,
-      theme: monacoTheme,
+      theme: themeNameRef.current,
+      fontSize: fontSizeRef.current,
+      wordWrap: wordWrapRef.current ? "on" : "off",
       onContentChange: (nextContent) => {
         contentRef.current = nextContent;
         setCurrentContent(nextContent);
@@ -91,8 +119,9 @@ export function useMonacoFileEditor({
       editorRef.current = null;
       setEditorInstance(null);
     };
-  }, [handleSaveCurrentContent, isDeleted, monacoTheme, path]);
+  }, [handleSaveCurrentContent, isDeleted, path]);
 
+  // ── Sync external content changes into the editor ──
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor || editor.getValue() === content) {
@@ -101,9 +130,19 @@ export function useMonacoFileEditor({
 
     replaceEditorContentPreservingViewState(editor, content);
   }, [content]);
+
+  // ── Set Monaco theme when it changes (without recreating the editor) ──
   useEffect(() => {
-    monaco.editor.setTheme(monacoTheme);
-  }, [monacoTheme]);
+    monaco.editor.setTheme(themeName);
+  }, [themeName]);
+
+  // ── Update editor options live when fontSize/wordWrap change ──
+  useEffect(() => {
+    editorRef.current?.updateOptions({
+      fontSize: editorFontSize,
+      wordWrap: wordWrapEnabled ? "on" : "off",
+    });
+  }, [editorFontSize, wordWrapEnabled]);
 
   useEffect(() => {
     editorRef.current?.updateOptions?.({ readOnly: isDeleted });
@@ -146,5 +185,8 @@ export function useMonacoFileEditor({
     isMarkdown,
     handleSaveCurrentContent,
     handleMarkdownPreviewContentChange,
+    mode,
+    isDark: mode === "dark",
+    editorFontSize,
   };
 }

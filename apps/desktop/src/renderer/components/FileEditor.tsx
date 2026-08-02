@@ -51,6 +51,8 @@ export function FileEditor({
     currentContent,
     markdownPreviewImmediateUpdateToken,
     isMarkdown,
+    isDark,
+    editorFontSize,
     handleSaveCurrentContent,
     handleMarkdownPreviewContentChange,
   } = useMonacoFileEditor({
@@ -188,6 +190,8 @@ export function FileEditor({
     worktreePath,
     currentContent,
     isIgnored,
+    isDark,
+    editorFontSize,
   });
 
   return (

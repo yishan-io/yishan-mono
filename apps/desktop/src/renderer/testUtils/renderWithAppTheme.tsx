@@ -1,5 +1,6 @@
 import { ThemeProvider } from "@mui/material/styles";
 import type { Theme } from "@mui/material/styles";
+import { AppThemePreferenceProvider } from "@renderer/hooks/useThemePreference";
 import { type AppThemeMode, createAppTheme } from "@renderer/theme";
 import type { RenderOptions } from "@testing-library/react";
 import { render } from "@testing-library/react";
@@ -15,6 +16,10 @@ export function renderWithAppTheme(ui: ReactElement, options: RenderWithAppTheme
 
   return render(ui, {
     ...renderOptions,
-    wrapper: ({ children }) => <ThemeProvider theme={appTheme}>{children}</ThemeProvider>,
+    wrapper: ({ children }) => (
+      <AppThemePreferenceProvider>
+        <ThemeProvider theme={appTheme}>{children}</ThemeProvider>
+      </AppThemePreferenceProvider>
+    ),
   });
 }

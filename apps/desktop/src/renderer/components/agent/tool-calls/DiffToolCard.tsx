@@ -1,9 +1,11 @@
 import { Box, Collapse } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
 import { FileDiff } from "@pierre/diffs/react";
 import { useMemo, useState } from "react";
 import { LuFilePlus2, LuPencil } from "react-icons/lu";
-import { YISHAN_DIFF_THEME_DARK, YISHAN_DIFF_THEME_LIGHT, getDiffCssVariables } from "../../../helpers/diffTheme";
+import { MONO_FONT_FAMILY } from "../../../helpers/codeThemes";
+import { getDiffCssVariablesForPalette } from "../../../helpers/diffTheme";
+import { useCodeTheme } from "../../../hooks/useCodeTheme";
+import { editorSettingsStore } from "../../../store/settings/editorSettingsStore";
 import { ToolDiffStats } from "./ToolBadges";
 import { ToolCardShell, ToolSummaryPanel } from "./ToolCardShell";
 import { ToolExpandableSummary } from "./ToolExpandableSummary";
@@ -20,7 +22,10 @@ import {
 
 /** Renders the specialized edit/write tool-call card. */
 export function DiffToolCard({ toolCall, result = null, workspacePath }: AgentToolCallCardProps) {
-  const theme = useTheme();
+  const { palette, themeName, mode } = useCodeTheme();
+  const editorFontSize = editorSettingsStore((s) => s.editorFontSize);
+  const diffLineHeight = Math.round(editorFontSize * 1.5);
+
   const [open, setOpen] = useState(false);
   const isEdit = toolCall.name === "edit";
   const isWrite = toolCall.name === "write";
@@ -52,8 +57,7 @@ export function DiffToolCard({ toolCall, result = null, workspacePath }: AgentTo
       };
     });
   }, [patchDiff]);
-  const diffTheme = theme.palette.mode === "dark" ? YISHAN_DIFF_THEME_DARK : YISHAN_DIFF_THEME_LIGHT;
-  const diffCssVars = useMemo(() => getDiffCssVariables(theme.palette.mode), [theme.palette.mode]);
+  const diffCssVars = useMemo(() => getDiffCssVariablesForPalette(palette, mode), [palette, mode]);
 
   if (!diffToolPath) {
     return null;
@@ -87,14 +91,14 @@ export function DiffToolCard({ toolCall, result = null, workspacePath }: AgentTo
                 disableWorkerPool
                 style={
                   {
-                    "--diffs-font-family": '"JetBrains Mono", "SF Mono", Menlo, monospace',
-                    "--diffs-font-size": "12px",
-                    "--diffs-line-height": "18px",
+                    "--diffs-font-family": MONO_FONT_FAMILY,
+                    "--diffs-font-size": `${editorFontSize}px`,
+                    "--diffs-line-height": `${diffLineHeight}px`,
                     ...diffCssVars,
                   } as React.CSSProperties
                 }
                 options={{
-                  theme: diffTheme,
+                  theme: themeName,
                   diffStyle: "unified",
                   overflow: "scroll",
                   disableFileHeader: true,

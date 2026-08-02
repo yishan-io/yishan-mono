@@ -115,7 +115,7 @@ const MermaidBlock = memo(function MermaidBlock({ code }: MermaidBlockProps) {
           sx={{
             color: "text.secondary",
             mt: 0.5,
-            fontFamily: '"JetBrains Mono", "SF Mono", Menlo, monospace',
+            fontFamily: "var(--yishan-font-mono)",
             fontSize: "0.75em",
             whiteSpace: "pre-wrap",
           }}

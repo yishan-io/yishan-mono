@@ -1,3 +1,4 @@
+import { MONO_FONT_FAMILY } from "../../helpers/codeThemes";
 import { getLanguageId } from "../../helpers/editorLanguage";
 import { ensureEditorThemes, monaco } from "../../helpers/monacoSetup";
 
@@ -8,6 +9,8 @@ export type CreateMonacoFileEditorProps = {
   content: string;
   isDeleted: boolean;
   theme: string;
+  fontSize: number;
+  wordWrap: "on" | "off";
   onContentChange: (content: string) => void;
   onSave: (content: string) => void;
 };
@@ -32,6 +35,8 @@ export function createMonacoFileEditor({
   content,
   isDeleted,
   theme,
+  fontSize,
+  wordWrap,
   onContentChange,
   onSave,
 }: CreateMonacoFileEditorProps) {
@@ -49,10 +54,10 @@ export function createMonacoFileEditor({
   const editor = monaco.editor.create(host, {
     model,
     theme,
-    fontSize: 13,
-    fontFamily: '"JetBrains Mono", "SF Mono", Menlo, monospace',
+    fontSize,
+    fontFamily: MONO_FONT_FAMILY,
     lineHeight: 1.5,
-    wordWrap: "on",
+    wordWrap,
     minimap: { enabled: false },
     scrollBeyondLastLine: false,
     automaticLayout: true,

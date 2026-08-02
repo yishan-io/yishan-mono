@@ -79,7 +79,7 @@ export function MarkdownFindBar({
         placeholder="Find"
         sx={{
           fontSize: 13,
-          fontFamily: '"JetBrains Mono", "SF Mono", Menlo, monospace',
+          fontFamily: "var(--yishan-font-mono)",
           color: "text.primary",
           px: 0.75,
           py: 0.25,
@@ -99,7 +99,7 @@ export function MarkdownFindBar({
           variant="caption"
           sx={{
             fontSize: 11,
-            fontFamily: '"JetBrains Mono", "SF Mono", Menlo, monospace',
+            fontFamily: "var(--yishan-font-mono)",
             color: matchCount === 0 ? "error.main" : "text.secondary",
             userSelect: "none",
             px: 0.75,

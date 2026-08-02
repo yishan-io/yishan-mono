@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { renderWithAppTheme } from "@renderer/testUtils/renderWithAppTheme";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AgentMarkdownContent } from "./AgentMarkdownContent";
 
@@ -33,7 +34,7 @@ afterEach(() => {
 
 describe("AgentMarkdownContent", () => {
   it("renders streaming text without invoking the markdown parser", async () => {
-    render(<AgentMarkdownContent content="**streaming**" renderMode="streaming" />);
+    renderWithAppTheme(<AgentMarkdownContent content="**streaming**" renderMode="streaming" />);
 
     expect(screen.getByText("**streaming**")).toBeTruthy();
 
@@ -45,7 +46,9 @@ describe("AgentMarkdownContent", () => {
   it("keeps file-link underlines hidden until hover", async () => {
     mocked.parse.mockResolvedValueOnce("<p><code>src/example.ts</code></p>");
 
-    const { container } = render(<AgentMarkdownContent content="`src/example.ts`" workspacePath="/project" />);
+    const { container } = renderWithAppTheme(
+      <AgentMarkdownContent content="`src/example.ts`" workspacePath="/project" />,
+    );
 
     await waitFor(() => {
       expect(container.querySelector(".file-link")).not.toBeNull();
@@ -59,7 +62,7 @@ describe("AgentMarkdownContent", () => {
   it("strips line ranges before opening a file link", async () => {
     mocked.parse.mockResolvedValueOnce("<p><code>.github/pull_request_template.md:32-37</code></p>");
 
-    const { container } = render(
+    const { container } = renderWithAppTheme(
       <AgentMarkdownContent content="`.github/pull_request_template.md:32-37`" workspacePath="/project" />,
     );
 
@@ -80,7 +83,7 @@ describe("AgentMarkdownContent", () => {
   it("still parses finalized markdown content", async () => {
     mocked.parse.mockResolvedValueOnce("<p><strong>done</strong></p>");
 
-    render(<AgentMarkdownContent content="**done**" renderMode="final" />);
+    renderWithAppTheme(<AgentMarkdownContent content="**done**" renderMode="final" />);
 
     await waitFor(() => {
       expect(mocked.parse).toHaveBeenCalledWith("**done**");
@@ -90,7 +93,7 @@ describe("AgentMarkdownContent", () => {
   it("selects a folder path ending with / in the file tree instead of opening a file tab", async () => {
     mocked.parse.mockResolvedValueOnce("<p><code>apps/desktop/src/</code></p>");
 
-    const { container } = render(
+    const { container } = renderWithAppTheme(
       <AgentMarkdownContent content="`apps/desktop/src/`" workspacePath="/project" />,
     );
 
@@ -108,7 +111,7 @@ describe("AgentMarkdownContent", () => {
   it("selects a path without extension as a folder in the file tree", async () => {
     mocked.parse.mockResolvedValueOnce("<p><code>apps/desktop/src</code></p>");
 
-    const { container } = render(
+    const { container } = renderWithAppTheme(
       <AgentMarkdownContent content="`apps/desktop/src`" workspacePath="/project" />,
     );
 
@@ -126,7 +129,7 @@ describe("AgentMarkdownContent", () => {
   it("selects .my-context/ path as a folder in the file tree", async () => {
     mocked.parse.mockResolvedValueOnce("<p><code>.my-context/tasks/</code></p>");
 
-    const { container } = render(
+    const { container } = renderWithAppTheme(
       <AgentMarkdownContent content="`.my-context/tasks/`" workspacePath="/project" />,
     );
 
@@ -144,7 +147,7 @@ describe("AgentMarkdownContent", () => {
   it("keeps opening file tabs for paths with known extensions", async () => {
     mocked.parse.mockResolvedValueOnce("<p><code>apps/desktop/src/index.ts</code></p>");
 
-    const { container } = render(
+    const { container } = renderWithAppTheme(
       <AgentMarkdownContent content="`apps/desktop/src/index.ts`" workspacePath="/project" />,
     );
 
@@ -162,7 +165,7 @@ describe("AgentMarkdownContent", () => {
   it("does not treat URLs as folders", async () => {
     mocked.parse.mockResolvedValueOnce("<p><a href='https://example.com/dir/'>link</a></p>");
 
-    const { container } = render(
+    const { container } = renderWithAppTheme(
       <AgentMarkdownContent content="[link](https://example.com/dir/)" workspacePath="/project" />,
     );
 
@@ -179,9 +182,7 @@ describe("AgentMarkdownContent", () => {
   it("treats extensionless dotfiles like .eslintrc as files, not folders", async () => {
     mocked.parse.mockResolvedValueOnce("<p><code>.eslintrc</code></p>");
 
-    const { container } = render(
-      <AgentMarkdownContent content="`.eslintrc`" workspacePath="/project" />,
-    );
+    const { container } = renderWithAppTheme(<AgentMarkdownContent content="`.eslintrc`" workspacePath="/project" />);
 
     await waitFor(() => {
       expect(container.querySelector(".file-link")).not.toBeNull();
@@ -197,7 +198,7 @@ describe("AgentMarkdownContent", () => {
   it("resolves ../ in folder paths before selecting in tree", async () => {
     mocked.parse.mockResolvedValueOnce("<p><code>../sibling-dir/</code></p>");
 
-    const { container } = render(
+    const { container } = renderWithAppTheme(
       <AgentMarkdownContent content="`../sibling-dir/`" workspacePath="/project/apps/desktop" />,
     );
 

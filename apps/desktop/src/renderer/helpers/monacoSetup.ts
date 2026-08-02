@@ -1,7 +1,8 @@
 import * as monaco from "monaco-editor";
 import "monaco-editor/esm/vs/basic-languages/javascript/javascript.contribution";
 import "monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution";
-import { EDITOR_COLORS } from "./diffTheme";
+import { CODE_THEME_FAMILIES, getMonacoThemeName } from "./codeThemes";
+import { buildMonacoThemeRules } from "./monacoThemeRules";
 
 // Configure Monaco to use locally bundled workers instead of loading from CDN.
 // The `new Worker(new URL(..., import.meta.url))` pattern is a web standard that
@@ -194,70 +195,34 @@ export const YISHAN_THEME_DARK = "yishan-dark";
 let themesRegistered = false;
 
 /**
- * Registers the yishan-light and yishan-dark Monaco themes (idempotent).
+ * Registers one Monaco theme per (code-theme-family, app-mode) pair (idempotent).
  * Must be called before creating any editor instance.
  */
 export function ensureEditorThemes() {
   if (themesRegistered) return;
   themesRegistered = true;
 
-  monaco.editor.defineTheme(YISHAN_THEME_LIGHT, {
-    base: "vs",
-    inherit: true,
-    rules: [
-      { token: "comment", foreground: "7a8190", fontStyle: "italic" },
-      { token: "keyword", foreground: "8a3ffc" },
-      { token: "string", foreground: "2d7a00" },
-      { token: "number", foreground: "bd5500" },
-      { token: "type", foreground: "006b99" },
-      { token: "function", foreground: "0060b8" },
-      { token: "variable", foreground: "1f2430" },
-      { token: "constant", foreground: "9a6100" },
-      { token: "operator", foreground: "3f4758" },
-      { token: "delimiter", foreground: "3f4758" },
-      { token: "tag", foreground: "b04900" },
-      { token: "attribute.name", foreground: "0b6ea8" },
-      { token: "attribute.value", foreground: "2d7a00" },
-    ],
-    colors: {
-      "editor.background": EDITOR_COLORS.light.background,
-      "editor.foreground": EDITOR_COLORS.light.foreground,
-      "editor.lineHighlightBackground": EDITOR_COLORS.light.lineHighlight,
-      "editor.selectionBackground": EDITOR_COLORS.light.selection,
-      "editorLineNumber.foreground": EDITOR_COLORS.light.lineNumber,
-      "editorGutter.background": EDITOR_COLORS.light.gutter,
-      "editorCursor.foreground": EDITOR_COLORS.light.cursor,
-    },
-  });
+  for (const family of CODE_THEME_FAMILIES) {
+    for (const mode of ["light", "dark"] as const) {
+      const palette = family.palettes[mode];
+      const themeName = getMonacoThemeName(family.id, mode);
 
-  monaco.editor.defineTheme(YISHAN_THEME_DARK, {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "comment", foreground: "7f8796", fontStyle: "italic" },
-      { token: "keyword", foreground: "c49fff" },
-      { token: "string", foreground: "a7d56d" },
-      { token: "number", foreground: "ffa86f" },
-      { token: "type", foreground: "8ad9ff" },
-      { token: "function", foreground: "79c4ff" },
-      { token: "variable", foreground: "d4dbe8" },
-      { token: "constant", foreground: "ffd57a" },
-      { token: "operator", foreground: "c0c8d8" },
-      { token: "delimiter", foreground: "c0c8d8" },
-      { token: "tag", foreground: "ffb86b" },
-      { token: "attribute.name", foreground: "86d0ff" },
-      { token: "attribute.value", foreground: "a7d56d" },
-    ],
-    colors: {
-      "editor.background": EDITOR_COLORS.dark.background,
-      "editor.foreground": EDITOR_COLORS.dark.foreground,
-      "editor.lineHighlightBackground": EDITOR_COLORS.dark.lineHighlight,
-      "editor.selectionBackground": EDITOR_COLORS.dark.selection,
-      "editorLineNumber.foreground": EDITOR_COLORS.dark.lineNumber,
-      "editorGutter.background": EDITOR_COLORS.dark.gutter,
-      "editorCursor.foreground": EDITOR_COLORS.dark.cursor,
-    },
-  });
+      monaco.editor.defineTheme(themeName, {
+        base: mode === "dark" ? "vs-dark" : "vs",
+        inherit: true,
+        rules: buildMonacoThemeRules(palette),
+        colors: {
+          "editor.background": palette.background,
+          "editor.foreground": palette.foreground,
+          "editor.lineHighlightBackground": palette.lineHighlight,
+          "editor.selectionBackground": palette.selection,
+          "editorLineNumber.foreground": palette.lineNumber,
+          "editorGutter.background": palette.gutter,
+          "editorCursor.foreground": palette.cursor,
+        },
+      });
+    }
+  }
 }
 
 /** The locally bundled Monaco editor namespace. */

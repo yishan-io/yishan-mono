@@ -363,6 +363,22 @@
           "label": "\u663e\u793a Markdown \u5927\u7eb2",
           "description": "\u5728 Markdown \u6587\u4ef6\u65c1\u663e\u793a\u6587\u6863\u5927\u7eb2\u3002"
         }
+      },
+      "editor": {
+        "title": "编辑器",
+        "description": "配置代码编辑器外观。",
+        "theme": {
+          "label": "代码主题",
+          "description": "代码主题跟随全局浅色/深色主题。"
+        },
+        "fontSize": {
+          "label": "字体大小",
+          "description": "控制代码编辑器中的文本大小。"
+        },
+        "wordWrap": {
+          "label": "自动换行",
+          "description": "在代码编辑器中自动换行。"
+        }
       }
     },
     "language": {

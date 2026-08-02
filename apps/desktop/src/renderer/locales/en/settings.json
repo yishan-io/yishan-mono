@@ -385,6 +385,22 @@
           "label": "Show markdown outline",
           "description": "Display the document outline beside markdown files."
         }
+      },
+      "editor": {
+        "title": "Editor",
+        "description": "Configure code editor appearance.",
+        "theme": {
+          "label": "Code theme",
+          "description": "Code theme follows the global light/dark theme."
+        },
+        "fontSize": {
+          "label": "Font size",
+          "description": "Control text size in the code editor."
+        },
+        "wordWrap": {
+          "label": "Word wrap",
+          "description": "Wrap long lines in the code editor."
+        }
       }
     },
     "language": {

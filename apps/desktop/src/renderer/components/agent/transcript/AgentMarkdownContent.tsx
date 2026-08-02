@@ -2,6 +2,8 @@ import { Box, Typography, useTheme } from "@mui/material";
 import { isAbsoluteUrl, resolveRelativePath } from "@renderer/components/markdown/markdownHelpers";
 import { markdownService } from "@renderer/components/markdown/markdownService";
 import { useMarkdownStyles } from "@renderer/components/markdown/markdownStyles";
+import { useCodeTheme } from "@renderer/hooks/useCodeTheme";
+import { editorSettingsStore } from "@renderer/store/settings/editorSettingsStore";
 import { useEffect, useRef, useState } from "react";
 import { openLink } from "../../../commands/appCommands";
 import { openTab, openTabInOppositePane } from "../../../commands/tabCommands";
@@ -76,7 +78,9 @@ function openFolderInFileTree(href: string, workspacePath: string): void {
 /** Renders assistant response text as sanitized markdown HTML. */
 export function AgentMarkdownContent({ content, workspacePath, renderMode = "final" }: AgentMarkdownContentProps) {
   const theme = useTheme();
-  const styles = useMarkdownStyles(theme, 14);
+  const { palette: codePalette, mode: codeMode } = useCodeTheme();
+  const editorFontSize = editorSettingsStore((state) => state.editorFontSize);
+  const styles = useMarkdownStyles(theme, 14, codePalette, editorFontSize, codeMode);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [html, setHtml] = useState("");
 

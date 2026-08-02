@@ -1,12 +1,14 @@
 import { Box } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
 import type { CodeViewDiffItem } from "@pierre/diffs";
 import { CodeView } from "@pierre/diffs/react";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MONO_FONT_FAMILY } from "../helpers/codeThemes";
 import { findDiffMatches } from "../helpers/diffSearch";
 import type { DiffMatch } from "../helpers/diffSearch";
-import { YISHAN_DIFF_THEME_DARK, YISHAN_DIFF_THEME_LIGHT, getDiffCssVariables } from "../helpers/diffTheme";
+import { getDiffCssVariablesForPalette } from "../helpers/diffTheme";
+import { useCodeTheme } from "../hooks/useCodeTheme";
+import { editorSettingsStore } from "../store/settings/editorSettingsStore";
 import type { FileDiffEntry } from "../store/types";
 import { DiffSearchPanel } from "./DiffSearchPanel";
 import { MultiFileDiffViewerHeader } from "./multiFileDiffViewer/MultiFileDiffViewerHeader";
@@ -32,12 +34,15 @@ type CustomHeaderItem = {
 };
 
 export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerProps) {
-  const theme = useTheme();
+  const { palette, themeName, mode } = useCodeTheme();
+  const editorFontSize = editorSettingsStore((s) => s.editorFontSize);
+  const wordWrap = editorSettingsStore((s) => s.wordWrap);
+  const diffLineHeight = Math.round(editorFontSize * 1.5);
+
   const codeViewRef = useRef<CodeViewHandle<undefined>>(null);
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(() => createInitialCollapsedKeys(files));
   const [sideBySide, setSideBySide] = useState(false);
   const [changesOnly, setChangesOnly] = useState(true);
-  const [wrapLines, setWrapLines] = useState(false);
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
@@ -52,17 +57,16 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
   const allCollapsed = collapsedKeys.size === files.length;
 
   const totals = useMemo(() => getDiffTotals(files), [files]);
-  const diffTheme = theme.palette.mode === "dark" ? YISHAN_DIFF_THEME_DARK : YISHAN_DIFF_THEME_LIGHT;
-  const diffCssVars = useMemo(() => getDiffCssVariables(theme.palette.mode), [theme.palette.mode]);
+  const diffCssVars = useMemo(() => getDiffCssVariablesForPalette(palette, mode), [palette, mode]);
 
   const options = useMemo(
     () => ({
-      theme: diffTheme,
+      theme: themeName,
       diffStyle: (sideBySide ? "split" : "unified") as "split" | "unified",
       expandUnchanged: !changesOnly,
-      overflow: (wrapLines ? "wrap" : "scroll") as "wrap" | "scroll",
+      overflow: (wordWrap ? "wrap" : "scroll") as "wrap" | "scroll",
     }),
-    [diffTheme, sideBySide, changesOnly, wrapLines],
+    [themeName, sideBySide, changesOnly, wordWrap],
   );
 
   const searchFiles = useMemo(
@@ -228,12 +232,12 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
         allCollapsed={allCollapsed}
         changesOnly={changesOnly}
         sideBySide={sideBySide}
-        wrapLines={wrapLines}
+        wrapLines={wordWrap}
         onFoldAll={handleFoldAll}
         onUnfoldAll={handleUnfoldAll}
         onToggleChangesOnly={handleToggleChangesOnly}
         onToggleSideBySide={() => setSideBySide((previousValue) => !previousValue)}
-        onToggleWrapLines={() => setWrapLines((previousValue) => !previousValue)}
+        onToggleWrapLines={() => editorSettingsStore.getState().setWordWrap(!wordWrap)}
         onToggleSearch={() => setSearchActive((previousValue) => !previousValue)}
       />
 
@@ -260,9 +264,9 @@ export function MultiFileDiffViewer({ files, onOpenFile }: MultiFileDiffViewerPr
                 position: "absolute",
                 inset: 0,
                 overflow: "auto",
-                "--diffs-font-family": '"JetBrains Mono", "SF Mono", Menlo, monospace',
-                "--diffs-font-size": "13px",
-                "--diffs-line-height": "20px",
+                "--diffs-font-family": MONO_FONT_FAMILY,
+                "--diffs-font-size": `${editorFontSize}px`,
+                "--diffs-line-height": `${diffLineHeight}px`,
                 ...diffCssVars,
               } as React.CSSProperties
             }
