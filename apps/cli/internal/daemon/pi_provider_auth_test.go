@@ -34,6 +34,7 @@ func newTestPiAuthStore(t *testing.T) (*piAuthStore, string) {
 	dir := filepath.Join(t.TempDir(), "pi", "agent")
 	store := newPiAuthStore(dir)
 	store.lockPolicy = fastLockPolicy()
+	store.ambientDetector = func(string) string { return "" } // hermetic: ignore host AWS/GCP env
 	return store, dir
 }
 
@@ -64,7 +65,7 @@ func TestPiAuthStore_SaveCreatesFileAndDirWithModes(t *testing.T) {
 	t.Parallel()
 	store, dir := newTestPiAuthStore(t)
 
-	if err := store.Save("deepseek", "sk-test-123"); err != nil {
+	if err := store.Save("deepseek", piProviderCredentialInput{Key: "sk-test-123"}); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 
@@ -96,10 +97,10 @@ func TestPiAuthStore_SaveUpsertsAndListHidesKeys(t *testing.T) {
 	t.Parallel()
 	store, _ := newTestPiAuthStore(t)
 
-	if err := store.Save("openrouter", "sk-or-first"); err != nil {
+	if err := store.Save("openrouter", piProviderCredentialInput{Key: "sk-or-first"}); err != nil {
 		t.Fatalf("first Save: %v", err)
 	}
-	if err := store.Save("openrouter", "sk-or-second"); err != nil {
+	if err := store.Save("openrouter", piProviderCredentialInput{Key: "sk-or-second"}); err != nil {
 		t.Fatalf("second Save: %v", err)
 	}
 
@@ -134,7 +135,7 @@ func TestPiAuthStore_SavePreservesOAuthEntryByteForByte(t *testing.T) {
 	}
 	oauthLineBefore := extractLine(t, string(rawBefore), `"access": "access-token-value"`)
 
-	if err := store.Save("deepseek", "sk-ds-new"); err != nil {
+	if err := store.Save("deepseek", piProviderCredentialInput{Key: "sk-ds-new"}); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 
@@ -167,10 +168,10 @@ func TestPiAuthStore_RemoveDeletesOnlyTarget(t *testing.T) {
 	t.Parallel()
 	store, _ := newTestPiAuthStore(t)
 
-	if err := store.Save("deepseek", "sk-a"); err != nil {
+	if err := store.Save("deepseek", piProviderCredentialInput{Key: "sk-a"}); err != nil {
 		t.Fatalf("Save deepseek: %v", err)
 	}
-	if err := store.Save("openrouter", "sk-b"); err != nil {
+	if err := store.Save("openrouter", piProviderCredentialInput{Key: "sk-b"}); err != nil {
 		t.Fatalf("Save openrouter: %v", err)
 	}
 	if err := store.Remove("deepseek"); err != nil {
@@ -197,18 +198,23 @@ func TestPiAuthStore_SaveValidation(t *testing.T) {
 		name     string
 		provider string
 		key      string
+		env      map[string]string
 		wantErr  bool
 	}{
 		{name: "empty provider", provider: "", key: "sk-x", wantErr: true},
-		{name: "empty key", provider: "deepseek", key: "   ", wantErr: true},
+		{name: "empty key and env", provider: "deepseek", key: "   ", wantErr: true},
 		{name: "invalid provider chars", provider: "DeepSeek!", key: "sk-x", wantErr: true},
 		{name: "non-allowlisted provider", provider: "openai-codex", key: "sk-x", wantErr: true},
 		{name: "oversized key", provider: "deepseek", key: strings.Repeat("k", piAuthKeyMaxLength+1), wantErr: true},
+		{name: "invalid env name", provider: "deepseek", key: "sk-x", env: map[string]string{"aws-profile": "x"}, wantErr: true},
+		{name: "empty env value", provider: "deepseek", key: "sk-x", env: map[string]string{"AWS_PROFILE": " "}, wantErr: true},
+		{name: "too many env pairs", provider: "deepseek", key: "sk-x", env: manyEnvPairs(piAuthEnvMaxPairs + 1), wantErr: true},
 		{name: "valid save", provider: "anthropic", key: "sk-ant-valid", wantErr: false},
+		{name: "env-only save", provider: "amazon-bedrock", env: map[string]string{"AWS_PROFILE": "sandbox"}, wantErr: false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := store.Save(tc.provider, tc.key)
+			err := store.Save(tc.provider, piProviderCredentialInput{Key: tc.key, Env: tc.env})
 			if tc.wantErr && err == nil {
 				t.Fatalf("expected error, got nil")
 			}
@@ -227,7 +233,7 @@ func TestPiAuthStore_CorruptFileReturnsTypedError(t *testing.T) {
 	if _, err := store.List(); !errors.Is(err, errPiAuthCorrupt) {
 		t.Fatalf("List err = %v, want errPiAuthCorrupt", err)
 	}
-	if err := store.Save("deepseek", "sk-x"); !errors.Is(err, errPiAuthCorrupt) {
+	if err := store.Save("deepseek", piProviderCredentialInput{Key: "sk-x"}); !errors.Is(err, errPiAuthCorrupt) {
 		t.Fatalf("Save err = %v, want errPiAuthCorrupt", err)
 	}
 	if err := store.Remove("deepseek"); !errors.Is(err, errPiAuthCorrupt) {
@@ -246,7 +252,7 @@ func TestPiAuthStore_FreshLockReturnsRetryableError(t *testing.T) {
 		t.Fatalf("seed lock: %v", err)
 	}
 
-	err := store.Save("deepseek", "sk-x")
+	err := store.Save("deepseek", piProviderCredentialInput{Key: "sk-x"})
 	if !errors.Is(err, errPiAuthLocked) {
 		t.Fatalf("Save err = %v, want errPiAuthLocked", err)
 	}
@@ -267,7 +273,7 @@ func TestPiAuthStore_StaleLockIsStolen(t *testing.T) {
 		t.Fatalf("age lock: %v", err)
 	}
 
-	if err := store.Save("deepseek", "sk-x"); err != nil {
+	if err := store.Save("deepseek", piProviderCredentialInput{Key: "sk-x"}); err != nil {
 		t.Fatalf("Save with stale lock: %v", err)
 	}
 	if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
@@ -278,7 +284,7 @@ func TestPiAuthStore_StaleLockIsStolen(t *testing.T) {
 func TestPiAuthStore_ReleaseRemovesOwnLock(t *testing.T) {
 	t.Parallel()
 	store, dir := newTestPiAuthStore(t)
-	if err := store.Save("deepseek", "sk-x"); err != nil {
+	if err := store.Save("deepseek", piProviderCredentialInput{Key: "sk-x"}); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, piAuthFileName) + ".lock"); !os.IsNotExist(err) {
@@ -295,7 +301,7 @@ func TestPiAuthStore_ConcurrentSaveAndRemove(t *testing.T) {
 		wg.Add(1)
 		go func(provider string) {
 			defer wg.Done()
-			_ = store.Save(provider, "sk-x")
+			_ = store.Save(provider, piProviderCredentialInput{Key: "sk-x"})
 			_ = store.Remove(provider)
 		}(provider)
 	}
@@ -328,6 +334,7 @@ func newPiAuthTestHandler(t *testing.T) *JSONRPCHandler {
 	h := newTestHandler(t)
 	h.piAuth = newPiAuthStore(t.TempDir())
 	h.piAuth.lockPolicy = fastLockPolicy()
+	h.piAuth.ambientDetector = func(string) string { return "" } // hermetic
 	return h
 }
 
@@ -436,4 +443,67 @@ func TestPiProviderDispatch_NilStoreIsServerError(t *testing.T) {
 	h.piAuth = nil
 	_, err := h.dispatchPi(context.Background(), nil, MethodPiListProviders, nil)
 	assertRPCErrorCode(t, err, rpcCodeServerError)
+}
+
+func manyEnvPairs(count int) map[string]string {
+	env := make(map[string]string, count)
+	for i := 0; i < count; i++ {
+		env["VAR_"+string(rune('A'+i%26))+"_"+string(rune('0'+i%10))] = "value"
+	}
+	return env
+}
+
+func TestPiAuthStore_SaveWritesEnvAndListsEnvType(t *testing.T) {
+	t.Parallel()
+	store, dir := newTestPiAuthStore(t)
+
+	if err := store.Save("amazon-bedrock", piProviderCredentialInput{Env: map[string]string{"AWS_PROFILE": "sandbox"}}); err != nil {
+		t.Fatalf("Save env-only: %v", err)
+	}
+
+	raw, err := os.ReadFile(filepath.Join(dir, piAuthFileName))
+	if err != nil {
+		t.Fatalf("read auth file: %v", err)
+	}
+	content := string(raw)
+	if !strings.Contains(content, `"AWS_PROFILE": "sandbox"`) {
+		t.Fatalf("env not stored in entry: %s", content)
+	}
+	if strings.Contains(content, `"key"`) {
+		t.Fatalf("env-only entry should not contain a key: %s", content)
+	}
+
+	entries, err := store.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d: %+v", len(entries), entries)
+	}
+	if entries[0].Provider != "amazon-bedrock" || entries[0].Type != "env" || entries[0].Source != "AWS_PROFILE" {
+		t.Fatalf("entry = %+v, want env/AWS_PROFILE", entries[0])
+	}
+	// Env values must never be exposed through the list.
+	if strings.Contains(fmt.Sprint(entries), "sandbox") {
+		t.Fatalf("List exposed env value: %+v", entries)
+	}
+}
+
+func TestPiAuthStore_SaveEnvWithKeyStaysApiKeyType(t *testing.T) {
+	t.Parallel()
+	store, _ := newTestPiAuthStore(t)
+
+	if err := store.Save("cloudflare-ai-gateway", piProviderCredentialInput{
+		Key: "cf-key",
+		Env: map[string]string{"CLOUDFLARE_ACCOUNT_ID": "acct-1"},
+	}); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	entries, err := store.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Type != "api_key" {
+		t.Fatalf("entry = %+v, want api_key type", entries)
+	}
 }

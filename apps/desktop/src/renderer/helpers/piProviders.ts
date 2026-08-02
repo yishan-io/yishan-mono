@@ -38,6 +38,8 @@ export type PiProviderCatalogEntry = {
   monochrome?: boolean;
   /** True when the provider is a paid subscription (ChatGPT/Copilot/Pro/Grok). */
   hasSubscription?: boolean;
+  /** Provider-scoped env var names pi reads from the stored credential. */
+  envVars?: string[];
 };
 
 const FALLBACK_PROVIDER_ICON: IconType = LuCloud;
@@ -79,6 +81,7 @@ export const PI_PROVIDER_CATALOG: PiProviderCatalogEntry[] = [
     authMode: "api_key",
     icon: FaMicrosoft,
     brandColor: "0078D4",
+    envVars: ["AZURE_OPENAI_BASE_URL", "AZURE_OPENAI_RESOURCE_NAME"],
   },
   {
     id: "openai",
@@ -120,6 +123,7 @@ export const PI_PROVIDER_CATALOG: PiProviderCatalogEntry[] = [
     authMode: "api_key",
     icon: SiGooglecloud,
     brandColor: "4285F4",
+    envVars: ["GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION"],
   },
   {
     id: "amazon-bedrock",
@@ -128,6 +132,7 @@ export const PI_PROVIDER_CATALOG: PiProviderCatalogEntry[] = [
     authMode: "api_key",
     icon: FaAmazon,
     brandColor: "FF9900",
+    envVars: ["AWS_PROFILE"],
   },
   {
     id: "mistral",
@@ -161,6 +166,7 @@ export const PI_PROVIDER_CATALOG: PiProviderCatalogEntry[] = [
     authMode: "api_key",
     icon: SiCloudflare,
     brandColor: "F38020",
+    envVars: ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_GATEWAY_ID"],
   },
   {
     id: "cloudflare-workers-ai",
@@ -169,6 +175,7 @@ export const PI_PROVIDER_CATALOG: PiProviderCatalogEntry[] = [
     authMode: "api_key",
     icon: SiCloudflare,
     brandColor: "F38020",
+    envVars: ["CLOUDFLARE_ACCOUNT_ID"],
   },
   {
     id: "xai",
@@ -401,6 +408,33 @@ export function isPiProviderOAuthCapable(providerId: string): boolean {
 /** True when the provider is a paid subscription (ChatGPT/Copilot/Pro/Grok). */
 export function isPiProviderSubscriptionCapable(providerId: string): boolean {
   return getPiProviderCatalogEntry(providerId)?.hasSubscription === true;
+}
+
+/**
+ * Derives prefilled provider-scoped env values from an ambient source label
+ * (e.g. "AWS_PROFILE: ai-bedrock" → { AWS_PROFILE: "ai-bedrock" }) so the
+ * user can pin the detected credential into auth.json in one click. Returns
+ * null when the source cannot be pinned.
+ */
+export function getPiProviderPinEnv(providerId: string, source: string | undefined): Record<string, string> | null {
+  if (!source) {
+    return null;
+  }
+  const envVars = getPiProviderCatalogEntry(providerId)?.envVars;
+  if (!envVars || envVars.length === 0) {
+    return null;
+  }
+  const awsProfilePrefix = "AWS_PROFILE: ";
+  if (source.startsWith(awsProfilePrefix)) {
+    const profile = source.slice(awsProfilePrefix.length).trim();
+    return profile ? { AWS_PROFILE: profile } : null;
+  }
+  const awsProfilesPrefix = "AWS profile: ";
+  if (source.startsWith(awsProfilesPrefix)) {
+    const firstProfile = source.slice(awsProfilesPrefix.length).split(",")[0]?.trim();
+    return firstProfile ? { AWS_PROFILE: firstProfile } : null;
+  }
+  return null;
 }
 
 /**

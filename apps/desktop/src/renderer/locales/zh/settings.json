@@ -578,6 +578,7 @@
       },
       "actions": {
         "add": "\u6dfb\u52a0\u63d0\u4f9b\u5546",
+        "pin": "\u56fa\u5b9a\u5230 auth.json",
         "edit": "\u7f16\u8f91",
         "remove": "\u79fb\u9664",
         "cancel": "\u53d6\u6d88",
@@ -586,6 +587,7 @@
       "credentialType": {
         "apiKey": "API \u5bc6\u94a5",
         "oauth": "OAuth",
+        "ambient": "\u73af\u5883",
         "unknown": "\u672a\u77e5"
       },
       "dialog": {
@@ -594,6 +596,7 @@
         "providerLabel": "\u63d0\u4f9b\u5546",
         "keyLabel": "API \u5bc6\u94a5",
         "keyPlaceholder": "\u7c98\u8d34\u4f60\u7684 API \u5bc6\u94a5",
+        "envSection": "\u73af\u5883\u53d8\u91cf",
         "keyRequired": "\u8bf7\u8f93\u5165 API \u5bc6\u94a5\u3002",
         "editKeyHelper": "\u8f93\u5165\u65b0\u7684 API \u5bc6\u94a5\u4ee5\u66ff\u6362\u73b0\u6709\u5bc6\u94a5\u3002",
         "oauthOnlyHint": "\u6b64\u63d0\u4f9b\u5546\u4ec5\u652f\u6301\u8ba2\u9605\u3002\u8bf7\u4f7f\u7528\u8d26\u6237\u767b\u5f55\u3002",

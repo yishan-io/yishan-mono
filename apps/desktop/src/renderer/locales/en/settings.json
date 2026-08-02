@@ -615,6 +615,7 @@
       },
       "actions": {
         "add": "Add Provider",
+        "pin": "Pin to auth.json",
         "edit": "Edit",
         "remove": "Remove",
         "cancel": "Cancel",
@@ -623,6 +624,7 @@
       "credentialType": {
         "apiKey": "API key",
         "oauth": "OAuth",
+        "ambient": "Environment",
         "unknown": "Unknown"
       },
       "dialog": {
@@ -631,6 +633,7 @@
         "providerLabel": "Provider",
         "keyLabel": "API Key",
         "keyPlaceholder": "Paste your API key",
+        "envSection": "Environment variables",
         "keyRequired": "API key is required.",
         "editKeyHelper": "Enter a new API key to replace the existing one.",
         "oauthOnlyHint": "This provider is subscription-only. Sign in with your account.",

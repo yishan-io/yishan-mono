@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -27,7 +28,10 @@ const (
 	piAuthFileName          = "auth.json"
 	piAuthLockStaleDuration = 30 * time.Second // mirrors pi proper-lockfile `stale: 30000`
 	piAuthKeyMaxLength      = 4096
+	piAuthEnvMaxPairs       = 16
 )
+
+var envVarNamePattern = regexp.MustCompile(`^[A-Z0-9_]+$`)
 
 // apiKeyCapableProviders mirrors pi 0.83.0's env-api-keys envMap plus the
 // providers whose provider config accepts an `{ "type": "api_key", "key": ... }`
@@ -85,10 +89,21 @@ func isApiKeyCapableProvider(provider string) bool {
 
 // piProviderEntry describes one registered provider without exposing its
 // credential material. Type is "api_key", "oauth", or empty when the stored
-// entry has no decodable type field.
+// entry has no decodable type field; "ambient" marks providers usable via
+// cloud/environment credentials with no auth.json entry.
 type piProviderEntry struct {
 	Provider string `json:"provider"`
 	Type     string `json:"type"`
+	Source   string `json:"source,omitempty"`
+}
+
+// piProviderCredentialInput is the credential payload accepted by Save. At
+// least one of Key or Env must be set; Env mirrors pi's provider-scoped
+// environment values (e.g. AWS_PROFILE, GOOGLE_CLOUD_PROJECT) that take
+// priority over process environment when pi resolves the provider.
+type piProviderCredentialInput struct {
+	Key string
+	Env map[string]string
 }
 
 // piAuthFile models auth.json as raw per-provider payloads so OAuth token
@@ -106,15 +121,17 @@ type authLockPolicy struct {
 // piAuthStore provides lock-compatible read-modify-write access to the yishan
 // pi agent's auth.json. It coordinates with pi's own proper-lockfile writers.
 type piAuthStore struct {
-	mu         sync.Mutex
-	dir        string
-	lockPolicy authLockPolicy
+	mu              sync.Mutex
+	dir             string
+	lockPolicy      authLockPolicy
+	ambientDetector func(provider string) string
 }
 
 func newPiAuthStore(dir string) *piAuthStore {
 	return &piAuthStore{
-		dir:        dir,
-		lockPolicy: defaultAuthLockPolicy(),
+		dir:             dir,
+		lockPolicy:      defaultAuthLockPolicy(),
+		ambientDetector: detectAmbientProviderAuth,
 	}
 }
 
@@ -167,8 +184,12 @@ func (s *piAuthStore) ensureFile() error {
 	return os.Chmod(path, 0o600)
 }
 
-// List returns one entry per provider registered in auth.json, never the
-// credential material itself.
+// ambientCapableProviders are the providers pi can authenticate via cloud/
+// environment credentials without an auth.json entry.
+var ambientCapableProviders = []string{"amazon-bedrock", "google-vertex"}
+
+// List returns one entry per provider registered in auth.json plus providers
+// usable via ambient cloud credentials, never the credential material itself.
 func (s *piAuthStore) List() ([]piProviderEntry, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -185,18 +206,35 @@ func (s *piAuthStore) List() ([]piProviderEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	providers := make([]piProviderEntry, 0, len(entries))
+	providers := make([]piProviderEntry, 0, len(entries)+len(ambientCapableProviders))
 	for provider, raw := range entries {
-		providers = append(providers, piProviderEntry{Provider: provider, Type: decodePiCredentialType(raw)})
+		entry := piProviderEntry{Provider: provider, Type: decodePiCredentialType(raw)}
+		if entry.Type == "api_key" && !decodePiCredentialHasKey(raw) && len(decodePiCredentialEnvKeys(raw)) > 0 {
+			// Env-only stored credential (e.g. Bedrock AWS_PROFILE, Vertex
+			// project/location) — surfaced as an environment credential.
+			entry.Type = "env"
+			entry.Source = strings.Join(decodePiCredentialEnvKeys(raw), ", ")
+		}
+		providers = append(providers, entry)
+	}
+	for _, provider := range ambientCapableProviders {
+		if _, stored := entries[provider]; stored {
+			// Stored credentials win over ambient sources, mirroring pi.
+			continue
+		}
+		if source := s.ambientDetector(provider); source != "" {
+			providers = append(providers, piProviderEntry{Provider: provider, Type: "ambient", Source: source})
+		}
 	}
 	return providers, nil
 }
 
-// Save upserts an api_key credential for one allowlisted provider, preserving
-// every other entry (including OAuth token blobs) byte-for-byte.
-func (s *piAuthStore) Save(provider string, key string) error {
+// Save upserts one api_key credential (key and/or provider-scoped env values)
+// for one allowlisted provider, preserving every other entry (including OAuth
+// token blobs) byte-for-byte.
+func (s *piAuthStore) Save(provider string, credential piProviderCredentialInput) error {
 	provider = normalizeProviderID(provider)
-	if err := validateProviderKey(provider, key); err != nil {
+	if err := validateProviderCredential(provider, credential); err != nil {
 		return err
 	}
 
@@ -215,7 +253,7 @@ func (s *piAuthStore) Save(provider string, key string) error {
 	if err != nil {
 		return err
 	}
-	raw, err := json.Marshal(map[string]string{"type": "api_key", "key": key})
+	raw, err := json.Marshal(buildApiKeyCredentialEntry(credential))
 	if err != nil {
 		return fmt.Errorf("marshal provider credential: %w", err)
 	}
@@ -257,7 +295,23 @@ func normalizeProviderID(provider string) string {
 	return strings.TrimSpace(provider)
 }
 
-func validateProviderKey(provider string, key string) error {
+// buildApiKeyCredentialEntry composes the auth.json entry: type api_key with
+// optional key and provider-scoped env values (omitted when empty, mirroring
+// pi's own /login output).
+func buildApiKeyCredentialEntry(credential piProviderCredentialInput) map[string]any {
+	entry := map[string]any{"type": "api_key"}
+	if key := strings.TrimSpace(credential.Key); key != "" {
+		entry["key"] = key
+	}
+	if len(credential.Env) > 0 {
+		entry["env"] = credential.Env
+	}
+	return entry
+}
+
+// validateProviderCredential requires a known provider and at least one of a
+// key or provider-scoped env values, each well-formed.
+func validateProviderCredential(provider string, credential piProviderCredentialInput) error {
 	if provider == "" {
 		return errors.New("provider id is required")
 	}
@@ -267,12 +321,26 @@ func validateProviderKey(provider string, key string) error {
 	if !isApiKeyCapableProvider(provider) {
 		return fmt.Errorf("provider %q does not support API key credentials", provider)
 	}
-	key = strings.TrimSpace(key)
-	if key == "" {
-		return errors.New("api key is required")
+	key := strings.TrimSpace(credential.Key)
+	if key == "" && len(credential.Env) == 0 {
+		return errors.New("an API key or at least one environment variable is required")
 	}
 	if len(key) > piAuthKeyMaxLength {
 		return fmt.Errorf("api key is too long (max %d characters)", piAuthKeyMaxLength)
+	}
+	if len(credential.Env) > piAuthEnvMaxPairs {
+		return fmt.Errorf("too many environment variables (max %d)", piAuthEnvMaxPairs)
+	}
+	for name, value := range credential.Env {
+		if !envVarNamePattern.MatchString(name) {
+			return fmt.Errorf("invalid environment variable name %q: use uppercase letters, numbers, or underscore", name)
+		}
+		if strings.TrimSpace(value) == "" {
+			return fmt.Errorf("environment variable %q cannot be empty", name)
+		}
+		if len(value) > piAuthKeyMaxLength {
+			return fmt.Errorf("environment variable %q is too long (max %d characters)", name, piAuthKeyMaxLength)
+		}
 	}
 	return nil
 }
@@ -322,6 +390,34 @@ func decodePiCredentialType(raw json.RawMessage) string {
 		return ""
 	}
 	return meta.Type
+}
+
+// decodePiCredentialHasKey reports whether the entry carries a key value.
+func decodePiCredentialHasKey(raw json.RawMessage) bool {
+	var meta struct {
+		Key string `json:"key"`
+	}
+	if err := json.Unmarshal(raw, &meta); err != nil {
+		return false
+	}
+	return strings.TrimSpace(meta.Key) != ""
+}
+
+// decodePiCredentialEnvKeys returns the provider-scoped env var names stored
+// in the entry (sorted for a stable source label). Values are never exposed.
+func decodePiCredentialEnvKeys(raw json.RawMessage) []string {
+	var meta struct {
+		Env map[string]string `json:"env"`
+	}
+	if err := json.Unmarshal(raw, &meta); err != nil {
+		return nil
+	}
+	keys := make([]string, 0, len(meta.Env))
+	for name := range meta.Env {
+		keys = append(keys, name)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // acquireAuthLock implements a proper-lockfile-compatible lock at
@@ -430,8 +526,9 @@ func (h *JSONRPCHandler) handlePiListProviders() (any, error) {
 }
 
 type piSaveProviderParams struct {
-	Provider string `json:"provider"`
-	Key      string `json:"key"`
+	Provider string            `json:"provider"`
+	Key      string            `json:"key"`
+	Env      map[string]string `json:"env,omitempty"`
 }
 
 func (h *JSONRPCHandler) handlePiSaveProvider(params json.RawMessage) (any, error) {
@@ -442,7 +539,7 @@ func (h *JSONRPCHandler) handlePiSaveProvider(params json.RawMessage) (any, erro
 	if h.piAuth == nil {
 		return nil, workspace.NewRPCError(rpcCodeServerError, "pi agent auth store is unavailable")
 	}
-	if err := h.piAuth.Save(req.Provider, req.Key); err != nil {
+	if err := h.piAuth.Save(req.Provider, piProviderCredentialInput{Key: req.Key, Env: req.Env}); err != nil {
 		return nil, mapPiAuthError(err)
 	}
 	return map[string]bool{"ok": true}, nil

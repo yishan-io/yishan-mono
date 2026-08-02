@@ -28,6 +28,7 @@ vi.mock("../../hooks/useCommands", () => ({
 
 const apiKeyProvider = { provider: "deepseek", type: "api_key" };
 const oauthProvider = { provider: "openai-codex", type: "oauth" };
+const ambientProvider = { provider: "amazon-bedrock", type: "ambient", source: "AWS_PROFILE: ai-bedrock" };
 
 function mockListOnce(providers: Array<{ provider: string; type: string }>) {
   mocked.listPiProviders.mockResolvedValueOnce(providers);
@@ -48,6 +49,23 @@ describe("AgentProviderSettingsView", () => {
     expect(screen.getByText("OpenAI Codex")).toBeTruthy();
     expect(screen.getByText("settings.providers.credentialType.apiKey")).toBeTruthy();
     expect(screen.getByText("settings.providers.credentialType.oauth")).toBeTruthy();
+  });
+
+  it("renders ambient providers with an Environment chip and a pin action", async () => {
+    mockListOnce([ambientProvider]);
+
+    render(<AgentProviderSettingsView />);
+
+    expect(await screen.findByText("Amazon Bedrock")).toBeTruthy();
+    expect(screen.getByText("settings.providers.credentialType.ambient")).toBeTruthy();
+    expect(screen.queryByLabelText(/settings.providers.actions.edit/)).toBeNull();
+    expect(screen.queryByLabelText(/settings.providers.actions.remove/)).toBeNull();
+
+    // Ambient AWS profile rows offer one-click pinning with the profile prefilled.
+    fireEvent.click(screen.getByLabelText("settings.providers.actions.pin Amazon Bedrock"));
+    expect(await screen.findByText("settings.providers.dialog.addTitle")).toBeTruthy();
+    const envInput = (await screen.findByRole("textbox")) as HTMLInputElement;
+    expect(envInput.value).toBe("ai-bedrock");
   });
 
   it("shows edit button only for api_key entries", async () => {
@@ -100,7 +118,7 @@ describe("AgentProviderSettingsView", () => {
     fireEvent.click(screen.getByText("settings.providers.actions.save"));
 
     await waitFor(() => {
-      expect(mocked.savePiProvider).toHaveBeenCalledWith("deepseek", "sk-test-secret");
+      expect(mocked.savePiProvider).toHaveBeenCalledWith("deepseek", "sk-test-secret", undefined);
     });
     expect(mocked.listPiProviders).toHaveBeenCalledTimes(2); // initial load + refresh after save
   });
@@ -123,7 +141,7 @@ describe("AgentProviderSettingsView", () => {
     fireEvent.click(screen.getByText("settings.providers.actions.save"));
 
     await waitFor(() => {
-      expect(mocked.savePiProvider).toHaveBeenCalledWith("deepseek", "sk-new-key");
+      expect(mocked.savePiProvider).toHaveBeenCalledWith("deepseek", "sk-new-key", undefined);
     });
   });
 
@@ -208,6 +226,28 @@ describe("AgentProviderSettingsView", () => {
     const openrouterOption = await screen.findByRole("option", { name: /OpenRouter/ });
     fireEvent.click(openrouterOption);
     expect(screen.getByText("settings.providers.dialog.signInWithAccount")).toBeTruthy();
+  });
+
+  it("saves an environment-only credential for cloud providers", async () => {
+    mockListOnce([]);
+
+    render(<AgentProviderSettingsView />);
+
+    fireEvent.click(await screen.findByText("settings.providers.actions.add"));
+    await screen.findByText("settings.providers.dialog.addTitle");
+
+    fireEvent.mouseDown(screen.getByRole("combobox"));
+    const option = await screen.findByRole("option", { name: /Amazon Bedrock/ });
+    fireEvent.click(option);
+
+    // Env section with AWS_PROFILE appears; save works without any API key.
+    const envInput = (await screen.findByRole("textbox")) as HTMLInputElement;
+    fireEvent.change(envInput, { target: { value: "sandbox" } });
+    fireEvent.click(screen.getByText("settings.providers.actions.save"));
+
+    await waitFor(() => {
+      expect(mocked.savePiProvider).toHaveBeenCalledWith("amazon-bedrock", "", { AWS_PROFILE: "sandbox" });
+    });
   });
 
   it("shows the subscription sign-in action alongside the key field for both-mode providers", async () => {

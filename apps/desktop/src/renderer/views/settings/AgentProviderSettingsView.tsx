@@ -1,10 +1,10 @@
 import { Alert, Box, Button, Chip, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuPencil, LuPlus, LuTrash2 } from "react-icons/lu";
+import { LuPencil, LuPin, LuPlus, LuTrash2 } from "react-icons/lu";
 import type { PiProviderStatus } from "../../commands/piProviderCommands";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
-import { getPiProviderDisplayName } from "../../helpers/piProviders";
+import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../helpers/piProviders";
 import { useCommands } from "../../hooks/useCommands";
 import { useRefreshableLoader } from "../../hooks/useRefreshableLoader";
 import { ProviderCredentialDialog } from "./ProviderCredentialDialog";
@@ -14,6 +14,7 @@ import { RemoveProviderDialog } from "./RemoveProviderDialog";
 type ProviderCredentialDialogTarget = {
   mode: "add" | "edit";
   provider?: string;
+  initialEnv?: Record<string, string>;
 };
 
 const PROVIDER_LIST_TIMEOUT_MS = 10_000;
@@ -22,19 +23,33 @@ function ProviderRow({
   entry,
   onEdit,
   onRemove,
+  onPin,
 }: {
   entry: PiProviderStatus;
   onEdit: () => void;
   onRemove: () => void;
+  onPin: () => void;
 }) {
   const { t } = useTranslation();
-  const canEdit = entry.type === "api_key";
+  const isAmbient = entry.type === "ambient";
+  const canPin = isAmbient && getPiProviderPinEnv(entry.provider, entry.source) !== null;
+  const canEdit = entry.type === "api_key" || entry.type === "env";
   const typeLabel =
     entry.type === "api_key"
       ? t("settings.providers.credentialType.apiKey")
       : entry.type === "oauth"
         ? t("settings.providers.credentialType.oauth")
-        : entry.type || t("settings.providers.credentialType.unknown");
+        : isAmbient || entry.type === "env"
+          ? t("settings.providers.credentialType.ambient")
+          : entry.type || t("settings.providers.credentialType.unknown");
+
+  const typeChip = entry.source ? (
+    <Tooltip title={entry.source}>
+      <Chip size="small" variant="outlined" label={typeLabel} />
+    </Tooltip>
+  ) : (
+    <Chip size="small" variant="outlined" label={typeLabel} />
+  );
 
   return (
     <SettingsControlRow
@@ -46,7 +61,7 @@ function ProviderRow({
       }
       control={
         <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-          <Chip size="small" variant="outlined" label={typeLabel} />
+          {typeChip}
           {canEdit ? (
             <Tooltip title={t("settings.providers.actions.edit")}>
               <IconButton
@@ -58,15 +73,28 @@ function ProviderRow({
               </IconButton>
             </Tooltip>
           ) : null}
-          <Tooltip title={t("settings.providers.actions.remove")}>
-            <IconButton
-              size="small"
-              onClick={onRemove}
-              aria-label={`${t("settings.providers.actions.remove")} ${getPiProviderDisplayName(entry.provider)}`}
-            >
-              <LuTrash2 size={14} />
-            </IconButton>
-          </Tooltip>
+          {canPin ? (
+            <Tooltip title={t("settings.providers.actions.pin")}>
+              <IconButton
+                size="small"
+                onClick={onPin}
+                aria-label={`${t("settings.providers.actions.pin")} ${getPiProviderDisplayName(entry.provider)}`}
+              >
+                <LuPin size={14} />
+              </IconButton>
+            </Tooltip>
+          ) : null}
+          {!isAmbient ? (
+            <Tooltip title={t("settings.providers.actions.remove")}>
+              <IconButton
+                size="small"
+                onClick={onRemove}
+                aria-label={`${t("settings.providers.actions.remove")} ${getPiProviderDisplayName(entry.provider)}`}
+              >
+                <LuTrash2 size={14} />
+              </IconButton>
+            </Tooltip>
+          ) : null}
         </Stack>
       }
     />
@@ -133,6 +161,13 @@ export function AgentProviderSettingsView() {
                 entry={entry}
                 onEdit={() => setCredentialTarget({ mode: "edit", provider: entry.provider })}
                 onRemove={() => setRemoveTarget(entry)}
+                onPin={() =>
+                  setCredentialTarget({
+                    mode: "add",
+                    provider: entry.provider,
+                    initialEnv: getPiProviderPinEnv(entry.provider, entry.source) ?? undefined,
+                  })
+                }
               />
             ))}
           </SettingsRows>
@@ -145,6 +180,7 @@ export function AgentProviderSettingsView() {
         open={credentialTarget !== null}
         mode={credentialTarget?.mode ?? "add"}
         initialProviderId={credentialTarget?.provider}
+        initialEnv={credentialTarget?.initialEnv}
         onClose={() => setCredentialTarget(null)}
         onSaved={handleSaved}
       />

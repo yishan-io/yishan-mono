@@ -119,7 +119,7 @@ export type DaemonRpcClient = {
     listSessions: (input: Rpc.PiListSessionsInput) => Promise<Rpc.PiSessionSummary[]>;
     listActiveSessions: (input?: Rpc.PiListActiveSessionsInput) => Promise<Rpc.PiActiveSessionSummary[]>;
     listProviders: (input?: unknown) => Promise<{ providers: Array<{ provider: string; type: string }> }>;
-    saveProvider: (input: { provider: string; key: string }) => Promise<{ ok: boolean }>;
+    saveProvider: (input: { provider: string; key: string; env?: Record<string, string> }) => Promise<{ ok: boolean }>;
     removeProvider: (input: { provider: string }) => Promise<{ ok: boolean }>;
   };
   agent: {

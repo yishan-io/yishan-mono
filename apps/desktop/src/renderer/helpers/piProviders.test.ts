@@ -5,6 +5,7 @@ import {
   getPiProviderDisplayName,
   getPiProviderIcon,
   getPiProviderIconColor,
+  getPiProviderPinEnv,
   isKnownPiProviderId,
   isPiProviderApiKeyCapable,
   isPiProviderOAuthCapable,
@@ -160,6 +161,18 @@ describe("PI_PROVIDER_CATALOG", () => {
     expect(isPiProviderApiKeyCapable("github-copilot")).toBe(true);
     expect(isPiProviderApiKeyCapable("openai-codex")).toBe(false);
     expect(isPiProviderApiKeyCapable("not-a-provider")).toBe(false);
+  });
+
+  it("derives pin env values from ambient AWS profile sources", () => {
+    expect(getPiProviderPinEnv("amazon-bedrock", "AWS_PROFILE: ai-bedrock")).toEqual({ AWS_PROFILE: "ai-bedrock" });
+    expect(getPiProviderPinEnv("amazon-bedrock", "AWS profile: ai-bedrock, default")).toEqual({
+      AWS_PROFILE: "ai-bedrock",
+    });
+    // Non-profile sources and providers without env vars cannot be pinned.
+    expect(getPiProviderPinEnv("amazon-bedrock", "AWS access keys")).toBeNull();
+    expect(getPiProviderPinEnv("google-vertex", "gcloud application default credentials")).toBeNull();
+    expect(getPiProviderPinEnv("deepseek", "AWS_PROFILE: ai-bedrock")).toBeNull();
+    expect(getPiProviderPinEnv("amazon-bedrock", undefined)).toBeNull();
   });
 
   it("marks subscription-capable providers (paid plans) and excludes OAuth-only gateways", () => {

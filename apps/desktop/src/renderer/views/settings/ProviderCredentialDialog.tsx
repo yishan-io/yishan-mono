@@ -34,12 +34,14 @@ export function ProviderCredentialDialog({
   open,
   mode,
   initialProviderId,
+  initialEnv,
   onClose,
   onSaved,
 }: {
   open: boolean;
   mode: ProviderCredentialDialogMode;
   initialProviderId?: string;
+  initialEnv?: Record<string, string>;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -47,6 +49,7 @@ export function ProviderCredentialDialog({
   const { savePiProvider, openPiProviderLogin } = useCommands();
   const [providerId, setProviderId] = useState(initialProviderId ?? "");
   const [key, setKey] = useState("");
+  const [envValues, setEnvValues] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,11 +58,12 @@ export function ProviderCredentialDialog({
     if (open) {
       setProviderId(initialProviderId ?? "");
       setKey("");
+      setEnvValues(initialEnv ?? {});
       setError(null);
       setIsSaving(false);
       setIsSigningIn(false);
     }
-  }, [open, initialProviderId]);
+  }, [open, initialProviderId, initialEnv]);
 
   const selectedEntry = getPiProviderCatalogEntry(providerId);
   const canUseApiKey = isPiProviderApiKeyCapable(providerId);
@@ -67,15 +71,30 @@ export function ProviderCredentialDialog({
   const isSubscription = isPiProviderSubscriptionCapable(providerId);
   const isEdit = mode === "edit";
   const trimmedKey = key.trim();
+  const envVars = selectedEntry?.envVars ?? [];
+  const hasEnvValue = envVars.some((name) => {
+    const value = envValues[name];
+    return value !== undefined && value.trim().length > 0;
+  });
 
   const handleSave = async () => {
-    if (!providerId || !trimmedKey || isSaving) {
+    if (!providerId || isSaving) {
+      return;
+    }
+    if (!trimmedKey && !hasEnvValue) {
       return;
     }
     setIsSaving(true);
     setError(null);
     try {
-      await savePiProvider(providerId, trimmedKey);
+      const env = envVars.reduce<Record<string, string>>((acc, name) => {
+        const value = envValues[name]?.trim();
+        if (value) {
+          acc[name] = value;
+        }
+        return acc;
+      }, {});
+      await savePiProvider(providerId, trimmedKey, Object.keys(env).length > 0 ? env : undefined);
       onSaved();
     } catch (err) {
       setError(getErrorMessage(err));
@@ -204,6 +223,26 @@ export function ProviderCredentialDialog({
               {t("settings.providers.dialog.envVarHint", { envVar: selectedEntry.envVar })}
             </Typography>
           ) : null}
+          {envVars.length > 0 ? (
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                {t("settings.providers.dialog.envSection")}
+              </Typography>
+              {envVars.map((name) => (
+                <TextField
+                  key={name}
+                  fullWidth
+                  size="small"
+                  sx={{ mb: 1 }}
+                  label={name}
+                  placeholder={name}
+                  value={envValues[name] ?? ""}
+                  onChange={(event) => setEnvValues((prev) => ({ ...prev, [name]: event.target.value }))}
+                  aria-label={`${t("settings.providers.dialog.envSection")} ${name}`}
+                />
+              ))}
+            </Box>
+          ) : null}
           {error ? <Alert severity="error">{error}</Alert> : null}
         </Stack>
       </DialogContent>
@@ -229,7 +268,7 @@ export function ProviderCredentialDialog({
           <Button
             variant="contained"
             onClick={handleSave}
-            disabled={!providerId || !trimmedKey || isSaving || isSigningIn}
+            disabled={!providerId || (!trimmedKey && !hasEnvValue) || isSaving || isSigningIn}
           >
             {isSaving ? t("settings.providers.dialog.saving") : t("settings.providers.actions.save")}
           </Button>
