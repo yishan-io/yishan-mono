@@ -1,0 +1,59 @@
+{
+  "name": "@yishan-io/pi-lsp",
+  "version": "0.1.0",
+  "description": "Pi extension exposing configurable, language-agnostic LSP diagnostics and source-fix tools.",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi",
+    "lsp",
+    "language-server-protocol",
+    "configurable",
+    "lint",
+    "diagnostics",
+    "code-action"
+  ],
+  "files": [
+    "extensions",
+    "src",
+    "!src/**/*.test.ts",
+    "test/fixtures",
+    "LICENSE",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./extension": "./extensions/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check src extensions test"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.80.3",
+    "@types/node": "^24.12.4",
+    "typebox": "1.1.38"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yishan-io/yishan-mono",
+    "directory": "packages/pi-lsp"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "license": "MIT"
+}
