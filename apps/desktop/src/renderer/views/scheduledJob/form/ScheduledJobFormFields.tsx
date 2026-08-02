@@ -14,14 +14,8 @@ import type { SxProps, Theme } from "@mui/material/styles";
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { LuClock3, LuCloud, LuGlobe, LuServer } from "react-icons/lu";
-import { AgentIcon } from "../../../components/AgentIcon";
 import { VirtualizedListbox } from "../../../components/VirtualizedListbox";
 import { renderProjectIcon } from "../../../components/projectIcons";
-import {
-  AGENT_SETTINGS_LABEL_KEY_BY_KIND,
-  type DesktopAgentKind,
-  SUPPORTED_DESKTOP_AGENT_KINDS,
-} from "../../../helpers/agentSettings";
 import {
   SCHEDULE_TYPE_OPTIONS,
   type ScheduleType,
@@ -231,38 +225,6 @@ export function ScheduledJobFormFields(props: ScheduledJobFormFieldsProps) {
               )}
             </Box>
           )}
-
-          <Box>
-            <Typography
-              variant="body2"
-              sx={[
-                {
-                  color: "text.secondary",
-                },
-                ...(Array.isArray(sectionLabelSx) ? sectionLabelSx : [sectionLabelSx]),
-              ]}
-            >
-              {t("scheduledJob.form.agentKind")}
-            </Typography>
-            <TextField
-              select
-              fullWidth
-              disabled={isBusy}
-              value={draft.agentKind}
-              onChange={(event) =>
-                setDraft((previousDraft) => ({ ...previousDraft, agentKind: event.target.value as DesktopAgentKind }))
-              }
-            >
-              {SUPPORTED_DESKTOP_AGENT_KINDS.map((agentKind) => (
-                <MenuItem key={agentKind} value={agentKind}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <AgentIcon agentKind={agentKind} context="settingsRow" decorative />
-                    {t(AGENT_SETTINGS_LABEL_KEY_BY_KIND[agentKind])}
-                  </Box>
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
 
           <Divider />
           <Typography

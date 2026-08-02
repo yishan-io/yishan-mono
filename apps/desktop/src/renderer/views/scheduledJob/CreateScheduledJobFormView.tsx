@@ -9,7 +9,7 @@ import { sessionStore } from "../../store/sessionStore";
 import { workspaceStore } from "../../store/workspaceStore";
 import { ScheduledJobFormFields } from "./form/ScheduledJobFormFields";
 import { useScheduledJobFormState } from "./form/useScheduledJobFormState";
-import { DEFAULT_FORM_DRAFT } from "./scheduledJobFormHelpers";
+import { DEFAULT_FORM_DRAFT, SCHEDULED_JOB_AGENT_KIND } from "./scheduledJobFormHelpers";
 
 type CreateScheduledJobFormViewProps = {
   onCreated: () => void;
@@ -81,7 +81,7 @@ export function CreateScheduledJobFormView({ onCreated, onCancel, onBusyChange }
         name: draft.name.trim(),
         projectId: draft.projectId,
         nodeId: draft.nodeId,
-        agentKind: draft.agentKind,
+        agentKind: SCHEDULED_JOB_AGENT_KIND,
         cronExpression: draft.cronExpression.trim(),
         prompt: draft.prompt.trim(),
         timezone: draft.timezone.trim() || "UTC",

@@ -119,7 +119,7 @@ describe("EditScheduledJobDialogView", () => {
       expect(mocked.updateScheduledJob).toHaveBeenCalledWith("job-1", {
         name: "Tuesday digest",
         nodeId: "node-2",
-        agentKind: "opencode",
+        agentKind: "pi",
         cronExpression: "30 14 * * 2",
         timezone: "UTC",
         prompt: "Prepare the digest",
