@@ -1,6 +1,7 @@
 import { Box, Button, ClickAwayListener, List, ListItemButton, ListItemText, Popper, Typography } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
+import { ProviderMark } from "../../ProviderMark";
 import type { AgentModel } from "../../../store/agentChatTypes";
 import { FloatingSurface } from "../../FloatingSurface";
 import { SearchInput } from "../../SearchInput";
@@ -43,16 +44,6 @@ function buildModelButtonSx(isSelected: boolean) {
       bgcolor: "action.hover",
     },
   } as const;
-}
-
-function getProviderIconLabel(provider: string): string {
-  const trimmedProvider = provider.trim();
-
-  if (!trimmedProvider) {
-    return "?";
-  }
-
-  return trimmedProvider[0]?.toUpperCase() ?? "?";
 }
 
 /** Two-column model picker with provider navigation and a virtualized model list. */
@@ -167,30 +158,8 @@ export function AgentModelSelectorMenu({
                       },
                     }}
                   >
-                    <Box
-                      component="span"
-                      aria-hidden="true"
-                      sx={{
-                        width: 18,
-                        height: 18,
-                        mr: 1,
-                        borderRadius: "50%",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        bgcolor:
-                          providerGroup.provider === activeProviderGroup?.provider ? "primary.main" : "action.hover",
-                        color:
-                          providerGroup.provider === activeProviderGroup?.provider
-                            ? "primary.contrastText"
-                            : "text.secondary",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        lineHeight: 1,
-                      }}
-                    >
-                      {getProviderIconLabel(providerGroup.provider)}
+                    <Box sx={{ mr: 1, flexShrink: 0, display: "inline-flex" }}>
+                      <ProviderMark providerId={providerGroup.provider} size={18} />
                     </Box>
                     <ListItemText primary={providerGroup.provider} />
                   </ListItemButton>

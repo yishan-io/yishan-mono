@@ -17,6 +17,7 @@ import (
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/memory"
 	"yishan/apps/cli/internal/modellist"
+	"yishan/apps/cli/internal/piauth"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/tokenusage"
 	"yishan/apps/cli/internal/workspace"
@@ -48,6 +49,7 @@ type JSONRPCHandler struct {
 	modelList            *modellist.Service
 	memory               *memory.Service
 	agentMgr             *agentmanager.Manager
+	piAuth               *piauth.Store
 	agentLifecycleCtx    context.Context
 	cancelAgentLifecycle context.CancelFunc
 	agentLifecycleMu     sync.Mutex
@@ -121,6 +123,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		computer:             newComputerService(computer.NewUnavailableRuntime("unknown")),
 		modelList:            modellist.NewService(),
 		agentMgr:             agentmanager.NewManager(),
+		piAuth:               mustNewManagedPiAuthStore(),
 		agentLifecycleCtx:    agentLifecycleCtx,
 		cancelAgentLifecycle: cancelAgentLifecycle,
 		settingsPath:         config.SettingsFilePath(filepath.Dir(configPath)),

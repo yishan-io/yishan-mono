@@ -47,6 +47,12 @@ func (h *JSONRPCHandler) dispatchPi(ctx context.Context, connState *wsConnState,
 		return h.handlePiListActiveSessions()
 	case MethodPiRename:
 		return h.handlePiRename(params)
+	case MethodPiListProviders:
+		return h.handlePiListProviders()
+	case MethodPiSaveProvider:
+		return h.handlePiSaveProvider(params)
+	case MethodPiRemoveProvider:
+		return h.handlePiRemoveProvider(params)
 	default:
 		return nil, workspace.NewRPCError(rpcCodeMethodNotFound, "unknown pi method: "+method)
 	}

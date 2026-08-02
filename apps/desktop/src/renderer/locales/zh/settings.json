@@ -25,7 +25,8 @@
       "serviceTokens": "\u670d\u52a1\u4ee4\u724c",
       "skills": "\u6280\u80fd",
       "terminal": "\u7ec8\u7aef",
-      "workspace": "\u5de5\u4f5c\u533a"
+      "workspace": "\u5de5\u4f5c\u533a",
+      "providers": "\u6a21\u578b\u63d0\u4f9b\u5546"
     },
     "nodes": {
       "title": "\u8282\u70b9",
@@ -563,6 +564,62 @@
         }
       }
     },
-    "comingSoon": "\u8be5\u8bbe\u7f6e\u9879\u5373\u5c06\u4e0a\u7ebf\u3002"
+    "comingSoon": "\u8be5\u8bbe\u7f6e\u9879\u5373\u5c06\u4e0a\u7ebf\u3002",
+    "providers": {
+      "title": "\u667a\u80fd\u4f53\u6a21\u578b\u63d0\u4f9b\u5546",
+      "description": "Pi \u667a\u80fd\u4f53\u4e2d\u5df2\u6ce8\u518c\u7684\u6a21\u578b\u63d0\u4f9b\u5546\uff0c\u51ed\u636e\u5b58\u50a8\u4e8e ~/.yishan/pi/agent/auth.json\u3002",
+      "loadError": "\u52a0\u8f7d\u6a21\u578b\u63d0\u4f9b\u5546\u5931\u8d25\u3002",
+      "empty": "\u5c1a\u672a\u6ce8\u518c\u4efb\u4f55\u6a21\u578b\u63d0\u4f9b\u5546\u3002",
+      "appliesToNewSessions": "\u66f4\u6539\u5c06\u5728\u65b0\u7684 Pi \u4f1a\u8bdd\u4e2d\u751f\u6548\u3002",
+      "keywords": {
+        "provider": "\u63d0\u4f9b\u5546",
+        "apiKey": "API \u5bc6\u94a5",
+        "model": "\u6a21\u578b"
+      },
+      "actions": {
+        "add": "\u6dfb\u52a0\u63d0\u4f9b\u5546",
+        "pin": "\u56fa\u5b9a\u5230 auth.json",
+        "edit": "\u7f16\u8f91",
+        "remove": "\u79fb\u9664",
+        "cancel": "\u53d6\u6d88",
+        "save": "\u4fdd\u5b58"
+      },
+      "credentialType": {
+        "apiKey": "API \u5bc6\u94a5",
+        "oauth": "OAuth",
+        "ambient": "\u73af\u5883",
+        "unknown": "\u672a\u77e5"
+      },
+      "dialog": {
+        "addTitle": "\u6dfb\u52a0\u63d0\u4f9b\u5546",
+        "editTitle": "\u7f16\u8f91\u63d0\u4f9b\u5546",
+        "providerLabel": "\u63d0\u4f9b\u5546",
+        "keyLabel": "API \u5bc6\u94a5",
+        "keyPlaceholder": "\u7c98\u8d34\u4f60\u7684 API \u5bc6\u94a5",
+        "envSection": "\u73af\u5883\u53d8\u91cf",
+        "envStoredWarning": "\u5df2\u5b58\u50a8\u7684\u73af\u5883\u53d8\u91cf\uff08{{names}}\uff09\u5c06\u88ab\u79fb\u9664\uff0c\u9664\u975e\u5728\u4e0a\u65b9\u91cd\u65b0\u8f93\u5165\u3002",
+        "keyRequired": "\u8bf7\u8f93\u5165 API \u5bc6\u94a5\u3002",
+        "editKeyHelper": "\u8f93\u5165\u65b0\u7684 API \u5bc6\u94a5\u4ee5\u66ff\u6362\u73b0\u6709\u5bc6\u94a5\u3002",
+        "oauthOnlyHint": "\u6b64\u63d0\u4f9b\u5546\u4ec5\u652f\u6301\u8ba2\u9605\u3002\u8bf7\u4f7f\u7528\u8d26\u6237\u767b\u5f55\u3002",
+        "envVarHint": "\u7b49\u4ef7\u73af\u5883\u53d8\u91cf\uff1a{{envVar}}",
+        "saving": "\u4fdd\u5b58\u4e2d...",
+        "removing": "\u79fb\u9664\u4e2d...",
+        "subscriptionHint": "\u652f\u6301\u901a\u8fc7 Pi /login \u8ba2\u9605\u767b\u5f55\uff0c\u6216\u5728\u4e0b\u65b9\u4f7f\u7528 API \u5bc6\u94a5\u3002",
+        "signInWithSubscription": "\u4f7f\u7528\u8ba2\u9605\u767b\u5f55",
+        "openingSignIn": "\u6b63\u5728\u6253\u5f00 Pi \u767b\u5f55...",
+        "loginTabTitle": "Pi \u767b\u5f55 \u2014 {{provider}}",
+        "signInWithAccount": "\u4f7f\u7528\u8d26\u6237\u767b\u5f55",
+        "subscriptionTag": "\u8ba2\u9605"
+      },
+      "removeDialog": {
+        "title": "\u79fb\u9664\u63d0\u4f9b\u5546",
+        "description": "\u786e\u5b9a\u79fb\u9664 {{provider}} \u7684\u51ed\u636e\u5417\uff1f\u8be5\u63d0\u4f9b\u5546\u5c06\u4e0d\u518d\u53ef\u7528\u4e8e Pi\u3002",
+        "confirm": "\u79fb\u9664"
+      },
+      "errors": {
+        "noWorkspace": "\u8bf7\u5148\u6253\u5f00\u4e00\u4e2a\u5de5\u4f5c\u533a\u518d\u767b\u5f55\u3002",
+        "loginLaunchFailed": "\u6253\u5f00 Pi \u767b\u5f55\u5931\u8d25\uff1a{{message}}"
+      }
+    }
   }
 }

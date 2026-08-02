@@ -1,6 +1,7 @@
 import { Box, Button } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
+import { ProviderMark } from "../../ProviderMark";
 import type { AgentModel } from "../../../store/agentChatTypes";
 import { AgentModelSelectorMenu } from "./AgentModelSelectorMenu";
 import { ThinkingLevelControl } from "./ThinkingLevelControl";
@@ -130,7 +131,8 @@ export function AgentModelSelector({
         >
           {providerLabel ? (
             <>
-              <Box component="span" sx={{ color: "text.secondary" }}>
+              <ProviderMark providerId={providerLabel} size={14} />
+              <Box component="span" sx={{ color: "text.secondary", ml: 0.5 }}>
                 {providerLabel}
               </Box>
               <Box component="span" aria-hidden="true" sx={{ mx: 0.75, color: "text.disabled" }}>
