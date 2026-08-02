@@ -155,21 +155,26 @@ export function AgentProviderSettingsView() {
           </Typography>
         ) : (
           <SettingsRows>
-            {(providers ?? []).map((entry) => (
-              <ProviderRow
-                key={entry.provider}
-                entry={entry}
-                onEdit={() => setCredentialTarget({ mode: "edit", provider: entry.provider })}
-                onRemove={() => setRemoveTarget(entry)}
-                onPin={() =>
-                  setCredentialTarget({
-                    mode: "add",
-                    provider: entry.provider,
-                    initialEnv: getPiProviderPinEnv(entry.provider, entry.source) ?? undefined,
-                  })
-                }
-              />
-            ))}
+            {(providers ?? [])
+              .slice()
+              .sort((left, right) =>
+                getPiProviderDisplayName(left.provider).localeCompare(getPiProviderDisplayName(right.provider)),
+              )
+              .map((entry) => (
+                <ProviderRow
+                  key={entry.provider}
+                  entry={entry}
+                  onEdit={() => setCredentialTarget({ mode: "edit", provider: entry.provider })}
+                  onRemove={() => setRemoveTarget(entry)}
+                  onPin={() =>
+                    setCredentialTarget({
+                      mode: "add",
+                      provider: entry.provider,
+                      initialEnv: getPiProviderPinEnv(entry.provider, entry.source) ?? undefined,
+                    })
+                  }
+                />
+              ))}
           </SettingsRows>
         )}
         <Typography variant="body2" sx={{ color: "text.secondary", mt: 1 }}>

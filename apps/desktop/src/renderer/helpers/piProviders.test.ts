@@ -69,6 +69,15 @@ describe("PI_PROVIDER_CATALOG", () => {
     expect(catalogIds).toEqual(pinnedIds);
   });
 
+  it("sorts the catalog alphabetically by display name", () => {
+    const names = PI_PROVIDER_CATALOG.map((entry) => entry.name.toLowerCase());
+    const sorted = [...names].sort();
+    expect(names).toEqual(sorted);
+    const openaiIndex = PI_PROVIDER_CATALOG.findIndex((entry) => entry.id === "openai");
+    const codexIndex = PI_PROVIDER_CATALOG.findIndex((entry) => entry.id === "openai-codex");
+    expect(codexIndex - openaiIndex).toBe(1);
+  });
+
   it("has unique, well-formed ids and non-empty names", () => {
     const ids = new Set<string>();
     for (const entry of PI_PROVIDER_CATALOG) {
@@ -84,7 +93,7 @@ describe("PI_PROVIDER_CATALOG", () => {
     expect(oauthOnly).toEqual(["openai-codex"]);
 
     const both = PI_PROVIDER_CATALOG.filter((entry) => entry.authMode === "both").map((entry) => entry.id);
-    expect(both).toEqual(["anthropic", "xai", "openrouter", "radius", "github-copilot"]);
+    expect(both).toEqual(["anthropic", "github-copilot", "openrouter", "radius", "xai"]);
 
     const apiKey = PI_PROVIDER_CATALOG.filter((entry) => entry.authMode === "api_key");
     expect(apiKey).toHaveLength(PINNED_PROVIDER_IDS.length - oauthOnly.length - both.length);
@@ -110,16 +119,16 @@ describe("PI_PROVIDER_CATALOG", () => {
     const withAsset = PI_PROVIDER_CATALOG.filter((entry) => entry.assetIcon).map((entry) => entry.id);
     expect(withAsset).toEqual([
       "ant-ling",
-      "openai",
-      "groq",
       "cerebras",
-      "xai",
-      "zai",
-      "zai-coding-cn",
-      "radius",
       "fireworks",
-      "together",
+      "groq",
+      "openai",
       "openai-codex",
+      "radius",
+      "together",
+      "xai",
+      "zai-coding-cn",
+      "zai",
     ]);
     for (const entry of PI_PROVIDER_CATALOG.filter((candidate) => candidate.assetIcon)) {
       expect(entry.assetIcon).toMatch(/^app-icons\//);
@@ -128,7 +137,7 @@ describe("PI_PROVIDER_CATALOG", () => {
     const monochromeAssetIds = PI_PROVIDER_CATALOG.filter((entry) => entry.assetIcon && entry.monochrome).map(
       (entry) => entry.id,
     );
-    expect(monochromeAssetIds).toEqual(["ant-ling", "openai", "groq", "xai", "radius", "openai-codex"]);
+    expect(monochromeAssetIds).toEqual(["ant-ling", "groq", "openai", "openai-codex", "radius", "xai"]);
     // The codex mark does not fill its viewBox; it needs a visual scale-up.
     expect(getPiProviderCatalogEntry("openai-codex")?.iconScale).toBe(1.5);
     // Fallback icons stay neutral (no brand color, no asset).

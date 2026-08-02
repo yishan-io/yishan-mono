@@ -57,6 +57,11 @@ const FALLBACK_PROVIDER_ICON: IconType = LuCloud;
  * preset-icons) for OpenAI/Groq/Cerebras/Z.ai and the reused Codex mark.
  * Providers without any brand mark use a neutral LuCloud fallback.
  */
+/**
+ * Providers supported by the yishan pi agent, sorted alphabetically by display
+ * name so pickers show OpenAI and OpenAI Codex adjacent. The pinned id
+ * snapshot in piProviders.test.ts is order-independent.
+ */
 export const PI_PROVIDER_CATALOG: PiProviderCatalogEntry[] = [
   {
     id: "anthropic",
@@ -378,6 +383,9 @@ export const PI_PROVIDER_CATALOG: PiProviderCatalogEntry[] = [
     hasSubscription: true,
   },
 ];
+
+// Keep the exported catalog sorted by display name regardless of entry order.
+PI_PROVIDER_CATALOG.sort((left, right) => left.name.localeCompare(right.name));
 
 const PI_PROVIDER_BY_ID = new Map(PI_PROVIDER_CATALOG.map((entry) => [entry.id, entry]));
 
