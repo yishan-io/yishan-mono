@@ -46,7 +46,6 @@ const mockEditorState: {
   editorValue: string;
   editorFocus: () => void;
   editorFindAction: { run: () => void };
-  addCommandCalls: Array<{ keybinding: number; handler: () => void }>;
   contentChangeListener: null | (() => void);
   disposeCount: number;
   createCount: number;
@@ -67,7 +66,6 @@ const mockEditorState: {
   editorValue: "",
   editorFocus: vi.fn(),
   editorFindAction: { run: vi.fn() },
-  addCommandCalls: [],
   contentChangeListener: null,
   disposeCount: 0,
   createCount: 0,
@@ -119,9 +117,6 @@ vi.mock("../helpers/monacoSetup", () => ({
           focus: () => mockEditorState.editorFocus(),
           layout: vi.fn(),
           getAction: (id: string) => (id === "actions.find" ? mockEditorState.editorFindAction : null),
-          addCommand: (keybinding: number, handler: () => void) => {
-            mockEditorState.addCommandCalls.push({ keybinding, handler });
-          },
           onDidChangeModelContent: (listener: () => void) => {
             mockEditorState.contentChangeListener = listener;
             return { dispose: vi.fn() };
@@ -187,7 +182,6 @@ afterEach(() => {
   mockEditorState.editorValue = "";
   mockEditorState.editorFocus = vi.fn();
   mockEditorState.editorFindAction = { run: vi.fn() };
-  mockEditorState.addCommandCalls = [];
   mockEditorState.contentChangeListener = null;
   mockEditorState.disposeCount = 0;
   mockEditorState.createCount = 0;
@@ -212,7 +206,7 @@ describe("FileEditor", () => {
     expect(mockEditorState.createCount).toBe(1);
   });
 
-  it("triggers save callback on Cmd+S binding", () => {
+  it("saves via the root capture handler when Cmd+S is pressed on the editor", () => {
     const onSave = vi.fn();
 
     renderWithAppTheme(<FileEditor path="src/a.ts" content="initial" onSave={onSave} />);
@@ -220,26 +214,25 @@ describe("FileEditor", () => {
     // Simulate the user editing the document after mount.
     mockEditorState.editorValue = "saved text";
 
-    const saveCommand = mockEditorState.addCommandCalls.find((c) => c.keybinding === (2048 | 49));
-    expect(saveCommand).toBeTruthy();
-    saveCommand?.handler();
+    const monacoDomNode = mockEditorState.editorDomNode;
+    expect(monacoDomNode).toBeTruthy();
+    // Ctrl+S (Windows) — the .md test below covers Cmd+S (macOS).
+    fireEvent.keyDown(monacoDomNode as HTMLElement, { key: "s", code: "KeyS", ctrlKey: true });
 
+    expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave).toHaveBeenCalledWith("saved text");
   });
 
-  it("defers Monaco Cmd+S events to Monaco's single save command", () => {
+  it("saves markdown editor content on Cmd+S without relying on Monaco's binding", () => {
     const onSave = vi.fn();
 
     renderWithAppTheme(<FileEditor path="README.md" content="initial" onSave={onSave} />);
     mockEditorState.editorValue = "saved text";
     const monacoDomNode = mockEditorState.editorDomNode;
-    const saveCommand = mockEditorState.addCommandCalls.find((command) => command.keybinding === (2048 | 49));
 
     expect(monacoDomNode).toBeTruthy();
     fireEvent.keyDown(monacoDomNode as HTMLElement, { key: "s", metaKey: true });
-    expect(onSave).not.toHaveBeenCalled();
 
-    saveCommand?.handler();
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave).toHaveBeenCalledWith("saved text");
   });

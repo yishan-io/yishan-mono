@@ -111,18 +111,22 @@ export function FileEditor({
 
   useEffect(() => {
     const rootElement = fileEditorRootRef.current;
-    if (!rootElement || !isMarkdown) {
+    if (!rootElement) {
       return;
     }
 
     const handleNativeKeyDown = (event: KeyboardEvent) => {
-      const isCmdS = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s";
-      const editorNode = editorRef.current?.getDomNode?.();
-      const isMonacoEvent = event.target instanceof Node && editorNode?.contains(event.target);
-      if (!isCmdS || isDeleted || isMonacoEvent) {
+      // Match the physical S key position (layout-independent, like Monaco's
+      // prior keyCode-based binding) with an event.key fallback for IMEs that
+      // leave event.code empty.
+      const isCmdS = (event.metaKey || event.ctrlKey) && (event.code === "KeyS" || event.key.toLowerCase() === "s");
+      if (!isCmdS || isDeleted) {
         return;
       }
 
+      // Single Cmd/Ctrl+S save path for every focus target inside the editor
+      // root (toolbar, preview DOM, Monaco). Intercepting in the capture phase
+      // also keeps Monaco's internal keybinding service from seeing the event.
       event.preventDefault();
       event.stopPropagation();
       handleSaveCurrentContent();
@@ -132,7 +136,7 @@ export function FileEditor({
     return () => {
       rootElement.removeEventListener("keydown", handleNativeKeyDown, true);
     };
-  }, [editorRef, handleSaveCurrentContent, isDeleted, isMarkdown]);
+  }, [handleSaveCurrentContent, isDeleted]);
 
   const handlePreviewKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
