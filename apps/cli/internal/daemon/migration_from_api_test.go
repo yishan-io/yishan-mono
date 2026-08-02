@@ -64,8 +64,8 @@ func TestMigrationFromAPI_UsesOrganizationExportCSVEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list projects: %v", err)
 	}
-	if len(projects) != 1 || projects[0].Name != "Core" || len(projects[0].Commands) != 1 {
-		t.Fatalf("expected imported project with commands, got %#v", projects)
+	if len(projects) != 1 || projects[0].Name != "Core" || len(projects[0].Commands) != 1 || !projects[0].ContextEnabled {
+		t.Fatalf("expected imported project with commands and context enabled, got %#v", projects)
 	}
 
 	workspaces, err := localdb.NewWorkspaceStore(database).ListByOrg(context.Background(), "org-1")

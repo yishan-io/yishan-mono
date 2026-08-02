@@ -159,6 +159,16 @@ func buildImportedProjectConfigBackfillUpdate(existingProject Project, importedP
 		commands := importedProject.Commands
 		update.Commands = &commands
 	}
+	// One-way context repair: legacy-imported rows were written with context
+	// disabled because the legacy migration never mapped ContextEnabled.
+	// Only restore when the local value is false and the export says enabled:
+	// an explicit local true (a deliberate user toggle) is never overwritten,
+	// and by design a local false is indistinguishable from the legacy bug, so
+	// it is re-enabled when the remote project says enabled.
+	if !existingProject.ContextEnabled && importedProject.ContextEnabled {
+		contextEnabled := true
+		update.ContextEnabled = &contextEnabled
+	}
 	return update
 }
 
