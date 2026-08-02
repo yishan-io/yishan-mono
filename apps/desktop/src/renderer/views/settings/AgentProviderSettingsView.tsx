@@ -3,18 +3,19 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuPencil, LuPin, LuPlus, LuTrash2 } from "react-icons/lu";
 import type { PiProviderStatus } from "../../commands/piProviderCommands";
+import { ProviderMark } from "../../components/ProviderMark";
 import { SettingsCard, SettingsControlRow, SettingsRows, SettingsSectionHeader } from "../../components/settings";
 import { getPiProviderDisplayName, getPiProviderPinEnv } from "../../helpers/piProviders";
 import { useCommands } from "../../hooks/useCommands";
 import { useRefreshableLoader } from "../../hooks/useRefreshableLoader";
 import { ProviderCredentialDialog } from "./ProviderCredentialDialog";
-import { ProviderMark } from "../../components/ProviderMark";
 import { RemoveProviderDialog } from "./RemoveProviderDialog";
 
 type ProviderCredentialDialogTarget = {
   mode: "add" | "edit";
   provider?: string;
   initialEnv?: Record<string, string>;
+  storedEnvVars?: string[];
 };
 
 const PROVIDER_LIST_TIMEOUT_MS = 10_000;
@@ -164,7 +165,13 @@ export function AgentProviderSettingsView() {
                 <ProviderRow
                   key={entry.provider}
                   entry={entry}
-                  onEdit={() => setCredentialTarget({ mode: "edit", provider: entry.provider })}
+                  onEdit={() =>
+                    setCredentialTarget({
+                      mode: "edit",
+                      provider: entry.provider,
+                      storedEnvVars: entry.envVars,
+                    })
+                  }
                   onRemove={() => setRemoveTarget(entry)}
                   onPin={() =>
                     setCredentialTarget({
@@ -186,6 +193,7 @@ export function AgentProviderSettingsView() {
         mode={credentialTarget?.mode ?? "add"}
         initialProviderId={credentialTarget?.provider}
         initialEnv={credentialTarget?.initialEnv}
+        storedEnvVars={credentialTarget?.storedEnvVars}
         onClose={() => setCredentialTarget(null)}
         onSaved={handleSaved}
       />

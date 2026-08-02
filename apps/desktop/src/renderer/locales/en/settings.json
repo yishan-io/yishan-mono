@@ -634,6 +634,7 @@
         "keyLabel": "API Key",
         "keyPlaceholder": "Paste your API key",
         "envSection": "Environment variables",
+        "envStoredWarning": "Stored environment variables ({{names}}) will be removed unless re-entered above.",
         "keyRequired": "API key is required.",
         "editKeyHelper": "Enter a new API key to replace the existing one.",
         "oauthOnlyHint": "This provider is subscription-only. Sign in with your account.",

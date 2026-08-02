@@ -176,9 +176,6 @@ describe("PI_PROVIDER_CATALOG", () => {
 
   it("derives pin env values from ambient AWS profile sources", () => {
     expect(getPiProviderPinEnv("amazon-bedrock", "AWS_PROFILE: ai-bedrock")).toEqual({ AWS_PROFILE: "ai-bedrock" });
-    expect(getPiProviderPinEnv("amazon-bedrock", "AWS profile: ai-bedrock, default")).toEqual({
-      AWS_PROFILE: "ai-bedrock",
-    });
     // Non-profile sources and providers without env vars cannot be pinned.
     expect(getPiProviderPinEnv("amazon-bedrock", "AWS access keys")).toBeNull();
     expect(getPiProviderPinEnv("google-vertex", "gcloud application default credentials")).toBeNull();

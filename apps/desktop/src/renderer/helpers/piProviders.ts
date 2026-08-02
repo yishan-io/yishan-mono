@@ -440,11 +440,6 @@ export function getPiProviderPinEnv(providerId: string, source: string | undefin
     const profile = source.slice(awsProfilePrefix.length).trim();
     return profile ? { AWS_PROFILE: profile } : null;
   }
-  const awsProfilesPrefix = "AWS profile: ";
-  if (source.startsWith(awsProfilesPrefix)) {
-    const firstProfile = source.slice(awsProfilesPrefix.length).split(",")[0]?.trim();
-    return firstProfile ? { AWS_PROFILE: firstProfile } : null;
-  }
   return null;
 }
 

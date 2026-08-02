@@ -19,6 +19,8 @@ export type PiProviderStatus = {
   type: string;
   /** Credential source label for ambient (environment/cloud) entries. */
   source?: string;
+  /** Stored provider-scoped env var NAMES (never values). */
+  envVars?: string[];
 };
 
 export type PiProviderListResult = {
@@ -39,15 +41,19 @@ function normalizePiProviderList(payload: unknown): PiProviderStatus[] {
     if (!entry || typeof entry !== "object") {
       continue;
     }
-    const record = entry as { provider?: unknown; type?: unknown; source?: unknown };
+    const record = entry as { provider?: unknown; type?: unknown; source?: unknown; envVars?: unknown };
     const provider = typeof record.provider === "string" ? record.provider.trim() : "";
     if (!provider) {
       continue;
     }
+    const envVars = Array.isArray(record.envVars)
+      ? record.envVars.filter((name): name is string => typeof name === "string" && name.trim().length > 0)
+      : undefined;
     providers.push({
       provider,
       type: typeof record.type === "string" ? record.type : "",
       source: typeof record.source === "string" && record.source.trim().length > 0 ? record.source.trim() : undefined,
+      envVars: envVars && envVars.length > 0 ? envVars : undefined,
     });
   }
   return providers;
@@ -61,11 +67,7 @@ export async function listPiProviders(): Promise<PiProviderStatus[]> {
 }
 
 /** Saves (adds or replaces) one api_key credential for a pi agent provider. */
-export async function savePiProvider(
-  provider: string,
-  key: string,
-  env?: Record<string, string>,
-): Promise<void> {
+export async function savePiProvider(provider: string, key: string, env?: Record<string, string>): Promise<void> {
   const client = await getDaemonClient();
   await client.pi.saveProvider({ provider, key, env });
 }

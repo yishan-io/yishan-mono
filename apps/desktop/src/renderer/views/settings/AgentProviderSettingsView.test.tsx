@@ -30,7 +30,7 @@ const apiKeyProvider = { provider: "deepseek", type: "api_key" };
 const oauthProvider = { provider: "openai-codex", type: "oauth" };
 const ambientProvider = { provider: "amazon-bedrock", type: "ambient", source: "AWS_PROFILE: ai-bedrock" };
 
-function mockListOnce(providers: Array<{ provider: string; type: string }>) {
+function mockListOnce(providers: Array<{ provider: string; type: string; envVars?: string[] }>) {
   mocked.listPiProviders.mockResolvedValueOnce(providers);
 }
 
@@ -143,6 +143,16 @@ describe("AgentProviderSettingsView", () => {
     await waitFor(() => {
       expect(mocked.savePiProvider).toHaveBeenCalledWith("deepseek", "sk-new-key", undefined);
     });
+  });
+
+  it("warns that stored environment variables are removed on edit unless re-entered", async () => {
+    mockListOnce([{ provider: "cloudflare-ai-gateway", type: "api_key", envVars: ["CLOUDFLARE_ACCOUNT_ID"] }]);
+
+    render(<AgentProviderSettingsView />);
+
+    fireEvent.click(await screen.findByLabelText("settings.providers.actions.edit Cloudflare AI Gateway"));
+    expect(await screen.findByText("settings.providers.dialog.editTitle")).toBeTruthy();
+    expect(screen.getByText(/settings.providers.dialog.envStoredWarning/)).toBeTruthy();
   });
 
   it("removes a provider after confirmation", async () => {

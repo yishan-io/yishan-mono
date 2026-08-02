@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LuLogIn } from "react-icons/lu";
 import { NO_ACTIVE_WORKSPACE_LOGIN_ERROR } from "../../commands/piProviderCommands";
+import { ProviderMark } from "../../components/ProviderMark";
 import { getErrorMessage } from "../../helpers/errorHelpers";
 import {
   PI_PROVIDER_CATALOG,
@@ -26,7 +27,6 @@ import {
   isPiProviderSubscriptionCapable,
 } from "../../helpers/piProviders";
 import { useCommands } from "../../hooks/useCommands";
-import { ProviderMark } from "../../components/ProviderMark";
 
 export type ProviderCredentialDialogMode = "add" | "edit";
 
@@ -35,6 +35,7 @@ export function ProviderCredentialDialog({
   mode,
   initialProviderId,
   initialEnv,
+  storedEnvVars,
   onClose,
   onSaved,
 }: {
@@ -42,6 +43,7 @@ export function ProviderCredentialDialog({
   mode: ProviderCredentialDialogMode;
   initialProviderId?: string;
   initialEnv?: Record<string, string>;
+  storedEnvVars?: string[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -76,6 +78,7 @@ export function ProviderCredentialDialog({
     const value = envValues[name];
     return value !== undefined && value.trim().length > 0;
   });
+  const storedEnvNames = isEdit && storedEnvVars && storedEnvVars.length > 0 ? storedEnvVars : undefined;
 
   const handleSave = async () => {
     if (!providerId || isSaving) {
@@ -169,13 +172,20 @@ export function ProviderCredentialDialog({
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
                       <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1, minWidth: 0 }}>
                         <ProviderMark providerId={entry.id} size={16} />
-                        <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <Box
+                          component="span"
+                          sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        >
                           {entry.name}
                         </Box>
                       </Box>
                       {isSubscription ? (
                         <Box sx={{ ml: "auto", flexShrink: 0 }}>
-                          <Chip size="small" variant="outlined" label={t("settings.providers.dialog.subscriptionTag")} />
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            label={t("settings.providers.dialog.subscriptionTag")}
+                          />
                         </Box>
                       ) : null}
                     </Box>
@@ -228,6 +238,11 @@ export function ProviderCredentialDialog({
               <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
                 {t("settings.providers.dialog.envSection")}
               </Typography>
+              {storedEnvNames ? (
+                <Typography variant="caption" sx={{ color: "warning.main", display: "block", mb: 1 }}>
+                  {t("settings.providers.dialog.envStoredWarning", { names: storedEnvNames.join(", ") })}
+                </Typography>
+              ) : null}
               {envVars.map((name) => (
                 <TextField
                   key={name}
