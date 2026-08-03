@@ -14,17 +14,18 @@ import (
 
 type Summarizer struct {
 	enabled   bool
-	agentKind string // override agent; empty = use session's own agent
+	agentKind string // fixed built-in summarizer agent (Pi)
 	model     string // optional model override
 	runAgent  RunAgentFunc
 	dbReader  sessionReader
 }
 
 func NewSummarizer(cfg SummarizerConfig, runAgent RunAgentFunc) *Summarizer {
+	normalizedCfg := NormalizeSummarizerConfig(cfg)
 	return &Summarizer{
-		enabled:   cfg.Enabled,
-		agentKind: cfg.AgentKind,
-		model:     cfg.Model,
+		enabled:   normalizedCfg.Enabled,
+		agentKind: normalizedCfg.AgentKind,
+		model:     normalizedCfg.Model,
 		runAgent:  runAgent,
 		dbReader:  newAgentDBReader(),
 	}
@@ -35,23 +36,21 @@ func (s *Summarizer) Enabled() bool {
 }
 
 func (s *Summarizer) UpdateConfig(cfg SummarizerConfig) {
-	s.enabled = cfg.Enabled
-	s.agentKind = cfg.AgentKind
-	s.model = cfg.Model
+	normalizedCfg := NormalizeSummarizerConfig(cfg)
+	s.enabled = normalizedCfg.Enabled
+	s.agentKind = normalizedCfg.AgentKind
+	s.model = normalizedCfg.Model
 }
 
-func (s *Summarizer) resolveSummarizeAgent(sessionAgent string) string {
-	if s.agentKind != "" {
-		return s.agentKind
-	}
-	return sessionAgent
+func (s *Summarizer) resolveSummarizeAgent() string {
+	return s.agentKind
 }
 
 // SummarizeSession runs the full summarize pipeline for the given workspace.
 // Skipped sessions are returned explicitly so callers can distinguish them
 // from real summarize runs that wrote no files.
 func (s *Summarizer) SummarizeSession(sessionAgent string, workspacePath string) (SummarizeResult, error) {
-	summarizeAgent := s.resolveSummarizeAgent(sessionAgent)
+	summarizeAgent := s.resolveSummarizeAgent()
 	result := SummarizeResult{
 		Skipped:         true,
 		SourceAgent:     sessionAgent,

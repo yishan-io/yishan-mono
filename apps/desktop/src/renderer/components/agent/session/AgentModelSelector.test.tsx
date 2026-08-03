@@ -108,6 +108,29 @@ describe("AgentModelSelector", () => {
     expect(screen.queryByRole("button", { name: "claude-sonnet-4" })).toBeNull();
   });
 
+  it("groups models by the explicit provider field instead of inferring from model id", () => {
+    const models: AgentModel[] = [
+      { id: "google/gemini-2.5-pro", provider: "OpenRouter", name: "gemini-2.5-pro" },
+      { id: "anthropic.claude-sonnet-4", provider: "Anthropic", name: "claude-sonnet-4" },
+    ];
+
+    render(
+      <AgentModelSelector
+        models={models}
+        currentModel={models[0] ?? null}
+        thinkingLevel="off"
+        onModelChange={vi.fn()}
+        onThinkingLevelCycle={vi.fn()}
+      />,
+    );
+
+    fireEvent.mouseDown(screen.getByRole("button", { name: "OpenRouter/gemini-2.5-pro" }));
+    fireEvent.click(screen.getByRole("button", { name: "OpenRouter/gemini-2.5-pro" }));
+
+    expect(screen.getByRole("button", { name: "OpenRouter" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Anthropic" })).toBeTruthy();
+  });
+
   it("virtualizes the model list for the selected provider", () => {
     const models: AgentModel[] = [
       { id: "anthropic/claude-sonnet-4", provider: "Anthropic", name: "claude-sonnet-4" },

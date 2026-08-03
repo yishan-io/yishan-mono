@@ -37,7 +37,7 @@ func TestSummarizeSession_BuildsConversationAndWritesMemory(t *testing.T) {
 
 	summarizer := NewSummarizer(SummarizerConfig{Enabled: true, AgentKind: "opencode"}, func(_ context.Context, agentKind string, model string, gotPrompt string, workDir string) (string, error) {
 		prompt = gotPrompt
-		if agentKind != "opencode" {
+		if agentKind != BuiltInSummarizerAgentKind {
 			t.Fatalf("unexpected agent kind: %q", agentKind)
 		}
 		return `{"lockedDecisions":["2026-06-16 — Fixed reader. Why: reader was broken."],"durableDiscoveries":["[Workflow Trap] 2026-06-16 — Summarizer writes MEMORY.md on normal runs"],"openQuestions":[]}`,
@@ -55,8 +55,8 @@ func TestSummarizeSession_BuildsConversationAndWritesMemory(t *testing.T) {
 	if result.SourceAgent != "pi" {
 		t.Fatalf("expected source agent pi, got %q", result.SourceAgent)
 	}
-	if result.SummarizerAgent != "opencode" {
-		t.Fatalf("expected summarizer agent opencode, got %q", result.SummarizerAgent)
+	if result.SummarizerAgent != BuiltInSummarizerAgentKind {
+		t.Fatalf("expected summarizer agent %q, got %q", BuiltInSummarizerAgentKind, result.SummarizerAgent)
 	}
 	if len(result.WrittenPaths) == 0 || result.WrittenPaths[0] != memoryPath {
 		t.Fatalf("unexpected written paths: %v", result.WrittenPaths)
@@ -66,6 +66,32 @@ func TestSummarizeSession_BuildsConversationAndWritesMemory(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "lockedDecisions") || !strings.Contains(prompt, "durableDiscoveries") {
 		t.Fatalf("prompt missing durable-memory schema: %q", prompt)
+	}
+}
+
+func TestSummarizeSession_UsesPiWhenNoAgentOverrideConfigured(t *testing.T) {
+	workspacePath := t.TempDir()
+	var gotAgentKind string
+
+	summarizer := NewSummarizer(SummarizerConfig{Enabled: true}, func(_ context.Context, agentKind string, model string, gotPrompt string, workDir string) (string, error) {
+		gotAgentKind = agentKind
+		return `{"lockedDecisions":["2026-08-03 — Summaries always run with Pi. Why: Pi is built in."],"durableDiscoveries":[],"openQuestions":[]}`,
+			nil
+	})
+	summarizer.dbReader = fakeSessionReader{session: &sessionMessages{Messages: []sessionMessage{{Role: "user", Content: "hello", Timestamp: time.UnixMilli(1000)}}}}
+
+	result, err := summarizer.SummarizeSession("opencode", workspacePath)
+	if err != nil {
+		t.Fatalf("SummarizeSession: %v", err)
+	}
+	if result.Skipped {
+		t.Fatal("expected summarize run, got skipped")
+	}
+	if gotAgentKind != BuiltInSummarizerAgentKind {
+		t.Fatalf("expected summarize run to use %q, got %q", BuiltInSummarizerAgentKind, gotAgentKind)
+	}
+	if result.SummarizerAgent != BuiltInSummarizerAgentKind {
+		t.Fatalf("expected result summarizer agent %q, got %q", BuiltInSummarizerAgentKind, result.SummarizerAgent)
 	}
 }
 
