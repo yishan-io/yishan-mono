@@ -23,11 +23,16 @@ const piModelFallbackFixture = `{"type":"session","version":3,"id":"session-2","
 {"type":"message","id":"assistant-1","parentId":"model-1","timestamp":"2026-06-29T12:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"done"}],"usage":{"input":100,"output":20,"cacheRead":0,"cacheWrite":0,"totalTokens":120},"stopReason":"stop","timestamp":1780007205000}}
 `
 
+const piDirectCostFixture = `{"type":"session","version":3,"id":"session-3","timestamp":"2026-06-29T13:00:00.000Z","cwd":"/tmp/pi-project"}
+{"type":"model_change","id":"model-1","parentId":null,"timestamp":"2026-06-29T13:00:01.000Z","provider":"openai","modelId":"gpt-5.6-terra"}
+{"type":"message","id":"assistant-1","parentId":"model-1","timestamp":"2026-06-29T13:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"done"}],"usage":{"input":100,"output":20,"cacheRead":0,"cacheWrite":0,"reasoning":5,"totalTokens":125,"cost":{"total":0.25}},"stopReason":"stop","timestamp":1780010805000}}
+`
+
 func TestParsePiMessageActivityCountsAssistantUsageAndToolCalls(t *testing.T) {
 	t.Parallel()
 
 	rawLine := []byte(`{"type":"message","id":"assistant-1","timestamp":"2026-06-29T10:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"running"},{"type":"toolCall","id":"call-1","name":"bash","arguments":{"command":"pi --version"}}],"model":"gpt-5.5","usage":{"input":654,"output":16,"cacheRead":1536,"cacheWrite":0,"totalTokens":2206}}}`)
-	activity, ok := parsePiMessageActivity(mapFromJSON(t, rawLine), "session-1", "/tmp/pi-project", "gpt-5.5", "session-1")
+	activity, ok := parsePiMessageActivity(mapFromJSON(t, rawLine), "session-1", "/tmp/pi-project", "gpt-5.5", "session-1", testModelPricingCatalog())
 	if !ok {
 		t.Fatal("expected assistant activity to parse")
 	}
@@ -39,6 +44,22 @@ func TestParsePiMessageActivityCountsAssistantUsageAndToolCalls(t *testing.T) {
 	}
 	if activity.ToolCallCount != 1 {
 		t.Fatalf("expected 1 tool call, got %d", activity.ToolCallCount)
+	}
+}
+
+func TestParsePiMessageActivityUsesDirectCostWhenPresent(t *testing.T) {
+	t.Parallel()
+
+	rawLine := []byte(`{"type":"message","id":"assistant-1","timestamp":"2026-06-29T10:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"done"}],"model":"gpt-5.6-terra","usage":{"input":100,"output":20,"cacheRead":0,"cacheWrite":0,"reasoning":5,"totalTokens":125,"cost":{"total":0.25}}}}`)
+	activity, ok := parsePiMessageActivity(mapFromJSON(t, rawLine), "session-1", "/tmp/pi-project", "gpt-5.6-terra", "session-1", testModelPricingCatalog())
+	if !ok {
+		t.Fatal("expected assistant activity to parse")
+	}
+	if activity.ReasoningTokens != 5 {
+		t.Fatalf("expected reasoning tokens 5, got %d", activity.ReasoningTokens)
+	}
+	if activity.TotalCostMicrosUSD != 250_000 {
+		t.Fatalf("expected direct cost 250000 micros, got %d", activity.TotalCostMicrosUSD)
 	}
 }
 
@@ -56,9 +77,10 @@ func TestScanPiHourlyUsageIntegration(t *testing.T) {
 	}
 
 	input := ScanInput{
-		RunID:       "test-run",
-		IngestedAt:  time.Date(2026, 6, 29, 13, 0, 0, 0, time.UTC).UnixMilli(),
-		SessionRoot: tmpDir,
+		RunID:               "test-run",
+		IngestedAt:          time.Date(2026, 6, 29, 13, 0, 0, 0, time.UTC).UnixMilli(),
+		SessionRoot:         tmpDir,
+		ModelPricingCatalog: testModelPricingCatalog(),
 		Worktrees: []WorktreeRef{{
 			ProjectID:     "proj-1",
 			WorkspaceID:   "ws-1",
@@ -74,7 +96,7 @@ func TestScanPiHourlyUsageIntegration(t *testing.T) {
 		t.Fatalf("expected 2 hourly rows, got %d", len(rows))
 	}
 
-	var totalInput, totalOutput, totalCacheRead, totalTokens int64
+	var totalInput, totalOutput, totalCacheRead, totalTokens, totalCostMicros int64
 	var turns, tools int64
 	for _, row := range rows {
 		if row.AgentKind != piAgentKind {
@@ -96,6 +118,7 @@ func TestScanPiHourlyUsageIntegration(t *testing.T) {
 		totalOutput += row.OutputTokens
 		totalCacheRead += row.CachedInputTokens
 		totalTokens += row.TotalTokens
+		totalCostMicros += row.TotalCostMicrosUSD
 		turns += row.TurnCount
 		tools += row.ToolCallCount
 	}
@@ -111,6 +134,9 @@ func TestScanPiHourlyUsageIntegration(t *testing.T) {
 	}
 	if totalTokens != 4357 {
 		t.Fatalf("expected total tokens 4357, got %d", totalTokens)
+	}
+	if totalCostMicros != 8_586 {
+		t.Fatalf("expected estimated total cost 8586 micros, got %d", totalCostMicros)
 	}
 	if turns != 1 {
 		t.Fatalf("expected 1 turn, got %d", turns)
@@ -129,7 +155,7 @@ func TestScanPiUsesDirectMessageSummationNotDeltas(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir}
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, ModelPricingCatalog: testModelPricingCatalog()}
 	rows, err := ScanPiHourlyUsage(context.Background(), input)
 	if err != nil {
 		t.Fatalf("scan hourly usage: %v", err)
@@ -153,7 +179,7 @@ func TestScanPiFallsBackToLatestModelChange(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir}
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, ModelPricingCatalog: testModelPricingCatalog()}
 	rows, err := ScanPiHourlyUsage(context.Background(), input)
 	if err != nil {
 		t.Fatalf("scan hourly usage: %v", err)
@@ -163,6 +189,57 @@ func TestScanPiFallsBackToLatestModelChange(t *testing.T) {
 	}
 	if rows[0].Model != "deepseek-v4-pro" {
 		t.Fatalf("expected model fallback deepseek-v4-pro, got %q", rows[0].Model)
+	}
+	if rows[0].TotalCostMicrosUSD != 61 {
+		t.Fatalf("expected estimated cost 61 micros, got %d", rows[0].TotalCostMicrosUSD)
+	}
+}
+
+func TestScanPiPrefersDirectCostOverFallbackPricing(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	sessionFilePath := filepath.Join(tmpDir, "2026-06-29T13-00-00-000Z_session-3.jsonl")
+	if err := os.WriteFile(sessionFilePath, []byte(piDirectCostFixture), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, ModelPricingCatalog: testModelPricingCatalog()}
+	rows, err := ScanPiHourlyUsage(context.Background(), input)
+	if err != nil {
+		t.Fatalf("scan hourly usage: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(rows))
+	}
+	if rows[0].TotalCostMicrosUSD != 250_000 {
+		t.Fatalf("expected direct cost 250000 micros, got %d", rows[0].TotalCostMicrosUSD)
+	}
+}
+
+func TestScanPiPreservesExplicitZeroDirectCost(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	fixture := `{"type":"session","version":3,"id":"session-4","timestamp":"2026-06-29T13:00:00.000Z","cwd":"/tmp/pi-project"}
+{"type":"model_change","id":"model-1","parentId":null,"timestamp":"2026-06-29T13:00:01.000Z","provider":"openai","modelId":"gpt-5.6-terra"}
+{"type":"message","id":"assistant-1","parentId":"model-1","timestamp":"2026-06-29T13:00:05.000Z","message":{"role":"assistant","content":[{"type":"text","text":"done"}],"usage":{"input":100,"output":20,"cacheRead":0,"cacheWrite":0,"totalTokens":120,"cost":{"total":0}},"stopReason":"stop","timestamp":1780010805000}}
+`
+	sessionFilePath := filepath.Join(tmpDir, "2026-06-29T13-00-00-000Z_session-4.jsonl")
+	if err := os.WriteFile(sessionFilePath, []byte(fixture), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, ModelPricingCatalog: testModelPricingCatalog()}
+	rows, err := ScanPiHourlyUsage(context.Background(), input)
+	if err != nil {
+		t.Fatalf("scan hourly usage: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(rows))
+	}
+	if rows[0].TotalCostMicrosUSD != 0 {
+		t.Fatalf("expected explicit zero direct cost to remain zero, got %d", rows[0].TotalCostMicrosUSD)
 	}
 }
 

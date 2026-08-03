@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -35,6 +36,8 @@ type openCodeMessageRow struct {
 	TokensReasoning  int64
 	TokensCacheRead  int64
 	TokensCacheWrite int64
+	HasCost          bool
+	CostMicrosUSD    int64
 	ToolCallCount    int64
 }
 
@@ -140,6 +143,8 @@ func queryOpenCodeMessageRows(ctx context.Context, databasePath string, scanSinc
 		"  COALESCE(json_extract(m.data, '$.tokens.reasoning'), 0) AS tokens_reasoning,",
 		"  COALESCE(json_extract(m.data, '$.tokens.cache.read'), 0) AS tokens_cache_read,",
 		"  COALESCE(json_extract(m.data, '$.tokens.cache.write'), 0) AS tokens_cache_write,",
+		"  CASE WHEN json_type(m.data, '$.cost') IS NULL THEN 0 ELSE 1 END AS has_cost,",
+		"  COALESCE(json_extract(m.data, '$.cost'), 0) AS cost_usd,",
 		"  COALESCE(tool_parts.tool_call_count, 0) AS tool_call_count",
 		"FROM message m",
 		"JOIN session s ON s.id = m.session_id",
@@ -173,18 +178,20 @@ func queryOpenCodeMessageRows(ctx context.Context, databasePath string, scanSinc
 	}
 
 	type sqliteRow struct {
-		SessionID        string `json:"session_id"`
-		MsgTime          any    `json:"msg_time"`
-		Directory        string `json:"directory"`
-		WorkspaceDir     string `json:"workspace_directory"`
-		Worktree         string `json:"worktree"`
-		SessionModel     string `json:"session_model"`
-		TokensInput      int64  `json:"tokens_input"`
-		TokensOutput     int64  `json:"tokens_output"`
-		TokensReasoning  int64  `json:"tokens_reasoning"`
-		TokensCacheRead  int64  `json:"tokens_cache_read"`
-		TokensCacheWrite int64  `json:"tokens_cache_write"`
-		ToolCallCount    int64  `json:"tool_call_count"`
+		SessionID        string  `json:"session_id"`
+		MsgTime          any     `json:"msg_time"`
+		Directory        string  `json:"directory"`
+		WorkspaceDir     string  `json:"workspace_directory"`
+		Worktree         string  `json:"worktree"`
+		SessionModel     string  `json:"session_model"`
+		TokensInput      int64   `json:"tokens_input"`
+		TokensOutput     int64   `json:"tokens_output"`
+		TokensReasoning  int64   `json:"tokens_reasoning"`
+		TokensCacheRead  int64   `json:"tokens_cache_read"`
+		TokensCacheWrite int64   `json:"tokens_cache_write"`
+		HasCost          int64   `json:"has_cost"`
+		CostUSD          float64 `json:"cost_usd"`
+		ToolCallCount    int64   `json:"tool_call_count"`
 	}
 	parsedRows := make([]sqliteRow, 0)
 	if err := json.Unmarshal(rawOutput, &parsedRows); err != nil {
@@ -204,6 +211,8 @@ func queryOpenCodeMessageRows(ctx context.Context, databasePath string, scanSinc
 			TokensReasoning:  row.TokensReasoning,
 			TokensCacheRead:  row.TokensCacheRead,
 			TokensCacheWrite: row.TokensCacheWrite,
+			HasCost:          row.HasCost != 0,
+			CostMicrosUSD:    int64(math.Round(row.CostUSD * usdMicrosPerUSD)),
 			ToolCallCount:    row.ToolCallCount,
 		})
 	}
@@ -321,6 +330,25 @@ func applyOpenCodeMessageRow(
 		CachedWriteTokens: msgRow.TokensCacheWrite,
 		ReasoningTokens:   msgRow.TokensReasoning,
 		TotalTokens:       msgRow.TokensInput + msgRow.TokensCacheRead + msgRow.TokensCacheWrite + msgRow.TokensOutput + msgRow.TokensReasoning,
+	}
+	if msgRow.HasCost {
+		delta.TotalCostMicrosUSD = msgRow.CostMicrosUSD
+		delta.CostSource = CostSourceDirect
+	} else {
+		delta.TotalCostMicrosUSD = estimateModelCostMicros(
+			input.ModelPricingCatalog,
+			event.Model,
+			msgRow.TokensInput,
+			msgRow.TokensOutput,
+			msgRow.TokensCacheRead,
+			msgRow.TokensCacheWrite,
+			msgRow.TokensReasoning,
+		)
+		if delta.TotalCostMicrosUSD > 0 {
+			delta.CostSource = CostSourceEstimated
+		} else {
+			delta.CostSource = CostSourceUnknown
+		}
 	}
 	if delta.TotalTokens <= 0 {
 		return

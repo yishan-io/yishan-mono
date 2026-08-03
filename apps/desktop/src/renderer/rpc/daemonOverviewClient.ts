@@ -19,6 +19,7 @@ type TokenUsageSeriesItem = {
   cachedWriteTokens: number;
   turnCount: number;
   toolCallCount: number;
+  totalCostUsd: number;
 };
 
 type OverviewTokenUsageResponse = {
@@ -29,6 +30,7 @@ type OverviewTokenUsageResponse = {
   grandTotal: number;
   turnTotal: number;
   toolCallTotal: number;
+  totalCostUsd: number;
 };
 
 type ModelBreakdownItem = {
@@ -37,6 +39,7 @@ type ModelBreakdownItem = {
   totalTokens: number;
   inputTokens: number;
   outputTokens: number;
+  totalCostUsd: number;
   percentage: number;
 };
 
@@ -57,6 +60,7 @@ type ClosedWorkspaceItem = {
   closedAt: string;
   lifetimeHours: number;
   totalTokens: number;
+  totalCostUsd: number;
 };
 
 type PrimaryWorkspaceItem = {
@@ -66,6 +70,7 @@ type PrimaryWorkspaceItem = {
   branch: string | null;
   createdAt: string;
   totalTokens: number;
+  totalCostUsd: number;
 };
 
 type WorkspaceInsightsResult = {
@@ -88,6 +93,7 @@ function parseSeriesItem(item: unknown): TokenUsageSeriesItem {
     cachedWriteTokens: requireNumber(r?.cachedWriteTokens),
     turnCount: requireNumber(r?.turnCount),
     toolCallCount: requireNumber(r?.toolCallCount),
+    totalCostUsd: readOptionalNumber(r?.totalCostUsd) ?? 0,
   };
 }
 
@@ -101,6 +107,7 @@ function parseTokenUsage(result: unknown): OverviewTokenUsageResponse {
     grandTotal: requireNumber(r?.grandTotal),
     turnTotal: requireNumber(r?.turnTotal),
     toolCallTotal: requireNumber(r?.toolCallTotal),
+    totalCostUsd: readOptionalNumber(r?.totalCostUsd) ?? 0,
   };
 }
 
@@ -112,6 +119,7 @@ function parseModelItem(item: unknown): ModelBreakdownItem {
     totalTokens: requireNumber(r?.totalTokens),
     inputTokens: requireNumber(r?.inputTokens),
     outputTokens: requireNumber(r?.outputTokens),
+    totalCostUsd: readOptionalNumber(r?.totalCostUsd) ?? 0,
     percentage: requireNumber(r?.percentage),
   };
 }
@@ -152,6 +160,7 @@ function parseClosedWorkspace(item: unknown): ClosedWorkspaceItem {
     closedAt: requireString(r?.closedAt),
     lifetimeHours: requireNumber(r?.lifetimeHours),
     totalTokens: requireNumber(r?.totalTokens),
+    totalCostUsd: readOptionalNumber(r?.totalCostUsd) ?? 0,
   };
 }
 
@@ -164,6 +173,7 @@ function parsePrimaryWorkspace(item: unknown): PrimaryWorkspaceItem {
     branch: readOptionalString(r?.branch) ?? null,
     createdAt: requireString(r?.createdAt),
     totalTokens: requireNumber(r?.totalTokens),
+    totalCostUsd: readOptionalNumber(r?.totalCostUsd) ?? 0,
   };
 }
 

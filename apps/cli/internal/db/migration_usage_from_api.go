@@ -72,6 +72,8 @@ func migrateOrgUsage(ctx context.Context, store *HourlyUsageStore, client APICli
 			CachedWriteTokens:     apiRow.CachedWriteTokens,
 			ReasoningTokens:       apiRow.ReasoningTokens,
 			TotalTokens:           apiRow.TotalTokens,
+			TotalCostMicrosUSD:    apiRow.TotalCostMicrosUSD,
+			CostSource:            CostSource(apiRow.CostSource),
 			EventCount:            apiRow.EventCount,
 			SessionCount:          apiRow.SessionCount,
 			TurnCount:             apiRow.TurnCount,

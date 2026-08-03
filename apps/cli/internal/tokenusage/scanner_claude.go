@@ -43,17 +43,19 @@ const (
 )
 
 type parsedClaudeActivity struct {
-	Kind             claudeActivityKind
-	SessionID        string
-	Timestamp        time.Time
-	Model            string
-	CWD              string
-	InputTokens      int64
-	OutputTokens     int64
-	CacheReadTokens  int64
-	CacheWriteTokens int64
-	TurnCount        int64
-	ToolCallCount    int64
+	Kind               claudeActivityKind
+	SessionID          string
+	Timestamp          time.Time
+	Model              string
+	CWD                string
+	InputTokens        int64
+	OutputTokens       int64
+	CacheReadTokens    int64
+	CacheWriteTokens   int64
+	TotalCostMicrosUSD int64
+	CostSource         CostSource
+	TurnCount          int64
+	ToolCallCount      int64
 }
 
 func ScanClaudeHourlyUsage(ctx context.Context, input ScanInput) ([]HourlyUsageRow, error) {
@@ -140,7 +142,7 @@ func scanClaudeTranscriptFile(
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		activity, ok := parseClaudeActivity(scanner.Bytes(), fallbackSessionID)
+		activity, ok := parseClaudeActivity(scanner.Bytes(), fallbackSessionID, input.ModelPricingCatalog)
 		if !ok {
 			continue
 		}
@@ -153,12 +155,14 @@ func scanClaudeTranscriptFile(
 		if activity.Kind == claudeActivityAssistantUsage {
 			normalizedInputTokens := activity.InputTokens + activity.CacheReadTokens + activity.CacheWriteTokens
 			delta := codexUsage{
-				InputTokens:       normalizedInputTokens,
-				OutputTokens:      activity.OutputTokens,
-				CachedInputTokens: activity.CacheReadTokens,
-				CachedWriteTokens: activity.CacheWriteTokens,
-				ReasoningTokens:   0,
-				TotalTokens:       normalizedInputTokens + activity.OutputTokens,
+				InputTokens:        normalizedInputTokens,
+				OutputTokens:       activity.OutputTokens,
+				CachedInputTokens:  activity.CacheReadTokens,
+				CachedWriteTokens:  activity.CacheWriteTokens,
+				ReasoningTokens:    0,
+				TotalTokens:        normalizedInputTokens + activity.OutputTokens,
+				TotalCostMicrosUSD: activity.TotalCostMicrosUSD,
+				CostSource:         activity.CostSource,
 			}
 			if delta.TotalTokens <= 0 {
 				continue
@@ -226,7 +230,7 @@ func parseClaudeUsageRecord(rawLine []byte, fallbackSessionID string) (parsedCla
 	}, true
 }
 
-func parseClaudeActivity(rawLine []byte, fallbackSessionID string) (parsedClaudeActivity, bool) {
+func parseClaudeActivity(rawLine []byte, fallbackSessionID string, pricingCatalog *modelPricingCatalog) (parsedClaudeActivity, bool) {
 	var top map[string]any
 	if err := json.Unmarshal(rawLine, &top); err != nil {
 		return parsedClaudeActivity{}, false
@@ -251,17 +255,32 @@ func parseClaudeActivity(rawLine []byte, fallbackSessionID string) (parsedClaude
 		record, ok := parseClaudeUsageRecord(rawLine, fallbackSessionID)
 		if ok {
 			_, toolCalls := parseClaudeAssistantToolUse(top)
+			estimatedCost := estimateModelCostMicros(
+				pricingCatalog,
+				record.Model,
+				record.InputTokens,
+				record.OutputTokens,
+				record.CacheReadTokens,
+				record.CacheWriteTokens,
+				0,
+			)
+			costSource := CostSourceUnknown
+			if estimatedCost > 0 {
+				costSource = CostSourceEstimated
+			}
 			return parsedClaudeActivity{
-				Kind:             claudeActivityAssistantUsage,
-				SessionID:        record.SessionID,
-				Timestamp:        record.Timestamp,
-				Model:            record.Model,
-				CWD:              record.CWD,
-				InputTokens:      record.InputTokens,
-				OutputTokens:     record.OutputTokens,
-				CacheReadTokens:  record.CacheReadTokens,
-				CacheWriteTokens: record.CacheWriteTokens,
-				ToolCallCount:    toolCalls,
+				Kind:               claudeActivityAssistantUsage,
+				SessionID:          record.SessionID,
+				Timestamp:          record.Timestamp,
+				Model:              record.Model,
+				CWD:                record.CWD,
+				InputTokens:        record.InputTokens,
+				OutputTokens:       record.OutputTokens,
+				CacheReadTokens:    record.CacheReadTokens,
+				CacheWriteTokens:   record.CacheWriteTokens,
+				TotalCostMicrosUSD: estimatedCost,
+				CostSource:         costSource,
+				ToolCallCount:      toolCalls,
 			}, true
 		}
 		model, toolCalls := parseClaudeAssistantToolUse(top)

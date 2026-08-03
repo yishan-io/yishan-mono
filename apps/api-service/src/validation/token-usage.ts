@@ -4,6 +4,7 @@ import { z } from "zod";
 import { nonEmptyStringSchema, orgIdParamSchema } from "@/validation/common";
 
 const attributionConfidenceSchema = z.enum(["exact", "prefix_match", "fallback_unknown"]);
+const costSourceSchema = z.enum(["unknown", "estimated", "direct"]);
 
 export { orgIdParamSchema as tokenUsageOrgParamsSchema };
 
@@ -21,6 +22,8 @@ export const tokenUsageHourlyRowSchema = z.object({
   cachedWriteTokens: z.number().int().min(0),
   reasoningTokens: z.number().int().min(0),
   totalTokens: z.number().int().min(0),
+  totalCostMicrosUsd: z.number().int().min(0).optional().default(0),
+  costSource: costSourceSchema.optional().default("unknown"),
   eventCount: z.number().int().min(0),
   sessionCount: z.number().int().min(0),
   turnCount: z.number().int().min(0),

@@ -84,6 +84,145 @@ func TestHourlyUsageStoreRetainsExpiredDirtyRows(t *testing.T) {
 	}
 }
 
+func TestHourlyUsageStorePreservesExistingCostOnSameTokenRescan(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+
+	store := NewHourlyUsageStore(database)
+	bucketStart := time.Now().UTC().Add(-time.Hour).UnixMilli()
+	initialRow := newTestHourlyUsageRow(bucketStart, 100)
+	initialRow.TotalCostMicrosUSD = 123_000
+	initialRow.CostSource = CostSourceEstimated
+	if err := store.ReplaceAgentHourlyRows(context.Background(), "claude", []HourlyUsageRow{initialRow}); err != nil {
+		t.Fatalf("seed row: %v", err)
+	}
+	if err := store.MarkHourlyRowsSynced(context.Background(), []HourlyUsageRow{initialRow}, time.Now().UTC().UnixMilli()); err != nil {
+		t.Fatalf("mark synced: %v", err)
+	}
+
+	rescanRow := newTestHourlyUsageRow(bucketStart, 100)
+	rescanRow.TotalCostMicrosUSD = 0
+	rescanRow.CostSource = CostSourceUnknown
+	if err := store.ReplaceAgentHourlyRows(context.Background(), "claude", []HourlyUsageRow{rescanRow}); err != nil {
+		t.Fatalf("rescan row: %v", err)
+	}
+
+	rows, err := store.ListDirtyHourlyRows(context.Background())
+	if err != nil {
+		t.Fatalf("list dirty rows: %v", err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("expected preserved clean row, got %#v", rows)
+	}
+
+	var cost int64
+	if err := database.QueryRow(`SELECT total_cost_micros_usd FROM token_usage_hourly WHERE bucket_start_hour_utc = ?`, bucketStart).Scan(&cost); err != nil {
+		t.Fatalf("query row: %v", err)
+	}
+	if cost != 123_000 {
+		t.Fatalf("expected preserved cost 123000, got %d", cost)
+	}
+}
+
+func TestHourlyUsageStoreBackfillsHistoricalCostBeforeCutoff(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+
+	store := NewHourlyUsageStore(database)
+	cutoff := time.Now().UTC().UnixMilli()
+	historicalRow := newTestHourlyUsageRow(cutoff-2_000, 100)
+	historicalRow.TotalCostMicrosUSD = 0
+	historicalRow.UpdatedAt = cutoff - 2_000
+	historicalRow.Dirty = false
+	directZeroRow := newTestHourlyUsageRow(cutoff-1_000, 110)
+	directZeroRow.BucketStartHourUTC = cutoff - 1_000
+	directZeroRow.TotalCostMicrosUSD = 0
+	directZeroRow.CostSource = CostSourceDirect
+	directZeroRow.UpdatedAt = cutoff - 1_000
+	directZeroRow.Dirty = false
+	currentRow := newTestHourlyUsageRow(cutoff+2_000, 120)
+	currentRow.BucketStartHourUTC = cutoff + 2_000
+	currentRow.TotalCostMicrosUSD = 0
+	currentRow.UpdatedAt = cutoff + 2_000
+	currentRow.Dirty = false
+	if err := store.UpsertHourlyUsageRows(context.Background(), []HourlyUsageRow{historicalRow, directZeroRow, currentRow}); err != nil {
+		t.Fatalf("seed rows: %v", err)
+	}
+
+	startedAt, err := store.EnsureCostBackfillStartedAt(context.Background(), cutoff)
+	if err != nil {
+		t.Fatalf("ensure cost backfill started-at: %v", err)
+	}
+	if startedAt != cutoff {
+		t.Fatalf("expected started-at cutoff %d, got %d", cutoff, startedAt)
+	}
+
+	updatedCount, err := store.BackfillEstimatedCost(context.Background(), startedAt, func(row HourlyUsageRow) int64 {
+		if row.BucketStartHourUTC == historicalRow.BucketStartHourUTC {
+			return 123_000
+		}
+		return 456_000
+	}, CostBackfillOptions{})
+	if err != nil {
+		t.Fatalf("backfill estimated cost: %v", err)
+	}
+	if updatedCount != 1 {
+		t.Fatalf("expected 1 updated row, got %d", updatedCount)
+	}
+
+	var historicalCost int64
+	var historicalDirty int
+	if err := database.QueryRow(`SELECT total_cost_micros_usd, is_dirty FROM token_usage_hourly WHERE bucket_start_hour_utc = ?`, historicalRow.BucketStartHourUTC).Scan(&historicalCost, &historicalDirty); err != nil {
+		t.Fatalf("query historical row: %v", err)
+	}
+	if historicalCost != 123_000 {
+		t.Fatalf("expected historical cost 123000, got %d", historicalCost)
+	}
+	if historicalDirty != 1 {
+		t.Fatalf("expected historical row dirty after backfill, got %d", historicalDirty)
+	}
+
+	var directZeroCost int64
+	var directZeroDirty int
+	var directZeroSource string
+	if err := database.QueryRow(`SELECT total_cost_micros_usd, is_dirty, cost_source FROM token_usage_hourly WHERE bucket_start_hour_utc = ?`, directZeroRow.BucketStartHourUTC).Scan(&directZeroCost, &directZeroDirty, &directZeroSource); err != nil {
+		t.Fatalf("query direct-zero row: %v", err)
+	}
+	if directZeroCost != 0 {
+		t.Fatalf("expected direct-zero row cost to remain 0, got %d", directZeroCost)
+	}
+	if directZeroDirty != 0 {
+		t.Fatalf("expected direct-zero row to remain clean, got %d", directZeroDirty)
+	}
+	if directZeroSource != string(CostSourceDirect) {
+		t.Fatalf("expected direct-zero row cost source %q, got %q", CostSourceDirect, directZeroSource)
+	}
+
+	var currentCost int64
+	var currentDirty int
+	if err := database.QueryRow(`SELECT total_cost_micros_usd, is_dirty FROM token_usage_hourly WHERE bucket_start_hour_utc = ?`, currentRow.BucketStartHourUTC).Scan(&currentCost, &currentDirty); err != nil {
+		t.Fatalf("query current row: %v", err)
+	}
+	if currentCost != 0 {
+		t.Fatalf("expected current row cost to remain 0, got %d", currentCost)
+	}
+	if currentDirty != 0 {
+		t.Fatalf("expected current row to remain clean, got %d", currentDirty)
+	}
+}
+
 func newTestHourlyUsageRow(bucketStartHourUTC int64, totalTokens int64) HourlyUsageRow {
 	return HourlyUsageRow{
 		ProjectID:             "project-1",

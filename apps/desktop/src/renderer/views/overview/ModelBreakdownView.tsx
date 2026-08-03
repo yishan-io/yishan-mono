@@ -3,6 +3,13 @@ import { useTranslation } from "react-i18next";
 import { formatTokens } from "../../helpers/formatters";
 import { overviewStore } from "../../store/overviewStore";
 
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 const thSx = {
   px: 1.5,
   py: 0.75,
@@ -99,6 +106,9 @@ export function ModelBreakdownView() {
                 {t("overview.modelBreakdown.output")}
               </Box>
               <Box component="th" sx={thNumericSx}>
+                {t("overview.modelBreakdown.cost")}
+              </Box>
+              <Box component="th" sx={thNumericSx}>
                 {t("overview.modelBreakdown.percentage")}
               </Box>
             </Box>
@@ -124,6 +134,9 @@ export function ModelBreakdownView() {
                 </Box>
                 <Box component="td" sx={tdNumericSx}>
                   {formatTokens(model.outputTokens)}
+                </Box>
+                <Box component="td" sx={tdNumericSx}>
+                  {usdFormatter.format(model.totalCostUsd)}
                 </Box>
                 <Box component="td" sx={tdNumericSx}>
                   {model.percentage.toFixed(1)}%

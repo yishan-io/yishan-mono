@@ -6,6 +6,13 @@ import type { OverviewTimeRange } from "../../api/overviewApi.types";
 import { formatTokens } from "../../helpers/formatters";
 import { overviewStore } from "../../store/overviewStore";
 
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 type TokenUnit = "B" | "M" | "K" | "raw";
 
 function resolveUnit(total: number): TokenUnit {
@@ -54,16 +61,18 @@ export function TokenUsageChartView() {
   const timeRange = overviewStore((state) => state.timeRange);
   const grandTotal = overviewStore((state) => state.grandTotal);
   const cachedTotal = overviewStore((state) => state.cachedTotal);
+  const cachedWriteTotal = overviewStore((state) => state.cachedWriteTotal);
   const uncachedTotal = overviewStore((state) => state.uncachedTotal);
   const turnTotal = overviewStore((state) => state.turnTotal);
   const toolCallTotal = overviewStore((state) => state.toolCallTotal);
+  const totalCostUsd = overviewStore((state) => state.totalCostUsd);
 
   const chartData = useMemo(() => {
     const dataByDate = new Map<string, { cachedTokens: number; uncachedTokens: number }>();
     for (const item of series) {
       const date = parseBucketDate(item.bucketStartUtc);
-      const cached = item.cachedInputTokens;
-      const uncached = Math.max(0, item.totalTokens - item.cachedInputTokens);
+      const cached = item.cachedInputTokens + item.cachedWriteTokens;
+      const uncached = Math.max(0, item.totalTokens - item.cachedInputTokens - item.cachedWriteTokens);
       dataByDate.set(date, { cachedTokens: cached, uncachedTokens: uncached });
     }
 
@@ -81,7 +90,8 @@ export function TokenUsageChartView() {
   }, [series, timeRange]);
 
   const statUnit = resolveUnit(grandTotal);
-  const cachedPercentage = grandTotal > 0 ? ((cachedTotal / grandTotal) * 100).toFixed(1) : "0";
+  const cachedDisplayTotal = cachedTotal + cachedWriteTotal;
+  const cachedPercentage = grandTotal > 0 ? ((cachedDisplayTotal / grandTotal) * 100).toFixed(1) : "0";
 
   if (loadState === "loading" || loadState === "idle") {
     return (
@@ -188,7 +198,7 @@ export function TokenUsageChartView() {
             {t("overview.tokenUsage.cached")}
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace", color: "#4CAF50" }}>
-            {formatTokensInUnit(cachedTotal, statUnit)} ({cachedPercentage}%)
+            {formatTokensInUnit(cachedDisplayTotal, statUnit)} ({cachedPercentage}%)
           </Typography>
         </Box>
         <Box>
@@ -228,6 +238,19 @@ export function TokenUsageChartView() {
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
             {toolCallTotal}
+          </Typography>
+        </Box>
+        <Box>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
+            {t("overview.tokenUsage.cost")}
+          </Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
+            {usdFormatter.format(totalCostUsd)}
           </Typography>
         </Box>
       </Box>

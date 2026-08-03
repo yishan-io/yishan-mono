@@ -8,8 +8,17 @@ type AttributionConfidence string
 // ScannerSourceKind identifies the scanner's source format.
 type ScannerSourceKind string
 
+// CostSource identifies whether a row's cost was direct, estimated, or unknown.
+type CostSource string
+
 // HourlyUsageRetentionWindow is how long clean hourly usage rows are retained locally.
 const HourlyUsageRetentionWindow = 90 * 24 * time.Hour
+
+const (
+	CostSourceUnknown   CostSource = "unknown"
+	CostSourceEstimated CostSource = "estimated"
+	CostSourceDirect    CostSource = "direct"
+)
 
 // HourlyUsageRow is one token-usage aggregate for a workspace, model, agent, and UTC hour.
 type HourlyUsageRow struct {
@@ -27,6 +36,8 @@ type HourlyUsageRow struct {
 	CachedWriteTokens     int64
 	ReasoningTokens       int64
 	TotalTokens           int64
+	TotalCostMicrosUSD    int64
+	CostSource            CostSource
 	EventCount            int64
 	SessionCount          int64
 	TurnCount             int64

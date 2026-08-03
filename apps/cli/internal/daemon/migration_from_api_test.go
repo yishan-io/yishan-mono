@@ -25,7 +25,7 @@ func TestMigrationFromAPI_UsesOrganizationExportCSVEndToEnd(t *testing.T) {
 			_, _ = w.Write([]byte("id,organizationId,projectId,userId,nodeId,kind,status,branch,sourceBranch,localPath,createdAt,updatedAt\nworkspace-1,org-1,project-1,user-1,node-1,primary,active,,main,/tmp/core,2026-07-31T10:00:00.000Z,2026-07-31T11:00:00.000Z\nworkspace-2,org-1,project-1,user-1,node-1,worktree,closed,feature/export-migration,main,/tmp/core-export-migration,2026-07-31T12:00:00.000Z,2026-07-31T13:00:00.000Z\n"))
 		case r.Method == http.MethodGet && r.URL.Path == "/orgs/org-1/export" && r.URL.Query().Get("type") == "usage":
 			w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-			_, _ = w.Write([]byte("id,organizationId,projectId,workspaceId,workspacePath,agentKind,model,modelNormalized,bucketStartHourUtc,inputTokens,outputTokens,cachedInputTokens,cachedWriteTokens,reasoningTokens,totalTokens,eventCount,sessionCount,turnCount,toolCallCount,attributionConfidence,ingestedAt,runId,createdAt,updatedAt\nusage-1,org-1,project-1,workspace-1,/tmp/core,opencode,gpt-5,gpt-5,2026-07-31T10:00:00.000Z,10,5,2,1,3,21,4,2,6,7,exact,2026-07-31T10:30:00.000Z,run-1,2026-07-31T10:31:00.000Z,2026-07-31T10:32:00.000Z\nusage-2,org-1,project-1,workspace-2,/tmp/core-export-migration,opencode,gpt-5,gpt-5,2026-07-31T11:00:00.000Z,8,4,1,0,2,15,3,1,4,5,exact,2026-07-31T11:30:00.000Z,run-2,2026-07-31T11:31:00.000Z,2026-07-31T11:32:00.000Z\n"))
+			_, _ = w.Write([]byte("id,organizationId,projectId,workspaceId,workspacePath,agentKind,model,modelNormalized,bucketStartHourUtc,inputTokens,outputTokens,cachedInputTokens,cachedWriteTokens,reasoningTokens,totalTokens,totalCostMicrosUsd,costSource,eventCount,sessionCount,turnCount,toolCallCount,attributionConfidence,ingestedAt,runId,createdAt,updatedAt\nusage-1,org-1,project-1,workspace-1,/tmp/core,opencode,gpt-5,gpt-5,2026-07-31T10:00:00.000Z,10,5,2,1,3,21,123,estimated,4,2,6,7,exact,2026-07-31T10:30:00.000Z,run-1,2026-07-31T10:31:00.000Z,2026-07-31T10:32:00.000Z\nusage-2,org-1,project-1,workspace-2,/tmp/core-export-migration,opencode,gpt-5,gpt-5,2026-07-31T11:00:00.000Z,8,4,1,0,2,15,99,direct,3,1,4,5,exact,2026-07-31T11:30:00.000Z,run-2,2026-07-31T11:31:00.000Z,2026-07-31T11:32:00.000Z\n"))
 		case r.Method == http.MethodGet && r.URL.Path == "/orgs/org-1/token-usage/hourly":
 			t.Fatalf("unexpected old usage migration request: %s", r.URL.String())
 		default:
@@ -88,6 +88,35 @@ func TestMigrationFromAPI_UsesOrganizationExportCSVEndToEnd(t *testing.T) {
 	}
 	if usageState.TotalRows != 2 || usageState.DirtyRows != 0 {
 		t.Fatalf("expected two clean imported usage rows, got %#v", usageState)
+	}
+
+	rows, err := database.Query(`SELECT total_cost_micros_usd, cost_source FROM token_usage_hourly ORDER BY workspace_id`)
+	if err != nil {
+		t.Fatalf("query imported usage rows: %v", err)
+	}
+	defer rows.Close()
+	var importedCosts []struct {
+		costMicros int64
+		costSource string
+	}
+	for rows.Next() {
+		var item struct {
+			costMicros int64
+			costSource string
+		}
+		if err := rows.Scan(&item.costMicros, &item.costSource); err != nil {
+			t.Fatalf("scan imported usage row: %v", err)
+		}
+		importedCosts = append(importedCosts, item)
+	}
+	if len(importedCosts) != 2 {
+		t.Fatalf("expected 2 imported usage rows, got %#v", importedCosts)
+	}
+	if importedCosts[0].costMicros != 123 || importedCosts[0].costSource != "estimated" {
+		t.Fatalf("expected first imported row to retain cost/provenance, got %#v", importedCosts[0])
+	}
+	if importedCosts[1].costMicros != 99 || importedCosts[1].costSource != "direct" {
+		t.Fatalf("expected second imported row to retain cost/provenance, got %#v", importedCosts[1])
 	}
 
 	projectsMigrated, err := localdb.MetadataKeyExists(context.Background(), database, localdb.MigrationProjectsAPIExportV1CompletedKey)

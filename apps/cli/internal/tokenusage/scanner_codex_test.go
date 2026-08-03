@@ -126,9 +126,10 @@ func TestScanCodexSessionFile(t *testing.T) {
 	}
 
 	input := ScanInput{
-		RunID:      "test-run",
-		IngestedAt: time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
-		Worktrees:  nil,
+		RunID:               "test-run",
+		IngestedAt:          time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
+		Worktrees:           nil,
+		ModelPricingCatalog: testModelPricingCatalog(),
 	}
 
 	states := make(map[string]*codexSessionState)
@@ -143,12 +144,16 @@ func TestScanCodexSessionFile(t *testing.T) {
 		t.Fatal("expected at least one bucket, got 0")
 	}
 
-	var totalTokens int64
+	var totalTokens, totalCostMicros int64
 	for _, acc := range buckets {
 		totalTokens += acc.TotalTokens
+		totalCostMicros += acc.TotalCostMicrosUSD
 	}
 	if totalTokens != 2100 {
 		t.Fatalf("expected total tokens 2100 (1050 first event + 1050 delta from second), got %d", totalTokens)
+	}
+	if totalCostMicros != 1_770 {
+		t.Fatalf("expected total estimated cost 1770 micros, got %d", totalCostMicros)
 	}
 }
 
@@ -162,10 +167,11 @@ func TestScanCodexHourlyUsageIntegration(t *testing.T) {
 	}
 
 	input := ScanInput{
-		RunID:       "test-run",
-		IngestedAt:  time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
-		SessionRoot: tmpDir,
-		Worktrees:   nil,
+		RunID:               "test-run",
+		IngestedAt:          time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
+		SessionRoot:         tmpDir,
+		Worktrees:           nil,
+		ModelPricingCatalog: testModelPricingCatalog(),
 	}
 
 	rows, err := ScanCodexHourlyUsage(context.Background(), input)
@@ -190,6 +196,9 @@ func TestScanCodexHourlyUsageIntegration(t *testing.T) {
 		if row.Model != "gpt-5.4-mini" {
 			t.Fatalf("expected model gpt-5.4-mini, got %q", row.Model)
 		}
+		if row.TotalCostMicrosUSD != 1_770 {
+			t.Fatalf("expected estimated cost 1770 micros, got %d", row.TotalCostMicrosUSD)
+		}
 	}
 }
 
@@ -206,9 +215,10 @@ func TestScanCodexSessionFileModelFallback(t *testing.T) {
 	}
 
 	input := ScanInput{
-		RunID:      "test-run",
-		IngestedAt: time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
-		Worktrees:  nil,
+		RunID:               "test-run",
+		IngestedAt:          time.Date(2026, 6, 8, 10, 0, 0, 0, time.UTC).UnixMilli(),
+		Worktrees:           nil,
+		ModelPricingCatalog: testModelPricingCatalog(),
 	}
 
 	buckets := make(map[hourlyKey]*hourlyAccumulator)
@@ -233,7 +243,7 @@ func TestScanCodexCountsTurnsToolsAndSkills(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir}
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, ModelPricingCatalog: testModelPricingCatalog()}
 	rows, err := ScanCodexHourlyUsage(context.Background(), input)
 	if err != nil {
 		t.Fatalf("scan hourly usage: %v", err)

@@ -18,7 +18,8 @@
       "uncached": "\u672a\u7f13\u5b58",
       "total": "\u5408\u8ba1",
       "turns": "\u8f6e\u6b21",
-      "toolCalls": "\u5de5\u5177\u8c03\u7528"
+      "toolCalls": "\u5de5\u5177\u8c03\u7528",
+      "cost": "\u6210\u672c"
     },
     "agentUsage": {
       "title": "\u667a\u80fd\u4f53\u7528\u91cf",
@@ -36,6 +37,7 @@
       "totalTokens": "\u603b\u4ee4\u724c\u6570",
       "input": "\u8f93\u5165",
       "output": "\u8f93\u51fa",
+      "cost": "\u6210\u672c",
       "percentage": "%"
     },
     "workspaceInsights": {
@@ -53,6 +55,7 @@
       "branch": "\u5206\u652f",
       "lifetime": "\u751f\u547d\u5468\u671f",
       "tokens": "\u4ee4\u724c\u6570",
+      "cost": "\u6210\u672c",
       "primaryCount": "\u4e3b\u5de5\u4f5c\u533a\u6570\u91cf",
       "tokenUsage": "\u4ee4\u724c\u4f7f\u7528\u91cf",
       "topPrimary": "\u6838\u5fc3\u4e3b\u5de5\u4f5c\u533a",

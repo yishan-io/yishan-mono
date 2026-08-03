@@ -18,7 +18,8 @@
       "uncached": "Uncached",
       "total": "Total",
       "turns": "Turns",
-      "toolCalls": "Tool Calls"
+      "toolCalls": "Tool Calls",
+      "cost": "Cost"
     },
     "agentUsage": {
       "title": "Agent Usage",
@@ -36,6 +37,7 @@
       "totalTokens": "Total Tokens",
       "input": "Input",
       "output": "Output",
+      "cost": "Cost",
       "percentage": "%"
     },
     "workspaceInsights": {
@@ -53,6 +55,7 @@
       "branch": "Branch",
       "lifetime": "Lifetime",
       "tokens": "Tokens",
+      "cost": "Cost",
       "primaryCount": "Primary Workspaces",
       "tokenUsage": "Token Usage",
       "topPrimary": "Top Primary Workspaces",

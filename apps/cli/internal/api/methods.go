@@ -242,6 +242,8 @@ type TokenUsageHourlyRowOutput struct {
 	CachedWriteTokens     int64  `json:"cachedWriteTokens"`
 	ReasoningTokens       int64  `json:"reasoningTokens"`
 	TotalTokens           int64  `json:"totalTokens"`
+	TotalCostMicrosUSD    int64  `json:"totalCostMicrosUsd"`
+	CostSource            string `json:"costSource"`
 	EventCount            int64  `json:"eventCount"`
 	SessionCount          int64  `json:"sessionCount"`
 	TurnCount             int64  `json:"turnCount"`
@@ -297,6 +299,8 @@ type TokenUsageHourlyRowInput struct {
 	CachedWriteTokens     int64  `json:"cachedWriteTokens"`
 	ReasoningTokens       int64  `json:"reasoningTokens"`
 	TotalTokens           int64  `json:"totalTokens"`
+	TotalCostMicrosUSD    int64  `json:"totalCostMicrosUsd"`
+	CostSource            string `json:"costSource"`
 	EventCount            int64  `json:"eventCount"`
 	SessionCount          int64  `json:"sessionCount"`
 	TurnCount             int64  `json:"turnCount"`

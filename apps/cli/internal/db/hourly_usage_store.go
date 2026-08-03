@@ -95,7 +95,7 @@ func (s *HourlyUsageStore) ReplaceAgentHourlyRows(ctx context.Context, agentKind
 func (s *HourlyUsageStore) ListDirtyHourlyRows(ctx context.Context) ([]HourlyUsageRow, error) {
 	rows, err := s.database.QueryContext(ctx, `SELECT project_id, workspace_id, workspace_path, organization_id,
 		agent_kind, model, model_normalized, bucket_start_hour_utc, input_tokens, output_tokens,
-		cached_input_tokens, cached_write_tokens, reasoning_tokens, total_tokens, event_count,
+		cached_input_tokens, cached_write_tokens, reasoning_tokens, total_tokens, total_cost_micros_usd, cost_source, event_count,
 		session_count, turn_count, tool_call_count, attribution_confidence, scanner_source_kind,
 		scanner_source_id, ingested_at, run_id, updated_at, is_dirty, last_synced_at
 		FROM token_usage_hourly WHERE is_dirty = 1 ORDER BY bucket_start_hour_utc, project_id, workspace_id, agent_kind, model_normalized`)
@@ -122,11 +122,11 @@ func (s *HourlyUsageStore) MarkHourlyRowsSynced(ctx context.Context, rows []Hour
 			WHERE project_id = ? AND workspace_id = ? AND agent_kind = ? AND model_normalized = ?
 			AND bucket_start_hour_utc = ? AND updated_at = ? AND input_tokens = ? AND output_tokens = ?
 			AND cached_input_tokens = ? AND cached_write_tokens = ? AND reasoning_tokens = ? AND total_tokens = ?
-			AND event_count = ? AND session_count = ? AND turn_count = ? AND tool_call_count = ?
+			AND total_cost_micros_usd = ? AND cost_source = ? AND event_count = ? AND session_count = ? AND turn_count = ? AND tool_call_count = ?
 			AND attribution_confidence = ?`, syncedAt, row.ProjectID, row.WorkspaceID, row.AgentKind,
 			row.ModelNormalized, row.BucketStartHourUTC, row.UpdatedAt, row.InputTokens, row.OutputTokens,
-			row.CachedInputTokens, row.CachedWriteTokens, row.ReasoningTokens, row.TotalTokens, row.EventCount,
-			row.SessionCount, row.TurnCount, row.ToolCallCount, row.AttributionConfidence)
+			row.CachedInputTokens, row.CachedWriteTokens, row.ReasoningTokens, row.TotalTokens, row.TotalCostMicrosUSD,
+			normalizedCostSource(row.CostSource), row.EventCount, row.SessionCount, row.TurnCount, row.ToolCallCount, row.AttributionConfidence)
 		if updateErr != nil {
 			return fmt.Errorf("mark usage row synced: %w", updateErr)
 		}
@@ -172,7 +172,7 @@ func (s *HourlyUsageStore) GetHourlyUsageSyncState(ctx context.Context) (HourlyU
 func listAgentHourlyRows(ctx context.Context, tx *sql.Tx, agentKind string) ([]HourlyUsageRow, error) {
 	rows, err := tx.QueryContext(ctx, `SELECT project_id, workspace_id, workspace_path, organization_id,
 		agent_kind, model, model_normalized, bucket_start_hour_utc, input_tokens, output_tokens,
-		cached_input_tokens, cached_write_tokens, reasoning_tokens, total_tokens, event_count,
+		cached_input_tokens, cached_write_tokens, reasoning_tokens, total_tokens, total_cost_micros_usd, cost_source, event_count,
 		session_count, turn_count, tool_call_count, attribution_confidence, scanner_source_kind,
 		scanner_source_id, ingested_at, run_id, updated_at, is_dirty, last_synced_at
 		FROM token_usage_hourly WHERE agent_kind = ?`, agentKind)
@@ -191,9 +191,9 @@ func scanHourlyUsageRows(rows *sql.Rows) ([]HourlyUsageRow, error) {
 		if err := rows.Scan(&row.ProjectID, &row.WorkspaceID, &row.WorkspacePath, &row.OrganizationID,
 			&row.AgentKind, &row.Model, &row.ModelNormalized, &row.BucketStartHourUTC, &row.InputTokens,
 			&row.OutputTokens, &row.CachedInputTokens, &row.CachedWriteTokens, &row.ReasoningTokens,
-			&row.TotalTokens, &row.EventCount, &row.SessionCount, &row.TurnCount, &row.ToolCallCount,
-			&row.AttributionConfidence, &row.ScannerSourceKind, &row.ScannerSourceID, &row.IngestedAt,
-			&row.RunID, &row.UpdatedAt, &isDirty, &row.LastSyncedAt); err != nil {
+			&row.TotalTokens, &row.TotalCostMicrosUSD, &row.CostSource, &row.EventCount, &row.SessionCount, &row.TurnCount,
+			&row.ToolCallCount, &row.AttributionConfidence, &row.ScannerSourceKind, &row.ScannerSourceID,
+			&row.IngestedAt, &row.RunID, &row.UpdatedAt, &isDirty, &row.LastSyncedAt); err != nil {
 			return nil, fmt.Errorf("scan usage row: %w", err)
 		}
 		row.Dirty = isDirty != 0
@@ -209,27 +209,31 @@ func scanHourlyUsageRows(rows *sql.Rows) ([]HourlyUsageRow, error) {
 }
 
 func upsertHourlyUsageRow(ctx context.Context, tx *sql.Tx, row HourlyUsageRow) error {
+	if row.CostSource == "" {
+		row.CostSource = CostSourceUnknown
+	}
 	_, err := tx.ExecContext(ctx, `INSERT INTO token_usage_hourly (
 		project_id, workspace_id, workspace_path, organization_id, agent_kind, model, model_normalized,
 		bucket_start_hour_utc, input_tokens, output_tokens, cached_input_tokens, cached_write_tokens,
-		reasoning_tokens, total_tokens, event_count, session_count, turn_count, tool_call_count,
-		attribution_confidence, scanner_source_kind, scanner_source_id, ingested_at, run_id, updated_at,
-		is_dirty, last_synced_at
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		reasoning_tokens, total_tokens, total_cost_micros_usd, cost_source, event_count, session_count, turn_count,
+		tool_call_count, attribution_confidence, scanner_source_kind, scanner_source_id, ingested_at,
+		run_id, updated_at, is_dirty, last_synced_at
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(project_id, workspace_id, agent_kind, model_normalized, bucket_start_hour_utc) DO UPDATE SET
 		workspace_path = excluded.workspace_path, organization_id = excluded.organization_id, model = excluded.model,
 		input_tokens = excluded.input_tokens, output_tokens = excluded.output_tokens,
 		cached_input_tokens = excluded.cached_input_tokens, cached_write_tokens = excluded.cached_write_tokens,
-		reasoning_tokens = excluded.reasoning_tokens, total_tokens = excluded.total_tokens, event_count = excluded.event_count,
+		reasoning_tokens = excluded.reasoning_tokens, total_tokens = excluded.total_tokens,
+		total_cost_micros_usd = excluded.total_cost_micros_usd, cost_source = excluded.cost_source, event_count = excluded.event_count,
 		session_count = excluded.session_count, turn_count = excluded.turn_count, tool_call_count = excluded.tool_call_count,
 		attribution_confidence = excluded.attribution_confidence, scanner_source_kind = excluded.scanner_source_kind,
 		scanner_source_id = excluded.scanner_source_id, ingested_at = excluded.ingested_at, run_id = excluded.run_id,
 		updated_at = excluded.updated_at, is_dirty = excluded.is_dirty, last_synced_at = excluded.last_synced_at`,
 		row.ProjectID, row.WorkspaceID, row.WorkspacePath, row.OrganizationID, row.AgentKind, row.Model,
 		row.ModelNormalized, row.BucketStartHourUTC, row.InputTokens, row.OutputTokens, row.CachedInputTokens,
-		row.CachedWriteTokens, row.ReasoningTokens, row.TotalTokens, row.EventCount, row.SessionCount,
-		row.TurnCount, row.ToolCallCount, row.AttributionConfidence, row.ScannerSourceKind, row.ScannerSourceID,
-		row.IngestedAt, row.RunID, row.UpdatedAt, boolToInteger(row.Dirty), row.LastSyncedAt)
+		row.CachedWriteTokens, row.ReasoningTokens, row.TotalTokens, row.TotalCostMicrosUSD, normalizedCostSource(row.CostSource), row.EventCount,
+		row.SessionCount, row.TurnCount, row.ToolCallCount, row.AttributionConfidence, row.ScannerSourceKind,
+		row.ScannerSourceID, row.IngestedAt, row.RunID, row.UpdatedAt, boolToInteger(row.Dirty), row.LastSyncedAt)
 	if err != nil {
 		return fmt.Errorf("upsert usage row: %w", err)
 	}
