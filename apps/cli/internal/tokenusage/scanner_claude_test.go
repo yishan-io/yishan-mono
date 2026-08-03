@@ -94,9 +94,10 @@ func TestScanClaudeTranscriptFile(t *testing.T) {
 	}
 
 	input := ScanInput{
-		RunID:      "test-run",
-		IngestedAt: time.Date(2026, 5, 26, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		Worktrees:  nil,
+		RunID:               "test-run",
+		IngestedAt:          time.Date(2026, 5, 26, 0, 0, 0, 0, time.UTC).UnixMilli(),
+		Worktrees:           nil,
+		ModelPricingCatalog: testModelPricingCatalog(),
 	}
 
 	buckets := make(map[hourlyKey]*hourlyAccumulator)
@@ -109,13 +110,14 @@ func TestScanClaudeTranscriptFile(t *testing.T) {
 		t.Fatal("expected at least one bucket")
 	}
 
-	var totalInput, totalOutput, totalCacheRead, totalCacheWrite, totalTokens int64
+	var totalInput, totalOutput, totalCacheRead, totalCacheWrite, totalTokens, totalCostMicros int64
 	for _, acc := range buckets {
 		totalInput += acc.InputTokens
 		totalOutput += acc.OutputTokens
 		totalCacheRead += acc.CachedInputTokens
 		totalCacheWrite += acc.CachedWriteTokens
 		totalTokens += acc.TotalTokens
+		totalCostMicros += acc.TotalCostMicrosUSD
 	}
 
 	if totalInput != 174698 {
@@ -133,6 +135,9 @@ func TestScanClaudeTranscriptFile(t *testing.T) {
 	if totalTokens != 175367 {
 		t.Fatalf("expected total tokens 175367, got %d", totalTokens)
 	}
+	if totalCostMicros != 278_341 {
+		t.Fatalf("expected total estimated cost 278341 micros, got %d", totalCostMicros)
+	}
 }
 
 func TestScanClaudeHourlyUsageIntegration(t *testing.T) {
@@ -145,10 +150,11 @@ func TestScanClaudeHourlyUsageIntegration(t *testing.T) {
 	}
 
 	input := ScanInput{
-		RunID:       "test-run",
-		IngestedAt:  time.Date(2026, 5, 26, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		SessionRoot: tmpDir,
-		Worktrees:   nil,
+		RunID:               "test-run",
+		IngestedAt:          time.Date(2026, 5, 26, 0, 0, 0, 0, time.UTC).UnixMilli(),
+		SessionRoot:         tmpDir,
+		Worktrees:           nil,
+		ModelPricingCatalog: testModelPricingCatalog(),
 	}
 
 	rows, err := ScanClaudeHourlyUsage(context.Background(), input)
@@ -190,7 +196,7 @@ func TestScanClaudeCountsTurnsToolsAndSkills(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir}
+	input := ScanInput{RunID: "test-run", IngestedAt: time.Now().UnixMilli(), SessionRoot: tmpDir, ModelPricingCatalog: testModelPricingCatalog()}
 	rows, err := ScanClaudeHourlyUsage(context.Background(), input)
 	if err != nil {
 		t.Fatalf("scan hourly: %v", err)

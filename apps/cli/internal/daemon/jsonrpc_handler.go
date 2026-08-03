@@ -143,6 +143,7 @@ func (h *JSONRPCHandler) SetLocalDatabase(database *sql.DB) {
 		h.manager,
 		h.runtime,
 		localdb.NewHourlyUsageStore(database),
+		filepath.Dir(h.settingsPath),
 	)
 }
 

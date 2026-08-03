@@ -45,6 +45,8 @@ function buildRow(overrides?: Partial<Parameters<TokenUsageService["upsertHourly
     cachedWriteTokens: 2,
     reasoningTokens: 1,
     totalTokens: 21,
+    totalCostMicrosUsd: 123,
+    costSource: "estimated" as const,
     eventCount: 1,
     sessionCount: 1,
     turnCount: 1,

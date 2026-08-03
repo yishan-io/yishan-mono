@@ -159,7 +159,7 @@ export class OverviewService {
     const cachedTotal = series.reduce((acc, item) => acc + item.cachedInputTokens, 0);
     const cachedWriteTotal = series.reduce((acc, item) => acc + item.cachedWriteTokens, 0);
     const grandTotal = series.reduce((acc, item) => acc + item.totalTokens, 0);
-    const uncachedTotal = Math.max(0, grandTotal - cachedTotal);
+    const uncachedTotal = Math.max(0, grandTotal - cachedTotal - cachedWriteTotal);
     const turnTotal = series.reduce((acc, item) => acc + item.turnCount, 0);
     const toolCallTotal = series.reduce((acc, item) => acc + item.toolCallCount, 0);
 

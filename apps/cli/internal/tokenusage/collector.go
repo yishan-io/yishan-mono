@@ -2,6 +2,7 @@ package tokenusage
 
 import (
 	"context"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"yishan/apps/cli/internal/agentkind"
 	"yishan/apps/cli/internal/api"
+	localdb "yishan/apps/cli/internal/db"
 	cliruntime "yishan/apps/cli/internal/runtime"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -32,6 +34,7 @@ type Collector struct {
 	manager              *workspace.Manager
 	runtime              *cliruntime.Runtime
 	repo                 HourlyUsageRepository
+	pricingCatalog       *modelPricingCatalog
 	timers               map[string]*time.Timer
 	inFlight             map[string]bool
 	needsRerun           map[string]bool
@@ -56,7 +59,7 @@ func NewCollector(manager *workspace.Manager, runtime *cliruntime.Runtime, confi
 	if err != nil {
 		return nil, err
 	}
-	return NewCollectorWithRepository(manager, runtime, repo), nil
+	return NewCollectorWithRepository(manager, runtime, repo, filepath.Dir(configPath)), nil
 }
 
 // NewCollectorWithRepository creates a collector with the supplied durable usage repository.
@@ -64,11 +67,17 @@ func NewCollectorWithRepository(
 	manager *workspace.Manager,
 	runtime *cliruntime.Runtime,
 	repo HourlyUsageRepository,
+	profileDir string,
 ) *Collector {
+	cachePath := ""
+	if strings.TrimSpace(profileDir) != "" {
+		cachePath = filepath.Join(profileDir, modelPricingCacheFileName)
+	}
 	return &Collector{
 		manager:              manager,
 		runtime:              runtime,
 		repo:                 repo,
+		pricingCatalog:       newModelPricingCatalog(cachePath, fetchPublicModelPrices),
 		timers:               make(map[string]*time.Timer),
 		inFlight:             make(map[string]bool),
 		needsRerun:           make(map[string]bool),
@@ -78,6 +87,13 @@ func NewCollectorWithRepository(
 }
 
 func (c *Collector) StartStartupScan() {
+	c.ensureHistoricalCostBackfillStarted()
+	if c.pricingCatalog != nil {
+		c.pricingCatalog.refreshIfStaleAsync(func() {
+			c.maybeBackfillHistoricalCost("pricing-refresh", true)
+		})
+	}
+	c.maybeBackfillHistoricalCost("startup", false)
 	c.startSyncLoop()
 	c.startHourRolloverLoop()
 	timer := time.AfterFunc(tokenUsageStartupDelay, func() {
@@ -203,10 +219,11 @@ func (c *Collector) scanAgent(agentKind string) ([]HourlyUsageRow, error) {
 
 func (c *Collector) scanAgentSince(agentKind string, scanSinceUnixMilli int64) ([]HourlyUsageRow, error) {
 	scanInput := ScanInput{
-		RunID:              "daemon-" + agentKind,
-		IngestedAt:         time.Now().UnixMilli(),
-		ScanSinceUnixMilli: scanSinceUnixMilli,
-		Worktrees:          buildTokenUsageWorktreeRefs(c.manager.List()),
+		RunID:               "daemon-" + agentKind,
+		IngestedAt:          time.Now().UnixMilli(),
+		ScanSinceUnixMilli:  scanSinceUnixMilli,
+		Worktrees:           buildTokenUsageWorktreeRefs(c.manager.List()),
+		ModelPricingCatalog: c.pricingCatalog,
 	}
 	switch agentKind {
 	case agentkind.Codex:
@@ -337,6 +354,12 @@ func (c *Collector) startSyncLoop() {
 }
 
 func (c *Collector) onPeriodicSync() {
+	if c.pricingCatalog != nil {
+		c.pricingCatalog.refreshIfStaleAsync(func() {
+			c.maybeBackfillHistoricalCost("pricing-refresh", true)
+		})
+	}
+	c.maybeBackfillHistoricalCost("periodic", false)
 	c.syncPending("periodic")
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -484,6 +507,8 @@ func (c *Collector) syncRowsForOrg(orgID string, rows []HourlyUsageRow) error {
 			CachedWriteTokens:     row.CachedWriteTokens,
 			ReasoningTokens:       row.ReasoningTokens,
 			TotalTokens:           row.TotalTokens,
+			TotalCostMicrosUSD:    row.TotalCostMicrosUSD,
+			CostSource:            string(normalizedUsageCostSource(row.CostSource)),
 			EventCount:            row.EventCount,
 			SessionCount:          row.SessionCount,
 			TurnCount:             row.TurnCount,
@@ -507,6 +532,76 @@ func (c *Collector) syncRowsForOrg(orgID string, rows []HourlyUsageRow) error {
 		}
 	}
 	return nil
+}
+
+func (c *Collector) ensureHistoricalCostBackfillStarted() {
+	store, ok := c.repo.(*localdb.HourlyUsageStore)
+	if !ok {
+		return
+	}
+	if _, err := store.EnsureCostBackfillStartedAt(context.Background(), time.Now().UTC().UnixMilli()); err != nil {
+		log.Warn().Err(err).Msg("failed to initialize token usage historical cost backfill state")
+	}
+}
+
+func (c *Collector) maybeBackfillHistoricalCost(source string, force bool) {
+	store, ok := c.repo.(*localdb.HourlyUsageStore)
+	if !ok || c.pricingCatalog == nil || !c.pricingCatalog.hasPrices() {
+		return
+	}
+	completed, err := store.CostBackfillCompleted(context.Background())
+	if err != nil {
+		log.Warn().Err(err).Str("source", source).Msg("failed to read token usage historical cost backfill status")
+		return
+	}
+	if completed && !force {
+		return
+	}
+	startedAt, err := store.EnsureCostBackfillStartedAt(context.Background(), time.Now().UTC().UnixMilli())
+	if err != nil {
+		log.Warn().Err(err).Str("source", source).Msg("failed to read token usage historical cost backfill cutoff")
+		return
+	}
+	updatedCount, err := store.BackfillEstimatedCost(context.Background(), startedAt, func(row localdb.HourlyUsageRow) int64 {
+		uncachedInputTokens := reconstructedUncachedInputTokens(row)
+		return estimateModelCostMicros(
+			c.pricingCatalog,
+			row.Model,
+			uncachedInputTokens,
+			row.OutputTokens,
+			row.CachedInputTokens,
+			row.CachedWriteTokens,
+			row.ReasoningTokens,
+		)
+	}, localdb.CostBackfillOptions{RecomputeEstimated: force})
+	if err != nil {
+		log.Warn().Err(err).Str("source", source).Msg("token usage historical cost backfill failed")
+		return
+	}
+	if err := store.MarkCostBackfillCompleted(context.Background(), time.Now().UTC().UnixMilli()); err != nil {
+		log.Warn().Err(err).Str("source", source).Msg("failed to mark token usage historical cost backfill complete")
+		return
+	}
+	if updatedCount > 0 {
+		log.Info().Str("source", source).Int("rows", updatedCount).Msg("token usage historical cost backfill completed")
+		c.syncPending("cost-backfill")
+	}
+}
+
+func reconstructedUncachedInputTokens(row localdb.HourlyUsageRow) int64 {
+	switch strings.ToLower(strings.TrimSpace(row.AgentKind)) {
+	case "pi", "opencode", "codex", "claude":
+		uncachedInputTokens := row.InputTokens - row.CachedInputTokens - row.CachedWriteTokens
+		if uncachedInputTokens < 0 {
+			return 0
+		}
+		return uncachedInputTokens
+	default:
+		if row.InputTokens < 0 {
+			return 0
+		}
+		return row.InputTokens
+	}
 }
 
 func formatTokenUsageSyncTime(unixMillis int64) string {

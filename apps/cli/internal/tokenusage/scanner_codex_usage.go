@@ -20,16 +20,18 @@ type hourlyKey struct {
 }
 
 type hourlyAccumulator struct {
-	InputTokens       int64
-	OutputTokens      int64
-	CachedInputTokens int64
-	CachedWriteTokens int64
-	ReasoningTokens   int64
-	TotalTokens       int64
-	EventCount        int64
-	TurnCount         int64
-	ToolCallCount     int64
-	Sessions          map[string]struct{}
+	InputTokens        int64
+	OutputTokens       int64
+	CachedInputTokens  int64
+	CachedWriteTokens  int64
+	ReasoningTokens    int64
+	TotalTokens        int64
+	TotalCostMicrosUSD int64
+	CostSource         CostSource
+	EventCount         int64
+	TurnCount          int64
+	ToolCallCount      int64
+	Sessions           map[string]struct{}
 }
 
 func applyCodexEvent(
@@ -83,12 +85,14 @@ func computeDeltaUsage(current codexUsage, previous *codexUsage) codexUsage {
 		return current
 	}
 	return codexUsage{
-		InputTokens:       maxInt64(current.InputTokens-previous.InputTokens, 0),
-		OutputTokens:      maxInt64(current.OutputTokens-previous.OutputTokens, 0),
-		CachedInputTokens: maxInt64(current.CachedInputTokens-previous.CachedInputTokens, 0),
-		CachedWriteTokens: maxInt64(current.CachedWriteTokens-previous.CachedWriteTokens, 0),
-		ReasoningTokens:   maxInt64(current.ReasoningTokens-previous.ReasoningTokens, 0),
-		TotalTokens:       maxInt64(current.TotalTokens-previous.TotalTokens, 0),
+		InputTokens:        maxInt64(current.InputTokens-previous.InputTokens, 0),
+		OutputTokens:       maxInt64(current.OutputTokens-previous.OutputTokens, 0),
+		CachedInputTokens:  maxInt64(current.CachedInputTokens-previous.CachedInputTokens, 0),
+		CachedWriteTokens:  maxInt64(current.CachedWriteTokens-previous.CachedWriteTokens, 0),
+		ReasoningTokens:    maxInt64(current.ReasoningTokens-previous.ReasoningTokens, 0),
+		TotalTokens:        maxInt64(current.TotalTokens-previous.TotalTokens, 0),
+		TotalCostMicrosUSD: maxInt64(current.TotalCostMicrosUSD-previous.TotalCostMicrosUSD, 0),
+		CostSource:         current.CostSource,
 	}
 }
 
@@ -186,6 +190,10 @@ func accumulateDelta(acc *hourlyAccumulator, delta codexUsage, sessionID string)
 	acc.CachedWriteTokens += delta.CachedWriteTokens
 	acc.ReasoningTokens += delta.ReasoningTokens
 	acc.TotalTokens += delta.TotalTokens
+	acc.TotalCostMicrosUSD += delta.TotalCostMicrosUSD
+	if usageCostSourcePriority(delta.CostSource) > usageCostSourcePriority(acc.CostSource) {
+		acc.CostSource = delta.CostSource
+	}
 	acc.EventCount++
 	acc.Sessions[sessionID] = struct{}{}
 }
@@ -220,6 +228,8 @@ func materializeHourlyRows(buckets map[hourlyKey]*hourlyAccumulator, input ScanI
 			CachedWriteTokens:     acc.CachedWriteTokens,
 			ReasoningTokens:       acc.ReasoningTokens,
 			TotalTokens:           acc.TotalTokens,
+			TotalCostMicrosUSD:    acc.TotalCostMicrosUSD,
+			CostSource:            normalizedUsageCostSource(acc.CostSource),
 			EventCount:            acc.EventCount,
 			SessionCount:          int64(len(acc.Sessions)),
 			TurnCount:             acc.TurnCount,

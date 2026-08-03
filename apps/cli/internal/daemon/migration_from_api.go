@@ -92,6 +92,8 @@ func (client *daemonAPIClient) ExportHourlyUsage(ctx context.Context, orgID stri
 			CachedWriteTokens:     row.CachedWriteTokens,
 			ReasoningTokens:       row.ReasoningTokens,
 			TotalTokens:           row.TotalTokens,
+			TotalCostMicrosUSD:    row.TotalCostMicrosUSD,
+			CostSource:            row.CostSource,
 			EventCount:            row.EventCount,
 			SessionCount:          row.SessionCount,
 			TurnCount:             row.TurnCount,

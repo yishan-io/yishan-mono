@@ -63,6 +63,13 @@ func makeMsg(input, output, cacheRead, cacheWrite, reasoning int64) string {
 	)
 }
 
+func makeMsgWithCost(input, output, cacheRead, cacheWrite, reasoning int64, costUSD float64) string {
+	return fmt.Sprintf(
+		`{"role":"assistant","cost":%.6f,"tokens":{"input":%d,"output":%d,"cache":{"read":%d,"write":%d},"reasoning":%d}}`,
+		costUSD, input, output, cacheRead, cacheWrite, reasoning,
+	)
+}
+
 func makeTextPart(text string) string {
 	return fmt.Sprintf(`{"type":"text","text":%q}`, text)
 }
@@ -331,6 +338,80 @@ INSERT INTO part VALUES('part-tool-2','msg-assistant','ses-1',%d,%d,'%s');
 }
 
 // TestParseOpenCodeTimestamp verifies epoch-ms → RFC3339 conversion.
+func TestScanOpenCodeUsesDirectMessageCostWhenPresent(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now().UTC()
+	msgTime := now.Add(-10 * time.Minute)
+
+	ddl := openCodeTestSchema + fmt.Sprintf(`
+INSERT INTO session VALUES('ses-cost', NULL, NULL, '/work/cost', 'gpt-5.6-terra', %d, %d);
+INSERT INTO message VALUES('msg-cost','ses-cost',%d,%d,'%s');
+`,
+		now.UnixMilli(), now.UnixMilli(),
+		msgTime.UnixMilli(), msgTime.UnixMilli(), makeMsgWithCost(100, 20, 0, 0, 5, 0.25),
+	)
+	dbPath := createOpenCodeTestDB(t, ddl)
+
+	input := ScanInput{
+		RunID:              "test",
+		IngestedAt:         now.UnixMilli(),
+		ScanSinceUnixMilli: now.Add(-2 * time.Hour).UnixMilli(),
+		Worktrees:          []WorktreeRef{{ProjectID: "proj-1", WorkspaceID: "ws-1", WorkspacePath: "/work/cost"}},
+		SessionRoot:        filepath.Dir(dbPath),
+	}
+
+	rows, err := ScanOpenCodeHourlyUsage(context.Background(), input)
+	if err != nil {
+		t.Fatalf("ScanOpenCodeHourlyUsage: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(rows))
+	}
+	if rows[0].TotalCostMicrosUSD != 250_000 {
+		t.Fatalf("expected direct cost 250000 micros, got %d", rows[0].TotalCostMicrosUSD)
+	}
+}
+
+func TestScanOpenCodePreservesExplicitZeroDirectCost(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now().UTC()
+	msgTime := now.Add(-10 * time.Minute)
+
+	ddl := openCodeTestSchema + fmt.Sprintf(`
+INSERT INTO session VALUES('ses-cost-zero', NULL, NULL, '/work/cost-zero', 'gpt-5.6-terra', %d, %d);
+INSERT INTO message VALUES('msg-cost-zero','ses-cost-zero',%d,%d,'%s');
+`,
+		now.UnixMilli(), now.UnixMilli(),
+		msgTime.UnixMilli(), msgTime.UnixMilli(), makeMsgWithCost(100, 20, 0, 0, 5, 0),
+	)
+	dbPath := createOpenCodeTestDB(t, ddl)
+
+	input := ScanInput{
+		RunID:              "test",
+		IngestedAt:         now.UnixMilli(),
+		ScanSinceUnixMilli: now.Add(-2 * time.Hour).UnixMilli(),
+		Worktrees: []WorktreeRef{{
+			ProjectID:     "proj-1",
+			WorkspaceID:   "ws-1",
+			WorkspacePath: "/work/cost-zero",
+		}},
+		SessionRoot: filepath.Dir(dbPath),
+	}
+
+	rows, err := ScanOpenCodeHourlyUsage(context.Background(), input)
+	if err != nil {
+		t.Fatalf("ScanOpenCodeHourlyUsage: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(rows))
+	}
+	if rows[0].TotalCostMicrosUSD != 0 {
+		t.Fatalf("expected explicit zero direct cost to remain zero, got %d", rows[0].TotalCostMicrosUSD)
+	}
+}
+
 func TestParseOpenCodeTimestamp(t *testing.T) {
 	t.Parallel()
 

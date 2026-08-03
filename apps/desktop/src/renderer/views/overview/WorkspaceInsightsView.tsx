@@ -5,6 +5,13 @@ import { LuArchive, LuClock, LuHistory } from "react-icons/lu";
 import { formatTokens } from "../../helpers/formatters";
 import { overviewStore } from "../../store/overviewStore";
 
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 function formatHours(hours: number): string {
   if (hours < 1) {
     return `${Math.round(hours * 60)}m`;
@@ -15,6 +22,10 @@ function formatHours(hours: number): string {
   const days = Math.floor(hours / 24);
   const remainder = hours % 24;
   return remainder > 0 ? `${days}d ${remainder.toFixed(0)}h` : `${days}d`;
+}
+
+function formatUsd(totalCostUsd: number): string {
+  return usdFormatter.format(totalCostUsd);
 }
 
 const thSx = {
@@ -233,6 +244,9 @@ function ClosedTabContent({
               <Box component="th" sx={thNumericSx}>
                 {t("overview.workspaceInsights.tokens")}
               </Box>
+              <Box component="th" sx={thNumericSx}>
+                {t("overview.workspaceInsights.cost")}
+              </Box>
             </Box>
           </Box>
           <Box component="tbody">
@@ -251,6 +265,9 @@ function ClosedTabContent({
                 </Box>
                 <Box component="td" sx={tdNumericSx}>
                   {formatTokens(ws.totalTokens)}
+                </Box>
+                <Box component="td" sx={tdNumericSx}>
+                  {formatUsd(ws.totalCostUsd)}
                 </Box>
               </Box>
             ))}
@@ -374,6 +391,9 @@ function PrimaryTabContent({
               <Box component="th" sx={thNumericSx}>
                 {t("overview.workspaceInsights.tokens")}
               </Box>
+              <Box component="th" sx={thNumericSx}>
+                {t("overview.workspaceInsights.cost")}
+              </Box>
             </Box>
           </Box>
           <Box component="tbody">
@@ -389,6 +409,9 @@ function PrimaryTabContent({
                 </Box>
                 <Box component="td" sx={tdNumericSx}>
                   {formatTokens(ws.totalTokens)}
+                </Box>
+                <Box component="td" sx={tdNumericSx}>
+                  {formatUsd(ws.totalCostUsd)}
                 </Box>
               </Box>
             ))}

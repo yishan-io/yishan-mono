@@ -23,6 +23,7 @@ export async function refreshOverviewTokenUsage(): Promise<void> {
         cachedWriteTokens: number;
         turnCount: number;
         toolCallCount: number;
+        totalCostUsd: number;
       }>;
       cachedTotal: number;
       cachedWriteTotal: number;
@@ -30,6 +31,7 @@ export async function refreshOverviewTokenUsage(): Promise<void> {
       grandTotal: number;
       turnTotal: number;
       toolCallTotal: number;
+      totalCostUsd: number;
     };
     overviewStore
       .getState()
@@ -37,9 +39,11 @@ export async function refreshOverviewTokenUsage(): Promise<void> {
         result.series,
         result.grandTotal,
         result.cachedTotal,
+        result.cachedWriteTotal,
         result.uncachedTotal,
         result.turnTotal,
         result.toolCallTotal,
+        result.totalCostUsd,
       );
     overviewStore.getState().setTokenUsageLoadState("loaded");
   } catch (error) {
@@ -63,6 +67,7 @@ export async function refreshOverviewModelBreakdown(): Promise<void> {
         totalTokens: number;
         inputTokens: number;
         outputTokens: number;
+        totalCostUsd: number;
         percentage: number;
       }>;
     };
@@ -119,6 +124,7 @@ export async function refreshOverviewWorkspaceInsights(): Promise<void> {
         closedAt: string;
         lifetimeHours: number;
         totalTokens: number;
+        totalCostUsd: number;
       }>;
       primaryWorkspaceCount: number;
       primaryWorkspaceTokens: number;
@@ -129,6 +135,7 @@ export async function refreshOverviewWorkspaceInsights(): Promise<void> {
         branch: string | null;
         createdAt: string;
         totalTokens: number;
+        totalCostUsd: number;
       }>;
     };
     overviewStore.getState().setWorkspaceInsights(result);

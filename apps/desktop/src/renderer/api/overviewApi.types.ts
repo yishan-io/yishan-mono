@@ -7,6 +7,7 @@ export type TokenUsageSeriesItem = {
   cachedWriteTokens: number;
   turnCount: number;
   toolCallCount: number;
+  totalCostUsd: number;
 };
 
 export type OverviewTokenUsageResponse = {
@@ -17,6 +18,7 @@ export type OverviewTokenUsageResponse = {
   grandTotal: number;
   turnTotal: number;
   toolCallTotal: number;
+  totalCostUsd: number;
 };
 
 export type ModelBreakdownItem = {
@@ -25,6 +27,7 @@ export type ModelBreakdownItem = {
   totalTokens: number;
   inputTokens: number;
   outputTokens: number;
+  totalCostUsd: number;
   percentage: number;
 };
 
@@ -45,6 +48,7 @@ export type ClosedWorkspaceItem = {
   closedAt: string;
   lifetimeHours: number;
   totalTokens: number;
+  totalCostUsd: number;
 };
 
 export type PrimaryWorkspaceItem = {
@@ -54,6 +58,7 @@ export type PrimaryWorkspaceItem = {
   branch: string | null;
   createdAt: string;
   totalTokens: number;
+  totalCostUsd: number;
 };
 
 export type WorkspaceInsightsResult = {

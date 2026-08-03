@@ -27,6 +27,7 @@ function makeBucket(bucketStartUtc: string, totalTokens: number, cachedInputToke
     cachedWriteTokens: 0,
     turnCount: 0,
     toolCallCount: 0,
+    totalCostUsd: 0,
   };
 }
 
@@ -49,6 +50,7 @@ describe("TokenUsageChartView", () => {
       uncachedTotal: 0,
       turnTotal: 0,
       toolCallTotal: 0,
+      totalCostUsd: 0,
     });
   });
 
@@ -141,6 +143,20 @@ describe("TokenUsageChartView", () => {
     // Should NOT show 0.20K / 0.40K (the old chart-derived values)
     expect(screen.queryByText("0.20K")).toBeNull();
     expect(screen.queryByText("0.40K")).toBeNull();
+  });
+
+  it("shows total cost from the server", () => {
+    overviewStore.setState({
+      tokenUsageSeries: [makeBucket(utcDateIso(1), 500, 200)],
+      grandTotal: 500,
+      cachedTotal: 200,
+      uncachedTotal: 300,
+      totalCostUsd: 1.25,
+    });
+
+    render(<TokenUsageChartView />);
+
+    expect(screen.getByText("$1.25")).toBeTruthy();
   });
 
   it("cached percentage is computed from server totals", () => {

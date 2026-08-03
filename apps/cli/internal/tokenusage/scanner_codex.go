@@ -17,12 +17,14 @@ const codexAgentKind = agentkind.Codex
 const maxTokenUsageScanLineBytes = 16 * 1024 * 1024
 
 type codexUsage struct {
-	InputTokens       int64
-	OutputTokens      int64
-	CachedInputTokens int64
-	CachedWriteTokens int64
-	ReasoningTokens   int64
-	TotalTokens       int64
+	InputTokens        int64
+	OutputTokens       int64
+	CachedInputTokens  int64
+	CachedWriteTokens  int64
+	ReasoningTokens    int64
+	TotalTokens        int64
+	TotalCostMicrosUSD int64
+	CostSource         CostSource
 }
 
 type codexEvent struct {
@@ -232,12 +234,31 @@ func handleCodexTokenCount(
 	if model == "" {
 		model = "unknown"
 	}
+	usage := line.usage
+	uncachedInputTokens := usage.InputTokens - usage.CachedInputTokens - usage.CachedWriteTokens
+	if uncachedInputTokens < 0 {
+		uncachedInputTokens = 0
+	}
+	usage.TotalCostMicrosUSD = estimateModelCostMicros(
+		input.ModelPricingCatalog,
+		model,
+		uncachedInputTokens,
+		usage.OutputTokens,
+		usage.CachedInputTokens,
+		usage.CachedWriteTokens,
+		usage.ReasoningTokens,
+	)
+	if usage.TotalCostMicrosUSD > 0 {
+		usage.CostSource = CostSourceEstimated
+	} else {
+		usage.CostSource = CostSourceUnknown
+	}
 	event := codexEvent{
 		SessionID: currentSessionID,
 		Model:     model,
 		CWD:       currentCWD,
 		Timestamp: line.timestamp,
-		Usage:     line.usage,
+		Usage:     usage,
 	}
 	if event.SessionID == "" {
 		return

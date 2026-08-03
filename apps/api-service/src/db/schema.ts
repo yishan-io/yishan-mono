@@ -14,6 +14,7 @@ export type ScheduledJobStatus = "active" | "paused" | "disabled" | "deleted";
 export type ScheduledAgentKind = AgentKind;
 export type ScheduledJobRunStatus = "pending" | "running" | "succeeded" | "failed" | "skipped_offline";
 export type TokenUsageAttributionConfidence = "exact" | "prefix_match" | "fallback_unknown";
+export type TokenUsageCostSource = "unknown" | "estimated" | "direct";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -365,6 +366,8 @@ export const tokenUsageHourly = pgTable(
     cachedWriteTokens: bigint("cached_write_tokens", { mode: "number" }).notNull().default(0),
     reasoningTokens: bigint("reasoning_tokens", { mode: "number" }).notNull().default(0),
     totalTokens: bigint("total_tokens", { mode: "number" }).notNull().default(0),
+    totalCostMicrosUsd: bigint("total_cost_micros_usd", { mode: "number" }).notNull().default(0),
+    costSource: text("cost_source").$type<TokenUsageCostSource>().notNull().default("unknown"),
     eventCount: bigint("event_count", { mode: "number" }).notNull().default(0),
     sessionCount: bigint("session_count", { mode: "number" }).notNull().default(0),
     turnCount: bigint("turn_count", { mode: "number" }).notNull().default(0),

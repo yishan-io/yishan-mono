@@ -2,6 +2,43 @@ package db
 
 import "fmt"
 
+func normalizedCostSource(source CostSource) CostSource {
+	if source == "" {
+		return CostSourceUnknown
+	}
+	return source
+}
+
+func costSourcePriority(source CostSource) int {
+	switch normalizedCostSource(source) {
+	case CostSourceDirect:
+		return 3
+	case CostSourceEstimated:
+		return 2
+	default:
+		return 1
+	}
+}
+
+func shouldPreferExistingCost(existingRow, nextRow HourlyUsageRow) bool {
+	existingPriority := costSourcePriority(existingRow.CostSource)
+	nextPriority := costSourcePriority(nextRow.CostSource)
+	if existingPriority != nextPriority {
+		return existingPriority > nextPriority
+	}
+	if existingRow.TotalCostMicrosUSD == nextRow.TotalCostMicrosUSD {
+		return false
+	}
+	switch normalizedCostSource(existingRow.CostSource) {
+	case CostSourceDirect:
+		return false
+	case CostSourceEstimated:
+		return nextRow.TotalCostMicrosUSD == 0 && existingRow.TotalCostMicrosUSD > 0
+	default:
+		return existingRow.TotalCostMicrosUSD > nextRow.TotalCostMicrosUSD
+	}
+}
+
 // HourlyUsageRowKey returns the natural composite key for an hourly usage row.
 func HourlyUsageRowKey(row HourlyUsageRow) string {
 	return row.ProjectID + "\x00" + row.WorkspaceID + "\x00" + row.AgentKind + "\x00" + row.ModelNormalized + "\x00" + fmt.Sprintf("%d", row.BucketStartHourUTC)
@@ -15,6 +52,9 @@ func MergeHourlyUsageRow(existingRow HourlyUsageRow, hasExisting bool, scannedRo
 		return scannedRow
 	}
 	if existingRow.TotalTokens > scannedRow.TotalTokens || HourlyRowsMatchForSync(existingRow, scannedRow) {
+		return existingRow
+	}
+	if existingRow.TotalTokens == scannedRow.TotalTokens && shouldPreferExistingCost(existingRow, scannedRow) {
 		return existingRow
 	}
 	scannedRow.Dirty = true
@@ -32,6 +72,9 @@ func MergeImportedHourlyUsageRow(existingRow HourlyUsageRow, hasExisting bool, i
 		return existingRow
 	}
 	if existingRow.TotalTokens > importedRow.TotalTokens || HourlyRowsMatchForSync(existingRow, importedRow) {
+		return existingRow
+	}
+	if existingRow.TotalTokens == importedRow.TotalTokens && shouldPreferExistingCost(existingRow, importedRow) {
 		return existingRow
 	}
 	importedRow.LastSyncedAt = existingRow.LastSyncedAt
@@ -52,6 +95,8 @@ func HourlyRowsMatchForSync(left, right HourlyUsageRow) bool {
 		left.CachedWriteTokens == right.CachedWriteTokens &&
 		left.ReasoningTokens == right.ReasoningTokens &&
 		left.TotalTokens == right.TotalTokens &&
+		left.TotalCostMicrosUSD == right.TotalCostMicrosUSD &&
+		normalizedCostSource(left.CostSource) == normalizedCostSource(right.CostSource) &&
 		left.EventCount == right.EventCount &&
 		left.SessionCount == right.SessionCount &&
 		left.TurnCount == right.TurnCount &&

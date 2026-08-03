@@ -175,6 +175,10 @@ func finishUsageRowParse(
 	if err != nil {
 		return TokenUsageHourlyRowOutput{}, err
 	}
+	totalCostMicrosUSD, err := parseOptionalInt64Field(row, header, "totalCostMicrosUsd")
+	if err != nil {
+		return TokenUsageHourlyRowOutput{}, err
+	}
 	eventCount, err := parseInt64Field(row, header, "eventCount")
 	if err != nil {
 		return TokenUsageHourlyRowOutput{}, err
@@ -206,6 +210,8 @@ func finishUsageRowParse(
 		CachedWriteTokens:     cachedWriteTokens,
 		ReasoningTokens:       reasoningTokens,
 		TotalTokens:           totalTokens,
+		TotalCostMicrosUSD:    totalCostMicrosUSD,
+		CostSource:            csvValue(row, header, "costSource"),
 		EventCount:            eventCount,
 		SessionCount:          sessionCount,
 		TurnCount:             turnCount,
@@ -249,6 +255,18 @@ func parseInt64Field(row []string, header map[string]int, key string) (int64, er
 		return 0, fmt.Errorf("parse %s: %w", key, err)
 	}
 	return value, nil
+}
+
+func parseOptionalInt64Field(row []string, header map[string]int, key string) (int64, error) {
+	value := csvValue(row, header, key)
+	if value == "" {
+		return 0, nil
+	}
+	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+	return parsed, nil
 }
 
 func csvValue(row []string, header map[string]int, key string) string {

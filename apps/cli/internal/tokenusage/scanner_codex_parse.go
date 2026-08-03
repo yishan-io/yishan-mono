@@ -233,6 +233,20 @@ func getInt64(record map[string]any, keys ...string) int64 {
 	return 0
 }
 
+func getFloat64(record map[string]any, keys ...string) (float64, bool) {
+	for _, key := range keys {
+		value, ok := record[key]
+		if !ok {
+			continue
+		}
+		number, ok := value.(float64)
+		if ok {
+			return number, true
+		}
+	}
+	return 0, false
+}
+
 func maxInt64(left int64, right int64) int64 {
 	if left > right {
 		return left

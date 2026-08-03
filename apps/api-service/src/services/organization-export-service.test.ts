@@ -132,6 +132,8 @@ describe("OrganizationExportService", () => {
           cachedWriteTokens: 1,
           reasoningTokens: 3,
           totalTokens: 21,
+          totalCostMicrosUsd: 123,
+          costSource: "estimated",
           eventCount: 4,
           sessionCount: 2,
           turnCount: 6,
@@ -153,8 +155,8 @@ describe("OrganizationExportService", () => {
     expect(mock.mockFrom.mock.calls).toEqual([[nodes], [workspaces], [tokenUsageHourly]]);
     expect(result.body).toBe(
       [
-        "id,organizationId,projectId,workspaceId,workspacePath,agentKind,model,modelNormalized,bucketStartHourUtc,inputTokens,outputTokens,cachedInputTokens,cachedWriteTokens,reasoningTokens,totalTokens,eventCount,sessionCount,turnCount,toolCallCount,attributionConfidence,ingestedAt,runId,createdAt,updatedAt",
-        "usage-1,org-1,project-1,workspace-1,/tmp/core,opencode,gpt-5,gpt-5,2026-07-31T10:00:00.000Z,10,5,2,1,3,21,4,2,6,7,exact,2026-07-31T10:30:00.000Z,run-1,2026-07-31T10:31:00.000Z,2026-07-31T10:32:00.000Z",
+        "id,organizationId,projectId,workspaceId,workspacePath,agentKind,model,modelNormalized,bucketStartHourUtc,inputTokens,outputTokens,cachedInputTokens,cachedWriteTokens,reasoningTokens,totalTokens,totalCostMicrosUsd,costSource,eventCount,sessionCount,turnCount,toolCallCount,attributionConfidence,ingestedAt,runId,createdAt,updatedAt",
+        "usage-1,org-1,project-1,workspace-1,/tmp/core,opencode,gpt-5,gpt-5,2026-07-31T10:00:00.000Z,10,5,2,1,3,21,123,estimated,4,2,6,7,exact,2026-07-31T10:30:00.000Z,run-1,2026-07-31T10:31:00.000Z,2026-07-31T10:32:00.000Z",
       ].join("\n"),
     );
   });

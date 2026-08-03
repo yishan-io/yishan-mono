@@ -11,6 +11,8 @@ import (
 )
 
 // OverviewStore provides local aggregate queries for the desktop Overview view.
+const usdMicrosPerUSD = 1_000_000
+
 type OverviewStore struct {
 	database *sql.DB
 }
@@ -46,7 +48,7 @@ func (s *OverviewStore) GetTokenUsageSeries(
 	query := fmt.Sprintf(`SELECT %s AS bucket,
 		COALESCE(SUM(total_tokens), 0), COALESCE(SUM(input_tokens), 0), COALESCE(SUM(output_tokens), 0),
 		COALESCE(SUM(cached_input_tokens), 0), COALESCE(SUM(cached_write_tokens), 0),
-		COALESCE(SUM(turn_count), 0), COALESCE(SUM(tool_call_count), 0)
+		COALESCE(SUM(turn_count), 0), COALESCE(SUM(tool_call_count), 0), COALESCE(SUM(total_cost_micros_usd), 0)
 		FROM token_usage_hourly WHERE bucket_start_hour_utc >= ?%s
 		GROUP BY bucket ORDER BY bucket`, bucketExpr, projectFilter)
 
@@ -57,28 +59,33 @@ func (s *OverviewStore) GetTokenUsageSeries(
 	defer rows.Close()
 
 	result := &OverviewTokenUsageResult{}
+	var totalCostMicrosUSD int64
 	for rows.Next() {
 		var bucketMillis int64
 		var item OverviewTokenUsageSeriesItem
+		var bucketCostMicrosUSD int64
 		if err := rows.Scan(&bucketMillis, &item.TotalTokens, &item.InputTokens, &item.OutputTokens,
-			&item.CachedInputTokens, &item.CachedWriteTokens, &item.TurnCount, &item.ToolCallCount); err != nil {
+			&item.CachedInputTokens, &item.CachedWriteTokens, &item.TurnCount, &item.ToolCallCount, &bucketCostMicrosUSD); err != nil {
 			return nil, fmt.Errorf("scan token usage series row: %w", err)
 		}
 		item.BucketStartUtc = time.UnixMilli(bucketMillis).UTC().Format(time.RFC3339)
+		item.TotalCostUSD = microsToUSD(bucketCostMicrosUSD)
 		result.Series = append(result.Series, item)
 		result.GrandTotal += item.TotalTokens
 		result.CachedTotal += item.CachedInputTokens
 		result.CachedWriteTotal += item.CachedWriteTokens
 		result.TurnTotal += item.TurnCount
 		result.ToolCallTotal += item.ToolCallCount
+		totalCostMicrosUSD += bucketCostMicrosUSD
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate token usage series: %w", err)
 	}
-	result.UncachedTotal = result.GrandTotal - result.CachedTotal
+	result.UncachedTotal = result.GrandTotal - result.CachedTotal - result.CachedWriteTotal
 	if result.UncachedTotal < 0 {
 		result.UncachedTotal = 0
 	}
+	result.TotalCostUSD = microsToUSD(totalCostMicrosUSD)
 	return result, nil
 }
 
@@ -100,7 +107,7 @@ func (s *OverviewStore) GetModelBreakdown(
 	}
 
 	query := fmt.Sprintf(`SELECT model_normalized, agent_kind,
-		COALESCE(SUM(total_tokens), 0), COALESCE(SUM(input_tokens), 0), COALESCE(SUM(output_tokens), 0)
+		COALESCE(SUM(total_tokens), 0), COALESCE(SUM(input_tokens), 0), COALESCE(SUM(output_tokens), 0), COALESCE(SUM(total_cost_micros_usd), 0)
 		FROM token_usage_hourly WHERE bucket_start_hour_utc >= ?%s
 		GROUP BY model_normalized, agent_kind ORDER BY SUM(total_tokens) DESC`, projectFilter)
 
@@ -114,9 +121,11 @@ func (s *OverviewStore) GetModelBreakdown(
 	var grandTotal int64
 	for rows.Next() {
 		var item OverviewModelBreakdownItem
-		if err := rows.Scan(&item.ModelNormalized, &item.AgentKind, &item.TotalTokens, &item.InputTokens, &item.OutputTokens); err != nil {
+		var totalCostMicrosUSD int64
+		if err := rows.Scan(&item.ModelNormalized, &item.AgentKind, &item.TotalTokens, &item.InputTokens, &item.OutputTokens, &totalCostMicrosUSD); err != nil {
 			return nil, fmt.Errorf("scan model breakdown row: %w", err)
 		}
+		item.TotalCostUSD = microsToUSD(totalCostMicrosUSD)
 		result.Models = append(result.Models, item)
 		grandTotal += item.TotalTokens
 	}
@@ -252,6 +261,7 @@ func (s *OverviewStore) GetWorkspaceInsights(
 	}
 	projectNames := s.projectNames(ctx, projectIDs)
 	workspaceTokens := s.workspaceTokenTotals(ctx, wsIDs)
+	workspaceCosts := s.workspaceCostTotals(ctx, wsIDs)
 
 	for _, cr := range closedRowsData {
 		projectName := projectNames[cr.projectID]
@@ -259,6 +269,7 @@ func (s *OverviewStore) GetWorkspaceInsights(
 			projectName = cr.projectID
 		}
 		totalTokens := workspaceTokens[cr.id]
+		totalCostUSD := microsToUSD(workspaceCosts[cr.id])
 
 		createdAt, _ := time.Parse("2006-01-02 15:04:05", cr.createdAt)
 		closedAt, _ := time.Parse("2006-01-02 15:04:05", cr.closedAt)
@@ -277,6 +288,7 @@ func (s *OverviewStore) GetWorkspaceInsights(
 			ClosedAt:      cr.closedAt,
 			LifetimeHours: lifetimeHours,
 			TotalTokens:   totalTokens,
+			TotalCostUSD:  totalCostUSD,
 		})
 	}
 
@@ -320,16 +332,18 @@ func (s *OverviewStore) GetWorkspaceInsights(
 	}
 	result.PrimaryWorkspaceCount = len(groups)
 
-	// Compute range-bounded token totals per group, sort top 10.
+	// Compute range-bounded token/cost totals per group, sort top 10.
 	type primaryToken struct {
-		pg     primaryGroup
-		tokens int64
+		pg         primaryGroup
+		tokens     int64
+		costMicros int64
 	}
 	var primaryTokens []primaryToken
 	for _, key := range groupKeys {
 		pg := groups[key]
 		tokens := s.workspacePathTokenTotal(ctx, key, cutoffMillis)
-		primaryTokens = append(primaryTokens, primaryToken{pg: pg, tokens: tokens})
+		costMicros := s.workspacePathCostTotal(ctx, key, cutoffMillis)
+		primaryTokens = append(primaryTokens, primaryToken{pg: pg, tokens: tokens, costMicros: costMicros})
 		result.PrimaryWorkspaceTokens += tokens
 	}
 
@@ -358,12 +372,13 @@ func (s *OverviewStore) GetWorkspaceInsights(
 			projectName = pt.pg.projectID
 		}
 		result.TopPrimaryWorkspaces = append(result.TopPrimaryWorkspaces, OverviewPrimaryWorkspaceItem{
-			ID:          pt.pg.id,
-			ProjectID:   pt.pg.projectID,
-			ProjectName: projectName,
-			Branch:      pt.pg.branch,
-			CreatedAt:   pt.pg.createdAt,
-			TotalTokens: pt.tokens,
+			ID:           pt.pg.id,
+			ProjectID:    pt.pg.projectID,
+			ProjectName:  projectName,
+			Branch:       pt.pg.branch,
+			CreatedAt:    pt.pg.createdAt,
+			TotalTokens:  pt.tokens,
+			TotalCostUSD: microsToUSD(pt.costMicros),
 		})
 	}
 
@@ -412,11 +427,46 @@ func (s *OverviewStore) workspaceTokenTotals(ctx context.Context, ids []string) 
 	return totals
 }
 
+func (s *OverviewStore) workspaceCostTotals(ctx context.Context, ids []string) map[string]int64 {
+	if len(ids) == 0 {
+		return nil
+	}
+	totals := make(map[string]int64, len(ids))
+	query, args := buildInQuery(
+		`SELECT workspace_id, COALESCE(SUM(total_cost_micros_usd), 0) FROM token_usage_hourly WHERE workspace_id IN`,
+		ids,
+	)
+	query += " GROUP BY workspace_id"
+	rows, err := s.database.QueryContext(ctx, query, args...)
+	if err != nil {
+		return totals
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var wsID string
+		var total int64
+		if err := rows.Scan(&wsID, &total); err == nil {
+			totals[wsID] = total
+		}
+	}
+	return totals
+}
+
 func (s *OverviewStore) workspacePathTokenTotal(ctx context.Context, groupKey string, cutoffMillis int64) int64 {
 	var total int64
 	parts := splitGroupKey(groupKey)
 	_ = s.database.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(total_tokens), 0) FROM token_usage_hourly
+		 WHERE project_id = ? AND workspace_path = ? AND bucket_start_hour_utc >= ?`,
+		parts[0], parts[1], cutoffMillis).Scan(&total)
+	return total
+}
+
+func (s *OverviewStore) workspacePathCostTotal(ctx context.Context, groupKey string, cutoffMillis int64) int64 {
+	var total int64
+	parts := splitGroupKey(groupKey)
+	_ = s.database.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(total_cost_micros_usd), 0) FROM token_usage_hourly
 		 WHERE project_id = ? AND workspace_path = ? AND bucket_start_hour_utc >= ?`,
 		parts[0], parts[1], cutoffMillis).Scan(&total)
 	return total
@@ -436,6 +486,13 @@ func idsToAny(ids []string) []any {
 		out[i] = id
 	}
 	return out
+}
+
+func microsToUSD(totalMicros int64) float64 {
+	if totalMicros == 0 {
+		return 0
+	}
+	return float64(totalMicros) / usdMicrosPerUSD
 }
 
 func splitGroupKey(key string) [2]string {

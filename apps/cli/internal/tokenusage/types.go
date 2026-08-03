@@ -7,6 +7,7 @@ type HourlyUsageRow = localdb.HourlyUsageRow
 type HourlyUsageSyncState = localdb.HourlyUsageSyncState
 type AttributionConfidence = localdb.AttributionConfidence
 type ScannerSourceKind = localdb.ScannerSourceKind
+type CostSource = localdb.CostSource
 
 // HourlyUsageLocalRetentionWindow aliases the db-owned retention window.
 const HourlyUsageLocalRetentionWindow = localdb.HourlyUsageRetentionWindow
@@ -23,6 +24,12 @@ const (
 	SourceKindAPI    ScannerSourceKind = "api"
 )
 
+const (
+	CostSourceUnknown   CostSource = localdb.CostSourceUnknown
+	CostSourceEstimated CostSource = localdb.CostSourceEstimated
+	CostSourceDirect    CostSource = localdb.CostSourceDirect
+)
+
 type WorktreeRef struct {
 	ProjectID     string
 	WorkspaceID   string
@@ -30,9 +37,10 @@ type WorktreeRef struct {
 }
 
 type ScanInput struct {
-	RunID              string
-	IngestedAt         int64
-	ScanSinceUnixMilli int64
-	Worktrees          []WorktreeRef
-	SessionRoot        string
+	RunID               string
+	IngestedAt          int64
+	ScanSinceUnixMilli  int64
+	Worktrees           []WorktreeRef
+	SessionRoot         string
+	ModelPricingCatalog *modelPricingCatalog
 }

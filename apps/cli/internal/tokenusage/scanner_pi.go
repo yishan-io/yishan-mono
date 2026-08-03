@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -27,18 +28,21 @@ const (
 )
 
 type piParsedActivity struct {
-	Kind             piActivityKind
-	SessionID        string
-	Timestamp        time.Time
-	Model            string
-	CWD              string
-	InputTokens      int64
-	OutputTokens     int64
-	CacheReadTokens  int64
-	CacheWriteTokens int64
-	TotalTokens      int64
-	TurnCount        int64
-	ToolCallCount    int64
+	Kind               piActivityKind
+	SessionID          string
+	Timestamp          time.Time
+	Model              string
+	CWD                string
+	InputTokens        int64
+	OutputTokens       int64
+	CacheReadTokens    int64
+	CacheWriteTokens   int64
+	ReasoningTokens    int64
+	TotalTokens        int64
+	TotalCostMicrosUSD int64
+	CostSource         CostSource
+	TurnCount          int64
+	ToolCallCount      int64
 }
 
 // ScanPiHourlyUsage scans PI session JSONL files and materializes hourly usage rows.
@@ -144,6 +148,7 @@ func scanPiSessionFile(
 			currentCWD,
 			currentModel,
 			fallbackSessionID,
+			input.ModelPricingCatalog,
 		)
 		if nextSessionID != "" {
 			currentSessionID = nextSessionID
@@ -180,6 +185,7 @@ func parsePiLine(
 	currentCWD string,
 	currentModel string,
 	fallbackSessionID string,
+	pricingCatalog *modelPricingCatalog,
 ) (piParsedActivity, string, string, string) {
 	var top map[string]any
 	if err := json.Unmarshal(rawLine, &top); err != nil {
@@ -193,7 +199,7 @@ func parsePiLine(
 	case "model_change":
 		return piParsedActivity{}, "", "", strings.TrimSpace(getString(top, "modelId", "model"))
 	case "message":
-		activity, ok := parsePiMessageActivity(top, currentSessionID, currentCWD, currentModel, fallbackSessionID)
+		activity, ok := parsePiMessageActivity(top, currentSessionID, currentCWD, currentModel, fallbackSessionID, pricingCatalog)
 		if !ok {
 			return piParsedActivity{}, "", "", ""
 		}
@@ -209,6 +215,7 @@ func parsePiMessageActivity(
 	currentCWD string,
 	currentModel string,
 	fallbackSessionID string,
+	pricingCatalog *modelPricingCatalog,
 ) (piParsedActivity, bool) {
 	message, ok := top["message"].(map[string]any)
 	if !ok {
@@ -230,21 +237,24 @@ func parsePiMessageActivity(
 
 	switch getString(message, "role") {
 	case "assistant":
-		usage, hasUsage := parsePiUsage(message["usage"])
+		usage, hasUsage := parsePiUsage(message["usage"], model, pricingCatalog)
 		toolCalls := countPiAssistantToolCalls(message["content"])
 		if hasUsage {
 			return piParsedActivity{
-				Kind:             piActivityAssistantUsage,
-				SessionID:        sessionID,
-				Timestamp:        timestamp,
-				Model:            model,
-				CWD:              cwd,
-				InputTokens:      usage.InputTokens,
-				OutputTokens:     usage.OutputTokens,
-				CacheReadTokens:  usage.CachedInputTokens,
-				CacheWriteTokens: usage.CachedWriteTokens,
-				TotalTokens:      usage.TotalTokens,
-				ToolCallCount:    toolCalls,
+				Kind:               piActivityAssistantUsage,
+				SessionID:          sessionID,
+				Timestamp:          timestamp,
+				Model:              model,
+				CWD:                cwd,
+				InputTokens:        usage.InputTokens,
+				OutputTokens:       usage.OutputTokens,
+				CacheReadTokens:    usage.CachedInputTokens,
+				CacheWriteTokens:   usage.CachedWriteTokens,
+				ReasoningTokens:    usage.ReasoningTokens,
+				TotalTokens:        usage.TotalTokens,
+				TotalCostMicrosUSD: usage.TotalCostMicrosUSD,
+				CostSource:         usage.CostSource,
+				ToolCallCount:      toolCalls,
 			}, true
 		}
 		if toolCalls == 0 {
@@ -285,7 +295,7 @@ func firstNonEmptyPiValue(values ...string) string {
 	return ""
 }
 
-func parsePiUsage(value any) (codexUsage, bool) {
+func parsePiUsage(value any, model string, pricingCatalog *modelPricingCatalog) (codexUsage, bool) {
 	record, ok := value.(map[string]any)
 	if !ok {
 		return codexUsage{}, false
@@ -294,21 +304,55 @@ func parsePiUsage(value any) (codexUsage, bool) {
 	outputTokens := getInt64(record, "output")
 	cacheReadTokens := getInt64(record, "cacheRead")
 	cacheWriteTokens := getInt64(record, "cacheWrite")
+	reasoningTokens := getInt64(record, "reasoning")
 	normalizedInputTokens := inputTokens + cacheReadTokens + cacheWriteTokens
 	totalTokens := getInt64(record, "totalTokens")
 	if totalTokens <= 0 {
-		totalTokens = normalizedInputTokens + outputTokens
+		totalTokens = normalizedInputTokens + outputTokens + reasoningTokens
 	}
 	if totalTokens <= 0 {
 		return codexUsage{}, false
 	}
+	totalCostMicrosUSD, hasDirectCost := parsePiUsageCostMicros(record)
+	costSource := CostSourceDirect
+	if !hasDirectCost {
+		totalCostMicrosUSD = estimateModelCostMicros(
+			pricingCatalog,
+			model,
+			inputTokens,
+			outputTokens,
+			cacheReadTokens,
+			cacheWriteTokens,
+			reasoningTokens,
+		)
+		if totalCostMicrosUSD > 0 {
+			costSource = CostSourceEstimated
+		} else {
+			costSource = CostSourceUnknown
+		}
+	}
 	return codexUsage{
-		InputTokens:       normalizedInputTokens,
-		OutputTokens:      outputTokens,
-		CachedInputTokens: cacheReadTokens,
-		CachedWriteTokens: cacheWriteTokens,
-		TotalTokens:       totalTokens,
+		InputTokens:        normalizedInputTokens,
+		OutputTokens:       outputTokens,
+		CachedInputTokens:  cacheReadTokens,
+		CachedWriteTokens:  cacheWriteTokens,
+		ReasoningTokens:    reasoningTokens,
+		TotalTokens:        totalTokens,
+		TotalCostMicrosUSD: totalCostMicrosUSD,
+		CostSource:         costSource,
 	}, true
+}
+
+func parsePiUsageCostMicros(record map[string]any) (int64, bool) {
+	costRecord, ok := record["cost"].(map[string]any)
+	if !ok {
+		return 0, false
+	}
+	totalCost, ok := getFloat64(costRecord, "total")
+	if !ok {
+		return 0, false
+	}
+	return int64(math.Round(totalCost * usdMicrosPerUSD)), true
 }
 
 func countPiAssistantToolCalls(content any) int64 {
@@ -361,11 +405,14 @@ func applyPiActivity(
 	acc := getAccumulator(buckets, key)
 	if activity.Kind == piActivityAssistantUsage {
 		accumulateDelta(acc, codexUsage{
-			InputTokens:       activity.InputTokens,
-			OutputTokens:      activity.OutputTokens,
-			CachedInputTokens: activity.CacheReadTokens,
-			CachedWriteTokens: activity.CacheWriteTokens,
-			TotalTokens:       activity.TotalTokens,
+			InputTokens:        activity.InputTokens,
+			OutputTokens:       activity.OutputTokens,
+			CachedInputTokens:  activity.CacheReadTokens,
+			CachedWriteTokens:  activity.CacheWriteTokens,
+			ReasoningTokens:    activity.ReasoningTokens,
+			TotalTokens:        activity.TotalTokens,
+			TotalCostMicrosUSD: activity.TotalCostMicrosUSD,
+			CostSource:         activity.CostSource,
 		}, activity.SessionID)
 		if activity.ToolCallCount > 0 {
 			accumulateEngagementCounts(acc, activity.SessionID, 0, activity.ToolCallCount)
