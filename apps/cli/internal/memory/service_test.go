@@ -76,7 +76,7 @@ func TestSummarizeSession_BinaryNotFoundLogsDebugNotWarn(t *testing.T) {
 	// RunAgentFunc that returns ErrAgentNotFound (as buildRunAgentFunc does when
 	// ResolveCommand cannot locate the binary).
 	runAgent := RunAgentFunc(func(_ context.Context, _, _, _, _ string) (string, error) {
-		return "", fmt.Errorf("%w: opencode", ErrAgentNotFound)
+		return "", fmt.Errorf("%w: %s", ErrAgentNotFound, BuiltInSummarizerAgentKind)
 	})
 
 	svc := &Service{
@@ -102,7 +102,7 @@ func TestSummarizeSession_BinaryNotFoundLogsDebugNotWarn(t *testing.T) {
 	if !strings.Contains(debugLogs, "agent binary not installed") {
 		t.Errorf("expected debug log 'agent binary not installed', got debug=%q warn=%q", debugLogs, warnLogs)
 	}
-	if !strings.Contains(debugLogs, `"sourceAgent":"pi"`) || !strings.Contains(debugLogs, `"summarizerAgent":"opencode"`) {
+	if !strings.Contains(debugLogs, `"sourceAgent":"pi"`) || !strings.Contains(debugLogs, `"summarizerAgent":"pi"`) {
 		t.Errorf("expected debug log to include source and summarizer agents, got %q", debugLogs)
 	}
 }
@@ -131,7 +131,7 @@ func TestRunSummarize_FailureLogIncludesSourceAndSummarizerAgents(t *testing.T) 
 	if !strings.Contains(warnLogs, `"sourceAgent":"pi"`) {
 		t.Fatalf("expected source agent field, got %q", warnLogs)
 	}
-	if !strings.Contains(warnLogs, `"summarizerAgent":"opencode"`) {
+	if !strings.Contains(warnLogs, `"summarizerAgent":"pi"`) {
 		t.Fatalf("expected summarizer agent field, got %q", warnLogs)
 	}
 }
@@ -264,6 +264,35 @@ func TestService_PersonaEnabledFalseWhenDisabledByPolicy(t *testing.T) {
 	}
 	// Must remain a no-op when persona is policy-disabled.
 	svc.MaybeRunDailyPersonaBatch("opencode")
+}
+
+func TestService_UpdateSummarizerConfigForcesPiAgent(t *testing.T) {
+	svc := &Service{}
+
+	svc.UpdateSummarizerConfig(SummarizerConfig{
+		Enabled:   true,
+		AgentKind: "opencode",
+		Model:     "gpt-5",
+	})
+
+	cfg := svc.GetConfig()
+	if cfg.AgentKind != BuiltInSummarizerAgentKind {
+		t.Fatalf("AgentKind = %q, want %q", cfg.AgentKind, BuiltInSummarizerAgentKind)
+	}
+	if cfg.Model != "" {
+		t.Fatalf("Model = %q, want empty model after legacy non-Pi normalization", cfg.Model)
+	}
+
+	svc.UpdateSummarizerConfig(SummarizerConfig{
+		Enabled:   true,
+		AgentKind: BuiltInSummarizerAgentKind,
+		Model:     "openai/gpt-5",
+	})
+
+	cfg = svc.GetConfig()
+	if cfg.Model != "openai/gpt-5" {
+		t.Fatalf("Model = %q, want %q", cfg.Model, "openai/gpt-5")
+	}
 }
 
 // ── shouldIndexPath ───────────────────────────────────────────────────────────

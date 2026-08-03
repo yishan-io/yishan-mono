@@ -78,12 +78,13 @@ func NewService(dbPath string, summarizerConfig SummarizerConfig, runAgent RunAg
 		return nil, fmt.Errorf("open memory db: %w", err)
 	}
 
+	normalizedConfig := NormalizeSummarizerConfig(summarizerConfig)
 	svc := &Service{
 		db:     db,
-		config: summarizerConfig,
+		config: normalizedConfig,
 	}
-	svc.summarizer = NewSummarizer(summarizerConfig, runAgent)
-	svc.persona = newPersonaService(summarizerConfig, runAgent)
+	svc.summarizer = NewSummarizer(normalizedConfig, runAgent)
+	svc.persona = newPersonaService(normalizedConfig, runAgent)
 	return svc, nil
 }
 
@@ -108,12 +109,13 @@ func (s *Service) GetConfig() SummarizerConfig {
 }
 
 func (s *Service) UpdateSummarizerConfig(cfg SummarizerConfig) {
-	s.config = cfg
+	normalizedConfig := NormalizeSummarizerConfig(cfg)
+	s.config = normalizedConfig
 	if s.summarizer != nil {
-		s.summarizer.UpdateConfig(cfg)
+		s.summarizer.UpdateConfig(normalizedConfig)
 	}
 	if s.persona != nil {
-		s.persona.summarizer.UpdateConfig(cfg)
+		s.persona.summarizer.UpdateConfig(normalizedConfig)
 	}
 }
 

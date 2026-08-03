@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -69,16 +70,29 @@ const (
 	SectionOpenQuestions      MemorySection = "## Open Questions"
 )
 
+// BuiltInSummarizerAgentKind is the fixed agent used for post-session memory summarization.
+const BuiltInSummarizerAgentKind = "pi"
+
 // SummarizerConfig controls the automatic post-session summarizer.
-// AgentKind selects the agent CLI used for summarization (e.g. "claude",
-// "opencode"). When empty the session's own agent is used as the default.
-// Model is optional; when empty the agent's default model is used.
+// AgentKind is retained for backwards-compatible settings wiring, but the
+// runtime always normalizes post-session summarization to the built-in Pi
+// agent. Model is optional; when empty Pi's default model is used.
 type SummarizerConfig struct {
 	Enabled              bool
 	DisableProjectMemory bool
 	DisablePersona       bool
 	AgentKind            string
 	Model                string
+}
+
+// NormalizeSummarizerConfig forces summarizer execution onto the built-in Pi agent.
+func NormalizeSummarizerConfig(cfg SummarizerConfig) SummarizerConfig {
+	trimmedAgentKind := strings.TrimSpace(cfg.AgentKind)
+	if trimmedAgentKind != "" && trimmedAgentKind != BuiltInSummarizerAgentKind {
+		cfg.Model = ""
+	}
+	cfg.AgentKind = BuiltInSummarizerAgentKind
+	return cfg
 }
 
 // RunAgentFunc runs a non-interactive agent prompt and returns its text output.

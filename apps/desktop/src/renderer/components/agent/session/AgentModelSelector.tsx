@@ -1,11 +1,12 @@
 import { Box, Button } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
+import { ModelPickerMenu } from "../../ModelPickerMenu";
 import { ProviderMark } from "../../ProviderMark";
+import { type ModelPickerOption, buildModelPickerOption, groupModelPickerOptionsByProvider } from "../../modelPicker";
 import type { AgentModel } from "../../../store/agentChatTypes";
-import { AgentModelSelectorMenu } from "./AgentModelSelectorMenu";
 import { ThinkingLevelControl } from "./ThinkingLevelControl";
-import { formatAgentModelLabel, getAgentModelProviderName, groupAgentModelsByProvider } from "./helpers";
+import { formatAgentModelLabel } from "./helpers";
 
 type AgentModelSelectorProps = {
   models: AgentModel[];
@@ -18,12 +19,22 @@ type AgentModelSelectorProps = {
 const MODEL_SELECTOR_FONT_SIZE_PX = 12;
 const MODEL_SELECTOR_MAX_WIDTH = "min(48ch, calc(100vw - 120px))";
 
-function getInitialSelectedProvider(models: AgentModel[], currentModel: AgentModel | null): string {
-  if (currentModel) {
-    return getAgentModelProviderName(currentModel);
+function getInitialSelectedProvider(selectedOptionId: string | null, modelOptions: ReturnType<typeof buildAgentModelOptions>): string {
+  if (selectedOptionId) {
+    return modelOptions.find((option) => option.id === selectedOptionId)?.providerId ?? "";
   }
 
-  return groupAgentModelsByProvider(models)[0]?.provider ?? "";
+  return groupModelPickerOptionsByProvider(modelOptions)[0]?.providerId ?? "";
+}
+
+function buildAgentModelOptions(models: AgentModel[]) {
+  return models.map((model) =>
+    buildModelPickerOption({
+      id: model.id,
+      name: model.name,
+      providerId: model.provider?.trim(),
+    }),
+  );
 }
 
 /** Model selector dropdown with thinking level toggle. */
@@ -35,11 +46,16 @@ export function AgentModelSelector({
   onThinkingLevelCycle,
 }: AgentModelSelectorProps) {
   const modelLabel = currentModel ? formatAgentModelLabel(currentModel) : "Select model";
-  const providerLabel = currentModel?.provider?.trim() ?? "";
-  const providerGroups = useMemo(() => groupAgentModelsByProvider(models), [models]);
+  const modelOptions = useMemo(() => buildAgentModelOptions(models), [models]);
+  const selectedModelId = currentModel?.id ?? null;
+  const selectedOption = useMemo(
+    () => (selectedModelId ? modelOptions.find((option) => option.id === selectedModelId) ?? null : null),
+    [modelOptions, selectedModelId],
+  );
+  const providerLabel = selectedOption?.providerName ?? "";
   const initialSelectedProvider = useMemo(
-    () => getInitialSelectedProvider(models, currentModel),
-    [currentModel, models],
+    () => getInitialSelectedProvider(selectedModelId, modelOptions),
+    [modelOptions, selectedModelId],
   );
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedProvider, setSelectedProvider] = useState(initialSelectedProvider);
@@ -69,15 +85,21 @@ export function AgentModelSelector({
   );
 
   const handleModelSelect = useCallback(
-    (model: AgentModel) => {
-      onModelChange(model);
-      setSelectedProvider(getAgentModelProviderName(model));
+    (model: ModelPickerOption) => {
+      const nextModel = models.find((candidateModel) => candidateModel.id === model.id);
+      if (!nextModel) {
+        return;
+      }
+      onModelChange(nextModel);
+      setSelectedProvider(model.providerId);
       handleMenuClose();
     },
-    [handleMenuClose, onModelChange],
+    [handleMenuClose, models, onModelChange],
   );
 
-  const activeSelectedProvider = providerGroups.some((providerGroup) => providerGroup.provider === selectedProvider)
+  const activeSelectedProvider = groupModelPickerOptionsByProvider(modelOptions).some(
+    (providerGroup) => providerGroup.providerId === selectedProvider,
+  )
     ? selectedProvider
     : initialSelectedProvider;
 
@@ -131,7 +153,7 @@ export function AgentModelSelector({
         >
           {providerLabel ? (
             <>
-              <ProviderMark providerId={providerLabel} size={14} />
+              <ProviderMark providerId={selectedOption?.providerId ?? providerLabel} size={14} />
               <Box component="span" sx={{ color: "text.secondary", ml: 0.5 }}>
                 {providerLabel}
               </Box>
@@ -147,13 +169,13 @@ export function AgentModelSelector({
           )}
         </Box>
       </Button>
-      <AgentModelSelectorMenu
+      <ModelPickerMenu
         key={activeSelectedProvider || "no-provider"}
         anchorEl={menuAnchor}
         open={isMenuOpen}
-        models={models}
-        currentModel={currentModel}
-        selectedProvider={activeSelectedProvider}
+        options={modelOptions}
+        selectedModelId={selectedModelId}
+        selectedProviderId={activeSelectedProvider}
         ignoreNextClickAwayRef={ignoreNextClickAwayRef}
         onClose={handleMenuClose}
         onProviderChange={setSelectedProvider}

@@ -14,7 +14,6 @@ import {
   SiMoonshotai,
   SiNvidia,
   SiOpencode,
-  SiOpenrouter,
   SiQwen,
   SiVercel,
   SiXiaomi,
@@ -199,8 +198,8 @@ export const PI_PROVIDER_CATALOG: PiProviderCatalogEntry[] = [
     name: "OpenRouter",
     envVar: "OPENROUTER_API_KEY",
     authMode: "both",
-    icon: SiOpenrouter,
-    brandColor: "94A3B8",
+    icon: FALLBACK_PROVIDER_ICON,
+    assetIcon: "app-icons/provider-icons/openrouter.svg",
   },
   {
     id: "vercel-ai-gateway",

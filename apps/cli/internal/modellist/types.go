@@ -2,7 +2,7 @@ package modellist
 
 import "time"
 
-const DefaultCacheTTL = 24 * time.Hour
+const DefaultCacheTTL = 5 * time.Minute
 
 type ModelInfo struct {
 	ID   string `json:"id"`

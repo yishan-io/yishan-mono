@@ -467,7 +467,6 @@ const MEMORY_SEARCH_ITEMS: SettingsSearchCatalogItem[] = [
       "settings.memory.description",
       "settings.memory.summarizer.title",
       "settings.memory.summarizer.enabled.label",
-      "settings.memory.summarizer.agentKind.label",
       "settings.memory.summarizer.model.label",
     ],
   },
