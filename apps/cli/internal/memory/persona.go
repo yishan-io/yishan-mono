@@ -58,17 +58,20 @@ type personaSections struct {
 
 // PersonaSummarizer extracts and merges developer persona from session transcripts.
 type PersonaSummarizer struct {
-	enabled  bool
-	model    string
-	runAgent RunAgentFunc
+	enabled   bool
+	agentKind string
+	model     string
+	runAgent  RunAgentFunc
 }
 
 // NewPersonaSummarizer creates a PersonaSummarizer with the given config.
 func NewPersonaSummarizer(cfg SummarizerConfig, runAgent RunAgentFunc) *PersonaSummarizer {
+	normalizedCfg := NormalizeSummarizerConfig(cfg)
 	return &PersonaSummarizer{
-		enabled:  cfg.Enabled,
-		model:    cfg.Model,
-		runAgent: runAgent,
+		enabled:   normalizedCfg.Enabled,
+		agentKind: normalizedCfg.AgentKind,
+		model:     normalizedCfg.Model,
+		runAgent:  runAgent,
 	}
 }
 
@@ -79,8 +82,10 @@ func (p *PersonaSummarizer) Enabled() bool {
 
 // UpdateConfig refreshes the summarizer's config at runtime.
 func (p *PersonaSummarizer) UpdateConfig(cfg SummarizerConfig) {
-	p.enabled = cfg.Enabled
-	p.model = cfg.Model
+	normalizedCfg := NormalizeSummarizerConfig(cfg)
+	p.enabled = normalizedCfg.Enabled
+	p.agentKind = normalizedCfg.AgentKind
+	p.model = normalizedCfg.Model
 }
 
 // maxPersonaSessions is the maximum number of sessions fed into a single
@@ -89,11 +94,11 @@ func (p *PersonaSummarizer) UpdateConfig(cfg SummarizerConfig) {
 // context limits. The most recent sessions are used (best signal).
 const maxPersonaSessions = 10
 
-// SummarizeForPersona runs the persona extraction pipeline for the given agent
-// and set of session transcripts (typically all sessions from the previous day).
-// It reads the existing PERSONA.md, extracts signals via LLM, merges them using
-// replace-on-contradiction semantics, and writes the result back.
-func (p *PersonaSummarizer) SummarizeForPersona(agentKind string, sessions []*sessionMessages) (PersonaSummarizeResult, error) {
+// SummarizeForPersona runs the persona extraction pipeline for the given source
+// agent and set of session transcripts (typically all sessions from the previous day).
+// It reads the existing PERSONA.md, extracts signals via the built-in Pi agent,
+// merges them using replace-on-contradiction semantics, and writes the result back.
+func (p *PersonaSummarizer) SummarizeForPersona(sourceAgent string, sessions []*sessionMessages) (PersonaSummarizeResult, error) {
 	if !p.Enabled() {
 		return PersonaSummarizeResult{Skipped: true}, nil
 	}
@@ -125,16 +130,17 @@ func (p *PersonaSummarizer) SummarizeForPersona(agentKind string, sessions []*se
 	prompt := fmt.Sprintf(personaExtractionPrompt, existingContent, conversation)
 
 	log.Info().
-		Str("agent", agentKind).
+		Str("sourceAgent", sourceAgent).
+		Str("summarizerAgent", p.agentKind).
 		Int("sessions", len(sessions)).
 		Msg("starting persona extraction")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
-	output, err := p.runAgent(ctx, agentKind, p.model, prompt, "")
+	output, err := p.runAgent(ctx, p.agentKind, p.model, prompt, "")
 	if err != nil {
-		return PersonaSummarizeResult{}, fmt.Errorf("llm persona extraction via %s: %w", agentKind, err)
+		return PersonaSummarizeResult{}, fmt.Errorf("llm persona extraction via %s: %w", p.agentKind, err)
 	}
 
 	extracted, err := parseExtractedPersona(output)
