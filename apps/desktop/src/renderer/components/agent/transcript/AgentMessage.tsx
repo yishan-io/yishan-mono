@@ -41,8 +41,6 @@ export function AgentMessage({
         borderLeft: isUser ? 3 : 0,
         borderColor: isUser ? "info.main" : undefined,
         borderRadius: isUser ? 1 : 0,
-        contentVisibility: "auto",
-        containIntrinsicSize: "auto 160px",
       }}
     >
       {isUser ? <UserMessageContent messageText={messageText} /> : null}

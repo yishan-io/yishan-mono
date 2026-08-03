@@ -38,11 +38,11 @@ function formatExpectedMessageTime(timestamp: number): string {
 }
 
 describe("AgentMessage", () => {
-  it("uses browser content visibility to skip off-screen message rendering", () => {
+  it("does not apply placeholder sizing styles that conflict with virtualized row measurement", () => {
     render(<AgentMessage message={buildAssistantThinkingMessage()} />);
 
-    expect(document.head.textContent).toContain("content-visibility:auto");
-    expect(document.head.textContent).toContain("contain-intrinsic-size:auto 160px");
+    expect(document.head.textContent).not.toContain("content-visibility:auto");
+    expect(document.head.textContent).not.toContain("contain-intrinsic-size:auto 160px");
   });
 
   it("renders a standalone tool result with omitted content", () => {
