@@ -33,7 +33,6 @@ function buildAgentModelOptions(models: AgentModel[]) {
       id: model.id,
       name: model.name,
       providerId: model.provider?.trim(),
-      providerName: model.provider?.trim(),
     }),
   );
 }

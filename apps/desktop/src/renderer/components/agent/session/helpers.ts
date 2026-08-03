@@ -1,3 +1,4 @@
+import { getPiProviderDisplayName } from "../../../helpers/piProviders";
 import type { AgentModel } from "../../../store/agentChatTypes";
 
 export const FALLBACK_MODEL_PROVIDER_NAME = "Other";
@@ -10,13 +11,17 @@ export type AgentModelProviderGroup = {
 
 /** Returns the normalized provider label used by the model selector. */
 export function getAgentModelProviderName(model: AgentModel): string {
-  const providerName = model.provider?.trim();
-  return providerName ? providerName : FALLBACK_MODEL_PROVIDER_NAME;
+  const providerId = model.provider?.trim();
+  if (!providerId) {
+    return FALLBACK_MODEL_PROVIDER_NAME;
+  }
+
+  return getPiProviderDisplayName(providerId.toLowerCase()) || providerId;
 }
 
 /** Formats the selected model label shown in the trigger button. */
 export function formatAgentModelLabel(model: AgentModel): string {
-  const providerName = model.provider?.trim();
+  const providerName = getAgentModelProviderName(model);
   return providerName ? `${providerName}/${model.name}` : model.name;
 }
 

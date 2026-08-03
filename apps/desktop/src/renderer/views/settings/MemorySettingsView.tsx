@@ -1,7 +1,7 @@
-import { Alert, Box, Button, CircularProgress, IconButton, Stack } from "@mui/material";
+import { Alert, Box, Button, Stack } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuChevronDown, LuRefreshCw } from "react-icons/lu";
+import { LuChevronDown } from "react-icons/lu";
 import { ModelPickerMenu } from "../../components/ModelPickerMenu";
 import { ProviderMark } from "../../components/ProviderMark";
 import { buildModelPickerOption, groupModelPickerOptionsByProvider } from "../../components/modelPicker";
@@ -17,7 +17,6 @@ import type { MemoryConfig } from "../../rpc/daemonTypes";
 import { getDaemonClient } from "../../rpc/rpcTransport";
 
 const MEMORY_SUMMARIZER_AGENT_KIND = "pi" as const;
-const MODEL_SELECTOR_MIN_WIDTH_PX = 280;
 
 function normalizeMemoryConfig(config: MemoryConfig): MemoryConfig {
   const normalizedAgentKind = config.agentKind.trim();
@@ -30,24 +29,45 @@ function normalizeMemoryConfig(config: MemoryConfig): MemoryConfig {
   };
 }
 
+function stripProviderPrefix(modelName: string, providerId: string, providerName: string): string {
+  const trimmedModelName = modelName.trim();
+  const lowerModelName = trimmedModelName.toLowerCase();
+  const normalizedPrefixes = [providerId.trim().toLowerCase(), providerName.trim().toLowerCase()].filter(Boolean);
+
+  for (const prefix of normalizedPrefixes) {
+    if (lowerModelName.startsWith(`${prefix}/`)) {
+      return trimmedModelName.slice(prefix.length + 1).trim() || trimmedModelName;
+    }
+  }
+
+  return trimmedModelName;
+}
+
 function buildMemoryModelOptions(
   models: Array<{ id: string; name: string }>,
   selectedModelId: string,
 ): ReturnType<typeof buildModelPickerOption>[] {
-  const options = models.map((model) =>
-    buildModelPickerOption({
+  const options = models.map((model) => {
+    const baseOption = buildModelPickerOption({
       id: model.id,
       name: model.name,
-    }),
-  );
+    });
+
+    return {
+      ...baseOption,
+      name: stripProviderPrefix(baseOption.name, baseOption.providerId, baseOption.providerName),
+    };
+  });
 
   if (selectedModelId && !options.some((option) => option.id === selectedModelId)) {
-    options.unshift(
-      buildModelPickerOption({
-        id: selectedModelId,
-        name: selectedModelId,
-      }),
-    );
+    const fallbackOption = buildModelPickerOption({
+      id: selectedModelId,
+      name: selectedModelId,
+    });
+    options.unshift({
+      ...fallbackOption,
+      name: stripProviderPrefix(fallbackOption.name, fallbackOption.providerId, fallbackOption.providerName),
+    });
   }
 
   return options;
@@ -72,7 +92,6 @@ export function MemorySettingsView() {
   const [models, setModels] = useState<Array<{ id: string; name: string }>>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
-  const [isRefreshingModels, setIsRefreshingModels] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedProvider, setSelectedProvider] = useState("");
   const ignoreNextClickAwayRef = useRef(false);
@@ -145,16 +164,6 @@ export function MemorySettingsView() {
     },
     [config, persistConfig],
   );
-
-  const handleRefreshModels = useCallback(async () => {
-    setIsRefreshingModels(true);
-    setModelsError(null);
-    try {
-      await fetchModels(true);
-    } finally {
-      setIsRefreshingModels(false);
-    }
-  }, [fetchModels]);
 
   const modelValue = config?.model ?? "";
   const modelOptions = useMemo(() => buildMemoryModelOptions(models, modelValue), [modelValue, models]);
@@ -265,15 +274,13 @@ export function MemorySettingsView() {
                       size="small"
                       onMouseDown={handleTriggerMouseDown}
                       onClick={handleTriggerClick}
-                      disabled={loading}
+                      disabled={loading || modelsLoading}
                       title={selectedModelLabel ?? t("settings.memory.summarizer.model.defaultOption")}
                       aria-label={selectedModelLabel ?? t("settings.memory.summarizer.model.defaultOption")}
                       aria-haspopup="dialog"
                       aria-expanded={isMenuOpen}
                       endIcon={<LuChevronDown size={14} />}
                       sx={{
-                        minWidth: MODEL_SELECTOR_MIN_WIDTH_PX,
-                        maxWidth: MODEL_SELECTOR_MIN_WIDTH_PX,
                         justifyContent: "flex-start",
                         textTransform: "none",
                         color: "text.secondary",
@@ -319,13 +326,6 @@ export function MemorySettingsView() {
                       clearSelectionLabel={t("settings.memory.summarizer.model.defaultOption")}
                       onClearSelection={handleClearSelection}
                     />
-                    <IconButton
-                      onClick={handleRefreshModels}
-                      disabled={loading || isRefreshingModels}
-                      aria-label={t("settings.memory.summarizer.model.refresh")}
-                    >
-                      {isRefreshingModels || modelsLoading ? <CircularProgress size={16} /> : <LuRefreshCw size={16} />}
-                    </IconButton>
                   </Box>
                 }
               />

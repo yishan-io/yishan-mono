@@ -7,9 +7,9 @@ import { AgentModelSelector } from "./AgentModelSelector";
 
 function buildModels(): AgentModel[] {
   return [
-    { id: "anthropic/claude-sonnet-4", provider: "Anthropic", name: "claude-sonnet-4" },
-    { id: "anthropic/claude-opus-4", provider: "Anthropic", name: "claude-opus-4" },
-    { id: "openai/gpt-4.1", provider: "OpenAI", name: "gpt-4.1" },
+    { id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "claude-sonnet-4" },
+    { id: "anthropic/claude-opus-4", provider: "anthropic", name: "claude-opus-4" },
+    { id: "openai/gpt-4.1", provider: "openai", name: "gpt-4.1" },
   ];
 }
 
@@ -108,10 +108,10 @@ describe("AgentModelSelector", () => {
     expect(screen.queryByRole("button", { name: "claude-sonnet-4" })).toBeNull();
   });
 
-  it("groups models by the explicit provider field instead of inferring from model id", () => {
+  it("shows human-readable provider names from raw provider ids", () => {
     const models: AgentModel[] = [
-      { id: "google/gemini-2.5-pro", provider: "OpenRouter", name: "gemini-2.5-pro" },
-      { id: "anthropic.claude-sonnet-4", provider: "Anthropic", name: "claude-sonnet-4" },
+      { id: "google/gemini-2.5-pro", provider: "openrouter", name: "gemini-2.5-pro" },
+      { id: "anthropic.claude-sonnet-4", provider: "anthropic", name: "claude-sonnet-4" },
     ];
 
     render(
@@ -133,10 +133,10 @@ describe("AgentModelSelector", () => {
 
   it("virtualizes the model list for the selected provider", () => {
     const models: AgentModel[] = [
-      { id: "anthropic/claude-sonnet-4", provider: "Anthropic", name: "claude-sonnet-4" },
+      { id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "claude-sonnet-4" },
       ...Array.from({ length: 40 }, (_, index) => ({
         id: `openai/model-${index}`,
-        provider: "OpenAI",
+        provider: "openai",
         name: `model-${index}`,
       })),
     ];

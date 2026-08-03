@@ -32,7 +32,6 @@ export function AgentModelSelectorMenu({
       id: model.id,
       name: model.name,
       providerId: model.provider?.trim(),
-      providerName: model.provider?.trim(),
     }),
   );
 

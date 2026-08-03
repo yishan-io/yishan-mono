@@ -42,8 +42,8 @@ describe("MemorySettingsView", () => {
     mocked.updateConfig.mockResolvedValue({ ok: true });
     mocked.listModels.mockResolvedValue({
       models: [
-        { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4" },
-        { id: "openai/gpt-5", name: "GPT-5" },
+        { id: "anthropic/claude-sonnet-4", name: "anthropic/claude-sonnet-4" },
+        { id: "openai/gpt-5", name: "openai/gpt-5" },
       ],
     });
   });
@@ -74,7 +74,7 @@ describe("MemorySettingsView", () => {
     expect(screen.getByRole("searchbox", { name: "Search models" })).toBeTruthy();
   });
 
-  it("persists the selected Pi model from the popup picker", async () => {
+  it("shows provider-stripped model names in the popup and persists the selected Pi model", async () => {
     render(<MemorySettingsView />);
 
     const trigger = await screen.findByRole("button", {
@@ -84,7 +84,11 @@ describe("MemorySettingsView", () => {
     fireEvent.mouseDown(trigger);
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole("button", { name: "OpenAI" }));
-    fireEvent.click(screen.getByRole("button", { name: "GPT-5" }));
+
+    expect(screen.getByRole("button", { name: "gpt-5" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "openai/gpt-5" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "gpt-5" }));
 
     await waitFor(() => {
       expect(mocked.updateConfig).toHaveBeenCalledWith({
@@ -103,17 +107,9 @@ describe("MemorySettingsView", () => {
     expect(await screen.findByText("pi model fetch failed")).toBeTruthy();
   });
 
-  it("refreshes the model list with Pi", async () => {
+  it("does not show a separate refresh button", () => {
     render(<MemorySettingsView />);
 
-    const refreshButton = await screen.findByRole("button", {
-      name: "settings.memory.summarizer.model.refresh",
-    });
-
-    fireEvent.click(refreshButton);
-
-    await waitFor(() => {
-      expect(mocked.listModels).toHaveBeenLastCalledWith({ agentKind: "pi", forceRefresh: true });
-    });
+    expect(screen.queryByRole("button", { name: "settings.memory.summarizer.model.refresh" })).toBeNull();
   });
 });
