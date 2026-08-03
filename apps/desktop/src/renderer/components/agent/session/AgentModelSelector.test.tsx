@@ -5,6 +5,29 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentModel } from "../../../store/agentChatTypes";
 import { AgentModelSelector } from "./AgentModelSelector";
 
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { count?: number }) => {
+      switch (key) {
+        case "common.modelPicker.providerListLabel":
+          return "Model providers";
+        case "common.modelPicker.searchAriaLabel":
+          return "Search models";
+        case "common.modelPicker.searchPlaceholder":
+          return options?.count === 1 ? "Search 1 model" : `Search ${options?.count ?? 0} models`;
+        case "common.modelPicker.providerCount":
+          return options?.count === 1 ? "1 model" : `${options?.count ?? 0} models`;
+        case "common.modelPicker.noModels":
+          return "No models";
+        case "common.modelPicker.noMatchingModels":
+          return "No matching models";
+        default:
+          return key;
+      }
+    },
+  }),
+}));
+
 function buildModels(): AgentModel[] {
   return [
     { id: "anthropic/claude-sonnet-4", provider: "anthropic", name: "claude-sonnet-4" },
@@ -80,10 +103,36 @@ describe("AgentModelSelector", () => {
 
     fireEvent.mouseDown(screen.getByRole("button", { name: "Anthropic/claude-sonnet-4" }));
     fireEvent.click(screen.getByRole("button", { name: "Anthropic/claude-sonnet-4" }));
-    fireEvent.click(screen.getByRole("button", { name: "OpenAI" }));
+    fireEvent.click(screen.getByRole("button", { name: "OpenAI 1 model" }));
     fireEvent.click(screen.getByRole("button", { name: "gpt-4.1" }));
 
     expect(onModelChange).toHaveBeenCalledWith(models[2]);
+  });
+
+  it("shows provider counts and uses the active-provider count in the search placeholder", () => {
+    const models = buildModels();
+    const currentModel = models[0] ?? null;
+
+    render(
+      <AgentModelSelector
+        models={models}
+        currentModel={currentModel}
+        thinkingLevel="off"
+        onModelChange={vi.fn()}
+        onThinkingLevelCycle={vi.fn()}
+      />,
+    );
+
+    fireEvent.mouseDown(screen.getByRole("button", { name: "Anthropic/claude-sonnet-4" }));
+    fireEvent.click(screen.getByRole("button", { name: "Anthropic/claude-sonnet-4" }));
+
+    expect(screen.getByText("2 models")).toBeTruthy();
+    expect(screen.getByText("1 model")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Search 2 models")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "OpenAI 1 model" }));
+
+    expect(screen.getByPlaceholderText("Search 1 model")).toBeTruthy();
   });
 
   it("filters models inside the dropdown search", () => {
@@ -127,8 +176,8 @@ describe("AgentModelSelector", () => {
     fireEvent.mouseDown(screen.getByRole("button", { name: "OpenRouter/gemini-2.5-pro" }));
     fireEvent.click(screen.getByRole("button", { name: "OpenRouter/gemini-2.5-pro" }));
 
-    expect(screen.getByRole("button", { name: "OpenRouter" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Anthropic" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "OpenRouter 1 model" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Anthropic 1 model" })).toBeTruthy();
   });
 
   it("virtualizes the model list for the selected provider", () => {

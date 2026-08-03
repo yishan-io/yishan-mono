@@ -1,5 +1,6 @@
 import { Box, Button, ClickAwayListener, List, ListItemButton, ListItemText, Popper, Typography } from "@mui/material";
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import { useTranslation } from "react-i18next";
 import { FloatingSurface } from "./FloatingSurface";
 import { ProviderMark } from "./ProviderMark";
 import { SearchInput } from "./SearchInput";
@@ -60,11 +61,16 @@ export function ModelPickerMenu({
   clearSelectionLabel,
   onClearSelection,
 }: ModelPickerMenuProps) {
+  const { t } = useTranslation();
   const providerGroups = useMemo(() => groupModelPickerOptionsByProvider(options), [options]);
   const activeProviderGroup =
     providerGroups.find((group) => group.providerId === selectedProviderId) ?? providerGroups[0] ?? null;
   const activeProviderKey = activeProviderGroup?.providerId ?? selectedProviderId;
   const activeModels = activeProviderGroup?.models ?? [];
+  const searchPlaceholder = useMemo(
+    () => t("common.modelPicker.searchPlaceholder", { count: activeModels.length }),
+    [activeModels.length, t],
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const filteredModels = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -140,7 +146,7 @@ export function ModelPickerMenu({
                 py: 0.5,
               }}
             >
-              <List dense disablePadding aria-label="Model providers">
+              <List dense disablePadding aria-label={t("common.modelPicker.providerListLabel")}>
                 {providerGroups.map((providerGroup) => (
                   <ListItemButton
                     key={providerGroup.providerId}
@@ -158,12 +164,19 @@ export function ModelPickerMenu({
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                       },
+                      "& .MuiListItemText-secondary": {
+                        fontSize: 11,
+                        lineHeight: 1.3,
+                      },
                     }}
                   >
                     <Box sx={{ mr: 1, flexShrink: 0, display: "inline-flex" }}>
                       <ProviderMark providerId={providerGroup.providerId} size={18} />
                     </Box>
-                    <ListItemText primary={providerGroup.providerName} />
+                    <ListItemText
+                      primary={providerGroup.providerName}
+                      secondary={t("common.modelPicker.providerCount", { count: providerGroup.models.length })}
+                    />
                   </ListItemButton>
                 ))}
               </List>
@@ -172,8 +185,8 @@ export function ModelPickerMenu({
               <Box sx={{ height: SEARCH_AREA_HEIGHT_PX, px: 1, pb: 0.5 }}>
                 <SearchInput
                   value={searchQuery}
-                  placeholder="Search models"
-                  ariaLabel="Search models"
+                  placeholder={searchPlaceholder}
+                  ariaLabel={t("common.modelPicker.searchAriaLabel")}
                   sizeVariant="small"
                   onChange={(value) => {
                     if (modelListRef.current) {
@@ -186,11 +199,11 @@ export function ModelPickerMenu({
               </Box>
               {activeModels.length === 0 ? (
                 <Typography variant="caption" sx={{ color: "text.secondary", display: "block", px: 1.5, py: 1 }}>
-                  No models
+                  {t("common.modelPicker.noModels")}
                 </Typography>
               ) : filteredModels.length === 0 ? (
                 <Typography variant="caption" sx={{ color: "text.secondary", display: "block", px: 1.5, py: 1 }}>
-                  No matching models
+                  {t("common.modelPicker.noMatchingModels")}
                 </Typography>
               ) : filteredModels.length <= MAX_VISIBLE_MODEL_ROWS ? (
                 <Box

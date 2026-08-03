@@ -8,6 +8,16 @@
       "save": "Save",
       "saving": "Saving...",
       "close": "Close"
+    },
+    "modelPicker": {
+      "providerListLabel": "Model providers",
+      "searchAriaLabel": "Search models",
+      "searchPlaceholder_one": "Search {{count}} model",
+      "searchPlaceholder_other": "Search {{count}} models",
+      "providerCount_one": "{{count}} model",
+      "providerCount_other": "{{count}} models",
+      "noModels": "No models",
+      "noMatchingModels": "No matching models"
     }
   }
 }

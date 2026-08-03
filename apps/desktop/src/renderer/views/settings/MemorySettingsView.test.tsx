@@ -12,7 +12,24 @@ const mocked = vi.hoisted(() => ({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, options?: { count?: number }) => {
+      switch (key) {
+        case "common.modelPicker.providerListLabel":
+          return "Model providers";
+        case "common.modelPicker.searchAriaLabel":
+          return "Search models";
+        case "common.modelPicker.searchPlaceholder":
+          return options?.count === 1 ? "Search 1 model" : `Search ${options?.count ?? 0} models`;
+        case "common.modelPicker.providerCount":
+          return options?.count === 1 ? "1 model" : `${options?.count ?? 0} models`;
+        case "common.modelPicker.noModels":
+          return "No models";
+        case "common.modelPicker.noMatchingModels":
+          return "No matching models";
+        default:
+          return key;
+      }
+    },
   }),
 }));
 
@@ -83,7 +100,7 @@ describe("MemorySettingsView", () => {
 
     fireEvent.mouseDown(trigger);
     fireEvent.click(trigger);
-    fireEvent.click(screen.getByRole("button", { name: "OpenAI" }));
+    fireEvent.click(screen.getByRole("button", { name: "OpenAI 1 model" }));
 
     expect(screen.getByRole("button", { name: "gpt-5" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "openai/gpt-5" })).toBeNull();

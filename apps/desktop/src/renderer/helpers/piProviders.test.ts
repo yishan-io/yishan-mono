@@ -124,6 +124,7 @@ describe("PI_PROVIDER_CATALOG", () => {
       "groq",
       "openai",
       "openai-codex",
+      "openrouter",
       "radius",
       "together",
       "xai",
