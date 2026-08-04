@@ -38,7 +38,7 @@ func TestBuildRunCommand_Claude_NonInteractive(t *testing.T) {
 	}
 }
 
-func TestBuildRunCommand_Pi_NonInteractive_UsesPromptAndModelFlags(t *testing.T) {
+func TestBuildRunCommand_Pi_NonInteractive_UsesPromptModelAndNoSessionFlags(t *testing.T) {
 	cmd, err := agentcmd.BuildRunCommand("pi", "summarize this", "openai/gpt-5", false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -46,11 +46,29 @@ func TestBuildRunCommand_Pi_NonInteractive_UsesPromptAndModelFlags(t *testing.T)
 	if cmd.Binary != "pi" {
 		t.Errorf("expected binary pi, got %q", cmd.Binary)
 	}
-	if len(cmd.Args) != 4 {
-		t.Fatalf("expected 4 args, got %v", cmd.Args)
+	if len(cmd.Args) != 5 {
+		t.Fatalf("expected 5 args, got %v", cmd.Args)
 	}
 	if cmd.Args[0] != "-p" || cmd.Args[1] != "summarize this" || cmd.Args[2] != "--model" || cmd.Args[3] != "openai/gpt-5" {
 		t.Errorf("unexpected args: %v", cmd.Args)
+	}
+	if cmd.Args[4] != "--no-session" {
+		t.Errorf("expected --no-session as last arg, got %v", cmd.Args)
+	}
+}
+
+func TestBuildRunCommand_Pi_Interactive_NoNoSessionFlag(t *testing.T) {
+	cmd, err := agentcmd.BuildRunCommand("pi", "hello", "", true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cmd.Binary != "pi" {
+		t.Errorf("expected binary pi, got %q", cmd.Binary)
+	}
+	for _, a := range cmd.Args {
+		if a == "--no-session" {
+			t.Errorf("expected no --no-session for interactive run, got %v", cmd.Args)
+		}
 	}
 }
 
