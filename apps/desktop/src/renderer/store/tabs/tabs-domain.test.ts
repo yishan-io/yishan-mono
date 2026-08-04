@@ -120,6 +120,156 @@ describe("tabs-domain open", () => {
     expect(created?.kind).toBe("browser");
   });
 
+  it("focuses the existing agent-chat tab when reopening the same history session", () => {
+    const state: WorkspaceTabStateSlice = {
+      ...createBaseState(),
+      tabs: [
+        ...createBaseState().tabs,
+        {
+          id: "agent-history-1",
+          workspaceId: "workspace-1",
+          title: "Agent Chat",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionId: "history-session-1" },
+        },
+      ],
+    };
+
+    const patch = openTabState(
+      state,
+      {
+        kind: "agent-chat",
+        cwd: "/tmp/project",
+        sessionId: "history-session-1",
+        title: "Agent Chat",
+      },
+      "new-agent-chat",
+      { selectedWorkspaceId: "workspace-1" },
+    );
+
+    expect(patch?.selectedTabId).toBe("agent-history-1");
+    expect(patch?.tabs?.some((tab) => tab.id === "new-agent-chat")).toBeFalsy();
+  });
+
+  it("creates a new agent-chat tab for a history session not yet open", () => {
+    const state = createBaseState();
+    const patch = openTabState(
+      state,
+      {
+        kind: "agent-chat",
+        cwd: "/tmp/project",
+        sessionId: "history-session-2",
+        title: "Agent Chat",
+      },
+      "new-agent-chat",
+      { selectedWorkspaceId: "workspace-1" },
+    );
+
+    expect(patch?.selectedTabId).toBe("new-agent-chat");
+    const created = patch?.tabs?.find((tab) => tab.id === "new-agent-chat");
+    expect(created?.kind).toBe("agent-chat");
+    expect(created && created.kind === "agent-chat" ? created.data.sessionId : undefined).toBe("history-session-2");
+  });
+
+  it("always creates a new tab for fresh agent chats without a session id", () => {
+    const state: WorkspaceTabStateSlice = {
+      ...createBaseState(),
+      tabs: [
+        ...createBaseState().tabs,
+        {
+          id: "agent-fresh-1",
+          workspaceId: "workspace-1",
+          title: "Agent Chat",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project" },
+        },
+      ],
+    };
+
+    const patch = openTabState(
+      state,
+      {
+        kind: "agent-chat",
+        cwd: "/tmp/project",
+        title: "Agent Chat",
+      },
+      "new-agent-chat",
+      { selectedWorkspaceId: "workspace-1" },
+    );
+
+    expect(patch?.selectedTabId).toBe("new-agent-chat");
+    expect(patch?.tabs?.some((tab) => tab.id === "new-agent-chat")).toBe(true);
+  });
+
+  it("does not dedupe a history open against a subagent-detail tab of the same session", () => {
+    const state: WorkspaceTabStateSlice = {
+      ...createBaseState(),
+      tabs: [
+        ...createBaseState().tabs,
+        {
+          id: "agent-subagent-1",
+          workspaceId: "workspace-1",
+          title: "Builder detail",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionId: "child-session-1", sessionView: "subagent-detail" },
+        },
+      ],
+    };
+
+    const patch = openTabState(
+      state,
+      {
+        kind: "agent-chat",
+        cwd: "/tmp/project",
+        sessionId: "child-session-1",
+        title: "Agent Chat",
+      },
+      "new-agent-chat",
+      { selectedWorkspaceId: "workspace-1" },
+    );
+
+    expect(patch?.selectedTabId).toBe("new-agent-chat");
+    expect(patch?.tabs?.some((tab) => tab.id === "new-agent-chat")).toBe(true);
+  });
+
+  it("dedupes subagent-detail opens within the same view kind", () => {
+    const state: WorkspaceTabStateSlice = {
+      ...createBaseState(),
+      tabs: [
+        ...createBaseState().tabs,
+        {
+          id: "agent-subagent-1",
+          workspaceId: "workspace-1",
+          title: "Builder detail",
+          pinned: false,
+          kind: "agent-chat",
+          data: { cwd: "/tmp/project", sessionId: "child-session-1", sessionView: "subagent-detail" },
+        },
+      ],
+    };
+
+    const patch = openTabState(
+      state,
+      {
+        kind: "agent-chat",
+        cwd: "/tmp/project",
+        sessionId: "child-session-1",
+        title: "Builder detail",
+        sessionView: "subagent-detail",
+        subagentAgentId: "builder",
+        subagentParentSessionId: "parent-1",
+      },
+      "new-agent-chat",
+      { selectedWorkspaceId: "workspace-1" },
+    );
+
+    expect(patch?.selectedTabId).toBe("agent-subagent-1");
+    expect(patch?.tabs?.some((tab) => tab.id === "new-agent-chat")).toBeFalsy();
+  });
+
   it("creates a new terminal tab when reuseExisting is disabled", () => {
     const state = createBaseState();
     const patch = openTabState(

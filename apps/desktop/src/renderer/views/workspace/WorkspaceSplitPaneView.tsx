@@ -319,10 +319,16 @@ export function WorkspaceSplitPane({ workspaceId, isActive, workspaceTabs }: Wor
           anchorEl={historyMenuAnchor}
           onClose={() => setHistoryMenuAnchor(null)}
           onSelectSession={(session, title) => {
-            // Check if this Pi session is already active in a tab.
+            // Check if this Pi session is already active in a full agent-chat
+            // tab (subagent-detail tabs are read-only and not candidates).
             const existingTabId =
               findTabWithSession(session.sessionId) ??
-              workspaceTabs.find((tab) => tab.kind === "agent-chat" && tab.data.sessionId === session.sessionId)?.id;
+              workspaceTabs.find(
+                (tab) =>
+                  tab.kind === "agent-chat" &&
+                  tab.data.sessionView !== "subagent-detail" &&
+                  tab.data.sessionId === session.sessionId,
+              )?.id;
             if (existingTabId) {
               cmd.selectTab(existingTabId);
               return;

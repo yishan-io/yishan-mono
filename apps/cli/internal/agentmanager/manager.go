@@ -26,6 +26,12 @@ var ErrBinaryNotFound = errors.New("agent binary not found in PATH")
 // already active.
 var ErrSessionExists = errors.New("agent session already exists")
 
+// StartGate, when non-nil, runs after the subprocess is spawned and before the
+// session is registered with the manager. Test-only hook that lets tests hold a
+// Start in its reservation window (the id is in `starting` but not yet in
+// `sessions`).
+var StartGate func()
+
 // Manager tracks active agent sessions and provides lifecycle operations.
 type Manager struct {
 	mu       sync.Mutex
@@ -152,6 +158,12 @@ func (m *Manager) Start(ctx context.Context, opts StartOptions) (*Session, error
 		manager:     m,
 	}
 
+	// Test hook: hold the start in its reservation window (id in `starting`,
+	// not yet in `sessions`) so tests can exercise concurrent start/attach.
+	if StartGate != nil {
+		StartGate()
+	}
+
 	m.mu.Lock()
 	m.sessions[opts.SessionID] = session
 	delete(m.starting, opts.SessionID)
@@ -192,6 +204,16 @@ func (m *Manager) Session(sessionID string) (*Session, bool) {
 
 	session, exists := m.sessions[sessionID]
 	return session, exists
+}
+
+// Starting reports whether a Start for the session id is currently in flight
+// (the id is reserved but the session has not been registered yet).
+func (m *Manager) Starting(sessionID string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	_, exists := m.starting[sessionID]
+	return exists
 }
 
 // Sessions returns a snapshot of all active sessions.

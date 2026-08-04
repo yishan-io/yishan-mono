@@ -45,9 +45,24 @@ export function findExistingTab(
     );
   }
 
-  // Agent chat tabs are always new — each gets its own session.
+  // Agent chat tabs: a history session is one conversation — reopening it
+  // focuses the tab that already owns it instead of creating a duplicate tab
+  // that races the same session id. Fresh chats (no sessionId) are always new;
+  // subagent-detail tabs dedupe within their own view kind.
   if (input.kind === "agent-chat") {
-    return undefined;
+    const sessionId = input.sessionId?.trim();
+    if (!sessionId) {
+      return undefined;
+    }
+
+    const isSubagentDetail = input.sessionView === "subagent-detail";
+    return tabs.find(
+      (tab) =>
+        tab.workspaceId === targetWorkspaceId &&
+        tab.kind === "agent-chat" &&
+        tab.data.sessionId?.trim() === sessionId &&
+        Boolean(tab.data.sessionView === "subagent-detail") === isSubagentDetail,
+    );
   }
 
   if (input.reuseExisting === false) {

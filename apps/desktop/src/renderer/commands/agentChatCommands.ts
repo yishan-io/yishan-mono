@@ -41,7 +41,20 @@ type PiSessionHandle = {
 };
 
 const activePiSessions = new Map<string, PiSessionHandle>();
+// closingSessions tracks in-flight pi.stop teardowns by session id so a fast
+// reopen of the same history session waits for the teardown instead of racing
+// it (pi.start would hit ErrSessionExists and attach to a process being killed).
+const closingSessions = new Map<string, Promise<void>>();
 const PI_SESSION_EXISTS_RPC_CODE = -32003;
+// CLOSING_SESSION_WAIT_TIMEOUT_MS bounds how long a reopen waits for an
+// in-flight pi.stop of the same session id before proceeding anyway.
+const CLOSING_SESSION_WAIT_TIMEOUT_MS = 6_000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 /**
  * Ensures a Pi RPC session exists for a tab. Idempotent — subsequent calls
@@ -116,6 +129,10 @@ export async function ensurePiSession(opts: {
   activePiSessions.set(opts.tabId, handle);
   const client = await getDaemonClient();
   await ensureAgentChatEventRouterReady();
+  // A previous tab may have just been closed for this session id; wait for its
+  // teardown to finish so pi.start spawns a fresh process instead of falling
+  // back to attaching to a process that is being killed.
+  await closingSessions.get(sessionId)?.catch(() => undefined);
   const startPiSession = async (): Promise<{ sessionId: string } | { ok: boolean }> => {
     return await client.pi.start({
       sessionId,
@@ -244,7 +261,9 @@ export async function stopPiSession(tabId: string): Promise<void> {
 
     if (fallbackSessionId && !isReadOnlySubagentDetail) {
       const client = await getDaemonClient();
-      await Promise.resolve(client.pi.stop({ sessionId: fallbackSessionId })).catch(() => {});
+      const stopPromise = Promise.resolve(client.pi.stop({ sessionId: fallbackSessionId })).catch(() => {});
+      trackClosingSession(fallbackSessionId, stopPromise);
+      await stopPromise;
     }
 
     agentChatStore.getState().removeSession(tabId);
@@ -426,6 +445,22 @@ function resolveAgentChatPaneId(tabId: string, paneId: string | undefined): stri
   return `pane-${tabId}`;
 }
 
+/** Records an in-flight pi.stop so a concurrent reopen can await it. */
+function trackClosingSession(sessionId: string, stopPromise: Promise<unknown>): void {
+  // Bound the wait: a hung stop RPC (transport timeout is 30s) must not stall
+  // reopens of the same session id; the daemon serializes start-during-stop
+  // itself, so the frontend only needs a responsive fast path.
+  const tracked = Promise.race([stopPromise.then(() => undefined), delay(CLOSING_SESSION_WAIT_TIMEOUT_MS)]).catch(
+    () => undefined,
+  );
+  closingSessions.set(sessionId, tracked);
+  void tracked.finally(() => {
+    if (closingSessions.get(sessionId) === tracked) {
+      closingSessions.delete(sessionId);
+    }
+  });
+}
+
 function releasePiSessionHandle(tabId: string, session: PiSessionHandle): void {
   if (activePiSessions.get(tabId) === session) {
     activePiSessions.delete(tabId);
@@ -441,7 +476,9 @@ async function closePiSessionHandle(tabId: string, session: PiSessionHandle): Pr
   session.state = "closing";
 
   const client = await getDaemonClient();
-  await Promise.resolve(client.pi.stop({ sessionId: session.sessionId })).catch(() => {});
+  const stopPromise = Promise.resolve(client.pi.stop({ sessionId: session.sessionId })).catch(() => {});
+  trackClosingSession(session.sessionId, stopPromise);
+  await stopPromise;
 
   if (activePiSessions.get(tabId) === session) {
     activePiSessions.delete(tabId);

@@ -59,6 +59,9 @@ afterEach(() => {
   agentChatStore.setState(initialAgentChatStoreState, true);
   tabStore.setState(initialTabStoreState, true);
   splitPaneStore.setState(initialSplitPaneStoreState, true);
+  // The reopen test leaves a deferred pi.stop implementation behind; reset it so
+  // later tests never hang on an unresolved stop.
+  mocks.stop.mockReset();
   vi.clearAllMocks();
 });
 
@@ -344,6 +347,62 @@ describe("agentChatCommands.ensurePiSession", () => {
     expect(id2).toBe("generated-session-id");
     // Pi must have been started only once.
     expect(mocks.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("reopens a session id only after an in-flight stop for it has settled", async () => {
+    mocks.start.mockResolvedValue({ sessionId: "history-close-reopen" });
+
+    // Open the history session in a first tab.
+    await ensurePiSession({
+      tabId: "tab-close",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "history-close-reopen",
+    });
+
+    // Close the tab; pi.stop stays in flight until the test resolves it.
+    let resolveStop: (() => void) | undefined;
+    mocks.stop.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveStop = resolve;
+        }),
+    );
+    const stopPromise = stopPiSession("tab-close");
+    await vi.waitFor(() => {
+      expect(mocks.stop).toHaveBeenCalledWith({ sessionId: "history-close-reopen" });
+    });
+
+    // Reopen the same history session in a new tab while the stop is in flight.
+    const reopenPromise = ensurePiSession({
+      tabId: "tab-reopen",
+      workspaceId: "workspace-1",
+      cwd: "/tmp/project",
+      sessionId: "history-close-reopen",
+    });
+
+    // The reopen must wait for the teardown instead of racing pi.start.
+    let reopenSettled = false;
+    void reopenPromise.then(() => {
+      reopenSettled = true;
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(reopenSettled).toBe(false);
+    expect(mocks.start).toHaveBeenCalledTimes(1); // only the first open so far
+
+    // Finish the teardown; the reopen then proceeds with a fresh pi.start.
+    resolveStop?.();
+    await stopPromise;
+    await reopenPromise;
+
+    expect(reopenSettled).toBe(true);
+    expect(mocks.start).toHaveBeenCalledTimes(2);
+    expect(mocks.attach).not.toHaveBeenCalled();
+    expect(mocks.start).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sessionId: "history-close-reopen", tabId: "tab-reopen" }),
+    );
   });
 
   it("closes subagent-detail tabs without stopping the child session", async () => {

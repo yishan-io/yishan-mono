@@ -137,9 +137,9 @@ function AgentChatComposerPaneComponent({
   }, [focusComposer, isActive, isReadyForAutoFocus, sessionState, tabId]);
 
   const handleSubmit = useCallback(
-    async (value: string) => {
+    async (value: string): Promise<boolean> => {
       const prompt = value.trim();
-      if (!sessionId || (!prompt && attachments.length === 0)) return;
+      if (!sessionId || (!prompt && attachments.length === 0)) return false;
 
       if (prompt && messageCount === 0 && !hasStreamingMessage && !agentChatTab?.data.userRenamed) {
         renameTab(tabId, formatAgentSessionTitle(prompt));
@@ -155,8 +155,14 @@ function AgentChatComposerPaneComponent({
       const finalMessage =
         parts.length > 0 ? (nextMessage ? `${nextMessage}\n\n${parts.join("\n\n")}` : parts.join("\n\n")) : nextMessage;
 
-      await sendAgentPrompt({ tabId, sessionId, message: finalMessage });
+      try {
+        await sendAgentPrompt({ tabId, sessionId, message: finalMessage });
+      } catch (error) {
+        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+        return false;
+      }
       setAttachments([]);
+      return true;
     },
     [agentChatTab?.data.userRenamed, attachments, hasStreamingMessage, messageCount, sessionId, slashCommands, tabId],
   );
@@ -204,7 +210,11 @@ function AgentChatComposerPaneComponent({
 
   const handleAbort = useCallback(async () => {
     if (!sessionId) return;
-    await abortAgent({ tabId, sessionId });
+    try {
+      await abortAgent({ tabId, sessionId });
+    } catch (error) {
+      agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+    }
   }, [sessionId, tabId]);
 
   const handleCompact = useCallback(async () => {
@@ -222,8 +232,10 @@ function AgentChatComposerPaneComponent({
   const handleSubmitButtonClick = useCallback(async () => {
     const nextDraft = draft.trim();
     if (!nextDraft && attachments.length === 0) return;
-    await handleSubmit(nextDraft);
-    setDraft("");
+    const sent = await handleSubmit(nextDraft);
+    if (sent) {
+      setDraft("");
+    }
   }, [attachments.length, draft, handleSubmit]);
 
   const handleVoiceText = useCallback((text: string) => {
@@ -242,7 +254,11 @@ function AgentChatComposerPaneComponent({
   const handleModelChange = useCallback(
     async (model: AgentModel) => {
       if (!sessionId) return;
-      await setAgentModel({ tabId, sessionId, provider: model.provider ?? "", modelId: model.id });
+      try {
+        await setAgentModel({ tabId, sessionId, provider: model.provider ?? "", modelId: model.id });
+      } catch (error) {
+        agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+      }
     },
     [sessionId, tabId],
   );
@@ -251,7 +267,11 @@ function AgentChatComposerPaneComponent({
     if (!sessionId) return;
     const currentIdx = THINKING_LEVELS.indexOf(thinkingLevel);
     const nextLevel = THINKING_LEVELS[(currentIdx + 1) % THINKING_LEVELS.length] ?? THINKING_LEVELS[0] ?? "medium";
-    await setAgentThinkingLevel({ tabId, sessionId, level: nextLevel });
+    try {
+      await setAgentThinkingLevel({ tabId, sessionId, level: nextLevel });
+    } catch (error) {
+      agentChatStore.getState().setTurnError(tabId, getErrorMessage(error));
+    }
   }, [sessionId, tabId, thinkingLevel]);
 
   return (
