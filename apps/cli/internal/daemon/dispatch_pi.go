@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"yishan/apps/cli/internal/agentmanager"
 	"yishan/apps/cli/internal/config"
@@ -36,7 +37,7 @@ func (h *JSONRPCHandler) dispatchPi(ctx context.Context, connState *wsConnState,
 	case MethodPiStart:
 		return h.handlePiStart(ctx, connState, params)
 	case MethodPiAttach:
-		return h.handlePiAttach(connState, params)
+		return h.handlePiAttach(ctx, connState, params)
 	case MethodPiStop:
 		return h.handlePiStop(params)
 	case MethodPiSend:
@@ -68,6 +69,16 @@ type piStartParams struct {
 	Resume      bool   `json:"resume,omitempty"`
 }
 
+// piStopWaitTimeout bounds how long pi.start waits for an in-flight pi.stop of
+// the same session id before giving up and reporting ErrSessionExists.
+const piStopWaitTimeout = 10 * time.Second
+
+// stoppingMarkGracePeriod is how long pi.start waits to observe the stopping
+// marker before concluding the session is a genuinely live session (not being
+// torn down) and giving up on the wait. The marker is set microseconds after
+// the pi.stop RPC arrives, so a short grace is ample.
+const stoppingMarkGracePeriod = 150 * time.Millisecond
+
 func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnState, params json.RawMessage) (any, error) {
 	var req piStartParams
 	if err := decodeParams(params, &req); err != nil {
@@ -79,6 +90,14 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 	if req.CWD == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "cwd is required")
 	}
+
+	// A fast reopen of the same session id can race an in-flight pi.stop for
+	// that id (teardown holds the id for up to abortGracePeriod). Wait for the
+	// teardown to finish so the reopen starts a fresh process instead of
+	// reporting ErrSessionExists or attaching to a process being killed. The
+	// wait runs again after ErrSessionExists below because the stop's marker
+	// may be set after this first check.
+	h.waitForStoppingSession(ctx, req.SessionID)
 
 	args := []string{"--mode", "rpc", "--name", req.TabID, "--approve"}
 	if req.Resume {
@@ -113,9 +132,20 @@ func (h *JSONRPCHandler) handlePiStart(ctx context.Context, connState *wsConnSta
 	session, err := h.agentMgr.Start(h.agentLifecycleCtx, opts)
 	if err != nil {
 		if errors.Is(err, agentmanager.ErrSessionExists) {
-			return nil, workspace.NewRPCError(rpcCodeSessionExists, err.Error())
+			// The existing session may be mid-teardown (its pi.stop began after
+			// our first wait above). Wait for the teardown to release the id,
+			// then start a fresh process so a fast reopen works regardless of
+			// RPC ordering.
+			if h.waitForStoppingSession(ctx, req.SessionID) {
+				session, err = h.agentMgr.Start(h.agentLifecycleCtx, opts)
+			}
 		}
-		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
+		if err != nil {
+			if errors.Is(err, agentmanager.ErrSessionExists) {
+				return nil, workspace.NewRPCError(rpcCodeSessionExists, err.Error())
+			}
+			return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
+		}
 	}
 
 	h.piSessionsMu.Lock()
@@ -138,7 +168,11 @@ type piAttachParams struct {
 	CWD         string `json:"cwd,omitempty"`
 }
 
-func (h *JSONRPCHandler) handlePiAttach(connState *wsConnState, params json.RawMessage) (any, error) {
+// attachStartWaitTimeout bounds how long pi.attach waits for a concurrent
+// pi.start of the same session id to finish spawning.
+const attachStartWaitTimeout = 2 * time.Second
+
+func (h *JSONRPCHandler) handlePiAttach(ctx context.Context, connState *wsConnState, params json.RawMessage) (any, error) {
 	var req piAttachParams
 	if err := decodeParams(params, &req); err != nil {
 		return nil, err
@@ -146,11 +180,38 @@ func (h *JSONRPCHandler) handlePiAttach(connState *wsConnState, params json.RawM
 	if req.SessionID == "" {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "sessionId is required")
 	}
+
+	// Never rebind to a session that is mid-teardown: the pi.stop that follows
+	// would delete the registry entry under the newly attached tab.
+	h.piSessionsMu.Lock()
+	_, isStopping := h.stoppingPiSessions[req.SessionID]
+	h.piSessionsMu.Unlock()
+	if isStopping {
+		return nil, workspace.NewRPCError(rpcCodeNotFound, "pi session is stopping: "+req.SessionID)
+	}
+
+	// A concurrent pi.start for the same id (e.g. two tabs opening the same
+	// history session at once) may still be spawning: the id is reserved in the
+	// manager but the session is not registered yet. Wait for it so the second
+	// opener attaches to the winning process instead of failing with
+	// "pi session not found".
 	if _, exists := h.agentMgr.Session(req.SessionID); !exists {
-		h.piSessionsMu.Lock()
-		delete(h.piSessions, req.SessionID)
-		h.piSessionsMu.Unlock()
-		return nil, workspace.NewRPCError(rpcCodeNotFound, "pi session not found: "+req.SessionID)
+		if !h.waitForSessionStart(ctx, req.SessionID) {
+			h.piSessionsMu.Lock()
+			delete(h.piSessions, req.SessionID)
+			h.piSessionsMu.Unlock()
+			return nil, workspace.NewRPCError(rpcCodeNotFound, "pi session not found: "+req.SessionID)
+		}
+	}
+
+	// Re-check the stopping marker: a pi.stop may have started while we waited
+	// for the concurrent start, and its teardown would delete the entry under a
+	// newly attached tab.
+	h.piSessionsMu.Lock()
+	_, isStopping = h.stoppingPiSessions[req.SessionID]
+	h.piSessionsMu.Unlock()
+	if isStopping {
+		return nil, workspace.NewRPCError(rpcCodeNotFound, "pi session is stopping: "+req.SessionID)
 	}
 
 	h.piSessionsMu.Lock()
@@ -204,6 +265,82 @@ func resolvePiStartPaneID(tabID string, paneID string) string {
 	return "pane-" + tabID
 }
 
+// waitForStoppingSession blocks while the given session id is being torn down
+// by an in-flight pi.stop, so a concurrent pi.start can reuse the id as soon as
+// it is released. It returns true once the session has been released (or is
+// already absent). It returns false without waiting when the session is never
+// marked as stopping (a genuinely live session) or when the context is done or
+// the wait times out — the caller then reports ErrSessionExists.
+func (h *JSONRPCHandler) waitForStoppingSession(ctx context.Context, sessionID string) bool {
+	startedAt := time.Now()
+	deadline := startedAt.Add(piStopWaitTimeout)
+	sawStopping := false
+	for {
+		h.piSessionsMu.Lock()
+		_, isStopping := h.stoppingPiSessions[sessionID]
+		h.piSessionsMu.Unlock()
+		sawStopping = sawStopping || isStopping
+
+		if _, exists := h.agentMgr.Session(sessionID); !exists {
+			return true // released (mid-stop teardown finished, or already absent)
+		}
+		// The session still exists but was never marked as stopping: it is a
+		// live session, not a teardown — stop waiting so the caller reports
+		// ErrSessionExists and the frontend attaches to it.
+		if !sawStopping && time.Since(startedAt) > stoppingMarkGracePeriod {
+			return false
+		}
+		if time.Now().After(deadline) {
+			return sawStopping
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
+}
+
+// waitForSessionStart polls until the given session id is fully registered
+// (spawned in the process manager and present in the pi registry) — i.e. a
+// concurrent pi.start finished. It only waits while a start for the id is
+// genuinely in flight and returns false when the id is not being started, the
+// context is done, or the wait times out.
+func (h *JSONRPCHandler) waitForSessionStart(ctx context.Context, sessionID string) bool {
+	deadline := time.Now().Add(attachStartWaitTimeout)
+	for {
+		if h.sessionFullyRegistered(sessionID) {
+			return true
+		}
+		if !h.agentMgr.Starting(sessionID) {
+			// The winner may have completed its register-and-release between our
+			// two reads; do one final check before declaring the session absent.
+			return h.sessionFullyRegistered(sessionID)
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
+}
+
+// sessionFullyRegistered reports whether the session is both spawned in the
+// process manager and registered in the pi session registry. The registry write
+// happens just after the spawn, so an attach must wait for both.
+func (h *JSONRPCHandler) sessionFullyRegistered(sessionID string) bool {
+	if _, exists := h.agentMgr.Session(sessionID); !exists {
+		return false
+	}
+	h.piSessionsMu.Lock()
+	_, exists := h.piSessions[sessionID]
+	h.piSessionsMu.Unlock()
+	return exists
+}
+
 func (h *JSONRPCHandler) handlePiStop(params json.RawMessage) (any, error) {
 	var req piStopParams
 	if err := decodeParams(params, &req); err != nil {
@@ -213,12 +350,24 @@ func (h *JSONRPCHandler) handlePiStop(params json.RawMessage) (any, error) {
 		return nil, workspace.NewRPCError(rpcCodeInvalidParams, "sessionId is required")
 	}
 
+	// Mark the session as stopping before the (potentially slow) process
+	// teardown so concurrent pi.start/pi.attach cannot bind to a dying process.
+	h.piSessionsMu.Lock()
+	if _, exists := h.piSessions[req.SessionID]; exists {
+		h.stoppingPiSessions[req.SessionID] = struct{}{}
+	}
+	h.piSessionsMu.Unlock()
+
 	if err := h.agentMgr.Stop(req.SessionID); err != nil {
+		h.piSessionsMu.Lock()
+		delete(h.stoppingPiSessions, req.SessionID)
+		h.piSessionsMu.Unlock()
 		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
 	}
 
 	h.piSessionsMu.Lock()
 	delete(h.piSessions, req.SessionID)
+	delete(h.stoppingPiSessions, req.SessionID)
 	h.piSessionsMu.Unlock()
 
 	return map[string]bool{"ok": true}, nil
@@ -250,6 +399,12 @@ func (h *JSONRPCHandler) handlePiSend(params json.RawMessage) (any, error) {
 	}
 
 	if err := state.session.Send(req.Command); err != nil {
+		// A dead process leaves the registry entry behind until the next
+		// stop/attach; report it as not-found so clients recover by re-starting
+		// instead of surfacing a raw pipe error.
+		if errors.Is(err, agentmanager.ErrStdinClosed) {
+			return nil, workspace.NewRPCError(rpcCodeNotFound, "pi session not found: "+req.SessionID)
+		}
 		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
 	}
 
@@ -311,6 +466,12 @@ func (h *JSONRPCHandler) handlePiRename(params json.RawMessage) (any, error) {
 	}
 
 	if err := state.session.Send(renameCmd); err != nil {
+		// A dead process leaves the registry entry behind until the next
+		// stop/attach; report it as not-found so clients recover by re-starting
+		// instead of surfacing a raw pipe error.
+		if errors.Is(err, agentmanager.ErrStdinClosed) {
+			return nil, workspace.NewRPCError(rpcCodeNotFound, "pi session not found: "+req.SessionID)
+		}
 		return nil, workspace.NewRPCError(rpcCodeServerError, err.Error())
 	}
 

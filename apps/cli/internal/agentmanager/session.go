@@ -3,6 +3,7 @@ package agentmanager
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -11,8 +12,15 @@ import (
 	"time"
 )
 
-// abortGracePeriod is how long we wait after sending abort before force-killing.
+// abortGracePeriod is how long we wait after sending abort + closing stdin
+// before force-killing the agent process. Closing stdin makes agents such as
+// pi exit promptly on EOF, so the grace is only reached for agents that keep
+// running after stdin closes.
 const abortGracePeriod = 3 * time.Second
+
+// ErrStdinClosed is returned by Session.Send when the session is being or has
+// been torn down (stdin pipe closed). Callers can treat it as "session gone".
+var ErrStdinClosed = errors.New("session stdin is closed")
 
 // Session represents a running agent subprocess. It is safe for concurrent use:
 // Send can be called from one goroutine while the stdout reader goroutine calls
@@ -52,7 +60,7 @@ func (s *Session) Send(cmd json.RawMessage) error {
 	defer s.mu.Unlock()
 
 	if s.stdin == nil {
-		return fmt.Errorf("session stdin is closed")
+		return ErrStdinClosed
 	}
 
 	line := append([]byte{}, cmd...)
@@ -60,21 +68,30 @@ func (s *Session) Send(cmd json.RawMessage) error {
 
 	_, err := s.stdin.Write(line)
 	if err != nil {
-		return fmt.Errorf("write to agent stdin: %w", err)
+		// The pipe is dead (process exited or was killed). Mark it closed so
+		// later Send calls fail fast and callers can treat the session as gone.
+		s.stdin = nil
+		return fmt.Errorf("%w: %v", ErrStdinClosed, err)
 	}
 	return nil
 }
 
-// Close terminates the agent session. It sends an abort command to stdin, waits
-// for the process to exit gracefully (up to abortGracePeriod), then force-kills.
+// Close terminates the agent session. It sends an abort command to stdin and
+// closes the stdin pipe (RPC-mode agents such as pi exit promptly on stdin
+// EOF), waits for the process to exit gracefully (up to abortGracePeriod), then
+// force-kills.
 func (s *Session) Close() error {
-	// Best-effort abort: if the stdin pipe is already broken, skip the write.
+	// Best-effort abort, then close stdin. Closing stdin both signals agents
+	// that read commands from stdin (e.g. pi --mode rpc exits on EOF) and stops
+	// any further Send calls from reaching a session being torn down.
 	s.mu.Lock()
 	if s.stdin != nil {
 		abortCmd := json.RawMessage(`{"type":"abort"}`)
 		line := append([]byte{}, abortCmd...)
 		line = append(line, '\n')
 		_, _ = s.stdin.Write(line)
+		_ = s.stdin.Close()
+		s.stdin = nil
 	}
 	s.mu.Unlock()
 

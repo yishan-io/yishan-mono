@@ -112,6 +112,13 @@ export function useAgentChatSessionLifecycle({
           const liveSessionId = agentChatStore.getState().sessionsByTabId[tabId]?.sessionId;
           if (!liveSessionId) return;
 
+          // Subagent-detail tabs are read-only: they never own a daemon session
+          // to reattach, and their transcript is re-streamed by the parent's
+          // events, so there is nothing to recover here.
+          if (isReadOnlySubagentDetail) {
+            return;
+          }
+
           // fire-and-forget: the connection-status subscription cannot await recovery.
           void (async () => {
             try {
@@ -121,14 +128,30 @@ export function useAgentChatSessionLifecycle({
               await fetchAgentModels({ tabId, sessionId: liveSessionId });
               await refreshAgentSessionStats(liveSessionId);
             } catch {
+              // The daemon no longer holds the session (e.g. it was re-run and
+              // started fresh). Drop the stale handle and re-start the session
+              // so the tab heals itself instead of staying broken.
               clearPiSessionHandle(tabId);
-              agentChatStore
-                .getState()
-                .setSessionError(tabId, "Agent session disconnected. Reopen the tab to recover.");
+              try {
+                await ensurePiSession({
+                  tabId,
+                  workspaceId,
+                  cwd,
+                  sessionId: liveSessionId,
+                  sessionView,
+                  paneId: startupPaneIdRef.current,
+                });
+                await fetchAgentState({ tabId, sessionId: liveSessionId });
+                await fetchAgentMessages({ tabId, sessionId: liveSessionId });
+                await fetchAgentModels({ tabId, sessionId: liveSessionId });
+                await refreshAgentSessionStats(liveSessionId);
+              } catch (recoveryError) {
+                agentChatStore.getState().setSessionError(tabId, getErrorMessage(recoveryError));
+              }
             }
           })();
         }
       }
     });
-  }, [tabId]);
+  }, [cwd, isReadOnlySubagentDetail, sessionView, tabId, workspaceId]);
 }

@@ -26,12 +26,18 @@ const mocked = vi.hoisted(() => {
       latestAgentModelSelectorProps: {
         onModelChange: ((model: AgentModel) => void | Promise<void>) | null;
       };
+      latestRichComposerProps: {
+        value?: string;
+        onChange?: (value: string) => void;
+        onSubmit?: (value: string) => void;
+      } | null;
     };
   } = {
     current: {
       tabs: [{ id: "tab-1", kind: "agent-chat", data: { userRenamed: true } }],
       richComposerRenderCount: 0,
       shouldExposeComposerAsTextbox: false,
+      latestRichComposerProps: null,
       agentModelSelectorRenderCount: 0,
       latestAgentModelSelectorProps: {
         onModelChange: null,
@@ -56,6 +62,7 @@ const mocked = vi.hoisted(() => {
     setAgentChatStreamTabVisible: vi.fn(),
     setAgentModel: vi.fn(),
     setAgentThinkingLevel: vi.fn(),
+    sendAgentPrompt: vi.fn(),
     getDaemonClient: vi.fn().mockResolvedValue({
       events: {
         frontendStream: {
@@ -81,7 +88,7 @@ vi.mock("../../commands/agentChatCommands", () => ({
   reattachPiSession: mocked.reattachPiSession,
   refreshAgentSessionStats: mocked.refreshAgentSessionStats,
   respondToAgentExtensionUiRequest: mocked.respondToAgentExtensionUiRequest,
-  sendAgentPrompt: vi.fn(),
+  sendAgentPrompt: mocked.sendAgentPrompt,
   setAgentChatStreamTabVisible: mocked.setAgentChatStreamTabVisible,
   setAgentModel: mocked.setAgentModel,
   setAgentThinkingLevel: mocked.setAgentThinkingLevel,
@@ -97,8 +104,13 @@ vi.mock("../../commands/tabCommands", () => ({
 }));
 
 vi.mock("../../components/RichComposer", () => ({
-  RichComposer: () => {
+  RichComposer: (props: {
+    value?: string;
+    onChange?: (value: string) => void;
+    onSubmit?: (value: string) => void;
+  }) => {
     mocked.stateRef.current.richComposerRenderCount += 1;
+    mocked.stateRef.current.latestRichComposerProps = props;
     return (
       <div
         data-testid="rich-composer"
@@ -271,8 +283,12 @@ afterEach(() => {
   mocked.stateRef.current.tabs = [{ id: "tab-1", kind: "agent-chat", data: { userRenamed: true } }];
   mocked.stateRef.current.richComposerRenderCount = 0;
   mocked.stateRef.current.shouldExposeComposerAsTextbox = false;
+  mocked.stateRef.current.latestRichComposerProps = null;
   mocked.stateRef.current.agentModelSelectorRenderCount = 0;
   mocked.stateRef.current.latestAgentModelSelectorProps.onModelChange = null;
+  // The send-failure test leaves a rejecting sendAgentPrompt implementation
+  // behind; reset it so later tests can submit normally.
+  mocked.sendAgentPrompt.mockReset();
   vi.useRealTimers();
   vi.clearAllMocks();
 });
@@ -437,6 +453,34 @@ describe("AgentChatView", () => {
 
     expect(document.activeElement).toBe(screen.getByRole("textbox"));
     focusTarget.remove();
+  });
+
+  it("shows a turn error when sending fails instead of an unhandled rejection", async () => {
+    seedSession();
+    mocked.sendAgentPrompt.mockRejectedValue(new Error("pi session not found: session-1"));
+
+    const { fireEvent } = await import("@testing-library/react");
+
+    render(<AgentChatView tabId="tab-1" workspaceId="workspace-1" cwd="/tmp/project" isActive />);
+
+    // Drive the composer draft + submit through the captured RichComposer props.
+    act(() => {
+      mocked.stateRef.current.latestRichComposerProps?.onChange?.("hello");
+    });
+    act(() => {
+      void mocked.stateRef.current.latestRichComposerProps?.onSubmit?.("hello");
+    });
+
+    await waitFor(() => {
+      expect(mocked.sendAgentPrompt).toHaveBeenCalledWith({
+        tabId: "tab-1",
+        sessionId: "session-1",
+        message: "hello",
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByText("pi session not found: session-1")).toBeTruthy();
+    });
   });
 
   it("renders voice input beside the agent chat submit control", () => {

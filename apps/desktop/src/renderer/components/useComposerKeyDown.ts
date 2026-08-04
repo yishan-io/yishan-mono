@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from "react";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { normalizeComposerText } from "./richComposerHelpers";
 import type { ComposerTokenRange, RichComposerSlashCommand } from "./richComposerTypes";
 
@@ -7,7 +7,7 @@ type UseComposerKeyDownOptions = {
   disabled: boolean;
   value?: string;
   onChange?: (value: string) => void;
-  onSubmit?: (value: string) => void | Promise<void>;
+  onSubmit?: (value: string) => unknown;
   allowEmptySubmit: boolean;
   activeSlashCommandRange: ComposerTokenRange | null;
   setActiveSlashCommandRange: (range: ComposerTokenRange | null) => void;
@@ -33,6 +33,7 @@ export function useComposerKeyDown({
   insertSlashCommand,
   handleMentionComposerKeyDown,
 }: UseComposerKeyDownOptions): (event: KeyboardEvent<HTMLDivElement>) => void {
+  const submittingRef = useRef(false);
   return useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
       if (disabled) {
@@ -90,6 +91,12 @@ export function useComposerKeyDown({
         return;
       }
 
+      // Ignore Enter while a submit is in flight so a quick Enter-Enter cannot
+      // double-send the same prompt.
+      if (submittingRef.current) {
+        return;
+      }
+
       event.preventDefault();
       const editable = event.currentTarget;
       const nextValue = normalizeComposerText(editable.innerText).trim();
@@ -97,12 +104,28 @@ export function useComposerKeyDown({
         return;
       }
 
-      void onSubmit(nextValue);
-      if (value === undefined) {
-        editable.innerHTML = "";
-      }
-      onChange?.("");
-      setActiveSlashCommandRange(null);
+      submittingRef.current = true;
+      void Promise.resolve(onSubmit(nextValue)).then(
+        (result) => {
+          submittingRef.current = false;
+          // A resolved `false` means the submit failed (the caller surfaced the
+          // error itself); keep the draft so the user can retry without
+          // retyping.
+          if (result === false) {
+            return;
+          }
+          if (value === undefined) {
+            editable.innerHTML = "";
+          }
+          onChange?.("");
+          setActiveSlashCommandRange(null);
+        },
+        () => {
+          submittingRef.current = false;
+          // Keep the draft and the active slash-command range when the submit
+          // failed so the user can retry without retyping.
+        },
+      );
     },
     [
       activeSlashCommandRange,

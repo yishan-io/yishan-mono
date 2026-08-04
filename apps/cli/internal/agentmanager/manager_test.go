@@ -69,6 +69,39 @@ func TestStartDuplicateSession(t *testing.T) {
 	}
 }
 
+func TestStarting_ReleasesReservationAfterStart(t *testing.T) {
+	m := NewManager()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sessionID := "starting-session"
+	opts := StartOptions{
+		SessionID: sessionID,
+		Binary:    "sleep",
+		Args:      []string{"5"},
+	}
+
+	session, err := m.Start(ctx, opts)
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer session.Close()
+
+	// After Start returns the session is registered, so it is no longer
+	// reported as "starting".
+	if m.Starting(sessionID) {
+		t.Fatal("expected the start reservation to be released after Start returns")
+	}
+	if _, exists := m.Session(sessionID); !exists {
+		t.Fatal("expected the session to be registered after Start")
+	}
+
+	// An unrelated id is never reported as starting.
+	if m.Starting("never-started") {
+		t.Fatal("expected unknown session ids to not be starting")
+	}
+}
+
 func TestStartStopLifecycle(t *testing.T) {
 	m := NewManager()
 	ctx := context.Background()

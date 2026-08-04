@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, createEvent, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, createEvent, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FILETREE_DRAG_MIME } from "./FileTree/dataTransfer";
@@ -70,6 +70,64 @@ describe("RichComposer", () => {
 
     expect(textbox.getAttribute("contenteditable")).toBe("false");
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("clears the draft after a successful Enter submit", async () => {
+    const onSubmit = vi.fn(async () => undefined);
+    render(<RichComposer placeholder="Type a message…" onSubmit={onSubmit} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    textbox.innerText = "hello";
+    fireEvent.keyDown(textbox, { key: "Enter" });
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith("hello"));
+    await waitFor(() => expect(textbox.textContent).toBe(""));
+  });
+
+  it("keeps the draft when the submit reports failure (resolved false)", async () => {
+    const onSubmit = vi.fn(async () => false);
+    render(<RichComposer placeholder="Type a message…" onSubmit={onSubmit} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    textbox.innerText = "hello";
+    fireEvent.keyDown(textbox, { key: "Enter" });
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith("hello"));
+    expect(textbox.textContent).toBe("hello");
+  });
+
+  it("keeps the draft when the submit rejects", async () => {
+    const onSubmit = vi.fn(async () => {
+      throw new Error("pi session not found");
+    });
+    render(<RichComposer placeholder="Type a message…" onSubmit={onSubmit} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    textbox.innerText = "hello";
+    fireEvent.keyDown(textbox, { key: "Enter" });
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith("hello"));
+    expect(textbox.textContent).toBe("hello");
+  });
+
+  it("ignores Enter while a submit is in flight (no double send)", async () => {
+    let resolveSubmit: ((value: unknown) => void) | undefined;
+    const onSubmit = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveSubmit = resolve;
+        }),
+    );
+    render(<RichComposer placeholder="Type a message…" onSubmit={onSubmit} />);
+
+    const textbox = screen.getByRole("textbox", { name: "Type a message…" });
+    textbox.innerText = "hello";
+    fireEvent.keyDown(textbox, { key: "Enter" });
+    fireEvent.keyDown(textbox, { key: "Enter" });
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    resolveSubmit?.(undefined);
+    await waitFor(() => expect(textbox.textContent).toBe(""));
   });
 
   it("moves the cursor to the end after dropping a file path", () => {

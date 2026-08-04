@@ -18,7 +18,7 @@ type RichComposerProps = {
   placeholder: string;
   value?: string;
   onChange?: (value: string) => void;
-  onSubmit?: (value: string) => void | Promise<void>;
+  onSubmit?: (value: string) => unknown;
   minHeight?: number;
   disabled?: boolean;
   slashCommands?: RichComposerSlashCommand[];

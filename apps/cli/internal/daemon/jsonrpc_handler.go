@@ -63,6 +63,10 @@ type JSONRPCHandler struct {
 	piSessionsMu sync.Mutex
 	piSessions   map[string]*piSessionState
 
+	// stoppingPiSessions tracks pi session ids whose teardown (pi.stop) is in
+	// flight, so concurrent pi.start/pi.attach cannot bind to a dying process.
+	stoppingPiSessions map[string]struct{}
+
 	remoteStreamMu   sync.Mutex
 	remoteStreamSubs map[string]map[*wsConnState]struct{}
 
@@ -129,6 +133,7 @@ func NewJSONRPCHandler(manager *workspace.Manager, runtime *cliruntime.Runtime, 
 		settingsPath:         config.SettingsFilePath(filepath.Dir(configPath)),
 		agentUsage:           make(map[string]map[string]struct{}),
 		piSessions:           make(map[string]*piSessionState),
+		stoppingPiSessions:   make(map[string]struct{}),
 		remoteStreamSubs:     make(map[string]map[*wsConnState]struct{}),
 		fileCacheSubID:       fileCacheSubID,
 	}
