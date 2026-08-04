@@ -39,11 +39,12 @@ func (f copilotFetcher) Fetch() ([]ModelInfo, error) {
 }
 
 func discoverCopilotACP() ([]ModelInfo, error) {
-	if _, err := exec.LookPath("copilot"); err != nil {
-		return nil, fmt.Errorf("copilot not found: %w", err)
+	copilotPath, err := resolveCLIBinary("copilot", enrichedCLIEnv())
+	if err != nil {
+		return nil, err
 	}
 
-	cmd := exec.Command("copilot", "--acp")
+	cmd := exec.Command(copilotPath, "--acp")
 	isolateCmd(cmd)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

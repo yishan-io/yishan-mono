@@ -23,7 +23,8 @@ var (
 
 func getEnrichedEnv() []string {
 	enrichedEnvOnce.Do(func() {
-		enrichedEnv = shellenv.ResolveEnvWithUserPath(os.Environ(), os.Getenv("SHELL"))
+		base := shellenv.MergeLoginShellEnv(os.Environ())
+		enrichedEnv = shellenv.ResolveEnvWithUserPath(base, os.Getenv("SHELL"))
 	})
 	return enrichedEnv
 }

@@ -1,9 +1,13 @@
 package modellist
 
 import (
+	"fmt"
 	"os/exec"
 	"sort"
 	"strings"
+
+	"yishan/apps/cli/internal/config"
+	"yishan/apps/cli/internal/runtime/shellenv"
 )
 
 type piFetcher struct{}
@@ -11,8 +15,19 @@ type piFetcher struct{}
 func (f piFetcher) AgentKind() string { return "pi" }
 
 func (f piFetcher) Fetch() ([]ModelInfo, error) {
-	cmd := exec.Command("pi", "--list-models")
+	env := enrichedCLIEnv()
+	piPath, err := resolveCLIBinary("pi", env)
+	if err != nil {
+		return nil, err
+	}
+	piAgentDir, err := config.ManagedPiAgentDir()
+	if err != nil {
+		return nil, fmt.Errorf("resolve managed pi agent dir: %w", err)
+	}
+	env = shellenv.UpsertEnv(env, config.PiAgentDirEnvKey, piAgentDir)
+	cmd := exec.Command(piPath, "--list-models")
 	isolateCmd(cmd)
+	cmd.Env = env
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
 	stdout, err := cmd.Output()
@@ -82,7 +97,11 @@ type cursorFetcher struct{}
 func (f cursorFetcher) AgentKind() string { return "cursor" }
 
 func (f cursorFetcher) Fetch() ([]ModelInfo, error) {
-	cmd := exec.Command("cursor", "--list-models")
+	cursorPath, err := resolveCLIBinary("cursor", enrichedCLIEnv())
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command(cursorPath, "--list-models")
 	isolateCmd(cmd)
 	output, err := cmd.Output()
 	if err != nil {
