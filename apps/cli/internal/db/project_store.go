@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
 
 var ErrProjectNotFound = errors.New("project not found")
@@ -50,7 +52,8 @@ func (store *ProjectStore) Create(ctx context.Context, project *Project) error {
 
 // CreateOrBackfillImportedProject writes one remotely-exported project into local storage,
 // backfilling only the legacy-missing script and command fields when the project
-// already exists locally.
+// already exists locally. A local project that is as new as or newer than the
+// remote record is left untouched so the migration never clobbers local edits.
 func (store *ProjectStore) CreateOrBackfillImportedProject(ctx context.Context, project *Project) error {
 	existingProject, err := store.Get(ctx, project.ID)
 	if errors.Is(err, ErrProjectNotFound) {
@@ -58,6 +61,19 @@ func (store *ProjectStore) CreateOrBackfillImportedProject(ctx context.Context, 
 	}
 	if err != nil {
 		return fmt.Errorf("get imported project %q: %w", project.ID, err)
+	}
+	importedUpdatedAt := parseProjectUpdatedAt(project.UpdatedAt)
+	if importedUpdatedAt.IsZero() {
+		if project.UpdatedAt != "" {
+			log.Warn().Str("projectId", project.ID).Str("updatedAt", project.UpdatedAt).Msg("cannot parse imported project updatedAt; skipping backfill")
+		}
+		return nil
+	}
+	if !parseProjectUpdatedAt(existingProject.UpdatedAt).Before(importedUpdatedAt) {
+		if backfillWouldApply(buildImportedProjectConfigBackfillUpdate(existingProject, *project)) {
+			log.Warn().Str("projectId", project.ID).Msg("skipping project backfill: local record is as new as or newer than the remote export")
+		}
+		return nil
 	}
 	return store.Update(ctx, project.ID, buildImportedProjectConfigBackfillUpdate(existingProject, *project))
 }
@@ -229,6 +245,12 @@ func requireProjectUpdated(projectID string, result sql.Result) error {
 	return nil
 }
 
+// backfillWouldApply reports whether the computed backfill update would change
+// anything, used to make a guard skip observable.
+func backfillWouldApply(update ProjectUpdate) bool {
+	return update.SetupScript != nil || update.PostScript != nil || update.Commands != nil || update.ContextEnabled != nil
+}
+
 func defaultSourceType(sourceType string) string {
 	if sourceType == "" {
 		return "unknown"
@@ -248,4 +270,16 @@ func defaultColor(color string) string {
 		return "#1E66F5"
 	}
 	return color
+}
+
+// parseProjectUpdatedAt parses either an RFC3339 remote timestamp or a local
+// SQLite datetime('now') value into a comparable time. Unparseable values
+// yield the zero time.
+func parseProjectUpdatedAt(value string) time.Time {
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02 15:04:05"} {
+		if t, err := time.Parse(layout, value); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
 }

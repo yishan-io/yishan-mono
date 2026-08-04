@@ -1,5 +1,5 @@
 import { Box, CircularProgress, Stack, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import yishanLogo from "../../../assets/images/yishan-transparent.png";
 import { AppBackgroundContainer } from "../../components/AppBackgroundContainer";
 import { getDaemonClient } from "../../rpc/rpcTransport";
@@ -9,30 +9,16 @@ type MigrationViewProps = {
 };
 
 export function MigrationView({ onComplete }: MigrationViewProps) {
-  const [projectsDone, setProjectsDone] = useState(false);
-  const [usageDone, setUsageDone] = useState(false);
-
   useEffect(() => {
     let disposed = false;
     const poll = async () => {
       try {
         const client = await getDaemonClient();
         const raw = await client.tokenUsage.migrationStatus();
-        const status = raw as {
-          projectsMigrated?: boolean;
-          usageMigrated?: boolean;
-          projectsExportV1Migrated?: boolean;
-          usageExportV1Migrated?: boolean;
-        };
+        const status = raw as { migrated?: boolean };
         if (disposed) return;
 
-        const projectsReady = Boolean(status.projectsExportV1Migrated || status.projectsMigrated);
-        const usageReady = Boolean(status.usageExportV1Migrated || status.usageMigrated);
-
-        setProjectsDone(projectsReady);
-        setUsageDone(usageReady);
-
-        if (projectsReady && usageReady) {
+        if (status.migrated) {
           onComplete();
           return;
         }
@@ -116,23 +102,9 @@ export function MigrationView({ onComplete }: MigrationViewProps) {
 
             <Stack spacing={1.5} sx={{ width: "100%", maxWidth: 300, mt: 2 }}>
               <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                {projectsDone ? (
-                  <Typography variant="caption" sx={{ color: "success.main" }}>✓</Typography>
-                ) : (
-                  <CircularProgress size={14} />
-                )}
+                <CircularProgress size={14} />
                 <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                  Projects & workspaces
-                </Typography>
-              </Stack>
-              <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                {usageDone ? (
-                  <Typography variant="caption" sx={{ color: "success.main" }}>✓</Typography>
-                ) : (
-                  <CircularProgress size={14} />
-                )}
-                <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                  Token usage history
+                  Migration in progress
                 </Typography>
               </Stack>
             </Stack>

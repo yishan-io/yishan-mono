@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/rs/zerolog/log"
 	localdb "yishan/apps/cli/internal/db"
 	"yishan/apps/cli/internal/workspace"
 )
@@ -110,17 +111,15 @@ func (h *JSONRPCHandler) handleOverviewWorkspaceInsights(ctx context.Context, pa
 	return h.overviewStore().GetWorkspaceInsights(ctx, rangeDays, req.ProjectID)
 }
 
-// handleTokenUsageMigrationStatus reports both readiness compatibility and
-// export-v1 rerun completion state for API-to-local migrations.
+// handleTokenUsageMigrationStatus reports remote-to-local migration completion
+// from the single versioned marker. Desktop and daemon ship matched builds, so
+// no legacy compatibility fields are exposed.
 func (h *JSONRPCHandler) handleTokenUsageMigrationStatus(ctx context.Context, _ json.RawMessage) (any, error) {
-	projectsDone, _ := localdb.ProjectMigrationStatusComplete(ctx, h.localDatabase)
-	usageDone, _ := localdb.UsageMigrationStatusComplete(ctx, h.localDatabase)
-	projectsExportV1Done, _ := localdb.ProjectExportV1MigrationComplete(ctx, h.localDatabase)
-	usageExportV1Done, _ := localdb.UsageExportV1MigrationComplete(ctx, h.localDatabase)
+	migrated, err := localdb.RemoteToLocalMigrationComplete(ctx, h.localDatabase)
+	if err != nil {
+		log.Warn().Err(err).Msg("read remote-to-local migration status")
+	}
 	return map[string]any{
-		"projectsMigrated":         projectsDone,
-		"usageMigrated":            usageDone,
-		"projectsExportV1Migrated": projectsExportV1Done,
-		"usageExportV1Migrated":    usageExportV1Done,
+		"migrated": migrated,
 	}, nil
 }

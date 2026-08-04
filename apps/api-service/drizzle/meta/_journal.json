@@ -92,6 +92,13 @@
       "when": 1783200000000,
       "tag": "0012_workspace_live_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1785756923000,
+      "tag": "0013_token_usage_hourly_cost",
+      "breakpoints": true
     }
   ]
 }

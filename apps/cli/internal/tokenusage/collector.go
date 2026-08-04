@@ -54,15 +54,6 @@ type CollectorDebugState struct {
 	PendingAgents    []string          `json:"pendingAgents"`
 }
 
-func NewCollector(manager *workspace.Manager, runtime *cliruntime.Runtime, configPath string) (*Collector, error) {
-	repo, err := NewFileHourlyUsageRepository(configPath)
-	if err != nil {
-		return nil, err
-	}
-	return NewCollectorWithRepository(manager, runtime, repo, filepath.Dir(configPath)), nil
-}
-
-// NewCollectorWithRepository creates a collector with the supplied durable usage repository.
 func NewCollectorWithRepository(
 	manager *workspace.Manager,
 	runtime *cliruntime.Runtime,
@@ -578,7 +569,7 @@ func (c *Collector) maybeBackfillHistoricalCost(source string, force bool) {
 		log.Warn().Err(err).Str("source", source).Msg("token usage historical cost backfill failed")
 		return
 	}
-	if err := store.MarkCostBackfillCompleted(context.Background(), time.Now().UTC().UnixMilli()); err != nil {
+	if err := store.MarkCostBackfillCompleted(context.Background()); err != nil {
 		log.Warn().Err(err).Str("source", source).Msg("failed to mark token usage historical cost backfill complete")
 		return
 	}

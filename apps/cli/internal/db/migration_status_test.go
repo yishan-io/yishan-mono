@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestProjectMigrationStatusComplete_AcceptsLegacyMarker(t *testing.T) {
+func TestRemoteToLocalMigrationComplete_RequiresSingleKey(t *testing.T) {
 	database, err := Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
@@ -14,20 +14,30 @@ func TestProjectMigrationStatusComplete_AcceptsLegacyMarker(t *testing.T) {
 	if err := Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	if err := setMetadataKey(context.Background(), database, legacyMigrationAPICompletedKey, "true"); err != nil {
-		t.Fatalf("set legacy migration marker: %v", err)
+
+	complete, err := RemoteToLocalMigrationComplete(context.Background(), database)
+	if err != nil {
+		t.Fatalf("RemoteToLocalMigrationComplete: %v", err)
+	}
+	if complete {
+		t.Fatal("expected migration to be incomplete before any marker is set")
 	}
 
-	complete, err := ProjectMigrationStatusComplete(context.Background(), database)
+	// Any version satisfies the status check (an upgraded binary on a profile
+	// migrated under an older version still reports complete).
+	if err := setMetadataKey(context.Background(), database, RemoteToLocalMigrationCompletedKey, "v0"); err != nil {
+		t.Fatalf("set migration marker: %v", err)
+	}
+	complete, err = RemoteToLocalMigrationComplete(context.Background(), database)
 	if err != nil {
-		t.Fatalf("ProjectMigrationStatusComplete: %v", err)
+		t.Fatalf("RemoteToLocalMigrationComplete: %v", err)
 	}
 	if !complete {
-		t.Fatal("expected legacy project migration marker to satisfy status")
+		t.Fatal("expected migration marker to satisfy status")
 	}
 }
 
-func TestUsageMigrationStatusComplete_AcceptsLegacyMarker(t *testing.T) {
+func TestRemoteToLocalMigrationComplete_IgnoresLegacyMarkers(t *testing.T) {
 	database, err := Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
@@ -36,47 +46,17 @@ func TestUsageMigrationStatusComplete_AcceptsLegacyMarker(t *testing.T) {
 	if err := Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	if err := setMetadataKey(context.Background(), database, legacyMigrationUsageAPICompletedKey, "true"); err != nil {
-		t.Fatalf("set legacy usage migration marker: %v", err)
+	for _, key := range legacyRemoteToLocalMarkerKeys {
+		if err := setMetadataKey(context.Background(), database, key, "true"); err != nil {
+			t.Fatalf("set legacy migration marker %q: %v", key, err)
+		}
 	}
 
-	complete, err := UsageMigrationStatusComplete(context.Background(), database)
+	complete, err := RemoteToLocalMigrationComplete(context.Background(), database)
 	if err != nil {
-		t.Fatalf("UsageMigrationStatusComplete: %v", err)
+		t.Fatalf("RemoteToLocalMigrationComplete: %v", err)
 	}
-	if !complete {
-		t.Fatal("expected legacy usage migration marker to satisfy status")
-	}
-}
-
-func TestExportV1MigrationComplete_DoesNotTreatLegacyMarkersAsRerunComplete(t *testing.T) {
-	database, err := Open(t.TempDir())
-	if err != nil {
-		t.Fatalf("open database: %v", err)
-	}
-	defer database.Close()
-	if err := Migrate(database); err != nil {
-		t.Fatalf("migrate database: %v", err)
-	}
-	if err := setMetadataKey(context.Background(), database, legacyMigrationAPICompletedKey, "true"); err != nil {
-		t.Fatalf("set legacy project migration marker: %v", err)
-	}
-	if err := setMetadataKey(context.Background(), database, legacyMigrationUsageAPICompletedKey, "true"); err != nil {
-		t.Fatalf("set legacy usage migration marker: %v", err)
-	}
-
-	projectsComplete, err := ProjectExportV1MigrationComplete(context.Background(), database)
-	if err != nil {
-		t.Fatalf("ProjectExportV1MigrationComplete: %v", err)
-	}
-	if projectsComplete {
-		t.Fatal("did not expect legacy project marker to satisfy export-v1 rerun status")
-	}
-	usageComplete, err := UsageExportV1MigrationComplete(context.Background(), database)
-	if err != nil {
-		t.Fatalf("UsageExportV1MigrationComplete: %v", err)
-	}
-	if usageComplete {
-		t.Fatal("did not expect legacy usage marker to satisfy export-v1 rerun status")
+	if complete {
+		t.Fatal("expected legacy migration markers not to satisfy status")
 	}
 }

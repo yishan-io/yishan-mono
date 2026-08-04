@@ -2,50 +2,10 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/rs/zerolog/log"
 )
-
-const MigrationUsageAPIExportV1CompletedKey = "migration_usage_api_export_v1_completed"
-
-// MigrateUsageFromAPI pulls historical hourly usage from the remote API and imports it
-// into the local token_usage_hourly table. It is idempotent — once the marker is set,
-// subsequent calls return immediately.
-func MigrateUsageFromAPI(ctx context.Context, database *sql.DB, organizations []string, client APIClient) error {
-	if !client.IsConfigured() {
-		return nil
-	}
-	alreadyMigrated, err := MetadataKeyExists(ctx, database, MigrationUsageAPIExportV1CompletedKey)
-	if err != nil {
-		return err
-	}
-	if alreadyMigrated {
-		return nil
-	}
-	if len(organizations) == 0 {
-		return nil
-	}
-
-	store := NewHourlyUsageStore(database)
-	anySucceeded := false
-	for _, orgID := range organizations {
-		log.Info().Str("orgId", orgID).Msg("migrating token usage from API")
-		if err := migrateOrgUsage(ctx, store, client, orgID); err != nil {
-			log.Warn().Err(err).Str("orgId", orgID).Msg("usage API migration failed for org")
-			continue
-		}
-		anySucceeded = true
-	}
-
-	if !anySucceeded && len(organizations) > 0 {
-		log.Warn().Msg("usage API migration: all organizations failed; marker not set, will retry on next restart")
-		return nil
-	}
-
-	return setMetadataKey(ctx, database, MigrationUsageAPIExportV1CompletedKey, "true")
-}
 
 func migrateOrgUsage(ctx context.Context, store *HourlyUsageStore, client APIClient, orgID string) error {
 	apiRows, err := client.ExportHourlyUsage(ctx, orgID)

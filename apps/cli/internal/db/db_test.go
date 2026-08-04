@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"path/filepath"
 	"testing"
@@ -47,6 +48,63 @@ func TestMigrate_IsIdempotent(t *testing.T) {
 	}
 	if migrationCount != 5 {
 		t.Fatalf("expected five applied migrations, got %d", migrationCount)
+	}
+}
+
+func TestMigrate_CleansUpLegacyMetadataKeys(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+
+	legacyKeys := append(append([]string{}, legacyRemoteToLocalMarkerKeys...), legacyUsageMetadataKeys...)
+	for _, key := range legacyKeys {
+		if err := setMetadataKey(context.Background(), database, key, "true"); err != nil {
+			t.Fatalf("seed legacy marker %q: %v", key, err)
+		}
+	}
+	if err := setMetadataKey(context.Background(), database, RemoteToLocalMigrationCompletedKey, RemoteToLocalMigrationVersion); err != nil {
+		t.Fatalf("seed migration marker: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, "token_usage_cost_backfill_started_at", "1780000000000"); err != nil {
+		t.Fatalf("seed backfill started-at: %v", err)
+	}
+	if err := setMetadataKey(context.Background(), database, "token_usage_cost_backfill_completed", "v4"); err != nil {
+		t.Fatalf("seed backfill completed: %v", err)
+	}
+
+	if err := Migrate(database); err != nil {
+		t.Fatalf("second migration: %v", err)
+	}
+
+	for _, key := range legacyKeys {
+		exists, err := MetadataKeyExists(context.Background(), database, key)
+		if err != nil {
+			t.Fatalf("read legacy marker %q: %v", key, err)
+		}
+		if exists {
+			t.Fatalf("expected legacy marker %q to be cleaned up", key)
+		}
+	}
+	complete, err := RemoteToLocalMigrationComplete(context.Background(), database)
+	if err != nil {
+		t.Fatalf("read migration status: %v", err)
+	}
+	if !complete {
+		t.Fatal("expected remote-to-local migration marker to be preserved")
+	}
+	for _, activeKey := range []string{"token_usage_cost_backfill_started_at", "token_usage_cost_backfill_completed"} {
+		exists, err := MetadataKeyExists(context.Background(), database, activeKey)
+		if err != nil {
+			t.Fatalf("read active key %q: %v", activeKey, err)
+		}
+		if !exists {
+			t.Fatalf("expected active key %q to be preserved", activeKey)
+		}
 	}
 }
 

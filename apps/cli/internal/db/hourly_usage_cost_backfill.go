@@ -9,8 +9,13 @@ import (
 )
 
 const (
-	hourlyUsageCostBackfillStartedAtMetadataKey   = "token_usage_cost_backfill_v4_started_at"
-	hourlyUsageCostBackfillCompletedAtMetadataKey = "token_usage_cost_backfill_v4_completed_at"
+	// UsageCostBackfillVersion is the current historical cost backfill version.
+	// Bump it to force a re-run of the (idempotent) backfill; the version is
+	// stored as the VALUE of the completed marker, so no new metadata keys are
+	// ever introduced.
+	UsageCostBackfillVersion                    = "v4"
+	hourlyUsageCostBackfillStartedAtMetadataKey = "token_usage_cost_backfill_started_at"
+	hourlyUsageCostBackfillCompletedMetadataKey = "token_usage_cost_backfill_completed"
 )
 
 type HourlyUsageCostEstimator func(row HourlyUsageRow) int64
@@ -42,23 +47,17 @@ func (s *HourlyUsageStore) EnsureCostBackfillStartedAt(ctx context.Context, star
 }
 
 func (s *HourlyUsageStore) CostBackfillCompleted(ctx context.Context) (bool, error) {
-	var value string
-	err := s.database.QueryRowContext(ctx, `SELECT value FROM _metadata WHERE key = ?`, hourlyUsageCostBackfillCompletedAtMetadataKey).Scan(&value)
-	if err == sql.ErrNoRows {
-		return false, nil
-	}
+	value, hasKey, err := getMetadataKey(ctx, s.database, hourlyUsageCostBackfillCompletedMetadataKey)
 	if err != nil {
 		return false, fmt.Errorf("read usage cost backfill completed metadata: %w", err)
 	}
-	return value != "", nil
+	return hasKey && value == UsageCostBackfillVersion, nil
 }
 
-func (s *HourlyUsageStore) MarkCostBackfillCompleted(ctx context.Context, completedAt int64) error {
-	if completedAt <= 0 {
-		completedAt = time.Now().UTC().UnixMilli()
-	}
+// MarkCostBackfillCompleted records the current backfill version as complete.
+func (s *HourlyUsageStore) MarkCostBackfillCompleted(ctx context.Context) error {
 	_, err := s.database.ExecContext(ctx, `INSERT INTO _metadata (key, value) VALUES (?, ?)
-		ON CONFLICT(key) DO UPDATE SET value = excluded.value`, hourlyUsageCostBackfillCompletedAtMetadataKey, strconv.FormatInt(completedAt, 10))
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value`, hourlyUsageCostBackfillCompletedMetadataKey, UsageCostBackfillVersion)
 	if err != nil {
 		return fmt.Errorf("write usage cost backfill completed metadata: %w", err)
 	}

@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"context"
-	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -42,10 +41,6 @@ func TestMigrationFromAPI_UsesOrganizationExportCSVEndToEnd(t *testing.T) {
 	if err := localdb.Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	if err := setLegacyMigrationMarkers(database); err != nil {
-		t.Fatalf("set legacy migration markers: %v", err)
-	}
-
 	runtime := cliruntime.New(&config.Config{
 		API: config.APIConfig{
 			BaseURL: server.URL,
@@ -53,11 +48,8 @@ func TestMigrationFromAPI_UsesOrganizationExportCSVEndToEnd(t *testing.T) {
 		},
 	})
 
-	if err := migrateProjectsFromAPI(database, runtime); err != nil {
-		t.Fatalf("migrateProjectsFromAPI: %v", err)
-	}
-	if err := migrateUsageFromAPI(database, runtime); err != nil {
-		t.Fatalf("migrateUsageFromAPI: %v", err)
+	if err := migrateRemoteToLocal(database, runtime); err != nil {
+		t.Fatalf("migrateRemoteToLocal: %v", err)
 	}
 
 	projects, err := localdb.NewProjectStore(database).ListByOrg(context.Background(), "org-1")
@@ -119,29 +111,27 @@ func TestMigrationFromAPI_UsesOrganizationExportCSVEndToEnd(t *testing.T) {
 		t.Fatalf("expected second imported row to retain cost/provenance, got %#v", importedCosts[1])
 	}
 
-	projectsMigrated, err := localdb.MetadataKeyExists(context.Background(), database, localdb.MigrationProjectsAPIExportV1CompletedKey)
+	migrated, err := localdb.MetadataKeyExists(context.Background(), database, localdb.RemoteToLocalMigrationCompletedKey)
 	if err != nil {
-		t.Fatalf("read project migration marker: %v", err)
+		t.Fatalf("read remote-to-local migration marker: %v", err)
 	}
-	if !projectsMigrated {
-		t.Fatal("expected project migration marker")
+	if !migrated {
+		t.Fatal("expected remote-to-local migration marker")
 	}
-	usageMigrated, err := localdb.MetadataKeyExists(context.Background(), database, localdb.MigrationUsageAPIExportV1CompletedKey)
-	if err != nil {
-		t.Fatalf("read usage migration marker: %v", err)
-	}
-	if !usageMigrated {
-		t.Fatal("expected usage migration marker")
-	}
-}
 
-func setLegacyMigrationMarkers(database *sql.DB) error {
-	ctx := context.Background()
-	if _, err := database.ExecContext(ctx, `INSERT INTO _metadata (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, "migration_api_completed", "true"); err != nil {
-		return err
+	for _, legacyKey := range []string{
+		"migration_api_completed",
+		"migration_usage_api_completed",
+		"migration_projects_api_export_v1_completed",
+		"migration_project_config_backfill_v1_completed",
+		"migration_usage_api_export_v1_completed",
+	} {
+		exists, err := localdb.MetadataKeyExists(context.Background(), database, legacyKey)
+		if err != nil {
+			t.Fatalf("read legacy migration marker %q: %v", legacyKey, err)
+		}
+		if exists {
+			t.Fatalf("expected legacy migration marker %q to be cleaned up", legacyKey)
+		}
 	}
-	if _, err := database.ExecContext(ctx, `INSERT INTO _metadata (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, "migration_usage_api_completed", "true"); err != nil {
-		return err
-	}
-	return nil
 }

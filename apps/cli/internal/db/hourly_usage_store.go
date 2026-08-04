@@ -60,6 +60,28 @@ func (s *HourlyUsageStore) ImportRemoteHourlyUsageRows(ctx context.Context, rows
 	return tx.Commit()
 }
 
+func lookupHourlyUsageRow(ctx context.Context, tx *sql.Tx, row HourlyUsageRow) (HourlyUsageRow, bool, error) {
+	queryRows, err := tx.QueryContext(ctx, `SELECT project_id, workspace_id, workspace_path, organization_id,
+		agent_kind, model, model_normalized, bucket_start_hour_utc, input_tokens, output_tokens,
+		cached_input_tokens, cached_write_tokens, reasoning_tokens, total_tokens, total_cost_micros_usd, cost_source, event_count,
+		session_count, turn_count, tool_call_count, attribution_confidence, scanner_source_kind,
+		scanner_source_id, ingested_at, run_id, updated_at, is_dirty, last_synced_at FROM token_usage_hourly
+		WHERE project_id = ? AND workspace_id = ? AND agent_kind = ? AND model_normalized = ? AND bucket_start_hour_utc = ?`,
+		row.ProjectID, row.WorkspaceID, row.AgentKind, row.ModelNormalized, row.BucketStartHourUTC)
+	if err != nil {
+		return HourlyUsageRow{}, false, fmt.Errorf("query existing imported usage row: %w", err)
+	}
+	defer queryRows.Close()
+	usageRows, err := scanHourlyUsageRows(queryRows)
+	if err != nil {
+		return HourlyUsageRow{}, false, err
+	}
+	if len(usageRows) == 0 {
+		return HourlyUsageRow{}, false, nil
+	}
+	return usageRows[0], true, nil
+}
+
 // ReplaceAgentHourlyRows merges scanned rows and retains dirty rows until they are acknowledged.
 func (s *HourlyUsageStore) ReplaceAgentHourlyRows(ctx context.Context, agentKind string, rows []HourlyUsageRow) error {
 	tx, err := s.database.BeginTx(ctx, nil)

@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestMigrateUsageFromAPI_ImportsExportedUsageRows(t *testing.T) {
+func TestMigrateRemoteToLocal_ImportsExportedUsageRows(t *testing.T) {
 	database, err := Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
@@ -23,8 +23,8 @@ func TestMigrateUsageFromAPI_ImportsExportedUsageRows(t *testing.T) {
 		},
 	}
 
-	if err := MigrateUsageFromAPI(context.Background(), database, []string{"org-1"}, client); err != nil {
-		t.Fatalf("MigrateUsageFromAPI: %v", err)
+	if err := MigrateRemoteToLocal(context.Background(), database, []string{"org-1"}, client); err != nil {
+		t.Fatalf("MigrateRemoteToLocal: %v", err)
 	}
 
 	state, err := NewHourlyUsageStore(database).GetHourlyUsageSyncState(context.Background())
@@ -34,16 +34,10 @@ func TestMigrateUsageFromAPI_ImportsExportedUsageRows(t *testing.T) {
 	if state.TotalRows != 1 || state.DirtyRows != 0 {
 		t.Fatalf("expected one clean imported row, got %#v", state)
 	}
-	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, MigrationUsageAPIExportV1CompletedKey)
-	if err != nil {
-		t.Fatalf("read usage migration marker: %v", err)
-	}
-	if !alreadyMigrated {
-		t.Fatal("expected usage migration marker")
-	}
+	assertRemoteToLocalMigrationComplete(t, database, true)
 }
 
-func TestMigrateUsageFromAPI_PreservesCleanLocalRowsWhenExportIsStale(t *testing.T) {
+func TestMigrateRemoteToLocal_PreservesCleanLocalRowsWhenExportIsStale(t *testing.T) {
 	database, err := Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
@@ -71,9 +65,6 @@ func TestMigrateUsageFromAPI_PreservesCleanLocalRowsWhenExportIsStale(t *testing
 	if err := store.MarkHourlyRowsSynced(context.Background(), cleanDirtyRows, syncedAt); err != nil {
 		t.Fatalf("mark clean row synced: %v", err)
 	}
-	if err := setMetadataKey(context.Background(), database, legacyMigrationUsageAPICompletedKey, "true"); err != nil {
-		t.Fatalf("set legacy usage migration marker: %v", err)
-	}
 
 	client := &exportAPIClientStub{
 		configured: true,
@@ -82,8 +73,8 @@ func TestMigrateUsageFromAPI_PreservesCleanLocalRowsWhenExportIsStale(t *testing
 		},
 	}
 
-	if err := MigrateUsageFromAPI(context.Background(), database, []string{"org-1"}, client); err != nil {
-		t.Fatalf("MigrateUsageFromAPI: %v", err)
+	if err := MigrateRemoteToLocal(context.Background(), database, []string{"org-1"}, client); err != nil {
+		t.Fatalf("MigrateRemoteToLocal: %v", err)
 	}
 
 	storedRow := lookupStoredUsageRow(t, database, cleanRow)
@@ -98,7 +89,7 @@ func TestMigrateUsageFromAPI_PreservesCleanLocalRowsWhenExportIsStale(t *testing
 	}
 }
 
-func TestMigrateUsageFromAPI_RefreshesCleanLocalRowsWhenExportIsNewer(t *testing.T) {
+func TestMigrateRemoteToLocal_RefreshesCleanLocalRowsWhenExportIsNewer(t *testing.T) {
 	database, err := Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
@@ -126,9 +117,6 @@ func TestMigrateUsageFromAPI_RefreshesCleanLocalRowsWhenExportIsNewer(t *testing
 	if err := store.MarkHourlyRowsSynced(context.Background(), cleanDirtyRows, syncedAt); err != nil {
 		t.Fatalf("mark clean row synced: %v", err)
 	}
-	if err := setMetadataKey(context.Background(), database, legacyMigrationUsageAPICompletedKey, "true"); err != nil {
-		t.Fatalf("set legacy usage migration marker: %v", err)
-	}
 
 	client := &exportAPIClientStub{
 		configured: true,
@@ -137,8 +125,8 @@ func TestMigrateUsageFromAPI_RefreshesCleanLocalRowsWhenExportIsNewer(t *testing
 		},
 	}
 
-	if err := MigrateUsageFromAPI(context.Background(), database, []string{"org-1"}, client); err != nil {
-		t.Fatalf("MigrateUsageFromAPI: %v", err)
+	if err := MigrateRemoteToLocal(context.Background(), database, []string{"org-1"}, client); err != nil {
+		t.Fatalf("MigrateRemoteToLocal: %v", err)
 	}
 
 	storedRow := lookupStoredUsageRow(t, database, cleanRow)
@@ -153,7 +141,7 @@ func TestMigrateUsageFromAPI_RefreshesCleanLocalRowsWhenExportIsNewer(t *testing
 	}
 }
 
-func TestMigrateUsageFromAPI_PreservesDirtyLocalRowsWhenLegacyMarkerTriggersRerun(t *testing.T) {
+func TestMigrateRemoteToLocal_PreservesDirtyLocalRows(t *testing.T) {
 	database, err := Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
@@ -187,9 +175,6 @@ func TestMigrateUsageFromAPI_PreservesDirtyLocalRowsWhenLegacyMarkerTriggersReru
 	if err := store.ReplaceAgentHourlyRows(context.Background(), "claude", []HourlyUsageRow{updatedDirtyRow}); err != nil {
 		t.Fatalf("seed updated dirty row: %v", err)
 	}
-	if err := setMetadataKey(context.Background(), database, legacyMigrationUsageAPICompletedKey, "true"); err != nil {
-		t.Fatalf("set legacy usage migration marker: %v", err)
-	}
 
 	client := &exportAPIClientStub{
 		configured: true,
@@ -198,8 +183,8 @@ func TestMigrateUsageFromAPI_PreservesDirtyLocalRowsWhenLegacyMarkerTriggersReru
 		},
 	}
 
-	if err := MigrateUsageFromAPI(context.Background(), database, []string{"org-1"}, client); err != nil {
-		t.Fatalf("MigrateUsageFromAPI: %v", err)
+	if err := MigrateRemoteToLocal(context.Background(), database, []string{"org-1"}, client); err != nil {
+		t.Fatalf("MigrateRemoteToLocal: %v", err)
 	}
 
 	dirtyRows, err := store.ListDirtyHourlyRows(context.Background())
@@ -215,16 +200,10 @@ func TestMigrateUsageFromAPI_PreservesDirtyLocalRowsWhenLegacyMarkerTriggersReru
 	if dirtyRows[0].LastSyncedAt != syncedAt {
 		t.Fatalf("expected rerun to preserve lastSyncedAt %d, got %#v", syncedAt, dirtyRows[0])
 	}
-	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, MigrationUsageAPIExportV1CompletedKey)
-	if err != nil {
-		t.Fatalf("read usage migration marker: %v", err)
-	}
-	if !alreadyMigrated {
-		t.Fatal("expected export-based usage migration marker")
-	}
+	assertRemoteToLocalMigrationComplete(t, database, true)
 }
 
-func TestMigrateUsageFromAPI_IgnoresLegacyCompletionMarker(t *testing.T) {
+func TestMigrateRemoteToLocal_ImportsUsageWhenLegacyMarkerPresent(t *testing.T) {
 	database, err := Open(t.TempDir())
 	if err != nil {
 		t.Fatalf("open database: %v", err)
@@ -233,7 +212,7 @@ func TestMigrateUsageFromAPI_IgnoresLegacyCompletionMarker(t *testing.T) {
 	if err := Migrate(database); err != nil {
 		t.Fatalf("migrate database: %v", err)
 	}
-	if err := setMetadataKey(context.Background(), database, legacyMigrationUsageAPICompletedKey, "true"); err != nil {
+	if err := setMetadataKey(context.Background(), database, "migration_usage_api_completed", "true"); err != nil {
 		t.Fatalf("set legacy usage migration marker: %v", err)
 	}
 
@@ -244,24 +223,18 @@ func TestMigrateUsageFromAPI_IgnoresLegacyCompletionMarker(t *testing.T) {
 		},
 	}
 
-	if err := MigrateUsageFromAPI(context.Background(), database, []string{"org-1"}, client); err != nil {
-		t.Fatalf("MigrateUsageFromAPI: %v", err)
+	if err := MigrateRemoteToLocal(context.Background(), database, []string{"org-1"}, client); err != nil {
+		t.Fatalf("MigrateRemoteToLocal: %v", err)
 	}
 
-	alreadyMigrated, err := MetadataKeyExists(context.Background(), database, MigrationUsageAPIExportV1CompletedKey)
-	if err != nil {
-		t.Fatalf("read usage migration marker: %v", err)
-	}
-	if !alreadyMigrated {
-		t.Fatal("expected export-based usage migration marker")
-	}
 	state, err := NewHourlyUsageStore(database).GetHourlyUsageSyncState(context.Background())
 	if err != nil {
 		t.Fatalf("get usage sync state: %v", err)
 	}
 	if state.TotalRows != 1 {
-		t.Fatalf("expected legacy marker to be ignored and usage row imported, got %#v", state)
+		t.Fatalf("expected legacy marker not to gate the migration and usage row imported, got %#v", state)
 	}
+	assertRemoteToLocalMigrationComplete(t, database, true)
 }
 
 func newExportUsageRow(totalTokens int64) APIHourlyUsageRow {
