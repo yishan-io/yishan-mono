@@ -250,3 +250,47 @@ func newTestHourlyUsageRow(bucketStartHourUTC int64, totalTokens int64) HourlyUs
 		UpdatedAt:             bucketStartHourUTC,
 	}
 }
+
+func TestCostBackfillCompleted_RequiresCurrentVersion(t *testing.T) {
+	database, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer database.Close()
+	if err := Migrate(database); err != nil {
+		t.Fatalf("migrate database: %v", err)
+	}
+	store := NewHourlyUsageStore(database)
+
+	completed, err := store.CostBackfillCompleted(context.Background())
+	if err != nil {
+		t.Fatalf("CostBackfillCompleted: %v", err)
+	}
+	if completed {
+		t.Fatal("expected backfill to be incomplete before any marker is set")
+	}
+
+	// A stale version must not satisfy the completion check so the backfill
+	// re-runs when the version constant is bumped.
+	if err := setMetadataKey(context.Background(), database, "token_usage_cost_backfill_completed", "v1"); err != nil {
+		t.Fatalf("set stale backfill marker: %v", err)
+	}
+	completed, err = store.CostBackfillCompleted(context.Background())
+	if err != nil {
+		t.Fatalf("CostBackfillCompleted: %v", err)
+	}
+	if completed {
+		t.Fatal("expected stale backfill version not to satisfy completion")
+	}
+
+	if err := store.MarkCostBackfillCompleted(context.Background()); err != nil {
+		t.Fatalf("MarkCostBackfillCompleted: %v", err)
+	}
+	completed, err = store.CostBackfillCompleted(context.Background())
+	if err != nil {
+		t.Fatalf("CostBackfillCompleted: %v", err)
+	}
+	if !completed {
+		t.Fatal("expected current backfill version to satisfy completion")
+	}
+}

@@ -4,16 +4,45 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/rs/zerolog/log"
 )
 
 const (
-	MigrationProjectsAPIExportV1CompletedKey     = "migration_projects_api_export_v1_completed"
-	MigrationProjectConfigBackfillV1CompletedKey = "migration_project_config_backfill_v1_completed"
-	legacyMigrationAPICompletedKey               = "migration_api_completed"
-	legacyMigrationUsageAPICompletedKey          = "migration_usage_api_completed"
+	RemoteToLocalMigrationCompletedKey = "migration_remote_to_local_completed"
+	RemoteToLocalMigrationVersion      = "v1"
 )
+
+// legacyRemoteToLocalMarkerKeys are the completion markers written by
+// pre-consolidation migration schemes (the API-import era and the export-v1
+// era). Current code never reads or writes them; the rows are deleted on every
+// database open by cleanupLegacyMetadataKeys so old profiles converge on the
+// single RemoteToLocalMigrationCompletedKey record.
+var legacyRemoteToLocalMarkerKeys = []string{
+	"migration_api_completed",
+	"migration_usage_api_completed",
+	"migration_projects_api_export_v1_completed",
+	"migration_project_config_backfill_v1_completed",
+	"migration_usage_api_export_v1_completed",
+}
+
+// legacyUsageMetadataKeys are the version-suffixed cost backfill markers and
+// the legacy JSON import markers. Current code never reads or writes them;
+// rows are deleted on every database open. The active backfill state lives in
+// the single token_usage_cost_backfill_started_at / _completed records.
+var legacyUsageMetadataKeys = []string{
+	"token_usage_cost_backfill_v1_started_at",
+	"token_usage_cost_backfill_v1_completed_at",
+	"token_usage_cost_backfill_v2_started_at",
+	"token_usage_cost_backfill_v2_completed_at",
+	"token_usage_cost_backfill_v3_started_at",
+	"token_usage_cost_backfill_v3_completed_at",
+	"token_usage_cost_backfill_v4_started_at",
+	"token_usage_cost_backfill_v4_completed_at",
+	"token_usage_json_import_complete",
+	"token_usage_json_backup_pending",
+}
 
 // APIClient abstracts the remote datastore for first-launch project import.
 type APIClient interface {
@@ -85,88 +114,110 @@ type APIHourlyUsageRow struct {
 	RunID                 string `json:"runId"`
 }
 
-// MigrateFromAPI imports projects and workspaces from the remote API into the
-// local database. It reads orgs from the API client and stores them locally.
-// Existing projects are backfilled from export data where legacy imports missed
-// scripts, post hooks, command config, or the context-enabled setting; existing
-// workspaces remain create-only.
-func MigrateFromAPI(ctx context.Context, database *sql.DB, organizations []string, client APIClient) error {
+// MigrateRemoteToLocal imports projects, workspaces, and hourly usage from the
+// remote API into the local database. It is the single remote-to-local
+// migration entry point. Existing projects are backfilled from export data
+// where legacy imports missed scripts, post hooks, command config, or the
+// context-enabled setting; existing workspaces remain create-only. Completion
+// is recorded as a single versioned metadata key: the migration re-runs
+// (idempotently) when the key is absent or its version differs from
+// RemoteToLocalMigrationVersion, and the key is written only when every step
+// succeeds for every organization.
+func MigrateRemoteToLocal(ctx context.Context, database *sql.DB, organizations []string, client APIClient) error {
 	if !client.IsConfigured() {
 		return nil
 	}
-	workspaceMigrationCompleted, err := MetadataKeyExists(ctx, database, MigrationProjectsAPIExportV1CompletedKey)
+	currentVersion, hasVersion, err := getMetadataKey(ctx, database, RemoteToLocalMigrationCompletedKey)
 	if err != nil {
 		return err
 	}
-	projectConfigBackfillCompleted, err := MetadataKeyExists(ctx, database, MigrationProjectConfigBackfillV1CompletedKey)
-	if err != nil {
-		return err
-	}
-	if workspaceMigrationCompleted && projectConfigBackfillCompleted {
+	if hasVersion && currentVersion == RemoteToLocalMigrationVersion {
 		return nil
 	}
 	if len(organizations) == 0 {
 		return nil
 	}
-	projectStore := NewProjectStore(database)
-	workspaceStore := NewWorkspaceStore(database)
 
-	projectBackfillSucceeded := true
-	workspaceMigrationSucceeded := true
+	store := NewHourlyUsageStore(database)
+	allSucceeded := true
 	for _, orgID := range organizations {
-		if !projectConfigBackfillCompleted {
-			projects, exportErr := client.ExportProjects(ctx, orgID)
-			if exportErr != nil {
-				projectBackfillSucceeded = false
-				log.Warn().Err(exportErr).Str("orgId", orgID).Msg("project export backfill failed for org")
-			} else {
-				for _, project := range projects {
-					localProject := apiProjectToLocal(project)
-					if err := projectStore.CreateOrBackfillImportedProject(ctx, &localProject); err != nil {
-						projectBackfillSucceeded = false
-						log.Warn().Err(err).Str("orgId", orgID).Str("projectId", project.ID).Msg("project export backfill failed for project")
-					}
-				}
-			}
+		if err := backfillProjectsFromExport(ctx, database, orgID, client); err != nil {
+			allSucceeded = false
+			log.Warn().Err(err).Str("orgId", orgID).Msg("project export backfill failed for org")
 		}
-		if workspaceMigrationCompleted {
-			continue
+		if err := exportWorkspacesFromAPI(ctx, database, orgID, client); err != nil {
+			allSucceeded = false
+			log.Warn().Err(err).Str("orgId", orgID).Msg("workspace export migration failed for org")
 		}
-		workspaces, exportErr := client.ExportWorkspaces(ctx, orgID)
-		if exportErr != nil {
-			workspaceMigrationSucceeded = false
-			log.Warn().Err(exportErr).Str("orgId", orgID).Msg("workspace export migration failed for org")
-			continue
-		}
-		for _, workspace := range workspaces {
-			_, getErr := workspaceStore.Get(ctx, workspace.ID)
-			if getErr == nil {
-				continue
-			}
-			if getErr != nil && !errors.Is(getErr, ErrWorkspaceNotFound) {
-				workspaceMigrationSucceeded = false
-				log.Warn().Err(getErr).Str("orgId", orgID).Str("workspaceId", workspace.ID).Msg("workspace export migration lookup failed for workspace")
-				continue
-			}
-			localWorkspace := apiWorkspaceToLocal(workspace)
-			if err := workspaceStore.Create(ctx, &localWorkspace); err != nil {
-				workspaceMigrationSucceeded = false
-				log.Warn().Err(err).Str("orgId", orgID).Str("workspaceId", workspace.ID).Msg("workspace export migration failed for workspace")
-			}
+		if err := migrateOrgUsage(ctx, store, client, orgID); err != nil {
+			allSucceeded = false
+			log.Warn().Err(err).Str("orgId", orgID).Msg("usage API migration failed for org")
 		}
 	}
 
-	if !workspaceMigrationCompleted && workspaceMigrationSucceeded {
-		if err := setMetadataKey(ctx, database, MigrationProjectsAPIExportV1CompletedKey, "true"); err != nil {
-			return err
-		}
-	}
-	if !projectConfigBackfillCompleted && projectBackfillSucceeded {
-		if err := setMetadataKey(ctx, database, MigrationProjectConfigBackfillV1CompletedKey, "true"); err != nil {
-			return err
-		}
+	if allSucceeded {
+		return setMetadataKey(ctx, database, RemoteToLocalMigrationCompletedKey, RemoteToLocalMigrationVersion)
 	}
 	return nil
+}
+
+// backfillProjectsFromExport upserts every exported project into the local
+// database, restoring scripts, post hooks, command config, and the
+// context-enabled setting on existing projects whose local record is strictly
+// older than the remote export (local data is never overwritten). Per-project
+// failures are logged and skipped; the first failure is returned so the overall
+// migration marker stays unwritten.
+func backfillProjectsFromExport(ctx context.Context, database *sql.DB, orgID string, client APIClient) error {
+	projects, err := client.ExportProjects(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	projectStore := NewProjectStore(database)
+	var firstErr error
+	for _, project := range projects {
+		localProject := apiProjectToLocal(project)
+		if err := projectStore.CreateOrBackfillImportedProject(ctx, &localProject); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			log.Warn().Err(err).Str("orgId", orgID).Str("projectId", project.ID).Msg("project export backfill failed for project")
+		}
+	}
+	return firstErr
+}
+
+// exportWorkspacesFromAPI imports remote workspaces that do not exist locally,
+// leaving existing workspaces untouched. Per-workspace failures are logged and
+// skipped; the first failure is returned so the overall migration marker stays
+// unwritten.
+func exportWorkspacesFromAPI(ctx context.Context, database *sql.DB, orgID string, client APIClient) error {
+	workspaces, err := client.ExportWorkspaces(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	workspaceStore := NewWorkspaceStore(database)
+	var firstErr error
+	for _, workspace := range workspaces {
+		_, getErr := workspaceStore.Get(ctx, workspace.ID)
+		if getErr == nil {
+			continue
+		}
+		if getErr != nil && !errors.Is(getErr, ErrWorkspaceNotFound) {
+			if firstErr == nil {
+				firstErr = getErr
+			}
+			log.Warn().Err(getErr).Str("orgId", orgID).Str("workspaceId", workspace.ID).Msg("workspace export migration lookup failed for workspace")
+			continue
+		}
+		localWorkspace := apiWorkspaceToLocal(workspace)
+		if err := workspaceStore.Create(ctx, &localWorkspace); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			log.Warn().Err(err).Str("orgId", orgID).Str("workspaceId", workspace.ID).Msg("workspace export migration failed for workspace")
+		}
+	}
+	return firstErr
 }
 
 func apiProjectToLocal(project APIProject) Project {
@@ -220,33 +271,34 @@ func MetadataKeyExists(ctx context.Context, database *sql.DB, key string) (bool,
 	return err == nil, err
 }
 
-func ProjectMigrationStatusComplete(ctx context.Context, database *sql.DB) (bool, error) {
-	return metadataKeyExistsAny(ctx, database, MigrationProjectsAPIExportV1CompletedKey, legacyMigrationAPICompletedKey)
+func getMetadataKey(ctx context.Context, database *sql.DB, key string) (string, bool, error) {
+	var value string
+	err := database.QueryRowContext(ctx, `SELECT value FROM _metadata WHERE key = ?`, key).Scan(&value)
+	if err == sql.ErrNoRows {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return value, true, nil
 }
 
-func UsageMigrationStatusComplete(ctx context.Context, database *sql.DB) (bool, error) {
-	return metadataKeyExistsAny(ctx, database, MigrationUsageAPIExportV1CompletedKey, legacyMigrationUsageAPICompletedKey)
+// RemoteToLocalMigrationComplete reports whether any remote-to-local migration
+// has completed. It is version-agnostic: an upgraded binary on a profile that
+// migrated under an older version still reports complete while the background
+// re-run bumps the version.
+func RemoteToLocalMigrationComplete(ctx context.Context, database *sql.DB) (bool, error) {
+	_, hasKey, err := getMetadataKey(ctx, database, RemoteToLocalMigrationCompletedKey)
+	return hasKey, err
 }
 
-func ProjectExportV1MigrationComplete(ctx context.Context, database *sql.DB) (bool, error) {
-	return MetadataKeyExists(ctx, database, MigrationProjectsAPIExportV1CompletedKey)
-}
-
-func UsageExportV1MigrationComplete(ctx context.Context, database *sql.DB) (bool, error) {
-	return MetadataKeyExists(ctx, database, MigrationUsageAPIExportV1CompletedKey)
-}
-
-func metadataKeyExistsAny(ctx context.Context, database *sql.DB, keys ...string) (bool, error) {
-	for _, key := range keys {
-		exists, err := MetadataKeyExists(ctx, database, key)
-		if err != nil {
-			return false, err
-		}
-		if exists {
-			return true, nil
+func cleanupLegacyMetadataKeys(database *sql.DB) error {
+	for _, key := range append(append([]string{}, legacyRemoteToLocalMarkerKeys...), legacyUsageMetadataKeys...) {
+		if _, err := database.Exec(`DELETE FROM _metadata WHERE key = ?`, key); err != nil {
+			return fmt.Errorf("clean up legacy metadata key %q: %w", key, err)
 		}
 	}
-	return false, nil
+	return nil
 }
 
 func setMetadataKey(ctx context.Context, database *sql.DB, key, value string) error {

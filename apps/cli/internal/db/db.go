@@ -74,6 +74,9 @@ func Migrate(database *sql.DB) error {
 			return err
 		}
 	}
+	if err := cleanupLegacyMetadataKeys(database); err != nil {
+		return err
+	}
 	return nil
 }
 

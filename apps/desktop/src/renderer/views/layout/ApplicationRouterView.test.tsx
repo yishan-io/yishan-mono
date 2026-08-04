@@ -32,7 +32,7 @@ vi.mock("../../commands/appCommands", () => ({
 vi.mock("../../rpc/rpcTransport", () => ({
   getDaemonClient: vi.fn(async () => ({
     tokenUsage: {
-      migrationStatus: vi.fn(async () => ({ projectsMigrated: true, usageMigrated: true })),
+      migrationStatus: vi.fn(async () => ({ migrated: true })),
     },
   })),
 }));
